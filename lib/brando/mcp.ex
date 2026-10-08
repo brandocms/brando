@@ -22,7 +22,8 @@ defmodule Brando.MCP do
   every request, as are the account, the switch and the connection itself:
   taking the permission away, turning two-factor authentication off,
   deactivating the user, turning the endpoint off or revoking the connection
-  stops the next call.
+  stops the next call. A connection lasts at most `grant_days` (90) from
+  consent; `revoke_user_grants/2` lists what else ends one.
 
   ## URLs
 
@@ -37,6 +38,7 @@ defmodule Brando.MCP do
       config :brando, Brando.MCP,
         access_token_minutes: 60,
         refresh_token_days: 30,
+        grant_days: 90,
         requests_per_minute: 60,
         user_requests_per_minute: 120,
         max_request_bytes: 512_000,
@@ -48,6 +50,7 @@ defmodule Brando.MCP do
   alias Brando.Authorization.Engine
   alias Brando.Authorization.Scope
   alias Brando.Environments.Environment
+  alias Brando.MCP.AuthorizationCode
   alias Brando.MCP.Grant
   alias Brando.MCP.Setting
   alias Brando.MCP.Token
@@ -75,6 +78,22 @@ defmodule Brando.MCP do
   @doc "One of the settings in `config/0`, or `default`."
   @spec config(atom(), term()) :: term()
   def config(key, default), do: Keyword.get(config(), key, default)
+
+  @doc """
+  How many days a connection lasts from consent, however often it is
+  refreshed: `grant_days`, 90 by default. After that its refresh token is
+  refused and the person connects the tool again.
+  """
+  @spec grant_days() :: pos_integer()
+  def grant_days, do: config(:grant_days, 90)
+
+  @doc "When `grant` expires: `grant_days/0` after it was made."
+  @spec grant_expires_at(Grant.t()) :: DateTime.t()
+  def grant_expires_at(%Grant{inserted_at: inserted_at}), do: DateTime.add(inserted_at, grant_days() * 86_400, :second)
+
+  @doc "Whether `grant` is past its lifetime."
+  @spec grant_expired?(Grant.t()) :: boolean()
+  def grant_expired?(grant), do: DateTime.compare(grant_expires_at(grant), DateTime.utc_now()) != :gt
 
   @doc "The one OAuth scope a connection gets: read content and propose changes."
   @spec scope() :: String.t()
@@ -235,9 +254,10 @@ defmodule Brando.MCP do
 
   @doc """
   Turns the endpoint on or off for `tenant`, as `actor`, who must be allowed
-  to manage connections (`can_manage?/2`). Turning it off leaves the
-  connections in place; they answer 404 until it is on again. Recorded in
-  Activity.
+  to manage connections (`can_manage?/2`). Turning it off is a kill switch:
+  every connection to the site environment is revoked too, and people
+  connect their tools again once it is back on. Recorded in Activity, with
+  how many connections it ended.
   """
   @spec set_enabled(tenant(), boolean(), User.t()) :: :ok | {:error, :forbidden | :insecure_url}
   def set_enabled(tenant, enabled?, actor) when is_boolean(enabled?) do
@@ -267,13 +287,50 @@ defmodule Brando.MCP do
             returning: true
           )
 
-        in_tenant(tenant, fn ->
-          Brando.Activity.setting_changed(:updated, setting, "MCP", actor,
-            details: %{"mcp" => if(enabled?, do: "enabled", else: "disabled")}
-          )
-        end)
+        revoked = if enabled?, do: 0, else: revoke_tenant_grants(tenant, actor)
+
+        details =
+          if enabled?,
+            do: %{"mcp" => "enabled"},
+            else: %{"mcp" => "disabled", "revoked" => revoked}
+
+        in_tenant(tenant, fn -> Brando.Activity.setting_changed(:updated, setting, "MCP", actor, details: details) end)
 
         :ok
+    end
+  end
+
+  defp revoke_tenant_grants(tenant, actor) do
+    grants = tenant |> grant_query() |> where([g], is_nil(g.revoked_at)) |> Repo.all()
+    Enum.each(grants, &revoke_grant(&1, actor, "endpoint_off"))
+    length(grants)
+  end
+
+  @doc """
+  Removes what no request can use any more: the tokens of revoked or
+  expired connections and expired tokens, authorization codes past their
+  minute, and the pairs refresh tokens keep for a concurrent refresh past
+  their grace period. Run nightly by `Brando.Worker.ActivityPurger`.
+  Returns how many rows went.
+  """
+  @spec prune() :: non_neg_integer()
+  def prune do
+    if installed?() do
+      now = DateTime.utc_now()
+      made_after = DateTime.add(now, -grant_days() * 86_400, :second)
+
+      dead_grants =
+        from(g in Grant, where: not is_nil(g.revoked_at) or g.inserted_at <= ^made_after, select: g.id)
+
+      {tokens, _} = Repo.delete_all(from(t in Token, where: t.grant_id in subquery(dead_grants) or t.expires_at < ^now))
+      {codes, _} = Repo.delete_all(from(c in AuthorizationCode, where: c.expires_at < ^now))
+
+      from(t in Token, where: not is_nil(t.successor_ciphertext) and t.rotated_at < ^DateTime.add(now, -60, :second))
+      |> Repo.update_all(set: [successor_ciphertext: nil])
+
+      tokens + codes
+    else
+      0
     end
   end
 
@@ -434,9 +491,23 @@ defmodule Brando.MCP do
   defp actor_or_system(_), do: :system
 
   @doc """
-  Revokes every connection of `user`, when their sign-in security changes so
-  that they may no longer connect: two-factor authentication turned off or
-  reset, the account deactivated or deleted, every session logged out.
+  Revokes every connection of `user` that is not revoked yet, recording
+  `reason`. Brando calls it when:
+
+    * two-factor authentication is turned off (`"two_factor_off"`), reset by
+      an administrator, or the last passkey of a user without an app is
+      removed;
+    * the password changes, by the user, a reset link or an administrator
+      (`"password_changed"`);
+    * the user, or an administrator, logs the user out everywhere
+      (`"logged_out_everywhere"`), including "Log out other sessions";
+    * the account is deactivated (`"account_deactivated"`) or deleted
+      (`"account_deleted"`).
+
+  Callers inside a transaction run it with `Brando.Repo.after_commit/1`.
+  Losing the Connect permission or the endpoint being turned off are not
+  revocations here: the first stops the next call, the second revokes the
+  site environment's connections itself (`set_enabled/3`).
   """
   @spec revoke_user_grants(map(), String.t()) :: :ok
   def revoke_user_grants(%{id: user_id}, reason) do

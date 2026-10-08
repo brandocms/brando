@@ -68,7 +68,7 @@ defmodule Brando.MCP.EndpointTest do
         build_conn()
         |> put_req_header("content-type", "application/json")
         |> put_req_header("authorization", "Bearer " <> token)
-        |> post(tenant.path, Jason.encode!(%{jsonrpc: "2.0", id: 1, method: "ping"}))
+        |> post_sized(tenant.path, Jason.encode!(%{jsonrpc: "2.0", id: 1, method: "ping"}))
 
       assert json_response(conn, 200)["result"] == %{}
     end
@@ -127,7 +127,7 @@ defmodule Brando.MCP.EndpointTest do
         build_conn()
         |> put_req_header("content-type", "text/plain")
         |> put_req_header("authorization", "Bearer " <> token)
-        |> post(tenant.path, "{}")
+        |> post_sized(tenant.path, "{}")
 
       assert conn.status == 415
     end
@@ -146,6 +146,49 @@ defmodule Brando.MCP.EndpointTest do
       # The site's own origin, or a configured one, is fine.
       own = MCP.base_url()
       assert rpc(tenant, token, "ping", %{}, headers: [{"origin", own}]).status == 200
+    end
+
+    test "the length is checked from the header, before the token", %{tenant: tenant} do
+      body = Jason.encode!(%{jsonrpc: "2.0", id: 1, method: "ping"})
+
+      unsized =
+        build_conn()
+        |> put_req_header("content-type", "application/json")
+        |> post(tenant.path, body)
+
+      assert unsized.status == 411
+
+      # No token at all, and still 413, not 401: nothing past the length is looked at
+      oversized =
+        build_conn()
+        |> put_req_header("content-type", "application/json")
+        |> put_req_header("content-length", "600000")
+        |> post(tenant.path, body)
+
+      assert oversized.status == 413
+    end
+
+    test "Brando.MCP.BodyLimit refuses before anything reads the body" do
+      conn = fn path, length ->
+        Plug.Test.conn("POST", path, "{}")
+        |> then(&if(length, do: put_req_header(&1, "content-length", length), else: &1))
+        |> Brando.MCP.BodyLimit.call([])
+      end
+
+      assert %{status: 411, halted: true} = conn.("/mcp", nil)
+      assert %{status: 413, halted: true} = conn.("/mcp/site/env/oauth/token", "600000")
+      assert %{halted: false} = conn.("/mcp", "2")
+      assert %{halted: false} = conn.("/elsewhere", nil)
+    end
+
+    test "a modern request without Mcp-Method is refused", %{tenant: tenant, token: token} do
+      meta = %{
+        "io.modelcontextprotocol/protocolVersion" => "2026-07-28",
+        "io.modelcontextprotocol/clientCapabilities" => %{}
+      }
+
+      conn = rpc(tenant, token, "tools/list", %{"_meta" => meta}, version: "2026-07-28")
+      assert %{"error" => %{"code" => -32_020}} = json_response(conn, 400)
     end
 
     test "oversized requests are refused", %{tenant: tenant, token: token} do

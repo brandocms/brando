@@ -31,6 +31,10 @@ defmodule Brando.MCP.OAuth do
   alias Brando.Users.User
 
   @code_seconds 60
+  @max_state 1024
+  # A client may refresh twice at once: within this many seconds of an
+  # exchange, the same refresh token gets the same answer.
+  @refresh_grace_seconds 10
   @verifier_format ~r/\A[A-Za-z0-9\-._~]{43,128}\z/
   @challenge_format ~r/\A[A-Za-z0-9\-_]{43}\z/
 
@@ -53,8 +57,10 @@ defmodule Brando.MCP.OAuth do
       (`MCP.refusal/2`); `request` has what is known of the client;
     * `{:error, {:page, reason}}` — the client or its redirect URI cannot be
       trusted, so the person is not sent back to it;
-    * `{:error, {:redirect, url}}` — the request is wrong in a way the client
-      should hear about, at its own redirect URI.
+    * `{:error, {:client_error, request, error, description}}` — the client
+      and its redirect URI check out, but the request is wrong. The person
+      sees an error page; nothing redirects until they click to go back to
+      the client (`error_redirect/1`).
   """
   @spec validate(map(), User.t()) :: {:ok, map()} | {:error, term()}
   def validate(params, user) when is_map(params) do
@@ -66,7 +72,9 @@ defmodule Brando.MCP.OAuth do
         client_id: params["client_id"],
         client: nil,
         redirect_uri: params["redirect_uri"],
-        state: bounded(params["state"], 1024)
+        # A state that is too long is refused (`request_error/1`); until then
+        # it is not repeated back to anyone.
+        state: bounded(params["state"], @max_state)
       }
 
       validate_for(MCP.refusal(user, tenant), user, request, params)
@@ -104,24 +112,40 @@ defmodule Brando.MCP.OAuth do
          :ok <- redirect_uri(client, request.redirect_uri) do
       request = %{request | client: client}
 
-      cond do
-        params["response_type"] != "code" ->
-          {:error, {:redirect, error_url(request, "unsupported_response_type", "Only the code flow is supported.")}}
-
-        params["code_challenge_method"] != "S256" ->
-          {:error, {:redirect, error_url(request, "invalid_request", "PKCE with S256 is required.")}}
-
-        not (is_binary(params["code_challenge"]) and params["code_challenge"] =~ @challenge_format) ->
-          {:error, {:redirect, error_url(request, "invalid_request", "code_challenge is missing or malformed.")}}
-
-        not valid_scope?(params["scope"]) ->
-          {:error, {:redirect, error_url(request, "invalid_scope", "The only scope is #{MCP.scope()}.")}}
-
-        true ->
-          {:ok, Map.put(request, :code_challenge, params["code_challenge"])}
+      case request_error(params) do
+        nil -> {:ok, Map.put(request, :code_challenge, params["code_challenge"])}
+        {error, description} -> {:error, {:client_error, request, error, description}}
       end
     end
   end
+
+  # What is wrong with an authorization request whose client and redirect
+  # URI check out. The person sees it on an error page; only their click
+  # sends it back to the client (`error_redirect/1`).
+  defp request_error(params) do
+    cond do
+      params["response_type"] != "code" ->
+        {"unsupported_response_type", "Only the code flow is supported."}
+
+      params["code_challenge_method"] != "S256" ->
+        {"invalid_request", "PKCE with S256 is required."}
+
+      not (is_binary(params["code_challenge"]) and params["code_challenge"] =~ @challenge_format) ->
+        {"invalid_request", "code_challenge is missing or malformed."}
+
+      not valid_scope?(params["scope"]) ->
+        {"invalid_scope", "The only scope is #{MCP.scope()}."}
+
+      not valid_state?(params["state"]) ->
+        {"invalid_request", "state is too long."}
+
+      true ->
+        nil
+    end
+  end
+
+  defp valid_state?(nil), do: true
+  defp valid_state?(state), do: is_binary(state) and byte_size(state) <= @max_state
 
   defp fetch_client(client_id) do
     case ClientMetadata.fetch(client_id) do
@@ -177,6 +201,13 @@ defmodule Brando.MCP.OAuth do
 
     {:ok, redirect_url(request, %{"code" => code})}
   end
+
+  @doc """
+  Where to send the person, at their click, back to the client of a request
+  `validate/2` refused with `{:client_error, request, error, description}`.
+  """
+  @spec error_redirect({map(), String.t(), String.t()}) :: String.t()
+  def error_redirect({request, error, description}), do: error_url(request, error, description)
 
   @doc "Where to send the person who declined `request`: its redirect URI with `access_denied`."
   @spec deny(map()) :: String.t()
@@ -291,7 +322,7 @@ defmodule Brando.MCP.OAuth do
 
       code |> Ecto.Changeset.change(used_at: now, grant_id: grant.id) |> Repo.update!()
       record_connected(grant, user, tenant)
-      issue_tokens(grant)
+      grant |> issue_tokens() |> elem(0)
     else
       code |> Ecto.Changeset.change(used_at: now) |> Repo.update!()
       Repo.rollback({"invalid_grant", "The user may no longer connect tools."})
@@ -338,13 +369,32 @@ defmodule Brando.MCP.OAuth do
     case refresh_refusal(token, client_id, tenant) do
       nil ->
         now = DateTime.utc_now()
-        token |> Ecto.Changeset.change(rotated_at: now) |> Repo.update!()
 
         # Tokens past their time are of no use, and only rotated refresh
-        # tokens still within theirs are kept, to notice reuse.
+        # tokens still within theirs are kept, to notice reuse. The pair a
+        # rotated token keeps for a concurrent refresh is kept for the grace
+        # period only.
         from(t in Token, where: t.grant_id == ^grant.id and t.expires_at < ^now) |> Repo.delete_all()
 
-        issue_tokens(grant)
+        from(t in Token,
+          where: t.grant_id == ^grant.id and not is_nil(t.successor_ciphertext) and t.rotated_at < ^grace_start(now)
+        )
+        |> Repo.update_all(set: [successor_ciphertext: nil])
+
+        {response, successor_id} = issue_tokens(grant)
+
+        token
+        |> Ecto.Changeset.change(
+          rotated_at: now,
+          successor_id: successor_id,
+          successor_ciphertext: Brando.Crypto.encrypt(Jason.encode!(response), successor_context(token))
+        )
+        |> Repo.update!()
+
+        response
+
+      {:replay, response} ->
+        response
 
       refusal ->
         Repo.rollback(refusal)
@@ -356,15 +406,44 @@ defmodule Brando.MCP.OAuth do
     cond do
       not is_nil(grant.revoked_at) or not is_nil(token.revoked_at) -> invalid_grant()
       not secure_equal?(grant.client_id, client_id) -> invalid_grant()
-      # Reuse: the token was already exchanged once, so one of its two
-      # holders stole it. End the connection.
-      not is_nil(token.rotated_at) -> {:revoke, grant.id, "refresh_token_reuse"}
+      not is_nil(token.rotated_at) -> reused(token, tenant)
+      true -> refresh_expired(token, grant) || refresh_unbound(grant, tenant)
+    end
+  end
+
+  defp refresh_expired(token, grant) do
+    cond do
       DateTime.compare(token.expires_at, DateTime.utc_now()) != :gt -> invalid_grant()
+      MCP.grant_expired?(grant) -> {"invalid_grant", "The connection has expired. Connect again."}
+      true -> nil
+    end
+  end
+
+  defp refresh_unbound(grant, tenant) do
+    cond do
       not bound_to?(grant, tenant) -> invalid_grant()
       not allowed?(grant.user_id, tenant) -> {"invalid_grant", "The user may no longer connect tools."}
       true -> nil
     end
   end
+
+  # A refresh token presented again. A client that refreshed twice at once
+  # gets the pair the first exchange returned, within the grace period and
+  # while that pair's refresh token is unused. Anything else is reuse: one of
+  # the token's two holders stole it, so the connection ends.
+  defp reused(%Token{grant: grant} = token, tenant) do
+    with true <- DateTime.compare(token.rotated_at, grace_start(DateTime.utc_now())) == :gt,
+         true <- bound_to?(grant, tenant) and allowed?(grant.user_id, tenant),
+         %Token{rotated_at: nil, revoked_at: nil} <- token.successor_id && Repo.get(Token, token.successor_id),
+         {:ok, json} <- Brando.Crypto.decrypt(token.successor_ciphertext, successor_context(token)) do
+      {:replay, Jason.decode!(json)}
+    else
+      _ -> {:revoke, grant.id, "refresh_token_reuse"}
+    end
+  end
+
+  defp grace_start(now), do: DateTime.add(now, -@refresh_grace_seconds, :second)
+  defp successor_context(token), do: "mcp.refresh_successor:#{token.id}"
 
   defp bound_to?(grant, tenant), do: secure_equal?(grant.resource, MCP.resource(tenant)) and same_tenant?(grant, tenant)
 
@@ -375,30 +454,41 @@ defmodule Brando.MCP.OAuth do
     access = random("bmcp_at_")
     refresh = random("bmcp_rt_")
 
-    Repo.insert_all(Token, [
-      %{
-        grant_id: grant.id,
-        kind: :access,
-        token_hash: hash(access),
-        expires_at: DateTime.add(now, access_token_seconds(), :second),
-        inserted_at: now
-      },
-      %{
-        grant_id: grant.id,
-        kind: :refresh,
-        token_hash: hash(refresh),
-        expires_at: DateTime.add(now, refresh_token_seconds(), :second),
-        inserted_at: now
-      }
-    ])
+    {2, rows} =
+      Repo.insert_all(
+        Token,
+        [
+          %{
+            grant_id: grant.id,
+            kind: :access,
+            token_hash: hash(access),
+            expires_at:
+              Enum.min([DateTime.add(now, access_token_seconds(), :second), MCP.grant_expires_at(grant)], DateTime),
+            inserted_at: now
+          },
+          %{
+            grant_id: grant.id,
+            kind: :refresh,
+            token_hash: hash(refresh),
+            expires_at:
+              Enum.min([DateTime.add(now, refresh_token_seconds(), :second), MCP.grant_expires_at(grant)], DateTime),
+            inserted_at: now
+          }
+        ],
+        returning: [:id, :kind]
+      )
 
-    %{
+    refresh_id = Enum.find_value(rows, &(&1.kind == :refresh && &1.id))
+
+    response = %{
       "access_token" => access,
       "token_type" => "Bearer",
-      "expires_in" => access_token_seconds(),
+      "expires_in" => min(access_token_seconds(), max(DateTime.diff(MCP.grant_expires_at(grant), now), 0)),
       "refresh_token" => refresh,
       "scope" => grant.scope
     }
+
+    {response, refresh_id}
   end
 
   defp unwrap({:ok, response}), do: {:ok, response}
@@ -485,13 +575,14 @@ defmodule Brando.MCP.OAuth do
 
   defp access_token(token, tenant, now) do
     resource = MCP.resource(tenant)
+    made_after = DateTime.add(now, -MCP.grant_days() * 86_400, :second)
 
     Repo.one(
       from t in Token,
         join: g in assoc(t, :grant),
         where:
           t.token_hash == ^hash(token) and t.kind == :access and is_nil(t.revoked_at) and t.expires_at > ^now and
-            is_nil(g.revoked_at) and g.resource == ^resource,
+            is_nil(g.revoked_at) and g.resource == ^resource and g.inserted_at > ^made_after,
         preload: [grant: g]
     )
   end

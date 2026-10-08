@@ -101,7 +101,12 @@ defmodule Brando.MCP.OAuthTest do
       assert refreshed["refresh_token"] != refresh
       assert rpc(tenant, refreshed["access_token"], "ping") |> json_response(200)
 
-      # Reuse of the spent refresh token: the whole connection ends.
+      # Reuse of the spent refresh token, after the grace period: the whole
+      # connection ends.
+      Repo.update_all(from(t in Token, where: not is_nil(t.rotated_at)),
+        set: [rotated_at: DateTime.add(DateTime.utc_now(), -11, :second)]
+      )
+
       reuse =
         oauth_post(tenant, "token", %{
           "grant_type" => "refresh_token",
@@ -204,7 +209,7 @@ defmodule Brando.MCP.OAuthTest do
       response =
         build_conn()
         |> put_req_header("content-type", "application/json")
-        |> post(
+        |> post_sized(
           tenant.path <> "/oauth/token",
           Jason.encode!(%{grant_type: "authorization_code", code: code, code_verifier: verifier})
         )
@@ -214,15 +219,38 @@ defmodule Brando.MCP.OAuthTest do
   end
 
   describe "the consent screen" do
-    test "refuses PKCE without S256, at the client's redirect URI", %{conn: conn, tenant: tenant} do
-      params = authorize_params(tenant, "x", %{"code_challenge_method" => "plain"})
-      assert {:error, {:redirect, %{to: url}}} = consent(conn, params)
-      assert %{"error" => "invalid_request", "state" => "xyz"} = URI.decode_query(URI.parse(url).query)
-
+    test "shows what is wrong with a request, and redirects only at a click", %{conn: conn, tenant: tenant} do
       {_, challenge} = pkce()
-      params = authorize_params(tenant, challenge) |> Map.delete("code_challenge_method")
-      assert {:error, {:redirect, %{to: url}}} = consent(conn, params)
-      assert %{"error" => "invalid_request"} = URI.decode_query(URI.parse(url).query)
+
+      for params <- [
+            authorize_params(tenant, "x", %{"code_challenge_method" => "plain"}),
+            authorize_params(tenant, challenge) |> Map.delete("code_challenge_method"),
+            authorize_params(tenant, challenge, %{"response_type" => "token"}),
+            authorize_params(tenant, challenge, %{"scope" => "admin"}),
+            authorize_params(tenant, challenge, %{"state" => String.duplicate("s", 1025)})
+          ] do
+        assert {:ok, view, html} = consent(conn, params)
+        assert html =~ ~s(data-testid="mcp-consent-error")
+        refute html =~ "mcp-consent-approve"
+
+        assert {:error, {:redirect, %{to: url}}} = view |> element("[data-testid=mcp-consent-return]") |> render_click()
+        assert url =~ "http://127.0.0.1:43123/callback?"
+        assert %{"error" => error} = URI.decode_query(URI.parse(url).query)
+        assert error in ["invalid_request", "unsupported_response_type", "invalid_scope"]
+      end
+
+      assert Repo.aggregate(AuthorizationCode, :count) == 0
+    end
+
+    test "refuses a state over 1024 bytes as invalid_request, without repeating it", %{conn: conn, tenant: tenant} do
+      {_, challenge} = pkce()
+      long = String.duplicate("s", 1025)
+      {:ok, view, html} = consent(conn, authorize_params(tenant, challenge, %{"state" => long}))
+      assert html =~ "invalid_request"
+      {:error, {:redirect, %{to: url}}} = view |> element("[data-testid=mcp-consent-return]") |> render_click()
+      query = URI.decode_query(URI.parse(url).query)
+      assert query["error"] == "invalid_request"
+      refute Map.has_key?(query, "state")
     end
 
     test "does not send anyone to a redirect URI the client did not declare", %{conn: conn, tenant: tenant} do
@@ -258,7 +286,15 @@ defmodule Brando.MCP.OAuthTest do
       )
 
       switch!(tenant, false)
-      assert_not_found(get(conn, "/admin/mcp/authorize?" <> URI.encode_query(authorize_params(tenant, challenge))))
+      sent = get(conn, "/admin/mcp/authorize?" <> URI.encode_query(authorize_params(tenant, challenge)))
+      {404, headers, _body} = Plug.Test.sent_resp(sent)
+
+      # Nothing of this route shows: no session cookie, no framing or cache headers
+      names = Enum.map(headers, &elem(&1, 0))
+      refute "content-security-policy" in names
+      refute "x-frame-options" in names
+      refute "set-cookie" in names
+      assert sent.resp_cookies == %{}
     end
 
     test "shows a refusal to a user without the permission, and fetches nothing", %{
@@ -366,7 +402,7 @@ defmodule Brando.MCP.OAuthTest do
       conn =
         build_conn()
         |> put_req_header("content-type", "application/json")
-        |> post(
+        |> post_sized(
           tenant.path <> "?access_token=" <> tokens["access_token"],
           Jason.encode!(%{jsonrpc: "2.0", id: 1, method: "ping"})
         )
@@ -379,8 +415,8 @@ defmodule Brando.MCP.OAuthTest do
       Repo.update_all(from(u in Brando.Users.User, where: u.id == ^user.id), set: [role: :editor])
       conn = rpc(tenant, tokens["access_token"], "ping")
       assert conn.status == 403
-      assert [challenge] = get_resp_header(conn, "www-authenticate")
-      assert challenge =~ ~s(error="insufficient_scope")
+      # A plain 403: no step-up challenge for a client to loop on
+      assert get_resp_header(conn, "www-authenticate") == []
     end
 
     test "turning two-factor authentication off revokes the connection", %{
@@ -419,6 +455,126 @@ defmodule Brando.MCP.OAuthTest do
         })
 
       assert json_response(response, 400)["error"] == "invalid_grant"
+    end
+  end
+
+  describe "connections end" do
+    setup %{conn: conn, tenant: tenant} do
+      %{tokens: connect!(conn, tenant)}
+    end
+
+    defp refresh(tenant, token),
+      do:
+        oauth_post(tenant, "token", %{
+          "grant_type" => "refresh_token",
+          "refresh_token" => token,
+          "client_id" => client_id()
+        })
+
+    test "when the password is reset", %{tenant: tenant, tokens: tokens, current_user: user} do
+      {:ok, _} =
+        Brando.Users.reset_user_password(user, %{password: "a new password 1", password_confirmation: "a new password 1"})
+
+      assert %Grant{revoked_reason: "password_changed"} = Repo.one!(Grant)
+      assert rpc(tenant, tokens["access_token"], "ping").status == 401
+      assert json_response(refresh(tenant, tokens["refresh_token"]), 400)["error"] == "invalid_grant"
+    end
+
+    test "when an administrator sets the password", %{tenant: tenant, tokens: tokens, current_user: user} do
+      admin = Brando.Factory.insert(:random_user, role: :superuser, config: %Brando.Users.UserConfig{})
+
+      {:ok, _} =
+        Brando.Users.set_user_password(
+          user.id,
+          %{password: "a new password 1", password_confirmation: "a new password 1"},
+          admin
+        )
+
+      assert %Grant{revoked_reason: "password_changed"} = Repo.one!(Grant)
+      assert rpc(tenant, tokens["access_token"], "ping").status == 401
+    end
+
+    test "when the user is logged out everywhere", %{tenant: tenant, tokens: tokens, current_user: user} do
+      assert :ok = Brando.Users.log_out_everywhere(user, user)
+      assert %Grant{revoked_reason: "logged_out_everywhere"} = Repo.one!(Grant)
+      assert rpc(tenant, tokens["access_token"], "ping").status == 401
+      assert json_response(refresh(tenant, tokens["refresh_token"]), 400)["error"] == "invalid_grant"
+    end
+
+    test "at 90 days from consent, however often refreshed", %{tenant: tenant, tokens: tokens} do
+      fresh = refresh(tenant, tokens["refresh_token"]) |> json_response(200)
+      days_ago = DateTime.add(DateTime.utc_now(), -(MCP.grant_days() * 86_400 + 60), :second)
+      Repo.update_all(Grant, set: [inserted_at: days_ago])
+
+      assert %{"error" => "invalid_grant", "error_description" => description} =
+               refresh(tenant, fresh["refresh_token"]) |> json_response(400)
+
+      assert description =~ "expired"
+      assert rpc(tenant, fresh["access_token"], "ping").status == 401
+      assert MCP.grant_expired?(Repo.one!(Grant))
+      # Expired, not revoked: still listed, marked as expired
+      assert [_] = MCP.list_user_grants(Repo.get!(Brando.Users.User, Repo.one!(Grant).user_id))
+    end
+
+    test "the lifetime is configurable", %{tenant: tenant, tokens: tokens} do
+      put_test_env(MCP, client_metadata_fetcher: {Brando.MCPHelpers, :fetch}, grant_days: 1)
+      Repo.update_all(Grant, set: [inserted_at: DateTime.add(DateTime.utc_now(), -2 * 86_400, :second)])
+      assert json_response(refresh(tenant, tokens["refresh_token"]), 400)["error"] == "invalid_grant"
+    end
+
+    test "a refresh token sent twice at once gets the same pair, within the grace period", %{
+      tenant: tenant,
+      tokens: tokens
+    } do
+      first = refresh(tenant, tokens["refresh_token"]) |> json_response(200)
+      second = refresh(tenant, tokens["refresh_token"]) |> json_response(200)
+      assert second == first
+      assert %Grant{revoked_at: nil} = Repo.one!(Grant)
+      assert rpc(tenant, first["access_token"], "ping").status == 200
+      # The pair is kept encrypted, never in the clear
+      refute inspect(Repo.all(Token)) =~ first["refresh_token"]
+    end
+
+    test "but not once its successor was used", %{tenant: tenant, tokens: tokens} do
+      first = refresh(tenant, tokens["refresh_token"]) |> json_response(200)
+      _third = refresh(tenant, first["refresh_token"]) |> json_response(200)
+      assert json_response(refresh(tenant, tokens["refresh_token"]), 400)["error"] == "invalid_grant"
+      assert %Grant{revoked_reason: "refresh_token_reuse"} = Repo.one!(Grant)
+    end
+
+    test "nor after the grace period", %{tenant: tenant, tokens: tokens} do
+      refresh(tenant, tokens["refresh_token"]) |> json_response(200)
+
+      Repo.update_all(from(t in Token, where: not is_nil(t.rotated_at)),
+        set: [rotated_at: DateTime.add(DateTime.utc_now(), -11, :second)]
+      )
+
+      assert json_response(refresh(tenant, tokens["refresh_token"]), 400)["error"] == "invalid_grant"
+      assert %Grant{revoked_reason: "refresh_token_reuse"} = Repo.one!(Grant)
+    end
+
+    test "turning the endpoint off disconnects every app, and is recorded", %{tenant: tenant, tokens: tokens} do
+      admin = Brando.Factory.insert(:random_user, role: :superuser, config: %Brando.Users.UserConfig{})
+      assert :ok = MCP.set_enabled(tenant, false, admin)
+      assert %Grant{revoked_reason: "endpoint_off"} = Repo.one!(Grant)
+
+      assert [%{details: %{"mcp" => "disabled", "revoked" => 1}}] =
+               Repo.all(from e in Brando.Activity.Event, where: e.schema == "Elixir.Brando.MCP.Setting")
+
+      assert :ok = MCP.set_enabled(tenant, true, admin)
+      assert rpc(tenant, tokens["access_token"], "ping").status == 401
+    end
+
+    test "pruning removes what nothing can use", %{tenant: tenant, tokens: tokens} do
+      refresh(tenant, tokens["refresh_token"])
+      Repo.update_all(AuthorizationCode, set: [expires_at: DateTime.add(DateTime.utc_now(), -5, :second)])
+      grant = Repo.one!(Grant)
+      MCP.revoke_grant(grant, :system, "test")
+
+      assert MCP.prune() > 0
+      assert Repo.aggregate(Token, :count) == 0
+      assert Repo.aggregate(AuthorizationCode, :count) == 0
+      assert :ok = Oban.Testing.perform_job(Brando.Worker.ActivityPurger, %{}, repo: BrandoIntegration.Repo)
     end
   end
 end

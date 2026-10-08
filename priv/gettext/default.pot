@@ -15108,7 +15108,7 @@ msgstr ""
 
 #: lib/brando/users/user.ex:267
 #, elixir-autogen, elixir-format
-msgid "Changing your password asks for the current one, and logs out your other sessions."
+msgid "Changing your password asks for the current one, logs out your other sessions and disconnects your connected apps."
 msgstr ""
 
 #: lib/brando_admin/live/user_forgot_password_live.ex:14
@@ -16604,7 +16604,7 @@ msgstr ""
 
 #: lib/brando_admin/live/users/user_security_live.ex
 #, elixir-autogen, elixir-format
-msgid "Every other browser where you are logged in is logged out. This one stays logged in."
+msgid "Every other browser where you are logged in is logged out, and your connected apps are disconnected. This one stays logged in."
 msgstr ""
 
 #: lib/brando_admin/live/users/user_security_live.ex
@@ -18111,10 +18111,6 @@ msgstr ""
 msgid "MCP endpoint"
 msgstr ""
 
-#: lib/brando_admin/live/sites/mcp_live.ex
-#, elixir-autogen, elixir-format
-msgid "People with the Connected AI tools permission and two-factor authentication can connect. Turning it off stops every connection at once; they work again when it is back on."
-msgstr ""
 
 #: lib/brando_admin/live/sites/mcp_live.ex
 #, elixir-autogen, elixir-format
@@ -18345,10 +18341,6 @@ msgstr ""
 msgid "Turn the MCP endpoint off?"
 msgstr ""
 
-#: lib/brando_admin/live/sites/mcp_live.ex
-#, elixir-autogen, elixir-format
-msgid "Every connected tool stops working at once. The connections stay, and work again when you turn it back on."
-msgstr ""
 
 #: lib/brando_admin/live/sites/mcp_live.ex
 #, elixir-autogen, elixir-format
@@ -18565,5 +18557,39 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "%{count} connection"
 msgid_plural "%{count} connections"
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/brando_admin/live/mcp/consent_live.ex
+#, elixir-autogen, elixir-format
+msgid "Back to %{host}"
+msgstr ""
+
+#: lib/brando_admin/live/mcp/consent_live.ex
+#, elixir-autogen, elixir-format
+msgid "The app's request is not one Brando accepts."
+msgstr ""
+
+#: lib/brando_admin/live/sites/mcp_live.ex
+#, elixir-autogen, elixir-format
+msgid "People with the Connected AI tools permission and two-factor authentication can connect. Turning it off disconnects every connected app at once."
+msgstr ""
+
+#: lib/brando_admin/live/users/user_security_live.ex
+#, elixir-autogen, elixir-format
+msgid "Expired: connect it again from the app"
+msgstr ""
+
+#: lib/brando_admin/live/sites/mcp_live.ex
+#, elixir-autogen, elixir-format
+msgid "This disconnects %{count} connected app. Its person can connect it again once the endpoint is back on."
+msgid_plural "This disconnects %{count} connected apps. Their people can connect them again once the endpoint is back on."
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "Turned the MCP endpoint off and disconnected %{count} app"
+msgid_plural "Turned the MCP endpoint off and disconnected %{count} apps"
 msgstr[0] ""
 msgstr[1] ""

@@ -11,6 +11,8 @@ defmodule Brando.Repo.Migrations.Brando213AddMCPConnections do
       (its Client ID Metadata Document URL and name), the site environment
       and resource it is bound to, and when it was revoked.
     * `mcp_tokens` — access and refresh tokens, stored as SHA-256 hashes only.
+      A refresh token just exchanged keeps its successor, encrypted, for ten
+      seconds, for a client that refreshes twice at once.
     * `mcp_authorization_codes` — one-time codes, also hashed, that last a
       minute.
 
@@ -58,6 +60,8 @@ defmodule Brando.Repo.Migrations.Brando213AddMCPConnections do
       add :token_hash, :binary, null: false
       add :expires_at, :utc_datetime_usec, null: false
       add :rotated_at, :utc_datetime_usec
+      add :successor_id, references(:mcp_tokens, on_delete: :nilify_all, prefix: "public")
+      add :successor_ciphertext, :text
       add :revoked_at, :utc_datetime_usec
       add :last_used_at, :utc_datetime_usec
       timestamps(type: :utc_datetime_usec, updated_at: false)

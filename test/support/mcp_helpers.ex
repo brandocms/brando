@@ -106,6 +106,11 @@ defmodule Brando.MCPHelpers do
     )
   end
 
+  @doc "POSTs `body` with its Content-Length, as clients do."
+  def post_sized(conn, path, body) do
+    conn |> put_req_header("content-length", Integer.to_string(byte_size(body))) |> post(path, body)
+  end
+
   @doc "Opens the consent screen for `params` as the conn's user."
   def consent(conn, params), do: live(conn, "/admin/mcp/authorize?" <> URI.encode_query(params))
 
@@ -123,11 +128,14 @@ defmodule Brando.MCPHelpers do
 
   @doc "POSTs a form to the token or revocation endpoint of `tenant`."
   def oauth_post(tenant, name, params, headers \\ []) do
+    body = URI.encode_query(params)
+
     conn =
       Enum.reduce(headers, build_conn(), fn {k, v}, conn -> put_req_header(conn, k, v) end)
       |> put_req_header("content-type", "application/x-www-form-urlencoded")
+      |> put_req_header("content-length", Integer.to_string(byte_size(body)))
 
-    post(conn, tenant.path <> "/oauth/" <> name, URI.encode_query(params))
+    post(conn, tenant.path <> "/oauth/" <> name, body)
   end
 
   @doc "Exchanges `code` for tokens."
@@ -158,14 +166,16 @@ defmodule Brando.MCPHelpers do
   @doc "A legacy (2025-06-18) JSON-RPC request to the MCP endpoint."
   def rpc(tenant, token, method, params \\ %{}, opts \\ []) do
     message = %{"jsonrpc" => "2.0", "id" => opts[:id] || 1, "method" => method, "params" => params}
+    body = Jason.encode!(opts[:body] || message)
 
     build_conn()
+    |> put_req_header("content-length", Integer.to_string(byte_size(body)))
     |> put_req_header("content-type", "application/json")
     |> put_req_header("accept", "application/json, text/event-stream")
     |> put_req_header("mcp-protocol-version", opts[:version] || "2025-06-18")
     |> then(&if(token, do: put_req_header(&1, "authorization", "Bearer " <> token), else: &1))
     |> then(&Enum.reduce(opts[:headers] || [], &1, fn {k, v}, conn -> put_req_header(conn, k, v) end))
-    |> post(tenant.path, Jason.encode!(opts[:body] || message))
+    |> post(tenant.path, body)
   end
 
   @doc "Calls tool `name` and returns the decoded JSON-RPC response."

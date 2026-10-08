@@ -137,9 +137,28 @@ defmodule BrandoAdmin.MCP.ConsentLive do
             <p>{error(@reason)}</p>
           </div>
         </header>
+        <dl :if={@client_error} class="mcp-consent-facts">
+          <div>
+            <dt>{gettext("App")}</dt>
+            <dd><code>{elem(@client_error, 0).client.host}</code></dd>
+          </div>
+          <div>
+            <dt>{gettext("Error")}</dt>
+            <dd><code>{elem(@client_error, 1)}</code> {elem(@client_error, 2)}</dd>
+          </div>
+        </dl>
         <footer class="mcp-consent-footer">
           <p>{gettext("Nothing was connected. Start again from the app.")}</p>
           <div class="mcp-consent-actions">
+            <button
+              :if={@client_error}
+              type="button"
+              class="workspace-button"
+              phx-click="return"
+              data-testid="mcp-consent-return"
+            >
+              {gettext("Back to %{host}", host: redirect_host(elem(@client_error, 0).redirect_uri))}
+            </button>
             <.link navigate="/admin" class="workspace-button">{gettext("Go to the dashboard")}</.link>
           </div>
         </footer>
@@ -151,7 +170,7 @@ defmodule BrandoAdmin.MCP.ConsentLive do
   def mount(params, _session, socket) do
     {:ok,
      socket
-     |> assign(socket_connected: connected?(socket), params: params, request: nil, reason: nil)
+     |> assign(socket_connected: connected?(socket), params: params, request: nil, reason: nil, client_error: nil)
      |> assign(page_title: gettext("Connect an app"))
      |> check()}
   end
@@ -174,14 +193,29 @@ defmodule BrandoAdmin.MCP.ConsentLive do
 
   def handle_event("deny", _params, socket), do: {:noreply, push_navigate(socket, to: "/admin")}
 
+  # Back to the client with what was wrong, at the person's click only: its
+  # redirect URI was checked against its own document first.
+  def handle_event("return", _params, %{assigns: %{client_error: {_, _, _} = client_error}} = socket),
+    do: {:noreply, redirect(socket, external: OAuth.error_redirect(client_error))}
+
+  def handle_event("return", _params, socket), do: {:noreply, socket}
+
   # Everything about the request and the person is checked from the start,
   # on every mount and before an approval.
   defp check(socket) do
     case OAuth.validate(socket.assigns.params, socket.assigns.current_user) do
-      {:ok, request} -> assign(socket, state: :consent, request: request, reason: nil)
-      {:error, {:refused, reason, request}} -> assign(socket, state: :refused, request: request, reason: reason)
-      {:error, {:page, reason}} -> assign(socket, state: :error, request: nil, reason: reason)
-      {:error, {:redirect, url}} -> socket |> assign(state: :redirecting) |> redirect(external: url)
+      {:ok, request} ->
+        assign(socket, state: :consent, request: request, reason: nil, client_error: nil)
+
+      {:error, {:refused, reason, request}} ->
+        assign(socket, state: :refused, request: request, reason: reason, client_error: nil)
+
+      {:error, {:page, reason}} ->
+        assign(socket, state: :error, request: nil, reason: reason, client_error: nil)
+
+      # Never a redirect before a click (`handle_event("return", …)`)
+      {:error, {:client_error, request, error, description}} ->
+        assign(socket, state: :error, request: nil, reason: :client_error, client_error: {request, error, description})
     end
   end
 
@@ -224,6 +258,7 @@ defmodule BrandoAdmin.MCP.ConsentLive do
   defp error(:invalid_redirect_uri),
     do: gettext("The app asked to send you back to an address it has not declared.")
 
+  defp error(:client_error), do: gettext("The app's request is not one Brando accepts.")
   defp error(:rate_limited), do: gettext("Too many attempts. Wait a minute, then start again from the app.")
   defp error(_reason), do: gettext("This MCP endpoint does not exist or is turned off.")
 end

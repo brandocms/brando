@@ -67,7 +67,7 @@ defmodule Brando.Users do
     fn entry ->
       if entry.active == false or not is_nil(entry.deleted_at) do
         revoke_sessions(entry)
-        Brando.MCP.revoke_user_grants(entry, "account_deactivated")
+        Repo.after_commit(fn -> Brando.MCP.revoke_user_grants(entry, "account_deactivated") end)
       end
 
       {:ok, entry}
@@ -77,7 +77,7 @@ defmodule Brando.Users do
   mutation :delete, User do
     fn entry ->
       revoke_sessions(entry)
-      Brando.MCP.revoke_user_grants(entry, "account_deactivated")
+      Repo.after_commit(fn -> Brando.MCP.revoke_user_grants(entry, "account_deleted") end)
       {:ok, entry}
     end
   end
@@ -203,12 +203,15 @@ defmodule Brando.Users do
   Logs `user` out everywhere on behalf of `actor`: an administrator allowed
   to reset the user's password (`Brando.Trait.ProtectPassword.allowed?/2`),
   or the user themselves, who keeps the session with the token row id
-  `opts[:except_id]`.
+  `opts[:except_id]`. The tools the user connected over MCP are
+  disconnected too (`Brando.MCP.revoke_user_grants/2`).
   """
   @spec log_out_everywhere(user, user, keyword()) :: :ok | {:error, :forbidden}
   def log_out_everywhere(user, actor, opts \\ []) do
     if Brando.Trait.ProtectPassword.allowed?(actor, user) do
       revoke_sessions(user, except_id: opts[:except_id])
+      # Everywhere includes the tools connected over MCP.
+      Repo.after_commit(fn -> Brando.MCP.revoke_user_grants(user, "logged_out_everywhere") end)
       SecurityLog.record(:sessions_revoked, user, actor: actor, meta: opts[:meta])
       :ok
     else
@@ -793,6 +796,9 @@ defmodule Brando.Users do
     |> case do
       {:ok, %{user: user, tokens: {_count, tokens}}} ->
         announce_deleted(tokens)
+        # A new password ends the tools connected over MCP too: whoever knew
+        # the old one may have connected them.
+        Repo.after_commit(fn -> Brando.MCP.revoke_user_grants(user, "password_changed") end)
         notify_password_changed(user, by)
         {:ok, user}
 

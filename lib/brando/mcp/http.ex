@@ -16,11 +16,19 @@ defmodule Brando.MCP.HTTP do
 
   On the MCP endpoint, in order: only POST (405 otherwise); an `Origin`
   header, when sent, must be the site's own or a configured one (403); a
-  bearer access token for this endpoint (401 with `WWW-Authenticate` naming
-  the resource metadata; 403 when the person may no longer connect tools);
-  at most `max_request_bytes` (413); at most `requests_per_minute` per
-  connection and `user_requests_per_minute` per person (429). No CORS
-  headers are sent.
+  `Content-Length` (411 without) of at most `max_request_bytes` (413), read
+  from the header before the token is looked at; a bearer access token for
+  this endpoint (401 with `WWW-Authenticate` naming the resource metadata;
+  a plain 403 when the person may no longer connect tools); JSON (415); at
+  most `requests_per_minute` per connection and `user_requests_per_minute`
+  per person (429). No CORS headers are sent. The token and revocation
+  endpoints take at most 16 KB.
+
+  The endpoint's own `Plug.Parsers` runs before the router, so by the time
+  this plug sees a request its body may have been read already, up to the
+  parser's `:length`. `Brando.MCP.BodyLimit`, plugged into the application's
+  endpoint before `Plug.Parsers`, refuses an oversized or unsized request to
+  `/mcp` before anything reads it.
   """
   @behaviour Plug
 
@@ -32,6 +40,7 @@ defmodule Brando.MCP.HTTP do
   alias Brando.RateLimit
 
   @minute 60_000
+  @form_bytes 16_000
 
   @impl Plug
   def init(action), do: action
@@ -88,6 +97,7 @@ defmodule Brando.MCP.HTTP do
   defp run(conn, :mcp, tenant) do
     with :ok <- post_only(conn),
          :ok <- origin(conn),
+         :ok <- content_length(conn, max_request_bytes()),
          {:ok, auth} <- authenticate(conn, tenant),
          {:ok, body} <- body(conn),
          :ok <- rate_limit(auth) do
@@ -110,6 +120,9 @@ defmodule Brando.MCP.HTTP do
       {:error, :too_large} ->
         json(conn, 413, Server.error(nil, -32_600, "The request is too large."))
 
+      {:error, :length_required} ->
+        json(conn, 411, Server.error(nil, -32_600, "Send a Content-Length."))
+
       {:error, :unsupported} ->
         json(conn, 415, Server.error(nil, -32_600, "Send application/json."))
 
@@ -131,6 +144,7 @@ defmodule Brando.MCP.HTTP do
   defp run(conn, action, tenant) when action in [:token, :revoke] do
     with :ok <- post_only(conn),
          :ok <- origin(conn),
+         :ok <- content_length(conn, @form_bytes),
          :ok <- form(conn),
          :ok <- hit({:oauth_ip, client_ip(conn)}, MCP.config(:token_requests_per_minute, 30)),
          {:ok, conn} <- parse_form(conn) do
@@ -139,6 +153,8 @@ defmodule Brando.MCP.HTTP do
       {:error, :method} -> method_not_allowed(conn, "POST")
       {:error, :origin} -> oauth_error(conn, 403, "invalid_request", "Origin not allowed.")
       {:error, :unsupported} -> oauth_error(conn, 400, "invalid_request", "Send application/x-www-form-urlencoded.")
+      {:error, :too_large} -> oauth_error(conn, 413, "invalid_request", "The request is too large.")
+      {:error, :length_required} -> oauth_error(conn, 411, "invalid_request", "Send a Content-Length.")
       {:error, {:rate_limited, retry_after}} -> rate_limited(conn, retry_after, %{error: "slow_down"})
     end
   end
@@ -185,26 +201,37 @@ defmodule Brando.MCP.HTTP do
     end
   end
 
-  defp body(conn) do
-    max = MCP.config(:max_request_bytes, 512_000)
+  defp max_request_bytes, do: MCP.config(:max_request_bytes, 512_000)
 
-    cond do
-      not json?(conn) -> {:error, :unsupported}
-      too_long?(conn, max) -> {:error, :too_large}
-      true -> parsed_body(conn, max)
+  # Before the token is looked at: a POST names its length, and it is
+  # within the limit. (The endpoint's `Plug.Parsers` may have read the body
+  # already; `Brando.MCP.BodyLimit` in the endpoint stops a large one
+  # before that.)
+  defp content_length(conn, max) do
+    case conn |> get_req_header("content-length") |> List.first() |> parse_length() do
+      nil -> {:error, :length_required}
+      length when length > max -> {:error, :too_large}
+      _length -> :ok
     end
+  end
+
+  @doc false
+  def parse_length(value) when is_binary(value) do
+    case Integer.parse(value) do
+      {length, ""} when length >= 0 -> length
+      _ -> nil
+    end
+  end
+
+  def parse_length(_value), do: nil
+
+  defp body(conn) do
+    if json?(conn), do: parsed_body(conn, max_request_bytes()), else: {:error, :unsupported}
   end
 
   defp json?(conn) do
     case header(conn, "content-type") do
       "application/json" <> _ -> true
-      _ -> false
-    end
-  end
-
-  defp too_long?(conn, max) do
-    case Integer.parse(header(conn, "content-length") || "") do
-      {length, ""} -> length > max
       _ -> false
     end
   end
@@ -260,14 +287,11 @@ defmodule Brando.MCP.HTTP do
     |> json(401, Server.error(nil, -32_000, "Authorization required."))
   end
 
-  defp forbidden(conn, tenant) do
-    conn
-    |> put_resp_header(
-      "www-authenticate",
-      ~s(Bearer error="insufficient_scope", scope="#{MCP.scope()}", resource_metadata="#{MCP.resource_metadata_url(tenant)}", ) <>
-        ~s(error_description="The user may no longer connect tools to this site")
-    )
-    |> json(403, Server.error(nil, -32_000, "The user may no longer connect tools to this site."))
+  # A plain 403: the token is good, but its person may no longer connect
+  # tools. No `insufficient_scope`, which would send a client into a step-up
+  # sign-in that cannot succeed.
+  defp forbidden(conn, _tenant) do
+    json(conn, 403, Server.error(nil, -32_000, "The user may no longer connect tools to this site."))
   end
 
   ## OAuth
@@ -305,7 +329,7 @@ defmodule Brando.MCP.HTTP do
 
   # The endpoint's `Plug.Parsers` has usually parsed the form already.
   defp parse_form(%{body_params: %Plug.Conn.Unfetched{}} = conn) do
-    {:ok, Plug.Parsers.call(conn, Plug.Parsers.init(parsers: [:urlencoded], length: 16_000))}
+    {:ok, Plug.Parsers.call(conn, Plug.Parsers.init(parsers: [:urlencoded], length: @form_bytes))}
   rescue
     _ in [Plug.Parsers.RequestTooLargeError, Plug.Parsers.BadEncodingError] -> {:error, :unsupported}
   end

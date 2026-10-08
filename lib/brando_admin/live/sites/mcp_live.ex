@@ -51,7 +51,7 @@ defmodule BrandoAdmin.Sites.MCPLive do
               </h3>
               <p :if={@enabled?}>
                 {gettext(
-                  "People with the Connected AI tools permission and two-factor authentication can connect. Turning it off stops every connection at once; they work again when it is back on."
+                  "People with the Connected AI tools permission and two-factor authentication can connect. Turning it off disconnects every connected app at once."
                 )}
               </p>
               <p :if={!@enabled?}>
@@ -86,8 +86,10 @@ defmodule BrandoAdmin.Sites.MCPLive do
                 data-testid="mcp-disable"
                 data-confirm-title={gettext("Turn the MCP endpoint off?")}
                 data-confirm={
-                  gettext(
-                    "Every connected tool stops working at once. The connections stay, and work again when you turn it back on."
+                  ngettext(
+                    "This disconnects %{count} connected app. Its person can connect it again once the endpoint is back on.",
+                    "This disconnects %{count} connected apps. Their people can connect them again once the endpoint is back on.",
+                    length(@grants)
                   )
                 }
                 data-confirm-ok={gettext("Turn off")}
@@ -156,6 +158,9 @@ defmodule BrandoAdmin.Sites.MCPLive do
               <tr :for={grant <- @grants} data-testid="mcp-grant" data-id={grant.id}>
                 <td>
                   {grant.client_name}
+                  <span :if={MCP.grant_expired?(grant)} class="workspace-badge warning" data-testid="mcp-grant-expired">
+                    {gettext("Expired")}
+                  </span>
                   <small><code>{URI.parse(grant.client_id).host}</code></small>
                 </td>
                 <td>

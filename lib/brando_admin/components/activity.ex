@@ -458,6 +458,16 @@ defmodule BrandoAdmin.Components.Activity do
   defp lines(%{schema: @mcp_setting, details: %{"mcp" => "enabled"}}, _fields, _states),
     do: [gettext("Turned the MCP endpoint on")]
 
+  defp lines(%{schema: @mcp_setting, details: %{"mcp" => "disabled", "revoked" => count}}, _fields, _states)
+       when is_integer(count) and count > 0,
+       do: [
+         ngettext(
+           "Turned the MCP endpoint off and disconnected %{count} app",
+           "Turned the MCP endpoint off and disconnected %{count} apps",
+           count
+         )
+       ]
+
   defp lines(%{schema: @mcp_setting, details: %{"mcp" => "disabled"}}, _fields, _states),
     do: [gettext("Turned the MCP endpoint off")]
 

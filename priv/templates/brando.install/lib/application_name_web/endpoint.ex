@@ -52,6 +52,10 @@ defmodule <%= application_module %>Web.Endpoint do
   plug Plug.RequestId
   plug Plug.Telemetry, event_prefix: [:phoenix, :endpoint]
 
+  # With `mcp_routes()` in the router: refuses an oversized request to the
+  # MCP endpoint before Plug.Parsers reads it (guides/mcp.md).
+  # plug Brando.MCP.BodyLimit
+
   plug Plug.Parsers,
     parsers: [:urlencoded, {:multipart, length: 100_000_000}, :json],
     pass: ["*/*"],

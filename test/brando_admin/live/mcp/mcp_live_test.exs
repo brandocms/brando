@@ -103,6 +103,27 @@ defmodule BrandoAdmin.MCP.MCPLiveTest do
       assert grant
     end
 
+    test "an expired connection is marked in both lists", %{conn: conn, tenant: tenant} do
+      switch!(tenant)
+      connect!(conn, tenant)
+      Repo.update_all(Grant, set: [inserted_at: DateTime.add(DateTime.utc_now(), -91 * 86_400, :second)])
+
+      {:ok, _view, html} = live(conn, "/admin/users/security")
+      assert html =~ ~s(data-testid="connected-app-expired")
+      {:ok, _view, html} = live(conn, "/admin/config/mcp")
+      assert html =~ ~s(data-testid="mcp-grant-expired")
+    end
+
+    test "turning the endpoint off says how many apps it disconnects", %{conn: conn, tenant: tenant} do
+      switch!(tenant)
+      connect!(conn, tenant)
+      {:ok, view, _html} = live(conn, "/admin/config/mcp")
+      assert has_element?(view, ~s([data-testid=mcp-disable][data-confirm*="1 connected app"]))
+      view |> element("[data-testid=mcp-disable]") |> render_click()
+      assert %Grant{revoked_reason: "endpoint_off"} = Repo.one!(Grant)
+      refute render(view) =~ ~s(data-testid="mcp-grant")
+    end
+
     test "a person cannot revoke someone else's connection", %{conn: conn, tenant: tenant} do
       switch!(tenant)
       connect!(conn, tenant)

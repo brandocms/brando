@@ -98,8 +98,12 @@ defmodule Brando.Router do
           do: [{BrandoAdmin.Mounts.LiveAcceptance, {:default, nil}}],
           else: []
 
+      pipeline :brando_mcp_consent_check do
+        plug Brando.MCP.ConsentPlug, :check
+      end
+
       pipeline :brando_mcp_consent do
-        plug Brando.MCP.ConsentPlug
+        plug Brando.MCP.ConsentPlug, :guard
       end
 
       scope "/" do
@@ -112,7 +116,7 @@ defmodule Brando.Router do
       end
 
       scope "/admin/mcp", as: :admin_mcp do
-        pipe_through [:admin, :brando_root_layout, :brando_mcp_consent]
+        pipe_through [:brando_mcp_consent_check, :admin, :brando_root_layout, :brando_mcp_consent]
 
         live_session :brando_mcp_consent,
           on_mount:

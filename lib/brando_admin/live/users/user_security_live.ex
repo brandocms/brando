@@ -157,7 +157,11 @@ defmodule BrandoAdmin.Users.UserSecurityLive do
         <header class="workspace-panel-heading security-panel-single">
           <div>
             <h2>{gettext("Password")}</h2>
-            <p>{gettext("Changing your password asks for the current one, and logs out your other sessions.")}</p>
+            <p>
+              {gettext(
+                "Changing your password asks for the current one, logs out your other sessions and disconnects your connected apps."
+              )}
+            </p>
           </div>
           <.link navigate="/admin/users/password" class="workspace-button">
             <.icon name="key-round" />{gettext("Change password")}
@@ -178,7 +182,11 @@ defmodule BrandoAdmin.Users.UserSecurityLive do
             phx-click="revoke_other_sessions"
             data-testid="sessions-revoke-others"
             data-confirm-title={gettext("Log out your other sessions?")}
-            data-confirm={gettext("Every other browser where you are logged in is logged out. This one stays logged in.")}
+            data-confirm={
+              gettext(
+                "Every other browser where you are logged in is logged out, and your connected apps are disconnected. This one stays logged in."
+              )
+            }
             data-confirm-ok={gettext("Log them out")}
           >
             {gettext("Log out other sessions")}
@@ -242,6 +250,13 @@ defmodule BrandoAdmin.Users.UserSecurityLive do
             <div class="security-item-text">
               <span class="security-item-title">
                 {grant.client_name} <span class="workspace-badge">{URI.parse(grant.client_id).host}</span>
+                <span
+                  :if={Brando.MCP.grant_expired?(grant)}
+                  class="workspace-badge warning"
+                  data-testid="connected-app-expired"
+                >
+                  {gettext("Expired: connect it again from the app")}
+                </span>
               </span>
               <span class="security-item-meta">
                 {[

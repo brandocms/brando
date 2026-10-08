@@ -46,6 +46,8 @@ defmodule BrandoIntegration.Repo.Migrations.AddMCPConnections do
       add :token_hash, :binary, null: false
       add :expires_at, :utc_datetime_usec, null: false
       add :rotated_at, :utc_datetime_usec
+      add :successor_id, references(:mcp_tokens, on_delete: :nilify_all)
+      add :successor_ciphertext, :text
       add :revoked_at, :utc_datetime_usec
       add :last_used_at, :utc_datetime_usec
       timestamps(type: :utc_datetime_usec, updated_at: false)
