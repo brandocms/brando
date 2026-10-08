@@ -78,6 +78,7 @@ defmodule Brando.Worker.VimeoStatus do
 
     with {:ok, creator} <- Brando.Users.get_user(video.creator_id),
          {:ok, updated} <- Brando.Videos.update_video(video, %{status: :errored}, creator) do
+      Brando.Assets.ProcessingStatus.broadcast(:video, updated, :done)
       Phoenix.PubSub.broadcast(Brando.pubsub(), "brando:video:#{updated.id}", {updated, [:video, :updated]})
     end
 

@@ -25,6 +25,7 @@ defmodule BrandoAdmin.LiveView.Form.Compiler do
     :hooks_mutation_listener,
     :hooks_images,
     :hooks_asset_delivery,
+    :hooks_processing_watch,
     :hooks_tiptap_link,
     :hooks_notes,
     :hooks_videos,

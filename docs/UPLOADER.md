@@ -495,6 +495,14 @@ subscribes per-item to flip `:processing → :done`. (The synchronous
 `Images.Uploads.Schema.handle_upload` → `process_upload` path is only used by the
 image/file *list* LiveViews — do not copy it into the manager.)
 
+That topic reaches only the processes that queued or delivered the upload. The worker
+also reports on `Brando.Assets.ProcessingStatus.topic(:image, id)` (video providers on
+`topic(:video, id)` through `ProviderUpdate`), and every form LiveView follows the assets
+its components show in processing: a component that renders an image or video calls
+`BrandoAdmin.LiveView.Form.ProcessingWatch.watch/4` from `update`, and receives
+`%{event: "image_processed"}` / `%{event: "video_processed"}` when the asset is done. This
+is what updates a second editor, or an editor who opened the entry mid-processing.
+
 **Slot hygiene:** `cancel_upload/3` every failed/cancelled entry and prune dismissed items,
 or the shared `max_entries: 20` fills with dead entries and blocks new uploads.
 

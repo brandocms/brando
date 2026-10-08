@@ -12,7 +12,8 @@ defmodule Brando.Videos.Uploaders.ProviderUpdate do
   @doc """
   Updates `video` with `params` as its creator, runs the completed callback when
   the video has just become ready, and broadcasts the result to subscribers of
-  `"brando:video:<id>"`. Returns `{:ok, video}` or the error from the update.
+  `"brando:video:<id>"` and to the editors following it
+  (`Brando.Assets.ProcessingStatus`). Returns `{:ok, video}` or the error from the update.
   """
   def update_video(video, params) do
     with {:ok, creator} <- Brando.Users.get_user(video.creator_id),
@@ -36,6 +37,8 @@ defmodule Brando.Videos.Uploaders.ProviderUpdate do
   def put_dimensions(params, _source), do: params
 
   defp broadcast_video_update(video) do
+    Brando.Assets.ProcessingStatus.broadcast(:video, video, Brando.Assets.ProcessingStatus.video_state(video))
+
     Phoenix.PubSub.broadcast(
       Brando.pubsub(),
       "brando:video:#{video.id}",

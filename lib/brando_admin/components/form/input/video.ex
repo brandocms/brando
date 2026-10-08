@@ -10,6 +10,7 @@ defmodule BrandoAdmin.Components.Form.Input.Video do
   alias BrandoAdmin.Components.Form.Input
   alias BrandoAdmin.Components.Form.Input.FormId
   alias BrandoAdmin.Components.Form.Primitives
+  alias BrandoAdmin.LiveView.Form.ProcessingWatch
 
   def mount(socket) do
     {:ok,
@@ -31,6 +32,27 @@ defmodule BrandoAdmin.Components.Form.Input.Video do
   def update(%{event: "video_created_from_url", video_data: %{id: video_id}}, socket) do
     {:noreply, socket} = select_video(socket, video_id)
     {:ok, socket}
+  end
+
+  # The provider reported on the video this field shows, to every editor with
+  # the entry open (`ProcessingWatch`): it moved on from uploading, or is ready.
+  # The form takes it into its changeset and entry, for the live preview.
+  def update(%{event: "video_processed", video: video}, socket) do
+    if socket.assigns.video && socket.assigns.video.id == video.id do
+      field = socket.assigns.field
+
+      send_update(BrandoAdmin.Components.Form,
+        id: socket.assigns.form_id,
+        event: "entry_field_asset_processed",
+        field: field.field,
+        path: Brando.Utils.get_path_from_field_name(field.form.name),
+        asset: video
+      )
+
+      {:ok, socket |> assign(:video, video) |> ProcessingWatch.watch(__MODULE__, :video, [video])}
+    else
+      {:ok, socket}
+    end
   end
 
   def update(assigns, socket) do
@@ -90,7 +112,8 @@ defmodule BrandoAdmin.Components.Form.Input.Video do
      socket
      |> prepare_input_component()
      |> assign_new(:editable, fn -> Keyword.get(socket.assigns.opts, :editable, true) end)
-     |> assign_new(:relation_field, fn -> relation_field end)}
+     |> assign_new(:relation_field, fn -> relation_field end)
+     |> ProcessingWatch.watch(__MODULE__, :video, [socket.assigns.video])}
   end
 
   defp other_video?(video, video_id),
@@ -101,9 +124,7 @@ defmodule BrandoAdmin.Components.Form.Input.Video do
   defp refresh_video(socket, video, video_id, video_from_changeset) do
     cond do
       video_id != socket.assigns.video_id ->
-        socket
-        |> assign(:video_id, video_id)
-        |> maybe_subscribe(video_id)
+        assign(socket, :video_id, video_id)
 
       # we have a video, and a video from the changeset, but the title or caption has changed
       text_changed?(video, video_from_changeset) ->
@@ -121,9 +142,11 @@ defmodule BrandoAdmin.Components.Form.Input.Video do
   end
 
   defp maybe_reload_video(socket, video, video_id) do
-    if video && video.status != :ready do
-      # if the video is not ready, we can try to reload and see if it's done.
-      # A failed reload keeps the video we already have — it is only a refresh.
+    if video && video.status != :ready && not ProcessingWatch.enabled?() do
+      # Outside a form LiveView nothing reports the provider's progress
+      # (`ProcessingWatch` does inside one), so reload a video that is not
+      # ready on each update and see if it's done. A failed reload keeps the
+      # video we already have — it is only a refresh.
       case Brando.Videos.get_video(video_id) do
         {:ok, reloaded_video} -> assign(socket, :video, reloaded_video)
         {:error, _} -> socket
@@ -178,7 +201,6 @@ defmodule BrandoAdmin.Components.Form.Input.Video do
         socket
         |> assign(:video, video)
         |> assign(:video_id, video_id)
-        |> maybe_subscribe(video_id)
 
       {:error, _} ->
         socket
@@ -186,16 +208,6 @@ defmodule BrandoAdmin.Components.Form.Input.Video do
         |> assign(:video_id, nil)
     end
   end
-
-  defp maybe_subscribe(socket, video_id) when is_integer(video_id) do
-    if connected?(socket) do
-      Phoenix.PubSub.subscribe(Brando.pubsub(), "brando:video:#{video_id}", link: true)
-    end
-
-    socket
-  end
-
-  defp maybe_subscribe(socket, _), do: socket
 
   def try_force_int(str) when is_binary(str), do: String.to_integer(str)
   def try_force_int(int) when is_integer(int), do: int
@@ -362,11 +374,6 @@ defmodule BrandoAdmin.Components.Form.Input.Video do
     end
 
     {:noreply, socket}
-  end
-
-  # Handle real-time video updates
-  def handle_info({video, [:video, :updated]}, socket) do
-    {:noreply, assign(socket, :video, video)}
   end
 
   @doc """

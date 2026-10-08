@@ -1684,6 +1684,20 @@ production dump.
   reconnect no longer sends the browser's old values over newer ones, while
   what was typed during it still wins. An edit made after a save or a
   reload wins over the edits before it.
+- **Every editor sees an image finish processing.** With two editors in one
+  entry, an image the first uploaded or replaced showed "Processing image…"
+  in the second editor's field, picture ref, image variable or gallery until
+  that editor reloaded, and an editor who opened the entry while an image was
+  processing saw the same. Only the form that uploaded an image heard that it
+  was processed. Processing now also reports on a topic per asset
+  (`Brando.Assets.ProcessingStatus`), and each open form follows the images
+  it shows in processing, and the videos it shows uploading to or processing
+  at their provider, until they are done, and takes the finished asset into
+  the form and its live preview. A video field now takes its provider's
+  reports as they come; before, it caught up only when something else
+  re-rendered it, in every editor. Image and video fields in a form no
+  longer read their asset from the database on every render while it is
+  processing.
 
 - **Image sizes given only a height are made, and crops come out at their
   size.** A size such as `"x400"` stopped processing with an error; it is

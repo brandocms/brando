@@ -14,6 +14,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
   alias BrandoAdmin.Components.Content
   alias BrandoAdmin.Components.Form.Input
   alias BrandoAdmin.Components.Form.Primitives
+  alias BrandoAdmin.LiveView.Form.ProcessingWatch
   alias Phoenix.HTML
 
   # prop var, :any
@@ -87,7 +88,22 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
         &{&1.assigns.id, &1}
       )
 
-    Enum.map(original_assigns_sockets, fn {assigns, socket} -> Map.fetch!(results, assigns[:id] || socket.assigns.id) end)
+    Enum.map(original_assigns_sockets, fn {assigns, socket} ->
+      results |> Map.fetch!(assigns[:id] || socket.assigns.id) |> watch_processing()
+    end)
+  end
+
+  # An image var, or a gallery var's images, set by another editor may still
+  # be processing here; follow them until they are done (`image_processed`).
+  defp watch_processing(socket) do
+    images =
+      case socket.assigns[:type] do
+        :image -> [socket.assigns[:image]]
+        :gallery -> Enum.map(gallery_objects(socket.assigns[:gallery]), &Map.get(&1, :image))
+        _ -> []
+      end
+
+    ProcessingWatch.watch(socket, __MODULE__, :image, images)
   end
 
   defp apply_image_processed({%{image: image}, socket}) do
