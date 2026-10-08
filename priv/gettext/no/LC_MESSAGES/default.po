@@ -391,6 +391,7 @@ msgid_plural "%{count} new entries"
 msgstr[0] "%{count} ny oppføring"
 msgstr[1] "%{count} nye oppføringer"
 
+#: lib/brando_admin/components/form/field_actions.ex
 #: lib/brando_admin/live/ai/guidance_live.ex
 #, elixir-autogen, elixir-format
 msgid "%{count} of %{max} characters"
@@ -1205,6 +1206,7 @@ msgstr "KI-vurdering"
 msgid "AI search"
 msgstr "AI-søk"
 
+#: lib/brando_admin/components/form/field_actions.ex
 #: lib/brando_admin/components/form/input/rich_text_labels.ex
 #, elixir-autogen, elixir-format
 msgid "AI suggestion"
@@ -1215,6 +1217,7 @@ msgstr "KI-forslag"
 msgid "AI tools you let read content and propose changes as you, over MCP. Disconnecting one stops it at once."
 msgstr "AI-verktøy du lar lese innhold og foreslå endringer som deg, over MCP. Kobler du fra ett, stanser det med en gang."
 
+#: lib/brando_admin/components/form/field_actions.ex
 #: lib/brando_admin/components/form/input/rich_text_labels.ex
 #: lib/brando_admin/components/suggestion_review.ex
 #, elixir-autogen, elixir-format
@@ -2839,6 +2842,7 @@ msgstr "Kan gjenopprettes fra papirkurven til %{date}"
 #: lib/brando_admin/components/authorization_tools.ex
 #: lib/brando_admin/components/content/list/saved_views.ex
 #: lib/brando_admin/components/form/block/render.ex
+#: lib/brando_admin/components/form/field_actions.ex
 #: lib/brando_admin/components/form/image_drawer.ex
 #: lib/brando_admin/components/form/input/blocks/tiptap_link_dialog.ex
 #: lib/brando_admin/components/form/input/gallery/image_config.ex
@@ -5279,6 +5283,7 @@ msgstr "Deaktivert"
 msgid "Disabled account"
 msgstr "Deaktivert konto"
 
+#: lib/brando_admin/components/form/field_actions.ex
 #: lib/brando_admin/components/form/input/rich_text_labels.ex
 #: lib/brando_admin/live/ai/assistant_live.ex
 #, elixir-autogen, elixir-format
@@ -15129,6 +15134,11 @@ msgstr "Foreslåtte beskrivelser"
 msgid "Suggested destination"
 msgstr "Foreslått mål"
 
+#: lib/brando_admin/components/form/field_actions.ex
+#, elixir-autogen, elixir-format
+msgid "Suggested text"
+msgstr "Foreslått tekst"
+
 #: lib/brando_admin/components/form/input/rich_text_labels.ex
 #, elixir-autogen, elixir-format
 msgid "Suggestion accepted. Undo is available."
@@ -15684,6 +15694,11 @@ msgstr "Miljøet finnes ikke lenger."
 #, elixir-autogen, elixir-format
 msgid "The fallback image from the SEO settings, as it is shared."
 msgstr "Reservebildet fra SEO-innstillingene, slik det deles."
+
+#: lib/brando/ai.ex
+#, elixir-autogen, elixir-format
+msgid "The fields this action reads are empty"
+msgstr "Feltene denne handlingen leser fra, er tomme"
 
 #: lib/brando_admin/components/authorization_tools.ex
 #, elixir-autogen, elixir-format
@@ -16885,6 +16900,7 @@ msgstr "Oversettelser kan ikke opprettes: denne innholdstypen kan ikke kopieres.
 msgid "Try a resource name, such as Pages, or an action, such as Publish."
 msgstr "Prøv et ressursnavn, som Sider, eller en handling, som Publiser."
 
+#: lib/brando_admin/components/form/field_actions.ex
 #: lib/brando_admin/components/form/input/rich_text_labels.ex
 #: lib/brando_admin/components/form/revisions_drawer.ex
 #: lib/brando_admin/live/ai/assistant_live.ex
@@ -18277,6 +18293,7 @@ msgstr "Skriv noe …"
 msgid "Write the alt text before accepting it"
 msgstr "Skriv alt-teksten før du godtar den"
 
+#: lib/brando_admin/components/form/field_actions.ex
 #: lib/brando_admin/components/form/input/rich_text_labels.ex
 #, elixir-autogen, elixir-format
 msgid "Write with AI"
@@ -18301,6 +18318,7 @@ msgid_plural "Writing %{count} descriptions"
 msgstr[0] "Skriver én beskrivelse"
 msgstr[1] "Skriver %{count} beskrivelser"
 
+#: lib/brando_admin/components/form/field_actions.ex
 #: lib/brando_admin/components/suggestion_review.ex
 #: lib/brando_admin/live/sites/seo_live.ex
 #, elixir-autogen, elixir-format

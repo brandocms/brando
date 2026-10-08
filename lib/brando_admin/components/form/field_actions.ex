@@ -193,8 +193,8 @@ defmodule BrandoAdmin.Components.Form.FieldActions do
         <p class="ai-proposal-label">
           <.icon name="sparkles" />
           <span :if={@proposal.status == :running}>{gettext("Writing…")}</span>
-          <span :if={@proposal.status != :running}>{gettext("AI suggestion")}</span>
-          <span class="field-ai-action-name">{@proposal.label}</span>
+          <span :if={@proposal.status == :ready}>{gettext("AI suggestion")}</span>
+          <span class={@proposal.status != :failed && "field-ai-action-name"}>{@proposal.label}</span>
         </p>
 
         <%= if @proposal.status == :ready do %>
@@ -214,7 +214,7 @@ defmodule BrandoAdmin.Components.Form.FieldActions do
             class="field-ai-count"
             data-over={to_string(String.length(@proposal.text) > @proposal.max)}
           >
-            {gettext("%{count} of at most %{max} characters", count: String.length(@proposal.text), max: @proposal.max)}
+            {gettext("%{count} of %{max} characters", count: String.length(@proposal.text), max: @proposal.max)}
           </p>
         <% end %>
 
