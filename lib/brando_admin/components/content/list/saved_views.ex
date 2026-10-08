@@ -333,7 +333,7 @@ defmodule BrandoAdmin.Components.Content.List.SavedViews do
               data-confirm-ok={gettext("Delete view")}
               data-confirm-destructive
             >
-              <.icon name="trash-2" />
+              <.icon name="trash" />
               <span>{gettext("Delete “%{name}”…", name: @selected.name)}</span>
             </button>
           <% end %>
