@@ -67,7 +67,11 @@ test('opens from the sidebar, finds an entry by title and opens it with enter', 
 
   await page.goto('/admin')
   await syncLV(page)
-  const button = page.locator('#nav-search')
+  // A row of the sidebar's first section, right after Dashboard, never current
+  const button = page.locator('#nav-sections .navigation-section').first().locator('dl').nth(1).locator('#nav-search')
+  await expect(button).toBeVisible()
+  await expect(button).toHaveAttribute('aria-haspopup', 'dialog')
+  await expect(page.locator('#nav-sections .navigation-section').first().locator('dl').first().locator('a')).toHaveAttribute('href', '/admin')
   await button.click()
   await expect(palette(page)).toBeVisible()
   await expect(input(page)).toBeFocused()
@@ -98,6 +102,7 @@ test('opens from the sidebar, finds an entry by title and opens it with enter', 
   await expect(palette(page)).toBeVisible()
   await page.keyboard.press('Escape')
   await expect(button).toBeFocused()
+  await expect(button).not.toHaveClass(/active/)
 })
 
 test('the empty palette shows the places visited last', async ({ page }) => {
