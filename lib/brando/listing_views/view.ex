@@ -46,9 +46,9 @@ defmodule Brando.ListingViews.View do
   # Only flat string pairs, as the listing reads them from the URL
   defp validate_params(changeset) do
     validate_change(changeset, :params, fn :params, params ->
-      if Enum.all?(params, fn {key, value} -> is_binary(key) and is_binary(value) end),
-        do: [],
-        else: [params: "must be URL parameters"]
+      if Enum.all?(params, &url_param?/1), do: [], else: [params: "must be URL parameters"]
     end)
   end
+
+  defp url_param?({key, value}), do: is_binary(key) and is_binary(value)
 end

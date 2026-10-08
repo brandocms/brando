@@ -212,7 +212,9 @@ defmodule BrandoAdmin.ListingSavedViewsLiveTest do
   end
 
   test "the menu's link, with the listing's own query, opens the default view too", %{conn: conn, current_user: user} do
-    {:ok, saved} = ListingViews.create_view(user, Article, :default, %{"name" => "Big pages", "params" => %{"limit" => "50"}})
+    {:ok, saved} =
+      ListingViews.create_view(user, Article, :default, %{"name" => "Big pages", "params" => %{"limit" => "50"}})
+
     {:ok, _} = ListingViews.set_default(user, saved)
 
     # As BrandoAdmin.Menu links to it: the default listing's `order`
