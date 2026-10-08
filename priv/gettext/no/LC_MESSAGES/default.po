@@ -10980,6 +10980,11 @@ msgstr "Varselet er sendt"
 msgid "Notifications"
 msgstr "Varsler"
 
+#: lib/brando_admin/components/dashboard.ex
+#, elixir-autogen, elixir-format
+msgid "Notifications are not being sent"
+msgstr "Varsler blir ikke sendt"
+
 #: lib/brando_admin/live/sites/notifications_live.ex
 #, elixir-autogen, elixir-format
 msgid "Notifications are sent as things happen. Pausing stops them until you resume."
@@ -17045,6 +17050,11 @@ msgstr "Dette nettstedet krever nå tofaktorautentisering for %{email}: et ekstr
 #, elixir-autogen, elixir-format
 msgid "This site requires two-factor authentication for %{email}. Choose how you will confirm it is you when you log in, as well as with your password."
 msgstr "Dette nettstedet krever tofaktorautentisering for %{email}. Velg hvordan du skal bekrefte at det er deg når du logger inn, i tillegg til med passordet."
+
+#: lib/brando_admin/components/dashboard.ex
+#, elixir-autogen, elixir-format
+msgid "This site runs no notifications queue, so Slack, Teams and email notifications wait. A developer adds notifications: [limit: 2] to the Oban queues."
+msgstr "Dette nettstedet kjører ingen notifications-kø, så varsler til Slack, Teams og e-post venter. En utvikler legger til notifications: [limit: 2] i Oban-køene."
 
 #: lib/brando_admin/live/images/alt_text_live.ex
 #: lib/brando_admin/live/sites/seo_live.ex

@@ -50,9 +50,10 @@ Content types limit the events about entries; failed jobs are always sent.
 Slack gets a `text` fallback and blocks; Teams a message with one Adaptive
 Card (version 1.4). Both carry a title, a line of detail, the site and
 environment, and a link to the entry in the admin, in the site's default admin
-language, with Slack's and Teams' markup escaped so a title cannot make a
-link. `Brando.Notifications.Message` builds them. A Slack or Teams message
-waits ten seconds (`burst_seconds`) and takes along the others of the same
+language. Slack's markup is escaped and Teams gets plain text runs
+(`RichTextBlock`), so a title cannot make a link.
+`Brando.Notifications.Message` builds them. A Slack or Teams message waits ten
+seconds (`burst_seconds`) and takes along the others of the same
 event on the route, so twelve entries published at nine make one message.
 
 Email goes to each recipient in their own language, at most one every ten

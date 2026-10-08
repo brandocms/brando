@@ -194,33 +194,20 @@ defmodule Brando.Notifications.Message do
   @doc """
   The body for a Microsoft Teams incoming webhook (a Workflows "post to a
   channel when a webhook request is received" flow): a message with one
-  Adaptive Card — the title, its text, the context line, and a button to
-  open the entry in the admin.
+  Adaptive Card — the title, its text and the context line as plain text
+  runs (`RichTextBlock`, which reads no Markdown), and a button to open the
+  entry in the admin.
   """
   @spec teams(map() | [map()]) :: map()
   def teams(notification) do
     c = content(notification)
 
+    # RichTextBlock and TextRun show text as it is: no Markdown, so a title
+    # or a name cannot make a link or emphasis.
     body =
-      [
-        %{
-          "type" => "TextBlock",
-          "text" => teams_escape(c.title),
-          "weight" => "Bolder",
-          "size" => "Medium",
-          "wrap" => true
-        },
-        c.text && %{"type" => "TextBlock", "text" => teams_escape(c.text), "wrap" => true},
-        c.context &&
-          %{
-            "type" => "TextBlock",
-            "text" => teams_escape(c.context),
-            "isSubtle" => true,
-            "size" => "Small",
-            "wrap" => true
-          }
-      ]
-      |> Enum.reject(&is_nil/1)
+      [rich_text(c.title, %{"weight" => "Bolder", "size" => "Medium"})] ++
+        Enum.map(lines(c.text), &rich_text(&1, %{})) ++
+        Enum.map(lines(c.context), &rich_text(&1, %{"isSubtle" => true, "size" => "Small"}))
 
     card =
       %{
@@ -243,10 +230,10 @@ defmodule Brando.Notifications.Message do
     }
   end
 
-  # TextBlocks render Markdown: a title or a name must not make a link,
-  # emphasis or a heading, so those characters are escaped with a backslash.
-  @teams_markdown ~r/[\\`*_\[\]()#]/
+  defp rich_text(text, run) do
+    %{"type" => "RichTextBlock", "inlines" => [Map.merge(%{"type" => "TextRun", "text" => text}, run)]}
+  end
 
-  @doc "Escapes what a Teams TextBlock reads as Markdown: backslash, backtick, `*`, `_`, brackets, parentheses, `#`."
-  def teams_escape(text), do: Regex.replace(@teams_markdown, text, "\\\\\\0")
+  defp lines(nil), do: []
+  defp lines(text), do: String.split(text, "\n", trim: true)
 end

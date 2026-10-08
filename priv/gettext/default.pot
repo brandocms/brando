@@ -10978,6 +10978,11 @@ msgstr ""
 msgid "Notifications"
 msgstr ""
 
+#: lib/brando_admin/components/dashboard.ex
+#, elixir-autogen, elixir-format
+msgid "Notifications are not being sent"
+msgstr ""
+
 #: lib/brando_admin/live/sites/notifications_live.ex
 #, elixir-autogen, elixir-format
 msgid "Notifications are sent as things happen. Pausing stops them until you resume."
@@ -17040,6 +17045,11 @@ msgstr ""
 #: lib/brando_admin/live/user_two_factor_setup_live.ex
 #, elixir-autogen, elixir-format
 msgid "This site requires two-factor authentication for %{email}. Choose how you will confirm it is you when you log in, as well as with your password."
+msgstr ""
+
+#: lib/brando_admin/components/dashboard.ex
+#, elixir-autogen, elixir-format
+msgid "This site runs no notifications queue, so Slack, Teams and email notifications wait. A developer adds notifications: [limit: 2] to the Oban queues."
 msgstr ""
 
 #: lib/brando_admin/live/images/alt_text_live.ex

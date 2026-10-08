@@ -64,9 +64,9 @@ defmodule Brando.Worker.NotificationDelivery do
     with {:ok, delivery} <- load(delivery_id, route_id),
          :ok <- ensure_unfinished(delivery),
          {:ok, route} <- Routing.get_route(route_id),
-         :ok <- ensure_active(route, delivery) do
-      mark_sending(delivery)
-      attempt(route, delivery, job)
+         :ok <- ensure_active(route, delivery),
+         :claimed <- claim(delivery) do
+      attempt(route, %{delivery | state: "sending"}, job)
     else
       {:error, :not_found} -> {:cancel, :not_found}
       {:cancel, _} = cancel -> cancel
@@ -96,8 +96,28 @@ defmodule Brando.Worker.NotificationDelivery do
     {:cancel, :route_paused}
   end
 
-  defp mark_sending(delivery) do
-    write(delivery, %{state: "sending", started_at: DateTime.utc_now()})
+  @doc """
+  Takes `delivery` for the calling job, in one conditional update. Another
+  job may have grouped it into its message, or sent it, since it was loaded:
+  then nothing changes and `{:cancel, :already_claimed}` stops the job. A
+  "sending" row older than the timeout is from an attempt that crashed, and
+  may be taken again.
+  """
+  def claim(%Delivery{} = delivery) do
+    now = DateTime.utc_now()
+    stale = DateTime.add(now, -(Client.timeout() + 5_000), :millisecond)
+
+    {count, _} =
+      Repo.update_all(
+        from(d in Delivery,
+          where:
+            d.id == ^delivery.id and is_nil(d.grouped_into_id) and
+              (d.state in ["pending", "retrying"] or (d.state == "sending" and d.started_at < ^stale))
+        ),
+        set: [state: "sending", started_at: now]
+      )
+
+    if count == 1, do: :claimed, else: {:cancel, :already_claimed}
   end
 
   defp attempt(%Route{kind: :email} = route, delivery, job) do

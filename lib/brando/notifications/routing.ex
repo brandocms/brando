@@ -31,9 +31,10 @@ defmodule Brando.Notifications.Routing do
   to it in the admin; a mention names its author and the people mentioned,
   never the note's text nor the text it is anchored to. Slack gets blocks,
   Teams an Adaptive Card, both in the site's default admin language, with
-  their markup escaped; see `Brando.Notifications.Message`. Email goes to
-  each recipient in their own language, while they are on the route, active,
-  members of the site and allowed to read the entry.
+  Slack's markup escaped and Teams' text as plain text runs; see
+  `Brando.Notifications.Message`. Email goes to each recipient in their own
+  language, while they are on the route, active, members of the site and
+  allowed to read the entry.
 
   Each message is a delivery (`Brando.Notifications.Delivery`) sent by an
   Oban job on the `:notifications` queue
@@ -88,7 +89,10 @@ defmodule Brando.Notifications.Routing do
         # how long a Slack or Teams message waits for others like it
         burst_seconds: 10,
         # the hosts Slack and Teams routes may post to
-        hosts: [slack: ["hooks.slack.com"], teams: ["logic.azure.com", "api.powerplatform.com"]],
+        hosts: [
+          slack: ["hooks.slack.com"],
+          teams: ["logic.azure.com", "api.powerplatform.com", "webhook.office.com"]
+        ],
         # when digests go out, in Brando.timezone()
         digest_hour: 8
   """
@@ -606,23 +610,50 @@ defmodule Brando.Notifications.Routing do
   @doc """
   Send a failed or cancelled delivery again, as a new delivery of the same
   notification to the same channel or recipient. An email goes out as a
-  single email, whatever the recipient's summary setting.
+  single email, whatever the recipient's summary setting. The main delivery
+  of a message that went out for several sends them all again, as one.
   """
   def redeliver(%Delivery{state: state} = original, user) when state in ["failed", "cancelled"] do
     with :ok <- authorize(user),
          {:ok, route} <- get_route(original.route_id),
          :ok <- active(route) do
-      attrs =
-        original
-        |> Map.take([:route_id, :event, :recipient_id, :entry_schema, :entry_type, :entry_id, :notification, :test])
-
-      with {:ok, delivery} <- %Delivery{} |> Ecto.Changeset.change(attrs) |> Repo.insert() do
-        enqueue(delivery)
-      end
+      Repo.transaction(fn -> redeliver_copy(original) end)
     end
   end
 
   def redeliver(%Delivery{}, _user), do: {:error, :not_redeliverable}
+
+  defp redeliver_copy(original) do
+    with {:ok, delivery} <- insert_copy(original, %{}),
+         :ok <- copy_group(original, delivery),
+         {:ok, delivery} <- enqueue(delivery) do
+      delivery
+    else
+      {:error, reason} -> Repo.rollback(reason)
+    end
+  end
+
+  @copied [:route_id, :event, :recipient_id, :entry_schema, :entry_type, :entry_id, :notification, :test]
+
+  defp insert_copy(original, changes) do
+    %Delivery{}
+    |> Ecto.Changeset.change(original |> Map.take(@copied) |> Map.merge(changes))
+    |> Repo.insert()
+  end
+
+  # The main delivery of a message that went out for several: the others
+  # go again with it, in one message (`Brando.Worker.NotificationDelivery`
+  # sends what is grouped into it).
+  defp copy_group(original, delivery) do
+    from(d in Delivery, where: d.grouped_into_id == ^original.id, order_by: [asc: d.inserted_at, asc: d.id])
+    |> Repo.all()
+    |> Enum.reduce_while(:ok, fn grouped, :ok ->
+      case insert_copy(grouped, %{grouped_into_id: delivery.id, state: "sending"}) do
+        {:ok, _} -> {:cont, :ok}
+        {:error, reason} -> {:halt, {:error, reason}}
+      end
+    end)
+  end
 
   @doc "Whether a delivery can be sent again: it failed, or was not sent."
   def redeliverable?(%Delivery{state: state}), do: state in ["failed", "cancelled"]
@@ -690,6 +721,36 @@ defmodule Brando.Notifications.Routing do
     }
   rescue
     _ -> %{count: 0, latest: nil, failed: 0}
+  end
+
+  @doc """
+  Whether Oban, as configured, runs no `notifications` queue, so nothing
+  routed is ever sent. A node that runs no queues at all (`queues: false`,
+  say a web node beside a worker node) cannot tell, and neither can testing
+  modes: both count as running.
+  """
+  def queue_missing?(conf \\ oban_config())
+
+  def queue_missing?(%Oban.Config{testing: testing}) when testing in [:inline, :manual], do: false
+  def queue_missing?(%Oban.Config{queues: queues}) when queues in [[], false, nil], do: false
+  def queue_missing?(%Oban.Config{queues: queues}), do: not Keyword.has_key?(queues, :notifications)
+  def queue_missing?(_conf), do: false
+
+  defp oban_config do
+    Oban.config()
+  rescue
+    _ -> nil
+  end
+
+  @doc """
+  For the dashboard: whether `user`, who manages routes, should hear that
+  the `notifications` queue is missing while active routes wait on it.
+  """
+  def queue_warning?(user) do
+    can_manage?(user) and queue_missing?() and
+      Repo.one(from(r in Route, where: r.active == true, select: true, limit: 1)) == true
+  rescue
+    _ -> false
   end
 
   @doc "The routes paused because their messages kept failing, for the dashboard."

@@ -53,6 +53,7 @@ defmodule BrandoIntegration.Repo.Migrations.AddNotificationRoutes do
     create index(:notification_deliveries, [:route_id, :inserted_at])
     create index(:notification_deliveries, [:inserted_at])
     create index(:notification_deliveries, [:recipient_id, :state])
+    create index(:notification_deliveries, [:grouped_into_id])
 
     create unique_index(:notification_deliveries, [:route_id, :event_id, "coalesce(recipient_id, 0)"],
              where: "event_id IS NOT NULL",

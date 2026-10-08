@@ -17,7 +17,8 @@ defmodule BrandoAdmin.Components.Dashboard do
      |> assign(assigns)
      |> assign(:overview, BrandoAdmin.Dashboard.load(assigns.current_user))
      |> assign(:paused_webhooks, paused_webhooks(assigns.current_user))
-     |> assign(:paused_routes, paused_routes(assigns.current_user))}
+     |> assign(:paused_routes, paused_routes(assigns.current_user))
+     |> assign(:notifications_queue_missing?, Brando.Notifications.Routing.queue_warning?(assigns.current_user))}
   end
 
   # Shown to the people who can do something about it.
@@ -29,6 +30,29 @@ defmodule BrandoAdmin.Components.Dashboard do
     if Brando.Notifications.Routing.can_manage?(user),
       do: Brando.Notifications.Routing.paused_after_failures(),
       else: []
+  end
+
+  @doc """
+  The notice that notifications wait for a queue that is not running: the
+  application's own Oban configuration lacks `notifications`
+  (`Brando.Notifications.Routing.queue_missing?/1`). Shown to those who
+  manage routes.
+  """
+  def notifications_queue_notice(assigns) do
+    ~H"""
+    <div class="dashboard-alert" role="alert" data-testid="dashboard-notifications-queue">
+      <.icon name="triangle-alert" />
+      <div>
+        <h2>{gettext("Notifications are not being sent")}</h2>
+        <p>
+          {gettext(
+            "This site runs no notifications queue, so Slack, Teams and email notifications wait. A developer adds notifications: [limit: 2] to the Oban queues."
+          )}
+        </p>
+      </div>
+      <.link navigate="/admin/config/notifications" class="workspace-button">{gettext("Review notifications")}</.link>
+    </div>
+    """
   end
 
   # One paused: straight to it. Several: the list.
@@ -88,6 +112,7 @@ defmodule BrandoAdmin.Components.Dashboard do
           {gettext("Review notifications")}
         </.link>
       </div>
+      <.notifications_queue_notice :if={@notifications_queue_missing?} />
       <div class="dashboard-layout">
         <section class="dashboard-recent" aria-labelledby="dashboard-recent-heading">
           <h2 id="dashboard-recent-heading" class="dashboard-heading">{gettext("Recently updated")}</h2>

@@ -5,6 +5,8 @@ defmodule Brando.NotificationsTest do
   import Ecto.Query, only: [from: 2]
   import Swoosh.TestAssertions
 
+  require Phoenix.LiveViewTest
+
   alias Brando.Activity
   alias Brando.Factory
   alias Brando.Notes
@@ -213,11 +215,26 @@ defmodule Brando.NotificationsTest do
                ]
              } = body
 
+      # Plain text runs: no Markdown is read from a title or a name
       assert [
-               %{"type" => "TextBlock", "text" => "Published as scheduled: Spring <launch> & more", "weight" => "Bolder"},
-               %{"type" => "TextBlock", "text" => "Page · EN"},
-               %{"type" => "TextBlock", "text" => "shop · production", "isSubtle" => true}
+               %{
+                 "type" => "RichTextBlock",
+                 "inlines" => [
+                   %{
+                     "type" => "TextRun",
+                     "text" => "Published as scheduled: Spring <launch> & more",
+                     "weight" => "Bolder"
+                   }
+                 ]
+               },
+               %{"type" => "RichTextBlock", "inlines" => [%{"type" => "TextRun", "text" => "Page · EN"}]},
+               %{
+                 "type" => "RichTextBlock",
+                 "inlines" => [%{"type" => "TextRun", "text" => "shop · production", "isSubtle" => true}]
+               }
              ] = blocks
+
+      refute Enum.any?(blocks, &(&1["type"] == "TextBlock"))
 
       assert [%{"type" => "Action.OpenUrl", "url" => "https://example.com/admin/pages/update/1"}] = actions
     end
@@ -232,7 +249,12 @@ defmodule Brando.NotificationsTest do
 
       [%{"content" => card}] = body["attachments"]
       refute Map.has_key?(card, "actions")
-      assert [%{"text" => "A background job failed: MyApp.Worker.Sync"}, %{"text" => text} | _] = card["body"]
+
+      assert [
+               %{"inlines" => [%{"text" => "A background job failed: MyApp.Worker.Sync"}]},
+               %{"inlines" => [%{"text" => text}]} | _
+             ] = card["body"]
+
       assert text =~ "3 of 3"
       assert text =~ "timeout"
     end
@@ -745,16 +767,18 @@ defmodule Brando.NotificationsTest do
   end
 
   describe "hardening" do
-    test "Teams text cannot make links or emphasis, and the Slack fallback is escaped" do
+    test "Teams text goes as plain text runs, and the Slack fallback is escaped" do
       n = %{
         "event" => "scheduled_publish",
         "entry" => %{"title" => "[Log in](https://evil.example.com) *now* _here_ `x` #1"}
       }
 
-      [%{"content" => %{"body" => [title | _]}}] = Message.teams(n)["attachments"]
+      [%{"content" => %{"body" => body}}] = Message.teams(n)["attachments"]
 
-      assert title["text"] ==
-               ~S"Published as scheduled: \[Log in\]\(https://evil.example.com\) \*now\* \_here\_ \`x\` \#1"
+      # As it is, unescaped, in a run that reads no Markdown
+      assert [%{"type" => "RichTextBlock", "inlines" => [%{"type" => "TextRun", "text" => title}]} | _] = body
+      assert title == "Published as scheduled: [Log in](https://evil.example.com) *now* _here_ `x` #1"
+      refute Enum.any?(body, &(&1["type"] == "TextBlock"))
 
       assert Message.slack(Map.put(n, "entry", %{"title" => "<https://evil|click>"}))["text"] ==
                "Published as scheduled: &lt;https://evil|click&gt;"
@@ -886,6 +910,119 @@ defmodule Brando.NotificationsTest do
 
       assert route |> deliveries() |> Enum.map(&{&1.state, &1.error}) |> Enum.uniq() ==
                [{"cancelled", "recipient_unavailable"}]
+    end
+  end
+
+  describe "bursts and redelivery" do
+    defp pending!(route, title) do
+      Repo.insert!(%Delivery{
+        route_id: route.id,
+        event: "scheduled_publish",
+        notification: %{"event" => "scheduled_publish", "entry" => %{"title" => title}}
+      })
+    end
+
+    defp job(delivery),
+      do: %Oban.Job{args: %{"delivery" => delivery.id, "route" => delivery.route_id}, attempt: 1, max_attempts: 10}
+
+    test "jobs running at once send a burst once", %{user: user} do
+      receiver = WebhookReceiver.start(fn _ -> {200, "ok"} end)
+      route = slack_route!(user, receiver)
+
+      for round <- 1..3 do
+        deliveries = for n <- 1..4, do: pending!(route, "Round #{round} entry #{n}")
+
+        results =
+          deliveries
+          |> Enum.map(fn delivery -> Task.async(fn -> NotificationDelivery.deliver(job(delivery)) end) end)
+          |> Task.await_many(10_000)
+
+        assert Enum.all?(results, &(&1 == :ok or match?({:cancel, _}, &1)))
+        sent = Enum.count(results, &(&1 == :ok))
+
+        # One request per job that sent, and every entry in exactly one of them
+        texts =
+          for _ <- 1..sent do
+            assert_receive {:webhook_request, request}, 5_000
+            request.body |> Jason.decode!() |> Map.fetch!("blocks") |> hd() |> get_in(["text", "text"])
+          end
+
+        refute_receive {:webhook_request, _}, 200
+
+        for n <- 1..4 do
+          assert Enum.count(texts, &(&1 =~ "Round #{round} entry #{n}")) == 1
+        end
+
+        assert deliveries |> Enum.map(&Repo.reload!(&1).state) |> Enum.uniq() == ["succeeded"]
+      end
+    end
+
+    test "a job whose delivery another job grouped meanwhile stops", %{user: user} do
+      receiver = WebhookReceiver.start()
+      route = slack_route!(user, receiver)
+      [a, b] = [pending!(route, "A"), pending!(route, "B")]
+
+      # B's job has loaded B while pending; A's job then sends both
+      loaded_b = Repo.reload!(b)
+      assert :ok = NotificationDelivery.deliver(job(a))
+      assert_receive {:webhook_request, %{body: body}}, 5_000
+      assert Jason.decode!(body)["text"] == "2 entries published as scheduled"
+
+      # B's job may not take it now, so B is not sent again
+      assert {:cancel, :already_claimed} = NotificationDelivery.claim(loaded_b)
+      assert {:cancel, _} = NotificationDelivery.deliver(job(b))
+      refute_receive {:webhook_request, _}, 100
+      assert %{state: "succeeded", grouped_into_id: id} = Repo.reload!(b)
+      assert id == a.id
+    end
+
+    test "redelivering a burst's main delivery sends the whole burst again, as one", %{user: user} do
+      receiver = WebhookReceiver.start(fn _ -> {500, "down"} end)
+      route = slack_route!(user, receiver)
+      [main | _] = for n <- 1..3, do: pending!(route, "Entry #{n}")
+
+      assert {:cancel, "HTTP 500"} =
+               NotificationDelivery.deliver(%Oban.Job{job(main) | attempt: 10, max_attempts: 10})
+
+      assert_receive {:webhook_request, _}, 5_000
+      assert route |> deliveries() |> Enum.map(& &1.state) |> Enum.uniq() == ["failed"]
+
+      {:ok, _} = Routing.resume(Repo.reload!(route), user)
+      ok_receiver = WebhookReceiver.start()
+      {:ok, route} = Routing.update_route(Repo.reload!(route), %{"url" => WebhookReceiver.url(ok_receiver, "/s")}, user)
+
+      assert {:ok, again} = Routing.redeliver(Repo.reload!(main), user)
+      assert_receive {:webhook_request, %{path: "/s", body: body}}, 5_000
+      assert Jason.decode!(body)["text"] == "3 entries published as scheduled"
+
+      grouped = Repo.all(from(d in Delivery, where: d.grouped_into_id == ^again.id))
+      assert length(grouped) == 2
+      assert Enum.all?([Repo.reload!(again) | grouped], &(&1.state == "succeeded"))
+      assert length(deliveries(route)) == 6
+    end
+  end
+
+  describe "the notifications queue" do
+    test "is missing when Oban runs queues but not this one" do
+      missing = Oban.Config.new(repo: BrandoIntegration.Repo, queues: [default: 1, webhooks: 5], plugins: false)
+      running = Oban.Config.new(repo: BrandoIntegration.Repo, queues: [default: 1, notifications: 2], plugins: false)
+      none = Oban.Config.new(repo: BrandoIntegration.Repo, queues: false, plugins: false)
+
+      assert Routing.queue_missing?(missing)
+      refute Routing.queue_missing?(running)
+      # A node without queues cannot tell, nor can testing
+      refute Routing.queue_missing?(none)
+      refute Routing.queue_missing?()
+    end
+
+    test "the dashboard notice is for those who manage routes", %{user: user} do
+      html = Phoenix.LiveViewTest.render_component(&BrandoAdmin.Components.Dashboard.notifications_queue_notice/1, %{})
+      assert html =~ "dashboard-notifications-queue"
+      assert html =~ "notifications: [limit: 2]"
+
+      refute Routing.queue_warning?(Factory.insert(:random_user, role: :editor))
+      # Oban runs inline in tests, so the queue counts as running
+      refute Routing.queue_warning?(user)
     end
   end
 end

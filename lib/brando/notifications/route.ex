@@ -150,7 +150,10 @@ defmodule Brando.Notifications.Route do
   managing routes cannot post anywhere:
 
       config :brando, Brando.Notifications,
-        hosts: [slack: ["hooks.slack.com"], teams: ["logic.azure.com", "api.powerplatform.com"]]
+        hosts: [
+          slack: ["hooks.slack.com"],
+          teams: ["logic.azure.com", "api.powerplatform.com", "webhook.office.com"]
+        ]
 
   Loopback addresses are allowed too where `Brando.Webhooks.URLGuard`
   allows them (development and tests).
