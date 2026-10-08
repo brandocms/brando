@@ -17,6 +17,7 @@ const DEBOUNCE = 300
 export default () => ({
   mounted() {
     this.timers = {}
+    this.pending = {}
 
     this.onEvent = (e) => {
       const input = e.target
@@ -36,19 +37,36 @@ export default () => ({
         })
 
       clearTimeout(this.timers[field])
+      delete this.pending[field]
       const typing = e.type === 'input' && (input.tagName === 'TEXTAREA' || TYPED.test(input.type))
       if (typing) {
-        this.timers[field] = setTimeout(push, DEBOUNCE)
+        this.pending[field] = push
+        this.timers[field] = setTimeout(() => {
+          delete this.pending[field]
+          push()
+        }, DEBOUNCE)
       } else {
         push()
       }
     }
+
+    // A save asks for what is held back (`Form/pendingChange.js`), so the
+    // text typed last reaches the transformer before the save collects it.
+    this.onFlush = () => {
+      Object.entries(this.pending).forEach(([field, push]) => {
+        clearTimeout(this.timers[field])
+        delete this.pending[field]
+        push()
+      })
+    }
+    document.addEventListener('brando:flush', this.onFlush)
 
     this.el.addEventListener('input', this.onEvent)
     this.el.addEventListener('change', this.onEvent)
   },
 
   destroyed() {
+    document.removeEventListener('brando:flush', this.onFlush)
     Object.values(this.timers).forEach(clearTimeout)
     this.el.removeEventListener('input', this.onEvent)
     this.el.removeEventListener('change', this.onEvent)

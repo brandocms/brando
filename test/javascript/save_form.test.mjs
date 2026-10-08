@@ -23,13 +23,14 @@ function setup(t, { saveEvent = 'save_form', active = null } = {}) {
   }
   t.mock.method(globalThis, 'FormData', function (form) { return form.values })
   const previous = globalThis.document
-  globalThis.document = { activeElement: active, body: {} }
+  const flushed = []
+  globalThis.document = { activeElement: active, body: {}, dispatchEvent: event => flushed.push({ event, pushedBefore: pushed.length }) }
   t.after(() => { globalThis.document = previous })
   const hook = {
     js: () => ({ push: (el, event, { value }) => pushed.push({ el, event, value }) }),
     pushEventTo: (el, event, value) => pushed.push({ el, event, value, fromHook: true }),
   }
-  return { hook, form, inputs, saveSource, pushed, dispatched }
+  return { hook, form, inputs, saveSource, pushed, dispatched, flushed }
 }
 
 test('pushes the fields from the save source, not the hook element, with the token', t => {
@@ -70,6 +71,13 @@ test("flushes a widget's hidden input when its editor has the focus", t => {
   const s = setup(t, { active: editor })
   saveForm(s.hook, s.form)
   assert.deepEqual(events.map(event => event.type), ['blur'])
+})
+
+test('widgets that hold a change back are asked for it before the save is pushed', t => {
+  const s = setup(t)
+  saveForm(s.hook, s.form)
+  assert.deepEqual(s.flushed.map(({ event, pushedBefore }) => [event.type, pushedBefore]), [['brando:flush', 0]])
+  assert.equal(s.pushed.length, 1)
 })
 
 test('a form that takes no save event is submitted', t => {

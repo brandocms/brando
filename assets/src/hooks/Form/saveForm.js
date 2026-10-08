@@ -8,8 +8,10 @@
 // in that time went nowhere. The edit session already keeps what is typed
 // while a save runs, so the inputs can stay as they are.
 //
-// What a submit did besides is done here:
-// * the focused input's pending debounced change is flushed first, so the
+// What a submit did besides is done here, and one thing it did not:
+// * widgets that hold a change back in their own JS (the colour picker, a
+//   transformer's text fields) are asked for it (`brando:flush`);
+// * the focused input's pending debounced change is flushed, so the
 //   save includes the last keystrokes (`flushFocused`);
 // * every input is marked submitted, so the form's errors show for fields
 //   the editor never touched (LiveView's `used_input?`);
@@ -69,6 +71,8 @@ export default function saveForm(hook, form, { token, stay } = {}) {
     return
   }
 
+  // widgets that hold a change back give it up now (`pendingChange.js`)
+  document.dispatchEvent(new CustomEvent('brando:flush'))
   flushFocused()
   markSubmitted(form)
   Array.from(form.elements).forEach(markSubmitted)
