@@ -617,6 +617,37 @@ defmodule BrandoAdmin.EditSessionSavesTest do
     await(fn -> shown.(b) == "abc" end)
   end
 
+  # Follow-up, round 2: a toggle set back, or a backspace to the text from
+  # before, within a second of another editor's change to the same field.
+  for {name, path, theirs, mine} <- [
+        {"a toggle set back", ["entry_block", "block", "active"], "false", "true"},
+        {"a backspace to the text before", ["entry_block", "block", "refs", "0", "data", "data", "text"], "<p>B's</p>",
+         "<p>Identity 0</p>"}
+      ] do
+    test "#{name} right after another editor changed the field is kept", c do
+      [first | _] = c.uids
+      path = unquote(path)
+      a = open(c.conn, c.identity)
+      b = open(c.other_conn, c.identity)
+      selector = "#entry_block_form-#{first}"
+
+      set = fn view, value ->
+        params = view |> render() |> form_params(selector) |> put_in(path, value) |> Map.put("_target", path)
+        view |> element(selector) |> render_change(params)
+      end
+
+      shown = fn view -> view |> render() |> form_params(selector) |> get_in(path) end
+      before = shown.(a)
+
+      set.(b, unquote(theirs))
+      await(fn -> shown.(a) == unquote(theirs) end)
+      set.(a, unquote(mine))
+      assert unquote(mine) == before
+
+      await(fn -> shown.(b) == unquote(mine) end)
+    end
+  end
+
   # #10: refreshing a root for another editor's change also rewrote its seed
   # form, so the field re-rendered and the block was updated a second time.
   test "another editor's change updates only the block it changed", c do
