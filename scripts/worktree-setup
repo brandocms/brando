@@ -153,6 +153,7 @@ else
 fi
 step "Playwright Chromium" playwright_browser
 step "git hooks (core.hooksPath)" git config core.hooksPath .githooks
+step "Gettext merge driver" python3 scripts/gettext-merge-driver --install
 
 # What .envrc derives for this worktree, or for the slug given.
 e2e_env="$(

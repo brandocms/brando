@@ -52,6 +52,7 @@ run_step() {
   case "$1" in
     mix_in) shown="MIX_ENV=$2 mix ${*:3}" ;;
     credo_changed) shown="MIX_ENV=test mix credo --strict <changed files>" ;;
+    gettext_up_to_date) shown="MIX_ENV=test mix gettext.extract --merge" ;;
   esac
   if [ "$verbose" = true ]; then
     echo "check: $name: $shown"
@@ -138,6 +139,23 @@ credo_changed() {
   echo "No credo findings on changed lines in $(wc -l < "$files" | tr -d ' ') file(s)."
 }
 
+# As CI does: extract and merge, then fail if that changed the catalogues. The
+# merged catalogues are left in place, ready to translate and commit.
+gettext_state() {
+  { git status --porcelain --untracked-files=all -- priv/gettext; git diff -- priv/gettext; } | cksum
+}
+
+gettext_up_to_date() {
+  local before
+  before="$(gettext_state)"
+  mix_in test gettext.extract --merge > /dev/null || return 1
+  if [ "$(gettext_state)" != "$before" ]; then
+    git status --short -- priv/gettext
+    echo "The Gettext catalogues were out of date and are now merged: translate the new Norwegian entries and commit priv/gettext (see TRANSLATIONS.md)."
+    return 1
+  fi
+}
+
 # Order follows .github/workflows/ci.yml: the quality job, then the colour and
 # E2E path checks, then the docs job.
 run_step "format" mix_in test format --check-formatted
@@ -145,6 +163,7 @@ run_step "compile (warnings as errors)" mix_in test compile --all-warnings --war
 run_step "usage-rules.md up to date" mix_in test brando.docs.agents --check
 run_step "credo (Blueprint)" mix_in test credo --strict lib/brando/blueprint.ex lib/brando/blueprint
 run_step "credo (changed lines)" credo_changed
+run_step "Gettext catalogues up to date" gettext_up_to_date
 run_step "xref compile cycles" mix_in test xref graph --format cycles --label compile-connected --fail-above 0
 run_step "CSS colour tokens" bash .github/scripts/check_css_colors.sh
 run_step "E2E machine paths" bash .github/scripts/check-e2e-paths.sh
