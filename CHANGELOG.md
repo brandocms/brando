@@ -1695,8 +1695,9 @@ production dump.
   at their provider, until they are done, and takes the finished asset into
   the form and its live preview. A video field now takes its provider's
   reports as they come; before, it caught up only when something else
-  re-rendered it, in every editor. An image field no longer reads its image
-  from the database on every render while the image is processing.
+  re-rendered it, in every editor. Image and video fields in a form no
+  longer read their asset from the database on every render while it is
+  processing.
 
 - **Image sizes given only a height are made, and crops come out at their
   size.** A size such as `"x400"` stopped processing with an error; it is

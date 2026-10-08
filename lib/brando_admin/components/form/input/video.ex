@@ -142,9 +142,11 @@ defmodule BrandoAdmin.Components.Form.Input.Video do
   end
 
   defp maybe_reload_video(socket, video, video_id) do
-    if video && video.status != :ready do
-      # if the video is not ready, we can try to reload and see if it's done.
-      # A failed reload keeps the video we already have — it is only a refresh.
+    if video && video.status != :ready && not ProcessingWatch.enabled?() do
+      # Outside a form LiveView nothing reports the provider's progress
+      # (`ProcessingWatch` does inside one), so reload a video that is not
+      # ready on each update and see if it's done. A failed reload keeps the
+      # video we already have — it is only a refresh.
       case Brando.Videos.get_video(video_id) do
         {:ok, reloaded_video} -> assign(socket, :video, reloaded_video)
         {:error, _} -> socket

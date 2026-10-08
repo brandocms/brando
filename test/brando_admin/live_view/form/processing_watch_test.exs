@@ -11,6 +11,7 @@ defmodule BrandoAdmin.LiveView.Form.ProcessingWatchTest do
   alias Brando.Factory
 
   alias Brando.Assets.ProcessingStatus
+  alias Brando.JSONLDTest.Post
   alias Brando.MigrationTest.ProjectUpdate1
   alias Brando.Videos.Uploaders.ProviderUpdate
   alias BrandoAdmin.Components.Form
@@ -62,6 +63,31 @@ defmodule BrandoAdmin.LiveView.Form.ProcessingWatchTest do
       assert_received {:phoenix, :send_update,
                        {{BrandoAdmin.Components.Form, "page_form"},
                         %{event: "entry_field_asset_processed", field: :clip, path: [], asset: ^ready}}}
+    end
+  end
+
+  describe "a video field showing a video that is not ready" do
+    setup %{user: user} do
+      video = Factory.insert(:upload_video, status: :processing, creator_id: user.id)
+      field = Component.to_form(Changeset.change(%Post{cover_video_id: video.id, cover_video: video}))[:cover_video]
+      {:ok, socket} = Input.Video.mount(%Socket{assigns: %{__changed__: %{}}})
+      {:ok, socket} = Input.Video.update(%{id: "post_cover_video", field: field}, socket)
+      {:ok, field: field, socket: socket}
+    end
+
+    test "does not read it on each update in a form LiveView", %{field: field, socket: socket} do
+      Process.put(ProcessingWatch, true)
+      on_exit(fn -> Process.delete(ProcessingWatch) end)
+
+      queries = count_queries()
+      {:ok, _socket} = Input.Video.update(%{id: "post_cover_video", field: field}, socket)
+      assert queries.() == 0
+    end
+
+    test "reads it on each update anywhere else", %{field: field, socket: socket} do
+      queries = count_queries()
+      {:ok, _socket} = Input.Video.update(%{id: "post_cover_video", field: field}, socket)
+      assert queries.() == 1
     end
   end
 
