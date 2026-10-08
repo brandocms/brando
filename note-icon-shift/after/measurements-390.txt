@@ -1,0 +1,24 @@
+no presence seen
+┌─────────┬─────────────────────────────┬──────────────────────────┬──────────────────────────┬───────────────────────────┬─────────────┬───────┐
+│ (index) │ field                       │ el                       │ before                   │ during                    │ delta       │ note  │
+├─────────┼─────────────────────────────┼──────────────────────────┼──────────────────────────┼───────────────────────────┼─────────────┼───────┤
+│ 0       │ 'presence-title'            │ 'presence avatars'       │ 0                        │ 0                         │ 'n/a'       │       │
+│ 1       │ 'presence-title'            │ '.field-note-add'        │ undefined                │ '64.31,285.94,18,18'      │ 'new'       │ true  │
+│ 2       │ 'text-title'                │ 'presence avatars'       │ 0                        │ 0                         │ 'n/a'       │       │
+│ 3       │ 'text-title'                │ '.field-note-add'        │ undefined                │ '64.31,285.94,18,18'      │ 'new'       │ true  │
+│ 4       │ 'richtext-introduction'     │ 'presence avatars'       │ 0                        │ 0                         │ 'n/a'       │       │
+│ 5       │ 'richtext-introduction'     │ '.field-note-add'        │ undefined                │ '112.69,555.75,18,18'     │ 'new'       │ true  │
+│ 6       │ 'select-client'             │ 'presence avatars'       │ 0                        │ 0                         │ 'n/a'       │       │
+│ 7       │ 'select-client'             │ '.field-note-add'        │ undefined                │ '73.52,388.33,18,18'      │ 'new'       │ true  │
+│ 8       │ 'blocks-build-with-ai'      │ 'label-wrapper'          │ '25,-0.19,340,24'        │ '25,632.81,340,24'        │ '0,633,0,0' │ false │
+│ 9       │ 'blocks-build-with-ai'      │ 'label'                  │ '25,3.36,47.48,16.89'    │ '25,636.36,47.48,16.89'   │ '0,633,0,0' │ false │
+│ 10      │ 'blocks-build-with-ai'      │ 'label text'             │ '25,4.36,41.09,13'       │ '25,637.36,41.09,13'      │ '0,633,0,0' │ false │
+│ 11      │ 'blocks-build-with-ai'      │ '.field-presence'        │ '72.48,14.36,0,0'        │ '72.48,647.36,0,0'        │ '0,633,0,0' │ false │
+│ 12      │ 'blocks-build-with-ai'      │ '.block-field-assistant' │ '258.67,-0.19,106.33,24' │ '258.67,632.81,106.33,24' │ '0,633,0,0' │ false │
+│ 13      │ 'blocks-build-with-ai'      │ '.ai-action'             │ '258.67,-0.19,106.33,24' │ '258.67,632.81,106.33,24' │ '0,633,0,0' │ false │
+│ 14      │ 'blocks-build-with-ai'      │ 'field-base'             │ undefined                │ undefined                 │ 'new'       │ false │
+│ 15      │ 'blocks-build-with-ai'      │ 'presence avatars'       │ 0                        │ 0                         │ 'n/a'       │       │
+│ 16      │ 'textarea-meta-description' │ 'presence avatars'       │ 0                        │ 0                         │ 'n/a'       │       │
+│ 17      │ 'textarea-meta-description' │ '.field-note-add'        │ undefined                │ '143.48,360,18,18'        │ 'new'       │ true  │
+└─────────┴─────────────────────────────┴──────────────────────────┴──────────────────────────┴───────────────────────────┴─────────────┴───────┘
+rows 48

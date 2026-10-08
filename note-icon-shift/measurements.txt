@@ -1,0 +1,18 @@
+unfixed | 1440 | project[title] | label row: 335, 178, 532.8, 16.89 -> 335, 178, 532.8, 18; label: 335, 178, 33.31, 16.89 -> 335, 178, 33.31, 18; control: 335, 199.89, 532.8, 44 -> 335, 201, 532.8, 44
+unfixed | 1440 | project[introduction] | label row: 335, 454.78, 532.8, 16.89 -> 335, 453.67, 532.8, 18; label: 335, 454.78, 81.69, 16.89 -> 335, 453.67, 81.69, 18; label text: 335, 455.78, 75.3, 13 -> 335, 454.67, 75.3, 13; 0 field-presence: 416.69, 465.78, 0, 0 -> 416.69, 464.67, 0, 0; 1 field-errors: 867.8, 454.78, 0, 0 -> 867.8, 453.67, 0, 0
+unfixed | 1440 | project[client_id] | label row: 335, 753.36, 532.8, 16.89 -> 335, 752.25, 532.8, 18; label: 335, 753.36, 42.52, 16.89 -> 335, 752.25, 42.52, 18; label text: 335, 754.36, 36.13, 13 -> 335, 753.25, 36.13, 13; 0 field-presence: 377.52, 764.36, 0, 0 -> 377.52, 763.25, 0, 0; 1 field-errors: 867.8, 753.36, 0, 0 -> 867.8, 752.25, 0, 0
+unfixed | 1440 | project[title] (note count) | note count starts at: 368.31 -> 392.31
+unfixed | 1440 | project[title] (note count) (presence avatar) | note count starts at: 382.31 -> 406.31
+unfixed | 1440 | page[meta_description] | no change
+unfixed | 390 | project[title] | label row: 25, 286.5, 340, 16.89 -> 25, 286.5, 340, 18; label: 25, 286.5, 33.31, 16.89 -> 25, 286.5, 33.31, 18; control: 25, 308.39, 340, 44 -> 25, 309.5, 340, 44
+unfixed | 390 | project[introduction] | label row: 25, 557.42, 340, 16.89 -> 25, 556.31, 340, 18; label: 25, 557.42, 81.69, 16.89 -> 25, 556.31, 81.69, 18; label text: 25, 558.42, 75.3, 13 -> 25, 557.31, 75.3, 13; 0 field-presence: 106.69, 568.42, 0, 0 -> 106.69, 567.31, 0, 0; 1 field-errors: 365, 557.42, 0, 0 -> 365, 556.31, 0, 0
+unfixed | 390 | project[client_id] | label row: 25, 873, 340, 16.89 -> 25, 871.89, 340, 18; label: 25, 873, 42.52, 16.89 -> 25, 871.89, 42.52, 18; label text: 25, 874, 36.13, 13 -> 25, 872.89, 36.13, 13; 0 field-presence: 67.52, 884, 0, 0 -> 67.52, 882.89, 0, 0; 1 field-errors: 365, 873, 0, 0 -> 365, 871.89, 0, 0
+fixed | 1440 | project[title] | no change
+fixed | 1440 | project[introduction] | no change
+fixed | 1440 | project[client_id] | no change
+fixed | 1440 | project[title] (note count) | no change
+fixed | 1440 | project[title] (note count) (presence avatar) | no change
+fixed | 1440 | page[meta_description] | no change
+fixed | 390 | project[title] | no change
+fixed | 390 | project[introduction] | no change
+fixed | 390 | project[client_id] | no change

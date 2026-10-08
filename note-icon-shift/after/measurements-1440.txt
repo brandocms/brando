@@ -1,0 +1,18 @@
+no presence seen
+┌─────────┬─────────────────────────────┬────────────────────┬───────────┬───────────────────────┬───────┬───────┐
+│ (index) │ field                       │ el                 │ before    │ during                │ delta │ note  │
+├─────────┼─────────────────────────────┼────────────────────┼───────────┼───────────────────────┼───────┼───────┤
+│ 0       │ 'presence-title'            │ 'presence avatars' │ 0         │ 0                     │ 'n/a' │       │
+│ 1       │ 'presence-title'            │ '.field-note-add'  │ undefined │ '374.31,177.44,18,18' │ 'new' │ true  │
+│ 2       │ 'text-title'                │ 'presence avatars' │ 0         │ 0                     │ 'n/a' │       │
+│ 3       │ 'text-title'                │ '.field-note-add'  │ undefined │ '374.31,177.44,18,18' │ 'new' │ true  │
+│ 4       │ 'richtext-introduction'     │ 'presence avatars' │ 0         │ 0                     │ 'n/a' │       │
+│ 5       │ 'richtext-introduction'     │ '.field-note-add'  │ undefined │ '422.69,453.11,18,18' │ 'new' │ true  │
+│ 6       │ 'select-client'             │ 'presence avatars' │ 0         │ 0                     │ 'n/a' │       │
+│ 7       │ 'select-client'             │ '.field-note-add'  │ undefined │ '383.52,751.69,18,18' │ 'new' │ true  │
+│ 8       │ 'blocks-build-with-ai'      │ 'field-base'       │ undefined │ undefined             │ 'new' │ false │
+│ 9       │ 'blocks-build-with-ai'      │ 'presence avatars' │ 0         │ 0                     │ 'n/a' │       │
+│ 10      │ 'textarea-meta-description' │ 'presence avatars' │ 0         │ 0                     │ 'n/a' │       │
+│ 11      │ 'textarea-meta-description' │ '.field-note-add'  │ undefined │ '1049.48,365,18,18'   │ 'new' │ true  │
+└─────────┴─────────────────────────────┴────────────────────┴───────────┴───────────────────────┴───────┴───────┘
+rows 48
