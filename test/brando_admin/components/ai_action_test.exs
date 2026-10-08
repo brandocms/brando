@@ -53,4 +53,18 @@ defmodule BrandoAdmin.Components.AIActionTest do
     assert {"aria-busy", "true"} in attrs
     assert {"disabled", "disabled"} in attrs
   end
+
+  test "the primary variant fills the confirm step of a costed request" do
+    assigns = %{}
+
+    html =
+      rendered_to_string(~H"""
+      <AIAction.button variant={:primary} phx-click="describe">Describe 3 images</AIAction.button>
+      <AIAction.button>Suggest alt text</AIAction.button>
+      """)
+
+    assert [{"button", _, _}] = find(html, "button.ai-action.is-primary")
+    assert find(html, "button.ai-action.is-primary > [data-icon].lucide-sparkles") != []
+    assert length(find(html, "button.ai-action")) == 2
+  end
 end

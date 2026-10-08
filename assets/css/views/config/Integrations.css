@@ -51,7 +51,7 @@
   /* The new secret, shown once */
   .webhook-secret {
     display: grid; gap: 16px; margin-bottom: 24px; padding: 20px 24px;
-    border-color: var(--brando-suggestion-line); background: var(--brando-surface-subform);
+    border-color: var(--brando-line-strong); background: var(--brando-surface-subform);
   }
   .webhook-secret[hidden] { display: none; }
   .webhook-secret-text { display: grid; gap: 4px; }
