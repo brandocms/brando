@@ -34,7 +34,12 @@
         id="content-language-switch"
         current_user={@current_user}
       />
-      <main id="brando-main" data-authorization-upload={Brando.Authorization.Media.token(@current_user)}>
+      <%!-- data-create-url: a listing's "new entry" page, for the `c` shortcut --%>
+      <main
+        id="brando-main"
+        data-authorization-upload={Brando.Authorization.Media.token(@current_user)}
+        data-create-url={assigns[:admin_create_url]}
+      >
         <article class={["content", assigns[:admin_workspace?] && "admin-workspace content-workspace"]}>
           {@inner_content}
         </article>

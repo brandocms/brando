@@ -1,4 +1,5 @@
 import { Dom } from '@brandocms/jupiter'
+import { bindShortcut } from '../../shortcuts'
 
 export default app => ({
   mounted() {
@@ -46,21 +47,13 @@ export default app => ({
     this.el.addEventListener('dragstart', this._rowDragStartHandler, true)
     this.el.addEventListener('dragend', this._rowDragEndHandler, false)
 
-    this._filterKeyHandler = ev => {
-      if (
-        ev.key === 'f' &&
-        !ev.target.matches('input, textarea, select, [contenteditable]')
-      ) {
-        const filterInput = this.el.querySelector(
-          '.filter input[type="text"]'
-        )
-        if (filterInput) {
-          ev.preventDefault()
-          filterInput.focus()
-        }
-      }
-    }
-    window.addEventListener('keydown', this._filterKeyHandler)
+    // `f` focuses the filter (`filter` in the shortcut registry, which keeps
+    // it out of text fields and dialogs)
+    this.unbindFilter = bindShortcut('filter', () => {
+      const filterInput = this.el.querySelector('.filter input[type="text"]')
+      if (!filterInput) return false
+      filterInput.focus()
+    })
   },
 
   destroyed() {
@@ -69,7 +62,7 @@ export default app => ({
     )
     this.el.removeEventListener('dragstart', this._rowDragStartHandler, true)
     this.el.removeEventListener('dragend', this._rowDragEndHandler, false)
-    window.removeEventListener('keydown', this._filterKeyHandler)
+    this.unbindFilter?.()
     document.body.classList.remove('selection-dragging')
     window.__brandoSelectedIdsDrag = null
   },

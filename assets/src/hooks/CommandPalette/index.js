@@ -2,9 +2,12 @@
  * Brando.CommandPalette — the command palette's keyboard and memory.
  *
  * ⌘K (Ctrl+K off a Mac) opens the palette from any admin screen, and closes
- * it again. Nothing is listened for in text fields until the keys are pressed:
- * one capturing `keydown` on the window, which runs before any editor sees
- * the keys. The sidebar's search row sends `brando:command-palette:open`.
+ * it again: `palette` in the shortcut registry (`shortcuts/`), whose capturing
+ * `keydown` on the window runs before any editor sees the keys, in text
+ * fields too. The sidebar's search row sends `brando:command-palette:open`.
+ *
+ * A row with `data-palette-command` runs a command instead of opening a page:
+ * "Keyboard shortcuts" opens the shortcut sheet.
  *
  * The dialog is a native modal `<dialog>`: the page under it is inert while
  * it is open, Escape closes it, and focus goes back to where it was.
@@ -18,6 +21,8 @@
  * Recent places: every admin page visited is remembered in localStorage, per
  * user and site, and sent to the server when the palette opens.
  */
+import { bindShortcut } from '../../shortcuts'
+
 const RECENT_LIMIT = 12
 
 export default () => ({
@@ -30,14 +35,10 @@ export default () => ({
     this.pendingEnter = null
     this.restoreFocus = true
 
-    this.onShortcut = e => {
-      if (!(e.metaKey || e.ctrlKey) || e.altKey || e.shiftKey || (e.key || '').toLowerCase() !== 'k') return
-      e.preventDefault()
-      e.stopPropagation()
+    this.unbindShortcut = bindShortcut('palette', () => {
       if (this.dialog.open) this.close()
       else this.open()
-    }
-    window.addEventListener('keydown', this.onShortcut, true)
+    })
 
     this.onOpenRequest = () => this.open()
     this.el.addEventListener('brando:command-palette:open', this.onOpenRequest)
@@ -52,6 +53,10 @@ export default () => ({
       }
       const item = e.target.closest('[data-palette-item]')
       if (!item) return
+      if (item.dataset.paletteCommand) {
+        this.runCommand(item)
+        return
+      }
       // A modified click opens a tab: the page stays, and so does the focus
       const newTab = e.metaKey || e.ctrlKey || e.shiftKey || e.button === 1
       this.close({ restoreFocus: newTab })
@@ -95,7 +100,7 @@ export default () => ({
   },
 
   destroyed() {
-    window.removeEventListener('keydown', this.onShortcut, true)
+    this.unbindShortcut?.()
     window.removeEventListener('phx:page-loading-stop', this.onPage)
     this.observer?.disconnect()
     clearTimeout(this.rememberTimer)
@@ -139,6 +144,11 @@ export default () => ({
     const item = this.items()[this.index]
     if (!item) return
 
+    if (item.dataset.paletteCommand) {
+      this.runCommand(item)
+      return
+    }
+
     if (newTab) {
       window.open(item.href, '_blank', 'noopener')
       this.close()
@@ -146,6 +156,16 @@ export default () => ({
       this.close({ restoreFocus: false })
       // The row is a LiveView link: clicking it navigates in place
       item.click()
+    }
+  },
+
+  // The palette closes and hands the place it was opened from to what the
+  // command opens, which gives the focus back there when it closes.
+  runCommand(item) {
+    const opener = this.opener
+    this.close({ restoreFocus: false })
+    if (item.dataset.paletteCommand === 'shortcuts') {
+      document.getElementById('shortcut-sheet')?.dispatchEvent(new CustomEvent('brando:shortcuts:open', { detail: { opener } }))
     }
   },
 

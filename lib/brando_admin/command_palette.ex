@@ -46,9 +46,10 @@ defmodule BrandoAdmin.CommandPalette do
 
   @type item :: %{
           required(:id) => String.t(),
-          required(:kind) => :entry | :action | :setting | :recent,
+          required(:kind) => :entry | :action | :setting | :recent | :search | :command,
           required(:label) => String.t(),
-          required(:url) => String.t(),
+          optional(:url) => String.t(),
+          optional(:command) => String.t(),
           optional(atom()) => any()
         }
   @type group :: %{key: atom(), label: String.t(), items: [item()]}
@@ -108,7 +109,8 @@ defmodule BrandoAdmin.CommandPalette do
   defp command_groups(context, term) do
     actions =
       Enum.filter(
-        create_actions(context.content_types) ++ assistant_actions(context, nil) ++ context.utilities,
+        create_actions(context.content_types) ++
+          assistant_actions(context, nil) ++ help_commands() ++ context.utilities,
         &matches?(&1, term)
       )
 
@@ -125,6 +127,7 @@ defmodule BrandoAdmin.CommandPalette do
 
     actions =
       assistant_actions(context, term) ++
+        Enum.filter(help_commands(), &matches?(&1, term)) ++
         asset_actions(context, term) ++
         Enum.take(create_matches(context, term, entries), 3) ++
         Enum.filter(context.utilities, &matches?(&1, term))
@@ -367,7 +370,23 @@ defmodule BrandoAdmin.CommandPalette do
   ## Actions
 
   defp common_actions(context) do
-    Enum.take(create_actions(context.content_types), 3) ++ assistant_actions(context, nil)
+    Enum.take(create_actions(context.content_types), 3) ++ assistant_actions(context, nil) ++ help_commands()
+  end
+
+  # Rows that run a command in the browser instead of opening a page: the
+  # `Brando.CommandPalette` hook runs `command`.
+  @doc false
+  def help_commands do
+    [
+      %{
+        id: "palette-keyboard-shortcuts",
+        kind: :command,
+        command: "shortcuts",
+        label: gettext("Keyboard shortcuts"),
+        icon: "keyboard",
+        keywords: ["keyboard", "shortcuts", "keys", "hotkeys", gettext("keys")]
+      }
+    ]
   end
 
   defp assistant_actions(%{assistant?: true}, nil),
