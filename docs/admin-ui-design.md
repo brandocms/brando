@@ -196,6 +196,8 @@ value:
 | Needs attention (missing alt text, unsaved, warning badges): tint / rule / ink | `--brando-attention` / `--brando-attention-line` / `--brando-attention-ink` | `#fbefda` / `#e4b866` / `#87662d` |
 | Done or fine (passed check, added line, active or connected, finished import): tint / border / ink | `--brando-success` / `--brando-success-line` / `--brando-success-ink` | `#e8f2e9` / `#d0e3d2` / `#2f6343` |
 | Errors (failed save or upload, invalid field, destructive action): tint / border / ink | `--brando-error` / `--brando-error-line` / `--brando-error-ink` | `#fff1ed` / `#e8ccc4` / `#8c4232` |
+| AI: anything that calls a paid AI service, as text, icon, focus or fill / filled control on hover / hairline / hairline on hover / hover tint | `--brando-ai` / `--brando-ai-hover` / `--brando-ai-line` / `--brando-ai-line-strong` / `--brando-ai-tint` | `#634f8f`, the rest mixed from it |
+| AI result waiting for review: tint / rule / ink | `--brando-suggestion` / `--brando-suggestion-line` / `--brando-suggestion-ink` | mixed from `--brando-ai` |
 | Switch on / off | `--brando-switch-on` / `--brando-switch-off` | `#9cc79f` / `#c0c0c0` |
 | Status: published | `--brando-status-published` | `#3cb371` |
 | Status: pending | `--brando-status-pending` | `#f1ac00` |
@@ -296,18 +298,24 @@ on a Mac: Linux renders the admin's text differently.
 
 ## AI actions and suggestions
 
-Approved with issue #2983. Everything AI in the admin uses two looks, so an
-editor recognises AI the same way everywhere and it belongs to the admin's
-palette. Both live in `assets/css/components/AI.css`.
+Approved with issue #2983; the colour changed to violet in October 2026.
+Everything AI in the admin uses two looks, so an editor recognises AI the same
+way everywhere. Both are drawn in the AI violet, `--brando-ai` (`#634f8f`, 6.9:1
+on white), and the tints mixed from it. An AI action sends the content to an
+external AI service that is paid for by the request, so it is marked apart
+from every other action, which uses the sage accent. Both looks live in
+`assets/css/components/AI.css`.
 
 ![AI actions and AI suggestions](admin-ui/ai-actions-and-suggestions.png)
 
 **The AI action** is any control that asks AI for something: Build with AI,
 Suggest alt text, the generate button in a meta field, Write or Review with AI
-in Content SEO, Draw a sketch with AI. It is a small secondary button: the
-Lucide `sparkles` icon, `--brando-accent` text, a solid sage hairline (the
-accent mixed into `--brando-line`), white, 30px high with a 5px radius, like
-the other small admin buttons. Render it with `AIAction.button/1`:
+in Content SEO, Draw a sketch with AI, Sketches with AI on the Modules screen,
+the rich-text editor's Write with AI. It is a small secondary button: the
+Lucide `sparkles` icon, `--brando-ai` text, a solid violet hairline
+(`--brando-ai-line`, `--brando-ai-line-strong` on hover, over the
+`--brando-ai-tint` surface), white, 30px high with a 5px radius, like the
+other small admin buttons. Render it with `AIAction.button/1`:
 
 ```heex
 <AIAction.button phx-click="suggest_alt_text" phx-target={@myself} size={:compact}>
@@ -319,40 +327,55 @@ the other small admin buttons. Render it with `AIAction.button/1`:
 - `size={:compact}` (24px) beside a field's label; `size={:icon}` (28px
   square, with an `aria-label`) inside a text field.
 - `busy` while the request runs: the sparkles pulse and the button stays
-  fully visible; `disabled` fades it. Focus is the admin's 2px accent outline.
-- In a toolbar or a menu, an AI item keeps the host's shape and only takes
-  the accent and the sparkles: the rich-text toolbar's sparkles button, the
-  listing's "Translate to" menu item (icon after the label, so the labels stay
-  aligned).
-- A costed batch's confirm step ("Write 3 descriptions", "Describe 3 images",
-  after the estimate) stays the panel's primary button, with the sparkles.
-- Sidebar rows are navigation, not actions: the Assistant row keeps the
-  sidebar's look with the `sparkles` icon.
+  fully visible; `disabled` fades it. Focus is a 2px `--brando-ai` outline.
+- `variant={:primary}` fills it with the violet: the confirm step of a
+  costed batch, after its estimate ("Write 3 descriptions", "Describe 3
+  images", "Draw 4 sketches"), and the rich-text editor's Generate
+  suggestion.
+- In a toolbar, a menu or a list of choices, an AI item keeps the host's
+  shape and only takes the violet and the sparkles: the rich-text toolbar's
+  sparkles button, the listing's "Translate to" menu item (icon after the
+  label, so the labels stay aligned), a suggestion's Try again, the
+  assistant's "Let the assistant choose". The translation dialog's sparkles
+  and spinner are violet too.
+- The assistant's send button keeps its shape, filled with the violet, as
+  does "Use the ones I attached", which answers the assistant.
+
+The rule is the call, not the subject. Navigation to the Assistant (its
+sidebar row, the command palette's "Ask the Assistant") and the Assistant's
+own chrome (its heading, the "Assistant" label on its replies, Apply, Share)
+call nothing and keep the admin's look with the `sparkles` icon. Accepting or
+discarding a suggestion calls nothing either.
 
 **The suggestion** is what AI hands back for review before it is content: a
 rich-text rewrite, a Content SEO review, suggested meta descriptions or alt
-text, what an assistant proposal adds. It sits on the suggestion tint
-(`--brando-suggestion`, mixed lighter for a panel) with a 3px
-`--brando-suggestion-line` rule down its left edge, and is labelled with the
-sparkles in `--brando-suggestion-ink` ("AI suggestion", "AI review"). Accept is
-the primary button beside it; Discard and Try again are secondary.
+text, what an assistant proposal adds or changes, a proposal from a connected
+tool. It sits on the suggestion tint (`--brando-suggestion`, mixed lighter for
+a panel) with a 3px `--brando-suggestion-line` rule down its left edge, and is
+labelled with the sparkles in `--brando-suggestion-ink` ("AI suggestion", "AI
+review"). All three are mixed from `--brando-ai`. Accept is the primary button
+beside it, in the sage accent; Discard is secondary, and Try again is an AI
+item.
 
 - A panel: `.ai-proposal`, its label `.ai-proposal-label`, its buttons in
   `.ai-proposal-actions`.
 - Suggested text the editor can still change before accepting
   (`SuggestionReview`): the textarea takes `.ai-proposal-field`.
-- The assistant's proposals use the same tokens for new and changed blocks.
+- The assistant's proposals use the same tokens for new and changed blocks,
+  and its list of proposals from connected tools marks those waiting for
+  review with them.
 
 Do not:
 
-- use purple, or any colour outside the tokens, for AI;
+- use the AI violet for anything that does not call AI, or another colour for
+  something that does;
 - draw an AI action or a suggestion with a dashed border — dashed means
   "drop here" in the block editor;
 - fill a field with an AI result and style it as a suggestion: text written
   straight into a field (Generate with AI, Suggest alt text) is ordinary unsaved
   input, kept or discarded with the form;
-- add a second AI button style for a new screen; add a size to `AIAction`
-  instead.
+- add a second AI button style for a new screen; add a size or a variant to
+  `AIAction` instead.
 
 ## Confirmations, alerts and toasts
 

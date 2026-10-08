@@ -17,8 +17,7 @@
 // --font-render-hinting=none. Every reference is 1× at the stated width; the
 // state column says what the image shows.
 //
-// Not covered: docs/admin-ui/ai-actions-and-suggestions.png (a composed sheet),
-// docs/admin-ui/identifier-variants (a design study, see its capture.mjs),
+// Not covered: docs/admin-ui/identifier-variants (a design study, see its capture.mjs),
 // docs/admin-ui/content-agent-concepts (concept prototypes) and the dated
 // audits under docs/audits.
 import { spawnSync } from 'node:child_process'
@@ -59,6 +58,7 @@ const spec = {
   assistantEmpty: ['scripts/admin-ui-references.spec.js', 'assistant: empty workspace'],
   assistantSommerro: ['scripts/admin-ui-references.spec.js', 'assistant: Sommerro proposal from review to applied'],
   assistantNeedsChanges: ['scripts/admin-ui-references.spec.js', 'assistant: proposal that needs changes'],
+  aiLooks: ['scripts/admin-ui-references.spec.js', 'ai actions and suggestions: composed sheet'],
 }
 
 // [reference path, test, screenshot the test writes, width, language, state]
@@ -76,6 +76,8 @@ const catalogue = [
   [D + 'joined-identifiers-picker.png', 'relatedEntries', 'joined-identifiers-picker.png', 1440, 'en', 'Select entries dialog over the project form, two entries checked'],
   [D + 'link-picker-desktop.png', 'linkPicker', 'link-picker-desktop.png', 1440, 'en', 'Menu item link picker, Content mode, entry selected'],
   [D + 'block-identifiers-1440.png', 'blockIdentifiers', 'block-identifiers-1440.png', 1440, 'en', 'Block datasource with three selected entries (element)'],
+
+  [D + 'ai-actions-and-suggestions.png', 'aiLooks', 'ai-actions-and-suggestions.png', 1440, 'en', 'AI actions and suggestions, composed from the components\' markup (element)'],
 
   [D + 'assistant-empty-desktop.png', 'assistantEmpty', 'assistant-empty-desktop.png', 1440, 'en', 'Assistant, new conversation'],
   [D + 'assistant-review-desktop.png', 'assistantSommerro', 'assistant-review-desktop.png', 1440, 'en', 'Sommerro proposal ready for review'],
