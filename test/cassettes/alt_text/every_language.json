@@ -1,0 +1,40 @@
+{
+  "cassette": "alt_text/every_language",
+  "interactions": [
+    {
+      "request": {
+        "kind": "generate",
+        "messages": [
+          {
+            "content": [
+              {
+                "text": "Write alt text for this image. A screen reader reads it aloud in place of the image, as part of the page. Describe what it shows that matters to someone who cannot see it, in one complete sentence of at most 125 characters — count them; a short sentence that ends is better than a long one. Leave out photographic style (close-up, black-and-white, shallow focus) unless it is the point of the image, and leave out decorative detail. Name people, places, brands and products only when the image or the details below give them; never guess. Do not begin with \"Image of\" or \"Picture of\". If the image is mostly text, give the text. Plain text, no quotes.\n\nWrite it in these languages: \"en\" (English), \"no\" (Norsk). Reply with one JSON object and nothing else: {\"en\": \"…\", \"no\": \"…\"}\n\nThe image's title: Oslo harbour",
+                "type": "text"
+              },
+              {
+                "bytes": 23465,
+                "media_type": "image/jpeg",
+                "sha256": "3ddcfb07a3ebca9d",
+                "type": "image"
+              }
+            ],
+            "role": "user"
+          }
+        ],
+        "model": "openai:gpt-4o-mini",
+        "params": {},
+        "system": null,
+        "tools": []
+      },
+      "response": {
+        "finish_reason": "stop",
+        "text": "{\"en\": \"A ferry leaving Oslo harbour at dusk\", \"no\": \"En ferje forlater Oslo havn i skumringen\"}",
+        "usage": {
+          "input_tokens": 1,
+          "output_tokens": 1
+        }
+      }
+    }
+  ],
+  "version": 1
+}

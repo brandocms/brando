@@ -28,6 +28,7 @@ defmodule E2eProjectWeb.ConnCase do
       import Plug.Conn
       import Phoenix.ConnTest
       import E2eProjectWeb.ConnCase
+      use Brando.Test
     end
   end
 

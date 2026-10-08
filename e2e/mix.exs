@@ -70,6 +70,8 @@ defmodule E2eProject.MixProject do
       # live view
       {:phoenix_live_view, "1.2.12"},
       {:floki, ">= 0.27.0"},
+      # LiveView tests (Phoenix.LiveViewTest), as a new Phoenix app has
+      {:lazy_html, ">= 0.1.0", only: :test},
 
       # general deps
       {:postgrex, "~> 0.15"},

@@ -1,0 +1,52 @@
+defmodule Brando.Test.FactoryTest do
+  use Brando.ConnCase, async: false
+  use Brando.Test
+
+  alias Brando.Pages.Page
+  alias Brando.SyncTest.Article
+
+  test "derives params from the blueprint's required attributes" do
+    params = params_for(Article)
+
+    assert params.title =~ "Title"
+    assert params.slug =~ ~r/^slug-\d+$/
+    assert params.status == :published
+    assert params.language == Brando.config(:default_language)
+    refute Map.has_key?(params, :subtitle)
+
+    # Unique per call, for unique fields.
+    refute params_for(Article).slug == params.slug
+  end
+
+  test "the blueprint's factory and the given attrs come first" do
+    params = params_for(Page, title: "Given")
+    assert params.title == "Given"
+    assert params.template == "default.html"
+  end
+
+  test "builds a valid entry without inserting it" do
+    article = build_entry(Article, %{title: "Built", year: 2024})
+    assert %Article{id: nil, title: "Built", year: 2024, status: :published} = article
+    assert Brando.Repo.aggregate(Article, :count) == 0
+  end
+
+  test "inserts through the context, as the admin creates entries" do
+    user = insert_user()
+    article = insert_entry(Article, %{title: "Inserted"}, user: user)
+
+    assert %Article{id: id, title: "Inserted", creator_id: creator_id} = article
+    assert id
+    assert creator_id == user.id
+    assert {:ok, %{title: "Inserted"}} = Brando.SyncTest.get_article(id)
+  end
+
+  test "says what is missing when the entry is not valid" do
+    error = assert_raise ArgumentError, fn -> insert_entry(Article, %{title: nil}) end
+    assert error.message =~ "Brando.SyncTest.Article is not valid"
+    assert error.message =~ "title"
+  end
+
+  test "refuses a schema that is not a blueprint" do
+    assert_raise ArgumentError, ~r/not a blueprint/, fn -> params_for(Brando.Users.UserToken) end
+  end
+end

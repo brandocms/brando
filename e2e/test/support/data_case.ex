@@ -24,6 +24,7 @@ defmodule E2eProject.DataCase do
       import Ecto.Changeset
       import Ecto.Query
       import E2eProject.DataCase
+      use Brando.Test
     end
   end
 

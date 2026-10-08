@@ -820,4 +820,5 @@ Load a topic's rules before working in that area:
 - `brando:tenancy` (`deps/brando/usage-rules/tenancy.md`): sites and environments, tenant migrations, static builds, groups, policies and permission checks.
 - `brando:i18n` (`deps/brando/usage-rules/i18n.md`): content languages, localized routes, hreflang and Gettext.
 - `brando:querying` (`deps/brando/usage-rules/querying.md`): writing a context with `Brando.Query`: filters, matches, pagination, caching and mutations.
+- `brando:testing` (`deps/brando/usage-rules/testing.md`): factories for any blueprint, rendering blocks, admin form tests, users with rights, and recorded AI calls (cassettes).
 - `brando:deployment` (`deps/brando/usage-rules/deployment.md`): deploying with Florist and checking a site with `mix brando.doctor`.

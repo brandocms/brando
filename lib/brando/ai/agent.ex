@@ -34,7 +34,9 @@ defmodule Brando.AI.Agent do
         show_cost: true,                      # show the conversation's estimated cost
                                               # to the editor
         client: ReqLLM                        # anything with ReqLLM's generate_text/3,
-                                              # e.g. a scripted model for end-to-end tests
+                                              # e.g. a scripted model for end-to-end tests;
+                                              # defaults to Brando.AI's client. A cassette
+                                              # in use (Brando.AI.Cassette) comes first
 
   Keys come from `Brando.AI`'s provider configuration.
   """
@@ -56,7 +58,7 @@ defmodule Brando.AI.Agent do
     Keyword.merge(
       [
         model: nil,
-        client: ReqLLM,
+        client: nil,
         max_steps: 12,
         max_tokens: 4096,
         run_token_budget: 300_000,

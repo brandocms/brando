@@ -39,6 +39,8 @@ defmodule Brando.LiveCase do
   using do
     quote do
       import Brando.LiveCase
+      # Extracted to the toolkit projects use; `use Brando.Test` imports the rest.
+      import Brando.Test, only: [log_in_user: 2, await_selector: 2, await_selector: 3]
       import Brando.Test.Support
       import Phoenix.ConnTest
       import Phoenix.LiveViewTest
@@ -66,24 +68,7 @@ defmodule Brando.LiveCase do
         config: %Brando.Users.UserConfig{}
       )
 
-    {:ok, conn: log_in_user(Phoenix.ConnTest.build_conn(), user), current_user: user}
-  end
-
-  @doc """
-  Puts a session token for `user` on the conn.
-
-  Deliberately not `BrandoAdmin.UserAuth.log_in_user/3`: that one ends in a
-  `redirect/2`, so it hands back an already-sent 302 conn that `live/2` cannot
-  dispatch. What the admin pipeline actually reads is the session, and this
-  writes exactly what `put_token_in_session/2` writes.
-  """
-  def log_in_user(conn, user) do
-    token = Brando.Users.generate_user_session_token(user)
-
-    conn
-    |> Plug.Test.init_test_session(%{})
-    |> Plug.Conn.put_session(:user_token, token)
-    |> Plug.Conn.put_session(:live_socket_id, Brando.Users.live_socket_id(token))
+    {:ok, conn: Brando.Test.log_in_user(Phoenix.ConnTest.build_conn(), user), current_user: user}
   end
 
   @doc """
@@ -230,35 +215,7 @@ defmodule Brando.LiveCase do
     quote do
       {:ok, view, _html} = Phoenix.LiveViewTest.live(unquote(conn), unquote(path))
       Phoenix.LiveViewTest.render_async(view, 5_000)
-      {view, Brando.LiveCase.await_selector(view, "##{unquote(form_id)}_form input")}
-    end
-  end
-
-  @doc """
-  Re-renders `view` until `selector` matches, and returns the matching HTML.
-
-  Polls observable DOM state rather than sleeping a guessed interval — the
-  e2e suite's fixed `waitForTimeout` calls are the repo's worst flake source
-  and there is no reason to import that pattern here.
-  """
-  def await_selector(view, selector, timeout \\ 2_000) do
-    deadline = System.monotonic_time(:millisecond) + timeout
-    do_await_selector(view, selector, deadline)
-  end
-
-  defp do_await_selector(view, selector, deadline) do
-    html = Phoenix.LiveViewTest.render(view)
-
-    cond do
-      html |> Floki.parse_document!() |> Floki.find(selector) |> Enum.any?() ->
-        html
-
-      System.monotonic_time(:millisecond) >= deadline ->
-        flunk("`#{selector}` never appeared in the rendered LiveView")
-
-      true ->
-        Process.sleep(20)
-        do_await_selector(view, selector, deadline)
+      {view, Brando.Test.await_selector(view, "##{unquote(form_id)}_form input")}
     end
   end
 

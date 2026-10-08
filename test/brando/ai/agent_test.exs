@@ -1,5 +1,6 @@
 defmodule Brando.AI.AgentTest do
   use Brando.ConnCase, async: false
+  use Brando.Test
   alias Brando.AI.Agent
   alias Brando.AI.Agent.{Message, Run}
   alias Brando.AIStub
@@ -29,61 +30,55 @@ defmodule Brando.AI.AgentTest do
   defp roles(c), do: Enum.map(Agent.messages(c.conversation.id, c.user), & &1.role)
   defp blocks(c), do: length(Catalog.load!(Page, c.identity.id, c.user).entry_blocks)
 
-  defp insert_op(c, media \\ %{"cover" => "image1"}) do
+  # Values that differ between runs, written as "{{name}}" in the cassette.
+  defp bindings(c) do
     %{
-      "op" => "insert_block",
-      "target" => %{"content_type" => "Brando.Pages.Page", "id" => c.identity.id},
-      "module" => "local:#{c.case_module.id}",
-      "values" => %{"heading" => "Lobby"},
-      "media" => media
+      identity: c.identity.id,
+      identity_entry: "Brando.Pages.Page:#{c.identity.id}",
+      case_module: "local:#{c.case_module.id}"
     }
   end
+
+  # The system prompt and the tools' descriptions are tested on their own and
+  # change with the product; these cassettes test the conversation.
+  defp cassette_opts(c), do: [bindings: bindings(c), match_on: [:model, :messages, :tool_names, :params]]
 
   test "a run reads content, prepares a proposal with an attachment and answers", c do
     assert {:ok, "image1"} = Agent.attach(c.conversation.id, {:image, c.image.id}, c.user)
     Agent.subscribe(c.conversation.id)
 
-    AIStub.script([
-      {:tools, [{"search_entries", %{"query" => "Ident", "content_type" => "Brando.Pages.Page"}}]},
-      {:tools, [{"prepare_proposal", %{"summary" => "Lobby on Identity", "operations" => [insert_op(c)]}}]},
-      {:text, "I prepared a proposal that adds the lobby photo to Identity. It goes live when you apply it."}
-    ])
+    use_cassette "assistant/lobby_proposal", cassette_opts(c) do
+      assert {:ok, %Run{status: "completed", steps: 3} = run} =
+               Agent.send_message(c.conversation.id, "Put the lobby photo on Identity", c.user, sync: true)
 
-    assert {:ok, %Run{status: "completed", steps: 3} = run} =
-             Agent.send_message(c.conversation.id, "Put the lobby photo on Identity", c.user, sync: true)
+      assert run.input_tokens == 201
+      assert run.output_tokens == 41
 
-    assert run.input_tokens == 201
-    assert run.output_tokens == 41
+      assert roles(c) == ~w(user assistant tool assistant tool assistant)
 
-    assert roles(c) == ~w(user assistant tool assistant tool assistant)
+      # The model saw the tools, then the results of its calls.
+      assert [first, second, _third] = Brando.AI.Cassette.requests()
+      assert Enum.any?(first["tools"], &(&1["name"] == "prepare_proposal"))
+      assert %{"role" => "tool", "name" => "search_entries", "content" => result} = List.last(second["messages"])
+      assert inspect(result) =~ "Identity"
 
-    # The model saw the tools, then the results of its calls.
-    assert_received {:ai_request, first}
-    assert Enum.any?(first["tools"], &(&1["name"] == "prepare_proposal"))
-    assert_received {:ai_request, second}
-    assert Enum.any?(second["input"], &(&1["type"] == "function_call_output" and &1["output"] =~ "Identity"))
+      {:ok, conversation} = Agent.get_conversation(c.conversation.id, c.user)
+      assert {:ok, proposal} = Proposals.get(conversation.proposal_id, c.user)
+      assert proposal.status == "pending"
+      assert proposal.summary == "Lobby on Identity"
+      assert [%{media: %{"cover" => {:image, id}}}] = proposal.operations
+      assert id == c.image.id
+      assert_received {:agent, _, {:proposal, _}}
+      assert_received {:agent, _, {:progress, "Checking the proposal"}}
 
-    {:ok, conversation} = Agent.get_conversation(c.conversation.id, c.user)
-    assert {:ok, proposal} = Proposals.get(conversation.proposal_id, c.user)
-    assert proposal.status == "pending"
-    assert proposal.summary == "Lobby on Identity"
-    assert [%{media: %{"cover" => {:image, id}}}] = proposal.operations
-    assert id == c.image.id
-    assert_received {:agent, _, {:proposal, _}}
-    assert_received {:agent, _, {:progress, "Checking the proposal"}}
+      # Preparing wrote nothing; the user applies in the admin.
+      assert blocks(c) == 3
 
-    # Preparing wrote nothing; the user applies in the admin.
-    assert blocks(c) == 3
-
-    # A follow-up refines the proposal under review.
-    AIStub.script([
-      {:tools, [{"prepare_proposal", %{"summary" => "Lobby, refined", "operations" => [insert_op(c)]}}]},
-      {:text, "Updated."}
-    ])
-
-    assert {:ok, %{status: "completed"}} = Agent.send_message(c.conversation.id, "Refine it", c.user, sync: true)
-    {:ok, conversation} = Agent.get_conversation(c.conversation.id, c.user)
-    assert {:ok, %{version: 2}} = Proposals.get(conversation.proposal_id, c.user)
+      # A follow-up refines the proposal under review.
+      assert {:ok, %{status: "completed"}} = Agent.send_message(c.conversation.id, "Refine it", c.user, sync: true)
+      {:ok, conversation} = Agent.get_conversation(c.conversation.id, c.user)
+      assert {:ok, %{version: 2}} = Proposals.get(conversation.proposal_id, c.user)
+    end
   end
 
   test "attachment aliases follow attach order and survive detaching others", c do
@@ -280,32 +275,14 @@ defmodule Brando.AI.AgentTest do
     conversation_id = c.conversation.id
     user = c.user
 
-    AIStub.script([
-      {:tools, [{"list_content_types", %{}}]},
-      {:text, "never reached"}
-    ])
-
     # Cancel while the first model call is in flight.
-    Req.Test.stub(Brando.AI, fn conn ->
+    Brando.AI.Cassette.stub(fn _request ->
       :ok = Agent.cancel(conversation_id, user)
 
-      Req.Test.json(conn, %{
-        "id" => "resp_0",
-        "object" => "response",
-        "status" => "completed",
-        "model" => "gpt-4o-mini",
-        "output" => [
-          %{
-            "type" => "function_call",
-            "id" => "fc_0",
-            "call_id" => "call_0",
-            "name" => "list_content_types",
-            "arguments" => "{}",
-            "status" => "completed"
-          }
-        ],
-        "usage" => %{"input_tokens" => 10, "output_tokens" => 5, "total_tokens" => 15}
-      })
+      %{
+        "tool_calls" => [%{"id" => "call_0", "name" => "list_content_types", "arguments" => %{}}],
+        "usage" => %{"input_tokens" => 10, "output_tokens" => 5}
+      }
     end)
 
     assert {:ok, %Run{status: "cancelled", input_tokens: 10}} =
@@ -435,9 +412,10 @@ defmodule Brando.AI.AgentTest do
     assert [%{content: "Pages have blocks."} | _] = Enum.reverse(Agent.messages(c.conversation.id, c.user))
   end
 
+  # The run's process is started by a task supervisor; it finds the test's
+  # cassette through `$callers`.
+  @tag cassette: "assistant/background_run", cassette_opts: [match_on: [:model, :messages, :tool_names]]
   test "runs execute in the background and report over PubSub", c do
-    AIStub.configure(shared: true)
-    AIStub.script([{:text, "Hello there"}])
     Agent.subscribe(c.conversation.id)
 
     assert {:ok, %Run{status: "running", id: id}} = Agent.send_message(c.conversation.id, "Hi", c.user)

@@ -39,7 +39,7 @@ defmodule BrandoAdmin.ListingCopyToLanguageTest do
   end
 
   test "a language the page already has is not offered, and is refused if asked for", c do
-    Brando.AIStub.configure(shared: true)
+    Brando.AIStub.configure()
     Page.Alternate.add(c.en_index.id, c.no_index.id)
     Brando.endpoint().subscribe("user:#{c.current_user.id}")
 
@@ -59,7 +59,7 @@ defmodule BrandoAdmin.ListingCopyToLanguageTest do
   end
 
   test "Translate to a language that uses the page's URI translates a copy at a free URI", c do
-    Brando.AIStub.configure(shared: true)
+    Brando.AIStub.configure()
 
     Brando.AIStub.reply(fn prompt ->
       ~r/^(\d+): .*$/m

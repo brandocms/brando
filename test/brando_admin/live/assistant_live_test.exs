@@ -1,16 +1,30 @@
 defmodule BrandoAdmin.AssistantLiveTest do
   use Brando.LiveCase
+  use Brando.Test
   import Ecto.Query, only: [from: 2]
   alias Brando.AI.Agent
   alias Brando.AIStub
   alias Brando.Content.Transfer.Catalog
   alias Brando.Pages.Page
 
+  # The conversation is what these cassettes test; the system prompt and the
+  # tools' descriptions change with the product and are tested on their own.
+  @cassette_opts [match_on: [:model, :messages, :tool_names, :params]]
+
   setup %{current_user: user} do
-    AIStub.configure(shared: true)
+    AIStub.configure()
     fixtures = Brando.ProposalFixtures.context()
     Brando.Content.create_identifier(Page, fixtures.identity)
     Map.merge(fixtures, %{current_user: user})
+  end
+
+  # Ids the recorded tool calls name, written as "{{name}}" in the cassettes.
+  defp bind(c) do
+    Brando.AI.Cassette.bind(
+      identity: c.identity.id,
+      identity_entry: "Brando.Pages.Page:#{c.identity.id}",
+      text_module: "local:#{c.text_module.id}"
+    )
   end
 
   defp eventually(view, fun, tries \\ 200) do
@@ -30,8 +44,9 @@ defmodule BrandoAdmin.AssistantLiveTest do
   end
 
   describe "opened from the block editor" do
+    @tag cassette: "assistant/selected_entry", cassette_opts: @cassette_opts
     test "shows the selected entry and starts the conversation on it", %{conn: conn} = c do
-      AIStub.script([{:text, "Which part of Identity should change?"}])
+      bind(c)
       path = "/admin/assistant?content_type=Brando.Pages.Page&id=#{c.identity.id}&field=blocks"
       {:ok, view, html} = live(conn, path)
 
@@ -159,20 +174,9 @@ defmodule BrandoAdmin.AssistantLiveTest do
     end
   end
 
+  @tag cassette: "assistant/text_block_proposal", cassette_opts: @cassette_opts
   test "a message produces a reviewed proposal that one click applies", %{conn: conn} = c do
-    op = %{
-      "op" => "insert_block",
-      "target" => %{"content_type" => "Brando.Pages.Page", "id" => c.identity.id},
-      "module" => "local:#{c.text_module.id}",
-      "texts" => %{"body" => "<p>Written in the assistant</p>"}
-    }
-
-    AIStub.script([
-      {:tools, [{"search_entries", %{"query" => "Ident", "content_type" => "Brando.Pages.Page"}}]},
-      {:tools, [{"prepare_proposal", %{"summary" => "A new text block on Identity", "operations" => [op]}}]},
-      {:text, "Prepared a text block for Identity."}
-    ])
-
+    bind(c)
     {:ok, view, _} = live(conn, "/admin/assistant")
     view |> form("#assistant-composer", %{message: "Add a text block to Identity"}) |> render_submit()
     [conversation] = Agent.list_conversations(c.current_user)
@@ -199,12 +203,9 @@ defmodule BrandoAdmin.AssistantLiveTest do
     refute has_element?(view, "button.assistant-apply")
   end
 
+  @tag cassette: "assistant/read_entry", cassette_opts: @cassette_opts
   test "steps name what they read, and the cost so far is shown unless switched off", %{conn: conn} = c do
-    AIStub.script([
-      {:tools, [{"entry_outline", %{"content_type" => "Brando.Pages.Page", "id" => c.identity.id}}]},
-      {:text, "Identity has three text blocks."}
-    ])
-
+    bind(c)
     {:ok, view, _} = live(conn, "/admin/assistant")
     view |> form("#assistant-composer", %{message: "What is on Identity?"}) |> render_submit()
     html = eventually(view, &(&1 =~ "Identity has three text blocks."))
@@ -225,14 +226,10 @@ defmodule BrandoAdmin.AssistantLiveTest do
     refute has_element?(view, ".assistant-cost")
   end
 
+  # The suggested images are listed by id; the test picks its own.
+  @tag cassette: "assistant/request_media", cassette_opts: @cassette_opts ++ [ignore_keys: ["suggested"]]
   test "the assistant asks for media, and the editor picks from its suggestions", %{conn: conn} = c do
-    AIStub.script([
-      {:tools, [{"request_media", %{"kind" => "image", "reason" => "Photos of the typeface", "query" => "Title one"}}]},
-      {:text, "Which images of the typeface should I use?"},
-      {:tools, [{"list_attachments", %{}}]},
-      {:text, "I will use image1."}
-    ])
-
+    bind(c)
     {:ok, view, _} = live(conn, "/admin/assistant")
     view |> form("#assistant-composer", %{message: "Write an insight article about the typeface"}) |> render_submit()
     eventually(view, &(&1 =~ "Which images of the typeface should I use?"))

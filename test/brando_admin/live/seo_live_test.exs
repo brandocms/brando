@@ -298,5 +298,5 @@ defmodule BrandoAdmin.Sites.SEOLiveTest do
     page.meta_description
   end
 
-  defp configure_ai, do: Brando.AIStub.configure(shared: true)
+  defp configure_ai, do: Brando.AIStub.configure()
 end
