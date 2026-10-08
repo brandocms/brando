@@ -61,8 +61,29 @@ defmodule BrandoAdmin.Components.TwoFactor do
     """
   end
 
-  defp negative?(action),
+  @doc "Whether an event weakens or threatens an account, for its red dot."
+  def negative?(action),
     do: action in [:login_failed, :locked, :two_factor_disabled, :two_factor_reset, :passkey_removed, :mcp_revoked]
+
+  @doc "The kinds of security event, labelled, for filtering: `[{label, value}]`."
+  def action_options, do: Enum.map(Brando.Users.SecurityEvent.actions(), &{action_label(&1), to_string(&1)})
+
+  defp action_label(:login), do: gettext("Logged in")
+  defp action_label(:login_failed), do: gettext("Failed attempt")
+  defp action_label(:locked), do: gettext("Account locked")
+  defp action_label(:two_factor_enabled), do: gettext("Two-factor authentication turned on")
+  defp action_label(:two_factor_disabled), do: gettext("Two-factor authentication turned off")
+  defp action_label(:two_factor_reset), do: gettext("Two-factor authentication reset")
+  defp action_label(:recovery_codes_created), do: gettext("New recovery codes created")
+  defp action_label(:password_changed), do: gettext("Password changed")
+  defp action_label(:policy_changed), do: gettext("Sign-in policy changed")
+  defp action_label(:passkey_added), do: gettext("Passkey added")
+  defp action_label(:passkey_removed), do: gettext("Passkey removed")
+  defp action_label(:session_revoked), do: gettext("A session was logged out")
+  defp action_label(:sessions_revoked), do: gettext("Logged out everywhere")
+  defp action_label(:mcp_connected), do: gettext("App connected")
+  defp action_label(:mcp_revoked), do: gettext("App disconnected")
+  defp action_label(action), do: to_string(action)
 
   @doc "What a security event says, in the admin's language."
   def event_label(%{action: :login, details: %{"method" => "totp"}}),

@@ -18593,3 +18593,73 @@ msgid "Turned the MCP endpoint off and disconnected %{count} app"
 msgid_plural "Turned the MCP endpoint off and disconnected %{count} apps"
 msgstr[0] ""
 msgstr[1] ""
+
+#: lib/brando_admin/components/two_factor.ex
+#, elixir-autogen, elixir-format
+msgid "Failed attempt"
+msgstr ""
+
+#: lib/brando_admin/components/two_factor.ex
+#, elixir-autogen, elixir-format
+msgid "Account locked"
+msgstr ""
+
+#: lib/brando_admin/components/two_factor.ex
+#, elixir-autogen, elixir-format
+msgid "Two-factor authentication reset"
+msgstr ""
+
+#: lib/brando_admin/components/two_factor.ex
+#, elixir-autogen, elixir-format
+msgid "Passkey added"
+msgstr ""
+
+#: lib/brando_admin/components/two_factor.ex
+#, elixir-autogen, elixir-format
+msgid "Passkey removed"
+msgstr ""
+
+#: lib/brando_admin/components/two_factor.ex
+#, elixir-autogen, elixir-format
+msgid "App connected"
+msgstr ""
+
+#: lib/brando_admin/components/two_factor.ex
+#, elixir-autogen, elixir-format
+msgid "App disconnected"
+msgstr ""
+
+#: lib/brando_admin/live/sites/activity_live.ex
+#, elixir-autogen, elixir-format
+msgid "Every user's sign-ins, failed attempts and lockouts, and changes to passwords, two-factor authentication, passkeys, sessions and connected apps."
+msgstr ""
+
+#: lib/brando_admin/live/sites/activity_live.ex
+#, elixir-autogen, elixir-format
+msgid "Activity views"
+msgstr ""
+
+#: lib/brando_admin/live/sites/activity_live.ex
+#, elixir-autogen, elixir-format
+msgid "Load older events"
+msgstr ""
+
+#: lib/brando_admin/live/sites/activity_live.ex
+#, elixir-autogen, elixir-format
+msgid "Unknown account"
+msgstr ""
+
+#: lib/brando_admin/live/sites/activity_live.ex
+#, elixir-autogen, elixir-format
+msgid "Locked until %{time}"
+msgstr ""
+
+#: lib/brando_admin/live/users/groups_live.ex
+#, elixir-autogen, elixir-format
+msgid "Security log"
+msgstr ""
+
+#: lib/brando_admin/live/users/groups_live.ex
+#, elixir-autogen, elixir-format
+msgid "Shows every user's sign-ins, failed attempts and changes to their sign-in settings, with IP addresses and browsers, under Activity. With several sites, only superusers see it."
+msgstr ""

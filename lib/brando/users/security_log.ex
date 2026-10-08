@@ -11,10 +11,15 @@ defmodule Brando.Users.SecurityLog do
 
   Recording never fails the action it records: an event that cannot be
   written is logged and dropped.
+
+  Everyone's events are listed in Configuration → Activity → Security for
+  those `readable_by?/1` allows.
   """
 
   import Ecto.Query
 
+  alias Brando.Authorization
+  alias Brando.Authorization.{Engine, Scope}
   alias Brando.Repo
   alias Brando.Users.SecurityEvent
   alias Phoenix.LiveView
@@ -107,6 +112,72 @@ defmodule Brando.Users.SecurityLog do
       order_by: [desc: e.inserted_at, desc: e.id],
       limit: ^limit,
       preload: [:actor]
+    )
+    |> Repo.all()
+  end
+
+  @doc """
+  Whether `user` may see every user's events (Configuration → Activity →
+  Security). Each user sees their own on their security page regardless.
+
+  Users are shared by every site, and their events say nothing about which
+  site they worked on. With several sites (`Brando.Tenant.mode/0` is
+  `:multi`) only superusers see them, since an administrator of one site
+  would otherwise follow the sign-ins of people who work on other sites.
+  With one site: administrators and superusers, or with group authorization
+  the `brando.security_log.read` permission in the current scope.
+  """
+  @spec readable_by?(map() | nil) :: boolean()
+  def readable_by?(%{id: id} = user) when is_integer(id) do
+    multi? = Brando.Tenant.mode() == :multi
+
+    cond do
+      Authorization.enabled?() and multi? -> Engine.superuser?(Scope.installation(user))
+      Authorization.enabled?() -> Authorization.can?(Scope.current(user), :read, :security_log)
+      multi? -> Map.get(user, :role) == :superuser
+      true -> Map.get(user, :role) in [:admin, :superuser]
+    end
+  end
+
+  def readable_by?(_user), do: false
+
+  @doc """
+  Everyone's events matching `filters`, newest first, with the user and
+  whoever else acted. Filters: `:user_id`, `:action` and `:since` (a
+  `DateTime`); nil leaves one out. Options: `:limit` (50) and `:offset`.
+  Only for those `readable_by?/1` allows.
+  """
+  @spec list_all(map(), keyword()) :: [SecurityEvent.t()]
+  def list_all(filters \\ %{}, opts \\ []) do
+    filters
+    |> filtered()
+    |> order_by([e], desc: e.inserted_at, desc: e.id)
+    |> limit(^Keyword.get(opts, :limit, 50))
+    |> offset(^Keyword.get(opts, :offset, 0))
+    |> preload([:actor, user: :avatar])
+    |> Repo.all()
+  end
+
+  @doc "How many events match `filters` (see `list_all/2`)."
+  @spec count_all(map()) :: non_neg_integer()
+  def count_all(filters \\ %{}), do: filters |> filtered() |> Repo.aggregate(:count)
+
+  defp filtered(filters) do
+    Enum.reduce(filters, from(e in SecurityEvent), fn
+      {_key, nil}, query -> query
+      {:user_id, id}, query -> where(query, [e], e.user_id == ^id)
+      {:action, action}, query -> where(query, [e], e.action == ^action)
+      {:since, since}, query -> where(query, [e], e.inserted_at >= ^since)
+      _, query -> query
+    end)
+  end
+
+  @doc "The users who have events, by name, for filtering."
+  @spec users() :: [Brando.Users.User.t()]
+  def users do
+    from(u in Brando.Users.User,
+      where: u.id in subquery(from(e in SecurityEvent, where: not is_nil(e.user_id), distinct: true, select: e.user_id)),
+      order_by: u.name
     )
     |> Repo.all()
   end
