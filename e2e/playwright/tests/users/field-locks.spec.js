@@ -106,10 +106,11 @@ test.describe('Field locks', () => {
   })
 
   // What B types while disconnected is B's newest edit: the reconnect keeps
-  // it, and A, who holds the older title, gets it. The socket is dropped and
-  // reconnected by LiveSocket, which rejoins and recovers the form; a real
-  // network partition reloads the page instead (see block-recovery.spec.js),
-  // and there is no form to recover.
+  // it, and A, who holds the older title, gets it. A lost connection (sleep,
+  // a network change) rejoins with a new process and recovers the form,
+  // which is what this drives. It drops the socket through LiveSocket rather
+  // than `goOffline`: the browser's offline emulation closes the socket with
+  // code 1000, which LiveView answers with a page reload.
   test('typing done offline survives the reconnect', async ({ page, secondUserPage }) => {
     const path = await openProject(page)
     await secondUserPage.goto(path)
