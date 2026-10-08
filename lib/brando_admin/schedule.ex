@@ -51,12 +51,20 @@ defmodule BrandoAdmin.Schedule do
           movable?: boolean()
         }
 
-  @doc "The content types that can be scheduled: they have `Brando.Trait.ScheduledPublishing` and an admin."
+  @doc """
+  The content types that can be scheduled: they have
+  `Brando.Trait.ScheduledPublishing`, a status and an admin.
+  """
   def schemas do
     :include_brando
     |> Brando.Content.Identifier.Registry.list_persistent_identifier_modules()
-    |> Enum.filter(&(&1.has_trait(Brando.Trait.ScheduledPublishing) and function_exported?(&1, :__admin_route__, 2)))
     |> Enum.uniq()
+    |> Enum.filter(&schedulable?/1)
+  end
+
+  defp schedulable?(schema) do
+    schema.has_trait(Brando.Trait.ScheduledPublishing) and :status in schema.__schema__(:fields) and
+      function_exported?(schema, :__admin_route__, 2)
   end
 
   @doc """
