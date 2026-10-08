@@ -68,10 +68,12 @@ defmodule Brando.MCP do
 
   ## Configuration
 
-  @doc false
+  @doc "The application's `config :brando, Brando.MCP` settings."
+  @spec config() :: keyword()
   def config, do: Brando.config(__MODULE__) || []
 
-  @doc false
+  @doc "One of the settings in `config/0`, or `default`."
+  @spec config(atom(), term()) :: term()
   def config(key, default), do: Keyword.get(config(), key, default)
 
   @doc "The one OAuth scope a connection gets: read content and propose changes."
@@ -186,7 +188,7 @@ defmodule Brando.MCP do
   @spec server_metadata_url(tenant()) :: String.t()
   def server_metadata_url(tenant), do: base_url() <> "/.well-known/oauth-authorization-server" <> tenant.path
 
-  @doc "The OAuth endpoint `name` (`\"authorize\"`, `\"token\"`, `\"revoke\"`) of `tenant`."
+  @doc ~s[The OAuth endpoint `name` (`"authorize"`, `"token"` or `"revoke"`) of `tenant`.]
   @spec oauth_url(tenant(), String.t()) :: String.t()
   def oauth_url(tenant, name), do: resource(tenant) <> "/oauth/" <> name
 
@@ -376,8 +378,13 @@ defmodule Brando.MCP do
     end
   end
 
-  @doc false
-  # Revokes `grant` and every token of it, and records it.
+  @doc """
+  Revokes `grant` and every token of it, as `actor` (a user, or `:system`
+  for a revocation Brando makes itself: reuse of a token, a client's
+  revocation request, two-factor authentication turned off). Recorded in
+  Activity and the user's security log once.
+  """
+  @spec revoke_grant(Grant.t(), User.t() | :system, String.t()) :: :ok
   def revoke_grant(%Grant{} = grant, actor, reason) do
     now = DateTime.utc_now()
     actor_id = if match?(%User{}, actor), do: actor.id

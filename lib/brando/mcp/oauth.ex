@@ -69,12 +69,15 @@ defmodule Brando.MCP.OAuth do
         state: bounded(params["state"], 1024)
       }
 
-      case MCP.refusal(user, tenant) do
-        nil -> with :ok <- rate_limit(user), do: validate_client(request, params)
-        reason -> {:error, {:refused, reason, request}}
-      end
+      validate_for(MCP.refusal(user, tenant), user, request, params)
     end
   end
+
+  defp validate_for(nil, user, request, params) do
+    with :ok <- rate_limit(user), do: validate_client(request, params)
+  end
+
+  defp validate_for(reason, _user, request, _params), do: {:error, {:refused, reason, request}}
 
   # Each check may fetch the client's document: a few dozen a minute is
   # more than a person clicking needs.
@@ -212,12 +215,8 @@ defmodule Brando.MCP.OAuth do
   defp exchange_code(params, tenant) do
     with {:ok, code, verifier, client_id, redirect_uri} <- code_params(params),
          :ok <- resource_param(params, tenant) do
-      Repo.transaction(fn ->
-        case Repo.one(from c in AuthorizationCode, where: c.code_hash == ^hash(code), lock: "FOR UPDATE") do
-          nil -> Repo.rollback(invalid_grant())
-          code -> redeem(code, verifier, client_id, redirect_uri, tenant)
-        end
-      end)
+      fn -> redeem(locked_code(code), verifier, client_id, redirect_uri, tenant) end
+      |> Repo.transaction()
       |> unwrap()
     end
   end
@@ -246,6 +245,12 @@ defmodule Brando.MCP.OAuth do
     do: {:error, "invalid_target", "The resource is not this MCP endpoint."}
 
   defp resource_param(_params, _tenant), do: :ok
+
+  defp locked_code(code) do
+    Repo.one(from c in AuthorizationCode, where: c.code_hash == ^hash(code), lock: "FOR UPDATE")
+  end
+
+  defp redeem(nil, _verifier, _client_id, _redirect_uri, _tenant), do: Repo.rollback(invalid_grant())
 
   defp redeem(%AuthorizationCode{used_at: used_at} = code, _verifier, _client_id, _redirect_uri, _tenant)
        when not is_nil(used_at) do
@@ -306,20 +311,19 @@ defmodule Brando.MCP.OAuth do
   defp refresh(params, tenant) do
     with {:ok, token, client_id} <- refresh_params(params),
          :ok <- resource_param(params, tenant) do
-      Repo.transaction(fn ->
-        query =
-          from t in Token,
-            where: t.token_hash == ^hash(token) and t.kind == :refresh,
-            lock: "FOR UPDATE",
-            preload: [:grant]
-
-        case Repo.one(query) do
-          nil -> Repo.rollback(invalid_grant())
-          token -> rotate(token, client_id, tenant)
-        end
-      end)
+      fn -> rotate(locked_refresh_token(token), client_id, tenant) end
+      |> Repo.transaction()
       |> unwrap()
     end
+  end
+
+  defp locked_refresh_token(token) do
+    Repo.one(
+      from t in Token,
+        where: t.token_hash == ^hash(token) and t.kind == :refresh,
+        lock: "FOR UPDATE",
+        preload: [:grant]
+    )
   end
 
   defp refresh_params(%{"refresh_token" => token, "client_id" => client_id})
@@ -328,31 +332,12 @@ defmodule Brando.MCP.OAuth do
 
   defp refresh_params(_params), do: {:error, "invalid_request", "refresh_token and client_id are required."}
 
+  defp rotate(nil, _client_id, _tenant), do: Repo.rollback(invalid_grant())
+
   defp rotate(%Token{grant: grant} = token, client_id, tenant) do
-    now = DateTime.utc_now()
-
-    cond do
-      not is_nil(grant.revoked_at) or not is_nil(token.revoked_at) ->
-        Repo.rollback(invalid_grant())
-
-      not secure_equal?(grant.client_id, client_id) ->
-        Repo.rollback(invalid_grant())
-
-      not is_nil(token.rotated_at) ->
-        # Reuse: the token was already exchanged once, so one of its two
-        # holders stole it. End the connection.
-        Repo.rollback({:revoke, grant.id, "refresh_token_reuse"})
-
-      DateTime.compare(token.expires_at, now) != :gt ->
-        Repo.rollback(invalid_grant())
-
-      not secure_equal?(grant.resource, MCP.resource(tenant)) or not same_tenant?(grant, tenant) ->
-        Repo.rollback(invalid_grant())
-
-      not (MCP.enabled?(tenant) and MCP.can_connect?(Repo.get(User, grant.user_id), tenant)) ->
-        Repo.rollback({"invalid_grant", "The user may no longer connect tools."})
-
-      true ->
+    case refresh_refusal(token, client_id, tenant) do
+      nil ->
+        now = DateTime.utc_now()
         token |> Ecto.Changeset.change(rotated_at: now) |> Repo.update!()
 
         # Tokens past their time are of no use, and only rotated refresh
@@ -360,8 +345,30 @@ defmodule Brando.MCP.OAuth do
         from(t in Token, where: t.grant_id == ^grant.id and t.expires_at < ^now) |> Repo.delete_all()
 
         issue_tokens(grant)
+
+      refusal ->
+        Repo.rollback(refusal)
     end
   end
+
+  # Why a refresh token may not be exchanged, or nil
+  defp refresh_refusal(%Token{grant: grant} = token, client_id, tenant) do
+    cond do
+      not is_nil(grant.revoked_at) or not is_nil(token.revoked_at) -> invalid_grant()
+      not secure_equal?(grant.client_id, client_id) -> invalid_grant()
+      # Reuse: the token was already exchanged once, so one of its two
+      # holders stole it. End the connection.
+      not is_nil(token.rotated_at) -> {:revoke, grant.id, "refresh_token_reuse"}
+      DateTime.compare(token.expires_at, DateTime.utc_now()) != :gt -> invalid_grant()
+      not bound_to?(grant, tenant) -> invalid_grant()
+      not allowed?(grant.user_id, tenant) -> {"invalid_grant", "The user may no longer connect tools."}
+      true -> nil
+    end
+  end
+
+  defp bound_to?(grant, tenant), do: secure_equal?(grant.resource, MCP.resource(tenant)) and same_tenant?(grant, tenant)
+
+  defp allowed?(user_id, tenant), do: MCP.enabled?(tenant) and MCP.can_connect?(Repo.get(User, user_id), tenant)
 
   defp issue_tokens(grant) do
     now = DateTime.utc_now()
@@ -464,36 +471,38 @@ defmodule Brando.MCP.OAuth do
           {:ok, %{grant: Grant.t(), token: Token.t(), user: User.t()}} | {:error, :invalid_token | :forbidden}
   def authenticate(token, tenant) when is_binary(token) and byte_size(token) in 20..200 do
     now = DateTime.utc_now()
-    resource = MCP.resource(tenant)
 
-    query =
-      from t in Token,
-        join: g in assoc(t, :grant),
-        where:
-          t.token_hash == ^hash(token) and t.kind == :access and is_nil(t.revoked_at) and t.expires_at > ^now and
-            is_nil(g.revoked_at) and g.resource == ^resource,
-        preload: [grant: g]
-
-    with %Token{grant: grant} = token <- Repo.one(query),
+    with %Token{grant: grant} = token <- access_token(token, tenant, now),
          true <- same_tenant?(grant, tenant),
          %User{} = user <- Repo.get(User, grant.user_id) do
-      case MCP.refusal(user, tenant) do
-        nil ->
-          touch(token, grant, now)
-          {:ok, %{grant: grant, token: token, user: user}}
-
-        :permission ->
-          {:error, :forbidden}
-
-        _inactive_or_two_factor ->
-          {:error, :invalid_token}
-      end
+      authenticated(MCP.refusal(user, tenant), token, grant, user, now)
     else
       _ -> {:error, :invalid_token}
     end
   end
 
   def authenticate(_token, _tenant), do: {:error, :invalid_token}
+
+  defp access_token(token, tenant, now) do
+    resource = MCP.resource(tenant)
+
+    Repo.one(
+      from t in Token,
+        join: g in assoc(t, :grant),
+        where:
+          t.token_hash == ^hash(token) and t.kind == :access and is_nil(t.revoked_at) and t.expires_at > ^now and
+            is_nil(g.revoked_at) and g.resource == ^resource,
+        preload: [grant: g]
+    )
+  end
+
+  defp authenticated(nil, token, grant, user, now) do
+    touch(token, grant, now)
+    {:ok, %{grant: grant, token: token, user: user}}
+  end
+
+  defp authenticated(:permission, _token, _grant, _user, _now), do: {:error, :forbidden}
+  defp authenticated(_inactive_or_two_factor, _token, _grant, _user, _now), do: {:error, :invalid_token}
 
   # Last used, at most once a minute per connection
   defp touch(token, grant, now) do

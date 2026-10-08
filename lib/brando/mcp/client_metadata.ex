@@ -65,21 +65,20 @@ defmodule Brando.MCP.ClientMetadata do
   @spec fetch(String.t()) :: {:ok, t()} | {:error, atom()}
   def fetch(client_id) do
     if valid_client_id?(client_id) do
-      key = {__MODULE__, client_id}
-
-      case Cachex.get(:cache, key) do
-        {:ok, %{client_id: ^client_id} = client} ->
-          {:ok, client}
-
-        _ ->
-          with {:ok, body} <- get(client_id),
-               {:ok, client} <- parse(client_id, body) do
-            Cachex.put(:cache, key, client, expire: @cache_ttl)
-            {:ok, client}
-          end
+      case Cachex.get(:cache, {__MODULE__, client_id}) do
+        {:ok, %{client_id: ^client_id} = client} -> {:ok, client}
+        _ -> fetch_and_cache(client_id)
       end
     else
       {:error, :invalid_client_id}
+    end
+  end
+
+  defp fetch_and_cache(client_id) do
+    with {:ok, body} <- get(client_id),
+         {:ok, client} <- parse(client_id, body) do
+      Cachex.put(:cache, {__MODULE__, client_id}, client, expire: @cache_ttl)
+      {:ok, client}
     end
   end
 
@@ -247,24 +246,19 @@ defmodule Brando.MCP.ClientMetadata do
   defp receive_response(conn, ref, state, deadline) do
     wait = deadline - System.monotonic_time(:millisecond)
 
-    if wait <= 0 do
-      Mint.HTTP.close(conn)
-      {:error, :unreachable}
+    with true <- wait > 0,
+         {:ok, conn, responses} <- Mint.HTTP.recv(conn, 0, wait) do
+      received(conn, ref, consume(responses, ref, state), deadline)
     else
-      case Mint.HTTP.recv(conn, 0, wait) do
-        {:ok, conn, responses} ->
-          case consume(responses, ref, state) do
-            {:more, state} -> receive_response(conn, ref, state, deadline)
-            {:done, %{status: 200} = state} -> close(conn, {:ok, IO.iodata_to_binary(state.body)})
-            {:done, _state} -> close(conn, {:error, :unreachable})
-            :too_large -> close(conn, {:error, :invalid_document})
-          end
-
-        {:error, conn, _error, _responses} ->
-          close(conn, {:error, :unreachable})
-      end
+      false -> close(conn, {:error, :unreachable})
+      {:error, conn, _error, _responses} -> close(conn, {:error, :unreachable})
     end
   end
+
+  defp received(conn, ref, {:more, state}, deadline), do: receive_response(conn, ref, state, deadline)
+  defp received(conn, _ref, {:done, %{status: 200} = state}, _), do: close(conn, {:ok, IO.iodata_to_binary(state.body)})
+  defp received(conn, _ref, {:done, _state}, _deadline), do: close(conn, {:error, :unreachable})
+  defp received(conn, _ref, :too_large, _deadline), do: close(conn, {:error, :invalid_document})
 
   defp close(conn, result) do
     Mint.HTTP.close(conn)

@@ -82,14 +82,14 @@ defmodule Brando.MCP.Tools do
 
   def call(_name, _args, _auth, _tenant), do: {:error, :unknown}
 
+  # In the connection's schema prefix and authorization scope, with anything
+  # it records attributed to the client.
   defp run(name, args, context, tenant) do
-    MCP.in_tenant(tenant, fn ->
-      Brando.Authorization.Boundary.with_scope(MCP.authorization_scope(context.actor, tenant), fn ->
-        Brando.Activity.with_source(:mcp, %{"client" => context.client}, fn ->
-          Registry.call(name, args, context)
-        end)
-      end)
-    end)
+    scope = MCP.authorization_scope(context.actor, tenant)
+    call = fn -> Registry.call(name, args, context) end
+    attributed = fn -> Brando.Activity.with_source(:mcp, %{"client" => context.client}, call) end
+    scoped = fn -> Brando.Authorization.Boundary.with_scope(scope, attributed) end
+    MCP.in_tenant(tenant, scoped)
   rescue
     exception ->
       # The client hears no internals; the message stays in the server log.

@@ -80,33 +80,51 @@ defmodule Brando.MCP.Server do
   ## Modern requests
 
   defp modern(id, method, params, headers, auth, tenant) do
-    meta = meta(params)
-    version = meta[@meta_version]
+    version = meta(params)[@meta_version]
 
-    cond do
-      not is_binary(version) or not is_map(meta[@meta_capabilities]) ->
-        {400, error(id, -32_602, "_meta must carry #{@meta_version} and #{@meta_capabilities}.")}
-
-      headers["mcp-protocol-version"] != version ->
-        {400, error(id, -32_020, "Header mismatch: MCP-Protocol-Version does not match the request's protocol version.")}
-
-      version not in @modern ->
-        {400, error(id, -32_022, "Unsupported protocol version", %{"supported" => versions(), "requested" => version})}
-
-      headers["mcp-method"] != method ->
-        {400, error(id, -32_020, "Header mismatch: Mcp-Method does not match the request's method.")}
-
-      method == "tools/call" and decode_header(headers["mcp-name"]) != params["name"] ->
-        {400, error(id, -32_020, "Header mismatch: Mcp-Name does not match the tool's name.")}
-
-      true ->
+    case modern_error(method, params, headers) do
+      nil ->
         case dispatch(method, params, auth, tenant, version) do
           {:ok, result} -> {200, result(id, modern_result(result))}
           {:error, :not_found} -> {404, error(id, -32_601, "Method not found: #{method}")}
           {:error, code, message} -> {200, error(id, code, message)}
         end
+
+      {code, message, data} ->
+        {400, error(id, code, message, data)}
     end
   end
+
+  # What is wrong with a modern request's `_meta` and headers, if anything:
+  # the headers mirror the body and must agree with it.
+  defp modern_error(method, params, headers) do
+    meta = meta(params)
+    version = meta[@meta_version]
+
+    cond do
+      not is_binary(version) or not is_map(meta[@meta_capabilities]) ->
+        {-32_602, "_meta must carry #{@meta_version} and #{@meta_capabilities}.", nil}
+
+      headers["mcp-protocol-version"] != version ->
+        {-32_020, "Header mismatch: MCP-Protocol-Version does not match the request's protocol version.", nil}
+
+      version not in @modern ->
+        {-32_022, "Unsupported protocol version", %{"supported" => versions(), "requested" => version}}
+
+      true ->
+        header_mismatch(method, params, headers)
+    end
+  end
+
+  defp header_mismatch(method, _params, %{"mcp-method" => header}) when header != method,
+    do: {-32_020, "Header mismatch: Mcp-Method does not match the request's method.", nil}
+
+  defp header_mismatch("tools/call", params, headers) do
+    if decode_header(headers["mcp-name"]) != params["name"],
+      do: {-32_020, "Header mismatch: Mcp-Name does not match the tool's name.", nil}
+  end
+
+  defp header_mismatch(_method, _params, _headers), do: nil
 
   defp modern_result(result) do
     result
