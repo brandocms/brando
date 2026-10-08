@@ -142,6 +142,9 @@ jobs:
       - name: Compile without warnings
         run: mix compile --warnings-as-errors
 
+      - name: Check usage-rules.md matches the guides
+        run: mix brando.docs.agents --check
+
       - name: Run strict Blueprint code analysis
         run: mix credo --strict lib/brando/blueprint.ex lib/brando/blueprint
 
