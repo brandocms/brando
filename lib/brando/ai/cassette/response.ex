@@ -25,6 +25,7 @@ defmodule Brando.AI.Cassette.Response do
 
   alias Brando.AI.Cassette.Request
   alias ReqLLM.{Message, StreamChunk, ToolCall}
+  alias ReqLLM.Response, as: LLMResponse
   alias ReqLLM.Message.ContentPart
   alias ReqLLM.StreamResponse.MetadataHandle
 
@@ -34,12 +35,12 @@ defmodule Brando.AI.Cassette.Response do
   ## Recording
 
   @doc "The JSON form of a `ReqLLM.Response`."
-  @spec dump(ReqLLM.Response.t()) :: map()
-  def dump(%ReqLLM.Response{} = response) do
+  @spec dump(LLMResponse.t()) :: map()
+  def dump(%LLMResponse{} = response) do
     %{
-      "text" => ReqLLM.Response.text(response),
-      "tool_calls" => response |> ReqLLM.Response.tool_calls() |> Enum.map(&dump_tool_call/1),
-      "usage" => dump_usage(ReqLLM.Response.usage(response)),
+      "text" => LLMResponse.text(response),
+      "tool_calls" => response |> LLMResponse.tool_calls() |> Enum.map(&dump_tool_call/1),
+      "usage" => dump_usage(LLMResponse.usage(response)),
       "finish_reason" => response.finish_reason && to_string(response.finish_reason)
     }
     |> reject_empty()
@@ -109,7 +110,7 @@ defmodule Brando.AI.Cassette.Response do
     context = context(prompt, opts)
 
     {:ok,
-     %ReqLLM.Response{
+     %LLMResponse{
        id: "cassette-" <> Integer.to_string(System.unique_integer([:positive])),
        model: Request.model_spec(model),
        context: %{context | messages: context.messages ++ [message]},

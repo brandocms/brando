@@ -198,20 +198,24 @@ defmodule Brando.AI.Cassette.Request do
   def volatile(map) when is_map(map) do
     Map.new(map, fn {key, value} ->
       key = to_string(key)
-
-      cond do
-        is_nil(value) -> {key, nil}
-        id_key?(key) and (is_integer(value) or is_binary(value)) -> {key, "<id>"}
-        id_key?(key) and is_list(value) -> {key, Enum.map(value, fn _ -> "<id>" end)}
-        String.ends_with?(key, "_at") and is_binary(value) -> {key, "<timestamp>"}
-        true -> {key, volatile(value)}
-      end
+      {key, volatile_value(key, value)}
     end)
   end
 
   def volatile(list) when is_list(list), do: Enum.map(list, &volatile/1)
   def volatile(text) when is_binary(text), do: scrub(text)
   def volatile(other), do: other
+
+  defp volatile_value(_key, nil), do: nil
+
+  defp volatile_value(key, value) do
+    cond do
+      id_key?(key) and (is_integer(value) or is_binary(value)) -> "<id>"
+      id_key?(key) and is_list(value) -> Enum.map(value, fn _ -> "<id>" end)
+      String.ends_with?(key, "_at") and is_binary(value) -> "<timestamp>"
+      true -> volatile(value)
+    end
+  end
 
   defp id_key?(key),
     do: key in ["id", "uid", "ids"] or String.ends_with?(key, ["_id", "_uid", "_ids"])
