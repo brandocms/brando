@@ -175,6 +175,25 @@ defmodule Brando.EditSession.Data do
     end)
   end
 
+  @doc """
+  Note that `client` left `field` to show something else in place of the
+  current state (`Brando.EditSession.detach/2`). Like a save's mark, but it
+  does not expire: it lasts until `client` joins again, or goes.
+  """
+  @spec mark_detached(t(), field(), term()) :: t()
+  def mark_detached(%__MODULE__{} = data, field, client) do
+    update_field(data, field, fn entry -> %{entry | marks: Map.put(entry.marks, client, {entry.rev, :held})} end)
+  end
+
+  @doc "Whether `client` has a mark on `field`."
+  @spec marked?(t(), field(), term()) :: boolean()
+  def marked?(%__MODULE__{} = data, field, client), do: match?(%{^field => %{marks: %{^client => _}}}, data.fields)
+
+  @doc "Forget `client`'s mark on `field`."
+  @spec unmark(t(), field(), term()) :: t()
+  def unmark(%__MODULE__{} = data, field, client),
+    do: update_field(data, field, fn entry -> prune(%{entry | marks: Map.delete(entry.marks, client)}) end)
+
   @doc "Forget the saves `client` had in flight (it left, or its save failed)."
   @spec drop_client(t(), term()) :: t()
   def drop_client(%__MODULE__{} = data, client) do
@@ -283,7 +302,7 @@ defmodule Brando.EditSession.Data do
   end
 
   defp expire_marks(marks, now) do
-    marks |> Enum.reject(fn {_client, {_rev, at}} -> now - at > @mark_ttl_ms end) |> Map.new()
+    marks |> Enum.reject(fn {_client, {_rev, at}} -> at != :held and now - at > @mark_ttl_ms end) |> Map.new()
   end
 
   defp put_field(data, field, entry), do: %{data | fields: Map.put(data.fields, field, entry)}

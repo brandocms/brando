@@ -596,7 +596,13 @@ store** (`BlockField.Ops` — a pure, unit-tested reducer over
   in (`@local_focus`) waits until they leave it. Save, preview, share and recovery copies
   read `EditSession.fetch/3`; after a save the BlockField hands the saved rows to
   `EditSession.rebase/4`, which replays only the ops that arrived during the save and moves
-  every replica onto the new rows. Writes outside the editor (Assistant apply, revision
+  every replica onto the new rows. A revision loaded as a working copy (revisions drawer)
+  replaces the editor's unsaved work: the Form lets its replicas go (no `:DOWN` rejoin)
+  and calls `EditSession.detach/2`, which marks the session's revision; when that editor
+  then writes the entry (activation, save), the rebase keeps only ops after the mark
+  instead of carrying the replaced work back. Anything that replaces the editor's blocks
+  wholesale must go through the session as ops or detach like this — never leave the
+  session holding work the editor no longer shows. Writes outside the editor (Assistant apply, revision
   activation in `Revisions.set_entry_to_revision`, content transfer) call
   `EditSession.sync_saved/1` (`Ops.carry/3`), which waits for the surrounding
   `Brando.Repo.transaction/2` to commit (`Brando.Repo.after_commit/1`) and is dropped on

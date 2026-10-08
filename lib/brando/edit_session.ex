@@ -204,6 +204,19 @@ defmodule Brando.EditSession do
   def leave(session, field), do: GenServer.cast(session, {:leave, self(), field})
 
   @doc """
+  Leave `field` to show something the others do not see: a revision loaded
+  as a working copy, which replaces the editor's unsaved changes.
+
+  The unsaved work the session holds now is what this editor replaced. If
+  this editor then writes the entry (activates the revision, or saves the
+  working copy), the session moves onto the written rows keeping only the
+  ops that arrived after this call, instead of carrying the replaced work
+  back over what was written. Joining again forgets it.
+  """
+  @spec detach(pid(), term()) :: :ok
+  def detach(session, field), do: GenServer.cast(session, {:detach, self(), field})
+
+  @doc """
   The entry was written outside the editor. If a session is running for
   it, its block fields are rebased onto the rows as they are now, carrying
   every editor's unsaved work over (`Ops.carry/3`). The open editors receive
@@ -270,6 +283,9 @@ defmodule Brando.EditSession do
        topic: topic,
        data: Data.new(System.unique_integer([:positive, :monotonic])),
        clients: %{},
+       # editors that left to show something else (`detach/2`), monitored so
+       # their marks go when they do
+       detached: %{},
        grace_ms: grace_period(),
        stop_timer: nil
      }}
@@ -277,36 +293,12 @@ defmodule Brando.EditSession do
 
   @impl true
   def handle_call({:join, pid, field, base, held, opts}, _from, session) do
-    session = track(session, pid, field, opts)
+    detached? = detached?(session, field, pid)
+    {reply, session} = do_join(track(session, pid, field, opts), pid, field, base, held, opts, detached?)
 
-    # Someone who may not change the entry brings nothing into the session,
-    # not even through a rejoin with work it holds.
-    {held, held_base} = if opts[:read_only], do: {base, base}, else: {held, opts[:held_base] || base}
-
-    case Data.join(session.data, field, base, held, held_base) do
-      {result, data} when result in [:seeded, :joined] ->
-        session = %{session | data: data}
-        {:reply, {:ok, info(session, field, pid, result == :seeded)}, session}
-
-      {{:merged, conflicts}, data} ->
-        session = %{session | data: data}
-        broadcast_state(session, field, pid, :joined, conflicts)
-        {:reply, {:ok, info(session, field, pid, false)}, session}
-
-      {:mismatch, data} ->
-        session = %{session | data: data}
-
-        if opts[:rebase] do
-          session =
-            session
-            |> do_rebase(field, base, :carry, pid, :joined)
-            |> merge_held(field, held, held_base, pid)
-
-          {:reply, {:ok, info(session, field, pid, false)}, session}
-        else
-          {:reply, {:error, :base_mismatch}, session}
-        end
-    end
+    # The mark of a working copy this editor left for (`detach/2`) goes with
+    # the join, used by its rebase if it had one.
+    {:reply, reply, %{session | data: Data.unmark(session.data, field, {:detached, pid})}}
   end
 
   def handle_call({:fetch, pid, field, purpose}, _from, session) do
@@ -327,10 +319,12 @@ defmodule Brando.EditSession do
 
   def handle_call({:rebase, pid, field, base, mode}, _from, session) do
     mode =
-      case mode do
-        :own_save -> {:client, pid}
-        {:after, rev} -> {:after, rev, pid}
-        :carry -> :carry
+      case {mode, detached?(session, field, pid)} do
+        # this editor wrote what it showed in place of the session's state
+        {mode, true} when mode in [:own_save, :carry] -> {:client, {:detached, pid}}
+        {:own_save, false} -> {:client, pid}
+        {{:after, rev}, false} -> {:after, rev, pid}
+        {:carry, false} -> :carry
       end
 
     reason = if mode == :carry, do: :external, else: :saved
@@ -366,6 +360,20 @@ defmodule Brando.EditSession do
     end
   end
 
+  def handle_cast({:detach, pid, field}, session) do
+    session =
+      case Data.state(session.data, field) do
+        nil ->
+          session
+
+        _state ->
+          detached = Map.put_new_lazy(session.detached, pid, fn -> Process.monitor(pid) end)
+          %{session | detached: detached, data: Data.mark_detached(session.data, field, {:detached, pid})}
+      end
+
+    handle_cast({:leave, pid, field}, session)
+  end
+
   def handle_cast({:leave, pid, field}, session) do
     session =
       case session.clients do
@@ -385,6 +393,12 @@ defmodule Brando.EditSession do
 
   @impl true
   def handle_info({:DOWN, _ref, :process, pid, _reason}, session) do
+    session = %{
+      session
+      | detached: Map.delete(session.detached, pid),
+        data: Data.drop_client(session.data, {:detached, pid})
+    }
+
     {:noreply, session |> remove_client(pid) |> maybe_schedule_stop()}
   end
 
@@ -481,6 +495,41 @@ defmodule Brando.EditSession do
         })
     end
   end
+
+  defp do_join(session, pid, field, base, held, opts, detached?) do
+    rebase? = opts[:rebase] == true
+    # Someone who may not change the entry brings nothing into the session,
+    # not even through a rejoin with work it holds.
+    {held, held_base} = if opts[:read_only], do: {base, base}, else: {held, opts[:held_base] || base}
+
+    case Data.join(session.data, field, base, held, held_base) do
+      {result, data} when result in [:seeded, :joined] ->
+        session = %{session | data: data}
+        {{:ok, info(session, field, pid, result == :seeded)}, session}
+
+      {{:merged, conflicts}, data} ->
+        session = %{session | data: data}
+        broadcast_state(session, field, pid, :joined, conflicts)
+        {{:ok, info(session, field, pid, false)}, session}
+
+      {:mismatch, data} when rebase? ->
+        # rows this editor wrote from a working copy (`detach/2`) replace
+        # what it held when it left
+        mode = if detached?, do: {:client, {:detached, pid}}, else: :carry
+
+        session =
+          %{session | data: data}
+          |> do_rebase(field, base, mode, pid, :joined)
+          |> merge_held(field, held, held_base, pid)
+
+        {{:ok, info(session, field, pid, false)}, session}
+
+      {:mismatch, data} ->
+        {{:error, :base_mismatch}, %{session | data: data}}
+    end
+  end
+
+  defp detached?(session, field, pid), do: Data.marked?(session.data, field, {:detached, pid})
 
   defp remove_client(session, pid) do
     case Map.pop(session.clients, pid) do
