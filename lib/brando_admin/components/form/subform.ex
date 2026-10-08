@@ -86,16 +86,18 @@ defmodule BrandoAdmin.Components.Form.Subform do
         field={@field}
         label={@label}
         instructions={@instructions}
-        class={["subform", @table? && "subform--table"]}
+        class={["subform", @table? && "subform--table", @listing? && "subform--listing"]}
         meta_top
       >
         <%!-- An inline subform is a table: one line per entry under one row of
               column headings, so every row reads the same. The headings are a
               header group beside the sortable rows, which keeps them out of
               the rows' sibling order. --%>
+        <%!-- A listing is one bordered list too: a row per entry, its fields
+              opening under it, and the same footer. --%>
         <div
           id={@table? && "#{@field.id}-table"}
-          class={@table? && "subform-table-frame"}
+          class={[@table? && "subform-table-frame", @listing? && "subform-list-frame"]}
           phx-hook={@table? && "Brando.TableRows"}
         >
           <div class={@table? && "subform-table-scroll"}>
@@ -147,7 +149,7 @@ defmodule BrandoAdmin.Components.Form.Subform do
                       />
                       <.subentry_sequence :if={@sequenced?} />
                       <.subentry_remove
-                        :if={!@table?}
+                        :if={!@table? and !@listing?}
                         name={"#{@field.form.name}[#{@drop_param}][]"}
                         index={sub_form.index}
                       />
@@ -176,6 +178,7 @@ defmodule BrandoAdmin.Components.Form.Subform do
                         <.icon name={if entry_open?(sub_form, @open_entries), do: "chevron-up", else: "square-pen"} />
                         {if entry_open?(sub_form, @open_entries), do: gettext("Done"), else: gettext("Edit")}
                       </button>
+                      <.subentry_remove name={"#{@field.form.name}[#{@drop_param}][]"} index={sub_form.index} />
                     </div>
                     <div
                       id={"#{sub_form.id}-fields"}
@@ -203,7 +206,7 @@ defmodule BrandoAdmin.Components.Form.Subform do
               </div>
             </div>
           </div>
-          <div :if={@table?} class="subform-table-foot">
+          <div :if={@table? or @listing?} class={(@table? && "subform-table-foot") || "subform-list-foot"}>
             <.subentry_add :if={@subform.add_entry} on_click={JS.push("add_subentry", target: @myself)} />
             <span :if={!@empty_subform_fields} class="subform-table-count">
               {ngettext(
@@ -214,7 +217,10 @@ defmodule BrandoAdmin.Components.Form.Subform do
             </span>
           </div>
         </div>
-        <.subentry_add :if={!@table? && @subform.add_entry} on_click={JS.push("add_subentry", target: @myself)} />
+        <.subentry_add
+          :if={!@table? and !@listing? and @subform.add_entry}
+          on_click={JS.push("add_subentry", target: @myself)}
+        />
       </Primitives.field_base>
     </fieldset>
     """
@@ -362,6 +368,7 @@ defmodule BrandoAdmin.Components.Form.Subform do
   defp assign_table(%{assigns: %{subform: subform, field: field}} = socket) do
     socket
     |> assign_new(:table?, fn -> subform.style == :inline and subform.cardinality == :many end)
+    |> assign_new(:listing?, fn -> subform.style == :listing and subform.cardinality == :many end)
     |> assign_new(:columns, fn -> table_columns(subform, field) end)
   end
 

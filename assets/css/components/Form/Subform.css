@@ -735,68 +735,237 @@
   }
 }
 
-/* Summary subforms keep the entry identity visible while editing. */
-.field-wrapper.subform .subform-entry.summary-entry {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
-  align-items: start;
-  gap: 0 12px;
-  padding: 16px;
+/* A listing subform (`style :listing`) is one bordered list, like the inline
+   tables (SubformTable.css) and `.identifier-list`: a row per entry with its
+   grip, its summary, Edit and remove, and a footer to add one. Edit opens the
+   entry's fields under its row, stacked with the usual gap between a field's
+   instructions and the next label.
 
-  > .subform-tools {
-    grid-column: 1;
-    grid-row: 1;
+   Markup: subform.ex, `@listing?`. */
+.field-wrapper.subform--listing {
+  .subform-list-frame {
+    border: 1px solid var(--brando-line);
+    border-radius: 6px;
+    background: var(--brando-surface);
+    overflow: clip;
+  }
+
+  .subform-empty {
+    padding: 14px 12px;
+    color: var(--brando-muted);
+    font-size: 13px;
+  }
+
+  .subform-entry.summary-entry {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: center;
+    gap: 0 8px;
+    margin: 0;
+    padding: 10px 10px 10px 8px;
+    border: 0;
+    border-radius: 0;
+    background: var(--brando-surface);
+
+    /* Hidden inputs sit between the rows */
+    & ~ .subform-entry {
+      border-top: 1px solid var(--brando-line);
+    }
+
+    > .subform-tools {
+      grid-column: 1;
+      grid-row: 1;
+      align-self: center;
+      margin: 0;
+      padding: 0;
+    }
+
+    > .subform-tools:empty {
+      display: none;
+    }
+  }
+
+  .subform-handle {
+    display: grid;
+    place-items: center;
+    width: 22px;
+    min-height: 32px;
     padding: 0;
-    align-self: center;
+    border: 0;
+    border-radius: 4px;
+    background: transparent;
+    color: var(--brando-faint);
+    cursor: grab;
+
+    [data-icon] {
+      width: 15px;
+      height: 15px;
+      color: currentColor;
+    }
+
+    &:hover {
+      background: var(--brando-surface-selected);
+      color: var(--brando-ink);
+    }
   }
 
   .subform-summary {
     display: flex;
     align-items: center;
-    gap: 16px;
+    gap: 8px;
     min-width: 0;
     min-height: 36px;
   }
 
+  /* The name, a badge beside it, and one quiet line under them */
   .subform-summary-content {
+    display: flex;
     flex: 1;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 3px 8px;
     min-width: 0;
-    overflow-wrap: anywhere;
-    font-size: 15px;
-    line-height: 1.5;
+    color: var(--brando-ink);
+    font-size: 14px;
+    line-height: 19px;
 
-    strong { font-weight: 600; }
-    small { display: block; color: var(--brando-muted); font-size: 13px; }
+    strong {
+      min-width: 0;
+      font-weight: 500;
+      overflow-wrap: break-word;
+    }
+
+    .badge {
+      padding: 3px 7px 2px;
+      font-size: 10px;
+    }
+
+    small {
+      display: block;
+      flex-basis: 100%;
+      min-width: 0;
+      overflow: hidden;
+      color: var(--brando-muted);
+      font-size: 12px;
+      line-height: 16px;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
   }
 
+  /* The admin's small button (30px) */
   .subform-summary-edit {
     display: inline-flex;
     align-items: center;
-    justify-content: center;
     gap: 6px;
     flex-shrink: 0;
-    min-height: 36px;
-    padding: 6px 10px;
+    min-height: 30px;
+    padding: 5px 10px;
     border: 1px solid var(--brando-line);
-    border-radius: 7px;
-    font-size: 13px;
-    cursor: pointer;
+    border-radius: 5px;
     background: var(--brando-surface);
+    color: var(--brando-ink);
+    font-size: 12px;
+    font-weight: 500;
+    line-height: 18px;
+    white-space: nowrap;
+    cursor: pointer;
 
-    [data-icon] { width: 15px; height: 15px; }
-    &:hover { background: var(--brando-surface); }
-    &:focus-visible { outline: 2px solid var(--brando-accent); outline-offset: 3px; }
+    [data-icon] {
+      width: 14px;
+      height: 14px;
+    }
+
+    &:hover {
+      border-color: color-mix(in srgb, var(--brando-accent) 35%, var(--brando-line));
+      background: var(--brando-surface-hover);
+    }
+
+    &:focus-visible {
+      outline: 2px solid var(--brando-accent);
+      outline-offset: 2px;
+    }
   }
 
-  > .subform-fields {
-    grid-column: 1 / -1;
-    width: 100%;
-    min-width: 0;
-    margin-top: 16px;
-    padding-top: 20px;
-    border-top: 1px solid var(--brando-line);
+  .subform-delete {
+    display: grid;
+    place-items: center;
+    flex-shrink: 0;
+    width: 28px;
+    min-height: 30px;
+    padding: 0;
+    border: 0;
+    border-radius: 4px;
+    background: transparent;
+    color: var(--brando-muted);
+    cursor: pointer;
 
-    &[hidden] { display: none; }
-    > .brando-input:last-child .field-wrapper { margin-bottom: 0; }
+    [data-icon] {
+      width: 15px;
+      height: 15px;
+      color: currentColor;
+    }
+
+    &:hover,
+    &:focus-visible {
+      background: var(--brando-surface-selected);
+      color: var(--brando-ink);
+    }
+  }
+
+  /* An open entry: its fields under the row, one under the other. The
+     settings workspace takes the margins off every field and spaces fields
+     with gaps instead; so does this, whatever the form. */
+  .summary-entry > .subform-fields {
+    display: flex;
+    grid-column: 1 / -1;
+    flex-direction: column;
+    gap: 20px;
+    width: auto;
+    min-width: 0;
+    margin: 10px -10px -10px -8px;
+    padding: 18px 16px 18px 38px;
+    border-top: 1px solid var(--brando-line);
+    background: var(--brando-surface);
+
+    &[hidden] {
+      display: none;
+    }
+
+    .field-wrapper {
+      margin: 0;
+    }
+  }
+
+  /* Footer: add an entry, and the count, as under a table */
+  .subform-list-foot {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 8px 10px;
+    border-top: 1px solid var(--brando-line);
+    background: var(--brando-surface-shaded);
+
+    /* Outranks the settings workspace's own add button */
+    & .add-entry-button.add-entry-button {
+      margin: 0;
+      min-height: 30px;
+      padding: 4px 12px;
+      border-radius: 999px;
+      font-size: 13px;
+    }
+  }
+
+  .subform-table-count {
+    color: var(--brando-muted);
+    font-size: 12px;
+  }
+
+  @media (max-width: 599px) {
+    .summary-entry > .subform-fields {
+      padding-left: 12px;
+      padding-right: 12px;
+    }
   }
 }

@@ -289,18 +289,27 @@ defmodule Brando.Sites.Identity do
   @doc "Page options for a service; see `Brando.Sites.Services.identifier_options/2`."
   def service_page_options(form, opts), do: Brando.Sites.Services.identifier_options(form, opts)
 
-  @doc "Summary line for a service in the identity form's listing."
+  @doc """
+  A service's row in the identity form's listing: its name, the page it is
+  linked to (or its URL, or its description) and its type.
+  """
   def service_summary(assigns) do
     assigns = Phoenix.Component.assign(assigns, :detail, service_detail(assigns.entry))
 
     ~H"""
     <strong>{@entry.name || gettext("New service")}</strong>
+    <span :if={@entry.service_type not in [nil, ""]} class="badge">{@entry.service_type}</span>
     <small>{@detail}</small>
     """
   end
 
+  # The loaded page, unless another was picked since (it loads on save)
+  defp service_detail(%{identifier_id: id, identifier: %{id: id, title: title}}) when is_binary(title),
+    do: gettext("Linked to %{page}", page: title)
+
+  defp service_detail(%{identifier_id: id}) when not is_nil(id), do: gettext("Linked to a page")
+  defp service_detail(%{url: url}) when is_binary(url) and url != "", do: url
   defp service_detail(%{description: description}) when is_binary(description) and description != "", do: description
-  defp service_detail(%{identifier: %{title: title}}) when is_binary(title), do: gettext("Linked to %{page}", page: title)
   defp service_detail(_), do: gettext("Describe the service or link it to a page")
 
   def query_with_preloads(id) do
