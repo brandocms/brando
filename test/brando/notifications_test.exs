@@ -461,6 +461,45 @@ defmodule Brando.NotificationsTest do
       assert %{active: false, paused_reason: :failures} = Repo.reload!(route)
     end
 
+    test "a failed or cancelled delivery can be sent again, as a new delivery", %{user: user} do
+      receiver = WebhookReceiver.start(fn _ -> {500, "no"} end)
+      route = slack_route!(user, receiver)
+      page = create_page(user)
+
+      assert :ok = schedule_status(page, user, "published")
+      next_request()
+      [delivery] = deliveries(route)
+      args = %{"delivery" => delivery.id, "route" => route.id}
+      assert {:cancel, _} = NotificationDelivery.deliver(%Oban.Job{args: args, attempt: 10, max_attempts: 10})
+      failed = Repo.reload!(delivery)
+      assert Routing.redeliverable?(failed)
+      assert Routing.paused_after_failures() |> Enum.map(& &1.id) == [route.id]
+
+      # Paused after the failure: resume first
+      assert {:error, :paused} = Routing.redeliver(failed, user)
+      {:ok, _} = Routing.resume(Repo.reload!(route), user)
+      assert {:error, :forbidden} = Routing.redeliver(failed, Factory.insert(:random_user, role: :editor))
+
+      assert {:ok, again} = Routing.redeliver(failed, user)
+      body = Jason.decode!(next_request().body)
+      assert body["text"] == "Published as scheduled: Spring launch"
+      assert again.id != delivery.id
+      assert again.event == "scheduled_publish"
+      assert %{state: "failed"} = Repo.reload!(delivery)
+      assert length(deliveries(route)) == 2
+      assert Routing.paused_after_failures() == []
+    end
+
+    test "a delivery that arrived or is on its way is not sent again", %{user: user} do
+      receiver = WebhookReceiver.start()
+      route = slack_route!(user, receiver)
+      {:ok, [delivery]} = Routing.send_test(route, user)
+      next_request()
+
+      refute Routing.redeliverable?(Repo.reload!(delivery))
+      assert {:error, :not_redeliverable} = Routing.redeliver(Repo.reload!(delivery), user)
+    end
+
     test "a test notification is tried once", %{user: user} do
       receiver = WebhookReceiver.start(fn _ -> {404, "no_service"} end)
       route = slack_route!(user, receiver)

@@ -1061,6 +1061,13 @@ msgstr "Et nytt passord ble satt for %{email}. Brukeren velger sitt eget neste g
 msgid "A new secret replaces this one at once; update the receiver straight after."
 msgstr "En ny hemmelighet erstatter denne med én gang; oppdater mottakeren rett etterpå."
 
+#: lib/brando_admin/components/dashboard.ex
+#, elixir-autogen, elixir-format
+msgid "A notification route was paused"
+msgid_plural "%{count} notification routes were paused"
+msgstr[0] "En varslingsrute ble satt på pause"
+msgstr[1] "%{count} varslingsruter ble satt på pause"
+
 #: lib/brando_admin/components/form/input/form_fields.ex
 #, elixir-autogen, elixir-format
 msgid "A number"
@@ -1345,6 +1352,7 @@ msgstr "Handling"
 #: lib/brando_admin/live/sites/cache_live.ex
 #: lib/brando_admin/live/sites/environment_live.ex
 #: lib/brando_admin/live/sites/mcp_live.ex
+#: lib/brando_admin/live/sites/notifications_live.ex
 #: lib/brando_admin/live/sites/publishing_live.ex
 #: lib/brando_admin/live/sites/scheduled_publishing_live.ex
 #: lib/brando_admin/live/sites/seo_live.ex
@@ -9364,6 +9372,11 @@ msgstr "Melding"
 msgid "Messages"
 msgstr "Meldinger"
 
+#: lib/brando_admin/components/dashboard.ex
+#, elixir-autogen, elixir-format
+msgid "Messages on %{names} kept failing. Check the webhook URL, then resume it."
+msgstr "Meldinger på %{names} feilet gang på gang. Sjekk webhook-URL-en, og gjenoppta den så."
+
 #: lib/brando_admin/live/sites/notifications_live.ex
 #, elixir-autogen, elixir-format
 msgid "Messages to Slack, Microsoft Teams or email when something happens in this environment."
@@ -10946,7 +10959,7 @@ msgstr "Varsler"
 #: lib/brando_admin/live/sites/notifications_live.ex
 #, elixir-autogen, elixir-format
 msgid "Notifications are sent as things happen. Pausing stops them until you resume."
-msgstr "Varsler sendes når ting skjer. En pause stopper dem til du fortsetter."
+msgstr "Varsler sendes når ting skjer. En pause stopper dem til du gjenopptar."
 
 #: lib/brando/notifications/message.ex
 #, elixir-autogen, elixir-format
@@ -11702,7 +11715,7 @@ msgstr "Satt på pause fordi leveringene feilet i et døgn. Sjekk mottakeren, og
 #: lib/brando_admin/live/sites/notifications_live.ex
 #, elixir-autogen, elixir-format
 msgid "Paused because its messages kept failing. Check the webhook URL, then resume."
-msgstr "Satt på pause fordi meldingene feilet gang på gang. Sjekk webhook-URL-en, og fortsett så."
+msgstr "Satt på pause fordi meldingene feilet gang på gang. Sjekk webhook-URL-en, og gjenoppta så."
 
 #: lib/brando_admin/components/activity.ex
 #, elixir-autogen, elixir-format
@@ -11717,7 +11730,7 @@ msgstr "Satt på pause fordi dette miljøet ble kopiert eller gjenopprettet fra 
 #: lib/brando_admin/live/sites/notifications_live.ex
 #, elixir-autogen, elixir-format
 msgid "Paused because this environment was copied or restored from another one. It resumes when this environment goes live; resume it sooner only if this environment should send here."
-msgstr "Satt på pause fordi dette miljøet ble kopiert eller gjenopprettet fra et annet. Den fortsetter når dette miljøet blir live; fortsett tidligere bare hvis dette miljøet skal sende hit."
+msgstr "Satt på pause fordi dette miljøet ble kopiert eller gjenopprettet fra et annet. Den gjenopptas når dette miljøet blir live; gjenoppta den før bare hvis dette miljøet skal sende hit."
 
 #: lib/brando_admin/live/sites/notifications_live.ex
 #: lib/brando_admin/live/sites/webhooks_live.ex
@@ -12603,6 +12616,7 @@ msgstr "Lager størrelser for endrede bilder på nytt i bakgrunnen."
 msgid "Recreating image sizes in the background."
 msgstr "Lager bildestørrelser på nytt i bakgrunnen."
 
+#: lib/brando_admin/live/sites/notifications_live.ex
 #: lib/brando_admin/live/sites/webhooks_live.ex
 #, elixir-autogen, elixir-format
 msgid "Redeliver"
@@ -13402,7 +13416,7 @@ msgstr "Gjenoppta"
 #: lib/brando_admin/live/sites/notifications_live.ex
 #, elixir-autogen, elixir-format
 msgid "Resume the route to send on it."
-msgstr "Fortsett ruten for å sende på den."
+msgstr "Gjenoppta ruten for å sende på den."
 
 #: lib/brando_admin/live/sites/webhooks_live.ex
 #, elixir-autogen, elixir-format
@@ -13498,6 +13512,11 @@ msgstr "Gjennomgå tillatelsene og medlemmene, eller opprett en gruppe for teame
 #, elixir-autogen, elixir-format
 msgid "Review loose blocks"
 msgstr "Gå gjennom løse blokker"
+
+#: lib/brando_admin/components/dashboard.ex
+#, elixir-autogen, elixir-format
+msgid "Review notifications"
+msgstr "Gå gjennom varsler"
 
 #: lib/brando_admin/live/users/groups_live.ex
 #, elixir-autogen, elixir-format
@@ -15991,6 +16010,7 @@ msgstr "Definisjonen er uendret."
 msgid "The delivery stopped with an error"
 msgstr "Leveringen stoppet med en feil"
 
+#: lib/brando_admin/live/sites/notifications_live.ex
 #: lib/brando_admin/live/sites/webhooks_live.ex
 #, elixir-autogen, elixir-format
 msgid "The delivery was sent again."

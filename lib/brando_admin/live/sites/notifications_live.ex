@@ -23,7 +23,7 @@ defmodule BrandoAdmin.Sites.NotificationsLive do
   alias BrandoAdmin.Toast
 
   on_mount({BrandoAdmin.LiveView.Form, {:hooks_toast, __MODULE__}})
-  on_mount({BrandoAdmin.Reauth, events: ~w(save delete pause resume send_test)})
+  on_mount({BrandoAdmin.Reauth, events: ~w(save delete pause resume send_test redeliver)})
 
   @log_limit 100
 
@@ -186,6 +186,17 @@ defmodule BrandoAdmin.Sites.NotificationsLive do
 
       _ ->
         {:noreply, error(socket)}
+    end
+  end
+
+  def handle_event("redeliver", %{"id" => id}, socket) do
+    with {:ok, delivery} <- Routing.get_delivery(id),
+         {:ok, _delivery} <- Routing.redeliver(delivery, socket.assigns.current_user) do
+      Toast.send_to(socket.assigns.current_user, gettext("The delivery was sent again."))
+      {:noreply, reload(socket)}
+    else
+      {:error, :paused} -> {:noreply, error(socket, gettext("Resume the route to send on it."))}
+      _ -> {:noreply, error(socket)}
     end
   end
 
@@ -637,7 +648,7 @@ defmodule BrandoAdmin.Sites.NotificationsLive do
           />
         </div>
         <div :if={@deliveries != []} class="workspace-table-scroll">
-          <table class="workspace-table webhook-log" data-testid="notification-log">
+          <table class="workspace-table webhook-log notification-log" data-testid="notification-log">
             <thead>
               <tr>
                 <th scope="col">{gettext("Time")}</th>
@@ -646,6 +657,7 @@ defmodule BrandoAdmin.Sites.NotificationsLive do
                 <th scope="col">{gettext("Message")}</th>
                 <th scope="col">{gettext("Result")}</th>
                 <th scope="col">{gettext("Duration")}</th>
+                <th scope="col"><span class="workspace-sr-only">{gettext("Actions")}</span></th>
               </tr>
             </thead>
             <tbody>
@@ -661,6 +673,18 @@ defmodule BrandoAdmin.Sites.NotificationsLive do
                   <small :if={delivery.error} class="webhook-error">{error_text(delivery.error)}</small>
                 </td>
                 <td class="webhook-duration">{duration(delivery.duration_ms)}</td>
+                <td class="row-actions">
+                  <button
+                    :if={Routing.redeliverable?(delivery)}
+                    type="button"
+                    class="workspace-button"
+                    phx-click="redeliver"
+                    phx-value-id={delivery.id}
+                    data-testid="notification-redeliver"
+                  >
+                    <.icon name="refresh-cw" />{gettext("Redeliver")}
+                  </button>
+                </td>
               </tr>
             </tbody>
           </table>

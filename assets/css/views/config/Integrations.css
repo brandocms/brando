@@ -147,5 +147,7 @@
       > tbody > tr > td.row-actions { grid-column: 2; grid-row: 1 / span 2; width: auto; align-self: start; }
       .webhook-response { max-width: 100%; }
     }
+    /* The notification log: every cell in the first column, the action beside them */
+    .notification-log > tbody > tr > td:not(.row-actions) { grid-column: 1; }
   }
 }

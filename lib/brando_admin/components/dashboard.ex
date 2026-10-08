@@ -16,13 +16,24 @@ defmodule BrandoAdmin.Components.Dashboard do
      socket
      |> assign(assigns)
      |> assign(:overview, BrandoAdmin.Dashboard.load(assigns.current_user))
-     |> assign(:paused_webhooks, paused_webhooks(assigns.current_user))}
+     |> assign(:paused_webhooks, paused_webhooks(assigns.current_user))
+     |> assign(:paused_routes, paused_routes(assigns.current_user))}
   end
 
   # Shown to the people who can do something about it.
   defp paused_webhooks(user) do
     if Brando.Webhooks.can_manage?(user), do: Brando.Webhooks.paused_after_failures(), else: []
   end
+
+  defp paused_routes(user) do
+    if Brando.Notifications.Routing.can_manage?(user),
+      do: Brando.Notifications.Routing.paused_after_failures(),
+      else: []
+  end
+
+  # One paused: straight to it. Several: the list.
+  defp paused_path([%{id: id}], base), do: "#{base}/#{id}/edit"
+  defp paused_path(_paused, base), do: base
 
   def render(assigns) do
     ~H"""
@@ -44,7 +55,38 @@ defmodule BrandoAdmin.Components.Dashboard do
             )}
           </p>
         </div>
-        <.link navigate="/admin/config/webhooks" class="workspace-button">{gettext("Review webhooks")}</.link>
+        <.link navigate={paused_path(@paused_webhooks, "/admin/config/webhooks")} class="workspace-button">
+          {gettext("Review webhooks")}
+        </.link>
+      </div>
+      <div
+        :if={@paused_routes != []}
+        class="dashboard-alert"
+        role="alert"
+        data-testid="dashboard-notifications-paused"
+      >
+        <.icon name="triangle-alert" />
+        <div>
+          <h2>
+            {ngettext(
+              "A notification route was paused",
+              "%{count} notification routes were paused",
+              length(@paused_routes)
+            )}
+          </h2>
+          <p>
+            {gettext("Messages on %{names} kept failing. Check the webhook URL, then resume it.",
+              names: Enum.map_join(@paused_routes, ", ", & &1.name)
+            )}
+          </p>
+        </div>
+        <.link
+          navigate={paused_path(@paused_routes, "/admin/config/notifications")}
+          class="workspace-button"
+          data-testid="dashboard-notifications-review"
+        >
+          {gettext("Review notifications")}
+        </.link>
       </div>
       <div class="dashboard-layout">
         <section class="dashboard-recent" aria-labelledby="dashboard-recent-heading">

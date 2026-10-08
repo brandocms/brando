@@ -205,6 +205,74 @@ defmodule BrandoAdmin.Sites.NotificationsLiveTest do
     end
   end
 
+  describe "redelivering" do
+    test "a failed delivery shows Redeliver, which sends it again", %{conn: conn, current_user: user} do
+      receiver = WebhookReceiver.start()
+      route = create_route(user, %{"url" => WebhookReceiver.url(receiver, "/services/x")})
+
+      failed =
+        Repo.insert!(%Brando.Notifications.Delivery{
+          route_id: route.id,
+          event: "failed_job",
+          notification: %{
+            "event" => "failed_job",
+            "job" => %{"worker" => "MyApp.Sync", "attempt" => 3, "max_attempts" => 3}
+          },
+          state: "failed",
+          error: "HTTP 500"
+        })
+
+      {:ok, view, _html} = live(conn, "/admin/config/notifications/#{route.id}/deliveries")
+      assert has_element?(view, "#notification-delivery-#{failed.id} [data-testid=notification-redeliver]")
+
+      view |> element("#notification-delivery-#{failed.id} [data-testid=notification-redeliver]") |> render_click()
+      assert_receive {:webhook_request, %{body: body}}, 5_000
+      assert body =~ "MyApp.Sync"
+
+      assert [again, old] = Routing.list_deliveries(route)
+      assert old.id == failed.id
+
+      assert again.state == "succeeded"
+      refute has_element?(view, "#notification-delivery-#{again.id} [data-testid=notification-redeliver]")
+    end
+
+    test "only a delivery of this environment", %{conn: conn, current_user: user} do
+      route = create_route(user)
+      {:ok, view, _html} = live(conn, "/admin/config/notifications/#{route.id}/deliveries")
+      render_click(view, "redeliver", %{"id" => "999999"})
+      assert Routing.list_deliveries(route) == []
+    end
+  end
+
+  describe "the dashboard" do
+    test "tells those who manage routes that one was paused after failures, linking to it", %{current_user: user} do
+      route = create_route(user)
+      {:ok, _} = Routing.pause(route, :failures, :system)
+
+      html = render_component(BrandoAdmin.Components.Dashboard, id: "dashboard", current_user: user)
+      assert html =~ "dashboard-notifications-paused"
+      assert html =~ "Editors"
+      assert html =~ ~s(href="/admin/config/notifications/#{route.id}/edit")
+
+      # Several: the list
+      other = create_route(user, %{"name" => "Desk"})
+      {:ok, _} = Routing.pause(other, :failures, :system)
+      html = render_component(BrandoAdmin.Components.Dashboard, id: "dashboard", current_user: user)
+      assert html =~ "2 notification routes were paused"
+      assert html =~ ~s(href="/admin/config/notifications")
+
+      editor = Factory.insert(:random_user, role: :editor)
+      html = render_component(BrandoAdmin.Components.Dashboard, id: "dashboard", current_user: editor)
+      refute html =~ "dashboard-notifications-paused"
+    end
+
+    test "says nothing about routes paused by hand", %{current_user: user} do
+      {:ok, _} = user |> create_route() |> Routing.pause(user)
+      html = render_component(BrandoAdmin.Components.Dashboard, id: "dashboard", current_user: user)
+      refute html =~ "dashboard-notifications-paused"
+    end
+  end
+
   describe "with group authorization" do
     alias Brando.Authorization.{Catalog, Groups, Migration, Scope}
 

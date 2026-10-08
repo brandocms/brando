@@ -100,3 +100,45 @@ test.describe('Notifications', () => {
     }
   })
 })
+
+test.describe('Notifications paused after failures', () => {
+  test('the dashboard says so, links to the route, and the failed message can be sent again', async ({
+    page,
+  }) => {
+    const fixture = await page.request.post('/e2e/setup_fixtures/notification-route-paused')
+    expect(fixture.ok()).toBe(true)
+    const norwegian = await page.request.post('/e2e/setup_fixtures/norwegian-admin-user')
+    expect(norwegian.ok()).toBe(true)
+    const slack = receiver('notification-route-paused')
+    const before = (await slack.requests()).length
+    await page.setViewportSize({ width: 1440, height: 900 })
+
+    await page.goto('/admin')
+    await syncLV(page)
+    const notice = page.getByTestId('dashboard-notifications-paused')
+    await expect(notice).toBeVisible()
+    await expect(notice).toContainText("Editors' channel")
+    await notice.getByRole('link', { name: 'Gå gjennom varsler' }).click()
+    await expect(page).toHaveURL(/\/admin\/config\/notifications\/\d+\/edit$/)
+    await syncLV(page)
+    await expect(page.getByTestId('notification-route-state')).toHaveText('På pause etter feil')
+
+    // Resume, then send the failed message again from the log
+    await page.getByRole('button', { name: 'Gjenoppta' }).click()
+    await expect(page.getByTestId('notification-route-state')).toHaveText('Aktiv')
+    await page.getByRole('link', { name: 'Leveringslogg' }).click()
+    await syncLV(page)
+    const rows = page.getByTestId('notification-log').locator('tbody tr')
+    await expect(rows).toHaveCount(1)
+    await rows.first().getByRole('button', { name: 'Lever på nytt' }).click()
+    await expect(rows).toHaveCount(2)
+    await expect(rows.first()).toHaveAttribute('data-state', 'succeeded')
+    await expect.poll(async () => (await slack.requests()).length).toBe(before + 1)
+    const body = JSON.parse((await slack.requests()).at(-1).body)
+    expect(body.text).toContain('E2eProject.Worker.Sync')
+
+    await page.goto('/admin')
+    await syncLV(page)
+    await expect(page.getByTestId('dashboard-notifications-paused')).toHaveCount(0)
+  })
+})

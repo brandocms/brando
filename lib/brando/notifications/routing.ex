@@ -573,6 +573,40 @@ defmodule Brando.Notifications.Routing do
     end
   end
 
+  @doc """
+  Send a failed or cancelled delivery again, as a new delivery of the same
+  notification to the same channel or recipient. An email goes out as a
+  single email, whatever the recipient's summary setting.
+  """
+  def redeliver(%Delivery{state: state} = original, user) when state in ["failed", "cancelled"] do
+    with :ok <- authorize(user),
+         {:ok, route} <- get_route(original.route_id),
+         :ok <- active(route) do
+      attrs =
+        original
+        |> Map.take([:route_id, :event, :recipient_id, :entry_schema, :entry_type, :entry_id, :notification, :test])
+
+      with {:ok, delivery} <- %Delivery{} |> Ecto.Changeset.change(attrs) |> Repo.insert() do
+        enqueue(delivery)
+      end
+    end
+  end
+
+  def redeliver(%Delivery{}, _user), do: {:error, :not_redeliverable}
+
+  @doc "Whether a delivery can be sent again: it failed, or was not sent."
+  def redeliverable?(%Delivery{state: state}), do: state in ["failed", "cancelled"]
+
+  @doc "A delivery of the current environment."
+  def get_delivery(id) do
+    with {:ok, id} <- cast_id(id),
+         %Delivery{} = delivery <- Repo.get(Delivery, id) do
+      {:ok, delivery}
+    else
+      _ -> {:error, :not_found}
+    end
+  end
+
   defp active(%Route{active: true}), do: :ok
   defp active(_route), do: {:error, :paused}
 
@@ -626,6 +660,13 @@ defmodule Brando.Notifications.Routing do
     }
   rescue
     _ -> %{count: 0, latest: nil, failed: 0}
+  end
+
+  @doc "The routes paused because their messages kept failing, for the dashboard."
+  def paused_after_failures do
+    Repo.all(from(r in Route, where: r.active == false and r.paused_reason == :failures, order_by: r.name))
+  rescue
+    _ -> []
   end
 
   @doc "Remove deliveries older than `days`, except those waiting for a digest. Returns how many."

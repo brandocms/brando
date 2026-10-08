@@ -1061,6 +1061,13 @@ msgstr ""
 msgid "A new secret replaces this one at once; update the receiver straight after."
 msgstr ""
 
+#: lib/brando_admin/components/dashboard.ex
+#, elixir-autogen, elixir-format
+msgid "A notification route was paused"
+msgid_plural "%{count} notification routes were paused"
+msgstr[0] ""
+msgstr[1] ""
+
 #: lib/brando_admin/components/form/input/form_fields.ex
 #, elixir-autogen, elixir-format
 msgid "A number"
@@ -1345,6 +1352,7 @@ msgstr ""
 #: lib/brando_admin/live/sites/cache_live.ex
 #: lib/brando_admin/live/sites/environment_live.ex
 #: lib/brando_admin/live/sites/mcp_live.ex
+#: lib/brando_admin/live/sites/notifications_live.ex
 #: lib/brando_admin/live/sites/publishing_live.ex
 #: lib/brando_admin/live/sites/scheduled_publishing_live.ex
 #: lib/brando_admin/live/sites/seo_live.ex
@@ -9364,6 +9372,11 @@ msgstr ""
 msgid "Messages"
 msgstr ""
 
+#: lib/brando_admin/components/dashboard.ex
+#, elixir-autogen, elixir-format
+msgid "Messages on %{names} kept failing. Check the webhook URL, then resume it."
+msgstr ""
+
 #: lib/brando_admin/live/sites/notifications_live.ex
 #, elixir-autogen, elixir-format
 msgid "Messages to Slack, Microsoft Teams or email when something happens in this environment."
@@ -12603,6 +12616,7 @@ msgstr ""
 msgid "Recreating image sizes in the background."
 msgstr ""
 
+#: lib/brando_admin/live/sites/notifications_live.ex
 #: lib/brando_admin/live/sites/webhooks_live.ex
 #, elixir-autogen, elixir-format
 msgid "Redeliver"
@@ -13497,6 +13511,11 @@ msgstr ""
 #: lib/brando_admin/live/sites/utils_live.ex
 #, elixir-autogen, elixir-format
 msgid "Review loose blocks"
+msgstr ""
+
+#: lib/brando_admin/components/dashboard.ex
+#, elixir-autogen, elixir-format
+msgid "Review notifications"
 msgstr ""
 
 #: lib/brando_admin/live/users/groups_live.ex
@@ -15991,6 +16010,7 @@ msgstr ""
 msgid "The delivery stopped with an error"
 msgstr ""
 
+#: lib/brando_admin/live/sites/notifications_live.ex
 #: lib/brando_admin/live/sites/webhooks_live.ex
 #, elixir-autogen, elixir-format
 msgid "The delivery was sent again."
