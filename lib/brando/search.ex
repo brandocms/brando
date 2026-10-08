@@ -14,6 +14,17 @@ defmodule Brando.Search do
   other language. Searching uses a GIN index on it; Brando needs no Postgres
   extension for this.
 
+  ## Searching
+
+  `Brando.Search.Query.run/3` matches each document with the query parsed
+  by its own configuration and ranks an exact title first, then titles that
+  start with the query, then `ts_rank_cd`; published entries come before
+  pending, draft and disabled ones among equals, then the most recently
+  updated. The admin's search page (`BrandoAdmin.SearchLive`, `/admin/search`)
+  narrows the index to what the user may read and to the current site and
+  environment. On 10,000 entries a query takes 2–40 ms, and about 80 ms for a
+  word on every entry (`e2e/bench/search_bench.exs`).
+
   ## Keeping it up to date
 
   `Brando.Search` is a `Brando.ContentEvents.Subscriber`, subscribed by

@@ -8,7 +8,8 @@ defmodule Brando.Search.Query do
   filters. The text never becomes SQL: it is a parameter of
   `websearch_to_tsquery/2` when it uses web search syntax (quotes, `or`, a
   leading `-`), and otherwise its words, letters and digits only, become a
-  prefix query (`word:*`), so results come while a word is half typed.
+  prefix query (`word:*`), so results come while a word is half typed. A
+  single letter is matched as a whole word rather than as a prefix.
 
   Each document is matched with the query parsed by its own text search
   configuration. Results are ranked: an exact title, then titles starting
@@ -48,10 +49,14 @@ defmodule Brando.Search.Query do
       true ->
         case words(text) do
           [] -> :empty
-          words -> {:prefix, Enum.map_join(words, " & ", &(&1 <> ":*"))}
+          words -> {:prefix, Enum.map_join(words, " & ", &prefix/1)}
         end
     end
   end
+
+  # A one-letter prefix would match most of the index, so a single letter is
+  # matched as a whole word.
+  defp prefix(word), do: if(String.length(word) > 1, do: word <> ":*", else: word)
 
   # Letters and digits only; one-letter words add little but cost much, so
   # they count only when they are all there is.

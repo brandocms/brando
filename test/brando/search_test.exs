@@ -17,6 +17,8 @@ defmodule Brando.SearchTest do
   alias Brando.Worker.SearchIndexRebuild
   alias Ecto.Changeset
 
+  doctest Brando.Search.Highlight
+
   setup do
     put_test_env(Brando.ContentEvents, debounce_seconds: 0)
     {:ok, %{user: Factory.insert(:random_user)}}
@@ -323,6 +325,56 @@ defmodule Brando.SearchTest do
     test "segments never contain the markers, and an unpaired marker is dropped" do
       assert Highlight.segments("a \u0002hit\u0003 <b>") == [{:text, "a "}, {:mark, "hit"}, {:text, " <b>"}]
       assert Highlight.segments("\u0003x\u0002y") == [{:text, "x"}, {:text, "y"}]
+    end
+  end
+
+  describe "tenancy" do
+    @prefix "tenant_search_other"
+
+    setup do
+      put_test_env(:tenancy_mode, :multi)
+      Repo.query!(~s(CREATE SCHEMA "#{@prefix}"))
+
+      # The tables an entry is read with: the page, its blocks and alternates,
+      # and the site's identity and SEO for its identifier
+      %{rows: tables} =
+        Repo.query!(
+          "SELECT tablename FROM pg_tables WHERE schemaname = 'public' AND (tablename LIKE 'pages%' OR tablename LIKE 'content_%' OR tablename LIKE 'sites_%' OR tablename = 'search_documents')"
+        )
+
+      for [table] <- tables do
+        Repo.query!(~s|CREATE TABLE "#{@prefix}"."#{table}" (LIKE public."#{table}" INCLUDING ALL)|)
+      end
+
+      on_exit(fn -> Brando.Tenant.put_prefix(nil) end)
+      :ok
+    end
+
+    test "documents are written to and found in the current site and environment only", %{user: user} do
+      public = Factory.insert(:page, title: "Sommerro public", creator: user)
+      :ok = Search.index_entry(Page, public.id)
+
+      Brando.Tenant.with_prefix(@prefix, fn ->
+        page =
+          Brando.Repo.insert!(%Page{
+            title: "Sommerro tenant",
+            uri: "sommerro",
+            language: :en,
+            status: :published,
+            template: "default.html",
+            creator_id: user.id
+          })
+
+        :ok = Search.index_entry(Page, page.id)
+        assert Document |> Query.run("sommerro") |> Map.fetch!(:rows) |> Enum.map(& &1.title) == ["Sommerro tenant"]
+
+        assert {:ok, 1} = Search.rebuild()
+        assert Brando.Repo.aggregate(Document, :count) == 1
+      end)
+
+      assert search("sommerro") == ["Sommerro public"]
+
+      assert Repo.query!(~s|SELECT title FROM "#{@prefix}".search_documents|).rows == [["Sommerro tenant"]]
     end
   end
 
