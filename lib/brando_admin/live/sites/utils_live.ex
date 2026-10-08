@@ -7,6 +7,7 @@ defmodule BrandoAdmin.Sites.UtilsLive do
 
   alias Brando.Authorization.{Configuration, Engine, Scope}
   alias Brando.Images
+  alias Brando.Search
   alias BrandoAdmin.Components.AuthorizationTools
   alias BrandoAdmin.Components.SystemCheck
 
@@ -49,13 +50,21 @@ defmodule BrandoAdmin.Sites.UtilsLive do
   end
 
   # The search index of this site and environment: how many documents it
-  # holds, and a rebuild's progress, which its job broadcasts.
+  # holds, when it was last rebuilt, and a rebuild's progress, which its job
+  # broadcasts.
   defp assign_search_index(socket) do
     if connected?(socket) and !socket.assigns[:search_index],
-      do: Phoenix.PubSub.subscribe(Brando.pubsub(), Brando.Search.topic())
+      do: Phoenix.PubSub.subscribe(Brando.pubsub(), Search.topic())
 
-    state = if Brando.Search.rebuild_running?(), do: :queued, else: :idle
-    assign(socket, :search_index, %{state: state, done: 0, total: 0, count: Brando.Search.count()})
+    state = if Search.rebuild_running?(), do: :queued, else: :idle
+
+    assign(socket, :search_index, %{
+      state: state,
+      done: 0,
+      total: 0,
+      count: Search.count(),
+      rebuilt_at: Search.rebuilt_at()
+    })
   end
 
   # Recreate changed images reports how many images it kept and how many it
@@ -157,9 +166,17 @@ defmodule BrandoAdmin.Sites.UtilsLive do
                   {gettext("Indexing… %{done} of %{total} entries", done: @search_index.done, total: @search_index.total)}
                 </small>
                 <small :if={@search_index.state == :failed}>{gettext("The rebuild failed. Check the application logs.")}</small>
-                <small :if={@search_index.state in [:idle, :done] and is_integer(@search_index.count)}>
-                  {ngettext("%{count} entry in the index", "%{count} entries in the index", @search_index.count)}
-                </small>
+                <%= if @search_index.state in [:idle, :done] and is_integer(@search_index.count) do %>
+                  <small>
+                    {ngettext("%{count} entry in the index", "%{count} entries in the index", @search_index.count)}
+                  </small>
+                  <small :if={@search_index.rebuilt_at} id="utils-search-index-rebuilt">
+                    {gettext("Last rebuilt: %{date}", date: BrandoAdmin.Dates.long(@search_index.rebuilt_at))}
+                  </small>
+                  <small :if={!@search_index.rebuilt_at} id="utils-search-index-rebuilt" class="utils-empty-status">
+                    {gettext("Never rebuilt")}
+                  </small>
+                <% end %>
                 <small :if={@search_index.state in [:idle, :done] and is_nil(@search_index.count)} class="utils-empty-status">
                   {gettext("Not set up: the brando_212 migration has not run")}
                 </small>
@@ -329,7 +346,7 @@ defmodule BrandoAdmin.Sites.UtilsLive do
   end
 
   def handle_event("rebuild_search_index", _, socket) do
-    case Brando.Search.queue_rebuild(socket.assigns.current_user) do
+    case Search.queue_rebuild(socket.assigns.current_user) do
       {:ok, _job} ->
         {:noreply, update(socket, :search_index, &queued/1)}
 
@@ -539,7 +556,14 @@ defmodule BrandoAdmin.Sites.UtilsLive do
       {:toast, ngettext("Search index rebuilt: %{count} entry.", "Search index rebuilt: %{count} entries.", count)}
     )
 
-    {:noreply, assign(socket, :search_index, %{state: :done, done: count, total: count, count: Brando.Search.count()})}
+    {:noreply,
+     assign(socket, :search_index, %{
+       state: :done,
+       done: count,
+       total: count,
+       count: Search.count(),
+       rebuilt_at: Search.rebuilt_at()
+     })}
   end
 
   def handle_info({:search_index, %{state: state, done: done, total: total}}, socket) do

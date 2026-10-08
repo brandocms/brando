@@ -18325,6 +18325,16 @@ msgstr "Ikke satt opp: migreringen brando_212 er ikke kjørt"
 
 #: lib/brando_admin/live/sites/utils_live.ex
 #, elixir-autogen, elixir-format
+msgid "Last rebuilt: %{date}"
+msgstr "Sist bygget på nytt: %{date}"
+
+#: lib/brando_admin/live/sites/utils_live.ex
+#, elixir-autogen, elixir-format
+msgid "Never rebuilt"
+msgstr "Aldri bygget på nytt"
+
+#: lib/brando_admin/live/sites/utils_live.ex
+#, elixir-autogen, elixir-format
 msgid "Search index rebuilt: %{count} entry."
 msgid_plural "Search index rebuilt: %{count} entries."
 msgstr[0] "Søkeindeksen er bygget på nytt: %{count} oppføring."

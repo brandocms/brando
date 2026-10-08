@@ -157,14 +157,30 @@ defmodule BrandoAdmin.SearchLiveTest do
   end
 
   describe "Utilities" do
-    test "rebuilds the index and says how many entries it holds", %{conn: conn, current_user: user} do
+    test "rebuilds the index and says how many entries it holds, and when", %{conn: conn, current_user: user} do
       Factory.insert(:page, title: "Never indexed", creator: user)
       {:ok, view, _} = live(conn, "/admin/config/utils")
       assert has_element?(view, "#utils-search-index-state", "0 entries in the index")
+      assert has_element?(view, "#utils-search-index-rebuilt.utils-empty-status", "Never rebuilt")
 
       view |> element("#utils-search-index button", "Rebuild search index") |> render_click()
       assert has_element?(view, "#utils-search-index-state", "1 entry in the index")
       assert Repo.aggregate(from(d in Brando.Search.Document, where: d.title == "Never indexed"), :count) == 1
+
+      Gettext.put_locale(Brando.Gettext, "en")
+      rebuilt = "Last rebuilt: " <> BrandoAdmin.Dates.long(Search.rebuilt_at())
+      assert has_element?(view, "#utils-search-index-rebuilt", rebuilt)
+      refute has_element?(view, "#utils-search-index-rebuilt.utils-empty-status")
+    end
+
+    test "says when the index was last rebuilt", %{conn: conn} do
+      :ok = Search.Indexer.mark_rebuilt(~U[2026-10-01 08:30:00Z])
+      {:ok, view, _} = live(conn, "/admin/config/utils")
+
+      Gettext.put_locale(Brando.Gettext, "en")
+      expected = "Last rebuilt: " <> BrandoAdmin.Dates.long(~U[2026-10-01 08:30:00Z])
+      assert has_element?(view, "#utils-search-index-rebuilt", expected)
+      assert has_element?(view, "#utils-search-index-state", "0 entries in the index")
     end
   end
 end
