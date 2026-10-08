@@ -13,8 +13,12 @@ defmodule Mix.Tasks.Brando.Docs.Agents do
   It writes:
 
     * `usage-rules.md`, from the regions of each guide between
-      `<!-- usage-rules:start -->` and `<!-- usage-rules:end -->`. It ships in
-      the Hex package, where `usage_rules` and similar tools find it;
+      `<!-- usage-rules:start -->` and `<!-- usage-rules:end -->`: the core
+      rules for building a site, and an index of the topic files;
+    * `usage-rules/<topic>.md`, from regions that name a topic,
+      `<!-- usage-rules:start topic="seo" -->`. The topics are listed in
+      `lib/mix/brando/docs/agents.ex`. Both ship in the Hex package, where
+      `usage_rules` finds them (the topics as `brando:<topic>`);
     * `llms.txt` and `llms-full.txt` in the docs output directory (`doc/`):
       an index of the guides with a one-line description each, and all guides
       joined. `mix docs` runs this task after ExDoc, replacing ExDoc's own
@@ -22,14 +26,19 @@ defmodule Mix.Tasks.Brando.Docs.Agents do
 
   Options:
 
-    * `--check` writes nothing and exits with status 1 when `usage-rules.md`
-      is out of date, for CI.
+    * `--check` writes nothing and exits with status 1 when a rules file is
+      out of date or no longer generated, for CI.
     * `--only rules` or `--only llms` writes one of the two.
     * `--output DIR` writes the llms files to `DIR` instead of the docs output
       directory.
 
   An Elixir example inside a region is compiled by a test. Put
   `<!-- usage-rules:no-compile -->` on the line before a fence that cannot be.
+  Links in the rules point at `deps/brando/guides/`, where the guides are in
+  an application that depends on the Hex package or a git checkout. With a
+  `path:` dependency they don't resolve; the guides are in the Brando
+  checkout instead.
+
   A guide's description in `llms.txt` is its first sentence, or the text of a
   `<!-- llms-description: ... -->` comment in the guide.
   """
@@ -39,7 +48,6 @@ defmodule Mix.Tasks.Brando.Docs.Agents do
   alias Mix.Brando.Docs.Agents
 
   @switches [check: :boolean, only: :string, output: :string]
-  @rules "usage-rules.md"
 
   @impl Mix.Task
   def run(args) do
@@ -61,12 +69,13 @@ defmodule Mix.Tasks.Brando.Docs.Agents do
   end
 
   defp check!(guides) do
-    current = if File.exists?(@rules), do: File.read!(@rules), else: ""
+    expected = Agents.rules_files(guides)
+    stale = Enum.reject(generated_files(), &Map.has_key?(expected, &1))
+    outdated = for {path, contents} <- expected, read(path) != contents, do: path
 
-    if current == Agents.usage_rules(guides) do
-      Mix.shell().info("#{@rules} is up to date.")
-    else
-      Mix.raise("#{@rules} is out of date. Run mix brando.docs.agents and commit the result.")
+    case Enum.sort(outdated ++ stale) do
+      [] -> Mix.shell().info("#{map_size(expected)} rules files are up to date.")
+      paths -> Mix.raise("Out of date: #{Enum.join(paths, ", ")}. Run mix brando.docs.agents and commit the result.")
     end
   end
 
@@ -76,8 +85,21 @@ defmodule Mix.Tasks.Brando.Docs.Agents do
   end
 
   defp write_rules(guides) do
-    write(@rules, Agents.usage_rules(guides))
+    expected = Agents.rules_files(guides)
+
+    for path <- generated_files(), not Map.has_key?(expected, path) do
+      File.rm!(path)
+      Mix.shell().info("Removed #{path}")
+    end
+
+    File.mkdir_p!("usage-rules")
+    for {path, contents} <- Enum.sort(expected), do: write(path, contents)
   end
+
+  # Topic files from earlier runs. Skills, in usage-rules/skills, are not generated.
+  defp generated_files, do: Path.wildcard("usage-rules/*.md")
+
+  defp read(path), do: if(File.exists?(path), do: File.read!(path), else: nil)
 
   defp write_llms(guides, opts) do
     output = opts[:output] || Mix.Project.config()[:docs][:output] || "doc"

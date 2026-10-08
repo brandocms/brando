@@ -63,7 +63,7 @@ identities.
 Run the framework upgrade migrations first. Migration 172 adds and backfills
 stable UIDs for table templates, in public and existing tenant schemas.
 
-<!-- usage-rules:start -->
+<!-- usage-rules:start topic="module-definitions" -->
 
 From your Brando application's directory:
 
@@ -144,7 +144,7 @@ save would be refused), when both sides changed, or when the file has changes
 that are not imported. Set `PLUG_EDITOR` (as for Phoenix's error pages, e.g.
 `vscode://file/__FILE__:__LINE__`) to link the path to your editor.
 
-<!-- usage-rules:start -->
+<!-- usage-rules:start topic="module-definitions" -->
 
 ## Authoring a definition
 
@@ -196,7 +196,7 @@ same: `{"Light", "light"}` is a label in the default language, and
 `%{"label" => %{"en" => "Light", "no" => "Lys"}, "value" => "light"}` gives
 both.
 
-<!-- usage-rules:start -->
+<!-- usage-rules:start topic="module-definitions" -->
 
 With `hero.heex` beside it:
 
@@ -246,7 +246,7 @@ Changing only the module UID while retaining another module's ref UIDs is reject
 
 ### Refs: settings and initial content
 
-<!-- usage-rules:start -->
+<!-- usage-rules:start topic="module-definitions" -->
 
 `ref :name, :type` declares a normal content ref. Available types include
 `:header`, `:text`, `:picture`, `:media`, `:video`, `:gallery`, `:file`, `:blocks`,
@@ -302,7 +302,7 @@ Unknown settings and unsupported ref types fail validation rather than being
 silently dropped. Export includes default and nil values so a later schema
 default cannot quietly change an existing definition.
 
-<!-- usage-rules:start -->
+<!-- usage-rules:start topic="module-definitions" -->
 
 A ref appears in the block editor where the template renders it
 (`<.ref block={@block} ref={:note} />`, `{% ref refs.note %}`); a ref the

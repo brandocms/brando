@@ -4,7 +4,7 @@ A form is something visitors fill in on the site, such as a contact or signup
 form. Editors build it in the admin under **Configuration → Forms**, and the site
 renders it with `Brando.HTML.Forms.site_form/1`.
 
-<!-- usage-rules:start -->
+<!-- usage-rules:start topic="rendering" -->
 
 A form is addressed by **key and language**. Each language has its own form,
 linked to the others as a [synchronized translation](i18n.md): the source form
@@ -101,7 +101,7 @@ the import asks which form to use.
 
 ## Render a form
 
-<!-- usage-rules:start -->
+<!-- usage-rules:start topic="rendering" -->
 
 ### In a block
 
@@ -335,7 +335,7 @@ replaces Brando's crontab, and adds the job to its own:
   set your own content security policy, allow it in `script-src` and
   `frame-src`.
 
-<!-- usage-rules:start -->
+<!-- usage-rules:start topic="rendering" -->
 
 ### Static sites
 

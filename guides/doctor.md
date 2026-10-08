@@ -38,7 +38,7 @@ failing check names the fix, and in the admin links to the screen for it. The
 task starts the application without its web server and with Oban's queues
 stopped, so it can run beside a running server and no job runs while it looks.
 
-<!-- usage-rules:start -->
+<!-- usage-rules:start topic="deployment" -->
 
 ## Options and exit status
 
@@ -102,7 +102,7 @@ details under a row are what `--verbose` prints.
 A release has no source tree, so in production the checks that read the
 project's files (admin assets and deprecations) are skipped and say so.
 
-<!-- usage-rules:start -->
+<!-- usage-rules:start topic="deployment" -->
 
 ## Add a check
 

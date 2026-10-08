@@ -20,7 +20,7 @@ deploy, and static rollback. Rolling back one does not roll back the other.
   will fail on its first command without this.
 - A server running Linux with PostgreSQL and either Traefik or nginx
 
-<!-- usage-rules:start -->
+<!-- usage-rules:start topic="deployment" -->
 
 ### Health endpoint
 
@@ -85,7 +85,7 @@ both reads `etc/traefik/traefik.yml` and installs the Traefik binary, which
 
 ### Release helpers
 
-<!-- usage-rules:start -->
+<!-- usage-rules:start topic="deployment" -->
 
 Florist builds a standard Mix release. If the application has no release setup
 yet, run:
@@ -227,7 +227,7 @@ export BRANDO_URL_PORT="443"
 export POOL_SIZE="15"
 ```
 
-<!-- usage-rules:start -->
+<!-- usage-rules:start topic="deployment" -->
 
 > #### Do not set PORT for blue/green {: .warning}
 >
@@ -359,7 +359,7 @@ SSL certificates are issued automatically via Let's Encrypt on the first HTTPS r
 └── etc/
 ```
 
-<!-- usage-rules:start -->
+<!-- usage-rules:start topic="deployment" -->
 
 Key points:
 
@@ -385,7 +385,7 @@ Stage 6: digest        → mix brando.digest (fingerprint static assets)
 Stage 7: release       → mix release (create OTP release tarball)
 ```
 
-<!-- usage-rules:start -->
+<!-- usage-rules:start topic="deployment" -->
 
 Assets (CSS, JS) are built inside the Docker container and baked into the release
 at `priv/static/`. There is no separate asset upload step — everything ships as

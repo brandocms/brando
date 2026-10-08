@@ -62,7 +62,7 @@ legacy snapshot that omitted the prefix produces a reviewed, reversible
 constraint change on its next migration. Unprefixed content references continue
 to use the migration's current schema.
 
-<!-- usage-rules:start -->
+<!-- usage-rules:start topic="generators" -->
 
 Before committing a generated migration:
 
@@ -98,7 +98,7 @@ This makes reversibility part of the normal E2E gate for checked-in Blueprint
 migration fixtures; it does not replace testing a generated application
 migration against that application's own schema and data.
 
-<!-- usage-rules:start -->
+<!-- usage-rules:start topic="generators" -->
 
 Deployment still uses the application's normal Ecto migration command. The Blueprint task generates source files; it
 does not connect to or mutate a database.
@@ -148,7 +148,7 @@ Snapshot format 3 records the database contract rather than the complete DSL:
 Presentation-only changes—forms, listings, translations, upload UI, and media processing settings—do not generate a
 database migration unless they also change one of those storage contracts.
 
-<!-- usage-rules:start -->
+<!-- usage-rules:start topic="generators" -->
 
 ## Renaming an attribute
 
@@ -416,7 +416,7 @@ resolve duplicates deliberately before applying the migration. Igniter does
 not generate this migration because it cannot safely enumerate application
 Blueprints, snapshots, or deployed data.
 
-<!-- usage-rules:start -->
+<!-- usage-rules:start topic="generators" -->
 
 ## Changes that require a hand-written migration
 

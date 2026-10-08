@@ -26,7 +26,7 @@ and content transfer, see [User accounts and sessions](users.md).
 5. Test with representative accounts on every site and environment, including
    direct URLs and denied writes. Review `/admin/groups` for each scope.
 
-<!-- usage-rules:start -->
+<!-- usage-rules:start topic="tenancy" -->
 
 The default mode remains `:legacy` until that explicit switch
 (`authorization_mode: :groups`). Old
@@ -144,7 +144,7 @@ Membership changes apply immediately and preserve any unsaved permission draft.
 The person picker excludes current members. View access combines a member's grants
 from all groups in the selected scope and identifies the contributing groups.
 
-<!-- usage-rules:start -->
+<!-- usage-rules:start topic="tenancy" -->
 
 ## Application code
 
@@ -188,7 +188,7 @@ and authorize again when the operation executes.
 
 <!-- usage-rules:end -->
 
-<!-- usage-rules:start -->
+<!-- usage-rules:start topic="tenancy" -->
 
 ### Resource metadata and policies
 
@@ -216,7 +216,7 @@ Read and export policies may differ; implement both in `scope/3` when exports
 need stricter filtering. Listing exports use this scope and return a download in
 the authenticated LiveView response instead of writing public files under `/media`.
 
-<!-- usage-rules:start -->
+<!-- usage-rules:start topic="tenancy" -->
 
 ```elixir
 defmodule MyApp.ProjectPolicy do

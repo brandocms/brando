@@ -9,7 +9,7 @@ Use the generated context functions from application code. The lower-level
 helpers are useful when composing an Ecto query yourself, but the compiler and
 runtime modules behind `Brando.Query` are internal implementation details.
 
-<!-- usage-rules:start -->
+<!-- usage-rules:start topic="querying" -->
 
 ## Defining a context
 
@@ -101,7 +101,7 @@ operations. List queries additionally support filtering, ordering, joins,
 offsets, and pagination; single queries use `matches` and can retrieve a
 revision.
 
-<!-- usage-rules:start -->
+<!-- usage-rules:start topic="querying" -->
 
 | Option | Query | Purpose |
 | --- | --- | --- |
@@ -146,7 +146,7 @@ silently ignored.
   })
 ```
 
-<!-- usage-rules:start -->
+<!-- usage-rules:start topic="querying" -->
 
 Add a clause for every supported key. An unknown key raises a
 `Brando.Exception.QueryFilterClauseError` or
@@ -245,7 +245,7 @@ supports.
 
 ## Pagination
 
-<!-- usage-rules:start -->
+<!-- usage-rules:start topic="querying" -->
 
 Set `paginate: true` together with a `limit`. `offset` defaults to zero:
 
@@ -483,7 +483,7 @@ MyApp.Projects.get_project(%{
 })
 ```
 
-<!-- usage-rules:start -->
+<!-- usage-rules:start topic="querying" -->
 
 The complete query argument map is part of the cache key. Generated Brando
 mutations and the `Brando.Query.insert/2`, `update/2`, and `delete/1` helpers
@@ -547,7 +547,7 @@ mutation :duplicate,
    merge_fields: %{contributors: []}}
 ```
 
-<!-- usage-rules:start -->
+<!-- usage-rules:start topic="querying" -->
 
 The resulting functions accept the acting user so Brando can run the Blueprint
 changeset and its lifecycle consistently:

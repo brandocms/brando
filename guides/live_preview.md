@@ -5,7 +5,7 @@ Phoenix templates and layout. Editors can inspect a page at desktop, tablet, or
 mobile dimensions, open the preview in another window, and create an expiring
 shared snapshot when they have export access.
 
-<!-- usage-rules:start -->
+<!-- usage-rules:start topic="live-preview" -->
 
 ## Configure a view
 
@@ -94,7 +94,7 @@ The default is `:default` when present, otherwise the first declared target.
 Labels default to "Preview" for the unnamed target or a humanized target name;
 provide explicit labels/descriptions for useful editor-facing choices.
 
-<!-- usage-rules:start -->
+<!-- usage-rules:start topic="live-preview" -->
 
 ## Preloads, assigns, and refresh behavior
 

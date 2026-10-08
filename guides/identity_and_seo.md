@@ -18,7 +18,7 @@ type and fill its relevant fields; [JSON-LD](jsonld.md#identity-type-specific-fi
 explains what each type contributes. Add a named social link, then save and reload.
 Repeat for Norwegian with its translated display text.
 
-<!-- usage-rules:start -->
+<!-- usage-rules:start topic="seo" -->
 
 For a new language, create defaults once in that environment:
 
@@ -57,7 +57,7 @@ are refreshed:
 Embed updates replace the submitted collection, so preserve existing links when
 adding one programmatically. In the admin, the normal form handles that collection.
 
-<!-- usage-rules:start -->
+<!-- usage-rules:start topic="seo" -->
 
 ## Use it in the frontend
 
@@ -142,7 +142,7 @@ values are filled from these settings when metadata renders.
 }, current_user)
 ```
 
-<!-- usage-rules:start -->
+<!-- usage-rules:start topic="seo" -->
 
 `Brando.Cache.SEO.get(language)` returns an empty SEO struct if the language has
 no row. That keeps lookups possible but does not provide meaningful metadata.
@@ -219,7 +219,7 @@ shows the last submission and the answer: `200` or `202` is accepted, `403`
 means the key file could not be read, `422` that a URL is not on the key's
 host.
 
-<!-- usage-rules:start -->
+<!-- usage-rules:start topic="seo" -->
 
 It is off by default. Only the live environment submits, so a staging copy
 never does. Without tenancy the deployment is the site; on a server that is
@@ -293,7 +293,7 @@ config :brando, Brando.Sites.FourOhFour,
   flush_interval: :timer.seconds(60)
 ```
 
-<!-- usage-rules:start -->
+<!-- usage-rules:start topic="seo" -->
 
 An application that sets its own `config :brando, Oban` replaces Brando's
 crontab and must add `{"25 5 * * *", Brando.Worker.NotFoundPurger}` to its own.

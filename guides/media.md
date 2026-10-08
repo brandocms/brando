@@ -11,7 +11,7 @@ a writable media directory, a running image-processing queue, and the consumer's
 compiled admin assets. Run a [Blueprint migration](blueprint_migrations.md) after
 adding the asset fields.
 
-<!-- usage-rules:start -->
+<!-- usage-rules:start topic="media" -->
 
 ## Configure a cover image
 
@@ -56,7 +56,7 @@ MIME limits apply to incoming uploads, while `formats` controls processed output
 For SVG, use an explicitly allowed MIME type and inspect its rendering separately
 from raster variants.
 
-<!-- usage-rules:start -->
+<!-- usage-rules:start topic="media" -->
 
 To use application defaults instead, declare `cfg: :default` and configure
 `default_config` under `Brando.Images`.
@@ -95,7 +95,7 @@ before Brando stored fingerprints count as changed once. Confirm the new size
 paths exist before rendering them. A requested size absent from `image.sizes`
 is a configuration/processing error, not a fallback image.
 
-<!-- usage-rules:start -->
+<!-- usage-rules:start topic="media" -->
 
 ## Render responsive images
 
@@ -149,7 +149,7 @@ as HTML, so only pass trusted editorial content.
 A nil image renders nothing. An **unloaded** association renders a diagnostic:
 fix the preload rather than hiding it with a CSS rule.
 
-<!-- usage-rules:start -->
+<!-- usage-rules:start topic="media" -->
 
 A template in the database that prints an image text directly shows the raw
 map. Add the `i18n` filter, which prints the page's language with the default
@@ -216,7 +216,7 @@ asset. A `required: true` asset must remain present for a valid publishable entr
 A rejected MIME type or size should leave the previous selection in place; test
 that state as well as the successful upload.
 
-<!-- usage-rules:start -->
+<!-- usage-rules:start topic="media" -->
 
 ## Add an ordered mixed gallery
 
@@ -256,7 +256,7 @@ picker to images, videos, or both. For hosted/transcoded video, configure one of
 the supported strategies in [Videos](videos.md); choosing a provider also requires
 its credentials and webhook integration.
 
-<!-- usage-rules:start -->
+<!-- usage-rules:start topic="media" -->
 
 Preload and resolve the gallery before passing it to the template:
 

@@ -69,7 +69,7 @@ def default_link(_entry, _asset), do: %{}
 
 <!-- usage-rules:end -->
 
-<!-- usage-rules:start -->
+<!-- usage-rules:start topic="admin-ui" -->
 
 ## The form LiveView
 
@@ -180,7 +180,7 @@ query &__MODULE__.form_query/1
 def form_query(id), do: %{matches: %{id: id}, preload: [:category, :cover]}
 ```
 
-<!-- usage-rules:start -->
+<!-- usage-rules:start topic="admin-ui" -->
 
 With either form, the automatic preloads are off: list every association the
 form shows, including asset fields, galleries and `alternate_entries` for
@@ -346,7 +346,7 @@ input :url, :text, show_if: {:kind, :url}
 input :file, :file, show_if: {:kind, [:pdf, :audio]}
 ```
 
-<!-- usage-rules:start -->
+<!-- usage-rules:start topic="admin-ui" -->
 
 Atoms and strings compare equal, so `{:kind, :url}` matches the param
 `"url"`; other values must match exactly, so `{:count, 1}` does not match the
@@ -490,7 +490,7 @@ input :article_categories, :multi_select,
   resetable: true
 ```
 
-<!-- usage-rules:start -->
+<!-- usage-rules:start topic="admin-ui" -->
 
 `:multi_select` picks several values. It works with two kinds of field:
 
@@ -726,7 +726,7 @@ input :meta_description, :textarea,
   ai: [prompt: "Write a succinct meta description", context: [:title, :blocks]]
 ```
 
-<!-- usage-rules:start -->
+<!-- usage-rules:start topic="admin-ui" -->
 
 ## Block editors
 

@@ -1,6 +1,6 @@
 # Villain parser
 
-<!-- usage-rules:start -->
+<!-- usage-rules:start topic="rendering" -->
 
 The parser turns block data into HTML. `mix brando.install` generates one for
 your project:
@@ -29,7 +29,7 @@ render differently.
 See the [Block editor](block_editor.md) guide for how modules, refs and vars fit
 together; this guide is about the rendering step at the end of that pipeline.
 
-<!-- usage-rules:start -->
+<!-- usage-rules:start topic="rendering" -->
 
 ## When it runs
 
@@ -94,7 +94,7 @@ at the bottom.
 the editor can produce them: `blockquote/2`, `datatable/2`, `divider/2`,
 `list/2`, `table/2`, `timeline/2`, `datasource/2`.
 
-<!-- usage-rules:start -->
+<!-- usage-rules:start topic="rendering" -->
 
 ### What the media callbacks receive
 
@@ -151,7 +151,7 @@ defmodule MyApp.Villain.Parser do
 end
 ```
 
-<!-- usage-rules:start -->
+<!-- usage-rules:start topic="rendering" -->
 
 To build on the default rather than replace it, call it explicitly:
 

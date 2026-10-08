@@ -2,7 +2,7 @@
 
 Brando supports video fields with multiple upload strategies for different hosting providers.
 
-<!-- usage-rules:start -->
+<!-- usage-rules:start topic="media" -->
 
 ### Video Fields in Blueprints
 
@@ -145,7 +145,7 @@ that legitimately have no credentials. To fail the boot instead:
 config :brando, :strict_video_provider_config, true
 ```
 
-<!-- usage-rules:start -->
+<!-- usage-rules:start topic="media" -->
 
 ### Mux Configuration
 

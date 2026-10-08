@@ -11,7 +11,7 @@ activated, optionally blue/green.
 
 ## Read first
 
-- `deps/brando/usage-rules.md`: the Deployment section.
+- `deps/brando/usage-rules/deployment.md`.
 - `deps/brando/guides/deployment.md` for commands, configuration and
   troubleshooting.
 

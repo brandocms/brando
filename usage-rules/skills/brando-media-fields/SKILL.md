@@ -11,8 +11,7 @@ saving the entry are separate steps.
 
 ## Read first
 
-- `deps/brando/usage-rules.md`: the Images, files, and galleries and Videos
-  sections.
+- `deps/brando/usage-rules/media.md`.
 - `deps/brando/guides/media.md`, `videos.md`, `cdn.md`.
 
 ## Declare and render

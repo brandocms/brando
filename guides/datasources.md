@@ -10,7 +10,7 @@ This example adds related page cards to an existing application Blueprint. It
 assumes working [modules and blocks](block_editor.md), persisted page identifiers,
 and a running content-rendering queue.
 
-<!-- usage-rules:start -->
+<!-- usage-rules:start topic="datasources" -->
 
 ## Declare automatic and selected pages
 
@@ -82,7 +82,7 @@ In the module editor, enable its datasource, choose the Blueprint, then select
 `recent_pages` or `selected_pages`. Insert the module into a page. For a selection,
 choose two pages and drag them into the desired order.
 
-<!-- usage-rules:start -->
+<!-- usage-rules:start topic="datasources" -->
 
 A HEEx module template can render those entries:
 
@@ -220,7 +220,7 @@ stored rendering, previews, or background invalidation. If you cache dynamic
 output yourself, include every relevant tenant, language, and route input in its
 cache key. Never cache per-user content as a shared page render.
 
-<!-- usage-rules:start -->
+<!-- usage-rules:start topic="datasources" -->
 
 ## Keep dependent pages fresh
 

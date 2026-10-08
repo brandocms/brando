@@ -7,7 +7,7 @@ search results; the generator does not infer publication or language rules.
 This guide assumes a migrated consumer, a writable media directory, an accurate
 public endpoint URL, and published pages with working URL definitions.
 
-<!-- usage-rules:start -->
+<!-- usage-rules:start topic="seo" -->
 
 ## Declare public URLs
 
@@ -66,7 +66,7 @@ edits move, falling back to `edited_at` and `updated_at`. Select those fields.
 JSON-LD's `dateModified` should read the same value; see
 [JSON-LD](jsonld.md#datemodified).
 
-<!-- usage-rules:start -->
+<!-- usage-rules:start topic="seo" -->
 
 ## Generate and inspect
 
@@ -109,7 +109,7 @@ generated. Fix it in the query: add `filter: Schema.__url_filter__()` (keeping
 the filter's fields in `select`) and return Blueprint structs, so those entries
 are never loaded.
 
-<!-- usage-rules:start -->
+<!-- usage-rules:start topic="seo" -->
 
 ## Keep it current
 

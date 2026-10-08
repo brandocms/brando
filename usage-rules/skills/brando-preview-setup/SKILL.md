@@ -11,7 +11,7 @@ templates. The site declares one `preview_target` per view in its
 
 ## Read first
 
-- `deps/brando/usage-rules.md`: the Live preview section.
+- `deps/brando/usage-rules/live-preview.md`.
 - `deps/brando/guides/live_preview.md`; `frontend_edit.md` if the site uses
   frontend edit mode.
 

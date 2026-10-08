@@ -18,7 +18,7 @@ to `main`, language to English, and status to published. Add an item with key
 **About us** as the link text, or leave the override blank to use the identifier
 title. Save and reopen the menu to verify the selection and ordering survived.
 
-<!-- usage-rules:start -->
+<!-- usage-rules:start topic="rendering" -->
 
 For a seed or import, the equivalent literal-link menu is:
 
@@ -57,7 +57,7 @@ Changing the menu's language does not translate its items or switch their
 identifier targets. A missing translation should have a deliberate empty state;
 there is no automatic fallback to the English menu.
 
-<!-- usage-rules:start -->
+<!-- usage-rules:start topic="rendering" -->
 
 ## Load and render it
 

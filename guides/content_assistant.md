@@ -13,7 +13,7 @@ Screenshots: [empty workspace](../docs/admin-ui/assistant-empty-desktop.png),
 [applied](../docs/admin-ui/assistant-applied-desktop.png) and
 [mobile](../docs/admin-ui/assistant-applied-mobile.png).
 
-<!-- usage-rules:start -->
+<!-- usage-rules:start topic="assistant-mcp" -->
 
 ## Configure a model
 
@@ -84,7 +84,7 @@ may publish.
   answer in the editor's language. New entries get the conversation's content
   language unless the editor names another.
 
-<!-- usage-rules:start -->
+<!-- usage-rules:start topic="assistant-mcp" -->
 
 ## Proposals from connected tools
 
@@ -193,7 +193,7 @@ site and environment. Staging and production each have their own.
   default (see [Permissions](#permissions)). Guidance is trusted as
   instructions for everyone's assistant, so grant this sparingly.
 
-<!-- usage-rules:start -->
+<!-- usage-rules:start topic="assistant-mcp" -->
 
 ### In the code
 
@@ -321,7 +321,7 @@ is applied.
 It does not delete entries. A link to an entry created in the same proposal is
 reported as a problem, because the new entry is a draft.
 
-<!-- usage-rules:start -->
+<!-- usage-rules:start topic="assistant-mcp" -->
 
 ## For developers
 

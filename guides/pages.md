@@ -42,7 +42,7 @@ changeset and display its errors; a failed save has not published the edit.
 Use the admin block editor to author blocks, or follow the [block editor
 guide](block_editor.md) for programmatic content construction.
 
-<!-- usage-rules:start -->
+<!-- usage-rules:start topic="rendering" -->
 
 ## Resolve and render public pages
 
@@ -105,7 +105,7 @@ The template selector discovers functions in `MyAppWeb.PageHTML` (or legacy
 
 <!-- usage-rules:end -->
 
-<!-- usage-rules:start -->
+<!-- usage-rules:start topic="rendering" -->
 
 ## Homepage, hierarchy, and breadcrumbs
 
@@ -159,7 +159,7 @@ language `en`. Add its blocks and publish it. Create the translated counterpart
 with the same keys and language `no`. The parent key is a namespace; `page_id`
 is optional organization, not the lookup key.
 
-<!-- usage-rules:start -->
+<!-- usage-rules:start topic="rendering" -->
 
 Query the current language explicitly and filter status for public output:
 

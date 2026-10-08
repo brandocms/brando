@@ -31,7 +31,7 @@ The output is a single `<script type="application/ld+json">` tag:
 }
 ```
 
-<!-- usage-rules:start -->
+<!-- usage-rules:start topic="seo" -->
 
 ### Blueprint DSL
 
@@ -92,7 +92,7 @@ JSON-LD and the [sitemap](sitemaps.md) agree:
 <p>Updated {Brando.Utils.Datetime.format_datetime(Brando.Blueprint.Value.modified_at(@post), "%d.%m.%Y")}</p>
 ```
 
-<!-- usage-rules:start -->
+<!-- usage-rules:start topic="seo" -->
 
 #### Field types
 
@@ -125,7 +125,7 @@ json_ld_schema JSONLD.Schema.Event do
 end
 ```
 
-<!-- usage-rules:start -->
+<!-- usage-rules:start topic="seo" -->
 
 ### Authors
 
@@ -150,7 +150,7 @@ or People entries, from a relation:
 field :author, :person, & &1.authors
 ```
 
-<!-- usage-rules:start -->
+<!-- usage-rules:start topic="seo" -->
 
 The callback may return one value or a list, and anything not preloaded is
 skipped (it never queries). Each author becomes its own `Person` node in the
@@ -292,7 +292,7 @@ SportsOrganization.
 
 ### Controller usage
 
-<!-- usage-rules:start -->
+<!-- usage-rules:start topic="seo" -->
 
 #### Adding a content entity
 
@@ -371,7 +371,7 @@ extra = [%{name: :image, type: :image, value_fn: &get_hero_image/1}]
 put_json_ld(conn, MyApp.Blog.Post, post, extra)
 ```
 
-<!-- usage-rules:start -->
+<!-- usage-rules:start topic="seo" -->
 
 ### Collections rendered by datasource blocks
 
@@ -427,7 +427,7 @@ conn
 |> put_json_ld_type("CollectionPage")
 ```
 
-<!-- usage-rules:start -->
+<!-- usage-rules:start topic="seo" -->
 
 Every `put_json_ld/4` call also sets the page type, to the entry's
 `json_ld_type` or `"WebPage"` when it has none. Call `put_json_ld_type/2`

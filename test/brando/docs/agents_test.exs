@@ -12,21 +12,38 @@ defmodule Brando.Docs.AgentsTest do
   end
 
   describe "usage-rules.md" do
-    test "is up to date with the guides", %{guides: guides} do
-      assert File.read!(Path.join(@root, "usage-rules.md")) == Agents.usage_rules(guides),
-             "usage-rules.md is out of date. Run mix brando.docs.agents and commit the result."
+    test "and the topic files are up to date with the guides", %{guides: guides} do
+      expected = Agents.rules_files(guides)
+      committed = Path.wildcard(Path.join(@root, "usage-rules/*.md")) |> Enum.map(&Path.relative_to(&1, @root))
+
+      assert Enum.sort(committed) == expected |> Map.keys() |> Enum.reject(&(&1 == "usage-rules.md")) |> Enum.sort()
+
+      for {path, contents} <- expected do
+        assert File.read!(Path.join(@root, path)) == contents,
+               "#{path} is out of date. Run mix brando.docs.agents and commit the result."
+      end
+    end
+
+    test "keeps the core rules short and lists every topic", %{guides: guides} do
+      rules = Agents.usage_rules(guides)
+
+      assert byte_size(rules) < 36_000, "usage-rules.md is #{byte_size(rules)} bytes; move rules into a topic"
+
+      for {key, _title, _when} <- Agents.topics() do
+        assert rules =~ "`brando:#{key}` (`deps/brando/usage-rules/#{key}.md`)"
+      end
     end
 
     test "is reproducible", %{guides: guides} do
       again = Agents.guides(@root, Mix.Project.config()[:docs])
 
-      assert Agents.usage_rules(guides) == Agents.usage_rules(again)
+      assert Agents.rules_files(guides) == Agents.rules_files(again)
       assert Agents.llms_txt(guides) == Agents.llms_txt(again)
       assert Agents.llms_full_txt(guides) == Agents.llms_full_txt(again)
     end
 
     test "points every section at a guide that ships with the package", %{guides: guides} do
-      rules = Agents.usage_rules(guides)
+      rules = guides |> Agents.rules_files() |> Map.values() |> Enum.join("\n")
 
       for [_, file] <- Regex.scan(~r{^Guide: `deps/brando/guides/([a-z0-9_]+\.md)`$}m, rules) do
         assert File.exists?(Path.join([@root, "guides", file]))
@@ -39,17 +56,21 @@ defmodule Brando.Docs.AgentsTest do
 
     test "every Elixir example compiles, or is marked as not compilable", %{guides: guides} do
       UsageRulesExamples.define_scratch_modules()
-      examples = guides |> Agents.usage_rules() |> Agents.examples()
+
+      examples =
+        for {path, contents} <- Enum.sort(Agents.rules_files(guides)),
+            example <- Agents.examples(contents),
+            do: Map.put(example, :path, path)
 
       assert examples != []
 
       failures =
         for example <- examples, not example.no_compile, {:error, reason} <- [UsageRulesExamples.check(example.code)] do
-          "usage-rules.md:#{example.line} (#{example.section})\n#{indent(reason)}\n\n#{indent(example.code)}"
+          "#{example.path}:#{example.line} (#{example.section})\n#{indent(reason)}\n\n#{indent(example.code)}"
         end
 
       assert failures == [], """
-      #{length(failures)} example(s) in usage-rules.md fail. Fix the guide the example comes from, or put
+      #{length(failures)} example(s) in the rules files fail. Fix the guide the example comes from, or put
       #{Agents.no_compile_marker()} on the line before an example that cannot compile.
 
       #{Enum.join(failures, "\n\n")}
@@ -115,8 +136,7 @@ defmodule Brando.Docs.AgentsTest do
       full = Agents.llms_full_txt(guides)
 
       for guide <- guides, do: assert(full =~ "<!-- guides/#{guide.file} -->")
-      refute full =~ "usage-rules:start"
-      refute full =~ "usage-rules:no-compile"
+      refute full =~ ~r/^\s*<!-- usage-rules:/m
       refute full =~ "llms-description:"
     end
   end

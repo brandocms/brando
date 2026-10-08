@@ -10,7 +10,7 @@ a search index, a chat channel. Two layers do this.
   to URLs an administrator sets up under Configuration → Integrations →
   Webhooks.
 
-<!-- usage-rules:start -->
+<!-- usage-rules:start topic="content-events" -->
 
 ## Events
 
@@ -34,7 +34,7 @@ pending update's fields, so a save followed by a publish is one
 config :brando, Brando.ContentEvents, debounce_seconds: 5
 ```
 
-<!-- usage-rules:start -->
+<!-- usage-rules:start topic="content-events" -->
 
 Schemas that Activity does not log (its `ignore` list, media, Brando's
 internal records) send no events, and neither do changes to users.
@@ -271,7 +271,7 @@ when the webhook is saved and again before every delivery, and the delivery
 connects to the address that was checked, with the host name kept for TLS,
 so a host that later resolves to an internal address is not called.
 
-<!-- usage-rules:start -->
+<!-- usage-rules:start topic="content-events" -->
 
 For a receiver on your own machine in development:
 

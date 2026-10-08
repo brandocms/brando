@@ -186,7 +186,7 @@ attribute :language, :language, languages: Brando.RuntimeConfig.get(:admin_langu
 
 `Brando.config/1` works too.
 
-<!-- usage-rules:start -->
+<!-- usage-rules:start topic="blueprint-reference" -->
 
 ## Uniqueness
 
@@ -344,7 +344,7 @@ as the constraint they are for.
 relation :name, type, options
 ```
 
-<!-- usage-rules:start -->
+<!-- usage-rules:start topic="blueprint-reference" -->
 
 Every relation needs `module:`. The types:
 
@@ -626,7 +626,7 @@ Options:
 Unknown options fail the compilation. For rendering and upload recipes, see
 [Images, files, and galleries](media.md) and [Videos](videos.md).
 
-<!-- usage-rules:start -->
+<!-- usage-rules:start topic="blueprint-reference" -->
 
 ### Asset configuration
 
@@ -667,7 +667,7 @@ non-positive `size_limit`, empty MIME lists, unknown formats or strategies,
 malformed sizes, and a `srcset` naming a size that does not exist. Function
 configs are checked when they are first read.
 
-<!-- usage-rules:start -->
+<!-- usage-rules:start topic="blueprint-reference" -->
 
 An image config's `sizes` replaces the default sizes; name the
 `{:standard, %{...}}` preset to extend them, as described in

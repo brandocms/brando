@@ -21,7 +21,9 @@ if Code.ensure_loaded?(Igniter) do
     @section """
     <!-- brando-start -->
     ## brando usage
-    [brando usage rules](deps/brando/usage-rules.md). The guides they summarize are in `deps/brando/guides/`.
+    [brando usage rules](deps/brando/usage-rules.md): the core rules for building a site. The file ends
+    with an index of topic rules in `deps/brando/usage-rules/` (`brando:<topic>`); load one before working
+    in its area. The guides they summarize are in `deps/brando/guides/`.
     <!-- brando-end -->\
     """
 

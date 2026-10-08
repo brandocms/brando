@@ -295,7 +295,7 @@ than raising. `Brando.Blueprint.URL.resolve/1` calls it for any entry, and
 The tuple form `absolute_url {:i18n, :article_path, :detail, [:slug]}` still
 compiles, with a deprecation warning; use HEEx with `route_i18n`.
 
-<!-- usage-rules:start -->
+<!-- usage-rules:start topic="blueprint-reference" -->
 
 ### Only some entries have a URL
 
@@ -357,7 +357,7 @@ tables so suggestions don't scan every entry. Matching only suggests a
 target: the editor still chooses the destination and block field. Pages and
 fragments have built-in keys and queries.
 
-<!-- usage-rules:start -->
+<!-- usage-rules:start topic="blueprint-reference" -->
 
 ## Translations
 
@@ -535,7 +535,7 @@ For fields, `__attributes__/1` in `Brando.Blueprint.Attributes`,
 `Brando.Blueprint.preloads_for/2` returns the preloads for a complete entry.
 `Brando.Blueprint.list_blueprints/0` lists the application's Blueprints.
 
-<!-- usage-rules:start -->
+<!-- usage-rules:start topic="blueprint-reference" -->
 
 ## Deprecated declarations
 

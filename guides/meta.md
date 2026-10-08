@@ -8,7 +8,7 @@ set it deliberately so the browser tab and sharing title agree.
 This example assumes a `MyApp.News.Post` Blueprint with `title`, `summary`, and
 `language`, `trait :meta` for the editable metadata fields, and a public controller.
 
-<!-- usage-rules:start -->
+<!-- usage-rules:start topic="seo" -->
 
 ## Define the metadata schema
 
@@ -45,7 +45,7 @@ Brando.Blueprint.Value.fallback(%{meta_title: nil, title: "Our story"}, [:meta_t
 #=> "Our story"
 ```
 
-<!-- usage-rules:start -->
+<!-- usage-rules:start topic="seo" -->
 
 Fallback skips `nil`, not every falsey-looking value: an empty string remains a
 value. If your import stores blank strings and you want defaults, normalize them
@@ -59,7 +59,7 @@ Read the entry's `language`, not Ecto's `__meta__` storage metadata.
 
 <!-- usage-rules:end -->
 
-<!-- usage-rules:start -->
+<!-- usage-rules:start topic="seo" -->
 
 ## Put values on the connection
 
@@ -100,7 +100,7 @@ including Open Graph, without setting the document title on its own.
 
 <!-- usage-rules:end -->
 
-<!-- usage-rules:start -->
+<!-- usage-rules:start topic="seo" -->
 
 ## Render the head once
 
@@ -127,7 +127,7 @@ keys use `name`. Image records are turned into absolute image URLs with type and
 dimensions; a URL string is accepted too. Preload `:meta_image` and configure real
 image sizes/CDN delivery before relying on that output.
 
-<!-- usage-rules:start -->
+<!-- usage-rules:start topic="seo" -->
 
 Without a language assign, `render_meta` renders no tags. Without a configured
 fallback, absent values stay absent. Neither case should be mistaken for an

@@ -171,7 +171,7 @@ own CMS templates while preserving your Phoenix PageHTML and layouts. Templates
 under `priv/templates/brando.gen.site` override packaged defaults. No page or
 account is created by this source generator.
 
-<!-- usage-rules:start -->
+<!-- usage-rules:start topic="generators" -->
 
 ## Run setup
 
@@ -262,7 +262,7 @@ For `single`/`multi`, provision the site/environment after public migrations and
 initialize content inside that environment as described in the tenancy guide.
 Group authorization remains an explicit setup in [Authorization](authorization.md).
 
-<!-- usage-rules:start -->
+<!-- usage-rules:start topic="generators" -->
 
 ## Generate a content type
 
@@ -344,6 +344,36 @@ before missing framework migrations are planned: a 0.54 → 0.55 upgrade runs
 use `brando.gen.migrations` to reconcile files during development. Applications
 with older DSL syntax must first follow [Migrating from 0.53 or 0.54](migrating_from_053.md).
 Future release transitions require explicit upgrade recipes and qualification.
+
+## Files for coding agents
+
+<!-- usage-rules:start topic="generators" -->
+
+`mix brando.install` gives coding agents Brando's rules and skills:
+
+* `AGENTS.md` gets a `brando` section linking `deps/brando/usage-rules.md`,
+  inside the `<!-- usage-rules-start -->` block Phoenix writes, or in a new
+  file. `mix usage_rules.sync` from the `usage_rules` package can take that
+  section over; it loads the topic files in `deps/brando/usage-rules/` as
+  `brando:<topic>`.
+* `.claude/skills/` gets Brando's skills for building a site: Blueprints,
+  blocks and modules, live preview, media fields and deploys.
+
+A versioned `mix brando.upgrade` adds the ones that are missing. Neither task
+replaces a skill file or a `brando` section that already exists, so edit them
+freely.
+
+<!-- usage-rules:end -->
+
+The rules are generated from these guides by `mix brando.docs.agents`, in
+Brando's own repository: each guide marks what goes in with
+`<!-- usage-rules:start -->` (core rules) or
+`<!-- usage-rules:start topic="seo" -->` (a topic file) and
+`<!-- usage-rules:end -->`. CI checks the generated files are current and
+compiles their Elixir examples. Their links point at `deps/brando/guides/`,
+which is where the guides are when Brando is a Hex or git dependency. With a
+`path:` dependency those links don't resolve; the guides are in the Brando
+checkout.
 
 ## Auxiliary generators
 
@@ -431,7 +461,7 @@ Run `mix help TASK` for current options. These are separate operations:
 | `brando.gen.tenant_migration` | Tenant migration source; see the tenancy guide |
 | `brando.doctor` | Read-only checks of versions, migrations, configuration, assets and content; see [System check](doctor.md) |
 
-<!-- usage-rules:start -->
+<!-- usage-rules:start topic="generators" -->
 
 For setup failures, fix the first compiler, migration or asset error before
 continuing. After an upgrade, `mix brando.doctor` lists what is still out of

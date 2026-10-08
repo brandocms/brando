@@ -11,8 +11,9 @@ rendered to HTML when the entry is saved, through the site's parser module.
 
 ## Read first
 
-- `deps/brando/usage-rules.md`: the Block editor, Module definitions,
-  Villain parser and Datasources sections.
+- `deps/brando/usage-rules.md`: the Block editor section;
+  `deps/brando/usage-rules/module-definitions.md`, `rendering.md` (the
+  parser) and `datasources.md`.
 - `deps/brando/guides/block_editor.md`, `module_definitions.md`,
   `villain_parser.md`, `datasources.md`, `pages.md`.
 

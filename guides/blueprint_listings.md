@@ -185,7 +185,7 @@ or show a toast. Events Brando does not handle reach your own
 
 ### Rendering `Content.List`
 
-<!-- usage-rules:start -->
+<!-- usage-rules:start topic="admin-ui" -->
 
 `Content.List`, aliased from `BrandoAdmin.Components`, is a LiveComponent.
 Pass it:
@@ -236,7 +236,7 @@ The rest are optional:
 
 ### Menu items
 
-<!-- usage-rules:start -->
+<!-- usage-rules:start topic="admin-ui" -->
 
 `menu_item MyApp.Articles.Article` in the admin menu links to
 `/admin/<domain>/<plural>` and needs a listing named `:default`; without one
@@ -729,7 +729,7 @@ action label: t("Preview"), event: JS.push("preview_article") |> JS.add_class("l
   dialog before the event is sent. `confirm: true` is rejected; write the
   question instead.
 
-<!-- usage-rules:start -->
+<!-- usage-rules:start topic="admin-ui" -->
 
 Custom actions are shown on every row, after the built-in ones, without a
 permission check; check permissions in the handler.
@@ -775,7 +775,7 @@ selection_action label: t("Reject selected"),
   the action. It only hides the menu item: the LiveView handling the event
   must still check the user itself.
 
-<!-- usage-rules:start -->
+<!-- usage-rules:start topic="admin-ui" -->
 
 The event goes to the listing LiveView with `"ids"`, a JSON-encoded list of the selected
 IDs, so decode it with `Jason.decode!/1`. The Blueprint's selection actions
@@ -908,7 +908,7 @@ See [Traits](blueprint_traits.md) for what each trait adds to the schema.
 
 ## Live updates
 
-<!-- usage-rules:start -->
+<!-- usage-rules:start topic="admin-ui" -->
 
 The listing reloads its entries when the schema's listing topic receives an
 update. Brando's own actions, scheduled publishing and translation sync send

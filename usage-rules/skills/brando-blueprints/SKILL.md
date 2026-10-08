@@ -11,7 +11,9 @@ schema with a generated `changeset/5`, and generates its storage from it.
 
 ## Read first
 
-- `deps/brando/usage-rules.md`: the Blueprints sections.
+- `deps/brando/usage-rules.md`: the Blueprint sections; `brando:blueprint-reference`,
+  `brando:admin-ui` and `brando:generators` in `deps/brando/usage-rules/` for
+  details.
 - `deps/brando/guides/blueprints.md`, then the guide for the part you change:
   `blueprint_fields.md`, `blueprint_traits.md`, `blueprint_listings.md`,
   `blueprint_forms.md`, `blueprint_migrations.md`.
