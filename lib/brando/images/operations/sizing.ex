@@ -200,36 +200,13 @@ defmodule Brando.Images.Operations.Sizing do
           original_height: original_height
         } = conversion_parameters
       ) do
-    {resize_width, resize_height} =
-      if crop_width > crop_height do
-        resize_width = crop_width
-        resize_height = round(crop_width * original_height / original_width)
-
-        if resize_height < crop_height do
-          resize_width = round(crop_height * resize_width / resize_height)
-          resize_height = crop_height
-
-          {resize_width, resize_height}
-        else
-          {resize_width, resize_height}
-        end
-      else
-        resize_width = round(crop_height * original_width / original_height)
-        resize_height = crop_height
-
-        if resize_width < crop_width do
-          resize_height = round(crop_width * resize_height / resize_width)
-          resize_width = crop_width
-
-          {resize_width, resize_height}
-        else
-          {resize_width, resize_height}
-        end
-      end
+    # The smallest scale that covers the crop: one side meets it exactly, the
+    # other overshoots. Computed once, so rounding can't leave a side short.
+    scale = max(crop_width / original_width, crop_height / original_height)
 
     conversion_parameters
-    |> Map.put(:resize_width, round(resize_width / 1))
-    |> Map.put(:resize_height, round(resize_height / 1))
+    |> Map.put(:resize_width, max(crop_width, round(original_width * scale)))
+    |> Map.put(:resize_height, max(crop_height, round(original_height * scale)))
   end
 
   def add_resize_dimensions(%{crop: false} = params), do: params

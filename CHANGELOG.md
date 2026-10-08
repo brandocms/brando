@@ -1585,6 +1585,13 @@ production dump.
 
 #### Fixes
 
+- **Image sizes given only a height are made, and crops come out at their
+  size.** A size such as `"x400"` stopped processing with an error; it is
+  now fitted to the height. A cropped size could come out a pixel or two
+  short of its geometry on originals of unusual proportions (`399×400` for a
+  `400x400` crop); the size that covers the crop is now worked out from one
+  scale, so it is exact. Recreate the affected images to get the new files.
+
 - **Nothing typed or changed in a shared entry is lost on the way to a
   save.** The save button and ⌘S no longer submit the form, which took the
   focus from the field being typed in and ignored every key until the save
