@@ -10,7 +10,7 @@
   z-index: 1100;
   width: 320px;
   background-color: var(--brando-color-input, var(--brando-surface));
-  border: 1px solid var(--brando-color-dark, #000);
+  border: 1px solid var(--brando-ink);
   font-size: 14px;
 
   header {
@@ -21,7 +21,7 @@
     padding: 8px 12px;
     cursor: pointer;
     user-select: none;
-    border-bottom: 1px solid var(--brando-color-dark, #000);
+    border-bottom: 1px solid var(--brando-ink);
 
     .title {
       font-weight: 500;
@@ -76,7 +76,7 @@
       .done-label {
         display: flex;
         align-items: center;
-        color: #2e7d32;
+        color: var(--brando-success-ink);
         flex-shrink: 0;
 
         [data-icon] {
@@ -113,7 +113,7 @@
     }
 
     .error-label {
-      color: #c00;
+      color: var(--brando-error-ink);
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
@@ -126,8 +126,8 @@
       gap: 6px;
       padding: 8px 10px;
       border-radius: 6px;
-      background: #fff8e9;
-      color: #755929;
+      background: var(--brando-attention);
+      color: var(--brando-attention-ink);
       font-size: 12px;
       line-height: 1.4;
 
@@ -142,14 +142,14 @@
       button {
         margin: 0;
         padding: 3px 9px;
-        border: 1px solid #e6d3a8;
+        border: 1px solid var(--brando-attention-line);
         border-radius: 5px;
         background: var(--brando-surface);
         color: var(--brando-ink);
         font-size: 12px;
         cursor: pointer;
 
-        &:first-child { border-color: #cfdcce; background: #edf3e9; color: var(--brando-accent); }
+        &:first-child { border-color: var(--brando-line-strong); background: var(--brando-surface-selected); color: var(--brando-accent); }
         &:hover { filter: brightness(0.97); }
       }
     }
