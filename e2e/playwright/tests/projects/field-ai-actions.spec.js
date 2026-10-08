@@ -1,8 +1,8 @@
 import { test, expect } from '../../test-support/setupAuth'
 import { syncLV } from '../../utils'
 
-// AI actions declared on a field (`ai_actions:` on the project's title and
-// introduction). A fake model answers (E2eProject.FieldActionModel), in the
+// AI actions declared on a field (`ai_actions:`: two on the project's title,
+// one on its introduction). A fake model answers (E2eProject.FieldActionModel), in the
 // language the prompt asks for. The reply is a suggestion under the field
 // until it is accepted; discarding it leaves the field alone.
 
@@ -28,7 +28,7 @@ test('suggests text for a field, in the entry language, and writes it only when 
   const client = await factory(page, 'E2eProject.Projects.Client', { name: 'Fjord', slug: 'fjord', status: 'published', language: 'no' })
   const entry = await factory(page, 'E2eProject.Projects.Project', {
     title: 'Fjordhuset', slug: 'fjordhuset', client_id: client.id, status: 'draft', language: 'no',
-    introduction: '<p>Et hus ved fjorden.</p>',
+    introduction: '<p>Et hus ved <strong>fjorden</strong>.</p>',
   })
   expect((await page.request.post('/e2e/setup_fixtures/norwegian-admin-user')).ok()).toBe(true)
 
@@ -40,8 +40,9 @@ test('suggests text for a field, in the entry language, and writes it only when 
   const titleField = page.locator('.field-wrapper', { has: title })
   const titleSuggestion = titleField.getByTestId('field-ai-suggestion')
 
-  // One action: a button beside the label
-  await titleField.getByRole('button', { name: 'Suggest a title' }).click()
+  // Two actions: a menu beside the label
+  await titleField.getByRole('button', { name: 'Skriv med KI' }).click()
+  await page.getByRole('button', { name: 'Suggest a title' }).click()
   const suggested = titleSuggestion.getByRole('textbox', { name: 'Foreslått tekst' })
   // The Norwegian entry asked for Norwegian
   await expect(suggested).toHaveValue('Huset ved fjorden')
@@ -55,23 +56,23 @@ test('suggests text for a field, in the entry language, and writes it only when 
   await expect(title).toHaveValue('Huset ved fjorden, redigert')
   await expect(titleSuggestion.locator('.ai-proposal')).toHaveCount(0)
 
-  // Several actions: a menu
+  // One action: a button beside the label
   const introduction = page.locator('[data-footnote-field="introduction"] .tiptap-text')
   const introductionField = page.locator('.field-wrapper', { has: page.locator('[data-footnote-field="introduction"]') })
   const introductionSuggestion = introductionField.getByTestId('field-ai-suggestion')
 
-  await introductionField.getByRole('button', { name: 'Skriv med KI' }).click()
-  await page.getByRole('button', { name: 'Write from the content' }).click()
+  await introductionField.getByRole('button', { name: 'Write from the content' }).click()
   await expect(introductionSuggestion.getByRole('textbox')).toHaveValue(/^Et lyst hus ved fjorden/)
+  // The bold text would be lost: the suggestion says so
+  await expect(introductionSuggestion.getByTestId('field-ai-warning')).toBeVisible()
 
   // Discarded: the field is as it was
   await introductionSuggestion.getByRole('button', { name: 'Forkast' }).click()
   await expect(introductionSuggestion.locator('.ai-proposal')).toHaveCount(0)
-  await expect(introduction).toHaveValue('<p>Et hus ved fjorden.</p>')
+  await expect(introduction).toHaveValue('<p>Et hus ved <strong>fjorden</strong>.</p>')
 
   // Asked again and accepted: the rich text editor shows it
-  await introductionField.getByRole('button', { name: 'Skriv med KI' }).click()
-  await page.getByRole('button', { name: 'Write from the content' }).click()
+  await introductionField.getByRole('button', { name: 'Write from the content' }).click()
   await introductionSuggestion.getByRole('button', { name: 'Godta' }).click()
   await syncLV(page)
   await expect(introductionField.locator('.ProseMirror')).toContainText('Et lyst hus ved fjorden')
@@ -92,12 +93,15 @@ test('an action with nothing to read says so, and AI off hides the actions', asy
   await page.goto('/admin/projects/projects/update/1')
   await syncLV(page)
 
-  // Project 1 has no introduction: shortening it has nothing to read
-  const introductionField = page.locator('.field-wrapper', { has: page.locator('[data-footnote-field="introduction"]') })
-  await introductionField.getByRole('button', { name: 'Write with AI' }).click()
+  // With the title cleared, shortening it has nothing to read
+  const title = page.locator('input[name="project[title]"]')
+  const titleField = page.locator('.field-wrapper', { has: title })
+  await title.fill('')
+  await syncLV(page)
+  await titleField.getByRole('button', { name: 'Write with AI' }).click()
   await page.getByRole('button', { name: 'Shorten' }).click()
-  await expect(introductionField.getByTestId('field-ai-suggestion').getByRole('alert')).toBeVisible()
-  await expect(introductionField.getByTestId('field-ai-suggestion').getByRole('button', { name: 'Try again' })).toBeVisible()
+  await expect(titleField.getByTestId('field-ai-suggestion').getByRole('alert')).toBeVisible()
+  await expect(titleField.getByTestId('field-ai-suggestion').getByRole('button', { name: 'Try again' })).toBeVisible()
 
   expect((await page.request.post('/e2e/field-ai/off')).ok()).toBe(true)
   await page.reload()

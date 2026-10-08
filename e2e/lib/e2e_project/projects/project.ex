@@ -142,6 +142,12 @@ defmodule E2eProject.Projects.Project do
                 prompt: "Suggest a short title for the project.",
                 from: [:introduction, :blocks],
                 max: 60
+              ],
+              shorten: [
+                label: t("Shorten"),
+                prompt: "Shorten the title, keeping its meaning.",
+                from: [:title],
+                max: 40
               ]
             ]
 
@@ -161,12 +167,6 @@ defmodule E2eProject.Projects.Project do
                 from: [:title, :blocks],
                 max: 300,
                 tone: "plain and factual"
-              ],
-              shorten: [
-                label: t("Shorten"),
-                prompt: "Shorten the introduction, keeping its meaning.",
-                from: [:introduction],
-                max: 160
               ]
             ]
 

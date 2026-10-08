@@ -24,12 +24,12 @@ defmodule E2eProject.FieldActionModel do
      }}
   end
 
-  # A reply in the language the prompt asks for: a title for "Suggest a
-  # short title", otherwise a sentence.
+  # A reply in the language the prompt asks for: a title for the title's
+  # actions, otherwise a sentence.
   defp reply(prompt) do
     norwegian? = prompt =~ ~r/^Write in Norsk\.$/m
 
-    case {prompt =~ "Suggest a short title", norwegian?} do
+    case {prompt =~ ~r/Suggest a short title|Shorten the title/, norwegian?} do
       {true, true} -> "Huset ved fjorden"
       {true, false} -> "The house by the fjord"
       {false, true} -> "Et lyst hus ved fjorden, tegnet for lange somre og stille vintre."
