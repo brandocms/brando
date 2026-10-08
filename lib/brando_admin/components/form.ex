@@ -2811,10 +2811,7 @@ defmodule BrandoAdmin.Components.Form do
               <button
                 :if={@has_revisioning?}
                 class="form-tool-revisions"
-                phx-click={
-                  JS.push("toggle_revisions_drawer_status", target: @myself)
-                  |> toggle_drawer("##{@id}-revisions-drawer")
-                }
+                phx-click={toggle_revisions(@entry_id, @id, @myself)}
                 type="button"
                 aria-haspopup="dialog"
               >
@@ -5105,6 +5102,17 @@ defmodule BrandoAdmin.Components.Form do
 
   def handle_event("save_redirect_target", _, socket) do
     {:noreply, assign(socket, :save_redirect_target, :self)}
+  end
+
+  # An entry that was never saved has no revisions: the button only asks the
+  # server, which says so, and the drawer stays shut. Opening it here too left
+  # it open, and closing it asked again.
+  defp toggle_revisions(nil, _id, myself), do: JS.push("toggle_revisions_drawer_status", target: myself)
+
+  defp toggle_revisions(_entry_id, id, myself) do
+    "toggle_revisions_drawer_status"
+    |> JS.push(target: myself)
+    |> toggle_drawer("##{id}-revisions-drawer")
   end
 
   defp upload_file_count(count) when is_integer(count), do: count
