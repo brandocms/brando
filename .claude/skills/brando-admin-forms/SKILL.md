@@ -38,6 +38,13 @@ area in [the section map](form-map.md) and grep for the names it lists.
   of those fields must go through Form and mark ownership. Do not read them back
   from `validate` params. Coverage lives in
   `test/brando_admin/live/stale_validate_asset_race_test.exs`.
+- Entry fields sync between editors as the fields each editor changed
+  ("Entry field sync" in Form): `validate` marks the field `_target` names
+  and other inputs whose value it changed; a change Form makes itself must
+  go through `put_local_form/2`, or it never ships. Received values go
+  through `apply_field_change/3`, which drops the browser's param for the
+  field (the form shows a param before a saved value). Coverage lives in
+  `test/brando_admin/live/entry_field_sync_test.exs`.
 - Read pending subform associations through the helpers in
   `lib/brando_admin/components/form/input/subform_helpers.ex`. Applying child
   changesets before rewriting the association loses pending edits. Use the

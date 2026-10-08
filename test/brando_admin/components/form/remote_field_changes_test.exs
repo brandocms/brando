@@ -32,7 +32,10 @@ defmodule BrandoAdmin.Components.Form.RemoteFieldChangesTest do
           form: Component.to_form(changeset, as: "entry"),
           tiptap_epoch: "mounted-form",
           dirty_fields: [],
-          synced_values: %{}
+          synced_values: %{},
+          unshipped_fields: MapSet.new(),
+          replaced_values: %{},
+          held_remote: %{}
         ],
         assigns
       )
@@ -72,7 +75,7 @@ defmodule BrandoAdmin.Components.Form.RemoteFieldChangesTest do
     assert payload.revision == 1
   end
 
-  test "a remote change leaves the field being typed in alone" do
+  test "a remote change to the field being typed in waits until the editor leaves it" do
     changes = [
       %{field: :title, value: "Remote title", assoc?: false},
       %{field: :body, value: "<p>Older remote body</p>", assoc?: false}
@@ -83,7 +86,17 @@ defmodule BrandoAdmin.Components.Form.RemoteFieldChangesTest do
     assert {:ok, updated} = Form.update(%{event: "apply_remote_field_changes", changes: changes}, socket)
     assert updated.assigns.form[:title].value == "Remote title"
     assert updated.assigns.form[:body].value == "<p>Local draft</p>"
-    assert updated.assigns.synced_values == %{title: "Remote title"}
+    assert updated.assigns.held_remote == %{body: %{field: :body, value: "<p>Older remote body</p>", assoc?: false}}
+  end
+
+  test "a remote value equal to the saved one replaces what the editor's browser sent" do
+    entry = %Entry{id: "entry-1", title: "Stored title", body: "<p>Stored body</p>", caption: "<p>Caption</p>"}
+    changeset = Changeset.cast(entry, %{"title" => "Typed title"}, [:title])
+    socket = socket(form: Component.to_form(changeset, as: "entry"))
+    changes = [%{field: :title, value: "Stored title", assoc?: false}]
+
+    assert {:ok, updated} = Form.update(%{event: "apply_remote_field_changes", changes: changes}, socket)
+    assert updated.assigns.form[:title].value == "Stored title"
   end
 
   test "a field changed back to its saved value ships, and the editors are told nothing is pending" do
@@ -91,7 +104,12 @@ defmodule BrandoAdmin.Components.Form.RemoteFieldChangesTest do
     Phoenix.PubSub.subscribe(Brando.pubsub(), Brando.Tenant.Topic.entry("dirty_fields", Entry, "entry-1"))
 
     # The editors got "Shipped title" from us; the form holds the stored title again.
-    socket = socket(synced_values: %{title: "Shipped title"}, dirty_fields: ["entry[body]", "entry[title]"])
+    socket =
+      socket(
+        synced_values: %{title: "Shipped title"},
+        unshipped_fields: MapSet.new([:title, :body]),
+        dirty_fields: ["entry[body]", "entry[title]"]
+      )
 
     assert {:ok, updated} = Form.update(%{event: "ship_field_changes"}, socket)
 

@@ -1117,6 +1117,7 @@ defmodule BrandoAdmin.LiveView.Form.Hooks do
 
   defp handle_hooks_dirty_fields_info(_, socket), do: {:cont, socket}
 
+  # `field` is nil when the editor left the field, which releases it.
   defp handle_hooks_active_field_info({:active_field, field, user_id}, socket) do
     socket =
       if user_id == socket.assigns.current_user.id do
@@ -1271,11 +1272,11 @@ defmodule BrandoAdmin.LiveView.Form.Hooks do
   end
 
   # Another editor opened the entry. Blocks need nothing from us — the edit
-  # session gives the joiner its state — but unsaved ENTRY FIELD changes
-  # (title, slug, ...) ship through the regular field-sync path, and our
-  # current block focus is re-broadcast: lock indicators are event-driven, so
-  # a joiner would otherwise not see the block we're editing as locked until
-  # our next focus event happens to fire.
+  # session gives the joiner its state — but our unsaved ENTRY FIELD values
+  # (title, slug, ...) are shipped to the joiner alone, and our current block
+  # focus is re-broadcast: lock indicators are event-driven, so a joiner
+  # would otherwise not see the block we're editing as locked until our next
+  # focus event happens to fire.
   defp handle_hooks_block_sync_info({:editor_joined, %{user_id: user_id}}, socket) do
     if user_id != socket.assigns.current_user.id do
       if schema = socket.assigns[:schema] do
@@ -1283,7 +1284,8 @@ defmodule BrandoAdmin.LiveView.Form.Hooks do
 
         send_update(BrandoAdmin.Components.Form,
           id: "#{singular}_form",
-          event: "ship_field_changes"
+          event: "ship_field_changes",
+          to: user_id
         )
 
         send_update(BrandoAdmin.Components.Form,
@@ -1313,9 +1315,12 @@ defmodule BrandoAdmin.LiveView.Form.Hooks do
     {:halt, socket}
   end
 
-  # Field sync — ship field changeset diffs between users
+  # Field sync: the entry fields another editor changed, or, addressed to us
+  # (`to`) when we joined, the unsaved values they hold.
   defp handle_hooks_block_sync_info({:fields_shipped, %{user_id: user_id} = msg}, socket) do
-    if user_id != socket.assigns.current_user.id do
+    me = socket.assigns.current_user.id
+
+    if user_id != me and Map.get(msg, :to) in [nil, me] do
       schema = socket.assigns[:schema]
 
       if schema do
