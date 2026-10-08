@@ -404,9 +404,9 @@ defmodule BrandoAdmin.Content.ModuleListLive do
       </ol>
 
       <div :if={@total > 0 and @finished < @total} class="module-sketches-actions">
-        <button type="button" class="primary" phx-click="start_sketches" disabled={@sketches.running?}>
+        <AIAction.button variant={:primary} phx-click="start_sketches" disabled={@sketches.running?}>
           {ngettext("Draw one sketch", "Draw %{count} sketches", @total)}
-        </button>
+        </AIAction.button>
       </div>
     </div>
     """

@@ -939,7 +939,8 @@
 }
 
 /* Translation dialog: progress of an AI translation from the listing's
-   "Translate to" action. The sparkles and accent mark it as AI (AI.css). */
+   "Translate to" action. The sparkles and the spinner take the AI violet
+   (AI.css); finished steps keep the accent's check. */
 
 .translation-dialog-backdrop {
   position: fixed;
@@ -979,7 +980,7 @@
     flex-shrink: 0;
     width: 18px;
     height: 18px;
-    color: var(--brando-accent);
+    color: var(--brando-ai);
   }
 }
 
@@ -1030,7 +1031,7 @@
   .spinner {
     width: 14px;
     height: 14px;
-    border: 2px solid var(--brando-accent);
+    border: 2px solid var(--brando-ai);
     border-top-color: transparent;
     border-radius: 50%;
     animation: translation-spin 0.6s linear infinite;

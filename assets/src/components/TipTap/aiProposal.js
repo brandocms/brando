@@ -37,10 +37,18 @@ export function proposalExtension({ labels, accept, discard, retry }) {
               if (proposal.error) { const error = document.createElement('span'); error.className = 'tiptap-ai-error'; error.setAttribute('role', 'alert'); error.textContent = proposal.error; panel.append(error) }
               const actions = document.createElement('span')
               actions.className = 'tiptap-ai-actions ai-proposal-actions'
-              const button = (label, action, primary = false) => { const btn = document.createElement('button'); btn.type = 'button'; btn.textContent = label; if (primary) btn.className = 'primary'; btn.addEventListener('mousedown', e => e.preventDefault()); btn.addEventListener('click', action); actions.append(btn) }
-              if (proposal.status === 'ready' && !proposal.error) button(labels.accept, accept, true)
+              // Try again asks the model again, so it carries the AI mark: the
+              // violet and the sparkles (AI.css).
+              const button = (label, action, kind) => {
+                const btn = document.createElement('button'); btn.type = 'button'
+                if (kind === 'ai') { const mark = document.createElement('span'); mark.className = 'lucide-sparkles'; mark.dataset.icon = ''; mark.setAttribute('aria-hidden', 'true'); btn.append(mark) }
+                btn.append(label)
+                if (kind) btn.className = kind === 'ai' ? 'is-ai' : kind
+                btn.addEventListener('mousedown', e => e.preventDefault()); btn.addEventListener('click', action); actions.append(btn)
+              }
+              if (proposal.status === 'ready' && !proposal.error) button(labels.accept, accept, 'primary')
               button(proposal.status === 'pending' ? labels.cancel : labels.discard, discard)
-              if (proposal.status !== 'pending') button(labels.retry, retry)
+              if (proposal.status !== 'pending') button(labels.retry, retry, 'ai')
               panel.append(actions)
               return panel
             }, { side: 1, key: `${proposal.id}:${proposal.status}:${proposal.error || ''}`, stopEvent: () => true, ignoreSelection: true })])

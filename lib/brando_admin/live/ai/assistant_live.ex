@@ -589,6 +589,7 @@ defmodule BrandoAdmin.AI.AssistantLive do
         </button>
         <button
           type="button"
+          class="is-ai"
           phx-click="send"
           phx-value-message={gettext("Choose suitable ones from the library yourself.")}
           disabled={!@available?}
