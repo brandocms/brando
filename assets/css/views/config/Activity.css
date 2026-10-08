@@ -127,9 +127,11 @@ button.activity-revision {
     select.admin-select { width: auto; max-width: 220px; }
   }
 
+  /* The search has the first row to itself; the five filters and the
+     count share the second, in English and Norwegian alike. */
   .activity-search {
     position: relative;
-    flex: 1 1 220px;
+    flex: 1 1 100%;
 
     [data-icon] {
       position: absolute;
