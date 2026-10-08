@@ -159,11 +159,25 @@ defmodule BrandoAdmin.Components.Assets.MediaField do
           <button :if={@upload_enabled?} type="button" class="media-button primary upload-trigger">
             <.icon name="upload" />{gettext("Upload")}
           </button>
-          <button :if={@browse} type="button" class="media-button" phx-click={@browse}>
-            <.icon name="folder" />{@browse_label}
+          <%!-- Upload leads and keeps its label; in a narrow field the others
+                keep only their icons, as the filled field's do below. --%>
+          <button
+            :if={@browse}
+            type="button"
+            class={["media-button", @upload_enabled? && collapsible_class(@link)]}
+            title={@upload_enabled? && @browse_label}
+            phx-click={@browse}
+          >
+            <.icon name="folder" /><span class="media-button-label">{@browse_label}</span>
           </button>
-          <button :if={@link} type="button" class="media-button" phx-click={@link}>
-            <.icon name="link" />{gettext("Add from URL")}
+          <button
+            :if={@link}
+            type="button"
+            class="media-button media-button--collapsible"
+            title={gettext("Add from URL")}
+            phx-click={@link}
+          >
+            <.icon name="link" /><span class="media-button-label">{gettext("Add from URL")}</span>
           </button>
         </div>
         <%!-- A filled field's own actions are one segmented control too. The
@@ -179,12 +193,25 @@ defmodule BrandoAdmin.Components.Assets.MediaField do
             {gettext("Configure")}
           </button>
           <%!-- Offered with Configure too: a filled field is replaced the same
-                way everywhere, by upload, library or drop. --%>
-          <button :if={@asset && @upload_enabled?} type="button" class="media-button upload-trigger">
-            {gettext("Upload replacement")}
+                way everywhere, by upload, library or drop. In a narrow field
+                these two keep only their icons (MediaField.css); the label
+                stays their accessible name and the title shows it on hover. --%>
+          <button
+            :if={@asset && @upload_enabled?}
+            type="button"
+            class="media-button media-button--collapsible upload-trigger"
+            title={gettext("Upload replacement")}
+          >
+            <.icon name="upload" /><span class="media-button-label">{gettext("Upload replacement")}</span>
           </button>
-          <button :if={@asset && @browse} type="button" class="media-button" phx-click={@browse}>
-            <.icon name="folder" />{@browse_label}
+          <button
+            :if={@asset && @browse}
+            type="button"
+            class="media-button media-button--collapsible"
+            title={@browse_label}
+            phx-click={@browse}
+          >
+            <.icon name="folder" /><span class="media-button-label">{@browse_label}</span>
           </button>
         </div>
         <%!-- On a block the asset's own controls — configure, whatever the caller
@@ -253,6 +280,12 @@ defmodule BrandoAdmin.Components.Assets.MediaField do
     </div>
     """
   end
+
+  # Three actions crowd a field sooner than two: with "Add from URL" beside
+  # it, Select collapses to its icon at the same width as the filled field's
+  # actions; as the only other action, only in the narrowest fields.
+  defp collapsible_class(nil), do: "media-button--collapsible-narrow"
+  defp collapsible_class(_link), do: "media-button--collapsible"
 
   defp field_config_target(config_target) when config_target in [nil, ""], do: "default"
   defp field_config_target(config_target), do: config_target
