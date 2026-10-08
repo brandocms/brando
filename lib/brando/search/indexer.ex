@@ -74,7 +74,7 @@ defmodule Brando.Search.Indexer do
         written = schema |> load(ids) |> Enum.filter(&live?/1) |> then(&build_all(schema, &1)) |> write()
         done = done + written
         progress.(min(done, total), total)
-        rebuild_schema(schema, List.last(ids), done, total, progress)
+        rebuild_schema(schema, Enum.max(ids), done, total, progress)
     end
   end
 
