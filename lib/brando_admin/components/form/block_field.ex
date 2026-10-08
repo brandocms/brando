@@ -973,17 +973,14 @@ defmodule BrandoAdmin.Components.Form.BlockField do
 
     with %{} = block <- rescued_block(socket, old, uid) do
       block = Enum.reduce(removed, block, &shell_around(socket, old, &1, &2))
-      top = List.last(removed, uid)
-
-      case surviving do
-        [parent | _] ->
-          {:child, parent, block, uid}
-
-        [] ->
-          with %{} = entry_block <- rescued_params(socket, old, top),
-               do: {:root, Map.put(entry_block, "block", block), uid}
-      end
+      place_rescued(socket, old, uid, block, Enum.reduce(removed, uid, fn ancestor, _ -> ancestor end), surviving)
     end
+  end
+
+  defp place_rescued(_socket, _old, uid, block, _top, [parent | _]), do: {:child, parent, block, uid}
+
+  defp place_rescued(socket, old, uid, block, top, []) do
+    with %{} = entry_block <- rescued_params(socket, old, top), do: {:root, Map.put(entry_block, "block", block), uid}
   end
 
   # The removed ancestor `uid` around `inner`: its own content, and only

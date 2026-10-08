@@ -468,7 +468,7 @@ defmodule BrandoAdmin.EditSessionSavesTest do
 
       state = session_state(c.work)
       assert state.parents[kept] == c.multi_uid
-      assert List.last(state.child_order[c.multi_uid]) == kept
+      assert state.child_order[c.multi_uid] == tl(c.child_uids) ++ [kept]
       refute kept in state.order
       assert kept_text(state, kept) == "<p>Alpha, by B</p>"
 
