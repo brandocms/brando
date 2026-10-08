@@ -336,15 +336,16 @@ defmodule BrandoAdmin.Components.Content.List do
      })}
   end
 
-  # A listing opened without parameters opens with the person's default view
+  # A listing opened as the menu links to it, without parameters or with
+  # only its own query, opens with the person's default view
   # (`Brando.ListingViews`), once, when it connects: its URL is replaced with
   # the view's, and this render already shows it. A listing the person has
   # emptied themselves stays empty.
   defp maybe_open_default_view(%{schema: schema, uri: %URI{} = uri, current_user: user} = assigns, socket) do
     with false <- Map.has_key?(socket.assigns, :listing),
-         true <- connected?(socket) and Map.get(assigns, :saved_views, true),
-         true <- uri.query in [nil, ""] and listing_view?(socket.view),
+         true <- connected?(socket) and Map.get(assigns, :saved_views, true) and listing_view?(socket.view),
          %{} = listing <- Enum.find(schema.__listings__(), &(&1.name == Map.get(assigns, :listing, :default))),
+         true <- as_linked?(uri, listing),
          %ListingView{} = view <- ListingViews.default_view(user, schema, listing.name) do
       url = SavedViews.view_url(uri.path, view, listing, schema)
       send(self(), {:open_listing_view, url})
@@ -359,6 +360,14 @@ defmodule BrandoAdmin.Components.Content.List do
   end
 
   defp maybe_open_default_view(assigns, _socket), do: assigns
+
+  defp as_linked?(%URI{query: query}, _listing) when query in [nil, ""], do: true
+
+  defp as_linked?(%URI{query: query}, %{query: listing_query}) when is_map(listing_query) do
+    URI.decode_query(query) == URI.decode_query(BrandoAdmin.Menu.encode_listing_query(listing_query))
+  end
+
+  defp as_linked?(_uri, _listing), do: false
 
   # Only the listing LiveViews handle the message that patches the URL
   defp listing_view?(view) do

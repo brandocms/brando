@@ -441,6 +441,7 @@ defmodule BrandoAdmin.Images.ImageListLive do
           uri={@uri}
           params={AssetListHelpers.list_params(@params, @root_folder_ids)}
           listing={:default}
+          saved_views={false}
           hidden_filters={[:folder_id]}
           empty_title={gettext("No images in this view")}
           empty_description={gettext("Choose a folder, upload an image, or adjust your search.")}

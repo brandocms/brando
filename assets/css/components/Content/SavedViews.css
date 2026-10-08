@@ -184,5 +184,6 @@
   input {
     flex: none;
     margin: 2px 0 0;
+    accent-color: var(--brando-accent);
   }
 }
