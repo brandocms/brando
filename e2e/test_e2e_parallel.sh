@@ -27,7 +27,19 @@ mkdir -p "$SHARD_DIR"
 MIX_ENV=e2e mix compile --warnings-as-errors || exit 1
 
 pids=()
+ready_pids=()
+trap 'kill ${ready_pids[@]+"${ready_pids[@]}"} 2>/dev/null || true' EXIT
 for i in $(seq 1 "$SHARDS"); do
+  # One line per shard when its server answers HTTP (see server_ready.sh).
+  port="$(
+    unset BRANDO_E2E_DATABASE BRANDO_E2E_PORT BRANDO_E2E_BASE_URL BRANDO_URL_PORT PORT
+    export BRANDO_E2E_INSTANCE="${BASE_INSTANCE}_shard${i}"
+    source .envrc
+    echo "$BRANDO_E2E_PORT"
+  )"
+  ./server_ready.sh "$port" "(shard $i/$SHARDS)" &
+  ready_pids+=($!)
+
   (
     # .envrc derives the database and port from the instance name.
     unset BRANDO_E2E_DATABASE BRANDO_E2E_PORT BRANDO_E2E_BASE_URL BRANDO_URL_PORT PORT

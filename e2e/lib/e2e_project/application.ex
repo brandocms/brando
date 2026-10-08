@@ -65,7 +65,22 @@ defmodule E2eProject.Application do
       Brando.System.initialize()
     end
 
+    announce_server()
     result
+  end
+
+  # The E2E logger runs at :warning, which hides Phoenix's "Running ... at"
+  # line, so say when the server is up at any level. test_e2e.sh polls the
+  # port and prints the same line itself, and sets BRANDO_E2E_QUIET_READY=1.
+  # The seeding instance also listens (e2e.exs sets `server: true`) but is not
+  # the server anyone waits for.
+  defp announce_server do
+    with true <- Phoenix.Endpoint.server?(:e2e_project, E2eProjectWeb.Endpoint),
+         nil <- System.get_env("BRANDO_SEEDING"),
+         false <- System.get_env("BRANDO_E2E_QUIET_READY") == "1",
+         {:ok, {_ip, port}} <- E2eProjectWeb.Endpoint.server_info(:http) do
+      IO.puts("E2E server ready on :#{port}")
+    end
   end
 
   def stop(_state) do
