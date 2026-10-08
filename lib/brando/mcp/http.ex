@@ -16,7 +16,7 @@ defmodule Brando.MCP.HTTP do
 
   On the MCP endpoint, in order: only POST (405 otherwise); an `Origin`
   header, when sent, must be the site's own or a configured one (403); a
-  `Content-Length` (411 without) of at most `max_request_bytes` (413), read
+  `Content-Length` (411 without, 400 with a `Transfer-Encoding`) of at most `max_request_bytes` (413), read
   from the header before the token is looked at; a bearer access token for
   this endpoint (401 with `WWW-Authenticate` naming the resource metadata;
   a plain 403 when the person may no longer connect tools); JSON (415); at
@@ -123,6 +123,9 @@ defmodule Brando.MCP.HTTP do
       {:error, :length_required} ->
         json(conn, 411, Server.error(nil, -32_600, "Send a Content-Length."))
 
+      {:error, :transfer_encoding} ->
+        json(conn, 400, Server.error(nil, -32_600, "Send the body with a Content-Length, not a Transfer-Encoding."))
+
       {:error, :unsupported} ->
         json(conn, 415, Server.error(nil, -32_600, "Send application/json."))
 
@@ -150,12 +153,26 @@ defmodule Brando.MCP.HTTP do
          {:ok, conn} <- parse_form(conn) do
       oauth(conn, action, tenant, conn.body_params)
     else
-      {:error, :method} -> method_not_allowed(conn, "POST")
-      {:error, :origin} -> oauth_error(conn, 403, "invalid_request", "Origin not allowed.")
-      {:error, :unsupported} -> oauth_error(conn, 400, "invalid_request", "Send application/x-www-form-urlencoded.")
-      {:error, :too_large} -> oauth_error(conn, 413, "invalid_request", "The request is too large.")
-      {:error, :length_required} -> oauth_error(conn, 411, "invalid_request", "Send a Content-Length.")
-      {:error, {:rate_limited, retry_after}} -> rate_limited(conn, retry_after, %{error: "slow_down"})
+      {:error, :method} ->
+        method_not_allowed(conn, "POST")
+
+      {:error, :origin} ->
+        oauth_error(conn, 403, "invalid_request", "Origin not allowed.")
+
+      {:error, :unsupported} ->
+        oauth_error(conn, 400, "invalid_request", "Send application/x-www-form-urlencoded.")
+
+      {:error, :too_large} ->
+        oauth_error(conn, 413, "invalid_request", "The request is too large.")
+
+      {:error, :length_required} ->
+        oauth_error(conn, 411, "invalid_request", "Send a Content-Length.")
+
+      {:error, :transfer_encoding} ->
+        oauth_error(conn, 400, "invalid_request", "Send a Content-Length, not a Transfer-Encoding.")
+
+      {:error, {:rate_limited, retry_after}} ->
+        rate_limited(conn, retry_after, %{error: "slow_down"})
     end
   end
 
@@ -207,15 +224,28 @@ defmodule Brando.MCP.HTTP do
   # within the limit. (The endpoint's `Plug.Parsers` may have read the body
   # already; `Brando.MCP.BodyLimit` in the endpoint stops a large one
   # before that.)
-  defp content_length(conn, max) do
-    case conn |> get_req_header("content-length") |> List.first() |> parse_length() do
-      nil -> {:error, :length_required}
-      length when length > max -> {:error, :too_large}
-      _length -> :ok
+  defp content_length(conn, max), do: length_check(conn, max)
+
+  @doc """
+  Whether a POST may be read: it has no `Transfer-Encoding` (a chunked body
+  beside a `Content-Length` could be read two ways), and a `Content-Length`
+  of at most `max` bytes. Shared with `Brando.MCP.BodyLimit`.
+  """
+  @spec length_check(Plug.Conn.t(), non_neg_integer()) ::
+          :ok | {:error, :transfer_encoding | :length_required | :too_large}
+  def length_check(conn, max) do
+    length = conn |> get_req_header("content-length") |> List.first() |> parse_length()
+
+    cond do
+      get_req_header(conn, "transfer-encoding") != [] -> {:error, :transfer_encoding}
+      is_nil(length) -> {:error, :length_required}
+      length > max -> {:error, :too_large}
+      true -> :ok
     end
   end
 
-  @doc false
+  @doc "A `Content-Length` value as a non-negative integer, or nil."
+  @spec parse_length(String.t() | nil) :: non_neg_integer() | nil
   def parse_length(value) when is_binary(value) do
     case Integer.parse(value) do
       {length, ""} when length >= 0 -> length

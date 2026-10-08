@@ -1,8 +1,9 @@
 defmodule Brando.MCP.BodyLimit do
   @moduledoc """
   An optional plug for the application's endpoint that refuses a POST to
-  `/mcp` without a `Content-Length`, or with one over the MCP endpoint's
-  `max_request_bytes` (512 KB by default), before `Plug.Parsers` reads it.
+  `/mcp` with a `Transfer-Encoding` (400), without a `Content-Length` (411),
+  or with one over the MCP endpoint's `max_request_bytes` (512 KB by
+  default, 413), before `Plug.Parsers` reads it.
 
   Put it just before `Plug.Parsers`:
 
@@ -27,12 +28,11 @@ defmodule Brando.MCP.BodyLimit do
 
   @impl Plug
   def call(%{method: "POST", path_info: ["mcp" | _]} = conn, _opts) do
-    max = Brando.MCP.config(:max_request_bytes, 512_000)
-
-    case conn |> get_req_header("content-length") |> List.first() |> Brando.MCP.HTTP.parse_length() do
-      nil -> refuse(conn, 411)
-      length when length > max -> refuse(conn, 413)
-      _length -> conn
+    case Brando.MCP.HTTP.length_check(conn, Brando.MCP.config(:max_request_bytes, 512_000)) do
+      :ok -> conn
+      {:error, :transfer_encoding} -> refuse(conn, 400)
+      {:error, :length_required} -> refuse(conn, 411)
+      {:error, :too_large} -> refuse(conn, 413)
     end
   end
 

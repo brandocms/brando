@@ -166,6 +166,16 @@ defmodule Brando.MCP.EndpointTest do
         |> post(tenant.path, body)
 
       assert oversized.status == 413
+
+      # A Transfer-Encoding beside the length: refused, before the token
+      both =
+        build_conn()
+        |> put_req_header("content-type", "application/json")
+        |> put_req_header("content-length", Integer.to_string(byte_size(body)))
+        |> put_req_header("transfer-encoding", "chunked")
+        |> post(tenant.path, body)
+
+      assert both.status == 400
     end
 
     test "Brando.MCP.BodyLimit refuses before anything reads the body" do
@@ -178,6 +188,10 @@ defmodule Brando.MCP.EndpointTest do
       assert %{status: 411, halted: true} = conn.("/mcp", nil)
       assert %{status: 413, halted: true} = conn.("/mcp/site/env/oauth/token", "600000")
       assert %{halted: false} = conn.("/mcp", "2")
+
+      chunked = Plug.Test.conn("POST", "/mcp", "{}") |> put_req_header("content-length", "2")
+      chunked = put_req_header(chunked, "transfer-encoding", "chunked")
+      assert %{status: 400, halted: true} = Brando.MCP.BodyLimit.call(chunked, [])
       assert %{halted: false} = conn.("/elsewhere", nil)
     end
 
