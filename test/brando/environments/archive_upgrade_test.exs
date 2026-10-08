@@ -198,7 +198,13 @@ defmodule Brando.Environments.ArchiveUpgradeTest do
     replayed = List.flatten(rows(~s(SELECT version FROM "#{prefix}".schema_migrations)))
     assert Enum.sort(replayed) == Enum.sort(loops)
 
-    for schema <- [Brando.Pages.Page, Brando.Search.Document, Brando.Webhooks.Webhook, Brando.Notes.Note] do
+    for schema <- [
+          Brando.Pages.Page,
+          Brando.Search.Document,
+          Brando.Webhooks.Webhook,
+          Brando.Notes.Note,
+          Brando.Notifications.Route
+        ] do
       assert is_list(BrandoIntegration.Repo.all(schema, prefix: prefix))
     end
 
@@ -435,7 +441,7 @@ defmodule Brando.Environments.ArchiveUpgradeTest do
     end
 
     test "an older archive misses more", %{archive: archive, copied: copied} do
-      # Taken before brando_210 ran: 210, 211, 212, 215 and 216 were missed
+      # Taken before brando_210 ran: 210, 211, 212, 215, 216 and 217 were missed
       versions = Map.new(copied, fn {version, file} -> {number(file), version} end)
       taken_at = ArchiveUpgrade.taken_at(archive)
 
@@ -447,7 +453,7 @@ defmodule Brando.Environments.ArchiveUpgradeTest do
           do: query!("UPDATE schema_migrations SET inserted_at = $1 WHERE version = $2", [ran_at.(number), version])
 
       assert {:ok, replays} = ArchiveUpgrade.plan(archive)
-      assert Enum.map(replays, &number(&1.name <> ".exs")) == [210, 211, 212, 215, 216]
+      assert Enum.map(replays, &number(&1.name <> ".exs")) == [210, 211, 212, 215, 216, 217]
     end
   end
 
