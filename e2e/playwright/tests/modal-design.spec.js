@@ -159,7 +159,7 @@ test('block sections preserve config fields and keep advanced actions separate',
   await expect(modal.getByLabel('Config note', { exact: true })).toHaveValue('Keep this setting')
 })
 
-test('transfer summary keeps content and recipient visible with the approved tint', async ({ page }, testInfo) => {
+test('transfer summary keeps content and recipient visible on a shaded surface', async ({ page }, testInfo) => {
   const client = await page.request.post('/__e2e/db/factory', { data: { schema: 'E2eProject.Projects.Client', attributes: { name: 'Transfer client', slug: 'transfer-client', language: 'en', status: 'published' }, creator_id: 2, fields: ['id'] } })
   expect(client.ok(), await client.text()).toBeTruthy()
   const { id: clientId } = await client.json()
@@ -180,7 +180,7 @@ test('transfer summary keeps content and recipient visible with the approved tin
   await modal.locator('.transfer-user-option').filter({ hasText: 'Brando Admin' }).click()
   await expect(modal.locator('.transfer-content-summary tbody tr')).toHaveCount(4)
   await expect(modal.locator('.transfer-content-summary tfoot')).toHaveText('Total5')
-  await expect(modal.locator('.transfer-content-summary')).toHaveCSS('background-color', 'rgb(251, 255, 247)')
+  await expect(modal.locator('.transfer-content-summary')).toHaveCSS('background-color', 'rgb(251, 252, 250)')
   await expect(modal.getByRole('button', { name: 'Transfer & Delete', exact: true })).toBeEnabled()
   await capture(page, modal, testInfo, 'transfer-delete')
   await modal.getByRole('button', { name: 'Cancel', exact: true }).click()

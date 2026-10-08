@@ -228,6 +228,10 @@ colour that has no role yet belongs in `tokens.css` under a role name. For a
 translucent version of a role, mix it with transparent:
 `color-mix(in srgb, var(--brando-ink) 8%, transparent)`.
 
+Native checkboxes, radios, range sliders and progress bars take the accent from
+one `accent-color` on `:root` in `assets/css/base.css`; don't set it per
+component. Picker and listing status dots use the status tokens.
+
 Keep tinted surfaces subtle, and check text and control contrast in the
 rendered interface. Status needs a textual label as well as color.
 

@@ -797,7 +797,6 @@
 .assistant-preview-options { display: flex; flex-wrap: wrap; align-items: center; gap: 16px; }
 
 .assistant-check { display: inline-flex; align-items: center; gap: 6px; color: var(--assistant-muted); font-size: 12px; cursor: pointer; }
-.assistant-check input { accent-color: var(--assistant-accent); }
 
 .assistant-frame {
   overflow: hidden;

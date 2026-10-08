@@ -1,5 +1,11 @@
 @europa base;
 
+/* Native checkboxes, radios, range sliders and progress bars take the accent.
+   accent-color is inherited, so this one declaration covers the admin. */
+:root {
+  accent-color: var(--brando-accent);
+}
+
 /* A status dot beside its label is as tall as a capital letter and stands on
    the baseline, so it spans exactly what a capital does at any font size. Dot
    and label share one inline box: as separate flex items, the space between

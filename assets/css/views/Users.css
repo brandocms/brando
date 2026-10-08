@@ -178,7 +178,7 @@
     display: flex; align-items: flex-start; gap: 12px; padding: 12px 14px;
     border: 1px solid var(--brando-line); border-radius: 6px; background: var(--brando-surface); cursor: pointer;
     &:hover { background: var(--brando-surface-hover); }
-    input { flex: none; margin: 2px 0 0; accent-color: var(--brando-accent); }
+    input { flex: none; margin: 2px 0 0; }
     > span { display: grid; gap: 2px; }
   }
   .security-choice.compact { align-items: center; padding: 10px 12px; }

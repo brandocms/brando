@@ -5,7 +5,7 @@
   flex-wrap: wrap;
   gap: 2px 6px;
   margin-top: 2px;
-  color: var(--workspace-muted, #6b756f);
+  color: var(--brando-muted);
   font-size: 11px;
   line-height: 16px;
 
@@ -36,33 +36,33 @@
     text-decoration: none;
   }
 
-  li > a:hover { background: var(--workspace-wash, #f5f7f3); }
-  [data-icon] { width: 16px; height: 16px; color: var(--workspace-muted, #6b756f); }
+  li > a:hover { background: var(--brando-surface-hover); }
+  [data-icon] { width: 16px; height: 16px; color: var(--brando-muted); }
   [data-icon].hidden { visibility: hidden; }
 }
 
-.usage-list-empty { color: var(--workspace-muted, #6b756f); font-size: 13px; }
+.usage-list-empty { color: var(--brando-muted); font-size: 13px; }
 
 .usage-cover {
   width: 40px;
   height: 40px;
   overflow: hidden;
   border-radius: 5px;
-  background: var(--workspace-wash, #f5f7f3);
+  background: var(--brando-surface-hover);
 
   img { width: 100%; height: 100%; object-fit: cover; }
 }
 
 .usage-label { overflow: hidden; font-size: 14px; text-overflow: ellipsis; white-space: nowrap; }
-.usage-type { color: var(--workspace-muted, #6b756f); font-size: 12px; }
+.usage-type { color: var(--brando-muted); font-size: 12px; }
 
 .usage-status {
   width: 8px;
   height: 8px;
   border-radius: 50%;
 
-  &.status-published { background: #3aa76d; }
-  &.status-pending { background: #e2a93b; }
-  &.status-draft { background: #b8c0ba; }
-  &.status-disabled { background: #d4574e; }
+  &.status-published { background: var(--brando-status-published); }
+  &.status-pending { background: var(--brando-status-pending); }
+  &.status-draft { background: var(--brando-status-draft); }
+  &.status-disabled { background: var(--brando-status-disabled); }
 }
