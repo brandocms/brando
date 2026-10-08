@@ -13,12 +13,17 @@
   --brando-muted: #626b66;
   /* Text and icons on a dark fill: the accent, a status colour, a photo */
   --brando-ink-inverse: #ffffff;
+  /* Placeholders, disabled text, counters and separators between metadata */
+  --brando-faint: #9aa39c;
 
   /* Hairlines, borders and dividers */
   --brando-line: #dce2dc;
+  /* A border under the pointer or holding focus, and a drop target's outline */
+  --brando-line-strong: #bacabd;
 
   /* The one action colour: primary buttons, links, focus, progress */
   --brando-accent: #254e3f;
+  --brando-accent-hover: #1a3d30;
 
   /* Surfaces */
   --brando-surface-page: #fafbf9;
@@ -43,13 +48,37 @@
   /* Needs attention: a missing alt text, an unprocessed image, unsaved or
      untranslated work, a warning badge. A tint for the chip and its ink. */
   --brando-attention: #fbefda;
+  --brando-attention-line: #e4b866;
   --brando-attention-ink: #87662d;
+
+  /* Errors: a failed save or upload, an invalid field, a destructive action.
+     The tint, its border and its ink, as on Utilities and in toasts. */
+  --brando-error: #fff1ed;
+  --brando-error-line: #e8ccc4;
+  --brando-error-ink: #8c4232;
 
   /* Editors' notes: the amber of a missing alt text. A tint for highlights
      and counts, a rule for underlines and pins, and its ink (Notes.css). */
   --brando-note: var(--brando-attention);
-  --brando-note-line: #e4b866;
+  --brando-note-line: var(--brando-attention-line);
   --brando-note-ink: var(--brando-attention-ink);
+
+  /* Module colours: the categories a developer can give a module (pink,
+     emerald, peach) tint its blocks' chrome: the border, the title bar and
+     its ink, and the dot in the outline. Blue, the default, uses the
+     neutral roles above. */
+  --brando-module-pink-line: #fce7f3;
+  --brando-module-pink-tint: #fdf2f8;
+  --brando-module-pink-ink: #831843;
+  --brando-module-pink-dot: #f9a8d4;
+  --brando-module-emerald-line: #d1fae5;
+  --brando-module-emerald-tint: #ecfdf5;
+  --brando-module-emerald-ink: #064e3b;
+  --brando-module-emerald-dot: #6ee7b7;
+  --brando-module-peach-line: #ffedd5;
+  --brando-module-peach-tint: #fff7ed;
+  --brando-module-peach-ink: #7c2d12;
+  --brando-module-peach-dot: #fdba74;
 
   /* Entry status. Always shown with a text label as well. */
   --brando-status-published: #3cb371;
@@ -80,6 +109,8 @@
 
   /* Inputs, chips and tab bars */
   --brando-input-border: #e0e0e0;
+  --brando-switch-on: #9cc79f;
+  --brando-switch-off: #c0c0c0;
   --brando-color-block-ref-background: #fcfcfc;
   --brando-tabbar-bg: #fcfcfd;
   --brando-chip-hover-bg: var(--brando-surface-hover);
