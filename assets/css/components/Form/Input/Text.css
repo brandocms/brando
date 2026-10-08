@@ -22,7 +22,7 @@
     padding: 2px;
     border: 1px solid var(--brando-input-border);
     border-radius: 999px;
-    background: #f6f6f4;
+    background: var(--brando-surface-hover);
     transition: border-color 0.2s ease;
   }
 
@@ -61,13 +61,13 @@
       width: 5px;
       height: 5px;
       border-radius: 50%;
-      background: #d9a13b;
+      background: var(--brando-attention-line);
     }
   }
 
   /* The group takes the input's focus colour, so they read as one field. */
   &:focus-within .i18n-tabs {
-    border-color: var(--brando-color-blue);
+    border-color: var(--brando-accent);
   }
 
   .i18n-panel:not(.is-active) {
@@ -91,7 +91,7 @@ input.text {
 
   &:focus {
     outline: none;
-    border-color: var(--brando-color-blue);
+    border-color: var(--brando-accent);
     box-shadow: var(--brando-input-focus-shadow);
   }
 
@@ -107,7 +107,7 @@ input.text {
 
   &.invert {
     @color fg input;
-    color: var(--brando-color-dark);
+    color: var(--brando-ink);
   }
 }
 
@@ -126,7 +126,7 @@ textarea.text {
 
   &:focus {
     outline: none;
-    border-color: var(--brando-color-blue);
+    border-color: var(--brando-accent);
     box-shadow: var(--brando-input-focus-shadow);
   }
 

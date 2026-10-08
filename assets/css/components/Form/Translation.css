@@ -6,7 +6,7 @@
   --translation-muted: var(--brando-muted);
   --translation-line: var(--brando-line);
   --translation-accent: var(--brando-accent);
-  --translation-work: #b7791f;
+  --translation-work: var(--brando-attention-ink);
 
   display: grid;
   gap: 16px;
@@ -14,7 +14,7 @@
   padding: 20px 24px;
   border: 1px solid var(--translation-line);
   border-radius: 8px;
-  background: #f8f9f5;
+  background: var(--brando-surface-hover);
   color: var(--translation-ink);
   font-size: 13px;
   line-height: 1.55;
@@ -30,14 +30,14 @@
   > header a { color: var(--translation-accent); text-decoration: underline; text-underline-offset: 2px; }
 }
 
-.translation-panel.is-target { border-color: #e7d7b4; background: #fdf9ef; }
+.translation-panel.is-target { border-color: var(--brando-attention-line); background: var(--brando-attention); }
 
 .translation-notice {
   padding: 8px 12px;
-  border: 1px solid #ecdcb9;
+  border: 1px solid var(--brando-attention-line);
   border-radius: 6px;
-  background: #fff8e9;
-  color: #755929;
+  background: var(--brando-attention);
+  color: var(--brando-attention-ink);
 }
 
 .translation-done, .translation-summary span { color: var(--translation-muted); }
@@ -81,7 +81,7 @@
   padding: 1px 8px;
   border-radius: 30px;
   background: var(--brando-badge-bg);
-  color: #5b6557;
+  color: var(--brando-badge-ink);
   font-size: 11px;
   white-space: nowrap;
 
@@ -89,18 +89,18 @@
 }
 
 /* Marks from Brando.TranslationWork. */
-.block[data-translation-work] { box-shadow: 0 0 0 2px #e2b85c; border-radius: 6px; }
-.field-wrapper[data-translation-work] { box-shadow: -3px 0 0 #e2b85c; }
+.block[data-translation-work] { box-shadow: 0 0 0 2px var(--brando-attention-line); border-radius: 6px; }
+.field-wrapper[data-translation-work] { box-shadow: -3px 0 0 var(--brando-attention-line); }
 
 /* A block's note, e.g. the linked entries it waits for. */
 .block[data-translation-note]::before {
   content: attr(data-translation-note);
   display: block;
   padding: 10px 16px;
-  border-bottom: 1px solid #ecdcb9;
+  border-bottom: 1px solid var(--brando-attention-line);
   border-radius: 6px 6px 0 0;
-  background: #fff8e9;
-  color: #755929;
+  background: var(--brando-attention);
+  color: var(--brando-attention-ink);
   font-size: 13px;
   line-height: 1.5;
 }
@@ -153,5 +153,5 @@
   box-shadow: none;
   cursor: pointer;
 
-  &:hover { border-color: #aab9a5; background: #f1f5ef; }
+  &:hover { border-color: var(--brando-line-strong); background: var(--brando-surface-selected); }
 }

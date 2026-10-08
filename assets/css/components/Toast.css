@@ -133,8 +133,8 @@
   font-family: "Mono";
   font-size: 12px;
   text-transform: uppercase;
-  background-color: var(--brando-color-dark);
-  color: white;
+  background-color: var(--brando-ink);
+  color: var(--brando-ink-inverse);
   width: 400px;
   height: 60px;
   display: flex;

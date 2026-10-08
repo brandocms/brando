@@ -15,7 +15,7 @@
  */
 
 .asset-field {
-  background-color: var(--brando-color-input);
+  background-color: var(--brando-surface);
   border: 1px solid var(--brando-input-border);
   border-radius: var(--brando-input-radius);
   box-shadow: var(--brando-input-shadow);
@@ -30,13 +30,13 @@
      light well — especially in the gallery's four-button action row. */
   .tiny {
     border-color: var(--brando-input-border);
-    color: var(--brando-color-dark);
-    background-color: var(--brando-color-input);
+    color: var(--brando-ink);
+    background-color: var(--brando-surface);
     opacity: 0.85;
 
     &:hover {
       opacity: 1;
-      border-color: var(--brando-color-dark);
+      border-color: var(--brando-line-strong);
     }
   }
 }
@@ -63,7 +63,7 @@
      name for the same box. */
   .img-placeholder,
   .video-placeholder {
-    background-color: #f5f5f7;
+    background-color: var(--brando-surface-hover);
     border-radius: 5px;
     width: 90px;
     height: 90px;
@@ -74,7 +74,7 @@
 
     .shaded &,
     .subform & {
-      background-color: #f5f5f7;
+      background-color: var(--brando-surface-hover);
     }
 
     svg {

@@ -27,13 +27,13 @@
   padding-left: 15px;
   padding-right: 15px;
   width: 100%;
-  background-color: var(--brando-color-input);
+  background-color: var(--brando-surface);
   border: 0;
 }
 
 .flatpickr-day.selected {
-  background-color: var(--brando-color-blue);
-  border-color: var(--brando-color-blue);
+  background-color: var(--brando-accent);
+  border-color: var(--brando-accent);
 }
 
 .datetime-wrapper {
@@ -44,13 +44,13 @@
     position: absolute;
     top: 7px;
     right: 15px;
-    border: 1px solid var(--brando-color-dark);
+    border: 1px solid var(--brando-line);
     padding: 8px 12px 10px;
     transition: all 0.25s ease;
 
     &:hover {
-      background-color: var(--brando-color-dark);
-      color: var(--brando-color-input);
+      background-color: var(--brando-ink);
+      color: var(--brando-ink-inverse);
     }
   }
 
@@ -81,7 +81,7 @@
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
 
   &:focus-within {
-    border-color: var(--brando-color-blue);
+    border-color: var(--brando-accent);
     box-shadow: var(--brando-input-focus-shadow);
   }
 
@@ -161,12 +161,12 @@
     transition: background-color 0.2s ease, border-color 0.2s ease;
 
     &:hover {
-      background-color: color-mix(in srgb, var(--brando-color-dark) 7%, transparent);
+      background-color: color-mix(in srgb, var(--brando-ink) 7%, transparent);
       color: inherit;
     }
 
     &:focus-visible {
-      outline: 2px solid var(--brando-color-blue);
+      outline: 2px solid var(--brando-accent);
       outline-offset: 2px;
     }
   }

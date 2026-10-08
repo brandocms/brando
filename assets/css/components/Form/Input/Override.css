@@ -6,7 +6,7 @@
   width: 20px;
   height: 20px;
   border-radius: 50%;
-  border: 1px solid #ccc;
+  border: 1px solid var(--brando-line);
   background: transparent;
   color: var(--brando-muted);
   display: flex;
@@ -24,7 +24,7 @@
 
 button.override-reset-button:hover {
   background-color: aliceblue;
-  border-color: var(--brando-color-dark);
+  border-color: var(--brando-line-strong);
 }
 
 /* A rich-text field's top-right corner is its toolbar's expand button, so the
@@ -77,14 +77,14 @@ input.is-overridden {
   font-weight: 500;
   font-size: 12px;
   padding-left: 4px;
-  background-color: white;
+  background-color: var(--brando-surface);
 }
 
 .override-reset-all {
   font-size: 11px;
   color: var(--brando-muted);
   background: none;
-  border: 1px solid #ccc;
+  border: 1px solid var(--brando-line);
   border-radius: 50%;
   width: 16px;
   height: 16px;
@@ -101,7 +101,7 @@ input.is-overridden {
 
 button.override-reset-all:hover {
   background-color: aliceblue;
-  border-color: var(--brando-color-dark);
+  border-color: var(--brando-line-strong);
 }
 
 .override-toggle-row {
@@ -116,7 +116,7 @@ button.override-reset-all:hover {
   width: 26px;
   height: 14px;
   border-radius: 7px;
-  background: #ccc;
+  background: var(--brando-line);
   border: none;
   cursor: pointer;
   position: relative;
@@ -131,7 +131,7 @@ button.override-reset-all:hover {
   width: 10px;
   height: 10px;
   border-radius: 50%;
-  background: white;
+  background: var(--brando-surface);
   top: 2px;
   left: 2px;
   transition: transform 200ms;
@@ -153,7 +153,7 @@ button.override-reset-all:hover {
 .override-reset-inline {
   width: 16px;
   height: 16px;
-  border: 1px solid #ccc;
+  border: 1px solid var(--brando-line);
   border-radius: 50%;
   background: none;
   color: var(--brando-muted);
@@ -170,5 +170,5 @@ button.override-reset-all:hover {
 
 button.override-reset-inline:hover {
   background-color: aliceblue;
-  border-color: var(--brando-color-dark);
+  border-color: var(--brando-line-strong);
 }

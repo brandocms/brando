@@ -92,8 +92,8 @@
     .variable-type {
       min-width: 58px;
       padding: 4px 6px;
-      background: #eef3ec;
-      color: #4d6150;
+      background: var(--brando-surface-selected);
+      color: var(--brando-muted);
       text-align: center;
     }
 

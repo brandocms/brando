@@ -31,7 +31,7 @@
 }
 
 .form-loader-card {
-  background-color: var(--brando-color-white);
+  background-color: var(--brando-surface);
   border-radius: 14px;
   padding: 36px 28px;
   width: 300px;
@@ -43,7 +43,7 @@
 
 .form-loader-title {
   @font mono;
-  color: var(--brando-color-dark);
+  color: var(--brando-ink);
   font-size: 14px;
   font-weight: 400;
   text-transform: uppercase;
@@ -68,11 +68,11 @@
     justify-content: space-between;
     gap: 24px;
     text-align: left;
-    color: var(--brando-color-dark);
+    color: var(--brando-ink);
     transition: opacity 0.2s ease;
 
     & + li {
-      border-top: 1px solid color-mix(in srgb, var(--brando-color-dark) 8%, transparent);
+      border-top: 1px solid color-mix(in srgb, var(--brando-ink) 8%, transparent);
       padding-top: 10px;
     }
 
@@ -95,8 +95,8 @@
       /* the bar's track, drawn along the bottom of the row; `overflow` keeps
          the sweep below from escaping the row as it travels */
       background-image: linear-gradient(
-        color-mix(in srgb, var(--brando-color-dark) 8%, transparent),
-        color-mix(in srgb, var(--brando-color-dark) 8%, transparent)
+        color-mix(in srgb, var(--brando-ink) 8%, transparent),
+        color-mix(in srgb, var(--brando-ink) 8%, transparent)
       );
       background-size: 100% 3px;
       background-position: 0 100%;
@@ -107,8 +107,8 @@
         width: 12px;
         height: 12px;
         background-color: transparent;
-        border: 2px solid color-mix(in srgb, var(--brando-color-dark) 20%, transparent);
-        border-top-color: var(--brando-color-dark);
+        border: 2px solid color-mix(in srgb, var(--brando-ink) 20%, transparent);
+        border-top-color: var(--brando-accent);
         animation: spin 0.8s linear infinite;
       }
 
@@ -128,7 +128,7 @@
         width: 40%;
         height: 3px;
         border-radius: 3px;
-        background-color: var(--brando-color-blue);
+        background-color: var(--brando-accent);
         will-change: transform;
         animation: form-loader-sweep 1.2s ease-in-out infinite;
       }

@@ -18,7 +18,7 @@
   background-color: rgba(0, 0, 80, 0.6);
   font-size: 30px;
   font-weight: bold;
-  color: white;
+  color: var(--brando-ink-inverse);
   z-index: 9;
 
   > div {
@@ -97,8 +97,8 @@
       width: fit-content;
       cursor: pointer;
       white-space: nowrap;
-      color: var(--brando-color-dark);
-      border: 1px solid var(--brando-color-dark) !important;
+      color: var(--brando-ink);
+      border: 1px solid var(--brando-line) !important;
       background-color: transparent;
       padding: 15px 25px 16px;
       min-width: 205px;
@@ -115,7 +115,7 @@
 
     &:hover {
       .label {
-        background-color: var(--brando-color-peach);
+        background-color: var(--brando-surface-subform);
       }
     }
 
@@ -150,7 +150,7 @@
     .placeholder-wrapper {
       border-radius: 50%;
       margin-bottom: 15px;
-      background-color: var(--brando-color-input);
+      background-color: var(--brando-surface);
 
       .svg-wrapper {
         padding: 75px;
@@ -159,7 +159,7 @@
   }
 
   .upload-file-size-instructions {
-    background-color: yellow;
+    background-color: var(--brando-attention);
     padding: 12px;
     border-radius: 8px;
 
@@ -218,8 +218,8 @@
 .input-image-previews {
   button[phx-click="cancel-upload"] {
     border: none;
-    background-color: blue;
-    color: white;
+    background-color: var(--brando-accent);
+    color: var(--brando-ink-inverse);
     width: 25px;
     height: 25px;
     border-radius: 25px;
@@ -227,7 +227,7 @@
   }
 
   .upload-status {
-    background-color: var(--brando-color-peach);
+    background-color: var(--brando-surface-subform);
     margin-bottom: 10px;
     padding: 7px;
     border-radius: 12px;
@@ -258,7 +258,7 @@
 
     svg {
       path:nth-of-type(2) {
-        fill: #ccc;
+        fill: var(--brando-faint);
       }
     }
 

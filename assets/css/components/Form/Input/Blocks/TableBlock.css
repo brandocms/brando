@@ -4,9 +4,9 @@
    the label beside each value, which is the column heading, and the sheet's
    own border, background and cell dividers. */
 .block .table-block {
-  --vars-line: color-mix(in srgb, var(--brando-color-dark) 9%, transparent);
-  --vars-muted: color-mix(in srgb, var(--brando-color-dark) 62%, transparent);
-  --vars-faint: color-mix(in srgb, var(--brando-color-dark) 40%, transparent);
+  --vars-line: color-mix(in srgb, var(--brando-ink) 9%, transparent);
+  --vars-muted: color-mix(in srgb, var(--brando-ink) 62%, transparent);
+  --vars-faint: color-mix(in srgb, var(--brando-ink) 40%, transparent);
 
   .subform-table {
     max-width: none;
@@ -18,7 +18,7 @@
   .subform-table-body > .table-row > .variable {
     min-height: 0;
     padding: 4px 8px;
-    color: var(--brando-color-foreground);
+    color: var(--brando-ink);
   }
 
   .subform-table-body > .table-row > .variable + .variable {

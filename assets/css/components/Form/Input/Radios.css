@@ -25,7 +25,7 @@
       display: flex;
       justify-content: center;
       width: 46px;
-      background: var(--brando-color-input);
+      background: var(--brando-surface);
       border: 1px solid var(--brando-input-border);
       border-radius: var(--brando-input-radius);
       cursor: pointer;
@@ -70,7 +70,7 @@
       position: absolute;
       width: 240px;
       z-index: 1;
-      background-color: white;
+      background-color: var(--brando-surface);
       padding: 10px;
       border: 1px solid var(--brando-input-border);
       border-radius: 10px;
@@ -83,23 +83,23 @@
     svg {
       margin-right: 10px;
       circle {
-        fill: theme(colors.blue);
+        fill: var(--brando-accent);
         transition: fill 500ms ease;
 
         &.draft {
-          fill: theme(colors.status.draft);
+          fill: var(--brando-status-draft);
         }
 
         &.pending {
-          fill: theme(colors.status.pending);
+          fill: var(--brando-status-pending);
         }
 
         &.published {
-          fill: theme(colors.status.published);
+          fill: var(--brando-status-published);
         }
 
         &.disabled {
-          fill: theme(colors.status.disabled);
+          fill: var(--brando-status-disabled);
         }
       }
     }
@@ -114,19 +114,19 @@
       border-radius: 6px;
 
       &.draft {
-        border-color: theme(colors.status.draft);
+        border-color: var(--brando-status-draft);
       }
 
       &.pending {
-        border-color: theme(colors.status.pending);
+        border-color: var(--brando-status-pending);
       }
 
       &.published {
-        border-color: theme(colors.status.published);
+        border-color: var(--brando-status-published);
       }
 
       &.disabled {
-        border-color: theme(colors.status.disabled);
+        border-color: var(--brando-status-disabled);
       }
     }
   }

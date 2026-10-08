@@ -373,7 +373,7 @@
     color: var(--brando-surface);
     font-weight: 500;
 
-    &:hover { background: color-mix(in srgb, var(--brando-accent) 88%, black); }
+    &:hover { background: color-mix(in srgb, var(--brando-accent) 88%, var(--brando-ink)); }
   }
 }
 
@@ -520,7 +520,7 @@
     }
   }
 
-  &:hover { color: white; }
+  &:hover { color: var(--brando-ink-inverse); }
 }
 
 /* An entry field with open notes */

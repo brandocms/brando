@@ -1,7 +1,7 @@
 .map-block {
   .empty {
-    background-color: var(--brando-color-peach);
-    color: var(--brando-color-dark);
+    background-color: var(--brando-surface-subform);
+    color: var(--brando-ink);
     flex-direction: column;
     max-width: 400px;
     margin: 0 auto;

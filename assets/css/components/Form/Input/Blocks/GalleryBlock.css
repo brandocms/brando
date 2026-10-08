@@ -1,7 +1,7 @@
 .gallery-block {
   .gallery-upload-wrapper {
     &.dragging {
-      background-color: #cde7ec;
+      background-color: var(--brando-surface-selected);
       border-radius: 8px;
       cursor: cell;
     }
@@ -110,7 +110,7 @@
         height: 56px;
         border-radius: 4px;
         overflow: hidden;
-        background: #f0f3ee;
+        background: var(--brando-surface-selected);
       }
 
       .image-content img {
@@ -123,7 +123,7 @@
       .img-placeholder {
         display: grid;
         place-items: center;
-        color: #79917b;
+        color: var(--brando-muted);
 
         [data-icon] {
           width: 20px;
@@ -166,7 +166,7 @@
       > span + span::before {
         content: "·";
         margin-right: 6px;
-        color: #a6afa8;
+        color: var(--brando-faint);
       }
     }
 
@@ -208,7 +208,7 @@
         border: 0;
         border-radius: 999px;
         background: transparent;
-        color: color-mix(in srgb, var(--brando-color-dark) 74%, white);
+        color: color-mix(in srgb, var(--brando-ink) 74%, var(--brando-ink-inverse));
         cursor: pointer;
         transition:
           background-color 140ms ease,
@@ -220,15 +220,15 @@
         }
 
         &:hover {
-          background: color-mix(in srgb, var(--brando-color-peach) 30%, white);
-          color: var(--brando-color-dark);
+          background: color-mix(in srgb, var(--brando-surface-subform) 30%, var(--brando-surface));
+          color: var(--brando-ink);
         }
       }
     }
   }
 
   .empty {
-    background-color: #e3fbff;
+    background-color: var(--brando-surface-subform);
     flex-direction: column;
     max-width: 400px;
     display: flex;
@@ -255,7 +255,7 @@
         circle {
           user-select: none;
           pointer-events: none;
-          fill: var(--brando-color-dark);
+          fill: var(--brando-ink);
         }
       }
     }
@@ -279,7 +279,7 @@
       border: 5px solid transparent;
 
       &.selected {
-        border: 5px solid theme(colors.blue);
+        border: 5px solid var(--brando-accent);
       }
 
       &.hidden {
@@ -299,8 +299,8 @@
     }
 
     .img-placeholder {
-      background-color: var(--brando-color-peach);
-      color: var(--brando-color-dark);
+      background-color: var(--brando-surface-subform);
+      color: var(--brando-ink);
       padding: 2vw;
 
       .instructions {
@@ -321,7 +321,7 @@
         circle {
           user-select: none;
           pointer-events: none;
-          fill: var(--brando-color-dark);
+          fill: var(--brando-ink);
         }
       }
     }

@@ -1,6 +1,6 @@
 .block-instructions {
-  background-color: var(--brando-color-peach);
-  color: var(--brando-color-dark);
+  background-color: var(--brando-surface-subform);
+  color: var(--brando-ink);
   flex-direction: column;
   display: flex;
   padding: 12px 15px 15px;
@@ -24,7 +24,7 @@
       circle {
         user-select: none;
         pointer-events: none;
-        fill: var(--brando-color-dark);
+        fill: var(--brando-ink);
       }
     }
   }
@@ -62,14 +62,14 @@
   border-radius: 50%;
   width: 30px;
   height: 30px;
-  background-color: #dbd7c359;
+  background-color: var(--brando-badge-bg);
   transition:
     background-color 250ms ease,
     color 250ms ease;
 
   &:hover {
-    background-color: var(--brando-color-dark);
-    color: white;
+    background-color: var(--brando-ink);
+    color: var(--brando-ink-inverse);
   }
 
   span {
@@ -90,8 +90,8 @@
   border-radius: 10px;
   padding: 2px 8px;
   height: 24px;
-  background-color: var(--brando-color-dark);
-  color: white;
+  background-color: var(--brando-ink);
+  color: var(--brando-ink-inverse);
   font-family: "Mono";
   font-size: 10px;
   text-transform: uppercase;
@@ -185,7 +185,7 @@
 }
 
 .block[data-block-type="comment"] {
-  background-color: #ffffc4a6 !important;
+  background-color: var(--brando-attention);
 }
 
 .base-block {
@@ -251,13 +251,13 @@
 button.btn-palette {
   border: none;
   text-transform: uppercase;
-  color: var(--brando-color-blue);
+  color: var(--brando-accent);
   text-decoration: underline;
   text-decoration-color: transparent;
   transition: text-decoration-color 250ms ease;
 
   &:hover {
-    text-decoration-color: var(--brando-color-blue);
+    text-decoration-color: var(--brando-accent);
   }
 }
 
@@ -278,121 +278,121 @@ button.btn-palette {
     border 500ms ease,
     background-color 1500ms ease;
 
-  border: 1px solid #e4edf6;
-  color: #0c4a6e;
+  border: 1px solid var(--brando-line);
+  color: var(--brando-ink);
 
   /* The editor toolbar stays white in every block colour — the block's tint
      belongs to its chrome (titlebar, border), not to the writing surface. */
 
   .ref_block {
-    background-color: #fcffff;
-    color: #0c4a6e;
-    border: 1px solid #e4edf6 !important;
+    background-color: var(--brando-surface);
+    color: var(--brando-ink);
+    border: 1px solid var(--brando-line) !important;
     box-shadow: none;
 
     .block-content {
-      border-top: 1px solid #e4edf6;
+      border-top: 1px solid var(--brando-line);
     }
   }
 
   .block-toolbar {
-    background-color: #f0f9ff;
-    color: #0c4a6e;
+    background-color: var(--brando-surface-hover);
+    color: var(--brando-ink);
   }
 
   .block-actions {
     .block-action {
-      color: #0c4a6e;
+      color: var(--brando-muted);
 
       &:hover {
-        background-color: #0c4a6e;
-        color: #f0f9ff;
+        background-color: var(--brando-accent);
+        color: var(--brando-ink-inverse);
       }
     }
   }
 
   .block-vars-wrapper {
-    border-top: 1px solid #e4edf6;
+    border-top: 1px solid var(--brando-line);
 
     .vars-info {
       .icon {
-        background-color: #f0f9ff;
-        color: #0c4a6e;
+        background-color: var(--brando-surface-hover);
+        color: var(--brando-muted);
       }
     }
   }
 
   .block-datasource {
-    border-top: 1px solid #e4edf6;
+    border-top: 1px solid var(--brando-line);
 
     .datasource-info {
       .icon {
-        background-color: #f0f9ff;
-        color: #0c4a6e;
+        background-color: var(--brando-surface-hover);
+        color: var(--brando-muted);
       }
     }
   }
 
   .block-liquex-preview,
   .block-heex-preview {
-    border-top: 1px solid #e4edf6;
+    border-top: 1px solid var(--brando-line);
   }
 
   &[data-color="pink"] {
-    border: 1px solid #fce7f3;
-    color: #064e3b;
+    border: 1px solid var(--brando-module-pink-line);
+    color: var(--brando-ink);
 
     .block-toolbar {
-      background-color: #fdf2f8;
-      color: #831843;
+      background-color: var(--brando-module-pink-tint);
+      color: var(--brando-module-pink-ink);
     }
 
     .block-actions {
       .block-action {
-        color: #831843;
+        color: var(--brando-module-pink-ink);
 
         &:hover {
-          background-color: #831843;
-          color: #fdf2f8;
+          background-color: var(--brando-module-pink-ink);
+          color: var(--brando-module-pink-tint);
         }
       }
     }
 
     .block-vars-wrapper {
-      border-top: 1px solid #fce7f3;
+      border-top: 1px solid var(--brando-module-pink-line);
 
       .vars-info {
         .icon {
-          background-color: #fdf2f8;
-          color: #831843;
+          background-color: var(--brando-module-pink-tint);
+          color: var(--brando-module-pink-ink);
         }
       }
     }
 
     .block-liquex-preview,
     .block-heex-preview {
-      border-top: 1px solid #fce7f3;
+      border-top: 1px solid var(--brando-module-pink-line);
     }
 
     .ref_block {
-      background-color: #fefeff;
-      color: #831843;
-      border: 1px solid #fce7f3 !important;
+      background-color: var(--brando-surface);
+      color: var(--brando-ink);
+      border: 1px solid var(--brando-module-pink-line) !important;
       box-shadow: none;
 
       .block-content {
-        border-top: 1px solid #fce7f3;
+        border-top: 1px solid var(--brando-module-pink-line);
       }
     }
   }
 
   &[data-color="emerald"] {
-    border: 1px solid #d1fae5;
-    color: #064e3b;
+    border: 1px solid var(--brando-module-emerald-line);
+    color: var(--brando-ink);
 
     .block-toolbar {
-      background-color: #ecfdf5;
-      color: #064e3b;
+      background-color: var(--brando-module-emerald-tint);
+      color: var(--brando-module-emerald-ink);
     }
 
     button.tiny,
@@ -401,95 +401,95 @@ button.btn-palette {
       border-color: currentColor;
 
       &:hover {
-        border-color: #064e3b;
-        background-color: #064e3b;
-        color: #ecfdf5;
+        border-color: var(--brando-module-emerald-ink);
+        background-color: var(--brando-module-emerald-ink);
+        color: var(--brando-module-emerald-tint);
       }
     }
 
     .block-actions {
       .block-action {
-        color: #064e3b;
+        color: var(--brando-module-emerald-ink);
 
         &:hover {
-          background-color: #064e3b;
-          color: #ecfdf5;
+          background-color: var(--brando-module-emerald-ink);
+          color: var(--brando-module-emerald-tint);
         }
       }
     }
 
     .block-vars-wrapper {
-      border-top: 1px solid #d1fae5;
+      border-top: 1px solid var(--brando-module-emerald-line);
 
       .vars-info {
         .icon {
-          background-color: #ecfdf5;
-          color: #064e3b;
+          background-color: var(--brando-module-emerald-tint);
+          color: var(--brando-module-emerald-ink);
         }
       }
     }
 
     .block-liquex-preview,
     .block-heex-preview {
-      border-top: 1px solid #d1fae5;
+      border-top: 1px solid var(--brando-module-emerald-line);
     }
 
     .ref_block {
-      background-color: #fdfffd;
-      color: #064e3b;
-      border: 1px solid #d1fae5 !important;
+      background-color: var(--brando-surface);
+      color: var(--brando-ink);
+      border: 1px solid var(--brando-module-emerald-line) !important;
       box-shadow: none;
 
       .block-content {
-        border-top: 1px solid #d1fae5;
+        border-top: 1px solid var(--brando-module-emerald-line);
       }
     }
   }
 
   &[data-color="peach"] {
-    border: 1px solid #ffedd5;
-    color: #7c2d12;
+    border: 1px solid var(--brando-module-peach-line);
+    color: var(--brando-ink);
 
     .block-toolbar {
-      background-color: #fff7ed;
-      color: #7c2d12;
+      background-color: var(--brando-module-peach-tint);
+      color: var(--brando-module-peach-ink);
     }
 
     .block-actions {
       .block-action {
-        color: #7c2d12;
+        color: var(--brando-module-peach-ink);
 
         &:hover {
-          background-color: #7c2d12;
-          color: #fff7ed;
+          background-color: var(--brando-module-peach-ink);
+          color: var(--brando-module-peach-tint);
         }
       }
     }
 
     .block-vars-wrapper {
-      border-top: 1px solid #ffedd6;
+      border-top: 1px solid var(--brando-module-peach-line);
 
       .vars-info {
         .icon {
-          background-color: #fff7ed;
-          color: #7c2d12;
+          background-color: var(--brando-module-peach-tint);
+          color: var(--brando-module-peach-ink);
         }
       }
     }
 
     .block-liquex-preview,
     .block-heex-preview {
-      border-top: 1px solid #ffedd5;
+      border-top: 1px solid var(--brando-module-peach-line);
     }
 
     .ref_block {
-      background-color: #fffefd;
-      color: #7c2d12;
-      border: 1px solid #ffedd5 !important;
+      background-color: var(--brando-surface);
+      color: var(--brando-ink);
+      border: 1px solid var(--brando-module-peach-line) !important;
       box-shadow: none;
 
       .block-content {
-        border-top: 1px solid #ffedd5;
+        border-top: 1px solid var(--brando-module-peach-line);
       }
     }
   }
@@ -554,8 +554,8 @@ button.btn-palette {
       display: flex;
       align-items: center;
       justify-content: center;
-      background-color: #f1f1f1;
-      color: var(--brando-color-dark);
+      background-color: var(--brando-surface-hover);
+      color: var(--brando-ink);
       border-radius: 50%;
 
       [data-icon] {
@@ -588,8 +588,8 @@ button.btn-palette {
       display: flex;
       align-items: center;
       justify-content: center;
-      background-color: #f1f1f1;
-      color: var(--brando-color-dark);
+      background-color: var(--brando-surface-hover);
+      color: var(--brando-ink);
       border-radius: 50%;
 
       [data-icon] {
@@ -609,7 +609,7 @@ button.btn-palette {
   }
 
   .table-block-wrapper {
-    border-top: 1px solid #eee;
+    border-top: 1px solid var(--brando-line);
     padding: 15px 10px;
   }
 
@@ -627,8 +627,8 @@ button.btn-palette {
       display: flex;
       align-items: center;
       justify-content: center;
-      background-color: #f1f1f1;
-      color: var(--brando-color-dark);
+      background-color: var(--brando-surface-hover);
+      color: var(--brando-ink);
       border-radius: 50%;
 
       [data-icon] {
@@ -656,10 +656,10 @@ button.btn-palette {
      server-side from `sequence` + `new_row` (`Brando.Content.Var.Layout`).
      The module editor's layout preview uses this same markup. */
   .block-vars-wrapper {
-    --vars-line: color-mix(in srgb, var(--brando-color-dark) 9%, transparent);
-    --vars-muted: color-mix(in srgb, var(--brando-color-dark) 62%, transparent);
-    --vars-faint: color-mix(in srgb, var(--brando-color-dark) 40%, transparent);
-    border-top: 1px solid #eee;
+    --vars-line: color-mix(in srgb, var(--brando-ink) 9%, transparent);
+    --vars-muted: color-mix(in srgb, var(--brando-ink) 62%, transparent);
+    --vars-faint: color-mix(in srgb, var(--brando-ink) 40%, transparent);
+    border-top: 1px solid var(--brando-line);
     padding: 10px;
 
     > .vars-info {
@@ -681,7 +681,7 @@ button.btn-palette {
     max-width: 1080px;
     border: 1px solid var(--vars-line);
     border-radius: 8px;
-    background-color: var(--brando-color-shaded);
+    background-color: var(--brando-surface-shaded);
 
     .block-vars-row {
       display: flex;
@@ -698,7 +698,7 @@ button.btn-palette {
       display: flex;
       align-items: center;
       padding: 5px 12px;
-      color: var(--brando-color-foreground);
+      color: var(--brando-ink);
 
       > div {
         flex: 1 1 auto;
@@ -821,8 +821,8 @@ button.btn-palette {
         }
 
         &:focus {
-          background-color: var(--brando-color-input);
-          border-color: var(--brando-color-blue);
+          background-color: var(--brando-surface);
+          border-color: var(--brando-accent);
           outline: none;
         }
       }
@@ -847,7 +847,7 @@ button.btn-palette {
         max-width: none;
 
         label.control-label {
-          color: var(--brando-color-foreground);
+          color: var(--brando-ink);
           cursor: pointer;
         }
       }
@@ -912,7 +912,7 @@ button.btn-palette {
         width: 18px;
         height: 18px;
         flex-shrink: 0;
-        border: 1px solid color-mix(in srgb, var(--brando-color-dark) 14%, transparent);
+        border: 1px solid color-mix(in srgb, var(--brando-ink) 14%, transparent);
       }
 
       .color-hex {
@@ -1005,7 +1005,7 @@ button.btn-palette {
       margin-left: 0;
       padding: 0 10px 0 7px;
       border-color: var(--vars-line);
-      background-color: var(--brando-color-input);
+      background-color: var(--brando-surface);
 
       .icon {
         width: 14px;
@@ -1025,12 +1025,12 @@ button.btn-palette {
         line-height: 20px;
 
         dt {
-          color: var(--brando-color-foreground);
+          color: var(--brando-ink);
         }
       }
 
       &:hover {
-        border-color: color-mix(in srgb, var(--brando-color-dark) 25%, transparent);
+        border-color: color-mix(in srgb, var(--brando-ink) 25%, transparent);
       }
     }
 
@@ -1202,8 +1202,8 @@ button.btn-palette {
         }
 
         &:focus {
-          background-color: var(--brando-color-input);
-          border-color: var(--brando-color-blue);
+          background-color: var(--brando-surface);
+          border-color: var(--brando-accent);
           outline: none;
         }
       }
@@ -1238,11 +1238,11 @@ button.btn-palette {
         text-transform: none;
         color: var(--vars-muted);
         background: transparent;
-        background: var(--brando-color-shaded);
+        background: var(--brando-surface-shaded);
         opacity: 0;
 
         &:hover {
-          color: var(--brando-color-blue);
+          color: var(--brando-accent);
         }
       }
     }
@@ -1331,7 +1331,7 @@ button.btn-palette {
       @font main;
       font-size: var(--vars-value-size);
       padding: 8px 10px;
-      background-color: var(--brando-color-input);
+      background-color: var(--brando-surface);
       height: auto;
     }
 
@@ -1363,8 +1363,8 @@ button.btn-palette {
   &.drag-element {
     background: var(--brando-surface);
     box-shadow:
-      3px 3px #f00 inset,
-      -3px -3px #f00 inset;
+      3px 3px var(--brando-accent) inset,
+      -3px -3px var(--brando-accent) inset;
     position: absolute;
     width: 100%;
     z-index: -1;
@@ -1381,7 +1381,7 @@ button.btn-palette {
   }
 
   &.dragging-block {
-    background: #f6f7f9;
+    background: var(--brando-surface-selected);
     max-height: 75px;
 
     & > * {
@@ -1435,7 +1435,7 @@ button.btn-palette {
       margin: 0 auto;
       padding: 2rem;
       font-size: 95%;
-      background-color: theme(colors.villain.secondary);
+      background-color: var(--brando-surface-subform);
 
       .help-content-buttons {
         margin: 0 auto;
@@ -1511,12 +1511,12 @@ button.btn-palette {
 
   .block-liquex-preview,
   .block-heex-preview {
-    border-top: 1px solid #eee;
+    border-top: 1px solid var(--brando-line);
     padding: 15px 10px 0;
   }
 
   .block-datasource {
-    border-top: 1px solid #eee;
+    border-top: 1px solid var(--brando-line);
     padding: 15px 10px;
     width: 100%;
     font-size: 13px;
@@ -1563,7 +1563,7 @@ button.btn-palette {
     .datasource-preview {
       max-width: 560px;
       margin: 0 0 0 40px;
-      color: #3f4643;
+      color: var(--brando-ink);
       font-size: 12px;
 
       p { margin: 0; }
@@ -1608,7 +1608,7 @@ button.btn-palette {
     }
 
     strong {
-      color: var(--brando-color-blue);
+      color: var(--brando-accent);
     }
 
     .circle-stack {
@@ -1645,7 +1645,7 @@ button.btn-palette {
     }
 
     span.description {
-      background-color: #ffd70078;
+      background-color: var(--brando-attention);
       margin-left: 7px;
       border: 1px solid;
       padding: 0 5px;
@@ -1658,7 +1658,7 @@ button.btn-palette {
     text-transform: uppercase;
     text-align: right;
     margin-left: 1rem;
-    color: #aaa;
+    color: var(--brando-faint);
     display: none;
   }
 
@@ -1686,8 +1686,8 @@ button.btn-palette {
       }
 
       &:hover {
-        background-color: var(--brando-color-dark);
-        color: white;
+        background-color: var(--brando-ink);
+        color: var(--brando-ink-inverse);
         border-radius: 7px;
       }
 
@@ -1804,13 +1804,13 @@ button.btn-palette {
   img {
     max-width: 100px;
     padding: 0.3rem;
-    border: 1px solid #dee2e6;
+    border: 1px solid var(--brando-line);
     background-color: var(--brando-surface);
     cursor: pointer;
 
     &:hover {
-      box-shadow: 0px 0px 5px #85003838;
-      border-color: #aaa;
+      box-shadow: 0px 0px 5px color-mix(in srgb, var(--brando-ink) 22%, transparent);
+      border-color: var(--brando-line-strong);
     }
   }
 }
@@ -1881,7 +1881,7 @@ button.btn-palette {
   padding-top: 2rem;
 
   hr {
-    border-bottom: 1px solid #ddd;
+    border-bottom: 1px solid var(--brando-line);
     border-left: none;
     border-right: none;
     border-top: none;

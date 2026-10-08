@@ -11,7 +11,7 @@
       align-items: center;
       aspect-ratio: 1;
       justify-content: center;
-      background-color: white;
+      background-color: var(--brando-surface);
     }
 
     &:hover .delete-object {
@@ -22,7 +22,7 @@
       opacity: 0;
       position: absolute;
       right: 5px;
-      background-color: white;
+      background-color: var(--brando-surface);
       border: none;
       border-radius: 50%;
       top: 5px;
@@ -34,7 +34,7 @@
       transition: opacity 250ms ease;
 
       svg {
-        stroke: black;
+        stroke: var(--brando-ink);
       }
     }
   }
@@ -113,7 +113,7 @@
           height: 56px;
           object-fit: cover;
           border-radius: 4px;
-          background: #f0f3ee;
+          background: var(--brando-surface-selected);
         }
 
         .img-placeholder {
@@ -122,8 +122,8 @@
           width: 56px;
           height: 56px;
           border-radius: 4px;
-          background: #f0f3ee;
-          color: #79917b;
+          background: var(--brando-surface-selected);
+          color: var(--brando-muted);
         }
       }
 
@@ -168,7 +168,7 @@
         > span + span::before {
           content: "·";
           margin-right: 6px;
-          color: #a6afa8;
+          color: var(--brando-faint);
         }
       }
 
@@ -215,19 +215,19 @@
           width: 1cap;
           height: 1cap;
           border-radius: 50%;
-          background: #89968c;
+          background: var(--brando-faint);
         }
 
         &.gallery-object-list-status--processed > i,
         &.gallery-object-list-status--ready > i {
-          background: #43a976;
+          background: var(--brando-status-published);
         }
 
         &.gallery-object-list-status--unprocessed {
           color: var(--brando-attention-ink);
 
           > i {
-            background: #edaa00;
+            background: var(--brando-status-pending);
           }
         }
       }
@@ -242,7 +242,7 @@
       .gallery-object-action-button {
         border: 0;
         background: transparent;
-        color: color-mix(in srgb, var(--brando-color-dark) 74%, white);
+        color: color-mix(in srgb, var(--brando-ink) 74%, var(--brando-ink-inverse));
         width: 26px;
         height: 26px;
         border-radius: 999px;
@@ -259,8 +259,8 @@
         }
 
         &:hover {
-          background: color-mix(in srgb, var(--brando-color-peach) 30%, white);
-          color: var(--brando-color-dark);
+          background: color-mix(in srgb, var(--brando-surface-subform) 30%, var(--brando-surface));
+          color: var(--brando-ink);
         }
       }
 
@@ -274,8 +274,8 @@
         padding: 0;
         list-style: none;
         border-radius: 8px;
-        border: 1px solid color-mix(in srgb, var(--brando-color-dark) 30%, transparent);
-        background: color-mix(in srgb, white 95%, var(--brando-color-peach) 5%);
+        border: 1px solid color-mix(in srgb, var(--brando-ink) 30%, transparent);
+        background: color-mix(in srgb, var(--brando-surface) 95%, var(--brando-surface-selected) 5%);
         box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
         overflow: hidden;
 
@@ -285,7 +285,7 @@
           padding: 0;
 
           + li {
-            border-top: 1px solid color-mix(in srgb, var(--brando-color-dark) 14%, transparent);
+            border-top: 1px solid color-mix(in srgb, var(--brando-ink) 14%, transparent);
           }
         }
 
@@ -296,7 +296,7 @@
           border: 0;
           border-radius: 0;
           background: transparent;
-          color: var(--brando-color-dark);
+          color: var(--brando-ink);
           font-size: 11px;
           text-transform: uppercase;
           display: flex;
@@ -312,17 +312,17 @@
           }
 
           &:hover {
-            background: var(--brando-color-dark);
-            color: white;
+            background: var(--brando-ink);
+            color: var(--brando-ink-inverse);
           }
 
           &.delete-action {
-            color: color-mix(in srgb, #a71f34 86%, var(--brando-color-dark));
+            color: var(--brando-error-ink);
           }
 
           &.delete-action:hover {
-            background: color-mix(in srgb, #a71f34 14%, white);
-            color: color-mix(in srgb, #8b1527 88%, var(--brando-color-dark));
+            background: var(--brando-error);
+            color: var(--brando-error-ink);
           }
         }
       }
@@ -338,7 +338,7 @@
 
   .gallery-upload-wrapper {
     &.dragging {
-      background-color: #cde7ec;
+      background-color: var(--brando-surface-selected);
       border-radius: 8px;
       cursor: cell;
     }
@@ -367,7 +367,7 @@
   &.media-gallery--empty {
     display: grid; grid-template-columns: 112px minmax(0, 1fr); gap: 0 16px;
     padding: 6px;
-    > .media-field-preview { grid-column: 1; grid-row: 1 / span 2; width: 112px; height: 112px; background: #f7f8f6; }
+    > .media-field-preview { grid-column: 1; grid-row: 1 / span 2; width: 112px; height: 112px; background: var(--brando-surface-hover); }
     > .gallery-info { display: flex; flex-direction: column; gap: 2px; grid-column: 2; min-width: 0; padding: 8px 10px 0 0; }
     .media-field-name { font-weight: 400; }
     > .actions { grid-column: 2; align-self: end; margin: 12px 10px 8px 0; }
@@ -410,8 +410,8 @@
   .gallery-toolbar .actions { margin: 0; }
 
   /* Uploading leads the group in a light accent, like every media field's. */
-  .segmented-buttons .media-button.primary { background: #edf3e9; border-color: #cfdcce; color: var(--brando-accent); }
-  .segmented-buttons .media-button.primary:hover { background: #e2ecdd; border-color: #c3d5c5; }
+  .segmented-buttons .media-button.primary { background: var(--brando-surface-selected); border-color: var(--brando-line); color: var(--brando-accent); }
+  .segmented-buttons .media-button.primary:hover { background: color-mix(in srgb, var(--brando-accent) 8%, var(--brando-surface-selected)); border-color: var(--brando-line-strong); }
 
   .gallery-count {
     order: 2;
@@ -444,7 +444,7 @@
       padding: 0;
       background: color-mix(in srgb, var(--brando-surface) 92%, transparent);
       box-shadow: 0 1px 3px rgba(0, 0, 0, .2);
-      color: #b42318;
+      color: var(--brando-error-ink);
 
       [data-icon] { width: 14px; height: 14px; }
     }
@@ -454,7 +454,7 @@
 
   .media-gallery-empty {
     padding: 32px;
-    border: 1px dashed #cfd8d1;
+    border: 1px dashed var(--brando-line);
     border-radius: 8px;
     color: var(--workspace-muted);
     text-align: center;
@@ -569,7 +569,7 @@
 .gallery-tile-square {
   position: relative;
   aspect-ratio: 1;
-  background: #f0f3ee;
+  background: var(--brando-surface-selected);
 
   > img {
     display: block;
@@ -584,7 +584,7 @@
   place-items: center;
   width: 100%;
   height: 100%;
-  color: #79917b;
+  color: var(--brando-muted);
 
   [data-icon] {
     width: 22px;
@@ -599,7 +599,7 @@
 }
 
 .gallery-sheet .gallery-object:is(:hover, :focus-within) .gallery-tile-square {
-  outline: 2px solid #c3d5c5;
+  outline: 2px solid var(--brando-line-strong);
   outline-offset: -2px;
 }
 
@@ -666,12 +666,12 @@
 
     &:hover {
       color: var(--brando-ink);
-      border-color: #c3d5c5;
+      border-color: var(--brando-line-strong);
     }
 
     &.delete-object:hover,
     &.delete-x:hover {
-      color: #983e30;
+      color: var(--brando-error-ink);
     }
   }
 }
@@ -724,14 +724,14 @@
 
   &.is-empty {
     background: color-mix(in srgb, var(--brando-surface) 70%, transparent);
-    color: #9aa39c;
+    color: var(--brando-faint);
     box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.06);
   }
 
   &.is-missing {
     background: var(--brando-attention);
     color: var(--brando-attention-ink);
-    box-shadow: 0 0 0 1px #ecd9b4;
+    box-shadow: 0 0 0 1px var(--brando-attention-line);
   }
 
   &.is-active {
@@ -858,7 +858,7 @@
 
     &:focus {
       outline: 2.5px solid rgba(0, 71, 255, 0.12);
-      border-color: #bacabd;
+      border-color: var(--brando-line-strong);
     }
   }
 
@@ -901,7 +901,7 @@
       cursor: pointer;
 
       &:hover {
-        background: #f1f5ef;
+        background: var(--brando-surface-selected);
       }
 
       &.primary {
@@ -910,7 +910,7 @@
         color: var(--brando-ink-inverse);
 
         &:hover {
-          background: #1d3f33;
+          background: var(--brando-accent-hover);
         }
       }
     }

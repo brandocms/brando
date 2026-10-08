@@ -5,7 +5,7 @@
     left: 0;
     width: 100%;
     height: 100%;
-    background-color: white;
+    background-color: var(--brando-surface);
     border-radius: 12px;
     display: flex;
     justify-content: center;
@@ -20,7 +20,7 @@
     font-size: 13px;
     display: flex;
     align-items: stretch;
-    border: 1px dashed #3b3b3b;
+    border: 1px dashed var(--brando-muted);
     border-radius: 8px;
     padding: 8px 25px 8px 8px;
     width: fit-content;
@@ -68,8 +68,8 @@
 
   .empty {
     background-color: transparent;
-    color: var(--brando-color-dark);
-    border: 1px dashed var(--brando-color-dark);
+    color: var(--brando-ink);
+    border: 1px dashed var(--brando-line-strong);
     flex-direction: column;
     max-width: 400px;
     margin: 0 auto;
@@ -96,7 +96,7 @@
         circle {
           user-select: none;
           pointer-events: none;
-          fill: var(--brando-color-dark);
+          fill: var(--brando-ink);
         }
       }
     }
@@ -161,7 +161,7 @@
       row-gap: 5px;
       margin-top: 15px;
       padding-top: 15px;
-      border-top: 1px solid var(--brando-color-dark);
+      border-top: 1px solid var(--brando-line);
 
       .video-info-item {
         display: flex;
@@ -188,8 +188,8 @@
     }
 
     .img-placeholder {
-      background-color: var(--brando-color-peach);
-      color: var(--brando-color-dark);
+      background-color: var(--brando-surface-subform);
+      color: var(--brando-ink);
       padding: 2vw;
 
       .instructions {
@@ -210,7 +210,7 @@
         circle {
           user-select: none;
           pointer-events: none;
-          fill: var(--brando-color-dark);
+          fill: var(--brando-ink);
         }
       }
     }

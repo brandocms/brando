@@ -20,8 +20,8 @@
   --table-hover: var(--brando-surface-hover);
   --table-ink: var(--brando-ink);
   --table-muted: var(--brando-muted);
-  --table-faint: #99a39b;
-  --table-focus: #a6bba8;
+  --table-faint: var(--brando-faint);
+  --table-focus: var(--brando-line-strong);
 
   .subform-table-frame {
     border: 1px solid var(--table-line);
@@ -147,7 +147,7 @@
     }
 
     &:hover {
-      background: #eef3ed;
+      background: var(--brando-surface-selected);
       color: var(--table-ink);
 
       [data-icon] {
@@ -221,7 +221,7 @@
     border: 0;
     border-radius: 4px;
     background: transparent;
-    color: #707c73;
+    color: var(--brando-muted);
     opacity: 0;
     transition: opacity 120ms ease;
     cursor: pointer;
@@ -234,7 +234,7 @@
 
     &:hover,
     &:focus-visible {
-      background: #eef3ed;
+      background: var(--brando-surface-selected);
       color: var(--table-ink);
       opacity: 1;
 
@@ -301,7 +301,7 @@
     }
 
     .field-error {
-      color: #b4403b;
+      color: var(--brando-error-ink);
       font-size: 11px;
       line-height: 15px;
       white-space: normal;
@@ -352,12 +352,12 @@
   .subform-fields :is(input.text, input.input, input[type="email"], input[type="number"], input[type="phone"], input[type="tel"], input[type="password"], textarea.text):focus {
     border-color: var(--table-focus);
     background: var(--brando-surface);
-    box-shadow: 0 0 0 2px #254e3f14;
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--brando-accent) 8%, transparent);
     outline: none;
   }
 
   .subform-fields .brando-input:has(.field-error) :is(input.text, input.input, input[type="email"], input[type="number"], input[type="phone"], input[type="tel"], textarea.text) {
-    border-color: #e5a29f;
+    border-color: var(--brando-error-line);
     background: var(--brando-surface);
   }
 
@@ -618,7 +618,7 @@
     .circle {
       width: 18px;
       height: 18px;
-      border: 1px solid color-mix(in srgb, var(--brando-color-dark) 14%, transparent);
+      border: 1px solid color-mix(in srgb, var(--brando-ink) 14%, transparent);
     }
 
     .color-hex,
@@ -713,8 +713,8 @@
       height: 28px;
       overflow: hidden;
       border-radius: 4px;
-      background: #f0f3ee;
-      color: #79917b;
+      background: var(--brando-surface-selected);
+      color: var(--brando-muted);
 
       img,
       video {

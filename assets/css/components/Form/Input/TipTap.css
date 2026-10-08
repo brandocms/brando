@@ -2,7 +2,7 @@
 .ProseMirror {
   line-height: 1.5;
   max-width: 70ch;
-  color: #1a1a1a;
+  color: var(--brando-ink);
 
   &:focus {
     outline: none;
@@ -27,7 +27,7 @@
     a {
       border-bottom: none;
       text-decoration: underline;
-      text-decoration-color: var(--brando-color-blue);
+      text-decoration-color: var(--brando-accent);
       text-decoration-thickness: 2px;
     }
   }
@@ -43,7 +43,7 @@
     margin-top: 35px;
     margin-bottom: 35px;
     padding-left: 40px;
-    border-left: 2px solid black;
+    border-left: 2px solid var(--brando-muted);
   }
 
   &:first-child {
@@ -68,7 +68,7 @@
     a {
       border-bottom: none;
       text-decoration: underline;
-      text-decoration-color: var(--brando-color-blue);
+      text-decoration-color: var(--brando-accent);
       text-decoration-thickness: 2px;
     }
   }
@@ -89,7 +89,7 @@
     a {
       border-bottom: none;
       text-decoration: underline;
-      text-decoration-color: var(--brando-color-blue);
+      text-decoration-color: var(--brando-accent);
       text-decoration-thickness: 2px;
     }
   }
@@ -133,7 +133,7 @@
     padding-bottom: 14px;
     padding-left: 23px;
     padding-right: 23px;
-    border: 1px solid var(--brando-color-dark) !important;
+    border: 1px solid var(--brando-line) !important;
     line-height: 1;
     font-size: 18px;
   }
@@ -150,7 +150,7 @@
 .tiptap-wrapper {
   position: relative;
   min-width: 0;
-  .field-base & { background: var(--brando-color-input, var(--brando-surface)); border: 1px solid var(--brando-input-border, var(--brando-line)); border-radius: var(--brando-input-radius, 6px); }
+  .field-base & { background: var(--brando-surface); border: 1px solid var(--brando-input-border); border-radius: var(--brando-input-radius, 6px); }
   /* The toolbar masks the 8px above itself so text scrolling under it, once it
      is stuck, cannot peek through the gap. Unstuck, the toolbar sits flush
      against this border — one pixel inside it — and that opaque mask paints
@@ -159,7 +159,7 @@
      wrapper does; draw the border again over the top of it. */
   .field-base &::after {
     content: ""; position: absolute; inset: -1px; z-index: 3; pointer-events: none;
-    border: 1px solid var(--brando-input-border, var(--brando-line));
+    border: 1px solid var(--brando-input-border);
     border-radius: var(--brando-input-radius, 6px);
   }
 }
@@ -178,14 +178,14 @@
   .tiptap-activate {
     display: inline-flex; align-items: center;
     min-height: 32px; margin: 0; padding: 6px 11px;
-    border: 1px solid #d5dfe6; border-radius: 6px;
-    background: #f5f8fa; color: #345568;
+    border: 1px solid var(--brando-line); border-radius: 6px;
+    background: var(--brando-surface-hover); color: var(--brando-muted);
     font: 500 12px/18px "Main", sans-serif; white-space: nowrap; cursor: pointer;
-    &:hover { background: #eaf2f7; border-color: #aebfcb; }
-    &:focus-visible { outline: 2px solid #345568; outline-offset: 3px; }
+    &:hover { background: var(--brando-surface-selected); border-color: var(--brando-line-strong); }
+    &:focus-visible { outline: 2px solid var(--brando-accent); outline-offset: 3px; }
     &:disabled { opacity: .5; cursor: default; }
   }
-  &:not(.is-readonly):is(:hover, :focus-within) { background: #fbfcfd; }
+  &:not(.is-readonly):is(:hover, :focus-within) { background: var(--brando-surface-shaded); }
   .tiptap-preview-content { min-width: 0; min-height: 32px; padding: 0; overflow-wrap: anywhere; }
   .tiptap-preview-empty { color: var(--brando-muted); }
   &.is-readonly { cursor: default; }
@@ -209,7 +209,7 @@
   .tiptap-document { padding: 16px 0; }
   .ProseMirror { min-height: 40px; width: 100%; }
   .ProseMirror p.is-editor-empty:first-child::before { color: var(--tiptap-muted); content: attr(data-placeholder); float: left; height: 0; pointer-events: none; }
-  .ProseMirror [data-type="jump-anchor"] { text-decoration: underline dotted var(--brando-color-blue); text-underline-offset: 4px; }
+  .ProseMirror [data-type="jump-anchor"] { text-decoration: underline dotted var(--brando-accent); text-underline-offset: 4px; }
 }
 .tiptap-wrapper .tiptap-menu {
   display: flex;
@@ -232,7 +232,7 @@
     border: 0; border-radius: 4px; background: transparent; color: var(--brando-ink); padding: 6px; margin: 0;
     min-width: 32px; height: 32px; display: inline-flex; align-items: center; justify-content: center; gap: 6px;
     > :is(span, [data-icon]) { display: inline-block; width: 18px; height: 18px; flex-shrink: 0; }
-    &:hover, &[aria-pressed="true"] { background: #e4eee8; }
+    &:hover, &[aria-pressed="true"] { background: var(--brando-surface-selected); }
     &:disabled { opacity: .35; cursor: default; }
     &:focus { outline: 2px solid var(--brando-accent); outline-offset: 2px; }
   }
@@ -252,10 +252,10 @@
 .field-base .tiptap-editor-shell .tiptap-document { padding-inline: 12px; }
 .tiptap-popover {
   box-sizing: border-box; margin: 0; padding: 6px; min-width: 180px; max-width: min(340px, calc(100vw - 16px));
-  background: var(--brando-surface); border: 1px solid var(--brando-line); border-radius: 6px; box-shadow: 0 6px 20px #163a2020; color: var(--brando-ink);
+  background: var(--brando-surface); border: 1px solid var(--brando-line); border-radius: 6px; box-shadow: 0 6px 20px color-mix(in srgb, var(--brando-ink) 13%, transparent); color: var(--brando-ink);
   button { display: flex; align-items: center; gap: 8px; width: 100%; border: 0; border-radius: 4px; margin: 0; padding: 9px 12px; background: transparent; text-align: left; color: inherit; font-size: 13px; line-height: 18px; }
   button > [data-icon] { width: 16px; height: 16px; }
-  button:hover, button.active { background: #e4eee8; }
+  button:hover, button.active { background: var(--brando-surface-selected); }
   button:disabled { opacity: .4; cursor: default; }
   button.primary { background: var(--brando-accent); color: var(--brando-ink-inverse); }
   button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px solid var(--brando-accent); outline-offset: 2px; }
@@ -265,10 +265,10 @@
   input[type="color"] { display: block; width: 34px; height: 32px; border: 1px solid var(--brando-line); background: transparent; padding: 2px; }
 }
 .tiptap-preset-picker {
-  margin-block: 12px; padding: 12px 14px; background: #f4f7f5; border: 1px solid var(--brando-line); border-radius: 5px;
+  margin-block: 12px; padding: 12px 14px; background: var(--brando-surface-hover); border: 1px solid var(--brando-line); border-radius: 5px;
   summary { cursor: pointer; font-size: 13px; }
   p { font-size: 13px; color: var(--brando-muted); padding-block: 12px; margin: 0; }
-  > button { display: flex; flex-direction: column; gap: 4px; width: 100%; text-align: left; padding: 12px; margin-block: 6px; background: white; border: 1px solid var(--brando-line); border-radius: 4px; }
+  > button { display: flex; flex-direction: column; gap: 4px; width: 100%; text-align: left; padding: 12px; margin-block: 6px; background: var(--brando-surface); border: 1px solid var(--brando-line); border-radius: 4px; }
   small { color: var(--brando-muted); font-size: 12px; }
 }
 .tiptap-link-url-workspace { display: grid; grid-template-columns: minmax(0, 1fr) 306px; }
@@ -278,13 +278,13 @@
 #tiptap-link-dialog:has(.tiptap-link-url-workspace) > .modal-dialog { height: auto; width: 900px; }
 #tiptap-link-dialog .modal-subtitle { max-width: 70ch; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
 .tiptap-link-destination { padding: 24px; .field-wrapper { margin: 0; } .control-label { display: block; margin-bottom: 8px; } .help-text { padding-top: 12px; margin: 0; font-size: 13px; color: var(--brando-muted); } }
-.tiptap-link-settings { padding: 24px 20px; background: #f4f7f9; }
+.tiptap-link-settings { padding: 24px 20px; background: var(--brando-surface-hover); }
 .tiptap-link-fields { display: flex; flex-direction: column; gap: 14px; }
 .tiptap-link-field { display: flex; flex-direction: column; gap: 8px; font-size: 13px; }
-.tiptap-link-fields select, .tiptap-link-fields input.text, .tiptap-link-destination input.text { width: 100%; min-height: 40px; box-sizing: border-box; border: 1px solid var(--brando-line); border-radius: 4px; padding: 8px 10px; background: white; color: var(--brando-ink); font-size: 14px; }
+.tiptap-link-fields select, .tiptap-link-fields input.text, .tiptap-link-destination input.text { width: 100%; min-height: 40px; box-sizing: border-box; border: 1px solid var(--brando-line); border-radius: 4px; padding: 8px 10px; background: var(--brando-surface); color: var(--brando-ink); font-size: 14px; }
 .tiptap-link-check { display: flex; align-items: center; gap: 8px; font-size: 13px; input { accent-color: var(--brando-accent); } }
-.tiptap-link-error { margin: 0; padding: 16px 24px; color: #a22c38; font-size: 13px; &:empty { display: none; } }
-.tiptap-link-warning { margin: 0; padding: 12px 24px; background: #fff8e6; color: #715921; font-size: 13px; flex-shrink: 0; }
+.tiptap-link-error { margin: 0; padding: 16px 24px; color: var(--brando-error-ink); font-size: 13px; &:empty { display: none; } }
+.tiptap-link-warning { margin: 0; padding: 12px 24px; background: var(--brando-attention); color: var(--brando-attention-ink); font-size: 13px; flex-shrink: 0; }
 @media (max-width: 700px) { .tiptap-link-url-workspace { grid-template-columns: 1fr; } .tiptap-link-fields input.text, .tiptap-link-destination input.text { font-size: 16px; } }
 .tiptap-ai-editor {
   select { font-size: 14px; }
@@ -307,26 +307,26 @@
 .tiptap-editor-shell.expanded:popover-open {
   box-sizing: border-box; display: flex; flex-direction: column; position: fixed; inset: 32px; margin: auto;
   width: min(960px, calc(100vw - 64px)); height: min(820px, calc(100dvh - 64px)); max-height: calc(100dvh - 64px); padding: 0;
-  border: 1px solid #d3dcd3; border-radius: 12px; box-shadow: 0 26px 80px #13251c26, 0 4px 16px #13251c12; overflow: hidden;
+  border: 1px solid var(--brando-line); border-radius: 12px; box-shadow: 0 26px 80px color-mix(in srgb, var(--brando-ink) 15%, transparent), 0 4px 16px color-mix(in srgb, var(--brando-ink) 7%, transparent); overflow: hidden;
   color: var(--brando-ink); font: 14px/1.5 "Main", sans-serif;
   .tiptap-expanded-header { display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 22px 24px; border-bottom: 1px solid var(--brando-line); flex-shrink: 0; }
   .tiptap-expanded-heading { display: flex; align-items: center; gap: 14px; min-width: 0; }
-  .tiptap-expanded-icon { display: grid; place-items: center; width: 40px; height: 40px; flex: 0 0 40px; border: 1px solid #dbe6ed; border-radius: 8px; background: #f1f6fb; color: #526f83; > [data-icon] { width: 20px; height: 20px; } }
+  .tiptap-expanded-icon { display: grid; place-items: center; width: 40px; height: 40px; flex: 0 0 40px; border: 1px solid var(--brando-line); border-radius: 8px; background: var(--brando-surface-hover); color: var(--brando-muted); > [data-icon] { width: 20px; height: 20px; } }
   .tiptap-expanded-heading-copy { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
   .tiptap-expanded-heading h2 { margin: 0; font: 500 22px/28px "Main", sans-serif; letter-spacing: -.025em; text-transform: none; text-box: trim-both cap alphabetic; overflow-wrap: anywhere; }
   .tiptap-expanded-heading p { margin: 0; font: 12px/18px "Main", sans-serif; color: var(--brando-muted); text-box: trim-both cap alphabetic; }
-  .tiptap-expanded-done { display: inline-flex; align-items: center; justify-content: center; gap: 8px; flex-shrink: 0; min-height: 34px; padding: 7px 13px; margin: 0; border: 1px solid var(--brando-accent); border-radius: 5px; background: var(--brando-accent); color: white; font: 13px/18px "Main", sans-serif; > [data-icon] { width: 16px; height: 16px; } &:hover { background: #1a3d30; } &:focus-visible { outline: 2px solid var(--brando-accent); outline-offset: 3px; } }
-  .tiptap-menu { position: static; flex-shrink: 0; padding: 10px 24px; border-radius: 0; background: #fafcf9; }
-  .tiptap-writing-area { flex: 1; min-height: 0; overflow: auto; padding: 24px 32px; background: #f4f6f3; scrollbar-width: thin; scroll-padding-block: 24px; }
-  .tiptap-document { box-sizing: border-box; display: flex; width: 100%; max-width: 736px; min-height: 100%; margin-inline: auto; padding: 40px 48px; background: white; border: 1px solid #e1e7df; border-radius: 6px; box-shadow: 0 2px 6px #1c332408; }
-  .tiptap-document:focus-within { border-color: #a6bba8; box-shadow: 0 0 0 2px #254e3f0a; }
+  .tiptap-expanded-done { display: inline-flex; align-items: center; justify-content: center; gap: 8px; flex-shrink: 0; min-height: 34px; padding: 7px 13px; margin: 0; border: 1px solid var(--brando-accent); border-radius: 5px; background: var(--brando-accent); color: var(--brando-ink-inverse); font: 13px/18px "Main", sans-serif; > [data-icon] { width: 16px; height: 16px; } &:hover { background: var(--brando-accent-hover); } &:focus-visible { outline: 2px solid var(--brando-accent); outline-offset: 3px; } }
+  .tiptap-menu { position: static; flex-shrink: 0; padding: 10px 24px; border-radius: 0; background: var(--brando-surface-shaded); }
+  .tiptap-writing-area { flex: 1; min-height: 0; overflow: auto; padding: 24px 32px; background: var(--brando-surface-hover); scrollbar-width: thin; scroll-padding-block: 24px; }
+  .tiptap-document { box-sizing: border-box; display: flex; width: 100%; max-width: 736px; min-height: 100%; margin-inline: auto; padding: 40px 48px; background: var(--brando-surface); border: 1px solid var(--brando-line); border-radius: 6px; box-shadow: 0 2px 6px color-mix(in srgb, var(--brando-ink) 3%, transparent); }
+  .tiptap-document:focus-within { border-color: var(--brando-line-strong); box-shadow: 0 0 0 2px color-mix(in srgb, var(--brando-accent) 4%, transparent); }
   .ProseMirror { flex: 1; min-width: 0; min-height: 160px; max-width: none; font: 18px/1.75 "Main", sans-serif; color: var(--brando-ink); caret-color: var(--brando-accent); }
   .ProseMirror:focus { outline: none; }
   .ProseMirror p { font: inherit; margin-top: 0; margin-bottom: 1.25em; }
-  .tiptap-link-preview { flex-shrink: 0; padding-inline: 24px; background: #fafcf9; }
-  .tiptap-status { min-height: 42px; flex-shrink: 0; padding: 10px 24px; gap: 16px; background: white; }
+  .tiptap-link-preview { flex-shrink: 0; padding-inline: 24px; background: var(--brando-surface-shaded); }
+  .tiptap-status { min-height: 42px; flex-shrink: 0; padding: 10px 24px; gap: 16px; background: var(--brando-surface); }
   .tiptap-return-hint { display: inline-flex; align-items: center; gap: 8px; flex: none; font-size: 12px; }
-  .tiptap-return-hint kbd { border: 1px solid var(--brando-line); border-radius: 4px; padding: 1px 5px; background: #f8faf7; color: var(--brando-muted); font: 11px/16px "Main", sans-serif; }
+  .tiptap-return-hint kbd { border: 1px solid var(--brando-line); border-radius: 4px; padding: 1px 5px; background: var(--brando-surface-hover); color: var(--brando-muted); font: 11px/16px "Main", sans-serif; }
   .tiptap-notice { flex: 1; }
   .tiptap-word-count { margin-left: auto; flex: none; font-variant-numeric: tabular-nums; }
   &::backdrop { background: var(--brando-overlay); backdrop-filter: blur(2px); }

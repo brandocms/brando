@@ -38,25 +38,25 @@
           flex-shrink: 0;
 
           &.ready {
-            background-color: #22c55e;
+            background-color: var(--brando-status-published);
           }
 
           &.uploading {
-            background-color: #9ca3af;
+            background-color: var(--brando-faint);
             animation: pulse 1.5s ease-in-out infinite;
           }
 
           &.processing {
-            background-color: #f97316;
+            background-color: var(--brando-status-pending);
             animation: pulse 1.5s ease-in-out infinite;
           }
 
           &.errored {
-            background-color: #ef4444;
+            background-color: var(--brando-status-disabled);
           }
 
           &.pending {
-            background-color: #9ca3af;
+            background-color: var(--brando-faint);
             animation: pulse 1.5s ease-in-out infinite;
           }
         }
