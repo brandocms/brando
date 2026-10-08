@@ -17066,6 +17066,26 @@ msgstr ""
 
 #: lib/brando_admin/live/sites/seo_live.ex
 #, elixir-autogen, elixir-format
+msgid "Checked per content type"
+msgstr ""
+
+#: lib/brando_admin/live/sites/seo_live.ex
+#, elixir-autogen, elixir-format
+msgid "no page of its own"
+msgstr ""
+
+#: lib/brando_admin/live/sites/seo_live.ex
+#, elixir-autogen, elixir-format
+msgid "its context module %{context} is not loaded"
+msgstr ""
+
+#: lib/brando_admin/live/sites/seo_live.ex
+#, elixir-autogen, elixir-format
+msgid "no %{function} function in %{context}"
+msgstr ""
+
+#: lib/brando_admin/live/sites/seo_live.ex
+#, elixir-autogen, elixir-format
 msgid "No structured data issues"
 msgstr ""
 

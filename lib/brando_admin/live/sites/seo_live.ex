@@ -111,6 +111,7 @@ defmodule BrandoAdmin.Sites.SEOLive do
         />
         <.structured_data
           result={@structured_data}
+          unchecked={@structured_data_unchecked}
           status={@structured_data_status}
           language={@audit_language}
         />
@@ -573,6 +574,7 @@ defmodule BrandoAdmin.Sites.SEOLive do
   end
 
   attr :result, :any
+  attr :unchecked, :list, default: []
   attr :status, :any
   attr :language, :string
 
@@ -620,6 +622,26 @@ defmodule BrandoAdmin.Sites.SEOLive do
               <dd>{@result.with_warnings}</dd>
             </div>
           </dl>
+          <%!-- What "Checked" is made of, so a type with no rows below reads as
+                checked rather than forgotten --%>
+          <ul
+            :if={@result.per_schema != []}
+            class="seo-structured-data-types"
+            aria-label={gettext("Checked per content type")}
+            data-testid="structured-data-types"
+          >
+            <li :for={{schema, count} <- @result.per_schema}>
+              {Brando.Blueprint.get_plural(schema)} <strong>{count}</strong>
+            </li>
+          </ul>
+          <div :if={@unchecked != []} class="seo-structured-data-unchecked" data-testid="structured-data-unchecked">
+            <h3>{gettext("Not checked")}</h3>
+            <ul>
+              <li :for={{schema, reason} <- @unchecked}>
+                {Brando.Blueprint.get_plural(schema)}: {unchecked_reason(schema, reason)}
+              </li>
+            </ul>
+          </div>
         </div>
 
         <BrandoAdmin.Components.Workspace.empty
@@ -683,6 +705,18 @@ defmodule BrandoAdmin.Sites.SEOLive do
     do: BrandoAdmin.Components.Form.StructuredData.describe_issue(issue)
 
   defp first_issue(_row), do: "—"
+
+  defp unchecked_reason(_schema, :no_page), do: gettext("no page of its own")
+
+  defp unchecked_reason(schema, :context_not_loaded),
+    do: gettext("its context module %{context} is not loaded", context: inspect(schema.__modules__().context))
+
+  defp unchecked_reason(schema, :no_list_function) do
+    gettext("no %{function} function in %{context}",
+      function: "#{StructuredData.list_function(schema)}/1",
+      context: inspect(schema.__modules__().context)
+    )
+  end
 
   attr :candidates, :list
   attr :confirm, :boolean
@@ -1245,7 +1279,12 @@ defmodule BrandoAdmin.Sites.SEOLive do
   end
 
   def handle_async(:structured_data, {:ok, %StructuredData.Result{} = result}, socket) do
-    {:noreply, assign(socket, structured_data: result, structured_data_status: :done)}
+    {:noreply,
+     assign(socket,
+       structured_data: result,
+       structured_data_unchecked: StructuredData.unchecked(),
+       structured_data_status: :done
+     )}
   end
 
   def handle_async(:structured_data, {:exit, reason}, socket) do
@@ -1346,6 +1385,7 @@ defmodule BrandoAdmin.Sites.SEOLive do
     |> assign(:audit_sandbox, sandbox_owner(socket))
     |> assign(:audit_status, :idle)
     |> assign(:structured_data, nil)
+    |> assign(:structured_data_unchecked, [])
     |> assign(:structured_data_status, :idle)
     |> assign(:audit_schemas, schemas)
     |> assign(:selected_schemas, default)

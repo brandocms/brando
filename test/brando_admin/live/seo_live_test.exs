@@ -48,6 +48,12 @@ defmodule BrandoAdmin.Sites.SEOLiveTest do
 
     # This blueprint has no admin form to open.
     refute has_element?(view, "#seo-structured-data tr.seo-structured-data-row a.seo-row-action")
+
+    # What was checked, per type, and what was left out and why
+    assert has_element?(view, "#seo-structured-data [data-testid=structured-data-types] li", ~r/Products\s+1/)
+    assert has_element?(view, "#seo-structured-data [data-testid=structured-data-types] li", "Pages")
+    assert has_element?(view, "#seo-structured-data [data-testid=structured-data-unchecked] li", "no page of its own")
+    assert has_element?(view, "#seo-structured-data [data-testid=structured-data-unchecked] li", "list_posts/1")
   end
 
   test "a recorded 404 matching an entry's slug can become a redirect", %{conn: conn} do
