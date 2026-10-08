@@ -103,6 +103,10 @@ defmodule BrandoAdmin.Components.Form do
      |> assign(:entry_load_status, nil)
      |> assign(:dirty_fields, [])
      |> assign(:synced_values, %{})
+     |> assign(:unshipped_fields, MapSet.new())
+     |> assign(:replaced_values, %{})
+     |> assign(:held_remote, %{})
+     |> assign(:field_clocks, %{})
      |> assign(:blocks_detached?, false)
      |> assign(:hidden_block_fields, [])
      |> assign(:server_owned_assets, %{})
@@ -194,6 +198,13 @@ defmodule BrandoAdmin.Components.Form do
 
   def update(%{event: "draft_timeout", capture_id: id}, socket), do: {:ok, Drafts.timeout(socket, id)}
 
+  # Another editor's tab opened the entry, or reconnected (`:editor_joined`
+  # in LiveView.Form): what we changed goes to everyone as usual, and the
+  # joining tab also gets the unsaved values we hold.
+  def update(%{event: "ship_field_changes", to: tab}, socket) do
+    {:ok, socket |> ship_all_field_changes() |> ship_fields_to(tab)}
+  end
+
   def update(%{event: "ship_field_changes"}, socket) do
     {:ok, ship_all_field_changes(socket)}
   end
@@ -202,41 +213,22 @@ defmodule BrandoAdmin.Components.Form do
   # indicators are event-driven, so a joiner would otherwise not see the
   # field we're editing as locked (triggered from the :editor_joined
   # handler in LiveView.Form alongside ship_field_changes)
+  # An image, video or file field opened its drawer (see `focus_field/2`).
+  def update(%{event: "focus_field", field: field}, socket), do: {:ok, focus_field(socket, field)}
+
   def update(%{event: "reship_active_field"}, socket) do
     entry = socket.assigns[:entry]
     field = socket.assigns[:focused_field]
 
-    if field && entry && entry.id do
-      Phoenix.PubSub.broadcast(
-        Brando.pubsub(),
-        Brando.Tenant.Topic.entry("active_field", socket.assigns.schema, entry.id),
-        {:active_field, field, socket.assigns.current_user.id}
-      )
-    end
+    if field && entry && entry.id, do: broadcast_active_field(socket, field)
 
     {:ok, socket}
   end
 
-  # Apply field changes received from another user. A sender ships its whole
-  # changeset, so it can carry an older copy of the field we are typing in.
-  # Others see that field as locked, and our blur ships what we typed.
-  def update(%{event: "apply_remote_field_changes", changes: changes}, socket) do
-    changeset = socket.assigns.form.source
-    schema = changeset.data.__struct__
-    changes = Enum.reject(changes, &focused_field?(socket, &1.field))
-
-    # Build a set of image/video/file FK fields so we can load associations
-    asset_fk_map = build_asset_fk_map(schema)
-
-    updated_changeset = Enum.reduce(changes, changeset, &apply_field_change(&2, &1, asset_fk_map))
-
-    {:ok,
-     socket
-     |> put_form(to_form(updated_changeset, []))
-     |> mark_synced(changes)
-     |> own_changed_assets(Enum.map(changes, & &1.field))
-     |> Drafts.dirty()
-     |> force_svelte_remounts(Enum.map(changes, & &1.field))}
+  # Field changes another editor shipped: the fields they changed. A change
+  # to the field we are in waits until we leave it (see "Entry field sync").
+  def update(%{event: "apply_remote_field_changes", changes: changes} = message, socket) do
+    {:ok, socket |> receive_field_changes(changes) |> merge_clocks(message[:clocks])}
   end
 
   def update(%{action: :image_processed, image_id: id}, socket) do
@@ -618,7 +610,7 @@ defmodule BrandoAdmin.Components.Form do
 
     {:ok,
      socket
-     |> put_form(to_form(changeset, []))
+     |> put_local_form(to_form(changeset, []))
      |> update_entry_with_relation(path ++ [field], nil)
      |> update_entry_assocs(path ++ [field], nil)
      |> own_asset(path, relation_key, :id)
@@ -846,7 +838,7 @@ defmodule BrandoAdmin.Components.Form do
 
     socket
     |> assign(:blocks_detached?, true)
-    |> put_form(to_form(changeset, []))
+    |> put_local_form(to_form(changeset, []))
     |> assign_entry_for_blocks()
     |> clear_blocks_root_changesets()
     |> force_svelte_remounts(:all)
@@ -1012,7 +1004,7 @@ defmodule BrandoAdmin.Components.Form do
 
         socket =
           socket
-          |> put_form(to_form(updated, []))
+          |> put_local_form(to_form(updated, []))
           |> Drafts.dirty()
           |> broadcast_dirty_fields()
           |> send_updated_entry_field_to_blocks(
@@ -1034,7 +1026,7 @@ defmodule BrandoAdmin.Components.Form do
       ) do
     {:ok,
      socket
-     |> put_form(to_form(updated_changeset, []))
+     |> put_local_form(to_form(updated_changeset, []))
      |> Drafts.dirty()
      |> push_event("b:validate", %{})
      |> force_svelte_remounts()}
@@ -1069,13 +1061,13 @@ defmodule BrandoAdmin.Components.Form do
           push_event(socket, "b:scroll_to", %{selector: ~s([name="#{name}"]), focus: true})
       end
 
-    {:ok, socket |> put_form(form) |> Drafts.dirty()}
+    {:ok, socket |> put_local_form(form) |> Drafts.dirty()}
   end
 
   def update(%{action: :update_changeset, changeset: updated_changeset}, socket) do
     updated_form = to_form(updated_changeset, [])
 
-    {:ok, socket |> put_form(updated_form) |> Drafts.dirty()}
+    {:ok, socket |> put_local_form(updated_form) |> Drafts.dirty()}
   end
 
   # Gallery picker writes. The gallery components hand back a replacement
@@ -1173,7 +1165,7 @@ defmodule BrandoAdmin.Components.Form do
     updated_changeset = put_change(changeset, :globals, updated_globals)
     updated_form = to_form(updated_changeset, [])
 
-    {:ok, put_form(socket, updated_form)}
+    {:ok, put_local_form(socket, updated_form)}
   end
 
   # Async entry-load progress, reported from the loading task via
@@ -1223,6 +1215,7 @@ defmodule BrandoAdmin.Components.Form do
       |> assign(assigns)
       |> assign_new(:entry_id, fn -> nil end)
       |> assign_new(:singular, fn -> assigns.schema.__naming__().singular end)
+      |> assign_sync_fields()
       |> assign_new(:context, fn -> assigns.schema.__modules__().context end)
       |> assign_new(:form_blueprint, fn ->
         case assigns.schema.__form__(form_name) do
@@ -1333,6 +1326,7 @@ defmodule BrandoAdmin.Components.Form do
           socket
           |> assign(:entry, entry)
           |> finish_form_update()
+          |> announce_join()
 
         :not_found ->
           entry_not_found(socket)
@@ -1404,6 +1398,7 @@ defmodule BrandoAdmin.Components.Form do
       |> assign(:entry, entry)
       |> assign(:entry_loading?, false)
       |> finish_form_update()
+      |> announce_join()
 
     socket =
       if socket.assigns.has_blocks? do
@@ -1445,7 +1440,7 @@ defmodule BrandoAdmin.Components.Form do
         changeset = socket.assigns.form.source
         alt = Map.merge(Changeset.get_field(changeset, :alt) || %{}, values)
         changeset = put_change(changeset, :alt, alt)
-        {:noreply, socket |> put_form(to_form(changeset, [])) |> Drafts.dirty()}
+        {:noreply, put_written_form(socket, to_form(changeset, []))}
 
       {{:ok, {:ok, _}}, _} ->
         {:noreply, socket}
@@ -1513,7 +1508,7 @@ defmodule BrandoAdmin.Components.Form do
   # A picker SELECT has to commit the FK exactly like an upload does. It used to
   # only assign `edit_image`/`image_changeset`, leaving the id to reach the
   # changeset through the drawer's form submit — which is dispatched by the close
-  # BUTTON (`close_image/1`). Dismissing the drawer any other way (Esc, backdrop,
+  # BUTTON (`close_image/2`). Dismissing the drawer any other way (Esc, backdrop,
   # navigating away) therefore lost the selection silently.
   #
   # Block-level picks are excluded: they carry a `block_target` and commit
@@ -1570,7 +1565,7 @@ defmodule BrandoAdmin.Components.Form do
 
     socket
     |> assign(:entry, updated_entry)
-    |> put_form(to_form(updated_changeset, []))
+    |> put_local_form(to_form(updated_changeset, []))
     |> own_asset(path, relation_key, :id)
     |> Drafts.dirty()
     # Ship while the FK is still a change — the drawer-save path re-bakes the
@@ -1625,7 +1620,7 @@ defmodule BrandoAdmin.Components.Form do
     updated_changeset = put_gallery_into(socket.assigns.form.source, path, key, new_gallery)
 
     socket
-    |> put_form(to_form(updated_changeset, []))
+    |> put_local_form(to_form(updated_changeset, []))
     |> own_asset(path, key, :gallery)
     |> Drafts.dirty()
   end
@@ -1721,7 +1716,12 @@ defmodule BrandoAdmin.Components.Form do
 
   # The one place entry params become a changeset (validate, commit_tiptap and
   # both save paths).
-  defp cast_entry_params(socket, entry, params) do
+  defp cast_entry_params(socket, entry, params), do: socket |> cast_entry_edit(entry, params, nil) |> elem(0)
+
+  # Also returns the fields whose value was kept over the browser's old form,
+  # sent before another editor's change reached it (`drop_echoes/4`).
+  # `target` is the entry field the event names.
+  defp cast_entry_edit(socket, entry, params, target) do
     %{schema: schema, current_user: current_user} = socket.assigns
     owned = owned_assets(socket)
     current = socket.assigns.form.source
@@ -1729,6 +1729,7 @@ defmodule BrandoAdmin.Components.Form do
     entry
     |> schema.changeset(owned_params(params, owned, current), current_user)
     |> reapply_owned_assets(owned, current)
+    |> drop_echoes(current, replaced_values(socket), target)
   end
 
   # Ids are substituted rather than dropped so the schema's own validations
@@ -2099,6 +2100,10 @@ defmodule BrandoAdmin.Components.Form do
 
   # Maps FK fields (e.g. :cover_id) to {assoc_field, schema_module}
   # for loading associated records when receiving remote field changes.
+  #
+  # A value equal to the saved one leaves no change, and the form shows a
+  # field's param before its saved value: the param this editor's browser
+  # sent for the field goes, or the field keeps showing what it typed.
   defp apply_field_change(cs, %{field: field, value: value, assoc?: assoc?}, asset_fk_map) do
     cs =
       if assoc? do
@@ -2106,6 +2111,8 @@ defmodule BrandoAdmin.Components.Form do
       else
         Changeset.put_change(cs, field, value)
       end
+
+    cs = %{cs | params: drop_param(cs.params, field)}
 
     # If this is an asset FK (e.g. :cover_id), load the record
     # and put it directly on the changeset data (not via put_assoc,
@@ -2116,8 +2123,8 @@ defmodule BrandoAdmin.Components.Form do
     end
   end
 
-  # A cleared asset (`Repo.get/2` raises on a nil id).
-  defp put_loaded_asset(cs, _assoc_field, _asset_schema, nil), do: cs
+  # A cleared asset: the field shows the record in `data`, so it goes too.
+  defp put_loaded_asset(cs, assoc_field, _asset_schema, nil), do: %{cs | data: Map.put(cs.data, assoc_field, nil)}
 
   defp put_loaded_asset(cs, assoc_field, asset_schema, value) do
     case Brando.Repo.get(asset_schema, value) do
@@ -2149,59 +2156,159 @@ defmodule BrandoAdmin.Components.Form do
     Map.new(image_fields ++ video_fields ++ file_fields)
   end
 
-  # Ship all non-block changeset changes to other users.
-  # Used on field blur, save, and after image/video/file selection.
+  ## Entry field sync
+  #
+  # Entry fields (title, URI and the other blueprint fields, not blocks,
+  # which go through `Brando.EditSession`) travel between the editors of an
+  # entry on its `field_sync` topic. Each edit is an op on the field the
+  # editor changed: an editor ships the fields it changed itself since its
+  # last shipment, with their current value (a value set back to the saved
+  # one included), and never a value it only holds because another editor
+  # sent it or because its browser has not caught up yet.
+  #
+  #   * `synced_values`: field => the value the other editors hold, because
+  #     we shipped it or received it from them.
+  #   * `unshipped_fields`: the fields this editor changed since its last
+  #     shipment. The field a `validate` names, any other input whose value
+  #     the event changed, and fields the form writes itself (an asset
+  #     chosen, a subform row added, `put_local_form/2`).
+  #   * `replaced_values`: field => values the browser may still show for a
+  #     field another editor's change replaced. An event that carries one of
+  #     them for a field it does not name is the browser's old form, sent
+  #     before the change reached it, and the replacing value is kept.
+  #   * `held_remote`: another editor's change to the field this editor is
+  #     in. It applies when the editor leaves the field without having
+  #     changed it; otherwise what they typed wins and is shipped.
+
+  # Ships the fields this editor changed since its last shipment. Used on
+  # field blur and focus, save, and after an asset or a multi-select change.
   defp ship_all_field_changes(socket) do
     entry = socket.assigns[:entry]
-    user_id = socket.assigns.current_user.id
 
-    if entry && entry.id do
-      do_ship_field_changes(socket, entry.id, user_id)
+    if entry && entry.id && socket.assigns[:singular] do
+      socket = apply_held_remote(socket)
+      {changes, socket} = socket |> pending_changes() |> stamp(socket)
+
+      if changes != [], do: broadcast_field_changes(socket, entry.id, changes, nil)
+
+      socket
+      |> mark_synced(changes)
+      |> assign(:unshipped_fields, MapSet.new())
+      |> broadcast_dirty_fields()
     else
       socket
     end
   end
 
-  defp do_ship_field_changes(socket, entry_id, user_id) do
-    changeset = socket.assigns.form.source
-    schema = changeset.data.__struct__
+  # A joining editor loaded the saved entry. It gets every unsaved value the
+  # editors hold, as we know them (`synced_values`, which our own changes
+  # have just joined), addressed to it alone: the editors who already have
+  # them would otherwise take back values they have since changed. A change
+  # held for the field we are in goes as the others have it, not as our
+  # form still shows it.
+  defp ship_fields_to(socket, user_id) do
+    entry = socket.assigns[:entry]
 
-    # Only ship belongs_to associations (FK changes), not has_many/many_to_many
-    # which have complex nested changesets that can't be put_assoc'd on the receiver
-    belongs_to_assocs =
-      schema.__schema__(:associations)
-      |> Enum.filter(fn assoc_name ->
-        case schema.__schema__(:association, assoc_name) do
-          %Ecto.Association.BelongsTo{} -> true
-          _ -> false
-        end
-      end)
+    if entry && entry.id do
+      {_fields, belongs_to} = sync_fields(socket)
 
-    # Collect all has_many/many_to_many association names to skip
-    all_assocs = schema.__schema__(:associations)
-    has_many_assocs = all_assocs -- belongs_to_assocs
+      changes =
+        socket
+        |> synced_values()
+        |> Enum.sort()
+        |> Enum.map(fn {field, value} ->
+          %{field: field, value: value, assoc?: field in belongs_to, clock: clock(socket, field)}
+        end)
 
-    skip_fields = unsynced_field_keys(schema) ++ has_many_assocs
+      clocks = field_clocks(socket)
 
-    changes =
-      changeset.changes
-      |> Map.drop(skip_fields)
-      |> Enum.map(fn {field, value} ->
-        %{field: field, value: value, assoc?: field in belongs_to_assocs}
-      end)
-      |> Kernel.++(reverted_fields(socket))
+      if changes != [] or clocks != %{},
+        do: broadcast_field_changes(socket, entry.id, changes, user_id, clocks)
+    end
 
-    if changes != [] do
+    socket
+  end
+
+  defp broadcast_field_changes(socket, entry_id, changes, to, clocks \\ nil) do
+    Phoenix.PubSub.broadcast(
+      Brando.pubsub(),
+      Brando.Tenant.Topic.entry("field_sync", socket.assigns.schema, entry_id),
+      {:fields_shipped,
+       %{
+         changes: changes,
+         clocks: clocks,
+         user_id: socket.assigns.current_user.id,
+         tab: BrandoAdmin.Presence.tab(),
+         to: to
+       }}
+    )
+  end
+
+  # The entry loaded in this tab (opened, or after a reconnect): the other
+  # editors send it the unsaved values they hold, addressed to this tab, and
+  # say which field they are in. Every form does this, with or without block
+  # fields.
+  defp announce_join(%{assigns: %{entry: %{id: id} = entry}} = socket) when not is_nil(id) do
+    if connected?(socket) do
       Phoenix.PubSub.broadcast(
         Brando.pubsub(),
-        Brando.Tenant.Topic.entry("field_sync", socket.assigns.schema, entry_id),
-        {:fields_shipped, %{changes: changes, user_id: user_id}}
+        Brando.Tenant.Topic.entry("field_sync", entry.__struct__, id),
+        {:editor_joined, %{user_id: socket.assigns.current_user.id, tab: BrandoAdmin.Presence.tab(), part: :fields}}
       )
     end
 
     socket
-    |> mark_synced(changes)
-    |> broadcast_dirty_fields()
+  end
+
+  defp announce_join(socket), do: socket
+
+  # The fields this editor changed whose value the other editors don't
+  # hold. A field typed back to what they hold has nothing to ship.
+  defp pending_changes(socket) do
+    changeset = socket.assigns.form.source
+    synced = synced_values(socket)
+    {_fields, belongs_to} = sync_fields(socket)
+
+    for field <- socket |> unshipped_fields() |> Enum.sort(),
+        %{value: value} = change <- List.wrap(field_change(changeset, field, belongs_to)),
+        value != Map.get(synced, field, Map.get(changeset.data, field)),
+        do: change
+  end
+
+  # A field as it ships: the change, or the saved value when the field was
+  # set back to it. A belongs_to association ships only as a change (its
+  # foreign key carries the revert).
+  defp field_change(changeset, field, belongs_to) do
+    assoc? = field in belongs_to
+
+    case Map.fetch(changeset.changes, field) do
+      {:ok, value} -> %{field: field, value: value, assoc?: assoc?}
+      :error when assoc? -> nil
+      :error -> %{field: field, value: Map.get(changeset.data, field), assoc?: false}
+    end
+  end
+
+  # The fields that sync, and which of them are belongs_to associations.
+  # has_many/many_to_many associations hold nested changesets the receiver
+  # can't put_assoc, so they don't ship; multi-selects sync those
+  # themselves.
+  # Computed once per form (`assign_sync_fields/1`).
+  defp sync_fields(%Phoenix.LiveView.Socket{assigns: %{sync_fields: sync_fields}}), do: sync_fields
+  defp sync_fields(%Phoenix.LiveView.Socket{assigns: %{schema: schema}}), do: compute_sync_fields(schema)
+  defp sync_fields(%Phoenix.LiveView.Socket{assigns: %{form: form}}), do: compute_sync_fields(form.source.data.__struct__)
+
+  defp assign_sync_fields(%{assigns: %{schema: schema}} = socket),
+    do: assign_new(socket, :sync_fields, fn -> compute_sync_fields(schema) end)
+
+  defp compute_sync_fields(schema) do
+    belongs_to =
+      Enum.filter(
+        schema.__schema__(:associations),
+        &match?(%Ecto.Association.BelongsTo{}, schema.__schema__(:association, &1))
+      )
+
+    fields = schema.__schema__(:fields) ++ schema.__schema__(:virtual_fields) ++ belongs_to
+    {fields -- unsynced_field_keys(schema), belongs_to}
   end
 
   # Timestamps and block fields never ship as entry fields: blocks sync
@@ -2219,6 +2326,323 @@ defmodule BrandoAdmin.Components.Form do
     [:updated_at, :inserted_at | block_fields]
   end
 
+  # Fields this editor changed.
+  defp mark_local(socket, []), do: socket
+
+  defp mark_local(socket, fields) do
+    socket
+    |> assign(:unshipped_fields, MapSet.union(unshipped_fields(socket), MapSet.new(fields)))
+    |> assign(:replaced_values, Map.drop(replaced_values(socket), fields))
+  end
+
+  # A change the form makes itself (an asset chosen, a subform row added, a
+  # recovery copy restored): the fields it changed are this editor's to ship,
+  # and the other editors see them marked until they do.
+  defp put_local_form(socket, form) do
+    previous = socket.assigns.form.source
+
+    socket = socket |> put_form(form) |> mark_local(changed_fields(socket, previous, form.source))
+
+    case socket.assigns[:entry] do
+      %{id: id} when not is_nil(id) -> broadcast_dirty_fields(socket)
+      _ -> socket
+    end
+  end
+
+  # A field's value as the form has it. An association is compared as it is
+  # held: one the entry didn't preload can't be read through the changeset.
+  defp field_value(%Changeset{data: %schema{}} = changeset, field) do
+    if schema.__schema__(:association, field),
+      do: Map.get(changeset.changes, field, Map.get(changeset.data, field)),
+      else: get_field(changeset, field)
+  end
+
+  # A value the form wrote itself, with no event from the browser to follow
+  # (AI text, an uploaded video, an image copy): ship it now.
+  defp put_written_form(socket, form) do
+    socket
+    |> put_local_form(form)
+    |> Drafts.dirty()
+    |> ship_all_field_changes()
+  end
+
+  defp changed_fields(socket, previous, changeset) do
+    {fields, _belongs_to} = sync_fields(socket)
+    Enum.filter(fields, &(field_value(previous, &1) != field_value(changeset, &1)))
+  end
+
+  # A `validate` from this editor's browser: the field it names, and any
+  # other input whose value it changed, are this editor's changes. Fields
+  # kept over the browser's old form (`echoed`, `drop_echoes/4`) are not. A
+  # replaced field stays replaced while the browser sends what it showed
+  # before; it has caught up once it sends anything else.
+  defp take_local_edit(socket, previous, changeset, echoed, target, entry_params) do
+    {fields, _belongs_to} = sync_fields(socket)
+    sent = if is_map(entry_params), do: entry_params, else: %{}
+    sent? = &Map.has_key?(sent, Atom.to_string(&1))
+
+    edited =
+      for field <- fields,
+          field == target or (sent?.(field) and field_value(previous, field) != field_value(changeset, field)),
+          do: field
+
+    replaced = Map.filter(replaced_values(socket), fn {field, _} -> field in echoed or not sent?.(field) end)
+
+    socket
+    |> assign(:replaced_values, replaced)
+    |> mark_local(edited)
+  end
+
+  # What a `validate` changed is this editor's edit; a recovered form is not
+  # one, except in the fields typed into while the tab was offline.
+  defp settle_edit(false = _recovery?, socket, changeset, edit) do
+    %{previous: previous, echoed: echoed, target: target, entry_params: entry_params} = edit
+    {changeset, take_local_edit(socket, previous, changeset, echoed, target, entry_params), []}
+  end
+
+  defp settle_edit(true = _recovery?, socket, changeset, %{previous: previous, params: params}) do
+    offline = offline_fields(socket, params)
+    {keep_received(socket, previous, changeset, offline), socket, offline}
+  end
+
+  # A recovered form keeps what the other editors sent this tab since it
+  # loaded, except in the fields typed into while it was offline.
+  defp keep_received(socket, previous, changeset, offline) do
+    socket
+    |> synced_values()
+    |> Map.keys()
+    |> Kernel.--(offline)
+    |> Enum.reduce(changeset, fn field, changeset ->
+      if field_value(changeset, field) == field_value(previous, field),
+        do: changeset,
+        else: keep_field(changeset, previous, field)
+    end)
+  end
+
+  # The entry fields typed into while the tab was offline, which the Form
+  # hook lists in the recovered form (`__offline_edits`, input names).
+  defp offline_fields(socket, params) do
+    singular = socket.assigns.singular
+
+    params
+    |> Map.get("__offline_edits", "")
+    |> to_string()
+    |> String.split(" ", trim: true)
+    |> Enum.flat_map(fn name ->
+      case Regex.run(~r/^#{Regex.escape(singular)}\[([^\]]+)\]/, name) do
+        [_, key] -> List.wrap(target_field(socket, singular, [singular, key]))
+        _ -> []
+      end
+    end)
+    |> Enum.uniq()
+  end
+
+  # After a recovery, what the tab holds reaches the others: fields typed
+  # into offline as fresh edits, which win, and other recovered values that
+  # differ from the saved entry with the oldest clock, `{0, tab}`, so they
+  # fill fields nobody else holds and lose to every real edit. Otherwise a
+  # value restored in a tab that was alone would be in nobody else's form,
+  # and their save would revert it.
+  #
+  # A recovered value whose field has a newer clock known (the others sent
+  # it with their join reply, but no value: they saved since) is older than
+  # the saved entry, and the field goes back to the saved value.
+  defp share_recovered(socket, offline, entry_params) do
+    socket = socket |> mark_local(offline) |> ship_all_field_changes()
+    entry = socket.assigns[:entry]
+
+    if entry && entry.id && is_map(entry_params) do
+      changeset = socket.assigns.form.source
+      synced = synced_values(socket)
+      {fields, belongs_to} = sync_fields(socket)
+      tab = BrandoAdmin.Presence.tab()
+
+      recovered =
+        for field <- fields,
+            Map.has_key?(entry_params, Atom.to_string(field)),
+            not Map.has_key?(synced, field),
+            %{value: value} = change <- List.wrap(field_change(changeset, field, belongs_to)),
+            value != Map.get(changeset.data, field),
+            do: Map.put(change, :clock, {0, tab})
+
+      {outdated, changes} = Enum.split_with(recovered, &(clock(socket, &1.field) > &1.clock))
+      socket = restore_saved(socket, Enum.map(outdated, & &1.field))
+
+      if changes != [], do: broadcast_field_changes(socket, entry.id, changes, nil)
+
+      clocks =
+        Enum.reduce(changes, field_clocks(socket), &Map.update(&2, &1.field, &1.clock, fn c -> max(c, &1.clock) end))
+
+      socket
+      |> mark_synced(changes)
+      |> assign(:field_clocks, clocks)
+    else
+      socket
+    end
+  end
+
+  # The entry field `_target` names (`["page", "title"]` or a path into a
+  # subform, `["page", "items", "0", "name"]`).
+  defp target_field(socket, singular, [singular, key | _]) do
+    {fields, _belongs_to} = sync_fields(socket)
+    Enum.find(fields, &(Atom.to_string(&1) == key))
+  end
+
+  defp target_field(_socket, _singular, _target), do: nil
+
+  # A replaced field that arrives with a value the browser showed before the
+  # change replaced it, in an event that does not name it, is the browser's
+  # old form: the replacing value stays. Returns the fields kept.
+  defp drop_echoes(changeset, previous, replaced, target) do
+    Enum.reduce(replaced, {changeset, []}, fn {field, stale}, {changeset, echoed} ->
+      value = field_value(changeset, field)
+
+      if field != target and value in stale and value != field_value(previous, field),
+        do: {keep_field(changeset, previous, field), [field | echoed]},
+        else: {changeset, echoed}
+    end)
+  end
+
+  defp keep_field(changeset, previous, field) do
+    changes =
+      case Map.fetch(previous.changes, field) do
+        {:ok, value} -> Map.put(changeset.changes, field, value)
+        :error -> Map.delete(changeset.changes, field)
+      end
+
+    errors = Keyword.delete(changeset.errors, field)
+
+    %{changeset | changes: changes, errors: errors, valid?: errors == [], params: drop_param(changeset.params, field)}
+  end
+
+  # The form shows a field's param before its saved value, so a field put
+  # back to its saved value has to lose the param the browser sent for it.
+  defp drop_param(%{} = params, field), do: Map.delete(params, Atom.to_string(field))
+  defp drop_param(params, _field), do: params
+
+  # Another editor's changes. The field this editor is in is held until it
+  # leaves it (`apply_held_remote/1`); the rest apply now.
+  defp receive_field_changes(socket, changes) do
+    {changes, socket} = take_newer(changes, socket)
+    {held, changes} = Enum.split_with(changes, &focused_field?(socket, &1.field))
+
+    held_remote = Enum.reduce(held, held_remote(socket), &Map.put(&2, &1.field, &1))
+
+    socket
+    |> apply_remote(changes)
+    |> mark_synced(held)
+    |> assign(:held_remote, held_remote)
+  end
+
+  defp apply_remote(socket, []), do: socket
+
+  defp apply_remote(socket, changes) do
+    previous = socket.assigns.form.source
+    asset_fk_map = build_asset_fk_map(previous.data.__struct__)
+    changeset = Enum.reduce(changes, previous, &apply_field_change(&2, &1, asset_fk_map))
+    fields = Enum.map(changes, & &1.field)
+
+    replaced =
+      Enum.reduce(fields, replaced_values(socket), fn field, replaced ->
+        stale = field_value(previous, field)
+
+        if stale == field_value(changeset, field),
+          do: replaced,
+          else: Map.update(replaced, field, [stale], &Enum.take(Enum.uniq([stale | &1]), 5))
+      end)
+
+    socket
+    |> put_form(to_form(changeset, []))
+    |> assign(:replaced_values, replaced)
+    |> assign(:unshipped_fields, MapSet.difference(unshipped_fields(socket), MapSet.new(fields)))
+    |> assign(:held_remote, Map.drop(held_remote(socket), fields))
+    |> mark_synced(changes)
+    |> own_changed_assets(fields)
+    |> Drafts.dirty()
+    |> force_svelte_remounts(fields)
+  end
+
+  # Changes held while this editor was in their field apply once it has left
+  # it without changing it.
+  defp apply_held_remote(socket) do
+    {left, still_in} = socket |> held_remote() |> Map.values() |> Enum.split_with(&(not focused_field?(socket, &1.field)))
+    unshipped = unshipped_fields(socket)
+
+    socket
+    |> assign(:held_remote, Map.new(still_in, &{&1.field, &1}))
+    |> apply_remote(Enum.reject(left, &MapSet.member?(unshipped, &1.field)))
+  end
+
+  # Each field's value carries a clock, `{n, tab}`, a hybrid logical clock:
+  # `n` is the wall-clock time in milliseconds, or one more than the newest
+  # `n` known for the field if that is later, and the tab id breaks a tie.
+  # An editor takes a value only if its clock is newer than the one it
+  # holds, so two editors who send the same field at once both end with the
+  # same one, and a value relayed late to a joiner can't replace a newer
+  # one. Because `n` follows the wall clock, an edit made after another one
+  # wins without either tab having heard of the other: a tab that opened
+  # after a save, knowing no clocks, still beats the edits before it.
+  defp clock(socket, field), do: Map.get(field_clocks(socket), field, {0, ""})
+
+  defp stamp(changes, socket) do
+    tab = BrandoAdmin.Presence.tab()
+
+    {changes, clocks} =
+      Enum.map_reduce(changes, field_clocks(socket), fn %{field: field} = change, clocks ->
+        {n, _tab} = Map.get(clocks, field, {0, ""})
+        clock = {max(System.os_time(:millisecond), n + 1), tab}
+        {Map.put(change, :clock, clock), Map.put(clocks, field, clock)}
+      end)
+
+    {changes, assign(socket, :field_clocks, clocks)}
+  end
+
+  defp take_newer(changes, socket) do
+    {changes, clocks} =
+      Enum.flat_map_reduce(changes, field_clocks(socket), fn %{field: field} = change, clocks ->
+        incoming = Map.get(change, :clock, {0, ""})
+
+        if incoming > Map.get(clocks, field, {0, ""}),
+          do: {[change], Map.put(clocks, field, incoming)},
+          else: {[], clocks}
+      end)
+
+    {changes, assign(socket, :field_clocks, clocks)}
+  end
+
+  defp field_clocks(socket), do: socket.assigns[:field_clocks] || %{}
+
+  # Fields back to the saved value, as the entry loaded, like a change from
+  # another editor: the browser's old value for them is an echo from then on.
+  defp restore_saved(socket, []), do: socket
+
+  defp restore_saved(socket, fields) do
+    data = socket.assigns.form.source.data
+    {_fields, belongs_to} = sync_fields(socket)
+
+    restored =
+      for field <- fields, field not in belongs_to, do: %{field: field, value: Map.get(data, field), assoc?: false}
+
+    apply_remote(socket, restored)
+  end
+
+  # The clocks a joining tab is sent with the values: each field's newest.
+  # A field this tab shipped from its recovered form (`{0, tab}`) that has a
+  # newer clock but came without a value was saved since by the editor who
+  # sent the clock: it goes back to the saved value (`share_recovered/3`).
+  defp merge_clocks(socket, clocks) when is_map(clocks) and map_size(clocks) > 0 do
+    ours = field_clocks(socket)
+    recovered = {0, BrandoAdmin.Presence.tab()}
+    outdated = for {field, theirs} <- clocks, Map.get(ours, field) == recovered, theirs > recovered, do: field
+    merged = Map.merge(ours, clocks, fn _field, ours, theirs -> max(ours, theirs) end)
+
+    socket
+    |> assign(:field_clocks, merged)
+    |> restore_saved(outdated)
+  end
+
+  defp merge_clocks(socket, _clocks), do: socket
+
   # The value of each field the other editors already hold, because we
   # shipped it or received it from them.
   defp mark_synced(socket, changes) do
@@ -2227,20 +2651,9 @@ defmodule BrandoAdmin.Components.Form do
   end
 
   defp synced_values(socket), do: socket.assigns[:synced_values] || %{}
-
-  # Fields the other editors hold a value for that we have since changed back
-  # to the saved one. A field equal to the saved value is not in `changes`,
-  # so without this the editors keep the value we abandoned.
-  defp reverted_fields(socket) do
-    changeset = socket.assigns.form.source
-    schema_fields = changeset.data.__struct__.__schema__(:fields)
-
-    for {field, value} <- synced_values(socket),
-        field in schema_fields,
-        not Map.has_key?(changeset.changes, field),
-        Map.get(changeset.data, field) != value,
-        do: %{field: field, value: Map.get(changeset.data, field), assoc?: false}
-  end
+  defp unshipped_fields(socket), do: socket.assigns[:unshipped_fields] || MapSet.new()
+  defp replaced_values(socket), do: socket.assigns[:replaced_values] || %{}
+  defp held_remote(socket), do: socket.assigns[:held_remote] || %{}
 
   defp focused_field?(socket, field) do
     case socket.assigns[:focused_field] do
@@ -2249,21 +2662,70 @@ defmodule BrandoAdmin.Components.Form do
     end
   end
 
-  # Tells the other editors which of our changed fields they do not have yet,
-  # as input names (`page[title]`). Their forms mark those fields.
-  defp broadcast_dirty_fields(socket) do
-    %{schema: schema, singular: singular} = socket.assigns
-    synced = synced_values(socket)
-    skip = unsynced_field_keys(schema)
+  # This editor moved to `field` (an input name): the other editors lock it,
+  # and leaving the field it was in ships what we changed there.
+  defp focus_field(socket, field) do
+    entry = socket.assigns.entry
+    old_field = socket.assigns[:focused_field]
 
-    socket.assigns.form.source.changes
-    |> Enum.reject(fn {field, value} -> field in skip or Map.get(synced, field, :__unsynced__) == value end)
-    |> Enum.map(&elem(&1, 0))
-    |> Kernel.++(Enum.map(reverted_fields(socket), & &1.field))
+    if entry && entry.id do
+      broadcast_active_field(socket, field)
+
+      # Clear block focus/lock when a regular field gets focus
+      send(self(), :clear_block_focus)
+    end
+
+    socket = assign(socket, :focused_field, field)
+
+    if old_field && old_field != field,
+      do: ship_all_field_changes(socket),
+      else: socket
+  end
+
+  defp entry_field?(socket, field), do: String.starts_with?(field, "#{socket.assigns.singular}[")
+
+  # Leaving the field we are in (any field, for a drawer's close) releases it.
+  defp leave_field(socket, field \\ nil) do
+    case socket.assigns[:focused_field] do
+      focused when is_binary(focused) and (is_nil(field) or field == focused) ->
+        socket = assign(socket, :focused_field, nil)
+        entry = socket.assigns[:entry]
+        if entry && entry.id, do: broadcast_active_field(socket, nil)
+        socket
+
+      _ ->
+        socket
+    end
+  end
+
+  # The field this editor is in (an input name, `page[title]`), or `nil`
+  # when it left it: the other editors lock and release the field, and the
+  # editor's presence carries it for those who join later.
+  defp broadcast_active_field(socket, field) do
+    %{schema: schema, entry: entry, current_user: user} = socket.assigns
+    BrandoAdmin.Presence.broadcast_active_field(schema, entry.id, field, user.id)
+  end
+
+  # Tells the other editors which of our changed fields they do not have yet,
+  # as input names (`page[title]`). Their forms mark those fields. That
+  # includes has_many lists, which don't ship (`sync_fields/1`) and so stay
+  # ours until saved.
+  defp broadcast_dirty_fields(%{assigns: %{singular: singular, schema: schema}} = socket) do
+    {_fields, belongs_to} = sync_fields(socket)
+    unshipped = schema.__schema__(:associations) -- (belongs_to ++ unsynced_field_keys(schema))
+
+    lists = for {field, _} <- socket.assigns.form.source.changes, field in unshipped, do: field
+
+    socket
+    |> pending_changes()
+    |> Enum.map(& &1.field)
+    |> Kernel.++(lists)
     |> Enum.map(&"#{singular}[#{&1}]")
     |> Enum.sort()
     |> then(&put_dirty_fields(socket, &1))
   end
+
+  defp broadcast_dirty_fields(socket), do: socket
 
   defp put_dirty_fields(%{assigns: %{dirty_fields: dirty_fields}} = socket, dirty_fields), do: socket
 
@@ -3047,6 +3509,7 @@ defmodule BrandoAdmin.Components.Form do
             phx-submit="save"
             data-save-event="save_form"
             phx-change="validate"
+            phx-auto-recover="recover_form"
           >
             <input type="hidden" name={"#{@form.name}[#{:__force_change}]"} phx-debounce="0" />
             <Translation.panel :if={@translation} state={@translation} form_name={@form.name} target={@myself} />
@@ -3601,68 +4064,14 @@ defmodule BrandoAdmin.Components.Form do
       when is_binary(form) and is_list(target),
       do: handle_event("validate", Map.put(Plug.Conn.Query.decode(form), "_target", target), socket)
 
-  def handle_event("validate", params, socket) do
-    # This is also the recovery event for the main form, and it is what
-    # rebuilds the entry from the recovered params — see
-    # `maybe_finish_live_preview_recovery/1`.
-    socket = socket |> assign(:form_recovered?, true) |> Translation.put_acknowledged(params)
-    schema = socket.assigns.schema
-    entry = socket.assigns.entry
-    singular = socket.assigns.singular
-    has_blocks? = socket.assigns.has_blocks?
+  def handle_event("validate", params, socket), do: validate(params, socket, false)
 
-    entry_params = Map.get(params, singular)
-    entry_or_default = entry || struct(schema)
-
-    changeset = socket |> cast_entry_params(entry_or_default, entry_params) |> Map.put(:action, :validate)
-
-    # The recomputed form is assigned before the `_target` branch, and that
-    # placement is load-bearing. Form *recovery* pushes this same event with a
-    # `_target` naming the first non-hidden input in the form — which here is
-    # the `image_editor_upload` file input a few lines into the markup, not an
-    # entry field (`view.ts:2450`, `channel.ex:848-853`). Assigning inside the
-    # `[^singular | rest]` branch meant every recovered value was recomputed and
-    # then dropped, so a reconnect silently restored nothing.
-    socket = socket |> put_form(to_form(changeset, [])) |> broadcast_dirty_fields() |> Drafts.dirty()
-
-    case Map.get(params, "_target") do
-      [^singular | rest] ->
-        if has_blocks? && rest != ["__force_change"] do
-          # `rest` is the path *below* the singular, so it has to be read out of
-          # `entry_params`, not out of the top-level params map — `params` is
-          # `%{"page" => %{"title" => …}}`, so `get_in(params, ["title"])` is
-          # always nil. Every block rendering `{{ entry.title }}` therefore blanked
-          # its entry variables the moment you typed in that field, and stayed
-          # blank until reload. Invisible until a fixture had a module that reads
-          # the entry — see `/bench-entry-consumers`.
-          #
-          # The two representations differ on purpose: `path` walks the entry
-          # *struct* (list indices as `Access.at/1`), `rest` walks the params
-          # *map* (list indices as "0" keys).
-          path = string_path_to_access_path(rest)
-          change = get_in(entry_params, rest)
-          send_updated_entry_field_to_blocks(socket, path, change, hd(rest))
-        end
-
-        if rest == ["language"] do
-          request_select_options_update(socket)
-        end
-
-        if rest != ["__force_change"], do: FrontendEditor.field_changed(socket)
-
-        socket
-        |> maybe_invalidate_live_preview_assign(rest, :string_path)
-        |> maybe_fetch_root_blocks(:live_preview_update, 0)
-        |> maybe_finish_live_preview_recovery()
-        |> then(&{:noreply, &1})
-
-      # Anything else — a target outside the entry, or none at all. A missing
-      # `_target` used to raise `CaseClauseError` here and take the form
-      # LiveView down with every unsaved edit in it.
-      _ ->
-        {:noreply, maybe_finish_live_preview_recovery(socket)}
-    end
-  end
+  # LiveView's form recovery after a reconnect (`phx-auto-recover` on the main
+  # form): the browser's form as it was, which is not an edit. It rebuilds
+  # the entry like `validate`, but marks nothing to ship: these may be values
+  # the other editors have since replaced, and they send this tab theirs when
+  # it loads (`announce_join/1`). A value already received from them stays.
+  def handle_event("recover_form", params, socket), do: validate(params, socket, true)
 
   def handle_event("open_block_upload_folder_browser", params, socket) do
     # upload_name is an opaque correlation key from the UploadTrigger hook —
@@ -3733,48 +4142,35 @@ defmodule BrandoAdmin.Components.Form do
     {:noreply, socket}
   end
 
+  # Others see the field we are in as locked (`active_field`) until we leave
+  # it. Leaving a field ships what we changed; the focus moves first, so a
+  # change another editor made to the field we left applies. An image,
+  # video or file field is "in" while its drawer is open: the drawer's close
+  # sends the blur (without a field), and the inputs inside the drawer, which
+  # are not the entry's (`image[alt]`), neither take nor leave the field.
+  #
+  # Every blur ships: after a reconnect the input still has the focus, but
+  # this process never saw it arrive.
   def handle_event("focus", %{"field" => field}, socket) do
-    current_user = socket.assigns.current_user
-    entry = socket.assigns.entry
-    old_field = socket.assigns[:focused_field]
-
-    if entry && entry.id do
-      Phoenix.PubSub.broadcast(
-        Brando.pubsub(),
-        Brando.Tenant.Topic.entry("active_field", socket.assigns.schema, entry.id),
-        {:active_field, field, current_user.id}
-      )
-
-      # Clear block focus/lock when a regular field gets focus
-      send(self(), :clear_block_focus)
-    end
-
-    # Ship all field changeset diffs on blur
-    socket =
-      if old_field && old_field != field && entry && entry.id do
-        ship_all_field_changes(socket)
-      else
-        socket
-      end
-
-    {:noreply, assign(socket, :focused_field, field)}
+    if entry_field?(socket, field),
+      do: {:noreply, focus_field(socket, field)},
+      else: {:noreply, socket}
   end
 
   def handle_event("focus", _, socket) do
     {:noreply, socket}
   end
 
-  def handle_event("blur", _, socket) do
-    entry = socket.assigns[:entry]
+  def handle_event("blur", params, socket) do
+    case params["field"] do
+      nil ->
+        {:noreply, socket |> leave_field() |> ship_all_field_changes()}
 
-    socket =
-      if socket.assigns[:focused_field] && entry && entry.id do
-        ship_all_field_changes(socket)
-      else
-        socket
-      end
-
-    {:noreply, assign(socket, :focused_field, nil)}
+      field ->
+        if entry_field?(socket, field),
+          do: {:noreply, socket |> leave_field(field) |> ship_all_field_changes()},
+          else: {:noreply, socket}
+    end
   end
 
   def handle_event("create_permalink_redirect", _, %{assigns: %{pending_permalink_redirect: nil}} = socket) do
@@ -4177,7 +4573,7 @@ defmodule BrandoAdmin.Components.Form do
      |> assign(:video_changeset, nil)
      |> assign(:editing_video?, false)
      |> assign(:edit_video, %{edit_video | video: nil})
-     |> put_form(to_form(changeset, []))
+     |> put_local_form(to_form(changeset, []))
      |> own_asset(edit_video.path, relation_key, :id)
      |> assign_drawer_recovery_state()
      |> push_event("b:validate", %{target: "#{singular}[#{relation_key}]", value: ""})}
@@ -4278,7 +4674,7 @@ defmodule BrandoAdmin.Components.Form do
      # "close the file drawer before saving" with no drawer to close.
      |> assign(:editing_file?, false)
      |> assign(:edit_file, updated_edit_file)
-     |> put_form(to_form(updated_changeset, []))
+     |> put_local_form(to_form(updated_changeset, []))
      |> own_asset(edit_file.path, relation_key, :id)
      |> assign_drawer_recovery_state()
      |> push_event("b:validate", %{
@@ -4312,7 +4708,7 @@ defmodule BrandoAdmin.Components.Form do
      # guard flag must come down or the entry can never be saved again.
      |> assign(:editing_image?, false)
      |> assign(:edit_image, updated_edit_image)
-     |> put_form(to_form(updated_changeset, []))
+     |> put_local_form(to_form(updated_changeset, []))
      |> own_asset(edit_image.path, relation_key, :id)
      |> assign_drawer_recovery_state()
      |> push_event("b:validate", %{
@@ -5691,7 +6087,7 @@ defmodule BrandoAdmin.Components.Form do
     end
 
     socket
-    |> put_form(form)
+    |> put_local_form(form)
     |> own_changed_assets(Map.keys(changeset.changes))
     |> assign_entry_for_blocks()
     |> force_svelte_remounts(:all)
@@ -6515,7 +6911,7 @@ defmodule BrandoAdmin.Components.Form do
         Enum.map(list, &Map.from_struct/1)
       end)
 
-    socket |> put_form(to_form(new_changeset, [])) |> Drafts.dirty()
+    socket |> put_written_form(to_form(new_changeset, []))
   end
 
   def update_changeset(socket, path, key, map) when is_list(path) and is_map(map) do
@@ -6524,10 +6920,14 @@ defmodule BrandoAdmin.Components.Form do
     new_changeset =
       EctoNestedChangeset.update_at(changeset, path ++ [key], fn _ -> Map.from_struct(map) end)
 
-    socket |> put_form(to_form(new_changeset, [])) |> Drafts.dirty()
+    socket |> put_written_form(to_form(new_changeset, []))
   end
 
   def update_changeset(socket, path, key, value) when is_list(path) do
+    # The re-bake below moves pending changes into `data`, where they no
+    # longer read as changes: ship them first.
+    socket = ship_all_field_changes(socket)
+
     changeset =
       socket.assigns.form.source
       |> apply_changes()
@@ -6535,28 +6935,28 @@ defmodule BrandoAdmin.Components.Form do
 
     new_changeset = EctoNestedChangeset.update_at(changeset, path ++ [key], fn _ -> value end)
 
-    socket |> put_form(to_form(new_changeset, [])) |> Drafts.dirty()
+    socket |> put_written_form(to_form(new_changeset, []))
   end
 
   def update_changeset(socket, key, list) when is_list(list) do
     changeset = socket.assigns.form.source
     new_changeset = put_change(changeset, key, Enum.map(list, &Map.from_struct/1))
 
-    socket |> put_form(to_form(new_changeset, [])) |> Drafts.dirty()
+    socket |> put_written_form(to_form(new_changeset, []))
   end
 
   def update_changeset(socket, key, value) when is_map(value) do
     changeset = socket.assigns.form.source
     new_changeset = put_change(changeset, key, Map.from_struct(value))
 
-    socket |> put_form(to_form(new_changeset, [])) |> Drafts.dirty()
+    socket |> put_written_form(to_form(new_changeset, []))
   end
 
   def update_changeset(socket, key, value) do
     changeset = socket.assigns.form.source
     new_changeset = put_change(changeset, key, value)
 
-    socket |> put_form(to_form(new_changeset, [])) |> Drafts.dirty()
+    socket |> put_written_form(to_form(new_changeset, []))
   end
 
   defp sequence(gallery_images) do
@@ -7193,4 +7593,74 @@ defmodule BrandoAdmin.Components.Form do
   defp has_language_input?(%{fields: fields}), do: Enum.any?(fields, &has_language_input?/1)
   defp has_language_input?(%{name: :language}), do: true
   defp has_language_input?(_field), do: false
+
+  defp validate(params, socket, recovery?) do
+    # This is also the recovery event for the main form, and it is what
+    # rebuilds the entry from the recovered params — see
+    # `maybe_finish_live_preview_recovery/1`.
+    socket = socket |> assign(:form_recovered?, true) |> Translation.put_acknowledged(params)
+    schema = socket.assigns.schema
+    entry = socket.assigns.entry
+    singular = socket.assigns.singular
+    has_blocks? = socket.assigns.has_blocks?
+
+    entry_params = Map.get(params, singular)
+    entry_or_default = entry || struct(schema)
+    previous = socket.assigns.form.source
+    target = target_field(socket, singular, params["_target"])
+
+    {changeset, echoed} = cast_entry_edit(socket, entry_or_default, entry_params, target)
+    changeset = Map.put(changeset, :action, :validate)
+
+    edit = %{previous: previous, echoed: echoed, target: target, params: params, entry_params: entry_params}
+    {changeset, socket, offline} = settle_edit(recovery?, socket, changeset, edit)
+
+    # The recomputed form is assigned before the `_target` branch, and that
+    # placement is load-bearing. Form *recovery* pushes this same event with a
+    # `_target` naming the first non-hidden input in the form — which here is
+    # the `image_editor_upload` file input a few lines into the markup, not an
+    # entry field (`view.ts:2450`, `channel.ex:848-853`). Assigning inside the
+    # `[^singular | rest]` branch meant every recovered value was recomputed and
+    # then dropped, so a reconnect silently restored nothing.
+    socket = socket |> put_form(to_form(changeset, [])) |> broadcast_dirty_fields() |> Drafts.dirty()
+    socket = if recovery?, do: share_recovered(socket, offline, entry_params), else: socket
+
+    case Map.get(params, "_target") do
+      [^singular | rest] ->
+        if has_blocks? && rest != ["__force_change"] do
+          # `rest` is the path *below* the singular, so it has to be read out of
+          # `entry_params`, not out of the top-level params map — `params` is
+          # `%{"page" => %{"title" => …}}`, so `get_in(params, ["title"])` is
+          # always nil. Every block rendering `{{ entry.title }}` therefore blanked
+          # its entry variables the moment you typed in that field, and stayed
+          # blank until reload. Invisible until a fixture had a module that reads
+          # the entry — see `/bench-entry-consumers`.
+          #
+          # The two representations differ on purpose: `path` walks the entry
+          # *struct* (list indices as `Access.at/1`), `rest` walks the params
+          # *map* (list indices as "0" keys).
+          path = string_path_to_access_path(rest)
+          change = get_in(entry_params, rest)
+          send_updated_entry_field_to_blocks(socket, path, change, hd(rest))
+        end
+
+        if rest == ["language"] do
+          request_select_options_update(socket)
+        end
+
+        if rest != ["__force_change"], do: FrontendEditor.field_changed(socket)
+
+        socket
+        |> maybe_invalidate_live_preview_assign(rest, :string_path)
+        |> maybe_fetch_root_blocks(:live_preview_update, 0)
+        |> maybe_finish_live_preview_recovery()
+        |> then(&{:noreply, &1})
+
+      # Anything else — a target outside the entry, or none at all. A missing
+      # `_target` used to raise `CaseClauseError` here and take the form
+      # LiveView down with every unsaved edit in it.
+      _ ->
+        {:noreply, maybe_finish_live_preview_recovery(socket)}
+    end
+  end
 end

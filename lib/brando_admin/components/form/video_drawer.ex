@@ -75,7 +75,7 @@ defmodule BrandoAdmin.Components.Form.VideoDrawer do
     <Content.drawer
       id="video-drawer"
       title={gettext("Video details")}
-      close={close_video()}
+      close={close_video(@myself)}
       z={1001}
       narrow
       light
@@ -326,7 +326,7 @@ defmodule BrandoAdmin.Components.Form.VideoDrawer do
       </.form>
       <:footer>
         <span>{gettext("Shared video settings")}</span>
-        <button type="button" class="workspace-button primary" phx-click={close_video()}>{gettext("Done")}</button>
+        <button type="button" class="workspace-button primary" phx-click={close_video(@myself)}>{gettext("Done")}</button>
       </:footer>
     </Content.drawer>
     """
@@ -500,6 +500,7 @@ defmodule BrandoAdmin.Components.Form.VideoDrawer do
   def reset_video_field(js \\ %JS{}, target) do
     js
     |> JS.push("reset_video_field", target: target)
+    |> JS.push("blur", target: target)
     |> toggle_drawer("#video-drawer")
   end
 
@@ -516,9 +517,12 @@ defmodule BrandoAdmin.Components.Form.VideoDrawer do
     JS.push(js, "reset_video_thumbnail", target: target)
   end
 
-  def close_video(js \\ %JS{}) do
+  # Done, ×, the backdrop and Escape (`data-modal-close`) all close here. The
+  # blur releases the field for the other editors (`Form.focus_field/2`).
+  def close_video(js \\ %JS{}, target) do
     js
     |> JS.dispatch("submit", to: "#video-drawer-form", detail: %{bubbles: true, cancelable: true})
+    |> JS.push("blur", target: target)
     |> toggle_drawer("#video-drawer")
   end
 end

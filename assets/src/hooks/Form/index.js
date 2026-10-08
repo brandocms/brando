@@ -103,15 +103,7 @@ export default (app) => ({
     })
 
     this.handleEvent('b:clear_user_presence', ({ user_id }) => {
-      // Remove all field presence indicators and unlock fields for this user
-      document.querySelectorAll(`.field-presence-user[data-user-id="${user_id}"]`)
-        .forEach(el => {
-          const fieldWrapper = el.closest('.field-wrapper')
-          if (fieldWrapper) {
-            this.js().removeClass(fieldWrapper, 'field-locked')
-          }
-          el.remove()
-        })
+      this.releaseField(`[data-user-id="${CSS.escape(String(user_id))}"]`)
 
       // Remove block and field presence for this user
       clearUserPresence(this.js(), user_id)
@@ -123,7 +115,19 @@ export default (app) => ({
       this.dirtyFields.set(user_id, fields, label)
     })
 
+    // Another editor's tab moved to an entry field, which is locked for us
+    // while they are in it, or left it (`field` is null), which releases it.
+    // Locks are per tab: one editor can be in two fields from two tabs.
     this.handleEvent('b:set_active_field', (opts) => {
+      const tab = opts.tab
+        ? `[data-tab="${CSS.escape(String(opts.tab))}"]`
+        : `[data-user-id="${CSS.escape(String(opts.user_id))}"]`
+
+      if (!opts.field) {
+        this.releaseField(tab)
+        return
+      }
+
       const color = getPresenceColor(opts.user_id)
 
       const fieldPresence = document.querySelector(
@@ -133,10 +137,8 @@ export default (app) => ({
       this.follow.seen(opts.user_id, fieldPresence?.closest('.field-wrapper'))
 
       if (fieldPresence) {
-        // see if we find any other presence indicators from this user
-        const otherFieldPresence = document.querySelector(
-          `.field-presence-user[data-user-id="${opts.user_id}"]`
-        )
+        // the field this tab was in before
+        const otherFieldPresence = document.querySelector(`.field-presence-user${tab}`)
 
         if (otherFieldPresence) {
           // if it's presence indicator for the same field, just return
@@ -145,16 +147,12 @@ export default (app) => ({
           if (otherFieldPresenceFor === opts.field) {
             return
           }
-          // Unlock the old field
-          const oldFieldWrapper = otherFieldPresence.closest('.field-wrapper')
-          if (oldFieldWrapper) {
-            this.js().removeClass(oldFieldWrapper, 'field-locked')
-          }
-          otherFieldPresence.remove()
+          this.releaseField(tab)
         }
         // create a new presence indicator
         const presence = document.createElement('div')
         presence.setAttribute('data-user-id', opts.user_id)
+        if (opts.tab) presence.setAttribute('data-tab', opts.tab)
         presence.setAttribute('data-presence-for', opts.field)
         presence.classList.add('field-presence-user')
         presence.style.setProperty('--presence-color', color)
@@ -183,6 +181,20 @@ export default (app) => ({
     })
   },
 
+  // Removes the avatars matching `selector` (a tab's, or all of a user's)
+  // from the entry fields they were in, and unlocks a field nobody else is
+  // in.
+  releaseField(selector) {
+    document.querySelectorAll(`.field-presence-user${selector}`)
+      .forEach(el => {
+        const fieldWrapper = el.closest('.field-wrapper')
+        el.remove()
+        if (fieldWrapper && !fieldWrapper.querySelector('.field-presence-user')) {
+          this.js().removeClass(fieldWrapper, 'field-locked')
+        }
+      })
+  },
+
   updated() {
     this.updateToolbarOffset()
     this.observeStuckToolbar()
@@ -191,6 +203,7 @@ export default (app) => ({
   },
 
   destroyed() {
+    this.trackOfflineEdits(false)
     this.follow?.destroy()
     this.notes?.destroy()
     this.el.removeEventListener('mouseover', this.onBlockNameHover)
@@ -230,8 +243,46 @@ export default (app) => ({
     this.stuckObserver.observe(sentinel)
   },
 
-  disconnected() { this.draftRecovery?.disconnected() },
-  reconnected() { this.draftRecovery?.reconnected() },
+  disconnected() {
+    this.draftRecovery?.disconnected()
+    this.trackOfflineEdits(true)
+  },
+  reconnected() {
+    this.draftRecovery?.reconnected()
+    this.trackOfflineEdits(false)
+  },
+
+  // The entry inputs typed into while the socket is down are listed in the
+  // form itself (`__offline_edits`), so LiveView's recovery of the form
+  // after the reconnect carries the list: the server takes those fields as
+  // fresh edits, and the rest of the recovered form as what it was
+  // (`recover_form` in form.ex).
+  trackOfflineEdits(on) {
+    if (this.onOfflineInput) {
+      this.$form.removeEventListener('input', this.onOfflineInput, true)
+      this.$form.removeEventListener('change', this.onOfflineInput, true)
+      this.onOfflineInput = null
+    }
+    if (!on) return
+
+    const edits = new Set()
+    this.$form.querySelector(':scope > input[name="__offline_edits"]')?.remove()
+    this.onOfflineInput = event => {
+      const name = event.target?.name
+      if (!name || name === '__offline_edits' || event.target.form !== this.$form) return
+      edits.add(name)
+      let list = this.$form.querySelector(':scope > input[name="__offline_edits"]')
+      if (!list) {
+        list = document.createElement('input')
+        list.type = 'hidden'
+        list.name = '__offline_edits'
+        this.$form.appendChild(list)
+      }
+      list.value = [...edits].join(' ')
+    }
+    this.$form.addEventListener('input', this.onOfflineInput, true)
+    this.$form.addEventListener('change', this.onOfflineInput, true)
+  },
 
   // ⇧⌘S saves and closes, ⌘S saves and stays. Ctrl stands in for ⌘ off a
   // Mac, and the key is compared in lower case so Caps Lock doesn't matter.

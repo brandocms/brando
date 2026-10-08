@@ -275,7 +275,6 @@ defmodule BrandoAdmin.Components.Form.Input.Image do
     field = socket.assigns.field
     field_name = field.field
     form = field.form
-    entry_id = form.data.id
     relation_field = socket.assigns.relation_field
     image_id = socket.assigns.image_id
 
@@ -292,16 +291,13 @@ defmodule BrandoAdmin.Components.Form.Input.Image do
       end
 
     myself = socket.assigns.myself
-    current_user = socket.assigns.current_user
-
-    Phoenix.PubSub.broadcast(
-      Brando.pubsub(),
-      Brando.Tenant.Topic.entry("active_field", form.data.__struct__, entry_id),
-      {:active_field, field.name, current_user.id}
-    )
 
     path = Brando.Utils.get_path_from_field_name(form.name)
     form_id = FormId.for_form(form)
+
+    # The field is locked for the other editors while its drawer is open;
+    # closing the drawer releases it.
+    send_update(BrandoAdmin.Components.Form, id: form_id, event: "focus_field", field: field.name)
 
     # No per-field LiveView upload anymore — uploads go through the sticky
     # UploadManager; the picker is browse/select only.

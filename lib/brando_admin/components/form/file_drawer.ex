@@ -11,7 +11,7 @@ defmodule BrandoAdmin.Components.Form.FileDrawer do
   what makes the markup half free.
 
   The two JS command helpers come along because their only callers are in here.
-  `close_file/1` dispatches a submit at `#file-drawer-form`, which is rendered
+  `close_file/2` dispatches a submit at `#file-drawer-form`, which is rendered
   by `render/1` — helper and markup are one unit and were only ever apart by
   accident of file layout.
 
@@ -40,7 +40,7 @@ defmodule BrandoAdmin.Components.Form.FileDrawer do
 
   def render(assigns) do
     ~H"""
-    <Content.drawer id="file-drawer" title={gettext("File details")} close={close_file()} z={1001} narrow light>
+    <Content.drawer id="file-drawer" title={gettext("File details")} close={close_file(@myself)} z={1001} narrow light>
       <.form
         :let={file_form}
         :if={@file_changeset}
@@ -127,12 +127,15 @@ defmodule BrandoAdmin.Components.Form.FileDrawer do
   def reset_file_field(js \\ %JS{}, target) do
     js
     |> JS.push("reset_file_field", target: target)
+    |> JS.push("blur", target: target)
     |> toggle_drawer("#file-drawer")
   end
 
-  def close_file(js \\ %JS{}) do
+  # The blur releases the field for the other editors (`Form.focus_field/2`).
+  def close_file(js \\ %JS{}, target) do
     js
     |> JS.dispatch("submit", to: "#file-drawer-form", detail: %{bubbles: true, cancelable: true})
+    |> JS.push("blur", target: target)
     |> toggle_drawer("#file-drawer")
   end
 end

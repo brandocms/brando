@@ -273,6 +273,23 @@ defmodule Brando.LiveCase do
   end
 
   @doc """
+  Events a hook pushes to a component (`pushEventTo`) have no element a test
+  can click, so they go through `with_target/2` with the id this finds: that
+  of the innermost LiveComponent holding `selector`.
+  """
+  def cid_of(view, selector) do
+    view
+    |> Phoenix.LiveViewTest.render()
+    |> Floki.parse_document!()
+    |> Floki.find("[data-phx-component]")
+    |> Enum.filter(&(Floki.find(&1, selector) != []))
+    |> Enum.min_by(&(&1 |> Floki.raw_html() |> byte_size()))
+    |> Floki.attribute("data-phx-component")
+    |> hd()
+    |> String.to_integer()
+  end
+
+  @doc """
   Serializes a form in `html` the way a browser would, returning nested params.
 
   This is what makes recovery testable: LiveView's default form recovery

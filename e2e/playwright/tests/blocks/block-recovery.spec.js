@@ -1,5 +1,5 @@
 import { test, expect } from '../../test-support/setupAuth'
-import { syncLV, goOffline, goOnline } from '../../utils'
+import { syncLV, goOffline, goOnline, routeLiveSocket, dropConnection, restoreConnection } from '../../utils'
 
 test.describe('Block Recovery', () => {
   test.setTimeout(90000)
@@ -86,45 +86,22 @@ test.describe('Block Recovery', () => {
     await expect(page.locator('.header-block textarea')).toHaveValue('Recovery Test Header')
   })
 
-  // The same journey with the connection taken away instead of handed back —
-  // and it does NOT recover. This is the gap Phase 4 suspected the cooperative
-  // test was hiding, now measured.
-  //
-  // What actually happens, from the probe that produced this test:
-  //
-  //   * `disconnected()` fires and the snapshot IS written correctly — the root
-  //     uid and its form are both in sessionStorage.
-  //   * when the network returns, LiveView cannot rejoin the view it lost, so it
-  //     does a **full page reload** rather than a rejoin.
-  //   * a reloaded page runs `mounted()`, which is deliberately a no-op
-  //     ("No recovery on fresh mount"). `reconnected()` never fires, so the
-  //     snapshot is never read. It sits there until its 1h TTL expires.
-  //
-  // So block recovery today covers `liveSocket.disconnect()` → `connect()`, a
-  // path only a test or the dev console takes, and not the connection loss it
-  // was written for.
-  //
-  // **This is not fixable by moving recovery into `mounted()`**, which is the
-  // obvious patch. Unsaved entries all share the `new` storage bucket (C4), so
-  // recovering on mount would replay one abandoned create form's blocks into the
-  // next one — exactly what the "stale sessionStorage" test below forbids. A real
-  // fix needs an identity that survives a reload but does not collide across
-  // create forms, which is a design change, not a line edit.
-  //
-  // Asserted as-is so the gap is visible and a future fix flips this test rather
-  // than being invisible.
-  test('a real network partition does NOT recover — snapshot is written, never read', async ({
-    page,
-  }) => {
+  // The same journey with the connection lost rather than handed back, the
+  // way sleep or a network change loses it: the socket dies with an abnormal
+  // close and LiveSocket's retries are refused for a while. LiveView then
+  // rejoins with a new server process, `reconnected()` fires and the unsaved
+  // root block comes back from its snapshot.
+  test('blocks recover after a lost connection', async ({ page }) => {
+    await routeLiveSocket(page)
     await createUnsavedBlock(page, {
       title: 'Block Partition Test Page',
       uri: 'block-partition-test',
       text: 'Partition Test Header',
     })
 
-    await goOffline(page)
+    await dropConnection(page)
 
-    // The capture half works: the snapshot exists and holds the unsaved root.
+    // The snapshot holds the unsaved root while the connection is down.
     const snapshot = await page.evaluate(() => {
       const key = Object.keys(sessionStorage).find(k => k.startsWith('brando:block-recovery:'))
       return key ? { key, ...JSON.parse(sessionStorage.getItem(key)) } : null
@@ -134,18 +111,31 @@ test.describe('Block Recovery', () => {
     expect(snapshot.rootUids).toHaveLength(1)
     expect(Object.keys(snapshot.forms)).toEqual([`entry_block_form-${snapshot.rootUids[0]}`])
 
+    await restoreConnection(page)
+
+    await expect(page.locator('.entry-block')).toHaveCount(1)
+    await expect(page.locator('.header-block textarea')).toHaveValue('Partition Test Header')
+    await expect(page.getByLabel('Title', { exact: true })).toHaveValue('Block Partition Test Page')
+  })
+
+  // `goOffline` is not a lost connection for LiveView: it closes the socket
+  // from the page, the server answers with a clean close (code 1000), and
+  // LiveView answers a clean close with a page reload. A reload starts clean
+  // (see the next test), so nothing is recovered. Pinned so that nobody
+  // takes `goOffline` for a connection loss in a recovery spec.
+  test('goOffline ends in a page reload, not a rejoin', async ({ page }) => {
+    await createUnsavedBlock(page, {
+      title: 'Block Offline Emulation Page',
+      uri: 'block-offline-emulation',
+      text: 'Offline Emulation Header',
+    })
+    await page.evaluate(() => { window.__beforeOffline = true })
+
+    await goOffline(page)
     await goOnline(page)
 
-    // The replay half does not. LiveView reloaded the page instead of rejoining,
-    // so the form came back empty and the snapshot was left unread.
+    expect(await page.evaluate(() => window.__beforeOffline)).toBeUndefined()
     await expect(page.locator('.entry-block')).toHaveCount(0)
-    await expect(page.getByLabel('Title', { exact: true })).toHaveValue('')
-
-    const stillStored = await page.evaluate(
-      key => sessionStorage.getItem(key) !== null,
-      snapshot.key
-    )
-    expect(stillStored).toBe(true)
   })
 
   // Phase 4 asked for a "positive sessionStorage-recovery assertion via hard

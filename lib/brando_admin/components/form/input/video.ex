@@ -284,22 +284,18 @@ defmodule BrandoAdmin.Components.Form.Input.Video do
     field = socket.assigns.field
     field_name = field.field
     form = field.form
-    entry_id = form.data.id
     relation_field = socket.assigns.relation_field
     video_id = socket.assigns.video_id
     video = socket.assigns.video
     myself = socket.assigns.myself
-    current_user = socket.assigns.current_user
     defaults = socket.assigns.defaults
-
-    Phoenix.PubSub.broadcast(
-      Brando.pubsub(),
-      Brando.Tenant.Topic.entry("active_field", form.data.__struct__, entry_id),
-      {:active_field, field.name, current_user.id}
-    )
 
     path = Brando.Utils.get_path_from_field_name(form.name)
     form_id = FormId.for_form(form)
+
+    # The field is locked for the other editors while its drawer is open;
+    # closing the drawer releases it.
+    send_update(BrandoAdmin.Components.Form, id: form_id, event: "focus_field", field: field.name)
 
     send_update(BrandoAdmin.Components.VideoPicker,
       id: "video-picker",

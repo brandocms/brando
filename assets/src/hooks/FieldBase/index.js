@@ -1,3 +1,5 @@
+import { flushInput } from '../Form/saveForm'
+
 export default (app) => ({
   mounted() {
     this.field = this.el.querySelector('[data-watch-focus]')
@@ -29,11 +31,18 @@ export default (app) => ({
 
   // A save flushes the focused input's pending change with a synthetic blur
   // (`Form/saveForm.js`); the editor is still in the field.
+  //
+  // The blur ships what the editor changed to the other editors, so the
+  // last keystrokes have to reach the server first. LiveView sends a
+  // pending debounced change on blur, from a listener it adds after this
+  // one (on the first keystroke): flushing it here keeps the change ahead
+  // of the blur.
   handleBlur(event) {
     if (event?.brandoFlush || this.el.closest('[data-block-uid]')) return
     const formEl = this.el.closest('.brando-form')
     if (formEl) {
-      this.pushEventTo(formEl, 'blur', {})
+      flushInput(this.field)
+      this.pushEventTo(formEl, 'blur', { field: this.field.getAttribute('name') })
     }
   },
 

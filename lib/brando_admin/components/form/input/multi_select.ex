@@ -1211,7 +1211,7 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
     socket = if was_open, do: socket, else: update_input_options(socket)
 
     if !was_open, do: broadcast_field_focus(socket)
-    if was_open, do: request_field_ship(socket)
+    if was_open, do: socket |> broadcast_field_focus(false) |> request_field_ship()
 
     {:noreply, socket}
   end
@@ -1223,7 +1223,7 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
     socket = (!was_open && update_input_options(socket)) || socket
 
     if !was_open, do: broadcast_field_focus(socket)
-    if was_open, do: request_field_ship(socket)
+    if was_open, do: socket |> broadcast_field_focus(false) |> request_field_ship()
 
     {:noreply, socket}
   end
@@ -1535,19 +1535,19 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
     end
   end
 
-  defp broadcast_field_focus(socket) do
+  # Others see the field as locked while the options are open; closing them
+  # (`open?` false) releases it.
+  defp broadcast_field_focus(socket, open? \\ true) do
     field = socket.assigns.field
     entry_id = Changeset.get_field(field.form.source, :id)
     current_user = socket.assigns[:current_user]
-    field_name = "#{field.form.name}[#{field.field}]"
+    field_name = if open?, do: "#{field.form.name}[#{field.field}]"
 
     if entry_id && current_user do
-      Phoenix.PubSub.broadcast(
-        Brando.pubsub(),
-        Brando.Tenant.Topic.entry("active_field", field.form.data.__struct__, entry_id),
-        {:active_field, field_name, current_user.id}
-      )
+      BrandoAdmin.Presence.broadcast_active_field(field.form.data.__struct__, entry_id, field_name, current_user.id)
     end
+
+    socket
   end
 
   def maybe_add_relation(struct, nil, _assoc_data), do: struct

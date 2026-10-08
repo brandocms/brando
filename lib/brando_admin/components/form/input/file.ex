@@ -201,6 +201,10 @@ defmodule BrandoAdmin.Components.Form.Input.File do
       selected_files: if(file_id, do: [file_id], else: [])
     )
 
+    # The field is locked for the other editors while its drawer is open;
+    # closing the drawer releases it.
+    send_update(BrandoAdmin.Components.Form, id: form_id, event: "focus_field", field: field.name)
+
     send_update(BrandoAdmin.Components.Form,
       id: form_id,
       action: :update_edit_file,

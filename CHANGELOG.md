@@ -1662,6 +1662,29 @@ production dump.
 
 #### Fixes
 
+- **Two editors in an entry's fields keep each other's changes, and a
+  field is unlocked when its editor leaves it.** Each editor now sends the
+  entry fields (title, URI and the other fields, not blocks) they changed
+  since they last sent, a field set back to its saved value included, and
+  never a value they only hold. A title set back to the saved one used to
+  stay as the other editor's own text on their screen, and their next field
+  sent the old title back to everyone. Leaving a field straight after typing
+  in it no longer sends the field before the last keystrokes. A change to
+  the field someone is in waits until they leave it, and applies unless
+  they typed. Leaving a field, a rich text field included, unlocks it for
+  the others; before, it stayed locked until the editor focused another
+  field or left the entry. An image, video or file field is locked while
+  its drawer is open and unlocked when it closes (Done, ×, the backdrop or
+  Escape), and a multi-select when its options close. Locks belong to a
+  browser tab: someone with the entry open in two tabs locks a field in
+  each, and closing one tab unlocks only its field. Two editors who leave
+  one field at once end with the same value. AI text and other values the
+  form fills in reach the other editors at once, an editor who opens an
+  entry without block fields gets the others' unsaved values, and a
+  reconnect no longer sends the browser's old values over newer ones, while
+  what was typed during it still wins. An edit made after a save or a
+  reload wins over the edits before it.
+
 - **Image sizes given only a height are made, and crops come out at their
   size.** A size such as `"x400"` stopped processing with an error; it is
   now fitted to the height. A cropped size could come out a pixel or two

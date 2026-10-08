@@ -1117,19 +1117,52 @@ defmodule BrandoAdmin.LiveView.Form.Hooks do
 
   defp handle_hooks_dirty_fields_info(_, socket), do: {:cont, socket}
 
-  defp handle_hooks_active_field_info({:active_field, field, user_id}, socket) do
+  # The field a tab is in; `field` is nil when it left the field, which
+  # releases it. Locks are per tab: our own tab records its field in its
+  # presence meta (for editors who join later), our other tabs are not shown
+  # as locks to us, and another editor's tabs each lock their own field.
+  defp handle_hooks_active_field_info({:active_field, field, user_id, tab}, socket) do
     socket =
-      if user_id == socket.assigns.current_user.id do
-        Brando.presence().update_active_field(socket.assigns.uri.path, user_id, field)
-        socket
-      else
-        push_event(socket, "b:set_active_field", %{user_id: user_id, field: field})
+      cond do
+        tab == BrandoAdmin.Presence.tab() ->
+          schedule_active_field_write(socket.assigns.uri.path, field)
+          socket
+
+        user_id == socket.assigns.current_user.id ->
+          socket
+
+        true ->
+          push_event(socket, "b:set_active_field", %{user_id: user_id, field: field, tab: tab})
       end
 
     {:halt, socket}
   end
 
+  defp handle_hooks_active_field_info({:brando_active_field_write, token, path, field}, socket) do
+    with ^token <- Process.get(:brando_active_field_write),
+         false <- Process.get(:brando_active_field_written, nil) == field do
+      Brando.presence().update_active_field(path, socket.assigns.current_user.id, field)
+      Process.put(:brando_active_field_written, field)
+    end
+
+    {:halt, socket}
+  end
+
   defp handle_hooks_active_field_info(_, socket), do: {:cont, socket}
+
+  # The presence meta only tells editors who join later which field this tab
+  # is in; the others hear it at once from the broadcast. Each write costs a
+  # presence diff (a join and a leave, and a user lookup in every editor's
+  # process), so a blur followed by a focus within 300 ms writes once, and a
+  # field the meta already has is not written again.
+  #
+  # The write goes to the page it was scheduled on; navigating away drops it
+  # (`BrandoAdmin.Hooks.handle_params/3`).
+  defp schedule_active_field_write(path, field) do
+    token = make_ref()
+    Process.put(:brando_active_field_write, token)
+    Process.send_after(self(), {:brando_active_field_write, token, path, field}, 300)
+  end
 
   # Field presence: the block and the field in it another editor is in, with
   # their name for the label ("Ingrid · Caption").
@@ -1270,28 +1303,26 @@ defmodule BrandoAdmin.LiveView.Form.Hooks do
     end
   end
 
-  # Another editor opened the entry. Blocks need nothing from us — the edit
-  # session gives the joiner its state — but unsaved ENTRY FIELD changes
-  # (title, slug, ...) ship through the regular field-sync path, and our
-  # current block focus is re-broadcast: lock indicators are event-driven, so
-  # a joiner would otherwise not see the block we're editing as locked until
-  # our next focus event happens to fire.
-  defp handle_hooks_block_sync_info({:editor_joined, %{user_id: user_id}}, socket) do
-    if user_id != socket.assigns.current_user.id do
+  # Another tab opened the entry (another editor's, or one that reconnected).
+  # Its form (`part: :fields`) gets our unsaved ENTRY FIELD values (title,
+  # slug, ...), addressed to it, and the field we are in. Its block fields
+  # (`part: :blocks`) need no values, since the edit session gives them their
+  # state, but get our current block focus: presence is event-driven, so the
+  # joiner would otherwise not see where we are until our next focus.
+  defp handle_hooks_block_sync_info({:editor_joined, %{tab: tab, part: :fields}}, socket) do
+    if tab != BrandoAdmin.Presence.tab() do
       if schema = socket.assigns[:schema] do
         singular = schema.__naming__().singular
-
-        send_update(BrandoAdmin.Components.Form,
-          id: "#{singular}_form",
-          event: "ship_field_changes"
-        )
-
-        send_update(BrandoAdmin.Components.Form,
-          id: "#{singular}_form",
-          event: "reship_active_field"
-        )
+        send_update(BrandoAdmin.Components.Form, id: "#{singular}_form", event: "ship_field_changes", to: tab)
+        send_update(BrandoAdmin.Components.Form, id: "#{singular}_form", event: "reship_active_field")
       end
+    end
 
+    {:halt, socket}
+  end
+
+  defp handle_hooks_block_sync_info({:editor_joined, %{tab: tab, part: :blocks}}, socket) do
+    if tab != BrandoAdmin.Presence.tab() do
       focused_uid = socket.assigns[:current_focused_block_uid]
       entry_id = socket.assigns[:entry_id]
 
@@ -1313,9 +1344,13 @@ defmodule BrandoAdmin.LiveView.Form.Hooks do
     {:halt, socket}
   end
 
-  # Field sync — ship field changeset diffs between users
-  defp handle_hooks_block_sync_info({:fields_shipped, %{user_id: user_id} = msg}, socket) do
-    if user_id != socket.assigns.current_user.id do
+  # Field sync: the entry fields another tab changed, or, addressed to this
+  # tab (`to`) when it joined, the unsaved values they hold. Two tabs of one
+  # editor sync like two editors.
+  defp handle_hooks_block_sync_info({:fields_shipped, %{tab: from} = msg}, socket) do
+    me = BrandoAdmin.Presence.tab()
+
+    if from != me and Map.get(msg, :to) in [nil, me] do
       schema = socket.assigns[:schema]
 
       if schema do
@@ -1325,7 +1360,8 @@ defmodule BrandoAdmin.LiveView.Form.Hooks do
         send_update(BrandoAdmin.Components.Form,
           id: form_id,
           event: "apply_remote_field_changes",
-          changes: msg.changes
+          changes: msg.changes,
+          clocks: Map.get(msg, :clocks)
         )
       end
     end

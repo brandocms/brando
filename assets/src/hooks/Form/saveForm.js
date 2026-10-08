@@ -47,13 +47,14 @@ const focusedInput = () => {
 // LiveView sends a pending debounce on the input's blur event. It is
 // dispatched without moving the focus, and marked, so the field presence
 // handlers that also listen for blur (`FieldBase`) leave it alone.
-export const flushFocused = () => {
-  const input = focusedInput()
+export const flushInput = input => {
   if (!input) return
   const event = new Event('blur')
   event.brandoFlush = true
   input.dispatchEvent(event)
 }
+
+export const flushFocused = () => flushInput(focusedInput())
 
 // The form's fields as LiveView would send them, files left out (uploads
 // go on their own, `auto_upload`).
