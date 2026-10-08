@@ -21,12 +21,32 @@ defmodule BrandoIntegration.UserTest do
 
     old_pass = updated_user.password
 
-    assert {:ok, updated_password_user} =
-             Users.update_user(updated_user.id, %{"password" => "newpass"}, :system)
+    # A saved user's password changes only through the password functions,
+    # which end the user's sessions and connected tools.
+    assert {:error, changeset} = Users.update_user(updated_user.id, %{"password" => "newpass1"}, :system)
+    assert changeset.errors[:password]
+    assert Brando.Repo.get!(Brando.Users.User, user.id).password == old_pass
+  end
 
-    refute old_pass == updated_password_user.password
-    refute updated_password_user.password == "newpass"
-    assert Bcrypt.verify_pass("newpass", updated_password_user.password)
+  test "changing the password ends the user's sessions and connected tools" do
+    user = Factory.insert(:random_user, config: %UserConfig{})
+    Users.generate_user_session_token(user)
+
+    grant =
+      Brando.Repo.insert!(%Brando.MCP.Grant{
+        user_id: user.id,
+        resource: "http://localhost/mcp",
+        client_id: "https://client.example/c.json",
+        client_name: "Client",
+        redirect_uri: "https://client.example/cb",
+        scope: "content"
+      })
+
+    assert {:ok, _} =
+             Users.reset_user_password(user, %{password: "a new password 1", password_confirmation: "a new password 1"})
+
+    assert Brando.Repo.get!(Brando.MCP.Grant, grant.id).revoked_reason == "password_changed"
+    assert Brando.Repo.aggregate(from(t in Brando.Users.UserToken, where: t.user_id == ^user.id), :count) == 0
   end
 
   test "a password created through the context is stored hashed" do

@@ -32,6 +32,21 @@ defmodule Brando.Trait.Password do
     delete_change(changeset, :password)
   end
 
+  # A saved user's password changes only through `Brando.Users`'s password
+  # functions (`update_user_password/4`, `reset_user_password/2`,
+  # `set_user_password/3`), which check who asks and end the user's
+  # sessions and connected tools. `update_user/3` refuses it.
+  def changeset_mutator(
+        Brando.Users.User,
+        _cfg,
+        %Changeset{data: %{id: id}, changes: %{password: _}} = changeset,
+        _user,
+        _opts
+      )
+      when not is_nil(id) do
+    add_error(changeset, :password, "is changed with the password functions in Brando.Users")
+  end
+
   def changeset_mutator(_module, _cfg, changeset, _user, _opts), do: prepare_changes(changeset, &hash_password/1)
 
   @doc """
