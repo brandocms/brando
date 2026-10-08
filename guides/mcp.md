@@ -38,8 +38,9 @@ path to MCP in Brando: BrandoMCP's own transport is stdio, for development
    Optionally, plug `Brando.MCP.BodyLimit` into the endpoint just before
    `Plug.Parsers`. The endpoint's parser reads a request body before the
    router sees it (up to its own `:length`, often several megabytes); the
-   plug refuses a POST to `/mcp` without a `Content-Length` (411) or over
-   `max_request_bytes` (413) before anything reads it:
+   plug refuses a POST to `/mcp` with a `Transfer-Encoding` (400), without a
+   `Content-Length` (411) or over `max_request_bytes` (413) before anything
+   reads it:
 
    ```elixir
    plug Brando.MCP.BodyLimit
@@ -173,7 +174,8 @@ A revoked connection's tokens stop working on the next request. Brando
 revokes all of a person's connections when:
 
 - their password changes: by them, through a reset link, or set by an
-  administrator;
+  administrator (the only ways it can change: `Brando.Users.update_user/3`
+  refuses a saved user's password);
 - they, or an administrator, log them out everywhere ("Log out other
   sessions" on the Security page too);
 - two-factor authentication is turned off, reset by an administrator, or
@@ -234,10 +236,12 @@ Rate limits count per node, like the sign-in throttle (`Brando.RateLimit`).
   stored as SHA-256 hashes.
 - **Refreshing twice at once.** A client that sends the same refresh token
   twice within ten seconds, while the pair the first request returned is
-  unused, gets that same pair again (kept encrypted with `Brando.Crypto` for
-  those ten seconds). Any other second use of a refresh token, later or after
-  its successor was used, is treated as theft and revokes the whole
-  connection; the person connects the tool again.
+  unused, gets that same pair again. The pair is held for those ten seconds
+  in the node's cache, encrypted with `Brando.Crypto`, never in the
+  database. With several nodes, a second request that lands on another node
+  finds nothing there and counts as reuse. Any other second use of a refresh
+  token, later or after its successor was used, is treated as theft and
+  revokes the whole connection; the person connects the tool again.
 - **The consent screen never redirects by itself.** A request that is wrong
   (an unsupported `response_type`, no S256 challenge, an unknown scope, a
   `state` over 1024 bytes) is shown on an error page. Only a click on
@@ -309,8 +313,8 @@ What the endpoint does about each requirement in
    screen. No tool calls a model, so there is no cost limit to keep.
 8. **Transport hygiene.** HTTPS in production (the endpoint will not turn on
    without it). A browser `Origin` other than the site's own (or a configured
-   one) gets 403. No CORS headers at all. A POST without a `Content-Length`
-   gets 411, and one over 512 KB gets 413, read from the header before the
+   one) gets 403. No CORS headers at all. A POST with a `Transfer-Encoding`
+   gets 400, one without a `Content-Length` 411, and one over 512 KB 413, read from the header before the
    token is looked at (`Brando.MCP.BodyLimit` refuses it before the
    endpoint's parser too); results are bounded as in the Assistant. Tokens are read from the
    `Authorization` header only, never the query string.
@@ -346,8 +350,8 @@ And the attacks the review asked about:
   30 checks a minute, through the webhooks' address guard (public addresses,
   `https` on port 443, two seconds per DNS lookup, no redirects, five
   seconds, 5 KB) and are never stored. A `client_id` on the site's own host,
-  or its media or CDN host, is refused: a file uploaded there could pose as
-  a client. A client's
+  its media or CDN host, or any site environment's domain is refused: a
+  file uploaded there could pose as a client. A client's
   name is its own claim: the consent screen shows the host that published it
   and the redirect host, and warns about loopback addresses.
 - **Tokens in logs, Activity and URLs.** Tokens never appear in a URL (codes

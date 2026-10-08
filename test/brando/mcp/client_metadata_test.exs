@@ -1,7 +1,7 @@
 defmodule Brando.MCP.ClientMetadataTest do
   # Client ID Metadata Documents: what a client's document must say, and
   # where a client may send the person back to.
-  use ExUnit.Case, async: false
+  use Brando.ConnCase, async: false
 
   alias Brando.MCP.ClientMetadata
 
@@ -44,6 +44,32 @@ defmodule Brando.MCP.ClientMetadataTest do
     Application.put_env(:brando, :media_url, "https://media.example.com/media")
     on_exit(fn -> Application.put_env(:brando, :media_url, original) end)
     refute ClientMetadata.valid_client_id?("https://media.example.com/media/client.json")
+  end
+
+  test "nor any site environment's domain" do
+    site =
+      %Brando.Sites.Site{}
+      |> Brando.Sites.Site.changeset(%{
+        name: "Acme",
+        key: "acme",
+        languages: ["en"],
+        default_language: "en",
+        status: :active,
+        delivery_mode: :dynamic
+      })
+      |> Brando.Repo.insert!()
+
+    %Brando.Environments.Environment{}
+    |> Brando.Environments.Environment.changeset(%{
+      site_id: site.id,
+      name: "Staging",
+      key: "staging",
+      domain: "Staging.Acme.TEST"
+    })
+    |> Brando.Repo.insert!()
+
+    refute ClientMetadata.valid_client_id?("https://staging.acme.test/uploads/client.json")
+    assert ClientMetadata.valid_client_id?("https://client.example/oauth/client.json")
   end
 
   test "a document names itself, the client and its redirect URIs" do

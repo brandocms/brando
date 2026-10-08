@@ -44,7 +44,8 @@ defmodule Brando.MCP.ClientMetadata do
   Checks the shape of `client_id` without fetching it: an `https` URL on the
   default port, with a host and a path other than `/`, no credentials,
   query, fragment or dot segments, at most 512 bytes. Its host may not be
-  the site's own, nor its media or CDN host.
+  the site's own, nor its media or CDN host, nor any site environment's
+  domain.
   """
   @spec valid_client_id?(term()) :: boolean()
   def valid_client_id?(client_id) when is_binary(client_id) and byte_size(client_id) <= 512 do
@@ -70,17 +71,26 @@ defmodule Brando.MCP.ClientMetadata do
 
   defp own_hosts do
     media = [Brando.config(:media_url)] ++ Enum.map([Brando.Images, Brando.Files, Brando.Videos], &cdn_url/1)
+    Enum.flat_map([Brando.MCP.base_url() | media], &url_host/1) ++ environment_domains()
+  end
 
-    [Brando.MCP.base_url() | media]
-    |> Enum.flat_map(fn
-      url when is_binary(url) ->
-        case URI.parse(url) do
-          %URI{host: host} when is_binary(host) and host != "" -> [String.downcase(host)]
-          _ -> []
-        end
+  defp url_host(url) when is_binary(url) do
+    case URI.parse(url) do
+      %URI{host: host} when is_binary(host) and host != "" -> [String.downcase(host)]
+      _ -> []
+    end
+  end
 
-      _ ->
-        []
+  defp url_host(_url), do: []
+
+  # Every site environment's own domain, a host such as "www.example.com"
+  defp environment_domains do
+    import Ecto.Query, only: [from: 2]
+
+    from(e in Brando.Environments.Environment, where: not is_nil(e.domain), select: e.domain)
+    |> Brando.Repo.all()
+    |> Enum.flat_map(fn domain ->
+      if String.contains?(domain, "://"), do: url_host(domain), else: url_host("https://" <> domain)
     end)
   end
 
