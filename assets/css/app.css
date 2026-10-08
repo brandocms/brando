@@ -330,7 +330,7 @@ code {
 
   &.popover {
     .popover-inner {
-      background: #ffffff;
+      background: var(--brando-surface);
       color: black;
       padding: 24px;
       border-radius: 5px;
@@ -694,7 +694,7 @@ h3 {
   gap: 12px;
   padding: 12px 14px;
   border-radius: 10px;
-  background-color: #fcfcfd;
+  background-color: var(--brando-color-shaded);
   box-shadow: 0 0 0 1px rgba(5, 39, 82, 0.06);
 
   &:hover {
@@ -883,7 +883,7 @@ h3 {
   padding-top: 5px;
   color: var(--brando-color-dark);
   border: 1px solid var(--brando-color-dark);
-  background-color: #ffffff;
+  background-color: var(--brando-surface);
   height: 60px;
   border-radius: 30px;
   padding-bottom: 5px;

@@ -168,7 +168,7 @@
 
 .modal-content {
   color: var(--brando-color-dark);
-  background-color: #ffffff;
+  background-color: var(--brando-surface);
   background-clip: padding-box;
   border: none;
   display: flex;
@@ -348,7 +348,7 @@
   max-height: 80vh;
   overflow-y: scroll;
   overflow-x: hidden;
-  background-color: #fff;
+  background-color: var(--brando-surface);
 
   > h2 {
     font-size: 20px;

@@ -46,7 +46,7 @@
   .transfer-related-row span { font-size: 12px; color: var(--transfer-muted); }
   .transfer-related-row .transfer-button { flex-shrink: 0; }
   #transfer-entry-mappings { display: grid; gap: 20px; }
-  .transfer-whole-entry { min-width: 0; border: 1px solid #dce4e8; border-radius: 9px; background: #fff; overflow: hidden; padding: 0 24px 20px; }
+  .transfer-whole-entry { min-width: 0; border: 1px solid #dce4e8; border-radius: 9px; background: var(--brando-surface); overflow: hidden; padding: 0 24px 20px; }
   .transfer-whole-entry-header { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 20px 24px; margin: 0 -24px 20px; background: #f5f9fc; border-bottom: 1px solid #e5ebef; }
   .transfer-whole-entry-header h3 { font-size: 17px; }
   .transfer-entry-controls, .transfer-entry-overrides { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
@@ -77,7 +77,7 @@
   .transfer-section-heading > div { display: grid; gap: 5px; min-width: 0; }
   .transfer-step { display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; width: 32px; height: 32px; border: 1px solid #dbe4d6; border-radius: 7px; background: #f1f6eb; color: #5b7353; font-size: 11px; font-variant-numeric: tabular-nums; }
   .transfer-step.blue { background: #f1f6fb; border-color: #dce6ee; color: #51728a; }
-  .transfer-search { display: flex; align-items: center; gap: 10px; border: 1px solid var(--transfer-line); border-radius: 6px; padding: 0 13px; margin-bottom: 16px; background: #fff; }
+  .transfer-search { display: flex; align-items: center; gap: 10px; border: 1px solid var(--transfer-line); border-radius: 6px; padding: 0 13px; margin-bottom: 16px; background: var(--brando-surface); }
   .transfer-search [data-icon] { width: 16px; height: 16px; color: #7a8880; }
   .transfer-search[hidden] { display: none; }
   .transfer-search input { width: 100%; min-width: 0; height: 42px; padding: 0; border: 0; background: transparent; outline-offset: -2px; font-size: 13px; }
@@ -85,7 +85,7 @@
   .transfer-search > span:not([data-icon]) { font-size: 11px; color: var(--transfer-muted); }
   .transfer-mobile-selection, .transfer-mobile-selection[hidden] { display: none; }
   .transfer-entry-list { display: grid; gap: 10px; }
-  .transfer-entry { display: grid; gap: 12px; padding: 16px 18px; border: 1px solid var(--transfer-line); border-radius: 10px; background: #fff; }
+  .transfer-entry { display: grid; gap: 12px; padding: 16px 18px; border: 1px solid var(--transfer-line); border-radius: 10px; background: var(--brando-surface); }
   .transfer-entry.is-selected { background: #f5faf7; border-color: #b8cebf; }
   .transfer-entry-heading { display: flex; align-items: center; gap: 12px; }
   .transfer-entry-icon { display: grid; place-items: center; flex-shrink: 0; width: 36px; height: 40px; background: #f0f6fd; color: #6080a4; border-radius: 8px; }
@@ -98,13 +98,13 @@
   .transfer-meta > span + span { border-left: 1px solid #cfd9d2; padding-left: 8px; }
   .transfer-entry-footer { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; padding-left: 48px; }
   .transfer-field-pills { display: flex; flex-wrap: wrap; gap: 6px; }
-  .transfer-field-pills button { display: inline-flex; align-items: center; gap: 8px; padding: 6px 10px; border: 1px solid #dce3de; border-radius: 7px; background: #fff; color: #526258; font-size: 12px; line-height: 18px; min-height: 32px; }
+  .transfer-field-pills button { display: inline-flex; align-items: center; gap: 8px; padding: 6px 10px; border: 1px solid #dce3de; border-radius: 7px; background: var(--brando-surface); color: #526258; font-size: 12px; line-height: 18px; min-height: 32px; }
   .transfer-field-pills button:hover { border-color: #8da797; background: #f0f6f2; }
   .transfer-field-pills button[aria-pressed="true"] { background: #e5f1e9; border-color: #adc8b7; color: #345b45; }
   .transfer-field-pills button[aria-pressed="true"]:hover { background: #d8eade; border-color: #8da797; }
-  .transfer-field-check { display: grid; place-items: center; width: 15px; height: 15px; flex-shrink: 0; border: 1px solid #879b8f; border-radius: 4px; background: #fff; }
+  .transfer-field-check { display: grid; place-items: center; width: 15px; height: 15px; flex-shrink: 0; border: 1px solid #879b8f; border-radius: 4px; background: var(--brando-surface); }
   .transfer-field-check [data-icon] { width: 11px; height: 11px; visibility: hidden; }
-  [aria-pressed="true"] .transfer-field-check { background: #426e55; border-color: #426e55; color: #fff; }
+  [aria-pressed="true"] .transfer-field-check { background: #426e55; border-color: #426e55; color: var(--brando-ink-inverse); }
   [aria-pressed="true"] .transfer-field-check [data-icon] { visibility: visible; }
   .transfer-entry-status { display: inline-flex; align-items: center; gap: 6px; margin-left: auto; color: var(--transfer-muted); font-size: 11px; line-height: 18px; white-space: nowrap; }
   .transfer-status-dot { width: 1em; height: 1em; flex-shrink: 0; border: 1px solid #98a29b; border-radius: 50%; background: #e6eae7; }
@@ -124,7 +124,7 @@
   .transfer-options input { width: 16px; height: 16px; flex-shrink: 0; margin: 2px 0 0; accent-color: var(--transfer-green); }
   .transfer-options strong { display: block; font-size: 12px; font-weight: 500; }
   .transfer-options small { display: block; padding-top: 4px; color: var(--transfer-muted); font-size: 11px; line-height: 1.6; }
-  .transfer-button { display: inline-flex; align-items: center; justify-content: center; gap: 7px; min-height: 36px; padding: 9px 14px; border: 1px solid #d7dfd3; border-radius: var(--brando-chip-radius); background: #fff; color: var(--transfer-ink); font-size: 12px; font-weight: 500; line-height: 18px; text-decoration: none; letter-spacing: 0; text-transform: none; white-space: normal; text-align: center; }
+  .transfer-button { display: inline-flex; align-items: center; justify-content: center; gap: 7px; min-height: 36px; padding: 9px 14px; border: 1px solid #d7dfd3; border-radius: var(--brando-chip-radius); background: var(--brando-surface); color: var(--transfer-ink); font-size: 12px; font-weight: 500; line-height: 18px; text-decoration: none; letter-spacing: 0; text-transform: none; white-space: normal; text-align: center; }
   .transfer-button [data-icon] { width: 16px; height: 16px; }
   .transfer-button:hover:not(:disabled) { background: #f2f6ed; border-color: #b3c3a9; }
   .transfer-button.is-primary { background: #dfefe7; color: #345b45; border-color: #b7d2c1; }
@@ -282,10 +282,10 @@
   .transfer-type-options { display: flex; flex-wrap: wrap; gap: 6px; }
   .transfer-type-options button { display: inline-flex; align-items: center; gap: 8px; min-height: 32px; padding: 6px 10px; border: 1px solid transparent; border-radius: 5px; background: transparent; color: var(--transfer-muted); font-size: 12px; line-height: 18px; }
   .transfer-type-options button:hover { background: #edf2e9; }
-  .transfer-type-options button[aria-pressed="true"] { background: #fff; color: var(--transfer-green); border-color: #bfceba; }
-  .transfer-type-check { display: grid; place-items: center; width: 14px; height: 14px; border: 1px solid #aab8a6; border-radius: 3px; background: #fff; }
+  .transfer-type-options button[aria-pressed="true"] { background: var(--brando-surface); color: var(--transfer-green); border-color: #bfceba; }
+  .transfer-type-check { display: grid; place-items: center; width: 14px; height: 14px; border: 1px solid #aab8a6; border-radius: 3px; background: var(--brando-surface); }
   .transfer-type-check [data-icon] { width: 10px; height: 10px; visibility: hidden; }
-  [aria-pressed="true"] > .transfer-type-check { background: var(--transfer-green); border-color: var(--transfer-green); color: #fff; }
+  [aria-pressed="true"] > .transfer-type-check { background: var(--transfer-green); border-color: var(--transfer-green); color: var(--brando-ink-inverse); }
   [aria-pressed="true"] > .transfer-type-check [data-icon] { visibility: visible; }
   .transfer-entry-metadata { display: flex; flex-wrap: wrap; gap: 8px 24px; padding-left: 48px; }
   .transfer-entry-metadata > div { display: flex; flex-wrap: wrap; gap: 4px 6px; min-width: 0; font-size: 12px; line-height: 18px; }

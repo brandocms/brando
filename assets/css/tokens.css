@@ -11,6 +11,8 @@
   /* Text */
   --brando-ink: #272b2a;
   --brando-muted: #626b66;
+  /* Text and icons on a dark fill: the accent, a status colour, a photo */
+  --brando-ink-inverse: #ffffff;
 
   /* Hairlines, borders and dividers */
   --brando-line: #dce2dc;
@@ -38,11 +40,16 @@
   --brando-suggestion-line: #6a9b80;
   --brando-suggestion-ink: #2f6a4d;
 
+  /* Needs attention: a missing alt text, an unprocessed image, unsaved or
+     untranslated work, a warning badge. A tint for the chip and its ink. */
+  --brando-attention: #fbefda;
+  --brando-attention-ink: #87662d;
+
   /* Editors' notes: the amber of a missing alt text. A tint for highlights
      and counts, a rule for underlines and pins, and its ink (Notes.css). */
-  --brando-note: #fbefda;
+  --brando-note: var(--brando-attention);
   --brando-note-line: #e4b866;
-  --brando-note-ink: #87662d;
+  --brando-note-ink: var(--brando-attention-ink);
 
   /* Entry status. Always shown with a text label as well. */
   --brando-status-published: #3cb371;

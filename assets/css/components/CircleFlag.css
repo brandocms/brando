@@ -6,7 +6,7 @@
   border-color: transparent !important;
   
   line-height: 1;
-  background-color: #fff;
+  background-color: var(--brando-surface);
 
   svg {
     width: 22px;

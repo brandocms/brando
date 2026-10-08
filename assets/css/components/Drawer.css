@@ -660,7 +660,7 @@ figcaption.tiny {
           }
 
           ul li button:hover {
-            @color bg #ffffff;
+            @color bg var(--brando-surface);
           }
         }
       }

@@ -582,7 +582,7 @@
   display: grid;
   place-items: center;
   padding: 28px;
-  background: repeating-linear-gradient(-45deg, #fcfcfd 0 6px, #f7f7f7 6px 12px);
+  background: repeating-linear-gradient(-45deg, var(--brando-color-shaded) 0 6px, #f7f7f7 6px 12px);
   font-size: 12px;
   opacity: 0.5;
 }

@@ -357,7 +357,7 @@ button.primary.submit-button {
   .processing svg { fill: currentColor; }
 
   &:hover:not(:disabled) { background-color: #e2ebdc; border-color: #c3d3bb; }
-  &:focus-visible { box-shadow: 0 0 0 3px color-mix(in srgb, #254e3f 20%, transparent); }
+  &:focus-visible { box-shadow: 0 0 0 3px color-mix(in srgb, var(--brando-accent) 20%, transparent); }
   &:disabled { background-color: #f1f3f0; border-color: #e1e5df; color: #8a968e; }
 }
 
@@ -371,9 +371,9 @@ button.primary.submit-button {
   min-height: 32px;
   padding: 5px 12px;
   font: 13px/20px "Main", sans-serif;
-  color: #272b2a;
-  background-color: #fff;
-  border: 1px solid #dce2dc;
+  color: var(--brando-ink);
+  background-color: var(--brando-surface);
+  border: 1px solid var(--brando-line);
   border-radius: 5px;
   cursor: pointer;
   transition: background-color 0.15s ease, border-color 0.15s ease;

@@ -2,10 +2,10 @@
    marks on the blocks and fields its open work points at. */
 
 .translation-panel {
-  --translation-ink: #272b2a;
-  --translation-muted: #626b66;
-  --translation-line: #dce2dc;
-  --translation-accent: #254e3f;
+  --translation-ink: var(--brando-ink);
+  --translation-muted: var(--brando-muted);
+  --translation-line: var(--brando-line);
+  --translation-accent: var(--brando-accent);
   --translation-work: #b7791f;
 
   display: grid;
@@ -80,12 +80,12 @@
 .translation-badge {
   padding: 1px 8px;
   border-radius: 30px;
-  background: #eef0eb;
+  background: var(--brando-badge-bg);
   color: #5b6557;
   font-size: 11px;
   white-space: nowrap;
 
-  &.is-work { background: #fbefda; color: #87662d; }
+  &.is-work { background: var(--brando-attention); color: var(--brando-attention-ink); }
 }
 
 /* Marks from Brando.TranslationWork. */
@@ -143,7 +143,7 @@
   padding: 5px 12px;
   border: 1px solid var(--translation-line);
   border-radius: 5px;
-  background: #fff;
+  background: var(--brando-surface);
   color: var(--translation-ink);
   font-size: 12px;
   font-weight: 500;

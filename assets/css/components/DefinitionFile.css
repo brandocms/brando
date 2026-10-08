@@ -12,18 +12,18 @@
   /* icon | headline | file chip, then the explanation under the headline */
   display: grid; grid-template-columns: 16px minmax(0, 1fr) auto; align-items: center;
   column-gap: 10px; row-gap: 2px; margin-bottom: 20px; padding: 12px 14px;
-  border: 1px solid #dce2dc; border-radius: 8px; background: #f7f9f6; color: #3f4843;
+  border: 1px solid var(--brando-line); border-radius: 8px; background: #f7f9f6; color: #3f4843;
   font: 13px/20px "Main", sans-serif;
   > [data-icon] { width: 16px; height: 16px; color: #69806c; }
   p { margin: 0; }
-  .definition-file-headline { font-weight: 500; color: #272b2a; }
+  .definition-file-headline { font-weight: 500; color: var(--brando-ink); }
   .definition-file-path {
     justify-self: end; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-    padding: 1px 7px; border: 1px solid #dce2dc; border-radius: 4px; background: #fff;
-    font: 11px/18px Mono, monospace; color: #626b66; text-decoration: none;
+    padding: 1px 7px; border: 1px solid var(--brando-line); border-radius: 4px; background: var(--brando-surface);
+    font: 11px/18px Mono, monospace; color: var(--brando-muted); text-decoration: none;
   }
-  a.definition-file-path:hover { border-color: #bacabd; color: #272b2a; }
-  .definition-file-explanation { grid-column: 2 / -1; max-width: 72ch; font-size: 12px; line-height: 18px; color: #626b66; }
+  a.definition-file-path:hover { border-color: #bacabd; color: var(--brando-ink); }
+  .definition-file-explanation { grid-column: 2 / -1; max-width: 72ch; font-size: 12px; line-height: 18px; color: var(--brando-muted); }
   &:not([data-state="in_sync"]) {
     border-color: #ecd9a8; background: #fdf8ea;
     > [data-icon] { color: #a86f00; }

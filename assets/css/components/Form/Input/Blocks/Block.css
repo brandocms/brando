@@ -271,7 +271,7 @@ button.btn-palette {
 }
 
 .block {
-  background-color: #fff;
+  background-color: var(--brando-surface);
   padding: 0 0 15px;
   position: relative;
   transition:
@@ -495,7 +495,7 @@ button.btn-palette {
   }
 
   &[data-block-type="container"] {
-    background-color: #ffffff;
+    background-color: var(--brando-surface);
   }
 
   &.ref_block {
@@ -1361,7 +1361,7 @@ button.btn-palette {
   }
 
   &.drag-element {
-    background: #fff;
+    background: var(--brando-surface);
     box-shadow:
       3px 3px #f00 inset,
       -3px -3px #f00 inset;
@@ -1554,7 +1554,7 @@ button.btn-palette {
       }
 
       .datasource-help {
-        color: #626b66;
+        color: var(--brando-muted);
         font-size: 12px;
       }
     }
@@ -1586,7 +1586,7 @@ button.btn-palette {
 
     .datasource-more {
       margin-top: 4px;
-      color: #626b66;
+      color: var(--brando-muted);
     }
   }
 
@@ -1805,7 +1805,7 @@ button.btn-palette {
     max-width: 100px;
     padding: 0.3rem;
     border: 1px solid #dee2e6;
-    background-color: #fff;
+    background-color: var(--brando-surface);
     cursor: pointer;
 
     &:hover {
@@ -2438,7 +2438,7 @@ CodeMirror template by Jan T. Sott (https://github.com/idleberg), adapted by Bra
 */
 
   .cm-s-duotone-light.CodeMirror {
-    background: #ffffff;
+    background: var(--brando-surface);
     color: #021853;
   }
 
@@ -2447,7 +2447,7 @@ CodeMirror template by Jan T. Sott (https://github.com/idleberg), adapted by Bra
   }
 
   .cm-s-duotone-light .CodeMirror-gutters {
-    background: #ffffff;
+    background: var(--brando-surface);
     border-right: 0px;
   }
 

@@ -1,6 +1,6 @@
 .field-wrapper {
   &.subform {
-    background-color: #fcfcfd;
+    background-color: var(--brando-color-shaded);
     padding: 16px;
     border-radius: var(--brando-card-radius);
     box-shadow: var(--brando-card-shadow);
@@ -289,7 +289,7 @@
 
   &.dragging {
     border-color: var(--brando-color-dark);
-    background-color: #fff;
+    background-color: var(--brando-surface);
 
     .transformer-dropzone-hint {
       opacity: 1;
@@ -307,7 +307,7 @@
     padding: 18px;
     border: 1px dashed #d8d8dd;
     border-radius: 10px;
-    background-color: #fff;
+    background-color: var(--brando-surface);
     font-size: 14px;
     cursor: pointer;
     transition: border-color 0.15s ease, background-color 0.15s ease, color 0.15s ease;
@@ -369,9 +369,9 @@
         height: 28px;
         border: none;
         border-radius: 6px;
-        background: rgb(255 255 255 / 95%);
+        background: color-mix(in srgb, var(--brando-surface) 95%, transparent);
         box-shadow: 0 1px 3px rgb(0 0 0 / 12%);
-        color: #272b2a;
+        color: var(--brando-ink);
         cursor: pointer;
         transition: background-color 0.15s ease, color 0.15s ease;
 
@@ -382,8 +382,8 @@
         }
 
         &:hover {
-          background-color: #eef3ea;
-          color: #254e3f;
+          background-color: var(--brando-surface-selected);
+          color: var(--brando-accent);
         }
 
         &.subform-delete:hover {
@@ -392,7 +392,7 @@
         }
 
         &:focus-visible {
-          outline: 2px solid #254e3f;
+          outline: 2px solid var(--brando-accent);
           outline-offset: 1px;
         }
       }
@@ -479,10 +479,10 @@
       padding: 5px 12px;
       column-gap: 7px;
       font: 13px/20px "Main", sans-serif;
-      color: #272b2a;
+      color: var(--brando-ink);
       border-radius: 5px;
-      border: 1px solid #dce2dc;
-      background-color: #fff;
+      border: 1px solid var(--brando-line);
+      background-color: var(--brando-surface);
       white-space: nowrap;
       cursor: pointer;
       transition: background-color 0.15s ease, border-color 0.15s ease;
@@ -502,9 +502,9 @@
     /* The combined upload is the primary action — it is what most drops and
        most clicks actually want. */
     .upload-button[data-pick="files"] {
-      background-color: #254e3f;
-      border-color: #254e3f;
-      color: #fff;
+      background-color: var(--brando-accent);
+      border-color: var(--brando-accent);
+      color: var(--brando-ink-inverse);
 
       &:hover {
         background-color: #1a3d30;
@@ -589,7 +589,7 @@
     justify-content: center;
     row-gap: 8px;
     padding: 12px;
-    background-color: rgba(255, 255, 255, 0.92);
+    background-color: color-mix(in srgb, var(--brando-surface) 92%, transparent);
 
     .replace-filename {
       font-size: 13px;
@@ -713,7 +713,7 @@
     margin-top: 12px;
     padding: 10px 12px;
     border-radius: 8px;
-    background-color: #fff;
+    background-color: var(--brando-surface);
     border: 1px solid var(--brando-color-red, #c53030);
     font-size: 13px;
 

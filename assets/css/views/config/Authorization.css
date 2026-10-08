@@ -1,10 +1,10 @@
 /* Screen-local controls avoid the dimensions of blueprint forms and module tabs. */
 .authorization-workspace {
-  --access-ink: #272b2a;
-  --access-muted: #626b66;
-  --access-line: #dce2dc;
+  --access-ink: var(--brando-ink);
+  --access-muted: var(--brando-muted);
+  --access-line: var(--brando-line);
   --access-wash: #f5f7f3;
-  --access-accent: #254e3f;
+  --access-accent: var(--brando-accent);
   --access-selected: #edf3ed;
   color: var(--access-ink);
   font-size: 14px;
@@ -29,7 +29,7 @@
   }
   input:not([type='checkbox']), textarea, select {
     display: block; width: 100%; height: 36px; min-width: 0; border: 1px solid var(--access-line);
-    border-radius: 5px; background: #fff; color: var(--access-ink); padding: 7px 10px;
+    border-radius: 5px; background: var(--brando-surface); color: var(--access-ink); padding: 7px 10px;
     font-size: 13px; line-height: 20px; box-shadow: none;
     &::placeholder { color: #727b75; font-size: inherit; opacity: 1; }
     &:disabled { background: var(--access-wash); color: var(--access-muted); }
@@ -37,12 +37,12 @@
   .access-button {
     display: inline-flex; justify-content: center; align-items: center; gap: 6px;
     min-height: 30px; width: auto; min-width: 0; height: auto; margin: 0; padding: 5px 12px;
-    border: 1px solid var(--access-line); border-radius: 5px; background: #fff;
+    border: 1px solid var(--access-line); border-radius: 5px; background: var(--brando-surface);
     color: var(--access-ink); font-size: 12px; font-weight: 500; line-height: 18px;
     white-space: nowrap; text-transform: none; text-decoration: none; letter-spacing: 0; box-shadow: none;
     &:hover:not(:disabled) { background: var(--access-wash); border-color: #aab9a5; }
     &.quiet { border-color: transparent; background: transparent; padding-inline: 8px; }
-    &.primary-action { background: var(--access-accent); border-color: var(--access-accent); color: #fff; }
+    &.primary-action { background: var(--access-accent); border-color: var(--access-accent); color: var(--brando-ink-inverse); }
     &.primary-action:hover:not(:disabled) { background: #163c2e; border-color: #163c2e; }
     &.primary-action:disabled { background: var(--access-wash); border-color: var(--access-line); color: var(--access-muted); opacity: 1; }
     &.destructive { color: #9d3430; }
@@ -52,7 +52,7 @@
     display: inline-flex; align-items: center; justify-content: center;
     min-width: 20px; padding: 1px 6px; border: 0; border-radius: 4px;
     font-size: 11px; font-weight: 400; font-variant-numeric: tabular-nums;
-    line-height: 18px; white-space: nowrap; background: #eef0eb; color: #566153;
+    line-height: 18px; white-space: nowrap; background: var(--brando-badge-bg); color: var(--brando-badge-ink);
     &.access-count-mint { background: #e9f2e9; color: #355e43; }
     &.access-count-peach { background: #fcf0eb; color: #914936; }
   }
@@ -93,7 +93,7 @@
   .authorization-editor-heading > button { flex-shrink: 0; }
   .authorization-feedback { color: #355e43; font-size: 12px; margin-top: 6px; }
   .authorization-group-kind { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 11px; color: var(--access-muted); margin-bottom: 4px; }
-  .authorization-unsaved { color: #87662d; }
+  .authorization-unsaved { color: var(--brando-attention-ink); }
   /* Pill tabs (TabSwitch.css) */
   .authorization-tabs { margin: 16px 0 24px; }
   .authorization-fields { display: grid; grid-template-columns: minmax(160px, .85fr) minmax(0, 1.15fr); gap: 16px; padding: 0; border: 0; margin: 0 0 24px; }
@@ -143,10 +143,10 @@
   .authorization-resource-note { display: block; max-width: 360px; padding: 0 12px 10px 23px; color: var(--access-muted); font-size: 11px; font-weight: 400; line-height: 1.45; white-space: normal; }
   .authorization-row-check {
     display: inline-flex; align-items: center; justify-content: center; flex: 0 0 15px;
-    width: 15px; height: 15px; border: 1px solid #8b968e; border-radius: 3px; background: #fff;
+    width: 15px; height: 15px; border: 1px solid #8b968e; border-radius: 3px; background: var(--brando-surface);
     [data-icon] { display: block; width: 13px; height: 13px; }
   }
-  .authorization-row-toggle[aria-checked='true'] .authorization-row-check { border-color: var(--access-accent); background: var(--access-accent); color: #fff; }
+  .authorization-row-toggle[aria-checked='true'] .authorization-row-check { border-color: var(--access-accent); background: var(--access-accent); color: var(--brando-ink-inverse); }
   .authorization-row-toggle[aria-checked='mixed'] .authorization-row-check { border-color: var(--access-accent); background: var(--access-selected); color: var(--access-accent); }
   .authorization-cell { display: flex; align-items: center; justify-content: center; padding: 10px 6px; min-height: 44px; min-width: 44px; cursor: pointer; }
   .authorization-cell input { margin: 0; width: 15px; height: 15px; accent-color: var(--access-accent); cursor: pointer; }
@@ -197,7 +197,7 @@
   .authorization-person > div { margin-right: auto; min-width: 0; overflow-wrap: anywhere; }
   .authorization-person strong { font-size: 13px; }
   .authorization-person small { display: block; }
-  .authorization-avatar { display: grid; place-items: center; width: 32px; height: 32px; flex: 0 0 32px; border-radius: 50%; background: #edf0e9; color: #566153; font-size: 11px; }
+  .authorization-avatar { display: grid; place-items: center; width: 32px; height: 32px; flex: 0 0 32px; border-radius: 50%; background: #edf0e9; color: var(--brando-badge-ink); font-size: 11px; }
   .authorization-effective > .access-button { margin-left: -8px; }
   .authorization-effective > h3 { font-size: 22px; font-weight: 400; margin-top: 20px; }
   .authorization-effective > .authorization-protected { margin-top: 24px; }

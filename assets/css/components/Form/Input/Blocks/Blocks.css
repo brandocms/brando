@@ -578,7 +578,7 @@ section.alert.danger {
   flex: 0 0 auto;
   height: 54px;
   padding: 0 18px;
-  border-bottom: 1px solid var(--modal-line, #dce2dc);
+  border-bottom: 1px solid var(--modal-line, var(--brando-line));
   color: #8a958f;
 
   > [data-icon] {
@@ -601,7 +601,7 @@ section.alert.danger {
     padding: 0;
     background: transparent;
     font-size: 15px;
-    color: var(--modal-ink, #272b2a);
+    color: var(--modal-ink, var(--brando-ink));
     outline: none;
 
     &::placeholder {
@@ -649,7 +649,7 @@ section.alert.danger {
 
   &:hover {
     background: #f1f4f1;
-    color: var(--modal-ink, #272b2a);
+    color: var(--modal-ink, var(--brando-ink));
   }
 
   &:focus-visible {
@@ -668,7 +668,7 @@ section.alert.danger {
   font: 500 10.5px/16px "Main", sans-serif;
   text-align: center;
   color: #5d6a63;
-  background: #fff;
+  background: var(--brando-surface);
 }
 
 .module-picker-body {
@@ -683,7 +683,7 @@ section.alert.danger {
   flex-direction: column;
   gap: 2px;
   padding: 10px 8px;
-  border-right: 1px solid var(--modal-line, #dce2dc);
+  border-right: 1px solid var(--modal-line, var(--brando-line));
   overflow-y: auto;
 }
 
@@ -888,7 +888,7 @@ section.alert.danger {
     flex-direction: row;
     overflow-x: auto;
     border-right: 0;
-    border-bottom: 1px solid var(--modal-line, #dce2dc);
+    border-bottom: 1px solid var(--modal-line, var(--brando-line));
   }
 
   .module-picker-namespace {
@@ -913,13 +913,13 @@ section.alert.danger {
    changes as well (BlockField's structural-op guard and the save check). */
 .blocks-source-note {
   margin: 0 0 8px;
-  color: #626b66;
+  color: var(--brando-muted);
   font-size: 12px;
   line-height: 18px;
 
   a {
     margin-left: 6px;
-    color: #254e3f;
+    color: var(--brando-accent);
     text-decoration: underline;
     text-underline-offset: 2px;
   }

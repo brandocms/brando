@@ -1,16 +1,16 @@
 /* Approved modal shell: B for editors, C for link selection. */
 .modal {
-  --modal-ink: #272b2a;
-  --modal-muted: #626b66;
-  --modal-line: #dce2dc;
-  --modal-accent: #254e3f;
+  --modal-ink: var(--brando-ink);
+  --modal-muted: var(--brando-muted);
+  --modal-line: var(--brando-line);
+  --modal-accent: var(--brando-accent);
   --admin-field-height: 40px;
   --admin-field-font-size: 14px;
   color: var(--modal-ink);
   padding: 32px;
   overflow: hidden;
 }
-.modal > .modal-backdrop { background: rgb(30 43 37 / 30%); backdrop-filter: blur(2px); overflow: hidden; }
+.modal > .modal-backdrop { background: var(--brando-overlay); backdrop-filter: blur(2px); overflow: hidden; }
 .modal > .modal-dialog { width: 760px; max-width: 100%; max-height: calc(100dvh - 64px); transform: none !important; }
 .modal.narrow > .modal-dialog { width: 400px; }
 .modal.medium > .modal-dialog { width: 550px; }
@@ -163,7 +163,7 @@
 .modal-status circle.draft { fill: #656967; }
 .modal-status circle.pending { fill: #edaa00; }
 .modal-status circle.disabled { fill: #cc6060; }
-.modal-status circle.deleted { fill: #171a18; }
+.modal-status circle.deleted { fill: var(--brando-status-deleted); }
 .modal--picker .tiny-toggle-wrapper { display: flex; align-items: center; gap: 12px; margin: 0; }
 .modal--picker .tiny-toggle-label { font: 13px/20px "Main", sans-serif; color: var(--modal-ink); text-transform: none; letter-spacing: 0; }
 .modal--picker .modal-footer .tertiary.ml-auto { margin: 0 auto 0 0; order: -1; color: #a73e35; }
@@ -330,12 +330,12 @@ button.link-preview { text-align: left; }
 }
 
 /* Related-entry pickers share the quiet selection surface used by other pickers. */
-.modal .entry-picker-filter { background: #fff; padding-bottom: 12px; margin-bottom: 8px; }
+.modal .entry-picker-filter { background: var(--brando-surface); padding-bottom: 12px; margin-bottom: 8px; }
 .entry-picker-filter .filter-clear > span { width: 14px; height: 14px; }
 
 @media (max-width: 600px) {
   .select-modal-wrapper { grid-template-columns: minmax(0, 1fr); }
-  .select-modal-wrapper .select-modal { border-right: 0; border-bottom: 1px solid #dce2dc; padding: 0 0 16px; }
+  .select-modal-wrapper .select-modal { border-right: 0; border-bottom: 1px solid var(--brando-line); padding: 0 0 16px; }
   .select-modal-wrapper .selected-labels { padding: 0; }
 }
 

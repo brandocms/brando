@@ -11,7 +11,7 @@
   border: 1px solid #ccd7cb;
   border-radius: 8px;
   background: #f5f8f1;
-  color: #272b2a;
+  color: var(--brando-ink);
   box-shadow: 0 4px 24px #17291e26;
   font: 13px/20px "Main", sans-serif;
   transform: translateY(0);
@@ -21,16 +21,16 @@
   &.hidden { transform: translateY(calc(100% + 12px)); opacity: 0; pointer-events: none; }
   .selection-actions { display: flex; align-items: center; gap: 12px; }
   .selection-count { display: inline-flex; align-items: center; gap: 8px; white-space: nowrap; }
-  .selection-count strong { display: grid; place-items: center; min-width: 28px; height: 28px; padding: 0 6px; border-radius: 5px; background: #e1ebda; color: #254e3f; font-weight: 500; font-variant-numeric: tabular-nums; }
+  .selection-count strong { display: grid; place-items: center; min-width: 28px; height: 28px; padding: 0 6px; border-radius: 5px; background: #e1ebda; color: var(--brando-accent); font-weight: 500; font-variant-numeric: tabular-nums; }
   .clear-selection button, .selection-actions .circle-dropdown-button {
     display: inline-flex; align-items: center; justify-content: center; gap: 8px;
     width: auto; height: auto; min-height: 34px; margin: 0; padding: 6px 12px;
-    border: 1px solid #dce2dc; border-radius: 5px; background: #fff;
-    color: #272b2a; font: inherit; white-space: nowrap;
+    border: 1px solid var(--brando-line); border-radius: 5px; background: var(--brando-surface);
+    color: var(--brando-ink); font: inherit; white-space: nowrap;
     &:hover { background: #eaf0e5; }
-    &:focus-visible { outline: 2px solid #254e3f; outline-offset: 2px; }
+    &:focus-visible { outline: 2px solid var(--brando-accent); outline-offset: 2px; }
   }
-  .selection-actions .circle-dropdown-button { background: #254e3f; border-color: #254e3f; color: #fff; }
+  .selection-actions .circle-dropdown-button { background: var(--brando-accent); border-color: var(--brando-accent); color: var(--brando-ink-inverse); }
   .selection-actions .circle-dropdown-button:hover { background: #163c2e; }
   .circle-dropdown-button > span { width: 14px; height: 14px; }
   @media (max-width: 600px) {

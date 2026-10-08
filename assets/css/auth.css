@@ -63,7 +63,7 @@
 
     .login-form {
       @column 5:1/10 >mobile;
-      background-color: #ffffff;
+      background-color: var(--brando-surface);
       @space padding container;
     }
   }

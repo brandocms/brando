@@ -391,7 +391,7 @@
       display: flex;
       align-items: center;
       background-color: var(--brando-color-input);
-      border-left: 5px solid #ffffff;
+      border-left: 5px solid var(--brando-surface);
       transition: background-color 250ms ease;
     }
 
@@ -572,15 +572,15 @@
       background-color: #fafafa;
 
       .main-content .img-placeholder {
-        background-color: #ffffff;
+        background-color: var(--brando-surface);
       }
 
       .main-content .circle-flag {
-        background-color: #ffffff;
+        background-color: var(--brando-surface);
       }
 
       .badge.tiny {
-        background-color: #ffffff;
+        background-color: var(--brando-surface);
       }
     }
 
@@ -672,7 +672,7 @@
 
     &.selected {
       &.phx-click-loading {
-        background-color: #ffffff;
+        background-color: var(--brando-surface);
         &:nth-of-type(odd) {
           background-color: #fafafa;
         }
@@ -759,7 +759,7 @@
         }
 
         > div > svg {
-          border: 3px solid #fff;
+          border: 3px solid var(--brando-surface);
           border-radius: 50%;
           box-sizing: content-box;
         }

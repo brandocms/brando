@@ -25,9 +25,9 @@
   max-width: calc(100vw - 16px);
   margin: 0;
   padding: 3px;
-  border: 1px solid #dce2dc;
+  border: 1px solid var(--brando-line);
   border-radius: 6px;
-  background: #fff;
+  background: var(--brando-surface);
   color: var(--brando-color-dark);
   box-shadow: 0 4px 16px #17291e14, 0 1px 3px #17291e0a;
   font: 12px/20px "Main", sans-serif;
@@ -58,7 +58,7 @@
     cursor: pointer;
     white-space: normal;
     &:hover { background: #f5f7f3; color: inherit; }
-    &:focus-visible { outline: 2px solid #254e3f; outline-offset: -2px; }
+    &:focus-visible { outline: 2px solid var(--brando-accent); outline-offset: -2px; }
     &:disabled { opacity: .45; cursor: default; }
     > [data-icon] { width: 14px; height: 14px; flex-shrink: 0; }
   }

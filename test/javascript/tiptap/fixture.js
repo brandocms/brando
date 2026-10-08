@@ -1,5 +1,6 @@
 import { tick } from 'svelte'
 import hookFactory from '../../../assets/src/hooks/TipTap/index.js'
+import '../../../assets/css/tokens.css'
 import '../../../assets/css/components/Form/Input/TipTap.css'
 
 const app = { components: [] }

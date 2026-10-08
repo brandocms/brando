@@ -68,9 +68,9 @@
     display: flex;
     flex-direction: column;
     gap: 0;
-    border: 1px solid #dce2dc;
+    border: 1px solid var(--brando-line);
     border-radius: 6px;
-    background: #fff;
+    background: var(--brando-surface);
 
     .gallery-object {
       margin: 0;
@@ -78,7 +78,7 @@
       /* Hidden inputs sit between the figures, so siblings are matched with
          `~` and the ends by type: the figures are the list's only figures */
       & ~ .gallery-object .gallery-object-list-row {
-        border-top: 1px solid #dce2dc;
+        border-top: 1px solid var(--brando-line);
       }
 
       &:first-of-type .gallery-object-list-row {
@@ -96,11 +96,11 @@
         align-items: center;
         gap: 12px;
         padding: 10px 12px;
-        background: #fff;
+        background: var(--brando-surface);
         transition: background-color 150ms ease;
 
         &:hover {
-          background: #f5f8f3;
+          background: var(--brando-surface-hover);
         }
       }
 
@@ -136,7 +136,7 @@
       }
 
       .gallery-object-list-filename {
-        color: #272b2a;
+        color: var(--brando-ink);
         font: 500 14px/19px "Main", sans-serif;
         overflow: hidden;
         text-overflow: ellipsis;
@@ -144,7 +144,7 @@
       }
 
       .gallery-object-list-title {
-        color: #272b2a;
+        color: var(--brando-ink);
         font: 12px/18px "Main", sans-serif;
         overflow: hidden;
         text-overflow: ellipsis;
@@ -155,7 +155,7 @@
         display: flex;
         flex-wrap: wrap;
         gap: 0 6px;
-        color: #626b66;
+        color: var(--brando-muted);
         font: 12px/18px "Main", sans-serif;
         min-width: 0;
 
@@ -174,20 +174,20 @@
 
       .gallery-object-list-alt {
         overflow: hidden;
-        color: #626b66;
+        color: var(--brando-muted);
         font: 12px/18px "Main", sans-serif;
         white-space: nowrap;
         text-overflow: ellipsis;
 
         &.is-missing {
-          color: #87662d;
+          color: var(--brando-attention-ink);
         }
       }
 
       .gallery-object-list-alt-label {
         margin-right: 2px;
         padding: 0 5px;
-        border: 1px solid #dce2dc;
+        border: 1px solid var(--brando-line);
         border-radius: 3px;
         font-size: 10px;
         line-height: 15px;
@@ -206,7 +206,7 @@
         display: inline-flex;
         align-items: baseline;
         gap: 5px;
-        color: #626b66;
+        color: var(--brando-muted);
         font: 12px/18px "Main", sans-serif;
         white-space: nowrap;
 
@@ -224,7 +224,7 @@
         }
 
         &.gallery-object-list-status--unprocessed {
-          color: #87662d;
+          color: var(--brando-attention-ink);
 
           > i {
             background: #edaa00;
@@ -358,7 +358,7 @@
 /* Entry galleries use the same single surface and thumbnail scale as the
    neighboring image/video fields. The upload hook still owns this wrapper. */
 .gallery-input .media-gallery--field {
-  background: #fff;
+  background: var(--brando-surface);
   padding: 12px;
   .actions { align-items: stretch; max-width: 100%; }
   .actions .media-button { white-space: normal; }
@@ -396,7 +396,7 @@
     padding: 16px;
     border: 1px solid var(--workspace-line);
     border-radius: 8px;
-    background: #fff;
+    background: var(--brando-surface);
   }
 
   .gallery-toolbar {
@@ -410,7 +410,7 @@
   .gallery-toolbar .actions { margin: 0; }
 
   /* Uploading leads the group in a light accent, like every media field's. */
-  .segmented-buttons .media-button.primary { background: #edf3e9; border-color: #cfdcce; color: #254e3f; }
+  .segmented-buttons .media-button.primary { background: #edf3e9; border-color: #cfdcce; color: var(--brando-accent); }
   .segmented-buttons .media-button.primary:hover { background: #e2ecdd; border-color: #c3d5c5; }
 
   .gallery-count {
@@ -442,14 +442,14 @@
       width: 24px;
       height: 24px;
       padding: 0;
-      background: rgba(255, 255, 255, .92);
+      background: color-mix(in srgb, var(--brando-surface) 92%, transparent);
       box-shadow: 0 1px 3px rgba(0, 0, 0, .2);
       color: #b42318;
 
       [data-icon] { width: 14px; height: 14px; }
     }
 
-    .delete-object:hover { background: #fff; }
+    .delete-object:hover { background: var(--brando-surface); }
   }
 
   .media-gallery-empty {
@@ -497,9 +497,9 @@
   flex: none;
   margin-left: auto;
   overflow: hidden;
-  border: 1px solid #dce2dc;
+  border: 1px solid var(--brando-line);
   border-radius: 6px;
-  background: #fff;
+  background: var(--brando-surface);
 
   button {
     display: grid;
@@ -510,27 +510,27 @@
     padding: 0;
     border: 0;
     border-radius: 0;
-    background: #fff;
-    color: #626b66;
+    background: var(--brando-surface);
+    color: var(--brando-muted);
     cursor: pointer;
 
     &:hover:not(.is-selected) {
-      background: #f5f8f3;
-      color: #272b2a;
+      background: var(--brando-surface-hover);
+      color: var(--brando-ink);
     }
 
     &:focus-visible {
-      outline: 2px solid #254e3f;
+      outline: 2px solid var(--brando-accent);
       outline-offset: -2px;
     }
 
     &.is-selected {
-      background: #eef3ea;
-      color: #254e3f;
+      background: var(--brando-surface-selected);
+      color: var(--brando-accent);
     }
 
     + button {
-      border-left: 1px solid #dce2dc;
+      border-left: 1px solid var(--brando-line);
     }
 
     [data-icon] {
@@ -544,9 +544,9 @@
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(max(min(150px, (100% - 4px) / 5), (100% - 5px) / 6), 1fr));
   gap: 1px;
-  border: 1px solid #dce2dc;
+  border: 1px solid var(--brando-line);
   border-radius: 6px;
-  background: #fff;
+  background: var(--brando-surface);
 
   > .gallery-object {
     position: relative;
@@ -555,9 +555,9 @@
     padding: 0;
     border: 0;
     border-radius: 0;
-    background: #fff;
+    background: var(--brando-surface);
     box-shadow: none;
-    outline: 1px solid #dce2dc;
+    outline: 1px solid var(--brando-line);
     cursor: move;
 
     &:first-of-type .gallery-tile-square > :is(img, .gallery-tile-placeholder) {
@@ -611,8 +611,8 @@
   height: 20px;
   padding: 0 5px;
   border-radius: 10px;
-  background: rgba(255, 255, 255, 0.92);
-  color: #272b2a;
+  background: color-mix(in srgb, var(--brando-surface) 92%, transparent);
+  color: var(--brando-ink);
   font: 11px/20px "Main", sans-serif;
   text-align: center;
 }
@@ -624,7 +624,7 @@
   padding: 1px 5px;
   border-radius: 4px;
   background: rgba(0, 0, 0, 0.6);
-  color: #fff;
+  color: var(--brando-ink-inverse);
   font: 10px/16px "Main", sans-serif;
   white-space: nowrap;
 }
@@ -651,10 +651,10 @@
     height: 26px;
     margin: 0;
     padding: 0;
-    border: 1px solid #dce2dc;
+    border: 1px solid var(--brando-line);
     border-radius: 50%;
-    background: #fff;
-    color: #626b66;
+    background: var(--brando-surface);
+    color: var(--brando-muted);
     box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
     opacity: 1;
     cursor: pointer;
@@ -665,7 +665,7 @@
     }
 
     &:hover {
-      color: #272b2a;
+      color: var(--brando-ink);
       border-color: #c3d5c5;
     }
 
@@ -717,29 +717,29 @@
   }
 
   &.is-set {
-    background: #fff;
-    color: #272b2a;
+    background: var(--brando-surface);
+    color: var(--brando-ink);
     box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.08);
   }
 
   &.is-empty {
-    background: rgba(255, 255, 255, 0.7);
+    background: color-mix(in srgb, var(--brando-surface) 70%, transparent);
     color: #9aa39c;
     box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.06);
   }
 
   &.is-missing {
-    background: #fbefda;
-    color: #87662d;
+    background: var(--brando-attention);
+    color: var(--brando-attention-ink);
     box-shadow: 0 0 0 1px #ecd9b4;
   }
 
   &.is-active {
-    box-shadow: 0 0 0 2px #254e3f;
+    box-shadow: 0 0 0 2px var(--brando-accent);
   }
 
   &:focus-visible {
-    outline: 2px solid #254e3f;
+    outline: 2px solid var(--brando-accent);
     outline-offset: 1px;
   }
 }
@@ -754,8 +754,8 @@
   width: 220px;
   padding: 8px 10px;
   border-radius: 6px;
-  background: #272b2a;
-  color: #fff;
+  background: var(--brando-ink);
+  color: var(--brando-ink-inverse);
   box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18);
   font: 400 12px/16px "Main", sans-serif;
   letter-spacing: 0;
@@ -811,11 +811,11 @@
   top: calc(100% + 6px);
   width: 280px;
   padding: 12px;
-  border: 1px solid #dce2dc;
+  border: 1px solid var(--brando-line);
   border-radius: 8px;
-  background: #fff;
+  background: var(--brando-surface);
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.14);
-  color: #272b2a;
+  color: var(--brando-ink);
   font: 13px/18px "Main", sans-serif;
   text-align: left;
   cursor: default;
@@ -839,7 +839,7 @@
   }
 
   .gallery-text-editor-file {
-    color: #626b66;
+    color: var(--brando-muted);
   }
 
   .gallery-text-editor-input {
@@ -848,10 +848,10 @@
     height: 58px;
     margin: 0;
     padding: 7px 9px;
-    border: 1px solid #dce2dc;
+    border: 1px solid var(--brando-line);
     border-radius: 6px;
-    background: #fff;
-    color: #272b2a;
+    background: var(--brando-surface);
+    color: var(--brando-ink);
     font: 13px/18px "Main", sans-serif;
     resize: none;
     box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.03);
@@ -873,7 +873,7 @@
 
   .gallery-text-editor-note {
     margin: 6px 0 0 !important;
-    color: #626b66;
+    color: var(--brando-muted);
     font-size: 11px;
     line-height: 15px;
   }
@@ -891,10 +891,10 @@
       min-height: 0;
       margin: 0;
       padding: 5px 10px;
-      border: 1px solid #dce2dc;
+      border: 1px solid var(--brando-line);
       border-radius: 5px;
-      background: #fff;
-      color: #272b2a;
+      background: var(--brando-surface);
+      color: var(--brando-ink);
       font: 12px/18px "Main", sans-serif;
       text-transform: none;
       letter-spacing: 0;
@@ -905,9 +905,9 @@
       }
 
       &.primary {
-        border-color: #254e3f;
-        background: #254e3f;
-        color: #fff;
+        border-color: var(--brando-accent);
+        background: var(--brando-accent);
+        color: var(--brando-ink-inverse);
 
         &:hover {
           background: #1d3f33;
@@ -924,7 +924,7 @@
   align-items: center;
   gap: 8px 14px;
   margin-top: 10px;
-  color: #626b66;
+  color: var(--brando-muted);
   font: 12px/18px "Main", sans-serif;
 
   .gallery-sheet-legend-item {
@@ -934,7 +934,7 @@
   }
 
   .gallery-sheet-legend-item.is-missing {
-    color: #87662d;
+    color: var(--brando-attention-ink);
   }
 
   .gallery-tile-icon {

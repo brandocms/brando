@@ -4,18 +4,18 @@
    is the empty row that adds a value. The `Brando.StringList` hook does the
    inserting and removing. */
 .string-list {
-  --list-line: #dce2dc;
-  --list-hover: #f5f8f3;
-  --list-ink: #272b2a;
-  --list-muted: #626b66;
+  --list-line: var(--brando-line);
+  --list-hover: var(--brando-surface-hover);
+  --list-ink: var(--brando-ink);
+  --list-muted: var(--brando-muted);
   --list-faint: #99a39b;
-  --list-accent: #254e3f;
+  --list-accent: var(--brando-accent);
 
   display: flex;
   flex-direction: column;
   border: 1px solid var(--list-line);
   border-radius: 6px;
-  background: #fff;
+  background: var(--brando-surface);
 
   .string-list-row {
     position: relative;
@@ -85,12 +85,12 @@
   }
 
   .string-list-row:focus-within {
-    background: #fff;
+    background: var(--brando-surface);
     box-shadow: inset 2px 0 0 var(--list-accent);
   }
 
   .string-list-add {
-    background: #fbfcfa;
+    background: var(--brando-surface-shaded);
 
     .string-list-gutter {
       color: var(--list-muted);
@@ -140,7 +140,7 @@
     padding: 0;
     border: 1px solid var(--list-line);
     border-radius: 50%;
-    background: #fff;
+    background: var(--brando-surface);
     color: var(--list-muted);
     opacity: 0;
     transform: translateY(-50%);
@@ -157,7 +157,7 @@
     &:focus-visible {
       border-color: var(--list-accent);
       background: var(--list-accent);
-      color: #fff;
+      color: var(--brando-ink-inverse);
       opacity: 1;
     }
   }
