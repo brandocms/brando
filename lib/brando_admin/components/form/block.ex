@@ -3006,7 +3006,7 @@ defmodule BrandoAdmin.Components.Form.Block do
   Sends `update_ref_data` to the block, which rebuilds its form through the
   `assign_block_form/2` chokepoint — the change lands in the BlockField op
   store automatically, so it is save-complete the moment it commits (see
-  CLAUDE.md "Block Editor: single-owner state & ops").
+  the brando-blocks skill, `.claude/skills/brando-blocks/SKILL.md`).
 
   Do NOT use for per-keystroke updates — discrete commits only (select /
   reset / upload-complete / image-editor).

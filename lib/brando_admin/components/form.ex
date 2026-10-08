@@ -1591,7 +1591,7 @@ defmodule BrandoAdmin.Components.Form do
 
   # Append a delivered asset to the gallery assoc: existing objects are
   # slimmed to plain maps (put_assoc with mixed nil-ID structs would raise
-  # duplicate-PK — see CLAUDE.md "put_assoc with multiple new records"),
+  # duplicate-PK — see docs/ecto-changeset-patterns.md, "New records"),
   # the new object rides along with its loaded struct, and the whole list is
   # re-sequenced. The gallery is created on first upload.
   defp append_gallery_object(socket, path, key, new_object, config_target) do

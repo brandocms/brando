@@ -33,8 +33,8 @@ preserves the reasoning at the original audit baseline.
 
 The block skill remains needed for the single-owner ops architecture. The upload
 skill remains needed for the manager/browser/field ownership and transport
-contracts. AGENTS.md already carries shared LiveView identity, sticky DOM, Ecto,
-and validation rules. The two retained additions refer to these rather than
+contracts. AGENTS.md already carries shared LiveView identity and sticky DOM
+rules, and `docs/ecto-changeset-patterns.md` the Ecto and validation rules. The two retained additions refer to these rather than
 restating them. This audit does not retire unrelated deployment or project skills.
 
 ## Validation and future maintenance
