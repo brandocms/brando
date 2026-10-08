@@ -196,25 +196,36 @@ defmodule BrandoAdmin.Components.Form.BlockField.SetFieldTest do
 
   # #12: a list whose items have no identity was named by index, so an item
   # added or removed elsewhere moved every later change onto its neighbour.
-  test "a var's options are one field, and new table rows go by their sync uid", c do
+  # Follow-up: a select var's options (an embed, no id) were set whole, so
+  # of two editors each adding one, one lost theirs. They are named by
+  # their value.
+  test "a var's options are named by their value, and new table rows go by their sync uid", c do
     [_intro, multi] = rows(c.work)
     alpha = hd(multi.block.children)
     before = Changeset.change(alpha)
     [var | _] = alpha.vars
-    options = [%{"label" => "Small", "value" => "50"}, %{"label" => "Large", "value" => "100"}]
 
-    params =
-      before
-      |> Params.snapshot()
-      |> put_at(["vars", "0", "options"], options)
+    option_op = fn options ->
+      params = before |> Params.snapshot() |> put_at(["vars", "0", "options"], options)
+      {:ok, op} = Ops.field_op(before, Block.block_changeset(alpha, params, c.user.id), alpha.uid)
+      op
+    end
 
-    changed = Block.block_changeset(alpha, params, c.user.id)
+    # relabelled in place: each option is its own field
+    assert {:set_fields, _, changes, nil} =
+             option_op.([%{"label" => "Small", "value" => "50"}, %{"label" => "Large", "value" => "100"}])
 
-    assert {:ok, {:set_field, _, [{:at, "vars", {"id", id}, _}, "options"], value, nil}} =
-             Ops.field_op(before, changed, alpha.uid)
+    assert changes |> Enum.map(fn {[_var, {:at, "options", option, _} | _], value} -> {option, value} end) |> Enum.sort() ==
+             [{{"value", "100"}, "Large"}, {{"value", "50"}, "Small"}]
 
-    assert id == var.id
-    assert Enum.map(value, & &1["value"]) == ["50", "100"]
+    assert Enum.all?(changes, &match?({[{:at, "vars", {"id", id}, _} | _], _} when id == var.id, &1))
+    # one added: what changed in the list, to merge
+    assert {:set_field, _, [{:at, "vars", _, _}, "options"], {:list, [_, _], [_, _, _]}, nil} =
+             option_op.([
+               %{"label" => "Half", "value" => "50"},
+               %{"label" => "Full", "value" => "100"},
+               %{"label" => "Third", "value" => "33"}
+             ])
 
     rows_before = %Block{
       id: 1,
@@ -297,6 +308,42 @@ defmodule BrandoAdmin.Components.Form.BlockField.SetFieldTest do
 
     assert {:ok, {:set_field, _, ["block", "description"], "abcd", nil}} =
              Ops.field_op(replacing, echo, intro.block.uid, {stale, replacing})
+  end
+
+  test "two editors adding a select option each both keep theirs", c do
+    [_intro, multi] = rows = rows(c.work)
+    alpha = hd(multi.block.children)
+    before = Changeset.change(alpha)
+    snapshot = Params.snapshot(before)
+    options = get_in(snapshot, ["vars", Access.at(0), "options"])
+
+    add = fn option ->
+      params = put_at(snapshot, ["vars", "0", "options"], options ++ [option])
+      {:ok, op} = Ops.field_op(before, Block.block_changeset(alpha, params, c.user.id), alpha.uid)
+      op
+    end
+
+    state =
+      rows
+      |> Ops.from_entry_blocks()
+      |> apply!(add.(%{"label" => "By A", "value" => "25"}))
+      |> apply!(add.(%{"label" => "By B", "value" => "75"}))
+
+    save(c.work, rows, state, c.user)
+    [_intro, multi] = rows(c.work)
+    alpha = hd(multi.block.children)
+    assert alpha.vars |> hd() |> Map.get(:options) |> Enum.map(& &1.value) |> Enum.sort() == ~w(100 25 50 75)
+  end
+
+  test "gallery objects are named by their image or video, before and after a save" do
+    before = [%{"image_id" => 1, "sequence" => 0}]
+    saved = [%{"id" => 9, "image_id" => 1, "sequence" => 0}]
+    mine = before ++ [%{"image_id" => 2, "sequence" => 1}]
+    theirs = saved ++ [%{"image_id" => 3, "sequence" => 1}]
+
+    merged = Ops.merge_list(before, mine, theirs, "gallery_objects")
+    assert Enum.map(merged, & &1["image_id"]) |> Enum.sort() == [1, 2, 3]
+    assert Enum.find(merged, &(&1["image_id"] == 1))["id"] == 9
   end
 
   # Round 4: the field the event names was dropped as an echo when the
