@@ -6,6 +6,10 @@ defmodule Brando.JSONLD do
   them into a connected `@graph` document following schema.org vocabulary.
   """
 
+  # schema.org's WebPage and its subtypes
+  @page_types ~w(WebPage AboutPage CheckoutPage CollectionPage ContactPage FAQPage ItemPage
+                 MedicalWebPage ProfilePage QAPage RealEstateListing SearchResultsPage)
+
   @doc """
   Extracts a JSON-LD entity from a blueprint module's `json_ld_schema` DSL.
 
@@ -124,7 +128,11 @@ defmodule Brando.JSONLD do
 
   defp maybe_add_id(struct, _), do: struct
 
-  defp maybe_override_type(struct, %{json_ld_type: type}) when is_binary(type) do
+  # A page type (`WebPage`, `AboutPage`, …) describes the page, and
+  # `Brando.Plug.HTML.put_json_ld/3` gives it to the graph's `WebPage` node.
+  # Given to the entity as well, it took the page's `@id` and the graph kept
+  # only the page, so a page's Article was never emitted.
+  defp maybe_override_type(struct, %{json_ld_type: type}) when is_binary(type) and type not in @page_types do
     Map.put(struct, :"@type", type)
   end
 

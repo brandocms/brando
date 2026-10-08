@@ -385,8 +385,6 @@ defmodule Brando.JSONLD.Inspector do
     }
   end
 
-  # An entity given a page type (a page's `json_ld_type`) shares the page's
-  # `@id`, and the graph keeps the page.
   defp role(data, ref, main_id) when is_binary(ref) do
     cond do
       String.ends_with?(ref, "#webpage") -> :webpage

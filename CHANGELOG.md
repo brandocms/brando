@@ -1456,6 +1456,12 @@ production dump.
 
 #### Fixes
 
+- **Pages emit their Article again.** A page's structured data type
+  (`WebPage`, `AboutPage`, `ContactPage`, …) was given to the page's Article as
+  well, so the Article took the page's `@id` and the graph kept only the page.
+  Page types now type the page alone; other values of `json_ld_type` still
+  replace the entity's type.
+
 - **Fresh installs build the admin again.** `@codemirror/language` 6.13.0
   (7 October 2026) imports `@codemirror/streamparser` without declaring it, so
   `mix brando.assets.setup` failed to resolve it in new projects. The backend
