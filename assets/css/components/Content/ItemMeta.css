@@ -84,7 +84,7 @@
           }
 
           &.deleted {
-            fill: #111;
+            fill: var(--brando-status-deleted);
           }
         }
       }

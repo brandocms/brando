@@ -1,6 +1,6 @@
 /* Notices read as guidance rather than technical output, so they use the main
    face at body size, with fixed spacing and a readable line length. The tint
-   mixes into --brando-color-white, which keeps it soft in dark mode too. */
+   mixes the accent into white; warnings and errors use their own roles. */
 .alert {
   @font main;
   --alert-accent: var(--brando-color-blue);
@@ -19,13 +19,13 @@
   line-height: 1.5;
 
   &.warning {
-    --alert-accent: #e2a300;
-    background-color: color-mix(in srgb, var(--alert-accent) 14%, var(--brando-color-white));
+    --alert-accent: var(--brando-attention-ink);
+    background-color: var(--brando-attention);
   }
 
   &.danger {
-    --alert-accent: #e5484d;
-    background-color: color-mix(in srgb, var(--alert-accent) 11%, var(--brando-color-white));
+    --alert-accent: var(--brando-error-ink);
+    background-color: var(--brando-error);
   }
 
   /* Sits in the form's 16-column grid on a line of its own, but sized to its

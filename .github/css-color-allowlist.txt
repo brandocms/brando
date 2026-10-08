@@ -1,22 +1,4 @@
 # Hex colour literals per admin stylesheet, checked by
 # .github/scripts/check_css_colors.sh. Counts may only go down: convert
 # colours to the role tokens in assets/css/tokens.css and lower the count.
-assets/css/app.css 11
-assets/css/chrome.css 3
-assets/css/components/Alert.css 2
-assets/css/components/Button.css 16
-assets/css/components/CircleDropdown.css 1
-assets/css/components/Content.css 1
-assets/css/components/Content/ItemMeta.css 1
-assets/css/components/Content/List.css 24
-assets/css/components/Content/SelectedRows.css 6
-assets/css/components/Dialog.css 6
-assets/css/components/FloatingDropdown.css 4
-assets/css/components/Form/Input/Blocks/Block.css 54
-assets/css/components/FrontendEditor.css 15
-assets/css/components/Modal.css 14
-assets/css/components/TabSwitch.css 4
-assets/css/components/Toast.css 8
-assets/css/views/Assistant.css 22
-assets/css/views/ContentWorkspace.css 22
 assets/css/views/assets/Images.css 1

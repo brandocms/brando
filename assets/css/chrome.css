@@ -16,12 +16,12 @@
   flex-wrap: wrap;
   line-height: 1;
   align-items: baseline;
-  border-bottom: 1px solid #eee;
+  border-bottom: 1px solid var(--brando-line-soft);
   padding: 5px 0 9px;
 
   .online & {
     &:first-of-type {
-      border-top: 1px solid #eee;
+      border-top: 1px solid var(--brando-line-soft);
     }
   }
 
@@ -179,7 +179,7 @@
 
   &[data-user-status="offline"] {
     > .avatar {
-      border: 1px solid #aaa;
+      border: 1px solid var(--brando-faint);
       img {
         filter: grayscale(100%);
         cursor: pointer;

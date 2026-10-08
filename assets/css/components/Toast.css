@@ -41,14 +41,14 @@
   pointer-events: auto;
 
   &.toast--error {
-    border-color: #e8ccc4;
-    background: #fff1ed;
-    color: #8c4232;
+    border-color: var(--brando-error-line);
+    background: var(--brando-error);
+    color: var(--brando-error-ink);
   }
 
   /* Someone else's change: present, but quieter than your own results. */
   &.toast--mutation {
-    background: #f8f9f5;
+    background: var(--brando-surface-shaded);
     box-shadow: none;
     color: var(--toast-muted);
 
@@ -80,15 +80,15 @@
     width: 8px;
     height: 8px;
     border-radius: 50%;
-    background: #3c7a52;
+    background: var(--brando-status-published);
   }
 
   .toast--error &::before {
-    background: #a3352a;
+    background: var(--brando-error-ink);
   }
 
   .toast--info &::before {
-    background: #8a948e;
+    background: var(--brando-faint);
   }
 }
 
@@ -100,7 +100,7 @@
   height: 20px;
   margin-top: -1px;
   border-radius: 50%;
-  background: #e9eee7;
+  background: var(--brando-badge-bg);
   color: var(--brando-accent);
   font-size: 9px;
   font-weight: 600;

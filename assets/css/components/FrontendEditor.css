@@ -15,7 +15,7 @@ html.is-frontend-editor :is(.progress-wrapper, #brando-main > .progress) {
 
   #brando-main {
     min-height: 100vh;
-    background-color: #f6f7f9;
+    background-color: var(--brando-surface-page);
   }
 }
 
@@ -103,7 +103,7 @@ html.is-frontend-editor :is(.progress-wrapper, #brando-main > .progress) {
   transition: background-color 0.15s, color 0.15s;
 
   &:hover {
-    background-color: #f1f5ef;
+    background-color: var(--brando-surface-tint);
     color: var(--brando-ink);
   }
 
@@ -165,29 +165,29 @@ html.is-frontend-editor :is(.progress-wrapper, #brando-main > .progress) {
   }
 
   &.is-error {
-    border-color: #f0c9c5;
-    background-color: #fdf4f3;
+    border-color: var(--brando-error-line);
+    background-color: var(--brando-error);
 
     > [data-icon] {
-      color: #b4261f;
+      color: var(--brando-error-ink);
     }
   }
 
   &.is-warning {
-    border-color: #ecdfb6;
-    background-color: #fdf9ee;
+    border-color: var(--brando-attention-line);
+    background-color: var(--brando-attention);
 
     > [data-icon] {
-      color: #8a6a12;
+      color: var(--brando-attention-ink);
     }
   }
 
   &.is-shared {
-    border-color: #d8e1f3;
-    background-color: #f5f8fd;
+    border-color: var(--brando-line);
+    background-color: var(--brando-surface-tint);
 
     > [data-icon] {
-      color: #2c4f9e;
+      color: var(--brando-muted);
     }
   }
 
@@ -211,7 +211,7 @@ html.is-frontend-editor :is(.progress-wrapper, #brando-main > .progress) {
   cursor: pointer;
 
   &:hover {
-    border-color: #b9c4bc;
+    border-color: var(--brando-line-strong);
   }
 
   &:focus-visible {
@@ -229,7 +229,7 @@ html.is-frontend-editor :is(.progress-wrapper, #brando-main > .progress) {
   height: 24px;
   overflow: hidden;
   border-radius: 50%;
-  background-color: #f1f5ef;
+  background-color: var(--brando-surface-tint);
   color: var(--brando-muted);
 
   .image-content,
@@ -324,7 +324,7 @@ html.is-frontend-editor :is(.progress-wrapper, #brando-main > .progress) {
     flex: none;
     width: 16px;
     height: 16px;
-    color: #2f7d4f;
+    color: var(--brando-success-ink);
   }
 }
 
@@ -333,7 +333,7 @@ html.is-frontend-editor :is(.progress-wrapper, #brando-main > .progress) {
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background-color: #c98a14;
+  background-color: var(--brando-attention-line);
 }
 
 /* -- One block, nothing around it --------------------------------------------

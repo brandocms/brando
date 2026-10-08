@@ -9,7 +9,7 @@ button.delete.tiny {
   width: 18px;
   height: 18px;
   border-radius: 50%;
-  color: #333333;
+  color: var(--brando-ink);
   background-color: var(--brando-color-peach);
   transition:
     background-color 0.08s ease,
@@ -44,7 +44,7 @@ a.primary {
 
   &[disabled],
   &:disabled {
-    background-color: #333;
+    background-color: var(--brando-muted);
     border: none;
   }
 
@@ -124,7 +124,7 @@ button.danger {
 
   white-space: nowrap;
   border: none;
-  background-color: #be1010;
+  background-color: var(--brando-error-ink);
   padding: 12px 22px;
   color: white;
   border-radius: 22px;
@@ -151,7 +151,7 @@ button.danger {
   }
 
   &.disabled {
-    color: #aaa;
+    color: var(--brando-faint);
   }
 
   &.fw {
@@ -193,7 +193,7 @@ button.danger {
   }
 
   &.disabled {
-    color: #aaa;
+    color: var(--brando-faint);
   }
 
   &.fw {
@@ -344,10 +344,10 @@ button.primary.submit-button {
   min-width: 0;
   min-height: 40px;
   padding: 9px 16px;
-  border: 1px solid #d3dfcd;
+  border: 1px solid var(--brando-line);
   border-radius: 6px;
-  background-color: #edf3e9;
-  color: #1f3d2b;
+  background-color: var(--brando-surface-selected);
+  color: var(--brando-accent);
   font-size: 14px;
   font-weight: 500;
   line-height: 20px;
@@ -356,9 +356,9 @@ button.primary.submit-button {
   .shortcut { margin-left: 4px; }
   .processing svg { fill: currentColor; }
 
-  &:hover:not(:disabled) { background-color: #e2ebdc; border-color: #c3d3bb; }
+  &:hover:not(:disabled) { background-color: color-mix(in srgb, var(--brando-accent) 8%, var(--brando-surface-selected)); border-color: var(--brando-line-strong); }
   &:focus-visible { box-shadow: 0 0 0 3px color-mix(in srgb, var(--brando-accent) 20%, transparent); }
-  &:disabled { background-color: #f1f3f0; border-color: #e1e5df; color: #8a968e; }
+  &:disabled { background-color: var(--brando-surface-shaded); border-color: var(--brando-line-soft); color: var(--brando-faint); }
 }
 
 .add-entry-button {
@@ -385,12 +385,12 @@ button.primary.submit-button {
   }
 
   &:hover {
-    background-color: #f1f5ef;
-    border-color: #bacabd;
+    background-color: var(--brando-surface-tint);
+    border-color: var(--brando-line-strong);
   }
 
   &:focus-visible {
-    outline: 2px solid #758f75;
+    outline: 2px solid var(--brando-accent);
     outline-offset: 3px;
   }
 }
