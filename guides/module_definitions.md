@@ -63,6 +63,8 @@ identities.
 Run the framework upgrade migrations first. Migration 172 adds and backfills
 stable UIDs for table templates, in public and existing tenant schemas.
 
+<!-- usage-rules:start topic="module-definitions" -->
+
 From your Brando application's directory:
 
 ```sh
@@ -88,6 +90,8 @@ mix brando.modules import --from priv/modules --dry-run \
 
 There is no implicit live-environment default. The command restores the previous
 tenant context on success or failure.
+
+<!-- usage-rules:end -->
 
 Export requires a **new directory**. It writes:
 
@@ -140,6 +144,8 @@ save would be refused), when both sides changed, or when the file has changes
 that are not imported. Set `PLUG_EDITOR` (as for Phoenix's error pages, e.g.
 `vscode://file/__FILE__:__LINE__`) to link the path to your editor.
 
+<!-- usage-rules:start topic="module-definitions" -->
+
 ## Authoring a definition
 
 ```elixir
@@ -180,6 +186,8 @@ defmodule MySite.Definitions.Hero do
 end
 ```
 
+<!-- usage-rules:end -->
+
 A var's `label` is what editors see above the field. Give it per admin
 language as a map, as for `name`; editors see their own language, then the
 default language, then any. A plain string, as in `show_intro`, is read as the
@@ -188,11 +196,13 @@ same: `{"Light", "light"}` is a label in the default language, and
 `%{"label" => %{"en" => "Light", "no" => "Lys"}, "value" => "light"}` gives
 both.
 
+<!-- usage-rules:start topic="module-definitions" -->
+
 With `hero.heex` beside it:
 
 ```heex
 <section class={["hero", @theme]}>
-  <.ref ref={:heading} />
+  <.ref block={@block} ref={:heading} />
   <p :if={@show_intro}>Explore our work.</p>
 </section>
 ```
@@ -210,6 +220,8 @@ attributes, loops, arbitrary `use` statements and expressions such as
 HEEx templates remain trusted server-side code, just like templates edited in
 the admin: planning compiles them, and rendering executes their expressions.
 Only import definitions and templates from trusted authors.
+
+<!-- usage-rules:end -->
 
 ### Metadata and identity
 
@@ -234,9 +246,13 @@ Changing only the module UID while retaining another module's ref UIDs is reject
 
 ### Refs: settings and initial content
 
+<!-- usage-rules:start topic="module-definitions" -->
+
 `ref :name, :type` declares a normal content ref. Available types include
 `:header`, `:text`, `:picture`, `:media`, `:video`, `:gallery`, `:file`, `:blocks`,
 `:html`, `:markdown`, `:markdown_source`, `:svg`, `:map`, `:input` and `:comment`.
+
+<!-- usage-rules:end -->
 
 `config` and `default` are maps of the ref type's persisted data fields. They
 must not declare the same field twice. Together they describe the complete
@@ -286,6 +302,8 @@ Unknown settings and unsupported ref types fail validation rather than being
 silently dropped. Export includes default and nil values so a later schema
 default cannot quietly change an existing definition.
 
+<!-- usage-rules:start topic="module-definitions" -->
+
 A ref appears in the block editor where the template renders it
 (`<.ref block={@block} ref={:note} />`, `{% ref refs.note %}`); a ref the
 template never places isn't editable. This holds for a `:comment` ref too:
@@ -305,6 +323,8 @@ accept `{label, value}` pairs or maps with `label` and `value`. Layout declarati
 are `width` (`:full`, `:half`, `:third`, `:fourth`, `:auto`, `:fill`), `new_row`
 and `placement` (`:content`, `:config`, `:hidden`). Var order is declaration order.
 HEEx's reserved assign names cannot be used as var keys.
+
+<!-- usage-rules:end -->
 
 Additional persisted var settings belong in `settings`, for example:
 

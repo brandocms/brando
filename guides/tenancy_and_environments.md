@@ -1,5 +1,7 @@
 # Tenancy and named environments
 
+<!-- llms-description: Tenancy modes, sites and named content environments, tenant migrations, routing and static publication. -->
+
 Brando can run in three tenancy modes. The default preserves the traditional
 single-site, `public`-schema setup; the other modes introduce named content
 environments backed by PostgreSQL schemas.
@@ -12,6 +14,8 @@ environments backed by PostgreSQL schemas.
 | `:single` | One configured site can have any number of schema-backed environments | Standalone site with production, staging, and project environments |
 | `:multi` | Multiple isolated sites with per-site roles, media, assets, domains, and environments | Agencies and Brando Master installations |
 
+<!-- usage-rules:start topic="tenancy" -->
+
 Upgrading Brando does **not** require an existing project to adopt tenancy.
 Projects that keep the default `:none` mode continue to read and write content
 in `public` as before. They should apply the ordinary Brando-owned public
@@ -19,6 +23,8 @@ database migrations during an upgrade, but they do not need tenant migrations,
 `Brando.Plug.Tenant`, site or environment records, or
 `mix brando.migrate_to_tenant`. The new public registry tables may exist unused
 in this mode.
+
+<!-- usage-rules:end -->
 
 The tenant setup and data-conversion sections in this guide apply only when a
 project deliberately changes to `:single` or `:multi`. Existing projects may
@@ -146,6 +152,8 @@ On reruns, omitted tenancy flags preserve the existing selection. An explicit
 mode updates its existing base configuration; changing it does not move data.
 New installations write the selection to `config/brando.exs`:
 
+<!-- usage-rules:start topic="tenancy" -->
+
 ```elixir
 config :brando,
   tenancy_mode: :single,
@@ -154,6 +162,8 @@ config :brando,
 
 Configuration is validated when Brando starts. An invalid mode or a missing or
 invalid single-site key stops startup with a configuration error.
+
+<!-- usage-rules:end -->
 
 The installer does **not** create registry records or generate application
 content migrations. Complete the tenant migration and provisioning steps below
@@ -228,10 +238,14 @@ clones it: creating an environment runs `CREATE SCHEMA`, copies the structure of
 every tenant table out of `public` without its data, and only then runs tenant
 migrations.
 
+<!-- usage-rules:start topic="tenancy" -->
+
 Applications therefore do **not** restate their content schema as tenant
 migrations. Neither does Brando. Adding `create table` migrations to
 `priv/repo/tenant_migrations` would fork one schema definition into two places
 that must then be kept in step by hand.
+
+<!-- usage-rules:end -->
 
 > #### Table names may not contain a double quote {: .warning}
 >
@@ -252,12 +266,16 @@ that must then be kept in step by hand.
 > Rename anything that turns up, or add it to `:shared_tables` if it is genuinely
 > a cross-site table that should stay in `public`.
 
+<!-- usage-rules:start topic="tenancy" -->
+
 Tenant migrations exist to *evolve* environments that already exist. Write them
 for column additions, index changes, and backfills, and generate them with:
 
 ```bash
 mix brando.gen.tenant_migration add_summary_to_pages
 ```
+
+<!-- usage-rules:end -->
 
 For an umbrella or custom repository layout:
 
@@ -266,11 +284,15 @@ mix brando.gen.tenant_migration add_summary_to_pages \
   --migrations-path apps/my_app/priv/repo/tenant_migrations
 ```
 
+<!-- usage-rules:start topic="tenancy" -->
+
 Make them idempotent. They run against freshly cloned structure as well as
 against long-lived environments, so guard them the way Brando's own tenant
 migration does, with `ADD COLUMN IF NOT EXISTS` and `to_regclass` checks. Note
 also that `execute/1` does not receive the migration prefix the way
 `create table/2` does — read `prefix()` and interpolate it yourself.
+
+<!-- usage-rules:end -->
 
 ### Which tables are shared
 
@@ -292,6 +314,8 @@ oban_*
 ```
 
 `Brando.Tenant.SharedTables.list/0` returns the current list.
+
+<!-- usage-rules:start topic="tenancy" -->
 
 Everything else in `public` is treated as tenant content, so an application with
 its own cross-site tables must say so, or they will be cloned into every
@@ -325,6 +349,8 @@ mix brando.migrate --tenants
 # Every environment belonging to one site
 mix brando.migrate --site acme
 ```
+
+<!-- usage-rules:end -->
 
 Generated release tasks expose the same ordering for releases:
 
@@ -383,6 +409,8 @@ In `single` mode, the site key in the registry must match the configured
 
 ## Router and request context
 
+<!-- usage-rules:start topic="tenancy" -->
+
 Newly generated routers place `Brando.Plug.Tenant` in the browser pipelines
 before plugs that load content:
 
@@ -409,6 +437,8 @@ position. It resolves domains from `Brando.Tenant.Cache`, assigns
 `current_site`, `current_environment`, and `tenant_prefix`, and stores the
 prefix in process context without a database query.
 
+<!-- usage-rules:end -->
+
 The Brando admin routes also restore the environment selected in the signed
 session:
 
@@ -425,6 +455,8 @@ archive, and prune old archives. Editors can inspect the same state without
 lifecycle mutation controls. In multi-site mode the sidebar contains only sites
 assigned to the current user; global superusers see every active site.
 
+<!-- usage-rules:start topic="tenancy" -->
+
 `Brando.Repo` applies the current prefix to reads, writes, preloads, bulk
 updates, and bulk soft deletion. An explicit prefix always wins:
 
@@ -439,6 +471,8 @@ Brando.Repo.all(Brando.Sites.Site, prefix: "public")
 Shared schemas should set `@schema_prefix "public"`. The wrapper recognizes
 that metadata and keeps shared models in `public` even when an admin is working
 inside a tenant environment.
+
+<!-- usage-rules:end -->
 
 In `:multi`, a suspended, archived, or unknown frontend host receives `404`
 before content plugs run. A stale or forged admin site selection is checked
@@ -814,6 +848,8 @@ admin assets screen marks sets that are in use by previews or builds.
 
 ## Build and publish static sites
 
+<!-- usage-rules:start topic="tenancy" -->
+
 Declare public paths in your application's web SSG module:
 
 ```elixir
@@ -830,6 +866,8 @@ defmodule MyAppWeb.SSG do
   end
 end
 ```
+
+<!-- usage-rules:end -->
 
 URL callbacks execute under the selected environment's tenant prefix. The
 renderer sends a short-lived signed context header through the normal endpoint,
@@ -852,6 +890,8 @@ directories are pruned after the retention window, while their database history
 and logs remain. Preview tokens expire after seven days and stop working as soon
 as their artifact is pruned.
 
+<!-- usage-rules:start topic="tenancy" -->
+
 The command-line task uses the same renderer and remains interactive by default:
 
 ```bash
@@ -867,6 +907,8 @@ mix brando.ssg --site acme --environment production --dry-run
 # Non-interactive build to an explicit directory
 mix brando.ssg --site acme --force --output /tmp/acme-static
 ```
+
+<!-- usage-rules:end -->
 
 Without an uploaded asset set, the task builds the local frontend with Vite and
 copies `priv/static`. Pass `--no-compile-assets` to reuse the current release

@@ -1,5 +1,7 @@
 # System check
 
+<!-- llms-description: `mix brando.doctor` finds what is misconfigured or out of date and says how to fix it; add checks of your own. -->
+
 Most problems on a Brando site come from something out of date or
 misconfigured: a migration not run, admin assets from an older Yalc publish,
 images made before their settings changed, blocks on old module versions, a
@@ -36,6 +38,8 @@ failing check names the fix, and in the admin links to the screen for it. The
 task starts the application without its web server and with Oban's queues
 stopped, so it can run beside a running server and no job runs while it looks.
 
+<!-- usage-rules:start topic="deployment" -->
+
 ## Options and exit status
 
 | Option | Result |
@@ -47,6 +51,8 @@ stopped, so it can run beside a running server and no job runs while it looks.
 The task exits with status 1 when a check finds an error, so CI can run it;
 with only warnings it exits 0, unless `--strict` is given. A skipped check
 never fails.
+
+<!-- usage-rules:end -->
 
 `--json` prints:
 
@@ -95,6 +101,8 @@ details under a row are what `--verbose` prints.
 
 A release has no source tree, so in production the checks that read the
 project's files (admin assets and deprecations) are skipped and say so.
+
+<!-- usage-rules:start topic="deployment" -->
 
 ## Add a check
 
@@ -149,3 +157,5 @@ config :brando, Brando.Doctor,
   English in the terminal.
 - A check that raises, or takes over a minute, is reported as an error; the
   others still run.
+
+<!-- usage-rules:end -->

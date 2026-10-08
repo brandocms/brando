@@ -10,6 +10,7 @@ if Code.ensure_loaded?(Igniter) do
     alias Igniter.Code.Keyword, as: CodeKeyword
     alias Igniter.Project.Application, as: ProjectApplication
     alias Igniter.Project.Module, as: ProjectModule
+    alias Mix.Brando.Igniter.AgentFiles
     alias Mix.Brando.Igniter.Assets
     alias Mix.Brando.Igniter.Dependencies
     alias Mix.Brando.Igniter.Files
@@ -43,6 +44,7 @@ if Code.ensure_loaded?(Igniter) do
         |> Configuration.configure(project, tenancy)
         |> dependencies()
         |> support_files(project)
+        |> AgentFiles.plan()
         |> Assets.plan(project)
         |> Mix.Brando.Igniter.Install.Migrations.plan(project)
         |> application(project)
@@ -330,6 +332,9 @@ if Code.ensure_loaded?(Igniter) do
       For single/multi tenancy, provision a site/environment after public migrations;
       see the tenancy guide before initializing tenant content.
       Brando's admin is available at /admin.
+
+      For coding agents, AGENTS.md links Brando's usage rules
+      (deps/brando/usage-rules.md), and .claude/skills has Brando's site skills.
       """)
     end
   end

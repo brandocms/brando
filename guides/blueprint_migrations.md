@@ -4,6 +4,8 @@ Blueprint migrations turn storage-relevant DSL changes into reviewed Ecto migrat
 versioned, normalized schema snapshot beside the migration history and compares the next Blueprint definition to that
 snapshot. It does not compare arbitrary runtime structs or infer state from the database.
 
+<!-- usage-rules:start -->
+
 ## Normal workflow
 
 After changing a Blueprint, run:
@@ -28,6 +30,8 @@ several Blueprints, plan them all in one run:
 ```shell
 mix brando.gen.blueprint_migration --all
 ```
+
+<!-- usage-rules:end -->
 
 `--all` plans every application Blueprint (the ones compiled into your
 `:otp_app`) whose storage differs from its latest snapshot, or that has no
@@ -58,6 +62,8 @@ legacy snapshot that omitted the prefix produces a reviewed, reversible
 constraint change on its next migration. Unprefixed content references continue
 to use the migration's current schema.
 
+<!-- usage-rules:start topic="generators" -->
+
 Before committing a generated migration:
 
 1. Read both `up/0` and `down/0`. The task calls out removed columns and tables, but the developer remains responsible
@@ -66,6 +72,8 @@ Before committing a generated migration:
 3. Roll it back and run it forward again. This is especially important for foreign keys, unique indexes, block fields,
    entries relations, and alternates.
 4. Run the affected application tests.
+
+<!-- usage-rules:end -->
 
 ```shell
 mix ecto.migrate
@@ -90,8 +98,12 @@ This makes reversibility part of the normal E2E gate for checked-in Blueprint
 migration fixtures; it does not replace testing a generated application
 migration against that application's own schema and data.
 
+<!-- usage-rules:start topic="generators" -->
+
 Deployment still uses the application's normal Ecto migration command. The Blueprint task generates source files; it
 does not connect to or mutate a database.
+
+<!-- usage-rules:end -->
 
 ## How the command writes files
 
@@ -136,6 +148,8 @@ Snapshot format 3 records the database contract rather than the complete DSL:
 Presentation-only changes—forms, listings, translations, upload UI, and media processing settings—do not generate a
 database migration unless they also change one of those storage contracts.
 
+<!-- usage-rules:start topic="generators" -->
+
 ## Renaming an attribute
 
 Renames must be explicit. Replace the old declaration and retain its storage name as a migration hint:
@@ -149,6 +163,8 @@ end
 The generator emits a column rename in `up/0` and the inverse rename in `down/0`. It also handles a type or option
 change on the renamed column. Do not declare both `:title` and `:headline`; the semantic validator rejects that
 ambiguous state. The hint may remain in the Blueprint after the migration; once the new column exists it is a no-op.
+
+<!-- usage-rules:end -->
 
 ## Physical Ecto sources
 
@@ -400,6 +416,8 @@ resolve duplicates deliberately before applying the migration. Igniter does
 not generate this migration because it cannot safely enumerate application
 Blueprints, snapshots, or deployed data.
 
+<!-- usage-rules:start topic="generators" -->
+
 ## Changes that require a hand-written migration
 
 Table and primary-key changes are deliberately refused. Their safe implementation depends on deployed data, foreign
@@ -414,6 +432,8 @@ mix brando.gen.blueprint_migration MyApp.Projects.Project --rebaseline
 continue without a generated migration for that baseline; the hand-written migration remains the database history. It
 is not a shortcut for a missing database migration. Use it only after a reviewed hand-written migration exists and the
 database has been verified to match the current Blueprint.
+
+<!-- usage-rules:end -->
 
 The generator also stops if it finds migrations without snapshots, snapshots without migrations, an unreadable
 snapshot, an unsupported snapshot format, a filename/embedded-version mismatch, a malformed normalized storage schema,

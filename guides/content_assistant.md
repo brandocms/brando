@@ -13,6 +13,8 @@ Screenshots: [empty workspace](../docs/admin-ui/assistant-empty-desktop.png),
 [applied](../docs/admin-ui/assistant-applied-desktop.png) and
 [mobile](../docs/admin-ui/assistant-applied-mobile.png).
 
+<!-- usage-rules:start topic="assistant-mcp" -->
+
 ## Configure a model
 
 The assistant uses `Brando.AI`'s providers and keys:
@@ -39,6 +41,8 @@ provider's reported usage replaces the estimate.
 
 Without a configured model and key, the menu item is hidden and the screen
 explains what is missing.
+
+<!-- usage-rules:end -->
 
 ## Permissions
 
@@ -80,14 +84,21 @@ may publish.
   answer in the editor's language. New entries get the conversation's content
   language unless the editor names another.
 
+<!-- usage-rules:start topic="assistant-mcp" -->
+
 ## Proposals from connected tools
 
 Tools connected over MCP can prepare proposals too: Claude, ChatGPT or Claude
 Code through the remote endpoint, once an administrator turns it on and the
 person connects them ([Connected AI tools](mcp.md)), and a coding agent in
 development through BrandoMCP's stdio server (`mix brando.mcp`, as a named
-Brando user; see the BrandoMCP README). Their proposals belong to that user
-but to no conversation, so the Assistant lists them apart:
+Brando user; see the BrandoMCP README). The tools read content and prepare
+proposals; a person reviews and applies them in the Assistant.
+
+<!-- usage-rules:end -->
+
+Their proposals belong to that user but to no conversation, so the Assistant
+lists them apart:
 
 - **From connected tools** sits beside the conversation's title, with the
   number of proposals waiting for review. It opens a list of them in place of
@@ -182,6 +193,8 @@ site and environment. Staging and production each have their own.
   default (see [Permissions](#permissions)). Guidance is trusted as
   instructions for everyone's assistant, so grant this sparingly.
 
+<!-- usage-rules:start topic="assistant-mcp" -->
+
 ### In the code
 
 Developers can ship a baseline in `guidance`, as a string or as a module
@@ -212,6 +225,8 @@ The module is called for every model call, with the site and environment keys
 conversation has one. One application can give each site its own guidance.
 Guidance is limited to 12,000 characters. A guidance module that fails is
 logged and left out.
+
+<!-- usage-rules:end -->
 
 Name modules, slots and settings the way editors see them. The assistant
 matches the names against the modules the block field allows. If a name
@@ -306,11 +321,15 @@ is applied.
 It does not delete entries. A link to an entry created in the same proposal is
 reported as a problem, because the new entry is a draft.
 
+<!-- usage-rules:start topic="assistant-mcp" -->
+
 ## For developers
 
 `Brando.Content.Proposals` can be used without the assistant:
 
 ```elixir
+alias Brando.Content.Proposals
+
 {:ok, proposal} = Proposals.propose(operations, user, summary: "…")
 {:ok, _} = Proposals.approve(proposal.id, proposal.version, user)
 {:ok, receipt} = Proposals.apply(proposal.id, proposal.version, user)
@@ -321,3 +340,5 @@ the site's live-preview targets without saving it. BrandoMCP exposes the same
 tools in-process, for an actor the host provides, and over stdio to local
 coding agents in development; their proposals are reviewed under
 [From connected tools](#proposals-from-connected-tools).
+
+<!-- usage-rules:end -->

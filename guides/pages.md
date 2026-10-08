@@ -42,6 +42,8 @@ changeset and display its errors; a failed save has not published the edit.
 Use the admin block editor to author blocks, or follow the [block editor
 guide](block_editor.md) for programmatic content construction.
 
+<!-- usage-rules:start topic="rendering" -->
+
 ## Resolve and render public pages
 
 Keep `page_routes()` **after** application-specific routes: its catch-all would
@@ -101,6 +103,10 @@ The template selector discovers functions in `MyAppWeb.PageHTML` (or legacy
 `embed_templates "page_html/*"`. The stored value includes `.html`, such as
 `"default.html"`; a stored template without a matching function cannot render.
 
+<!-- usage-rules:end -->
+
+<!-- usage-rules:start topic="rendering" -->
+
 ## Homepage, hierarchy, and breadcrumbs
 
 The root path resolves to URI `"index"`, with one record per language. Set
@@ -119,6 +125,8 @@ Use `has_url: false` for organizational content that should not be public. Such
 a page has no URL: `Page.__absolute_url__/1` returns `nil` for it, and the
 content SEO audit leaves it out. Filter the flag in your controllers, and use
 `Page.__url_filter__/0` in your [sitemap](sitemaps.md).
+
+<!-- usage-rules:end -->
 
 Page context creates and updates recompute `breadcrumbs` for the page and its
 non-deleted descendants. Each element has string keys `"title"` and `"uri"`.
@@ -151,6 +159,8 @@ language `en`. Add its blocks and publish it. Create the translated counterpart
 with the same keys and language `no`. The parent key is a namespace; `page_id`
 is optional organization, not the lookup key.
 
+<!-- usage-rules:start topic="rendering" -->
+
 Query the current language explicitly and filter status for public output:
 
 ```elixir
@@ -180,6 +190,8 @@ without that wrapper.
 loading a group after the locale plug, but its current query does not restrict
 status. Neither do all of the older fragment lookup helpers. Use the explicit
 query above when a draft fragment must remain private.
+
+<!-- usage-rules:end -->
 
 Saving or deleting a fragment through its context queues affected block entries
 for rendering. Check the direct footer and a page that references the fragment

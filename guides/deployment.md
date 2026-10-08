@@ -20,6 +20,8 @@ deploy, and static rollback. Rolling back one does not roll back the other.
   will fail on its first command without this.
 - A server running Linux with PostgreSQL and either Traefik or nginx
 
+<!-- usage-rules:start topic="deployment" -->
+
 ### Health endpoint
 
 Blue/green deployments require a health endpoint. Florist starts the new colour,
@@ -35,6 +37,8 @@ plug Brando.Plug.Health
 `Brando.Plug.Health` answers `GET`/`HEAD /health` before the request reaches the
 router, returning `200` when healthy and `503` otherwise. Without it, the health
 check never passes and the deploy stalls on the new colour.
+
+<!-- usage-rules:end -->
 
 ### Formatting florist.config.exs
 
@@ -81,6 +85,8 @@ both reads `etc/traefik/traefik.yml` and installs the Traefik binary, which
 
 ### Release helpers
 
+<!-- usage-rules:start topic="deployment" -->
+
 Florist builds a standard Mix release. If the application has no release setup
 yet, run:
 
@@ -92,6 +98,8 @@ It creates `MyApp.ReleaseTasks` (`migrate/0`, `rollback/2`,
 `migrate_tenants/0`) and adds a `releases` entry for the app to `mix.exs` when
 none exists. Existing release settings, runtime configuration, secrets and
 deployment files are left alone. The task requires Igniter.
+
+<!-- usage-rules:end -->
 
 ### Migrating from Fabric
 
@@ -219,6 +227,8 @@ export BRANDO_URL_PORT="443"
 export POOL_SIZE="15"
 ```
 
+<!-- usage-rules:start topic="deployment" -->
+
 > #### Do not set PORT for blue/green {: .warning}
 >
 > With `deployment type: :blue_green`, systemd sets `PORT` per environment —
@@ -233,6 +243,8 @@ export POOL_SIZE="15"
 The database password in `BRANDO_DB_URL` must match `FLORIST_DB_PASSWORD_PROD`,
 since florist uses the latter to create the database user that your app then
 authenticates as.
+
+<!-- usage-rules:end -->
 
 Upload it with:
 
@@ -347,6 +359,8 @@ SSL certificates are issued automatically via Let's Encrypt on the first HTTPS r
 └── etc/
 ```
 
+<!-- usage-rules:start topic="deployment" -->
+
 Key points:
 
 - Blue and green each run their own systemd service on separate ports
@@ -354,6 +368,8 @@ Key points:
 - Only the `active-environment` file and web server config determine which
   environment receives traffic
 - Florist keeps the last 5 releases per environment and cleans up older ones
+
+<!-- usage-rules:end -->
 
 ## The Docker build
 
@@ -369,6 +385,8 @@ Stage 6: digest        → mix brando.digest (fingerprint static assets)
 Stage 7: release       → mix release (create OTP release tarball)
 ```
 
+<!-- usage-rules:start topic="deployment" -->
+
 Assets (CSS, JS) are built inside the Docker container and baked into the release
 at `priv/static/`. There is no separate asset upload step — everything ships as
 one tarball.
@@ -379,6 +397,8 @@ Both asset stages install with the pnpm version pinned in the Dockerfile and
 updating BrandoJS through Yalc, run `pnpm install` in `assets/backend` and commit
 the lockfile it changes; the build stops on a stale one rather than resolving
 different packages.
+
+<!-- usage-rules:end -->
 
 ### Source maps
 

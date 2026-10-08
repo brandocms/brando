@@ -4,6 +4,8 @@ A form is something visitors fill in on the site, such as a contact or signup
 form. Editors build it in the admin under **Configuration → Forms**, and the site
 renders it with `Brando.HTML.Forms.site_form/1`.
 
+<!-- usage-rules:start topic="rendering" -->
+
 A form is addressed by **key and language**. Each language has its own form,
 linked to the others as a [synchronized translation](i18n.md): the source form
 decides which fields there are, and each translation words them in its own
@@ -11,6 +13,8 @@ language.
 
 Run `mix brando.gen.migrations` for `brando_194`, `brando_195` and `brando_196`
 to add the tables.
+
+<!-- usage-rules:end -->
 
 ## Build a form
 
@@ -97,6 +101,8 @@ the import asks which form to use.
 
 ## Render a form
 
+<!-- usage-rules:start topic="rendering" -->
+
 ### In a block
 
 Give a module a **Form** variable and render it with the `form` tag. Editors
@@ -146,6 +152,8 @@ required markers, help text and errors linked for screen readers. Values are
 posted as `fields[<key>]`, or `fields[<key>][]` for multiple choice. Pass
 `values` and `errors`, keyed by field key, to fill the form in again after a
 failed submission.
+
+<!-- usage-rules:end -->
 
 Only structural classes (`site-form`, `site-form-field`, …) and data attributes
 are emitted; the site styles them. Each field carries `data-width` and, where
@@ -327,6 +335,8 @@ replaces Brando's crontab, and adds the job to its own:
   set your own content security policy, allow it in `script-src` and
   `frame-src`.
 
+<!-- usage-rules:start topic="rendering" -->
+
 ### Static sites
 
 A statically delivered site (`delivery_mode: :static`) has no backend serving
@@ -347,3 +357,4 @@ end
 The forms post to the endpoint's URL; set another with
 `config :brando, Brando.Forms, submit_url: "https://admin.example.com"`.
 
+<!-- usage-rules:end -->

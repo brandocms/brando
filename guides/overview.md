@@ -5,6 +5,8 @@ admin forms, and structured content. These guides cover the developing **0.55**
 API on the `main` branch. Use documentation from your application's Brando
 version when maintaining an older installation.
 
+<!-- usage-rules:start -->
+
 ## Start with your task
 
 | I want to… | Start here | Then read |
@@ -20,6 +22,39 @@ version when maintaining an older installation.
 | Delete, restore, or reorder content | [Content lifecycle](content_lifecycle.md) | [Querying](querying.md) |
 | Manage accounts and editing permissions | [Users and sessions](users.md) | [Authorization](authorization.md) |
 | Configure environments or publish a static build | [Sites and environments](tenancy_and_environments.md) | [Deployment](deployment.md) |
+
+## Rules that bite
+
+The mistakes that cost the most time, each explained in its guide:
+
+* Build with `mix compile --warnings-as-errors`. Form mistakes in a Blueprint
+  are only warnings otherwise ([Blueprints](blueprints.md#compile-time-checks)).
+* After changing a Blueprint's stored fields, run
+  `mix brando.gen.blueprint_migration` and commit the Blueprint, migration and
+  snapshot together. Never edit a snapshot by hand
+  ([Blueprint migrations](blueprint_migrations.md)).
+* A `has_one` or `has_many` relation is only cast with `cast: true`
+  ([Attributes, relations, and assets](blueprint_fields.md)).
+* A trait's `before_save/2` and `after_save/3` run when the admin saves an
+  entry, not when the context's `create_*` and `update_*` functions do
+  ([Traits](blueprint_traits.md#when-trait-hooks-run)).
+* Every listing filter needs a `filters` clause in the context; a missing one
+  raises `Brando.Exception.QueryFilterClauseError`
+  ([Blueprint listings](blueprint_listings.md)).
+* Associations an `identifier` or `absolute_url` template reads must be
+  declared relations ([Blueprints](blueprints.md#identifier)).
+* Blocks are rendered when an entry is saved. A changed parser does not change
+  existing entries until `mix brando.entries.resave`
+  ([Villain parser](villain_parser.md#when-it-runs)).
+* HEEx module templates run as server-side Elixir; only trusted administrators
+  may edit them ([Block editor](block_editor.md#modules-refs-and-vars)).
+* Keep `page_routes()` after the application's own routes; its catch-all
+  would take their requests ([Pages and fragments](pages.md)).
+* Preload media before rendering it. A size missing from `image.sizes` is a
+  configuration or processing error, not a fallback
+  ([Images, files, and galleries](media.md#render-responsive-images)).
+
+<!-- usage-rules:end -->
 
 ## Your first working site
 

@@ -1,4 +1,4 @@
-## JSON-LD
+# JSON-LD
 
 Brando outputs structured data as [JSON-LD](https://json-ld.org/) using the
 [schema.org](https://schema.org) vocabulary. All entities are combined into a
@@ -31,11 +31,16 @@ The output is a single `<script type="application/ld+json">` tag:
 }
 ```
 
+<!-- usage-rules:start topic="seo" -->
+
 ### Blueprint DSL
 
-Define structured data fields for your blueprint's content type:
+Define structured data fields for your blueprint's content type. The examples
+refer to the schema modules through `alias Brando.JSONLD`:
 
 ```elixir
+alias Brando.JSONLD
+
 json_ld_schema JSONLD.Schema.Article do
   field :author, :identity
   field :copyrightHolder, :identity
@@ -51,7 +56,6 @@ json_ld_schema JSONLD.Schema.Article do
   field :name, :string, & &1.title
   field :image, :image, & &1.meta_image
   field :inLanguage, :language
-  field :keywords, :string, &__MODULE__.keywords(&1.case_categories)
   field :mainEntityOfPage, :current_url
   field :url, :current_url
 end
@@ -63,6 +67,8 @@ Search and answer engines show `dateModified` as "Updated …", and compare it
 with the sitemap's `lastmod`. Read it with `Brando.Blueprint.Value.modified_at/1`
 rather than `updated_at`, which moves on every save, block re-render and
 `mix brando.entries.resave`.
+
+<!-- usage-rules:end -->
 
 `modified_at/1` returns `content_modified_at` for entries with `trait :meta`.
 That column is set when an entry is created and moves only when a save changes
@@ -86,6 +92,8 @@ JSON-LD and the [sitemap](sitemaps.md) agree:
 <p>Updated {Brando.Utils.Datetime.format_datetime(Brando.Blueprint.Value.modified_at(@post), "%d.%m.%Y")}</p>
 ```
 
+<!-- usage-rules:start topic="seo" -->
+
 #### Field types
 
 | Type | Description |
@@ -103,6 +111,8 @@ JSON-LD and the [sitemap](sitemaps.md) agree:
 | `{:list, SchemaModule}` | Maps over a list, calling `SchemaModule.build/1` on each item |
 | `SchemaModule` | Calls `SchemaModule.build/1` on the extracted value |
 
+<!-- usage-rules:end -->
+
 #### List type example
 
 Map over a collection of items to build nested schema objects:
@@ -115,6 +125,8 @@ json_ld_schema JSONLD.Schema.Event do
 end
 ```
 
+<!-- usage-rules:start topic="seo" -->
+
 ### Authors
 
 Map who wrote an entry with the `:person` field type. Nothing is emitted for
@@ -122,17 +134,23 @@ an author unless the blueprint maps one, so admin users never appear in
 structured data by accident:
 
 ```elixir
+alias Brando.JSONLD
+
 json_ld_schema JSONLD.Schema.Article do
   # a Brando user: `trait :creator` gives every entry one
   field :author, :person, & &1.creator
 end
 ```
 
+<!-- usage-rules:end -->
+
 or People entries, from a relation:
 
 ```elixir
 field :author, :person, & &1.authors
 ```
+
+<!-- usage-rules:start topic="seo" -->
 
 The callback may return one value or a list, and anything not preloaded is
 skipped (it never queries). Each author becomes its own `Person` node in the
@@ -142,6 +160,8 @@ skipped (it never queries). Each author becomes its own `Person` node in the
 {"@type": "Article", "author": {"@id": "https://example.com/people/ada/#person"}, ...},
 {"@type": "Person", "@id": "https://example.com/people/ada/#person", "name": "Ada Lovelace", ...}
 ```
+
+<!-- usage-rules:end -->
 
 **Brando users** give their public profile only: `name`, `jobTitle` and
 `sameAs` from the *Public profile* fields on the user form (Job title,
@@ -272,6 +292,8 @@ SportsOrganization.
 
 ### Controller usage
 
+<!-- usage-rules:start topic="seo" -->
+
 #### Adding a content entity
 
 ```elixir
@@ -286,6 +308,8 @@ conn
 |> put_section("case")
 |> render(:detail)
 ```
+
+<!-- usage-rules:end -->
 
 #### Adding breadcrumbs
 
@@ -347,6 +371,8 @@ extra = [%{name: :image, type: :image, value_fn: &get_hero_image/1}]
 put_json_ld(conn, MyApp.Blog.Post, post, extra)
 ```
 
+<!-- usage-rules:start topic="seo" -->
+
 ### Collections rendered by datasource blocks
 
 `put_json_ld/4` assembles the graph from controller assigns, but a datasource
@@ -364,6 +390,8 @@ rendered:
 ```heex
 <.json_ld entries={@entries} type="CreativeWork" />
 ```
+
+<!-- usage-rules:end -->
 
 Both go through `Brando.JSONLD.Collection.from_entries/2`, which builds an
 `ItemList` (or a `CollectionPage` with the `page` flag) from every entry whose
@@ -399,9 +427,13 @@ conn
 |> put_json_ld_type("CollectionPage")
 ```
 
+<!-- usage-rules:start topic="seo" -->
+
 Every `put_json_ld/4` call also sets the page type, to the entry's
 `json_ld_type` or `"WebPage"` when it has none. Call `put_json_ld_type/2`
 after `put_json_ld/4`, or the entity call resets it.
+
+<!-- usage-rules:end -->
 
 ### Identity type-specific fields
 

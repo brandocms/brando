@@ -1,5 +1,7 @@
 # Scheduled publishing
 
+<!-- llms-description: Publish an entry or an approved revision at a set time, cancel a schedule, and follow the jobs that run it. -->
+
 Choose what should be published before choosing a time:
 
 | Operation | What runs at the scheduled time | Use it for |

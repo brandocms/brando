@@ -9,6 +9,8 @@ Use the generated context functions from application code. The lower-level
 helpers are useful when composing an Ecto query yourself, but the compiler and
 runtime modules behind `Brando.Query` are internal implementation details.
 
+<!-- usage-rules:start topic="querying" -->
+
 ## Defining a context
 
 A context declares its list query, single-entry query, accepted filters and
@@ -73,6 +75,8 @@ MyApp.Projects.get_project!(id_or_args)
 The non-bang functions return `{:ok, result}` or an error tuple. The bang
 functions return the result and raise when a single entry does not exist.
 
+<!-- usage-rules:end -->
+
 Passing an ID directly is convenient when no query options are needed:
 
 ```elixir
@@ -97,6 +101,8 @@ operations. List queries additionally support filtering, ordering, joins,
 offsets, and pagination; single queries use `matches` and can retrieve a
 revision.
 
+<!-- usage-rules:start topic="querying" -->
+
 | Option | Query | Purpose |
 | --- | --- | --- |
 | `filter` | list | Apply the context's `filters` clauses |
@@ -116,6 +122,8 @@ revision.
 
 Unknown top-level options are rejected by the query reducer rather than being
 silently ignored.
+
+<!-- usage-rules:end -->
 
 ## Filtering and matching
 
@@ -138,10 +146,14 @@ silently ignored.
   })
 ```
 
+<!-- usage-rules:start topic="querying" -->
+
 Add a clause for every supported key. An unknown key raises a
 `Brando.Exception.QueryFilterClauseError` or
 `Brando.Exception.QueryMatchClauseError`, which makes an accidental or stale
 filter visible immediately.
+
+<!-- usage-rules:end -->
 
 When user input is used in `LIKE` or `ILIKE`, escape wildcard characters before
 adding your own wildcard pattern:
@@ -233,6 +245,8 @@ supports.
 
 ## Pagination
 
+<!-- usage-rules:start topic="querying" -->
+
 Set `paginate: true` together with a `limit`. `offset` defaults to zero:
 
 ```elixir
@@ -254,6 +268,8 @@ result.pagination_meta.previous_offset
 
 Pagination counts the filtered query without its preload, order, limit, or
 offset. Omitting `limit` while pagination is enabled raises an error.
+
+<!-- usage-rules:end -->
 
 ## Status, language, and soft deletion
 
@@ -467,6 +483,8 @@ MyApp.Projects.get_project(%{
 })
 ```
 
+<!-- usage-rules:start topic="querying" -->
+
 The complete query argument map is part of the cache key. Generated Brando
 mutations and the `Brando.Query.insert/2`, `update/2`, and `delete/1` helpers
 evict affected query entries. Direct `Brando.Repo` writes do not automatically
@@ -474,6 +492,8 @@ evict this cache.
 
 Do not combine cached list queries with pagination or streaming. Cached list
 results are materialized as a plain list.
+
+<!-- usage-rules:end -->
 
 ## Revisions
 
@@ -527,6 +547,8 @@ mutation :duplicate,
    merge_fields: %{contributors: []}}
 ```
 
+<!-- usage-rules:start topic="querying" -->
+
 The resulting functions accept the acting user so Brando can run the Blueprint
 changeset and its lifecycle consistently:
 
@@ -549,6 +571,8 @@ useful when an identifier or lifecycle callback depends on associations:
 ```elixir
 mutation :update, {Project, preload: [:category]}
 ```
+
+<!-- usage-rules:end -->
 
 Create, update, and delete declarations can run a callback after the mutation:
 

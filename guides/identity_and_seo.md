@@ -1,5 +1,7 @@
 # Identity, SEO settings, and redirects
 
+<!-- llms-description: The site's identity, SEO defaults, robots.txt, AI crawler policy, IndexNow and manual redirects. -->
+
 Identity describes the organization or person behind a site. SEO settings provide
 page-metadata fallbacks, robots text, and manual redirects. Both are stored per
 content language and, when tenancy is enabled, inside the selected environment.
@@ -16,6 +18,8 @@ type and fill its relevant fields; [JSON-LD](jsonld.md#identity-type-specific-fi
 explains what each type contributes. Add a named social link, then save and reload.
 Repeat for Norwegian with its translated display text.
 
+<!-- usage-rules:start topic="seo" -->
+
 For a new language, create defaults once in that environment:
 
 ```elixir
@@ -31,6 +35,8 @@ contact/title values that must be replaced before launch. The interactive
 `mix brando.gen.languages` task creates the same defaults and prints the language
 configuration to add. A newly created row does not automatically refresh every
 already-warm cache; the explicit `set/0` calls above do.
+
+<!-- usage-rules:end -->
 
 Update an existing record through the context so its cache and content consumers
 are refreshed:
@@ -50,6 +56,8 @@ are refreshed:
 
 Embed updates replace the submitted collection, so preserve existing links when
 adding one programmatically. In the admin, the normal form handles that collection.
+
+<!-- usage-rules:start topic="seo" -->
 
 ## Use it in the frontend
 
@@ -84,6 +92,8 @@ Identity updates refresh the cache and enqueue block content referencing identit
 configs, or links for rendering. Direct `Repo` writes skip those callbacks. During
 a controlled import, refresh the cache in each affected environment and invoke
 `Brando.Sites.update_villains_referencing_identity({:ok, identity})` afterwards.
+
+<!-- usage-rules:end -->
 
 ## Describe your services
 
@@ -132,6 +142,8 @@ values are filled from these settings when metadata renders.
 }, current_user)
 ```
 
+<!-- usage-rules:start topic="seo" -->
+
 `Brando.Cache.SEO.get(language)` returns an empty SEO struct if the language has
 no row. That keeps lookups possible but does not provide meaningful metadata.
 SEO context updates refresh the SEO cache; they do not automatically rerender
@@ -146,6 +158,8 @@ for you; inspect the intended deployment and configure its policy explicitly.
 The base URL field does not reconfigure Phoenix's endpoint or your DNS. Set the
 endpoint URL correctly
 for canonical URLs, metadata, and [sitemap generation](sitemaps.md).
+
+<!-- usage-rules:end -->
 
 ### AI crawlers and Content Signals
 
@@ -174,6 +188,8 @@ User-agent: *
 Content-Signal: search=yes, ai-input=yes, ai-train=no
 ```
 
+<!-- usage-rules:start topic="seo" -->
+
 `ai-input` is `no` only when every AI search and user-fetch crawler is blocked.
 The robots text is never changed; the block is added when robots.txt is served.
 Nothing is added until a crawler is blocked or a training preference chosen,
@@ -185,6 +201,8 @@ Blocking is a request: the user-fetch crawlers say robots.txt may not apply to
 them. Google's AI Overviews use Googlebot, not `Google-Extended`; keep a page
 out of them with the entry's **No snippet** and **Snippet length** settings
 ([Page metadata](meta.md#snippet-limits)).
+
+<!-- usage-rules:end -->
 
 ### IndexNow
 
@@ -205,6 +223,8 @@ shows the last submission and the answer: `200` or `202` is accepted, `403`
 means the key file could not be read, `422` that a URL is not on the key's
 host.
 
+<!-- usage-rules:start topic="seo" -->
+
 It is off by default. Only the live environment submits, so a staging copy
 never does. Without tenancy the deployment is the site; on a server that is
 not the public one, turn IndexNow off in its configuration:
@@ -212,6 +232,8 @@ not the public one, turn IndexNow off in its configuration:
 ```elixir
 config :brando, Brando.IndexNow, enabled: false
 ```
+
+<!-- usage-rules:end -->
 
 ## Add a manual redirect
 
@@ -275,9 +297,13 @@ config :brando, Brando.Sites.FourOhFour,
   flush_interval: :timer.seconds(60)
 ```
 
+<!-- usage-rules:start topic="seo" -->
+
 An application that sets its own `config :brando, Oban` replaces Brando's
 crontab and must add `{"25 5 * * *", Brando.Worker.NotFoundPurger}` to its own.
 `Brando.Sites.FourOhFour.add_404/1` records a miss from a controller of your own.
+
+<!-- usage-rules:end -->
 
 For permalink changes, the admin can offer a confirmed automatic redirect. That
 flow stores an escaped exact source, removes stale exact rules on the new URL,

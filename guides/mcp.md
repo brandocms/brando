@@ -12,6 +12,8 @@ permission and two-factor authentication can connect. It is the only network
 path to MCP in Brando: BrandoMCP's own transport is stdio, for development
 (`mix brando.mcp`).
 
+<!-- usage-rules:start topic="assistant-mcp" -->
+
 ## Enable the endpoint
 
 1. Mount the routes in the application's router, after `admin_routes` and
@@ -72,11 +74,15 @@ path to MCP in Brando: BrandoMCP's own transport is stdio, for development
    sign-in and its metadata answer 404 as a missing route does (see
    requirement 1 below).
 
+<!-- usage-rules:end -->
+
 Turning it on or off needs **Connected AI tools → Manage** (the admin and
 superuser roles without group authorization). Configuration → Integrations
 opens for people who may manage webhooks or connected AI tools, and shows each
 of those rows only to those who may manage it. Turning it on or off asks for the password or a code
 when the session has not given one lately, and is recorded in Activity.
+
+<!-- usage-rules:start topic="assistant-mcp" -->
 
 ## Let someone connect
 
@@ -95,6 +101,8 @@ when the session has not given one lately, and is recorded in Activity.
   passkey) under **Security**.
 
 Both are checked again on every request, not only when connecting.
+
+<!-- usage-rules:end -->
 
 ## Connect a tool
 
@@ -192,6 +200,8 @@ Connected apps marks it as expired, and the person connects the tool again.
 The nightly `Brando.Worker.ActivityPurger` removes tokens and codes that
 nothing can use any more (`Brando.MCP.prune/0`).
 
+<!-- usage-rules:start topic="assistant-mcp" -->
+
 ## Configuration
 
 ```elixir
@@ -208,6 +218,8 @@ config :brando, Brando.MCP,
 ```
 
 Rate limits count per node, like the sign-in throttle (`Brando.RateLimit`).
+
+<!-- usage-rules:end -->
 
 ## How it works
 

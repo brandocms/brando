@@ -13,6 +13,8 @@ see [Installation and generators](generators.md#generate-a-content-type).
 Keep the Blueprint, its generated migrations and its migration snapshots under
 version control.
 
+<!-- usage-rules:start -->
+
 ## A Blueprint
 
 ```elixir
@@ -89,6 +91,8 @@ defmodule MyApp.Articles.Article do
 end
 ```
 
+<!-- usage-rules:end -->
+
 A Blueprint is used together with a context built on `Brando.Query`
 ([Querying](querying.md)) and two admin LiveViews, which
 `mix brando.gen` writes.
@@ -112,6 +116,8 @@ The parts are documented in these guides:
 
 This guide covers the rest: the root declaration, schema settings,
 identifiers, URLs, translations and the generated changeset.
+
+<!-- usage-rules:start -->
 
 ## Declaring a Blueprint
 
@@ -145,6 +151,8 @@ Write the options as literals; module attributes are not available yet.
   `admin_editorial_article_form_path`.
 * `extensions`: more Spark extensions for the Blueprint DSL, such as a JSON
   API or GraphQL extension.
+
+<!-- usage-rules:end -->
 
 Unknown, duplicate or missing options, and malformed names, fail before
 anything else compiles.
@@ -200,6 +208,8 @@ content_icon "newspaper"
 Every Blueprint exports a struct type `t/0`. Declare your own `@type t` for a
 more precise one; Blueprint keeps it.
 
+<!-- usage-rules:start -->
+
 ## Identifier
 
 An identifier is how an entry is named across the admin: in selects,
@@ -224,6 +234,8 @@ declaration the Blueprint has none. Embedded Blueprints cannot have one: an
 identifier template after `data_layer :embedded` fails to compile. Leave
 `identifier` out of them, or write `identifier false`.
 
+<!-- usage-rules:end -->
+
 Identifiers are stored in Brando's identifier table so other entries can point
 at them, as `:entries` relations, the link picker and content transfer do.
 `persist_identifier false` keeps a Blueprint's identifiers out of that
@@ -234,6 +246,8 @@ The fields the identifier shows are also the only required fields of a
 [draft](#drafts).
 
 Invalid template syntax fails the compilation with the parser's location.
+
+<!-- usage-rules:start -->
 
 ## Absolute URL
 
@@ -266,6 +280,8 @@ the default language when `scope_default_language_routes` is `false`). Use
 `route_i18n` for schemas with a `language` field whose routes are localized,
 and `route` otherwise.
 
+<!-- usage-rules:end -->
+
 Associations the template reads are collected in
 `__absolute_url_preloads__/0`. The SEO audit, permalink redirects and
 translation links preload them; elsewhere, preload them before calling
@@ -278,6 +294,8 @@ than raising. `Brando.Blueprint.URL.resolve/1` calls it for any entry, and
 
 The tuple form `absolute_url {:i18n, :article_path, :detail, [:slug]}` still
 compiles, with a deprecation warning; use HEEx with `route_i18n`.
+
+<!-- usage-rules:start topic="blueprint-reference" -->
 
 ### Only some entries have a URL
 
@@ -297,6 +315,8 @@ have none. The declaration answers two questions:
   such entries are never loaded, as in a sitemap:
   `filter: Project.__url_filter__()`. The context needs filter clauses for
   those keys.
+
+<!-- usage-rules:end -->
 
 For the entries `only:` excludes, `__absolute_url__/1` returns `nil`. Sitemaps
 skip them (with a warning suggesting the query filter), the SEO audit leaves
@@ -337,6 +357,8 @@ tables so suggestions don't scan every entry. Matching only suggests a
 target: the editor still chooses the destination and block field. Pages and
 fragments have built-in keys and queries.
 
+<!-- usage-rules:start topic="blueprint-reference" -->
+
 ## Translations
 
 ```elixir
@@ -361,6 +383,8 @@ listings and forms are translated in that domain when they render. `t("text",
 OtherSchema)` uses another Blueprint's domain, as for a subform's labels; it
 reads that Blueprint's naming while compiling, so it makes this Blueprint
 compile against the other one.
+
+<!-- usage-rules:end -->
 
 ## Datasources, metadata, and JSON-LD
 
@@ -431,6 +455,8 @@ It runs, in order:
 `user` is the current user, or `:system` for work done by Brando or a job.
 Traits use it to stamp creators and editors, and relation casts pass it on.
 
+<!-- usage-rules:start -->
+
 ### Drafts
 
 When `status` is `:draft`, the changeset only requires the required fields
@@ -457,6 +483,10 @@ MyApp.Articles.update_article(id, %{"name" => "New name"}, user,
 )
 ```
 
+<!-- usage-rules:end -->
+
+<!-- usage-rules:start -->
+
 ## Compile-time checks
 
 Brando checks a Blueprint in three stages:
@@ -476,6 +506,8 @@ Brando checks a Blueprint in three stages:
 
 The checks need no database. Fix declarations reported after an upgrade; if
 a fix changes stored columns, follow [Blueprint migrations](blueprint_migrations.md).
+
+<!-- usage-rules:end -->
 
 ## Introspection
 
@@ -503,6 +535,8 @@ For fields, `__attributes__/1` in `Brando.Blueprint.Attributes`,
 `Brando.Blueprint.preloads_for/2` returns the preloads for a complete entry.
 `Brando.Blueprint.list_blueprints/0` lists the application's Blueprints.
 
+<!-- usage-rules:start topic="blueprint-reference" -->
+
 ## Deprecated declarations
 
 These still compile but only print a warning; what they declare is dropped.
@@ -517,6 +551,8 @@ These still compile but only print a warning; what they declare is dropped.
 
 Datasources' top-level `list/2`, `single/2` and `selection/3` compile to
 nothing; use `datasource` entries.
+
+<!-- usage-rules:end -->
 
 ## Module definitions
 

@@ -14,6 +14,8 @@ This guide covers all three. Field declarations are in
 [Attributes, relations, and assets](blueprint_fields.md), and the context's
 query options are in [Querying](querying.md).
 
+<!-- usage-rules:start -->
+
 ## A complete example
 
 ```elixir
@@ -105,6 +107,8 @@ filters Article do
 end
 ```
 
+<!-- usage-rules:end -->
+
 The LiveView renders the listing and handles the custom events:
 
 ```elixir
@@ -154,8 +158,12 @@ defmodule MyAppAdmin.Articles.ArticleListLive do
 end
 ```
 
+<!-- usage-rules:start -->
+
 `mix brando.gen` writes the LiveView, routes and context for a new Blueprint;
 see [Installation and generators](generators.md#generate-a-content-type).
+
+<!-- usage-rules:end -->
 
 ## The listing LiveView
 
@@ -177,6 +185,8 @@ or show a toast. Events Brando does not handle reach your own
 
 ### Rendering `Content.List`
 
+<!-- usage-rules:start topic="admin-ui" -->
+
 `Content.List`, aliased from `BrandoAdmin.Components`, is a LiveComponent.
 Pass it:
 
@@ -188,6 +198,8 @@ Pass it:
 * `listing`: the name of the listing to render. Default `:default`. It is
   read when the component mounts, so changing it later has no effect;
   navigate to another LiveView instead.
+
+<!-- usage-rules:end -->
 
 The rest are optional:
 
@@ -224,6 +236,8 @@ The rest are optional:
 
 ### Menu items
 
+<!-- usage-rules:start topic="admin-ui" -->
+
 `menu_item MyApp.Articles.Article` in the admin menu links to
 `/admin/<domain>/<plural>` and needs a listing named `:default`; without one
 the menu module raises when it compiles. The default listing's `query`, minus
@@ -233,6 +247,8 @@ other keys, such as `filter` or `language`, are not accepted there and make
 the listing raise. Keep the default listing's `query` to `order`, `status` and
 `preload` when the schema has a menu item, and set fixed filters with
 `hidden_filters` and a context clause instead.
+
+<!-- usage-rules:end -->
 
 ## Declaring listings
 
@@ -469,6 +485,8 @@ end
 
 ### What the context receives
 
+<!-- usage-rules:start -->
+
 The listing passes the values as `filter: %{key: value}` to
 `list_<plural>/1`, and the context runs each pair through its `filters`
 clauses ([Querying](querying.md#filtering-and-matching)). A missing clause
@@ -478,6 +496,8 @@ always strings:
 * a `:text` filter sends what the editor typed;
 * a `:boolean` filter sends `"true"`, or `"false"` with `off: false`;
 * a `:select` filter sends the chosen option's value.
+
+<!-- usage-rules:end -->
 
 Before the query runs, text filter values are escaped for `LIKE`: `%`, `_`
 and `\` get a backslash, so they can go straight into an `ilike` pattern, as
@@ -575,9 +595,13 @@ Option values are strings or `nil`. Static option values must be unique and
 labels non-empty, and a select filter needs either static options or the
 function.
 
+<!-- usage-rules:start -->
+
 Include an option with the value `nil` and put it first. Choosing it clears
 the filter. Without it, the browser shows the first option as selected while
 no filter applies.
+
+<!-- usage-rules:end -->
 
 ### Defaults
 
@@ -634,9 +658,13 @@ def order_by_score(query) do
 end
 ```
 
+<!-- usage-rules:start -->
+
 When a listing declares sorts, they appear in a menu in the tools bar, and
 the **first sort is the listing's initial order**: it replaces `query.order`.
 Put the order the listing should open with first.
+
+<!-- usage-rules:end -->
 
 With `trait :sequenced` and `sortable true`, rows can be dragged while the
 active sort orders by `:sequence`; the menu marks those sorts with "Rows can
@@ -701,6 +729,8 @@ action label: t("Preview"), event: JS.push("preview_article") |> JS.add_class("l
   dialog before the event is sent. `confirm: true` is rejected; write the
   question instead.
 
+<!-- usage-rules:start topic="admin-ui" -->
+
 Custom actions are shown on every row, after the built-in ones, without a
 permission check; check permissions in the handler.
 
@@ -719,6 +749,8 @@ A `JS` command runs as written; a `JS.push/2` in it receives `"id"` and
 `"edit_entry"`, `"duplicate_entry"` or `"delete_entry"`, runs Brando's
 handler. That is how a listing with `default_actions false` puts some of them
 back under its own labels.
+
+<!-- usage-rules:end -->
 
 ## Selection actions
 
@@ -743,11 +775,15 @@ selection_action label: t("Reject selected"),
   the action. It only hides the menu item: the LiveView handling the event
   must still check the user itself.
 
+<!-- usage-rules:start topic="admin-ui" -->
+
 The event goes to the listing LiveView with `"ids"`, a JSON-encoded list of the selected
 IDs, so decode it with `Jason.decode!/1`. The Blueprint's selection actions
 come after Brando's own: **Delete selected** (when the user may delete
 entries) and, for translatable schemas with `duplicate_<singular>/2`,
 **Duplicate selected to [language]**.
+
+<!-- usage-rules:end -->
 
 The selection stays after the action runs. To clear it from the LiveView:
 
@@ -872,6 +908,8 @@ See [Traits](blueprint_traits.md) for what each trait adds to the schema.
 
 ## Live updates
 
+<!-- usage-rules:start topic="admin-ui" -->
+
 The listing reloads its entries when the schema's listing topic receives an
 update. Brando's own actions, scheduled publishing and translation sync send
 one. Code that changes entries while a listing is open, such as a custom
@@ -883,6 +921,8 @@ BrandoAdmin.LiveView.Listing.update_list_entries(MyApp.Articles.Article)
 
 Every listing of that schema open in the same site and environment reloads
 its current page, keeping filters, sort and selection.
+
+<!-- usage-rules:end -->
 
 ## Compile-time checks
 

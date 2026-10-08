@@ -1,5 +1,7 @@
 # Groups and authorization
 
+<!-- llms-description: Groups, scopes and resource policies, the move from legacy roles, and enforcing permissions in application code. -->
+
 Brando supports an explicit transition from legacy roles to configurable groups.
 Authentication still uses the existing Phoenix session tokens. Authorization decides
 which resources and actions that authenticated account may use in a specific scope.
@@ -24,12 +26,17 @@ and content transfer, see [User accounts and sessions](users.md).
 5. Test with representative accounts on every site and environment, including
    direct URLs and denied writes. Review `/admin/groups` for each scope.
 
-The default mode remains `:legacy` until that explicit switch. Old
+<!-- usage-rules:start topic="tenancy" -->
+
+The default mode remains `:legacy` until that explicit switch
+(`authorization_mode: :groups`). Old
 `MyApp.Authorization.Can.can?/3` calls retain their original tuple return contract
 and consult group authority after cutover. Replace broad `:manage` calls with
 explicit actions and move administration code to `Brando.Authorization`. Reverting
 the configuration reactivates old role rules, which can restore access previously
 revoked in groups. Treat this as an authority migration, not a routine rollback.
+
+<!-- usage-rules:end -->
 
 The import is retry-safe: it preserves edited preset grants and records each
 legacy assignment it imports. Re-running does not resurrect memberships removed
@@ -137,6 +144,8 @@ Membership changes apply immediately and preserve any unsaved permission draft.
 The person picker excludes current members. View access combines a member's grants
 from all groups in the selected scope and identifies the contributing groups.
 
+<!-- usage-rules:start topic="tenancy" -->
+
 ## Application code
 
 Build the scope from the authenticated account and server-resolved context:
@@ -177,6 +186,10 @@ parameter or use it as a fallback for a missing account. Do not store a resolved
 permission snapshot in an Oban job. Retain the initiating account and tenant,
 and authorize again when the operation executes.
 
+<!-- usage-rules:end -->
+
+<!-- usage-rules:start topic="tenancy" -->
+
 ### Resource metadata and policies
 
 Blueprint permissions use stable keys based on application, schema source, and
@@ -197,9 +210,13 @@ and records for target checks. For read policies, implement `scope/3` to add the
 same constraints to the Ecto query. A policy without a query scope fails closed
 for scoped reads. It must preserve the input query and tenant prefix.
 
+<!-- usage-rules:end -->
+
 Read and export policies may differ; implement both in `scope/3` when exports
 need stricter filtering. Listing exports use this scope and return a download in
 the authenticated LiveView response instead of writing public files under `/media`.
+
+<!-- usage-rules:start topic="tenancy" -->
 
 ```elixir
 defmodule MyApp.ProjectPolicy do
@@ -225,6 +242,8 @@ before the view loads its data, then rechecks current authority on navigation,
 events, and authorization broadcasts. LiveComponents must still use guarded
 context operations because parent LiveView event hooks do not intercept their
 events.
+
+<!-- usage-rules:end -->
 
 ### Managing groups from code
 

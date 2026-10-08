@@ -5,6 +5,8 @@ Phoenix templates and layout. Editors can inspect a page at desktop, tablet, or
 mobile dimensions, open the preview in another window, and create an expiring
 shared snapshot when they have export access.
 
+<!-- usage-rules:start topic="live-preview" -->
+
 ## Configure a view
 
 Create `MyAppWeb.LivePreview` in the application's web namespace:
@@ -27,6 +29,8 @@ Use the same layout/template assigns as your controller. `template_prop` is the
 assign containing the edited entry (`:entry` by default). A single configured
 view opens immediately from the editor's eye button; existing unnamed targets
 continue to work without changes.
+
+<!-- usage-rules:end -->
 
 ## Offer more than one view
 
@@ -90,6 +94,8 @@ The default is `:default` when present, otherwise the first declared target.
 Labels default to "Preview" for the unnamed target or a humanized target name;
 provide explicit labels/descriptions for useful editor-facing choices.
 
+<!-- usage-rules:start topic="live-preview" -->
+
 ## Preloads, assigns, and refresh behavior
 
 - `schema_preloads` is passed to `Repo.preload/2` before assign callbacks. Include
@@ -142,6 +148,8 @@ document.addEventListener('brando:livepreview:patched', ({ detail }) => {
   detail.elements.forEach(el => initWidgets(el))
 })
 ```
+
+<!-- usage-rules:end -->
 
 ## Recovery and sharing
 

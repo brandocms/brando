@@ -104,6 +104,7 @@ defmodule Brando.Mixfile do
             "guides/markdown_sources.md",
             "guides/module_definitions.md",
             "guides/content_transfer.md",
+            "guides/content_assistant.md",
             "guides/villain_parser.md",
             "guides/villain_text_styles.md",
             "guides/live_preview.md",
@@ -172,7 +173,10 @@ defmodule Brando.Mixfile do
     [
       "ecto.setup": ["ecto.create", "ecto.migrate", "run priv/repo/seeds.exs"],
       "ecto.reset": ["ecto.drop", "ecto.setup"],
-      "ecto.seed": ["run priv/repo/seeds.exs"]
+      "ecto.seed": ["run priv/repo/seeds.exs"],
+      # ExDoc writes its own llms.txt; ours replaces it with one that describes
+      # each guide, and adds llms-full.txt.
+      docs: ["docs", "brando.docs.agents --only llms"]
     ]
   end
 
@@ -212,6 +216,11 @@ defmodule Brando.Mixfile do
         "priv",
         "assets/src/components/TipTap/capabilities.json",
         "mix.exs",
+        # Read by coding agents in applications, directly or through the
+        # usage_rules package: the rules generated from the guides, and the
+        # site-building skills in usage-rules/skills.
+        "usage-rules.md",
+        "usage-rules",
         "README.md",
         "CHANGELOG.md",
         "UPGRADE.md"

@@ -6,6 +6,7 @@ on:
       - 'lib/**'
       - 'assets/**'
       - 'priv/templates/**'
+      - 'usage-rules/**'
       - 'scripts/igniter_smoke/**'
       - 'scripts/igniter_smoke.sh'
       - 'mix.exs'

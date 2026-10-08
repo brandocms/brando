@@ -673,6 +673,23 @@ production dump.
 
 #### Features
 
+- **Documentation for coding agents.** `usage-rules.md` is now generated
+  from the guides by `mix brando.docs.agents`, which copies the regions
+  marked `<!-- usage-rules:start -->` … `<!-- usage-rules:end -->` under a
+  heading per guide. It holds the core rules for building a site, about
+  32 KB, and ends with an index of fifteen topic files in `usage-rules/`
+  (SEO, media, tenancy and so on), generated from regions marked
+  `<!-- usage-rules:start topic="seo" -->`. They ship in the Hex package,
+  where `usage_rules` finds them (the topics as `brando:<topic>`), and a test
+  compiles their Elixir examples so wrong function names and arities fail
+  CI. The HexDocs build gets an `llms.txt`
+  that describes each guide in one line, and `llms-full.txt` with every
+  guide joined. Five site-building skills (Blueprints, blocks and modules,
+  live preview, media fields, Florist deploys) ship in
+  `usage-rules/skills/`: `mix brando.install` copies them to
+  `.claude/skills/` and links the usage rules from `AGENTS.md`, and a
+  versioned `mix brando.upgrade` adds them when missing, never replacing
+  edited copies.
 - **AI crawler policy.** Configuration → SEO lists the crawlers AI products
   send, grouped by purpose (AI search, fetches for a user, model training),
   each with Allow / Block, and a setting for the `ai-train` content signal.

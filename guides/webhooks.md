@@ -10,6 +10,8 @@ a search index, a chat channel. Two layers do this.
   to URLs an administrator sets up under Configuration → Integrations →
   Webhooks.
 
+<!-- usage-rules:start topic="content-events" -->
+
 ## Events
 
 | Event | When |
@@ -21,6 +23,8 @@ a search index, a chat channel. Two layers do this.
 | `entry.deleted` | An entry was moved to the trash or deleted. Emptying the trash later sends nothing more. |
 | `entry.restored` | An entry came back from the trash. |
 
+<!-- usage-rules:end -->
+
 Several saves of the same entry within five seconds become one
 `entry.updated` with every changed field. A publish in that window takes the
 pending update's fields, so a save followed by a publish is one
@@ -29,6 +33,8 @@ pending update's fields, so a save followed by a publish is one
 ```elixir
 config :brando, Brando.ContentEvents, debounce_seconds: 5
 ```
+
+<!-- usage-rules:start topic="content-events" -->
 
 Schemas that Activity does not log (its `ignore` list, media, Brando's
 internal records) send no events, and neither do changes to users.
@@ -76,12 +82,28 @@ deliveries or search updates ever run**: the jobs are queued and wait
 forever. `mix brando.doctor` (and the system check under Configuration →
 Utilities) warns when they are missing.
 
+<!-- usage-rules:no-compile -->
 ```elixir
 config :brando, Oban,
   queues: [default: [limit: 1], content_events: [limit: 1], webhooks: [limit: 5], search_index: [limit: 2], ...],
   # also schedule the delivery log's cleanup
   cron: [crontab: [{"35 5 * * *", Brando.Worker.WebhookDeliveryPurger}, ...]]
 ```
+
+### The admin search index
+
+- `Brando.Search` indexes every Blueprint with a persisted `identifier` (one
+  that declares an `identifier` and not `persist_identifier false`). There is
+  nothing to configure per Blueprint.
+- A document holds the entry's title, its slug or URI, its meta description,
+  and the plain text of its text fields and of every block.
+- `config :brando, Brando.Search, enabled: false` stops updates; the index is
+  left as it is.
+- Rebuild the index (Configuration → Utilities, or
+  `Brando.Search.queue_rebuild/1`) once after upgrading, and after changing
+  what an identifier or text field holds.
+
+<!-- usage-rules:end -->
 
 ## Setting up a webhook
 
@@ -249,6 +271,8 @@ when the webhook is saved and again before every delivery, and the delivery
 connects to the address that was checked, with the host name kept for TLS,
 so a host that later resolves to an internal address is not called.
 
+<!-- usage-rules:start topic="content-events" -->
+
 For a receiver on your own machine in development:
 
 ```elixir
@@ -258,6 +282,8 @@ config :brando, Brando.Webhooks, allow_localhost: true
 
 This allows loopback addresses, and `http` to them only; other hosts still
 need `https`. Never set it in production.
+
+<!-- usage-rules:end -->
 
 ## Configuration
 
