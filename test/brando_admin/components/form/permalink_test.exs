@@ -7,6 +7,7 @@ defmodule BrandoAdmin.Components.Form.PermalinkTest do
   alias Phoenix.Component
 
   setup do
+    preserve_cache(:seo)
     Brando.Cache.SEO.set()
     user = Brando.Factory.insert(:random_user)
     page = Brando.Factory.insert(:page, uri: "old-permalink", creator: user, has_url: true)

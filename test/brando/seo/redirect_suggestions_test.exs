@@ -7,6 +7,7 @@ defmodule Brando.SEO.RedirectSuggestionsTest do
   alias Brando.SEO.RedirectSuggestions
 
   setup do
+    preserve_cache(:seo)
     Brando.Cache.SEO.set()
     :ok
   end

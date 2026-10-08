@@ -7,6 +7,7 @@ defmodule Brando.Cache.GlobalsTest do
   alias Brando.Sites
 
   setup do
+    preserve_cache(:globals)
     ExMachina.Sequence.reset()
     user = Factory.insert(:user)
     {:ok, %{user: user}}

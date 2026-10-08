@@ -4,6 +4,7 @@ defmodule BrandoAdmin.MetaPreviewsLiveTest do
   use Brando.LiveCase
 
   setup do
+    preserve_cache(:seo)
     Brando.Cache.SEO.set()
     :ok
   end

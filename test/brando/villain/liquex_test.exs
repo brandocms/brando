@@ -4,6 +4,10 @@ defmodule Brando.Villain.LiquexTest do
   alias Brando.Factory
   doctest Brando.Villain.Filters
 
+  setup do
+    preserve_cache(:globals)
+  end
+
   test "if statement" do
     Brando.Cache.Globals.set()
 

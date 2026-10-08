@@ -3,6 +3,10 @@ defmodule Brando.CacheReloadAllTest do
   use ExUnit.Case, async: false
   use Brando.ConnCase
 
+  setup do
+    preserve_cache([:identity, :seo, :globals, :palettes, :palettes_css, :navigation])
+  end
+
   test "reload_all/0 replaces stale identity and globals caches, and empties the query cache" do
     Brando.Cache.put(:identity, :stale, :infinite)
     Brando.Cache.put(:globals, :stale, :infinite)

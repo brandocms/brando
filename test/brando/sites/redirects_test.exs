@@ -14,6 +14,7 @@ defmodule Brando.Sites.RedirectsTest do
   }
 
   setup do
+    preserve_cache(:seo)
     Brando.Cache.SEO.set()
     :ok
   end

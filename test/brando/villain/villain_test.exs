@@ -29,10 +29,11 @@ defmodule Brando.VillainTest do
 
   use ExUnit.Case, async: false
   use Brando.ConnCase
-  import Brando.Test.Support, only: [strip_spark_metadata: 1]
+  import Brando.Test.Support, only: [preserve_cache: 1, strip_spark_metadata: 1]
   alias Brando.Factory
 
   setup do
+    preserve_cache([:navigation, :globals, :identity])
     user = Factory.insert(:random_user)
     image = Factory.insert(:image, creator: user)
 
