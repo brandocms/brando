@@ -35,6 +35,7 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
         |> assign(:can_manage?, can_manage?)
         |> assign(:tenancy_enabled?, Tenant.enabled?())
         |> assign(:default_scheduled_at, default_scheduled_at())
+        |> assign(:restoring, nil)
         |> refresh_data()
 
       subscribe_to_environments(socket.assigns.site)
@@ -384,7 +385,10 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
               <button
                 type="button"
                 class="secondary"
-                disabled={!@can_manage? || !BrandoAdmin.Authorization.allowed?(:promote, :environments) || @archives == []}
+                disabled={
+                  !@can_manage? || !BrandoAdmin.Authorization.allowed?(:promote, :environments) || @archives == [] ||
+                    !!@restoring
+                }
                 phx-click="rollback"
                 phx-confirm={gettext("Restore the newest archive as a new non-live environment?")}
               >
@@ -419,7 +423,7 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
                 <button
                   type="button"
                   class="secondary small"
-                  disabled={!@can_manage? || !BrandoAdmin.Authorization.allowed?(:promote, :environments)}
+                  disabled={!@can_manage? || !BrandoAdmin.Authorization.allowed?(:promote, :environments) || !!@restoring}
                   phx-click="rollback"
                   phx-value-schema={archive.schema}
                   phx-confirm={gettext("Restore this archive as a new, non-live environment?")}
@@ -491,6 +495,30 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
   @impl Phoenix.LiveView
   def handle_info({:environments_updated, _site_id}, socket) do
     {:noreply, refresh_data(socket)}
+  end
+
+  def handle_info({ref, result}, %{assigns: %{restoring: ref}} = socket) do
+    Process.demonitor(ref, [:flush])
+    socket = assign(socket, :restoring, nil)
+
+    case result do
+      {:ok, restored} ->
+        {:noreply,
+         socket
+         |> notify(gettext("Archive restored as %{name}.", name: restored.name))
+         |> refresh_data()}
+
+      {:error, reason} ->
+        {:noreply, socket |> notify_error(operation_error(reason)) |> refresh_data()}
+    end
+  end
+
+  def handle_info({:DOWN, ref, :process, _pid, reason}, %{assigns: %{restoring: ref}} = socket) do
+    {:noreply,
+     socket
+     |> assign(:restoring, nil)
+     |> notify_error(operation_error({:archive_restore_failed, reason}))
+     |> refresh_data()}
   end
 
   def handle_info(_message, socket), do: {:noreply, socket}
@@ -626,19 +654,27 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
     end
   end
 
+  # Restoring copies a whole environment and may migrate it, so it runs
+  # outside this process: closing the page does not stop it halfway.
+  def handle_event("rollback", _params, %{assigns: %{restoring: ref}} = socket) when is_reference(ref),
+    do: {:noreply, socket}
+
   def handle_event("rollback", params, socket) do
-    with :ok <- authorize(socket),
-         {:ok, restored} <-
-           Environments.rollback(socket.assigns.site,
-             creator: socket.assigns.current_user,
-             archive_schema: params["schema"]
-           ) do
-      {:noreply,
-       socket
-       |> notify(gettext("Archive restored as %{name}.", name: restored.name))
-       |> refresh_data()}
-    else
-      {:error, reason} -> {:noreply, notify_error(socket, operation_error(reason))}
+    case authorize(socket) do
+      :ok ->
+        site = socket.assigns.site
+        opts = [creator: socket.assigns.current_user, archive_schema: params["schema"]]
+
+        %Task{ref: ref} =
+          Task.Supervisor.async_nolink(Brando.Environments.TaskSupervisor, fn -> Environments.rollback(site, opts) end)
+
+        {:noreply,
+         socket
+         |> assign(:restoring, ref)
+         |> notify(gettext("Restoring the archive. This can take a while."))}
+
+      {:error, reason} ->
+        {:noreply, notify_error(socket, operation_error(reason))}
     end
   end
 
@@ -817,6 +853,16 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
 
   defp operation_error({:archive_behind, :unknown_age}),
     do: gettext("Brando cannot tell when this archive was taken, so it cannot bring it up to date. Nothing was restored.")
+
+  defp operation_error({:archive_behind, {:migrations_path, path}}),
+    do:
+      gettext(
+        "Brando cannot find the migrations directory %{path}, so it cannot tell whether this archive is up to date. Nothing was restored.",
+        path: path
+      )
+
+  defp operation_error({:archive_restore_failed, reason}),
+    do: gettext("Restoring the archive failed: %{reason}. Nothing was restored.", reason: inspect(reason))
 
   defp operation_error({:archive_upgrade_failed, {name, _reason}}),
     do: gettext("Bringing this archive up to date failed in %{name}. Nothing was restored.", name: name)

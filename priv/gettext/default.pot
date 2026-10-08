@@ -4946,6 +4946,21 @@ msgstr ""
 msgid "Bringing this archive up to date failed in %{name}. Nothing was restored."
 msgstr ""
 
+#: lib/brando_admin/live/sites/environment_live.ex
+#, elixir-autogen, elixir-format
+msgid "Restoring the archive. This can take a while."
+msgstr ""
+
+#: lib/brando_admin/live/sites/environment_live.ex
+#, elixir-autogen, elixir-format
+msgid "Brando cannot find the migrations directory %{path}, so it cannot tell whether this archive is up to date. Nothing was restored."
+msgstr ""
+
+#: lib/brando_admin/live/sites/environment_live.ex
+#, elixir-autogen, elixir-format
+msgid "Restoring the archive failed: %{reason}. Nothing was restored."
+msgstr ""
+
 #: lib/brando_admin/live/sites/environment_live.ex:401
 #, elixir-autogen, elixir-format
 msgid "No recovery archives exist for this site."
