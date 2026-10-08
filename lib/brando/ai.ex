@@ -36,6 +36,12 @@ defmodule Brando.AI do
   full `"provider:model"` spec. `default_model: "..."` is still read, as
   `models: [default: "..."]`.
 
+  ## Tests
+
+  `config :brando, Brando.AI, client: Brando.AI.Cassette` in `config/test.exs`
+  keeps every test away from a live model: a call outside a cassette fails.
+  See `Brando.AI.Cassette` for recording and replaying model calls.
+
   ## Resolution order
 
   - Model: field `:model` (a spec, or a name in `models:`) -> the job's own
@@ -103,7 +109,7 @@ defmodule Brando.AI do
     ai_opts = normalize_ai_opts(ai_opts)
 
     with {:ok, %{model: model, provider: provider, req_opts: req_opts}} <- request(ai_opts),
-         {:ok, response} <- ReqLLM.generate_text(model, prompt, req_opts),
+         {:ok, response} <- client().generate_text(model, prompt, req_opts),
          text <- response |> Response.text() |> normalize_text(),
          true <- text != "" or {:error, :empty_response} do
       {:ok,
@@ -119,6 +125,26 @@ defmodule Brando.AI do
       error -> {:error, error}
     end
   end
+
+  @doc """
+  The client that sends model requests for the calling process: anything
+  with ReqLLM's `generate_text/3` (and `stream_text/3`).
+
+  A cassette or stub in use for the process or one of its `$callers` comes
+  first (see `Brando.AI.Cassette`), then `fallback` (the content assistant
+  passes its own `client:`), then `config :brando, Brando.AI, client: …`, and
+  finally `ReqLLM`.
+  """
+  @spec client(module() | nil) :: module()
+  def client(fallback \\ nil) do
+    if Brando.AI.Cassette.active?(),
+      do: Brando.AI.Cassette,
+      else: fallback || configured_client()
+  end
+
+  @doc "The client in `config :brando, Brando.AI, client: …`, `ReqLLM` by default."
+  @spec configured_client() :: module()
+  def configured_client, do: Keyword.get(config(), :client) || ReqLLM
 
   @doc """
   Resolve `ai_opts` to a model, its provider and the ReqLLM request options,
@@ -305,8 +331,15 @@ defmodule Brando.AI do
 
     case key do
       key when is_binary(key) and key != "" -> {:ok, key}
-      _ -> {:error, :missing_api_key}
+      _ -> replay_key()
     end
+  end
+
+  # A cassette that replays never reaches the provider, so no key is needed.
+  defp replay_key do
+    if Brando.AI.Cassette.replaying?(),
+      do: {:ok, "cassette-replay"},
+      else: {:error, :missing_api_key}
   end
 
   defp provider_config(provider) do

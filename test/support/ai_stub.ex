@@ -1,13 +1,13 @@
 defmodule Brando.AIStub do
   @moduledoc """
-  Points `Brando.AI` at a `Req.Test` stub instead of a provider.
+  Configures `Brando.AI` for a test and answers its model calls from a
+  function, through `Brando.AI.Cassette.stub/2`.
 
-  `Brando.AI` forwards `default_opts` to ReqLLM untouched, so the stub is
-  plain configuration: ReqLLM hands `req_http_options: [plug: …]` to Req, and
-  the reply below is what OpenAI's Responses API sends back. `Req.Test` stubs
-  follow `$callers`, which covers inline Oban jobs; LiveView tests pass
-  `shared: true`, the way `Brando.LiveCase` shares the SQL sandbox, so the
-  view's `start_async` tasks see the stub too.
+  For flows with fixed replies, prefer a recorded cassette (`use_cassette/3`
+  or `@tag cassette: "name"`); this is for replies that depend on the prompt.
+  The stub is scoped to the test process and the processes it starts —
+  LiveViews, their `start_async` tasks and inline Oban jobs — through
+  `$callers`.
 
       setup do
         Brando.AIStub.configure()
@@ -16,25 +16,21 @@ defmodule Brando.AIStub do
   """
   import ExUnit.Callbacks, only: [on_exit: 1]
 
-  alias Req.Test
+  alias Brando.AI.Cassette
 
   @doc """
-  Configures a provider and restores the previous configuration on exit.
-  `shared: true` makes the stub global — only for tests that are not async.
+  Configures a provider and restores the previous configuration on exit. The
+  client is `Brando.AI.Cassette`, so a call no stub or cassette answers fails
+  instead of reaching a provider.
   """
-  def configure(opts \\ []) do
+  def configure do
     previous = Application.get_env(:brando, Brando.AI)
-
-    if opts[:shared] do
-      Test.set_req_test_to_shared(%{async: false})
-      on_exit(fn -> Test.set_req_test_to_private() end)
-    end
 
     Application.put_env(:brando, Brando.AI,
       enabled: true,
       default_model: "openai:gpt-4o-mini",
       providers: [openai: [api_key: "test-key"]],
-      default_opts: [req_http_options: [plug: {Test, Brando.AI}, retry: false]]
+      client: Cassette
     )
 
     on_exit(fn ->
@@ -51,15 +47,10 @@ defmodule Brando.AIStub do
   def reply(text) when is_binary(text), do: reply(fn _prompt -> text end)
 
   def reply(fun) when is_function(fun, 1) do
-    Test.stub(Brando.AI, fn conn ->
-      {:ok, body, conn} = Plug.Conn.read_body(conn)
-
-      case fun.(prompt(body)) do
-        {:error, status} ->
-          conn |> Plug.Conn.put_status(status) |> Test.json(%{"error" => %{"message" => "stubbed failure"}})
-
-        text ->
-          Test.json(conn, response(text))
+    Cassette.stub(fn request ->
+      case fun.(prompt(request)) do
+        {:error, status} -> %{"error" => %{"status" => status, "message" => "stubbed failure"}}
+        text -> %{"text" => text, "usage" => %{"input_tokens" => 1, "output_tokens" => 1}}
       end
     end)
   end
@@ -67,80 +58,112 @@ defmodule Brando.AIStub do
   @doc """
   Answers successive requests with `turns`, in order: `{:text, text}` for a
   final answer, or `{:tools, [{name, args}]}` for function calls. Every
-  request body is sent to the test process as `{:ai_request, body}`.
+  request is sent to the test process as `{:ai_request, request}`, normalised
+  as `Brando.AI.Cassette.Request` describes.
   """
   def script(turns) when is_list(turns) do
     test = self()
     {:ok, counter} = Elixir.Agent.start_link(fn -> 0 end)
 
-    Test.stub(Brando.AI, fn conn ->
-      {:ok, body, conn} = Plug.Conn.read_body(conn)
-      send(test, {:ai_request, Jason.decode!(body)})
+    Cassette.stub(fn request ->
+      send(test, {:ai_request, request})
       n = Elixir.Agent.get_and_update(counter, &{&1, &1 + 1})
+      turn(Enum.at(turns, n), n)
+    end)
+  end
 
-      case Enum.at(turns, n) do
-        {:text, text} -> Test.json(conn, response(text))
-        {:tools, calls} -> Test.json(conn, tool_response(calls, n))
-        {:error, status} -> conn |> Plug.Conn.put_status(status) |> Test.json(%{"error" => %{"message" => "stubbed"}})
-        nil -> Test.json(conn, response("(script exhausted)"))
+  @doc "The reply a cassette records for one scripted turn."
+  def turn({:text, text}, _n), do: %{"text" => text, "usage" => %{"input_tokens" => 1, "output_tokens" => 1}}
+
+  def turn({:tools, calls}, n) do
+    %{
+      "tool_calls" =>
+        calls
+        |> Enum.with_index()
+        |> Enum.map(fn {{name, args}, i} -> %{"id" => "call_#{n}_#{i}", "name" => name, "arguments" => args} end),
+      "usage" => %{"input_tokens" => 100, "output_tokens" => 20}
+    }
+  end
+
+  def turn({:error, status}, _n), do: %{"error" => %{"status" => status, "message" => "stubbed"}}
+  def turn(nil, n), do: turn({:text, "(script exhausted)"}, n)
+
+  @doc "The text of a normalised request: its system prompt and messages."
+  def prompt(request) do
+    [request["system"] | Enum.map(request["messages"] || [], & &1["content"])]
+    |> Enum.reject(&is_nil/1)
+    |> Enum.map_join("\n", &text/1)
+  end
+
+  defp text(text) when is_binary(text), do: text
+
+  defp text(parts) when is_list(parts) do
+    Enum.map_join(parts, "\n", fn
+      %{"type" => "text", "text" => text} -> text(text)
+      %{"type" => _} -> ""
+      other -> text(other)
+    end)
+  end
+
+  defp text(other), do: Jason.encode!(other)
+end
+
+defmodule Brando.AIStub.ScriptedClient do
+  @moduledoc """
+  A fake provider that answers from a script of turns, as `Brando.AIStub.script/1`
+  takes them. It speaks ReqLLM's `generate_text/3` and `stream_text/3`, so a
+  cassette can record from it — that is how Brando's own cassettes were made
+  without a model or a key:
+
+      Brando.AIStub.ScriptedClient.start([{:tools, [{"search_entries", %{"query" => "Ident"}}]}, {:text, "Done"}])
+      use_cassette "assistant/example", mode: :record, client: Brando.AIStub.ScriptedClient do
+        …
       end
+
+  A streamed text turn arrives a word at a time.
+  """
+  alias Brando.AI.Cassette.Response
+
+  def start(turns) do
+    owner = self()
+    {:ok, script} = Elixir.Agent.start(fn -> {turns, 0} end)
+    :persistent_term.put({__MODULE__, owner}, script)
+
+    ExUnit.Callbacks.on_exit(fn ->
+      :persistent_term.erase({__MODULE__, owner})
+      if Process.alive?(script), do: Elixir.Agent.stop(script)
     end)
+
+    :ok
   end
 
-  defp tool_response(calls, n) do
-    output =
-      calls
-      |> Enum.with_index()
-      |> Enum.map(fn {{name, args}, i} ->
-        %{
-          "type" => "function_call",
-          "id" => "fc_#{n}_#{i}",
-          "call_id" => "call_#{n}_#{i}",
-          "name" => name,
-          "arguments" => Jason.encode!(args),
-          "status" => "completed"
-        }
-      end)
-
-    %{
-      "id" => "resp_#{n}",
-      "object" => "response",
-      "status" => "completed",
-      "model" => "gpt-4o-mini",
-      "output" => output,
-      "usage" => %{"input_tokens" => 100, "output_tokens" => 20, "total_tokens" => 120}
-    }
+  def generate_text(model, prompt, opts) do
+    {turn, n} = next()
+    Response.load(Brando.AIStub.turn(turn, n), model, prompt, opts, %{})
   end
 
-  defp prompt(body) do
-    body
-    |> Jason.decode!()
-    |> Map.get("input")
-    |> List.wrap()
-    |> Enum.flat_map(fn
-      %{"content" => content} when is_binary(content) -> [content]
-      %{"content" => parts} when is_list(parts) -> Enum.map(parts, &Map.get(&1, "text", ""))
-      _ -> []
-    end)
-    |> Enum.join("\n")
+  def stream_text(model, prompt, opts) do
+    {turn, n} = next()
+
+    reply =
+      case Brando.AIStub.turn(turn, n) do
+        %{"text" => text} = reply ->
+          chunks = text |> String.split(~r/(?<= )/) |> Enum.map(&%{"type" => "content", "text" => &1})
+          reply |> Map.delete("text") |> Map.merge(%{"chunks" => chunks, "finish_reason" => "stop"})
+
+        reply ->
+          reply
+      end
+
+    Response.load_stream(reply, model, prompt, opts, %{})
   end
 
-  defp response(text) do
-    %{
-      "id" => "resp_stub",
-      "object" => "response",
-      "status" => "completed",
-      "model" => "gpt-4o-mini",
-      "output" => [
-        %{
-          "type" => "message",
-          "id" => "msg_stub",
-          "role" => "assistant",
-          "status" => "completed",
-          "content" => [%{"type" => "output_text", "text" => text, "annotations" => []}]
-        }
-      ],
-      "usage" => %{"input_tokens" => 1, "output_tokens" => 1, "total_tokens" => 2}
-    }
+  defp next do
+    script =
+      Enum.find_value([self() | Process.get(:"$callers", [])], fn pid ->
+        :persistent_term.get({__MODULE__, pid}, nil)
+      end) || raise "Brando.AIStub.ScriptedClient.start/1 was not called by this test"
+
+    Elixir.Agent.get_and_update(script, fn {turns, n} -> {{Enum.at(turns, n), n}, {turns, n + 1}} end)
   end
 end

@@ -1,0 +1,29 @@
+{
+  "cassette": "cassette_test/hello",
+  "interactions": [
+    {
+      "request": {
+        "kind": "generate",
+        "messages": [
+          {
+            "content": "Say hello",
+            "role": "user"
+          }
+        ],
+        "model": "openai:gpt-4o-mini",
+        "params": {},
+        "system": null,
+        "tools": []
+      },
+      "response": {
+        "finish_reason": "stop",
+        "text": "Hello from the cassette",
+        "usage": {
+          "input_tokens": 3,
+          "output_tokens": 4
+        }
+      }
+    }
+  ],
+  "version": 1
+}

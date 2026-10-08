@@ -76,7 +76,7 @@ defmodule Brando.AI.Agent.Loop do
       |> Keyword.merge(tools: tools(), max_tokens: Agent.config()[:max_tokens])
       |> Keyword.merge(cache_opts(request.provider))
 
-    case Agent.config()[:client].generate_text(request.model, context, opts) do
+    case Brando.AI.client(Agent.config()[:client]).generate_text(request.model, context, opts) do
       {:ok, response} ->
         run = Budget.reconcile(run, Response.usage(response), request.model)
         respond(run, user, request, conversation, response, n)
