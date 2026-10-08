@@ -2655,7 +2655,6 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
   attr :module_datasource_query, :any, default: nil
   attr :available_identifiers, :list, default: []
 
-  slot :inner_block
   slot :description
 
   def toolbar(assigns) do
@@ -2736,9 +2735,10 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
           </span>
         <% end %>
       </div>
-      <div class="block-content" id={"block-#{@uid}-block-toolbar-content"}>
-        {render_slot(@inner_block)}
-      </div>
+      <%!-- Another editor in this block: "Ingrid · Caption", or on a ref their
+            first name. Drawn from sticky attributes the client sets
+            (`assets/src/Presence/fieldPresence.js`), beside the actions. --%>
+      <span class="block-presence"></span>
       <div class="block-actions" id={"block-#{@uid}-block-toolbar-actions"}>
         <%!-- Notes: the count of open notes is a sticky attribute the client
               sets (`assets/src/Notes`), so a note never re-renders a block. --%>

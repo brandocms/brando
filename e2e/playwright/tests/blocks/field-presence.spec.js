@@ -69,7 +69,15 @@ test.describe('Field presence', () => {
     const theirs = block(page).locator('[data-field-presence-user]')
     await expect(theirs).toHaveCount(1, { timeout: 5000 })
     await expect(theirs.getByLabel('Headline', { exact: true })).toBeAttached()
-    await expect(block(page).locator('.block-toolbar').first()).toHaveAttribute('data-presence-label', /Headline/)
+    await expect(block(page).locator('.block-toolbar > .block-presence').first()).toHaveAttribute('data-presence-label', /Headline/)
+    // The label sits before the actions, which keep their place at the right
+    // edge of the header, as on a block nobody else is in.
+    const header = block(page).locator('.block-toolbar').first()
+    const [bar, actions, label] = await Promise.all(
+      [header, header.locator('> .block-actions'), header.locator('> .block-presence')].map(l => l.boundingBox())
+    )
+    expect(label.x + label.width).toBeLessThanOrEqual(actions.x + 1)
+    expect(bar.x + bar.width - (actions.x + actions.width)).toBeCloseTo(10, 0)
 
     // Nothing is locked: A can still type.
     await title(page).fill('Title by A, again')

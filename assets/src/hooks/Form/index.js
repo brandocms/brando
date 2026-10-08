@@ -23,6 +23,18 @@ export default (app) => ({
     this.follow = follow(this)
     this.notes = notes(this)
     app.notes = this.notes
+    // A block name too long for its header ends in an ellipsis (Block.css);
+    // hovering it shows it whole. Set as it is hovered, so a patch that drops
+    // the title costs nothing and the next hover has the current name.
+    this.onBlockNameHover = event => {
+      const name = event.target.closest?.('.block-toolbar .block-name')
+      if (!name) return
+      const text = name.scrollWidth > name.clientWidth ? name.textContent.replace(/\s+/g, ' ').trim() : ''
+      if (text && name.title !== text) name.title = text
+      else if (!text && name.hasAttribute('title')) name.removeAttribute('title')
+    }
+    this.el.addEventListener('mouseover', this.onBlockNameHover)
+
     // Keep the measurement outside LiveView's patched inline attributes.
     this.toolbarStyle = document.createElement('style')
     document.head.appendChild(this.toolbarStyle)
@@ -180,6 +192,7 @@ export default (app) => ({
   destroyed() {
     this.follow?.destroy()
     this.notes?.destroy()
+    this.el.removeEventListener('mouseover', this.onBlockNameHover)
     if (app.notes === this.notes) app.notes = null
     this.stopLocatingBlock?.()
     this.toolbarObserver?.disconnect()
