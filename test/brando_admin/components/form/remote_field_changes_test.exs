@@ -106,13 +106,33 @@ defmodule BrandoAdmin.Components.Form.RemoteFieldChangesTest do
     assert socket.assigns.form[:title].value == "Newer"
   end
 
-  test "a change this editor ships counts on from the newest it has for the field" do
+  # A hybrid logical clock: the wall clock in milliseconds, or one past the
+  # newest clock known for the field when that is ahead of it.
+  test "a change this editor ships is stamped with the time, or past the newest clock it knows" do
     Phoenix.PubSub.subscribe(Brando.pubsub(), Brando.Tenant.Topic.entry("field_sync", Entry, "entry-1"))
-    socket = socket(unshipped_fields: MapSet.new([:body]), field_clocks: %{body: {4, "other"}})
-
-    assert {:ok, _} = Form.update(%{event: "ship_field_changes"}, socket)
     tab = BrandoAdmin.Presence.tab()
-    assert_receive {:fields_shipped, %{changes: [%{field: :body, clock: {5, ^tab}}]}}
+    before = System.os_time(:millisecond)
+
+    socket = socket(unshipped_fields: MapSet.new([:body]), field_clocks: %{body: {4, "other"}})
+    assert {:ok, _} = Form.update(%{event: "ship_field_changes"}, socket)
+    assert_receive {:fields_shipped, %{changes: [%{field: :body, clock: {n, ^tab}}]}}
+    assert n >= before
+
+    ahead = before + 60_000
+    socket = socket(unshipped_fields: MapSet.new([:body]), field_clocks: %{body: {ahead, "other"}})
+    assert {:ok, _} = Form.update(%{event: "ship_field_changes"}, socket)
+    assert_receive {:fields_shipped, %{changes: [%{field: :body, clock: {n, ^tab}}]}}
+    assert n == ahead + 1
+  end
+
+  # A joining tab is sent the clocks with the values, also when there are no
+  # values, and keeps the newest of each.
+  test "clocks sent to a joining tab are merged, newest kept" do
+    socket = socket(field_clocks: %{title: {9, "a"}, body: {2, "a"}})
+    clocks = %{title: {3, "b"}, body: {5, "b"}, caption: {1, "b"}}
+
+    assert {:ok, updated} = Form.update(%{event: "apply_remote_field_changes", changes: [], clocks: clocks}, socket)
+    assert updated.assigns.field_clocks == %{title: {9, "a"}, body: {5, "b"}, caption: {1, "b"}}
   end
 
   test "a remote value equal to the saved one replaces what the editor's browser sent" do
@@ -143,10 +163,10 @@ defmodule BrandoAdmin.Components.Form.RemoteFieldChangesTest do
 
     tab = BrandoAdmin.Presence.tab()
 
-    assert Enum.sort_by(changes, & &1.field) == [
-             %{field: :body, value: "<p>Local draft</p>", assoc?: false, clock: {1, tab}},
-             %{field: :title, value: "Stored title", assoc?: false, clock: {1, tab}}
-           ]
+    assert [
+             %{field: :body, value: "<p>Local draft</p>", assoc?: false, clock: {_, ^tab}},
+             %{field: :title, value: "Stored title", assoc?: false, clock: {_, ^tab}}
+           ] = Enum.sort_by(changes, & &1.field)
 
     assert_receive {:dirty_fields, [], 1}
     assert updated.assigns.dirty_fields == []

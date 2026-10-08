@@ -227,8 +227,8 @@ defmodule BrandoAdmin.Components.Form do
 
   # Field changes another editor shipped: the fields they changed. A change
   # to the field we are in waits until we leave it (see "Entry field sync").
-  def update(%{event: "apply_remote_field_changes", changes: changes}, socket) do
-    {:ok, receive_field_changes(socket, changes)}
+  def update(%{event: "apply_remote_field_changes", changes: changes} = message, socket) do
+    {:ok, socket |> receive_field_changes(changes) |> merge_clocks(message[:clocks])}
   end
 
   def update(%{action: :image_processed, image_id: id}, socket) do
@@ -2220,18 +2220,27 @@ defmodule BrandoAdmin.Components.Form do
           %{field: field, value: value, assoc?: field in belongs_to, clock: clock(socket, field)}
         end)
 
-      if changes != [], do: broadcast_field_changes(socket, entry.id, changes, user_id)
+      clocks = field_clocks(socket)
+
+      if changes != [] or clocks != %{},
+        do: broadcast_field_changes(socket, entry.id, changes, user_id, clocks)
     end
 
     socket
   end
 
-  defp broadcast_field_changes(socket, entry_id, changes, to) do
+  defp broadcast_field_changes(socket, entry_id, changes, to, clocks \\ nil) do
     Phoenix.PubSub.broadcast(
       Brando.pubsub(),
       Brando.Tenant.Topic.entry("field_sync", socket.assigns.schema, entry_id),
       {:fields_shipped,
-       %{changes: changes, user_id: socket.assigns.current_user.id, tab: BrandoAdmin.Presence.tab(), to: to}}
+       %{
+         changes: changes,
+         clocks: clocks,
+         user_id: socket.assigns.current_user.id,
+         tab: BrandoAdmin.Presence.tab(),
+         to: to
+       }}
     )
   end
 
@@ -2385,16 +2394,72 @@ defmodule BrandoAdmin.Components.Form do
   end
 
   # A recovered form keeps what the other editors sent this tab since it
-  # loaded.
-  defp keep_received(socket, previous, changeset) do
+  # loaded, except in the fields typed into while it was offline.
+  defp keep_received(socket, previous, changeset, offline) do
     socket
     |> synced_values()
     |> Map.keys()
+    |> Kernel.--(offline)
     |> Enum.reduce(changeset, fn field, changeset ->
       if field_value(changeset, field) == field_value(previous, field),
         do: changeset,
         else: keep_field(changeset, previous, field)
     end)
+  end
+
+  # The entry fields typed into while the tab was offline, which the Form
+  # hook lists in the recovered form (`__offline_edits`, input names).
+  defp offline_fields(socket, params) do
+    singular = socket.assigns.singular
+
+    params
+    |> Map.get("__offline_edits", "")
+    |> to_string()
+    |> String.split(" ", trim: true)
+    |> Enum.flat_map(fn name ->
+      case Regex.run(~r/^#{Regex.escape(singular)}\[([^\]]+)\]/, name) do
+        [_, key] -> List.wrap(target_field(socket, singular, [singular, key]))
+        _ -> []
+      end
+    end)
+    |> Enum.uniq()
+  end
+
+  # After a recovery, what the tab holds reaches the others: fields typed
+  # into offline as fresh edits, which win, and other recovered values that
+  # differ from the saved entry with the oldest clock, `{0, tab}`, so they
+  # fill fields nobody else holds and lose to every real edit. Otherwise a
+  # value restored in a tab that was alone would be in nobody else's form,
+  # and their save would revert it.
+  defp share_recovered(socket, offline, entry_params) do
+    socket = socket |> mark_local(offline) |> ship_all_field_changes()
+    entry = socket.assigns[:entry]
+
+    if entry && entry.id && is_map(entry_params) do
+      changeset = socket.assigns.form.source
+      synced = synced_values(socket)
+      {fields, belongs_to} = sync_fields(socket)
+      tab = BrandoAdmin.Presence.tab()
+
+      changes =
+        for field <- fields,
+            Map.has_key?(entry_params, Atom.to_string(field)),
+            not Map.has_key?(synced, field),
+            %{value: value} = change <- List.wrap(field_change(changeset, field, belongs_to)),
+            value != Map.get(changeset.data, field),
+            do: Map.put(change, :clock, {0, tab})
+
+      if changes != [], do: broadcast_field_changes(socket, entry.id, changes, nil)
+
+      clocks =
+        Enum.reduce(changes, field_clocks(socket), &Map.update(&2, &1.field, &1.clock, fn c -> max(c, &1.clock) end))
+
+      socket
+      |> mark_synced(changes)
+      |> assign(:field_clocks, clocks)
+    else
+      socket
+    end
   end
 
   # The entry field `_target` names (`["page", "title"]` or a path into a
@@ -2489,11 +2554,15 @@ defmodule BrandoAdmin.Components.Form do
     |> apply_remote(Enum.reject(left, &MapSet.member?(unshipped, &1.field)))
   end
 
-  # Each field's value carries a clock, `{n, tab}`: a change counts one up
-  # from the newest it knows for the field, and the tab id breaks a tie. An
-  # editor takes a value only if its clock is newer than the one it holds, so
-  # two editors who send the same field at once both end with the same one,
-  # and a value relayed late to a joiner can't replace a newer one.
+  # Each field's value carries a clock, `{n, tab}`, a hybrid logical clock:
+  # `n` is the wall-clock time in milliseconds, or one more than the newest
+  # `n` known for the field if that is later, and the tab id breaks a tie.
+  # An editor takes a value only if its clock is newer than the one it
+  # holds, so two editors who send the same field at once both end with the
+  # same one, and a value relayed late to a joiner can't replace a newer
+  # one. Because `n` follows the wall clock, an edit made after another one
+  # wins without either tab having heard of the other: a tab that opened
+  # after a save, knowing no clocks, still beats the edits before it.
   defp clock(socket, field), do: Map.get(field_clocks(socket), field, {0, ""})
 
   defp stamp(changes, socket) do
@@ -2502,7 +2571,7 @@ defmodule BrandoAdmin.Components.Form do
     {changes, clocks} =
       Enum.map_reduce(changes, field_clocks(socket), fn %{field: field} = change, clocks ->
         {n, _tab} = Map.get(clocks, field, {0, ""})
-        clock = {n + 1, tab}
+        clock = {max(System.os_time(:millisecond), n + 1), tab}
         {Map.put(change, :clock, clock), Map.put(clocks, field, clock)}
       end)
 
@@ -2523,6 +2592,14 @@ defmodule BrandoAdmin.Components.Form do
   end
 
   defp field_clocks(socket), do: socket.assigns[:field_clocks] || %{}
+
+  # The clocks a joining tab is sent with the values: each field's newest.
+  defp merge_clocks(socket, clocks) when is_map(clocks) and map_size(clocks) > 0 do
+    merged = Map.merge(field_clocks(socket), clocks, fn _field, ours, theirs -> max(ours, theirs) end)
+    assign(socket, :field_clocks, merged)
+  end
+
+  defp merge_clocks(socket, _clocks), do: socket
 
   # The value of each field the other editors already hold, because we
   # shipped it or received it from them.
@@ -7493,9 +7570,11 @@ defmodule BrandoAdmin.Components.Form do
     {changeset, echoed} = cast_entry_edit(socket, entry_or_default, entry_params, target)
     changeset = Map.put(changeset, :action, :validate)
 
+    offline = if recovery?, do: offline_fields(socket, params), else: []
+
     {changeset, socket} =
       if recovery?,
-        do: {keep_received(socket, previous, changeset), socket},
+        do: {keep_received(socket, previous, changeset, offline), socket},
         else: {changeset, take_local_edit(socket, previous, changeset, echoed, target, entry_params)}
 
     # The recomputed form is assigned before the `_target` branch, and that
@@ -7506,6 +7585,7 @@ defmodule BrandoAdmin.Components.Form do
     # `[^singular | rest]` branch meant every recovered value was recomputed and
     # then dropped, so a reconnect silently restored nothing.
     socket = socket |> put_form(to_form(changeset, [])) |> broadcast_dirty_fields() |> Drafts.dirty()
+    socket = if recovery?, do: share_recovered(socket, offline, entry_params), else: socket
 
     case Map.get(params, "_target") do
       [^singular | rest] ->

@@ -296,6 +296,91 @@ defmodule BrandoAdmin.EntryFieldSyncTest do
     assert shown(c.a, "title") == shown(c.b, "title")
   end
 
+  # "Save and continue editing": the form stays open after the save. A save
+  # is two submits: the first collects the blocks, the second writes.
+  defp save_and_stay(view) do
+    view |> form() |> render_hook("save_redirect_target", %{})
+    view |> element("#page_form_form") |> render_submit()
+    assert_push_event(view, "b:submit", %{}, 5_000)
+    view |> element("#page_form_form") |> render_submit()
+  end
+
+  defp saved_title(page), do: Repo.get!(Page, page.id).title
+
+  # Clocks follow the wall clock, so an edit made after another one wins
+  # even when its tab has never heard of the other: here B opens after A's
+  # save and knows no clocks, and A's clocks are five edits ahead.
+  test "edits after a save and a reload win, both ways", c do
+    for n <- 1..5, do: edit(c.a, "title", "Om oss #{n}")
+    await_shown(c.b, "title", "Om oss 5")
+    save_and_stay(c.a)
+    await(fn -> saved_title(c.page) == "Om oss 5" end)
+
+    # B reloads and edits before A has answered its join: B knows none of
+    # A's clocks when it ships.
+    kill_live(c.b)
+    :sys.suspend(c.a.pid)
+    b = open(c.other_conn, c.page)
+    edit(b, "title", "Om oss, B after reload")
+    :sys.resume(c.a.pid)
+    await_shown(c.a, "title", "Om oss, B after reload")
+
+    edit(c.a, "title", "Om oss, A again")
+    await_shown(b, "title", "Om oss, A again")
+    assert_both(%{a: c.a, b: b}, %{"title" => "Om oss, A again"})
+  end
+
+  test "an edit after a reconnect wins", c do
+    for n <- 1..3, do: edit(c.a, "title", "Om oss #{n}")
+    await_shown(c.b, "title", "Om oss 3")
+
+    kill_live(c.a)
+    a = open(c.conn, c.page)
+    await_shown(a, "title", "Om oss 3")
+    edit(a, "title", "Om oss, A after reconnect")
+
+    await_shown(c.b, "title", "Om oss, A after reconnect")
+  end
+
+  # The browser lists the fields typed into while offline (`__offline_edits`,
+  # see the Form hook); those are fresh edits and win over the older value
+  # the others send the reconnected tab.
+  test "typing done offline survives the reconnect", c do
+    edit(c.b, "title", "Om oss, B")
+    await_shown(c.a, "title", "Om oss, B")
+    offline = c.b |> render() |> form_params("#page_form_form") |> put_in(["page", "title"], "Om oss, typed offline")
+    kill_live(c.b)
+
+    b = open(c.other_conn, c.page)
+    await_shown(b, "title", "Om oss, B")
+
+    recovered = offline |> Map.put("__offline_edits", "page[title]") |> Map.put("_target", ["image_editor_upload"])
+    b |> form() |> render_hook("recover_form", recovered)
+
+    assert_both(%{a: c.a, b: b}, %{"title" => "Om oss, typed offline"})
+  end
+
+  # A tab that was alone gets its unsaved form back from the browser. An
+  # editor who opens the entry later gets those values too, or their save
+  # would revert them.
+  test "a value recovered in a tab that was alone reaches a later joiner", c do
+    kill_live(c.b)
+    edit(c.a, "title", "Om oss, A alone")
+    recovered_form = c.a |> render() |> form_params("#page_form_form")
+    kill_live(c.a)
+
+    a = open(c.conn, c.page)
+    a |> form() |> render_hook("recover_form", Map.put(recovered_form, "_target", ["image_editor_upload"]))
+    assert shown(a, "title") == "Om oss, A alone"
+
+    b = open(c.other_conn, c.page)
+    await_shown(b, "title", "Om oss, A alone")
+
+    # It is the oldest value there is: any edit beats it.
+    edit(b, "title", "Om oss, B")
+    await_shown(a, "title", "Om oss, B")
+  end
+
   describe "field locks" do
     setup c do
       Phoenix.PubSub.subscribe(Brando.pubsub(), Brando.Tenant.Topic.entry("active_field", Page, c.page.id))
@@ -327,6 +412,17 @@ defmodule BrandoAdmin.EntryFieldSyncTest do
 
       diffs = for %Phoenix.Socket.Broadcast{event: "presence_diff"} <- messages(), do: :diff
       assert length(diffs) == 1
+    end
+
+    # The write goes to the page it was scheduled on, carried in the timer.
+    test "the delayed presence write carries the page it is for", c do
+      :erlang.trace(c.a.pid, true, [:receive])
+      focus(c.a, "title")
+      path = "/admin/pages/update/#{c.page.id}"
+
+      assert_receive {:trace, _, :receive, {:brando_active_field_write, _token, ^path, "page[title]"}}, 1_000
+    after
+      :erlang.trace(:all, false, [:receive])
     end
 
     test "leaving the entry releases the field", c do

@@ -1125,7 +1125,7 @@ defmodule BrandoAdmin.LiveView.Form.Hooks do
     socket =
       cond do
         tab == BrandoAdmin.Presence.tab() ->
-          schedule_active_field_write(field)
+          schedule_active_field_write(socket.assigns.uri.path, field)
           socket
 
         user_id == socket.assigns.current_user.id ->
@@ -1138,10 +1138,10 @@ defmodule BrandoAdmin.LiveView.Form.Hooks do
     {:halt, socket}
   end
 
-  defp handle_hooks_active_field_info({:brando_active_field_write, token}, socket) do
-    with {^token, field} <- Process.get(:brando_active_field_write),
+  defp handle_hooks_active_field_info({:brando_active_field_write, token, path, field}, socket) do
+    with ^token <- Process.get(:brando_active_field_write),
          false <- Process.get(:brando_active_field_written, nil) == field do
-      Brando.presence().update_active_field(socket.assigns.uri.path, socket.assigns.current_user.id, field)
+      Brando.presence().update_active_field(path, socket.assigns.current_user.id, field)
       Process.put(:brando_active_field_written, field)
     end
 
@@ -1155,10 +1155,13 @@ defmodule BrandoAdmin.LiveView.Form.Hooks do
   # presence diff (a join and a leave, and a user lookup in every editor's
   # process), so a blur followed by a focus within 300 ms writes once, and a
   # field the meta already has is not written again.
-  defp schedule_active_field_write(field) do
+  #
+  # The write goes to the page it was scheduled on; navigating away drops it
+  # (`BrandoAdmin.Hooks.handle_params/3`).
+  defp schedule_active_field_write(path, field) do
     token = make_ref()
-    Process.put(:brando_active_field_write, {token, field})
-    Process.send_after(self(), {:brando_active_field_write, token}, 300)
+    Process.put(:brando_active_field_write, token)
+    Process.send_after(self(), {:brando_active_field_write, token, path, field}, 300)
   end
 
   # Field presence: the block and the field in it another editor is in, with
@@ -1357,7 +1360,8 @@ defmodule BrandoAdmin.LiveView.Form.Hooks do
         send_update(BrandoAdmin.Components.Form,
           id: form_id,
           event: "apply_remote_field_changes",
-          changes: msg.changes
+          changes: msg.changes,
+          clocks: Map.get(msg, :clocks)
         )
       end
     end
