@@ -41,7 +41,7 @@ defmodule BrandoAdmin.CommandPaletteTest do
       owner = Factory.insert(:random_user, role: :superuser)
       user = Factory.insert(:random_user, role: :user)
       {:ok, _} = Migration.run()
-      %{scope: Scope.standalone(owner), user: user}
+      %{scope: Scope.standalone(owner), user: user, owner: owner}
     end
 
     test "rank an exact title, then titles starting with the query, then the rest", c do
@@ -96,6 +96,34 @@ defmodule BrandoAdmin.CommandPaletteTest do
 
       {:ok, _} = Groups.update(c.scope, group.id, %{name: group.name}, @content, group.lock_version)
       assert titles(CommandPalette.entries(c.user, "somm")) == ["Sommerro"]
+    end
+
+    test "entries of a content type the user has no grant for are left out, and a superuser sees both", c do
+      grant(c, @content)
+      page("Lighthouse page")
+
+      {:ok, article} =
+        Brando.SyncTest.create_article(
+          %{title: "Lighthouse case", slug: "lighthouse-case", language: "en", status: "published"},
+          c.owner
+        )
+
+      # Creating the article gives it an identifier, as for any entry
+      assert Repo.get_by(Identifier, schema: Brando.SyncTest.Article, entry_id: article.id)
+
+      assert titles(CommandPalette.entries(c.user, "lighthouse")) == ["Lighthouse page"]
+
+      # A superuser's search reaches every content type, including test-only
+      # Blueprints without a table; give those an empty one in this test.
+      for schema <- Brando.Authorization.Catalog.schemas(),
+          is_binary(schema.__schema__(:source)),
+          table = schema.__schema__(:source),
+          Repo.query!("SELECT to_regclass($1)::text", [table]).rows == [[nil]] do
+        Repo.query!(~s[CREATE TABLE "#{table}" (id bigserial PRIMARY KEY)])
+      end
+
+      assert c.owner |> CommandPalette.entries("lighthouse") |> titles() |> Enum.sort() ==
+               ["Lighthouse case", "Lighthouse page"]
     end
 
     test "deleted entries are left out even when their identifier remains", c do

@@ -48,23 +48,7 @@ test.describe('Accessible form validation', () => {
     await expect(title).toBeFocused()
   })
 
-  test('correcting the field clears the announcement', async ({ page }) => {
-    await page.goto('/admin/pages/create')
-    await syncLV(page)
-    await setEntryStatus(page, 'published')
-
-    const title = page.getByLabel('Title', { exact: true })
-    await page.getByTestId('submit').click()
-    await syncLV(page)
-    await expect(title).toHaveAttribute('aria-invalid', 'true')
-    await page.getByRole('dialog').getByRole('button', { name: 'OK' }).click()
-
-    await title.fill('An acceptable title')
-    await syncLV(page)
-
-    await expect(title).not.toHaveAttribute('aria-invalid', 'true')
-    await expect(page.locator('#page_title-error')).toBeEmpty()
-  })
+  // Correcting the field clears the announcement: form_validation_a11y_test.exs
 })
 
 test.describe('Modal focus management', () => {
