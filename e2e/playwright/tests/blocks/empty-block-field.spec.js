@@ -22,6 +22,37 @@ const emptyCase = async page => {
 const noOverflow = page =>
   page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)
 
+// The tiles' rows (how many on each), and the words of their names that a
+// line break splits. Names are swapped for long, grouped ones first, as sites
+// name their modules ("Tekst | Oppsummeringsliste").
+const tileLayout = tiles =>
+  tiles.evaluateAll(elements => {
+    const names = ['Overskrift | Tekst', 'Case/Artikkel media', 'Tekst | Oppsummeringsliste', 'Innholdsfortegnelse | Kapitteloversikt']
+    const rows = {}
+    const split = []
+
+    elements.forEach((tile, index) => {
+      const name = tile.querySelector('.blocks-welcome-module-name')
+      name.textContent = names[index % names.length].replace(' | ', '\u00A0| ')
+      const top = Math.round(tile.getBoundingClientRect().top)
+      rows[top] = (rows[top] || 0) + 1
+
+      const text = name.firstChild
+      for (const word of text.textContent.matchAll(/[^\s\u00A0]+/g)) {
+        const range = document.createRange()
+        range.setStart(text, word.index)
+        range.setEnd(text, word.index + word[0].length)
+        const lines = new Set([...range.getClientRects()].map(rect => Math.round(rect.top)))
+        if (lines.size > 1) split.push(word[0])
+      }
+
+      const hint = tile.querySelector('.blocks-welcome-module-count')
+      if (hint && hint.getBoundingClientRect().height > parseFloat(getComputedStyle(hint).lineHeight) * 1.5) split.push(hint.textContent.trim())
+    })
+
+    return { rows: Object.values(rows), split }
+  })
+
 test('an empty case offers what cases usually start with, and a tile inserts and opens it', async ({ page }, testInfo) => {
   await page.setViewportSize({ width: 1440, height: 1000 })
   const entry = await emptyCase(page)
@@ -64,15 +95,22 @@ test('an empty case offers what cases usually start with, and a tile inserts and
   await expect(page.locator('.blocks-wrapper .block-plus').last()).toBeVisible()
   await page.screenshot({ path: testInfo.outputPath('empty-block-field-desktop.png'), fullPage: true })
 
+  // Four in a row, with long names that wrap between words only.
+  expect(await tileLayout(tiles)).toEqual({ rows: [4], split: [] })
+
   await page.setViewportSize({ width: 390, height: 844 })
   await welcome.scrollIntoViewIfNeeded()
   expect(await noOverflow(page)).toBeLessThanOrEqual(0)
-  // Two to a row, or one.
+  // Two to a row.
   const [a, b] = await Promise.all([tiles.nth(0).boundingBox(), tiles.nth(1).boundingBox()])
   expect(a.x + a.width).toBeLessThanOrEqual(390)
   expect(b.x + b.width).toBeLessThanOrEqual(390)
+  expect(await tileLayout(tiles)).toEqual({ rows: [2, 2], split: [] })
   await page.screenshot({ path: testInfo.outputPath('empty-block-field-mobile.png'), fullPage: true })
   await page.setViewportSize({ width: 1440, height: 1000 })
+  // The names were changed in the page only; it is reloaded before going on.
+  await page.reload()
+  await syncLV(page)
 
   await first.click()
   await syncLV(page)
