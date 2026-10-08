@@ -1,0 +1,701 @@
+#!/usr/bin/env python3
+"""Git merge driver for Gettext catalogues (.po and .pot files).
+
+Merges message by message, keyed by msgctxt + msgid, instead of line by line:
+
+* Messages added on either side are kept.
+* A message changed on one side only takes that side's version.
+* When both sides change the same message, flags, references and comments
+  are merged as sets and each msgstr three-way. Only a msgstr (or plural form)
+  changed differently on both sides is a conflict: the two sides' msgstr lines
+  are written between conflict markers and the driver exits 1. A message that
+  cannot be merged field by field (one side made it plural, say) is written
+  whole from each side.
+* A message deleted on one side and unchanged on the other is deleted. One
+  deleted on one side and changed on the other is kept; the next
+  `mix gettext.extract --merge` removes it if no code uses it.
+* When either side is sorted by msgid (mix.exs sets `sort_by_msgid`), the
+  result is sorted the same way. Otherwise a new message follows the message
+  it followed on its own side, ours before theirs.
+
+Every message written has its msgstr (msgstr[N] for a plural). Input that does
+not parse as a catalogue, such as a file that already holds conflict markers,
+falls back to a plain `git merge-file`.
+
+Register it once per clone, from the repository root (worktrees share the
+setting):
+
+    python3 scripts/gettext-merge-driver --install
+
+That sets `merge.gettext.name` and `merge.gettext.driver` (DRIVER_COMMAND
+below) in the repository's git config. The command runs the script from the
+checked-out tree, and falls back to a line merge when that tree does not have
+it yet (merging main into an older branch). .gitattributes sends
+priv/gettext/**/*.po and *.pot here.
+
+Usage:
+    gettext-merge-driver BASE OURS THEIRS [MARKER_SIZE [PATH [BASE_LABEL OURS_LABEL THEIRS_LABEL]]]
+        Merge into OURS, as git calls it (%O %A %B %L %P %S %X %Y). Exit 0
+        when clean, 1 on conflicts.
+    gettext-merge-driver --install
+        Register the driver in this repository's git config.
+    gettext-merge-driver --self-test
+        Run the built-in tests, including real merges and a rebase in a
+        scratch repository.
+"""
+
+import os
+import re
+import shutil
+import subprocess
+import sys
+import tempfile
+
+FIELD_RE = re.compile(r'^(msgctxt|msgid_plural|msgid|msgstr(?:\[\d+\])?)\s+(".*")\s*$')
+STRING_RE = re.compile(r'^".*"\s*$')
+ESCAPES = {"n": "\n", "t": "\t", "r": "\r", '"': '"', "\\": "\\", "a": "\a", "b": "\b", "f": "\f", "v": "\v"}
+DRIVER_COMMAND = (
+    "sh -c 'test -f scripts/gettext-merge-driver"
+    ' || exec git merge-file --marker-size="$3" -L "$6" -L "$5" -L "$7" "$1" "$0" "$2";'
+    ' exec python3 scripts/gettext-merge-driver "$0" "$@"\''
+    " %O %A %B %L %P %S %X %Y"
+)
+COMMENT_KINDS = ("translator", "extracted", "reference", "flag", "previous")
+FIELD_ORDER = ("msgctxt", "msgid", "msgid_plural")
+
+
+class ParseError(Exception):
+    pass
+
+
+def unquote(literal):
+    body = literal.strip()[1:-1]
+    return re.sub(r"\\(.)", lambda m: ESCAPES.get(m.group(1), m.group(1)), body)
+
+
+class Message:
+    """One catalogue entry, keeping its original lines so untouched messages
+    are written back byte for byte."""
+
+    def __init__(self, lines):
+        self.lines = lines
+        self.comments = {kind: [] for kind in COMMENT_KINDS}
+        self.flags = []
+        self.fields = {}
+        self.obsolete = False
+        current = None
+
+        for line in lines:
+            if not line.strip():
+                continue
+            if line.startswith("#~"):
+                self.obsolete = True
+                continue
+            if line.startswith("#"):
+                current = None
+                kind = {"#.": "extracted", "#:": "reference", "#,": "flag", "#|": "previous"}.get(line[:2], "translator")
+                if kind == "flag":
+                    self.flags += [f.strip() for f in line[2:].split(",") if f.strip()]
+                self.comments[kind].append(line)
+                continue
+            match = FIELD_RE.match(line)
+            if match:
+                current = match.group(1)
+                if current in self.fields:
+                    raise ParseError("duplicate %s in %r" % (current, lines))
+                self.fields[current] = [line]
+                continue
+            if current and STRING_RE.match(line):
+                self.fields[current].append(line)
+                continue
+            raise ParseError("unexpected line %r" % line)
+
+        if self.obsolete or not self.fields:
+            # Obsolete messages, and comments left at the end of the file, are
+            # kept as they are.
+            self.obsolete = True
+            self.key = ("#~", "\n".join(lines))
+            return
+        if "msgid" not in self.fields:
+            raise ParseError("message without msgid: %r" % lines)
+        self.key = (self.text("msgctxt"), self.text("msgid"))
+        if not self.msgstr_fields():
+            # A line merge that shared the closing msgstr between two appended
+            # messages leaves one without it. Give it an empty one back.
+            names = ["msgstr[0]", "msgstr[1]"] if "msgid_plural" in self.fields else ["msgstr"]
+            for name in names:
+                self.fields[name] = ['%s ""' % name]
+                self.lines.append('%s ""' % name)
+
+    def text(self, field):
+        lines = self.fields.get(field)
+        if lines is None:
+            return None
+        first = FIELD_RE.match(lines[0]).group(2)
+        return "".join(unquote(part) for part in [first] + lines[1:])
+
+    @property
+    def msgid(self):
+        return self.key[1] if not self.obsolete else ""
+
+    def msgstr_fields(self):
+        return sorted(name for name in self.fields if name.startswith("msgstr"))
+
+    def well_formed(self):
+        if self.obsolete:
+            return True
+        strs = self.msgstr_fields()
+        if "msgid_plural" in self.fields:
+            return bool(strs) and "msgstr" not in strs
+        return strs == ["msgstr"]
+
+    def render(self):
+        return "\n".join(self.lines)
+
+
+def build(comments, flags, fields):
+    """Writes a message the way Expo orders it."""
+    lines = []
+    for kind in COMMENT_KINDS:
+        if kind == "flag":
+            if flags:
+                lines.append("#, " + ", ".join(flags))
+        elif kind == "reference":
+            lines += sorted(comments[kind])
+        else:
+            lines += comments[kind]
+    for name in FIELD_ORDER:
+        lines += fields.get(name, [])
+    plural_index = lambda name: int(name[7:-1]) if "[" in name else -1
+    for name in sorted((n for n in fields if n.startswith("msgstr")), key=plural_index):
+        lines += fields[name]
+    return Message(lines)
+
+
+def split_messages(lines):
+    """Splits a block that holds several messages with no blank line between
+    them, as hand edits left behind: a message ends at its last msgstr."""
+    chunks, current, seen_msgstr = [], [], False
+    for line in lines:
+        starts = line.startswith("#") or line.startswith("msgctxt") or line.startswith("msgid ")
+        if starts and seen_msgstr:
+            chunks.append(current)
+            current, seen_msgstr = [], False
+        current.append(line)
+        seen_msgstr = seen_msgstr or line.startswith("msgstr")
+    return chunks + [current]
+
+
+class Catalogue:
+    def __init__(self, text):
+        if text and not text.endswith("\n"):
+            text += "\n"
+        blocks = [chunk
+                  for block in re.split(r"\n[ \t]*\n+", text.strip("\n")) if block.strip()
+                  for chunk in split_messages(block.split("\n"))]
+        preamble = []
+        self.messages = []
+        header_seen = False
+        dangling = []
+
+        for block in blocks:
+            if any(line.startswith(("<<<<<<<", "=======", ">>>>>>>", "|||||||")) for line in block):
+                raise ParseError("conflict markers in input")
+            if not header_seen and all(line.startswith("#") for line in block):
+                preamble.append(block)
+                continue
+            if header_seen and all(line.startswith("#") and not line.startswith("#~") for line in block):
+                # A comment block separated from its message by a blank line,
+                # which hand edits left behind. It belongs to the next message.
+                dangling += block + [""]
+                continue
+            message = Message(dangling + block)
+            dangling = []
+            if not header_seen and message.key == (None, ""):
+                preamble.append(block)
+            else:
+                self.messages.append(message)
+            # Without a header entry, everything after the leading comments
+            # is a message.
+            header_seen = True
+
+        if dangling:
+            self.messages.append(Message(dangling[:-1]))
+        self.preamble = "\n\n".join("\n".join(block) for block in preamble)
+        self.by_key = {}
+        for message in self.messages:
+            if message.key in self.by_key:
+                raise ParseError("duplicate message %r" % (message.key,))
+            self.by_key[message.key] = message
+
+    def sorted_by_msgid(self):
+        ids = [m.msgid for m in self.messages if not m.obsolete]
+        return all(a <= b for a, b in zip(ids, ids[1:]))
+
+
+def merge_sets(base, ours, theirs):
+    """Three-way merge of unordered items: keeps an item when both sides keep
+    it, or when one side added it; drops it when either side removed it."""
+    base_set, ours_set, theirs_set = set(base), set(ours), set(theirs)
+    result = []
+    for item in list(ours) + list(theirs):
+        if item in result:
+            continue
+        in_ours, in_theirs, in_base = item in ours_set, item in theirs_set, item in base_set
+        if (in_ours and in_theirs) or (in_ours and not in_base) or (in_theirs and not in_base):
+            result.append(item)
+    return result
+
+
+def pick(base, ours, theirs):
+    """Three-way choice of one value. Returns (value, conflicted)."""
+    if ours == theirs or theirs == base:
+        return ours, False
+    if ours == base:
+        return theirs, False
+    return None, True
+
+
+def merge_message(base, ours, theirs, conflict):
+    """Returns (text, conflicted). `base` may be None (added on both sides).
+    `conflict(ours_text, theirs_text)` writes a conflict between markers."""
+    if ours.render() == theirs.render():
+        return ours.render(), False
+    if base is not None and ours.render() == base.render():
+        return theirs.render(), False
+    if base is not None and theirs.render() == base.render():
+        return ours.render(), False
+    whole = conflict(ours.render(), theirs.render()), True
+    if ours.obsolete or theirs.obsolete:
+        return whole
+
+    base_comments = base.comments if base else {kind: [] for kind in COMMENT_KINDS}
+    base_flags = base.flags if base else []
+    base_fields = base.fields if base else {}
+
+    comments = {}
+    for kind in COMMENT_KINDS:
+        if kind != "flag":
+            comments[kind] = merge_sets(base_comments[kind], ours.comments[kind], theirs.comments[kind])
+    flags = merge_sets(base_flags, ours.flags, theirs.flags)
+
+    fields, conflicting = {}, []
+    for name in sorted(set(ours.fields) | set(theirs.fields) | set(base_fields)):
+        value, conflicted = pick(base_fields.get(name), ours.fields.get(name), theirs.fields.get(name))
+        if conflicted:
+            conflicting.append(name)
+        elif value is not None:
+            fields[name] = value
+
+    if not conflicting:
+        merged = build(comments, flags, fields)
+        return (merged.render(), False) if merged.well_formed() else whole
+    if not all(name.startswith("msgstr") for name in conflicting):
+        return whole
+
+    # Only translations differ: merge the rest and mark just the msgstr lines.
+    sides = []
+    for side in (ours, theirs):
+        version = build(comments, flags, dict(fields, **{n: side.fields[n] for n in conflicting if n in side.fields}))
+        if not version.well_formed():
+            return whole
+        cut = next(i for i, line in enumerate(version.lines) if line.startswith("msgstr"))
+        sides.append((version.lines[:cut], version.lines[cut:]))
+    if sides[0][0] != sides[1][0]:
+        return whole
+    return "\n".join(sides[0][0] + [conflict("\n".join(sides[0][1]), "\n".join(sides[1][1]))]), True
+
+
+def conflict_block(ours_text, theirs_text, size, labels, base_text=None):
+    ours_label, base_label, theirs_label = labels
+    lines = ["<" * size + (" " + ours_label if ours_label else ""), ours_text]
+    if base_text is not None:
+        lines += ["|" * size + (" " + base_label if base_label else ""), base_text]
+    lines += ["=" * size, theirs_text, ">" * size + (" " + theirs_label if theirs_label else "")]
+    return "\n".join(lines)
+
+
+def merge_catalogues(base_text, ours_text, theirs_text, marker_size=7, labels=("ours", "base", "theirs")):
+    """Returns (merged_text, conflict_count). Raises ParseError on input it
+    cannot read."""
+    base, ours, theirs = Catalogue(base_text), Catalogue(ours_text), Catalogue(theirs_text)
+    conflicts = 0
+
+    preamble, conflicted = pick(base.preamble, ours.preamble, theirs.preamble)
+    if conflicted:
+        conflicts += 1
+        preamble = conflict_block(ours.preamble, theirs.preamble, marker_size, labels)
+
+    results = {}
+    for key in list(ours.by_key) + [k for k in theirs.by_key if k not in ours.by_key]:
+        o, t, b = ours.by_key.get(key), theirs.by_key.get(key), base.by_key.get(key)
+        if o and t:
+            text, conflicted = merge_message(b, o, t, lambda x, y: conflict_block(x, y, marker_size, labels))
+            conflicts += conflicted
+            results[key] = text
+        elif o or t:
+            present = o or t
+            if b is None or present.render() != b.render():
+                # Added on one side, or changed on one side and deleted on the other.
+                results[key] = present.render()
+            # Otherwise deleted on one side and untouched on the other: drop it.
+
+    # Ours' order. A message only theirs has goes after the last message both
+    # sides share that preceded it in theirs, and after ours' own additions
+    # there, so two branches appending at the end read ours, then theirs.
+    after = {}
+    anchor = None
+    for message in theirs.messages:
+        if message.key in ours.by_key:
+            anchor = message.key
+        elif message.key in results:
+            after.setdefault(anchor, []).append(message.key)
+    order = []
+    pending = after.get(None, [])
+    for message in ours.messages:
+        if message.key in theirs.by_key:
+            order += pending
+            pending = after.get(message.key, [])
+        order.append(message.key)
+    order = [key for key in order + pending if key in results]
+
+    # mix.exs sorts the catalogues. A branch from before that appended at the
+    # end, so one sorted side is enough to sort the result.
+    if ours.sorted_by_msgid() or theirs.sorted_by_msgid():
+        msgid = lambda key: "" if key[0] == "#~" else key[1]
+        live = sorted((k for k in order if k[0] != "#~"), key=msgid)
+        order = live + [k for k in order if k[0] == "#~"]
+
+    parts = [preamble] if preamble else []
+    parts += [results[key] for key in order]
+    return "\n\n".join(parts) + "\n", conflicts
+
+
+def verify(text):
+    """Every message in the output must parse and carry its msgstr."""
+    for message in Catalogue(text).messages:
+        if not message.well_formed():
+            raise ParseError("merged message lacks msgstr: %r" % message.lines)
+
+
+def fallback(base_path, ours_path, theirs_path, marker_size, labels):
+    ours_label, base_label, theirs_label = labels
+    return subprocess.call(
+        ["git", "merge-file", "--marker-size=%d" % marker_size,
+         "-L", ours_label, "-L", base_label, "-L", theirs_label,
+         ours_path, base_path, theirs_path]
+    )
+
+
+def install(cwd=None):
+    for key, value in (("merge.gettext.name", "Gettext catalogue merge"), ("merge.gettext.driver", DRIVER_COMMAND)):
+        subprocess.run(["git", "config", key, value], cwd=cwd, check=True)
+
+
+def read(path):
+    with open(path, encoding="utf-8", newline="") as handle:
+        return handle.read()
+
+
+def run_driver(argv):
+    base_path, ours_path, theirs_path = argv[:3]
+    marker_size = int(argv[3]) if len(argv) > 3 and argv[3].isdigit() else 7
+    path = argv[4] if len(argv) > 4 else ours_path
+    labels = (argv[6], argv[5], argv[7]) if len(argv) >= 8 else ("ours", "base", "theirs")
+
+    try:
+        texts = [read(p) for p in (base_path, ours_path, theirs_path)]
+        if any("\r" in text for text in texts):
+            raise ParseError("CRLF line endings")
+        merged, conflicts = merge_catalogues(*texts, marker_size=marker_size, labels=labels)
+        if not conflicts:
+            verify(merged)
+    except (ParseError, UnicodeDecodeError) as error:
+        sys.stderr.write("gettext-merge-driver: %s: %s; falling back to a line merge\n" % (path, error))
+        return 0 if fallback(base_path, ours_path, theirs_path, marker_size, labels) == 0 else 1
+
+    with open(ours_path, "w", encoding="utf-8", newline="") as handle:
+        handle.write(merged)
+    if conflicts:
+        sys.stderr.write("gettext-merge-driver: %s: %d conflicting message(s)\n" % (path, conflicts))
+        return 1
+    return 0
+
+
+# --- self-test ---------------------------------------------------------------
+
+POT_HEAD = '''## This file is a PO Template file.
+msgid ""
+msgstr ""
+'''
+
+PO_HEAD = '''## "msgid"s in this file come from POT (.pot) files.
+msgid ""
+msgstr ""
+"Content-Type: text/plain; charset=UTF-8\\n"
+"Language: no\\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\\n"
+'''
+
+
+def entry(msgid, msgstr="", ref="lib/a.ex", flags="elixir-autogen, elixir-format", plural=None, ctxt=None):
+    lines = ["#: " + r for r in ref.split()] if ref else []
+    if flags:
+        lines.append("#, " + flags)
+    if ctxt:
+        lines.append('msgctxt "%s"' % ctxt)
+    lines.append('msgid "%s"' % msgid)
+    if plural:
+        lines.append('msgid_plural "%s"' % plural)
+        forms = msgstr if isinstance(msgstr, tuple) else (msgstr, msgstr)
+        lines += ['msgstr[%d] "%s"' % (i, s) for i, s in enumerate(forms)]
+    else:
+        lines.append('msgstr "%s"' % msgstr)
+    return "\n".join(lines)
+
+
+def catalogue(head, *entries):
+    return "\n\n".join([head.rstrip("\n")] + list(entries)) + "\n"
+
+
+def msgids(text):
+    return [m.key[1] for m in Catalogue(text).messages]
+
+
+class SelfTest:
+    def __init__(self):
+        self.failures = 0
+        self.count = 0
+
+    def check(self, name, condition, detail=""):
+        self.count += 1
+        if not condition:
+            self.failures += 1
+            print("FAIL %s %s" % (name, detail))
+
+    def msgfmt_ok(self, text, name):
+        if not shutil.which("msgfmt"):
+            return
+        with tempfile.NamedTemporaryFile("w", suffix=".po", delete=False, encoding="utf-8") as handle:
+            handle.write(text)
+        try:
+            result = subprocess.run(["msgfmt", "-c", "-o", os.devnull, handle.name], capture_output=True, text=True)
+            self.check(name + " passes msgfmt -c", result.returncode == 0, result.stderr)
+        finally:
+            os.unlink(handle.name)
+
+    def run(self):
+        self.unit_cases()
+        self.git_cases()
+        print("%d checks, %d failed" % (self.count, self.failures))
+        return 1 if self.failures else 0
+
+    def unit_cases(self):
+        a, b, c, d = entry("Alpha", "Alfa"), entry("Bravo", "Bravo"), entry("Charlie", "Charlie"), entry("Delta", "Delta")
+        base = catalogue(PO_HEAD, a, c)
+
+        # Both sides add different messages; sorted catalogues stay sorted.
+        merged, conflicts = merge_catalogues(base, catalogue(PO_HEAD, a, b, c), catalogue(PO_HEAD, a, c, d))
+        self.check("adds from both sides", conflicts == 0 and msgids(merged) == ["Alpha", "Bravo", "Charlie", "Delta"], merged)
+        self.msgfmt_ok(merged, "adds from both sides")
+
+        # Both append at the end of an unsorted catalogue (the pre-sorting layout).
+        unsorted = catalogue(POT_HEAD, entry("Zulu"), entry("Alpha"))
+        ours = catalogue(POT_HEAD, entry("Zulu"), entry("Alpha"), entry("%{count} item", plural="%{count} items"))
+        theirs = catalogue(POT_HEAD, entry("Zulu"), entry("Alpha"), entry("Mike"))
+        merged, conflicts = merge_catalogues(unsorted, ours, theirs)
+        self.check("appends from both sides", conflicts == 0 and msgids(merged) == ["Zulu", "Alpha", "%{count} item", "Mike"], merged)
+        self.check("plural keeps both forms", 'msgstr[0] ""\nmsgstr[1] ""\n\n#: lib/a.ex' in merged, merged)
+
+        # An older branch appended at the end; main is sorted.
+        merged, conflicts = merge_catalogues(base, catalogue(PO_HEAD, a, b, c), catalogue(PO_HEAD, a, c, entry("Able", "Evne")))
+        self.check("sorts when one side is sorted", conflicts == 0 and msgids(merged) == ["Able", "Alpha", "Bravo", "Charlie"], merged)
+
+        # One side translates, the other only moves the reference.
+        ours = catalogue(PO_HEAD, entry("Alpha", "Alfa (ny)"), c)
+        theirs = catalogue(PO_HEAD, entry("Alpha", "Alfa", ref="lib/b.ex"), c)
+        merged, conflicts = merge_catalogues(base, ours, theirs)
+        alpha = Catalogue(merged).by_key[(None, "Alpha")]
+        self.check("msgstr and references merge", conflicts == 0 and alpha.text("msgstr") == "Alfa (ny)" and alpha.comments["reference"] == ["#: lib/b.ex"], merged)
+
+        # Only theirs changed the translation.
+        merged, conflicts = merge_catalogues(base, base, catalogue(PO_HEAD, entry("Alpha", "Alfa!"), c))
+        self.check("takes theirs' msgstr", conflicts == 0 and 'msgstr "Alfa!"' in merged, merged)
+
+        # Both changed the same msgstr differently.
+        merged, conflicts = merge_catalogues(base, catalogue(PO_HEAD, entry("Alpha", "A1"), c), catalogue(PO_HEAD, entry("Alpha", "A2"), c), labels=("HEAD", "base", "topic"))
+        self.check("conflicting msgstr", conflicts == 1 and 'msgid "Alpha"\n<<<<<<< HEAD\nmsgstr "A1"\n=======\nmsgstr "A2"\n>>>>>>> topic\n' in merged, merged)
+
+        # A conflicting msgstr while the other parts merge cleanly.
+        ours = catalogue(PO_HEAD, entry("Alpha", "A1", ref="lib/a.ex lib/o.ex"), c)
+        theirs = catalogue(PO_HEAD, entry("Alpha", "A2", ref="lib/a.ex lib/t.ex"), c)
+        merged, conflicts = merge_catalogues(base, ours, theirs)
+        self.check("conflict marks only the msgstr", conflicts == 1 and "#: lib/a.ex\n#: lib/o.ex\n#: lib/t.ex\n#, elixir-autogen, elixir-format\nmsgid \"Alpha\"\n<<<<<<< ours\nmsgstr \"A1\"\n=======\nmsgstr \"A2\"\n>>>>>>> theirs" in merged, merged)
+
+        # Both made the same change.
+        same = catalogue(PO_HEAD, entry("Alpha", "A1"), c)
+        merged, conflicts = merge_catalogues(base, same, same)
+        self.check("identical changes", conflicts == 0 and merged == same, merged)
+
+        # Both added the same message with different translations.
+        merged, conflicts = merge_catalogues(base, catalogue(PO_HEAD, a, b, c), catalogue(PO_HEAD, a, entry("Bravo", "B2"), c))
+        self.check("same message added twice differently", conflicts == 1, merged)
+
+        # Flags: theirs removes fuzzy while ours edits the msgstr of another message.
+        fuzzy_base = catalogue(PO_HEAD, entry("Alpha", "Alfa", flags="elixir-autogen, elixir-format, fuzzy"), c)
+        ours = catalogue(PO_HEAD, entry("Alpha", "Alfa", flags="elixir-autogen, elixir-format, fuzzy", ref="lib/z.ex"), c)
+        theirs = catalogue(PO_HEAD, entry("Alpha", "Alfa"), c)
+        merged, conflicts = merge_catalogues(fuzzy_base, ours, theirs)
+        self.check("flag removal survives", conflicts == 0 and "fuzzy" not in merged and "#: lib/z.ex" in merged, merged)
+
+        # Deleted on one side, untouched on the other.
+        merged, conflicts = merge_catalogues(base, catalogue(PO_HEAD, c), base)
+        self.check("deletion", conflicts == 0 and msgids(merged) == ["Charlie"], merged)
+
+        # Deleted on one side, translated on the other: kept.
+        merged, conflicts = merge_catalogues(base, catalogue(PO_HEAD, c), catalogue(PO_HEAD, entry("Alpha", "Alfa 2"), c))
+        self.check("delete versus change keeps the change", conflicts == 0 and 'msgstr "Alfa 2"' in merged, merged)
+
+        # Context is part of the key.
+        ours = catalogue(PO_HEAD, a, entry("Alpha", "Blokker", ctxt="crawler"), c)
+        theirs = catalogue(PO_HEAD, a, c, d)
+        merged, conflicts = merge_catalogues(base, ours, theirs)
+        self.check("msgctxt keeps messages apart", conflicts == 0 and merged.count('msgid "Alpha"') == 2, merged)
+
+        # Plural: one side translates form 0, the other form 1.
+        p = lambda forms: catalogue(PO_HEAD, entry("%{n} file", forms, plural="%{n} files"))
+        merged, conflicts = merge_catalogues(p(("", "")), p(("%{n} fil", "")), p(("", "%{n} filer")))
+        self.check("plural forms merge separately", conflicts == 0 and 'msgstr[0] "%{n} fil"' in merged and 'msgstr[1] "%{n} filer"' in merged, merged)
+        self.msgfmt_ok(merged, "plural forms")
+
+        # A message turned plural on one side while the other edits its msgstr.
+        merged, conflicts = merge_catalogues(
+            catalogue(PO_HEAD, entry("%{n} file", "x")),
+            catalogue(PO_HEAD, entry("%{n} file", "y")),
+            catalogue(PO_HEAD, entry("%{n} file", ("", ""), plural="%{n} files")),
+        )
+        self.check("singular to plural against an edit conflicts", conflicts == 1, merged)
+
+        # Multi-line strings and escapes.
+        long = '#, elixir-autogen, elixir-format\nmsgid ""\n"Line one \\"quoted\\"\\n"\n"line two"\nmsgstr ""\n"Linje en\\n"\n"linje to"'
+        merged, conflicts = merge_catalogues(base, catalogue(PO_HEAD, a, long, c), catalogue(PO_HEAD, a, c, d))
+        self.check("multi-line strings", conflicts == 0 and long in merged, merged)
+        self.check("multi-line key", Catalogue(merged).by_key.get((None, 'Line one "quoted"\nline two')) is not None)
+
+        # Input with conflict markers is refused (the driver then falls back).
+        try:
+            merge_catalogues(base, "<<<<<<< x\n" + base, base)
+            self.check("refuses conflict markers", False)
+        except ParseError:
+            self.check("refuses conflict markers", True)
+
+        # A message that lost its msgstr in an earlier line merge gets it back.
+        broken = catalogue(POT_HEAD, entry("Alpha"), '#: lib/a.ex\nmsgid "%{n} page"\nmsgid_plural "%{n} pages"', 'msgid "Orphan"')
+        merged, conflicts = merge_catalogues(catalogue(POT_HEAD, entry("Alpha")), broken, catalogue(POT_HEAD, entry("Alpha"), entry("Bravo")))
+        verify(merged)
+        self.check("restores a missing msgstr", conflicts == 0 and 'msgid "Orphan"\nmsgstr ""' in merged and 'msgid_plural "%{n} pages"\nmsgstr[0] ""\nmsgstr[1] ""' in merged, merged)
+
+        # A reference left on its own by a hand edit stays with the next message.
+        dangling = catalogue(PO_HEAD, a, "#: lib/stray.ex", c)
+        merged, conflicts = merge_catalogues(base, dangling, catalogue(PO_HEAD, a, c, d))
+        self.check("dangling comment block", conflicts == 0 and "#: lib/stray.ex\n\n#: lib/a.ex\n#, elixir-autogen, elixir-format\nmsgid \"Charlie\"" in merged and msgids(merged)[-1] == "Delta", merged)
+
+        # Two messages with no blank line between them.
+        joined = catalogue(PO_HEAD, a + "\n" + c)
+        merged, conflicts = merge_catalogues(base, joined, catalogue(PO_HEAD, a, c, d))
+        self.check("messages without a blank line between", conflicts == 0 and msgids(merged) == ["Alpha", "Charlie", "Delta"], merged)
+
+        # Header changed on one side.
+        new_head = PO_HEAD.replace("Language: no", "Language: nb")
+        merged, conflicts = merge_catalogues(base, base, catalogue(new_head, a, c))
+        self.check("header change", conflicts == 0 and "Language: nb" in merged, merged)
+
+    def git(self, cwd, *args, check=True):
+        result = subprocess.run(["git"] + list(args), cwd=cwd, capture_output=True, text=True)
+        if check and result.returncode != 0:
+            raise RuntimeError("git %s failed: %s%s" % (" ".join(args), result.stdout, result.stderr))
+        return result
+
+    def git_cases(self):
+        if not shutil.which("git"):
+            print("skip: git not found")
+            return
+        root = tempfile.mkdtemp(prefix="gettext-merge-driver-")
+        try:
+            self.git(root, "init", "-q", "-b", "main")
+            for key, value in (("user.name", "Test"), ("user.email", "test@example.com"), ("commit.gpgsign", "false")):
+                self.git(root, "config", key, value)
+            # The registered command runs the copy in the checked-out tree.
+            install(cwd=root)
+            os.mkdir(os.path.join(root, "scripts"))
+            shutil.copy(os.path.abspath(__file__), os.path.join(root, "scripts", "gettext-merge-driver"))
+            with open(os.path.join(root, ".gitattributes"), "w") as handle:
+                handle.write("*.po merge=gettext\n*.pot merge=gettext\n")
+            path = os.path.join(root, "default.po")
+
+            def commit(text, message):
+                with open(path, "w", encoding="utf-8") as handle:
+                    handle.write(text)
+                self.git(root, "add", "-A")
+                self.git(root, "commit", "-q", "-m", message)
+
+            def contents():
+                return read(path)
+
+            base = catalogue(PO_HEAD, entry("Alpha", "Alfa"), entry("Zulu", "Zulu"))
+            commit(base, "base")
+            # Each topic appends at the end, as every PR did before sorting.
+            self.git(root, "checkout", "-q", "-b", "one")
+            commit(catalogue(PO_HEAD, entry("Alpha", "Alfa"), entry("Zulu", "Zulu"), entry("%{n} line", ("%{n} linje", "%{n} linjer"), plural="%{n} lines")), "one")
+            self.git(root, "checkout", "-q", "-b", "two", "main")
+            commit(catalogue(PO_HEAD, entry("Alpha", "Alfa"), entry("Zulu", "Zulu"), entry("Mike", "Mike")), "two")
+            self.git(root, "checkout", "-q", "-b", "three", "main")
+            commit(catalogue(PO_HEAD, entry("Alpha", "Alfa (endret)"), entry("Zulu", "Zulu")), "three")
+            self.git(root, "checkout", "-q", "-b", "four", "main")
+            commit(catalogue(PO_HEAD, entry("Alpha", "Alfa (annet)"), entry("Zulu", "Zulu")), "four")
+
+            self.git(root, "checkout", "-q", "main")
+            self.git(root, "merge", "-q", "--no-edit", "one")
+            result = self.git(root, "merge", "--no-edit", "two", check=False)
+            text = contents()
+            self.check("git merge of two appends", result.returncode == 0 and msgids(text) == ["Alpha", "Zulu", "%{n} line", "Mike"], result.stderr + text)
+            self.msgfmt_ok(text, "git merge")
+
+            result = self.git(root, "merge", "--no-edit", "three", check=False)
+            self.check("git merge of a translation", result.returncode == 0 and 'msgstr "Alfa (endret)"' in contents(), result.stderr)
+
+            result = self.git(root, "merge", "--no-edit", "four", check=False)
+            text = contents()
+            self.check("git merge of a conflicting translation", result.returncode != 0 and text.count("<<<<<<< HEAD\n") == 1 and ">>>>>>> four\n" in text and "Alfa (annet)" in text, text)
+            self.git(root, "merge", "--abort")
+
+            # Rebase "two" onto "one": the replayed commit appends after the plural.
+            self.git(root, "checkout", "-q", "two")
+            result = self.git(root, "rebase", "one", check=False)
+            text = contents()
+            self.check("git rebase", result.returncode == 0 and msgids(text) == ["Alpha", "Zulu", "%{n} line", "Mike"], result.stderr + text)
+            self.msgfmt_ok(text, "git rebase")
+
+            # A tree without the script (an older branch) gets a line merge.
+            self.git(root, "checkout", "-q", "-b", "old", "main")
+            self.git(root, "rm", "-q", "-r", "scripts")
+            commit(catalogue(PO_HEAD, entry("Alpha", "Alfa"), entry("Zulu", "Zulu"), entry("Kilo", "Kilo")), "old")
+            result = self.git(root, "merge", "--no-edit", "two", check=False)
+            text = contents()
+            self.check("line merge without the script", result.returncode != 0 and "<<<<<<< HEAD\n" in text and ">>>>>>> two\n" in text, result.stdout + result.stderr + text)
+            self.git(root, "merge", "--abort")
+        finally:
+            shutil.rmtree(root, ignore_errors=True)
+
+
+if __name__ == "__main__":
+    args = sys.argv[1:]
+    if args == ["--self-test"]:
+        sys.exit(SelfTest().run())
+    if args == ["--install"]:
+        install()
+        sys.exit(0)
+    if len(args) < 3 or args[0] in ("-h", "--help"):
+        sys.stderr.write(__doc__)
+        sys.exit(2)
+    sys.exit(run_driver(args))
