@@ -413,6 +413,8 @@ defmodule BrandoAdmin.EditSessionSavesTest do
 
     {:ok, _} = Proposals.undo(proposal.id, c.user)
     await(fn -> Ops.known?(session_state(c.identity), second) end)
+    # The session has the block back before B's replica renders it.
+    await(fn -> render(b) =~ ~s(id="entry_block_form-#{second}") end)
     type(b, second, "<p>Second work</p>")
 
     {:ok, again} = Proposals.propose([%DeleteBlock{target: {Page, c.identity.id}, block_uid: second}], c.user)
