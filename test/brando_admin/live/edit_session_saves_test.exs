@@ -135,7 +135,6 @@ defmodule BrandoAdmin.EditSessionSavesTest do
     await(fn -> session_state(c.identity).statuses[new] == :persisted end)
     save_write(b)
     assert block_count(new) == 1
-
     type(b, new, "<p>B retries</p>")
     save_read(b)
     save_write(b)
@@ -143,6 +142,21 @@ defmodule BrandoAdmin.EditSessionSavesTest do
     await(fn -> Map.new(texts(c.identity))[new] == "<p>B retries</p>" end)
     assert block_count(new) == 1
     assert length(rows(c.identity)) == 4
+  end
+
+  # Follow-up: a save's mark is cleared when the save is done, not after a
+  # fixed time. A save that fails lets go of it at once.
+  test "a save that fails lets the session forget what it read", c do
+    a = open(c.conn, c.identity)
+    stay(a)
+    session = EditSession.whereis(EditSession.ref(Page, c.identity.id, c.identity.language))
+    marked? = fn -> Map.has_key?(:sys.get_state(session).data.fields[:blocks].marks, a.pid) end
+
+    a |> form("#page_form_form") |> render_change(%{"page" => %{"title" => ""}, "_target" => ["page", "title"]})
+    save_read(a)
+    assert marked?.()
+    save_write(a)
+    await(fn -> not marked?.() end)
   end
 
   # A keystroke on a block that was new when a save read the state, landing

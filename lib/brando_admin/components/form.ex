@@ -5163,6 +5163,7 @@ defmodule BrandoAdmin.Components.Form do
 
   defp source_controlled_save_with_blocks(socket, paths) do
     if FrontendEditor.frontend?(socket), do: FrontendEditor.save_failed(socket, :source_controlled)
+    if socket.assigns.entry, do: EditSession.save_failed(socket.assigns.entry)
 
     {:noreply,
      socket
@@ -5176,6 +5177,7 @@ defmodule BrandoAdmin.Components.Form do
   defp failed_save_with_blocks(socket, changeset, save) do
     Logger.error(inspect(changeset, pretty: true))
     send(self(), {:progress_popup, "Saving entry failed..."})
+    if socket.assigns.entry, do: EditSession.save_failed(socket.assigns.entry)
 
     if FrontendEditor.frontend?(socket),
       do: FrontendEditor.save_failed(socket, {:invalid, changeset |> traverse_errors(& &1) |> Map.keys()})

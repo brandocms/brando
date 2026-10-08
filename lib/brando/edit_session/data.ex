@@ -32,11 +32,13 @@ defmodule Brando.EditSession.Data do
 
   require Logger
 
-  # A save that has not rebased within this time has failed or been
-  # abandoned. Its mark stops pinning the log. Checked every
-  # `@mark_check_ms`, so a mark lives at most a minute. A save slower than
-  # that still rebases, as a carry onto the rows it wrote (`rebase/5`).
-  @mark_ttl_ms 30_000
+  # A save's mark lasts until the save is done: its rebase, its failure
+  # (`release/2`) or its editor leaving clear it. Only a mark nothing
+  # cleared — a save that neither finished nor failed, in an editor still
+  # open — expires, after this long, so it stops pinning the log. A slow
+  # save keeps its mark however long it takes: without it the rebase would
+  # carry the saved changes over as unsaved ones.
+  @mark_ttl_ms 15 * 60_000
 
   defstruct epoch: nil, fields: %{}
 
@@ -193,6 +195,14 @@ defmodule Brando.EditSession.Data do
   @spec unmark(t(), field(), term()) :: t()
   def unmark(%__MODULE__{} = data, field, client),
     do: update_field(data, field, fn entry -> prune(%{entry | marks: Map.delete(entry.marks, client)}) end)
+
+  @doc "Forget the save `client` had in flight on any field: it failed."
+  @spec release(t(), term()) :: t()
+  def release(%__MODULE__{} = data, client) do
+    Enum.reduce(Map.keys(data.fields), data, fn field, data ->
+      update_field(data, field, fn entry -> prune(%{entry | marks: Map.delete(entry.marks, client)}) end)
+    end)
+  end
 
   @doc "Forget the saves `client` had in flight (it left, or its save failed)."
   @spec drop_client(t(), term()) :: t()

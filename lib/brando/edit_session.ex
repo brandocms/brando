@@ -241,6 +241,21 @@ defmodule Brando.EditSession do
   @spec saved(struct()) :: :ok
   def saved(%_{} = entry), do: rebase_all(entry, :own_save)
 
+  @doc """
+  This process's save of `entry`, from the state it fetched with `purpose:
+  :save`, failed: the session stops keeping the ops that arrived since for
+  its rebase.
+  """
+  @spec save_failed(struct()) :: :ok
+  def save_failed(%_{id: id} = entry) when not is_nil(id) do
+    case whereis(ref_for(entry)) do
+      pid when is_pid(pid) -> GenServer.cast(pid, {:save_failed, self()})
+      _ -> :ok
+    end
+  end
+
+  def save_failed(_entry), do: :ok
+
   defp rebase_all(%schema{id: id} = entry, mode) do
     with pid when is_pid(pid) <- whereis(ref_for(entry)),
          true <- schema.has_trait(Brando.Trait.Blocks) do
@@ -373,6 +388,8 @@ defmodule Brando.EditSession do
 
     handle_cast({:leave, pid, field}, session)
   end
+
+  def handle_cast({:save_failed, pid}, session), do: {:noreply, %{session | data: Data.release(session.data, pid)}}
 
   def handle_cast({:leave, pid, field}, session) do
     session =

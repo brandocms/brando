@@ -519,25 +519,51 @@ defmodule Brando.EditSessionTest do
       assert state.diffs == %{}
     end
 
-    test "a save mark lives 30 seconds, and a save slower than that still rebases" do
+    # Follow-up: a save slower than the mark's 30 seconds rebased as a carry,
+    # which showed what it had saved as unsaved changes.
+    test "a slow save keeps its mark until it is done, and its saved changes are not unsaved" do
       base = rows()
       {:seeded, data} = Data.join(Data.new(1), @field, base, base)
-      {:ok, data} = Data.apply_op(data, @field, {:insert, "n", :end, %{}})
+      {:ok, data} = Data.apply_op(data, @field, anchor("b", "saved by the slow save"))
       data = Data.mark_save(data, @field, :saver, 0)
-      assert Data.expire(data, 30_000).fields[@field].marks != %{}
-      assert Data.expire(data, 30_001).fields[@field].marks == %{}
+      {:ok, data} = Data.apply_op(data, @field, anchor("a", "typed while it ran"))
 
-      saved =
-        Ops.from_entry_blocks([
-          entry_block("a", 1, 10, [child("a1", 11)]),
-          entry_block("b", 2, 20),
-          entry_block("n", 3, 30)
-        ])
+      # two minutes later, the save is still running
+      data = Data.expire(data, 2 * 60_000)
+      assert Map.has_key?(data.fields[@field].marks, :saver)
 
-      {:ok, data, []} = Data.rebase(Data.expire(data, 60_000), @field, saved, {:client, :saver})
+      saved = Ops.from_entry_blocks([entry_block("a", 1, 10, [child("a1", 11)]), entry_block("b", 2, 20)])
+      {:ok, data, []} = Data.rebase(data, @field, saved, {:client, :saver}, 2 * 60_000)
       state = Data.state(data, @field)
-      assert state.order == ["a", "b", "n"]
-      assert state.statuses["n"] == :persisted
+      refute Map.has_key?(state.diffs, "b")
+      assert state.diffs["a"]["block"]["anchor"] == "typed while it ran"
+      assert data.fields[@field].marks == %{}
+    end
+
+    test "a failed save releases its mark, and one nothing clears expires after 15 minutes" do
+      base = rows()
+      {:seeded, data} = Data.join(Data.new(1), @field, base, base)
+      data = data |> Data.mark_save(@field, :failed, 0) |> Data.mark_save(@field, :forgotten, 0)
+      {:ok, data} = Data.apply_op(data, @field, anchor("a", "after the marks"))
+
+      data = Data.release(data, :failed)
+      assert Map.keys(data.fields[@field].marks) == [:forgotten]
+      assert [_] = data.fields[@field].log
+
+      assert Data.expire(data, 15 * 60_000).fields[@field].marks != %{}
+      data = Data.expire(data, 15 * 60_000 + 1)
+      assert data.fields[@field].marks == %{}
+      assert data.fields[@field].log == []
+    end
+
+    test "a save that failed tells the session" do
+      ref = new_ref()
+      {:ok, info} = EditSession.join(ref, @field, {rows(), rows()})
+      {:ok, _} = EditSession.fetch(info.session, @field, purpose: :save)
+      assert Map.has_key?(:sys.get_state(info.session).data.fields[@field].marks, self())
+
+      EditSession.save_failed(%Brando.Pages.Page{id: elem(ref.key, 2), language: nil})
+      wait_until(fn -> :sys.get_state(info.session).data.fields[@field].marks == %{} end)
     end
 
     test "the session keeps row ids only for blocks with unsaved work" do
@@ -579,7 +605,7 @@ defmodule Brando.EditSessionTest do
       {:ok, data} = Data.apply_op(data, @field, anchor("b", "x"))
       assert [_] = data.fields[@field].log
 
-      data = Data.expire(data, 10 * 60_000)
+      data = Data.expire(data, 16 * 60_000)
       assert data.fields[@field].marks == %{}
       assert data.fields[@field].log == []
     end
