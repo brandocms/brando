@@ -783,5 +783,47 @@ msgstr[1] ""
 
 #: lib/brando/doctor/checks/image_configs.ex
 #, elixir-autogen, elixir-format
-msgid "Utilities → Recreate changed images, once, to be sure they match"
+msgid "it already matches (mix brando.images.adopt records that)"
+msgid_plural "all already match (mix brando.images.adopt records that)"
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/brando/doctor/checks/image_configs.ex
+#, elixir-autogen, elixir-format
+msgid "it likely matches (mix brando.images.adopt checks and records that)"
+msgid_plural "all likely match (mix brando.images.adopt checks and records that)"
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/brando/doctor/checks/image_configs.ex
+#, elixir-autogen, elixir-format
+msgid "it differs (recreate it)"
+msgid_plural "none match (recreate them)"
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/brando/doctor/checks/image_configs.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} likely matches (mix brando.images.adopt checks and records that)"
+msgid_plural "%{count} likely match (mix brando.images.adopt checks and records that)"
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/brando/doctor/checks/image_configs.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} already matches (mix brando.images.adopt records that)"
+msgid_plural "%{count} already match (mix brando.images.adopt records that)"
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/brando/doctor/checks/image_configs.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} differs (recreate it)"
+msgid_plural "%{count} differ (recreate them)"
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/brando/doctor/checks/image_configs.ex
+#, elixir-autogen, elixir-format
+msgid "run mix brando.images.adopt, or Utilities → Recreate changed images, which records them without recreating them"
 msgstr ""
