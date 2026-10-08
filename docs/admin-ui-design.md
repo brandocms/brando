@@ -672,6 +672,12 @@ cap centre. Rows are 32px (top level) and 30px (sub-items) with no block
 padding. Browsers without `text-box` sit the label a pixel or two high, which
 is acceptable.
 
+Search is a row too, built in by `BrandoAdmin.Nav` rather than configured: a
+button after Dashboard (or at the top of the first section) that opens the
+command palette, with the shortcut faint at its end (mono 11px, the muted nav
+colour at 60%). It is never the current row. On phones, where the sidebar is
+hidden, the round `.mobile-search` button opens the palette instead.
+
 ## Approved modal direction
 
 The modal study approved on 8 September 2026 uses **B (Section rail)** as the
