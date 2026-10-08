@@ -4,44 +4,39 @@ defmodule Brando.Migrations.Brando209AddWebhooksTest do
   use ExUnit.Case
   use Brando.ConnCase
 
-  alias BrandoIntegration.Repo
+  import Brando.MigrationTemplates
 
-  @template Application.app_dir(:brando, "priv/templates/brando.upgrade/migrations/brando_209_add_webhooks.exs")
+  @template "brando_209_add_webhooks.exs"
+  @tenant "tenant_acme_staging"
+  @tables ~w(webhooks webhook_deliveries)
 
-  defp run_template do
-    [{module, _bytecode}] = Code.compile_file(@template)
+  test "creates the webhook tables in public and every environment, with the columns the schemas use" do
+    expected = Map.new(@tables, &{&1, {column_definitions("public", &1), indexes("public", &1)}})
+    query!("DROP TABLE public.webhook_deliveries, public.webhooks")
+    create_environment(@tenant)
 
-    try do
-      Ecto.Migrator.up(Repo, System.unique_integer([:positive]), module, log: false, migration_lock: false)
-    after
-      :code.purge(module)
-      :code.delete(module)
+    version = up(@template)
+
+    for schema <- ["public", @tenant] do
+      for table <- @tables do
+        assert {column_definitions(schema, table), indexes(schema, table)} == expected[table]
+      end
+
+      assert Enum.any?(indexes(schema, "webhook_deliveries"), &(&1 =~ "webhook_deliveries_once_per_event_index"))
+      assert references(schema, "webhooks") == [{"creator_id", "public", "users"}]
+      assert references(schema, "webhook_deliveries") == [{"webhook_id", schema, "webhooks"}]
+
+      assert columns(schema, "webhooks") ==
+               Brando.Webhooks.Webhook.__schema__(:fields) |> Enum.map(&to_string/1) |> Enum.sort()
+
+      assert columns(schema, "webhook_deliveries") ==
+               Brando.Webhooks.Delivery.__schema__(:fields) |> Enum.map(&to_string/1) |> Enum.sort()
     end
-  end
 
-  defp columns(table) do
-    Repo.query!(
-      "SELECT column_name FROM information_schema.columns WHERE table_schema = 'public' AND table_name = $1",
-      [table]
-    ).rows
-    |> List.flatten()
-    |> Enum.sort()
-  end
+    down(@template, version)
 
-  test "creates the webhook tables with the columns the schemas use" do
-    expected_webhooks = columns("webhooks")
-    expected_deliveries = columns("webhook_deliveries")
-    Repo.query!("DROP TABLE public.webhook_deliveries, public.webhooks")
-
-    run_template()
-
-    assert columns("webhooks") == expected_webhooks
-    assert columns("webhook_deliveries") == expected_deliveries
-
-    assert expected_webhooks ==
-             Brando.Webhooks.Webhook.__schema__(:fields) |> Enum.map(&to_string/1) |> Enum.sort()
-
-    assert expected_deliveries ==
-             Brando.Webhooks.Delivery.__schema__(:fields) |> Enum.map(&to_string/1) |> Enum.sort()
+    for schema <- ["public", @tenant], table <- @tables do
+      refute table?(schema, table)
+    end
   end
 end

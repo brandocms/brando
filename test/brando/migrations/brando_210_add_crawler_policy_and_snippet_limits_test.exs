@@ -1,53 +1,35 @@
 defmodule Brando.Migrations.Brando210AddCrawlerPolicyAndSnippetLimitsTest do
-  # Runs the upgrade templates inside the sandbox transaction against tables
-  # rolled back to before them; Postgres DDL is transactional, so everything
+  # Runs the upgrade template inside the sandbox transaction against tables
+  # rolled back to before it; Postgres DDL is transactional, so everything
   # is undone afterwards.
   use ExUnit.Case
   use Brando.ConnCase
 
-  alias BrandoIntegration.Repo
+  import Brando.MigrationTemplates
 
-  @templates Application.app_dir(:brando, "priv/templates/brando.upgrade/migrations")
-  @tenant "tenant_acme_production"
+  @template "brando_210_add_crawler_policy_and_snippet_limits.exs"
+  @tenant "tenant_acme_staging"
+  @columns %{"sites_seos" => ~w(crawler_policy), "pages" => ~w(meta_nosnippet meta_max_snippet)}
 
-  defp columns(schema, table) do
-    "SELECT column_name FROM information_schema.columns WHERE table_schema = $1 AND table_name = $2"
-    |> Repo.query!([schema, table])
-    |> Map.fetch!(:rows)
-    |> List.flatten()
-  end
+  defp definitions(schema, table),
+    do: schema |> column_definitions(table) |> Enum.filter(&(elem(&1, 0) in @columns[table]))
 
-  defp run_template(file) do
-    [{module, _bytecode}] = Code.compile_file(Path.join(@templates, file))
+  test "adds its columns in public and every environment, and removes them" do
+    expected = Map.new(@columns, fn {table, _} -> {table, definitions("public", table)} end)
+    query!("ALTER TABLE sites_seos DROP COLUMN crawler_policy")
+    query!("ALTER TABLE pages DROP COLUMN meta_nosnippet, DROP COLUMN meta_max_snippet")
+    create_environment(@tenant, Map.keys(@columns))
 
-    try do
-      Ecto.Migrator.up(Repo, System.unique_integer([:positive]), module, log: false, migration_lock: false)
-    after
-      :code.purge(module)
-      :code.delete(module)
-    end
-  end
+    version = up(@template)
 
-  test "brando_210 and brando_211 add their columns in public and every tenant schema" do
-    Repo.query!("ALTER TABLE sites_seos DROP COLUMN crawler_policy")
-    Repo.query!("ALTER TABLE pages DROP COLUMN meta_nosnippet, DROP COLUMN meta_max_snippet")
-    Repo.query!("ALTER TABLE content_modules DROP COLUMN markdown_code")
-    Repo.query!("DROP TABLE sites_indexnow")
-    Repo.query!(~s(CREATE SCHEMA "#{@tenant}"))
-
-    for table <- ~w(sites_seos pages content_modules) do
-      Repo.query!(~s{CREATE TABLE "#{@tenant}".#{table} (LIKE public.#{table} INCLUDING DEFAULTS)})
+    for schema <- ["public", @tenant], table <- Map.keys(@columns) do
+      assert definitions(schema, table) == expected[table]
     end
 
-    run_template("brando_210_add_crawler_policy_and_snippet_limits.exs")
-    run_template("brando_211_add_markdown_templates_and_indexnow.exs")
+    down(@template, version)
 
-    for schema <- ["public", @tenant] do
-      assert "crawler_policy" in columns(schema, "sites_seos")
-      assert "meta_nosnippet" in columns(schema, "pages")
-      assert "meta_max_snippet" in columns(schema, "pages")
-      assert "markdown_code" in columns(schema, "content_modules")
-      assert "key" in columns(schema, "sites_indexnow")
+    for schema <- ["public", @tenant], table <- Map.keys(@columns) do
+      assert definitions(schema, table) == []
     end
   end
 end
