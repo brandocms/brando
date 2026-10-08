@@ -5,6 +5,7 @@ if Code.ensure_loaded?(Igniter) do
 
     @moduledoc false
 
+    alias Mix.Brando.Igniter.AgentFiles
     alias Mix.Brando.Igniter.Files
     alias Mix.Brando.Igniter.Install.Configuration
     alias Mix.Brando.Igniter.Install.Migrations
@@ -149,8 +150,11 @@ if Code.ensure_loaded?(Igniter) do
           "Brando is already at #{to}; use mix brando.gen.migrations to reconcile missing framework migration files."
         )
       else
+        # Skills and the AGENTS.md link are added when missing and never
+        # replace the application's copies.
         igniter
         |> compose_recipes(from, to)
+        |> AgentFiles.plan()
         |> migrations()
       end
     end
