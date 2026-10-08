@@ -460,6 +460,7 @@
 
 .assistant-attached-count { margin-left: 4px; color: var(--assistant-muted); font-size: 12px; }
 
+/* Sending asks the model: the AI violet (AI.css), not the accent. */
 .assistant-send {
   display: grid;
   place-items: center;
@@ -468,8 +469,10 @@
   margin-left: auto;
   border: 0;
   border-radius: 6px;
-  background: var(--assistant-accent);
+  background: var(--brando-ai);
   color: var(--brando-ink-inverse);
+
+  &:hover:not(:disabled) { background: var(--brando-ai-hover); }
 }
 
 .assistant-footnote { color: var(--assistant-muted); font-size: 12px; text-align: center; }
@@ -1086,7 +1089,8 @@
 }
 
 /* The main action under the suggestions, then the other ways to answer as a
-   quiet list. */
+   quiet list. Both "Use the ones I attached" and "Let the assistant choose"
+   answer the model, so they take the AI violet (AI.css). */
 .assistant-request-use {
   display: flex;
   align-items: center;
@@ -1094,7 +1098,10 @@
   gap: 6px;
   width: 100%;
   white-space: normal;
+  border-color: var(--brando-ai);
+  background: var(--brando-ai);
 
+  &:hover:not(:disabled) { border-color: var(--brando-ai-hover); background: var(--brando-ai-hover); }
   [data-icon] { width: 14px; height: 14px; }
 }
 
@@ -1124,6 +1131,11 @@
   button:hover:not(:disabled) { background: color-mix(in srgb, var(--brando-surface) 70%, transparent); }
   button:focus-visible { outline: 2px solid var(--assistant-accent); outline-offset: -2px; }
   [data-icon] { flex: 0 0 auto; width: 16px; height: 16px; color: var(--assistant-muted); }
+  button.is-ai, button.is-ai [data-icon] { color: var(--brando-ai); }
+}
+
+.assistant-workspace :is(.assistant-send, .assistant-request-use, .assistant-request-other .is-ai):focus-visible {
+  outline-color: var(--brando-ai);
 }
 
 /* Sharing: a review link for colleagues, a public link to a proposed page,

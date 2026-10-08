@@ -294,6 +294,6 @@
   <div bind:this={aiMenu} popover="auto" class="tiptap-popover tiptap-ai-editor" role="dialog" tabindex="-1" aria-label={labels.ai} onkeydown={menuKeys}>
     <label for={`${id}-ai-mode`}>{labels.ai}</label><select id={`${id}-ai-mode`} bind:value={aiMode}>{#each ['rewrite', 'shorten', 'continue'] as mode}<option value={mode}>{labels[mode]}</option>{/each}</select>
     <label for={`${id}-instruction`}>{labels.instruction}</label><input id={`${id}-instruction`} type="text" bind:value={instruction} />
-    <button type="button" class="primary" onclick={generate}><Icon name="sparkles" />{labels.generate}</button>
+    <button type="button" class="ai-action is-primary" onclick={generate}><Icon name="sparkles" />{labels.generate}</button>
   </div>
 </div>

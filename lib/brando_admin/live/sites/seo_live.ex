@@ -716,10 +716,9 @@ defmodule BrandoAdmin.Sites.SEOLive do
         <AIAction.button :if={!@confirm} phx-click="confirm_batch">
           {gettext("Write missing descriptions")}
         </AIAction.button>
-        <button :if={@confirm} type="button" class="workspace-button primary" phx-click="start_batch">
-          <.icon name="sparkles" />
+        <AIAction.button :if={@confirm} variant={:primary} phx-click="start_batch">
           {ngettext("Write one description", "Write %{count} descriptions", @count)}
-        </button>
+        </AIAction.button>
         <button :if={@confirm} type="button" class="workspace-button" phx-click="cancel_batch">
           {gettext("Cancel")}
         </button>

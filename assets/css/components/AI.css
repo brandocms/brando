@@ -1,14 +1,14 @@
 /* AI in the admin: one look for an action that asks AI for something, and
-   one for what AI hands back for review. See "AI actions and suggestions" in
-   docs/admin-ui-design.md.
+   one for what AI hands back for review, both in the AI violet
+   (`--brando-ai`, tokens.css): these call an external, paid service, so they
+   are marked apart from every other action. See "AI actions and suggestions"
+   in docs/admin-ui-design.md.
 
-   An AI action is a small secondary button: the sparkles icon and the accent
-   ink, on a solid sage hairline. Never dashed — a dashed outline means "drop
-   here" in the block editor. `BrandoAdmin.Components.AIAction.button/1`
+   An AI action is a small secondary button: the sparkles icon and the violet
+   ink, on a solid violet hairline. Never dashed — a dashed outline means
+   "drop here" in the block editor. `BrandoAdmin.Components.AIAction.button/1`
    renders it. */
 .ai-action {
-  --ai-action-line: color-mix(in srgb, var(--brando-accent) 22%, var(--brando-line));
-  --ai-action-line-hover: color-mix(in srgb, var(--brando-accent) 45%, var(--brando-line));
 
   display: inline-flex;
   align-items: center;
@@ -21,11 +21,11 @@
   min-height: 30px;
   margin: 0;
   padding: 5px 12px;
-  border: 1px solid var(--ai-action-line);
+  border: 1px solid var(--brando-ai-line);
   border-radius: 5px;
   background: var(--brando-surface);
   box-shadow: none;
-  color: var(--brando-accent);
+  color: var(--brando-ai);
   font-family: inherit;
   font-size: 12px;
   font-weight: 500;
@@ -45,13 +45,13 @@
   }
 
   &:hover:not(:disabled, [aria-disabled="true"]) {
-    border-color: var(--ai-action-line-hover);
-    background: var(--brando-surface-hover);
-    color: var(--brando-accent);
+    border-color: var(--brando-ai-line-strong);
+    background: var(--brando-ai-tint);
+    color: var(--brando-ai);
   }
 
   &:focus-visible {
-    outline: 2px solid var(--brando-accent);
+    outline: 2px solid var(--brando-ai);
     outline-offset: 3px;
   }
 
@@ -80,6 +80,20 @@
     gap: 5px;
   }
 
+  /* The confirm step of a costed request, after its estimate ("Describe 3
+     images"): filled, as the panel's primary action. */
+  &.is-primary {
+    border-color: var(--brando-ai);
+    background: var(--brando-ai);
+    color: var(--brando-ink-inverse);
+
+    &:hover:not(:disabled, [aria-disabled="true"]) {
+      border-color: var(--brando-ai-hover);
+      background: var(--brando-ai-hover);
+      color: var(--brando-ink-inverse);
+    }
+  }
+
   /* Icon only, inside a text field. Needs an aria-label. */
   &.is-icon {
     width: 28px;
@@ -91,6 +105,13 @@
       outline-offset: 2px;
     }
   }
+}
+
+/* The workspaces draw their own focus ring in the accent
+   (`.admin-workspace :is(button, …):focus-visible`); an AI action keeps the
+   violet there too. */
+.admin-workspace :is(button, a).ai-action:focus-visible {
+  outline-color: var(--brando-ai);
 }
 
 @keyframes ai-action-busy {

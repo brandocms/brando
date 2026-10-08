@@ -98,10 +98,10 @@
       }
     }
 
-    /* An AI item keeps the menu's row and takes the AI action's ink and
+    /* An AI item keeps the menu's row and takes the AI violet and the
        sparkles (AI.css), after the label so the labels stay aligned. */
     button.ai-translate-action {
-      color: var(--brando-accent);
+      color: var(--brando-ai);
 
       .lucide-sparkles {
         width: 14px;

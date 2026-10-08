@@ -15,6 +15,7 @@ defmodule BrandoAdmin.Images.AltTextLive do
   alias Brando.Images.AltText
   alias Brando.Images.Image
   alias Brando.SEO.Suggestions
+  alias BrandoAdmin.Components.AIAction
   alias BrandoAdmin.Components.SuggestionReview
   alias BrandoAdmin.Components.Workspace
 
@@ -115,15 +116,13 @@ defmodule BrandoAdmin.Images.AltTextLive do
               {gettext("At most %{max} per run; run it again for the rest.", max: @max_batch)}
             </p>
             <div class="alt-text-actions">
-              <button
-                type="button"
-                class="workspace-button primary"
+              <AIAction.button
+                variant={:primary}
                 phx-click="describe"
                 disabled={match?({:error, :no_image_input}, @estimate)}
               >
-                <.icon name="sparkles" />
                 {ngettext("Describe one image", "Describe %{count} images", min(length(@candidates), @max_batch))}
-              </button>
+              </AIAction.button>
             </div>
           </div>
         </div>

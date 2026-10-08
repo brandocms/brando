@@ -45,11 +45,22 @@
   --brando-badge-bg: #eef0eb;
   --brando-badge-ink: #566153;
 
+  /* AI: anything that asks an external, paid AI service for something is
+     marked in this violet, and so is what it hands back for review. One base
+     (the ink: text, icons, focus, a filled control; 6.9:1 on white) and the
+     rest mixed from it: a filled control on hover, the hairline, the
+     hairline on hover, and a hover tint (AI.css). */
+  --brando-ai: #634f8f;
+  --brando-ai-hover: color-mix(in srgb, var(--brando-ai) 82%, var(--brando-ink));
+  --brando-ai-line: color-mix(in srgb, var(--brando-ai) 35%, var(--brando-surface));
+  --brando-ai-line-strong: color-mix(in srgb, var(--brando-ai) 60%, var(--brando-surface));
+  --brando-ai-tint: color-mix(in srgb, var(--brando-ai) 6%, var(--brando-surface));
+
   /* AI results waiting for review: a suggestion or proposal that is not
-     content yet. The tint, its rule and its ink (AI.css). */
-  --brando-suggestion: #e6f1ea;
-  --brando-suggestion-line: #6a9b80;
-  --brando-suggestion-ink: #2f6a4d;
+     content yet. The tint, its rule and its ink, from the AI violet. */
+  --brando-suggestion: color-mix(in srgb, var(--brando-ai) 14%, var(--brando-surface));
+  --brando-suggestion-line: color-mix(in srgb, var(--brando-ai) 65%, var(--brando-surface));
+  --brando-suggestion-ink: var(--brando-ai);
 
   /* Needs attention: a missing alt text, an unprocessed image, unsaved or
      untranslated work, a warning badge. A tint for the chip and its ink. */

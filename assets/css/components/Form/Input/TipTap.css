@@ -242,8 +242,8 @@
   .tiptap-type-control.tiptap-type-pilcrow > span:first-child { font-size: 17px; line-height: 18px; }
   .tiptap-disclosure { width: 22px; min-width: 22px; }
   .tiptap-undo { margin-left: auto; }
-  /* The AI action in a toolbar keeps the toolbar's shape and takes the accent (AI.css). */
-  .tiptap-ai-trigger { color: var(--brando-accent); }
+  /* The AI action in a toolbar keeps the toolbar's shape and takes the AI violet (AI.css). */
+  .tiptap-ai-trigger { color: var(--brando-ai); }
 }
 /* Dialogs and expanded editors scroll independently of the entry toolbar. */
 .modal, .drawer, .tiptap-editor-shell.expanded { --form-toolbar-offset: 0px; }
@@ -288,9 +288,11 @@
 @media (max-width: 700px) { .tiptap-link-url-workspace { grid-template-columns: 1fr; } .tiptap-link-fields input.text, .tiptap-link-destination input.text { font-size: 16px; } }
 .tiptap-ai-editor {
   select { font-size: 14px; }
-  /* The request is the AI action: the accent and the sparkles (AI.css). */
-  button.primary { justify-content: center; height: auto; min-height: 34px; min-width: 0; padding: 7px 12px; border-radius: 5px; line-height: 18px; font-weight: 500; }
-  button.primary > [data-icon] { width: 14px; height: 14px; }
+  /* The request is the AI action, filled (`.ai-action.is-primary`, AI.css);
+     this keeps the popover's full-width shape. */
+  button.ai-action { justify-content: center; height: auto; min-height: 34px; min-width: 0; padding: 7px 12px; border-radius: 5px; line-height: 18px; font-weight: 500; }
+  button.ai-action > [data-icon] { width: 14px; height: 14px; }
+  button.ai-action:focus-visible { outline-color: var(--brando-ai); }
 }
 .tiptap-anchor-editor, .tiptap-ai-editor {
   padding: 18px; width: 320px;
@@ -346,12 +348,17 @@
   .tiptap-ai-actions button:hover { background: var(--brando-surface-hover); }
   .tiptap-ai-actions button.primary { background: var(--brando-accent); border-color: var(--brando-accent); color: var(--brando-surface); }
   .tiptap-ai-actions button:focus-visible { outline: 2px solid var(--brando-accent); outline-offset: 3px; }
+  /* Try again asks the model again: the AI violet and the sparkles (AI.css). */
+  .tiptap-ai-actions button.is-ai { gap: 6px; border-color: var(--brando-ai-line); color: var(--brando-ai); }
+  .tiptap-ai-actions button.is-ai:hover { border-color: var(--brando-ai-line-strong); background: var(--brando-ai-tint); }
+  .tiptap-ai-actions button.is-ai:focus-visible { outline-color: var(--brando-ai); }
+  .tiptap-ai-actions button.is-ai > [data-icon] { width: 14px; height: 14px; }
 }
 @keyframes tiptap-suggestion-arrive { from { transform: translateY(5px); opacity: .6; } to { transform: translateY(0); opacity: 1; } }
 @media (prefers-reduced-motion: reduce) { .tiptap-ai-proposal { animation: none; } }
 @media (pointer: coarse) {
   .tiptap-wrapper .tiptap-menu .menu-item { min-width: 44px; min-height: 44px; }
-  .tiptap-popover button, .tiptap-ai-editor button.primary, .tiptap-ai-proposal .tiptap-ai-actions button { min-height: 44px; }
+  .tiptap-popover button, .tiptap-ai-editor button.ai-action, .tiptap-ai-proposal .tiptap-ai-actions button { min-height: 44px; }
   .tiptap-popover input, .tiptap-popover select { font-size: 16px; }
   .tiptap-editor-shell.expanded:popover-open .tiptap-expanded-done { min-height: 44px; }
 }

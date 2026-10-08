@@ -215,3 +215,88 @@ test('image refs while processing', async ({ page }, testInfo) => {
     await expect(picture.locator('.media-field-preview img')).toBeVisible({ timeout: 20000 })
   }
 })
+
+// The AI looks side by side (docs/admin-ui-design.md, "AI actions and
+// suggestions"). AI controls only render when a provider is configured, which
+// an E2E run is not, so the sheet is the components' own markup, copied from
+// the rendered screens and drawn by the admin's stylesheets on an admin page.
+test('ai actions and suggestions: composed sheet', async ({ page }, testInfo) => {
+  await page.setViewportSize({ width: 1440, height: 1000 })
+  await page.goto('/admin')
+  await syncLV(page)
+  const sparkles = '<span data-icon="" class="lucide-sparkles" aria-hidden="true"></span>'
+  const action = (label, extra = '') => `<button type="button" class="ai-action ${extra}">${sparkles}${label}</button>`
+  await page.evaluate(({ sparkles, buildWithAI, describe, rewrite, review }) => {
+    const style = document.createElement('style')
+    style.textContent = `
+      #ai-reference-sheet { position: absolute; top: 0; left: 0; z-index: 100000; isolation: isolate; box-sizing: border-box; width: 1000px; padding: 28px; background: var(--brando-surface); }
+      #ai-reference-sheet .ai-sheet-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 28px; align-items: start; }
+      #ai-reference-sheet .ai-sheet-column { display: grid; gap: 24px; justify-items: start; }
+      #ai-reference-sheet .ai-sheet-column > * { width: 100%; }
+      #ai-reference-sheet .ai-sheet-actions { display: flex; gap: 12px; width: auto; }
+      body > :not(#ai-reference-sheet) { visibility: hidden; }
+      #ai-reference-sheet .seo-audit-details-grid { display: block; }
+      #ai-reference-sheet .admin-workspace, #ai-reference-sheet .seo-audit { margin: 0; padding: 0; min-height: 0; }
+      #ai-reference-sheet .tiptap-ai-proposal { margin-block: 28px 0; }`
+    document.head.append(style)
+    const sheet = document.createElement('div')
+    sheet.id = 'ai-reference-sheet'
+    sheet.innerHTML = `
+      <div class="ai-sheet-grid">
+        <div class="ai-sheet-column">
+          <div class="ai-sheet-actions">${buildWithAI}${describe}</div>
+          <div class="brando-form"><div class="form-content"><div class="drawer-form"><div class="brando-input">
+            <div class="field-wrapper"><div class="label-wrapper"><label class="control-label"><span>Meta title</span></label></div>
+              <div class="field-base"><div class="input-with-action has-action">
+                <input type="text" class="text has-ai-action" aria-label="Meta title">
+                <button type="button" class="ai-action is-icon ai-generate-button" aria-label="Generate with AI">${sparkles}</button>
+              </div></div>
+            </div>
+          </div></div></div></div>
+          <div class="brando-form"><div class="form-content"><div class="drawer-form">
+            <div class="field-wrapper"><div class="label-wrapper"><label class="control-label"><span>Alternative text</span></label></div>
+              <div class="field-base"><div class="i18n-field i18n-text">
+                <div class="i18n-head">
+                  <div class="i18n-tabs" role="tablist" aria-label="Alternative text">
+                    <button type="button" role="tab" class="i18n-tab is-active" aria-selected="true">en</button><button type="button" role="tab" class="i18n-tab" aria-selected="false">no</button>
+                  </div>
+                  <button type="button" class="ai-action is-compact i18n-suggest">${sparkles}Suggest alt text</button>
+                </div>
+                <div role="tabpanel" class="i18n-panel is-active"><input type="text" class="text" aria-label="Alternative text (English)"></div>
+              </div></div>
+            </div>
+          </div></div></div>
+        </div>
+        <div class="admin-workspace settings-workspace seo-workspace"><section class="workspace-panel seo-audit"><div class="seo-audit-details-grid">
+          <div class="seo-search-preview">
+            <span class="seo-preview-url">/</span>
+            <div class="seo-preview-title">Index</div>
+            <p>Welcome to Brando, the content system for considered websites.</p>
+            <div class="seo-preview-actions"><a href="#" class="seo-row-action">Open entry</a>${rewrite}${review}</div>
+            <div class="seo-critique ai-proposal" role="status">
+              <h4 class="ai-proposal-label">${sparkles}AI review</h4>
+              <ul><li>The description repeats the title.</li><li>Mention the location early.</li><li>Keep it under 155 characters.</li></ul>
+            </div>
+          </div>
+        </div></section></div>
+      </div>
+      <div class="tiptap-ai-proposal ai-proposal" role="region" aria-label="AI suggestion">
+        <span class="tiptap-ai-heading ai-proposal-label">${sparkles}AI suggestion</span>
+        <span class="tiptap-ai-text">Our rooms face the sea, with wide windows and quiet mornings on the terrace.</span>
+        <span class="tiptap-ai-actions ai-proposal-actions">
+          <button type="button" class="primary">Accept</button><button type="button">Discard</button><button type="button" class="is-ai">${sparkles}Try again</button>
+        </span>
+      </div>`
+    document.body.append(sheet)
+  }, {
+    sparkles,
+    buildWithAI: action('Build with AI'),
+    describe: action('Describe 3 images', 'is-primary'),
+    rewrite: action('Rewrite description'),
+    review: action('Review with AI'),
+  })
+  const sheet = page.locator('#ai-reference-sheet')
+  await expect(sheet.locator('.ai-action')).toHaveCount(6)
+  await page.waitForTimeout(300)
+  await sheet.screenshot({ path: testInfo.outputPath('ai-actions-and-suggestions.png'), animations: 'disabled' })
+})

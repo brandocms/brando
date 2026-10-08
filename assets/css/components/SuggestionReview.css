@@ -23,7 +23,7 @@
 .ai-suggestion-languages label { display: grid; grid-template-columns: 28px minmax(0, 1fr); gap: 8px; align-items: start; }
 .ai-suggestion-languages span { padding-top: 8px; color: var(--workspace-muted); font-family: "Mono"; font-size: 10px; letter-spacing: .04em; text-transform: uppercase; }
 .ai-suggestion-languages textarea { min-height: 44px; }
-.ai-spinner { flex: 0 0 15px; width: 15px; height: 15px; border: 2px solid var(--brando-suggestion); border-top-color: var(--brando-accent); border-radius: 50%; animation: ai-spin .8s linear infinite; }
+.ai-spinner { flex: 0 0 15px; width: 15px; height: 15px; border: 2px solid var(--brando-suggestion); border-top-color: var(--brando-ai); border-radius: 50%; animation: ai-spin .8s linear infinite; }
 @keyframes ai-spin { to { transform: rotate(360deg); } }
 
 @media (max-width: 800px) {
