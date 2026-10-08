@@ -43,6 +43,17 @@ such as `"crp"`, an unreadable geometry, or a `srcset` naming a size that isn't
 in `sizes` fails the build with the field and the size it is about. Configs
 from a function or `config_target` are checked when they are first read.
 
+`"700"` makes an image 700 pixels wide and `"x400"` 400 tall, the other side
+following its proportions, for portraits and landscapes alike; `"700x400"`
+fits it inside the box. No size is made larger than the original: from an
+original 600 pixels wide, `"1400"` gives a 600-pixel file. A cropped size is
+cut to exactly its geometry around the focal point, or, from an original
+smaller than the geometry, to the largest part of it with the geometry's
+proportions. A trailing `>` ("only shrink") is accepted and changes nothing.
+`srcset` widths are written by hand and are not checked against the files, so
+`{"large", "1400w"}` is declared 1400 wide even when the original is
+narrower. See `Brando.Images.Size`.
+
 ### Render responsive images
 
 Preload the asset in the controller's query or through the repo:

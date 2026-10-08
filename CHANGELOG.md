@@ -1600,6 +1600,22 @@ production dump.
   `400x400` crop); the size that covers the crop is now worked out from one
   scale, so it is exact. Recreate the affected images to get the new files.
 
+- **A width-only image size is that width, and no size is enlarged.** Since
+  the move to libvips, a size such as `"700"` was fitted inside a 700×700
+  square, so a portrait came out 700 tall and narrower than its `srcset`
+  said (525×700 from a 3000×4000 original). It is now 700 wide for portraits
+  and landscapes alike, as it was with sharp in 0.54. Every size used to be
+  enlarged from an original smaller than it; now none is. An uncropped size
+  keeps the original's size, and a cropped size is the largest part of the
+  original with its proportions (`200×200` for a `400x400` crop of a
+  300×200 original). A trailing `>`, as in `"400x400>"`, is still accepted
+  and changes nothing. Cropped sizes of photos stored on their side (EXIF
+  orientation) are now cut from the upright image, at their size and around
+  the right focal point. This changes only images uploaded or recreated from
+  now on. Existing files stay as they are and still count as matching their
+  config, so `mix brando.images.adopt` and **Recreate changed images** don't
+  recreate them for this.
+
 - **Nothing typed or changed in a shared entry is lost on the way to a
   save.** The save button and ⌘S no longer submit the form, which took the
   focus from the field being typed in and ignored every key until the save
