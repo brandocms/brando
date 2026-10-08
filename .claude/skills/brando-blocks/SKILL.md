@@ -617,7 +617,7 @@ store** (`BlockField.Ops` — a pure, unit-tested reducer over
   read-only (the session refuses their ops). Ops must stay pure: the session and every
   replica must reach the same state from the same ops.
 - **An event sends the fields it changed**: `Block.assign_block_form/2` compares the
-  block's form before and after (`Ops.field_op/4`) and emits `{:set_field, uid, path,
+  block's form before and after (`Ops.field_op/5`) and emits `{:set_field, uid, path,
   value, rev}` for one changed leaf, `{:set_fields, uid, [{path, value}], rev}` for
   several, nothing for none — never the whole diff, so another editor's in-flight change
   to a different field survives. List items are named by `id`/`uid`/`key`/`sync_uid`
@@ -628,7 +628,9 @@ store** (`BlockField.Ops` — a pure, unit-tested reducer over
   second of a `replace_form` the event can carry the browser's old values for what that
   change touched: `@replaced` keeps the form before AND the one that replaced it, and a
   leaf is dropped only where the two differ and the event sets it back to the old value
-  — never drop a field the remote change did not touch (a backspace, a toggle set back).
+  — never drop a field the remote change did not touch (a backspace, a toggle set back),
+  nor the event's own `_target` field (`assign_block_form/3`'s `target:`), which is a
+  deliberate change even when it restores the old value.
   A field op made while its rows were new names them by uid; the reducer
   matches uid- and id-named items through `rel_ids`, so both land on one row. `{:update,
   ...}` remains only for forms that cannot be compared. Last arrival wins per field. The

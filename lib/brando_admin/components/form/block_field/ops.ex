@@ -1054,6 +1054,9 @@ defmodule BrandoAdmin.Components.Form.BlockField.Ops do
   is one field, set whole. `"children"` is left out: the tree is the
   store's.
 
+  `target` is the input the event names (LiveView's `_target`): its field
+  is always a change.
+
   `replaced` is `{stale, replacing}` when another editor's change replaced
   the form a moment ago: the form the browser showed before, and the one
   that replaced it. The event can carry the browser's old values for the
@@ -1074,16 +1077,16 @@ defmodule BrandoAdmin.Components.Form.BlockField.Ops do
       {:ok, {:set_field, "b", ["description"], "New", nil}}
 
   """
-  @spec field_op(Changeset.t(), Changeset.t(), uid(), {Changeset.t(), Changeset.t()} | nil) ::
+  @spec field_op(Changeset.t(), Changeset.t(), uid(), {Changeset.t(), Changeset.t()} | nil, [String.t()] | nil) ::
           {:ok, op() | nil} | :error
-  def field_op(%Changeset{} = previous, %Changeset{} = changeset, uid, replaced \\ nil) do
+  def field_op(%Changeset{} = previous, %Changeset{} = changeset, uid, replaced \\ nil, target \\ nil) do
     before = fields_snapshot(previous)
     now = fields_snapshot(changeset)
 
     changes =
       before
       |> leaf_changes(now, [], [], :top)
-      |> reject_stale(replaced)
+      |> reject_stale(replaced, target_path(target))
 
     case changes do
       [] -> {:ok, nil}
@@ -1094,17 +1097,26 @@ defmodule BrandoAdmin.Components.Form.BlockField.Ops do
     _ -> :error
   end
 
-  defp reject_stale(changes, nil), do: changes
+  defp reject_stale(changes, nil, _target), do: changes
 
-  defp reject_stale(changes, {stale, replacing}) do
+  defp reject_stale(changes, {stale, replacing}, target) do
     stale = fields_snapshot(stale)
     replacing = fields_snapshot(replacing)
 
     Enum.reject(changes, fn {raw, _path, value} ->
       old = dom_get(stale, raw)
-      old != dom_get(replacing, raw) and old == {:ok, list_after(value)}
+      not targets?(target, raw) and old != dom_get(replacing, raw) and old == {:ok, list_after(value)}
     end)
   end
+
+  # The input the event names (`_target`, without the form's name) is what
+  # the editor changed: never an echo, even when it is set back to what it
+  # was before another editor's change to it (a toggle turned off again).
+  defp target_path([_form_name | path]) when path != [], do: path
+  defp target_path(_target), do: nil
+
+  defp targets?(nil, _raw), do: false
+  defp targets?(target, raw), do: List.starts_with?(target, raw)
 
   defp list_after({:list, _before, after_list}), do: after_list
   defp list_after(value), do: value
@@ -1343,7 +1355,11 @@ defmodule BrandoAdmin.Components.Form.BlockField.Ops do
   The editor's order and its additions, removals and item changes win;
   items it left as they were take their current version, items others
   removed stay removed, and items others added are kept, after the item
-  they follow in `current`.
+  they follow in `current`. So when an editor adds or removes items, its
+  order wins over a reorder someone else made meanwhile.
+
+  Items are the same row when their first identity (of `id`, `uid`, `key`
+  and `sync_uid`, in that order) is the same.
 
   ## Examples
 
@@ -1382,13 +1398,13 @@ defmodule BrandoAdmin.Components.Form.BlockField.Ops do
     end)
   end
 
-  @row_identities ~w(id uid key sync_uid)
+  # One identity per item, the first it has of id, uid, key and sync uid:
+  # two rows that happen to share a key are not the same row.
   defp same_row?(%{} = a, %{} = b) do
-    Enum.any?(@row_identities, fn name ->
-      x = Map.get(a, name)
-      y = Map.get(b, name)
-      x not in [nil, ""] and y not in [nil, ""] and to_string(x) == to_string(y)
-    end)
+    case {identity(a), identity(b)} do
+      {{name, x}, {name, y}} -> to_string(x) == to_string(y)
+      _ -> false
+    end
   end
 
   defp same_row?(_a, _b), do: false

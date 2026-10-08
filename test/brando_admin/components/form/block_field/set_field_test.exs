@@ -299,6 +299,45 @@ defmodule BrandoAdmin.Components.Form.BlockField.SetFieldTest do
              Ops.field_op(replacing, echo, intro.block.uid, {stale, replacing})
   end
 
+  # Round 4: the field the event names was dropped as an echo when the
+  # editor set it back to its value from before another editor changed it.
+  test "the input the event names is never an echo, even set back after another editor's change" do
+    data = %Block{id: 1, uid: "b", active: false, description: "x"}
+
+    # B turned it on; A turns it back off within a second
+    stale = Changeset.change(data)
+    replacing = Changeset.change(data, %{active: true})
+    off = Changeset.change(data, %{active: false})
+
+    assert Ops.field_op(replacing, off, "b", {stale, replacing}) == {:ok, nil}
+
+    assert Ops.field_op(replacing, off, "b", {stale, replacing}, ["child_block", "active"]) ==
+             {:ok, {:set_field, "b", ["active"], false, nil}}
+
+    # B's text replaced A's; A types, then backspaces to its old value
+    stale = Changeset.change(data, %{description: "abc"})
+    replacing = Changeset.change(data, %{description: "abcB"})
+    typed = Changeset.change(data, %{description: "abcd"})
+    back = Changeset.change(data, %{description: "abc"})
+
+    assert Ops.field_op(typed, back, "b", {stale, replacing}, ["child_block", "description"]) ==
+             {:ok, {:set_field, "b", ["description"], "abc", nil}}
+  end
+
+  # Round 4: two items were one row when any identity matched, so another
+  # editor's new item sharing a key with an existing one vanished.
+  test "list items are the same row by their first identity only" do
+    before = [%{"id" => 1, "key" => "k"}]
+    current = [%{"id" => 1, "key" => "k"}, %{"id" => 2, "key" => "k"}]
+    assert Ops.merge_list(before, before, current) == current
+
+    # this editor's order wins over another editor's reorder when it adds
+    uids = &Enum.map(&1, fn item -> item["uid"] end)
+    abc = Enum.map(~w(a b c), &%{"uid" => &1})
+    reordered = Enum.map(~w(b a c), &%{"uid" => &1})
+    assert uids.(Ops.merge_list(abc, abc ++ [%{"uid" => "x"}], reordered)) == ~w(a b c x)
+  end
+
   # Round 3 #5: a list that gained, lost or reordered items was set whole,
   # so of two editors each adding an item, one lost theirs.
   test "two editors adding and removing list items both keep their change", c do

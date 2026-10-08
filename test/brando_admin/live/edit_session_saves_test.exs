@@ -452,6 +452,33 @@ defmodule BrandoAdmin.EditSessionSavesTest do
     assert shown.(a, text_path()) == "<p>B typing</p>"
   end
 
+  # Round 4: A set the field B had just changed back to A's old value, and it
+  # was taken for an echo of the form before B's change.
+  test "setting a field back right after another editor changed it is kept", c do
+    [first | _] = c.uids
+    desc = ["entry_block", "block", "description"]
+    a = open(c.conn, c.identity)
+    b = open(c.other_conn, c.identity)
+
+    set = fn view, value ->
+      selector = "#entry_block_form-#{first}"
+      params = view |> render() |> form_params(selector) |> put_in(desc, value) |> Map.put("_target", desc)
+      view |> element(selector) |> render_change(params)
+    end
+
+    shown = fn view -> view |> render() |> form_params("#entry_block_form-#{first}") |> get_in(desc) end
+
+    set.(a, "abc")
+    await(fn -> shown.(b) == "abc" end)
+    set.(b, "abcB")
+    await(fn -> get_in(session_state(c.identity).diffs, [first, "block", "description"]) == "abcB" end)
+    Process.sleep(100)
+    set.(a, "abc")
+
+    await(fn -> get_in(session_state(c.identity).diffs, [first, "block", "description"]) == "abc" end)
+    await(fn -> shown.(b) == "abc" end)
+  end
+
   # #10: refreshing a root for another editor's change also rewrote its seed
   # form, so the field re-rendered and the block was updated a second time.
   test "another editor's change updates only the block it changed", c do

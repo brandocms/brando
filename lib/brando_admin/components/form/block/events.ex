@@ -789,7 +789,7 @@ defmodule BrandoAdmin.Components.Form.Block.Events do
       )
 
     socket
-    |> Block.assign_block_form(updated_form)
+    |> Block.assign_block_form(updated_form, target: params_target)
     |> assign(:form_has_changes, updated_form.source.changes !== %{})
     |> Block.maybe_update_liquex_block_var(params_target, params)
     |> Block.maybe_update_live_preview_block()
@@ -893,7 +893,7 @@ defmodule BrandoAdmin.Components.Form.Block.Events do
       )
 
     socket
-    |> Block.assign_block_form(updated_form)
+    |> Block.assign_block_form(updated_form, target: params_target)
     |> assign(:form_has_changes, updated_form.source.changes !== %{})
     |> Block.maybe_update_liquex_block_var(params_target, params)
     |> Block.maybe_update_container(params_target)

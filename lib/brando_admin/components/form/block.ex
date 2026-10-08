@@ -2302,11 +2302,12 @@ defmodule BrandoAdmin.Components.Form.Block do
   strips render artifacts anyway).
 
   What reaches the edit session is the fields the event changed
-  (`Ops.field_op/4`), so someone working in another field of the block
-  keeps their change.
+  (`Ops.field_op/5`), so someone working in another field of the block
+  keeps their change. `target:` is the input a `validate_block` event
+  names (`_target`).
   """
-  def assign_block_form(socket, form) do
-    op = form_op(socket, form)
+  def assign_block_form(socket, form, opts \\ []) do
+    op = form_op(socket, form, opts[:target])
 
     socket
     |> assign(:form, form)
@@ -2319,11 +2320,11 @@ defmodule BrandoAdmin.Components.Form.Block do
   # event can still carry the values the browser showed before it.
   @stale_ms 1_000
 
-  defp form_op(socket, form) do
+  defp form_op(socket, form, target) do
     uid = socket.assigns.uid
 
     with %{source: %Changeset{} = before} <- socket.assigns[:form],
-         {:ok, op} <- Ops.field_op(before, form.source, uid, replaced(socket)) do
+         {:ok, op} <- Ops.field_op(before, form.source, uid, replaced(socket), target) do
       op
     else
       _ -> {:update, uid, Ops.block_diff_params(form.source)}
