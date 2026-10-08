@@ -106,9 +106,13 @@ test.describe('Webhooks', () => {
     await expect(rows.first().getByTestId('delivery-state')).toContainText('200')
     await page.screenshot({ path: testInfo.outputPath('delivery-log.png'), fullPage: true })
 
-    // On a phone the log stacks instead of widening the page
+    // On a phone the log stacks instead of widening the page. Polled: right
+    // after the resize the layout can still be the desktop one (it read 112px
+    // over once), which is the resize settling, not the log overflowing.
     await page.setViewportSize({ width: 390, height: 844 })
-    expect(await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)).toBeLessThanOrEqual(1)
+    await expect
+      .poll(() => page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth))
+      .toBeLessThanOrEqual(1)
     await page.setViewportSize({ width: 1440, height: 900 })
 
     // Redeliver: the same event, a new delivery id
