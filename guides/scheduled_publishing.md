@@ -41,10 +41,9 @@ entry are what it will publish. An ordinary unsaved browser edit is not included
 The worker runs a context update, so publication validation and permission checks
 still apply at execution time.
 
-Setting a future date while leaving status as draft or disabled does **not** make
-that date inert: the scheduling callback is driven by a changed future
-`publish_at`. Use the explicit published-to-pending flow above, and inspect the
-queue whenever an entry has a publication date.
+The job publishes only an entry that is still pending when it runs: a future
+date on a draft or a deactivated entry queues a job that does nothing. Use the
+published-to-pending flow above.
 
 ## See it in the calendar
 
@@ -58,7 +57,10 @@ it. The view, the date and the type are in the URL.
 
 An item can be moved to another day, at the same time of day, by dragging it
 or with its **Move to…** button, which opens a dialog with the day and is the
-way to do it from the keyboard or a phone. Both ask before moving. A move
+way to do it from the keyboard or a phone. Both ask before moving. An item that
+changed since the calendar was loaded (published by hand, its expiry cleared,
+its revision cancelled or moved) is not moved: the calendar says so and shows
+what is planned now. A move
 saves the date through the entry's context, as saving it in the form does, or
 reschedules the revision through `Brando.Publisher.schedule_revision/5`, so the
 same validation, permissions and jobs apply: moving publishing takes the
@@ -75,16 +77,16 @@ job in the current authorization and tenant context:
 {1, _} = Brando.Publisher.delete_job(job.id)
 ```
 
-Then save the entry with its intended remaining status and date. For example,
-set `status: :draft, publish_at: nil` to keep it private. Clearing `publish_at`
-alone does not remove an already queued job. Also, clearing the date on a pending
-entry changes its status to published unless you explicitly choose another
-status. Cancellation and the content edit are separate operations.
+Or save the entry with its intended status and date: any change to
+`publish_at`, clearing it or moving it into the past included, removes the
+entry's waiting publication job, whoever scheduled it, and only a future date
+queues a new one. For example, set `status: :draft, publish_at: nil` to keep it
+private. Clearing the date on a pending entry changes its status to published
+unless you explicitly choose another status.
 
-Changing a future date replaces the entry's waiting publication job, whoever
-scheduled it. A job that was already running when the date moved checks the
-entry when it runs and does nothing if the entry's `publish_at` is still more
-than a minute ahead. Cancelling a job that has already executed cannot undo its
+A job that was already running when the date changed checks the entry when it
+runs and does nothing unless the entry is still pending and its `publish_at`
+has come. Cancelling a job that has already executed cannot undo its
 publication.
 
 ## Let an entry expire
@@ -115,8 +117,23 @@ the entry's status, and the dashboard lists what expires in the next 14 days.
 - Restoring a revision, scheduled or not, keeps the expiry the entry has: it
   is not part of the revision's content.
 
-The expired entry keeps its `unpublish_at`, so it shows when it ended. Clear it
-or set a new one when publishing the entry again.
+The expired entry keeps its `unpublish_at`, so it shows when it ended.
+Publishing it again clears an expiry that has passed, unless the same change
+sets a new one. A duplicate or a new translation starts without an expiry, and
+a content transfer treats `unpublish_at` like `publish_at`: a draft has none,
+preserve keeps the target's own and source takes the archive's.
+
+## Dates without jobs
+
+Cloning an environment or restoring an archive carries the dates but not the
+jobs, which live with the queue. `Brando.Worker.ScheduledPublishingSweep`, in
+Brando's default Oban crontab every ten minutes, catches up in every active
+environment (`Brando.Publisher.sweep/1`): it publishes pending entries whose
+`publish_at` passed more than five minutes ago and deactivates published or
+pending entries whose `unpublish_at` did, through the context as the jobs do.
+Running it again changes nothing. An application that sets
+`config :brando, Oban` itself must add
+`{"*/10 * * * *", Brando.Worker.ScheduledPublishingSweep}` to its crontab.
 
 ## Schedule an approved revision
 
