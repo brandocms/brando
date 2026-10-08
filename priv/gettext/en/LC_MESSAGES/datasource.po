@@ -10,11 +10,12 @@ msgid ""
 msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Language: en\n"
-
-msgid "selection"
-msgstr ""
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
 msgid "all"
+msgstr ""
+
+msgid "selection"
 msgstr ""
 
 msgid "single"

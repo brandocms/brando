@@ -11,61 +11,61 @@
 msgid ""
 msgstr ""
 
-#: lib/brando_admin/components/text_diff.ex:55
+#: lib/brando_admin/components/text_diff.ex
 #, elixir-autogen, elixir-format
 msgid "%{count} line added"
 msgid_plural "%{count} lines added"
 msgstr[0] ""
 msgstr[1] ""
 
-#: lib/brando_admin/components/text_diff.ex:47
+#: lib/brando_admin/components/text_diff.ex
 #, elixir-autogen, elixir-format
 msgid "%{count} line removed"
 msgid_plural "%{count} lines removed"
 msgstr[0] ""
 msgstr[1] ""
 
-#: lib/brando_admin/components/text_diff.ex:201
+#: lib/brando_admin/components/text_diff.ex
 #, elixir-autogen, elixir-format
 msgid "Added:"
 msgstr ""
 
-#: lib/brando_admin/components/text_diff.ex:42
+#: lib/brando_admin/components/text_diff.ex
 #, elixir-autogen, elixir-format
 msgid "Before → after"
 msgstr ""
 
-#: lib/brando_admin/components/module_files.ex:194
-#, elixir-autogen, elixir-format
-msgid "Current → imported"
-msgstr ""
-
-#: lib/brando_admin/components/text_diff.ex:92
-#, elixir-autogen, elixir-format
-msgid "No content"
-msgstr ""
-
-#: lib/brando_admin/components/text_diff.ex:95
-#, elixir-autogen, elixir-format
-msgid "Preview shortened. More content exists beyond the lines shown."
-msgstr ""
-
-#: lib/brando_admin/components/text_diff.ex:202
-#, elixir-autogen, elixir-format
-msgid "Removed:"
-msgstr ""
-
-#: lib/brando_admin/components/text_diff.ex:203
-#, elixir-autogen, elixir-format
-msgid "Unchanged:"
-msgstr ""
-
-#: lib/brando_admin/components/text_diff.ex:71
+#: lib/brando_admin/components/text_diff.ex
 #, elixir-autogen, elixir-format
 msgid "Changes in %{field}"
 msgstr ""
 
-#: lib/brando_admin/components/text_diff.ex:63
+#: lib/brando_admin/components/module_files.ex
+#, elixir-autogen, elixir-format
+msgid "Current → imported"
+msgstr ""
+
+#: lib/brando_admin/components/text_diff.ex
 #, elixir-autogen, elixir-format
 msgid "No changes in this preview"
+msgstr ""
+
+#: lib/brando_admin/components/text_diff.ex
+#, elixir-autogen, elixir-format
+msgid "No content"
+msgstr ""
+
+#: lib/brando_admin/components/text_diff.ex
+#, elixir-autogen, elixir-format
+msgid "Preview shortened. More content exists beyond the lines shown."
+msgstr ""
+
+#: lib/brando_admin/components/text_diff.ex
+#, elixir-autogen, elixir-format
+msgid "Removed:"
+msgstr ""
+
+#: lib/brando_admin/components/text_diff.ex
+#, elixir-autogen, elixir-format
+msgid "Unchanged:"
 msgstr ""

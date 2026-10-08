@@ -11,146 +11,142 @@
 msgid ""
 msgstr ""
 
-#: lib/brando/users/user.ex:198
-#, elixir-autogen, elixir-format
-msgid "Admin"
-msgstr ""
-
-#: lib/brando/users/user.ex:120
-#, elixir-autogen, elixir-format
-msgid "Are you sure?"
-msgstr ""
-
-#: lib/brando/users/user.ex:206
-#, elixir-autogen, elixir-format
-msgid "Avatar"
-msgstr ""
-
-#: lib/brando/users/user.ex:209
-#, elixir-autogen, elixir-format
-msgid "Config"
-msgstr ""
-
-#: lib/brando/users/user.ex:172
-#: lib/brando/users/user.ex:186
-#, elixir-autogen, elixir-format
-msgid "Content"
-msgstr ""
-
-#: lib/brando/users/user.ex:120
-#, elixir-autogen, elixir-format
-msgid "Disable user"
-msgstr ""
-
-#: lib/brando/users/user.ex:119
-#, elixir-autogen, elixir-format
-msgid "Edit user"
-msgstr ""
-
-#: lib/brando/users/user.ex:199
-#, elixir-autogen, elixir-format
-msgid "Editor"
-msgstr ""
-
-#: lib/brando/users/user.ex:118
-#: lib/brando/users/user.ex:190
-#, elixir-autogen, elixir-format
-msgid "Email"
-msgstr ""
-
-#: lib/brando/users/user.ex:192
-#, elixir-autogen, elixir-format
-msgid "Language"
-msgstr ""
-
-#: lib/brando/users/user.ex:117
-#: lib/brando/users/user.ex:189
-#, elixir-autogen, elixir-format
-msgid "Name"
-msgstr ""
-
-#: lib/brando/users/user.ex:178
-#: lib/brando/users/user.ex:191
-#, elixir-autogen, elixir-format
-msgid "Password"
-msgstr ""
-
-#: lib/brando/users/user.ex:197
-#, elixir-autogen, elixir-format
-msgid "Superuser"
-msgstr ""
-
-#: lib/brando/users/user.ex:200
-#, elixir-autogen, elixir-format
-msgid "User"
-msgstr ""
-
-#: lib/brando/users/user.ex:108
-#, elixir-autogen, elixir-format
-msgid "user"
-msgstr ""
-
-#: lib/brando/users/user.ex:109
-#, elixir-autogen, elixir-format
-msgid "users"
-msgstr ""
-
-#: lib/brando/users/user.ex:149
-#, elixir-autogen, elixir-format
-msgid "Inactive"
-msgstr ""
-
-#: lib/brando/users/user.ex:121
-#, elixir-autogen, elixir-format
-msgid "Delete user"
-msgstr ""
-
-#: lib/brando/users/user.ex:149
+#: lib/brando/users/user.ex
 #, elixir-format, elixir-autogen
 msgid "Active"
 msgstr ""
 
-#: lib/brando/users/user.ex:137
-#, elixir-format, elixir-autogen
-msgid "Legacy role"
-msgstr ""
-
-#: lib/brando/users/user.ex:141
-#, elixir-format, elixir-autogen
-msgid "Last seen"
-msgstr ""
-
-#: lib/brando/users/user.ex:145
-#, elixir-format, elixir-autogen
-msgid "Last logged in"
-msgstr ""
-
-#: lib/brando/users/user.ex:164
-#, elixir-format, elixir-autogen
-msgid "Not recorded"
-msgstr ""
-
-#: lib/brando/users/user.ex:137
+#: lib/brando/users/user.ex
 #, elixir-autogen, elixir-format
-msgid "Role"
+msgid "Admin"
 msgstr ""
 
-#: lib/brando/users/user.ex:232
+#: lib/brando/users/user.ex
 #, elixir-autogen, elixir-format
-msgid "Job title"
+msgid "Are you sure?"
 msgstr ""
 
-#: lib/brando/users/user.ex:233
+#: lib/brando/users/user.ex
+#, elixir-autogen, elixir-format
+msgid "Avatar"
+msgstr ""
+
+#: lib/brando/users/user.ex
+#, elixir-autogen, elixir-format
+msgid "Config"
+msgstr ""
+
+#: lib/brando/users/user.ex
+#, elixir-autogen, elixir-format
+msgid "Content"
+msgstr ""
+
+#: lib/brando/users/user.ex
+#, elixir-autogen, elixir-format
+msgid "Delete user"
+msgstr ""
+
+#: lib/brando/users/user.ex
+#, elixir-autogen, elixir-format
+msgid "Disable user"
+msgstr ""
+
+#: lib/brando/users/user.ex
+#, elixir-autogen, elixir-format
+msgid "Edit user"
+msgstr ""
+
+#: lib/brando/users/user.ex
+#, elixir-autogen, elixir-format
+msgid "Editor"
+msgstr ""
+
+#: lib/brando/users/user.ex
+#, elixir-autogen, elixir-format
+msgid "Email"
+msgstr ""
+
+#: lib/brando/users/user.ex
 #, elixir-autogen, elixir-format
 msgid "Given to search engines on pages that name this user as the author."
 msgstr ""
 
-#: lib/brando/users/user.ex:236
+#: lib/brando/users/user.ex
+#, elixir-autogen, elixir-format
+msgid "Inactive"
+msgstr ""
+
+#: lib/brando/users/user.ex
+#, elixir-autogen, elixir-format
+msgid "Job title"
+msgstr ""
+
+#: lib/brando/users/user.ex
+#, elixir-autogen, elixir-format
+msgid "Language"
+msgstr ""
+
+#: lib/brando/users/user.ex
+#, elixir-format, elixir-autogen
+msgid "Last logged in"
+msgstr ""
+
+#: lib/brando/users/user.ex
+#, elixir-format, elixir-autogen
+msgid "Last seen"
+msgstr ""
+
+#: lib/brando/users/user.ex
+#, elixir-format, elixir-autogen
+msgid "Legacy role"
+msgstr ""
+
+#: lib/brando/users/user.ex
+#, elixir-autogen, elixir-format
+msgid "Name"
+msgstr ""
+
+#: lib/brando/users/user.ex
+#, elixir-format, elixir-autogen
+msgid "Not recorded"
+msgstr ""
+
+#: lib/brando/users/user.ex
+#, elixir-autogen, elixir-format
+msgid "Pages about this user on other sites, such as LinkedIn or a personal site."
+msgstr ""
+
+#: lib/brando/users/user.ex
+#, elixir-autogen, elixir-format
+msgid "Password"
+msgstr ""
+
+#: lib/brando/users/user.ex
 #, elixir-autogen, elixir-format
 msgid "Profile links"
 msgstr ""
 
-#: lib/brando/users/user.ex:237
+#: lib/brando/users/user.ex
 #, elixir-autogen, elixir-format
-msgid "Pages about this user on other sites, such as LinkedIn or a personal site."
+msgid "Role"
+msgstr ""
+
+#: lib/brando/users/user.ex
+#, elixir-autogen, elixir-format
+msgid "Superuser"
+msgstr ""
+
+#: lib/brando/users/user.ex
+#, elixir-autogen, elixir-format
+msgid "User"
+msgstr ""
+
+#: lib/brando/users/user.ex
+#, elixir-autogen, elixir-format
+msgid "user"
+msgstr ""
+
+#: lib/brando/users/user.ex
+#, elixir-autogen, elixir-format
+msgid "users"
 msgstr ""

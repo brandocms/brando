@@ -10,43 +10,44 @@ msgid ""
 msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Language: en\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
-#: lib/brando/content/module.ex:145
+#: lib/brando/content/module.ex
 #, elixir-autogen, elixir-format
 msgid "Class"
 msgstr ""
 
-#: lib/brando/content/module.ex:151
-#, elixir-autogen, elixir-format
-msgid "Export modules"
-msgstr ""
-
-#: lib/brando/content/module.ex:143
-#, elixir-autogen, elixir-format
-msgid "Name"
-msgstr ""
-
-#: lib/brando/content/module.ex:144
-#, elixir-autogen, elixir-format
-msgid "Namespace"
-msgstr ""
-
-#: lib/brando/content/module.ex:241
-#, elixir-autogen, elixir-format
-msgid "module"
-msgstr ""
-
-#: lib/brando/content/module.ex:242
-#, elixir-autogen, elixir-format
-msgid "modules"
-msgstr ""
-
-#: lib/brando/content/module.ex:146
+#: lib/brando/content/module.ex
 #, elixir-autogen, elixir-format
 msgid "Code"
 msgstr ""
 
-#: lib/brando/content/module.ex:157
+#: lib/brando/content/module.ex
 #, elixir-autogen, elixir-format
 msgid "Export DSL files"
+msgstr ""
+
+#: lib/brando/content/module.ex
+#, elixir-autogen, elixir-format
+msgid "Export modules"
+msgstr ""
+
+#: lib/brando/content/module.ex
+#, elixir-autogen, elixir-format
+msgid "Name"
+msgstr ""
+
+#: lib/brando/content/module.ex
+#, elixir-autogen, elixir-format
+msgid "Namespace"
+msgstr ""
+
+#: lib/brando/content/module.ex
+#, elixir-autogen, elixir-format
+msgid "module"
+msgstr ""
+
+#: lib/brando/content/module.ex
+#, elixir-autogen, elixir-format
+msgid "modules"
 msgstr ""

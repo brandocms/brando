@@ -15,6 +15,15 @@ msgstr ""
 msgid "month_1"
 msgstr "januar"
 
+msgid "month_10"
+msgstr "oktober"
+
+msgid "month_11"
+msgstr "november"
+
+msgid "month_12"
+msgstr "desember"
+
 msgid "month_2"
 msgstr "februar"
 
@@ -38,12 +47,3 @@ msgstr "august"
 
 msgid "month_9"
 msgstr "september"
-
-msgid "month_10"
-msgstr "oktober"
-
-msgid "month_11"
-msgstr "november"
-
-msgid "month_12"
-msgstr "desember"

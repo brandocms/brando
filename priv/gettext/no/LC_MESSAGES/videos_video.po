@@ -10,102 +10,102 @@ msgid ""
 msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Language: no\n"
-"Plural-Forms: nplurals=2; plural=(n != 1);"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
-#: lib/brando/videos/video.ex:130
+#: lib/brando/videos/video.ex
 #, elixir-autogen, elixir-format
 msgid "Aspect ratio"
 msgstr "Sideforhold"
 
-#: lib/brando/videos/video.ex:136
+#: lib/brando/videos/video.ex
 #, elixir-autogen, elixir-format
 msgid "Autoplay"
 msgstr "Autoavspilling"
 
-#: lib/brando/videos/video.ex:112
+#: lib/brando/videos/video.ex
 #, elixir-autogen, elixir-format
 msgid "Caption"
 msgstr "Bildetekst"
 
-#: lib/brando/videos/video.ex:131
+#: lib/brando/videos/video.ex
 #, elixir-autogen, elixir-format
 msgid "Configuration target"
 msgstr "Konfigurasjonsmål"
 
-#: lib/brando/videos/video.ex:139
+#: lib/brando/videos/video.ex
+#, elixir-autogen, elixir-format
+msgid "Content"
+msgstr "Innhold"
+
+#: lib/brando/videos/video.ex
 #, elixir-autogen, elixir-format
 msgid "Controls"
 msgstr "Kontroller"
 
-#: lib/brando/videos/video.ex:129
+#: lib/brando/videos/video.ex
 #, elixir-autogen, elixir-format
 msgid "Height"
 msgstr "Høyde"
 
-#: lib/brando/videos/video.ex:138
+#: lib/brando/videos/video.ex
 #, elixir-autogen, elixir-format
 msgid "Loop"
 msgstr "Loop"
 
-#: lib/brando/videos/video.ex:137
-#, elixir-autogen, elixir-format
-msgid "Preload"
-msgstr "Forhåndslasting"
-
-#: lib/brando/videos/video.ex:127
-#, elixir-autogen, elixir-format
-msgid "Remote ID"
-msgstr "Ekstern ID"
-
-#: lib/brando/videos/video.ex:126
-#, elixir-autogen, elixir-format
-msgid "Source URL"
-msgstr "Kilde-URL"
-
-#: lib/brando/videos/video.ex:142
-#, elixir-autogen, elixir-format
-msgid "Thumbnail"
-msgstr "Miniatyrbilde"
-
-#: lib/brando/videos/video.ex:111
-#, elixir-autogen, elixir-format
-msgid "Title"
-msgstr "Tittel"
-
-#: lib/brando/videos/video.ex:115
-#, elixir-autogen, elixir-format
-msgid "Type"
-msgstr "Type"
-
-#: lib/brando/videos/video.ex:141
-#, elixir-autogen, elixir-format
-msgid "Video file"
-msgstr "Videofil"
-
-#: lib/brando/videos/video.ex:128
-#, elixir-autogen, elixir-format
-msgid "Width"
-msgstr "Bredde"
-
-#: lib/brando/videos/video.ex:140
+#: lib/brando/videos/video.ex
 #, elixir-autogen, elixir-format
 msgid "Muted"
 msgstr "Uten lyd"
 
-#: lib/brando/videos/video.ex:99
-#, elixir-autogen, elixir-format
-msgid "Title or source"
-msgstr "Tittel eller kilde"
-
-#: lib/brando/videos/video.ex:100
+#: lib/brando/videos/video.ex
 #, elixir-autogen, elixir-format
 msgid "Not in use"
 msgstr "Ikke i bruk"
 
-#: lib/brando/videos/video.ex:108
+#: lib/brando/videos/video.ex
 #, elixir-autogen, elixir-format
-msgid "Content"
-msgstr "Innhold"
+msgid "Preload"
+msgstr "Forhåndslasting"
+
+#: lib/brando/videos/video.ex
+#, elixir-autogen, elixir-format
+msgid "Remote ID"
+msgstr "Ekstern ID"
+
+#: lib/brando/videos/video.ex
+#, elixir-autogen, elixir-format
+msgid "Source URL"
+msgstr "Kilde-URL"
+
+#: lib/brando/videos/video.ex
+#, elixir-autogen, elixir-format
+msgid "Thumbnail"
+msgstr "Miniatyrbilde"
+
+#: lib/brando/videos/video.ex
+#, elixir-autogen, elixir-format
+msgid "Title"
+msgstr "Tittel"
+
+#: lib/brando/videos/video.ex
+#, elixir-autogen, elixir-format
+msgid "Title or source"
+msgstr "Tittel eller kilde"
+
+#: lib/brando/videos/video.ex
+#, elixir-autogen, elixir-format
+msgid "Type"
+msgstr "Type"
+
+#: lib/brando/videos/video.ex
+#, elixir-autogen, elixir-format
+msgid "Video file"
+msgstr "Videofil"
+
+#: lib/brando/videos/video.ex
+#, elixir-autogen, elixir-format
+msgid "Width"
+msgstr "Bredde"
 
 #: lib/brando/videos/video.ex
 #, elixir-autogen, elixir-format

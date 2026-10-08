@@ -10,65 +10,64 @@ msgid ""
 msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Language: no\n"
-"Plural-Forms: nplurals=2; plural=(n != 1);"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
-#: lib/brando/navigation/menu.ex:60
+#: lib/brando/navigation/menu.ex
 #, elixir-autogen, elixir-format
 msgid "Content"
 msgstr "Innhold"
 
-#: lib/brando/navigation/menu.ex:85
+#: lib/brando/navigation/menu.ex
 #, elixir-autogen, elixir-format
-msgid "Items"
-msgstr "Menypunkter"
+msgid "Deactivated"
+msgstr "Deaktivert"
 
-#: lib/brando/navigation/menu.ex:64
-#, elixir-autogen, elixir-format
-msgid "Key"
-msgstr "Nøkkel"
-
-#: lib/brando/navigation/menu.ex:80
-#, elixir-autogen, elixir-format
-msgid "Language"
-msgstr "Språk"
-
-#: lib/brando/navigation/menu.ex:63
-#: lib/brando/navigation/menu.ex:127
-#, elixir-autogen, elixir-format
-msgid "Title"
-msgstr "Tittel"
-
-#: lib/brando/navigation/menu.ex:51
-#, elixir-autogen, elixir-format
-msgid "menu"
-msgstr "meny"
-
-#: lib/brando/navigation/menu.ex:52
-#, elixir-autogen, elixir-format
-msgid "menus"
-msgstr "menyer"
-
-#: lib/brando/navigation/menu.ex:71
-#, elixir-autogen, elixir-format
-msgid "Status"
-msgstr "Status"
-
-#: lib/brando/navigation/menu.ex:74
+#: lib/brando/navigation/menu.ex
 #, elixir-autogen, elixir-format
 msgid "Draft"
 msgstr "Utkast"
 
-#: lib/brando/navigation/menu.ex:75
+#: lib/brando/navigation/menu.ex
+#, elixir-autogen, elixir-format
+msgid "Items"
+msgstr "Menypunkter"
+
+#: lib/brando/navigation/menu.ex
+#, elixir-autogen, elixir-format
+msgid "Key"
+msgstr "Nøkkel"
+
+#: lib/brando/navigation/menu.ex
+#, elixir-autogen, elixir-format
+msgid "Language"
+msgstr "Språk"
+
+#: lib/brando/navigation/menu.ex
 #, elixir-autogen, elixir-format
 msgid "Pending"
 msgstr "Venter"
 
-#: lib/brando/navigation/menu.ex:76
+#: lib/brando/navigation/menu.ex
 #, elixir-autogen, elixir-format
 msgid "Published"
 msgstr "Publisert"
 
-#: lib/brando/navigation/menu.ex:77
+#: lib/brando/navigation/menu.ex
 #, elixir-autogen, elixir-format
-msgid "Deactivated"
-msgstr "Deaktivert"
+msgid "Status"
+msgstr "Status"
+
+#: lib/brando/navigation/menu.ex
+#, elixir-autogen, elixir-format
+msgid "Title"
+msgstr "Tittel"
+
+#: lib/brando/navigation/menu.ex
+#, elixir-autogen, elixir-format
+msgid "menu"
+msgstr "meny"
+
+#: lib/brando/navigation/menu.ex
+#, elixir-autogen, elixir-format
+msgid "menus"
+msgstr "menyer"

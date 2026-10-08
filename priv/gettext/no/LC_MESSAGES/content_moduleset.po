@@ -10,34 +10,34 @@ msgid ""
 msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Language: no\n"
-"Plural-Forms: nplurals=2; plural=(n != 1);"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
-#: lib/brando/content/module_set.ex:43
+#: lib/brando/content/module_set.ex
 #, elixir-autogen, elixir-format
 msgid "Content"
 msgstr "Innhold"
 
-#: lib/brando/content/module_set.ex:52
+#: lib/brando/content/module_set.ex
 #, elixir-autogen, elixir-format
 msgid "Modules"
 msgstr "Moduler"
-
-#: lib/brando/content/module_set.ex:45
-#, elixir-autogen, elixir-format
-msgid "Title"
-msgstr "Tittel"
-
-#: lib/brando/content/module_set.ex:89
-#, elixir-autogen, elixir-format
-msgid "module set"
-msgstr "blokkmodulsett"
-
-#: lib/brando/content/module_set.ex:90
-#, elixir-autogen, elixir-format
-msgid "module sets"
-msgstr "blokkmodulsett"
 
 #: lib/brando/content/module_set.ex
 #, elixir-format
 msgid "New %{type}"
 msgstr "Nytt %{type}"
+
+#: lib/brando/content/module_set.ex
+#, elixir-autogen, elixir-format
+msgid "Title"
+msgstr "Tittel"
+
+#: lib/brando/content/module_set.ex
+#, elixir-autogen, elixir-format
+msgid "module set"
+msgstr "blokkmodulsett"
+
+#: lib/brando/content/module_set.ex
+#, elixir-autogen, elixir-format
+msgid "module sets"
+msgstr "blokkmodulsett"

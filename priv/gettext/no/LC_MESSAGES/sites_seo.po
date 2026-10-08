@@ -10,82 +10,84 @@ msgid ""
 msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Language: no\n"
-"Plural-Forms: nplurals=2; plural=(n != 1);"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
-#: lib/brando/sites/seo.ex:84
+#: lib/brando/sites/seo.ex
 #, elixir-autogen, elixir-format
 msgid "Base URL"
 msgstr "Primær URL-adresse"
 
-#: lib/brando/sites/seo.ex:60
+#: lib/brando/sites/seo.ex
 #, elixir-autogen, elixir-format
 msgid "Content"
 msgstr "Innhold"
 
-#: lib/brando/sites/seo.ex:69
-#: lib/brando/sites/seo.ex:70
-#, elixir-autogen, elixir-format
-msgid "Fallback meta description"
-msgstr "Metabeskrivelse (reserve)"
+#: lib/brando/sites/seo.ex
+#, elixir-autogen
+msgid "Crawlers and AI"
+msgstr "Roboter og AI"
 
-#: lib/brando/sites/seo.ex:73
-#: lib/brando/sites/seo.ex:74
-#, elixir-autogen, elixir-format
-msgid "Fallback meta image"
-msgstr "Metabilde (reserve)"
-
-#: lib/brando/sites/seo.ex:65
-#: lib/brando/sites/seo.ex:66
-#, elixir-autogen, elixir-format
-msgid "Fallback meta title"
-msgstr "Metatittel (reserve)"
-
-#: lib/brando/sites/seo.ex:92
-#, elixir-autogen, elixir-format
-msgid "Redirects"
-msgstr "Omdirigeringer"
-
-#: lib/brando/sites/seo.ex:85
-#: lib/brando/sites/seo.ex:85
-#, elixir-autogen, elixir-format
-msgid "Robots"
-msgstr "Roboter"
-
-#: lib/brando/sites/seo.ex:109
-#: lib/brando/sites/seo.ex:110
-#, elixir-autogen, elixir-format
-msgid "SEO"
-msgstr "SEO"
-
-
-#: lib/brando/sites/seo.ex:84
-#, elixir-autogen, elixir-format
-msgid "https://yoursite.com"
-msgstr "https://din-side.no"
-
-#: lib/brando/sites/seo.ex:62
+#: lib/brando/sites/seo.ex
 #, elixir-autogen, elixir-format
 msgid "Default metadata"
 msgstr "Standard metadata"
 
-#: lib/brando/sites/seo.ex:83
+#: lib/brando/sites/seo.ex
+#, elixir-autogen, elixir-format
+msgid "Fallback meta description"
+msgstr "Metabeskrivelse (reserve)"
+
+#: lib/brando/sites/seo.ex
+#, elixir-autogen, elixir-format
+msgid "Fallback meta image"
+msgstr "Metabilde (reserve)"
+
+#: lib/brando/sites/seo.ex
+#, elixir-autogen, elixir-format
+msgid "Fallback meta title"
+msgstr "Metatittel (reserve)"
+
+#: lib/brando/sites/seo.ex
+#, elixir-autogen
+msgid "From can use parameters, like <code>/work/:slug</code>. End it with <code>$</code> to match that path only, not longer ones that start with it."
+msgstr "Fra kan bruke parametere, som <code>/work/:slug</code>. Avslutt med <code>$</code> for å treffe bare den stien, ikke lengre stier som begynner med den."
+
+#: lib/brando/sites/seo.ex
 #, elixir-autogen, elixir-format
 msgid "Indexing"
 msgstr "Indeksering"
 
-#: lib/brando/sites/seo.ex:78
+#: lib/brando/sites/seo.ex
+#, elixir-autogen, elixir-format
+msgid "Redirects"
+msgstr "Omdirigeringer"
+
+#: lib/brando/sites/seo.ex
+#, elixir-autogen, elixir-format
+msgid "Robots"
+msgstr "Roboter"
+
+#: lib/brando/sites/seo.ex
+#, elixir-autogen, elixir-format
+msgid "SEO"
+msgstr "SEO"
+
+#: lib/brando/sites/seo.ex
 #, elixir-autogen, elixir-format
 msgid "Search preview"
 msgstr "Søkeforhåndsvisning"
 
-msgid "There is no base URL yet (under Indexing). Without it, structured data can't give the site's address, and analytics can't tell which site this is."
-msgstr "Det er ingen basis-URL ennå (under Indeksering). Uten den kan ikke strukturerte data oppgi nettstedets adresse, og analyseverktøyene vet ikke hvilket nettsted det gjelder."
-
+#: lib/brando/sites/seo.ex
+#, elixir-autogen
 msgid "The site's address, used in structured data and to find the site in analytics. Canonical links and the sitemap use the server's own URL"
 msgstr "Nettstedets adresse, brukt i strukturerte data og for å finne nettstedet i analyseverktøy. Kanoniske lenker og nettstedskartet bruker serverens egen URL"
 
-msgid "From can use parameters, like <code>/work/:slug</code>. End it with <code>$</code> to match that path only, not longer ones that start with it."
-msgstr "Fra kan bruke parametere, som <code>/work/:slug</code>. Avslutt med <code>$</code> for å treffe bare den stien, ikke lengre stier som begynner med den."
+#: lib/brando/sites/seo.ex
+#, elixir-autogen
+msgid "There is no base URL yet (under Indexing). Without it, structured data can't give the site's address, and analytics can't tell which site this is."
+msgstr "Det er ingen basis-URL ennå (under Indeksering). Uten den kan ikke strukturerte data oppgi nettstedets adresse, og analyseverktøyene vet ikke hvilket nettsted det gjelder."
 
-msgid "Crawlers and AI"
-msgstr "Roboter og AI"
+#: lib/brando/sites/seo.ex
+#, elixir-autogen, elixir-format
+msgid "https://yoursite.com"
+msgstr "https://din-side.no"

@@ -9,8 +9,8 @@
 msgid ""
 msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
-"Language: no"
-"Plural-Forms: nplurals=2; plural=(n != 1);"
+"Language: no\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
 msgid "day_1"
 msgstr "mandag"

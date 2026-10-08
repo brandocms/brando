@@ -8,186 +8,186 @@
 ### to merge POT files into PO files.
 msgid ""
 msgstr ""
+"Content-Type: text/plain; charset=UTF-8\n"
 "Language: no\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
-#: lib/brando/forms/form.ex:88
-#, elixir-autogen, elixir-format
-msgid "Deactivated"
-msgstr "Deaktivert"
-
-#: lib/brando/forms/form.ex:85
-#, elixir-autogen, elixir-format
-msgid "Draft"
-msgstr "Utkast"
-
-#: lib/brando/forms/form.ex:102
-#, elixir-autogen, elixir-format
-msgid "Fields"
-msgstr "Felter"
-
-#: lib/brando/forms/form.ex:71
-#, elixir-autogen, elixir-format
-msgid "Form"
-msgstr "Skjema"
-
-#: lib/brando/forms/form.ex:123
-#, elixir-autogen, elixir-format
-msgid "Introduction"
-msgstr "Innledning"
-
-#: lib/brando/forms/form.ex:75
-#, elixir-autogen, elixir-format
-msgid "Key"
-msgstr "Nøkkel"
-
-#: lib/brando/forms/form.ex:94
-#, elixir-autogen, elixir-format
-msgid "Language"
-msgstr "Språk"
-
-#: lib/brando/forms/form.ex:120
-#, elixir-autogen, elixir-format
-msgid "Messages"
-msgstr "Meldinger"
-
-#: lib/brando/forms/form.ex:86
-#, elixir-autogen, elixir-format
-msgid "Pending"
-msgstr "Venter"
-
-#: lib/brando/forms/form.ex:87
-#, elixir-autogen, elixir-format
-msgid "Published"
-msgstr "Publisert"
-
-#: lib/brando/forms/form.ex:123
-#, elixir-autogen, elixir-format
-msgid "Shown above the fields."
-msgstr "Vises over feltene."
-
-#: lib/brando/forms/form.ex:82
-#, elixir-autogen, elixir-format
-msgid "Status"
-msgstr "Status"
-
-#: lib/brando/forms/form.ex:124
-#, elixir-autogen, elixir-format
-msgid "Submit button"
-msgstr "Send-knapp"
-
-#: lib/brando/forms/form.ex:127
-#, elixir-autogen, elixir-format
-msgid "Success message"
-msgstr "Bekreftelsesmelding"
-
-#: lib/brando/forms/form.ex:74
-#: lib/brando/forms/form.ex:137
-#, elixir-autogen, elixir-format
-msgid "Title"
-msgstr "Tittel"
-
-#: lib/brando/forms/form.ex:61
-#, elixir-autogen, elixir-format
-msgid "form"
-msgstr "skjema"
-
-#: lib/brando/forms/form.ex:62
-#, elixir-autogen, elixir-format
-msgid "forms"
-msgstr "skjemaer"
-
-#: lib/brando/forms/form.ex:131
-#, elixir-autogen, elixir-format
-msgid "Leave empty to use the site's wording, set under Forms → Messages."
-msgstr "La stå tomt for å bruke nettstedets formulering, satt under Skjemaer → Meldinger."
-
-#: lib/brando/forms/form.ex:136
-#, elixir-autogen, elixir-format
-msgid "Shown in place of the form once it has been sent. Leave empty to use the site's wording, set under Forms → Messages."
-msgstr "Vises i stedet for skjemaet når det er sendt. La stå tomt for å bruke nettstedets formulering, satt under Skjemaer → Meldinger."
-
-#: lib/brando/forms/form.ex:168
+#: lib/brando/forms/form.ex
 #, elixir-autogen, elixir-format
 msgid "A path on the site, like /thank-you, or a full address. Visitors go there once the form is sent, instead of seeing the success message."
 msgstr "En sti på nettstedet, som /takk, eller en full adresse. Besøkende sendes dit når skjemaet er sendt, i stedet for å se bekreftelsesmeldingen."
 
-#: lib/brando/forms/form.ex:199
+#: lib/brando/forms/form.ex
 #, elixir-autogen, elixir-format
 msgid "Confirmation to the visitor"
 msgstr "Kvittering til den besøkende"
 
-#: lib/brando/forms/form.ex:222
+#: lib/brando/forms/form.ex
+#, elixir-autogen, elixir-format
+msgid "Deactivated"
+msgstr "Deaktivert"
+
+#: lib/brando/forms/form.ex
 #, elixir-autogen, elixir-format
 msgid "Delete submissions after (days)"
 msgstr "Slett innsendinger etter (dager)"
 
-#: lib/brando/forms/form.ex:204
+#: lib/brando/forms/form.ex
+#, elixir-autogen, elixir-format
+msgid "Draft"
+msgstr "Utkast"
+
+#: lib/brando/forms/form.ex
 #, elixir-autogen, elixir-format
 msgid "Emailed to the address the visitor filled in, with a copy of what they sent. Needs an Email field."
 msgstr "Sendes til e-postadressen den besøkende fylte inn, med en kopi av det de sendte. Krever et e-postfelt."
 
-#: lib/brando/forms/form.ex:219
+#: lib/brando/forms/form.ex
+#, elixir-autogen, elixir-format
+msgid "Fields"
+msgstr "Felter"
+
+#: lib/brando/forms/form.ex
+#, elixir-autogen, elixir-format
+msgid "Form"
+msgstr "Skjema"
+
+#: lib/brando/forms/form.ex
+#, elixir-autogen, elixir-format
+msgid "Introduction"
+msgstr "Innledning"
+
+#: lib/brando/forms/form.ex
 #, elixir-autogen, elixir-format
 msgid "Keeping submissions"
 msgstr "Lagring av innsendinger"
 
-#: lib/brando/forms/form.ex:208
+#: lib/brando/forms/form.ex
+#, elixir-autogen, elixir-format
+msgid "Key"
+msgstr "Nøkkel"
+
+#: lib/brando/forms/form.ex
+#, elixir-autogen, elixir-format
+msgid "Language"
+msgstr "Språk"
+
+#: lib/brando/forms/form.ex
 #, elixir-autogen, elixir-format
 msgid "Leave empty to use the form's title."
 msgstr "La stå tomt for å bruke skjemaets tittel."
 
-#: lib/brando/forms/form.ex:211
+#: lib/brando/forms/form.ex
+#, elixir-autogen, elixir-format
+msgid "Leave empty to use the site's wording, set under Forms → Messages."
+msgstr "La stå tomt for å bruke nettstedets formulering, satt under Skjemaer → Meldinger."
+
+#: lib/brando/forms/form.ex
 #, elixir-autogen, elixir-format
 msgid "Message"
 msgstr "Melding"
 
-#: lib/brando/forms/form.ex:176
+#: lib/brando/forms/form.ex
 #, elixir-autogen, elixir-format
-msgid "Notification"
-msgstr "Varsel"
-
-#: lib/brando/forms/form.ex:165
-#, elixir-autogen, elixir-format
-msgid "Page after sending"
-msgstr "Side etter sending"
-
-#: lib/brando/forms/form.ex:182
-#, elixir-autogen, elixir-format
-msgid "Put in what a visitor filled in by its field key, like {{ name }}. Leave empty for “New submission” and the form's title. Replies go to the email address the visitor filled in."
-msgstr "Sett inn det en besøkende fylte inn med feltets nøkkel, som {{ name }}. La stå tomt for «Ny innsending» og skjemaets tittel. Svar går til e-postadressen den besøkende fylte inn."
-
-#: lib/brando/forms/form.ex:186
-#, elixir-autogen, elixir-format
-msgid "Recipients"
-msgstr "Mottakere"
-
-#: lib/brando/forms/form.ex:202
-#, elixir-autogen, elixir-format
-msgid "Send a confirmation"
-msgstr "Send kvittering"
-
-#: lib/brando/forms/form.ex:212
-#, elixir-autogen, elixir-format
-msgid "Shown above the copy. Leave empty to use the success message."
-msgstr "Vises over kopien. La stå tomt for å bruke bekreftelsesmeldingen."
-
-#: lib/brando/forms/form.ex:179
-#, elixir-autogen, elixir-format
-msgid "Subject"
-msgstr "Emne"
-
-#: lib/brando/forms/form.ex:173
-#, elixir-autogen, elixir-format
-msgid "Submissions"
-msgstr "Innsendinger"
-
-#: lib/brando/forms/form.ex:223
-#, elixir-autogen, elixir-format
-msgid "Submissions older than this are deleted every night. Leave empty to keep them."
-msgstr "Innsendinger eldre enn dette slettes hver natt. La stå tomt for å beholde dem."
+msgid "Messages"
+msgstr "Meldinger"
 
 #: lib/brando/forms/form.ex
 #, elixir-format
 msgid "New %{type}"
 msgstr "Nytt %{type}"
+
+#: lib/brando/forms/form.ex
+#, elixir-autogen, elixir-format
+msgid "Notification"
+msgstr "Varsel"
+
+#: lib/brando/forms/form.ex
+#, elixir-autogen, elixir-format
+msgid "Page after sending"
+msgstr "Side etter sending"
+
+#: lib/brando/forms/form.ex
+#, elixir-autogen, elixir-format
+msgid "Pending"
+msgstr "Venter"
+
+#: lib/brando/forms/form.ex
+#, elixir-autogen, elixir-format
+msgid "Published"
+msgstr "Publisert"
+
+#: lib/brando/forms/form.ex
+#, elixir-autogen, elixir-format
+msgid "Put in what a visitor filled in by its field key, like {{ name }}. Leave empty for “New submission” and the form's title. Replies go to the email address the visitor filled in."
+msgstr "Sett inn det en besøkende fylte inn med feltets nøkkel, som {{ name }}. La stå tomt for «Ny innsending» og skjemaets tittel. Svar går til e-postadressen den besøkende fylte inn."
+
+#: lib/brando/forms/form.ex
+#, elixir-autogen, elixir-format
+msgid "Recipients"
+msgstr "Mottakere"
+
+#: lib/brando/forms/form.ex
+#, elixir-autogen, elixir-format
+msgid "Send a confirmation"
+msgstr "Send kvittering"
+
+#: lib/brando/forms/form.ex
+#, elixir-autogen, elixir-format
+msgid "Shown above the copy. Leave empty to use the success message."
+msgstr "Vises over kopien. La stå tomt for å bruke bekreftelsesmeldingen."
+
+#: lib/brando/forms/form.ex
+#, elixir-autogen, elixir-format
+msgid "Shown above the fields."
+msgstr "Vises over feltene."
+
+#: lib/brando/forms/form.ex
+#, elixir-autogen, elixir-format
+msgid "Shown in place of the form once it has been sent. Leave empty to use the site's wording, set under Forms → Messages."
+msgstr "Vises i stedet for skjemaet når det er sendt. La stå tomt for å bruke nettstedets formulering, satt under Skjemaer → Meldinger."
+
+#: lib/brando/forms/form.ex
+#, elixir-autogen, elixir-format
+msgid "Status"
+msgstr "Status"
+
+#: lib/brando/forms/form.ex
+#, elixir-autogen, elixir-format
+msgid "Subject"
+msgstr "Emne"
+
+#: lib/brando/forms/form.ex
+#, elixir-autogen, elixir-format
+msgid "Submissions"
+msgstr "Innsendinger"
+
+#: lib/brando/forms/form.ex
+#, elixir-autogen, elixir-format
+msgid "Submissions older than this are deleted every night. Leave empty to keep them."
+msgstr "Innsendinger eldre enn dette slettes hver natt. La stå tomt for å beholde dem."
+
+#: lib/brando/forms/form.ex
+#, elixir-autogen, elixir-format
+msgid "Submit button"
+msgstr "Send-knapp"
+
+#: lib/brando/forms/form.ex
+#, elixir-autogen, elixir-format
+msgid "Success message"
+msgstr "Bekreftelsesmelding"
+
+#: lib/brando/forms/form.ex
+#, elixir-autogen, elixir-format
+msgid "Title"
+msgstr "Tittel"
+
+#: lib/brando/forms/form.ex
+#, elixir-autogen, elixir-format
+msgid "form"
+msgstr "skjema"
+
+#: lib/brando/forms/form.ex
+#, elixir-autogen, elixir-format
+msgid "forms"
+msgstr "skjemaer"

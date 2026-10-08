@@ -10,29 +10,29 @@ msgid ""
 msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Language: no\n"
-"Plural-Forms: nplurals=2; plural=(n != 1);"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
-#: lib/brando/users/user.ex:212
+#: lib/brando/users/user.ex
 #, elixir-autogen, elixir-format
 msgid "Prefers reduced motion"
 msgstr "Foretrekker redusert bevegelse"
 
-#: lib/brando/users/user.ex:210
+#: lib/brando/users/user.ex
 #, elixir-autogen, elixir-format
 msgid "Reset password on first login"
 msgstr "Tilbakestill passord ved første pålogging"
 
-#: lib/brando/users/user.ex:211
+#: lib/brando/users/user.ex
 #, elixir-autogen, elixir-format
 msgid "Show mutation notifications"
 msgstr "Vis mutasjonsvarsler"
 
-#: lib/brando/users/user_config.ex:28
+#: lib/brando/users/user_config.ex
 #, elixir-autogen, elixir-format
 msgid "user config"
 msgstr "brukerkonfigurasjon"
 
-#: lib/brando/users/user_config.ex:29
+#: lib/brando/users/user_config.ex
 #, elixir-autogen, elixir-format
 msgid "user configs"
 msgstr "brukerkonfigurasjoner"

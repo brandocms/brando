@@ -11,27 +11,27 @@
 msgid ""
 msgstr ""
 
-#: lib/brando/users/user.ex:212
+#: lib/brando/users/user.ex
 #, elixir-autogen, elixir-format
 msgid "Prefers reduced motion"
 msgstr ""
 
-#: lib/brando/users/user.ex:210
+#: lib/brando/users/user.ex
 #, elixir-autogen, elixir-format
 msgid "Reset password on first login"
 msgstr ""
 
-#: lib/brando/users/user.ex:211
+#: lib/brando/users/user.ex
 #, elixir-autogen, elixir-format
 msgid "Show mutation notifications"
 msgstr ""
 
-#: lib/brando/users/user_config.ex:28
+#: lib/brando/users/user_config.ex
 #, elixir-autogen, elixir-format
 msgid "user config"
 msgstr ""
 
-#: lib/brando/users/user_config.ex:29
+#: lib/brando/users/user_config.ex
 #, elixir-autogen, elixir-format
 msgid "user configs"
 msgstr ""

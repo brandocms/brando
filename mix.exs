@@ -29,6 +29,7 @@ defmodule Brando.Mixfile do
       ],
       description: @description,
       aliases: aliases(),
+      gettext: gettext(),
 
       # Docs
       name: "Brando",
@@ -158,6 +159,25 @@ defmodule Brando.Mixfile do
         docs: :docs,
         inch: :docs
       ]
+    ]
+  end
+
+  # `mix gettext.extract --merge` must change nothing on a clean main; CI checks
+  # it in the test env (see TRANSLATIONS.md). The test env also compiles
+  # `test/support`, so keep gettext calls out of the fixtures there.
+  #
+  # - Line numbers in references changed with every edit above a call and made
+  #   every PR conflict in the catalogues. File names are enough.
+  # - Sorting by msgid places a new message among its neighbours instead of at
+  #   the end of the file, where every branch appended and collided.
+  # - Gettext serves fuzzy entries at runtime, so a fuzzy match showed the old
+  #   Norwegian text for a reworded message ("Replacing…" became "Erstatt").
+  #   A threshold of 1.0 turns fuzzy matching off; new messages arrive empty.
+  defp gettext do
+    [
+      write_reference_line_numbers: false,
+      sort_by_msgid: :case_sensitive,
+      fuzzy_threshold: 1.0
     ]
   end
 

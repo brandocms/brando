@@ -10,14 +10,14 @@ msgid ""
 msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Language: no\n"
-"Plural-Forms: nplurals=2; plural=(n != 1);"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
-#: lib/brando/content/block.ex:142
+#: lib/brando/content/block.ex
 #, elixir-autogen, elixir-format
 msgid "block"
 msgstr "blokk"
 
-#: lib/brando/content/block.ex:143
+#: lib/brando/content/block.ex
 #, elixir-autogen, elixir-format
 msgid "blocks"
 msgstr "blokker"

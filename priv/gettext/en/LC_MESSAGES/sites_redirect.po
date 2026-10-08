@@ -10,28 +10,29 @@ msgid ""
 msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Language: en\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
-#: lib/brando/sites/seo.ex:98
+#: lib/brando/sites/seo.ex
 #, elixir-autogen, elixir-format
 msgid "Code"
 msgstr ""
 
-#: lib/brando/sites/seo.ex:99
+#: lib/brando/sites/seo.ex
 #, elixir-autogen, elixir-format
 msgid "From"
 msgstr ""
 
-#: lib/brando/sites/seo.ex:100
+#: lib/brando/sites/seo.ex
 #, elixir-autogen, elixir-format
 msgid "To"
 msgstr ""
 
-#: lib/brando/sites/redirect.ex:26
+#: lib/brando/sites/redirect.ex
 #, elixir-autogen, elixir-format
 msgid "redirect"
 msgstr ""
 
-#: lib/brando/sites/redirect.ex:27
+#: lib/brando/sites/redirect.ex
 #, elixir-autogen, elixir-format
 msgid "redirects"
 msgstr ""

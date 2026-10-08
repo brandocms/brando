@@ -10,48 +10,49 @@ msgid ""
 msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Language: en\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
-#: lib/brando/forms/form.ex:111
+#: lib/brando/forms/form.ex
 #, elixir-autogen, elixir-format
 msgid "Default value"
 msgstr ""
 
-#: lib/brando/forms/form.ex:110
+#: lib/brando/forms/form.ex
 #, elixir-autogen, elixir-format
 msgid "Help text"
 msgstr ""
 
-#: lib/brando/forms/form.ex:106
+#: lib/brando/forms/form.ex
 #, elixir-autogen, elixir-format
 msgid "Key"
 msgstr ""
 
-#: lib/brando/forms/form.ex:108
+#: lib/brando/forms/form.ex
 #, elixir-autogen, elixir-format
 msgid "Label"
 msgstr ""
 
-#: lib/brando/forms/form.ex:114
+#: lib/brando/forms/form.ex
 #, elixir-autogen, elixir-format
 msgid "New row"
 msgstr ""
 
-#: lib/brando/forms/form.ex:109
+#: lib/brando/forms/form.ex
 #, elixir-autogen, elixir-format
 msgid "Placeholder"
 msgstr ""
 
-#: lib/brando/forms/form.ex:112
+#: lib/brando/forms/form.ex
 #, elixir-autogen, elixir-format
 msgid "Required"
 msgstr ""
 
-#: lib/brando/forms/form.ex:107
+#: lib/brando/forms/form.ex
 #, elixir-autogen, elixir-format
 msgid "Type"
 msgstr ""
 
-#: lib/brando/forms/form.ex:113
+#: lib/brando/forms/form.ex
 #, elixir-autogen, elixir-format
 msgid "Width"
 msgstr ""
