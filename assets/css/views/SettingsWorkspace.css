@@ -330,6 +330,14 @@
   .seo-structured-data-table > thead > tr > th:last-child,
   .seo-structured-data-table > tbody > tr > td:last-child { width: 1%; text-align: right; }
   .seo-structured-data-meta { margin: 0; padding: 12px 18px 16px; color: var(--workspace-muted); font-size: 12px; }
+  /* Under the stats: how many were checked of each type, then, quieter, the
+     types with a mapping that are left out and why */
+  .seo-structured-data-types { display: flex; flex-wrap: wrap; margin: 12px 0 0; padding: 0; list-style: none; color: var(--workspace-muted); font-size: 12px; line-height: 18px; }
+  .seo-structured-data-types li + li::before { content: "·"; margin: 0 8px; color: var(--brando-faint); }
+  .seo-structured-data-types strong { color: var(--workspace-ink); font-weight: 500; font-variant-numeric: tabular-nums; }
+  .seo-structured-data-unchecked { margin-top: 8px; color: var(--workspace-muted); font-size: 12px; line-height: 18px; }
+  .seo-structured-data-unchecked h3 { margin: 0; color: inherit; font-size: inherit; font-weight: 500; line-height: inherit; }
+  .seo-structured-data-unchecked ul { margin: 0; padding: 0; list-style: none; }
 
   /* The table scrolls inside its region. Without containment its width —
      long URLs, the traffic columns — propagates up and widens the page. */

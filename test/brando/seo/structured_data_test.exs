@@ -34,6 +34,40 @@ defmodule Brando.SEO.StructuredDataTest do
     refute Brando.JSONLDTest.Post in schemas
   end
 
+  test "lists the blueprints with a mapping that are not checked, and why" do
+    unchecked = StructuredData.unchecked()
+
+    assert {Brando.JSONLDTest.QuietPost, :no_page} in unchecked
+    assert {Brando.JSONLDTest.Post, :no_list_function} in unchecked
+    # Checked, or without a mapping: not listed
+    refute Enum.any?(unchecked, fn {schema, _} -> schema in [Brando.Pages.Page, Brando.Pages.Fragment] end)
+    assert unchecked == Enum.uniq(unchecked)
+    assert StructuredData.schemas() == Enum.uniq(StructuredData.schemas())
+  end
+
+  test "counts the entries checked of each type" do
+    products = [
+      %Brando.JSONLDTest.Product{id: 1, title: "Kettle", slug: "kettle", sku: "K-1"},
+      %Brando.JSONLDTest.Product{id: 2, title: "Teapot", slug: "teapot", sku: "T-1"}
+    ]
+
+    put_test_env(Brando.JSONLDTest, products: products, shelves: [])
+    result = StructuredData.check("en", [Brando.JSONLDTest.Product, Brando.JSONLDTest.Shelf])
+
+    assert result.per_schema == [{Brando.JSONLDTest.Product, 2}, {Brando.JSONLDTest.Shelf, 0}]
+    assert result.checked == 2
+  end
+
+  test "a cached result from before the counts per type is run again" do
+    user = Factory.insert(:random_user)
+    create_page(user, %{title: "First", uri: "first"})
+
+    old = Map.delete(%StructuredData.Result{language: "en", checked: 99}, :per_schema)
+    Brando.Cache.put({:seo_structured_data, "en", [Brando.Pages.Page]}, old, :timer.minutes(10))
+
+    assert %{checked: 1, per_schema: [{Brando.Pages.Page, 1}]} = StructuredData.run("en", schemas: [Brando.Pages.Page])
+  end
+
   test "counts entries with errors and warnings, leaving the site's identity out" do
     complete = %Brando.JSONLDTest.Product{
       id: 1,
