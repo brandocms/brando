@@ -45,10 +45,16 @@ trap 'rm -f "$log" "$log".*' EXIT
 
 # run_step NAME COMMAND... — runs COMMAND, prints one line, stops on failure.
 run_step() {
-  local name="$1" started=$SECONDS status
+  local name="$1" started=$SECONDS status shown
   shift
+  # `mix_in test format` reads better as the command to rerun by hand.
+  shown="$*"
+  case "$1" in
+    mix_in) shown="MIX_ENV=$2 mix ${*:3}" ;;
+    credo_changed) shown="MIX_ENV=test mix credo --strict <changed files>" ;;
+  esac
   if [ "$verbose" = true ]; then
-    echo "check: $name: $*"
+    echo "check: $name: $shown"
     "$@" 2>&1 | tee "$log"
     status=${PIPESTATUS[0]}
   else
@@ -60,7 +66,7 @@ run_step() {
     printf 'check: %-28s ok (%ss)\n' "$name" "$((SECONDS - started))"
   else
     [ "$verbose" = true ] || cat "$log"
-    echo "check: FAILED at \"$name\" (exit $status): $*" >&2
+    echo "check: FAILED at \"$name\" (exit $status): $shown" >&2
     exit 1
   fi
 }
