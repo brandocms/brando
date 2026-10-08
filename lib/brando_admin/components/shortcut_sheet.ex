@@ -76,7 +76,7 @@ defmodule BrandoAdmin.Components.ShortcutSheet do
       data-labels={@labels}
     >
       <header class="shortcut-sheet-header">
-        <h2 id="shortcut-sheet-title">{gettext("Keyboard shortcuts")}</h2>
+        <h2 id="shortcut-sheet-title" tabindex="-1">{gettext("Keyboard shortcuts")}</h2>
         <button type="button" class="shortcut-sheet-close" data-shortcut-sheet-close aria-label={gettext("Close")}>
           <kbd>esc</kbd>
         </button>

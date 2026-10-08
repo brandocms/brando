@@ -77,6 +77,9 @@ export default () => ({
     this.render()
     if (this.toggle) this.toggle.checked = characterKeysEnabled()
     this.dialog.showModal()
+    // The title, not the close button: a screen reader reads the dialog's
+    // name, and Tab goes on to the close button.
+    this.el.querySelector('#shortcut-sheet-title')?.focus()
     return true
   },
 

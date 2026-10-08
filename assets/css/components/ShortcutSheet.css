@@ -55,6 +55,7 @@
   border-bottom: 1px solid var(--brando-line);
 
   h2 {
+    outline: none;
     margin: 0;
     font-size: 18px;
     font-weight: 500;
