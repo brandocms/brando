@@ -244,8 +244,7 @@ defmodule Brando.MigrationTemplates do
 
   @doc "What the 2xx migrations add in every environment: tables"
   def environment_tables,
-    do:
-      ~w(sites_not_found_hits entry_notes note_mentions webhooks webhook_deliveries sites_indexnow search_documents
+    do: ~w(sites_not_found_hits entry_notes note_mentions webhooks webhook_deliveries sites_indexnow search_documents
          listing_views listing_view_defaults notification_routes notification_deliveries)
 
   @doc "What the 2xx migrations add in every environment: columns by table"
