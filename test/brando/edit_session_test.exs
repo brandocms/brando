@@ -784,6 +784,30 @@ defmodule Brando.EditSessionTest do
     end
   end
 
+  # The flake hunt: an editor whose session was killed rejoins as soon as
+  # its :DOWN arrives, which can be before the Registry has dropped the dead
+  # session. The lookup returned the dead pid, the join's retry did too,
+  # and the LiveView crashed.
+  test "a session killed a moment ago is replaced, even before the registry has noticed" do
+    ref = new_ref()
+    {:ok, info} = EditSession.join(ref, @field, {rows(), rows()})
+    partition = Module.concat(Brando.EditSession.Registry, "PIDPartition0")
+    assert is_pid(Process.whereis(partition))
+
+    # the registry cannot clean up while it is suspended
+    :sys.suspend(partition)
+
+    try do
+      Process.exit(info.session, :kill)
+      wait_until(fn -> not Process.alive?(info.session) end)
+      assert EditSession.whereis(ref) == nil
+      assert {:ok, rejoined} = EditSession.join(ref, @field, {rows(), rows()})
+      assert rejoined.session != info.session
+    after
+      :sys.resume(partition)
+    end
+  end
+
   describe "tenancy" do
     setup do
       put_test_env(:tenancy_mode, :multi)

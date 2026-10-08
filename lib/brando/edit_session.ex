@@ -98,9 +98,13 @@ defmodule Brando.EditSession do
   @spec whereis(ref() | key()) :: pid() | nil
   def whereis(%{key: key}), do: whereis(key)
 
+  # A session that died stays registered until the Registry has handled its
+  # exit, which can be after its editors have handled theirs and come back
+  # to join: a dead pid is no session. (Registering a new one replaces the
+  # stale entry, as `Registry` does for a dead process.)
   def whereis(key) do
     case Registry.lookup(@registry, key) do
-      [{pid, _}] -> pid
+      [{pid, _}] -> if Process.alive?(pid), do: pid
       [] -> nil
     end
   end
