@@ -90,6 +90,21 @@ defmodule BrandoAdmin.FieldActionsLiveTest do
     assert prompt =~ "subtitle: Et hus ved fjorden, ulagret"
   end
 
+  test "a cleared required field reads as empty, as the editor sees it", %{conn: conn, article: article} do
+    view = open(conn, article)
+    replies("Made up")
+
+    # The title is required: the changeset keeps its saved value
+    view
+    |> form("#article_form_form")
+    |> render_change(%{"article" => %{"title" => ""}, "_target" => ["article", "title"]})
+
+    run(view, "summarize")
+
+    await_selector(view, "#{@suggestion} .ai-proposal[data-status='failed'] [role=alert]")
+    refute_received {:prompt, _}
+  end
+
   test "discarding the suggestion leaves the field as it was", %{conn: conn, article: article} do
     view = open(conn, article)
     replies("Something else")
@@ -251,6 +266,19 @@ defmodule BrandoAdmin.FieldActionsLiveTest do
     [_, blocks] = Regex.run(~r/^blocks: (.*)$/m, prompt)
     assert blocks =~ "ord ord"
     assert String.length(blocks) <= Brando.AI.Context.block_text_length()
+  end
+
+  test "the ai: generate button reads a cleared field as empty too", %{conn: conn, current_user: user} do
+    page = Factory.insert(:page, creator: user, title: "Om oss", uri: "om-oss", language: "no")
+    {view, _html} = live_form(conn, "/admin/pages/update/#{page.id}")
+    replies("En tittel")
+
+    view |> form("#page_form_form") |> render_change(%{"page" => %{"title" => ""}, "_target" => ["page", "title"]})
+    view |> element("button[phx-click='ai_generate_input'][phx-value-field_key='meta_title']") |> render_click()
+
+    assert_received {:prompt, prompt}
+    assert prompt =~ "language: no"
+    refute prompt =~ "Om oss"
   end
 
   describe "a read-only field" do

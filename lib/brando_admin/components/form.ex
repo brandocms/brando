@@ -6933,27 +6933,41 @@ defmodule BrandoAdmin.Components.Form do
   # saved with. Every other field reads the applied changeset headlessly.
   defp build_ai_context_values(socket, context_fields), do: ai_context_fun(socket, context_fields).()
 
-  # The same, as a function to call later: it holds the form's changeset and
-  # block map, not the socket, so a task can render the blocks.
+  # The same, as a function to call later: it holds the form and the block
+  # map, not the socket, so a task can render the blocks.
   defp ai_context_fun(socket, context_fields) do
-    changeset = socket.assigns.form.source
+    form = socket.assigns.form
     block_map = if socket.assigns.has_blocks?, do: socket.assigns.block_map
     context_fields = Brando.AI.Context.normalize_fields(context_fields)
 
     fn ->
-      entry = apply_changes(changeset)
-      Enum.flat_map(context_fields, &ai_context_value(&1, entry, changeset, block_map))
+      entry = apply_changes(form.source)
+      Enum.flat_map(context_fields, &ai_context_value(&1, form, entry, block_map))
     end
   end
 
-  defp ai_context_value(:blocks, _entry, changeset, block_map) do
-    case render_ai_blocks_context(changeset, block_map) do
+  defp ai_context_value(:blocks, form, _entry, block_map) do
+    case render_ai_blocks_context(form.source, block_map) do
       value when value in [nil, ""] -> []
       value -> [{:blocks, value}]
     end
   end
 
-  defp ai_context_value(field, entry, _changeset, _block_map), do: Brando.AI.Context.for_entry(entry, [field])
+  # A field's text as the editor sees it: the form's params, where the
+  # browser sent one. The changeset keeps a required field's saved value when
+  # it is cleared, and that is not what the editor asked about.
+  defp ai_context_value(field, form, entry, _block_map) do
+    case Phoenix.HTML.Form.input_value(form, field) do
+      value when is_binary(value) ->
+        case Brando.AI.Context.format_value(value) do
+          "" -> []
+          text -> [{field, text}]
+        end
+
+      _ ->
+        Brando.AI.Context.for_entry(entry, [field])
+    end
+  end
 
   # Each block field's text, cut to the length `Brando.AI.Context` gives a
   # saved entry's blocks.
