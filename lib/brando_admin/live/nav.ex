@@ -19,10 +19,7 @@ defmodule BrandoAdmin.Nav do
       |> assign(:current_url, url)
       |> put_locale()
       |> assign_tenant_options()
-      |> assign(
-        :menu_sections,
-        BrandoAdmin.Menu.get_menu(socket.assigns.current_user, socket.assigns[:current_site])
-      )
+      |> assign_menu_sections()
       |> then(&{:ok, &1})
     else
       # The first render already has the user (`:mount_current_user`), so it
@@ -33,15 +30,30 @@ defmodule BrandoAdmin.Nav do
       |> assign(:current_url, url)
       |> put_locale()
       |> assign_tenant_options()
-      |> assign(:menu_sections, dead_render_menu(socket))
+      |> assign_menu_sections()
       |> then(&{:ok, &1})
     end
   end
 
-  defp dead_render_menu(%{assigns: %{current_user: user}} = socket) when not is_nil(user),
-    do: BrandoAdmin.Menu.get_menu(user, socket.assigns[:current_site])
+  defp assign_menu_sections(%{assigns: %{current_user: user}} = socket) when not is_nil(user) do
+    sections = BrandoAdmin.Menu.get_menu(user, socket.assigns[:current_site])
+    assign(socket, :menu_sections, with_search_item(sections))
+  end
 
-  defp dead_render_menu(_socket), do: []
+  defp assign_menu_sections(socket), do: assign(socket, :menu_sections, [])
+
+  # Search is a row of the menu, though it opens the command palette rather
+  # than a page: after Dashboard when the first section starts with it, at
+  # the top of the first section otherwise. With no sections at all it gets
+  # one of its own, so the palette can always be opened from the sidebar.
+  @search_item %{search: true}
+
+  @doc false
+  def with_search_item([%{items: [%{url: "/admin"} = dashboard | rest]} = first | sections]),
+    do: [%{first | items: [dashboard, @search_item | rest]} | sections]
+
+  def with_search_item([%{items: items} = first | sections]), do: [%{first | items: [@search_item | items]} | sections]
+  def with_search_item([]), do: [%{name: nil, items: [@search_item]}]
 
   def put_locale(socket) do
     current_user = socket.assigns.current_user
@@ -62,7 +74,7 @@ defmodule BrandoAdmin.Nav do
   def refresh_authorization(socket) do
     socket
     |> assign_tenant_options()
-    |> assign(:menu_sections, BrandoAdmin.Menu.get_menu(socket.assigns.current_user, socket.assigns[:current_site]))
+    |> assign_menu_sections()
   end
 
   def subscribe(%{assigns: %{current_user: user}} = socket) when not is_nil(user) do
@@ -119,7 +131,7 @@ defmodule BrandoAdmin.Nav do
           /><path d="M6 5.5h4.5v1H6zM6 2h4.5v1H6z" />
         </svg>
       </button>
-      <%!-- The sidebar, and its search row, is hidden on narrow screens:
+      <%!-- The sidebar, and its Search item, is hidden on narrow screens:
             this opens the command palette there. --%>
       <button
         :if={@current_user}
@@ -259,33 +271,33 @@ defmodule BrandoAdmin.Nav do
               </section>
             </div>
 
-            <%!-- Opens the command palette (BrandoAdmin.CommandPaletteLive), for
-                  people who don't use the shortcut. --%>
-            <button
-              :if={@current_user}
-              type="button"
-              id="nav-search"
-              class="nav-search"
-              aria-haspopup="dialog"
-              aria-controls="command-palette-dialog"
-              phx-click={JS.dispatch("brando:command-palette:open", to: "#command-palette")}
-            >
-              <.icon name="search" class="nav-icon" />
-              <span class="nav-label">{gettext("Search")}</span>
-              <kbd class="nav-search-shortcut" aria-hidden="true">
-                <span class="shortcut-mac">⌘K</span><span class="shortcut-other">Ctrl K</span>
-              </kbd>
-            </button>
-
             <nav :if={@menu_sections != []} phx-hook="Brando.Navigation" id="nav">
               <div class="nav-sections" id="nav-sections">
                 <section :for={section <- @menu_sections} class="navigation-section">
-                  <header>
+                  <header :if={section.name}>
                     <h3>{section.name}</h3>
                     <div class="line"></div>
                   </header>
                   <dl :for={item <- section.items}>
-                    <dt>
+                    <%!-- Opens the command palette (BrandoAdmin.CommandPaletteLive),
+                          for people who don't use the shortcut. Never current. --%>
+                    <dt :if={item[:search]}>
+                      <button
+                        type="button"
+                        id="nav-search"
+                        class="nav-search-item"
+                        aria-haspopup="dialog"
+                        aria-controls="command-palette-dialog"
+                        phx-click={JS.dispatch("brando:command-palette:open", to: "#command-palette")}
+                      >
+                        <.icon name="search" class="nav-icon" />
+                        <span class="nav-label">{gettext("Search")}</span>
+                        <kbd class="nav-shortcut" aria-hidden="true">
+                          <span class="shortcut-mac">⌘K</span><span class="shortcut-other">Ctrl K</span>
+                        </kbd>
+                      </button>
+                    </dt>
+                    <dt :if={!item[:search]}>
                       <.link :if={item.url} navigate={item.url} class={Brando.HTML.active(@current_url, item.url)}>
                         <.icon name={item[:icon] || "dot"} class="nav-icon" />
                         <span class="nav-label">{item.name}</span>

@@ -14,7 +14,12 @@
       display: none;
     }
 
+    /* A flex column: under keyboard navigation Jupiter's
+       `[data-outline] *:focus { display: inherit }` gives the focused row
+       its dt's display, and a block row loses its gap and right edge. */
     dt {
+      display: flex;
+      flex-direction: column;
       font-size: 19px;
       line-height: 24px;
       color: var(--brando-nav-ink);
@@ -23,7 +28,8 @@
       font-weight: 400;
 
       a,
-      [data-nav-expand] {
+      [data-nav-expand],
+      .nav-search-item {
         display: flex;
         align-items: center;
         justify-content: flex-start;
@@ -36,6 +42,26 @@
 
         &:hover {
           background-color: var(--brando-nav-hover);
+        }
+      }
+
+      /* Search opens the command palette: a button dressed as the rows
+         around it, with the shortcut faint at its end. */
+      .nav-search-item {
+        inline-size: 100%;
+        margin: 0;
+        border: 0;
+        background: none;
+        color: inherit;
+        font: inherit;
+        text-align: start;
+        cursor: pointer;
+
+        .nav-shortcut {
+          margin-inline-start: auto;
+          font: 11px/14px "Mono", monospace;
+          color: var(--brando-nav-muted);
+          opacity: 0.6;
         }
       }
 
