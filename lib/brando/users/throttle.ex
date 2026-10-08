@@ -50,6 +50,14 @@ defmodule Brando.Users.Throttle do
     lockout_escalation_minutes: [60, 240]
   ]
 
+  @doc """
+  Whole minutes left until `until`, rounded up and at least 1: a fresh
+  15-minute lock reads 15 for its whole first minute, so answers given moments
+  apart agree (one second earlier it read 16 with a floor-plus-one).
+  """
+  @spec minutes_left(DateTime.t(), DateTime.t()) :: pos_integer()
+  def minutes_left(until, now \\ DateTime.utc_now()), do: max(div(DateTime.diff(until, now) + 59, 60), 1)
+
   @doc "The throttle's settings, the defaults merged with the application's."
   @spec config() :: keyword()
   def config, do: Keyword.merge(@defaults, Brando.config(__MODULE__) || [])

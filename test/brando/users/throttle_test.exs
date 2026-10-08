@@ -166,4 +166,21 @@ defmodule Brando.Users.ThrottleTest do
       refute Throttle.unknown_locked_until(address)
     end
   end
+
+  describe "minutes_left/2" do
+    test "rounds up to whole minutes, so a fresh lock reads its own length" do
+      now = ~U[2026-10-08 10:00:00Z]
+      left = fn seconds -> Throttle.minutes_left(DateTime.add(now, seconds, :second), now) end
+
+      assert left.(900) == 15
+      assert left.(899) == 15
+      assert left.(841) == 15
+      assert left.(840) == 14
+      assert left.(61) == 2
+      assert left.(60) == 1
+      assert left.(1) == 1
+      assert left.(0) == 1
+      assert left.(-5) == 1
+    end
+  end
 end

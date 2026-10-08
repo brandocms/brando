@@ -240,6 +240,8 @@ defmodule BrandoAdmin.TwoFactorLoginTest do
 
       assert Phoenix.Flash.get(known.assigns.flash, :error) == Phoenix.Flash.get(unknown.assigns.flash, :error)
       assert Phoenix.Flash.get(known.assigns.flash, :error) =~ "Too many attempts"
+      # A fresh lock reads its full length, not one minute more
+      assert Phoenix.Flash.get(known.assigns.flash, :error) =~ "in #{Throttle.config()[:lockout_minutes]} minutes"
 
       # Locked, the right password gets the same answer and no session
       right = log_in(anonymous(), user)

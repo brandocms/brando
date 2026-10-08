@@ -268,5 +268,5 @@ defmodule BrandoAdmin.UserSessionController do
 
   defp expired_message, do: gettext("Your login took too long. Log in again.")
 
-  defp minutes_until(until), do: max(div(DateTime.diff(until, DateTime.utc_now()), 60) + 1, 1)
+  defp minutes_until(until), do: Brando.Users.Throttle.minutes_left(until)
 end
