@@ -118,7 +118,7 @@ defmodule Brando.Pages.Page do
     relation :vars, :has_many,
       module: Brando.Content.Var,
       on_replace: :delete_if_exists,
-      preload_order: [asc: :sequence],
+      preload_order: [asc: :sequence, asc: :id],
       cast: true,
       sort_param: :sort_var_ids,
       drop_param: :drop_var_ids
@@ -133,13 +133,13 @@ defmodule Brando.Pages.Page do
         preload: [
           fragments: %{
             module: @fragment_module,
-            order: [asc: :sequence],
+            order: [asc: :sequence, asc: :id],
             preload: [creator: :avatar, updated_by: :avatar],
             hide_deleted: true
           },
           children: %{
             module: __MODULE__,
-            order: [asc: :sequence],
+            order: [asc: :sequence, asc: :id],
             preload: [:alternate_entries, creator: :avatar, updated_by: :avatar],
             hide_deleted: true
           }

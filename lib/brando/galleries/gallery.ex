@@ -140,7 +140,7 @@ defmodule Brando.Galleries.Gallery do
   def preloads_for do
     gallery_objects_query =
       from go in Brando.Galleries.GalleryObject,
-        order_by: [asc: go.sequence],
+        order_by: [asc: go.sequence, asc: go.id],
         preload: [:image, video: [:thumbnail]]
 
     from g in Brando.Galleries.Gallery,

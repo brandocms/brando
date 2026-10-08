@@ -92,15 +92,18 @@ defmodule Brando.Content.Block do
     relation :palette, :belongs_to, module: Brando.Content.Palette
     relation :parent, :belongs_to, module: __MODULE__
 
+    # `:id` breaks ties here as for `:block_identifiers` below: rows written
+    # without a sequence all have 0, and Postgres would hand them back in
+    # whatever physical order they have, which changes as rows are rewritten.
     relation :children, :has_many,
       module: __MODULE__,
       on_replace: :delete_if_exists,
-      preload_order: [asc: :sequence],
+      preload_order: [asc: :sequence, asc: :id],
       foreign_key: :parent_id
 
     relation :vars, :has_many,
       module: Brando.Content.Var,
-      preload_order: [asc: :sequence],
+      preload_order: [asc: :sequence, asc: :id],
       on_replace: :delete_if_exists,
       cast: true,
       sort_param: :sort_var_ids,
@@ -108,13 +111,13 @@ defmodule Brando.Content.Block do
 
     relation :refs, :has_many,
       module: Brando.Content.Ref,
-      preload_order: [asc: :sequence],
+      preload_order: [asc: :sequence, asc: :id],
       on_replace: :delete_if_exists,
       cast: true
 
     relation :table_rows, :has_many,
       module: Brando.Content.TableRow,
-      preload_order: [asc: :sequence],
+      preload_order: [asc: :sequence, asc: :id],
       on_replace: :delete_if_exists,
       cast: true
 

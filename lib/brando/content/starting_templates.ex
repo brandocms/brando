@@ -85,7 +85,7 @@ defmodule Brando.Content.StartingTemplates do
         template
         |> Repo.preload(Brando.Blueprint.preloads_for(Template))
         |> Map.get(:entry_blocks, [])
-        |> Enum.sort_by(& &1.sequence)
+        |> Enum.sort_by(&{&1.sequence, &1.id})
         |> Enum.map(& &1.block)
     end
   end

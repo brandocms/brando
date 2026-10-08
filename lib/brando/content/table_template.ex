@@ -36,7 +36,7 @@ defmodule Brando.Content.TableTemplate do
     relation :vars, :has_many,
       module: Brando.Content.Var,
       on_replace: :delete_if_exists,
-      preload_order: [asc: :sequence],
+      preload_order: [asc: :sequence, asc: :id],
       cast: true,
       drop_param: :drop_var_ids,
       sort_param: :sort_var_ids

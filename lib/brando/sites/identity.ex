@@ -79,7 +79,7 @@ defmodule Brando.Sites.Identity do
 
     relation :services, :has_many,
       module: Brando.Sites.Service,
-      preload_order: [asc: :sequence],
+      preload_order: [asc: :sequence, asc: :id],
       drop_param: :drop_services_ids,
       sort_param: :sort_services_ids,
       on_replace: :delete_if_exists,

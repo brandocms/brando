@@ -213,7 +213,7 @@ defmodule Brando.Content do
   defp module_cache_opts do
     %{
       cache: {:ttl, :infinite},
-      preload: [{:vars, {Var, [asc: :sequence]}}, refs: Brando.Content.Ref.preloads()]
+      preload: [{:vars, {Var, [asc: :sequence, asc: :id]}}, refs: Brando.Content.Ref.preloads()]
     }
   end
 

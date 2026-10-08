@@ -105,7 +105,7 @@ defmodule Brando.Content.Module do
       module: __MODULE__,
       on_replace: :delete_if_exists,
       foreign_key: :parent_id,
-      preload_order: [asc: :sequence]
+      preload_order: [asc: :sequence, asc: :id]
 
     relation :table_template, :belongs_to,
       module: Brando.Content.TableTemplate,
@@ -116,7 +116,7 @@ defmodule Brando.Content.Module do
     relation :refs, :has_many,
       module: Brando.Content.Ref,
       on_replace: :delete,
-      preload_order: [asc: :sequence],
+      preload_order: [asc: :sequence, asc: :id],
       cast: true,
       sort_param: :sort_ref_ids,
       drop_param: :drop_ref_ids
@@ -124,7 +124,7 @@ defmodule Brando.Content.Module do
     relation :vars, :has_many,
       module: Brando.Content.Var,
       on_replace: :delete,
-      preload_order: [asc: :sequence],
+      preload_order: [asc: :sequence, asc: :id],
       cast: true,
       sort_param: :sort_var_ids,
       drop_param: :drop_var_ids
@@ -137,7 +137,7 @@ defmodule Brando.Content.Module do
         preload: [
           children: %{
             module: __MODULE__,
-            order: [asc: :sequence],
+            order: [asc: :sequence, asc: :id],
             hide_deleted: true
           }
         ],

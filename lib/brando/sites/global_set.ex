@@ -38,7 +38,7 @@ defmodule Brando.Sites.GlobalSet do
       cast: true,
       sort_param: :sort_var_ids,
       drop_param: :drop_var_ids,
-      preload_order: [asc: :sequence]
+      preload_order: [asc: :sequence, asc: :id]
   end
 
   forms do

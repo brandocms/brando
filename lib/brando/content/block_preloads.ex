@@ -39,7 +39,7 @@ defmodule Brando.Content.BlockPreloads do
           [
             {entry_assoc_name,
              from(j in join_schema,
-               order_by: [asc: :sequence],
+               order_by: [asc: :sequence, asc: :id],
                preload: [
                  block: [
                    :parent,
@@ -104,7 +104,7 @@ defmodule Brando.Content.BlockPreloads do
 
     parent_ids
     |> Enum.flat_map(&Map.get(by_parent, &1, []))
-    |> Enum.sort_by(& &1.sequence)
+    |> Enum.sort_by(&{&1.sequence, &1.id})
     |> Enum.map(&attach_child_tree(&1, by_parent))
   end
 
@@ -112,7 +112,7 @@ defmodule Brando.Content.BlockPreloads do
     children =
       by_parent
       |> Map.get(block.id, [])
-      |> Enum.sort_by(& &1.sequence)
+      |> Enum.sort_by(&{&1.sequence, &1.id})
       |> Enum.map(&attach_child_tree(&1, by_parent))
 
     %{block | children: children}
@@ -120,7 +120,7 @@ defmodule Brando.Content.BlockPreloads do
 
   defp block_vars_query do
     from variable in Var,
-      order_by: [asc: :sequence],
+      order_by: [asc: :sequence, asc: :id],
       preload: ^Var.preloads()
   end
 
@@ -128,13 +128,13 @@ defmodule Brando.Content.BlockPreloads do
     vars_query = block_vars_query()
 
     from table_row in TableRow,
-      order_by: [asc: :sequence],
+      order_by: [asc: :sequence, asc: :id],
       preload: [vars: ^vars_query]
   end
 
   defp block_refs_query do
     from ref in Ref,
-      order_by: [asc: :sequence],
+      order_by: [asc: :sequence, asc: :id],
       preload: [
         :image,
         :file,

@@ -92,7 +92,7 @@ defmodule Brando.Query.Runtime do
         preload: [
           fragments: %{
             module: Fragment,
-            order: [asc: :sequence],
+            order: [asc: :sequence, asc: :id],
             preload: [creator: :avatar],
             hide_deleted: true
           }

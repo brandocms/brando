@@ -436,7 +436,7 @@ defmodule Brando.Blueprint do
             Ecto.Schema.has_many(
               :"entry_#{rel_name}",
               block_module,
-              preload_order: [asc: :sequence],
+              preload_order: [asc: :sequence, asc: :id],
               on_replace: :delete,
               foreign_key: :entry_id
             )
@@ -488,7 +488,7 @@ defmodule Brando.Blueprint do
               name,
               entries_module,
               foreign_key: :parent_id,
-              preload_order: [asc: :sequence],
+              preload_order: [asc: :sequence, asc: :id],
               on_replace: :delete
             )
           ]

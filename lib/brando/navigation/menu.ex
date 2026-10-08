@@ -45,7 +45,7 @@ defmodule Brando.Navigation.Menu do
       drop_param: :drop_items_ids,
       sort_param: :sort_items_ids,
       on_replace: :delete,
-      preload_order: [asc: :sequence]
+      preload_order: [asc: :sequence, asc: :id]
   end
 
   translations do
@@ -150,11 +150,11 @@ defmodule Brando.Navigation.Menu do
 
   def preloads_for do
     children_preload =
-      from i in Brando.Navigation.Item, order_by: i.sequence, preload: [link: :identifier]
+      from i in Brando.Navigation.Item, order_by: [asc: i.sequence, asc: i.id], preload: [link: :identifier]
 
     items_preload =
       from i in Brando.Navigation.Item,
-        order_by: i.sequence,
+        order_by: [asc: i.sequence, asc: i.id],
         preload: [link: :identifier, children: ^children_preload]
 
     [

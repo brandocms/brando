@@ -34,7 +34,7 @@ defmodule Brando.Navigation.Item do
     relation :children, :has_many,
       module: __MODULE__,
       on_replace: :delete_if_exists,
-      preload_order: [asc: :sequence],
+      preload_order: [asc: :sequence, asc: :id],
       foreign_key: :parent_id
 
     relation :link, :has_one,

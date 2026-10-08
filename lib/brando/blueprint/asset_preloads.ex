@@ -25,7 +25,7 @@ defmodule Brando.Blueprint.AssetPreloads do
 
     gallery_objects_query =
       from gallery_object in gallery_object_schema,
-        order_by: [asc: gallery_object.sequence],
+        order_by: [asc: gallery_object.sequence, asc: gallery_object.id],
         preload: [:image, :video]
 
     gallery_query =

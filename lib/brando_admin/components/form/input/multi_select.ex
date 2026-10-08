@@ -467,7 +467,7 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
               relations do
                 relation :case_categories, :has_many,
                   module: Cases.CaseCategory,
-                  preload_order: [{:asc, :sequence}],
+                  preload_order: [{:asc, :sequence}, {:asc, :id}],
                   drop_param: :drop_category_ids,
                   sort_param: :sort_category_ids,
                   on_replace: :delete_if_exists,

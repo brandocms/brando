@@ -27,7 +27,7 @@ defmodule Brando.Pages.FragmentQuery do
     query =
       from fragment in fragment_schema,
         where: is_nil(fragment.deleted_at),
-        order_by: [asc: fragment.parent_key, asc: fragment.sequence, asc: fragment.language]
+        order_by: [asc: fragment.parent_key, asc: fragment.sequence, asc: fragment.language, asc: fragment.id]
 
     query_key = {:list, fragment_schema.__schema__(:source), opts}
 
