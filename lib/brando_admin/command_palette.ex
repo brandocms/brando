@@ -15,7 +15,13 @@ defmodule BrandoAdmin.CommandPalette do
   their content as well. Published entries come
   before pending ones and drafts, then entries in the user's content language.
   An entry is listed only when the user may read and edit it, exactly as the
-  dashboard decides, so every row opens. A query starting with `>` lists
+  dashboard decides, so every row opens.
+
+  Titles are matched in `content_identifiers`, not in the search index
+  (`Brando.Search`): the palette finds text inside a title, which a
+  full-text index cannot, and on 10,000 entries it answers in 2–5 ms, where
+  the index takes up to 75 ms for a word every title shares
+  (`e2e/bench/search_bench.exs`). A query starting with `>` lists
   commands only: actions and settings.
 
   Recent places are kept by the browser (see `assets/src/hooks/CommandPalette`)

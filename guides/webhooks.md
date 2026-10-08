@@ -35,14 +35,15 @@ internal records) send no events, and neither do changes to users.
 
 ## Subscribing in code
 
-Brando's webhooks and [IndexNow](identity_and_seo.md#indexnow)
-(`Brando.IndexNow`) are subscribers. A search index or your own integration
+Brando's webhooks, [IndexNow](identity_and_seo.md#indexnow)
+(`Brando.IndexNow`) and the admin search index (`Brando.Search`) are
+subscribers. A search index of your own or another integration
 subscribes with a module:
 
 ```elixir
-config :brando, Brando.ContentEvents, subscribers: [MyApp.Search]
+config :brando, Brando.ContentEvents, subscribers: [MyApp.CdnPurge]
 
-defmodule MyApp.Search do
+defmodule MyApp.CdnPurge do
   @behaviour Brando.ContentEvents.Subscriber
 
   @impl true
@@ -50,7 +51,7 @@ defmodule MyApp.Search do
     %{url: url, event_id: event.id}
     |> Brando.Tenant.Job.attach()
     # One job per event: a retried dispatch finds it and adds none
-    |> MyApp.Workers.IndexUrl.new(unique: [keys: [:event_id], period: :infinity])
+    |> MyApp.Workers.PurgeUrl.new(unique: [keys: [:event_id], period: :infinity])
     |> Oban.insert()
   end
 
@@ -67,16 +68,17 @@ the same across these retries; ignore an `id` you have already handled.
 Brando's webhooks do this with a unique index, so a retry never queues a
 delivery twice.
 
-The dispatcher runs on the `:content_events` queue, and deliveries on
-`:webhooks`. Brando's default Oban configuration has both. **An application
-that sets `config :brando, Oban` itself must declare both queues, or no
-events and no webhook deliveries ever run**: the jobs are queued and wait
+The dispatcher runs on the `:content_events` queue, deliveries on
+`:webhooks`, and updates to the admin search index on `:search_index`.
+Brando's default Oban configuration has all three. **An application that
+sets `config :brando, Oban` itself must declare them, or no events, webhook
+deliveries or search updates ever run**: the jobs are queued and wait
 forever. `mix brando.doctor` (and the system check under Configuration →
 Utilities) warns when they are missing.
 
 ```elixir
 config :brando, Oban,
-  queues: [default: [limit: 1], content_events: [limit: 1], webhooks: [limit: 5], ...],
+  queues: [default: [limit: 1], content_events: [limit: 1], webhooks: [limit: 5], search_index: [limit: 2], ...],
   # also schedule the delivery log's cleanup
   cron: [crontab: [{"35 5 * * *", Brando.Worker.WebhookDeliveryPurger}, ...]]
 ```

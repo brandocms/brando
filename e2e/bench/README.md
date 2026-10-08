@@ -125,3 +125,15 @@ is going to raise.
   everywhere. `/bench-entry-consumers` exists for that measurement, and the
   spec asserts the rendered output, not just the byte count. Same failure shape
   as the bench save that reported a latency for a save that never succeeded.
+
+## Admin search
+
+`search_bench.exs` inserts 10,000 projects (half English, half Norwegian,
+with 2–5 KB of text each), rebuilds the search index, and times
+`Brando.Search.Query.run/3`, the search page's whole query and the command
+palette's title search, with EXPLAIN ANALYZE for the broadest query. Stop
+the E2E server first; the script removes what it inserted.
+
+```sh
+cd e2e && source .envrc && MIX_ENV=e2e mix run bench/search_bench.exs
+```

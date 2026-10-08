@@ -70,7 +70,7 @@ never fails.
 | --- | --- |
 | Versions | Elixir, OTP, Phoenix and LiveView against the versions this Brando supports |
 | Migrations | Public migrations not run (Brando's upgrade migrations included), tenant migrations not run in each environment, pending copies that differ from Brando's templates (as `mix brando.migrations.check`), and upgrade migrations Brando added since they were copied |
-| Oban queues | The configured queues (in the admin, the running ones, so a paused queue shows), that the `content_events` and `webhooks` queues are among them, jobs waiting or executing for over an hour, jobs discarded in the last 24 hours |
+| Oban queues | The configured queues (in the admin, the running ones, so a paused queue shows), that the `content_events`, `webhooks` and `search_index` queues are among them, jobs waiting or executing for over an hour, jobs discarded in the last 24 hours |
 | Configuration | The endpoint URL, the mailer and its sender, the CDN settings of `Brando.Images` and `Brando.Files` when enabled, and the Assistant's API key when a model is configured |
 | Admin assets | The `@brandocms/brandojs` version in `assets/backend/.yalc` (or the checkout it links to) against Brando's |
 | Image configs | Images made with an older image config: what Utilities → Recreate changed images recreates |
