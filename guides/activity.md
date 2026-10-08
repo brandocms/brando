@@ -35,18 +35,32 @@ variables, revisions, identifiers, previews) are not logged.
 ## Who did it
 
 The person is the user the change was made as. When the change wasn't made by
-hand in the admin, the source says how, and the person behind it is shown
-underneath:
+hand in the admin, the source says how, a small badge gives its kind (**AI**,
+**MCP** or **Automatic**), and the person behind it is shown underneath:
 
-- **Scheduled publishing**: the job that published the entry, set by the user who
-  scheduled it.
-- **Assistant**: an applied [proposal](content_assistant.md), approved by the user
-  who applied it.
-- **A tool via MCP**: an applied proposal that a [connected
+- **Assistant** (AI): an applied [proposal](content_assistant.md), approved by
+  the user who applied it.
+- **A connected tool** (MCP): an applied proposal that a [connected
   tool](content_assistant.md#proposals-from-connected-tools) prepared, named
-  when known ("Claude Code via MCP"), approved by the user who applied it.
+  when known ("Claude Code"), approved by the user who applied it. The tool's
+  own calls are listed as the user who connected it.
+- **Scheduled publishing** (Automatic): the job that published the entry, set by
+  the user who scheduled it.
+- **System** (Automatic): no user, such as `mix brando.entries.resave` or the
+  trash purge.
 - **Content transfer**: an import, run by the user who imported it.
-- **System**: no user, such as `mix brando.entries.resave` or the trash purge.
+
+A change from a proposal also records the proposal (`proposal_id`) and the user
+who approved and applied it (`approver`), apart from the agent that prepared it.
+Undoing an applied proposal is recorded against the same proposal, undone by
+the user who undid it. The person who applied a proposal gets **Open proposal**,
+which opens it in the Assistant. The entry's own history shows the same badge,
+approver and link.
+
+The **All actors** filter narrows the log to people (including content
+transfers they ran), the Assistant, connected tools (all of them, or one by
+name) or automatic jobs. In code, `Brando.Activity.actor_kind/1` gives an
+event's kind: `:person`, `:assistant`, `:mcp` or `:task`.
 
 In code, wrap work that runs on someone's behalf so its events say so:
 
@@ -83,7 +97,9 @@ config :brando, Brando.Activity,
 older ones. Schemas in `ignore` are not logged.
 
 Recording never fails a save. An event that can't be written, for example before
-the `brando_193` migration has run, is logged as a warning and dropped.
+the `brando_193` migration has run, is logged as a warning and dropped. The
+`brando_216` migration adds the proposal and the approver in every
+environment; until it runs, events are dropped the same way.
 
 ## Reading the log in code
 
@@ -91,6 +107,9 @@ the `brando_193` migration has run, is logged as a warning and dropped.
 Brando.Activity.list(%{schema: MyApp.Projects.Project, action: :published}, limit: 20)
 Brando.Activity.for_entry(MyApp.Projects.Project, project.id)
 Brando.Activity.count(%{user_id: user.id, since: ~U[2026-10-01 00:00:00Z]})
+Brando.Activity.list(%{actor: :mcp, client: "Claude Code"})
+Brando.Activity.list(%{proposal_id: proposal.id})
 ```
 
-Events are `Brando.Activity.Event` structs, newest first, with `user` preloaded.
+Events are `Brando.Activity.Event` structs, newest first, with `user` and
+`approver` preloaded.
