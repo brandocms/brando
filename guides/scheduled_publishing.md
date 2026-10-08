@@ -141,6 +141,11 @@ use. The API accepts a `DateTime` or an ISO-8601 string with an offset. It rejec
 past dates, invalid timestamps, missing revisions, and an already active revision.
 The caller needs both **schedule** and **publish** permission for the record.
 
+Scheduling a revision again, from the revisions drawer or the calendar,
+cancels its job and queues another. A job that is no longer the revision's one
+waiting job, or whose time has not come, does nothing when it runs, so a stale
+job cannot publish the revision early.
+
 At execution, Brando restores the snapshot transactionally, forces published
 status and the current publication timestamp, makes the revision active, and
 updates identifiers, caches, and rendered content. Later edits to the live entry

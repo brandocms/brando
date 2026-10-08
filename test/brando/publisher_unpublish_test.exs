@@ -219,6 +219,39 @@ defmodule Brando.PublisherUnpublishTest do
       assert [_job] = unpublish_jobs(page)
     end
 
+    test "a revision job left from before the revision was moved later does nothing", %{user: user} do
+      page = create_page(user)
+      {:ok, _} = update_page(page, %{title: "Second"}, user)
+
+      schedule = fn at ->
+        Oban.Testing.with_testing_mode(:manual, fn -> Brando.Publisher.schedule_revision(Page, page.id, 0, at, user) end)
+      end
+
+      {:ok, old_job} = schedule.(at(3600))
+      # Moved later, as the revisions drawer or the calendar moves it
+      {:ok, new_job} = schedule.(at(7200))
+      assert new_job.id != old_job.id
+
+      # The old job runs anyway, at its old time
+      old_job = BrandoIntegration.Repo.get!(Oban.Job, old_job.id)
+      assert :ok = EntryPublisher.perform(%{old_job | scheduled_at: at(-1)})
+
+      unchanged = Repo.get!(Page, page.id)
+      assert unchanged.title == "Second"
+      assert {:ok, revisions} = Revisions.list_revision_metadata(Page, page.id)
+      assert Enum.find(revisions, &(&1.revision == 0)).scheduled
+
+      # Nor does the new one run before its time
+      new_job = BrandoIntegration.Repo.get!(Oban.Job, new_job.id)
+      assert :ok = EntryPublisher.perform(new_job)
+      assert Repo.get!(Page, page.id).title == "Second"
+
+      # At its time, it publishes the revision
+      assert {:ok, published} = EntryPublisher.perform(%{new_job | scheduled_at: at(-1)})
+      assert published.title == "Campaign"
+      assert published.status == :published
+    end
+
     test "a scheduled revision still publishes, keeping the expiry", %{user: user} do
       page = create_page(user)
       unpublish_at = at(3600)

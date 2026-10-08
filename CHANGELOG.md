@@ -819,8 +819,8 @@ production dump.
   has an "Expiring soon" panel for the next 14 days, and the publishing
   queue marks expiry jobs. Restoring a revision keeps the expiry the entry
   has. A changed publishing date now replaces the entry's earlier job
-  whoever scheduled it, and a job left from before a reschedule does
-  nothing when it runs. See [Scheduled publishing](guides/scheduled_publishing.md).
+  whoever scheduled it, and a job left from before a reschedule (of a
+  date or a scheduled revision) does nothing when it runs. See [Scheduled publishing](guides/scheduled_publishing.md).
 
 - **Blocks on older module versions can be resolved.** A module save keeps
   refs and vars the new version no longer defines, and leaves the blocks

@@ -30,32 +30,9 @@ defmodule Brando.Worker.EntryPublisher do
            }
          } = job
        ) do
-    user = publisher_user(user_id)
-    now = DateTime.utc_now()
-
-    single =
-      schema
-      |> String.split(".")
-      |> List.last()
-      |> String.downcase()
-
-    schema = Module.concat(List.wrap(schema))
-
-    case Revisions.set_entry_to_revision(schema, id, revision, user, publish?: true) do
-      {:ok, new_entry} ->
-        Logger.info("""
-
-        ==> [B/Pub] Published revision ##{revision} of #{single} ##{id}
-        ==> [B/Pub] @ #{now.day}/#{now.month}/#{now.year} #{now.hour}:#{now.minute}:#{now.second} UTC
-        """)
-
-        BrandoAdmin.LiveView.Listing.update_list_entries(schema)
-        {:ok, new_entry}
-
-      {:error, reason} ->
-        release_failed_revision_schedule(job, schema, id, revision)
-        {:error, reason}
-    end
+    if current_revision_job?(job),
+      do: publish_revision(job, schema, id, revision, user_id),
+      else: :ok
   end
 
   # Publish an entry at its publish_at, or deactivate it at its unpublish_at,
@@ -84,6 +61,60 @@ defmodule Brando.Worker.EntryPublisher do
         if due?(entry, status, now),
           do: update_status(schema_module, entry, status, user_id, now),
           else: :ok
+    end
+  end
+
+  # A scheduled revision's time is its job's: moving it (in the revisions
+  # drawer or the calendar) cancels the job and queues another. A job that
+  # is no longer the revision's one waiting job, or whose time has not come,
+  # is stale and does nothing, so it cannot publish early. A job built
+  # without a row (a test, a manual run) has nothing to compare with.
+  defp current_revision_job?(%Oban.Job{id: nil}), do: true
+
+  defp current_revision_job?(%Oban.Job{id: job_id, args: args, scheduled_at: scheduled_at}) do
+    import Ecto.Query, only: [from: 2]
+
+    # Whoever scheduled it: a move by another user replaces it too
+    match = Map.drop(args, ["user_id"])
+
+    waiting =
+      Brando.Repo.all(
+        from j in Oban.Job,
+          where:
+            j.worker == ^inspect(__MODULE__) and j.state in ["available", "scheduled", "executing", "retryable"] and
+              fragment("? @> ?", j.args, ^match),
+          select: j.id
+      )
+
+    waiting == [job_id] and not after?(scheduled_at, DateTime.utc_now())
+  end
+
+  defp publish_revision(job, schema, id, revision, user_id) do
+    user = publisher_user(user_id)
+    now = DateTime.utc_now()
+
+    single =
+      schema
+      |> String.split(".")
+      |> List.last()
+      |> String.downcase()
+
+    schema = Module.concat(List.wrap(schema))
+
+    case Revisions.set_entry_to_revision(schema, id, revision, user, publish?: true) do
+      {:ok, new_entry} ->
+        Logger.info("""
+
+        ==> [B/Pub] Published revision ##{revision} of #{single} ##{id}
+        ==> [B/Pub] @ #{now.day}/#{now.month}/#{now.year} #{now.hour}:#{now.minute}:#{now.second} UTC
+        """)
+
+        BrandoAdmin.LiveView.Listing.update_list_entries(schema)
+        {:ok, new_entry}
+
+      {:error, reason} ->
+        release_failed_revision_schedule(job, schema, id, revision)
+        {:error, reason}
     end
   end
 
