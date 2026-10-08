@@ -29,13 +29,13 @@
     padding: 2px 15px 2px 2px;
 
     &.true {
-      background-color: #90ee9033;
-      color: #475b4f;
+      background-color: var(--brando-success);
+      color: var(--brando-success-ink);
     }
 
     &.false {
-      background-color: #ff9d9d30;
-      color: #863f3f;
+      background-color: var(--brando-error);
+      color: var(--brando-error-ink);
     }
 
     [data-icon] {
@@ -46,11 +46,11 @@
     }
 
     &.true [data-icon] {
-      color: #475b4f;
+      color: var(--brando-success-ink);
     }
 
     &.false [data-icon] {
-      color: #863f3f;
+      color: var(--brando-error-ink);
     }
 
     .grid-icon {
@@ -67,7 +67,7 @@
     row-gap: 0;
     width: fit-content;
     margin-top: 0.4em;
-    border: 1px solid #dfe5df;
+    border: 1px solid var(--brando-line);
     border-radius: 6px;
     overflow: hidden;
 
@@ -86,8 +86,8 @@
         display: flex;
         align-items: center;
         min-height: 17px;
-        border-top: 1px solid #dfe5df;
-        color: #3b4a3f;
+        border-top: 1px solid var(--brando-line);
+        color: var(--brando-ink);
       }
 
       &:first-child .grid-icon,
@@ -97,7 +97,7 @@
 
       .grid-icon {
         justify-content: center;
-        border-right: 1px solid #dfe5df;
+        border-right: 1px solid var(--brando-line);
       }
 
       .content {
@@ -112,11 +112,11 @@
       }
 
       &.true .grid-icon {
-        color: #2e9d4f;
+        color: var(--brando-success-ink);
       }
 
       &.false .grid-icon {
-        color: #c43c3c;
+        color: var(--brando-error-ink);
       }
 
       /* A count (`checklist_count`) in the icon's cell */
@@ -126,7 +126,7 @@
       }
 
       &.count.zero :is(.grid-icon, .content) {
-        color: #9aa59d;
+        color: var(--brando-faint);
       }
     }
   }
@@ -377,7 +377,7 @@
           }
 
           &.deleted {
-            fill: #111;
+            fill: var(--brando-status-deleted);
           }
         }
       }
@@ -491,7 +491,7 @@
     margin-bottom: 10px;
 
     .list-row {
-      background-color: #f3f3f3 !important;
+      background-color: var(--brando-surface-hover) !important;
       border-radius: 0px;
 
       &:first-of-type {
@@ -569,7 +569,7 @@
     }
 
     &:nth-of-type(odd) {
-      background-color: #fafafa;
+      background-color: var(--brando-surface-shaded);
 
       .main-content .img-placeholder {
         background-color: var(--brando-surface);
@@ -586,7 +586,7 @@
 
     &:nth-of-type(even) {
       .main-content .circle-flag {
-        background-color: #fafafa;
+        background-color: var(--brando-surface-shaded);
       }
     }
 
@@ -599,7 +599,7 @@
 
     .url {
       a {
-        background-color: #f4f4f4;
+        background-color: var(--brando-surface-hover);
         width: 30px;
         height: 30px;
         display: flex;
@@ -674,14 +674,14 @@
       &.phx-click-loading {
         background-color: var(--brando-surface);
         &:nth-of-type(odd) {
-          background-color: #fafafa;
+          background-color: var(--brando-surface-shaded);
         }
       }
       background-color: theme(colors.peachDarker);
     }
 
     &.deleted {
-      background-color: #e8e8e8;
+      background-color: var(--brando-badge-bg);
       transition: background-color 250ms ease;
     }
 
@@ -694,7 +694,7 @@
       min-height: 50px;
 
       &:has(> .disabled) {
-        background-color: #ffedeb;
+        background-color: var(--brando-error);
         opacity: 0.5;
       }
 
@@ -785,7 +785,7 @@
             }
 
             &.deleted {
-              fill: #111;
+              fill: var(--brando-status-deleted);
             }
           }
         }
@@ -812,7 +812,7 @@
 
   .filter {
     @font mono;
-    background-color: #ffef45;
+    background-color: var(--brando-chip-active-bg);
     border: 0;
     font-size: 12px;
     text-transform: uppercase;
@@ -906,7 +906,7 @@
   select {
     @font mono 10px;
     padding: 4px;
-    border: 1px solid #ccc;
+    border: 1px solid var(--brando-input-border);
     border-radius: 4px;
     background-color: white;
     min-width: 120px;

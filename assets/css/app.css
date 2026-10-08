@@ -453,7 +453,7 @@ strong {
 
 .no-entries {
   @fontsize base;
-  background-color: #0000000d;
+  background-color: color-mix(in srgb, var(--brando-ink) 5%, transparent);
   margin-top: 25px;
   margin-bottom: 25px;
   padding: 1rem;
@@ -496,33 +496,6 @@ body {
 
   background-color: var(--brando-color-background);
   color: var(--brando-color-foreground);
-
-  &.dark-mode {
-    --brando-color-background: theme(colors.dark);
-    --brando-color-content-background: theme(colors.black);
-    --brando-color-foreground: theme(colors.white);
-    --brando-color-white: theme(colors.black);
-    --brando-color-gray: theme(colors.gray);
-    --brando-color-gray-light: theme(colors.grayLight);
-    --brando-color-black: theme(colors.white);
-    --brando-color-shaded: #031122;
-    --brando-color-nav-background: #031122;
-    --brando-nav-ink: #f4f5fb;
-    --brando-nav-accent: #f4f5fb;
-    --brando-nav-muted: rgba(244, 245, 251, 0.66);
-    --brando-nav-rule: rgba(244, 245, 251, 0.2);
-    --brando-nav-hover: rgba(255, 255, 255, 0.08);
-    --brando-nav-surface: rgba(255, 255, 255, 0.14);
-    --brando-nav-surface-shadow: none;
-    --brando-color-dark: theme(colors.peach);
-    --brando-color-peach: theme(colors.dark);
-    --brando-color-peach-darker: #072850;
-    --brando-color-input: theme(colors.dark);
-    --brando-color-blue: theme(colors.blue);
-    --brando-badge-bg: rgba(244, 245, 251, 0.12);
-    --brando-badge-ink: rgba(244, 245, 251, 0.82);
-    --brando-shaded-surface: rgba(244, 245, 251, 0.03);
-  }
 }
 
 .main-content .circle-dropdown.wrapper {
@@ -626,7 +599,7 @@ body {
 
 table.table-bordered {
   td {
-    border: 1px solid #dee2e6;
+    border: 1px solid var(--brando-line);
     vertical-align: middle;
     padding: 0.75rem;
     position: relative;
@@ -698,7 +671,7 @@ h3 {
   box-shadow: 0 0 0 1px rgba(5, 39, 82, 0.06);
 
   &:hover {
-    background-color: #f7f4f2;
+    background-color: var(--brando-surface-hover);
     cursor: pointer;
   }
 
@@ -1241,8 +1214,8 @@ h3 {
   width: 100%;
   height: 100%;
   border-radius: 50%;
-  background: #eaf0e5;
-  color: #48634e;
+  background: var(--brando-badge-bg);
+  color: var(--brando-badge-ink);
   font-size: 13px;
   line-height: 1;
   text-transform: uppercase;
@@ -1353,7 +1326,7 @@ h3 {
   left: 0;
   width: 100%;
   height: 100%;
-  background-color: #000000cf;
+  background-color: color-mix(in srgb, var(--brando-ink) 80%, transparent);
   z-index: 10005;
   display: flex;
   flex-direction: column;

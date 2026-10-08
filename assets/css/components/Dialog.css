@@ -19,7 +19,7 @@
   --dialog-muted: var(--brando-muted);
   --dialog-line: var(--brando-line);
   --dialog-green: var(--brando-accent);
-  --dialog-red: #a3352a;
+  --dialog-red: var(--brando-error-ink);
 
   box-sizing: border-box;
   width: 440px;
@@ -60,7 +60,7 @@
   overflow-wrap: break-word;
 
   .admin-dialog--error & {
-    color: #8c4232;
+    color: var(--brando-error-ink);
   }
 }
 
@@ -118,8 +118,8 @@
   cursor: pointer;
 
   &:hover {
-    background: #f1f5ef;
-    border-color: #aab9a5;
+    background: var(--brando-surface-tint);
+    border-color: var(--brando-line-strong);
   }
 
   &:focus-visible {
@@ -133,7 +133,7 @@
     color: var(--brando-ink-inverse);
 
     &:hover {
-      background: #163c2e;
+      background: var(--brando-accent-hover);
     }
   }
 
@@ -143,7 +143,7 @@
     color: var(--brando-ink-inverse);
 
     &:hover {
-      background: #8a2b22;
+      background: color-mix(in srgb, var(--brando-error-ink) 85%, var(--brando-ink));
     }
 
     &:focus-visible {

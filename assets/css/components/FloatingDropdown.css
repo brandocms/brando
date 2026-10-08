@@ -29,12 +29,12 @@
   border-radius: 6px;
   background: var(--brando-surface);
   color: var(--brando-color-dark);
-  box-shadow: 0 4px 16px #17291e14, 0 1px 3px #17291e0a;
+  box-shadow: 0 4px 16px color-mix(in srgb, var(--brando-ink) 8%, transparent), 0 1px 3px color-mix(in srgb, var(--brando-ink) 4%, transparent);
   font: 12px/20px "Main", sans-serif;
   overflow: clip;
 
   > li { list-style: none; margin: 0; padding: 0; }
-  > li + li, > button + button, > a + a { border-top: 1px solid #eef0ed; }
+  > li + li, > button + button, > a + a { border-top: 1px solid var(--brando-line-soft); }
   > li.dropdown-separator { display: none; }
   button, a {
     display: flex;
@@ -57,7 +57,7 @@
     text-decoration: none;
     cursor: pointer;
     white-space: normal;
-    &:hover { background: #f5f7f3; color: inherit; }
+    &:hover { background: var(--brando-surface-hover); color: inherit; }
     &:focus-visible { outline: 2px solid var(--brando-accent); outline-offset: -2px; }
     &:disabled { opacity: .45; cursor: default; }
     > [data-icon] { width: 14px; height: 14px; flex-shrink: 0; }
