@@ -1808,9 +1808,9 @@ msgstr ""
 msgid "You must close the image drawer before saving this form. You might have changes to an image that has not been processed, which might lead to broken image links. Close the image drawer, allow processing to finish (if any), then try to save again."
 msgstr ""
 
-#: lib/brando_admin/components/form/meta_drawer.ex:36
+#: lib/brando_admin/components/form/meta_drawer.ex:59
 #, elixir-autogen, elixir-format
-msgid "Meta information for search engines. Try to keep the title tag below 70 characters while incorporating key terms for your content. The description tag should be around 155 characters to prevent getting truncated in search results. You can also attach your own meta image which will override your entry's cover image, if it has one."
+msgid "The title, description and image that search engines and social media show for this entry."
 msgstr ""
 
 #: lib/brando_admin/components/form/input/render_var.ex:1148
@@ -18662,4 +18662,19 @@ msgstr ""
 #: lib/brando_admin/live/users/groups_live.ex
 #, elixir-autogen, elixir-format
 msgid "Shows every user's sign-ins, failed attempts and changes to their sign-in settings, with IP addresses and browsers, under Activity. With several sites, only superusers see it."
+msgstr ""
+
+#: lib/brando_admin/components/form/meta_drawer.ex:100
+#, elixir-autogen, elixir-format
+msgid "Keep it under 70 characters, with the words people search for."
+msgstr ""
+
+#: lib/brando_admin/components/form/meta_drawer.ex:110
+#, elixir-autogen, elixir-format
+msgid "Around 155 characters. Longer descriptions are cut short in search results."
+msgstr ""
+
+#: lib/brando_admin/components/form/meta_drawer.ex:160
+#, elixir-autogen, elixir-format
+msgid "Shown when this entry is shared, in place of its cover image."
 msgstr ""
