@@ -2,8 +2,8 @@ import { test, expect } from '../../test-support/setupAuth'
 import { syncLV } from '../../utils'
 
 // Scheduled expiry (#3080): Expires in the entry's scheduling drawer, the
-// label in the listing and the dashboard's "Expiring soon" panel. Driven in
-// Norwegian, so the locators name the translated labels.
+// label in the listing, the dashboard's "Expiring soon" panel and the
+// calendar. Driven in Norwegian, so the locators name the translated labels.
 
 async function factory(page, schema, attributes) {
   const response = await page.request.post('/__e2e/db/factory', { data: { schema, attributes, creator_id: 1, fields: ['id'] } })
@@ -15,7 +15,7 @@ async function factory(page, schema, attributes) {
 const MONTHS = ['Januar', 'Februar', 'Mars', 'April', 'Mai', 'Juni', 'Juli', 'August', 'September', 'Oktober', 'November', 'Desember']
 const dayLabel = date => `${MONTHS[date.getMonth()]} ${date.getDate()}, ${date.getFullYear()}`
 
-test('an expiry set in the entry shows in the listing and on the dashboard', async ({ page }, testInfo) => {
+test('an expiry set in the entry shows in the listing, on the dashboard and in the calendar', async ({ page }, testInfo) => {
   const client = await factory(page, 'E2eProject.Projects.Client', {
     name: 'Expiry owner', slug: 'expiry-owner', status: 'published', language: 'en',
   })
@@ -54,7 +54,8 @@ test('an expiry set in the entry shows in the listing and on the dashboard', asy
   const row = page.locator(`#list-row-${project.id}`)
   const label = row.getByTestId('listing-expiry')
   await expect(label).toBeVisible()
-  expect(Date.parse(await label.getAttribute('datetime'))).toBeGreaterThan(Date.now())
+  const expiresAt = await label.getAttribute('datetime')
+  expect(Date.parse(expiresAt)).toBeGreaterThan(Date.now())
   await page.screenshot({ path: testInfo.outputPath('expires-listing.png') })
 
   // The dashboard: in the side column's "Expiring soon"
@@ -67,4 +68,12 @@ test('an expiry set in the entry shows in the listing and on the dashboard', asy
     `/admin/projects/projects/update/${project.id}`
   )
   await page.screenshot({ path: testInfo.outputPath('expires-dashboard.png'), fullPage: true })
+
+  // The calendar: on its day, as an expiry
+  const day = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Oslo' }).format(new Date(Date.parse(expiresAt)))
+  await page.goto(`/admin/calendar?date=${day}`)
+  await syncLV(page)
+  const item = page.locator(`#calendar-day-${day} #calendar-item-expire-projects_project-${project.id}`)
+  await expect(item).toHaveAttribute('data-kind', 'expire')
+  await expect(item.getByRole('link', { name: 'Winter campaign', exact: true })).toBeVisible()
 })

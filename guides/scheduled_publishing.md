@@ -1,6 +1,6 @@
 # Scheduled publishing
 
-<!-- llms-description: Publish an entry or an approved revision at a set time, let an entry expire, cancel a schedule, and follow the jobs that run it. -->
+<!-- llms-description: Publish an entry or an approved revision at a set time, let an entry expire, see and move what is planned in the calendar, cancel a schedule, and follow the jobs that run it. -->
 
 Choose what should be published before choosing a time:
 
@@ -45,6 +45,26 @@ Setting a future date while leaving status as draft or disabled does **not** mak
 that date inert: the scheduling callback is driven by a changed future
 `publish_at`. Use the explicit published-to-pending flow above, and inspect the
 queue whenever an entry has a publication date.
+
+## See it in the calendar
+
+**Calendar** in the sidebar, after Dashboard and Search, shows what is planned
+by day, a month or a week at a time: entries to be published (`publish_at` on a
+pending entry), scheduled revisions and expiries (`unpublish_at`), in the site's
+time zone (`config :brando, timezone:`). It covers every content type with
+`trait :scheduled_publishing` and an admin, with a filter for one type, and only
+the entries the user may read; the title links to the entry when they may edit
+it. The view, the date and the type are in the URL.
+
+An item can be moved to another day, at the same time of day, by dragging it
+or with its **Move to…** button, which opens a dialog with the day and is the
+way to do it from the keyboard or a phone. Both ask before moving. A move
+saves the date through the entry's context, as saving it in the form does, or
+reschedules the revision through `Brando.Publisher.schedule_revision/5`, so the
+same validation, permissions and jobs apply: moving publishing takes the
+**schedule** permission, moving an expiry or a revision also **publish**. On a
+phone the calendar is a list of the days that have something planned.
+`BrandoAdmin.Schedule` reads and moves the items.
 
 ## Cancel an entry schedule
 

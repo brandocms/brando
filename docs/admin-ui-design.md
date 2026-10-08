@@ -810,6 +810,9 @@ cap centre. Rows are 32px (top level) and 30px (sub-items) with no block
 padding. Browsers without `text-box` sit the label a pixel or two high, which
 is acceptable.
 
+Calendar (`/admin/calendar`) is a fixed row after Dashboard, in
+`BrandoAdmin.Menu`; Search follows Dashboard directly.
+
 Search is a row too, built in by `BrandoAdmin.Nav` rather than configured: a
 button after Dashboard (or at the top of the first section) that opens the
 command palette, with the shortcut faint at its end (mono 11px, the muted nav

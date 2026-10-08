@@ -796,6 +796,16 @@ production dump.
   when a route was paused after failures. Copying an environment pauses
   its routes, as it does webhooks. See [Notifications](guides/notifications.md).
 
+- **A calendar of what is planned** (#3081). **Calendar** in the sidebar
+  shows entries to be published, scheduled revisions and expiries by day, a
+  month or a week at a time, in the site's time zone, across the content
+  types with scheduled publishing, with a filter for one type. It lists only
+  entries the user may read. An item moves to another day, at the same time,
+  by dragging it or with **Move to…**, after a confirmation, and only where
+  the user may reschedule it; the move saves the entry the way its form does,
+  or reschedules the revision as the revisions drawer does. On a phone the
+  days are a list. See [Scheduled publishing](guides/scheduled_publishing.md#see-it-in-the-calendar).
+
 - **Entries can expire** (#3080). `trait :scheduled_publishing` adds
   `unpublish_at` beside `publish_at`: **Expires** in the entry's Scheduled
   publishing drawer. When it comes, the publisher deactivates the entry
