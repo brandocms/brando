@@ -10699,6 +10699,11 @@ msgstr "Juridisk navn"
 msgid "Linked to %{page}"
 msgstr "Koblet til %{page}"
 
+#: lib/brando/sites/identity.ex
+#, elixir-autogen, elixir-format
+msgid "Linked to a page"
+msgstr "Koblet til en side"
+
 #: lib/brando_admin/components/form/input/rich_text_labels.ex:16
 #, elixir-autogen, elixir-format
 msgid "List types"

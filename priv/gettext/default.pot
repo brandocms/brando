@@ -10704,6 +10704,11 @@ msgstr ""
 msgid "Linked to %{page}"
 msgstr ""
 
+#: lib/brando/sites/identity.ex
+#, elixir-autogen, elixir-format
+msgid "Linked to a page"
+msgstr ""
+
 #: lib/brando_admin/components/form/input/rich_text_labels.ex:16
 #, elixir-autogen, elixir-format
 msgid "List types"
