@@ -318,27 +318,38 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
 
   attr :myself, :any, required: true
 
+  # The wrapper is the container the buttons measure (Gallery.css): in a
+  # narrow field Select images and Select videos keep only their icons, and
+  # Upload media too in the narrowest. Each label stays the accessible name
+  # and the title shows it on hover.
   defp gallery_actions(assigns) do
     ~H"""
-    <div class="actions segmented-buttons">
-      <button type="button" class="media-button upload-trigger">
-        <.icon name="upload" />
-        {gettext("Upload media")}
-      </button>
-      <button
-        phx-click={JS.push("set_target", target: @myself) |> toggle_drawer("#image-picker")}
-        type="button"
-        class="media-button"
-      >
-        {gettext("Select images")}
-      </button>
-      <button
-        phx-click={JS.push("open_video_picker", target: @myself) |> toggle_drawer("#video-picker")}
-        type="button"
-        class="media-button"
-      >
-        {gettext("Select videos")}
-      </button>
+    <div class="gallery-actions">
+      <div class="actions segmented-buttons">
+        <button
+          type="button"
+          class="media-button media-button--collapsible-narrow upload-trigger"
+          title={gettext("Upload media")}
+        >
+          <.icon name="upload" /><span class="media-button-label">{gettext("Upload media")}</span>
+        </button>
+        <button
+          phx-click={JS.push("set_target", target: @myself) |> toggle_drawer("#image-picker")}
+          type="button"
+          class="media-button media-button--collapsible"
+          title={gettext("Select images")}
+        >
+          <.icon name="images" /><span class="media-button-label">{gettext("Select images")}</span>
+        </button>
+        <button
+          phx-click={JS.push("open_video_picker", target: @myself) |> toggle_drawer("#video-picker")}
+          type="button"
+          class="media-button media-button--collapsible"
+          title={gettext("Select videos")}
+        >
+          <.icon name="film" /><span class="media-button-label">{gettext("Select videos")}</span>
+        </button>
+      </div>
     </div>
     """
   end
