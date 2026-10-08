@@ -54,9 +54,7 @@ defmodule BrandoAdmin.Components.Form.MetaDrawer do
           </button>
         </nav>
         <p id={"#{@id}-meta-info"}>
-          {gettext(
-            "Meta information for search engines. Try to keep the title tag below 70 characters while incorporating key terms for your content. The description tag should be around 155 characters to prevent getting truncated in search results. You can also attach your own meta image which will override your entry's cover image, if it has one."
-          )}
+          {gettext("The title, description and image that search engines and social media show for this entry.")}
         </p>
         <p id={"#{@id}-previews-info"} hidden>
           {gettext(
@@ -92,9 +90,15 @@ defmodule BrandoAdmin.Components.Form.MetaDrawer do
           open={@close |> JS.exec("phx-click", to: "##{@id}-tab-structured-data")}
         />
       </div>
-      <div id={"#{@id}-meta-fields"} class="meta-drawer-fields">
+      <div id={"#{@id}-meta-fields"} class="meta-drawer-fields drawer-fields">
         <div class="brando-input">
-          <Input.text field={@form[:meta_title]} opts={@meta_title_opts} target={@form_cid} label={gettext("Meta title")} />
+          <Input.text
+            field={@form[:meta_title]}
+            opts={@meta_title_opts}
+            target={@form_cid}
+            label={gettext("Meta title")}
+            instructions={gettext("Keep it under 70 characters, with the words people search for.")}
+          />
         </div>
 
         <div class="brando-input">
@@ -103,6 +107,7 @@ defmodule BrandoAdmin.Components.Form.MetaDrawer do
             opts={@meta_description_opts}
             target={@form_cid}
             label={gettext("Meta description")}
+            instructions={gettext("Around 155 characters. Longer descriptions are cut short in search results.")}
           />
         </div>
 
@@ -152,6 +157,7 @@ defmodule BrandoAdmin.Components.Form.MetaDrawer do
             field={@form[:meta_image]}
             current_user={@current_user}
             label={gettext("Meta image")}
+            instructions={gettext("Shown when this entry is shared, in place of its cover image.")}
           />
         </div>
       </div>

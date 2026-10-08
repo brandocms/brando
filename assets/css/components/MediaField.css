@@ -132,7 +132,8 @@
 /* Keep ordinary fields close to the original thumbnail-and-details treatment.
    The drop overlay and live progress appear only when they are needed. */
 .media-field--field {
-  display: grid; grid-template-columns: 112px minmax(0, 1fr); column-gap: 16px;
+  /* The thumbnail sets the first column, so a container query can narrow it. */
+  display: grid; grid-template-columns: auto minmax(0, 1fr); column-gap: 16px;
   padding: 6px; border-radius: 8px; max-width: 520px;
   .media-field-content { display: contents; }
   .media-field-preview { grid-column: 1; grid-row: 1 / span 2; width: 112px; height: 112px; }
@@ -156,6 +157,30 @@
     .image-content, img, picture { width: 100%; height: auto; object-fit: contain; }
   }
 }
+/* A field is as wide as where it sits, not the window: in a drawer or a
+   narrow column the replace actions keep only their icons, with the label as
+   the accessible name and the title. EuropaCSS claims `@container` for its
+   own (deprecated) shorthand and rejects the CSS rule, so it is written
+   `@Container`: at-rule names are case-insensitive in CSS, and the plugin
+   only matches the lower-case name. */
+.media-field--field { container: media-field / inline-size; }
+/* Upload replacement needs its icon only once it is nothing but the icon. */
+.media-field--field .upload-trigger.media-button--collapsible > [data-icon] { display: none; }
+@Container media-field (max-width: 499px) {
+  .media-field-split > .media-button--collapsible { padding-inline: 8px; }
+  .media-field--field .upload-trigger.media-button--collapsible > [data-icon] { display: inline-block; }
+  .media-button--collapsible > .media-button-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+}
+/* Narrower still, the thumbnail shrinks as it does on a phone, so a
+   sidebar column of a wide form leaves room for the actions too. */
+@Container media-field (max-width: 339px) {
+  .media-field--field .media-field-preview { width: 72px; height: 104px; }
+  .media-field--field:not(.media-field--empty) .media-field-preview { height: auto; }
+}
+@Container media-field (max-width: 319px) {
+  .media-field-split > .media-button--collapsible-narrow { padding-inline: 8px; }
+  .media-button--collapsible-narrow > .media-button-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+}
 .media-field-drop > div { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
 .media-field-drop-destination { font: 12px/18px "Main", sans-serif; overflow-wrap: anywhere; }
 .media-field > .media-field-drop { padding: 16px; }
@@ -163,7 +188,7 @@
   .media-field { padding: 14px; }
   .media-field--block:not(.media-field--empty):not([data-asset-type="image"]) .media-field-preview { flex-basis: 96px; width: 96px; height: 86px; }
   .media-field .media-field-content { gap: 12px; }
-  .media-field--field { padding: 6px; grid-template-columns: 72px minmax(0, 1fr); column-gap: 12px; }
+  .media-field--field { padding: 6px; column-gap: 12px; }
   .media-field--field .media-field-preview { width: 72px; height: 104px; }
   .media-field--field:not(.media-field--empty) .media-field-preview { height: auto; }
   .media-field--field .media-field-actions { margin-top: 8px; }

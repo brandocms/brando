@@ -7,9 +7,15 @@
   .drawer-info p:last-of-type { margin-bottom: 0 !important; }
   .drawer-info p + p { padding-top: 12px; }
   .drawer-form { padding: 24px; }
-  .drawer-form > .brando-input + .brando-input { margin-top: 24px; }
+  /* The gap between fields, after any help text. `.drawer-fields` wraps a
+     group of them in a pane (the Meta drawer's tab), where the inputs are no
+     longer the form's own children. */
+  .drawer-form > .brando-input + .brando-input, .drawer-fields > .brando-input + .brando-input { margin-top: 24px; }
   .drawer-form .field-wrapper { margin: 0; }
   .drawer-form .label-wrapper { margin-bottom: 8px; }
+  /* As an inline-block the switch sat on the text baseline, which left a
+     strut's descent between it and its help text. */
+  .drawer-form .field-base > .switch { display: block; }
   .drawer-form .control-label { color: var(--workspace-ink); font: 14px/20px "Main", sans-serif; }
   .drawer-form input.text, .drawer-form textarea, .drawer-form .multiselect {
     background: var(--brando-surface); color: var(--workspace-ink); border: 1px solid var(--workspace-line);
