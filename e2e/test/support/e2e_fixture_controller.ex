@@ -63,6 +63,9 @@ defmodule E2EFixtureController do
         "assistant-applied-copy" ->
           create_applied_copy_proposal()
 
+        "activity-actors" ->
+          create_activity_actors()
+
         "markdown-source" ->
           E2E.MarkdownProvider.setup(get_admin_user())
 
@@ -298,6 +301,59 @@ defmodule E2EFixtureController do
       client_id: client.id
     )
     |> Brando.Repo.update!()
+
+    user
+  end
+
+  # Changes by every kind of actor, for Configuration → Activity: the admin's
+  # own save, a proposal from the Assistant and one from Claude Code over MCP,
+  # both approved and applied by the admin, scheduled publishing and the
+  # system's trash purge.
+  defp create_activity_actors do
+    alias Brando.Content.Proposals
+    alias Brando.Content.Proposals.Tools
+
+    user = get_admin_user()
+
+    page = fn title, uri ->
+      {:ok, page} =
+        Brando.Pages.create_page(
+          %{title: title, uri: uri, language: "en", template: "default.html", status: :draft},
+          user
+        )
+
+      page
+    end
+
+    apply_proposal = fn page, title, origin, client ->
+      op = %{
+        "op" => "set_fields",
+        "target" => %{"content_type" => "Brando.Pages.Page", "id" => page.id},
+        "fields" => %{"title" => title}
+      }
+
+      context = %Tools.Context{actor: user, origin: origin, client: client}
+
+      {:ok, %{proposal_id: id, version: version}} =
+        Tools.call("prepare_proposal", %{"summary" => "Retitle #{page.title}", "operations" => [op]}, context)
+
+      {:ok, _} = Proposals.approve(id, version, user)
+      {:ok, _} = Proposals.apply(id, version, user)
+    end
+
+    hotel = page.("Sommerro", "activity-sommerro")
+    {:ok, _} = Brando.Pages.update_page(hotel.id, %{meta_description: "By the sea"}, user)
+
+    apply_proposal.(page.("Villa Tide", "activity-villa-tide"), "Villa Tide, by the fjord", :assistant, nil)
+    apply_proposal.(page.("Aker brygge", "activity-aker-brygge"), "Aker brygge, the wharf", :mcp, "Claude Code")
+
+    Brando.Activity.with_source(:scheduler, fn ->
+      {:ok, _} = Brando.Pages.update_page(hotel.id, %{status: :published}, user)
+    end)
+
+    gone = page.("Old lobby", "activity-old-lobby")
+    Brando.Repo.delete!(gone)
+    Brando.Activity.deleted(gone, :system, false, %{"purged" => true})
 
     user
   end
