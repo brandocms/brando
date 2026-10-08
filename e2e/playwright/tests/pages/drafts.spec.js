@@ -28,19 +28,8 @@ test.describe('Entry recovery copies', () => {
     await page.getByRole('button', { name: 'Review recovery copy', exact: true }).click()
   }
 
-  test('identical copies form one choice and discarding it does not reveal another duplicate', async ({ page }) => {
-    await createDraft(page)
-    expect((await page.request.post('/e2e/drafts/duplicates')).ok()).toBeTruthy()
-    await review(page)
-    await expect(page.locator('.draft-copy-table tbody tr')).toHaveCount(1)
-    await page.getByRole('button', { name: 'Discard copy', exact: true }).click()
-    // data-confirm asks with the admin's own dialog, not window.confirm.
-    await page.getByRole('dialog').getByRole('button', { name: 'OK', exact: true }).click()
-    await expect(page.getByTestId('draft-panel')).toHaveCount(0)
-    await page.reload()
-    await expect(page.getByTestId('draft-notice')).toHaveCount(0)
-    await expect(page.getByRole('button', { name: /^Recovery copies/ })).toHaveCount(0)
-  })
+  // Identical copies, the copy history's order and a failed restore are
+  // LiveView tests in draft_recovery_live_test.exs.
 
   test('browses a recovery table and keeps inspected content open across autosave patches', async ({ page }, testInfo) => {
     await createDraft(page)
@@ -107,21 +96,6 @@ test.describe('Entry recovery copies', () => {
     await page.setViewportSize({ width: 390, height: 1800 })
     await expect.poll(() => panel.evaluate(el => el.scrollWidth <= el.clientWidth)).toBe(true)
     await panel.screenshot({ path: testInfo.outputPath('recovery-table-mobile.png'), animations: 'disabled' })
-  })
-
-  test('closing and reopening history preserves capture dates and order', async ({ page }) => {
-    await createDraft(page)
-    expect((await page.request.post('/e2e/drafts/history')).ok()).toBeTruthy()
-    await review(page)
-    const times = () => page.locator('.draft-copy-table time').evaluateAll(nodes => nodes.map(node => node.dateTime))
-    const before = await times()
-    expect(new Set(before).size).toBe(11)
-    await page.getByRole('button', { name: 'Close recovery panel', exact: true }).click()
-    await page.getByRole('button', { name: /^Recovery copies/ }).click()
-    await expect.poll(times).toEqual(before)
-    await page.reload()
-    await page.getByRole('button', { name: /^Recovery copies/ }).click()
-    await expect.poll(times).toEqual(before)
   })
 
   test('restoring a copy settles the ones passed over instead of renewing the notice', async ({ page }) => {
@@ -221,30 +195,6 @@ test.describe('Entry recovery copies', () => {
     await showUnchanged.check()
     await expect(diff).toBeVisible()
     await expect(diff).toContainText('No changes in this preview')
-  })
-
-  test('a failed restore survives reload without trapping the editor or overwriting the original', async ({ page }, testInfo) => {
-    await createDraft(page)
-    expect((await page.request.post('/e2e/drafts/unsupported')).ok()).toBeTruthy()
-    await review(page)
-    await page.getByRole('button', { name: 'Restore recovery copy', exact: true }).click()
-    await expect(page.getByTestId('draft-panel').getByRole('alert')).toContainText('unsupported format')
-    await expect(page.getByRole('button', { name: 'Restore compatible content', exact: true })).toHaveCount(0)
-    await page.getByTestId('draft-panel').screenshot({ path: testInfo.outputPath('recovery-failed.png'), animations: 'disabled' })
-    await page.reload()
-    await expect(page.getByTestId('draft-panel')).toHaveCount(0)
-    await expect(page.getByTestId('draft-notice')).toHaveCount(0)
-    await page.getByRole('button', { name: /^Recovery copies/ }).click()
-    await page.getByRole('button', { name: 'Start fresh', exact: true }).click()
-    await expect(page.getByLabel('Title', { exact: true })).toHaveValue('')
-    await expect(page.locator('.entry-block')).toHaveCount(0)
-    await expect(page.getByTestId('draft-notice')).toHaveCount(0)
-    await page.getByLabel('Title', { exact: true }).fill('A fresh start')
-    await expect(page.getByTestId('draft-status')).toContainText('Recovery copy saved at', { timeout: 25000 })
-    await page.reload()
-    await page.getByRole('button', { name: /^Recovery copies/ }).click()
-    await expect(page.getByTestId('draft-panel').getByRole('button', { name: /Autumn campaign/ })).toBeVisible()
-    await expect(page.getByTestId('draft-panel').getByRole('button', { name: /A fresh start/ })).toBeVisible()
   })
 
   test('changed modules require review and retain incompatible block content', async ({ page }, testInfo) => {
