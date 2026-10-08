@@ -770,6 +770,7 @@ production dump.
   runs, the menu lists no views and saving one is refused. The image, file and video libraries have no
   menu; another listing can leave it out with `saved_views={false}`. See
   `Brando.ListingViews` and "Saved views" in the listings guide.
+
 - **Notifications to Slack, Teams and email.** Configuration → Integrations →
   Notifications routes mentions, scheduled publishing and unpublishing, and
   failed jobs (jobs Oban gave up, and webhooks paused after failures) to a
