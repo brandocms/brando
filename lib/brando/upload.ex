@@ -169,8 +169,8 @@ defmodule Brando.Upload do
 
     case media_path |> Images.Utils.media_path() |> Image.open() do
       {:ok, img} ->
-        width = Image.width(img)
-        height = Image.height(img)
+        # As shown and processed: turned upright by its EXIF orientation.
+        {width, height} = Images.Utils.upright_dimensions(img)
         dominant_color = Images.Operations.Info.get_dominant_color(media_path)
 
         image_params = %{

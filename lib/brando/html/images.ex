@@ -6,6 +6,8 @@ defmodule Brando.HTML.Images do
   use Phoenix.Component
 
   alias Brando.Blueprint.Assets
+  alias Brando.Images.ConfigResolver
+  alias Brando.Images.Operations.Sizing
   alias Brando.Utils
 
   @placeholders [
@@ -22,8 +24,12 @@ defmodule Brando.HTML.Images do
 
   `src` is an image, an image var or a gallery object (its image is rendered).
 
-  The `srcset` attribute is the ACTUAL width of the image, as saved to disk. You'll find that in the
-  image type's `sizes` map.
+  A `srcset` pairs size keys with width descriptors, such as `{"large", "1400w"}`.
+  A size is never made wider than its original, so where the image's width and
+  height are known each `w` descriptor is lowered to the width the size's file
+  really has (see `Brando.Images.Size`), and of candidates that end up equally
+  wide only the one declared smallest is kept. A 600 pixel wide original with
+  sizes of 400, 700, 1100 and 1400 renders `400w` and a single `600w`.
 
   ## Options:
 
@@ -764,19 +770,7 @@ defmodule Brando.HTML.Images do
           {false, list}
       end
 
-    srcset_values =
-      for {k, v} <- list do
-        path =
-          Utils.img_url(
-            image_field,
-            (placeholder not in @placeholders && placeholder) || k,
-            opts
-          )
-
-        "#{encode_candidate_url(path)} #{v}"
-      end
-
-    {cropped_ratio, Enum.join(srcset_values, ", ")}
+    {cropped_ratio, candidates(image_field, list, cfg.sizes, opts, placeholder)}
   end
 
   # this is for srcsets with keys:
@@ -809,19 +803,7 @@ defmodule Brando.HTML.Images do
     # check if it is cropped
     cropped_ratio = check_cropped(cfg, key)
 
-    srcset_values =
-      for {k, v} <- Map.get(cfg.srcset, key) do
-        path =
-          Utils.img_url(
-            image_field,
-            (placeholder not in @placeholders && placeholder) || k,
-            opts
-          )
-
-        "#{encode_candidate_url(path)} #{v}"
-      end
-
-    {cropped_ratio, Enum.join(srcset_values, ", ")}
+    {cropped_ratio, candidates(image_field, Map.get(cfg.srcset, key), cfg.sizes, opts, placeholder)}
   end
 
   def get_srcset(image_field, %Brando.Type.ImageConfig{} = cfg, opts, placeholder) do
@@ -846,19 +828,7 @@ defmodule Brando.HTML.Images do
           {false, list}
       end
 
-    srcset_values =
-      for {k, v} <- srcset do
-        path =
-          Utils.img_url(
-            image_field,
-            (placeholder not in @placeholders && placeholder) || k,
-            opts
-          )
-
-        "#{encode_candidate_url(path)} #{v}"
-      end
-
-    {cropped_ratio, Enum.join(srcset_values, ", ")}
+    {cropped_ratio, candidates(image_field, srcset, cfg.sizes, opts, placeholder)}
   end
 
   # a keyed srcset map, without a key. try to get default
@@ -880,20 +850,97 @@ defmodule Brando.HTML.Images do
   end
 
   def get_srcset(image_field, srcset, opts, placeholder) do
-    srcset_values =
-      for {k, v} <- srcset do
-        path =
-          Utils.img_url(
-            image_field,
-            (placeholder not in @placeholders && placeholder) || k,
-            opts
-          )
-
-        "#{encode_candidate_url(path)} #{v}"
-      end
-
-    {false, Enum.join(srcset_values, ", ")}
+    {false, candidates(image_field, srcset, nil, opts, placeholder)}
   end
+
+  # "url descriptor, …" for `srcset`. `sizes` are the config's that the size
+  # keys belong to, or nil for the image's own.
+  defp candidates(image_field, srcset, sizes, opts, placeholder) do
+    image_field
+    |> fit_descriptors(srcset, sizes)
+    |> Enum.map_join(", ", fn {key, descriptor} ->
+      path = Utils.img_url(image_field, (placeholder not in @placeholders && placeholder) || key, opts)
+      "#{encode_candidate_url(path)} #{descriptor}"
+    end)
+  end
+
+  # A `w` descriptor says how wide a candidate's file is, but it is written
+  # in the config, and a size is never made wider than its original: for a
+  # 600 pixel wide original, "1400" is 600 wide too. Where the image's
+  # dimensions are known, each descriptor is lowered to the width processing
+  # gives its size, and of candidates that end up equally wide only the one
+  # declared smallest is kept. Otherwise the descriptors are left as written.
+  defp fit_descriptors(image_field, srcset, sizes) do
+    case known_dimensions(image_field) do
+      nil ->
+        Enum.to_list(srcset)
+
+      dimensions ->
+        sizes = sizes || image_sizes(image_field)
+
+        fitted =
+          srcset
+          |> Enum.with_index()
+          |> Enum.map(fn {{key, descriptor}, index} ->
+            {index, key, descriptor, fit_descriptor(descriptor, size_config(sizes, key), dimensions)}
+          end)
+
+        kept =
+          fitted
+          |> Enum.group_by(&elem(&1, 3))
+          |> Enum.map(fn {_descriptor, same} ->
+            same |> Enum.min_by(&{declared_width(elem(&1, 2)), elem(&1, 0)}) |> elem(0)
+          end)
+          |> MapSet.new()
+
+        for {index, key, _declared, descriptor} <- fitted, index in kept, do: {key, descriptor}
+    end
+  end
+
+  defp fit_descriptor(descriptor, size_config, dimensions) when is_map(size_config) do
+    with declared when is_integer(declared) <- declared_width(descriptor),
+         width when is_integer(width) <- processed_width(size_config, dimensions) do
+      "#{min(declared, width)}w"
+    else
+      _ -> descriptor
+    end
+  end
+
+  defp fit_descriptor(descriptor, _size_config, _dimensions), do: descriptor
+
+  # A config given straight to the tag isn't checked like a Blueprint's; one
+  # processing couldn't read leaves its descriptor as written.
+  defp processed_width(size_config, dimensions) do
+    size_config |> Sizing.processed_dimensions(dimensions) |> elem(0)
+  rescue
+    _error -> nil
+  end
+
+  defp declared_width(descriptor) when is_binary(descriptor) do
+    case Integer.parse(descriptor) do
+      {width, "w"} -> width
+      _other -> nil
+    end
+  end
+
+  defp declared_width(_descriptor), do: nil
+
+  defp known_dimensions(%{width: width, height: height})
+       when is_integer(width) and is_integer(height) and width > 0 and height > 0,
+       do: {width, height}
+
+  defp known_dimensions(_image_field), do: nil
+
+  # The sizes of the config the image was processed with.
+  defp image_sizes(image_field) do
+    case ConfigResolver.get(image_field) do
+      {:ok, %{sizes: sizes}} when is_map(sizes) -> sizes
+      _other -> %{}
+    end
+  end
+
+  defp size_config(sizes, key) when is_map(sizes), do: Map.get(sizes, to_string(key))
+  defp size_config(_sizes, _key), do: nil
 
   # A `:gallery` asset carries one config per media type — `%{image: .., video: ..}` —
   # so the image config has to be unwrapped before looking for `:srcset`. Every
@@ -931,8 +978,9 @@ defmodule Brando.HTML.Images do
     Kernel./(w, h)
   end
 
-  # ImageMagick geometry flags (`400x400>`, `300x300^`) don't change the ratio,
-  # so strip them. A geometry without both dimensions has no ratio to report.
+  # A trailing `>` (`400x400>`) doesn't change the ratio, so strip it, and any
+  # flag from before configs were checked for them. A geometry without both
+  # dimensions has no ratio to report.
   defp calc_ratio(%{"size" => size}) do
     size
     |> String.replace(~r/[^\dx]/, "")
@@ -946,13 +994,7 @@ defmodule Brando.HTML.Images do
 
   def get_mq(image_field, mq, opts) do
     for {media_query, srcsets} <- mq do
-      rendered_srcsets =
-        Enum.map(srcsets, fn {k, v} ->
-          path = Utils.img_url(image_field, k, opts)
-          "#{encode_candidate_url(path)} #{v}"
-        end)
-
-      {media_query, Enum.join(rendered_srcsets, ", ")}
+      {media_query, candidates(image_field, srcsets, nil, opts, false)}
     end
   end
 

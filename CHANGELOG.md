@@ -196,6 +196,16 @@ production dump.
   its own `srcset` no longer inherits a default `srcset` naming sizes it lacks:
   that srcset is dropped instead of rendering broken URLs.
 
+- **Image sizes with an ImageMagick flag other than `>` no longer compile.**
+  Brando read past the flags, so `"400x400^"` was processed like `"400x400"`
+  and `"50%"` as 50 pixels. A size using `^`, `!`, `%` or `<` now raises a
+  `BlueprintError` naming the size and what to write instead: `"crop" =>
+  true` for `^`, `"crop" => true` with a `"ratio"` for `!`, a width in pixels
+  for `%` (a `srcset` needs fixed widths), and nothing for `<`, since sizes
+  only shrink. A trailing `>`, as in `"400x400>"`, stays valid and changes
+  nothing. Configs from a function or the `default_config` setting are
+  checked when they are first read, as before.
+
 - **Video uploads are opt-in.** `default_video_upload_strategy` now defaults
   to `:none`, and a video field without its own `upload_strategy` follows it
   instead of uploading to the server. A site that never set it loses its
@@ -1638,6 +1648,33 @@ production dump.
   short of its geometry on originals of unusual proportions (`399×400` for a
   `400x400` crop); the size that covers the crop is now worked out from one
   scale, so it is exact. Recreate the affected images to get the new files.
+
+- **A width-only image size is that width, and no size is enlarged.** Since
+  the move to libvips, a size such as `"700"` was fitted inside a 700×700
+  square, so a portrait came out 700 tall and narrower than its `srcset`
+  said (525×700 from a 3000×4000 original). It is now 700 wide for portraits
+  and landscapes alike, as it was with sharp in 0.54. Every size used to be
+  enlarged from an original smaller than it; now none is. An uncropped size
+  keeps the original's size, and a cropped size is the largest part of the
+  original with its proportions (`200×200` for a `400x400` crop of a
+  300×200 original). A trailing `>`, as in `"400x400>"`, is still accepted
+  and changes nothing. Cropped sizes of photos stored on their side (EXIF
+  orientation) are now cut from the upright image, at their size and around
+  the right focal point. This changes only images uploaded or recreated from
+  now on. Existing files stay as they are and still count as matching their
+  config, so `mix brando.images.adopt` and **Recreate changed images** don't
+  recreate them for this.
+
+- **A `srcset` says how wide each file really is.** The `w` widths in an
+  image config's `srcset` were printed as written, so a 600-pixel original
+  rendered its `"1400"` size as `1400w` although the file is 600 wide, and
+  several sizes as different widths of the same picture. When the image's
+  width and height are known, each width is now lowered to the size's real
+  one, and sizes that end up equally wide are listed once: 400, 700, 1100 and
+  1400 for a 600-pixel original render `400w` and `600w`. Media query
+  sources do the same. An image's width and height are now recorded as it is
+  shown, turned by its EXIF orientation; images uploaded earlier get them
+  when they are next processed.
 
 - **Nothing typed or changed in a shared entry is lost on the way to a
   save.** The save button and ⌘S no longer submit the form, which took the

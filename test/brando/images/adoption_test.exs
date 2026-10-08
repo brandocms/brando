@@ -127,12 +127,75 @@ defmodule Brando.Images.AdoptionTest do
       assert Adoption.check(image, config()) == :match
     end
 
+    test "files processing makes now match: widths kept, nothing enlarged" do
+      # A portrait is as wide as its size, and a 300×200 original is never
+      # enlarged: its square thumb is the largest square it holds.
+      portrait = %{
+        "micro" => {25, 33},
+        "thumb" => {400, 400},
+        "small" => {700, 933},
+        "medium" => {900, 1200},
+        "large" => {900, 1200},
+        "xlarge" => {900, 1200}
+      }
+
+      small = %{
+        "micro" => {25, 17},
+        "thumb" => {200, 200},
+        "small" => {300, 200},
+        "medium" => {300, 200},
+        "large" => {300, 200},
+        "xlarge" => {300, 200}
+      }
+
+      assert Adoption.check(unrecorded("now-portrait", original: {900, 1200}, sizes: portrait), config()) == :match
+      assert Adoption.check(unrecorded("now-small", original: {300, 200}, sizes: small), config()) == :match
+    end
+
+    test "files from the first libvips processor match: a width fitted in a square, enlarged" do
+      portrait = %{
+        "micro" => {19, 25},
+        "thumb" => {400, 400},
+        "small" => {525, 700},
+        "medium" => {825, 1100},
+        "large" => {1275, 1700},
+        "xlarge" => {1575, 2100}
+      }
+
+      small = %{
+        "micro" => {25, 17},
+        "thumb" => {400, 400},
+        "small" => {700, 467},
+        "medium" => {1100, 733},
+        "large" => {1700, 1133},
+        "xlarge" => {2100, 1400}
+      }
+
+      assert Adoption.check(unrecorded("vix-portrait", original: {900, 1200}, sizes: portrait), config()) == :match
+      assert Adoption.check(unrecorded("vix-small", original: {300, 200}, sizes: small), config()) == :match
+    end
+
     test "an original rotated by its EXIF orientation matches" do
       # Stored as 800×600, the dimensions before rotation, and processed
       # upright, as 600×800.
       rotated = Map.new(@sizes, fn {key, {width, height}} -> {key, {height, width}} end)
       image = unrecorded("rotated", sizes: rotated)
       assert Adoption.check(image, config()) == :match
+    end
+
+    test "an original stored on its side matches by either orientation's size" do
+      # Stored as 1200×900 and upright as 900×1200. Processing now picks the
+      # portrait size, 400 tall; the older processors picked the landscape
+      # one, 700 wide, and made it upright.
+      config = %{config() | sizes: %{"medium" => %{"portrait" => %{"size" => "x400"}, "landscape" => %{"size" => "700"}}}}
+
+      for {name, dimensions} <- [{"now", {300, 400}}, {"before", {700, 933}}] do
+        image = unrecorded("sideways-#{name}", original: {1200, 900}, sizes: %{"medium" => dimensions})
+        assert Adoption.check(image, config) == :match, name
+      end
+
+      image = unrecorded("sideways-other", original: {1200, 900}, sizes: %{"medium" => {400, 300}})
+      assert Adoption.check(image, config) == {:differ, {:dimensions, "medium"}}
     end
 
     test "records only: formats and size keys, without reading files" do

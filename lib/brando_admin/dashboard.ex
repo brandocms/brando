@@ -6,6 +6,7 @@ defmodule BrandoAdmin.Dashboard do
   alias Brando.Blueprint.Identifier.Generator
   alias Brando.Content.Identifier
   alias Brando.Images.{ConfigResolver, Image, Size}
+  alias Brando.Images.Operations.Sizing
   alias Brando.Repo
   alias Brando.Utils
 
@@ -90,7 +91,7 @@ defmodule BrandoAdmin.Dashboard do
           Map.has_key?(image.sizes, key),
           Map.get(size_config, "quality", 100) >= 30,
           {:ok, dimensions} <- [Size.dimensions(geometry)],
-          width = rendered_width(image, dimensions, size_config["crop"]) do
+          width = rendered_width(image, dimensions, size_config) do
         {width, Utils.img_url(image, key, prefix: Utils.media_url())}
       end
       |> Enum.sort()
@@ -106,24 +107,13 @@ defmodule BrandoAdmin.Dashboard do
     end
   end
 
-  # The width a size is actually saved at, which `srcset` needs: a size fits
-  # the image inside its box unless it crops, and never enlarges it.
-  defp rendered_width(%{width: original, height: height}, box, crop)
-       when is_integer(original) and is_integer(height) and height > 0 do
-    box
-    |> fitted_width(original / height, crop in [true, "true"])
-    |> Kernel.||(original)
-    |> min(original)
-    |> round()
+  # The width a size is actually saved at, which `srcset` needs.
+  defp rendered_width(%{width: width, height: height}, _box, size_config)
+       when is_integer(width) and is_integer(height) and width > 0 and height > 0 do
+    size_config |> Sizing.processed_dimensions({width, height}) |> elem(0)
   end
 
-  defp rendered_width(_image, {box_width, _box_height}, _crop), do: box_width
-
-  defp fitted_width({box_width, _box_height}, _ratio, true), do: box_width
-  defp fitted_width({nil, nil}, _ratio, _crop), do: nil
-  defp fitted_width({nil, box_height}, ratio, _crop), do: box_height * ratio
-  defp fitted_width({box_width, nil}, _ratio, _crop), do: box_width
-  defp fitted_width({box_width, box_height}, ratio, _crop), do: min(box_width, box_height * ratio)
+  defp rendered_width(_image, {box_width, _box_height}, _size_config), do: box_width
 
   # Who last edited each entry (its creator until someone edits it), loaded
   # in one query for the whole list.

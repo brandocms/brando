@@ -6,6 +6,7 @@ defmodule Brando.Images.Operations.Sizing do
 
   alias Brando.Images
   alias Brando.Images.Focal
+  alias Brando.Images.Size
   alias BrandoAdmin.Progress
 
   @supported_formats [:jpg, :png, :gif, :webp, :avif]
@@ -58,7 +59,7 @@ defmodule Brando.Images.Operations.Sizing do
 
     File.mkdir_p!(image_dest_dir)
 
-    {width, height} = ensure_dims(width, height, image_src_path)
+    {width, height} = width |> ensure_dims(height, image_src_path) |> upright(image_src_path)
 
     conversion_parameters = %Images.ConversionParameters{
       image_id: image_id,
@@ -115,6 +116,17 @@ defmodule Brando.Images.Operations.Sizing do
   end
 
   defp ensure_dims(w, h, _), do: {w, h}
+
+  # The processor turns the image upright by its EXIF orientation before
+  # resizing, and the focal point is set on the upright image, so crops and
+  # the orientation pick are worked out on its upright dimensions. Images
+  # uploaded before Brando recorded those have the stored file's.
+  defp upright(dimensions, img_path) do
+    case Image.open(img_path) do
+      {:ok, img} -> if Images.Utils.rotated?(img), do: Images.Utils.upright_dimensions(img), else: dimensions
+      {:error, _reason} -> dimensions
+    end
+  end
 
   @doc """
   Check if `image_src_path` exists
@@ -174,10 +186,14 @@ defmodule Brando.Images.Operations.Sizing do
   end
 
   @doc """
-  Add extracted crop dimensions to conversion parameters
+  Add the crop's dimensions to conversion parameters: the size's own, or the
+  largest part of a smaller original with their proportions (see
+  `fit_crop/2`).
   """
-  def add_crop_dimensions(%{crop: true, size_cfg: size_cfg} = conversion_parameters) do
-    {crop_width, crop_height} = get_crop_dimensions_from_cfg(size_cfg)
+  def add_crop_dimensions(
+        %{crop: true, size_cfg: size_cfg, original_width: width, original_height: height} = conversion_parameters
+      ) do
+    {crop_width, crop_height} = size_cfg |> get_crop_dimensions_from_cfg() |> fit_crop({width, height})
 
     conversion_parameters
     |> Map.put(:crop_width, crop_width)
@@ -244,27 +260,9 @@ defmodule Brando.Images.Operations.Sizing do
     |> Map.put(:crop_values, crop_values)
   end
 
-  def add_values(%{crop: false, size_cfg: %{"size" => resize_geography}} = conversion_parameters) do
-    resize_values =
-      resize_geography
-      |> String.replace(~r/\^|\!|\>|\<|\%/, "")
-      |> String.split("x")
-      |> case do
-        ["", target_height] ->
-          %{height: String.to_integer(target_height)}
-
-        [target_width, ""] ->
-          %{width: String.to_integer(target_width)}
-
-        [target_width, target_height] ->
-          %{
-            width: String.to_integer(target_width),
-            height: String.to_integer(target_height)
-          }
-
-        [target_width] ->
-          %{width: String.to_integer(target_width)}
-      end
+  def add_values(%{crop: false, size_cfg: %{"size" => geometry}} = conversion_parameters) do
+    {:ok, {width, height}} = Size.dimensions(geometry)
+    resize_values = Map.reject(%{width: width, height: height}, fn {_key, value} -> is_nil(value) end)
 
     Map.put(conversion_parameters, :resize_values, resize_values)
   end
@@ -369,25 +367,47 @@ defmodule Brando.Images.Operations.Sizing do
   missing dimension.
   """
   def get_crop_dimensions_from_cfg(cfg) do
-    cleaned_size_string = String.replace(cfg["size"], ~r/\^|\!|\>|\<|\%/, "")
-
-    case String.split(cleaned_size_string, "x") do
-      [target_width] ->
-        ratio = parse_ratio_string(cfg["ratio"])
-        {String.to_integer(target_width), round(String.to_integer(target_width) / ratio)}
-
-      ["", target_height] ->
-        ratio = parse_ratio_string(cfg["ratio"])
-        {round(String.to_integer(target_height) * ratio), String.to_integer(target_height)}
-
-      [target_width, ""] ->
-        ratio = parse_ratio_string(cfg["ratio"])
-        {String.to_integer(target_width), round(String.to_integer(target_width) / ratio)}
-
-      [target_width, target_height] ->
-        {String.to_integer(target_width), String.to_integer(target_height)}
+    case Size.dimensions(cfg["size"]) do
+      {:ok, {width, nil}} -> {width, round(width / parse_ratio_string(cfg["ratio"]))}
+      {:ok, {nil, height}} -> {round(height * parse_ratio_string(cfg["ratio"])), height}
+      {:ok, {width, height}} -> {width, height}
     end
   end
+
+  @doc """
+  The crop `{crop_width, crop_height}` makes of an original of `{width,
+  height}`. Processing never enlarges: when the crop doesn't fit inside the
+  original, it is the largest crop with the same proportions that does.
+  """
+  def fit_crop({crop_width, crop_height}, {width, height}) do
+    case max(crop_width / width, crop_height / height) do
+      scale when scale > 1 -> {min(width, round(crop_width / scale)), min(height, round(crop_height / scale))}
+      _scale -> {crop_width, crop_height}
+    end
+  end
+
+  @doc """
+  The `{width, height}` processing makes `size_cfg` for an upright original
+  of `{width, height}`, give or take a pixel of rounding.
+
+  A cropped size is its crop (`fit_crop/2`). Any other size is scaled to its
+  width, its height, or to fit inside both, and never enlarged.
+  """
+  def processed_dimensions(size_cfg, {width, height} = original) do
+    size_cfg = get_size_cfg_orientation(size_cfg, width, height)
+
+    if size_cfg["crop"] == true do
+      size_cfg |> get_crop_dimensions_from_cfg() |> fit_crop(original)
+    else
+      {:ok, box} = Size.dimensions(size_cfg["size"])
+      scale = box |> scale_to(original) |> min(1)
+      {round(width * scale), round(height * scale)}
+    end
+  end
+
+  defp scale_to({box_width, nil}, {width, _height}), do: box_width / width
+  defp scale_to({nil, box_height}, {_width, height}), do: box_height / height
+  defp scale_to({box_width, box_height}, {width, height}), do: min(box_width / width, box_height / height)
 
   def parse_ratio_string(ratio_string) do
     [r1, r2] = String.split(ratio_string, "/")

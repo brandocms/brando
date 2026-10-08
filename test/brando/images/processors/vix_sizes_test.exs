@@ -9,33 +9,66 @@ defmodule Brando.Images.Processor.VixSizesTest do
   alias Brando.Images.Operations.Sizing
   alias Brando.Images.Size
 
-  @originals %{landscape: {1200, 800}, portrait: {800, 1200}, small: {300, 200}}
+  @originals %{
+    landscape: {1200, 800},
+    portrait: {800, 1200},
+    square: {1000, 1000},
+    phone: {3000, 4000},
+    small: {300, 200},
+    small_portrait: {200, 300}
+  }
 
   # {size config, %{original => {width, height}}}
   @forms [
-    # Fitted inside the geometry, enlarging a smaller original. A width alone
-    # is fitted inside a square of that width.
-    {%{"size" => "700"}, %{landscape: {700, 467}, portrait: {467, 700}, small: {700, 467}}},
-    {%{"size" => "700x"}, %{landscape: {700, 467}, portrait: {467, 700}, small: {700, 467}}},
-    {%{"size" => "x400"}, %{landscape: {600, 400}, portrait: {267, 400}, small: {600, 400}}},
-    {%{"size" => "700x400"}, %{landscape: {600, 400}, portrait: {267, 400}, small: {600, 400}}},
-    # Flags are read past: ">" doesn't stop enlarging, "%" is pixels.
-    {%{"size" => "400x400>"}, %{landscape: {400, 267}, portrait: {267, 400}, small: {400, 267}}},
-    {%{"size" => "x400^"}, %{landscape: {600, 400}, portrait: {267, 400}, small: {600, 400}}},
-    {%{"size" => "50%"}, %{landscape: {50, 33}, portrait: {33, 50}, small: {50, 33}}},
-    {%{"size" => "700", "crop" => false}, %{landscape: {700, 467}, portrait: {467, 700}, small: {700, 467}}},
-    # Cropped to the geometry around the focal point.
-    {%{"size" => "400x400", "crop" => true}, %{landscape: {400, 400}, portrait: {400, 400}, small: {400, 400}}},
-    {%{"size" => "400x400>", "crop" => true}, %{landscape: {400, 400}, portrait: {400, 400}, small: {400, 400}}},
+    # A width alone is that width, whatever the orientation; a height alone
+    # that height; a box fits the image inside it. Nothing is enlarged.
+    {%{"size" => "700"},
+     %{
+       landscape: {700, 467},
+       portrait: {700, 1050},
+       square: {700, 700},
+       phone: {700, 933},
+       small: {300, 200},
+       small_portrait: {200, 300}
+     }},
+    {%{"size" => "700x"},
+     %{landscape: {700, 467}, portrait: {700, 1050}, square: {700, 700}, small: {300, 200}, small_portrait: {200, 300}}},
+    {%{"size" => "250"}, %{landscape: {250, 167}, portrait: {250, 375}, small: {250, 167}, small_portrait: {200, 300}}},
+    {%{"size" => "x400"},
+     %{
+       landscape: {600, 400},
+       portrait: {267, 400},
+       square: {400, 400},
+       phone: {300, 400},
+       small: {300, 200},
+       small_portrait: {200, 300}
+     }},
+    {%{"size" => "x250"}, %{landscape: {375, 250}, portrait: {167, 250}, small: {300, 200}, small_portrait: {167, 250}}},
+    {%{"size" => "700x400"},
+     %{landscape: {600, 400}, portrait: {267, 400}, square: {400, 400}, small: {300, 200}, small_portrait: {200, 300}}},
+    {%{"size" => "700", "crop" => false},
+     %{landscape: {700, 467}, portrait: {700, 1050}, square: {700, 700}, small: {300, 200}, small_portrait: {200, 300}}},
+    # ">" (only shrink) is what every size does.
+    {%{"size" => "400x400>"},
+     %{landscape: {400, 267}, portrait: {267, 400}, square: {400, 400}, small: {300, 200}, small_portrait: {200, 300}}},
+    {%{"size" => "1400>"}, %{landscape: {1200, 800}, portrait: {800, 1200}, phone: {1400, 1867}}},
+    # Cropped to the geometry around the focal point; a smaller original
+    # gives the largest crop of the geometry's proportions it holds.
+    {%{"size" => "400x400", "crop" => true},
+     %{landscape: {400, 400}, portrait: {400, 400}, square: {400, 400}, small: {200, 200}, small_portrait: {200, 200}}},
+    {%{"size" => "400x400>", "crop" => true},
+     %{landscape: {400, 400}, portrait: {400, 400}, square: {400, 400}, small: {200, 200}, small_portrait: {200, 200}}},
+    {%{"size" => "1100x1000", "crop" => true},
+     %{landscape: {880, 800}, portrait: {800, 727}, square: {1000, 909}, phone: {1100, 1000}}},
     {%{"size" => "600", "crop" => true, "ratio" => "3/2"},
-     %{landscape: {600, 400}, portrait: {600, 400}, small: {600, 400}}},
+     %{landscape: {600, 400}, portrait: {600, 400}, square: {600, 400}, small: {300, 200}, small_portrait: {200, 133}}},
     {%{"size" => "600x", "crop" => true, "ratio" => "16/9"},
-     %{landscape: {600, 338}, portrait: {600, 338}, small: {600, 338}}},
+     %{landscape: {600, 338}, portrait: {600, 338}, square: {600, 338}, small: {300, 169}, small_portrait: {200, 113}}},
     {%{"size" => "x300", "crop" => true, "ratio" => "3/2"},
-     %{landscape: {450, 300}, portrait: {450, 300}, small: {450, 300}}},
-    # By orientation.
+     %{landscape: {450, 300}, portrait: {450, 300}, square: {450, 300}, small: {300, 200}, small_portrait: {200, 133}}},
+    # By orientation: a square counts as a landscape.
     {%{"portrait" => %{"size" => "x400"}, "landscape" => %{"size" => "700"}},
-     %{landscape: {700, 467}, portrait: {267, 400}, small: {700, 467}}}
+     %{landscape: {700, 467}, portrait: {267, 400}, square: {700, 700}, small: {300, 200}, small_portrait: {200, 300}}}
   ]
 
   setup do
@@ -65,7 +98,7 @@ defmodule Brando.Images.Processor.VixSizesTest do
     assert Enum.reject(results, fn {_original, _cfg, actual, expected} -> actual == expected end) == []
   end
 
-  test "a crop covers its size whatever the original's proportions", %{dir: dir} do
+  test "a crop is its size, or the largest of its proportions a smaller original holds", %{dir: dir} do
     for {{width, height}, index} <-
           Enum.with_index([{273, 843}, {2217, 147}, {2460, 360}, {1508, 128}, {541, 2089}, {2177, 1307}, {739, 649}]),
         size_cfg <- [
@@ -78,8 +111,54 @@ defmodule Brando.Images.Processor.VixSizesTest do
       file = Brando.Images.Utils.media_path("#{dir}/#{name}.jpg")
       if !File.exists?(file), do: width |> Image.new!(height, color: [1, 2, 3]) |> Image.write!(file)
 
-      assert process(dir, name, size_cfg, System.unique_integer([:positive]), {width, height}, %{x: 80, y: 20}) ==
-               Sizing.get_crop_dimensions_from_cfg(size_cfg)
+      {crop_width, crop_height} = Sizing.get_crop_dimensions_from_cfg(size_cfg)
+
+      {actual_width, actual_height} =
+        process(dir, name, size_cfg, System.unique_integer([:positive]), {width, height}, %{x: 80, y: 20})
+
+      if crop_width <= width and crop_height <= height do
+        assert {actual_width, actual_height} == {crop_width, crop_height}
+      else
+        # Not enlarged: inside the original, touching it on one side, at the
+        # crop's proportions give or take the rounding of the other side.
+        assert actual_width <= width and actual_height <= height
+        assert actual_width == width or actual_height == height
+        assert_in_delta actual_width / actual_height, crop_width / crop_height, 1 / min(actual_width, actual_height)
+      end
+    end
+  end
+
+  test "an original stored on its side is sized and cropped upright", %{dir: dir} do
+    # Stored as 1200×900 with EXIF orientation 6, recorded so on upload, and
+    # shown upright as 900×1200 with a red band along the top.
+    band = Image.new!(900, 300, color: [255, 0, 0])
+    {:ok, upright} = Vix.Vips.Operation.join(band, Image.new!(900, 900, color: [0, 0, 255]), :VIPS_DIRECTION_VERTICAL)
+    {:ok, stored} = Vix.Vips.Operation.rot(upright, :VIPS_ANGLE_D270)
+    {:ok, stored} = Vix.Vips.Image.mutate(stored, &Vix.Vips.MutableImage.set(&1, "orientation", :gint, 6))
+    Image.write!(stored, Brando.Images.Utils.media_path("#{dir}/sideways.jpg"))
+
+    for {{size_cfg, expected}, index} <-
+          Enum.with_index([
+            {%{"size" => "700"}, {700, 933}},
+            {%{"size" => "800x800", "crop" => true}, {800, 800}},
+            {%{"size" => "1000x1000", "crop" => true}, {900, 900}},
+            {%{"size" => "x1000", "crop" => true, "ratio" => "3/4"}, {750, 1000}},
+            {%{"portrait" => %{"size" => "x400"}, "landscape" => %{"size" => "700"}}, {300, 400}}
+          ]) do
+      assert process(dir, "sideways", size_cfg, "sideways-#{index}", {1200, 900}) == expected, inspect(size_cfg)
+    end
+
+    # The focal point is on the upright image: at its top, the crop is the band.
+    for {focal_y, color} <- [{0, :red}, {100, :blue}] do
+      process(dir, "sideways", %{"size" => "900x300", "crop" => true}, "band-#{focal_y}", {1200, 900}, %{
+        x: 50,
+        y: focal_y
+      })
+
+      [r, _g, b] =
+        Image.get_pixel!(Image.open!(Brando.Images.Utils.media_path("#{dir}/out-band-#{focal_y}/sideways.jpg")), 450, 150)
+
+      assert if(color == :red, do: r > 200 and b < 50, else: b > 200 and r < 50)
     end
   end
 

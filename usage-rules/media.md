@@ -43,6 +43,26 @@ such as `"crp"`, an unreadable geometry, or a `srcset` naming a size that isn't
 in `sizes` fails the build with the field and the size it is about. Configs
 from a function or `config_target` are checked when they are first read.
 
+`"700"` makes an image 700 pixels wide and `"x400"` 400 tall, the other side
+following its proportions, for portraits and landscapes alike; `"700x400"`
+fits it inside the box. No size is made larger than the original: from an
+original 600 pixels wide, `"1400"` gives a 600-pixel file. A cropped size is
+cut to exactly its geometry around the focal point, or, from an original
+smaller than the geometry, to the largest part of it with the geometry's
+proportions. A trailing `>` ("only shrink") is accepted and changes nothing.
+The other ImageMagick flags fail the config with what to write instead:
+`"crop" => true` for `^`, `"crop" => true` with a `"ratio"` for `!`, a width
+in pixels for `%`, and nothing for `<`, since sizes only shrink. See
+`Brando.Images.Size`.
+
+A `srcset` names each size's width, as in `{"large", "1400w"}`. When the
+image's width and height are known, a rendered `srcset` gives each size the
+width its file really has, and lists sizes that end up equally wide once,
+under the one declared smallest: a 600-pixel original with sizes of 400, 700,
+1100 and 1400 renders `400w` and a single `600w`. Images are recorded upright
+(turned by their EXIF orientation), as they are shown; ones uploaded before
+0.55 get upright dimensions when they are next processed.
+
 ### Render responsive images
 
 Preload the asset in the controller's query or through the repo:

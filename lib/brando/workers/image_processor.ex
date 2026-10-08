@@ -50,12 +50,16 @@ defmodule Brando.Worker.ImageProcessor do
   def timeout(_job), do: :timer.seconds(400)
 
   defp finish_processing(image, result, config, user, field_full_path) do
-    image_params = %{
-      formats: result.formats,
-      sizes: result.sizes,
-      status: :processed,
-      config_fingerprint: ImageConfig.fingerprint(config)
-    }
+    image_params =
+      Map.merge(
+        %{
+          formats: result.formats,
+          sizes: result.sizes,
+          status: :processed,
+          config_fingerprint: ImageConfig.fingerprint(config)
+        },
+        upright_dimensions(image)
+      )
 
     with {:ok, image} <- Images.update_image(image, image_params, user) do
       CompletedCallback.run(config, image, user)
@@ -63,6 +67,22 @@ defmodule Brando.Worker.ImageProcessor do
       broadcast_status(image, field_full_path, :updated)
     end
   end
+
+  # Images uploaded before Brando recorded upright dimensions have those of
+  # the file as stored. A photo stored on its side gets them turned, so that
+  # rendering (width and height, srcset widths) matches what is shown.
+  defp upright_dimensions(%{path: path, width: width, height: height}) when is_binary(path) do
+    with {:ok, img} <- Image.open(Images.Utils.media_path(path)),
+         true <- Images.Utils.rotated?(img),
+         {upright_width, upright_height} when {upright_width, upright_height} != {width, height} <-
+           Images.Utils.upright_dimensions(img) do
+      %{width: upright_width, height: upright_height}
+    else
+      _ -> %{}
+    end
+  end
+
+  defp upright_dimensions(_image), do: %{}
 
   defp handle_processing_error(job, image_id, field_full_path, error) do
     # Earlier attempts may still succeed; only a terminal broadcast should

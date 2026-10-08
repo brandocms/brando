@@ -69,6 +69,26 @@ such as `"crp"`, an unreadable geometry, or a `srcset` naming a size that isn't
 in `sizes` fails the build with the field and the size it is about. Configs
 from a function or `config_target` are checked when they are first read.
 
+`"700"` makes an image 700 pixels wide and `"x400"` 400 tall, the other side
+following its proportions, for portraits and landscapes alike; `"700x400"`
+fits it inside the box. No size is made larger than the original: from an
+original 600 pixels wide, `"1400"` gives a 600-pixel file. A cropped size is
+cut to exactly its geometry around the focal point, or, from an original
+smaller than the geometry, to the largest part of it with the geometry's
+proportions. A trailing `>` ("only shrink") is accepted and changes nothing.
+The other ImageMagick flags fail the config with what to write instead:
+`"crop" => true` for `^`, `"crop" => true` with a `"ratio"` for `!`, a width
+in pixels for `%`, and nothing for `<`, since sizes only shrink. See
+`Brando.Images.Size`.
+
+A `srcset` names each size's width, as in `{"large", "1400w"}`. When the
+image's width and height are known, a rendered `srcset` gives each size the
+width its file really has, and lists sizes that end up equally wide once,
+under the one declared smallest: a 600-pixel original with sizes of 400, 700,
+1100 and 1400 renders `400w` and a single `600w`. Images are recorded upright
+(turned by their EXIF orientation), as they are shown; ones uploaded before
+0.55 get upright dimensions when they are next processed.
+
 <!-- usage-rules:end -->
 
 `sizes` replaces the default list rather than merging with it. To start from
@@ -110,10 +130,12 @@ mix brando.images.adopt --verbose   # and say why the others differ
 An image matches when its formats are the ones its config produces, its
 sizes have exactly the config's size keys, every size exists in every format
 in the media folder, and each size's pixel dimensions are what its geometry
-gives for the original (scaled to fit, or cropped), within a pixel. Files from
-the older sharp-based processor, which fit sizes to their width and never
-enlarged, match too. Quality and other encoder settings are not in a file's
-header and are not compared, nor is a crop's focal point: if a config changed
+gives for the original (scaled, or cropped), within a pixel. Files from the
+older processors match too: the sharp-based one of 0.54 and earlier, and the
+first libvips one, which 0.55 used before its release and which fitted a
+width alone into a square and enlarged smaller originals. Quality and other
+encoder settings are not in a file's header and are not compared, nor is a
+crop's focal point: if a config changed
 only those, use **Recreate image sizes**. Images on the CDN without a local
 copy (`keep_local_copy: false`) can't be checked and are left as they are.
 

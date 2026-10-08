@@ -13,14 +13,36 @@ defmodule Brando.Images.Size do
 
   ## Fields
 
-    * `size` - the geometry: `"700"` (a width), `"x400"` (a height) or
-      `"400x400"`, optionally with an ImageMagick flag such as `>`. Required.
-      The image is fitted inside the geometry, keeping its proportions, and a
-      smaller original is enlarged; a width alone is fitted inside a square of
-      that width. Processing reads past the flags: `"400x400>"` is processed
-      like `"400x400"`, and `"50%"` is 50 pixels, not half.
+    * `size` - the geometry. Required.
+      * `"700"` or `"700x"` is a width: the image is made 700 pixels wide and
+        its height follows its proportions, whether it is a portrait or a
+        landscape.
+      * `"x400"` is a height: 400 pixels tall, the width following.
+      * `"700x400"` is a box: the image is fitted inside it, keeping its
+        proportions, so one side meets the box and the other may fall short.
+
+      A size is never made larger than the original. An original narrower
+      than `"1400"` keeps its own size, so that size's file is as wide as the
+      original, not 1400 pixels.
+
+      A geometry may end in ImageMagick's `>` ("only shrink larger images"),
+      as in `"400x400>"`. That is what processing does for every size, so `>`
+      changes nothing. The other ImageMagick flags fail the config, with what
+      to use instead:
+      * `^` (fill the box): `"crop" => true`;
+      * `!` (exact dimensions): `"crop" => true`, with a `"ratio"` when the
+        size gives one dimension;
+      * `%` (a share of the original): a width in pixels, since a `srcset`
+        needs fixed widths;
+      * `<` (only enlarge): nothing, since sizes only shrink.
+
+      So does any other character after the numbers.
     * `quality` - an integer from 1 to 100. Processing uses 100 without one.
-    * `crop` - crop to the geometry around the image's focal point.
+    * `crop` - cut the image to exactly the geometry's width and height,
+      around its focal point. When the original is smaller than the geometry
+      the size isn't enlarged either: it is the largest part of the original
+      with the geometry's proportions, so a 300×200 original cropped to
+      `"400x400"` gives 200×200.
     * `ratio` - an aspect ratio such as `"3/2"`. A cropped size that gives only
       a width or a height needs one to know the other.
 
@@ -56,8 +78,17 @@ defmodule Brando.Images.Size do
 
   @fields ~w(size quality crop ratio)
   @orientations ~w(portrait landscape)
-  # ImageMagick geometry flags. Processing strips them before reading the numbers.
+  # ImageMagick geometry flags, read past when the numbers are read, so a
+  # config from before they were checked still processes as it did.
   @geometry_flags ["^", "!", ">", "<", "%"]
+  # `>` (only shrink) is what processing does for every size, so a config may
+  # keep it. These fail the config, with what to write instead.
+  @unsupported_flags [
+    {"^", ~s(to fill the geometry, use "crop" => true)},
+    {"!", ~s(for exact dimensions, use "crop" => true, with a "ratio" when the size gives one dimension)},
+    {"%", ~s(give a width in pixels, such as "700", since a srcset needs fixed widths)},
+    {"<", "sizes only shrink, so remove it"}
+  ]
 
   @presets %{
     standard: %{
@@ -123,6 +154,9 @@ defmodule Brando.Images.Size do
 
   @doc """
   Parses a size's geometry into `{width, height}`, either of which may be nil.
+
+  Reads past ImageMagick flags, which a config is checked for when it is
+  normalized, so processing and rendering read any stored geometry.
   """
   @spec dimensions(String.t()) :: {:ok, {pos_integer() | nil, pos_integer() | nil}} | :error
   def dimensions(geometry) when is_binary(geometry) do
@@ -216,12 +250,27 @@ defmodule Brando.Images.Size do
 
   defp geometry(nil), do: {:error, ~s(has no "size")}
 
-  defp geometry(geometry) do
-    case dimensions(geometry) do
-      {:ok, dimensions} -> {:ok, dimensions}
-      :error -> {:error, ~s(has an invalid "size" #{inspect(geometry)}, expected a geometry such as "700" or "400x400>")}
+  defp geometry(geometry) when is_binary(geometry) do
+    base = String.replace_suffix(geometry, ">", "")
+
+    case Enum.find(@unsupported_flags, fn {flag, _instead} -> String.contains?(geometry, flag) end) do
+      {flag, instead} ->
+        {:error,
+         ~s(has the "size" #{inspect(geometry)} with the ImageMagick flag "#{flag}", which isn't supported: #{instead})}
+
+      nil ->
+        with false <- String.contains?(base, ">"), {:ok, dimensions} <- dimensions(base) do
+          {:ok, dimensions}
+        else
+          _invalid -> invalid_geometry(geometry)
+        end
     end
   end
+
+  defp geometry(geometry), do: invalid_geometry(geometry)
+
+  defp invalid_geometry(geometry),
+    do: {:error, ~s(has an invalid "size" #{inspect(geometry)}, expected a geometry such as "700" or "400x400>")}
 
   defp quality(nil), do: {:ok, nil}
   defp quality(quality) when is_integer(quality) and quality in 1..100, do: {:ok, quality}
