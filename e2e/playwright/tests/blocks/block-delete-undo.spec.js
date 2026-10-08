@@ -49,7 +49,7 @@ test.describe('Block delete undo', () => {
     await page.getByRole('button', { name: 'Add block' }).last().click()
     await page.getByRole('button', { name: '05 LIVE PREVIEW TEST' }).click()
     await expect(page.locator('.module-picker-namespace.active')).toContainText('05 LIVE PREVIEW TEST')
-    await page.getByRole('button', { name: 'Styled Header' }).click()
+    await page.getByRole('button', { name: 'Styled Header', exact: true }).click()
     await syncLV(page)
 
     const headerText = page.locator('.header-block textarea')
@@ -86,7 +86,7 @@ test.describe('Block delete undo', () => {
 
     await page.getByRole('button', { name: 'Add block' }).last().click()
     await page.getByRole('button', { name: 'COPY PASTE TEST' }).click()
-    await page.getByRole('button', { name: 'Team Section' }).click()
+    await page.getByRole('button', { name: 'Team Section', exact: true }).click()
     await syncLV(page)
 
     const multiBlock = page.locator('[data-module-multi="true"]')
