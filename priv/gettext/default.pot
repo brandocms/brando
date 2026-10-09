@@ -2692,6 +2692,7 @@ msgid "Blockquote (optional)"
 msgstr ""
 
 #: lib/brando_admin/components/form/block_field.ex
+#: lib/brando_admin/components/form/entry_skeleton.ex
 #: lib/brando_admin/components/form/module_props.ex
 #: lib/brando_admin/live/ai/assistant_live.ex
 #: lib/brando_admin/live/content/stale_blocks_live.ex
@@ -2881,11 +2882,6 @@ msgstr ""
 #: lib/brando_admin/live/sites/markdown_sources_live.ex
 #, elixir-autogen, elixir-format
 msgid "Building"
-msgstr ""
-
-#: lib/brando_admin/components/form.ex
-#, elixir-autogen, elixir-format
-msgid "Building block editor"
 msgstr ""
 
 #: lib/brando_admin/menu.ex
@@ -6985,11 +6981,6 @@ msgstr ""
 msgid "Fetches for a user"
 msgstr ""
 
-#: lib/brando_admin/components/form.ex
-#, elixir-autogen, elixir-format
-msgid "Fetching content"
-msgstr ""
-
 #: lib/brando_admin/components/content/list.ex
 #, elixir-autogen, elixir-format
 msgid "Fetching entry..."
@@ -7869,6 +7860,7 @@ msgid "High"
 msgstr ""
 
 #: lib/brando_admin/components/form.ex
+#: lib/brando_admin/components/form/entry_skeleton.ex
 #: lib/brando_admin/live/ai/guidance_live.ex
 #: lib/brando_admin/live/sites/environment_live.ex
 #: lib/brando_admin/live/sites/markdown_sources_live.ex
@@ -9048,7 +9040,7 @@ msgstr ""
 msgid "Load revision %{revision} into the editor? Unsaved editor changes will be replaced."
 msgstr ""
 
-#: lib/brando_admin/components/form.ex
+#: lib/brando_admin/components/form/entry_skeleton.ex
 #, elixir-autogen, elixir-format
 msgid "Loading %{count} block"
 msgid_plural "Loading %{count} blocks"
@@ -9732,6 +9724,7 @@ msgid "Moonwalk"
 msgstr ""
 
 #: lib/brando_admin/components/form.ex
+#: lib/brando_admin/components/form/entry_skeleton.ex
 #, elixir-autogen, elixir-format
 msgid "More"
 msgstr ""
@@ -11026,6 +11019,7 @@ msgid "Note on this block"
 msgstr ""
 
 #: lib/brando_admin/components/form.ex
+#: lib/brando_admin/components/form/entry_skeleton.ex
 #: lib/brando_admin/components/form/notes_drawer.ex
 #, elixir-autogen, elixir-format
 msgid "Notes"
@@ -11614,14 +11608,16 @@ msgstr ""
 msgid "Open your authenticator app and enter the 6-digit code it shows for %{email}."
 msgstr ""
 
+#: lib/brando/blueprint/listings/components/core.ex
+#: lib/brando_admin/components/form.ex
+#: lib/brando_admin/components/form/entry_skeleton.ex
+#, elixir-autogen, elixir-format
+msgid "Opening"
+msgstr ""
+
 #: lib/brando/frontend_edit/text.ex
 #, elixir-autogen, elixir-format
 msgid "Opening editor…"
-msgstr ""
-
-#: lib/brando_admin/components/form.ex
-#, elixir-autogen, elixir-format
-msgid "Opening entry"
 msgstr ""
 
 #: lib/brando_admin/components/form/input/identity_type_config.ex
@@ -12300,6 +12296,7 @@ msgid "Presence details"
 msgstr ""
 
 #: lib/brando_admin/components/form.ex
+#: lib/brando_admin/components/form/entry_skeleton.ex
 #: lib/brando_admin/components/video_picker.ex
 #: lib/brando_admin/live/sites/publishing_live.ex
 #, elixir-autogen, elixir-format
@@ -14107,6 +14104,7 @@ msgid "Save access"
 msgstr ""
 
 #: lib/brando_admin/components/form.ex
+#: lib/brando_admin/components/form/entry_skeleton.ex
 #: lib/brando_admin/components/shortcut_sheet.ex
 #, elixir-autogen, elixir-format
 msgid "Save and close"
@@ -14159,6 +14157,7 @@ msgid "Save minor text corrections"
 msgstr ""
 
 #: lib/brando_admin/components/form.ex
+#: lib/brando_admin/components/form/entry_skeleton.ex
 #, elixir-autogen, elixir-format
 msgid "Save options"
 msgstr ""
@@ -14371,6 +14370,7 @@ msgstr ""
 #: lib/brando_admin/components/activity.ex
 #: lib/brando_admin/components/dashboard.ex
 #: lib/brando_admin/components/form.ex
+#: lib/brando_admin/components/form/entry_skeleton.ex
 #: lib/brando_admin/components/form/scheduled_publishing_drawer.ex
 #: lib/brando_admin/menu.ex
 #, elixir-autogen, elixir-format

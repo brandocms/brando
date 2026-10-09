@@ -369,9 +369,8 @@ defmodule BrandoAdmin.FormRecoveryTest do
     test "the block field hook element carries its entry id", %{conn: conn, page: page} do
       {view, _html} = live_form(conn, "/admin/pages/update/#{page.id}")
 
-      # The block editor is deferred a further tick past the entry load
-      # (`send_update_after(…, :render_blocks, 50)`), so the form being rendered
-      # is not yet the blocks being rendered.
+      # A heavy entry's block editor follows its fields (`Form.open_entry/1`),
+      # so the form being rendered is not always the blocks being rendered.
       html = await_selector(view, ~s([phx-hook="Brando.BlockField"]))
 
       entry_ids =

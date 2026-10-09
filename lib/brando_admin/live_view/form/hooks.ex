@@ -34,7 +34,7 @@ defmodule BrandoAdmin.LiveView.Form.Hooks do
        socket
        |> assign(:socket_connected, false)
        |> assign(:page_title, Brando.Blueprint.get_singular(schema))
-       |> assign(:entry_skeleton, BrandoAdmin.Components.Form.EntrySkeleton.describe(schema))}
+       |> assign(:entry_skeleton, entry_skeleton(schema))}
     end
   end
 
@@ -1525,6 +1525,14 @@ defmodule BrandoAdmin.LiveView.Form.Hooks do
 
   defp assign_entry_id(socket, entry_id) do
     assign(socket, :entry_id, entry_id)
+  end
+
+  # Only a picture of what is coming: a blueprint it can't describe gets the
+  # empty page the layout had before, not an error.
+  defp entry_skeleton(schema) do
+    BrandoAdmin.Components.Form.EntrySkeleton.describe(schema)
+  rescue
+    _ -> nil
   end
 
   defp set_admin_locale(%{assigns: %{current_user: current_user}} = socket) do

@@ -73,8 +73,9 @@ defmodule Brando.Test do
   Mount the admin form for an entry (its update form) or a schema (its
   create form), wait until it has rendered, and return `{view, html}`.
 
-  The form arrives in steps — the entry loads asynchronously and the block
-  editor renders after it — so a bare `live/2` returns a loading shell.
+  An entry with many blocks arrives in steps — its fields first, then its
+  blocks, loaded asynchronously — so a bare `live/2` can return the form
+  with its blocks still loading.
 
   Options: `path:` and `form_id:` for a named form. A macro, as
   `Phoenix.LiveViewTest.live/2` is: like `live/2`, it needs the test's

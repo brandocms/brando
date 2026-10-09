@@ -43,9 +43,8 @@ test.describe('Multi-user block sync', () => {
     await page.getByRole('button', { name: /Save and continue editing/ }).click()
     await expect(page).toHaveURL(/\/update\//, { timeout: 30000 })
     await syncLV(page)
-    // The block editor is deferred a tick past the entry load, so `syncLV` alone
-    // returns while the blocks are still a loader shell. Wait for the blocks
-    // themselves rather than for 750ms.
+    // The redirect remounts the form, so `syncLV` alone can return before the
+    // block editor is back. Wait for the blocks themselves rather than for 750ms.
     await expect(page.locator('.header-block textarea').nth(1)).toHaveValue('Beta', {
       timeout: 15000,
     })

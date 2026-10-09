@@ -1448,12 +1448,23 @@ defmodule BrandoAdmin.Components.Form do
   # A blueprint with its own form query loads in one piece, so a heavy one
   # shows the full skeleton (`EntrySkeleton.form/1`) until it has.
   #
-  # The limit is where the complete form stops arriving in about the time the
-  # outline would: measured from the Pages listing on the E2E bench entries
-  # (`e2e/bench`), a 5-block entry opens complete in ~100 ms and a 40-block one
-  # in ~400 ms, at 4x CPU throttling ~300 and ~1 000 ms, about 17 ms a block.
-  # Twenty blocks keep a light entry under ~0.7 s on a slow machine; past
-  # that the fields are worth showing first.
+  # The limit, measured from the Pages listing on the flat bench entries
+  # (`e2e/priv/repo/e2e_seeds_large.exs`, with 10, 20 and 30 built the same
+  # way), from the click:
+  #
+  #   blocks                      5     10     20     30     40
+  #   in one step                112    154    221    288    367 ms
+  #     at 4x CPU                390    472    757  1 030  1 338 ms
+  #   fields first: the fields    59     67     69     70     58 ms
+  #     at 4x CPU                211    210    215    208    236 ms
+  #   fields first: the blocks   114    140    178    239    280 ms
+  #     at 4x CPU                415    521    673    828  1 078 ms
+  #
+  # Up to 20 blocks the complete form arrives in about 0.2 s (0.75 s on a
+  # slow machine), and the fields-first frame would be on screen for only
+  # ~0.1 s before it: a flash of outlines rather than a step. Past that the
+  # wait on the listing grows by ~30 ms a block (4x CPU) while showing the
+  # fields first stays at ~0.2 s, and gets to the whole form sooner.
   @light_block_limit 20
 
   @doc false
@@ -1472,7 +1483,7 @@ defmodule BrandoAdmin.Components.Form do
   defp open_in_one_step(socket) do
     case fetch_entry(entry_source(socket), []) do
       {:ok, entry} -> entry_opened(socket, entry)
-      :not_found -> entry_not_found(socket)
+      :not_found -> not_found_on_open(socket)
     end
   end
 
@@ -1490,11 +1501,10 @@ defmodule BrandoAdmin.Components.Form do
         |> assign(:blocks_ready?, false)
         |> assign(:block_counts, counts)
         |> finish_form_fields()
-        |> announce_join()
         |> run_load(:blocks_load, fn -> Brando.Repo.preload(entry, Brando.Content.Blocks.preloads_for(schema)) end)
       end
     else
-      :not_found -> entry_not_found(socket)
+      :not_found -> not_found_on_open(socket)
     end
   end
 
@@ -1513,6 +1523,14 @@ defmodule BrandoAdmin.Components.Form do
       |> assign(:block_counts, counts)
       |> run_load(:entry_load, fn -> fetch_entry(source, []) end)
     end
+  end
+
+  # `update/2` can't navigate, so the answer goes round through
+  # `handle_async/3`, which can (`entry_not_found/1`).
+  defp not_found_on_open(socket) do
+    socket
+    |> assign(:entry_loading?, true)
+    |> start_async(:entry_load, fn -> :not_found end)
   end
 
   defp light_entry?(counts), do: counts |> Map.values() |> Enum.sum() <= @light_block_limit
@@ -1577,14 +1595,16 @@ defmodule BrandoAdmin.Components.Form do
      |> entry_opened(entry)}
   end
 
-  # A heavy entry's blocks, for the fields already on screen.
+  # A heavy entry's blocks, for the fields already on screen. The form joins
+  # the other editors now, as a light entry does once it has everything.
   def handle_async(:blocks_load, {:ok, entry}, socket) do
     {:noreply,
      socket
      |> assign(:entry, entry)
      |> put_loaded_blocks(entry)
      |> finish_form_blocks()
-     |> assign(:blocks_ready?, true)}
+     |> assign(:blocks_ready?, true)
+     |> announce_join()}
   end
 
   def handle_async({:tiptap_ai, id, request}, result, socket) do
