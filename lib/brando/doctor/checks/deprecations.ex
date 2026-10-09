@@ -41,6 +41,7 @@ defmodule Brando.Doctor.Checks.Deprecations do
     |> Enum.sort()
     |> Enum.flat_map(&scan_file(&1, deprecated()))
     |> Enum.map(fn finding -> %{finding | file: Path.relative_to(finding.file, root)} end)
+    |> Enum.sort_by(&{&1.file, &1.line})
     |> evaluate()
   end
 
@@ -72,21 +73,35 @@ defmodule Brando.Doctor.Checks.Deprecations do
         do: {{module, name, arity}, reason}
   end
 
-  @doc "Finds calls in `deprecated` (see `deprecated/0`) in the file at `path`."
+  @doc """
+  Finds calls in `deprecated` (see `deprecated/0`) in the file at `path`,
+  and in the templates its `embed_templates` calls compile in.
+  """
   def scan_file(path, deprecated) do
     case path |> File.read!() |> Code.string_to_quoted(file: path, columns: false) do
-      {:ok, ast} -> ast |> scan(deprecated) |> Enum.map(&Map.put(&1, :file, path))
-      {:error, _} -> []
+      {:ok, ast} ->
+        ast
+        |> scan(deprecated, templates: &read_templates(path, &1, &2))
+        |> Enum.map(&Map.update!(&1, :file, fn file -> file || path end))
+
+      {:error, _} ->
+        []
     end
   rescue
     # A file the scanner cannot follow is not worth failing the check over
     _ -> []
   end
 
-  @doc "Finds calls in `deprecated` in quoted code."
-  def scan(ast, deprecated) do
+  @doc """
+  Finds calls in `deprecated` in quoted code, and the renamed modules named
+  in its templates: a `~H` sigil, and, given `templates:` (a function of an
+  `embed_templates` call's pattern and options returning
+  `[{path, text}]`), the files it compiles in. A finding in a template file
+  has that file's path.
+  """
+  def scan(ast, deprecated, opts \\ []) do
     ast = RenamedModules.mark_scoped_routes(ast)
-    imports = collect_imports(ast, deprecated)
+    templates = Keyword.get(opts, :templates, fn _pattern, _options -> [] end)
 
     {_ast, found} =
       Macro.prewalk(ast, [], fn
@@ -102,6 +117,18 @@ defmodule Brando.Doctor.Checks.Deprecations do
 
         {verb, [{:scope_alias, scope} | _] = meta, [path, {:__aliases__, _, _} = plug | rest]}, acc ->
           {{verb, meta, [path | rest]}, scoped_route(scope, plug, acc)}
+
+        # Names in a template resolve through the aliases where it is written
+        {:embed_templates, [{:lexical_env, env} | _], [pattern | options]} = node, acc ->
+          found =
+            Enum.reduce(templates.(pattern, options), acc, fn {path, text}, acc ->
+              text |> LexicalAliases.names_in_text(env, 1) |> template_findings(path) |> Enum.concat(acc)
+            end)
+
+          {node, found}
+
+        {_sigil, [{:lexical_env, _} | _], [{:<<>>, _, _} | _]} = node, acc ->
+          {node, node |> LexicalAliases.template_names() |> template_findings(nil) |> Enum.concat(acc)}
 
         # A piped call has one more argument than it shows
         {:|>, meta, [left, {call, call_meta, args}]}, acc when is_list(args) ->
@@ -124,11 +151,9 @@ defmodule Brando.Doctor.Checks.Deprecations do
         {{:., _, [module, name]}, meta, args} = node, acc when is_atom(module) and is_atom(name) and is_list(args) ->
           {node, check(module, name, arity(meta, args), meta, deprecated, acc)}
 
+        # A local call, through the imports in scope where it is made
         {name, meta, args} = node, acc when is_atom(name) and is_list(args) ->
-          case Map.get(imports, {name, arity(meta, args)}) do
-            nil -> {node, acc}
-            module -> {node, check(module, name, arity(meta, args), meta, deprecated, acc)}
-          end
+          {node, local_call(name, arity(meta, args), meta, deprecated, acc)}
 
         node, acc ->
           {node, acc}
@@ -183,28 +208,54 @@ defmodule Brando.Doctor.Checks.Deprecations do
     end
   end
 
-  # `{name, arity} => module` for deprecated functions brought in by `import`
-  defp collect_imports(ast, deprecated) do
-    {_ast, imports} =
-      Macro.prewalk(ast, %{}, fn
-        {:import, _, [{:__aliases__, _, _} = target | rest]} = node, acc ->
-          opts = List.first(rest) || []
-          {node, Map.merge(acc, imported(LexicalAliases.module(target), opts, deprecated))}
+  defp local_call(name, arity, meta, deprecated, acc) do
+    imports = Enum.filter(meta[:imports] || [], &imported?(&1, name, arity))
 
-        node, acc ->
-          {node, acc}
-      end)
-
-    imports
+    case Enum.find(imports, &Map.has_key?(deprecated, {&1.module, name, arity})) do
+      nil -> acc
+      %{module: module} -> check(module, name, arity, meta, deprecated, acc)
+    end
   end
 
-  defp imported(module, opts, deprecated) do
-    only = if is_list(opts), do: opts[:only]
-    except = if(is_list(opts), do: opts[:except]) || []
-
-    for {{^module, name, arity}, _reason} <- deprecated,
-        (is_nil(only) or not is_list(only) or {name, arity} in only) and {name, arity} not in List.wrap(except),
-        into: %{},
-        do: {{name, arity}, module}
+  # Whether `import module, only: …, except: …` brings in `name/arity`
+  defp imported?(%{only: only, except: except}, name, arity) do
+    (not is_list(only) or {name, arity} in only) and {name, arity} not in List.wrap(except)
   end
+
+  defp template_modules({:either, candidates}),
+    do: candidates |> Enum.map(&LexicalAliases.to_module/1) |> Enum.reject(&is_nil/1)
+
+  defp template_modules(resolved), do: List.wrap(LexicalAliases.to_module(resolved))
+
+  # Findings, newest first, for the renamed modules among a template's
+  # names; `file` is the template file's path, or nil for a sigil
+  defp template_findings(names, file) do
+    names
+    |> Enum.flat_map(fn %{resolved: resolved, line: line} ->
+      resolved |> template_modules() |> Enum.reduce([], &renamed(&1, [line: line], &2)) |> Enum.reverse()
+    end)
+    |> Enum.map(&%{&1 | file: file})
+    |> Enum.reverse()
+  end
+
+  # The templates `embed_templates pattern, root: …` in the file at `path`
+  # compiles in, as Phoenix finds them
+  defp read_templates(path, pattern, options) when is_binary(pattern) do
+    root =
+      case options do
+        [options | _] when is_list(options) -> options[:root]
+        _ -> nil
+      end
+
+    path
+    |> Path.dirname()
+    |> Path.expand()
+    |> Path.join(if(is_binary(root), do: root, else: "."))
+    |> Path.join(pattern <> ".{heex,eex,leex}")
+    |> Path.wildcard()
+    |> Enum.sort()
+    |> Enum.map(&{&1, File.read!(&1)})
+  end
+
+  defp read_templates(_path, _pattern, _options), do: []
 end

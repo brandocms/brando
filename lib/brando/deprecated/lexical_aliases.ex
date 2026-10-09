@@ -7,7 +7,7 @@ defmodule Brando.Deprecated.LexicalAliases do
   # `annotate/1` puts two keys on every `{:__aliases__, meta, parts}` node:
   #
   #   * `:resolved_alias`: the module's segments (`[:Brando, :Upload]`), nil
-  #     when they cannot be known (`unquote(m).X`), or `{:either, a, b}`
+  #     when they cannot be known (`unquote(m).X`), or `{:either, [a, b]}`
   #     when an alias declared inside an unknown macro's block may or may
   #     not reach it.
   #   * `:alias_binding`: the `{line, column}` of the declaration its first
@@ -17,11 +17,18 @@ defmodule Brando.Deprecated.LexicalAliases do
   #     `alias` (`require A.{B, C}`), and `:uncertain` for an `{:either, …}`.
   #
   # An alias applies from where it is declared to the end of its lexical
-  # scope: a module body, a function, an `fn` or `->` clause, and the blocks
-  # of `if`, `case`, `try`, `quote`, `test` and the other macros known to
-  # scope them. An alias declared in the block of another macro may leak out
-  # of it, so the names it could reach afterwards are `{:either, …}`. A
-  # nested `defmodule Inner` aliases `Inner` inside and after it.
+  # scope: a module body, a function, an `fn` or `->` clause, and each block
+  # (`do`, `else`, `rescue`, `after`, …) of `if`, `try`, `def`, `with`,
+  # `quote`, `test` and the other macros known to scope them, local or
+  # through `Kernel.`. An alias declared in the block of another macro,
+  # local or remote, may leak out of it, so the names it could reach
+  # afterwards are `{:either, …}`. A nested `defmodule Inner` aliases
+  # `Inner` inside and after it.
+  #
+  # Imports are scoped the same way: a local call after one carries
+  # `imports: [%{module, only, except}]`. Template sigils (`~H`, …) and
+  # `embed_templates` calls carry `:lexical_env`, the aliases where they
+  # are written, for `template_names/1` and `names_in_text/3`.
   #
   # The alias's own target, the base and children of a multi-alias, and a
   # nested module's name are annotated too; an `as:` option is not, being a
@@ -33,10 +40,12 @@ defmodule Brando.Deprecated.LexicalAliases do
             [:if, :unless, :case, :cond, :with, :for, :try, :receive, :quote, :test, :describe] ++
             [:setup, :setup_all, :scope]
   @module_like [:defimpl, :defprotocol]
+  @template_calls [:sigil_H, :sigil_F, :sigil_L, :sigil_E, :embed_templates]
+  @heredocs [~s("""), ~s(''')]
 
   @doc "Annotates every module name in `ast`; see the module notes."
   def annotate(ast) do
-    {ast, _env} = walk(ast, %{aliases: %{}, module: nil})
+    {ast, _env} = walk(ast, %{aliases: %{}, module: nil, imports: []})
     ast
   end
 
@@ -45,12 +54,12 @@ defmodule Brando.Deprecated.LexicalAliases do
   def module(_node), do: nil
 
   @doc """
-  Every module a name annotated by `annotate/1` may resolve to: one, both
+  Every module a name annotated by `annotate/1` may resolve to: one, each
   of an `{:either, …}`, or none.
   """
   def modules({:__aliases__, meta, _parts}) do
     case meta[:resolved_alias] do
-      {:either, a, b} -> [a, b] |> Enum.map(&to_module/1) |> Enum.reject(&is_nil/1) |> Enum.uniq()
+      {:either, candidates} -> candidates |> Enum.map(&to_module/1) |> Enum.reject(&is_nil/1) |> Enum.uniq()
       resolved -> List.wrap(to_module(resolved))
     end
   end
@@ -60,6 +69,38 @@ defmodule Brando.Deprecated.LexicalAliases do
   @doc "The module for annotated segments, nil when not a plain list."
   def to_module([_ | _] = parts), do: Module.concat(parts)
   def to_module(_resolved), do: nil
+
+  @doc """
+  The module names written in a template sigil (`~H`, `~F`, `~L`, `~E`)
+  annotated by `annotate/1`: `[%{name, resolved, line}]`, resolved through
+  the aliases where the sigil is written. Text that looks like a module
+  name counts, so prose such as `Store` in a heading is read as one too.
+  """
+  def template_names({_sigil, meta, [{:<<>>, _, parts} | _]}) do
+    text = parts |> Enum.filter(&is_binary/1) |> Enum.join()
+    names_in_text(text, meta[:lexical_env], meta[:line] + if(meta[:delimiter] in @heredocs, do: 1, else: 0))
+  end
+
+  def template_names(_node), do: []
+
+  @doc """
+  The module names written in `text` (a template file compiled into a
+  module by the `embed_templates` call whose metadata holds `lexical_env`),
+  with its first line numbered `first_line`; see `template_names/1`.
+  """
+  def names_in_text(_text, nil, _first_line), do: []
+
+  def names_in_text(text, lexical_env, first_line) do
+    ~r/(?<![\w.@:\-])[A-Z]\w*(?:\.[A-Z]\w*)*/u
+    |> Regex.scan(text, return: :index)
+    |> Enum.map(fn [{at, length}] ->
+      name = binary_part(text, at, length)
+      parts = name |> String.split(".") |> Enum.map(&String.to_atom/1)
+      {resolved, _binding} = resolve(parts, lexical_env)
+      line = first_line + (text |> binary_part(0, at) |> String.split("\n") |> length()) - 1
+      %{name: name, resolved: resolved, line: line}
+    end)
+  end
 
   ## Walk
 
@@ -81,6 +122,11 @@ defmodule Brando.Deprecated.LexicalAliases do
         {target, _env} = walk(target, env)
         {{form, meta, [target | options]}, bind(env, form, target, options, node_position(node))}
     end
+  end
+
+  defp walk({:import, meta, [target | options]}, env) do
+    {target, _env} = walk(target, env)
+    {{:import, meta, [target | options]}, put_import(env, target, options)}
   end
 
   # `A.{B, C}`: the children are under the base
@@ -120,19 +166,18 @@ defmodule Brando.Deprecated.LexicalAliases do
   end
 
   defp walk({call, meta, args}, env) when is_atom(call) and is_list(args) do
-    cond do
-      call in @scoped ->
-        {args, _inner} = walk_list(args, env)
-        {{call, meta, args}, env}
+    meta = annotate_imports(meta, env)
+    meta = if call in @template_calls, do: [{:lexical_env, Map.take(env, [:aliases, :module])} | meta], else: meta
+    {args, env} = walk_call(call in @scoped, args, env)
+    {{call, meta, args}, env}
+  end
 
-      do_block?(args) ->
-        {args, inner} = walk_list(args, env)
-        {{call, meta, args}, leak(env, inner)}
-
-      true ->
-        {args, env} = walk_list(args, env)
-        {{call, meta, args}, env}
-    end
+  # `Kernel.if x do … end` scopes its blocks as `if` does; another remote
+  # macro's do block may leak what it declares
+  defp walk({{:., dot_meta, [remote, name]}, meta, args}, env) when is_atom(name) and is_list(args) do
+    {remote, _env} = walk(remote, env)
+    {args, env} = walk_call(module(remote) == Kernel and name in @scoped, args, env)
+    {{{:., dot_meta, [remote, name]}, meta, args}, env}
   end
 
   defp walk({call, meta, args}, env) when is_list(args) do
@@ -152,6 +197,35 @@ defmodule Brando.Deprecated.LexicalAliases do
 
   defp walk_list(list, env), do: Enum.map_reduce(list, env, &walk/2)
 
+  # A call's arguments, then each of its `do`/`else`/`rescue`/… blocks
+  # from where they start: a scoping macro keeps what they declare, another
+  # macro may leak it
+  defp walk_call(scoped?, args, env) do
+    case split_blocks(args) do
+      {args, nil} ->
+        walk_list(args, env)
+
+      {head, blocks} ->
+        {head, env} = walk_list(head, env)
+        {blocks, inners} = blocks |> Enum.map(&walk_block(&1, env)) |> Enum.unzip()
+        {head ++ [blocks], if(scoped?, do: env, else: leak(env, inners))}
+    end
+  end
+
+  defp walk_block({key, value}, env) do
+    {value, inner} = walk(value, env)
+    {{key, value}, inner}
+  end
+
+  defp walk_block(other, env), do: {other, env}
+
+  defp split_blocks([_ | _] = args) do
+    {head, [last]} = Enum.split(args, -1)
+    if is_list(last) and Enum.any?(last, &do_key?/1), do: {head, last}, else: {args, nil}
+  end
+
+  defp split_blocks(args), do: {args, nil}
+
   ## Declarations
 
   defp bind(env, form, target, options, position) do
@@ -170,7 +244,7 @@ defmodule Brando.Deprecated.LexicalAliases do
 
     case {as || last_atom(parts) || last_atom(plain(resolved) || []), resolved} do
       {nil, _resolved} -> env
-      {short, {:either, _, _}} -> put_alias(env, {short, nil, position})
+      {short, {:either, _}} -> put_alias(env, {short, nil, position})
       {short, resolved} -> put_alias(env, {short, resolved, position})
     end
   end
@@ -201,6 +275,18 @@ defmodule Brando.Deprecated.LexicalAliases do
 
   defp brace_child(child, _base, _position), do: child
 
+  # `import Brando.HTML, only: […]`: `%{module, only, except}` per module it
+  # may name, for the local calls after it
+  defp put_import(env, target, options) do
+    options = plain_term(List.first(options) || [])
+    keyword = if Keyword.keyword?(options), do: options, else: []
+    specs = for module <- modules(target), do: %{module: module, only: keyword[:only], except: keyword[:except]}
+    %{env | imports: Enum.uniq(env.imports ++ specs)}
+  end
+
+  defp annotate_imports(meta, %{imports: []}), do: meta
+  defp annotate_imports(meta, %{imports: imports}), do: [{:imports, imports} | meta]
+
   defp put_alias(env, {short, to, at}), do: %{env | aliases: Map.put(env.aliases, short, %{to: to, at: at})}
 
   # A nested `defmodule Inner` defines `Outer.Inner` and aliases `Inner`; at
@@ -222,15 +308,27 @@ defmodule Brando.Deprecated.LexicalAliases do
     {plain(resolved) || :unknown, name, nil}
   end
 
-  # The names an unknown macro's block declared may or may not reach past it
-  defp leak(env, inner) do
-    Enum.reduce(inner.aliases, env, fn {short, entry}, env ->
-      case env.aliases[short] do
-        ^entry -> env
-        outer -> %{env | aliases: Map.put(env.aliases, short, %{either: {entry, outer}})}
-      end
-    end)
+  # What an unknown macro's blocks declared may or may not reach past it:
+  # a name each block left differently is any of them, or the one before
+  defp leak(env, inners) do
+    shorts = inners |> Enum.flat_map(&Map.keys(&1.aliases)) |> Enum.uniq()
+
+    aliases =
+      Enum.reduce(shorts, env.aliases, fn short, aliases ->
+        candidates = (inners ++ [env]) |> Enum.flat_map(&candidates(&1.aliases[short])) |> Enum.uniq()
+
+        case candidates do
+          [nil] -> aliases
+          [only] -> Map.put(aliases, short, only)
+          _ -> Map.put(aliases, short, %{either: candidates})
+        end
+      end)
+
+    %{env | aliases: aliases, imports: Enum.uniq(env.imports ++ Enum.flat_map(inners, & &1.imports))}
   end
+
+  defp candidates(%{either: candidates}), do: candidates
+  defp candidates(entry), do: [entry]
 
   ## Resolution
 
@@ -247,7 +345,7 @@ defmodule Brando.Deprecated.LexicalAliases do
       case env.aliases[first] do
         nil -> {parts, nil}
         %{to: to, at: at} -> {to && to ++ rest, at}
-        %{either: {a, b}} -> {{:either, through(a, first, rest), through(b, first, rest)}, :uncertain}
+        %{either: candidates} -> {{:either, Enum.map(candidates, &through(&1, first, rest))}, :uncertain}
       end
     else
       {nil, nil}
@@ -258,7 +356,6 @@ defmodule Brando.Deprecated.LexicalAliases do
 
   defp through(nil, first, rest), do: [first | rest]
   defp through(%{to: to}, _first, rest), do: to && to ++ rest
-  defp through(%{either: _}, _first, _rest), do: nil
 
   defp resolved({:__aliases__, meta, _}), do: {meta[:resolved_alias], meta[:alias_binding]}
   defp resolved(_node), do: {nil, nil}
@@ -297,13 +394,15 @@ defmodule Brando.Deprecated.LexicalAliases do
   defp as_value(false), do: false
   defp as_value(_value), do: nil
 
-  # The block is the last argument; a keyword list with `do` anywhere else
-  # is not valid Elixir
-  defp do_block?(args), do: Enum.any?(args, &(is_list(&1) and Enum.any?(&1, fn option -> do_key?(option) end)))
-
   defp do_key?({key, _value}), do: literal(key) == :do
   defp do_key?(_option), do: false
 
   defp literal({:__block__, _, [value]}), do: value
   defp literal(value), do: value
+
+  # A literal without Sourceror's :__block__ wrappers
+  defp plain_term({:__block__, _, [value]}), do: plain_term(value)
+  defp plain_term({left, right}), do: {plain_term(left), plain_term(right)}
+  defp plain_term(list) when is_list(list), do: Enum.map(list, &plain_term/1)
+  defp plain_term(value), do: value
 end

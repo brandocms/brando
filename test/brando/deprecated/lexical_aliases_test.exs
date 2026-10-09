@@ -36,7 +36,7 @@ defmodule Brando.Deprecated.LexicalAliasesTest do
     Enum.reverse(found)
   end
 
-  defp resolved({:either, a, b}), do: {:either, resolved(a), resolved(b)}
+  defp resolved({:either, candidates}), do: {:either, Enum.map(candidates, &resolved/1)}
   defp resolved(nil), do: nil
   defp resolved(parts), do: Module.concat(parts)
 
@@ -114,6 +114,131 @@ defmodule Brando.Deprecated.LexicalAliasesTest do
     end
     """
 
-    assert [{1, "A", A}, {6, "Upload", Upload}, {12, "Upload", {:either, Plug.Upload, Upload}}] = resolutions(code)
+    assert [{1, "A", A}, {6, "Upload", Upload}, {12, "Upload", {:either, [Plug.Upload, Upload]}}] = resolutions(code)
+  end
+
+  test "each block of a scoping macro starts from the aliases where it is called" do
+    code = """
+    defmodule A do
+      alias Brando.Upload
+
+      def f(x) do
+        if x do
+          alias Plug.Upload
+          Upload
+        else
+          Upload
+        end
+      end
+
+      def g do
+        try do
+          alias Plug.Upload
+          Upload
+        rescue
+          _ -> Upload
+        catch
+          _ -> Upload
+        else
+          _ -> Upload
+        after
+          Upload
+        end
+      end
+
+      def h do
+        alias Plug.Upload
+        Upload
+      rescue
+        _ -> Upload
+      end
+
+      def i(x) do
+        with {:ok, y} <- x do
+          alias Plug.Upload
+          {y, Upload}
+        else
+          _ -> Upload
+        end
+      end
+
+      def j(x), do: unless(x, do: (alias Plug.Upload; Upload), else: Upload)
+    end
+    """
+
+    assert [
+             {1, "A", A},
+             {7, "Upload", Plug.Upload},
+             {9, "Upload", Brando.Upload},
+             {16, "Upload", Plug.Upload},
+             {18, "Upload", Brando.Upload},
+             {20, "Upload", Brando.Upload},
+             {22, "Upload", Brando.Upload},
+             {24, "Upload", Brando.Upload},
+             {30, "Upload", Plug.Upload},
+             {32, "Upload", Brando.Upload},
+             {38, "Upload", Plug.Upload},
+             {40, "Upload", Brando.Upload},
+             {44, "Upload", Plug.Upload},
+             {44, "Upload", Brando.Upload}
+           ] = resolutions(code)
+  end
+
+  test "a remote call with a do block: Kernel's scoping macros scope it, another macro may leak it" do
+    code = """
+    defmodule A do
+      alias Brando.Upload
+
+      Kernel.if true do
+        alias Plug.Upload
+      end
+
+      def a, do: Upload
+
+      Some.Dsl.settings do
+        alias Plug.Upload
+      end
+
+      def b, do: Upload
+    end
+    """
+
+    assert [
+             {1, "A", A},
+             {4, "Kernel", Kernel},
+             {8, "Upload", Brando.Upload},
+             {10, "Some.Dsl", Some.Dsl},
+             {14, "Upload", {:either, [Plug.Upload, Brando.Upload]}}
+           ] = resolutions(code)
+  end
+
+  test "names in a template sigil resolve through the aliases where it is written" do
+    code = ~S'''
+    defmodule A do
+      alias Brando.Meta
+
+      def a(assigns) do
+        ~H"""
+        <Meta.HTML.render_meta conn={@conn} />
+        <.link>Brando.Upload</.link>
+        """
+      end
+
+      def b(assigns), do: ~H"<Meta.HTML.x />"
+    end
+    '''
+
+    for ast <- [Code.string_to_quoted!(code), Sourceror.parse_string!(code)] do
+      {_ast, found} =
+        ast
+        |> LexicalAliases.annotate()
+        |> Macro.prewalk([], fn
+          {:sigil_H, _, _} = node, acc -> {node, acc ++ LexicalAliases.template_names(node)}
+          node, acc -> {node, acc}
+        end)
+
+      assert [{[:Brando, :Meta, :HTML], 6}, {[:Brando, :Upload], 7}, {[:Brando, :Meta, :HTML], 11}] =
+               Enum.map(found, &{&1.resolved, &1.line})
+    end
   end
 end
