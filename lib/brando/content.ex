@@ -153,14 +153,23 @@ defmodule Brando.Content do
 
   mutation :delete, Module
 
+  # A copy is a new lineage at v1, as an exported module is
+  # (`prepare_modules_for_export/2`): the original's `uid` would collide with
+  # it, and its version and shared-library link describe the original's
+  # history.
   mutation :duplicate,
            {Module,
             change_fields: [
               :class,
+              uid: &__MODULE__.duplicate_module_uid/2,
+              version: 1,
               name: &__MODULE__.duplicate_module_name/2,
               vars: &__MODULE__.duplicate_vars/2,
               refs: &__MODULE__.duplicate_refs/2
-            ]}
+            ],
+            delete_fields: [:version_note, :source_module_id, :source_version, :acknowledged_version]}
+
+  def duplicate_module_uid(_entry, _uid), do: Brando.Utils.generate_uid()
 
   def duplicate_module_name(entry, _) do
     Map.new(entry.name, fn {k, v} -> {k, "#{v}_dupl"} end)
