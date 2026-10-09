@@ -4,10 +4,12 @@ defmodule BrandoAdmin.Components.Form.RichTextAI do
   editor's Accept action changes the ordinary HTML input.
 
   It is on in every top-level rich text input of an entry form and in block
-  text whenever `Brando.AI` is configured. `write_with_ai: false` on an input
-  turns it off there, and in the `block_text` site prompt
-  (`config :brando, Brando.AI, fields: [block_text: [...]]`) for block text,
-  whose `prompt` is added to every request as the site's instructions.
+  text whenever `Brando.AI` is configured. On an input, `write_with_ai:`
+  (`Brando.Blueprint.Forms.WriteWithAI`) turns it off (`false`) or gives it
+  instructions, fields to read and a model. In block text the `block_text`
+  site prompt (`config :brando, Brando.AI, fields: [block_text: [...]]`) does:
+  its `prompt` is added to every request, and `write_with_ai: false` turns
+  it off.
   """
   import Phoenix.Component, only: [assign: 3]
   import Phoenix.LiveView, only: [start_async: 3, cancel_async: 2, push_event: 3]
@@ -17,6 +19,35 @@ defmodule BrandoAdmin.Components.Form.RichTextAI do
     "shorten" => "Shorten the passage while retaining its meaning.",
     "continue" => "Continue after the passage. Return only the continuation."
   }
+
+  @doc """
+  Write with AI's options for an input with `opts`: `:off` for
+  `write_with_ai: false`, else the `write_with_ai:` options (`[]` for none).
+  """
+  @spec input_config(keyword()) :: keyword() | :off
+  def input_config(opts) do
+    case Keyword.get(opts, :write_with_ai) do
+      false -> :off
+      config when is_list(config) -> config
+      _ -> []
+    end
+  end
+
+  @doc "Write with AI's options for block text, from the `block_text` site prompt, or `:off`."
+  @spec block_text_config() :: keyword() | :off
+  def block_text_config do
+    opts = Brando.AI.field_ai_opts(:block_text)
+    if Keyword.get(opts, :write_with_ai) == false, do: :off, else: opts
+  end
+
+  @doc "Whether Write with AI is on with `config`: not `:off`, and AI is configured for its model."
+  @spec enabled?(keyword() | :off) :: boolean()
+  def enabled?(:off), do: false
+  def enabled?(config) when is_list(config), do: Brando.AI.configured?(ai_opts(config))
+
+  @doc "The `Brando.AI` options in `config`: its model and request options."
+  @spec ai_opts(keyword()) :: keyword()
+  def ai_opts(config), do: Keyword.drop(config, [:prompt, :from, :context, :write_with_ai])
 
   def start(socket, params, prompt, opts, generate \\ &Brando.AI.generate_text/2) do
     id = params["tiptap_id"]
@@ -64,20 +95,6 @@ defmodule BrandoAdmin.Components.Form.RichTextAI do
       socket
     end
   end
-
-  @doc """
-  Whether Write with AI is on for an input with `opts`, or for block text
-  with the `block_text` site prompt's options: AI is configured for the
-  model they name, and they do not say `write_with_ai: false`.
-  """
-  @spec enabled?(keyword()) :: boolean()
-  def enabled?(opts) do
-    Keyword.get(opts, :write_with_ai) != false and Brando.AI.configured?(Keyword.take(opts, [:model, :api_key]))
-  end
-
-  @doc "The `block_text` site prompt's options: its instructions, model and request options."
-  @spec block_text_opts() :: keyword()
-  def block_text_opts, do: Brando.AI.field_ai_opts(:block_text)
 
   @doc """
   The prompt for a Write with AI request: the site's instructions (`base`,

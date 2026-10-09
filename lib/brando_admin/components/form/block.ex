@@ -2072,13 +2072,13 @@ defmodule BrandoAdmin.Components.Form.Block do
   # when there is one, adds its instructions and picks the model; the reply
   # goes back to the editor as a suggestion.
   def generate_rich_text(socket, %{"ref_name" => name, "tiptap_id" => id} = params) do
-    opts = RichTextAI.block_text_opts()
+    config = RichTextAI.block_text_config()
 
     with %{data: %{type: "text"}, uid: uid} <- instance_ref(socket, name),
          true <- id == "block-#{uid}-rich-text",
-         true <- RichTextAI.enabled?(opts),
-         {:ok, prompt} <- RichTextAI.prompt(opts[:prompt], params) do
-      RichTextAI.start(socket, params, prompt, opts)
+         true <- RichTextAI.enabled?(config),
+         {:ok, prompt} <- RichTextAI.prompt(config[:prompt], params) do
+      RichTextAI.start(socket, params, prompt, RichTextAI.ai_opts(config))
     else
       _ -> push_event(socket, "b:tiptap:ai:#{id}", %{request_id: params["request_id"], error: true})
     end

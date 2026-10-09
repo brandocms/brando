@@ -52,6 +52,8 @@ defmodule Brando.Blueprint.Forms.AIAction do
         }
 
   @input_types [:text, :textarea, :rich_text]
+  # Edited in the Meta drawer: a hidden input for one carries its actions.
+  @meta_fields [:meta_title, :meta_description]
 
   @schema [
     prompt: [type: :string, required: true, doc: "The instruction sent to the model."],
@@ -86,6 +88,14 @@ defmodule Brando.Blueprint.Forms.AIAction do
 
   @doc "The input types that take `ai_actions:`."
   def input_types, do: @input_types
+
+  @doc """
+  Whether an input takes `ai_actions:`: a text input, or a `:hidden` input
+  for a meta field, whose actions the Meta drawer offers.
+  """
+  def takes_actions?(type, _name) when type in @input_types, do: true
+  def takes_actions?(:hidden, name), do: name in @meta_fields
+  def takes_actions?(_type, _name), do: false
 
   @doc """
   The `:generate` action for the options of the deprecated `ai:` on an input
@@ -123,15 +133,17 @@ defmodule Brando.Blueprint.Forms.AIAction do
 
   @doc """
   Adds the action an input's deprecated `ai:` options run as (`generate/2`)
-  to the actions it declares in `ai_actions:`. Not on an input type without
-  text, and not when `ai_actions:` already has a `:generate`; the forms
-  verifier warns about `ai:` in each case.
+  to the actions it declares in `ai_actions:`: on a `:text` or `:textarea`
+  input, or a `:hidden` input for a meta field. Not when `ai_actions:`
+  already has a `:generate`; the forms verifier warns about `ai:` then.
+  (On `:rich_text`, `ai:` is Write with AI's, see
+  `Brando.Blueprint.Forms.WriteWithAI`.)
   """
-  @spec add_deprecated(atom() | term(), [t()], term()) :: [t()]
-  def add_deprecated(_type, actions, nil), do: actions
+  @spec add_deprecated(atom() | term(), atom(), [t()], term()) :: [t()]
+  def add_deprecated(_type, _name, actions, nil), do: actions
 
-  def add_deprecated(type, actions, ai_opts) do
-    with true <- type in @input_types,
+  def add_deprecated(type, name, actions, ai_opts) do
+    with true <- type != :rich_text and takes_actions?(type, name),
          false <- Enum.any?(actions, &(&1.name == :generate)),
          %__MODULE__{} = action <- generate(ai_opts, :ai) do
       actions ++ [action]
@@ -162,9 +174,10 @@ defmodule Brando.Blueprint.Forms.AIAction do
   @doc "The request options `generate/2` keeps besides `model:`."
   def request_opt_keys, do: @request_opt_keys
 
-  defp keyword(opts) when is_list(opts), do: if(Keyword.keyword?(opts), do: opts, else: [])
-  defp keyword(opts) when is_map(opts), do: Enum.flat_map(opts, &keyword_pair/1)
-  defp keyword(_opts), do: []
+  @doc false
+  def keyword(opts) when is_list(opts), do: if(Keyword.keyword?(opts), do: opts, else: [])
+  def keyword(opts) when is_map(opts), do: Enum.flat_map(opts, &keyword_pair/1)
+  def keyword(_opts), do: []
 
   defp keyword_pair({key, value}) when is_atom(key), do: [{key, value}]
 
@@ -176,11 +189,12 @@ defmodule Brando.Blueprint.Forms.AIAction do
 
   defp keyword_pair(_pair), do: []
 
+  @doc false
   # `context:` as `Brando.AI.Context.normalize_fields/1` reads it: atoms, and
   # strings that name an existing atom.
-  defp context_fields(nil), do: []
+  def context_fields(nil), do: []
 
-  defp context_fields(fields) do
+  def context_fields(fields) do
     fields
     |> List.wrap()
     |> Enum.flat_map(fn
@@ -203,13 +217,15 @@ defmodule Brando.Blueprint.Forms.AIAction do
   Builds the actions an input declares in `ai_actions:`, or an error message
   for a Blueprint compile error.
   """
-  @spec build(atom() | term(), term()) :: {:ok, [t()]} | {:error, String.t()}
-  def build(_type, nil), do: {:ok, []}
+  @spec build(atom() | term(), term(), atom() | nil) :: {:ok, [t()]} | {:error, String.t()}
+  def build(type, actions, name \\ nil)
+  def build(_type, nil, _name), do: {:ok, []}
 
-  def build(type, actions) do
+  def build(type, actions, name) do
     cond do
-      type not in @input_types ->
-        {:error, "ai_actions work on #{Enum.map_join(@input_types, ", ", &inspect/1)} inputs, not #{inspect(type)}"}
+      not takes_actions?(type, name) ->
+        {:error,
+         "ai_actions work on #{Enum.map_join(@input_types, ", ", &inspect/1)} inputs and :hidden inputs for meta fields, not #{inspect(type)}"}
 
       not (is_list(actions) and Keyword.keyword?(actions)) ->
         {:error, "ai_actions must be a keyword list of action name and options, got: #{inspect(actions)}"}

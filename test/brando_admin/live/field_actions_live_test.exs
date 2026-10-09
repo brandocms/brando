@@ -358,6 +358,90 @@ defmodule BrandoAdmin.FieldActionsLiveTest do
     end
   end
 
+  describe "a meta field that is also an input in a tab" do
+    # Brando.MetaDrawerTest.ActionsArticle's `form :visible`: the meta
+    # description in a tab, with its own action, and in the Meta drawer, with
+    # that action and the site prompt's Generate
+    setup %{current_user: user} do
+      page = Factory.insert(:page, creator: user, title: "Om oss", uri: "om-oss-meta", language: "no")
+      %{page: page}
+    end
+
+    test "has a suggestion panel in each place, each answering for itself", %{conn: conn, page: page} do
+      # The meta description's own input is in the form twice, in the tab and
+      # in the drawer, as it always was; LiveView itself refuses a component
+      # rendered twice under one id, which is what this is about.
+      {:ok, view, _html} = live(conn, "/admin/meta-articles/update/#{page.id}", on_error: [duplicate_id: :ignore])
+      render_async(view, 5_000)
+      await_selector(view, "#actions_article_form_form input")
+      replies("En kortere beskrivelse")
+
+      tab = "#actions_article_meta_description-ai-actions"
+      drawer = "#actions_article_meta_description-meta-ai-actions"
+      assert has_element?(view, tab)
+      assert has_element?(view, drawer)
+
+      view
+      |> element("button[phx-click='run_field_action'][phx-value-action='generate'][phx-value-panel$='-meta-ai-actions']")
+      |> render_click()
+
+      await_selector(view, "#{drawer} .ai-proposal[data-status='ready']")
+      refute has_element?(view, "#{tab} .ai-proposal")
+
+      view |> element("#{drawer} button", "Accept") |> render_click()
+      settle(view)
+
+      assert view
+             |> render()
+             |> form_params("#actions_article_form_form")
+             |> get_in(["actions_article", "meta_description"]) ==
+               "En kortere beskrivelse"
+
+      refute has_element?(view, "#{drawer} .ai-proposal")
+    end
+  end
+
+  describe "Write with AI in a rich text input" do
+    setup %{current_user: user} do
+      page = Factory.insert(:page, creator: user, title: "Om oss", uri: "om-oss-rich", language: "no")
+      %{page: page}
+    end
+
+    test "starts with its write_with_ai: instructions and the fields they read, with its model",
+         %{conn: conn, page: page} do
+      {:ok, view, _html} = live(conn, "/admin/meta-articles/update/#{page.id}", on_error: [duplicate_id: :ignore])
+      render_async(view, 5_000)
+      await_selector(view, "#actions_article_form_form input")
+      test = self()
+
+      Brando.AI.Cassette.stub(fn request ->
+        send(test, {:request, request})
+        %{"text" => "Et forslag.", "usage" => %{"input_tokens" => 1, "output_tokens" => 1}}
+      end)
+
+      assert has_element?(view, "[data-tiptap-field='css_classes'][data-tiptap-ai='true']")
+
+      view
+      |> with_target(cid_of(view, "#actions_article_form_form"))
+      |> render_hook("tiptap_ai_generate", %{
+        "field_key" => "css_classes",
+        "field_name" => "actions_article[css_classes]",
+        "tiptap_id" => "actions_article_css_classes-rich-text",
+        "request_id" => "request-1",
+        "mode" => "rewrite",
+        "instruction" => "",
+        "selection" => "Et avsnitt."
+      })
+
+      event = "b:tiptap:ai:actions_article_css_classes-rich-text"
+      assert_push_event(view, ^event, %{text: "Et forslag.", request_id: "request-1"})
+      assert_received {:request, request}
+      assert request["model"] == "openai:gpt-4o"
+      prompt = Brando.AIStub.prompt(request)
+      assert prompt =~ ~r/\AKeep the house style\.\n\nContext:\ntitle: Om oss\n\nRewrite the passage\./
+    end
+  end
+
   describe "the Meta drawer" do
     # A page's meta fields take their Generate from the site prompts in
     # `trait :meta, ai:` (Brando.Pages.Page)
@@ -376,18 +460,33 @@ defmodule BrandoAdmin.FieldActionsLiveTest do
       refute has_element?(view, "button[phx-click='ai_generate_input']")
 
       run_meta(view, "meta_title")
-      await_selector(view, "#page_meta_title-ai-actions .ai-proposal[data-status='ready']")
+      await_selector(view, "#page_meta_title-meta-ai-actions .ai-proposal[data-status='ready']")
 
       assert_received {:prompt, prompt}
       assert prompt =~ "Write an SEO title tag"
       assert prompt =~ "title: Om oss"
-      assert has_element?(view, "#page_meta_title-ai-actions textarea", "Om oss – Brando")
+      assert has_element?(view, "#page_meta_title-meta-ai-actions textarea", "Om oss – Brando")
       assert meta_title(view) == "Gammel"
 
-      view |> element("#page_meta_title-ai-actions button", "Accept") |> render_click()
+      view |> element("#page_meta_title-meta-ai-actions button", "Accept") |> render_click()
       settle(view)
 
       assert meta_title(view) == "Om oss – Brando"
+    end
+
+    test "sends the site prompt even when the fields it reads are empty, as ai: did", %{conn: conn, page: page} do
+      {view, _html} = live_form(conn, "/admin/pages/update/#{page.id}")
+      replies("En tittel")
+
+      # The Page's meta title prompt reads title, blocks and language
+      view
+      |> form("#page_form_form")
+      |> render_change(%{"page" => %{"title" => "", "language" => ""}, "_target" => ["page", "title"]})
+
+      run_meta(view, "meta_title")
+      await_selector(view, "#page_meta_title-meta-ai-actions .ai-proposal[data-status='ready']")
+      assert_received {:prompt, prompt}
+      assert prompt =~ "Write an SEO title tag"
     end
 
     test "reads a cleared field as empty", %{conn: conn, page: page} do
@@ -396,7 +495,7 @@ defmodule BrandoAdmin.FieldActionsLiveTest do
 
       view |> form("#page_form_form") |> render_change(%{"page" => %{"title" => ""}, "_target" => ["page", "title"]})
       run_meta(view, "meta_title")
-      await_selector(view, "#page_meta_title-ai-actions .ai-proposal[data-status='ready']")
+      await_selector(view, "#page_meta_title-meta-ai-actions .ai-proposal[data-status='ready']")
 
       assert_received {:prompt, prompt}
       assert prompt =~ "language: no"

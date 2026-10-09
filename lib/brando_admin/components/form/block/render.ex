@@ -2230,7 +2230,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
       assigns
       |> assign(:uid, uid)
       |> assign(:text_type, Changeset.get_field(block_data_cs, :type))
-      |> assign(:ai_enabled?, RichTextAI.enabled?(RichTextAI.block_text_opts()))
+      |> assign(:ai_enabled?, RichTextAI.enabled?(RichTextAI.block_text_config()))
       |> assign(:extensions, extensions)
       |> assign(:styles, styles)
       |> assign(:footnotes, assigns[:footnotes_enabled] == true)

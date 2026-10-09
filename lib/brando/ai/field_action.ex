@@ -73,12 +73,27 @@ defmodule Brando.AI.FieldAction do
   def for_field(schema, form_blueprint, field) do
     case form_blueprint && Brando.Blueprint.Forms.get_field(field, form_blueprint) do
       %Brando.Blueprint.Forms.Input{actions: actions, type: type, opts: opts} ->
-        {with_site_action(actions, schema, field), type, opts || []}
+        {with_site_action(actions, schema, field), input_type(type, field), opts || []}
 
       _ ->
         {with_site_action([], schema, field), @site_fields[field], []}
     end
   end
+
+  # A `:hidden` input for a meta field is edited in the Meta drawer, as a
+  # text field or a textarea: a suggestion is written as one.
+  defp input_type(type, field) do
+    if type in AIAction.input_types(), do: type, else: @site_fields[field]
+  end
+
+  @doc """
+  Whether an empty read of `action`'s fields stops it. Actions declared in
+  `ai_actions:` say so instead of asking the model; the `:generate` of a
+  deprecated `ai:` or a site prompt sends its prompt anyway, as `ai:` did.
+  """
+  @spec needs_inputs?(AIAction.t()) :: boolean()
+  def needs_inputs?(%AIAction{origin: :ai_actions, from: [_ | _]}), do: true
+  def needs_inputs?(%AIAction{}), do: false
 
   @doc """
   `actions` with the site prompt's `:generate` for `field`, when it is a meta

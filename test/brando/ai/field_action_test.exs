@@ -108,7 +108,8 @@ defmodule Brando.AI.FieldActionTest do
       assert {[%{name: :shorten, origin: :ai_actions}, %{name: :generate, origin: :site}], :textarea, opts} =
                FieldAction.for_field(schema, schema.__form__(), :meta_description)
 
-      assert opts[:hidden] == true
+      # A `:hidden` input for it: the drawer's textarea
+      assert opts == []
     end
 
     test "an input's own :generate replaces the site prompt's" do
@@ -137,6 +138,17 @@ defmodule Brando.AI.FieldActionTest do
       assert AIAction.generate([context: [:title]], :site) == nil
       assert AIAction.generate([prompt: " "], :site) == nil
       assert AIAction.generate(nil, :site) == nil
+    end
+
+    test "send their prompt when the fields they read are empty, as ai: did; ai_actions do not" do
+      refute FieldAction.needs_inputs?(AIAction.generate([prompt: "P", context: [:title]], :ai))
+      refute FieldAction.needs_inputs?(AIAction.generate([prompt: "P", context: [:title]], :site))
+      assert FieldAction.needs_inputs?(@action)
+      refute FieldAction.needs_inputs?(%{@action | from: []})
+    end
+
+    test "a hidden meta input's suggestion is written as the drawer's field is" do
+      assert FieldAction.field_value("Line one\nline two", :text) == "Line one line two"
     end
 
     test "with no fields to read, the prompt goes alone" do

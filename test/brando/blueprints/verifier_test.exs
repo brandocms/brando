@@ -1281,7 +1281,7 @@ defmodule Brando.Blueprint.VerifierTest do
            ), ~r/declares the action :summarize more than once/},
           {"an input type without text",
            quote(do: input(:year, :number, ai_actions: [count: [prompt: "S", from: [:title]]])),
-           ~r/ai_actions work on :text, :textarea, :rich_text inputs, not :number/}
+           ~r/ai_actions work on :text, :textarea, :rich_text inputs and :hidden inputs for meta fields, not :number/}
         ] do
       @input input
       @message message
@@ -1388,6 +1388,119 @@ defmodule Brando.Blueprint.VerifierTest do
         assert message =~ reason
         assert message =~ "Remove it."
       end
+    end
+
+    test "a deprecated ai: on rich text is Write with AI's, and the warning prints write_with_ai:" do
+      module =
+        compile_blueprint(
+          ai_actions_blueprint(
+            quote do
+              input :summary, :rich_text,
+                ai: [prompt: "Keep the tone.", context: [:title], model: :fast, temperature: 0.3]
+            end
+          )
+        )
+
+      input = Brando.Blueprint.Forms.get_field(:summary, module.__form__())
+      assert input.actions == []
+      refute Keyword.has_key?(input.opts, :ai)
+
+      assert input.opts[:write_with_ai] == [prompt: "Keep the tone.", from: [:title], model: :fast, temperature: 0.3]
+
+      assert {:warn, [{message, _}]} = Brando.Blueprint.Forms.Verifier.verify(module.spark_dsl_config())
+      assert message =~ "gives Write with AI its instructions"
+
+      assert message =~ """
+                 write_with_ai: [
+                   prompt: "Keep the tone.",
+                   from: [:title],
+                   model: :fast
+                 ]
+             """
+
+      assert message =~ "`write_with_ai:` takes no `temperature`"
+      refute message =~ "ai_actions:"
+    end
+
+    test "write_with_ai: written out wins over ai: on rich text" do
+      module =
+        compile_blueprint(
+          ai_actions_blueprint(quote(do: input(:summary, :rich_text, write_with_ai: false, ai: [prompt: "Old."])))
+        )
+
+      assert Brando.Blueprint.Forms.get_field(:summary, module.__form__()).opts[:write_with_ai] == false
+      assert {:warn, [{message, _}]} = Brando.Blueprint.Forms.Verifier.verify(module.spark_dsl_config())
+      assert message =~ "`write_with_ai:` is set, so it is ignored"
+    end
+
+    # One failed compile per test: Spark keeps state from a failed one.
+    test "write_with_ai: works only on rich text" do
+      assert_raise Spark.Error.DslError, ~r/write_with_ai works on :rich_text inputs, not :textarea/, fn ->
+        compile_blueprint(ai_actions_blueprint(quote(do: input(:summary, :textarea, write_with_ai: false))))
+      end
+    end
+
+    test "write_with_ai: options are checked when the Blueprint compiles" do
+      assert_raise Spark.Error.DslError, ~r/write_with_ai: unknown options \[:lenght\]/, fn ->
+        compile_blueprint(ai_actions_blueprint(quote(do: input(:summary, :rich_text, write_with_ai: [lenght: 3]))))
+      end
+    end
+
+    test "write_with_ai: reads text and block fields only" do
+      assert_form_error(
+        ai_actions_blueprint(quote(do: input(:summary, :rich_text, write_with_ai: [from: [:items]]))),
+        ~r/has write_with_ai reading :items in :from, which is not a text or block field/
+      )
+    end
+
+    test "a deprecated ai: on a hidden meta input is the Meta drawer's action" do
+      module =
+        compile_blueprint(
+          quote do
+            trait :meta
+
+            attributes do
+              attribute :title, :string
+            end
+
+            forms do
+              form do
+                tab "Content" do
+                  fieldset do
+                    input :title, :text
+                    input :meta_title, :hidden, ai: [prompt: "Write a meta title.", context: [:title]]
+                    input :meta_description, :hidden, ai_actions: [shorten: [prompt: "Shorten.", from: :title]]
+                  end
+                end
+              end
+            end
+          end
+        )
+
+      assert [%{name: :generate, origin: :ai, from: [:title]}] =
+               Brando.Blueprint.Forms.get_field(:meta_title, module.__form__()).actions
+
+      assert {[%{name: :generate}], :text, _opts} =
+               Brando.AI.FieldAction.for_field(module, module.__form__(), :meta_title)
+
+      assert {[%{name: :shorten}], :textarea, _opts} =
+               Brando.AI.FieldAction.for_field(module, module.__form__(), :meta_description)
+
+      assert {:warn, [{message, _}]} = Brando.Blueprint.Forms.Verifier.verify(module.spark_dsl_config())
+      assert message =~ "input :meta_title has `ai:`"
+      assert message =~ "ai_actions: ["
+    end
+
+    test "a custom component keeps ai: in its options, without a warning" do
+      module =
+        compile_blueprint(
+          ai_actions_blueprint(
+            quote(do: input(:summary, {:live_component, Brando.Blueprint.VerifierTest.MediaItem}, ai: [prompt: "P"]))
+          )
+        )
+
+      assert Brando.Blueprint.Forms.get_field(:summary, module.__form__()).opts[:ai] == [prompt: "P"]
+      assert :ok = Brando.Blueprint.Forms.Verifier.verify(module.spark_dsl_config())
     end
 
     test "a deprecated ai: in a subform is a warning, not the error ai_actions are" do
