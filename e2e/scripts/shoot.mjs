@@ -24,12 +24,15 @@
 //   --email / --password  log in as someone else (default the E2E admin)
 //   --no-sandbox          keep what setup and actions write (see Data below)
 //   --hide-toasts         hide toast notifications
+//   --no-unstick          leave sticky and fixed elements alone (see Overlays)
 //
 // Spec (all keys optional except shots[].name and shots[].path):
 //   {
 //     "label": "after", "widths": [1440, 390], "locales": ["en", "no"],
 //     "fullPage": true,               // default for shots; false = viewport
 //     "height": 1000,                 // viewport height (390 wide: 844)
+//     "unstick": true,                // default; false = shots as rendered (Overlays)
+//     "keep": [".selected-rows"],     // more overlays to leave alone (Overlays)
 //     "setup": [                      // run before logging in, per locale/width
 //       { "fixture": "assistant-applied-copy" },        // /e2e/setup_fixtures/<name>
 //       { "post": "/e2e/admin-workspace-fixtures" },
@@ -46,6 +49,7 @@
 //       { "name": "page-meta", "path": "/admin/pages/update/1",
 //         "actions": [{ "click": ".form-tool-meta" }, { "waitFor": "[id$='-meta-drawer']" }, { "wait": 400 }] },
 //       { "name": "utilities-system", "path": "/admin/config/utils", "element": ".utils-system" },
+//       { "name": "block", "path": "/admin/pages/update/1", "element": "[data-block-type='text']", "unstick": false },
 //       { "name": "top", "path": "/admin", "fullPage": false, "widths": [1440], "locales": ["en"] },
 //       { "name": "corner", "path": "/admin", "clip": { "x": 0, "y": 0, "width": 600, "height": 300 } }
 //     ]
@@ -72,6 +76,19 @@
 // language inside the sandbox, so it still sees what it owns; it needs the
 // sandbox. Setup steps run before the login (fixtures log in their own user).
 //
+// Overlays: before an element or full-page shot, sticky elements are put back
+// in the flow (position: relative), so a sticky entry toolbar no longer sits
+// over the element or across the middle of a full page. Element shots also
+// hide fixed elements (headers, floating buttons, the presence bar), which
+// would otherwise be painted over the element; full-page shots keep them, so
+// the sidebar stays, and are taken from the top of the page, since one
+// captured while scrolled has the fixed elements again at the scroll position
+// over a black band. Left alone: modals, drawers, dialogs and popovers
+// (dropdowns, tooltips) and whatever is inside them, the shot
+// element's ancestors and, for fixed elements, its descendants. "keep" adds
+// selectors to that list; "unstick": false (per spec or shot, or
+// --no-unstick) turns it off. Viewport and clip shots are never changed.
+//
 // Chromium always runs with --font-render-hinting=none (default hinting on
 // Linux makes text cramped). Committed design references come from
 // playwright/scripts/admin-ui-references.mjs instead.
@@ -86,6 +103,11 @@ const e2eDir = path.resolve(here, '..')
 const playwrightDir = path.join(e2eDir, 'playwright')
 const require = createRequire(path.join(playwrightDir, 'package.json'))
 
+// Overlays an element or full-page shot leaves alone (see Overlays above).
+const KEEP_OVERLAYS = [
+  'dialog', '[role="dialog"]', '[role="alertdialog"]', '[role="tooltip"]', '[popover]',
+  '.modal', '.modal-backdrop', '.drawer', '[class*="-drawer"]',
+]
 const DEFAULT_EMAIL = 'admin@brandocms.com'
 const DEFAULT_PASSWORD = 'brandocms'
 const LV_TIMEOUT = 20000
@@ -124,6 +146,7 @@ function parseArgs(argv) {
       case '--password': opts.password = take(i++, arg); break
       case '--no-sandbox': opts.sandbox = false; break
       case '--hide-toasts': opts.hideToasts = true; break
+      case '--no-unstick': opts.unstick = false; break
       default: fail(`Unknown option ${arg}. Run with --help.`)
     }
   }
@@ -275,11 +298,43 @@ async function login(context, page, ctx, cfg) {
   }
 }
 
+// Runs in the page: unsticks sticky elements and, for an element shot, hides
+// fixed ones, by inline !important styles. The next shot reloads the page.
+function neutraliseOverlays(target, { keep, element }) {
+  const keepSelector = keep.join(', ')
+  for (const el of document.querySelectorAll('body *')) {
+    const { position } = getComputedStyle(el)
+    if (position !== 'sticky' && position !== 'fixed') continue
+    if (el.closest(keepSelector) || el.contains(target)) continue
+    if (position === 'sticky') {
+      el.style.setProperty('position', 'relative', 'important')
+      el.style.setProperty('inset', 'auto', 'important')
+    } else if (element && !target.contains(el)) {
+      el.style.setProperty('visibility', 'hidden', 'important')
+    }
+  }
+}
+
 async function capture(page, shot, file, cfg) {
   const options = { path: file, animations: 'disabled', caret: 'hide' }
-  if (shot.element) return visible(page, interpolate(shot.element, cfg.vars)).screenshot(options)
   if (shot.clip) return page.screenshot({ ...options, clip: shot.clip })
-  return page.screenshot({ ...options, fullPage: shot.fullPage ?? cfg.fullPage })
+  const fullPage = shot.fullPage ?? cfg.fullPage
+  const target = shot.element ? visible(page, interpolate(shot.element, cfg.vars)) : null
+  const unstick = cfg.unstickFromCli ?? shot.unstick ?? cfg.unstick
+  if (unstick && (target || fullPage)) {
+    const keep = [...KEEP_OVERLAYS, ...cfg.keep, ...(shot.keep || [])].map(sel => interpolate(sel, cfg.vars))
+    const neutralise = target ? target : page.locator('body')
+    await neutralise.evaluate(neutraliseOverlays, { keep, element: !!target })
+    // A full page captured while scrolled repeats the fixed elements at the
+    // scroll position over a black band, so it starts from the top. Then
+    // one frame for the new layout to paint.
+    await page.evaluate(top => new Promise(resolve => {
+      if (top) window.scrollTo(0, 0)
+      requestAnimationFrame(() => requestAnimationFrame(resolve))
+    }), !target)
+  }
+  if (target) return target.screenshot(options)
+  return page.screenshot({ ...options, fullPage })
 }
 
 async function main() {
@@ -307,6 +362,9 @@ async function main() {
     sandbox: opts.sandbox ?? spec.sandbox ?? true,
     fullPage: spec.fullPage ?? true,
     hideToasts: opts.hideToasts ?? spec.hideToasts ?? false,
+    unstick: spec.unstick ?? true,
+    unstickFromCli: opts.unstick,
+    keep: spec.keep || [],
   }
   if (cfg.email !== DEFAULT_EMAIL && cfg.password === undefined) cfg.password = DEFAULT_PASSWORD
   if (widths.some(w => !Number.isInteger(w) || w < 200)) fail(`Bad widths: ${widths.join(',')}`)

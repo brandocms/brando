@@ -352,6 +352,14 @@ scripts/server.sh stop                       # stops only the server it started
   `<out>/<label>/` at 1440 and 390 px by default, with font hinting off. A JSON
   or JS spec adds actions (click, fill, hover, wait for, scroll, press Escape),
   element or clip shots and setup data. `--help` prints the spec format.
+- Element and full-page shots come out clean of overlays by default, so no
+  `evaluate` steps are needed for them: sticky elements (the entry toolbar)
+  go back into the flow, element shots also hide fixed elements (headers,
+  floating buttons), and full-page shots start from the top of the page and
+  keep the sidebar. Modals, drawers, dialogs and popovers stay as they
+  are. Add selectors to leave alone with `"keep"`; `"unstick": false` on
+  a shot (or `--no-unstick`) takes it exactly as rendered. Viewport and clip
+  shots are never changed.
 - `scripts/pr-shots <shots-dir> <name> --worktree <pr-screenshots checkout>`
   copies `before/` and `after/` to the `pr-screenshots` branch layout and prints
   the before/after table for the PR body; `--push` commits and pushes.
