@@ -454,6 +454,9 @@ item.
   again. A line in the attention
   ink warns when accepting drops rich text's formatting; when the field
   changed since the action ran, Accept turns into Replace under an alert.
+- Suggest alt text (`Form.AltTextSuggestion`) waits under the alt field
+  as a panel with one `.ai-proposal-field` per language, and Accept,
+  Discard and Try again; accepted texts join the field's other languages.
 - Write with AI in a rich-text editor shows its suggestion in the text, at
   the passage it rewrites, with its text in an `.ai-proposal-field` the
   editor can change before Accept inserts it.
@@ -467,9 +470,8 @@ Do not:
   something that does;
 - draw an AI action or a suggestion with a dashed border — dashed means
   "drop here" in the block editor;
-- fill a field with an AI result and style it as a suggestion: text written
-  straight into a field (Suggest alt text) is ordinary unsaved
-  input, kept or discarded with the form;
+- write an AI result straight into a field: it waits as a suggestion until
+  the editor accepts it, and only then is ordinary unsaved input;
 - add a second AI button style for a new screen; add a size or a variant to
   `AIAction` instead.
 

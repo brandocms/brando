@@ -70,18 +70,26 @@ production dump.
     inside the field that wrote its reply straight in. The Blueprint warns
     when it compiles, at the input, with the `ai_actions:` to write. `ai:`
     is removed in a later release. Projects that compile with
-    `--warnings-as-errors` must change their inputs first.
+    `--warnings-as-errors` must change their inputs first. On a `:rich_text`
+    input `ai:` keeps feeding Write with AI, read as `write_with_ai:` (below);
+    on a `:hidden` input for a meta field it is the Meta drawer's Generate. A
+    custom component still gets `ai:` in its options.
   - The Meta drawer's **Generate** on `meta_title` and `meta_description` is
     the same kind of action, from the site prompt (`trait :meta, ai:` or
-    `config :brando, Brando.AI, fields:`); a hidden input for a meta field
-    can add its own `ai_actions:`.
+    `config :brando, Brando.AI, fields:`); an input for a meta field, usually
+    `:hidden`, can add its own `ai_actions:`.
+  - **Suggest alt text** on an image's form, in the image drawer and in a
+    picture block is a suggestion per language under the alt field, written
+    only on Accept.
   - **Write with AI** in the rich-text toolbar is on in every top-level rich
     text input of an entry form and in block text whenever `Brando.AI` is
     configured, no longer only with `ai:` or a `block_text` prompt. Each
     request is a paid call, as before.
     `write_with_ai: false` on an input turns it off there, and
-    `fields: [block_text: [write_with_ai: false]]` in block text. Its
-    suggestion can now be edited before Accept.
+    `fields: [block_text: [write_with_ai: false]]` in block text;
+    `write_with_ai: [prompt:, from:, model:]` gives an input's requests
+    instructions, fields to read and a model. Its suggestion can now be
+    edited before Accept.
   - Site prompts are unchanged and keep their names: `trait :meta, ai:` and
     `config :brando, Brando.AI, fields:` still drive the Meta drawer's
     Generate, the Content SEO batch, the SEO review's model, image alt text
@@ -101,7 +109,9 @@ production dump.
   ```
 
   `context:` becomes `from:`, which is required; name the fields the prompt
-  reads where `ai:` had none. `model:` carries over. Move `api_key:` to
+  reads where `ai:` had none. `model:` carries over. On a `:rich_text`
+  input, write `write_with_ai: [prompt: …, from: […], model: …]` instead,
+  as the warning prints. Move `api_key:` to
   `providers:` and request options such as `temperature:` to
   `default_opts:` in `config :brando, Brando.AI`. Add
   `write_with_ai: false` to rich text inputs that should not offer Write

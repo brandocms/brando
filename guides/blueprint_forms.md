@@ -727,18 +727,22 @@ whenever AI is configured; `write_with_ai: false` turns it off.
 
 `meta_title` and `meta_description` from `trait :meta` are edited in the
 form's Meta drawer, not in a tab. Each gets a **Generate** action from its
-[site prompt](#site-prompts), and the actions of a hidden input for it:
+[site prompt](#site-prompts), and the actions of an input for it, usually a
+`:hidden` one:
 
 ```elixir
-input :meta_description, :textarea,
-  hidden: true,
+input :meta_description, :hidden,
   ai_actions: [
     shorten: [label: t("Shorten"), prompt: "Shorten the description.", from: :meta_description, max: 155]
   ]
 ```
 
 The input's own actions come first. An action named `generate` replaces the
-site prompt's.
+site prompt's. In the drawer the meta title is a text field and the meta
+description a textarea, whatever the input's type, and a suggestion is
+written as one: the meta title gets it on one line. A meta field that is also
+an input in a tab has its actions in both places, each with its own
+suggestion.
 
 ## Write with AI
 
@@ -751,6 +755,18 @@ input with `write_with_ai: false`:
 ```elixir
 input :body, :rich_text, write_with_ai: false
 ```
+
+or give its requests instructions, the fields they read and a model:
+
+```elixir
+input :body, :rich_text,
+  write_with_ai: [prompt: "Keep the magazine's plain tone.", from: [:title], model: :fast]
+```
+
+* `prompt`: instructions every request starts with.
+* `from`: fields whose values, as the form has them, follow the
+  instructions, as an action's `from:`. Checked when the Blueprint compiles.
+* `model`: a `"provider:model"` spec or a name from the `models:` config.
 
 and in block text with the [`block_text` site prompt](#site-prompts):
 `fields: [block_text: [write_with_ai: false]]`.
@@ -843,9 +859,18 @@ input :summary, :textarea,
 `context:` becomes `from:`, which `ai_actions:` requires. `model:` carries
 over. `api_key:` and request options such as `temperature:` have no place in
 `ai_actions:`: set keys under `providers:` and request options under
-`default_opts:`. Until the input is changed, the action keeps them. `ai:` on
-a `:rich_text` input no longer turns on Write with AI, which is on by
-default; it is a Generate action like the others.
+`default_opts:`. Until the input is changed, the action keeps them, and like
+`ai:` it sends its prompt even when the fields it reads are empty.
+
+`ai:` keeps its meaning elsewhere too:
+
+* On a `:rich_text` input it gave Write with AI its instructions, context
+  and model: it is read as `write_with_ai: [prompt:, from:, model:]`, and the
+  warning prints that.
+* On a `:hidden` input for a meta field it is the Meta drawer's Generate, an
+  action on that input.
+* A custom component (`{:live_component, module}` or a function) gets it in
+  its options as before, without a warning.
 
 <!-- usage-rules:start topic="admin-ui" -->
 
