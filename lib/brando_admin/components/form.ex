@@ -1411,6 +1411,7 @@ defmodule BrandoAdmin.Components.Form do
     |> maybe_assign_block_map()
     |> maybe_assign_entry_for_blocks()
     |> FrontendEditor.unless_frontend(&Drafts.init/1)
+    |> then(&Drafts.keep_baseline(&1, &1.assigns[:opened_entry]))
     |> Translation.assign_state()
     |> FrontendEditor.unless_frontend(&schedule_translation_apply/1)
   end
@@ -2090,7 +2091,11 @@ defmodule BrandoAdmin.Components.Form do
       |> add_preloads(schema, form_blueprint)
       |> Map.put(:with_deleted, true)
 
-    assign(socket, :entry, apply(context, :"get_#{singular}!", [query_params]))
+    entry = apply(context, :"get_#{singular}!", [query_params])
+
+    socket
+    |> assign(:entry, entry)
+    |> Drafts.keep_baseline(entry)
   end
 
   defp maybe_query(id, form_blueprint) do
@@ -3694,10 +3699,12 @@ defmodule BrandoAdmin.Components.Form do
                   phx-key="Escape"
                 >
                   <div id={"#{@id}-preview-heading"} class="preview-choices-heading">{gettext("Preview as")}</div>
+                  <%!-- Another target renders the blocks: not before they load --%>
                   <button
                     :for={preview <- @live_preview_targets}
                     type="button"
                     class="preview-choice"
+                    disabled={!@blocks_ready?}
                     phx-click={
                       JS.push("select_preview_target", target: @myself, value: %{name: preview.name})
                       |> JS.focus(to: "##{@id}-preview-trigger")

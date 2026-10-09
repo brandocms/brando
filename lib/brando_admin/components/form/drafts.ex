@@ -88,6 +88,17 @@ defmodule BrandoAdmin.Components.Form.Drafts do
     do: schema.changeset(assigns[:opened_entry] || assigns.form.source.data, %{}, user)
 
   @doc """
+  Keeps the entry recovery is baselined against (`:opened_entry`, read by
+  `init/1`) while recovery has not started: the entry as read, then as each
+  save leaves it. Once recovery has started the baseline lives in its state,
+  and nothing more is kept.
+  """
+  def keep_baseline(%{assigns: %{draft: %{initialized?: true}}} = socket, _entry),
+    do: assign(socket, :opened_entry, nil)
+
+  def keep_baseline(socket, entry), do: assign(socket, :opened_entry, entry)
+
+  @doc """
   Sets the form's recovery state, and hands it to the status component.
 
   The form's own template doesn't read `@draft`: the state changes on every

@@ -238,9 +238,15 @@ defmodule BrandoAdmin.FormEntryOpenTest do
       assert html =~ "Recovered title"
     end
 
-    test "the preview can be closed while the blocks load", c do
+    test "the preview can be closed while the blocks load, but not switched", c do
       {view, task} = reconnect_with_preview(c)
       assert render(view) =~ "__livepreview"
+
+      html = view |> element("button[phx-click=toggle_preview_targets]") |> render_click()
+      choices = find(html, "button.preview-choice")
+      assert choices != []
+      assert Enum.all?(choices, &(Floki.attribute(&1, "disabled") != []))
+      assert find(html, "button.preview-choice-close") |> Floki.attribute("disabled") == []
 
       view |> with_target(cid_of(view, "#page_form_form")) |> render_hook("open_live_preview", %{})
       refute render(view) =~ "__livepreview"
@@ -318,6 +324,32 @@ defmodule BrandoAdmin.FormEntryOpenTest do
     test "no recovery copy is captured", %{socket: socket} do
       socket = Phoenix.Component.assign(socket, :draft, %{initialized?: true, capture: nil})
       assert Form.Drafts.capture(socket, %{}) == socket
+    end
+  end
+
+  describe "the recovery baseline" do
+    defp form_assigns(view) do
+      {:ok, components} = Phoenix.LiveView.Debug.live_components(view.pid)
+      Enum.find(components, &(&1.module == Form and &1.id == "page_form")).assigns
+    end
+
+    test "is the entry as read until recovery starts, then lives in its state", c do
+      {view, _html} = live_form(c.conn, "/admin/pages/update/#{c.page.id}")
+      assigns = form_assigns(view)
+
+      assert assigns.draft.initialized?
+      assert assigns.opened_entry == nil
+    end
+
+    test "follows each save while recovery has not started" do
+      opened = %Page{id: 1, title: "Opened"}
+      saved = %Page{id: 1, title: "Saved"}
+      socket = %Phoenix.LiveView.Socket{assigns: %{__changed__: %{}, draft: nil, opened_entry: opened}}
+
+      assert Form.Drafts.keep_baseline(socket, saved).assigns.opened_entry == saved
+
+      started = Phoenix.Component.assign(socket, :draft, %{initialized?: true})
+      assert Form.Drafts.keep_baseline(started, saved).assigns.opened_entry == nil
     end
   end
 
