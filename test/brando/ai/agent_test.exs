@@ -234,6 +234,52 @@ defmodule Brando.AI.AgentTest do
     assert {:ok, _} = Agent.start_conversation(editor)
   end
 
+  test "permissions taken away during a run apply to its next tool call and stop its next model call", c do
+    put_test_env(:authorization_mode, :groups)
+    {:ok, _} = Brando.Authorization.Migration.run()
+    alias Brando.Authorization.{Catalog, Groups, Scope}
+    editor = Factory.insert(:random_user, role: :user)
+    scope = Scope.standalone(c.user)
+
+    {:ok, assistants} =
+      Groups.create(scope, %{name: "Assistant users"}, [
+        Catalog.get(:access, :backend).key,
+        Catalog.get(:use, :assistant).key
+      ])
+
+    {:ok, editors} =
+      Groups.create(scope, %{name: "Page editors"}, [Catalog.get(:read, Page).key, Catalog.get(:update, Page).key])
+
+    for group <- [assistants, editors], do: {:ok, :ok} = Groups.add_member(scope, group.id, editor.id)
+    {:ok, conversation} = Agent.start_conversation(editor)
+    test = self()
+
+    # An administrator removes the editor from both groups while the model
+    # answers its first call.
+    Brando.AI.Cassette.stub(fn _request ->
+      send(test, :model_called)
+
+      if Agent.allowed?(editor) do
+        for group <- [assistants, editors], do: {:ok, :ok} = Groups.remove_member(scope, group.id, editor.id)
+        AIStub.turn({:tools, [{"list_content_types", %{}}]}, 0)
+      else
+        AIStub.turn({:text, "Answered without permission"}, 1)
+      end
+    end)
+
+    assert {:ok, %Run{status: "failed", steps: 1}} =
+             Agent.send_message(conversation.id, "What can I edit?", editor, sync: true)
+
+    assert_received :model_called
+    refute_received :model_called
+
+    assert [_user, _call, %Message{role: "tool", content: result}, %Message{role: "assistant", content: notice}] =
+             Agent.messages(conversation.id, editor)
+
+    assert Jason.decode!(result) == %{"content_types" => []}
+    assert notice =~ "permission to use the assistant"
+  end
+
   test "conversations belong to their user", c do
     other = Factory.insert(:random_user)
     assert {:error, _} = Agent.get_conversation(c.conversation.id, other)

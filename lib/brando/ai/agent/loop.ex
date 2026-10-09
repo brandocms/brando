@@ -50,6 +50,10 @@ defmodule Brando.AI.Agent.Loop do
       run.status != "running" ->
         run
 
+      # Permission taken away while the run works: nothing more goes to the model.
+      not Agent.allowed?(user) ->
+        finish(run, "failed", dgettext("ai_agent", "You do not have permission to use the assistant."))
+
       n > config[:max_steps] ->
         say(
           run,
