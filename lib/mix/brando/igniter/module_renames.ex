@@ -61,6 +61,8 @@ if Code.ensure_loaded?(Igniter) do
       content = igniter.rewrite |> Rewrite.source!(path) |> Source.get(:content)
 
       {patches, left} = patches(content, renamed)
+      {shorts, left} = Enum.split_with(left, &match?({:short, _}, &1))
+      shorts = Enum.map(shorts, &elem(&1, 1))
       updated = Sourceror.patch_string(content, patches)
 
       # The last guards: a rewrite that leaves invalid code, or changes what
@@ -72,8 +74,11 @@ if Code.ensure_loaded?(Igniter) do
         match?({:error, _}, Code.string_to_quoted(updated)) ->
           warn_left(igniter, path, [{:unparsable, nil, nil}])
 
-        line = computed_templates(content) ->
-          warn_left(igniter, path, [{:computed_templates, line} | left])
+        line = opaque_templates(content) ->
+          warn_left(igniter, path, [{:opaque_templates, line} | left])
+
+        mention = shorts != [] && template_mention(content, shorts, templates(igniter, path)) ->
+          warn_left(igniter, path, [{:template_mention, mention} | left])
 
         line = changed_reference({content, updated}, renamed, templates(igniter, path)) ->
           warn_left(igniter, path, [{:changed_meaning, line} | left])
@@ -216,21 +221,78 @@ if Code.ensure_loaded?(Igniter) do
       end
     end
 
-    # The line of an `embed_templates` whose pattern or root is computed:
-    # its templates cannot be found to check
-    defp computed_templates(content) do
+    # The line of the first template this task cannot read: an
+    # `embed_templates` whose pattern or root is computed, or that is called
+    # remotely, `use Phoenix.View`, `use Phoenix.Template` or
+    # `Phoenix.Template.compile_all`, `use …, :view`, or Surface's `~F`
+    defp opaque_templates(content) do
       {:ok, ast} = Sourceror.parse_string(content)
+      ast = LexicalAliases.annotate(ast)
 
       {_ast, line} =
         Macro.prewalk(ast, nil, fn
-          {:embed_templates, meta, [pattern | options]} = node, nil ->
-            {node, if(TemplateCode.embed_pattern(pattern, options) == :computed, do: meta[:line])}
-
-          node, line ->
-            {node, line}
+          node, nil -> {node, if(opaque_template?(node), do: node_line(node))}
+          node, line -> {node, line}
         end)
 
       line
+    end
+
+    defp opaque_template?({:embed_templates, _, [pattern | options]}),
+      do: TemplateCode.embed_pattern(pattern, options) == :computed
+
+    defp opaque_template?({{:., _, [_remote, :embed_templates]}, _, _}), do: true
+    defp opaque_template?({:sigil_F, _, _}), do: true
+    defp opaque_template?({:use, _, [_target, {:__block__, _, [:view]}]}), do: true
+    defp opaque_template?({:use, _, [_target, :view]}), do: true
+
+    defp opaque_template?({:use, _, [target | _]}), do: LexicalAliases.module(target) in [Phoenix.View, Phoenix.Template]
+
+    defp opaque_template?({{:., _, [remote, :compile_all]}, _, _}),
+      do: LexicalAliases.module(remote) == Phoenix.Template
+
+    defp opaque_template?(_node), do: false
+
+    defp node_line({_, meta, _}) when is_list(meta), do: meta[:line] || 1
+    defp node_line({{_, meta, _}, _, _}), do: meta[:line] || 1
+    defp node_line(_node), do: 1
+
+    # Where a template the file holds or embeds names one of `shorts` (the
+    # aliases the rewrite changes) as code would: followed by `.`, `{`, `}`,
+    # `)`, `,`, `]`, `<-` or `%>`. The raw text, comments, strings and
+    # attributes included, so a template the code scan misreads cannot hide
+    # a use; prose (`Upload a file`) does not count. `{where, name}`.
+    defp template_mention(content, shorts, templates) do
+      names = shorts |> Enum.uniq() |> Enum.map_join("|", &Regex.escape(Atom.to_string(&1)))
+      regex = Regex.compile!("(?<![\\w.@:\\-])(#{names})(?=[.{}),\\]]|\\s*(?:<-|%>|\\}|\\)))")
+      {:ok, ast} = Sourceror.parse_string(content)
+      ast = LexicalAliases.annotate(ast)
+
+      {_ast, texts} =
+        Macro.prewalk(ast, [], fn
+          {sigil, meta, [{:<<>>, _, parts} | _]} = node, texts when sigil in [:sigil_H, :sigil_L, :sigil_E] ->
+            first_line = meta[:line] + if(meta[:delimiter] in [~s("""), ~s(''')], do: 1, else: 0)
+            {node, [{nil, first_line, parts |> Enum.filter(&is_binary/1) |> Enum.join()} | texts]}
+
+          {:embed_templates, _, [pattern | options]} = node, texts ->
+            {node, Enum.reverse(for({path, text} <- templates.(pattern, options), do: {path, 1, text}), texts)}
+
+          node, texts ->
+            {node, texts}
+        end)
+
+      texts |> Enum.reverse() |> Enum.find_value(&mention(&1, regex))
+    end
+
+    defp mention({path, first_line, text}, regex) do
+      case Regex.run(regex, text, return: :index, capture: :first) do
+        [{at, length}] ->
+          line = first_line + (text |> binary_part(0, at) |> :binary.matches("\n") |> length())
+          {{path, line}, binary_part(text, at, length)}
+
+        nil ->
+          nil
+      end
     end
 
     defp new_name([_ | _] = parts, renamed) do
@@ -509,11 +571,11 @@ if Code.ensure_loaded?(Igniter) do
 
     defp patch_plain_alias({:alias, _, [{:__aliases__, _, parts} = target | options]} = node, ctx, {patches, left} = acc) do
       case alias_module(parts) && ctx.entries[{node_position(node), alias_as(options) || short_name(alias_module(parts))}] do
-        %{new: new, mode: mode} when mode in [:follow, :rename] ->
-          {[module_patch(target, full_name(parts, new)) | patches], left}
+        %{new: new, mode: mode} = entry when mode in [:follow, :rename] ->
+          {[module_patch(target, full_name(parts, new)) | patches], changed_shorts(entry) ++ left}
 
-        %{new: new, mode: :rename_as, short: short} ->
-          {[module_patch(target, "#{full_name(parts, new)}, as: #{short}") | patches], left}
+        %{new: new, mode: :rename_as, short: short} = entry ->
+          {[module_patch(target, "#{full_name(parts, new)}, as: #{short}") | patches], changed_shorts(entry) ++ left}
 
         _ ->
           acc
@@ -539,6 +601,11 @@ if Code.ensure_loaded?(Igniter) do
       end
     end
 
+    # The names a renamed alias declaration changes the meaning of: its
+    # short name, and the new one it takes
+    defp changed_shorts(%{mode: :follow, short: short, new: new}), do: [{:short, short}, {:short, short_name(new)}]
+    defp changed_shorts(%{short: short}), do: [{:short, short}]
+
     defp alias_use_change(%{mode: :follow, new: new}, []), do: Atom.to_string(short_name(new))
 
     defp alias_use_change(%{mode: mode, module: module}, [_ | _] = rest) when mode in [:follow, :rename, :rename_as],
@@ -550,8 +617,8 @@ if Code.ensure_loaded?(Igniter) do
       module = alias_module(base ++ parts)
 
       case module && ctx.entries[{position, short_name(module)}] do
-        %{module: ^module, mode: mode, new: new} when mode in [:follow, :rename] ->
-          {[module_patch(child, Enum.join(relative_parts(base, new), ".")) | patches], left}
+        %{module: ^module, mode: mode, new: new} = entry when mode in [:follow, :rename] ->
+          {[module_patch(child, Enum.join(relative_parts(base, new), ".")) | patches], changed_shorts(entry) ++ left}
 
         %{module: ^module, mode: :left} ->
           {patches, [{:braced, module} | left]}
@@ -664,11 +731,21 @@ if Code.ensure_loaded?(Igniter) do
           working, with a warning, until 0.57.
           """)
 
-        {:computed_templates, line}, igniter ->
+        {:opaque_templates, line}, igniter ->
           Igniter.add_warning(igniter, """
-          #{path}:#{line} names modules renamed in 0.55, and embeds templates whose pattern or root \
-          this task cannot read, so the file is unchanged: a template may use an alias it would \
-          rename. Replace the old names yourself; they keep working, with a warning, until 0.57.
+          #{path}:#{line} names modules renamed in 0.55, and has templates this task cannot read \
+          (a computed or remote `embed_templates`, Phoenix.View, Phoenix.Template or Surface's ~F), \
+          so the file is unchanged: a template may use an alias it would rename. Replace the old \
+          names yourself; they keep working, with a warning, until 0.57.
+          """)
+
+        {:template_mention, {{template, line}, name}}, igniter ->
+          where = if template, do: "#{template}:#{line}, a template #{path} embeds,", else: "#{path}:#{line}"
+
+          Igniter.add_warning(igniter, """
+          #{where} names modules renamed in 0.55: its template uses #{name}, an alias this task \
+          would rename, so #{path} is unchanged. Use the new names there and in its templates \
+          yourself; the old names keep working, with a warning, until 0.57.
           """)
 
         {:changed_meaning, line}, igniter ->
