@@ -1295,6 +1295,7 @@ msgstr "KI-vurdering"
 msgid "AI search"
 msgstr "AI-søk"
 
+#: lib/brando_admin/components/form/alt_text_suggestion.ex
 #: lib/brando_admin/components/form/field_actions.ex
 #: lib/brando_admin/components/form/input/rich_text_labels.ex
 #, elixir-autogen, elixir-format
@@ -1306,6 +1307,7 @@ msgstr "KI-forslag"
 msgid "AI tools you let read content and propose changes as you, over MCP. Disconnecting one stops it at once."
 msgstr "AI-verktøy du lar lese innhold og foreslå endringer som deg, over MCP. Kobler du fra ett, stanser det med en gang."
 
+#: lib/brando_admin/components/form/alt_text_suggestion.ex
 #: lib/brando_admin/components/form/field_actions.ex
 #: lib/brando_admin/components/form/input/rich_text_labels.ex
 #: lib/brando_admin/components/suggestion_review.ex
@@ -2016,6 +2018,7 @@ msgstr "Alternativ tekst"
 msgid "Alternates"
 msgstr "Alternative innlegg"
 
+#: lib/brando_admin/components/form/alt_text_suggestion.ex
 #: lib/brando_admin/components/form/image_drawer.ex
 #: lib/brando_admin/components/form/input/blocks/picture_block.ex
 #: lib/brando_admin/components/form/input/gallery/image_config.ex
@@ -5441,6 +5444,7 @@ msgstr "Deaktivert"
 msgid "Disabled account"
 msgstr "Deaktivert konto"
 
+#: lib/brando_admin/components/form/alt_text_suggestion.ex
 #: lib/brando_admin/components/form/field_actions.ex
 #: lib/brando_admin/components/form/input/rich_text_labels.ex
 #: lib/brando_admin/live/ai/assistant_live.ex
@@ -15675,6 +15679,7 @@ msgstr "Foreslåtte beskrivelser"
 msgid "Suggested destination"
 msgstr "Foreslått mål"
 
+#: lib/brando_admin/components/form/alt_text_suggestion.ex
 #: lib/brando_admin/components/form/field_actions.ex
 #: lib/brando_admin/components/form/input/rich_text_labels.ex
 #, elixir-autogen, elixir-format
@@ -17563,6 +17568,7 @@ msgstr "Oversettelser kan ikke opprettes: denne innholdstypen kan ikke kopieres.
 msgid "Try a resource name, such as Pages, or an action, such as Publish."
 msgstr "Prøv et ressursnavn, som Sider, eller en handling, som Publiser."
 
+#: lib/brando_admin/components/form/alt_text_suggestion.ex
 #: lib/brando_admin/components/form/field_actions.ex
 #: lib/brando_admin/components/form/input/rich_text_labels.ex
 #: lib/brando_admin/components/form/revisions_drawer.ex

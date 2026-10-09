@@ -9,6 +9,7 @@ defmodule BrandoAdmin.Components.Form.Input do
   import BrandoAdmin.Components.Content.List.Row, only: [status_circle: 1]
 
   alias BrandoAdmin.Components.AIAction
+  alias BrandoAdmin.Components.Form.AltTextSuggestion
   alias BrandoAdmin.Components.Form.FieldActions
   alias BrandoAdmin.Components.Form.Input.Options
   alias BrandoAdmin.Components.Form.Primitives
@@ -1467,13 +1468,15 @@ defmodule BrandoAdmin.Components.Form.Input do
               {language}
             </button>
           </div>
-          <%!-- An image's alt text, described by AI and filled in unsaved --%>
+          <%!-- An image's alt text, described by AI: a suggestion under the
+                field until it is accepted --%>
           <AIAction.button
             :if={@suggest_alt?}
             size={:compact}
             class="i18n-suggest"
             phx-click={@suggest_event}
             phx-target={@suggest_target}
+            phx-value-panel={AltTextSuggestion.id(@field.id)}
           >
             {gettext("Suggest alt text")}
           </AIAction.button>
@@ -1513,6 +1516,16 @@ defmodule BrandoAdmin.Components.Form.Input do
           >{@value[language]}</textarea>
         </div>
       </div>
+      <.live_component
+        :if={@suggest_alt?}
+        module={AltTextSuggestion}
+        id={AltTextSuggestion.id(@field.id)}
+        owner={@suggest_target}
+        scope={@suggest_event}
+        languages={@languages}
+        retry_event={@suggest_event}
+        retry_target={@suggest_target}
+      />
     </Primitives.field_base>
     """
   end

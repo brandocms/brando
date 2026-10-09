@@ -6,6 +6,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
   alias BrandoAdmin.Components.AIAction
   alias BrandoAdmin.Components.Assets.MediaField
   alias BrandoAdmin.Components.Content
+  alias BrandoAdmin.Components.Form.AltTextSuggestion
   alias BrandoAdmin.Components.Form.Block
   alias BrandoAdmin.Components.Form.Input
   alias BrandoAdmin.LiveView.Form.ProcessingWatch
@@ -57,11 +58,26 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
     |> then(&{:ok, &1})
   end
 
+  # The form's reply to "Suggest alt text": a suggestion under the field
+  # (`AltTextSuggestion`) until the editor accepts it.
   def update(%{event: "alt_text_suggested", result: result}, socket) do
     socket = assign(socket, :alt_suggesting, false)
 
     case result do
-      {:ok, text} ->
+      {:ok, language, text} ->
+        send_update(AltTextSuggestion, id: alt_suggestion_id(socket.assigns.uid), values: %{language => text})
+        {:ok, socket}
+
+      :error ->
+        send(self(), {:toast, gettext("The alt text could not be suggested. Try again, or write it yourself.")})
+        {:ok, socket}
+    end
+  end
+
+  # Accepted: this use's alt text, as unsaved input in the block.
+  def update(%{event: "accept_alt_suggestion", values: values}, socket) do
+    case Map.values(values) do
+      [text | _] ->
         socket
         |> Block.commit_ref_data(
           ref_data: Block.current_block_data_map(socket.assigns.block, @override_fields, %{alt: text}),
@@ -69,8 +85,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
         )
         |> then(&{:ok, &1})
 
-      :error ->
-        send(self(), {:toast, gettext("The alt text could not be suggested. Try again, or write it yourself.")})
+      [] ->
         {:ok, socket}
     end
   end
@@ -145,6 +160,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
     |> assign(:image, image)
     |> assign(image_display_assigns(image))
   end
+
+  defp alt_suggestion_id(uid), do: AltTextSuggestion.id("block-#{uid}-ref-alt")
 
   defp alt_text_ai?, do: Brando.AI.configured?(Brando.Images.AltText.ai_opts())
 
@@ -273,6 +290,16 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
                     >
                       {gettext("Suggest alt text")}
                     </AIAction.button>
+                    <.live_component
+                      :if={@image && @form_id && alt_text_ai?()}
+                      module={AltTextSuggestion}
+                      id={alt_suggestion_id(@uid)}
+                      owner={{__MODULE__, @id}}
+                      scope="ref"
+                      languages={Input.i18n_languages(:content)}
+                      retry_event="suggest_alt_text"
+                      retry_target={@myself}
+                    />
                   </div>
                   <Input.override_text
                     field={block_data[:credits]}
