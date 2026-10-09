@@ -83,7 +83,13 @@ defmodule BrandoAdmin.Components.Form.EntrySkeleton do
         </EntryHeader.header>
         <div class="form-tabs form-tabs--split">
           <nav class="form-tab-customs pill-tabs pill-tabs--small" aria-hidden="true">
-            <button :for={{label, index} <- Enum.with_index(@skeleton.tabs)} type="button" class={index == 0 && "active"} tabindex="-1" disabled>
+            <button
+              :for={{label, index} <- Enum.with_index(@skeleton.tabs)}
+              type="button"
+              class={index == 0 && "active"}
+              tabindex="-1"
+              disabled
+            >
               <span class="sk sk-tab" style={"width: #{tab_width(label)}px"}></span>
             </button>
           </nav>

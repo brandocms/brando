@@ -237,9 +237,7 @@ defmodule BrandoAdmin.Components.Form.FrontendEditor do
 
           <%!-- A heavy entry's blocks load after the form (`Form.open_entry/1`) --%>
           <div :if={@has_blocks? && !@blocks_ready?} class="frontend-edit-loading">
-            <EntrySkeleton.load_state label={
-              EntrySkeleton.loading_blocks_label(@block_counts |> Map.values() |> Enum.sum())
-            } />
+            <EntrySkeleton.load_state label={EntrySkeleton.loading_blocks_label(@block_counts |> Map.values() |> Enum.sum())} />
             <EntrySkeleton.blocks count={2} label?={false} />
           </div>
           <.live_component

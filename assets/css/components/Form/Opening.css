@@ -287,6 +287,11 @@
   }
 }
 
+/* The title's hover arrow (Users.css) gives way to "Opening" */
+.content-list .list-row.is-opening .entry-link::after {
+  content: none;
+}
+
 /* "Opening", after the entry's title; `update_link` renders it hidden */
 .entry-opening {
   display: none;

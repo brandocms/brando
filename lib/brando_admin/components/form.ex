@@ -37,6 +37,7 @@ defmodule BrandoAdmin.Components.Form do
   alias Brando.Blueprint.Forms, as: BlueprintForms
   alias Brando.EditSession
   alias Brando.Images
+  alias Brando.Content.Blocks
   alias Brando.LivePreview
   alias Brando.Villain
   alias BrandoAdmin.Components.Button
@@ -1467,7 +1468,7 @@ defmodule BrandoAdmin.Components.Form do
   # fields first stays at ~0.2 s, and gets to the whole form sooner.
   @light_block_limit 20
 
-  @doc false
+  @doc "The most blocks an entry opens with in one step, see `open_entry/1`."
   def light_block_limit, do: @light_block_limit
 
   defp open_entry(socket) do
@@ -1488,29 +1489,31 @@ defmodule BrandoAdmin.Components.Form do
   end
 
   defp open_fields_first(socket) do
-    %{schema: schema, entry_id: entry_id} = socket.assigns
-
-    with {:ok, entry} <- fetch_entry(entry_source(socket), skip_blocks: true) do
-      counts = Brando.Content.Blocks.count_entry_blocks_by_field(schema, entry_id)
-
-      if light_entry?(counts) do
-        entry_opened(socket, Brando.Repo.preload(entry, Brando.Content.Blocks.preloads_for(schema)))
-      else
-        socket
-        |> assign(:entry, entry)
-        |> assign(:blocks_ready?, false)
-        |> assign(:block_counts, counts)
-        |> finish_form_fields()
-        |> run_load(:blocks_load, fn -> Brando.Repo.preload(entry, Brando.Content.Blocks.preloads_for(schema)) end)
-      end
-    else
+    case fetch_entry(entry_source(socket), skip_blocks: true) do
+      {:ok, entry} -> open_with_blocks_counted(socket, entry)
       :not_found -> not_found_on_open(socket)
+    end
+  end
+
+  defp open_with_blocks_counted(%{assigns: %{schema: schema}} = socket, entry) do
+    counts = Blocks.count_entry_blocks_by_field(schema, entry.id)
+    load_blocks = fn -> Brando.Repo.preload(entry, Blocks.preloads_for(schema)) end
+
+    if light_entry?(counts) do
+      entry_opened(socket, load_blocks.())
+    else
+      socket
+      |> assign(:entry, entry)
+      |> assign(:blocks_ready?, false)
+      |> assign(:block_counts, counts)
+      |> finish_form_fields()
+      |> run_load(:blocks_load, load_blocks)
     end
   end
 
   defp open_with_custom_query(socket) do
     %{schema: schema, entry_id: entry_id} = socket.assigns
-    counts = Brando.Content.Blocks.count_entry_blocks_by_field(schema, entry_id)
+    counts = Blocks.count_entry_blocks_by_field(schema, entry_id)
 
     if light_entry?(counts) do
       open_in_one_step(socket)
@@ -3862,8 +3865,10 @@ defmodule BrandoAdmin.Components.Form do
                 have loaded; `@block_map` is built from them. --%>
           <EntrySkeleton.blocks
             :for={%{name: block_field, opts: field_opts} <- @form_blueprint.blocks}
-            :if={@has_blocks? && !@blocks_ready? && !field_opts[:footnote_fields] &&
-              block_field not in @hidden_block_fields}
+            :if={
+              @has_blocks? && !@blocks_ready? && !field_opts[:footnote_fields] &&
+                block_field not in @hidden_block_fields
+            }
             count={Map.get(@block_counts, block_field, 0)}
           />
           <.live_component
@@ -6456,8 +6461,8 @@ defmodule BrandoAdmin.Components.Form do
     Enum.reduce(block_changesets, changeset, fn {field_name, block_cs}, updated_changeset ->
       updated_block_cs =
         block_cs
-        |> Brando.Content.Blocks.reject_deleted(true)
-        |> Brando.Content.Blocks.strip_render_artifacts()
+        |> Blocks.reject_deleted(true)
+        |> Blocks.strip_render_artifacts()
         |> Brando.Utils.set_action()
 
       Changeset.put_assoc(updated_changeset, :"entry_#{field_name}", updated_block_cs)
