@@ -38,6 +38,7 @@
 
 ## Reviewing
 - Review a change (yours before pushing, or a PR) against [CODING_STANDARDS.md](CODING_STANDARDS.md): tests, field sync, `:has()`, UI.
+- Independent bug hunt on a branch or PR: the read-only `reviewer` subagent ([.claude/agents/reviewer.md](.claude/agents/reviewer.md)).
 
 ## Admin UI design
 - **Admin screens** follow the [Admin UI design guide](docs/admin-ui-design.md). Read its index first, then only the sections the screen needs; its Utilities example is the reference alongside existing components.
