@@ -35,4 +35,13 @@ test('the groups open and close with Configuration, and their links work', async
   await nav.locator('[data-nav-expand]').filter({ hasText: 'Konfigurasjon' }).click()
   await expect(nav.getByRole('heading', { name: 'Byggeklosser', level: 4 })).toBeHidden()
   await expect(blocks.getByRole('link', { name: 'Blokkmoduler' })).toBeHidden()
+  // and so do the groups, rather than staying as empty named groups
+  for (const name of ['Nettsted', 'Publisering', 'Byggeklosser', 'System']) {
+    await expect(nav.getByRole('group', { name })).toHaveCount(0)
+  }
+
+  // Opened again, they are back
+  await nav.locator('[data-nav-expand]').filter({ hasText: 'Konfigurasjon' }).click()
+  await expect(nav.getByRole('group', { name: 'Byggeklosser' })).toBeVisible()
+  await expect(blocks.getByRole('link', { name: 'Blokkmoduler' })).toBeVisible()
 })
