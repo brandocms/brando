@@ -10,6 +10,7 @@ if Code.ensure_loaded?(Igniter) do
     alias Brando.Deprecated.LexicalAliases
     alias Brando.Deprecated.RenamedModules
     alias Brando.Deprecated.TemplateCode
+    alias Brando.Deprecated.TemplateHazards
     alias Rewrite.Source
 
     @doc """
@@ -41,34 +42,38 @@ if Code.ensure_loaded?(Igniter) do
     module afterwards, the renamed ones aside; otherwise it is left as it is
     and reported.
     """
-    @template_extensions ["heex", "eex", "leex"]
-
     def rewrite(igniter) do
       renamed = RenamedModules.all()
       igniter = Igniter.include_glob(igniter, "{config,lib,test}/**/*.{ex,exs}")
-      # Read for the safety net: `embed_templates` compiles them into a module
-      igniter = Igniter.include_glob(igniter, "{lib,test}/**/*.{#{Enum.join(@template_extensions, ",")}}")
+      # Every template in the project, for the safety nets
+      extensions = TemplateHazards.extensions() -- ["exs"]
+      igniter = Igniter.include_glob(igniter, "{config,lib,test,priv}/**/*.{#{Enum.join(extensions, ",")}}")
+      igniter = Igniter.include_glob(igniter, "{config,lib,test,priv}/**/*.*.exs")
+
+      corpus =
+        igniter.rewrite
+        |> Rewrite.sources()
+        |> Enum.map(&{Source.get(&1, :path), Source.get(&1, :content)})
+        |> TemplateHazards.corpus(&read_template(igniter, &1))
 
       igniter.rewrite
       |> Rewrite.sources()
       |> Enum.map(&Source.get(&1, :path))
       |> Enum.filter(&(String.starts_with?(&1, ["config/", "lib/", "test/"]) and Path.extname(&1) in [".ex", ".exs"]))
+      |> Enum.reject(&TemplateHazards.template_file?/1)
       |> Enum.sort()
-      |> Enum.reduce(igniter, &rewrite_file(&2, &1, renamed))
+      |> Enum.reduce(igniter, &rewrite_file(&2, &1, {renamed, corpus}))
     end
 
-    defp rewrite_file(igniter, path, renamed) do
+    defp rewrite_file(igniter, path, {renamed, corpus}) do
       content = igniter.rewrite |> Rewrite.source!(path) |> Source.get(:content)
 
       {patches, left} = patches(content, renamed)
       {shorts, left} = Enum.split_with(left, &match?({:short, _}, &1))
-      shorts = Enum.map(shorts, &elem(&1, 1))
+      {hazards, left} = Enum.split_with(left, &match?({:hazard, _}, &1))
+      names = {Enum.map(shorts, &elem(&1, 1)), hazards |> Enum.map(&elem(&1, 1)) |> Enum.uniq()}
       updated = Sourceror.patch_string(content, patches)
-      templates = templates(igniter, path)
-      colocated = colocated_templates(igniter, path)
 
-      # The last guards: a rewrite that leaves invalid code, or changes what
-      # a module name means, is not made
       cond do
         patches == [] ->
           warn_left(igniter, path, left)
@@ -76,17 +81,35 @@ if Code.ensure_loaded?(Igniter) do
         match?({:error, _}, Code.string_to_quoted(updated)) ->
           warn_left(igniter, path, [{:unparsable, nil, nil}])
 
-        line = opaque_templates(content, templates, colocated) ->
-          warn_left(igniter, path, [{:opaque_templates, line} | left])
-
-        mention = shorts != [] && template_mention(content, shorts, templates, readable(colocated)) ->
-          warn_left(igniter, path, [{:template_mention, mention} | left])
-
-        line = changed_reference({content, updated}, renamed, &readable(templates.(&1, &2))) ->
-          warn_left(igniter, path, [{:changed_meaning, line} | left])
+        reason = held(igniter, path, {content, updated}, names, {renamed, corpus}) ->
+          warn_left(igniter, path, [reason | left])
 
         true ->
           igniter |> Igniter.update_file(path, &Source.update(&1, :content, fn _ -> updated end)) |> warn_left(path, left)
+      end
+    end
+
+    # The last guards: why a rewrite that would change what a module name
+    # means, here or in a template, is not made; nil when it can be
+    defp held(igniter, path, {content, updated}, {shorts, hazards}, {renamed, corpus}) do
+      templates = templates(igniter, path)
+      colocated = colocated_templates(igniter, path)
+
+      cond do
+        line = opaque_templates(content, templates, colocated) ->
+          {:opaque_templates, line}
+
+        mention = shorts != [] && template_mention(content, shorts, templates, readable(colocated)) ->
+          {:template_mention, mention}
+
+        hazard = hazards != [] && project_template(content, path, hazards, corpus, igniter) ->
+          {:project_template, hazard}
+
+        line = changed_reference({content, updated}, renamed, &readable(templates.(&1, &2))) ->
+          {:changed_meaning, line}
+
+        true ->
+          nil
       end
     end
 
@@ -210,7 +233,7 @@ if Code.ensure_loaded?(Igniter) do
       case TemplateCode.embed_pattern(pattern, options) do
         {:ok, pattern, root} ->
           dir = path |> Path.dirname() |> Path.expand() |> then(&Path.expand(root, &1))
-          glob = Path.join(dir, pattern <> ".{#{Enum.join(@template_extensions, ",")}}")
+          glob = Path.join(dir, pattern <> ".{#{Enum.join(TemplateHazards.extensions(), ",")}}")
           compiled = GlobEx.compile!(glob)
 
           in_sources =
@@ -660,9 +683,59 @@ if Code.ensure_loaded?(Igniter) do
     end
 
     # The names a renamed alias declaration changes the meaning of: its
-    # short name, and the new one it takes
-    defp changed_shorts(%{mode: :follow, short: short, new: new}), do: [{:short, short}, {:short, short_name(new)}]
-    defp changed_shorts(%{short: short}), do: [{:short, short}]
+    # short name, and the new one it takes. As hazards for any template in
+    # the project: both names when the short name changes, and otherwise
+    # the modules under the old name that did not move (`Meta.HTML`)
+    defp changed_shorts(%{mode: :follow, short: short, new: new}) do
+      new_short = short_name(new)
+      [{:short, short}, {:short, new_short}, {:hazard, Atom.to_string(short)}, {:hazard, Atom.to_string(new_short)}]
+    end
+
+    defp changed_shorts(%{short: short, module: module}) do
+      [{:short, short} | for(child <- RenamedModules.unmoved_children(module), do: {:hazard, "#{short}.#{child}"})]
+    end
+
+    # `{line, token, [{template, line}]}` when a template in the project
+    # uses a name the rewrite changes and the file can render templates:
+    # the template may be this module's, wherever it lives
+    defp project_template(content, path, hazards, corpus, igniter) do
+      with {token, [_ | _] = uses} <-
+             Enum.find_value(hazards, fn token -> {token, TemplateHazards.uses(corpus, token)} |> nonempty() end),
+           line when not is_nil(line) <- renders_templates(content, path, igniter) do
+        {line, token, uses}
+      else
+        _ -> nil
+      end
+    end
+
+    defp nonempty({_token, []}), do: nil
+    defp nonempty(found), do: found
+
+    defp renders_templates(content, path, igniter) do
+      {:ok, ast} = Sourceror.parse_string(content)
+      TemplateHazards.renders_templates(LexicalAliases.annotate(ast)) || sibling_template(path, igniter)
+    end
+
+    # A template file of any name in the same directory
+    defp sibling_template(path, igniter) do
+      dir = Path.dirname(path)
+
+      in_sources =
+        igniter.rewrite
+        |> Rewrite.sources()
+        |> Enum.map(&Source.get(&1, :path))
+        |> Enum.filter(&(Path.dirname(&1) == dir))
+
+      on_disk = for file <- ls(dir), do: Path.join(dir, file)
+      if Enum.any?(in_sources ++ on_disk, &TemplateHazards.template_file?/1), do: 1
+    end
+
+    defp ls(dir) do
+      case File.ls(dir) do
+        {:ok, files} -> files
+        {:error, _} -> []
+      end
+    end
 
     defp alias_use_change(%{mode: :follow, new: new}, []), do: Atom.to_string(short_name(new))
 
@@ -795,6 +868,17 @@ if Code.ensure_loaded?(Igniter) do
           (a computed or remote `embed_templates`, Phoenix.View, Phoenix.Template or Surface's ~F), \
           so the file is unchanged: a template may use an alias it would rename. Replace the old \
           names yourself; they keep working, with a warning, until 0.57.
+          """)
+
+        {:project_template, {line, token, uses}}, igniter ->
+          listed = uses |> Enum.take(5) |> Enum.map_join(", ", fn {template, at} -> "#{template}:#{at}" end)
+          more = if length(uses) > 5, do: " and #{length(uses) - 5} more", else: ""
+
+          Igniter.add_warning(igniter, """
+          #{path}:#{line} left unchanged: a template in this project uses `#{token}`; check whether it \
+          belongs to this module and rename it by hand. Renaming the modules renamed in 0.55 here would \
+          change what `#{token}` means to a template compiled into it. Templates: #{listed}#{more}. \
+          The old names keep working, with a warning, until 0.57.
           """)
 
         {:template_mention, {{template, line}, name}}, igniter ->

@@ -326,11 +326,21 @@ defmodule Brando.Deprecated.LexicalAliases do
     end
   end
 
-  # `alias :lists, as: L` and the like: a name the walk cannot follow
-  defp put_target(env, _target, as, position) when is_atom(as) and not is_nil(as),
-    do: put_alias(env, {as, nil, position})
+  # `alias :"Elixir.EEx", as: T` names its module; `alias :lists, as: L`
+  # and the like a name the walk cannot follow
+  defp put_target(env, target, as, position) do
+    case module(target) do
+      nil when is_atom(as) and not is_nil(as) ->
+        put_alias(env, {as, nil, position})
 
-  defp put_target(env, _target, _as, _position), do: env
+      nil ->
+        env
+
+      module ->
+        parts = module |> Module.split() |> Enum.map(&String.to_atom/1)
+        put_alias(env, {as || last_atom(parts), parts, position})
+    end
+  end
 
   defp bind_children(env, children, position) do
     Enum.reduce(children, env, fn

@@ -1359,7 +1359,7 @@ defmodule Mix.Tasks.Brando.Migrate55Test do
             {dgettext("drawer",
               "Upload to %{folder}", folder: @folder)}
           </p>
-          Upload
+          Upload here
           """
         end
       end
@@ -1520,6 +1520,121 @@ defmodule Mix.Tasks.Brando.Migrate55Test do
         assert source(igniter, path) == code, "rewritten past root #{root}"
         assert_has_warning(igniter, &String.contains?(&1, "names modules renamed in 0.55"))
       end
+    end
+
+    test "a template anywhere in the project that uses a renamed alias's name holds back files that can render one" do
+      upload = fn path, use, body, templates ->
+        code = """
+        defmodule LegacyAppWeb.PageLive do
+          #{use}
+          alias Brando.Upload
+          def store(m, e, c, u), do: Upload.handle_upload(m, e, c, u)
+        #{body}
+        end
+        """
+
+        {path, code, templates}
+      end
+
+      template = "<p>{Upload.url(@x)}</p>\n"
+
+      cases = [
+        # Named after the module, not the file
+        upload.("lib/legacy_app_web/live/pages.ex", "use Phoenix.LiveView", "", %{
+          "lib/legacy_app_web/live/page_live.html.heex" => template
+        }),
+        # A nested LiveComponent's colocated template
+        upload.(
+          "lib/legacy_app_web/live/page_live.ex",
+          "use Phoenix.LiveView",
+          "  defmodule Form do\n    use Phoenix.LiveComponent\n  end",
+          %{"lib/legacy_app_web/live/form.html.heex" => template}
+        ),
+        # Phoenix's .exs template engine
+        upload.("lib/legacy_app_web/l.ex", "use Phoenix.Component", ~S|  embed_templates "l/*"|, %{
+          "lib/legacy_app_web/l/a.html.heex" => "<p>hi</p>\n",
+          "lib/legacy_app_web/l/b.html.exs" => "Upload.url(assigns.x)\n"
+        }),
+        upload.("lib/legacy_app_web/live/page_live.ex", "use Phoenix.LiveView", "", %{
+          "lib/legacy_app_web/live/page_live.html.exs" => "Upload.url(assigns.x)\n"
+        }),
+        # embed_templates from a site's use macro
+        upload.("lib/legacy_app_web/l.ex", "use LegacyAppWeb, :html_templates", "", %{
+          "lib/legacy_app_web/l/a.html.heex" => template
+        }),
+        # Nested directories
+        upload.("lib/legacy_app_web/l.ex", "use Phoenix.Component", ~S|  embed_templates "pages/**/*"|, %{
+          "lib/legacy_app_web/pages/a.html.heex" => "<p>hi</p>\n",
+          "lib/legacy_app_web/pages/x/y/b.html.heex" => template
+        }),
+        # Whitespace before a delimiter in a colocated template
+        upload.("lib/legacy_app_web/live/page_live.ex", "use Phoenix.LiveView", "", %{
+          "lib/legacy_app_web/live/page_live.html.heex" => "<.c ms={[Upload ]} />\n"
+        }),
+        # Only under priv/, which no embed_templates names
+        upload.("lib/legacy_app_web/live/page_live.ex", "use LegacyAppWeb, :live_view", "", %{
+          "priv/templates/page/show.html.heex" => template
+        })
+      ]
+
+      for {path, code, templates} <- cases do
+        igniter = migrate(@blueprint_054, Map.put(templates, path, code))
+        assert source(igniter, path) == code, "rewritten past #{inspect(Map.keys(templates))}:\n#{code}"
+        assert_has_warning(igniter, &String.contains?(&1, path))
+      end
+
+      # A module under Brando.Meta that kept its name, from a template no module claims
+      meta = """
+      defmodule LegacyAppWeb.Head do
+        use Phoenix.Component
+        alias Brando.Meta
+        def meta, do: %Meta{}
+      end
+      """
+
+      igniter =
+        migrate(@blueprint_054, %{
+          "lib/legacy_app_web/head.ex" => meta,
+          "priv/templates/layout/root.html.heex" => "<Meta.HTML.render_meta conn={@conn} />\n"
+        })
+
+      assert source(igniter, "lib/legacy_app_web/head.ex") == meta
+
+      assert_has_warning(igniter, fn warning ->
+        String.contains?(
+          warning,
+          "lib/legacy_app_web/head.ex:2 left unchanged: a template in this project uses `Meta.HTML`"
+        ) and
+          String.contains?(warning, "priv/templates/layout/root.html.heex")
+      end)
+    end
+
+    test "a module that cannot render a template is rewritten whatever the project's templates use" do
+      code = """
+      defmodule LegacyApp.Uploader do
+        alias Brando.Upload
+        def store(m, e, c, u), do: Upload.handle_upload(m, e, c, u)
+      end
+      """
+
+      path = "lib/legacy_app/uploader.ex"
+      igniter = migrate(@blueprint_054, %{path => code, "lib/legacy_app_web/x.html.heex" => "<p>{Upload.url(@x)}</p>\n"})
+      assert source(igniter, path) =~ "alias Brando.Uploads.Store"
+    end
+
+    test "an EEx module aliased from its atom is still EEx" do
+      code = """
+      defmodule LegacyAppWeb.Render do
+        alias :"Elixir.EEx", as: Templates
+        alias Brando.Upload
+        def store(m, e, c, u), do: Upload.handle_upload(m, e, c, u)
+        def r(a), do: unquote(Templates.compile_string("<%= Upload.url(@x) %>"))
+      end
+      """
+
+      path = "lib/legacy_app_web/render.ex"
+      igniter = migrate(@blueprint_054, %{path => code})
+      assert source(igniter, path) == code
     end
 
     test "rendering through Phoenix.Template is not a template the task needs to read" do

@@ -35,6 +35,21 @@ defmodule Brando.Deprecated.RenamedModules do
 
   def removed_in, do: @removed_in
 
+  @doc """
+  The segments under `old` of Brando's modules that kept their names:
+  `["HTML"]` for `Brando.Meta`, whose `Brando.Meta.HTML` did not move.
+  """
+  def unmoved_children(old) do
+    prefix = inspect(old) <> "."
+
+    for module <- Application.spec(:brando, :modules) || [],
+        name = inspect(module),
+        String.starts_with?(name, prefix),
+        not Map.has_key?(@renamed, module),
+        uniq: true,
+        do: name |> String.replace_prefix(prefix, "") |> String.split(".") |> hd()
+  end
+
   @doc "Why `old` is deprecated, as the doctor and the shims' warnings say it."
   def reason(old) do
     "renamed to #{inspect(Map.fetch!(@renamed, old))}; the old name is removed in Brando #{@removed_in}. " <>
