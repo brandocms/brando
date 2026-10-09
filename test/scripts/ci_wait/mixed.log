@@ -12,16 +12,19 @@
 2026-10-09T09:00:11.0000000Z      stacktrace:
 2026-10-09T09:00:12.0000000Z        test/brando/notifications_test.exs:280: (test)
 2026-10-09T09:00:13.0000000Z 
-2026-10-09T09:00:14.0000000Z   2) test of two overlapping saves the second can be retried, without a duplicate block (BrandoAdmin.EditSessionSavesTest)
-2026-10-09T09:00:15.0000000Z ##[error]     test/brando_admin/live/edit_session_saves_test.exs:113
-2026-10-09T09:00:16.0000000Z      condition never held
-2026-10-09T09:00:17.0000000Z      code: await(fn -> Map.new(texts(c.identity))[new] == "<p>B retries</p>" end)
-2026-10-09T09:00:18.0000000Z      stacktrace:
-2026-10-09T09:00:19.0000000Z        test/brando_admin/live/edit_session_saves_test.exs:130: (test)
-2026-10-09T09:00:20.0000000Z 
-2026-10-09T09:00:21.0000000Z .........................................................
-2026-10-09T09:00:22.0000000Z Finished in 664.6 seconds (50.1s async, 614.5s sync)
+2026-10-09T09:00:14.0000000Z   2) test pushes socket tokens for the signed-in user on mount (BrandoAdmin.ChromeSocketTokensTest)
+2026-10-09T09:00:15.0000000Z ##[error]     test/brando_admin/live/chrome_socket_tokens_test.exs:15
+2026-10-09T09:00:16.0000000Z      ** (exit) exited in: Phoenix.LiveViewTest.live(nil)
+2026-10-09T09:00:17.0000000Z          ** (EXIT) exited in: GenServer.call(BrandoIntegration.Presence_shard0, {:list, "lobby"}, 5000)
+2026-10-09T09:00:18.0000000Z              ** (EXIT) exited in: DBConnection.Holder.checkout(#PID<0.12255.0>, [log: #Function<14.89431826/1 in Ecto.Adapters.SQL.with_log/4>])
+2026-10-09T09:00:19.0000000Z                  ** (EXIT) shutdown: "owner #PID<0.12254.0> exited"
+2026-10-09T09:00:20.0000000Z      code: {:ok, view, _} = live_isolated(build_conn(), BrandoAdmin.Chrome, session: %{"user_token" => session_token})
+2026-10-09T09:00:21.0000000Z      stacktrace:
+2026-10-09T09:00:22.0000000Z        test/brando_admin/live/chrome_socket_tokens_test.exs:19: (test)
 2026-10-09T09:00:23.0000000Z 
-2026-10-09T09:00:24.0000000Z Result: 5072/5074 passed (165/165 doctests, 4907/4909 tests)
-2026-10-09T09:00:25.0000000Z Failed: 2 tests
-2026-10-09T09:00:26.0000000Z ##[error]Process completed with exit code 2.
+2026-10-09T09:00:24.0000000Z .........................................................
+2026-10-09T09:00:25.0000000Z Finished in 664.6 seconds (50.1s async, 614.5s sync)
+2026-10-09T09:00:26.0000000Z 
+2026-10-09T09:00:27.0000000Z Result: 5072/5074 passed (165/165 doctests, 4907/4909 tests)
+2026-10-09T09:00:28.0000000Z Failed: 2 tests
+2026-10-09T09:00:29.0000000Z ##[error]Process completed with exit code 2.
