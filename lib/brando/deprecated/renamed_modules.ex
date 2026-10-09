@@ -55,7 +55,7 @@ defmodule Brando.Deprecated.RenamedModules do
     :ok
   end
 
-  @route_macros [:get, :post, :put, :patch, :delete, :options, :head, :match, :live, :forward, :resources]
+  @route_macros [:get, :post, :put, :patch, :delete, :options, :head, :live, :forward, :resources]
 
   @doc """
   Marks each route inside a router `scope` with an alias, so a reader of
@@ -64,60 +64,116 @@ defmodule Brando.Deprecated.RenamedModules do
   plug is `Brando.SEOController`.
 
   The route call's metadata starts with `scope_alias: [Brando]` (first, so
-  a pattern can match it), the joined aliases
-  of the scopes around it (a nested `scope "/x", Sub` adds `Sub`; a scope
-  with `alias: false` starts over). Routes with `alias: false` of their own,
-  or outside any aliased scope, are left unmarked. Works on both
-  `Code.string_to_quoted/2` and Sourceror ASTs.
+  a pattern can match it), the joined aliases of the scopes around it, as
+  Phoenix joins them: the file's aliases are expanded (`alias Brando, as: B`
+  then `scope "/", B`), a nested `scope "/x", Sub` adds `Sub`, a scope's
+  positional alias wins over its `alias:` option, and `alias: false` starts
+  over. `match :get, path, Plug, action` is marked like the verb macros.
+  Routes with `alias: false` of their own, or outside any aliased scope, are
+  left unmarked. Works on both `Code.string_to_quoted/2` and Sourceror ASTs.
   """
-  def mark_scoped_routes(ast), do: mark(ast, [])
+  def mark_scoped_routes(ast), do: mark(ast, %{scope: [], aliases: file_aliases(ast)})
 
-  defp mark({:scope, meta, [_ | _] = args} = node, scope) do
+  defp mark({:scope, meta, [_ | _] = args} = node, ctx) do
     {options, [block]} = Enum.split(args, -1)
 
     if do_block?(block) do
-      {:scope, meta, options ++ [mark(block, scope_alias(options, scope))]}
+      {:scope, meta, options ++ [mark(block, %{ctx | scope: scope_alias(options, ctx)})]}
     else
-      mark_children(node, scope)
+      mark_children(node, ctx)
     end
   end
 
-  defp mark({verb, meta, [path, {:__aliases__, _, parts} = plug | rest]}, [_ | _] = scope)
+  defp mark({verb, meta, [path, {:__aliases__, _, _} = plug | rest]}, %{scope: [_ | _]} = ctx)
        when verb in @route_macros do
-    if Enum.all?(parts, &is_atom/1) and not keyword_value?(rest, :alias, false) do
-      {verb, [{:scope_alias, scope} | meta], [path, plug | rest]}
-    else
-      {verb, meta, [path, plug | rest]}
+    {verb, scope_meta(meta, plug, rest, ctx), [path, plug | rest]}
+  end
+
+  defp mark({:match, meta, [verb, path, {:__aliases__, _, _} = plug | rest]}, %{scope: [_ | _]} = ctx) do
+    {:match, scope_meta(meta, plug, rest, ctx), [verb, path, plug | rest]}
+  end
+
+  defp mark({_, _, args} = node, ctx) when is_list(args), do: mark_children(node, ctx)
+  defp mark({left, right}, ctx), do: {mark(left, ctx), mark(right, ctx)}
+  defp mark(list, ctx) when is_list(list), do: Enum.map(list, &mark(&1, ctx))
+  defp mark(other, _ctx), do: other
+
+  defp mark_children({call, meta, args}, ctx), do: {mark(call, ctx), meta, Enum.map(args, &mark(&1, ctx))}
+
+  defp scope_meta(meta, {:__aliases__, _, parts}, rest, ctx) do
+    if Enum.all?(parts, &is_atom/1) and not keyword_value?(rest, :alias, false),
+      do: [{:scope_alias, ctx.scope} | meta],
+      else: meta
+  end
+
+  # A positional alias wins: Phoenix's scope/3 and scope/4 put it over the
+  # options' `alias:`
+  defp scope_alias(options, ctx) do
+    positional = Enum.find_value(options, &expand_alias(&1, ctx.aliases))
+
+    keyword =
+      options
+      |> Enum.map(&literal/1)
+      |> Enum.find_value(:none, fn
+        options when is_list(options) ->
+          case keyword_value(options, :alias) do
+            {:ok, false} -> :reset
+            {:ok, value} -> expand_alias(value, ctx.aliases)
+            :error -> nil
+          end
+
+        _ ->
+          nil
+      end)
+
+    cond do
+      positional -> ctx.scope ++ positional
+      keyword == :reset -> []
+      is_list(keyword) -> ctx.scope ++ keyword
+      true -> ctx.scope
     end
   end
 
-  defp mark({_, _, args} = node, scope) when is_list(args), do: mark_children(node, scope)
-  defp mark({left, right}, scope), do: {mark(left, scope), mark(right, scope)}
-  defp mark(list, scope) when is_list(list), do: Enum.map(list, &mark(&1, scope))
-  defp mark(other, _scope), do: other
-
-  defp mark_children({call, meta, args}, scope), do: {mark(call, scope), meta, Enum.map(args, &mark(&1, scope))}
-
-  defp scope_alias(options, scope) do
-    Enum.reduce(options, scope, fn
-      {:__aliases__, _, parts}, scope ->
-        if Enum.all?(parts, &is_atom/1), do: scope ++ parts, else: scope
-
-      options, scope when is_list(options) ->
-        case keyword_value(options, :alias) do
-          {:ok, {:__aliases__, _, parts}} -> scope ++ parts
-          {:ok, false} -> []
-          _ -> scope
-        end
-
-      _, scope ->
-        scope
-    end)
+  defp expand_alias({:__aliases__, _, [first | rest] = parts}, aliases) do
+    if Enum.all?(parts, &is_atom/1), do: Map.get(aliases, first, [first]) ++ rest
   end
+
+  defp expand_alias(_node, _aliases), do: nil
+
+  # `short => parts` for the file's aliases, `as:` included
+  defp file_aliases(ast) do
+    {_ast, aliases} =
+      Macro.prewalk(ast, %{}, fn
+        {:alias, _, [{:__aliases__, _, parts} | options]} = node, aliases ->
+          if Enum.all?(parts, &is_atom/1),
+            do: {node, Map.put(aliases, alias_as(options) || parts |> Enum.reverse() |> hd(), parts)},
+            else: {node, aliases}
+
+        node, aliases ->
+          {node, aliases}
+      end)
+
+    aliases
+  end
+
+  defp alias_as([options]) when is_list(options) do
+    case keyword_value(options, :as) do
+      {:ok, {:__aliases__, _, [as]}} -> as
+      _ -> nil
+    end
+  end
+
+  defp alias_as(_options), do: nil
 
   defp do_block?(block), do: is_list(block) and match?({:ok, _}, keyword_value(block, :do))
 
-  defp keyword_value?(args, key, value), do: Enum.any?(args, &(is_list(&1) and keyword_value(&1, key) == {:ok, value}))
+  # Bracketed options too: Sourceror wraps `[alias: false]` in a :__block__
+  defp keyword_value?(args, key, value) do
+    Enum.any?(args, fn arg ->
+      arg = literal(arg)
+      is_list(arg) and keyword_value(arg, key) == {:ok, value}
+    end)
+  end
 
   # Plain keyword lists, and Sourceror's, which wraps keys and literals in
   # :__block__ nodes

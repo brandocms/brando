@@ -716,6 +716,44 @@ defmodule Brando.Doctor.ChecksTest do
              ] = code |> Code.string_to_quoted!() |> Checks.Deprecations.scan(@deprecated_calls)
     end
 
+    test "resolves a scope's alias through the file's aliases, and reports routes migrate55 leaves" do
+      code = """
+      defmodule MyAppWeb.Router do
+        alias Brando, as: B
+
+        scope "/", B do
+          get "/robots.txt", SEOController, :robots
+        end
+
+        scope "/", Brando, alias: false do
+          match :get, "/m", PreviewController, :show
+          forward "/f", SitemapController
+        end
+      end
+      """
+
+      assert [
+               %{line: 5, call: "Brando.SEOController", reason: reason},
+               %{line: 9, call: "Brando.PreviewController"},
+               %{line: 10, call: "Brando.SitemapController"}
+             ] = code |> Code.string_to_quoted!() |> Checks.Deprecations.scan(@deprecated_calls)
+
+      assert reason =~ "name the controller BrandoWeb.SEOController and add alias: false"
+    end
+
+    test "follows as: aliases" do
+      code = """
+      defmodule A do
+        alias Brando.Upload, as: U
+        alias Brando.Meta, as: M
+        def new, do: %U{}
+        def tags(c), do: M.HTML.render_meta(c)
+      end
+      """
+
+      assert [%{line: 4, call: "Brando.Upload"}] = scan(code)
+    end
+
     test "an alias used only for a module that kept its name is not a reference" do
       code = "defmodule A do\n  alias Brando.Meta\n  def tags(c), do: Meta.HTML.render_meta(c)\nend"
       assert scan(code) == []

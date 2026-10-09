@@ -97,9 +97,11 @@ defmodule Brando.Doctor.Checks.Deprecations do
 
         # A route inside `scope "/", Brando do`: Phoenix joins the scope's
         # alias to the plug's
+        {:match, [{:scope_alias, scope} | _] = meta, [verb, path, {:__aliases__, plug_meta, parts} | rest]}, acc ->
+          {{:match, meta, [verb, path | rest]}, scoped_route(scope, parts, plug_meta, aliases, acc)}
+
         {verb, [{:scope_alias, scope} | _] = meta, [path, {:__aliases__, plug_meta, parts} | rest]}, acc ->
-          module = Module.concat(scope ++ [resolve(parts, aliases)])
-          {{verb, meta, [path | rest]}, renamed(module, plug_meta, acc)}
+          {{verb, meta, [path | rest]}, scoped_route(scope, parts, plug_meta, aliases, acc)}
 
         # A piped call has one more argument than it shows
         {:|>, meta, [left, {call, call_meta, args}]}, acc when is_list(args) ->
@@ -152,6 +154,22 @@ defmodule Brando.Doctor.Checks.Deprecations do
 
   # A reference to a module renamed in 0.55: a router or socket names a
   # controller or channel without calling it
+  defp scoped_route(scope, parts, meta, aliases, acc) do
+    module = Module.concat(scope ++ [resolve(parts, aliases)])
+
+    case RenamedModules.new_name(module) do
+      nil ->
+        acc
+
+      new ->
+        reason =
+          "renamed to #{inspect(new)}; the old name is removed in Brando #{RenamedModules.removed_in()}. " <>
+            "The route gets it from its scope's alias: name the controller #{inspect(new)} and add alias: false"
+
+        [%{file: nil, line: meta[:line], call: inspect(module), reason: reason} | acc]
+    end
+  end
+
   defp renamed(module, meta, acc) do
     if RenamedModules.new_name(module) do
       [%{file: nil, line: meta[:line], call: inspect(module), reason: RenamedModules.reason(module)} | acc]
