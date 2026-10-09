@@ -202,12 +202,7 @@ defmodule Brando.Content.Usage do
       )
       # A shared table: every site's drafts are in `public`, told apart by scope.
       |> Brando.Repo.all(prefix: "public")
-      |> Enum.flat_map(fn value ->
-        case value && Integer.parse(value) do
-          {id, ""} -> [id]
-          _ -> []
-        end
-      end)
+      |> Enum.flat_map(&draft_id/1)
     end)
   end
 
@@ -227,6 +222,13 @@ defmodule Brando.Content.Usage do
   end
 
   defp in_galleries(_kind, _ids), do: []
+
+  defp draft_id(value) do
+    case value && Integer.parse(value) do
+      {id, ""} -> [id]
+      _ -> []
+    end
+  end
 
   defp in_fields(kind, ids, opts) do
     for {schema, foreign_key} <- asset_fields(kind),
