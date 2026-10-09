@@ -409,7 +409,9 @@ other small admin buttons. Render it with `AIAction.button/1`:
 
 - `href` makes it a link (Build with AI opens the assistant in a new tab).
 - `size={:compact}` (24px) beside a field's label; `size={:icon}` (28px
-  square, with an `aria-label`) where only the icon fits. No AI action sits
+  square, with an `aria-label` and a `data-tooltip`, see
+  [Icon-only buttons and tooltips](#icon-only-buttons-and-tooltips)) where
+  only the icon fits. No AI action sits
   inside a text field: a field's actions are beside its label.
 - `busy` while the request runs: the sparkles pulse and the button stays
   fully visible; `disabled` fades it. Focus is a 2px `--brando-ai` outline.
