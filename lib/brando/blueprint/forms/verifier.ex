@@ -87,14 +87,7 @@ defmodule Brando.Blueprint.Forms.Verifier do
   defp verify_write_with_ai(context, form, %{ai: nil, opts: opts} = input) do
     case Keyword.get(opts || [], :write_with_ai) do
       config when is_list(config) ->
-        config
-        |> Keyword.get(:from, [])
-        |> validate_entities(fn field ->
-          case ai_source_problem(context, field) do
-            nil -> :ok
-            problem -> error(context, input, [form.name, input.name], "has write_with_ai reading #{problem}")
-          end
-        end)
+        validate_entities(Keyword.get(config, :from, []), &verify_write_with_ai_source(context, form, input, &1))
 
       _ ->
         :ok
@@ -102,6 +95,13 @@ defmodule Brando.Blueprint.Forms.Verifier do
   end
 
   defp verify_write_with_ai(_context, _form, _input), do: :ok
+
+  defp verify_write_with_ai_source(context, form, input, field) do
+    case ai_source_problem(context, field) do
+      nil -> :ok
+      problem -> error(context, input, [form.name, input.name], "has write_with_ai reading #{problem}")
+    end
+  end
 
   # `ai_actions:` read the fields in `from:`: the schema's own values and its
   # block fields. `:blocks` stands for every block field, so it needs one,

@@ -32,6 +32,7 @@ defmodule BrandoAdmin.Components.Form do
 
   require Logger
 
+  alias Brando.AI.FieldAction
   alias Brando.Blueprint.Callback
   alias Brando.Blueprint.Forms, as: BlueprintForms
   alias Brando.EditSession
@@ -209,7 +210,7 @@ defmodule BrandoAdmin.Components.Form do
 
       if message[:replace] || get_field(socket.assigns.form.source, field) == message[:original] do
         send_update(FieldActions, id: panel, accept_result: :written)
-        value = Brando.AI.FieldAction.field_value(text, type)
+        value = FieldAction.field_value(text, type)
         {:ok, write_ai_text(socket, path, key, string_path, field, value)}
       else
         send_update(FieldActions, id: panel, accept_result: :conflict)
@@ -4926,7 +4927,7 @@ defmodule BrandoAdmin.Components.Form do
          {actions, type, opts} <- field_ai_actions(socket, field_atom),
          false <- FieldActions.locked?(opts, socket.assigns.current_user),
          %BlueprintForms.AIAction{} = ai_action <- Enum.find(actions, &(&1.name == action_atom)),
-         true <- Brando.AI.FieldAction.available?(ai_action) do
+         true <- FieldAction.available?(ai_action) do
       send_update(FieldActions,
         id: field_action_panel(socket, field_atom, params["panel"]),
         run: field_action_run(socket, field_atom, ai_action, type)
@@ -5032,24 +5033,28 @@ defmodule BrandoAdmin.Components.Form do
   # field) and the image drawer's: the reply is a suggestion in the field's
   # panel (`AltTextSuggestion`), which the button names.
   def handle_event("suggest_entry_alt_text", params, %{assigns: %{entry: %Images.Image{id: id}}} = socket) do
-    with panel when is_binary(panel) <- alt_suggestion_panel(params) do
-      {:noreply,
-       socket
-       |> assign(:alt_text_suggesting, true)
-       |> start_async({:suggest_entry_alt_text, id, panel}, fn -> Images.AltText.describe(id) end)}
-    else
-      _ -> {:noreply, socket}
+    case alt_suggestion_panel(params) do
+      nil ->
+        {:noreply, socket}
+
+      panel ->
+        {:noreply,
+         socket
+         |> assign(:alt_text_suggesting, true)
+         |> start_async({:suggest_entry_alt_text, id, panel}, fn -> Images.AltText.describe(id) end)}
     end
   end
 
   def handle_event("suggest_alt_text", params, %{assigns: %{edit_image: %{image: %{id: id}}}} = socket) do
-    with panel when is_binary(panel) <- alt_suggestion_panel(params) do
-      {:noreply,
-       socket
-       |> assign(:alt_text_suggesting, true)
-       |> start_async({:suggest_alt_text, id, panel}, fn -> Brando.Images.AltText.describe(id) end)}
-    else
-      _ -> {:noreply, socket}
+    case alt_suggestion_panel(params) do
+      nil ->
+        {:noreply, socket}
+
+      panel ->
+        {:noreply,
+         socket
+         |> assign(:alt_text_suggesting, true)
+         |> start_async({:suggest_alt_text, id, panel}, fn -> Brando.Images.AltText.describe(id) end)}
     end
   end
 
@@ -6925,7 +6930,7 @@ defmodule BrandoAdmin.Components.Form do
   defp alt_suggestion_panel(_params), do: nil
 
   defp field_ai_actions(socket, field) do
-    Brando.AI.FieldAction.for_field(socket.assigns.schema, socket.assigns.form_blueprint, field)
+    FieldAction.for_field(socket.assigns.schema, socket.assigns.form_blueprint, field)
   end
 
   # The values of the fields an AI action reads, as a function to call later:
@@ -7071,12 +7076,12 @@ defmodule BrandoAdmin.Components.Form do
 
     # An action from `ai:` or a site prompt sends its prompt even with
     # nothing to read, as `ai:` did.
-    needs_inputs? = Brando.AI.FieldAction.needs_inputs?(ai_action)
+    needs_inputs? = FieldAction.needs_inputs?(ai_action)
 
     build = fn ->
       case context.() do
         [] when needs_inputs? -> {:error, :empty_inputs}
-        values -> {:ok, Brando.AI.FieldAction.prompt(ai_action, values, language: language, type: type)}
+        values -> {:ok, FieldAction.prompt(ai_action, values, language: language, type: type)}
       end
     end
 
@@ -7087,12 +7092,12 @@ defmodule BrandoAdmin.Components.Form do
       original: original,
       warning: field_action_warning(type, original),
       build: build,
-      ai_opts: Brando.AI.FieldAction.ai_opts(ai_action)
+      ai_opts: FieldAction.ai_opts(ai_action)
     }
   end
 
   defp field_action_warning(:rich_text, html) do
-    if Brando.AI.FieldAction.formatting_lost?(html),
+    if FieldAction.formatting_lost?(html),
       do: gettext("Accepting replaces the field's text, with its formatting, links and footnotes.")
   end
 

@@ -174,7 +174,8 @@ defmodule Brando.Blueprint.Forms.AIAction do
   @doc "The request options `generate/2` keeps besides `model:`."
   def request_opt_keys, do: @request_opt_keys
 
-  @doc false
+  @doc "`ai:` or site prompt options as a keyword list: a map's known keys, anything else empty."
+  @spec keyword(term()) :: keyword()
   def keyword(opts) when is_list(opts), do: if(Keyword.keyword?(opts), do: opts, else: [])
   def keyword(opts) when is_map(opts), do: Enum.flat_map(opts, &keyword_pair/1)
   def keyword(_opts), do: []
@@ -189,9 +190,11 @@ defmodule Brando.Blueprint.Forms.AIAction do
 
   defp keyword_pair(_pair), do: []
 
-  @doc false
-  # `context:` as `Brando.AI.Context.normalize_fields/1` reads it: atoms, and
-  # strings that name an existing atom.
+  @doc """
+  `context:` as the fields it names, as `Brando.AI.Context.normalize_fields/1`
+  reads it: atoms, and strings that name an existing atom.
+  """
+  @spec context_fields(term()) :: [atom()]
   def context_fields(nil), do: []
 
   def context_fields(fields) do
