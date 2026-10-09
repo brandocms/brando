@@ -676,12 +676,49 @@ defmodule Brando.Doctor.ChecksTest do
 
       deprecated = Map.put(@deprecated_calls, {Brando.UserChannel, :alert, 2}, "Use BrandoAdmin.UserChannel.alert/2")
 
+      # The alias on line 9 is reported where it is used
       assert [
                %{line: 3, call: "Brando.SEOController", reason: "renamed to BrandoWeb.SEOController" <> _},
-               %{line: 9, call: "Brando.UserChannel"},
                %{line: 10, call: "Brando.UserChannel.alert/2"},
                %{line: 11, call: "Brando.UserChannel"}
              ] = code |> Code.string_to_quoted!() |> Checks.Deprecations.scan(deprecated)
+    end
+
+    test "joins a router scope's alias to its routes, as Phoenix does" do
+      code = """
+      defmodule MyAppWeb.Router do
+        scope "/", Brando do
+          get "/robots.txt", SEOController, :robots
+          get "/new", BrandoWeb.SitemapController, :show, alias: false
+
+          scope "/p", alias: false do
+            get "/:preview_key", PreviewController, :show
+          end
+        end
+
+        scope "/", MyAppWeb do
+          get "/sitemaps/:file", Brando.SitemapController, :show
+          get "/old", Brando.SitemapController, :show, alias: false
+        end
+
+        scope path: "/x", alias: Brando do
+          scope "/" do
+            get "/__p__/:preview_key", PreviewController, :show
+          end
+        end
+      end
+      """
+
+      assert [
+               %{line: 3, call: "Brando.SEOController"},
+               %{line: 13, call: "Brando.SitemapController"},
+               %{line: 18, call: "Brando.PreviewController"}
+             ] = code |> Code.string_to_quoted!() |> Checks.Deprecations.scan(@deprecated_calls)
+    end
+
+    test "an alias used only for a module that kept its name is not a reference" do
+      code = "defmodule A do\n  alias Brando.Meta\n  def tags(c), do: Meta.HTML.render_meta(c)\nend"
+      assert scan(code) == []
     end
 
     test "knows Brando's deprecated functions" do

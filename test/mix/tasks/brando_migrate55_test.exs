@@ -494,6 +494,102 @@ defmodule Mix.Tasks.Brando.Migrate55Test do
              """
     end
 
+    test "routes inside a scope with an alias are read relative to it" do
+      router = """
+      defmodule LegacyAppWeb.Router do
+        use LegacyAppWeb, :router
+
+        scope "/", Brando do
+          pipe_through :browser
+          get "/robots.txt", SEOController, :robots
+          get "/sitemaps/:file", SitemapController, :show, as: :sitemap
+          get "/legacy", Upload, :show
+
+          scope "/p", alias: false do
+            get "/:key", PreviewController, :show
+          end
+        end
+
+        scope "/", LegacyAppWeb do
+          get "/__p__/:preview_key", Brando.PreviewController, :show
+        end
+      end
+      """
+
+      igniter = migrate(@blueprint_054, %{@router_path => router})
+      assert igniter.issues == []
+
+      assert source(igniter, @router_path) == """
+             defmodule LegacyAppWeb.Router do
+               use LegacyAppWeb, :router
+
+               scope "/", Brando do
+                 pipe_through :browser
+                 get "/robots.txt", BrandoWeb.SEOController, :robots, alias: false
+                 get "/sitemaps/:file", BrandoWeb.SitemapController, :show, as: :sitemap, alias: false
+                 get "/legacy", Uploads.Store, :show
+
+                 scope "/p", alias: false do
+                   get "/:key", PreviewController, :show
+                 end
+               end
+
+               scope "/", LegacyAppWeb do
+                 get "/__p__/:preview_key", Brando.PreviewController, :show
+               end
+             end
+             """
+    end
+
+    test "aliases are resolved per module" do
+      two_modules = """
+      defmodule LegacyApp.A do
+        alias Brando.Upload
+        def store(m, e, c, u), do: Upload.handle_upload(m, e, c, u)
+      end
+
+      defmodule LegacyApp.B do
+        alias LegacyApp.Upload
+        def own, do: Upload.new()
+
+        defmodule Inner do
+          def own, do: Upload.new()
+        end
+      end
+
+      defmodule LegacyApp.C do
+        alias Brando.Meta
+        def tags(conn), do: Meta.HTML.render_meta(conn)
+      end
+      """
+
+      path = "lib/legacy_app/two_modules.ex"
+      igniter = migrate(@blueprint_054, %{path => two_modules})
+      assert igniter.issues == []
+
+      # Meta.HTML kept its name: the alias stays, so nothing goes unused
+      assert source(igniter, path) == """
+             defmodule LegacyApp.A do
+               alias Brando.Uploads.Store
+               def store(m, e, c, u), do: Store.handle_upload(m, e, c, u)
+             end
+
+             defmodule LegacyApp.B do
+               alias LegacyApp.Upload
+               def own, do: Upload.new()
+
+               defmodule Inner do
+                 def own, do: Upload.new()
+               end
+             end
+
+             defmodule LegacyApp.C do
+               alias Brando.Meta
+               def tags(conn), do: Meta.HTML.render_meta(conn)
+             end
+             """
+    end
+
     test "the Identity's schemas move under Brando.Sites, and Brando.Meta.HTML stays" do
       identity = """
       defmodule LegacyApp.Identity do

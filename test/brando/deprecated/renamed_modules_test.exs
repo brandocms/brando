@@ -56,8 +56,10 @@ defmodule Brando.Deprecated.RenamedModulesTest do
   end
 
   test "the Identity's schemas keep their changesets under the old names" do
-    # Through variables: a direct call is a deprecation warning at compile time
-    {link, meta} = {Brando.Link, Brando.Meta}
+    # Picked at runtime: the compiler follows a literal module, even through
+    # a variable, and warns that changeset/2 is deprecated
+    old = Map.new(RenamedModules.all(), fn {old, new} -> {new, old} end)
+    {link, meta} = {old[Brando.Sites.Link], old[Brando.Sites.Meta]}
     changeset = link.changeset(%Brando.Sites.Link{}, %{name: "Instagram", url: "https://x.com"})
     assert changeset.valid?
     assert changeset.data.__struct__ == Brando.Sites.Link

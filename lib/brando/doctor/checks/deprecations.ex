@@ -3,7 +3,8 @@ defmodule Brando.Doctor.Checks.Deprecations do
   Calls to deprecated Brando functions and macros (those marked
   `@deprecated`) in the project's `lib/`, and references to the modules
   renamed in 0.55, whose old names are deprecated: a router's
-  `get "/robots.txt", Brando.SEOController, :robots`, say.
+  `get "/robots.txt", Brando.SEOController, :robots`, say, or the same
+  route as `SEOController` inside `scope "/", Brando do`.
 
   The source is read as code, not text: aliases (`alias Brando.HTML`,
   `alias Brando.{HTML, Utils}`, `as:`), imports and pipes are followed, so
@@ -86,7 +87,20 @@ defmodule Brando.Doctor.Checks.Deprecations do
     imports = collect_imports(ast, aliases, deprecated)
 
     {_ast, found} =
-      Macro.prewalk(ast, [], fn
+      ast
+      |> RenamedModules.mark_scoped_routes()
+      |> Macro.prewalk([], fn
+        # Declaring an alias uses nothing: what is reached through it is
+        # reported where it is used (`alias Brando.Meta` for `Meta.HTML`)
+        {:alias, _, _}, acc ->
+          {:ok, acc}
+
+        # A route inside `scope "/", Brando do`: Phoenix joins the scope's
+        # alias to the plug's
+        {verb, [{:scope_alias, scope} | _] = meta, [path, {:__aliases__, plug_meta, parts} | rest]}, acc ->
+          module = Module.concat(scope ++ [resolve(parts, aliases)])
+          {{verb, meta, [path | rest]}, renamed(module, plug_meta, acc)}
+
         # A piped call has one more argument than it shows
         {:|>, meta, [left, {call, call_meta, args}]}, acc when is_list(args) ->
           {{:|>, meta, [left, {call, [{:piped, true} | call_meta], args}]}, acc}

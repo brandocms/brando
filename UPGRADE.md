@@ -51,7 +51,10 @@ as deprecated shims in 0.55 and 0.56 and are removed in 0.57.
    `lib/` and `test/`: routes such as
    `get "/robots.txt", Brando.SEOController, :robots`, an endpoint's
    `render_errors: [formats: [html: Brando.ErrorHTML]]`, aliases and calls.
-   It reports an alias in braces that the new name cannot share, such as
+   A route inside `scope "/", Brando do` names its controller relative to
+   the scope (`get "/robots.txt", SEOController, :robots`); it becomes
+   `BrandoWeb.SEOController` with `alias: false`. It reports an alias in
+   braces that the new name cannot share, such as
    `alias Brando.{UserChannel, Utils}`; give the new name its own `alias`.
 2. Run `mix brando.doctor`. Its Deprecations check lists any old name still
    in `lib/`, including ones the task could not see.
