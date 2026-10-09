@@ -1440,6 +1440,117 @@ defmodule E2EFixtureController do
     json(conn, %{folder_id: folder_id})
   end
 
+  # "Sort by use" in the video and file libraries (#3098): a "Sweep" folder in
+  # each, with videos and files that pages show through block refs. "Spring
+  # campaign" has a Norwegian translation using one of them, so the two share
+  # a folder; one video and one file are used nowhere and stay.
+  def media_sweep(conn, _params) do
+    alias BrandoAdmin.Images.FolderBrowser
+
+    [beam | _] = Plug.Conn.get_req_header(conn, "user-agent")
+    Phoenix.Ecto.SQL.Sandbox.allow(beam, Ecto.Adapters.SQL.Sandbox)
+    owner = get_admin_user()
+
+    {:ok, video_cfg} = Brando.Videos.get_config_for(%{config_target: "default"})
+    {:ok, file_cfg} = Brando.Files.get_config_for(%{config_target: "default"})
+    video_folder = FolderBrowser.folder_id_for("Sweep", FolderBrowser.scope_for(video_cfg.upload_path))
+    file_folder = FolderBrowser.folder_id_for("Sweep", FolderBrowser.scope_for(file_cfg.upload_path))
+
+    [teaser, film, walkthrough, _reel] =
+      for {title, n} <- Enum.with_index(["Spring teaser", "Spring film", "Studio walkthrough", "Old showreel"]) do
+        Brando.Repo.insert!(%Brando.Videos.Video{
+          title: title,
+          type: :external_file,
+          source_url: "https://example.com/clips/#{n + 1}.mp4",
+          width: 1920,
+          height: 1080,
+          duration: "00:42",
+          config_target: "default",
+          creator_id: owner.id,
+          folder_id: video_folder,
+          thumbnail_id: sweep_thumbnail().id
+        })
+      end
+
+    [price_list, brochure, floor_plan, _old] =
+      for {filename, mime} <- [
+            {"price-list.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"},
+            {"spring-brochure.pdf", "application/pdf"},
+            {"floor-plan.zip", "application/zip"},
+            {"old-terms.pdf", "application/pdf"}
+          ] do
+        Brando.Repo.insert!(%Brando.Files.File{
+          filename: filename,
+          mime_type: mime,
+          filesize: 120_000,
+          config_target: "default",
+          creator_id: owner.id,
+          folder_id: file_folder
+        })
+      end
+
+    spring = sweep_page(owner, "Spring campaign", :en, videos: [teaser, film], files: [price_list, brochure])
+    norwegian = sweep_page(owner, "Vårkampanje", :no, videos: [film], files: [])
+
+    Brando.Repo.insert!(
+      struct(Module.concat([Brando.Pages.Page, Alternate]), entry_id: norwegian.id, linked_entry_id: spring.id)
+    )
+
+    sweep_page(owner, "Studio visits", :en, videos: [walkthrough], files: [floor_plan])
+
+    json(conn, %{video_folder_id: video_folder, file_folder_id: file_folder})
+  end
+
+  defp sweep_page(owner, title, language, media) do
+    page =
+      Brando.Repo.insert!(%Brando.Pages.Page{
+        title: title,
+        uri: "#{Brando.Utils.slugify(title)}-#{language}",
+        language: language,
+        status: :published,
+        creator_id: owner.id
+      })
+
+    Brando.Content.create_identifier(Brando.Pages.Page, page)
+
+    block =
+      Brando.Repo.insert!(%Brando.Content.Block{
+        type: :module,
+        source: to_string(Brando.Pages.Page.Blocks),
+        uid: Brando.Utils.generate_uid()
+      })
+
+    Brando.Repo.insert!(struct(Brando.Pages.Page.Blocks, %{entry_id: page.id, block_id: block.id, sequence: 0}))
+
+    refs = Enum.map(media[:videos], &{:video_id, &1.id}) ++ Enum.map(media[:files], &{:file_id, &1.id})
+
+    for {{key, id}, n} <- Enum.with_index(refs) do
+      Brando.Repo.insert!(
+        struct(Brando.Content.Ref, [
+          {key, id},
+          name: "media_#{n}",
+          uid: Brando.Utils.generate_uid(),
+          block_id: block.id,
+          sequence: n,
+          data: %Brando.Villain.Blocks.TextBlock{type: "text", data: %Brando.Villain.Blocks.TextBlock.Data{text: ""}}
+        ])
+      )
+    end
+
+    page
+  end
+
+  # A video thumbnail with a real file behind every size the admin asks for.
+  defp sweep_thumbnail do
+    {_name, image} = create_directory_avatar()
+    {:ok, config} = Brando.Images.get_config_for(%{config_target: "default"})
+    sizes = Map.new(Map.keys(config.sizes), &{&1, image.path})
+
+    image
+    |> Ecto.Changeset.change(config_target: "default", sizes: sizes)
+    |> Brando.Repo.update!()
+  end
+
   defp create_directory_avatar do
     name = "e2e-directory-#{System.unique_integer([:positive])}.jpg"
     relative_path = Path.join("images", name)

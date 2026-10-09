@@ -56,12 +56,12 @@ defmodule BrandoAdmin.Images.SweepTest do
     assert first.key == "pages/about-us"
     assert first.path == "images/site/default/pages/about-us"
     assert first.label == "About us"
-    assert Enum.sort(first.image_ids) == Enum.sort([a.id, b.id, shared.id])
+    assert Enum.sort(first.ids) == Enum.sort([a.id, b.id, shared.id])
     assert first.shared == 1
     assert second.key == "pages/contact"
-    assert second.image_ids == [lone.id]
+    assert second.ids == [lone.id]
 
-    refute unused.id in Enum.flat_map(plan.groups, & &1.image_ids)
+    refute unused.id in Enum.flat_map(plan.groups, & &1.ids)
   end
 
   test "an entry and its translation share the default-language entry's folder", c do
@@ -74,7 +74,7 @@ defmodule BrandoAdmin.Images.SweepTest do
 
     assert {:ok, %{groups: [group]}} = Sweep.plan(c.folder_id)
     assert group.key == "pages/about-us"
-    assert Enum.sort(group.image_ids) == Enum.sort([norwegian_only.id, both.id])
+    assert Enum.sort(group.ids) == Enum.sort([norwegian_only.id, both.id])
     assert group.shared == 0
   end
 

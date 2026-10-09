@@ -43,7 +43,7 @@ msgstr "%{browser} på %{system}"
 msgid "%{client} via MCP"
 msgstr "%{client} via MCP"
 
-#: lib/brando_admin/live/images/image_list_live.ex
+#: lib/brando_admin/components/assets/sort_by_use.ex
 #, elixir-autogen, elixir-format
 msgid "%{count} also used elsewhere"
 msgid_plural "%{count} also used elsewhere"
@@ -240,6 +240,7 @@ msgstr[1] "%{count} feilet siste døgn"
 msgid "%{count} fewer images than the %{language} version."
 msgstr "%{count} færre bilder enn versjonen på %{language}."
 
+#: lib/brando_admin/components/assets/sort_by_use.ex
 #: lib/brando_admin/components/file_picker.ex
 #: lib/brando_admin/live/files/file_list_live.ex
 #: lib/brando_admin/live/sites/asset_live.ex
@@ -249,7 +250,14 @@ msgid_plural "%{count} files"
 msgstr[0] "%{count} fil"
 msgstr[1] "%{count} filer"
 
-#: lib/brando_admin/live/images/image_list_live.ex
+#: lib/brando_admin/components/assets/sort_by_use.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} file in this folder is used by an entry. It moves to a folder named after that entry; the file itself stays where it is, so no address changes."
+msgid_plural "%{count} files in this folder are used by entries. Each moves to a folder named after its entry; the files themselves stay where they are, so no address changes."
+msgstr[0] "%{count} fil i denne mappen brukes av en oppføring. Den flyttes til en mappe med oppføringens navn; selve filen blir liggende, så ingen adresser endres."
+msgstr[1] "%{count} filer i denne mappen brukes av oppføringer. Hver flyttes til en mappe med sin oppførings navn; selve filene blir liggende, så ingen adresser endres."
+
+#: lib/brando_admin/components/assets/sort_by_use.ex
 #, elixir-autogen, elixir-format
 msgid "%{count} folder"
 msgid_plural "%{count} folders"
@@ -261,6 +269,7 @@ msgstr[1] "%{count} mapper"
 msgid "%{count} headings, against %{other} in the %{language} version."
 msgstr "%{count} overskrifter, mot %{other} i versjonen på %{language}."
 
+#: lib/brando_admin/components/assets/sort_by_use.ex
 #: lib/brando_admin/components/image_picker.ex
 #: lib/brando_admin/live/images/image_list_live.ex
 #, elixir-autogen, elixir-format
@@ -276,7 +285,7 @@ msgid_plural "%{count} images already matched their settings"
 msgstr[0] "%{count} bilde samsvarte allerede med innstillingene"
 msgstr[1] "%{count} bilder samsvarte allerede med innstillingene"
 
-#: lib/brando_admin/live/images/image_list_live.ex
+#: lib/brando_admin/components/assets/sort_by_use.ex
 #, elixir-autogen, elixir-format
 msgid "%{count} image in this folder is used by an entry. It moves to a folder named after that entry; the file itself stays where it is, so no address changes."
 msgid_plural "%{count} images in this folder are used by entries. Each moves to a folder named after its entry; the files themselves stay where they are, so no address changes."
@@ -516,12 +525,26 @@ msgid_plural "%{count} trees"
 msgstr[0] "%{count} tre"
 msgstr[1] "%{count} trær"
 
-#: lib/brando_admin/live/images/image_list_live.ex
+#: lib/brando_admin/components/assets/sort_by_use.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} unused file stays here."
+msgid_plural "%{count} unused files stay here."
+msgstr[0] "%{count} ubrukt fil blir liggende her."
+msgstr[1] "%{count} ubrukte filer blir liggende her."
+
+#: lib/brando_admin/components/assets/sort_by_use.ex
 #, elixir-autogen, elixir-format
 msgid "%{count} unused image stays here."
 msgid_plural "%{count} unused images stay here."
 msgstr[0] "%{count} ubrukt bilde blir liggende her."
 msgstr[1] "%{count} ubrukte bilder blir liggende her."
+
+#: lib/brando_admin/components/assets/sort_by_use.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} unused video stays here."
+msgid_plural "%{count} unused videos stay here."
+msgstr[0] "%{count} ubrukt video blir liggende her."
+msgstr[1] "%{count} ubrukte videoer blir liggende her."
 
 #: lib/brando_admin/live/ai/assistant_live.ex
 #, elixir-autogen, elixir-format
@@ -556,6 +579,7 @@ msgid_plural "%{count} versions could not be read, so nothing can be removed."
 msgstr[0] "%{count} versjon kunne ikke leses, så ingenting kan fjernes."
 msgstr[1] "%{count} versjoner kunne ikke leses, så ingenting kan fjernes."
 
+#: lib/brando_admin/components/assets/sort_by_use.ex
 #: lib/brando_admin/components/video_picker.ex
 #: lib/brando_admin/live/videos/video_list_live.ex
 #, elixir-autogen, elixir-format
@@ -563,6 +587,13 @@ msgid "%{count} video"
 msgid_plural "%{count} videos"
 msgstr[0] "%{count} video"
 msgstr[1] "%{count} videoer"
+
+#: lib/brando_admin/components/assets/sort_by_use.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} video in this folder is used by an entry. It moves to a folder named after that entry; the video itself stays where it is, so no address changes."
+msgid_plural "%{count} videos in this folder are used by entries. Each moves to a folder named after its entry; the videos themselves stay where they are, so no address changes."
+msgstr[0] "%{count} video i denne mappen brukes av en oppføring. Den flyttes til en mappe med oppføringens navn; selve videoen blir liggende, så ingen adresser endres."
+msgstr[1] "%{count} videoer i denne mappen brukes av oppføringer. Hver flyttes til en mappe med sin oppførings navn; selve videoene blir liggende, så ingen adresser endres."
 
 #: lib/brando_admin/components/video_picker.ex
 #, elixir-autogen, elixir-format
@@ -2951,6 +2982,7 @@ msgid "Can be restored from the trash until %{date}"
 msgstr "Kan gjenopprettes fra papirkurven til %{date}"
 
 #: lib/brando_admin/components/assets/file_browser.ex
+#: lib/brando_admin/components/assets/sort_by_use.ex
 #: lib/brando_admin/components/authorization_tools.ex
 #: lib/brando_admin/components/content/list/saved_views.ex
 #: lib/brando_admin/components/form/block/render.ex
@@ -2969,7 +3001,6 @@ msgstr "Kan gjenopprettes fra papirkurven til %{date}"
 #: lib/brando_admin/live/ai/assistant_live.ex
 #: lib/brando_admin/live/calendar_live.ex
 #: lib/brando_admin/live/content/module_form_live.ex
-#: lib/brando_admin/live/images/image_list_live.ex
 #: lib/brando_admin/live/mcp/consent_live.ex
 #: lib/brando_admin/live/sites/environment_live.ex
 #: lib/brando_admin/live/sites/seo_live.ex
@@ -5040,6 +5071,7 @@ msgstr "Definisjonene er lagret; oppfriskingen mislyktes: %{reason}"
 msgid "Definitions were saved, but the updated ZIP could not be prepared. Export a fresh bundle before your next edit."
 msgstr "Definisjonene er lagret, men den oppdaterte ZIP-filen kunne ikke lages. Eksporter en ny pakke før neste endring."
 
+#: lib/brando_admin/components/assets/sort_by_use.ex
 #: lib/brando_admin/components/content/list/row.ex
 #: lib/brando_admin/components/form/block/render.ex
 #: lib/brando_admin/components/form/input/blocks/gallery_block/object.ex
@@ -5058,19 +5090,33 @@ msgstr "Definisjonene er lagret, men den oppdaterte ZIP-filen kunne ikke lages. 
 msgid "Delete"
 msgstr "Slett"
 
-#: lib/brando_admin/live/images/image_list_live.ex
+#: lib/brando_admin/components/assets/sort_by_use.ex
 #, elixir-autogen, elixir-format
 msgid "Delete %{count} unused"
 msgid_plural "Delete all %{count} unused"
 msgstr[0] "Slett %{count} ubrukt"
 msgstr[1] "Slett alle %{count} ubrukte"
 
-#: lib/brando_admin/live/images/image_list_live.ex
+#: lib/brando_admin/components/assets/sort_by_use.ex
+#, elixir-autogen, elixir-format
+msgid "Delete %{count} unused file?"
+msgid_plural "Delete all %{count} unused files?"
+msgstr[0] "Slette %{count} ubrukt fil?"
+msgstr[1] "Slette alle %{count} ubrukte filer?"
+
+#: lib/brando_admin/components/assets/sort_by_use.ex
 #, elixir-autogen, elixir-format
 msgid "Delete %{count} unused image?"
 msgid_plural "Delete all %{count} unused images?"
 msgstr[0] "Slette %{count} ubrukt bilde?"
 msgstr[1] "Slette alle %{count} ubrukte bilder?"
+
+#: lib/brando_admin/components/assets/sort_by_use.ex
+#, elixir-autogen, elixir-format
+msgid "Delete %{count} unused video?"
+msgid_plural "Delete all %{count} unused videos?"
+msgstr[0] "Slette %{count} ubrukt video?"
+msgstr[1] "Slette alle %{count} ubrukte videoer?"
 
 #: lib/brando_admin/live/sites/environment_live.ex
 #, elixir-autogen, elixir-format
@@ -5234,12 +5280,26 @@ msgstr "Slett «%{name}» …"
 msgid "Deleted"
 msgstr "Slettet"
 
-#: lib/brando_admin/live/images/image_list_live.ex
+#: lib/brando_admin/components/assets/sort_by_use.ex
+#, elixir-autogen, elixir-format
+msgid "Deleted %{count} file"
+msgid_plural "Deleted %{count} files"
+msgstr[0] "Slettet %{count} fil"
+msgstr[1] "Slettet %{count} filer"
+
+#: lib/brando_admin/components/assets/sort_by_use.ex
 #, elixir-autogen, elixir-format
 msgid "Deleted %{count} image"
 msgid_plural "Deleted %{count} images"
 msgstr[0] "Slettet %{count} bilde"
 msgstr[1] "Slettet %{count} bilder"
+
+#: lib/brando_admin/components/assets/sort_by_use.ex
+#, elixir-autogen, elixir-format
+msgid "Deleted %{count} video"
+msgid_plural "Deleted %{count} videos"
+msgstr[0] "Slettet %{count} video"
+msgstr[1] "Slettet %{count} videoer"
 
 #: lib/brando_admin/live/users/groups_live.ex
 #, elixir-autogen, elixir-format
@@ -5266,6 +5326,11 @@ msgstr "Slettet bruker"
 #, elixir-autogen, elixir-format
 msgid "Deleted with its delivery log"
 msgstr "Slettet sammen med leveringsloggen"
+
+#: lib/brando_admin/components/assets/sort_by_use.ex
+#, elixir-autogen, elixir-format
+msgid "Deleting stopped before it finished. The list shows what is left."
+msgstr "Slettingen stoppet før den var ferdig. Listen viser det som er igjen."
 
 #: lib/brando_admin/live/sites/notifications_live.ex
 #: lib/brando_admin/live/sites/webhooks_live.ex
@@ -5519,11 +5584,11 @@ msgstr "Koblet fra %{client}: et token som allerede var brukt, ble brukt igjen"
 msgid "Disconnected: a used token was presented again"
 msgstr "Koblet fra: et token som allerede var brukt, ble brukt igjen"
 
+#: lib/brando_admin/components/assets/sort_by_use.ex
 #: lib/brando_admin/components/form/block_field.ex
 #: lib/brando_admin/components/form/transformer.ex
 #: lib/brando_admin/components/suggestion_review.ex
 #: lib/brando_admin/live/content/shared_library_live.ex
-#: lib/brando_admin/live/images/image_list_live.ex
 #: lib/brando_admin/live/upload_manager.ex
 #, elixir-autogen, elixir-format
 msgid "Dismiss"
@@ -7109,7 +7174,7 @@ msgstr "Florist registrerer hvert bygg her. Å aktivere et bygg virker umiddelba
 msgid "Folder"
 msgstr "Mappe"
 
-#: lib/brando_admin/live/images/image_list_live.ex
+#: lib/brando_admin/components/assets/sort_by_use.ex
 #, elixir-autogen, elixir-format
 msgid "Folder for %{entry}"
 msgstr "Mappe for %{entry}"
@@ -9730,12 +9795,22 @@ msgstr[1] "Flytt %{key} til %{target} i %{count} blokker"
 msgid "Move into the block"
 msgstr "Flytt inn i blokken"
 
-#: lib/brando_admin/live/images/image_list_live.ex
+#: lib/brando_admin/components/assets/sort_by_use.ex
+#, elixir-autogen, elixir-format
+msgid "Move the files"
+msgstr "Flytt filene"
+
+#: lib/brando_admin/components/assets/sort_by_use.ex
 #, elixir-autogen, elixir-format
 msgid "Move the images"
 msgstr "Flytt bildene"
 
-#: lib/brando_admin/live/images/image_list_live.ex
+#: lib/brando_admin/components/assets/sort_by_use.ex
+#, elixir-autogen, elixir-format
+msgid "Move the videos"
+msgstr "Flytt videoene"
+
+#: lib/brando_admin/components/assets/sort_by_use.ex
 #, elixir-autogen, elixir-format
 msgid "Move these"
 msgstr "Flytt disse"
@@ -9802,6 +9877,13 @@ msgid_plural "Moved %{count} entries"
 msgstr[0] "Flyttet %{count} oppføring"
 msgstr[1] "Flyttet %{count} oppføringer"
 
+#: lib/brando_admin/components/assets/sort_by_use.ex
+#, elixir-autogen, elixir-format
+msgid "Moved %{count} file back"
+msgid_plural "Moved %{count} files back"
+msgstr[0] "Flyttet %{count} fil tilbake"
+msgstr[1] "Flyttet %{count} filer tilbake"
+
 #: lib/brando_admin/live/files/file_list_live.ex
 #, elixir-autogen, elixir-format
 msgid "Moved %{count} files"
@@ -9812,7 +9894,7 @@ msgstr "Flyttet %{count} filer"
 msgid "Moved %{count} files to %{folder}"
 msgstr "Flyttet %{count} filer til %{folder}"
 
-#: lib/brando_admin/live/images/image_list_live.ex
+#: lib/brando_admin/components/assets/sort_by_use.ex
 #, elixir-autogen, elixir-format
 msgid "Moved %{count} image back"
 msgid_plural "Moved %{count} images back"
@@ -9829,6 +9911,13 @@ msgstr "Flyttet %{count} bilder"
 #, elixir-autogen, elixir-format
 msgid "Moved %{count} images to %{folder}"
 msgstr "Flyttet %{count} bilder til %{folder}"
+
+#: lib/brando_admin/components/assets/sort_by_use.ex
+#, elixir-autogen, elixir-format
+msgid "Moved %{count} video back"
+msgid_plural "Moved %{count} videos back"
+msgstr[0] "Flyttet %{count} video tilbake"
+msgstr[1] "Flyttet %{count} videoer tilbake"
 
 #: lib/brando_admin/components/video_picker.ex
 #: lib/brando_admin/live/videos/video_list_live.ex
@@ -10733,10 +10822,20 @@ msgstr "Er ingen valgt, sendes hendelser for alle innholdstyper. Feilede jobber 
 msgid "None chosen sends events in every language."
 msgstr "Velger du ingen, sendes hendelser på alle språk."
 
-#: lib/brando_admin/live/images/image_list_live.ex
+#: lib/brando_admin/components/assets/sort_by_use.ex
+#, elixir-autogen, elixir-format
+msgid "None of the files in this folder are used by an entry, so there is nothing to sort."
+msgstr "Ingen av filene i denne mappen brukes av en oppføring, så det er ingenting å sortere."
+
+#: lib/brando_admin/components/assets/sort_by_use.ex
 #, elixir-autogen, elixir-format
 msgid "None of the images in this folder are used by an entry, so there is nothing to sort."
 msgstr "Ingen av bildene i denne mappen brukes av en oppføring, så det er ingenting å sortere."
+
+#: lib/brando_admin/components/assets/sort_by_use.ex
+#, elixir-autogen, elixir-format
+msgid "None of the videos in this folder are used by an entry, so there is nothing to sort."
+msgstr "Ingen av videoene i denne mappen brukes av en oppføring, så det er ingenting å sortere."
 
 #: lib/brando_admin/components/form/input/multi_select.ex
 #, elixir-autogen, elixir-format
@@ -15387,7 +15486,7 @@ msgstr "Sortering"
 msgid "Sort by filename"
 msgstr "Sortér etter filnavn"
 
-#: lib/brando_admin/live/images/image_list_live.ex
+#: lib/brando_admin/components/assets/sort_by_use.ex
 #, elixir-autogen, elixir-format
 msgid "Sort by use"
 msgstr "Sorter etter bruk"
@@ -15397,15 +15496,25 @@ msgstr "Sorter etter bruk"
 msgid "Sort entries"
 msgstr "Sorter oppføringer"
 
-#: lib/brando_admin/live/images/image_list_live.ex
+#: lib/brando_admin/components/assets/sort_by_use.ex
+#, elixir-autogen, elixir-format
+msgid "Sort this folder's files into folders for the entries that use them"
+msgstr "Sorter filene i denne mappen i mapper for oppføringene som bruker dem"
+
+#: lib/brando_admin/components/assets/sort_by_use.ex
 #, elixir-autogen, elixir-format
 msgid "Sort this folder's images into folders for the entries that use them"
 msgstr "Sorter bildene i denne mappen i mapper for oppføringene som bruker dem"
 
-#: lib/brando_admin/live/images/image_list_live.ex
+#: lib/brando_admin/components/assets/sort_by_use.ex
 #, elixir-autogen, elixir-format
-msgid "Sorted %{images} into %{folders}."
-msgstr "Sorterte %{images} i %{folders}."
+msgid "Sort this folder's videos into folders for the entries that use them"
+msgstr "Sorter videoene i denne mappen i mapper for oppføringene som bruker dem"
+
+#: lib/brando_admin/components/assets/sort_by_use.ex
+#, elixir-autogen, elixir-format
+msgid "Sorted %{assets} into %{folders}."
+msgstr "Sorterte %{assets} i %{folders}."
 
 #: lib/brando_admin/components/content/list/row.ex
 #: lib/brando_admin/components/form/input/blocks/markdown_source_block.ex
@@ -17822,10 +17931,10 @@ msgstr "Gjenopprett"
 msgid "Underline"
 msgstr "Understreking"
 
+#: lib/brando_admin/components/assets/sort_by_use.ex
 #: lib/brando_admin/components/form/block_field.ex
 #: lib/brando_admin/components/form/input/rich_text_labels.ex
 #: lib/brando_admin/live/ai/assistant_live.ex
-#: lib/brando_admin/live/images/image_list_live.ex
 #, elixir-autogen, elixir-format
 msgid "Undo"
 msgstr "Angre"

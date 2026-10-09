@@ -6,6 +6,7 @@ defmodule BrandoAdmin.Videos.VideoListLive do
   alias Brando.Videos
   alias Brando.Videos.Video
   alias BrandoAdmin.Components.Assets.FileBrowser
+  alias BrandoAdmin.Components.Assets.SortByUse
   alias BrandoAdmin.Components.Content
   alias BrandoAdmin.Components.VideoPlayer
   alias BrandoAdmin.Components.Workspace
@@ -35,6 +36,11 @@ defmodule BrandoAdmin.Videos.VideoListLive do
       |> assign(:playing, nil)
       |> assign(:missing_metadata_count, length(Videos.list_video_ids_missing_metadata()))
       |> assign(:root_folder_ids, [])
+      |> assign(:sweep, nil)
+      |> assign(:sweep_result, nil)
+      |> assign(:unused_count, 0)
+      |> assign(:unused_ids, [])
+      |> assign(:deleting_unused?, false)
       |> assign_folder_state(nil)
 
     {:ok, socket}
@@ -47,6 +53,7 @@ defmodule BrandoAdmin.Videos.VideoListLive do
     {:noreply,
      socket
      |> assign_folder_state(folder_filter)
+     |> AssetListHelpers.assign_unused_count(params, &Videos.list_videos/1)
      |> AssetListHelpers.assign_all_folders(params, &Videos.list_videos/1, :visible_video_count)}
   end
 
@@ -108,7 +115,7 @@ defmodule BrandoAdmin.Videos.VideoListLive do
           action: :clear_selection
         )
 
-        {:noreply, assign_folder_state(socket, socket.assigns.current_folder)}
+        {:noreply, refresh(socket)}
     end
   end
 
@@ -155,12 +162,35 @@ defmodule BrandoAdmin.Videos.VideoListLive do
     {:noreply,
      socket
      |> assign(:clipboard_ids, [])
-     |> assign_folder_state(socket.assigns.current_folder)}
+     |> refresh()}
   end
 
   @impl true
   def handle_event("assets_clear_clipboard", _, socket) do
     {:noreply, assign(socket, :clipboard_ids, [])}
+  end
+
+  # Sort the videos loose in this folder into folders for the entries that
+  # use them (see `BrandoAdmin.Media.Sweep`): a preview first, then the move.
+  def handle_event("sweep_open", _, socket), do: {:noreply, AssetListHelpers.open_sweep(socket, :video)}
+  def handle_event("sweep_close", _, socket), do: {:noreply, assign(socket, :sweep, nil)}
+
+  def handle_event("sweep_apply", params, socket) do
+    socket = AssetListHelpers.apply_sweep(socket, params)
+    {:noreply, refresh(socket)}
+  end
+
+  def handle_event("sweep_undo", _, socket) do
+    socket = AssetListHelpers.undo_sweep(socket)
+    {:noreply, refresh(socket)}
+  end
+
+  def handle_event("sweep_dismiss", _, socket), do: {:noreply, assign(socket, :sweep_result, nil)}
+
+  # With the "Not in use" filter on: delete every unused video in view, this
+  # folder's or, at the root, the whole library's, as the listing's Delete does.
+  def handle_event("delete_unused", _, socket) do
+    {:noreply, AssetListHelpers.delete_unused(socket, :video, &Videos.list_videos/1)}
   end
 
   def handle_event("rename_video", %{"video_id" => id, "title" => title}, socket) do
@@ -200,6 +230,15 @@ defmodule BrandoAdmin.Videos.VideoListLive do
 
   defp blank_to_nil(""), do: nil
   defp blank_to_nil(title), do: title
+
+  @impl true
+  def handle_async(:delete_unused, result, socket) do
+    socket = AssetListHelpers.finish_delete_unused(socket, result)
+
+    {:noreply,
+     socket
+     |> refresh()}
+  end
 
   @impl true
   def render(assigns) do
@@ -271,6 +310,22 @@ defmodule BrandoAdmin.Videos.VideoListLive do
               <span :if={@clipboard_ids != []} class="clipboard-status">
                 {gettext("Cut queue")}: {length(@clipboard_ids)}
               </span>
+              <SortByUse.sort_button
+                :if={
+                  @current_folder != "" and @visible_video_count > 0 and !AssetListHelpers.unused_filter?(@params) and
+                    BrandoAdmin.Authorization.allowed?(:update, @schema)
+                }
+                asset_type={:video}
+              />
+              <SortByUse.delete_unused_button
+                :if={
+                  AssetListHelpers.unused_filter?(@params) and @unused_count > 0 and
+                    BrandoAdmin.Authorization.allowed?(:delete, @schema)
+                }
+                asset_type={:video}
+                count={@unused_count}
+                busy={@deleting_unused?}
+              />
               <button
                 :if={@clipboard_ids != []}
                 type="button"
@@ -291,6 +346,9 @@ defmodule BrandoAdmin.Videos.VideoListLive do
           </div>
         </:main_header>
 
+        <SortByUse.result :if={@sweep_result} asset_type={:video} result={@sweep_result} />
+        <SortByUse.modal :if={@sweep} sweep={@sweep} />
+
         <.live_component
           module={Content.List}
           id={"content_listing_#{@schema}_default"}
@@ -310,6 +368,14 @@ defmodule BrandoAdmin.Videos.VideoListLive do
       </.live_component>
     </div>
     """
+  end
+
+  # After a change: the folders, and the counts the header shows (unused,
+  # all folders), as handle_params assigns them.
+  defp refresh(socket) do
+    socket
+    |> assign_folder_state(socket.assigns.current_folder)
+    |> AssetListHelpers.refresh_counts(&Videos.list_videos/1, :visible_video_count)
   end
 
   defp assign_folder_state(socket, folder_filter) do

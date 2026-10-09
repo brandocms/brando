@@ -8,10 +8,10 @@ defmodule BrandoAdmin.Images.ImageListLive do
   alias Brando.Images
   alias Brando.Images.Image
   alias BrandoAdmin.Components.Assets.FileBrowser
+  alias BrandoAdmin.Components.Assets.SortByUse
   alias BrandoAdmin.Components.Content
   alias BrandoAdmin.Components.Workspace
   alias BrandoAdmin.Images.FolderBrowser
-  alias BrandoAdmin.Images.Sweep
   alias BrandoAdmin.LiveView.AssetListHelpers
 
   @impl true
@@ -43,6 +43,8 @@ defmodule BrandoAdmin.Images.ImageListLive do
       |> assign(:sweep, nil)
       |> assign(:sweep_result, nil)
       |> assign(:unused_count, 0)
+      |> assign(:unused_ids, [])
+      |> assign(:deleting_unused?, false)
       |> assign_folder_state(nil)
 
     {:ok, socket}
@@ -55,7 +57,7 @@ defmodule BrandoAdmin.Images.ImageListLive do
     socket =
       socket
       |> assign_folder_state(folder_filter)
-      |> assign_unused_count(params)
+      |> AssetListHelpers.assign_unused_count(params, &Images.list_images/1)
       |> AssetListHelpers.assign_all_folders(params, &Images.list_images/1, :visible_image_count)
 
     # Arriving without a folder at an empty root (uploads land in the default
@@ -144,7 +146,7 @@ defmodule BrandoAdmin.Images.ImageListLive do
           action: :clear_selection
         )
 
-        {:noreply, assign_folder_state(socket, socket.assigns.current_folder)}
+        {:noreply, refresh(socket)}
     end
   end
 
@@ -191,7 +193,7 @@ defmodule BrandoAdmin.Images.ImageListLive do
     {:noreply,
      socket
      |> assign(:clipboard_ids, [])
-     |> assign_folder_state(socket.assigns.current_folder)}
+     |> refresh()}
   end
 
   @impl true
@@ -200,58 +202,26 @@ defmodule BrandoAdmin.Images.ImageListLive do
   end
 
   # Sort the images loose in this folder into folders for the entries that
-  # use them (see `BrandoAdmin.Images.Sweep`): a preview first, then the move.
-  def handle_event("sweep_open", _, socket) do
-    folder_id = FolderBrowser.folder_id_for(socket.assigns.current_folder, socket.assigns.upload_root)
-
-    case Sweep.plan(folder_id) do
-      {:ok, plan} ->
-        samples = Enum.flat_map(plan.groups, &Enum.take(&1.image_ids, 4))
-        images = Map.new(Brando.Repo.all(from i in Image, where: i.id in ^samples), &{&1.id, &1})
-        {:noreply, assign(socket, :sweep, %{plan: plan, images: images})}
-
-      {:error, _} ->
-        {:noreply, socket}
-    end
-  end
-
+  # use them (see `BrandoAdmin.Media.Sweep`): a preview first, then the move.
+  def handle_event("sweep_open", _, socket), do: {:noreply, AssetListHelpers.open_sweep(socket, :image)}
   def handle_event("sweep_close", _, socket), do: {:noreply, assign(socket, :sweep, nil)}
 
-  def handle_event("sweep_apply", params, %{assigns: %{sweep: %{plan: plan}}} = socket) do
-    included = params |> Map.get("include", %{}) |> Enum.filter(&(elem(&1, 1) == "true")) |> Enum.map(&elem(&1, 0))
-    {:ok, result} = Sweep.apply(plan, only: included, names: Map.get(params, "name", %{}))
-    AssetListHelpers.update_list_entries(socket.assigns.schema)
-
-    {:noreply,
-     socket
-     |> assign(:sweep, nil)
-     |> assign(:sweep_result, if(result.moved > 0, do: result))
-     |> assign_folder_state(socket.assigns.current_folder)}
+  def handle_event("sweep_apply", params, socket) do
+    socket = AssetListHelpers.apply_sweep(socket, params)
+    {:noreply, refresh(socket)}
   end
 
-  def handle_event("sweep_apply", _, socket), do: {:noreply, socket}
-
-  def handle_event("sweep_undo", _, %{assigns: %{sweep_result: %{} = result}} = socket) do
-    {:ok, count} = Sweep.undo(result)
-    AssetListHelpers.update_list_entries(socket.assigns.schema)
-    send(self(), {:toast, ngettext("Moved %{count} image back", "Moved %{count} images back", count, count: count)})
-
-    {:noreply, socket |> assign(:sweep_result, nil) |> assign_folder_state(socket.assigns.current_folder)}
+  def handle_event("sweep_undo", _, socket) do
+    socket = AssetListHelpers.undo_sweep(socket)
+    {:noreply, refresh(socket)}
   end
 
-  def handle_event("sweep_undo", _, socket), do: {:noreply, socket}
   def handle_event("sweep_dismiss", _, socket), do: {:noreply, assign(socket, :sweep_result, nil)}
 
   # With the "Not in use" filter on: delete every unused image in view, this
   # folder's or, at the root, the whole library's. A soft delete.
   def handle_event("delete_unused", _, socket) do
-    ids = unused_ids(socket)
-    Images.delete_images(ids)
-    AssetListHelpers.update_list_entries(socket.assigns.schema)
-    send(self(), {:toast, ngettext("Deleted %{count} image", "Deleted %{count} images", length(ids), count: length(ids))})
-
-    {:noreply,
-     socket |> assign_folder_state(socket.assigns.current_folder) |> assign_unused_count(%{"filter:unused" => "true"})}
+    {:noreply, AssetListHelpers.delete_unused(socket, :image, &Images.list_images/1)}
   end
 
   @impl true
@@ -263,7 +233,7 @@ defmodule BrandoAdmin.Images.ImageListLive do
       if socket.assigns.current_folder == "" && image.folder_id do
         AssetListHelpers.patch_folder_filter(socket, image.folder_id)
       else
-        assign_folder_state(socket, socket.assigns.current_folder)
+        refresh(socket)
       end
 
     {:noreply, socket}
@@ -272,11 +242,20 @@ defmodule BrandoAdmin.Images.ImageListLive do
   def handle_info({%Image{} = image, [:image, :updated], _path}, socket) do
     if image.status == :processed, do: Phoenix.PubSub.unsubscribe(Brando.pubsub(), "brando:image:#{image.id}")
     AssetListHelpers.update_list_entries(socket.assigns.schema)
-    {:noreply, assign_folder_state(socket, socket.assigns.current_folder)}
+    {:noreply, refresh(socket)}
   end
 
   def handle_info({%Image{}, [:image, _event], _path}, socket) do
     {:noreply, socket}
+  end
+
+  @impl true
+  def handle_async(:delete_unused, result, socket) do
+    socket = AssetListHelpers.finish_delete_unused(socket, result)
+
+    {:noreply,
+     socket
+     |> refresh()}
   end
 
   @impl true
@@ -366,37 +345,22 @@ defmodule BrandoAdmin.Images.ImageListLive do
                                                                                                       else: gettext("Upload")}</button>
                 <input type="file" class="file-input" multiple aria-label={gettext("Upload images")} />
               </div>
-              <button
-                :if={@current_folder != "" and @visible_image_count > 0 and !unused_filter?(@params)}
-                type="button"
-                class="folder-action"
-                phx-click="sweep_open"
-                title={gettext("Sort this folder's images into folders for the entries that use them")}
-              >
-                <.icon name="folder-down" />{gettext("Sort by use")}
-              </button>
-              <button
-                :if={unused_filter?(@params) and @unused_count > 0}
-                type="button"
-                class="folder-action is-destructive"
-                phx-click="delete_unused"
-                data-confirm-destructive
-                data-confirm={
-                  ngettext(
-                    "Delete %{count} unused image?",
-                    "Delete all %{count} unused images?",
-                    @unused_count,
-                    count: @unused_count
-                  )
+              <SortByUse.sort_button
+                :if={
+                  @current_folder != "" and @visible_image_count > 0 and !AssetListHelpers.unused_filter?(@params) and
+                    BrandoAdmin.Authorization.allowed?(:update, @schema)
                 }
-              >
-                <.icon name="trash" />{ngettext(
-                  "Delete %{count} unused",
-                  "Delete all %{count} unused",
-                  @unused_count,
-                  count: @unused_count
-                )}
-              </button>
+                asset_type={:image}
+              />
+              <SortByUse.delete_unused_button
+                :if={
+                  AssetListHelpers.unused_filter?(@params) and @unused_count > 0 and
+                    BrandoAdmin.Authorization.allowed?(:delete, @schema)
+                }
+                asset_type={:image}
+                count={@unused_count}
+                busy={@deleting_unused?}
+              />
               <button
                 :if={@clipboard_ids != []}
                 type="button"
@@ -417,21 +381,8 @@ defmodule BrandoAdmin.Images.ImageListLive do
           </div>
         </:main_header>
 
-        <div :if={@sweep_result} class="image-sweep-result" role="status">
-          <.icon name="circle-check" />
-          <span>
-            {gettext("Sorted %{images} into %{folders}.",
-              images: ngettext("%{count} image", "%{count} images", @sweep_result.moved, count: @sweep_result.moved),
-              folders: ngettext("%{count} folder", "%{count} folders", @sweep_result.folders, count: @sweep_result.folders)
-            )}
-          </span>
-          <button type="button" class="image-sweep-undo" phx-click="sweep_undo">{gettext("Undo")}</button>
-          <button type="button" class="image-sweep-dismiss" phx-click="sweep_dismiss" aria-label={gettext("Dismiss")}>
-            <.icon name="x" />
-          </button>
-        </div>
-
-        <.sweep_modal :if={@sweep} sweep={@sweep} />
+        <SortByUse.result :if={@sweep_result} asset_type={:image} result={@sweep_result} />
+        <SortByUse.modal :if={@sweep} sweep={@sweep} />
 
         <.live_component
           module={Content.List}
@@ -454,113 +405,12 @@ defmodule BrandoAdmin.Images.ImageListLive do
     """
   end
 
-  attr :sweep, :map, required: true
-
-  defp sweep_modal(assigns) do
-    plan = assigns.sweep.plan
-    sorted = plan.groups |> Enum.map(&length(&1.image_ids)) |> Enum.sum()
-    assigns = assigns |> assign(:plan, plan) |> assign(:sorted, sorted)
-
-    ~H"""
-    <Content.modal
-      id="image-sweep"
-      title={gettext("Sort by use")}
-      subtitle={String.replace(@plan.folder, "/", " › ")}
-      icon="folder-down"
-      show
-      wide
-      close={JS.push("sweep_close")}
-    >
-      <form id="image-sweep-form" class="image-sweep" phx-submit="sweep_apply">
-        <p :if={@plan.groups == []} class="image-sweep-lede">
-          {gettext("None of the images in this folder are used by an entry, so there is nothing to sort.")}
-        </p>
-        <p :if={@plan.groups != []} class="image-sweep-lede">
-          {ngettext(
-            "%{count} image in this folder is used by an entry. It moves to a folder named after that entry; the file itself stays where it is, so no address changes.",
-            "%{count} images in this folder are used by entries. Each moves to a folder named after its entry; the files themselves stay where they are, so no address changes.",
-            @sorted,
-            count: @sorted
-          )}
-          <span :if={@plan.unused > 0}>
-            {ngettext(
-              "%{count} unused image stays here.",
-              "%{count} unused images stay here.",
-              @plan.unused,
-              count: @plan.unused
-            )}
-          </span>
-        </p>
-
-        <ul :if={@plan.groups != []} class="image-sweep-groups">
-          <li :for={group <- @plan.groups} class="image-sweep-group">
-            <label class="image-sweep-include">
-              <input type="hidden" name={"include[#{group.key}]"} value="false" />
-              <input type="checkbox" name={"include[#{group.key}]"} value="true" checked />
-              <span class="sr-only">{gettext("Move these")}</span>
-            </label>
-            <div class="image-sweep-thumbs">
-              <Content.image
-                :for={id <- Enum.take(group.image_ids, 4)}
-                :if={@sweep.images[id]}
-                image={@sweep.images[id]}
-                size={:smallest}
-              />
-            </div>
-            <div class="image-sweep-entry">
-              <strong>{group.label}</strong>
-              <span>
-                {group.type} · {ngettext("%{count} image", "%{count} images", length(group.image_ids),
-                  count: length(group.image_ids)
-                )}
-                <span :if={group.shared > 0}>
-                  · {ngettext(
-                    "%{count} also used elsewhere",
-                    "%{count} also used elsewhere",
-                    group.shared,
-                    count: group.shared
-                  )}
-                </span>
-              </span>
-            </div>
-            <input
-              type="text"
-              class="image-sweep-name"
-              name={"name[#{group.key}]"}
-              value={group.key}
-              aria-label={gettext("Folder for %{entry}", entry: group.label)}
-              autocomplete="off"
-              spellcheck="false"
-            />
-          </li>
-        </ul>
-      </form>
-      <:footer>
-        <button type="button" class="secondary" phx-click="sweep_close">{gettext("Cancel")}</button>
-        <button :if={@plan.groups != []} type="submit" form="image-sweep-form" class="primary">
-          {gettext("Move the images")}
-        </button>
-      </:footer>
-    </Content.modal>
-    """
-  end
-
-  defp assign_unused_count(socket, params) do
-    assign(socket, :unused_count, if(unused_filter?(params), do: length(unused_ids(socket)), else: 0))
-  end
-
-  defp unused_filter?(params), do: Map.get(params || %{}, "filter:unused") in ["true", true]
-
-  # The unused images the listing shows: the current folder's, or at the root
-  # everything the root lists.
-  defp unused_ids(socket) do
-    folder =
-      if socket.assigns.current_folder == "",
-        do: {:root, socket.assigns.root_folder_ids},
-        else: FolderBrowser.folder_id_for(socket.assigns.current_folder, socket.assigns.upload_root)
-
-    {:ok, images} = Images.list_images(%{filter: %{unused: "true", folder_id: folder}, select: [:id]})
-    Enum.map(images, & &1.id)
+  # After a change: the folders, and the counts the header shows (unused,
+  # all folders), as handle_params assigns them.
+  defp refresh(socket) do
+    socket
+    |> assign_folder_state(socket.assigns.current_folder)
+    |> AssetListHelpers.refresh_counts(&Images.list_images/1, :visible_image_count)
   end
 
   defp assign_folder_state(socket, folder_filter) do

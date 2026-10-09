@@ -219,8 +219,12 @@ defmodule BrandoAdmin.Authorization do
   defp event_action(:sites, _), do: :update
   defp event_action(subject, _) when subject in [:frontend_assets, :shared_library, :utilities], do: :update
 
-  defp event_action(_, event) when event in ["delete_entry", "delete_selected", "delete_user", "confirm_transfer_delete"],
-    do: :delete
+  defp event_action(_, event)
+       when event in ["delete_entry", "delete_selected", "delete_user", "confirm_transfer_delete", "delete_unused"],
+       do: :delete
+
+  # The media libraries' "Sort by use" moves assets between folders.
+  defp event_action(_, event) when event in ["sweep_apply", "sweep_undo"], do: :update
 
   defp event_action(_, event)
        when event in [

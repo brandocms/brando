@@ -840,6 +840,28 @@ production dump.
 
 #### Features
 
+- **Sort by use and Delete unused for videos and files** (#3098). The video
+  and file libraries get the image library's **Sort by use**: a preview of a
+  folder per entry using the folder's videos or files (with video thumbnails
+  and file type icons), renaming, per-entry opt-out, the move, and Undo. With
+  **Not in use** switched on, they offer to delete every unused video or file
+  in view, through the same delete as the listing's, so a provider that
+  deletes on delete loses the remote copy too. One implementation serves all
+  three, `BrandoAdmin.Media.Sweep` (`BrandoAdmin.Images.Sweep` stays as the
+  image entry point; plans and results name the moved assets `ids`, no
+  longer `image_ids`). Videos and files rank shared assets by
+  `sweep_priority:` under `Brando.Videos` and `Brando.Files`, falling back to
+  the images' list. Sorting and deleting unused assets now need the update
+  and delete permissions on the asset type. Undo now also puts back what
+  went into a folder that already existed, and removes only folders the
+  sort made itself. Delete unused deletes what its confirmation offered and
+  the list, with all its filters, still shows, in the background. "Not in
+  use" for images, videos and files now counts as used an asset in a table
+  block's rows (a "Downloads" table's files were listed as unused), in an
+  entry in the trash, or in an open recovery draft, and finds Blueprint
+  asset fields in a tenant's own schema. See "Tidy a folder that has filled
+  up" in the media guide.
+
 - **Saved listing views.** The listing toolbar has a Views menu: an editor
   saves the listing's filters, status, sort and page size under a name, for
   themselves or shared with everyone who can open the listing, and gets back

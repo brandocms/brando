@@ -36,7 +36,7 @@ defmodule BrandoAdmin.ImageSweepLiveTest do
     assert html =~ ~s(name="name[pages/about-us]")
 
     html = view |> form("#image-sweep-form") |> render_submit()
-    assert html =~ "image-sweep-result"
+    assert html =~ "media-sweep-result"
     assert Repo.get!(Folder, folder_of(c.used)).path == "site/default/pages/about-us"
     assert folder_of(c.unused) == c.folder_id
 
@@ -74,6 +74,7 @@ defmodule BrandoAdmin.ImageSweepLiveTest do
     refute html =~ "sweep_open"
 
     view |> element("button[phx-click=delete_unused]") |> render_click()
+    render_async(view)
     assert Repo.get!(Image, c.unused.id).deleted_at
     refute Repo.get!(Image, c.used.id).deleted_at
   end
