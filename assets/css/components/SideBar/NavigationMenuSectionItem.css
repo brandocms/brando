@@ -101,6 +101,23 @@
       display: none;
       padding: 2px 0 6px;
 
+      /* A grouped submenu's headings (Configuration): the section labels'
+         mono capitals, smaller and without the rule, level with the icons. */
+      .nav-group + .nav-group {
+        margin-top: 10px;
+      }
+
+      .nav-group-label {
+        margin: 0;
+        padding: 6px 10px 4px;
+        font: 10px/14px "Mono", monospace;
+        font-weight: normal;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        color: var(--brando-nav-muted);
+        opacity: 0.8;
+      }
+
       ul li a {
         display: flex;
         align-items: center;

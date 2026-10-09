@@ -2890,6 +2890,11 @@ msgstr "Bygger"
 msgid "Building block editor"
 msgstr "Bygger blokkeditoren"
 
+#: lib/brando_admin/menu.ex
+#, elixir-autogen, elixir-format
+msgid "Building blocks"
+msgstr "Byggeklosser"
+
 #: lib/brando_admin/live/users/groups_live.ex
 #, elixir-autogen, elixir-format
 msgid "Builds & deployments"
@@ -15358,6 +15363,7 @@ msgstr "Hurtigtaster med én tast"
 #: lib/brando_admin/live/content/shared_library_live.ex
 #: lib/brando_admin/live/mcp/consent_live.ex
 #: lib/brando_admin/live/nav.ex
+#: lib/brando_admin/menu.ex
 #, elixir-autogen, elixir-format
 msgid "Site"
 msgstr "Nettsted"

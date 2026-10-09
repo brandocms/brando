@@ -324,6 +324,13 @@ defmodule BrandoAdmin.Menu do
       do: %{name: gettext("Assistant guidance"), url: "/admin/config/assistant", icon: "message-square-text"}
   end
 
+  @doc """
+  The sidebar's sections for `current_user`: `[%{name: "System", items: [...]}, ...]`.
+  An item links (`url`) or opens a submenu (`items`). A submenu may also carry
+  `groups`, `[%{key: :site, name: "Site"}, ...]`, with each of its items naming
+  one as `group`; the sidebar shows those items under the group's heading (see
+  `grouped_items/1`), while `items` stays one flat list in group order.
+  """
   def get_menu(current_user \\ nil, current_site \\ nil) do
     content_menus = Brando.admin_module(Menus).__menus__()
 
@@ -344,97 +351,7 @@ defmodule BrandoAdmin.Menu do
             },
             assistant_menu_item(current_user),
             sites_menu_item(current_user),
-            %{
-              name: gettext("Configuration"),
-              key: :configuration,
-              icon: "settings",
-              url: nil,
-              items:
-                [
-                  %{
-                    name: gettext("Navigation"),
-                    icon: "list-tree",
-                    url: "/admin/config/navigation/menus"
-                  },
-                  %{
-                    name: gettext("Forms"),
-                    icon: "text-cursor-input",
-                    url: "/admin/config/forms"
-                  },
-                  %{
-                    name: gettext("Identity"),
-                    icon: "building-complex",
-                    url: "/admin/config/identity"
-                  },
-                  %{
-                    name: gettext("SEO"),
-                    icon: "search",
-                    url: "/admin/config/seo"
-                  },
-                  %{
-                    name: gettext("Scheduled publishing"),
-                    icon: "calendar-clock",
-                    url: "/admin/config/scheduled_publishing"
-                  },
-                  activity_menu_item(current_user),
-                  integrations_menu_item(current_user),
-                  if(Brando.Authorization.enabled?() or match?(%{role: :superuser}, current_user),
-                    do: %{name: gettext("Permissions"), url: "/admin/groups", icon: "shield-check"}
-                  ),
-                  environments_menu_item(),
-                  publishing_menu_item(current_site),
-                  developer_items(current_user, [
-                    %{name: gettext("Global fields (setup)"), url: "/admin/config/global_sets", icon: "globe"},
-                    %{name: gettext("Markdown sources"), url: "/admin/config/markdown-sources", icon: "file-code"},
-                    frontend_assets_menu_item(current_user),
-                    %{name: gettext("Content transfer"), url: "/admin/config/import-export", icon: "arrow-left-right"},
-                    %{
-                      name: gettext("Cache"),
-                      icon: "database-zap",
-                      url: "/admin/config/cache"
-                    },
-                    %{
-                      name: gettext("Utilities"),
-                      icon: "wrench",
-                      url: "/admin/config/utils"
-                    },
-                    assistant_guidance_menu_item(current_user),
-                    %{
-                      name: gettext("Block modules"),
-                      icon: "blocks",
-                      url: "/admin/config/content/modules"
-                    },
-                    shared_library_menu_item(current_user),
-                    %{
-                      name: gettext("Block module sets"),
-                      icon: "boxes",
-                      url: "/admin/config/content/module_sets"
-                    },
-                    %{
-                      name: gettext("Containers"),
-                      icon: "square-dashed",
-                      url: "/admin/config/content/containers"
-                    },
-                    %{
-                      name: gettext("Table Templates"),
-                      icon: "table",
-                      url: "/admin/config/content/table_templates"
-                    },
-                    %{
-                      name: gettext("Templates"),
-                      icon: "layout-template",
-                      url: "/admin/config/content/templates"
-                    },
-                    %{
-                      name: gettext("Palettes"),
-                      icon: "palette",
-                      url: "/admin/config/content/palettes"
-                    }
-                  ])
-                ]
-                |> List.flatten()
-                |> Enum.reject(&(&1 in [false, nil]))
-            },
+            configuration_menu_item(current_user, current_site),
             %{
               name: gettext("Assets"),
               icon: "images",
@@ -489,6 +406,91 @@ defmodule BrandoAdmin.Menu do
 
     if Brando.Authorization.enabled?(), do: filter_authorized(menus, current_user), else: menus
   end
+
+  # Configuration's screens under four headings. `items` stays one flat list,
+  # in group order, for everything that reads it as a list (the command
+  # palette, page titles, the "go to" shortcut); each item names its group,
+  # and `groups` gives the headings' order and labels for the sidebar. A group
+  # with nothing left for this user is dropped, heading and all.
+  defp configuration_menu_item(current_user, current_site) do
+    groups =
+      [
+        {:site, gettext("Site"),
+         [
+           %{name: gettext("Navigation"), icon: "list-tree", url: "/admin/config/navigation/menus"},
+           %{name: gettext("Forms"), icon: "text-cursor-input", url: "/admin/config/forms"},
+           %{name: gettext("Identity"), icon: "building-complex", url: "/admin/config/identity"},
+           %{name: gettext("SEO"), icon: "search", url: "/admin/config/seo"},
+           developer_items(current_user, [
+             %{name: gettext("Global fields (setup)"), url: "/admin/config/global_sets", icon: "globe"}
+           ])
+         ]},
+        {:publishing, gettext("Publishing"),
+         [
+           %{name: gettext("Scheduled publishing"), icon: "calendar-clock", url: "/admin/config/scheduled_publishing"},
+           environments_menu_item(),
+           publishing_menu_item(current_site),
+           developer_items(current_user, [
+             %{name: gettext("Content transfer"), url: "/admin/config/import-export", icon: "arrow-left-right"}
+           ])
+         ]},
+        {:building_blocks, gettext("Building blocks"),
+         developer_items(current_user, [
+           %{name: gettext("Block modules"), icon: "blocks", url: "/admin/config/content/modules"},
+           shared_library_menu_item(current_user),
+           %{name: gettext("Block module sets"), icon: "boxes", url: "/admin/config/content/module_sets"},
+           %{name: gettext("Containers"), icon: "square-dashed", url: "/admin/config/content/containers"},
+           %{name: gettext("Templates"), icon: "layout-template", url: "/admin/config/content/templates"},
+           %{name: gettext("Table Templates"), icon: "table", url: "/admin/config/content/table_templates"},
+           %{name: gettext("Palettes"), icon: "palette", url: "/admin/config/content/palettes"},
+           %{name: gettext("Markdown sources"), url: "/admin/config/markdown-sources", icon: "file-code"}
+         ])},
+        {:system, gettext("System"),
+         [
+           if(Brando.Authorization.enabled?() or match?(%{role: :superuser}, current_user),
+             do: %{name: gettext("Permissions"), url: "/admin/groups", icon: "shield-check"}
+           ),
+           activity_menu_item(current_user),
+           integrations_menu_item(current_user),
+           developer_items(current_user, [
+             assistant_guidance_menu_item(current_user),
+             frontend_assets_menu_item(current_user),
+             %{name: gettext("Cache"), icon: "database-zap", url: "/admin/config/cache"},
+             %{name: gettext("Utilities"), icon: "wrench", url: "/admin/config/utils"}
+           ])
+         ]}
+      ]
+      |> Enum.map(fn {key, name, items} ->
+        {key, name, items |> List.flatten() |> Enum.reject(&(&1 in [false, nil]))}
+      end)
+
+    %{
+      name: gettext("Configuration"),
+      key: :configuration,
+      icon: "settings",
+      url: nil,
+      groups: Enum.map(groups, fn {key, name, _} -> %{key: key, name: name} end),
+      items: for({key, _, items} <- groups, item <- items, do: Map.put(item, :group, key))
+    }
+  end
+
+  @doc """
+  A submenu's items under their headings: `[%{key: :site, name: "Site", items:
+  [...]}, ...]` in the order of the item's `groups`, without empty groups. Items
+  whose `group` is not among them come last, under no heading (`key` and `name`
+  nil), as do all the items of a submenu without `groups`.
+  """
+  def grouped_items(%{items: items} = item) when is_list(items) do
+    groups = Map.get(item, :groups) || []
+    keys = Enum.map(groups, & &1.key)
+
+    grouped = Enum.map(groups, &%{key: &1.key, name: &1.name, items: Enum.filter(items, fn i -> i[:group] == &1.key end)})
+    ungrouped = %{key: nil, name: nil, items: Enum.reject(items, &(&1[:group] in keys))}
+
+    Enum.reject(grouped ++ [ungrouped], &(&1.items == []))
+  end
+
+  def grouped_items(_item), do: []
 
   # What visitors have sent: there is nothing to read until a form is built
   # under Configuration. With tenants the item stays, as for Globals.

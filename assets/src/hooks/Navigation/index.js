@@ -128,13 +128,20 @@ export default app => ({
     }
   },
 
+  // What a section fades in and hides: its links, and the headings of a
+  // grouped one (Configuration), in reading order. Hidden headings leave the
+  // accessibility tree with the links under them.
+  dropdownRows(dd) {
+    return dd.querySelectorAll('li, .nav-group-label')
+  },
+
   // Opens a section at once, without the animation: on load, for sections
   // that were open, or that hold the current page. Instant animations rather
   // than plain styles, so Motion knows where a later toggle starts from.
   openDropdown(trigger) {
     const dl = trigger.parentNode.parentNode
     const dd = dl.querySelector('dd')
-    const lis = dd.querySelectorAll('li')
+    const lis = this.dropdownRows(dd)
     // Measured once, while the section is closed: see toggleCurrentUserDropdown.
     trigger.dataset.height ||= dl.offsetHeight
     set(dd, { opacity: 1, display: 'block' })
@@ -147,7 +154,7 @@ export default app => ({
   toggleDropdown(trigger) {
     const dl = trigger.parentNode.parentNode
     const dd = dl.querySelector('dd')
-    const lis = dd.querySelectorAll('li')
+    const lis = this.dropdownRows(dd)
     const { track } = this.animations
 
     if (trigger.classList.contains('open')) {
