@@ -348,8 +348,9 @@ These are the defaults, and what the tests check:
   to about 20 KB, and a folder is attached 100 items at a time.
 - **A proposal** can be applied for 24 hours, and its review links last as
   long. After that it must be prepared again.
-- **One run at a time** per conversation. A run that stops reporting for 10
-  minutes is marked interrupted.
+- **One run at a time** per conversation, in every tab and on every server.
+  A running run shows it is alive every 15 seconds (`heartbeat`); one that
+  has not for a minute died with its server and is marked interrupted.
 
 ## Operating the assistant
 
@@ -369,9 +370,11 @@ the details of a run that failed ("Content agent run … failed").
   for the next one or raise `monthly_token_budget`. Set to `0`, it stops
   every run before its next model call.
 - **A run seems stuck.** After a reconnect, the conversation shows the run
-  that is still working, with **Stop**. A run left behind by a restart or a
-  deploy shows the same: **Stop** ends it at once, and the editor can write
-  again. Left alone, it is marked interrupted after 10 minutes.
+  that is still working, with **Stop**. A stopped run shows "Stopping…"
+  until its model call returns, since it may still add to the conversation;
+  until then no new message can be sent, in any tab. A run left behind by a
+  restart or a deploy lets the conversation go a minute after its server
+  stopped, and the page notices without a reload.
 - **Apply is refused because something changed.** An entry or module was
   saved after the proposal was prepared, or the proposal expired. Nothing was
   written. Ask the assistant to prepare it again.

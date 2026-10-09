@@ -302,7 +302,23 @@ defmodule BrandoAdmin.AssistantLiveTest do
   describe "stopping and reconnecting" do
     defp sending?(view), do: has_element?(view, "button.assistant-send:not([disabled])")
 
-    test "a run stopped while the model answers frees the composer once its call returns", %{conn: conn} = c do
+    # A run on a node this page cannot hear from: its row says it works.
+    defp remote_run(conversation, attrs) do
+      Brando.Repo.insert!(
+        struct(
+          %Brando.AI.Agent.Run{conversation_id: conversation.id, scope: Brando.Content.Transfer.scope()},
+          Map.merge(%{status: "running", updated_at: DateTime.utc_now()}, attrs)
+        )
+      )
+    end
+
+    defp age(run, seconds) do
+      run
+      |> Ecto.Changeset.change(updated_at: DateTime.add(DateTime.utc_now(), -seconds))
+      |> Brando.Repo.update!()
+    end
+
+    test "a stopped run holds the conversation in every tab until its call returns", %{conn: conn} = c do
       test = self()
 
       # The model's first answer waits for the test (within the cassette's
@@ -320,15 +336,29 @@ defmodule BrandoAdmin.AssistantLiveTest do
       assert_receive {:in_call, call}, 5_000
       eventually(view, &(&1 =~ "assistant-progress"))
       refute sending?(view)
+      [conversation] = Agent.list_conversations(c.current_user)
 
       view |> element(".assistant-progress button", "Stop") |> render_click()
+      assert has_element?(view, ".assistant-progress", "Stopping…")
+      refute has_element?(view, ".assistant-progress button")
       refute sending?(view)
+
+      # A reload or a second tab sees the same, and cannot start another run.
+      {:ok, other, _} = live(conn, "/admin/assistant/#{conversation.id}")
+      assert has_element?(other, ".assistant-progress", "Stopping…")
+      refute sending?(other)
+      assert {:error, message} = Agent.send_message(conversation.id, "Hello again", c.current_user)
+      assert message =~ "still working"
 
       send(call, :answer)
       eventually(view, fn _ -> sending?(view) end)
+      eventually(other, fn _ -> sending?(other) end)
+      refute has_element?(other, ".assistant-progress")
 
-      [conversation] = Agent.list_conversations(c.current_user)
       assert %{status: "cancelled"} = Agent.latest_run(conversation.id, c.current_user)
+
+      # The call's tool request got its cancelled result, right after it.
+      assert ~w(user assistant tool) == Enum.map(Agent.messages(conversation.id, c.current_user), & &1.role)
     end
 
     test "a reconnected editor follows the run, and its reply arrives", %{conn: conn} = c do
@@ -357,27 +387,74 @@ defmodule BrandoAdmin.AssistantLiveTest do
       refute has_element?(view, ".assistant-progress")
     end
 
-    test "a run left running by a restart can be stopped at once", %{conn: conn} = c do
+    test "a run left behind by a restart lets the conversation go once its heartbeat stops", %{conn: conn} = c do
       {:ok, conversation} = Agent.start_conversation(c.current_user)
-
-      # The node that ran it went away a minute ago; nothing works on it.
-      run =
-        Brando.Repo.insert!(%Brando.AI.Agent.Run{
-          conversation_id: conversation.id,
-          scope: Brando.Content.Transfer.scope(),
-          status: "running",
-          updated_at: DateTime.add(DateTime.utc_now(), -60)
-        })
+      run = conversation |> remote_run(%{}) |> age(61)
 
       {:ok, view, _} = live(conn, "/admin/assistant/#{conversation.id}")
-      refute sending?(view)
-      view |> element(".assistant-progress button", "Stop") |> render_click()
-      eventually(view, fn _ -> sending?(view) end)
-      assert Brando.Repo.get!(Brando.AI.Agent.Run, run.id).status == "cancelled"
+      assert sending?(view)
+      refute has_element?(view, ".assistant-progress")
+      assert Brando.Repo.get!(Brando.AI.Agent.Run, run.id).status == "interrupted"
 
       AIStub.script([{:text, "Back again."}])
       view |> form("#assistant-composer", %{message: "Try again"}) |> render_submit()
       eventually(view, &(&1 =~ "Back again."))
+    end
+
+    test "a run on a node the page cannot hear from is stopped, and the page follows its row", %{conn: conn} = c do
+      {:ok, conversation} = Agent.start_conversation(c.current_user)
+      run = remote_run(conversation, %{})
+
+      {:ok, view, _} = live(conn, "/admin/assistant/#{conversation.id}")
+      assert has_element?(view, ".assistant-progress", "Thinking")
+      view |> element(".assistant-progress button", "Stop") |> render_click()
+
+      # Its heartbeat is fresh, so it may still write: it is stopping.
+      assert Brando.Repo.get!(Brando.AI.Agent.Run, run.id).status == "stopping"
+      assert has_element?(view, ".assistant-progress", "Stopping…")
+      refute sending?(view)
+
+      # Its node finishes it and writes its last message; no event reaches the page.
+      Brando.Repo.insert!(%Brando.AI.Agent.Message{
+        conversation_id: conversation.id,
+        run_id: run.id,
+        role: "assistant",
+        content: "Stopped where I was."
+      })
+
+      Brando.Repo.get!(Brando.AI.Agent.Run, run.id)
+      |> Ecto.Changeset.change(status: "cancelled", finished_at: DateTime.utc_now())
+      |> Brando.Repo.update!()
+
+      send(view.pid, :check_run)
+      assert render(view) =~ "Stopped where I was."
+      assert sending?(view)
+      refute has_element?(view, ".assistant-progress")
+    end
+
+    test "a stopping run whose node went away lets the conversation go within a minute", %{conn: conn} = c do
+      {:ok, conversation} = Agent.start_conversation(c.current_user)
+      run = remote_run(conversation, %{status: "stopping"})
+
+      {:ok, view, _} = live(conn, "/admin/assistant/#{conversation.id}")
+      assert has_element?(view, ".assistant-progress", "Stopping…")
+      refute sending?(view)
+
+      age(run, 61)
+      send(view.pid, :check_run)
+      eventually(view, fn _ -> sending?(view) end)
+      assert Brando.Repo.get!(Brando.AI.Agent.Run, run.id).status == "cancelled"
+    end
+
+    test "a queued event from the conversation left behind does not touch the one on screen", %{conn: conn} = c do
+      {:ok, left} = Agent.start_conversation(c.current_user)
+      {:ok, shown} = Agent.start_conversation(c.current_user)
+      {:ok, view, _} = live(conn, "/admin/assistant/#{shown.id}")
+
+      send(view.pid, {:agent, left.id, {:run, %Brando.AI.Agent.Run{status: "running", conversation_id: left.id}}})
+      send(view.pid, {:agent, left.id, {:progress, "Reading an entry"}})
+      assert sending?(view)
+      refute has_element?(view, ".assistant-progress")
     end
   end
 

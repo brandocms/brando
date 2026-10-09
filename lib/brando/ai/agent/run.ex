@@ -4,7 +4,8 @@ defmodule Brando.AI.Agent.Run do
 
   Token counts are the provider's reported usage summed over the run's calls;
   `reserved_tokens` is held against the budget while a call is in flight.
-  `status` is `running`, `completed`, `failed`, `cancelled`,
+  `status` is `running`, `stopping` (asked to stop, its process not yet
+  ended), `completed`, `failed`, `cancelled`,
   `budget_exhausted` or `interrupted`.
   """
   use Ecto.Schema

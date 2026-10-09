@@ -15667,6 +15667,11 @@ msgstr ""
 msgid "Stop sharing"
 msgstr ""
 
+#: lib/brando_admin/live/ai/assistant_live.ex
+#, elixir-autogen, elixir-format
+msgid "Stopping…"
+msgstr ""
+
 #: lib/brando_admin/live/sites/webhooks_live.ex
 #, elixir-autogen, elixir-format
 msgid "Stops all deliveries and removes the delivery log."

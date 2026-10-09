@@ -33,6 +33,8 @@ defmodule Brando.AI.Agent do
                                               # provider's or catalogue's price
         show_cost: true,                      # show the conversation's estimated cost
                                               # to the editor
+        heartbeat: 15_000,                    # ms between a run's signs of life; a run
+                                              # quiet for four of them died with its node
         client: ReqLLM                        # anything with ReqLLM's generate_text/3,
                                               # e.g. a scripted model for end-to-end tests;
                                               # defaults to Brando.AI's client. A cassette
@@ -50,7 +52,7 @@ defmodule Brando.AI.Agent do
   alias Brando.Repo
   alias Ecto.Changeset
 
-  @stale_after :timer.minutes(10)
+  @busy ~w(running stopping)
 
   @doc "The agent's configuration, with defaults."
   @spec config() :: keyword()
@@ -63,7 +65,8 @@ defmodule Brando.AI.Agent do
         max_tokens: 4096,
         run_token_budget: 300_000,
         monthly_token_budget: nil,
-        show_cost: true
+        show_cost: true,
+        heartbeat: :timer.seconds(15)
       ],
       Application.get_env(:brando, __MODULE__, [])
     )
@@ -479,9 +482,11 @@ defmodule Brando.AI.Agent do
         conversation = conversation!(conversation_id, actor, lock: true)
         recover_stale_runs(conversation.id)
 
+        # A run that is stopping may still write to the conversation until its
+        # call in flight returns, so it holds the conversation too.
         if Repo.one(
              from(r in Run,
-               where: r.conversation_id == ^conversation.id and r.status == "running",
+               where: r.conversation_id == ^conversation.id and r.status in @busy,
                select: true,
                limit: 1
              )
@@ -505,33 +510,55 @@ defmodule Brando.AI.Agent do
   end
 
   @doc """
-  Cancel the conversation's running run. It stops before its next model or
-  tool call; charges for a call already in flight still apply.
+  Stop the conversation's running run. It is `stopping` until its process
+  ends: before its next model or tool call, once the call in flight returns
+  (its charges still apply). Until then no new run starts, in any tab or on
+  any node. A run that nothing works on any more is cancelled at once.
   """
   @spec cancel(Ecto.UUID.t(), term()) :: :ok | {:error, String.t()}
   def cancel(conversation_id, actor) do
     with {:ok, _} <- Error.protect(fn -> conversation!(conversation_id, actor) end) do
       {_, runs} =
         from(r in Run, where: r.conversation_id == ^conversation_id and r.status == "running", select: r)
-        |> Repo.update_all(set: [status: "cancelled", finished_at: DateTime.utc_now(), reserved_tokens: 0])
+        |> Repo.update_all(set: [status: "stopping"])
 
-      broadcast(conversation_id, {:progress, nil})
+      recover_stale_runs(conversation_id)
 
-      # A live run reports its end once its call in flight returns, so the
-      # editor cannot write while it still adds to the conversation. A run
-      # whose node went away (a deploy, a crash) never will.
-      for run <- runs, not Loop.alive?(run.id), do: broadcast(conversation_id, {:run, run})
+      for %{id: id} <- runs, do: broadcast(conversation_id, {:run, Repo.get!(Run, id)})
       :ok
     end
   end
 
-  # A run whose process died with the node — a deploy, a crash — would block
-  # the conversation forever. After ten quiet minutes it is interrupted.
-  defp recover_stale_runs(conversation_id) do
-    cutoff = DateTime.add(DateTime.utc_now(), -@stale_after, :millisecond)
+  @doc """
+  Whether `run` holds its conversation: it is running or stopping, and its
+  process lives on this node (or a connected one) or showed a sign of life
+  within four heartbeats — a minute by default. Its process touches the run
+  every `heartbeat`, on whichever node it runs.
+  """
+  @spec busy?(Run.t() | nil) :: boolean()
+  def busy?(%Run{status: status} = run) when status in @busy, do: Loop.alive?(run.id) or not quiet?(run)
+  def busy?(_run), do: false
 
-    from(r in Run, where: r.conversation_id == ^conversation_id and r.status == "running" and r.updated_at < ^cutoff)
-    |> Repo.update_all(set: [status: "interrupted", finished_at: DateTime.utc_now(), reserved_tokens: 0])
+  @doc "How often a run's process shows it is alive, in milliseconds."
+  @spec heartbeat() :: pos_integer()
+  def heartbeat, do: config()[:heartbeat]
+
+  defp quiet?(run),
+    do: DateTime.compare(run.updated_at, DateTime.add(DateTime.utc_now(), -4 * heartbeat(), :millisecond)) == :lt
+
+  # A run whose process died with its node (a deploy, a crash) stops touching
+  # its row; once quiet for four heartbeats it no longer holds the conversation. One
+  # that was running is interrupted, one that was stopping is cancelled.
+  defp recover_stale_runs(conversation_id) do
+    from(r in Run, where: r.conversation_id == ^conversation_id and r.status in @busy)
+    |> Repo.all()
+    |> Enum.reject(&busy?/1)
+    |> Enum.each(fn run ->
+      status = if run.status == "stopping", do: "cancelled", else: "interrupted"
+
+      from(r in Run, where: r.id == ^run.id and r.status == ^run.status)
+      |> Repo.update_all(set: [status: status, finished_at: DateTime.utc_now(), reserved_tokens: 0])
+    end)
   end
 
   ## Events

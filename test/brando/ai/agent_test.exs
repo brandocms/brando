@@ -1,6 +1,7 @@
 defmodule Brando.AI.AgentTest do
   use Brando.ConnCase, async: false
   use Brando.Test
+  import Ecto.Query, only: [from: 2]
   alias Brando.AI.Agent
   alias Brando.AI.Agent.{Message, Run}
   alias Brando.AIStub
@@ -474,6 +475,106 @@ defmodule Brando.AI.AgentTest do
     AIStub.script([{:text, "Hi"}])
     assert {:ok, %{status: "completed"}} = Agent.send_message(c.conversation.id, "Hello", c.user, sync: true)
     assert Repo.get!(Run, run.id).status == "interrupted"
+  end
+
+  describe "a run on another node" do
+    test "shows it lives through its heartbeat, and holds the conversation while it does", c do
+      put_config(heartbeat: 50)
+      test = self()
+
+      Brando.AI.Cassette.stub(fn _request ->
+        send(test, {:in_call, self()})
+        receive do: (:answer -> AIStub.turn({:text, "Hi"}, 0))
+      end)
+
+      {:ok, %Run{id: id}} = Agent.send_message(c.conversation.id, "Hello", c.user)
+      assert_receive {:in_call, call}, 5_000
+
+      # Seen from a node that cannot reach the run's process.
+      Repo.update_all(from(r in Run, where: r.id == ^id), set: [updated_at: DateTime.add(DateTime.utc_now(), -60)])
+      Process.sleep(200)
+      run = Repo.get!(Run, id)
+      assert DateTime.diff(DateTime.utc_now(), run.updated_at, :millisecond) < 200
+      assert :global.unregister_name({Brando.AI.Agent.Loop, id}) == :ok
+      assert Agent.busy?(run)
+      assert {:error, _} = Agent.send_message(c.conversation.id, "Again", c.user)
+
+      Agent.subscribe(c.conversation.id)
+      send(call, :answer)
+      assert_receive {:agent, _, {:run, %Run{id: ^id, status: "completed"}}}, 5_000
+
+      # Done, its heartbeat stops.
+      Process.sleep(200)
+      refute Agent.busy?(Repo.get!(Run, id))
+      assert DateTime.diff(DateTime.utc_now(), Repo.get!(Run, id).updated_at, :millisecond) >= 150
+    end
+
+    test "taken for dead after another run started, it writes nothing more", c do
+      conversation_id = c.conversation.id
+      user = c.user
+      test = self()
+
+      # While its call is in flight, another node takes the run for dead and
+      # the editor starts the next one there.
+      Brando.AI.Cassette.stub(fn _request ->
+        send(test, :model_called)
+        [run] = Repo.all(from(r in Run, where: r.conversation_id == ^conversation_id))
+        run |> Ecto.Changeset.change(status: "interrupted") |> Repo.update!()
+
+        next =
+          Repo.insert!(%Run{
+            conversation_id: conversation_id,
+            scope: run.scope,
+            status: "running",
+            inserted_at: DateTime.add(run.inserted_at, 1)
+          })
+
+        Repo.insert!(%Message{conversation_id: conversation_id, run_id: next.id, role: "user", content: "Next"})
+        AIStub.turn({:tools, [{"list_content_types", %{}}]}, 0)
+      end)
+
+      assert {:ok, %Run{status: "interrupted"}} = Agent.send_message(conversation_id, "First", user, sync: true)
+      assert_received :model_called
+      refute_received :model_called
+
+      assert Enum.map(Agent.messages(conversation_id, user), &{&1.role, &1.content}) == [
+               {"user", "First"},
+               {"user", "Next"}
+             ]
+    end
+  end
+
+  test "each tool call is followed by its result, whatever order they were stored in", c do
+    message = fn attrs -> Repo.insert!(struct(Message, Map.put(attrs, :conversation_id, c.conversation.id))) end
+    call = fn id -> %{"id" => id, "name" => "list_content_types", "arguments" => "{}"} end
+
+    message.(%{role: "user", content: "One"})
+    message.(%{role: "assistant", content: "", tool_calls: [call.("a")]})
+    # A stopped run's late call lands between another call and its result.
+    message.(%{role: "assistant", content: "", tool_calls: [call.("b"), call.("c")]})
+    message.(%{role: "tool", tool_call_id: "a", tool_name: "list_content_types", content: ~s({"for":"a"})})
+    message.(%{role: "tool", tool_call_id: "b", tool_name: "list_content_types", content: ~s({"for":"b"})})
+    message.(%{role: "tool", tool_call_id: "zzz", tool_name: "list_content_types", content: ~s({"for":"nothing"})})
+
+    pairs =
+      c.conversation
+      |> Brando.AI.Agent.Loop.context()
+      |> Map.fetch!(:messages)
+      |> Enum.drop(1)
+      |> Enum.map(fn
+        %{role: :assistant, tool_calls: calls} when calls not in [nil, []] -> {:calls, Enum.map(calls, & &1.id)}
+        %{role: :tool, tool_call_id: id, content: content} -> {:result, id, Enum.map_join(content, & &1.text)}
+        %{role: role} -> role
+      end)
+
+    assert pairs == [
+             :user,
+             {:calls, ["a"]},
+             {:result, "a", ~s({"for":"a"})},
+             {:calls, ["b", "c"]},
+             {:result, "b", ~s({"for":"b"})},
+             {:result, "c", ~s({"error":"cancelled"})}
+           ]
   end
 
   test "an unconfigured site says so" do

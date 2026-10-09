@@ -1892,11 +1892,15 @@ production dump.
 
 - **The Assistant recovers from a stopped, reconnected or interrupted run,
   and from a failed apply.** Stopping a run while the model answered with
-  tool calls left the message box disabled until a reload. A conversation
-  opened again while its run worked showed no progress and no **Stop**, and
-  a run left behind by a restart or a deploy blocked the conversation for
-  ten minutes; it now shows with **Stop**, which frees the conversation at
-  once. When applying a proposal failed and rolled back, every later
+  tool calls left the message box disabled until a reload, while a reload
+  or another tab could start a second run before the first had finished
+  writing. A stopped run now shows "Stopping…" everywhere and holds the
+  conversation until its call returns. A conversation opened again while
+  its run worked showed no progress and no **Stop**. A run left behind by a
+  restart or a deploy blocked the conversation for ten minutes; runs now
+  show a heartbeat, so one whose server is gone lets go after a minute,
+  also across the two colours of a blue/green deploy, and the page notices
+  without a reload. When applying a proposal failed and rolled back, every later
   **Apply** was refused as no longer under review; it now applies once the
   cause is gone, and a click in a second tab after the first applied shows
   the receipt. A run whose user loses **Content assistant → use** stops

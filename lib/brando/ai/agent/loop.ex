@@ -26,17 +26,48 @@ defmodule Brando.AI.Agent.Loop do
   @spec run(Ecto.UUID.t(), integer()) :: Run.t()
   def run(run_id, user_id) do
     registered? = :global.register_name(name(run_id), self()) == :yes
+    # Nodes that are not connected, such as the two colours of a blue/green
+    # deploy, see the run's row instead: it is touched while this process lives.
+    {:ok, heartbeat} = Task.start_link(fn -> beat(run_id) end)
 
     try do
       work(run_id, user_id)
     after
+      stop_heartbeat(heartbeat)
       if registered?, do: :global.unregister_name(name(run_id))
+    end
+  end
+
+  defp beat(run_id) do
+    receive do
+      :stop -> :ok
+    after
+      Agent.heartbeat() ->
+        from(r in Run, where: r.id == ^run_id and r.status in ~w(running stopping))
+        |> Repo.update_all(set: [updated_at: DateTime.utc_now()])
+
+        beat(run_id)
+    end
+  end
+
+  # Stopped between beats rather than killed, so it never leaves a query
+  # half done on its connection.
+  defp stop_heartbeat(heartbeat) do
+    Process.unlink(heartbeat)
+    ref = Process.monitor(heartbeat)
+    send(heartbeat, :stop)
+
+    receive do
+      {:DOWN, ^ref, :process, _, _} -> :ok
+    after
+      5_000 -> Process.exit(heartbeat, :kill)
     end
   end
 
   @doc """
   Whether a process on this node, or a connected one, is working on run
-  `run_id`. A run left `running` without one died with its node.
+  `run_id`. `Brando.AI.Agent.busy?/1` also asks the run's heartbeat, for
+  nodes that are not connected.
   """
   @spec alive?(Ecto.UUID.t()) :: boolean()
   def alive?(run_id), do: is_pid(:global.whereis_name(name(run_id)))
@@ -66,10 +97,10 @@ defmodule Brando.AI.Agent.Loop do
     conversation = Repo.get!(Conversation, run.conversation_id)
 
     cond do
-      # Cancelled while its last call was in flight: say so, so the admin
-      # lets the editor write again.
+      # Stopped while its last call was in flight: end, and say so, so the
+      # admin lets the editor write again.
       run.status != "running" ->
-        finish(run, run.status)
+        finish(run, "cancelled")
 
       # Permission taken away while the run works: nothing more goes to the model.
       not Agent.allowed?(user) ->
@@ -238,12 +269,48 @@ defmodule Brando.AI.Agent.Loop do
 
     Context.new([
       Context.system(Prompt.system(conversation))
-      | Enum.flat_map(messages, fn
+      | Enum.flat_map(pair_results(messages), fn
           %Message{id: id} = message when not is_nil(latest_look) and id == latest_look.id -> look(message)
           %Message{tool_name: "look_at_media", content: "{" <> _} = message -> message(earlier_look(message))
           message -> message(message)
         end)
     ])
+  end
+
+  # A provider takes the results of a model's tool calls right after the
+  # calls, one for each. Each call message is followed by its results here,
+  # wherever they were stored, and a call without one gets a cancelled result,
+  # so writes that interleave (a stopped run's late answer, say) cannot break
+  # every later call. A result without its call is left out.
+  defp pair_results(messages) do
+    indexed = Enum.with_index(messages)
+    results = for {%Message{role: "tool"} = message, index} <- indexed, do: {index, message}
+
+    {paired, _used} =
+      Enum.flat_map_reduce(indexed, MapSet.new(), fn
+        {%Message{role: "tool"}, _index}, used ->
+          {[], used}
+
+        {%Message{role: "assistant", tool_calls: [_ | _] = calls} = message, index}, used ->
+          {found, used} = Enum.map_reduce(calls, used, &result_for(&1, index, results, &2))
+          {[message | found], used}
+
+        {message, _index}, used ->
+          {[message], used}
+      end)
+
+    paired
+  end
+
+  defp result_for(call, after_index, results, used) do
+    case Enum.find(results, fn {i, m} -> i > after_index and m.tool_call_id == call["id"] and i not in used end) do
+      {i, message} ->
+        {message, MapSet.put(used, i)}
+
+      nil ->
+        {%Message{role: "tool", tool_call_id: call["id"], tool_name: call["name"], content: ~s({"error":"cancelled"})},
+         used}
+    end
   end
 
   defp earlier_look(message),
@@ -327,9 +394,28 @@ defmodule Brando.AI.Agent.Loop do
 
   defp say(run, text), do: insert(run, %{role: "assistant", content: text})
 
+  # A run taken for dead (its node unreachable for a minute) may come back
+  # after the editor started another. It then writes nothing more into the
+  # conversation: `Agent` starts runs under the same lock.
   defp insert(run, attrs) do
-    message = Repo.insert!(struct(Message, Map.merge(attrs, %{conversation_id: run.conversation_id, run_id: run.id})))
-    Agent.broadcast(run.conversation_id, {:message, message})
+    {:ok, message} =
+      Repo.transaction(fn ->
+        Repo.one!(from(c in Conversation, where: c.id == ^run.conversation_id, select: c.id, lock: "FOR UPDATE"))
+
+        newer? =
+          Repo.one(
+            from(r in Run,
+              where: r.conversation_id == ^run.conversation_id and r.id != ^run.id and r.inserted_at > ^run.inserted_at,
+              select: true,
+              limit: 1
+            )
+          )
+
+        unless newer?,
+          do: Repo.insert!(struct(Message, Map.merge(attrs, %{conversation_id: run.conversation_id, run_id: run.id})))
+      end)
+
+    if message, do: Agent.broadcast(run.conversation_id, {:message, message})
     message
   end
 
@@ -339,14 +425,21 @@ defmodule Brando.AI.Agent.Loop do
   defp finish(run, status, error) do
     run = Repo.get!(Run, run.id)
 
-    # A cancelled run keeps its status; the steps already taken are recorded.
+    # A stopped run is cancelled, whatever it was doing; one already finished
+    # (interrupted while taken for dead) keeps its status. The steps already
+    # taken are recorded.
     run =
-      if run.status == "running" do
-        run
-        |> Ecto.Changeset.change(status: status, error: error, reserved_tokens: 0, finished_at: DateTime.utc_now())
-        |> Repo.update!()
-      else
-        run
+      case run.status do
+        busy when busy in ~w(running stopping) ->
+          status = if busy == "stopping", do: "cancelled", else: status
+          error = if busy == "stopping", do: nil, else: error
+
+          run
+          |> Ecto.Changeset.change(status: status, error: error, reserved_tokens: 0, finished_at: DateTime.utc_now())
+          |> Repo.update!()
+
+        _ ->
+          run
       end
 
     if status == "failed" and run.status == "failed",
