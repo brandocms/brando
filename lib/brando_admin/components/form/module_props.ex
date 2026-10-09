@@ -257,7 +257,7 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
                       class="module-drag-handle sort-handle"
                       type="button"
                       aria-label={gettext("Reorder reference")}
-                      title={gettext("Drag to reorder")}
+                      data-tooltip={gettext("Drag to reorder")}
                     >
                       <%!-- Dot grid rather than an icon: none of them read as
                             "grab me", and this matches the layout canvas's chips. --%>
@@ -285,7 +285,7 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
                           phx-click={@duplicate_ref}
                           phx-value-index={ref.index}
                           aria-label={gettext("Duplicate reference %{name}", name: ref[:name].value)}
-                          title={gettext("Duplicate")}
+                          data-tooltip={gettext("Duplicate")}
                         >
                           <.icon name="copy" />
                         </button>
@@ -297,7 +297,7 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
                           name={"#{@form.name}[drop_ref_ids][]"}
                           value={ref.index}
                           aria-label={gettext("Delete reference %{name}", name: ref[:name].value)}
-                          title={gettext("Delete")}
+                          data-tooltip={gettext("Delete")}
                         >
                           <.icon name="x" />
                         </button>

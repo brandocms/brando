@@ -286,7 +286,7 @@ defmodule BrandoAdmin.AssistantLiveTest do
         status: :processed
       )
 
-    view |> element("button[title='Attach images from the media library']") |> render_click()
+    view |> element("button[data-tooltip='Attach images from the media library']") |> render_click()
     assert has_element?(view, "#image-picker [data-id='#{image.id}']")
 
     render_click(view, "select_image", %{"id" => to_string(image.id)})

@@ -99,7 +99,7 @@ test('attaches library media and removes it again', async ({ page }) => {
   await page.goto('/admin/assistant')
   await syncLV(page)
 
-  await page.getByTitle('Attach videos from the media library', { exact: true }).click()
+  await page.locator('[data-tooltip="Attach videos from the media library"]').click()
   const dialog = page.locator('#video-picker')
   await expect(dialog).toBeVisible()
   const video = dialog.locator('.video-picker__video').filter({ hasText: 'Studio tour' })

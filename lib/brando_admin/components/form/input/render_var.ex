@@ -717,7 +717,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
                                   type="button"
                                   class="sort-handle"
                                   aria-label={gettext("Reorder option")}
-                                  title={gettext("Drag to reorder")}
+                                  data-tooltip={gettext("Drag to reorder")}
                                 >
                                   <span class="drag-grip" aria-hidden="true"></span>
                                 </button>
@@ -732,7 +732,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
                                   name={"#{@var.name}[drop_option_ids][]"}
                                   value={opt.index}
                                   aria-label={gettext("Delete option")}
-                                  title={gettext("Delete")}
+                                  data-tooltip={gettext("Delete")}
                                   phx-click={JS.dispatch("change")}
                                 >
                                   <.icon name="x" />
@@ -1510,23 +1510,21 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
             </p>
           </div>
           <div class="actions segmented-buttons">
-            <button type="button" class="media-button primary upload-trigger">{gettext("Upload media")}</button>
-            <button
+            <button type="button" class="media-button primary upload-trigger">
+              <.icon name="upload" />{gettext("Upload")}
+            </button>
+            <MediaField.icon_button
               :if={:image in @allowed_types}
-              type="button"
-              class="media-button"
+              icon="images"
+              label={gettext("Select images")}
               phx-click={JS.push("set_gallery_image_target", target: @target) |> toggle_drawer("#image-picker")}
-            >
-              {gettext("Browse images")}
-            </button>
-            <button
+            />
+            <MediaField.icon_button
               :if={:video in @allowed_types}
-              type="button"
-              class="media-button"
+              icon="film"
+              label={gettext("Select videos")}
               phx-click={JS.push("set_gallery_video_target", target: @target) |> toggle_drawer("#video-picker")}
-            >
-              {gettext("Browse videos")}
-            </button>
+            />
           </div>
         </div>
         <div :if={@objects == []} class="gallery-workspace-empty">

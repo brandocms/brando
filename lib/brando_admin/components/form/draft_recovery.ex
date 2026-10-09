@@ -72,7 +72,7 @@ defmodule BrandoAdmin.Components.Form.DraftRecovery do
             phx-click="draft_dismiss"
             phx-target={@target}
             aria-label={gettext("Close recovery panel")}
-            title={gettext("Close recovery panel")}
+            data-tooltip={gettext("Close recovery panel")}
           >
             <Brando.HTML.Icon.icon name="x" class="draft-icon" />
           </button>

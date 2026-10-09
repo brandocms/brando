@@ -182,7 +182,7 @@ defmodule BrandoAdmin.Components.Form.Input.FormFields do
                       :if={!@locked}
                       type="button"
                       class="var-row-handle"
-                      title={gettext("Drag to reorder this row")}
+                      data-tooltip={gettext("Drag to reorder this row")}
                       aria-label={gettext("Reorder row %{number}", number: index + 1)}
                     >
                       <.icon name="equal" />
@@ -410,7 +410,7 @@ defmodule BrandoAdmin.Components.Form.Input.FormFields do
       </button>
       <button
         type="button"
-        title={gettext("Duplicate")}
+        data-tooltip={gettext("Duplicate")}
         aria-label={gettext("Duplicate field %{key}", key: @entry.key)}
         phx-click={JS.push("duplicate_field", value: %{uid: @entry.uid}, target: @target)}
       >
@@ -419,7 +419,7 @@ defmodule BrandoAdmin.Components.Form.Input.FormFields do
       <button
         type="button"
         class="var-chip-danger"
-        title={gettext("Delete")}
+        data-tooltip={gettext("Delete")}
         aria-label={gettext("Delete field %{key}", key: @entry.key)}
         name={@drop_name}
         value={@entry.index}

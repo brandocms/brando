@@ -267,7 +267,7 @@ test.describe('Live Preview with Blocks, Vars and Refs', () => {
       await waitForPreviewUpdate(page)
 
       // Select video for gallery
-      await page.locator('.gallery-block').getByRole('button', { name: 'Browse videos', exact: true }).click()
+      await page.locator('.gallery-block').getByRole('button', { name: 'Select videos', exact: true }).click()
       await syncLV(page)
 
       // Pick a video from the video picker drawer

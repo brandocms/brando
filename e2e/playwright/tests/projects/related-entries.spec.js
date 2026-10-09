@@ -109,7 +109,7 @@ test('related entries can be cleared, saved and selected again without losing ot
   await expect(field.getByRole('button', { name: 'Velg innlegg', exact: true })).toBeVisible()
   await expect(field.getByRole('button', { name: 'Fjern alle', exact: true })).toBeEnabled()
   const gallery = page.locator('.gallery-input .media-gallery--empty')
-  await expect(gallery.getByRole('button', { name: 'Last opp medier', exact: true })).toBeVisible()
+  await expect(gallery.getByRole('button', { name: 'Last opp', exact: true })).toBeVisible()
   await expect(gallery.locator('.media-field-meta')).toHaveText('Bilder opptil 10.2 MB · Videoer opptil 100 MB per fil')
   for (const width of [1440, 390]) {
     await page.setViewportSize({ width, height: 1100 })

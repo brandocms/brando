@@ -18,7 +18,7 @@ defmodule BrandoAdmin.Components.CircleDropdown do
         data-testid="circle-dropdown-button"
         type="button"
         aria-label={assigns[:label] || gettext("Actions")}
-        title={assigns[:label] || gettext("Actions")}
+        data-tooltip={assigns[:label] || gettext("Actions")}
         aria-haspopup="menu"
         aria-controls={@id}
         phx-click={toggle_dropdown("##{@id}")}

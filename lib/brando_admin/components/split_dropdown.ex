@@ -21,7 +21,7 @@ defmodule BrandoAdmin.Components.SplitDropdown do
         data-testid="split-dropdown-button"
         type="button"
         aria-label={@label}
-        title={@label}
+        data-tooltip={@label}
         phx-click={toggle_dropdown("##{@id}")}
         phx-click-away={hide_dropdown("##{@id}")}
       >

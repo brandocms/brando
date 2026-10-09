@@ -100,7 +100,7 @@ test('creates project', async ({ page }, testInfo) => {
   }
   await page.setViewportSize({ width: 1440, height: 1000 })
   const galleryFileChooser = page.waitForEvent('filechooser')
-  await page.locator('.gallery-input').getByRole('button', { name: 'Upload media' }).click()
+  await page.locator('.gallery-input').getByRole('button', { name: 'Upload', exact: true }).click()
   await (await galleryFileChooser).setFiles(['./fixtures/image2.jpg', './fixtures/image.jpg'])
   await confirmUploadFolder(page)
 

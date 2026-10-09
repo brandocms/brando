@@ -429,7 +429,7 @@ test.describe('Image Editor from Blocks', () => {
     })
 
     // Open image picker and select the original image (adds a second image)
-    await page.locator('.gallery-block button', { hasText: 'Browse images' }).click()
+    await page.locator('.gallery-block').getByRole('button', { name: 'Select images', exact: true }).click()
     await syncLV(page)
     await page.waitForTimeout(1000)
 
@@ -486,7 +486,7 @@ test.describe('Image Editor from Blocks', () => {
     })
 
     // Open image picker - the uploaded image should be selected
-    await page.locator('.gallery-block button', { hasText: 'Browse images' }).click()
+    await page.locator('.gallery-block').getByRole('button', { name: 'Select images', exact: true }).click()
     await syncLV(page)
     await page.waitForTimeout(1000)
 

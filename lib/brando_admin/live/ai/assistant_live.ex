@@ -403,7 +403,7 @@ defmodule BrandoAdmin.AI.AssistantLive do
                   type="button"
                   class="assistant-tool upload-trigger"
                   disabled={!@available?}
-                  title={gettext("Upload images or videos")}
+                  data-tooltip={gettext("Upload images or videos")}
                 >
                   <.icon name="upload" /><span class="visually-hidden">{gettext("Upload")}</span>
                 </button>
@@ -420,7 +420,7 @@ defmodule BrandoAdmin.AI.AssistantLive do
                 class="assistant-tool"
                 phx-click={JS.push("browse_library", value: %{kind: "image"}) |> toggle_drawer("#image-picker")}
                 disabled={!@available?}
-                title={gettext("Attach images from the media library")}
+                data-tooltip={gettext("Attach images from the media library")}
               >
                 <.icon name="image" /><span class="visually-hidden">{gettext("Images")}</span>
               </button>
@@ -429,7 +429,7 @@ defmodule BrandoAdmin.AI.AssistantLive do
                 class="assistant-tool"
                 phx-click={JS.push("browse_library", value: %{kind: "video"}) |> toggle_drawer("#video-picker")}
                 disabled={!@available?}
-                title={gettext("Attach videos from the media library")}
+                data-tooltip={gettext("Attach videos from the media library")}
               >
                 <.icon name="film" /><span class="visually-hidden">{gettext("Videos")}</span>
               </button>

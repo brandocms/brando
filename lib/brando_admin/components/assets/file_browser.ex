@@ -95,7 +95,7 @@ defmodule BrandoAdmin.Components.Assets.FileBrowser do
               class="folder-action icon-only"
               phx-click={push_browser_event(@go_parent_event, @target)}
               disabled={@current_folder == ""}
-              title={gettext("Up")}
+              data-tooltip={gettext("Up")}
               aria-label={gettext("Up")}
             >
               <.icon name="arrow-up" />
@@ -141,7 +141,7 @@ defmodule BrandoAdmin.Components.Assets.FileBrowser do
             <button
               type="submit"
               class="folder-icon-button confirm"
-              title={gettext("Create folder")}
+              data-tooltip={gettext("Create folder")}
               aria-label={gettext("Create folder")}
             >
               <.icon name="circle-check" />
@@ -149,7 +149,7 @@ defmodule BrandoAdmin.Components.Assets.FileBrowser do
             <button
               type="button"
               class="folder-icon-button cancel"
-              title={gettext("Cancel")}
+              data-tooltip={gettext("Cancel")}
               aria-label={gettext("Cancel")}
               phx-click={@cancel_new_folder_event}
               phx-target={@target}

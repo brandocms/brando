@@ -10,6 +10,7 @@ import brandoHooks from './hooks'
 import initializeLiveSocket from './initializeLiveSocket'
 import installUICommands from './uiCommands'
 import installFloatingDropdowns from './floatingDropdowns'
+import installTooltips from './tooltips'
 import installShortcuts from './shortcuts'
 import installConfirm from './confirm'
 import configureFader from './config/FADER'
@@ -76,6 +77,7 @@ export default (hooks, enableDebug = false) => {
     }
     installUICommands(app)
     installFloatingDropdowns(app)
+    installTooltips()
     installShortcuts(app)
     // if login screen, do some animations
     const el = Dom.find('#application-login')

@@ -3440,7 +3440,7 @@ defmodule BrandoAdmin.Components.Form do
                 aria-controls={"#{@id}-notes"}
                 aria-expanded="false"
                 aria-label={notes_label(@notes_open_count)}
-                title={notes_label(@notes_open_count)}
+                data-tooltip={notes_label(@notes_open_count)}
               >
                 <.icon name="message-square" class="s" />
                 <span :if={@notes_open_count > 0} class="form-tool-count" aria-hidden="true">{@notes_open_count}</span>
@@ -3869,7 +3869,7 @@ defmodule BrandoAdmin.Components.Form do
         popovertarget={"#{@id}-more-menu"}
         aria-expanded="false"
         aria-label={gettext("More")}
-        title={gettext("More")}
+        data-tooltip={gettext("More")}
         aria-busy={to_string(@sharing?)}
       >
         <%!-- Sharing takes a moment while the blocks are gathered; the menu
@@ -3938,7 +3938,7 @@ defmodule BrandoAdmin.Components.Form do
           data-follow-user={user.id}
           aria-pressed="false"
           aria-label={gettext("Follow %{name}", name: user.name)}
-          title={presence_title(user, @count)}
+          data-tooltip={presence_title(user, @count)}
         >
           <.presence_avatar user={user} />
         </button>

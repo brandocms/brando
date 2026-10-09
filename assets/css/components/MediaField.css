@@ -157,29 +157,22 @@
     .image-content, img, picture { width: 100%; height: auto; object-fit: contain; }
   }
 }
-/* A field is as wide as where it sits, not the window: in a drawer or a
-   narrow column the replace actions keep only their icons, with the label as
-   the accessible name and the title. EuropaCSS claims `@container` for its
-   own (deprecated) shorthand and rejects the CSS rule, so it is written
-   `@Container`: at-rule names are case-insensitive in CSS, and the plugin
-   only matches the lower-case name. */
+/* A source other than Upload is its icon alone (`MediaField.icon_button/1`),
+   in every field and at every width: its label stays the accessible name and
+   shows in the shared tooltip (`data-tooltip`). */
+.media-field-split > .media-button--icon,
+.media-gallery :is(.gallery-buttons, .actions).segmented-buttons > .media-button.media-button--icon { padding-inline: 8px; }
+.media-button--icon > .media-button-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+/* A field is as wide as where it sits, not the window: in a sidebar column
+   of a wide form the thumbnail shrinks as it does on a phone, leaving room
+   for the actions. EuropaCSS claims `@container` for its own (deprecated)
+   shorthand and rejects the CSS rule, so it is written `@Container`: at-rule
+   names are case-insensitive in CSS, and the plugin only matches the
+   lower-case name. */
 .media-field--field { container: media-field / inline-size; }
-/* Upload replacement needs its icon only once it is nothing but the icon. */
-.media-field--field .upload-trigger.media-button--collapsible > [data-icon] { display: none; }
-@Container media-field (max-width: 499px) {
-  .media-field-split > .media-button--collapsible { padding-inline: 8px; }
-  .media-field--field .upload-trigger.media-button--collapsible > [data-icon] { display: inline-block; }
-  .media-button--collapsible > .media-button-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
-}
-/* Narrower still, the thumbnail shrinks as it does on a phone, so a
-   sidebar column of a wide form leaves room for the actions too. */
 @Container media-field (max-width: 339px) {
   .media-field--field .media-field-preview { width: 72px; height: 104px; }
   .media-field--field:not(.media-field--empty) .media-field-preview { height: auto; }
-}
-@Container media-field (max-width: 319px) {
-  .media-field-split > .media-button--collapsible-narrow { padding-inline: 8px; }
-  .media-button--collapsible-narrow > .media-button-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 }
 /* A ref's card is as wide as its column. On a phone its segmented actions
    (Configure, Edit/Crop, Replace) were wider than the card; there Edit/Crop

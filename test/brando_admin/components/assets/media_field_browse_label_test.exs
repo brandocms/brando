@@ -68,38 +68,4 @@ defmodule BrandoAdmin.Components.Assets.MediaFieldBrowseLabelTest do
   test "a file field offers Select file" do
     assert render(:file, nil) =~ "Select file"
   end
-
-  # In a narrow field (a drawer, a phone) the replace actions keep only their
-  # icons (a container query in MediaField.css). Each keeps its label as its
-  # accessible name and shows it as a tooltip.
-  test "a filled field's replace actions can collapse to labelled icons" do
-    image = %Brando.Images.Image{
-      id: 1,
-      status: :processed,
-      path: "images/a.jpg",
-      width: 10,
-      height: 10,
-      alt: %{},
-      sizes: %{"small" => "images/small/a.jpg", "xlarge" => "images/xlarge/a.jpg"}
-    }
-
-    doc = :image |> render(image) |> LazyHTML.from_fragment()
-    buttons = LazyHTML.query(doc, ".media-field-split .media-button--collapsible")
-
-    assert buttons |> Enum.map(&LazyHTML.attribute(&1, "title")) |> List.flatten() == [
-             "Upload replacement",
-             "Select image"
-           ]
-
-    assert buttons |> LazyHTML.query(".media-button-label") |> Enum.map(&LazyHTML.text/1) == [
-             "Upload replacement",
-             "Select image"
-           ]
-  end
-
-  test "an empty field keeps Upload's label and collapses Select only beside Add from URL" do
-    image_doc = :image |> render(nil) |> LazyHTML.from_fragment()
-    assert image_doc |> LazyHTML.query(".upload-trigger.media-button--collapsible") |> Enum.count() == 0
-    assert image_doc |> LazyHTML.query(".media-button--collapsible-narrow") |> Enum.count() == 1
-  end
 end

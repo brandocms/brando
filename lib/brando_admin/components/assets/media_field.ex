@@ -153,36 +153,21 @@ defmodule BrandoAdmin.Components.Assets.MediaField do
         <.folder_note :if={@upload_enabled?} folder={@folder} choose_folder?={@choose_folder?} />
       </.action_menu>
       <div :if={@editable && @presentation != :line} class="media-field-actions">
-        <%!-- The two ways of filling an empty field read as one segmented control,
-              the same as the asset's own actions do once it has been filled. --%>
+        <%!-- The ways of filling an empty field read as one segmented control.
+              Upload leads and keeps its label, the main action beside "Drop …
+              here"; every other source is its icon, named by its hidden label
+              and shown in a tooltip. Without Upload the library leads instead. --%>
         <div :if={!@asset && (@upload_enabled? || @browse || @link)} class="media-field-split">
           <button :if={@upload_enabled?} type="button" class="media-button primary upload-trigger">
             <.icon name="upload" />{gettext("Upload")}
           </button>
-          <%!-- Upload leads and keeps its label; in a narrow field the others
-                keep only their icons, as the filled field's do below. --%>
-          <button
-            :if={@browse}
-            type="button"
-            class={["media-button", @upload_enabled? && collapsible_class(@link)]}
-            title={@upload_enabled? && @browse_label}
-            phx-click={@browse}
-          >
-            <.icon name="folder" /><span class="media-button-label">{@browse_label}</span>
-          </button>
-          <button
-            :if={@link}
-            type="button"
-            class="media-button media-button--collapsible"
-            title={gettext("Add from URL")}
-            phx-click={@link}
-          >
-            <.icon name="link" /><span class="media-button-label">{gettext("Add from URL")}</span>
-          </button>
+          <.icon_button :if={@browse} icon="folder" label={@browse_label} labelled={!@upload_enabled?} phx-click={@browse} />
+          <.icon_button :if={@link} icon="link" label={gettext("Add from URL")} phx-click={@link} />
         </div>
-        <%!-- A filled field's own actions are one segmented control too. The
-              condition covers the union of the three below, so the group is
-              there exactly when one of them is. --%>
+        <%!-- A filled field's own actions are one segmented control too:
+              Configure, then the same sources in the same order as the empty
+              field's. The condition covers the union of the buttons, so the
+              group is there exactly when one of them is. --%>
         <div :if={@compact? && (@asset || !@upload_enabled?)} class="media-field-split">
           <button
             :if={@configure && (@asset || !@upload_enabled?)}
@@ -192,27 +177,14 @@ defmodule BrandoAdmin.Components.Assets.MediaField do
           >
             {gettext("Configure")}
           </button>
-          <%!-- Offered with Configure too: a filled field is replaced the same
-                way everywhere, by upload, library or drop. In a narrow field
-                these two keep only their icons (MediaField.css); the label
-                stays their accessible name and the title shows it on hover. --%>
-          <button
+          <.icon_button
             :if={@asset && @upload_enabled?}
-            type="button"
-            class="media-button media-button--collapsible upload-trigger"
-            title={gettext("Upload replacement")}
-          >
-            <.icon name="upload" /><span class="media-button-label">{gettext("Upload replacement")}</span>
-          </button>
-          <button
-            :if={@asset && @browse}
-            type="button"
-            class="media-button media-button--collapsible"
-            title={@browse_label}
-            phx-click={@browse}
-          >
-            <.icon name="folder" /><span class="media-button-label">{@browse_label}</span>
-          </button>
+            class="upload-trigger"
+            icon="upload"
+            label={gettext("Upload replacement")}
+          />
+          <.icon_button :if={@asset && @browse} icon="folder" label={@browse_label} phx-click={@browse} />
+          <.icon_button :if={@asset && @link} icon="link" label={gettext("Add from URL")} phx-click={@link} />
         </div>
         <%!-- On a block the asset's own controls — configure, whatever the caller
               adds, and replace — read as one segmented control. Remove stays
@@ -281,11 +253,29 @@ defmodule BrandoAdmin.Components.Assets.MediaField do
     """
   end
 
-  # Three actions crowd a field sooner than two: with "Add from URL" beside
-  # it, Select collapses to its icon at the same width as the filled field's
-  # actions; as the only other action, only in the narrowest fields.
-  defp collapsible_class(nil), do: "media-button--collapsible-narrow"
-  defp collapsible_class(_link), do: "media-button--collapsible"
+  @doc """
+  A media source as an icon-only button: its label is the accessible name
+  (visually hidden) and shows in the shared tooltip (`data-tooltip`).
+  `labelled` shows the label instead, for a source that leads its group.
+  """
+  attr :icon, :string, required: true
+  attr :label, :string, required: true
+  attr :labelled, :boolean, default: false
+  attr :class, :any, default: nil
+  attr :rest, :global
+
+  def icon_button(assigns) do
+    ~H"""
+    <button
+      type="button"
+      class={["media-button", !@labelled && "media-button--icon", @class]}
+      data-tooltip={!@labelled && @label}
+      {@rest}
+    >
+      <.icon name={@icon} /><span class="media-button-label">{@label}</span>
+    </button>
+    """
+  end
 
   defp field_config_target(config_target) when config_target in [nil, ""], do: "default"
   defp field_config_target(config_target), do: config_target

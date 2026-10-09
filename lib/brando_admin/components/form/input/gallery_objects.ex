@@ -7,6 +7,7 @@ defmodule BrandoAdmin.Components.Form.Input.GalleryObjects do
   use BrandoAdmin, :live_component
   use Gettext, backend: Brando.Gettext
 
+  alias BrandoAdmin.Components.Assets.MediaField
   alias BrandoAdmin.Components.Form.Input
   alias BrandoAdmin.Components.Form.Input.Gallery.Media
   alias BrandoAdmin.Components.Form.Input.Gallery.Thumb
@@ -88,21 +89,19 @@ defmodule BrandoAdmin.Components.Form.Input.GalleryObjects do
               {ngettext("1 object", "%{count} objects", length(@gallery_objects))}
             </span>
             <div class="actions segmented-buttons">
-              <button type="button" class="media-button primary upload-trigger">{gettext("Upload media")}</button>
-              <button
+              <button type="button" class="media-button primary upload-trigger">
+                <.icon name="upload" />{gettext("Upload")}
+              </button>
+              <MediaField.icon_button
+                icon="images"
+                label={gettext("Select images")}
                 phx-click={JS.push("set_target", target: @myself) |> toggle_drawer("#image-picker")}
-                type="button"
-                class="media-button"
-              >
-                {gettext("Browse images")}
-              </button>
-              <button
+              />
+              <MediaField.icon_button
+                icon="film"
+                label={gettext("Select videos")}
                 phx-click={JS.push("open_video_picker", target: @myself) |> toggle_drawer("#video-picker")}
-                type="button"
-                class="media-button"
-              >
-                {gettext("Browse videos")}
-              </button>
+              />
             </div>
           </div>
 
