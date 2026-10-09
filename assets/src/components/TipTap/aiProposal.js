@@ -40,7 +40,8 @@ export function proposalExtension({ labels, accept, discard, retry, edit }) {
                 const field = document.createElement('textarea')
                 field.className = 'tiptap-ai-field ai-proposal-field'
                 field.value = proposal.text
-                field.rows = Math.min(Math.max(proposal.text.split('\n').length, Math.ceil(proposal.text.length / 70)), 12)
+                // Rows for a narrow editor; where the browser can, CSS sizes it to the text.
+                field.rows = Math.min(Math.max(proposal.text.split('\n').length, Math.ceil(proposal.text.length / 45), 2), 12)
                 field.setAttribute('aria-label', labels.suggestedText)
                 field.addEventListener('input', () => edit?.(field.value))
                 panel.append(field)
