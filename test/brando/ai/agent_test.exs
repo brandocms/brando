@@ -81,6 +81,53 @@ defmodule Brando.AI.AgentTest do
     end
   end
 
+  # A production release has no MCP URL, no mounted route and no listener
+  # for the Assistant to depend on: its tools are function calls.
+  test "a run calls its tools in-process, with the MCP endpoint off and nothing listening", c do
+    refute Brando.MCP.enabled?(Brando.MCP.tenant(nil, nil))
+    refute Application.get_env(:brando, BrandoIntegrationWeb.Endpoint)[:server]
+    assert {:ok, "image1"} = Agent.attach(c.conversation.id, {:image, c.image.id}, c.user)
+
+    # Every function of every MCP module, and of Phoenix's and Plug's request
+    # handling, is traced while the run works in this process. (The model
+    # call itself is an outgoing HTTPS request, answered here by a cassette.)
+    mcp =
+      for module <- Application.spec(:brando, :modules),
+          String.starts_with?(inspect(module), ["Brando.MCP", "BrandoAdmin.MCP"]),
+          do: module
+
+    traced = mcp ++ [Plug.Conn, Phoenix.Endpoint, Phoenix.Router]
+    Enum.each(traced, &Code.ensure_loaded!/1)
+    for module <- traced, do: :erlang.trace_pattern({module, :_, :_}, true, [:local])
+    # A process cannot receive its own trace messages; another collects them.
+    tracer = spawn_link(fn -> collect_traces([]) end)
+    :erlang.trace(self(), true, [:call, {:tracer, tracer}])
+
+    try do
+      use_cassette "assistant/lobby_proposal", cassette_opts(c) do
+        assert {:ok, %Run{status: "completed", steps: 3}} =
+                 Agent.send_message(c.conversation.id, "Put the lobby photo on Identity", c.user, sync: true)
+      end
+    after
+      :erlang.trace(self(), false, [:call])
+      for module <- traced, do: :erlang.trace_pattern({module, :_, :_}, false, [:local])
+    end
+
+    send(tracer, {:calls, self()})
+    assert_receive {:calls, calls}
+    assert calls == [], "the run called #{inspect(Enum.uniq(calls))}"
+
+    {:ok, conversation} = Agent.get_conversation(c.conversation.id, c.user)
+    assert {:ok, %{status: "pending", origin: "assistant"}} = Proposals.get(conversation.proposal_id, c.user)
+  end
+
+  defp collect_traces(calls) do
+    receive do
+      {:trace, _pid, :call, {module, function, args}} -> collect_traces([{module, function, length(args)} | calls])
+      {:calls, to} -> send(to, {:calls, Enum.reverse(calls)})
+    end
+  end
+
   test "attachment aliases follow attach order and survive detaching others", c do
     video = Factory.insert(:video)
     other = Factory.insert(:image, creator_id: c.user.id, path: "images/other.jpg")
@@ -122,6 +169,17 @@ defmodule Brando.AI.AgentTest do
            ] = conversation.attachments
 
     assert id == small.id
+
+    # The others finish in reverse order and still take their own names.
+    clip = Factory.insert(:video)
+    large = Factory.insert(:image, creator_id: c.user.id, title: nil, path: "images/x/large.jpg")
+    assert {:ok, "video1"} = Agent.fulfil(c.conversation.id, "b", clip, c.user)
+    assert {:ok, "image1"} = Agent.fulfil(c.conversation.id, "a", large, c.user)
+
+    {:ok, conversation} = Agent.get_conversation(c.conversation.id, c.user)
+
+    assert Enum.map(conversation.attachments, &{&1["alias"], &1["id"]}) ==
+             [{"image1", large.id}, {"video1", clip.id}, {"image2", small.id}]
   end
 
   test "attach_many attaches in order, keeps existing aliases and reports what it cannot attach", c do
@@ -298,6 +356,32 @@ defmodule Brando.AI.AgentTest do
 
     refute_received {:ai_request, _}
     assert roles(c) == ~w(user assistant)
+  end
+
+  test "a budget spent during a run stops it before the next call, with its steps recorded", c do
+    put_config(max_tokens: 100, run_token_budget: 50_000)
+    test = self()
+
+    # The first call reports most of the budget used.
+    Brando.AI.Cassette.stub(fn _request ->
+      send(test, :model_called)
+
+      %{
+        "tool_calls" => [%{"id" => "call_0", "name" => "list_content_types", "arguments" => %{}}],
+        "usage" => %{"input_tokens" => 49_000, "output_tokens" => 50}
+      }
+    end)
+
+    assert {:ok, %Run{status: "budget_exhausted", steps: 1, input_tokens: 49_000, reserved_tokens: 0}} =
+             Agent.send_message(c.conversation.id, "What can I edit?", c.user, sync: true)
+
+    assert_received :model_called
+    refute_received :model_called
+
+    assert [_user, _call, %Message{role: "tool"}, %Message{role: "assistant", content: notice}] =
+             Agent.messages(c.conversation.id, c.user)
+
+    assert notice =~ "token budget is used up"
   end
 
   test "the monthly budget counts other runs in the site/environment", c do
