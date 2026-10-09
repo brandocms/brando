@@ -160,6 +160,14 @@ defmodule BrandoAdmin.MediaSweepLiveTest do
       refute html =~ "list-row-#{c.used.id}"
     end
 
+    test "All folders keeps counting everything it lists after a change", %{conn: conn} = c do
+      {:ok, view, _html} = live(conn, "/admin/assets/videos?filter:folder_id=all")
+      assert has_element?(view, ".image-picker-main-actions span", "2 videos")
+
+      render_click(view, "assets_move_selected_to_folder", %{"folder" => "sweep/older", "ids" => [c.unused.id]})
+      assert has_element?(view, ".image-picker-main-actions span", "2 videos")
+    end
+
     test "the root offers no sort", %{conn: conn} do
       {:ok, _view, html} = live(conn, "/admin/assets/videos")
       refute html =~ "sweep_open"

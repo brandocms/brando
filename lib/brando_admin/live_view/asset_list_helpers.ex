@@ -277,6 +277,19 @@ defmodule BrandoAdmin.LiveView.AssetListHelpers do
   end
 
   @doc """
+  Recounts what the header shows after a change, as `handle_params` does:
+  the unused assets (`assign_unused_count/3`) and, in the "All folders"
+  view, everything it lists (`assign_all_folders/4`).
+  """
+  def refresh_counts(socket, list, count_key) do
+    params = socket.assigns[:params] || %{}
+
+    socket
+    |> assign_unused_count(params, list)
+    |> assign_all_folders(params, list, count_key)
+  end
+
+  @doc """
   Deletes the unused assets the confirmation offered (`:unused_ids`) that
   the listing still shows as unused: one used or moved away since stays, and
   one added since is not deleted unseen. Runs in the background

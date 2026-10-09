@@ -149,7 +149,7 @@ defmodule BrandoAdmin.Files.FileListLive do
           action: :clear_selection
         )
 
-        {:noreply, assign_folder_state(socket, socket.assigns.current_folder)}
+        {:noreply, refresh(socket)}
     end
   end
 
@@ -196,7 +196,7 @@ defmodule BrandoAdmin.Files.FileListLive do
     {:noreply,
      socket
      |> assign(:clipboard_ids, [])
-     |> assign_folder_state(socket.assigns.current_folder)}
+     |> refresh()}
   end
 
   @impl true
@@ -211,12 +211,12 @@ defmodule BrandoAdmin.Files.FileListLive do
 
   def handle_event("sweep_apply", params, socket) do
     socket = AssetListHelpers.apply_sweep(socket, params)
-    {:noreply, assign_folder_state(socket, socket.assigns.current_folder)}
+    {:noreply, refresh(socket)}
   end
 
   def handle_event("sweep_undo", _, socket) do
     socket = AssetListHelpers.undo_sweep(socket)
-    {:noreply, assign_folder_state(socket, socket.assigns.current_folder)}
+    {:noreply, refresh(socket)}
   end
 
   def handle_event("sweep_dismiss", _, socket), do: {:noreply, assign(socket, :sweep_result, nil)}
@@ -239,13 +239,13 @@ defmodule BrandoAdmin.Files.FileListLive do
         socket
       end
 
-    {:noreply, assign_folder_state(socket, socket.assigns.current_folder)}
+    {:noreply, refresh(socket)}
   end
 
   @impl true
   def handle_info({:asset_ready, %{"kind" => "asset_library"}, _asset}, socket) do
     AssetListHelpers.update_list_entries(socket.assigns.schema)
-    {:noreply, assign_folder_state(socket, socket.assigns.current_folder)}
+    {:noreply, refresh(socket)}
   end
 
   @impl true
@@ -254,9 +254,7 @@ defmodule BrandoAdmin.Files.FileListLive do
 
     {:noreply,
      socket
-     |> assign_folder_state(socket.assigns.current_folder)
-     |> AssetListHelpers.assign_unused_count(socket.assigns.params, &Files.list_files/1)
-     |> AssetListHelpers.assign_all_folders(socket.assigns.params, &Files.list_files/1, :visible_file_count)}
+     |> refresh()}
   end
 
   @impl true
@@ -428,6 +426,14 @@ defmodule BrandoAdmin.Files.FileListLive do
       </.live_component>
     </div>
     """
+  end
+
+  # After a change: the folders, and the counts the header shows (unused,
+  # all folders), as handle_params assigns them.
+  defp refresh(socket) do
+    socket
+    |> assign_folder_state(socket.assigns.current_folder)
+    |> AssetListHelpers.refresh_counts(&Files.list_files/1, :visible_file_count)
   end
 
   defp assign_folder_state(socket, folder_filter) do

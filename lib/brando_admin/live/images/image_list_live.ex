@@ -146,7 +146,7 @@ defmodule BrandoAdmin.Images.ImageListLive do
           action: :clear_selection
         )
 
-        {:noreply, assign_folder_state(socket, socket.assigns.current_folder)}
+        {:noreply, refresh(socket)}
     end
   end
 
@@ -193,7 +193,7 @@ defmodule BrandoAdmin.Images.ImageListLive do
     {:noreply,
      socket
      |> assign(:clipboard_ids, [])
-     |> assign_folder_state(socket.assigns.current_folder)}
+     |> refresh()}
   end
 
   @impl true
@@ -208,12 +208,12 @@ defmodule BrandoAdmin.Images.ImageListLive do
 
   def handle_event("sweep_apply", params, socket) do
     socket = AssetListHelpers.apply_sweep(socket, params)
-    {:noreply, assign_folder_state(socket, socket.assigns.current_folder)}
+    {:noreply, refresh(socket)}
   end
 
   def handle_event("sweep_undo", _, socket) do
     socket = AssetListHelpers.undo_sweep(socket)
-    {:noreply, assign_folder_state(socket, socket.assigns.current_folder)}
+    {:noreply, refresh(socket)}
   end
 
   def handle_event("sweep_dismiss", _, socket), do: {:noreply, assign(socket, :sweep_result, nil)}
@@ -233,7 +233,7 @@ defmodule BrandoAdmin.Images.ImageListLive do
       if socket.assigns.current_folder == "" && image.folder_id do
         AssetListHelpers.patch_folder_filter(socket, image.folder_id)
       else
-        assign_folder_state(socket, socket.assigns.current_folder)
+        refresh(socket)
       end
 
     {:noreply, socket}
@@ -242,7 +242,7 @@ defmodule BrandoAdmin.Images.ImageListLive do
   def handle_info({%Image{} = image, [:image, :updated], _path}, socket) do
     if image.status == :processed, do: Phoenix.PubSub.unsubscribe(Brando.pubsub(), "brando:image:#{image.id}")
     AssetListHelpers.update_list_entries(socket.assigns.schema)
-    {:noreply, assign_folder_state(socket, socket.assigns.current_folder)}
+    {:noreply, refresh(socket)}
   end
 
   def handle_info({%Image{}, [:image, _event], _path}, socket) do
@@ -255,9 +255,7 @@ defmodule BrandoAdmin.Images.ImageListLive do
 
     {:noreply,
      socket
-     |> assign_folder_state(socket.assigns.current_folder)
-     |> AssetListHelpers.assign_unused_count(socket.assigns.params, &Images.list_images/1)
-     |> AssetListHelpers.assign_all_folders(socket.assigns.params, &Images.list_images/1, :visible_image_count)}
+     |> refresh()}
   end
 
   @impl true
@@ -405,6 +403,14 @@ defmodule BrandoAdmin.Images.ImageListLive do
       </.live_component>
     </div>
     """
+  end
+
+  # After a change: the folders, and the counts the header shows (unused,
+  # all folders), as handle_params assigns them.
+  defp refresh(socket) do
+    socket
+    |> assign_folder_state(socket.assigns.current_folder)
+    |> AssetListHelpers.refresh_counts(&Images.list_images/1, :visible_image_count)
   end
 
   defp assign_folder_state(socket, folder_filter) do
