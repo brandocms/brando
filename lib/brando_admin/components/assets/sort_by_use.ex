@@ -45,6 +45,7 @@ defmodule BrandoAdmin.Components.Assets.SortByUse do
       data-testid="delete-unused"
       data-confirm-destructive
       data-confirm={delete_question(@asset_type, @count)}
+      data-confirm-ok={gettext("Delete")}
     >
       <.icon name="trash" />{ngettext(
         "Delete %{count} unused",
