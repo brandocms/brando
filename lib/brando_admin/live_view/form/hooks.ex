@@ -1430,7 +1430,7 @@ defmodule BrandoAdmin.LiveView.Form.Hooks do
 
   defp handle_hooks_tiptap_link_info(_, socket), do: {:cont, socket}
 
-  defp handle_hooks_modules_info({_module, [:module, action]}, socket) when action in [:created, :updated] do
+  defp handle_hooks_modules_info({module, [:module, action]}, socket) when action in [:created, :updated] do
     schema = socket.assigns.schema
 
     for %{name: field} <- schema.__blocks_fields__() do
@@ -1439,6 +1439,15 @@ defmodule BrandoAdmin.LiveView.Form.Hooks do
       send_update(BrandoAdmin.Components.Form.BlockField.ModulePicker,
         id: target_id,
         event: :refresh_modules
+      )
+    end
+
+    # Blocks using an updated module take its editor settings (Write with AI)
+    if action == :updated and schema.__blocks_fields__() != [] do
+      send_update(BrandoAdmin.Components.Form,
+        id: "#{schema.__naming__().singular}_form",
+        event: "module_updated",
+        module_id: module.id
       )
     end
 

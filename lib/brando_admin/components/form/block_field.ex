@@ -622,6 +622,16 @@ defmodule BrandoAdmin.Components.Form.BlockField do
   end
 
   # Coalesced refresh of the roots other editors changed.
+  # A module was saved: each root block takes its settings, and passes the
+  # news on to its children (`Block.update/2`).
+  def update(%{event: "module_updated", module_id: module_id}, socket) do
+    for uid <- socket.assigns[:root_order] || [] do
+      send_update(Block, id: "block-#{uid}", event: "module_updated", module_id: module_id)
+    end
+
+    {:ok, socket}
+  end
+
   def update(%{event: "flush_remote_refresh"}, socket) do
     {:ok, flush_remote_refresh(assign(socket, :remote_refresh_scheduled?, false))}
   end

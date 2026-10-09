@@ -75,6 +75,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
         table_template_name={@table_template_name}
         module_class={@module_class}
         module_color={@module_color}
+        module_write_with_ai={@module_write_with_ai}
         module_name={@module_name}
         module_type={@module_type}
         heex_compiled_module={@heex_compiled_module}
@@ -178,6 +179,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
         has_children?={false}
         module_name={@module_name}
         module_color={@module_color}
+        module_write_with_ai={@module_write_with_ai}
         module_datasource_module_label={@module_datasource_module_label}
         module_datasource_type={@module_datasource_type}
         module_datasource_query={@module_datasource_query}
@@ -237,6 +239,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
         has_children?={false}
         module_name={@module_name}
         module_color={@module_color}
+        module_write_with_ai={@module_write_with_ai}
         paste_multi_module_id={@paste_multi_module_id}
         hidden_block_fields={@hidden_block_fields}
         paste_context={multi_paste_context(@paste_multi_module_id, @parent_module_id)}
@@ -835,6 +838,8 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
   attr :entry_language, :string, default: nil
   attr :hidden_block_fields, :list, default: []
   attr :focus_role, :atom, default: nil
+  # Write with AI in the module's text blocks (`Brando.Content.Module`)
+  attr :module_write_with_ai, :boolean, default: false
   slot :inner_block
 
   def module(assigns) do
@@ -948,6 +953,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
               block_identifiers={@block_form[:block_identifiers]}
               entry={@entry}
               entry_language={@entry_language}
+              write_with_ai={@module_write_with_ai}
             />
           <% else %>
             <Input.hidden field={@form[:sequence]} />
@@ -1001,6 +1007,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
               block_identifiers={@form[:block_identifiers]}
               entry={@entry}
               entry_language={@entry_language}
+              write_with_ai={@module_write_with_ai}
             />
           <% end %>
         </form>
@@ -1110,6 +1117,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
       |> assign_derived([:block_form], footnote_refs: footnote_ref_names(assigns.block_form.source))
       |> assign(:liquid_splits, liquid_splits)
       |> assign_new(:entry_language, fn -> nil end)
+      |> assign_new(:write_with_ai, fn -> false end)
 
     ~H"""
     <div class="block-content">
@@ -1158,6 +1166,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
                   refs_field={@block_form[:refs]}
                   ref_name={ref}
                   footnotes_enabled={ref in @footnote_refs}
+                  write_with_ai={@write_with_ai}
                   config_open={@config_open}
                   target={@target}
                   target_ref={@target_ref}
@@ -1561,6 +1570,8 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
   attr :config_open, :string, default: nil
 
   attr :footnotes_enabled, :boolean
+  # Write with AI in the ref's text: the module turns it on
+  attr :write_with_ai, :boolean, default: false
 
   def ref(assigns) do
     refs = Changeset.get_assoc(assigns.refs_field.form.source, :refs, :struct)
@@ -1590,6 +1601,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
                 ref_description={ref_form[:description].value}
                 ref_form={ref_form}
                 footnotes_enabled={@footnotes_enabled}
+                write_with_ai={@write_with_ai}
                 block={block}
                 target={@target}
                 target_ref={@target_ref}
@@ -2230,7 +2242,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
       assigns
       |> assign(:uid, uid)
       |> assign(:text_type, Changeset.get_field(block_data_cs, :type))
-      |> assign(:ai_enabled?, RichTextAI.enabled?(RichTextAI.block_text_config()))
+      |> assign(:ai_enabled?, RichTextAI.enabled?(RichTextAI.block_text_config(assigns[:write_with_ai] == true)))
       |> assign(:extensions, extensions)
       |> assign(:styles, styles)
       |> assign(:footnotes, assigns[:footnotes_enabled] == true)
@@ -3310,7 +3322,8 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
       refs: processed_refs,
       target: assigns[:target],
       target_ref: assigns[:target_ref],
-      form_id: assigns[:form_id]
+      form_id: assigns[:form_id],
+      write_with_ai: assigns[:write_with_ai] == true
     }
 
     system_assigns =

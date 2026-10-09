@@ -132,7 +132,7 @@ defmodule Brando.Blueprint.TraitCompilerTest do
     assert title.type == :text
     assert description.type == :text
     assert image.type == :image
-    assert Keyword.has_key?(Brando.Pages.Page.__trait__(Brando.Trait.Meta), :ai)
+    assert Keyword.has_key?(Brando.Pages.Page.__trait__(Brando.Trait.Meta), :ai_prompts)
   end
 
   test "the ScheduledPublishing compiler preserves its generated Blueprint attribute" do

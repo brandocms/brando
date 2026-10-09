@@ -2,6 +2,18 @@ defmodule Brando.Trait.Meta do
   @moduledoc """
   Adds SEO metadata fields and exposes per-field AI defaults.
 
+  `ai_prompts:` holds the Blueprint's site prompts for `meta_title` and
+  `meta_description`: the Meta drawer's **Generate** and the Content SEO
+  batch use them (see "Site prompts" in `guides/blueprint_forms.md`).
+
+      trait :meta,
+        ai_prompts: [
+          meta_description: [prompt: "Write an SEO description", context: [:title, :blocks]]
+        ]
+
+  Before 0.55 it was called `ai:`, which still works and warns when the
+  Blueprint compiles.
+
   Fields: `meta_title`, `meta_description`, `meta_image` and
   `meta_canonical_url`. The canonical URL overrides the address in the page's
   `<link rel="canonical">` and `og:url`, for content first published
@@ -81,11 +93,20 @@ defmodule Brando.Trait.Meta do
   @impl true
   def ai_field_opts(_module, _config, field_name) when field_name not in @meta_fields, do: []
 
+  # `ai_prompts:`, or the deprecated `ai:` it was called before 0.55 (the
+  # Blueprint warns when it compiles; see `Brando.Blueprint.Trait`).
   def ai_field_opts(_module, config, field_name) do
     config
-    |> Map.get(:ai, %{})
+    |> ai_prompts()
     |> get_value(field_name)
     |> normalize_ai_opts()
+  end
+
+  defp ai_prompts(config) do
+    case Map.fetch(config, :ai_prompts) do
+      {:ok, prompts} -> prompts
+      :error -> Map.get(config, :ai, %{})
+    end
   end
 
   defp get_value(config, key) when is_map(config) do

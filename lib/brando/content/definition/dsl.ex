@@ -55,6 +55,7 @@ defmodule Brando.Content.Definition.Dsl do
     class: [type: :string],
     svg: [type: :any],
     color: [type: :any],
+    write_with_ai: [type: :any],
     multi: [type: :any],
     sequence: [type: :any],
     datasource: [type: :any],

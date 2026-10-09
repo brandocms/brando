@@ -150,8 +150,9 @@ compilation, and a field in `from` that the schema does not have, or that is
 an association or an embed, is reported with the other form errors.
 
 Write new per-field AI as `ai_actions:`: `ai:` on an input is
-[deprecated](deps/brando/guides/blueprint_forms.md#ai-on-an-input-deprecated). Rich text inputs get Write with AI
-whenever AI is configured; `write_with_ai: false` turns it off.
+[deprecated](deps/brando/guides/blueprint_forms.md#ai-on-an-input-deprecated). Write with AI in rich text is off
+unless the input asks for it with `write_with_ai: true` or its options, and
+in block text unless the module turns it on in the module editor.
 
 ### Block editors
 

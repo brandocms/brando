@@ -203,7 +203,7 @@ defmodule BrandoAdmin.Sites.SEOLiveTest do
 
       assert has_element?(view, ".seo-context-picker")
       view |> element(".seo-context-summary") |> render_click()
-      # What Brando.Pages.Page declares through `trait :meta, ai: [...]`.
+      # What Brando.Pages.Page declares through `trait :meta, ai_prompts: [...]`.
       assert has_element?(view, ".seo-context-picker .seo-chip[aria-pressed=true]", "blocks")
 
       view

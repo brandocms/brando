@@ -3,7 +3,7 @@ defmodule Brando.SEO.Generate do
   Generates an entry's meta description or title from the entry's own content.
 
   The prompt is whatever the blueprint declares for the field —
-  `trait :meta, ai: [meta_description: [prompt: "…", context: [:title, :blocks]]]`
+  `trait :meta, ai_prompts: [meta_description: [prompt: "…", context: [:title, :blocks]]]`
   — falling back to a built-in prompt that asks for a description of display
   length in the entry's language. The context fields are whatever the caller
   passes (the Content SEO tab passes the site's stored pick), the blueprint's
@@ -192,7 +192,7 @@ defmodule Brando.SEO.Generate do
   The prompt used for `field` when the blueprint declares none of its own.
 
   Blueprints that care — `Brando.Pages.Page` among them — say what they want
-  through `trait :meta, ai: [...]`; this is what everything else gets.
+  through `trait :meta, ai_prompts: [...]`; this is what everything else gets.
   """
   @spec default_prompt(map(), atom()) :: String.t()
   def default_prompt(entry, field)

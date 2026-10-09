@@ -42,7 +42,7 @@ const openProject = async page => {
   const id = path.split('/').at(-1)
   await page.locator('#project_client_id-field-base').getByRole('button', { name: 'Select', exact: true }).click()
   await page.getByRole('button', { name: 'Recovery client', exact: true }).click()
-  await page.locator('.tiptap-wrapper [contenteditable="true"]').fill('A project for media recovery testing.')
+  await page.getByRole('textbox', { name: 'Introduction', exact: true }).fill('A project for media recovery testing.')
   return { path, id }
 }
 

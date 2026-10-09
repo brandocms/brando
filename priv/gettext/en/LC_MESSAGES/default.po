@@ -11283,6 +11283,11 @@ msgstr ""
 msgid "Off: the endpoint, its sign-in and its metadata answer as if they did not exist. Nothing reaches this site over MCP."
 msgstr ""
 
+#: lib/brando_admin/components/form/module_props.ex
+#, elixir-autogen, elixir-format
+msgid "Offers Write with AI in this module's text blocks when AI is configured. Each request is a paid call to the AI service."
+msgstr ""
+
 #: lib/brando_admin/components/form/draft_recovery.ex
 #, elixir-autogen, elixir-format
 msgid "Offline — recent edits have not reached recovery storage"
@@ -19124,6 +19129,7 @@ msgstr ""
 
 #: lib/brando_admin/components/form/field_actions.ex
 #: lib/brando_admin/components/form/input/rich_text_labels.ex
+#: lib/brando_admin/components/form/module_props.ex
 #, elixir-autogen, elixir-format
 msgid "Write with AI"
 msgstr ""

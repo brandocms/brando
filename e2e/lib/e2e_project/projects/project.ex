@@ -38,6 +38,7 @@ defmodule E2eProject.Projects.Project do
     attribute :slug, :slug, unique: [prevent_collision: true], required: true
     attribute :full_case, :boolean, default: false
     attribute :introduction, :text, required: true
+    attribute :summary, :text
   end
 
   relations do
@@ -160,6 +161,7 @@ defmodule E2eProject.Projects.Project do
             instructions:
               t("Used for case listings and also the heading for the case detail page"),
             extensions: ["p", "bold", "link", "color"],
+            write_with_ai: true,
             ai_actions: [
               summarize: [
                 label: t("Write from the content"),
@@ -169,6 +171,10 @@ defmodule E2eProject.Projects.Project do
                 tone: "plain and factual"
               ]
             ]
+
+          # Rich text without `write_with_ai:`: no Write with AI
+          # (write-with-ai.spec.js)
+          input :summary, :rich_text, label: t("Summary"), extensions: ["p", "bold", "link"]
 
           input :project_categories, :multi_select,
             options: &__MODULE__.get_categories/2,

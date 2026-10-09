@@ -39,8 +39,14 @@ defmodule Brando.System do
     {:ok, {:authorization, :exists}} = check_authorization_exists()
     {:ok, {:env, :exists}} = check_env()
     {:ok, {:presence, :exists}} = check_presence_exists()
+    :ok = warn_deprecated_config()
 
     Logger.info("==> Brando >> System checks complete!")
+  end
+
+  # Deprecated config names that still work, with the name to use instead.
+  defp warn_deprecated_config do
+    Enum.each(Brando.AI.deprecations(), &Brando.System.Log.warn/1)
   end
 
   defp check_tenancy_config do

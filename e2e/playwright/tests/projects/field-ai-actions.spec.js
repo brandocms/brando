@@ -2,7 +2,8 @@ import { test, expect } from '../../test-support/setupAuth'
 import { syncLV } from '../../utils'
 
 // AI actions declared on a field (`ai_actions:`: two on the project's title,
-// one on its introduction), and Write with AI in its rich text. A fake model
+// one on its introduction), and Write with AI in its introduction, which asks
+// for it (`write_with_ai: true`). A fake model
 // answers (E2eProject.FieldActionModel), in the language the prompt asks for.
 // The reply is a suggestion under the field until it is accepted; discarding
 // it leaves the field alone.
@@ -94,7 +95,7 @@ test('an action with nothing to read says so, and AI off hides the actions and W
   await page.goto('/admin/projects/projects/update/1')
   await syncLV(page)
 
-  // Write with AI is in the rich text toolbar whenever AI is configured
+  // Write with AI is in the introduction's toolbar: it asks for it, and AI is configured
   const introductionEditor = page.locator('[data-footnote-field="introduction"]')
   await expect(introductionEditor).toHaveAttribute('data-tiptap-ai', 'true')
 

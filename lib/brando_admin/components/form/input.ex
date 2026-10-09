@@ -1360,8 +1360,8 @@ defmodule BrandoAdmin.Components.Form.Input do
   end
 
   # Write with AI in a rich text toolbar: in a top-level input of an entry
-  # form (the form answers its requests) whenever AI is configured for its
-  # model, unless the input says `write_with_ai: false`.
+  # form (the form answers its requests) that asks for it with
+  # `write_with_ai:`, when AI is configured for its model.
   defp assign_write_with_ai(assigns) do
     write_with_ai? =
       !is_nil(assigns[:target]) && !is_nil(assigns[:form_id]) &&

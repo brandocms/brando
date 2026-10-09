@@ -75,6 +75,14 @@ defmodule E2EFixtureController do
         "notification-route-paused" ->
           create_paused_notification_route()
 
+        # Write with AI in the text blocks of the Index page's module
+        # (Example module), which a module turns on in the module editor
+        "write-with-ai-module" ->
+          user = get_admin_user()
+          module = Brando.Repo.get_by!(Brando.Content.Module, class: "example")
+          {:ok, _} = Brando.Content.update_module(module, %{write_with_ai: true}, user)
+          user
+
         "markdown-source" ->
           E2E.MarkdownProvider.setup(get_admin_user())
 
@@ -1183,6 +1191,10 @@ defmodule E2EFixtureController do
     end
 
     Application.delete_env(:e2e_project, :field_ai_previous)
+
+    # A module whose Write with AI a spec turned on is rolled back with the
+    # sandbox, but the module cache would keep it on for the next spec.
+    Brando.Cache.Query.evict_schema(Brando.Content.Module)
     send_resp(conn, 200, "")
   end
 

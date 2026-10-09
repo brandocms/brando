@@ -75,29 +75,21 @@ production dump.
     on a `:hidden` input for a meta field it is the Meta drawer's Generate. A
     custom component still gets `ai:` in its options.
   - The Meta drawer's **Generate** on `meta_title` and `meta_description` is
-    the same kind of action, from the site prompt (`trait :meta, ai:` or
-    `config :brando, Brando.AI, fields:`); an input for a meta field, usually
-    `:hidden`, can add its own `ai_actions:`.
+    the same kind of action, from the site prompt (`trait :meta, ai_prompts:`
+    or `config :brando, Brando.AI, prompts:`, renamed below); an input for a
+    meta field, usually `:hidden`, can add its own `ai_actions:`.
   - **Suggest alt text** on an image's form, in the image drawer and in a
     picture block is a suggestion per language under the alt field, written
     only on Accept. It asks for the languages the field has no text in (as
     the form has it, unsaved), and Accept leaves a language written in since.
     Its request now runs in the environment the image is in;
     in a named environment it used to look for the image in the default one.
-  - **Write with AI** in the rich-text toolbar is on in every top-level rich
-    text input of an entry form and in block text whenever `Brando.AI` is
-    configured, no longer only with `ai:` or a `block_text` prompt. Each
-    request is a paid call, as before.
-    `write_with_ai: false` on an input turns it off there, and
-    `fields: [block_text: [write_with_ai: false]]` in block text;
-    `write_with_ai: [prompt:, from:, model:]` gives an input's requests
-    instructions, fields to read and a model. Its suggestion can now be
-    edited before Accept.
-  - Site prompts are unchanged and keep their names: `trait :meta, ai:` and
-    `config :brando, Brando.AI, fields:` still drive the Meta drawer's
-    Generate, the Content SEO batch, the SEO review's model, image alt text
-    and Write with AI in block text. They are documented under "Site
-    prompts" in the forms guide.
+  - **Write with AI** in the rich-text toolbar gives a suggestion that can
+    be edited before Accept. Where it shows is opt-in, below.
+  - Site prompts still drive the Meta drawer's Generate, the Content SEO
+    batch, the SEO review's model, image alt text and Write with AI in block
+    text. They are documented under "Site prompts" in the forms guide, and
+    renamed below.
 
   To upgrade, replace each input's `ai:` with the `ai_actions:` the warning
   prints:
@@ -116,9 +108,49 @@ production dump.
   input, write `write_with_ai: [prompt: …, from: […], model: …]` instead,
   as the warning prints. Move `api_key:` to
   `providers:` and request options such as `temperature:` to
-  `default_opts:` in `config :brando, Brando.AI`. Add
-  `write_with_ai: false` to rich text inputs that should not offer Write
-  with AI.
+  `default_opts:` in `config :brando, Brando.AI`.
+
+- **Write with AI is opt-in, and the site prompt options are renamed**
+  (#3101). Every Write with AI request is a paid call, so it shows only
+  where a site asks for it.
+
+  - A `:rich_text` input turns it on with `write_with_ai: true`, or with
+    `write_with_ai: [prompt:, from:, model:]`. Without `write_with_ai:`, or
+    with `false`, it is off. A deprecated `ai:` on a rich text input still
+    turns it on, and its warning prints the `write_with_ai:` to write
+    (`write_with_ai: true` when it had no options).
+  - In block text, each module turns it on for its text blocks with
+    **Write with AI** under Overview in the module editor (`write_with_ai`
+    in module definition files). `brando_218` adds
+    `content_modules.write_with_ai` in every environment, off in every
+    existing module. Duplicating, exporting and importing a module, its
+    definition files and the shared library carry the setting, and changing
+    it bumps the module's version. `prompts: [block_text: [write_with_ai:
+    false]]` turns it off in every module.
+  - `config :brando, Brando.AI, fields:` is now `prompts:`, and
+    `trait :meta, ai:` is now `trait :meta, ai_prompts:`. They hold the
+    site prompts, the instructions for the AI jobs that are not a field's
+    `ai_actions:`, and the names now read with `ai_actions:` and
+    `write_with_ai:` rather than suggesting form fields or a field's `ai:`.
+    The old names still work in 0.55 and are removed in a later release:
+    Brando warns at boot about `fields:` and the Blueprint warns when it
+    compiles about `ai:`, each printing the name to write. When both names
+    are set, the new one wins and the warning says to remove the old one.
+
+  To upgrade, run `mix brando.gen.migrations` and `mix brando.migrate`, add
+  `write_with_ai: true` to the rich text inputs that should keep Write with
+  AI, turn it on in the modules whose text blocks should have it, and rename
+  the options:
+
+  ```elixir
+  # Before
+  config :brando, Brando.AI, fields: [block_text: [prompt: "Keep it plain."]]
+  trait :meta, ai: [meta_description: [prompt: "Write an SEO description", context: [:title]]]
+
+  # After
+  config :brando, Brando.AI, prompts: [block_text: [prompt: "Keep it plain."]]
+  trait :meta, ai_prompts: [meta_description: [prompt: "Write an SEO description", context: [:title]]]
+  ```
 
 - **SEO settings, pages and `trait :meta` have new columns.** `brando_210`
   adds `crawler_policy` to `sites_seos` and `meta_nosnippet` and
@@ -1850,6 +1882,13 @@ production dump.
   compilation and raised from the changeset instead.
 
 #### Fixes
+
+- **Duplicating a module works again, and copies the whole module.** It
+  failed on the unique module `uid`. The copy is now a new module at
+  version 1 with its own `uid`, without the original's shared-library link.
+  It gets copies of the original's references, variables and child (entry)
+  modules, joins the module sets the original is in, and gets the class
+  `<class>-copy` (`-copy-2` and on when taken) instead of `<class> (copy)`.
 
 - **Two editors in an entry's fields keep each other's changes, and a
   field is unlocked when its editor leaves it.** Each editor now sends the

@@ -2,9 +2,10 @@ import { test, expect } from '../../test-support/setupAuth'
 import { syncLV } from '../../utils'
 
 // AI that is not a Blueprint's own `ai_actions:` gives suggestions too: the
-// Meta drawer's Generate, from the page's site prompts (`trait :meta, ai:` in
-// Brando.Pages.Page), and Write with AI in block text, which is on whenever
-// AI is configured, and Suggest alt text on an image's form. A fake model answers (E2eProject.FieldActionModel).
+// Meta drawer's Generate, from the page's site prompts (`trait :meta,
+// ai_prompts:` in Brando.Pages.Page), Write with AI in the text blocks of a
+// module that turns it on, and Suggest alt text on an image's form. A fake
+// model answers (E2eProject.FieldActionModel).
 // Nothing reaches a field until the editor accepts it.
 
 test.beforeEach(async ({ page }) => {
@@ -19,6 +20,7 @@ test.afterEach(async ({ page }) => {
 test('the Meta drawer and block text suggest, and write only what the editor accepts', async ({ page }) => {
   const errors = []
   page.on('pageerror', error => errors.push(error.message))
+  expect((await page.request.post('/e2e/setup_fixtures/write-with-ai-module')).ok()).toBe(true)
   expect((await page.request.post('/e2e/setup_fixtures/norwegian-admin-user')).ok()).toBe(true)
 
   await page.setViewportSize({ width: 1440, height: 1000 })
@@ -46,7 +48,8 @@ test('the Meta drawer and block text suggest, and write only what the editor acc
   await expect(metaSuggestion.locator('.ai-proposal')).toHaveCount(0)
   await drawer.getByRole('button', { name: 'Lukk', exact: true }).click()
 
-  // Write with AI in the block text's toolbar, with no block_text prompt
+  // Write with AI in the block text's toolbar, which its module turns on, with
+  // no block_text prompt
   const block = page.locator('[data-tiptap-type="block"][data-tiptap-ai="true"]').first()
   await block.scrollIntoViewIfNeeded()
   await block.locator('.tiptap-target').click()
@@ -114,6 +117,7 @@ test("Suggest alt text on an image's form waits per language until accepted", as
 })
 
 test('without AI, block text has no Write with AI and the meta fields no Generate', async ({ page }) => {
+  expect((await page.request.post('/e2e/setup_fixtures/write-with-ai-module')).ok()).toBe(true)
   expect((await page.request.post('/e2e/field-ai/off')).ok()).toBe(true)
   await page.goto('/admin/pages/update/1')
   await syncLV(page)

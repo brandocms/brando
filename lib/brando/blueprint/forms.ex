@@ -293,9 +293,9 @@ defmodule Brando.Blueprint.Forms do
 
   See `Brando.Blueprint.Forms.AIAction` and "AI actions on a field" in
   `guides/blueprint_forms.md`, which also covers the Meta drawer's fields,
-  Write with AI in rich text (`write_with_ai: false` turns it off on an
-  input) and the site prompts (`trait :meta, ai:` and
-  `config :brando, Brando.AI, fields:`).
+  Write with AI in rich text (off unless an input asks for it with
+  `write_with_ai: true` or its options) and the site prompts
+  (`trait :meta, ai_prompts:` and `config :brando, Brando.AI, prompts:`).
 
   `ai: [prompt: ..., context: ...]` on an input is deprecated: it runs as an
   action named `:generate`, and the Blueprint warns when it compiles with

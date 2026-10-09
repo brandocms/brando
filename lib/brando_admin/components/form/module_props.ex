@@ -147,6 +147,15 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
                 ]}
               />
               <Input.toggle field={@form[:multi]} label={gettext("Allow multiple entries")} />
+              <Input.toggle
+                field={@form[:write_with_ai]}
+                label={gettext("Write with AI")}
+                instructions={
+                  gettext(
+                    "Offers Write with AI in this module's text blocks when AI is configured. Each request is a paid call to the AI service."
+                  )
+                }
+              />
 
               <.live_component
                 module={Input.Select}

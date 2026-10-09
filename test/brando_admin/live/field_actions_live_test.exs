@@ -214,13 +214,20 @@ defmodule BrandoAdmin.FieldActionsLiveTest do
   end
 
   # An article with one block whose text ref, `body`, holds `text`
-  defp article_with_text_block(user, text) do
+  # `write_with_ai:` is the module's Write with AI setting
+  defp article_with_text_block(user, text, write_with_ai \\ false) do
+    {article, ref_uid, _module} = text_block_article(user, text, write_with_ai)
+    {article, ref_uid}
+  end
+
+  defp text_block_article(user, text, write_with_ai) do
     {:ok, module} =
       Brando.Content.create_module(
         Factory.params_for(:module,
+          write_with_ai: write_with_ai,
           name: %{"en" => "Text"},
           namespace: %{"en" => "Content"},
-          help_text: %{},
+          help_text: %{"en" => "Text"},
           code: "{% ref refs.body %}",
           refs: [%{name: "body", uid: Brando.Utils.generate_uid(), data: %{type: "text", data: %{text: "Default"}}}]
         ),
@@ -253,7 +260,7 @@ defmodule BrandoAdmin.FieldActionsLiveTest do
       |> Brando.Repo.insert!()
 
     struct(SyncTest.Article.Blocks, %{entry_id: article.id, block_id: block.id, sequence: 0}) |> Brando.Repo.insert!()
-    {article, ref_uid}
+    {article, ref_uid, module}
   end
 
   test "gives the model at most the context's length of block text", %{conn: conn, current_user: user} do
@@ -273,6 +280,16 @@ defmodule BrandoAdmin.FieldActionsLiveTest do
   end
 
   describe "Write with AI in block text" do
+    # The block component (its form's target) that owns the text
+    defp block_cids(view, ref_uid) do
+      view
+      |> render()
+      |> LazyHTML.from_fragment()
+      |> LazyHTML.query("form:has(#block-#{ref_uid}-rich-text)")
+      |> LazyHTML.attribute("phx-target")
+      |> Enum.reverse()
+    end
+
     defp write_with_ai(view, ref_uid) do
       # As the editor's hook sends it, to the block that owns the text (its
       # form's target)
@@ -296,9 +313,24 @@ defmodule BrandoAdmin.FieldActionsLiveTest do
       })
     end
 
-    test "is on whenever AI is configured, and its reply is a suggestion for the editor",
+    test "is off in a module that does not turn it on, and the server refuses a request",
          %{conn: conn, current_user: user} do
-      {article, ref_uid} = article_with_text_block(user, "<p>Et langt avsnitt om huset.</p>")
+      {article, ref_uid} = article_with_text_block(user, "<p>Et avsnitt.</p>")
+      view = open(conn, article)
+      await_selector(view, "#block-#{ref_uid}-rich-text")
+      replies("Kort.")
+
+      assert has_element?(view, "#block-#{ref_uid}-rich-text[data-tiptap-ai='false']")
+
+      write_with_ai(view, ref_uid)
+      event = "b:tiptap:ai:block-#{ref_uid}-rich-text"
+      assert_push_event(view, ^event, %{error: true})
+      refute_received {:prompt, _}
+    end
+
+    test "is on in a module that turns it on, and its reply is a suggestion for the editor",
+         %{conn: conn, current_user: user} do
+      {article, ref_uid} = article_with_text_block(user, "<p>Et langt avsnitt om huset.</p>", true)
       view = open(conn, article)
       await_selector(view, "#block-#{ref_uid}-rich-text")
       replies("Et kort avsnitt.")
@@ -319,13 +351,32 @@ defmodule BrandoAdmin.FieldActionsLiveTest do
              )
     end
 
+    test "follows the module's switch in an open editor, on and off, without remounting the block",
+         %{conn: conn, current_user: user} do
+      {article, ref_uid, module} = text_block_article(user, "<p>Et avsnitt.</p>", false)
+      view = open(conn, article)
+      selector = "#block-#{ref_uid}-rich-text"
+      await_selector(view, selector)
+      assert has_element?(view, "#{selector}[data-tiptap-ai='false']")
+      # The block keeps its component: it is updated, not remounted
+      [cid | _] = block_cids(view, ref_uid)
+
+      {:ok, module} = Brando.Content.update_module(module, %{write_with_ai: true}, user)
+      await_selector(view, "#{selector}[data-tiptap-ai='true']")
+      assert [^cid | _] = block_cids(view, ref_uid)
+
+      {:ok, _module} = Brando.Content.update_module(module, %{write_with_ai: false}, user)
+      await_selector(view, "#{selector}[data-tiptap-ai='false']")
+      assert [^cid | _] = block_cids(view, ref_uid)
+    end
+
     test "the block_text site prompt adds the site's instructions", %{conn: conn, current_user: user} do
       put_test_env(
         Brando.AI,
-        Keyword.put(Application.get_env(:brando, Brando.AI), :fields, block_text: [prompt: "Skriv enkelt."])
+        Keyword.put(Application.get_env(:brando, Brando.AI), :prompts, block_text: [prompt: "Skriv enkelt."])
       )
 
-      {article, ref_uid} = article_with_text_block(user, "<p>Et avsnitt.</p>")
+      {article, ref_uid} = article_with_text_block(user, "<p>Et avsnitt.</p>", true)
       view = open(conn, article)
       await_selector(view, "#block-#{ref_uid}-rich-text")
       replies("Kort.")
@@ -338,13 +389,14 @@ defmodule BrandoAdmin.FieldActionsLiveTest do
       assert prompt =~ ~r/\ASkriv enkelt\.\n\nShorten the passage/
     end
 
-    test "is off with write_with_ai: false in the block_text site prompt", %{conn: conn, current_user: user} do
+    test "is off with write_with_ai: false in the block_text site prompt, even where a module turns it on",
+         %{conn: conn, current_user: user} do
       put_test_env(
         Brando.AI,
-        Keyword.put(Application.get_env(:brando, Brando.AI), :fields, block_text: [write_with_ai: false])
+        Keyword.put(Application.get_env(:brando, Brando.AI), :prompts, block_text: [write_with_ai: false])
       )
 
-      {article, ref_uid} = article_with_text_block(user, "<p>Et avsnitt.</p>")
+      {article, ref_uid} = article_with_text_block(user, "<p>Et avsnitt.</p>", true)
       view = open(conn, article)
       await_selector(view, "#block-#{ref_uid}-rich-text")
       replies("Kort.")
@@ -440,11 +492,36 @@ defmodule BrandoAdmin.FieldActionsLiveTest do
       prompt = Brando.AIStub.prompt(request)
       assert prompt =~ ~r/\AKeep the house style\.\n\nContext:\ntitle: Om oss\n\nRewrite the passage\./
     end
+
+    test "is off in rich text without write_with_ai:, and the form refuses a request for it", %{conn: conn, page: page} do
+      {:ok, view, _html} = live(conn, "/admin/meta-articles/update/#{page.id}", on_error: [duplicate_id: :ignore])
+      render_async(view, 5_000)
+      await_selector(view, "#actions_article_form_form input")
+      replies("Et forslag.")
+
+      assert has_element?(view, "[data-tiptap-field='template'][data-tiptap-ai='false']")
+
+      view
+      |> with_target(cid_of(view, "#actions_article_form_form"))
+      |> render_hook("tiptap_ai_generate", %{
+        "field_key" => "template",
+        "field_name" => "actions_article[template]",
+        "tiptap_id" => "actions_article_template-rich-text",
+        "request_id" => "request-1",
+        "mode" => "rewrite",
+        "instruction" => "",
+        "selection" => "Et avsnitt."
+      })
+
+      event = "b:tiptap:ai:actions_article_template-rich-text"
+      assert_push_event(view, ^event, %{error: true, request_id: "request-1"})
+      refute_received {:prompt, _}
+    end
   end
 
   describe "the Meta drawer" do
     # A page's meta fields take their Generate from the site prompts in
-    # `trait :meta, ai:` (Brando.Pages.Page)
+    # `trait :meta, ai_prompts:` (Brando.Pages.Page)
     setup %{current_user: user} do
       page = Factory.insert(:page, creator: user, title: "Om oss", uri: "om-oss", language: "no", meta_title: "Gammel")
       %{page: page}

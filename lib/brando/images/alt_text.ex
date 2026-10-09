@@ -17,10 +17,10 @@ defmodule Brando.Images.AltText do
       config :brando, Brando.AI,
         models: [default: "anthropic:claude-opus-5-5", image: "anthropic:claude-haiku-4-5"]
 
-  The `:alt` field overrides model or prompt for this job alone:
+  The `:alt` site prompt overrides model or prompt for this job alone:
 
       config :brando, Brando.AI,
-        fields: [alt: [model: "anthropic:claude-haiku-4-5", prompt: "…"]]
+        prompts: [alt: [model: "anthropic:claude-haiku-4-5", prompt: "…"]]
   """
   import Ecto.Query, only: [from: 2, dynamic: 1, dynamic: 2]
 
