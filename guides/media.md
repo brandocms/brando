@@ -404,31 +404,50 @@ It is still public at its URL, like all media.
 
 ## Tidy a folder that has filled up
 
-Block images all upload to the default config's folder (`images/site/default`
-unless you changed it), so over the years it becomes one long list. The image
-library can sort it from where the images are used.
+Block media all upload to the default config's folder (`images/site/default`,
+`videos/default` and `files/default` unless you changed them), so over the
+years each becomes one long list. The image, video and file libraries can sort
+it from where the assets are used.
 
-Open the folder under **Resources → Images** and choose **Sort by use**. The
-preview lists a folder per entry that uses images from this one, named by type
-and title (`cases/sommerro`, `pages/about`), with some of its images. Untick
-the ones to leave, rename the folders you want different, and move them. The
-bar above the list offers **Undo** until you leave the page.
+Open the folder under **Resources → Images**, **Videos** or **Files** and
+choose **Sort by use**. The preview lists a folder per entry that uses images,
+videos or files from this one, named by type and title (`cases/sommerro`,
+`pages/about`), with a few of them: images as they are, videos by their
+thumbnail, files by an icon for their type. Untick the ones to leave, rename
+the folders you want different, and move them. The bar above the list offers
+**Undo** until you leave the page.
 
-- Only images directly in the folder are sorted; what is already in a subfolder
+- Only assets directly in the folder are sorted; what is already in a subfolder
   stays, so a later run takes only what has arrived since.
 - An entry and its translations share a folder, named after the entry in the
   default language.
-- Images no entry uses stay where they are. Switch on **Not in use** to see
-  them; with it on, the header offers to delete all of them (a soft delete).
-- A move changes the image's folder, not its files, so no URL changes.
+- Assets no entry uses stay where they are. Switch on **Not in use** to see
+  them; with it on, the header offers to delete all of them. It is a soft
+  delete (see below). Videos and files go through the same delete as the
+  listing's, so a video provider configured to delete on delete loses its copy
+  at once.
+- A move changes the asset's folder, not its files, so no URL changes.
+- Undo puts back what is still where the sort put it, and removes the folders
+  the sort made once they are empty.
+- Sorting needs permission to update the asset type, and **Delete unused** to
+  delete it.
 
-An image several entries use goes to one of them: the entry using the most of
-the folder's images, unless the site ranks its types:
+An asset several entries use goes to one of them: the entry using the most of
+the folder's assets, unless the site ranks its types. Images take their list
+from `Brando.Images`; videos and files take their own when they have one, and
+the images' list otherwise:
 
 ```elixir
 config :brando, Brando.Images,
   sweep_priority: [MyApp.Projects.Project, MyApp.Articles.Article, Brando.Pages.Page]
+
+# Optional: shared videos go to articles first, files to projects
+config :brando, Brando.Videos, sweep_priority: [MyApp.Articles.Article]
+config :brando, Brando.Files, sweep_priority: [MyApp.Projects.Project]
 ```
+
+From code, `BrandoAdmin.Media.Sweep.plan(:video, folder_id)` returns the
+preview, `apply/2` moves and `undo/1` moves back.
 
 ## What happens to a deleted image's files
 
