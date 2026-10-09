@@ -256,7 +256,8 @@ defmodule BrandoAdmin.Images.ImageListLive do
     {:noreply,
      socket
      |> assign_folder_state(socket.assigns.current_folder)
-     |> AssetListHelpers.assign_unused_count(socket.assigns.params, &Images.list_images/1)}
+     |> AssetListHelpers.assign_unused_count(socket.assigns.params, &Images.list_images/1)
+     |> AssetListHelpers.assign_all_folders(socket.assigns.params, &Images.list_images/1, :visible_image_count)}
   end
 
   @impl true

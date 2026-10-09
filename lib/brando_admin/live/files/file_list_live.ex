@@ -255,7 +255,8 @@ defmodule BrandoAdmin.Files.FileListLive do
     {:noreply,
      socket
      |> assign_folder_state(socket.assigns.current_folder)
-     |> AssetListHelpers.assign_unused_count(socket.assigns.params, &Files.list_files/1)}
+     |> AssetListHelpers.assign_unused_count(socket.assigns.params, &Files.list_files/1)
+     |> AssetListHelpers.assign_all_folders(socket.assigns.params, &Files.list_files/1, :visible_file_count)}
   end
 
   @impl true

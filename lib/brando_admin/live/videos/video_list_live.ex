@@ -238,7 +238,8 @@ defmodule BrandoAdmin.Videos.VideoListLive do
     {:noreply,
      socket
      |> assign_folder_state(socket.assigns.current_folder)
-     |> AssetListHelpers.assign_unused_count(socket.assigns.params, &Videos.list_videos/1)}
+     |> AssetListHelpers.assign_unused_count(socket.assigns.params, &Videos.list_videos/1)
+     |> AssetListHelpers.assign_all_folders(socket.assigns.params, &Videos.list_videos/1, :visible_video_count)}
   end
 
   @impl true

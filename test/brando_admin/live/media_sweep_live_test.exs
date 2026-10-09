@@ -136,14 +136,19 @@ defmodule BrandoAdmin.MediaSweepLiveTest do
       assert Repo.get!(Video, named.id).deleted_at
       refute Repo.get!(Video, c.unused.id).deleted_at
 
-      # All folders: the subfolder's too, not only the root's.
+      # All folders: the subfolder's too, not only the root's. A used video at
+      # the root keeps the root's count apart from the listing's.
+      show([Factory.insert(:video)], "Root page")
       {:ok, view, html} = live(conn, "/admin/assets/videos?filter:folder_id=all&filter:unused=true")
       assert html =~ "Delete all 2 unused"
+      assert has_element?(view, ".image-picker-main-actions span", "2 videos")
       view |> element("button[phx-click=delete_unused]") |> render_click()
       render_async(view)
       assert Repo.get!(Video, c.unused.id).deleted_at
       assert Repo.get!(Video, nested.id).deleted_at
       refute Repo.get!(Video, c.used.id).deleted_at
+      # The header still counts what "All folders" lists.
+      assert has_element?(view, ".image-picker-main-actions span", "0 videos")
     end
 
     test "a video a trashed page uses is not offered for deletion", %{conn: conn} = c do
