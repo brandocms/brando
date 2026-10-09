@@ -1,0 +1,47 @@
+#!/usr/bin/env bash
+# A second-opinion review of the current branch by OpenAI Codex, from another
+# model family than the `reviewer` subagent. It follows the same instructions
+# (.claude/agents/reviewer.md) in a read-only sandbox and prints the final
+# report. Run it in parallel with the reviewer and merge both lists before
+# fixing anything; Codex reviews statically, so reproduce each finding with a
+# failing test first.
+#
+#   scripts/sol-audit "<one-paragraph intent of the change>"
+#   scripts/sol-audit "<intent>" --base origin/main --model gpt-6.1-sol
+#
+# Needs the Codex CLI (>= 0.162 for gpt-6.1-sol), logged in. The full
+# transcript goes to /tmp/sol-audit-<branch>.out.
+set -euo pipefail
+
+intent=""
+base="origin/main"
+model="gpt-6.1-sol"
+
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --base) base=$2; shift 2 ;;
+    --model) model=$2; shift 2 ;;
+    -h|--help) sed -n '2,14p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+    *) intent=$1; shift ;;
+  esac
+done
+
+[ -n "$intent" ] || { echo "usage: scripts/sol-audit \"<intent>\" [--base ref] [--model id]" >&2; exit 2; }
+command -v codex >/dev/null || { echo "codex CLI not found" >&2; exit 2; }
+
+root=$(git rev-parse --show-toplevel)
+branch=$(git -C "$root" rev-parse --abbrev-ref HEAD | tr '/' '-')
+out=/tmp/sol-audit-$branch.out
+git -C "$root" fetch -q origin || true
+
+prompt="You are an independent code reviewer. Follow .claude/agents/reviewer.md in this repository exactly (it is written for a Claude agent; apply it as-is). You are read-only: do not modify any files. Review the branch: run \`git diff $base...HEAD\` and \`git log $base..HEAD\`. Intent: $intent Hunt for real bugs. Report severity-ranked findings with file:line and a concrete failure scenario (input -> wrong output, or who does what in which order), then a short checked-and-fine list."
+
+(cd "$root" && timeout 1800 codex exec -m "$model" -s read-only "$prompt") >"$out" 2>&1 || true
+
+start=$(grep -n '^codex$' "$out" | tail -1 | cut -d: -f1 || true)
+end=$(grep -n '^tokens used' "$out" | tail -1 | cut -d: -f1 || true)
+if [ -n "$start" ] && [ -n "$end" ]; then
+  sed -n "$((start + 1)),$((end + 1))p" "$out"
+else
+  tail -n 40 "$out"
+fi
