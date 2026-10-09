@@ -97,14 +97,18 @@ export default app => ({
 
   // GSAP's autoAlpha: items are faded and then hidden, so a collapsed menu
   // cannot be tabbed into. A fade that is interrupted never finishes, and so
-  // never hides items that are being shown again.
-  hideItems(items, options) {
+  // never hides items that are being shown again. `containers` (a grouped
+  // section's role="group" wrappers) are hidden and shown with their items,
+  // so a closed section leaves no empty named groups for screen readers.
+  hideItems(items, options, containers = []) {
     const animation = animate(Array.from(items).reverse(), { opacity: 0, x: -6 }, options)
-    this.animations.track(animation).finished.then(() => set(items, { visibility: 'hidden' }))
+    this.animations
+      .track(animation)
+      .finished.then(() => set([...containers, ...items], { visibility: 'hidden' }))
   },
 
-  showItems(items, options) {
-    set(items, { visibility: 'visible' })
+  showItems(items, options, containers = []) {
+    set([...containers, ...items], { visibility: 'visible' })
     this.animations.track(animate(items, { opacity: [0, 1], x: [-6, 0] }, options))
   },
 
@@ -128,17 +132,29 @@ export default app => ({
     }
   },
 
+  // What a section fades in and hides: its links, and the headings of a
+  // grouped one (Configuration), in reading order. Hidden headings leave the
+  // accessibility tree with the links under them.
+  dropdownRows(dd) {
+    return dd.querySelectorAll('li, .nav-group-label')
+  },
+
+  // The role="group" wrappers around a grouped section's headings and links.
+  dropdownGroups(dd) {
+    return Array.from(dd.querySelectorAll('.nav-group'))
+  },
+
   // Opens a section at once, without the animation: on load, for sections
   // that were open, or that hold the current page. Instant animations rather
   // than plain styles, so Motion knows where a later toggle starts from.
   openDropdown(trigger) {
     const dl = trigger.parentNode.parentNode
     const dd = dl.querySelector('dd')
-    const lis = dd.querySelectorAll('li')
+    const lis = this.dropdownRows(dd)
     // Measured once, while the section is closed: see toggleCurrentUserDropdown.
     trigger.dataset.height ||= dl.offsetHeight
     set(dd, { opacity: 1, display: 'block' })
-    set(lis, { visibility: 'visible' })
+    set([...this.dropdownGroups(dd), ...lis], { visibility: 'visible' })
     animate(lis, { opacity: 1, x: 0 }, { duration: 0 })
     animate(dl, { height: 'auto' }, { duration: 0 })
     trigger.classList.add('open')
@@ -147,11 +163,11 @@ export default app => ({
   toggleDropdown(trigger) {
     const dl = trigger.parentNode.parentNode
     const dd = dl.querySelector('dd')
-    const lis = dd.querySelectorAll('li')
+    const lis = this.dropdownRows(dd)
     const { track } = this.animations
 
     if (trigger.classList.contains('open')) {
-      this.hideItems(lis, { duration: 0.1, delay: stagger(0.015) })
+      this.hideItems(lis, { duration: 0.1, delay: stagger(0.015) }, this.dropdownGroups(dd))
       track(
         animate(
           dl,
@@ -165,7 +181,7 @@ export default app => ({
       trigger.dataset.height ||= dl.offsetHeight
       set(dd, { opacity: 1, display: 'block' })
       track(animate(dl, { height: 'auto' }, { duration: 0.18, ease: ease.power2Out }))
-      this.showItems(lis, { duration: 0.14, delay: stagger(0.02, { startDelay: 0.05 }) })
+      this.showItems(lis, { duration: 0.14, delay: stagger(0.02, { startDelay: 0.05 }) }, this.dropdownGroups(dd))
       trigger.classList.add('open')
       this.saveOpen(trigger.dataset.navKey, true)
     }

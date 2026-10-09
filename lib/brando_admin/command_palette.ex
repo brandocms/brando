@@ -515,21 +515,27 @@ defmodule BrandoAdmin.CommandPalette do
 
   ## Settings and places
 
-  # Configuration's screens, as the sidebar shows them to this user.
+  # Configuration's screens, as the sidebar shows them to this user. Their
+  # sidebar heading ("Building blocks") finds them too.
   defp settings(menu) do
     menu
     |> Enum.flat_map(& &1.items)
     |> Enum.find(&(&1[:key] == :configuration))
     |> case do
-      %{items: items, name: section} when is_list(items) ->
+      %{items: items, name: section} = configuration when is_list(items) ->
+        group_names = Map.new(configuration[:groups] || [], &{&1.key, &1.name})
+
         items
         |> Enum.filter(&is_binary(&1[:url]))
-        |> Enum.map(&menu_item(&1, section, :setting))
+        |> Enum.map(&(&1 |> menu_item(section, :setting) |> with_group_keyword(group_names[&1[:group]])))
 
       _ ->
         []
     end
   end
+
+  defp with_group_keyword(setting, nil), do: setting
+  defp with_group_keyword(setting, group), do: Map.put(setting, :keywords, [group])
 
   # Every other screen in the sidebar, to name the recent places.
   defp places(menu) do

@@ -502,6 +502,13 @@
     .link-text + dl dd::before {
       content: "→ ";
     }
+
+    /* The URL's break points are for the stacked preview. In a row they let
+       a narrow table wrap the URL over two lines and squeeze the title; the
+       row stays one line and the table scrolls instead. */
+    wbr {
+      display: none;
+    }
   }
 
   .subform-entry:hover .subform-fields .link-preview {

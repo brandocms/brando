@@ -179,6 +179,112 @@ defmodule BrandoAdmin.MenuTest do
     end
   end
 
+  describe "Configuration's groups" do
+    test "a superuser gets every group, in order, with its items in order" do
+      assert [
+               {:site,
+                [
+                  "/admin/config/navigation/menus",
+                  "/admin/config/forms",
+                  "/admin/config/identity",
+                  "/admin/config/seo",
+                  "/admin/config/global_sets"
+                ]},
+               {:publishing, ["/admin/config/scheduled_publishing", "/admin/config/import-export"]},
+               {:building_blocks,
+                [
+                  "/admin/config/content/modules",
+                  "/admin/config/content/module_sets",
+                  "/admin/config/content/containers",
+                  "/admin/config/content/templates",
+                  "/admin/config/content/table_templates",
+                  "/admin/config/content/palettes",
+                  "/admin/config/markdown-sources"
+                ]},
+               {:operations,
+                [
+                  "/admin/groups",
+                  "/admin/config/activity",
+                  "/admin/config/integrations",
+                  "/admin/config/assistant",
+                  "/admin/config/assets",
+                  "/admin/config/cache",
+                  "/admin/config/utils"
+                ]}
+             ] = configuration_groups(%{role: :superuser})
+    end
+
+    test "the flat item list keeps every item, in group order" do
+      configuration = configuration(%{role: :superuser})
+
+      assert Enum.map(configuration.items, & &1.url) ==
+               configuration |> BrandoAdmin.Menu.grouped_items() |> Enum.flat_map(& &1.items) |> Enum.map(& &1.url)
+
+      assert Enum.all?(configuration.items, &(&1.group in [:site, :publishing, :building_blocks, :operations]))
+    end
+
+    test "a static site's Publishing joins the publishing group" do
+      groups = configuration_groups(%{role: :superuser}, %Brando.Sites.Site{delivery_mode: :static})
+
+      assert {:publishing, ["/admin/config/scheduled_publishing", "/admin/config/publishing", _]} =
+               List.keyfind(groups, :publishing, 0)
+    end
+
+    test "a group with nothing left for the user is left out, heading and all" do
+      assert [:site, :publishing] = Keyword.keys(configuration_groups(%{role: :editor}))
+      assert [:site, :publishing, :operations] = Keyword.keys(configuration_groups(%{role: :admin}))
+
+      assert {:operations, ["/admin/config/activity" | _]} =
+               List.keyfind(configuration_groups(%{role: :admin}), :operations, 0)
+    end
+
+    test "the group names are translated" do
+      names =
+        Gettext.with_locale("no", fn ->
+          %{role: :superuser} |> configuration() |> BrandoAdmin.Menu.grouped_items() |> Enum.map(& &1.name)
+        end)
+
+      assert names == ["Nettsted", "Publisering", "Byggeklosser", "Drift"]
+    end
+  end
+
+  describe "grouped_items/1" do
+    test "a submenu without groups is one group without a heading" do
+      items = [%{name: "Index", url: "/admin/projects"}, %{name: "Create", url: "/admin/projects/new"}]
+
+      assert [%{key: nil, name: nil, items: ^items}] = BrandoAdmin.Menu.grouped_items(%{name: "Projects", items: items})
+    end
+
+    test "items outside the groups come last, without a heading, and empty groups are dropped" do
+      a = %{name: "A", url: "/a", group: :one}
+      b = %{name: "B", url: "/b"}
+      c = %{name: "C", url: "/c", group: :unknown}
+
+      item = %{name: "X", items: [b, a, c], groups: [%{key: :one, name: "One"}, %{key: :two, name: "Two"}]}
+
+      assert [%{key: :one, name: "One", items: [^a]}, %{key: nil, name: nil, items: [^b, ^c]}] =
+               BrandoAdmin.Menu.grouped_items(item)
+    end
+
+    test "a link has no groups" do
+      assert [] = BrandoAdmin.Menu.grouped_items(%{name: "Users", url: "/admin/users"})
+    end
+  end
+
+  defp configuration(user, site \\ nil) do
+    user
+    |> BrandoAdmin.Menu.get_menu(site)
+    |> Enum.flat_map(& &1.items)
+    |> Enum.find(&(&1[:key] == :configuration))
+  end
+
+  defp configuration_groups(user, site \\ nil) do
+    user
+    |> configuration(site)
+    |> BrandoAdmin.Menu.grouped_items()
+    |> Enum.map(&{&1.key, Enum.map(&1.items, fn item -> item.url end)})
+  end
+
   defp menu_urls(menus) do
     menus
     |> Enum.flat_map(fn menu -> List.wrap(menu[:url]) ++ List.wrap(menu[:items] && menu_urls(menu.items)) end)

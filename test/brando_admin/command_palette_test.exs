@@ -232,6 +232,15 @@ defmodule BrandoAdmin.CommandPaletteTest do
              ] = CommandPalette.results(c.context, "seo")
     end
 
+    test "a setting is found by its sidebar group's name too", c do
+      groups = CommandPalette.results(c.context, "building blocks")
+
+      assert %{items: [%{url: "/admin/config/content/modules"} | _] = settings} =
+               Enum.find(groups, &(&1.key == :settings))
+
+      assert Enum.all?(settings, &String.starts_with?(&1.url, ["/admin/config/content/", "/admin/config/markdown"]))
+    end
+
     test "the search page's row carries the query, encoded", c do
       assert %{url: "/admin/search?q=fish+%26+chips", label: label} = CommandPalette.search_all("fish & chips")
       assert label =~ "fish & chips"

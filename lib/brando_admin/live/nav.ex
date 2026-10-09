@@ -322,15 +322,22 @@ defmodule BrandoAdmin.Nav do
                         <span class="nav-chevron" aria-hidden="true"></span>
                       </span>
                     </dt>
+                    <%!-- A submenu with `groups` (Configuration) lists its items
+                          under small headings: each group is labelled by its
+                          heading, so screen readers announce it. --%>
                     <dd :if={item[:items]}>
-                      <ul>
-                        <li :for={sub_item <- item.items}>
-                          <.link navigate={sub_item.url}>
-                            <.icon name={sub_item[:icon] || "dot"} class="nav-icon" />
-                            <span class="nav-label">{sub_item.name}</span>
-                          </.link>
-                        </li>
-                      </ul>
+                      <%= for group <- BrandoAdmin.Menu.grouped_items(item) do %>
+                        <div
+                          :if={group.name}
+                          class="nav-group"
+                          role="group"
+                          aria-labelledby={nav_group_id(item, group)}
+                        >
+                          <h4 id={nav_group_id(item, group)} class="nav-group-label">{group.name}</h4>
+                          <.nav_sub_items items={group.items} />
+                        </div>
+                        <.nav_sub_items :if={!group.name} items={group.items} />
+                      <% end %>
                     </dd>
                   </dl>
                 </section>
@@ -342,6 +349,23 @@ defmodule BrandoAdmin.Nav do
     </div>
     """
   end
+
+  attr :items, :list, required: true
+
+  defp nav_sub_items(assigns) do
+    ~H"""
+    <ul>
+      <li :for={sub_item <- @items}>
+        <.link navigate={sub_item.url}>
+          <.icon name={sub_item[:icon] || "dot"} class="nav-icon" />
+          <span class="nav-label">{sub_item.name}</span>
+        </.link>
+      </li>
+    </ul>
+    """
+  end
+
+  defp nav_group_id(item, group), do: "nav-group-#{item[:key] || Brando.Utils.slugify(item.name)}-#{group.key}"
 
   # The site's own logo (Identity → Branding) in place of Brando's, once set.
   defp identity_logo_url do
