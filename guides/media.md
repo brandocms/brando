@@ -422,10 +422,14 @@ the folders you want different, and move them. The bar above the list offers
 - An entry and its translations share a folder, named after the entry in the
   default language.
 - Assets no entry uses stay where they are. Switch on **Not in use** to see
-  them; with it on, the header offers to delete all of them. It is a soft
-  delete (see below). Videos and files go through the same delete as the
-  listing's, so a video provider configured to delete on delete loses its copy
-  at once.
+  them; with it on, the header offers to delete all the list shows, under
+  its other filters too. It deletes those it offered that are still unused
+  when you confirm, never one added since. It is a soft delete (see below).
+  Videos and files go through the same delete as the listing's, so a video
+  provider configured to delete on delete loses its copy at once.
+- "Not in use" errs towards used: an asset in a table block's rows, in an
+  entry in the trash, or in an editor's unsaved recovery copy counts as used,
+  though the "Used in" list names only the live entries.
 - A move changes the asset's folder, not its files, so no URL changes.
 - Undo puts back what is still where the sort put it, and removes the folders
   the sort made once they are empty.
