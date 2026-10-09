@@ -39,6 +39,8 @@ defmodule BrandoAdmin.Videos.VideoListLive do
       |> assign(:sweep, nil)
       |> assign(:sweep_result, nil)
       |> assign(:unused_count, 0)
+      |> assign(:unused_ids, [])
+      |> assign(:deleting_unused?, false)
       |> assign_folder_state(nil)
 
     {:ok, socket}
@@ -188,12 +190,7 @@ defmodule BrandoAdmin.Videos.VideoListLive do
   # With the "Not in use" filter on: delete every unused video in view, this
   # folder's or, at the root, the whole library's, as the listing's Delete does.
   def handle_event("delete_unused", _, socket) do
-    socket = AssetListHelpers.delete_unused(socket, :video, &Videos.list_videos/1)
-
-    {:noreply,
-     socket
-     |> assign_folder_state(socket.assigns.current_folder)
-     |> AssetListHelpers.assign_unused_count(%{"filter:unused" => "true"}, &Videos.list_videos/1)}
+    {:noreply, AssetListHelpers.delete_unused(socket, :video, &Videos.list_videos/1)}
   end
 
   def handle_event("rename_video", %{"video_id" => id, "title" => title}, socket) do
@@ -233,6 +230,16 @@ defmodule BrandoAdmin.Videos.VideoListLive do
 
   defp blank_to_nil(""), do: nil
   defp blank_to_nil(title), do: title
+
+  @impl true
+  def handle_async(:delete_unused, result, socket) do
+    socket = AssetListHelpers.finish_delete_unused(socket, result)
+
+    {:noreply,
+     socket
+     |> assign_folder_state(socket.assigns.current_folder)
+     |> AssetListHelpers.assign_unused_count(socket.assigns.params, &Videos.list_videos/1)}
+  end
 
   @impl true
   def render(assigns) do
@@ -318,6 +325,7 @@ defmodule BrandoAdmin.Videos.VideoListLive do
                 }
                 asset_type={:video}
                 count={@unused_count}
+                busy={@deleting_unused?}
               />
               <button
                 :if={@clipboard_ids != []}

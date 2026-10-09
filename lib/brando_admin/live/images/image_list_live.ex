@@ -43,6 +43,8 @@ defmodule BrandoAdmin.Images.ImageListLive do
       |> assign(:sweep, nil)
       |> assign(:sweep_result, nil)
       |> assign(:unused_count, 0)
+      |> assign(:unused_ids, [])
+      |> assign(:deleting_unused?, false)
       |> assign_folder_state(nil)
 
     {:ok, socket}
@@ -219,12 +221,7 @@ defmodule BrandoAdmin.Images.ImageListLive do
   # With the "Not in use" filter on: delete every unused image in view, this
   # folder's or, at the root, the whole library's. A soft delete.
   def handle_event("delete_unused", _, socket) do
-    socket = AssetListHelpers.delete_unused(socket, :image, &Images.list_images/1)
-
-    {:noreply,
-     socket
-     |> assign_folder_state(socket.assigns.current_folder)
-     |> AssetListHelpers.assign_unused_count(%{"filter:unused" => "true"}, &Images.list_images/1)}
+    {:noreply, AssetListHelpers.delete_unused(socket, :image, &Images.list_images/1)}
   end
 
   @impl true
@@ -250,6 +247,16 @@ defmodule BrandoAdmin.Images.ImageListLive do
 
   def handle_info({%Image{}, [:image, _event], _path}, socket) do
     {:noreply, socket}
+  end
+
+  @impl true
+  def handle_async(:delete_unused, result, socket) do
+    socket = AssetListHelpers.finish_delete_unused(socket, result)
+
+    {:noreply,
+     socket
+     |> assign_folder_state(socket.assigns.current_folder)
+     |> AssetListHelpers.assign_unused_count(socket.assigns.params, &Images.list_images/1)}
   end
 
   @impl true
@@ -353,6 +360,7 @@ defmodule BrandoAdmin.Images.ImageListLive do
                 }
                 asset_type={:image}
                 count={@unused_count}
+                busy={@deleting_unused?}
               />
               <button
                 :if={@clipboard_ids != []}

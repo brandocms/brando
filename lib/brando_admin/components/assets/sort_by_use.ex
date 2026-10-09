@@ -34,6 +34,7 @@ defmodule BrandoAdmin.Components.Assets.SortByUse do
 
   attr :asset_type, :atom, required: true
   attr :count, :integer, required: true
+  attr :busy, :boolean, default: false, doc: "while the deletes run"
 
   @doc "With the Not in use filter on: deletes every unused asset in view, after a confirmation."
   def delete_unused_button(assigns) do
@@ -42,6 +43,8 @@ defmodule BrandoAdmin.Components.Assets.SortByUse do
       type="button"
       class="folder-action is-destructive"
       phx-click="delete_unused"
+      disabled={@busy}
+      aria-busy={to_string(@busy)}
       data-testid="delete-unused"
       data-confirm-destructive
       data-confirm={delete_question(@asset_type, @count)}
@@ -228,6 +231,10 @@ defmodule BrandoAdmin.Components.Assets.SortByUse do
   def deleted(:image, count), do: ngettext("Deleted %{count} image", "Deleted %{count} images", count)
   def deleted(:video, count), do: ngettext("Deleted %{count} video", "Deleted %{count} videos", count)
   def deleted(:file, count), do: ngettext("Deleted %{count} file", "Deleted %{count} files", count)
+
+  @doc "The toast when Delete unused stops before it has finished."
+  @spec delete_failed() :: String.t()
+  def delete_failed, do: gettext("Deleting stopped before it finished. The list shows what is left.")
 
   defp count_label(:image, count), do: ngettext("%{count} image", "%{count} images", count)
   defp count_label(:video, count), do: ngettext("%{count} video", "%{count} videos", count)

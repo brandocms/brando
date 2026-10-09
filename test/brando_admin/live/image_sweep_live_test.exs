@@ -74,6 +74,7 @@ defmodule BrandoAdmin.ImageSweepLiveTest do
     refute html =~ "sweep_open"
 
     view |> element("button[phx-click=delete_unused]") |> render_click()
+    render_async(view)
     assert Repo.get!(Image, c.unused.id).deleted_at
     refute Repo.get!(Image, c.used.id).deleted_at
   end

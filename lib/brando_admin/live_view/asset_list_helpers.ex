@@ -6,6 +6,8 @@ defmodule BrandoAdmin.LiveView.AssetListHelpers do
 
   import Ecto.Query, only: [from: 2]
 
+  require Phoenix.LiveView
+
   alias BrandoAdmin.Components.Assets.SortByUse
   alias BrandoAdmin.Images.FolderBrowser
   alias BrandoAdmin.Media.Sweep
@@ -239,50 +241,90 @@ defmodule BrandoAdmin.LiveView.AssetListHelpers do
   def unused_filter?(params), do: Map.get(params || %{}, "filter:unused") in ["true", true]
 
   @doc """
-  Puts in `:unused_count` how many unused assets the listing shows with the
-  "Not in use" filter on, else 0. `list` is the context's list function.
+  The filter the library's listing applies for `params`: every `filter:`
+  parameter, as `Content.List` passes them on, with the folder as
+  `list_params/2` resolves it.
   """
-  def assign_unused_count(socket, params, list) do
-    Component.assign(socket, :unused_count, if(unused_filter?(params), do: length(unused_ids(socket, list)), else: 0))
+  def listing_filter(params, root_folder_ids) do
+    params
+    |> list_params(root_folder_ids)
+    |> Enum.flat_map(fn
+      {"filter:" <> key, value} ->
+        try do
+          [{String.to_existing_atom(key), value}]
+        rescue
+          ArgumentError -> []
+        end
+
+      _ ->
+        []
+    end)
+    |> Map.new()
   end
 
   @doc """
-  Deletes every unused `asset_type` asset the listing shows (the current
-  folder's, or at the root everything the root lists), through the context's
-  own delete, with a toast. Images are soft deleted in one go; videos and
-  files one by one through their delete mutation, as the listing's Delete
-  does, which checks the user's permission and removes a video's remote copy
-  when its provider deletes on delete.
+  With the "Not in use" filter on, keeps the ids of the unused assets the
+  listing shows (`:unused_ids`) and their number (`:unused_count`): what the
+  Delete unused confirmation offers. `list` is the context's list function.
   """
+  def assign_unused_count(socket, params, list) do
+    ids = if unused_filter?(params), do: listed_ids(socket, params, list), else: []
+
+    socket
+    |> Component.assign(:unused_ids, ids)
+    |> Component.assign(:unused_count, length(ids))
+  end
+
+  @doc """
+  Deletes the unused assets the confirmation offered (`:unused_ids`) that
+  the listing still shows as unused: one used or moved away since stays, and
+  one added since is not deleted unseen. Runs in the background
+  (`:delete_unused`); the LiveView passes the result to
+  `finish_delete_unused/2` from its `handle_async/3`.
+
+  Images are soft deleted in one go; videos and files one by one through
+  their delete mutation, as the listing's Delete does, which checks the
+  user's permission and removes a video's remote copy when its provider
+  deletes on delete.
+  """
+  def delete_unused(%{assigns: %{deleting_unused?: true}} = socket, _asset_type, _list), do: socket
+
   def delete_unused(socket, asset_type, list) do
-    ids = unused_ids(socket, list)
+    still_unused = MapSet.new(listed_ids(socket, socket.assigns.params, list))
+    ids = Enum.filter(socket.assigns.unused_ids, &MapSet.member?(still_unused, &1))
     user = socket.assigns.current_user
 
-    deleted =
-      case asset_type do
-        :image ->
-          Brando.Images.delete_images(ids)
-          length(ids)
+    socket
+    |> Component.assign(:deleting_unused?, true)
+    |> Phoenix.LiveView.start_async(
+      :delete_unused,
+      Brando.Tenant.capture_context(fn -> {asset_type, delete_assets(asset_type, ids, user)} end)
+    )
+  end
 
-        :video ->
-          Enum.count(ids, &match?({:ok, _}, Brando.Videos.delete_video(&1, user)))
-
-        :file ->
-          Enum.count(ids, &match?({:ok, _}, Brando.Files.delete_file(&1, user)))
+  @doc "Reports what `delete_unused/3` did and refreshes the listing."
+  def finish_delete_unused(socket, result) do
+    message =
+      case result do
+        {:ok, {asset_type, count}} -> SortByUse.deleted(asset_type, count)
+        {:exit, _reason} -> SortByUse.delete_failed()
       end
 
     update_list_entries(socket.assigns.schema)
-    send(self(), {:toast, SortByUse.deleted(asset_type, deleted)})
-    socket
+    send(self(), {:toast, message})
+    Component.assign(socket, :deleting_unused?, false)
   end
 
-  defp unused_ids(socket, list) do
-    folder =
-      if socket.assigns.current_folder == "",
-        do: {:root, socket.assigns.root_folder_ids},
-        else: FolderBrowser.folder_id_for(socket.assigns.current_folder, socket.assigns.upload_root)
+  defp delete_assets(:image, ids, _user) do
+    Brando.Images.delete_images(ids)
+    length(ids)
+  end
 
-    {:ok, entries} = list.(%{filter: %{unused: "true", folder_id: folder}, select: [:id]})
+  defp delete_assets(:video, ids, user), do: Enum.count(ids, &match?({:ok, _}, Brando.Videos.delete_video(&1, user)))
+  defp delete_assets(:file, ids, user), do: Enum.count(ids, &match?({:ok, _}, Brando.Files.delete_file(&1, user)))
+
+  defp listed_ids(socket, params, list) do
+    {:ok, entries} = list.(%{filter: listing_filter(params, socket.assigns.root_folder_ids), select: [:id]})
     Enum.map(entries, & &1.id)
   end
 

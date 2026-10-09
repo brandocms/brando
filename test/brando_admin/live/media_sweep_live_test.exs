@@ -14,8 +14,8 @@ defmodule BrandoAdmin.MediaSweepLiveTest do
   alias Brando.Videos.Video
   alias BrandoAdmin.Images.FolderBrowser
 
-  defp show(assets) do
-    page = Factory.insert(:page, title: "About us", uri: "about-us", language: "en")
+  defp show(assets, title \\ "About us") do
+    page = Factory.insert(:page, title: title, uri: Brando.Utils.slugify(title), language: "en")
     Brando.Content.create_identifier(Page, page)
     source = "Elixir.Brando.Pages.Page.Blocks"
     block = Repo.insert!(%Block{type: :module, source: source, uid: Brando.Utils.generate_uid()})
@@ -97,9 +97,62 @@ defmodule BrandoAdmin.MediaSweepLiveTest do
       refute html =~ "sweep_open"
 
       view |> element("button[phx-click=delete_unused]") |> render_click()
+      render_async(view)
       assert Repo.get!(Video, c.unused.id).deleted_at
       refute Repo.get!(Video, c.used.id).deleted_at
       refute has_element?(view, "button[phx-click=delete_unused]")
+    end
+
+    test "Delete unused deletes what the confirmation offered, not what arrived since", %{conn: conn} = c do
+      {:ok, view, html} = live(conn, "/admin/assets/videos?filter:folder_id=#{c.folder_id}&filter:unused=true")
+      assert html =~ "Delete 1 unused"
+
+      # Another editor adds a video, and a page starts using the confirmed one.
+      arrived = Factory.insert(:video, folder_id: c.folder_id)
+      view |> element("button[phx-click=delete_unused]") |> render_click()
+      render_async(view)
+
+      assert Repo.get!(Video, c.unused.id).deleted_at
+      refute Repo.get!(Video, arrived.id).deleted_at
+      # The list is fresh again: the new one is offered now.
+      assert render(view) =~ "Delete 1 unused"
+
+      show([arrived], "Contact")
+      view |> element("button[phx-click=delete_unused]") |> render_click()
+      render_async(view)
+      refute Repo.get!(Video, arrived.id).deleted_at
+    end
+
+    test "Delete unused deletes exactly what the filtered list shows", %{conn: conn} = c do
+      named = Factory.insert(:video, folder_id: c.folder_id, title: "Launch teaser")
+      nested = Factory.insert(:video, folder_id: FolderBrowser.folder_id_for("videos/default/sweep/older"))
+
+      {:ok, view, html} =
+        live(conn, "/admin/assets/videos?filter:folder_id=#{c.folder_id}&filter:unused=true&filter:path=Launch")
+
+      assert html =~ "Delete 1 unused"
+      view |> element("button[phx-click=delete_unused]") |> render_click()
+      render_async(view)
+      assert Repo.get!(Video, named.id).deleted_at
+      refute Repo.get!(Video, c.unused.id).deleted_at
+
+      # All folders: the subfolder's too, not only the root's.
+      {:ok, view, html} = live(conn, "/admin/assets/videos?filter:folder_id=all&filter:unused=true")
+      assert html =~ "Delete all 2 unused"
+      view |> element("button[phx-click=delete_unused]") |> render_click()
+      render_async(view)
+      assert Repo.get!(Video, c.unused.id).deleted_at
+      assert Repo.get!(Video, nested.id).deleted_at
+      refute Repo.get!(Video, c.used.id).deleted_at
+    end
+
+    test "a video a trashed page uses is not offered for deletion", %{conn: conn} = c do
+      page = Repo.one!(from p in Page, where: p.uri == "about-us")
+      Repo.update_all(from(p in Page, where: p.id == ^page.id), set: [deleted_at: DateTime.utc_now()])
+
+      {:ok, _view, html} = live(conn, "/admin/assets/videos?filter:folder_id=#{c.folder_id}&filter:unused=true")
+      assert html =~ "Delete 1 unused"
+      refute html =~ "list-row-#{c.used.id}"
     end
 
     test "the root offers no sort", %{conn: conn} do
@@ -138,8 +191,33 @@ defmodule BrandoAdmin.MediaSweepLiveTest do
       assert html =~ "Delete 1 unused"
 
       view |> element("button[phx-click=delete_unused]") |> render_click()
+      render_async(view)
       assert Repo.get!(MediaFile, c.unused.id).deleted_at
       refute Repo.get!(MediaFile, c.used.id).deleted_at
+    end
+
+    test "a file in a table block's row is used, and Delete unused keeps it", %{conn: conn} = c do
+      download = file(c.folder_id, "downloads.pdf")
+      source = "Elixir.Brando.Pages.Page.Blocks"
+      block = Repo.insert!(%Block{type: :module, source: source, uid: Brando.Utils.generate_uid()})
+      page = Repo.one!(from p in Page, where: p.uri == "about-us")
+      Repo.insert!(%Page.Blocks{entry_id: page.id, block_id: block.id, sequence: 1})
+      row = Repo.insert!(%Brando.Content.TableRow{block_id: block.id, sequence: 0})
+
+      Repo.insert!(%Brando.Content.Var{
+        type: :file,
+        key: "download",
+        label: %{"en" => "Download"},
+        table_row_id: row.id,
+        file_id: download.id
+      })
+
+      {:ok, view, html} = live(conn, "/admin/assets/files?filter:folder_id=#{c.folder_id}&filter:unused=true")
+      assert html =~ "Delete 1 unused"
+      view |> element("button[phx-click=delete_unused]") |> render_click()
+      render_async(view)
+      refute Repo.get!(MediaFile, download.id).deleted_at
+      assert Repo.get!(MediaFile, c.unused.id).deleted_at
     end
   end
 
@@ -179,6 +257,7 @@ defmodule BrandoAdmin.MediaSweepLiveTest do
       refute html =~ "delete_unused"
 
       render_click(view, "delete_unused", %{})
+      render_async(view)
       refute Repo.get!(Video, c.unused.id).deleted_at
     end
 
@@ -192,6 +271,7 @@ defmodule BrandoAdmin.MediaSweepLiveTest do
 
       {:ok, view, _html} = live(conn, "/admin/assets/videos?filter:folder_id=#{c.folder_id}&filter:unused=true")
       view |> element("button[phx-click=delete_unused]") |> render_click()
+      render_async(view)
       assert Repo.get!(Video, c.unused.id).deleted_at
     end
   end
