@@ -741,6 +741,39 @@ defmodule Brando.Doctor.ChecksTest do
       assert reason =~ "name the controller BrandoWeb.SEOController and add alias: false"
     end
 
+    test "reads an alias from where it is declared, in its own module and function" do
+      code = """
+      defmodule MyAppWeb.Router do
+        alias MyAppWeb, as: B
+
+        scope "/", B do
+          get "/robots.txt", SEOController, :robots
+        end
+      end
+
+      defmodule MyApp.Files do
+        alias Brando.Upload
+        def a, do: %Upload{}
+        def b do
+          alias Plug.Upload
+          %Upload{}
+        end
+        def c, do: Upload.x()
+      end
+
+      defmodule MyApp.Later do
+        alias Brando, as: B
+        def d, do: B.Upload
+      end
+      """
+
+      assert [
+               %{line: 11, call: "Brando.Upload"},
+               %{line: 16, call: "Brando.Upload"},
+               %{line: 21, call: "Brando.Upload"}
+             ] = scan(code)
+    end
+
     test "follows as: aliases" do
       code = """
       defmodule A do

@@ -7,6 +7,8 @@ defmodule Brando.Deprecated.RenamedModules do
   #
   # Module atoms only, so nothing here depends on the modules at compile time.
 
+  alias Brando.Deprecated.LexicalAliases
+
   require Logger
 
   @removed_in "0.57"
@@ -65,14 +67,31 @@ defmodule Brando.Deprecated.RenamedModules do
 
   The route call's metadata starts with `scope_alias: [Brando]` (first, so
   a pattern can match it), the joined aliases of the scopes around it, as
-  Phoenix joins them: the file's aliases are expanded (`alias Brando, as: B`
-  then `scope "/", B`), a nested `scope "/x", Sub` adds `Sub`, a scope's
+  Phoenix joins them: a scope's alias is expanded through the aliases in
+  scope where it is declared (`alias Brando, as: B` then `scope "/", B`, in
+  the same module), a nested `scope "/x", Sub` adds `Sub`, a scope's
   positional alias wins over its `alias:` option, and `alias: false` starts
   over. `match :get, path, Plug, action` is marked like the verb macros.
   Routes with `alias: false` of their own, or outside any aliased scope, are
   left unmarked. Works on both `Code.string_to_quoted/2` and Sourceror ASTs.
+
+  Module names come back annotated by `Brando.Deprecated.LexicalAliases`.
   """
-  def mark_scoped_routes(ast), do: mark(ast, %{scope: [], aliases: file_aliases(ast)})
+  def mark_scoped_routes(ast), do: ast |> LexicalAliases.annotate() |> mark(%{scope: []})
+
+  @doc """
+  The module a route marked by `mark_scoped_routes/1` reaches: Phoenix
+  expands the plug through the aliases in scope, then joins it to the
+  scope's. Nil when the scope's alias or the plug cannot be resolved.
+  """
+  def scoped_module(:unknown, _plug), do: nil
+
+  def scoped_module(scope, plug) do
+    case LexicalAliases.module(plug) do
+      nil -> nil
+      module -> Module.concat(scope ++ [module])
+    end
+  end
 
   defp mark({:scope, meta, [_ | _] = args} = node, ctx) do
     {options, [block]} = Enum.split(args, -1)
@@ -84,12 +103,12 @@ defmodule Brando.Deprecated.RenamedModules do
     end
   end
 
-  defp mark({verb, meta, [path, {:__aliases__, _, _} = plug | rest]}, %{scope: [_ | _]} = ctx)
-       when verb in @route_macros do
+  defp mark({verb, meta, [path, {:__aliases__, _, _} = plug | rest]}, %{scope: scope} = ctx)
+       when verb in @route_macros and scope != [] do
     {verb, scope_meta(meta, plug, rest, ctx), [path, plug | rest]}
   end
 
-  defp mark({:match, meta, [verb, path, {:__aliases__, _, _} = plug | rest]}, %{scope: [_ | _]} = ctx) do
+  defp mark({:match, meta, [verb, path, {:__aliases__, _, _} = plug | rest]}, %{scope: scope} = ctx) when scope != [] do
     {:match, scope_meta(meta, plug, rest, ctx), [verb, path, plug | rest]}
   end
 
@@ -107,9 +126,10 @@ defmodule Brando.Deprecated.RenamedModules do
   end
 
   # A positional alias wins: Phoenix's scope/3 and scope/4 put it over the
-  # options' `alias:`
+  # options' `alias:`. :unknown for an alias that cannot be resolved, and
+  # for every scope under it
   defp scope_alias(options, ctx) do
-    positional = Enum.find_value(options, &expand_alias(&1, ctx.aliases))
+    positional = Enum.find_value(options, &expand_alias/1)
 
     keyword =
       options
@@ -118,7 +138,7 @@ defmodule Brando.Deprecated.RenamedModules do
         options when is_list(options) ->
           case keyword_value(options, :alias) do
             {:ok, false} -> :reset
-            {:ok, value} -> expand_alias(value, ctx.aliases)
+            {:ok, value} -> expand_alias(value)
             :error -> nil
           end
 
@@ -127,43 +147,24 @@ defmodule Brando.Deprecated.RenamedModules do
       end)
 
     cond do
-      positional -> ctx.scope ++ positional
+      positional -> join_scope(ctx.scope, positional)
       keyword == :reset -> []
-      is_list(keyword) -> ctx.scope ++ keyword
-      true -> ctx.scope
+      keyword in [nil, :none] -> ctx.scope
+      true -> join_scope(ctx.scope, keyword)
     end
   end
 
-  defp expand_alias({:__aliases__, _, [first | rest] = parts}, aliases) do
-    if Enum.all?(parts, &is_atom/1), do: Map.get(aliases, first, [first]) ++ rest
-  end
+  defp join_scope(scope, alias) when is_list(scope) and is_list(alias), do: scope ++ alias
+  defp join_scope(_scope, _alias), do: :unknown
 
-  defp expand_alias(_node, _aliases), do: nil
-
-  # `short => parts` for the file's aliases, `as:` included
-  defp file_aliases(ast) do
-    {_ast, aliases} =
-      Macro.prewalk(ast, %{}, fn
-        {:alias, _, [{:__aliases__, _, parts} | options]} = node, aliases ->
-          if Enum.all?(parts, &is_atom/1),
-            do: {node, Map.put(aliases, alias_as(options) || parts |> Enum.reverse() |> hd(), parts)},
-            else: {node, aliases}
-
-        node, aliases ->
-          {node, aliases}
-      end)
-
-    aliases
-  end
-
-  defp alias_as([options]) when is_list(options) do
-    case keyword_value(options, :as) do
-      {:ok, {:__aliases__, _, [as]}} -> as
-      _ -> nil
+  defp expand_alias({:__aliases__, meta, _parts}) do
+    case meta[:resolved_alias] do
+      [_ | _] = parts -> parts
+      _ -> :unknown
     end
   end
 
-  defp alias_as(_options), do: nil
+  defp expand_alias(_node), do: nil
 
   defp do_block?(block), do: is_list(block) and match?({:ok, _}, keyword_value(block, :do))
 

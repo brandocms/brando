@@ -9,14 +9,16 @@ defmodule Brando.Doctor.Checks.Deprecations do
   The source is read as code, not text: aliases (`alias Brando.HTML`,
   `alias Brando.{HTML, Utils}`, `as:`), imports and pipes are followed, so
   `picture_tag(…)` after `import Brando.HTML` is found, and a function of the
-  same name in another module is not. Calls made through `apply/3` or a
-  variable module cannot be seen.
+  same name in another module is not. An alias reaches the code after it in
+  its own module or function, as the compiler reads it. Calls made through
+  `apply/3` or a variable module cannot be seen.
 
   Reads the source tree, so it is skipped in a release.
   """
   use Brando.Doctor.Check
   use Gettext, backend: Brando.Gettext
 
+  alias Brando.Deprecated.LexicalAliases
   alias Brando.Deprecated.RenamedModules
   alias Brando.Doctor.Context
 
@@ -83,13 +85,11 @@ defmodule Brando.Doctor.Checks.Deprecations do
 
   @doc "Finds calls in `deprecated` in quoted code."
   def scan(ast, deprecated) do
-    aliases = collect_aliases(ast)
-    imports = collect_imports(ast, aliases, deprecated)
+    ast = RenamedModules.mark_scoped_routes(ast)
+    imports = collect_imports(ast, deprecated)
 
     {_ast, found} =
-      ast
-      |> RenamedModules.mark_scoped_routes()
-      |> Macro.prewalk([], fn
+      Macro.prewalk(ast, [], fn
         # Declaring an alias uses nothing: what is reached through it is
         # reported where it is used (`alias Brando.Meta` for `Meta.HTML`)
         {:alias, _, _}, acc ->
@@ -97,31 +97,29 @@ defmodule Brando.Doctor.Checks.Deprecations do
 
         # A route inside `scope "/", Brando do`: Phoenix joins the scope's
         # alias to the plug's
-        {:match, [{:scope_alias, scope} | _] = meta, [verb, path, {:__aliases__, plug_meta, parts} | rest]}, acc ->
-          {{:match, meta, [verb, path | rest]}, scoped_route(scope, parts, plug_meta, aliases, acc)}
+        {:match, [{:scope_alias, scope} | _] = meta, [verb, path, {:__aliases__, _, _} = plug | rest]}, acc ->
+          {{:match, meta, [verb, path | rest]}, scoped_route(scope, plug, acc)}
 
-        {verb, [{:scope_alias, scope} | _] = meta, [path, {:__aliases__, plug_meta, parts} | rest]}, acc ->
-          {{verb, meta, [path | rest]}, scoped_route(scope, parts, plug_meta, aliases, acc)}
+        {verb, [{:scope_alias, scope} | _] = meta, [path, {:__aliases__, _, _} = plug | rest]}, acc ->
+          {{verb, meta, [path | rest]}, scoped_route(scope, plug, acc)}
 
         # A piped call has one more argument than it shows
         {:|>, meta, [left, {call, call_meta, args}]}, acc when is_list(args) ->
           {{:|>, meta, [left, {call, [{:piped, true} | call_meta], args}]}, acc}
 
         # The module is reported with its deprecated function, or else once
-        # if renamed; the arguments are still scanned, the receiver is not
-        {{:., _, [{:__aliases__, _, parts}, name]}, meta, args}, acc when is_atom(name) and is_list(args) ->
-          module = resolve(parts, aliases)
-
+        # if renamed; the arguments are still scanned, the receiver is not.
+        # A name an alias may or may not reach is checked as both modules.
+        {{:., _, [{:__aliases__, _, _} = receiver, name]}, meta, args}, acc when is_atom(name) and is_list(args) ->
           acc =
-            case check(module, name, arity(meta, args), meta, deprecated, acc) do
-              ^acc -> renamed(module, meta, acc)
-              found -> found
-            end
+            receiver
+            |> LexicalAliases.modules()
+            |> Enum.reduce(acc, &check_call(&1, {name, arity(meta, args)}, meta, deprecated, &2))
 
           {{:__block__, [], args}, acc}
 
         {:__aliases__, meta, parts} = node, acc when is_list(parts) ->
-          {node, renamed(resolve(parts, aliases), meta, acc)}
+          {node, node |> LexicalAliases.modules() |> Enum.reduce(acc, &renamed(&1, meta, &2))}
 
         {{:., _, [module, name]}, meta, args} = node, acc when is_atom(module) and is_atom(name) and is_list(args) ->
           {node, check(module, name, arity(meta, args), meta, deprecated, acc)}
@@ -141,6 +139,13 @@ defmodule Brando.Doctor.Checks.Deprecations do
 
   defp arity(meta, args), do: length(args) + if(meta[:piped], do: 1, else: 0)
 
+  defp check_call(module, {name, arity}, meta, deprecated, acc) do
+    case check(module, name, arity, meta, deprecated, acc) do
+      ^acc -> renamed(module, meta, acc)
+      found -> found
+    end
+  end
+
   defp check(module, name, arity, meta, deprecated, acc) do
     case Map.get(deprecated, {module, name, arity}) do
       nil ->
@@ -154,10 +159,10 @@ defmodule Brando.Doctor.Checks.Deprecations do
 
   # A reference to a module renamed in 0.55: a router or socket names a
   # controller or channel without calling it
-  defp scoped_route(scope, parts, meta, aliases, acc) do
-    module = Module.concat(scope ++ [resolve(parts, aliases)])
+  defp scoped_route(scope, {:__aliases__, meta, _} = plug, acc) do
+    module = RenamedModules.scoped_module(scope, plug)
 
-    case RenamedModules.new_name(module) do
+    case module && RenamedModules.new_name(module) do
       nil ->
         acc
 
@@ -178,59 +183,13 @@ defmodule Brando.Doctor.Checks.Deprecations do
     end
   end
 
-  defp collect_aliases(ast) do
-    {_ast, aliases} =
-      Macro.prewalk(ast, %{}, fn
-        {:alias, _, [{:__aliases__, _, parts} | _]} = node, acc when not is_atom(hd(parts)) ->
-          {node, acc}
-
-        {:alias, _, [{:__aliases__, _, parts}]} = node, acc ->
-          {node, Map.put(acc, List.last(parts), Module.concat(parts))}
-
-        {:alias, _, [{:__aliases__, _, parts}, opts]} = node, acc when is_list(opts) ->
-          as =
-            case opts[:as] do
-              {:__aliases__, _, [as]} -> as
-              _ -> List.last(parts)
-            end
-
-          {node, Map.put(acc, as, Module.concat(parts))}
-
-        {:alias, _, [{{:., _, [{:__aliases__, _, [first | _] = base}, :{}]}, _, children}]} = node, acc
-        when is_atom(first) ->
-          {node,
-           Enum.reduce(children, acc, fn
-             {:__aliases__, _, [part | _] = parts}, acc when is_atom(part) ->
-               Map.put(acc, List.last(parts), Module.concat(base ++ parts))
-
-             _, acc ->
-               acc
-           end)}
-
-        node, acc ->
-          {node, acc}
-      end)
-
-    aliases
-  end
-
-  defp resolve([first | rest] = parts, aliases) when is_atom(first) do
-    case Map.get(aliases, first) do
-      nil -> Module.concat(parts)
-      module -> Module.concat([module | rest])
-    end
-  end
-
-  defp resolve(parts, _aliases), do: Module.concat(Enum.filter(parts, &is_atom/1))
-
   # `{name, arity} => module` for deprecated functions brought in by `import`
-  defp collect_imports(ast, aliases, deprecated) do
+  defp collect_imports(ast, deprecated) do
     {_ast, imports} =
       Macro.prewalk(ast, %{}, fn
-        {:import, _, [{:__aliases__, _, parts} | rest]} = node, acc ->
-          module = resolve(parts, aliases)
+        {:import, _, [{:__aliases__, _, _} = target | rest]} = node, acc ->
           opts = List.first(rest) || []
-          {node, Map.merge(acc, imported(module, opts, deprecated))}
+          {node, Map.merge(acc, imported(LexicalAliases.module(target), opts, deprecated))}
 
         node, acc ->
           {node, acc}
