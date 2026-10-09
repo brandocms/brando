@@ -180,3 +180,176 @@
     background: var(--brando-surface);
   }
 }
+
+/* AI actions a Blueprint declares on a field (`ai_actions:`,
+   `BrandoAdmin.Components.Form.FieldActions`). One action is a compact AI
+   action beside the field's label; several open a menu of AI items, the
+   sparkles after each label. The reply waits under the input as a
+   suggestion, editable, until it is accepted or discarded. */
+.field-ai-menu {
+  display: flex;
+  align-items: center;
+
+  .ai-action > .field-ai-chevron {
+    width: 12px;
+    height: 12px;
+    margin-left: -1px;
+  }
+}
+
+/* The field's errors sit before the action rather than under it. Scoped to
+   the label row, which never contains the block editor. */
+.label-wrapper:has(> .field-wrapper-header .field-ai-menu) {
+  align-items: center;
+  gap: 8px;
+
+  > .field-errors {
+    position: static;
+    margin-left: auto;
+  }
+}
+
+.field-ai-menu-items {
+  @extend %admin_dropdown_panel;
+  position: fixed;
+  inset: auto;
+
+  &:not(:popover-open) {
+    display: none;
+  }
+
+  > button {
+    justify-content: space-between;
+    color: var(--brando-ai);
+
+    &:hover {
+      color: var(--brando-ai);
+    }
+
+    &:focus-visible {
+      outline-color: var(--brando-ai);
+    }
+  }
+}
+
+.field-ai-actions > .ai-proposal {
+  margin-top: 8px;
+
+  .ai-proposal-actions {
+    align-items: center;
+  }
+
+  .field-ai-action-name {
+    color: var(--brando-muted);
+
+    &::before {
+      content: "·";
+      margin-right: 6px;
+    }
+  }
+
+  /* `p:last-of-type` loses its margins globally (app.css): the grid gap
+     spaces the panel instead. */
+  p {
+    margin: 0;
+  }
+
+  textarea.ai-proposal-field {
+    box-sizing: border-box;
+    display: block;
+    width: 100%;
+    margin: 0;
+    padding: 8px 10px;
+    border-width: 1px;
+    border-style: solid;
+    border-radius: var(--brando-input-radius);
+    color: var(--brando-ink);
+    font: 14px/1.5 "Main", sans-serif;
+    resize: vertical;
+
+    &:focus-visible {
+      outline: 2px solid var(--brando-ai);
+      outline-offset: 1px;
+    }
+  }
+}
+
+.field-ai-count {
+  color: var(--brando-muted);
+  font-size: 12px;
+  line-height: 18px;
+  font-variant-numeric: tabular-nums;
+
+  &[data-over="true"] {
+    color: var(--brando-error-ink);
+  }
+}
+
+.field-ai-error {
+  color: var(--brando-error-ink);
+  font-size: 13px;
+  line-height: 20px;
+}
+
+/* Accept is the form's primary action in the sage accent, Discard is
+   secondary; Try again is an `AIAction.button`. Scoped to outrank the global
+   `button.primary` (Button.css), whose 50px pill this is not. */
+.field-ai-actions button.field-ai-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  width: auto;
+  min-width: 0;
+  height: auto;
+  min-height: 30px;
+  margin: 0;
+  padding: 5px 12px;
+  border: 1px solid var(--brando-line);
+  border-radius: 5px;
+  background: var(--brando-surface);
+  box-shadow: none;
+  color: var(--brando-ink);
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 18px;
+  letter-spacing: 0;
+  text-transform: none;
+  white-space: nowrap;
+  cursor: pointer;
+
+  &:hover {
+    border-color: var(--brando-line-strong);
+    background: var(--brando-surface-hover);
+    color: var(--brando-ink);
+  }
+
+  &.primary {
+    border-color: var(--brando-accent);
+    background: var(--brando-accent);
+    color: var(--brando-ink-inverse);
+
+    &:hover {
+      border-color: var(--brando-accent-hover);
+      background: var(--brando-accent-hover);
+      color: var(--brando-ink-inverse);
+    }
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--brando-accent);
+    outline-offset: 3px;
+  }
+
+  @media (pointer: coarse) {
+    min-height: 40px;
+  }
+}
+
+/* What accepting costs: rich text losing its formatting. */
+.field-ai-warning {
+  color: var(--brando-attention-ink);
+  font-size: 13px;
+  line-height: 20px;
+}

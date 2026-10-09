@@ -391,9 +391,10 @@ from every other action, which uses the sage accent. Both looks live in
 ![AI actions and AI suggestions](admin-ui/ai-actions-and-suggestions.png)
 
 **The AI action** is any control that asks AI for something: Build with AI,
-Suggest alt text, the generate button in a meta field, Write or Review with AI
-in Content SEO, Draw a sketch with AI, Sketches with AI on the Modules screen,
-the rich-text editor's Write with AI. It is a small secondary button: the
+Suggest alt text, the generate button in a meta field, a field's own AI
+actions (`ai_actions:`), Write or Review with AI in Content SEO, Draw a sketch
+with AI, Sketches with AI on the Modules screen, the rich-text editor's Write
+with AI. It is a small secondary button: the
 Lucide `sparkles` icon, `--brando-ai` text, a solid violet hairline
 (`--brando-ai-line`, `--brando-ai-line-strong` on hover, over the
 `--brando-ai-tint` surface), white, 30px high with a 5px radius, like the
@@ -443,6 +444,13 @@ item.
   `.ai-proposal-actions`.
 - Suggested text the editor can still change before accepting
   (`SuggestionReview`): the textarea takes `.ai-proposal-field`.
+- A field's AI actions (`Form.FieldActions`): one action is a compact AI
+  action beside the label, several a "Write with AI" menu of AI items. The
+  reply waits under the input as a panel with its text in an
+  `.ai-proposal-field`, the action's name in the label, a count against the
+  action's `max`, and Accept, Discard and Try again. A line in the attention
+  ink warns when accepting drops rich text's formatting; when the field
+  changed since the action ran, Accept turns into Replace under an alert.
 - The assistant's proposals use the same tokens for new and changed blocks,
   and its list of proposals from connected tools marks those waiting for
   review with them.

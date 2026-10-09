@@ -9,6 +9,7 @@ defmodule BrandoAdmin.Components.Form.Input do
   import BrandoAdmin.Components.Content.List.Row, only: [status_circle: 1]
 
   alias BrandoAdmin.Components.AIAction
+  alias BrandoAdmin.Components.Form.FieldActions
   alias BrandoAdmin.Components.Form.Input.Options
   alias BrandoAdmin.Components.Form.Primitives
 
@@ -419,6 +420,9 @@ defmodule BrandoAdmin.Components.Form.Input do
 
     ~H"""
     <Primitives.field_base field={@field} label={@label} instructions={@instructions} class={@class} compact={@compact}>
+      <:header :if={@field_actions != []}>
+        <FieldActions.menu field={@field} actions={@field_actions} target={@target} />
+      </:header>
       <div
         class={["tiptap-wrapper", "input-with-action", @reset && @is_overridden && "has-action"]}
         id={"#{@field.id}-rich-text-wrapper"}
@@ -483,6 +487,15 @@ defmodule BrandoAdmin.Components.Form.Input do
       <div :if={@show_default? && !@is_overridden} class="tiptap-inherited-value">
         {@default_value |> HtmlSanitizeEx.basic_html() |> Phoenix.HTML.raw()}
       </div>
+      <.live_component
+        :if={@field_actions != []}
+        module={FieldActions}
+        id={FieldActions.id(@field)}
+        field={@field}
+        type={:rich_text}
+        form_target={@target}
+        form_id={@form_id}
+      />
     </Primitives.field_base>
     """
   end
@@ -1115,6 +1128,9 @@ defmodule BrandoAdmin.Components.Form.Input do
 
     ~H"""
     <Primitives.field_base field={@field} label={@label} instructions={@instructions} class={@class} compact={@compact}>
+      <:header :if={@field_actions != []}>
+        <FieldActions.menu field={@field} actions={@field_actions} target={@target} />
+      </:header>
       <div class={["input-with-action", @ai_enabled? && "has-action"]}>
         <.input
           type={:text}
@@ -1140,6 +1156,15 @@ defmodule BrandoAdmin.Components.Form.Input do
           aria-label={@ai_label}
         />
       </div>
+      <.live_component
+        :if={@field_actions != []}
+        module={FieldActions}
+        id={FieldActions.id(@field)}
+        field={@field}
+        type={:text}
+        form_target={@target}
+        form_id={@form_id}
+      />
     </Primitives.field_base>
     """
   end
@@ -1293,6 +1318,9 @@ defmodule BrandoAdmin.Components.Form.Input do
 
     ~H"""
     <Primitives.field_base field={@field} label={@label} instructions={@instructions} class={@class} compact={@compact}>
+      <:header :if={@field_actions != []}>
+        <FieldActions.menu field={@field} actions={@field_actions} target={@target} />
+      </:header>
       <div class={["input-with-action", @ai_enabled? && "has-action"]}>
         <.input
           type={:textarea}
@@ -1318,6 +1346,15 @@ defmodule BrandoAdmin.Components.Form.Input do
           aria-label={@ai_label}
         />
       </div>
+      <.live_component
+        :if={@field_actions != []}
+        module={FieldActions}
+        id={FieldActions.id(@field)}
+        field={@field}
+        type={:textarea}
+        form_target={@target}
+        form_id={@form_id}
+      />
     </Primitives.field_base>
     """
   end
@@ -1334,6 +1371,7 @@ defmodule BrandoAdmin.Components.Form.Input do
     |> assign(:ai_opts, ai_opts)
     |> assign(:ai_enabled?, ai_enabled?)
     |> assign(:ai_label, gettext("Generate with AI"))
+    |> assign(:field_actions, FieldActions.available(assigns))
   end
 
   attr :field, FormField

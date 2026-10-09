@@ -72,6 +72,10 @@ defmodule Brando.AI.Context do
     end
   end
 
+  @doc "Characters of block text a prompt is given per block field."
+  @spec block_text_length() :: pos_integer()
+  def block_text_length, do: @block_text_length
+
   @doc "The block field names declared on `schema`."
   @spec block_fields(module() | nil) :: [atom()]
   def block_fields(nil), do: []

@@ -131,15 +131,44 @@ defmodule E2eProject.Projects.Project do
 
         fieldset do
           size :half
-          input :title, :text, label: t("Title")
+          # AI actions (`ai_actions:`) show only where Brando.AI is
+          # configured: the field-actions spec switches on a fake model
+          # (`POST /e2e/field-ai/on`, E2eProject.FieldActionModel).
+          input :title, :text,
+            label: t("Title"),
+            ai_actions: [
+              suggest: [
+                label: t("Suggest a title"),
+                prompt: "Suggest a short title for the project.",
+                from: [:introduction, :blocks],
+                max: 60
+              ],
+              shorten: [
+                label: t("Shorten"),
+                prompt: "Shorten the title, keeping its meaning.",
+                from: [:title],
+                max: 40
+              ]
+            ]
+
           input :slug, :slug, source: :title, show_url: true, label: t("Slug")
           input :full_case, :toggle, label: t("Full case")
 
           input :introduction, :rich_text,
             label: t("Introduction"),
             footnotes: [blocks: :introduction_notes, module_set: "Footnotes"],
-            instructions: t("Used for case listings and also the heading for the case detail page"),
-            extensions: ["p", "bold", "link", "color"]
+            instructions:
+              t("Used for case listings and also the heading for the case detail page"),
+            extensions: ["p", "bold", "link", "color"],
+            ai_actions: [
+              summarize: [
+                label: t("Write from the content"),
+                prompt: "Write a short introduction to the project from its title and content.",
+                from: [:title, :blocks],
+                max: 300,
+                tone: "plain and factual"
+              ]
+            ]
 
           input :project_categories, :multi_select,
             options: &__MODULE__.get_categories/2,

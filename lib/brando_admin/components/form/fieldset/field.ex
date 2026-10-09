@@ -87,6 +87,7 @@ defmodule BrandoAdmin.Components.Form.Fieldset.Field do
           current_user={@current_user}
           form_id={@form_id}
           target={@form_cid}
+          ai_actions={@input.actions}
         />
       <% end %>
     <% end %>

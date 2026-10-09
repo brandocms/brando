@@ -5,6 +5,7 @@ defmodule Brando.Blueprint.Forms.Dsl do
     name: :input,
     args: [:name, :type, {:optional, :opts}],
     target: Forms.Input,
+    transform: {__MODULE__, :transform_input, []},
     schema: [
       opts: [
         type: :keyword_list,
@@ -292,7 +293,24 @@ defmodule Brando.Blueprint.Forms.Dsl do
     transformers: [],
     verifiers: [Brando.Blueprint.Forms.Verifier]
 
-  @doc false
+  @doc """
+  Builds an input's `ai_actions:` into `Forms.AIAction` structs on the input,
+  so a bad option is a compile error and the admin reads checked structs. The
+  option is dropped from `opts`, which input components receive.
+  """
+  def transform_input(%Forms.Input{opts: opts} = input) do
+    opts = opts || []
+
+    case Forms.AIAction.build(input.type, Keyword.get(opts, :ai_actions)) do
+      {:ok, actions} -> {:ok, %{input | actions: actions, opts: Keyword.delete(opts, :ai_actions)}}
+      {:error, message} -> {:error, message}
+    end
+  end
+
+  @doc """
+  Resolves the form's component tokens and collects its transformers and
+  footnote fields, once, when the Blueprint compiles.
+  """
   def transform_form(%Forms.Form{tabs: tabs} = form) do
     # Resolve the symbolic component tokens ONCE, here, at compile time.
     # `ComponentResolver` exists so a Blueprint can name an admin LiveComponent

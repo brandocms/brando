@@ -64,6 +64,7 @@ defmodule E2eProjectWeb.Router do
       post "/webhook-receiver/:inbox", E2EWebhookReceiverController, :receive_delivery
       get "/webhook-receiver/:inbox", E2EWebhookReceiverController, :list
       post "/mcp/:action", E2EFixtureController, :mcp
+      post "/field-ai/:action", E2EFixtureController, :field_ai
     end
   end
 

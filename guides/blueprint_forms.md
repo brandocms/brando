@@ -364,9 +364,10 @@ type.
 
 ### Text and numbers
 
-* `:text`: a single line. Reads `readonly` and [`ai`](#ai-generated-values).
+* `:text`: a single line. Reads `readonly`, [`ai`](#ai-generated-values)
+  and [`ai_actions`](#ai-actions-on-a-field).
 * `:textarea`: several lines. `rows:` sets the height (default 3). Reads
-  `ai`.
+  `ai` and `ai_actions`.
 * `:number`: a number field. Reads `readonly`.
 * `:email`: an email field.
 * `:phone`: a text field for phone numbers.
@@ -725,6 +726,82 @@ input :meta_description, :textarea,
   hidden: true,
   ai: [prompt: "Write a succinct meta description", context: [:title, :blocks]]
 ```
+
+## AI actions on a field
+
+`ai_actions:` on a `:text`, `:textarea` or `:rich_text` input declares named
+actions an editor can run on the field: each a prompt, the fields it reads,
+and limits on the result.
+
+```elixir
+input :summary, :textarea,
+  label: t("Summary"),
+  ai_actions: [
+    summarize: [
+      label: t("Summarize the article"),
+      prompt: "Summarize the article for a listing.",
+      from: [:title, :blocks],
+      max: 160,
+      tone: "plain and factual"
+    ],
+    shorten: [
+      label: t("Shorten"),
+      prompt: "Shorten the summary, keeping its meaning.",
+      from: :summary,
+      max: 100
+    ]
+  ]
+```
+
+Each action takes:
+
+* `prompt` (required): the instruction sent to the model.
+* `from` (required): the fields it reads, one or a list: the schema's own
+  values and its block fields, not associations or embeds. They are read from
+  the form as the editor has it, saved or not. `:blocks` reads the block
+  editor's content, up to 2000 characters per block field. An action can read
+  its own field, to shorten or rewrite it.
+* `label`: the menu label, translated through the Blueprint's Gettext domain.
+  Without it the humanized action name is shown.
+* `max`: the longest result, in characters. The prompt asks for it and the
+  suggestion shows its length against it; a longer reply is not cut.
+* `tone`: how the result should read, such as `"plain and friendly"`.
+* `language`: a language code to write in. By default a translatable entry is
+  written in its own language, as the form has it; other entries in the
+  language of the fields the action reads.
+* `model`: a `"provider:model"` spec or a name from the `models:` config.
+
+<!-- usage-rules:start topic="admin-ui" -->
+
+An action asks for nothing until an editor runs it, and its result is a
+suggestion: it appears under the field, where the editor can change it, and
+reaches the field only when they accept it, as unsaved input like typing. If
+the field changed after the action ran, by this editor or another, Accept
+asks before replacing it. A `:text` input gets the result on one line. A
+`:rich_text` input gets plain paragraphs, so the suggestion warns when the
+field's formatting, links or footnotes would be replaced. An action whose
+fields are all empty says so without asking the model.
+
+One action shows as a button beside the field's label, several as a menu.
+They show only on top-level inputs of an entry form, not in subforms or
+blocks, not on inputs that are `readonly` or `disabled` for the editor, and
+only when `Brando.AI` is configured for the action's model; anyone else who
+can edit the entry can run them. The prompt, the model and its key stay on
+the server.
+
+The options are checked when the Blueprint compiles: a missing prompt or
+`from`, an unknown option, a `max` that is not a positive integer, a name
+used twice, an input type without text or actions in `inputs_for` stop the
+compilation, and a field in `from` that the schema does not have, or that is
+an association or an embed, is reported with the other form errors.
+
+<!-- usage-rules:end -->
+
+An input can have both `ai:` and `ai_actions:`. `ai:` is a single generate
+button: on `:text` and `:textarea` it writes its result straight into the
+field, and on `:rich_text` it is the toolbar's Write with AI. Use
+`ai_actions:` to offer several named actions, or to have the editor review a
+result before it reaches the field.
 
 <!-- usage-rules:start topic="admin-ui" -->
 

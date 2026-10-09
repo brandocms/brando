@@ -310,16 +310,20 @@ defmodule Brando.AI.CassetteTest do
         end)
       end
 
-      assert_receive {:ready, "left", left}
-      assert_receive {:ready, "right", right}
+      # Waited for without a timeout of their own: `assert_receive`'s 100 ms
+      # default ran out under load while the processes read their cassettes
+      # and started their servers. The processes are linked, so one that
+      # fails fails the test, and the test's own timeout bounds the wait.
+      left = receive(do: ({:ready, "left", pid} -> pid))
+      right = receive(do: ({:ready, "right", pid} -> pid))
       refute Cassette.active?()
 
       # Both ask at the same time, with the same request.
       send(left, :go)
       send(right, :go)
 
-      assert_receive {"left", "Left"}, 2_000
-      assert_receive {"right", "Right"}, 2_000
+      assert receive(do: ({"left", reply} -> reply)) == "Left"
+      assert receive(do: ({"right", reply} -> reply)) == "Right"
     end
 
     @tag cassette: "cassette_test/hello"
