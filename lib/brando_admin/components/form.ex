@@ -262,6 +262,17 @@ defmodule BrandoAdmin.Components.Form do
     {:ok, ship_all_field_changes(socket)}
   end
 
+  # A module was saved (`brando:modules`, routed by LiveView.Form.Hooks):
+  # the blocks using it take the settings that change their editor, such as
+  # Write with AI, without remounting.
+  def update(%{event: "module_updated", module_id: module_id}, socket) do
+    for %{name: field} <- socket.assigns.form_blueprint.blocks do
+      send_update(BlockField, id: "#{socket.assigns.id}-blocks-#{field}", event: "module_updated", module_id: module_id)
+    end
+
+    {:ok, socket}
+  end
+
   # Re-broadcast our focused field for a late joiner — field presence
   # indicators are event-driven, so a joiner would otherwise not see the
   # field we're editing as locked (triggered from the :editor_joined

@@ -79,6 +79,18 @@ defmodule BrandoAdmin.Components.Form.Block do
     |> then(&{:ok, &1})
   end
 
+  # A module was saved. A block using it reads the settings that change its
+  # editor again (Write with AI in its text blocks); the module's other
+  # settings reach blocks through `Blocks.sync_module/2` and a reload. Every
+  # block passes it on to its children, which can use other modules.
+  def update(%{event: "module_updated", module_id: module_id}, socket) do
+    for uid <- socket.assigns[:block_list] || [] do
+      send_update(__MODULE__, id: "#{socket.assigns.id}-child-#{uid}", event: "module_updated", module_id: module_id)
+    end
+
+    {:ok, refresh_module_settings(socket, module_id)}
+  end
+
   # set_collapsed — explicitly set the collapsed state (used by bulk collapse/expand)
   def update(%{event: "set_collapsed", collapsed: collapsed}, socket) do
     changeset = socket.assigns.form.source
@@ -2089,6 +2101,11 @@ defmodule BrandoAdmin.Components.Form.Block do
   end
 
   def generate_rich_text(socket, _), do: socket
+
+  defp refresh_module_settings(%{assigns: %{module_id: module_id}} = socket, module_id) when not is_nil(module_id),
+    do: assign(socket, :module_write_with_ai, module_write_with_ai?(socket))
+
+  defp refresh_module_settings(socket, _module_id), do: socket
 
   defp module_write_with_ai?(%{assigns: %{module_id: id} = assigns}) when not is_nil(id),
     do: match?(%{write_with_ai: true}, get_module(id, Map.get(assigns, :module_origin, :local)))

@@ -216,13 +216,18 @@ defmodule BrandoAdmin.FieldActionsLiveTest do
   # An article with one block whose text ref, `body`, holds `text`
   # `write_with_ai:` is the module's Write with AI setting
   defp article_with_text_block(user, text, write_with_ai \\ false) do
+    {article, ref_uid, _module} = text_block_article(user, text, write_with_ai)
+    {article, ref_uid}
+  end
+
+  defp text_block_article(user, text, write_with_ai) do
     {:ok, module} =
       Brando.Content.create_module(
         Factory.params_for(:module,
           write_with_ai: write_with_ai,
           name: %{"en" => "Text"},
           namespace: %{"en" => "Content"},
-          help_text: %{},
+          help_text: %{"en" => "Text"},
           code: "{% ref refs.body %}",
           refs: [%{name: "body", uid: Brando.Utils.generate_uid(), data: %{type: "text", data: %{text: "Default"}}}]
         ),
@@ -255,7 +260,7 @@ defmodule BrandoAdmin.FieldActionsLiveTest do
       |> Brando.Repo.insert!()
 
     struct(SyncTest.Article.Blocks, %{entry_id: article.id, block_id: block.id, sequence: 0}) |> Brando.Repo.insert!()
-    {article, ref_uid}
+    {article, ref_uid, module}
   end
 
   test "gives the model at most the context's length of block text", %{conn: conn, current_user: user} do
@@ -275,6 +280,16 @@ defmodule BrandoAdmin.FieldActionsLiveTest do
   end
 
   describe "Write with AI in block text" do
+    # The block component (its form's target) that owns the text
+    defp block_cids(view, ref_uid) do
+      view
+      |> render()
+      |> LazyHTML.from_fragment()
+      |> LazyHTML.query("form:has(#block-#{ref_uid}-rich-text)")
+      |> LazyHTML.attribute("phx-target")
+      |> Enum.reverse()
+    end
+
     defp write_with_ai(view, ref_uid) do
       # As the editor's hook sends it, to the block that owns the text (its
       # form's target)
@@ -334,6 +349,25 @@ defmodule BrandoAdmin.FieldActionsLiveTest do
                view,
                "#block-#{ref_uid}-rich-text input.tiptap-text[value='<p>Et langt avsnitt om huset.</p>']"
              )
+    end
+
+    test "follows the module's switch in an open editor, on and off, without remounting the block",
+         %{conn: conn, current_user: user} do
+      {article, ref_uid, module} = text_block_article(user, "<p>Et avsnitt.</p>", false)
+      view = open(conn, article)
+      selector = "#block-#{ref_uid}-rich-text"
+      await_selector(view, selector)
+      assert has_element?(view, "#{selector}[data-tiptap-ai='false']")
+      # The block keeps its component: it is updated, not remounted
+      [cid | _] = block_cids(view, ref_uid)
+
+      {:ok, module} = Brando.Content.update_module(module, %{write_with_ai: true}, user)
+      await_selector(view, "#{selector}[data-tiptap-ai='true']")
+      assert [^cid | _] = block_cids(view, ref_uid)
+
+      {:ok, _module} = Brando.Content.update_module(module, %{write_with_ai: false}, user)
+      await_selector(view, "#{selector}[data-tiptap-ai='false']")
+      assert [^cid | _] = block_cids(view, ref_uid)
     end
 
     test "the block_text site prompt adds the site's instructions", %{conn: conn, current_user: user} do
