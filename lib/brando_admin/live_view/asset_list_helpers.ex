@@ -8,6 +8,7 @@ defmodule BrandoAdmin.LiveView.AssetListHelpers do
 
   require Phoenix.LiveView
 
+  alias Brando.Authorization.Boundary
   alias BrandoAdmin.Components.Assets.SortByUse
   alias BrandoAdmin.Images.FolderBrowser
   alias BrandoAdmin.Media.Sweep
@@ -294,12 +295,22 @@ defmodule BrandoAdmin.LiveView.AssetListHelpers do
     ids = Enum.filter(socket.assigns.unused_ids, &MapSet.member?(still_unused, &1))
     user = socket.assigns.current_user
 
+    # The task works as this process would: in its site and environment,
+    # with its authorization scope, and in the E2E server's test sandbox.
+    scope = Boundary.current_scope()
+    parent = self()
+
+    work =
+      Brando.Tenant.capture_context(fn ->
+        if Application.get_env(Brando.config(:otp_app), :sql_sandbox),
+          do: Ecto.Adapters.SQL.Sandbox.allow(Brando.Repo.repo(), parent, self())
+
+        Boundary.with_scope(scope, fn -> {asset_type, delete_assets(asset_type, ids, user)} end)
+      end)
+
     socket
     |> Component.assign(:deleting_unused?, true)
-    |> Phoenix.LiveView.start_async(
-      :delete_unused,
-      Brando.Tenant.capture_context(fn -> {asset_type, delete_assets(asset_type, ids, user)} end)
-    )
+    |> Phoenix.LiveView.start_async(:delete_unused, work)
   end
 
   @doc "Reports what `delete_unused/3` did and refreshes the listing."
