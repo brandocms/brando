@@ -6,6 +6,34 @@ defmodule Mix.Brando do
   alias Phoenix.Naming
 
   @doc """
+  Starts the application without its HTTP server and without Oban queues or
+  plugins, for a task that reads or changes data and must not run jobs. Jobs
+  it inserts wait for the application's own queues. Returns the Oban
+  configuration the application would run with. An application already
+  running (a test, another task) is left as it is.
+  """
+  def start_quietly do
+    Mix.Task.run("app.config")
+    oban = Application.get_env(:brando, Oban) || Brando.Supervisor.oban_config()
+
+    app = Brando.otp_app()
+
+    if is_nil(app) or not List.keymember?(Application.started_applications(), app, 0) do
+      Logger.configure(level: :error)
+      Application.put_env(:brando, Oban, Keyword.put(oban, :testing, :manual))
+
+      with endpoint when not is_nil(endpoint) <- Brando.endpoint(),
+           config when is_list(config) <- Application.get_env(app, endpoint) do
+        Application.put_env(app, endpoint, Keyword.put(config, :server, false))
+      end
+
+      Mix.Task.run("app.start")
+    end
+
+    oban
+  end
+
+  @doc """
   Asks a question, and refuses to guess when nobody is there to answer.
 
   `Mix.Shell.IO.prompt/1` hands back `IO.gets/1`'s `:eof` when stdin is closed —

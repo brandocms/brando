@@ -8,6 +8,7 @@ import ModulePickerKeysHook from './hooks/ModulePickerKeys'
 import AssetFolderDropHook from './hooks/AssetFolderDrop'
 import BlockFieldHook from './hooks/BlockField'
 import BlockHook from './hooks/Block'
+import CalendarHook from './hooks/Calendar'
 import CodeEditorHook from './hooks/CodeEditor'
 import CommandPaletteHook from './hooks/CommandPalette'
 import ColorPickerHook from './hooks/ColorPicker'
@@ -81,6 +82,7 @@ export default (app) => {
     'Brando.AssetFolderDrop': AssetFolderDropHook(app),
     'Brando.BlockField': BlockFieldHook(app),
     'Brando.Block': BlockHook(app),
+    'Brando.Calendar': CalendarHook(app),
     'Brando.CodeEditor': CodeEditorHook(app),
     'Brando.CommandPalette': CommandPaletteHook(app),
     'Brando.ShortcutSheet': ShortcutSheetHook(app),

@@ -22,6 +22,7 @@ defmodule Brando.Migrations.UpgradeWithEnvironmentsTest do
   # The schemas that read the environment tables the 2xx migrations change
   @environment_schemas [
     Brando.Pages.Page,
+    Brando.Pages.Fragment,
     Brando.Content.Module,
     Brando.Sites.SEO,
     Brando.Sites.NotFoundHit,
@@ -62,7 +63,8 @@ defmodule Brando.Migrations.UpgradeWithEnvironmentsTest do
     directory: directory,
     files: files
   } do
-    # Reserved and never used; the upgrade runs across the gaps
+    # Reserved and never used; the upgrade runs across the gaps. Up to 213
+    # only, so a later number merged out of order is no gap here.
     numbers = Enum.map(files, &number/1)
     assert Enum.to_list(200..213) -- numbers == [206, 208]
 

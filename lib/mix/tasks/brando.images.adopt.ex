@@ -39,7 +39,7 @@ defmodule Mix.Tasks.Brando.Images.Adopt do
   @impl Mix.Task
   def run(args) do
     {opts, _positional} = OptionParser.parse!(args, strict: @switches, aliases: @aliases)
-    start_quietly()
+    Mix.Brando.start_quietly()
 
     dry_run? = opts[:dry_run] == true
     results = adopt(Context.new(mode: :mix).environments, dry_run: dry_run?, verbose: opts[:verbose] == true)
@@ -97,32 +97,4 @@ defmodule Mix.Tasks.Brando.Images.Adopt do
   defp reason({:skipped, :cdn}), do: "on the CDN without a local copy, not checked"
   defp reason({:skipped, :no_config}), do: "its config target no longer resolves"
   defp reason(other), do: inspect(other)
-
-  # Starts the application without its HTTP server and without Oban queues or
-  # plugins, as `mix brando.doctor` does.
-  defp start_quietly do
-    Mix.Task.run("app.config")
-
-    # Already running (called from a test or another task): leave it be
-    if !started?(), do: boot()
-  end
-
-  defp started? do
-    app = Brando.otp_app()
-    not is_nil(app) and List.keymember?(Application.started_applications(), app, 0)
-  end
-
-  defp boot do
-    Logger.configure(level: :error)
-    oban = Application.get_env(:brando, Oban) || Brando.Supervisor.oban_config()
-    Application.put_env(:brando, Oban, Keyword.put(oban, :testing, :manual))
-
-    with app when not is_nil(app) <- Brando.otp_app(),
-         endpoint when not is_nil(endpoint) <- Brando.endpoint(),
-         config when is_list(config) <- Application.get_env(app, endpoint) do
-      Application.put_env(app, endpoint, Keyword.put(config, :server, false))
-    end
-
-    Mix.Task.run("app.start")
-  end
 end

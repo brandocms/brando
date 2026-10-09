@@ -654,6 +654,11 @@ msgstr ""
 msgid "Entry validation: %{value1}"
 msgstr ""
 
+#: lib/brando/content/transfer/labels.ex
+#, elixir-autogen, elixir-format
+msgid "Expiry date"
+msgstr ""
+
 #: lib/brando_admin/live/sites/content_transfer_live.ex
 #, elixir-autogen, elixir-format
 msgid "Export"

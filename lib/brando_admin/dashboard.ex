@@ -18,7 +18,8 @@ defmodule BrandoAdmin.Dashboard do
         %{
           recent: entries(user, :recent, 6),
           drafts: entries(user, :drafts, 4),
-          scheduled: scheduled(user)
+          scheduled: scheduled(user),
+          expiring: expiring(user)
         }
       end)
     end)
@@ -128,12 +129,12 @@ defmodule BrandoAdmin.Dashboard do
     Enum.map(entries, &Map.put(&1, :editor, Map.get(users, &1.editor_id)))
   end
 
+  # The next publications, filtered in the query (expiries have their own
+  # panel), each entry checked until four are found
   defp scheduled(user) do
-    {:ok, jobs} = Brando.Publisher.list_jobs()
-
-    jobs
-    |> Enum.filter(&(&1.state in ["scheduled", "available", "retryable", "executing"]))
-    |> Enum.flat_map(fn job ->
+    [kinds: [:publish, :revision]]
+    |> Brando.Publisher.waiting_jobs()
+    |> Stream.flat_map(fn job ->
       with schema when not is_nil(schema) <- Brando.Authorization.Catalog.schema(job.args["schema"]),
            true <- function_exported?(schema, :__admin_route__, 2),
            entry when not is_nil(entry) <- Repo.get(schema, job.args["id"]),
@@ -153,6 +154,19 @@ defmodule BrandoAdmin.Dashboard do
         _ -> []
       end
     end)
+    |> Enum.take(4)
+  end
+
+  @expiring_days 14
+
+  # Published entries that expire in the next two weeks, soonest first, that
+  # the user may edit.
+  defp expiring(user) do
+    now = DateTime.utc_now()
+
+    user
+    |> BrandoAdmin.Schedule.items(now, DateTime.add(now, @expiring_days, :day), kinds: [:expire])
+    |> Enum.filter(& &1.path)
     |> Enum.take(4)
   end
 

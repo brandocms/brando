@@ -285,9 +285,13 @@ defmodule Brando.Authorization.Engine do
   defp publication_allowed?(snapshot, %{data: original, changes: changes} = changeset) do
     published? = Map.get(original, :status) == :published or Ecto.Changeset.get_field(changeset, :status) == :published
     scheduled? = Map.has_key?(changes, :publish_at)
+    # An expiry unpublishes the entry when it comes, so setting or clearing
+    # one takes both rights.
+    expiry? = Map.has_key?(changes, :unpublish_at)
 
     (not published? or map_size(changes) == 0 or can?(snapshot, :publish, original.__struct__)) and
-      (not scheduled? or can?(snapshot, :schedule, original.__struct__))
+      (not (scheduled? or expiry?) or can?(snapshot, :schedule, original.__struct__)) and
+      (not expiry? or can?(snapshot, :publish, original.__struct__))
   end
 
   defp policy_allows?(scope, action, subject) do

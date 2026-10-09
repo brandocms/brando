@@ -76,6 +76,29 @@ production dump.
   run it with `brando_210`. Until then, loading modules fails with a
   missing-column error.
 
+- **`trait :scheduled_publishing` has a new column, `unpublish_at`.**
+  `brando_214` adds it to `pages` and `pages_fragments`, with an index, in
+  every environment. Every application schema with
+  `trait :scheduled_publishing` gets it too: run `mix brando.gen.migrations`
+  and `mix brando.gen.blueprint_migration --all`, then `mix brando.migrate`
+  (and `mix brando.migrate --tenants` with named environments); until then,
+  loading those schemas fails with a missing-column error. Existing entries
+  have no expiry. **An application that sets `config :brando, Oban` itself
+  must add `{"*/10 * * * *", Brando.Worker.ScheduledPublishingSweep}` to its
+  crontab**: it publishes and expires entries whose dates passed with no job,
+  as after an environment clone or an archive restore, and `mix brando.doctor`
+  warns when it is missing. It only takes dates from the last seven days, so
+  older ones are left alone. `mix brando.scheduled_publishing.sweep` lists
+  what it would do, and `Brando.Publisher.sweep(dry_run: true)` in a release.
+- **A publishing job publishes only a pending entry.** A future `publish_at`
+  on a draft or a deactivated entry used to publish it when the job ran; the
+  job now does nothing unless the entry is still pending, and clearing
+  `publish_at` or moving it into the past removes the job. The Scheduled
+  publishing drawer says so on a draft with a date. **Delete job** on the
+  Scheduled Publishing screen asks first, and now clears the date with the
+  job (a pending entry goes back to draft), so the sweep does not publish it
+  later; `Brando.Publisher.delete_job/2` takes the user to save as.
+
 - **Markdown alternates and IndexNow need two plugs.** Add
   `plug Brando.Plug.Markdown` and `plug Brando.Plug.IndexNow` to the
   endpoint, before the router (after `Brando.Plug.LivePreview`). The first
@@ -786,6 +809,32 @@ production dump.
   or cancelled message can be sent again from the log, and the dashboard says
   when a route was paused after failures. Copying an environment pauses
   its routes, as it does webhooks. See [Notifications](guides/notifications.md).
+
+- **A calendar of what is planned** (#3081). **Calendar** in the sidebar
+  shows entries to be published, scheduled revisions and expiries by day, a
+  month or a week at a time, in the site's time zone, across the content
+  types with scheduled publishing, with a filter for one type. It lists only
+  entries the user may read. An item moves to another day, at the same time,
+  by dragging it or with **Move to…**, after a confirmation, and only where
+  the user may reschedule it; the move saves the entry the way its form does,
+  or reschedules the revision as the revisions drawer does. On a phone the
+  days are a list. See [Scheduled publishing](guides/scheduled_publishing.md#see-it-in-the-calendar).
+
+- **Entries can expire** (#3080). `trait :scheduled_publishing` adds
+  `unpublish_at` beside `publish_at`: **Expires** in the entry's Scheduled
+  publishing drawer. When it comes, the publisher deactivates the entry
+  through its context, the same status change as deactivating it by hand,
+  so Activity records it and the content events (webhooks, IndexNow, the
+  search index), the cache and the rendered pages follow, with the actor
+  "scheduler". It has to come after `publish_at`; clearing it cancels the
+  job, and a time that has already passed deactivates the entry at once.
+  Setting or clearing an expiry takes the rights to schedule and to
+  publish. Listings show "Expires 12 Oct" under the status, the dashboard
+  has an "Expiring soon" panel for the next 14 days, and the publishing
+  queue marks expiry jobs. Restoring a revision keeps the expiry the entry
+  has. A changed publishing date now replaces the entry's earlier job
+  whoever scheduled it, and a job left from before a reschedule (of a
+  date or a scheduled revision) does nothing when it runs. See [Scheduled publishing](guides/scheduled_publishing.md).
 
 - **Blocks on older module versions can be resolved.** A module save keeps
   refs and vars the new version no longer defines, and leaves the blocks

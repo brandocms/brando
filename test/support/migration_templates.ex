@@ -250,7 +250,8 @@ defmodule Brando.MigrationTemplates do
   @doc "What the 2xx migrations add in every environment: columns by table"
   def environment_columns do
     %{
-      "pages" => ~w(meta_canonical_url content_modified_at meta_nosnippet meta_max_snippet),
+      "pages" => ~w(meta_canonical_url content_modified_at meta_nosnippet meta_max_snippet unpublish_at),
+      "pages_fragments" => ~w(unpublish_at),
       "sites_seos" => ~w(crawler_policy),
       "content_modules" => ~w(markdown_code),
       "activity_events" => ~w(proposal_id approver_id)

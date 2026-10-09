@@ -646,6 +646,11 @@ msgstr "Oppføring valgt"
 msgid "Entry validation: %{value1}"
 msgstr "Validering av oppføring: %{value1}"
 
+#: lib/brando/content/transfer/labels.ex
+#, elixir-autogen, elixir-format
+msgid "Expiry date"
+msgstr "Utløpsdato"
+
 #: lib/brando_admin/live/sites/content_transfer_live.ex
 #, elixir-autogen, elixir-format
 msgid "Export"

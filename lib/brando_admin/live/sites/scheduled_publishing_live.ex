@@ -70,7 +70,11 @@ defmodule BrandoAdmin.Sites.ScheduledPublishingLive do
               <tr :for={job <- @jobs}>
                 <td class="publishing-entry">
                   <strong>{job.meta["identifier"]["title"]}</strong>
-                  <small>{gettext("Entry #%{id}", id: job.args["id"])}</small>
+                  <small>
+                    {gettext("Entry #%{id}", id: job.args["id"])}<span :if={Publisher.unpublish_job?(job)}> · {gettext(
+                      "Expiry"
+                    )}</span>
+                  </small>
                 </td>
                 <td>
                   <span class={[
@@ -87,6 +91,14 @@ defmodule BrandoAdmin.Sites.ScheduledPublishingLive do
                     type="button"
                     class="workspace-button quiet destructive"
                     phx-click={JS.push("delete_job", value: %{id: job.id})}
+                    data-confirm-title={gettext("Delete the job?")}
+                    data-confirm={
+                      gettext(
+                        "The entry's publishing date or expiry is cleared with it, and an entry waiting to be published goes back to draft."
+                      )
+                    }
+                    data-confirm-ok={gettext("Delete job")}
+                    data-confirm-destructive
                   >{gettext("Delete job")}</button>
                 </td>
               </tr>
@@ -122,12 +134,30 @@ defmodule BrandoAdmin.Sites.ScheduledPublishingLive do
     {:noreply, assign_jobs(socket)}
   end
 
+  # Deleting the job also clears the date it was for (Publisher.delete_job/2)
   def handle_event("delete_job", %{"id" => job_id}, socket) do
-    Publisher.delete_job(job_id)
-    send(self(), {:toast, gettext("Job deleted")})
+    case Publisher.delete_job(job_id, socket.assigns.current_user) do
+      {:error, reason} ->
+        {:noreply,
+         push_event(socket, "b:alert", %{
+           type: "error",
+           title: gettext("Job not deleted"),
+           message: delete_job_error(reason)
+         })}
 
-    {:noreply, assign_jobs(socket)}
+      _ ->
+        send(self(), {:toast, gettext("Job deleted")})
+        {:noreply, assign_jobs(socket)}
+    end
   end
+
+  defp delete_job_error(reason) when reason in [:forbidden, :unauthorized],
+    do: gettext("You do not have the rights to change this entry's schedule.")
+
+  defp delete_job_error(%Ecto.Changeset{}),
+    do: gettext("The entry's date could not be cleared. Open the entry and clear it there.")
+
+  defp delete_job_error(_reason), do: gettext("The job could not be deleted. Refresh the list and try again.")
 
   defp set_admin_locale(%{assigns: %{current_user: current_user}} = socket) do
     current_user.language

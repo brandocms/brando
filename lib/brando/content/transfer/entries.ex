@@ -253,20 +253,24 @@ defmodule Brando.Content.Transfer.Entries do
     end
   end
 
+  # The publishing date and the expiry follow the publication policy alike:
+  # a draft has neither, preserve keeps the target's own, source takes the
+  # archive's. An expiry from another environment could otherwise take a
+  # live entry offline on import.
   defp put_publication_date(data, publication, entry) do
-    if Map.has_key?(data["attributes"], "publish_at") do
-      date =
-        case publication do
-          "draft" -> nil
-          "preserve" -> Params.snapshot(Map.get(entry, :publish_at))
-          "source" -> data["attributes"]["publish_at"]
-        end
-
-      put_in(data["attributes"]["publish_at"], date)
-    else
-      data
-    end
+    ~w(publish_at unpublish_at)
+    |> Enum.filter(&Map.has_key?(data["attributes"], &1))
+    |> Enum.reduce(data, fn field, data ->
+      put_in(data["attributes"][field], publication_date(publication, field, data, entry))
+    end)
   end
+
+  defp publication_date("draft", _field, _data, _entry), do: nil
+
+  defp publication_date("preserve", field, _data, entry),
+    do: Params.snapshot(Map.get(entry, String.to_existing_atom(field)))
+
+  defp publication_date("source", field, data, _entry), do: data["attributes"][field]
 
   defp put_cast_attribute(stub, schema, {key, value}) do
     field = Enum.find(EntryCodec.attributes(schema), &(to_string(&1) == key))
@@ -743,10 +747,10 @@ defmodule Brando.Content.Transfer.Entries do
     if is_nil(Repo.get_by(Brando.Content.Identifier, schema: entry.__struct__, entry_id: entry.id)),
       do: Brando.Content.create_identifier(entry.__struct__, entry)
 
-    if Map.has_key?(cs.changes, :publish_at) do
-      cancel_status_jobs(entry)
-      {:ok, _} = Brando.Publisher.schedule_publishing(entry, cs, actor)
-    end
+    if Map.has_key?(cs.changes, :publish_at), do: cancel_status_jobs(entry)
+
+    if Map.has_key?(cs.changes, :publish_at) or Map.has_key?(cs.changes, :unpublish_at),
+      do: {:ok, _} = Brando.Publisher.schedule_publishing(entry, cs, actor)
 
     saved = %{item | entry: EntryCodec.preload(entry)}
     bindings = Map.merge(bindings, bundled_bindings(plan.archive.bundle, [saved], plan.supplied, :persist))

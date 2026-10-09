@@ -321,6 +321,7 @@ msgstr[1] "%{count} vises automatisk"
 #: lib/brando/content/stale_blocks.ex
 #: lib/brando_admin/components/form/input/render_var.ex
 #: lib/brando_admin/live/ai/assistant_live.ex
+#: lib/brando_admin/live/calendar_live.ex
 #, elixir-autogen, elixir-format
 msgid "%{count} item"
 msgid_plural "%{count} items"
@@ -1853,6 +1854,7 @@ msgstr "Alle endringer"
 msgid "All content"
 msgstr "Alt innhold"
 
+#: lib/brando_admin/live/calendar_live.ex
 #: lib/brando_admin/live/search_live.ex
 #: lib/brando_admin/live/sites/activity_live.ex
 #, elixir-autogen, elixir-format
@@ -2938,6 +2940,17 @@ msgstr "Mellomlagringsnøkkel"
 msgid "Caches cleared!"
 msgstr "Mellomlagringene ble tømt!"
 
+#: lib/brando_admin/live/calendar_live.ex
+#: lib/brando_admin/menu.ex
+#, elixir-autogen, elixir-format
+msgid "Calendar"
+msgstr "Kalender"
+
+#: lib/brando_admin/live/calendar_live.ex
+#, elixir-autogen, elixir-format
+msgid "Calendar view"
+msgstr "Kalendervisning"
+
 #: lib/brando_admin/live/sites/block_audit_live.ex
 #, elixir-autogen, elixir-format
 msgid "Can be removed"
@@ -2965,6 +2978,7 @@ msgstr "Kan gjenopprettes fra papirkurven til %{date}"
 #: lib/brando_admin/components/image_picker.ex
 #: lib/brando_admin/components/layouts/root.html.heex
 #: lib/brando_admin/live/ai/assistant_live.ex
+#: lib/brando_admin/live/calendar_live.ex
 #: lib/brando_admin/live/content/module_form_live.ex
 #: lib/brando_admin/live/images/image_list_live.ex
 #: lib/brando_admin/live/mcp/consent_live.ex
@@ -3335,6 +3349,11 @@ msgstr "Velg en commit å forhåndsvise"
 #, elixir-autogen, elixir-format
 msgid "Choose a connection"
 msgstr "Velg tilkobling"
+
+#: lib/brando_admin/live/calendar_live.ex
+#, elixir-autogen, elixir-format
+msgid "Choose a day and time that has not passed."
+msgstr "Velg en dag og et tidspunkt som ikke har passert."
 
 #: lib/brando_admin/components/form/input/blocks/tiptap_link_dialog.ex
 #, elixir-autogen, elixir-format
@@ -4179,6 +4198,7 @@ msgid "Content transfer"
 msgstr "Innholdsoverføring"
 
 #: lib/brando_admin/components/content/select_identifier.ex
+#: lib/brando_admin/live/calendar_live.ex
 #: lib/brando_admin/live/search_live.ex
 #: lib/brando_admin/live/sites/activity_live.ex
 #, elixir-autogen, elixir-format
@@ -4197,6 +4217,11 @@ msgstr "Innholdstyper"
 #, elixir-autogen, elixir-format
 msgid "Content will remain in the CMS. Ownership will transfer to the selected user."
 msgstr "Innholdet beholdes i CMS-et. Eierskapet overføres til den valgte brukeren."
+
+#: lib/brando_admin/components/dashboard.ex
+#, elixir-autogen, elixir-format
+msgid "Content you can edit that expires in the next 14 days will appear here."
+msgstr "Innhold du kan redigere som utløper de neste 14 dagene, vises her."
 
 #: lib/brando_admin/components/dashboard.ex
 #, elixir-autogen, elixir-format
@@ -4952,6 +4977,11 @@ msgstr "Dato og klokkeslett"
 msgid "Datetime"
 msgstr "Dato og klokkeslett"
 
+#: lib/brando_admin/live/calendar_live.ex
+#, elixir-autogen, elixir-format
+msgid "Day"
+msgstr "Dag"
+
 #: lib/brando_admin/components/activity.ex
 #: lib/brando_admin/components/content/list.ex
 #: lib/brando_admin/components/content/list/row.ex
@@ -5115,6 +5145,11 @@ msgstr "Slett rute"
 #, elixir-autogen, elixir-format
 msgid "Delete selected"
 msgstr "Slett valgte"
+
+#: lib/brando_admin/live/sites/scheduled_publishing_live.ex
+#, elixir-autogen, elixir-format
+msgid "Delete the job?"
+msgstr "Slette jobben?"
 
 #: lib/brando_admin/components/form/block/render.ex
 #, elixir-autogen, elixir-format
@@ -6749,6 +6784,27 @@ msgstr "Utløpt"
 msgid "Expired: connect it again from the app"
 msgstr "Utløpt: koble den til igjen fra appen"
 
+#: lib/brando_admin/components/form/scheduled_publishing_drawer.ex
+#: lib/brando_admin/live/calendar_live.ex
+#, elixir-autogen, elixir-format
+msgid "Expires"
+msgstr "Utløper"
+
+#: lib/brando_admin/components/content/list/row.ex
+#, elixir-autogen, elixir-format
+msgid "Expires %{date}"
+msgstr "Utløper %{date}"
+
+#: lib/brando_admin/components/dashboard.ex
+#, elixir-autogen, elixir-format
+msgid "Expiring soon"
+msgstr "Utløper snart"
+
+#: lib/brando_admin/live/sites/scheduled_publishing_live.ex
+#, elixir-autogen, elixir-format
+msgid "Expiry"
+msgstr "Utløp"
+
 #: lib/brando_admin/components/content/list.ex
 #: lib/brando_admin/live/users/groups_live.ex
 #, elixir-autogen, elixir-format
@@ -8371,6 +8427,11 @@ msgstr "Det slutter å virke med en gang. %{name} kan koble det til igjen."
 msgid "It stops working at once. You can connect it again from the app."
 msgstr "Det slutter å virke med en gang. Du kan koble det til igjen fra appen."
 
+#: lib/brando_admin/live/calendar_live.ex
+#, elixir-autogen, elixir-format
+msgid "It was changed since the calendar was loaded. The calendar now shows what is planned."
+msgstr "Den ble endret etter at kalenderen ble lastet inn. Kalenderen viser nå det som er planlagt."
+
 #: lib/brando_admin/components/form/input/rich_text_labels.ex
 #: lib/brando_admin/components/form/module_props/ref_block_form.ex
 #: lib/brando_admin/components/shortcut_sheet.ex
@@ -8404,6 +8465,11 @@ msgstr "Skjemaversjonen avviker fra gjeldende skjema, så noen felter gjenoppret
 #, elixir-autogen, elixir-format
 msgid "Job deleted"
 msgstr "Jobb slettet"
+
+#: lib/brando_admin/live/sites/scheduled_publishing_live.ex
+#, elixir-autogen, elixir-format
+msgid "Job not deleted"
+msgstr "Jobben ble ikke slettet"
 
 #: lib/brando_admin/live/sites/scheduled_publishing_live.ex
 #, elixir-autogen, elixir-format
@@ -9597,6 +9663,11 @@ msgstr "Moduler som filer"
 msgid "Modules imported"
 msgstr "Modulene ble importert"
 
+#: lib/brando_admin/live/calendar_live.ex
+#, elixir-autogen, elixir-format
+msgid "Month"
+msgstr "Måned"
+
 #: lib/brando_admin/components/form/module_props/ref_block_form.ex
 #, elixir-autogen, elixir-format
 msgid "Moonwalk"
@@ -9652,6 +9723,11 @@ msgstr "Mest besøkt"
 msgid "Mostly from %{referrer}"
 msgstr "Mest fra %{referrer}"
 
+#: lib/brando_admin/live/calendar_live.ex
+#, elixir-autogen, elixir-format
+msgid "Move"
+msgstr "Flytt"
+
 #: lib/brando_admin/live/content/stale_blocks_live.ex
 #, elixir-autogen, elixir-format
 msgid "Move %{key} to %{target} in %{count} block"
@@ -9694,6 +9770,11 @@ msgstr "Flytt mellom treffene i modulvelgeren"
 msgid "Move to"
 msgstr "Flytt til"
 
+#: lib/brando_admin/live/calendar_live.ex
+#, elixir-autogen, elixir-format
+msgid "Move to another day"
+msgstr "Flytt til en annen dag"
+
 #: lib/brando_admin/components/form/var_layout.ex
 #, elixir-autogen, elixir-format
 msgid "Move to the Configure modal"
@@ -9703,6 +9784,21 @@ msgstr "Flytt til konfigurasjonsvinduet"
 #, elixir-autogen, elixir-format
 msgid "Move to the rich text toolbar"
 msgstr "Gå til verktøylinjen for rik tekst"
+
+#: lib/brando_admin/live/calendar_live.ex
+#, elixir-autogen, elixir-format
+msgid "Move to…"
+msgstr "Flytt til …"
+
+#: lib/brando_admin/live/calendar_live.ex
+#, elixir-autogen, elixir-format
+msgid "Move “%{title}” to another day"
+msgstr "Flytt «%{title}» til en annen dag"
+
+#: lib/brando_admin/live/calendar_live.ex
+#, elixir-autogen, elixir-format
+msgid "Move “%{title}”?"
+msgstr "Flytte «%{title}»?"
 
 #: lib/brando_admin/live/ai/assistant_live.ex
 #, elixir-autogen, elixir-format
@@ -9785,6 +9881,11 @@ msgstr "Multi"
 #, elixir-autogen, elixir-format
 msgid "Multiple choice"
 msgstr "Flervalg"
+
+#: lib/brando/traits/scheduled_publishing.ex
+#, elixir-autogen, elixir-format
+msgid "Must be after the publishing date"
+msgstr "Må være etter publiseringstidspunktet"
 
 #: lib/brando_admin/components/form/input/blocks/gallery_block/override_form.ex
 #: lib/brando_admin/components/form/input/blocks/video_block.ex
@@ -9995,11 +10096,21 @@ msgstr "Ny webhook"
 msgid "Newest first. Open a submission to read all of it."
 msgstr "Nyeste først. Åpne en innsending for å lese hele."
 
+#: lib/brando_admin/live/calendar_live.ex
+#, elixir-autogen, elixir-format
+msgid "Next month"
+msgstr "Neste måned"
+
 #: lib/brando_admin/components/content/list.ex
 #: lib/brando_admin/live/search_live.ex
 #, elixir-autogen, elixir-format
 msgid "Next page"
 msgstr "Neste side"
+
+#: lib/brando_admin/live/calendar_live.ex
+#, elixir-autogen, elixir-format
+msgid "Next week"
+msgstr "Neste uke"
 
 #: lib/brando/content/stale_blocks.ex
 #: lib/brando/forms/display.ex
@@ -10718,6 +10829,11 @@ msgstr "Ikke i bruk"
 msgid "Not in use anywhere yet."
 msgstr "Ikke i bruk noe sted ennå."
 
+#: lib/brando_admin/live/calendar_live.ex
+#, elixir-autogen, elixir-format
+msgid "Not moved"
+msgstr "Ikke flyttet"
+
 #: lib/brando_admin/live/sites/asset_live.ex
 #, elixir-autogen, elixir-format
 msgid "Not provided"
@@ -10835,6 +10951,11 @@ msgid_plural "Notes, %{count} open"
 msgstr[0] "Notater, %{count} åpent"
 msgstr[1] "Notater, %{count} åpne"
 
+#: lib/brando_admin/components/dashboard.ex
+#, elixir-autogen, elixir-format
+msgid "Nothing expires soon"
+msgstr "Ingenting utløper snart"
+
 #: lib/brando_admin/components/module_files.ex
 #, elixir-autogen, elixir-format
 msgid "Nothing has been applied"
@@ -10854,6 +10975,16 @@ msgstr "Ingenting har skjedd i denne perioden."
 #, elixir-autogen, elixir-format
 msgid "Nothing hidden."
 msgstr "Ingenting er skjult."
+
+#: lib/brando_admin/live/calendar_live.ex
+#, elixir-autogen, elixir-format
+msgid "Nothing is planned this month."
+msgstr "Ingenting er planlagt denne måneden."
+
+#: lib/brando_admin/live/calendar_live.ex
+#, elixir-autogen, elixir-format
+msgid "Nothing is planned this week."
+msgstr "Ingenting er planlagt denne uken."
 
 #: lib/brando_admin/live/sites/webhooks_live.ex
 #, elixir-autogen, elixir-format
@@ -11166,6 +11297,11 @@ msgid "One user this applies to has not set it up. They set it up at their next 
 msgid_plural "%{count} users this applies to have not set it up. They set it up at their next login, and their current sessions end when you save."
 msgstr[0] "Én bruker dette gjelder, har ikke satt det opp. Brukeren setter det opp ved neste innlogging, og de nåværende øktene avsluttes når du lagrer."
 msgstr[1] "%{count} brukere dette gjelder, har ikke satt det opp. De setter det opp ved neste innlogging, og de nåværende øktene deres avsluttes når du lagrer."
+
+#: lib/brando_admin/components/form/scheduled_publishing_drawer.ex
+#, elixir-autogen, elixir-format
+msgid "Only a pending entry is published at this time. Set the status to Pending to schedule it."
+msgstr "Bare en oppføring med status Venter publiseres på dette tidspunktet. Sett statusen til Venter for å planlegge den."
 
 #: lib/brando_admin/live/users/sign_in_policy_live.ex
 #, elixir-autogen, elixir-format
@@ -12114,11 +12250,21 @@ msgstr "Forhåndsvisninger"
 msgid "Previous build archived"
 msgstr "Forrige bygg er arkivert"
 
+#: lib/brando_admin/live/calendar_live.ex
+#, elixir-autogen, elixir-format
+msgid "Previous month"
+msgstr "Forrige måned"
+
 #: lib/brando_admin/components/content/list.ex
 #: lib/brando_admin/live/search_live.ex
 #, elixir-autogen, elixir-format
 msgid "Previous page"
 msgstr "Forrige side"
+
+#: lib/brando_admin/live/calendar_live.ex
+#, elixir-autogen, elixir-format
+msgid "Previous week"
+msgstr "Forrige uke"
 
 #: lib/brando_admin/components/form/draft_recovery.ex
 #, elixir-autogen, elixir-format
@@ -12320,6 +12466,11 @@ msgstr "Publiserte oppføringer med egen side, sjekket for metatittel og -beskri
 msgid "Published on schedule"
 msgstr "Publisert som planlagt"
 
+#: lib/brando_admin/live/calendar_live.ex
+#, elixir-autogen, elixir-format
+msgid "Publishes"
+msgstr "Publiseres"
+
 #: lib/brando_admin/live/sites/publishing_live.ex
 #: lib/brando_admin/live/sites/scheduled_publishing_live.ex
 #: lib/brando_admin/menu.ex
@@ -12327,10 +12478,20 @@ msgstr "Publisert som planlagt"
 msgid "Publishing"
 msgstr "Publisering"
 
+#: lib/brando_admin/live/calendar_live.ex
+#, elixir-autogen, elixir-format
+msgid "Publishing moves from %{from} to %{to}."
+msgstr "Publiseringen flyttes fra %{from} til %{to}."
+
 #: lib/brando_admin/live/sites/scheduled_publishing_live.ex
 #, elixir-format, elixir-autogen
 msgid "Publishing queue"
 msgstr "Publiseringskø"
+
+#: lib/brando_admin/live/calendar_live.ex
+#, elixir-autogen, elixir-format
+msgid "Publishing, scheduled revisions and expiries you can read, in %{timezone} time."
+msgstr "Publiseringer, planlagte revisjoner og utløp du har tilgang til, i %{timezone}-tid."
 
 #: lib/brando_admin/components/form/revisions_drawer.ex
 #, elixir-autogen, elixir-format
@@ -13640,6 +13801,11 @@ msgstr "Versjon slettet"
 #, elixir-autogen, elixir-format
 msgid "Revision error"
 msgstr "Versjonsfeil"
+
+#: lib/brando_admin/live/calendar_live.ex
+#, elixir-autogen, elixir-format
+msgid "Revision is published"
+msgstr "Revisjon publiseres"
 
 #: lib/brando_admin/components/form.ex
 #, elixir-autogen, elixir-format
@@ -16076,6 +16242,11 @@ msgstr "Dokumentene kunne ikke legges til. Sjekk tilkoblingen og prøv igjen."
 msgid "The entry cannot be saved until these fields are fixed: %{fields}"
 msgstr "Oppføringen kan ikke lagres før disse feltene er rettet: %{fields}"
 
+#: lib/brando_admin/live/calendar_live.ex
+#, elixir-autogen, elixir-format
+msgid "The entry could not be moved. Reload the calendar and try again."
+msgstr "Oppføringen kunne ikke flyttes. Last inn kalenderen på nytt og prøv igjen."
+
 #: lib/brando_admin/components/form/meta_previews.ex
 #: lib/brando_admin/components/form/structured_data.ex
 #, elixir-autogen, elixir-format
@@ -16092,6 +16263,11 @@ msgstr "Feltene i oppføringen som en generert beskrivelse skrives ut fra. Blokk
 msgid "The entry has no resolvable URL; check its slug and the blueprint's absolute_url."
 msgstr "Oppføringen har ingen gyldig URL; sjekk slug og blueprintens absolute_url."
 
+#: lib/brando_admin/components/form/scheduled_publishing_drawer.ex
+#, elixir-autogen, elixir-format
+msgid "The entry is deactivated at this time. Leave blank to keep it published."
+msgstr "Oppføringen deaktiveres på dette tidspunktet. La feltet stå tomt for å holde den publisert."
+
 #: lib/brando_admin/components/activity.ex
 #, elixir-autogen, elixir-format
 msgid "The entry no longer exists"
@@ -16107,10 +16283,25 @@ msgstr "Elementet ble lagret, men en eksisterende omdirigering på den nye URL-e
 msgid "The entry was saved, but the redirect could not be created. Please try again or continue without it."
 msgstr "Elementet ble lagret, men omdirigeringen kunne ikke opprettes. Prøv igjen eller fortsett uten."
 
+#: lib/brando_admin/live/sites/scheduled_publishing_live.ex
+#, elixir-autogen, elixir-format
+msgid "The entry's date could not be cleared. Open the entry and clear it there."
+msgstr "Datoen til oppføringen kunne ikke fjernes. Åpne oppføringen og fjern den der."
+
+#: lib/brando_admin/live/sites/scheduled_publishing_live.ex
+#, elixir-autogen, elixir-format
+msgid "The entry's publishing date or expiry is cleared with it, and an entry waiting to be published goes back to draft."
+msgstr "Publiseringsdatoen eller utløpstiden til oppføringen fjernes også, og en oppføring som venter på publisering blir et utkast igjen."
+
 #: lib/brando_admin/live/sites/environment_live.ex
 #, elixir-autogen, elixir-format
 msgid "The environment no longer exists."
 msgstr "Miljøet finnes ikke lenger."
+
+#: lib/brando_admin/live/calendar_live.ex
+#, elixir-autogen, elixir-format
+msgid "The expiry moves from %{from} to %{to}."
+msgstr "Utløpet flyttes fra %{from} til %{to}."
 
 #: lib/brando_admin/components/form/meta_previews.ex
 #, elixir-autogen, elixir-format
@@ -16194,6 +16385,11 @@ msgstr "Bildet er i et format KI-modellen ikke kan lese"
 #, elixir-autogen, elixir-format
 msgid "The image this content type shares, as it is shared."
 msgstr "Bildet denne innholdstypen deler, slik det deles."
+
+#: lib/brando_admin/live/sites/scheduled_publishing_live.ex
+#, elixir-autogen, elixir-format
+msgid "The job could not be deleted. Refresh the list and try again."
+msgstr "Jobben kunne ikke slettes. Oppdater listen og prøv igjen."
 
 #: lib/brando_admin/live/users/groups_live.ex
 #, elixir-autogen, elixir-format
@@ -16438,6 +16634,11 @@ msgstr "Ruten ble satt på pause"
 #, elixir-autogen, elixir-format
 msgid "The scheduled operation no longer exists."
 msgstr "Den planlagte operasjonen finnes ikke lenger."
+
+#: lib/brando_admin/live/calendar_live.ex
+#, elixir-autogen, elixir-format
+msgid "The scheduled revision moves from %{from} to %{to}."
+msgstr "Den planlagte revisjonen flyttes fra %{from} til %{to}."
 
 #: lib/brando_admin/live/search_live.ex
 #, elixir-autogen, elixir-format
@@ -17224,6 +17425,7 @@ msgid "To embed a map in your content, please follow these steps:"
 msgstr "For å bygge inn et kart i innholdet ditt, følg disse stegene:"
 
 #: lib/brando_admin/components/activity.ex
+#: lib/brando_admin/live/calendar_live.ex
 #: lib/brando_admin/live/sites/activity_live.ex
 #, elixir-autogen, elixir-format
 msgid "Today"
@@ -17764,6 +17966,7 @@ msgstr "Innhold som ikke støttes, ble gjort om til tekst. Fotnoter fra en annen
 #: lib/brando_admin/components/video_picker.ex
 #: lib/brando_admin/live/ai/assistant_live.ex
 #: lib/brando_admin/live/videos/video_list_live.ex
+#: lib/brando_admin/schedule.ex
 #: lib/brando_admin/search.ex
 #, elixir-autogen, elixir-format
 msgid "Untitled"
@@ -18554,6 +18757,11 @@ msgstr "Innstillinger for webhook"
 msgid "Webhooks"
 msgstr "Webhooks"
 
+#: lib/brando_admin/live/calendar_live.ex
+#, elixir-autogen, elixir-format
+msgid "Week"
+msgstr "Uke"
+
 #: lib/brando_admin/live/content/stale_blocks_live.ex
 #, elixir-autogen, elixir-format
 msgid "What happens to %{key}"
@@ -18583,6 +18791,11 @@ msgstr "Det redaktøren ser"
 #, elixir-autogen, elixir-format
 msgid "What the editor sees above the field"
 msgstr "Det redaktøren ser over feltet"
+
+#: lib/brando_admin/live/calendar_live.ex
+#, elixir-autogen, elixir-format
+msgid "What the icons mean"
+msgstr "Hva ikonene betyr"
 
 #: lib/brando_admin/live/forms/inbox_live.ex
 #, elixir-autogen, elixir-format
@@ -18995,6 +19208,11 @@ msgstr "Du har ikke tilgang til å importere moduldefinisjoner."
 msgid "You do not have permission to share pages."
 msgstr "Du har ikke tilgang til å dele sider."
 
+#: lib/brando_admin/live/sites/scheduled_publishing_live.ex
+#, elixir-autogen, elixir-format
+msgid "You do not have the rights to change this entry's schedule."
+msgstr "Du har ikke rettigheter til å endre planen for denne oppføringen."
+
 #: lib/brando/traits/protect_role.ex
 #, elixir-autogen, elixir-format
 msgid "You don't have the right to change the role"
@@ -19044,6 +19262,11 @@ msgstr "Du har valgt en filtype som ikke er støttet"
 #, elixir-autogen, elixir-format
 msgid "You have selected too many files"
 msgstr "Du har valgt for mange filer"
+
+#: lib/brando_admin/live/calendar_live.ex
+#, elixir-autogen, elixir-format
+msgid "You may not reschedule this entry."
+msgstr "Du kan ikke flytte denne oppføringen."
 
 #: lib/brando_admin/components/form.ex
 #, elixir-autogen, elixir-format
@@ -20044,6 +20267,11 @@ msgstr "arbeid"
 #, elixir-autogen, elixir-format
 msgid "“%{block}” is copied. Paste it with the clipboard button beside + between blocks, here or on another page."
 msgstr "«%{block}» er kopiert. Lim den inn med utklippstavle-knappen ved + mellom blokkene, her eller på en annen side."
+
+#: lib/brando_admin/live/calendar_live.ex
+#, elixir-autogen, elixir-format
+msgid "“%{title}” moved to %{date}"
+msgstr "«%{title}» er flyttet til %{date}"
 
 #: lib/brando/content/stale_blocks.ex
 #, elixir-autogen, elixir-format

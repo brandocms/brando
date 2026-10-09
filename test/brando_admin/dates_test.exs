@@ -46,6 +46,20 @@ defmodule BrandoAdmin.DatesTest do
     assert Dates.clock(nil) == ""
   end
 
+  test "day/1 is the local date, with the year when it is not this one" do
+    this_year = DateTime.now!(Brando.timezone()).year
+    # 23:30 UTC is the next day in Oslo
+    late = DateTime.new!(Date.new!(this_year, 10, 11), ~T[23:30:00], "Etc/UTC")
+
+    Gettext.put_locale(Brando.Gettext, "en")
+    assert Dates.day(late) == "12 Oct"
+    assert Dates.day(%{late | year: this_year + 1}) == "12 Oct #{this_year + 1}"
+
+    Gettext.put_locale(Brando.Gettext, "no")
+    assert Dates.day(late) == "12. okt."
+    assert Dates.day(nil) == ""
+  end
+
   test "time/1 carries the machine value and the full timestamp" do
     Gettext.put_locale(Brando.Gettext, "no")
     html = rendered_to_string(Dates.time(%{at: @at, format: :long, class: nil, __changed__: nil}))

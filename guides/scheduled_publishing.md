@@ -1,6 +1,6 @@
 # Scheduled publishing
 
-<!-- llms-description: Publish an entry or an approved revision at a set time, cancel a schedule, and follow the jobs that run it. -->
+<!-- llms-description: Publish an entry or an approved revision at a set time, let an entry expire, see and move what is planned in the calendar, cancel a schedule, and follow the jobs that run it. -->
 
 Choose what should be published before choosing a time:
 
@@ -8,6 +8,7 @@ Choose what should be published before choosing a time:
 | --- | --- | --- |
 | Entry `publish_at` | Publish the entry's then-current saved content | An article that editors can keep refining until release |
 | Scheduled revision | Restore a specific inactive snapshot and force published status | An approved campaign version that must not drift with later edits |
+| Entry `unpublish_at` | Deactivate the entry | A campaign, job post or event that has to end on time |
 
 The schema needs `trait :scheduled_publishing` and `trait :status`; revision
 scheduling also needs `trait :revisioned`. Pages and fragments already have them.
@@ -40,10 +41,32 @@ entry are what it will publish. An ordinary unsaved browser edit is not included
 The worker runs a context update, so publication validation and permission checks
 still apply at execution time.
 
-Setting a future date while leaving status as draft or disabled does **not** make
-that date inert: the scheduling callback is driven by a changed future
-`publish_at`. Use the explicit published-to-pending flow above, and inspect the
-queue whenever an entry has a publication date.
+The job publishes only an entry that is still pending when it runs: a future
+date on a draft or a deactivated entry queues a job that does nothing, and the
+Scheduled publishing drawer says so. Use the published-to-pending flow above.
+
+## See it in the calendar
+
+**Calendar** in the sidebar, after Dashboard and Search, shows what is planned
+by day, a month or a week at a time: entries to be published (`publish_at` on a
+pending entry), scheduled revisions and expiries (`unpublish_at`), in the site's
+time zone (`config :brando, timezone:`). It covers every content type with
+`trait :scheduled_publishing` and an admin, with a filter for one type, and only
+the entries the user may read; the title links to the entry when they may edit
+it. The view, the date and the type are in the URL.
+
+An item can be moved to another day, at the same time of day, by dragging it
+or with its **Move to…** button, which opens a dialog with the day and is the
+way to do it from the keyboard or a phone. Both ask before moving. An item that
+changed since the calendar was loaded (published by hand, its expiry cleared,
+its revision cancelled or moved) is not moved: the calendar says so and shows
+what is planned now. A move
+saves the date through the entry's context, as saving it in the form does, or
+reschedules the revision through `Brando.Publisher.schedule_revision/5`, so the
+same validation, permissions and jobs apply: moving publishing takes the
+**schedule** permission, moving an expiry or a revision also **publish**. On a
+phone the calendar is a list of the days that have something planned.
+`BrandoAdmin.Schedule` reads and moves the items.
 
 ## Cancel an entry schedule
 
@@ -51,19 +74,87 @@ Use **Delete job** on the Scheduled Publishing screen, or cancel the matching
 job in the current authorization and tenant context:
 
 ```elixir
-{1, _} = Brando.Publisher.delete_job(job.id)
+{1, _} = Brando.Publisher.delete_job(job.id, user)
 ```
 
-Then save the entry with its intended remaining status and date. For example,
-set `status: :draft, publish_at: nil` to keep it private. Clearing `publish_at`
-alone does not remove an already queued job. Also, clearing the date on a pending
-entry changes its status to published unless you explicitly choose another
-status. Cancellation and the content edit are separate operations.
+Deleting a job clears the date it was for, so that nothing publishes the entry
+later: a publishing job clears `publish_at` and sets a pending entry back to
+draft, and an expiry job clears `unpublish_at`. The entry is saved through its
+context as `user` (`:system` when left out), so Activity records it. A date
+that has moved since the job was made is left alone. The Scheduled Publishing
+screen asks before it deletes.
 
-Changing a future date replaces jobs matching that entry, actor, and target
-status. Do not assume it removes schedules created by a different actor; verify
-the queue and cancel superseded jobs. Cancelling a job that has already executed
-cannot undo its publication.
+Or save the entry with its intended status and date: any change to
+`publish_at`, clearing it or moving it into the past included, removes the
+entry's waiting publication job, whoever scheduled it, and only a future date
+queues a new one. For example, set `status: :draft, publish_at: nil` to keep it
+private. Clearing the date on a pending entry changes its status to published
+unless you explicitly choose another status.
+
+A job that was already running when the date changed checks the entry when it
+runs and does nothing unless the entry is still pending and its `publish_at`
+has come. Cancelling a job that has already executed cannot undo its
+publication.
+
+## Let an entry expire
+
+**Expires** in the same drawer sets `unpublish_at`. When it comes, the entry is
+deactivated (status `:disabled`) through the context's update, the same change
+as choosing Deactivated by hand: Activity records it as unpublished, and the
+`entry.unpublished` content event goes to webhooks, IndexNow and the search
+index, with the actor `"scheduler"`. The listing shows "Expires 12 Oct" under
+the entry's status, and the dashboard lists what expires in the next 14 days.
+
+```elixir
+{:ok, page} = Brando.Pages.update_page(page, %{
+  unpublish_at: DateTime.add(DateTime.utc_now(), 14, :day)
+}, current_user)
+```
+
+- It has to come after `publish_at`; the save is refused otherwise.
+- Changing it replaces the job, and clearing it (`unpublish_at: nil`) cancels it.
+- A time that has already passed deactivates a published or pending entry at
+  once.
+- At its time the job deactivates the entry only if it is still published or
+  pending and its `unpublish_at` has come; an entry unpublished by hand, or
+  given a later date, is left alone. A publication job finds an entry whose
+  expiry has passed and does not publish it.
+- Setting or clearing an expiry takes both the **schedule** and the **publish**
+  permission.
+- Restoring a revision, scheduled or not, keeps the expiry the entry has: it
+  is not part of the revision's content.
+
+The expired entry keeps its `unpublish_at`, so it shows when it ended.
+Publishing it again clears an expiry that has passed, unless the same change
+sets a new one. A duplicate or a new translation starts without an expiry, and
+a content transfer treats `unpublish_at` like `publish_at`: a draft has none,
+preserve keeps the target's own and source takes the archive's.
+
+## Dates without jobs
+
+Cloning an environment or restoring an archive carries the dates but not the
+jobs, which live with the queue. `Brando.Worker.ScheduledPublishingSweep`, in
+Brando's default Oban crontab every ten minutes, catches up in every active
+environment (`Brando.Publisher.sweep/1`): it publishes pending entries whose
+`publish_at` passed more than five minutes ago and deactivates published or
+pending entries whose `unpublish_at` did, through the context as the jobs do.
+Running it again changes nothing.
+
+It only takes dates from the last seven days, so dates left from before the
+sweep existed are not acted on when it first runs; change the window with
+`config :brando, Brando.Publisher, sweep_days: 7`. A content type whose table
+cannot be read in an environment (its migrations lag) is logged and skipped,
+and an entry that fails to save is logged and left alone for a day, or until
+it is saved again. To see what it would do, in every environment:
+
+```sh
+mix brando.scheduled_publishing.sweep          # list, change nothing
+mix brando.scheduled_publishing.sweep --apply  # do it now
+```
+ An application that sets
+`config :brando, Oban` itself must add
+`{"*/10 * * * *", Brando.Worker.ScheduledPublishingSweep}` to its crontab;
+`mix brando.doctor` warns when it is missing.
 
 ## Schedule an approved revision
 
@@ -87,6 +178,11 @@ The revision number is local to the entry; `revision.id` is not the argument to
 use. The API accepts a `DateTime` or an ISO-8601 string with an offset. It rejects
 past dates, invalid timestamps, missing revisions, and an already active revision.
 The caller needs both **schedule** and **publish** permission for the record.
+
+Scheduling a revision again, from the revisions drawer or the calendar,
+cancels its job and queues another. A job that is no longer the revision's one
+waiting job, or whose time has not come, does nothing when it runs, so a stale
+job cannot publish the revision early.
 
 At execution, Brando restores the snapshot transactionally, forces published
 status and the current publication timestamp, makes the revision active, and

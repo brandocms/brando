@@ -18,7 +18,8 @@ test('selects a future publishing date and manages the publishing queue', async 
   await expect(drawer).toBeVisible()
 
   const publishAtInput = drawer.locator('input[name="page[publish_at]"]')
-  const datePickerInput = drawer.locator('input').filter({ visible: true })
+  // The drawer has two pickers: Publish at and Expires
+  const datePickerInput = drawer.locator('[id$="_publish_at-datetimepicker"] input').filter({ visible: true })
   const publishAtDate = new Date(Date.now() + 24 * 60 * 60 * 1000)
   const publishAtDay = publishAtDate.toLocaleDateString('en-US', {
     month: 'long',
@@ -72,6 +73,8 @@ test('selects a future publishing date and manages the publishing queue', async 
   await expect(scheduledJob).toContainText(/Entry #\d+/)
   await page.screenshot({ path: testInfo.outputPath('scheduled-publishing-desktop.png'), fullPage: true })
   await scheduledJob.getByRole('button', { name: 'Delete job' }).click()
+  // It asks first: the entry's date goes with the job
+  await page.locator('dialog.admin-dialog').getByRole('button', { name: 'Delete job' }).click()
   await syncLV(page)
   await expect(scheduledJob).toHaveCount(0)
   await expect(page.getByRole('heading', { name: 'No scheduled publications' })).toBeVisible()

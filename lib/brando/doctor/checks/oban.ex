@@ -37,14 +37,42 @@ defmodule Brando.Doctor.Checks.Oban do
       testing: context.oban[:testing],
       queues: queues(context),
       stuck: stuck_jobs(context),
-      discarded: discarded_jobs(context)
+      discarded: discarded_jobs(context),
+      sweep: sweep_scheduled?(context.oban)
     })
   end
+
+  @sweep inspect(Brando.Worker.ScheduledPublishingSweep)
+
+  @doc """
+  Whether the Oban configuration schedules `Brando.Worker.ScheduledPublishingSweep`,
+  through `cron: [crontab: …]` or the cron plugin in `plugins`.
+  """
+  def sweep_scheduled?(oban) when is_list(oban) do
+    plugins = if is_list(oban[:plugins]), do: oban[:plugins], else: []
+    cron = if is_list(oban[:cron]), do: oban[:cron], else: []
+
+    crontabs =
+      [cron[:crontab]] ++
+        for {plugin, opts} <- plugins, plugin in [Oban.Plugins.Cron, Oban.Cron], is_list(opts), do: opts[:crontab]
+
+    crontabs
+    |> Enum.flat_map(&List.wrap/1)
+    |> Enum.any?(fn
+      {_schedule, worker} -> inspect(worker) == @sweep
+      {_schedule, worker, _opts} -> inspect(worker) == @sweep
+      _ -> false
+    end)
+  end
+
+  def sweep_scheduled?(_oban), do: false
 
   @doc """
   Turns what was found into a result. `findings` has `:testing` (Oban's
   testing mode or nil), `:queues` (`[%{queue, limit, paused, live}]`), and
-  `:stuck` and `:discarded` (`[%{id, worker, state, at, error}]`).
+  `:stuck` and `:discarded` (`[%{id, worker, state, at, error}]`), and
+  `:sweep`, whether the crontab has `Brando.Worker.ScheduledPublishingSweep`
+  (taken as true when left out).
   """
   def evaluate(findings) do
     queues = findings.queues
@@ -63,6 +91,16 @@ defmodule Brando.Doctor.Checks.Oban do
       queues == [] and findings.testing not in [:inline, :manual] ->
         error(dgettext("doctor", "no queues, so background jobs never run"),
           fix: dgettext("doctor", "give config :brando, Oban its queues (see Brando.Supervisor)"),
+          items: items
+        )
+
+      no_sweep?(findings) ->
+        warning(summary <> " · " <> dgettext("doctor", "no scheduled publishing sweep"),
+          fix:
+            dgettext(
+              "doctor",
+              "add {\"*/10 * * * *\", Brando.Worker.ScheduledPublishingSweep} to the crontab in config :brando, Oban"
+            ),
           items: items
         )
 
@@ -94,6 +132,12 @@ defmodule Brando.Doctor.Checks.Oban do
         ok(summary, items: items)
     end
   end
+
+  # Without it, dates that came without jobs (environment clones, archive
+  # restores) are never acted on
+  defp no_sweep?(%{testing: testing}) when testing in [:inline, :manual], do: false
+  defp no_sweep?(%{queues: []}), do: false
+  defp no_sweep?(findings), do: Map.get(findings, :sweep, true) == false
 
   defp missing_queues(%{testing: testing}) when testing in [:inline, :manual], do: []
   defp missing_queues(%{queues: []}), do: []

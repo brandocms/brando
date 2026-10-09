@@ -429,6 +429,7 @@ defmodule BrandoAdmin.Components.Content.List.Row do
       |> assign(:is_deleted, is_deleted)
       |> assign(:status_value, status_value)
       |> assign(:publish_at, publish_at)
+      |> assign(:expires_at, if(!is_deleted, do: expires_at(assigns.entry)))
       |> assign(:entry_id, make_id(assigns.entry))
 
     ~H"""
@@ -443,9 +444,29 @@ defmodule BrandoAdmin.Components.Content.List.Row do
           schema={@entry.__struct__}
         />
       </div>
+      <time
+        :if={@expires_at}
+        class="listing-expiry"
+        datetime={DateTime.to_iso8601(@expires_at)}
+        title={BrandoAdmin.Dates.full(@expires_at)}
+        data-testid="listing-expiry"
+      >
+        {gettext("Expires %{date}", date: BrandoAdmin.Dates.day(@expires_at))}
+      </time>
     </div>
     """
   end
+
+  @doc """
+  When a published or scheduled entry expires (`unpublish_at`), or nil when
+  it has no expiry ahead of it.
+  """
+  def expires_at(%{unpublish_at: %DateTime{} = unpublish_at, status: status})
+      when status in [:published, :pending] do
+    if DateTime.after?(unpublish_at, DateTime.utc_now()), do: unpublish_at
+  end
+
+  def expires_at(_entry), do: nil
 
   # Status dropdown component
   attr :id, :string, required: true

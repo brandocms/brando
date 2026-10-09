@@ -29,6 +29,15 @@ defmodule Brando.Authorization.OperationsTest do
     assert published.status == :published
   end
 
+  test "an expiry takes the rights to schedule and to publish", c do
+    unpublish_at = DateTime.utc_now() |> DateTime.add(3600) |> DateTime.truncate(:second)
+    grant(c, ["brando.admin.access", "brando.pages.read", "brando.pages.update", "brando.pages.schedule"])
+    assert {:error, :forbidden} = Pages.update_page(c.page.id, %{unpublish_at: unpublish_at}, c.user)
+    assert Repo.get!(Page, c.page.id).unpublish_at == nil
+
+    assert {:ok, %{unpublish_at: ^unpublish_at}} = Pages.update_page(c.page.id, %{unpublish_at: unpublish_at}, c.editor)
+  end
+
   test "the legacy tuple adapter follows group authority after cutover", c do
     assert {:error, :unauthorized} =
              BrandoIntegration.Authorization.Can.can?(%{c.user | role: :superuser}, :update, c.page)
@@ -112,9 +121,10 @@ defmodule Brando.Authorization.OperationsTest do
   end
 
   test "a missing publishing actor never becomes a trusted system actor", c do
+    Repo.update_all(Ecto.Query.from(p in Page, where: p.id == ^c.page.id), set: [status: :pending])
     job = %Oban.Job{args: %{"schema" => to_string(Page), "id" => c.page.id, "status" => "published", "user_id" => -1}}
     assert {:error, :forbidden} = Brando.Worker.EntryPublisher.perform(job)
-    assert Repo.get!(Page, c.page.id).status == :draft
+    assert Repo.get!(Page, c.page.id).status == :pending
   end
 
   test "revision metadata and scheduling cannot bypass resource permissions", c do

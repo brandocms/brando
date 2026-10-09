@@ -392,12 +392,15 @@ defmodule Brando.Revisions do
   @spec restore_params(struct()) :: map()
   def restore_params(revision_entry), do: prepare_restore_params(revision_entry, false)
 
+  # The entry's expiry is a plan for the entry, not content of the revision:
+  # restoring one keeps the expiry the entry has now.
   defp prepare_restore_params(target_entry, publish?) do
     params =
       target_entry
       |> Utils.map_from_struct()
       |> Enum.reject(fn {key, _value} -> key |> to_string() |> String.starts_with?("rendered_") end)
       |> Map.new()
+      |> Map.delete(:unpublish_at)
 
     if publish? do
       params

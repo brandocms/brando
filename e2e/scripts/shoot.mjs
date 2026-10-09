@@ -34,7 +34,11 @@
 //       { "fixture": "assistant-applied-copy" },        // /e2e/setup_fixtures/<name>
 //       { "post": "/e2e/admin-workspace-fixtures" },
 //       { "factory": "E2eProject.Projects.Client", "as": "client",
-//         "attributes": { "name": "Fjord", "slug": "fjord", "status": "published", "language": "en" } }
+//         "attributes": { "name": "Fjord", "slug": "fjord", "status": "published", "language": "en" } },
+//       // "oban_testing": "manual" keeps the jobs a save schedules (publishing,
+//       // expiry) instead of running them at once
+//       { "factory": "Brando.Pages.Page", "oban_testing": "manual",
+//         "attributes": { "title": "Later", "uri": "later", "status": "pending", "publish_at": "2030-01-01T09:00:00Z" } }
 //     ],
 //     "shots": [
 //       { "name": "dashboard", "path": "/admin" },
@@ -245,6 +249,7 @@ async function runSetup(context, setup, ctx) {
       const attributes = JSON.parse(interpolate(JSON.stringify(step.attributes || {}), ctx.vars))
       result = await request(context, 'POST', '/__e2e/db/factory', {
         schema: step.factory, attributes, creator_id: step.creator_id ?? 1, fields: step.fields || ['id'],
+        ...(step.oban_testing ? { oban_testing: step.oban_testing } : {}),
       })
     } else throw new Error(`Unknown setup step ${JSON.stringify(step)}`)
     if (step.as) ctx.vars[step.as] = result

@@ -700,8 +700,9 @@ entries are cards in an auto-fill grid: the identifier's cover (or the content
 type's icon on a grey field) at 16:10, the title, the content type with its
 icon and language, then the status, when it changed and the last editor's
 avatar. The title's link is stretched over the card, so the whole card opens
-the entry. Drafts and scheduled publishing sit in a 300px side column of white
-panels with a count; a scheduled entry shows a small date tile. Under 1240px
+the entry. Drafts, scheduled publishing and "Expiring soon" (the next 14
+days) sit in a 300px side column of white panels with a count; a scheduled or
+expiring entry shows a small date tile. Under 1240px
 the side column moves below the cards; on phones a card becomes a row with a
 square cover. No content-type shortcuts: the sidebar already lists them.
 
@@ -808,6 +809,9 @@ centres on the icon's centre line: aim for under 0.5px between icon centre and
 cap centre. Rows are 32px (top level) and 30px (sub-items) with no block
 padding. Browsers without `text-box` sit the label a pixel or two high, which
 is acceptable.
+
+Calendar (`/admin/calendar`) is a fixed row after Dashboard, in
+`BrandoAdmin.Menu`; Search follows Dashboard directly.
 
 Search is a row too, built in by `BrandoAdmin.Nav` rather than configured: a
 button after Dashboard (or at the top of the first section) that opens the

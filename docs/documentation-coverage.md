@@ -39,7 +39,7 @@ which were not listed separately in that checklist, also have a complete guide.
 | Sequence | [Content lifecycle](../guides/content_lifecycle.md#choose-sequence-behavior) | Append/strict modes, language scope, stable ordering, authorized reorder and nested rows |
 | Gallery | [Images, files, and galleries](../guides/media.md#add-an-ordered-mixed-gallery) | Mixed media configuration, placement overrides, ordering, rendering, independent duplication |
 | Status | [Content lifecycle](../guides/content_lifecycle.md#status-and-valid-publication) | Four status values, required-field validation, public queries and mutation side effects |
-| Scheduled publishing | [Scheduled publishing](../guides/scheduled_publishing.md) | Entry dates versus frozen revisions, cancellation, time zones, retries, permissions and environments |
+| Scheduled publishing | [Scheduled publishing](../guides/scheduled_publishing.md) | Entry dates versus frozen revisions, expiry, the calendar, cancellation, time zones, retries, permissions and environments |
 | I18n | [Languages and translations](../guides/i18n.md) | Admin/content languages, Gettext, translated entries, alternates, routes and helpers |
 | Navigation | [Navigation](../guides/navigation.md) | Translated menus, link identifiers, nesting, rendering, ordering and cache refresh |
 | Query | [Querying](../guides/querying.md) | Contexts, filters, ordering, pagination, association loading, caching and mutation behavior |

@@ -20,6 +20,9 @@
   }
   .status-dropdown { top: 100%; left: 0; }
   .listing-status-label { display: inline; font-size: 12px; color: var(--workspace-muted); }
+  /* "Expires 12 Oct" under the status, lined up with its dot */
+  .content-list .status:has(> .listing-expiry) { flex-direction: column; align-items: flex-start; }
+  .listing-expiry { display: block; margin: 0 0 0 9px; color: var(--workspace-muted); font-size: 11px; line-height: 16px; white-space: nowrap; }
   /* Fallback for older browsers; consumers can supply different Main fonts. */
   .listing-status-label, .list-tools .statuses .label { transform: translateY(var(--status-label-offset, 2px)); }
   @supports (text-box: trim-both cap alphabetic) {
@@ -81,6 +84,8 @@
     .content-list .list-row .main-content:has(.children-button:not(.hidden)) :is(.listing-title, div:has(> .entry-link)) { grid-column: 2; }
     .content-list .list-row .main-content > div:has(> .children-button) { grid-column: 3; grid-row: 1; }
     .content-list .list-row .main-content > .status, .content-list .child-row > .status { grid-column: 2 / 4; grid-row: 2; }
+    .content-list .status:has(> .listing-expiry) { flex-direction: row; flex-wrap: wrap; align-items: center; gap: 0 4px; }
+    .listing-expiry { margin: 0; }
     .content-list .list-row .main-content > .listing-creator, .content-list .child-row > .listing-creator { display: block; grid-column: 2 / -1; grid-row: 3; }
     .content-list .list-row .circle-dropdown { grid-column: 4; grid-row: 1; align-self: start; }
     .listing-alternates { grid-column: 4; grid-row: 2; }

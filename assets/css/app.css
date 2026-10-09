@@ -100,6 +100,7 @@
 @import "./components/ModalWorkspace.css";
 @import "./views/Users.css";
 @import "./views/Search.css";
+@import "./views/Calendar.css";
 @import "./views/ContentWorkspace.css";
 @import "./views/SettingsWorkspace.css";
 @import "./views/AltTextWorkspace.css";
