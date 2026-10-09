@@ -218,8 +218,12 @@ defmodule Brando.Worker.WebhookDelivery do
       failing_since: webhook.failing_since || DateTime.utc_now()
     )
 
-    # A delivery that failed every attempt, about a day: stop calling it.
-    if final? and not delivery.test and webhook.active, do: pause_after_failures(webhook)
+    # A delivery that failed every attempt, about a day: stop calling it,
+    # and tell the notification routes that send failed jobs.
+    if final? and not delivery.test and webhook.active do
+      pause_after_failures(webhook)
+      Brando.Notifications.Routing.webhook_failed(webhook, delivery)
+    end
   end
 
   defp pause_after_failures(webhook) do

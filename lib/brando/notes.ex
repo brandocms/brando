@@ -46,7 +46,6 @@ defmodule Brando.Notes do
 
   @mark_attribute "data-brando-note"
   @mention_token ~r/<@(\d+)>/
-  @email_interval 600
 
   ## Reading
 
@@ -154,7 +153,7 @@ defmodule Brando.Notes do
          {body, mentioned} = encode_mentions(attrs["body"] || "", mention_candidates(entry, attrs)),
          fields = %{"body" => body, "author_id" => user.id, "entry_type" => entry_type(schema), "entry_id" => entry.id},
          changeset = Note.thread_changeset(%Note{}, Map.merge(attrs, fields)),
-         {:ok, note} <- insert_with_mentions(changeset, mentioned, user) do
+         {:ok, note} <- insert_with_mentions(changeset, mentioned, user, entry) do
       record(:note_added, entry, user, note)
       broadcast(schema, entry.id, :added, note)
       {:ok, note, mentioned}
@@ -174,7 +173,7 @@ defmodule Brando.Notes do
          attrs = normalize_attrs(attrs),
          {body, mentioned} = encode_mentions(attrs["body"] || "", mention_candidates(entry, attrs)),
          changeset = Note.reply_changeset(%Note{}, thread, %{"body" => body, "author_id" => user.id}),
-         {:ok, reply} <- insert_with_mentions(changeset, mentioned, user) do
+         {:ok, reply} <- insert_with_mentions(changeset, mentioned, user, entry) do
       if Note.resolved?(thread), do: set_resolved(thread, entry, user, false)
       broadcast(schema, entry.id, :replied, thread)
       {:ok, reply, mentioned}
@@ -215,13 +214,15 @@ defmodule Brando.Notes do
     end
   end
 
-  # Writing about yourself mentions no one.
-  defp insert_with_mentions(changeset, mentioned, author) do
+  # Writing about yourself mentions no one. The mention also goes to the
+  # notification routes that send mentions (`Brando.Notifications.Routing`).
+  defp insert_with_mentions(changeset, mentioned, author, entry) do
     others = Enum.reject(mentioned, &(&1.id == author.id))
 
     case Repo.transaction(fn -> insert_note!(changeset, others) end) do
       {:ok, note} ->
         Enum.each(others, &schedule_mention_email(&1.id))
+        Brando.Notifications.Routing.mention_created(note, entry.__struct__, entry, author, others)
         {:ok, note}
 
       error ->
@@ -599,41 +600,29 @@ defmodule Brando.Notes do
   @doc """
   Queues the email for `user_id`'s unsent mentions: now, or ten minutes
   after the last one, so a user gets one email at most every ten minutes.
+  A user who chose a daily or weekly summary gets it then instead
+  (`Brando.Notifications.Digest`).
   """
-  def schedule_mention_email(user_id) do
-    args = Brando.Tenant.Job.attach_current(%{"user_id" => user_id})
-    delay = seconds_until_next_email(user_id, DateTime.utc_now())
-
-    args
-    |> Brando.Worker.NoteMentions.new(schedule_in: delay)
-    |> Oban.insert()
-  rescue
-    error ->
-      Logger.warning("[Brando.Notes] Could not queue a mention email: " <> Exception.message(error))
-      {:error, error}
-  end
+  def schedule_mention_email(user_id), do: Brando.Notifications.Digest.schedule(user_id)
 
   @doc """
   Emails `user_id` the mentions not sent yet, unless an email went out less
   than ten minutes ago. Returns `:ok` (sent, or nothing to send) or
-  `{:snooze, seconds}` until the next email may go.
+  `{:snooze, seconds}` until the next email may go. With a daily or weekly
+  summary, the summary goes out instead, when it is due.
   """
   def deliver_mentions(user_id, now \\ DateTime.utc_now()) do
-    case seconds_until_next_email(user_id, now) do
-      0 -> send_pending_mentions(user_id, now)
-      seconds -> {:snooze, seconds}
+    with :not_digest <- Brando.Notifications.Digest.deliver(user_id, now) do
+      case seconds_until_next_email(user_id, now) do
+        0 -> send_pending_mentions(user_id, now)
+        seconds -> {:snooze, seconds}
+      end
     end
   end
 
-  defp seconds_until_next_email(user_id, now) do
-    last =
-      Repo.one(from(m in Mention, where: m.user_id == ^user_id and not is_nil(m.emailed_at), select: max(m.emailed_at)))
-
-    case last do
-      nil -> 0
-      last -> max(0, @email_interval - DateTime.diff(now, last, :second))
-    end
-  end
+  @doc "Seconds until `user_id` may get their next email: 0, or what is left of ten minutes since the last one."
+  def seconds_until_next_email(user_id, now),
+    do: Brando.Notifications.Digest.seconds_until_next_email(user_id, now)
 
   defp send_pending_mentions(user_id, now) do
     user = Repo.get(User, user_id)
@@ -647,7 +636,7 @@ defmodule Brando.Notes do
         mark_emailed(pending, now)
 
       true ->
-        items = pending |> Enum.reverse() |> Enum.flat_map(&email_item/1)
+        items = mention_email_items(pending)
 
         if items != [] do
           {:ok, _job} = user |> Brando.Notes.MentionEmail.build(items) |> Brando.Mailer.deliver_later()
@@ -657,11 +646,21 @@ defmodule Brando.Notes do
     end
   end
 
-  defp mark_emailed(mentions, now) do
+  @doc "Marks `mentions` as emailed at `now`."
+  def mark_emailed([], _now), do: :ok
+
+  def mark_emailed(mentions, now) do
     ids = Enum.map(mentions, & &1.id)
     Repo.update_all(from(m in Mention, where: m.id in ^ids), set: [emailed_at: now])
     :ok
   end
+
+  @doc """
+  `mentions` (newest first, as `mentions_for/2` returns them) as
+  `Brando.Notes.MentionEmail` lists them: oldest first, leaving out those
+  whose entry is gone.
+  """
+  def mention_email_items(mentions), do: mentions |> Enum.reverse() |> Enum.flat_map(&email_item/1)
 
   defp email_item(%Mention{note: note}) do
     schema = schema_of(note)

@@ -72,6 +72,9 @@ defmodule E2EFixtureController do
         "activity-actors" ->
           create_activity_actors()
 
+        "notification-route-paused" ->
+          create_paused_notification_route()
+
         "markdown-source" ->
           E2E.MarkdownProvider.setup(get_admin_user())
 
@@ -86,6 +89,39 @@ defmodule E2EFixtureController do
     conn = login_user(conn, scenario)
 
     send_resp(conn, 200, "")
+  end
+
+  # A Slack notification route posting to the E2E receiver, paused after its
+  # last message failed for good, with that message in its delivery log.
+  defp create_paused_notification_route do
+    user = get_admin_user()
+    url = String.trim_trailing(E2eProjectWeb.Endpoint.url(), "/") <> "/e2e/webhook-receiver/notification-route-paused"
+    routing = Brando.Notifications.Routing
+
+    {:ok, route} =
+      routing.create_route(
+        %{"name" => "Editors' channel", "kind" => "slack", "url" => url, "events" => ["scheduled_publish", "failed_job"]},
+        user
+      )
+
+    Brando.Repo.insert!(%Brando.Notifications.Delivery{
+      route_id: route.id,
+      event: "failed_job",
+      notification: %{
+        "event" => "failed_job",
+        "site" => "e2e",
+        "job" => %{"worker" => "E2eProject.Worker.Sync", "attempt" => 10, "max_attempts" => 10, "error" => "timeout"}
+      },
+      state: "failed",
+      response_status: 500,
+      error: nil,
+      attempts: 10,
+      duration_ms: 120,
+      completed_at: DateTime.utc_now()
+    })
+
+    {:ok, _route} = routing.pause(route, :failures, :system)
+    user
   end
 
   # A published contact form on a published page, in a module's form var. The

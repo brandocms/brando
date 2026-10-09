@@ -98,6 +98,10 @@ config :brando, Oban,
 # Webhook URLs are looked up in a stub, not real DNS (test/support).
 config :brando, Brando.Webhooks, resolver: {Brando.WebhookTestResolver, :resolve}
 
+# Jobs that tests give up on are not notified as failed jobs, unless a
+# notification test turns it on.
+config :brando, Brando.Notifications, failed_jobs: false
+
 # IndexNow submissions go to a stub.
 config :brando, Brando.IndexNow, req_options: [plug: {Req.Test, Brando.IndexNow}]
 

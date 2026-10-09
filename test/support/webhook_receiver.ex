@@ -100,7 +100,7 @@ end
 defmodule Brando.WebhookTestResolver do
   @moduledoc """
   DNS for webhook tests (`config :brando, Brando.Webhooks, resolver: ...`):
-  `*.example.com` is public, `*.internal.test` private, `pinned.test` is
+  `*.example.com`, `hooks.slack.com` and one Teams host are public, `*.internal.test` private, `pinned.test` is
   loopback, `rebind.test` answers what `rebind/1` set last, anything else is
   not found.
   """
@@ -110,6 +110,7 @@ defmodule Brando.WebhookTestResolver do
 
     cond do
       host == "example.com" or String.ends_with?(host, ".example.com") -> {:ok, [{93, 184, 216, 34}]}
+      host in ["hooks.slack.com", "prod-01.westeurope.logic.azure.com"] -> {:ok, [{93, 184, 216, 34}]}
       String.ends_with?(host, ".internal.test") -> {:ok, [{10, 0, 0, 5}]}
       host == "pinned.test" -> {:ok, [{127, 0, 0, 1}]}
       host == "mixed.test" -> {:ok, [{93, 184, 216, 34}, {192, 168, 1, 1}]}

@@ -322,6 +322,7 @@ defmodule BrandoAdmin.Sites.WebhooksLiveTest do
       html = render_component(BrandoAdmin.Components.Dashboard, id: "dashboard", current_user: user)
       assert html =~ "dashboard-webhooks-paused"
       assert html =~ "Shop cache"
+      assert html =~ ~s(href="/admin/config/webhooks/#{webhook.id}/edit")
 
       editor = Factory.insert(:random_user, role: :editor)
       html = render_component(BrandoAdmin.Components.Dashboard, id: "dashboard", current_user: editor)

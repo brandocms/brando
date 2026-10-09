@@ -16,6 +16,7 @@ defmodule BrandoAdmin.Components.Activity do
 
   @trash_days 30
   @webhook "Elixir.Brando.Webhooks.Webhook"
+  @route "Elixir.Brando.Notifications.Route"
   # Connected AI tools (`Brando.MCP`): a connection, and the endpoint's switch
   @mcp_grant "Elixir.Brando.MCP.Grant"
   @mcp_setting "Elixir.Brando.MCP.Setting"
@@ -210,6 +211,7 @@ defmodule BrandoAdmin.Components.Activity do
   defp tone(_), do: "is-neutral"
 
   defp setting_label(@webhook), do: gettext("Webhook")
+  defp setting_label(@route), do: gettext("Notification route")
   defp setting_label(@mcp_grant), do: gettext("Connected app")
   defp setting_label(@mcp_setting), do: gettext("MCP endpoint")
   defp setting_label(_schema), do: nil
@@ -448,7 +450,7 @@ defmodule BrandoAdmin.Components.Activity do
       assign(assigns,
         path: entry_path(assigns.event, assigns.states),
         gone?:
-          assigns.event.schema not in [@webhook, @mcp_grant, @mcp_setting] && assigns.event.entry_id &&
+          assigns.event.schema not in [@webhook, @route, @mcp_grant, @mcp_setting] && assigns.event.entry_id &&
             is_nil(assigns.states[{assigns.event.schema, assigns.event.entry_id}]),
         title: assigns.event.title || plural_label(schema) || assigns.event.schema,
         type: if(assigns.event.entry_id, do: type_label(schema) || setting_label(assigns.event.schema)),
@@ -503,6 +505,24 @@ defmodule BrandoAdmin.Components.Activity do
     do: [gettext("Deleted with its delivery log")]
 
   defp lines(%{schema: @webhook}, fields, _states), do: [fields && fields_line(fields)]
+
+  # Notification routes (`Brando.Notifications.Routing`) are settings too
+  defp lines(%{schema: @route, details: %{"route" => "paused", "reason" => "failures"}}, _fields, _states),
+    do: [gettext("Paused after its messages kept failing")]
+
+  defp lines(%{schema: @route, details: %{"route" => "paused", "reason" => "environment_copy"}}, _fields, _states),
+    do: [gettext("Paused because this environment was copied or restored")]
+
+  defp lines(%{schema: @route, details: %{"route" => "resumed", "reason" => "went_live"}}, _fields, _states),
+    do: [gettext("Resumed when this environment went live")]
+
+  defp lines(%{schema: @route, details: %{"route" => "paused"}}, _fields, _states), do: [gettext("Paused")]
+  defp lines(%{schema: @route, details: %{"route" => "resumed"}}, _fields, _states), do: [gettext("Resumed")]
+
+  defp lines(%{schema: @route, action: :deleted}, _fields, _states),
+    do: [gettext("Deleted with its delivery log")]
+
+  defp lines(%{schema: @route}, fields, _states), do: [fields && fields_line(fields)]
 
   defp lines(%{schema: @mcp_grant, action: :tool_called, details: %{"tool" => tool, "ok" => false}}, _fields, _states),
     do: [gettext("%{tool}, which failed", tool: tool)]

@@ -85,6 +85,8 @@
   .webhook-modes { display: flex; flex-wrap: wrap; gap: 8px; }
   .webhook-checks { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 8px; }
   .webhook-checks-inline { grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); }
+  /* Choices with a line of description: events, recipients */
+  .webhook-checks-described { grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); }
   .webhook-modes + .webhook-checks { margin-top: 8px; }
   .webhook-choice {
     display: flex; align-items: center; gap: 10px; min-height: 40px; padding: 8px 12px;
@@ -94,7 +96,12 @@
     input { flex: none; margin: 0; }
     > span { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 8px; min-width: 0; }
     code { color: var(--brando-muted); font-size: 11px; }
+    small { color: var(--brando-muted); font-size: 12px; }
   }
+  /* A choice with a line under its label: recipients, notification events */
+  .webhook-choice:has(small) { align-items: flex-start; }
+  .webhook-choice:has(small) > span { flex-direction: column; gap: 2px; }
+  .webhook-choice:has(small) input { margin-top: 2px; }
   .webhook-error { color: color-mix(in srgb, var(--brando-status-disabled), var(--brando-ink) 35%); font-size: 12px; }
   .webhook-form-footer {
     display: flex; justify-content: flex-end; gap: 8px; padding: 16px 24px;
@@ -113,6 +120,7 @@
     .webhook-response { max-width: 280px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .webhook-duration { white-space: nowrap; font-variant-numeric: tabular-nums; }
     .webhook-muted { color: var(--brando-muted); }
+    td > span + small { display: block; color: var(--brando-muted); }
     time { white-space: nowrap; }
   }
 
@@ -123,6 +131,7 @@
     .integrations-group { padding: 12px 20px; }
     .webhook-fields { padding: 20px; }
     .webhook-checks { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); }
+    .webhook-checks-described { grid-template-columns: minmax(0, 1fr); }
     .webhook-secret { padding: 20px; }
     .webhook-form-footer { padding: 16px 20px; }
 
@@ -138,5 +147,7 @@
       > tbody > tr > td.row-actions { grid-column: 2; grid-row: 1 / span 2; width: auto; align-self: start; }
       .webhook-response { max-width: 100%; }
     }
+    /* The notification log: every cell in the first column, the action beside them */
+    .notification-log > tbody > tr > td:not(.row-actions) { grid-column: 1; }
   }
 }

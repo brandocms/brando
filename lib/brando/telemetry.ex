@@ -18,6 +18,7 @@ defmodule Brando.Telemetry do
       :no_config
     )
 
+    Brando.Notifications.JobFailures.attach()
     :ok
   end
 

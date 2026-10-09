@@ -290,6 +290,11 @@ defmodule Brando.Router do
       live "/webhooks/deliveries", BrandoAdmin.Sites.WebhooksLive, :deliveries
       live "/webhooks/:id/edit", BrandoAdmin.Sites.WebhooksLive, :edit
       live "/webhooks/:id/deliveries", BrandoAdmin.Sites.WebhooksLive, :deliveries
+      live "/notifications", BrandoAdmin.Sites.NotificationsLive, :index
+      live "/notifications/new", BrandoAdmin.Sites.NotificationsLive, :new
+      live "/notifications/deliveries", BrandoAdmin.Sites.NotificationsLive, :deliveries
+      live "/notifications/:id/edit", BrandoAdmin.Sites.NotificationsLive, :edit
+      live "/notifications/:id/deliveries", BrandoAdmin.Sites.NotificationsLive, :deliveries
       live "/mcp", BrandoAdmin.Sites.MCPLive
       live "/seo", BrandoAdmin.Sites.SEOLive
       live "/utils", BrandoAdmin.Sites.UtilsLive

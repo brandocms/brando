@@ -108,6 +108,17 @@ production dump.
   request before `Plug.Parsers` reads it. See
   [Connected AI tools](guides/mcp.md).
 
+- **Notifications need two tables.** `brando_217` creates
+  `notification_routes` and `notification_deliveries` in every environment.
+  Run `mix brando.gen.migrations` and `mix brando.migrate`; until then, there
+  are no notification routes and saves, notes and jobs carry on without them.
+  Brando's default Oban configuration has the new `notifications` queue. **An
+  application that sets `config :brando, Oban` itself must add it
+  (`notifications: [limit: 2]`), or no notification is sent**;
+  `mix brando.doctor` warns when it is missing. Add the Notifications permission
+  (`brando.notifications.manage`) to the groups that should manage routes;
+  no existing group gets it. See [Notifications](guides/notifications.md).
+
 - **Webhooks need two tables and two Oban queues.** `brando_209` creates
   `webhooks` and `webhook_deliveries` in every environment. Run
   `mix brando.gen.migrations` and `mix brando.migrate`; until then, content
@@ -759,6 +770,22 @@ production dump.
   runs, the menu lists no views and saving one is refused. The image, file and video libraries have no
   menu; another listing can leave it out with `saved_views={false}`. See
   `Brando.ListingViews` and "Saved views" in the listings guide.
+
+- **Notifications to Slack, Teams and email.** Configuration → Integrations →
+  Notifications routes mentions, scheduled publishing and unpublishing, and
+  failed jobs (jobs Oban gave up, and webhooks paused after failures) to a
+  Slack or Microsoft Teams incoming webhook, or by email to chosen users,
+  optionally for some content types only. Slack gets blocks and Teams an
+  Adaptive Card, with a link to the entry in the admin; each message is sent
+  through Oban with retries and listed in a delivery log. Webhook URLs are
+  stored encrypted, shown only by host and last characters, and limited to
+  Slack's and Teams' hosts; email goes only to members of the site. A burst
+  of the same event on a Slack or Teams route is one message, and email comes
+  at most every ten minutes. In their profile, users can choose a daily or
+  weekly email summary of their mentions and notifications instead. A failed
+  or cancelled message can be sent again from the log, and the dashboard says
+  when a route was paused after failures. Copying an environment pauses
+  its routes, as it does webhooks. See [Notifications](guides/notifications.md).
 
 - **Blocks on older module versions can be resolved.** A module save keeps
   refs and vars the new version no longer defines, and leaves the blocks
