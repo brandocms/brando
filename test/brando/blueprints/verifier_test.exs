@@ -1408,7 +1408,7 @@ defmodule Brando.Blueprint.VerifierTest do
       assert input.opts[:write_with_ai] == [prompt: "Keep the tone.", from: [:title], model: :fast, temperature: 0.3]
 
       assert {:warn, [{message, _}]} = Brando.Blueprint.Forms.Verifier.verify(module.spark_dsl_config())
-      assert message =~ "gives Write with AI its instructions"
+      assert message =~ "turns on Write with AI, with its instructions and model"
 
       assert message =~ """
                  write_with_ai: [
@@ -1464,20 +1464,38 @@ defmodule Brando.Blueprint.VerifierTest do
       end
     end
 
-    test "ai: true on rich text says it adds nothing" do
+    test "ai: true on rich text keeps Write with AI on, and the warning prints write_with_ai: true" do
       module = compile_blueprint(ai_actions_blueprint(quote(do: input(:summary, :rich_text, ai: true))))
 
+      assert Brando.Blueprint.Forms.get_field(:summary, module.__form__()).opts[:write_with_ai] == []
       assert {:warn, [{message, _}]} = Brando.Blueprint.Forms.Verifier.verify(module.spark_dsl_config())
-      assert message =~ "gives Write with AI no instructions"
+      assert message =~ "turns on Write with AI, and Write with AI is off unless the input asks for it"
+      assert message =~ "    write_with_ai: true"
       refute message =~ "write_with_ai: ["
     end
 
-    test "ai: with only request options on rich text says they go with it" do
+    test "ai: with only request options on rich text prints write_with_ai: true and says where they go" do
       module = compile_blueprint(ai_actions_blueprint(quote(do: input(:summary, :rich_text, ai: [temperature: 0.2]))))
 
       assert {:warn, [{message, _}]} = Brando.Blueprint.Forms.Verifier.verify(module.spark_dsl_config())
-      assert message =~ "gives Write with AI no instructions"
+      assert message =~ "    write_with_ai: true"
       assert message =~ "`temperature`"
+    end
+
+    test "write_with_ai: is off when left out or false, and on with true or options" do
+      for {opts, stored, config} <- [
+            {[], nil, :off},
+            {[write_with_ai: false], false, :off},
+            {[write_with_ai: true], true, []},
+            {[write_with_ai: [model: :fast]], [model: :fast], [model: :fast]}
+          ] do
+        module = compile_blueprint(ai_actions_blueprint(quote(do: input(:summary, :rich_text, unquote(opts)))))
+
+        assert :ok = Brando.Blueprint.Forms.Verifier.verify(module.spark_dsl_config())
+        input_opts = Brando.Blueprint.Forms.get_field(:summary, module.__form__()).opts
+        assert input_opts[:write_with_ai] == stored
+        assert BrandoAdmin.Components.Form.RichTextAI.input_config(input_opts) == config
+      end
     end
 
     test "write_with_ai: reads text and block fields only" do
@@ -1575,6 +1593,78 @@ defmodule Brando.Blueprint.VerifierTest do
         ),
         ~r/ai_actions work only on top-level inputs/
       )
+    end
+  end
+
+  describe "trait :meta, ai: (renamed ai_prompts: in 0.55)" do
+    test "still works, and warns when the Blueprint compiles with the ai_prompts: to write" do
+      warning =
+        capture_io(:stderr, fn ->
+          Process.put(
+            :compiled_blueprint,
+            do_compile_blueprint(
+              quote do
+                trait :meta, ai: [meta_description: [prompt: "Write an SEO description", context: [:title]]]
+
+                attributes do
+                  attribute :title, :string
+                end
+              end
+            )
+          )
+        end)
+
+      module = Process.delete(:compiled_blueprint)
+
+      assert warning =~ "`trait :meta, ai:` is deprecated"
+
+      assert warning =~ """
+                 trait :meta,
+                   ai_prompts: [meta_description: [prompt: "Write an SEO description", context: [:title]]]
+             """
+
+      assert Brando.AI.field_ai_opts(module, :meta_description) ==
+               [prompt: "Write an SEO description", context: [:title]]
+    end
+
+    test "ai_prompts: wins over ai:, which the warning says to remove" do
+      warning =
+        capture_io(:stderr, fn ->
+          Process.put(
+            :compiled_blueprint,
+            do_compile_blueprint(
+              quote do
+                trait :meta, ai: [meta_title: [prompt: "Old"]], ai_prompts: [meta_title: [prompt: "New"]]
+
+                attributes do
+                  attribute :title, :string
+                end
+              end
+            )
+          )
+        end)
+
+      module = Process.delete(:compiled_blueprint)
+
+      assert warning =~ "`ai_prompts:` is set, so `ai:` is ignored. Remove it."
+      assert Brando.AI.field_ai_opts(module, :meta_title) == [prompt: "New"]
+    end
+
+    test "ai_prompts: compiles without a warning" do
+      warning =
+        capture_io(:stderr, fn ->
+          do_compile_blueprint(
+            quote do
+              trait :meta, ai_prompts: [meta_title: [prompt: "New"]]
+
+              attributes do
+                attribute :title, :string
+              end
+            end
+          )
+        end)
+
+      refute warning =~ "deprecated"
     end
   end
 

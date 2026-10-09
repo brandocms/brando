@@ -49,6 +49,7 @@ defmodule Brando.Villain.Components do
       |> assign(:target, ctx.target)
       |> assign(:target_ref, ctx.target_ref)
       |> assign(:form_id, ctx.form_id)
+      |> assign(:write_with_ai, Map.get(ctx, :write_with_ai, false))
 
     ~H"""
     <BrandoAdmin.Components.Form.Block.ref
@@ -57,6 +58,7 @@ defmodule Brando.Villain.Components do
       target={@target}
       target_ref={@target_ref}
       form_id={@form_id}
+      write_with_ai={@write_with_ai}
     />
     """
   end

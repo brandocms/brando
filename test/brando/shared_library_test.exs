@@ -159,10 +159,11 @@ defmodule Brando.Content.SharedLibraryTest do
     assert container_override.source_container_id == container.id
   end
 
-  test "module customization copies editable variables and references", %{site: site, user: user} do
+  test "module customization copies editable variables, references and settings", %{site: site, user: user} do
     attrs =
       "Shared rich module"
       |> module_attrs()
+      |> Map.put(:write_with_ai, true)
       |> Map.put(:vars, [
         %{
           type: :text,
@@ -190,6 +191,7 @@ defmodule Brando.Content.SharedLibraryTest do
     assert override_id == override.id
     assert [%{name: "body", description: "Body copy", module_id: ref_override_id}] = override.refs
     assert ref_override_id == override.id
+    assert override.write_with_ai
   end
 
   test "origin-qualified block fields round-trip independently from integer IDs" do

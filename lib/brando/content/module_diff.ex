@@ -15,8 +15,8 @@ defmodule Brando.Content.ModuleDiff do
   ## Classes
 
     * `:none` — nothing meaningful changed.
-    * `:metadata` — name, namespace, help text, svg, colour, sequence. Blocks
-      keep their data untouched.
+    * `:metadata` — name, namespace, help text, svg, colour, Write with AI,
+      sequence. Blocks keep their data untouched.
     * `:render` — the template code or class changed but the ref/var contract did
       not. Blocks re-render; their data is untouched.
     * `:compatible` — refs or vars were added. Existing block data survives and
@@ -55,7 +55,7 @@ defmodule Brando.Content.ModuleDiff do
 
   @type class :: :none | :metadata | :render | :compatible | :destructive
 
-  @metadata_fields ~w(name namespace help_text svg color sequence)a
+  @metadata_fields ~w(name namespace help_text svg color write_with_ai sequence)a
 
   # `class` sits with `code` rather than with the metadata: both feed the rendered
   # markup and neither touches a block's stored instance data.

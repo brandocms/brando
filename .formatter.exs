@@ -182,6 +182,7 @@ definition_locals_without_parens = [
   class: 1,
   svg: 1,
   color: 1,
+  write_with_ai: 1,
   multi: 1,
   sequence: 1,
   datasource_module: 1,

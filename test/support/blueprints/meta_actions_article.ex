@@ -1,8 +1,9 @@
 # A Blueprint with `trait :meta` on the `pages` table, for the Meta drawer's
 # AI actions (MetaDrawerTest, FieldActionsLiveTest): a site prompt for the
-# meta description in `trait :meta, ai:`, and the meta description as an
+# meta description in `trait :meta, ai_prompts:`, and the meta description as an
 # input with its own actions, a `:hidden` input in the default form and in a
-# tab in `form :visible`, which also has rich text with `write_with_ai:`.
+# tab in `form :visible`, which also has rich text with `write_with_ai:` and
+# rich text without it.
 defmodule Brando.MetaDrawerTest.ActionsArticle do
   @moduledoc false
   use Brando.Blueprint,
@@ -21,12 +22,13 @@ defmodule Brando.MetaDrawerTest.ActionsArticle do
   trait :timestamped
 
   trait :meta,
-    ai: [meta_description: [prompt: "Write an SEO description", context: [:title]]]
+    ai_prompts: [meta_description: [prompt: "Write an SEO description", context: [:title]]]
 
   attributes do
     attribute :title, :string
     attribute :language, :string
     attribute :css_classes, :text
+    attribute :template, :text
   end
 
   forms do
@@ -51,6 +53,8 @@ defmodule Brando.MetaDrawerTest.ActionsArticle do
 
           input :css_classes, :rich_text,
             write_with_ai: [prompt: "Keep the house style.", from: [:title], model: "openai:gpt-4o"]
+
+          input :template, :rich_text
         end
       end
     end

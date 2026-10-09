@@ -201,26 +201,32 @@ defmodule BrandoAdmin.Components.Form.InputTest do
       refute html =~ "run_field_action"
     end
 
-    test "Write with AI is on in an entry form's rich text whenever AI is configured" do
+    test "Write with AI is on in an entry form's rich text that asks for it, when AI is configured" do
       put_test_env(Brando.AI, default_model: "openai:gpt-4o-mini", providers: [openai: [api_key: "test-openai-key"]])
 
-      html = render_input(&Input.rich_text/1, :body, %{form_id: "page_form"})
+      for write_with_ai <- [true, [prompt: "Keep it plain."]] do
+        html = render_input(&Input.rich_text/1, :body, %{form_id: "page_form", opts: [write_with_ai: write_with_ai]})
 
-      assert html =~ ~s(data-tiptap-ai="true")
-      assert html =~ ~s(data-tiptap-field="body")
-      assert html =~ ~s(name="page[body]")
+        assert html =~ ~s(data-tiptap-ai="true")
+        assert html =~ ~s(data-tiptap-field="body")
+        assert html =~ ~s(name="page[body]")
+      end
     end
 
-    test "Write with AI is off with write_with_ai: false, outside an entry form and without AI" do
+    test "Write with AI is off by default, with write_with_ai: false, outside an entry form and without AI" do
       put_test_env(Brando.AI, default_model: "openai:gpt-4o-mini", providers: [openai: [api_key: "test-openai-key"]])
+
+      assert render_input(&Input.rich_text/1, :body, %{form_id: "page_form"}) =~ ~s(data-tiptap-ai="false")
 
       assert render_input(&Input.rich_text/1, :body, %{form_id: "page_form", opts: [write_with_ai: false]}) =~
                ~s(data-tiptap-ai="false")
 
-      assert render_input(&Input.rich_text/1, :body, %{}) =~ ~s(data-tiptap-ai="false")
+      assert render_input(&Input.rich_text/1, :body, %{opts: [write_with_ai: true]}) =~ ~s(data-tiptap-ai="false")
 
       put_test_env(Brando.AI, enabled: false, default_model: "openai:gpt-4o-mini")
-      assert render_input(&Input.rich_text/1, :body, %{form_id: "page_form"}) =~ ~s(data-tiptap-ai="false")
+
+      assert render_input(&Input.rich_text/1, :body, %{form_id: "page_form", opts: [write_with_ai: true]}) =~
+               ~s(data-tiptap-ai="false")
     end
   end
 

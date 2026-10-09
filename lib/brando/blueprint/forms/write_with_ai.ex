@@ -2,11 +2,17 @@ defmodule Brando.Blueprint.Forms.WriteWithAI do
   @moduledoc """
   `write_with_ai:` on a `:rich_text` input: Write with AI in its toolbar.
 
-  It is on whenever `Brando.AI` is configured. `false` turns it off; a keyword
-  list gives its requests instructions, the fields they read and a model:
+  It is off unless the input asks for it: every request is a paid call to the
+  AI service. `true` turns it on, and a keyword list turns it on with
+  instructions for its requests, the fields they read and a model:
+
+      input :body, :rich_text, write_with_ai: true
 
       input :body, :rich_text,
         write_with_ai: [prompt: "Keep the magazine's plain tone.", from: [:title], model: :fast]
+
+  `false`, or no `write_with_ai:`, leaves it off. It shows only where
+  `Brando.AI` is configured for its model.
 
   * `prompt`: instructions every request starts with.
   * `from`: fields whose values follow the instructions, as an AI action's
@@ -14,8 +20,8 @@ defmodule Brando.Blueprint.Forms.WriteWithAI do
   * `model`: a `"provider:model"` spec or a name from the `models:` config.
 
   The deprecated `ai:` on a `:rich_text` input meant the same and is read as
-  `write_with_ai:` (`from_ai/1`); it also keeps the request options `ai:`
-  took (`api_key`, `temperature`, …).
+  `write_with_ai:` (`from_ai/1`), so it stays on; it also keeps the request
+  options `ai:` took (`api_key`, `temperature`, …).
   """
   alias Brando.Blueprint.Forms.AIAction
 
@@ -69,16 +75,17 @@ defmodule Brando.Blueprint.Forms.WriteWithAI do
 
   @doc """
   The `write_with_ai:` to write for `opts` (`from_ai/1`), as Blueprint
-  source, or `nil` when it would say nothing: Write with AI is on by
-  default. `from` goes only with a prompt.
+  source: `write_with_ai: true` when there are no options to carry, since
+  Write with AI is off unless an input asks for it. `from` goes only with a
+  prompt.
   """
-  @spec to_source(keyword()) :: String.t() | nil
+  @spec to_source(keyword()) :: String.t()
   def to_source(opts) do
     opts = if opts[:prompt], do: opts, else: Keyword.delete(opts, :from)
 
     case Keyword.take(opts, [:prompt, :from, :model]) do
       [] ->
-        nil
+        "write_with_ai: true"
 
       options ->
         lines =

@@ -6,7 +6,7 @@ defmodule Brando.Content.Definition.Model do
   alias Brando.Villain.Blocks
   alias Ecto.Changeset
 
-  @module_fields ~w(uid name namespace help_text class code type svg color multi sequence datasource datasource_module datasource_type datasource_query)a
+  @module_fields ~w(uid name namespace help_text class code type svg color write_with_ai multi sequence datasource datasource_module datasource_type datasource_query)a
   @ref_fields ~w(uid name description active collapsed sequence data)a
   @var_owners ~w(page_id block_id module_id table_template_id table_row_id global_set_id menu_item_id)a
   @var_assets ~w(image file video gallery palette identifier)

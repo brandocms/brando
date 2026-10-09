@@ -228,9 +228,11 @@ Only import definitions and templates from trusted authors.
 `uid` identifies the module lineage, independently of the Elixir module name,
 filename, translated display name or namespace. Keep it when updating an
 existing module. `name`, `namespace` and `help_text` use locale maps or keyword
-lists. Other declarations are `class`, `svg`, `color`, `multi`, `sequence`,
-`datasource`, `datasource_module`, `datasource_type` and `datasource_query`.
-Datasource configuration uses the same values as the admin.
+lists. Other declarations are `class`, `svg`, `color`, `write_with_ai`,
+`multi`, `sequence`, `datasource`, `datasource_module`, `datasource_type` and
+`datasource_query`. Datasource configuration uses the same values as the
+admin. `write_with_ai true` offers Write with AI in the module's text blocks;
+left out, it is off.
 
 Export preserves module UIDs and definition-ref UIDs. Existing vars match by
 `key`; their database IDs remain local. Versions are managed by import and are

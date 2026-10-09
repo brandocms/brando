@@ -54,7 +54,7 @@ defmodule Brando.Content.Module do
   persist_identifier false
 
   @derived_fields ~w(
-    id uid type name sequence namespace help_text multi color class code markdown_code refs vars svg deleted_at
+    id uid type name sequence namespace help_text multi color write_with_ai class code markdown_code refs vars svg deleted_at
     version version_note source_module_id source_version acknowledged_version library_origin
     override_id
   )a
@@ -84,6 +84,9 @@ defmodule Brando.Content.Module do
     attribute :markdown_code, :text
     attribute :multi, :boolean
     attribute :color, :enum, values: [:blue, :emerald, :pink, :peach], default: :blue
+    # Write with AI in the module's text blocks. Off unless turned on here:
+    # every request is a paid call (see `BrandoAdmin.Components.Form.RichTextAI`).
+    attribute :write_with_ai, :boolean, default: false
 
     attribute :datasource, :boolean, default: false
     attribute :datasource_module, :string

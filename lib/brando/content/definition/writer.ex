@@ -273,7 +273,7 @@ defmodule Brando.Content.Definition.Writer do
 
   defp locals do
     Enum.map(
-      ~w(kind uid name namespace help_text class svg color multi sequence datasource datasource_module datasource_type datasource_query table_template description active collapsed config default assets label placeholder instructions width placement new_row options settings)a,
+      ~w(kind uid name namespace help_text class svg color write_with_ai multi sequence datasource datasource_module datasource_type datasource_query table_template description active collapsed config default assets label placeholder instructions width placement new_row options settings)a,
       &{&1, 1}
     ) ++
       [ref: 2, var: 2, child: 1, template_file: 2]

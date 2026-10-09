@@ -1519,6 +1519,7 @@ defmodule BrandoAdmin.Components.Form.Block do
     |> assign_new(:module_type, fn -> nil end)
     |> assign_new(:heex_compiled_module, fn -> nil end)
     |> assign_new(:module_color, fn -> :blue end)
+    |> assign_new(:module_write_with_ai, fn -> false end)
     |> assign_new(:is_datasource?, fn -> false end)
     |> assign_new(:has_table_template?, fn -> false end)
     |> assign_new(:table_template, fn -> nil end)
@@ -1545,6 +1546,7 @@ defmodule BrandoAdmin.Components.Form.Block do
         |> assign_new(:module_type, fn -> module.type end)
         |> assign_new(:heex_compiled_module, fn -> nil end)
         |> assign_new(:module_color, fn -> module.color end)
+        |> assign_new(:module_write_with_ai, fn -> module.write_with_ai == true end)
         |> assign_new(:is_datasource?, fn -> module.datasource end)
         |> assign_new(:has_table_template?, fn -> (module.table_template_id && true) || false end)
         |> assign_new(:table_template, fn -> module_table_template(module.table_template_id) end)
@@ -2068,11 +2070,13 @@ defmodule BrandoAdmin.Components.Form.Block do
     |> push_event("b:tiptap:insert_footnote:#{tiptap_id}", %{uid: uid})
   end
 
-  # Write with AI in a text block's toolbar. The `block_text` site prompt,
-  # when there is one, adds its instructions and picks the model; the reply
-  # goes back to the editor as a suggestion.
+  # Write with AI in a text block's toolbar, when the block's module turns it
+  # on. The `block_text` site prompt, when there is one, adds its
+  # instructions and picks the model; the reply goes back to the editor as a
+  # suggestion. The module is read again here rather than trusted from the
+  # rendered toolbar.
   def generate_rich_text(socket, %{"ref_name" => name, "tiptap_id" => id} = params) do
-    config = RichTextAI.block_text_config()
+    config = RichTextAI.block_text_config(module_write_with_ai?(socket))
 
     with %{data: %{type: "text"}, uid: uid} <- instance_ref(socket, name),
          true <- id == "block-#{uid}-rich-text",
@@ -2085,6 +2089,11 @@ defmodule BrandoAdmin.Components.Form.Block do
   end
 
   def generate_rich_text(socket, _), do: socket
+
+  defp module_write_with_ai?(%{assigns: %{module_id: id} = assigns}) when not is_nil(id),
+    do: match?(%{write_with_ai: true}, get_module(id, Map.get(assigns, :module_origin, :local)))
+
+  defp module_write_with_ai?(_socket), do: false
 
   def handle_async({:tiptap_ai, id, request}, result, socket) do
     {:noreply, RichTextAI.finish(socket, id, request, result)}
