@@ -61,26 +61,28 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
   # The form's reply to "Suggest alt text": a suggestion under the field
   # (`AltTextSuggestion`) until the editor accepts it. Not when the block
   # has another image by now.
+  # A reply for an image the block no longer shows leaves the spinner of the
+  # request that is still running.
   def update(%{event: "alt_text_suggested", result: result, image_id: image_id}, socket) do
-    socket = assign(socket, :alt_suggesting, false)
-
     case {result, current_image_id(socket)} do
       {_result, current} when current != image_id ->
         {:ok, socket}
 
       {{:ok, language, text}, _current} ->
+        socket = assign(socket, :alt_suggesting, false)
+
         send_update(AltTextSuggestion,
           id: alt_suggestion_id(socket.assigns.uid, image_id),
           values: %{language => text},
           image_id: image_id,
-          original: %{language => socket.assigns[:alt_requested_from]}
+          original: %{language => Map.get(socket.assigns[:alt_requested_from] || %{}, image_id)}
         )
 
         {:ok, socket}
 
       {:error, _current} ->
         send(self(), {:toast, gettext("The alt text could not be suggested. Try again, or write it yourself.")})
-        {:ok, socket}
+        {:ok, assign(socket, :alt_suggesting, false)}
     end
   end
 
@@ -419,7 +421,10 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
       reply_to: {__MODULE__, socket.assigns.id}
     )
 
-    {:noreply, assign(socket, alt_suggesting: true, alt_requested_from: current_alt(socket))}
+    # The alt text when it was asked for, per image: Accept leaves alone what
+    # was written since (`AltTextSuggestion.merge/3`)
+    requested_from = Map.put(socket.assigns[:alt_requested_from] || %{}, image_id, current_alt(socket))
+    {:noreply, assign(socket, alt_suggesting: true, alt_requested_from: requested_from)}
   end
 
   def handle_event("reset_image", _, socket) do

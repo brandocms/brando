@@ -1472,6 +1472,14 @@ defmodule Brando.Blueprint.VerifierTest do
       refute message =~ "write_with_ai: ["
     end
 
+    test "ai: with only request options on rich text says they go with it" do
+      module = compile_blueprint(ai_actions_blueprint(quote(do: input(:summary, :rich_text, ai: [temperature: 0.2]))))
+
+      assert {:warn, [{message, _}]} = Brando.Blueprint.Forms.Verifier.verify(module.spark_dsl_config())
+      assert message =~ "gives Write with AI no instructions"
+      assert message =~ "`temperature`"
+    end
+
     test "write_with_ai: reads text and block fields only" do
       assert_form_error(
         ai_actions_blueprint(quote(do: input(:summary, :rich_text, write_with_ai: [prompt: "P", from: [:items]]))),

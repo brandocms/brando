@@ -490,7 +490,12 @@ defmodule Brando.Blueprint.Forms.Verifier do
         |> Enum.join("\n\n")
 
       true ->
-        "input #{inspect(name)} #{@subject}. It gives Write with AI no instructions, and Write with AI is on whenever AI is configured. Remove it."
+        [
+          "input #{inspect(name)} #{@subject}. It gives Write with AI no instructions, and Write with AI is on whenever AI is configured. Remove it.",
+          dropped_options_note("write_with_ai:", Keyword.take(converted, Forms.AIAction.request_opt_keys()))
+        ]
+        |> Enum.filter(& &1)
+        |> Enum.join("\n\n")
     end
   end
 

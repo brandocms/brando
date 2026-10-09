@@ -192,7 +192,7 @@ defmodule BrandoAdmin.Components.Form.SuggestAltTextTest do
           ref_name: "picture",
           uid: "ref-uid",
           alt_suggesting: true,
-          alt_requested_from: alt
+          alt_requested_from: %{image_id => alt}
         }
       }
     end
@@ -212,13 +212,15 @@ defmodule BrandoAdmin.Components.Form.SuggestAltTextTest do
     end
 
     test "after the block took another image, the reply is dropped and Accept changes nothing" do
-      {:ok, _socket} =
+      {:ok, socket} =
         PictureBlock.update(
           %{event: "alt_text_suggested", result: {:ok, "en", "A chair"}, image_id: 5},
           block_socket(6, nil)
         )
 
       refute_received {:phoenix, :send_update, _}
+      # The request for the image it shows now is still running
+      assert socket.assigns.alt_suggesting
 
       {:ok, _socket} = accept(block_socket(6, nil), 5, %{"en" => nil})
       refute_received {:phoenix, :send_update, _}
@@ -234,6 +236,16 @@ defmodule BrandoAdmin.Components.Form.SuggestAltTextTest do
       assert_received {:phoenix, :send_update,
                        {{AltTextSuggestion, "block-ref-uid-ref-alt-5-alt-suggestion"},
                         %{values: %{"en" => "A chair"}, image_id: 5, original: %{"en" => "Old"}}}}
+    end
+
+    test "the reply compares with the alt text when its own image was asked for" do
+      socket = block_socket(5, "Now")
+      socket = put_in(socket.assigns.alt_requested_from, %{5 => "Asked for 5", 6 => "Asked for 6"})
+
+      {:ok, _socket} =
+        PictureBlock.update(%{event: "alt_text_suggested", result: {:ok, "en", "A chair"}, image_id: 5}, socket)
+
+      assert_received {:phoenix, :send_update, {{AltTextSuggestion, _}, %{original: %{"en" => "Asked for 5"}}}}
     end
 
     test "Accept leaves alt text written since it was asked for" do
