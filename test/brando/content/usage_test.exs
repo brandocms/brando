@@ -149,6 +149,45 @@ defmodule Brando.Content.UsageTest do
     refute discarded.id in used
   end
 
+  test "a module's or table template's default value is a use, though not shown in Used in" do
+    module = Factory.insert(:module)
+    template = Brando.Repo.insert!(%Brando.Content.TableTemplate{uid: Brando.Utils.generate_uid(), name: "Prices"})
+    [image, video, file] = [Factory.insert(:image), Factory.insert(:video), media_file()]
+    ref_image = Factory.insert(:image)
+
+    Brando.Repo.insert!(%Var{
+      type: :image,
+      key: "hero",
+      label: %{"en" => "Hero"},
+      module_id: module.id,
+      image_id: image.id
+    })
+
+    Brando.Repo.insert!(%Var{
+      type: :video,
+      key: "film",
+      label: %{"en" => "Film"},
+      table_template_id: template.id,
+      video_id: video.id
+    })
+
+    Brando.Repo.insert!(%Var{
+      type: :file,
+      key: "sheet",
+      label: %{"en" => "Sheet"},
+      module_id: module.id,
+      file_id: file.id
+    })
+
+    Factory.insert(:ref, module_id: module.id, image_id: ref_image.id)
+
+    assert image.id in Usage.used_ids(:image)
+    assert ref_image.id in Usage.used_ids(:image)
+    assert video.id in Usage.used_ids(:video)
+    assert file.id in Usage.used_ids(:file)
+    assert Usage.list(:image, [image.id]) == %{}
+  end
+
   describe "tenancy" do
     @prefix "tenant_usage_production"
     @cache {Usage, :asset_fields, @prefix}

@@ -67,7 +67,8 @@ defmodule Brando.Content.Usage do
   unused ones, which the libraries offer to delete. It errs towards "used":
   an entry in the trash still uses its assets, so restoring it finds them,
   and so does an editor's unsaved copy of an entry (its recovery draft),
-  where a block or field holds the asset.
+  where a block or field holds the asset, and a module's or table
+  template's default value, which every new block copies.
   """
   @spec used_ids(kind()) :: [integer()]
   def used_ids(kind) when kind in @kinds do
@@ -75,6 +76,7 @@ defmodule Brando.Content.Usage do
     |> references(:all, include_deleted: true)
     |> Enum.map(&elem(&1, 0))
     |> Kernel.++(in_drafts(kind))
+    |> Kernel.++(in_defaults(kind))
     |> Enum.uniq()
   end
 
@@ -207,6 +209,24 @@ defmodule Brando.Content.Usage do
     # A shared table: every site's drafts are in `public`, told apart by scope.
     |> Brando.Repo.all(prefix: "public")
     |> Enum.flat_map(&draft_id/1)
+  end
+
+  # Ids of `kind` set as a default: on a module's variables or refs, or a
+  # table template's variables. Not entries, so not in "Used in".
+  defp in_defaults(kind) do
+    vars =
+      from(v in "content_vars",
+        where: not is_nil(v.module_id) or not is_nil(v.table_template_id),
+        select: field(v, ^fk(kind))
+      )
+
+    refs =
+      if kind in [:image, :video, :file, :gallery],
+        do: [from(r in "content_refs", where: not is_nil(r.module_id), select: field(r, ^fk(kind)))],
+        else: []
+
+    [vars | refs]
+    |> Enum.flat_map(&(&1 |> where_ids(fk(kind), :all) |> Brando.Repo.all()))
   end
 
   defp in_vars(kind, ids) do
