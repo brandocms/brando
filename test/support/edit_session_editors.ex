@@ -45,6 +45,26 @@ defmodule Brando.EditSessionEditors do
   def shown_text(view, uid),
     do: view |> render() |> Brando.LiveCase.form_params("#entry_block_form-#{uid}") |> get_in(@text)
 
+  @doc """
+  Whether a view shows the block from its saved row: the block's form
+  carries the row's id. A block another editor's save wrote has it once
+  that save's rebase reached this view's block field, which then also asked
+  its form to collect again: any event sent to the view after this holds
+  is handled after that.
+
+  The session's state (`Brando.EditSession.fetch/3`) moves on before the
+  rebase reaches the views, so it cannot tell when a view can act on it.
+  """
+  def shows_saved?(view, uid) do
+    id =
+      view
+      |> render()
+      |> Brando.LiveCase.form_params("#entry_block_form-#{uid}")
+      |> get_in(["entry_block", "block", "id"])
+
+    id not in [nil, ""]
+  end
+
   @doc "Waits for `fun` to hold, polling every 20 ms."
   def await(fun, tries \\ 150) do
     cond do

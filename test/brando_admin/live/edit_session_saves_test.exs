@@ -76,10 +76,10 @@ defmodule BrandoAdmin.EditSessionSavesTest do
 
   defp block_count(uid), do: Repo.one(from(b in Brando.Content.Block, where: b.uid == ^uid, select: count(b.id)))
 
-  defp session_state(page) do
-    {:ok, %{state: state}} =
-      EditSession.fetch(EditSession.whereis(EditSession.ref(Page, page.id, page.language)), :blocks)
+  defp session_pid(page), do: EditSession.whereis(EditSession.ref(Page, page.id, page.language))
 
+  defp session_state(page) do
+    {:ok, %{state: state}} = EditSession.fetch(session_pid(page), :blocks)
     state
   end
 
@@ -96,7 +96,8 @@ defmodule BrandoAdmin.EditSessionSavesTest do
     save_write(a)
     assert_redirect(a, 3_000)
 
-    await(fn -> session_state(c.identity).statuses[new] == :persisted end)
+    await(fn -> shows_saved?(b, new) end)
+    assert session_state(c.identity).statuses[new] == :persisted
     type(b, first, "<p>B, after A closed</p>")
     stay(b)
     save_read(b)
@@ -119,15 +120,44 @@ defmodule BrandoAdmin.EditSessionSavesTest do
 
     save_read(a)
     save_read(b)
+    # B writes after A's write and before A's rebase reaches it: the session
+    # takes the rebase only once B's write is done.
+    session = session_pid(c.identity)
+    :sys.suspend(session)
     save_write(a)
-    await(fn -> session_state(c.identity).statuses[new] == :persisted end)
     save_write(b)
+    :sys.resume(session)
     assert block_count(new) == 1
+
+    await(fn -> shows_saved?(b, new) end)
     type(b, new, "<p>B retries</p>")
     save_read(b)
     save_write(b)
 
     await(fn -> Map.new(texts(c.identity))[new] == "<p>B retries</p>" end)
+    assert block_count(new) == 1
+    assert length(rows(c.identity)) == 4
+  end
+
+  # The other order: A's rebase reaches B between its collect and its write.
+  # The write the first submit asked for collects the blocks again, from the
+  # saved rows, instead of inserting the new block a second time.
+  test "of two overlapping saves the second collects again when the first's rebase arrives before it writes", c do
+    a = open(c.conn, c.identity)
+    b = open(c.other_conn, c.identity)
+    new = added_block(a, b, c)
+    stay(a)
+    stay(b)
+
+    save_read(a)
+    type(b, new, "<p>B, after A read</p>")
+    save_read(b)
+    save_write(a)
+    await(fn -> shows_saved?(b, new) end)
+    save_read(b)
+    save_write(b)
+
+    await(fn -> Map.new(texts(c.identity))[new] == "<p>B, after A read</p>" end)
     assert block_count(new) == 1
     assert length(rows(c.identity)) == 4
   end
@@ -240,8 +270,9 @@ defmodule BrandoAdmin.EditSessionSavesTest do
     save_read(a)
     type(b, new, "<p>B typed during A's save</p>")
     save_write(a)
-    await(fn -> session_state(c.identity).statuses[new] == :persisted end)
+    await(fn -> shows_saved?(b, new) end)
 
+    assert session_state(c.identity).statuses[new] == :persisted
     assert session_state(c.identity).diffs[new] != nil
     type(b, new, "<p>B after the save</p>")
     stay(b)
