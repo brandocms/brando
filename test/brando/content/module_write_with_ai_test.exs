@@ -112,6 +112,96 @@ defmodule Brando.Content.ModuleWriteWithAITest do
     assert again.class == "cards-copy-2"
   end
 
+  test "a duplicated multi module copies three children, each with its own refs and vars", %{user: user} do
+    image = Factory.insert(:image)
+    parent = create_module(user, %{class: "slides", multi: true})
+
+    children =
+      for n <- 1..3 do
+        refs =
+          [
+            %{
+              name: "body",
+              uid: Brando.Utils.generate_uid(),
+              sequence: 0,
+              data: %{type: "text", data: %{text: "Text #{n}"}}
+            },
+            %{
+              name: "lede",
+              uid: Brando.Utils.generate_uid(),
+              sequence: 1,
+              data: %{type: "text", data: %{text: "Lede #{n}"}}
+            }
+          ] ++
+            if n == 2,
+              do: [
+                %{
+                  name: "photo",
+                  uid: Brando.Utils.generate_uid(),
+                  sequence: 2,
+                  image_id: image.id,
+                  data: %{type: "picture", data: %{}}
+                }
+              ],
+              else: []
+
+        create_module(user, %{
+          class: "slide-#{n}",
+          parent_id: parent.id,
+          sequence: n,
+          refs: refs,
+          vars: [
+            %{type: :text, label: "Title", key: "title", value: "Title #{n}", sequence: 0},
+            %{type: :text, label: "Kicker", key: "kicker", value: "Kicker #{n}", sequence: 1}
+          ]
+        })
+      end
+
+    {:ok, copy} = Content.duplicate_module(parent.id, user)
+
+    copied =
+      Module
+      |> Repo.get!(copy.id)
+      |> Repo.preload(
+        children: [
+          vars: Ecto.Query.from(v in Brando.Content.Var, order_by: v.sequence),
+          refs: Ecto.Query.from(r in Brando.Content.Ref, order_by: r.sequence)
+        ]
+      )
+      |> Map.fetch!(:children)
+      |> Enum.sort_by(& &1.sequence)
+
+    assert Enum.map(copied, & &1.class) == ["slide-1", "slide-2", "slide-3"]
+    assert copied |> Enum.map(& &1.id) |> Enum.uniq() |> length() == 3
+    assert copied |> Enum.map(& &1.uid) |> Enum.uniq() |> length() == 3
+    assert MapSet.disjoint?(MapSet.new(copied, & &1.id), MapSet.new(children, & &1.id))
+    assert MapSet.disjoint?(MapSet.new(copied, & &1.uid), MapSet.new(children, & &1.uid))
+
+    for {child, n} <- Enum.with_index(copied, 1) do
+      assert Enum.map(child.vars, &{&1.key, &1.value}) == [{"title", "Title #{n}"}, {"kicker", "Kicker #{n}"}]
+      assert Enum.all?(child.vars, &(&1.module_id == child.id))
+      assert Enum.all?(child.refs, &(&1.module_id == child.id))
+      expected_refs = if n == 2, do: ~w(body lede photo), else: ~w(body lede)
+      assert Enum.map(child.refs, & &1.name) == expected_refs
+    end
+
+    # The picture ref keeps its image
+    assert [%{image_id: image_id}] = Enum.filter(Enum.at(copied, 1).refs, &(&1.name == "photo"))
+    assert image_id == image.id
+
+    # Every ref uid is new and unique
+    ref_uids = for child <- copied, ref <- child.refs, do: ref.uid
+    original_uids = for child <- Repo.preload(children, :refs), ref <- child.refs, do: ref.uid
+    assert length(Enum.uniq(ref_uids)) == 7
+    assert MapSet.disjoint?(MapSet.new(ref_uids), MapSet.new(original_uids))
+
+    # The originals keep their children, refs and vars
+    original = Repo.preload(Repo.get!(Module, parent.id), children: [:vars, :refs])
+    assert original.children |> Enum.map(& &1.id) |> Enum.sort() == Enum.map(children, & &1.id)
+    assert original.children |> Enum.flat_map(& &1.vars) |> length() == 6
+    assert original.children |> Enum.flat_map(& &1.refs) |> length() == 7
+  end
+
   test "the module export carries it, and an export from before it imports as off", %{user: user} do
     module = create_module(user, %{write_with_ai: true})
 
