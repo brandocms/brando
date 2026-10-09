@@ -2067,14 +2067,16 @@ defmodule BrandoAdmin.Components.Form.Block do
     |> push_event("b:tiptap:insert_footnote:#{tiptap_id}", %{uid: uid})
   end
 
+  # Write with AI in a text block's toolbar. The `block_text` site prompt,
+  # when there is one, adds its instructions and picks the model; the reply
+  # goes back to the editor as a suggestion.
   def generate_rich_text(socket, %{"ref_name" => name, "tiptap_id" => id} = params) do
-    opts = Brando.AI.field_ai_opts(:block_text)
+    opts = BrandoAdmin.Components.Form.RichTextAI.block_text_opts()
 
     with %{data: %{type: "text"}, uid: uid} <- instance_ref(socket, name),
          true <- id == "block-#{uid}-rich-text",
-         true <- Brando.AI.configured?(opts),
-         base when is_binary(base) and base != "" <- opts[:prompt],
-         {:ok, prompt} <- BrandoAdmin.Components.Form.RichTextAI.prompt(base, params) do
+         true <- BrandoAdmin.Components.Form.RichTextAI.enabled?(opts),
+         {:ok, prompt} <- BrandoAdmin.Components.Form.RichTextAI.prompt(opts[:prompt], params) do
       BrandoAdmin.Components.Form.RichTextAI.start(socket, params, prompt, opts)
     else
       _ -> push_event(socket, "b:tiptap:ai:#{id}", %{request_id: params["request_id"], error: true})

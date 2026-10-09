@@ -13,8 +13,9 @@ defmodule BrandoAdmin.Components.Form.FieldActions do
       writes it into the field as unsaved input (`accept_field_action`).
       Nothing is written to the field until then.
 
-  Both render only for top-level inputs in an entry form, when `Brando.AI`
-  is configured for the action's model.
+  Both render only for top-level inputs in an entry form and the meta fields
+  in its Meta drawer, when `Brando.AI` is configured for the action's model.
+  The actions come from `Brando.AI.FieldAction.for_field/3`.
   """
   use BrandoAdmin, :live_component
   use BrandoAdmin.Translator
@@ -71,7 +72,10 @@ defmodule BrandoAdmin.Components.Form.FieldActions do
   @doc """
   An action's label from the Blueprint, translated in its domain, or its
   name when it has none (as an input without a label shows its field name).
+  The `:generate` that a deprecated `ai:` or a site prompt gives a field is
+  "Generate".
   """
+  def label(_schema, %{label: nil, origin: origin}) when origin in [:ai, :site], do: gettext("Generate")
   def label(_schema, %{label: nil, name: name}), do: Brando.Utils.humanize(to_string(name))
   def label(schema, %{label: label}), do: schema |> g(label) |> Phoenix.HTML.safe_to_string()
 

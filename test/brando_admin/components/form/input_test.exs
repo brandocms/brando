@@ -167,86 +167,61 @@ defmodule BrandoAdmin.Components.Form.InputTest do
     end
   end
 
-  test "meta_description textarea renders AI action when model comes from app config" do
-    put_test_env(Brando.AI,
-      default_model: "openai:gpt-4o-mini",
-      providers: [openai: [api_key: "test-openai-key"]]
-    )
+  describe "AI" do
+    # `ai:` on a Blueprint input runs as the action :generate
+    defp generate_action do
+      Brando.Blueprint.Forms.AIAction.generate([prompt: "Write a succinct meta description", context: [:title]], :ai)
+    end
 
-    form =
-      %TestEntry{}
-      |> cast(%{}, [:title, :meta_description])
-      |> to_form(as: :page)
+    defp render_input(fun, field, assigns) do
+      form = %TestEntry{} |> cast(%{}, [:title, :body, :meta_description]) |> to_form(as: :page)
+      render_component(fun, Map.merge(%{field: form[field], label: "Label", target: "form-target", opts: []}, assigns))
+    end
 
-    html =
-      render_component(&Input.textarea/1, %{
-        field: form[:meta_description],
-        label: "META description",
-        target: "form-target",
-        opts: [
-          ai: [
-            prompt: "Write a succinct meta description",
-            context: [:title]
-          ]
-        ]
-      })
+    test "an input's Generate is an action whose result is a suggestion, not a button that writes the field" do
+      put_test_env(Brando.AI, default_model: "openai:gpt-4o-mini", providers: [openai: [api_key: "test-openai-key"]])
 
-    assert html =~ ~s(phx-click="ai_generate_input")
-    assert html =~ ~s(phx-value-field_key="meta_description")
-    assert html =~ ~s(phx-value-field_name="page[meta_description]")
-  end
+      for fun <- [&Input.textarea/1, &Input.text/1] do
+        html = render_input(fun, :meta_description, %{ai_actions: [generate_action()], form_id: "page_form"})
 
-  test "meta_description textarea hides AI action when no model is available" do
-    Application.put_env(:brando, Brando.AI, providers: [openai: [api_key: "test-openai-key"]])
+        assert html =~ ~s(phx-click="run_field_action")
+        assert html =~ ~s(phx-value-action="generate")
+        assert html =~ "Generate"
+        assert html =~ ~s(data-testid="field-ai-suggestion")
+        refute html =~ "ai_generate_input"
+        refute html =~ "ai-generate-button"
+      end
+    end
 
-    form =
-      %TestEntry{}
-      |> cast(%{}, [:title, :body, :meta_description])
-      |> to_form(as: :page)
+    test "offers no action when no model is available" do
+      put_test_env(Brando.AI, providers: [openai: [api_key: "test-openai-key"]])
 
-    html =
-      render_component(&Input.textarea/1, %{
-        field: form[:meta_description],
-        label: "META description",
-        target: "form-target",
-        opts: [
-          ai: [
-            prompt: "Write a succinct meta description",
-            context: [:title]
-          ]
-        ]
-      })
+      html = render_input(&Input.textarea/1, :meta_description, %{ai_actions: [generate_action()], form_id: "page_form"})
 
-    refute html =~ ~s(phx-click="ai_generate_input")
-  end
+      refute html =~ "run_field_action"
+    end
 
-  test "rich_text renders AI action when model comes from app config" do
-    put_test_env(Brando.AI,
-      default_model: "openai:gpt-4o-mini",
-      providers: [openai: [api_key: "test-openai-key"]]
-    )
+    test "Write with AI is on in an entry form's rich text whenever AI is configured" do
+      put_test_env(Brando.AI, default_model: "openai:gpt-4o-mini", providers: [openai: [api_key: "test-openai-key"]])
 
-    form =
-      %TestEntry{}
-      |> cast(%{}, [:title, :body, :meta_description])
-      |> to_form(as: :page)
+      html = render_input(&Input.rich_text/1, :body, %{form_id: "page_form"})
 
-    html =
-      render_component(&Input.rich_text/1, %{
-        field: form[:body],
-        label: "Body",
-        target: "form-target",
-        opts: [
-          ai: [
-            prompt: "Write body copy",
-            context: [:title]
-          ]
-        ]
-      })
+      assert html =~ ~s(data-tiptap-ai="true")
+      assert html =~ ~s(data-tiptap-field="body")
+      assert html =~ ~s(name="page[body]")
+    end
 
-    assert html =~ ~s(data-tiptap-ai="true")
-    assert html =~ ~s(data-tiptap-field="body")
-    assert html =~ ~s(name="page[body]")
+    test "Write with AI is off with write_with_ai: false, outside an entry form and without AI" do
+      put_test_env(Brando.AI, default_model: "openai:gpt-4o-mini", providers: [openai: [api_key: "test-openai-key"]])
+
+      assert render_input(&Input.rich_text/1, :body, %{form_id: "page_form", opts: [write_with_ai: false]}) =~
+               ~s(data-tiptap-ai="false")
+
+      assert render_input(&Input.rich_text/1, :body, %{}) =~ ~s(data-tiptap-ai="false")
+
+      put_test_env(Brando.AI, enabled: false, default_model: "openai:gpt-4o-mini")
+      assert render_input(&Input.rich_text/1, :body, %{form_id: "page_form"}) =~ ~s(data-tiptap-ai="false")
+    end
   end
 
   test "text input renders the placeholder attribute" do

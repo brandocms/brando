@@ -200,8 +200,7 @@ defmodule BrandoAdmin.Components.Form do
   # since the action ran (another editor's, say) unless the editor said to
   # replace it.
   def update(%{event: "accept_field_action", field_name: name, field: field, text: text} = message, socket) do
-    with %BlueprintForms.Input{actions: [_ | _], type: type, opts: opts} <-
-           BlueprintForms.get_field(field, socket.assigns.form_blueprint),
+    with {[_ | _], type, opts} <- field_ai_actions(socket, field),
          false <- FieldActions.locked?(opts, socket.assigns.current_user),
          {:ok, path, key, string_path} <- parse_form_field_name(name, socket.assigns.singular) do
       if message[:replace] || get_field(socket.assigns.form.source, field) == message[:original] do
@@ -3651,6 +3650,7 @@ defmodule BrandoAdmin.Components.Form do
               form={@form}
               blueprint={@form_blueprint}
               form_cid={@myself}
+              form_id={@id}
               current_user={@current_user}
               close={toggle_drawer("##{@id}-meta-drawer")}
             />
@@ -4861,15 +4861,18 @@ defmodule BrandoAdmin.Components.Form do
     {:noreply, socket}
   end
 
+  # Write with AI in a top-level rich text field's toolbar. The reply goes
+  # back to the editor as a suggestion; nothing here writes the field.
   def handle_event("tiptap_ai_generate", params, socket) do
     with {:ok, field} <- safe_to_existing_atom(params["field_key"]),
          true <- is_binary(params["field_name"]),
-         %{type: :rich_text} <- BlueprintForms.get_field(field, socket.assigns.form_blueprint),
+         %BlueprintForms.Input{type: :rich_text, opts: opts} <-
+           BlueprintForms.get_field(field, socket.assigns.form_blueprint),
+         true <- BrandoAdmin.Components.Form.RichTextAI.enabled?(opts || []),
+         false <- FieldActions.locked?(opts, socket.assigns.current_user),
          {:ok, _path, ^field, _segments} <- parse_form_field_name(params["field_name"], socket.assigns.singular),
-         {:ok, opts} <- fetch_field_ai_opts(socket.assigns.form_blueprint, field, socket.assigns.schema),
-         {:ok, base} <- build_ai_prompt(socket, opts),
-         {:ok, prompt} <- BrandoAdmin.Components.Form.RichTextAI.prompt(base, params) do
-      {:noreply, BrandoAdmin.Components.Form.RichTextAI.start(socket, params, prompt, opts)}
+         {:ok, prompt} <- BrandoAdmin.Components.Form.RichTextAI.prompt(nil, params) do
+      {:noreply, BrandoAdmin.Components.Form.RichTextAI.start(socket, params, prompt, [])}
     else
       _ ->
         {:noreply,
@@ -4881,34 +4884,14 @@ defmodule BrandoAdmin.Components.Form do
     {:noreply, BrandoAdmin.Components.Form.RichTextAI.cancel(socket, params)}
   end
 
-  def handle_event(
-        "ai_generate_input",
-        %{"field_name" => field_name, "field_key" => field_key},
-        socket
-      ) do
-    with {:ok, field_atom} <- safe_to_existing_atom(field_key),
-         {:ok, ai_opts} <-
-           fetch_field_ai_opts(socket.assigns.form_blueprint, field_atom, socket.assigns.schema),
-         {:ok, prompt} <- build_ai_prompt(socket, ai_opts),
-         {:ok, path, key, string_path} <-
-           parse_form_field_name(field_name, socket.assigns.singular),
-         {:ok, %{text: generated_text}} <- Brando.AI.generate_text(prompt, ai_opts) do
-      {:noreply, write_ai_text(socket, path, key, string_path, field_atom, generated_text)}
-    else
-      {:error, reason} ->
-        send(self(), {:toast, ai_error_message(reason)})
-        {:noreply, socket}
-    end
-  end
-
-  # An AI action declared on the field (`ai_actions:`): the prompt is built
-  # here, from the unsaved form, and the field's suggestion panel asks the
-  # model and shows the reply until the editor accepts or discards it.
+  # An AI action on the field (`ai_actions:`, a deprecated `ai:`, or a meta
+  # field's site prompt): the prompt is built here, from the unsaved form, and
+  # the field's suggestion panel asks the model and shows the reply until the
+  # editor accepts or discards it.
   def handle_event("run_field_action", %{"field" => field, "action" => action}, socket) do
     with {:ok, field_atom} <- safe_to_existing_atom(field),
          {:ok, action_atom} <- safe_to_existing_atom(action),
-         %BlueprintForms.Input{actions: actions, type: type, opts: opts} <-
-           BlueprintForms.get_field(field_atom, socket.assigns.form_blueprint),
+         {actions, type, opts} <- field_ai_actions(socket, field_atom),
          false <- FieldActions.locked?(opts, socket.assigns.current_user),
          %BlueprintForms.AIAction{} = ai_action <- Enum.find(actions, &(&1.name == action_atom)),
          true <- Brando.AI.FieldAction.available?(ai_action) do
@@ -6875,66 +6858,16 @@ defmodule BrandoAdmin.Components.Form do
     socket
   end
 
-  defp fetch_field_ai_opts(form_blueprint, field_atom, schema) do
-    case BlueprintForms.get_field(field_atom, form_blueprint) do
-      nil ->
-        fetch_fallback_ai_opts(schema, field_atom, :missing_field)
-
-      %{opts: opts} ->
-        field_ai_opts(opts || [], schema, field_atom)
-    end
+  defp field_ai_actions(socket, field) do
+    Brando.AI.FieldAction.for_field(socket.assigns.schema, socket.assigns.form_blueprint, field)
   end
 
-  defp field_ai_opts(opts, schema, field_atom) do
-    if Keyword.has_key?(opts, :ai) do
-      ai_opts = Brando.AI.normalize_ai_opts(Keyword.get(opts, :ai))
-
-      if ai_opts == [] do
-        {:error, :missing_ai_config}
-      else
-        {:ok, ai_opts}
-      end
-    else
-      fetch_fallback_ai_opts(schema, field_atom, :missing_ai_config)
-    end
-  end
-
-  defp fetch_fallback_ai_opts(schema, field_atom, error_reason) do
-    case Brando.AI.field_ai_opts(schema, field_atom) do
-      [] -> {:error, error_reason}
-      ai_opts -> {:ok, ai_opts}
-    end
-  end
-
-  defp build_ai_prompt(socket, ai_opts) do
-    case Keyword.get(ai_opts, :prompt) do
-      prompt when is_binary(prompt) ->
-        prompt = String.trim(prompt)
-
-        if prompt == "" do
-          {:error, :missing_prompt}
-        else
-          context_values =
-            ai_opts
-            |> Keyword.get(:context, [])
-            |> Brando.AI.Context.normalize_fields()
-            |> then(&build_ai_context_values(socket, &1))
-
-          {:ok, Brando.AI.Context.build_prompt(prompt, context_values)}
-        end
-
-      _ ->
-        {:error, :missing_prompt}
-    end
-  end
-
-  # `:blocks` keeps its own path: in a form the editor's unsaved state is what
-  # should be summarized, not the `rendered_blocks` column the entry was last
-  # saved with. Every other field reads the applied changeset headlessly.
-  defp build_ai_context_values(socket, context_fields), do: ai_context_fun(socket, context_fields).()
-
-  # The same, as a function to call later: it holds the form and the block
-  # map, not the socket, so a task can render the blocks.
+  # The values of the fields an AI action reads, as a function to call later:
+  # it holds the form and the block map, not the socket, so a task can render
+  # the blocks. `:blocks` keeps its own path: in a form the editor's unsaved
+  # state is what should be summarized, not the `rendered_blocks` column the
+  # entry was last saved with. Every other field reads the applied changeset
+  # headlessly.
   defp ai_context_fun(socket, context_fields) do
     form = socket.assigns.form
     block_map = if socket.assigns.has_blocks?, do: socket.assigns.block_map
@@ -7048,8 +6981,9 @@ defmodule BrandoAdmin.Components.Form do
     end
   end
 
-  # Text from AI written into a field as if typed: shipped to the other
-  # editors, passed to the blocks that read the field and to the preview.
+  # An accepted AI suggestion written into a field as if typed: shipped to
+  # the other editors, passed to the blocks that read the field and to the
+  # preview.
   defp write_ai_text(socket, path, key, string_path, field_atom, text) do
     socket
     |> update_changeset(path, key, text)
@@ -7069,9 +7003,13 @@ defmodule BrandoAdmin.Components.Form do
     context = ai_context_fun(socket, ai_action.from)
     language = field_action_language(socket)
 
+    # An action from `ai:` or a site prompt that names no fields to read
+    # sends its prompt alone, as `ai:` did.
+    reads_fields? = ai_action.from != []
+
     build = fn ->
       case context.() do
-        [] -> {:error, :empty_inputs}
+        [] when reads_fields? -> {:error, :empty_inputs}
         values -> {:ok, Brando.AI.FieldAction.prompt(ai_action, values, language: language, type: type)}
       end
     end
@@ -7110,8 +7048,6 @@ defmodule BrandoAdmin.Components.Form do
       _ -> socket
     end
   end
-
-  defp ai_error_message(reason), do: Brando.AI.error_message(reason)
 
   defp safe_to_existing_atom(value) when is_atom(value), do: {:ok, value}
 

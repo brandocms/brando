@@ -1,5 +1,14 @@
 defmodule BrandoAdmin.Components.Form.RichTextAI do
-  @moduledoc "Cancellable proposals. Only the editor's Accept action changes the ordinary HTML input."
+  @moduledoc """
+  Write with AI in the rich-text toolbar: cancellable proposals. Only the
+  editor's Accept action changes the ordinary HTML input.
+
+  It is on in every top-level rich text input of an entry form and in block
+  text whenever `Brando.AI` is configured. `write_with_ai: false` on an input
+  turns it off there, and in the `block_text` site prompt
+  (`config :brando, Brando.AI, fields: [block_text: [...]]`) for block text,
+  whose `prompt` is added to every request as the site's instructions.
+  """
   import Phoenix.Component, only: [assign: 3]
   import Phoenix.LiveView, only: [start_async: 3, cancel_async: 2, push_event: 3]
 
@@ -56,6 +65,24 @@ defmodule BrandoAdmin.Components.Form.RichTextAI do
     end
   end
 
+  @doc """
+  Whether Write with AI is on for an input with `opts`, or for block text
+  with the `block_text` site prompt's options: AI is configured for the
+  model they name, and they do not say `write_with_ai: false`.
+  """
+  @spec enabled?(keyword()) :: boolean()
+  def enabled?(opts) do
+    Keyword.get(opts, :write_with_ai) != false and Brando.AI.configured?(Keyword.take(opts, [:model, :api_key]))
+  end
+
+  @doc "The `block_text` site prompt's options: its instructions, model and request options."
+  @spec block_text_opts() :: keyword()
+  def block_text_opts, do: Brando.AI.field_ai_opts(:block_text)
+
+  @doc """
+  The prompt for a Write with AI request: the site's instructions (`base`,
+  `nil` for none), the mode's, the author's instruction and the passage.
+  """
   def prompt(base, params) do
     mode = params["mode"]
     selection = params["selection"] || ""
@@ -67,13 +94,13 @@ defmodule BrandoAdmin.Components.Form.RichTextAI do
 
       {:ok,
        Enum.join(
-         [
-           base,
-           action,
-           "Return plain text in the passage's language, without HTML, Markdown or explanatory commentary.",
-           "Author instruction: " <> instruction,
-           "Passage:\n" <> selection
-         ],
+         Enum.reject([base], &(&1 in [nil, ""])) ++
+           [
+             action,
+             "Return plain text in the passage's language, without HTML, Markdown or explanatory commentary.",
+             "Author instruction: " <> instruction,
+             "Passage:\n" <> selection
+           ],
          "\n\n"
        )}
     else

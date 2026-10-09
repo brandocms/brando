@@ -3,7 +3,7 @@ defmodule BrandoAdmin.Components.Form.MetaDrawer do
   use BrandoAdmin, :component
   use Gettext, backend: Brando.Gettext
 
-  alias Brando.Blueprint.Forms, as: BlueprintForms
+  alias Brando.AI.FieldAction
   alias BrandoAdmin.Components.Content
   alias BrandoAdmin.Components.Form.Input
   alias BrandoAdmin.Components.Form.MetaPreviews
@@ -15,16 +15,22 @@ defmodule BrandoAdmin.Components.Form.MetaDrawer do
   # prop status, :atom, default: :closed
   # prop close, :event
 
+  # The meta title and description take the options and AI actions of the
+  # Blueprint's input for them (a hidden input, usually), and the site
+  # prompt's Generate (`Brando.AI.FieldAction.for_field/3`).
   def render(assigns) do
-    meta_title_opts = get_input_opts(assigns, :meta_title)
-    meta_description_opts = get_input_opts(assigns, :meta_description)
-
     schema = schema_from_assigns(assigns)
+    blueprint = assigns[:blueprint]
+    {meta_title_actions, _type, meta_title_opts} = FieldAction.for_field(schema, blueprint, :meta_title)
+    {meta_description_actions, _type, meta_description_opts} = FieldAction.for_field(schema, blueprint, :meta_description)
 
     assigns =
       assigns
+      |> assign_new(:form_id, fn -> nil end)
       |> assign(:meta_title_opts, meta_title_opts)
+      |> assign(:meta_title_actions, meta_title_actions)
       |> assign(:meta_description_opts, meta_description_opts)
+      |> assign(:meta_description_actions, meta_description_actions)
       |> assign(:schema, schema)
       |> assign(:structured_data?, structured_data?(schema))
       |> assign(:tabs, tabs(structured_data?(schema)))
@@ -95,7 +101,10 @@ defmodule BrandoAdmin.Components.Form.MetaDrawer do
           <Input.text
             field={@form[:meta_title]}
             opts={@meta_title_opts}
+            ai_actions={@meta_title_actions}
             target={@form_cid}
+            form_id={@form_id}
+            current_user={@current_user}
             label={gettext("Meta title")}
             instructions={gettext("Keep it under 70 characters, with the words people search for.")}
           />
@@ -105,7 +114,10 @@ defmodule BrandoAdmin.Components.Form.MetaDrawer do
           <Input.textarea
             field={@form[:meta_description]}
             opts={@meta_description_opts}
+            ai_actions={@meta_description_actions}
             target={@form_cid}
+            form_id={@form_id}
+            current_user={@current_user}
             label={gettext("Meta description")}
             instructions={gettext("Around 155 characters. Longer descriptions are cut short in search results.")}
           />
@@ -207,31 +219,6 @@ defmodule BrandoAdmin.Components.Form.MetaDrawer do
 
   defp pane_id(id, "meta"), do: "#{id}-meta-fields"
   defp pane_id(id, tab), do: "#{id}-#{tab}-pane"
-
-  defp get_input_opts(%{blueprint: nil} = assigns, field), do: maybe_attach_ai_fallback([], assigns, field)
-
-  defp get_input_opts(%{blueprint: blueprint} = assigns, field) do
-    opts =
-      case BlueprintForms.get_field(field, blueprint) do
-        %{opts: opts} when is_list(opts) -> opts
-        _ -> []
-      end
-
-    maybe_attach_ai_fallback(opts, assigns, field)
-  end
-
-  defp maybe_attach_ai_fallback(opts, assigns, field) do
-    if Keyword.has_key?(opts, :ai) do
-      opts
-    else
-      schema = schema_from_assigns(assigns)
-
-      case Brando.AI.field_ai_opts(schema, field) do
-        [] -> opts
-        ai_opts -> Keyword.put(opts, :ai, ai_opts)
-      end
-    end
-  end
 
   defp schema_from_assigns(assigns) do
     Brando.Utils.try_path(assigns, [:form, :source, :data, :__struct__])

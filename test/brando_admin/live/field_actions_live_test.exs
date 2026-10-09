@@ -213,7 +213,8 @@ defmodule BrandoAdmin.FieldActionsLiveTest do
     refute has_element?(view, "#{@suggestion} .ai-proposal")
   end
 
-  test "gives the model at most the context's length of block text", %{conn: conn, current_user: user} do
+  # An article with one block whose text ref, `body`, holds `text`
+  defp article_with_text_block(user, text) do
     {:ok, module} =
       Brando.Content.create_module(
         Factory.params_for(:module,
@@ -232,6 +233,8 @@ defmodule BrandoAdmin.FieldActionsLiveTest do
         user
       )
 
+    ref_uid = Brando.Utils.generate_uid()
+
     block =
       %Brando.Content.Block{}
       |> Brando.Content.Block.recursive_block_changeset(
@@ -242,11 +245,7 @@ defmodule BrandoAdmin.FieldActionsLiveTest do
           "creator_id" => user.id,
           "source" => to_string(SyncTest.Article.Blocks),
           "refs" => [
-            %{
-              "uid" => Brando.Utils.generate_uid(),
-              "name" => "body",
-              "data" => %{"type" => "text", "data" => %{"text" => String.duplicate("ord ", 2_000)}}
-            }
+            %{"uid" => ref_uid, "name" => "body", "data" => %{"type" => "text", "data" => %{"text" => text}}}
           ]
         },
         user
@@ -254,6 +253,11 @@ defmodule BrandoAdmin.FieldActionsLiveTest do
       |> Brando.Repo.insert!()
 
     struct(SyncTest.Article.Blocks, %{entry_id: article.id, block_id: block.id, sequence: 0}) |> Brando.Repo.insert!()
+    {article, ref_uid}
+  end
+
+  test "gives the model at most the context's length of block text", %{conn: conn, current_user: user} do
+    {article, _ref_uid} = article_with_text_block(user, String.duplicate("ord ", 2_000))
 
     view = open(conn, article)
     await_selector(view, "#article_form-blocks-blocks-wrapper")
@@ -268,17 +272,142 @@ defmodule BrandoAdmin.FieldActionsLiveTest do
     assert String.length(blocks) <= Brando.AI.Context.block_text_length()
   end
 
-  test "the ai: generate button reads a cleared field as empty too", %{conn: conn, current_user: user} do
-    page = Factory.insert(:page, creator: user, title: "Om oss", uri: "om-oss", language: "no")
-    {view, _html} = live_form(conn, "/admin/pages/update/#{page.id}")
-    replies("En tittel")
+  describe "Write with AI in block text" do
+    defp write_with_ai(view, ref_uid) do
+      # As the editor's hook sends it, to the block that owns the text (its
+      # form's target)
+      [cid | _] =
+        view
+        |> render()
+        |> LazyHTML.from_fragment()
+        |> LazyHTML.query("form:has(#block-#{ref_uid}-rich-text)")
+        |> LazyHTML.attribute("phx-target")
+        |> Enum.reverse()
 
-    view |> form("#page_form_form") |> render_change(%{"page" => %{"title" => ""}, "_target" => ["page", "title"]})
-    view |> element("button[phx-click='ai_generate_input'][phx-value-field_key='meta_title']") |> render_click()
+      view
+      |> with_target(cid)
+      |> render_hook("tiptap_ai_generate", %{
+        "ref_name" => "body",
+        "tiptap_id" => "block-#{ref_uid}-rich-text",
+        "request_id" => "request-1",
+        "mode" => "shorten",
+        "instruction" => "",
+        "selection" => "Et langt avsnitt om huset."
+      })
+    end
 
-    assert_received {:prompt, prompt}
-    assert prompt =~ "language: no"
-    refute prompt =~ "Om oss"
+    test "is on whenever AI is configured, and its reply is a suggestion for the editor",
+         %{conn: conn, current_user: user} do
+      {article, ref_uid} = article_with_text_block(user, "<p>Et langt avsnitt om huset.</p>")
+      view = open(conn, article)
+      await_selector(view, "#block-#{ref_uid}-rich-text")
+      replies("Et kort avsnitt.")
+
+      assert has_element?(view, "#block-#{ref_uid}-rich-text[data-tiptap-ai='true']")
+
+      write_with_ai(view, ref_uid)
+      event = "b:tiptap:ai:block-#{ref_uid}-rich-text"
+
+      assert_push_event(view, ^event, %{text: "Et kort avsnitt.", request_id: "request-1"})
+      assert_received {:prompt, prompt}
+      assert prompt =~ "Shorten the passage"
+      assert prompt =~ "Passage:\nEt langt avsnitt om huset."
+      # The editor shows it for review: the block's text is as it was
+      assert has_element?(
+               view,
+               "#block-#{ref_uid}-rich-text input.tiptap-text[value='<p>Et langt avsnitt om huset.</p>']"
+             )
+    end
+
+    test "the block_text site prompt adds the site's instructions", %{conn: conn, current_user: user} do
+      put_test_env(
+        Brando.AI,
+        Keyword.put(Application.get_env(:brando, Brando.AI), :fields, block_text: [prompt: "Skriv enkelt."])
+      )
+
+      {article, ref_uid} = article_with_text_block(user, "<p>Et avsnitt.</p>")
+      view = open(conn, article)
+      await_selector(view, "#block-#{ref_uid}-rich-text")
+      replies("Kort.")
+
+      write_with_ai(view, ref_uid)
+      event = "b:tiptap:ai:block-#{ref_uid}-rich-text"
+
+      assert_push_event(view, ^event, %{text: "Kort."})
+      assert_received {:prompt, prompt}
+      assert prompt =~ ~r/\ASkriv enkelt\.\n\nShorten the passage/
+    end
+
+    test "is off with write_with_ai: false in the block_text site prompt", %{conn: conn, current_user: user} do
+      put_test_env(
+        Brando.AI,
+        Keyword.put(Application.get_env(:brando, Brando.AI), :fields, block_text: [write_with_ai: false])
+      )
+
+      {article, ref_uid} = article_with_text_block(user, "<p>Et avsnitt.</p>")
+      view = open(conn, article)
+      await_selector(view, "#block-#{ref_uid}-rich-text")
+      replies("Kort.")
+
+      assert has_element?(view, "#block-#{ref_uid}-rich-text[data-tiptap-ai='false']")
+
+      write_with_ai(view, ref_uid)
+      event = "b:tiptap:ai:block-#{ref_uid}-rich-text"
+      assert_push_event(view, ^event, %{error: true})
+      refute_received {:prompt, _}
+    end
+  end
+
+  describe "the Meta drawer" do
+    # A page's meta fields take their Generate from the site prompts in
+    # `trait :meta, ai:` (Brando.Pages.Page)
+    setup %{current_user: user} do
+      page = Factory.insert(:page, creator: user, title: "Om oss", uri: "om-oss", language: "no", meta_title: "Gammel")
+      %{page: page}
+    end
+
+    defp meta_title(view), do: view |> render() |> form_params("#page_form_form") |> get_in(["page", "meta_title"])
+
+    test "Generate suggests a meta title, written only when accepted", %{conn: conn, page: page} do
+      {view, _html} = live_form(conn, "/admin/pages/update/#{page.id}")
+      replies(~s("Om oss – Brando"))
+
+      assert has_element?(view, "button[phx-value-field='meta_title'][phx-value-action='generate']", "Generate")
+      refute has_element?(view, "button[phx-click='ai_generate_input']")
+
+      run_meta(view, "meta_title")
+      await_selector(view, "#page_meta_title-ai-actions .ai-proposal[data-status='ready']")
+
+      assert_received {:prompt, prompt}
+      assert prompt =~ "Write an SEO title tag"
+      assert prompt =~ "title: Om oss"
+      assert has_element?(view, "#page_meta_title-ai-actions textarea", "Om oss – Brando")
+      assert meta_title(view) == "Gammel"
+
+      view |> element("#page_meta_title-ai-actions button", "Accept") |> render_click()
+      settle(view)
+
+      assert meta_title(view) == "Om oss – Brando"
+    end
+
+    test "reads a cleared field as empty", %{conn: conn, page: page} do
+      {view, _html} = live_form(conn, "/admin/pages/update/#{page.id}")
+      replies("En tittel")
+
+      view |> form("#page_form_form") |> render_change(%{"page" => %{"title" => ""}, "_target" => ["page", "title"]})
+      run_meta(view, "meta_title")
+      await_selector(view, "#page_meta_title-ai-actions .ai-proposal[data-status='ready']")
+
+      assert_received {:prompt, prompt}
+      assert prompt =~ "language: no"
+      refute prompt =~ "Om oss"
+    end
+
+    defp run_meta(view, field) do
+      view
+      |> element("button[phx-click='run_field_action'][phx-value-field='#{field}'][phx-value-action='generate']")
+      |> render_click()
+    end
   end
 
   describe "a read-only field" do
