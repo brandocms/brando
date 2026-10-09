@@ -1,4 +1,4 @@
-defmodule Brando.Config do
+defmodule Brando.Sites.Config do
   @moduledoc false
   use Brando.Blueprint,
     application: "Brando",

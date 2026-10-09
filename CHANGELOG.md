@@ -721,12 +721,25 @@ production dump.
   | `Brando.LobbyChannel` | `BrandoAdmin.LobbyChannel` |
   | `Brando.LivePreviewChannel` | `BrandoAdmin.LivePreviewChannel` |
   | `Brando.ErrorHTML` | `BrandoAdmin.ErrorHTML` |
+  | `Brando.Config` | `Brando.Sites.Config` |
+  | `Brando.Link` | `Brando.Sites.Link` |
+  | `Brando.Meta` | `Brando.Sites.Meta` |
 
   The three controllers serve the site's public routes (`/robots.txt`,
   `/sitemaps/:file` and the shared preview links at `/__p__/:preview_key`),
   so they moved to `BrandoWeb` with their files. A router that `mix
   brando.gen.site` generated before 0.55 names them directly; rerunning the
   task accepts either name.
+
+  `Brando.Config`, `Brando.Link` and `Brando.Meta` are the Identity's
+  embedded schemas (its `configs`, `links` and `metas`), filed under
+  `lib/brando/sites/` but named as if they were Brando-wide. Only their
+  module names change; the data does not. A struct cannot answer to two
+  names, so `%Brando.Link{}` as a literal or a pattern, and a relation's
+  `module: Brando.Link`, stop compiling until they use the new name;
+  `changeset` calls on the old names still work. `Brando.Meta.HTML`, which
+  renders a page's `<meta>` tags, keeps its name: it was never part of the
+  schema.
 
 #### Improvements
 

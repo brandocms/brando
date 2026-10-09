@@ -12,9 +12,12 @@ defmodule Brando.Deprecated.RenamedModules do
   @removed_in "0.57"
 
   @renamed %{
+    Brando.Config => Brando.Sites.Config,
     Brando.ErrorHTML => BrandoAdmin.ErrorHTML,
+    Brando.Link => Brando.Sites.Link,
     Brando.LivePreviewChannel => BrandoAdmin.LivePreviewChannel,
     Brando.LobbyChannel => BrandoAdmin.LobbyChannel,
+    Brando.Meta => Brando.Sites.Meta,
     Brando.PreviewController => BrandoWeb.PreviewController,
     Brando.SEOController => BrandoWeb.SEOController,
     Brando.SitemapController => BrandoWeb.SitemapController,

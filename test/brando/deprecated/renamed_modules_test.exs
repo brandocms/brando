@@ -53,6 +53,17 @@ defmodule Brando.Deprecated.RenamedModulesTest do
     assert {:alert, 2} in Enum.map(Brando.UserChannel.__info__(:deprecated), &elem(&1, 0))
   end
 
+  test "the Identity's schemas keep their changesets under the old names" do
+    # Through variables: a direct call is a deprecation warning at compile time
+    {link, meta} = {Brando.Link, Brando.Meta}
+    changeset = link.changeset(%Brando.Sites.Link{}, %{name: "Instagram", url: "https://x.com"})
+    assert changeset.valid?
+    assert changeset.data.__struct__ == Brando.Sites.Link
+
+    refute meta.changeset(%Brando.Sites.Meta{}, %{key: "k"}).valid?
+    assert Code.ensure_loaded?(Brando.Meta.HTML)
+  end
+
   test "a router that routes to the old controller names still serves them, and warns once" do
     name = "renamed-#{System.unique_integer([:positive])}.xml"
     dir = Path.join(Brando.Tenant.Storage.current_media_root(), "sitemaps")

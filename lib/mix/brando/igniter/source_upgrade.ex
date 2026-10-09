@@ -922,8 +922,10 @@ if Code.ensure_loaded?(Igniter) do
 
     The source is read as code and only the module names are replaced, so
     `Brando.Meta.HTML` is not `Brando.Meta`, and the rest of a file keeps its
-    formatting. A plain `alias` whose last segment changes renames the short
-    name in that file too. An alias inside braces that the new name cannot
+    formatting. Behind a plain `alias`, a short name follows its module when
+    the last segment changes, and a module under the old name (`Meta.HTML`
+    after `alias Brando.Meta`) is spelled out in full, since it did not
+    move. An alias inside braces that the new name cannot
     share (`alias Brando.{LobbyChannel}`, now `BrandoAdmin`) is left for the
     developer and reported; the old name keeps working until 0.57.
     """
@@ -961,7 +963,7 @@ if Code.ensure_loaded?(Igniter) do
     defp module_rename_patches(content, renamed) do
       case Sourceror.parse_string(content) do
         {:ok, ast} ->
-          short = ast |> plain_renamed_aliases(renamed) |> short_renames(renamed)
+          short = ast |> plain_renamed_aliases(renamed) |> short_names()
 
           {_ast, {patches, left}} =
             Macro.prewalk(ast, {[], []}, fn node, acc -> module_rename_patch(node, renamed, short, acc) end)
@@ -990,15 +992,10 @@ if Code.ensure_loaded?(Igniter) do
       Enum.filter(plain, &Map.has_key?(renamed, &1))
     end
 
-    # Short names that change with a plain alias: `alias Brando.Upload`
-    # becomes `alias Brando.Uploads.Store`, so `Upload.` becomes `Store.`
-    defp short_renames(plain, renamed) do
-      for old <- plain,
-          old_short = old |> Module.split() |> List.last() |> String.to_atom(),
-          new_short = renamed[old] |> Module.split() |> List.last() |> String.to_atom(),
-          old_short != new_short,
-          into: %{},
-          do: {old_short, new_short}
+    # The short name each plain alias gives a renamed module: `Meta` for
+    # `alias Brando.Meta`
+    defp short_names(plain) do
+      Map.new(plain, &{&1 |> Module.split() |> List.last() |> String.to_atom(), &1})
     end
 
     # The braced alias is handled here, child by child, and not walked again
@@ -1013,7 +1010,10 @@ if Code.ensure_loaded?(Igniter) do
           {node, {[module_patch(node, inspect(new)) | patches], left}}
 
         Map.has_key?(short, first) and Enum.all?(rest, &is_atom/1) ->
-          {node, {[module_patch(node, Enum.join([short[first] | rest], ".")) | patches], left}}
+          case short_name_change(short[first], rest, renamed) do
+            nil -> {node, acc}
+            change -> {node, {[module_patch(node, change) | patches], left}}
+          end
 
         true ->
           {node, acc}
@@ -1021,6 +1021,17 @@ if Code.ensure_loaded?(Igniter) do
     end
 
     defp module_rename_patch(node, _renamed, _short, acc), do: {node, acc}
+
+    # Through the alias. `Upload` follows `alias Brando.Upload` to
+    # `Brando.Uploads.Store` as `Store`. A module under the old name did not
+    # move, so `Meta.HTML` after `alias Brando.Meta` is spelled out in full.
+    defp short_name_change(old, [], renamed) do
+      old_short = old |> Module.split() |> List.last()
+      new_short = renamed[old] |> Module.split() |> List.last()
+      if old_short != new_short, do: new_short
+    end
+
+    defp short_name_change(old, rest, _renamed), do: inspect(Module.concat([old | rest]))
 
     defp braced_rename_patch({:__aliases__, _, parts} = child, base, renamed, {patches, left} = acc) do
       module = alias_module(base ++ parts)

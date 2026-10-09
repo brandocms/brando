@@ -1,4 +1,4 @@
-defmodule Brando.Meta do
+defmodule Brando.Sites.Meta do
   @moduledoc false
   use Brando.Blueprint,
     application: "Brando",

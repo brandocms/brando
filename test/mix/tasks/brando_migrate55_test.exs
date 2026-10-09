@@ -450,6 +450,36 @@ defmodule Mix.Tasks.Brando.Migrate55Test do
         String.contains?(warning, @notify_path) and String.contains?(warning, "BrandoAdmin.LobbyChannel")
       end)
     end
+
+    test "the Identity's schemas move under Brando.Sites, and Brando.Meta.HTML stays" do
+      identity = """
+      defmodule LegacyApp.Identity do
+        alias Brando.Meta
+        alias Brando.{Link, Utils}
+
+        def links, do: [%Link{name: "Instagram", url: "https://instagram.com"}, %Brando.Config{}]
+        def meta, do: %Meta{key: "a", value: Utils.slugify("b")}
+        def tags(conn), do: {Brando.Meta.HTML.render_meta(conn), Meta.HTML.render_meta(conn)}
+        def plug, do: Plug.Upload
+      end
+      """
+
+      path = "lib/legacy_app/identity.ex"
+      igniter = migrate(@blueprint_054, %{path => identity})
+      assert igniter.issues == []
+
+      assert source(igniter, path) == """
+             defmodule LegacyApp.Identity do
+               alias Brando.Sites.Meta
+               alias Brando.{Sites.Link, Utils}
+
+               def links, do: [%Link{name: "Instagram", url: "https://instagram.com"}, %Brando.Sites.Config{}]
+               def meta, do: %Meta{key: "a", value: Utils.slugify("b")}
+               def tags(conn), do: {Brando.Meta.HTML.render_meta(conn), Brando.Meta.HTML.render_meta(conn)}
+               def plug, do: Plug.Upload
+             end
+             """
+    end
   end
 
   describe "image text reads" do

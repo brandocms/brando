@@ -233,14 +233,14 @@ defmodule Brando.Blueprint.RuntimeRegressionTest do
     meta_id = Ecto.UUID.generate()
 
     unsaved_changeset =
-      Brando.Meta.changeset(
-        %Brando.Meta{},
+      Brando.Sites.Meta.changeset(
+        %Brando.Sites.Meta{},
         %{key: "", value: "", marked_as_deleted: true}
       )
 
     persisted_changeset =
-      Brando.Meta.changeset(
-        %Brando.Meta{id: meta_id},
+      Brando.Sites.Meta.changeset(
+        %Brando.Sites.Meta{id: meta_id},
         %{key: "", value: "", marked_as_deleted: true}
       )
 
@@ -255,7 +255,7 @@ defmodule Brando.Blueprint.RuntimeRegressionTest do
         language: "en",
         name: "Test",
         type: :organization,
-        metas: [%Brando.Meta{id: meta_id, key: "old", value: "old"}]
+        metas: [%Brando.Sites.Meta{id: meta_id, key: "old", value: "old"}]
       }
       |> Ecto.put_meta(state: :loaded)
 

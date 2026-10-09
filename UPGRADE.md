@@ -42,6 +42,9 @@ as deprecated shims in 0.55 and 0.56 and are removed in 0.57.
 | `Brando.LobbyChannel` | `BrandoAdmin.LobbyChannel` |
 | `Brando.LivePreviewChannel` | `BrandoAdmin.LivePreviewChannel` |
 | `Brando.ErrorHTML` | `BrandoAdmin.ErrorHTML` |
+| `Brando.Config` | `Brando.Sites.Config` |
+| `Brando.Link` | `Brando.Sites.Link` |
+| `Brando.Meta` | `Brando.Sites.Meta` |
 
 1. Run `mix brando.migrate55`. It rewrites the old names in `config/`,
    `lib/` and `test/`: routes such as
@@ -54,7 +57,13 @@ as deprecated shims in 0.55 and 0.56 and are removed in 0.57.
 3. Until then the old names work. One that a router, socket or endpoint
    config names (looked up at runtime) logs a warning the first time it is
    used; a call such as `Brando.UserChannel.alert/2` warns when it compiles.
+   The exception is a struct, which cannot answer to two names:
+   `%Brando.Link{}`, as a literal or a pattern, and a relation's
+   `module: Brando.Link` need the new name (`Brando.Sites.Link`) to compile.
 
+`Brando.Meta.HTML`, which renders a page's `<meta>` tags, keeps its name.
+
+## 0.52.0
 
 * Pull in new `mix.exs` and rename to your application's names
   https://github.com/brandocms/brando/blob/master/priv/templates/brando.install/mix.exs
