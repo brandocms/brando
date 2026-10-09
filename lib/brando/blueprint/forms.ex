@@ -279,76 +279,27 @@ defmodule Brando.Blueprint.Forms do
   For tuple rules, atom/string values are treated as equivalent (`:full_case` matches `"full_case"`).
   The rule is evaluated whenever the form re-renders.
 
-  ### `ai`: Generate text with ReqLLM
+  ### `ai_actions`: AI suggestions for a field
 
-  Add an AI action button to `:text`, `:textarea`, and `:rich_text` inputs. Clicking the button
-  sends a server-side request and replaces the field value with generated text.
+  Named AI actions on `:text`, `:textarea` and `:rich_text` inputs. Each
+  builds a prompt from the fields it reads and shows the reply under the
+  field as a suggestion the editor can change, accept or discard; nothing is
+  written until it is accepted.
 
-  #### Field options
-
-      input :meta_description, :textarea,
-        ai: [
-          prompt: "Write a succinct meta description based on title and intro",
-          context: [:title, :intro]
+      input :summary, :textarea,
+        ai_actions: [
+          summarize: [label: t("Summarize"), prompt: "Summarize the article.", from: [:title, :blocks], max: 160]
         ]
 
-  For `:rich_text` fields, prompt the model to return HTML (not Markdown),
-  since the editor stores HTML.
+  See `Brando.Blueprint.Forms.AIAction` and "AI actions on a field" in
+  `guides/blueprint_forms.md`, which also covers the Meta drawer's fields,
+  Write with AI in rich text (`write_with_ai: false` turns it off on an
+  input) and the site prompts (`trait :meta, ai:` and
+  `config :brando, Brando.AI, fields:`).
 
-  #### AI options
-
-      - `prompt` (required): Instruction sent to the model
-      - `context` (optional): List of fields to append as context.
-        Supports regular fields and `:blocks` (rendered block content)
-      - `model` (optional): Model in `"provider:model"` format.
-        If omitted, `Brando.AI` uses its configured `:default_model`
-      - `api_key` (optional): Per-field/provider key override
-      - `temperature`, `max_tokens`, `top_p`, `presence_penalty`, `frequency_penalty`,
-        `tool_choice`, `tools`, `system_prompt`, `provider_options`,
-        `receive_timeout`, `thinking_timeout` (optional): forwarded to ReqLLM
-
-  #### Configuration
-
-  Configure AI defaults in your app config:
-
-      config :brando, Brando.AI,
-        enabled: true,
-        default_model: "openai:gpt-4o-mini",
-        providers: [
-          openai: [api_key: System.get_env("OPENAI_API_KEY")]
-        ],
-        default_opts: [temperature: 0.4]
-
-  Optional per-field defaults:
-
-      config :brando, Brando.AI,
-        fields: [
-          summary: [prompt: "Summarize title and intro", context: [:title, :intro]],
-          teaser: [prompt: "Write a short teaser from title and intro", context: [:title, :intro]]
-        ]
-
-  Trait-provided defaults:
-    Traits may provide field defaults before generic `fields` fallback.
-    For `Brando.Trait.Meta`, configure `meta_title`/`meta_description` defaults
-    on the blueprint:
-
-      trait :meta,
-        ai: [
-          meta_title: [prompt: "Write SEO title from title", context: [:title]],
-          meta_description: [prompt: "Write SEO description from title and blocks", context: [:title, :blocks]]
-        ]
-
-  The AI action only appears when:
-    - the input has `ai: [...]`
-    - or a matching trait / `Brando.AI` fallback exists
-    - Brando AI is enabled/configured for that provider/model
-
-  #### Meta trait fields
-
-  `meta_title` and `meta_description` are rendered in the Meta drawer.
-  You can configure AI for these fields either by:
-    - declaring form inputs with `ai: [...]`
-    - setting `trait :meta, ai: [...]`
+  `ai: [prompt: ..., context: ...]` on an input is deprecated: it runs as an
+  action named `:generate`, and the Blueprint warns when it compiles with
+  the `ai_actions:` to write instead.
 
   ### `blocks`: Block editor
 

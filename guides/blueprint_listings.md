@@ -727,7 +727,7 @@ each shown only when its condition holds:
   may duplicate the entry and create entries.
 * **Duplicate to [language]**: for translatable schemas in independent mode
   with more than one language, one item per language. **Translate to
-  [language]** is added when [AI](blueprint_forms.md#ai-generated-values) is
+  [language]** is added when [AI](blueprint_forms.md#site-prompts) is
   configured.
 * **Create translation [language]**: for synchronized translatable schemas.
 * **Re-render**: for `trait :blocks`, shown to superusers who may publish.

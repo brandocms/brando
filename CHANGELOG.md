@@ -60,6 +60,53 @@ production dump.
 
 #### Breaking
 
+- **`ai:` on a form input is deprecated, and AI no longer writes into a
+  field** (#3094). `ai_actions:` (#3083) is the one per-field AI API. Every
+  AI result for an entry's text, textarea or rich text field, block text
+  included, is now a suggestion the editor can change, accept or discard.
+
+  - `input …, ai: [prompt: …, context: …]` still works in 0.55, as one action
+    named **Generate** beside the field's label, in place of the button
+    inside the field that wrote its reply straight in. The Blueprint warns
+    when it compiles, at the input, with the `ai_actions:` to write. `ai:`
+    is removed in a later release. Projects that compile with
+    `--warnings-as-errors` must change their inputs first.
+  - The Meta drawer's **Generate** on `meta_title` and `meta_description` is
+    the same kind of action, from the site prompt (`trait :meta, ai:` or
+    `config :brando, Brando.AI, fields:`); a hidden input for a meta field
+    can add its own `ai_actions:`.
+  - **Write with AI** in the rich-text toolbar is on in every top-level rich
+    text input of an entry form and in block text whenever `Brando.AI` is
+    configured, no longer only with `ai:` or a `block_text` prompt. Each
+    request is a paid call, as before.
+    `write_with_ai: false` on an input turns it off there, and
+    `fields: [block_text: [write_with_ai: false]]` in block text. Its
+    suggestion can now be edited before Accept.
+  - Site prompts are unchanged and keep their names: `trait :meta, ai:` and
+    `config :brando, Brando.AI, fields:` still drive the Meta drawer's
+    Generate, the Content SEO batch, the SEO review's model, image alt text
+    and Write with AI in block text. They are documented under "Site
+    prompts" in the forms guide.
+
+  To upgrade, replace each input's `ai:` with the `ai_actions:` the warning
+  prints:
+
+  ```elixir
+  # Before
+  input :summary, :textarea, ai: [prompt: "Summarize.", context: [:title, :blocks]]
+
+  # After
+  input :summary, :textarea,
+    ai_actions: [generate: [label: t("Generate"), prompt: "Summarize.", from: [:title, :blocks]]]
+  ```
+
+  `context:` becomes `from:`, which is required; name the fields the prompt
+  reads where `ai:` had none. `model:` carries over. Move `api_key:` to
+  `providers:` and request options such as `temperature:` to
+  `default_opts:` in `config :brando, Brando.AI`. Add
+  `write_with_ai: false` to rich text inputs that should not offer Write
+  with AI.
+
 - **SEO settings, pages and `trait :meta` have new columns.** `brando_210`
   adds `crawler_policy` to `sites_seos` and `meta_nosnippet` and
   `meta_max_snippet` to `pages`, in every environment. Every application
