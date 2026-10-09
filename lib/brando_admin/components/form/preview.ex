@@ -50,6 +50,15 @@ defmodule BrandoAdmin.Components.Form.Preview do
     assign(socket, :preview_update, nil)
   end
 
+  # A heavy entry's blocks are still loading (a preview recovered after a
+  # reconnect, Refresh): the request waits for them, see `resume/1`.
+  def flush(
+        %{assigns: %{blocks_ready?: false, preview_update: %{token: token, parts: nil} = pending}} = socket,
+        token,
+        _
+      ),
+      do: assign(socket, :preview_update, %{pending | timer: nil})
+
   def flush(
         %{assigns: %{live_preview_active?: true, preview_update: %{token: token, parts: nil} = pending}} = socket,
         token,
@@ -70,6 +79,14 @@ defmodule BrandoAdmin.Components.Form.Preview do
   end
 
   def flush(socket, _token, _render), do: socket
+
+  @doc "Sends a request that waited for the blocks (`flush/3`), now they are there."
+  def resume(%{assigns: %{preview_update: %{token: token, timer: nil, parts: nil}}} = socket) do
+    send_update(Form, id: socket.assigns.id, event: "flush_live_preview", token: token)
+    socket
+  end
+
+  def resume(socket), do: socket
 
   def receive_blocks(
         %{assigns: %{live_preview_active?: true, preview_update: %{token: token, parts: parts} = pending}} = socket,

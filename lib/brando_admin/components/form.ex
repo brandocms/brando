@@ -1293,7 +1293,7 @@ defmodule BrandoAdmin.Components.Form do
   # A heavy entry loaded with a custom query: its fields went out with the
   # previous render, so they are on screen while the block tree renders.
   def update(%{action: :render_blocks}, socket) do
-    {:ok, assign(socket, :blocks_ready?, true)}
+    {:ok, socket |> assign(:blocks_ready?, true) |> Preview.resume()}
   end
 
   # `run_load/3` on a sandboxed E2E server: the load runs here, in the
@@ -1394,6 +1394,9 @@ defmodule BrandoAdmin.Components.Form do
 
   defp finish_form_fields(socket) do
     socket
+    # The entry as it was read, before recovery or deliveries change it: the
+    # recovery baseline (`Drafts.init/1`)
+    |> assign_new(:opened_entry, fn -> socket.assigns.entry end)
     |> assign_addon_statuses()
     |> assign_default_params()
     |> extract_tab_names()
@@ -1588,19 +1591,24 @@ defmodule BrandoAdmin.Components.Form do
     end
   end
 
-  # A test can hold a load back (`config :brando, :form_load_gate, fun`) to
-  # act on the form while it waits, which a real load is too quick for.
-  defp gated(key, load) do
-    case Application.get_env(:brando, :form_load_gate) do
-      nil ->
-        load
+  # Brando's own tests hold a load back (`:form_load_gate`) to act on the
+  # form while it waits, which a real load is too quick for. Compiled in only
+  # where `config :brando, :form_load_gate?, true` (config/test.exs).
+  if Application.compile_env(:brando, :form_load_gate?, false) do
+    defp gated(key, load) do
+      case Application.get_env(:brando, :form_load_gate) do
+        nil ->
+          load
 
-      gate ->
-        fn ->
-          gate.(key)
-          load.()
-        end
+        gate ->
+          fn ->
+            gate.(key)
+            load.()
+          end
+      end
     end
+  else
+    defp gated(_key, load), do: load
   end
 
   def handle_async(:entry_load, {:ok, :not_found}, socket) do
@@ -1626,6 +1634,7 @@ defmodule BrandoAdmin.Components.Form do
      |> put_loaded_blocks(loaded)
      |> finish_form_blocks()
      |> assign(:blocks_ready?, true)
+     |> Preview.resume()
      |> announce_join()}
   end
 
@@ -2060,6 +2069,7 @@ defmodule BrandoAdmin.Components.Form do
 
     socket
     |> assign(:entry, take_blocks.(entry))
+    |> assign(:opened_entry, take_blocks.(socket.assigns.opened_entry))
     |> put_form(%{form | source: %{changeset | data: data}, data: data})
   end
 
@@ -3632,7 +3642,7 @@ defmodule BrandoAdmin.Components.Form do
                 data-toggle-preview={JS.push("open_live_preview", target: @myself)}
                 class={["live-preview-toggle form-tool-preview", @live_preview_active? && "active"]}
                 type="button"
-                disabled={!@blocks_ready?}
+                disabled={!@blocks_ready? && !@live_preview_active?}
                 aria-label={gettext("Live preview")}
                 aria-pressed={to_string(@live_preview_active?)}
               >
@@ -3649,7 +3659,7 @@ defmodule BrandoAdmin.Components.Form do
                   id={"#{@id}-preview-trigger"}
                   type="button"
                   class={["live-preview-toggle preview-chooser-trigger", @live_preview_active? && "active"]}
-                  disabled={!@blocks_ready?}
+                  disabled={!@blocks_ready? && !@live_preview_active?}
                   data-toggle-preview={JS.push("open_live_preview", target: @myself)}
                   phx-click="toggle_preview_targets"
                   phx-target={@myself}
@@ -4325,8 +4335,10 @@ defmodule BrandoAdmin.Components.Form do
   # A heavy entry's blocks are still loading: its tools are disabled, and a
   # shortcut or a click that gets through anyway does nothing. A save would
   # write without the blocks; the rest read the block fields.
+  # Closing a preview (recovered after a reconnect) needs no blocks.
   def handle_event(event, _params, %{assigns: %{blocks_ready?: false}} = socket)
-      when event in @wait_for_blocks,
+      when event in @wait_for_blocks and
+             not (event in ~w(open_live_preview toggle_preview_targets) and socket.assigns.live_preview_active?),
       do: {:noreply, socket}
 
   def handle_event("save_form", %{"stay" => true} = params, socket),

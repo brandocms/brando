@@ -194,6 +194,93 @@ defmodule BrandoAdmin.FormEntryOpenTest do
       assert_push_event(view, "b:draft-dirty", %{id: "page_form"})
     end
 
+    defp open_preview(view) do
+      view |> element("button[phx-click=toggle_preview_targets]") |> render_click()
+      view |> element("button.preview-choice", "Blocks") |> render_click()
+      html = await_selector(view, "iframe[src*='__livepreview']")
+      [key] = Regex.run(~r/__livepreview\?key=([A-Za-z0-9_-]+)/, html, capture: :all_but_first)
+      Brando.endpoint().subscribe("live_preview:#{key}")
+      on_exit(fn -> Brando.LivePreview.cleanup_cache(key) end)
+      key
+    end
+
+    # A reconnect to the entry with its preview open: both recovery forms
+    # arrive while the blocks still load.
+    defp reconnect_with_preview(c) do
+      {view, _html, task} = open_held(c)
+      html = release(view, task)
+      key = open_preview(view)
+      captured = html |> recovery_params("#page_form_form") |> put_in(["page", "title"], "Recovered title")
+      kill_live(view)
+
+      {view, _html, task} = open_held(c)
+      [target] = view |> render() |> Floki.parse_document!() |> Floki.attribute("#live-preview-recovery", "phx-target")
+
+      view
+      |> with_target(String.to_integer(target))
+      |> render_hook("recover_live_preview_state", %{"live_preview" => %{"cache_key" => key}})
+
+      view |> with_target(cid_of(view, "#page_form_form")) |> render_hook("recover_form", captured)
+      {view, task}
+    end
+
+    test "a preview recovered while the blocks load renders once they have", c do
+      {view, task} = reconnect_with_preview(c)
+
+      # Past the preview's own render delay, with the blocks still loading
+      Process.sleep(1_300)
+      view |> with_target(cid_of(view, "#page_form_form")) |> render_hook("refresh_live_preview", %{})
+      assert render(view) =~ "form-load-state"
+      refute_receive %Phoenix.Socket.Broadcast{event: "rerender"}, 50
+
+      release(view, task)
+      assert_receive %Phoenix.Socket.Broadcast{event: "rerender", payload: %{html: html}}, 3_000
+      assert html =~ "Recovered title"
+    end
+
+    test "the preview can be closed while the blocks load", c do
+      {view, task} = reconnect_with_preview(c)
+      assert render(view) =~ "__livepreview"
+
+      view |> with_target(cid_of(view, "#page_form_form")) |> render_hook("open_live_preview", %{})
+      refute render(view) =~ "__livepreview"
+
+      html = release(view, task)
+      refute html =~ "__livepreview"
+      refute_receive %Phoenix.Socket.Broadcast{event: "rerender"}, 1_500
+    end
+
+    test "an asset delivered while the blocks load does not make a recovered edit look saved", c do
+      image =
+        Factory.insert(:image, creator: c.current_user, focal: %Brando.Images.Focal{x: 50, y: 50}, status: :processed)
+
+      {view, html, task} = open_held(c)
+      form = view |> with_target(cid_of(view, "#page_form_form"))
+
+      params = html |> form_params("#page_form_form") |> put_in(["page", "title"], "Unsaved title")
+      render_hook(form, "recover_form", params)
+      send(view.pid, {:asset_ready, %{"kind" => "entry_field", "field" => "meta_image"}, image})
+      render(view)
+
+      release(view, task)
+
+      # The asset goes again; the unsaved title stays, and is what a copy keeps
+      Phoenix.LiveView.send_update(view.pid, Form,
+        id: "page_form",
+        event: "clear_entry_field_asset",
+        field: :meta_image,
+        path: []
+      )
+
+      main = view |> render() |> form_params("#page_form_form") |> Plug.Conn.Query.encode()
+      render_hook(form, "draft_capture", %{"main" => main, "blocks" => %{}, "generation" => 5, "request_id" => 1})
+      await_selector(view, "[data-testid=draft-status]")
+      settle(view)
+
+      assert [copy] = Brando.Drafts.list(Brando.Drafts.identity(Page, c.page.id, c.current_user.id))
+      assert copy.payload["main"]["title"] == "Unsaved title"
+    end
+
     test "keeps what was delivered to the entry while its blocks loaded", c do
       {view, _html, task} = open_held(c)
 

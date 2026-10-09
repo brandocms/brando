@@ -79,12 +79,13 @@ defmodule BrandoAdmin.Components.Form.Drafts do
   end
 
   # The form an untouched entry opens with (`Form.assign_form/1`), from the
-  # entry the form was built from. A new entry has no saved state: its
-  # baseline is the form with its default values.
+  # entry as it was read (`:opened_entry`): the form's data can have taken in
+  # edits by then (an asset delivery bakes the changes). A new entry has no
+  # saved state: its baseline is the form with its default values.
   defp saved_changeset(%{assigns: %{entry: %{id: nil}, form: form}}), do: form.source
 
-  defp saved_changeset(%{assigns: %{schema: schema, current_user: user, form: %{source: changeset}}}),
-    do: schema.changeset(changeset.data, %{}, user)
+  defp saved_changeset(%{assigns: %{schema: schema, current_user: user} = assigns}),
+    do: schema.changeset(assigns[:opened_entry] || assigns.form.source.data, %{}, user)
 
   @doc """
   Sets the form's recovery state, and hands it to the status component.
