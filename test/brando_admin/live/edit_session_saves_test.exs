@@ -124,9 +124,14 @@ defmodule BrandoAdmin.EditSessionSavesTest do
     # takes the rebase only once B's write is done.
     session = session_pid(c.identity)
     :sys.suspend(session)
-    save_write(a)
-    save_write(b)
-    :sys.resume(session)
+
+    try do
+      save_write(a)
+      save_write(b)
+    after
+      :sys.resume(session)
+    end
+
     assert block_count(new) == 1
 
     await(fn -> shows_saved?(b, new) end)
