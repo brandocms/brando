@@ -1126,6 +1126,205 @@ defmodule Mix.Tasks.Brando.Migrate55Test do
       assert_has_warning(igniter, &String.contains?(&1, "#{path}:8 names modules renamed in 0.55"))
       assert [{8, "Brando.Upload"}] = doctor_findings(code)
     end
+
+    test "each block of if, try, def and with keeps its own aliases" do
+      code = """
+      defmodule LegacyApp.Branches do
+        alias Brando.Upload
+
+        def f(x) do
+          if x do
+            alias Plug.Upload
+            Upload.foo()
+          else
+            %Upload{}
+          end
+        end
+
+        def g do
+          alias Plug.Upload
+          %Upload{}
+        rescue
+          _ -> Upload.x()
+        end
+
+        def h(x) do
+          try do
+            alias Plug.Upload
+            %Upload{}
+          rescue
+            _ -> Upload.x()
+          after
+            Upload.y()
+          end
+        end
+
+        def i(x) do
+          with {:ok, y} <- x do
+            alias Plug.Upload
+            %Upload{path: y}
+          else
+            _ -> Upload.x()
+          end
+        end
+      end
+      """
+
+      path = "lib/legacy_app/branches.ex"
+      igniter = migrate(@blueprint_054, %{path => code})
+      assert igniter.issues == []
+
+      expected = """
+      defmodule LegacyApp.Branches do
+        alias Brando.Uploads.Store
+
+        def f(x) do
+          if x do
+            alias Plug.Upload
+            Upload.foo()
+          else
+            %Store{}
+          end
+        end
+
+        def g do
+          alias Plug.Upload
+          %Upload{}
+        rescue
+          _ -> Store.x()
+        end
+
+        def h(x) do
+          try do
+            alias Plug.Upload
+            %Upload{}
+          rescue
+            _ -> Store.x()
+          after
+            Store.y()
+          end
+        end
+
+        def i(x) do
+          with {:ok, y} <- x do
+            alias Plug.Upload
+            %Upload{path: y}
+          else
+            _ -> Store.x()
+          end
+        end
+      end
+      """
+
+      assert source(igniter, path) == expected
+      assert {:ok, _} = Code.string_to_quoted(expected)
+      assert_idempotent(igniter, path)
+      assert [{9, _}, {17, _}, {25, _}, {27, _}, {36, _}] = doctor_findings(code)
+    end
+
+    test "an alias in a remote macro's do block may reach past it, so the file is left and reported" do
+      code = """
+      defmodule LegacyApp.RemoteDsl do
+        alias Brando.Upload
+
+        Some.Dsl.settings do
+          alias Plug.Upload
+        end
+
+        Kernel.if true do
+          alias Plug.Upload
+        end
+
+        def f, do: %Upload{}
+      end
+      """
+
+      path = "lib/legacy_app/remote_dsl.ex"
+      igniter = migrate(@blueprint_054, %{path => code})
+      assert igniter.issues == []
+      assert source(igniter, path) == code
+      assert_has_warning(igniter, &String.contains?(&1, "#{path}:12 names modules renamed in 0.55"))
+      assert [{12, "Brando.Upload"}] = doctor_findings(code)
+    end
+
+    test "a template that names a renamed alias leaves the file, and is reported" do
+      code = ~S'''
+      defmodule LegacyAppWeb.Head do
+        use Phoenix.Component
+        alias Brando.Meta
+
+        def meta, do: %Meta{}
+
+        def head(assigns) do
+          ~H"""
+          <title>{@title}</title>
+          <Meta.HTML.render_meta conn={@conn} />
+          """
+        end
+      end
+      '''
+
+      embedded = """
+      defmodule LegacyAppWeb.Layouts do
+        use Phoenix.Component
+        alias Brando.Upload
+
+        def store(m, e, c, u), do: Upload.handle_upload(m, e, c, u)
+
+        embed_templates "layouts/*"
+      end
+      """
+
+      template = """
+      <main>
+        {Upload.url(@upload)}
+      </main>
+      """
+
+      head_path = "lib/legacy_app_web/head.ex"
+      layouts_path = "lib/legacy_app_web/layouts.ex"
+
+      files = %{
+        head_path => code,
+        layouts_path => embedded,
+        "lib/legacy_app_web/layouts/app.html.heex" => template
+      }
+
+      igniter = migrate(@blueprint_054, files)
+      assert igniter.issues == []
+      assert source(igniter, head_path) == code
+      assert source(igniter, layouts_path) == embedded
+      assert_has_warning(igniter, &String.contains?(&1, "#{head_path}:10 names modules renamed in 0.55"))
+      assert_has_warning(igniter, &String.contains?(&1, "#{layouts_path}:7 names modules renamed in 0.55"))
+      assert [{5, "Brando.Meta"}] = doctor_findings(code)
+    end
+
+    test "a name spelled from Elixir. keeps the prefix" do
+      code = """
+      defmodule LegacyApp.Prefixed do
+        alias LegacyApp.Brando
+
+        def store(m, e, c, u), do: Elixir.Brando.Upload.handle_upload(m, e, c, u)
+        def own, do: Brando.thing()
+      end
+      """
+
+      path = "lib/legacy_app/prefixed.ex"
+      igniter = migrate(@blueprint_054, %{path => code})
+      assert igniter.issues == []
+
+      expected = """
+      defmodule LegacyApp.Prefixed do
+        alias LegacyApp.Brando
+
+        def store(m, e, c, u), do: Elixir.Brando.Uploads.Store.handle_upload(m, e, c, u)
+        def own, do: Brando.thing()
+      end
+      """
+
+      assert source(igniter, path) == expected
+      assert_idempotent(igniter, path)
+    end
   end
 
   describe "image text reads" do

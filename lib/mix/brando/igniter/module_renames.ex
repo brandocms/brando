@@ -7,6 +7,7 @@ if Code.ensure_loaded?(Igniter) do
     # Rewrites references to the public modules renamed in 0.55
     # (`Brando.Deprecated.RenamedModules`) for `mix brando.migrate55`.
 
+    alias Brando.Deprecated.LexicalAliases
     alias Brando.Deprecated.RenamedModules
     alias Rewrite.Source
 
@@ -39,9 +40,13 @@ if Code.ensure_loaded?(Igniter) do
     module afterwards, the renamed ones aside; otherwise it is left as it is
     and reported.
     """
+    @template_extensions ["heex", "eex", "leex"]
+
     def rewrite(igniter) do
       renamed = RenamedModules.all()
       igniter = Igniter.include_glob(igniter, "{config,lib,test}/**/*.{ex,exs}")
+      # Read for the safety net: `embed_templates` compiles them into a module
+      igniter = Igniter.include_glob(igniter, "{lib,test}/**/*.{#{Enum.join(@template_extensions, ",")}}")
 
       igniter.rewrite
       |> Rewrite.sources()
@@ -66,7 +71,7 @@ if Code.ensure_loaded?(Igniter) do
         match?({:error, _}, Code.string_to_quoted(updated)) ->
           warn_left(igniter, path, [{:unparsable, nil, nil}])
 
-        line = changed_reference(content, updated, renamed) ->
+        line = changed_reference({content, updated}, renamed, templates(igniter, path)) ->
           warn_left(igniter, path, [{:changed_meaning, line} | left])
 
         true ->
@@ -92,9 +97,9 @@ if Code.ensure_loaded?(Igniter) do
 
     # The line of the first module name that `updated` resolves differently
     # from `content`, the renames aside, or nil when they all agree
-    defp changed_reference(content, updated, renamed) do
-      before = references(content, renamed)
-      after_ = references(updated, renamed)
+    defp changed_reference({content, updated}, renamed, templates) do
+      before = references(content, renamed, templates)
+      after_ = references(updated, renamed, templates)
 
       cond do
         before == :error or after_ == :error -> 1
@@ -114,11 +119,16 @@ if Code.ensure_loaded?(Igniter) do
     # `[{module, line}]` for every module name in `content`, in order, with
     # the renamed modules under their new names. An alias's `as:` is a new
     # name, not a reference; a route in an aliased scope is the module
-    # Phoenix joins.
-    defp references(content, renamed) do
+    # Phoenix joins. Names in a template, a `~H` sigil or a file that
+    # `embed_templates` compiles in, resolve through the aliases where it
+    # is written; a template file's are counted on its `embed_templates`
+    # line.
+    defp references(content, renamed, templates) do
       case Sourceror.parse_string(content) do
         {:ok, ast} ->
-          {_ast, refs} = ast |> RenamedModules.mark_scoped_routes() |> Macro.prewalk([], &reference(&1, &2, renamed))
+          {_ast, refs} =
+            ast |> RenamedModules.mark_scoped_routes() |> Macro.prewalk([], &reference(&1, &2, {renamed, templates}))
+
           Enum.reverse(refs)
 
         {:error, _} ->
@@ -126,8 +136,31 @@ if Code.ensure_loaded?(Igniter) do
       end
     end
 
-    defp reference({form, meta, [target, _options]}, refs, renamed) when form in [:alias, :require],
-      do: reference({form, meta, [target]}, refs, renamed)
+    defp reference({form, meta, [target, _options]}, refs, ctx) when form in [:alias, :require],
+      do: reference({form, meta, [target]}, refs, ctx)
+
+    defp reference(
+           {:embed_templates, [{:lexical_env, env} | _] = meta, [pattern | options]} = node,
+           refs,
+           {renamed, templates}
+         ) do
+      names =
+        for {_path, text} <- templates.(literal(pattern), options),
+            %{resolved: resolved} <- LexicalAliases.names_in_text(text, env, 1),
+            do: {template_reference(resolved, renamed), meta[:line]}
+
+      {node, Enum.reverse(names, refs)}
+    end
+
+    defp reference({_sigil, [{:lexical_env, _} | _], [{:<<>>, _, _} | _]} = node, refs, {renamed, _templates}) do
+      names =
+        for %{resolved: resolved, line: line} <- LexicalAliases.template_names(node),
+            do: {template_reference(resolved, renamed), line}
+
+      {node, Enum.reverse(names, refs)}
+    end
+
+    defp reference(node, refs, {renamed, _templates}), do: reference(node, refs, renamed)
 
     defp reference({:match, [{:scope_alias, scope} | _] = meta, [verb, path, plug | rest]}, refs, renamed),
       do: {{:match, meta, [verb, path | rest]}, [scoped_reference(scope, plug, renamed) | refs]}
@@ -138,7 +171,7 @@ if Code.ensure_loaded?(Igniter) do
     defp reference({:__aliases__, meta, parts} = node, refs, renamed) do
       module =
         case meta[:resolved_alias] do
-          {:either, a, b} -> {:either, new_name(a, renamed), new_name(b, renamed)}
+          {:either, candidates} -> {:either, Enum.map(candidates, &new_name(&1, renamed))}
           [_ | _] = resolved -> new_name(resolved, renamed)
           _ -> {:unresolved, Enum.map(parts, &segment_name/1)}
         end
@@ -154,6 +187,39 @@ if Code.ensure_loaded?(Igniter) do
         module -> {Map.get(renamed, module, module), meta[:line]}
       end
     end
+
+    defp template_reference({:either, candidates}, renamed), do: {:either, Enum.map(candidates, &new_name(&1, renamed))}
+    defp template_reference(resolved, renamed), do: new_name(resolved, renamed)
+
+    # `[{path, text}]` for the templates `embed_templates pattern, root: …`
+    # compiles into the module at `path`, when they can be read
+    defp templates(igniter, path), do: &read_templates(igniter, path, &1, &2)
+
+    defp read_templates(igniter, path, pattern, options) when is_binary(pattern) do
+      root = options |> List.first() |> literal() |> keyword_root()
+      dir = path |> Path.dirname() |> Path.join(root) |> Path.expand("/") |> Path.relative_to("/")
+      glob = GlobEx.compile!(Path.join(dir, pattern <> ".{#{Enum.join(@template_extensions, ",")}}"))
+
+      igniter.rewrite
+      |> Rewrite.sources()
+      |> Enum.filter(&GlobEx.match?(glob, Source.get(&1, :path)))
+      |> Enum.map(&{Source.get(&1, :path), Source.get(&1, :content)})
+      |> Enum.sort()
+    end
+
+    defp read_templates(_igniter, _path, _pattern, _options), do: []
+
+    defp keyword_root(options) when is_list(options) do
+      Enum.find_value(options, ".", fn
+        {key, value} -> if literal(key) == :root and is_binary(literal(value)), do: literal(value)
+        _ -> nil
+      end)
+    end
+
+    defp keyword_root(_options), do: "."
+
+    defp literal({:__block__, _, [value]}), do: value
+    defp literal(value), do: value
 
     defp new_name([_ | _] = parts, renamed) do
       module = Module.concat(parts)
@@ -375,7 +441,7 @@ if Code.ensure_loaded?(Igniter) do
     defp patch({:__aliases__, meta, [_ | rest] = parts} = node, ctx, {patches, left} = acc) do
       change =
         if is_nil(meta[:alias_binding]),
-          do: (new = ctx.renamed[alias_module(parts)]) && inspect(new),
+          do: (new = ctx.renamed[alias_module(parts)]) && full_name(parts, new),
           else: Enum.all?(rest, &is_atom/1) && alias_use_change(binding_entry(node, ctx), rest)
 
       if is_binary(change),
@@ -432,10 +498,10 @@ if Code.ensure_loaded?(Igniter) do
     defp patch_plain_alias({:alias, _, [{:__aliases__, _, parts} = target | options]} = node, ctx, {patches, left} = acc) do
       case alias_module(parts) && ctx.entries[{node_position(node), alias_as(options) || short_name(alias_module(parts))}] do
         %{new: new, mode: mode} when mode in [:follow, :rename] ->
-          {[module_patch(target, inspect(new)) | patches], left}
+          {[module_patch(target, full_name(parts, new)) | patches], left}
 
         %{new: new, mode: :rename_as, short: short} ->
-          {[module_patch(target, "#{inspect(new)}, as: #{short}") | patches], left}
+          {[module_patch(target, "#{full_name(parts, new)}, as: #{short}") | patches], left}
 
         _ ->
           acc
@@ -553,6 +619,10 @@ if Code.ensure_loaded?(Igniter) do
 
     defp module_patch(node, change), do: Sourceror.Patch.new(Sourceror.get_range(node), change, false)
 
+    # The new name, with the old one's `Elixir.` prefix if it had one
+    defp full_name([:"Elixir" | _], new), do: "Elixir." <> inspect(new)
+    defp full_name(_parts, new), do: inspect(new)
+
     defp alias_module(parts) do
       if Enum.all?(parts, &is_atom/1), do: Module.concat(parts)
     end
@@ -585,7 +655,7 @@ if Code.ensure_loaded?(Igniter) do
         {:changed_meaning, line}, igniter ->
           Igniter.add_warning(igniter, """
           #{path}:#{line} names modules renamed in 0.55, but rewriting them would change which module \
-          a name there refers to, so the file is unchanged. `mix brando.doctor` lists the old names to \
+          a name there, or in a template it embeds, refers to, so the file is unchanged. `mix brando.doctor` lists the old names to \
           replace; the old names keep working, with a warning, until 0.57.
           """)
 
