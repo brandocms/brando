@@ -175,7 +175,8 @@ defmodule BrandoAdmin.Media.Sweep do
   folder. An asset that has left the folder since the plan is left alone.
 
   Returns what `undo/1` needs: `%{asset_type: type, moved: n, folders: n,
-  from: folder_id, ids: [id], created: [folder_id]}`.
+  from: folder_id, ids: [id], moves: [{folder_id, [id]}], created:
+  [folder_id]}`, where `moves` holds where each asset went.
   """
   @spec apply(plan(), keyword()) :: {:ok, map()}
   def apply(plan, opts \\ []) do
@@ -203,9 +204,9 @@ defmodule BrandoAdmin.Media.Sweep do
     before = folder_ids(candidates)
     now = NaiveDateTime.truncate(NaiveDateTime.utc_now(), :second)
 
-    {:ok, moved} =
+    {:ok, moves} =
       Repo.transaction(fn ->
-        Enum.flat_map(groups, fn group ->
+        Enum.map(groups, fn group ->
           target = FolderBrowser.folder_id_for(group.path)
 
           {_count, ids} =
@@ -214,9 +215,11 @@ defmodule BrandoAdmin.Media.Sweep do
               set: [folder_id: target, updated_at: now]
             )
 
-          ids
+          {target, ids}
         end)
       end)
+
+    moved = Enum.flat_map(moves, &elem(&1, 1))
 
     {:ok,
      %{
@@ -225,24 +228,33 @@ defmodule BrandoAdmin.Media.Sweep do
        folders: length(paths),
        from: plan.folder_id,
        ids: moved,
+       moves: moves,
        created: folder_ids(candidates) -- before
      }}
   end
 
   @doc """
-  Puts back what `apply/2` moved, and removes the folders it created that are
-  empty again. An asset an editor has moved on since stays where it was put.
+  Puts back what `apply/2` moved, from folders it created and folders that
+  were there already, and removes the folders it created that are empty
+  again. An asset an editor has moved on since stays where it was put.
   """
   @spec undo(map()) :: {:ok, non_neg_integer()}
-  def undo(%{asset_type: asset_type, from: from, ids: ids, created: created}) do
+  def undo(%{asset_type: asset_type, from: from, moves: moves, created: created}) do
     now = NaiveDateTime.truncate(NaiveDateTime.utc_now(), :second)
 
     Repo.transaction(fn ->
-      {count, _} =
-        Repo.update_all(
-          from(a in schema(asset_type), where: a.id in ^ids and a.folder_id in ^created),
-          set: [folder_id: from, updated_at: now]
-        )
+      count =
+        moves
+        |> Enum.map(fn {target, ids} ->
+          {count, _} =
+            Repo.update_all(
+              from(a in schema(asset_type), where: a.id in ^ids and a.folder_id == ^target),
+              set: [folder_id: from, updated_at: now]
+            )
+
+          count
+        end)
+        |> Enum.sum()
 
       remove_empty(created)
       count
