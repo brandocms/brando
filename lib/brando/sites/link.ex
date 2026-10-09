@@ -1,4 +1,4 @@
-defmodule Brando.Link do
+defmodule Brando.Sites.Link do
   @moduledoc false
   use Brando.Blueprint,
     application: "Brando",

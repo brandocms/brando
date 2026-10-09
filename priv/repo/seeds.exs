@@ -16,10 +16,10 @@ Brando.Repo.insert!(%Brando.Sites.Identity{
   title_postfix: "",
   logo: nil,
   links: [
-    %Brando.Link{name: "Instagram", url: "https://instagram.com/test"},
-    %Brando.Link{name: "Facebook", url: "https://facebook.com/test"}
+    %Brando.Sites.Link{name: "Instagram", url: "https://instagram.com/test"},
+    %Brando.Sites.Link{name: "Facebook", url: "https://facebook.com/test"}
   ],
-  metas: [%Brando.Meta{key: "key1", value: "value1"}, %Brando.Meta{key: "key2", value: "value2"}]
+  metas: [%Brando.Sites.Meta{key: "key1", value: "value1"}, %Brando.Sites.Meta{key: "key2", value: "value2"}]
 })
 
 Brando.Repo.insert!(%Brando.Sites.SEO{

@@ -145,10 +145,10 @@ coverage of that file.
 | [lib/brando_admin/controllers/admin_controller.ex](../../../lib/brando_admin/controllers/admin_controller.ex) | 0 | Supporting source / setup |
 | [lib/brando_admin/controllers/admin_html.ex](../../../lib/brando_admin/controllers/admin_html.ex) | 0 | Supporting source / setup |
 | [lib/brando_admin/controllers/environment_controller.ex](../../../lib/brando_admin/controllers/environment_controller.ex) | 0 | Supporting source / setup |
-| [lib/brando_admin/controllers/error_html.ex](../../../lib/brando_admin/controllers/error_html.ex) | 0 | Supporting source / setup |
-| [lib/brando_admin/controllers/preview_controller.ex](../../../lib/brando_admin/controllers/preview_controller.ex) | 0 | Supporting source / setup |
-| [lib/brando_admin/controllers/seo_controller.ex](../../../lib/brando_admin/controllers/seo_controller.ex) | 0 | Supporting source / setup |
-| [lib/brando_admin/controllers/sitemap_controller.ex](../../../lib/brando_admin/controllers/sitemap_controller.ex) | 0 | Supporting source / setup |
+| [lib/brando_web/controllers/error_html.ex](../../../lib/brando_web/controllers/error_html.ex) | 0 | Supporting source / setup |
+| [lib/brando_web/controllers/preview_controller.ex](../../../lib/brando_web/controllers/preview_controller.ex) | 0 | Supporting source / setup |
+| [lib/brando_web/controllers/seo_controller.ex](../../../lib/brando_web/controllers/seo_controller.ex) | 0 | Supporting source / setup |
+| [lib/brando_web/controllers/sitemap_controller.ex](../../../lib/brando_web/controllers/sitemap_controller.ex) | 0 | Supporting source / setup |
 | [lib/brando_admin/controllers/user_session_controller.ex](../../../lib/brando_admin/controllers/user_session_controller.ex) | 0 | Supporting source / setup |
 | [lib/brando_admin/live/chrome.ex](../../../lib/brando_admin/live/chrome.ex) | 3 | F3 |
 | [lib/brando_admin/live/config/asset_live.ex](../../../lib/brando_admin/live/config/asset_live.ex) | 2 | — |
@@ -209,10 +209,10 @@ coverage of that file.
 | [lib/brando_admin/components/layouts/live_child.html.heex](../../../lib/brando_admin/components/layouts/live_child.html.heex) | 1 | — |
 | [lib/brando_admin/components/layouts/root.html.heex](../../../lib/brando_admin/components/layouts/root.html.heex) | 1 | — |
 | [lib/brando_admin/controllers/admin_html/sidebar.html.heex](../../../lib/brando_admin/controllers/admin_html/sidebar.html.heex) | 1 | — |
-| [lib/brando_admin/controllers/error_html/400.html.heex](../../../lib/brando_admin/controllers/error_html/400.html.heex) | 1 | — |
-| [lib/brando_admin/controllers/error_html/404.html.heex](../../../lib/brando_admin/controllers/error_html/404.html.heex) | 1 | — |
-| [lib/brando_admin/controllers/error_html/406.html.heex](../../../lib/brando_admin/controllers/error_html/406.html.heex) | 1 | — |
-| [lib/brando_admin/controllers/error_html/500.html.heex](../../../lib/brando_admin/controllers/error_html/500.html.heex) | 1 | — |
+| [lib/brando_web/controllers/error_html/400.html.heex](../../../lib/brando_web/controllers/error_html/400.html.heex) | 1 | — |
+| [lib/brando_web/controllers/error_html/404.html.heex](../../../lib/brando_web/controllers/error_html/404.html.heex) | 1 | — |
+| [lib/brando_web/controllers/error_html/406.html.heex](../../../lib/brando_web/controllers/error_html/406.html.heex) | 1 | — |
+| [lib/brando_web/controllers/error_html/500.html.heex](../../../lib/brando_web/controllers/error_html/500.html.heex) | 1 | — |
 | [e2e/lib/e2e_project/presence.ex](../../../e2e/lib/e2e_project/presence.ex) | 0 | Supporting source / setup |
 | [e2e/lib/e2e_project/prices/price_category.ex](../../../e2e/lib/e2e_project/prices/price_category.ex) | 2 | — |
 | [e2e/lib/e2e_project/projects/category.ex](../../../e2e/lib/e2e_project/projects/category.ex) | 2 | — |

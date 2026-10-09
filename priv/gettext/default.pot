@@ -2547,12 +2547,12 @@ msgstr ""
 msgid "Backend access is not selected. Members need it from another group to use the admin."
 msgstr ""
 
-#: lib/brando_admin/controllers/error_html/400.html.heex
+#: lib/brando_web/controllers/error_html/400.html.heex
 #, elixir-autogen, elixir-format
 msgid "Bad request"
 msgstr ""
 
-#: lib/brando_admin/controllers/error_html/400.html.heex
+#: lib/brando_web/controllers/error_html/400.html.heex
 #, elixir-autogen, elixir-format
 msgid "Bad request."
 msgstr ""
@@ -6672,12 +6672,12 @@ msgstr ""
 msgid "Error uploading"
 msgstr ""
 
-#: lib/brando/upload.ex
+#: lib/brando/uploads/store.ex
 #, elixir-autogen, elixir-format
 msgid "Error while copying"
 msgstr ""
 
-#: lib/brando/upload.ex
+#: lib/brando/uploads/store.ex
 #, elixir-autogen, elixir-format
 msgid "Error while creating image sizes"
 msgstr ""
@@ -7021,7 +7021,7 @@ msgstr ""
 msgid "File details"
 msgstr ""
 
-#: lib/brando/upload.ex
+#: lib/brando/uploads/store.ex
 #, elixir-autogen, elixir-format
 msgid "File is too large"
 msgstr ""
@@ -7542,9 +7542,9 @@ msgstr ""
 msgid "Globals"
 msgstr ""
 
-#: lib/brando_admin/controllers/error_html/400.html.heex
-#: lib/brando_admin/controllers/error_html/404.html.heex
-#: lib/brando_admin/controllers/error_html/406.html.heex
+#: lib/brando_web/controllers/error_html/400.html.heex
+#: lib/brando_web/controllers/error_html/404.html.heex
+#: lib/brando_web/controllers/error_html/406.html.heex
 #, elixir-autogen, elixir-format
 msgid "Go back <a href=\"/\">to the main page</a>"
 msgstr ""
@@ -9456,7 +9456,7 @@ msgstr ""
 msgid "Matching group keys are updated; other groups are preserved. Accounts, memberships, and the protected Superuser are excluded."
 msgstr ""
 
-#: lib/brando_admin/controllers/error_html/404.html.heex
+#: lib/brando_web/controllers/error_html/404.html.heex
 #, elixir-autogen, elixir-format
 msgid "Maybe it was outdated and has been deleted?"
 msgstr ""
@@ -10856,12 +10856,12 @@ msgstr ""
 msgid "Not a valid HTTP response"
 msgstr ""
 
-#: lib/brando_admin/controllers/error_html/406.html.heex
+#: lib/brando_web/controllers/error_html/406.html.heex
 #, elixir-autogen, elixir-format
 msgid "Not acceptable"
 msgstr ""
 
-#: lib/brando_admin/controllers/error_html/406.html.heex
+#: lib/brando_web/controllers/error_html/406.html.heex
 #, elixir-autogen, elixir-format
 msgid "Not acceptable."
 msgstr ""
@@ -11759,12 +11759,12 @@ msgstr ""
 msgid "Page anchor"
 msgstr ""
 
-#: lib/brando_admin/controllers/error_html/404.html.heex
+#: lib/brando_web/controllers/error_html/404.html.heex
 #, elixir-autogen, elixir-format
 msgid "Page not found"
 msgstr ""
 
-#: lib/brando_admin/controllers/error_html/404.html.heex
+#: lib/brando_web/controllers/error_html/404.html.heex
 #, elixir-autogen, elixir-format
 msgid "Page not found."
 msgstr ""
@@ -11930,7 +11930,7 @@ msgstr ""
 msgid "Paste this into the app as the MCP server's URL."
 msgstr ""
 
-#: lib/brando/upload.ex
+#: lib/brando/uploads/store.ex
 #, elixir-autogen, elixir-format
 msgid "Path creation failed"
 msgstr ""
@@ -12202,7 +12202,7 @@ msgstr ""
 msgid "Playback defaults"
 msgstr ""
 
-#: lib/brando_admin/controllers/error_html/500.html.heex
+#: lib/brando_web/controllers/error_html/500.html.heex
 #, elixir-autogen, elixir-format
 msgid "Please try again shortly, or go back <a href=\"/\">to the main page</a>"
 msgstr ""
@@ -14903,7 +14903,7 @@ msgstr ""
 msgid "Served once the entry is published. This is the last saved version."
 msgstr ""
 
-#: lib/brando_admin/controllers/error_html/500.html.heex
+#: lib/brando_web/controllers/error_html/500.html.heex
 #, elixir-autogen, elixir-format
 msgid "Server Error"
 msgstr ""
@@ -17256,7 +17256,7 @@ msgstr ""
 msgid "This language already has a version."
 msgstr ""
 
-#: lib/brando_admin/controllers/error_html/500.html.heex
+#: lib/brando_web/controllers/error_html/500.html.heex
 #, elixir-autogen, elixir-format
 msgid "This might occur during a server update or reboot"
 msgstr ""
@@ -17995,7 +17995,7 @@ msgstr ""
 msgid "Unknown environment"
 msgstr ""
 
-#: lib/brando/upload.ex
+#: lib/brando/uploads/store.ex
 #, elixir-autogen, elixir-format
 msgid "Unknown error while creating image sizes."
 msgstr ""
@@ -19369,12 +19369,12 @@ msgstr ""
 msgid "You have an unsaved recovery copy for this entry."
 msgstr ""
 
-#: lib/brando/upload.ex
+#: lib/brando/uploads/store.ex
 #, elixir-autogen, elixir-format
 msgid "You have selected an unacceptable file type"
 msgstr ""
 
-#: lib/brando/upload.ex
+#: lib/brando/uploads/store.ex
 #, elixir-autogen, elixir-format
 msgid "You have selected too many files"
 msgstr ""

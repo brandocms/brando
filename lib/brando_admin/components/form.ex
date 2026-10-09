@@ -6745,7 +6745,7 @@ defmodule BrandoAdmin.Components.Form do
   defp normalize_upload_config_target(_), do: nil
 
   defp safe_handle_upload(meta, upload_entry, cfg, current_user) do
-    case Brando.Upload.handle_upload(meta, upload_entry, cfg, current_user) do
+    case Brando.Uploads.Store.handle_upload(meta, upload_entry, cfg, current_user) do
       {:ok, asset} -> {:ok, asset}
       {:error, reason} -> {:ok, {:upload_error, reason}}
     end

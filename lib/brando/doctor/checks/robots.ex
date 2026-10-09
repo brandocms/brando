@@ -21,7 +21,9 @@ defmodule Brando.Doctor.Checks.Robots do
   @doc "`route` is the plug `/robots.txt` resolves to (or nil); `static?` whether a static file exists."
   def evaluate(route, static?) do
     cond do
-      route != Brando.SEOController ->
+      # The deprecated `Brando.SEOController` still serves it; the
+      # Deprecations check names the rename
+      route not in [BrandoWeb.SEOController, Brando.SEOController] ->
         warning(dgettext("doctor", "not served by Brando"),
           fix: dgettext("doctor", "call page_routes() in the router's browser scope"),
           items: [dgettext("doctor", "GET /robots.txt goes to %{plug}", plug: inspect(route))]

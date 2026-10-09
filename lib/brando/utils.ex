@@ -1184,8 +1184,8 @@ defmodule Brando.Utils do
     cond do
       # `overwrite: true` is a request to write over whatever is there, so the
       # bucket is not consulted at all — asking and then renaming on a hit is
-      # what defeated the option. `Brando.Upload`'s filesystem path
-      # (`upload.ex:321-327`) and `Uploads.build_direct_filename/2` both branch
+      # what defeated the option. `Brando.Uploads.Store`'s filesystem path
+      # (`copy_uploaded_file/1`) and `Uploads.build_direct_filename/2` both branch
       # here; this one did not, so a documented option (`Brando.Type.FileConfig`)
       # had no effect on the CDN path.
       Map.get(file_cfg, :overwrite, false) -> key

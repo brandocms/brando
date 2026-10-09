@@ -914,6 +914,9 @@ if Code.ensure_loaded?(Igniter) do
       )
     end
 
+    @doc "See `Mix.Brando.Igniter.ModuleRenames.rewrite/1`."
+    defdelegate rename_moved_modules(igniter), to: Mix.Brando.Igniter.ModuleRenames, as: :rewrite
+
     def configure_repo_module(igniter) do
       case Igniter.Libs.Ecto.list_repos(igniter) do
         {igniter, [repo]} ->

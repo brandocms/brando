@@ -704,6 +704,52 @@ production dump.
   Jupiter 5's `app.scrollTo({y: el, offsetY})` adds the offset to the target,
   where GSAP subtracted it: negate offsets passed from custom hooks.
 
+- **Public modules that sat in the wrong layer are renamed** (#2833). The old
+  names are deprecated and keep working until 0.57: a router, socket or
+  endpoint config that names one logs a warning the first time it is used,
+  and calling a function on one warns when the caller compiles.
+  `mix brando.migrate55` rewrites the references in `config/`, `lib/` and
+  `test/`, and `mix brando.doctor` lists any left in `lib/`. Applications
+  that route with `page_routes()` need no change.
+
+  | Old name | New name |
+  | --- | --- |
+  | `Brando.SEOController` | `BrandoWeb.SEOController` |
+  | `Brando.SitemapController` | `BrandoWeb.SitemapController` |
+  | `Brando.PreviewController` | `BrandoWeb.PreviewController` |
+  | `Brando.UserChannel` | `BrandoAdmin.UserChannel` |
+  | `Brando.LobbyChannel` | `BrandoAdmin.LobbyChannel` |
+  | `Brando.LivePreviewChannel` | `BrandoAdmin.LivePreviewChannel` |
+  | `Brando.ErrorHTML` | `BrandoWeb.ErrorHTML` |
+  | `Brando.Config` | `Brando.Sites.Config` |
+  | `Brando.Link` | `Brando.Sites.Link` |
+  | `Brando.Meta` | `Brando.Sites.Meta` |
+  | `Brando.Upload` | `Brando.Uploads.Store` |
+
+  The three controllers serve the site's public routes (`/robots.txt`,
+  `/sitemaps/:file` and the shared preview links at `/__p__/:preview_key`),
+  and `ErrorHTML` renders the public site's error pages as its endpoint's
+  `render_errors`, so they moved to `BrandoWeb` with their files. A router that `mix
+  brando.gen.site` generated before 0.55 names them directly; rerunning the
+  task accepts either name.
+
+  `Brando.Config`, `Brando.Link` and `Brando.Meta` are the Identity's
+  embedded schemas (its `configs`, `links` and `metas`), filed under
+  `lib/brando/sites/` but named as if they were Brando-wide. Only their
+  module names change; the data does not. A struct cannot answer to two
+  names, so `%Brando.Link{}` as a literal or a pattern, and a relation's
+  `module: Brando.Link`, stop compiling until they use the new name;
+  `changeset` calls on the old names still work. `Brando.Meta.HTML`, which
+  renders a page's `<meta>` tags, keeps its name: it was never part of the
+  schema.
+
+  `Brando.Upload` sat beside the `Brando.Uploads` context with only the
+  plural to tell them apart. It stores an uploaded file and creates its
+  image, file or video row, so it is `Brando.Uploads.Store` now, under the
+  context that calls it (`Brando.Uploads.store_upload/4`). `Brando.Uploads`,
+  which decides the transport and finalizes direct uploads, keeps its name.
+  `%Brando.Upload{}` needs the new name too.
+
 #### Improvements
 
 - **The admin's colours are role tokens** (#2981). Every admin stylesheet

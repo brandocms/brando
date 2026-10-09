@@ -16,10 +16,10 @@ defmodule Brando.Router do
 
     quote do
       if unquote(options)[:root] do
-        get "/robots.txt", Brando.SEOController, :robots
-        get "/__p__/:preview_key", Brando.PreviewController, :show
+        get "/robots.txt", BrandoWeb.SEOController, :robots
+        get "/__p__/:preview_key", BrandoWeb.PreviewController, :show
         get "/__ssg_preview__/:token/*path", Brando.SSG.PreviewController, :show
-        get "/sitemaps/:file", Brando.SitemapController, :show
+        get "/sitemaps/:file", BrandoWeb.SitemapController, :show
         # Inside the application's browser pipeline, so `protect_from_forgery`
         # checks the token `Brando.HTML.Forms.site_form/1` carries.
         post "/__brando/forms/:key", Brando.Forms.SubmissionController, :create

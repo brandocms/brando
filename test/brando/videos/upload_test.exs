@@ -65,7 +65,7 @@ defmodule Brando.Videos.UploadTest do
         client_size: 1024
       }
 
-      assert {:ok, %Brando.Videos.Video{} = video} = Brando.Upload.handle_upload(meta, entry, @cfg, user)
+      assert {:ok, %Brando.Videos.Video{} = video} = Brando.Uploads.Store.handle_upload(meta, entry, @cfg, user)
 
       assert video.type == :upload
       assert video.status == :ready
@@ -88,7 +88,7 @@ defmodule Brando.Videos.UploadTest do
       entry = %{client_name: Path.basename(tmp), client_type: "application/x-msdownload", client_size: 4}
 
       assert {:error, :content_type, "application/x-msdownload", _allowed} =
-               Brando.Upload.handle_upload(meta, entry, @cfg, user)
+               Brando.Uploads.Store.handle_upload(meta, entry, @cfg, user)
     end
 
     test "runs an MFA callback after a local video is ready" do
@@ -101,7 +101,7 @@ defmodule Brando.Videos.UploadTest do
       meta = %{path: tmp, config_target: "video:Some.Schema:field"}
       entry = %{client_name: Path.basename(tmp), client_type: "video/mp4", client_size: 128}
 
-      assert {:ok, video} = Brando.Upload.handle_upload(meta, entry, config, user)
+      assert {:ok, video} = Brando.Uploads.Store.handle_upload(meta, entry, config, user)
       assert_received {:video_completed, ^video, ^user}
     end
 
@@ -137,7 +137,7 @@ defmodule Brando.Videos.UploadTest do
         }
       }
 
-      assert {:ok, video} = Brando.Upload.handle_upload_type(upload, user, :direct_to_s3)
+      assert {:ok, video} = Brando.Uploads.Store.handle_upload_type(upload, user, :direct_to_s3)
       assert video.type == :upload
       assert video.status == :ready
       assert video.folder_id == folder.id

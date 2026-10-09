@@ -49,7 +49,7 @@ if Code.ensure_loaded?(Igniter) do
          "Existing :page_html_module #{inspect(configured)} owns page rendering. Integrate CMS templates explicitly."}
 
     defp ownership(router, project, controller) do
-      routes = RouteInventory.read(router)
+      routes = router |> RouteInventory.read() |> Enum.map(&current_module/1)
       owned = Enum.filter(routes, &(&1.module == controller))
       expected = declarations(controller)
       others = if owned == [], do: routes, else: routes -- expected
@@ -70,6 +70,15 @@ if Code.ensure_loaded?(Igniter) do
 
         true ->
           {:ok, %{home?: home?, home: home, present?: owned != []}}
+      end
+    end
+
+    # A router this task wrote before 0.55 routes the support paths to the
+    # controllers' deprecated names; they are the same declarations.
+    defp current_module(route) do
+      case Brando.Deprecated.RenamedModules.new_name(route.module) do
+        nil -> route
+        module -> %{route | module: module}
       end
     end
 
@@ -222,10 +231,10 @@ if Code.ensure_loaded?(Igniter) do
 
            scope "/" do
              pipe_through [:browser, :brando_site]
-             get "/robots.txt", Brando.SEOController, :robots
-             get "/__p__/:preview_key", Brando.PreviewController, :show
+             get "/robots.txt", BrandoWeb.SEOController, :robots
+             get "/__p__/:preview_key", BrandoWeb.PreviewController, :show
              get "/__ssg_preview__/:token/*path", Brando.SSG.PreviewController, :show
-             get "/sitemaps/:file", Brando.SitemapController, :show
+             get "/sitemaps/:file", BrandoWeb.SitemapController, :show
              get "/", #{inspect(controller)}, :index, as: :page
              get "/*path", #{inspect(controller)}, :show, as: :page
            end
@@ -239,10 +248,10 @@ if Code.ensure_loaded?(Igniter) do
     defp declarations(controller) do
       Enum.map(
         [
-          {"/robots.txt", Brando.SEOController, :robots},
-          {"/__p__/:preview_key", Brando.PreviewController, :show},
+          {"/robots.txt", BrandoWeb.SEOController, :robots},
+          {"/__p__/:preview_key", BrandoWeb.PreviewController, :show},
           {"/__ssg_preview__/:token/*path", Brando.SSG.PreviewController, :show},
-          {"/sitemaps/:file", Brando.SitemapController, :show},
+          {"/sitemaps/:file", BrandoWeb.SitemapController, :show},
           {"/", controller, :index},
           {"/*path", controller, :show}
         ],

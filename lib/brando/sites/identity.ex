@@ -58,19 +58,19 @@ defmodule Brando.Sites.Identity do
 
   relations do
     relation :metas, :embeds_many,
-      module: Brando.Meta,
+      module: Brando.Sites.Meta,
       on_replace: :delete,
       drop_param: :drop_metas_ids,
       sort_param: :sort_metas_ids
 
     relation :links, :embeds_many,
-      module: Brando.Link,
+      module: Brando.Sites.Link,
       on_replace: :delete,
       drop_param: :drop_links_ids,
       sort_param: :sort_links_ids
 
     relation :configs, :embeds_one,
-      module: Brando.Config,
+      module: Brando.Sites.Config,
       on_replace: :delete
 
     relation :type_config, :embeds_one,
@@ -201,8 +201,8 @@ defmodule Brando.Sites.Identity do
             cardinality :many
             default &__MODULE__.default_link/2
 
-            input :name, :text, label: t("Name", Brando.Link)
-            input :url, :text, label: t("URL", Brando.Link)
+            input :name, :text, label: t("Name", Brando.Sites.Link)
+            input :url, :text, label: t("URL", Brando.Sites.Link)
           end
         end
 
@@ -213,8 +213,8 @@ defmodule Brando.Sites.Identity do
             cardinality :many
             default &__MODULE__.default_meta/2
 
-            input :key, :text, label: t("Key", Brando.Meta)
-            input :value, :text, label: t("Value", Brando.Meta)
+            input :key, :text, label: t("Key", Brando.Sites.Meta)
+            input :value, :text, label: t("Value", Brando.Sites.Meta)
           end
         end
       end
@@ -278,10 +278,10 @@ defmodule Brando.Sites.Identity do
   def default_type_config(_identity, _asset), do: %Brando.Sites.Identity.TypeConfig{}
 
   @doc "Builds a default link for the identity form."
-  def default_link(_identity, _asset), do: %Brando.Link{}
+  def default_link(_identity, _asset), do: %Brando.Sites.Link{}
 
   @doc "Builds a default metadata entry for the identity form."
-  def default_meta(_identity, _asset), do: %Brando.Meta{}
+  def default_meta(_identity, _asset), do: %Brando.Sites.Meta{}
 
   @doc "Builds a default service for the identity form."
   def default_service(_identity, _asset), do: %Brando.Sites.Service{}

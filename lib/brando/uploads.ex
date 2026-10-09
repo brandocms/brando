@@ -1,12 +1,15 @@
 defmodule Brando.Uploads do
   @moduledoc """
-  Transport facade for the unified upload manager (see `docs/UPLOADER.md`).
+  The uploads context: intake, transport and finalize for the unified upload
+  manager (see `docs/UPLOADER.md`) and for a site's own upload forms
+  (`Brando.Uploads.Direct`). Storing the bytes and creating the asset row is
+  `Brando.Uploads.Store`.
 
   Transports:
 
   - `:server` — bytes travel through the `BrandoAdmin.UploadManager` sticky
     LiveView's own `allow_upload` and are stored via
-    `Brando.Upload.handle_upload/4`. Files, videos and images on local
+    `Brando.Uploads.Store.handle_upload/4`. Files, videos and images on local
     storage or when the CDN config doesn't opt into direct uploads.
   - `:direct` (files/videos/images → S3-compatible storage) — the browser PUTs the bytes
     straight to the bucket via a short-lived presigned URL; the server only
@@ -26,7 +29,7 @@ defmodule Brando.Uploads do
   back to a global 50 MB default (plus an image extension allowlist);
   for `:server` transport, mimetype validation
   against the resolved config still runs at consume time via
-  `Brando.Upload.check_mimetype` — for `:direct` it runs at intake.
+  `Brando.Uploads.Store.check_mimetype` — for `:direct` it runs at intake.
   """
 
   use Gettext, backend: Brando.Gettext
@@ -34,6 +37,7 @@ defmodule Brando.Uploads do
   import Ecto.Query, only: [from: 2]
 
   alias Brando.Uploads.PendingIntent
+  alias Brando.Uploads.Store
   alias Brando.Utils
 
   require Logger
@@ -116,7 +120,7 @@ defmodule Brando.Uploads do
   @doc """
   Store a consumed server-transport upload, normalizing every error shape.
 
-  `Brando.Upload.handle_upload/4` leaks mixed error shapes from its `with`
+  `Brando.Uploads.Store.handle_upload/4` leaks mixed error shapes from its `with`
   chain (`{:error, reason}`, `{:error, :mkdir, reason}`,
   `{:error, :content_type, type, allowed}`, ...). The upload manager consumes
   in a singleton sticky LiveView — an unmatched error shape there would crash
@@ -124,7 +128,7 @@ defmodule Brando.Uploads do
   `{:ok, asset} | {:error, message}` where `message` is safe to show the user.
   """
   def store_upload(meta, entry, cfg, user) do
-    case Brando.Upload.handle_upload(meta, entry, cfg, user) do
+    case Store.handle_upload(meta, entry, cfg, user) do
       {:ok, asset} ->
         {:ok, asset}
 
@@ -152,7 +156,7 @@ defmodule Brando.Uploads do
   defp format_upload_error(error), do: inspect(error)
 
   defp upload_error_message(error) do
-    {:error, message} = Brando.Upload.handle_upload_error(error)
+    {:error, message} = Store.handle_upload_error(error)
     message
   end
 
@@ -294,7 +298,7 @@ defmodule Brando.Uploads do
         }
       }
 
-      Brando.Upload.handle_upload_type(upload, user, :direct_to_s3)
+      Store.handle_upload_type(upload, user, :direct_to_s3)
     else
       {:error, :not_found} -> {:error, "Uploaded object not found in bucket (#{key})"}
       {:error, reason} -> {:error, reason}
@@ -318,7 +322,7 @@ defmodule Brando.Uploads do
         }
       }
 
-      Brando.Upload.handle_upload_type(upload, user, :direct_to_s3)
+      Store.handle_upload_type(upload, user, :direct_to_s3)
     else
       false -> {:error, "S3 video CDN is not configured for direct uploads"}
       {:error, :not_found} -> {:error, "Uploaded object not found in bucket (#{key})"}
@@ -373,7 +377,7 @@ defmodule Brando.Uploads do
       }
     }
 
-    Brando.Upload.handle_upload_type(upload, user)
+    Store.handle_upload_type(upload, user)
   end
 
   @doc """
@@ -873,7 +877,7 @@ defmodule Brando.Uploads do
 
   Falls back to the default video config when unresolvable. The resolved cfg
   is guaranteed to be a `%Brando.Type.VideoConfig{}` — a plain-map cfg would
-  miss the VideoConfig clause in `Brando.Upload.handle_upload_type/2` and fall
+  miss the VideoConfig clause in `Brando.Uploads.Store.handle_upload_type/2` and fall
   into the generic image path.
   """
   def resolve_video_config(config_target),

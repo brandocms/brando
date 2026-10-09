@@ -227,8 +227,8 @@ defmodule Brando.Videos do
         meta = %{path: tmp, config_target: config_target}
         entry = %{client_name: "video-#{video.id}#{extension(content_type)}", client_type: content_type}
 
-        with {:ok, image} <- Brando.Upload.handle_upload(meta, entry, cfg, user),
-             {:ok, image} <- Brando.Upload.process_upload(image, cfg, user) do
+        with {:ok, image} <- Brando.Uploads.Store.handle_upload(meta, entry, cfg, user),
+             {:ok, image} <- Brando.Uploads.Store.process_upload(image, cfg, user) do
           image.id
         else
           _ -> nil

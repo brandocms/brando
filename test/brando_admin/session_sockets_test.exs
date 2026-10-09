@@ -317,19 +317,19 @@ defmodule BrandoAdmin.SessionSocketsTest do
       user = user()
       session = Users.generate_user_session_token(user)
       assert {:ok, socket} = connect_admin(socket_token(user, session))
-      assert {:ok, _, _} = Phoenix.ChannelTest.subscribe_and_join(socket, Brando.UserChannel, "user:#{user.id}")
+      assert {:ok, _, _} = Phoenix.ChannelTest.subscribe_and_join(socket, BrandoAdmin.UserChannel, "user:#{user.id}")
 
       # Ended between the socket's connect and its subscribing to its id
       Repo.delete_all(from(t in Users.UserToken, where: t.token == ^session))
 
       assert {:error, %{reason: "forbidden"}} =
-               Phoenix.ChannelTest.subscribe_and_join(socket, Brando.UserChannel, "user:#{user.id}")
+               Phoenix.ChannelTest.subscribe_and_join(socket, BrandoAdmin.UserChannel, "user:#{user.id}")
 
       assert {:error, %{reason: "forbidden"}} =
-               Phoenix.ChannelTest.subscribe_and_join(socket, Brando.LobbyChannel, "lobby", %{"url" => "/admin"})
+               Phoenix.ChannelTest.subscribe_and_join(socket, BrandoAdmin.LobbyChannel, "lobby", %{"url" => "/admin"})
 
       assert {:error, %{reason: "forbidden"}} =
-               Phoenix.ChannelTest.subscribe_and_join(socket, Brando.LivePreviewChannel, "live_preview:key")
+               Phoenix.ChannelTest.subscribe_and_join(socket, BrandoAdmin.LivePreviewChannel, "live_preview:key")
     end
   end
 

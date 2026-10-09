@@ -1,14 +1,15 @@
-defmodule Brando.Upload do
+defmodule Brando.Uploads.Store do
   @moduledoc """
-  Common functions for image and file upload.
+  Stores an uploaded file and creates its asset.
 
-  There are two distinct paths of travel within Brando for file uploading.
+  `handle_upload/4` checks a file the server received (its name, extension
+  and mimetype against the field's config), copies it into the media root and
+  creates the `Image`, `File` or `Video` row; `process_upload/3` then makes an
+  image's sizes. `handle_upload_type/3` with `:direct_to_s3` creates the row
+  for an object the browser already put in the bucket.
 
-    1) LiveView uploads for image fields within the Blueprint
-
-    2) Villain content block uploads
-
-  This module contains helper functions for both paths.
+  The upload manager reaches it through `Brando.Uploads`, which decides the
+  transport and turns these errors into messages.
   """
   defstruct upload_entry: nil,
             cfg: nil,

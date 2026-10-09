@@ -70,7 +70,7 @@ arrival orders and `test/brando_admin/live/form_recovery_test.exs` for the wider
 mounted-recovery harness.
 Use `test/brando/live_preview/live_preview_test.exs` for rendering;
 `test/brando/plugs/live_preview_test.exs` and
-`test/brando_admin/preview_controller_test.exs` for access and snapshots.
+`test/brando_web/controllers/preview_controller_test.exs` for access and snapshots.
 Browser cases in `e2e/playwright/tests/blocks/block-live-preview.spec.js` and
 `e2e/playwright/tests/blocks/block-multi-live-preview.spec.js` cover unsaved
 updates and nested modules. Follow AGENTS.md for test setup.

@@ -1045,7 +1045,7 @@ defmodule BrandoAdmin.UploadManager do
   defp push_released(socket, ref), do: push_event(socket, "b:uploads:released", %{ref: ref})
 
   defp upload_error_label(reason) when reason in [:too_large, :too_many_files, :not_accepted],
-    do: Brando.Upload.error_to_string(reason)
+    do: Brando.Uploads.Store.error_to_string(reason)
 
   defp upload_error_label(reason), do: inspect(reason)
 

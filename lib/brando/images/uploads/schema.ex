@@ -8,7 +8,7 @@ defmodule Brando.Images.Uploads.Schema do
   """
 
   alias Brando.Images
-  alias Brando.Upload
+  alias Brando.Uploads.Store
   alias Brando.Users
 
   @type changeset :: Ecto.Changeset.t()
@@ -23,8 +23,8 @@ defmodule Brando.Images.Uploads.Schema do
   def handle_upload(params, cfg, user) do
     with {:ok, upload_entry} <- build_upload_entry(params),
          {:ok, meta} <- build_meta(params),
-         {:ok, image} <- Upload.handle_upload(meta, upload_entry, cfg, user) do
-      Upload.process_upload(image, cfg, user)
+         {:ok, image} <- Store.handle_upload(meta, upload_entry, cfg, user) do
+      Store.process_upload(image, cfg, user)
     end
   end
 

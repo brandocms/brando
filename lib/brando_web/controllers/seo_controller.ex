@@ -1,6 +1,6 @@
-defmodule Brando.SEOController do
+defmodule BrandoWeb.SEOController do
   @moduledoc """
-  Controller for i18n actions.
+  Serves the site's `robots.txt` (routed by `Brando.Router.page_routes/1`).
   """
   use BrandoAdmin, :controller
 

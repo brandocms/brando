@@ -1,7 +1,7 @@
-defmodule Brando.SEOControllerTest do
+defmodule BrandoWeb.SEOControllerTest do
   use ExUnit.Case, async: true
 
-  alias Brando.SEOController
+  alias BrandoWeb.SEOController
 
   @url "https://example.com/sitemaps/sitemap.xml.gz"
 

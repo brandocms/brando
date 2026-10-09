@@ -27,6 +27,51 @@ project lacks with `mix brando.gen.migrations`, review them, and run them with
 `mix brando.migrate`, followed by `mix brando.migrate --tenants` when the
 application has named environments.
 
+## Modules renamed in 0.55
+
+Some public modules sat in the wrong layer or claimed a top-level `Brando.*`
+name from inside a context (#2833). They have new names; the old ones stay
+as deprecated shims in 0.55 and 0.56 and are removed in 0.57.
+
+| Old name | New name |
+| --- | --- |
+| `Brando.SEOController` | `BrandoWeb.SEOController` |
+| `Brando.SitemapController` | `BrandoWeb.SitemapController` |
+| `Brando.PreviewController` | `BrandoWeb.PreviewController` |
+| `Brando.UserChannel` | `BrandoAdmin.UserChannel` |
+| `Brando.LobbyChannel` | `BrandoAdmin.LobbyChannel` |
+| `Brando.LivePreviewChannel` | `BrandoAdmin.LivePreviewChannel` |
+| `Brando.ErrorHTML` | `BrandoWeb.ErrorHTML` |
+| `Brando.Config` | `Brando.Sites.Config` |
+| `Brando.Link` | `Brando.Sites.Link` |
+| `Brando.Meta` | `Brando.Sites.Meta` |
+| `Brando.Upload` | `Brando.Uploads.Store` |
+
+1. Run `mix brando.migrate55`. It rewrites the old names in `config/`,
+   `lib/` and `test/`: routes such as
+   `get "/robots.txt", Brando.SEOController, :robots`, an endpoint's
+   `render_errors: [formats: [html: Brando.ErrorHTML]]`, aliases and calls.
+   A route inside `scope "/", Brando do` names its controller relative to
+   the scope (`get "/robots.txt", SEOController, :robots`); it becomes
+   `BrandoWeb.SEOController` with `alias: false`. `match`, `forward`,
+   `resources` and `live` routes, routes whose options are not a plain
+   keyword list or end in a parenthesised or computed value, and an alias
+   inside a function, are left as they are and reported: name the
+   controller `BrandoWeb.*` and add `alias: false`, or use the new name,
+   yourself. It reports an alias in
+   braces that the new name cannot share, such as
+   `alias Brando.{UserChannel, Utils}`; give the new name its own `alias`.
+2. Run `mix brando.doctor`. Its Deprecations check lists any old name still
+   in `lib/`, including ones the task could not see.
+3. Until then the old names work. One that a router, socket or endpoint
+   config names (looked up at runtime) logs a warning the first time it is
+   used; a call such as `Brando.UserChannel.alert/2` warns when it compiles.
+   The exception is a struct, which cannot answer to two names:
+   `%Brando.Link{}`, as a literal or a pattern, and a relation's
+   `module: Brando.Link` need the new name (`Brando.Sites.Link`) to compile.
+
+`Brando.Meta.HTML`, which renders a page's `<meta>` tags, keeps its name.
+
 ## 0.52.0
 
 * Pull in new `mix.exs` and rename to your application's names

@@ -1,4 +1,4 @@
-defmodule BrandoAdmin.PreviewControllerTest do
+defmodule BrandoWeb.PreviewControllerTest do
   use Brando.ConnCase
   alias Brando.Sites.Preview
 
@@ -13,7 +13,7 @@ defmodule BrandoAdmin.PreviewControllerTest do
         expires_at: DateTime.utc_now() |> DateTime.add(60, :second) |> DateTime.truncate(:second)
       })
 
-    response = Brando.PreviewController.show(build_conn(), %{"preview_key" => preview.preview_key})
+    response = BrandoWeb.PreviewController.show(build_conn(), %{"preview_key" => preview.preview_key})
     assert response.status == 200
     assert response.resp_body =~ "Shared draft"
     assert {:snooze, seconds} = Brando.Worker.PreviewPurger.perform(%Oban.Job{args: %{"id" => preview.id}})
@@ -23,7 +23,7 @@ defmodule BrandoAdmin.PreviewControllerTest do
     Brando.Cache.Query.evict(preview)
 
     assert {:error, {:preview, :not_found}} =
-             Brando.PreviewController.show(build_conn(), %{"preview_key" => preview.preview_key})
+             BrandoWeb.PreviewController.show(build_conn(), %{"preview_key" => preview.preview_key})
 
     assert :ok = Brando.Worker.PreviewPurger.perform(%Oban.Job{args: %{"id" => preview.id}})
     refute Repo.get(Preview, preview.id)

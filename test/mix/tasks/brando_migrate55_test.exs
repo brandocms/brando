@@ -397,6 +397,509 @@ defmodule Mix.Tasks.Brando.Migrate55Test do
     assert_unchanged(igniter, @brando_config_path)
   end
 
+  describe "modules renamed in 0.55" do
+    @router_path "lib/legacy_app_web/router.ex"
+    @notify_path "lib/legacy_app/notify.ex"
+
+    @router """
+    defmodule LegacyAppWeb.Router do
+      use LegacyAppWeb, :router
+
+      scope "/" do
+        pipe_through :browser
+        get "/robots.txt", Brando.SEOController, :robots
+        get "/__p__/:preview_key", Brando.PreviewController, :show
+        get "/sitemaps/:file", Brando.SitemapController, :show
+      end
+    end
+    """
+
+    @notify """
+    defmodule LegacyApp.Notify do
+      alias Brando.UserChannel
+      alias Brando.{LobbyChannel, Utils}
+
+      def done(user), do: UserChannel.alert(user, Utils.slugify("Done"))
+      def lobby, do: LobbyChannel
+      def unrelated, do: {LegacyApp.UserChannel, UserChannelHelper}
+    end
+    """
+
+    test "points routers, sockets, config and code at the new names" do
+      config =
+        @config <> "\nconfig :legacy_app, LegacyAppWeb.Endpoint, render_errors: [formats: [html: Brando.ErrorHTML]]\n"
+
+      igniter = migrate(@blueprint_054, %{@router_path => @router, @notify_path => @notify, @config_path => config})
+
+      assert igniter.issues == []
+      router = source(igniter, @router_path)
+      assert router =~ ~s(get "/robots.txt", BrandoWeb.SEOController, :robots)
+      assert router =~ ~s(get "/__p__/:preview_key", BrandoWeb.PreviewController, :show)
+      assert router =~ ~s(get "/sitemaps/:file", BrandoWeb.SitemapController, :show)
+      assert source(igniter, @config_path) =~ "html: BrandoWeb.ErrorHTML"
+
+      notify = source(igniter, @notify_path)
+      assert notify =~ "alias BrandoAdmin.UserChannel"
+      assert notify =~ "UserChannel.alert(user"
+      assert notify =~ "{LegacyApp.UserChannel, UserChannelHelper}"
+
+      # Brando.LobbyChannel left Brando's namespace: the braces can't hold it
+      assert notify =~ "alias Brando.{LobbyChannel, Utils}"
+
+      assert_has_warning(igniter, fn warning ->
+        String.contains?(warning, @notify_path) and String.contains?(warning, "BrandoAdmin.LobbyChannel")
+      end)
+    end
+
+    test "the short name follows Brando.Upload to Brando.Uploads.Store, unless it is taken" do
+      uploader = """
+      defmodule LegacyApp.Uploader do
+        alias Brando.Upload
+
+        def store(meta, entry, cfg, user), do: Upload.handle_upload(meta, entry, cfg, user)
+        def plug, do: Plug.Upload
+        def uploads, do: Brando.Uploads
+      end
+      """
+
+      taken = """
+      defmodule LegacyApp.Shop do
+        alias Brando.Upload
+        alias LegacyApp.Store
+
+        def store(meta, entry, cfg, user), do: {Store, Upload.handle_upload(meta, entry, cfg, user)}
+      end
+      """
+
+      igniter = migrate(@blueprint_054, %{"lib/legacy_app/uploader.ex" => uploader, "lib/legacy_app/shop.ex" => taken})
+      assert igniter.issues == []
+
+      assert source(igniter, "lib/legacy_app/uploader.ex") == """
+             defmodule LegacyApp.Uploader do
+               alias Brando.Uploads.Store
+
+               def store(meta, entry, cfg, user), do: Store.handle_upload(meta, entry, cfg, user)
+               def plug, do: Plug.Upload
+               def uploads, do: Brando.Uploads
+             end
+             """
+
+      assert source(igniter, "lib/legacy_app/shop.ex") == """
+             defmodule LegacyApp.Shop do
+               alias Brando.Uploads.Store, as: Upload
+               alias LegacyApp.Store
+
+               def store(meta, entry, cfg, user), do: {Store, Upload.handle_upload(meta, entry, cfg, user)}
+             end
+             """
+    end
+
+    test "routes inside a scope with an alias are read relative to it" do
+      router = """
+      defmodule LegacyAppWeb.Router do
+        use LegacyAppWeb, :router
+
+        scope "/", Brando do
+          pipe_through :browser
+          get "/robots.txt", SEOController, :robots
+          get "/sitemaps/:file", SitemapController, :show, as: :sitemap
+          get "/legacy", Upload, :show
+
+          scope "/p", alias: false do
+            get "/:key", PreviewController, :show
+          end
+        end
+
+        scope "/", LegacyAppWeb do
+          get "/__p__/:preview_key", Brando.PreviewController, :show
+        end
+      end
+      """
+
+      igniter = migrate(@blueprint_054, %{@router_path => router})
+      assert igniter.issues == []
+
+      assert source(igniter, @router_path) == """
+             defmodule LegacyAppWeb.Router do
+               use LegacyAppWeb, :router
+
+               scope "/", Brando do
+                 pipe_through :browser
+                 get "/robots.txt", BrandoWeb.SEOController, :robots, alias: false
+                 get "/sitemaps/:file", BrandoWeb.SitemapController, :show, as: :sitemap, alias: false
+                 get "/legacy", Uploads.Store, :show
+
+                 scope "/p", alias: false do
+                   get "/:key", PreviewController, :show
+                 end
+               end
+
+               scope "/", LegacyAppWeb do
+                 get "/__p__/:preview_key", Brando.PreviewController, :show
+               end
+             end
+             """
+    end
+
+    test "aliases are resolved per module" do
+      two_modules = """
+      defmodule LegacyApp.A do
+        alias Brando.Upload
+        def store(m, e, c, u), do: Upload.handle_upload(m, e, c, u)
+      end
+
+      defmodule LegacyApp.B do
+        alias LegacyApp.Upload
+        def own, do: Upload.new()
+
+        defmodule Inner do
+          def own, do: Upload.new()
+        end
+      end
+
+      defmodule LegacyApp.C do
+        alias Brando.Meta
+        def tags(conn), do: Meta.HTML.render_meta(conn)
+      end
+      """
+
+      path = "lib/legacy_app/two_modules.ex"
+      igniter = migrate(@blueprint_054, %{path => two_modules})
+      assert igniter.issues == []
+
+      # Meta.HTML kept its name: the alias stays, so nothing goes unused
+      assert source(igniter, path) == """
+             defmodule LegacyApp.A do
+               alias Brando.Uploads.Store
+               def store(m, e, c, u), do: Store.handle_upload(m, e, c, u)
+             end
+
+             defmodule LegacyApp.B do
+               alias LegacyApp.Upload
+               def own, do: Upload.new()
+
+               defmodule Inner do
+                 def own, do: Upload.new()
+               end
+             end
+
+             defmodule LegacyApp.C do
+               alias Brando.Meta
+               def tags(conn), do: Meta.HTML.render_meta(conn)
+             end
+             """
+    end
+
+    test "a scoped route keeps its layout and comments, and alias: false goes after its last argument" do
+      router = """
+      defmodule LegacyAppWeb.Router do
+        alias Brando, as: B
+
+        scope "/", Brando do
+          get "/r5",
+              SEOController,
+              :robots,
+              # keep me
+              private: %{a: 1}
+
+          get "/r6", SitemapController, :show # trailing
+        end
+
+        scope "/", B do
+          get "/r7", PreviewController, :show
+        end
+
+        scope "/", Brando, alias: false do
+          get "/r8", SEOController, :robots
+        end
+      end
+      """
+
+      igniter = migrate(@blueprint_054, %{@router_path => router})
+      assert igniter.issues == []
+
+      expected = """
+      defmodule LegacyAppWeb.Router do
+        alias Brando, as: B
+
+        scope "/", Brando do
+          get "/r5",
+              BrandoWeb.SEOController,
+              :robots,
+              # keep me
+              private: %{a: 1}, alias: false
+
+          get "/r6", BrandoWeb.SitemapController, :show, alias: false # trailing
+        end
+
+        scope "/", B do
+          get "/r7", BrandoWeb.PreviewController, :show, alias: false
+        end
+
+        scope "/", Brando, alias: false do
+          get "/r8", BrandoWeb.SEOController, :robots, alias: false
+        end
+      end
+      """
+
+      assert source(igniter, @router_path) == expected
+      assert {:ok, _} = Code.string_to_quoted(expected)
+      assert_idempotent(igniter, @router_path)
+    end
+
+    test "scoped routes it cannot safely rewrite are left as they are, and reported" do
+      router = """
+      defmodule LegacyAppWeb.Router do
+        @opts [as: :seo]
+
+        scope "/", Brando do
+          forward "/f", SEOController
+          resources "/r", SitemapController
+          match :get, "/m", PreviewController, :show
+          get "/b", SEOController, :robots, [as: :robots]
+          get "/a", SEOController, :robots, @opts
+          get "/t", SEOController, :robots, alias: true
+        end
+      end
+      """
+
+      igniter = migrate(@blueprint_054, %{@router_path => router})
+      assert igniter.issues == []
+      assert source(igniter, @router_path) == router
+
+      for line <- 5..10 do
+        assert_has_warning(igniter, fn warning ->
+          String.contains?(warning, "#{@router_path}:#{line} routes to Brando.") and
+            String.contains?(warning, "add `alias: false`")
+        end)
+      end
+    end
+
+    test "a scoped route whose last argument is parenthesised or computed is left and reported" do
+      router = """
+      defmodule LegacyAppWeb.Router do
+        scope "/", Brando do
+          get "/p", PreviewController, (:show)
+          get "/s", SitemapController, :show, as: (:sitemap)
+          get "/i", SEOController, :robots, private: (if true, do: %{}, else: %{})
+          get "/d", SEOController, :robots, do: :x
+        end
+      end
+      """
+
+      igniter = migrate(@blueprint_054, %{@router_path => router})
+      assert igniter.issues == []
+      assert source(igniter, @router_path) == router
+
+      for line <- 3..6 do
+        assert_has_warning(igniter, &String.contains?(&1, "#{@router_path}:#{line} routes to Brando."))
+      end
+    end
+
+    test "a relative alias under a renamed module, a nested defmodule's name and an alias in a function" do
+      code = """
+      defmodule LegacyApp.Relative do
+        alias Brando.Meta
+        alias Meta.HTML
+
+        def f, do: {%Meta{}, HTML.render(1)}
+      end
+
+      defmodule LegacyApp.RelativeOnly do
+        alias Brando.Meta
+        alias Meta.HTML
+
+        def f, do: HTML.render(1)
+      end
+
+      defmodule LegacyApp.Shadow do
+        alias Brando.Upload
+
+        defmodule Store do
+          def x(_), do: :mine
+        end
+
+        def f(u), do: Upload.x(u)
+      end
+
+      defmodule LegacyApp.InFunction do
+        def f(u) do
+          alias Brando.Upload
+          Upload.x(u)
+        end
+
+        def g, do: Upload.y()
+      end
+      """
+
+      path = "lib/legacy_app/relative.ex"
+      igniter = migrate(@blueprint_054, %{path => code})
+      assert igniter.issues == []
+
+      assert source(igniter, path) == """
+             defmodule LegacyApp.Relative do
+               alias Brando.Sites.Meta
+               alias Brando.Meta.HTML
+
+               def f, do: {%Meta{}, HTML.render(1)}
+             end
+
+             defmodule LegacyApp.RelativeOnly do
+               alias Brando.Meta
+               alias Meta.HTML
+
+               def f, do: HTML.render(1)
+             end
+
+             defmodule LegacyApp.Shadow do
+               alias Brando.Uploads.Store, as: Upload
+
+               defmodule Store do
+                 def x(_), do: :mine
+               end
+
+               def f(u), do: Upload.x(u)
+             end
+
+             defmodule LegacyApp.InFunction do
+               def f(u) do
+                 alias Brando.Upload
+                 Upload.x(u)
+               end
+
+               def g, do: Upload.y()
+             end
+             """
+
+      assert_has_warning(igniter, &String.contains?(&1, "#{path}:27 aliases Brando.Upload inside a function"))
+      assert_idempotent(igniter, path)
+    end
+
+    test "an alias that nested modules use is decided by every use" do
+      nested = """
+      defmodule LegacyApp.Outer do
+        alias Brando.Meta
+        alias Brando.Upload
+
+        def meta, do: %Meta{}
+
+        defmodule Inner do
+          alias Other.Store
+
+          def tags(conn), do: Meta.HTML.render_meta(conn)
+          def store(m, e, c, u), do: {Store, Upload.handle_upload(m, e, c, u)}
+        end
+      end
+
+      defmodule LegacyApp.OnlyInner do
+        alias Brando.Meta
+
+        defmodule Inner do
+          def tags(conn), do: Meta.HTML.render_meta(conn)
+        end
+      end
+      """
+
+      path = "lib/legacy_app/nested.ex"
+      igniter = migrate(@blueprint_054, %{path => nested})
+      assert igniter.issues == []
+
+      assert source(igniter, path) == """
+             defmodule LegacyApp.Outer do
+               alias Brando.Sites.Meta
+               alias Brando.Uploads.Store, as: Upload
+
+               def meta, do: %Meta{}
+
+               defmodule Inner do
+                 alias Other.Store
+
+                 def tags(conn), do: Brando.Meta.HTML.render_meta(conn)
+                 def store(m, e, c, u), do: {Store, Upload.handle_upload(m, e, c, u)}
+               end
+             end
+
+             defmodule LegacyApp.OnlyInner do
+               alias Brando.Meta
+
+               defmodule Inner do
+                 def tags(conn), do: Meta.HTML.render_meta(conn)
+               end
+             end
+             """
+
+      assert_idempotent(igniter, path)
+    end
+
+    test "an as: alias is followed into the modules under it" do
+      as_aliases = """
+      defmodule LegacyApp.Tags do
+        alias Brando.Meta, as: M
+
+        def tags(conn), do: M.HTML.render_meta(conn)
+      end
+
+      defmodule LegacyApp.Both do
+        alias Brando.Meta, as: M
+
+        def meta, do: %M{}
+        def tags(conn), do: M.HTML.render_meta(conn)
+      end
+      """
+
+      path = "lib/legacy_app/as_aliases.ex"
+      igniter = migrate(@blueprint_054, %{path => as_aliases})
+      assert igniter.issues == []
+
+      assert source(igniter, path) == """
+             defmodule LegacyApp.Tags do
+               alias Brando.Meta, as: M
+
+               def tags(conn), do: M.HTML.render_meta(conn)
+             end
+
+             defmodule LegacyApp.Both do
+               alias Brando.Sites.Meta, as: M
+
+               def meta, do: %M{}
+               def tags(conn), do: Brando.Meta.HTML.render_meta(conn)
+             end
+             """
+
+      assert_idempotent(igniter, path)
+    end
+
+    test "the Identity's schemas move under Brando.Sites, and Brando.Meta.HTML stays" do
+      identity = """
+      defmodule LegacyApp.Identity do
+        alias Brando.Meta
+        alias Brando.{Link, Utils}
+
+        def links, do: [%Link{name: "Instagram", url: "https://instagram.com"}, %Brando.Config{}]
+        def meta, do: %Meta{key: "a", value: Utils.slugify("b")}
+        def tags(conn), do: {Brando.Meta.HTML.render_meta(conn), Meta.HTML.render_meta(conn)}
+        def plug, do: Plug.Upload
+      end
+      """
+
+      path = "lib/legacy_app/identity.ex"
+      igniter = migrate(@blueprint_054, %{path => identity})
+      assert igniter.issues == []
+
+      assert source(igniter, path) == """
+             defmodule LegacyApp.Identity do
+               alias Brando.Sites.Meta
+               alias Brando.{Sites.Link, Utils}
+
+               def links, do: [%Link{name: "Instagram", url: "https://instagram.com"}, %Brando.Sites.Config{}]
+               def meta, do: %Meta{key: "a", value: Utils.slugify("b")}
+               def tags(conn), do: {Brando.Meta.HTML.render_meta(conn), Brando.Meta.HTML.render_meta(conn)}
+               def plug, do: Plug.Upload
+             end
+             """
+    end
+  end
+
   describe "image text reads" do
     @hero_blueprint String.replace(@blueprint_054, "attribute :title, :string", """
                     attribute :title, :string
@@ -588,6 +1091,11 @@ defmodule Mix.Tasks.Brando.Migrate55Test do
     refute Enum.any?(igniter.warnings, &String.contains?(&1, "Manual 0.54 decisions"))
     refute Enum.any?(igniter.warnings, &String.contains?(&1, "Brando.Type.Video"))
     refute Enum.any?(igniter.tasks, &match?({"igniter.update_gettext", _}, &1))
+  end
+
+  defp assert_idempotent(igniter, path) do
+    rerun = igniter |> apply_igniter!() |> include_test_files() |> Migrate55.igniter()
+    assert_unchanged(rerun, path)
   end
 
   defp migrate(blueprint, overrides \\ %{}) do

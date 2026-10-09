@@ -1,4 +1,4 @@
-defmodule Brando.UserChannel do
+defmodule BrandoAdmin.UserChannel do
   @moduledoc """
   Channel for user specific interaction.
   """

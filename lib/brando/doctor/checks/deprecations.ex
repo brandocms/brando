@@ -1,7 +1,10 @@
 defmodule Brando.Doctor.Checks.Deprecations do
   @moduledoc """
   Calls to deprecated Brando functions and macros (those marked
-  `@deprecated`) in the project's `lib/`.
+  `@deprecated`) in the project's `lib/`, and references to the modules
+  renamed in 0.55, whose old names are deprecated: a router's
+  `get "/robots.txt", Brando.SEOController, :robots`, say, or the same
+  route as `SEOController` inside `scope "/", Brando do`.
 
   The source is read as code, not text: aliases (`alias Brando.HTML`,
   `alias Brando.{HTML, Utils}`, `as:`), imports and pipes are followed, so
@@ -14,6 +17,7 @@ defmodule Brando.Doctor.Checks.Deprecations do
   use Brando.Doctor.Check
   use Gettext, backend: Brando.Gettext
 
+  alias Brando.Deprecated.RenamedModules
   alias Brando.Doctor.Context
 
   @impl true
@@ -83,13 +87,41 @@ defmodule Brando.Doctor.Checks.Deprecations do
     imports = collect_imports(ast, aliases, deprecated)
 
     {_ast, found} =
-      Macro.prewalk(ast, [], fn
+      ast
+      |> RenamedModules.mark_scoped_routes()
+      |> Macro.prewalk([], fn
+        # Declaring an alias uses nothing: what is reached through it is
+        # reported where it is used (`alias Brando.Meta` for `Meta.HTML`)
+        {:alias, _, _}, acc ->
+          {:ok, acc}
+
+        # A route inside `scope "/", Brando do`: Phoenix joins the scope's
+        # alias to the plug's
+        {:match, [{:scope_alias, scope} | _] = meta, [verb, path, {:__aliases__, plug_meta, parts} | rest]}, acc ->
+          {{:match, meta, [verb, path | rest]}, scoped_route(scope, parts, plug_meta, aliases, acc)}
+
+        {verb, [{:scope_alias, scope} | _] = meta, [path, {:__aliases__, plug_meta, parts} | rest]}, acc ->
+          {{verb, meta, [path | rest]}, scoped_route(scope, parts, plug_meta, aliases, acc)}
+
         # A piped call has one more argument than it shows
         {:|>, meta, [left, {call, call_meta, args}]}, acc when is_list(args) ->
           {{:|>, meta, [left, {call, [{:piped, true} | call_meta], args}]}, acc}
 
-        {{:., _, [{:__aliases__, _, parts}, name]}, meta, args} = node, acc when is_atom(name) and is_list(args) ->
-          {node, check(resolve(parts, aliases), name, arity(meta, args), meta, deprecated, acc)}
+        # The module is reported with its deprecated function, or else once
+        # if renamed; the arguments are still scanned, the receiver is not
+        {{:., _, [{:__aliases__, _, parts}, name]}, meta, args}, acc when is_atom(name) and is_list(args) ->
+          module = resolve(parts, aliases)
+
+          acc =
+            case check(module, name, arity(meta, args), meta, deprecated, acc) do
+              ^acc -> renamed(module, meta, acc)
+              found -> found
+            end
+
+          {{:__block__, [], args}, acc}
+
+        {:__aliases__, meta, parts} = node, acc when is_list(parts) ->
+          {node, renamed(resolve(parts, aliases), meta, acc)}
 
         {{:., _, [module, name]}, meta, args} = node, acc when is_atom(module) and is_atom(name) and is_list(args) ->
           {node, check(module, name, arity(meta, args), meta, deprecated, acc)}
@@ -117,6 +149,32 @@ defmodule Brando.Doctor.Checks.Deprecations do
       reason ->
         call = "#{inspect(module)}.#{name}/#{arity}"
         [%{file: nil, line: meta[:line], call: call, reason: reason} | acc]
+    end
+  end
+
+  # A reference to a module renamed in 0.55: a router or socket names a
+  # controller or channel without calling it
+  defp scoped_route(scope, parts, meta, aliases, acc) do
+    module = Module.concat(scope ++ [resolve(parts, aliases)])
+
+    case RenamedModules.new_name(module) do
+      nil ->
+        acc
+
+      new ->
+        reason =
+          "renamed to #{inspect(new)}; the old name is removed in Brando #{RenamedModules.removed_in()}. " <>
+            "The route gets it from its scope's alias: name the controller #{inspect(new)} and add alias: false"
+
+        [%{file: nil, line: meta[:line], call: inspect(module), reason: reason} | acc]
+    end
+  end
+
+  defp renamed(module, meta, acc) do
+    if RenamedModules.new_name(module) do
+      [%{file: nil, line: meta[:line], call: inspect(module), reason: RenamedModules.reason(module)} | acc]
+    else
+      acc
     end
   end
 
