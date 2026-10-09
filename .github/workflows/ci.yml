@@ -80,7 +80,23 @@ jobs:
           otp-version: ${{ matrix.otp }}
 
       - name: Restore deps and _build cache
+        if: github.event_name != 'merge_group'
         uses: actions/cache@v6.1.0
+        with:
+          path: |
+            deps
+            _build
+          key: deps-${{ runner.os }}-${{ matrix.otp }}-${{ matrix.elixir }}-${{ hashFiles('**/mix.lock') }}-${{ github.sha }}
+          restore-keys: |
+            deps-${{ runner.os }}-${{ matrix.otp }}-${{ matrix.elixir }}-${{ hashFiles('**/mix.lock') }}-
+            deps-${{ runner.os }}-${{ matrix.otp }}-${{ matrix.elixir }}
+
+      # A merge queue run restores the cache but does not save one: its
+      # temporary branch could never reuse it, and the entries would evict
+      # main's from the 10 GB cache.
+      - name: Restore deps and _build cache (merge queue, restore only)
+        if: github.event_name == 'merge_group'
+        uses: actions/cache/restore@v6.1.0
         with:
           path: |
             deps
@@ -136,7 +152,23 @@ jobs:
           otp-version: 28.4.1
 
       - name: Restore deps and _build cache
+        if: github.event_name != 'merge_group'
         uses: actions/cache@v6.1.0
+        with:
+          path: |
+            deps
+            _build
+          key: quality-${{ runner.os }}-28.4.1-1.20.3-${{ hashFiles('**/mix.lock') }}-${{ github.sha }}
+          restore-keys: |
+            quality-${{ runner.os }}-28.4.1-1.20.3-${{ hashFiles('**/mix.lock') }}-
+            quality-${{ runner.os }}-28.4.1-1.20.3
+
+      # A merge queue run restores the cache but does not save one: its
+      # temporary branch could never reuse it, and the entries would evict
+      # main's from the 10 GB cache.
+      - name: Restore deps and _build cache (merge queue, restore only)
+        if: github.event_name == 'merge_group'
+        uses: actions/cache/restore@v6.1.0
         with:
           path: |
             deps
@@ -194,6 +226,9 @@ jobs:
       - name: Check the Gettext merge driver
         run: python3 scripts/gettext-merge-driver --self-test
 
+      - name: Check how ci-wait tells known flakes from real failures
+        run: bash test/scripts/ci_wait_test.sh
+
   docs:
     name: Published documentation
     runs-on: ubuntu-latest
@@ -210,7 +245,23 @@ jobs:
           otp-version: 28.4.1
 
       - name: Restore docs dependencies and build cache
+        if: github.event_name != 'merge_group'
         uses: actions/cache@v6.1.0
+        with:
+          path: |
+            deps
+            _build
+          key: docs-${{ runner.os }}-28.4.1-1.20.3-${{ hashFiles('**/mix.lock') }}-${{ github.sha }}
+          restore-keys: |
+            docs-${{ runner.os }}-28.4.1-1.20.3-${{ hashFiles('**/mix.lock') }}-
+            docs-${{ runner.os }}-28.4.1-1.20.3
+
+      # A merge queue run restores the cache but does not save one: its
+      # temporary branch could never reuse it, and the entries would evict
+      # main's from the 10 GB cache.
+      - name: Restore docs dependencies and build cache (merge queue, restore only)
+        if: github.event_name == 'merge_group'
+        uses: actions/cache/restore@v6.1.0
         with:
           path: |
             deps
