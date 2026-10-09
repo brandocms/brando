@@ -1446,9 +1446,35 @@ defmodule Brando.Blueprint.VerifierTest do
       end
     end
 
+    test "write_with_ai: takes one field in from:, as a list" do
+      module =
+        compile_blueprint(
+          ai_actions_blueprint(quote(do: input(:summary, :rich_text, write_with_ai: [prompt: "Plain.", from: :title])))
+        )
+
+      assert :ok = Brando.Blueprint.Forms.Verifier.verify(module.spark_dsl_config())
+
+      assert Brando.Blueprint.Forms.get_field(:summary, module.__form__()).opts[:write_with_ai] ==
+               [prompt: "Plain.", from: [:title]]
+    end
+
+    test "write_with_ai: from: needs a prompt" do
+      assert_raise Spark.Error.DslError, ~r/from: needs a prompt/, fn ->
+        compile_blueprint(ai_actions_blueprint(quote(do: input(:summary, :rich_text, write_with_ai: [from: [:title]]))))
+      end
+    end
+
+    test "ai: true on rich text says it adds nothing" do
+      module = compile_blueprint(ai_actions_blueprint(quote(do: input(:summary, :rich_text, ai: true))))
+
+      assert {:warn, [{message, _}]} = Brando.Blueprint.Forms.Verifier.verify(module.spark_dsl_config())
+      assert message =~ "gives Write with AI no instructions"
+      refute message =~ "write_with_ai: ["
+    end
+
     test "write_with_ai: reads text and block fields only" do
       assert_form_error(
-        ai_actions_blueprint(quote(do: input(:summary, :rich_text, write_with_ai: [from: [:items]]))),
+        ai_actions_blueprint(quote(do: input(:summary, :rich_text, write_with_ai: [prompt: "P", from: [:items]]))),
         ~r/has write_with_ai reading :items in :from, which is not a text or block field/
       )
     end

@@ -312,6 +312,8 @@ defmodule Brando.Blueprint.Forms.Dsl do
 
     with {:ok, actions} <- Forms.AIAction.build(input.type, Keyword.get(opts, :ai_actions), input.name),
          {:ok, write_with_ai} <- Forms.WriteWithAI.validate(input.type, Keyword.get(opts, :write_with_ai)) do
+      # The checked `write_with_ai:`, with `from:` as a list
+      opts = if is_nil(write_with_ai), do: opts, else: Keyword.put(opts, :write_with_ai, write_with_ai)
       opts = Keyword.delete(opts, :ai_actions)
       {actions, opts} = deprecated_ai(input, ai, actions, write_with_ai, opts)
       {:ok, %{input | actions: actions, ai: ai, opts: opts}}

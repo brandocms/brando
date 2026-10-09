@@ -476,16 +476,21 @@ defmodule Brando.Blueprint.Forms.Verifier do
   defp deprecated_ai_message(%Forms.Input{type: :rich_text, name: name, ai: ai, opts: opts}) do
     converted = Forms.WriteWithAI.from_ai(ai)
 
-    if opts[:write_with_ai] == converted do
-      [
-        "input #{inspect(name)} #{@subject}. On a rich text input it gives Write with AI its instructions, the fields they read and its model. Write it as:",
-        indent(Forms.WriteWithAI.to_source(converted)),
-        dropped_options_note("write_with_ai:", Keyword.take(converted, Forms.AIAction.request_opt_keys()))
-      ]
-      |> Enum.filter(& &1)
-      |> Enum.join("\n\n")
-    else
-      "input #{inspect(name)} #{@subject}. `write_with_ai:` is set, so it is ignored. Remove it."
+    cond do
+      opts[:write_with_ai] != converted ->
+        "input #{inspect(name)} #{@subject}. `write_with_ai:` is set, so it is ignored. Remove it."
+
+      source = Forms.WriteWithAI.to_source(converted) ->
+        [
+          "input #{inspect(name)} #{@subject}. On a rich text input it gives Write with AI its instructions, the fields they read and its model. Write it as:",
+          indent(source),
+          dropped_options_note("write_with_ai:", Keyword.take(converted, Forms.AIAction.request_opt_keys()))
+        ]
+        |> Enum.filter(& &1)
+        |> Enum.join("\n\n")
+
+      true ->
+        "input #{inspect(name)} #{@subject}. It gives Write with AI no instructions, and Write with AI is on whenever AI is configured. Remove it."
     end
   end
 

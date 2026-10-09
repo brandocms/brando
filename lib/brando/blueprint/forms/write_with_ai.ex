@@ -35,8 +35,13 @@ defmodule Brando.Blueprint.Forms.WriteWithAI do
 
   def validate(:rich_text, opts) when is_list(opts) do
     case Spark.Options.validate(opts, @schema) do
-      {:ok, opts} -> {:ok, opts}
-      {:error, error} -> {:error, "write_with_ai: " <> Exception.message(error)}
+      {:ok, opts} ->
+        if opts[:from] not in [nil, []] and is_nil(opts[:prompt]),
+          do: {:error, "write_with_ai: from: needs a prompt: the fields' values follow its instructions"},
+          else: {:ok, opts}
+
+      {:error, error} ->
+        {:error, "write_with_ai: " <> Exception.message(error)}
     end
   end
 
@@ -62,14 +67,24 @@ defmodule Brando.Blueprint.Forms.WriteWithAI do
     |> Kernel.++(Keyword.take(opts, AIAction.request_opt_keys()))
   end
 
-  @doc "The `write_with_ai:` to write for `opts` (`from_ai/1`), as Blueprint source."
-  @spec to_source(keyword()) :: String.t()
+  @doc """
+  The `write_with_ai:` to write for `opts` (`from_ai/1`), as Blueprint
+  source, or `nil` when it would say nothing: Write with AI is on by
+  default. `from` goes only with a prompt.
+  """
+  @spec to_source(keyword()) :: String.t() | nil
   def to_source(opts) do
-    options =
-      opts
-      |> Keyword.take([:prompt, :from, :model])
-      |> Enum.map_join(",\n", fn {key, value} -> "  #{key}: #{inspect(value, printable_limit: :infinity)}" end)
+    opts = if opts[:prompt], do: opts, else: Keyword.delete(opts, :from)
 
-    "write_with_ai: [\n#{options}\n]"
+    case Keyword.take(opts, [:prompt, :from, :model]) do
+      [] ->
+        nil
+
+      options ->
+        lines =
+          Enum.map_join(options, ",\n", fn {key, value} -> "  #{key}: #{inspect(value, printable_limit: :infinity)}" end)
+
+        "write_with_ai: [\n#{lines}\n]"
+    end
   end
 end
