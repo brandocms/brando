@@ -116,6 +116,8 @@ defmodule Brando.Content.BlockReferences do
     |> select([block], %{id: block.id, source: block.source})
     |> distinct(true)
     |> repo().all()
+    # A root without a source belongs to no entry (a loose block).
+    |> Enum.reject(&is_nil(&1.source))
     |> Enum.reduce(%{}, fn %{id: id, source: source}, roots_by_schema ->
       schema = Module.concat([source])
       Map.update(roots_by_schema, schema, [id], &(&1 ++ [id]))
