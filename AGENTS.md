@@ -40,8 +40,8 @@
 - Review a change (yours before pushing, or a PR) against [CODING_STANDARDS.md](CODING_STANDARDS.md): tests, field sync, `:has()`, UI.
 - Independent bug hunt on a branch or PR: the read-only `reviewer` subagent ([.claude/agents/reviewer.md](.claude/agents/reviewer.md)).
 - Second opinion from another model family, in parallel with the reviewer:
-  `codex exec -m gpt-6.1-sol -s read-only "<follow .claude/agents/reviewer.md; review git diff origin/main...HEAD; intent: …>"`
-  (OpenAI Codex CLI ≥ 0.162). The two miss different things: on the 0.55 module renames,
+  `scripts/sol-audit "<intent of the change>"` (OpenAI Codex, `gpt-6.1-sol`, read-only, same
+  reviewer instructions; Codex CLI ≥ 0.162). The two miss different things: on the 0.55 module renames,
   Codex found scoping bugs four Claude rounds had passed, and each found one the other missed.
   Merge both lists before fixing. Codex reviews statically, so reproduce each finding with a
   failing test first.
