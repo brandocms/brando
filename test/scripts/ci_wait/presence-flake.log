@@ -1,0 +1,19 @@
+2026-10-09T09:00:00.0000000Z Running ExUnit with seed: 1234, max_cases: 8
+2026-10-09T09:00:01.0000000Z .........................................................
+2026-10-09T09:00:02.0000000Z 09:14:07.486 [error] ==> Presence: could not record last seen for user 1826: exited in: GenServer.call(BrandoIntegration.Presence_shard0, {:list, "lobby"}, 5000)
+2026-10-09T09:00:03.0000000Z     ** (EXIT) shutdown: "owner #PID<0.47181.0> exited"
+2026-10-09T09:00:04.0000000Z .........................................................
+2026-10-09T09:00:05.0000000Z   1) test pushes socket tokens for the signed-in user on mount (BrandoAdmin.ChromeSocketTokensTest)
+2026-10-09T09:00:06.0000000Z ##[error]     test/brando_admin/live/chrome_socket_tokens_test.exs:15
+2026-10-09T09:00:07.0000000Z      ** (exit) exited in: Phoenix.LiveViewTest.live(nil)
+2026-10-09T09:00:08.0000000Z          ** (EXIT) exited in: GenServer.call(BrandoIntegration.Presence_shard0, {:list, "lobby"}, 5000)
+2026-10-09T09:00:09.0000000Z              ** (EXIT) exited in: DBConnection.Holder.checkout(#PID<0.12255.0>, [log: #Function<14.89431826/1 in Ecto.Adapters.SQL.with_log/4>])
+2026-10-09T09:00:10.0000000Z                  ** (EXIT) shutdown: "owner #PID<0.12254.0> exited"
+2026-10-09T09:00:11.0000000Z      code: {:ok, view, _} = live_isolated(build_conn(), BrandoAdmin.Chrome, session: %{"user_token" => session_token})
+2026-10-09T09:00:12.0000000Z      stacktrace:
+2026-10-09T09:00:13.0000000Z        test/brando_admin/live/chrome_socket_tokens_test.exs:19: (test)
+2026-10-09T09:00:14.0000000Z 
+2026-10-09T09:00:15.0000000Z .........................................................
+2026-10-09T09:00:16.0000000Z Finished in 262.7 seconds (35.4s async, 227.2s sync)
+2026-10-09T09:00:17.0000000Z 146 doctests, 3681 tests, 1 failure
+2026-10-09T09:00:18.0000000Z ##[error]Process completed with exit code 2.

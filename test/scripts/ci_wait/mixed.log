@@ -1,0 +1,27 @@
+2026-10-09T09:00:00.0000000Z Running ExUnit with seed: 1234, max_cases: 8
+2026-10-09T09:00:01.0000000Z .........................................................
+2026-10-09T09:00:02.0000000Z 09:14:07.486 [error] ==> Presence: could not record last seen for user 1826: exited in: GenServer.call(BrandoIntegration.Presence_shard0, {:list, "lobby"}, 5000)
+2026-10-09T09:00:03.0000000Z     ** (EXIT) shutdown: "owner #PID<0.47181.0> exited"
+2026-10-09T09:00:04.0000000Z .........................................................
+2026-10-09T09:00:05.0000000Z   1) test scheduled publishing posts to the Slack routes that send it (Brando.NotificationsTest)
+2026-10-09T09:00:06.0000000Z ##[error]     test/brando/notifications_test.exs:269
+2026-10-09T09:00:07.0000000Z      Assertion with == failed
+2026-10-09T09:00:08.0000000Z      code:  assert length(requests) == 1
+2026-10-09T09:00:09.0000000Z      left:  0
+2026-10-09T09:00:10.0000000Z      right: 1
+2026-10-09T09:00:11.0000000Z      stacktrace:
+2026-10-09T09:00:12.0000000Z        test/brando/notifications_test.exs:280: (test)
+2026-10-09T09:00:13.0000000Z 
+2026-10-09T09:00:14.0000000Z   2) test of two overlapping saves the second can be retried, without a duplicate block (BrandoAdmin.EditSessionSavesTest)
+2026-10-09T09:00:15.0000000Z ##[error]     test/brando_admin/live/edit_session_saves_test.exs:113
+2026-10-09T09:00:16.0000000Z      condition never held
+2026-10-09T09:00:17.0000000Z      code: await(fn -> Map.new(texts(c.identity))[new] == "<p>B retries</p>" end)
+2026-10-09T09:00:18.0000000Z      stacktrace:
+2026-10-09T09:00:19.0000000Z        test/brando_admin/live/edit_session_saves_test.exs:130: (test)
+2026-10-09T09:00:20.0000000Z 
+2026-10-09T09:00:21.0000000Z .........................................................
+2026-10-09T09:00:22.0000000Z Finished in 664.6 seconds (50.1s async, 614.5s sync)
+2026-10-09T09:00:23.0000000Z 
+2026-10-09T09:00:24.0000000Z Result: 5072/5074 passed (165/165 doctests, 4907/4909 tests)
+2026-10-09T09:00:25.0000000Z Failed: 2 tests
+2026-10-09T09:00:26.0000000Z ##[error]Process completed with exit code 2.

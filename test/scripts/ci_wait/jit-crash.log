@@ -1,0 +1,10 @@
+﻿2026-10-09T09:00:00.0000000Z ##[group]Run mix test --warnings-as-errors
+2026-10-09T09:00:01.0000000Z Running ExUnit with seed: 1234, max_cases: 8
+2026-10-09T09:00:02.0000000Z .........................................................
+2026-10-09T09:00:03.0000000Z 09:14:07.486 [error] ==> Presence: could not record last seen for user 1826: exited in: GenServer.call(BrandoIntegration.Presence_shard0, {:list, "lobby"}, 5000)
+2026-10-09T09:00:04.0000000Z     ** (EXIT) shutdown: "owner #PID<0.47181.0> exited"
+2026-10-09T09:00:05.0000000Z .........................................................
+2026-10-09T09:00:06.0000000Z [asmjit] Assertion failed at asmjit/core/jitallocator.cpp (line 999):
+2026-10-09T09:00:07.0000000Z [asmjit] offset <= block->block_size() - size
+2026-10-09T09:00:08.0000000Z /home/runner/work/_temp/8334a857.sh: line 1:  3224 Aborted                 (core dumped) mix test --warnings-as-errors
+2026-10-09T09:00:09.0000000Z ##[error]Process completed with exit code 134.

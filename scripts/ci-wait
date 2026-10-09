@@ -137,22 +137,34 @@ failures() {
 }
 
 # A job log as clean lines: no BOM, timestamps, ##[error] prefixes or colours.
+# The log helpers work on bytes (LC_ALL=C), so they behave the same in any
+# locale and with any awk.
 clean_log() {
-  sed -E $'s/^\xef\xbb\xbf//; s/^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9:.]+Z ?//; s/\x1b\\[[0-9;]*[A-Za-z]//g; s/^##\\[error\\]//'
+  LC_ALL=C sed -E $'s/^\xef\xbb\xbf//; s/^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9:.]+Z ?//; s/\x1b\\[[0-9;]*[A-Za-z]//g; s/^##\\[error\\]//'
 }
 
 # The failing tests in a clean log, one per line: a title, a tab, then the
 # test's report joined into one line. ExUnit reports start with
-# "  1) test …" (or doctest/property), Playwright's with "  1) [project] › …".
-# A test reported twice (Playwright repeats them) is kept once, and when a
-# Playwright run summary names the failed tests, a test that passed on retry
-# (flaky) is dropped.
+# "  1) test …" (or doctest/property) or "  1) Mod: failure on setup_all
+# callback", Playwright's with "  1) [project] › …". A test reported twice
+# (Playwright repeats them) is kept once, and when a Playwright run summary
+# names the failed tests, a test that passed on retry (flaky) is dropped.
 failing_tests() {
-  awk '
+  LC_ALL=C awk -v rule='─' '
     # Playwright pads titles with a rule (and "Retry #1") to the line width.
+    # Compared as a byte string, so no awk or locale reads it as a character.
+    function rstrip(s,   n) {
+      n = length(rule)
+      while (1) {
+        if (substr(s, length(s)) == " ") s = substr(s, 1, length(s) - 1)
+        else if (length(s) >= n && substr(s, length(s) - n + 1) == rule) s = substr(s, 1, length(s) - n)
+        else return s
+      }
+    }
     function norm(s) {
-      sub(/^ +/, "", s); sub(/ *(─+ *)?(Retry #[0-9]+ *─*)? *$/, "", s)
-      return s
+      sub(/^ +/, "", s); s = rstrip(s)
+      sub(/ *Retry #[0-9]+$/, "", s)
+      return rstrip(s)
     }
     function flush() {
       if (title != "" && !(title in texts)) { order[++count] = title; texts[title] = text }
@@ -168,10 +180,12 @@ failing_tests() {
         if (in_failed) failed[norm(line)] = 1
       }
     }
-    /^ *[0-9]+\) (test|doctest|property) / || /^ *[0-9]+\) \[[^]]+\] › / {
+    /^ *[0-9]+\) (test|doctest|property) / || /^ *[0-9]+\) [A-Za-z0-9_.]+: failure on setup_all callback/ ||
+    /^ *[0-9]+\) \[[^]]+\] / {
       flush()
       title = $0
       sub(/^ *[0-9]+\) /, "", title)
+      sub(/, all tests have been invalidated.*$/, "", title)
       title = norm(title)
       text = $0; lines = 0
       next
@@ -186,28 +200,59 @@ failing_tests() {
       flush()
       for (i = 1; i <= count; i++) {
         t = order[i]
-        if (summaries && t ~ /^\[[^]]+\] › / && !(t in failed)) continue
+        if (summaries && t ~ /^\[[^]]+\] / && !(t in failed)) continue
         print t "\t" texts[t]
       }
     }
   '
 }
 
-# The known flakes as name<TAB>pattern lines.
+# How many tests ExUnit says failed (the sum of every summary in the log):
+# "4917 tests, 9 failures" or, from Elixir 1.20, "Failed: 2 doctests, 8 tests".
+reported_failures() {
+  LC_ALL=C awk '
+    /^[0-9]+ (doctests?|tests?|propert(y|ies)), .*[0-9]+ failures?/ {
+      if (match($0, /[0-9]+ failures?/)) total += substr($0, RSTART, RLENGTH) + 0
+    }
+    /^Failed: [0-9]+ / {
+      n = split(substr($0, 9), parts, ",")
+      for (i = 1; i <= n; i++) total += parts[i] + 0
+    }
+    END { print total + 0 }
+  '
+}
+
+# Why a job failed when it reported no failing test: the suite aborting
+# (warnings as errors), a Mix or compile error, an error line. Empty if none.
+failure_reason() {
+  local log="$1" line
+  line="$(LC_ALL=C grep -m1 -E 'Test suite aborted|failed due to warnings' "$log")" ||
+    line="$(LC_ALL=C grep -E '^\*\* \([A-Za-z.]+\)' "$log" | tail -n 1)"
+  [ -n "$line" ] || line="$(LC_ALL=C grep -m1 -E '^(== Compilation error|error: )' "$log")"
+  line="${line#ERROR! }"
+  printf '%s' "${line:0:160}"
+}
+
+# The known flakes as name<TAB>scope<TAB>pattern lines, where scope is "log"
+# for a "log:" pattern and "test" otherwise.
 known_flakes() {
   [ -r "$flakes_file" ] || return 0
   awk '!/^[[:space:]]*(#|$)/ {
-    name = $1; sub(/^[[:space:]]*[^[:space:]]+[[:space:]]+/, ""); print name "\t" $0
+    name = $1; sub(/^[[:space:]]*[^[:space:]]+[[:space:]]+/, "")
+    scope = "test"
+    if (substr($0, 1, 4) == "log:") { scope = "log"; $0 = substr($0, 5) }
+    print name "\t" scope "\t" $0
   }' "$flakes_file"
 }
 
-# Prints the name of the first known flake matching stdin, or fails.
+# Prints the name of the first known flake of the scope (test or log) that
+# matches stdin, or fails.
 match_flake() {
-  local text name pattern
+  local want="$1" text name scope pattern
   text="$(cat)"
-  while IFS=$'\t' read -r name pattern; do
-    [ -n "$pattern" ] || continue
-    if grep -Eq -- "$pattern" <<<"$text"; then
+  while IFS=$'\t' read -r name scope pattern; do
+    [ "$scope" = "$want" ] && [ -n "$pattern" ] || continue
+    if LC_ALL=C grep -Eq -- "$pattern" <<<"$text"; then
       printf '%s' "$name"
       return 0
     fi
@@ -216,9 +261,13 @@ match_flake() {
 }
 
 # Explains one failed job: "flake<TAB>names<TAB>run", "real<TAB>detail" or
-# "cancelled".
+# "cancelled". A job is a known flake only when it reported failing tests and
+# every one matches a test pattern, with no failure ExUnit counted but did not
+# report and no aborted suite; or when it reported none and its whole log
+# matches a log: pattern.
 classify() {
-  local bucket="$1" link="$2" job run log tests total titles title body name names="" first="" step
+  local bucket="$1" link="$2" job run log tests total titles=0 title body name names="" first="" step
+  local reason parsed reported
   if [ "$bucket" = cancel ]; then printf 'cancelled\n'; return; fi
   if [[ ! "$link" =~ /actions/runs/([0-9]+)/job/([0-9]+) ]]; then
     printf 'real\tnot a GitHub Actions job, no log to read\n'; return
@@ -232,26 +281,36 @@ classify() {
   tests="$work/$job.tests"
   failing_tests <"$log" >"$tests"
   total="$(wc -l <"$tests" | tr -d ' ')"
+  reason="$(failure_reason "$log")"
   if [ "$total" -eq 0 ]; then
-    if name="$(tr '\n' ' ' <"$log" | match_flake)"; then
+    if name="$(tr '\n' ' ' <"$log" | match_flake log)"; then
       printf 'flake\t%s\t%s\n' "$name" "$run"
+      return
+    fi
+    step="$(gh api "repos/$repo/actions/jobs/$job" \
+      --jq '[.steps[] | select(.conclusion == "failure") | .name][0] // empty' 2>>"$err")"
+    if [ -n "$reason" ]; then
+      printf 'real\t%s%s\n' "$reason" "${step:+ (step: $step)}"
     else
-      step="$(gh api "repos/$repo/actions/jobs/$job" \
-        --jq '[.steps[] | select(.conclusion == "failure") | .name][0] // empty' 2>>"$err")"
       printf 'real\t%s\n' "${step:+failed step: $step}"
     fi
     return
   fi
   while IFS=$'\t' read -r title body; do
-    if name="$(printf '%s %s' "$title" "$body" | match_flake)"; then
-      case " $names " in *" $name "*) ;; *) names="${names:+$names, }$name" ;; esac
-    elif [ -z "$first" ]; then
-      first="$title"
-      titles=1
+    if name="$(printf '%s %s' "$title" "$body" | match_flake test)"; then
+      case ", $names, " in *", $name, "*) ;; *) names="${names:+$names, }$name" ;; esac
     else
+      [ -n "$first" ] || first="$title"
       titles=$((titles + 1))
     fi
   done <"$tests"
+  parsed="$(LC_ALL=C grep -cE '^(test|doctest|property) ' "$tests")"
+  reported="$(reported_failures <"$log")"
+  if [ -z "$first" ] && [ "$reported" -gt "$parsed" ]; then
+    first="$((reported - parsed)) failing test(s) not found in the log"
+  elif [ -z "$first" ]; then
+    case "$reason" in *aborted*|*'failed due to warnings'*) first="$reason" ;; esac
+  fi
   if [ -z "$first" ]; then
     printf 'flake\t%s\t%s\n' "$names" "$run"
   else
