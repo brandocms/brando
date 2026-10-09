@@ -1280,28 +1280,47 @@ defmodule Brando.Content.Blocks do
   # --- Preload Strategy ---
 
   @doc """
-  Count the root blocks attached to an entry across all of the schema's
-  block fields.
+  Counts an entry's blocks in each of its block fields, nested blocks
+  included: the number of blocks the block editor renders. Returns a map of
+  field name to count, empty for a schema without blocks.
 
-  A fast aggregate over the entry↔block join schemas — used by the form's
-  loading overlay to tell the user how many blocks are on their way before
-  the heavy preload pass runs.
+  The entry form reads it before the block preloads run, to decide whether
+  the blocks render with the rest of the form or after it, and to say how many
+  are on their way. One recursive query per block field.
   """
-  def count_entry_blocks(schema, entry_id) do
+  def count_entry_blocks_by_field(schema, entry_id) do
     if schema.has_trait(Brando.Trait.Blocks) do
-      Enum.reduce(schema.__blocks_fields__(), 0, fn %{name: assoc_name}, acc ->
-        field_as_module =
-          assoc_name
-          |> to_string
-          |> Macro.camelize()
-          |> then(&:"#{&1}")
-
-        join_schema = Module.concat([schema, field_as_module])
-        acc + Repo.aggregate(from(j in join_schema, where: j.entry_id == ^entry_id), :count)
+      Map.new(schema.__blocks_fields__(), fn %{name: assoc_name} ->
+        join_schema = Module.concat([schema, assoc_name |> to_string() |> Macro.camelize()])
+        {assoc_name, count_block_tree(join_schema, entry_id)}
       end)
     else
-      0
+      %{}
     end
+  end
+
+  @doc "All of an entry's blocks, every field and level, see `count_entry_blocks_by_field/2`."
+  def count_entry_blocks(schema, entry_id) do
+    schema
+    |> count_entry_blocks_by_field(entry_id)
+    |> Map.values()
+    |> Enum.sum()
+  end
+
+  defp count_block_tree(join_schema, entry_id) do
+    roots = from(j in join_schema, where: j.entry_id == ^entry_id, select: %{id: j.block_id})
+
+    descendants =
+      from(b in Block,
+        join: tree in "entry_block_tree",
+        on: b.parent_id == tree.id,
+        select: %{id: b.id}
+      )
+
+    from(tree in "entry_block_tree", select: count())
+    |> recursive_ctes(true)
+    |> with_cte("entry_block_tree", as: ^union_all(roots, ^descendants))
+    |> Repo.one()
   end
 
   @doc """

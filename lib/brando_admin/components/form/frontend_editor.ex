@@ -25,8 +25,8 @@ defmodule BrandoAdmin.Components.Form.FrontendEditor do
   import Ecto.Changeset, only: [apply_changes: 1, get_assoc: 2]
 
   alias BrandoAdmin.Components.FilePicker
-  alias BrandoAdmin.Components.Form
   alias BrandoAdmin.Components.Form.BlockField
+  alias BrandoAdmin.Components.Form.EntrySkeleton
   alias BrandoAdmin.Components.Form.Fieldset
   alias BrandoAdmin.Components.Form.FileDrawer
   alias BrandoAdmin.Components.Form.ImageDrawer
@@ -148,7 +148,6 @@ defmodule BrandoAdmin.Components.Form.FrontendEditor do
   def render(assigns) do
     ~H"""
     <div class="frontend-edit-form-wrapper">
-      <Form.entry_loader :if={!@blocks_ready?} id={"#{@id}-loader"} status={@entry_load_status} />
       <div
         id={"#{@id}-el"}
         class="brando-form frontend-edit-form"
@@ -236,9 +235,16 @@ defmodule BrandoAdmin.Components.Form.FrontendEditor do
             />
           </.form>
 
+          <%!-- A heavy entry's blocks load after the form (`Form.open_entry/1`) --%>
+          <div :if={@has_blocks? && !@blocks_ready?} class="frontend-edit-loading">
+            <EntrySkeleton.load_state label={
+              EntrySkeleton.loading_blocks_label(@block_counts |> Map.values() |> Enum.sum())
+            } />
+            <EntrySkeleton.blocks count={2} label?={false} />
+          </div>
           <.live_component
-            :for={{block_field, block_module, entry_blocks, field_opts} <- @block_map}
-            :if={@has_blocks? && @blocks_ready?}
+            :for={{block_field, block_module, entry_blocks, field_opts} <- (@blocks_ready? && @block_map) || []}
+            :if={@has_blocks?}
             :key={block_field}
             module={BlockField}
             block_module={block_module}

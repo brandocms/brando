@@ -11,6 +11,7 @@ defmodule BrandoAdmin.Components.SplitDropdown do
 
   attr :id, :string, required: true
   attr :label, :string, default: nil
+  attr :disabled, :boolean, default: false
   slot :inner_block, required: true
 
   def render(assigns) do
@@ -22,6 +23,7 @@ defmodule BrandoAdmin.Components.SplitDropdown do
         type="button"
         aria-label={@label}
         data-tooltip={@label}
+        disabled={@disabled}
         phx-click={toggle_dropdown("##{@id}")}
         phx-click-away={hide_dropdown("##{@id}")}
       >

@@ -7,6 +7,7 @@ defmodule Brando.Blueprint.Listings.Components.Core do
   modules so ordinary rows do not inherit their admin rendering dependencies.
   """
   use Phoenix.Component
+  use Gettext, backend: Brando.Gettext
 
   alias Brando.Blueprint.URL
   alias Brando.HTML.I18n
@@ -63,6 +64,8 @@ defmodule Brando.Blueprint.Listings.Components.Core do
       <.link navigate={@update_url} class={!@skip_style && "entry-link"}>
         {render_slot(@inner_block)}
       </.link>
+      <%!-- Shown while the entry opens from its row (`openingRow.js`) --%>
+      <span class="entry-opening">{gettext("Opening")}</span>
       {render_slot(@outside)}
     </div>
     """

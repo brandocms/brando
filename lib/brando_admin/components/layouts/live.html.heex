@@ -46,6 +46,13 @@
         <%!-- A sensitive action held until the user confirms it is them, see BrandoAdmin.Reauth --%>
         <BrandoAdmin.Reauth.prompt :if={match?(%{event: _}, assigns[:reauth])} reauth={@reauth} />
       </main>
+    <% else %>
+      <%!-- An entry editor's first render, before LiveView connects --%>
+      <main :if={assigns[:entry_skeleton]} id="brando-main">
+        <article class="content">
+          <BrandoAdmin.Components.Form.EntrySkeleton.form id="entry-skeleton" skeleton={@entry_skeleton} />
+        </article>
+      </main>
     <% end %>
   </div>
 <% else %>

@@ -48,6 +48,7 @@ defmodule BrandoAdmin.Components.Form do
   alias BrandoAdmin.Components.Form.DraftRecoveryComponent
   alias BrandoAdmin.Components.Form.Drafts
   alias BrandoAdmin.Components.Form.EntryHeader
+  alias BrandoAdmin.Components.Form.EntrySkeleton
   alias BrandoAdmin.Components.Form.FieldActions
   alias BrandoAdmin.Components.Form.Fieldset
   alias BrandoAdmin.Components.Form.FileDrawer
@@ -104,7 +105,7 @@ defmodule BrandoAdmin.Components.Form do
      |> assign(:tiptap_epoch, Ecto.UUID.generate())
      |> assign(:entry_loading?, false)
      |> assign(:blocks_ready?, true)
-     |> assign(:entry_load_status, nil)
+     |> assign(:block_counts, %{})
      |> assign(:dirty_fields, [])
      |> assign(:synced_values, %{})
      |> assign(:unshipped_fields, MapSet.new())
@@ -1284,22 +1285,21 @@ defmodule BrandoAdmin.Components.Form do
     {:ok, put_local_form(socket, updated_form)}
   end
 
-  # Async entry-load progress, reported from the loading task via
-  # send_update/3 — keeps the loading overlay's status current.
   def update(%{action: :notes_count, count: count}, socket) do
     {:ok, assign(socket, :notes_open_count, count)}
   end
 
-  def update(%{action: :entry_load_progress, status: status}, socket) do
-    {:ok, assign(socket, :entry_load_status, status)}
-  end
-
-  # Second phase of the async load: the entry + form fields rendered in the
-  # previous cycle, now let the block components mount. Deferred one render
-  # cycle (send_update_after) so the "building block editor" status actually
-  # paints before the server spends seconds rendering a large block tree.
+  # A heavy entry loaded with a custom query: its fields went out with the
+  # previous render, so they are on screen while the block tree renders.
   def update(%{action: :render_blocks}, socket) do
     {:ok, assign(socket, :blocks_ready?, true)}
+  end
+
+  # `run_load/3` on a sandboxed E2E server: the load runs here, in the
+  # LiveView, after the render that went out before it.
+  def update(%{action: :run_load, key: key, load: load}, socket) do
+    {:noreply, socket} = handle_async(key, {:ok, load.()}, socket)
+    {:ok, socket}
   end
 
   def update(%{action: :apply_translation}, socket) do
@@ -1357,15 +1357,14 @@ defmodule BrandoAdmin.Components.Form do
       |> FrontendEditor.init()
 
     cond do
-      # async load in flight — parent re-rendered (presence etc.); the new
-      # props are assigned above, nothing to build until the entry lands
-      socket.assigns.entry_loading? ->
+      # The entry or its blocks are still loading and the parent re-rendered
+      # (presence etc.): the new props are assigned above, and the rest of the
+      # pipeline runs when the load lands.
+      socket.assigns.entry_loading? or not socket.assigns.blocks_ready? ->
         {:ok, socket}
 
-      # editing an existing entry: load it off-process so the form shell and
-      # loading overlay paint immediately instead of blocking on the query
       socket.assigns.initial_update && socket.assigns.entry_id ->
-        {:ok, start_entry_load(socket)}
+        {:ok, open_entry(socket)}
 
       true ->
         {:ok, socket |> assign_entry() |> finish_form_update()}
@@ -1383,21 +1382,33 @@ defmodule BrandoAdmin.Components.Form do
   defp default_save_target(socket), do: FrontendEditor.save_target(socket)
 
   # The tail of the update pipeline — expects :entry to be assigned. Runs
-  # synchronously for create forms and subsequent parent updates, and from
-  # handle_async/3 once the async-loaded entry arrives.
+  # for create forms and subsequent parent updates, and when an existing
+  # entry has loaded (`open_entry/1`). A heavy entry runs the first half
+  # before its blocks are loaded and the second once they are.
   defp finish_form_update(socket) do
+    socket
+    |> finish_form_fields()
+    |> finish_form_blocks()
+  end
+
+  defp finish_form_fields(socket) do
     socket
     |> assign_addon_statuses()
     |> assign_default_params()
     |> extract_tab_names()
     |> assign_form()
     |> maybe_assign_uploads()
+    |> assign(:initial_update, false)
+  end
+
+  # Everything that reads the entry's blocks.
+  defp finish_form_blocks(socket) do
+    socket
     |> maybe_assign_block_map()
     |> maybe_assign_entry_for_blocks()
     |> FrontendEditor.unless_frontend(&Drafts.init/1)
     |> Translation.assign_state()
     |> FrontendEditor.unless_frontend(&schedule_translation_apply/1)
-    |> assign(:initial_update, false)
   end
 
   # A synchronized translation opens with its pending version in the form.
@@ -1422,85 +1433,132 @@ defmodule BrandoAdmin.Components.Form do
     |> schedule_translation_apply()
   end
 
-  defp start_entry_load(socket) do
-    %{
-      schema: schema,
-      form_blueprint: form_blueprint,
-      entry_id: entry_id,
-      singular: singular,
-      context: context,
-      id: form_id
-    } = socket.assigns
+  # Opening an existing entry. The entry is read before the form's first
+  # render, so its heading, tabs and fields arrive real rather than as a
+  # skeleton, and LiveView keeps the page the user came from on screen until
+  # then (a listing marks the row they clicked: `openingRow.js`). Its blocks
+  # decide the rest:
+  #
+  #   * at most `@light_block_limit` (every level counted) load and render in
+  #     the same step, so a light entry goes straight to the complete form;
+  #   * more, and the form renders without them: read-only, block outlines
+  #     where they go, "Loading N blocks" in the toolbar. The blocks follow
+  #     (`run_load/3`); Save and recovery copies wait for them.
+  #
+  # A blueprint with its own form query loads in one piece, so a heavy one
+  # shows the full skeleton (`EntrySkeleton.form/1`) until it has.
+  #
+  # The limit is where the complete form stops arriving in about the time the
+  # outline would: measured from the Pages listing on the E2E bench entries
+  # (`e2e/bench`), a 5-block entry opens complete in ~100 ms and a 40-block one
+  # in ~400 ms, at 4x CPU throttling ~300 and ~1 000 ms, about 17 ms a block.
+  # Twenty blocks keep a light entry under ~0.7 s on a slow machine; past
+  # that the fields are worth showing first.
+  @light_block_limit 20
 
-    if Application.get_env(Brando.config(:otp_app), :sql_sandbox) do
-      # Sandboxed e2e runs use ownership :auto mode, where the async task's
-      # fresh connection escapes the per-test sandbox transaction and cannot
-      # see test-created entries (same class of problem as
-      # :sql_sandbox_serial_preloads) — load in-process instead.
-      case load_entry_with_progress(nil, form_id, schema, form_blueprint, entry_id, singular, context) do
-        {:ok, entry} ->
-          socket
-          |> assign(:entry, entry)
-          |> finish_form_update()
-          |> announce_join()
+  @doc false
+  def light_block_limit, do: @light_block_limit
 
-        :not_found ->
-          entry_not_found(socket)
+  defp open_entry(socket) do
+    %{schema: schema, form_blueprint: form_blueprint} = socket.assigns
+
+    cond do
+      not schema.has_trait(Brando.Trait.Blocks) -> open_in_one_step(socket)
+      is_nil(form_blueprint.query) -> open_fields_first(socket)
+      true -> open_with_custom_query(socket)
+    end
+  end
+
+  defp open_in_one_step(socket) do
+    case fetch_entry(entry_source(socket), []) do
+      {:ok, entry} -> entry_opened(socket, entry)
+      :not_found -> entry_not_found(socket)
+    end
+  end
+
+  defp open_fields_first(socket) do
+    %{schema: schema, entry_id: entry_id} = socket.assigns
+
+    with {:ok, entry} <- fetch_entry(entry_source(socket), skip_blocks: true) do
+      counts = Brando.Content.Blocks.count_entry_blocks_by_field(schema, entry_id)
+
+      if light_entry?(counts) do
+        entry_opened(socket, Brando.Repo.preload(entry, Brando.Content.Blocks.preloads_for(schema)))
+      else
+        socket
+        |> assign(:entry, entry)
+        |> assign(:blocks_ready?, false)
+        |> assign(:block_counts, counts)
+        |> finish_form_fields()
+        |> announce_join()
+        |> run_load(:blocks_load, fn -> Brando.Repo.preload(entry, Brando.Content.Blocks.preloads_for(schema)) end)
       end
     else
-      lv_pid = self()
-      has_blocks? = schema.has_trait(Brando.Trait.Blocks)
+      :not_found -> entry_not_found(socket)
+    end
+  end
+
+  defp open_with_custom_query(socket) do
+    %{schema: schema, entry_id: entry_id} = socket.assigns
+    counts = Brando.Content.Blocks.count_entry_blocks_by_field(schema, entry_id)
+
+    if light_entry?(counts) do
+      open_in_one_step(socket)
+    else
+      source = entry_source(socket)
 
       socket
       |> assign(:entry_loading?, true)
       |> assign(:blocks_ready?, false)
-      |> assign(:entry_load_status, %{phase: :entry, blocks?: has_blocks?, block_count: nil})
-      |> start_async(
-        :entry_load,
-        # The tenant prefix lives in the process dictionary, which a fresh async
-        # task does not inherit — without this the query runs against `public`.
-        Brando.Tenant.capture_context(fn ->
-          load_entry_with_progress(lv_pid, form_id, schema, form_blueprint, entry_id, singular, context)
-        end)
-      )
+      |> assign(:block_counts, counts)
+      |> run_load(:entry_load, fn -> fetch_entry(source, []) end)
     end
   end
 
-  # Runs inside the async task. Splits the load in two so we can report real
-  # progress: the entry itself (fast) first, then the heavy recursive block
-  # preloads — with a cheap count in between so the overlay can say how many
-  # blocks are coming. Custom form queries pass through untouched (we can't
-  # split preloads we don't own), so they load in one step. A missing entry is
-  # an expected answer, not a failure, so it comes back as `:not_found`.
-  defp load_entry_with_progress(lv_pid, form_id, schema, form_blueprint, entry_id, singular, context) do
-    has_blocks? = schema.has_trait(Brando.Trait.Blocks)
-    split_blocks? = has_blocks? && is_nil(form_blueprint.query)
+  defp light_entry?(counts), do: counts |> Map.values() |> Enum.sum() <= @light_block_limit
 
+  defp entry_opened(socket, entry) do
+    socket
+    |> assign(:entry, entry)
+    |> finish_form_update()
+    |> announce_join()
+  end
+
+  # What reading the entry takes, without the socket: an async load gets it.
+  defp entry_source(%{assigns: assigns}) do
+    Map.take(assigns, [:schema, :form_blueprint, :entry_id, :singular, :context])
+  end
+
+  # A missing entry is an expected answer, not a failure, so it comes back as
+  # `:not_found`. `skip_blocks: true` leaves out the block preloads, which a
+  # custom form query can't (it passes through untouched).
+  defp fetch_entry(%{schema: schema, form_blueprint: form_blueprint} = source, opts) do
     query_params =
-      entry_id
+      source.entry_id
       |> maybe_query(form_blueprint)
-      |> add_preloads(schema, form_blueprint, skip_blocks: split_blocks?)
+      |> add_preloads(schema, form_blueprint, opts)
       |> Map.put(:with_deleted, true)
 
-    case apply(context, :"get_#{singular}", [query_params]) do
-      {:ok, entry} when split_blocks? ->
-        if lv_pid do
-          block_count = Brando.Content.Blocks.count_entry_blocks(schema, entry_id)
+    case apply(source.context, :"get_#{source.singular}", [query_params]) do
+      {:ok, entry} -> {:ok, entry}
+      {:error, _err} -> :not_found
+    end
+  end
 
-          send_update(lv_pid, __MODULE__,
-            id: form_id,
-            action: :entry_load_progress,
-            status: %{phase: :blocks, blocks?: true, block_count: block_count}
-          )
-        end
-
-        {:ok, Brando.Repo.preload(entry, Brando.Content.Blocks.preloads_for(schema))}
-
-      {:ok, entry} ->
-        {:ok, entry}
-
-      {:error, _err} ->
-        :not_found
+  # Runs a slow load off the LiveView, whose result arrives in
+  # `handle_async/3` after the render that went out before it. A sandboxed
+  # E2E server runs it in-process instead, in the next update cycle: there
+  # an async task's fresh connection escapes the per-test sandbox
+  # transaction and cannot see test-created entries (the same problem as
+  # `:sql_sandbox_serial_preloads`).
+  defp run_load(socket, key, load) do
+    if Application.get_env(Brando.config(:otp_app), :sql_sandbox) do
+      send_update(__MODULE__, id: socket.assigns.id, action: :run_load, key: key, load: load)
+      socket
+    else
+      # The tenant prefix lives in the process dictionary, which a fresh
+      # async task does not inherit; without it the query runs on `public`.
+      start_async(socket, key, Brando.Tenant.capture_context(load))
     end
   end
 
@@ -1508,29 +1566,25 @@ defmodule BrandoAdmin.Components.Form do
     {:noreply, entry_not_found(socket)}
   end
 
+  # A heavy entry with a custom query: its fields render now, read-only
+  # beside the block outlines, and the block tree in the next cycle.
   def handle_async(:entry_load, {:ok, {:ok, entry}}, socket) do
-    socket =
-      socket
-      |> assign(:entry, entry)
-      |> assign(:entry_loading?, false)
-      |> finish_form_update()
-      |> announce_join()
+    send_update(__MODULE__, id: socket.assigns.id, action: :render_blocks)
 
-    socket =
-      if socket.assigns.has_blocks? do
-        # let this cycle's diff (form fields + updated status) reach the
-        # client before the expensive block render pass starts
-        send_update_after(__MODULE__, [id: socket.assigns.id, action: :render_blocks], 50)
+    {:noreply,
+     socket
+     |> assign(:entry_loading?, false)
+     |> entry_opened(entry)}
+  end
 
-        update(socket, :entry_load_status, fn
-          %{} = status -> %{status | phase: :rendering}
-          nil -> nil
-        end)
-      else
-        assign(socket, :blocks_ready?, true)
-      end
-
-    {:noreply, socket}
+  # A heavy entry's blocks, for the fields already on screen.
+  def handle_async(:blocks_load, {:ok, entry}, socket) do
+    {:noreply,
+     socket
+     |> assign(:entry, entry)
+     |> put_loaded_blocks(entry)
+     |> finish_form_blocks()
+     |> assign(:blocks_ready?, true)}
   end
 
   def handle_async({:tiptap_ai, id, request}, result, socket) do
@@ -1591,8 +1645,8 @@ defmodule BrandoAdmin.Components.Form do
     end
   end
 
-  def handle_async(:entry_load, {:exit, reason}, _socket) do
-    # surface load failures exactly like the old synchronous load did
+  def handle_async(key, {:exit, reason}, _socket) when key in [:entry_load, :blocks_load] do
+    # surface load failures exactly like a synchronous load does
     case reason do
       {exception, stacktrace} when is_exception(exception) -> reraise(exception, stacktrace)
       other -> exit(other)
@@ -1946,8 +2000,20 @@ defmodule BrandoAdmin.Components.Form do
   end
 
   # Editing an existing entry never reaches this far — the update-form path
-  # loads the entry asynchronously (start_entry_load/1) before the pipeline
-  # runs, so only the skip- and create-clauses above remain.
+  # loads the entry itself (`open_entry/1`) before the pipeline runs, so only
+  # the skip- and create-clauses above remain.
+
+  # The fields went out before the blocks were loaded. The form keeps what it
+  # holds (values other editors sent, a recovered form) and takes the loaded
+  # blocks into its data, where saving puts the block changesets.
+  defp put_loaded_blocks(%{assigns: %{form: %{source: changeset} = form, schema: schema}} = socket, entry) do
+    data =
+      Enum.reduce(schema.__blocks_fields__(), changeset.data, fn %{name: name}, data ->
+        Map.put(data, :"entry_#{name}", Map.fetch!(entry, :"entry_#{name}"))
+      end)
+
+    put_form(socket, %{form | source: %{changeset | data: data}, data: data})
+  end
 
   defp assign_refreshed_entry(
          %{
@@ -3280,19 +3346,28 @@ defmodule BrandoAdmin.Components.Form do
     assign(socket, :fields_demanding_live_preview_reassign, lp_opts.reassign_on_change)
   end
 
-  # Loading shell while the async entry load is in flight. Deliberately a
-  # separate DOM id without the Brando.Form hook — the hook's mounted()
-  # expects the real form markup, and hooks only mount when their element
-  # enters the DOM, so the real form must arrive as a fresh element.
+  # The whole form as a skeleton while a heavy entry with a custom form query
+  # loads in one piece (`open_with_custom_query/1`). Deliberately a separate
+  # DOM id without the Brando.Form hook — the hook's mounted() expects the
+  # real form markup, and hooks only mount when their element enters the DOM,
+  # so the real form must arrive as a fresh element.
+  def render(%{entry_loading?: true, frontend_edit: %{}} = assigns) do
+    ~H"""
+    <div class="frontend-edit-form-wrapper">
+      <div id={"#{@id}-loading"} class="frontend-edit-loading">
+        <EntrySkeleton.load_state label={gettext("Opening")} />
+        <EntrySkeleton.blocks count={2} label?={false} />
+      </div>
+    </div>
+    """
+  end
+
   def render(%{entry_loading?: true} = assigns) do
+    assigns = assign(assigns, :skeleton, EntrySkeleton.describe(assigns.schema, assigns[:name] || :default))
+
     ~H"""
     <div>
-      <div id={"#{@id}-loading"} class="brando-form form-loading">
-        <div class="form-content">
-          <EntryHeader.header :if={@layout == :entry} crumbs={@entry_crumbs} />
-        </div>
-        <.entry_loader id={"#{@id}-loader-shell"} status={@entry_load_status} entering />
-      </div>
+      <EntrySkeleton.form id={"#{@id}-loading"} skeleton={@skeleton} header?={@layout == :entry} />
     </div>
     """
   end
@@ -3347,10 +3422,14 @@ defmodule BrandoAdmin.Components.Form do
           </button>
         </:footer>
       </Content.modal>
-      <.entry_loader :if={!@blocks_ready?} id={"#{@id}-loader"} status={@entry_load_status} />
       <div
         id={"#{@id}-el"}
-        class={["brando-form", assigns[:alt_text_suggesting] && "is-suggesting-alt"]}
+        class={[
+          "brando-form",
+          assigns[:alt_text_suggesting] && "is-suggesting-alt",
+          !@blocks_ready? && "is-loading-blocks"
+        ]}
+        aria-busy={!@blocks_ready? && "true"}
         phx-hook="Brando.Form"
         data-deliver-topic={@deliver_topic}
         data-entry-id={@entry_id}
@@ -3378,6 +3457,7 @@ defmodule BrandoAdmin.Components.Form do
               name={@status_input_name}
               value={@entry_status}
               options={@status_options}
+              disabled={!@blocks_ready?}
             />
           </EntryHeader.header>
 
@@ -3419,6 +3499,7 @@ defmodule BrandoAdmin.Components.Form do
             <nav
               class={["form-tab-customs pill-tabs", @layout == :entry && "pill-tabs--small"]}
               aria-label={gettext("Sections")}
+              inert={!@blocks_ready?}
             >
               <button
                 :for={tab <- @tabs}
@@ -3464,7 +3545,15 @@ defmodule BrandoAdmin.Components.Form do
 
             <div :if={@layout == :entry} class="form-tab-builtins">
               <.form_presences presences={@presences} current_user={@current_user} />
+              <%!-- Where the save state goes, while a heavy entry's blocks
+                    load. The status mounts once they have, with the
+                    recovery state they come with. --%>
+              <EntrySkeleton.load_state
+                :if={!@blocks_ready?}
+                label={EntrySkeleton.loading_blocks_label(@block_counts |> Map.values() |> Enum.sum())}
+              />
               <.live_component
+                :if={@blocks_ready?}
                 module={DraftRecoveryComponent}
                 id={DraftRecoveryComponent.status_id(@id)}
                 dom_id={"#{@id}-save-state"}
@@ -3478,6 +3567,7 @@ defmodule BrandoAdmin.Components.Form do
                 :if={notes?(@layout, @entry_id)}
                 id={"#{@id}-notes-toggle"}
                 class="form-tool-notes form-tool-icon"
+                disabled={!@blocks_ready?}
                 phx-click={JS.dispatch("brando:notes:toggle")}
                 type="button"
                 aria-controls={"#{@id}-notes"}
@@ -3494,6 +3584,7 @@ defmodule BrandoAdmin.Components.Form do
                 data-toggle-preview={JS.push("open_live_preview", target: @myself)}
                 class={["live-preview-toggle form-tool-preview", @live_preview_active? && "active"]}
                 type="button"
+                disabled={!@blocks_ready?}
                 aria-label={gettext("Live preview")}
                 aria-pressed={to_string(@live_preview_active?)}
               >
@@ -3510,6 +3601,7 @@ defmodule BrandoAdmin.Components.Form do
                   id={"#{@id}-preview-trigger"}
                   type="button"
                   class={["live-preview-toggle preview-chooser-trigger", @live_preview_active? && "active"]}
+                  disabled={!@blocks_ready?}
                   data-toggle-preview={JS.push("open_live_preview", target: @myself)}
                   phx-click="toggle_preview_targets"
                   phx-target={@myself}
@@ -3581,6 +3673,7 @@ defmodule BrandoAdmin.Components.Form do
                 languages?={@has_alternates?}
                 share?={@has_live_preview? && BrandoAdmin.Authorization.allowed?(:export, @schema)}
                 sharing?={@sharing_preview?}
+                disabled={!@blocks_ready?}
               />
               <div class="split-dropdown form-tool-save">
                 <%!-- Saves and closes, like the bottom button and ⇧⌘S; the menu
@@ -3590,11 +3683,12 @@ defmodule BrandoAdmin.Components.Form do
                   type="button"
                   class="form-tool-save-button"
                   title={gettext("Save and close")}
+                  disabled={!@blocks_ready?}
                 >
                   <.icon name="check" class="s" />
                   <span>{gettext("Save and close")}</span>
                 </button>
-                <SplitDropdown.render id="save-dropdown" label={gettext("Save options")}>
+                <SplitDropdown.render id="save-dropdown" label={gettext("Save options")} disabled={!@blocks_ready?}>
                   <Button.dropdown
                     value={false}
                     event={JS.push("push_submit_redirect", target: @myself)}
@@ -3621,6 +3715,7 @@ defmodule BrandoAdmin.Components.Form do
                 </SplitDropdown.render>
               </div>
             </div>
+            <EntrySkeleton.progress :if={!@blocks_ready?} label={gettext("Loading blocks")} />
           </div>
 
           <.live_component module={FilePicker} id="file-picker" />
@@ -3682,6 +3777,7 @@ defmodule BrandoAdmin.Components.Form do
             data-save-event="save_form"
             phx-change="validate"
             phx-auto-recover="recover_form"
+            inert={!@blocks_ready?}
           >
             <input type="hidden" name={"#{@form.name}[#{:__force_change}]"} phx-debounce="0" />
             <Translation.panel :if={@translation} state={@translation} form_name={@form.name} target={@myself} />
@@ -3742,9 +3838,17 @@ defmodule BrandoAdmin.Components.Form do
             />
           </.form>
 
+          <%!-- A heavy entry's block fields as outlines until its blocks
+                have loaded; `@block_map` is built from them. --%>
+          <EntrySkeleton.blocks
+            :for={%{name: block_field, opts: field_opts} <- @form_blueprint.blocks}
+            :if={@has_blocks? && !@blocks_ready? && !field_opts[:footnote_fields] &&
+              block_field not in @hidden_block_fields}
+            count={Map.get(@block_counts, block_field, 0)}
+          />
           <.live_component
-            :for={{block_field, block_module, entry_blocks, field_opts} <- @block_map}
-            :if={@has_blocks? && @blocks_ready?}
+            :for={{block_field, block_module, entry_blocks, field_opts} <- (@blocks_ready? && @block_map) || []}
+            :if={@has_blocks?}
             :key={block_field}
             module={BlockField}
             block_module={block_module}
@@ -3766,7 +3870,7 @@ defmodule BrandoAdmin.Components.Form do
           />
 
           <Primitives.submit_button
-            :if={@layout == :entry}
+            :if={@layout == :entry && @blocks_ready?}
             processing={@processing}
             form_id={@id}
             label={gettext("Save and close")}
@@ -3824,62 +3928,6 @@ defmodule BrandoAdmin.Components.Form do
     """
   end
 
-  attr :status, :map, default: nil
-  attr :id, :string, required: true
-  attr :entering, :boolean, default: false
-
-  # Full-viewport overlay shown while an entry loads and while its block
-  # tree renders. The phase steps give the user a sense of scale ("ah, 132
-  # blocks — that's why it takes a moment") instead of a frozen screen.
-  #
-  # Two instances exist across the load: the loading shell's (delayed
-  # fade-in via `entering`, so fast loads never flash it) and the main
-  # render's continuation (instantly opaque — the shell's overlay is
-  # discarded in the same patch — fading out via phx-remove when done).
-  def entry_loader(assigns) do
-    ~H"""
-    <div
-      class={["form-loader", @entering && "entering"]}
-      id={@id}
-      phx-remove={JS.hide(transition: {"form-loader-out", "opacity-100", "opacity-0"}, time: 200)}
-    >
-      <div class="form-loader-card">
-        <div class="form-loader-title">
-          {gettext("Opening entry")}
-        </div>
-        <ol :if={@status} class="form-loader-steps">
-          <li class={entry_loader_step(@status.phase, :entry)}>
-            {gettext("Fetching content")}
-          </li>
-          <li :if={@status.blocks?} class={entry_loader_step(@status.phase, :blocks)}>
-            <%= if @status.block_count do %>
-              {ngettext("Loading %{count} block", "Loading %{count} blocks", @status.block_count)}
-            <% else %>
-              {gettext("Loading blocks")}
-            <% end %>
-          </li>
-          <li :if={@status.blocks?} class={entry_loader_step(@status.phase, :rendering)}>
-            {gettext("Building block editor")}
-          </li>
-        </ol>
-      </div>
-    </div>
-    """
-  end
-
-  @entry_load_phases [:entry, :blocks, :rendering]
-
-  defp entry_loader_step(current_phase, step) do
-    current_idx = Enum.find_index(@entry_load_phases, &(&1 == current_phase)) || 0
-    step_idx = Enum.find_index(@entry_load_phases, &(&1 == step))
-
-    cond do
-      step_idx < current_idx -> "done"
-      step_idx == current_idx -> "active"
-      true -> "pending"
-    end
-  end
-
   # Notes belong to a saved entry, in the entry editor (not settings screens).
   defp notes?(layout, entry_id), do: layout == :entry and not is_nil(entry_id)
 
@@ -3891,6 +3939,7 @@ defmodule BrandoAdmin.Components.Form do
   attr :languages?, :any, required: true
   attr :share?, :any, required: true
   attr :sharing?, :boolean, required: true
+  attr :disabled, :boolean, default: false
 
   # The entry toolbar's "⋯" menu: the tools an editor reaches for now and
   # then. Each item does what its toolbar button did; a form with none of
@@ -3915,6 +3964,7 @@ defmodule BrandoAdmin.Components.Form do
         aria-label={gettext("More")}
         data-tooltip={gettext("More")}
         aria-busy={to_string(@sharing?)}
+        disabled={@disabled}
       >
         <%!-- Sharing takes a moment while the blocks are gathered; the menu
               has closed by then, so its trigger spins until the link is ready. --%>
@@ -4378,6 +4428,10 @@ defmodule BrandoAdmin.Components.Form do
 
   # Someone else saved the entry after the frontend editor loaded it. Saving
   # now would write this editor's copy of the blocks over their save.
+  # Saving waits for a heavy entry's blocks (the shortcut too: the buttons
+  # are disabled until then).
+  def handle_event("save", _params, %{assigns: %{blocks_ready?: false}} = socket), do: {:noreply, socket}
+
   def handle_event("save", _params, %{assigns: %{frontend_edit: %{}, frontend_status: %{stale: %{} = stale}}} = socket) do
     {:noreply,
      socket
@@ -5592,6 +5646,8 @@ defmodule BrandoAdmin.Components.Form do
   # One save that asks the translations for no new review of text that
   # changed: typo fixes and the like. Structure, shared values and new text
   # are still synchronized.
+  def handle_event("push_submit" <> _, _, %{assigns: %{blocks_ready?: false}} = socket), do: {:noreply, socket}
+
   def handle_event("push_submit_minor", _, socket) do
     {:noreply,
      socket

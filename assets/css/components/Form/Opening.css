@@ -1,0 +1,319 @@
+/* Opening an entry (approved October 2026, see EntrySkeleton): skeleton
+   bars, a block field's outlines, the toolbar's status and its 2px line, and
+   the listing row the entry was opened from.
+
+   The states are classes: `is-loading-blocks` on the form root, from the
+   server, and `is-opening` on a listing row, from sticky JS
+   (`openingRow.js`). Nothing here keys on `:has()` above the block editor. */
+
+/* ---------- skeleton bars ---------- */
+
+.sk {
+  display: inline-block;
+  position: relative;
+  overflow: hidden;
+  height: 12px;
+  border-radius: 4px;
+  background-color: var(--brando-surface-tint);
+  vertical-align: middle;
+}
+
+/* The shimmer moves by transform, on the compositor, so it keeps moving
+   while the main thread applies a large patch. */
+.sk::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in srgb, var(--brando-surface) 75%, transparent),
+    transparent
+  );
+  transform: translateX(-100%);
+  animation: sk-shimmer 1.6s ease-in-out infinite;
+}
+
+@keyframes sk-shimmer {
+  from {
+    transform: translateX(-100%);
+  }
+
+  to {
+    transform: translateX(100%);
+  }
+}
+
+.sk-title {
+  width: min(340px, 70%);
+  height: 30px;
+  margin: 5px 0;
+  border-radius: 6px;
+}
+
+.sk-label {
+  height: 10px;
+  border-radius: 3px;
+}
+
+.sk-tab {
+  height: 10px;
+  border-radius: 3px;
+}
+
+.sk-circle {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+}
+
+.sk-line {
+  display: block;
+  height: 11px;
+
+  & + & {
+    margin-top: 10px;
+  }
+}
+
+/* The status pill's outline, empty */
+.sk-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 30px;
+  padding: 0 12px;
+  border: 1px solid var(--brando-line);
+  border-radius: 15px;
+  background-color: var(--brando-surface);
+
+  .sk-dot {
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+  }
+
+  .sk-text {
+    width: 62px;
+    height: 10px;
+  }
+}
+
+/* An input frame with no value yet: the real border, a bar inside */
+.sk-input {
+  display: flex;
+  align-items: center;
+  height: 44px;
+  padding: 0 14px;
+  border: 1px solid var(--brando-line-soft);
+  border-radius: 5px;
+  background-color: var(--brando-surface);
+}
+
+/* ---------- the whole form, before anything of the entry is known ---------- */
+
+.form-skeleton-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 24px 14px;
+  margin-bottom: 32px;
+
+  @media (max-width: 767px) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.form-skeleton-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* ---------- a form whose blocks are loading ---------- */
+
+.brando-form.is-loading-blocks {
+  /* Not ready to save: the tools stay where they are, quieter */
+  .form-tab-builtins > :is(.form-tool-notes, .form-tool-preview, .form-tool-more, .form-tool-save) {
+    opacity: 0.45;
+  }
+
+  .form-tab-builtins .page-presences .user-presence {
+    pointer-events: none;
+  }
+}
+
+/* "Loading 115 blocks", where "Saved 23:20" goes */
+.form-load-state {
+  display: inline-flex;
+  align-items: center;
+  min-height: 30px;
+  padding: 0 8px;
+  color: var(--brando-muted);
+  font: 400 12px/18px "Main", sans-serif;
+  white-space: nowrap;
+}
+
+/* The 2px line under the toolbar, in the gap above the form */
+.form-load-progress {
+  position: absolute;
+  right: 0;
+  bottom: -12px;
+  left: 0;
+  height: 2px;
+  overflow: hidden;
+  border-radius: 2px;
+  background-color: var(--brando-line-soft);
+  pointer-events: none;
+
+  &::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    width: 28%;
+    border-radius: 2px;
+    background-color: var(--brando-accent);
+    will-change: transform;
+    animation: load-sweep 1.4s ease-in-out infinite;
+  }
+}
+
+@keyframes load-sweep {
+  from {
+    transform: translateX(-100%);
+  }
+
+  to {
+    transform: translateX(360%);
+  }
+}
+
+/* ---------- block outlines ---------- */
+
+.blocks-wrapper.blocks-loading > .label-wrapper {
+  min-height: 18px;
+}
+
+.sk-blocks {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 16px 14px 24px;
+}
+
+.sk-block {
+  overflow: hidden;
+  border: 1px solid var(--brando-line-soft);
+  border-radius: 6px;
+  background-color: var(--brando-surface);
+}
+
+.sk-block-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 36px;
+  padding: 0 12px;
+  border-bottom: 1px solid var(--brando-line-soft);
+  background-color: var(--brando-surface-shaded);
+
+  .sk-toggle {
+    width: 24px;
+    height: 14px;
+    border-radius: 7px;
+  }
+
+  .sk-name {
+    width: 140px;
+    height: 9px;
+  }
+}
+
+.sk-block-body {
+  padding: 18px 20px 20px;
+
+  &.is-heading .sk-line:first-child {
+    height: 26px;
+  }
+}
+
+/* The frontend editor's panel while a heavy page's blocks load */
+.frontend-edit-loading {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* ---------- the listing row an entry is opening from ---------- */
+
+.list-row.is-opening,
+.child-row.is-opening {
+  position: relative;
+  background-color: var(--brando-surface-hover);
+
+  > .main-content {
+    background-color: var(--brando-surface-hover);
+  }
+}
+
+/* The line along the row's foot; `Row` renders it hidden */
+.list-row-progress {
+  display: none;
+}
+
+.is-opening > .list-row-progress {
+  display: block;
+  position: absolute;
+  right: 0;
+  bottom: -1px;
+  left: 0;
+  z-index: 1;
+  height: 2px;
+  overflow: hidden;
+  background-color: var(--brando-line-soft);
+  pointer-events: none;
+
+  &::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    width: 22%;
+    background-color: var(--brando-accent);
+    will-change: transform;
+    animation: load-sweep 1.4s ease-in-out infinite;
+  }
+}
+
+/* "Opening", after the entry's title; `update_link` renders it hidden */
+.entry-opening {
+  display: none;
+  margin-left: 10px;
+  color: var(--brando-muted);
+  font-size: 12px;
+  line-height: 18px;
+  font-weight: 400;
+  vertical-align: 1px;
+  white-space: nowrap;
+}
+
+.is-opening .entry-opening {
+  display: inline-flex;
+}
+
+/* ---------- reduced motion: no shimmer, a still line ---------- */
+
+@media (prefers-reduced-motion: reduce) {
+  .sk::after {
+    display: none;
+  }
+
+  .form-load-progress::before,
+  .is-opening > .list-row-progress::before {
+    width: 100%;
+    opacity: 0.35;
+    animation: none;
+  }
+}

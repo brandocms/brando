@@ -25,11 +25,16 @@ defmodule BrandoAdmin.LiveView.Form.Hooks do
 
       {:cont, assign(socket, :current_focused_block_uid, nil)}
     else
-      # The dead render gets a title too, so the tab isn't "Admin" first.
+      # The dead render gets a title too, so the tab isn't "Admin" first, and
+      # the form as a skeleton for the layout to show until LiveView connects
+      # and the entry has loaded (a reload, a link from elsewhere).
+      socket = if socket.assigns[:current_user], do: set_admin_locale(socket), else: socket
+
       {:cont,
        socket
        |> assign(:socket_connected, false)
-       |> assign(:page_title, Brando.Blueprint.get_singular(schema))}
+       |> assign(:page_title, Brando.Blueprint.get_singular(schema))
+       |> assign(:entry_skeleton, BrandoAdmin.Components.Form.EntrySkeleton.describe(schema))}
     end
   end
 
