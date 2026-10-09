@@ -898,6 +898,234 @@ defmodule Mix.Tasks.Brando.Migrate55Test do
              end
              """
     end
+
+    test "an alias inside a function, or after a use, only reaches the code after it" do
+      code = """
+      defmodule LegacyApp.Files do
+        alias Brando.Upload
+
+        def store(m, e, c, u), do: Upload.handle_upload(m, e, c, u)
+
+        def plug_upload(path) do
+          alias Plug.Upload
+          %Upload{path: path}
+        end
+
+        def both(path) do
+          Upload.handle_upload(path, nil, nil, nil)
+          alias Plug.Upload
+          %Upload{path: path}
+        end
+
+        def after_both, do: %Upload{}
+      end
+
+      defmodule LegacyApp.Later do
+        def before, do: Upload.x()
+        alias Brando.Upload
+        def later, do: Upload.y()
+      end
+      """
+
+      path = "lib/legacy_app/files.ex"
+      igniter = migrate(@blueprint_054, %{path => code})
+      assert igniter.issues == []
+
+      expected = """
+      defmodule LegacyApp.Files do
+        alias Brando.Uploads.Store
+
+        def store(m, e, c, u), do: Store.handle_upload(m, e, c, u)
+
+        def plug_upload(path) do
+          alias Plug.Upload
+          %Upload{path: path}
+        end
+
+        def both(path) do
+          Store.handle_upload(path, nil, nil, nil)
+          alias Plug.Upload
+          %Upload{path: path}
+        end
+
+        def after_both, do: %Store{}
+      end
+
+      defmodule LegacyApp.Later do
+        def before, do: Upload.x()
+        alias Brando.Uploads.Store
+        def later, do: Store.y()
+      end
+      """
+
+      assert source(igniter, path) == expected
+      assert {:ok, _} = Code.string_to_quoted(expected)
+      assert_idempotent(igniter, path)
+
+      # The doctor reads the original the same way: the Plug structs are not Brando.Upload
+      assert [{4, "Brando.Upload"}, {12, "Brando.Upload"}, {17, "Brando.Upload"}, {23, "Brando.Upload"}] =
+               doctor_findings(code)
+    end
+
+    test "the same short name aliased twice in a module: each alias keeps its own uses" do
+      code = """
+      defmodule LegacyApp.Attachments do
+        alias Plug.Upload
+
+        def from_path(path), do: %Upload{path: path}
+
+        alias Brando.Upload
+
+        def store(m, e, c, u), do: Upload.handle_upload(m, e, c, u)
+      end
+      """
+
+      path = "lib/legacy_app/attachments.ex"
+      igniter = migrate(@blueprint_054, %{path => code})
+      assert igniter.issues == []
+
+      expected = """
+      defmodule LegacyApp.Attachments do
+        alias Plug.Upload
+
+        def from_path(path), do: %Upload{path: path}
+
+        alias Brando.Uploads.Store
+
+        def store(m, e, c, u), do: Store.handle_upload(m, e, c, u)
+      end
+      """
+
+      assert source(igniter, path) == expected
+      assert {:ok, _} = Code.string_to_quoted(expected)
+      assert_idempotent(igniter, path)
+      assert [{8, "Brando.Upload"}] = doctor_findings(code)
+    end
+
+    test "a scope's alias is read from its own module, where the scope is declared" do
+      router = """
+      defmodule LegacyAppWeb.Router do
+        use LegacyAppWeb, :router
+        alias LegacyAppWeb, as: B
+
+        scope "/", B do
+          get "/robots.txt", SEOController, :robots
+        end
+      end
+
+      defmodule LegacyAppWeb.LaterRouter do
+        use LegacyAppWeb, :router
+
+        scope "/", B do
+          get "/robots.txt", SEOController, :robots
+        end
+
+        alias Brando, as: B
+        def slug(s), do: B.Utils.slugify(s)
+      end
+
+      defmodule LegacyApp.Later do
+        alias Brando, as: B
+        def slug(s), do: B.Utils.slugify(s)
+      end
+      """
+
+      igniter = migrate(@blueprint_054, %{@router_path => router})
+      assert igniter.issues == []
+      assert source(igniter, @router_path) == router
+      refute Enum.any?(igniter.warnings, &String.contains?(&1, @router_path))
+      assert doctor_findings(router) == []
+    end
+
+    test "a brace alias under a renamed module's alias is spelled out" do
+      code = """
+      defmodule LegacyApp.Braced do
+        alias Brando.Meta
+        alias Meta.{HTML}
+
+        def meta, do: %Meta{}
+        def tags(assigns), do: HTML.render_meta(assigns)
+      end
+
+      defmodule LegacyApp.BracedOnly do
+        alias Brando.Meta
+        alias Meta.{HTML}
+
+        def tags(assigns), do: HTML.render_meta(assigns)
+      end
+      """
+
+      path = "lib/legacy_app/braced.ex"
+      igniter = migrate(@blueprint_054, %{path => code})
+      assert igniter.issues == []
+
+      expected = """
+      defmodule LegacyApp.Braced do
+        alias Brando.Sites.Meta
+        alias Brando.Meta.{HTML}
+
+        def meta, do: %Meta{}
+        def tags(assigns), do: HTML.render_meta(assigns)
+      end
+
+      defmodule LegacyApp.BracedOnly do
+        alias Brando.Meta
+        alias Meta.{HTML}
+
+        def tags(assigns), do: HTML.render_meta(assigns)
+      end
+      """
+
+      assert source(igniter, path) == expected
+      assert {:ok, _} = Code.string_to_quoted(expected)
+      assert_idempotent(igniter, path)
+      assert doctor_findings(expected) == []
+    end
+
+    test "a rewrite that would change what another module name means leaves the file, and reports it" do
+      code = """
+      defmodule LegacyApp.ShadowedNamespace do
+        alias Brando.Meta
+        alias LegacyApp.Brando
+
+        def meta, do: %Meta{}
+        def tags(conn), do: Meta.HTML.render_meta(conn)
+        def own, do: Brando.thing()
+      end
+      """
+
+      path = "lib/legacy_app/shadowed_namespace.ex"
+      igniter = migrate(@blueprint_054, %{path => code})
+      assert igniter.issues == []
+      assert source(igniter, path) == code
+
+      assert_has_warning(igniter, fn warning ->
+        String.contains?(warning, "#{path}:6") and String.contains?(warning, "the file is unchanged")
+      end)
+
+      assert [{5, "Brando.Meta"}] = doctor_findings(code)
+    end
+
+    test "an alias declared in another macro's block may reach past it, so the file is left and reported" do
+      code = """
+      defmodule LegacyApp.Dsl do
+        alias Brando.Upload
+
+        settings do
+          alias Plug.Upload
+        end
+
+        def f, do: %Upload{}
+      end
+      """
+
+      path = "lib/legacy_app/dsl.ex"
+      igniter = migrate(@blueprint_054, %{path => code})
+      assert igniter.issues == []
+      assert source(igniter, path) == code
+      assert_has_warning(igniter, &String.contains?(&1, "#{path}:8 names modules renamed in 0.55"))
+      assert [{8, "Brando.Upload"}] = doctor_findings(code)
+    end
   end
 
   describe "image text reads" do
@@ -1091,6 +1319,14 @@ defmodule Mix.Tasks.Brando.Migrate55Test do
     refute Enum.any?(igniter.warnings, &String.contains?(&1, "Manual 0.54 decisions"))
     refute Enum.any?(igniter.warnings, &String.contains?(&1, "Brando.Type.Video"))
     refute Enum.any?(igniter.tasks, &match?({"igniter.update_gettext", _}, &1))
+  end
+
+  # `{line, module}` for each renamed module `mix brando.doctor` finds in `code`
+  defp doctor_findings(code) do
+    code
+    |> Code.string_to_quoted!()
+    |> Brando.Doctor.Checks.Deprecations.scan(%{})
+    |> Enum.map(&{&1.line, &1.call})
   end
 
   defp assert_idempotent(igniter, path) do

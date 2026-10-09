@@ -17,7 +17,10 @@ if Code.ensure_loaded?(Igniter) do
 
     The source is read as code and only the module names are replaced, so
     `Brando.Meta.HTML` is not `Brando.Meta`, and the rest of a file keeps its
-    formatting. Aliases are resolved per module, as Elixir does:
+    formatting. Aliases are resolved as Elixir does
+    (`Brando.Deprecated.LexicalAliases`): an alias reaches the code after it
+    in its own module, function or block, and each use follows the alias it
+    comes from.
 
       * Behind a plain `alias`, a short name follows its module when the last
         segment changes (`Upload` becomes `Store`). Where the new short name
@@ -31,6 +34,10 @@ if Code.ensure_loaded?(Igniter) do
       * An alias inside braces that the new name cannot share
         (`alias Brando.{LobbyChannel}`, now `BrandoAdmin`) is left for the
         developer and reported. The old name keeps working until 0.57.
+
+    A file is rewritten only if every module name in it still means the same
+    module afterwards, the renamed ones aside; otherwise it is left as it is
+    and reported.
     """
     def rewrite(igniter) do
       renamed = RenamedModules.all()
@@ -50,13 +57,17 @@ if Code.ensure_loaded?(Igniter) do
       {patches, left} = patches(content, renamed)
       updated = Sourceror.patch_string(content, patches)
 
-      # The last guard: a rewrite that leaves invalid code is not made
+      # The last guards: a rewrite that leaves invalid code, or changes what
+      # a module name means, is not made
       cond do
         patches == [] ->
           warn_left(igniter, path, left)
 
         match?({:error, _}, Code.string_to_quoted(updated)) ->
           warn_left(igniter, path, [{:unparsable, nil, nil}])
+
+        line = changed_reference(content, updated, renamed) ->
+          warn_left(igniter, path, [{:changed_meaning, line} | left])
 
         true ->
           igniter |> Igniter.update_file(path, &Source.update(&1, :content, fn _ -> updated end)) |> warn_left(path, left)
@@ -69,13 +80,90 @@ if Code.ensure_loaded?(Igniter) do
       case Sourceror.parse_string(content) do
         {:ok, ast} ->
           ast = RenamedModules.mark_scoped_routes(ast)
-          {patches, left} = patch_scope(ast, %{renamed: renamed, aliases: %{}}, {[], []})
+          {patches, left} = patch_scope(ast, %{renamed: renamed, entries: %{}}, {[], []})
           {patches, Enum.reverse(left)}
 
         {:error, _} ->
           {[], []}
       end
     end
+
+    ## Safety net
+
+    # The line of the first module name that `updated` resolves differently
+    # from `content`, the renames aside, or nil when they all agree
+    defp changed_reference(content, updated, renamed) do
+      before = references(content, renamed)
+      after_ = references(updated, renamed)
+
+      cond do
+        before == :error or after_ == :error -> 1
+        Enum.map(before, &elem(&1, 0)) == Enum.map(after_, &elem(&1, 0)) -> nil
+        true -> first_difference(before, after_) || 1
+      end
+    end
+
+    # Where only the number of references differs, the line of the last
+    # one they share
+    defp first_difference([{was, line} | before], [{now, _} | after_]),
+      do: if(was == now, do: first_difference(before, after_) || line, else: line)
+
+    defp first_difference([{_, line} | _], []), do: line
+    defp first_difference(_before, _after), do: nil
+
+    # `[{module, line}]` for every module name in `content`, in order, with
+    # the renamed modules under their new names. An alias's `as:` is a new
+    # name, not a reference; a route in an aliased scope is the module
+    # Phoenix joins.
+    defp references(content, renamed) do
+      case Sourceror.parse_string(content) do
+        {:ok, ast} ->
+          {_ast, refs} = ast |> RenamedModules.mark_scoped_routes() |> Macro.prewalk([], &reference(&1, &2, renamed))
+          Enum.reverse(refs)
+
+        {:error, _} ->
+          :error
+      end
+    end
+
+    defp reference({form, meta, [target, _options]}, refs, renamed) when form in [:alias, :require],
+      do: reference({form, meta, [target]}, refs, renamed)
+
+    defp reference({:match, [{:scope_alias, scope} | _] = meta, [verb, path, plug | rest]}, refs, renamed),
+      do: {{:match, meta, [verb, path | rest]}, [scoped_reference(scope, plug, renamed) | refs]}
+
+    defp reference({verb, [{:scope_alias, scope} | _] = meta, [path, plug | rest]}, refs, renamed),
+      do: {{verb, meta, [path | rest]}, [scoped_reference(scope, plug, renamed) | refs]}
+
+    defp reference({:__aliases__, meta, parts} = node, refs, renamed) do
+      module =
+        case meta[:resolved_alias] do
+          {:either, a, b} -> {:either, new_name(a, renamed), new_name(b, renamed)}
+          [_ | _] = resolved -> new_name(resolved, renamed)
+          _ -> {:unresolved, Enum.map(parts, &segment_name/1)}
+        end
+
+      {node, [{module, meta[:line]} | refs]}
+    end
+
+    defp reference(node, refs, _renamed), do: {node, refs}
+
+    defp scoped_reference(scope, {_, meta, _} = plug, renamed) do
+      case RenamedModules.scoped_module(scope, plug) do
+        nil -> {{:unresolved_route, scope, plug |> elem(2) |> Enum.map(&segment_name/1)}, meta[:line]}
+        module -> {Map.get(renamed, module, module), meta[:line]}
+      end
+    end
+
+    defp new_name([_ | _] = parts, renamed) do
+      module = Module.concat(parts)
+      Map.get(renamed, module, module)
+    end
+
+    defp new_name(_parts, _renamed), do: nil
+
+    defp segment_name({name, _, _}), do: name
+    defp segment_name(name), do: name
 
     ## Lexical scopes
 
@@ -93,9 +181,13 @@ if Code.ensure_loaded?(Igniter) do
       acc
     end
 
-    # `short => entry` for the aliases visible in `body`. The entry of a
-    # renamed module says what happens to its declaration and its uses, from
-    # how it is used everywhere it reaches, nested modules included:
+    # `{position, short} => entry` for the aliases declared at the top of
+    # `body`, and those of the enclosing modules. A use finds its entry by
+    # the declaration it comes from (`:alias_binding`), so an alias declared
+    # again, in a function or later in the module, keeps its own uses. The
+    # entry of a renamed module says what happens to its declaration and
+    # its uses, from how they are used everywhere it reaches, nested modules
+    # included:
     #
     #   * :keep — used only for modules under the old name (`Meta.HTML`),
     #     which did not move: the alias stays as it is.
@@ -115,16 +207,18 @@ if Code.ensure_loaded?(Igniter) do
       direct = body |> statements() |> Enum.filter(&match?({:alias, _, _}, &1))
 
       taken =
-        Map.keys(outer.aliases) ++ Enum.map(alias_declarations(body), & &1.short) ++ nested_module_names(body)
+        Enum.map(Map.keys(outer.entries), &elem(&1, 1)) ++
+          Enum.map(alias_declarations(body), & &1.short) ++ nested_module_names(body)
 
-      aliases =
+      entries =
         direct
         |> alias_declarations()
-        |> Enum.reduce(outer.aliases, fn declaration, aliases ->
-          Map.put(aliases, declaration.short, alias_entry(declaration, body, outer.renamed, taken))
+        |> Enum.reduce(outer.entries, fn declaration, entries ->
+          entry = alias_entry(declaration, body, outer.renamed, taken)
+          Map.put(entries, {declaration.position, declaration.short}, entry)
         end)
 
-      %{renamed: outer.renamed, aliases: aliases, direct: MapSet.new(direct, &node_position/1)}
+      %{renamed: outer.renamed, entries: entries, direct: MapSet.new(direct, &node_position/1)}
     end
 
     defp statements([{{:__block__, _, [:do]}, body}]), do: statements(body)
@@ -144,9 +238,11 @@ if Code.ensure_loaded?(Igniter) do
       names
     end
 
-    defp alias_entry(%{module: module} = declaration, body, renamed, taken) do
-      new = renamed[module]
-      mode = if new, do: alias_mode(declaration, new, alias_uses(body, declaration.short), taken)
+    # An alias relative to another (`alias Meta.HTML`, `alias Meta.{HTML}`)
+    # is followed through that one's entry, not renamed on its own
+    defp alias_entry(%{module: module, relative?: relative?} = declaration, body, renamed, taken) do
+      new = if not relative?, do: renamed[module]
+      mode = if new, do: alias_mode(declaration, new, alias_uses(body, declaration), taken)
       Map.merge(declaration, %{new: new, mode: mode})
     end
 
@@ -166,23 +262,19 @@ if Code.ensure_loaded?(Igniter) do
     defp taken_mode(%{base: nil}), do: :rename_as
     defp taken_mode(_braced), do: :left
 
-    defp without_nested_modules(body) do
-      Macro.prewalk(body, fn
-        {:defmodule, _, _} -> :ok
-        node -> node
-      end)
-    end
-
-    # Every alias in `ast`: `%{module, short, as, base}`; `base` is the
-    # brace alias's prefix, nil for a plain alias
+    # Every alias in `ast`: `%{module, short, as, base, position, relative?}`;
+    # `base` is the brace alias's prefix, nil for a plain alias, and
+    # `relative?` whether its first segment is itself an alias's
     defp alias_declarations(ast) do
       {_ast, declarations} =
         Macro.prewalk(ast, [], fn
-          {:alias, _, [{:__aliases__, _, parts} | options]} = node, acc ->
-            {node, declaration(alias_module(parts), alias_as(options), nil, acc)}
+          {:alias, _, [{:__aliases__, meta, parts} | options]} = node, acc ->
+            relative? = not is_nil(meta[:alias_binding])
+            {node, declaration(alias_module(parts), alias_as(options), {nil, node, relative?}, acc)}
 
-          {:alias, _, [{{:., _, [{:__aliases__, _, base}, :{}]}, _, children}]} = node, acc ->
-            {node, Enum.reduce(children, acc, &braced_declaration(&1, base, &2))}
+          {:alias, _, [{{:., _, [{:__aliases__, meta, base}, :{}]}, _, children}]} = node, acc ->
+            relative? = not is_nil(meta[:alias_binding])
+            {node, Enum.reduce(children, acc, &braced_declaration(&1, {base, node, relative?}, &2))}
 
           node, acc ->
             {node, acc}
@@ -191,15 +283,26 @@ if Code.ensure_loaded?(Igniter) do
       Enum.reverse(declarations)
     end
 
-    defp braced_declaration({:__aliases__, _, parts}, base, acc),
-      do: declaration(alias_module(base ++ parts), nil, base, acc)
+    defp braced_declaration({:__aliases__, _, parts}, {base, _, _} = from, acc),
+      do: declaration(alias_module(base ++ parts), nil, from, acc)
 
-    defp braced_declaration(_child, _base, acc), do: acc
+    defp braced_declaration(_child, _from, acc), do: acc
 
-    defp declaration(nil, _as, _base, acc), do: acc
+    defp declaration(nil, _as, _from, acc), do: acc
 
-    defp declaration(module, as, base, acc),
-      do: [%{module: module, as: as, short: as || short_name(module), base: base} | acc]
+    defp declaration(module, as, {base, node, relative?}, acc) do
+      [
+        %{
+          module: module,
+          as: as,
+          short: as || short_name(module),
+          base: base,
+          position: node_position(node),
+          relative?: relative?
+        }
+        | acc
+      ]
+    end
 
     defp alias_as([options]) when is_list(options) do
       Enum.find_value(options, fn
@@ -210,30 +313,27 @@ if Code.ensure_loaded?(Igniter) do
 
     defp alias_as(_options), do: nil
 
-    # How a short name is used where its alias reaches: `:bare` on its own
-    # (`Meta`, `%Meta{}`, `Meta.changeset(…)`), `:nested` with more segments
-    # (`Meta.HTML`). A nested module that aliases the short name itself is
-    # out of reach.
-    defp alias_uses(body, short) do
+    # How the names that come from `declaration` are used: `:bare` on their
+    # own (`Meta`, `%Meta{}`, `Meta.changeset(…)`), `:nested` with more
+    # segments (`Meta.HTML`, `alias Meta.HTML`, `alias Meta.{HTML}`)
+    defp alias_uses(body, %{position: position, short: short}) do
       {_ast, uses} =
         Macro.prewalk(body, MapSet.new(), fn
-          # `alias Meta.HTML` reaches a module under the old name
-          {:alias, _, [{:__aliases__, _, [^short, _ | _]} | _]}, uses ->
-            {:ok, MapSet.put(uses, :nested)}
+          {:alias, _, [{:__aliases__, meta, [^short, _ | _]} | _]}, uses ->
+            {:ok, if(meta[:alias_binding] == position, do: MapSet.put(uses, :nested), else: uses)}
+
+          {:alias, _, [{{:., _, [{:__aliases__, meta, [^short | _]}, :{}]}, _, _}]}, uses ->
+            {:ok, if(meta[:alias_binding] == position, do: MapSet.put(uses, :nested), else: uses)}
 
           {:alias, _, _}, uses ->
             {:ok, uses}
 
-          {:defmodule, _, [_name, block]} = node, uses ->
-            if Enum.any?(block |> without_nested_modules() |> alias_declarations(), &(&1.short == short)),
-              do: {:ok, uses},
-              else: {node, uses}
-
-          {:__aliases__, _, [^short]} = node, uses ->
-            {node, MapSet.put(uses, :bare)}
-
-          {:__aliases__, _, [^short | _]} = node, uses ->
-            {node, MapSet.put(uses, :nested)}
+          {:__aliases__, meta, [^short | rest]} = node, uses ->
+            cond do
+              meta[:alias_binding] != position -> {node, uses}
+              rest == [] -> {node, MapSet.put(uses, :bare)}
+              true -> {node, MapSet.put(uses, :nested)}
+            end
 
           node, uses ->
             {node, uses}
@@ -241,6 +341,9 @@ if Code.ensure_loaded?(Igniter) do
 
       uses
     end
+
+    # The entry of the declaration a name comes from
+    defp binding_entry({:__aliases__, meta, [first | _]}, ctx), do: ctx.entries[{meta[:alias_binding], first}]
 
     ## Patches
 
@@ -250,47 +353,84 @@ if Code.ensure_loaded?(Igniter) do
         else: {:ok, leave_alias(node, ctx, acc)}
     end
 
-    defp patch({:match, [{:scope_alias, scope} | _] = meta, [verb, path, {:__aliases__, _, parts} | rest]}, ctx, acc) do
-      {{:match, meta, [verb, path | rest]}, leave_match_route(scope, parts, meta, ctx, acc)}
+    defp patch({:match, [{:scope_alias, scope} | _] = meta, [verb, path, plug | rest]}, ctx, acc) do
+      {{:match, meta, [verb, path | rest]}, leave_match_route(scope, plug, meta, ctx, acc)}
     end
 
-    defp patch({verb, [{:scope_alias, scope} | _] = meta, [path, {:__aliases__, _, parts} = plug | rest]}, ctx, acc) do
+    defp patch({verb, [{:scope_alias, scope} | _] = meta, [path, {:__aliases__, plug_meta, _} = plug | rest]}, ctx, acc) do
+      module = RenamedModules.scoped_module(scope, plug)
+
       acc =
-        case ctx.renamed[Module.concat(scope ++ parts)] do
-          nil -> acc
-          new -> patch_scoped_route(verb, meta, {plug, parts}, rest, {scope, new}, acc)
+        case {module && ctx.renamed[module], plug_meta[:alias_binding]} do
+          {nil, _binding} -> acc
+          {new, nil} -> patch_scoped_route(verb, meta, plug, rest, {scope, module, new}, acc)
+          {new, _binding} -> leave_scoped_route(module, meta, new, acc)
         end
 
       {{verb, meta, [path | rest]}, acc}
     end
 
-    defp patch({:__aliases__, _, [first | rest] = parts} = node, ctx, {patches, left} = acc) do
-      cond do
-        new = ctx.renamed[alias_module(parts)] ->
-          {node, {[module_patch(node, inspect(new)) | patches], left}}
+    # A name no alias reaches is renamed in full; one that comes from an
+    # alias follows what its alias does
+    defp patch({:__aliases__, meta, [_ | rest] = parts} = node, ctx, {patches, left} = acc) do
+      change =
+        if is_nil(meta[:alias_binding]),
+          do: (new = ctx.renamed[alias_module(parts)]) && inspect(new),
+          else: Enum.all?(rest, &is_atom/1) && alias_use_change(binding_entry(node, ctx), rest)
 
-        change = Enum.all?(rest, &is_atom/1) && alias_use_change(ctx.aliases[first], rest) ->
-          {node, {[module_patch(node, change) | patches], left}}
-
-        true ->
-          {node, acc}
-      end
+      if is_binary(change),
+        do: {node, {[module_patch(node, change) | patches], left}},
+        else: {node, acc}
     end
 
     defp patch(node, _ctx, acc), do: {node, acc}
 
+    defp patch_alias(node, ctx, acc) do
+      if relative_alias?(node),
+        do: patch_relative_alias(node, ctx, acc),
+        else: patch_plain_alias(node, ctx, acc)
+    end
+
+    defp relative_alias?({:alias, _, [{:__aliases__, meta, _} | _]}), do: not is_nil(meta[:alias_binding])
+
+    defp relative_alias?({:alias, _, [{{:., _, [{:__aliases__, meta, _}, :{}]}, _, _}]}),
+      do: not is_nil(meta[:alias_binding])
+
+    defp relative_alias?(_node), do: false
+
     # A relative alias (`alias Meta.HTML` after `alias Brando.Meta`) follows
     # what its first segment does
-    defp patch_alias({:alias, _, [{:__aliases__, _, [first | [_ | _] = rest]} = target | _]}, ctx, {patches, left} = acc)
-         when is_atom(first) and is_map_key(ctx.aliases, first) do
-      case Enum.all?(rest, &is_atom/1) && alias_use_change(ctx.aliases[first], rest) do
+    defp patch_relative_alias(
+           {:alias, _, [{:__aliases__, _, [_ | [_ | _] = rest]} = target | _]},
+           ctx,
+           {patches, left} = acc
+         ) do
+      case Enum.all?(rest, &is_atom/1) && alias_use_change(binding_entry(target, ctx), rest) do
         change when is_binary(change) -> {[module_patch(target, change) | patches], left}
         _ -> acc
       end
     end
 
-    defp patch_alias({:alias, _, [{:__aliases__, _, parts} = target | options]}, ctx, {patches, left} = acc) do
-      case alias_module(parts) && ctx.aliases[alias_as(options) || short_name(alias_module(parts))] do
+    # A brace alias under another alias (`alias Meta.{HTML}`) gets its
+    # prefix spelled out as that alias's uses do
+    defp patch_relative_alias(
+           {:alias, _, [{{:., _, [{:__aliases__, _, [_ | rest]} = base, :{}]}, _, _}]},
+           ctx,
+           {patches, left} = acc
+         ) do
+      case Enum.all?(rest, &is_atom/1) && binding_entry(base, ctx) do
+        %{mode: mode, module: module} when mode in [:follow, :rename, :rename_as] ->
+          {[module_patch(base, inspect(Module.concat([module | rest]))) | patches], left}
+
+        _ ->
+          acc
+      end
+    end
+
+    defp patch_relative_alias(_node, _ctx, acc), do: acc
+
+    defp patch_plain_alias({:alias, _, [{:__aliases__, _, parts} = target | options]} = node, ctx, {patches, left} = acc) do
+      case alias_module(parts) && ctx.entries[{node_position(node), alias_as(options) || short_name(alias_module(parts))}] do
         %{new: new, mode: mode} when mode in [:follow, :rename] ->
           {[module_patch(target, inspect(new)) | patches], left}
 
@@ -303,16 +443,19 @@ if Code.ensure_loaded?(Igniter) do
     end
 
     # A brace alias, child by child
-    defp patch_alias({:alias, _, [{{:., _, [{:__aliases__, _, base}, :{}]}, _, children}]}, ctx, acc) do
-      Enum.reduce(children, acc, &patch_braced(&1, base, ctx, &2))
+    defp patch_plain_alias({:alias, _, [{{:., _, [{:__aliases__, _, base}, :{}]}, _, children}]} = node, ctx, acc) do
+      Enum.reduce(children, acc, &patch_braced(&1, {base, node_position(node)}, ctx, &2))
     end
 
-    defp patch_alias(_node, _ctx, acc), do: acc
+    defp patch_plain_alias(_node, _ctx, acc), do: acc
 
     # An alias inside a function or block: reported when it names a renamed
     # module, and left as it is
     defp leave_alias({:alias, meta, _} = node, ctx, {patches, left} = acc) do
-      case node |> List.wrap() |> alias_declarations() |> Enum.find(&Map.has_key?(ctx.renamed, &1.module)) do
+      case node
+           |> List.wrap()
+           |> alias_declarations()
+           |> Enum.find(&(not &1.relative? and Map.has_key?(ctx.renamed, &1.module))) do
         nil -> acc
         %{module: module} -> {patches, [{:alias_in_block, module, meta[:line]} | left]}
       end
@@ -325,10 +468,10 @@ if Code.ensure_loaded?(Igniter) do
 
     defp alias_use_change(_entry, _rest), do: nil
 
-    defp patch_braced({:__aliases__, _, parts} = child, base, ctx, {patches, left} = acc) do
+    defp patch_braced({:__aliases__, _, parts} = child, {base, position}, ctx, {patches, left} = acc) do
       module = alias_module(base ++ parts)
 
-      case module && ctx.aliases[short_name(module)] do
+      case module && ctx.entries[{position, short_name(module)}] do
         %{module: ^module, mode: mode, new: new} when mode in [:follow, :rename] ->
           {[module_patch(child, Enum.join(relative_parts(base, new), ".")) | patches], left}
 
@@ -340,7 +483,7 @@ if Code.ensure_loaded?(Igniter) do
       end
     end
 
-    defp patch_braced(_child, _base, _ctx, acc), do: acc
+    defp patch_braced(_child, _from, _ctx, acc), do: acc
 
     @http_verbs [:get, :post, :put, :patch, :delete, :options, :head]
 
@@ -348,10 +491,10 @@ if Code.ensure_loaded?(Igniter) do
     # the full name and `alias: false`, inserted after the last argument so
     # the route keeps its layout and comments; only for an HTTP verb whose
     # options, if any, are a plain keyword list without `alias:`.
-    defp patch_scoped_route(verb, meta, {plug, parts}, rest, {scope, new}, {patches, left} = acc) do
+    defp patch_scoped_route(verb, meta, plug, rest, {scope, module, new}, {patches, left} = acc) do
       cond do
         verb not in @http_verbs ->
-          leave_scoped_route(scope, parts, meta, new, acc)
+          leave_scoped_route(module, meta, new, acc)
 
         new_parts = relative_parts(scope, new) ->
           {[module_patch(plug, Enum.join(new_parts, ".")) | patches], left}
@@ -361,20 +504,22 @@ if Code.ensure_loaded?(Igniter) do
           {[insert, module_patch(plug, inspect(new)) | patches], left}
 
         true ->
-          leave_scoped_route(scope, parts, meta, new, acc)
+          leave_scoped_route(module, meta, new, acc)
       end
     end
 
     # `match` and the other forms the task does not rewrite: reported
-    defp leave_match_route(scope, parts, meta, ctx, acc) do
-      case ctx.renamed[Module.concat(scope ++ parts)] do
+    defp leave_match_route(scope, plug, meta, ctx, acc) do
+      module = RenamedModules.scoped_module(scope, plug)
+
+      case module && ctx.renamed[module] do
         nil -> acc
-        new -> leave_scoped_route(scope, parts, meta, new, acc)
+        new -> leave_scoped_route(module, meta, new, acc)
       end
     end
 
-    defp leave_scoped_route(scope, parts, meta, new, {patches, left}),
-      do: {patches, [{:route, Module.concat(scope ++ parts), new, meta[:line]} | left]}
+    defp leave_scoped_route(module, meta, new, {patches, left}),
+      do: {patches, [{:route, module, new, meta[:line]} | left]}
 
     # Where `, alias: false` can go: after the action, or after the last
     # option's value. Only after a node whose range is all of its text (a
@@ -435,6 +580,13 @@ if Code.ensure_loaded?(Igniter) do
           #{path}:#{line} aliases #{inspect(module)} inside a function or block, which this task \
           does not rewrite. Use #{inspect(RenamedModules.new_name(module))} there; the old name keeps \
           working, with a warning, until 0.57.
+          """)
+
+        {:changed_meaning, line}, igniter ->
+          Igniter.add_warning(igniter, """
+          #{path}:#{line} names modules renamed in 0.55, but rewriting them would change which module \
+          a name there refers to, so the file is unchanged. `mix brando.doctor` lists the old names to \
+          replace; the old names keep working, with a warning, until 0.57.
           """)
 
         {:unparsable, _, _}, igniter ->

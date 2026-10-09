@@ -56,7 +56,10 @@ as deprecated shims in 0.55 and 0.56 and are removed in 0.57.
    `BrandoWeb.SEOController` with `alias: false`. `match`, `forward`,
    `resources` and `live` routes, routes whose options are not a plain
    keyword list or end in a parenthesised or computed value, and an alias
-   inside a function, are left as they are and reported: name the
+   inside a function, are left as they are and reported. So is a whole
+   file where the rewrite would change which module another name there
+   refers to: spelling out `Meta.HTML` as `Brando.Meta.HTML` where
+   `alias MyApp.Brando` has taken the name `Brando`, say. Name the
    controller `BrandoWeb.*` and add `alias: false`, or use the new name,
    yourself. It reports an alias in
    braces that the new name cannot share, such as
