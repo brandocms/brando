@@ -381,6 +381,56 @@ defmodule BrandoAdmin.AssistantLiveTest do
     end
   end
 
+  describe "applying again" do
+    setup %{current_user: user} = c do
+      ops = [
+        %Brando.Content.Proposals.InsertBlock{target: {Page, c.identity.id}, module: c.case_module.id},
+        %Brando.Content.Proposals.SetFields{target: {Page, c.naming.id}, fields: %{uri: "naming-renamed"}}
+      ]
+
+      {:ok, conversation} = Agent.start_conversation(user)
+      {:ok, proposal} = Brando.Content.Proposals.propose(ops, user, conversation_id: conversation.id)
+      assert proposal.problems == []
+      conversation |> Ecto.Changeset.change(proposal_id: proposal.id) |> Brando.Repo.update!()
+      Map.merge(c, %{conversation: conversation, proposal: proposal})
+    end
+
+    defp identity_blocks(c), do: length(Catalog.load!(Page, c.identity.id, c.current_user).entry_blocks)
+
+    test "an apply that rolled back can be tried again once its cause is gone", %{conn: conn} = c do
+      # Another page takes the URI between review and apply.
+      taken = Brando.Factory.insert(:page, uri: "naming-renamed", language: :en, creator: c.current_user)
+      {:ok, view, _} = live(conn, "/admin/assistant/#{c.conversation.id}")
+
+      html = view |> element("button.assistant-apply") |> render_click()
+      assert html =~ "already in use"
+      assert identity_blocks(c) == 3
+      assert Brando.Repo.get!(Page, c.naming.id).uri == "naming"
+
+      Brando.Repo.delete!(taken)
+      view |> element("button.assistant-apply") |> render_click()
+      eventually(view, &(&1 =~ "The changes are saved"))
+      refute render(view) =~ "no longer under review"
+      assert identity_blocks(c) == 4
+      assert Brando.Repo.get!(Page, c.naming.id).uri == "naming-renamed"
+    end
+
+    test "a second tab's click after the first applied shows the receipt and writes nothing more", %{conn: conn} = c do
+      {:ok, first, _} = live(conn, "/admin/assistant/#{c.conversation.id}")
+      {:ok, second, _} = live(conn, "/admin/assistant/#{c.conversation.id}")
+
+      first |> element("button.assistant-apply") |> render_click()
+      eventually(first, &(&1 =~ "The changes are saved"))
+      assert identity_blocks(c) == 4
+
+      second |> element("button.assistant-apply") |> render_click()
+      eventually(second, &(&1 =~ "The changes are saved"))
+      refute render(second) =~ "no longer under review"
+      assert identity_blocks(c) == 4
+      assert [_] = Brando.Repo.all(Brando.Content.Proposals.Receipt)
+    end
+  end
+
   test "another user's conversation is not shown", %{conn: conn} do
     other = Brando.Factory.insert(:random_user)
     {:ok, conversation} = Agent.start_conversation(other)

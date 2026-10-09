@@ -1622,7 +1622,7 @@ defmodule BrandoAdmin.AI.AssistantLive do
 
     # The click is the approval: it approves exactly the version on screen,
     # then applies that version.
-    with {:ok, _} <- Proposals.approve(id, version, user),
+    with {:ok, _} <- approve(id, version, user),
          {:ok, receipt} <-
            Proposals.apply(id, version, user, publish: publishing(socket.assigns)) do
       {:noreply,
@@ -2490,6 +2490,17 @@ defmodule BrandoAdmin.AI.AssistantLive do
   defp connected_state_label("applied"), do: gettext("Applied")
   defp connected_state_label("undone"), do: gettext("Undone")
   defp connected_state_label("expired"), do: gettext("Expired")
+
+  # This user's approval of the version stays when applying it failed and
+  # rolled back, so a retry applies it again; an applied version returns its
+  # receipt, so a second tab's click writes nothing more. `apply/4` checks
+  # the entries and modules again either way.
+  defp approve(id, version, user) do
+    case Proposals.get(id, user) do
+      {:ok, %{version: ^version, status: status} = proposal} when status in ~w(approved applied) -> {:ok, proposal}
+      _ -> Proposals.approve(id, version, user)
+    end
+  end
 
   defp running?(%{status: "running"}), do: true
   defp running?(_), do: false
