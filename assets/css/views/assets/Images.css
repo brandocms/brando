@@ -293,15 +293,16 @@
 
 .video-player-unavailable { padding: 24px; color: var(--brando-ink-inverse); }
 
-/* "Sort by use": the preview of where a folder's images would go. One row per
-   entry: include, a few of its images, the entry, and the folder's name. */
-.image-sweep {
+/* "Sort by use": the preview of where a folder's images, videos or files would
+   go. One row per entry: include, a few of its assets, the entry, and the
+   folder's name. */
+.media-sweep {
   display: flex;
   flex-direction: column;
   gap: 20px;
 }
 
-.image-sweep-lede {
+.media-sweep-lede {
   margin: 0;
   color: var(--modal-muted, var(--brando-muted));
   font-size: 14px;
@@ -310,7 +311,7 @@
   span { display: block; margin-top: 4px; }
 }
 
-.image-sweep-groups {
+.media-sweep-groups {
   max-height: min(52vh, 520px);
   margin: 0;
   padding: 0;
@@ -320,7 +321,7 @@
   border-radius: 8px;
 }
 
-.image-sweep-group {
+.media-sweep-group {
   display: grid;
   grid-template-columns: auto 188px minmax(0, 1fr) minmax(0, 1.7fr);
   align-items: center;
@@ -330,17 +331,17 @@
   font-size: 13px;
 
   & + & { border-top: 1px solid var(--brando-line-soft); }
-  &:has(.image-sweep-include input[type="checkbox"]:not(:checked)) > :not(.image-sweep-include) { opacity: .45; }
+  &:has(.media-sweep-include input[type="checkbox"]:not(:checked)) > :not(.media-sweep-include) { opacity: .45; }
 }
 
-.image-sweep-include {
+.media-sweep-include {
   display: flex;
   align-items: center;
 
   input[type="checkbox"] { width: 16px; height: 16px; margin: 0; }
 }
 
-.image-sweep-thumbs {
+.media-sweep-thumbs {
   display: flex;
   gap: 4px;
 
@@ -351,7 +352,34 @@
   img { display: block; width: 44px; height: auto; border-radius: 3px; background: var(--brando-surface-hover); }
 }
 
-.image-sweep-entry {
+/* A video without a thumbnail, or a file: its type's icon on a quiet tile. */
+.media-sweep-tile {
+  display: flex;
+  flex: 0 0 44px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  width: 44px;
+  height: 44px;
+  border-radius: 3px;
+  background: var(--brando-surface-tint);
+  color: var(--brando-muted);
+
+  > [data-icon] { width: 18px; height: 18px; }
+}
+
+.media-sweep-extension {
+  max-width: 40px;
+  overflow: hidden;
+  font-family: "Mono";
+  font-size: 9px;
+  line-height: 10px;
+  text-overflow: clip;
+  white-space: nowrap;
+}
+
+.media-sweep-entry {
   display: flex;
   flex-direction: column;
   min-width: 0;
@@ -361,7 +389,7 @@
   > span { color: var(--brando-muted); font-size: 12px; }
 }
 
-.image-sweep .image-sweep-name {
+.media-sweep .media-sweep-name {
   width: 100%;
   height: 32px;
   padding: 0 10px;
@@ -372,8 +400,27 @@
   font-size: 12px;
 }
 
+/* On a phone each entry is its include box beside a stack: the entry, its
+   assets, and the folder's name across the row. */
+@media (max-width: 640px) {
+  .media-sweep-group {
+    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-areas:
+      "include entry"
+      ". thumbs"
+      ". name";
+    gap: 8px 12px;
+    padding: 12px;
+  }
+
+  .media-sweep-include { grid-area: include; }
+  .media-sweep-thumbs { grid-area: thumbs; }
+  .media-sweep-entry { grid-area: entry; }
+  .media-sweep .media-sweep-name { grid-area: name; }
+}
+
 /* What the sort did, with the way back, above the listing. */
-.image-sweep-result {
+.media-sweep-result {
   display: flex;
   align-items: center;
   gap: 10px;
@@ -388,7 +435,7 @@
   > [data-icon] { width: 18px; height: 18px; flex-shrink: 0; }
   > span:not([data-icon]) { flex: 1; }
 
-  .image-sweep-undo {
+  .media-sweep-undo {
     padding: 4px 10px;
     border: 1px solid var(--brando-success-line);
     border-radius: 6px;
@@ -398,7 +445,7 @@
     cursor: pointer;
   }
 
-  .image-sweep-dismiss {
+  .media-sweep-dismiss {
     display: inline-flex;
     padding: 4px;
     border: 0;

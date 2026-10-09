@@ -7,6 +7,7 @@ defmodule BrandoAdmin.Files.FileListLive do
   alias Brando.Files.File
   alias Brando.Uploads.AssetIntent
   alias BrandoAdmin.Components.Assets.FileBrowser
+  alias BrandoAdmin.Components.Assets.SortByUse
   alias BrandoAdmin.Components.Content
   alias BrandoAdmin.Components.Workspace
   alias BrandoAdmin.Images.FolderBrowser
@@ -40,6 +41,9 @@ defmodule BrandoAdmin.Files.FileListLive do
       |> assign(:current_folder_config_target, "default")
       |> assign(:clipboard_ids, [])
       |> assign(:root_folder_ids, [])
+      |> assign(:sweep, nil)
+      |> assign(:sweep_result, nil)
+      |> assign(:unused_count, 0)
       |> assign_folder_state(nil)
 
     {:ok, socket}
@@ -52,6 +56,7 @@ defmodule BrandoAdmin.Files.FileListLive do
     {:noreply,
      socket
      |> assign_folder_state(folder_filter)
+     |> AssetListHelpers.assign_unused_count(params, &Files.list_files/1)
      |> AssetListHelpers.assign_all_folders(params, &Files.list_files/1, :visible_file_count)}
   end
 
@@ -197,6 +202,34 @@ defmodule BrandoAdmin.Files.FileListLive do
     {:noreply, assign(socket, :clipboard_ids, [])}
   end
 
+  # Sort the files loose in this folder into folders for the entries that
+  # use them (see `BrandoAdmin.Media.Sweep`): a preview first, then the move.
+  def handle_event("sweep_open", _, socket), do: {:noreply, AssetListHelpers.open_sweep(socket, :file)}
+  def handle_event("sweep_close", _, socket), do: {:noreply, assign(socket, :sweep, nil)}
+
+  def handle_event("sweep_apply", params, socket) do
+    socket = AssetListHelpers.apply_sweep(socket, params)
+    {:noreply, assign_folder_state(socket, socket.assigns.current_folder)}
+  end
+
+  def handle_event("sweep_undo", _, socket) do
+    socket = AssetListHelpers.undo_sweep(socket)
+    {:noreply, assign_folder_state(socket, socket.assigns.current_folder)}
+  end
+
+  def handle_event("sweep_dismiss", _, socket), do: {:noreply, assign(socket, :sweep_result, nil)}
+
+  # With the "Not in use" filter on: delete every unused file in view, this
+  # folder's or, at the root, the whole library's, as the listing's Delete does.
+  def handle_event("delete_unused", _, socket) do
+    socket = AssetListHelpers.delete_unused(socket, :file, &Files.list_files/1)
+
+    {:noreply,
+     socket
+     |> assign_folder_state(socket.assigns.current_folder)
+     |> AssetListHelpers.assign_unused_count(%{"filter:unused" => "true"}, &Files.list_files/1)}
+  end
+
   @impl true
   def handle_info({:asset_ready, %{"kind" => "file_replace"}, file}, socket) do
     AssetListHelpers.update_list_entries(socket.assigns.schema)
@@ -329,6 +362,21 @@ defmodule BrandoAdmin.Files.FileListLive do
                 <button type="button" class="folder-action upload-trigger"><.icon name="upload" />{gettext("Upload")}</button>
                 <input type="file" class="file-input" multiple aria-label={gettext("Upload files")} />
               </div>
+              <SortByUse.sort_button
+                :if={
+                  @current_folder != "" and @visible_file_count > 0 and !AssetListHelpers.unused_filter?(@params) and
+                    BrandoAdmin.Authorization.allowed?(:update, @schema)
+                }
+                asset_type={:file}
+              />
+              <SortByUse.delete_unused_button
+                :if={
+                  AssetListHelpers.unused_filter?(@params) and @unused_count > 0 and
+                    BrandoAdmin.Authorization.allowed?(:delete, @schema)
+                }
+                asset_type={:file}
+                count={@unused_count}
+              />
               <button
                 :if={@clipboard_ids != []}
                 type="button"
@@ -348,6 +396,9 @@ defmodule BrandoAdmin.Files.FileListLive do
             </div>
           </div>
         </:main_header>
+
+        <SortByUse.result :if={@sweep_result} asset_type={:file} result={@sweep_result} />
+        <SortByUse.modal :if={@sweep} sweep={@sweep} />
 
         <.live_component
           module={Content.List}

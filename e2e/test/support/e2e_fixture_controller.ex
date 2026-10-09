@@ -1457,11 +1457,11 @@ defmodule E2EFixtureController do
     file_folder = FolderBrowser.folder_id_for("Sweep", FolderBrowser.scope_for(file_cfg.upload_path))
 
     [teaser, film, walkthrough, _reel] =
-      for title <- ["Spring teaser", "Spring film", "Studio walkthrough", "Old showreel"] do
+      for {title, n} <- Enum.with_index(["Spring teaser", "Spring film", "Studio walkthrough", "Old showreel"]) do
         Brando.Repo.insert!(%Brando.Videos.Video{
           title: title,
           type: :external_file,
-          source_url: "https://example.com/#{Brando.Utils.slugify(title)}.mp4",
+          source_url: "https://example.com/clips/#{n + 1}.mp4",
           width: 1920,
           height: 1080,
           duration: "00:42",

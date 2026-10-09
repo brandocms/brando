@@ -6,7 +6,9 @@ defmodule BrandoAdmin.LiveView.AssetListHelpers do
 
   import Ecto.Query, only: [from: 2]
 
+  alias BrandoAdmin.Components.Assets.SortByUse
   alias BrandoAdmin.Images.FolderBrowser
+  alias BrandoAdmin.Media.Sweep
   alias Phoenix.Component
 
   @doc "Navigates to the parent folder by patching the URL filter."
@@ -190,6 +192,98 @@ defmodule BrandoAdmin.LiveView.AssetListHelpers do
     else
       Component.assign(socket, :all_folders?, false)
     end
+  end
+
+  # "Sort by use" and "Delete unused" (see `BrandoAdmin.Media.Sweep` and
+  # `BrandoAdmin.Components.Assets.SortByUse`). The LiveView keeps `:sweep`
+  # (the open preview) and `:sweep_result` (what Undo puts back), and redraws
+  # its folder state after each call.
+
+  @doc "Opens the preview of sorting the current folder's `asset_type` assets."
+  def open_sweep(socket, asset_type) do
+    folder_id = FolderBrowser.folder_id_for(socket.assigns.current_folder, socket.assigns.upload_root)
+
+    case Sweep.plan(asset_type, folder_id) do
+      {:ok, plan} -> Component.assign(socket, :sweep, %{plan: plan, samples: Sweep.samples(plan)})
+      {:error, _} -> socket
+    end
+  end
+
+  @doc """
+  Moves what the preview's form keeps (`include[key]`, `name[key]`) and keeps
+  the result for Undo. Without an open preview, nothing happens.
+  """
+  def apply_sweep(%{assigns: %{sweep: %{plan: plan}}} = socket, params) do
+    included = params |> Map.get("include", %{}) |> Enum.filter(&(elem(&1, 1) == "true")) |> Enum.map(&elem(&1, 0))
+    {:ok, result} = Sweep.apply(plan, only: included, names: Map.get(params, "name", %{}))
+    update_list_entries(socket.assigns.schema)
+
+    socket
+    |> Component.assign(:sweep, nil)
+    |> Component.assign(:sweep_result, if(result.moved > 0, do: result))
+  end
+
+  def apply_sweep(socket, _params), do: socket
+
+  @doc "Puts back what the last sort moved, with a toast."
+  def undo_sweep(%{assigns: %{sweep_result: %{asset_type: asset_type} = result}} = socket) do
+    {:ok, count} = Sweep.undo(result)
+    update_list_entries(socket.assigns.schema)
+    send(self(), {:toast, SortByUse.moved_back(asset_type, count)})
+    Component.assign(socket, :sweep_result, nil)
+  end
+
+  def undo_sweep(socket), do: socket
+
+  @doc "Whether the listing's \"Not in use\" filter is on."
+  def unused_filter?(params), do: Map.get(params || %{}, "filter:unused") in ["true", true]
+
+  @doc """
+  Puts in `:unused_count` how many unused assets the listing shows with the
+  "Not in use" filter on, else 0. `list` is the context's list function.
+  """
+  def assign_unused_count(socket, params, list) do
+    Component.assign(socket, :unused_count, if(unused_filter?(params), do: length(unused_ids(socket, list)), else: 0))
+  end
+
+  @doc """
+  Deletes every unused `asset_type` asset the listing shows (the current
+  folder's, or at the root everything the root lists), through the context's
+  own delete, with a toast. Images are soft deleted in one go; videos and
+  files one by one through their delete mutation, as the listing's Delete
+  does, which checks the user's permission and removes a video's remote copy
+  when its provider deletes on delete.
+  """
+  def delete_unused(socket, asset_type, list) do
+    ids = unused_ids(socket, list)
+    user = socket.assigns.current_user
+
+    deleted =
+      case asset_type do
+        :image ->
+          Brando.Images.delete_images(ids)
+          length(ids)
+
+        :video ->
+          Enum.count(ids, &match?({:ok, _}, Brando.Videos.delete_video(&1, user)))
+
+        :file ->
+          Enum.count(ids, &match?({:ok, _}, Brando.Files.delete_file(&1, user)))
+      end
+
+    update_list_entries(socket.assigns.schema)
+    send(self(), {:toast, SortByUse.deleted(asset_type, deleted)})
+    socket
+  end
+
+  defp unused_ids(socket, list) do
+    folder =
+      if socket.assigns.current_folder == "",
+        do: {:root, socket.assigns.root_folder_ids},
+        else: FolderBrowser.folder_id_for(socket.assigns.current_folder, socket.assigns.upload_root)
+
+    {:ok, entries} = list.(%{filter: %{unused: "true", folder_id: folder}, select: [:id]})
+    Enum.map(entries, & &1.id)
   end
 
   @doc "Toggles children row visibility for the navigation component and legacy child buttons."
