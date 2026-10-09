@@ -1,4 +1,4 @@
-defmodule Brando.ErrorHTML do
+defmodule BrandoAdmin.ErrorHTML do
   @moduledoc """
   Basic error views for Brando.
   """

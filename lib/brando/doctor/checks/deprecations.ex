@@ -1,7 +1,9 @@
 defmodule Brando.Doctor.Checks.Deprecations do
   @moduledoc """
   Calls to deprecated Brando functions and macros (those marked
-  `@deprecated`) in the project's `lib/`.
+  `@deprecated`) in the project's `lib/`, and references to the modules
+  renamed in 0.55 (a router naming `Brando.SEOController`, say), whose old
+  names are deprecated.
 
   The source is read as code, not text: aliases (`alias Brando.HTML`,
   `alias Brando.{HTML, Utils}`, `as:`), imports and pipes are followed, so
@@ -14,6 +16,7 @@ defmodule Brando.Doctor.Checks.Deprecations do
   use Brando.Doctor.Check
   use Gettext, backend: Brando.Gettext
 
+  alias Brando.Deprecated.RenamedModules
   alias Brando.Doctor.Context
 
   @impl true
@@ -88,8 +91,21 @@ defmodule Brando.Doctor.Checks.Deprecations do
         {:|>, meta, [left, {call, call_meta, args}]}, acc when is_list(args) ->
           {{:|>, meta, [left, {call, [{:piped, true} | call_meta], args}]}, acc}
 
-        {{:., _, [{:__aliases__, _, parts}, name]}, meta, args} = node, acc when is_atom(name) and is_list(args) ->
-          {node, check(resolve(parts, aliases), name, arity(meta, args), meta, deprecated, acc)}
+        # The module is reported with its deprecated function, or else once
+        # if renamed; the arguments are still scanned, the receiver is not
+        {{:., _, [{:__aliases__, _, parts}, name]}, meta, args}, acc when is_atom(name) and is_list(args) ->
+          module = resolve(parts, aliases)
+
+          acc =
+            case check(module, name, arity(meta, args), meta, deprecated, acc) do
+              ^acc -> renamed(module, meta, acc)
+              found -> found
+            end
+
+          {{:__block__, [], args}, acc}
+
+        {:__aliases__, meta, parts} = node, acc when is_list(parts) ->
+          {node, renamed(resolve(parts, aliases), meta, acc)}
 
         {{:., _, [module, name]}, meta, args} = node, acc when is_atom(module) and is_atom(name) and is_list(args) ->
           {node, check(module, name, arity(meta, args), meta, deprecated, acc)}
@@ -117,6 +133,16 @@ defmodule Brando.Doctor.Checks.Deprecations do
       reason ->
         call = "#{inspect(module)}.#{name}/#{arity}"
         [%{file: nil, line: meta[:line], call: call, reason: reason} | acc]
+    end
+  end
+
+  # A reference to a module renamed in 0.55: a router or socket names a
+  # controller or channel without calling it
+  defp renamed(module, meta, acc) do
+    if RenamedModules.new_name(module) do
+      [%{file: nil, line: meta[:line], call: inspect(module), reason: RenamedModules.reason(module)} | acc]
+    else
+      acc
     end
   end
 

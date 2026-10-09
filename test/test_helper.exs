@@ -110,8 +110,8 @@ defmodule BrandoIntegration.AdminSocket do
   use Phoenix.Socket
 
   ## Channels
-  channel "user:*", Brando.UserChannel
-  channel "live_preview:*", Brando.LivePreviewChannel
+  channel "user:*", BrandoAdmin.UserChannel
+  channel "live_preview:*", BrandoAdmin.LivePreviewChannel
 
   @doc """
   Connect socket with token

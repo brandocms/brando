@@ -1,6 +1,7 @@
-defmodule Brando.SitemapController do
+defmodule BrandoWeb.SitemapController do
   @moduledoc """
-  Controller for i18n actions.
+  Serves the generated sitemap files under `/sitemaps/` (routed by
+  `Brando.Router.page_routes/1`).
   """
   use BrandoAdmin, :controller
 

@@ -546,12 +546,14 @@ defmodule Brando.Doctor.ChecksTest do
 
   describe "Robots" do
     test "served by Brando" do
+      assert %Result{status: :ok} = Checks.Robots.evaluate(BrandoWeb.SEOController, false)
+      # Through the deprecated name, which the Deprecations check reports
       assert %Result{status: :ok} = Checks.Robots.evaluate(Brando.SEOController, false)
     end
 
     test "routed elsewhere, or behind a static file" do
       assert %Result{status: :warning, summary: "not served by Brando"} = Checks.Robots.evaluate(nil, false)
-      assert %Result{status: :warning} = Checks.Robots.evaluate(Brando.SEOController, true)
+      assert %Result{status: :warning} = Checks.Robots.evaluate(BrandoWeb.SEOController, true)
     end
   end
 
@@ -653,6 +655,33 @@ defmodule Brando.Doctor.ChecksTest do
       assert item =~ "lib/my_app/page.ex:2 Brando.HTML.picture_tag/2: "
 
       assert %Result{status: :ok, summary: "none in lib/"} = Checks.Deprecations.run(context(root: tmp_dir("clean")))
+    end
+
+    test "reports the modules renamed in 0.55 where they are named, once per reference" do
+      code = """
+      defmodule MyAppWeb.Router do
+        scope "/" do
+          get "/robots.txt", Brando.SEOController, :robots
+          get "/sitemaps/:file", BrandoWeb.SitemapController, :show
+        end
+      end
+
+      defmodule MyApp.Notify do
+        alias Brando.UserChannel
+        def a(user), do: UserChannel.alert(user, "Hi")
+        def b(user), do: Brando.UserChannel.set_progress(user, 1)
+        def c(conn), do: Brando.Meta.HTML.render_meta(conn)
+      end
+      """
+
+      deprecated = Map.put(@deprecated_calls, {Brando.UserChannel, :alert, 2}, "Use BrandoAdmin.UserChannel.alert/2")
+
+      assert [
+               %{line: 3, call: "Brando.SEOController", reason: "renamed to BrandoWeb.SEOController" <> _},
+               %{line: 9, call: "Brando.UserChannel"},
+               %{line: 10, call: "Brando.UserChannel.alert/2"},
+               %{line: 11, call: "Brando.UserChannel"}
+             ] = code |> Code.string_to_quoted!() |> Checks.Deprecations.scan(deprecated)
     end
 
     test "knows Brando's deprecated functions" do

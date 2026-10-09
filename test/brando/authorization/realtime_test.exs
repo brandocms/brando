@@ -114,13 +114,13 @@ defmodule Brando.Authorization.RealtimeTest do
     Brando.endpoint().broadcast("live_preview:#{c.key}", "rerender", %{html: html})
 
     socket = admin_socket(c.editor, "preview")
-    assert {:ok, _, _} = subscribe_and_join(socket, Brando.LivePreviewChannel, "live_preview:#{c.key}")
+    assert {:ok, _, _} = subscribe_and_join(socket, BrandoAdmin.LivePreviewChannel, "live_preview:#{c.key}")
     assert_push "rerender", %{html: ^html}
   end
 
   test "preview channels stop on revocation and recheck each outgoing update", c do
     socket = admin_socket(c.editor, "preview")
-    {:ok, _, joined} = subscribe_and_join(socket, Brando.LivePreviewChannel, "live_preview:#{c.key}")
+    {:ok, _, joined} = subscribe_and_join(socket, BrandoAdmin.LivePreviewChannel, "live_preview:#{c.key}")
     monitor = Process.monitor(joined.channel_pid)
     broadcast_from!(joined, "update", %{html: "Allowed draft"})
     assert_push "update", %{html: "Allowed draft"}
@@ -130,12 +130,12 @@ defmodule Brando.Authorization.RealtimeTest do
     refute_push "update", %{html: "Forbidden draft"}
 
     assert {:error, %{reason: "forbidden"}} =
-             subscribe_and_join(socket, Brando.LivePreviewChannel, "live_preview:#{c.key}")
+             subscribe_and_join(socket, BrandoAdmin.LivePreviewChannel, "live_preview:#{c.key}")
   end
 
   test "a permission-change broadcast closes an already joined preview", c do
     socket = admin_socket(c.editor, "preview")
-    {:ok, _, joined} = subscribe_and_join(socket, Brando.LivePreviewChannel, "live_preview:#{c.key}")
+    {:ok, _, joined} = subscribe_and_join(socket, BrandoAdmin.LivePreviewChannel, "live_preview:#{c.key}")
     monitor = Process.monitor(joined.channel_pid)
     {:ok, groups} = Groups.list(Scope.standalone(c.owner))
     group = Enum.find(groups, &(&1.preset == :editor))
@@ -156,10 +156,12 @@ defmodule Brando.Authorization.RealtimeTest do
   test "lobby joins require signed scope and never forward raw presence diffs", c do
     Phoenix.PubSub.subscribe(Brando.pubsub(), "presence")
     socket = admin_socket(c.editor, "lobby")
-    assert {:error, %{reason: "forbidden"}} = subscribe_and_join(socket, Brando.LobbyChannel, "lobby", %{url: "/admin"})
+
+    assert {:error, %{reason: "forbidden"}} =
+             subscribe_and_join(socket, BrandoAdmin.LobbyChannel, "lobby", %{url: "/admin"})
 
     {:ok, _, joined} =
-      subscribe_and_join(socket, Brando.LobbyChannel, "lobby", %{url: "/admin", scope_token: Realtime.token(c.scope)})
+      subscribe_and_join(socket, BrandoAdmin.LobbyChannel, "lobby", %{url: "/admin", scope_token: Realtime.token(c.scope)})
 
     assert_receive {BrandoAdmin.Presence, {:presence, %{user_joined: _}}}
     broadcast_from!(joined, "presence_diff", %{joins: %{secret: "Other site activity"}})
@@ -187,7 +189,7 @@ defmodule Brando.Authorization.RealtimeTest do
     socket = admin_socket(c.editor, "lobby")
 
     {:ok, _, joined} =
-      subscribe_and_join(socket, Brando.LobbyChannel, "lobby", %{url: "/admin", scope_token: Realtime.token(c.scope)})
+      subscribe_and_join(socket, BrandoAdmin.LobbyChannel, "lobby", %{url: "/admin", scope_token: Realtime.token(c.scope)})
 
     assert_receive {BrandoAdmin.Presence, {:presence, %{user_joined: _}}}
 

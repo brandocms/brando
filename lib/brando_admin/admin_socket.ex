@@ -5,9 +5,9 @@ defmodule BrandoAdmin.AdminSocket do
   use Phoenix.Socket
 
   ## Channels
-  channel "user:*", Brando.UserChannel
-  channel "lobby", Brando.LobbyChannel
-  channel "live_preview:*", Brando.LivePreviewChannel
+  channel "user:*", BrandoAdmin.UserChannel
+  channel "lobby", BrandoAdmin.LobbyChannel
+  channel "live_preview:*", BrandoAdmin.LivePreviewChannel
 
   @doc """
   Connect socket with token

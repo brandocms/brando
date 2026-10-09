@@ -59,6 +59,23 @@ defmodule Mix.Brando.Igniter.SiteTest do
     Igniter.Test.assert_unchanged(rerun)
   end
 
+  test "a site generated before 0.55 still owns its routes through the controllers' old names" do
+    generated = project() |> generate(["--replace-phoenix-home", "--yes"]) |> IgniterCase.apply_and_reload()
+    path = "lib/studio_web/router.ex"
+    router = IgniterCase.source(generated, path)
+    assert router =~ "BrandoWeb.SEOController"
+    legacy_router = String.replace(router, ~r/BrandoWeb\.(SEO|Sitemap|Preview)Controller/, "Brando.\\1Controller")
+
+    legacy =
+      generated
+      |> Igniter.update_file(path, &Rewrite.Source.update(&1, :content, fn _ -> legacy_router end))
+      |> IgniterCase.apply_and_reload()
+
+    rerun = generate(legacy)
+    assert rerun.issues == []
+    Igniter.Test.assert_unchanged(rerun)
+  end
+
   test "yes alone never claims an existing homepage and custom route ownership blocks" do
     for {route, options} <- [
           {~s(get "/", PageController, :home), ["--yes"]},

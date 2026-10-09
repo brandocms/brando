@@ -397,6 +397,61 @@ defmodule Mix.Tasks.Brando.Migrate55Test do
     assert_unchanged(igniter, @brando_config_path)
   end
 
+  describe "modules renamed in 0.55" do
+    @router_path "lib/legacy_app_web/router.ex"
+    @notify_path "lib/legacy_app/notify.ex"
+
+    @router """
+    defmodule LegacyAppWeb.Router do
+      use LegacyAppWeb, :router
+
+      scope "/" do
+        pipe_through :browser
+        get "/robots.txt", Brando.SEOController, :robots
+        get "/__p__/:preview_key", Brando.PreviewController, :show
+        get "/sitemaps/:file", Brando.SitemapController, :show
+      end
+    end
+    """
+
+    @notify """
+    defmodule LegacyApp.Notify do
+      alias Brando.UserChannel
+      alias Brando.{LobbyChannel, Utils}
+
+      def done(user), do: UserChannel.alert(user, Utils.slugify("Done"))
+      def lobby, do: LobbyChannel
+      def unrelated, do: {LegacyApp.UserChannel, UserChannelHelper}
+    end
+    """
+
+    test "points routers, sockets, config and code at the new names" do
+      config =
+        @config <> "\nconfig :legacy_app, LegacyAppWeb.Endpoint, render_errors: [formats: [html: Brando.ErrorHTML]]\n"
+
+      igniter = migrate(@blueprint_054, %{@router_path => @router, @notify_path => @notify, @config_path => config})
+
+      assert igniter.issues == []
+      router = source(igniter, @router_path)
+      assert router =~ ~s(get "/robots.txt", BrandoWeb.SEOController, :robots)
+      assert router =~ ~s(get "/__p__/:preview_key", BrandoWeb.PreviewController, :show)
+      assert router =~ ~s(get "/sitemaps/:file", BrandoWeb.SitemapController, :show)
+      assert source(igniter, @config_path) =~ "html: BrandoAdmin.ErrorHTML"
+
+      notify = source(igniter, @notify_path)
+      assert notify =~ "alias BrandoAdmin.UserChannel"
+      assert notify =~ "UserChannel.alert(user"
+      assert notify =~ "{LegacyApp.UserChannel, UserChannelHelper}"
+
+      # Brando.LobbyChannel left Brando's namespace: the braces can't hold it
+      assert notify =~ "alias Brando.{LobbyChannel, Utils}"
+
+      assert_has_warning(igniter, fn warning ->
+        String.contains?(warning, @notify_path) and String.contains?(warning, "BrandoAdmin.LobbyChannel")
+      end)
+    end
+  end
+
   describe "image text reads" do
     @hero_blueprint String.replace(@blueprint_054, "attribute :title, :string", """
                     attribute :title, :string

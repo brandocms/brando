@@ -704,6 +704,30 @@ production dump.
   Jupiter 5's `app.scrollTo({y: el, offsetY})` adds the offset to the target,
   where GSAP subtracted it: negate offsets passed from custom hooks.
 
+- **Public modules that sat in the wrong layer are renamed** (#2833). The old
+  names are deprecated and keep working until 0.57: a router, socket or
+  endpoint config that names one logs a warning the first time it is used,
+  and calling a function on one warns when the caller compiles.
+  `mix brando.migrate55` rewrites the references in `config/`, `lib/` and
+  `test/`, and `mix brando.doctor` lists any left in `lib/`. Applications
+  that route with `page_routes()` need no change.
+
+  | Old name | New name |
+  | --- | --- |
+  | `Brando.SEOController` | `BrandoWeb.SEOController` |
+  | `Brando.SitemapController` | `BrandoWeb.SitemapController` |
+  | `Brando.PreviewController` | `BrandoWeb.PreviewController` |
+  | `Brando.UserChannel` | `BrandoAdmin.UserChannel` |
+  | `Brando.LobbyChannel` | `BrandoAdmin.LobbyChannel` |
+  | `Brando.LivePreviewChannel` | `BrandoAdmin.LivePreviewChannel` |
+  | `Brando.ErrorHTML` | `BrandoAdmin.ErrorHTML` |
+
+  The three controllers serve the site's public routes (`/robots.txt`,
+  `/sitemaps/:file` and the shared preview links at `/__p__/:preview_key`),
+  so they moved to `BrandoWeb` with their files. A router that `mix
+  brando.gen.site` generated before 0.55 names them directly; rerunning the
+  task accepts either name.
+
 #### Improvements
 
 - **The admin's colours are role tokens** (#2981). Every admin stylesheet

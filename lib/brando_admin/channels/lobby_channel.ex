@@ -1,4 +1,4 @@
-defmodule Brando.LobbyChannel do
+defmodule BrandoAdmin.LobbyChannel do
   @moduledoc "Workspace-aware activity tracking and administration notifications."
   use Phoenix.Channel
   alias Brando.Authorization.{Engine, Realtime, Scope}

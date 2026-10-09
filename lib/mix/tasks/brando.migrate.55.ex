@@ -15,7 +15,8 @@ if Code.ensure_loaded?(Igniter) do
     dependency. Applications still on 0.53 syntax must run
     `mix brando.migrate54` first.
 
-    The task adds the explicit listing component imports, gives Villain parsers
+    The task points references to the modules renamed in 0.55 at their new
+    names, adds the explicit listing component imports, gives Villain parsers
     back the `use Phoenix.Component`, imports and aliases they relied on from
     `use Brando.Villain.Parser`, configures Req as
     Swoosh's API client, points Brando at the application's mailer, removes the
@@ -43,6 +44,7 @@ if Code.ensure_loaded?(Igniter) do
       igniter
       |> SourceUpgrade.rewrite_blueprints(&SourceUpgrade.add_listing_component_imports/1)
       |> SourceUpgrade.update_villain_parsers()
+      |> SourceUpgrade.rename_moved_modules()
       |> SourceUpgrade.configure_swoosh_client()
       |> SourceUpgrade.configure_brando_mailer()
       |> SourceUpgrade.remove_sharp_processor()
@@ -62,7 +64,10 @@ if Code.ensure_loaded?(Igniter) do
       Igniter.add_notice(igniter, """
       Brando 0.55 source migration prepared.
 
-      Custom listing rows get the narrow component imports they use, and
+      References to the modules renamed in 0.55 (`Brando.SEOController`,
+      `Brando.UserChannel` and the rest; see UPGRADE.md) now
+      use the new names. Custom listing rows get the narrow component
+      imports they use, and
       Villain parsers get back the `use Phoenix.Component`, `Brando.HTML` and
       `Phoenix.HTML` imports, and aliases they used, which
       `use Brando.Villain.Parser` no longer brings in. The task

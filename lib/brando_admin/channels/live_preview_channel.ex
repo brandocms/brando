@@ -1,4 +1,4 @@
-defmodule Brando.LivePreviewChannel do
+defmodule BrandoAdmin.LivePreviewChannel do
   @moduledoc """
   Channel for streaming Live Preview updates
   """
