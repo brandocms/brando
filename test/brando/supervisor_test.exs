@@ -41,6 +41,7 @@ defmodule Brando.SupervisorTest do
       assert Brando.Worker.NotFoundPurger in workers
       assert Brando.Worker.WebhookDeliveryPurger in workers
       assert {"*/10 * * * *", Brando.Worker.ScheduledPublishingSweep} in cron_opts[:crontab]
+      assert Brando.Doctor.Checks.Oban.sweep_scheduled?(Brando.Supervisor.oban_config())
     end
 
     test "gives every queue Brando serializes a limit" do

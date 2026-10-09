@@ -28,7 +28,11 @@ defmodule BrandoAdmin.Components.Form.ScheduledPublishingDrawer do
         </p>
       </:info>
       <div class="brando-input">
-        <Input.datetime field={@form[:publish_at]} label={gettext("Publish at")} />
+        <Input.datetime
+          field={@form[:publish_at]}
+          label={gettext("Publish at")}
+          instructions={publish_at_instructions(@form)}
+        />
       </div>
       <div class="brando-input">
         <Input.datetime
@@ -39,5 +43,14 @@ defmodule BrandoAdmin.Components.Form.ScheduledPublishingDrawer do
       </div>
     </Content.drawer>
     """
+  end
+
+  # The job publishes only a pending entry: a date on a draft does nothing
+  defp publish_at_instructions(form) do
+    status = to_string(form[:status].value)
+    publish_at = form[:publish_at].value
+
+    if status in ["draft", "disabled"] and publish_at not in [nil, ""],
+      do: gettext("Only a pending entry is published at this time. Set the status to Pending to schedule it.")
   end
 end

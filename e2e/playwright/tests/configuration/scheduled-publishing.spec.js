@@ -73,6 +73,8 @@ test('selects a future publishing date and manages the publishing queue', async 
   await expect(scheduledJob).toContainText(/Entry #\d+/)
   await page.screenshot({ path: testInfo.outputPath('scheduled-publishing-desktop.png'), fullPage: true })
   await scheduledJob.getByRole('button', { name: 'Delete job' }).click()
+  // It asks first: the entry's date goes with the job
+  await page.locator('dialog.admin-dialog').getByRole('button', { name: 'Delete job' }).click()
   await syncLV(page)
   await expect(scheduledJob).toHaveCount(0)
   await expect(page.getByRole('heading', { name: 'No scheduled publications' })).toBeVisible()

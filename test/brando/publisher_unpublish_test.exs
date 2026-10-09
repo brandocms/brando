@@ -6,6 +6,7 @@ defmodule Brando.PublisherUnpublishTest do
   use Brando.ConnCase
 
   import Ecto.Query, only: [from: 2]
+  import ExUnit.CaptureLog, only: [with_log: 2]
 
   alias Brando.Factory
   alias Brando.Pages
@@ -161,6 +162,38 @@ defmodule Brando.PublisherUnpublishTest do
     end
   end
 
+  describe "deleting a job" do
+    defp delete_job(job, user),
+      do: Oban.Testing.with_testing_mode(:manual, fn -> Brando.Publisher.delete_job(job.id, user) end)
+
+    test "clears the publishing date, and a pending entry goes back to draft", %{user: user} do
+      page = create_page(user, %{status: :pending, publish_at: at(3600)})
+      [job] = publish_jobs(page)
+
+      assert {_, _} = delete_job(job, user)
+      assert %{status: :draft, publish_at: nil} = Repo.get!(Page, page.id)
+      assert publish_jobs(page) == []
+    end
+
+    test "clears the expiry, and keeps the entry published", %{user: user} do
+      page = create_page(user, %{unpublish_at: at(3600)})
+      [job] = unpublish_jobs(page)
+
+      assert {_, _} = delete_job(job, user)
+      assert %{status: :published, unpublish_at: nil} = Repo.get!(Page, page.id)
+    end
+
+    test "leaves a date that moved since the job was made", %{user: user} do
+      page = create_page(user, %{unpublish_at: at(3600)})
+      [job] = unpublish_jobs(page)
+      moved = at(7200)
+      {1, _} = BrandoIntegration.Repo.update_all(from(p in Page, where: p.id == ^page.id), set: [unpublish_at: moved])
+
+      assert {_, _} = delete_job(job, user)
+      assert Repo.get!(Page, page.id).unpublish_at == moved
+    end
+  end
+
   describe "an expiry that has passed" do
     test "is cleared when the entry is published again", %{user: user} do
       page = create_page(user, %{publish_at: at(-7200)})
@@ -222,7 +255,12 @@ defmodule Brando.PublisherUnpublishTest do
       without_jobs(later, unpublish_at: at(3600))
       collected()
 
-      assert Brando.Publisher.sweep() == 3
+      assert Brando.Publisher.sweep() |> Enum.map(&{&1.id, &1.action, &1.result}) |> Enum.sort() ==
+               Enum.sort([
+                 {pending.id, :publish, :ok},
+                 {expiring.id, :unpublish, :ok},
+                 {expired_pending.id, :unpublish, :ok}
+               ])
 
       assert Repo.get!(Page, pending.id).status == :published
       assert Repo.get!(Page, expiring.id).status == :disabled
@@ -241,7 +279,55 @@ defmodule Brando.PublisherUnpublishTest do
       assert collected() == []
 
       # Again: nothing left to do
-      assert Brando.Publisher.sweep() == 0
+      assert Brando.Publisher.sweep() == []
+    end
+
+    test "leaves dates from more than a week ago alone", %{user: user} do
+      old = create_page(user, %{status: :draft})
+      without_jobs(old, status: :pending, publish_at: at(-8 * 86_400))
+      old_expiry = create_page(user)
+      without_jobs(old_expiry, unpublish_at: at(-8 * 86_400))
+
+      assert Brando.Publisher.sweep() == []
+      assert Repo.get!(Page, old.id).status == :pending
+      assert Repo.get!(Page, old_expiry.id).status == :published
+    end
+
+    test "a dry run lists what it would do and changes nothing", %{user: user} do
+      pending = create_page(user, %{status: :draft, title: "Launch"})
+      without_jobs(pending, status: :pending, publish_at: at(-3600))
+
+      assert [%{id: id, title: "Launch", action: :publish, result: :dry_run}] = Brando.Publisher.sweep(dry_run: true)
+      assert id == pending.id
+      assert Repo.get!(Page, pending.id).status == :pending
+    end
+
+    test "an entry it cannot save is left alone until it is saved again", %{user: user} do
+      broken = create_page(user, %{status: :draft})
+      without_jobs(broken, status: :pending, publish_at: at(-3600), title: nil)
+      fine = create_page(user, %{status: :draft})
+      without_jobs(fine, status: :pending, publish_at: at(-3600))
+
+      previous = Logger.level()
+      Logger.configure(level: :warning)
+      on_exit(fn -> Logger.configure(level: previous) end)
+
+      {results, log} = with_log([level: :warning], fn -> Brando.Publisher.sweep() end)
+      assert log =~ "sweep could not publish"
+      assert %{result: {:error, _}} = Enum.find(results, &(&1.id == broken.id))
+      assert Repo.get!(Page, fine.id).status == :published
+
+      # Not tried again on the next run
+      assert Brando.Publisher.sweep() == []
+
+      # Saving it changes updated_at, and the sweep takes it again
+      {1, _} =
+        BrandoIntegration.Repo.update_all(from(p in Page, where: p.id == ^broken.id),
+          set: [title: "Fixed", updated_at: NaiveDateTime.add(broken.updated_at, 60)]
+        )
+
+      assert [%{id: id, result: :ok}] = Brando.Publisher.sweep()
+      assert id == broken.id
     end
 
     test "the cron worker runs it", %{user: user} do

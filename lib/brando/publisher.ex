@@ -4,6 +4,8 @@ defmodule Brando.Publisher do
   """
   import Ecto.Query
 
+  require Logger
+
   alias Brando.Authorization.Boundary
   alias Brando.Blueprint.Identifier
   alias Brando.Repo
@@ -360,33 +362,63 @@ defmodule Brando.Publisher do
   defp where_window(query, from, to), do: from(j in query, where: j.scheduled_at >= ^from and j.scheduled_at < ^to)
 
   @sweep_grace_seconds 300
+  @sweep_days 7
+  @failed_ttl :timer.hours(24)
 
   @doc """
   Catch up on dates no job will act on, in the current environment: publish
   pending entries whose `publish_at` has passed, and deactivate published or
   pending entries whose `unpublish_at` has passed, through each entry's
   context like the jobs do. Dates arrive without jobs when an environment is
-  cloned or an archive restored, and a lost job leaves one behind. Only dates
-  more than five minutes old are taken, so the jobs run first; an entry it
-  has handled no longer matches, so running it again does nothing. Both
-  dates are indexed. Returns how many entries it changed.
+  cloned or an archive restored, and a lost job leaves one behind.
 
-  `Brando.Worker.ScheduledPublishingSweep` runs it every ten minutes in every
-  active environment.
+    * Only dates from more than five minutes ago, so the jobs run first, and
+      from the last seven days (`config :brando, Brando.Publisher,
+      sweep_days: 7`), so older dates, from before the sweep existed, are
+      left alone.
+    * An entry it has handled no longer matches, so running it again does
+      nothing. Pages and fragments index both dates, and the window keeps
+      each query to a few days of them.
+    * A content type whose table cannot be read (an environment whose
+      migrations lag) is logged and skipped. An entry whose save fails is
+      logged and left alone for a day, or until it is saved again.
+
+  Returns what it did, one map per entry: `%{schema, id, title, action,
+  at, result}`, `action` being `:publish` or `:unpublish` and `result`
+  `:ok`, `{:error, reason}` or, with `dry_run: true`, `:dry_run` (nothing is
+  saved). `Brando.Worker.ScheduledPublishingSweep` runs it every ten minutes
+  in every active environment; `mix brando.scheduled_publishing.sweep` shows
+  what it would do.
   """
-  def sweep(now \\ DateTime.utc_now()) do
-    before = DateTime.add(now, -@sweep_grace_seconds)
+  def sweep(opts \\ []) do
+    now = Keyword.get(opts, :now, DateTime.utc_now())
+    dry_run? = Keyword.get(opts, :dry_run, false)
+    window = {DateTime.add(now, -sweep_days(), :day), DateTime.add(now, -@sweep_grace_seconds)}
 
     Brando.Activity.with_source(:scheduler, fn ->
-      sweepable_schemas()
-      |> Enum.map(fn schema ->
-        due(schema, :publish_at, [:pending], before)
-        |> Enum.concat(due(schema, :unpublish_at, [:published, :pending], before))
-        |> Enum.uniq_by(& &1.id)
-        |> Enum.count(&(sweep_entry(schema, &1, now) == :ok))
-      end)
-      |> Enum.sum()
+      Enum.flat_map(sweepable_schemas(), &sweep_schema(&1, window, now, dry_run?))
     end)
+  end
+
+  defp sweep_days do
+    config = Brando.config(__MODULE__) || []
+    Keyword.get(config, :sweep_days, @sweep_days)
+  end
+
+  defp sweep_schema(schema, {from, before}, now, dry_run?) do
+    due(schema, :publish_at, [:pending], from, before)
+    |> Enum.concat(due(schema, :unpublish_at, [:published, :pending], from, before))
+    |> Enum.uniq_by(& &1.id)
+    |> Enum.reject(&failed_before?(schema, &1))
+    |> Enum.map(&sweep_entry(schema, &1, now, dry_run?))
+  rescue
+    error ->
+      Logger.error(
+        "[Brando.Publisher] sweep skipped #{inspect(schema)} in #{Brando.Tenant.current_prefix() || "public"}: " <>
+          Exception.message(error)
+      )
+
+      []
   end
 
   @doc "Content types with dates to keep: the trait, a status and a context."
@@ -400,8 +432,11 @@ defmodule Brando.Publisher do
     end)
   end
 
-  defp due(schema, field, statuses, before) do
-    query = from e in schema, where: e.status in ^statuses and field(e, ^field) <= ^before
+  defp due(schema, field, statuses, from, before) do
+    query =
+      from e in schema,
+        where: e.status in ^statuses and field(e, ^field) >= ^from and field(e, ^field) <= ^before,
+        order_by: [asc: e.id]
 
     query =
       if :deleted_at in schema.__schema__(:fields), do: from(e in query, where: is_nil(e.deleted_at)), else: query
@@ -410,16 +445,55 @@ defmodule Brando.Publisher do
   end
 
   # An expiry that has passed wins over a publish that has
-  defp sweep_entry(schema, entry, now) do
+  defp sweep_entry(schema, entry, now, dry_run?) do
     expired? = match?(%DateTime{}, Map.get(entry, :unpublish_at)) and not DateTime.after?(entry.unpublish_at, now)
-    params = %{status: if(expired?, do: @unpublish_status, else: @publish_status)}
+    action = if expired?, do: :unpublish, else: :publish
+
+    found = %{
+      schema: schema,
+      id: entry.id,
+      title: Map.get(entry, :title) || Map.get(entry, :name),
+      action: action,
+      at: if(expired?, do: entry.unpublish_at, else: entry.publish_at)
+    }
+
+    Map.put(found, :result, if(dry_run?, do: :dry_run, else: save_sweep(schema, entry, action)))
+  end
+
+  defp save_sweep(schema, entry, action) do
+    params = %{status: if(action == :unpublish, do: @unpublish_status, else: @publish_status)}
     context = schema.__modules__().context
 
     case apply(context, :"update_#{schema.__naming__().singular}", [entry.id, params, :system]) do
-      {:ok, _} -> :ok
-      error -> error
+      {:ok, _} ->
+        :ok
+
+      error ->
+        Logger.warning(
+          "[Brando.Publisher] sweep could not #{action} #{inspect(schema)} ##{entry.id}, " <>
+            "left alone for a day or until it is saved: #{inspect(sweep_error(error))}"
+        )
+
+        Brando.Cache.put(failed_key(schema, entry), true, @failed_ttl)
+        {:error, sweep_error(error)}
     end
+  rescue
+    error ->
+      Logger.warning(
+        "[Brando.Publisher] sweep could not #{action} #{inspect(schema)} ##{entry.id}: #{Exception.message(error)}"
+      )
+
+      Brando.Cache.put(failed_key(schema, entry), true, @failed_ttl)
+      {:error, error}
   end
+
+  defp sweep_error({:error, %Changeset{errors: errors}}), do: errors
+  defp sweep_error({:error, reason}), do: reason
+  defp sweep_error(other), do: other
+
+  # Saving the entry changes updated_at, and with it the key: it is tried again
+  defp failed_key(schema, entry), do: {:publisher_sweep_failed, schema, entry.id, Map.get(entry, :updated_at)}
+  defp failed_before?(schema, entry), do: Brando.Cache.get(failed_key(schema, entry)) == true
 
   def list_jobs do
     context = TenantJob.context_fragment()
@@ -439,13 +513,24 @@ defmodule Brando.Publisher do
     {:ok, jobs}
   end
 
-  def delete_job(id) do
+  @doc """
+  Delete a publisher job, and with it the plan it carried out, so nothing
+  publishes the entry later (`sweep/1` would publish a pending entry whose
+  `publish_at` passed with no job): a publishing job clears the entry's
+  `publish_at` and sets a pending entry back to draft, an expiry job clears
+  `unpublish_at`, and a revision job makes the revision an ordinary one again.
+  The entry is saved through its context as `user`, so it records Activity;
+  a date that no longer matches the job (it was moved since) is left alone.
+  Needs the right to schedule the entry.
+  """
+  def delete_job(id, user \\ :system) do
     context = TenantJob.context_fragment()
 
     with {:ok, id} <- cast_entry_id(id),
          %Oban.Job{} = job <- Repo.get(Oban.Job, id),
          true <- map_size(context) == 0 or Map.take(job.args, Map.keys(context)) == context,
          :ok <- job_authorized?(job, :schedule),
+         :ok <- clear_job_date(job, user),
          :ok <- Oban.cancel_job(job) do
       clear_revision_schedule(job)
       Repo.delete_all(from j in Oban.Job, where: j.id == ^id)
@@ -455,6 +540,29 @@ defmodule Brando.Publisher do
       {:error, _reason} = error -> error
     end
   end
+
+  defp clear_job_date(%Oban.Job{args: %{"status" => status, "schema" => name, "id" => id}} = job, user) do
+    field = if status == @publish_status, do: :publish_at, else: :unpublish_at
+    schema = schema_module(name)
+
+    with schema when not is_nil(schema) <- schema,
+         %{} = entry <- Repo.get(schema, id),
+         %DateTime{} = at <- Map.get(entry, field),
+         true <- DateTime.compare(DateTime.truncate(at, :second), DateTime.truncate(job.scheduled_at, :second)) == :eq do
+      params = %{field => nil}
+      params = if field == :publish_at and entry.status == :pending, do: Map.put(params, :status, :draft), else: params
+      context = schema.__modules__().context
+
+      case apply(context, :"update_#{schema.__naming__().singular}", [entry.id, params, user]) do
+        {:ok, _} -> :ok
+        {:error, _} = error -> error
+      end
+    else
+      _ -> :ok
+    end
+  end
+
+  defp clear_job_date(_job, _user), do: :ok
 
   defp job_authorized?(%Oban.Job{worker: worker, args: %{"schema" => schema, "id" => id}}, action) do
     if worker == inspect(Worker.EntryPublisher),

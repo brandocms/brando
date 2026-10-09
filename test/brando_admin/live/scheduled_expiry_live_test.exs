@@ -55,6 +55,18 @@ defmodule BrandoAdmin.ScheduledExpiryLiveTest do
     end
   end
 
+  describe "a draft with a publishing date" do
+    test "is told the date publishes only a pending entry", %{conn: conn, current_user: user} do
+      draft = page(user, "Draft", status: :draft, publish_at: at(2))
+      {view, _html} = live_form(conn, "/admin/pages/update/#{draft.id}")
+      assert has_element?(view, "[id$='-scheduled-publishing-drawer']", "Only a pending entry is published")
+
+      pending = page(user, "Pending", status: :pending, publish_at: at(2))
+      {view, _html} = live_form(conn, "/admin/pages/update/#{pending.id}")
+      refute has_element?(view, "[id$='-scheduled-publishing-drawer']", "Only a pending entry is published")
+    end
+  end
+
   describe "listings" do
     test "show when a published entry expires, beside its status", %{conn: conn, current_user: user} do
       expiring = page(user, "Summer campaign", unpublish_at: at(3))

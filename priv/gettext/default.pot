@@ -5144,6 +5144,11 @@ msgstr ""
 msgid "Delete selected"
 msgstr ""
 
+#: lib/brando_admin/live/sites/scheduled_publishing_live.ex
+#, elixir-autogen, elixir-format
+msgid "Delete the job?"
+msgstr ""
+
 #: lib/brando_admin/components/form/block/render.ex
 #, elixir-autogen, elixir-format
 msgid "Delete this block"
@@ -8461,6 +8466,11 @@ msgstr ""
 
 #: lib/brando_admin/live/sites/scheduled_publishing_live.ex
 #, elixir-autogen, elixir-format
+msgid "Job not deleted"
+msgstr ""
+
+#: lib/brando_admin/live/sites/scheduled_publishing_live.ex
+#, elixir-autogen, elixir-format
 msgid "Job queue refreshed"
 msgstr ""
 
@@ -11285,6 +11295,11 @@ msgid "One user this applies to has not set it up. They set it up at their next 
 msgid_plural "%{count} users this applies to have not set it up. They set it up at their next login, and their current sessions end when you save."
 msgstr[0] ""
 msgstr[1] ""
+
+#: lib/brando_admin/components/form/scheduled_publishing_drawer.ex
+#, elixir-autogen, elixir-format
+msgid "Only a pending entry is published at this time. Set the status to Pending to schedule it."
+msgstr ""
 
 #: lib/brando_admin/live/users/sign_in_policy_live.ex
 #, elixir-autogen, elixir-format
@@ -16264,6 +16279,16 @@ msgstr ""
 #: lib/brando_admin/components/form.ex
 #, elixir-autogen, elixir-format
 msgid "The entry was saved, but the redirect could not be created. Please try again or continue without it."
+msgstr ""
+
+#: lib/brando_admin/live/sites/scheduled_publishing_live.ex
+#, elixir-autogen, elixir-format
+msgid "The entry's date could not be cleared. Open the entry and clear it there."
+msgstr ""
+
+#: lib/brando_admin/live/sites/scheduled_publishing_live.ex
+#, elixir-autogen, elixir-format
+msgid "The entry's publishing date or expiry is cleared with it, and an entry waiting to be published goes back to draft."
 msgstr ""
 
 #: lib/brando_admin/live/sites/environment_live.ex

@@ -491,6 +491,11 @@ msgstr "en statisk robots.txt kan skygge for SEO-teksten"
 msgid "add %{queues} to the queues in config :brando, Oban (see Brando.Supervisor)"
 msgstr "legg %{queues} til køene i config :brando, Oban (se Brando.Supervisor)"
 
+#: lib/brando/doctor/checks/oban.ex
+#, elixir-autogen, elixir-format
+msgid "add {\"*/10 * * * *\", Brando.Worker.ScheduledPublishingSweep} to the crontab in config :brando, Oban"
+msgstr "legg til {\"*/10 * * * *\", Brando.Worker.ScheduledPublishingSweep} i crontab i config :brando, Oban"
+
 #: lib/brando/doctor/checks/modules.ex
 #, elixir-autogen, elixir-format
 msgid "all blocks on their module's current version"
@@ -713,6 +718,11 @@ msgstr "ingen e-postmodul"
 #, elixir-autogen, elixir-format
 msgid "no queues, so background jobs never run"
 msgstr "ingen køer, så bakgrunnsjobber kjøres aldri"
+
+#: lib/brando/doctor/checks/oban.ex
+#, elixir-autogen, elixir-format
+msgid "no scheduled publishing sweep"
+msgstr "ingen opprydding for planlagt publisering"
 
 #: lib/brando/doctor/checks/configuration.ex
 #, elixir-autogen, elixir-format

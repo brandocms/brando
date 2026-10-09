@@ -86,11 +86,18 @@ production dump.
   have no expiry. **An application that sets `config :brando, Oban` itself
   must add `{"*/10 * * * *", Brando.Worker.ScheduledPublishingSweep}` to its
   crontab**: it publishes and expires entries whose dates passed with no job,
-  as after an environment clone or an archive restore.
+  as after an environment clone or an archive restore, and `mix brando.doctor`
+  warns when it is missing. It only takes dates from the last seven days, so
+  older ones are left alone; run `mix brando.scheduled_publishing.sweep`
+  before deploying to see what it will do.
 - **A publishing job publishes only a pending entry.** A future `publish_at`
   on a draft or a deactivated entry used to publish it when the job ran; the
   job now does nothing unless the entry is still pending, and clearing
-  `publish_at` or moving it into the past removes the job.
+  `publish_at` or moving it into the past removes the job. The Scheduled
+  publishing drawer says so on a draft with a date. **Delete job** on the
+  Scheduled Publishing screen asks first, and now clears the date with the
+  job (a pending entry goes back to draft), so the sweep does not publish it
+  later; `Brando.Publisher.delete_job/2` takes the user to save as.
 
 - **Markdown alternates and IndexNow need two plugs.** Add
   `plug Brando.Plug.Markdown` and `plug Brando.Plug.IndexNow` to the

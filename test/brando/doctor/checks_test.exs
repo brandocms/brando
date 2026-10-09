@@ -168,6 +168,27 @@ defmodule Brando.Doctor.ChecksTest do
       assert %Result{status: :ok} = Checks.Oban.evaluate(%{testing: :inline, queues: queues, stuck: [], discarded: []})
     end
 
+    test "warns when the crontab has no scheduled publishing sweep" do
+      result = Checks.Oban.evaluate(%{testing: nil, queues: @queues, stuck: [], discarded: [], sweep: false})
+      assert result.status == :warning
+      assert result.summary =~ "no scheduled publishing sweep"
+      assert result.fix =~ "Brando.Worker.ScheduledPublishingSweep"
+
+      assert %Result{status: :ok} =
+               Checks.Oban.evaluate(%{testing: nil, queues: @queues, stuck: [], discarded: [], sweep: true})
+    end
+
+    test "finds the sweep in Brando's default crontab, or the cron plugin's" do
+      assert Checks.Oban.sweep_scheduled?(cron: [crontab: [{"*/10 * * * *", Brando.Worker.ScheduledPublishingSweep}]])
+
+      assert Checks.Oban.sweep_scheduled?(
+               plugins: [{Oban.Plugins.Cron, crontab: [{"*/10 * * * *", Brando.Worker.ScheduledPublishingSweep}]}]
+             )
+
+      refute Checks.Oban.sweep_scheduled?(cron: [crontab: [{"0 2 * * *", Brando.Worker.SitemapGenerator}]])
+      refute Checks.Oban.sweep_scheduled?(plugins: false)
+    end
+
     test "queues read from the running Oban, with a paused one" do
       queues = [
         %{queue: "default", limit: 1, paused: false, live: true},
@@ -206,7 +227,12 @@ defmodule Brando.Doctor.ChecksTest do
 
       result =
         Checks.Oban.run(
-          context(oban: [queues: [default: 1, content_events: 1, webhooks: 5, search_index: 2, notifications: 2]])
+          context(
+            oban: [
+              queues: [default: 1, content_events: 1, webhooks: 5, search_index: 2, notifications: 2],
+              cron: [crontab: [{"*/10 * * * *", Brando.Worker.ScheduledPublishingSweep}]]
+            ]
+          )
         )
 
       assert result.status == :warning

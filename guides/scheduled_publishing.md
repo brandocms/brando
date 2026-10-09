@@ -42,8 +42,8 @@ The worker runs a context update, so publication validation and permission check
 still apply at execution time.
 
 The job publishes only an entry that is still pending when it runs: a future
-date on a draft or a deactivated entry queues a job that does nothing. Use the
-published-to-pending flow above.
+date on a draft or a deactivated entry queues a job that does nothing, and the
+Scheduled publishing drawer says so. Use the published-to-pending flow above.
 
 ## See it in the calendar
 
@@ -74,8 +74,15 @@ Use **Delete job** on the Scheduled Publishing screen, or cancel the matching
 job in the current authorization and tenant context:
 
 ```elixir
-{1, _} = Brando.Publisher.delete_job(job.id)
+{1, _} = Brando.Publisher.delete_job(job.id, user)
 ```
+
+Deleting a job clears the date it was for, so that nothing publishes the entry
+later: a publishing job clears `publish_at` and sets a pending entry back to
+draft, and an expiry job clears `unpublish_at`. The entry is saved through its
+context as `user` (`:system` when left out), so Activity records it. A date
+that has moved since the job was made is left alone. The Scheduled Publishing
+screen asks before it deletes.
 
 Or save the entry with its intended status and date: any change to
 `publish_at`, clearing it or moving it into the past included, removes the
@@ -131,9 +138,23 @@ Brando's default Oban crontab every ten minutes, catches up in every active
 environment (`Brando.Publisher.sweep/1`): it publishes pending entries whose
 `publish_at` passed more than five minutes ago and deactivates published or
 pending entries whose `unpublish_at` did, through the context as the jobs do.
-Running it again changes nothing. An application that sets
+Running it again changes nothing.
+
+It only takes dates from the last seven days, so dates left from before the
+sweep existed are not acted on when it first runs; change the window with
+`config :brando, Brando.Publisher, sweep_days: 7`. A content type whose table
+cannot be read in an environment (its migrations lag) is logged and skipped,
+and an entry that fails to save is logged and left alone for a day, or until
+it is saved again. To see what it would do, in every environment:
+
+```sh
+mix brando.scheduled_publishing.sweep          # list, change nothing
+mix brando.scheduled_publishing.sweep --apply  # do it now
+```
+ An application that sets
 `config :brando, Oban` itself must add
-`{"*/10 * * * *", Brando.Worker.ScheduledPublishingSweep}` to its crontab.
+`{"*/10 * * * *", Brando.Worker.ScheduledPublishingSweep}` to its crontab;
+`mix brando.doctor` warns when it is missing.
 
 ## Schedule an approved revision
 

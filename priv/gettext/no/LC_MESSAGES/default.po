@@ -5146,6 +5146,11 @@ msgstr "Slett rute"
 msgid "Delete selected"
 msgstr "Slett valgte"
 
+#: lib/brando_admin/live/sites/scheduled_publishing_live.ex
+#, elixir-autogen, elixir-format
+msgid "Delete the job?"
+msgstr "Slette jobben?"
+
 #: lib/brando_admin/components/form/block/render.ex
 #, elixir-autogen, elixir-format
 msgid "Delete this block"
@@ -8463,6 +8468,11 @@ msgstr "Jobb slettet"
 
 #: lib/brando_admin/live/sites/scheduled_publishing_live.ex
 #, elixir-autogen, elixir-format
+msgid "Job not deleted"
+msgstr "Jobben ble ikke slettet"
+
+#: lib/brando_admin/live/sites/scheduled_publishing_live.ex
+#, elixir-autogen, elixir-format
 msgid "Job queue refreshed"
 msgstr "Arbeidskøen ble oppdatert"
 
@@ -11287,6 +11297,11 @@ msgid "One user this applies to has not set it up. They set it up at their next 
 msgid_plural "%{count} users this applies to have not set it up. They set it up at their next login, and their current sessions end when you save."
 msgstr[0] "Én bruker dette gjelder, har ikke satt det opp. Brukeren setter det opp ved neste innlogging, og de nåværende øktene avsluttes når du lagrer."
 msgstr[1] "%{count} brukere dette gjelder, har ikke satt det opp. De setter det opp ved neste innlogging, og de nåværende øktene deres avsluttes når du lagrer."
+
+#: lib/brando_admin/components/form/scheduled_publishing_drawer.ex
+#, elixir-autogen, elixir-format
+msgid "Only a pending entry is published at this time. Set the status to Pending to schedule it."
+msgstr "Bare en oppføring med status Venter publiseres på dette tidspunktet. Sett statusen til Venter for å planlegge den."
 
 #: lib/brando_admin/live/users/sign_in_policy_live.ex
 #, elixir-autogen, elixir-format
@@ -16267,6 +16282,16 @@ msgstr "Elementet ble lagret, men en eksisterende omdirigering på den nye URL-e
 #, elixir-autogen, elixir-format
 msgid "The entry was saved, but the redirect could not be created. Please try again or continue without it."
 msgstr "Elementet ble lagret, men omdirigeringen kunne ikke opprettes. Prøv igjen eller fortsett uten."
+
+#: lib/brando_admin/live/sites/scheduled_publishing_live.ex
+#, elixir-autogen, elixir-format
+msgid "The entry's date could not be cleared. Open the entry and clear it there."
+msgstr "Datoen til oppføringen kunne ikke fjernes. Åpne oppføringen og fjern den der."
+
+#: lib/brando_admin/live/sites/scheduled_publishing_live.ex
+#, elixir-autogen, elixir-format
+msgid "The entry's publishing date or expiry is cleared with it, and an entry waiting to be published goes back to draft."
+msgstr "Publiseringsdatoen eller utløpstiden til oppføringen fjernes også, og en oppføring som venter på publisering blir et utkast igjen."
 
 #: lib/brando_admin/live/sites/environment_live.ex
 #, elixir-autogen, elixir-format
