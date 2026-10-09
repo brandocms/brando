@@ -180,4 +180,85 @@ defmodule Brando.Content.UsageTest do
       end)
     end
   end
+
+  describe "assets in blocks under tenancy" do
+    @block_prefix "tenant_usage_blocks"
+
+    setup do
+      put_test_env(:tenancy_mode, :multi)
+      on_exit(fn -> :persistent_term.erase({Usage, :asset_fields, @block_prefix}) end)
+      BrandoIntegration.Repo.query!(~s(CREATE SCHEMA "#{@block_prefix}"))
+
+      for table <-
+            ~w(images videos files pages pages_blocks pages_alternates content_blocks content_refs content_vars content_table_rows content_identifiers galleries_gallery_objects) do
+        BrandoIntegration.Repo.query!(~s|CREATE TABLE "#{@block_prefix}".#{table} (LIKE public.#{table} INCLUDING ALL)|)
+      end
+
+      %{user: Factory.insert(:random_user)}
+    end
+
+    test "a block's variables and refs use their images, videos and files in the site's own schema", c do
+      Brando.Tenant.with_prefix(@block_prefix, fn ->
+        page =
+          Brando.Repo.insert!(%Page{
+            title: "Om oss",
+            uri: "om-oss",
+            language: :en,
+            template: "default.html",
+            creator_id: c.user.id
+          })
+
+        Brando.Repo.insert!(%Brando.Content.Identifier{
+          schema: Page,
+          entry_id: page.id,
+          title: "Om oss",
+          status: :published,
+          language: :en,
+          updated_at: DateTime.utc_now(:second)
+        })
+
+        source = "Elixir.Brando.Pages.Page.Blocks"
+        block = Brando.Repo.insert!(%Block{type: :module, source: source, uid: Brando.Utils.generate_uid()})
+        Brando.Repo.insert!(%Page.Blocks{entry_id: page.id, block_id: block.id, sequence: 0})
+
+        assets = [
+          image: fn -> Brando.Repo.insert!(Factory.build(:image)) end,
+          video: fn -> Brando.Repo.insert!(Factory.build(:video)) end,
+          file: &media_file/0
+        ]
+
+        for {kind, new} <- assets do
+          [in_var, in_ref, unused] = [new.(), new.(), new.()]
+
+          Brando.Repo.insert!(
+            struct(Var, [
+              {:"#{kind}_id", in_var.id},
+              type: kind,
+              key: "#{kind}",
+              label: %{"en" => "A"},
+              block_id: block.id
+            ])
+          )
+
+          Brando.Repo.insert!(Map.put(Factory.build(:ref, block_id: block.id), :"#{kind}_id", in_ref.id))
+
+          used = Usage.used_ids(kind)
+          assert in_var.id in used
+          assert in_ref.id in used
+          refute unused.id in used
+          assert [%{label: "Om oss"}] = Usage.list(kind, [in_ref.id])[in_ref.id]
+
+          # What the library's Not in use filter, and so Delete unused, lists
+          list = %{
+            image: &Brando.Images.list_images/1,
+            video: &Brando.Videos.list_videos/1,
+            file: &Brando.Files.list_files/1
+          }
+
+          {:ok, listed} = list[kind].(%{filter: %{unused: "true"}, select: [:id]})
+          assert Enum.map(listed, & &1.id) == [unused.id]
+        end
+      end)
+    end
+  end
 end

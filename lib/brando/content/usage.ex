@@ -188,22 +188,25 @@ defmodule Brando.Content.Usage do
 
   # Ids of `kind` in the current site's open recovery drafts (unsaved
   # editor copies, `Brando.Drafts`): any `<kind>_id` key, as block refs and
-  # variables have, or the foreign key of a Blueprint field of the kind.
+  # variables have, or the foreign key of a Blueprint field of the kind. One
+  # strict walk of each payload; the keys are field names, safe in a regex.
   defp in_drafts(kind) do
     now = DateTime.utc_now()
     keys = Enum.uniq([to_string(fk(kind)) | Enum.map(asset_fields(kind), &to_string(elem(&1, 1)))])
 
-    Enum.flat_map(keys, fn key ->
-      from(d in "entry_drafts",
-        where:
-          d.scope == ^Brando.Drafts.scope() and is_nil(d.discarded_at) and is_nil(d.resolved_at) and
-            (is_nil(d.expires_at) or d.expires_at > ^now),
-        select: fragment("jsonb_path_query(?, (?::text)::jsonpath) #>> '{}'", d.payload, ^~s(lax $.**."#{key}"))
-      )
-      # A shared table: every site's drafts are in `public`, told apart by scope.
-      |> Brando.Repo.all(prefix: "public")
-      |> Enum.flat_map(&draft_id/1)
-    end)
+    path =
+      ~s{strict $.** ? (@.type() == "object").keyvalue() ? (@.key like_regex "^(#{Enum.join(keys, "|")})$").value}
+
+    from(d in "entry_drafts",
+      where:
+        d.scope == ^Brando.Drafts.scope() and is_nil(d.discarded_at) and is_nil(d.resolved_at) and
+          (is_nil(d.expires_at) or d.expires_at > ^now),
+      select: fragment("jsonb_path_query(?, (?::text)::jsonpath) #>> '{}'", d.payload, ^path),
+      distinct: true
+    )
+    # A shared table: every site's drafts are in `public`, told apart by scope.
+    |> Brando.Repo.all(prefix: "public")
+    |> Enum.flat_map(&draft_id/1)
   end
 
   defp in_vars(kind, ids) do

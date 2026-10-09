@@ -4,12 +4,11 @@ defmodule Brando.Content.BlockReferences do
 
   The queries intentionally operate on the stable content tables and dynamic
   entry schemas. This keeps datasource invalidation independent of the much
-  broader block rendering and mutation context.
+  broader block rendering and mutation context. They run through
+  `Brando.Repo`, in the current site and environment's schema.
   """
 
   import Ecto.Query
-
-  alias Brando.RuntimeConfig
 
   @doc """
   Lists block ids using the exact datasource tuple or datasource schema.
@@ -251,5 +250,7 @@ defmodule Brando.Content.BlockReferences do
     end
   end
 
-  defp repo, do: RuntimeConfig.get(:repo_module)
+  # Brando.Repo, so every lookup runs in the current site's schema
+  # (`Brando.Tenant`), where its blocks are, not in `public`.
+  defp repo, do: Brando.Repo
 end
