@@ -64,7 +64,19 @@ defmodule Brando.NotificationsTest do
     page
   end
 
+  # Runs the publisher's job for the entry once its time has come: it
+  # publishes only a pending entry whose publish_at has passed, and
+  # deactivates one whose unpublish_at has
   defp schedule_status(page, user, status) do
+    passed = DateTime.utc_now() |> DateTime.add(-60) |> DateTime.truncate(:second)
+
+    set =
+      if status == "published",
+        do: [status: :pending, publish_at: passed],
+        else: [unpublish_at: passed]
+
+    {1, _} = Brando.Repo.update_all(from(p in Page, where: p.id == ^page.id), set: set)
+
     perform_job(Brando.Worker.EntryPublisher, %{
       "schema" => to_string(Page),
       "id" => page.id,
@@ -303,7 +315,7 @@ defmodule Brando.NotificationsTest do
       unpublish = slack_route!(user, receiver, %{"name" => "Expiry", "events" => ["scheduled_unpublish"]})
       page = create_page(user, %{status: :published})
 
-      assert :ok = schedule_status(page, user, "draft")
+      assert :ok = schedule_status(page, user, "disabled")
 
       assert Jason.decode!(next_request().body)["text"] == "Unpublished as scheduled: Spring launch"
       assert deliveries(publish) == []
