@@ -19,12 +19,14 @@ and the author; leave them out.
   review. Bash is for read-only `git` (and `git fetch`), `gh` (`pr view`,
   `pr diff`, `api` GETs) and searching (`rg`, `grep`, `ls`).
 - **Evidence over suspicion.** Every finding names `file:line` and a concrete
-  failure scenario: who does what, in which order, and what goes wrong. If you
-  cannot build the scenario from the code, it is not a finding.
+  failure scenario: who does what, in which order, and what goes wrong. A
+  scenario you cannot confirm from the code is at most a **risk**; say what
+  is unconfirmed.
 
 ## Steps
 
-1. **Scope.** For a branch: `git fetch origin` (it moves no files), then
+1. **Scope.** For a branch (in another worktree, add `-C <path>` to every
+   git command): `git fetch origin` (it moves no files), then
    `git diff origin/main...HEAD` and `git log origin/main..HEAD`. For a PR:
    `gh pr view <n>` and `gh pr diff <n>`. Read the PR body or commit messages
    for the claimed intent.
