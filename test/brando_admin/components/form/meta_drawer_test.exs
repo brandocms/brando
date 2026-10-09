@@ -43,7 +43,7 @@ defmodule BrandoAdmin.Components.Form.MetaDrawerTest do
 
     assert actions(html, "meta_title") == ["generate"]
     assert actions(html, "meta_description") == ["generate"]
-    assert html =~ ~s(id="page_meta_title-ai-actions")
+    assert html =~ ~s(id="page_meta_title-meta-ai-actions")
     refute html =~ "ai_generate_input"
   end
 

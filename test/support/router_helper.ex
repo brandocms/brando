@@ -234,6 +234,7 @@ defmodule BrandoIntegrationWeb.Router do
     live "/articles/create", BrandoAdmin.SyncTest.ArticleFormLive, :create
     live "/articles/update/:entry_id", BrandoAdmin.SyncTest.ArticleFormLive, :update
     live "/articles/update/:entry_id/no-blocks", BrandoAdmin.SyncTest.ArticleNoBlocksFormLive, :update
+    live "/meta-articles/update/:entry_id", BrandoAdmin.MetaDrawerTest.ActionsArticleFormLive, :update
   end
 
   form_routes()

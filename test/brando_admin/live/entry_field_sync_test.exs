@@ -224,8 +224,8 @@ defmodule BrandoAdmin.EntryFieldSyncTest do
     |> element("button[phx-click='run_field_action'][phx-value-field='meta_description']")
     |> render_click()
 
-    await_selector(c.a, "#page_meta_description-ai-actions .ai-proposal[data-status='ready']")
-    c.a |> element("#page_meta_description-ai-actions button", "Accept") |> render_click()
+    await_selector(c.a, "#page_meta_description-meta-ai-actions .ai-proposal[data-status='ready']")
+    c.a |> element("#page_meta_description-meta-ai-actions button", "Accept") |> render_click()
 
     await_shown(c.b, "meta_description", "A description by A")
   end

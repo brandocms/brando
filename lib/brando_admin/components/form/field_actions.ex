@@ -66,8 +66,17 @@ defmodule BrandoAdmin.Components.Form.FieldActions do
     end)
   end
 
-  @doc "The panel's id for `field`; the form sends it the prompt."
-  def id(%Phoenix.HTML.FormField{id: id}), do: "#{id}-ai-actions"
+  @doc """
+  The panel's id for `field`; the form sends it the prompt. The Meta drawer's
+  panel (`:meta`) has its own, so a meta field that is also an input in a tab
+  has two panels, each with its own suggestion.
+  """
+  def id(field, scope \\ nil)
+  def id(%Phoenix.HTML.FormField{id: id}, nil), do: "#{id}-ai-actions"
+  def id(%Phoenix.HTML.FormField{id: id}, :meta), do: "#{id}-meta-ai-actions"
+
+  @doc "The panel ids `field` can have, for checking the one an event names."
+  def ids(field), do: [id(field), id(field, :meta)]
 
   @doc """
   An action's label from the Blueprint, translated in its domain, or its
@@ -82,9 +91,10 @@ defmodule BrandoAdmin.Components.Form.FieldActions do
   attr :field, Phoenix.HTML.FormField, required: true
   attr :actions, :list, required: true, doc: "from `available/1`"
   attr :target, :any, required: true, doc: "the entry form"
+  attr :panel, :string, default: nil, doc: "the suggestion panel's id, `id/2` (default `id(field)`)"
 
   def menu(%{actions: [action]} = assigns) do
-    assigns = assign(assigns, :action, action)
+    assigns = assigns |> assign(:action, action) |> assign_panel()
 
     ~H"""
     <div class="field-ai-menu">
@@ -94,6 +104,7 @@ defmodule BrandoAdmin.Components.Form.FieldActions do
         phx-target={@target}
         phx-value-field={@field.field}
         phx-value-action={@action.name}
+        phx-value-panel={@panel}
         data-testid="field-ai-action"
       >
         {@action.label}
@@ -103,7 +114,9 @@ defmodule BrandoAdmin.Components.Form.FieldActions do
   end
 
   def menu(assigns) do
-    assigns = assign(assigns, :menu_id, "#{assigns.field.id}-ai-menu")
+    assigns = assign_panel(assigns)
+    # `…-ai-menu`, or `…-meta-ai-menu` in the Meta drawer
+    assigns = assign(assigns, :menu_id, String.replace_suffix(assigns.panel, "-actions", "-menu"))
 
     ~H"""
     <div id={@menu_id} class="field-ai-menu" phx-hook="Brando.FloatingDropdown" data-placement="bottom-end">
@@ -124,6 +137,7 @@ defmodule BrandoAdmin.Components.Form.FieldActions do
           phx-target={@target}
           phx-value-field={@field.field}
           phx-value-action={action.name}
+          phx-value-panel={@panel}
         >
           <span>{action.label}</span><.icon name="sparkles" />
         </button>
@@ -131,6 +145,8 @@ defmodule BrandoAdmin.Components.Form.FieldActions do
     </div>
     """
   end
+
+  defp assign_panel(assigns), do: assign(assigns, :panel, assigns[:panel] || id(assigns.field))
 
   ## The suggestion
 
@@ -225,6 +241,7 @@ defmodule BrandoAdmin.Components.Form.FieldActions do
     send_update(BrandoAdmin.Components.Form,
       id: socket.assigns.form_id,
       event: "accept_field_action",
+      panel: socket.assigns.id,
       field_name: socket.assigns.field.name,
       field: socket.assigns.field.field,
       text: proposal.text,
@@ -302,6 +319,7 @@ defmodule BrandoAdmin.Components.Form.FieldActions do
             phx-target={@form_target}
             phx-value-field={@field.field}
             phx-value-action={@proposal.action}
+            phx-value-panel={@id}
           >
             {gettext("Try again")}
           </AIAction.button>

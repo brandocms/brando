@@ -5,6 +5,7 @@ defmodule BrandoAdmin.Components.Form.MetaDrawer do
 
   alias Brando.AI.FieldAction
   alias BrandoAdmin.Components.Content
+  alias BrandoAdmin.Components.Form.FieldActions
   alias BrandoAdmin.Components.Form.Input
   alias BrandoAdmin.Components.Form.MetaPreviews
   alias BrandoAdmin.Components.Form.StructuredData
@@ -102,6 +103,7 @@ defmodule BrandoAdmin.Components.Form.MetaDrawer do
             field={@form[:meta_title]}
             opts={@meta_title_opts}
             ai_actions={@meta_title_actions}
+            ai_panel={FieldActions.id(@form[:meta_title], :meta)}
             target={@form_cid}
             form_id={@form_id}
             current_user={@current_user}
@@ -115,6 +117,7 @@ defmodule BrandoAdmin.Components.Form.MetaDrawer do
             field={@form[:meta_description]}
             opts={@meta_description_opts}
             ai_actions={@meta_description_actions}
+            ai_panel={FieldActions.id(@form[:meta_description], :meta)}
             target={@form_cid}
             form_id={@form_id}
             current_user={@current_user}
