@@ -35,9 +35,9 @@ defmodule BrandoAdmin.Components.Form do
   alias Brando.AI.FieldAction
   alias Brando.Blueprint.Callback
   alias Brando.Blueprint.Forms, as: BlueprintForms
+  alias Brando.Content.Blocks
   alias Brando.EditSession
   alias Brando.Images
-  alias Brando.Content.Blocks
   alias Brando.LivePreview
   alias Brando.Villain
   alias BrandoAdmin.Components.Button
@@ -4451,12 +4451,12 @@ defmodule BrandoAdmin.Components.Form do
     {:noreply, finish_permalink_redirect(socket)}
   end
 
-  # Someone else saved the entry after the frontend editor loaded it. Saving
-  # now would write this editor's copy of the blocks over their save.
   # Saving waits for a heavy entry's blocks (the shortcut too: the buttons
   # are disabled until then).
   def handle_event("save", _params, %{assigns: %{blocks_ready?: false}} = socket), do: {:noreply, socket}
 
+  # Someone else saved the entry after the frontend editor loaded it. Saving
+  # now would write this editor's copy of the blocks over their save.
   def handle_event("save", _params, %{assigns: %{frontend_edit: %{}, frontend_status: %{stale: %{} = stale}}} = socket) do
     {:noreply,
      socket
@@ -5668,11 +5668,12 @@ defmodule BrandoAdmin.Components.Form do
     {:noreply, fetch_root_blocks(socket, :live_preview_standalone, 500)}
   end
 
+  # No save starts while a heavy entry's blocks load, as for "save".
+  def handle_event("push_submit" <> _, _, %{assigns: %{blocks_ready?: false}} = socket), do: {:noreply, socket}
+
   # One save that asks the translations for no new review of text that
   # changed: typo fixes and the like. Structure, shared values and new text
   # are still synchronized.
-  def handle_event("push_submit" <> _, _, %{assigns: %{blocks_ready?: false}} = socket), do: {:noreply, socket}
-
   def handle_event("push_submit_minor", _, socket) do
     {:noreply,
      socket
