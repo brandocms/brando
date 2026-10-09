@@ -37,6 +37,13 @@ provider's reported usage replaces the estimate.
 Without a configured model and key, the menu item is hidden and the screen
 explains what is missing.
 
+**Providers.** The model is a ReqLLM `"provider:model"` spec, with its key
+under `providers` (or `api_key` in the agent's own configuration). Anthropic
+is the supported provider: the assistant was run against a real
+`anthropic:claude-opus-5-5` on 9 October 2026, and its prompt caching is
+turned on for Anthropic only. Other providers that ReqLLM supports with tool
+calling may work, but have not been checked with the assistant.
+
 ### Proposals from connected tools
 
 Tools connected over MCP can prepare proposals too: Claude, ChatGPT or Claude

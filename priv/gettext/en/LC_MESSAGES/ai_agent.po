@@ -183,6 +183,7 @@ msgid "You do not have permission to change the assistant's guidance."
 msgstr ""
 
 #: lib/brando/ai/agent.ex
+#: lib/brando/ai/agent/loop.ex
 #, elixir-autogen, elixir-format
 msgid "You do not have permission to use the assistant."
 msgstr ""

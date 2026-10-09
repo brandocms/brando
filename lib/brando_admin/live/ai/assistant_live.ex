@@ -111,10 +111,13 @@ defmodule BrandoAdmin.AI.AssistantLive do
           do: Phoenix.PubSub.unsubscribe(Brando.pubsub(), topic(socket.assigns.conversation.id))
 
         if connected?(socket), do: Agent.subscribe(conversation.id)
+        run = Agent.latest_run(id, user)
 
         {:noreply,
          socket
-         |> assign(conversation: conversation, run: Agent.latest_run(id, user), progress: nil, error: nil, receipt: nil)
+         # A run still working after a reconnect or a restart can be stopped.
+         |> assign(conversation: conversation, error: nil, receipt: nil, progress: nil)
+         |> assign_run(run)
          |> assign_conversations()
          |> assign_messages()
          |> assign_proposal()
@@ -365,7 +368,9 @@ defmodule BrandoAdmin.AI.AssistantLive do
               <div :if={@progress} class="assistant-progress" role="status">
                 <span class="assistant-spinner" aria-hidden="true"></span>
                 <span>{@progress}</span>
-                <button type="button" class="assistant-link-button" phx-click="cancel_run">{gettext("Stop")}</button>
+                <button :if={!stopping?(@run)} type="button" class="assistant-link-button" phx-click="cancel_run">
+                  {gettext("Stop")}
+                </button>
               </div>
             </div>
           </div>
@@ -1594,7 +1599,8 @@ defmodule BrandoAdmin.AI.AssistantLive do
 
       {:noreply,
        socket
-       |> assign(conversation: reload(conversation, user), run: run, draft: "", progress: gettext("Thinking"))
+       |> assign(conversation: reload(conversation, user), draft: "", progress: gettext("Thinking"))
+       |> assign_run(run)
        |> assign_messages()
        |> push_event("b:assistant:clear", %{})}
     else
@@ -1603,10 +1609,14 @@ defmodule BrandoAdmin.AI.AssistantLive do
   end
 
   def handle_event("cancel_run", _, socket) do
-    if conversation = socket.assigns.conversation,
-      do: Agent.cancel(conversation.id, socket.assigns.current_user)
+    %{conversation: conversation, current_user: user} = socket.assigns
 
-    {:noreply, assign(socket, :progress, nil)}
+    if conversation do
+      Agent.cancel(conversation.id, user)
+      {:noreply, assign_run(socket, Agent.latest_run(conversation.id, user))}
+    else
+      {:noreply, assign(socket, :progress, nil)}
+    end
   end
 
   def handle_event("toggle_history", _, socket),
@@ -1619,7 +1629,7 @@ defmodule BrandoAdmin.AI.AssistantLive do
 
     # The click is the approval: it approves exactly the version on screen,
     # then applies that version.
-    with {:ok, _} <- Proposals.approve(id, version, user),
+    with {:ok, _} <- approve(id, version, user),
          {:ok, receipt} <-
            Proposals.apply(id, version, user, publish: publishing(socket.assigns)) do
       {:noreply,
@@ -1804,19 +1814,33 @@ defmodule BrandoAdmin.AI.AssistantLive do
 
   ## Agent and upload events
 
-  def handle_info({:agent, _id, {:progress, text}}, socket), do: {:noreply, assign(socket, :progress, text)}
-  def handle_info({:agent, _id, {:message, _}}, socket), do: {:noreply, assign_messages(socket)}
-
-  def handle_info({:agent, _id, {:proposal, _}}, socket) do
-    socket = socket |> refresh_conversation() |> assign_proposal()
-    {:noreply, if(preview = socket.assigns.preview, do: render_preview(socket, preview), else: socket)}
+  # Events of the conversation on screen only: one still queued from the
+  # conversation the editor just left must not change this one.
+  def handle_info({:agent, id, event}, socket) do
+    case socket.assigns.conversation do
+      %{id: ^id} -> agent_event(event, socket)
+      _ -> {:noreply, socket}
+    end
   end
 
-  def handle_info({:agent, _id, {:attachments, _}}, socket), do: {:noreply, refresh_conversation(socket)}
+  # A run's process may be on a node that cannot message this page (the other
+  # colour of a blue/green deploy). While it holds the conversation, the page
+  # reads the run again now and then; a run whose node went away is let go.
+  def handle_info(:check_run, socket) do
+    socket = assign(socket, :run_check, nil)
 
-  def handle_info({:agent, _id, {:run, run}}, socket) do
-    socket = assign(socket, :run, run)
-    {:noreply, if(running?(run), do: socket, else: assign(socket, :progress, nil))}
+    case socket.assigns.conversation do
+      %{id: id} ->
+        busy? = running?(socket.assigns.run)
+        socket = assign_run(socket, Agent.latest_run(id, socket.assigns.current_user))
+
+        if busy? and not running?(socket.assigns.run),
+          do: {:noreply, socket |> refresh_conversation() |> assign_messages() |> assign_proposal()},
+          else: {:noreply, socket}
+
+      nil ->
+        {:noreply, socket}
+    end
   end
 
   def handle_info({:assets_reserved, %{"kind" => "ai_conversation"}, uploads}, socket) do
@@ -1845,6 +1869,29 @@ defmodule BrandoAdmin.AI.AssistantLive do
   end
 
   def handle_info(_message, socket), do: {:noreply, socket}
+
+  # A stopping run's last steps do not take "Stopping…" away.
+  defp agent_event({:progress, text}, socket) do
+    if stopping?(socket.assigns.run) and text,
+      do: {:noreply, socket},
+      else: {:noreply, assign(socket, :progress, text)}
+  end
+
+  defp agent_event({:message, _}, socket), do: {:noreply, assign_messages(socket)}
+
+  defp agent_event({:proposal, _}, socket) do
+    socket = socket |> refresh_conversation() |> assign_proposal()
+    {:noreply, if(preview = socket.assigns.preview, do: render_preview(socket, preview), else: socket)}
+  end
+
+  defp agent_event({:attachments, _}, socket), do: {:noreply, refresh_conversation(socket)}
+  # Events from different processes may arrive out of order: a stale
+  # "stopping" after "cancelled", or an earlier run's end after the next began.
+  # The run is read again, so the page shows where it really is.
+  defp agent_event({:run, _run}, socket),
+    do: {:noreply, assign_run(socket, Agent.latest_run(socket.assigns.conversation.id, socket.assigns.current_user))}
+
+  defp agent_event(_event, socket), do: {:noreply, socket}
 
   ## Page preview
 
@@ -2488,8 +2535,43 @@ defmodule BrandoAdmin.AI.AssistantLive do
   defp connected_state_label("undone"), do: gettext("Undone")
   defp connected_state_label("expired"), do: gettext("Expired")
 
-  defp running?(%{status: "running"}), do: true
+  # This user's approval of the version stays when applying it failed and
+  # rolled back, so a retry applies it again; an applied version returns its
+  # receipt, so a second tab's click writes nothing more. `apply/4` checks
+  # the entries and modules again either way.
+  defp approve(id, version, user) do
+    case Proposals.get(id, user) do
+      {:ok, %{version: ^version, status: status} = proposal} when status in ~w(approved applied) -> {:ok, proposal}
+      _ -> Proposals.approve(id, version, user)
+    end
+  end
+
+  # A stopping run still holds the conversation: it may write to it until
+  # its call in flight returns.
+  defp running?(%{status: status}) when status in ~w(running stopping), do: true
   defp running?(_), do: false
+
+  defp stopping?(%{status: "stopping"}), do: true
+  defp stopping?(_), do: false
+
+  # The run on screen and its progress line: what it does while it runs,
+  # "Stopping…" while it winds down, nothing once it is done.
+  defp assign_run(socket, run) do
+    progress =
+      case run do
+        %{status: "running"} -> socket.assigns[:progress] || gettext("Thinking")
+        %{status: "stopping"} -> gettext("Stopping…")
+        _ -> nil
+      end
+
+    socket |> assign(run: run, progress: progress) |> watch_run()
+  end
+
+  defp watch_run(socket) do
+    if connected?(socket) and running?(socket.assigns.run) and is_nil(socket.assigns[:run_check]),
+      do: assign(socket, :run_check, Process.send_after(self(), :check_run, Agent.heartbeat())),
+      else: socket
+  end
 
   defp proposal_title(%{status: "undone"}, _receipt), do: gettext("Undone")
   defp proposal_title(_proposal, receipt) when not is_nil(receipt), do: gettext("Applied")

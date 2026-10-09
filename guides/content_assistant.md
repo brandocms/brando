@@ -42,6 +42,13 @@ provider's reported usage replaces the estimate.
 Without a configured model and key, the menu item is hidden and the screen
 explains what is missing.
 
+**Providers.** The model is a ReqLLM `"provider:model"` spec, with its key
+under `providers` (or `api_key` in the agent's own configuration). Anthropic
+is the supported provider: the assistant was run against a real
+`anthropic:claude-opus-5-5` on 9 October 2026, and its prompt caching is
+turned on for Anthropic only. Other providers that ReqLLM supports with tool
+calling may work, but have not been checked with the assistant.
+
 <!-- usage-rules:end -->
 
 ## Permissions
@@ -61,7 +68,10 @@ may publish.
 
 - **The model runs in the Brando backend.** It reaches Brando only through the
   tools in `Brando.Content.Proposals.Tools`, called in-process as the editor.
-  The Assistant uses no MCP endpoint, route or port. The model can search and read
+  The Assistant uses no MCP endpoint, route or port: a production release
+  needs no MCP URL, no `mcp_routes()` and no listener for it, and works the
+  same with the [remote endpoint](mcp.md) off. The only connection it makes is
+  the outgoing call to the model provider. The model can search and read
   entries, modules and media, and prepare a proposal. It cannot approve or
   apply anything.
 - **Proposals are stored and versioned.** Each proposal records its
@@ -321,6 +331,69 @@ is applied.
 
 It does not delete entries. A link to an entry created in the same proposal is
 reported as a problem, because the new entry is a draft.
+
+## Limits
+
+These are the defaults, and what the tests check:
+
+- **A message** gets at most 12 model calls (`max_steps`), 4,096 output
+  tokens per call (`max_tokens`) and 300,000 tokens in all
+  (`run_token_budget`). The step limit ends the run with "I stopped after 12
+  steps", and the editor can tell it to continue.
+- **A month** has no token limit until `monthly_token_budget` is set. It
+  counts every run in the site and environment, including the tokens
+  reserved for calls in flight.
+- **A tool result** is at most 24 KB. A larger one is replaced by a request to
+  narrow it. Searches return at most 20 results, an entry's outline shrinks
+  to about 20 KB, and a folder is attached 100 items at a time.
+- **A proposal** can be applied for 24 hours, and its review links last as
+  long. After that it must be prepared again.
+- **A model call** waits at most two minutes for the provider
+  (`receive_timeout`) and is tried again once (`max_retries`) when it timed
+  out, lost its connection or found the provider overloaded. An overloaded
+  provider can ask for a wait before that retry. Then the run fails.
+- **One run at a time** per conversation, in every tab and on every server.
+  A running run shows it is alive every 15 seconds (`heartbeat`); one that
+  has not for a minute died with its server and is marked interrupted.
+
+## Operating the assistant
+
+Nothing the assistant does is saved before an editor applies a proposal, so
+a run that fails leaves the content as it was. Each run is stored in
+`ai_runs` with its status, token counts, estimated cost and error. The log has
+the details of a run that failed ("Content agent run … failed").
+
+- **A run fails or the provider is down.** The conversation says "Something
+  went wrong" with the provider's error. Send the message again once the
+  provider answers. The conversation, its attachments and the proposal under
+  review are kept. To turn the assistant off meanwhile, remove its model or
+  key, or set `monthly_token_budget` to `0`.
+- **The budget runs out.** The run stops before its next model call and says
+  the token budget is used up; the steps it took are kept. For one message,
+  ask for less at a time, or raise `run_token_budget`. For the month, wait
+  for the next one or raise `monthly_token_budget`. Set to `0`, it stops
+  every run before its next model call.
+- **A run seems stuck.** After a reconnect, the conversation shows the run
+  that is still working, with **Stop**. A stopped run shows "Stopping…"
+  until its model call returns (at most about four minutes, see
+  [Limits](#limits)), since it may still add to the conversation; until then
+  no new message can be sent, in any tab. A run left behind by a
+  restart or a deploy lets the conversation go a minute after its server
+  stopped, and the page notices without a reload.
+- **Apply is refused because something changed.** An entry or module was
+  saved after the proposal was prepared, or the proposal expired. Nothing was
+  written. Ask the assistant to prepare it again.
+- **Apply fails partway.** Applying is one transaction, so nothing was
+  written. The error names the cause, such as an address another page took in
+  the meantime. Fix it and click **Apply** again. A second click, or one in
+  another tab, after the proposal was applied writes nothing more.
+- **Applied changes were wrong.** **Undo** on the applied proposal puts every
+  entry back and deletes the entries it created, unless an entry was changed
+  again after it was applied.
+- **Someone loses access.** Taking away **Content assistant → use**, or an
+  editor's permission for a content type, applies to the next tool call and
+  stops the run before its next model call. Their proposals can no longer be
+  applied by them.
 
 <!-- usage-rules:start topic="assistant-mcp" -->
 

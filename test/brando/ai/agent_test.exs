@@ -1,6 +1,7 @@
 defmodule Brando.AI.AgentTest do
   use Brando.ConnCase, async: false
   use Brando.Test
+  import Ecto.Query, only: [from: 2]
   alias Brando.AI.Agent
   alias Brando.AI.Agent.{Message, Run}
   alias Brando.AIStub
@@ -81,6 +82,53 @@ defmodule Brando.AI.AgentTest do
     end
   end
 
+  # A production release has no MCP URL, no mounted route and no listener
+  # for the Assistant to depend on: its tools are function calls.
+  test "a run calls its tools in-process, with the MCP endpoint off and nothing listening", c do
+    refute Brando.MCP.enabled?(Brando.MCP.tenant(nil, nil))
+    refute Application.get_env(:brando, BrandoIntegrationWeb.Endpoint)[:server]
+    assert {:ok, "image1"} = Agent.attach(c.conversation.id, {:image, c.image.id}, c.user)
+
+    # Every function of every MCP module, and of Phoenix's and Plug's request
+    # handling, is traced while the run works in this process. (The model
+    # call itself is an outgoing HTTPS request, answered here by a cassette.)
+    mcp =
+      for module <- Application.spec(:brando, :modules),
+          String.starts_with?(inspect(module), ["Brando.MCP", "BrandoAdmin.MCP"]),
+          do: module
+
+    traced = mcp ++ [Plug.Conn, Phoenix.Endpoint, Phoenix.Router]
+    Enum.each(traced, &Code.ensure_loaded!/1)
+    for module <- traced, do: :erlang.trace_pattern({module, :_, :_}, true, [:local])
+    # A process cannot receive its own trace messages; another collects them.
+    tracer = spawn_link(fn -> collect_traces([]) end)
+    :erlang.trace(self(), true, [:call, {:tracer, tracer}])
+
+    try do
+      use_cassette "assistant/lobby_proposal", cassette_opts(c) do
+        assert {:ok, %Run{status: "completed", steps: 3}} =
+                 Agent.send_message(c.conversation.id, "Put the lobby photo on Identity", c.user, sync: true)
+      end
+    after
+      :erlang.trace(self(), false, [:call])
+      for module <- traced, do: :erlang.trace_pattern({module, :_, :_}, false, [:local])
+    end
+
+    send(tracer, {:calls, self()})
+    assert_receive {:calls, calls}
+    assert calls == [], "the run called #{inspect(Enum.uniq(calls))}"
+
+    {:ok, conversation} = Agent.get_conversation(c.conversation.id, c.user)
+    assert {:ok, %{status: "pending", origin: "assistant"}} = Proposals.get(conversation.proposal_id, c.user)
+  end
+
+  defp collect_traces(calls) do
+    receive do
+      {:trace, _pid, :call, {module, function, args}} -> collect_traces([{module, function, length(args)} | calls])
+      {:calls, to} -> send(to, {:calls, Enum.reverse(calls)})
+    end
+  end
+
   test "attachment aliases follow attach order and survive detaching others", c do
     video = Factory.insert(:video)
     other = Factory.insert(:image, creator_id: c.user.id, path: "images/other.jpg")
@@ -122,6 +170,17 @@ defmodule Brando.AI.AgentTest do
            ] = conversation.attachments
 
     assert id == small.id
+
+    # The others finish in reverse order and still take their own names.
+    clip = Factory.insert(:video)
+    large = Factory.insert(:image, creator_id: c.user.id, title: nil, path: "images/x/large.jpg")
+    assert {:ok, "video1"} = Agent.fulfil(c.conversation.id, "b", clip, c.user)
+    assert {:ok, "image1"} = Agent.fulfil(c.conversation.id, "a", large, c.user)
+
+    {:ok, conversation} = Agent.get_conversation(c.conversation.id, c.user)
+
+    assert Enum.map(conversation.attachments, &{&1["alias"], &1["id"]}) ==
+             [{"image1", large.id}, {"video1", clip.id}, {"image2", small.id}]
   end
 
   test "attach_many attaches in order, keeps existing aliases and reports what it cannot attach", c do
@@ -234,6 +293,52 @@ defmodule Brando.AI.AgentTest do
     assert {:ok, _} = Agent.start_conversation(editor)
   end
 
+  test "permissions taken away during a run apply to its next tool call and stop its next model call", c do
+    put_test_env(:authorization_mode, :groups)
+    {:ok, _} = Brando.Authorization.Migration.run()
+    alias Brando.Authorization.{Catalog, Groups, Scope}
+    editor = Factory.insert(:random_user, role: :user)
+    scope = Scope.standalone(c.user)
+
+    {:ok, assistants} =
+      Groups.create(scope, %{name: "Assistant users"}, [
+        Catalog.get(:access, :backend).key,
+        Catalog.get(:use, :assistant).key
+      ])
+
+    {:ok, editors} =
+      Groups.create(scope, %{name: "Page editors"}, [Catalog.get(:read, Page).key, Catalog.get(:update, Page).key])
+
+    for group <- [assistants, editors], do: {:ok, :ok} = Groups.add_member(scope, group.id, editor.id)
+    {:ok, conversation} = Agent.start_conversation(editor)
+    test = self()
+
+    # An administrator removes the editor from both groups while the model
+    # answers its first call.
+    Brando.AI.Cassette.stub(fn _request ->
+      send(test, :model_called)
+
+      if Agent.allowed?(editor) do
+        for group <- [assistants, editors], do: {:ok, :ok} = Groups.remove_member(scope, group.id, editor.id)
+        AIStub.turn({:tools, [{"list_content_types", %{}}]}, 0)
+      else
+        AIStub.turn({:text, "Answered without permission"}, 1)
+      end
+    end)
+
+    assert {:ok, %Run{status: "failed", steps: 1}} =
+             Agent.send_message(conversation.id, "What can I edit?", editor, sync: true)
+
+    assert_received :model_called
+    refute_received :model_called
+
+    assert [_user, _call, %Message{role: "tool", content: result}, %Message{role: "assistant", content: notice}] =
+             Agent.messages(conversation.id, editor)
+
+    assert Jason.decode!(result) == %{"content_types" => []}
+    assert notice =~ "permission to use the assistant"
+  end
+
   test "conversations belong to their user", c do
     other = Factory.insert(:random_user)
     assert {:error, _} = Agent.get_conversation(c.conversation.id, other)
@@ -252,6 +357,32 @@ defmodule Brando.AI.AgentTest do
 
     refute_received {:ai_request, _}
     assert roles(c) == ~w(user assistant)
+  end
+
+  test "a budget spent during a run stops it before the next call, with its steps recorded", c do
+    put_config(max_tokens: 100, run_token_budget: 50_000)
+    test = self()
+
+    # The first call reports most of the budget used.
+    Brando.AI.Cassette.stub(fn _request ->
+      send(test, :model_called)
+
+      %{
+        "tool_calls" => [%{"id" => "call_0", "name" => "list_content_types", "arguments" => %{}}],
+        "usage" => %{"input_tokens" => 49_000, "output_tokens" => 50}
+      }
+    end)
+
+    assert {:ok, %Run{status: "budget_exhausted", steps: 1, input_tokens: 49_000, reserved_tokens: 0}} =
+             Agent.send_message(c.conversation.id, "What can I edit?", c.user, sync: true)
+
+    assert_received :model_called
+    refute_received :model_called
+
+    assert [_user, _call, %Message{role: "tool"}, %Message{role: "assistant", content: notice}] =
+             Agent.messages(c.conversation.id, c.user)
+
+    assert notice =~ "token budget is used up"
   end
 
   test "the monthly budget counts other runs in the site/environment", c do
@@ -344,6 +475,192 @@ defmodule Brando.AI.AgentTest do
     AIStub.script([{:text, "Hi"}])
     assert {:ok, %{status: "completed"}} = Agent.send_message(c.conversation.id, "Hello", c.user, sync: true)
     assert Repo.get!(Run, run.id).status == "interrupted"
+  end
+
+  describe "a run on another node" do
+    test "shows it lives through its heartbeat, and holds the conversation while it does", c do
+      put_config(heartbeat: 50)
+      test = self()
+
+      Brando.AI.Cassette.stub(fn _request ->
+        send(test, {:in_call, self()})
+        receive do: (:answer -> AIStub.turn({:text, "Hi"}, 0))
+      end)
+
+      {:ok, %Run{id: id}} = Agent.send_message(c.conversation.id, "Hello", c.user)
+      assert_receive {:in_call, call}, 5_000
+
+      # Seen from a node that cannot reach the run's process.
+      Repo.update_all(from(r in Run, where: r.id == ^id), set: [updated_at: DateTime.add(DateTime.utc_now(), -60)])
+      Process.sleep(200)
+      run = Repo.get!(Run, id)
+      assert DateTime.diff(DateTime.utc_now(), run.updated_at, :millisecond) < 200
+      assert :global.unregister_name({Brando.AI.Agent.Loop, id}) == :ok
+      assert Agent.busy?(run)
+      assert {:error, _} = Agent.send_message(c.conversation.id, "Again", c.user)
+
+      Agent.subscribe(c.conversation.id)
+      send(call, :answer)
+      assert_receive {:agent, _, {:run, %Run{id: ^id, status: "completed"}}}, 5_000
+
+      # Done, its heartbeat stops.
+      Process.sleep(200)
+      refute Agent.busy?(Repo.get!(Run, id))
+      assert DateTime.diff(DateTime.utc_now(), Repo.get!(Run, id).updated_at, :millisecond) >= 150
+    end
+
+    test "a heartbeat write that fails leaves the run working, and it finishes", c do
+      put_config(heartbeat: 20)
+      test = self()
+
+      # Every heartbeat write fails, as when the pool drops it or the
+      # database fails over; the run's own writes go through. A sequence,
+      # which a failed statement does not roll back, counts the attempts.
+      sql = &Ecto.Adapters.SQL.query!(Repo.repo(), &1)
+      sql.("CREATE TEMPORARY SEQUENCE refused_heartbeats")
+
+      sql.("""
+      CREATE FUNCTION pg_temp.refuse_heartbeat() RETURNS trigger AS $$
+      BEGIN
+        IF NEW.status = OLD.status AND NEW.steps = OLD.steps AND NEW.reserved_tokens = OLD.reserved_tokens
+           AND NEW.updated_at <> OLD.updated_at THEN
+          PERFORM nextval('refused_heartbeats');
+          RAISE EXCEPTION 'heartbeat refused';
+        END IF;
+        RETURN NEW;
+      END $$ LANGUAGE plpgsql
+      """)
+
+      sql.(
+        "CREATE TRIGGER refuse_heartbeat BEFORE UPDATE ON ai_runs FOR EACH ROW EXECUTE FUNCTION pg_temp.refuse_heartbeat()"
+      )
+
+      Brando.AI.Cassette.stub(fn _request ->
+        send(test, {:in_call, self()})
+        receive do: (:answer -> AIStub.turn({:text, "Still here."}, 0))
+      end)
+
+      Agent.subscribe(c.conversation.id)
+      {:ok, %Run{id: id}} = Agent.send_message(c.conversation.id, "Hello", c.user)
+      assert_receive {:in_call, call}, 5_000
+      Process.sleep(150)
+      send(call, :answer)
+      assert_receive {:agent, _, {:run, %Run{id: ^id, status: "completed"}}}, 5_000
+
+      assert %{rows: [[refused]]} = sql.("SELECT last_value FROM refused_heartbeats")
+      assert refused > 1
+      assert [_, %Message{content: "Still here."}] = Agent.messages(c.conversation.id, c.user)
+    end
+
+    test "taken for dead while it prepares a proposal, it does not put it under review", c do
+      conversation_id = c.conversation.id
+      repo_event = (Repo.repo().config()[:telemetry_prefix] || [:brando_integration, :repo]) ++ [:query]
+
+      # Another node takes the run for dead, and the editor starts the next
+      # one there, just as the run stores its proposal.
+      :telemetry.attach(
+        "taken-for-dead",
+        repo_event,
+        fn _event, _measurements, meta, _ ->
+          if meta.source == "content_proposals" and meta.query =~ "INSERT" and !Process.get(:taken_for_dead) do
+            Process.put(:taken_for_dead, true)
+            [run] = Repo.all(from(r in Run, where: r.conversation_id == ^conversation_id))
+            run |> Ecto.Changeset.change(status: "interrupted") |> Repo.update!()
+
+            Repo.insert!(%Run{
+              conversation_id: conversation_id,
+              scope: run.scope,
+              inserted_at: DateTime.add(run.inserted_at, 1)
+            })
+          end
+        end,
+        nil
+      )
+
+      on_exit(fn -> :telemetry.detach("taken-for-dead") end)
+
+      operation = %{
+        "op" => "insert_block",
+        "target" => %{"content_type" => "Brando.Pages.Page", "id" => c.identity.id},
+        "field" => "blocks",
+        "module" => "local:#{c.case_module.id}"
+      }
+
+      AIStub.script([{:tools, [{"prepare_proposal", %{"summary" => "A case", "operations" => [operation]}}]}])
+      Agent.subscribe(conversation_id)
+
+      assert {:ok, %Run{status: "interrupted"}} = Agent.send_message(conversation_id, "Add a case", c.user, sync: true)
+      assert Process.get(:taken_for_dead)
+      assert {:ok, %{proposal_id: nil}} = Agent.get_conversation(conversation_id, c.user)
+      refute_received {:agent, _, {:proposal, _}}
+    end
+
+    test "taken for dead after another run started, it writes nothing more", c do
+      conversation_id = c.conversation.id
+      user = c.user
+      test = self()
+
+      # While its call is in flight, another node takes the run for dead and
+      # the editor starts the next one there.
+      Brando.AI.Cassette.stub(fn _request ->
+        send(test, :model_called)
+        [run] = Repo.all(from(r in Run, where: r.conversation_id == ^conversation_id))
+        run |> Ecto.Changeset.change(status: "interrupted") |> Repo.update!()
+
+        next =
+          Repo.insert!(%Run{
+            conversation_id: conversation_id,
+            scope: run.scope,
+            status: "running",
+            inserted_at: DateTime.add(run.inserted_at, 1)
+          })
+
+        Repo.insert!(%Message{conversation_id: conversation_id, run_id: next.id, role: "user", content: "Next"})
+        AIStub.turn({:tools, [{"list_content_types", %{}}]}, 0)
+      end)
+
+      assert {:ok, %Run{status: "interrupted"}} = Agent.send_message(conversation_id, "First", user, sync: true)
+      assert_received :model_called
+      refute_received :model_called
+
+      assert Enum.map(Agent.messages(conversation_id, user), &{&1.role, &1.content}) == [
+               {"user", "First"},
+               {"user", "Next"}
+             ]
+    end
+  end
+
+  test "each tool call is followed by its result, whatever order they were stored in", c do
+    message = fn attrs -> Repo.insert!(struct(Message, Map.put(attrs, :conversation_id, c.conversation.id))) end
+    call = fn id -> %{"id" => id, "name" => "list_content_types", "arguments" => "{}"} end
+
+    message.(%{role: "user", content: "One"})
+    message.(%{role: "assistant", content: "", tool_calls: [call.("a")]})
+    # A stopped run's late call lands between another call and its result.
+    message.(%{role: "assistant", content: "", tool_calls: [call.("b"), call.("c")]})
+    message.(%{role: "tool", tool_call_id: "a", tool_name: "list_content_types", content: ~s({"for":"a"})})
+    message.(%{role: "tool", tool_call_id: "b", tool_name: "list_content_types", content: ~s({"for":"b"})})
+    message.(%{role: "tool", tool_call_id: "zzz", tool_name: "list_content_types", content: ~s({"for":"nothing"})})
+
+    pairs =
+      c.conversation
+      |> Brando.AI.Agent.Loop.context()
+      |> Map.fetch!(:messages)
+      |> Enum.drop(1)
+      |> Enum.map(fn
+        %{role: :assistant, tool_calls: calls} when calls not in [nil, []] -> {:calls, Enum.map(calls, & &1.id)}
+        %{role: :tool, tool_call_id: id, content: content} -> {:result, id, Enum.map_join(content, & &1.text)}
+        %{role: role} -> role
+      end)
+
+    assert pairs == [
+             :user,
+             {:calls, ["a"]},
+             {:result, "a", ~s({"for":"a"})},
+             {:calls, ["b", "c"]},
+             {:result, "b", ~s({"for":"b"})},
+             {:result, "c", ~s({"error":"cancelled"})}
+           ]
   end
 
   test "an unconfigured site says so" do
