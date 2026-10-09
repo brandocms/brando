@@ -337,6 +337,21 @@ test('an AI suggestion can be edited before it is accepted, and the edit is what
   expect(await html(page)).toBe('<p>A calmer, edited introduction.</p>')
 })
 
+test('an emptied AI suggestion cannot be accepted, and keeps the edit', async ({ page }) => {
+  await setup(page)
+  const original = await html(page)
+  await page.getByRole('button', { name: 'Write with AI', exact: true }).click(); await page.getByRole('button', { name: 'Generate suggestion', exact: true }).click()
+  await page.evaluate(() => { const request = harness.current.sent.findLast(event => event.name === 'tiptap_ai_generate'); harness.current.emit('ai', { request_id: request.payload.request_id, text: 'A calmer introduction.' }) })
+  const suggestion = page.getByRole('region', { name: 'AI suggestion' })
+  await suggestion.getByRole('textbox', { name: 'Suggested text' }).fill('')
+  await expect(suggestion.getByRole('button', { name: 'Accept', exact: true })).toBeDisabled()
+  await expect(suggestion.getByText('Could not generate a suggestion. Try again.')).toHaveCount(0)
+  await suggestion.getByRole('textbox', { name: 'Suggested text' }).fill('Kept.')
+  await suggestion.getByRole('button', { name: 'Accept', exact: true }).click()
+  expect(await html(page)).toBe('<p>Kept.</p>')
+  expect(original).not.toBe('<p>Kept.</p>')
+})
+
 test('AI ignores late replies and cannot overwrite text changed during generation', async ({ page }) => {
   await setup(page)
   await page.getByRole('button', { name: 'Write with AI', exact: true }).click(); await page.getByRole('button', { name: 'Generate suggestion' }).click()

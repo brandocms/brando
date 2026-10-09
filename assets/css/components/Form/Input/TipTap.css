@@ -350,6 +350,7 @@
   .tiptap-ai-actions button { display: inline-flex; align-items: center; width: auto; min-width: 0; height: auto; border: 1px solid var(--brando-line); border-radius: 5px; background: var(--brando-surface); color: var(--brando-ink); padding: 6px 12px; min-height: 32px; margin: 0; font-family: inherit; font-size: 13px; font-weight: 500; line-height: 18px; }
   .tiptap-ai-actions button:hover { background: var(--brando-surface-hover); }
   .tiptap-ai-actions button.primary { background: var(--brando-accent); border-color: var(--brando-accent); color: var(--brando-surface); }
+  .tiptap-ai-actions button:disabled { opacity: .45; cursor: not-allowed; }
   .tiptap-ai-actions button:focus-visible { outline: 2px solid var(--brando-accent); outline-offset: 3px; }
   /* Try again asks the model again: the AI violet and the sparkles (AI.css). */
   .tiptap-ai-actions button.is-ai { gap: 6px; border-color: var(--brando-ai-line); color: var(--brando-ai); }

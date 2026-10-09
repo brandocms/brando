@@ -158,6 +158,8 @@
   function acceptProposal() {
     if (!pending || pending.status !== 'ready' || !pending.range.valid || !editor.isEditable) return
     const { range, text } = pending
+    // An emptied suggestion inserts nothing; the edit stays for the editor.
+    if (!text.trim()) return
     const lines = text.split(/\n+/).filter(Boolean)
     if (!lines.length) { pending.error = labels.aiFailed; renderProposal(); return }
     const from = editor.state.doc.resolve(range.from), to = editor.state.doc.resolve(range.to)

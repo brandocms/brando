@@ -43,7 +43,8 @@ export function proposalExtension({ labels, accept, discard, retry, edit }) {
                 // Rows for a narrow editor; where the browser can, CSS sizes it to the text.
                 field.rows = Math.min(Math.max(proposal.text.split('\n').length, Math.ceil(proposal.text.length / 45), 2), 12)
                 field.setAttribute('aria-label', labels.suggestedText)
-                field.addEventListener('input', () => edit?.(field.value))
+                // Emptied, there is nothing to insert: Accept waits for text.
+                field.addEventListener('input', () => { edit?.(field.value); const accept = panel.querySelector('button.primary'); if (accept) accept.disabled = !field.value.trim() })
                 panel.append(field)
               } else if (proposal.text) { const text = document.createElement('span'); text.className = 'tiptap-ai-text'; text.textContent = proposal.text; panel.append(text) }
               if (proposal.error) { const error = document.createElement('span'); error.className = 'tiptap-ai-error'; error.setAttribute('role', 'alert'); error.textContent = proposal.error; panel.append(error) }
