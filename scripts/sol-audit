@@ -10,7 +10,8 @@
 #   scripts/sol-audit "<intent>" --base origin/main --model gpt-6.1-sol
 #
 # Needs the Codex CLI (>= 0.162 for gpt-6.1-sol), logged in. The full
-# transcript goes to /tmp/sol-audit-<branch>.out.
+# transcript goes to /tmp/sol-audit-<branch>.out. Stdin is closed: without a
+# terminal, codex exec would otherwise wait for more prompt on it.
 set -euo pipefail
 
 intent=""
@@ -36,7 +37,7 @@ git -C "$root" fetch -q origin || true
 
 prompt="You are an independent code reviewer. Follow .claude/agents/reviewer.md in this repository exactly (it is written for a Claude agent; apply it as-is). You are read-only: do not modify any files. Review the branch: run \`git diff $base...HEAD\` and \`git log $base..HEAD\`. Intent: $intent Hunt for real bugs. Report severity-ranked findings with file:line and a concrete failure scenario (input -> wrong output, or who does what in which order), then a short checked-and-fine list."
 
-(cd "$root" && timeout 1800 codex exec -m "$model" -s read-only "$prompt") >"$out" 2>&1 || true
+(cd "$root" && timeout 1800 codex exec -m "$model" -s read-only "$prompt" </dev/null) >"$out" 2>&1 || true
 
 start=$(grep -n '^codex$' "$out" | tail -1 | cut -d: -f1 || true)
 end=$(grep -n '^tokens used' "$out" | tail -1 | cut -d: -f1 || true)
