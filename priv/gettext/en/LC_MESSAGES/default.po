@@ -7392,6 +7392,11 @@ msgstr ""
 msgid "Gemini training and grounding; not AI Overviews"
 msgstr ""
 
+#: lib/brando_admin/components/form/field_actions.ex
+#, elixir-autogen, elixir-format
+msgid "Generate"
+msgstr ""
+
 #: lib/brando_admin/command_palette.ex
 #: lib/brando_admin/live/sites/utils_live.ex
 #, elixir-autogen, elixir-format
@@ -7401,11 +7406,6 @@ msgstr ""
 #: lib/brando_admin/components/form/input/rich_text_labels.ex
 #, elixir-autogen, elixir-format
 msgid "Generate suggestion"
-msgstr ""
-
-#: lib/brando_admin/components/form/input.ex
-#, elixir-autogen, elixir-format
-msgid "Generate with AI"
 msgstr ""
 
 #: lib/brando_admin/live/sites/utils_live.ex
@@ -15676,6 +15676,7 @@ msgid "Suggested destination"
 msgstr ""
 
 #: lib/brando_admin/components/form/field_actions.ex
+#: lib/brando_admin/components/form/input/rich_text_labels.ex
 #, elixir-autogen, elixir-format
 msgid "Suggested text"
 msgstr ""

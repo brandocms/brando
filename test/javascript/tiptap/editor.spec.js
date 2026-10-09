@@ -323,6 +323,20 @@ test('AI stays out of HTML until acceptance and supports discard and one-step un
   await command(page, 'undo'); expect(await html(page)).toBe(original)
 })
 
+test('an AI suggestion can be edited before it is accepted, and the edit is what goes in', async ({ page }) => {
+  await setup(page)
+  const original = await html(page)
+  await page.getByRole('button', { name: 'Write with AI', exact: true }).click(); await page.getByRole('button', { name: 'Generate suggestion', exact: true }).click()
+  await page.evaluate(() => { const request = harness.current.sent.findLast(event => event.name === 'tiptap_ai_generate'); harness.current.emit('ai', { request_id: request.payload.request_id, text: 'A calmer introduction.' }) })
+  const suggestion = page.getByRole('region', { name: 'AI suggestion' }).getByRole('textbox', { name: 'Suggested text' })
+  await expect(suggestion).toHaveValue('A calmer introduction.')
+  await suggestion.fill('A calmer, edited introduction.')
+  // Typing in the suggestion is not typing in the document
+  expect(await html(page)).toBe(original)
+  await page.getByRole('button', { name: 'Accept', exact: true }).click()
+  expect(await html(page)).toBe('<p>A calmer, edited introduction.</p>')
+})
+
 test('AI ignores late replies and cannot overwrite text changed during generation', async ({ page }) => {
   await setup(page)
   await page.getByRole('button', { name: 'Write with AI', exact: true }).click(); await page.getByRole('button', { name: 'Generate suggestion' }).click()

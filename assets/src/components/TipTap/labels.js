@@ -11,6 +11,6 @@ export const defaultLabels = {
   pasteFallback: 'Unsupported content was converted to text. Footnotes from another entry need to be added here.',
   changed: 'The selected text changed. Try again with the current text.', linkFailed: 'The link could not be applied. Check the destination and selection.',
   ai: 'Write with AI', rewrite: 'Rewrite', shorten: 'Shorten', continue: 'Continue', instruction: 'Instructions', generate: 'Generate suggestion',
-  aiSuggestion: 'AI suggestion', generating: 'Writing a suggestion…', accept: 'Accept', discard: 'Discard', retry: 'Try again', aiFailed: 'Could not generate a suggestion. Try again.',
+  aiSuggestion: 'AI suggestion', suggestedText: 'Suggested text', generating: 'Writing a suggestion…', accept: 'Accept', discard: 'Discard', retry: 'Try again', aiFailed: 'Could not generate a suggestion. Try again.',
   aiAccepted: 'Suggestion accepted. Undo is available.', addNote: 'Add note', words: '%{count} words', indent: 'Indent list item', outdent: 'Outdent list item',
 }

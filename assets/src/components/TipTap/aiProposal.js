@@ -3,7 +3,7 @@ import { Plugin, PluginKey } from '@tiptap/pm/state'
 import { Decoration, DecorationSet } from '@tiptap/pm/view'
 
 export const proposalKey = new PluginKey('brandoAiProposal')
-export function proposalExtension({ labels, accept, discard, retry }) {
+export function proposalExtension({ labels, accept, discard, retry, edit }) {
   return Extension.create({
     name: 'aiProposal',
     addProseMirrorPlugins() {
@@ -33,7 +33,18 @@ export function proposalExtension({ labels, accept, discard, retry }) {
               title.append(icon, proposal.status === 'pending' ? labels.generating : labels.aiSuggestion)
               title.setAttribute('role', 'status')
               panel.append(title)
-              if (proposal.text) { const text = document.createElement('span'); text.className = 'tiptap-ai-text'; text.textContent = proposal.text; panel.append(text) }
+              // A suggestion ready to accept can be changed first, as a field's
+              // can (FieldActions): the textarea is outside the document, and
+              // what it holds is what Accept inserts.
+              if (proposal.text && proposal.status === 'ready' && !proposal.error) {
+                const field = document.createElement('textarea')
+                field.className = 'tiptap-ai-field ai-proposal-field'
+                field.value = proposal.text
+                field.rows = Math.min(Math.max(proposal.text.split('\n').length, Math.ceil(proposal.text.length / 70)), 12)
+                field.setAttribute('aria-label', labels.suggestedText)
+                field.addEventListener('input', () => edit?.(field.value))
+                panel.append(field)
+              } else if (proposal.text) { const text = document.createElement('span'); text.className = 'tiptap-ai-text'; text.textContent = proposal.text; panel.append(text) }
               if (proposal.error) { const error = document.createElement('span'); error.className = 'tiptap-ai-error'; error.setAttribute('role', 'alert'); error.textContent = proposal.error; panel.append(error) }
               const actions = document.createElement('span')
               actions.className = 'tiptap-ai-actions ai-proposal-actions'

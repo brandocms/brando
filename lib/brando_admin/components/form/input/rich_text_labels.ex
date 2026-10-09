@@ -62,6 +62,7 @@ defmodule BrandoAdmin.Components.Form.Input.RichTextLabels do
       instruction: gettext("Instructions"),
       generate: gettext("Generate suggestion"),
       aiSuggestion: gettext("AI suggestion"),
+      suggestedText: gettext("Suggested text"),
       generating: gettext("Writing a suggestion…"),
       accept: gettext("Accept"),
       discard: gettext("Discard"),

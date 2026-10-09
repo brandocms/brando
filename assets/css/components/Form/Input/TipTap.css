@@ -341,6 +341,9 @@
   animation: tiptap-suggestion-arrive .22s ease-out;
   .tiptap-ai-heading { display: flex; }
   .tiptap-ai-text { display: block; white-space: pre-wrap; }
+  /* The suggestion, still open for editing; `.ai-proposal-field` (AI.css) tints it. */
+  .tiptap-ai-field { box-sizing: border-box; display: block; width: 100%; margin: 0; padding: 8px 10px; border-width: 1px; border-style: solid; border-radius: var(--brando-input-radius); color: var(--brando-ink); font: inherit; resize: vertical; }
+  .tiptap-ai-field:focus-visible { outline: 2px solid var(--brando-ai); outline-offset: 1px; }
   .tiptap-ai-error { display: block; font-size: 13px; color: var(--brando-status-disabled); }
   .tiptap-ai-actions { margin-top: 6px; }
   /* Above the global button.primary / .secondary sizes. */
