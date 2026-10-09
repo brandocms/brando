@@ -752,6 +752,17 @@ production dump.
 
 #### Improvements
 
+- **Opening an entry shows the entry, not a loading modal.** The form reads
+  the entry before its first render, so its heading, tabs and fields appear
+  at once. An entry with up to 20 blocks (nested ones counted) opens complete
+  while the listing stays on screen, the clicked row tinted and saying
+  "Opening"; a heavier one shows its fields read-only beside outlines of its
+  blocks, with "Loading 115 blocks" in the toolbar and Save disabled until
+  they have loaded. A reload shows the form as a skeleton until LiveView
+  connects. `Brando.Content.Blocks.count_entry_blocks/2` now counts nested
+  blocks too, and `count_entry_blocks_by_field/2` gives them per field.
+  `BrandoAdmin.Components.Form.entry_loader/1` is removed.
+
 - **The admin's colours are role tokens** (#2981). Every admin stylesheet
   uses the custom properties in `assets/css/tokens.css` (`--brando-ink`,
   `--brando-accent`, `--brando-surface-*`, the status and success/error
