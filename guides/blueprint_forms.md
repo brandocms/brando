@@ -765,7 +765,8 @@ input :body, :rich_text,
 
 * `prompt`: instructions every request starts with.
 * `from`: fields whose values, as the form has them, follow the
-  instructions, as an action's `from:`. Checked when the Blueprint compiles.
+  instructions, as an action's `from:`; it needs a `prompt`. Checked when
+  the Blueprint compiles.
 * `model`: a `"provider:model"` spec or a name from the `models:` config.
 
 and in block text with the [`block_text` site prompt](#site-prompts):
