@@ -54,8 +54,17 @@ defmodule Brando.Deprecated.LexicalAliases do
     ast
   end
 
-  @doc "The module a name annotated by `annotate/1` resolves to, or nil."
+  @doc """
+  The module a name annotated by `annotate/1` resolves to, or nil. A module
+  spelled as an atom (`:"Elixir.EEx"`) is that module.
+  """
   def module({:__aliases__, meta, _parts}), do: to_module(meta[:resolved_alias])
+  def module({:__block__, _, [atom]}) when is_atom(atom), do: module(atom)
+
+  def module(atom) when is_atom(atom) do
+    if atom |> Atom.to_string() |> String.starts_with?("Elixir."), do: atom
+  end
+
   def module(_node), do: nil
 
   @doc """

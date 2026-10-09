@@ -1456,6 +1456,72 @@ defmodule Mix.Tasks.Brando.Migrate55Test do
       end
     end
 
+    test "templates a file may own beyond embed_templates hold it back: colocated, EEx and atom-spelled calls" do
+      module = fn use, body ->
+        """
+        defmodule LegacyAppWeb.PageLive do
+          #{use}
+          alias Brando.Upload
+          def store(m, e, c, u), do: Upload.handle_upload(m, e, c, u)
+        #{body}
+        end
+        """
+      end
+
+      path = "lib/legacy_app_web/live/page_live.ex"
+      colocated = %{"lib/legacy_app_web/live/page_live.html.heex" => "<p>{inspect(Upload)}</p>\n"}
+      leex = %{"lib/legacy_app_web/live/page_live.html.leex" => "<p><%= inspect(Upload) %></p>\n"}
+      eex = %{"lib/legacy_app_web/live/r.eex" => "<%= Upload.url(@x) %>\n"}
+
+      cases = [
+        {"use Phoenix.LiveView", "", colocated},
+        {"use Phoenix.LiveComponent", "", colocated},
+        {"use LegacyAppWeb, :live_view", "", colocated},
+        {"use LegacyAppWeb.Site", "", leex},
+        {"require EEx", ~S|  EEx.function_from_string(:def, :r, "<%= Upload.url(@x) %>", [:assigns])|, %{}},
+        {"require EEx", ~S|  EEx.function_from_file(:def, :r, "lib/legacy_app_web/live/r.eex", [:assigns])|, eex},
+        {"", ~S|  def r(a), do: unquote(EEx.compile_file("lib/legacy_app_web/live/r.eex"))|, eex},
+        {"", ~S|  def r(a), do: unquote(EEx.compile_string("<%= Upload.url(@x) %>"))|, %{}},
+        {"", ~S|  :"Elixir.Phoenix.Template".compile_all(&(&1), "x", "*")|, %{}},
+        {"", ~S|  def r(a), do: unquote(:"Elixir.EEx".compile_file("lib/legacy_app_web/live/r.eex"))|, eex},
+        {"", ~S|  :"Elixir.Phoenix.Component".embed_templates("l/*")|, %{}},
+        {"", "  def h(assigns), do: ~h\"<p>{Upload.url(@x)}</p>\"", %{}}
+      ]
+
+      for {use, body, templates} <- cases do
+        code = module.(use, body)
+        igniter = migrate(@blueprint_054, Map.put(templates, path, code))
+        assert source(igniter, path) == code, "rewritten past:\n#{code}"
+        assert_has_warning(igniter, &String.contains?(&1, path))
+      end
+    end
+
+    test "embed_templates is read from the filesystem, and a root that finds nothing holds the file back" do
+      dir = Path.join(System.tmp_dir!(), "migrate55_templates_#{System.unique_integer([:positive])}")
+      File.mkdir_p!(dir)
+      on_exit(fn -> File.rm_rf!(dir) end)
+      File.write!(Path.join(dir, "page.html.heex"), "<p>{Upload.url(@x)}</p>\n")
+
+      module = fn root ->
+        """
+        defmodule LegacyAppWeb.Pages do
+          use Phoenix.Component
+          alias Brando.Upload
+          def store(m, e, c, u), do: Upload.handle_upload(m, e, c, u)
+          embed_templates "*", root: #{inspect(root)}
+        end
+        """
+      end
+
+      for root <- [dir, Path.join(dir, "missing")] do
+        path = "lib/legacy_app_web/pages.ex"
+        code = module.(root)
+        igniter = migrate(@blueprint_054, %{path => code})
+        assert source(igniter, path) == code, "rewritten past root #{root}"
+        assert_has_warning(igniter, &String.contains?(&1, "names modules renamed in 0.55"))
+      end
+    end
+
     test "rendering through Phoenix.Template is not a template the task needs to read" do
       code = """
       defmodule LegacyApp.Render do

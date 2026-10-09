@@ -64,6 +64,8 @@ if Code.ensure_loaded?(Igniter) do
       {shorts, left} = Enum.split_with(left, &match?({:short, _}, &1))
       shorts = Enum.map(shorts, &elem(&1, 1))
       updated = Sourceror.patch_string(content, patches)
+      templates = templates(igniter, path)
+      colocated = colocated_templates(igniter, path)
 
       # The last guards: a rewrite that leaves invalid code, or changes what
       # a module name means, is not made
@@ -74,13 +76,13 @@ if Code.ensure_loaded?(Igniter) do
         match?({:error, _}, Code.string_to_quoted(updated)) ->
           warn_left(igniter, path, [{:unparsable, nil, nil}])
 
-        line = opaque_templates(content) ->
+        line = opaque_templates(content, templates, colocated) ->
           warn_left(igniter, path, [{:opaque_templates, line} | left])
 
-        mention = shorts != [] && template_mention(content, shorts, templates(igniter, path)) ->
+        mention = shorts != [] && template_mention(content, shorts, templates, readable(colocated)) ->
           warn_left(igniter, path, [{:template_mention, mention} | left])
 
-        line = changed_reference({content, updated}, renamed, templates(igniter, path)) ->
+        line = changed_reference({content, updated}, renamed, &readable(templates.(&1, &2))) ->
           warn_left(igniter, path, [{:changed_meaning, line} | left])
 
         true ->
@@ -207,39 +209,90 @@ if Code.ensure_loaded?(Igniter) do
     defp read_templates(igniter, path, pattern, options) do
       case TemplateCode.embed_pattern(pattern, options) do
         {:ok, pattern, root} ->
-          dir = path |> Path.dirname() |> Path.join(root) |> Path.expand("/") |> Path.relative_to("/")
-          glob = GlobEx.compile!(Path.join(dir, pattern <> ".{#{Enum.join(@template_extensions, ",")}}"))
+          dir = path |> Path.dirname() |> Path.expand() |> then(&Path.expand(root, &1))
+          glob = Path.join(dir, pattern <> ".{#{Enum.join(@template_extensions, ",")}}")
+          compiled = GlobEx.compile!(glob)
 
-          igniter.rewrite
-          |> Rewrite.sources()
-          |> Enum.filter(&GlobEx.match?(glob, Source.get(&1, :path)))
-          |> Enum.map(&{Source.get(&1, :path), Source.get(&1, :content)})
-          |> Enum.sort()
+          in_sources =
+            igniter.rewrite
+            |> Rewrite.sources()
+            |> Enum.map(&Source.get(&1, :path))
+            |> Enum.filter(&GlobEx.match?(compiled, Path.expand(&1)))
+
+          on_disk = glob |> Path.wildcard() |> Enum.map(&Path.relative_to_cwd/1)
+          read_all(igniter, Enum.sort(Enum.uniq(in_sources ++ on_disk)))
 
         :computed ->
-          []
+          :unreadable
       end
     end
+
+    # A LiveView or LiveComponent renders `page_live.html.heex` beside
+    # `page_live.ex` when it has no render/1; read it for any module, since
+    # a site's own `use` macro may set one up
+    defp colocated_templates(igniter, path) do
+      root = Path.rootname(path)
+
+      [root <> ".html.heex", root <> ".html.leex"]
+      |> Enum.filter(&(Rewrite.has_source?(igniter.rewrite, &1) or File.exists?(&1)))
+      |> then(&read_all(igniter, &1, :allow_none))
+    end
+
+    # `{:ok, [{path, text}]}` from the sources, or else from disk; an
+    # `embed_templates` that finds nothing, or a template that cannot be
+    # read, is :unreadable
+    defp read_all(igniter, paths, none \\ :unreadable)
+    defp read_all(_igniter, [], :unreadable), do: :unreadable
+
+    defp read_all(igniter, paths, _none) do
+      Enum.reduce_while(paths, {:ok, []}, fn template, {:ok, read} ->
+        case read_template(igniter, template) do
+          {:ok, text} -> {:cont, {:ok, read ++ [{template, text}]}}
+          :error -> {:halt, :unreadable}
+        end
+      end)
+    end
+
+    defp read_template(igniter, template) do
+      if Rewrite.has_source?(igniter.rewrite, template) do
+        {:ok, igniter.rewrite |> Rewrite.source!(template) |> Source.get(:content)}
+      else
+        with {:error, _} <- File.read(template), do: :error
+      end
+    end
+
+    defp readable({:ok, templates}), do: templates
+    defp readable(:unreadable), do: []
 
     # The line of the first template this task cannot read: an
     # `embed_templates` whose pattern or root is computed, or that is called
     # remotely, `use Phoenix.View`, `use Phoenix.Template` or
     # `Phoenix.Template.compile_all`, `use …, :view`, or Surface's `~F`
-    defp opaque_templates(content) do
+    defp opaque_templates(_content, _templates, :unreadable), do: 1
+
+    defp opaque_templates(content, templates, _colocated) do
       {:ok, ast} = Sourceror.parse_string(content)
       ast = LexicalAliases.annotate(ast)
 
       {_ast, line} =
         Macro.prewalk(ast, nil, fn
-          node, nil -> {node, if(opaque_template?(node), do: node_line(node))}
+          node, nil -> {node, if(opaque_template?(node, templates), do: node_line(node))}
           node, line -> {node, line}
         end)
 
       line
     end
 
-    defp opaque_template?({:embed_templates, _, [pattern | options]}),
-      do: TemplateCode.embed_pattern(pattern, options) == :computed
+    @eex_compilers [:function_from_string, :function_from_file, :compile_string, :compile_file]
+
+    defp opaque_template?({:embed_templates, _, [pattern | options]}, templates),
+      do: templates.(pattern, options) == :unreadable
+
+    defp opaque_template?({{:., _, [remote, name]}, _, _}, _templates) when name in @eex_compilers,
+      do: LexicalAliases.module(remote) == EEx
+
+    defp opaque_template?({name, _, args}, _templates) when name in @eex_compilers and is_list(args), do: true
+    defp opaque_template?(node, _templates), do: opaque_template?(node)
 
     defp opaque_template?({{:., _, [_remote, :embed_templates]}, _, _}), do: true
     defp opaque_template?({:sigil_F, _, _}), do: true
@@ -262,7 +315,9 @@ if Code.ensure_loaded?(Igniter) do
     # `)`, `,`, `]`, `<-` or `%>`. The raw text, comments, strings and
     # attributes included, so a template the code scan misreads cannot hide
     # a use; prose (`Upload a file`) does not count. `{where, name}`.
-    defp template_mention(content, shorts, templates) do
+    @raw_sigils [:sigil_H, :sigil_L, :sigil_E, :sigil_h, :sigil_l, :sigil_e]
+
+    defp template_mention(content, shorts, templates, colocated) do
       names = shorts |> Enum.uniq() |> Enum.map_join("|", &Regex.escape(Atom.to_string(&1)))
       regex = Regex.compile!("(?<![\\w.@:\\-])(#{names})(?=[.{}),\\]]|\\s*(?:<-|%>|\\}|\\)))")
       {:ok, ast} = Sourceror.parse_string(content)
@@ -270,18 +325,21 @@ if Code.ensure_loaded?(Igniter) do
 
       {_ast, texts} =
         Macro.prewalk(ast, [], fn
-          {sigil, meta, [{:<<>>, _, parts} | _]} = node, texts when sigil in [:sigil_H, :sigil_L, :sigil_E] ->
+          {sigil, meta, [{:<<>>, _, parts} | _]} = node, texts when sigil in @raw_sigils ->
             first_line = meta[:line] + if(meta[:delimiter] in [~s("""), ~s(''')], do: 1, else: 0)
             {node, [{nil, first_line, parts |> Enum.filter(&is_binary/1) |> Enum.join()} | texts]}
 
           {:embed_templates, _, [pattern | options]} = node, texts ->
-            {node, Enum.reverse(for({path, text} <- templates.(pattern, options), do: {path, 1, text}), texts)}
+            {node, Enum.reverse(for({path, text} <- readable(templates.(pattern, options)), do: {path, 1, text}), texts)}
 
           node, texts ->
             {node, texts}
         end)
 
-      texts |> Enum.reverse() |> Enum.find_value(&mention(&1, regex))
+      texts
+      |> Enum.reverse()
+      |> Enum.concat(for {path, text} <- colocated, do: {path, 1, text})
+      |> Enum.find_value(&mention(&1, regex))
     end
 
     defp mention({path, first_line, text}, regex) do
