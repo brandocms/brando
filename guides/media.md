@@ -390,7 +390,7 @@ Then, in a controller the site authorizes itself:
 
 `presign/4` answers `{:ok, :server}` for a field without a direct CDN; take
 the bytes yourself then and store them with `Brando.Uploads.store_upload/4`
-(and processing images with `Brando.Upload.process_upload/3`).
+(and processing images with `Brando.Uploads.Store.process_upload/3`).
 
 `complete/2` trusts only what `presign/4` recorded: the key, the field and the
 declared size and type, which the bucket's own metadata must match. Images

@@ -6674,12 +6674,12 @@ msgstr ""
 msgid "Error uploading"
 msgstr ""
 
-#: lib/brando/upload.ex
+#: lib/brando/uploads/store.ex
 #, elixir-autogen, elixir-format
 msgid "Error while copying"
 msgstr ""
 
-#: lib/brando/upload.ex
+#: lib/brando/uploads/store.ex
 #, elixir-autogen, elixir-format
 msgid "Error while creating image sizes"
 msgstr ""
@@ -7023,7 +7023,7 @@ msgstr ""
 msgid "File details"
 msgstr ""
 
-#: lib/brando/upload.ex
+#: lib/brando/uploads/store.ex
 #, elixir-autogen, elixir-format
 msgid "File is too large"
 msgstr ""
@@ -11932,7 +11932,7 @@ msgstr "Paste encoded modules"
 msgid "Paste this into the app as the MCP server's URL."
 msgstr ""
 
-#: lib/brando/upload.ex
+#: lib/brando/uploads/store.ex
 #, elixir-autogen, elixir-format
 msgid "Path creation failed"
 msgstr ""
@@ -17992,7 +17992,7 @@ msgstr ""
 msgid "Unknown environment"
 msgstr ""
 
-#: lib/brando/upload.ex
+#: lib/brando/uploads/store.ex
 #, elixir-autogen, elixir-format
 msgid "Unknown error while creating image sizes."
 msgstr ""
@@ -19366,12 +19366,12 @@ msgstr ""
 msgid "You have an unsaved recovery copy for this entry."
 msgstr ""
 
-#: lib/brando/upload.ex
+#: lib/brando/uploads/store.ex
 #, elixir-autogen, elixir-format
 msgid "You have selected an unacceptable file type"
 msgstr ""
 
-#: lib/brando/upload.ex
+#: lib/brando/uploads/store.ex
 #, elixir-autogen, elixir-format
 msgid "You have selected too many files"
 msgstr ""

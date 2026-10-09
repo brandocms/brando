@@ -451,6 +451,49 @@ defmodule Mix.Tasks.Brando.Migrate55Test do
       end)
     end
 
+    test "the short name follows Brando.Upload to Brando.Uploads.Store, unless it is taken" do
+      uploader = """
+      defmodule LegacyApp.Uploader do
+        alias Brando.Upload
+
+        def store(meta, entry, cfg, user), do: Upload.handle_upload(meta, entry, cfg, user)
+        def plug, do: Plug.Upload
+        def uploads, do: Brando.Uploads
+      end
+      """
+
+      taken = """
+      defmodule LegacyApp.Shop do
+        alias Brando.Upload
+        alias LegacyApp.Store
+
+        def store(meta, entry, cfg, user), do: {Store, Upload.handle_upload(meta, entry, cfg, user)}
+      end
+      """
+
+      igniter = migrate(@blueprint_054, %{"lib/legacy_app/uploader.ex" => uploader, "lib/legacy_app/shop.ex" => taken})
+      assert igniter.issues == []
+
+      assert source(igniter, "lib/legacy_app/uploader.ex") == """
+             defmodule LegacyApp.Uploader do
+               alias Brando.Uploads.Store
+
+               def store(meta, entry, cfg, user), do: Store.handle_upload(meta, entry, cfg, user)
+               def plug, do: Plug.Upload
+               def uploads, do: Brando.Uploads
+             end
+             """
+
+      assert source(igniter, "lib/legacy_app/shop.ex") == """
+             defmodule LegacyApp.Shop do
+               alias Brando.Uploads.Store, as: Upload
+               alias LegacyApp.Store
+
+               def store(meta, entry, cfg, user), do: {Store, Upload.handle_upload(meta, entry, cfg, user)}
+             end
+             """
+    end
+
     test "the Identity's schemas move under Brando.Sites, and Brando.Meta.HTML stays" do
       identity = """
       defmodule LegacyApp.Identity do

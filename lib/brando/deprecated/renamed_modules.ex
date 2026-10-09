@@ -21,6 +21,7 @@ defmodule Brando.Deprecated.RenamedModules do
     Brando.PreviewController => BrandoWeb.PreviewController,
     Brando.SEOController => BrandoWeb.SEOController,
     Brando.SitemapController => BrandoWeb.SitemapController,
+    Brando.Upload => Brando.Uploads.Store,
     Brando.UserChannel => BrandoAdmin.UserChannel
   }
 

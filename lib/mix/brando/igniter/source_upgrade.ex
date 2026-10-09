@@ -927,7 +927,9 @@ if Code.ensure_loaded?(Igniter) do
     after `alias Brando.Meta`) is spelled out in full, since it did not
     move. An alias inside braces that the new name cannot
     share (`alias Brando.{LobbyChannel}`, now `BrandoAdmin`) is left for the
-    developer and reported; the old name keeps working until 0.57.
+    developer and reported; the old name keeps working until 0.57. Where the
+    new short name is another alias's, the alias keeps the old short name
+    with `as:`.
     """
     def rename_moved_modules(igniter) do
       renamed = RenamedModules.all()
@@ -963,11 +965,18 @@ if Code.ensure_loaded?(Igniter) do
     defp module_rename_patches(content, renamed) do
       case Sourceror.parse_string(content) do
         {:ok, ast} ->
-          short = ast |> plain_renamed_aliases(renamed) |> short_names()
+          plain = plain_renamed_aliases(ast, renamed)
+          taken = alias_short_names(ast)
 
-          {_ast, {patches, left}} =
-            Macro.prewalk(ast, {[], []}, fn node, acc -> module_rename_patch(node, renamed, short, acc) end)
+          ctx = %{
+            renamed: renamed,
+            short: Map.new(plain, &{short_name(&1), &1}),
+            # A short name the new module would take from another alias:
+            # the alias keeps the old one with `as:`
+            keep_as: Enum.filter(plain, &(short_name(renamed[&1]) != short_name(&1) and short_name(renamed[&1]) in taken))
+          }
 
+          {_ast, {patches, left}} = Macro.prewalk(ast, {[], []}, &module_rename_patch(&1, ctx, &2))
           {patches, Enum.reverse(left)}
 
         {:error, _} ->
@@ -977,40 +986,74 @@ if Code.ensure_loaded?(Igniter) do
 
     # The renamed modules a file aliases without `as:`, braces included
     defp plain_renamed_aliases(ast, renamed) do
-      {_ast, plain} =
+      ast
+      |> alias_declarations()
+      |> Enum.flat_map(fn
+        {module, nil} -> if Map.has_key?(renamed, module), do: [module], else: []
+        {_module, _as} -> []
+      end)
+    end
+
+    defp alias_short_names(ast) do
+      ast
+      |> alias_declarations()
+      |> Enum.map(fn {module, as} -> as || (module && short_name(module)) end)
+    end
+
+    # `{module, as}` for every alias in the file; `as` is nil without `as:`
+    defp alias_declarations(ast) do
+      {_ast, declarations} =
         Macro.prewalk(ast, [], fn
           {:alias, _, [{:__aliases__, _, parts}]} = node, acc ->
-            {node, [alias_module(parts) | acc]}
+            {node, [{alias_module(parts), nil} | acc]}
+
+          {:alias, _, [{:__aliases__, _, parts}, opts]} = node, acc ->
+            {node, [{alias_module(parts), alias_as(opts)} | acc]}
 
           {:alias, _, [{{:., _, [{:__aliases__, _, base}, :{}]}, _, children}]} = node, acc ->
-            {node, for({:__aliases__, _, parts} <- children, do: alias_module(base ++ parts)) ++ acc}
+            {node, for({:__aliases__, _, parts} <- children, do: {alias_module(base ++ parts), nil}) ++ acc}
 
           node, acc ->
             {node, acc}
         end)
 
-      Enum.filter(plain, &Map.has_key?(renamed, &1))
+      Enum.reject(declarations, &match?({nil, nil}, &1))
     end
 
-    # The short name each plain alias gives a renamed module: `Meta` for
-    # `alias Brando.Meta`
-    defp short_names(plain) do
-      Map.new(plain, &{&1 |> Module.split() |> List.last() |> String.to_atom(), &1})
+    defp alias_as(opts) do
+      Enum.find_value(List.wrap(opts), fn
+        {{:__block__, _, [:as]}, {:__aliases__, _, [as]}} -> as
+        {:as, {:__aliases__, _, [as]}} -> as
+        _ -> nil
+      end)
+    end
+
+    defp short_name(module), do: module |> Module.split() |> List.last() |> String.to_atom()
+
+    # An alias that keeps its short name: `alias Brando.Uploads.Store, as: Upload`
+    defp module_rename_patch({:alias, _, [{:__aliases__, _, parts} = target]} = node, ctx, {patches, left} = acc) do
+      module = alias_module(parts)
+
+      if module in ctx.keep_as do
+        change = "#{inspect(ctx.renamed[module])}, as: #{short_name(module)}"
+        {:ok, {[module_patch(target, change) | patches], left}}
+      else
+        {node, acc}
+      end
     end
 
     # The braced alias is handled here, child by child, and not walked again
-    defp module_rename_patch({{:., _, [{:__aliases__, _, base}, :{}]}, _, children}, renamed, _short, acc)
-         when is_list(children) do
-      {:ok, Enum.reduce(children, acc, &braced_rename_patch(&1, base, renamed, &2))}
+    defp module_rename_patch({{:., _, [{:__aliases__, _, base}, :{}]}, _, children}, ctx, acc) when is_list(children) do
+      {:ok, Enum.reduce(children, acc, &braced_rename_patch(&1, base, ctx, &2))}
     end
 
-    defp module_rename_patch({:__aliases__, _, [first | rest] = parts} = node, renamed, short, {patches, left} = acc) do
+    defp module_rename_patch({:__aliases__, _, [first | rest] = parts} = node, ctx, {patches, left} = acc) do
       cond do
-        new = renamed[alias_module(parts)] ->
+        new = ctx.renamed[alias_module(parts)] ->
           {node, {[module_patch(node, inspect(new)) | patches], left}}
 
-        Map.has_key?(short, first) and Enum.all?(rest, &is_atom/1) ->
-          case short_name_change(short[first], rest, renamed) do
+        Map.has_key?(ctx.short, first) and Enum.all?(rest, &is_atom/1) ->
+          case short_name_change(ctx.short[first], rest, ctx) do
             nil -> {node, acc}
             change -> {node, {[module_patch(node, change) | patches], left}}
           end
@@ -1020,31 +1063,31 @@ if Code.ensure_loaded?(Igniter) do
       end
     end
 
-    defp module_rename_patch(node, _renamed, _short, acc), do: {node, acc}
+    defp module_rename_patch(node, _ctx, acc), do: {node, acc}
 
     # Through the alias. `Upload` follows `alias Brando.Upload` to
     # `Brando.Uploads.Store` as `Store`. A module under the old name did not
     # move, so `Meta.HTML` after `alias Brando.Meta` is spelled out in full.
-    defp short_name_change(old, [], renamed) do
-      old_short = old |> Module.split() |> List.last()
-      new_short = renamed[old] |> Module.split() |> List.last()
-      if old_short != new_short, do: new_short
+    defp short_name_change(old, [], ctx) do
+      new_short = short_name(ctx.renamed[old])
+      if new_short != short_name(old) and old not in ctx.keep_as, do: Atom.to_string(new_short)
     end
 
-    defp short_name_change(old, rest, _renamed), do: inspect(Module.concat([old | rest]))
+    defp short_name_change(old, rest, _ctx), do: inspect(Module.concat([old | rest]))
 
-    defp braced_rename_patch({:__aliases__, _, parts} = child, base, renamed, {patches, left} = acc) do
+    defp braced_rename_patch({:__aliases__, _, parts} = child, base, ctx, {patches, left} = acc) do
       module = alias_module(base ++ parts)
-      new = renamed[module]
+      new = ctx.renamed[module]
 
       cond do
         is_nil(new) -> acc
+        module in ctx.keep_as -> {patches, [module | left]}
         new_parts = braced_parts(base, new) -> {[module_patch(child, Enum.join(new_parts, ".")) | patches], left}
         true -> {patches, [module | left]}
       end
     end
 
-    defp braced_rename_patch(_child, _base, _renamed, acc), do: acc
+    defp braced_rename_patch(_child, _base, _ctx, acc), do: acc
 
     defp module_patch(node, change), do: Sourceror.Patch.new(Sourceror.get_range(node), change, false)
 
@@ -1063,10 +1106,10 @@ if Code.ensure_loaded?(Igniter) do
 
     defp warn_braced_renames(igniter, path, modules) do
       Igniter.add_warning(igniter, """
-      #{path} aliases #{Enum.map_join(modules, ", ", &inspect/1)} inside braces, but 0.55 \
-      renamed #{if length(modules) == 1, do: "it", else: "them"} out of that namespace \
-      (#{Enum.map_join(modules, ", ", &inspect(RenamedModules.new_name(&1)))}). Alias the new \
-      name on its own line; the old name keeps working, with a warning, until 0.57.
+      #{path} aliases #{Enum.map_join(modules, ", ", &inspect/1)} inside braces, where the \
+      new #{if length(modules) == 1, do: "name", else: "names"} \
+      (#{Enum.map_join(modules, ", ", &inspect(RenamedModules.new_name(&1)))}) cannot go. Alias \
+      the new name on its own line; the old name keeps working, with a warning, until 0.57.
       """)
     end
 

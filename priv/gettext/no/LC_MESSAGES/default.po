@@ -6674,12 +6674,12 @@ msgstr "Feil ved gjenoppretting"
 msgid "Error uploading"
 msgstr "Feil ved opplasting av fil"
 
-#: lib/brando/upload.ex
+#: lib/brando/uploads/store.ex
 #, elixir-autogen, elixir-format
 msgid "Error while copying"
 msgstr "Feil ved kopiering"
 
-#: lib/brando/upload.ex
+#: lib/brando/uploads/store.ex
 #, elixir-autogen, elixir-format
 msgid "Error while creating image sizes"
 msgstr "Feil ved oppretting av bildestørrelse"
@@ -7023,7 +7023,7 @@ msgstr "Mal for filblokk"
 msgid "File details"
 msgstr "Fildetaljer"
 
-#: lib/brando/upload.ex
+#: lib/brando/uploads/store.ex
 #, elixir-autogen, elixir-format
 msgid "File is too large"
 msgstr "Filen er for stor"
@@ -11932,7 +11932,7 @@ msgstr "Lim inn kodede moduler"
 msgid "Paste this into the app as the MCP server's URL."
 msgstr "Lim dette inn i appen som MCP-serverens URL."
 
-#: lib/brando/upload.ex
+#: lib/brando/uploads/store.ex
 #, elixir-autogen, elixir-format
 msgid "Path creation failed"
 msgstr "Feil ved oppretting av sti"
@@ -17994,7 +17994,7 @@ msgstr "Ukjent nettleser"
 msgid "Unknown environment"
 msgstr "Ukjent miljø"
 
-#: lib/brando/upload.ex
+#: lib/brando/uploads/store.ex
 #, elixir-autogen, elixir-format
 msgid "Unknown error while creating image sizes."
 msgstr "Ukjent feil ved oppretting av bildestørrelser."
@@ -19368,12 +19368,12 @@ msgstr "Du får dette fordi en administrator har lagt deg til i en varslingsrute
 msgid "You have an unsaved recovery copy for this entry."
 msgstr "Du har en gjenopprettingskopi med ulagrede endringer for dette elementet."
 
-#: lib/brando/upload.ex
+#: lib/brando/uploads/store.ex
 #, elixir-autogen, elixir-format
 msgid "You have selected an unacceptable file type"
 msgstr "Du har valgt en filtype som ikke er støttet"
 
-#: lib/brando/upload.ex
+#: lib/brando/uploads/store.ex
 #, elixir-autogen, elixir-format
 msgid "You have selected too many files"
 msgstr "Du har valgt for mange filer"

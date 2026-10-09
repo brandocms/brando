@@ -45,6 +45,7 @@ as deprecated shims in 0.55 and 0.56 and are removed in 0.57.
 | `Brando.Config` | `Brando.Sites.Config` |
 | `Brando.Link` | `Brando.Sites.Link` |
 | `Brando.Meta` | `Brando.Sites.Meta` |
+| `Brando.Upload` | `Brando.Uploads.Store` |
 
 1. Run `mix brando.migrate55`. It rewrites the old names in `config/`,
    `lib/` and `test/`: routes such as

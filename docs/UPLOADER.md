@@ -262,11 +262,11 @@ direct-video routes are already isolated and are the models we generalize from.
 
 ### 2.3 Storage backends
 
-`Brando.Upload.handle_upload/4` (`upload.ex:38,44`):
-- `%{uploader: "S3"}` → `handle_upload_type(upload, user, :direct_to_s3)` (`upload.ex:75-87`)
+`Brando.Uploads.Store.handle_upload/4` (`uploads/store.ex:38,44`):
+- `%{uploader: "S3"}` → `handle_upload_type(upload, user, :direct_to_s3)` (`uploads/store.ex:75-87`)
   → creates a `File` with `cdn: true` from an S3 **key**, **no processing**.
 - default (local) → validate/copy → `handle_upload_type/2`; images run
-  `process_upload` (sizes/formats/dominant color, `upload.ex:89-140`).
+  `process_upload` (sizes/formats/dominant color, `uploads/store.ex:89-140`).
 - `build_meta/1` accepts a `%Plug.Upload{}` **or** a path (`files/uploads/schema.ex:42-49`,
   `images/uploads/schema.ex:37-44`) — so the storage layer is transport-agnostic (works from
   a controller POST *or* a consumed LiveView entry).
@@ -478,7 +478,7 @@ handle_progress(:queue, entry, socket):
   item = lookup by entry (match on client_name/ref)
   if entry.done? ->
     asset = consume_uploaded_entry(socket, entry, fn meta ->
-              Brando.Upload.handle_upload(meta_with_config_target(meta, item), entry, cfg, user) end)
+              Brando.Uploads.Store.handle_upload(meta_with_config_target(meta, item), entry, cfg, user) end)
     deliver(item, asset)               # broadcast, orphan-safe (see §7)
     update item status: :done (or :processing for images awaiting derivatives)
   else -> update item.progress   # re-renders ONLY the manager drawer
@@ -487,7 +487,7 @@ handle_progress(:queue, entry, socket):
 Only **one** re-render happens in the *form* — when `deliver/2` fires on completion (§7).
 
 **Images stay async exactly as the form path does today:** `consume_uploaded_entry` only
-copies the file and creates the `:unprocessed` image row (`upload.ex:125-151`); the manager
+copies the file and creates the `:unprocessed` image row (`uploads/store.ex:125-151`); the manager
 then calls `Brando.Images.Processing.queue_processing/2` → Oban `Brando.Worker.ImageProcessor`
 (queue `:image_processing`) and **delivers immediately**. The worker broadcasts
 `:processing`/`:updated` on `"brando:image:#{id}"` (`image_processor.ex:65-77`); the drawer
@@ -526,7 +526,7 @@ handle_event("direct_complete", %{entry_ref}, socket):
 ```
 
 For files→S3 this sends the exact signed headers, HEAD-verifies object size/type,
-then reuses `handle_upload_type(:direct_to_s3)` (`upload.ex:75-87`): the record is
+then reuses `handle_upload_type(:direct_to_s3)` (`uploads/store.ex:75-87`): the record is
 created from the object **key** with `cdn: true`, no bytes through the server.
 Provider video keeps its Mux/Bunny/Cloudflare orchestration, surfaced in the
 shared queue. S3 video instead uses the manager's presigned-PUT finalization and
@@ -752,7 +752,7 @@ the editor never re-renders for an upload again.
   (queued upload), mounted `form.ex:1695`.
 - Direct video: `form.ex:337-405` (`get_video_upload_url`/`video_upload_progress`),
   `videos/uploader.ex:150-166`, hooks `assets/src/hooks/{MuxUploader,BunnyUploader}/index.js`.
-- Storage: `upload.ex:38,44,75-140`; `files.ex:67,105-130`; `cdn.ex:56-57`;
+- Storage: `uploads/store.ex:38,44,75-140`; `files.ex:67,105-130`; `cdn.ex:56-57`;
   `files/uploads/schema.ex:42-49`, `images/uploads/schema.ex:37-44`.
 - Sticky precedent: `layouts/live.html.heex:2`. Legacy POST API: `router.ex:44-45`.
 - LiveView assign-skip guarantee (basis for §2.1 in-place option and safe re-assigns):

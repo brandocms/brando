@@ -59,7 +59,7 @@ defmodule Brando.Images.ProcessingTest do
       user = Factory.insert(:random_user)
       upload = %{meta: %{media_path: path, config_target: "default"}, upload_entry: nil, cfg: @cfg}
 
-      assert {:ok, image} = Brando.Upload.handle_upload_type(upload, user)
+      assert {:ok, image} = Brando.Uploads.Store.handle_upload_type(upload, user)
       assert {image.width, image.height} == {900, 1200}
     end
 
@@ -76,7 +76,7 @@ defmodule Brando.Images.ProcessingTest do
     u1 = Factory.insert(:random_user)
     upload_entry = %{@upload_entry | client_name: "NTECH 12, Keynote.png"}
 
-    {:ok, uploaded_image} = Brando.Upload.handle_upload(@meta, upload_entry, @cfg, u1)
+    {:ok, uploaded_image} = Brando.Uploads.Store.handle_upload(@meta, upload_entry, @cfg, u1)
 
     assert Path.basename(uploaded_image.path) =~ "ntech-12-keynote"
     refute uploaded_image.path =~ " "
@@ -88,7 +88,7 @@ defmodule Brando.Images.ProcessingTest do
     cfg = %{@cfg | slugify_filename: false}
     upload_entry = %{@upload_entry | client_name: "NTECH 12 Keynote.png"}
 
-    {:ok, uploaded_image} = Brando.Upload.handle_upload(@meta, upload_entry, cfg, u1)
+    {:ok, uploaded_image} = Brando.Uploads.Store.handle_upload(@meta, upload_entry, cfg, u1)
 
     assert uploaded_image.path =~ "NTECH 12 Keynote"
   end
@@ -96,7 +96,7 @@ defmodule Brando.Images.ProcessingTest do
   test "recreate_sizes_for_image_field" do
     u1 = Factory.insert(:random_user)
 
-    {:ok, uploaded_image} = Brando.Upload.handle_upload(@meta, @upload_entry, @cfg, u1)
+    {:ok, uploaded_image} = Brando.Uploads.Store.handle_upload(@meta, @upload_entry, @cfg, u1)
     {:ok, updated_ids} = Processing.recreate_sizes_for_image_field(Brando.Users.User, :avatar, u1)
 
     assert uploaded_image.id in updated_ids

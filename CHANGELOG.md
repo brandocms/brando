@@ -724,6 +724,7 @@ production dump.
   | `Brando.Config` | `Brando.Sites.Config` |
   | `Brando.Link` | `Brando.Sites.Link` |
   | `Brando.Meta` | `Brando.Sites.Meta` |
+  | `Brando.Upload` | `Brando.Uploads.Store` |
 
   The three controllers serve the site's public routes (`/robots.txt`,
   `/sitemaps/:file` and the shared preview links at `/__p__/:preview_key`),
@@ -740,6 +741,13 @@ production dump.
   `changeset` calls on the old names still work. `Brando.Meta.HTML`, which
   renders a page's `<meta>` tags, keeps its name: it was never part of the
   schema.
+
+  `Brando.Upload` sat beside the `Brando.Uploads` context with only the
+  plural to tell them apart. It stores an uploaded file and creates its
+  image, file or video row, so it is `Brando.Uploads.Store` now, under the
+  context that calls it (`Brando.Uploads.store_upload/4`). `Brando.Uploads`,
+  which decides the transport and finalizes direct uploads, keeps its name.
+  `%Brando.Upload{}` needs the new name too.
 
 #### Improvements
 

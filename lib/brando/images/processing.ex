@@ -7,7 +7,7 @@ defmodule Brando.Images.Processing do
   alias Brando.Images.Operations
   alias Brando.Tenant.Job, as: TenantJob
   alias Brando.Type.ImageConfig
-  alias Brando.Upload
+  alias Brando.Uploads.Store
   alias Brando.Users.User
   alias Brando.Worker
   alias Ecto.Changeset
@@ -15,7 +15,7 @@ defmodule Brando.Images.Processing do
   @type changeset :: Changeset.t()
   @type id :: binary | integer
   @type image :: Image.t()
-  @type upload :: Upload.t()
+  @type upload :: Store.t()
   @type user :: User.t()
 
   @doc """
