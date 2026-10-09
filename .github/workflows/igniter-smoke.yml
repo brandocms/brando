@@ -44,7 +44,7 @@ jobs:
             bootstrap: precompiled
     services:
       postgres:
-        image: postgres:14
+        image: public.ecr.aws/docker/library/postgres:14
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
