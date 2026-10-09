@@ -1292,6 +1292,130 @@ defmodule Brando.Blueprint.VerifierTest do
       end
     end
 
+    test "runs a deprecated ai: as the action :generate, with a warning that shows the ai_actions to write" do
+      module =
+        compile_blueprint(
+          ai_actions_blueprint(
+            quote do
+              input :summary, :textarea,
+                label: "Summary",
+                ai: [prompt: "Summarize the title.", context: [:title], model: :fast, temperature: 0.2, api_key: "k"]
+            end
+          )
+        )
+
+      assert %{opts: [label: "Summary"], actions: [generate]} =
+               Brando.Blueprint.Forms.get_field(:summary, module.__form__())
+
+      assert %Brando.Blueprint.Forms.AIAction{
+               name: :generate,
+               label: nil,
+               prompt: "Summarize the title.",
+               from: [:title],
+               model: :fast,
+               origin: :ai,
+               request_opts: [temperature: 0.2, api_key: "k"]
+             } = generate
+
+      assert Brando.AI.FieldAction.ai_opts(generate) == [model: :fast, temperature: 0.2, api_key: "k"]
+
+      assert {:warn, [{message, _location}]} = Brando.Blueprint.Forms.Verifier.verify(module.spark_dsl_config())
+      assert message =~ "input :summary has `ai:`, which is deprecated"
+
+      assert message =~ """
+                 ai_actions: [
+                   generate: [
+                     label: t("Generate"),
+                     prompt: "Summarize the title.",
+                     from: [:title],
+                     model: :fast
+                   ]
+                 ]
+             """
+
+      assert message =~ "`ai_actions:` takes no `temperature`, `api_key`"
+    end
+
+    test "the ai_actions a deprecated ai: prints compile, and run the same action" do
+      ai =
+        compile_blueprint(
+          ai_actions_blueprint(
+            quote(do: input(:summary, :textarea, ai: [prompt: "Summarize.", context: [:title, :summary]]))
+          )
+        )
+
+      {:warn, [{message, _}]} = Brando.Blueprint.Forms.Verifier.verify(ai.spark_dsl_config())
+      [_, source] = Regex.run(~r/^    (ai_actions: \[.*?^    \])$/ms, message)
+      written = Code.string_to_quoted!("[" <> String.replace(source, ~r/^    /m, "") <> "]")
+
+      # `t/1` is the Blueprint's own gettext marker
+      actions =
+        compile_blueprint(ai_actions_blueprint(quote(do: input(:summary, :textarea, unquote(written)))))
+
+      assert :ok = Brando.Blueprint.Forms.Verifier.verify(actions.spark_dsl_config())
+      [converted] = Brando.Blueprint.Forms.get_field(:summary, ai.__form__()).actions
+      [declared] = Brando.Blueprint.Forms.get_field(:summary, actions.__form__()).actions
+
+      assert Map.take(converted, [:name, :prompt, :from, :model]) ==
+               Map.take(declared, [:name, :prompt, :from, :model])
+
+      assert declared.label == "Generate"
+    end
+
+    test "a deprecated ai: without context still runs, and the warning asks for from:" do
+      module =
+        compile_blueprint(ai_actions_blueprint(quote(do: input(:summary, :textarea, ai: [prompt: "Write a summary."]))))
+
+      assert [%{name: :generate, from: []}] = Brando.Blueprint.Forms.get_field(:summary, module.__form__()).actions
+      assert {:warn, [{message, _}]} = Brando.Blueprint.Forms.Verifier.verify(module.spark_dsl_config())
+      assert message =~ "Add `from:` with the fields the prompt reads"
+    end
+
+    test "a deprecated ai: that cannot run says so, without failing the compile" do
+      for {input, reason} <- [
+            {quote(do: input(:year, :number, ai: [prompt: "Count."])), "does nothing on a :number input"},
+            {quote(do: input(:summary, :textarea, ai: [context: [:title]])), "has no prompt"},
+            {quote(
+               do:
+                 input(:summary, :textarea,
+                   ai: [prompt: "Old."],
+                   ai_actions: [generate: [prompt: "New.", from: [:title]]]
+                 )
+             ), "already has a :generate action"}
+          ] do
+        module = compile_blueprint(ai_actions_blueprint(input))
+        assert {:warn, [{message, _}]} = Brando.Blueprint.Forms.Verifier.verify(module.spark_dsl_config())
+        assert message =~ reason
+        assert message =~ "Remove it."
+      end
+    end
+
+    test "a deprecated ai: in a subform is a warning, not the error ai_actions are" do
+      module =
+        compile_blueprint(
+          ai_actions_blueprint(
+            quote do
+              inputs_for :items do
+                cardinality :many
+                input :title, :text, ai: [prompt: "Shorten.", context: [:title]]
+              end
+            end
+          )
+        )
+
+      assert {:warn, [{message, _}]} = Brando.Blueprint.Forms.Verifier.verify(module.spark_dsl_config())
+      assert message =~ "in inputs_for has `ai:`, which is deprecated and does nothing there"
+    end
+
+    test "a deprecated ai: reading a field ai_actions would refuse still compiles" do
+      module =
+        compile_blueprint(
+          ai_actions_blueprint(quote(do: input(:summary, :textarea, ai: [prompt: "Summarize.", context: [:items]])))
+        )
+
+      assert {:warn, [_]} = Brando.Blueprint.Forms.Verifier.verify(module.spark_dsl_config())
+    end
+
     test "reports actions in a subform" do
       assert_form_error(
         ai_actions_blueprint(
@@ -1325,7 +1449,13 @@ defmodule Brando.Blueprint.VerifierTest do
     error
   end
 
+  # A deprecated `ai:` warns when the module is verified, after it compiles.
   defp compile_blueprint(body) do
+    capture_io(:stderr, fn -> Process.put(:compiled_blueprint, do_compile_blueprint(body)) end)
+    Process.delete(:compiled_blueprint)
+  end
+
+  defp do_compile_blueprint(body) do
     unique = System.unique_integer([:positive])
     module = Module.concat(__MODULE__, "Invalid#{unique}")
     schema = "Invalid#{unique}"

@@ -23,9 +23,14 @@ defmodule Brando.Blueprint.Forms.Verifier do
       schema_fields: schema_fields(module)
     }
 
-    dsl_state
-    |> Verifier.get_entities([:forms])
-    |> validate_entities(&verify_form(context, &1))
+    forms = Verifier.get_entities(dsl_state, [:forms])
+
+    with :ok <- validate_entities(forms, &verify_form(context, &1)) do
+      case Enum.flat_map(forms, &deprecated_ai_warnings/1) do
+        [] -> :ok
+        warnings -> {:warn, warnings}
+      end
+    end
   end
 
   defp verify_form(context, form) do
@@ -80,8 +85,12 @@ defmodule Brando.Blueprint.Forms.Verifier do
   # block fields. `:blocks` stands for every block field, so it needs one,
   # whatever the relation is called. Associations and embeds are not text to
   # give a model.
+  # Actions from the deprecated `ai:` are not checked: `context:` was never
+  # checked, and a Blueprint that compiled before must still compile.
   defp verify_ai_actions(context, form, %{actions: actions} = input) do
-    validate_entities(actions, fn action ->
+    actions
+    |> Enum.filter(&(&1.origin == :ai_actions))
+    |> validate_entities(fn action ->
       validate_entities(action.from, &verify_ai_action_source(context, form, input, action, &1))
     end)
   end
@@ -220,7 +229,7 @@ defmodule Brando.Blueprint.Forms.Verifier do
 
     validate_entities(subform.sub_fields, fn input ->
       cond do
-        match?(%Forms.Input{actions: [_ | _]}, input) ->
+        match?(%Forms.Input{}, input) and Enum.any?(input.actions, &(&1.origin == :ai_actions)) ->
           error(
             context,
             input,
@@ -421,6 +430,64 @@ defmodule Brando.Blueprint.Forms.Verifier do
     )
     |> MapSet.new()
   end
+
+  # `ai:` on an input is deprecated: a warning at the input, with the
+  # `ai_actions:` it runs as and should be written as, or why it does nothing.
+  defp deprecated_ai_warnings(form) do
+    top_level =
+      for %Forms.Input{ai: ai} = input <- form_inputs(form), not is_nil(ai) do
+        {deprecated_ai_message(input), Entity.anno(input)}
+      end
+
+    nested =
+      for %Forms.Subform{sub_fields: sub_fields} <- form_inputs(form),
+          %Forms.Input{ai: ai} = input <- sub_fields || [],
+          not is_nil(ai) do
+        {"input #{inspect(input.name)} in inputs_for has `ai:`, which is deprecated and does nothing there. Remove it.",
+         Entity.anno(input)}
+      end
+
+    top_level ++ nested
+  end
+
+  defp deprecated_ai_message(%Forms.Input{name: name, type: type, ai: ai, actions: actions}) do
+    subject = "input #{inspect(name)} has `ai:`, which is deprecated and will be removed"
+
+    case Enum.find(actions, &(&1.origin == :ai)) do
+      %Forms.AIAction{} = action ->
+        [
+          "#{subject}. It runs as the AI action \"Generate\", whose result the editor reviews before it reaches the field. Write it as:",
+          indent(Forms.AIAction.to_source(action)),
+          action.from == [] &&
+            "Add `from:` with the fields the prompt reads: `ai_actions:` requires them, and `ai:` named none in `context:`.",
+          dropped_options_note(action)
+        ]
+        |> Enum.filter(& &1)
+        |> Enum.join("\n\n")
+
+      nil ->
+        "#{subject}. #{ignored_reason(type, ai, actions)} Remove it."
+    end
+  end
+
+  defp ignored_reason(type, ai, actions) do
+    cond do
+      type not in Forms.AIAction.input_types() -> "It does nothing on a #{inspect(type)} input."
+      Enum.any?(actions, &(&1.name == :generate)) -> "`ai_actions:` already has a :generate action, so it is ignored."
+      is_nil(Forms.AIAction.generate(ai, :ai)) -> "It has no prompt, so it does nothing."
+      true -> "It does nothing."
+    end
+  end
+
+  defp dropped_options_note(%Forms.AIAction{request_opts: []}), do: nil
+
+  defp dropped_options_note(%Forms.AIAction{request_opts: opts}) do
+    keys = opts |> Keyword.keys() |> Enum.map_join(", ", &"`#{&1}`")
+
+    "`ai_actions:` takes no #{keys}: set API keys under `providers:` and request options under `default_opts:` in `config :brando, Brando.AI`. Until `ai:` is removed, the action keeps them."
+  end
+
+  defp indent(source), do: source |> String.split("\n") |> Enum.map_join("\n", &("    " <> &1))
 
   defp form_inputs(form) do
     for tab <- form.tabs,

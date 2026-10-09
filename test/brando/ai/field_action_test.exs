@@ -93,4 +93,56 @@ defmodule Brando.AI.FieldActionTest do
       assert FieldAction.field_value("First.\n\nSecond.", :textarea) == "First.\n\nSecond."
     end
   end
+
+  describe "for_field/3" do
+    test "a meta field's site prompt is a Generate action" do
+      assert {[generate], :text, []} = FieldAction.for_field(Brando.Pages.Page, nil, :meta_title)
+
+      assert %AIAction{name: :generate, origin: :site, from: [:title, :blocks, :language]} = generate
+      assert generate.prompt =~ "Write an SEO title tag"
+    end
+
+    test "after the actions the input for it declares, which keep its options" do
+      schema = Brando.MetaDrawerTest.ActionsArticle
+
+      assert {[%{name: :shorten, origin: :ai_actions}, %{name: :generate, origin: :site}], :textarea, opts} =
+               FieldAction.for_field(schema, schema.__form__(), :meta_description)
+
+      assert opts[:hidden] == true
+    end
+
+    test "an input's own :generate replaces the site prompt's" do
+      own = %AIAction{name: :generate, prompt: "Mine.", from: [:title]}
+      assert FieldAction.with_site_action([own], Brando.Pages.Page, :meta_title) == [own]
+    end
+
+    test "other fields have no site actions" do
+      assert {[], nil, []} = FieldAction.for_field(Brando.Pages.Page, nil, :title)
+      assert FieldAction.with_site_action([], Brando.Pages.Page, :title) == []
+    end
+  end
+
+  describe "the Generate of ai: and site prompts" do
+    test "carries their model and request options to the model" do
+      action = AIAction.generate([prompt: "P", model: "openai:gpt-4o", temperature: 0.1, api_key: "k"], :ai)
+      assert FieldAction.ai_opts(action) == [model: "openai:gpt-4o", temperature: 0.1, api_key: "k"]
+      assert FieldAction.ai_opts(@action) == []
+    end
+
+    test "reads context: as the fields it reads, and needs a prompt" do
+      assert %AIAction{from: [:title, :blocks]} =
+               AIAction.generate(%{"prompt" => "P", "context" => ["title", :blocks]}, :site)
+
+      assert %AIAction{from: []} = AIAction.generate([prompt: "P"], :site)
+      assert AIAction.generate([context: [:title]], :site) == nil
+      assert AIAction.generate([prompt: " "], :site) == nil
+      assert AIAction.generate(nil, :site) == nil
+    end
+
+    test "with no fields to read, the prompt goes alone" do
+      action = AIAction.generate([prompt: "Write a tagline."], :ai)
+      assert FieldAction.prompt(action, [], type: :text) =~ ~r/\AWrite a tagline\.\n/
+      refute FieldAction.prompt(action, [], type: :text) =~ "Context:"
+    end
+  end
 end

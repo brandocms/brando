@@ -295,15 +295,29 @@ defmodule Brando.Blueprint.Forms.Dsl do
 
   @doc """
   Builds an input's `ai_actions:` into `Forms.AIAction` structs on the input,
-  so a bad option is a compile error and the admin reads checked structs. The
-  option is dropped from `opts`, which input components receive.
+  so a bad option is a compile error and the admin reads checked structs.
+
+  The deprecated `ai:` option runs as one more action, `:generate`
+  (`Forms.AIAction.add_deprecated/3`); it is kept on the input as written for
+  the forms verifier's deprecation warning. Both options are dropped from
+  `opts`, which input components receive.
   """
   def transform_input(%Forms.Input{opts: opts} = input) do
     opts = opts || []
+    ai = Keyword.get(opts, :ai)
 
     case Forms.AIAction.build(input.type, Keyword.get(opts, :ai_actions)) do
-      {:ok, actions} -> {:ok, %{input | actions: actions, opts: Keyword.delete(opts, :ai_actions)}}
-      {:error, message} -> {:error, message}
+      {:ok, actions} ->
+        {:ok,
+         %{
+           input
+           | actions: Forms.AIAction.add_deprecated(input.type, actions, ai),
+             ai: ai,
+             opts: Keyword.drop(opts, [:ai_actions, :ai])
+         }}
+
+      {:error, message} ->
+        {:error, message}
     end
   end
 
