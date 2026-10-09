@@ -94,11 +94,11 @@ when Igniter becomes available. The dependency remains optional at runtime.
 
 `mix brando.migrate55` covers the 0.54 to 0.55 source changes. It:
 
-- points references to the modules renamed in 0.55 at their new names
-  (`Brando.SEOController` is `BrandoWeb.SEOController`, and so on; the table
-  is in `UPGRADE.md`) in routers, sockets, config and code. An alias in
-  braces the new name cannot share is reported instead; the old names keep
-  working, with a warning, until 0.57;
+- points references to the modules renamed in 0.55 at their new names in
+  routers, sockets, config and code: a route's `Brando.SEOController, :robots`
+  becomes `BrandoWeb.SEOController, :robots`, and so on (the table is in
+  `UPGRADE.md`). An alias in braces the new name cannot share is reported
+  instead; the old names keep working, with a warning, until 0.57;
 - adds the narrow listing component imports used by custom row functions;
 - defaults an unconfigured Swoosh API client to `Swoosh.ApiClient.Req` and
   pins declared `phoenix_live_view` dependencies in `assets/**/package.json`

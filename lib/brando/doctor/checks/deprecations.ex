@@ -2,8 +2,8 @@ defmodule Brando.Doctor.Checks.Deprecations do
   @moduledoc """
   Calls to deprecated Brando functions and macros (those marked
   `@deprecated`) in the project's `lib/`, and references to the modules
-  renamed in 0.55 (a router naming `Brando.SEOController`, say), whose old
-  names are deprecated.
+  renamed in 0.55, whose old names are deprecated: a router's
+  `get "/robots.txt", Brando.SEOController, :robots`, say.
 
   The source is read as code, not text: aliases (`alias Brando.HTML`,
   `alias Brando.{HTML, Utils}`, `as:`), imports and pipes are followed, so
