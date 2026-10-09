@@ -702,6 +702,22 @@ the chip's ×, Escape, the avatar again, or your own scroll or click stop
 following. The followed avatar has a double ring. Nothing about following
 sits in the toolbar.
 
+Opening an entry (approved October 2026) shows the entry, never a modal.
+The form reads the entry before its first render, so the heading, tabs and
+fields arrive real. A light entry (up to 20 blocks) opens complete, and until
+then the listing stays: the clicked row is tinted, says "Opening" after the
+title and draws a 2px line along its foot (`openingRow.js`, from LiveView's
+own `phx-click-loading` on the link, through sticky JS). A heavier entry
+shows its fields read-only beside outlines of its blocks; the toolbar says
+"Loading 115 blocks" where the save state goes, over a 2px line under the
+bar, and its tools are disabled and quieter until the blocks have loaded.
+Only when nothing of the entry is known yet (a reload, before LiveView
+connects) is the whole form a skeleton, with real chrome and "Opening" in the
+save-state slot. Skeleton bars shimmer and lines sweep by `transform` only,
+and stand still under `prefers-reduced-motion`. `Form.EntrySkeleton` and
+`Opening.css` draw all of it; the state is a class on the form root
+(`is-loading-blocks`), not a `:has()`.
+
 A singleton settings screen (Identity, SEO) passes `layout={:settings}` to
 the form and puts `Workspace.header` above it: the eyebrow "Configuration",
 the screen's name and one plain line on what it holds. Its tabs are pill tabs
