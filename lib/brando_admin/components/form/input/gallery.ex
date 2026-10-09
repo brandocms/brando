@@ -343,37 +343,26 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
 
   attr :myself, :any, required: true
 
-  # The wrapper is the container the buttons measure (Gallery.css): in a
-  # narrow field Select images and Select videos keep only their icons, and
-  # Upload media too in the narrowest. Each label stays the accessible name
-  # and the title shows it on hover.
+  # Upload keeps its label; the library's images and videos are icons, named
+  # by their hidden labels and shown in the shared tooltip, as every media
+  # field's sources are (`MediaField.icon_button/1`).
   defp gallery_actions(assigns) do
     ~H"""
     <div class="gallery-actions">
       <div class="actions segmented-buttons">
-        <button
-          type="button"
-          class="media-button media-button--collapsible-narrow upload-trigger"
-          title={gettext("Upload media")}
-        >
-          <.icon name="upload" /><span class="media-button-label">{gettext("Upload media")}</span>
+        <button type="button" class="media-button upload-trigger">
+          <.icon name="upload" />{gettext("Upload")}
         </button>
-        <button
+        <MediaField.icon_button
+          icon="images"
+          label={gettext("Select images")}
           phx-click={JS.push("set_target", target: @myself) |> toggle_drawer("#image-picker")}
-          type="button"
-          class="media-button media-button--collapsible"
-          title={gettext("Select images")}
-        >
-          <.icon name="images" /><span class="media-button-label">{gettext("Select images")}</span>
-        </button>
-        <button
+        />
+        <MediaField.icon_button
+          icon="film"
+          label={gettext("Select videos")}
           phx-click={JS.push("open_video_picker", target: @myself) |> toggle_drawer("#video-picker")}
-          type="button"
-          class="media-button media-button--collapsible"
-          title={gettext("Select videos")}
-        >
-          <.icon name="film" /><span class="media-button-label">{gettext("Select videos")}</span>
-        </button>
+        />
       </div>
     </div>
     """

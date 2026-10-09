@@ -2785,13 +2785,6 @@ msgstr[1] ""
 msgid "Browse folders, upload images, and manage your library."
 msgstr ""
 
-#: lib/brando_admin/components/form/input/blocks/gallery_block.ex
-#: lib/brando_admin/components/form/input/gallery_objects.ex
-#: lib/brando_admin/components/form/input/render_var.ex
-#, elixir-autogen, elixir-format
-msgid "Browse images"
-msgstr ""
-
 #: lib/brando_admin/live/ai/assistant_live.ex
 #, elixir-autogen, elixir-format
 msgid "Browse the library"
@@ -2800,13 +2793,6 @@ msgstr ""
 #: lib/brando_admin/live/images/image_list_live.ex
 #, elixir-format, elixir-autogen
 msgid "Browse this location"
-msgstr ""
-
-#: lib/brando_admin/components/form/input/blocks/gallery_block.ex
-#: lib/brando_admin/components/form/input/gallery_objects.ex
-#: lib/brando_admin/components/form/input/render_var.ex
-#, elixir-autogen, elixir-format
-msgid "Browse videos"
 msgstr ""
 
 #: lib/brando_admin/live/sites/asset_live.ex
@@ -14597,7 +14583,10 @@ msgstr ""
 msgid "Select image"
 msgstr ""
 
+#: lib/brando_admin/components/form/input/blocks/gallery_block.ex
 #: lib/brando_admin/components/form/input/gallery.ex
+#: lib/brando_admin/components/form/input/gallery_objects.ex
+#: lib/brando_admin/components/form/input/render_var.ex
 #, elixir-autogen, elixir-format
 msgid "Select images"
 msgstr ""
@@ -14640,7 +14629,10 @@ msgstr ""
 msgid "Select video"
 msgstr ""
 
+#: lib/brando_admin/components/form/input/blocks/gallery_block.ex
 #: lib/brando_admin/components/form/input/gallery.ex
+#: lib/brando_admin/components/form/input/gallery_objects.ex
+#: lib/brando_admin/components/form/input/render_var.ex
 #, elixir-autogen, elixir-format
 msgid "Select videos"
 msgstr ""
@@ -18090,6 +18082,10 @@ msgstr ""
 #: lib/brando_admin/components/assets/media_field.ex
 #: lib/brando_admin/components/form/file_drawer.ex
 #: lib/brando_admin/components/form/image_drawer.ex
+#: lib/brando_admin/components/form/input/blocks/gallery_block.ex
+#: lib/brando_admin/components/form/input/gallery.ex
+#: lib/brando_admin/components/form/input/gallery_objects.ex
+#: lib/brando_admin/components/form/input/render_var.ex
 #: lib/brando_admin/components/form/transformer.ex
 #: lib/brando_admin/components/form/video_drawer.ex
 #: lib/brando_admin/live/ai/assistant_live.ex
@@ -18154,9 +18150,6 @@ msgid "Upload images or videos"
 msgstr ""
 
 #: lib/brando_admin/components/assets/media_field.ex
-#: lib/brando_admin/components/form/input/blocks/gallery_block.ex
-#: lib/brando_admin/components/form/input/gallery.ex
-#: lib/brando_admin/components/form/input/gallery_objects.ex
 #: lib/brando_admin/components/form/input/render_var.ex
 #: lib/brando_admin/live/ai/assistant_live.ex
 #, elixir-autogen, elixir-format

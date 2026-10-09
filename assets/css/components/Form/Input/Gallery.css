@@ -373,12 +373,20 @@
     > .gallery-actions { grid-column: 2; align-self: end; margin: 12px 10px 8px 0; }
     > .media-field-progress { grid-column: 1 / -1; }
   }
+  /* On a phone, the same shape as an empty image, video or file field
+     (MediaField.css): the buttons stay beside the thumbnail, and move under
+     it only on the narrowest screens. */
   @media (max-width: 600px) {
     &.media-gallery--empty {
       grid-template-columns: 72px minmax(0, 1fr); column-gap: 12px;
-      > .media-field-preview { width: 72px; height: 72px; grid-row: 1; }
-      > .gallery-info { align-self: center; padding-top: 0; }
-      > .gallery-actions { grid-column: 1 / -1; margin: 12px 6px 6px; }
+      > .media-field-preview { width: 72px; height: 104px; }
+      > .gallery-actions { margin-top: 8px; }
+    }
+  }
+  @media (max-width: 375px) {
+    &.media-gallery--empty {
+      > .media-field-preview { grid-row: 1; }
+      > .gallery-actions { grid-column: 1 / -1; }
     }
   }
 }
@@ -483,29 +491,11 @@
     margin: 0;
   }
 
-  /* The actions take the room the view switch leaves them, and measure it */
+  /* The actions take the room the view switch leaves them */
   > .gallery-actions { flex: 1 1 0; }
 }
 
-/* The gallery field's actions measure the room they have, not the window:
-   the same field sits in wide forms, half columns and on phones. Narrow, the
-   two Select buttons keep only their icons, and Upload media too in the
-   narrowest; the label stays the accessible name and the title. The icons of
-   labelled Select buttons stay hidden, as before. EuropaCSS claims
-   `@container` for its own deprecated shorthand and rejects the CSS rule, so
-   it is written `@Container`: at-rule names are case-insensitive, and the
-   plugin only matches the lower-case name. */
-.gallery-actions { container: gallery-actions / inline-size; min-width: 0; }
-.gallery-actions .media-button--collapsible > [data-icon] { display: none; }
-@Container gallery-actions (max-width: 339px) {
-  .gallery-actions .media-button--collapsible { padding-inline: 9px; }
-  .gallery-actions .media-button--collapsible > [data-icon] { display: inline-block; }
-  .gallery-actions .media-button--collapsible > .media-button-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
-}
-@Container gallery-actions (max-width: 219px) {
-  .gallery-actions .media-button--collapsible-narrow { padding-inline: 9px; }
-  .gallery-actions .media-button--collapsible-narrow > .media-button-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
-}
+.gallery-actions { min-width: 0; }
 
 .media-gallery > .gallery-toolbar-row {
   margin-bottom: 12px;

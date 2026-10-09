@@ -6,6 +6,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
   import Brando.Utils, only: [loaded_assoc?: 2]
 
   alias Brando.Villain.Blocks.GalleryObjectOverride
+  alias BrandoAdmin.Components.Assets.MediaField
   alias BrandoAdmin.Components.Form.Block
   alias BrandoAdmin.Components.Form.Input
   alias BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock.Object
@@ -267,24 +268,20 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
             <div class="gallery-toolbar-row">
               <div class="gallery-buttons segmented-buttons">
                 <button type="button" class="media-button primary upload-trigger">
-                  {gettext("Upload media")}
+                  <.icon name="upload" />{gettext("Upload")}
                 </button>
-                <button
+                <MediaField.icon_button
                   :if={:image in @allowed_types}
-                  type="button"
-                  class="media-button"
+                  icon="images"
+                  label={gettext("Select images")}
                   phx-click={JS.push("set_target", target: @myself) |> toggle_drawer("#image-picker")}
-                >
-                  {gettext("Browse images")}
-                </button>
-                <button
+                />
+                <MediaField.icon_button
                   :if={:video in @allowed_types}
-                  type="button"
-                  class="media-button"
+                  icon="film"
+                  label={gettext("Select videos")}
                   phx-click={JS.push("open_video_picker", target: @myself) |> toggle_drawer("#video-picker")}
-                >
-                  {gettext("Browse videos")}
-                </button>
+                />
               </div>
               <Tile.view_switch
                 :if={@has_objects?}
