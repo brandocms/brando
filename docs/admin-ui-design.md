@@ -818,7 +818,7 @@ colour at 60%). It is never the current row. On phones, where the sidebar is
 hidden, the round `.mobile-search` button opens the palette instead.
 
 Configuration's submenu is grouped (#3102): Site, Publishing, Building blocks
-and System, each under a small heading in the section labels' mono capitals
+and Operations, each under a small heading in the section labels' mono capitals
 (10px, muted, no rule), aligned with the icon column, 10px between groups. A
 group with nothing the user may open has no heading. In `BrandoAdmin.Menu`
 each item names its `group` and the submenu lists the headings as `groups`;

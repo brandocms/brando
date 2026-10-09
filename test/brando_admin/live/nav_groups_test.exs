@@ -4,7 +4,7 @@ defmodule BrandoAdmin.NavGroupsTest do
   # show no heading.
   use Brando.LiveCase
 
-  @groups ~w(site publishing building_blocks system)
+  @groups ~w(site publishing building_blocks operations)
 
   test "a superuser gets the four groups, each labelled by its heading", %{conn: conn} do
     nav = nav(conn)
@@ -28,7 +28,7 @@ defmodule BrandoAdmin.NavGroupsTest do
              "[aria-labelledby='nav-group-configuration-building_blocks'] li a[href='/admin/config/content/modules']"
            )
 
-    assert has_element?(nav, "[aria-labelledby='nav-group-configuration-system'] li a[href='/admin/config/utils']")
+    assert has_element?(nav, "[aria-labelledby='nav-group-configuration-operations'] li a[href='/admin/config/utils']")
   end
 
   test "an editor sees only the groups with screens they may open", %{conn: conn} do
@@ -38,7 +38,7 @@ defmodule BrandoAdmin.NavGroupsTest do
     assert has_element?(nav, "#nav-group-configuration-site")
     assert has_element?(nav, "#nav-group-configuration-publishing")
     refute has_element?(nav, "#nav-group-configuration-building_blocks")
-    refute has_element?(nav, "#nav-group-configuration-system")
+    refute has_element?(nav, "#nav-group-configuration-operations")
     refute has_element?(nav, "a[href='/admin/config/content/modules']")
   end
 

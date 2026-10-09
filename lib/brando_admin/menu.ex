@@ -445,7 +445,7 @@ defmodule BrandoAdmin.Menu do
            %{name: gettext("Palettes"), icon: "palette", url: "/admin/config/content/palettes"},
            %{name: gettext("Markdown sources"), url: "/admin/config/markdown-sources", icon: "file-code"}
          ])},
-        {:system, gettext("System"),
+        {:operations, gettext("Operations"),
          [
            if(Brando.Authorization.enabled?() or match?(%{role: :superuser}, current_user),
              do: %{name: gettext("Permissions"), url: "/admin/groups", icon: "shield-check"}

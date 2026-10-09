@@ -201,7 +201,7 @@ defmodule BrandoAdmin.MenuTest do
                   "/admin/config/content/palettes",
                   "/admin/config/markdown-sources"
                 ]},
-               {:system,
+               {:operations,
                 [
                   "/admin/groups",
                   "/admin/config/activity",
@@ -220,7 +220,7 @@ defmodule BrandoAdmin.MenuTest do
       assert Enum.map(configuration.items, & &1.url) ==
                configuration |> BrandoAdmin.Menu.grouped_items() |> Enum.flat_map(& &1.items) |> Enum.map(& &1.url)
 
-      assert Enum.all?(configuration.items, &(&1.group in [:site, :publishing, :building_blocks, :system]))
+      assert Enum.all?(configuration.items, &(&1.group in [:site, :publishing, :building_blocks, :operations]))
     end
 
     test "a static site's Publishing joins the publishing group" do
@@ -232,10 +232,10 @@ defmodule BrandoAdmin.MenuTest do
 
     test "a group with nothing left for the user is left out, heading and all" do
       assert [:site, :publishing] = Keyword.keys(configuration_groups(%{role: :editor}))
-      assert [:site, :publishing, :system] = Keyword.keys(configuration_groups(%{role: :admin}))
+      assert [:site, :publishing, :operations] = Keyword.keys(configuration_groups(%{role: :admin}))
 
-      assert {:system, ["/admin/config/activity" | _]} =
-               List.keyfind(configuration_groups(%{role: :admin}), :system, 0)
+      assert {:operations, ["/admin/config/activity" | _]} =
+               List.keyfind(configuration_groups(%{role: :admin}), :operations, 0)
     end
 
     test "the group names are translated" do
@@ -244,7 +244,7 @@ defmodule BrandoAdmin.MenuTest do
           %{role: :superuser} |> configuration() |> BrandoAdmin.Menu.grouped_items() |> Enum.map(& &1.name)
         end)
 
-      assert names == ["Nettsted", "Publisering", "Byggeklosser", "System"]
+      assert names == ["Nettsted", "Publisering", "Byggeklosser", "Drift"]
     end
   end
 

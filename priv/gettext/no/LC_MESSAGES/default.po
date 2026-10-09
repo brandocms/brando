@@ -11651,6 +11651,11 @@ msgstr "Operasjon"
 msgid "Operation log"
 msgstr "Operasjonslogg"
 
+#: lib/brando_admin/menu.ex
+#, elixir-autogen, elixir-format
+msgid "Operations"
+msgstr "Drift"
+
 #: lib/brando_admin/components/shortcut_sheet.ex
 #, elixir-autogen, elixir-format
 msgid "Option"
