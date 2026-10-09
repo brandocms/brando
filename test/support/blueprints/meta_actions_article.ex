@@ -14,6 +14,8 @@ defmodule Brando.MetaDrawerTest.ActionsArticle do
     gettext_module: Brando.Gettext
 
   table "pages"
+  # Pages' table, not their permissions
+  authorization(key: "brando.meta_drawer_test.actions_article")
 
   trait :creator
   trait :timestamped
