@@ -86,8 +86,10 @@ defmodule Brando.Content.BlockReferences do
         entries_by_schema
 
       {join_source, ids}, entries_by_schema ->
-        {schema, entry_ids} = list_entry_ids(join_source, ids)
-        Map.put(entries_by_schema, schema, entry_ids)
+        case join_schema(join_source) do
+          {join_source, schema} -> Map.put(entries_by_schema, schema, list_entry_ids(join_source, schema, ids))
+          nil -> entries_by_schema
+        end
     end)
   end
 
@@ -116,12 +118,33 @@ defmodule Brando.Content.BlockReferences do
     |> select([block], %{id: block.id, source: block.source})
     |> distinct(true)
     |> repo().all()
-    # A root without a source belongs to no entry (a loose block).
-    |> Enum.reject(&is_nil(&1.source))
     |> Enum.reduce(%{}, fn %{id: id, source: source}, roots_by_schema ->
-      schema = Module.concat([source])
-      Map.update(roots_by_schema, schema, [id], &(&1 ++ [id]))
+      case join_schema(source) do
+        {join_source, _entry_schema} -> Map.update(roots_by_schema, join_source, [id], &(&1 ++ [id]))
+        nil -> roots_by_schema
+      end
     end)
+  end
+
+  @doc """
+  The join schema a root block's `source` names and the entry schema behind
+  it, as `{join_source, entry_schema}`, or `nil` when no entry can own the
+  block: no source (a loose block), or one naming a module that is gone,
+  renamed, or not an entry's block join (a Blueprint removed from the app
+  while a site still has its blocks).
+  """
+  @spec join_schema(String.t() | module() | nil) :: {module(), module()} | nil
+  def join_schema(nil), do: nil
+
+  def join_schema(source) do
+    join_source = Module.concat([source])
+
+    with true <- Code.ensure_loaded?(join_source) and function_exported?(join_source, :__changeset__, 0),
+         {:assoc, %{queryable: entry_schema}} <- Map.get(join_source.__changeset__(), :entry) do
+      {join_source, entry_schema}
+    else
+      _ -> nil
+    end
   end
 
   @doc """
@@ -140,9 +163,11 @@ defmodule Brando.Content.BlockReferences do
     entries_by_root =
       roots
       |> Enum.group_by(fn {_block_id, _root_id, source} -> source end, fn {_block_id, root_id, _} -> root_id end)
-      |> Enum.reject(fn {source, _} -> is_nil(source) end)
       |> Enum.flat_map(fn {source, root_ids} ->
-        list_entries_by_root(Module.concat([source]), Enum.uniq(root_ids), opts)
+        case join_schema(source) do
+          {join_source, entry_schema} -> list_entries_by_root(join_source, entry_schema, Enum.uniq(root_ids), opts)
+          nil -> []
+        end
       end)
       |> Enum.group_by(fn {root_id, _entry} -> root_id end, fn {_root_id, entry} -> entry end)
 
@@ -174,9 +199,7 @@ defmodule Brando.Content.BlockReferences do
     |> repo().all()
   end
 
-  defp list_entries_by_root(join_source, root_ids, opts) do
-    {:assoc, %{queryable: schema}} = Map.fetch!(join_source.__changeset__(), :entry)
-
+  defp list_entries_by_root(join_source, schema, root_ids, opts) do
     query =
       from join_entry in join_source,
         join: entry in ^schema,
@@ -218,9 +241,7 @@ defmodule Brando.Content.BlockReferences do
     |> repo().all()
   end
 
-  defp list_entry_ids(join_source, block_ids) do
-    {:assoc, %{queryable: schema}} = Map.fetch!(join_source.__changeset__(), :entry)
-
+  defp list_entry_ids(join_source, schema, block_ids) do
     query =
       from join_entry in join_source,
         join: entry in ^schema,
@@ -230,7 +251,7 @@ defmodule Brando.Content.BlockReferences do
         distinct: true
 
     query = maybe_reject_deleted(query, schema)
-    {schema, repo().all(query)}
+    repo().all(query)
   end
 
   defp maybe_reject_deleted(query, schema) do
