@@ -509,6 +509,92 @@ defmodule Brando.AI.AgentTest do
       assert DateTime.diff(DateTime.utc_now(), Repo.get!(Run, id).updated_at, :millisecond) >= 150
     end
 
+    test "a heartbeat write that fails leaves the run working, and it finishes", c do
+      put_config(heartbeat: 20)
+      test = self()
+
+      # Every heartbeat write fails, as when the pool drops it or the
+      # database fails over; the run's own writes go through. A sequence,
+      # which a failed statement does not roll back, counts the attempts.
+      sql = &Ecto.Adapters.SQL.query!(Repo.repo(), &1)
+      sql.("CREATE TEMPORARY SEQUENCE refused_heartbeats")
+
+      sql.("""
+      CREATE FUNCTION pg_temp.refuse_heartbeat() RETURNS trigger AS $$
+      BEGIN
+        IF NEW.status = OLD.status AND NEW.steps = OLD.steps AND NEW.reserved_tokens = OLD.reserved_tokens
+           AND NEW.updated_at <> OLD.updated_at THEN
+          PERFORM nextval('refused_heartbeats');
+          RAISE EXCEPTION 'heartbeat refused';
+        END IF;
+        RETURN NEW;
+      END $$ LANGUAGE plpgsql
+      """)
+
+      sql.(
+        "CREATE TRIGGER refuse_heartbeat BEFORE UPDATE ON ai_runs FOR EACH ROW EXECUTE FUNCTION pg_temp.refuse_heartbeat()"
+      )
+
+      Brando.AI.Cassette.stub(fn _request ->
+        send(test, {:in_call, self()})
+        receive do: (:answer -> AIStub.turn({:text, "Still here."}, 0))
+      end)
+
+      Agent.subscribe(c.conversation.id)
+      {:ok, %Run{id: id}} = Agent.send_message(c.conversation.id, "Hello", c.user)
+      assert_receive {:in_call, call}, 5_000
+      Process.sleep(150)
+      send(call, :answer)
+      assert_receive {:agent, _, {:run, %Run{id: ^id, status: "completed"}}}, 5_000
+
+      assert %{rows: [[refused]]} = sql.("SELECT last_value FROM refused_heartbeats")
+      assert refused > 1
+      assert [_, %Message{content: "Still here."}] = Agent.messages(c.conversation.id, c.user)
+    end
+
+    test "taken for dead while it prepares a proposal, it does not put it under review", c do
+      conversation_id = c.conversation.id
+      repo_event = (Repo.repo().config()[:telemetry_prefix] || [:brando_integration, :repo]) ++ [:query]
+
+      # Another node takes the run for dead, and the editor starts the next
+      # one there, just as the run stores its proposal.
+      :telemetry.attach(
+        "taken-for-dead",
+        repo_event,
+        fn _event, _measurements, meta, _ ->
+          if meta.source == "content_proposals" and meta.query =~ "INSERT" and !Process.get(:taken_for_dead) do
+            Process.put(:taken_for_dead, true)
+            [run] = Repo.all(from(r in Run, where: r.conversation_id == ^conversation_id))
+            run |> Ecto.Changeset.change(status: "interrupted") |> Repo.update!()
+
+            Repo.insert!(%Run{
+              conversation_id: conversation_id,
+              scope: run.scope,
+              inserted_at: DateTime.add(run.inserted_at, 1)
+            })
+          end
+        end,
+        nil
+      )
+
+      on_exit(fn -> :telemetry.detach("taken-for-dead") end)
+
+      operation = %{
+        "op" => "insert_block",
+        "target" => %{"content_type" => "Brando.Pages.Page", "id" => c.identity.id},
+        "field" => "blocks",
+        "module" => "local:#{c.case_module.id}"
+      }
+
+      AIStub.script([{:tools, [{"prepare_proposal", %{"summary" => "A case", "operations" => [operation]}}]}])
+      Agent.subscribe(conversation_id)
+
+      assert {:ok, %Run{status: "interrupted"}} = Agent.send_message(conversation_id, "Add a case", c.user, sync: true)
+      assert Process.get(:taken_for_dead)
+      assert {:ok, %{proposal_id: nil}} = Agent.get_conversation(conversation_id, c.user)
+      refute_received {:agent, _, {:proposal, _}}
+    end
+
     test "taken for dead after another run started, it writes nothing more", c do
       conversation_id = c.conversation.id
       user = c.user

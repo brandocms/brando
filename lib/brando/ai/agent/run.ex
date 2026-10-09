@@ -28,6 +28,15 @@ defmodule Brando.AI.Agent.Run do
     field :cost, :float, default: 0.0
     field :error, :string
     field :finished_at, :utc_datetime_usec
-    timestamps(type: :utc_datetime_usec)
+    # The database's clock, not the writing node's: liveness (`updated_at`)
+    # is compared across nodes whose clocks may differ.
+    timestamps(type: :utc_datetime_usec, autogenerate: {__MODULE__, :now, []})
+  end
+
+  @doc "The database's current time, as `updated_at` stores it."
+  @spec now() :: DateTime.t()
+  def now do
+    %{rows: [[now]]} = Ecto.Adapters.SQL.query!(Brando.Repo.repo(), "SELECT clock_timestamp() AT TIME ZONE 'UTC'")
+    DateTime.from_naive!(now, "Etc/UTC")
   end
 end

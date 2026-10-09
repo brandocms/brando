@@ -1885,7 +1885,12 @@ defmodule BrandoAdmin.AI.AssistantLive do
   end
 
   defp agent_event({:attachments, _}, socket), do: {:noreply, refresh_conversation(socket)}
-  defp agent_event({:run, run}, socket), do: {:noreply, assign_run(socket, run)}
+  # Events from different processes may arrive out of order: a stale
+  # "stopping" after "cancelled", or an earlier run's end after the next began.
+  # The run is read again, so the page shows where it really is.
+  defp agent_event({:run, _run}, socket),
+    do: {:noreply, assign_run(socket, Agent.latest_run(socket.assigns.conversation.id, socket.assigns.current_user))}
+
   defp agent_event(_event, socket), do: {:noreply, socket}
 
   ## Page preview

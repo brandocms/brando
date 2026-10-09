@@ -446,6 +446,18 @@ defmodule BrandoAdmin.AssistantLiveTest do
       assert Brando.Repo.get!(Brando.AI.Agent.Run, run.id).status == "cancelled"
     end
 
+    test "a late event for a run does not take the page back from where the run is", %{conn: conn} = c do
+      {:ok, conversation} = Agent.start_conversation(c.current_user)
+      run = remote_run(conversation, %{status: "cancelled"})
+      {:ok, view, _} = live(conn, "/admin/assistant/#{conversation.id}")
+      assert sending?(view)
+
+      # Cancel's "stopping" arrives after the run's own "cancelled".
+      send(view.pid, {:agent, conversation.id, {:run, %{run | status: "stopping"}}})
+      assert sending?(view)
+      refute has_element?(view, ".assistant-progress")
+    end
+
     test "a queued event from the conversation left behind does not touch the one on screen", %{conn: conn} = c do
       {:ok, left} = Agent.start_conversation(c.current_user)
       {:ok, shown} = Agent.start_conversation(c.current_user)

@@ -27,8 +27,11 @@ defmodule Brando.AI.Agent.Loop do
   def run(run_id, user_id) do
     registered? = :global.register_name(name(run_id), self()) == :yes
     # Nodes that are not connected, such as the two colours of a blue/green
-    # deploy, see the run's row instead: it is touched while this process lives.
-    {:ok, heartbeat} = Task.start_link(fn -> beat(run_id) end)
+    # deploy, see the run's row instead: it is touched while this process
+    # lives. The heartbeat watches the run rather than linking to it, so a
+    # failed write cannot take the run down.
+    run = self()
+    {:ok, heartbeat} = Task.start(fn -> beat(run_id, Process.monitor(run)) end)
 
     try do
       work(run_id, user_id)
@@ -38,22 +41,31 @@ defmodule Brando.AI.Agent.Loop do
     end
   end
 
-  defp beat(run_id) do
+  defp beat(run_id, run) do
     receive do
       :stop -> :ok
+      {:DOWN, ^run, :process, _, _} -> :ok
     after
       Agent.heartbeat() ->
-        from(r in Run, where: r.id == ^run_id and r.status in ~w(running stopping))
-        |> Repo.update_all(set: [updated_at: DateTime.utc_now()])
-
-        beat(run_id)
+        touch(run_id)
+        beat(run_id, run)
     end
+  end
+
+  # On the database's clock, like every other write of the run.
+  defp touch(run_id) do
+    from(r in Run,
+      where: r.id == ^run_id and r.status in ~w(running stopping),
+      update: [set: [updated_at: fragment("clock_timestamp() AT TIME ZONE 'UTC'")]]
+    )
+    |> Repo.update_all([])
+  rescue
+    error -> Logger.warning("Content agent run #{run_id}: heartbeat failed: " <> Exception.message(error))
   end
 
   # Stopped between beats rather than killed, so it never leaves a query
   # half done on its connection.
   defp stop_heartbeat(heartbeat) do
-    Process.unlink(heartbeat)
     ref = Process.monitor(heartbeat)
     send(heartbeat, :stop)
 
@@ -129,7 +141,12 @@ defmodule Brando.AI.Agent.Loop do
 
     opts =
       request.req_opts
-      |> Keyword.merge(tools: tools(), max_tokens: Agent.config()[:max_tokens])
+      |> Keyword.merge(
+        tools: tools(),
+        max_tokens: Agent.config()[:max_tokens],
+        receive_timeout: Agent.config()[:receive_timeout],
+        max_retries: Agent.config()[:max_retries]
+      )
       |> Keyword.merge(cache_opts(request.provider))
 
     case Brando.AI.client(Agent.config()[:client]).generate_text(request.model, context, opts) do
@@ -178,7 +195,7 @@ defmodule Brando.AI.Agent.Loop do
           {:error, message} -> %{error: message}
         end
 
-      track_proposal(conversation, result)
+      track_proposal(run, result)
       insert(run, %{role: "tool", tool_call_id: id, tool_name: name, content: encode(result)})
     else
       # The model still needs a result for every call it made.
@@ -186,12 +203,16 @@ defmodule Brando.AI.Agent.Loop do
     end
   end
 
-  defp track_proposal(conversation, %{proposal_id: id}) do
-    conversation |> Ecto.Changeset.change(proposal_id: id) |> Repo.update!()
-    Agent.broadcast(conversation.id, {:proposal, id})
+  defp track_proposal(run, %{proposal_id: id}) do
+    tracked =
+      unless_superseded(run, fn ->
+        Repo.update_all(from(c in Conversation, where: c.id == ^run.conversation_id), set: [proposal_id: id])
+      end)
+
+    if tracked, do: Agent.broadcast(run.conversation_id, {:proposal, id})
   end
 
-  defp track_proposal(_conversation, _result), do: :ok
+  defp track_proposal(_run, _result), do: :ok
 
   defp tool_context(conversation, user) do
     %Tools.Context{
@@ -398,7 +419,18 @@ defmodule Brando.AI.Agent.Loop do
   # after the editor started another. It then writes nothing more into the
   # conversation: `Agent` starts runs under the same lock.
   defp insert(run, attrs) do
-    {:ok, message} =
+    message =
+      unless_superseded(run, fn ->
+        Repo.insert!(struct(Message, Map.merge(attrs, %{conversation_id: run.conversation_id, run_id: run.id})))
+      end)
+
+    if message, do: Agent.broadcast(run.conversation_id, {:message, message})
+    message
+  end
+
+  # `fun`'s result, or nil without calling it when a newer run has started.
+  defp unless_superseded(run, fun) do
+    {:ok, result} =
       Repo.transaction(fn ->
         Repo.one!(from(c in Conversation, where: c.id == ^run.conversation_id, select: c.id, lock: "FOR UPDATE"))
 
@@ -411,12 +443,10 @@ defmodule Brando.AI.Agent.Loop do
             )
           )
 
-        unless newer?,
-          do: Repo.insert!(struct(Message, Map.merge(attrs, %{conversation_id: run.conversation_id, run_id: run.id})))
+        unless newer?, do: fun.()
       end)
 
-    if message, do: Agent.broadcast(run.conversation_id, {:message, message})
-    message
+    result
   end
 
   defp finish(run, status, error \\ nil)

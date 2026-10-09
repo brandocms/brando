@@ -34,7 +34,11 @@ defmodule Brando.AI.Agent do
         show_cost: true,                      # show the conversation's estimated cost
                                               # to the editor
         heartbeat: 15_000,                    # ms between a run's signs of life; a run
-                                              # quiet for four of them died with its node
+                                              # quiet for four of them (a minute at
+                                              # least) died with its node
+        receive_timeout: 120_000,             # ms a model call may wait for the provider
+        max_retries: 1,                       # retries of a call that timed out, lost its
+                                              # connection or found the provider overloaded
         client: ReqLLM                        # anything with ReqLLM's generate_text/3,
                                               # e.g. a scripted model for end-to-end tests;
                                               # defaults to Brando.AI's client. A cassette
@@ -66,7 +70,9 @@ defmodule Brando.AI.Agent do
         run_token_budget: 300_000,
         monthly_token_budget: nil,
         show_cost: true,
-        heartbeat: :timer.seconds(15)
+        heartbeat: :timer.seconds(15),
+        receive_timeout: :timer.minutes(2),
+        max_retries: 1
       ],
       Application.get_env(:brando, __MODULE__, [])
     )
@@ -511,9 +517,11 @@ defmodule Brando.AI.Agent do
 
   @doc """
   Stop the conversation's running run. It is `stopping` until its process
-  ends: before its next model or tool call, once the call in flight returns
+  ends, before its next model or tool call: once the call in flight returns
   (its charges still apply). Until then no new run starts, in any tab or on
-  any node. A run that nothing works on any more is cancelled at once.
+  any node. A run whose process is gone — its node stopped, or cannot be
+  reached — stays `stopping` until its heartbeat has been quiet for the
+  window `busy?/1` allows, and is then cancelled.
   """
   @spec cancel(Ecto.UUID.t(), term()) :: :ok | {:error, String.t()}
   def cancel(conversation_id, actor) do
@@ -532,22 +540,34 @@ defmodule Brando.AI.Agent do
   @doc """
   Whether `run` holds its conversation: it is running or stopping, and its
   process lives on this node (or a connected one) or showed a sign of life
-  within four heartbeats — a minute by default. Its process touches the run
-  every `heartbeat`, on whichever node it runs.
+  within the last four heartbeats, and at least the last minute. Its process
+  touches the run every `heartbeat` on whichever node it runs, and the row is
+  read again here: times are the database's, so the nodes' clocks and their
+  `heartbeat` settings may differ.
   """
   @spec busy?(Run.t() | nil) :: boolean()
-  def busy?(%Run{status: status} = run) when status in @busy, do: Loop.alive?(run.id) or not quiet?(run)
+  def busy?(%Run{status: status} = run) when status in @busy, do: Loop.alive?(run.id) or not quiet?(run.id)
   def busy?(_run), do: false
 
   @doc "How often a run's process shows it is alive, in milliseconds."
   @spec heartbeat() :: pos_integer()
   def heartbeat, do: config()[:heartbeat]
 
-  defp quiet?(run),
-    do: DateTime.compare(run.updated_at, DateTime.add(DateTime.utc_now(), -4 * heartbeat(), :millisecond)) == :lt
+  defp quiet?(run_id) do
+    window = max(4 * heartbeat(), :timer.minutes(1))
+
+    Repo.one(
+      from(r in Run,
+        where: r.id == ^run_id,
+        select:
+          r.updated_at <
+            fragment("(clock_timestamp() AT TIME ZONE 'UTC') - (? * interval '1 millisecond')", ^window)
+      )
+    ) != false
+  end
 
   # A run whose process died with its node (a deploy, a crash) stops touching
-  # its row; once quiet for four heartbeats it no longer holds the conversation. One
+  # its row; once quiet (`busy?/1`) it no longer holds the conversation. One
   # that was running is interrupted, one that was stopping is cancelled.
   defp recover_stale_runs(conversation_id) do
     from(r in Run, where: r.conversation_id == ^conversation_id and r.status in @busy)
