@@ -308,6 +308,9 @@ defmodule Brando.Deprecated.LexicalAliasesTest do
              %{name: "Upload", resolved: [:Brando, :Upload], line: 11}
            ] = LexicalAliases.names_in_text(text, env, 1)
 
+    # A fragment that does not parse alone keeps its strings' interpolations
+    assert [%{line: 1}] = LexicalAliases.names_in_text(~S|<%= if "#{Upload.url(@x)}" != "" do %>x<% end %>|, env, 1)
+
     # EEx has no {…} interpolation
     assert [%{line: 1}] = LexicalAliases.names_in_text("<%= Upload.x() %> {Upload.y()}", env, 1, :eex)
   end

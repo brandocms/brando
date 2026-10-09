@@ -84,10 +84,14 @@ defmodule Brando.Deprecated.LexicalAliases do
   def template_names({sigil, meta, [{:<<>>, _, parts} | _]}) do
     text = parts |> Enum.filter(&is_binary/1) |> Enum.join()
     first_line = meta[:line] + if(meta[:delimiter] in @heredocs, do: 1, else: 0)
-    names_in_text(text, meta[:lexical_env], first_line, if(sigil in [:sigil_H, :sigil_F], do: :heex, else: :eex))
+    names_in_text(text, meta[:lexical_env], first_line, sigil_mode(sigil))
   end
 
   def template_names(_node), do: []
+
+  defp sigil_mode(:sigil_H), do: :heex
+  defp sigil_mode(:sigil_F), do: :surface
+  defp sigil_mode(_sigil), do: :eex
 
   @doc """
   The module names written in `text` (a template file compiled into a
@@ -110,7 +114,8 @@ defmodule Brando.Deprecated.LexicalAliases do
 
   # The module names in a template's Elixir; string literals and comments
   # are not code. A fragment that does not parse alone (`<%= if x do %>`)
-  # is read with its strings and comments blanked out.
+  # is read with its strings, but for their interpolations, and comments
+  # blanked out.
   defp names_in_code(code, lexical_env, line) do
     case Code.string_to_quoted(code, line: line, columns: false, emit_warnings: false) do
       {:ok, ast} ->
@@ -133,7 +138,7 @@ defmodule Brando.Deprecated.LexicalAliases do
 
       {:error, _} ->
         code
-        |> String.replace(~r/"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|#[^\n]*/, &String.duplicate("\n", newline_count(&1)))
+        |> String.replace(~r/"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|#[^\n]*/, &blank/1)
         |> names_in_words(lexical_env, line)
     end
   end
@@ -152,6 +157,12 @@ defmodule Brando.Deprecated.LexicalAliases do
   end
 
   defp newline_count(text), do: text |> :binary.matches("\n") |> length()
+
+  # A string literal's interpolations, a comment's nothing, on as many lines
+  defp blank(literal) do
+    interpolations = ~r/#\{([^}]*)\}/ |> Regex.scan(literal, capture: :all_but_first) |> Enum.map_join(" ", &hd/1)
+    String.replace(interpolations, "\n", " ") <> String.duplicate("\n", newline_count(literal))
+  end
 
   defp segment({name, _, _}), do: name
   defp segment(name), do: name
