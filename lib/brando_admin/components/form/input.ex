@@ -477,7 +477,8 @@ defmodule BrandoAdmin.Components.Form.Input do
           type="button"
           class="override-reset-button"
           phx-click={Phoenix.LiveView.JS.dispatch("brando:tiptap:clear", to: "##{@field.id}-rich-text")}
-          title={gettext("Reset to default")}
+          aria-label={gettext("Reset to default")}
+          data-tooltip={gettext("Reset to default")}
         >
           <.icon name="undo-2" />
         </button>
@@ -972,7 +973,7 @@ defmodule BrandoAdmin.Components.Form.Input do
           class="status-trigger"
           type="button"
           aria-label={"#{@label || gettext("Status")}: #{@current_label}"}
-          title={@current_label}
+          data-tooltip={@current_label}
           aria-controls={@id}
           aria-expanded="false"
           phx-keydown={@hide |> JS.focus(to: "##{@id}-trigger")}
@@ -1152,7 +1153,7 @@ defmodule BrandoAdmin.Components.Form.Input do
           phx-target={@target}
           phx-value-field_name={to_string(@field.name)}
           phx-value-field_key={to_string(@field.field)}
-          title={@ai_label}
+          data-tooltip={@ai_label}
           aria-label={@ai_label}
         />
       </div>
@@ -1205,7 +1206,8 @@ defmodule BrandoAdmin.Components.Form.Input do
             Phoenix.LiveView.JS.set_attribute({"value", ""}, to: "##{@field.id}")
             |> Phoenix.LiveView.JS.dispatch("input", to: "##{@field.id}")
           }
-          title={gettext("Reset to default")}
+          aria-label={gettext("Reset to default")}
+          data-tooltip={gettext("Reset to default")}
         >
           <.icon name="undo-2" />
         </button>
@@ -1342,7 +1344,7 @@ defmodule BrandoAdmin.Components.Form.Input do
           phx-target={@target}
           phx-value-field_name={to_string(@field.name)}
           phx-value-field_key={to_string(@field.field)}
-          title={@ai_label}
+          data-tooltip={@ai_label}
           aria-label={@ai_label}
         />
       </div>

@@ -34,7 +34,8 @@ test('tabs and tools share one row, with Notes as an icon and Languages and Shar
   // Notes: an icon with an accessible name, toggling the panel
   const notes = tools(page).locator('.form-tool-notes')
   await expect(notes).toHaveAccessibleName(/^Notes/)
-  await expect(notes).toHaveAttribute('title', await notes.getAttribute('aria-label'))
+  await expect(notes).toHaveAttribute('data-tooltip', await notes.getAttribute('aria-label'))
+  await expect(notes).not.toHaveAttribute('title')
   await notes.click()
   await expect(page.locator('.notes-panel')).toHaveClass(/is-open/)
   await expect(notes).toHaveAttribute('aria-expanded', 'true')

@@ -330,7 +330,7 @@ defmodule BrandoAdmin.CalendarLive do
             class="calendar-step"
             id="calendar-previous"
             aria-label={step_label(@view, -1)}
-            title={step_label(@view, -1)}
+            data-tooltip={step_label(@view, -1)}
           >
             <.icon name="chevron-left" />
           </.link>
@@ -340,7 +340,7 @@ defmodule BrandoAdmin.CalendarLive do
             class="calendar-step"
             id="calendar-next"
             aria-label={step_label(@view, 1)}
-            title={step_label(@view, 1)}
+            data-tooltip={step_label(@view, 1)}
           >
             <.icon name="chevron-right" />
           </.link>
@@ -491,7 +491,7 @@ defmodule BrandoAdmin.CalendarLive do
         phx-click="start_move"
         phx-value-item={@item.id}
         aria-label={gettext("Move “%{title}” to another day", title: @item.title)}
-        title={gettext("Move to…")}
+        data-tooltip={gettext("Move to…")}
       >
         <.icon name="move" />
       </button>

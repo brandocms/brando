@@ -844,7 +844,8 @@ defmodule BrandoAdmin.UploadManager do
                 class="icon-button"
                 phx-click="cancel_item"
                 phx-value-ref={ref}
-                title={gettext("Cancel")}
+                aria-label={gettext("Cancel")}
+                data-tooltip={gettext("Cancel")}
               >
                 <Brando.HTML.Icon.icon name="x" />
               </button>
@@ -854,7 +855,8 @@ defmodule BrandoAdmin.UploadManager do
                 class="icon-button"
                 phx-click="dismiss_item"
                 phx-value-ref={ref}
-                title={gettext("Dismiss")}
+                aria-label={gettext("Dismiss")}
+                data-tooltip={gettext("Dismiss")}
               >
                 <Brando.HTML.Icon.icon name="x" />
               </button>

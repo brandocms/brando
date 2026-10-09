@@ -636,7 +636,7 @@ defmodule BrandoAdmin.Components.Content.List.Row do
       <button
         type="button"
         aria-label={gettext("Alternates")}
-        title={gettext("Alternates")}
+        data-tooltip={gettext("Alternates")}
         class="btn-icon-subtle"
         disabled={!@alternate_entries?}
         phx-click={show_modal("#entry-#{@entry.id}-alternates")}

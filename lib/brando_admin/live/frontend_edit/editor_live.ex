@@ -315,7 +315,7 @@ defmodule BrandoAdmin.FrontendEdit.EditorLive do
           href={full_editor_url(@admin_url, @focus)}
           target="_blank"
           class="frontend-editor-open"
-          title={gettext("Open in the full editor")}
+          data-tooltip={gettext("Open in the full editor")}
           aria-label={gettext("Open in the full editor")}
         >
           <.icon name="external-link" />

@@ -282,7 +282,7 @@ defmodule BrandoAdmin.Components.Form.VarLayout do
         <button
           type="button"
           class="var-row-handle"
-          title={gettext("Drag to reorder this row")}
+          data-tooltip={gettext("Drag to reorder this row")}
           aria-label={gettext("Reorder row %{number}", number: index + 1)}
         >
           <.icon name="equal" />
@@ -378,7 +378,7 @@ defmodule BrandoAdmin.Components.Form.VarLayout do
         <div class="var-chip-actions">
           <button
             type="button"
-            title={move_hint(@surface)}
+            data-tooltip={move_hint(@surface)}
             aria-label={move_hint(@surface)}
             phx-click={JS.push("move_var", target: @target)}
             phx-value-key={@entry.key}
@@ -387,7 +387,7 @@ defmodule BrandoAdmin.Components.Form.VarLayout do
           </button>
           <button
             type="button"
-            title={gettext("Hide from editors — template only")}
+            data-tooltip={gettext("Hide from editors — template only")}
             aria-label={gettext("Hide from editors — template only")}
             phx-click={JS.push("hide_var", target: @target)}
             phx-value-key={@entry.key}
@@ -396,7 +396,7 @@ defmodule BrandoAdmin.Components.Form.VarLayout do
           </button>
           <button
             type="button"
-            title={gettext("Duplicate")}
+            data-tooltip={gettext("Duplicate")}
             aria-label={gettext("Duplicate variable %{key}", key: @entry.key)}
             phx-click={JS.push("duplicate_var")}
             phx-value-index={@entry.index}
@@ -408,7 +408,7 @@ defmodule BrandoAdmin.Components.Form.VarLayout do
           <button
             type="button"
             class="var-chip-danger"
-            title={gettext("Delete")}
+            data-tooltip={gettext("Delete")}
             aria-label={gettext("Delete variable %{key}", key: @entry.key)}
             phx-click={JS.dispatch("change")}
             phx-confirm={gettext("Delete variable %{key}?", key: @entry.key)}

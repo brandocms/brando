@@ -521,7 +521,7 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
           type="button"
           class="edit-image-btn"
           aria-label={gettext("Edit image")}
-          title={gettext("Edit image")}
+          data-tooltip={gettext("Edit image")}
           phx-click={
             JS.push("open_image_editor", target: @myself, value: %{image_id: @gallery_object.image_id})
             |> open_image_editor_drawer()
@@ -533,7 +533,7 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
           type="button"
           class="configure-object"
           aria-label={gettext("Configure")}
-          title={gettext("Configure")}
+          data-tooltip={gettext("Configure")}
           phx-click={
             JS.push("open_config_modal", target: @myself, value: %{index: @index})
             |> show_modal("##{@id}-object-config-modal")
@@ -545,7 +545,7 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
           type="button"
           class="delete-object"
           aria-label={gettext("Remove from gallery")}
-          title={gettext("Remove from gallery")}
+          data-tooltip={gettext("Remove from gallery")}
           phx-click={@remove}
         >
           <.icon name="x" />

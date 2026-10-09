@@ -717,7 +717,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
                                   type="button"
                                   class="sort-handle"
                                   aria-label={gettext("Reorder option")}
-                                  title={gettext("Drag to reorder")}
+                                  data-tooltip={gettext("Drag to reorder")}
                                 >
                                   <span class="drag-grip" aria-hidden="true"></span>
                                 </button>
@@ -732,7 +732,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
                                   name={"#{@var.name}[drop_option_ids][]"}
                                   value={opt.index}
                                   aria-label={gettext("Delete option")}
-                                  title={gettext("Delete")}
+                                  data-tooltip={gettext("Delete")}
                                   phx-click={JS.dispatch("change")}
                                 >
                                   <.icon name="x" />

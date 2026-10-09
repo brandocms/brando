@@ -447,7 +447,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock.Object do
         class="configure-object"
         type="button"
         aria-label={gettext("Configure")}
-        title={gettext("Configure")}
+        data-tooltip={gettext("Configure")}
         phx-click={@configure}
         data-sortable-filter
       >

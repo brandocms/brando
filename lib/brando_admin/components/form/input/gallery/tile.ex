@@ -228,7 +228,7 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery.Tile do
         class={@view == :grid && "is-selected"}
         aria-pressed={to_string(@view == :grid)}
         aria-label={gettext("Grid")}
-        title={gettext("Grid")}
+        data-tooltip={gettext("Grid")}
         data-gallery-view="grid"
         phx-click={JS.push("set_gallery_view", value: %{view: "grid"}, target: @target)}
       >
@@ -239,7 +239,7 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery.Tile do
         class={@view == :list && "is-selected"}
         aria-pressed={to_string(@view == :list)}
         aria-label={gettext("List")}
-        title={gettext("List")}
+        data-tooltip={gettext("List")}
         data-gallery-view="list"
         phx-click={JS.push("set_gallery_view", value: %{view: "list"}, target: @target)}
       >

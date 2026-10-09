@@ -222,7 +222,7 @@ export default function notes(hook) {
     // label, and a button named after it would be found too.
     const text = state.labels.add || 'Add note'
     button.setAttribute('aria-label', text)
-    button.title = text
+    button.dataset.tooltip = text
     fieldWrapper = wrapper
     // Beside the label, no taller than its line: offering the button must
     // not move the field under the pointer.
