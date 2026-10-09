@@ -5071,6 +5071,7 @@ msgstr ""
 msgid "Definitions were saved, but the updated ZIP could not be prepared. Export a fresh bundle before your next edit."
 msgstr ""
 
+#: lib/brando_admin/components/assets/sort_by_use.ex
 #: lib/brando_admin/components/content/list/row.ex
 #: lib/brando_admin/components/form/block/render.ex
 #: lib/brando_admin/components/form/input/blocks/gallery_block/object.ex
