@@ -287,8 +287,10 @@
   }
 }
 
-/* The title's hover arrow (Users.css) gives way to "Opening" */
-.content-list .list-row.is-opening .entry-link::after {
+/* The title's hover arrow (List.css, and Users.css in a workspace) gives
+   way to "Opening" */
+.content-list .list-row.is-opening .entry-link::after,
+.admin-workspace .content-list .list-row.is-opening a.entry-link::after {
   content: none;
 }
 
