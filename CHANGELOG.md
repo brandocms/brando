@@ -1883,6 +1883,13 @@ production dump.
 
 #### Fixes
 
+- **Duplicating a module works again, and copies the whole module.** It
+  failed on the unique module `uid`. The copy is now a new module at
+  version 1 with its own `uid`, without the original's shared-library link.
+  It gets copies of the original's references, variables and child (entry)
+  modules, joins the module sets the original is in, and gets the class
+  `<class>-copy` (`-copy-2` and on when taken) instead of `<class> (copy)`.
+
 - **Two editors in an entry's fields keep each other's changes, and a
   field is unlocked when its editor leaves it.** Each editor now sends the
   entry fields (title, URI and the other fields, not blocks) they changed

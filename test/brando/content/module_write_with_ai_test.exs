@@ -12,6 +12,8 @@ defmodule Brando.Content.ModuleWriteWithAITest do
   alias Brando.Content.{Definitions, Module, ModuleDiff}
   alias Brando.{Factory, Repo}
 
+  import Ecto.Query, only: [from: 2]
+
   defp create_module(user, attrs) do
     {:ok, module} =
       %{
@@ -55,6 +57,59 @@ defmodule Brando.Content.ModuleWriteWithAITest do
     assert copy.uid != module.uid
     assert copy.version == 1
     assert copy.write_with_ai
+  end
+
+  test "a duplicated multi module takes copies of its children, refs and vars, and joins its module sets",
+       %{user: user} do
+    parent =
+      create_module(user, %{
+        class: "cards",
+        multi: true,
+        vars: [%{type: :text, label: "Heading", key: "heading", value: "Cards", sequence: 0}]
+      })
+
+    child = create_module(user, %{class: "card", parent_id: parent.id, sequence: 0})
+    other = create_module(user, %{class: "other"})
+
+    {:ok, set} = Content.create_module_set(%{title: "Sections"}, user)
+
+    for {module, sequence} <- [{other, 0}, {parent, 1}],
+        do: Repo.insert!(%Brando.Content.ModuleSetModule{module_set_id: set.id, module_id: module.id, sequence: sequence})
+
+    {:ok, copy} = Content.duplicate_module(parent.id, user)
+    copy = Repo.preload(Repo.get!(Module, copy.id), [:vars, :refs, children: [:vars, :refs]])
+
+    assert copy.class == "cards-copy"
+    assert [%{key: "heading", value: "Cards"}] = copy.vars
+    assert [%{name: "body"} = ref] = copy.refs
+    refute ref.uid == hd(Repo.preload(parent, :refs).refs).uid
+
+    assert [copied_child] = copy.children
+    assert copied_child.id != child.id
+    assert copied_child.uid != child.uid
+    assert copied_child.class == "card"
+    assert [%{name: "body"}] = copied_child.refs
+
+    # The original keeps its own child, refs and vars
+    original = Repo.preload(Repo.get!(Module, parent.id), [:vars, :refs, :children])
+    assert [%{id: child_id}] = original.children
+    assert child_id == child.id
+    assert [_] = original.refs
+    assert [_] = original.vars
+
+    members =
+      Repo.all(
+        from msm in Brando.Content.ModuleSetModule,
+          where: msm.module_set_id == ^set.id,
+          order_by: [asc: msm.sequence, asc: msm.id],
+          select: msm.module_id
+      )
+
+    assert members == [other.id, parent.id, copy.id]
+
+    # A second copy takes the next free class
+    {:ok, again} = Content.duplicate_module(parent.id, user)
+    assert again.class == "cards-copy-2"
   end
 
   test "the module export carries it, and an export from before it imports as off", %{user: user} do

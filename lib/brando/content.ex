@@ -36,10 +36,12 @@ defmodule Brando.Content do
   alias Brando.Content.Identifier
   alias Brando.Content.Module
   alias Brando.Content.ModuleSet
+  alias Brando.Content.ModuleSetModule
   alias Brando.Content.Palette
   alias Brando.Content.TableTemplate
   alias Brando.Content.Template
   alias Brando.Content.Var
+  alias Brando.Repo
 
   query :list, Block, do: fn query -> from(q in query) end
 
@@ -153,23 +155,106 @@ defmodule Brando.Content do
 
   mutation :delete, Module
 
-  # A copy is a new lineage at v1, as an exported module is
-  # (`prepare_modules_for_export/2`): the original's `uid` would collide with
-  # it, and its version and shared-library link describe the original's
-  # history.
-  mutation :duplicate,
-           {Module,
-            change_fields: [
-              :class,
-              uid: &__MODULE__.duplicate_module_uid/2,
-              version: 1,
-              name: &__MODULE__.duplicate_module_name/2,
-              vars: &__MODULE__.duplicate_vars/2,
-              refs: &__MODULE__.duplicate_refs/2
-            ],
-            delete_fields: [:version_note, :source_module_id, :source_version, :acknowledged_version]}
+  @doc """
+  Duplicates the module `id` as a new module: a new lineage at v1, as an
+  exported module is (`prepare_modules_for_export/2`), with its own `uid`
+  and without the original's version history or shared-library link. Its
+  class gets a `-copy` suffix (numbered when taken), its name `_dupl`. The
+  copy takes copies of the module's references, variables and child modules,
+  and joins the module sets the original is in.
+  """
+  def duplicate_module(id, user, override_opts \\ []) do
+    Brando.Repo.transaction(fn ->
+      with {:ok, copy} <-
+             Brando.Query.Mutations.duplicate(__MODULE__, Module, "module", id,
+               user: user,
+               duplicate_opts: module_duplicate_opts(),
+               override_opts: override_opts
+             ),
+           :ok <- copy_module_set_memberships(id, copy.id) do
+        copy
+      else
+        {:error, reason} -> Brando.Repo.rollback(reason)
+      end
+    end)
+  end
+
+  defp module_duplicate_opts do
+    [
+      change_fields: [
+        uid: &__MODULE__.duplicate_module_uid/2,
+        class: &__MODULE__.duplicate_module_class/2,
+        version: 1,
+        name: &__MODULE__.duplicate_module_name/2,
+        vars: &__MODULE__.duplicate_vars/2,
+        refs: &__MODULE__.duplicate_refs/2,
+        children: &__MODULE__.duplicate_children/2
+      ],
+      delete_fields: [:version_note, :source_module_id, :source_version, :acknowledged_version]
+    ]
+  end
 
   def duplicate_module_uid(_entry, _uid), do: Brando.Utils.generate_uid()
+
+  @doc """
+  The class of a duplicated module: `<class>-copy`, numbered when another
+  module has it. A class is used in the module's template, so it stays one
+  CSS class name.
+  """
+  def duplicate_module_class(_entry, nil), do: nil
+
+  def duplicate_module_class(_entry, class) do
+    base = "#{class}-copy"
+    taken = MapSet.new(Brando.Repo.all(from(m in Module, where: like(m.class, ^"#{base}%"), select: m.class)))
+
+    1
+    |> Stream.iterate(&(&1 + 1))
+    |> Stream.map(&if(&1 == 1, do: base, else: "#{base}-#{&1}"))
+    |> Enum.find(&(not MapSet.member?(taken, &1)))
+  end
+
+  @doc """
+  The child (entry) modules of a duplicated multi module, as new modules of
+  the copy, with copies of their own references and variables.
+  """
+  def duplicate_children(entry, _children) do
+    children_query = from(c in Module, where: is_nil(c.deleted_at), order_by: [asc: c.sequence, asc: c.id])
+
+    entry
+    |> Brando.Repo.preload([children: {children_query, [:vars, :refs]}], force: true)
+    |> Map.get(:children)
+    |> Enum.map(fn child ->
+      child
+      |> Map.merge(%{
+        id: nil,
+        parent_id: nil,
+        uid: Brando.Utils.generate_uid(),
+        version: 1,
+        version_note: nil,
+        source_module_id: nil,
+        source_version: nil,
+        acknowledged_version: nil,
+        inserted_at: nil,
+        updated_at: nil,
+        vars: duplicate_vars(child, nil),
+        refs: duplicate_refs(child, nil)
+      })
+      |> put_in([Access.key(:__meta__), Access.key(:state)], :built)
+    end)
+  end
+
+  # The copy joins every module set the original is in, last in each
+  defp copy_module_set_memberships(original_id, copy_id) do
+    memberships = from(msm in ModuleSetModule, where: msm.module_id == ^original_id) |> Repo.all()
+
+    Enum.each(memberships, fn %{module_set_id: set_id} ->
+      last =
+        from(msm in ModuleSetModule, where: msm.module_set_id == ^set_id, select: max(msm.sequence))
+        |> Repo.one()
+
+      Repo.insert!(%ModuleSetModule{module_set_id: set_id, module_id: copy_id, sequence: (last || 0) + 1})
+    end)
+  end
 
   def duplicate_module_name(entry, _) do
     Map.new(entry.name, fn {k, v} -> {k, "#{v}_dupl"} end)
