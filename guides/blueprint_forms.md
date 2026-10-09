@@ -718,8 +718,9 @@ compilation, and a field in `from` that the schema does not have, or that is
 an association or an embed, is reported with the other form errors.
 
 Write new per-field AI as `ai_actions:`: `ai:` on an input is
-[deprecated](#ai-on-an-input-deprecated). Rich text inputs get Write with AI
-whenever AI is configured; `write_with_ai: false` turns it off.
+[deprecated](#ai-on-an-input-deprecated). Write with AI in rich text is off
+unless the input asks for it with `write_with_ai: true` or its options, and
+in block text unless the module turns it on in the module editor.
 
 <!-- usage-rules:end -->
 
@@ -746,22 +747,26 @@ suggestion.
 
 ## Write with AI
 
-A `:rich_text` toolbar offers **Write with AI**: Rewrite, Shorten or
+A `:rich_text` toolbar can offer **Write with AI**: Rewrite, Shorten or
 Continue the selection, or the whole text without one, with the editor's
-own instruction. It is on in every top-level `:rich_text` input of an entry
-form and in block text whenever `Brando.AI` is configured. Turn it off on an
-input with `write_with_ai: false`:
+own instruction. Every request is a paid call to the AI service, so it is
+off unless asked for. A top-level `:rich_text` input of an entry form turns
+it on with `write_with_ai: true`:
 
 ```elixir
-input :body, :rich_text, write_with_ai: false
+input :body, :rich_text, write_with_ai: true
 ```
 
-or give its requests instructions, the fields they read and a model:
+or with instructions for its requests, the fields they read and a model:
 
 ```elixir
 input :body, :rich_text,
   write_with_ai: [prompt: "Keep the magazine's plain tone.", from: [:title], model: :fast]
 ```
+
+`false`, or no `write_with_ai:`, leaves it off. It shows only where
+`Brando.AI` is configured for its model, and anyone who can edit the field
+can use it.
 
 * `prompt`: instructions every request starts with.
 * `from`: fields whose values, as the form has them, follow the
@@ -769,8 +774,12 @@ input :body, :rich_text,
   the Blueprint compiles.
 * `model`: a `"provider:model"` spec or a name from the `models:` config.
 
-and in block text with the [`block_text` site prompt](#site-prompts):
-`fields: [block_text: [write_with_ai: false]]`.
+In block text, a module turns it on for its text blocks with **Write with
+AI** under Overview in the module editor (`write_with_ai true` in a
+[module definition](module_definitions.md)). It is off in new and existing
+modules. The [`block_text` site prompt](#site-prompts) adds its instructions
+to every request there and picks the model, and
+`prompts: [block_text: [write_with_ai: false]]` turns it off in every module.
 
 The result shows in the text as a suggestion the editor can change; Accept
 inserts it and Discard leaves the document unchanged, and one Undo reverses
@@ -787,11 +796,11 @@ the meta descriptions and titles of the Content SEO batch, image alt text,
 and the instructions every Write with AI request in block text starts with.
 Each is a prompt, the fields it reads (`context:`) and the model options.
 
-`trait :meta, ai:` holds a Blueprint's prompts for its meta fields:
+`trait :meta, ai_prompts:` holds a Blueprint's prompts for its meta fields:
 
 ```elixir
 trait :meta,
-  ai: [
+  ai_prompts: [
     meta_title: [prompt: "Write an SEO title from the title", context: [:title]],
     meta_description: [prompt: "Write an SEO description", context: [:title, :blocks]]
   ]
@@ -810,7 +819,7 @@ config :brando, Brando.AI,
   providers: [
     openai: [api_key: System.get_env("OPENAI_API_KEY")]
   ],
-  fields: [
+  prompts: [
     meta_description: [model: :default],
     block_text: [prompt: "Keep the site's plain, friendly tone."],
     alt: [prompt: "Describe what the photo shows for a screen reader."]
@@ -821,8 +830,9 @@ config :brando, Brando.AI,
 * `meta_title`, `meta_description`: the Meta drawer's **Generate** and the
   Content SEO batch. The SEO review (critique) uses `meta_description`'s
   model.
-* `block_text`: added before every Write with AI request in block text;
-  `write_with_ai: false` turns Write with AI off there.
+* `block_text`: added before every Write with AI request in block text, in
+  the modules that turn it on; `write_with_ai: false` turns Write with AI
+  off in every module.
 * `alt`: image alt text, by default with the `:image` model.
 
 Each takes `prompt`, `context` (the fields it reads; `:blocks` is the
@@ -836,6 +846,11 @@ rendered block content), `model` (a `"provider:model"` spec or a name from
 per kind of job (alt text asks for `:image`) that falls back to `:default`.
 `default_model: "..."` is still read, as `models: [default: "..."]`. Model and
 provider settings and credentials stay on the server.
+
+Before 0.55, `prompts:` was called `fields:` and `trait :meta, ai_prompts:`
+was `trait :meta, ai:`. Both old names still work in 0.55: Brando warns at
+boot about `fields:`, and the Blueprint warns when it compiles about `ai:`,
+each with the name to write instead. They are removed in a later release.
 
 ## `ai:` on an input (deprecated)
 
@@ -865,9 +880,10 @@ over. `api_key:` and request options such as `temperature:` have no place in
 
 `ai:` keeps its meaning elsewhere too:
 
-* On a `:rich_text` input it gave Write with AI its instructions, context
-  and model: it is read as `write_with_ai: [prompt:, from:, model:]`, and the
-  warning prints that.
+* On a `:rich_text` input it turned on Write with AI and gave it its
+  instructions, context and model: it is read as
+  `write_with_ai: [prompt:, from:, model:]`, or `write_with_ai: true` when it
+  had none, so Write with AI stays on there, and the warning prints that.
 * On a `:hidden` input for a meta field it is the Meta drawer's Generate, an
   action on that input.
 * A custom component (`{:live_component, module}` or a function) gets it in
