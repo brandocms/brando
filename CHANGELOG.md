@@ -80,7 +80,8 @@ production dump.
     `:hidden`, can add its own `ai_actions:`.
   - **Suggest alt text** on an image's form, in the image drawer and in a
     picture block is a suggestion per language under the alt field, written
-    only on Accept.
+    only on Accept. Its request now runs in the environment the image is in;
+    in a named environment it used to look for the image in the default one.
   - **Write with AI** in the rich-text toolbar is on in every top-level rich
     text input of an entry form and in block text whenever `Brando.AI` is
     configured, no longer only with `ai:` or a `block_text` prompt. Each

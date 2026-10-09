@@ -169,10 +169,8 @@ defmodule BrandoAdmin.Components.Form do
         _ -> to_string(Brando.config(:default_language))
       end
 
-    {:ok,
-     start_async(socket, {:suggest_ref_alt_text, reply_to}, fn ->
-       {language, Images.AltText.describe(image_id, languages: [language])}
-     end)}
+    describe = AltTextSuggestion.describe_task(image_id, languages: [language])
+    {:ok, start_async(socket, {:suggest_ref_alt_text, reply_to}, fn -> {language, describe.()} end)}
   end
 
   def update(%{event: event, field: field} = message, socket)
@@ -5041,7 +5039,7 @@ defmodule BrandoAdmin.Components.Form do
         {:noreply,
          socket
          |> assign(:alt_text_suggesting, true)
-         |> start_async({:suggest_entry_alt_text, id, panel}, fn -> Images.AltText.describe(id) end)}
+         |> start_async({:suggest_entry_alt_text, id, panel}, AltTextSuggestion.describe_task(id))}
     end
   end
 
@@ -5054,7 +5052,7 @@ defmodule BrandoAdmin.Components.Form do
         {:noreply,
          socket
          |> assign(:alt_text_suggesting, true)
-         |> start_async({:suggest_alt_text, id, panel}, fn -> Brando.Images.AltText.describe(id) end)}
+         |> start_async({:suggest_alt_text, id, panel}, AltTextSuggestion.describe_task(id))}
     end
   end
 

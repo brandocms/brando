@@ -4,9 +4,7 @@ import { syncLV } from '../../utils'
 // AI that is not a Blueprint's own `ai_actions:` gives suggestions too: the
 // Meta drawer's Generate, from the page's site prompts (`trait :meta, ai:` in
 // Brando.Pages.Page), and Write with AI in block text, which is on whenever
-// AI is configured. (Suggest alt text describes the image in a task outside
-// the test's SQL sandbox; test/brando_admin/live/alt_text_suggestion_live_test.exs
-// covers it.) A fake model answers (E2eProject.FieldActionModel).
+// AI is configured, and Suggest alt text on an image's form. A fake model answers (E2eProject.FieldActionModel).
 // Nothing reaches a field until the editor accepts it.
 
 test.beforeEach(async ({ page }) => {
@@ -78,6 +76,41 @@ test('the Meta drawer and block text suggest, and write only what the editor acc
   await expect(page.locator('[data-tiptap-type="block"] input.tiptap-text').first()).toHaveValue('<p>Et redigert avsnitt om huset.</p>')
 
   expect(errors).toEqual([])
+})
+
+test("Suggest alt text on an image's form waits per language until accepted", async ({ page }) => {
+  expect((await page.request.post('/e2e/setup_fixtures/norwegian-admin-user')).ok()).toBe(true)
+  const { id } = await (await page.request.post('/e2e/alt-text-image')).json()
+
+  await page.goto(`/admin/assets/images/update/${id}`)
+  await syncLV(page)
+
+  const english = page.locator('input[name="image[alt][en]"]')
+  const norwegian = page.locator('input[name="image[alt][no]"]')
+  const field = page.locator('.field-wrapper', { has: english })
+  const suggestion = field.getByTestId('alt-suggestion')
+
+  // Discarded: the alt text is as it was
+  await field.getByRole('button', { name: 'Foreslå alt-tekst', exact: true }).click()
+  await expect(suggestion.getByRole('textbox', { name: 'Foreslått tekst (English)' })).toHaveValue(/ferries/)
+  await suggestion.getByRole('button', { name: 'Forkast', exact: true }).click()
+  await expect(suggestion.locator('.ai-proposal')).toHaveCount(0)
+  await expect(english).toHaveValue('')
+
+  // Asked again: one text per language, not in the field until accepted
+  await field.getByRole('button', { name: 'Foreslå alt-tekst', exact: true }).click()
+  const suggestedEnglish = suggestion.getByRole('textbox', { name: 'Foreslått tekst (English)' })
+  await expect(suggestedEnglish).toHaveValue(/ferries/)
+  await expect(suggestion.getByRole('textbox', { name: 'Foreslått tekst (Norsk)' })).toHaveValue(/ferjer/)
+  await expect(english).toHaveValue('')
+
+  // Edited, then accepted
+  await suggestedEnglish.fill('Two ferries at dusk')
+  await suggestion.getByRole('button', { name: 'Godta', exact: true }).click()
+  await syncLV(page)
+  await expect(english).toHaveValue('Two ferries at dusk')
+  await expect(norwegian).toHaveValue(/ferjer/)
+  await expect(suggestion.locator('.ai-proposal')).toHaveCount(0)
 })
 
 test('without AI, block text has no Write with AI and the meta fields no Generate', async ({ page }) => {

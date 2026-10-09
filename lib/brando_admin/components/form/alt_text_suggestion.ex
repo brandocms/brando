@@ -24,6 +24,30 @@ defmodule BrandoAdmin.Components.Form.AltTextSuggestion do
   def id?(id) when is_binary(id), do: String.ends_with?(id, "-alt-suggestion") and byte_size(id) < 300
   def id?(_id), do: false
 
+  @doc """
+  A function that describes image `image_id` (`Brando.Images.AltText.describe/2`
+  with `opts`) when called in a task, with this process's context: the
+  tenant prefix (the environment the image is in), the authorization scope
+  its reads are made under and, on a sandboxed E2E server, the SQL sandbox
+  connection, which a task's fresh connection would escape. The assistant's
+  runs (`Brando.AI.Agent`) and Content SEO's audit carry the same.
+  """
+  @spec describe_task(integer(), keyword()) :: (-> {:ok, map()} | {:error, term()})
+  def describe_task(image_id, opts \\ []) do
+    parent = self()
+    scope = Brando.Authorization.Boundary.current_scope()
+
+    Brando.Tenant.capture_context(fn ->
+      allow_sandbox(parent)
+      Brando.Authorization.Boundary.with_scope(scope, fn -> Brando.Images.AltText.describe(image_id, opts) end)
+    end)
+  end
+
+  defp allow_sandbox(parent) do
+    if Application.get_env(Brando.config(:otp_app), :sql_sandbox),
+      do: Ecto.Adapters.SQL.Sandbox.allow(Brando.Repo.repo(), parent, self())
+  end
+
   @impl true
   def mount(socket), do: {:ok, assign(socket, values: nil, request: 0)}
 
