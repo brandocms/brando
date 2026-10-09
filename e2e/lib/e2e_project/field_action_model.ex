@@ -1,7 +1,8 @@
 defmodule E2eProject.FieldActionModel do
   @moduledoc """
   A stand-in model for the AI on fields (`ai_actions:`, the Meta drawer's
-  Generate and Write with AI in rich text), for end-to-end tests. It speaks ReqLLM's `generate_text/3` contract and answers
+  Generate, Write with AI in rich text and Suggest alt text), for
+  end-to-end tests. It speaks ReqLLM's `generate_text/3` contract and answers
   in the language the prompt asks for, so a spec can see that the form asked
   for the entry's.
 
@@ -12,16 +13,28 @@ defmodule E2eProject.FieldActionModel do
   alias ReqLLM.{Context, Message, Response}
   alias ReqLLM.Message.ContentPart
 
-  def generate_text(model, prompt, _opts) when is_binary(prompt) do
+  def generate_text(model, prompt, _opts) when is_binary(prompt), do: {:ok, response(model, prompt, reply(prompt))}
+
+  # Alt text: the image comes in a message with the prompt, which asks for
+  # one JSON object of a text per language.
+  def generate_text(model, _messages, _opts) do
     {:ok,
-     %Response{
-       id: "e2e-" <> Integer.to_string(System.unique_integer([:positive])),
-       model: model,
-       context: Context.new([Context.user(prompt)]),
-       message: %Message{role: :assistant, content: [ContentPart.text(reply(prompt))]},
-       usage: %{input_tokens: 120, output_tokens: 30},
-       finish_reason: :stop
-     }}
+     response(
+       model,
+       "alt text",
+       ~s({"en": "Two ferries crossing the fjord at dusk", "no": "To ferjer krysser fjorden i skumringen"})
+     )}
+  end
+
+  defp response(model, prompt, text) do
+    %Response{
+      id: "e2e-" <> Integer.to_string(System.unique_integer([:positive])),
+      model: model,
+      context: Context.new([Context.user(prompt)]),
+      message: %Message{role: :assistant, content: [ContentPart.text(text)]},
+      usage: %{input_tokens: 120, output_tokens: 30},
+      finish_reason: :stop
+    }
   end
 
   # A reply in the language the prompt asks for: a title for the title's

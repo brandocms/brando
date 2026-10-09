@@ -4,7 +4,9 @@ import { syncLV } from '../../utils'
 // AI that is not a Blueprint's own `ai_actions:` gives suggestions too: the
 // Meta drawer's Generate, from the page's site prompts (`trait :meta, ai:` in
 // Brando.Pages.Page), and Write with AI in block text, which is on whenever
-// AI is configured. A fake model answers (E2eProject.FieldActionModel).
+// AI is configured. (Suggest alt text describes the image in a task outside
+// the test's SQL sandbox; test/brando_admin/live/alt_text_suggestion_live_test.exs
+// covers it.) A fake model answers (E2eProject.FieldActionModel).
 // Nothing reaches a field until the editor accepts it.
 
 test.beforeEach(async ({ page }) => {
