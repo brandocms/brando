@@ -64,11 +64,18 @@ defmodule Brando.Content.Usage do
 
   @doc """
   The ids of every asset of `kind` that is used somewhere, for listing the
-  unused ones.
+  unused ones, which the libraries offer to delete. It errs towards "used":
+  an entry in the trash still uses its assets, so restoring it finds them,
+  and so does an editor's unsaved copy of an entry (its recovery draft),
+  where a block or field holds the asset.
   """
   @spec used_ids(kind()) :: [integer()]
   def used_ids(kind) when kind in @kinds do
-    kind |> references(:all) |> Enum.map(&elem(&1, 0)) |> Enum.uniq()
+    kind
+    |> references(:all, include_deleted: true)
+    |> Enum.map(&elem(&1, 0))
+    |> Kernel.++(in_drafts(kind))
+    |> Enum.uniq()
   end
 
   @doc """
@@ -136,38 +143,72 @@ defmodule Brando.Content.Usage do
   end
 
   # {asset_id, {schema, entry_id}} for every place the assets are used.
-  defp references(_kind, []), do: []
+  # `include_deleted: true` counts entries in the trash as users too.
+  defp references(kind, ids, opts \\ [])
+  defp references(_kind, [], _opts), do: []
 
-  defp references(kind, ids) do
-    Enum.uniq(in_blocks(kind, ids) ++ in_vars(kind, ids) ++ in_galleries(kind, ids) ++ in_fields(kind, ids))
+  defp references(kind, ids, opts) do
+    Enum.uniq(in_blocks(kind, ids, opts) ++ in_vars(kind, ids) ++ in_galleries(kind, ids) ++ in_fields(kind, ids, opts))
   end
 
   # A form is only ever in a variable, of a block or of a block's table row.
-  defp in_blocks(:form, ids) do
+  defp in_blocks(:form, ids, opts) do
+    :form |> in_block_vars(ids) |> Enum.uniq() |> credit_blocks(opts)
+  end
+
+  defp in_blocks(kind, ids, opts) do
+    (by_ids(from(r in "content_refs", where: not is_nil(r.block_id)), kind, ids) ++ in_block_vars(kind, ids))
+    |> Enum.uniq()
+    |> credit_blocks(opts)
+  end
+
+  # {id, block_id} for each variable of a block, or of a row of a table
+  # block, holding the asset: a "Downloads" table's files are in its rows.
+  defp in_block_vars(kind, ids) do
     from(v in "content_vars",
       left_join: row in "content_table_rows",
       on: row.id == v.table_row_id,
       where: not is_nil(v.block_id) or not is_nil(row.block_id),
-      select: {v.form_id, coalesce(v.block_id, row.block_id)}
+      select: {field(v, ^fk(kind)), coalesce(v.block_id, row.block_id)}
     )
-    |> where_ids(:form_id, ids)
+    |> where_ids(fk(kind), ids)
     |> Brando.Repo.all()
-    |> Enum.uniq()
-    |> credit_blocks()
-  end
-
-  defp in_blocks(kind, ids) do
-    (by_ids(from(r in "content_refs", where: not is_nil(r.block_id)), kind, ids) ++
-       by_ids(from(v in "content_vars", where: not is_nil(v.block_id)), kind, ids, :block_id))
-    |> Enum.uniq()
-    |> credit_blocks()
   end
 
   # {id, block_id} to {id, entry}, for the entries owning the blocks.
-  defp credit_blocks(rows) do
-    entries = rows |> Enum.map(&elem(&1, 1)) |> Enum.uniq() |> BlockReferences.list_entries_for_block_ids()
+  defp credit_blocks(rows, opts) do
+    entries =
+      rows
+      |> Enum.map(&elem(&1, 1))
+      |> Enum.uniq()
+      |> BlockReferences.list_entries_for_block_ids(include_deleted: opts[:include_deleted] == true)
 
     for {id, block_id} <- rows, entry <- Map.get(entries, block_id, []), do: {id, entry}
+  end
+
+  # Ids of `kind` in the current site's open recovery drafts (unsaved
+  # editor copies, `Brando.Drafts`): any `<kind>_id` key, as block refs and
+  # variables have, or the foreign key of a Blueprint field of the kind.
+  defp in_drafts(kind) do
+    now = DateTime.utc_now()
+    keys = Enum.uniq([to_string(fk(kind)) | Enum.map(asset_fields(kind), &to_string(elem(&1, 1)))])
+
+    Enum.flat_map(keys, fn key ->
+      from(d in "entry_drafts",
+        where:
+          d.scope == ^Brando.Drafts.scope() and is_nil(d.discarded_at) and is_nil(d.resolved_at) and
+            (is_nil(d.expires_at) or d.expires_at > ^now),
+        select: fragment("jsonb_path_query(?, (?::text)::jsonpath) #>> '{}'", d.payload, ^~s(lax $.**."#{key}"))
+      )
+      # A shared table: every site's drafts are in `public`, told apart by scope.
+      |> Brando.Repo.all(prefix: "public")
+      |> Enum.flat_map(fn value ->
+        case value && Integer.parse(value) do
+          {id, ""} -> [id]
+          _ -> []
+        end
+      end)
+    end)
   end
 
   defp in_vars(kind, ids) do
@@ -187,23 +228,29 @@ defmodule Brando.Content.Usage do
 
   defp in_galleries(_kind, _ids), do: []
 
-  defp in_fields(kind, ids) do
+  defp in_fields(kind, ids, opts) do
     for {schema, foreign_key} <- asset_fields(kind),
-        {id, entry_id} <- field_references(schema, foreign_key, ids),
+        {id, entry_id} <- field_references(schema, foreign_key, ids, opts),
         do: {id, {schema, entry_id}}
   end
 
-  defp field_references(schema, foreign_key, ids) do
+  defp field_references(schema, foreign_key, ids, opts) do
     query = from(e in schema, select: {field(e, ^foreign_key), e.id})
-    query = if :deleted_at in schema.__schema__(:fields), do: where(query, [e], is_nil(e.deleted_at)), else: query
+
+    query =
+      if :deleted_at in schema.__schema__(:fields) and !opts[:include_deleted],
+        do: where(query, [e], is_nil(e.deleted_at)),
+        else: query
 
     query |> where_ids(foreign_key, ids) |> Brando.Repo.all()
   end
 
   # Every Blueprint field holding an asset of `kind`, as {schema, foreign_key}.
-  # Blueprints do not change while the system runs, so this is worked out once.
+  # Blueprints do not change while the system runs, so this is worked out
+  # once per schema prefix: a site's environment has its own tables, and its
+  # migrations can run ahead of or behind `public`'s.
   defp asset_fields(kind) do
-    key = {__MODULE__, :asset_fields}
+    key = {__MODULE__, :asset_fields, Brando.Tenant.current_prefix()}
 
     fields =
       case :persistent_term.get(key, nil) do
@@ -241,17 +288,29 @@ defmodule Brando.Content.Usage do
   end
 
   # A Blueprint can declare a field its table does not have yet (a pending
-  # migration); asking for that column would fail the whole lookup.
+  # migration); asking for that column would fail the whole lookup. Each
+  # table is checked where `Brando.Repo` will query it: the current tenant's
+  # schema, or `public` for a shared table and without tenancy.
   defp only_existing_columns(fields) do
+    prefix = Brando.Tenant.current_prefix()
+
     existing =
       Ecto.Adapters.SQL.query!(
         Brando.RuntimeConfig.get(:repo_module),
-        "SELECT table_name, column_name FROM information_schema.columns WHERE table_schema = current_schema()"
+        """
+        SELECT table_schema, table_name, column_name FROM information_schema.columns
+        WHERE table_schema IN (current_schema(), 'public', coalesce($1::text, current_schema()))
+        """,
+        [prefix]
       ).rows
-      |> MapSet.new(fn [table, column] -> {table, column} end)
+      |> MapSet.new(fn [table_schema, table, column] -> {table_schema, table, column} end)
+
+    {:ok, %{rows: [[current]]}} =
+      Ecto.Adapters.SQL.query(Brando.RuntimeConfig.get(:repo_module), "SELECT current_schema()", [])
 
     Enum.filter(fields, fn {_kind, {schema, foreign_key}} ->
-      MapSet.member?(existing, {schema.__schema__(:source), to_string(foreign_key)})
+      table_schema = if schema.__schema__(:prefix) == "public", do: "public", else: prefix || current
+      MapSet.member?(existing, {table_schema, schema.__schema__(:source), to_string(foreign_key)})
     end)
   end
 

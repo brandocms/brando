@@ -126,19 +126,23 @@ defmodule Brando.Content.BlockReferences do
   @doc """
   Resolves each block to the entries that own it, keeping which block led
   where. Returns `%{block_id => [{schema, entry_id}]}`; blocks no entry owns
-  are left out.
+  are left out. Entries in the trash are left out too, unless
+  `include_deleted: true`.
   """
-  @spec list_entries_for_block_ids([integer()]) :: %{optional(integer()) => [{module(), integer()}]}
-  def list_entries_for_block_ids([]), do: %{}
+  @spec list_entries_for_block_ids([integer()], keyword()) :: %{optional(integer()) => [{module(), integer()}]}
+  def list_entries_for_block_ids(block_ids, opts \\ [])
+  def list_entries_for_block_ids([], _opts), do: %{}
 
-  def list_entries_for_block_ids(block_ids) when is_list(block_ids) do
+  def list_entries_for_block_ids(block_ids, opts) when is_list(block_ids) do
     roots = list_roots_for_block_ids(block_ids)
 
     entries_by_root =
       roots
       |> Enum.group_by(fn {_block_id, _root_id, source} -> source end, fn {_block_id, root_id, _} -> root_id end)
       |> Enum.reject(fn {source, _} -> is_nil(source) end)
-      |> Enum.flat_map(fn {source, root_ids} -> list_entries_by_root(Module.concat([source]), Enum.uniq(root_ids)) end)
+      |> Enum.flat_map(fn {source, root_ids} ->
+        list_entries_by_root(Module.concat([source]), Enum.uniq(root_ids), opts)
+      end)
       |> Enum.group_by(fn {root_id, _entry} -> root_id end, fn {_root_id, entry} -> entry end)
 
     roots
@@ -169,7 +173,7 @@ defmodule Brando.Content.BlockReferences do
     |> repo().all()
   end
 
-  defp list_entries_by_root(join_source, root_ids) do
+  defp list_entries_by_root(join_source, root_ids, opts) do
     {:assoc, %{queryable: schema}} = Map.fetch!(join_source.__changeset__(), :entry)
 
     query =
@@ -180,8 +184,9 @@ defmodule Brando.Content.BlockReferences do
         select: {join_entry.block_id, join_entry.entry_id},
         distinct: true
 
+    query = if opts[:include_deleted], do: query, else: maybe_reject_deleted(query, schema)
+
     query
-    |> maybe_reject_deleted(schema)
     |> repo().all()
     |> Enum.map(fn {root_id, entry_id} -> {root_id, {schema, entry_id}} end)
   end
