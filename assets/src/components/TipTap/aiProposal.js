@@ -36,7 +36,10 @@ export function proposalExtension({ labels, accept, discard, retry, edit }) {
               // A suggestion ready to accept can be changed first, as a field's
               // can (FieldActions): the textarea is outside the document, and
               // what it holds is what Accept inserts.
-              if (proposal.text && proposal.status === 'ready' && !proposal.error) {
+              // Ready, it is a field even when the editor emptied it, so a
+              // redraw keeps the field, and Accept waits for text.
+              const editable = proposal.status === 'ready' && !proposal.error
+              if (editable) {
                 const field = document.createElement('textarea')
                 field.className = 'tiptap-ai-field ai-proposal-field'
                 field.value = proposal.text
@@ -59,7 +62,7 @@ export function proposalExtension({ labels, accept, discard, retry, edit }) {
                 if (kind) btn.className = kind === 'ai' ? 'is-ai' : kind
                 btn.addEventListener('mousedown', e => e.preventDefault()); btn.addEventListener('click', action); actions.append(btn)
               }
-              if (proposal.status === 'ready' && !proposal.error) button(labels.accept, accept, 'primary')
+              if (editable) { button(labels.accept, accept, 'primary'); actions.lastChild.disabled = !(proposal.text || '').trim() }
               button(proposal.status === 'pending' ? labels.cancel : labels.discard, discard)
               if (proposal.status !== 'pending') button(labels.retry, retry, 'ai')
               panel.append(actions)
