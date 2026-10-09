@@ -436,7 +436,7 @@ defmodule Mix.Tasks.Brando.Migrate55Test do
       assert router =~ ~s(get "/robots.txt", BrandoWeb.SEOController, :robots)
       assert router =~ ~s(get "/__p__/:preview_key", BrandoWeb.PreviewController, :show)
       assert router =~ ~s(get "/sitemaps/:file", BrandoWeb.SitemapController, :show)
-      assert source(igniter, @config_path) =~ "html: BrandoAdmin.ErrorHTML"
+      assert source(igniter, @config_path) =~ "html: BrandoWeb.ErrorHTML"
 
       notify = source(igniter, @notify_path)
       assert notify =~ "alias BrandoAdmin.UserChannel"

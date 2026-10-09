@@ -1,6 +1,7 @@
-defmodule BrandoAdmin.ErrorHTML do
+defmodule BrandoWeb.ErrorHTML do
   @moduledoc """
-  Basic error views for Brando.
+  Brando's built-in error pages for the public site, for an endpoint that
+  sets `render_errors: [formats: [html: BrandoWeb.ErrorHTML]]`.
   """
 
   require Logger

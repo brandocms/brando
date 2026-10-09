@@ -2549,12 +2549,12 @@ msgstr "Administrasjon"
 msgid "Backend access is not selected. Members need it from another group to use the admin."
 msgstr "Tilgang til administrasjonen er ikke valgt. Medlemmer må ha denne tilgangen fra en annen gruppe for å bruke administrasjonen."
 
-#: lib/brando_admin/controllers/error_html/400.html.heex
+#: lib/brando_web/controllers/error_html/400.html.heex
 #, elixir-autogen, elixir-format
 msgid "Bad request"
 msgstr "Feil i spørring"
 
-#: lib/brando_admin/controllers/error_html/400.html.heex
+#: lib/brando_web/controllers/error_html/400.html.heex
 #, elixir-autogen, elixir-format
 msgid "Bad request."
 msgstr "Feil i spørringen."
@@ -7544,9 +7544,9 @@ msgstr "Globalsett"
 msgid "Globals"
 msgstr "Globaler"
 
-#: lib/brando_admin/controllers/error_html/400.html.heex
-#: lib/brando_admin/controllers/error_html/404.html.heex
-#: lib/brando_admin/controllers/error_html/406.html.heex
+#: lib/brando_web/controllers/error_html/400.html.heex
+#: lib/brando_web/controllers/error_html/404.html.heex
+#: lib/brando_web/controllers/error_html/406.html.heex
 #, elixir-autogen, elixir-format
 msgid "Go back <a href=\"/\">to the main page</a>"
 msgstr "Gå tilbake <a href=\"/\">til hovedsiden</a>"
@@ -9458,7 +9458,7 @@ msgstr "Fant de vedlagte mediene"
 msgid "Matching group keys are updated; other groups are preserved. Accounts, memberships, and the protected Superuser are excluded."
 msgstr "Grupper med samsvarende nøkler oppdateres. Andre grupper beholdes. Kontoer, medlemskap og den beskyttede superbrukergruppen er unntatt."
 
-#: lib/brando_admin/controllers/error_html/404.html.heex
+#: lib/brando_web/controllers/error_html/404.html.heex
 #, elixir-autogen, elixir-format
 msgid "Maybe it was outdated and has been deleted?"
 msgstr "Kanskje den var utdatert og har blitt slettet?"
@@ -10858,12 +10858,12 @@ msgstr "Ingen. Ingenting skrives før en robot blokkeres eller en preferanse for
 msgid "Not a valid HTTP response"
 msgstr "Ikke et gyldig HTTP-svar"
 
-#: lib/brando_admin/controllers/error_html/406.html.heex
+#: lib/brando_web/controllers/error_html/406.html.heex
 #, elixir-autogen, elixir-format
 msgid "Not acceptable"
 msgstr "Ikke akseptert"
 
-#: lib/brando_admin/controllers/error_html/406.html.heex
+#: lib/brando_web/controllers/error_html/406.html.heex
 #, elixir-autogen, elixir-format
 msgid "Not acceptable."
 msgstr "Ikke akseptert."
@@ -11761,12 +11761,12 @@ msgstr "Side"
 msgid "Page anchor"
 msgstr "Sideanker"
 
-#: lib/brando_admin/controllers/error_html/404.html.heex
+#: lib/brando_web/controllers/error_html/404.html.heex
 #, elixir-autogen, elixir-format
 msgid "Page not found"
 msgstr "Fant ikke siden"
 
-#: lib/brando_admin/controllers/error_html/404.html.heex
+#: lib/brando_web/controllers/error_html/404.html.heex
 #, elixir-autogen, elixir-format
 msgid "Page not found."
 msgstr "Fant ikke siden."
@@ -12204,7 +12204,7 @@ msgstr "Avspilling"
 msgid "Playback defaults"
 msgstr "Standardvalg for avspilling"
 
-#: lib/brando_admin/controllers/error_html/500.html.heex
+#: lib/brando_web/controllers/error_html/500.html.heex
 #, elixir-autogen, elixir-format
 msgid "Please try again shortly, or go back <a href=\"/\">to the main page</a>"
 msgstr "Prøv igjen om litt, eller gå tilbake <a href=\"/\">til hovedsiden</a>"
@@ -14905,7 +14905,7 @@ msgstr "Rekkefølge oppdatert"
 msgid "Served once the entry is published. This is the last saved version."
 msgstr "Vises når oppføringen er publisert. Dette er sist lagrede versjon."
 
-#: lib/brando_admin/controllers/error_html/500.html.heex
+#: lib/brando_web/controllers/error_html/500.html.heex
 #, elixir-autogen, elixir-format
 msgid "Server Error"
 msgstr "Serverfeil"
@@ -17255,7 +17255,7 @@ msgstr "Dette er for langt."
 msgid "This language already has a version."
 msgstr "Dette språket har allerede en versjon."
 
-#: lib/brando_admin/controllers/error_html/500.html.heex
+#: lib/brando_web/controllers/error_html/500.html.heex
 #, elixir-autogen, elixir-format
 msgid "This might occur during a server update or reboot"
 msgstr "Dette kan skje under en serveroppdatering eller omstart"

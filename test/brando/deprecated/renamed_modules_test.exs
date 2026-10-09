@@ -135,11 +135,11 @@ defmodule Brando.Deprecated.RenamedModulesTest do
       ExUnit.CaptureLog.capture_log(fn ->
         for template <- ~w(400 404 406 500) do
           assert Phoenix.Template.render_to_string(Brando.ErrorHTML, template, "html", assigns) ==
-                   Phoenix.Template.render_to_string(BrandoAdmin.ErrorHTML, template, "html", assigns)
+                   Phoenix.Template.render_to_string(BrandoWeb.ErrorHTML, template, "html", assigns)
         end
       end)
 
-    assert log =~ "Brando.ErrorHTML is deprecated: renamed to BrandoAdmin.ErrorHTML"
+    assert log =~ "Brando.ErrorHTML is deprecated: renamed to BrandoWeb.ErrorHTML"
   end
 
   defp dispatch(method, path) do

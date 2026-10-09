@@ -720,7 +720,7 @@ production dump.
   | `Brando.UserChannel` | `BrandoAdmin.UserChannel` |
   | `Brando.LobbyChannel` | `BrandoAdmin.LobbyChannel` |
   | `Brando.LivePreviewChannel` | `BrandoAdmin.LivePreviewChannel` |
-  | `Brando.ErrorHTML` | `BrandoAdmin.ErrorHTML` |
+  | `Brando.ErrorHTML` | `BrandoWeb.ErrorHTML` |
   | `Brando.Config` | `Brando.Sites.Config` |
   | `Brando.Link` | `Brando.Sites.Link` |
   | `Brando.Meta` | `Brando.Sites.Meta` |
@@ -728,7 +728,8 @@ production dump.
 
   The three controllers serve the site's public routes (`/robots.txt`,
   `/sitemaps/:file` and the shared preview links at `/__p__/:preview_key`),
-  so they moved to `BrandoWeb` with their files. A router that `mix
+  and `ErrorHTML` renders the public site's error pages as its endpoint's
+  `render_errors`, so they moved to `BrandoWeb` with their files. A router that `mix
   brando.gen.site` generated before 0.55 names them directly; rerunning the
   task accepts either name.
 

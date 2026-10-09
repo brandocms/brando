@@ -1,6 +1,6 @@
 defmodule Brando.ErrorHTML do
   @moduledoc false
-  # Deprecated name for `BrandoAdmin.ErrorHTML` (renamed in 0.55, #2833;
+  # Deprecated name for `BrandoWeb.ErrorHTML` (renamed in 0.55, #2833;
   # removed in 0.57). An endpoint's `render_errors: [formats: [html:
   # Brando.ErrorHTML]]` keeps rendering the same pages and logs a warning on
   # the first error page.
@@ -18,9 +18,9 @@ defmodule Brando.ErrorHTML do
         [name] -> {name, "html"}
       end
 
-    Phoenix.Template.render(BrandoAdmin.ErrorHTML, name, format, assigns)
+    Phoenix.Template.render(BrandoWeb.ErrorHTML, name, format, assigns)
   end
 
-  @deprecated "Use BrandoAdmin.ErrorHTML.template_not_found/2 instead"
-  defdelegate template_not_found(template, assigns), to: BrandoAdmin.ErrorHTML
+  @deprecated "Use BrandoWeb.ErrorHTML.template_not_found/2 instead"
+  defdelegate template_not_found(template, assigns), to: BrandoWeb.ErrorHTML
 end

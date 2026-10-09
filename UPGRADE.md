@@ -41,7 +41,7 @@ as deprecated shims in 0.55 and 0.56 and are removed in 0.57.
 | `Brando.UserChannel` | `BrandoAdmin.UserChannel` |
 | `Brando.LobbyChannel` | `BrandoAdmin.LobbyChannel` |
 | `Brando.LivePreviewChannel` | `BrandoAdmin.LivePreviewChannel` |
-| `Brando.ErrorHTML` | `BrandoAdmin.ErrorHTML` |
+| `Brando.ErrorHTML` | `BrandoWeb.ErrorHTML` |
 | `Brando.Config` | `Brando.Sites.Config` |
 | `Brando.Link` | `Brando.Sites.Link` |
 | `Brando.Meta` | `Brando.Sites.Meta` |

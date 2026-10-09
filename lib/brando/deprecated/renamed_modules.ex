@@ -13,7 +13,7 @@ defmodule Brando.Deprecated.RenamedModules do
 
   @renamed %{
     Brando.Config => Brando.Sites.Config,
-    Brando.ErrorHTML => BrandoAdmin.ErrorHTML,
+    Brando.ErrorHTML => BrandoWeb.ErrorHTML,
     Brando.Link => Brando.Sites.Link,
     Brando.LivePreviewChannel => BrandoAdmin.LivePreviewChannel,
     Brando.LobbyChannel => BrandoAdmin.LobbyChannel,
