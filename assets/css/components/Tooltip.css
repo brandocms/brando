@@ -1,8 +1,10 @@
 /* The shared tooltip (`data-tooltip`, assets/src/tooltips.js): a short dark
-   peek beside the element, painted as a manual popover in the top layer.
-   Resets the popover's own box (border, padding, centred inset). */
+   peek beside the element, painted as a manual popover in the top layer, or
+   above the page's own layers where the Popover API is missing. Resets the
+   popover's own box (border, padding, centred inset). */
 .brando-tooltip {
   position: fixed;
+  z-index: 1000000;
   inset: auto;
   top: 0;
   left: 0;

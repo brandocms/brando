@@ -3924,7 +3924,7 @@ defmodule BrandoAdmin.Components.Form do
           class={["user-presence visible", user[:frontend?] && "is-frontend"]}
           data-presence-user-id={user.id}
           data-presence-color-index={rem(index, 6)}
-          data-tooltip={presence_title(user, @count)}
+          title={presence_title(user, @count)}
         >
           <.presence_avatar user={user} />
         </div>

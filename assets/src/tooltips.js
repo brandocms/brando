@@ -12,18 +12,32 @@ import { computePosition, flip, offset, shift } from '@floating-ui/dom'
 // shows. `data-tooltip-placement` overrides the default `top`.
 //
 // Painted as a manual popover, so it sits in the top layer above modal
-// dialogs and drawers, and it takes no pointer events.
+// dialogs and drawers, and it takes no pointer events. Without the Popover
+// API it is a fixed element over the page (Tooltip.css).
 
 const HOVER_DELAY = 400
 // Moving straight from one tooltip to the next skips the delay
 const SKIP_DELAY_WITHIN = 300
 
+const supportsPopover = typeof HTMLElement !== 'undefined' &&
+  typeof HTMLElement.prototype.showPopover === 'function'
+
+let installed = false
+
 export default () => {
+  if (installed || document.getElementById('brando-tooltip')) return
+  installed = true
+
   let tip = null
   let trigger = null
+  // How the open tooltip was asked for: 'hover' or 'focus'
+  let mode = null
+  // The element whose hover delay is running
+  let pending = null
   let timer = null
   let hiddenAt = 0
   let observer = null
+  let frame = null
   let describedBy = false
   // The element last pressed: its tooltip stays away until the pointer leaves
   let pressed = null
@@ -34,9 +48,24 @@ export default () => {
     tip.id = 'brando-tooltip'
     tip.className = 'brando-tooltip'
     tip.setAttribute('role', 'tooltip')
-    tip.setAttribute('popover', 'manual')
+    if (supportsPopover) tip.setAttribute('popover', 'manual')
+    else tip.hidden = true
     document.body.appendChild(tip)
     return tip
+  }
+
+  const isOpen = node => (supportsPopover ? node.matches(':popover-open') : !node.hidden)
+
+  const open = node => {
+    if (isOpen(node)) return
+    if (supportsPopover) node.showPopover()
+    else node.hidden = false
+  }
+
+  const close = node => {
+    if (!isOpen(node)) return
+    if (supportsPopover) node.hidePopover()
+    else node.hidden = true
   }
 
   const accessibleName = el =>
@@ -55,25 +84,47 @@ export default () => {
     tip.style.setProperty('top', `${y}px`)
   }
 
+  // Once per frame, however many mutations or scroll events arrive
+  const reposition = () => {
+    if (frame) return
+    frame = requestAnimationFrame(() => {
+      frame = null
+      position()
+    })
+  }
+
+  const inViewport = el => {
+    const r = el.getBoundingClientRect()
+    return r.bottom > 0 && r.right > 0 && r.top < window.innerHeight && r.left < window.innerWidth
+  }
+
   const clearTimer = () => {
     clearTimeout(timer)
     timer = null
+    pending = null
   }
 
-  const hide = () => {
+  // `fromHover`: the pointer left the element, so moving on to the next one
+  // shows its tooltip at once.
+  const hide = ({ fromHover = false } = {}) => {
     clearTimer()
     if (!trigger) return
     if (describedBy) trigger.removeAttribute('aria-describedby')
     describedBy = false
     observer?.disconnect()
     observer = null
+    if (frame) cancelAnimationFrame(frame)
+    frame = null
     trigger = null
-    hiddenAt = Date.now()
-    if (tip?.matches(':popover-open')) tip.hidePopover()
-    tip?.classList.remove('is-visible')
+    mode = null
+    if (fromHover) hiddenAt = Date.now()
+    if (tip) {
+      close(tip)
+      tip.classList.remove('is-visible')
+    }
   }
 
-  const show = el => {
+  const show = (el, how) => {
     clearTimer()
     const text = el.dataset.tooltip
     if (!text || !el.isConnected) return
@@ -81,32 +132,35 @@ export default () => {
 
     const node = ensureTip()
     node.textContent = text
+    mode = how
     if (trigger !== el) {
       trigger = el
-      // Text that adds to the name describes the element; text that repeats
-      // it would be read twice.
-      if (!el.hasAttribute('aria-describedby') && accessibleName(el) !== text) {
+      // Text that adds to the name describes the element; text the name
+      // already says would be read twice.
+      const name = accessibleName(el).toLowerCase()
+      if (!el.hasAttribute('aria-describedby') && !name.includes(text.trim().toLowerCase())) {
         el.setAttribute('aria-describedby', node.id)
         describedBy = true
       }
-      // LiveView may remove the element, or patch it into another button,
-      // while the tooltip shows. Watched only while a tooltip is open. A
-      // focused button keeps a tooltip that follows its new text; under the
-      // pointer, the layout may have moved, so the next hover shows it.
+      // LiveView may remove the element, move it, or patch it into another
+      // button while the tooltip shows. Watched only while a tooltip is open.
+      // A focused button keeps a tooltip that follows its new text; under the
+      // pointer, the next hover shows it.
       observer = new MutationObserver(() => {
         if (!trigger) return
         const current = trigger.dataset.tooltip
         if (!trigger.isConnected || !current) return hide()
-        if (node.textContent === current) return
-        if (!trigger.matches(':focus-visible')) return hide()
-        node.textContent = current
-        position()
+        if (node.textContent !== current) {
+          if (mode !== 'focus') return hide()
+          node.textContent = current
+        }
+        reposition()
       })
       observer.observe(document.body, { childList: true, subtree: true })
       observer.observe(el, { attributes: true, attributeFilter: ['data-tooltip'] })
     }
 
-    if (!node.matches(':popover-open')) node.showPopover()
+    open(node)
     position().then(() => trigger === el && node.classList.add('is-visible'))
   }
 
@@ -115,11 +169,15 @@ export default () => {
 
   document.addEventListener('pointerover', event => {
     if (event.pointerType === 'touch') return
+    // A button held down is a drag (Sortable, a selection): no tooltips
+    if (event.buttons !== 0) return clearTimer()
     const el = tooltipTarget(event)
-    if (!el || el === trigger || el === pressed) return
+    // Moving over the icon or the label inside the same element
+    if (!el || el === trigger || el === pending || el === pressed) return
     clearTimer()
-    if (trigger || Date.now() - hiddenAt < SKIP_DELAY_WITHIN) return show(el)
-    timer = setTimeout(() => show(el), HOVER_DELAY)
+    if ((trigger && mode === 'hover') || Date.now() - hiddenAt < SKIP_DELAY_WITHIN) return show(el, 'hover')
+    pending = el
+    timer = setTimeout(() => show(el, 'hover'), HOVER_DELAY)
   })
 
   document.addEventListener('pointerout', event => {
@@ -128,20 +186,19 @@ export default () => {
     // Still inside the same element (moving between its icon and label)
     if (event.relatedTarget instanceof Node && el.contains(event.relatedTarget)) return
     if (pressed === el) pressed = null
-    clearTimer()
+    if (pending === el) clearTimer()
     // Keyboard focus keeps its tooltip
-    if (trigger === el && !el.matches(':focus-visible')) hide()
+    if (trigger === el && mode === 'hover') hide({ fromHover: event.buttons === 0 })
   })
 
   document.addEventListener('pointerdown', event => {
-    const el = tooltipTarget(event)
-    pressed = el
+    pressed = tooltipTarget(event)
     hide()
   })
 
   document.addEventListener('focusin', event => {
     const el = tooltipTarget(event)
-    if (el && el === event.target && el.matches(':focus-visible')) show(el)
+    if (el && el === event.target && el.matches(':focus-visible')) show(el, 'focus')
   })
 
   document.addEventListener('focusout', event => {
@@ -152,9 +209,15 @@ export default () => {
     if (event.key === 'Escape' && trigger) hide()
   }, true)
 
-  // Scrolling moves the element away from where its tooltip points
-  document.addEventListener('scroll', () => trigger && hide(), { capture: true, passive: true })
+  // A hover tooltip goes when the page scrolls under it. Focus often scrolls
+  // its element into view (Tab, a scrolling toolbar's arrow keys), so a focus
+  // tooltip follows its element, until the element leaves the viewport.
+  document.addEventListener('scroll', () => {
+    if (!trigger) return
+    if (mode === 'focus' && inViewport(trigger)) return reposition()
+    hide()
+  }, { capture: true, passive: true })
   window.addEventListener('resize', () => trigger && hide(), { passive: true })
   // A LiveView navigation replaces the page under the tooltip
-  window.addEventListener('phx:page-loading-start', hide)
+  window.addEventListener('phx:page-loading-start', () => hide())
 }
