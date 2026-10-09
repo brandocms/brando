@@ -299,6 +299,88 @@ defmodule BrandoAdmin.AssistantLiveTest do
     assert conversation.attachments == []
   end
 
+  describe "stopping and reconnecting" do
+    defp sending?(view), do: has_element?(view, "button.assistant-send:not([disabled])")
+
+    test "a run stopped while the model answers frees the composer once its call returns", %{conn: conn} = c do
+      test = self()
+
+      # The model's first answer waits for the test (within the cassette's
+      # five seconds), then asks for a tool.
+      Brando.AI.Cassette.stub(fn _request ->
+        send(test, {:in_call, self()})
+
+        receive do
+          :answer -> AIStub.turn({:tools, [{"list_content_types", %{}}]}, 0)
+        end
+      end)
+
+      {:ok, view, _} = live(conn, "/admin/assistant")
+      view |> form("#assistant-composer", %{message: "What can I edit?"}) |> render_submit()
+      assert_receive {:in_call, call}, 5_000
+      eventually(view, &(&1 =~ "assistant-progress"))
+      refute sending?(view)
+
+      view |> element(".assistant-progress button", "Stop") |> render_click()
+      refute sending?(view)
+
+      send(call, :answer)
+      eventually(view, fn _ -> sending?(view) end)
+
+      [conversation] = Agent.list_conversations(c.current_user)
+      assert %{status: "cancelled"} = Agent.latest_run(conversation.id, c.current_user)
+    end
+
+    test "a reconnected editor follows the run, and its reply arrives", %{conn: conn} = c do
+      test = self()
+
+      Brando.AI.Cassette.stub(fn _request ->
+        send(test, {:in_call, self()})
+        receive do: (:answer -> AIStub.turn({:text, "You can edit pages."}, 0))
+      end)
+
+      {:ok, view, _} = live(conn, "/admin/assistant")
+      view |> form("#assistant-composer", %{message: "What can I edit?"}) |> render_submit()
+      assert_receive {:in_call, call}, 5_000
+      [conversation] = Agent.list_conversations(c.current_user)
+
+      # The socket drops and the editor's browser mounts the conversation
+      # again, while the model is still answering.
+      {:ok, view, _} = live(conn, "/admin/assistant/#{conversation.id}")
+      assert has_element?(view, ".assistant-progress", "Thinking")
+      assert has_element?(view, ".assistant-bubble", "What can I edit?")
+      refute sending?(view)
+
+      send(call, :answer)
+      eventually(view, &(&1 =~ "You can edit pages."))
+      eventually(view, fn _ -> sending?(view) end)
+      refute has_element?(view, ".assistant-progress")
+    end
+
+    test "a run left running by a restart can be stopped at once", %{conn: conn} = c do
+      {:ok, conversation} = Agent.start_conversation(c.current_user)
+
+      # The node that ran it went away a minute ago; nothing works on it.
+      run =
+        Brando.Repo.insert!(%Brando.AI.Agent.Run{
+          conversation_id: conversation.id,
+          scope: Brando.Content.Transfer.scope(),
+          status: "running",
+          updated_at: DateTime.add(DateTime.utc_now(), -60)
+        })
+
+      {:ok, view, _} = live(conn, "/admin/assistant/#{conversation.id}")
+      refute sending?(view)
+      view |> element(".assistant-progress button", "Stop") |> render_click()
+      eventually(view, fn _ -> sending?(view) end)
+      assert Brando.Repo.get!(Brando.AI.Agent.Run, run.id).status == "cancelled"
+
+      AIStub.script([{:text, "Back again."}])
+      view |> form("#assistant-composer", %{message: "Try again"}) |> render_submit()
+      eventually(view, &(&1 =~ "Back again."))
+    end
+  end
+
   test "another user's conversation is not shown", %{conn: conn} do
     other = Brando.Factory.insert(:random_user)
     {:ok, conversation} = Agent.start_conversation(other)

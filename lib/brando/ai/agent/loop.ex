@@ -25,6 +25,25 @@ defmodule Brando.AI.Agent.Loop do
   @doc "Run `run_id` for user `user_id` to completion and return the finished run."
   @spec run(Ecto.UUID.t(), integer()) :: Run.t()
   def run(run_id, user_id) do
+    registered? = :global.register_name(name(run_id), self()) == :yes
+
+    try do
+      work(run_id, user_id)
+    after
+      if registered?, do: :global.unregister_name(name(run_id))
+    end
+  end
+
+  @doc """
+  Whether a process on this node, or a connected one, is working on run
+  `run_id`. A run left `running` without one died with its node.
+  """
+  @spec alive?(Ecto.UUID.t()) :: boolean()
+  def alive?(run_id), do: is_pid(:global.whereis_name(name(run_id)))
+
+  defp name(run_id), do: {__MODULE__, run_id}
+
+  defp work(run_id, user_id) do
     run = Repo.get!(Run, run_id)
     user = Repo.get!(Brando.Users.User, user_id)
     # Progress and the assistant's own notices are shown in the editor's
@@ -47,8 +66,10 @@ defmodule Brando.AI.Agent.Loop do
     conversation = Repo.get!(Conversation, run.conversation_id)
 
     cond do
+      # Cancelled while its last call was in flight: say so, so the admin
+      # lets the editor write again.
       run.status != "running" ->
-        run
+        finish(run, run.status)
 
       # Permission taken away while the run works: nothing more goes to the model.
       not Agent.allowed?(user) ->

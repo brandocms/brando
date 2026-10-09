@@ -111,10 +111,13 @@ defmodule BrandoAdmin.AI.AssistantLive do
           do: Phoenix.PubSub.unsubscribe(Brando.pubsub(), topic(socket.assigns.conversation.id))
 
         if connected?(socket), do: Agent.subscribe(conversation.id)
+        run = Agent.latest_run(id, user)
 
         {:noreply,
          socket
-         |> assign(conversation: conversation, run: Agent.latest_run(id, user), progress: nil, error: nil, receipt: nil)
+         # A run still working after a reconnect or a restart can be stopped.
+         |> assign(conversation: conversation, run: run, error: nil, receipt: nil)
+         |> assign(:progress, if(running?(run), do: gettext("Thinking")))
          |> assign_conversations()
          |> assign_messages()
          |> assign_proposal()

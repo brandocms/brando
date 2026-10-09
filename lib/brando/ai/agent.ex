@@ -511,10 +511,16 @@ defmodule Brando.AI.Agent do
   @spec cancel(Ecto.UUID.t(), term()) :: :ok | {:error, String.t()}
   def cancel(conversation_id, actor) do
     with {:ok, _} <- Error.protect(fn -> conversation!(conversation_id, actor) end) do
-      from(r in Run, where: r.conversation_id == ^conversation_id and r.status == "running")
-      |> Repo.update_all(set: [status: "cancelled", finished_at: DateTime.utc_now(), reserved_tokens: 0])
+      {_, runs} =
+        from(r in Run, where: r.conversation_id == ^conversation_id and r.status == "running", select: r)
+        |> Repo.update_all(set: [status: "cancelled", finished_at: DateTime.utc_now(), reserved_tokens: 0])
 
       broadcast(conversation_id, {:progress, nil})
+
+      # A live run reports its end once its call in flight returns, so the
+      # editor cannot write while it still adds to the conversation. A run
+      # whose node went away (a deploy, a crash) never will.
+      for run <- runs, not Loop.alive?(run.id), do: broadcast(conversation_id, {:run, run})
       :ok
     end
   end
