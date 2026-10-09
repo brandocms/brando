@@ -35,6 +35,8 @@ defmodule Brando.Deprecated.LexicalAliases do
   # new name rather than a reference. Works on both `Code.string_to_quoted/2`
   # and Sourceror ASTs.
 
+  alias Brando.Deprecated.TemplateCode
+
   @defs [:def, :defp, :defmacro, :defmacrop, :defguard, :defguardp, :defn, :defnp, :defdelegate]
   @scoped @defs ++
             [:if, :unless, :case, :cond, :with, :for, :try, :receive, :quote, :test, :describe] ++
@@ -43,9 +45,12 @@ defmodule Brando.Deprecated.LexicalAliases do
   @template_calls [:sigil_H, :sigil_F, :sigil_L, :sigil_E, :embed_templates]
   @heredocs [~s("""), ~s(''')]
 
-  @doc "Annotates every module name in `ast`; see the module notes."
-  def annotate(ast) do
-    {ast, _env} = walk(ast, %{aliases: %{}, module: nil, imports: []})
+  @doc """
+  Annotates every module name in `ast`; see the module notes. Starts from
+  `lexical_env`, a template's `:lexical_env`, when given.
+  """
+  def annotate(ast, lexical_env \\ %{}) do
+    {ast, _env} = walk(ast, Map.merge(%{aliases: %{}, module: nil, imports: []}, lexical_env))
     ast
   end
 
@@ -76,9 +81,10 @@ defmodule Brando.Deprecated.LexicalAliases do
   the aliases where the sigil is written. Text that looks like a module
   name counts, so prose such as `Store` in a heading is read as one too.
   """
-  def template_names({_sigil, meta, [{:<<>>, _, parts} | _]}) do
+  def template_names({sigil, meta, [{:<<>>, _, parts} | _]}) do
     text = parts |> Enum.filter(&is_binary/1) |> Enum.join()
-    names_in_text(text, meta[:lexical_env], meta[:line] + if(meta[:delimiter] in @heredocs, do: 1, else: 0))
+    first_line = meta[:line] + if(meta[:delimiter] in @heredocs, do: 1, else: 0)
+    names_in_text(text, meta[:lexical_env], first_line, if(sigil in [:sigil_H, :sigil_F], do: :heex, else: :eex))
   end
 
   def template_names(_node), do: []
@@ -86,21 +92,69 @@ defmodule Brando.Deprecated.LexicalAliases do
   @doc """
   The module names written in `text` (a template file compiled into a
   module by the `embed_templates` call whose metadata holds `lexical_env`),
-  with its first line numbered `first_line`; see `template_names/1`.
+  with its first line numbered `first_line`; see `template_names/1`. Only
+  code counts (`Brando.Deprecated.TemplateCode`): `mode` is `:heex`, where
+  `{…}` interpolates, or `:eex`.
   """
-  def names_in_text(_text, nil, _first_line), do: []
+  def names_in_text(text, lexical_env, first_line, mode \\ :heex)
+  def names_in_text(_text, nil, _first_line, _mode), do: []
 
-  def names_in_text(text, lexical_env, first_line) do
+  def names_in_text(text, lexical_env, first_line, mode) do
+    text
+    |> TemplateCode.segments(mode)
+    |> Enum.flat_map(fn
+      {:tag, name, line} -> [name_entry(name, lexical_env, first_line + line)]
+      {:code, code, line} -> names_in_code(code, lexical_env, first_line + line)
+    end)
+  end
+
+  # The module names in a template's Elixir; string literals and comments
+  # are not code. A fragment that does not parse alone (`<%= if x do %>`)
+  # is read with its strings and comments blanked out.
+  defp names_in_code(code, lexical_env, line) do
+    case Code.string_to_quoted(code, line: line, columns: false, emit_warnings: false) do
+      {:ok, ast} ->
+        {_ast, names} =
+          ast
+          |> annotate(lexical_env)
+          |> Macro.prewalk([], fn
+            {:__aliases__, meta, parts} = node, names ->
+              {node,
+               [
+                 %{name: Enum.map_join(parts, ".", &segment/1), resolved: meta[:resolved_alias], line: meta[:line]}
+                 | names
+               ]}
+
+            node, names ->
+              {node, names}
+          end)
+
+        Enum.reverse(names)
+
+      {:error, _} ->
+        code
+        |> String.replace(~r/"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|#[^\n]*/, &String.duplicate("\n", newline_count(&1)))
+        |> names_in_words(lexical_env, line)
+    end
+  end
+
+  defp names_in_words(text, lexical_env, first_line) do
     ~r/(?<![\w.@:\-])[A-Z]\w*(?:\.[A-Z]\w*)*/u
     |> Regex.scan(text, return: :index)
     |> Enum.map(fn [{at, length}] ->
-      name = binary_part(text, at, length)
-      parts = name |> String.split(".") |> Enum.map(&String.to_atom/1)
-      {resolved, _binding} = resolve(parts, lexical_env)
-      line = first_line + (text |> binary_part(0, at) |> String.split("\n") |> length()) - 1
-      %{name: name, resolved: resolved, line: line}
+      name_entry(binary_part(text, at, length), lexical_env, first_line + newline_count(binary_part(text, 0, at)))
     end)
   end
+
+  defp name_entry(name, lexical_env, line) do
+    {resolved, _binding} = name |> String.split(".") |> Enum.map(&String.to_atom/1) |> resolve(lexical_env)
+    %{name: name, resolved: resolved, line: line}
+  end
+
+  defp newline_count(text), do: text |> :binary.matches("\n") |> length()
+
+  defp segment({name, _, _}), do: name
+  defp segment(name), do: name
 
   ## Walk
 
@@ -168,7 +222,7 @@ defmodule Brando.Deprecated.LexicalAliases do
   defp walk({call, meta, args}, env) when is_atom(call) and is_list(args) do
     meta = annotate_imports(meta, env)
     meta = if call in @template_calls, do: [{:lexical_env, Map.take(env, [:aliases, :module])} | meta], else: meta
-    {args, env} = walk_call(call in @scoped, args, env)
+    {args, env} = walk_call({call in @scoped, call}, args, env)
     {{call, meta, args}, env}
   end
 
@@ -176,7 +230,7 @@ defmodule Brando.Deprecated.LexicalAliases do
   # macro's do block may leak what it declares
   defp walk({{:., dot_meta, [remote, name]}, meta, args}, env) when is_atom(name) and is_list(args) do
     {remote, _env} = walk(remote, env)
-    {args, env} = walk_call(module(remote) == Kernel and name in @scoped, args, env)
+    {args, env} = walk_call({module(remote) == Kernel and name in @scoped, name}, args, env)
     {{{:., dot_meta, [remote, name]}, meta, args}, env}
   end
 
@@ -198,26 +252,30 @@ defmodule Brando.Deprecated.LexicalAliases do
   defp walk_list(list, env), do: Enum.map_reduce(list, env, &walk/2)
 
   # A call's arguments, then each of its `do`/`else`/`rescue`/… blocks
-  # from where they start: a scoping macro keeps what they declare, another
-  # macro may leak it
-  defp walk_call(scoped?, args, env) do
+  # from where they start, after the arguments (a `with`'s `else` before
+  # its clauses): a scoping macro keeps what they declare, another macro
+  # may leak it
+  defp walk_call({scoped?, call}, args, env) do
     case split_blocks(args) do
       {args, nil} ->
         walk_list(args, env)
 
       {head, blocks} ->
-        {head, env} = walk_list(head, env)
-        {blocks, inners} = blocks |> Enum.map(&walk_block(&1, env)) |> Enum.unzip()
-        {head ++ [blocks], if(scoped?, do: env, else: leak(env, inners))}
+        {head, head_env} = walk_list(head, env)
+        {blocks, inners} = blocks |> Enum.map(&walk_block(&1, {call, env, head_env})) |> Enum.unzip()
+        {head ++ [blocks], if(scoped?, do: head_env, else: leak(head_env, inners))}
     end
   end
 
-  defp walk_block({key, value}, env) do
-    {value, inner} = walk(value, env)
+  defp walk_block({key, value}, envs) do
+    {value, inner} = walk(value, block_env(literal(key), envs))
     {{key, value}, inner}
   end
 
-  defp walk_block(other, env), do: {other, env}
+  defp walk_block(other, {_call, _env, head_env}), do: {other, head_env}
+
+  defp block_env(:else, {:with, env, _head_env}), do: env
+  defp block_env(_key, {_call, _env, head_env}), do: head_env
 
   defp split_blocks([_ | _] = args) do
     {head, [last]} = Enum.split(args, -1)
@@ -242,10 +300,9 @@ defmodule Brando.Deprecated.LexicalAliases do
   defp put_target(env, {:__aliases__, meta, parts}, as, position) do
     resolved = meta[:resolved_alias]
 
-    case {as || last_atom(parts) || last_atom(plain(resolved) || []), resolved} do
-      {nil, _resolved} -> env
-      {short, {:either, _}} -> put_alias(env, {short, nil, position})
-      {short, resolved} -> put_alias(env, {short, resolved, position})
+    case as || last_atom(parts) || last_atom(plain(resolved) || []) do
+      nil -> env
+      short -> put_alias(env, {short, resolved, position})
     end
   end
 
@@ -260,7 +317,7 @@ defmodule Brando.Deprecated.LexicalAliases do
       {:__aliases__, meta, parts}, env ->
         case last_atom(parts) do
           nil -> env
-          short -> put_alias(env, {short, plain(meta[:resolved_alias]), position})
+          short -> put_alias(env, {short, meta[:resolved_alias], position})
         end
 
       _child, env ->
@@ -269,23 +326,36 @@ defmodule Brando.Deprecated.LexicalAliases do
   end
 
   defp brace_child({:__aliases__, meta, parts}, base, position) do
-    resolved = if is_list(base) and Enum.all?(parts, &is_atom/1), do: base ++ parts
+    resolved =
+      cond do
+        not Enum.all?(parts, &is_atom/1) -> nil
+        is_list(base) -> base ++ parts
+        match?({:either, _}, base) -> {:either, Enum.map(elem(base, 1), &(&1 && &1 ++ parts))}
+        true -> nil
+      end
+
     {:__aliases__, annotate_meta(meta, resolved, {:brace, position}), parts}
   end
 
   defp brace_child(child, _base, _position), do: child
 
   # `import Brando.HTML, only: […]`: `%{module, only, except}` per module it
-  # may name, for the local calls after it
+  # may name, for the local calls after it. A module imported again is
+  # imported as the last import says.
   defp put_import(env, target, options) do
     options = plain_term(List.first(options) || [])
     keyword = if Keyword.keyword?(options), do: options, else: []
-    specs = for module <- modules(target), do: %{module: module, only: keyword[:only], except: keyword[:except]}
-    %{env | imports: Enum.uniq(env.imports ++ specs)}
+    modules = modules(target)
+    specs = for module <- modules, do: %{module: module, only: keyword[:only], except: keyword[:except]}
+    %{env | imports: Enum.reject(env.imports, &(&1.module in modules)) ++ specs}
   end
 
   defp annotate_imports(meta, %{imports: []}), do: meta
   defp annotate_imports(meta, %{imports: imports}), do: [{:imports, imports} | meta]
+
+  # A name that may be either module is aliased as either
+  defp put_alias(env, {short, {:either, candidates}, at}),
+    do: %{env | aliases: Map.put(env.aliases, short, %{either: Enum.map(candidates, &%{to: &1, at: at})})}
 
   defp put_alias(env, {short, to, at}), do: %{env | aliases: Map.put(env.aliases, short, %{to: to, at: at})}
 

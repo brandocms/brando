@@ -220,7 +220,7 @@ defmodule Brando.Deprecated.LexicalAliasesTest do
       def a(assigns) do
         ~H"""
         <Meta.HTML.render_meta conn={@conn} />
-        <.link>Brando.Upload</.link>
+        <.link navigate={Brando.Upload.path()}>Store</.link>
         """
       end
 
@@ -240,5 +240,75 @@ defmodule Brando.Deprecated.LexicalAliasesTest do
       assert [{[:Brando, :Meta, :HTML], 6}, {[:Brando, :Upload], 7}, {[:Brando, :Meta, :HTML], 11}] =
                Enum.map(found, &{&1.resolved, &1.line})
     end
+  end
+
+  test "an alias in a with clause reaches its do block, not its else" do
+    code = """
+    defmodule A do
+      alias Brando.Upload
+
+      def g(x) do
+        with alias(Other.W, as: Upload), {:ok, _} <- x do
+          Upload
+        else
+          _ -> Upload
+        end
+      end
+    end
+    """
+
+    assert [{1, "A", A}, {6, "Upload", Other.W}, {8, "Upload", Brando.Upload}] = resolutions(code)
+  end
+
+  test "an alias of a name that may be either module may be either too" do
+    code = """
+    defmodule A do
+      alias Brando.Upload
+
+      Some.Dsl.settings do
+        alias Plug.Upload
+      end
+
+      alias Upload, as: U
+      alias Upload.{Inner}
+      def a, do: {U, Inner}
+    end
+    """
+
+    assert [
+             {1, "A", A},
+             {4, "Some.Dsl", Some.Dsl},
+             {10, "U", {:either, [Plug.Upload, Brando.Upload]}},
+             {10, "Inner", {:either, [Plug.Upload.Inner, Brando.Upload.Inner]}}
+           ] = resolutions(code)
+  end
+
+  test "template names come from code: interpolations, EEx tags, attributes and component tags" do
+    env = %{aliases: %{Upload: %{to: [:Brando, :Upload], at: {2, 3}}}, module: [:A]}
+
+    text = """
+    <%!-- Upload comment --%>
+    <!-- Upload too -->
+    <h1>Store current state, Upload</h1>
+    <p>{gettext("Upload anyway")}</p>
+    <button label={gettext("Upload files")} :if={Upload.ok?(@x)}>
+      {dgettext("x",
+        "Upload to %{folder}")}
+    </button>
+    <Upload.Button.render x={%{a: "}"}} />
+    <%= Upload.url(@x) %>
+    <% Upload.y() %>
+    <script>let x = {Upload: 1}</script>
+    """
+
+    assert [
+             %{name: "Upload", resolved: [:Brando, :Upload], line: 5},
+             %{name: "Upload.Button", resolved: [:Brando, :Upload, :Button], line: 9},
+             %{name: "Upload", resolved: [:Brando, :Upload], line: 10},
+             %{name: "Upload", resolved: [:Brando, :Upload], line: 11}
+           ] = LexicalAliases.names_in_text(text, env, 1)
+
+    # EEx has no {…} interpolation
+    assert [%{line: 1}] = LexicalAliases.names_in_text("<%= Upload.x() %> {Upload.y()}", env, 1, :eex)
   end
 end

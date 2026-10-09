@@ -20,6 +20,7 @@ defmodule Brando.Doctor.Checks.Deprecations do
 
   alias Brando.Deprecated.LexicalAliases
   alias Brando.Deprecated.RenamedModules
+  alias Brando.Deprecated.TemplateCode
   alias Brando.Doctor.Context
 
   @impl true
@@ -122,7 +123,10 @@ defmodule Brando.Doctor.Checks.Deprecations do
         {:embed_templates, [{:lexical_env, env} | _], [pattern | options]} = node, acc ->
           found =
             Enum.reduce(templates.(pattern, options), acc, fn {path, text}, acc ->
-              text |> LexicalAliases.names_in_text(env, 1) |> template_findings(path) |> Enum.concat(acc)
+              text
+              |> LexicalAliases.names_in_text(env, 1, TemplateCode.mode(path))
+              |> template_findings(path)
+              |> Enum.concat(acc)
             end)
 
           {node, found}
@@ -218,9 +222,16 @@ defmodule Brando.Doctor.Checks.Deprecations do
   end
 
   # Whether `import module, only: …, except: …` brings in `name/arity`
-  defp imported?(%{only: only, except: except}, name, arity) do
-    (not is_list(only) or {name, arity} in only) and {name, arity} not in List.wrap(except)
+  defp imported?(%{module: module, only: only, except: except}, name, arity) do
+    only?(only, module, name, arity) and {name, arity} not in List.wrap(except)
   end
+
+  defp only?(nil, _module, _name, _arity), do: true
+  defp only?(only, _module, name, arity) when is_list(only), do: {name, arity} in only
+  defp only?(:macros, module, name, arity), do: macro_exported?(module, name, arity)
+  defp only?(:functions, module, name, arity), do: not macro_exported?(module, name, arity)
+  defp only?(:sigils, _module, name, _arity), do: String.starts_with?(Atom.to_string(name), "sigil_")
+  defp only?(_only, _module, _name, _arity), do: true
 
   defp template_modules({:either, candidates}),
     do: candidates |> Enum.map(&LexicalAliases.to_module/1) |> Enum.reject(&is_nil/1)
@@ -240,22 +251,20 @@ defmodule Brando.Doctor.Checks.Deprecations do
 
   # The templates `embed_templates pattern, root: …` in the file at `path`
   # compiles in, as Phoenix finds them
-  defp read_templates(path, pattern, options) when is_binary(pattern) do
-    root =
-      case options do
-        [options | _] when is_list(options) -> options[:root]
-        _ -> nil
-      end
+  defp read_templates(path, pattern, options) do
+    case TemplateCode.embed_pattern(pattern, options) do
+      {:ok, pattern, root} ->
+        path
+        |> Path.dirname()
+        |> Path.expand()
+        |> Path.join(root)
+        |> Path.join(pattern <> ".{heex,eex,leex}")
+        |> Path.wildcard()
+        |> Enum.sort()
+        |> Enum.map(&{&1, File.read!(&1)})
 
-    path
-    |> Path.dirname()
-    |> Path.expand()
-    |> Path.join(if(is_binary(root), do: root, else: "."))
-    |> Path.join(pattern <> ".{heex,eex,leex}")
-    |> Path.wildcard()
-    |> Enum.sort()
-    |> Enum.map(&{&1, File.read!(&1)})
+      :computed ->
+        []
+    end
   end
-
-  defp read_templates(_path, _pattern, _options), do: []
 end

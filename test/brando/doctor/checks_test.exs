@@ -829,6 +829,55 @@ defmodule Brando.Doctor.ChecksTest do
              ]
     end
 
+    test "a later import of a module replaces the earlier one, and only: :macros brings in no functions" do
+      code = """
+      defmodule MyApp.A do
+        import Brando.HTML
+
+        def a(img), do: picture_tag(img, [])
+
+        def b(img) do
+          import Brando.HTML, except: [picture_tag: 2]
+          picture_tag(img, [])
+        end
+
+        def c(img) do
+          import Brando.HTML, only: []
+          picture_tag(img, [])
+        end
+
+        def d(img) do
+          import Brando.HTML, only: :macros
+          picture_tag(img, [])
+        end
+
+        def e(img) do
+          import Brando.HTML, only: :functions
+          picture_tag(img, [])
+        end
+      end
+      """
+
+      assert [%{line: 4}, %{line: 23}] = scan(code)
+    end
+
+    test "an alias of a name that may be either module is checked as both" do
+      code = """
+      defmodule MyApp.A do
+        alias Brando.Upload
+
+        Some.Dsl.settings do
+          alias Plug.Upload
+        end
+
+        alias Upload, as: U
+        def a, do: %U{}
+      end
+      """
+
+      assert [%{line: 9, call: "Brando.Upload"}] = scan(code)
+    end
+
     test "follows as: aliases" do
       code = """
       defmodule A do
