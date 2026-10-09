@@ -211,15 +211,21 @@ defmodule BrandoAdmin.EntryFieldSyncTest do
   end
 
   # A value the form writes itself, with no browser event to follow, ships at
-  # once: AI text here, an image copy or an uploaded video likewise
-  # (`update_changeset/3,4`).
+  # once: an accepted AI suggestion here, an image copy or an uploaded video
+  # likewise (`update_changeset/3,4`).
   test "a value the form writes itself reaches the other editor", c do
     Brando.AIStub.configure()
     Brando.AIStub.reply("A description by A")
+    # The form was open before AI was configured: an edit renders the
+    # Meta drawer's actions
+    edit(c.a, "title", "Om oss, A")
 
     c.a
-    |> form()
-    |> render_hook("ai_generate_input", %{"field_name" => "page[meta_description]", "field_key" => "meta_description"})
+    |> element("button[phx-click='run_field_action'][phx-value-field='meta_description']")
+    |> render_click()
+
+    await_selector(c.a, "#page_meta_description-ai-actions .ai-proposal[data-status='ready']")
+    c.a |> element("#page_meta_description-ai-actions button", "Accept") |> render_click()
 
     await_shown(c.b, "meta_description", "A description by A")
   end
