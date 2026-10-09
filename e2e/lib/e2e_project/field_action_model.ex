@@ -1,7 +1,7 @@
 defmodule E2eProject.FieldActionModel do
   @moduledoc """
-  A stand-in model for the AI actions declared on fields (`ai_actions:`), for
-  end-to-end tests. It speaks ReqLLM's `generate_text/3` contract and answers
+  A stand-in model for the AI on fields (`ai_actions:`, the Meta drawer's
+  Generate and Write with AI in rich text), for end-to-end tests. It speaks ReqLLM's `generate_text/3` contract and answers
   in the language the prompt asks for, so a spec can see that the form asked
   for the entry's.
 
