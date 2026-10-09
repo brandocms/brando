@@ -51,6 +51,7 @@ defmodule BrandoAdmin.Components.Form.Block do
   alias BrandoAdmin.Components.Form.Block.LiquidPreview
   alias BrandoAdmin.Components.Form.BlockField
   alias BrandoAdmin.Components.Form.BlockField.Ops
+  alias BrandoAdmin.Components.Form.RichTextAI
   alias Ecto.Changeset
 
   def mount(socket) do
@@ -2067,15 +2068,17 @@ defmodule BrandoAdmin.Components.Form.Block do
     |> push_event("b:tiptap:insert_footnote:#{tiptap_id}", %{uid: uid})
   end
 
+  # Write with AI in a text block's toolbar. The `block_text` site prompt,
+  # when there is one, adds its instructions and picks the model; the reply
+  # goes back to the editor as a suggestion.
   def generate_rich_text(socket, %{"ref_name" => name, "tiptap_id" => id} = params) do
-    opts = Brando.AI.field_ai_opts(:block_text)
+    config = RichTextAI.block_text_config()
 
     with %{data: %{type: "text"}, uid: uid} <- instance_ref(socket, name),
          true <- id == "block-#{uid}-rich-text",
-         true <- Brando.AI.configured?(opts),
-         base when is_binary(base) and base != "" <- opts[:prompt],
-         {:ok, prompt} <- BrandoAdmin.Components.Form.RichTextAI.prompt(base, params) do
-      BrandoAdmin.Components.Form.RichTextAI.start(socket, params, prompt, opts)
+         true <- RichTextAI.enabled?(config),
+         {:ok, prompt} <- RichTextAI.prompt(config[:prompt], params) do
+      RichTextAI.start(socket, params, prompt, RichTextAI.ai_opts(config))
     else
       _ -> push_event(socket, "b:tiptap:ai:#{id}", %{request_id: params["request_id"], error: true})
     end
@@ -2084,7 +2087,7 @@ defmodule BrandoAdmin.Components.Form.Block do
   def generate_rich_text(socket, _), do: socket
 
   def handle_async({:tiptap_ai, id, request}, result, socket) do
-    {:noreply, BrandoAdmin.Components.Form.RichTextAI.finish(socket, id, request, result)}
+    {:noreply, RichTextAI.finish(socket, id, request, result)}
   end
 
   def open_footnote(socket, %{"uid" => uid} = params) do

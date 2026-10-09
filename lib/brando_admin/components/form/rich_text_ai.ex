@@ -1,5 +1,16 @@
 defmodule BrandoAdmin.Components.Form.RichTextAI do
-  @moduledoc "Cancellable proposals. Only the editor's Accept action changes the ordinary HTML input."
+  @moduledoc """
+  Write with AI in the rich-text toolbar: cancellable proposals. Only the
+  editor's Accept action changes the ordinary HTML input.
+
+  It is on in every top-level rich text input of an entry form and in block
+  text whenever `Brando.AI` is configured. On an input, `write_with_ai:`
+  (`Brando.Blueprint.Forms.WriteWithAI`) turns it off (`false`) or gives it
+  instructions, fields to read and a model. In block text the `block_text`
+  site prompt (`config :brando, Brando.AI, fields: [block_text: [...]]`) does:
+  its `prompt` is added to every request, and `write_with_ai: false` turns
+  it off.
+  """
   import Phoenix.Component, only: [assign: 3]
   import Phoenix.LiveView, only: [start_async: 3, cancel_async: 2, push_event: 3]
 
@@ -8,6 +19,35 @@ defmodule BrandoAdmin.Components.Form.RichTextAI do
     "shorten" => "Shorten the passage while retaining its meaning.",
     "continue" => "Continue after the passage. Return only the continuation."
   }
+
+  @doc """
+  Write with AI's options for an input with `opts`: `:off` for
+  `write_with_ai: false`, else the `write_with_ai:` options (`[]` for none).
+  """
+  @spec input_config(keyword()) :: keyword() | :off
+  def input_config(opts) do
+    case Keyword.get(opts, :write_with_ai) do
+      false -> :off
+      config when is_list(config) -> config
+      _ -> []
+    end
+  end
+
+  @doc "Write with AI's options for block text, from the `block_text` site prompt, or `:off`."
+  @spec block_text_config() :: keyword() | :off
+  def block_text_config do
+    opts = Brando.AI.field_ai_opts(:block_text)
+    if Keyword.get(opts, :write_with_ai) == false, do: :off, else: opts
+  end
+
+  @doc "Whether Write with AI is on with `config`: not `:off`, and AI is configured for its model."
+  @spec enabled?(keyword() | :off) :: boolean()
+  def enabled?(:off), do: false
+  def enabled?(config) when is_list(config), do: Brando.AI.configured?(ai_opts(config))
+
+  @doc "The `Brando.AI` options in `config`: its model and request options."
+  @spec ai_opts(keyword()) :: keyword()
+  def ai_opts(config), do: Keyword.drop(config, [:prompt, :from, :context, :write_with_ai])
 
   def start(socket, params, prompt, opts, generate \\ &Brando.AI.generate_text/2) do
     id = params["tiptap_id"]
@@ -18,8 +58,16 @@ defmodule BrandoAdmin.Components.Form.RichTextAI do
 
     socket
     |> assign(:tiptap_ai_requests, Map.put(requests, id, {request, context}))
-    |> start_async({:tiptap_ai, id, request}, Brando.Tenant.capture_context(fn -> generate.(prompt, opts) end))
+    |> start_async({:tiptap_ai, id, request}, Brando.Tenant.capture_context(fn -> run(prompt, opts, generate) end))
   end
+
+  # `prompt` is the prompt, or a function that builds it in the task
+  # (`{:ok, prompt}`), when building it reads the form's fields.
+  defp run(build, opts, generate) when is_function(build, 0) do
+    with {:ok, prompt} <- build.(), do: generate.(prompt, opts)
+  end
+
+  defp run(prompt, opts, generate), do: generate.(prompt, opts)
 
   def cancel(socket, params) do
     requests = Map.get(socket.assigns, :tiptap_ai_requests, %{})
@@ -56,6 +104,10 @@ defmodule BrandoAdmin.Components.Form.RichTextAI do
     end
   end
 
+  @doc """
+  The prompt for a Write with AI request: the site's instructions (`base`,
+  `nil` for none), the mode's, the author's instruction and the passage.
+  """
   def prompt(base, params) do
     mode = params["mode"]
     selection = params["selection"] || ""
@@ -67,13 +119,13 @@ defmodule BrandoAdmin.Components.Form.RichTextAI do
 
       {:ok,
        Enum.join(
-         [
-           base,
-           action,
-           "Return plain text in the passage's language, without HTML, Markdown or explanatory commentary.",
-           "Author instruction: " <> instruction,
-           "Passage:\n" <> selection
-         ],
+         Enum.reject([base], &(&1 in [nil, ""])) ++
+           [
+             action,
+             "Return plain text in the passage's language, without HTML, Markdown or explanatory commentary.",
+             "Author instruction: " <> instruction,
+             "Passage:\n" <> selection
+           ],
          "\n\n"
        )}
     else

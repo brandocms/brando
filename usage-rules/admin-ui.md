@@ -137,17 +137,21 @@ field's formatting, links or footnotes would be replaced. An action whose
 fields are all empty says so without asking the model.
 
 One action shows as a button beside the field's label, several as a menu.
-They show only on top-level inputs of an entry form, not in subforms or
-blocks, not on inputs that are `readonly` or `disabled` for the editor, and
-only when `Brando.AI` is configured for the action's model; anyone else who
-can edit the entry can run them. The prompt, the model and its key stay on
-the server.
+They show only on top-level inputs of an entry form and on the meta fields
+in its Meta drawer, not in subforms or blocks, not on inputs that are
+`readonly` or `disabled` for the editor, and only when `Brando.AI` is
+configured for the action's model; anyone else who can edit the entry can
+run them. The prompt, the model and its key stay on the server.
 
 The options are checked when the Blueprint compiles: a missing prompt or
 `from`, an unknown option, a `max` that is not a positive integer, a name
 used twice, an input type without text or actions in `inputs_for` stop the
 compilation, and a field in `from` that the schema does not have, or that is
 an association or an embed, is reported with the other form errors.
+
+Write new per-field AI as `ai_actions:`: `ai:` on an input is
+[deprecated](deps/brando/guides/blueprint_forms.md#ai-on-an-input-deprecated). Rich text inputs get Write with AI
+whenever AI is configured; `write_with_ai: false` turns it off.
 
 ### Block editors
 

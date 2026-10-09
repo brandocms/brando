@@ -9,9 +9,11 @@ defmodule BrandoAdmin.Components.Form.Input do
   import BrandoAdmin.Components.Content.List.Row, only: [status_circle: 1]
 
   alias BrandoAdmin.Components.AIAction
+  alias BrandoAdmin.Components.Form.AltTextSuggestion
   alias BrandoAdmin.Components.Form.FieldActions
   alias BrandoAdmin.Components.Form.Input.Options
   alias BrandoAdmin.Components.Form.Primitives
+  alias BrandoAdmin.Components.Form.RichTextAI
 
   # prop current_user, :any
   # prop form, :any
@@ -409,6 +411,7 @@ defmodule BrandoAdmin.Components.Form.Input do
       |> assign_new(:input_form, fn -> nil end)
       |> prepare_input_component()
       |> prepare_ai_support()
+      |> assign_write_with_ai()
 
     # An empty TipTap document still serializes to `<p></p>`, so a bare
     # `not in [nil, ""]` would call every untouched field overridden — and would
@@ -421,7 +424,7 @@ defmodule BrandoAdmin.Components.Form.Input do
     ~H"""
     <Primitives.field_base field={@field} label={@label} instructions={@instructions} class={@class} compact={@compact}>
       <:header :if={@field_actions != []}>
-        <FieldActions.menu field={@field} actions={@field_actions} target={@target} />
+        <FieldActions.menu field={@field} actions={@field_actions} target={@target} panel={@ai_panel} />
       </:header>
       <div
         class={["tiptap-wrapper", "input-with-action", @reset && @is_overridden && "has-action"]}
@@ -447,7 +450,7 @@ defmodule BrandoAdmin.Components.Form.Input do
           data-tiptap-invalid={to_string(field_invalid?(@field))}
           data-tiptap-required={to_string(field_required?(@field))}
           data-tiptap-readonly={to_string(@disabled == true || @opts[:readonly] == true)}
-          data-tiptap-ai={to_string(@ai_enabled?)}
+          data-tiptap-ai={to_string(@write_with_ai?)}
           data-tiptap-field={@field.field}
           data-tiptap-label-mode={@opts[:label_mode] || "compact"}
           data-tiptap-typography={Jason.encode!(Map.new(@opts[:typography] || %{}))}
@@ -491,7 +494,7 @@ defmodule BrandoAdmin.Components.Form.Input do
       <.live_component
         :if={@field_actions != []}
         module={FieldActions}
-        id={FieldActions.id(@field)}
+        id={@ai_panel}
         field={@field}
         type={:rich_text}
         form_target={@target}
@@ -1120,6 +1123,10 @@ defmodule BrandoAdmin.Components.Form.Input do
   attr :change, :any, default: nil
   attr :target, :any, default: nil
   attr :opts, :list
+  attr :ai_actions, :list, default: [], doc: "the field's AI actions, from `Brando.AI.FieldAction.for_field/3`"
+  attr :ai_panel, :string, default: nil, doc: "the suggestion panel's id, `FieldActions.id/2`"
+  attr :form_id, :string, default: nil, doc: "the entry form's id, which runs and accepts AI actions"
+  attr :current_user, :any, default: nil
 
   def text(assigns) do
     assigns =
@@ -1130,37 +1137,26 @@ defmodule BrandoAdmin.Components.Form.Input do
     ~H"""
     <Primitives.field_base field={@field} label={@label} instructions={@instructions} class={@class} compact={@compact}>
       <:header :if={@field_actions != []}>
-        <FieldActions.menu field={@field} actions={@field_actions} target={@target} />
+        <FieldActions.menu field={@field} actions={@field_actions} target={@target} panel={@ai_panel} />
       </:header>
-      <div class={["input-with-action", @ai_enabled? && "has-action"]}>
+      <div class="input-with-action">
         <.input
           type={:text}
           field={@field}
           placeholder={@placeholder}
           disabled={@disabled}
           readonly={@readonly}
-          class={["text", @monospace && "monospace", @ai_enabled? && "has-ai-action"]}
+          class={["text", @monospace && "monospace"]}
           phx-debounce={@debounce}
           data-watch-focus
           phx-target={@target}
           phx-change={@change}
         />
-        <AIAction.button
-          :if={@ai_enabled?}
-          size={:icon}
-          class="ai-generate-button"
-          phx-click="ai_generate_input"
-          phx-target={@target}
-          phx-value-field_name={to_string(@field.name)}
-          phx-value-field_key={to_string(@field.field)}
-          data-tooltip={@ai_label}
-          aria-label={@ai_label}
-        />
       </div>
       <.live_component
         :if={@field_actions != []}
         module={FieldActions}
-        id={FieldActions.id(@field)}
+        id={@ai_panel}
         field={@field}
         type={:text}
         form_target={@target}
@@ -1305,6 +1301,10 @@ defmodule BrandoAdmin.Components.Form.Input do
   attr :placeholder, :string
   attr :target, :any, default: nil
   attr :opts, :list
+  attr :ai_actions, :list, default: [], doc: "the field's AI actions, from `Brando.AI.FieldAction.for_field/3`"
+  attr :ai_panel, :string, default: nil, doc: "the suggestion panel's id, `FieldActions.id/2`"
+  attr :form_id, :string, default: nil, doc: "the entry form's id, which runs and accepts AI actions"
+  attr :current_user, :any, default: nil
 
   def textarea(assigns) do
     assigns =
@@ -1321,13 +1321,13 @@ defmodule BrandoAdmin.Components.Form.Input do
     ~H"""
     <Primitives.field_base field={@field} label={@label} instructions={@instructions} class={@class} compact={@compact}>
       <:header :if={@field_actions != []}>
-        <FieldActions.menu field={@field} actions={@field_actions} target={@target} />
+        <FieldActions.menu field={@field} actions={@field_actions} target={@target} panel={@ai_panel} />
       </:header>
-      <div class={["input-with-action", @ai_enabled? && "has-action"]}>
+      <div class="input-with-action">
         <.input
           type={:textarea}
           field={@field}
-          class={["text", @monospace && "monospace", @ai_enabled? && "has-ai-action"]}
+          class={["text", @monospace && "monospace"]}
           placeholder={@placeholder}
           rows={@rows}
           disabled={@disabled}
@@ -1336,22 +1336,11 @@ defmodule BrandoAdmin.Components.Form.Input do
           data-watch-focus
           id={@generated_uid}
         />
-        <AIAction.button
-          :if={@ai_enabled?}
-          size={:icon}
-          class="ai-generate-button"
-          phx-click="ai_generate_input"
-          phx-target={@target}
-          phx-value-field_name={to_string(@field.name)}
-          phx-value-field_key={to_string(@field.field)}
-          data-tooltip={@ai_label}
-          aria-label={@ai_label}
-        />
       </div>
       <.live_component
         :if={@field_actions != []}
         module={FieldActions}
-        id={FieldActions.id(@field)}
+        id={@ai_panel}
         field={@field}
         type={:textarea}
         form_target={@target}
@@ -1361,19 +1350,24 @@ defmodule BrandoAdmin.Components.Form.Input do
     """
   end
 
+  # The field's AI actions (`ai_actions:`, the deprecated `ai:` and a meta
+  # field's site prompt; see `Brando.AI.FieldAction.for_field/3`). Each
+  # result is a suggestion under the field; nothing writes the field.
   defp prepare_ai_support(assigns) do
-    ai_opts = Brando.AI.normalize_ai_opts(assigns.opts[:ai])
-
-    ai_enabled? =
-      ai_opts != [] &&
-        !is_nil(assigns[:target]) &&
-        Brando.AI.configured?(ai_opts)
-
     assigns
-    |> assign(:ai_opts, ai_opts)
-    |> assign(:ai_enabled?, ai_enabled?)
-    |> assign(:ai_label, gettext("Generate with AI"))
     |> assign(:field_actions, FieldActions.available(assigns))
+    |> assign(:ai_panel, assigns[:ai_panel] || FieldActions.id(assigns.field))
+  end
+
+  # Write with AI in a rich text toolbar: in a top-level input of an entry
+  # form (the form answers its requests) whenever AI is configured for its
+  # model, unless the input says `write_with_ai: false`.
+  defp assign_write_with_ai(assigns) do
+    write_with_ai? =
+      !is_nil(assigns[:target]) && !is_nil(assigns[:form_id]) &&
+        RichTextAI.enabled?(RichTextAI.input_config(assigns.opts || []))
+
+    assign(assigns, :write_with_ai?, write_with_ai?)
   end
 
   attr :field, FormField
@@ -1440,6 +1434,12 @@ defmodule BrandoAdmin.Components.Form.Input do
       # (and `suggest_target`) where another component owns the image
       |> assign(:suggest_event, suggest_event(opts[:suggest_alt]))
       |> assign(:suggest_target, opts[:suggest_target] || assigns[:target])
+      # The suggestion panel of this image's alt field: another image's
+      # field (the drawer moving on) has another, empty one
+      |> assign(
+        :alt_suggestion_id,
+        AltTextSuggestion.id(assigns.field.id, Brando.Utils.try_path(assigns.field, [:form, :source, :data, :id]))
+      )
       |> then(fn assigns ->
         assign(
           assigns,
@@ -1474,13 +1474,15 @@ defmodule BrandoAdmin.Components.Form.Input do
               {language}
             </button>
           </div>
-          <%!-- An image's alt text, described by AI and filled in unsaved --%>
+          <%!-- An image's alt text, described by AI: a suggestion under the
+                field until it is accepted --%>
           <AIAction.button
             :if={@suggest_alt?}
             size={:compact}
             class="i18n-suggest"
             phx-click={@suggest_event}
             phx-target={@suggest_target}
+            phx-value-panel={@alt_suggestion_id}
           >
             {gettext("Suggest alt text")}
           </AIAction.button>
@@ -1520,6 +1522,16 @@ defmodule BrandoAdmin.Components.Form.Input do
           >{@value[language]}</textarea>
         </div>
       </div>
+      <.live_component
+        :if={@suggest_alt?}
+        module={AltTextSuggestion}
+        id={@alt_suggestion_id}
+        owner={@suggest_target}
+        scope={@suggest_event}
+        languages={@languages}
+        retry_event={@suggest_event}
+        retry_target={@suggest_target}
+      />
     </Primitives.field_base>
     """
   end

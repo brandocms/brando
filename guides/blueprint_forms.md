@@ -364,10 +364,10 @@ type.
 
 ### Text and numbers
 
-* `:text`: a single line. Reads `readonly`, [`ai`](#ai-generated-values)
-  and [`ai_actions`](#ai-actions-on-a-field).
+* `:text`: a single line. Reads `readonly` and
+  [`ai_actions`](#ai-actions-on-a-field).
 * `:textarea`: several lines. `rows:` sets the height (default 3). Reads
-  `ai` and `ai_actions`.
+  `ai_actions`.
 * `:number`: a number field. Reads `readonly`.
 * `:email`: an email field.
 * `:phone`: a text field for phone numbers.
@@ -607,7 +607,9 @@ extension keys never enter stored HTML. `label_mode` sets how the paragraph
 menu is labelled: `"compact"` (the default, `¶` / `H2`), `"icon"` or
 `"full"`. Removing `"smartText"` disables typography substitutions;
 `typography: [emDash: false]` turns single ones off. `readonly: true` or
-`disabled: true` prevents editing.
+`disabled: true` prevents editing. The toolbar offers
+[Write with AI](#write-with-ai) when AI is configured; `write_with_ai: false`
+leaves it out.
 
 Content links keep their target's identifier alongside the URL. When the
 target's URL changes, Brando updates the link in block text and ordinary
@@ -646,86 +648,6 @@ are written with; `enabled: false` keeps the configuration but turns the
 feature off. The relation must not also have its own `blocks` editor, the
 schema needs `trait :blocks`, and footnotes work only on top-level inputs, not
 in subforms. See [Footnotes](block_editor.md#footnotes).
-
-## AI-generated values
-
-`ai:` on a `:text`, `:textarea` or `:rich_text` input lets editors generate
-its value:
-
-```elixir
-input :meta_description, :textarea,
-  ai: [
-    prompt: "Write a succinct meta description based on title and intro",
-    context: [:title, :intro, :blocks]
-  ]
-```
-
-* `prompt` (required): the instruction.
-* `context`: fields sent with the prompt. `:blocks` sends the rendered block
-  content, including unsaved changes.
-* `model`: a `"provider:model"` spec or a name from the `models:` config.
-* `api_key`: a key for this field.
-* `temperature`, `max_tokens`, `top_p`, `presence_penalty`,
-  `frequency_penalty`, `tool_choice`, `tools`, `system_prompt`,
-  `provider_options`, `receive_timeout` and `thinking_timeout` are passed to
-  the model.
-
-On `:text` and `:textarea`, a button generates a value and replaces the
-field's. A `:rich_text` toolbar offers **Write with AI** instead: Rewrite,
-Shorten or Continue the selection. The result shows as a coloured
-suggestion; Accept inserts it and Discard leaves the document unchanged, and
-one Undo reverses an accepted suggestion. Suggestions are left out of saved
-HTML, recovery copies and the preview until accepted, and a response does not
-overwrite text edited while it was being generated. The editor inserts plain
-text and paragraphs, so write rich-text prompts for plain prose rather than
-HTML or Markdown.
-
-The button shows only when `Brando.AI` is configured, and only on top-level
-inputs, not in subforms. An input's `ai:` options are used as they are,
-without merging the `fields:` config below.
-
-```elixir
-config :brando, Brando.AI,
-  enabled: true,
-  models: [
-    default: "openai:gpt-4o-mini",
-    image: "openai:gpt-4o-mini"
-  ],
-  providers: [
-    openai: [api_key: System.get_env("OPENAI_API_KEY")]
-  ],
-  fields: [
-    block_text: [prompt: "Help refine this passage while preserving its meaning"]
-  ],
-  default_opts: [temperature: 0.4]
-```
-
-`models:` names the models a site uses: `:default` for everything, and a name
-per kind of job (alt text asks for `:image`) that falls back to `:default`.
-`default_model: "..."` is still read, as `models: [default: "..."]`.
-`fields:` holds defaults by field name: `block_text` turns on the same
-suggestions for text in the block editor, and the meta fields below read
-theirs from here when the Blueprint gives none. Model and provider settings
-and credentials stay on the server.
-
-`meta_title` and `meta_description` from `trait :meta` are edited in the
-form's Meta drawer, not in a tab. Configure their generation on the trait:
-
-```elixir
-trait :meta,
-  ai: [
-    meta_title: [prompt: "Write an SEO title from the title", context: [:title]],
-    meta_description: [prompt: "Write an SEO description", context: [:title, :blocks]]
-  ]
-```
-
-or with a hidden input, whose options the drawer reuses:
-
-```elixir
-input :meta_description, :textarea,
-  hidden: true,
-  ai: [prompt: "Write a succinct meta description", context: [:title, :blocks]]
-```
 
 ## AI actions on a field
 
@@ -783,11 +705,11 @@ field's formatting, links or footnotes would be replaced. An action whose
 fields are all empty says so without asking the model.
 
 One action shows as a button beside the field's label, several as a menu.
-They show only on top-level inputs of an entry form, not in subforms or
-blocks, not on inputs that are `readonly` or `disabled` for the editor, and
-only when `Brando.AI` is configured for the action's model; anyone else who
-can edit the entry can run them. The prompt, the model and its key stay on
-the server.
+They show only on top-level inputs of an entry form and on the meta fields
+in its Meta drawer, not in subforms or blocks, not on inputs that are
+`readonly` or `disabled` for the editor, and only when `Brando.AI` is
+configured for the action's model; anyone else who can edit the entry can
+run them. The prompt, the model and its key stay on the server.
 
 The options are checked when the Blueprint compiles: a missing prompt or
 `from`, an unknown option, a `max` that is not a positive integer, a name
@@ -795,13 +717,161 @@ used twice, an input type without text or actions in `inputs_for` stop the
 compilation, and a field in `from` that the schema does not have, or that is
 an association or an embed, is reported with the other form errors.
 
+Write new per-field AI as `ai_actions:`: `ai:` on an input is
+[deprecated](#ai-on-an-input-deprecated). Rich text inputs get Write with AI
+whenever AI is configured; `write_with_ai: false` turns it off.
+
 <!-- usage-rules:end -->
 
-An input can have both `ai:` and `ai_actions:`. `ai:` is a single generate
-button: on `:text` and `:textarea` it writes its result straight into the
-field, and on `:rich_text` it is the toolbar's Write with AI. Use
-`ai_actions:` to offer several named actions, or to have the editor review a
-result before it reaches the field.
+### Meta fields
+
+`meta_title` and `meta_description` from `trait :meta` are edited in the
+form's Meta drawer, not in a tab. Each gets a **Generate** action from its
+[site prompt](#site-prompts), and the actions of an input for it, usually a
+`:hidden` one:
+
+```elixir
+input :meta_description, :hidden,
+  ai_actions: [
+    shorten: [label: t("Shorten"), prompt: "Shorten the description.", from: :meta_description, max: 155]
+  ]
+```
+
+The input's own actions come first. An action named `generate` replaces the
+site prompt's. In the drawer the meta title is a text field and the meta
+description a textarea, whatever the input's type, and a suggestion is
+written as one: the meta title gets it on one line. A meta field that is also
+an input in a tab has its actions in both places, each with its own
+suggestion.
+
+## Write with AI
+
+A `:rich_text` toolbar offers **Write with AI**: Rewrite, Shorten or
+Continue the selection, or the whole text without one, with the editor's
+own instruction. It is on in every top-level `:rich_text` input of an entry
+form and in block text whenever `Brando.AI` is configured. Turn it off on an
+input with `write_with_ai: false`:
+
+```elixir
+input :body, :rich_text, write_with_ai: false
+```
+
+or give its requests instructions, the fields they read and a model:
+
+```elixir
+input :body, :rich_text,
+  write_with_ai: [prompt: "Keep the magazine's plain tone.", from: [:title], model: :fast]
+```
+
+* `prompt`: instructions every request starts with.
+* `from`: fields whose values, as the form has them, follow the
+  instructions, as an action's `from:`; it needs a `prompt`. Checked when
+  the Blueprint compiles.
+* `model`: a `"provider:model"` spec or a name from the `models:` config.
+
+and in block text with the [`block_text` site prompt](#site-prompts):
+`fields: [block_text: [write_with_ai: false]]`.
+
+The result shows in the text as a suggestion the editor can change; Accept
+inserts it and Discard leaves the document unchanged, and one Undo reverses
+an accepted suggestion. Suggestions are left out of saved HTML, recovery
+copies and the preview until accepted, and a response does not overwrite
+text edited while it was being generated. The editor inserts plain text and
+paragraphs.
+
+## Site prompts
+
+Site prompts are the site's own instructions for the AI jobs that are not a
+field's action: they write the meta fields' **Generate** in the Meta drawer,
+the meta descriptions and titles of the Content SEO batch, image alt text,
+and the instructions every Write with AI request in block text starts with.
+Each is a prompt, the fields it reads (`context:`) and the model options.
+
+`trait :meta, ai:` holds a Blueprint's prompts for its meta fields:
+
+```elixir
+trait :meta,
+  ai: [
+    meta_title: [prompt: "Write an SEO title from the title", context: [:title]],
+    meta_description: [prompt: "Write an SEO description", context: [:title, :blocks]]
+  ]
+```
+
+The app config holds the rest, by name, and fills in what a Blueprint's
+prompt leaves out, such as a `model:`:
+
+```elixir
+config :brando, Brando.AI,
+  enabled: true,
+  models: [
+    default: "openai:gpt-4o-mini",
+    image: "openai:gpt-4o-mini"
+  ],
+  providers: [
+    openai: [api_key: System.get_env("OPENAI_API_KEY")]
+  ],
+  fields: [
+    meta_description: [model: :default],
+    block_text: [prompt: "Keep the site's plain, friendly tone."],
+    alt: [prompt: "Describe what the photo shows for a screen reader."]
+  ],
+  default_opts: [temperature: 0.4]
+```
+
+* `meta_title`, `meta_description`: the Meta drawer's **Generate** and the
+  Content SEO batch. The SEO review (critique) uses `meta_description`'s
+  model.
+* `block_text`: added before every Write with AI request in block text;
+  `write_with_ai: false` turns Write with AI off there.
+* `alt`: image alt text, by default with the `:image` model.
+
+Each takes `prompt`, `context` (the fields it reads; `:blocks` is the
+rendered block content), `model` (a `"provider:model"` spec or a name from
+`models:`), `api_key`, and the request options passed to the model:
+`temperature`, `max_tokens`, `top_p`, `presence_penalty`,
+`frequency_penalty`, `tool_choice`, `tools`, `system_prompt`,
+`provider_options`, `receive_timeout` and `thinking_timeout`.
+
+`models:` names the models a site uses: `:default` for everything, and a name
+per kind of job (alt text asks for `:image`) that falls back to `:default`.
+`default_model: "..."` is still read, as `models: [default: "..."]`. Model and
+provider settings and credentials stay on the server.
+
+## `ai:` on an input (deprecated)
+
+Before `ai_actions:`, an input took one prompt in `ai:`, and on `:text` and
+`:textarea` its result went straight into the field. In 0.55 `ai:` still
+works, as one action named **Generate** whose result is a suggestion like
+any other, and the Blueprint warns when it compiles, with the `ai_actions:`
+to write instead. It is removed in a later release.
+
+```elixir
+# Deprecated
+input :summary, :textarea,
+  ai: [prompt: "Summarize the article.", context: [:title, :blocks]]
+
+# Instead
+input :summary, :textarea,
+  ai_actions: [
+    generate: [label: t("Generate"), prompt: "Summarize the article.", from: [:title, :blocks]]
+  ]
+```
+
+`context:` becomes `from:`, which `ai_actions:` requires. `model:` carries
+over. `api_key:` and request options such as `temperature:` have no place in
+`ai_actions:`: set keys under `providers:` and request options under
+`default_opts:`. Until the input is changed, the action keeps them, and like
+`ai:` it sends its prompt even when the fields it reads are empty.
+
+`ai:` keeps its meaning elsewhere too:
+
+* On a `:rich_text` input it gave Write with AI its instructions, context
+  and model: it is read as `write_with_ai: [prompt:, from:, model:]`, and the
+  warning prints that.
+* On a `:hidden` input for a meta field it is the Meta drawer's Generate, an
+  action on that input.
+* A custom component (`{:live_component, module}` or a function) gets it in
+  its options as before, without a warning.
 
 <!-- usage-rules:start topic="admin-ui" -->
 

@@ -1186,6 +1186,21 @@ defmodule E2EFixtureController do
     send_resp(conn, 200, "")
   end
 
+  # An image in the library with its file on disk and no alt text, for
+  # "Suggest alt text" with the fake model (`/e2e/field-ai/on`).
+  def alt_text_image(conn, _params) do
+    [beam | _] = Plug.Conn.get_req_header(conn, "user-agent")
+    Phoenix.Ecto.SQL.Sandbox.allow(beam, Ecto.Adapters.SQL.Sandbox)
+    {_name, image} = create_directory_avatar()
+
+    image =
+      image
+      |> Ecto.Changeset.change(config_target: "default", title: %{"en" => "Ferries", "no" => "Ferjer"})
+      |> Brando.Repo.update!()
+
+    json(conn, %{id: image.id})
+  end
+
   def image_creator(conn, %{"image_id" => image_id}) do
     [beam | _] = Plug.Conn.get_req_header(conn, "user-agent")
     Phoenix.Ecto.SQL.Sandbox.allow(beam, Ecto.Adapters.SQL.Sandbox)

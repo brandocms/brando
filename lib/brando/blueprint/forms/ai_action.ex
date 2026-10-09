@@ -20,6 +20,12 @@ defmodule Brando.Blueprint.Forms.AIAction do
   The options are checked when the Blueprint compiles: `build/2` here, as the
   input is built, and the fields named in `from:` in
   the forms verifier, once the schema exists.
+
+  Two other sources give an input the same kind of action, named `:generate`
+  (see `generate/2`): the deprecated `ai:` option on an input (`origin: :ai`),
+  and a site prompt for a meta field in the Meta drawer (`origin: :site`).
+  Those keep the request options `ai:` and site prompts take (`api_key`,
+  `temperature`, …) in `request_opts`; `ai_actions:` has none.
   """
   defstruct name: nil,
             label: nil,
@@ -28,7 +34,9 @@ defmodule Brando.Blueprint.Forms.AIAction do
             max: nil,
             tone: nil,
             language: nil,
-            model: nil
+            model: nil,
+            origin: :ai_actions,
+            request_opts: []
 
   @type t :: %__MODULE__{
           name: atom(),
@@ -38,10 +46,14 @@ defmodule Brando.Blueprint.Forms.AIAction do
           max: pos_integer() | nil,
           tone: String.t() | nil,
           language: String.t() | atom() | nil,
-          model: String.t() | atom() | nil
+          model: String.t() | atom() | nil,
+          origin: :ai_actions | :ai | :site,
+          request_opts: keyword()
         }
 
   @input_types [:text, :textarea, :rich_text]
+  # Edited in the Meta drawer: a hidden input for one carries its actions.
+  @meta_fields [:meta_title, :meta_description]
 
   @schema [
     prompt: [type: :string, required: true, doc: "The instruction sent to the model."],
@@ -57,20 +69,166 @@ defmodule Brando.Blueprint.Forms.AIAction do
     model: [type: {:or, [:atom, :string]}, doc: "A `\"provider:model\"` spec or a name from the `models:` config."]
   ]
 
+  # What `ai:` and site prompts pass on to the model besides `model:`
+  # (`Brando.AI`'s request options).
+  @request_opt_keys [
+    :api_key,
+    :temperature,
+    :max_tokens,
+    :top_p,
+    :presence_penalty,
+    :frequency_penalty,
+    :tool_choice,
+    :tools,
+    :system_prompt,
+    :provider_options,
+    :receive_timeout,
+    :thinking_timeout
+  ]
+
   @doc "The input types that take `ai_actions:`."
   def input_types, do: @input_types
+
+  @doc """
+  Whether an input takes `ai_actions:`: a text input, or a `:hidden` input
+  for a meta field, whose actions the Meta drawer offers.
+  """
+  def takes_actions?(type, _name) when type in @input_types, do: true
+  def takes_actions?(:hidden, name), do: name in @meta_fields
+  def takes_actions?(_type, _name), do: false
+
+  @doc """
+  The `:generate` action for the options of the deprecated `ai:` on an input
+  (`origin: :ai`) or of a site prompt (`origin: :site`, `trait :meta, ai:` or
+  `config :brando, Brando.AI, fields:`): its `prompt`, `context:` as the
+  fields it reads (`from`), its `model` and its request options. `nil` when
+  the options have no prompt.
+
+  A `context:` that names nothing is an empty `from`: the prompt goes to the
+  model alone, as it did before.
+  """
+  @spec generate(keyword() | map() | nil, :ai | :site) :: t() | nil
+  def generate(ai_opts, origin) when origin in [:ai, :site] do
+    opts = keyword(ai_opts)
+
+    case opts[:prompt] do
+      prompt when is_binary(prompt) ->
+        if String.trim(prompt) == "" do
+          nil
+        else
+          %__MODULE__{
+            name: :generate,
+            prompt: prompt,
+            from: context_fields(opts[:context]),
+            model: opts[:model],
+            origin: origin,
+            request_opts: Keyword.take(opts, @request_opt_keys)
+          }
+        end
+
+      _ ->
+        nil
+    end
+  end
+
+  @doc """
+  Adds the action an input's deprecated `ai:` options run as (`generate/2`)
+  to the actions it declares in `ai_actions:`: on a `:text` or `:textarea`
+  input, or a `:hidden` input for a meta field. Not when `ai_actions:`
+  already has a `:generate`; the forms verifier warns about `ai:` then.
+  (On `:rich_text`, `ai:` is Write with AI's, see
+  `Brando.Blueprint.Forms.WriteWithAI`.)
+  """
+  @spec add_deprecated(atom() | term(), atom(), [t()], term()) :: [t()]
+  def add_deprecated(_type, _name, actions, nil), do: actions
+
+  def add_deprecated(type, name, actions, ai_opts) do
+    with true <- type != :rich_text and takes_actions?(type, name),
+         false <- Enum.any?(actions, &(&1.name == :generate)),
+         %__MODULE__{} = action <- generate(ai_opts, :ai) do
+      actions ++ [action]
+    else
+      _ -> actions
+    end
+  end
+
+  @doc """
+  The `ai_actions:` to write for an action `generate/2` built from `ai:`
+  options, as Blueprint source, for the deprecation warning.
+  """
+  @spec to_source(t()) :: String.t()
+  def to_source(%__MODULE__{} = action) do
+    options =
+      [
+        {:label, ~s|t("Generate")|},
+        {:prompt, inspect(action.prompt, printable_limit: :infinity)},
+        action.from != [] && {:from, inspect(action.from)},
+        action.model && {:model, inspect(action.model)}
+      ]
+      |> Enum.filter(& &1)
+      |> Enum.map_join(",\n", fn {key, value} -> "    #{key}: #{value}" end)
+
+    "ai_actions: [\n  #{action.name}: [\n#{options}\n  ]\n]"
+  end
+
+  @doc "The request options `generate/2` keeps besides `model:`."
+  def request_opt_keys, do: @request_opt_keys
+
+  @doc "`ai:` or site prompt options as a keyword list: a map's known keys, anything else empty."
+  @spec keyword(term()) :: keyword()
+  def keyword(opts) when is_list(opts), do: if(Keyword.keyword?(opts), do: opts, else: [])
+  def keyword(opts) when is_map(opts), do: Enum.flat_map(opts, &keyword_pair/1)
+  def keyword(_opts), do: []
+
+  defp keyword_pair({key, value}) when is_atom(key), do: [{key, value}]
+
+  defp keyword_pair({key, value}) when is_binary(key) do
+    [{String.to_existing_atom(key), value}]
+  rescue
+    ArgumentError -> []
+  end
+
+  defp keyword_pair(_pair), do: []
+
+  @doc """
+  `context:` as the fields it names, as `Brando.AI.Context.normalize_fields/1`
+  reads it: atoms, and strings that name an existing atom.
+  """
+  @spec context_fields(term()) :: [atom()]
+  def context_fields(nil), do: []
+
+  def context_fields(fields) do
+    fields
+    |> List.wrap()
+    |> Enum.flat_map(fn
+      field when is_atom(field) and not is_nil(field) ->
+        [field]
+
+      field when is_binary(field) ->
+        try do
+          [String.to_existing_atom(field)]
+        rescue
+          ArgumentError -> []
+        end
+
+      _ ->
+        []
+    end)
+  end
 
   @doc """
   Builds the actions an input declares in `ai_actions:`, or an error message
   for a Blueprint compile error.
   """
-  @spec build(atom() | term(), term()) :: {:ok, [t()]} | {:error, String.t()}
-  def build(_type, nil), do: {:ok, []}
+  @spec build(atom() | term(), term(), atom() | nil) :: {:ok, [t()]} | {:error, String.t()}
+  def build(type, actions, name \\ nil)
+  def build(_type, nil, _name), do: {:ok, []}
 
-  def build(type, actions) do
+  def build(type, actions, name) do
     cond do
-      type not in @input_types ->
-        {:error, "ai_actions work on #{Enum.map_join(@input_types, ", ", &inspect/1)} inputs, not #{inspect(type)}"}
+      not takes_actions?(type, name) ->
+        {:error,
+         "ai_actions work on #{Enum.map_join(@input_types, ", ", &inspect/1)} inputs and :hidden inputs for meta fields, not #{inspect(type)}"}
 
       not (is_list(actions) and Keyword.keyword?(actions)) ->
         {:error, "ai_actions must be a keyword list of action name and options, got: #{inspect(actions)}"}

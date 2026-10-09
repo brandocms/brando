@@ -32,6 +32,7 @@ defmodule BrandoAdmin.Components.Form do
 
   require Logger
 
+  alias Brando.AI.FieldAction
   alias Brando.Blueprint.Callback
   alias Brando.Blueprint.Forms, as: BlueprintForms
   alias Brando.EditSession
@@ -42,6 +43,7 @@ defmodule BrandoAdmin.Components.Form do
   alias BrandoAdmin.Components.Content
   alias BrandoAdmin.Components.FilePicker
   alias BrandoAdmin.Components.Form.AlternatesDrawer
+  alias BrandoAdmin.Components.Form.AltTextSuggestion
   alias BrandoAdmin.Components.Form.BlockField
   alias BrandoAdmin.Components.Form.DraftRecoveryComponent
   alias BrandoAdmin.Components.Form.Drafts
@@ -60,6 +62,7 @@ defmodule BrandoAdmin.Components.Form do
   alias BrandoAdmin.Components.Form.Preview
   alias BrandoAdmin.Components.Form.Primitives
   alias BrandoAdmin.Components.Form.RevisionsDrawer
+  alias BrandoAdmin.Components.Form.RichTextAI
   alias BrandoAdmin.Components.Form.ScheduledPublishingDrawer
   alias BrandoAdmin.Components.Form.Translation
   alias BrandoAdmin.Components.Form.VideoDrawer
@@ -166,10 +169,8 @@ defmodule BrandoAdmin.Components.Form do
         _ -> to_string(Brando.config(:default_language))
       end
 
-    {:ok,
-     start_async(socket, {:suggest_ref_alt_text, reply_to}, fn ->
-       {language, Images.AltText.describe(image_id, languages: [language])}
-     end)}
+    describe = AltTextSuggestion.describe_task(image_id, languages: [language])
+    {:ok, start_async(socket, {:suggest_ref_alt_text, reply_to, image_id}, fn -> {language, describe.()} end)}
   end
 
   def update(%{event: event, field: field} = message, socket)
@@ -200,20 +201,48 @@ defmodule BrandoAdmin.Components.Form do
   # since the action ran (another editor's, say) unless the editor said to
   # replace it.
   def update(%{event: "accept_field_action", field_name: name, field: field, text: text} = message, socket) do
-    with %BlueprintForms.Input{actions: [_ | _], type: type, opts: opts} <-
-           BlueprintForms.get_field(field, socket.assigns.form_blueprint),
+    with {[_ | _], type, opts} <- field_ai_actions(socket, field),
          false <- FieldActions.locked?(opts, socket.assigns.current_user),
          {:ok, path, key, string_path} <- parse_form_field_name(name, socket.assigns.singular) do
+      panel = field_action_panel(socket, field, message[:panel])
+
       if message[:replace] || get_field(socket.assigns.form.source, field) == message[:original] do
-        send_update(FieldActions, id: FieldActions.id(socket.assigns.form[field]), accept_result: :written)
-        value = Brando.AI.FieldAction.field_value(text, type)
+        send_update(FieldActions, id: panel, accept_result: :written)
+        value = FieldAction.field_value(text, type)
         {:ok, write_ai_text(socket, path, key, string_path, field, value)}
       else
-        send_update(FieldActions, id: FieldActions.id(socket.assigns.form[field]), accept_result: :conflict)
+        send_update(FieldActions, id: panel, accept_result: :conflict)
         {:ok, socket}
       end
     else
       _ -> {:ok, socket}
+    end
+  end
+
+  # Alt text suggested by AI and accepted under its field
+  # (`AltTextSuggestion`): it joins the alt text there, as unsaved input.
+  # Only for the image the suggestion describes, and not over a language
+  # written in since (`AltTextSuggestion.merge/3`).
+  def update(%{event: "accept_alt_suggestion", scope: "suggest_entry_alt_text", image_id: id} = message, socket) do
+    case socket.assigns[:entry] do
+      %Images.Image{id: ^id} when not is_nil(id) ->
+        changeset = socket.assigns.form.source
+        alt = AltTextSuggestion.merge(Changeset.get_field(changeset, :alt), message.values, message[:original])
+        {:ok, put_written_form(socket, to_form(put_change(changeset, :alt, alt), []))}
+
+      _ ->
+        {:ok, socket}
+    end
+  end
+
+  def update(%{event: "accept_alt_suggestion", scope: "suggest_alt_text", image_id: id} = message, socket) do
+    case {socket.assigns[:edit_image], socket.assigns[:image_changeset]} do
+      {%{image: %{id: ^id}}, %Changeset{} = changeset} when not is_nil(id) ->
+        alt = AltTextSuggestion.merge(Changeset.get_field(changeset, :alt), message.values, message[:original])
+        {:ok, assign(socket, :image_changeset, Changeset.put_change(changeset, :alt, alt))}
+
+      _ ->
+        {:ok, socket}
     end
   end
 
@@ -1494,29 +1523,33 @@ defmodule BrandoAdmin.Components.Form do
   end
 
   def handle_async({:tiptap_ai, id, request}, result, socket) do
-    {:noreply, BrandoAdmin.Components.Form.RichTextAI.finish(socket, id, request, result)}
+    {:noreply, RichTextAI.finish(socket, id, request, result)}
   end
 
-  def handle_async({:suggest_ref_alt_text, {module, id}}, result, socket) do
+  # The reply names the image it describes: the block may have another by now.
+  def handle_async({:suggest_ref_alt_text, {module, id}, image_id}, result, socket) do
     reply =
       case result do
-        {:ok, {language, {:ok, %{values: values}}}} when is_map_key(values, language) -> {:ok, values[language]}
-        _ -> :error
+        {:ok, {language, {:ok, %{values: values}}}} when is_map_key(values, language) ->
+          {:ok, language, values[language]}
+
+        _ ->
+          :error
       end
 
-    send_update(module, id: id, event: "alt_text_suggested", result: reply)
+    send_update(module, id: id, event: "alt_text_suggested", result: reply, image_id: image_id)
     {:noreply, socket}
   end
 
-  def handle_async({:suggest_entry_alt_text, image_id}, result, socket) do
+  # The image form's own "Suggest alt text": a suggestion under the field
+  # (`AltTextSuggestion`), written by "accept_alt_suggestion".
+  def handle_async({:suggest_entry_alt_text, image_id, panel, original}, result, socket) do
     socket = assign(socket, :alt_text_suggesting, false)
 
     case {result, socket.assigns[:entry]} do
       {{:ok, {:ok, %{values: values}}}, %{id: ^image_id}} ->
-        changeset = socket.assigns.form.source
-        alt = Map.merge(Changeset.get_field(changeset, :alt) || %{}, values)
-        changeset = put_change(changeset, :alt, alt)
-        {:noreply, put_written_form(socket, to_form(changeset, []))}
+        send_update(AltTextSuggestion, id: panel, values: values, image_id: image_id, original: original)
+        {:noreply, socket}
 
       {{:ok, {:ok, _}}, _} ->
         {:noreply, socket}
@@ -1527,16 +1560,15 @@ defmodule BrandoAdmin.Components.Form do
     end
   end
 
-  # "Suggest alt text" in the image drawer: the suggestions go into the
-  # drawer's form, as if typed, and are saved with it — reviewed first.
-  def handle_async({:suggest_alt_text, image_id}, result, socket) do
+  # "Suggest alt text" in the image drawer: a suggestion under the field;
+  # accepted, it goes into the drawer's form, saved with it.
+  def handle_async({:suggest_alt_text, image_id, panel, original}, result, socket) do
     socket = assign(socket, :alt_text_suggesting, false)
 
     case {result, socket.assigns[:edit_image]} do
       {{:ok, {:ok, %{values: values}}}, %{image: %{id: ^image_id}}} ->
-        changeset = socket.assigns.image_changeset
-        alt = Map.merge(Changeset.get_field(changeset, :alt) || %{}, values)
-        {:noreply, assign(socket, :image_changeset, Changeset.put_change(changeset, :alt, alt))}
+        send_update(AltTextSuggestion, id: panel, values: values, image_id: image_id, original: original)
+        {:noreply, socket}
 
       # The drawer moved on to another image; its suggestion is not wanted
       {{:ok, {:ok, _}}, _} ->
@@ -3651,6 +3683,7 @@ defmodule BrandoAdmin.Components.Form do
               form={@form}
               blueprint={@form_blueprint}
               form_cid={@myself}
+              form_id={@id}
               current_user={@current_user}
               close={toggle_drawer("##{@id}-meta-drawer")}
             />
@@ -4861,15 +4894,20 @@ defmodule BrandoAdmin.Components.Form do
     {:noreply, socket}
   end
 
+  # Write with AI in a top-level rich text field's toolbar. The reply goes
+  # back to the editor as a suggestion; nothing here writes the field.
   def handle_event("tiptap_ai_generate", params, socket) do
     with {:ok, field} <- safe_to_existing_atom(params["field_key"]),
          true <- is_binary(params["field_name"]),
-         %{type: :rich_text} <- BlueprintForms.get_field(field, socket.assigns.form_blueprint),
+         %BlueprintForms.Input{type: :rich_text, opts: opts} <-
+           BlueprintForms.get_field(field, socket.assigns.form_blueprint),
+         config = RichTextAI.input_config(opts || []),
+         true <- RichTextAI.enabled?(config),
+         false <- FieldActions.locked?(opts, socket.assigns.current_user),
          {:ok, _path, ^field, _segments} <- parse_form_field_name(params["field_name"], socket.assigns.singular),
-         {:ok, opts} <- fetch_field_ai_opts(socket.assigns.form_blueprint, field, socket.assigns.schema),
-         {:ok, base} <- build_ai_prompt(socket, opts),
-         {:ok, prompt} <- BrandoAdmin.Components.Form.RichTextAI.prompt(base, params) do
-      {:noreply, BrandoAdmin.Components.Form.RichTextAI.start(socket, params, prompt, opts)}
+         {:ok, _prompt} <- RichTextAI.prompt(nil, params) do
+      {:noreply,
+       RichTextAI.start(socket, params, write_with_ai_prompt(socket, config, params), RichTextAI.ai_opts(config))}
     else
       _ ->
         {:noreply,
@@ -4878,42 +4916,22 @@ defmodule BrandoAdmin.Components.Form do
   end
 
   def handle_event("tiptap_ai_cancel", params, socket) do
-    {:noreply, BrandoAdmin.Components.Form.RichTextAI.cancel(socket, params)}
+    {:noreply, RichTextAI.cancel(socket, params)}
   end
 
-  def handle_event(
-        "ai_generate_input",
-        %{"field_name" => field_name, "field_key" => field_key},
-        socket
-      ) do
-    with {:ok, field_atom} <- safe_to_existing_atom(field_key),
-         {:ok, ai_opts} <-
-           fetch_field_ai_opts(socket.assigns.form_blueprint, field_atom, socket.assigns.schema),
-         {:ok, prompt} <- build_ai_prompt(socket, ai_opts),
-         {:ok, path, key, string_path} <-
-           parse_form_field_name(field_name, socket.assigns.singular),
-         {:ok, %{text: generated_text}} <- Brando.AI.generate_text(prompt, ai_opts) do
-      {:noreply, write_ai_text(socket, path, key, string_path, field_atom, generated_text)}
-    else
-      {:error, reason} ->
-        send(self(), {:toast, ai_error_message(reason)})
-        {:noreply, socket}
-    end
-  end
-
-  # An AI action declared on the field (`ai_actions:`): the prompt is built
-  # here, from the unsaved form, and the field's suggestion panel asks the
-  # model and shows the reply until the editor accepts or discards it.
-  def handle_event("run_field_action", %{"field" => field, "action" => action}, socket) do
+  # An AI action on the field (`ai_actions:`, a deprecated `ai:`, or a meta
+  # field's site prompt): the prompt is built here, from the unsaved form, and
+  # the field's suggestion panel asks the model and shows the reply until the
+  # editor accepts or discards it.
+  def handle_event("run_field_action", %{"field" => field, "action" => action} = params, socket) do
     with {:ok, field_atom} <- safe_to_existing_atom(field),
          {:ok, action_atom} <- safe_to_existing_atom(action),
-         %BlueprintForms.Input{actions: actions, type: type, opts: opts} <-
-           BlueprintForms.get_field(field_atom, socket.assigns.form_blueprint),
+         {actions, type, opts} <- field_ai_actions(socket, field_atom),
          false <- FieldActions.locked?(opts, socket.assigns.current_user),
          %BlueprintForms.AIAction{} = ai_action <- Enum.find(actions, &(&1.name == action_atom)),
-         true <- Brando.AI.FieldAction.available?(ai_action) do
+         true <- FieldAction.available?(ai_action) do
       send_update(FieldActions,
-        id: FieldActions.id(socket.assigns.form[field_atom]),
+        id: field_action_panel(socket, field_atom, params["panel"]),
         run: field_action_run(socket, field_atom, ai_action, type)
       )
 
@@ -5014,19 +5032,37 @@ defmodule BrandoAdmin.Components.Form do
   end
 
   # The image form's own "Suggest alt text" (`suggest_alt: true` on its alt
-  # field): the suggestion goes into the form, unsaved, like the drawer's.
-  def handle_event("suggest_entry_alt_text", _, %{assigns: %{entry: %Images.Image{id: id}}} = socket) do
-    {:noreply,
-     socket
-     |> assign(:alt_text_suggesting, true)
-     |> start_async({:suggest_entry_alt_text, id}, fn -> Images.AltText.describe(id) end)}
+  # field) and the image drawer's: the reply is a suggestion in the field's
+  # panel (`AltTextSuggestion`), which the button names.
+  def handle_event("suggest_entry_alt_text", params, %{assigns: %{entry: %Images.Image{id: id}}} = socket) do
+    case alt_suggestion_panel(params) do
+      nil ->
+        {:noreply, socket}
+
+      panel ->
+        {:noreply,
+         socket
+         |> assign(:alt_text_suggesting, true)
+         |> start_alt_suggestion(
+           :suggest_entry_alt_text,
+           id,
+           panel,
+           Changeset.get_field(socket.assigns.form.source, :alt)
+         )}
+    end
   end
 
-  def handle_event("suggest_alt_text", _, %{assigns: %{edit_image: %{image: %{id: id}}}} = socket) do
-    {:noreply,
-     socket
-     |> assign(:alt_text_suggesting, true)
-     |> start_async({:suggest_alt_text, id}, fn -> Brando.Images.AltText.describe(id) end)}
+  def handle_event("suggest_alt_text", params, %{assigns: %{edit_image: %{image: %{id: id}}}} = socket) do
+    case alt_suggestion_panel(params) do
+      nil ->
+        {:noreply, socket}
+
+      panel ->
+        {:noreply,
+         socket
+         |> assign(:alt_text_suggesting, true)
+         |> start_alt_suggestion(:suggest_alt_text, id, panel, Changeset.get_field(socket.assigns.image_changeset, :alt))}
+    end
   end
 
   # When opened from a block, edit_image has no path/field/relation_field.
@@ -6875,66 +6911,54 @@ defmodule BrandoAdmin.Components.Form do
     socket
   end
 
-  defp fetch_field_ai_opts(form_blueprint, field_atom, schema) do
-    case BlueprintForms.get_field(field_atom, form_blueprint) do
-      nil ->
-        fetch_fallback_ai_opts(schema, field_atom, :missing_field)
+  # A Write with AI request's prompt, built in its task: the input's
+  # `write_with_ai:` instructions (or the deprecated `ai:` they come from)
+  # with the fields they read as the form has them now. Reading `:blocks`
+  # renders the block editor's content, which stays out of this process.
+  defp write_with_ai_prompt(socket, config, params) do
+    context = ai_context_fun(socket, config[:from] || [])
 
-      %{opts: opts} ->
-        field_ai_opts(opts || [], schema, field_atom)
-    end
-  end
-
-  defp field_ai_opts(opts, schema, field_atom) do
-    if Keyword.has_key?(opts, :ai) do
-      ai_opts = Brando.AI.normalize_ai_opts(Keyword.get(opts, :ai))
-
-      if ai_opts == [] do
-        {:error, :missing_ai_config}
-      else
-        {:ok, ai_opts}
-      end
-    else
-      fetch_fallback_ai_opts(schema, field_atom, :missing_ai_config)
-    end
-  end
-
-  defp fetch_fallback_ai_opts(schema, field_atom, error_reason) do
-    case Brando.AI.field_ai_opts(schema, field_atom) do
-      [] -> {:error, error_reason}
-      ai_opts -> {:ok, ai_opts}
-    end
-  end
-
-  defp build_ai_prompt(socket, ai_opts) do
-    case Keyword.get(ai_opts, :prompt) do
-      prompt when is_binary(prompt) ->
-        prompt = String.trim(prompt)
-
-        if prompt == "" do
-          {:error, :missing_prompt}
-        else
-          context_values =
-            ai_opts
-            |> Keyword.get(:context, [])
-            |> Brando.AI.Context.normalize_fields()
-            |> then(&build_ai_context_values(socket, &1))
-
-          {:ok, Brando.AI.Context.build_prompt(prompt, context_values)}
+    fn ->
+      instructions =
+        case config[:prompt] do
+          prompt when is_binary(prompt) -> Brando.AI.Context.build_prompt(String.trim(prompt), context.())
+          _ -> nil
         end
 
-      _ ->
-        {:error, :missing_prompt}
+      RichTextAI.prompt(instructions, params)
     end
   end
 
-  # `:blocks` keeps its own path: in a form the editor's unsaved state is what
-  # should be summarized, not the `rendered_blocks` column the entry was last
-  # saved with. Every other field reads the applied changeset headlessly.
-  defp build_ai_context_values(socket, context_fields), do: ai_context_fun(socket, context_fields).()
+  # The suggestion panel an event names: the field's own, or the Meta
+  # drawer's for a meta field (`FieldActions.id/2`).
+  defp field_action_panel(socket, field, panel) do
+    ids = FieldActions.ids(socket.assigns.form[field])
+    if panel in ids, do: panel, else: hd(ids)
+  end
 
-  # The same, as a function to call later: it holds the form and the block
-  # map, not the socket, so a task can render the blocks.
+  # Asks for the languages the field has no text in as the form has it now,
+  # and keeps its values, so Accept leaves alone what is written since.
+  defp start_alt_suggestion(socket, kind, image_id, panel, current) do
+    describe = AltTextSuggestion.describe_task(image_id, languages: AltTextSuggestion.languages(current))
+    start_async(socket, {kind, image_id, panel, current || %{}}, describe)
+  end
+
+  defp alt_suggestion_panel(%{"panel" => panel}) do
+    if AltTextSuggestion.id?(panel), do: panel
+  end
+
+  defp alt_suggestion_panel(_params), do: nil
+
+  defp field_ai_actions(socket, field) do
+    FieldAction.for_field(socket.assigns.schema, socket.assigns.form_blueprint, field)
+  end
+
+  # The values of the fields an AI action reads, as a function to call later:
+  # it holds the form and the block map, not the socket, so a task can render
+  # the blocks. `:blocks` keeps its own path: in a form the editor's unsaved
+  # state is what should be summarized, not the `rendered_blocks` column the
+  # entry was last saved with. Every other field reads the applied changeset
+  # headlessly.
   defp ai_context_fun(socket, context_fields) do
     form = socket.assigns.form
     block_map = if socket.assigns.has_blocks?, do: socket.assigns.block_map
@@ -7048,8 +7072,9 @@ defmodule BrandoAdmin.Components.Form do
     end
   end
 
-  # Text from AI written into a field as if typed: shipped to the other
-  # editors, passed to the blocks that read the field and to the preview.
+  # An accepted AI suggestion written into a field as if typed: shipped to
+  # the other editors, passed to the blocks that read the field and to the
+  # preview.
   defp write_ai_text(socket, path, key, string_path, field_atom, text) do
     socket
     |> update_changeset(path, key, text)
@@ -7069,10 +7094,14 @@ defmodule BrandoAdmin.Components.Form do
     context = ai_context_fun(socket, ai_action.from)
     language = field_action_language(socket)
 
+    # An action from `ai:` or a site prompt sends its prompt even with
+    # nothing to read, as `ai:` did.
+    needs_inputs? = FieldAction.needs_inputs?(ai_action)
+
     build = fn ->
       case context.() do
-        [] -> {:error, :empty_inputs}
-        values -> {:ok, Brando.AI.FieldAction.prompt(ai_action, values, language: language, type: type)}
+        [] when needs_inputs? -> {:error, :empty_inputs}
+        values -> {:ok, FieldAction.prompt(ai_action, values, language: language, type: type)}
       end
     end
 
@@ -7083,12 +7112,12 @@ defmodule BrandoAdmin.Components.Form do
       original: original,
       warning: field_action_warning(type, original),
       build: build,
-      ai_opts: Brando.AI.FieldAction.ai_opts(ai_action)
+      ai_opts: FieldAction.ai_opts(ai_action)
     }
   end
 
   defp field_action_warning(:rich_text, html) do
-    if Brando.AI.FieldAction.formatting_lost?(html),
+    if FieldAction.formatting_lost?(html),
       do: gettext("Accepting replaces the field's text, with its formatting, links and footnotes.")
   end
 
@@ -7110,8 +7139,6 @@ defmodule BrandoAdmin.Components.Form do
       _ -> socket
     end
   end
-
-  defp ai_error_message(reason), do: Brando.AI.error_message(reason)
 
   defp safe_to_existing_atom(value) when is_atom(value), do: {:ok, value}
 

@@ -146,12 +146,16 @@ modes.
 It also adds `content_modified_at`, which only substantive edits move: read it
 with `Brando.Blueprint.Value.modified_at/1` for JSON-LD
 [`dateModified`](jsonld.md#datemodified) and the sitemap's `lastmod`. `ai:`
-configures their [AI generation](blueprint_forms.md#ai-generated-values):
+holds the [site prompts](blueprint_forms.md#site-prompts) for the meta fields,
+which write their Generate suggestion in the drawer and the Content SEO
+batch:
 
 ```elixir
 trait :meta,
   ai: [meta_title: [prompt: "Write an SEO title from the title", context: [:title]]]
 ```
+
+This `ai:` is not the deprecated `ai:` on an input.
 
 See [Page metadata](meta.md) and [Content SEO](content_seo.md).
 

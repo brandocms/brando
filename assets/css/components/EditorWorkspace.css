@@ -23,8 +23,6 @@
   }
   .drawer-form input.text { height: 44px; padding: 0 12px; }
   .drawer-form textarea { padding: 10px 12px; }
-  /* Keep text clear of the AI button in the field's top right corner. */
-  .drawer-form :is(input.text, textarea).has-ai-action { padding-right: 46px; }
   .drawer-form .datetime-wrapper > div { background: var(--brando-surface); color: var(--workspace-ink); border-color: var(--workspace-line); border-radius: 5px; }
   .drawer-form .character-count, .drawer-form .prefill-small { border-color: var(--workspace-line) !important; color: var(--workspace-muted); }
   .drawer-form .media-field { border-color: var(--workspace-line); }

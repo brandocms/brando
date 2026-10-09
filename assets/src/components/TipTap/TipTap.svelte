@@ -152,9 +152,14 @@
     pending.error = !pending.range.valid ? labels.changed : payload.error ? labels.aiFailed : null
     renderProposal()
   }
+  // The editor's changes to the suggestion before accepting it. The panel
+  // keeps its textarea, so this does not redraw it.
+  function editProposal(text) { if (pending?.status === 'ready') pending.text = text }
   function acceptProposal() {
     if (!pending || pending.status !== 'ready' || !pending.range.valid || !editor.isEditable) return
     const { range, text } = pending
+    // An emptied suggestion inserts nothing; the edit stays for the editor.
+    if (!text.trim()) return
     const lines = text.split(/\n+/).filter(Boolean)
     if (!lines.length) { pending.error = labels.aiFailed; renderProposal(); return }
     const from = editor.state.doc.resolve(range.from), to = editor.state.doc.resolve(range.to)
@@ -188,7 +193,7 @@
   onMount(() => {
     editor = new Editor({
       element, content,
-      extensions: [...createExtensions({ capabilities, styles: parsedStyles, footnoteLabels, onOpenFootnote, placeholder: labels.placeholder, typography }), proposalExtension({ labels, accept: acceptProposal, discard: discardProposal, retry: generate })],
+      extensions: [...createExtensions({ capabilities, styles: parsedStyles, footnoteLabels, onOpenFootnote, placeholder: labels.placeholder, typography }), proposalExtension({ labels, accept: acceptProposal, discard: discardProposal, retry: generate, edit: editProposal })],
       editorProps: {
         attributes: { role: 'textbox', 'aria-multiline': 'true', ...accessibility },
         transformPastedHTML: html => new HTMLInputParser({ capabilities, styles: parsedStyles, scope: element.closest('.blocks-wrapper') || element, onWarning: key => notice = labels[key] }).prepareHTML(html),

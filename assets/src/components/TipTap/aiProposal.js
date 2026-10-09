@@ -3,7 +3,7 @@ import { Plugin, PluginKey } from '@tiptap/pm/state'
 import { Decoration, DecorationSet } from '@tiptap/pm/view'
 
 export const proposalKey = new PluginKey('brandoAiProposal')
-export function proposalExtension({ labels, accept, discard, retry }) {
+export function proposalExtension({ labels, accept, discard, retry, edit }) {
   return Extension.create({
     name: 'aiProposal',
     addProseMirrorPlugins() {
@@ -33,7 +33,23 @@ export function proposalExtension({ labels, accept, discard, retry }) {
               title.append(icon, proposal.status === 'pending' ? labels.generating : labels.aiSuggestion)
               title.setAttribute('role', 'status')
               panel.append(title)
-              if (proposal.text) { const text = document.createElement('span'); text.className = 'tiptap-ai-text'; text.textContent = proposal.text; panel.append(text) }
+              // A suggestion ready to accept can be changed first, as a field's
+              // can (FieldActions): the textarea is outside the document, and
+              // what it holds is what Accept inserts.
+              // Ready, it is a field even when the editor emptied it, so a
+              // redraw keeps the field, and Accept waits for text.
+              const editable = proposal.status === 'ready' && !proposal.error
+              if (editable) {
+                const field = document.createElement('textarea')
+                field.className = 'tiptap-ai-field ai-proposal-field'
+                field.value = proposal.text
+                // Rows for a narrow editor; where the browser can, CSS sizes it to the text.
+                field.rows = Math.min(Math.max(proposal.text.split('\n').length, Math.ceil(proposal.text.length / 45), 2), 12)
+                field.setAttribute('aria-label', labels.suggestedText)
+                // Emptied, there is nothing to insert: Accept waits for text.
+                field.addEventListener('input', () => { edit?.(field.value); const accept = panel.querySelector('button.primary'); if (accept) accept.disabled = !field.value.trim() })
+                panel.append(field)
+              } else if (proposal.text) { const text = document.createElement('span'); text.className = 'tiptap-ai-text'; text.textContent = proposal.text; panel.append(text) }
               if (proposal.error) { const error = document.createElement('span'); error.className = 'tiptap-ai-error'; error.setAttribute('role', 'alert'); error.textContent = proposal.error; panel.append(error) }
               const actions = document.createElement('span')
               actions.className = 'tiptap-ai-actions ai-proposal-actions'
@@ -46,7 +62,7 @@ export function proposalExtension({ labels, accept, discard, retry }) {
                 if (kind) btn.className = kind === 'ai' ? 'is-ai' : kind
                 btn.addEventListener('mousedown', e => e.preventDefault()); btn.addEventListener('click', action); actions.append(btn)
               }
-              if (proposal.status === 'ready' && !proposal.error) button(labels.accept, accept, 'primary')
+              if (editable) { button(labels.accept, accept, 'primary'); actions.lastChild.disabled = !(proposal.text || '').trim() }
               button(proposal.status === 'pending' ? labels.cancel : labels.discard, discard)
               if (proposal.status !== 'pending') button(labels.retry, retry, 'ai')
               panel.append(actions)

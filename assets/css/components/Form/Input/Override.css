@@ -1,4 +1,4 @@
-/* Reset button — same position pattern as .ai-generate-button */
+/* Reset button, in the field's top right corner */
 .override-reset-button {
   position: absolute;
   top: 12px;
@@ -32,12 +32,6 @@ button.override-reset-button:hover {
 .tiptap-wrapper > .override-reset-button {
   top: auto;
   bottom: 8px;
-}
-
-/* Coexist with AI button */
-.has-ai-action + .override-reset-button,
-.has-ai-action ~ .override-reset-button {
-  right: 48px;
 }
 
 /* Subtle override indicator on input */

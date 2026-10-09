@@ -49,10 +49,66 @@ defmodule Brando.AI.FieldAction do
 
   defp format(_type), do: "Return only the text for the field: no quotes, Markdown or commentary."
 
-  @doc "The `Brando.AI` options for `action`: its model, when it names one."
+  @doc """
+  The `Brando.AI` options for `action`: its model, when it names one, and the
+  request options a deprecated `ai:` or a site prompt gave it.
+  """
   @spec ai_opts(AIAction.t()) :: keyword()
-  def ai_opts(%AIAction{model: nil}), do: []
-  def ai_opts(%AIAction{model: model}), do: [model: model]
+  def ai_opts(%AIAction{model: nil, request_opts: opts}), do: opts
+  def ai_opts(%AIAction{model: model, request_opts: opts}), do: [{:model, model} | opts]
+
+  # The meta fields the Meta drawer edits, and the input each is there.
+  @site_fields [meta_title: :text, meta_description: :textarea]
+
+  @doc """
+  The AI actions on `field` of `schema`'s form, its input type and options:
+  what the form's input declares (`ai_actions:`, and the deprecated `ai:` as
+  `:generate`), and for a meta field in the Meta drawer, the site prompt
+  (`trait :meta, ai:` or `config :brando, Brando.AI, fields:`) as
+  `:generate`, unless the input has its own.
+
+  The admin offers, runs and accepts the same list.
+  """
+  @spec for_field(module() | nil, struct() | nil, atom()) :: {[AIAction.t()], atom() | nil, keyword()}
+  def for_field(schema, form_blueprint, field) do
+    case form_blueprint && Brando.Blueprint.Forms.get_field(field, form_blueprint) do
+      %Brando.Blueprint.Forms.Input{actions: actions, type: type, opts: opts} ->
+        {with_site_action(actions, schema, field), input_type(type, field), opts || []}
+
+      _ ->
+        {with_site_action([], schema, field), @site_fields[field], []}
+    end
+  end
+
+  # A `:hidden` input for a meta field is edited in the Meta drawer, as a
+  # text field or a textarea: a suggestion is written as one.
+  defp input_type(type, field) do
+    if type in AIAction.input_types(), do: type, else: @site_fields[field]
+  end
+
+  @doc """
+  Whether an empty read of `action`'s fields stops it. Actions declared in
+  `ai_actions:` say so instead of asking the model; the `:generate` of a
+  deprecated `ai:` or a site prompt sends its prompt anyway, as `ai:` did.
+  """
+  @spec needs_inputs?(AIAction.t()) :: boolean()
+  def needs_inputs?(%AIAction{origin: :ai_actions, from: [_ | _]}), do: true
+  def needs_inputs?(%AIAction{}), do: false
+
+  @doc """
+  `actions` with the site prompt's `:generate` for `field`, when it is a meta
+  field with a site prompt and `actions` has no `:generate` of its own.
+  """
+  @spec with_site_action([AIAction.t()], module() | nil, atom()) :: [AIAction.t()]
+  def with_site_action(actions, schema, field) do
+    with true <- Keyword.has_key?(@site_fields, field),
+         false <- Enum.any?(actions, &(&1.name == :generate)),
+         %AIAction{} = action <- AIAction.generate(Brando.AI.field_ai_opts(schema, field), :site) do
+      actions ++ [action]
+    else
+      _ -> actions
+    end
+  end
 
   @doc "Whether `action` can run: AI is configured for its model."
   @spec available?(AIAction.t()) :: boolean()

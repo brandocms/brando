@@ -140,29 +140,9 @@ textarea.text {
   }
 }
 
-/* The AI action inside a text field (AIAction, size :icon; styled in AI.css),
-   in the field's top right corner. */
+/* A field with an action in its corner (an override's reset button) */
 .input-with-action {
   position: relative;
-
-  .ai-generate-button {
-    position: absolute;
-    top: 8px;
-    right: 8px;
-    z-index: 2;
-  }
-
-  /* A single-line field centres the button whatever the field's height; a
-     textarea keeps it in the top corner, beside the first line. */
-  input.text ~ .ai-generate-button {
-    top: 50%;
-    translate: 0 -50%;
-  }
-}
-
-input.text.has-ai-action,
-textarea.text.has-ai-action {
-  padding-right: 46px;
 }
 
 /* "Suggest alt text" beside the label of the field it fills */

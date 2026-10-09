@@ -6,6 +6,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
   alias BrandoAdmin.Components.AIAction
   alias BrandoAdmin.Components.Assets.MediaField
   alias BrandoAdmin.Components.Content
+  alias BrandoAdmin.Components.Form.AltTextSuggestion
   alias BrandoAdmin.Components.Form.Block
   alias BrandoAdmin.Components.Form.Input
   alias BrandoAdmin.LiveView.Form.ProcessingWatch
@@ -57,21 +58,52 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
     |> then(&{:ok, &1})
   end
 
-  def update(%{event: "alt_text_suggested", result: result}, socket) do
-    socket = assign(socket, :alt_suggesting, false)
-
-    case result do
-      {:ok, text} ->
-        socket
-        |> Block.commit_ref_data(
-          ref_data: Block.current_block_data_map(socket.assigns.block, @override_fields, %{alt: text}),
-          image_id: socket.assigns.image && socket.assigns.image.id
-        )
-        |> then(&{:ok, &1})
-
-      :error ->
-        send(self(), {:toast, gettext("The alt text could not be suggested. Try again, or write it yourself.")})
+  # The form's reply to "Suggest alt text": a suggestion under the field
+  # (`AltTextSuggestion`) until the editor accepts it. Not when the block
+  # has another image by now.
+  # A reply for an image the block no longer shows leaves the spinner of the
+  # request that is still running.
+  def update(%{event: "alt_text_suggested", result: result, image_id: image_id}, socket) do
+    case {result, current_image_id(socket)} do
+      {_result, current} when current != image_id ->
         {:ok, socket}
+
+      {{:ok, language, text}, _current} ->
+        socket = assign(socket, :alt_suggesting, false)
+
+        send_update(AltTextSuggestion,
+          id: alt_suggestion_id(socket.assigns.uid, image_id),
+          values: %{language => text},
+          image_id: image_id,
+          original: %{language => Map.get(socket.assigns[:alt_requested_from] || %{}, image_id)}
+        )
+
+        {:ok, socket}
+
+      {:error, _current} ->
+        send(self(), {:toast, gettext("The alt text could not be suggested. Try again, or write it yourself.")})
+        {:ok, assign(socket, :alt_suggesting, false)}
+    end
+  end
+
+  # Accepted: this use's alt text, as unsaved input in the block. Only for
+  # the image it describes, and not over alt text written since it was asked
+  # for (`AltTextSuggestion.merge/3`).
+  def update(%{event: "accept_alt_suggestion", values: values, image_id: image_id} = message, socket) do
+    current = current_alt(socket)
+
+    with true <- not is_nil(image_id) and current_image_id(socket) == image_id,
+         [{language, _text}] <- Map.to_list(values),
+         merged = AltTextSuggestion.merge(%{language => current}, values, message[:original]),
+         text when text != current <- merged[language] do
+      socket
+      |> Block.commit_ref_data(
+        ref_data: Block.current_block_data_map(socket.assigns.block, @override_fields, %{alt: text}),
+        image_id: image_id
+      )
+      |> then(&{:ok, &1})
+    else
+      _ -> {:ok, socket}
     end
   end
 
@@ -145,6 +177,12 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
     |> assign(:image, image)
     |> assign(image_display_assigns(image))
   end
+
+  # Keyed by the image too: another image has another, empty panel.
+  defp alt_suggestion_id(uid, image_id), do: AltTextSuggestion.id("block-#{uid}-ref-alt", image_id)
+
+  defp current_image_id(socket), do: socket.assigns[:image] && socket.assigns.image.id
+  defp current_alt(socket), do: Block.current_block_data_map(socket.assigns.block, [:alt])[:alt]
 
   defp alt_text_ai?, do: Brando.AI.configured?(Brando.Images.AltText.ai_opts())
 
@@ -273,6 +311,16 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
                     >
                       {gettext("Suggest alt text")}
                     </AIAction.button>
+                    <.live_component
+                      :if={@image && @form_id && alt_text_ai?()}
+                      module={AltTextSuggestion}
+                      id={alt_suggestion_id(@uid, @image.id)}
+                      owner={{__MODULE__, @id}}
+                      scope="ref"
+                      languages={Input.i18n_languages(:content)}
+                      retry_event="suggest_alt_text"
+                      retry_target={@myself}
+                    />
                   </div>
                   <Input.override_text
                     field={block_data[:credits]}
@@ -373,7 +421,10 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
       reply_to: {__MODULE__, socket.assigns.id}
     )
 
-    {:noreply, assign(socket, :alt_suggesting, true)}
+    # The alt text when it was asked for, per image: Accept leaves alone what
+    # was written since (`AltTextSuggestion.merge/3`)
+    requested_from = Map.put(socket.assigns[:alt_requested_from] || %{}, image_id, current_alt(socket))
+    {:noreply, assign(socket, alt_suggesting: true, alt_requested_from: requested_from)}
   end
 
   def handle_event("reset_image", _, socket) do

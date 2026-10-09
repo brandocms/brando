@@ -106,6 +106,32 @@ defmodule Brando.Images.AltTextTest do
     assert own =~ "The image's title: Oslo harbour"
   end
 
+  test "the alt site prompt in config drives the description and its model" do
+    Brando.AIStub.configure()
+
+    Brando.Test.Support.put_test_env(
+      Brando.AI,
+      Keyword.put(Application.get_env(:brando, Brando.AI), :fields,
+        alt: [prompt: "Describe the boats only.", model: "openai:gpt-4o"]
+      )
+    )
+
+    test = self()
+
+    Brando.AIStub.reply(fn prompt ->
+      send(test, {:prompt, prompt})
+      ~s({"en": "Two ferries", "no": "To ferjer"})
+    end)
+
+    image = insert_image(%{path: "images/alt/boats.jpg"})
+    place_file(image)
+
+    assert {:ok, %{values: %{"en" => "Two ferries"}, model: "openai:gpt-4o"}} = AltText.describe(image.id)
+    assert_received {:prompt, prompt}
+    assert prompt =~ "Describe the boats only."
+    refute prompt =~ "screen reader"
+  end
+
   test "reads replies in a code fence, plain text for one language, and refuses the rest" do
     assert AltText.parse(~s(```json\n{"no": "Hei"}\n```), ["no"]) == {:ok, %{"no" => "Hei"}}
     assert AltText.parse(~s("Just the text"), ["no"]) == {:ok, %{"no" => "Just the text"}}

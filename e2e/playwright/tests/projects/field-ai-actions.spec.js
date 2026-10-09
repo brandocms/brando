@@ -2,9 +2,10 @@ import { test, expect } from '../../test-support/setupAuth'
 import { syncLV } from '../../utils'
 
 // AI actions declared on a field (`ai_actions:`: two on the project's title,
-// one on its introduction). A fake model answers (E2eProject.FieldActionModel), in the
-// language the prompt asks for. The reply is a suggestion under the field
-// until it is accepted; discarding it leaves the field alone.
+// one on its introduction), and Write with AI in its rich text. A fake model
+// answers (E2eProject.FieldActionModel), in the language the prompt asks for.
+// The reply is a suggestion under the field until it is accepted; discarding
+// it leaves the field alone.
 
 async function factory(page, schema, attributes) {
   const response = await page.request.post('/__e2e/db/factory', { data: { schema, attributes, creator_id: 1, fields: ['id'] } })
@@ -89,9 +90,13 @@ test('suggests text for a field, in the entry language, and writes it only when 
   expect(errors).toEqual([])
 })
 
-test('an action with nothing to read says so, and AI off hides the actions', async ({ page }) => {
+test('an action with nothing to read says so, and AI off hides the actions and Write with AI', async ({ page }) => {
   await page.goto('/admin/projects/projects/update/1')
   await syncLV(page)
+
+  // Write with AI is in the rich text toolbar whenever AI is configured
+  const introductionEditor = page.locator('[data-footnote-field="introduction"]')
+  await expect(introductionEditor).toHaveAttribute('data-tiptap-ai', 'true')
 
   // With the title cleared, shortening it has nothing to read: the action
   // reads the field as the editor sees it, not the saved title the invalid
@@ -109,4 +114,5 @@ test('an action with nothing to read says so, and AI off hides the actions', asy
   await page.reload()
   await syncLV(page)
   await expect(page.locator('button[phx-click="run_field_action"]')).toHaveCount(0)
+  await expect(introductionEditor).toHaveAttribute('data-tiptap-ai', 'false')
 })

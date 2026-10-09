@@ -392,8 +392,8 @@ from every other action, which uses the sage accent. Both looks live in
 ![AI actions and AI suggestions](admin-ui/ai-actions-and-suggestions.png)
 
 **The AI action** is any control that asks AI for something: Build with AI,
-Suggest alt text, the generate button in a meta field, a field's own AI
-actions (`ai_actions:`), Write or Review with AI in Content SEO, Draw a sketch
+Suggest alt text, a field's AI actions (`ai_actions:`, and Generate on the
+meta fields), Write or Review with AI in Content SEO, Draw a sketch
 with AI, Sketches with AI on the Modules screen, the rich-text editor's Write
 with AI. It is a small secondary button: the
 Lucide `sparkles` icon, `--brando-ai` text, a solid violet hairline
@@ -409,7 +409,10 @@ other small admin buttons. Render it with `AIAction.button/1`:
 
 - `href` makes it a link (Build with AI opens the assistant in a new tab).
 - `size={:compact}` (24px) beside a field's label; `size={:icon}` (28px
-  square, with an `aria-label`) inside a text field.
+  square, with an `aria-label` and a `data-tooltip`, see
+  [Icon-only buttons and tooltips](#icon-only-buttons-and-tooltips)) where
+  only the icon fits. No AI action sits
+  inside a text field: a field's actions are beside its label.
 - `busy` while the request runs: the sparkles pulse and the button stays
   fully visible; `disabled` fades it. Focus is a 2px `--brando-ai` outline.
 - `variant={:primary}` fills it with the violet: the confirm step of a
@@ -445,13 +448,20 @@ item.
   `.ai-proposal-actions`.
 - Suggested text the editor can still change before accepting
   (`SuggestionReview`): the textarea takes `.ai-proposal-field`.
-- A field's AI actions (`Form.FieldActions`): one action is a compact AI
-  action beside the label, several a "Write with AI" menu of AI items. The
-  reply waits under the input as a panel with its text in an
-  `.ai-proposal-field`, the action's name in the label, a count against the
-  action's `max`, and Accept, Discard and Try again. A line in the attention
+- A field's AI actions (`Form.FieldActions`), in a form and its Meta
+  drawer: one action is a compact AI action beside the label, several a
+  "Write with AI" menu of AI items. The reply waits under the input as a
+  panel with its text in an `.ai-proposal-field`, the action's name in the
+  label, a count against the action's `max`, and Accept, Discard and Try
+  again. A line in the attention
   ink warns when accepting drops rich text's formatting; when the field
   changed since the action ran, Accept turns into Replace under an alert.
+- Suggest alt text (`Form.AltTextSuggestion`) waits under the alt field
+  as a panel with one `.ai-proposal-field` per language, and Accept,
+  Discard and Try again; accepted texts join the field's other languages.
+- Write with AI in a rich-text editor shows its suggestion in the text, at
+  the passage it rewrites, with its text in an `.ai-proposal-field` the
+  editor can change before Accept inserts it.
 - The assistant's proposals use the same tokens for new and changed blocks,
   and its list of proposals from connected tools marks those waiting for
   review with them.
@@ -462,9 +472,8 @@ Do not:
   something that does;
 - draw an AI action or a suggestion with a dashed border — dashed means
   "drop here" in the block editor;
-- fill a field with an AI result and style it as a suggestion: text written
-  straight into a field (Generate with AI, Suggest alt text) is ordinary unsaved
-  input, kept or discarded with the form;
+- write an AI result straight into a field: it waits as a suggestion until
+  the editor accepts it, and only then is ordinary unsaved input;
 - add a second AI button style for a new screen; add a size or a variant to
   `AIAction` instead.
 

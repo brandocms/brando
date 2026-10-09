@@ -1,10 +1,12 @@
 defmodule Brando.AI do
   @moduledoc """
-  Brando AI integration layer for form input generation.
+  Brando AI integration layer.
 
-  This module wraps `ReqLLM` for Brando's admin form AI actions. It resolves model
-  and key settings from field options and app config, then performs a per-request
-  call to `ReqLLM.generate_text/3`.
+  This module wraps `ReqLLM` for Brando's AI jobs: a field's AI actions
+  (`Brando.AI.FieldAction`), Write with AI in rich text, the site prompts
+  (meta fields, Content SEO, alt text) and the content assistant. It resolves
+  model and key settings from the job's options and app config, then performs
+  a per-request call to `ReqLLM.generate_text/3`.
 
   ## App config
 
@@ -19,10 +21,11 @@ defmodule Brando.AI do
         providers: [
           anthropic: [api_key: System.get_env("ANTHROPIC_API_KEY")]
         ],
-        # Optional per-field defaults
+        # Site prompts, by name (see "Site prompts" in guides/blueprint_forms.md)
         fields: [
-          summary: [prompt: "Summarize title + intro", context: [:title, :intro]],
-          meta_description: [model: :default]
+          meta_description: [model: :default],
+          block_text: [prompt: "Keep the site's plain, friendly tone."],
+          alt: [model: :image]
         ],
         default_opts: [temperature: 0.4]
 
@@ -48,12 +51,13 @@ defmodule Brando.AI do
     name (`:image` for alt text) -> `models[:default]` / `:default_model`
   - API key: field `:api_key` -> provider config `providers[provider][:api_key]` ->
     app `<provider>_api_key` -> `ReqLLM.get_key(:"<provider>_api_key")`
-  - Field AI defaults: blueprint `input ... ai: [...]` -> trait-provided defaults,
-    with app `fields[field_name]` filling in what they leave out (a `model:`, say)
+  - Site prompts (`field_ai_opts/2`): trait-provided prompts (`trait :meta, ai:`),
+    with app `fields[name]` filling in what they leave out (a `model:`, say)
 
-  ## Field options
+  ## Site prompt options
 
-  Besides `:model` and `:api_key`, these options are forwarded to ReqLLM:
+  Besides `:prompt`, `:context`, `:model` and `:api_key`, these options are
+  forwarded to ReqLLM:
 
   `:temperature`, `:max_tokens`, `:top_p`, `:presence_penalty`,
   `:frequency_penalty`, `:tool_choice`, `:tools`, `:system_prompt`,

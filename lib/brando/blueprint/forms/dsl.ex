@@ -295,16 +295,44 @@ defmodule Brando.Blueprint.Forms.Dsl do
 
   @doc """
   Builds an input's `ai_actions:` into `Forms.AIAction` structs on the input,
-  so a bad option is a compile error and the admin reads checked structs. The
-  option is dropped from `opts`, which input components receive.
+  so a bad option is a compile error and the admin reads checked structs, and
+  checks its `write_with_ai:`.
+
+  The deprecated `ai:` option keeps its meaning: on a `:text` or `:textarea`
+  input, or a `:hidden` input for a meta field, it runs as one more action,
+  `:generate` (`Forms.AIAction.add_deprecated/4`); on `:rich_text` it is
+  Write with AI's `write_with_ai:` (`Forms.WriteWithAI.from_ai/1`). It is
+  kept on the input as written for the forms verifier's deprecation warning.
+  `ai_actions:` and a used `ai:` are dropped from `opts`, which input
+  components receive; on any other input, `ai:` is left for its component.
   """
   def transform_input(%Forms.Input{opts: opts} = input) do
     opts = opts || []
+    ai = Keyword.get(opts, :ai)
 
-    case Forms.AIAction.build(input.type, Keyword.get(opts, :ai_actions)) do
-      {:ok, actions} -> {:ok, %{input | actions: actions, opts: Keyword.delete(opts, :ai_actions)}}
-      {:error, message} -> {:error, message}
+    with {:ok, actions} <- Forms.AIAction.build(input.type, Keyword.get(opts, :ai_actions), input.name),
+         {:ok, write_with_ai} <- Forms.WriteWithAI.validate(input.type, Keyword.get(opts, :write_with_ai)) do
+      # The checked `write_with_ai:`, with `from:` as a list
+      opts = if is_nil(write_with_ai), do: opts, else: Keyword.put(opts, :write_with_ai, write_with_ai)
+      opts = Keyword.delete(opts, :ai_actions)
+      {actions, opts} = deprecated_ai(input, ai, actions, write_with_ai, opts)
+      {:ok, %{input | actions: actions, ai: ai, opts: opts}}
     end
+  end
+
+  defp deprecated_ai(_input, nil, actions, _write_with_ai, opts), do: {actions, opts}
+
+  # `write_with_ai:` written out wins over `ai:`; the verifier says so.
+  defp deprecated_ai(%{type: :rich_text}, ai, actions, write_with_ai, opts) do
+    if write_with_ai in [nil, true],
+      do: {actions, opts |> Keyword.delete(:ai) |> Keyword.put(:write_with_ai, Forms.WriteWithAI.from_ai(ai))},
+      else: {actions, Keyword.delete(opts, :ai)}
+  end
+
+  defp deprecated_ai(%{type: type, name: name}, ai, actions, _write_with_ai, opts) do
+    if Forms.AIAction.takes_actions?(type, name),
+      do: {Forms.AIAction.add_deprecated(type, name, actions, ai), Keyword.delete(opts, :ai)},
+      else: {actions, opts}
   end
 
   @doc """

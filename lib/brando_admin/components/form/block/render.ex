@@ -8,7 +8,6 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
   import Phoenix.LiveView.TagEngine
   import PolymorphicEmbed.HTML.Component
 
-  alias Brando.AI
   alias Brando.Content.Var.Layout
   alias Brando.Content.VarAttrs
   alias Brando.Villain.Parser
@@ -19,6 +18,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
   alias BrandoAdmin.Components.Form.Input.Entries
   alias BrandoAdmin.Components.Form.Input.RenderVar
   alias BrandoAdmin.Components.Form.Primitives
+  alias BrandoAdmin.Components.Form.RichTextAI
   alias Ecto.Changeset
   alias Phoenix.LiveView.JS
 
@@ -2230,10 +2230,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
       assigns
       |> assign(:uid, uid)
       |> assign(:text_type, Changeset.get_field(block_data_cs, :type))
-      |> assign(
-        :ai_enabled?,
-        AI.field_ai_opts(:block_text) != [] && AI.configured?(AI.field_ai_opts(:block_text))
-      )
+      |> assign(:ai_enabled?, RichTextAI.enabled?(RichTextAI.block_text_config()))
       |> assign(:extensions, extensions)
       |> assign(:styles, styles)
       |> assign(:footnotes, assigns[:footnotes_enabled] == true)

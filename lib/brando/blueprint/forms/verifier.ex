@@ -23,9 +23,14 @@ defmodule Brando.Blueprint.Forms.Verifier do
       schema_fields: schema_fields(module)
     }
 
-    dsl_state
-    |> Verifier.get_entities([:forms])
-    |> validate_entities(&verify_form(context, &1))
+    forms = Verifier.get_entities(dsl_state, [:forms])
+
+    with :ok <- validate_entities(forms, &verify_form(context, &1)) do
+      case Enum.flat_map(forms, &deprecated_ai_warnings/1) do
+        [] -> :ok
+        warnings -> {:warn, warnings}
+      end
+    end
   end
 
   defp verify_form(context, form) do
@@ -71,8 +76,30 @@ defmodule Brando.Blueprint.Forms.Verifier do
   defp verify_input(context, form, %Forms.Input{} = input) do
     with :ok <- verify_schema_field(context, form, input),
          :ok <- verify_hidden_field(context, form, input),
-         :ok <- verify_source_fields(context, form, input) do
-      verify_ai_actions(context, form, input)
+         :ok <- verify_source_fields(context, form, input),
+         :ok <- verify_ai_actions(context, form, input) do
+      verify_write_with_ai(context, form, input)
+    end
+  end
+
+  # `write_with_ai: [from: …]` reads fields as an AI action does. Not checked
+  # when it comes from a deprecated `ai:`, whose `context:` never was.
+  defp verify_write_with_ai(context, form, %{ai: nil, opts: opts} = input) do
+    case Keyword.get(opts || [], :write_with_ai) do
+      config when is_list(config) ->
+        validate_entities(Keyword.get(config, :from, []), &verify_write_with_ai_source(context, form, input, &1))
+
+      _ ->
+        :ok
+    end
+  end
+
+  defp verify_write_with_ai(_context, _form, _input), do: :ok
+
+  defp verify_write_with_ai_source(context, form, input, field) do
+    case ai_source_problem(context, field) do
+      nil -> :ok
+      problem -> error(context, input, [form.name, input.name], "has write_with_ai reading #{problem}")
     end
   end
 
@@ -80,35 +107,33 @@ defmodule Brando.Blueprint.Forms.Verifier do
   # block fields. `:blocks` stands for every block field, so it needs one,
   # whatever the relation is called. Associations and embeds are not text to
   # give a model.
+  # Actions from the deprecated `ai:` are not checked: `context:` was never
+  # checked, and a Blueprint that compiled before must still compile.
   defp verify_ai_actions(context, form, %{actions: actions} = input) do
-    validate_entities(actions, fn action ->
+    actions
+    |> Enum.filter(&(&1.origin == :ai_actions))
+    |> validate_entities(fn action ->
       validate_entities(action.from, &verify_ai_action_source(context, form, input, action, &1))
     end)
   end
 
   defp verify_ai_action_source(context, form, input, action, field) do
+    case ai_source_problem(context, field) do
+      nil ->
+        :ok
+
+      problem ->
+        error(context, input, [form.name, input.name], "has ai_actions #{inspect(action.name)} reading #{problem}")
+    end
+  end
+
+  # Why `field` cannot be read as text for a model, or nil when it can.
+  defp ai_source_problem(context, field) do
     cond do
-      ai_readable_field?(context.module, field) ->
-        :ok
-
-      Enum.any?(context.relations, &(block_relation?(&1) and (field == :blocks or &1.name == field))) ->
-        :ok
-
-      MapSet.member?(context.schema_fields, field) ->
-        error(
-          context,
-          input,
-          [form.name, input.name],
-          "has ai_actions #{inspect(action.name)} reading #{inspect(field)} in :from, which is not a text or block field"
-        )
-
-      true ->
-        error(
-          context,
-          input,
-          [form.name, input.name],
-          "has ai_actions #{inspect(action.name)} reading unknown field #{inspect(field)} in :from"
-        )
+      ai_readable_field?(context.module, field) -> nil
+      Enum.any?(context.relations, &(block_relation?(&1) and (field == :blocks or &1.name == field))) -> nil
+      MapSet.member?(context.schema_fields, field) -> "#{inspect(field)} in :from, which is not a text or block field"
+      true -> "unknown field #{inspect(field)} in :from"
     end
   end
 
@@ -220,7 +245,7 @@ defmodule Brando.Blueprint.Forms.Verifier do
 
     validate_entities(subform.sub_fields, fn input ->
       cond do
-        match?(%Forms.Input{actions: [_ | _]}, input) ->
+        match?(%Forms.Input{}, input) and Enum.any?(input.actions, &(&1.origin == :ai_actions)) ->
           error(
             context,
             input,
@@ -421,6 +446,97 @@ defmodule Brando.Blueprint.Forms.Verifier do
     )
     |> MapSet.new()
   end
+
+  # `ai:` on an input is deprecated: a warning at the input, with the
+  # `ai_actions:` it runs as and should be written as, or why it does nothing.
+  defp deprecated_ai_warnings(form) do
+    top_level =
+      for %Forms.Input{ai: ai} = input <- form_inputs(form), not is_nil(ai), built_in?(input) do
+        {deprecated_ai_message(input), Entity.anno(input)}
+      end
+
+    nested =
+      for %Forms.Subform{sub_fields: sub_fields} <- form_inputs(form),
+          %Forms.Input{ai: ai} = input <- sub_fields || [],
+          not is_nil(ai),
+          built_in?(input) do
+        {"input #{inspect(input.name)} in inputs_for has `ai:`, which is deprecated and does nothing there. Remove it.",
+         Entity.anno(input)}
+      end
+
+    top_level ++ nested
+  end
+
+  # A custom component (`{:live_component, module}`, a function) gets `ai:`
+  # in its options as before, and may read it: no warning.
+  defp built_in?(%Forms.Input{type: type}), do: is_atom(type)
+
+  @subject "has `ai:`, which is deprecated and will be removed"
+
+  defp deprecated_ai_message(%Forms.Input{type: :rich_text, name: name, ai: ai, opts: opts}) do
+    converted = Forms.WriteWithAI.from_ai(ai)
+
+    cond do
+      opts[:write_with_ai] != converted ->
+        "input #{inspect(name)} #{@subject}. `write_with_ai:` is set, so it is ignored. Remove it."
+
+      source = Forms.WriteWithAI.to_source(converted) ->
+        [
+          "input #{inspect(name)} #{@subject}. On a rich text input it gives Write with AI its instructions, the fields they read and its model. Write it as:",
+          indent(source),
+          dropped_options_note("write_with_ai:", Keyword.take(converted, Forms.AIAction.request_opt_keys()))
+        ]
+        |> Enum.filter(& &1)
+        |> Enum.join("\n\n")
+
+      true ->
+        [
+          "input #{inspect(name)} #{@subject}. It gives Write with AI no instructions, and Write with AI is on whenever AI is configured. Remove it.",
+          dropped_options_note("write_with_ai:", Keyword.take(converted, Forms.AIAction.request_opt_keys()))
+        ]
+        |> Enum.filter(& &1)
+        |> Enum.join("\n\n")
+    end
+  end
+
+  defp deprecated_ai_message(%Forms.Input{name: name, type: type, ai: ai, actions: actions}) do
+    subject = "input #{inspect(name)} #{@subject}"
+
+    case Enum.find(actions, &(&1.origin == :ai)) do
+      %Forms.AIAction{} = action ->
+        [
+          "#{subject}. It runs as the AI action \"Generate\", whose result the editor reviews before it reaches the field. Write it as:",
+          indent(Forms.AIAction.to_source(action)),
+          action.from == [] &&
+            "Add `from:` with the fields the prompt reads: `ai_actions:` requires them, and `ai:` named none in `context:`.",
+          dropped_options_note("ai_actions:", action.request_opts)
+        ]
+        |> Enum.filter(& &1)
+        |> Enum.join("\n\n")
+
+      nil ->
+        "#{subject}. #{ignored_reason(type, name, ai, actions)} Remove it."
+    end
+  end
+
+  defp ignored_reason(type, name, ai, actions) do
+    cond do
+      not Forms.AIAction.takes_actions?(type, name) -> "It does nothing on a #{inspect(type)} input."
+      Enum.any?(actions, &(&1.name == :generate)) -> "`ai_actions:` already has a :generate action, so it is ignored."
+      is_nil(Forms.AIAction.generate(ai, :ai)) -> "It has no prompt, so it does nothing."
+      true -> "It does nothing."
+    end
+  end
+
+  defp dropped_options_note(_option, []), do: nil
+
+  defp dropped_options_note(option, opts) do
+    keys = opts |> Keyword.keys() |> Enum.map_join(", ", &"`#{&1}`")
+
+    "`#{option}` takes no #{keys}: set API keys under `providers:` and request options under `default_opts:` in `config :brando, Brando.AI`. Until `ai:` is removed, they are kept."
+  end
+
+  defp indent(source), do: source |> String.split("\n") |> Enum.map_join("\n", &("    " <> &1))
 
   defp form_inputs(form) do
     for tab <- form.tabs,

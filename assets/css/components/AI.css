@@ -274,6 +274,18 @@
   }
 }
 
+/* Suggested alt text, one field per language (`Form.AltTextSuggestion`) */
+.alt-suggestion-language {
+  display: grid;
+  gap: 4px;
+
+  > label {
+    color: var(--brando-muted);
+    font-size: 12px;
+    line-height: 18px;
+  }
+}
+
 .field-ai-count {
   color: var(--brando-muted);
   font-size: 12px;

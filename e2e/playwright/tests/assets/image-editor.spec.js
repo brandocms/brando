@@ -20,6 +20,9 @@ test('opens image editor, adjusts focal point, and saves', async ({ page }, test
   await syncLV(page)
   await expect(page.locator('input[name="client[slug]"]')).toHaveValue('imgedclient', { timeout: 10000 })
   await page.getByTestId('submit').click()
+  // Saving redirects to the listing; a navigation clicked before it lands
+  // is overtaken by the redirect
+  await expect(page).toHaveURL(/\/projects\/clients$/)
   await syncLV(page)
 
   // Step 2: Create a new project

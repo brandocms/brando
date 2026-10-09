@@ -1295,6 +1295,7 @@ msgstr ""
 msgid "AI search"
 msgstr ""
 
+#: lib/brando_admin/components/form/alt_text_suggestion.ex
 #: lib/brando_admin/components/form/field_actions.ex
 #: lib/brando_admin/components/form/input/rich_text_labels.ex
 #, elixir-autogen, elixir-format
@@ -1306,6 +1307,7 @@ msgstr ""
 msgid "AI tools you let read content and propose changes as you, over MCP. Disconnecting one stops it at once."
 msgstr ""
 
+#: lib/brando_admin/components/form/alt_text_suggestion.ex
 #: lib/brando_admin/components/form/field_actions.ex
 #: lib/brando_admin/components/form/input/rich_text_labels.ex
 #: lib/brando_admin/components/suggestion_review.ex
@@ -2016,6 +2018,7 @@ msgstr ""
 msgid "Alternates"
 msgstr ""
 
+#: lib/brando_admin/components/form/alt_text_suggestion.ex
 #: lib/brando_admin/components/form/image_drawer.ex
 #: lib/brando_admin/components/form/input/blocks/picture_block.ex
 #: lib/brando_admin/components/form/input/gallery/image_config.ex
@@ -5441,6 +5444,7 @@ msgstr ""
 msgid "Disabled account"
 msgstr ""
 
+#: lib/brando_admin/components/form/alt_text_suggestion.ex
 #: lib/brando_admin/components/form/field_actions.ex
 #: lib/brando_admin/components/form/input/rich_text_labels.ex
 #: lib/brando_admin/live/ai/assistant_live.ex
@@ -7392,6 +7396,11 @@ msgstr ""
 msgid "Gemini training and grounding; not AI Overviews"
 msgstr ""
 
+#: lib/brando_admin/components/form/field_actions.ex
+#, elixir-autogen, elixir-format
+msgid "Generate"
+msgstr ""
+
 #: lib/brando_admin/command_palette.ex
 #: lib/brando_admin/live/sites/utils_live.ex
 #, elixir-autogen, elixir-format
@@ -7401,11 +7410,6 @@ msgstr ""
 #: lib/brando_admin/components/form/input/rich_text_labels.ex
 #, elixir-autogen, elixir-format
 msgid "Generate suggestion"
-msgstr ""
-
-#: lib/brando_admin/components/form/input.ex
-#, elixir-autogen, elixir-format
-msgid "Generate with AI"
 msgstr ""
 
 #: lib/brando_admin/live/sites/utils_live.ex
@@ -15675,7 +15679,9 @@ msgstr ""
 msgid "Suggested destination"
 msgstr ""
 
+#: lib/brando_admin/components/form/alt_text_suggestion.ex
 #: lib/brando_admin/components/form/field_actions.ex
+#: lib/brando_admin/components/form/input/rich_text_labels.ex
 #, elixir-autogen, elixir-format
 msgid "Suggested text"
 msgstr ""
@@ -17560,6 +17566,7 @@ msgstr ""
 msgid "Try a resource name, such as Pages, or an action, such as Publish."
 msgstr ""
 
+#: lib/brando_admin/components/form/alt_text_suggestion.ex
 #: lib/brando_admin/components/form/field_actions.ex
 #: lib/brando_admin/components/form/input/rich_text_labels.ex
 #: lib/brando_admin/components/form/revisions_drawer.ex
