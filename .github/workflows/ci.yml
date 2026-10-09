@@ -5,6 +5,16 @@ on:
   push:
     branches: [main]
   pull_request:
+  # Merge queue readiness: a queue on `main` runs this workflow on its
+  # temporary merge commit (refs/heads/gh-readonly-queue/main/…) and waits for
+  # the required checks there. Those are the jobs below that run on every
+  # event: mix test (all three), Admin CSS colour tokens, Blueprint quality
+  # gates and Published documentation. They read no pull_request context, so
+  # they behave the same on the queued commit. The E2E jobs stay PR-only
+  # (informational, and the PR already ran them); igniter-smoke.yml has no
+  # merge_group trigger because its path filter cannot apply to a queue run.
+  merge_group:
+    types: [checks_requested]
   # Lets the E2E job be run on demand without raising a PR — it is skipped on
   # push because it is slow, so this is the only other way to exercise it.
   # `coverage` is ticked by the weekly coverage.yml run; it can also be ticked
@@ -20,8 +30,11 @@ permissions:
 
 concurrency:
   # A coverage run gets its own group so a push to main does not cancel it.
-  group: ci-${{ github.workflow }}-${{ github.ref }}${{ inputs.coverage && '-coverage' || '' }}
-  cancel-in-progress: true
+  # A merge queue run is keyed on its own commit and never cancelled: a
+  # cancelled or replaced queue run fails the entry and drops the PR from the
+  # queue. A newer push still cancels the older run on a PR branch.
+  group: ci-${{ github.workflow }}-${{ github.event_name == 'merge_group' && github.sha || github.ref }}${{ inputs.coverage && '-coverage' || '' }}
+  cancel-in-progress: ${{ github.event_name != 'merge_group' }}
 
 jobs:
   mix_test:
@@ -220,7 +233,8 @@ jobs:
     # Preserve the informational status of the existing E2E jobs.
     continue-on-error: true
     # Main builds seed a cache that future PRs can restore. PR-only caches are
-    # scoped to that PR and cannot warm the next branch's first run.
+    # scoped to that PR and cannot warm the next branch's first run. Not run
+    # for merge_group: only the E2E jobs need it, and they are PR-only.
     if: github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
     env:
       BRANDO_E2E_INSTANCE: ci
@@ -295,7 +309,9 @@ jobs:
     # Each shard gets its own runner, PostgreSQL service, server, PubSub and
     # caches. Keep workers: 1 within a server; only isolated jobs run in parallel.
     # Authorization runs independently so it need not wait for the legacy suite.
-    # PRs only, avoiding duplicate E2E runs for push + pull_request events.
+    # PRs only, avoiding duplicate E2E runs for push + pull_request events,
+    # and not in the merge queue: it is informational and would add half an
+    # hour to every queued PR.
     if: github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch'
     # Non-blocking until it has a track record. This job was added on
     # 2026-07-18 and had never once run to completion — it died at the first
