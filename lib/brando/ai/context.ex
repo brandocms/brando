@@ -3,7 +3,7 @@ defmodule Brando.AI.Context do
   Resolves the entry text an AI prompt is given as context.
 
   A blueprint declares what an AI action reads through the `:context` option on
-  the field — `trait :meta, ai: [meta_description: [context: [:title, :blocks]]]`.
+  the field — `trait :meta, ai_prompts: [meta_description: [context: [:title, :blocks]]]`.
   This module resolves that declaration against an entry: plain attributes are
   formatted as text, and block fields are read from the persisted
   `rendered_<field>` column instead of re-rendering the block tree.

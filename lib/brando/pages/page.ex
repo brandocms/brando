@@ -35,7 +35,7 @@ defmodule Brando.Pages.Page do
   trait :permalink
 
   trait :meta,
-    ai: [
+    ai_prompts: [
       meta_title: [
         prompt:
           "Write an SEO title tag based on the page title and rendered content. The `language` context value is the CMS language code (for example `en` = English, `no` = Norwegian); always write the output in that language. Return plain text only (no Markdown, no quotes, no emojis). Keep it clear, specific, and unique. Put the primary topic first. Target 50-60 characters; do not exceed 65 characters. If a brand name is clearly present in the source, place it at the end only if it fits naturally. Return exactly one title string.",

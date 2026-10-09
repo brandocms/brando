@@ -145,17 +145,18 @@ modes.
 `meta_canonical_url`, an optional [canonical override](meta.md#canonical-url).
 It also adds `content_modified_at`, which only substantive edits move: read it
 with `Brando.Blueprint.Value.modified_at/1` for JSON-LD
-[`dateModified`](jsonld.md#datemodified) and the sitemap's `lastmod`. `ai:`
-holds the [site prompts](blueprint_forms.md#site-prompts) for the meta fields,
-which write their Generate suggestion in the drawer and the Content SEO
-batch:
+[`dateModified`](jsonld.md#datemodified) and the sitemap's `lastmod`.
+`ai_prompts:` holds the [site prompts](blueprint_forms.md#site-prompts) for
+the meta fields, which write their Generate suggestion in the drawer and the
+Content SEO batch:
 
 ```elixir
 trait :meta,
-  ai: [meta_title: [prompt: "Write an SEO title from the title", context: [:title]]]
+  ai_prompts: [meta_title: [prompt: "Write an SEO title from the title", context: [:title]]]
 ```
 
-This `ai:` is not the deprecated `ai:` on an input.
+Before 0.55 it was called `ai:`, which still works in 0.55 and warns when the
+Blueprint compiles, with the `ai_prompts:` to write.
 
 See [Page metadata](meta.md) and [Content SEO](content_seo.md).
 

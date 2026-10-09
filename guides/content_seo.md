@@ -133,7 +133,7 @@ config :brando, Brando.AI,
   ]
 ```
 
-`fields: [alt: [model: "..."]]` overrides it for alt text alone. Prices and
+`prompts: [alt: [model: "..."]]` overrides it for alt text alone. Prices and
 abilities come from the `llm_db` catalogue that ReqLLM reads; after switching
 to a newly released model, `mix deps.update llm_db` picks it up.
 

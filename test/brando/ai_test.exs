@@ -6,11 +6,18 @@ defmodule Brando.AITest do
       [
         {Brando.Trait.Meta,
          [
-           ai: [
+           ai_prompts: [
              meta_description: [prompt: "Trait configured meta prompt", context: [:title, :blocks]]
            ]
          ]}
       ]
+    end
+  end
+
+  # `ai:`, the name of `ai_prompts:` before 0.55
+  defmodule TraitDeprecatedMetaSchema do
+    def __traits__ do
+      [{Brando.Trait.Meta, [ai: [meta_description: [prompt: "Deprecated trait prompt"]]]}]
     end
   end
 
@@ -71,7 +78,7 @@ defmodule Brando.AITest do
 
   test "field_ai_opts/2 uses trait-declared ai config before app config fallbacks" do
     Application.put_env(:brando, Brando.AI,
-      fields: [
+      prompts: [
         meta_description: [prompt: "General field prompt"]
       ]
     )
@@ -82,9 +89,9 @@ defmodule Brando.AITest do
            ]
   end
 
-  test "field_ai_opts/2 uses generic fields fallback when trait has no ai config" do
+  test "field_ai_opts/2 uses the site's prompts when the trait has none" do
     Application.put_env(:brando, Brando.AI,
-      fields: [
+      prompts: [
         meta_description: [prompt: "General field prompt"]
       ]
     )
@@ -94,14 +101,49 @@ defmodule Brando.AITest do
            ]
   end
 
-  test "field_ai_opts/1 uses generic fields fallback when no schema is provided" do
+  test "field_ai_opts/1 uses the site's prompts when no schema is provided" do
     Application.put_env(:brando, Brando.AI,
-      fields: [
+      prompts: [
         meta_description: [prompt: "General field prompt"]
       ]
     )
 
     assert Brando.AI.field_ai_opts(:meta_description) == [prompt: "General field prompt"]
+  end
+
+  describe "the site prompt names before 0.55" do
+    test "fields: still works, warns at boot with prompts:, and keeps its options out of the warning" do
+      Application.put_env(:brando, Brando.AI,
+        fields: [meta_description: [prompt: "Old site prompt", api_key: "sk-secret"], alt: [model: :image]]
+      )
+
+      assert Brando.AI.field_ai_opts(:meta_description) == [prompt: "Old site prompt", api_key: "sk-secret"]
+
+      assert [message] = Brando.AI.deprecations()
+      assert message =~ "config :brando, Brando.AI, fields: is deprecated"
+      assert message =~ "prompts: [meta_description: [...], alt: [...]]"
+      refute message =~ "sk-secret"
+    end
+
+    test "prompts: wins over fields:, which the warning says to remove" do
+      Application.put_env(:brando, Brando.AI,
+        prompts: [meta_description: [prompt: "New"]],
+        fields: [meta_description: [prompt: "Old"]]
+      )
+
+      assert Brando.AI.field_ai_opts(:meta_description) == [prompt: "New"]
+      assert [message] = Brando.AI.deprecations()
+      assert message =~ "`prompts:` is set, so `fields:` is ignored. Remove it."
+    end
+
+    test "prompts: alone warns about nothing" do
+      Application.put_env(:brando, Brando.AI, prompts: [alt: [model: :image]])
+      assert Brando.AI.deprecations() == []
+    end
+
+    test "trait :meta, ai: still gives the meta fields their prompts" do
+      assert Brando.AI.field_ai_opts(TraitDeprecatedMetaSchema, :meta_description) == [prompt: "Deprecated trait prompt"]
+    end
   end
 
   defp restore_env(app, key, nil), do: Application.delete_env(app, key)
@@ -135,7 +177,9 @@ defmodule Brando.AITest do
   end
 
   test "field_ai_opts/2 lets app config fill in what the trait leaves out" do
-    Application.put_env(:brando, Brando.AI, fields: [meta_description: [model: :default, prompt: "General field prompt"]])
+    Application.put_env(:brando, Brando.AI,
+      prompts: [meta_description: [model: :default, prompt: "General field prompt"]]
+    )
 
     opts = Brando.AI.field_ai_opts(TraitConfiguredMetaSchema, :meta_description)
 

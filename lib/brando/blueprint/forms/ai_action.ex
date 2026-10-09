@@ -99,8 +99,8 @@ defmodule Brando.Blueprint.Forms.AIAction do
 
   @doc """
   The `:generate` action for the options of the deprecated `ai:` on an input
-  (`origin: :ai`) or of a site prompt (`origin: :site`, `trait :meta, ai:` or
-  `config :brando, Brando.AI, fields:`): its `prompt`, `context:` as the
+  (`origin: :ai`) or of a site prompt (`origin: :site`, `trait :meta,
+  ai_prompts:` or `config :brando, Brando.AI, prompts:`): its `prompt`, `context:` as the
   fields it reads (`from`), its `model` and its request options. `nil` when
   the options have no prompt.
 

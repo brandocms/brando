@@ -5,6 +5,7 @@ defmodule Brando.Blueprint.Trait do
     trait = expand_trait(name, __CALLER__)
     {requested_compiler, trait_opts} = Keyword.pop(opts, :compile_with)
     compiler = expand_compiler(requested_compiler, trait, __CALLER__)
+    warn_deprecated_opts(trait, trait_opts, __CALLER__)
 
     [
       compiler.generate_code(__CALLER__.module, trait_opts),
@@ -12,6 +13,37 @@ defmodule Brando.Blueprint.Trait do
         Module.put_attribute(__MODULE__, :traits, {unquote(trait), unquote(trait_opts)})
       end
     ]
+  end
+
+  # `trait :meta, ai:` was renamed `ai_prompts:` in 0.55. The old name still
+  # works; the warning points at the trait with the line to write.
+  defp warn_deprecated_opts(trait, opts, caller) do
+    if trait == built_in_trait("Meta") and Keyword.keyword?(opts) and Keyword.has_key?(opts, :ai) do
+      IO.warn(deprecated_meta_ai_message(opts), Macro.Env.stacktrace(caller))
+    end
+  end
+
+  defp deprecated_meta_ai_message(opts) do
+    subject = "`trait :meta, ai:` is deprecated and will be removed"
+
+    if Keyword.has_key?(opts, :ai_prompts) do
+      "#{subject}. `ai_prompts:` is set, so `ai:` is ignored. Remove it."
+    else
+      options =
+        opts
+        |> Keyword.delete(:ai)
+        |> Keyword.put(:ai_prompts, Keyword.fetch!(opts, :ai))
+        |> Macro.to_string()
+        |> String.slice(1..-2//1)
+
+      replacement =
+        ("trait :meta, " <> options)
+        |> Code.format_string!(locals_without_parens: [trait: :*])
+        |> IO.iodata_to_binary()
+
+      "#{subject}. It holds the site prompts for the meta fields, now named `ai_prompts:`. Write it as:\n\n" <>
+        String.replace(replacement, ~r/^/m, "    ")
+    end
   end
 
   defp expand_trait(:blocks, _caller), do: built_in_trait("Blocks")

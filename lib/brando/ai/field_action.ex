@@ -64,7 +64,7 @@ defmodule Brando.AI.FieldAction do
   The AI actions on `field` of `schema`'s form, its input type and options:
   what the form's input declares (`ai_actions:`, and the deprecated `ai:` as
   `:generate`), and for a meta field in the Meta drawer, the site prompt
-  (`trait :meta, ai:` or `config :brando, Brando.AI, fields:`) as
+  (`trait :meta, ai_prompts:` or `config :brando, Brando.AI, prompts:`) as
   `:generate`, unless the input has its own.
 
   The admin offers, runs and accepts the same list.

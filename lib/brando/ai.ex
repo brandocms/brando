@@ -22,7 +22,7 @@ defmodule Brando.AI do
           anthropic: [api_key: System.get_env("ANTHROPIC_API_KEY")]
         ],
         # Site prompts, by name (see "Site prompts" in guides/blueprint_forms.md)
-        fields: [
+        prompts: [
           meta_description: [model: :default],
           block_text: [prompt: "Keep the site's plain, friendly tone."],
           alt: [model: :image]
@@ -51,8 +51,9 @@ defmodule Brando.AI do
     name (`:image` for alt text) -> `models[:default]` / `:default_model`
   - API key: field `:api_key` -> provider config `providers[provider][:api_key]` ->
     app `<provider>_api_key` -> `ReqLLM.get_key(:"<provider>_api_key")`
-  - Site prompts (`field_ai_opts/2`): trait-provided prompts (`trait :meta, ai:`),
-    with app `fields[name]` filling in what they leave out (a `model:`, say)
+  - Site prompts (`field_ai_opts/2`): trait-provided prompts
+    (`trait :meta, ai_prompts:`), with app `prompts[name]` filling in what
+    they leave out (a `model:`, say)
 
   ## Site prompt options
 
@@ -65,7 +66,13 @@ defmodule Brando.AI do
 
   Note: trait-specific defaults are resolved by each trait through the
   `c:Brando.Trait.ai_field_opts/3` callback. For example, `Brando.Trait.Meta` reads
-  field config from `trait :meta, ai: [...]` on the blueprint.
+  field config from `trait :meta, ai_prompts: [...]` on the blueprint.
+
+  ## Renamed in 0.55
+
+  `prompts:` was called `fields:` before 0.55, and `trait :meta, ai_prompts:`
+  was `ai:`. The old names still work in 0.55; Brando warns at boot
+  (`deprecations/0`) and when the Blueprint compiles, with the name to use.
   """
 
   use Gettext, backend: Brando.Gettext
@@ -253,17 +260,62 @@ defmodule Brando.AI do
 
   def field_ai_opts(field_name) when is_atom(field_name), do: field_ai_opts(nil, field_name)
 
-  # The trait's options win; the app's `fields` config fills in what the trait
-  # leaves out, so a site can pick a model for a field whose prompt a trait
-  # provides.
+  # The trait's options win; the app's `prompts` config fills in what the
+  # trait leaves out, so a site can pick a model for a field whose prompt a
+  # trait provides.
   def field_ai_opts(schema, field_name) when is_atom(field_name) do
     trait = normalize_ai_opts(Brando.Trait.get_trait_ai_field_opts(schema, field_name))
-    app = normalize_ai_opts(get_field_config(Keyword.get(config(), :fields, %{}), field_name))
+    app = normalize_ai_opts(get_field_config(site_prompts(), field_name))
 
     Keyword.merge(app, trait)
   end
 
   def field_ai_opts(_, _), do: []
+
+  # `prompts:`, or `fields:`, its name before 0.55 (`deprecations/0`)
+  defp site_prompts do
+    config = config()
+
+    case Keyword.fetch(config, :prompts) do
+      {:ok, prompts} -> prompts
+      :error -> Keyword.get(config, :fields, %{})
+    end
+  end
+
+  @doc """
+  Warnings for deprecated names in `config :brando, Brando.AI`, each with
+  the name to use. `Brando.System` prints them at boot.
+  """
+  @spec deprecations() :: [String.t()]
+  def deprecations do
+    config = config()
+
+    cond do
+      not Keyword.has_key?(config, :fields) ->
+        []
+
+      Keyword.has_key?(config, :prompts) ->
+        [
+          "config :brando, Brando.AI, fields: is deprecated and will be removed. " <>
+            "`prompts:` is set, so `fields:` is ignored. Remove it."
+        ]
+
+      true ->
+        [
+          "config :brando, Brando.AI, fields: is deprecated and will be removed. " <>
+            "It holds the site prompts, now named `prompts:`. Rename it:\n\n" <>
+            "    config :brando, Brando.AI,\n      prompts: #{site_prompt_names(config[:fields])}"
+        ]
+    end
+  end
+
+  # The prompts by name only: their options may hold an API key.
+  defp site_prompt_names(prompts) when is_list(prompts) or is_map(prompts) do
+    names = Enum.map_join(prompts, ", ", fn {name, _opts} -> "#{name}: [...]" end)
+    if is_map(prompts), do: "%{#{names}}", else: "[#{names}]"
+  end
+
+  defp site_prompt_names(_prompts), do: "[...]"
 
   defp build_req_opts(ai_opts, api_key) do
     default_opts = Keyword.get(config(), :default_opts, [])

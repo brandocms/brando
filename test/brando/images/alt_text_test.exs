@@ -111,7 +111,7 @@ defmodule Brando.Images.AltTextTest do
 
     Brando.Test.Support.put_test_env(
       Brando.AI,
-      Keyword.put(Application.get_env(:brando, Brando.AI), :fields,
+      Keyword.put(Application.get_env(:brando, Brando.AI), :prompts,
         alt: [prompt: "Describe the boats only.", model: "openai:gpt-4o"]
       )
     )
