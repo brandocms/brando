@@ -1,10 +1,19 @@
 #!/usr/bin/env bash
-# Waits for every check on a pull request to finish, then prints one line and
-# exits 0 when all passed (or were skipped), 1 otherwise. It prints nothing
-# while waiting, so run it in the background and read the line when it exits.
+# Waits for every check on a pull request to finish, then prints one summary
+# line and exits 0 when all passed (or were skipped), 1 otherwise. It prints
+# nothing while waiting, so run it in the background and read it when it exits.
 #
 #   scripts/ci-wait 3066
 #   scripts/ci-wait 3066 --repo brandocms/brando
+#   scripts/ci-wait 3066 --rerun-flakes
+#   scripts/ci-wait --run 37909080708       # explain a finished workflow run
+#   scripts/ci-wait --run 37909080708 --attempt 1   # or an earlier attempt
+#
+# When checks fail, it reads each failed job's log and adds one line per job:
+# a known flake from .github/known-flakes.txt, with the command to rerun it,
+# or a real failure with the first failing test (ExUnit or Playwright) or the
+# step that failed. --rerun-flakes reruns the failed jobs once when every
+# failure is a known flake, says so in one line and keeps waiting.
 #
 # Reads checks through `gh pr checks` (GraphQL) and falls back to the REST API
 # when that fails; transient errors are retried until the timeout.
@@ -12,28 +21,46 @@
 #   CI_WAIT_INTERVAL  seconds between polls (default 30)
 #   CI_WAIT_TIMEOUT   minutes before giving up (default 120)
 #   CI_WAIT_CONFIRM   seconds before re-reading a finished state (default 15)
+#   CI_WAIT_FLAKES    known flakes file (default .github/known-flakes.txt)
 set -uo pipefail
 
-usage() { echo "usage: scripts/ci-wait <PR number> [--repo owner/name]" >&2; exit 1; }
+usage() {
+  echo "usage: scripts/ci-wait <PR number> [--repo owner/name] [--rerun-flakes]" >&2
+  echo "       scripts/ci-wait --run <workflow run id> [--attempt <n>] [--repo owner/name]" >&2
+  exit 1
+}
 
+here="$(cd "$(dirname "$0")" && pwd)"
 pr=""
+run_id=""
+attempt=""
+rerun_flakes=false
 repo="${CI_WAIT_REPO:-}"
+flakes_file="${CI_WAIT_FLAKES:-$here/../.github/known-flakes.txt}"
 while [ $# -gt 0 ]; do
   case "$1" in
     --repo) [ $# -ge 2 ] || usage; repo="$2"; shift 2 ;;
-    -h|--help) sed -n '2,14p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+    --run) [ $# -ge 2 ] || usage; run_id="$2"; shift 2 ;;
+    --attempt) [ $# -ge 2 ] || usage; attempt="$2"; shift 2 ;;
+    --rerun-flakes) rerun_flakes=true; shift ;;
+    -h|--help) awk 'NR > 1 && !/^#/ { exit } NR > 1 { sub(/^# ?/, ""); print }' "$0"; exit 0 ;;
     *[!0-9]*|'') usage ;;
     *) pr="$1"; shift ;;
   esac
 done
-[ -n "$pr" ] || usage
+case "$run_id$attempt" in *[!0-9]*) usage ;; esac
+[ -z "$attempt" ] || [ -n "$run_id" ] || usage
+[ -n "$pr" ] || [ -n "$run_id" ] || usage
+[ -z "$pr" ] || [ -z "$run_id" ] || usage
+subject="${pr:+PR $pr}"
+subject="${subject:-Run $run_id}"
 
 for bin in gh jq; do
-  command -v "$bin" >/dev/null 2>&1 || { echo "PR $pr: ci-wait needs $bin on PATH" >&2; exit 1; }
+  command -v "$bin" >/dev/null 2>&1 || { echo "$subject: ci-wait needs $bin on PATH" >&2; exit 1; }
 done
 
 if [ -z "$repo" ]; then
-  repo="$(git -C "$(dirname "$0")" remote get-url origin 2>/dev/null |
+  repo="$(git -C "$here" remote get-url origin 2>/dev/null |
     sed -E 's#^.*github\.com[:/]##; s#\.git$##')"
   case "$repo" in */*) ;; *) repo="brandocms/brando" ;; esac
 fi
@@ -41,7 +68,8 @@ fi
 interval="${CI_WAIT_INTERVAL:-30}"
 deadline=$((SECONDS + ${CI_WAIT_TIMEOUT:-120} * 60))
 err="$(mktemp "${TMPDIR:-/tmp}/ci-wait.XXXXXX")"
-trap 'rm -f "$err"' EXIT
+work="$(mktemp -d "${TMPDIR:-/tmp}/ci-wait-logs.XXXXXX")"
+trap 'rm -rf "$err" "$work"' EXIT
 
 # Both fetchers print the checks as JSON, [{name, bucket, link}], where
 # bucket is pass, fail, pending, skipping or cancel (as `gh pr checks`).
@@ -83,54 +111,272 @@ fetch_rest() {
       })]'
 }
 
+# The jobs of one workflow run (its latest attempt, or --attempt), in the
+# same shape.
+fetch_run() {
+  gh api "repos/$repo/actions/runs/$run_id${attempt:+/attempts/$attempt}/jobs?per_page=100" 2>"$err" | jq '
+    [.jobs[] | {
+      name,
+      link: .html_url,
+      bucket: (if .status != "completed" then "pending"
+        elif .conclusion == "success" or .conclusion == "neutral" then "pass"
+        elif .conclusion == "skipped" then "skipping"
+        elif .conclusion == "cancelled" then "cancel"
+        else "fail" end)
+    }]'
+}
+
 not_found() {
   grep -qiE 'could not resolve to a pullrequest|HTTP 404|no pull requests found' "$err"
 }
 
+# The failed (or cancelled) checks, one per line: bucket, name, link (tabs).
+failures() {
+  jq -r '.[] | select(.bucket == "fail" or .bucket == "cancel")
+    | [.bucket, .name, (.link // "")] | @tsv' <<<"$1"
+}
+
+# A job log as clean lines: no BOM, timestamps, ##[error] prefixes or colours.
+clean_log() {
+  sed -E $'s/^\xef\xbb\xbf//; s/^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9:.]+Z ?//; s/\x1b\\[[0-9;]*[A-Za-z]//g; s/^##\\[error\\]//'
+}
+
+# The failing tests in a clean log, one per line: a title, a tab, then the
+# test's report joined into one line. ExUnit reports start with
+# "  1) test …" (or doctest/property), Playwright's with "  1) [project] › …".
+# A test reported twice (Playwright repeats them) is kept once, and when a
+# Playwright run summary names the failed tests, a test that passed on retry
+# (flaky) is dropped.
+failing_tests() {
+  awk '
+    # Playwright pads titles with a rule (and "Retry #1") to the line width.
+    function norm(s) {
+      sub(/^ +/, "", s); sub(/ *(─+ *)?(Retry #[0-9]+ *─*)? *$/, "", s)
+      return s
+    }
+    function flush() {
+      if (title != "" && !(title in texts)) { order[++count] = title; texts[title] = text }
+      title = ""; text = ""
+    }
+    /Playwright Run Summary::/ {
+      summaries = 1; in_failed = 0
+      n = split($0, parts, "%0A")
+      for (i = 1; i <= n; i++) {
+        line = parts[i]
+        if (line ~ /(^|::) *[0-9]+ failed *$/) { in_failed = 1; continue }
+        if (line ~ /(^|::) *[0-9]+ (flaky|passed|skipped|did not run|interrupted)/) { in_failed = 0; continue }
+        if (in_failed) failed[norm(line)] = 1
+      }
+    }
+    /^ *[0-9]+\) (test|doctest|property) / || /^ *[0-9]+\) \[[^]]+\] › / {
+      flush()
+      title = $0
+      sub(/^ *[0-9]+\) /, "", title)
+      title = norm(title)
+      text = $0; lines = 0
+      next
+    }
+    title != "" {
+      if ($0 ~ /^\.+$/ || $0 ~ /^(Finished in |Result: |##\[)/ ||
+          $0 ~ /^[0-9][0-9]:[0-9][0-9]:[0-9][0-9]\.[0-9]+ \[/ ||
+          $0 ~ /^ *[0-9]+ (failed|flaky|passed|skipped|did not run)/ || ++lines > 80) { flush(); next }
+      text = text " " $0
+    }
+    END {
+      flush()
+      for (i = 1; i <= count; i++) {
+        t = order[i]
+        if (summaries && t ~ /^\[[^]]+\] › / && !(t in failed)) continue
+        print t "\t" texts[t]
+      }
+    }
+  '
+}
+
+# The known flakes as name<TAB>pattern lines.
+known_flakes() {
+  [ -r "$flakes_file" ] || return 0
+  awk '!/^[[:space:]]*(#|$)/ {
+    name = $1; sub(/^[[:space:]]*[^[:space:]]+[[:space:]]+/, ""); print name "\t" $0
+  }' "$flakes_file"
+}
+
+# Prints the name of the first known flake matching stdin, or fails.
+match_flake() {
+  local text name pattern
+  text="$(cat)"
+  while IFS=$'\t' read -r name pattern; do
+    [ -n "$pattern" ] || continue
+    if grep -Eq -- "$pattern" <<<"$text"; then
+      printf '%s' "$name"
+      return 0
+    fi
+  done < <(known_flakes)
+  return 1
+}
+
+# Explains one failed job: "flake<TAB>names<TAB>run", "real<TAB>detail" or
+# "cancelled".
+classify() {
+  local bucket="$1" link="$2" job run log tests total titles title body name names="" first="" step
+  if [ "$bucket" = cancel ]; then printf 'cancelled\n'; return; fi
+  if [[ ! "$link" =~ /actions/runs/([0-9]+)/job/([0-9]+) ]]; then
+    printf 'real\tnot a GitHub Actions job, no log to read\n'; return
+  fi
+  run="${BASH_REMATCH[1]}" job="${BASH_REMATCH[2]}"
+  log="$work/$job.log"
+  if ! gh api "repos/$repo/actions/jobs/$job/logs" --allow-escape-sequences 2>>"$err" | clean_log >"$log" ||
+    [ ! -s "$log" ]; then
+    printf 'real\tcould not read the job log\n'; return
+  fi
+  tests="$work/$job.tests"
+  failing_tests <"$log" >"$tests"
+  total="$(wc -l <"$tests" | tr -d ' ')"
+  if [ "$total" -eq 0 ]; then
+    if name="$(tr '\n' ' ' <"$log" | match_flake)"; then
+      printf 'flake\t%s\t%s\n' "$name" "$run"
+    else
+      step="$(gh api "repos/$repo/actions/jobs/$job" \
+        --jq '[.steps[] | select(.conclusion == "failure") | .name][0] // empty' 2>>"$err")"
+      printf 'real\t%s\n' "${step:+failed step: $step}"
+    fi
+    return
+  fi
+  while IFS=$'\t' read -r title body; do
+    if name="$(printf '%s %s' "$title" "$body" | match_flake)"; then
+      case " $names " in *" $name "*) ;; *) names="${names:+$names, }$name" ;; esac
+    elif [ -z "$first" ]; then
+      first="$title"
+      titles=1
+    else
+      titles=$((titles + 1))
+    fi
+  done <"$tests"
+  if [ -z "$first" ]; then
+    printf 'flake\t%s\t%s\n' "$names" "$run"
+  else
+    [ "$titles" -gt 1 ] && first="$first (+$((titles - 1)) more)"
+    printf 'real\t%s%s\n' "$first" "${names:+; also known flake: $names}"
+  fi
+}
+
+# Prints one line per failed job into $work/lines, the run ids and names of
+# known flakes into $work/flaky_runs and $work/flaky_names, and succeeds when
+# every failure is a known flake.
+analyse() {
+  local checks="$1" bucket name link kind detail run all=true
+  : >"$work/lines"
+  : >"$work/flaky_runs"
+  : >"$work/flaky_names"
+  while IFS=$'\t' read -r bucket name link; do
+    IFS=$'\t' read -r kind detail run < <(classify "$bucket" "$link")
+    if [ "$kind" = flake ]; then
+      echo "  $name: known flake: $detail — rerun with: gh run rerun $run --failed" >>"$work/lines"
+      echo "$run" >>"$work/flaky_runs"
+      echo "$detail" | tr ',' '\n' | sed 's/^ *//' >>"$work/flaky_names"
+    elif [ "$kind" = cancelled ]; then
+      all=false
+      echo "  $name: cancelled" >>"$work/lines"
+    else
+      all=false
+      echo "  $name: real failure${detail:+: $detail}" >>"$work/lines"
+    fi
+  done < <(failures "$checks")
+  [ "$all" = true ]
+}
+
 report() {
-  local checks="$1" total failed skipped runs
+  local checks="$1" total failed skipped runs flaky_only=false
   total="$(jq length <<<"$checks")"
   skipped="$(jq '[.[] | select(.bucket == "skipping")] | length' <<<"$checks")"
   failed="$(jq -r '[.[] | select(.bucket == "fail" or .bucket == "cancel") | .name] | join(", ")' <<<"$checks")"
   if [ -z "$failed" ]; then
     if [ "$skipped" -gt 0 ]; then
-      echo "PR $pr: all $total checks green ($skipped skipped)"
+      echo "$subject: all $total checks green ($skipped skipped)"
     else
-      echo "PR $pr: all $total checks green"
+      echo "$subject: all $total checks green"
     fi
     exit 0
+  fi
+  analyse "$checks" && flaky_only=true
+  if [ "$flaky_only" = true ] && [ "$rerun_flakes" = true ] && [ -z "$rerun_links" ]; then
+    rerun "$checks" && return 0
+    echo "  (rerunning failed: $(head -c 200 "$err" | tr '\n' ' ' | sed 's/ *$//'))" >>"$work/lines"
   fi
   # One URL per workflow run (job links end in /job/<id>).
   runs="$(jq -r '[.[] | select(.bucket == "fail" or .bucket == "cancel") | .link // empty
     | sub("/job/[0-9]+$"; "")] | unique | join(" ")' <<<"$checks")"
-  echo "PR $pr: FAILED: $failed${runs:+ — $runs}"
+  if [ "$flaky_only" = true ]; then
+    echo "$subject: FAILED (known flakes only): $failed${runs:+ — $runs}"
+  else
+    echo "$subject: FAILED: $failed${runs:+ — $runs}"
+  fi
+  cat "$work/lines"
   exit 1
 }
 
+# Reruns the failed jobs of every run with a known flake, once, and keeps
+# waiting. Remembers the failed jobs so their old results are not reported
+# as the rerun's.
+rerun() {
+  local checks="$1" run names
+  names="$(sort -u "$work/flaky_names" | paste -sd ',' - | sed 's/,/, /g')"
+  : >"$err"
+  while read -r run; do
+    gh run rerun "$run" --failed --repo "$repo" >/dev/null 2>>"$err" || return 1
+  done < <(sort -u "$work/flaky_runs")
+  rerun_links="$(failed_links "$checks")"
+  echo "$subject: known flakes only ($names); reran the failed jobs once, still waiting"
+  return 0
+}
+
+failed_links() {
+  jq -r '[.[] | select(.bucket == "fail" or .bucket == "cancel") | .link // ""] | sort | join(" ")' <<<"$1"
+}
+
+if [ -n "$run_id" ]; then
+  rerun_flakes=false
+  rerun_links=""
+  checks="$(fetch_run)" || { echo "$subject: could not read the run in $repo"; exit 1; }
+  if [ "$(jq '[.[] | select(.bucket == "pending")] | length' <<<"$checks")" -gt 0 ]; then
+    echo "$subject: still running"
+    exit 1
+  fi
+  report "$checks"
+fi
+
+rerun_links=""
 confirmed=false
 while :; do
   : >"$err"
   if checks="$(fetch_graphql)" || checks="$(fetch_rest)"; then
     total="$(jq length <<<"$checks")"
     pending="$(jq '[.[] | select(.bucket == "pending")] | length' <<<"$checks")"
-    if [ "$total" -gt 0 ] && [ "$pending" -eq 0 ]; then
+    if [ "$total" -gt 0 ] && [ "$pending" -eq 0 ] &&
+      { [ -z "$rerun_links" ] || [ "$(failed_links "$checks")" != "$rerun_links" ]; }; then
       # Right after a push the PR can still point at the previous commit, whose
       # checks are done. Seeing the same finished state twice rules that out.
-      [ "$confirmed" = true ] && report "$checks"
+      # After a rerun, the failed jobs' old results stand until the new jobs
+      # appear, so the same failures are not reported again.
+      if [ "$confirmed" = true ]; then
+        report "$checks"
+        confirmed=false
+        continue
+      fi
       confirmed=true
       sleep "${CI_WAIT_CONFIRM:-15}"
       continue
     fi
     confirmed=false
   elif not_found; then
-    echo "PR $pr: not found in $repo"
+    echo "$subject: not found in $repo"
     exit 1
   fi
 
   if [ "$SECONDS" -ge "$deadline" ]; then
     waiting="$(jq -r '[.[] | select(.bucket == "pending") | .name] | join(", ")' <<<"${checks:-[]}" 2>/dev/null)"
     last_error="$(head -c 200 "$err" | tr '\n' ' ' | sed 's/ *$//')"
-    echo "PR $pr: gave up after ${CI_WAIT_TIMEOUT:-120} min${waiting:+; still pending: $waiting}${last_error:+; $last_error}"
+    echo "$subject: gave up after ${CI_WAIT_TIMEOUT:-120} min${waiting:+; still pending: $waiting}${last_error:+; $last_error}"
     exit 1
   fi
   sleep "$interval"
