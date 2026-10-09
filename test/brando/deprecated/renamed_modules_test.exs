@@ -46,7 +46,9 @@ defmodule Brando.Deprecated.RenamedModulesTest do
 
   test "the shims' own functions are deprecated, and name the new module" do
     for {old, new} <- RenamedModules.all(), {{name, arity}, reason} <- old.__info__(:deprecated) do
-      assert reason =~ inspect(new) or reason =~ "Brando.",
+      # add_sitemap/2 was itself a delegate to Brando.SEO.Robots
+      assert reason =~ "Use #{inspect(new)}.#{name}/#{arity} instead" or
+               {old, name} == {Brando.SEOController, :add_sitemap},
              "#{inspect(old)}.#{name}/#{arity}: #{reason}"
     end
 
