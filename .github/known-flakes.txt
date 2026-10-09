@@ -27,7 +27,3 @@ beam-jit-crash log:\[asmjit\] Assertion failed at asmjit/core/jitallocator\.cpp.
 # test's sandbox owner that has just exited, so the call dies with
 # "owner #PID<…> exited".
 presence-shard-owner-exited Presence_shard[0-9]+.*owner #PID<[0-9.]+> exited
-
-# TEMPORARY: a race in the test, being fixed on branch
-# wave8/edit-session-flake. That fix must remove this entry.
-edit-session-overlapping-saves of two overlapping saves the second can be retried.*\(BrandoAdmin\.EditSessionSavesTest\)

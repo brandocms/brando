@@ -14,5 +14,7 @@
 2026-10-09T09:00:13.0000000Z        test/brando_admin/live/chrome_socket_tokens_test.exs:19: (test)
 2026-10-09T09:00:14.0000000Z 
 2026-10-09T09:00:15.0000000Z Finished in 664.6 seconds (50.1s async, 614.5s sync)
-2026-10-09T09:00:16.0000000Z 165 doctests, 4909 tests, 3 failures
-2026-10-09T09:00:17.0000000Z ##[error]Process completed with exit code 2.
+2026-10-09T09:00:16.0000000Z 
+2026-10-09T09:00:17.0000000Z Result: 5073/5074 passed (165/165 doctests, 4908/4909 tests)
+2026-10-09T09:00:18.0000000Z Failed: 1 test
+2026-10-09T09:00:19.0000000Z ##[error]Process completed with exit code 2.

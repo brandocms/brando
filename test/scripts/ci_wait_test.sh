@@ -51,13 +51,13 @@ check() {
 
 check jit-crash.log 'known flake: beam-jit-crash — rerun with: gh run rerun 1 --failed'
 check presence-flake.log 'known flake: presence-shard-owner-exited — rerun with: gh run rerun 2 --failed'
-check overlapping-saves.log 'known flake: edit-session-overlapping-saves — rerun with: gh run rerun 3 --failed'
+check presence-flake-counted.log 'known flake: presence-shard-owner-exited — rerun with: gh run rerun 3 --failed'
 # Real failures in logs whose noise holds both halves of the Presence pattern.
 check warnings-abort.log 'real failure: Test suite aborted after successful execution due to warnings while using the --warnings-as-errors option (step: Run Tests)'
 check setup-all.log 'real failure: BrandoAdmin.FooTest: failure on setup_all callback'
 check compile-error.log 'real failure: ** (CompileError) test/brando/foo_test.exs:3: undefined function bar/0 (there is no such import) (step: Run Tests)'
-check mixed.log 'real failure: test scheduled publishing posts to the Slack routes that send it (Brando.NotificationsTest); also known flake: edit-session-overlapping-saves'
-check unparsed.log 'real failure: 2 failing test(s) not found in the log; also known flake: edit-session-overlapping-saves'
+check mixed.log 'real failure: test scheduled publishing posts to the Slack routes that send it (Brando.NotificationsTest); also known flake: presence-shard-owner-exited'
+check unparsed.log 'real failure: 2 failing test(s) not found in the log; also known flake: presence-shard-owner-exited'
 # The flaky Playwright test is dropped, the failed one kept, in any locale.
 for locale in '' C C.UTF-8; do
   check playwright.log 'real failure: [Google Chrome] › tests/pages/breadcrumbs.spec.js:4:5 › pages have JSON-LD breadcrumbs' "$locale"
