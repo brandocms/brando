@@ -1,5 +1,9 @@
 name: Igniter consumer smoke
 
+# No merge_group trigger, so do not make these checks required: merge_group
+# has no path filter, so a queue run would start all four consumers for
+# every queued PR, and a required check from a path-filtered workflow never
+# reports on PRs outside the paths, which then cannot merge.
 on:
   pull_request:
     paths:

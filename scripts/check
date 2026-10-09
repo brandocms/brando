@@ -167,6 +167,7 @@ run_step "Gettext catalogues up to date" gettext_up_to_date
 run_step "xref compile cycles" mix_in test xref graph --format cycles --label compile-connected --fail-above 0
 run_step "CSS colour tokens" bash .github/scripts/check_css_colors.sh
 run_step "E2E machine paths" bash .github/scripts/check-e2e-paths.sh
+run_step "ci-wait flake matching" bash test/scripts/ci_wait_test.sh
 
 if [ "$fast" = true ]; then
   echo "check: docs skipped (--fast)"

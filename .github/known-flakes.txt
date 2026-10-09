@@ -1,0 +1,33 @@
+# Known CI flakes, read by scripts/ci-wait. A failed job counts as a known
+# flake when every failing test it reports matches a test pattern below (and
+# ExUnit counted no failure the log does not show, and the suite did not
+# abort), or, for a job that died without reporting a failing test, when its
+# whole log matches a log: pattern.
+#
+# Format: `<name> <pattern>`, one per line. The name has no spaces; the
+# pattern is the rest of the line, an extended regex (grep -E) matched
+# against one failing test's report: its title line and what follows.
+# `<name> log:<pattern>` is matched against the whole log instead, only
+# when no failing test was reported; keep those to signatures that never
+# appear in a passing log, since unrelated noise lines join up in a whole
+# log. Before matching, timestamps, `##[error]` prefixes and colour codes are
+# stripped and the lines are joined with spaces, so `.*` can span lines.
+#
+# Comment every entry: what it is and why it is not the change's fault.
+# Mark entries waiting on a fix TEMPORARY and remove them when it lands.
+# Flaky means broken (CODING_STANDARDS.md): an entry here is a stopgap that
+# saves a CI round, not a reason to stop looking for the cause.
+
+# The Erlang JIT crashing on the runner: mix test aborts with exit 134 after
+# an asmjit assertion in jitallocator.cpp, unrelated to the code under test.
+beam-jit-crash log:\[asmjit\] Assertion failed at asmjit/core/jitallocator\.cpp.*exit code 134
+
+# A LiveView test (usually BrandoAdmin.ChromeSocketTokensTest) calls the
+# Presence shard while the shard's database checkout belongs to another
+# test's sandbox owner that has just exited, so the call dies with
+# "owner #PID<…> exited".
+presence-shard-owner-exited Presence_shard[0-9]+.*owner #PID<[0-9.]+> exited
+
+# TEMPORARY: a race in the test, being fixed on branch
+# wave8/edit-session-flake. That fix must remove this entry.
+edit-session-overlapping-saves of two overlapping saves the second can be retried.*\(BrandoAdmin\.EditSessionSavesTest\)

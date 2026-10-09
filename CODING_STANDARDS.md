@@ -4,7 +4,9 @@ The judgement calls to check when reviewing a change, yours before you push
 or someone else's PR. Each rule is the target, the reason, and an example.
 CI enforces the mechanical rules (`.github/workflows/ci.yml`); `AGENTS.md`
 and the subsystem skills hold what you need while implementing, and apply
-here too.
+here too. For an independent second review of a branch or PR, run the
+read-only `reviewer` subagent (`.claude/agents/reviewer.md`); its checklist
+covers the bug classes that have reached review here.
 
 ## Tests
 

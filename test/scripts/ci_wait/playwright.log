@@ -1,0 +1,21 @@
+2026-10-09T09:00:00.0000000Z Running 170 tests using 1 worker
+2026-10-09T09:00:01.0000000Z ··········F
+2026-10-09T09:00:02.0000000Z ##[error]  1) [Google Chrome] › tests/pages/breadcrumbs.spec.js:4:5 › pages have JSON-LD breadcrumbs ────────
+2026-10-09T09:00:03.0000000Z     Error: expect(locator).toHaveAttribute(expected) failed
+2026-10-09T09:00:04.0000000Z       at tests/pages/breadcrumbs.spec.js:12:5
+2026-10-09T09:00:05.0000000Z 
+2026-10-09T09:00:06.0000000Z     Retry #1 ───────────────────────────────────────────────────────────
+2026-10-09T09:00:07.0000000Z     Error: expect(locator).toHaveAttribute(expected) failed
+2026-10-09T09:00:08.0000000Z 
+2026-10-09T09:00:09.0000000Z   2) [Google Chrome] › tests/projects/listing.spec.js:9:5 › listing sorts by date ─────────────
+2026-10-09T09:00:10.0000000Z     Error: Timed out 5000ms waiting for expect(locator).toBeVisible()
+2026-10-09T09:00:11.0000000Z 
+2026-10-09T09:00:12.0000000Z ··········::notice title=🎭 Playwright Run Summary::  1 failed%0A    [Google Chrome] › tests/pages/breadcrumbs.spec.js:4:5 › pages have JSON-LD breadcrumbs ─────────%0A  1 flaky%0A    [Google Chrome] › tests/projects/listing.spec.js:9:5 › listing sorts by date ──────%0A  168 passed (12.4m)
+2026-10-09T09:00:13.0000000Z   1) [Google Chrome] › tests/pages/breadcrumbs.spec.js:4:5 › pages have JSON-LD breadcrumbs ───────
+2026-10-09T09:00:14.0000000Z 
+2026-10-09T09:00:15.0000000Z   1 failed
+2026-10-09T09:00:16.0000000Z     [Google Chrome] › tests/pages/breadcrumbs.spec.js:4:5 › pages have JSON-LD breadcrumbs ─────────
+2026-10-09T09:00:17.0000000Z   1 flaky
+2026-10-09T09:00:18.0000000Z     [Google Chrome] › tests/projects/listing.spec.js:9:5 › listing sorts by date ──────
+2026-10-09T09:00:19.0000000Z   168 passed (12.4m)
+2026-10-09T09:00:20.0000000Z ##[error]Process completed with exit code 1.

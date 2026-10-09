@@ -1,0 +1,10 @@
+2026-10-09T09:00:00.0000000Z Running ExUnit with seed: 1234, max_cases: 8
+2026-10-09T09:00:01.0000000Z .........................................................
+2026-10-09T09:00:02.0000000Z 09:14:07.486 [error] ==> Presence: could not record last seen for user 1826: exited in: GenServer.call(BrandoIntegration.Presence_shard0, {:list, "lobby"}, 5000)
+2026-10-09T09:00:03.0000000Z     ** (EXIT) shutdown: "owner #PID<0.47181.0> exited"
+2026-10-09T09:00:04.0000000Z .........................................................
+2026-10-09T09:00:05.0000000Z Finished in 262.7 seconds (35.4s async, 227.2s sync)
+2026-10-09T09:00:06.0000000Z 146 doctests, 3681 tests, 0 failures
+2026-10-09T09:00:07.0000000Z 
+2026-10-09T09:00:08.0000000Z ERROR! Test suite aborted after successful execution due to warnings while using the --warnings-as-errors option
+2026-10-09T09:00:09.0000000Z ##[error]Process completed with exit code 1.
