@@ -25,9 +25,8 @@ the second covers particular components and screens.
   [Workspaces and form sections](#shared-workspaces-and-form-sections) ·
   [Listings and editors](#listing-and-editor-refinement-checks) ·
   [Entry heading and settings screens](#entry-editor-heading-and-settings-screens) ·
-  [Dashboard](#dashboard) · [Pending subform sweep](#pending-subform-sweep) ·
-  [Inline subform tables](#inline-subform-tables) · [Icons](#icons) ·
-  [Icon-only buttons and tooltips](#icon-only-buttons-and-tooltips) ·
+  [Dashboard](#dashboard) · [Inline subform tables](#inline-subform-tables) ·
+  [Icons](#icons) · [Icon-only buttons and tooltips](#icon-only-buttons-and-tooltips) ·
   [Keyboard shortcuts](#keyboard-shortcuts) · [Modals](#approved-modal-direction) ·
   [Dropdowns, identifiers and entry panels](#shared-dropdowns-and-entry-panels) ·
   [Gallery grid](#gallery-grid-contact-sheet) · [Transformer cards](#transformer-cards)
@@ -733,25 +732,6 @@ only stands in until an image has its sizes. The status dot follows
 `BrandoAdmin.Dashboard` loads the data (the editors in one query);
 `components/dashboard.ex` renders it, styled in `SettingsWorkspace.css`.
 
-## Pending subform sweep
-
-Requested on 8 September 2026; recorded for a later implementation pass. Use
-Navigation → Edit menu → Menu items as the starting reference, then review the
-shared subform components and other nested/repeated editors.
-
-- Increase the status dot **inside the link preview field** to `1em` in both
-  dimensions, relative to its accompanying text. This is separate from the row's
-  status selector. Align the dot with the visible text and prevent flex shrinking.
-- Subform surfaces on settings screens are one very light green,
-  `--brando-surface-subform` with a `--brando-line-subform` border (approved 5 October 2026, replacing the earlier blue
-  and olive tints). Retain white rows and input surfaces, readable
-  labels/icons, and clear hover/focus states.
-- Audit nested levels, row rhythm, label/control alignment, and action placement
-  across subform usages. Inline subforms, menu items among them, are now tables
-  (see [Inline subform tables](#inline-subform-tables)); re-check the items above
-  against them. Check 1440px first, then 390px, including long link titles
-  and URLs. Capture fresh screenshots and run the relevant local E2E workflows.
-
 ## Inline subform tables
 
 Approved on 4 October 2026 (`design/drafts/redirects-subform.html`). An inline
@@ -836,6 +816,17 @@ button after Dashboard (or at the top of the first section) that opens the
 command palette, with the shortcut faint at its end (mono 11px, the muted nav
 colour at 60%). It is never the current row. On phones, where the sidebar is
 hidden, the round `.mobile-search` button opens the palette instead.
+
+Configuration's submenu is grouped (#3102): Site, Publishing, Building blocks
+and System, each under a small heading in the section labels' mono capitals
+(10px, muted, no rule), aligned with the icon column, 10px between groups. A
+group with nothing the user may open has no heading. In `BrandoAdmin.Menu`
+each item names its `group` and the submenu lists the headings as `groups`;
+`items` stays one flat list in group order for the palette and page titles,
+and the palette also finds a screen by its group's name. Each group is a
+`role="group"` labelled by its `h4`, which is never a link; the
+`Brando.Navigation` hook fades and hides the headings with the links. Put a
+new Configuration screen in the group where an editor would look for it.
 
 ## Icon-only buttons and tooltips
 
