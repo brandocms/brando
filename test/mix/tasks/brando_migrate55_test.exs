@@ -675,6 +675,106 @@ defmodule Mix.Tasks.Brando.Migrate55Test do
       end
     end
 
+    test "a scoped route whose last argument is parenthesised or computed is left and reported" do
+      router = """
+      defmodule LegacyAppWeb.Router do
+        scope "/", Brando do
+          get "/p", PreviewController, (:show)
+          get "/s", SitemapController, :show, as: (:sitemap)
+          get "/i", SEOController, :robots, private: (if true, do: %{}, else: %{})
+          get "/d", SEOController, :robots, do: :x
+        end
+      end
+      """
+
+      igniter = migrate(@blueprint_054, %{@router_path => router})
+      assert igniter.issues == []
+      assert source(igniter, @router_path) == router
+
+      for line <- 3..6 do
+        assert_has_warning(igniter, &String.contains?(&1, "#{@router_path}:#{line} routes to Brando."))
+      end
+    end
+
+    test "a relative alias under a renamed module, a nested defmodule's name and an alias in a function" do
+      code = """
+      defmodule LegacyApp.Relative do
+        alias Brando.Meta
+        alias Meta.HTML
+
+        def f, do: {%Meta{}, HTML.render(1)}
+      end
+
+      defmodule LegacyApp.RelativeOnly do
+        alias Brando.Meta
+        alias Meta.HTML
+
+        def f, do: HTML.render(1)
+      end
+
+      defmodule LegacyApp.Shadow do
+        alias Brando.Upload
+
+        defmodule Store do
+          def x(_), do: :mine
+        end
+
+        def f(u), do: Upload.x(u)
+      end
+
+      defmodule LegacyApp.InFunction do
+        def f(u) do
+          alias Brando.Upload
+          Upload.x(u)
+        end
+
+        def g, do: Upload.y()
+      end
+      """
+
+      path = "lib/legacy_app/relative.ex"
+      igniter = migrate(@blueprint_054, %{path => code})
+      assert igniter.issues == []
+
+      assert source(igniter, path) == """
+             defmodule LegacyApp.Relative do
+               alias Brando.Sites.Meta
+               alias Brando.Meta.HTML
+
+               def f, do: {%Meta{}, HTML.render(1)}
+             end
+
+             defmodule LegacyApp.RelativeOnly do
+               alias Brando.Meta
+               alias Meta.HTML
+
+               def f, do: HTML.render(1)
+             end
+
+             defmodule LegacyApp.Shadow do
+               alias Brando.Uploads.Store, as: Upload
+
+               defmodule Store do
+                 def x(_), do: :mine
+               end
+
+               def f(u), do: Upload.x(u)
+             end
+
+             defmodule LegacyApp.InFunction do
+               def f(u) do
+                 alias Brando.Upload
+                 Upload.x(u)
+               end
+
+               def g, do: Upload.y()
+             end
+             """
+
+      assert_has_warning(igniter, &String.contains?(&1, "#{path}:27 aliases Brando.Upload inside a function"))
+      assert_idempotent(igniter, path)
+    end
+
     test "an alias that nested modules use is decided by every use" do
       nested = """
       defmodule LegacyApp.Outer do

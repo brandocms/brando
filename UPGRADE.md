@@ -54,9 +54,11 @@ as deprecated shims in 0.55 and 0.56 and are removed in 0.57.
    A route inside `scope "/", Brando do` names its controller relative to
    the scope (`get "/robots.txt", SEOController, :robots`); it becomes
    `BrandoWeb.SEOController` with `alias: false`. `match`, `forward`,
-   `resources` and `live` routes, and routes whose options are not a plain
-   keyword list, are left as they are and reported: name the controller
-   `BrandoWeb.*` and add `alias: false` yourself. It reports an alias in
+   `resources` and `live` routes, routes whose options are not a plain
+   keyword list or end in a parenthesised or computed value, and an alias
+   inside a function, are left as they are and reported: name the
+   controller `BrandoWeb.*` and add `alias: false`, or use the new name,
+   yourself. It reports an alias in
    braces that the new name cannot share, such as
    `alias Brando.{UserChannel, Utils}`; give the new name its own `alias`.
 2. Run `mix brando.doctor`. Its Deprecations check lists any old name still
