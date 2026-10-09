@@ -59,34 +59,49 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
   end
 
   # The form's reply to "Suggest alt text": a suggestion under the field
-  # (`AltTextSuggestion`) until the editor accepts it.
-  def update(%{event: "alt_text_suggested", result: result}, socket) do
+  # (`AltTextSuggestion`) until the editor accepts it. Not when the block
+  # has another image by now.
+  def update(%{event: "alt_text_suggested", result: result, image_id: image_id}, socket) do
     socket = assign(socket, :alt_suggesting, false)
 
-    case result do
-      {:ok, language, text} ->
-        send_update(AltTextSuggestion, id: alt_suggestion_id(socket.assigns.uid), values: %{language => text})
+    case {result, current_image_id(socket)} do
+      {_result, current} when current != image_id ->
         {:ok, socket}
 
-      :error ->
+      {{:ok, language, text}, _current} ->
+        send_update(AltTextSuggestion,
+          id: alt_suggestion_id(socket.assigns.uid, image_id),
+          values: %{language => text},
+          image_id: image_id,
+          original: %{language => socket.assigns[:alt_requested_from]}
+        )
+
+        {:ok, socket}
+
+      {:error, _current} ->
         send(self(), {:toast, gettext("The alt text could not be suggested. Try again, or write it yourself.")})
         {:ok, socket}
     end
   end
 
-  # Accepted: this use's alt text, as unsaved input in the block.
-  def update(%{event: "accept_alt_suggestion", values: values}, socket) do
-    case Map.values(values) do
-      [text | _] ->
-        socket
-        |> Block.commit_ref_data(
-          ref_data: Block.current_block_data_map(socket.assigns.block, @override_fields, %{alt: text}),
-          image_id: socket.assigns.image && socket.assigns.image.id
-        )
-        |> then(&{:ok, &1})
+  # Accepted: this use's alt text, as unsaved input in the block. Only for
+  # the image it describes, and not over alt text written since it was asked
+  # for (`AltTextSuggestion.merge/3`).
+  def update(%{event: "accept_alt_suggestion", values: values, image_id: image_id} = message, socket) do
+    current = current_alt(socket)
 
-      [] ->
-        {:ok, socket}
+    with true <- not is_nil(image_id) and current_image_id(socket) == image_id,
+         [{language, _text}] <- Map.to_list(values),
+         merged = AltTextSuggestion.merge(%{language => current}, values, message[:original]),
+         text when text != current <- merged[language] do
+      socket
+      |> Block.commit_ref_data(
+        ref_data: Block.current_block_data_map(socket.assigns.block, @override_fields, %{alt: text}),
+        image_id: image_id
+      )
+      |> then(&{:ok, &1})
+    else
+      _ -> {:ok, socket}
     end
   end
 
@@ -161,7 +176,11 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
     |> assign(image_display_assigns(image))
   end
 
-  defp alt_suggestion_id(uid), do: AltTextSuggestion.id("block-#{uid}-ref-alt")
+  # Keyed by the image too: another image has another, empty panel.
+  defp alt_suggestion_id(uid, image_id), do: AltTextSuggestion.id("block-#{uid}-ref-alt", image_id)
+
+  defp current_image_id(socket), do: socket.assigns[:image] && socket.assigns.image.id
+  defp current_alt(socket), do: Block.current_block_data_map(socket.assigns.block, [:alt])[:alt]
 
   defp alt_text_ai?, do: Brando.AI.configured?(Brando.Images.AltText.ai_opts())
 
@@ -293,7 +312,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
                     <.live_component
                       :if={@image && @form_id && alt_text_ai?()}
                       module={AltTextSuggestion}
-                      id={alt_suggestion_id(@uid)}
+                      id={alt_suggestion_id(@uid, @image.id)}
                       owner={{__MODULE__, @id}}
                       scope="ref"
                       languages={Input.i18n_languages(:content)}
@@ -400,7 +419,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
       reply_to: {__MODULE__, socket.assigns.id}
     )
 
-    {:noreply, assign(socket, :alt_suggesting, true)}
+    {:noreply, assign(socket, alt_suggesting: true, alt_requested_from: current_alt(socket))}
   end
 
   def handle_event("reset_image", _, socket) do

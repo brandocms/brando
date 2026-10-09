@@ -1434,6 +1434,12 @@ defmodule BrandoAdmin.Components.Form.Input do
       # (and `suggest_target`) where another component owns the image
       |> assign(:suggest_event, suggest_event(opts[:suggest_alt]))
       |> assign(:suggest_target, opts[:suggest_target] || assigns[:target])
+      # The suggestion panel of this image's alt field: another image's
+      # field (the drawer moving on) has another, empty one
+      |> assign(
+        :alt_suggestion_id,
+        AltTextSuggestion.id(assigns.field.id, Brando.Utils.try_path(assigns.field, [:form, :source, :data, :id]))
+      )
       |> then(fn assigns ->
         assign(
           assigns,
@@ -1476,7 +1482,7 @@ defmodule BrandoAdmin.Components.Form.Input do
             class="i18n-suggest"
             phx-click={@suggest_event}
             phx-target={@suggest_target}
-            phx-value-panel={AltTextSuggestion.id(@field.id)}
+            phx-value-panel={@alt_suggestion_id}
           >
             {gettext("Suggest alt text")}
           </AIAction.button>
@@ -1519,7 +1525,7 @@ defmodule BrandoAdmin.Components.Form.Input do
       <.live_component
         :if={@suggest_alt?}
         module={AltTextSuggestion}
-        id={AltTextSuggestion.id(@field.id)}
+        id={@alt_suggestion_id}
         owner={@suggest_target}
         scope={@suggest_event}
         languages={@languages}

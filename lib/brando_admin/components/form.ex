@@ -170,7 +170,7 @@ defmodule BrandoAdmin.Components.Form do
       end
 
     describe = AltTextSuggestion.describe_task(image_id, languages: [language])
-    {:ok, start_async(socket, {:suggest_ref_alt_text, reply_to}, fn -> {language, describe.()} end)}
+    {:ok, start_async(socket, {:suggest_ref_alt_text, reply_to, image_id}, fn -> {language, describe.()} end)}
   end
 
   def update(%{event: event, field: field} = message, socket)
@@ -221,11 +221,13 @@ defmodule BrandoAdmin.Components.Form do
 
   # Alt text suggested by AI and accepted under its field
   # (`AltTextSuggestion`): it joins the alt text there, as unsaved input.
-  def update(%{event: "accept_alt_suggestion", scope: "suggest_entry_alt_text", values: values}, socket) do
+  # Only for the image the suggestion describes, and not over a language
+  # written in since (`AltTextSuggestion.merge/3`).
+  def update(%{event: "accept_alt_suggestion", scope: "suggest_entry_alt_text", image_id: id} = message, socket) do
     case socket.assigns[:entry] do
-      %Images.Image{} ->
+      %Images.Image{id: ^id} when not is_nil(id) ->
         changeset = socket.assigns.form.source
-        alt = Map.merge(Changeset.get_field(changeset, :alt) || %{}, values)
+        alt = AltTextSuggestion.merge(Changeset.get_field(changeset, :alt), message.values, message[:original])
         {:ok, put_written_form(socket, to_form(put_change(changeset, :alt, alt), []))}
 
       _ ->
@@ -233,10 +235,10 @@ defmodule BrandoAdmin.Components.Form do
     end
   end
 
-  def update(%{event: "accept_alt_suggestion", scope: "suggest_alt_text", values: values}, socket) do
-    case socket.assigns[:image_changeset] do
-      %Changeset{} = changeset when not is_nil(socket.assigns.edit_image) ->
-        alt = Map.merge(Changeset.get_field(changeset, :alt) || %{}, values)
+  def update(%{event: "accept_alt_suggestion", scope: "suggest_alt_text", image_id: id} = message, socket) do
+    case {socket.assigns[:edit_image], socket.assigns[:image_changeset]} do
+      {%{image: %{id: ^id}}, %Changeset{} = changeset} when not is_nil(id) ->
+        alt = AltTextSuggestion.merge(Changeset.get_field(changeset, :alt), message.values, message[:original])
         {:ok, assign(socket, :image_changeset, Changeset.put_change(changeset, :alt, alt))}
 
       _ ->
@@ -1524,7 +1526,8 @@ defmodule BrandoAdmin.Components.Form do
     {:noreply, RichTextAI.finish(socket, id, request, result)}
   end
 
-  def handle_async({:suggest_ref_alt_text, {module, id}}, result, socket) do
+  # The reply names the image it describes: the block may have another by now.
+  def handle_async({:suggest_ref_alt_text, {module, id}, image_id}, result, socket) do
     reply =
       case result do
         {:ok, {language, {:ok, %{values: values}}}} when is_map_key(values, language) ->
@@ -1534,18 +1537,18 @@ defmodule BrandoAdmin.Components.Form do
           :error
       end
 
-    send_update(module, id: id, event: "alt_text_suggested", result: reply)
+    send_update(module, id: id, event: "alt_text_suggested", result: reply, image_id: image_id)
     {:noreply, socket}
   end
 
   # The image form's own "Suggest alt text": a suggestion under the field
   # (`AltTextSuggestion`), written by "accept_alt_suggestion".
-  def handle_async({:suggest_entry_alt_text, image_id, panel}, result, socket) do
+  def handle_async({:suggest_entry_alt_text, image_id, panel, original}, result, socket) do
     socket = assign(socket, :alt_text_suggesting, false)
 
     case {result, socket.assigns[:entry]} do
       {{:ok, {:ok, %{values: values}}}, %{id: ^image_id}} ->
-        send_update(AltTextSuggestion, id: panel, values: values)
+        send_update(AltTextSuggestion, id: panel, values: values, image_id: image_id, original: original)
         {:noreply, socket}
 
       {{:ok, {:ok, _}}, _} ->
@@ -1559,12 +1562,12 @@ defmodule BrandoAdmin.Components.Form do
 
   # "Suggest alt text" in the image drawer: a suggestion under the field;
   # accepted, it goes into the drawer's form, saved with it.
-  def handle_async({:suggest_alt_text, image_id, panel}, result, socket) do
+  def handle_async({:suggest_alt_text, image_id, panel, original}, result, socket) do
     socket = assign(socket, :alt_text_suggesting, false)
 
     case {result, socket.assigns[:edit_image]} do
       {{:ok, {:ok, %{values: values}}}, %{image: %{id: ^image_id}}} ->
-        send_update(AltTextSuggestion, id: panel, values: values)
+        send_update(AltTextSuggestion, id: panel, values: values, image_id: image_id, original: original)
         {:noreply, socket}
 
       # The drawer moved on to another image; its suggestion is not wanted
@@ -5040,7 +5043,12 @@ defmodule BrandoAdmin.Components.Form do
         {:noreply,
          socket
          |> assign(:alt_text_suggesting, true)
-         |> start_async({:suggest_entry_alt_text, id, panel}, AltTextSuggestion.describe_task(id))}
+         |> start_alt_suggestion(
+           :suggest_entry_alt_text,
+           id,
+           panel,
+           Changeset.get_field(socket.assigns.form.source, :alt)
+         )}
     end
   end
 
@@ -5053,7 +5061,7 @@ defmodule BrandoAdmin.Components.Form do
         {:noreply,
          socket
          |> assign(:alt_text_suggesting, true)
-         |> start_async({:suggest_alt_text, id, panel}, AltTextSuggestion.describe_task(id))}
+         |> start_alt_suggestion(:suggest_alt_text, id, panel, Changeset.get_field(socket.assigns.image_changeset, :alt))}
     end
   end
 
@@ -6926,6 +6934,13 @@ defmodule BrandoAdmin.Components.Form do
   defp field_action_panel(socket, field, panel) do
     ids = FieldActions.ids(socket.assigns.form[field])
     if panel in ids, do: panel, else: hd(ids)
+  end
+
+  # Asks for the languages the field has no text in as the form has it now,
+  # and keeps its values, so Accept leaves alone what is written since.
+  defp start_alt_suggestion(socket, kind, image_id, panel, current) do
+    describe = AltTextSuggestion.describe_task(image_id, languages: AltTextSuggestion.languages(current))
+    start_async(socket, {kind, image_id, panel, current || %{}}, describe)
   end
 
   defp alt_suggestion_panel(%{"panel" => panel}) do

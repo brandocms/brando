@@ -7,18 +7,60 @@ defmodule BrandoAdmin.Components.Form.AltTextSuggestion do
 
   Whoever asks for the alt text (the entry form for the image's own form and
   the image drawer, a picture block for its own alt text) hands the reply
-  here with `send_update(AltTextSuggestion, id: id, values: %{"en" => …})`.
-  Accept sends `%{event: "accept_alt_suggestion", scope: scope, values: values}`
+  here with `send_update(AltTextSuggestion, id: id, values: %{"en" => …},
+  image_id: id, original: %{"en" => …})`: the texts, the image they describe
+  and the field's values when they were asked for. Accept sends
+  `%{event: "accept_alt_suggestion", scope:, values:, image_id:, original:}`
   to `owner` (a component's CID, or `{module, id}`), which writes the texts
-  into its form as unsaved input; empty ones are left out.
+  into its form as unsaved input with `merge/3`, if the image is still the
+  one described. A panel's id names its image (`id/2`), so another image's
+  field has another panel.
   """
   use BrandoAdmin, :live_component
   use Gettext, backend: Brando.Gettext
 
   alias BrandoAdmin.Components.AIAction
 
-  @doc "The panel's id for an alt field with DOM id `field_id`."
-  def id(field_id), do: "#{field_id}-alt-suggestion"
+  @doc "The panel's id for the alt field with DOM id `field_id` of image `image_id`."
+  def id(field_id, image_id), do: "#{field_id}-#{image_id}-alt-suggestion"
+
+  @doc """
+  The content languages to ask for: those `current` (the field's values as
+  the form has them, unsaved) has no text in, or all of them when it has text
+  in every one.
+  """
+  @spec languages(map() | nil) :: [String.t()]
+  def languages(current) do
+    all = Brando.Images.AltText.languages()
+
+    case Enum.filter(all, &blank?(current, &1)) do
+      [] -> all
+      missing -> missing
+    end
+  end
+
+  @doc """
+  The accepted texts merged into `current`, the field's values now: a
+  language the editor wrote in since the suggestion was asked for (its value
+  now is neither empty nor what it was then, in `original`) keeps its text.
+  """
+  @spec merge(map() | nil, map(), map() | nil) :: map()
+  def merge(current, values, original) do
+    current = current || %{}
+
+    Enum.reduce(values, current, fn {language, text}, merged ->
+      if blank?(current, language) or Map.get(current, language) == Map.get(original || %{}, language),
+        do: Map.put(merged, language, text),
+        else: merged
+    end)
+  end
+
+  defp blank?(values, language) do
+    case Map.get(values || %{}, language) do
+      text when is_binary(text) -> String.trim(text) == ""
+      _ -> true
+    end
+  end
 
   @doc "Whether `id` names an alt suggestion panel, for checking an id a browser sent."
   def id?(id) when is_binary(id), do: String.ends_with?(id, "-alt-suggestion") and byte_size(id) < 300
@@ -49,11 +91,17 @@ defmodule BrandoAdmin.Components.Form.AltTextSuggestion do
   end
 
   @impl true
-  def mount(socket), do: {:ok, assign(socket, values: nil, request: 0)}
+  def mount(socket), do: {:ok, assign(socket, values: nil, request: 0, image_id: nil, original: %{})}
 
   @impl true
-  def update(%{values: values}, socket) when is_map(values) do
-    {:ok, assign(socket, values: values, request: socket.assigns.request + 1)}
+  def update(%{values: values} = reply, socket) when is_map(values) do
+    {:ok,
+     assign(socket,
+       values: values,
+       image_id: reply[:image_id],
+       original: reply[:original] || %{},
+       request: socket.assigns.request + 1
+     )}
   end
 
   def update(assigns, socket) do
@@ -75,7 +123,14 @@ defmodule BrandoAdmin.Components.Form.AltTextSuggestion do
 
   def handle_event("accept", _params, %{assigns: %{values: values}} = socket) when is_map(values) do
     accepted = Map.reject(values, fn {_language, text} -> String.trim(text) == "" end)
-    message = %{event: "accept_alt_suggestion", scope: socket.assigns.scope, values: accepted}
+
+    message = %{
+      event: "accept_alt_suggestion",
+      scope: socket.assigns.scope,
+      values: accepted,
+      image_id: socket.assigns.image_id,
+      original: socket.assigns.original
+    }
 
     case socket.assigns.owner do
       {module, id} -> send_update(module, Map.put(message, :id, id))

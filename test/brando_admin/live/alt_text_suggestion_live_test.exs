@@ -5,7 +5,6 @@ defmodule BrandoAdmin.AltTextSuggestionLiveTest do
   use Brando.LiveCase
 
   @fixture Path.expand("../../fixtures/sample.jpg", __DIR__)
-  @panel "#image_alt-alt-suggestion"
 
   setup do
     Brando.AIStub.configure()
@@ -20,6 +19,8 @@ defmodule BrandoAdmin.AltTextSuggestionLiveTest do
     %{image: image}
   end
 
+  defp panel(image), do: "#image_alt-#{image.id}-alt-suggestion"
+
   defp alt(view, language),
     do: view |> render() |> form_params("#image_form_form") |> get_in(["image", "alt", language])
 
@@ -28,21 +29,21 @@ defmodule BrandoAdmin.AltTextSuggestionLiveTest do
     Brando.AIStub.reply(~s({"en": "Two ferries at dusk", "no": "To ferjer i skumringen"}))
 
     view |> element("button[phx-click='suggest_entry_alt_text']") |> render_click()
-    await_selector(view, "#{@panel} .ai-proposal[data-status='ready']")
+    await_selector(view, "#{panel(image)} .ai-proposal[data-status='ready']")
 
     # Shown, not written
-    assert has_element?(view, "#{@panel} textarea[lang='en']", "Two ferries at dusk")
-    assert has_element?(view, "#{@panel} textarea[lang='no']", "To ferjer i skumringen")
+    assert has_element?(view, "#{panel(image)} textarea[lang='en']", "Two ferries at dusk")
+    assert has_element?(view, "#{panel(image)} textarea[lang='no']", "To ferjer i skumringen")
     assert alt(view, "en") in [nil, ""]
 
     # Edited, then accepted
-    view |> element("#{@panel} textarea[lang='en']") |> render_blur(%{"value" => "Two ferries leaving at dusk"})
-    view |> element("#{@panel} button", "Accept") |> render_click()
+    view |> element("#{panel(image)} textarea[lang='en']") |> render_blur(%{"value" => "Two ferries leaving at dusk"})
+    view |> element("#{panel(image)} button", "Accept") |> render_click()
     settle(view)
 
     assert alt(view, "en") == "Two ferries leaving at dusk"
     assert alt(view, "no") == "To ferjer i skumringen"
-    refute has_element?(view, "#{@panel} .ai-proposal")
+    refute has_element?(view, "#{panel(image)} .ai-proposal")
   end
 
   test "discarded, the alt text is as it was", %{conn: conn, image: image} do
@@ -50,10 +51,37 @@ defmodule BrandoAdmin.AltTextSuggestionLiveTest do
     Brando.AIStub.reply(~s({"en": "Two ferries", "no": "To ferjer"}))
 
     view |> element("button[phx-click='suggest_entry_alt_text']") |> render_click()
-    await_selector(view, "#{@panel} .ai-proposal[data-status='ready']")
-    view |> element("#{@panel} button", "Discard") |> render_click()
+    await_selector(view, "#{panel(image)} .ai-proposal[data-status='ready']")
+    view |> element("#{panel(image)} button", "Discard") |> render_click()
 
-    refute has_element?(view, "#{@panel} .ai-proposal")
+    refute has_element?(view, "#{panel(image)} .ai-proposal")
     assert alt(view, "en") in [nil, ""]
+  end
+
+  test "asks only for the languages without text in the form, and keeps what is typed", %{conn: conn, image: image} do
+    {view, _html} = live_form(conn, "/admin/assets/images/update/#{image.id}", "image_form")
+    test = self()
+
+    Brando.AIStub.reply(fn prompt ->
+      send(test, {:prompt, prompt})
+      ~s({"no": "To ferjer"})
+    end)
+
+    # Typed, not saved
+    view |> form("#image_form_form") |> render_change(%{"image" => %{"alt" => %{"en" => "My own", "no" => ""}}})
+
+    view |> element("button[phx-click='suggest_entry_alt_text']") |> render_click()
+    await_selector(view, "#{panel(image)} .ai-proposal[data-status='ready']")
+
+    assert_received {:prompt, prompt}
+    assert prompt =~ ~s["no" (Norsk)]
+    refute prompt =~ ~s["en" (English)]
+    refute has_element?(view, "#{panel(image)} textarea[lang='en']")
+
+    view |> element("#{panel(image)} button", "Accept") |> render_click()
+    settle(view)
+
+    assert alt(view, "en") == "My own"
+    assert alt(view, "no") == "To ferjer"
   end
 end
