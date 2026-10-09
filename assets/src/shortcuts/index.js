@@ -19,6 +19,7 @@
 import {
   SHORTCUTS,
   createSequencer,
+  firstUsable,
   isCharacterShortcut,
   isTextTarget,
   inDialog,
@@ -94,7 +95,7 @@ function createUrl() {
 }
 
 function previewToggle() {
-  return document.querySelector('[data-toggle-preview]')
+  return firstUsable(document.querySelectorAll('[data-toggle-preview]'))
 }
 
 // Whether the shortcut can do anything for this user on this page. The sheet

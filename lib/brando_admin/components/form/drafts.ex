@@ -27,14 +27,19 @@ defmodule BrandoAdmin.Components.Form.Drafts do
           {to_string(name), Params.snapshot(Map.get(entry, name) || [])}
         end)
 
+      # The baseline is the saved entry. A heavy entry starts recovery once
+      # its blocks have loaded, and by then the form may hold edits already
+      # (recovered after a reconnect, sent by other editors): those are
+      # changes to keep a copy of, not part of the baseline.
       payload = %{
-        "main" => main_params(socket, socket.assigns.form.source),
+        "main" => main_params(socket, saved_changeset(socket)),
         "blocks" => blocks,
         "transformers" => transformers,
         "modules" => Modules.manifest(blocks)
       }
 
       baseline = Content.checksum(payload)
+      current = Content.checksum(%{payload | "main" => main_params(socket, socket.assigns.form.source)})
 
       state = %{
         initialized?: true,
@@ -59,7 +64,10 @@ defmodule BrandoAdmin.Components.Form.Drafts do
         saved_at: nil
       }
 
-      put_draft(socket, state)
+      socket = put_draft(socket, state)
+      # The browser captures what it shows; it is asked to now, rather than at
+      # the next keystroke.
+      if current != baseline, do: dirty(socket), else: socket
     else
       put_draft(socket, nil)
     end
@@ -69,6 +77,14 @@ defmodule BrandoAdmin.Components.Form.Drafts do
       Logger.error("Recovery copies unavailable: #{inspect(error.__struct__)}")
       put_draft(socket, nil)
   end
+
+  # The form an untouched entry opens with (`Form.assign_form/1`), from the
+  # entry the form was built from. A new entry has no saved state: its
+  # baseline is the form with its default values.
+  defp saved_changeset(%{assigns: %{entry: %{id: nil}, form: form}}), do: form.source
+
+  defp saved_changeset(%{assigns: %{schema: schema, current_user: user, form: %{source: changeset}}}),
+    do: schema.changeset(changeset.data, %{}, user)
 
   @doc """
   Sets the form's recovery state, and hands it to the status component.

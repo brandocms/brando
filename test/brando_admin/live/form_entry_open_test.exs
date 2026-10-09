@@ -42,7 +42,7 @@ defmodule BrandoAdmin.FormEntryOpenTest do
     test "opens complete in its first render, at the limit too", c do
       add_blocks(c.page, c.module, c.current_user, Form.light_block_limit())
 
-      {:ok, _view, html} = live(c.conn, "/admin/pages/update/#{c.page.id}")
+      {:ok, view, html} = live(c.conn, "/admin/pages/update/#{c.page.id}")
 
       assert title_value(html) == ["Stored title"]
       assert present?(html, ~s([phx-hook="Brando.BlockField"]))
@@ -51,6 +51,8 @@ defmodule BrandoAdmin.FormEntryOpenTest do
       refute present?(html, "#page_form_form[inert]")
       assert find(html, ".form-tool-save-button") |> Floki.attribute("disabled") == []
       assert present?(html, "#page_form-submit")
+      # An untouched entry has nothing to keep a recovery copy of
+      refute_push_event(view, "b:draft-dirty", _, 100)
     end
 
     test "an entry without blocks opens at once", c do
@@ -103,18 +105,74 @@ defmodule BrandoAdmin.FormEntryOpenTest do
       assert present?(html, "#page_form-el[data-draft-enabled]")
       assert present?(html, "#page_form-save-state")
     end
+  end
+
+  # The blocks are held back (`config :brando, :form_load_gate`) so the test
+  # can act on the form while they load, as an editor or a delivery could.
+  describe "while a heavy entry's blocks are held back" do
+    setup c do
+      add_blocks(c.page, c.module, c.current_user, Form.light_block_limit() + 1)
+      test = self()
+
+      Application.put_env(:brando, :form_load_gate, fn key ->
+        send(test, {:load_held, key, self()})
+
+        receive do
+          :release -> :ok
+        after
+          5_000 -> :ok
+        end
+      end)
+
+      on_exit(fn -> Application.delete_env(:brando, :form_load_gate) end)
+      :ok
+    end
+
+    defp open_held(c) do
+      {:ok, view, html} = live(c.conn, "/admin/pages/update/#{c.page.id}")
+      assert_receive {:load_held, :blocks_load, task}
+      {view, html, task}
+    end
+
+    defp release(view, task) do
+      send(task, :release)
+      render_async(view, 5_000)
+      await_selector(view, ~s([phx-hook="Brando.BlockField"]))
+    end
+
+    test "the tools a shortcut can still reach do nothing", c do
+      {view, _html, task} = open_held(c)
+      form = view |> with_target(cid_of(view, "#page_form_form"))
+
+      for event <- ~w(open_live_preview open_live_preview_standalone toggle_preview_targets share_link store_revision),
+          do: render_hook(form, event, %{})
+
+      render_hook(form, "select_preview_target", %{"name" => "desktop"})
+      assert render(view) =~ "form-load-state"
+
+      html = release(view, task)
+      refute html =~ "form-load-state"
+    end
+
+    test "⌘S before the blocks have loaded leaves Save and close as it was", c do
+      {view, html, task} = open_held(c)
+      form = view |> with_target(cid_of(view, "#page_form_form"))
+      main = html |> form_params("#page_form_form") |> Plug.Conn.Query.encode()
+
+      render_hook(form, "save_form", %{"stay" => true, "form" => main})
+      refute_push_event(view, "b:submit", _, 100)
+
+      release(view, task)
+      assert {:ok, "/admin/pages"} = Brando.Test.save_form(view, Page)
+    end
 
     test "keeps a value it was given before its blocks arrived, and saves with them", c do
-      {:ok, view, html} = live(c.conn, "/admin/pages/update/#{c.page.id}")
+      {view, html, task} = open_held(c)
 
-      # A recovered form or another editor's value can arrive while the
-      # blocks load; the form must not be rebuilt over it when they do. (The
-      # blocks may also win the race here: the value must hold either way.)
       params = html |> form_params("#page_form_form") |> put_in(["page", "title"], "Recovered title")
       view |> element("#page_form_form") |> render_change(Map.put(params, "_target", ["page", "title"]))
 
-      render_async(view, 5_000)
-      html = await_selector(view, ~s([phx-hook="Brando.BlockField"]))
+      html = release(view, task)
       assert title_value(html) == ["Recovered title"]
 
       assert {:ok, _path} = Brando.Test.save_form(view, Page)
@@ -122,6 +180,33 @@ defmodule BrandoAdmin.FormEntryOpenTest do
       saved = Page |> Brando.Repo.get!(c.page.id) |> Brando.Repo.preload(:entry_blocks)
       assert saved.title == "Recovered title"
       assert length(saved.entry_blocks) == Form.light_block_limit() + 1
+    end
+
+    test "a recovered edit gets a recovery copy as soon as the blocks have loaded", c do
+      {view, html, task} = open_held(c)
+      form = view |> with_target(cid_of(view, "#page_form_form"))
+
+      params = html |> form_params("#page_form_form") |> put_in(["page", "title"], "Typed offline")
+      render_hook(form, "recover_form", params)
+      refute_push_event(view, "b:draft-dirty", _, 100)
+
+      release(view, task)
+      assert_push_event(view, "b:draft-dirty", %{id: "page_form"})
+    end
+
+    test "keeps what was delivered to the entry while its blocks loaded", c do
+      {view, _html, task} = open_held(c)
+
+      Phoenix.LiveView.send_update(view.pid, Form,
+        id: "page_form",
+        event: "update_entry_relation",
+        path: [:title],
+        updated_relation: "Delivered title",
+        update_entry: true
+      )
+
+      html = release(view, task)
+      assert find(html, "h1[data-testid='entry-title']") |> Floki.text() == "Delivered title"
     end
   end
 
@@ -136,6 +221,8 @@ defmodule BrandoAdmin.FormEntryOpenTest do
     test "Save and its shortcut do nothing", %{socket: socket} do
       for event <- ["save", "save_form"],
           do: assert({:noreply, ^socket} = Form.handle_event(event, %{"form" => "page%5Btitle%5D=x"}, socket))
+
+      assert {:noreply, ^socket} = Form.handle_event("save_form", %{"stay" => true, "form" => ""}, socket)
 
       for event <- ["push_submit", "push_submit_redirect", "push_submit_new", "push_submit_minor"],
           do: assert({:noreply, ^socket} = Form.handle_event(event, %{}, socket))

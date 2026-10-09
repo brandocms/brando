@@ -217,6 +217,7 @@ defmodule BrandoAdmin.Components.Form.FrontendEditor do
             data-save-event="save_form"
             phx-change="validate"
             phx-auto-recover="recover_form"
+            inert={!@blocks_ready?}
           >
             <input type="hidden" name={"#{@form.name}[#{:__force_change}]"} phx-debounce="0" />
             <div style="display:none">
@@ -279,6 +280,7 @@ defmodule BrandoAdmin.Components.Form.FrontendEditor do
           </p>
           <Primitives.submit_button
             processing={@processing}
+            disabled={!@blocks_ready?}
             form_id={@id}
             label={gettext("Save")}
             shortcut={%{key: "S"}}

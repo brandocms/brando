@@ -218,6 +218,16 @@ export function isTextTarget(el) {
 // `role="dialog"`. The dialog has the keys then, apart from what it gives back.
 export const DIALOG_SELECTOR = 'dialog[open], [role="dialog"], [role="alertdialog"], [aria-modal="true"], .modal, .media-workspace-drawer'
 
+// The first of `elements` a click could reach: a shortcut that runs an
+// element's command skips one that is disabled or inside an inert part of
+// the page (an entry's tools while its blocks load).
+export function firstUsable(elements) {
+  return Array.from(elements || []).find(
+    el => !(typeof el.matches === 'function' && el.matches(':disabled')) &&
+      !(typeof el.closest === 'function' && el.closest('[inert]'))
+  ) || null
+}
+
 export function inDialog(el) {
   return !!(el && typeof el.closest === 'function' && el.closest(DIALOG_SELECTOR))
 }

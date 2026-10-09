@@ -1468,6 +1468,11 @@ defmodule BrandoAdmin.Components.Form do
   # fields first stays at ~0.2 s, and gets to the whole form sooner.
   @light_block_limit 20
 
+  # Events that wait for a heavy entry's blocks (`handle_event/3`)
+  @wait_for_blocks ~w(save save_form push_submit push_submit_redirect push_submit_new push_submit_minor
+                      open_live_preview open_live_preview_standalone select_preview_target toggle_preview_targets
+                      share_link store_revision)
+
   @doc "The most blocks an entry opens with in one step, see `open_entry/1`."
   def light_block_limit, do: @light_block_limit
 
@@ -1579,7 +1584,22 @@ defmodule BrandoAdmin.Components.Form do
     else
       # The tenant prefix lives in the process dictionary, which a fresh
       # async task does not inherit; without it the query runs on `public`.
-      start_async(socket, key, Brando.Tenant.capture_context(load))
+      start_async(socket, key, Brando.Tenant.capture_context(gated(key, load)))
+    end
+  end
+
+  # A test can hold a load back (`config :brando, :form_load_gate, fun`) to
+  # act on the form while it waits, which a real load is too quick for.
+  defp gated(key, load) do
+    case Application.get_env(:brando, :form_load_gate) do
+      nil ->
+        load
+
+      gate ->
+        fn ->
+          gate.(key)
+          load.()
+        end
     end
   end
 
@@ -1600,11 +1620,10 @@ defmodule BrandoAdmin.Components.Form do
 
   # A heavy entry's blocks, for the fields already on screen. The form joins
   # the other editors now, as a light entry does once it has everything.
-  def handle_async(:blocks_load, {:ok, entry}, socket) do
+  def handle_async(:blocks_load, {:ok, loaded}, socket) do
     {:noreply,
      socket
-     |> assign(:entry, entry)
-     |> put_loaded_blocks(entry)
+     |> put_loaded_blocks(loaded)
      |> finish_form_blocks()
      |> assign(:blocks_ready?, true)
      |> announce_join()}
@@ -2026,16 +2045,22 @@ defmodule BrandoAdmin.Components.Form do
   # loads the entry itself (`open_entry/1`) before the pipeline runs, so only
   # the skip- and create-clauses above remain.
 
-  # The fields went out before the blocks were loaded. The form keeps what it
-  # holds (values other editors sent, a recovered form) and takes the loaded
-  # blocks into its data, where saving puts the block changesets.
-  defp put_loaded_blocks(%{assigns: %{form: %{source: changeset} = form, schema: schema}} = socket, entry) do
-    data =
-      Enum.reduce(schema.__blocks_fields__(), changeset.data, fn %{name: name}, data ->
-        Map.put(data, :"entry_#{name}", Map.fetch!(entry, :"entry_#{name}"))
+  # The fields went out before the blocks were loaded. The entry and the form
+  # keep what they hold (an asset delivered meanwhile, values other editors
+  # sent, a recovered form) and take only the loaded block associations: the
+  # form into its data, where saving puts the block changesets.
+  defp put_loaded_blocks(%{assigns: %{entry: entry, form: %{source: changeset} = form, schema: schema}} = socket, loaded) do
+    take_blocks = fn into ->
+      Enum.reduce(schema.__blocks_fields__(), into, fn %{name: name}, acc ->
+        Map.put(acc, :"entry_#{name}", Map.fetch!(loaded, :"entry_#{name}"))
       end)
+    end
 
-    put_form(socket, %{form | source: %{changeset | data: data}, data: data})
+    data = take_blocks.(changeset.data)
+
+    socket
+    |> assign(:entry, take_blocks.(entry))
+    |> put_form(%{form | source: %{changeset | data: data}, data: data})
   end
 
   defp assign_refreshed_entry(
@@ -3918,6 +3943,7 @@ defmodule BrandoAdmin.Components.Form do
             />
             <Primitives.submit_button
               processing={@processing}
+              disabled={!@blocks_ready?}
               form_id={@id}
               label={gettext("Save")}
               shortcut={%{key: "S"}}
@@ -4296,6 +4322,13 @@ defmodule BrandoAdmin.Components.Form do
   # token the form no longer holds is a save that already wrote (two quick
   # saves, a button press and ⌘S), and is ignored.
   # ⌘S says to stay with the save, rather than in a push of its own.
+  # A heavy entry's blocks are still loading: its tools are disabled, and a
+  # shortcut or a click that gets through anyway does nothing. A save would
+  # write without the blocks; the rest read the block fields.
+  def handle_event(event, _params, %{assigns: %{blocks_ready?: false}} = socket)
+      when event in @wait_for_blocks,
+      do: {:noreply, socket}
+
   def handle_event("save_form", %{"stay" => true} = params, socket),
     do: handle_event("save_form", Map.delete(params, "stay"), assign(socket, :save_redirect_target, :self))
 
@@ -4450,10 +4483,6 @@ defmodule BrandoAdmin.Components.Form do
   def handle_event("skip_permalink_redirect", _, socket) do
     {:noreply, finish_permalink_redirect(socket)}
   end
-
-  # Saving waits for a heavy entry's blocks (the shortcut too: the buttons
-  # are disabled until then).
-  def handle_event("save", _params, %{assigns: %{blocks_ready?: false}} = socket), do: {:noreply, socket}
 
   # Someone else saved the entry after the frontend editor loaded it. Saving
   # now would write this editor's copy of the blocks over their save.
@@ -5667,9 +5696,6 @@ defmodule BrandoAdmin.Components.Form do
     send(self(), {:toast, gettext("Opening stand alone live preview window...")})
     {:noreply, fetch_root_blocks(socket, :live_preview_standalone, 500)}
   end
-
-  # No save starts while a heavy entry's blocks load, as for "save".
-  def handle_event("push_submit" <> _, _, %{assigns: %{blocks_ready?: false}} = socket), do: {:noreply, socket}
 
   # One save that asks the translations for no new review of text that
   # changed: typo fixes and the like. Structure, shared values and new text
