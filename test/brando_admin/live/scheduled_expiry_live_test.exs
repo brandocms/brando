@@ -61,6 +61,11 @@ defmodule BrandoAdmin.ScheduledExpiryLiveTest do
       {view, _html} = live_form(conn, "/admin/pages/update/#{draft.id}")
       assert has_element?(view, "[id$='-scheduled-publishing-drawer']", "Only a pending entry is published")
 
+      # Published once, set back to draft: its date has passed
+      unpublished = page(user, "Unpublished", status: :draft, publish_at: at(-2))
+      {view, _html} = live_form(conn, "/admin/pages/update/#{unpublished.id}")
+      refute has_element?(view, "[id$='-scheduled-publishing-drawer']", "Only a pending entry is published")
+
       pending = page(user, "Pending", status: :pending, publish_at: at(2))
       {view, _html} = live_form(conn, "/admin/pages/update/#{pending.id}")
       refute has_element?(view, "[id$='-scheduled-publishing-drawer']", "Only a pending entry is published")

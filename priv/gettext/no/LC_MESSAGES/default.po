@@ -16386,6 +16386,11 @@ msgstr "Bildet er i et format KI-modellen ikke kan lese"
 msgid "The image this content type shares, as it is shared."
 msgstr "Bildet denne innholdstypen deler, slik det deles."
 
+#: lib/brando_admin/live/sites/scheduled_publishing_live.ex
+#, elixir-autogen, elixir-format
+msgid "The job could not be deleted. Refresh the list and try again."
+msgstr "Jobben kunne ikke slettes. Oppdater listen og prøv igjen."
+
 #: lib/brando_admin/live/users/groups_live.ex
 #, elixir-autogen, elixir-format
 msgid "The latest 20 changes to this group."
@@ -19202,6 +19207,11 @@ msgstr "Du har ikke tilgang til å importere moduldefinisjoner."
 #, elixir-autogen, elixir-format
 msgid "You do not have permission to share pages."
 msgstr "Du har ikke tilgang til å dele sider."
+
+#: lib/brando_admin/live/sites/scheduled_publishing_live.ex
+#, elixir-autogen, elixir-format
+msgid "You do not have the rights to change this entry's schedule."
+msgstr "Du har ikke rettigheter til å endre planen for denne oppføringen."
 
 #: lib/brando/traits/protect_role.ex
 #, elixir-autogen, elixir-format

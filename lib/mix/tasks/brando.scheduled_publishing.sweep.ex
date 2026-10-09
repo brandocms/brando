@@ -13,7 +13,10 @@ defmodule Mix.Tasks.Brando.ScheduledPublishing.Sweep do
       mix brando.scheduled_publishing.sweep          # list, change nothing
       mix brando.scheduled_publishing.sweep --apply  # do it now
 
-  Run it before the first deploy with the sweep, to see what it will publish.
+  Run it against a copy of the production database before deploying the
+  sweep, to see what it will publish. In a release,
+  `Brando.Publisher.sweep(dry_run: true)` does the same for the current
+  environment.
   See `Brando.Publisher.sweep/1`.
   """
 
@@ -22,8 +25,7 @@ defmodule Mix.Tasks.Brando.ScheduledPublishing.Sweep do
     {opts, _, _} = OptionParser.parse(args, strict: [apply: :boolean])
     apply? = Keyword.get(opts, :apply, false)
 
-    Application.put_env(:logger, :level, :error)
-    Mix.Tasks.Run.run([])
+    Mix.Brando.start_quietly()
 
     results =
       :all

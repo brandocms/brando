@@ -46,7 +46,7 @@ defmodule Mix.Tasks.Brando.Doctor do
   def run(args) do
     {opts, _positional} = OptionParser.parse!(args, strict: @switches, aliases: @aliases)
 
-    oban = start_quietly()
+    oban = Mix.Brando.start_quietly()
     Gettext.put_locale(Brando.Gettext, "en")
 
     results = Doctor.run(mode: :mix, oban: oban, locale: "en", source?: true, offline?: opts[:offline] == true)
@@ -59,35 +59,5 @@ defmodule Mix.Tasks.Brando.Doctor do
     end
 
     if Doctor.exit_status(results, opts[:strict] == true) == 1, do: exit({:shutdown, 1})
-  end
-
-  # Starts the application without its HTTP server and without Oban queues or
-  # plugins, so the doctor only reads. Returns the Oban configuration the
-  # application would run with, for the Oban check.
-  defp start_quietly do
-    Mix.Task.run("app.config")
-    oban = Application.get_env(:brando, Oban) || Brando.Supervisor.oban_config()
-
-    # Already running (called from a test or another task): leave it be
-    if started?(), do: oban, else: boot(oban)
-  end
-
-  defp started? do
-    app = Brando.otp_app()
-    not is_nil(app) and List.keymember?(Application.started_applications(), app, 0)
-  end
-
-  defp boot(oban) do
-    Logger.configure(level: :error)
-    Application.put_env(:brando, Oban, Keyword.put(oban, :testing, :manual))
-
-    with app when not is_nil(app) <- Brando.otp_app(),
-         endpoint when not is_nil(endpoint) <- Brando.endpoint(),
-         config when is_list(config) <- Application.get_env(app, endpoint) do
-      Application.put_env(app, endpoint, Keyword.put(config, :server, false))
-    end
-
-    Mix.Task.run("app.start")
-    oban
   end
 end

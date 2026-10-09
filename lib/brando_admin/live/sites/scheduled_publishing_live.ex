@@ -137,12 +137,12 @@ defmodule BrandoAdmin.Sites.ScheduledPublishingLive do
   # Deleting the job also clears the date it was for (Publisher.delete_job/2)
   def handle_event("delete_job", %{"id" => job_id}, socket) do
     case Publisher.delete_job(job_id, socket.assigns.current_user) do
-      {:error, _reason} ->
+      {:error, reason} ->
         {:noreply,
          push_event(socket, "b:alert", %{
            type: "error",
            title: gettext("Job not deleted"),
-           message: gettext("The entry's date could not be cleared. Open the entry and clear it there.")
+           message: delete_job_error(reason)
          })}
 
       _ ->
@@ -150,6 +150,14 @@ defmodule BrandoAdmin.Sites.ScheduledPublishingLive do
         {:noreply, assign_jobs(socket)}
     end
   end
+
+  defp delete_job_error(reason) when reason in [:forbidden, :unauthorized],
+    do: gettext("You do not have the rights to change this entry's schedule.")
+
+  defp delete_job_error(%Ecto.Changeset{}),
+    do: gettext("The entry's date could not be cleared. Open the entry and clear it there.")
+
+  defp delete_job_error(_reason), do: gettext("The job could not be deleted. Refresh the list and try again.")
 
   defp set_admin_locale(%{assigns: %{current_user: current_user}} = socket) do
     current_user.language

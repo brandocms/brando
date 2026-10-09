@@ -50,9 +50,10 @@ defmodule Brando.Doctor.Checks.Oban do
   """
   def sweep_scheduled?(oban) when is_list(oban) do
     plugins = if is_list(oban[:plugins]), do: oban[:plugins], else: []
+    cron = if is_list(oban[:cron]), do: oban[:cron], else: []
 
     crontabs =
-      [get_in(oban, [:cron, :crontab])] ++
+      [cron[:crontab]] ++
         for {plugin, opts} <- plugins, plugin in [Oban.Plugins.Cron, Oban.Cron], is_list(opts), do: opts[:crontab]
 
     crontabs

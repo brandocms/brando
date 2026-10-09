@@ -88,8 +88,8 @@ production dump.
   crontab**: it publishes and expires entries whose dates passed with no job,
   as after an environment clone or an archive restore, and `mix brando.doctor`
   warns when it is missing. It only takes dates from the last seven days, so
-  older ones are left alone; run `mix brando.scheduled_publishing.sweep`
-  before deploying to see what it will do.
+  older ones are left alone. `mix brando.scheduled_publishing.sweep` lists
+  what it would do, and `Brando.Publisher.sweep(dry_run: true)` in a release.
 - **A publishing job publishes only a pending entry.** A future `publish_at`
   on a draft or a deactivated entry used to publish it when the job ran; the
   job now does nothing unless the entry is still pending, and clearing

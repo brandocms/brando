@@ -48,7 +48,7 @@ defmodule Brando.Publisher do
         replace_args: true,
         scheduled_at: publish_at,
         tags: [:publisher, :status],
-        meta: %{identifier: job_identifier(Identifier.identifier_for(entry))}
+        meta: %{identifier: job_identifier(Identifier.identifier_for(entry)), at: publish_at}
       )
       |> Oban.insert()
     end
@@ -69,7 +69,7 @@ defmodule Brando.Publisher do
           |> Worker.EntryPublisher.new(
             scheduled_at: unpublish_at,
             tags: [:publisher, :unpublish],
-            meta: %{identifier: job_identifier(Identifier.identifier_for(entry))}
+            meta: %{identifier: job_identifier(Identifier.identifier_for(entry)), at: unpublish_at}
           )
           |> Oban.insert()
         end
@@ -520,8 +520,9 @@ defmodule Brando.Publisher do
   `publish_at` and sets a pending entry back to draft, an expiry job clears
   `unpublish_at`, and a revision job makes the revision an ordinary one again.
   The entry is saved through its context as `user`, so it records Activity;
-  a date that no longer matches the job (it was moved since) is left alone.
-  Needs the right to schedule the entry.
+  a date that no longer matches the job (it was moved since) is left alone,
+  as is an entry in the trash. Needs the right to schedule the entry, and to
+  change the date the rights a save of it takes.
   """
   def delete_job(id, user \\ :system) do
     context = TenantJob.context_fragment()
@@ -547,8 +548,9 @@ defmodule Brando.Publisher do
 
     with schema when not is_nil(schema) <- schema,
          %{} = entry <- Repo.get(schema, id),
+         nil <- Map.get(entry, :deleted_at),
          %DateTime{} = at <- Map.get(entry, field),
-         true <- DateTime.compare(DateTime.truncate(at, :second), DateTime.truncate(job.scheduled_at, :second)) == :eq do
+         true <- job_for_date?(job, at) do
       params = %{field => nil}
       params = if field == :publish_at and entry.status == :pending, do: Map.put(params, :status, :draft), else: params
       context = schema.__modules__().context
@@ -563,6 +565,21 @@ defmodule Brando.Publisher do
   end
 
   defp clear_job_date(_job, _user), do: :ok
+
+  # The date the job was made for. A failed attempt moves scheduled_at to the
+  # retry, so it is kept in meta; a job from before that compares
+  # scheduled_at until its first retry, and is taken as the entry's after.
+  defp job_for_date?(%Oban.Job{meta: %{"at" => made_for}}, at) when is_binary(made_for) do
+    case DateTime.from_iso8601(made_for) do
+      {:ok, made_for, _} -> same_second?(made_for, at)
+      _ -> true
+    end
+  end
+
+  defp job_for_date?(%Oban.Job{attempt: 0, scheduled_at: scheduled_at}, at), do: same_second?(scheduled_at, at)
+  defp job_for_date?(_job, _at), do: true
+
+  defp same_second?(a, b), do: DateTime.compare(DateTime.truncate(a, :second), DateTime.truncate(b, :second)) == :eq
 
   defp job_authorized?(%Oban.Job{worker: worker, args: %{"schema" => schema, "id" => id}}, action) do
     if worker == inspect(Worker.EntryPublisher),

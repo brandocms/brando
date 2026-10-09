@@ -45,12 +45,18 @@ defmodule BrandoAdmin.Components.Form.ScheduledPublishingDrawer do
     """
   end
 
-  # The job publishes only a pending entry: a date on a draft does nothing
-  defp publish_at_instructions(form) do
-    status = to_string(form[:status].value)
-    publish_at = form[:publish_at].value
+  # The job publishes only a pending entry: a coming date on a draft does nothing
+  defp publish_at_instructions(%{source: %Ecto.Changeset{} = changeset}) do
+    status = to_string(Ecto.Changeset.get_field(changeset, :status))
 
-    if status in ["draft", "disabled"] and publish_at not in [nil, ""],
-      do: gettext("Only a pending entry is published at this time. Set the status to Pending to schedule it.")
+    with true <- status in ["draft", "disabled"],
+         %DateTime{} = publish_at <- Ecto.Changeset.get_field(changeset, :publish_at),
+         true <- DateTime.after?(publish_at, DateTime.utc_now()) do
+      gettext("Only a pending entry is published at this time. Set the status to Pending to schedule it.")
+    else
+      _ -> nil
+    end
   end
+
+  defp publish_at_instructions(_form), do: nil
 end

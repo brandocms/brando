@@ -187,6 +187,7 @@ defmodule Brando.Doctor.ChecksTest do
 
       refute Checks.Oban.sweep_scheduled?(cron: [crontab: [{"0 2 * * *", Brando.Worker.SitemapGenerator}]])
       refute Checks.Oban.sweep_scheduled?(plugins: false)
+      refute Checks.Oban.sweep_scheduled?(cron: false)
     end
 
     test "queues read from the running Oban, with a paused one" do

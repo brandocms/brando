@@ -183,6 +183,29 @@ defmodule Brando.PublisherUnpublishTest do
       assert %{status: :published, unpublish_at: nil} = Repo.get!(Page, page.id)
     end
 
+    test "clears the date after a failed attempt moved the job to its retry", %{user: user} do
+      page = create_page(user, %{status: :pending, publish_at: at(3600)})
+      [job] = publish_jobs(page)
+
+      {1, _} =
+        BrandoIntegration.Repo.update_all(from(j in Oban.Job, where: j.id == ^job.id),
+          set: [attempt: 1, state: "retryable", scheduled_at: at(3660)]
+        )
+
+      assert {_, _} = delete_job(job, user)
+      assert %{status: :draft, publish_at: nil} = Repo.get!(Page, page.id)
+    end
+
+    test "deletes the job of an entry in the trash, and leaves the entry", %{user: user} do
+      page = create_page(user, %{unpublish_at: at(3600)})
+      [job] = unpublish_jobs(page)
+      trashed_at = at(0)
+      {1, _} = BrandoIntegration.Repo.update_all(from(p in Page, where: p.id == ^page.id), set: [deleted_at: trashed_at])
+
+      assert {1, _} = delete_job(job, user)
+      assert Repo.get!(Page, page.id).unpublish_at != nil
+    end
+
     test "leaves a date that moved since the job was made", %{user: user} do
       page = create_page(user, %{unpublish_at: at(3600)})
       [job] = unpublish_jobs(page)

@@ -16384,6 +16384,11 @@ msgstr ""
 msgid "The image this content type shares, as it is shared."
 msgstr ""
 
+#: lib/brando_admin/live/sites/scheduled_publishing_live.ex
+#, elixir-autogen, elixir-format
+msgid "The job could not be deleted. Refresh the list and try again."
+msgstr ""
+
 #: lib/brando_admin/live/users/groups_live.ex
 #, elixir-autogen, elixir-format
 msgid "The latest 20 changes to this group."
@@ -19199,6 +19204,11 @@ msgstr ""
 #: lib/brando_admin/live/ai/assistant_live.ex
 #, elixir-autogen, elixir-format
 msgid "You do not have permission to share pages."
+msgstr ""
+
+#: lib/brando_admin/live/sites/scheduled_publishing_live.ex
+#, elixir-autogen, elixir-format
+msgid "You do not have the rights to change this entry's schedule."
 msgstr ""
 
 #: lib/brando/traits/protect_role.ex
