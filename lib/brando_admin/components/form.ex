@@ -60,6 +60,7 @@ defmodule BrandoAdmin.Components.Form do
   alias BrandoAdmin.Components.Form.Preview
   alias BrandoAdmin.Components.Form.Primitives
   alias BrandoAdmin.Components.Form.RevisionsDrawer
+  alias BrandoAdmin.Components.Form.RichTextAI
   alias BrandoAdmin.Components.Form.ScheduledPublishingDrawer
   alias BrandoAdmin.Components.Form.Translation
   alias BrandoAdmin.Components.Form.VideoDrawer
@@ -1493,7 +1494,7 @@ defmodule BrandoAdmin.Components.Form do
   end
 
   def handle_async({:tiptap_ai, id, request}, result, socket) do
-    {:noreply, BrandoAdmin.Components.Form.RichTextAI.finish(socket, id, request, result)}
+    {:noreply, RichTextAI.finish(socket, id, request, result)}
   end
 
   def handle_async({:suggest_ref_alt_text, {module, id}}, result, socket) do
@@ -4868,11 +4869,11 @@ defmodule BrandoAdmin.Components.Form do
          true <- is_binary(params["field_name"]),
          %BlueprintForms.Input{type: :rich_text, opts: opts} <-
            BlueprintForms.get_field(field, socket.assigns.form_blueprint),
-         true <- BrandoAdmin.Components.Form.RichTextAI.enabled?(opts || []),
+         true <- RichTextAI.enabled?(opts || []),
          false <- FieldActions.locked?(opts, socket.assigns.current_user),
          {:ok, _path, ^field, _segments} <- parse_form_field_name(params["field_name"], socket.assigns.singular),
-         {:ok, prompt} <- BrandoAdmin.Components.Form.RichTextAI.prompt(nil, params) do
-      {:noreply, BrandoAdmin.Components.Form.RichTextAI.start(socket, params, prompt, [])}
+         {:ok, prompt} <- RichTextAI.prompt(nil, params) do
+      {:noreply, RichTextAI.start(socket, params, prompt, [])}
     else
       _ ->
         {:noreply,
@@ -4881,7 +4882,7 @@ defmodule BrandoAdmin.Components.Form do
   end
 
   def handle_event("tiptap_ai_cancel", params, socket) do
-    {:noreply, BrandoAdmin.Components.Form.RichTextAI.cancel(socket, params)}
+    {:noreply, RichTextAI.cancel(socket, params)}
   end
 
   # An AI action on the field (`ai_actions:`, a deprecated `ai:`, or a meta
