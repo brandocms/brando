@@ -9,6 +9,7 @@ if Code.ensure_loaded?(Igniter) do
 
     alias Brando.Deprecated.LexicalAliases
     alias Brando.Deprecated.RenamedModules
+    alias Brando.Deprecated.TemplateCode
     alias Rewrite.Source
 
     @doc """
@@ -70,6 +71,9 @@ if Code.ensure_loaded?(Igniter) do
 
         match?({:error, _}, Code.string_to_quoted(updated)) ->
           warn_left(igniter, path, [{:unparsable, nil, nil}])
+
+        line = computed_templates(content) ->
+          warn_left(igniter, path, [{:computed_templates, line} | left])
 
         line = changed_reference({content, updated}, renamed, templates(igniter, path)) ->
           warn_left(igniter, path, [{:changed_meaning, line} | left])
@@ -145,8 +149,8 @@ if Code.ensure_loaded?(Igniter) do
            {renamed, templates}
          ) do
       names =
-        for {_path, text} <- templates.(literal(pattern), options),
-            %{resolved: resolved} <- LexicalAliases.names_in_text(text, env, 1),
+        for {path, text} <- templates.(pattern, options),
+            %{resolved: resolved} <- LexicalAliases.names_in_text(text, env, 1, TemplateCode.mode(path)),
             do: {template_reference(resolved, renamed), meta[:line]}
 
       {node, Enum.reverse(names, refs)}
@@ -192,34 +196,42 @@ if Code.ensure_loaded?(Igniter) do
     defp template_reference(resolved, renamed), do: new_name(resolved, renamed)
 
     # `[{path, text}]` for the templates `embed_templates pattern, root: …`
-    # compiles into the module at `path`, when they can be read
+    # compiles into the module at `path`
     defp templates(igniter, path), do: &read_templates(igniter, path, &1, &2)
 
-    defp read_templates(igniter, path, pattern, options) when is_binary(pattern) do
-      root = options |> List.first() |> literal() |> keyword_root()
-      dir = path |> Path.dirname() |> Path.join(root) |> Path.expand("/") |> Path.relative_to("/")
-      glob = GlobEx.compile!(Path.join(dir, pattern <> ".{#{Enum.join(@template_extensions, ",")}}"))
+    defp read_templates(igniter, path, pattern, options) do
+      case TemplateCode.embed_pattern(pattern, options) do
+        {:ok, pattern, root} ->
+          dir = path |> Path.dirname() |> Path.join(root) |> Path.expand("/") |> Path.relative_to("/")
+          glob = GlobEx.compile!(Path.join(dir, pattern <> ".{#{Enum.join(@template_extensions, ",")}}"))
 
-      igniter.rewrite
-      |> Rewrite.sources()
-      |> Enum.filter(&GlobEx.match?(glob, Source.get(&1, :path)))
-      |> Enum.map(&{Source.get(&1, :path), Source.get(&1, :content)})
-      |> Enum.sort()
+          igniter.rewrite
+          |> Rewrite.sources()
+          |> Enum.filter(&GlobEx.match?(glob, Source.get(&1, :path)))
+          |> Enum.map(&{Source.get(&1, :path), Source.get(&1, :content)})
+          |> Enum.sort()
+
+        :computed ->
+          []
+      end
     end
 
-    defp read_templates(_igniter, _path, _pattern, _options), do: []
+    # The line of an `embed_templates` whose pattern or root is computed:
+    # its templates cannot be found to check
+    defp computed_templates(content) do
+      {:ok, ast} = Sourceror.parse_string(content)
 
-    defp keyword_root(options) when is_list(options) do
-      Enum.find_value(options, ".", fn
-        {key, value} -> if literal(key) == :root and is_binary(literal(value)), do: literal(value)
-        _ -> nil
-      end)
+      {_ast, line} =
+        Macro.prewalk(ast, nil, fn
+          {:embed_templates, meta, [pattern | options]} = node, nil ->
+            {node, if(TemplateCode.embed_pattern(pattern, options) == :computed, do: meta[:line])}
+
+          node, line ->
+            {node, line}
+        end)
+
+      line
     end
-
-    defp keyword_root(_options), do: "."
-
-    defp literal({:__block__, _, [value]}), do: value
-    defp literal(value), do: value
 
     defp new_name([_ | _] = parts, renamed) do
       module = Module.concat(parts)
@@ -650,6 +662,13 @@ if Code.ensure_loaded?(Igniter) do
           #{path}:#{line} aliases #{inspect(module)} inside a function or block, which this task \
           does not rewrite. Use #{inspect(RenamedModules.new_name(module))} there; the old name keeps \
           working, with a warning, until 0.57.
+          """)
+
+        {:computed_templates, line}, igniter ->
+          Igniter.add_warning(igniter, """
+          #{path}:#{line} names modules renamed in 0.55, and embeds templates whose pattern or root \
+          this task cannot read, so the file is unchanged: a template may use an alias it would \
+          rename. Replace the old names yourself; they keep working, with a warning, until 0.57.
           """)
 
         {:changed_meaning, line}, igniter ->

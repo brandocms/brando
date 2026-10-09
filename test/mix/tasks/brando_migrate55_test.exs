@@ -1299,6 +1299,79 @@ defmodule Mix.Tasks.Brando.Migrate55Test do
       assert [{5, "Brando.Meta"}] = doctor_findings(code)
     end
 
+    test "templates whose pattern or root is computed cannot be read, so the file is left and reported" do
+      computed = """
+      defmodule LegacyAppWeb.Computed do
+        use Phoenix.Component
+        alias Brando.Upload
+
+        @pattern "computed/*"
+        def store(m, e, c, u), do: Upload.handle_upload(m, e, c, u)
+
+        embed_templates @pattern
+      end
+      """
+
+      rooted = """
+      defmodule LegacyAppWeb.Rooted do
+        use Phoenix.Component
+        alias Brando.Upload
+
+        def store(m, e, c, u), do: Upload.handle_upload(m, e, c, u)
+
+        embed_templates "rooted/*", root: Path.join(__DIR__, "x")
+      end
+      """
+
+      files = %{
+        "lib/legacy_app_web/computed.ex" => computed,
+        "lib/legacy_app_web/rooted.ex" => rooted,
+        "lib/legacy_app_web/computed/c.html.heex" => "{Upload.url(@x)}\n"
+      }
+
+      igniter = migrate(@blueprint_054, files)
+      assert igniter.issues == []
+      assert source(igniter, "lib/legacy_app_web/computed.ex") == computed
+      assert source(igniter, "lib/legacy_app_web/rooted.ex") == rooted
+      assert_has_warning(igniter, &String.contains?(&1, "lib/legacy_app_web/computed.ex:8 names modules renamed in 0.55"))
+      assert_has_warning(igniter, &String.contains?(&1, "lib/legacy_app_web/rooted.ex:7 names modules renamed in 0.55"))
+    end
+
+    test "only code in a template counts: text, comments and strings do not hold the file back" do
+      code = ~S'''
+      defmodule LegacyAppWeb.Drawer do
+        use Phoenix.Component
+        alias Brando.Upload
+
+        def store(m, e, c, u), do: Upload.handle_upload(m, e, c, u)
+
+        def drawer(assigns) do
+          ~H"""
+          <%!-- Upload is not a module here --%>
+          <h2>Store current editor state</h2>
+          <button aria-label={gettext("Upload media")}>{gettext("Upload")}</button>
+          <p>
+            {dgettext("drawer",
+              "Upload to %{folder}", folder: @folder)}
+          </p>
+          Upload
+          """
+        end
+      end
+      '''
+
+      path = "lib/legacy_app_web/drawer.ex"
+      igniter = migrate(@blueprint_054, %{path => code})
+      assert igniter.issues == []
+
+      updated = source(igniter, path)
+      assert updated =~ "alias Brando.Uploads.Store\n"
+      assert updated =~ "do: Store.handle_upload(m, e, c, u)"
+      assert updated =~ ~s[{gettext("Upload")}]
+      refute Enum.any?(igniter.warnings, &String.contains?(&1, path))
+      assert_idempotent(igniter, path)
+    end
+
     test "a name spelled from Elixir. keeps the prefix" do
       code = """
       defmodule LegacyApp.Prefixed do
