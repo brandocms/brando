@@ -72,4 +72,23 @@ defmodule BrandoAdmin.Components.Form.RichTextAITest do
     refute worker == owner
     assert pending.assigns.form == :unchanged
   end
+
+  test "a prompt that reads the form is built in the request's task, not the LiveView" do
+    owner = self()
+    connected = %{socket() | transport_pid: owner}
+
+    build = fn ->
+      send(owner, {:built, self()})
+      {:ok, "Built in the task"}
+    end
+
+    RichTextAI.start(connected, params(), build, [], fn prompt, _opts ->
+      send(owner, {:generated, prompt})
+      {:ok, %{text: "A suggestion"}}
+    end)
+
+    assert_receive {:built, worker}
+    refute worker == owner
+    assert_receive {:generated, "Built in the task"}
+  end
 end

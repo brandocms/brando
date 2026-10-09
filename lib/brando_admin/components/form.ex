@@ -4902,8 +4902,9 @@ defmodule BrandoAdmin.Components.Form do
          true <- RichTextAI.enabled?(config),
          false <- FieldActions.locked?(opts, socket.assigns.current_user),
          {:ok, _path, ^field, _segments} <- parse_form_field_name(params["field_name"], socket.assigns.singular),
-         {:ok, prompt} <- RichTextAI.prompt(write_with_ai_instructions(socket, config), params) do
-      {:noreply, RichTextAI.start(socket, params, prompt, RichTextAI.ai_opts(config))}
+         {:ok, _prompt} <- RichTextAI.prompt(nil, params) do
+      {:noreply,
+       RichTextAI.start(socket, params, write_with_ai_prompt(socket, config, params), RichTextAI.ai_opts(config))}
     else
       _ ->
         {:noreply,
@@ -6902,15 +6903,21 @@ defmodule BrandoAdmin.Components.Form do
     socket
   end
 
-  # An input's `write_with_ai:` instructions, with the fields they read as
-  # the form has them now (or the deprecated `ai:` they come from).
-  defp write_with_ai_instructions(socket, config) do
-    case config[:prompt] do
-      prompt when is_binary(prompt) ->
-        Brando.AI.Context.build_prompt(String.trim(prompt), ai_context_fun(socket, config[:from] || []).())
+  # A Write with AI request's prompt, built in its task: the input's
+  # `write_with_ai:` instructions (or the deprecated `ai:` they come from)
+  # with the fields they read as the form has them now. Reading `:blocks`
+  # renders the block editor's content, which stays out of this process.
+  defp write_with_ai_prompt(socket, config, params) do
+    context = ai_context_fun(socket, config[:from] || [])
 
-      _ ->
-        nil
+    fn ->
+      instructions =
+        case config[:prompt] do
+          prompt when is_binary(prompt) -> Brando.AI.Context.build_prompt(String.trim(prompt), context.())
+          _ -> nil
+        end
+
+      RichTextAI.prompt(instructions, params)
     end
   end
 

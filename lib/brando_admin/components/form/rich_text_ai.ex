@@ -58,8 +58,16 @@ defmodule BrandoAdmin.Components.Form.RichTextAI do
 
     socket
     |> assign(:tiptap_ai_requests, Map.put(requests, id, {request, context}))
-    |> start_async({:tiptap_ai, id, request}, Brando.Tenant.capture_context(fn -> generate.(prompt, opts) end))
+    |> start_async({:tiptap_ai, id, request}, Brando.Tenant.capture_context(fn -> run(prompt, opts, generate) end))
   end
+
+  # `prompt` is the prompt, or a function that builds it in the task
+  # (`{:ok, prompt}`), when building it reads the form's fields.
+  defp run(build, opts, generate) when is_function(build, 0) do
+    with {:ok, prompt} <- build.(), do: generate.(prompt, opts)
+  end
+
+  defp run(prompt, opts, generate), do: generate.(prompt, opts)
 
   def cancel(socket, params) do
     requests = Map.get(socket.assigns, :tiptap_ai_requests, %{})
