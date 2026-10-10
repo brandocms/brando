@@ -222,41 +222,27 @@ defmodule BrandoAdmin.Videos.VideoListLive do
   def handle_event("close_video", _, socket), do: {:noreply, assign(socket, :playing, nil)}
 
   # Every video missing details gets a job of its own, one insert each: a
-  # task does that, so a library of thousands leaves the list responsive.
-  # It works as this process would: in its site and environment, and in the
-  # E2E server's test sandbox.
+  # job queues them (`Brando.Worker.VideoMetadataSweep`), so a library of
+  # thousands leaves the list responsive, and leaving it does not cut that
+  # short.
   def handle_event("fetch_metadata", _, socket) do
-    user = socket.assigns.current_user
-    parent = self()
+    count = socket.assigns.missing_metadata_count
 
-    work =
-      Brando.Tenant.capture_context(fn ->
-        if Application.get_env(Brando.config(:otp_app), :sql_sandbox),
-          do: Ecto.Adapters.SQL.Sandbox.allow(Brando.Repo.repo(), parent, self())
+    case Brando.Worker.VideoMetadataSweep.enqueue(socket.assigns.current_user) do
+      {:ok, _job} ->
+        send(self(), {:toast, ngettext("Looking up %{count} video", "Looking up %{count} videos", count)})
+        {:noreply, assign(socket, :missing_metadata_count, 0)}
 
-        Videos.enqueue_metadata(Videos.list_video_ids_missing_metadata(), user)
-      end)
-
-    {:noreply,
-     socket
-     |> assign(:missing_metadata_count, 0)
-     |> start_async(:fetch_metadata, work)}
+      {:error, _reason} ->
+        send(self(), {:toast, gettext("Could not look the videos up")})
+        {:noreply, socket}
+    end
   end
 
   defp blank_to_nil(""), do: nil
   defp blank_to_nil(title), do: title
 
   @impl true
-  def handle_async(:fetch_metadata, {:ok, {:ok, count}}, socket) do
-    send(self(), {:toast, ngettext("Looking up %{count} video", "Looking up %{count} videos", count)})
-    {:noreply, socket}
-  end
-
-  def handle_async(:fetch_metadata, {:exit, _reason}, socket) do
-    send(self(), {:toast, gettext("Could not look the videos up")})
-    {:noreply, assign(socket, :missing_metadata_count, length(Videos.list_video_ids_missing_metadata()))}
-  end
-
   def handle_async(:delete_unused, result, socket) do
     socket = AssetListHelpers.finish_delete_unused(socket, result)
 

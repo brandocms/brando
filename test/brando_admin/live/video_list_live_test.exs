@@ -23,9 +23,9 @@ defmodule BrandoAdmin.VideoListLiveTest do
     refute has_element?(view, "#video-player-modal")
   end
 
-  # Every video missing a thumbnail or title is queued, one insert each:
-  # with thousands, the list would hang for as long as that took.
-  test "fetching missing details queues the lookups away from the list", %{conn: conn} do
+  # Every video missing a thumbnail or title gets a lookup, one insert each:
+  # the list queues one job that does that, and is done.
+  test "fetching missing details queues one job for the lookups", %{conn: conn} do
     video = Factory.insert(:video, title: nil)
     Req.Test.stub(Brando.Videos.Metadata, &Plug.Conn.send_resp(&1, 404, ""))
 
@@ -36,8 +36,7 @@ defmodule BrandoAdmin.VideoListLiveTest do
       handler,
       [:oban, :engine, :insert_job, :start],
       fn _event, _measurements, %{changeset: changeset}, _config ->
-        if Ecto.Changeset.get_field(changeset, :worker) == "Brando.Worker.VideoMetadata",
-          do: send(test, {:queued_by, self(), Ecto.Changeset.get_field(changeset, :args)["video_id"]})
+        send(test, {:queued, Ecto.Changeset.get_field(changeset, :worker), Ecto.Changeset.get_field(changeset, :args)})
       end,
       nil
     )
@@ -46,11 +45,11 @@ defmodule BrandoAdmin.VideoListLiveTest do
 
     {:ok, view, _html} = live(conn, "/admin/assets/videos")
     view |> element("button[phx-click='fetch_metadata']") |> render_click()
-    render_async(view)
 
-    assert_received {:queued_by, pid, video_id}
+    # Oban runs inline in tests: the sweep, then the lookup it queued.
+    assert_received {:queued, "Brando.Worker.VideoMetadataSweep", _args}
+    assert_received {:queued, "Brando.Worker.VideoMetadata", %{"video_id" => video_id}}
     assert video_id == video.id
-    refute pid == view.pid
     refute has_element?(view, "button[phx-click='fetch_metadata']")
   end
 
