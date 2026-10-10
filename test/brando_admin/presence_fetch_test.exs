@@ -37,4 +37,16 @@ defmodule BrandoAdmin.PresenceFetchTest do
       assert log =~ "could not look up"
     end
   end
+
+  # Phoenix.Presence merges the fetched diff into the state it hands
+  # handle_metas/4: a leave left out of it would keep the tab there for good,
+  # and that user's last departure would never be recorded
+  test "a lobby lookup that fails keeps every presence, by its key" do
+    metas = [%{online_at: "1", url: "/admin"}]
+
+    capture_log(fn ->
+      assert %{42 => %{user: %{id: 42}, metas: ^metas}} =
+               BrandoAdmin.Presence.LobbyFetcher.fetch(%{"42" => %{metas: metas}})
+    end)
+  end
 end

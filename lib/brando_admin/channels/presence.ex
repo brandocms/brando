@@ -29,28 +29,27 @@ defmodule BrandoAdmin.Presence do
     )
   end
 
-  @doc false
-  # The users behind `presences`, by id. `Phoenix.Presence` runs `fetch/2` for
-  # each diff in a task the presence shard monitors, and has no clause for one
-  # that dies: a lookup that raised or exited there took the shard down, and
-  # every admin session tracked on it. Without the users, the presences are
-  # left out (lobby) or carry no user (url), as for a deleted account, and the
-  # next diff brings them back.
+  @doc """
+  The users behind `presences`, by id, or `:error` when the lookup fails.
+
+  `Phoenix.Presence` runs `fetch/2` for each diff in a task the presence shard
+  monitors, and has no clause for one that dies: a lookup that raised or
+  exited there took the shard down, and every admin session tracked on it.
+  The fetchers keep every presence without its user details instead, so the
+  diff still reaches `handle_metas/4` whole.
+  """
   def users(presences) do
-    presences
-    |> Map.keys()
-    |> Brando.Users.get_users_map()
-    |> Map.new()
+    {:ok, presences |> Map.keys() |> Brando.Users.get_users_map() |> Map.new()}
   rescue
     exception ->
       Logger.error("==> Presence: could not look up users: " <> Exception.message(exception))
-      %{}
+      :error
   catch
     # A pool checkout that fails exits: a connection timeout in production,
     # or in tests a sandbox owner that has gone
     :exit, reason ->
       Logger.error("==> Presence: could not look up users: " <> Exception.format_exit(reason))
-      %{}
+      :error
   end
 
   defmodule LobbyFetcher do
@@ -59,7 +58,19 @@ defmodule BrandoAdmin.Presence do
     require Logger
 
     def fetch(presences) do
-      users = BrandoAdmin.Presence.users(presences)
+      users =
+        case BrandoAdmin.Presence.users(presences) do
+          {:ok, users} ->
+            users
+
+          # Every presence stays, under its id alone: one left out here
+          # would never leave
+          :error ->
+            Map.new(Map.keys(presences), fn id ->
+              id = String.to_integer(id)
+              {id, %{id: id, name: nil, avatar: nil, last_login: nil, last_seen: nil}}
+            end)
+        end
 
       for {id, %{metas: metas}} <- presences,
           user = users[String.to_integer(id)],
@@ -185,7 +196,12 @@ defmodule BrandoAdmin.Presence do
     @moduledoc false
 
     def fetch(presences) do
-      users = BrandoAdmin.Presence.users(presences)
+      # A presence without its user is handled as a deleted account's
+      users =
+        case BrandoAdmin.Presence.users(presences) do
+          {:ok, users} -> users
+          :error -> %{}
+        end
 
       for {key, %{metas: metas}} <- presences, into: %{} do
         {key, %{metas: metas, user: users[String.to_integer(key)]}}
