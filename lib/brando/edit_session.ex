@@ -542,7 +542,9 @@ defmodule Brando.EditSession do
       kind: :rebase,
       epoch: data.epoch,
       rev: entry.rev,
-      base: entry.base,
+      # the names and order of every saved row stay in the session
+      # (`Data.merge_held/4`); replicas compare rows by structure alone
+      base: Ops.keep_rel_ids(entry.base),
       state: entry.state,
       seqs: entry.seqs,
       origin: origin,

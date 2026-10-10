@@ -11,7 +11,10 @@ defmodule Brando.EditSession.Data do
   ## Per block field
 
   * `base` — the rows the state was built on, as `Ops.from_entry_blocks/1`
-    gives them. Joiners compare their own rows with it (`Ops.signature/1`).
+    gives them. Joiners compare their own rows with it (`Ops.signature/1`),
+    and a rejoiner's lists merge against its rows: it keeps every row's id,
+    name and order, which the state keeps only for blocks with unsaved
+    work.
   * `state` — `base` plus every unsaved op, in session order.
   * `log` — ops applied while a save is in flight, newest first, so that the
     save's rebase can replay what arrived after the saver read the state.
@@ -83,8 +86,7 @@ defmodule Brando.EditSession.Data do
         state = if held_base == base, do: held, else: held |> Ops.carry(held_base, base) |> elem(0)
         state = Ops.keep_rel_ids(state)
 
-        {:seeded,
-         put_field(data, field, new_field(Ops.keep_rel_ids(base, Map.keys(state.rel_ids), row_order: :all), state))}
+        {:seeded, put_field(data, field, new_field(Ops.keep_rel_ids(base, Map.keys(state.rel_ids), rows: :all), state))}
     end
   end
 
@@ -260,7 +262,7 @@ defmodule Brando.EditSession.Data do
   def rebase(%__MODULE__{} = data, field, %Ops{} = new_base, mode, now \\ 0) do
     case Map.get(data.fields, field) do
       nil ->
-        new_base = Ops.keep_rel_ids(new_base, [], row_order: :all)
+        new_base = Ops.keep_rel_ids(new_base, [], rows: :all)
         {:ok, put_field(data, field, %{new_field(new_base, new_base) | rev: 1}), []}
 
       entry ->
@@ -268,7 +270,7 @@ defmodule Brando.EditSession.Data do
         # the rows' ids stay for blocks that had unsaved work when the save
         # read them: ops made then name new rows by uid
         state = Ops.keep_rel_ids(state, Ops.edited(entry.state))
-        new_base = Ops.keep_rel_ids(new_base, Map.keys(state.rel_ids), row_order: :all)
+        new_base = Ops.keep_rel_ids(new_base, Map.keys(state.rel_ids), rows: :all)
         entry = prune(%{entry | base: new_base, state: state, marks: marks, rev: entry.rev + 1})
         {:ok, put_field(data, field, entry), conflicts}
     end

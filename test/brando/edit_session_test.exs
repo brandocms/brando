@@ -581,7 +581,7 @@ defmodule Brando.EditSessionTest do
       wait_until(fn -> :sys.get_state(info.session).data.fields[@field].marks == %{} end)
     end
 
-    test "the session keeps row ids only for blocks with unsaved work" do
+    test "the session's state keeps row ids only for blocks with unsaved work, its base all of them" do
       with_refs = fn uid, eb_id, block_id, refs ->
         %{id: eb_id, block: %{uid: uid, id: block_id, children: [], refs: refs}}
       end
@@ -595,7 +595,8 @@ defmodule Brando.EditSessionTest do
       assert map_size(loaded.rel_ids) == 2
       {:seeded, data} = Data.join(Data.new(1), @field, loaded, loaded)
       assert Data.state(data, @field).rel_ids == %{}
-      assert data.fields[@field].base.rel_ids == %{}
+      # a rejoiner may name a row by the uid it had while new (`Data.merge_held/4`)
+      assert data.fields[@field].base.rel_ids == loaded.rel_ids
 
       # a new block is saved while it has unsaved work: its rows' ids stay,
       # since ops made before the save name them by uid
@@ -935,6 +936,29 @@ defmodule Brando.EditSessionTest do
       save_rows(a.session, [add.("A")], table_rows_of([{5, "r5"}, {8, "new"}]))
 
       {:ok, held} = Ops.apply_op(loaded, add.("B"))
+      assert {:ok, %{state: state}} = rejoin_with_stale_rows(ref, loaded, held)
+
+      {:ok, params} = Ops.materialize_root(state, "a")
+      assert [%{"id" => 5}, %{"id" => 8, "cols" => "B"}] = params["block"]["table_rows"]
+    end
+
+    # Sol audit: a session seeded from the rows after the save named only
+    # the rows of blocks with unsaved work, so the rejoiner's new row was
+    # not matched with the row the save made of it.
+    test "a rejoin matches a new row it held with a saved row, in a session seeded after the save" do
+      ref = new_ref()
+      loaded = table_rows_of([{5, "r5"}])
+      rows_then = [%{"id" => 5}]
+
+      # C seeds the replaced session from the rows A's save wrote
+      saved = table_rows_of([{5, "r5"}, {8, "new"}])
+      {:ok, %{seeded?: true}} = EditSession.join(ref, @field, {saved, saved})
+
+      add =
+        {:set_field, "a", ["block", "table_rows"],
+         {:list, rows_then, rows_then ++ [%{"sync_uid" => "new", "cols" => "B"}]}, 0}
+
+      {:ok, held} = Ops.apply_op(loaded, add)
       assert {:ok, %{state: state}} = rejoin_with_stale_rows(ref, loaded, held)
 
       {:ok, params} = Ops.materialize_root(state, "a")

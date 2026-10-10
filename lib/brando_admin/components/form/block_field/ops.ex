@@ -243,15 +243,19 @@ defmodule BrandoAdmin.Components.Form.BlockField.Ops do
   needs them. The edit session keeps the rest out of its state: for a long
   entry they are most of its size.
 
-  `row_order` goes the same way, unless `row_order: :all` is given: the
-  session keeps all of it in its base, the rows as they are saved, which
-  a rejoin merges lists against (`carry/4`).
+  `row_order` goes the same way. With `rows: :all` both stay whole: the
+  session keeps them in its base, the rows as they are saved, which a
+  rejoin merges lists against (`carry/4`): a rejoiner may name a row by
+  the uid it had while new, after a save gave it an id.
   """
   @spec keep_rel_ids(t(), Enumerable.t(), keyword()) :: t()
   def keep_rel_ids(%__MODULE__{} = state, uids \\ [], opts \\ []) do
-    keep = state.diffs |> Enum.reject(fn {_uid, diff} -> diff == %{} end) |> Enum.map(&elem(&1, 0)) |> Enum.concat(uids)
-    row_order = if opts[:row_order] == :all, do: state.row_order, else: Map.take(state.row_order, keep)
-    %{state | rel_ids: Map.take(state.rel_ids, keep), row_order: row_order}
+    if opts[:rows] == :all do
+      state
+    else
+      keep = state.diffs |> Enum.reject(fn {_uid, diff} -> diff == %{} end) |> Enum.map(&elem(&1, 0)) |> Enum.concat(uids)
+      %{state | rel_ids: Map.take(state.rel_ids, keep), row_order: Map.take(state.row_order, keep)}
+    end
   end
 
   @doc "The blocks of `state` with unsaved work: inserted, or with a diff."
