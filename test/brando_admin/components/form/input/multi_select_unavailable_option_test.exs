@@ -14,22 +14,26 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelectUnavailableOptionTest do
   defmodule Host do
     use Phoenix.LiveView, layout: false
 
+    alias Brando.Content.Module
     alias Brando.Content.ModuleSet
     alias Brando.Content.ModuleSetModule
     alias Ecto.Changeset
     alias Phoenix.Component
 
+    # The related entry join 7 was loaded with; the options no longer offer it.
+    def hero, do: %Module{id: 42, name: %{"en" => "Hero"}, namespace: %{"en" => "general"}}
+
     def mount(_, %{"test_pid" => test_pid}, socket) do
       # Join 7 points at module 42, which is not among the options. Join 9
       # points at module 7, which is: the unavailable row's join id is also
       # the foreign key of another selection. The unsaved join points at
-      # module 43, also not offered.
+      # module 43, also not offered, and has no related entry loaded.
       module_set =
         loaded(%ModuleSet{
           id: 1,
           title: "Set",
           module_set_modules: [
-            loaded(%ModuleSetModule{id: 7, module_id: 42, module_set_id: 1, sequence: 0}),
+            loaded(%ModuleSetModule{id: 7, module_id: 42, module: hero(), module_set_id: 1, sequence: 0}),
             loaded(%ModuleSetModule{id: 9, module_id: 7, module_set_id: 1, sequence: 1})
           ]
         })
@@ -102,6 +106,18 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelectUnavailableOptionTest do
     assert remove_values(view) == ["42", "7", "43"]
     assert has_element?(view, "#{@chosen}-42-label")
     assert has_element?(view, "#{@chosen}-43-label")
+  end
+
+  test "an unavailable row is labelled with its related entry when loaded", %{view: view} do
+    title = Brando.Content.Module.__identifier__(Host.hero(), skip_cover: true).title
+    assert title =~ "Hero"
+
+    # The title leads and the secondary line marks the option as missing.
+    assert has_element?(view, "#{@chosen}-42-label", title)
+    assert has_element?(view, ~s(.multiselect-chosen-row[data-label="#{title}"] #{@chosen}-42-details))
+    # Without a loaded entry there is nothing better than the missing label.
+    refute has_element?(view, "#{@chosen}-43-label", title)
+    refute has_element?(view, "#{@chosen}-43-details")
   end
 
   test "Remove on an unavailable persisted row deletes that selection", %{view: view} do

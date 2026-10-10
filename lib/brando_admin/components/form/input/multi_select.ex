@@ -212,6 +212,7 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
                     input_options={@input_options}
                     relation_type={@relation_type}
                     relation_key={@relation_key}
+                    relation={@relation}
                     target={@myself}
                   />
                 </div>
@@ -913,6 +914,7 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
   attr :input_options, :list, required: true
   attr :relation_type, :any, required: true
   attr :relation_key, :atom, required: true
+  attr :relation, :atom, default: nil
   attr :target, :any, required: true
 
   # The selection, in its order, as the same rows with a remove button.
@@ -933,7 +935,8 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
           # for the remove button, and an id of its own.
           if view.value in [nil, ""] do
             value = selected_value(opt, assigns.relation_key, assigns.relation_type)
-            %{view | value: value, id: "#{assigns.id_prefix}-#{maybe_slug(value)}"}
+            view = %{view | value: value, id: "#{assigns.id_prefix}-#{maybe_slug(value)}"}
+            label_missing(view, opt, assigns.relation, assigns.relation_type)
           else
             view
           end
@@ -1110,6 +1113,19 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
       %{id: value} -> to_string(value) == opt
     end)
   end
+
+  # A has_many join whose related entry is loaded keeps that entry's title,
+  # with "Missing option" as its secondary line, so each unavailable row says
+  # what its Remove removes. Without one, the row is only "Missing option".
+  defp label_missing(view, %Changeset{} = changeset, relation, relation_type)
+       when relation_type in [:has_many, {:subform, :has_many}] do
+    case get_invalid_option_title(changeset, relation) do
+      title when is_binary(title) and title != "" -> %{view | label: title, details: [gettext("Missing option")]}
+      _ -> view
+    end
+  end
+
+  defp label_missing(view, _opt, _relation, _relation_type), do: view
 
   # The value select_option matches a selection by. A has_many selection is a
   # join changeset, matched by its relation key, not by the join row's own id.
