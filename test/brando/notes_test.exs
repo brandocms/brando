@@ -3,6 +3,7 @@ defmodule Brando.NotesTest do
   use Brando.ConnCase
 
   import Ecto.Query
+  import ExUnit.CaptureLog
   import Swoosh.TestAssertions
 
   alias Brando.Activity.Event
@@ -24,6 +25,15 @@ defmodule Brando.NotesTest do
   defp thread!(page, user, attrs) do
     {:ok, note, mentioned} = Notes.create_thread(Page, page.id, user, attrs)
     {note, mentioned}
+  end
+
+  defp mention_on!(user, author, schema, entry, body) do
+    now = DateTime.utc_now()
+
+    note =
+      Repo.insert!(%Note{entry_type: to_string(schema), entry_id: entry.id, body: body, author_id: author.id})
+
+    Repo.insert!(%Mention{note_id: note.id, user_id: user.id, inserted_at: now})
   end
 
   defp events(page, actions) do
@@ -288,40 +298,49 @@ defmodule Brando.NotesTest do
       assert Notes.mentions_for(other.id, unsent: true) == []
     end
 
-    test "a failure while checking access fails the job, and the mentions wait for its retry", %{page: page} do
+    test "a database failure while checking access is retried, until the last attempt", %{author: author} do
       put_test_env(:authorization_mode, :groups)
       put_test_env(:tenancy_mode, :none)
-      owner = Factory.insert(:random_user, role: :superuser)
-      reader = Factory.insert(:random_user, role: :user, name: "Kari Leser")
+      reader = Factory.insert(:random_user, role: :superuser)
       {:ok, _} = Brando.Authorization.Migration.run()
-      scope = Brando.Authorization.Scope.standalone(owner)
+      readable = Factory.insert(:page, creator: reader)
+      # Read through a schema whose policy the test can make fail
+      policed = Factory.insert(:page, creator: reader)
+      mention_on!(reader, author, Page, readable, "readable")
+      mention_on!(reader, author, Brando.AuthorizationTestResources.Page, policed, "policed")
 
-      {:ok, group} =
-        Brando.Authorization.Groups.create(scope, %{name: "Readers"}, ["brando.admin.access", "brando.pages.read"])
+      Process.put(:authorization_test_policy_raises, %DBConnection.ConnectionError{message: "timeout"})
+      assert_raise DBConnection.ConnectionError, fn -> Notes.deliver_mentions(reader.id) end
+      assert length(Notes.mentions_for(reader.id, unsent: true)) == 2
 
-      {:ok, :ok} = Brando.Authorization.Groups.add_member(scope, group.id, reader.id)
+      # The last attempt drops the one it cannot check, and sends the rest
+      log =
+        capture_log(fn ->
+          assert :ok = perform_job(Brando.Worker.NoteMentions, %{"user_id" => reader.id}, attempt: 5)
+        end)
 
-      Oban.Testing.with_testing_mode(:manual, fn ->
-        thread!(page, owner, %{"body" => "@Kari Leser waiting", "mentions" => [reader.id]})
-      end)
+      assert log =~ "timeout"
+      assert_email_sent(fn email -> email.text_body =~ "readable" and not (email.text_body =~ "policed") end)
+      assert Notes.mentions_for(reader.id, unsent: true) == []
+    end
 
-      # The first failing statement must surface, not count as "may not see";
-      # in the test transaction anything after it fails as aborted instead
-      for table <- ["authorization_user_groups", Page.__schema__(:source)] do
-        error =
-          assert_raise Postgrex.Error, fn ->
-            Repo.transaction(fn ->
-              Repo.query!(~s(ALTER TABLE "#{table}" RENAME TO "#{table}_away"))
-              Notes.deliver_mentions(reader.id)
-            end)
-          end
+    test "any other failure while checking access drops the mention", %{author: author} do
+      put_test_env(:authorization_mode, :groups)
+      put_test_env(:tenancy_mode, :none)
+      reader = Factory.insert(:random_user, role: :superuser)
+      {:ok, _} = Brando.Authorization.Migration.run()
+      readable = Factory.insert(:page, creator: reader)
+      policed = Factory.insert(:page, creator: reader)
+      mention_on!(reader, author, Page, readable, "readable")
+      mention_on!(reader, author, Brando.AuthorizationTestResources.Page, policed, "policed")
 
-        assert error.postgres.code == :undefined_table
-        assert [_] = Notes.mentions_for(reader.id, unsent: true)
-      end
+      # A policy that reads an association that is not loaded, say
+      Process.put(:authorization_test_policy_raises, %RuntimeError{message: "association not loaded"})
+      log = capture_log(fn -> assert :ok = Notes.deliver_mentions(reader.id) end)
 
-      assert :ok = Notes.deliver_mentions(reader.id)
-      assert_email_sent(fn email -> assert email.text_body =~ "waiting" end)
+      assert log =~ "association not loaded"
+      assert_email_sent(fn email -> email.text_body =~ "readable" and not (email.text_body =~ "policed") end)
+      assert Notes.mentions_for(reader.id, unsent: true) == []
     end
 
     test "a further email that cannot be queued fails the job, to be retried", %{author: author, other: other} do

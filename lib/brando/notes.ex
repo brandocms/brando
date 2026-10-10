@@ -676,22 +676,32 @@ defmodule Brando.Notes do
   end
 
   # An entry (or schema) that is gone, or that the user may no longer read,
-  # is left out; a failure while checking raises, for the job to retry
+  # is left out; how a failed check is handled: `Brando.Notifications.Recipient`
   defp email_item(user, %Mention{note: note}) do
+    case Recipient.checked(fn -> readable_entry(user, note) end, nil) do
+      {schema, entry} ->
+        [
+          %{
+            author: note.author && note.author.name,
+            entry_title: entry_title(schema, entry),
+            anchor: note.anchor_label,
+            text: plain_text(note.body, mention_names([note])),
+            url: entry_url(schema, entry, note)
+          }
+        ]
+
+      nil ->
+        []
+    end
+  end
+
+  defp readable_entry(user, note) do
     with {:ok, schema} <- Recipient.entry_schema(note.entry_type),
          %{} = entry <- Repo.get(schema, note.entry_id),
          true <- Recipient.may_read?(user, entry) do
-      [
-        %{
-          author: note.author && note.author.name,
-          entry_title: entry_title(schema, entry),
-          anchor: note.anchor_label,
-          text: plain_text(note.body, mention_names([note])),
-          url: entry_url(schema, entry, note)
-        }
-      ]
+      {schema, entry}
     else
-      _ -> []
+      _ -> nil
     end
   end
 
