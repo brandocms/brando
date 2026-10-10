@@ -541,6 +541,58 @@ defmodule Brando.Content.BlocksCrossParentMoveTest do
     assert ref.gallery.gallery_objects |> Enum.map(& &1.image_id) |> Enum.sort() == Enum.sort([first.id, second.id])
   end
 
+  # Review: removing a gallery's last image clears the ref's gallery
+  # (`put_assoc(:gallery, nil)`). The move must not bring it back by the
+  # ref's old `gallery_id` (`apply_changes/1` nils it with the gallery).
+  test "a moved child keeps its ref's gallery cleared before the move" do
+    user = Factory.insert(:random_user)
+    page = Factory.insert(:page, creator: user)
+    image = Factory.insert(:image, creator_id: user.id)
+
+    child = %{
+      uid: "childX",
+      type: :module,
+      active: true,
+      source: "Elixir.Brando.Pages.Page.Blocks",
+      creator_id: user.id,
+      sequence: 0,
+      refs: [
+        %{
+          name: "gallery",
+          uid: "refX",
+          data: %Brando.Villain.Blocks.TextBlock{data: %Brando.Villain.Blocks.TextBlock.Data{text: ""}},
+          gallery: %{gallery_objects: [%{image_id: image.id, sequence: 0}]}
+        }
+      ],
+      children: []
+    }
+
+    insert_containers(page, user, child)
+
+    entry_blocks = preloaded_entry_blocks(page.id)
+    [%{block: %{children: [row]}} | _] = entry_blocks
+    row = Brando.Repo.preload(row, refs: [gallery: :gallery_objects])
+    [%{id: ref_id, gallery: %{id: gallery_id}}] = row.refs
+    assert gallery_id
+    ops = Ops.from_entry_blocks(entry_blocks)
+
+    # the gallery's last image removed, as Block does it, not saved yet
+    ref_cs = row.refs |> hd() |> Changeset.change() |> Changeset.put_assoc(:gallery, nil)
+    removed = row |> Changeset.change() |> Changeset.put_assoc(:refs, [ref_cs])
+    {:ok, ops} = Ops.apply_op(ops, {:update, "childX", Ops.changes_to_params(removed)})
+
+    {:ok, params} = Ops.materialize_child(ops, "childX")
+    block_cs = Brando.Content.Block.recursive_block_changeset(row, params, user.id)
+    assert [%Changeset{changes: %{gallery: nil}}] = Changeset.get_change(block_cs, :refs)
+    moved_cs = BrandoAdmin.Components.Form.BlockField.moved_child_changeset(block_cs, user.id)
+    {:ok, ops} = Ops.apply_op(ops, {:insert_child, "containerB", "childX", 0, Ops.block_diff_params(moved_cs)})
+    assert {:ok, _} = save_from_ops(page, entry_blocks, ops, user)
+
+    assert [%{block: %{children: []}}, %{block: %{children: [moved]}}] = preloaded_entry_blocks(page.id)
+    assert [%{uid: "refX", id: new_ref_id, gallery_id: nil}] = Brando.Repo.preload(moved, :refs, force: true).refs
+    assert new_ref_id != ref_id
+  end
+
   # Sol audit: a var's gallery came along as a nested gallery the var's
   # cast does not take, so the moved var lost it.
   test "a moved child's gallery var keeps its gallery" do
