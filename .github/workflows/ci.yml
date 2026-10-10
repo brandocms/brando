@@ -235,6 +235,14 @@ jobs:
       - name: Check how changelog fragments are validated and collated
         run: bash test/scripts/changelog_test.sh
 
+      - name: Check scripts/queue and when scripts/check skips its Elixir gates
+        run: |
+          bash test/scripts/queue_test.sh
+          bash test/scripts/check_test.sh
+
+      - name: Check that the shell tests leave the repository alone under a Git hook
+        run: bash test/scripts/hook_env_test.sh
+
   docs:
     name: Published documentation
     runs-on: ubuntu-latest

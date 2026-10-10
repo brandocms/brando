@@ -10,11 +10,20 @@
 # the Elixir files changed against origin/main (CHECK_BASE overrides the ref),
 # reporting only findings on lines the branch added or changed.
 #
+# With --fast, when the branch and working tree change only Markdown that no
+# fast gate reads (CHANGELOG.md, docs/, AGENTS.md; not README.md, guides/ or
+# the usage rules), the Elixir gates are skipped. They need deps/: without it
+# the check stops and says to run scripts/worktree-setup.
+#
 # Not covered: the unit and E2E suites, the Elixir 1.18/1.19 builds and the
 # Igniter installer smoke (scripts/igniter_smoke.sh).
 set -uo pipefail
 
 cd "$(dirname "$0")/.." || exit 1
+# Run from a Git hook, GIT_DIR and friends point at this repository; a gate
+# that builds a scratch repository (test/scripts/queue_test.sh) would act on
+# this one instead. The gates discover the repository from the directory.
+unset GIT_DIR GIT_WORK_TREE GIT_INDEX_FILE GIT_PREFIX GIT_COMMON_DIR GIT_OBJECT_DIRECTORY GIT_ALTERNATE_OBJECT_DIRECTORIES GIT_IMPLICIT_WORK_TREE
 
 fast=false
 verbose=false
@@ -22,22 +31,72 @@ for arg in "$@"; do
   case "$arg" in
     --fast) fast=true ;;
     --verbose|-v) verbose=true ;;
-    -h|--help) sed -n '2,14p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+    -h|--help) sed -n '2,19p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
     *) echo "check: unknown option $arg" >&2; exit 2 ;;
   esac
 done
 
-# `mix check` puts mix on PATH; the pre-push hook and direct runs may not have
-# it, so fall back to mise (the maintainer's Mac and this repo's Linux boxes).
-if command -v mix >/dev/null 2>&1; then
-  mix_cmd=(mix)
-elif command -v mise >/dev/null 2>&1; then
-  mix_cmd=(mise exec -- mix)
-elif [ -x "$HOME/.local/bin/mise" ]; then
-  mix_cmd=("$HOME/.local/bin/mise" exec -- mix)
-else
-  echo "check: mix not found on PATH, and no mise to run it with" >&2
-  exit 1
+# The files the branch and the working tree change against the merge base with
+# CHECK_BASE (default origin/main), one per line, a rename as both its paths.
+# Fails when there is no base.
+changed_files() {
+  local base
+  base="$(git merge-base "${CHECK_BASE:-origin/main}" HEAD 2>/dev/null)" || return 1
+  { git diff --name-only --no-renames "$base" --; git ls-files --others --exclude-standard; } | sort -u
+}
+
+# Succeeds when every changed file is Markdown that no fast gate reads, and
+# there is at least one. The fast gates read Elixir, Gettext, CSS and E2E
+# sources; of the Markdown, README.md is compiled into Brando's moduledoc and
+# `mix brando.docs.agents --check` reads guides/ and the usage rules. Markdown
+# under lib, config, priv or test is left to the gates, in case code reads it.
+only_unread_docs() {
+  local files
+  files="$(changed_files)" || return 1
+  [ -n "$files" ] || return 1
+  grep -qvE '\.md$' <<<"$files" && return 1
+  ! grep -qE '^(README\.md|usage-rules\.md|usage-rules/|guides/|lib/|config/|priv/|test/|deps/)' <<<"$files"
+}
+
+elixir=true
+if [ "$fast" = true ] && only_unread_docs; then
+  elixir=false
+  echo "check: Elixir gates skipped (--fast, and only Markdown no gate reads changed)"
+fi
+
+# Every package in mix.lock has its directory in deps/, or the gates fail in
+# confusing ways (the formatter: "Unknown dependency :ecto given to
+# :import_deps"). Prints the first one missing.
+missing_dep() {
+  local name
+  for name in $(sed -n 's/^  "\([A-Za-z0-9_]*\)": .*/\1/p' mix.lock); do
+    [ -d "deps/$name" ] || { echo "$name"; return 0; }
+  done
+  return 1
+}
+
+if [ "$elixir" = true ]; then
+  if [ ! -d deps ]; then
+    echo "check: no deps/ in this worktree; run scripts/worktree-setup" >&2
+    exit 1
+  elif missing="$(missing_dep)"; then
+    echo "check: deps/$missing is missing (mix.lock is ahead of deps/); run scripts/worktree-setup" >&2
+    exit 1
+  fi
+
+  # `mix check` puts mix on PATH; the pre-push hook and direct runs may not
+  # have it, so fall back to mise (the maintainer's Mac and this repo's Linux
+  # boxes).
+  if command -v mix >/dev/null 2>&1; then
+    mix_cmd=(mix)
+  elif command -v mise >/dev/null 2>&1; then
+    mix_cmd=(mise exec -- mix)
+  elif [ -x "$HOME/.local/bin/mise" ]; then
+    mix_cmd=("$HOME/.local/bin/mise" exec -- mix)
+  else
+    echo "check: mix not found on PATH, and no mise to run it with" >&2
+    exit 1
+  fi
 fi
 
 log="$(mktemp "${TMPDIR:-/tmp}/brando-check.XXXXXX")"
@@ -158,21 +217,26 @@ gettext_up_to_date() {
 
 # Order follows .github/workflows/ci.yml: the quality job, then the colour and
 # E2E path checks, then the docs job.
-run_step "format" mix_in test format --check-formatted
-run_step "compile (warnings as errors)" mix_in test compile --all-warnings --warnings-as-errors
-run_step "usage-rules.md up to date" mix_in test brando.docs.agents --check
-run_step "credo (Blueprint)" mix_in test credo --strict lib/brando/blueprint.ex lib/brando/blueprint
-run_step "credo (changed lines)" credo_changed
-run_step "credo (test isolation)" mix_in test credo --strict \
-  --checks Brando.Credo.Check.TestCacheRestore,Brando.Credo.Check.TestSandboxShared \
-  "test/**/*.{ex,exs}" "e2e/test/**/*.{ex,exs}"
-run_step "Gettext catalogues up to date" gettext_up_to_date
-run_step "xref compile cycles" mix_in test xref graph --format cycles --label compile-connected --fail-above 0
+if [ "$elixir" = true ]; then
+  run_step "format" mix_in test format --check-formatted
+  run_step "compile (warnings as errors)" mix_in test compile --all-warnings --warnings-as-errors
+  run_step "usage-rules.md up to date" mix_in test brando.docs.agents --check
+  run_step "credo (Blueprint)" mix_in test credo --strict lib/brando/blueprint.ex lib/brando/blueprint
+  run_step "credo (changed lines)" credo_changed
+  run_step "credo (test isolation)" mix_in test credo --strict \
+    --checks Brando.Credo.Check.TestCacheRestore,Brando.Credo.Check.TestSandboxShared \
+    "test/**/*.{ex,exs}" "e2e/test/**/*.{ex,exs}"
+  run_step "Gettext catalogues up to date" gettext_up_to_date
+  run_step "xref compile cycles" mix_in test xref graph --format cycles --label compile-connected --fail-above 0
+fi
 run_step "CSS colour tokens" bash .github/scripts/check_css_colors.sh
 run_step "E2E machine paths" bash .github/scripts/check-e2e-paths.sh
 run_step "ci-wait flake matching" bash test/scripts/ci_wait_test.sh
 run_step "changelog fragments" scripts/changelog check
 run_step "changelog script" bash test/scripts/changelog_test.sh
+run_step "queue merge-queue steps" bash test/scripts/queue_test.sh
+run_step "shell tests safe under a Git hook" bash test/scripts/hook_env_test.sh
+run_step "check gate selection" bash test/scripts/check_test.sh
 
 if [ "$fast" = true ]; then
   echo "check: docs skipped (--fast)"
