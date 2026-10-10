@@ -4436,6 +4436,11 @@ msgstr "Could not create the translation"
 msgid "Could not generate a suggestion. Try again."
 msgstr ""
 
+#: lib/brando_admin/live/videos/video_list_live.ex
+#, elixir-autogen, elixir-format
+msgid "Could not look the videos up"
+msgstr ""
+
 #: lib/brando_admin/live/sites/publishing_live.ex
 #, elixir-autogen, elixir-format
 msgid "Could not queue the publishing action."
