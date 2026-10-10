@@ -101,6 +101,20 @@ defmodule Brando.Notes do
     Repo.all(query)
   end
 
+  @doc "The mentions with these ids whose note is not deleted, newest first, as `mentions_for/2` gives them."
+  def mentions_by_id([]), do: []
+
+  def mentions_by_id(ids) do
+    Repo.all(
+      from(m in Mention,
+        join: n in assoc(m, :note),
+        where: m.id in ^ids and is_nil(n.deleted_at),
+        order_by: [desc: m.inserted_at, desc: m.id],
+        preload: [note: {n, author: :avatar}]
+      )
+    )
+  end
+
   defp entry_query(schema, entry_id) do
     type = entry_type(schema)
     entry_id = to_integer(entry_id)
@@ -654,9 +668,8 @@ defmodule Brando.Notes do
 
   defp send_claimed(user, pending, entries, now) do
     claimed = claim_mentions(pending, now)
-    items = for {id, item} <- entries, MapSet.member?(claimed, id), do: item
-    if items != [], do: {:ok, _job} = user |> Brando.Notes.MentionEmail.build(items) |> Brando.Mailer.deliver_later()
-    :ok
+    ids = for {id, _item} <- entries, MapSet.member?(claimed, id), do: id
+    Brando.Notifications.Digest.queue_email(user, :mentions, [], ids)
   end
 
   @doc """

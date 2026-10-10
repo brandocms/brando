@@ -936,14 +936,49 @@ defmodule Brando.NotificationsTest do
         })
 
       # Queuing the email fails after the items were claimed
-      put_test_env(:mailer, nil)
+      Oban.Testing.with_testing_mode(:manual, fn ->
+        Repo.query!("ALTER TABLE oban_jobs RENAME TO oban_jobs_away")
 
-      assert_raise Brando.Exception.ConfigError, fn ->
-        Notes.deliver_mentions(reader.id, Digest.next_at(:daily, delivery.inserted_at))
-      end
+        assert_raise Postgrex.Error, fn ->
+          Notes.deliver_mentions(reader.id, Digest.next_at(:daily, delivery.inserted_at))
+        end
+
+        Repo.query!("ALTER TABLE oban_jobs_away RENAME TO oban_jobs")
+      end)
 
       assert %{state: "digest"} = Repo.reload!(delivery)
       assert [_] = Notes.mentions_for(reader.id, unsent: true)
+    end
+
+    test "a queued summary leaves out what the user may no longer read when it goes out", %{user: user} do
+      put_test_env(:authorization_mode, :groups)
+      put_test_env(:tenancy_mode, :none)
+      reader = Factory.insert(:random_user, role: :superuser, config: %UserConfig{notification_digest: :daily})
+      {:ok, _} = Brando.Authorization.Migration.run()
+      route = route!(user, %{"kind" => "email", "recipient_ids" => [reader.id]})
+      page = Factory.insert(:page, creator: reader)
+
+      delivery =
+        Repo.insert!(%Delivery{
+          route_id: route.id,
+          recipient_id: reader.id,
+          event: "scheduled_publish",
+          state: "digest",
+          entry_schema: to_string(Brando.AuthorizationTestResources.Page),
+          entry_id: page.id,
+          notification: %{"event" => "test"}
+        })
+
+      Oban.Testing.with_testing_mode(:manual, fn ->
+        assert :ok = Notes.deliver_mentions(reader.id, Digest.next_at(:daily, delivery.inserted_at))
+
+        # The entry is someone else's before the email goes out
+        Repo.update_all(from(p in Page, where: p.id == ^page.id), set: [creator_id: user.id])
+        Oban.drain_queue(queue: :default)
+      end)
+
+      assert_no_email_sent()
+      assert %{state: "cancelled", error: "recipient_unavailable"} = Repo.reload!(delivery)
     end
 
     test "one email job waits per user, however long ago it was queued", %{user: user} do

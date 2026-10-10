@@ -288,10 +288,10 @@ defmodule Brando.Notifications.Digest do
         cancelled = claim(access[:denied] || [], "cancelled", now, "recipient_unavailable")
         failed = claim(access[:unchecked] || [], "failed", now, "recipient_check_failed")
         claimed = Notes.claim_mentions(mentions, now)
-        notifications = for d <- waiting, MapSet.member?(sent, d.id), do: d.notification
-        items = for {id, item} <- entries, MapSet.member?(claimed, id), do: item
+        mention_ids = for {id, _item} <- entries, MapSet.member?(claimed, id), do: id
+        delivery_ids = for d <- waiting, MapSet.member?(sent, d.id), do: d.id
 
-        send_email(user, notifications, items, if(period == :off, do: :batch, else: period))
+        queue_email(user, if(period == :off, do: :batch, else: period), delivery_ids, mention_ids)
         routes(waiting, sent |> MapSet.union(cancelled) |> MapSet.union(failed))
       end)
 
@@ -299,16 +299,91 @@ defmodule Brando.Notifications.Digest do
     :ok
   end
 
-  defp send_email(_user, [], [], _period), do: :ok
+  @doc """
+  Queues the email for what `user` was sent: `kind` `:mentions` (the
+  mention email), `:batch` (notifications without a summary) or a digest
+  period; the routed deliveries and mentions by id. `send_queued/1` builds
+  and sends it.
+  """
+  def queue_email(_user, _kind, [], []), do: :ok
 
-  defp send_email(user, [notification], [], :batch) do
-    {:ok, _job} = user |> Email.single(notification) |> Brando.Mailer.deliver_later()
+  def queue_email(user, kind, delivery_ids, mention_ids) do
+    {:ok, _job} =
+      %{"user_id" => user.id, "kind" => to_string(kind), "deliveries" => delivery_ids, "mentions" => mention_ids}
+      |> Brando.Tenant.Job.attach_current()
+      |> Brando.Worker.NotificationEmail.new()
+      |> Oban.insert()
+
     :ok
   end
 
-  defp send_email(user, notifications, mention_items, period) do
-    {:ok, _job} = user |> Email.digest(notifications, mention_items, period) |> Brando.Mailer.deliver_later()
-    :ok
+  @doc """
+  Sends an email `queue_email/4` queued, built now: only with the
+  notifications the user may still get and the mentions they may still see
+  (`Brando.Notifications.Recipient`); those left out are marked so in the
+  delivery log.
+  """
+  def send_queued(%{"user_id" => user_id, "kind" => kind} = args) do
+    user = Repo.get(User, user_id)
+    deliveries = sent_deliveries(args["deliveries"] || [])
+    mentions = Notes.mentions_by_id(args["mentions"] || [])
+
+    if is_nil(user) or not user.active or not is_nil(user.deleted_at) do
+      settle(deliveries, "cancelled", "recipient_unavailable")
+      :ok
+    else
+      access = Enum.group_by(deliveries, &Recipient.access(user, &1, &1.route))
+      settle(access[:denied] || [], "cancelled", "recipient_unavailable")
+      settle(access[:unchecked] || [], "failed", "recipient_check_failed")
+      readable = access[:ok] || []
+      items = Notes.mention_email_items(user, mentions)
+
+      send_email(user, Enum.map(readable, & &1.notification), items, kind)
+    end
+  end
+
+  # Deliveries were marked sent when their email was queued
+  defp sent_deliveries([]), do: []
+
+  defp sent_deliveries(ids) do
+    Repo.all(
+      from(d in Delivery,
+        where: d.id in ^ids and d.state == "succeeded",
+        order_by: [asc: d.inserted_at, asc: d.id],
+        preload: :route
+      )
+    )
+  end
+
+  # Corrects the log for a delivery that was not sent after all
+  defp settle([], _state, _error), do: :ok
+
+  defp settle(deliveries, state, error) do
+    ids = Enum.map(deliveries, & &1.id)
+
+    Repo.update_all(from(d in Delivery, where: d.id in ^ids and d.state == "succeeded"),
+      set: [state: state, error: error]
+    )
+
+    deliveries |> Enum.map(& &1.route_id) |> Enum.uniq() |> Enum.each(&broadcast/1)
+  end
+
+  defp send_email(_user, [], [], _kind), do: :ok
+  defp send_email(user, [], items, "mentions"), do: user |> Notes.MentionEmail.build(items) |> mail()
+  defp send_email(user, [notification], [], "batch"), do: user |> Email.single(notification) |> mail()
+
+  defp send_email(user, notifications, items, kind),
+    do: user |> Email.digest(notifications, items, email_period(kind)) |> mail()
+
+  defp email_period("weekly"), do: :weekly
+  defp email_period("batch"), do: :batch
+  defp email_period(_daily), do: :daily
+
+  defp mail(email) do
+    case Brando.Mailer.deliver(email) do
+      {:ok, _} -> :ok
+      {:error, _} = error -> error
+    end
   end
 
   defp finish(deliveries, mentions, state, now, error) do
