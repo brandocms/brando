@@ -567,6 +567,38 @@ defmodule Brando.NotificationsTest do
       refute_receive {:webhook_request, _}, 100
     end
 
+    test "an email whose recipient check fails on the database is retried, then marked failed", %{user: user} do
+      put_test_env(:authorization_mode, :groups)
+      put_test_env(:tenancy_mode, :none)
+      reader = Factory.insert(:random_user, role: :superuser)
+      {:ok, _} = Brando.Authorization.Migration.run()
+      route = route!(user, %{"kind" => "email", "recipient_ids" => [reader.id]})
+      page = Factory.insert(:page, creator: reader)
+
+      # About an entry read through a schema whose policy the test can make fail
+      {:ok, delivery} =
+        %Delivery{}
+        |> Ecto.Changeset.change(%{
+          route_id: route.id,
+          recipient_id: reader.id,
+          event: "scheduled_publish",
+          entry_schema: to_string(Brando.AuthorizationTestResources.Page),
+          entry_id: page.id,
+          notification: %{"event" => "test"}
+        })
+        |> Repo.insert()
+
+      Process.put(:authorization_test_policy_raises, %DBConnection.ConnectionError{message: "timeout"})
+      job = %Oban.Job{args: %{"delivery" => delivery.id, "route" => route.id}, attempt: 1, max_attempts: 10}
+
+      assert {:error, _} = NotificationDelivery.deliver(job)
+      assert %{state: "retrying"} = Repo.reload!(delivery)
+
+      assert {:cancel, _} = NotificationDelivery.deliver(%{job | attempt: 10})
+      assert %{state: "failed"} = Repo.reload!(delivery)
+      assert_no_email_sent()
+    end
+
     test "email that cannot be read by the recipient is not sent", %{user: user} do
       inactive = Factory.insert(:random_user)
       route = route!(user, %{"kind" => "email", "recipient_ids" => [inactive.id]})
