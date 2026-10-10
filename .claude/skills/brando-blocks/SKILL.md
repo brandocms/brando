@@ -450,6 +450,9 @@ Use **maps** (not nil-ID changesets/structs) for multiple new records. Ecto crea
 ### Drop Association Keys When Converting Structs to Maps
 When building maps for `put_assoc`, drop association keys (`:block`, `:module`, `:parent`) that might contain `NotLoaded` values.
 
+### Blocks Decoded From Old Revisions
+A decoded revision holds blocks, vars and table rows as they were stored: fields added since (`module_version`, `sync_uid`) are missing keys, and `block.sync_uid` raises `KeyError`. Read them with `Map.get/2`; see the `Brando.Revisions` moduledoc, "Old snapshots".
+
 ---
 
 ## 12. DOM ID Conventions
