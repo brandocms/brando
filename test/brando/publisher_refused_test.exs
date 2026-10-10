@@ -19,6 +19,11 @@ defmodule Brando.PublisherRefusedTest do
   alias Brando.Worker.EntryPublisher
   alias Ecto.Adapters.SQL
 
+  defmodule Collector do
+    @behaviour Brando.ContentEvents.Subscriber
+    def handle_event(event), do: send(self(), {:collected, event})
+  end
+
   @keys ~w(brando.admin.access brando.pages.create brando.pages.read brando.pages.update
            brando.pages.publish brando.pages.schedule)
 
@@ -186,8 +191,11 @@ defmodule Brando.PublisherRefusedTest do
       revoke(c)
       set_dates(page, publish_at: at(-600), title: nil)
       assert {:ok, %{status: :pending}} = Pages.get_page(%{matches: %{id: page.id}, cache: true})
+      put_test_env(Brando.ContentEvents, subscribers: [Collector], debounce_seconds: 0)
 
       assert {:cancel, :forbidden} = run_job(page, "published", c.editor.id)
+      # Its content event carries the status it has now
+      assert_received {:collected, %{entry_id: entry_id, status: "draft"}} when entry_id == page.id
       assert %{status: :draft, publish_at: nil} = Repo.get!(Page, page.id)
       # Like a save: the query cache and the entry's identifier follow
       assert {:ok, %{status: :draft}} = Pages.get_page(%{matches: %{id: page.id}, cache: true})

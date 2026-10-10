@@ -319,16 +319,21 @@ defmodule Brando.Worker.EntryPublisher do
 
     Repo.update_all(from(e in schema_module, where: e.id == ^entry.id), set: Map.to_list(params))
 
-    # What a save does that readers see: the entry's identifier and its
-    # cached queries
-    with %{} = updated <- Repo.get(schema_module, entry.id) do
-      Brando.Content.update_identifier(schema_module, updated)
-      Repo.after_commit(fn -> Brando.Cache.Query.evict(updated) end)
+    # What a save does that readers see: the entry's identifier, its cached
+    # queries, and Activity with its content event, as the entry is now
+    case Repo.get(schema_module, entry.id) do
+      nil -> :ok
+      updated -> after_clearing(schema_module, updated, params, details)
     end
+  end
+
+  defp after_clearing(schema_module, updated, params, details) do
+    Brando.Content.update_identifier(schema_module, updated)
+    Repo.after_commit(fn -> Brando.Cache.Query.evict(updated) end)
 
     if Brando.Activity.logged?(schema_module) do
       fields = params |> Map.keys() |> Enum.map(&to_string/1)
-      Brando.Activity.record(:updated, entry, :system, fields: fields, details: details)
+      Brando.Activity.record(:updated, updated, :system, fields: fields, details: details)
     end
 
     :ok
