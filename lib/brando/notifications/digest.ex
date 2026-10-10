@@ -321,7 +321,8 @@ defmodule Brando.Notifications.Digest do
   Sends an email `queue_email/4` queued, built now: only with the
   notifications the user may still get and the mentions they may still see
   (`Brando.Notifications.Recipient`); those left out are marked so in the
-  delivery log.
+  delivery log. Without a mailer or sender, the notifications are marked
+  failed and it is not tried again.
   """
   def send_queued(%{"user_id" => user_id, "kind" => kind} = args) do
     user = Repo.get(User, user_id)
@@ -338,7 +339,14 @@ defmodule Brando.Notifications.Digest do
       readable = access[:ok] || []
       items = Notes.mention_email_items(user, mentions)
 
-      send_email(user, Enum.map(readable, & &1.notification), items, kind)
+      case send_email(user, Enum.map(readable, & &1.notification), items, kind) do
+        {:error, reason} when reason in [:no_mailer, :no_sender] ->
+          settle(readable, "failed", to_string(reason))
+          {:cancel, reason}
+
+        result ->
+          result
+      end
     end
   end
 

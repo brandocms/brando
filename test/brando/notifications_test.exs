@@ -981,6 +981,29 @@ defmodule Brando.NotificationsTest do
       assert %{state: "cancelled", error: "recipient_unavailable"} = Repo.reload!(delivery)
     end
 
+    test "without a mailer in production, a summary is marked so and not tried again", %{user: user} do
+      reader = Factory.insert(:random_user, name: "Kari", config: %UserConfig{notification_digest: :daily})
+      route = route!(user, %{"kind" => "email", "events" => ["failed_job"], "recipient_ids" => [reader.id]})
+      page = create_page(user)
+      {:ok, _note, _} = Notes.create_thread(Page, page.id, user, %{"body" => "@Kari hi", "mentions" => [reader.id]})
+
+      delivery =
+        Repo.insert!(%Delivery{
+          route_id: route.id,
+          recipient_id: reader.id,
+          event: "failed_job",
+          state: "digest",
+          notification: %{"event" => "failed_job", "job" => %{"worker" => "MyApp.Job", "error" => "boom"}}
+        })
+
+      put_test_env(:env, :prod)
+      put_test_env(:mailer, nil)
+
+      assert :ok = Notes.deliver_mentions(reader.id, Digest.next_at(:daily, delivery.inserted_at))
+      assert %{state: "failed", error: "no_mailer"} = Repo.reload!(delivery)
+      assert Notes.mentions_for(reader.id, unsent: true) == []
+    end
+
     test "one email job waits per user, however long ago it was queued", %{user: user} do
       reader = Factory.insert(:random_user, config: %UserConfig{notification_digest: :daily})
       _route = route!(user, %{"kind" => "email", "events" => ["failed_job"], "recipient_ids" => [reader.id]})
