@@ -33,11 +33,12 @@ for arg in "$@"; do
 done
 
 # The files the branch and the working tree change against the merge base with
-# CHECK_BASE (default origin/main), one per line. Fails when there is no base.
+# CHECK_BASE (default origin/main), one per line, a rename as both its paths.
+# Fails when there is no base.
 changed_files() {
   local base
   base="$(git merge-base "${CHECK_BASE:-origin/main}" HEAD 2>/dev/null)" || return 1
-  { git diff --name-only "$base" --; git ls-files --others --exclude-standard; } | sort -u
+  { git diff --name-only --no-renames "$base" --; git ls-files --others --exclude-standard; } | sort -u
 }
 
 # Succeeds when every changed file is Markdown that no fast gate reads, and

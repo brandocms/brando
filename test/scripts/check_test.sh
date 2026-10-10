@@ -87,6 +87,10 @@ for file in README.md guides/blocks.md usage-rules.md usage-rules/seo.md lib/bra
   expect "--fast runs the Elixir gates when $file changes" 1 "$no_deps" skipped --fast
 done
 
+scenario renamed-readme
+(cd "$repo" && mkdir docs && git_q mv README.md docs/readme.md && git_q commit -qm move) || exit 1
+expect "--fast runs the Elixir gates when README.md moves away" 1 "$no_deps" skipped --fast
+
 scenario untracked
 echo "x" >"$repo/lib/b.ex"
 expect "an untracked Elixir file counts as a change" 1 "$no_deps" skipped --fast
