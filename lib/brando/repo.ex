@@ -150,7 +150,7 @@ defmodule Brando.Repo do
           Process.delete(@after_commit)
         end
 
-      if elem(result, 0) == :ok, do: held |> Enum.reverse() |> Enum.each(& &1.())
+      if elem(result, 0) == :ok, do: held |> Enum.reverse() |> Enum.each(fn {_key, fun} -> fun.() end)
       result
     end
   end
@@ -164,10 +164,20 @@ defmodule Brando.Repo do
   sends them to read the database again, say.
   """
   @spec after_commit((-> any())) :: :ok
-  def after_commit(fun) when is_function(fun, 0) do
+  def after_commit(fun) when is_function(fun, 0), do: hold(make_ref(), fun)
+
+  @doc """
+  Like `after_commit/1`, once per `key` in a transaction: work already held
+  under `key` is not held again. For work that repeats for every write, such
+  as evicting the same cache entries.
+  """
+  @spec after_commit(term(), (-> any())) :: :ok
+  def after_commit(key, fun) when is_function(fun, 0), do: hold({:key, key}, fun)
+
+  defp hold(key, fun) do
     case Process.get(@after_commit) do
       nil -> fun.()
-      held -> Process.put(@after_commit, [fun | held])
+      held -> unless List.keymember?(held, key, 0), do: Process.put(@after_commit, [{key, fun} | held])
     end
 
     :ok
