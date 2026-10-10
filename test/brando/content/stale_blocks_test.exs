@@ -449,6 +449,16 @@ defmodule Brando.Content.StaleBlocksTest do
       assert %{value: "https://by.no/kultur", link_text: "Les mer"} = Enum.find(restored.vars, &(&1.key == "link"))
     end
 
+    test "an entry in the trash is rendered again, so restoring it shows the resolved blocks", c do
+      old_caption = %{"type" => "text", "key" => "old_caption", "label" => "Caption", "value" => "Fra papirkurven"}
+      {page, _block} = page_with_block(c, [old_caption], [])
+      page |> Ecto.Changeset.change(deleted_at: DateTime.utc_now(:second)) |> Repo.update!()
+
+      assert {:ok, _} = StaleBlocks.apply(c.module, %{{:var, "old_caption"} => {:map, "caption"}}, c.user)
+
+      assert Repo.get!(Page, page.id).rendered_blocks =~ "Fra papirkurven"
+    end
+
     test "an owner without revisions is flagged, and resolving it stores none", c do
       template =
         Repo.insert!(%Brando.Content.Template{name: "Kulturmal", namespace: "pages", creator_id: c.user.id})

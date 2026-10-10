@@ -190,9 +190,12 @@ defmodule Brando.Content.StaleBlocks do
       end
     end)
 
-    plan.changed
-    |> Blocks.render_blocks()
-    |> Blocks.list_entry_ids_for_root_blocks_by_source()
+    Blocks.render_blocks(plan.changed)
+
+    # Every owner, those in the trash too: one restored from it shows the
+    # resolved blocks.
+    plan.entries
+    |> Enum.group_by(& &1.schema, & &1.id)
     |> Blocks.enqueue_entry_map_for_render()
 
     details = activity_details(plan)
