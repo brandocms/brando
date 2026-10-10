@@ -56,7 +56,10 @@ and the author; leave them out.
   PubSub handlers and mailers that run without the tenant prefix
   (`Brando.Tenant.Job`) or environment; queries that leak across sites;
   actions that check permission in the UI but not on the server event or
-  context function.
+  context function. A group-mode fix that also changes legacy mode
+  (`authorization_mode: :legacy`, the default); code that reads `:forbidden`
+  as "missing grant" when it also means inactive site or account and wrong
+  scope (`Brando.Authorization.Boundary` moduledoc).
 - **Permissions changes.** Any new or changed permission, role or policy: who
   gains access, who loses it, and whether existing grants are migrated.
 - **Secrets.** Tokens, keys, credentials or private data reaching assigns,
@@ -65,11 +68,25 @@ and the author; leave them out.
 - **Migrations.** New columns and tables across every `tenant_*` schema;
   environment archives restored later (`Brando.Environments.ArchiveUpgrade`);
   migration numbering and the monolithic test migration; data backfills and
-  rollback.
+  rollback. Persisted snapshots: a revision decodes to structs from an older
+  version, so dot access on a field added since raises `KeyError`
+  (`Brando.Revisions` moduledoc, "Old snapshots").
 - **Jobs.** Retries that repeat a side effect; uniqueness that drops a needed
   job or keeps a stale one; jobs left behind when an entry is deleted,
   trashed, copied or rescheduled; a job that acts on state changed since it
-  was enqueued.
+  was enqueued. Oban traps (`docs/background-jobs.md`): `unique` without
+  `period` (60 s); `keys` without `:tenant_prefix`; a snoozing job with no
+  bound of its own; a later lookup of a job the Pruner has deleted; a
+  `conflict?: true` job with `id: nil`; an insert inside a transaction
+  (it commits, locks and fails with it); tests of any of these under
+  `testing: :inline`, which has none of them.
+- **Trash.** A trashed entry reached through `Repo.get`, a preload or a
+  revision: a change to it that announces itself (webhook, IndexNow), or a
+  restore that moves `deleted_at` or its obfuscated fields
+  (`Brando.Trait.SoftDelete` moduledoc).
+- **Query cache.** A `Brando.Query` write inside a transaction evicts before
+  the commit; a concurrent read re-caches the old row. Look for the evict
+  after commit (`Brando.Cache.Query` moduledoc).
 - **Translated copy.** New strings without Gettext, missing Norwegian
   entries, labels assembled from fragments, humanised English fallbacks.
 - **Tests that do not test the claim.** A test that passes without the fix,
