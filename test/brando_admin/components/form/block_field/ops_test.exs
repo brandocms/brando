@@ -682,6 +682,16 @@ defmodule BrandoAdmin.Components.Form.BlockField.OpsTest do
         assert gallery |> Changeset.get_change(:gallery_objects, []) |> Enum.all?(&(&1.action != :insert))
       end
 
+      # form-shaped params: rows by index, with their order
+      indexed = %{
+        "uid" => "b",
+        "table_rows" => %{"0" => %{"id" => "5"}, "1" => %{"id" => "7"}},
+        "sort_table_row_ids" => ["0", "1"]
+      }
+
+      indexed_changeset = Block.block_changeset(block, indexed, 1)
+      assert indexed_changeset |> Changeset.get_change(:table_rows, []) |> Enum.filter(&(&1.action == :insert)) == []
+
       # the gallery object alone, as a ref's own change
       ref = %Ref{id: 3, uid: "r3", name: "gallery", gallery: %Brando.Galleries.Gallery{id: 30, gallery_objects: []}}
       ref_changeset = Block.ref_changeset(ref, %{"gallery" => %{"id" => 30, "gallery_objects" => [%{"id" => 44}]}}, 1)

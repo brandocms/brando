@@ -371,10 +371,41 @@ defmodule Brando.Content.Block do
 
   defp reject_vanished_at(attrs, key, ids) do
     case attrs do
-      %{^key => rows} -> Map.put(attrs, key, reject_vanished(rows, ids))
-      _ -> attrs
+      %{^key => rows} ->
+        kept = reject_vanished(rows, ids)
+        attrs |> Map.put(key, kept) |> drop_sorted(key, dropped_indexes(rows, kept))
+
+      _ ->
+        attrs
     end
   end
+
+  # Form params name rows by index and order them by a sort param, which
+  # turns an index it names without a row into a new, empty one.
+  @sort_params %{
+    "table_rows" => "sort_table_row_ids",
+    "vars" => "sort_var_ids",
+    "gallery_objects" => "sort_gallery_object_ids"
+  }
+
+  defp dropped_indexes(%{} = rows, %{} = kept) when not is_struct(rows), do: Map.keys(rows) -- Map.keys(kept)
+  defp dropped_indexes(_rows, _kept), do: []
+
+  defp drop_sorted(attrs, _key, []), do: attrs
+
+  defp drop_sorted(attrs, key, indexes) do
+    sort = @sort_params[to_string(key)]
+    indexes = Enum.map(indexes, &to_string/1)
+
+    Enum.reduce([sort, sort && String.to_existing_atom(sort)], attrs, fn
+      nil, attrs -> attrs
+      sort, %{} = attrs when is_map_key(attrs, sort) -> Map.update!(attrs, sort, &reject_indexes(&1, indexes))
+      _sort, attrs -> attrs
+    end)
+  end
+
+  defp reject_indexes(order, indexes) when is_list(order), do: Enum.reject(order, &(to_string(&1) in indexes))
+  defp reject_indexes(order, _indexes), do: order
 
   defp drop_vanished_gallery_objects(attrs, ref) when is_map(attrs) do
     data = with %Ecto.Changeset{data: data} <- ref, do: data
