@@ -14,7 +14,10 @@ defmodule Brando.PublisherRefusedTest do
   alias Brando.Factory
   alias Brando.Pages
   alias Brando.Pages.Page
+  alias Brando.Tenant
+  alias Brando.Tenant.Registry
   alias Brando.Worker.EntryPublisher
+  alias Ecto.Adapters.SQL
 
   @keys ~w(brando.admin.access brando.pages.create brando.pages.read brando.pages.update
            brando.pages.publish brando.pages.schedule)
@@ -29,7 +32,7 @@ defmodule Brando.PublisherRefusedTest do
     scope = Scope.standalone(owner)
     {:ok, group} = Groups.create(scope, %{name: "Scheduled publishers"}, @keys)
     {:ok, :ok} = Groups.add_member(scope, group.id, editor.id)
-    %{scope: scope, group: group, editor: editor}
+    %{owner: owner, scope: scope, group: group, editor: editor}
   end
 
   defp at(seconds), do: DateTime.utc_now() |> DateTime.add(seconds) |> DateTime.truncate(:second)
@@ -234,6 +237,55 @@ defmodule Brando.PublisherRefusedTest do
     end
   end
 
+  describe "a schedule in a site's environment" do
+    setup c do
+      put_test_env(:tenancy_mode, :multi)
+      Tenant.put_prefix(nil)
+      page = Factory.insert(:page, status: :draft)
+
+      {:ok, site} =
+        Registry.create_site(%{
+          name: "Scheduled site",
+          key: "scheduled-site",
+          languages: ["en"],
+          default_language: "en",
+          status: :active,
+          delivery_mode: :dynamic
+        })
+
+      environment = environment(site, "production")
+      site_scope = Scope.site(c.owner, site, environment)
+      {:ok, group} = Groups.create(site_scope, %{name: "Site publishers"}, @keys)
+      {:ok, :ok} = Groups.add_member(site_scope, group.id, c.editor.id)
+
+      on_exit(fn ->
+        Tenant.put_prefix(nil)
+        Tenant.Cache.clear()
+      end)
+
+      %{site: site, prefix: Tenant.prefix(site, environment), site_scope: site_scope, site_group: group, page: page}
+    end
+
+    test "is retried while the site is suspended, and taken back once its user may no longer run it", c do
+      {1, _} =
+        Repo.update_all(from(p in Page, where: p.id == ^c.page.id), [set: [status: :pending, publish_at: at(-600)]],
+          prefix: c.prefix
+        )
+
+      args = %{"schema" => to_string(Page), "id" => c.page.id, "status" => "published", "user_id" => c.editor.id}
+      args = Map.put(args, "tenant_prefix", c.prefix)
+
+      {:ok, suspended} = Registry.update_site(c.site, %{status: :suspended})
+      assert {:error, :forbidden} = perform_job(EntryPublisher, args)
+      assert %{status: :pending, publish_at: %DateTime{}} = Repo.get!(Page, c.page.id, prefix: c.prefix)
+
+      {:ok, _} = Registry.update_site(suspended, %{status: :active})
+      {:ok, :ok} = Groups.remove_member(c.site_scope, c.site_group.id, c.editor.id)
+      assert {:cancel, :forbidden} = perform_job(EntryPublisher, args)
+      assert %{status: :draft, publish_at: nil} = Repo.get!(Page, c.page.id, prefix: c.prefix)
+    end
+  end
+
   describe "the sweep" do
     test "leaves a date to its job while the job waits or retries, and catches up once there is none", c do
       page = scheduled_page(c.editor, %{publish_at: at(3600)})
@@ -283,5 +335,23 @@ defmodule Brando.PublisherRefusedTest do
       assert Repo.get!(Page, lost.id).status == :published
       assert Repo.get!(Page, discarded.id).status == :published
     end
+  end
+
+  defp environment(site, key) do
+    {:ok, environment} = Registry.create_environment(site, %{name: key, key: key, live: key == "production"})
+    prefix = Tenant.prefix(site, environment)
+    SQL.query!(Repo, ~s(CREATE SCHEMA "#{prefix}"))
+    %{rows: rows} = SQL.query!(Repo, "SELECT tablename FROM pg_tables WHERE schemaname = 'public'")
+
+    rows
+    |> List.flatten()
+    |> Enum.reject(&Tenant.SharedTables.member?/1)
+    |> Enum.each(fn table ->
+      escaped = String.replace(table, "\"", "\"\"")
+      SQL.query!(Repo, ~s|CREATE TABLE "#{prefix}"."#{escaped}" (LIKE public."#{escaped}" INCLUDING ALL)|)
+      SQL.query!(Repo, ~s(INSERT INTO "#{prefix}"."#{escaped}" SELECT * FROM public."#{escaped}"))
+    end)
+
+    environment
   end
 end

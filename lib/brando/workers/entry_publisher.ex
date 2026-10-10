@@ -12,18 +12,20 @@ defmodule Brando.Worker.EntryPublisher do
   the job is cancelled rather than retried, and the date it was for is
   cleared (a pending entry goes back to draft) so that
   `Brando.Publisher.sweep/1` does not carry it out instead. Activity records
-  why.
+  why. A refusal that may pass, such as for a suspended site, is retried.
   """
   use Oban.Worker,
     queue: :default,
     max_attempts: 10
 
   require Logger
+  alias Brando.Authorization.Boundary
+  alias Brando.Authorization.Engine
   alias Brando.Revisions
   alias Brando.Tenant.Job, as: TenantJob
 
-  # A schedule its user may no longer carry out, or whose user is gone
-  @refusals [:forbidden, :scheduler_missing, :scheduler_inactive]
+  # Why a user's authorization refuses them for want of a grant
+  @grant_denials [:missing_grant, :backend_access_required]
 
   # schedule publishing/depublishing an entry
   @impl Oban.Worker
@@ -150,6 +152,13 @@ defmodule Brando.Worker.EntryPublisher do
   defp passed?(_at, _now), do: false
 
   defp update_status(schema_module, entry, status, user_id, now) do
+    case scheduler(user_id) do
+      {:ok, user} -> save_status(schema_module, entry, status, user, user_id, now)
+      {:error, reason} -> refuse(schema_module, entry, status, user_id, reason)
+    end
+  end
+
+  defp save_status(schema_module, entry, status, user, user_id, now) do
     params =
       if status == "published",
         do: %{creator_id: user_id, status: status, publish_at: now},
@@ -158,21 +167,38 @@ defmodule Brando.Worker.EntryPublisher do
     context = schema_module.__modules__().context
     singular = schema_module.__naming__().singular
 
-    with {:ok, user} <- scheduler(user_id),
-         {:ok, _} <- apply(context, :"update_#{singular}", [entry.id, params, user]) do
-      Logger.info("""
+    case apply(context, :"update_#{singular}", [entry.id, params, user]) do
+      {:ok, _} ->
+        Logger.info("""
 
-      ==> [B/Pub] #{(status == "published" && "Published") || "Depublished"} #{singular} ##{entry.id}
-      ==> [B/Pub] @ #{now.day}/#{now.month}/#{now.year} #{now.hour}:#{now.minute}:#{now.second} UTC
-      """)
+        ==> [B/Pub] #{(status == "published" && "Published") || "Depublished"} #{singular} ##{entry.id}
+        ==> [B/Pub] @ #{now.day}/#{now.month}/#{now.year} #{now.hour}:#{now.minute}:#{now.second} UTC
+        """)
 
-      BrandoAdmin.LiveView.Listing.update_list_entries(schema_module)
+        BrandoAdmin.LiveView.Listing.update_list_entries(schema_module)
+        :ok
 
-      :ok
-    else
-      {:error, reason} when reason in @refusals -> refuse(schema_module, entry, status, user_id, reason)
-      {:error, reason} -> {:error, reason}
+      {:error, :forbidden} ->
+        if lost_right?(user, schema_module),
+          do: refuse(schema_module, entry, status, user_id, :forbidden),
+          else: {:error, :forbidden}
+
+      {:error, reason} ->
+        {:error, reason}
     end
+  end
+
+  # Refused for want of a grant: the user's groups no longer let them update
+  # or publish the entry. A refusal for the scope instead, such as a
+  # suspended site, may pass, so the job is tried again (and the sweep waits
+  # for it).
+  defp lost_right?(:system, _schema_module), do: false
+
+  defp lost_right?(user, schema_module) do
+    snapshot = user |> Boundary.actor_scope() |> Engine.snapshot()
+
+    is_nil(snapshot.reason) and
+      Enum.any?([:update, :publish], &(Engine.explain(snapshot, &1, schema_module).reason in @grant_denials))
   end
 
   # Who a job runs as: the user who scheduled it, while their account is

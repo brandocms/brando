@@ -49,7 +49,7 @@ goes back to draft, and an expiry's `unpublish_at` is removed and the entry
 stays as it is. The change is saved by the system, and the entry's Activity
 says that it was not published (or deactivated) as scheduled, and why. Someone
 who may publish it can schedule it again. A save that fails for another
-reason, such as validation, is retried as before.
+reason, such as validation or a suspended site, is retried as before.
 
 The job publishes only an entry that is still pending when it runs: a future
 date on a draft or a deactivated entry queues a job that does nothing, and the
