@@ -2230,6 +2230,10 @@ production dump.
   `nil` and read it back as `:system`. Image, File and Video no longer
   require a creator.
 
+- **A form with errors that can't open the live preview says so.** The alert
+  read "Error while saving form" though nothing was being saved; it now says
+  the preview can't open until the marked fields are corrected.
+
 - **Live preview block updates keep all of a block's markup.** A block whose
   HTML started with `<style>`, `<script>`, `<link>` or `<meta>` lost it on its
   first edit, and table rows outside a table vanished. A block whose top-level

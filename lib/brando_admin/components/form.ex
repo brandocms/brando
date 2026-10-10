@@ -3238,7 +3238,7 @@ defmodule BrandoAdmin.Components.Form do
       form_blueprint = socket.assigns.form_blueprint
 
       socket
-      |> push_errors(changeset, form_blueprint, schema)
+      |> push_errors(changeset, form_blueprint, schema, :live_preview)
     end
   end
 
@@ -3260,7 +3260,7 @@ defmodule BrandoAdmin.Components.Form do
       else
         socket
         |> clear_blocks_root_changesets()
-        |> push_errors(changeset, form_blueprint, schema)
+        |> push_errors(changeset, form_blueprint, schema, :live_preview)
       end
     end
   end
@@ -3285,7 +3285,7 @@ defmodule BrandoAdmin.Components.Form do
       form_blueprint = socket.assigns.form_blueprint
 
       socket
-      |> push_errors(changeset, form_blueprint, schema)
+      |> push_errors(changeset, form_blueprint, schema, :live_preview)
     end
   end
 
@@ -3316,7 +3316,7 @@ defmodule BrandoAdmin.Components.Form do
       else
         socket
         |> clear_blocks_root_changesets()
-        |> push_errors(changeset, form_blueprint, schema)
+        |> push_errors(changeset, form_blueprint, schema, :live_preview)
       end
     end
   end
@@ -3338,7 +3338,7 @@ defmodule BrandoAdmin.Components.Form do
       if changeset.errors == [] do
         switch_live_preview_target(socket, schema, changeset, target)
       else
-        push_errors(socket, changeset, socket.assigns.form_blueprint, schema)
+        push_errors(socket, changeset, socket.assigns.form_blueprint, schema, :live_preview)
       end
     end
   end
@@ -6628,16 +6628,19 @@ defmodule BrandoAdmin.Components.Form do
   defp loaded_image?(%Ecto.Association.NotLoaded{}), do: false
   defp loaded_image?(%Images.Image{}), do: true
 
+  # `env` says what the errors stopped: a save, or opening the live preview.
   defp push_errors(socket, changeset, form, schema, env \\ :save) do
     error_title = gettext("Error")
 
     error_notice =
-      if env == :save do
-        gettext("Error while saving form. Please correct marked fields and resubmit<br><br>Fields marked invalid:")
-      else
-        gettext(
-          "Cannot open Live Preview with errors in form. Please correct marked fields and try again<br><br>Fields marked invalid:"
-        )
+      case env do
+        :save ->
+          gettext("Error while saving form. Please correct marked fields and resubmit<br><br>Fields marked invalid:")
+
+        :live_preview ->
+          gettext(
+            "Cannot open Live Preview with errors in form. Please correct marked fields and try again<br><br>Fields marked invalid:"
+          )
       end
 
     traversed_errors =
