@@ -100,14 +100,19 @@ defmodule Brando.Test.BlocksTest do
 
       Brando.Tenant.with_prefix(@prefix, fn ->
         module =
-          Brando.Repo.insert!(%Brando.Content.Module{
-            uid: Brando.Utils.generate_uid(),
-            name: %{"en" => "Tenant teaser"},
-            namespace: %{"en" => "Content"},
-            help_text: %{"en" => "Help"},
-            class: "tenant-teaser",
-            code: "<h2>Tenant</h2>"
-          })
+          %Brando.Content.Module{}
+          |> Brando.Content.Module.changeset(
+            Brando.Factory.params_for(:module,
+              name: %{"en" => "Tenant teaser"},
+              namespace: %{"en" => "Content"},
+              help_text: %{"en" => "Help"},
+              code: "<h2>{{ heading }}</h2>{% ref refs.body %}",
+              refs: [Brando.ProposalFixtures.ref("body", %{type: "text", data: %{text: "<p>Tenant body</p>"}})],
+              vars: [%{type: "string", key: "heading", label: "Heading", value: "Tenant heading"}]
+            ),
+            user
+          )
+          |> Brando.Repo.insert!()
 
         page =
           Brando.Repo.insert!(%Page{
@@ -125,11 +130,18 @@ defmodule Brando.Test.BlocksTest do
         assert Brando.Repo.get(Brando.Content.Block, first.id)
         refute Brando.Repo.get(Brando.Content.Block, first.id, prefix: "public")
 
+        # The block's refs and vars, copied from the module, are the tenant's too.
+        for schema <- [Brando.Content.Ref, Brando.Content.Var] do
+          rows = from(r in schema, where: r.block_id == ^first.id)
+          assert [_] = Brando.Repo.all(rows)
+          assert Brando.Repo.all(rows, prefix: "public") == []
+        end
+
         # The sequence counts the blocks the entry has in the tenant's schema.
         joins = from(j in Page.Blocks, where: j.entry_id == ^page.id, order_by: j.sequence)
         assert Brando.Repo.all(from(j in joins, select: {j.block_id, j.sequence})) == [{first.id, 0}, {second.id, 1}]
         assert Brando.Repo.aggregate(joins, :count, prefix: "public") == 0
-        assert Brando.Repo.get!(Page, page.id).rendered_blocks =~ "<h2>Tenant</h2>"
+        assert Brando.Repo.get!(Page, page.id).rendered_blocks =~ "<h2>Tenant heading</h2>"
       end)
     end
   end
