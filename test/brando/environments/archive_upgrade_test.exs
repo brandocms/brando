@@ -69,16 +69,23 @@ defmodule Brando.Environments.ArchiveUpgradeTest do
   end
 
   # Replays slowly, checking its module is still there, with the database
-  # work taken one at a time (the sandbox has one connection)
+  # work taken one at a time (the sandbox has one connection). The lock's
+  # requester is the process: `:global` lets every holder of the same
+  # requester id in at once, and the second replay then waited on the
+  # connection until the pool dropped it.
   defmodule SlowMigrator do
     @moduledoc false
     def up(repo, version, module, opts) do
-      send(Application.fetch_env!(:brando, :archive_replay_test_pid), {:replaying, module})
+      test_pid = Application.fetch_env!(:brando, :archive_replay_test_pid)
+      send(test_pid, {:replaying, module})
       Process.sleep(20)
       true = Code.ensure_loaded?(module)
 
-      :global.trans({__MODULE__, :database}, fn ->
-        Brando.MigrationTemplates.InProcessMigrator.up(repo, version, module, opts)
+      :global.trans({{__MODULE__, :database}, self()}, fn ->
+        send(test_pid, {:database, :in})
+        result = Brando.MigrationTemplates.InProcessMigrator.up(repo, version, module, opts)
+        send(test_pid, {:database, :out})
+        result
       end)
     end
   end
@@ -410,6 +417,15 @@ defmodule Brando.Environments.ArchiveUpgradeTest do
 
     assert length(Enum.uniq(modules)) == length(modules)
     refute Enum.any?(modules, &Code.ensure_loaded?/1)
+
+    # One replay on the connection at a time
+    turns =
+      for _ <- 1..(4 * length(replays)) do
+        assert_receive {:database, turn}
+        turn
+      end
+
+    assert turns == List.flatten(List.duplicate([:in, :out], 2 * length(replays)))
   end
 
   describe "planning looks only at what ran since the archive was taken" do
