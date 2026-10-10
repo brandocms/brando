@@ -413,7 +413,9 @@ defmodule Brando.Publisher do
     |> Enum.concat(due(schema, :unpublish_at, [:published, :pending], from, before))
     |> Enum.uniq_by(& &1.id)
     |> Enum.reject(&failed_before?(schema, &1))
-    |> Enum.map(&sweep_entry(schema, &1, now, dry_run?))
+    |> Enum.map(&{&1, sweep_action(&1, now)})
+    |> without_waiting_job(schema)
+    |> Enum.map(fn {entry, action} -> sweep_entry(schema, entry, action, dry_run?) end)
   rescue
     error ->
       Logger.error(
@@ -444,43 +446,47 @@ defmodule Brando.Publisher do
     query =
       if :deleted_at in schema.__schema__(:fields), do: from(e in query, where: is_nil(e.deleted_at)), else: query
 
-    query
-    |> Repo.all()
-    |> without_waiting_job(schema, if(field == :publish_at, do: @publish_status, else: @unpublish_status))
+    Repo.all(query)
   end
 
   # A date whose job is still to run, running or retrying is the job's: it
   # runs as the user who scheduled it, and refuses what they may no longer do.
-  defp without_waiting_job([], _schema, _status), do: []
+  # The job for what the sweep would do, an expiry winning over a publication.
+  defp without_waiting_job([], _schema), do: []
 
-  defp without_waiting_job(entries, schema, status) do
-    args = Map.merge(%{"schema" => to_string(schema), "status" => status}, TenantJob.context_fragment())
-    ids = Enum.map(entries, &to_string(&1.id))
+  defp without_waiting_job(due, schema) do
+    args = Map.merge(%{"schema" => to_string(schema)}, TenantJob.context_fragment())
+    ids = Enum.map(due, fn {entry, _action} -> to_string(entry.id) end)
 
     waiting =
       from(j in Oban.Job,
         where:
           j.worker == ^inspect(Worker.EntryPublisher) and j.state in @waiting_states and
             fragment("? @> ?", j.args, ^args) and fragment("?->>'id'", j.args) in ^ids,
-        select: fragment("?->>'id'", j.args)
+        select: {fragment("?->>'id'", j.args), fragment("?->>'status'", j.args)}
       )
       |> Repo.all()
       |> MapSet.new()
 
-    Enum.reject(entries, &MapSet.member?(waiting, to_string(&1.id)))
+    Enum.reject(due, fn {entry, action} -> MapSet.member?(waiting, {to_string(entry.id), action_status(action)}) end)
   end
 
-  # An expiry that has passed wins over a publish that has
-  defp sweep_entry(schema, entry, now, dry_run?) do
-    expired? = match?(%DateTime{}, Map.get(entry, :unpublish_at)) and not DateTime.after?(entry.unpublish_at, now)
-    action = if expired?, do: :unpublish, else: :publish
+  defp action_status(:publish), do: @publish_status
+  defp action_status(:unpublish), do: @unpublish_status
 
+  # An expiry that has passed wins over a publish that has
+  defp sweep_action(entry, now) do
+    expired? = match?(%DateTime{}, Map.get(entry, :unpublish_at)) and not DateTime.after?(entry.unpublish_at, now)
+    if expired?, do: :unpublish, else: :publish
+  end
+
+  defp sweep_entry(schema, entry, action, dry_run?) do
     found = %{
       schema: schema,
       id: entry.id,
       title: Map.get(entry, :title) || Map.get(entry, :name),
       action: action,
-      at: if(expired?, do: entry.unpublish_at, else: entry.publish_at)
+      at: if(action == :unpublish, do: entry.unpublish_at, else: entry.publish_at)
     }
 
     Map.put(found, :result, if(dry_run?, do: :dry_run, else: save_sweep(schema, entry, action)))

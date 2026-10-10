@@ -209,6 +209,17 @@ defmodule Brando.PublisherRefusedTest do
       assert Repo.get!(Page, page.id).status == :published
     end
 
+    test "leaves an expiry to its job, even when the publication before it has no job", c do
+      page = scheduled_page(c.editor, %{publish_at: at(3600), unpublish_at: at(7200)})
+      for job <- jobs(page, "published"), do: Repo.delete!(job)
+      [expiry] = jobs(page, "disabled")
+      Repo.update!(Ecto.Changeset.change(expiry, state: "retryable"))
+      set_dates(page, publish_at: at(-1200), unpublish_at: at(-600))
+
+      assert Brando.Publisher.sweep() |> Enum.filter(&(&1.id == page.id)) == []
+      assert Repo.get!(Page, page.id).status == :pending
+    end
+
     test "publishes a date whose job is gone or done", c do
       lost = scheduled_page(c.editor, %{publish_at: at(3600)})
       set_dates(lost, publish_at: at(-600))
