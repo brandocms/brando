@@ -17,8 +17,9 @@ defmodule Brando.Worker.EntryPublisher do
   the job waits, spending no attempts, until its date is older than the
   sweep's window; then, or for an archived site, it ends and leaves the
   entry as it is. A refusal for any other reason is retried, and taken back
-  on the last attempt. Without group authorization,
-  schedules run as they always have.
+  on the last attempt. Without group authorization nothing is refused: a
+  schedule runs as its user, deactivated or not, and as the system when the
+  user no longer exists.
   """
   use Oban.Worker,
     queue: :default,
@@ -179,10 +180,7 @@ defmodule Brando.Worker.EntryPublisher do
   end
 
   defp save_status(job, schema_module, entry, status, user, user_id, now) do
-    params =
-      if status == "published",
-        do: %{creator_id: user_id, status: status, publish_at: now},
-        else: %{status: status}
+    params = status_params(status, user, user_id, now)
 
     context = schema_module.__modules__().context
     singular = schema_module.__naming__().singular
@@ -205,6 +203,15 @@ defmodule Brando.Worker.EntryPublisher do
         {:error, reason}
     end
   end
+
+  defp status_params("published", user, user_id, now) do
+    # A user who is gone can't be the creator; the entry keeps its own
+    if user == :system and not is_nil(user_id),
+      do: %{status: "published", publish_at: now},
+      else: %{creator_id: user_id, status: "published", publish_at: now}
+  end
+
+  defp status_params(status, _user, _user_id, _now), do: %{status: status}
 
   # A save its user is refused (a record policy may hide the entry from them
   # instead, so it is not found), with group authorization. Refused for want
@@ -303,13 +310,14 @@ defmodule Brando.Worker.EntryPublisher do
   # Who a job runs as: the user who scheduled it, or the system for a
   # schedule made without a user. With group authorization the user's
   # account must be active, and a user who is gone is never replaced by the
-  # system; without it, the job runs as whoever it finds, as it always has.
+  # system. Without it, nothing is refused: the job runs as the user it
+  # finds, deactivated or not, and as the system when the user is gone.
   defp scheduler(nil), do: {:ok, :system}
 
   defp scheduler(user_id) do
     case {Engine.enabled?(), Brando.Users.get_user(user_id)} do
       {false, {:ok, user}} -> {:ok, user}
-      {false, _} -> {:ok, nil}
+      {false, _} -> {:ok, :system}
       {true, {:ok, %{active: true, deleted_at: nil} = user}} -> {:ok, user}
       {true, {:ok, _user}} -> {:error, :scheduler_inactive}
       {true, _} -> {:error, :scheduler_missing}

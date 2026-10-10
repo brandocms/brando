@@ -111,6 +111,20 @@ defmodule Brando.PublisherRefusedTest do
       )
   end
 
+  # Revision 0 of `page` (its first title) scheduled by `user`, whose row
+  # is then gone, and the job as the queue runs it once its time has come
+  defp revision_job_without_user(page, user) do
+    {:ok, _} = Oban.Testing.with_testing_mode(:manual, fn -> Pages.update_page(page.id, %{title: "Second"}, user) end)
+
+    {:ok, job} =
+      Oban.Testing.with_testing_mode(:manual, fn ->
+        Brando.Publisher.schedule_revision(Page, page.id, 0, at(3600), user)
+      end)
+
+    {1, _} = Repo.update_all(from(j in Oban.Job, where: j.id == ^job.id), set: [args: Map.put(job.args, "user_id", -1)])
+    %{Repo.get!(Oban.Job, job.id) | scheduled_at: at(-1)}
+  end
+
   # What the sweep did with `page`
   defp swept(page), do: Enum.filter(Brando.Publisher.sweep(), &for_page?(&1, page))
 
@@ -355,20 +369,61 @@ defmodule Brando.PublisherRefusedTest do
       refute_received {:locked, _}
     end
 
-    test "a schedule whose user no longer exists is not taken back, and the sweep publishes it", c do
+    test "a schedule whose user no longer exists runs as the system", c do
+      publication = scheduled_page(c.editor, %{publish_at: at(3600)})
+      expiry = scheduled_page(c.editor, %{unpublish_at: at(3600)})
+      set_dates(publication, publish_at: at(-600))
+      set_dates(expiry, unpublish_at: at(-600))
+
+      assert :ok = run_job(publication, "published", -1)
+      assert :ok = run_job(expiry, "disabled", -1)
+
+      assert %{status: :published, creator_id: creator_id} = Repo.get!(Page, publication.id)
+      assert creator_id == c.editor.id
+      assert Repo.get!(Page, expiry.id).status == :disabled
+
+      for {page, action} <- [{publication, :published}, {expiry, :unpublished}] do
+        assert [%{source: :scheduler, user_id: nil}] =
+                 Repo.all(from e in Event, where: e.entry_id == ^page.id and e.action == ^action)
+
+        assert refused_events(page) == []
+      end
+    end
+
+    test "a scheduled revision whose user no longer exists publishes, with no user", c do
+      page = scheduled_page(c.editor, %{})
+      job = revision_job_without_user(page, c.editor)
+
+      assert {:ok, %{title: "Scheduled page", status: :published}} = EntryPublisher.perform(job)
+
+      assert [%{source: :scheduler, user_id: nil, revision: 0}] =
+               Repo.all(from e in Event, where: e.entry_id == ^page.id and e.action == :published and e.revision == 0)
+    end
+
+    test "a job retrying does not hold the sweep back", c do
       page = scheduled_page(c.editor, %{publish_at: at(3600)})
       date = at(-600)
       set_dates(page, publish_at: date)
 
-      assert {:error, _} = run_job(page, "published", -1)
-      assert Repo.get!(Page, page.id).status == :pending
-      assert refused_events(page) == []
-
-      # Its job retrying does not hold the sweep back
       [job] = jobs(page, "published")
       Repo.update!(Ecto.Changeset.change(job, state: "retryable"))
       on_date(job, date, at(600))
       assert [%{action: :publish, result: :ok}] = swept(page)
+    end
+  end
+
+  describe "a scheduled revision whose user no longer exists" do
+    test "is refused, and its schedule released on the last attempt", c do
+      page = scheduled_page(c.editor, %{})
+      job = revision_job_without_user(page, c.editor)
+
+      assert {:error, :forbidden} = EntryPublisher.perform(job)
+      assert Repo.get!(Page, page.id).title == "Second"
+
+      assert {:error, :forbidden} = EntryPublisher.perform(%{job | attempt: 10, max_attempts: 10})
+      assert Repo.get!(Page, page.id).title == "Second"
+      assert {:ok, revisions} = Brando.Revisions.list_revision_metadata(Page, page.id)
+      refute Enum.find(revisions, &(&1.revision == 0)).scheduled
     end
   end
 

@@ -2020,7 +2020,9 @@ production dump.
   and taken back on the last attempt. The sweep for overdue dates leaves a publication to its job while
   the job for that date waits, runs or retries, so it no longer publishes as
   the system what the job was refused. Without group authorization nothing
-  changes. See
+  is refused, and a schedule whose user no longer exists now runs as the
+  system instead of failing (an expiry used to deactivate the entry and then
+  crash). See
   [Scheduled publishing](guides/scheduled_publishing.md#schedule-the-current-entry).
 
 - **Every editor sees an image finish processing.** With two editors in one
