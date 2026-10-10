@@ -185,8 +185,9 @@ resource filters.
 parameter or use it as a fallback for a missing account. Do not store a resolved
 permission snapshot in an Oban job. Retain the initiating account and tenant,
 and authorize again when the operation executes. Scheduled publishing does: a
-publication or expiry its user may no longer carry out, or whose account is
-gone, is cancelled and its date cleared rather than run as `:system` (see the
+publication its user may no longer carry out, or whose account is gone, is
+cancelled and its date cleared rather than run as `:system`, while an expiry
+is still carried out on time, as `:system`, with Activity saying why (see the
 scheduled publishing guide).
 
 <!-- usage-rules:end -->

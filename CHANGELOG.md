@@ -1941,14 +1941,16 @@ production dump.
 #### Fixes
 
 - **A scheduled publication its user may no longer make is taken back, not
-  retried or swept.** When the user who scheduled a publication or an expiry
-  has lost the right to make it, or their account is deactivated or deleted,
-  the job is now cancelled instead of retried ten times, and its date is
-  cleared as **Delete job** clears it: a pending entry goes back to draft,
-  and an expiry is removed with the entry left as it is. The entry's
-  Activity says why. The sweep for overdue dates leaves a date to its job
-  while the job waits, runs or retries, so it no longer publishes as the
-  system what the job was refused. See
+  retried or swept.** With group authorization, when the user who scheduled a
+  publication has lost the right to make it, or their account is deactivated
+  or deleted, the job is now cancelled instead of retried ten times, and its
+  date is cleared as **Delete job** clears it: the pending entry goes back to
+  draft. An expiry refused the same way is still carried out on time, by the
+  system. The entry's Activity says what happened and why. A refusal that may
+  pass, such as for a suspended site, is retried. The sweep for overdue dates
+  leaves a publication to its job while the job for that date waits, runs or
+  retries, so it no longer publishes as the system what the job was refused.
+  Without group authorization nothing changes. See
   [Scheduled publishing](guides/scheduled_publishing.md#schedule-the-current-entry).
 
 - **Duplicating a module works again, and copies the whole module.** It

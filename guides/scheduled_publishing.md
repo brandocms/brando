@@ -41,15 +41,18 @@ entry are what it will publish. An ordinary unsaved browser edit is not included
 The worker runs a context update as the user who scheduled it, so publication
 validation and permission checks still apply at execution time.
 
-When that user may no longer make the change (their groups lost the right to
-publish or update the entry), or their account has been deactivated or deleted,
-the job is not retried. It is cancelled, and the date is cleared as **Delete
-job** clears it: a publication's `publish_at` is removed and the pending entry
-goes back to draft, and an expiry's `unpublish_at` is removed and the entry
-stays as it is. The change is saved by the system, and the entry's Activity
-says that it was not published (or deactivated) as scheduled, and why. Someone
-who may publish it can schedule it again. A save that fails for another
-reason, such as validation or a suspended site, is retried as before.
+With group authorization, when that user may no longer make the change (their
+groups lost the right to update, publish or schedule the entry), or their
+account has been deactivated or deleted, the publication is not retried. The
+job is cancelled, and the date is cleared as **Delete job** clears it:
+`publish_at` is removed and the pending entry goes back to draft, saved by the
+system. The entry's Activity says that it was not published as scheduled, and
+why. Someone who may publish it can schedule it again. An expiry refused the
+same way is still carried out on time, by the system, so that a refusal never
+leaves an entry live for longer than planned; Activity says so, and why. A
+save that fails for another reason, such as validation or a suspended site, is
+retried as before. Without group authorization, schedules run as the user who
+made them whatever has become of the account, as they always have.
 
 The job publishes only an entry that is still pending when it runs: a future
 date on a draft or a deactivated entry queues a job that does nothing, and the
@@ -148,10 +151,11 @@ Brando's default Oban crontab every ten minutes, catches up in every active
 environment (`Brando.Publisher.sweep/1`): it publishes pending entries whose
 `publish_at` passed more than five minutes ago and deactivates published or
 pending entries whose `unpublish_at` did, through the context as the jobs do.
-Running it again changes nothing. A date whose publisher job is still waiting,
-running or retrying is left to that job, so the sweep never carries out what
-the job's user is refused; a job waiting for another, later date (one the
-entry had before an archive was restored) does not hold it up.
+Running it again changes nothing. With group authorization, a publication whose
+job is still waiting, running or retrying is left to that job, so the sweep
+never publishes what the job's user is refused; a job waiting for another,
+later date (one the entry had before an archive was restored) does not hold it
+up. Expiries do not wait.
 
 It only takes dates from the last seven days, so dates left from before the
 sweep existed are not acted on when it first runs; change the window with
