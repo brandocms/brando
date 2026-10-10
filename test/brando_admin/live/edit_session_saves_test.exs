@@ -512,6 +512,61 @@ defmodule BrandoAdmin.EditSessionSavesTest do
     await(fn -> shown_refs(b, first) == 2 end)
   end
 
+  # Two editors held the same new block when the session died. The one who
+  # came back second had changed it (its op never reached the session):
+  # the session keeps the first's version, and the second's comes back as
+  # a copy beside it.
+  test "a new block both editors held comes back as a copy for the one whose version the session did not keep", c do
+    a = open(c.conn, c.identity)
+    b = open(c.other_conn, c.identity)
+    uid = added_block(a, b, c)
+
+    old = session_pid(c.identity)
+    :sys.suspend(old)
+    type(b, uid, "<p>B's version</p>")
+    :sys.suspend(b.pid)
+    Process.exit(old, :kill)
+    # A comes back first and seeds the new session with its version
+    await(fn -> session_pid(c.identity) not in [nil, old] end)
+    :sys.resume(b.pid)
+
+    kept = uid <> "-kept"
+    await(fn -> session_state(c.identity).statuses[kept] == :inserted end)
+    state = session_state(c.identity)
+    assert Enum.find_index(state.order, &(&1 == kept)) == Enum.find_index(state.order, &(&1 == uid)) + 1
+    await(fn -> shown_text(b, kept) == "<p>B's version</p>" end)
+    await(fn -> shown_text(a, kept) == "<p>B's version</p>" end)
+    refute shown_text(a, uid) == "<p>B's version</p>"
+    refute state.diffs[kept]["block"]["sync_uid"] == uid
+  end
+
+  test "a new block both editors held in the same version is not copied when one rejoins", c do
+    a = open(c.conn, c.identity)
+    b = open(c.other_conn, c.identity)
+    uid = added_block(a, b, c)
+    type(b, uid, "<p>Seen by both</p>")
+    await(fn -> shown_text(a, uid) == "<p>Seen by both</p>" end)
+
+    old = session_pid(c.identity)
+    :sys.suspend(b.pid)
+    Process.exit(old, :kill)
+    await(fn -> session_pid(c.identity) not in [nil, old] end)
+    :sys.resume(b.pid)
+
+    await(fn ->
+      MapSet.size(
+        EditSession.whereis(EditSession.ref(Page, c.identity.id, c.identity.language))
+        |> :sys.get_state()
+        |> Map.get(:clients)
+        |> Map.keys()
+        |> MapSet.new()
+      ) == 2
+    end)
+
+    refute Map.has_key?(session_state(c.identity).statuses, uid <> "-kept")
+    assert shown_text(b, uid) == "<p>Seen by both</p>"
+  end
+
   # Review of #3055: the block came back after its rescue (the proposal was
   # undone) while the first copy stayed, and work in it was then removed
   # again. The first copy settled the second rescue, so nothing was

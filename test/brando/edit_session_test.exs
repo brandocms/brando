@@ -1029,6 +1029,71 @@ defmodule Brando.EditSessionTest do
       assert [%{"id" => 5}, %{"id" => 8, "cols" => "C's cell"}] = params["block"]["table_rows"]
     end
 
+    # Both editors held the same new block when the session died; the one
+    # who came back second held a different version of it. The session
+    # keeps the first's, and gives the rejoiner back its own as a copy.
+    test "a rejoiner holding another version of a new block the session has gets it back as a copy" do
+      ref = new_ref()
+      base = rows()
+      insert = fn text -> {:insert, "n", 1, %{"block" => %{"uid" => "n", "description" => text}}} end
+      {:ok, seed} = Ops.apply_op(base, insert.("A's version"))
+      {:ok, _} = EditSession.join(ref, @field, {base, seed})
+
+      {:ok, held} = Ops.apply_op(base, insert.("B's version"))
+      {:ok, held} = Ops.apply_op(held, {:insert_child, "n", "nc", 0, %{"uid" => "nc"}})
+      assert {:ok, info} = rejoin_with_stale_rows(ref, base, held)
+
+      assert info.state.diffs["n"]["block"]["description"] == "A's version"
+      assert [%{group: "n", kept: "n-kept", uids: uids, copy?: true}] = info.rescues
+      assert Enum.sort(uids) == ["n", "nc"]
+    end
+
+    test "a copy a rejoiner brings back during another editor's save stays through that save's rebase" do
+      ref = new_ref()
+      base = rows()
+      insert = fn uid, text -> {:insert, uid, 1, %{"block" => %{"uid" => uid, "description" => text}}} end
+      {:ok, seed} = Ops.apply_op(base, insert.("n", "A's version"))
+      {:ok, a} = EditSession.join(ref, @field, {base, seed})
+      {:ok, _} = EditSession.fetch(a.session, @field, purpose: :save)
+
+      {:ok, held} = Ops.apply_op(base, insert.("n", "B's version"))
+
+      task =
+        Task.async(fn ->
+          {:ok, info} = EditSession.join(ref, @field, {base, held})
+          [%{kept: kept}] = info.rescues
+          EditSession.submit(info.session, @field, insert.(kept, "B's version"), 1)
+          {:ok, _} = EditSession.fetch(info.session, @field)
+          kept
+        end)
+
+      kept = Task.await(task)
+
+      saved =
+        Ops.from_entry_blocks([
+          entry_block("a", 1, 10, [child("a1", 11)]),
+          entry_block("n", 9, 90),
+          entry_block("b", 2, 20)
+        ])
+
+      assert {:ok, %{state: state}} = EditSession.rebase(a.session, @field, saved, :own_save)
+      assert state.statuses["n"] == :persisted
+      assert state.statuses[kept] == :inserted
+      assert state.diffs[kept]["block"]["description"] == "B's version"
+    end
+
+    test "a rejoiner holding the same version of a new block the session has gets no copy" do
+      ref = new_ref()
+      base = rows()
+      {:ok, held} = Ops.apply_op(base, {:insert, "n", 1, %{"block" => %{"uid" => "n", "description" => "same"}}})
+      {:ok, _} = EditSession.join(ref, @field, {base, held})
+      {:ok, held} = Ops.apply_op(held, anchor("a", "B's other work"))
+
+      assert {:ok, info} = rejoin_with_stale_rows(ref, base, held)
+      assert info.rescues == []
+      assert info.state.diffs["a"]["block"]["anchor"] == "B's other work"
+    end
+
     test "a rejoin carrying work after a save's read is kept by that save's rebase, on the session" do
       ref = new_ref()
       Phoenix.PubSub.subscribe(Brando.pubsub(), ref.topic)

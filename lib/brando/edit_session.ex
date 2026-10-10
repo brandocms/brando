@@ -511,8 +511,29 @@ defmodule Brando.EditSession do
         }
       end)
 
-    Map.put(info(session, field, pid, false), :rescues, rescues)
+    Map.put(info(session, field, pid, false), :rescues, rescues ++ copies(session, field, pid, held, new))
   end
+
+  # New blocks the joiner held that the session has in another version (an
+  # editor who came back first seeded it with theirs): the session keeps
+  # its own, and the joiner brings its version back as a copy beside it.
+  defp copies(session, field, pid, %Ops{} = held, %Ops{} = new) do
+    held
+    |> Ops.diverged_inserts(new)
+    |> Enum.map(fn group ->
+      %{
+        group: group,
+        kept: kept_uid(session, field, held, new, group),
+        uids: [group | Ops.descendants(held, group)],
+        rescuer: pid,
+        owners: [pid],
+        orphan?: false,
+        copy?: true
+      }
+    end)
+  end
+
+  defp copies(_session, _field, _pid, _held, _new), do: []
 
   # `exclude`: an editor whose replica moves on with the reply of the call
   # that caused this rebase (a join, the replica's own rebase), and never

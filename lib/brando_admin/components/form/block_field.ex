@@ -990,6 +990,24 @@ defmodule BrandoAdmin.Components.Form.BlockField do
   # as `-kept` shells holding only the way to them: a child block is made
   # for its parent (a multi module's entry, a container's child) and would
   # not read, or render, as a root of its own.
+  # A copy of a new block the session has in another version (`copy?`)
+  # goes right after it, whole: the session's block stays as it is.
+  defp rescue_payload(socket, %Ops{} = old, %Ops{} = new, %{copy?: true, group: group, kept: kept}, _worked) do
+    with true <- Ops.known?(old, group) and Ops.known?(new, group),
+         %{} = block <- rescued_block(socket, old, group) do
+      parent = Map.get(new.parents, group)
+      siblings = if parent, do: Map.get(new.child_order, parent, []), else: new.order
+      at = Enum.find_index(siblings, &(&1 == group)) + 1
+      place_rescued(socket, old, group, block, parent, kept, at)
+    else
+      _ -> nil
+    end
+  rescue
+    error ->
+      Logger.error("BlockField could not keep its version of a new block: " <> Exception.message(error))
+      nil
+  end
+
   defp rescue_payload(socket, %Ops{} = old, %Ops{} = new, %{group: group, uids: uids, kept: kept}, worked) do
     whole =
       uids
@@ -1039,11 +1057,14 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     end
   end
 
-  defp place_rescued(_socket, _old, _group, block, parent, kept) when is_binary(parent),
-    do: {:child, parent, block, kept}
+  defp place_rescued(socket, old, group, block, parent, kept, at \\ :end)
 
-  defp place_rescued(socket, old, group, block, nil, kept) do
-    with %{} = entry_block <- rescued_params(socket, old, group), do: {:root, Map.put(entry_block, "block", block), kept}
+  defp place_rescued(_socket, _old, _group, block, parent, kept, at) when is_binary(parent),
+    do: {:child, parent, block, at, kept}
+
+  defp place_rescued(socket, old, group, block, nil, kept, at) do
+    with %{} = entry_block <- rescued_params(socket, old, group),
+         do: {:root, Map.put(entry_block, "block", block), at, kept}
   end
 
   defp rescued_block(socket, old, uid) do
@@ -1099,11 +1120,28 @@ defmodule BrandoAdmin.Components.Form.BlockField do
   end
 
   defp rescue_own(socket, rescues, payloads) do
-    Enum.reduce(rescues, socket, fn %{group: group}, socket ->
+    Enum.reduce(rescues, socket, fn %{group: group} = asked, socket ->
       {socket, ok?} = reinsert_payload(socket, payloads[group])
-      tell_rescued(ok?, true, false)
+      if asked[:copy?], do: tell_copied(ok?), else: tell_rescued(ok?, true, false)
       socket
     end)
+  end
+
+  defp tell_copied(true) do
+    send(
+      self(),
+      {:toast,
+       gettext(
+         "Another editor kept their version of a new block you had changed too. Your version is kept as a copy next to it."
+       )}
+    )
+  end
+
+  defp tell_copied(false) do
+    send(
+      self(),
+      {:toast, gettext("Another editor kept their version of a new block you had changed too. Yours could not be kept.")}
+    )
   end
 
   # Every editor hears how the session's rescue went: one whose work it
@@ -1183,14 +1221,18 @@ defmodule BrandoAdmin.Components.Form.BlockField do
   # is the data's own.
   defp rename_copy(%{"uid" => uid} = block, kept), do: rename_block(block, String.replace_prefix(kept, uid, ""))
 
+  # Its sync uid (and its table rows') would be the original's: a new block
+  # takes its own when it is cast.
   defp rename_block(%{} = block, suffix) do
     block
+    |> Map.delete("sync_uid")
+    |> Map.update("table_rows", [], fn rows -> Enum.map(rows, &Map.delete(&1, "sync_uid")) end)
     |> Map.update("uid", nil, &(&1 <> suffix))
     |> Map.update("refs", [], fn refs -> Enum.map(refs, &Map.put(&1, "uid", Brando.Utils.generate_uid())) end)
     |> Map.update("children", [], fn children -> Enum.map(children, &rename_block(&1, suffix)) end)
   end
 
-  defp reinsert(socket, {:root, params, kept}) do
+  defp reinsert(socket, {:root, params, at, kept}) do
     params = Map.update!(params, "block", &rename_copy(&1, kept))
     uid = params["block"]["uid"]
 
@@ -1204,16 +1246,16 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     socket =
       socket
       |> put_seed_form(uid, form)
-      |> apply_block_op({:insert, uid, :end, params}, :replay)
+      |> apply_block_op({:insert, uid, at, params}, :replay)
 
     {socket, uid}
   end
 
   # Under a block that is still there: its root shows it once it has it.
-  defp reinsert(socket, {:child, parent, block, kept}) do
+  defp reinsert(socket, {:child, parent, block, at, kept}) do
     block = rename_copy(block, kept)
     uid = block["uid"]
-    socket = apply_block_op(socket, {:insert_child, parent, uid, :end, block}, :replay)
+    socket = apply_block_op(socket, {:insert_child, parent, uid, at, block}, :replay)
 
     socket =
       if Ops.known?(socket.assigns.block_ops, uid),

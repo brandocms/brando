@@ -1082,6 +1082,27 @@ defmodule BrandoAdmin.Components.Form.BlockField.Ops do
     end
   end
 
+  @doc """
+  The new blocks `held` added (the tops of their subtrees) that `state`
+  has as well, in another version: their own or their descendants' params,
+  or the blocks under them, differ.
+
+  `carry/4` leaves a new block the target already has as it is there. A
+  rejoining editor who held another version of it gets its own back as a
+  copy (`Brando.EditSession`).
+  """
+  @spec diverged_inserts(t(), t()) :: [uid()]
+  def diverged_inserts(%__MODULE__{} = held, %__MODULE__{} = state) do
+    held
+    |> inserted_tops()
+    |> Enum.filter(&(known?(state, &1) and new_subtree(held, &1) != new_subtree(state, &1)))
+  end
+
+  defp new_subtree(state, uid) do
+    uids = [uid | descendants(state, uid)]
+    {Map.new(uids, &{&1, Map.get(state.diffs, &1, %{})}), Map.take(state.child_order, uids)}
+  end
+
   # The top of every subtree an editor added: an inserted block whose parent
   # (if any) is not itself inserted. Its descendants travel inside it.
   defp inserted_tops(state) do
