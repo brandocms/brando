@@ -15,6 +15,8 @@ defmodule Brando.SEO.Suggestions do
   """
   import Ecto.Query, only: [from: 2]
 
+  require Logger
+
   alias Brando.SEO.Audit.Row
   alias Brando.SEO.Generate
   alias Brando.SEO.Suggestion
@@ -58,45 +60,59 @@ defmodule Brando.SEO.Suggestions do
       |> Enum.reject(&MapSet.member?(waiting, {inspect(&1.schema), &1.id}))
       |> Enum.take(max_batch())
 
-    jobs =
-      Enum.map(rows, fn row ->
-        suggestion =
-          Brando.Repo.insert!(
-            %Suggestion{
-              schema: inspect(row.schema),
-              entry_id: row.id,
-              language: language,
-              field: field,
-              title: row.title,
+    {:ok, Enum.count(rows, &match?({:ok, _}, queue(&1, language, field, user, now)))}
+  end
+
+  # A suggestion is queued together with its job, or not at all: one left
+  # queued without a job would never be written, and later runs skip it.
+  # One job at a time: `Oban.insert_all/1` skips the worker's uniqueness,
+  # and two runs that both found the entry free would write it twice.
+  defp queue(row, language, field, user, now) do
+    Brando.Repo.transaction(fn ->
+      suggestion =
+        Brando.Repo.insert!(
+          %Suggestion{
+            schema: inspect(row.schema),
+            entry_id: row.id,
+            language: language,
+            field: field,
+            title: row.title,
+            status: :queued,
+            requested_by_id: user_id(user)
+          },
+          on_conflict: [
+            set: [
               status: :queued,
-              requested_by_id: user_id(user)
-            },
-            on_conflict: [
-              set: [
-                status: :queued,
-                title: row.title,
-                text: nil,
-                model: nil,
-                error: nil,
-                generated_at: nil,
-                requested_by_id: user_id(user),
-                reviewed_by_id: nil,
-                updated_at: now
-              ]
-            ],
-            conflict_target: [:schema, :entry_id, :language, :field],
-            returning: true
+              title: row.title,
+              text: nil,
+              model: nil,
+              error: nil,
+              generated_at: nil,
+              requested_by_id: user_id(user),
+              reviewed_by_id: nil,
+              updated_at: now
+            ]
+          ],
+          conflict_target: [:schema, :entry_id, :language, :field],
+          returning: true
+        )
+
+      %{"suggestion_id" => suggestion.id}
+      |> Brando.Tenant.Job.attach()
+      |> SEOSuggestionGenerator.new()
+      |> Oban.insert()
+      |> case do
+        {:ok, _job} ->
+          suggestion
+
+        {:error, reason} ->
+          Logger.warning(
+            "[Brando.SEO] Could not queue a suggestion for #{inspect(row.schema)} ##{row.id}: #{inspect(reason)}"
           )
 
-        %{"suggestion_id" => suggestion.id}
-        |> Brando.Tenant.Job.attach()
-        |> SEOSuggestionGenerator.new()
-      end)
-
-    # One at a time: `Oban.insert_all/1` skips the worker's uniqueness, and
-    # two runs that both found the entry free would write it twice.
-    Enum.each(jobs, &Oban.insert/1)
-    {:ok, length(rows)}
+          Brando.Repo.rollback(reason)
+      end
+    end)
   end
 
   @doc """

@@ -152,6 +152,24 @@ defmodule Brando.SEO.SuggestionsTest do
     end)
   end
 
+  # Left queued without a job, a suggestion would never be written, and
+  # every later run would skip it as waiting.
+  test "a suggestion whose job cannot be queued is not left queued", %{user: user} do
+    page = create_page(user, "No job", "no-job")
+
+    # Rolled back with the test's sandbox transaction.
+    Brando.Repo.repo().query!(
+      "ALTER TABLE public.oban_jobs ADD CONSTRAINT no_suggestion_jobs " <>
+        "CHECK (worker <> 'Brando.Worker.SEOSuggestionGenerator') NOT VALID"
+    )
+
+    Oban.Testing.with_testing_mode(:manual, fn ->
+      assert_raise Ecto.ConstraintError, fn -> Suggestions.enqueue([row(page)], "en", user) end
+    end)
+
+    assert Suggestions.list_open("en") == []
+  end
+
   defp age_jobs(worker, seconds) do
     import Ecto.Query, only: [from: 2]
     inserted_at = DateTime.add(DateTime.utc_now(), -seconds)
