@@ -870,50 +870,74 @@ defmodule Brando.EditSessionTest do
       assert [%{"id" => 5, "options" => ^options}] = Data.state(data, @field).diffs["a"]["block"]["vars"]
     end
 
-    # Sol audit: a row saved while the rejoiner was away was deleted when
-    # the session held no change to that block's rows: the rejoiner's list
-    # was taken as it was.
-    test "a rejoin keeps a row saved while the rejoiner was away, though the session never changed the rows" do
-      table = fn rows -> %{id: 1, block: %{uid: "a", id: 10, children: [], table_rows: rows}} end
-      old = Ops.from_entry_blocks([table.([%{id: 5, sync_uid: "r5"}]), entry_block("b", 2, 20)])
+    # A rejoin as `BlockField.rejoin_session/1` makes it: with the rows the
+    # editor loaded, not read again. Their blocks are the session's, so the
+    # session takes the editor's work, but a row may have been saved since.
+    defp table_rows_of(ids),
+      do:
+        Ops.from_entry_blocks([
+          %{
+            id: 1,
+            block: %{
+              uid: "a",
+              id: 10,
+              children: [],
+              table_rows: Enum.map(ids, fn {id, sync} -> %{id: id, sync_uid: sync} end)
+            }
+          },
+          entry_block("b", 2, 20)
+        ])
 
-      fresh =
-        Ops.from_entry_blocks([table.([%{id: 5, sync_uid: "r5"}, %{id: 8, sync_uid: "r8"}]), entry_block("b", 2, 20)])
-
-      {:ok, seed} = Ops.apply_op(fresh, anchor("b", "A"))
-      {:seeded, data} = Data.join(Data.new(1), @field, fresh, seed)
-
-      cell = ["block", {:at, "table_rows", {"id", 5}, [%{"id" => 5}]}, "cols"]
-      {:ok, held} = Ops.apply_op(old, {:set_field, "a", cell, "B's cell", 0})
-      {{:merged, []}, data} = Data.join(data, @field, fresh, held, old)
-
-      {:ok, params} = Ops.materialize_root(Data.state(data, @field), "a")
-      assert params["block"]["table_rows"] |> Enum.map(& &1["id"]) |> Enum.sort() == [5, 8]
+    defp save_rows(session, ops, saved) do
+      Enum.each(Enum.with_index(ops, 1), fn {op, seq} -> EditSession.submit(session, @field, op, seq) end)
+      {:ok, _} = EditSession.fetch(session, @field, purpose: :save)
+      {:ok, _} = EditSession.rebase(session, @field, saved, :own_save)
     end
 
-    # Sol audit: the session names only the rows of blocks with unsaved
-    # work, so a new row the rejoiner held, which a save has since given an
-    # id, was not matched with it, and came in twice.
-    test "a rejoin matches a new row it held with the row a save made of it" do
-      table = fn rows -> %{id: 1, block: %{uid: "a", id: 10, children: [], table_rows: rows}} end
-      old = Ops.from_entry_blocks([table.([%{id: 5, sync_uid: "r5"}]), entry_block("b", 2, 20)])
+    defp rejoin_with_stale_rows(ref, loaded, held) do
+      Task.await(Task.async(fn -> EditSession.join(ref, @field, {loaded, held}) end))
+    end
 
-      fresh =
-        Ops.from_entry_blocks([table.([%{id: 5, sync_uid: "r5"}, %{id: 8, sync_uid: "new"}]), entry_block("b", 2, 20)])
-
-      {:ok, seed} = Ops.apply_op(fresh, anchor("b", "A"))
-      {:seeded, data} = Data.join(Data.new(1), @field, fresh, seed)
-      assert Data.state(data, @field).rel_ids["a"] == nil
-
+    # Review: a row saved while the rejoiner was away was deleted. Its
+    # rows still had the same blocks, so the session took its list as the
+    # rows were when it loaded them.
+    test "a rejoin keeps a row saved while the rejoiner was away" do
+      ref = new_ref()
+      loaded = table_rows_of([{5, "r5"}])
       rows_then = [%{"id" => 5}]
-      added = %{"sync_uid" => "new", "cols" => "B"}
 
-      {:ok, held} =
-        Ops.apply_op(old, {:set_field, "a", ["block", "table_rows"], {:list, rows_then, rows_then ++ [added]}, 0})
+      # the session was replaced; A came back first, added a row and saved
+      {:ok, a} = EditSession.join(ref, @field, {loaded, loaded})
+      add = {:set_field, "a", ["block", "table_rows"], {:list, rows_then, rows_then ++ [%{"sync_uid" => "r8"}]}, 0}
+      save_rows(a.session, [add], table_rows_of([{5, "r5"}, {8, "r8"}]))
 
-      {{:merged, []}, data} = Data.join(data, @field, fresh, held, old)
+      cell = ["block", {:at, "table_rows", {"id", 5}, rows_then}, "cols"]
+      {:ok, held} = Ops.apply_op(loaded, {:set_field, "a", cell, "B's cell", 0})
+      assert {:ok, %{state: state}} = rejoin_with_stale_rows(ref, loaded, held)
 
-      {:ok, params} = Ops.materialize_root(Data.state(data, @field), "a")
+      {:ok, params} = Ops.materialize_root(state, "a")
+      assert [%{"id" => 5, "cols" => "B's cell"}, %{"id" => 8}] = params["block"]["table_rows"]
+    end
+
+    # Review: a new row the rejoiner held, which a save has since given an
+    # id, came in twice (or was deleted and inserted again).
+    test "a rejoin matches a new row it held with the row a save made of it" do
+      ref = new_ref()
+      loaded = table_rows_of([{5, "r5"}])
+      rows_then = [%{"id" => 5}]
+
+      add = fn cols ->
+        {:set_field, "a", ["block", "table_rows"],
+         {:list, rows_then, rows_then ++ [%{"sync_uid" => "new", "cols" => cols}]}, 0}
+      end
+
+      {:ok, a} = EditSession.join(ref, @field, {loaded, loaded})
+      save_rows(a.session, [add.("A")], table_rows_of([{5, "r5"}, {8, "new"}]))
+
+      {:ok, held} = Ops.apply_op(loaded, add.("B"))
+      assert {:ok, %{state: state}} = rejoin_with_stale_rows(ref, loaded, held)
+
+      {:ok, params} = Ops.materialize_root(state, "a")
       assert [%{"id" => 5}, %{"id" => 8, "cols" => "B"}] = params["block"]["table_rows"]
     end
 

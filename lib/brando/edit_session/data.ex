@@ -76,13 +76,15 @@ defmodule Brando.EditSession.Data do
     case data.fields do
       %{^field => %{base: known}} ->
         if Ops.signature(known) == Ops.signature(base),
-          do: merge_held(data, field, held, held_base, base),
+          do: merge_held(data, field, held, held_base),
           else: {:mismatch, data}
 
       _ ->
         state = if held_base == base, do: held, else: held |> Ops.carry(held_base, base) |> elem(0)
         state = Ops.keep_rel_ids(state)
-        {:seeded, put_field(data, field, new_field(Ops.keep_rel_ids(base, Map.keys(state.rel_ids)), state))}
+
+        {:seeded,
+         put_field(data, field, new_field(Ops.keep_rel_ids(base, Map.keys(state.rel_ids), row_order: :all), state))}
     end
   end
 
@@ -90,16 +92,17 @@ defmodule Brando.EditSession.Data do
   Carry the work an editor holds (`held`, built on `held_base`) onto the
   session's state of a known field. Nothing to carry is `:joined`.
   """
-  @spec merge_held(t(), field(), Ops.t(), Ops.t(), Ops.t() | nil) :: {:joined | {:merged, [String.t()]}, t()}
-  def merge_held(%__MODULE__{} = data, field, %Ops{} = held, %Ops{} = held_base, rows \\ nil) do
+  @spec merge_held(t(), field(), Ops.t(), Ops.t()) :: {:joined | {:merged, [String.t()]}, t()}
+  def merge_held(%__MODULE__{} = data, field, %Ops{} = held, %Ops{} = held_base) do
     entry = Map.fetch!(data.fields, field)
 
     if Ops.pristine?(held, held_base) do
       {:joined, data}
     else
-      # `rows`: the session's rows as the joiner just read them, with every
-      # row named (the session keeps only some of them)
-      {state, conflicts} = Ops.carry(held, held_base, entry.state, lists: :merge, rows: rows || entry.state)
+      # The session's rows, not the joiner's: a joiner whose blocks are the
+      # session's may have loaded them before a save added rows to them.
+      # The base keeps every block's row order for this (`keep_rel_ids/3`).
+      {state, conflicts} = Ops.carry(held, held_base, entry.state, lists: :merge, rows: entry.base)
       state = Ops.keep_rel_ids(state, Map.keys(entry.state.rel_ids))
       rev = entry.rev + 1
       # A save in flight read the state before this merge: its rebase
@@ -257,7 +260,7 @@ defmodule Brando.EditSession.Data do
   def rebase(%__MODULE__{} = data, field, %Ops{} = new_base, mode, now \\ 0) do
     case Map.get(data.fields, field) do
       nil ->
-        new_base = Ops.keep_rel_ids(new_base)
+        new_base = Ops.keep_rel_ids(new_base, [], row_order: :all)
         {:ok, put_field(data, field, %{new_field(new_base, new_base) | rev: 1}), []}
 
       entry ->
@@ -265,7 +268,7 @@ defmodule Brando.EditSession.Data do
         # the rows' ids stay for blocks that had unsaved work when the save
         # read them: ops made then name new rows by uid
         state = Ops.keep_rel_ids(state, Ops.edited(entry.state))
-        new_base = Ops.keep_rel_ids(new_base, Map.keys(state.rel_ids))
+        new_base = Ops.keep_rel_ids(new_base, Map.keys(state.rel_ids), row_order: :all)
         entry = prune(%{entry | base: new_base, state: state, marks: marks, rev: entry.rev + 1})
         {:ok, put_field(data, field, entry), conflicts}
     end
