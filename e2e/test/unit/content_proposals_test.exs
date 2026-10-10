@@ -128,7 +128,9 @@ defmodule E2eProject.ContentProposalsTest do
     assert {:ok, %{key: case_key, html: case_html}} =
              Preview.render(proposal, {:new, "sommerro"}, actor)
 
-    assert case_html =~ "<h2>Sommerro</h2>"
+    # The title is an editable field component; config/test.exs turns on HEEx
+    # debug annotations, which put a comment before it inside the heading.
+    assert case_html =~ ~r{<h2>(<!--[^>]*-->)?Sommerro</h2>}
     assert case_html =~ "Sommerro story"
     assert case_html =~ image.sizes["xlarge"]
 
