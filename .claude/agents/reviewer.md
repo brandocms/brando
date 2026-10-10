@@ -84,9 +84,12 @@ and the author; leave them out.
   revision: a change to it that announces itself (webhook, IndexNow), or a
   restore that moves `deleted_at` or its obfuscated fields
   (`Brando.Trait.SoftDelete` moduledoc).
-- **Query cache.** A `Brando.Query` write inside a transaction evicts before
-  the commit; a concurrent read re-caches the old row. Look for the evict
-  after commit (`Brando.Cache.Query` moduledoc).
+- **Query cache.** Evictions repeat once the transaction commits, once per
+  entry, and generated `{:mutation, ...}` broadcasts wait for the commit, on
+  their own (`Brando.Cache.Query` moduledoc). Look for an announcement that
+  sends readers to the database from inside a transaction by another route,
+  and for a transaction begun on the repo itself, where after-commit work
+  runs at once.
 - **Translated copy.** New strings without Gettext, missing Norwegian
   entries, labels assembled from fragments, humanised English fallbacks.
 - **Tests that do not test the claim.** A test that passes without the fix,
