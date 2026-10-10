@@ -40,12 +40,14 @@ defmodule E2eProject.DoctorTest do
 
     assert status == if(report["status"] == "error", do: 1, else: 0)
     assert report["versions"]["brando"] == Brando.version()
+    # The e2e app takes Brando as `path: "../"`, shown relative to the app
+    assert %{"type" => "path", "path" => ".."} = report["versions"]["brando_source"]
   end
 
   test "prints a line per check" do
     {text, _status} = doctor(["--verbose"])
 
-    assert text =~ "Brando #{Brando.version()} · Phoenix"
+    assert text =~ "Brando #{Brando.version()} (path ..) · Phoenix"
     assert text =~ ~r/^✓ Admin assets\s+linked to/m
     assert text =~ ~r/^. Sitemap\s+/m
   end

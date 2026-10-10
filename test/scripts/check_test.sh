@@ -33,6 +33,13 @@ scenario() {
     mkdir -p "$repo/$(dirname "$gate")"
     echo 'exit 0' >"$repo/$gate"
   done
+  # Gates that run a script directly (`run_step "…" scripts/changelog check`).
+  # shellcheck disable=SC2013
+  for gate in $(sed -n 's/^ *run_step "[^"]*" \(scripts\/[^ ]*\).*/\1/p' "$root/scripts/check"); do
+    mkdir -p "$repo/$(dirname "$gate")"
+    printf '#!/bin/sh\nexit 0\n' >"$repo/$gate"
+    chmod +x "$repo/$gate"
+  done
   printf '%%{\n  "alpha": {:hex, :alpha, "1.0.0"},\n  "beta": {:hex, :beta, "1.0.0"},\n}\n' >"$repo/mix.lock"
   echo "# Brando" >"$repo/README.md"
   echo "defmodule A do end" >"$repo/lib/a.ex"

@@ -1,3 +1,4 @@
+Code.require_file("../../credo/checks/aliases.ex", __DIR__)
 Code.require_file("../../credo/checks/test_cache_restore.ex", __DIR__)
 
 defmodule Brando.Credo.Check.TestCacheRestoreTest do

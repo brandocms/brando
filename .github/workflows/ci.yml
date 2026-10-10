@@ -8,8 +8,8 @@ on:
   # Merge queue readiness: a queue on `main` runs this workflow on its
   # temporary merge commit (refs/heads/gh-readonly-queue/main/…) and waits for
   # the required checks there. Those are the jobs below that run on every
-  # event: mix test (all three), Admin CSS colour tokens, Blueprint quality
-  # gates and Published documentation. They read no pull_request context, so
+  # event: mix test (all three), E2E app unit tests, Admin CSS colour tokens,
+  # Blueprint quality gates and Published documentation. They read no pull_request context, so
   # they behave the same on the queued commit. The E2E jobs stay PR-only
   # (informational, and the PR already ran them); igniter-smoke.yml has no
   # merge_group trigger because its path filter cannot apply to a queue run.
@@ -193,10 +193,10 @@ jobs:
       - name: Run strict Blueprint code analysis
         run: mix credo --strict lib/brando/blueprint.ex lib/brando/blueprint
 
-      # Brando's own checks (credo/checks). The glob, not the directory: Credo
-      # finds no files for a bare `test` argument.
-      - name: Check that tests put back the caches they change
-        run: mix credo --strict --checks Brando.Credo.Check.TestCacheRestore "test/**/*_test.exs"
+      # Brando's own checks (credo/checks). Globs, not directories: Credo
+      # finds no files for a bare `test` argument. scripts/check runs the same.
+      - name: Check that tests put back the caches they change and keep the sandbox unshared
+        run: mix credo --strict --checks Brando.Credo.Check.TestCacheRestore,Brando.Credo.Check.TestSandboxShared "test/**/*.{ex,exs}" "e2e/test/**/*.{ex,exs}"
 
       # Back to zero. The 251-module cycle this gate used to tolerate was not
       # the Blueprint DSL after all — it was a handful of accidental
@@ -228,6 +228,12 @@ jobs:
 
       - name: Check how ci-wait tells known flakes from real failures
         run: bash test/scripts/ci_wait_test.sh
+
+      - name: Validate the changelog fragments
+        run: scripts/changelog check
+
+      - name: Check how changelog fragments are validated and collated
+        run: bash test/scripts/changelog_test.sh
 
       - name: Check scripts/queue and when scripts/check skips its Elixir gates
         run: |
@@ -284,6 +290,85 @@ jobs:
 
       - name: Build published documentation without warnings
         run: mix docs --warnings-as-errors
+
+  # The E2E app's own ExUnit tests (e2e/test/unit): Brando against a real
+  # application's lib/, router, assets and migrations, without a browser. They
+  # compile in MIX_ENV=test, which the E2E jobs' e2e build cannot reuse, and
+  # run on every event, unlike those jobs.
+  e2e_unit:
+    name: E2E app unit tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      MIX_ENV: test
+      BRANDO_E2E_INSTANCE: ci
+
+    services:
+      db:
+        image: public.ecr.aws/docker/library/postgres:14
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: e2e_project_dev
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          path: brando
+      - uses: actions/checkout@v7.0.1
+        with:
+          repository: brandocms/brando_json_api
+          path: brando_json_api
+      - uses: actions/checkout@v7.0.1
+        with:
+          repository: brandocms/brando_graphql
+          path: brando_graphql
+
+      - name: Set up Elixir
+        uses: erlef/setup-beam@v1
+        with:
+          elixir-version: 1.20.3
+          otp-version: 28.4.1
+
+      - name: Restore E2E unit-test dependencies and build
+        if: github.event_name != 'merge_group'
+        uses: actions/cache@v6.1.0
+        with:
+          path: |
+            brando/e2e/deps
+            brando/e2e/_build
+          key: e2e-unit-v1-${{ runner.os }}-28.4.1-1.20.3-${{ hashFiles('brando/e2e/mix.lock') }}-${{ github.sha }}
+          restore-keys: |
+            e2e-unit-v1-${{ runner.os }}-28.4.1-1.20.3-${{ hashFiles('brando/e2e/mix.lock') }}-
+            e2e-unit-v1-${{ runner.os }}-28.4.1-1.20.3-
+
+      # As in mix_test: a merge queue run restores the cache but saves none.
+      - name: Restore E2E unit-test dependencies and build (merge queue, restore only)
+        if: github.event_name == 'merge_group'
+        uses: actions/cache/restore@v6.1.0
+        with:
+          path: |
+            brando/e2e/deps
+            brando/e2e/_build
+          key: e2e-unit-v1-${{ runner.os }}-28.4.1-1.20.3-${{ hashFiles('brando/e2e/mix.lock') }}-${{ github.sha }}
+          restore-keys: |
+            e2e-unit-v1-${{ runner.os }}-28.4.1-1.20.3-${{ hashFiles('brando/e2e/mix.lock') }}-
+            e2e-unit-v1-${{ runner.os }}-28.4.1-1.20.3-
+
+      - name: Install Elixir dependencies
+        working-directory: brando/e2e
+        run: source .envrc && mix deps.get
+
+      # Creates, migrates and seeds the database, then runs mix test.
+      - name: Run the E2E app's unit tests
+        working-directory: brando/e2e
+        run: ./test_unit.sh
 
   e2e_build:
     name: Compile E2E dependencies and application

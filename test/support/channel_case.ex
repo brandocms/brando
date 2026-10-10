@@ -29,12 +29,7 @@ defmodule Brando.ChannelCase do
   end
 
   setup tags do
-    :ok = Ecto.Adapters.SQL.Sandbox.checkout(BrandoIntegration.Repo)
-
-    unless tags[:async] do
-      Ecto.Adapters.SQL.Sandbox.mode(BrandoIntegration.Repo, {:shared, self()})
-    end
-
+    Brando.ConnCase.setup_sandbox(tags)
     :ok
   end
 end

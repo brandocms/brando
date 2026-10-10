@@ -38,6 +38,7 @@ defmodule Brando.Credo.Check.TestCacheRestore do
       ]
     ]
 
+  alias Brando.Credo.Aliases
   alias Credo.SourceFile
 
   @cachex_writes ~w(clear clear! put put! put_many put_many! del del! update update! reset reset! take take! incr incr! decr decr! expire expire! refresh refresh! touch touch!)a
@@ -55,7 +56,7 @@ defmodule Brando.Credo.Check.TestCacheRestore do
   def run(%SourceFile{} = source_file, params) do
     ctx = Context.build(source_file, params, __MODULE__)
     ast = SourceFile.ast(source_file)
-    aliases = collect_aliases(ast)
+    aliases = Aliases.collect(ast)
     helpers = Params.get(params, :restore_helpers, __MODULE__)
 
     if restores_cache?(ast, aliases, helpers) do
@@ -149,7 +150,7 @@ defmodule Brando.Credo.Check.TestCacheRestore do
   end
 
   defp cache_write({{:., _, [{:__aliases__, meta, parts}, fun]}, _, args}, aliases, purpose) when is_list(args) do
-    module = expand(parts, aliases)
+    module = Aliases.expand(parts, aliases)
 
     if write?(module, fun, purpose) do
       %{
@@ -171,37 +172,6 @@ defmodule Brando.Credo.Check.TestCacheRestore do
   defp write?([:Brando, :Cache, _module], fun, :flag), do: fun in @brando_cache_module_flagged
   defp write?([:Brando, :Cache, _module], fun, :restore), do: fun in @brando_cache_module_writes
   defp write?(_module, _fun, _purpose), do: false
-
-  defp expand([head | rest], aliases) do
-    case Map.fetch(aliases, head) do
-      {:ok, full} -> full ++ rest
-      :error -> [head | rest]
-    end
-  end
-
-  defp expand(parts, _aliases), do: parts
-
-  defp collect_aliases(ast) do
-    {_ast, aliases} = Macro.prewalk(ast, %{}, fn node, acc -> {node, add_alias(node, acc)} end)
-    aliases
-  end
-
-  defp add_alias({:alias, _, [{:__aliases__, _, parts}]}, acc) when is_list(parts) do
-    Map.put(acc, Enum.at(parts, -1), parts)
-  end
-
-  defp add_alias({:alias, _, [{:__aliases__, _, parts}, [as: {:__aliases__, _, [name]}]]}, acc) do
-    Map.put(acc, name, parts)
-  end
-
-  defp add_alias({:alias, _, [{{:., _, [{:__aliases__, _, base}, :{}]}, _, children}]}, acc) do
-    Enum.reduce(children, acc, fn
-      {:__aliases__, _, parts}, acc -> Map.put(acc, Enum.at(parts, -1), base ++ parts)
-      _child, acc -> acc
-    end)
-  end
-
-  defp add_alias(_node, acc), do: acc
 
   defp issue_for(ctx, write) do
     format_issue(

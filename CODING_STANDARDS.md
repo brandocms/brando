@@ -25,6 +25,12 @@ sandbox, so a leak shows up as another test failing, by suite order.
   It cannot see a context function that refreshes a cache (`update_identity`,
   `update_seo`, `create_global_set`), so check those by hand: a test that
   calls one needs the restore too.
+- **An unshared sandbox.** Start the owner with `Sandbox.start_owner!/1` and
+  `Sandbox.allow/3` the processes that need it; in shared mode a process left
+  over from an earlier test can take the connection and lock rows (#3119).
+  Shared mode belongs only in an `async: false` case template whose processes
+  the test cannot name (LiveView, channels); the `TestSandboxShared` Credo
+  check enforces this against the allowlist, with reasons, in `.credo.exs`.
 - **Application env through `put_test_env/2`**, which restores an absent key
   as absent; a restored `nil` breaks the next `get_env/3` default.
 - **Unique values against unique indexes.** Take ids and keys from

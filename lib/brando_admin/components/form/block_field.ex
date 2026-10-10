@@ -262,6 +262,25 @@ defmodule BrandoAdmin.Components.Form.BlockField do
      |> assign(:restored_blocks, BlockIdentity.index(revision_blocks))}
   end
 
+  # A recovery copy of a revision's working copy, restored: a working copy
+  # of that revision again (`load_working_copy`), its blocks where the copy
+  # has them, with the revision's module versions (read by the Form).
+  def update(
+        %{event: "restore_draft", working_copy: revision_blocks, changesets: changesets, entry_blocks: originals},
+        socket
+      ) do
+    restored = BlockIdentity.index(revision_blocks)
+    # the copy was cast again: as when it was loaded, its blocks and table
+    # rows deleted since take the revision's sync uids before it is shown
+    changesets = Enum.map(changesets, &BlockIdentity.keep_entry_block(&1, %{}, restored))
+
+    {:ok,
+     socket
+     |> detach_session()
+     |> restore_draft(changesets, originals, place?: true)
+     |> assign(:restored_blocks, restored)}
+  end
+
   def update(%{event: "restore_draft", changesets: changesets, entry_blocks: originals} = message, socket) do
     if Map.get(message, :source) == :translation and joined_with_work?(socket) do
       # A synchronized translation's pending version, loaded by an editor who
@@ -546,6 +565,9 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     # whatever the others' replicas have not shown here yet.
     ops = session_ops(socket)
     cache = socket.assigns[:draft_snapshots] || %{}
+    # a revision's working copy: the copy holds the revision's sync uids for
+    # what it brings back, as the field does (`load_working_copy`)
+    restored = socket.assigns[:restored_blocks] || %{}
 
     # A root's snapshot is a pure function of its saved row, its store state
     # and the browser values overlaid on its subtree, so an unchanged key
@@ -555,7 +577,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
       Enum.map_reduce(ops.order, %{}, fn uid, acc ->
         {:ok, params} = Ops.materialize_root(ops, uid)
         base = materialize_base_struct(socket, uid)
-        key = {base, params, Map.take(forms, [uid | Ops.descendants(ops, uid)])}
+        key = {base, params, Map.take(forms, [uid | Ops.descendants(ops, uid)]), restored == %{}}
 
         snapshot =
           case cache do
@@ -564,9 +586,10 @@ defmodule BrandoAdmin.Components.Form.BlockField do
 
             _ ->
               module = socket.assigns.block_module
-              full = module.changeset(base, params, socket.assigns.current_user.id, true) |> Params.snapshot()
+              user_id = socket.assigns.current_user.id
+              full = base |> module.changeset(params, user_id, true) |> keep_restored(restored) |> Params.snapshot()
               full = Map.update!(full, "block", &Params.overlay_block(&1, forms))
-              module.changeset(base, full, socket.assigns.current_user.id, true) |> Params.snapshot()
+              base |> module.changeset(full, user_id, true) |> keep_restored(restored) |> Params.snapshot()
           end
 
         {snapshot, Map.put(acc, uid, {key, snapshot})}
@@ -1543,6 +1566,9 @@ defmodule BrandoAdmin.Components.Form.BlockField do
         |> assign(:block_bin, [])
     end
   end
+
+  defp keep_restored(changeset, restored) when restored == %{}, do: changeset
+  defp keep_restored(changeset, restored), do: BlockIdentity.keep_entry_block(changeset, %{}, restored)
 
   # The copy's children where the copy has them. Its params name every
   # child, but registering them leaves a child the field knows where it is

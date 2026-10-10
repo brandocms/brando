@@ -1,6 +1,7 @@
 # Release Instructions
 
-  1. Bump version in `CHANGELOG`
+  1. Collate the changelog fragments: `scripts/changelog collate`
+     Bump version in `CHANGELOG`
      Bump version in `mix.exs`
      Bump version in `README.md` installation instructions (if we add to hex)
      Bump version in `assets/package.json`

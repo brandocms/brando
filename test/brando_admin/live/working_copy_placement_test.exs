@@ -98,6 +98,51 @@ defmodule BrandoAdmin.WorkingCopyPlacementTest do
     view
   end
 
+  defp load_working_copy(view, revision) do
+    drawer = cid_of(view, "#page_form-revisions-drawer-tab-activity")
+    view |> with_target(drawer) |> render_hook("select_revision", %{"revision" => revision})
+    await(fn -> render(view) =~ ~r/draft-save-state" data-state="dirty"/ end)
+  end
+
+  defp copies(c),
+    do: Repo.all(from(d in Brando.Drafts.EntryDraft, where: d.entry_id == ^c.page.id and is_nil(d.resolved_at)))
+
+  # A recovery copy, as the form's hook takes one.
+  defp capture(view) do
+    main = view |> render() |> form_params("#page_form_form") |> Plug.Conn.Query.encode()
+
+    view
+    |> with_target(cid_of(view, "#page_form-el"))
+    |> render_hook("draft_capture", %{"main" => main, "blocks" => %{}, "generation" => 1, "request_id" => 1})
+  end
+
+  defp restore_copy(view, copy) do
+    view |> with_target(cid_of(view, "#page_form-el")) |> render_hook("draft_restore", %{"id" => copy.id})
+    await(fn -> render(view) =~ ~r/draft-save-state" data-state="dirty"/ end)
+  end
+
+  defp save(view) do
+    view |> with_target(cid_of(view, "#page_form-el")) |> render_hook("save_redirect_target", %{})
+    view |> form("#page_form_form") |> render_submit()
+    assert_push_event(view, "b:submit", %{}, 5_000)
+    view |> form("#page_form_form") |> render_submit()
+  end
+
+  # The revision loaded as a working copy and its recovery copy taken; then
+  # the page is loaded again, and the copy restored and saved.
+  defp recover_and_save(c, revision, before_restore \\ fn -> :ok end) do
+    view = open(c)
+    load_working_copy(view, revision)
+    capture(view)
+    await(fn -> copies(c) != [] end)
+    before_restore.()
+
+    view = open(c)
+    [copy] = copies(c)
+    restore_copy(view, copy)
+    save(view)
+  end
+
   defp load_and_save(c, revision) do
     view = open(c)
     drawer = cid_of(view, "#page_form-revisions-drawer-tab-activity")
@@ -283,5 +328,140 @@ defmodule BrandoAdmin.WorkingCopyPlacementTest do
 
     await(fn -> length(syncs.()) == 2 end)
     assert Enum.sort(syncs.()) == ["row-gone", "row-kept"]
+  end
+
+  # Review: a working copy comes back after a reload through its recovery
+  # copy. Applied as any recovery copy, it left a block moved since where it
+  # is now, with the revision's content and the module version it has now.
+  test "a working copy brought back by its recovery copy still goes where the revision has it", c do
+    roots!(c, [
+      container(c, "boxA", [module_block(c, "keepA", "Stays in A"), module_block(c, "moved", "As in the revision")]),
+      container(c, "boxB", [module_block(c, "keepB", "Stays in B")])
+    ])
+
+    stamp!("moved", sync_uid: "moved-sync", module_version: 3)
+    revision = revision!(c)
+    saved = tree(c.page)
+    move!(c, "moved", "boxB", 0, "Moved on")
+    stamp!("moved", module_version: 4)
+    stamp!("keepB", sequence: 1)
+
+    recover_and_save(c, revision)
+
+    await(fn -> tree(c.page) == saved end)
+    moved = row("moved")
+    assert {body("moved"), moved.sync_uid, moved.module_version} == {"As in the revision", "moved-sync", 3}
+  end
+
+  # Sol audit: the recovery copy is cast again, which gave a table row
+  # deleted since a new sync uid.
+  test "a table row deleted since comes back with its sync uid through the recovery copy", c do
+    rows = [%{"sequence" => 0, "vars" => []}, %{"sequence" => 1, "vars" => []}]
+    roots!(c, [container(c, "boxA", [Map.put(module_block(c, "table", "Rows"), "table_rows", rows)])])
+
+    for {sequence, sync_uid} <- [{0, "row-kept"}, {1, "row-gone"}] do
+      Repo.update_all(
+        from(r in Brando.Content.TableRow, where: r.block_id == ^row("table").id and r.sequence == ^sequence),
+        set: [sync_uid: sync_uid]
+      )
+    end
+
+    revision = revision!(c)
+    Repo.delete_all(from(r in Brando.Content.TableRow, where: r.sync_uid == "row-gone"))
+
+    recover_and_save(c, revision)
+
+    syncs = fn ->
+      Repo.all(from(r in Brando.Content.TableRow, where: r.block_id == ^row("table").id, select: r.sync_uid))
+    end
+
+    await(fn -> length(syncs.()) == 2 end)
+    assert Enum.sort(syncs.()) == ["row-gone", "row-kept"]
+  end
+
+  # Sol audit: an ordinary recovery copy restored over a working copy left
+  # the form saying it was one, and its next copy said so too.
+  test "a recovery copy restored over a working copy is not one", c do
+    roots!(c, [container(c, "boxA", [module_block(c, "keepA", "Stays in A")])])
+    revision = revision!(c)
+
+    view = open(c)
+    view |> form("#page_form_form", %{"page" => %{"title" => "Typed"}}) |> render_change()
+    capture(view)
+    await(fn -> copies(c) != [] end)
+    [ordinary] = copies(c)
+
+    view = open(c)
+    drawer = cid_of(view, "#page_form-revisions-drawer-tab-activity")
+    view |> with_target(drawer) |> render_hook("select_revision", %{"revision" => revision})
+    await(fn -> render(view) =~ ~r/draft-save-state" data-state="dirty"/ end)
+    restore_copy(view, ordinary)
+    view |> form("#page_form_form", %{"page" => %{"title" => "Typed again"}}) |> render_change()
+    capture(view)
+
+    await(fn -> Enum.any?(copies(c), &(&1.payload["main"]["title"] == "Typed again")) end)
+    copy = Enum.find(copies(c), &(&1.payload["main"]["title"] == "Typed again"))
+    refute Map.has_key?(copy.payload, "working_copy")
+  end
+
+  # Review: a revision purged since its working copy's recovery copy was
+  # taken: the copy still puts the blocks where the revision had them, at
+  # the module versions they have.
+  test "a recovered working copy whose revision is gone still puts its blocks back", c do
+    roots!(c, [
+      container(c, "boxA", [module_block(c, "keepA", "Stays in A"), module_block(c, "moved", "As in the revision")]),
+      container(c, "boxB", [module_block(c, "keepB", "Stays in B")])
+    ])
+
+    stamp!("moved", sync_uid: "moved-sync", module_version: 3)
+    revision = revision!(c)
+    saved = tree(c.page)
+    move!(c, "moved", "boxB", 0, "Moved on")
+    stamp!("moved", module_version: 4)
+    stamp!("keepB", sequence: 1)
+
+    recover_and_save(c, revision, fn ->
+      Repo.delete_all(from(r in Brando.Revisions.Revision, where: r.entry_id == ^c.page.id and r.revision == ^revision))
+    end)
+
+    await(fn -> tree(c.page) == saved end)
+    moved = row("moved")
+    assert {body("moved"), moved.sync_uid, moved.module_version} == {"As in the revision", "moved-sync", 4}
+  end
+
+  # Review: once the working copy is saved, the form's copies are of the
+  # entry again.
+  test "a recovery copy taken after the working copy is saved is not one", c do
+    roots!(c, [container(c, "boxA", [module_block(c, "keepA", "Stays in A")])])
+    revision = revision!(c)
+
+    view = open(c)
+    load_working_copy(view, revision)
+    save(view)
+    await(fn -> render(view) =~ ~r/draft-save-state" data-state="(clean|new)"/ end)
+
+    view |> form("#page_form_form", %{"page" => %{"title" => "Typed after"}}) |> render_change()
+    capture(view)
+
+    await(fn -> Enum.any?(copies(c), &(&1.payload["main"]["title"] == "Typed after")) end)
+    copy = Enum.find(copies(c), &(&1.payload["main"]["title"] == "Typed after"))
+    refute Map.has_key?(copy.payload, "working_copy")
+  end
+
+  # Review: which revision a copy is a working copy of is not content. One
+  # that holds what is saved (the revision the entry is at, loaded and left
+  # as it is) is no change, and no copy is offered for it.
+  test "a working copy that holds what is saved is not a change to recover", c do
+    # as the form submits it (the factory leaves it nil)
+    Repo.update_all(from(p in Page, where: p.id == ^c.page.id), set: [is_homepage: false])
+    roots!(c, [container(c, "boxA", [module_block(c, "keepA", "Stays in A")])])
+    revision = revision!(c)
+
+    view = open(c)
+    load_working_copy(view, revision)
+    capture(view)
+
+    await(fn -> render(view) =~ ~r/draft-save-state" data-state="clean"/ end)
+    assert copies(c) == []
   end
 end
