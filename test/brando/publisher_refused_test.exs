@@ -156,6 +156,27 @@ defmodule Brando.PublisherRefusedTest do
       assert %{status: :draft, publish_at: nil} = Repo.get!(Page, page.id)
     end
 
+    test "its user lost only the right to read it", c do
+      page = scheduled_page(c.editor, %{publish_at: at(3600)})
+      {:ok, others} = Groups.create(c.scope, %{name: "Blind publishers"}, @keys -- ["brando.pages.read"])
+      {:ok, :ok} = Groups.add_member(c.scope, others.id, c.editor.id)
+      revoke(c)
+      set_dates(page, publish_at: at(-600))
+
+      assert {:cancel, :forbidden} = run_job(page, "published", c.editor.id)
+      assert %{status: :draft, publish_at: nil} = Repo.get!(Page, page.id)
+    end
+
+    test "its user was deactivated while the job ran", c do
+      page = scheduled_page(c.editor, %{publish_at: at(3600)})
+      set_dates(page, publish_at: at(-600))
+
+      # After the job found the account active
+      meanwhile(fn -> Repo.update!(Ecto.Changeset.change(c.editor, active: false)) end)
+      assert {:cancel, :scheduler_inactive} = run_job(page, "published", c.editor.id)
+      assert %{status: :draft, publish_at: nil} = Repo.get!(Page, page.id)
+    end
+
     test "its user no longer exists", c do
       page = scheduled_page(c.editor, %{publish_at: at(3600)})
       set_dates(page, publish_at: at(-600))

@@ -226,13 +226,16 @@ defmodule Brando.Worker.EntryPublisher do
     if Engine.enabled?(), do: classify(user, schema_module, entry, status), else: :retry
   end
 
-  # A publication sets publish_at, which takes the right to schedule as well
+  # The save reads the entry first; a publication sets publish_at, which
+  # takes the right to schedule as well. An account deactivated or deleted
+  # since the job looked it up is gone like one it found so.
   defp classify(user, schema_module, entry, status) do
     snapshot = user |> Boundary.actor_scope() |> Engine.snapshot()
-    actions = if status == "published", do: [:update, :publish, :schedule], else: [:update, :publish]
+    actions = if status == "published", do: [:read, :update, :publish, :schedule], else: [:read, :update, :publish]
 
     cond do
       snapshot.reason in @temporary_denials -> :temporary
+      snapshot.reason == :inactive_account -> {:refused, :scheduler_inactive}
       not is_nil(snapshot.reason) -> {:unexplained, snapshot.reason}
       denial = Enum.find_value(actions, &denial(snapshot, &1, schema_module, entry)) -> {:refused, denial}
       true -> {:unexplained, :forbidden}
