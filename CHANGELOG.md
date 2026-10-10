@@ -2075,6 +2075,22 @@ production dump.
   copy keeps only what others changed after it was loaded, and its block
   fields no longer rejoin the session with the replaced changes.
 
+- **A save no longer drops changes made while it ran after an editor
+  rejoined.** When an entry's edit session restarted and an editor came back
+  with unsaved changes while another editor's save was running, that save
+  discarded the returning editor's changes and every change made after the
+  save started, without a warning. The session now keeps them for the save,
+  as it does for changes typed during a save.
+
+- **An editor rejoining with unsaved changes to a block keeps the others'
+  changes to that block's other fields.** When an entry's edit session
+  restarted, an editor coming back with changes to a top-level block replaced
+  every change another editor had made to that block since. Now only the
+  fields the returning editor changed take its values. A list in the block
+  (its references, variables or table rows) still keeps the returning
+  editor's rows, and a field it set back to the saved value counts as
+  unchanged.
+
 - **Pages emit their Article again.** A page's structured data type
   (`WebPage`, `AboutPage`, `ContactPage`, …) was given to the page's Article as
   well, so the Article took the page's `@id` and the graph kept only the page.

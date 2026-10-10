@@ -34,6 +34,16 @@ defmodule BrandoAdmin.Components.Form.BlockField.Ops do
     Getting this backwards loses data either way: replacing child diffs drops
     every edit but the newest, and merging root diffs resurrects values the
     user has since reverted.
+  * `carry/3` is the exception for roots. It carries one state's diffs onto
+    another's, and when that is live session state (a rejoin, a recovery
+    copy) the target's root diff holds other editors' work, not an earlier
+    diff of the same editor. So a carried root diff is merged into it field
+    by field, the carried fields winning, as for children; a list in it
+    keeps the carried side's rows. A field the carried diff lacks keeps the
+    target's value, including one its editor set back to the saved value
+    with a whole-form `{:update, ...}`, which sends no key for it. A
+    recovery copy holds each root it changed whole (`restore_draft`), so it
+    still sets every field of such a root.
   * Inserted params may carry a nested children tree (duplicate/paste/
     recovery); `apply_op/2` splits it into per-uid diffs and registers the
     structure, keeping the one-diff-per-uid invariant.
@@ -986,9 +996,11 @@ defmodule BrandoAdmin.Components.Form.BlockField.Ops do
 
   defp carry_update({uid, diff}, {acc, conflicts}, _state) do
     if known?(acc, uid) do
-      # Children store deltas that merge, roots cumulative diffs that
-      # replace. Either way the new base holds no diff for the uid, so the
-      # editor's diff is what it ends up with.
+      # Children store deltas that merge; an `:update` replaces a root's
+      # cumulative diff. Rows just loaded hold no diff, but live session
+      # state can (a rejoin, a recovery copy): other editors' changes to a
+      # root's other fields stay, and the carried fields win, as children's do.
+      diff = if uid in acc.order, do: deep_merge_params(Map.get(acc.diffs, uid, %{}), diff), else: diff
       {carry_apply(acc, {:update, uid, diff}), conflicts}
     else
       {acc, [uid | conflicts]}
@@ -1612,7 +1624,9 @@ defmodule BrandoAdmin.Components.Form.BlockField.Ops do
   # so their diffs are already cumulative vs. the DB, and merging them would be a
   # bug in the other direction — a field the user edited and then reverted back
   # to its stored value emits no change at all, so the stale value would be
-  # resurrected from the previous diff.
+  # resurrected from the previous diff. A carry (`carry/3`) is different: the
+  # stored diff is other editors' work, so `carry_update/3` merges a carried
+  # root diff into it by field, the carried fields winning.
   #
   # Maps merge recursively. Relation lists (refs/vars/table_rows) merge ELEMENTWISE
   # BY IDENTITY, which is the case that matters most and the one that is easy to

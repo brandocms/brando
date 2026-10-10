@@ -15,7 +15,9 @@ defmodule Brando.EditSession.Data do
   * `state` — `base` plus every unsaved op, in session order.
   * `log` — ops applied while a save is in flight, newest first, so that the
     save's rebase can replay what arrived after the saver read the state.
-    Empty while nobody is saving.
+    Work a rejoining editor carried in (`merge_held/4`) is logged as the
+    `{:carry, held, held_base}` op that does the same. Empty while nobody is
+    saving.
   * `marks` — `%{client => {rev, monotonic_ms}}`, one per save in flight.
   * `rev` — counts the ops applied to the field (and its rebases), so a
     replica can tell a gap from a duplicate.
@@ -97,9 +99,17 @@ defmodule Brando.EditSession.Data do
     else
       {state, conflicts} = Ops.carry(held, held_base, entry.state)
       state = Ops.keep_rel_ids(state, Map.keys(entry.state.rel_ids))
-      {{:merged, conflicts}, put_field(data, field, %{entry | state: state, rev: entry.rev + 1, log: []})}
+      rev = entry.rev + 1
+      # A save in flight read the state before this merge: its rebase
+      # replays the merge as the equivalent op, or the work would be lost.
+      log = log(entry, rev, {:carry, held, held_base})
+      {{:merged, conflicts}, put_field(data, field, %{entry | state: state, rev: rev, log: log})}
     end
   end
+
+  # What a mark's rebase replays: kept only while a save is in flight.
+  defp log(%{marks: marks}, _rev, _op) when marks == %{}, do: []
+  defp log(%{log: log}, rev, op), do: [{rev, op} | log]
 
   defp new_field(base, state), do: %{base: base, state: state, rev: 0, log: [], marks: %{}, seqs: %{}}
 
@@ -148,8 +158,7 @@ defmodule Brando.EditSession.Data do
     with %{} = entry <- Map.get(data.fields, field, {:error, {:unknown_field, field}}),
          {:ok, state} <- safe_apply(entry.state, op) do
       rev = entry.rev + 1
-      log = if entry.marks == %{}, do: [], else: [{rev, op} | entry.log]
-      data = put_field(data, field, %{entry | state: state, rev: rev, log: log})
+      data = put_field(data, field, %{entry | state: state, rev: rev, log: log(entry, rev, op)})
 
       case origin do
         {client, seq} -> {:ok, note_seq(data, field, client, seq)}
