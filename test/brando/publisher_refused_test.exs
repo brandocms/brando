@@ -75,6 +75,26 @@ defmodule Brando.PublisherRefusedTest do
     )
   end
 
+  # Runs `change` once, the next time this process reads a user
+  defp meanwhile(change) do
+    id = make_ref()
+    test = self()
+
+    :telemetry.attach(
+      id,
+      Repo.config()[:telemetry_prefix] ++ [:query],
+      fn _event, _measurements, metadata, _config ->
+        if self() == test and metadata.source == "users" do
+          :telemetry.detach(id)
+          change.()
+        end
+      end,
+      nil
+    )
+
+    on_exit(fn -> :telemetry.detach(id) end)
+  end
+
   defp refused_events(page) do
     Repo.all(
       from e in Event,
@@ -144,6 +164,28 @@ defmodule Brando.PublisherRefusedTest do
       assert %{status: :draft, publish_at: nil} = Repo.get!(Page, page.id)
       assert [%{details: %{"schedule_refused" => %{"action" => "publish"}}}] = refused_events(page)
       assert Brando.Publisher.sweep() |> Enum.filter(&(&1.id == page.id)) == []
+    end
+
+    test "leaves a date or status an editor changed while the job ran", c do
+      moved = scheduled_page(c.editor, %{publish_at: at(3600)})
+      published = scheduled_page(c.editor, %{publish_at: at(3600)})
+      revoke(c)
+      set_dates(moved, publish_at: at(-600))
+      set_dates(published, publish_at: at(-600))
+      tomorrow = at(86_400)
+
+      # Between the job reading the entry and refusing it: when it looks up
+      # the user who scheduled it
+      meanwhile(fn -> set_dates(moved, publish_at: tomorrow) end)
+      assert {:cancel, :forbidden} = run_job(moved, "published", c.editor.id)
+      assert %{status: :pending, publish_at: ^tomorrow} = Repo.get!(Page, moved.id)
+
+      meanwhile(fn -> set_dates(published, status: :published) end)
+      assert {:cancel, :forbidden} = run_job(published, "published", c.editor.id)
+      assert %{status: :published} = Repo.get!(Page, published.id)
+
+      assert refused_events(moved) == []
+      assert refused_events(published) == []
     end
 
     test "a user who still may publishes as before", c do

@@ -200,23 +200,48 @@ defmodule Brando.Worker.EntryPublisher do
         else: {%{unpublish_at: nil}, "unpublish"}
 
     details = %{"schedule_refused" => %{"action" => action, "reason" => to_string(reason)}}
-    context = schema_module.__modules__().context
     singular = schema_module.__naming__().singular
 
     Logger.warning(
       "[B/Pub] Did not #{action} #{singular} ##{entry.id} as scheduled by user ##{user_id} (#{reason}): " <>
-        "the job is cancelled and its date cleared"
+        "cancelling the job and clearing the date"
     )
 
-    Brando.Activity.with_source(:scheduler, details, fn ->
-      case apply(context, :"update_#{singular}", [entry.id, params, :system]) do
-        {:ok, _} -> :ok
-        {:error, error} -> clear_refused(schema_module, entry, params, details, error)
-      end
+    Brando.Repo.transaction(fn ->
+      if still_refused?(schema_module, entry, status), do: clear_date(schema_module, entry, params, details)
     end)
 
     BrandoAdmin.LiveView.Listing.update_list_entries(schema_module)
     {:cancel, reason}
+  end
+
+  # The entry still has the date and status the job read, out of the trash: an
+  # editor may have moved the date, or published by hand, since. Locked until
+  # the date is cleared.
+  defp still_refused?(schema_module, entry, status) do
+    import Ecto.Query, only: [from: 2]
+
+    field = if status == "published", do: :publish_at, else: :unpublish_at
+    query = from e in schema_module, where: e.id == ^entry.id, lock: "FOR UPDATE"
+
+    case Brando.Repo.one(query) do
+      nil ->
+        false
+
+      current ->
+        current.status == entry.status and Map.get(current, field) == Map.get(entry, field) and
+          is_nil(Map.get(current, :deleted_at))
+    end
+  end
+
+  defp clear_date(schema_module, entry, params, details) do
+    context = schema_module.__modules__().context
+    update = :"update_#{schema_module.__naming__().singular}"
+
+    case Brando.Activity.with_source(:scheduler, details, fn -> apply(context, update, [entry.id, params, :system]) end) do
+      {:ok, _} -> :ok
+      {:error, error} -> clear_refused(schema_module, entry, params, details, error)
+    end
   end
 
   # An entry its context will not save (it no longer validates) still loses
