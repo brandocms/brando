@@ -381,8 +381,8 @@ defmodule Brando.Publisher do
       sweep_days: 7`), so older dates, from before the sweep existed, are
       left alone.
     * An entry it has handled no longer matches, so running it again does
-      nothing. One that changed after it was found (its job refused the
-      date, or an editor saved it) is left out. Pages and fragments index
+      nothing. With group authorization, one that changed after it was found
+      (its job refused the date, or an editor saved it) is left out. Pages and fragments index
       both dates, and the window keeps each query to a few days of them.
     * A content type whose table cannot be read (an environment whose
       migrations lag) is logged and skipped. An entry whose save fails is
@@ -521,16 +521,29 @@ defmodule Brando.Publisher do
     context = schema.__modules__().context
     update = :"update_#{schema.__naming__().singular}"
 
+    save = fn -> apply(context, update, [entry.id, params, :system]) end
+
+    # With group authorization a job may refuse the date and take it back
+    # while the sweep runs: the entry is locked and checked again. The save
+    # evicts the entry's cached queries before the commit, so again after it.
     result =
-      Repo.transaction(fn ->
-        if still_due?(schema, entry, action), do: apply(context, update, [entry.id, params, :system]), else: :changed
-      end)
+      if Brando.Authorization.Engine.enabled?(),
+        do: Repo.transaction(fn -> if still_due?(schema, entry, action), do: save.(), else: :changed end),
+        else: {:ok, save.()}
 
     case result do
-      {:ok, :changed} -> :changed
-      {:ok, {:ok, _}} -> :ok
-      {:ok, error} -> sweep_failed(schema, entry, action, error)
-      error -> sweep_failed(schema, entry, action, error)
+      {:ok, :changed} ->
+        :changed
+
+      {:ok, {:ok, _}} ->
+        Brando.Cache.Query.evict(entry)
+        :ok
+
+      {:ok, error} ->
+        sweep_failed(schema, entry, action, error)
+
+      error ->
+        sweep_failed(schema, entry, action, error)
     end
   rescue
     error ->

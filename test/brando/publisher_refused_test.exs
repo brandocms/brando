@@ -310,6 +310,30 @@ defmodule Brando.PublisherRefusedTest do
       assert refused_events(second) == []
     end
 
+    test "the sweep saves as it always has, without locking the entry", c do
+      page = scheduled_page(c.editor, %{publish_at: at(3600)})
+      set_dates(page, publish_at: at(-600))
+      test = self()
+      id = make_ref()
+
+      :telemetry.attach(
+        id,
+        Repo.config()[:telemetry_prefix] ++ [:query],
+        fn _event, _measurements, metadata, _config ->
+          # The sweep's check reads the whole row; a save takes its own lock on the id
+          if metadata.source == "pages" and metadata.query =~ "FOR UPDATE" and
+               not String.starts_with?(metadata.query, ~s(SELECT p0."id" FROM)),
+             do: send(test, {:locked, metadata.query})
+        end,
+        nil
+      )
+
+      on_exit(fn -> :telemetry.detach(id) end)
+
+      assert [%{action: :publish, result: :ok}] = swept(page)
+      refute_received {:locked, _}
+    end
+
     test "a schedule whose user no longer exists is not taken back, and the sweep publishes it", c do
       page = scheduled_page(c.editor, %{publish_at: at(3600)})
       date = at(-600)

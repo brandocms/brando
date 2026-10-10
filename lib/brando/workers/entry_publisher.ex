@@ -293,6 +293,8 @@ defmodule Brando.Worker.EntryPublisher do
         {:error, reason}
 
       {:ok, _} ->
+        # The save evicted the entry's cached queries before the commit
+        Brando.Cache.Query.evict(entry)
         BrandoAdmin.LiveView.Listing.update_list_entries(schema_module)
         :ok
 
@@ -323,6 +325,8 @@ defmodule Brando.Worker.EntryPublisher do
 
     case result do
       {:ok, _} ->
+        # The save evicted the entry's cached queries before the commit
+        Brando.Cache.Query.evict(entry)
         BrandoAdmin.LiveView.Listing.update_list_entries(schema_module)
         {:cancel, reason}
 
