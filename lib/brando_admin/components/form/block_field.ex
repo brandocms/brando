@@ -1644,9 +1644,22 @@ defmodule BrandoAdmin.Components.Form.BlockField do
   and vars.
   """
   def moved_child_changeset(%Changeset{} = changeset, user_id) do
-    params = changeset |> Ops.snapshot_params() |> Ops.moved_params()
+    params = changeset |> Ops.snapshot_params() |> Ops.moved_params(changed_galleries(changeset))
     base = %Brando.Content.Block{vars: [], refs: [], table_rows: [], children: [], block_identifiers: []}
     Brando.Content.Block.recursive_block_changeset(base, params, user_id)
+  end
+
+  # The uids of the refs, in the block and below it, whose gallery has
+  # unsaved changes.
+  defp changed_galleries(%Changeset{} = changeset) do
+    own =
+      for %Changeset{changes: %{gallery: _}} = ref <- Changeset.get_change(changeset, :refs, []),
+          into: MapSet.new(),
+          do: Changeset.get_field(ref, :uid)
+
+    changeset
+    |> Changeset.get_change(:children, [])
+    |> Enum.reduce(own, &MapSet.union(&2, changed_galleries(&1)))
   end
 
   # The persisted row a moved child should cast over, so `cast_assoc` matches

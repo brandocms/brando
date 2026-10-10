@@ -407,6 +407,24 @@ defmodule Brando.Content.BlocksCrossParentMoveTest do
            "the edit made before the move must survive it"
   end
 
+  # Containers A (holding `child`) and B, empty.
+  defp insert_containers(page, user, child) do
+    for {uid, children, seq} <- [{"containerA", [child], 0}, {"containerB", [], 1}] do
+      %Brando.Pages.Page.Blocks{}
+      |> Changeset.change(%{entry_id: page.id, sequence: seq})
+      |> Changeset.put_assoc(:block, %{
+        uid: uid,
+        type: :container,
+        active: true,
+        source: "Elixir.Brando.Pages.Page.Blocks",
+        creator_id: user.id,
+        sequence: seq,
+        children: children
+      })
+      |> Brando.Repo.insert!()
+    end
+  end
+
   # Review: the move ships the child as BlockField's insert_extracted_child
   # builds it, a changeset over its row (`Ops.block_diff_params/1`), which
   # holds only its changes. Under the new parent the child is a new row, so
@@ -446,20 +464,7 @@ defmodule Brando.Content.BlocksCrossParentMoveTest do
       ]
     }
 
-    for {uid, children, seq} <- [{"containerA", [child], 0}, {"containerB", [], 1}] do
-      %Brando.Pages.Page.Blocks{}
-      |> Changeset.change(%{entry_id: page.id, sequence: seq})
-      |> Changeset.put_assoc(:block, %{
-        uid: uid,
-        type: :container,
-        active: true,
-        source: "Elixir.Brando.Pages.Page.Blocks",
-        creator_id: user.id,
-        sequence: seq,
-        children: children
-      })
-      |> Brando.Repo.insert!()
-    end
+    insert_containers(page, user, child)
 
     entry_blocks = preloaded_entry_blocks(page.id)
     [%{block: %{children: [row]}} | _] = entry_blocks
@@ -480,6 +485,58 @@ defmodule Brando.Content.BlocksCrossParentMoveTest do
     assert [%{name: "body", data: %{data: %{text: "<p>Ref text</p>"}}}] = moved.refs
     assert [%{key: "heading", value: "Var value"}] = moved.vars
     assert [%{uid: "grandR", description: "the grandchild", type: :module}] = moved.children
+  end
+
+  # Sol audit: a moved child's ref keeps its saved gallery by id, which
+  # dropped the gallery changes the move carried.
+  test "a moved child keeps the unsaved changes to its ref's gallery" do
+    user = Factory.insert(:random_user)
+    page = Factory.insert(:page, creator: user)
+    [first, second] = for _ <- 1..2, do: Factory.insert(:image, creator_id: user.id)
+
+    child = %{
+      uid: "childG",
+      type: :module,
+      active: true,
+      source: "Elixir.Brando.Pages.Page.Blocks",
+      creator_id: user.id,
+      sequence: 0,
+      refs: [
+        %{
+          name: "gallery",
+          uid: "refG",
+          data: %Brando.Villain.Blocks.TextBlock{data: %Brando.Villain.Blocks.TextBlock.Data{text: ""}},
+          gallery: %{gallery_objects: [%{image_id: first.id, sequence: 0}]}
+        }
+      ],
+      children: []
+    }
+
+    insert_containers(page, user, child)
+
+    entry_blocks = preloaded_entry_blocks(page.id)
+    [%{block: %{children: [row]}} | _] = entry_blocks
+    row = Brando.Repo.preload(row, refs: [gallery: :gallery_objects])
+    [%{id: ref_id, gallery: %{id: gallery_id, gallery_objects: [%{id: object_id}]}}] = row.refs
+    ops = Ops.from_entry_blocks(entry_blocks)
+
+    # an image added to the gallery, not saved yet
+    gallery = %{
+      "id" => gallery_id,
+      "gallery_objects" => [%{"id" => object_id}, %{"image_id" => second.id, "sequence" => 1}]
+    }
+
+    {:ok, ops} = Ops.apply_op(ops, {:update, "childG", %{"refs" => [%{"id" => ref_id, "gallery" => gallery}]}})
+
+    {:ok, params} = Ops.materialize_child(ops, "childG")
+    block_cs = Brando.Content.Block.recursive_block_changeset(row, params, user.id)
+    moved_cs = BrandoAdmin.Components.Form.BlockField.moved_child_changeset(block_cs, user.id)
+    {:ok, ops} = Ops.apply_op(ops, {:insert_child, "containerB", "childG", 0, Ops.block_diff_params(moved_cs)})
+    assert {:ok, _} = save_from_ops(page, entry_blocks, ops, user)
+
+    assert [%{block: %{children: []}}, %{block: %{children: [moved]}}] = preloaded_entry_blocks(page.id)
+    [ref] = Brando.Repo.preload(moved, refs: [gallery: :gallery_objects]).refs
+    assert ref.gallery.gallery_objects |> Enum.map(& &1.image_id) |> Enum.sort() == Enum.sort([first.id, second.id])
   end
 
   test "materialize_child rejects roots and unknown uids" do

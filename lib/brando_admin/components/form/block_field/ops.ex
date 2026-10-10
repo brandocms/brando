@@ -785,13 +785,15 @@ defmodule BrandoAdmin.Components.Form.BlockField.Ops do
   child's id), so it has to carry everything it holds, not only what
   changed, and none of the old rows' ids: its refs, vars, table rows,
   identifiers and children come along as new rows. A ref's gallery stays
-  the same gallery (`gallery_id`): the old ref goes with the old row.
+  the same gallery (`gallery_id`): the old ref goes with the old row. A
+  gallery with unsaved changes (its ref's uid in `changed_galleries`) can
+  only bring them as a new gallery; the saved one is left unused.
   """
-  @spec moved_params(params()) :: params()
-  def moved_params(%{} = block) do
+  @spec moved_params(params(), MapSet.t()) :: params()
+  def moved_params(%{} = block, changed_galleries \\ MapSet.new()) do
     block
     |> Map.drop(["id", "parent_id"])
-    |> update_rows("refs", &(&1 |> keep_gallery() |> Map.drop(["id", "block_id"])))
+    |> update_rows("refs", &(&1 |> keep_gallery(changed_galleries) |> Map.drop(["id", "block_id"])))
     |> update_rows("vars", &Map.drop(&1, ["id", "block_id", "table_row_id"]))
     |> update_rows("table_rows", fn row ->
       row
@@ -799,7 +801,7 @@ defmodule BrandoAdmin.Components.Form.BlockField.Ops do
       |> update_rows("vars", &Map.drop(&1, ["id", "block_id", "table_row_id"]))
     end)
     |> update_rows("block_identifiers", &Map.drop(&1, ["id", "block_id"]))
-    |> update_rows("children", &moved_params/1)
+    |> update_rows("children", &moved_params(&1, changed_galleries))
   end
 
   defp update_rows(params, key, fun) do
@@ -809,10 +811,16 @@ defmodule BrandoAdmin.Components.Form.BlockField.Ops do
     end
   end
 
-  defp keep_gallery(%{"gallery" => %{"id" => id}} = ref) when id not in [nil, ""],
-    do: ref |> Map.delete("gallery") |> Map.put("gallery_id", id)
+  defp keep_gallery(%{"gallery" => %{"id" => id} = gallery} = ref, changed) when id not in [nil, ""] do
+    if MapSet.member?(changed, ref["uid"]) do
+      gallery = gallery |> Map.delete("id") |> update_rows("gallery_objects", &Map.drop(&1, ["id", "gallery_id"]))
+      Map.put(ref, "gallery", gallery)
+    else
+      ref |> Map.delete("gallery") |> Map.put("gallery_id", id)
+    end
+  end
 
-  defp keep_gallery(ref), do: ref
+  defp keep_gallery(ref, _changed), do: ref
 
   @doc """
   Full castable params snapshot of a changeset's applied state.
