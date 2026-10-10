@@ -1216,8 +1216,33 @@ defmodule BrandoAdmin.Components.Form.BlockField do
   # copy that is already there is not made again (`reinsert_payload/2`): a
   # rescue brings a group back once. Its refs, whose uids are unique as
   # well, get new ones. Nothing else changes: a `"uid"` inside a ref's data
-  # is the data's own.
-  defp rename_copy(%{"uid" => uid} = block, kept), do: rename_block(block, String.replace_prefix(kept, uid, ""))
+  # is the data's own, except footnote markers in its text, which name the
+  # blocks of the copy by their new uids (as a duplicate's do).
+  defp rename_copy(%{"uid" => uid} = block, kept) do
+    suffix = String.replace_prefix(kept, uid, "")
+    mapping = block |> subtree_uids() |> Map.new(&{&1, &1 <> suffix})
+    block |> rename_block(suffix) |> remap_copy_markers(mapping)
+  end
+
+  defp subtree_uids(%{"uid" => uid} = block),
+    do: [uid | Enum.flat_map(Map.get(block, "children", []), &subtree_uids/1)]
+
+  defp remap_copy_markers(%{} = block, mapping) do
+    block
+    |> Map.update("refs", [], fn refs -> Enum.map(refs, &remap_ref_markers(&1, mapping)) end)
+    |> Map.update("vars", [], fn vars -> Enum.map(vars, &remap_var_markers(&1, mapping)) end)
+    |> Map.update("children", [], fn children -> Enum.map(children, &remap_copy_markers(&1, mapping)) end)
+  end
+
+  defp remap_ref_markers(%{"data" => %{"type" => "text", "data" => %{"text" => text} = data}} = ref, mapping),
+    do: put_in(ref, ["data", "data"], %{data | "text" => Brando.Content.BlockSlots.remap_markers(text, mapping)})
+
+  defp remap_ref_markers(ref, _mapping), do: ref
+
+  defp remap_var_markers(%{"type" => type, "value" => value} = var, mapping) when type in ["html", :html],
+    do: %{var | "value" => Brando.Content.BlockSlots.remap_markers(value, mapping)}
+
+  defp remap_var_markers(var, _mapping), do: var
 
   # Its sync uid (and its table rows') would be the original's: a new block
   # takes its own when it is cast.

@@ -523,7 +523,8 @@ defmodule BrandoAdmin.EditSessionSavesTest do
 
     old = session_pid(c.identity)
     :sys.suspend(old)
-    type(b, uid, "<p>B's version</p>")
+    # a footnote marker in the text names a block of the copied subtree
+    type(b, uid, ~s(<p>B's version<sup data-footnote-uid="#{uid}">1</sup></p>))
     :sys.suspend(b.pid)
     Process.exit(old, :kill)
     # A comes back first and seeds the new session with its version
@@ -534,9 +535,10 @@ defmodule BrandoAdmin.EditSessionSavesTest do
     await(fn -> session_state(c.identity).statuses[kept] == :inserted end)
     state = session_state(c.identity)
     assert Enum.find_index(state.order, &(&1 == kept)) == Enum.find_index(state.order, &(&1 == uid)) + 1
-    await(fn -> shown_text(b, kept) == "<p>B's version</p>" end)
-    await(fn -> shown_text(a, kept) == "<p>B's version</p>" end)
-    refute shown_text(a, uid) == "<p>B's version</p>"
+    copied? = fn view -> (shown_text(view, kept) || "") =~ ~r/version<sup data-footnote-uid="#{kept}">/ end
+    await(fn -> copied?.(b) end)
+    await(fn -> copied?.(a) end)
+    refute shown_text(a, uid) =~ "B's version"
     refute state.diffs[kept]["block"]["sync_uid"] == uid
   end
 
