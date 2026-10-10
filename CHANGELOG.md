@@ -2136,6 +2136,14 @@ production dump.
   save started, without a warning. The session now keeps them for the save,
   as it does for changes typed during a save.
 
+- **A block moved into another container keeps its content.** Dragging a
+  saved block from one container to another in the outline saved it under
+  the new container with only its unsaved changes: without its module,
+  references, variables and child blocks. Unsaved changes to a moved
+  block's gallery come along as a new gallery. A block dropped at the same
+  position in the other container is moved too; the outline showed it
+  moved while it stayed where it was.
+
 - **An editor rejoining with unsaved changes to a block keeps the others'
   changes to that block's other fields.** When an entry's edit session
   restarted, an editor coming back with changes to a top-level block replaced
