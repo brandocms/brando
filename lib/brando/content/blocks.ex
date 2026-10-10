@@ -416,7 +416,8 @@ defmodule Brando.Content.Blocks do
   def render_entries_with_module_id(module_id, origin \\ :local) do
     module_id
     |> list_block_ids_using_module(origin)
-    |> sync_and_render_blocks(module_id, origin)
+    |> sync_blocks(module_id, origin)
+    |> list_root_block_ids_by_source()
     |> list_entry_ids_for_root_blocks_by_source()
     |> enqueue_entry_map_for_render()
   end
@@ -818,7 +819,6 @@ defmodule Brando.Content.Blocks do
         {:error, changeset} -> log_failed_sync(block, module, changeset, acc)
       end
     end)
-    |> render_blocks()
   end
 
   @doc """
@@ -935,10 +935,12 @@ defmodule Brando.Content.Blocks do
   defp block_data_type(%{__struct__: struct}), do: struct
   defp block_data_type(_), do: nil
 
-  def sync_and_render_blocks(block_ids, module_id, origin \\ :local)
-  def sync_and_render_blocks([], _module_id, _origin), do: %{}
+  # Returns the ids of the blocks it synced. The entries holding them are
+  # re-rendered from scratch by `render_entries_with_module_id/2`.
+  def sync_blocks(block_ids, module_id, origin \\ :local)
+  def sync_blocks([], _module_id, _origin), do: []
 
-  def sync_and_render_blocks(block_ids, module_id, origin) do
+  def sync_blocks(block_ids, module_id, origin) do
     module =
       case normalize_library_origin(origin) do
         :local ->
@@ -967,7 +969,6 @@ defmodule Brando.Content.Blocks do
         {:error, changeset} -> log_failed_sync(block, module, changeset, acc)
       end
     end)
-    |> render_blocks()
   end
 
   # A module save migrates every block that uses it, one write at a time and
@@ -996,49 +997,6 @@ defmodule Brando.Content.Blocks do
 
   defp normalize_library_origin(origin) when origin in [:shared, "shared"], do: :shared
   defp normalize_library_origin(_origin), do: :local
-
-  def render_blocks(block_ids) do
-    source_map = list_root_block_ids_by_source(block_ids)
-
-    for {join_source, ids} <- source_map do
-      {:assoc, %{queryable: schema}} = Map.get(join_source.__changeset__(), :entry)
-
-      query =
-        from js in join_source,
-          where: js.block_id in ^ids,
-          select: [js.entry_id, fragment("array_agg(?)", js.block_id)],
-          group_by: js.entry_id
-
-      grouped_block_ids = Repo.all(query)
-
-      for {entry_id, block_ids} <- grouped_block_ids do
-        {:ok, entry} = Brando.Blueprint.EntryQuery.get(schema, entry_id)
-
-        {:ok, blocks} =
-          Content.list_blocks(%{
-            filter: %{ids: block_ids},
-            preload: [:vars, :module]
-          })
-
-        Enum.each(blocks, &render_and_update_block(&1, entry))
-      end
-    end
-
-    source_map
-  end
-
-  defp render_and_update_block(block, entry) do
-    rendered_block = Villain.render_block(block, entry)
-
-    changes = %{
-      rendered_html: rendered_block,
-      rendered_at: DateTime.truncate(DateTime.utc_now(), :second)
-    }
-
-    block
-    |> Changeset.change(changes)
-    |> Repo.update()
-  end
 
   @doc """
   Reapplies the module's template-controlled ref settings onto a block's refs.
