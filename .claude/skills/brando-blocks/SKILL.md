@@ -108,6 +108,7 @@ each ref type submits with its config closed and open; add new ref types there.
 | `test/brando/villain/villain_test.exs` | Villain rendering tests |
 | `test/brando/villain/blocks/ref_apply_test.exs` | Ref apply_ref tests |
 | `e2e/playwright/tests/blocks/` | E2E tests (identifiers, table rows, live preview) |
+| `test/support/edit_session_rejoin.ex` | Edit-session crash and rejoin through two real block fields (late rejoiner, unconfirmed ops, rows fixture); a rejoin test goes through it, never `EditSession.join/4` with built state |
 
 ---
 

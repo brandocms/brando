@@ -911,28 +911,6 @@ defmodule Brando.EditSessionTest do
       )
     end
 
-    # Review: a row saved while the rejoiner was away was deleted. Its
-    # rows still had the same blocks, so the session took its list as the
-    # rows were when it loaded them.
-    test "a rejoin keeps a row saved while the rejoiner was away" do
-      ref = new_ref()
-      loaded = table_rows_of([{5, "r5"}])
-      rows_then = [%{"id" => 5}]
-
-      # the session was replaced; A came back first, added a row and saved
-      {:ok, a} = EditSession.join(ref, @field, {loaded, loaded})
-      add = {:set_field, "a", ["block", "table_rows"], {:list, rows_then, rows_then ++ [%{"sync_uid" => "r8"}]}, 0}
-      saved = table_rows_of([{5, "r5"}, {8, "r8"}])
-      save_rows(a.session, [add], saved)
-
-      cell = ["block", {:at, "table_rows", {"id", 5}, rows_then}, "cols"]
-      {:ok, held} = Ops.apply_op(loaded, {:set_field, "a", cell, "B's cell", 0})
-      assert {:ok, %{state: state}} = rejoin_with_stale_rows(ref, loaded, held, saved)
-
-      {:ok, params} = Ops.materialize_root(state, "a")
-      assert [%{"id" => 5, "cols" => "B's cell"}, %{"id" => 8}] = params["block"]["table_rows"]
-    end
-
     # Review: a new row the rejoiner held, which a save has since given an
     # id, came in twice (or was deleted and inserted again).
     test "a rejoin matches a new row it held with the row a save made of it" do
