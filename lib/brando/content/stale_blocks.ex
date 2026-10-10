@@ -825,11 +825,12 @@ defmodule Brando.Content.StaleBlocks do
 
   # Of everything the rows hold, not of their previews: a preview is plain
   # text cut short, and does not show a link's URL or which image it is.
+  # The owners are sorted: they are read in no particular order.
   defp fingerprint(module, blocks) do
     :erlang.phash2({
       module.version,
       Enum.map(blocks, fn b ->
-        {b.id, b.module_version, b.problems, Enum.map(b.entries, &{&1.schema, &1.id, &1.trashed?}),
+        {b.id, b.module_version, b.problems, b.entries |> Enum.map(&{&1.schema, &1.id, &1.trashed?}) |> Enum.sort(),
          Enum.map(b.leftovers, &{&1.kind, &1.key, &1.type, &1.row.id}), Enum.map(b.rows.vars, &stored/1),
          Enum.map(b.rows.refs, &stored/1)}
       end)

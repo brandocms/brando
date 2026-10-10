@@ -387,6 +387,22 @@ defmodule Brando.Content.StaleBlocksTest do
       assert Enum.find(refs(block), &(&1.name == "title"))
     end
 
+    test "the fingerprint does not depend on the order the owners are read in", c do
+      {_page, block} = page_with_block(c, [link_var()], [])
+      other = Factory.insert(:page, creator: c.user, title: "Annen", uri: "p#{System.unique_integer([:positive])}")
+      struct(Page.Blocks, %{entry_id: other.id, block_id: block.id, sequence: 0}) |> Repo.insert!()
+
+      report = report!(c)
+      assert [%{entries: [_, _]}] = report.blocks
+
+      reversed =
+        update_in(report.blocks, fn blocks ->
+          Enum.map(blocks, &Map.update!(&1, :entries, fn e -> Enum.reverse(e) end))
+        end)
+
+      assert StaleBlocks.plan(reversed, %{}).fingerprint == StaleBlocks.plan(report, %{}).fingerprint
+    end
+
     test "is refused when an entry it changes went to the trash after the review", c do
       {page, block} = page_with_block(c, [link_var()], [])
       plan = StaleBlocks.plan(report!(c), %{{:var, "link"} => :drop})
