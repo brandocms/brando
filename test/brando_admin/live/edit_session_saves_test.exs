@@ -939,6 +939,21 @@ defmodule BrandoAdmin.EditSessionSavesTest do
       end
     end
 
+    # Page obfuscates `uri` in the trash; a revision from before has the real one.
+    test "of an entry in the trash, it keeps the address the trash gave it", c do
+      {:ok, revision} = Brando.Revisions.create_revision(Repo.get!(Page, c.identity.id), c.me, false)
+      {:ok, trashed} = Brando.Repo.soft_delete(Repo.get!(Page, c.identity.id))
+      assert trashed.uri =~ "$$$"
+
+      a = open(c.conn, trashed)
+      drawer = cid_of(a, "#page_form-revisions-drawer-tab-activity")
+      a |> with_target(drawer) |> render_hook("select_revision", %{"revision" => revision.revision})
+      await(fn -> render(a) =~ ~r/draft-save-state" data-state="dirty"/ end)
+
+      [uri] = a |> render() |> Floki.parse_document!() |> Floki.attribute(~s(#page_form_form [name$="[uri]"]), "value")
+      assert uri == trashed.uri
+    end
+
     test "saving it writes the working copy, and another editor's later work stays", c do
       Application.put_env(:brando, EditSession, grace_period: 30_000)
       a = open(c.conn, c.identity)

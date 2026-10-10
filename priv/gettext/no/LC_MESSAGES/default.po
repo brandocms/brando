@@ -81,6 +81,13 @@ msgstr[1] "%{count} blokker lagt til"
 
 #: lib/brando_admin/live/content/stale_blocks_live.ex
 #, elixir-autogen, elixir-format
+msgid "%{count} block is not in any entry, so History cannot restore what changes in it."
+msgid_plural "%{count} blocks are not in any entry, so History cannot restore what changes in them."
+msgstr[0] "%{count} blokk er ikke i noen oppføring, så Historikk kan ikke gjenopprette det som endres i den."
+msgstr[1] "%{count} blokker er ikke i noen oppføring, så Historikk kan ikke gjenopprette det som endres i dem."
+
+#: lib/brando_admin/live/content/stale_blocks_live.ex
+#, elixir-autogen, elixir-format
 msgid "%{count} block of %{module} is on an older version than the module's version %{version}. A module save keeps what the module no longer defines, so the block cannot be brought up to date until that is dropped or moved."
 msgid_plural "%{count} blocks of %{module} are on older versions than the module's version %{version}. A module save keeps what the module no longer defines, so the blocks cannot be brought up to date until that is dropped or moved."
 msgstr[0] "%{count} blokk av %{module} er på en eldre versjon enn modulens versjon %{version}. En lagring av modulen beholder det modulen ikke lenger definerer, så blokken kan ikke oppdateres før det er forkastet eller flyttet."
@@ -560,10 +567,10 @@ msgstr "%{count} opplasting(er) var ikke ferdige og ble ikke lagret."
 
 #: lib/brando_admin/live/content/stale_blocks_live.ex
 #, elixir-autogen, elixir-format
-msgid "%{count} value is dropped or replaced. A revision of each entry is stored first, so History can restore it."
-msgid_plural "%{count} values are dropped or replaced. A revision of each entry is stored first, so History can restore them."
-msgstr[0] "%{count} verdi forkastes eller erstattes. En revisjon av hver oppføring lagres først, så Historikk kan gjenopprette den."
-msgstr[1] "%{count} verdier forkastes eller erstattes. En revisjon av hver oppføring lagres først, så Historikk kan gjenopprette dem."
+msgid "%{count} value is dropped or replaced."
+msgid_plural "%{count} values are dropped or replaced."
+msgstr[0] "%{count} verdi forkastes eller erstattes."
+msgstr[1] "%{count} verdier forkastes eller erstattes."
 
 #: lib/brando/sites/global_set.ex
 #, elixir-autogen, elixir-format
@@ -1200,6 +1207,25 @@ msgstr "En gjenbrukbar mediesamling"
 #, elixir-autogen, elixir-format
 msgid "A reusable video value"
 msgstr "En gjenbrukbar video"
+
+#: lib/brando_admin/live/content/stale_blocks_live.ex
+#, elixir-autogen, elixir-format
+msgid "A revision of %{count} entry was stored first; History can restore it."
+msgid_plural "Revisions of %{count} entries were stored first; History can restore them."
+msgstr[0] "En revisjon av %{count} oppføring ble lagret først; Historikk kan gjenopprette den."
+msgstr[1] "Revisjoner av %{count} oppføringer ble lagret først; Historikk kan gjenopprette dem."
+
+#: lib/brando_admin/live/content/stale_blocks_live.ex
+#, elixir-autogen, elixir-format
+msgid "A revision of %{count} of them is stored first, so History can restore it."
+msgid_plural "A revision of %{count} of them is stored first, so History can restore them."
+msgstr[0] "En revisjon av %{count} av dem lagres først, så Historikk kan gjenopprette den."
+msgstr[1] "En revisjon av %{count} av dem lagres først, så Historikk kan gjenopprette dem."
+
+#: lib/brando_admin/live/content/stale_blocks_live.ex
+#, elixir-autogen, elixir-format
+msgid "A revision of each entry is stored first, so History can restore it."
+msgstr "En revisjon av hver oppføring lagres først, så Historikk kan gjenopprette den."
 
 #: lib/brando_admin/live/content/stale_blocks_live.ex
 #, elixir-autogen, elixir-format
@@ -7880,6 +7906,18 @@ msgstr "Høy"
 msgid "History"
 msgstr "Historikk"
 
+#: lib/brando_admin/live/content/stale_blocks_live.ex
+#, elixir-autogen, elixir-format
+msgid "History cannot restore %{entries}: it keeps no revisions."
+msgid_plural "History cannot restore %{entries}: they keep no revisions."
+msgstr[0] "Historikk kan ikke gjenopprette %{entries}: den har ingen revisjoner."
+msgstr[1] "Historikk kan ikke gjenopprette %{entries}: de har ingen revisjoner."
+
+#: lib/brando_admin/live/content/stale_blocks_live.ex
+#, elixir-autogen, elixir-format
+msgid "History cannot restore all of it; see the review."
+msgstr "Historikk kan ikke gjenopprette alt; se gjennomgangen."
+
 #: lib/brando_admin/live/sites/seo_live.ex
 #, elixir-autogen, elixir-format
 msgid "Hits"
@@ -8213,6 +8251,11 @@ msgstr "I nettstedskartet"
 #, elixir-autogen, elixir-format
 msgid "In the block"
 msgstr "I blokken"
+
+#: lib/brando_admin/live/content/stale_blocks_live.ex
+#, elixir-autogen, elixir-format
+msgid "In the trash"
+msgstr "I papirkurven"
 
 #: lib/brando_admin/live/content/stale_blocks_live.ex
 #, elixir-autogen, elixir-format
@@ -11161,11 +11204,6 @@ msgstr "Ingenting sendt ennå"
 msgid "Nothing that holds a value is dropped or replaced."
 msgstr "Ingenting med en verdi forkastes eller erstattes."
 
-#: lib/brando_admin/live/content/stale_blocks_live.ex
-#, elixir-autogen, elixir-format
-msgid "Nothing that holds a value is dropped or replaced. A revision of each entry is stored first."
-msgstr "Ingenting med en verdi forkastes eller erstattes. En revisjon av hver oppføring lagres først."
-
 #: lib/brando_admin/live/sites/seo_live.ex
 #, elixir-autogen, elixir-format
 msgid "Nothing to audit"
@@ -13903,6 +13941,11 @@ msgstr "Versjon #%{from} → versjon #%{to}"
 msgid "Revision #%{revision}"
 msgstr "Versjon #%{revision}"
 
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "Revision #%{revision} was not published as scheduled: the entry was in the trash"
+msgstr "Revisjon #%{revision} ble ikke publisert som planlagt: oppføringen lå i papirkurven"
+
 #: lib/brando_admin/components/form/revisions_drawer.ex
 #, elixir-autogen, elixir-format
 msgid "Revision %{revision} is loaded as an unsaved working copy."
@@ -16289,6 +16332,11 @@ msgstr "Blokkene er tilbake, like løse som de var."
 msgid "The blocks changed after you reviewed them. Review them again."
 msgstr "Blokkene ble endret etter at du gikk gjennom dem. Gå gjennom dem på nytt."
 
+#: lib/brando/ai.ex
+#, elixir-autogen, elixir-format
+msgid "The blocks could not be read. Try again."
+msgstr "Blokkene kunne ikke leses. Prøv igjen."
+
 #: lib/brando_admin/components/form/structured_data.ex
 #, elixir-autogen, elixir-format
 msgid "The blueprint maps no author. A developer can add one with the :person field type."
@@ -16783,6 +16831,11 @@ msgstr "Ringen viser fokuspunktet."
 msgid "The route was paused"
 msgstr "Ruten ble satt på pause"
 
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "The schedule was cancelled"
+msgstr "Planleggingen ble avbrutt"
+
 #: lib/brando_admin/live/sites/environment_live.ex
 #, elixir-autogen, elixir-format
 msgid "The scheduled operation no longer exists."
@@ -17126,6 +17179,13 @@ msgstr "Dette kan ikke angres."
 #, elixir-autogen, elixir-format
 msgid "This change affects existing content"
 msgstr "Denne endringen påvirker eksisterende innhold"
+
+#: lib/brando_admin/live/content/stale_blocks_live.ex
+#, elixir-autogen, elixir-format
+msgid "This changes %{count} entry."
+msgid_plural "This changes %{count} entries."
+msgstr[0] "Dette endrer %{count} oppføring."
+msgstr[1] "Dette endrer %{count} oppføringer."
 
 #: lib/brando_admin/live/content/stale_blocks_live.ex
 #, elixir-autogen, elixir-format

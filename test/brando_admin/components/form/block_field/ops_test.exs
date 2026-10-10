@@ -446,6 +446,36 @@ defmodule BrandoAdmin.Components.Form.BlockField.OpsTest do
       assert {carried, ["c"]} = Ops.carry(state, old_base, new_base)
       assert carried.order == ["a", "b"]
     end
+
+    # A recovery copy (`{:carry, copy, base}`) lands on live session state,
+    # where a root can hold another editor's changes: an `:update` replaced
+    # the root's whole diff, so those changes went without a conflict.
+    test "a copy carried onto live state keeps others' changes to its roots' other fields" do
+      base = base_rows()
+
+      live =
+        base
+        |> apply!({:set_field, "b", ["block", "description"], "other editor", 0})
+        |> apply!({:set_field, "b", ["block", "anchor"], "other editor", 0})
+        |> apply!({:update, "a1", %{"description" => "other editor"}})
+
+      copy =
+        base
+        |> apply!({:update, "b", %{"block" => %{"anchor" => "copy"}}})
+        |> apply!({:update, "a1", %{"anchor" => "copy"}})
+
+      carried = apply!(live, {:carry, copy, base})
+
+      assert carried.diffs["b"] == %{"block" => %{"description" => "other editor", "anchor" => "copy"}}
+      assert carried.diffs["a1"] == %{"description" => "other editor", "anchor" => "copy"}
+    end
+
+    test "rows written outside the session take the editors' root diffs as they are" do
+      old_base = base_rows()
+      state = apply!(old_base, {:update, "b", %{"block" => %{"anchor" => "editor"}}})
+      {carried, []} = Ops.carry(state, old_base, base_rows())
+      assert carried.diffs["b"] == %{"block" => %{"anchor" => "editor"}}
+    end
   end
 
   describe "restorable bin snapshots" do

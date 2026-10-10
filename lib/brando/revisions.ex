@@ -253,6 +253,29 @@ defmodule Brando.Revisions do
     |> Repo.delete_all()
   end
 
+  @doc """
+  Drops the schedule of `revision`, which scheduled publishing refused to
+  publish because the entry was in the trash (`{:error, :in_trash}` from
+  `set_entry_to_revision/5`), and notes it in Activity. Done under the
+  entry's lock and only while `still_current?.()` (the refused job is still
+  the revision's schedule): a new schedule made in between is left alone. A
+  restore in between changes nothing: the revision was refused, and without
+  this its schedule would have no job.
+  """
+  def drop_schedule_in_trash(entry_schema, entry_id, revision_number, user, still_current?) do
+    Repo.transaction(fn ->
+      lock_entry!(entry_schema, entry_id)
+
+      if still_current?.() do
+        entry = Repo.get!(entry_schema, entry_id)
+        mark_revision_scheduled(entry_schema, entry_id, revision_number, false)
+        Brando.Activity.scheduled_revision_in_trash(entry, user, revision_number)
+      end
+    end)
+
+    :ok
+  end
+
   @doc "Delete all revision history for a permanently deleted entry."
   def delete_entry_revisions(entry_type, entry_id) do
     entry_id = normalize_entry_id(entry_id)
@@ -287,7 +310,9 @@ defmodule Brando.Revisions do
   The restore is transactional, includes block associations, refreshes the
   content identifier, and atomically moves the active marker. Pass
   `publish?: true` when a scheduled job executes to force published status and
-  the current publication timestamp.
+  the current publication timestamp; it returns `{:error, :in_trash}`, changing
+  nothing, for an entry in the trash. A restore never moves the entry into or
+  out of the trash.
   """
   def set_entry_to_revision(entry_schema, entry_id, revision_number, user, opts \\ []) do
     Brando.Authorization.Boundary.run(user, :restore, entry_schema, fn user ->
@@ -314,7 +339,11 @@ defmodule Brando.Revisions do
           |> Repo.get!(entry_id)
           |> Repo.preload(Brando.Blueprint.preloads_for(entry_schema))
 
-        restore_params = prepare_restore_params(target_entry, publish?)
+        # An entry in the trash is not published (the scheduled revision's
+        # job is cancelled). Read under the lock, so trashing can't slip in.
+        if publish? and Map.get(current_entry, :deleted_at), do: Repo.rollback(:in_trash)
+
+        restore_params = prepare_restore_params(target_entry, current_entry, publish?)
 
         changeset =
           current_entry
@@ -386,21 +415,29 @@ defmodule Brando.Revisions do
   end
 
   @doc """
-  The params that restore `revision_entry`, a decoded revision, onto the
-  entry as it is now: its fields and associations, without render output.
+  The params that restore `revision_entry`, a decoded revision, onto
+  `current_entry`, the entry as it is now: its fields and associations,
+  without render output, and without moving the entry into or out of the
+  trash (see `set_entry_to_revision/5`, which uses the same rule).
   """
-  @spec restore_params(struct()) :: map()
-  def restore_params(revision_entry), do: prepare_restore_params(revision_entry, false)
+  @spec restore_params(struct(), struct()) :: map()
+  def restore_params(revision_entry, current_entry), do: prepare_restore_params(revision_entry, current_entry, false)
 
   # The entry's expiry is a plan for the entry, not content of the revision:
-  # restoring one keeps the expiry the entry has now.
-  defp prepare_restore_params(target_entry, publish?) do
+  # restoring one keeps the expiry the entry has now. So is the trash:
+  # restoring never moves the entry into or out of it (`deleted_at`). The
+  # fields the trash obfuscates (a page's `uri`) are kept as the entry has
+  # them when either is in the trash: a revision taken there holds their
+  # trash form, and an entry there must not take back the names it freed.
+  defp prepare_restore_params(target_entry, current_entry, publish?) do
     params =
       target_entry
       |> Utils.map_from_struct()
       |> Enum.reject(fn {key, _value} -> key |> to_string() |> String.starts_with?("rendered_") end)
       |> Map.new()
-      |> Map.delete(:unpublish_at)
+      |> Map.drop([:unpublish_at, :deleted_at])
+      |> drop_obfuscated_if_trashed(target_entry)
+      |> drop_obfuscated_if_trashed(current_entry)
 
     if publish? do
       params
@@ -409,6 +446,15 @@ defmodule Brando.Revisions do
     else
       params
     end
+  end
+
+  defp drop_obfuscated_if_trashed(params, %{deleted_at: %{}} = entry), do: Map.drop(params, obfuscated_fields(entry))
+  defp drop_obfuscated_if_trashed(params, _entry), do: params
+
+  defp obfuscated_fields(%schema{}) do
+    if schema.has_trait(Brando.Trait.SoftDelete),
+      do: Keyword.get(schema.__trait__(Brando.Trait.SoftDelete), :obfuscated_fields, []),
+      else: []
   end
 
   # Removing a root block deletes its entry-specific join row while the shared

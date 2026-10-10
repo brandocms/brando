@@ -157,9 +157,12 @@ defmodule Mix.Tasks.Brando.Modules do
           |> StaleBlocks.apply(resolutions, user, expect: plan.fingerprint)
           |> unwrap_resolve!()
 
+        {revisioned, unrevisioned} = Enum.split_with(result.entries, & &1.revisioned?)
+
         Mix.shell().info(
           "Resolved #{length(result.changed)} blocks; #{length(result.stamped)} are now on version #{report.version}, " <>
-            "#{length(result.remaining)} remain. A revision of each changed entry (#{length(result.entries)}) was stored first."
+            "#{length(result.remaining)} remain. A revision of #{length(revisioned)} of the #{length(result.entries)} " <>
+            "changed entries was stored first." <> no_revisions(unrevisioned)
         )
     end
   end
@@ -212,7 +215,7 @@ defmodule Mix.Tasks.Brando.Modules do
 
   defp print_block(block, resolutions) do
     shell = Mix.shell()
-    where = Enum.map_join(block.entries, ", ", &"#{&1.label} (#{&1.type}#{language(&1)})")
+    where = Enum.map_join(block.entries, ", ", &"#{&1.label} (#{&1.type}#{language(&1)}#{trashed(&1)})")
     where = if where == "", do: "not in any entry", else: where
     shell.info("\n  Block ##{block.id} on version #{block.module_version || "none"}: #{where}")
 
@@ -258,6 +261,14 @@ defmodule Mix.Tasks.Brando.Modules do
 
   defp language(%{language: nil}), do: ""
   defp language(%{language: language}), do: ", #{language}"
+
+  defp trashed(%{trashed?: true}), do: ", in the trash"
+  defp trashed(_entry), do: ""
+
+  defp no_revisions([]), do: ""
+
+  defp no_revisions(entries),
+    do: " History cannot restore what keeps no revisions: #{Enum.map_join(entries, ", ", & &1.label)}."
 
   defp unwrap_resolve!({:ok, value}), do: value
   defp unwrap_resolve!({:error, reason}), do: Mix.raise("Resolve: #{reason}")

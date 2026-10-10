@@ -15,6 +15,12 @@ defmodule Brando.Content.StaleBlocksTest do
   alias Brando.ProposalFixtures
   alias Brando.Repo
 
+  # Receives every content event in the test process (Oban runs inline).
+  defmodule Collector do
+    @behaviour Brando.ContentEvents.Subscriber
+    def handle_event(event), do: send(self(), {:collected, event})
+  end
+
   # A slider module on version 3. Version 1 had a `link` variable and a
   # `title` text reference; version 3 has `cta` (link), `caption` (text),
   # `label` (string), `size` (select) and a `body` picture reference.
@@ -73,7 +79,7 @@ defmodule Brando.Content.StaleBlocksTest do
           "type" => "module",
           "module_id" => c.module.id,
           "creator_id" => c.user.id,
-          "source" => to_string(Page.Blocks),
+          "source" => to_string(join_schema(page)),
           "vars" => Enum.with_index(vars ++ defined_vars, &Map.put(&1, "sequence", &2)),
           "refs" => Enum.with_index(refs ++ defined_refs, &Map.put(&1, "sequence", &2))
         },
@@ -83,9 +89,12 @@ defmodule Brando.Content.StaleBlocksTest do
       |> Ecto.Changeset.change(module_version: 1)
       |> Repo.update!()
 
-    struct(Page.Blocks, %{entry_id: page.id, block_id: block.id, sequence: sequence}) |> Repo.insert!()
+    struct(join_schema(page), %{entry_id: page.id, block_id: block.id, sequence: sequence}) |> Repo.insert!()
     block
   end
+
+  # The join schema of the entry's blocks: `Page.Blocks`, `Template.Blocks`.
+  defp join_schema(%schema{}), do: Elixir.Module.concat(schema, "Blocks")
 
   defp link_var(text \\ "Les mer", url \\ "https://by.no/kultur"),
     do: %{"type" => "link", "key" => "link", "label" => "Link", "value" => url, "link_text" => text}
@@ -348,6 +357,64 @@ defmodule Brando.Content.StaleBlocksTest do
       assert var(block, "link")
     end
 
+    # The fingerprint is of what the rows hold, not of their previews: a
+    # preview is plain text cut at 140 characters.
+    test "is refused when a value changed where its preview does not show it", c do
+      prefix = String.duplicate("a", 160)
+      long = %{"type" => "text", "key" => "old", "label" => "Old", "value" => prefix <> "old"}
+      markup = text_ref("title", "<p>Overskrift</p>")
+      {_page, block} = page_with_block(c, [long], [markup])
+      resolutions = %{{:var, "old"} => :drop, {:ref, "title"} => :drop}
+
+      changes = [
+        fn -> Repo.update_all(from(v in Var, where: v.id == ^var(block, "old").id), set: [value: prefix <> "new"]) end,
+        fn ->
+          ref = Enum.find(refs(block), &(&1.name == "title"))
+          data = %{type: "text", data: %{text: "<p><strong>Overskrift</strong></p>"}}
+          ref |> Brando.Content.Ref.changeset(%{data: data}, c.user) |> Repo.update!()
+        end
+      ]
+
+      for change <- changes do
+        plan = StaleBlocks.plan(report!(c), resolutions)
+        change.()
+
+        assert {:error, message} = StaleBlocks.apply(c.module, resolutions, c.user, expect: plan.fingerprint)
+        assert message =~ "changed after you reviewed"
+      end
+
+      assert var(block, "old").value == prefix <> "new"
+      assert Enum.find(refs(block), &(&1.name == "title"))
+    end
+
+    test "the fingerprint does not depend on the order the owners are read in", c do
+      {_page, block} = page_with_block(c, [link_var()], [])
+      other = Factory.insert(:page, creator: c.user, title: "Annen", uri: "p#{System.unique_integer([:positive])}")
+      struct(Page.Blocks, %{entry_id: other.id, block_id: block.id, sequence: 0}) |> Repo.insert!()
+
+      report = report!(c)
+      assert [%{entries: [_, _]}] = report.blocks
+
+      reversed =
+        update_in(report.blocks, fn blocks ->
+          Enum.map(blocks, &Map.update!(&1, :entries, fn e -> Enum.reverse(e) end))
+        end)
+
+      assert StaleBlocks.plan(reversed, %{}).fingerprint == StaleBlocks.plan(report, %{}).fingerprint
+    end
+
+    test "is refused when an entry it changes went to the trash after the review", c do
+      {page, block} = page_with_block(c, [link_var()], [])
+      plan = StaleBlocks.plan(report!(c), %{{:var, "link"} => :drop})
+      page |> Ecto.Changeset.change(deleted_at: DateTime.utc_now(:second)) |> Repo.update!()
+
+      assert {:error, message} =
+               StaleBlocks.apply(c.module, %{{:var, "link"} => :drop}, c.user, expect: plan.fingerprint)
+
+      assert message =~ "changed after you reviewed"
+      assert var(block, "link")
+    end
+
     test "stores a revision of each entry before and after, and records the change in Activity", c do
       {page, _block} = page_with_block(c, [link_var()], [])
       before = revisions(page)
@@ -375,6 +442,92 @@ defmodule Brando.Content.StaleBlocksTest do
       assert Enum.any?(module_events, &match?(%{"stale_blocks" => %{"dropped" => ["var:link"]}}, &1.details))
     end
 
+    test "an entry in the trash is an owner: listed, revisioned, and History brings the value back", c do
+      {page, block} = page_with_block(c, [link_var()], [])
+      # trashed as the listing does it: Page obfuscates its `uri` there
+      {:ok, _} = Repo.soft_delete(page)
+
+      assert [%{entries: [entry]}] = report!(c).blocks
+      assert %{schema: Page, id: id, label: "Sommerro", trashed?: true, revisioned?: true} = entry
+      assert id == page.id
+
+      plan = StaleBlocks.plan(report!(c), %{{:var, "link"} => :drop})
+      assert [%{id: ^id}] = plan.entries
+
+      assert {:ok, %{entries: [%{id: ^id}]}} =
+               StaleBlocks.apply(c.module, %{{:var, "link"} => :drop}, c.user, expect: plan.fingerprint)
+
+      assert var(block, "link") == nil
+      assert [first, second] = revisions(page)
+      assert first.description =~ "Before resolving blocks"
+      assert second.active
+
+      assert Repo.one!(from(e in Brando.Activity.Event, where: e.schema == ^to_string(Page) and e.entry_id == ^id))
+
+      # restored from the trash, the page gets the value back from History
+      assert {:ok, _} = Brando.Authorization.Boundary.restore(c.user, Repo.get!(Page, id))
+      assert {:ok, _} = Brando.Revisions.set_entry_to_revision(Page, id, first.revision, c.user)
+
+      [%{block: restored}] = Repo.all(from(b in Page.Blocks, where: b.entry_id == ^id, preload: [block: :vars]))
+      assert %{value: "https://by.no/kultur", link_text: "Les mer"} = Enum.find(restored.vars, &(&1.key == "link"))
+
+      # and stays out of the trash, at its own address
+      assert %{deleted_at: nil, uri: uri} = Repo.get!(Page, id)
+      assert uri == page.uri
+    end
+
+    test "a change to an entry in the trash is in Activity, but no content event announces it", c do
+      put_test_env(Brando.ContentEvents, subscribers: [Collector], debounce_seconds: 0)
+      {page, _block} = page_with_block(c, [link_var()], [])
+      {:ok, _} = Repo.soft_delete(page)
+
+      assert {:ok, _} = StaleBlocks.apply(c.module, %{{:var, "link"} => :drop}, c.user)
+
+      assert Repo.one!(from(e in Brando.Activity.Event, where: e.schema == ^to_string(Page) and e.entry_id == ^page.id))
+      id = page.id
+      refute_received {:collected, %{entry_id: ^id}}
+    end
+
+    test "an entry in the trash is rendered again, so restoring it shows the resolved blocks", c do
+      old_caption = %{"type" => "text", "key" => "old_caption", "label" => "Caption", "value" => "Fra papirkurven"}
+      {page, _block} = page_with_block(c, [old_caption], [])
+      page |> Ecto.Changeset.change(deleted_at: DateTime.utc_now(:second)) |> Repo.update!()
+
+      assert {:ok, _} = StaleBlocks.apply(c.module, %{{:var, "old_caption"} => {:map, "caption"}}, c.user)
+
+      assert Repo.get!(Page, page.id).rendered_blocks =~ "Fra papirkurven"
+    end
+
+    test "an owner without revisions is flagged, and resolving it stores none", c do
+      template =
+        Repo.insert!(%Brando.Content.Template{name: "Kulturmal", namespace: "pages", creator_id: c.user.id})
+
+      block = insert_block!(c, template, [link_var()], [])
+
+      assert [%{entries: [%{schema: Brando.Content.Template, revisioned?: false, trashed?: false}]}] =
+               report!(c).blocks
+
+      plan = StaleBlocks.plan(report!(c), %{{:var, "link"} => :drop})
+      assert [%{schema: Brando.Content.Template, revisioned?: false}] = plan.entries
+
+      assert {:ok, _} = StaleBlocks.apply(c.module, %{{:var, "link"} => :drop}, c.user, expect: plan.fingerprint)
+      assert var(block, "link") == nil
+
+      assert Repo.all(
+               from(r in Brando.Revisions.Revision,
+                 where: r.entry_type == ^to_string(Brando.Content.Template) and r.entry_id == ^template.id
+               )
+             ) == []
+    end
+
+    test "a block in no entry at all has no owners", c do
+      {page, _block} = page_with_block(c, [link_var()], [])
+      Repo.delete_all(from(b in Page.Blocks, where: b.entry_id == ^page.id))
+
+      assert [%{entries: []}] = report!(c).blocks
+      assert %{entries: []} = StaleBlocks.plan(report!(c), %{{:var, "link"} => :drop})
+    end
+
     test "needs the right to update the module and every entry it changes", c do
       {_page, block} = page_with_block(c, [link_var()], [])
       put_test_env(:authorization_mode, :groups)
@@ -399,6 +552,25 @@ defmodule Brando.Content.StaleBlocksTest do
       assert var(block, "link")
       assert {:ok, _} = StaleBlocks.apply(c.module, %{{:var, "link"} => :drop}, owner)
       assert var(block, "link") == nil
+    end
+
+    test "needs the right to update an entry in the trash too", c do
+      {page, block} = page_with_block(c, [link_var()], [], "I papirkurven")
+      page |> Ecto.Changeset.change(deleted_at: DateTime.utc_now(:second)) |> Repo.update!()
+      put_test_env(:authorization_mode, :groups)
+      alias Brando.Authorization.{Catalog, Groups, Migration, Scope}
+      owner = Factory.insert(:random_user, role: :superuser)
+      assert {:ok, _} = Migration.run()
+      scope = Scope.standalone(owner)
+
+      module_only = Factory.insert(:random_user, role: :user, config: %Brando.Users.UserConfig{})
+      grants = [Catalog.get(:update, Module).key, Catalog.get(:read, Module).key, "brando.admin.access"]
+      assert {:ok, group} = Groups.create(scope, %{name: "Module editors"}, grants)
+      assert {:ok, :ok} = Groups.add_member(scope, group.id, module_only.id)
+
+      assert {:error, message} = StaleBlocks.apply(c.module, %{{:var, "link"} => :drop}, module_only)
+      assert message =~ "permission to change I papirkurven"
+      assert var(block, "link")
     end
   end
 
@@ -476,6 +648,20 @@ defmodule Brando.Content.StaleBlocksTest do
       assert var(block, "link") == nil
       assert Enum.find(refs(block), &(&1.name == "intro")).data.data.text == "Gammel tittel"
       assert version(block) == 3
+    end
+
+    test "resolve says which entries are in the trash and which History cannot restore", c do
+      {page, _block} = page_with_block(c, [link_var()], [])
+      page |> Ecto.Changeset.change(deleted_at: DateTime.utc_now(:second)) |> Repo.update!()
+      template = Repo.insert!(%Brando.Content.Template{name: "Kulturmal", namespace: "pages", creator_id: c.user.id})
+      insert_block!(c, template, [link_var()], [])
+      args = ["resolve", "--uid", c.module.uid, "--user", to_string(c.user.id), "--drop", "link"]
+
+      assert run_task(args) =~ "Sommerro (Page, en, in the trash)"
+
+      output = run_task(args ++ ["--apply"])
+      assert output =~ "A revision of 1 of the 2 changed entries was stored first."
+      assert output =~ "History cannot restore what keeps no revisions: Template ##{template.id}."
     end
 
     test "resolve --apply refuses an incompatible mapping and changes nothing", c do

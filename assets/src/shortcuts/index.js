@@ -45,7 +45,13 @@ function storageKey() {
   return `brando:shortcuts:character-keys:${userId()}`
 }
 
+// The choice made on this page when the browser would not store it (private
+// mode, a full store, storage turned off). Cleared once a choice is stored,
+// so one made in another tab applies here again.
+let pageChoice = null
+
 export function characterKeysEnabled() {
+  if (pageChoice !== null) return pageChoice
   try {
     return localStorage.getItem(storageKey()) !== 'off'
   } catch {
@@ -54,11 +60,13 @@ export function characterKeysEnabled() {
 }
 
 export function setCharacterKeysEnabled(enabled) {
+  pageChoice = enabled
   try {
     if (enabled) localStorage.removeItem(storageKey())
     else localStorage.setItem(storageKey(), 'off')
+    pageChoice = null
   } catch {
-    // Private mode or a full store: the choice lasts for this page only.
+    // The choice lasts for this page only.
   }
   sequencer.reset()
 }

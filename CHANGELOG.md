@@ -49,7 +49,10 @@ were reserved and never needed, so the gap is not a missed migration.
 Environment archives are not migrated. Restoring one taken before a
 `brando_2xx` migration that changes every environment runs that migration in
 the restored environment; an archive that cannot be brought up to date is
-refused, and nothing is restored.
+refused, and nothing is restored. The migration run is Brando's current
+template, so a restore is also refused when the application changed its copy
+(a data backfill added, say), rather than skipping the change. A copy of an
+earlier version of the template, as Brando shipped it, is not a change.
 
 The full ordered workflow, including Blueprint snapshot handling and Gettext
 recovery, is in [Migrating from 0.53 or 0.54](guides/migrating_from_053.md).
@@ -1020,7 +1023,10 @@ production dump.
   before the confirmation. Resolving stores a revision of each entry first,
   re-syncs, stamps and renders the blocks, records the change in Activity and
   moves editors who have an entry open onto the new rows; it needs the right
-  to update the module and the entries. `mix brando.modules resolve --uid UID`
+  to update the module and the entries. Entries in the trash are among them,
+  marked as such; the review names entries that keep no revisions (templates),
+  which History cannot restore. A resolve is refused when anything a block
+  holds changed after the review, not only what its shortened values show. `mix brando.modules resolve --uid UID`
   does the same from the terminal (a dry run until `--apply`, with `--drop
   KEY` and `--map OLD=NEW`), and `refresh` now says what keeps blocks stale
   and points there. See `Brando.Content.StaleBlocks` and "Blocks left on an
@@ -1940,22 +1946,14 @@ production dump.
 
 #### Fixes
 
-- **A scheduled publication its user may no longer make is taken back, not
-  retried or swept.** With group authorization, when the user who scheduled a
-  publication has lost the right to make it (a grant or a record policy), or
-  their account is deactivated or deleted, the job is now cancelled instead
-  of retried ten times, and its date is cleared as **Delete job** clears it:
-  the pending entry goes back to draft. An expiry refused the same way is
-  still carried out on time, by the system. The entry's Activity says what
-  happened and why. While the site is suspended the job waits without
-  spending attempts, within the sweep's window; another refusal is retried
-  and taken back on the last attempt. The sweep for overdue dates leaves a publication to its job while
-  the job for that date waits, runs or retries, so it no longer publishes as
-  the system what the job was refused. Without group authorization nothing
-  is refused, and a schedule whose user no longer exists now runs as the
-  system instead of failing (an expiry used to deactivate the entry and then
-  crash). See
-  [Scheduled publishing](guides/scheduled_publishing.md#schedule-the-current-entry).
+- **Removing a selection whose option is no longer offered removes it.** In
+  a multi-select over a `has_many` relation, a selected entry missing from
+  the options (filtered out by language or status, or deleted) showed under
+  "Currently selected" with the join row's id as its value. **Remove** then
+  added the entry with that id, or removed another selection that had it;
+  on a selection not saved yet it added an empty one. The row now carries
+  the relation key's value, as the other rows do, and shows the related
+  entry's title when it was loaded, with "Missing option" under it.
 
 - **Duplicating a module works again, and copies the whole module.** It
   failed on the unique module `uid`. The copy is now a new module at
@@ -2002,6 +2000,23 @@ production dump.
   reconnect no longer sends the browser's old values over newer ones, while
   what was typed during it still wins. An edit made after a save or a
   reload wins over the edits before it.
+- **A scheduled publication its user may no longer make is taken back, not
+  retried or swept.** With group authorization, when the user who scheduled a
+  publication has lost the right to make it (a grant or a record policy), or
+  their account is deactivated or deleted, the job is now cancelled instead
+  of retried ten times, and its date is cleared as **Delete job** clears it:
+  the pending entry goes back to draft. An expiry refused the same way is
+  still carried out on time, by the system. The entry's Activity says what
+  happened and why. While the site is suspended the job waits without
+  spending attempts, within the sweep's window; another refusal is retried
+  and taken back on the last attempt. The sweep for overdue dates leaves a publication to its job while
+  the job for that date waits, runs or retries, so it no longer publishes as
+  the system what the job was refused. Without group authorization nothing
+  is refused, and a schedule whose user no longer exists now runs as the
+  system instead of failing (an expiry used to deactivate the entry and then
+  crash). See
+  [Scheduled publishing](guides/scheduled_publishing.md#schedule-the-current-entry).
+
 - **Every editor sees an image finish processing.** With two editors in one
   entry, an image the first uploaded or replaced showed "Processing image…"
   in the second editor's field, picture ref, image variable or gallery until
@@ -2023,6 +2038,24 @@ production dump.
   short of its geometry on originals of unusual proportions (`399×400` for a
   `400x400` crop); the size that covers the crop is now worked out from one
   scale, so it is exact. Recreate the affected images to get the new files.
+
+- **Restoring a revision leaves the trash alone.** Restoring a revision
+  taken while the entry was in the trash put the entry back in the trash,
+  under its trash address (a page's `kulturkalender$$$…` URI), and
+  restoring a revision of an entry in the trash took it out. A restore now
+  keeps the entry's `deleted_at`, and keeps its obfuscated fields (the
+  `obfuscated_fields` of `trait :soft_delete`) when the revision or the
+  entry is in the trash. Outside the trash those fields are restored as
+  before. Loading a revision as a working copy follows the same rule. A
+  scheduled revision that comes due while its entry is in the trash is no
+  longer published there: the schedule is cancelled and Activity says why, so
+  restoring the entry publishes nothing; schedule it again if it should still
+  go out.
+
+- **A change to an entry in the trash announces nothing.** Activity still
+  records it, but no `entry.updated` (or other content event) goes out, so
+  webhooks no longer hear of a deleted page changing and IndexNow does not
+  submit its URL. Trashing and deleting still send `entry.deleted`.
 
 - **A width-only image size is that width, and no size is enlarged.** Since
   the move to libvips, a size such as `"700"` was fitted inside a 700×700
@@ -2050,6 +2083,16 @@ production dump.
   sources do the same. An image's width and height are now recorded as it is
   shown, turned by its EXIF orientation; images uploaded earlier get them
   when they are next processed.
+
+- **AI actions and Write with AI read the block editor as the editor has
+  it.** An `ai_actions:` or `write_with_ai:` that read `:blocks` got the
+  blocks the form opened with, and one that named a block field, such as
+  `from: [:body]`, got the text that field had when the entry was last
+  saved: an unsaved edit was missing from the prompt, and a field first
+  written since the last save had nothing to read. Both now ask the block
+  fields for their unsaved blocks first, as a save does; a named block field
+  gives its own text alone, and one the form does not show still reads what
+  was saved.
 
 - **Nothing typed or changed in a shared entry is lost on the way to a
   save.** The save button and ⌘S no longer submit the form, which took the
@@ -2079,6 +2122,22 @@ production dump.
   now leaves the session marking what it replaced, so a write of the working
   copy keeps only what others changed after it was loaded, and its block
   fields no longer rejoin the session with the replaced changes.
+
+- **A save no longer drops changes made while it ran after an editor
+  rejoined.** When an entry's edit session restarted and an editor came back
+  with unsaved changes while another editor's save was running, that save
+  discarded the returning editor's changes and every change made after the
+  save started, without a warning. The session now keeps them for the save,
+  as it does for changes typed during a save.
+
+- **An editor rejoining with unsaved changes to a block keeps the others'
+  changes to that block's other fields.** When an entry's edit session
+  restarted, an editor coming back with changes to a top-level block replaced
+  every change another editor had made to that block since. Now only the
+  fields the returning editor changed take its values. A list in the block
+  (its references, variables or table rows) still keeps the returning
+  editor's rows, and a field it set back to the saved value counts as
+  unchanged.
 
 - **Pages emit their Article again.** A page's structured data type
   (`WebPage`, `AboutPage`, `ContactPage`, …) was given to the page's Article as

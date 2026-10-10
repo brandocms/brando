@@ -102,7 +102,7 @@ defmodule Brando.Test.Factory do
 
     if Code.ensure_loaded?(context) and function_exported?(context, fun, 2),
       do: apply(context, fun, [params, user]),
-      else: schema |> struct() |> schema.changeset(params, user) |> Brando.Repo.repo().insert()
+      else: schema |> struct() |> schema.changeset(params, user) |> Brando.Repo.insert()
   end
 
   defp invalid(schema, changeset) do
@@ -185,7 +185,7 @@ defmodule Brando.Test.Factory do
   end
 
   defp asset(:image, opts) do
-    Brando.Repo.repo().insert!(%Brando.Images.Image{
+    Brando.Repo.insert!(%Brando.Images.Image{
       path: "images/test/#{System.unique_integer([:positive])}.jpg",
       width: 1200,
       height: 800,
@@ -198,7 +198,7 @@ defmodule Brando.Test.Factory do
   end
 
   defp asset(:video, _opts) do
-    Brando.Repo.repo().insert!(%Brando.Videos.Video{
+    Brando.Repo.insert!(%Brando.Videos.Video{
       type: :youtube,
       source_url: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
       remote_id: "dQw4w9WgXcQ",
@@ -208,7 +208,7 @@ defmodule Brando.Test.Factory do
   end
 
   defp asset(:file, opts) do
-    Brando.Repo.repo().insert!(%Brando.Files.File{
+    Brando.Repo.insert!(%Brando.Files.File{
       filename: "test.pdf",
       mime_type: "application/pdf",
       filesize: 1,

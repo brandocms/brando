@@ -376,7 +376,12 @@ defmodule Brando.MCP.OAuth do
 
         {response, successor_id} = issue_tokens(grant)
         token |> Ecto.Changeset.change(rotated_at: now, successor_id: successor_id) |> Repo.update!()
-        Repo.after_commit(fn -> hold_for_replay(token, response) end)
+        # Held before the rotation commits, not after: a second request
+        # waiting on this row's lock reads the rotation the moment it
+        # commits, and must find the pair then. Should this transaction roll
+        # back, the entry names a successor that never existed, and nothing
+        # replays it.
+        hold_for_replay(token, successor_id, response)
         response
 
       {:replay, response} ->
@@ -429,19 +434,22 @@ defmodule Brando.MCP.OAuth do
   end
 
   defp grace_start(now), do: DateTime.add(now, -@refresh_grace_seconds, :second)
+
   # The pair a refresh returned, held for the grace period in the node's
-  # cache, encrypted for the token it replaced. Never in the database, so
-  # it is in no table, backup or query log. With several nodes the grace
-  # only works on the node that rotated the token: elsewhere there is no
-  # entry, and a second use is treated as reuse, which is the safe side.
-  defp hold_for_replay(token, response) do
-    ciphertext = Brando.Crypto.encrypt(Jason.encode!(response), replay_context(token))
+  # cache, encrypted for the token it replaced and that token's successor.
+  # Never in the database, so it is in no table, backup or query log. With
+  # several nodes the grace only works on the node that rotated the token:
+  # elsewhere there is no entry, and a second use is treated as reuse, which
+  # is the safe side. Only the rotation that committed can open the entry: a
+  # rolled-back one named a successor row id that is never given out again.
+  defp hold_for_replay(token, successor_id, response) do
+    ciphertext = Brando.Crypto.encrypt(Jason.encode!(response), replay_context(token, successor_id))
     Cachex.put(:cache, replay_key(token), ciphertext, expire: @refresh_grace_seconds * 1000)
   end
 
   defp held_for_replay(token) do
     with {:ok, ciphertext} when is_binary(ciphertext) <- Cachex.get(:cache, replay_key(token)),
-         {:ok, json} <- Brando.Crypto.decrypt(ciphertext, replay_context(token)) do
+         {:ok, json} <- Brando.Crypto.decrypt(ciphertext, replay_context(token, token.successor_id)) do
       {:ok, Jason.decode!(json)}
     else
       _ -> :error
@@ -452,7 +460,7 @@ defmodule Brando.MCP.OAuth do
   @spec replay_key(map()) :: term()
   def replay_key(%{id: id}), do: {__MODULE__, :replay, id}
 
-  defp replay_context(token), do: "mcp.refresh_replay:#{token.id}"
+  defp replay_context(token, successor_id), do: "mcp.refresh_replay:#{token.id}:#{successor_id}"
 
   defp bound_to?(grant, tenant), do: secure_equal?(grant.resource, MCP.resource(tenant)) and same_tenant?(grant, tenant)
 

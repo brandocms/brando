@@ -598,7 +598,7 @@ store** (`BlockField.Ops` — a pure, unit-tested reducer over
   `EditSession.rebase/4`, which replays only the ops that arrived during the save and moves
   every replica onto the new rows. A revision loaded as a working copy (revisions drawer,
   Form `:load_working_copy`) is unsaved CHANGES on top of the current rows — never the
-  form's data: the Form casts the revision's params (`Revisions.restore_params/1`) over the
+  form's data: the Form casts the revision's params (`Revisions.restore_params/2`) over the
   saved entry, and each BlockField (`"load_working_copy"`) replays its blocks through
   `restore_draft/3` (blocks the entry lost come back with fresh uids). The BlockField lets
   its replica go (no `:DOWN` rejoin) and calls `EditSession.detach/2`, which marks the

@@ -41,6 +41,8 @@ defmodule Brando.SyncTest.Article do
   relations do
     relation :parent, :belongs_to, module: __MODULE__
     relation :blocks, :has_many, module: :blocks
+    # Declared only in `form :notes` (FieldActionsLiveTest)
+    relation :notes, :has_many, module: :blocks
 
     relation :items, :has_many,
       module: Brando.SyncTest.ArticleItem,
@@ -131,6 +133,28 @@ defmodule Brando.SyncTest.Article do
             input :label, :text
             input :link, :text
           end
+        end
+      end
+    end
+
+    # Both block fields, and an AI action that reads one of them by name
+    # (FieldActionsLiveTest)
+    form :notes do
+      blocks :blocks
+      blocks :notes
+
+      tab "Content" do
+        fieldset do
+          input :title, :text
+          input :slug, :slug, from: :title
+
+          input :subtitle, :rich_text,
+            write_with_ai: [prompt: "Keep it short.", from: [:notes]],
+            ai_actions: [
+              outline: [prompt: "Outline the notes.", from: [:notes]],
+              everything: [prompt: "Summarize the blocks.", from: [:blocks]],
+              shorten: [prompt: "Shorten the subtitle.", from: :subtitle]
+            ]
         end
       end
     end

@@ -200,11 +200,12 @@ defmodule BrandoAdmin.Content.StaleBlocksLive do
 
       <p :if={@done} class="utils-feedback success stale-blocks-done" role="status">
         {done_line(@done)}
-        {ngettext(
-          "A revision of the entry was stored first; History can restore it.",
-          "A revision of each entry was stored first; History can restore them.",
-          length(@done.entries)
-        )}
+        <span :if={done_history_line(@done.entries)} class="stale-blocks-history">
+          {done_history_line(@done.entries)}
+        </span>
+        <span :if={no_history(@done.entries) != []} class="stale-blocks-no-history">
+          {no_history_line(no_history(@done.entries))}
+        </span>
       </p>
       <p :if={@error} class="utils-feedback error" role="alert">{@error}</p>
 
@@ -266,12 +267,14 @@ defmodule BrandoAdmin.Content.StaleBlocksLive do
               <div class="stale-block-head">
                 <div class="stale-block-where">
                   <%= if block.entries == [] do %>
-                    <strong>{gettext("Not in any entry")}</strong>
+                    <strong class="stale-block-no-entry">{gettext("Not in any entry")}</strong>
                   <% else %>
-                    <span :for={entry <- block.entries} class="stale-block-entry">
+                    <span :for={entry <- block.entries} class={["stale-block-entry", entry.trashed? && "is-trashed"]}>
                       <.link :if={entry.url} navigate={entry.url}>{entry.label}</.link>
                       <strong :if={!entry.url}>{entry.label}</strong>
-                      <small>{entry.type}<span :if={entry.language}> · {String.upcase(to_string(entry.language))}</span></small>
+                      <small>{entry.type}<span :if={entry.language}> · {String.upcase(to_string(entry.language))}</span><span :if={
+                        entry.trashed?
+                      }> · {gettext("In the trash")}</span></small>
                     </span>
                   <% end %>
                 </div>
@@ -350,11 +353,17 @@ defmodule BrandoAdmin.Content.StaleBlocksLive do
         <div class="utils-section-heading">
           <h2 id="stale-blocks-review-title">{gettext("Review")}</h2>
           <p>
-            {ngettext(
-              "This changes %{count} entry. A revision of it is stored first, so History can restore it.",
-              "This changes %{count} entries. A revision of each is stored first, so History can restore them.",
-              length(@plan.entries)
-            )}
+            <span :if={history_line(@plan.entries)} class="stale-blocks-history">{history_line(@plan.entries)}</span>
+            <span :if={no_history(@plan.entries) != []} class="stale-blocks-no-history">
+              {no_history_line(no_history(@plan.entries))}
+            </span>
+            <span :if={unowned(@plan) > 0} class="stale-blocks-no-owner">
+              {ngettext(
+                "%{count} block is not in any entry, so History cannot restore what changes in it.",
+                "%{count} blocks are not in any entry, so History cannot restore what changes in them.",
+                unowned(@plan)
+              )}
+            </span>
           </p>
         </div>
         <ul class="stale-blocks-actions">
@@ -488,16 +497,84 @@ defmodule BrandoAdmin.Content.StaleBlocksLive do
         target: target
       )
 
-  defp confirm_line(%{lost: []}),
-    do: gettext("Nothing that holds a value is dropped or replaced. A revision of each entry is stored first.")
+  defp confirm_line(plan), do: lost_line(plan.lost) <> " " <> restore_line(plan)
 
-  defp confirm_line(%{lost: lost}) do
+  defp lost_line([]), do: gettext("Nothing that holds a value is dropped or replaced.")
+
+  defp lost_line(lost),
+    do: ngettext("%{count} value is dropped or replaced.", "%{count} values are dropped or replaced.", length(lost))
+
+  defp restore_line(plan) do
+    if plan.entries != [] and no_history(plan.entries) == [] and unowned(plan) == 0,
+      do: gettext("A revision of each entry is stored first, so History can restore it."),
+      else: gettext("History cannot restore all of it; see the review.")
+  end
+
+  # What History can restore: only an entry whose schema keeps revisions
+  # (`revisioned?`) gets one before the resolve. In the trash or not.
+  defp history_line([]), do: nil
+
+  defp history_line(entries) do
+    total = length(entries)
+
+    case length(entries) - length(no_history(entries)) do
+      ^total ->
+        ngettext(
+          "This changes %{count} entry. A revision of it is stored first, so History can restore it.",
+          "This changes %{count} entries. A revision of each is stored first, so History can restore them.",
+          total
+        )
+
+      0 ->
+        ngettext("This changes %{count} entry.", "This changes %{count} entries.", total)
+
+      revisioned ->
+        ngettext("This changes %{count} entry.", "This changes %{count} entries.", total) <>
+          " " <>
+          ngettext(
+            "A revision of %{count} of them is stored first, so History can restore it.",
+            "A revision of %{count} of them is stored first, so History can restore them.",
+            revisioned
+          )
+    end
+  end
+
+  defp done_history_line(entries) do
+    total = length(entries)
+
+    case total - length(no_history(entries)) do
+      0 ->
+        nil
+
+      ^total ->
+        ngettext(
+          "A revision of the entry was stored first; History can restore it.",
+          "A revision of each entry was stored first; History can restore them.",
+          total
+        )
+
+      revisioned ->
+        ngettext(
+          "A revision of %{count} entry was stored first; History can restore it.",
+          "Revisions of %{count} entries were stored first; History can restore them.",
+          revisioned
+        )
+    end
+  end
+
+  defp no_history(entries), do: Enum.reject(entries, & &1.revisioned?)
+
+  defp no_history_line(entries) do
     ngettext(
-      "%{count} value is dropped or replaced. A revision of each entry is stored first, so History can restore it.",
-      "%{count} values are dropped or replaced. A revision of each entry is stored first, so History can restore them.",
-      length(lost)
+      "History cannot restore %{entries}: it keeps no revisions.",
+      "History cannot restore %{entries}: they keep no revisions.",
+      length(entries),
+      entries: Enum.map_join(entries, ", ", & &1.label)
     )
   end
+
+  # Changed blocks no entry owns: nothing stores a revision of them.
+  defp unowned(plan), do: Enum.count(plan.blocks, &(&1.entries == [] and &1.id in plan.changed))
 
   defp where(%{entries: [entry | _]}), do: entry.label
   defp where(%{block_id: id}), do: gettext("Block #%{id}", id: id)

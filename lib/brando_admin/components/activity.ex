@@ -619,6 +619,12 @@ defmodule BrandoAdmin.Components.Activity do
   defp lines(%{action: :published, details: %{"scheduled" => true}, revision: revision}, _fields, _states),
     do: [gettext("Activated revision #%{revision}, as scheduled", revision: revision)]
 
+  defp lines(%{details: %{"scheduled_revision" => %{"reason" => "in_trash"}}, revision: revision}, _fields, _states),
+    do: [
+      gettext("Revision #%{revision} was not published as scheduled: the entry was in the trash", revision: revision),
+      gettext("The schedule was cancelled")
+    ]
+
   defp lines(%{action: :duplicated, details: %{"copied_from" => %{"title" => title}}}, _fields, _states),
     do: [gettext("Copied from %{title}", title: title)]
 

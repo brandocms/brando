@@ -15,9 +15,12 @@ defmodule Brando.Content.StaleBlocks do
   Resolving is a change to entries' content made outside their editors, so
   `apply/4`:
 
-    * checks the actor may update the module and every entry it touches;
+    * checks the actor may update the module and every entry it touches,
+      entries in the trash included;
     * stores a revision of each entry before changing it, so History can
-      restore it, and one after;
+      restore it, and one after. An entry whose schema keeps no revisions
+      (a template) gets none; the plan's entries say which with
+      `revisioned?`, and which are in the trash with `trashed?`;
     * re-syncs the blocks (`Blocks.sync_module/2`), stamps them and renders
       them and their entries, as a module refresh does;
     * records the change in Activity, on the entries and on the module;
@@ -187,9 +190,12 @@ defmodule Brando.Content.StaleBlocks do
       end
     end)
 
-    plan.changed
-    |> Blocks.render_blocks()
-    |> Blocks.list_entry_ids_for_root_blocks_by_source()
+    Blocks.render_blocks(plan.changed)
+
+    # Every owner, those in the trash too: one restored from it shows the
+    # resolved blocks.
+    plan.entries
+    |> Enum.group_by(& &1.schema, & &1.id)
     |> Blocks.enqueue_entry_map_for_render()
 
     details = activity_details(plan)
@@ -645,30 +651,50 @@ defmodule Brando.Content.StaleBlocks do
 
   defp entries_for([]), do: %{}
 
+  # Entries in the trash own their blocks too: a resolve changes them like
+  # any other, and restoring one from the trash brings back what it held.
   defp entries_for(block_ids) do
-    by_block = BlockReferences.list_entries_for_block_ids(block_ids)
+    by_block = BlockReferences.list_entries_for_block_ids(block_ids, include_deleted: true)
     entries = by_block |> Map.values() |> List.flatten() |> Enum.uniq()
     labels = Usage.labels(entries)
-    languages = languages(entries)
+    states = states(entries)
 
     Map.new(by_block, fn {block_id, entries} ->
-      {block_id,
-       Enum.map(entries, fn {schema, id} = key ->
-         labels[key]
-         |> Map.merge(%{schema: schema, id: id})
-         |> Map.update(:language, nil, &(&1 || languages[key]))
-       end)}
+      {block_id, Enum.map(entries, &entry(&1, labels[&1], Map.get(states, &1, %{})))}
     end)
   end
 
-  # An entry without an identifier row has its language only on itself.
-  defp languages(entries) do
+  # `revisioned?`: History can restore it (not every schema with blocks
+  # keeps revisions: templates do not).
+  defp entry({schema, id}, label, state) do
+    trashed? = Map.get(state, :deleted_at) != nil
+
+    label
+    |> Map.merge(%{
+      schema: schema,
+      id: id,
+      trashed?: trashed?,
+      revisioned?: schema.has_trait(Brando.Trait.Revisioned)
+    })
+    |> Map.update(:language, nil, &(&1 || Map.get(state, :language)))
+    |> Map.update(:url, nil, &if(trashed?, do: trash_url(&1), else: &1))
+  end
+
+  # The listing's trash: an entry in it has no edit page.
+  defp trash_url(nil), do: nil
+  defp trash_url(url), do: String.replace(url, ~r{/update/\d+$}, "") <> "?status=deleted"
+
+  # What an entry's identifier row does not say: its language (an entry
+  # without one has it only on itself) and whether it is in the trash.
+  defp states(entries) do
     entries
     |> Enum.group_by(&elem(&1, 0), &elem(&1, 1))
-    |> Enum.filter(fn {schema, _} -> :language in schema.__schema__(:fields) end)
     |> Enum.flat_map(fn {schema, ids} ->
-      Repo.all(from(e in schema, where: e.id in ^ids, select: {e.id, e.language}))
-      |> Enum.map(fn {id, language} -> {{schema, id}, language} end)
+      fields = Enum.filter([:id, :language, :deleted_at], &(&1 in schema.__schema__(:fields)))
+
+      from(e in schema, where: e.id in ^ids, select: map(e, ^fields))
+      |> Repo.all()
+      |> Enum.map(&{{schema, &1.id}, &1})
     end)
     |> Map.new()
   end
@@ -797,13 +823,19 @@ defmodule Brando.Content.StaleBlocks do
   def module_name(%{name: name}) when is_map(name), do: Brando.Type.I18nString.get(name, nil) || "-"
   def module_name(%{name: name}), do: to_string(name)
 
+  # Of everything the rows hold, not of their previews: a preview is plain
+  # text cut short, and does not show a link's URL or which image it is.
+  # The owners are sorted: they are read in no particular order.
   defp fingerprint(module, blocks) do
     :erlang.phash2({
       module.version,
       Enum.map(blocks, fn b ->
-        {b.id, b.module_version, b.problems, Enum.map(b.leftovers, &{&1.kind, &1.key, &1.type, &1.preview, &1.row.id}),
-         Enum.map(b.rows.vars, &{&1.key, var_preview(&1)}), Enum.map(b.rows.refs, &{&1.name, ref_preview(&1)})}
+        {b.id, b.module_version, b.problems, b.entries |> Enum.map(&{&1.schema, &1.id, &1.trashed?}) |> Enum.sort(),
+         Enum.map(b.leftovers, &{&1.kind, &1.key, &1.type, &1.row.id}), Enum.map(b.rows.vars, &stored/1),
+         Enum.map(b.rows.refs, &stored/1)}
       end)
     })
   end
+
+  defp stored(%schema{} = row), do: Map.take(row, schema.__schema__(:fields))
 end

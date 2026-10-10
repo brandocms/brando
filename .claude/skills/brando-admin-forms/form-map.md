@@ -90,4 +90,6 @@ the form; `EntrySkeleton` draws the loading states), `toolbar_more`, `form_prese
 ## AI
 
 `handle_event("tiptap_ai_generate"`, `"suggest_alt_text"`, `"suggest_entry_alt_text"`,
-`event: "suggest_ref_alt_text"`, `fetch_field_ai_opts`, `build_ai_prompt`.
+`event: "suggest_ref_alt_text"`, `"run_field_action"`, `field_action_run`, `ai_context_fun`.
+Block fields a request reads are collected first: `with_ai_blocks`, `receive_ai_blocks`
+(tag `{:ai_context, token}`).

@@ -138,6 +138,13 @@ defmodule Brando.Worker.EntryPublisher do
         BrandoAdmin.LiveView.Listing.update_list_entries(schema)
         {:ok, new_entry}
 
+      # An entry in the trash is not published. The schedule is dropped,
+      # with a note in Activity, so a restore brings back the entry as it
+      # was; an editor can schedule the revision again.
+      {:error, :in_trash} ->
+        Revisions.drop_schedule_in_trash(schema, id, revision, user, fn -> current_revision_job?(job) end)
+        {:cancel, :in_trash}
+
       {:error, reason} ->
         release_failed_revision_schedule(job, schema, id, revision)
         {:error, reason}

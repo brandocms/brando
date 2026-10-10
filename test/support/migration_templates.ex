@@ -16,6 +16,9 @@ defmodule Brando.MigrationTemplates do
   @doc "The path of the template named `file`"
   def path(file), do: Path.join(@templates, file)
 
+  @doc "The path of `file` among the shipped versions of the template `name`"
+  def history(name, file), do: Path.join([@templates, "..", "history", name, file])
+
   @doc "Every `brando_2xx` template, in the order `mix brando.gen.migrations` copies them"
   def brando_2xx do
     @templates
