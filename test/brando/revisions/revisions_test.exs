@@ -421,6 +421,68 @@ defmodule Brando.Revisions.RevisionsTest do
     end
   end
 
+  # Sol audit: a table row deleted since came back with a new sync uid, so
+  # its translation no longer matched it.
+  test "a table row deleted since comes back with its sync uid", %{user: user} do
+    page = Factory.insert(:page, creator: user)
+
+    rows = fn uid ->
+      [%{sequence: 0, sync_uid: "#{uid}-kept", vars: []}, %{sequence: 1, sync_uid: "#{uid}-gone", vars: []}]
+    end
+
+    blocks =
+      for uid <- ["inPlace", "moved"] do
+        %{
+          uid: uid,
+          type: :module,
+          active: true,
+          source: "Elixir.Brando.Pages.Page.Blocks",
+          creator_id: user.id,
+          table_rows: rows.(uid),
+          children: []
+        }
+      end
+
+    for {uid, children, n} <- [{"boxA", blocks, 0}, {"boxB", [], 1}] do
+      %Page.Blocks{}
+      |> Changeset.change(%{entry_id: page.id, sequence: n})
+      |> Changeset.put_assoc(:block, %{
+        uid: uid,
+        type: :container,
+        active: true,
+        source: "Elixir.Brando.Pages.Page.Blocks",
+        creator_id: user.id,
+        sequence: n,
+        children: Enum.with_index(children, &Map.put(&1, :sequence, &2))
+      })
+      |> Brando.Repo.insert!()
+    end
+
+    assert {:ok, revision} = Revisions.create_revision(page, user)
+
+    import Ecto.Query, only: [from: 2]
+    Brando.Repo.delete_all(from(r in Brando.Content.TableRow, where: r.sync_uid in ["inPlace-gone", "moved-gone"]))
+
+    # moved to B since, as the outline saves a move: a new row
+    moved = Brando.Repo.get_by!(Brando.Content.Block, uid: "moved") |> Brando.Repo.preload(:table_rows)
+    box_b = Brando.Repo.get_by!(Brando.Content.Block, uid: "boxB")
+    Brando.Repo.delete!(moved)
+
+    %Brando.Content.Block{}
+    |> Changeset.change(%{uid: "moved", sync_uid: moved.sync_uid, type: :module, active: true, parent_id: box_b.id})
+    |> Changeset.change(%{source: Brando.Pages.Page.Blocks, creator_id: user.id, sequence: 0})
+    |> Changeset.put_assoc(:table_rows, [%{sequence: 0, sync_uid: "moved-kept", vars: []}])
+    |> Brando.Repo.insert!()
+
+    assert {:ok, _} = Revisions.set_entry_to_revision(Page, page.id, revision.revision, user)
+
+    for uid <- ["inPlace", "moved"] do
+      block = Brando.Repo.get_by!(Brando.Content.Block, uid: uid) |> Brando.Repo.preload([:parent, :table_rows])
+      assert block.parent.uid == "boxA"
+      assert block.table_rows |> Enum.sort_by(& &1.sequence) |> Enum.map(& &1.sync_uid) == ["#{uid}-kept", "#{uid}-gone"]
+    end
+  end
+
   test "returns an error for a corrupt snapshot without changing the entry", %{user: user} do
     page = Factory.insert(:page, creator: user)
     assert {:ok, revision} = Revisions.create_revision(page, user)

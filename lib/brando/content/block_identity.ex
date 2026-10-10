@@ -17,8 +17,11 @@ defmodule Brando.Content.BlockIdentity do
     * `restored`, the blocks of a revision being restored (History, or a
       working copy of a revision). A block written with the revision's
       content takes the revision's module version, so a block from before a
-      module change shows as needing an upgrade. A block the entry no
-      longer has comes back with the revision's sync uid.
+      module change shows as needing an upgrade. A block or a table row
+      the entry no longer has comes back with the revision's sync uid.
+
+  A table row's sync uid is only ever one its own block has or had, named
+  by the params, and given to one row.
 
   Build both with `index/1`.
   """
@@ -87,10 +90,13 @@ defmodule Brando.Content.BlockIdentity do
           known = row || revision
           version = if revision, do: revision.module_version, else: row.module_version
 
+          # the row it replaces goes first: its table rows' sync uids are free
+          syncs = MapSet.union(row_syncs(row), row_syncs(revision))
+
           changeset
           |> force_present(:sync_uid, known.sync_uid)
           |> force_present(:module_version, version)
-          |> map_change(:table_rows, &keep_row_syncs(&1, known))
+          |> map_change(:table_rows, &keep_row_syncs(&1, syncs))
           |> delete_row_first(row)
       end
 
@@ -98,8 +104,13 @@ defmodule Brando.Content.BlockIdentity do
   end
 
   def keep(%Changeset{} = changeset, loaded, restored) do
+    revision = restored[Changeset.get_field(changeset, :uid)]
+    # a table row the revision has and the block no longer does
+    syncs = MapSet.difference(row_syncs(revision), row_syncs(changeset.data))
+
     changeset
-    |> restored_version(restored[Changeset.get_field(changeset, :uid)])
+    |> restored_version(revision)
+    |> map_change(:table_rows, &keep_row_syncs(&1, syncs))
     |> keep_children(loaded, restored)
   end
 
@@ -126,11 +137,14 @@ defmodule Brando.Content.BlockIdentity do
 
   defp map_change(changeset, _key, _fun), do: changeset
 
-  # A table row's sync uid is kept only when the params name one the same
-  # block has, and each once: two rows never share one.
-  defp keep_row_syncs(rows, %{table_rows: known_rows}) when is_list(rows) and is_list(known_rows) do
-    known = known_rows |> Enum.map(& &1.sync_uid) |> Enum.reject(&is_nil/1) |> MapSet.new()
+  defp row_syncs(%{table_rows: rows}) when is_list(rows),
+    do: rows |> Enum.map(& &1.sync_uid) |> Enum.reject(&is_nil/1) |> MapSet.new()
 
+  defp row_syncs(_block), do: MapSet.new()
+
+  # A table row's sync uid is kept only when the params name one of
+  # `known` (the same block's), and each once: two rows never share one.
+  defp keep_row_syncs(rows, known) when is_list(rows) do
     {rows, _known} =
       Enum.map_reduce(rows, known, fn
         %Changeset{action: :insert, params: %{"sync_uid" => sync_uid}} = row, known when is_binary(sync_uid) ->
@@ -145,7 +159,7 @@ defmodule Brando.Content.BlockIdentity do
     rows
   end
 
-  defp keep_row_syncs(rows, _block), do: rows
+  defp keep_row_syncs(rows, _known), do: rows
 
   # Its old parent deletes the row it leaves (`:delete_if_exists`, so it
   # then finds it gone), its refs, rows and children with it.
