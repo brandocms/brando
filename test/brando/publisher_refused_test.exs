@@ -98,6 +98,14 @@ defmodule Brando.PublisherRefusedTest do
     on_exit(fn -> :telemetry.detach(id) end)
   end
 
+  # The job made for `date`, to run at `scheduled_at`
+  defp on_date(job, date, scheduled_at) do
+    {1, _} =
+      Repo.update_all(from(j in Oban.Job, where: j.id == ^job.id),
+        set: [scheduled_at: scheduled_at, meta: Map.put(job.meta, "at", DateTime.to_iso8601(date))]
+      )
+  end
+
   # What the sweep did with `page`
   defp swept(page), do: Enum.filter(Brando.Publisher.sweep(), &for_page?(&1, page))
 
@@ -289,14 +297,21 @@ defmodule Brando.PublisherRefusedTest do
   describe "the sweep" do
     test "leaves a date to its job while the job waits or retries, and catches up once there is none", c do
       page = scheduled_page(c.editor, %{publish_at: at(3600)})
-      set_dates(page, publish_at: at(-600))
+      date = at(-600)
+      set_dates(page, publish_at: date)
       assert [job] = jobs(page, "published")
+      # The job made for this date, its time come
+      on_date(job, date, date)
 
       for state <- ~w(scheduled available executing retryable) do
         {1, _} = Repo.update_all(from(j in Oban.Job, where: j.id == ^job.id), set: [state: state])
         assert swept(page) == [], state
         assert Repo.get!(Page, page.id).status == :pending
       end
+
+      # Retrying later, after a failed attempt
+      on_date(job, date, at(600))
+      assert swept(page) == []
 
       # A job for the entry's expiry is not its publication's
       {1, _} =
@@ -314,9 +329,21 @@ defmodule Brando.PublisherRefusedTest do
       [expiry] = jobs(page, "disabled")
       Repo.update!(Ecto.Changeset.change(expiry, state: "retryable"))
       set_dates(page, publish_at: at(-1200), unpublish_at: at(-600))
+      on_date(expiry, at(-600), at(600))
 
       assert swept(page) == []
       assert Repo.get!(Page, page.id).status == :pending
+    end
+
+    test "does not wait for a job made for another, later date", c do
+      # An archive restored into the environment: the entry's date passed,
+      # while the queue still holds the job for the date it had before
+      page = scheduled_page(c.editor, %{publish_at: at(3 * 86_400)})
+      set_dates(page, publish_at: at(-600))
+      assert [%{state: "scheduled"}] = jobs(page, "published")
+
+      assert [%{action: :publish, result: :ok}] = swept(page)
+      assert Repo.get!(Page, page.id).status == :published
     end
 
     test "publishes a date whose job is gone or done", c do

@@ -150,7 +150,8 @@ environment (`Brando.Publisher.sweep/1`): it publishes pending entries whose
 pending entries whose `unpublish_at` did, through the context as the jobs do.
 Running it again changes nothing. A date whose publisher job is still waiting,
 running or retrying is left to that job, so the sweep never carries out what
-the job's user is refused.
+the job's user is refused; a job waiting for another, later date (one the
+entry had before an archive was restored) does not hold it up.
 
 It only takes dates from the last seven days, so dates left from before the
 sweep existed are not acted on when it first runs; change the window with

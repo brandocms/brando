@@ -371,9 +371,10 @@ defmodule Brando.Publisher do
   pending entries whose `unpublish_at` has passed, through each entry's
   context like the jobs do. Dates arrive without jobs when an environment is
   cloned or an archive restored, and a lost job leaves one behind. A date
-  with a publisher job still waiting, running or retrying is left to the
-  job, which runs as the user who scheduled it; a job that user may no
-  longer carry out clears its date (see `Brando.Worker.EntryPublisher`).
+  with a publisher job still waiting, running or retrying (made for that
+  date, or with its time come) is left to the job, which runs as the user
+  who scheduled it; a job that user may no longer carry out clears its date
+  (see `Brando.Worker.EntryPublisher`).
 
     * Only dates from more than five minutes ago, so the jobs run first, and
       from the last seven days (`config :brando, Brando.Publisher,
@@ -414,7 +415,7 @@ defmodule Brando.Publisher do
     |> Enum.uniq_by(& &1.id)
     |> Enum.reject(&failed_before?(schema, &1))
     |> Enum.map(&{&1, sweep_action(&1, now)})
-    |> without_waiting_job(schema)
+    |> without_waiting_job(schema, now)
     |> Enum.map(fn {entry, action} -> sweep_entry(schema, entry, action, dry_run?) end)
   rescue
     error ->
@@ -451,25 +452,47 @@ defmodule Brando.Publisher do
 
   # A date whose job is still to run, running or retrying is the job's: it
   # runs as the user who scheduled it, and refuses what they may no longer do.
-  # The job for what the sweep would do, an expiry winning over a publication.
-  defp without_waiting_job([], _schema), do: []
+  # The job for what the sweep would do, an expiry winning over a publication,
+  # made for the entry's date or with its time come: one waiting for a later
+  # date the entry had before (an archive restored) does not hold it up.
+  defp without_waiting_job([], _schema, _now), do: []
 
-  defp without_waiting_job(due, schema) do
+  defp without_waiting_job(due, schema, now) do
     args = Map.merge(%{"schema" => to_string(schema)}, TenantJob.context_fragment())
     ids = Enum.map(due, fn {entry, _action} -> to_string(entry.id) end)
 
     waiting =
-      from(j in Oban.Job,
-        where:
-          j.worker == ^inspect(Worker.EntryPublisher) and j.state in @waiting_states and
-            fragment("? @> ?", j.args, ^args) and fragment("?->>'id'", j.args) in ^ids,
-        select: {fragment("?->>'id'", j.args), fragment("?->>'status'", j.args)}
+      Repo.all(
+        from j in Oban.Job,
+          where:
+            j.worker == ^inspect(Worker.EntryPublisher) and j.state in @waiting_states and
+              fragment("? @> ?", j.args, ^args) and fragment("?->>'id'", j.args) in ^ids,
+          select: %{
+            id: fragment("?->>'id'", j.args),
+            status: fragment("?->>'status'", j.args),
+            at: fragment("?->>'at'", j.meta),
+            scheduled_at: j.scheduled_at
+          }
       )
-      |> Repo.all()
-      |> MapSet.new()
 
-    Enum.reject(due, fn {entry, action} -> MapSet.member?(waiting, {to_string(entry.id), action_status(action)}) end)
+    Enum.reject(due, fn {entry, action} ->
+      date = if action == :unpublish, do: entry.unpublish_at, else: entry.publish_at
+
+      Enum.any?(waiting, fn job ->
+        job.id == to_string(entry.id) and job.status == action_status(action) and
+          (made_for?(job.at, date) or not DateTime.after?(job.scheduled_at, now))
+      end)
+    end)
   end
+
+  defp made_for?(at, %DateTime{} = date) when is_binary(at) do
+    case DateTime.from_iso8601(at) do
+      {:ok, made_for, _} -> same_second?(made_for, date)
+      _ -> false
+    end
+  end
+
+  defp made_for?(_at, _date), do: false
 
   defp action_status(:publish), do: @publish_status
   defp action_status(:unpublish), do: @unpublish_status
