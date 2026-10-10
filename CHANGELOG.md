@@ -1940,21 +1940,6 @@ production dump.
 
 #### Fixes
 
-- **A scheduled publication its user may no longer make is taken back, not
-  retried or swept.** With group authorization, when the user who scheduled a
-  publication has lost the right to make it (a grant or a record policy), or
-  their account is deactivated or deleted, the job is now cancelled instead
-  of retried ten times, and its date is cleared as **Delete job** clears it:
-  the pending entry goes back to draft. An expiry refused the same way is
-  still carried out on time, by the system. The entry's Activity says what
-  happened and why. While the site is suspended the job waits without
-  spending attempts, within the sweep's window; another refusal is retried
-  and taken back on the last attempt. The sweep for overdue dates leaves a publication to its job while
-  the job for that date waits, runs or retries, so it no longer publishes as
-  the system what the job was refused. Without group authorization nothing
-  changes. See
-  [Scheduled publishing](guides/scheduled_publishing.md#schedule-the-current-entry).
-
 - **Duplicating a module works again, and copies the whole module.** It
   failed on the unique module `uid`. The copy is now a new module at
   version 1 with its own `uid`, without the original's shared-library link.
@@ -2000,6 +1985,21 @@ production dump.
   reconnect no longer sends the browser's old values over newer ones, while
   what was typed during it still wins. An edit made after a save or a
   reload wins over the edits before it.
+- **A scheduled publication its user may no longer make is taken back, not
+  retried or swept.** With group authorization, when the user who scheduled a
+  publication has lost the right to make it (a grant or a record policy), or
+  their account is deactivated or deleted, the job is now cancelled instead
+  of retried ten times, and its date is cleared as **Delete job** clears it:
+  the pending entry goes back to draft. An expiry refused the same way is
+  still carried out on time, by the system. The entry's Activity says what
+  happened and why. While the site is suspended the job waits without
+  spending attempts, within the sweep's window; another refusal is retried
+  and taken back on the last attempt. The sweep for overdue dates leaves a publication to its job while
+  the job for that date waits, runs or retries, so it no longer publishes as
+  the system what the job was refused. Without group authorization nothing
+  changes. See
+  [Scheduled publishing](guides/scheduled_publishing.md#schedule-the-current-entry).
+
 - **Every editor sees an image finish processing.** With two editors in one
   entry, an image the first uploaded or replaced showed "Processing image…"
   in the second editor's field, picture ref, image variable or gallery until
