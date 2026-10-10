@@ -314,7 +314,7 @@ defmodule Brando.Revisions do
           |> Repo.get!(entry_id)
           |> Repo.preload(Brando.Blueprint.preloads_for(entry_schema))
 
-        restore_params = target_entry |> prepare_restore_params(publish?) |> keep_trash_state(current_entry)
+        restore_params = prepare_restore_params(target_entry, current_entry, publish?)
 
         changeset =
           current_entry
@@ -386,18 +386,21 @@ defmodule Brando.Revisions do
   end
 
   @doc """
-  The params that restore `revision_entry`, a decoded revision, onto the
-  entry as it is now: its fields and associations, without render output.
+  The params that restore `revision_entry`, a decoded revision, onto
+  `current_entry`, the entry as it is now: its fields and associations,
+  without render output, and without moving the entry into or out of the
+  trash (see `set_entry_to_revision/5`, which uses the same rule).
   """
-  @spec restore_params(struct()) :: map()
-  def restore_params(revision_entry), do: prepare_restore_params(revision_entry, false)
+  @spec restore_params(struct(), struct()) :: map()
+  def restore_params(revision_entry, current_entry), do: prepare_restore_params(revision_entry, current_entry, false)
 
   # The entry's expiry is a plan for the entry, not content of the revision:
   # restoring one keeps the expiry the entry has now. So is the trash:
-  # restoring never moves the entry into or out of it (`deleted_at`), and a
-  # revision taken in the trash holds its obfuscated fields (a page's `uri`)
-  # in their trash form, which is no content either.
-  defp prepare_restore_params(target_entry, publish?) do
+  # restoring never moves the entry into or out of it (`deleted_at`). The
+  # fields the trash obfuscates (a page's `uri`) are kept as the entry has
+  # them when either is in the trash: a revision taken there holds their
+  # trash form, and an entry there must not take back the names it freed.
+  defp prepare_restore_params(target_entry, current_entry, publish?) do
     params =
       target_entry
       |> Utils.map_from_struct()
@@ -405,6 +408,7 @@ defmodule Brando.Revisions do
       |> Map.new()
       |> Map.drop([:unpublish_at, :deleted_at])
       |> drop_obfuscated_if_trashed(target_entry)
+      |> drop_obfuscated_if_trashed(current_entry)
 
     if publish? do
       params
@@ -414,10 +418,6 @@ defmodule Brando.Revisions do
       params
     end
   end
-
-  # An entry in the trash keeps its obfuscated fields as they are: the
-  # revision's values would take the names the trash freed.
-  defp keep_trash_state(params, current_entry), do: drop_obfuscated_if_trashed(params, current_entry)
 
   defp drop_obfuscated_if_trashed(params, %{deleted_at: %{}} = entry), do: Map.drop(params, obfuscated_fields(entry))
   defp drop_obfuscated_if_trashed(params, _entry), do: params

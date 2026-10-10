@@ -195,7 +195,7 @@ defmodule Brando.Revisions.RevisionsTest do
       {:ok, revision} = Revisions.create_revision(trashed, user, false)
       {:ok, {_, {_, snapshot}}} = Revisions.get_revision(Page, page.id, revision.revision)
 
-      params = Revisions.restore_params(snapshot)
+      params = Revisions.restore_params(snapshot, Brando.Repo.restore!(trashed))
       refute Map.has_key?(params, :deleted_at)
       refute Map.has_key?(params, :uri)
     end
