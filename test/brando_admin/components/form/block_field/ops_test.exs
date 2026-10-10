@@ -471,7 +471,14 @@ defmodule BrandoAdmin.Components.Form.BlockField.OpsTest do
       assert carried.diffs["a1"] == %{"description" => "other editor", "anchor" => "carried"}
     end
 
-    test "rows carried onto live state merge by row: each side's additions, removals and row changes stay" do
+    # A rejoin (`carry/4` with `lists: :merge`) merges the lists of a root
+    # both sides changed by row.
+    defp rejoin(live, held, base) do
+      {state, _conflicts} = Ops.carry(held, base, live, lists: :merge)
+      state
+    end
+
+    test "a rejoin merges rows: each side's additions, removals and row changes stay" do
       base = base_rows()
       rows_then = [%{"id" => 5}, %{"id" => 7}, %{"id" => 9}]
 
@@ -490,46 +497,73 @@ defmodule BrandoAdmin.Components.Form.BlockField.OpsTest do
           {:update, "b", %{"block" => %{"table_rows" => [%{"id" => 5, "label" => "carried"}, %{"id" => 9}, added]}}}
         )
 
-      carried = apply!(live, {:carry, held, base})
-
-      assert carried.diffs["b"]["block"]["table_rows"] == [%{"id" => 5, "cols" => "live", "label" => "carried"}, added]
+      assert rejoin(live, held, base).diffs["b"]["block"]["table_rows"] == [
+               %{"id" => 5, "cols" => "live", "label" => "carried"},
+               added
+             ]
     end
 
-    # Sol audit: a row both sides changed merged its own lists by the
-    # carried side's alone, so the target's new select option went.
-    test "lists inside a row both sides changed merge by item too" do
+    # Review: a list op left every row as a full copy, so a saved row the
+    # rejoiner removed looked changed in the session and came back.
+    test "a rejoin's removal of a saved row holds against rows a list op left as they were" do
       base = base_rows()
-      var = [%{"id" => 5}]
-      options = [%{"value" => "25"}, %{"value" => "50"}]
-      at_options = ["block", {:at, "vars", {"id", 5}, var}, "options"]
+      rows_then = [%{"id" => 5, "cols" => "saved 5"}, %{"id" => 7, "cols" => "saved 7"}]
+      added = %{"sync_uid" => "new", "cols" => "A's row"}
+      live = apply!(base, {:set_field, "b", ["block", "table_rows"], {:list, rows_then, rows_then ++ [added]}, 0})
+      assert live.diffs["b"]["block"]["table_rows"] == [%{"id" => 5}, %{"id" => 7}, added]
 
-      live = apply!(base, {:set_field, "b", at_options, {:list, options, options ++ [%{"value" => "75"}]}, 0})
+      held = apply!(base, {:update, "b", %{"block" => %{"table_rows" => [%{"id" => 5}]}}})
+      assert rejoin(live, held, base).diffs["b"]["block"]["table_rows"] == [%{"id" => 5}, added]
+    end
+
+    test "a rejoin merges lists inside a row by row when their rows have ids" do
+      base = base_rows()
+      vars = [%{"id" => 51}, %{"id" => 52}]
+      at_vars = ["block", {:at, "table_rows", {"id", 5}, [%{"id" => 5}]}, "vars"]
+
+      live = apply!(base, {:set_field, "b", at_vars, {:list, vars, [%{"id" => 51}]}, 0})
 
       held =
         apply!(
           base,
-          {:update, "b", %{"block" => %{"vars" => [%{"id" => 5, "options" => options ++ [%{"value" => "100"}]}]}}}
+          {:update, "b",
+           %{"block" => %{"table_rows" => [%{"id" => 5, "vars" => [%{"id" => 51, "value" => "B"}, %{"id" => 52}]}]}}}
         )
 
-      carried = apply!(live, {:carry, held, base})
-
-      assert [%{"id" => 5, "options" => merged}] = carried.diffs["b"]["block"]["vars"]
-      assert Enum.map(merged, & &1["value"]) == ["25", "50", "75", "100"]
+      assert [%{"id" => 5, "vars" => [%{"id" => 51, "value" => "B"}]}] =
+               rejoin(live, held, base).diffs["b"]["block"]["table_rows"]
     end
 
-    # Sol audit: a row the carried side left out of its list, but the target
-    # changed, was dropped with the change.
-    test "a row the target changed stays when the carried list leaves it out" do
+    # Review: below a row, an item can be named by id on one side and by
+    # what it holds on the other (a new gallery object by its image), and
+    # only top-level rows have ids to name them by: such a list is the
+    # carried side's, never both.
+    test "a rejoin takes a list inside a row whole when an item has no id" do
+      base = base_rows()
+      at_objects = ["block", {:at, "refs", {"id", 3}, [%{"id" => 3}]}, "gallery_objects"]
+      live = apply!(base, {:set_field, "b", at_objects, {:list, [], [%{"id" => 44, "image_id" => 9}]}, 0})
+
+      held =
+        apply!(
+          base,
+          {:update, "b",
+           %{"block" => %{"refs" => [%{"id" => 3, "gallery_objects" => [%{"image_id" => 9, "alt" => "B"}]}]}}}
+        )
+
+      assert [%{"id" => 3, "gallery_objects" => [%{"image_id" => 9, "alt" => "B"}]}] =
+               rejoin(live, held, base).diffs["b"]["block"]["refs"]
+    end
+
+    test "a row the session changed stays when the rejoiner's list leaves it out" do
       base = base_rows()
       live = apply!(base, {:update, "b", %{"block" => %{"table_rows" => [%{"id" => 5, "cols" => "unsaved work"}]}}})
       held = apply!(base, {:update, "b", %{"block" => %{"table_rows" => []}}})
 
-      carried = apply!(live, {:carry, held, base})
-      assert carried.diffs["b"]["block"]["table_rows"] == [%{"id" => 5, "cols" => "unsaved work"}]
+      assert rejoin(live, held, base).diffs["b"]["block"]["table_rows"] == [%{"id" => 5, "cols" => "unsaved work"}]
     end
 
-    # Sol audit: the carried side names a row by its sync uid (new when it
-    # was made), the target by the id a save gave it since: one row.
+    # The rejoiner names a row by its sync uid (new when it was made), the
+    # session by the id a save gave it since: one row.
     test "a row named by uid on one side and by id on the other is one row" do
       old_base = base_rows()
 
@@ -545,8 +579,47 @@ defmodule BrandoAdmin.Components.Form.BlockField.OpsTest do
 
       held = apply!(old_base, {:update, "b", %{"block" => %{"table_rows" => [%{"sync_uid" => "new", "cols" => "B"}]}}})
 
-      carried = apply!(live, {:carry, held, old_base})
-      assert [%{"id" => 8, "cols" => "B"}] = carried.diffs["b"]["block"]["table_rows"]
+      assert [%{"id" => 8, "cols" => "B"}] = rejoin(live, held, old_base).diffs["b"]["block"]["table_rows"]
+    end
+
+    # Review: a recovery copy is cast again, which gives its new table rows
+    # fresh sync uids; merged by row, the session's new row and the copy's
+    # were two rows.
+    test "a recovery copy's lists are the copy's" do
+      base = base_rows()
+
+      live =
+        apply!(
+          base,
+          {:update, "b", %{"block" => %{"table_rows" => [%{"id" => 5}, %{"sync_uid" => "s9", "cols" => "x"}]}}}
+        )
+
+      copy_rows = [%{"id" => 5}, %{"sync_uid" => "s9-recast", "cols" => "x"}]
+      copy = apply!(base, {:update, "b", %{"block" => %{"table_rows" => copy_rows}}})
+
+      assert apply!(live, {:carry, copy, base}).diffs["b"]["block"]["table_rows"] == copy_rows
+    end
+
+    test "a rejoin merges a 200-row table quickly" do
+      base = base_rows()
+      rows = for id <- 1..200, do: %{"id" => id, "cols" => "saved #{id}"}
+
+      live_rows =
+        Enum.map(rows, fn %{"id" => id} = row -> if rem(id, 2) == 0, do: %{row | "cols" => "A"}, else: %{"id" => id} end)
+
+      held_rows =
+        Enum.map(rows, fn %{"id" => id} = row -> if rem(id, 3) == 0, do: %{row | "cols" => "B"}, else: %{"id" => id} end)
+
+      live = apply!(base, {:update, "b", %{"block" => %{"table_rows" => live_rows ++ [%{"sync_uid" => "a"}]}}})
+      held = apply!(base, {:update, "b", %{"block" => %{"table_rows" => held_rows ++ [%{"sync_uid" => "b"}]}}})
+
+      {micros, state} = :timer.tc(fn -> rejoin(live, held, base) end)
+      merged = state.diffs["b"]["block"]["table_rows"]
+      assert length(merged) == 202
+      assert Enum.at(merged, 5) == %{"id" => 6, "cols" => "B"}
+      assert Enum.at(merged, 3) == %{"id" => 4, "cols" => "A"}
+      IO.puts("200-row rejoin merge: #{micros} µs")
+      assert micros < 100_000
     end
 
     test "rows written outside the session take the editors' root diffs as they are" do

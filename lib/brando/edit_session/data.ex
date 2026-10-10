@@ -15,9 +15,9 @@ defmodule Brando.EditSession.Data do
   * `state` — `base` plus every unsaved op, in session order.
   * `log` — ops applied while a save is in flight, newest first, so that the
     save's rebase can replay what arrived after the saver read the state.
-    Work a rejoining editor carried in (`merge_held/4`) is logged as the
-    `{:carry, held, held_base}` op that does the same. Empty while nobody is
-    saving.
+    Work a rejoining editor carried in (`merge_held/4`) is logged as
+    `{:merge_held, held, held_base}`, replayed the same way. Empty while
+    nobody is saving.
   * `marks` — `%{client => {rev, monotonic_ms}}`, one per save in flight.
   * `rev` — counts the ops applied to the field (and its rebases), so a
     replica can tell a gap from a duplicate.
@@ -97,24 +97,20 @@ defmodule Brando.EditSession.Data do
     if Ops.pristine?(held, held_base) do
       {:joined, data}
     else
-      {state, conflicts} = Ops.carry(held, held_base, entry.state)
+      {state, conflicts} = Ops.carry(held, held_base, entry.state, lists: :merge)
       state = Ops.keep_rel_ids(state, Map.keys(entry.state.rel_ids))
       rev = entry.rev + 1
       # A save in flight read the state before this merge: its rebase
-      # replays the merge as the equivalent op, or the work would be lost.
-      # Its row lists are the merged ones: the rows the merge kept may be
-      # rows by then (`Ops.with_merged_lists/2`).
-      log = log(entry, rev, logged({:carry, held, held_base}, state))
+      # replays the merge, or the work would be lost. Its lists hold the
+      # rows the merge kept, which that save may write (`Ops.rejoin_log/2`).
+      log = log(entry, rev, fn -> {:merge_held, Ops.rejoin_log(held, state), held_base} end)
       {{:merged, conflicts}, put_field(data, field, %{entry | state: state, rev: rev, log: log})}
     end
   end
 
-  # A carry replays with the row lists it merged into (`merge_held/4`).
-  defp logged({:carry, carried, base}, state), do: {:carry, Ops.with_merged_lists(carried, state), base}
-  defp logged(op, _state), do: op
-
   # What a mark's rebase replays: kept only while a save is in flight.
   defp log(%{marks: marks}, _rev, _op) when marks == %{}, do: []
+  defp log(%{log: log}, rev, op) when is_function(op, 0), do: [{rev, op.()} | log]
   defp log(%{log: log}, rev, op), do: [{rev, op} | log]
 
   defp new_field(base, state), do: %{base: base, state: state, rev: 0, log: [], marks: %{}, seqs: %{}}
@@ -164,7 +160,7 @@ defmodule Brando.EditSession.Data do
     with %{} = entry <- Map.get(data.fields, field, {:error, {:unknown_field, field}}),
          {:ok, state} <- safe_apply(entry.state, op) do
       rev = entry.rev + 1
-      data = put_field(data, field, %{entry | state: state, rev: rev, log: log(entry, rev, logged(op, state))})
+      data = put_field(data, field, %{entry | state: state, rev: rev, log: log(entry, rev, op)})
 
       case origin do
         {client, seq} -> {:ok, note_seq(data, field, client, seq)}
@@ -306,6 +302,14 @@ defmodule Brando.EditSession.Data do
 
   # An op that no longer applies is an insert the save already made or a
   # delete of a row it already removed: its effect is in the rows.
+  defp replay({_rev, {:merge_held, held, held_base}}, state) do
+    held |> Ops.carry(held_base, state, lists: :merge) |> elem(0)
+  rescue
+    error ->
+      Logger.error("[EditSession] replaying a rejoin raised: " <> Exception.message(error))
+      state
+  end
+
   defp replay({_rev, op}, state) do
     case safe_apply(state, op) do
       {:ok, state} -> state

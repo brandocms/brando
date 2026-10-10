@@ -731,38 +731,33 @@ defmodule Brando.EditSessionTest do
       assert [%{"id" => 5, "cols" => "B's cell"}, %{"id" => 8}] = params["block"]["table_rows"]
     end
 
-    test "a save's rebase replays a carry op with the rows the merge kept" do
+    # Review: the replayed rejoin held the merged lists whole, so rows the
+    # save had just written came back as unsaved work.
+    test "a save's rebase replays a rejoin without making the saved rows unsaved" do
       base = Ops.from_entry_blocks([entry_block("a", 1, 10), entry_block("b", 2, 20)])
       {:seeded, data} = Data.join(Data.new(1), @field, base, base)
-      rows_then = [%{"id" => 5}]
-      added = %{"sync_uid" => "new", "cols" => "A's row"}
+      rows_then = [%{"id" => 5}, %{"id" => 6}]
 
       {:ok, data} =
         Data.apply_op(
           data,
           @field,
-          {:set_field, "a", ["block", "table_rows"], {:list, rows_then, rows_then ++ [added]}, 0}
+          {:set_field, "a", ["block", {:at, "table_rows", {"id", 5}, rows_then}, "cols"], "saved by A", 0}
         )
 
       data = Data.mark_save(data, @field, :saver, 0)
 
-      # a recovery copy applied through the session (`restore_into_session/3`)
-      cell = ["block", {:at, "table_rows", {"id", 5}, rows_then}, "cols"]
-      {:ok, copy} = Ops.apply_op(base, {:set_field, "a", cell, "copy's cell", 0})
-      {:ok, data} = Data.apply_op(data, @field, {:carry, copy, base})
+      {:ok, held} =
+        Ops.apply_op(base, {:set_field, "a", ["block", {:at, "table_rows", {"id", 6}, rows_then}, "cols"], "B's cell", 0})
 
-      saved =
-        Ops.from_entry_blocks([
-          %{
-            id: 1,
-            block: %{uid: "a", id: 10, children: [], table_rows: [%{id: 5, sync_uid: "r5"}, %{id: 8, sync_uid: "new"}]}
-          },
-          entry_block("b", 2, 20)
-        ])
+      {{:merged, []}, data} = Data.join(data, @field, base, held)
 
-      {:ok, data, []} = Data.rebase(data, @field, saved, {:client, :saver})
-      {:ok, params} = Ops.materialize_root(Data.state(data, @field), "a")
-      assert [%{"id" => 5, "cols" => "copy's cell"}, %{"id" => 8}] = params["block"]["table_rows"]
+      {:ok, data, []} = Data.rebase(data, @field, base, {:client, :saver})
+
+      assert Data.state(data, @field).diffs["a"]["block"]["table_rows"] == [
+               %{"id" => 5},
+               %{"id" => 6, "cols" => "B's cell"}
+             ]
     end
 
     test "a rejoin carrying work after a save's read is kept by that save's rebase, on the session" do
