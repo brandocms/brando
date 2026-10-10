@@ -728,7 +728,9 @@ defmodule Brando.NotificationsTest do
       Repo.delete_all(from(j in Oban.Job, where: j.worker == "Brando.Worker.NoteMentions"))
 
       Oban.Testing.with_testing_mode(:manual, fn ->
-        assert {:ok, %{state: "scheduled"}} = Digest.schedule(reader.id)
+        assert {:ok, %{state: "scheduled"} = waiting} = Digest.schedule(reader.id)
+        hours_ago = DateTime.add(DateTime.utc_now(), -3 * 3600, :second)
+        Repo.update_all(from(j in Oban.Job, where: j.id == ^waiting.id), set: [inserted_at: hours_ago])
         assert :ok = Notes.deliver_mentions(reader.id, due)
         assert [job] = all_enqueued(worker: Brando.Worker.NoteMentions, args: %{"user_id" => reader.id})
         assert DateTime.compare(job.scheduled_at, DateTime.utc_now()) != :gt
@@ -737,6 +739,21 @@ defmodule Brando.NotificationsTest do
       assert :ok = Notes.deliver_mentions(reader.id, due)
       assert_email_sent(fn email -> email.text_body =~ "MyApp.Job201" end)
       assert states.() == [{"succeeded", 201}]
+    end
+
+    test "one email job waits per user, however long ago it was queued", %{user: user} do
+      reader = Factory.insert(:random_user, config: %UserConfig{notification_digest: :daily})
+      _route = route!(user, %{"kind" => "email", "events" => ["failed_job"], "recipient_ids" => [reader.id]})
+
+      Oban.Testing.with_testing_mode(:manual, fn ->
+        assert {:ok, first} = Digest.schedule(reader.id)
+        hours_ago = DateTime.add(DateTime.utc_now(), -3 * 3600, :second)
+        Repo.update_all(from(j in Oban.Job, where: j.id == ^first.id), set: [inserted_at: hours_ago])
+
+        assert {:ok, _} = Digest.schedule(reader.id)
+        assert [%{id: id}] = all_enqueued(worker: Brando.Worker.NoteMentions, args: %{"user_id" => reader.id})
+        assert id == first.id
+      end)
     end
 
     test "digest times are at the digest hour in the site's time zone, Mondays for weekly" do

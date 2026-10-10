@@ -9,7 +9,10 @@ defmodule Brando.Worker.NoteMentions do
   use Oban.Worker,
     queue: :default,
     max_attempts: 5,
-    unique: [keys: [:tenant_prefix, :user_id], states: [:available, :scheduled, :retryable]]
+    # One waiting job per user and environment, however long ago it was
+    # queued (Oban's default period is a minute). A running job does not
+    # count, so it can queue the rest of a full batch.
+    unique: [keys: [:tenant_prefix, :user_id], states: [:available, :scheduled, :retryable], period: :infinity]
 
   alias Brando.Tenant.Job, as: TenantJob
 
