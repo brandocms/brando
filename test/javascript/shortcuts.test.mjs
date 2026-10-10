@@ -179,3 +179,64 @@ test('a shortcut skips a disabled or inert target', () => {
   assert.equal(registry.firstUsable([el({ disabled: true })]), null)
   assert.equal(registry.firstUsable([]), null)
 })
+
+// The runtime (`assets/src/shortcuts/index.js`) with the registry inlined,
+// fresh for each test: the page's choice is module state.
+const runtimeSource = (await readFile(new URL('../../assets/src/shortcuts/index.js', import.meta.url), 'utf8')).replace(
+  "from './registry'",
+  `from 'data:text/javascript;base64,${Buffer.from(source).toString('base64')}'`
+)
+let runtimeLoads = 0
+
+async function withStorage(storage, fn) {
+  const saved = { document: globalThis.document, localStorage: globalThis.localStorage }
+  globalThis.document = { querySelector: () => null }
+  globalThis.localStorage = storage
+  try {
+    const fresh = `${runtimeSource}\n// load ${++runtimeLoads}\n`
+    await fn(await import(`data:text/javascript;base64,${Buffer.from(fresh).toString('base64')}`))
+  } finally {
+    Object.assign(globalThis, saved)
+  }
+}
+
+const memoryStorage = (overrides = {}) => {
+  const items = new Map()
+  return {
+    getItem: k => (items.has(k) ? items.get(k) : null),
+    setItem: (k, v) => items.set(k, String(v)),
+    removeItem: k => items.delete(k),
+    ...overrides,
+  }
+}
+
+const denied = () => {
+  throw new Error('storage denied')
+}
+
+test('turning character keys off lasts for the page when storage is unavailable', async () => {
+  await withStorage({ getItem: denied, setItem: denied, removeItem: denied }, runtime => {
+    assert.equal(runtime.characterKeysEnabled(), true)
+    runtime.setCharacterKeysEnabled(false)
+    assert.equal(runtime.characterKeysEnabled(), false)
+    runtime.setCharacterKeysEnabled(true)
+    assert.equal(runtime.characterKeysEnabled(), true)
+  })
+})
+
+test('turning character keys off lasts for the page when the store is full', async () => {
+  await withStorage(memoryStorage({ setItem: denied }), runtime => {
+    runtime.setCharacterKeysEnabled(false)
+    assert.equal(runtime.characterKeysEnabled(), false)
+  })
+})
+
+test('a stored choice is read from storage, so another tab can change it', async () => {
+  const storage = memoryStorage()
+  await withStorage(storage, runtime => {
+    runtime.setCharacterKeysEnabled(false)
+    assert.equal(runtime.characterKeysEnabled(), false)
+    storage.removeItem('brando:shortcuts:character-keys:anonymous')
+    assert.equal(runtime.characterKeysEnabled(), true)
+  })
+})
