@@ -584,6 +584,7 @@ defmodule BrandoAdmin.Components.Form.Primitives do
   end
 
   attr :processing, :boolean, default: false
+  attr :disabled, :boolean, default: false
   attr :form_id, :string, required: true
   attr :label, :any, required: true
   attr :class, :any, default: nil
@@ -595,7 +596,7 @@ defmodule BrandoAdmin.Components.Form.Primitives do
     <button
       id={"#{@form_id}-submit"}
       type="button"
-      disabled={@processing}
+      disabled={@processing || @disabled}
       data-processing={@processing}
       data-form-id={@form_id}
       data-testid="submit"

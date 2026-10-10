@@ -257,10 +257,9 @@ defmodule Brando.LiveCase do
   Mounts an entry form and waits for it to finish rendering, returning
   `{view, html}`.
 
-  The form arrives in three phases, which is why a bare `live/2` hands back a
-  loader shell: `Form.update/2` kicks off `start_async(:entry_load, …)`, then
-  defers the block editor by `send_update_after(…, :render_blocks, 50)`.
-  `render_async/2` covers the first; only re-rendering covers the second.
+  An entry with more blocks than `Form.light_block_limit/0` arrives in two
+  steps: its fields with the first render, its blocks from
+  `start_async(:blocks_load, …)`. `render_async/2` waits for the second.
   """
   defmacro live_form(conn, path, form_id \\ "page_form") do
     # A macro, not a function: `Phoenix.LiveViewTest.live/2` is itself a macro

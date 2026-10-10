@@ -150,7 +150,17 @@ export default function draftRecovery(hook) {
     clearTimeout(flightTimer)
     schedule()
   })
+  // A heavy entry's form starts without recovery and turns it on once its
+  // blocks have loaded. What it skipped meanwhile (edits from before a
+  // reconnect, the capture `reconnected()` could not send) goes now, not at
+  // the next keystroke.
+  let wasEnabled = enabled()
   return {
+    updated() {
+      const on = enabled()
+      if (on && !wasEnabled && pending) capture()
+      wasEnabled = on
+    },
     disconnected() {
       hook.js().addClass(hook.el, 'draft-offline')
       inFlight = null

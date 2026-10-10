@@ -239,6 +239,7 @@ defmodule BrandoAdmin.Components.Form.EntryHeader do
   attr :name, :string, required: true, doc: "The field's input name, e.g. `project[status]`"
   attr :value, :any, required: true
   attr :options, :list, required: true
+  attr :disabled, :boolean, default: false, doc: "while the entry's blocks load"
 
   @doc """
   The status as one control: a button with the status dot, its label and a
@@ -263,6 +264,7 @@ defmodule BrandoAdmin.Components.Form.EntryHeader do
         class="entry-status-trigger"
         data-testid="status-trigger"
         data-status={@current && @current.value}
+        disabled={@disabled}
         popovertarget={"#{@id}-options"}
         aria-haspopup="true"
         aria-expanded="false"

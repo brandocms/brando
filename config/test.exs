@@ -47,6 +47,8 @@ config :brando, Brando.Images,
   }
 
 config :brando, Brando.EditSession, grace_period: 0
+# Lets tests hold an entry form's load back (`:form_load_gate`)
+config :brando, :form_load_gate?, true
 config :brando, Brando.Static, cdn: [enabled: false]
 config :brando, Brando.Type.Role, roles: %{staff: 1, admin: 2, superuser: 4}
 config :brando, Brando.Villain, extra_blocks: []

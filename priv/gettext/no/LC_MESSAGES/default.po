@@ -2694,6 +2694,7 @@ msgid "Blockquote (optional)"
 msgstr "Sitatblokk (valgfritt)"
 
 #: lib/brando_admin/components/form/block_field.ex
+#: lib/brando_admin/components/form/entry_skeleton.ex
 #: lib/brando_admin/components/form/module_props.ex
 #: lib/brando_admin/live/ai/assistant_live.ex
 #: lib/brando_admin/live/content/stale_blocks_live.ex
@@ -2884,11 +2885,6 @@ msgstr "Bygg, forhåndsvis, publiser og rull tilbake versjonerte statiske artefa
 #, elixir-autogen, elixir-format
 msgid "Building"
 msgstr "Bygger"
-
-#: lib/brando_admin/components/form.ex
-#, elixir-autogen, elixir-format
-msgid "Building block editor"
-msgstr "Bygger blokkeditoren"
 
 #: lib/brando_admin/menu.ex
 #, elixir-autogen, elixir-format
@@ -6987,11 +6983,6 @@ msgstr "Hent miniatyrbilder og titler"
 msgid "Fetches for a user"
 msgstr "Henting for en bruker"
 
-#: lib/brando_admin/components/form.ex
-#, elixir-autogen, elixir-format
-msgid "Fetching content"
-msgstr "Henter innhold"
-
 #: lib/brando_admin/components/content/list.ex
 #, elixir-autogen, elixir-format
 msgid "Fetching entry..."
@@ -7871,6 +7862,7 @@ msgid "High"
 msgstr "Høy"
 
 #: lib/brando_admin/components/form.ex
+#: lib/brando_admin/components/form/entry_skeleton.ex
 #: lib/brando_admin/live/ai/guidance_live.ex
 #: lib/brando_admin/live/sites/environment_live.ex
 #: lib/brando_admin/live/sites/markdown_sources_live.ex
@@ -9050,7 +9042,7 @@ msgstr "Last eldre hendelser"
 msgid "Load revision %{revision} into the editor? Unsaved editor changes will be replaced."
 msgstr "Laste versjon %{revision} inn i editoren? Ulagrede endringer i editoren blir erstattet."
 
-#: lib/brando_admin/components/form.ex
+#: lib/brando_admin/components/form/entry_skeleton.ex
 #, elixir-autogen, elixir-format
 msgid "Loading %{count} block"
 msgid_plural "Loading %{count} blocks"
@@ -9734,6 +9726,7 @@ msgid "Moonwalk"
 msgstr "Månevandring"
 
 #: lib/brando_admin/components/form.ex
+#: lib/brando_admin/components/form/entry_skeleton.ex
 #, elixir-autogen, elixir-format
 msgid "More"
 msgstr "Mer"
@@ -11028,6 +11021,7 @@ msgid "Note on this block"
 msgstr "Notat på denne blokken"
 
 #: lib/brando_admin/components/form.ex
+#: lib/brando_admin/components/form/entry_skeleton.ex
 #: lib/brando_admin/components/form/notes_drawer.ex
 #, elixir-autogen, elixir-format
 msgid "Notes"
@@ -11616,15 +11610,17 @@ msgstr "Åpne papirkurven"
 msgid "Open your authenticator app and enter the 6-digit code it shows for %{email}."
 msgstr "Åpne autentiseringsappen og skriv inn den sekssifrede koden den viser for %{email}."
 
+#: lib/brando/blueprint/listings/components/core.ex
+#: lib/brando_admin/components/form.ex
+#: lib/brando_admin/components/form/entry_skeleton.ex
+#, elixir-autogen, elixir-format
+msgid "Opening"
+msgstr "Åpner"
+
 #: lib/brando/frontend_edit/text.ex
 #, elixir-autogen, elixir-format
 msgid "Opening editor…"
 msgstr "Åpner redigering …"
-
-#: lib/brando_admin/components/form.ex
-#, elixir-autogen, elixir-format
-msgid "Opening entry"
-msgstr "Åpner oppføring"
 
 #: lib/brando_admin/components/form/input/identity_type_config.ex
 #, elixir-autogen, elixir-format
@@ -12302,6 +12298,7 @@ msgid "Presence details"
 msgstr "Tilstedeværelse"
 
 #: lib/brando_admin/components/form.ex
+#: lib/brando_admin/components/form/entry_skeleton.ex
 #: lib/brando_admin/components/video_picker.ex
 #: lib/brando_admin/live/sites/publishing_live.ex
 #, elixir-autogen, elixir-format
@@ -14109,6 +14106,7 @@ msgid "Save access"
 msgstr "Lagre tilgang"
 
 #: lib/brando_admin/components/form.ex
+#: lib/brando_admin/components/form/entry_skeleton.ex
 #: lib/brando_admin/components/shortcut_sheet.ex
 #, elixir-autogen, elixir-format
 msgid "Save and close"
@@ -14161,6 +14159,7 @@ msgid "Save minor text corrections"
 msgstr "Lagre små tekstrettelser"
 
 #: lib/brando_admin/components/form.ex
+#: lib/brando_admin/components/form/entry_skeleton.ex
 #, elixir-autogen, elixir-format
 msgid "Save options"
 msgstr "Lagringsvalg"
@@ -14373,6 +14372,7 @@ msgstr "Den planlagte operasjonen ble avbrutt."
 #: lib/brando_admin/components/activity.ex
 #: lib/brando_admin/components/dashboard.ex
 #: lib/brando_admin/components/form.ex
+#: lib/brando_admin/components/form/entry_skeleton.ex
 #: lib/brando_admin/components/form/scheduled_publishing_drawer.ex
 #: lib/brando_admin/menu.ex
 #, elixir-autogen, elixir-format

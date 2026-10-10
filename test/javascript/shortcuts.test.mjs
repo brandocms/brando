@@ -168,3 +168,14 @@ test('focus in a dialog, a modal or a drawer', () => {
   assert.ok(inDialog(el({ inside: ['[role="dialog"]'] })))
   assert.ok(!inDialog(el()))
 })
+
+test('a shortcut skips a disabled or inert target', () => {
+  const el = ({ disabled = false, inert = false } = {}) => ({
+    matches: selector => selector === ':disabled' && disabled,
+    closest: selector => (selector === '[inert]' && inert ? {} : null),
+  })
+  const usable = el()
+  assert.equal(registry.firstUsable([el({ disabled: true }), el({ inert: true }), usable]), usable)
+  assert.equal(registry.firstUsable([el({ disabled: true })]), null)
+  assert.equal(registry.firstUsable([]), null)
+})

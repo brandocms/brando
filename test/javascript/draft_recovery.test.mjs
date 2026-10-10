@@ -57,6 +57,8 @@ function editor(t) {
     ack: (request = sent.at(-1)) => emit('saved', request),
     disconnect() { connected = false; recovery.disconnected() },
     reconnect() { connected = true; recovery.reconnected() },
+    // a heavy entry's form while its blocks load: no recovery yet
+    setEnabled(on) { el.dataset.draftEnabled = on ? 'true' : undefined; recovery.updated?.() },
   }
 }
 
@@ -212,6 +214,32 @@ test('destroy removes scheduled work and listeners', t => {
   const e = editor(t)
   e.input()
   e.recovery.destroy()
+  e.tick(60000)
+  assert.equal(e.sent.length, 0)
+})
+
+test('edits waiting while recovery was off are captured once it is on', t => {
+  const e = editor(t)
+  e.input()
+  e.disconnect()
+  // reconnected to a heavy entry whose blocks are still loading
+  e.setEnabled(false)
+  e.reconnect()
+  e.tick(60000)
+  assert.equal(e.sent.length, 0)
+  assert.equal(e.pending(), true)
+  // the blocks arrive and recovery starts
+  e.setEnabled(true)
+  assert.equal(e.sent.length, 1)
+  assert.ok(e.sent[0].blocks.abc, 'every block form goes with the first capture after reconnecting')
+  e.ack()
+  assert.equal(e.pending(), false)
+})
+
+test('turning recovery on with nothing waiting captures nothing', t => {
+  const e = editor(t)
+  e.setEnabled(false)
+  e.setEnabled(true)
   e.tick(60000)
   assert.equal(e.sent.length, 0)
 })

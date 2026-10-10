@@ -197,6 +197,7 @@ export default (app) => ({
   },
 
   updated() {
+    this.draftRecovery?.updated()
     this.updateToolbarOffset()
     this.observeStuckToolbar()
     this.dirtyFields.apply()

@@ -10,6 +10,7 @@ import brandoHooks from './hooks'
 import initializeLiveSocket from './initializeLiveSocket'
 import installUICommands from './uiCommands'
 import installFloatingDropdowns from './floatingDropdowns'
+import installOpeningRows from './openingRow'
 import installTooltips from './tooltips'
 import installShortcuts from './shortcuts'
 import installConfirm from './confirm'
@@ -77,6 +78,7 @@ export default (hooks, enableDebug = false) => {
     }
     installUICommands(app)
     installFloatingDropdowns(app)
+    installOpeningRows(app.liveSocket)
     installTooltips()
     installShortcuts(app)
     // if login screen, do some animations

@@ -8,11 +8,14 @@ a `def handle_event("name"` clause is a browser event.
 
 ## Mount and load
 
-`mount/1`, the catch-all `update(assigns, socket)`, `finish_form_update`,
-`start_entry_load`, `load_entry_with_progress`, `handle_async` (the entry
-arrives), `entry_not_found`, `action: :entry_load_progress`,
-`action: :render_blocks` (block fields mount one render later). Fixed per
-mount: `assign_addon_statuses`, `assign_header`, `assign_transformer_statuses`
+`mount/1`, the catch-all `update(assigns, socket)`, `finish_form_update`
+(`finish_form_fields` then `finish_form_blocks`), `open_entry` (read before
+the first render; `@light_block_limit` decides whether the blocks come with
+it), `run_load` (`start_async`, in-process on a sandboxed E2E server),
+`handle_async` (`:blocks_load`, `:entry_load`), `put_loaded_blocks`,
+`entry_not_found`, `action: :render_blocks`. `blocks_ready?` false: fields
+read-only, Save and recovery copies wait. Fixed per mount:
+`assign_addon_statuses`, `assign_header`, `assign_transformer_statuses`
 (initialised once on purpose), `assign_default_params`.
 
 ## Params to changeset, and the form assign
@@ -80,8 +83,8 @@ updates), `event: "provide_root_blocks"`, `"provide_transformer_data"`,
 
 ## Render
 
-`render/1` (three clauses: loading shell, frontend edit, the form),
-`entry_loader`, `toolbar_more`, `form_presences`, `follow_frame`, `form_tabs`,
+`render/1` (four clauses: skeletons while `entry_loading?`, frontend edit,
+the form; `EntrySkeleton` draws the loading states), `toolbar_more`, `form_presences`, `follow_frame`, `form_tabs`,
 `tab_fields`, `live_preview/1`.
 
 ## AI
