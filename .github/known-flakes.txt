@@ -24,9 +24,3 @@
 # TEMPORARY (10 Oct 2026): expected fixed by moving the 1.19 leg off OTP 28.0;
 # remove after two weeks without a hit.
 beam-jit-crash log:\[asmjit\] Assertion failed at asmjit/core/jitallocator\.cpp.*exit code 134
-
-# A LiveView test (usually BrandoAdmin.ChromeSocketTokensTest) calls the
-# Presence shard while the shard's database checkout belongs to another
-# test's sandbox owner that has just exited, so the call dies with
-# "owner #PID<…> exited".
-presence-shard-owner-exited Presence_shard[0-9]+.*owner #PID<[0-9.]+> exited

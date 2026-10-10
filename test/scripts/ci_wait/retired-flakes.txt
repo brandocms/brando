@@ -1,0 +1,6 @@
+# Entries no longer in .github/known-flakes.txt whose logs the cases still
+# use: their fix landed, but they remain good samples of a flake signature
+# that also appears, in halves, in a real failure's noise.
+
+# The Presence shard died when a users lookup failed in its fetch task.
+presence-shard-owner-exited Presence_shard[0-9]+.*owner #PID<[0-9.]+> exited

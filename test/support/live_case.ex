@@ -76,9 +76,9 @@ defmodule Brando.LiveCase do
 
   A LiveView that closes with the test leaves presence, and presence looks
   the user up in the database in a task. Should that task still run when the
-  test's sandbox owner stops, it dies on the closed connection, and
-  `Phoenix.Presence` has no clause for a task that died: the tracker crashes,
-  and the next test to mount an admin LiveView fails to track.
+  test's sandbox owner stops, the lookup fails on the closed connection and
+  logs an error (`BrandoAdmin.Presence.users/1`), or reads the next test's
+  sandbox.
   """
   def await_presence_idle(deadline \\ System.monotonic_time(:millisecond) + 1_000) do
     shard = :"Elixir.BrandoIntegration.Presence_shard0"

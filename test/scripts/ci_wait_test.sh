@@ -13,6 +13,10 @@ ci_wait="${CI_WAIT:-$root/scripts/ci-wait}"
 stub="$(mktemp -d "${TMPDIR:-/tmp}/ci-wait-test.XXXXXX")"
 trap 'rm -rf "$stub"' EXIT
 
+# The live list, plus retired entries the fixtures below still use
+cat "$root/.github/known-flakes.txt" "$fixtures/retired-flakes.txt" >"$stub/known-flakes.txt"
+export CI_WAIT_FLAKES="$stub/known-flakes.txt"
+
 cat >"$stub/gh" <<'EOF'
 #!/usr/bin/env bash
 # gh api <path> …: the run's failed job (and CASE_PASSING, a passed one), its
