@@ -2,6 +2,7 @@
 
 ## Build & Test Commands
 - Fresh worktree: `scripts/worktree-setup` (deps, private test DB, pnpm 10 installs, Git hooks; prints the env to use)
+- Whole unit suite as CI runs it, in partitions: `scripts/test-partitions`
 - Before pushing: `mix check` (CI's fast gates; the pre-push hook runs `--fast`, `SKIP_CHECK=1` bypasses)
 - Wait for CI: `scripts/ci-wait <PR>` (background; silent until a summary line, then one line per failed job: known flake from `.github/known-flakes.txt` or real failure; `--rerun-flakes` reruns flakes once)
 - Merge: `scripts/queue <PR…>` (background; queues PRs once green, retargets stacked ones, follows each to merged or says why it dropped; `--dequeue <PR>` before pushing to a queued branch)

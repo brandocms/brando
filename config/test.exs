@@ -65,6 +65,12 @@ config :brando, Brando.Villain, parser: Brando.Villain.ParserTest.Parser
 # The main checkout, which is what CI runs, keeps `brando_test`.
 # `BRANDO_TEST_DATABASE_URL` overrides both. scripts/worktree-setup derives the
 # same name when it creates, migrates and seeds the database.
+#
+# `mix test --partitions` runs set MIX_TEST_PARTITION (scripts/test-partitions):
+# each partition gets its own database and media directory, the number
+# appended to the name.
+partition = System.get_env("MIX_TEST_PARTITION", "")
+
 test_database =
   if File.regular?(Path.expand("../.git", __DIR__)) do
     slug =
@@ -73,13 +79,19 @@ test_database =
       |> String.downcase(:ascii)
       |> String.replace(~r/[^a-z0-9_]/, "_")
 
-    String.slice("brando_test_" <> slug, 0, 63)
+    String.slice("brando_test_" <> slug, 0, 63 - String.length(partition)) <> partition
   else
-    "brando_test"
+    "brando_test" <> partition
+  end
+
+test_database_url =
+  case System.get_env("BRANDO_TEST_DATABASE_URL") do
+    nil -> "ecto://postgres:postgres@localhost/#{test_database}"
+    url -> %{URI.parse(url) | path: URI.parse(url).path <> partition} |> URI.to_string()
   end
 
 config :brando, BrandoIntegration.Repo,
-  url: System.get_env("BRANDO_TEST_DATABASE_URL", "ecto://postgres:postgres@localhost/#{test_database}"),
+  url: test_database_url,
   pool: Ecto.Adapters.SQL.Sandbox,
   ownership_pool: DBConnection.Poolboy,
   # We don't run a server during test. If one is required,
@@ -148,10 +160,10 @@ config :brando, :languages, [
   [value: "en", text: "English"]
 ]
 
-config :brando, :log_dir, Path.expand("./tmp/logs")
+config :brando, :log_dir, Path.expand("./tmp/logs#{partition}")
 config :brando, :logging, disable_logging: true
 config :brando, :login_url, "/login"
-config :brando, :media_path, Path.join([Mix.Project.app_path(), "tmp", "media"])
+config :brando, :media_path, Path.join([Mix.Project.app_path(), "tmp", "media#{partition}"])
 config :brando, :media_url, "/media"
 config :brando, :otp_app, :brando
 config :brando, :repo_module, BrandoIntegration.Repo

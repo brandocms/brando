@@ -1,0 +1,128 @@
+#!/usr/bin/env bash
+# Runs the unit suite as N partitions at once (`mix test --partitions N`),
+# each in its own BEAM with its own test database and media directory
+# (config/test.exs appends MIX_TEST_PARTITION to both). Most of the suite is
+# synchronous, so one `mix test` leaves most cores idle. CI's mix test jobs
+# run this.
+#
+#   scripts/test-partitions              4 partitions
+#   scripts/test-partitions 3            3 partitions
+#   scripts/test-partitions 4 --seed 0   the rest goes to every `mix test`
+#
+# Compiles once, then creates, migrates and seeds each partition's database
+# when it is new (seeds once, as scripts/worktree-setup does). Prints one line
+# per partition, and the output of those that failed; on GitHub Actions, the
+# others' output folded in a group each. Fails if any partition fails.
+#
+# Uses mise (`mise exec --`) when mix is not on PATH. Works with macOS's bash 3.
+set -uo pipefail
+
+cd "$(dirname "$0")/.." || exit 1
+
+partitions=4
+case "${1:-}" in
+  -h|--help) sed -n '2,15p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+  [0-9]*) partitions="$1"; shift ;;
+esac
+if [ "$partitions" -lt 1 ]; then
+  echo "test-partitions: the number of partitions must be at least 1" >&2
+  exit 2
+fi
+
+if command -v mix >/dev/null 2>&1; then
+  mix_cmd=(mix)
+elif command -v mise >/dev/null 2>&1; then
+  mix_cmd=(mise exec -- mix)
+elif [ -x "$HOME/.local/bin/mise" ]; then
+  mix_cmd=("$HOME/.local/bin/mise" exec -- mix)
+else
+  echo "test-partitions: mix not found on PATH, and no mise to run it with" >&2
+  exit 1
+fi
+
+export MIX_ENV=test
+logs="$(mktemp -d "${TMPDIR:-/tmp}/brando-partitions.XXXXXX")"
+trap 'rm -rf "$logs"' EXIT
+
+# Compiling in each partition at once would race on _build
+if ! "${mix_cmd[@]}" compile > "$logs/compile" 2>&1; then
+  cat "$logs/compile"
+  echo "test-partitions: FAILED to compile" >&2
+  exit 1
+fi
+
+prepare() {
+  MIX_TEST_PARTITION="$1" "${mix_cmd[@]}" do \
+    ecto.create --quiet --no-compile + ecto.migrate --quiet --no-compile + \
+    run --no-compile -e 'BrandoIntegration.Repo.start_link()
+      if BrandoIntegration.Repo.aggregate(Brando.Sites.Identity, :count) == 0,
+        do: Code.eval_file("priv/repo/seeds.exs")'
+}
+
+i=1
+pids=()
+while [ "$i" -le "$partitions" ]; do
+  prepare "$i" > "$logs/prepare$i" 2>&1 &
+  pids+=($!)
+  i=$((i + 1))
+done
+i=1
+for pid in "${pids[@]}"; do
+  if ! wait "$pid"; then
+    cat "$logs/prepare$i"
+    echo "test-partitions: FAILED to prepare the database of partition $i" >&2
+    exit 1
+  fi
+  i=$((i + 1))
+done
+
+started=$SECONDS
+i=1
+pids=()
+while [ "$i" -le "$partitions" ]; do
+  MIX_TEST_PARTITION="$i" "${mix_cmd[@]}" test --no-compile --partitions "$partitions" ${1+"$@"} \
+    > "$logs/test$i" 2>&1 &
+  pids+=($!)
+  i=$((i + 1))
+done
+
+failed=0
+i=1
+for pid in "${pids[@]}"; do
+  wait "$pid"
+  status=$?
+  [ "$status" -eq 0 ] || failed=$((failed + 1))
+  echo "$status" > "$logs/status$i"
+  i=$((i + 1))
+done
+
+# Whole, unprefixed and once each: scripts/ci-wait reads ExUnit's own lines
+# and adds up its summaries. A failed partition's output is not folded away.
+i=1
+while [ "$i" -le "$partitions" ]; do
+  status="$(cat "$logs/status$i")"
+  if [ "$status" -ne 0 ]; then
+    echo "== Partition $i of $partitions (exit $status)"
+    cat "$logs/test$i"
+  elif [ -n "${GITHUB_ACTIONS:-}" ]; then
+    echo "::group::Partition $i of $partitions"
+    cat "$logs/test$i"
+    echo "::endgroup::"
+  fi
+  i=$((i + 1))
+done
+
+i=1
+while [ "$i" -le "$partitions" ]; do
+  status="$(cat "$logs/status$i")"
+  summary="$(grep -E '^Finished in |^Result: |^Failed: |^[0-9]+ (doctests?|tests?), ' "$logs/test$i" | tr '\n' ' ')"
+  printf 'test-partitions: partition %s/%s %s %s\n' "$i" "$partitions" \
+    "$([ "$status" -eq 0 ] && echo ok || echo "FAILED (exit $status)")" "$summary"
+  i=$((i + 1))
+done
+
+if [ "$failed" -gt 0 ]; then
+  echo "test-partitions: $failed of $partitions partition(s) failed ($((SECONDS - started))s)" >&2
+  exit 1
+fi
+echo "test-partitions: all $partitions partitions passed ($((SECONDS - started))s)"
