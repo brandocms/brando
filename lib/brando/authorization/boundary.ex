@@ -5,6 +5,23 @@ defmodule Brando.Authorization.Boundary do
   Public frontend queries keep their existing behavior outside an admin scope.
   Context mutations with a user always enforce groups once group mode is enabled.
   `:system` is reserved for explicitly trusted maintenance code.
+
+  ## Two modes
+
+  `config :brando, authorization_mode:` is `:legacy` (the default: the
+  application's role rules) or `:groups`. In legacy mode `run/4` calls `fun`
+  directly, with no check and no transaction, and `authorize/3` returns `:ok`.
+  A change to group-mode behaviour leaves legacy mode as it was unless it
+  means to change it too; test both.
+
+  ## `:forbidden`
+
+  `{:error, :forbidden}` is every denial, not only a missing grant: an
+  inactive account, an inactive site, a scope that does not match its site,
+  environment or subject (`:wrong_scope`), an unknown permission, no backend
+  access, a protected account or a resource policy. `Brando.Authorization.explain/3`
+  gives the reason. Treat `:forbidden` as "not allowed in this scope", not as
+  "lacks the grant".
   """
   alias Brando.Authorization.{Engine, Groups, Scope}
   alias Brando.Repo
