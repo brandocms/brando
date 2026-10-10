@@ -27,15 +27,17 @@ defmodule Brando.Notifications.Recipient do
     |> Enum.map(&%{id: &1.id, name: &1.name, email: &1.email})
   end
 
-  @doc "Whether `user` may enter the current site (see the moduledoc)."
+  @doc """
+  Whether `user` may enter the current site (see the moduledoc). A failure
+  while checking (the database) raises rather than counting as "no", so a
+  job sending email fails and is retried instead of dropping what it sends.
+  """
   def member?(%User{} = user) do
     cond do
       Engine.enabled?() -> Engine.can?(Scope.current(user), :access, :backend)
       Brando.Tenant.enabled?() -> site_access?(user)
       true -> true
     end
-  rescue
-    _ -> false
   end
 
   def member?(_), do: false
@@ -71,22 +73,33 @@ defmodule Brando.Notifications.Recipient do
 
   defp entry_readable?(_user, _delivery), do: true
 
-  # An entry that is gone can no longer be read, and is not sent about
+  # An entry that is gone, or of a schema that is gone, can no longer be
+  # read, and is not sent about
   defp readable?(user, schema, id) do
-    module = String.to_existing_atom(schema)
-
-    case Repo.get(module, id) do
-      nil -> false
-      entry -> may_read?(user, entry)
+    with {:ok, module} <- entry_schema(schema),
+         %{} = entry <- Repo.get(module, id) do
+      may_read?(user, entry)
+    else
+      _ -> false
     end
-  rescue
-    _ -> false
   end
 
-  @doc "Whether `user` may read `entry`: with group authorization, by its read permission; otherwise yes."
+  @doc """
+  The Ecto schema an entry type names (`"Elixir.MyApp.Projects.Project"`):
+  `{:ok, module}`, or `:error` when no such schema exists (any more).
+  """
+  def entry_schema(type) when is_binary(type) do
+    module = String.to_existing_atom(type)
+    if Code.ensure_loaded?(module) and function_exported?(module, :__schema__, 1), do: {:ok, module}, else: :error
+  rescue
+    ArgumentError -> :error
+  end
+
+  @doc """
+  Whether `user` may read `entry`: with group authorization, by its read
+  permission; otherwise yes. Like `member?/1`, raises when checking fails.
+  """
   def may_read?(%User{} = user, entry) do
     not Brando.Authorization.enabled?() or Brando.Authorization.can?(Scope.current(user), :read, entry)
-  rescue
-    _ -> false
   end
 end

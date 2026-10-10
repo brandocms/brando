@@ -288,6 +288,42 @@ defmodule Brando.NotesTest do
       assert Notes.mentions_for(other.id, unsent: true) == []
     end
 
+    test "a failure while checking access fails the job, and the mentions wait for its retry", %{page: page} do
+      put_test_env(:authorization_mode, :groups)
+      put_test_env(:tenancy_mode, :none)
+      owner = Factory.insert(:random_user, role: :superuser)
+      reader = Factory.insert(:random_user, role: :user, name: "Kari Leser")
+      {:ok, _} = Brando.Authorization.Migration.run()
+      scope = Brando.Authorization.Scope.standalone(owner)
+
+      {:ok, group} =
+        Brando.Authorization.Groups.create(scope, %{name: "Readers"}, ["brando.admin.access", "brando.pages.read"])
+
+      {:ok, :ok} = Brando.Authorization.Groups.add_member(scope, group.id, reader.id)
+
+      Oban.Testing.with_testing_mode(:manual, fn ->
+        thread!(page, owner, %{"body" => "@Kari Leser waiting", "mentions" => [reader.id]})
+      end)
+
+      # The first failing statement must surface, not count as "may not see";
+      # in the test transaction anything after it fails as aborted instead
+      for table <- ["authorization_user_groups", Page.__schema__(:source)] do
+        error =
+          assert_raise Postgrex.Error, fn ->
+            Repo.transaction(fn ->
+              Repo.query!(~s(ALTER TABLE "#{table}" RENAME TO "#{table}_away"))
+              Notes.deliver_mentions(reader.id)
+            end)
+          end
+
+        assert error.postgres.code == :undefined_table
+        assert [_] = Notes.mentions_for(reader.id, unsent: true)
+      end
+
+      assert :ok = Notes.deliver_mentions(reader.id)
+      assert_email_sent(fn email -> assert email.text_body =~ "waiting" end)
+    end
+
     test "a further email that cannot be queued fails the job, to be retried", %{author: author, other: other} do
       now = DateTime.utc_now()
 
