@@ -891,6 +891,32 @@ defmodule Brando.EditSessionTest do
       assert params["block"]["table_rows"] |> Enum.map(& &1["id"]) |> Enum.sort() == [5, 8]
     end
 
+    # Sol audit: the session names only the rows of blocks with unsaved
+    # work, so a new row the rejoiner held, which a save has since given an
+    # id, was not matched with it, and came in twice.
+    test "a rejoin matches a new row it held with the row a save made of it" do
+      table = fn rows -> %{id: 1, block: %{uid: "a", id: 10, children: [], table_rows: rows}} end
+      old = Ops.from_entry_blocks([table.([%{id: 5, sync_uid: "r5"}]), entry_block("b", 2, 20)])
+
+      fresh =
+        Ops.from_entry_blocks([table.([%{id: 5, sync_uid: "r5"}, %{id: 8, sync_uid: "new"}]), entry_block("b", 2, 20)])
+
+      {:ok, seed} = Ops.apply_op(fresh, anchor("b", "A"))
+      {:seeded, data} = Data.join(Data.new(1), @field, fresh, seed)
+      assert Data.state(data, @field).rel_ids["a"] == nil
+
+      rows_then = [%{"id" => 5}]
+      added = %{"sync_uid" => "new", "cols" => "B"}
+
+      {:ok, held} =
+        Ops.apply_op(old, {:set_field, "a", ["block", "table_rows"], {:list, rows_then, rows_then ++ [added]}, 0})
+
+      {{:merged, []}, data} = Data.join(data, @field, fresh, held, old)
+
+      {:ok, params} = Ops.materialize_root(Data.state(data, @field), "a")
+      assert [%{"id" => 5}, %{"id" => 8, "cols" => "B"}] = params["block"]["table_rows"]
+    end
+
     test "a rejoin carrying work after a save's read is kept by that save's rebase, on the session" do
       ref = new_ref()
       Phoenix.PubSub.subscribe(Brando.pubsub(), ref.topic)

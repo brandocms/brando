@@ -595,6 +595,23 @@ defmodule BrandoAdmin.Components.Form.BlockField.OpsTest do
              ]
     end
 
+    # Sol audit: rows the session has no change to were put in id order.
+    test "a rejoin takes the saved rows in their order when the session has no change to them" do
+      table = fn ids ->
+        Ops.from_entry_blocks([
+          %{id: 2, block: %{uid: "b", id: 20, children: [], table_rows: Enum.map(ids, &%{id: &1, sync_uid: "r#{&1}"})}}
+        ])
+      end
+
+      held_base = table.([5])
+      rows_now = table.([9, 5, 8])
+      live = apply!(rows_now, {:update, "b", %{"block" => %{"anchor" => "A"}}})
+      held = apply!(held_base, {:update, "b", %{"block" => %{"table_rows" => [%{"id" => 5, "cols" => "B"}]}}})
+
+      {state, _} = Ops.carry(held, held_base, live, lists: :merge, rows: rows_now)
+      assert state.diffs["b"]["block"]["table_rows"] |> Enum.map(& &1["id"]) == [9, 5, 8]
+    end
+
     # Without the saved rows, a row one side changed cannot be told from
     # one it left, so a saved row either side removed is removed, as a list
     # op's removal is (`merge_list/4`).

@@ -71,6 +71,7 @@ defmodule BrandoAdmin.Components.Form.BlockField.Ops do
             statuses: %{},
             db_ids: %{},
             rel_ids: %{},
+            row_order: %{},
             keys: %{},
             deleted: []
 
@@ -86,6 +87,7 @@ defmodule BrandoAdmin.Components.Form.BlockField.Ops do
           statuses: %{optional(uid()) => status()},
           db_ids: %{optional(uid()) => {entry_block_id :: term() | nil, block_id :: term() | nil}},
           rel_ids: %{optional(uid()) => %{optional({String.t(), String.t()}) => term()}},
+          row_order: %{optional(uid()) => %{optional(String.t()) => [term()]}},
           keys: %{optional(uid()) => FractionalKey.t()},
           deleted: [uid()]
         }
@@ -157,7 +159,8 @@ defmodule BrandoAdmin.Components.Form.BlockField.Ops do
         | order: state.order ++ [uid],
           statuses: Map.put(state.statuses, uid, :persisted),
           db_ids: Map.put(state.db_ids, uid, {entry_block.id, entry_block.block.id}),
-          rel_ids: put_rel_ids(state.rel_ids, entry_block.block)
+          rel_ids: put_rel_ids(state.rel_ids, entry_block.block),
+          row_order: put_row_order(state.row_order, entry_block.block)
       }
 
       register_persisted_children(state, entry_block.block)
@@ -183,7 +186,8 @@ defmodule BrandoAdmin.Components.Form.BlockField.Ops do
           child_order: Map.update(state.child_order, parent_uid, [child.uid], &(&1 ++ [child.uid])),
           statuses: Map.put(state.statuses, child.uid, :persisted),
           db_ids: Map.put(state.db_ids, child.uid, {nil, child.id}),
-          rel_ids: put_rel_ids(state.rel_ids, child)
+          rel_ids: put_rel_ids(state.rel_ids, child),
+          row_order: put_row_order(state.row_order, child)
       }
 
       register_persisted_children(state, child)
@@ -201,6 +205,20 @@ defmodule BrandoAdmin.Components.Form.BlockField.Ops do
   # What names a list item, in order (`identity/2`).
   @row_identities ~w(id uid key sync_uid)
   @content_identities %{"options" => ~w(value), "gallery_objects" => ~w(image_id video_id)}
+
+  # The ids of a block's rows, in their order, by relation: the rows as
+  # they are saved, for a rejoin whose session has no change to them
+  # (`carry/4`).
+  defp put_row_order(row_order, %{uid: uid} = block) do
+    ids =
+      for {key, _field} <- @rel_identities,
+          rows = Map.get(block, String.to_existing_atom(key)),
+          is_list(rows),
+          into: %{},
+          do: {key, for(%{id: id} <- rows, not is_nil(id), do: id)}
+
+    Map.put(row_order, uid, ids)
+  end
 
   defp put_rel_ids(rel_ids, %{uid: uid} = block) do
     ids =
@@ -228,7 +246,7 @@ defmodule BrandoAdmin.Components.Form.BlockField.Ops do
   @spec keep_rel_ids(t(), Enumerable.t()) :: t()
   def keep_rel_ids(%__MODULE__{} = state, uids \\ []) do
     keep = state.diffs |> Enum.reject(fn {_uid, diff} -> diff == %{} end) |> Enum.map(&elem(&1, 0)) |> Enum.concat(uids)
-    %{state | rel_ids: Map.take(state.rel_ids, keep)}
+    %{state | rel_ids: Map.take(state.rel_ids, keep), row_order: Map.take(state.row_order, keep)}
   end
 
   @doc "The blocks of `state` with unsaved work: inserted, or with a diff."
@@ -1097,7 +1115,10 @@ defmodule BrandoAdmin.Components.Form.BlockField.Ops do
       # by uid while it was new, and the other by the id a save gave it, is
       # one row: both are named by id first.
       root? = uid in acc.order
-      ids = Map.merge(Map.get(state.rel_ids, uid, %{}), Map.get(acc.rel_ids, uid, %{}))
+
+      ids =
+        [state, rows, acc] |> Enum.map(&Map.get(&1.rel_ids, uid, %{})) |> Enum.reduce(&Map.merge(&2, &1))
+
       now = acc.diffs |> Map.get(uid, %{}) |> fill_diff_ids(root?, ids)
       diff = fill_diff_ids(diff, root?, ids)
 
@@ -1141,8 +1162,8 @@ defmodule BrandoAdmin.Components.Form.BlockField.Ops do
   defp carry_merge(_key, now, value, _at), do: carry_merge(now, value, :nested)
 
   # A list the rejoiner's diff has and the session's lacks is the rows as
-  # they are saved (`rows`, whose `rel_ids` name them): rows saved while
-  # the rejoiner was away are among them, and its list would drop them.
+  # they are saved, in their order (`rows`): rows saved while the rejoiner
+  # was away are among them, and its list would drop them.
   defp with_saved_rows(now, diff, root?, rows, uid) do
     saved = saved_row_lists(rows, uid)
     {now_block, diff_block} = if root?, do: {Map.get(now, "block", %{}), Map.get(diff, "block", %{})}, else: {now, diff}
@@ -1157,34 +1178,13 @@ defmodule BrandoAdmin.Components.Form.BlockField.Ops do
     if root?, do: Map.put(now, "block", filled), else: filled
   end
 
-  defp saved_row_lists(%__MODULE__{} = rows, uid) do
-    if Map.has_key?(rows.statuses, uid) do
-      empty = Map.new(@rel_identities, fn {key, _field} -> {key, []} end)
+  defp saved_row_lists(%__MODULE__{} = rows, uid), do: Map.get(rows.row_order, uid, %{})
 
-      rows.rel_ids
-      |> Map.get(uid, %{})
-      |> Enum.reduce(empty, fn {{key, _identity}, id}, acc -> Map.update(acc, key, [id], &[id | &1]) end)
-      |> Map.new(fn {key, ids} -> {key, Enum.sort(ids)} end)
-    else
-      %{}
-    end
-  end
-
-  # The ids of the rows the rejoiner's rows had, by relation, where its
-  # rows name them (`rel_ids`): a saved row it lacks that is not among them
-  # was saved while it was away, not removed by it.
+  # The ids of the rows the rejoiner's rows had, by relation
+  # (`row_order`): a saved row it lacks that is not among them was saved
+  # while it was away, not removed by it.
   defp base_row_ids(%__MODULE__{} = base, uid) do
-    if Map.has_key?(base.statuses, uid) do
-      empty = Map.new(@rel_identities, fn {key, _field} -> {key, MapSet.new()} end)
-
-      base.rel_ids
-      |> Map.get(uid, %{})
-      |> Enum.reduce(empty, fn {{key, _identity}, id}, acc ->
-        Map.update(acc, key, MapSet.new([to_string(id)]), &MapSet.put(&1, to_string(id)))
-      end)
-    else
-      %{}
-    end
+    base.row_order |> Map.get(uid, %{}) |> Map.new(fn {key, ids} -> {key, MapSet.new(ids, &to_string/1)} end)
   end
 
   # `current` is the session's list, `carried` the rejoiner's. Both were
