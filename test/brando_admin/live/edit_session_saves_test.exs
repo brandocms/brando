@@ -420,6 +420,98 @@ defmodule BrandoAdmin.EditSessionSavesTest do
     assert length(rows(c.identity)) == 3
   end
 
+  # Review: an editor coming back to a session that moved onto other rows
+  # reads its rows again before it builds the copy of a removed block it
+  # worked in. Built over the new rows, which lack the block, the copy lost
+  # what the editor had not changed in it (its ref's name).
+  test "a block removed while the session was away comes back whole for the editor with unsaved work in it", c do
+    [_first, second | _] = c.uids
+    [ref] = c.identity |> rows() |> Enum.find(&(&1.block.uid == second)) |> then(& &1.block.refs)
+    b = open(c.other_conn, c.identity)
+    type(b, second, "<p>B's unsaved work</p>")
+    await(fn -> session_state(c.identity).diffs[second] not in [nil, %{}] end)
+
+    # B handles the session's exit late: the block goes, and a fresh editor
+    # seeds the new session from the rows without it, first.
+    :sys.suspend(b.pid)
+    old = session_pid(c.identity)
+    Process.exit(old, :kill)
+    await(fn -> session_pid(c.identity) != old end)
+
+    {:ok, proposal} = Proposals.propose([%DeleteBlock{target: {Page, c.identity.id}, block_uid: second}], c.user)
+    {:ok, _} = Proposals.approve(proposal.id, proposal.version, c.user)
+    {:ok, _} = Proposals.apply(proposal.id, proposal.version, c.user)
+
+    _a = open(c.conn, c.identity)
+    :sys.resume(b.pid)
+
+    kept = second <> "-kept"
+    await(fn -> session_state(c.identity).statuses[kept] == :inserted end)
+    await(fn -> shown_text(b, kept) == "<p>B's unsaved work</p>" end)
+    assert [%{"name" => name}] = session_state(c.identity).diffs[kept]["block"]["refs"]
+    assert name == ref.name
+  end
+
+  # A ref added to a block in the database, as a save the session never
+  # heard of would: the block's rows change, its structure does not.
+  defp add_ref_row(page, uid) do
+    row = page |> rows() |> Enum.find(&(&1.block.uid == uid))
+
+    Repo.insert!(%Brando.Content.Ref{
+      block_id: row.block.id,
+      name: "extra",
+      uid: Brando.Utils.generate_uid(),
+      sequence: 1,
+      data: %Brando.Villain.Blocks.TextBlock{data: %Brando.Villain.Blocks.TextBlock.Data{text: "<p>Extra</p>"}}
+    })
+  end
+
+  defp shown_refs(view, uid) do
+    view
+    |> render()
+    |> Brando.LiveCase.form_params("#entry_block_form-#{uid}")
+    |> get_in(["entry_block", "block", "refs"])
+    |> Map.new()
+    |> map_size()
+  end
+
+  # Review: a joiner with newer rows moved the session onto them, but the
+  # others took it as a plain join, compared blocks alone and kept showing
+  # (and later seeding and saving) the rows without the new one.
+  test "editors read the rows again when a joiner moves the session onto newer rows", c do
+    [first | _] = c.uids
+    a = open(c.conn, c.identity)
+    assert shown_refs(a, first) == 1
+
+    add_ref_row(c.identity, first)
+    _c = open(c.other_conn, c.identity)
+
+    await(fn -> shown_refs(a, first) == 2 end)
+  end
+
+  # Review: an editor that came back with older rows read them again, but
+  # kept showing its blocks' forms from the rows it had first.
+  test "an editor that rejoins with older rows shows the rows it read again", c do
+    [first | _] = c.uids
+    a = open(c.conn, c.identity)
+    b = open(c.other_conn, c.identity)
+    assert shown_refs(b, first) == 1
+
+    :sys.suspend(b.pid)
+    old = session_pid(c.identity)
+    Process.exit(old, :kill)
+    # A comes back first and seeds the new session with the rows it has
+    await(fn -> session_pid(c.identity) not in [nil, old] end)
+    await(fn -> shown_text(a, first) != nil end)
+
+    add_ref_row(c.identity, first)
+    _c = open(c.conn, c.identity)
+    await(fn -> shown_refs(a, first) == 2 end)
+
+    :sys.resume(b.pid)
+    await(fn -> shown_refs(b, first) == 2 end)
+  end
+
   # Review of #3055: the block came back after its rescue (the proposal was
   # undone) while the first copy stayed, and work in it was then removed
   # again. The first copy settled the second rescue, so nothing was

@@ -11,13 +11,16 @@ defmodule Brando.EditSession.Data do
   ## Per block field
 
   * `base` — the rows the state was built on, as `Ops.from_entry_blocks/1`
-    gives them. Joiners compare their own rows with it (`Ops.signature/1`).
+    gives them. Joiners compare their own rows with it (`Ops.signature/1`),
+    and a rejoiner's lists merge against its rows: it keeps every row's id,
+    name and order, which the state keeps only for blocks with unsaved
+    work.
   * `state` — `base` plus every unsaved op, in session order.
   * `log` — ops applied while a save is in flight, newest first, so that the
     save's rebase can replay what arrived after the saver read the state.
-    Work a rejoining editor carried in (`merge_held/4`) is logged as the
-    `{:carry, held, held_base}` op that does the same. Empty while nobody is
-    saving.
+    Work a rejoining editor carried in (`merge_held/4`) is logged as
+    `{:merge_held, held, held_base}`, replayed the same way. Empty while
+    nobody is saving.
   * `marks` — `%{client => {rev, monotonic_ms}}`, one per save in flight.
   * `rev` — counts the ops applied to the field (and its rebases), so a
     replica can tell a gap from a duplicate.
@@ -61,10 +64,11 @@ defmodule Brando.EditSession.Data do
 
   * An unknown field is seeded with what the editor holds.
   * A known field is joined when the editor loaded the same rows the session
-    is built on. Work the editor holds is carried onto the session's state
-    (`{:merged, conflicts}`): a replica that comes back after a crash, after
-    a fresh joiner seeded the new session from the database, must not lose
-    what it had.
+    is built on: the same blocks with the same rows (`row_order`). Work the
+    editor holds is carried onto the session's state (`{:merged,
+    conflicts}`): a replica that comes back after a crash, after a fresh
+    joiner seeded the new session from the database, must not lose what it
+    had.
   * Otherwise `:mismatch`: the editor's rows are older or newer than the
     session's, and the caller decides (see `Brando.EditSession.join/4`).
   """
@@ -75,14 +79,17 @@ defmodule Brando.EditSession.Data do
 
     case data.fields do
       %{^field => %{base: known}} ->
-        if Ops.signature(known) == Ops.signature(base),
+        # the blocks and their rows: an editor that did not read a save's
+        # new row would merge, and later seed, against rows without it
+        if Ops.signature(known) == Ops.signature(base) and known.row_order == base.row_order,
           do: merge_held(data, field, held, held_base),
           else: {:mismatch, data}
 
       _ ->
         state = if held_base == base, do: held, else: held |> Ops.carry(held_base, base) |> elem(0)
         state = Ops.keep_rel_ids(state)
-        {:seeded, put_field(data, field, new_field(Ops.keep_rel_ids(base, Map.keys(state.rel_ids)), state))}
+
+        {:seeded, put_field(data, field, new_field(Ops.keep_rel_ids(base, Map.keys(state.rel_ids), rows: :all), state))}
     end
   end
 
@@ -97,18 +104,23 @@ defmodule Brando.EditSession.Data do
     if Ops.pristine?(held, held_base) do
       {:joined, data}
     else
-      {state, conflicts} = Ops.carry(held, held_base, entry.state)
+      # The session's rows, not the joiner's: a joiner whose blocks are the
+      # session's may have loaded them before a save added rows to them.
+      # The base keeps every block's row order for this (`keep_rel_ids/3`).
+      {state, conflicts} = Ops.carry(held, held_base, entry.state, lists: :merge, rows: entry.base)
       state = Ops.keep_rel_ids(state, Map.keys(entry.state.rel_ids))
       rev = entry.rev + 1
       # A save in flight read the state before this merge: its rebase
-      # replays the merge as the equivalent op, or the work would be lost.
-      log = log(entry, rev, {:carry, held, held_base})
+      # replays the merge, or the work would be lost. Its lists hold the
+      # rows the merge kept, which that save may write (`Ops.rejoin_log/2`).
+      log = log(entry, rev, fn -> {:merge_held, Ops.rejoin_log(held, state), held_base} end)
       {{:merged, conflicts}, put_field(data, field, %{entry | state: state, rev: rev, log: log})}
     end
   end
 
   # What a mark's rebase replays: kept only while a save is in flight.
   defp log(%{marks: marks}, _rev, _op) when marks == %{}, do: []
+  defp log(%{log: log}, rev, op) when is_function(op, 0), do: [{rev, op.()} | log]
   defp log(%{log: log}, rev, op), do: [{rev, op} | log]
 
   defp new_field(base, state), do: %{base: base, state: state, rev: 0, log: [], marks: %{}, seqs: %{}}
@@ -253,7 +265,7 @@ defmodule Brando.EditSession.Data do
   def rebase(%__MODULE__{} = data, field, %Ops{} = new_base, mode, now \\ 0) do
     case Map.get(data.fields, field) do
       nil ->
-        new_base = Ops.keep_rel_ids(new_base)
+        new_base = Ops.keep_rel_ids(new_base, [], rows: :all)
         {:ok, put_field(data, field, %{new_field(new_base, new_base) | rev: 1}), []}
 
       entry ->
@@ -261,7 +273,7 @@ defmodule Brando.EditSession.Data do
         # the rows' ids stay for blocks that had unsaved work when the save
         # read them: ops made then name new rows by uid
         state = Ops.keep_rel_ids(state, Ops.edited(entry.state))
-        new_base = Ops.keep_rel_ids(new_base, Map.keys(state.rel_ids))
+        new_base = Ops.keep_rel_ids(new_base, Map.keys(state.rel_ids), rows: :all)
         entry = prune(%{entry | base: new_base, state: state, marks: marks, rev: entry.rev + 1})
         {:ok, put_field(data, field, entry), conflicts}
     end
@@ -300,6 +312,14 @@ defmodule Brando.EditSession.Data do
 
   # An op that no longer applies is an insert the save already made or a
   # delete of a row it already removed: its effect is in the rows.
+  defp replay({_rev, {:merge_held, held, held_base}}, state) do
+    held |> Ops.carry(held_base, state, lists: :merge) |> elem(0)
+  rescue
+    error ->
+      Logger.error("[EditSession] replaying a rejoin raised: " <> Exception.message(error))
+      state
+  end
+
   defp replay({_rev, op}, state) do
     case safe_apply(state, op) do
       {:ok, state} -> state

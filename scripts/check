@@ -163,11 +163,16 @@ run_step "compile (warnings as errors)" mix_in test compile --all-warnings --war
 run_step "usage-rules.md up to date" mix_in test brando.docs.agents --check
 run_step "credo (Blueprint)" mix_in test credo --strict lib/brando/blueprint.ex lib/brando/blueprint
 run_step "credo (changed lines)" credo_changed
+run_step "credo (test isolation)" mix_in test credo --strict \
+  --checks Brando.Credo.Check.TestCacheRestore,Brando.Credo.Check.TestSandboxShared \
+  "test/**/*.{ex,exs}" "e2e/test/**/*.{ex,exs}"
 run_step "Gettext catalogues up to date" gettext_up_to_date
 run_step "xref compile cycles" mix_in test xref graph --format cycles --label compile-connected --fail-above 0
 run_step "CSS colour tokens" bash .github/scripts/check_css_colors.sh
 run_step "E2E machine paths" bash .github/scripts/check-e2e-paths.sh
 run_step "ci-wait flake matching" bash test/scripts/ci_wait_test.sh
+run_step "changelog fragments" scripts/changelog check
+run_step "changelog script" bash test/scripts/changelog_test.sh
 
 if [ "$fast" = true ]; then
   echo "check: docs skipped (--fast)"

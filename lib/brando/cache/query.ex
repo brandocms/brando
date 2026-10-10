@@ -4,12 +4,17 @@ defmodule Brando.Cache.Query do
 
   ## Evict after commit
 
-  Inside a transaction, `evict/1`, `evict_entry/2` and `evict_schema/1`
-  evict at once and again once it has committed (`Brando.Repo.after_commit/2`,
-  under the tenant prefix of the write, once per cache entry): a read by
-  another process before the commit still sees the old row and caches it
-  again. Only a transaction
-  begun with `Brando.Repo.transaction/2` holds the second eviction back.
+  `evict/1`, `evict_entry/2` and `evict_schema/1` (and so `Brando.Query`'s
+  `insert/2`, `update/2` and `delete/1`) evict at once. Inside a transaction
+  (with group authorization a generated context mutation always runs in one)
+  that is before the commit, and a read by another process in between still
+  sees the old row and caches it again, so they also evict once the
+  transaction has committed: automatically, once per cache entry however
+  many writes the transaction makes, under the tenant prefix of the write
+  (`Brando.Repo.after_commit/2`). Only a transaction begun with
+  `Brando.Repo.transaction/2` holds that back; inside one begun on the repo
+  itself it runs at once. A generated mutation's `{:mutation, ...}`
+  broadcast also goes out after the commit.
   """
   @type changeset :: Ecto.Changeset.t()
   @cache_module Application.compile_env(:brando, :cache_module, Cachex)

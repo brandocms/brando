@@ -542,7 +542,9 @@ defmodule Brando.EditSession do
       kind: :rebase,
       epoch: data.epoch,
       rev: entry.rev,
-      base: entry.base,
+      # the names and order of every saved row stay in the session
+      # (`Data.merge_held/4`); replicas compare rows by structure alone
+      base: Ops.keep_rel_ids(entry.base),
       state: entry.state,
       seqs: entry.seqs,
       origin: origin,
@@ -780,7 +782,9 @@ defmodule Brando.EditSession do
       {:mismatch, data} when rebase? ->
         {session, conflicts} =
           %{session | data: data}
-          |> do_rebase(field, base, :carry, pid, :joined, pid)
+          # the joiner read the rows again and they are not the ones the
+          # session was built on: every editor reads them (`:rows_read`)
+          |> do_rebase(field, base, :carry, pid, :rows_read, pid)
           |> merge_held(field, held, held_base, pid)
 
         {{:ok, joiner_info(session, field, pid, held, conflicts)}, session}

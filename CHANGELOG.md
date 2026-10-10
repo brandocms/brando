@@ -2168,7 +2168,8 @@ production dump.
   when a working copy of the revision was saved, with the revision's
   content written over it, and restoring the revision from History failed.
   It now goes back to its container and position, and a working copy also
-  removes blocks added since, as History does. A restored block keeps what
+  removes blocks added since, as History does, also when it comes back
+  from its recovery copy after a reload. A restored block keeps what
   translations match it by, also a nested block or table row deleted since;
   a top-level block deleted since still comes back as a new block in a
   working copy (History relinks it). A block whose references, variables or
@@ -2179,11 +2180,25 @@ production dump.
 - **An editor rejoining with unsaved changes to a block keeps the others'
   changes to that block's other fields.** When an entry's edit session
   restarted, an editor coming back with changes to a top-level block replaced
-  every change another editor had made to that block since. Now only the
-  fields the returning editor changed take its values. A list in the block
-  (its references, variables or table rows) still keeps the returning
-  editor's rows, and a field it set back to the saved value counts as
-  unchanged.
+  every change another editor had made to that block since, rows added to
+  or removed from its lists included. Now only the fields the returning
+  editor changed take its values. In the block's own lists (references,
+  variables, table rows) each editor's new rows are kept, so are rows
+  saved while the editor was away, and a saved row either editor removed
+  stays removed. A list inside one of those rows, such as a gallery's
+  images, still takes the returning editor's list, and a field the
+  returning editor set back to the saved value counts as unchanged.
+
+- **A row another save removed is no longer saved back as an empty row.**
+  An unsaved change to a block could hold one of its table rows, variables,
+  references or gallery images by its id alone. When another save had
+  removed that row meanwhile, saving the change added an empty row in its
+  place.
+
+- **A block another save removed while the edit session restarted comes
+  back.** An editor returning with unsaved changes in it was told the
+  changes could not be brought back. The block now comes back as a new
+  block with them, as it does while the session runs.
 
 - **Pages emit their Article again.** A page's structured data type
   (`WebPage`, `AboutPage`, `ContactPage`, …) was given to the page's Article as

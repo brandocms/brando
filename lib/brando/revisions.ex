@@ -6,6 +6,15 @@ defmodule Brando.Revisions do
   Revision capture is deliberately synchronous. A background job that only
   carries an entry id cannot know which saved state it was created for once a
   later save has committed.
+
+  ## Old snapshots
+
+  A revision stores the entry's structs with `term_to_binary`, so decoding
+  one gives the structs as they were when it was taken: a field added to the
+  schema since (a block's `module_version` or `sync_uid`, say) is not a
+  key at all, not `nil`. Dot access on it raises `KeyError`, and a struct
+  pattern naming it does not match. Read fields of decoded revisions with
+  `Map.get/2`, as `Brando.Content.BlockIdentity` does.
   """
 
   use Brando.Query

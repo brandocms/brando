@@ -447,10 +447,11 @@ defmodule BrandoAdmin.Components.Form.BlockField.OpsTest do
       assert carried.order == ["a", "b"]
     end
 
-    # A recovery copy (`{:carry, copy, base}`) lands on live session state,
-    # where a root can hold another editor's changes: an `:update` replaced
-    # the root's whole diff, so those changes went without a conflict.
-    test "a copy carried onto live state keeps others' changes to its roots' other fields" do
+    # `{:carry, state, base}` (a rejoin, a recovery copy) lands on live
+    # session state, where a root can hold another editor's changes: an
+    # `:update` replaced the root's whole diff, so those changes went without
+    # a conflict.
+    test "state carried onto live state keeps others' changes to its roots' other fields" do
       base = base_rows()
 
       live =
@@ -459,15 +460,289 @@ defmodule BrandoAdmin.Components.Form.BlockField.OpsTest do
         |> apply!({:set_field, "b", ["block", "anchor"], "other editor", 0})
         |> apply!({:update, "a1", %{"description" => "other editor"}})
 
-      copy =
+      held =
         base
-        |> apply!({:update, "b", %{"block" => %{"anchor" => "copy"}}})
-        |> apply!({:update, "a1", %{"anchor" => "copy"}})
+        |> apply!({:update, "b", %{"block" => %{"anchor" => "carried"}}})
+        |> apply!({:update, "a1", %{"anchor" => "carried"}})
 
-      carried = apply!(live, {:carry, copy, base})
+      carried = apply!(live, {:carry, held, base})
 
-      assert carried.diffs["b"] == %{"block" => %{"description" => "other editor", "anchor" => "copy"}}
-      assert carried.diffs["a1"] == %{"description" => "other editor", "anchor" => "copy"}
+      assert carried.diffs["b"] == %{"block" => %{"description" => "other editor", "anchor" => "carried"}}
+      assert carried.diffs["a1"] == %{"description" => "other editor", "anchor" => "carried"}
+    end
+
+    # A rejoin (`carry/4` with `lists: :merge`) merges the lists of a root
+    # both sides changed by row.
+    defp rejoin(live, held, base) do
+      {state, _conflicts} = Ops.carry(held, base, live, lists: :merge)
+      state
+    end
+
+    # The rows with block "b" holding table rows `ids`.
+    defp table_base(ids) do
+      rows = Enum.map(ids, &%{id: &1, sync_uid: "r#{&1}"})
+
+      Ops.from_entry_blocks([
+        entry_block("a", 1, 10, [child("a1", 11), child("a2", 12)]),
+        %{id: 2, block: %{uid: "b", id: 20, children: [], table_rows: rows}},
+        entry_block("c", 3, 30)
+      ])
+    end
+
+    test "a rejoin merges rows: each side's additions, removals and row changes stay" do
+      base = table_base([5, 7, 9])
+      rows_then = [%{"id" => 5}, %{"id" => 7}, %{"id" => 9}]
+
+      # The session: a cell of row 5 changed, row 9 removed.
+      live =
+        base
+        |> apply!({:set_field, "b", ["block", {:at, "table_rows", {"id", 5}, rows_then}, "cols"], "live", 0})
+        |> apply!({:set_field, "b", ["block", "table_rows"], {:list, rows_then, [%{"id" => 5}, %{"id" => 7}]}, 0})
+
+      # Carried: another cell of row 5 changed, row 7 removed, a row added.
+      added = %{"sync_uid" => "new", "cols" => "carried row"}
+
+      held =
+        apply!(
+          base,
+          {:update, "b", %{"block" => %{"table_rows" => [%{"id" => 5, "label" => "carried"}, %{"id" => 9}, added]}}}
+        )
+
+      assert rejoin(live, held, base).diffs["b"]["block"]["table_rows"] == [
+               %{"id" => 5, "cols" => "live", "label" => "carried"},
+               added
+             ]
+    end
+
+    # Review: a list op leaves every row as a full copy, so a saved row the
+    # rejoiner removed looked changed in the session and came back.
+    test "a rejoin's removal of a saved row holds against rows a list op left as they were" do
+      base = table_base([5, 7])
+      rows_then = [%{"id" => 5, "cols" => "saved 5"}, %{"id" => 7, "cols" => "saved 7"}]
+      added = %{"sync_uid" => "new", "cols" => "A's row"}
+      live = apply!(base, {:set_field, "b", ["block", "table_rows"], {:list, rows_then, rows_then ++ [added]}, 0})
+
+      held = apply!(base, {:update, "b", %{"block" => %{"table_rows" => [%{"id" => 5}]}}})
+      assert rejoin(live, held, base).diffs["b"]["block"]["table_rows"] == [hd(rows_then), added]
+    end
+
+    # Review: a gallery's objects sit under a map in a ref, so a diff holds
+    # them whole, and a reorder gives every one a new sequence: a removal
+    # the rejoiner made was undone by the session's reorder.
+    test "a rejoin's removal of a gallery object holds against the session's reorder of the gallery" do
+      base = base_rows()
+      object = fn id, seq -> %{"id" => id, "image_id" => id + 10, "sequence" => seq, "alt" => "saved #{id}"} end
+      objects = [object.(1, 0), object.(2, 1), object.(3, 2)]
+      gallery = %{"id" => 30, "gallery_objects" => objects}
+      at_objects = ["block", {:at, "refs", {"id", 3}, [%{"id" => 3}]}, {:map, "gallery", gallery}, "gallery_objects"]
+
+      reordered = [object.(3, 0), object.(1, 1), object.(2, 2)]
+      live = apply!(base, {:set_field, "b", at_objects, {:list, objects, reordered}, 0})
+      held = apply!(base, {:set_field, "b", at_objects, {:list, objects, [object.(1, 0), object.(3, 2)]}, 0})
+
+      assert [%{"gallery" => %{"gallery_objects" => merged}}] = rejoin(live, held, base).diffs["b"]["block"]["refs"]
+      assert merged |> Enum.map(& &1["id"]) |> Enum.sort() == [1, 3]
+    end
+
+    test "a rejoin merges lists inside a row by row when their rows have ids" do
+      base = base_rows()
+      vars = [%{"id" => 51}, %{"id" => 52}]
+      at_vars = ["block", {:at, "table_rows", {"id", 5}, [%{"id" => 5}]}, "vars"]
+
+      live = apply!(base, {:set_field, "b", at_vars, {:list, vars, [%{"id" => 51}]}, 0})
+
+      held =
+        apply!(
+          base,
+          {:update, "b",
+           %{"block" => %{"table_rows" => [%{"id" => 5, "vars" => [%{"id" => 51, "value" => "B"}, %{"id" => 52}]}]}}}
+        )
+
+      assert [%{"id" => 5, "vars" => [%{"id" => 51, "value" => "B"}]}] =
+               rejoin(live, held, base).diffs["b"]["block"]["table_rows"]
+    end
+
+    # Review: below a row, an item can be named by id on one side and by
+    # what it holds on the other (a new gallery object by its image), and
+    # only top-level rows have ids to name them by: such a list is the
+    # carried side's, never both.
+    test "a rejoin takes a list inside a row whole when an item has no id" do
+      base = base_rows()
+      gallery = %{"id" => 30, "gallery_objects" => []}
+      at_objects = ["block", {:at, "refs", {"id", 3}, [%{"id" => 3}]}, {:map, "gallery", gallery}, "gallery_objects"]
+      live = apply!(base, {:set_field, "b", at_objects, {:list, [], [%{"id" => 44, "image_id" => 9, "alt" => "A"}]}, 0})
+      held = apply!(base, {:set_field, "b", at_objects, {:list, [], [%{"image_id" => 9, "alt" => "B"}]}, 0})
+
+      assert [%{"id" => 3, "gallery" => %{"gallery_objects" => [%{"image_id" => 9, "alt" => "B"}]}}] =
+               rejoin(live, held, base).diffs["b"]["block"]["refs"]
+    end
+
+    # Sol audit: a row another editor added and saved while the rejoiner
+    # was away is not one the rejoiner removed.
+    test "a rejoin keeps a saved row the rejoiner's rows never had" do
+      table = fn rows -> %{id: 2, block: %{uid: "b", id: 20, children: [], table_rows: rows}} end
+      held_base = Ops.from_entry_blocks([table.([%{id: 5, sync_uid: "r5"}])])
+      rows_now = Ops.from_entry_blocks([table.([%{id: 5, sync_uid: "r5"}, %{id: 8, sync_uid: "r8"}])])
+
+      live =
+        apply!(rows_now, {:update, "b", %{"block" => %{"table_rows" => [%{"id" => 5}, %{"id" => 8, "cols" => "A"}]}}})
+
+      held = apply!(held_base, {:update, "b", %{"block" => %{"table_rows" => [%{"id" => 5, "cols" => "B"}]}}})
+
+      assert rejoin(live, held, held_base).diffs["b"]["block"]["table_rows"] == [
+               %{"id" => 5, "cols" => "B"},
+               %{"id" => 8, "cols" => "A"}
+             ]
+    end
+
+    # Sol audit: rows the session has no change to were put in id order.
+    test "a rejoin takes the saved rows in their order when the session has no change to them" do
+      table = fn ids ->
+        Ops.from_entry_blocks([
+          %{id: 2, block: %{uid: "b", id: 20, children: [], table_rows: Enum.map(ids, &%{id: &1, sync_uid: "r#{&1}"})}}
+        ])
+      end
+
+      held_base = table.([5])
+      rows_now = table.([9, 5, 8])
+      live = apply!(rows_now, {:update, "b", %{"block" => %{"anchor" => "A"}}})
+      held = apply!(held_base, {:update, "b", %{"block" => %{"table_rows" => [%{"id" => 5, "cols" => "B"}]}}})
+
+      {state, _} = Ops.carry(held, held_base, live, lists: :merge, rows: rows_now)
+      assert state.diffs["b"]["block"]["table_rows"] |> Enum.map(& &1["id"]) == [9, 5, 8]
+    end
+
+    # Without the saved rows, a row one side changed cannot be told from
+    # one it left, so a saved row either side removed is removed, as a list
+    # op's removal is (`merge_list/4`).
+    test "a saved row either side removed stays removed on a rejoin" do
+      base = table_base([5, 7, 9])
+      live = apply!(base, {:update, "b", %{"block" => %{"table_rows" => [%{"id" => 5, "cols" => "A"}, %{"id" => 7}]}}})
+      held = apply!(base, {:update, "b", %{"block" => %{"table_rows" => [%{"id" => 5}, %{"id" => 9, "cols" => "B"}]}}})
+
+      assert rejoin(live, held, base).diffs["b"]["block"]["table_rows"] == [%{"id" => 5, "cols" => "A"}]
+    end
+
+    # The rejoiner names a row by its sync uid (new when it was made), the
+    # session by the id a save gave it since: one row.
+    test "a row named by uid on one side and by id on the other is one row" do
+      old_base = base_rows()
+
+      saved =
+        Ops.from_entry_blocks([
+          entry_block("a", 1, 10, [child("a1", 11), child("a2", 12)]),
+          %{id: 2, block: %{uid: "b", id: 20, children: [], table_rows: [%{id: 8, sync_uid: "new"}]}},
+          entry_block("c", 3, 30)
+        ])
+
+      live =
+        apply!(saved, {:update, "b", %{"block" => %{"table_rows" => [%{"id" => 8, "sync_uid" => "new", "cols" => "A"}]}}})
+
+      held = apply!(old_base, {:update, "b", %{"block" => %{"table_rows" => [%{"sync_uid" => "new", "cols" => "B"}]}}})
+
+      assert [%{"id" => 8, "cols" => "B"}] = rejoin(live, held, old_base).diffs["b"]["block"]["table_rows"]
+    end
+
+    # Review: a recovery copy is cast again, which gives its new table rows
+    # fresh sync uids; merged by row, the session's new row and the copy's
+    # were two rows.
+    test "a recovery copy's lists are the copy's" do
+      base = base_rows()
+
+      live =
+        apply!(
+          base,
+          {:update, "b", %{"block" => %{"table_rows" => [%{"id" => 5}, %{"sync_uid" => "s9", "cols" => "x"}]}}}
+        )
+
+      copy_rows = [%{"id" => 5}, %{"sync_uid" => "s9-recast", "cols" => "x"}]
+      copy = apply!(base, {:update, "b", %{"block" => %{"table_rows" => copy_rows}}})
+
+      assert apply!(live, {:carry, copy, base}).diffs["b"]["block"]["table_rows"] == copy_rows
+    end
+
+    # Sol audit: two items named alike in the list as it is made the
+    # rewritten merge anchor one on itself, forever.
+    test "merge_list keeps items named alike in the list as it is, in order" do
+      x1 = %{"value" => "x", "label" => "1"}
+      x2 = %{"value" => "x", "label" => "2"}
+      y = %{"value" => "y"}
+      task = Task.async(fn -> Ops.merge_list([], [y], [x1, x2], "options") end)
+      assert Task.await(task, 1_000) == [x1, x2, y]
+    end
+
+    test "a rejoin merges a 200-row table quickly" do
+      base = table_base(1..200)
+      rows = for id <- 1..200, do: %{"id" => id, "cols" => "saved #{id}"}
+
+      live_rows =
+        Enum.map(rows, fn %{"id" => id} = row -> if rem(id, 2) == 0, do: %{row | "cols" => "A"}, else: %{"id" => id} end)
+
+      held_rows =
+        Enum.map(rows, fn %{"id" => id} = row -> if rem(id, 3) == 0, do: %{row | "cols" => "B"}, else: %{"id" => id} end)
+
+      live = apply!(base, {:update, "b", %{"block" => %{"table_rows" => live_rows ++ [%{"sync_uid" => "a"}]}}})
+      held = apply!(base, {:update, "b", %{"block" => %{"table_rows" => held_rows ++ [%{"sync_uid" => "b"}]}}})
+
+      # about 1 ms; the bound only catches a return to quadratic work
+      {micros, state} = :timer.tc(fn -> rejoin(live, held, base) end)
+      merged = state.diffs["b"]["block"]["table_rows"]
+      assert length(merged) == 202
+      assert Enum.at(merged, 5) == %{"id" => 6, "cols" => "B"}
+      assert Enum.at(merged, 3) == %{"id" => 4, "cols" => "A"}
+      assert micros < 2_000_000
+    end
+
+    # Review: a row named by its id alone (a field op's skeleton names the
+    # rows it did not change so) whose row a write has since removed was
+    # cast as a new, blank row.
+    test "a row named by an id the block no longer has is not saved as a new row" do
+      alias Brando.Content.Block
+      alias Brando.Content.Ref
+      alias Brando.Content.TableRow
+
+      block = %Block{
+        id: 20,
+        uid: "b",
+        table_rows: [%TableRow{id: 5, sync_uid: "r5", vars: []}],
+        vars: [],
+        refs: [%Ref{id: 3, uid: "r3", name: "gallery", gallery: %Brando.Galleries.Gallery{id: 30, gallery_objects: []}}],
+        block_identifiers: [],
+        children: []
+      }
+
+      params = %{
+        "uid" => "b",
+        "table_rows" => [%{"id" => 5}, %{"id" => 7}, %{"id" => 8, "sync_uid" => "r8"}],
+        "vars" => [%{"id" => 51}],
+        "refs" => [%{"id" => 3, "gallery" => %{"id" => 30, "gallery_objects" => [%{"id" => 44}]}}, %{"id" => 4}]
+      }
+
+      changeset = Block.block_changeset(block, params, 1)
+      inserted = fn key -> changeset |> Changeset.get_change(key, []) |> Enum.filter(&(&1.action == :insert)) end
+      assert inserted.(:table_rows) == []
+      assert inserted.(:vars) == []
+      assert inserted.(:refs) == []
+
+      for ref <- Changeset.get_change(changeset, :refs, []), gallery = Changeset.get_change(ref, :gallery) do
+        assert gallery |> Changeset.get_change(:gallery_objects, []) |> Enum.all?(&(&1.action != :insert))
+      end
+
+      # form-shaped params: rows by index, with their order
+      indexed = %{
+        "uid" => "b",
+        "table_rows" => %{"0" => %{"id" => "5"}, "1" => %{"id" => "7"}},
+        "sort_table_row_ids" => ["0", "1"]
+      }
+
+      indexed_changeset = Block.block_changeset(block, indexed, 1)
+      assert indexed_changeset |> Changeset.get_change(:table_rows, []) |> Enum.filter(&(&1.action == :insert)) == []
+
+      # the gallery object alone, as a ref's own change
+      ref = %Ref{id: 3, uid: "r3", name: "gallery", gallery: %Brando.Galleries.Gallery{id: 30, gallery_objects: []}}
+      ref_changeset = Block.ref_changeset(ref, %{"gallery" => %{"id" => 30, "gallery_objects" => [%{"id" => 44}]}}, 1)
+      gallery = Changeset.get_change(ref_changeset, :gallery)
+      assert gallery == nil or Changeset.get_change(gallery, :gallery_objects, []) == []
     end
 
     test "rows written outside the session take the editors' root diffs as they are" do

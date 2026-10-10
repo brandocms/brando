@@ -162,7 +162,10 @@ defmodule Brando.Query do
   @doc "Inserts a changeset and evicts affected query caches."
   def insert(changeset, opts \\ []), do: runtime(:insert, [changeset, opts])
 
-  @doc "Updates a changeset and evicts affected query caches."
+  @doc """
+  Updates a changeset and evicts affected query caches at once, before an
+  enclosing transaction commits (see `Brando.Cache.Query`).
+  """
   def update(changeset, opts \\ []), do: runtime(:update, [changeset, opts])
 
   @doc "Deletes an entry and evicts affected query caches."

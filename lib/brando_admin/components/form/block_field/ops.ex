@@ -38,8 +38,8 @@ defmodule BrandoAdmin.Components.Form.BlockField.Ops do
     another's, and when that is live session state (a rejoin, a recovery
     copy) the target's root diff holds other editors' work, not an earlier
     diff of the same editor. So a carried root diff is merged into it field
-    by field, the carried fields winning, as for children; a list in it
-    keeps the carried side's rows. A field the carried diff lacks keeps the
+    by field, the carried fields winning, as for children; for a rejoin,
+    its row lists merge by row as well (`carry/4`, `lists: :merge`). A field the carried diff lacks keeps the
     target's value, including one its editor set back to the saved value
     with a whole-form `{:update, ...}`, which sends no key for it. A
     recovery copy holds each root it changed whole (`restore_draft`), so it
@@ -71,6 +71,7 @@ defmodule BrandoAdmin.Components.Form.BlockField.Ops do
             statuses: %{},
             db_ids: %{},
             rel_ids: %{},
+            row_order: %{},
             keys: %{},
             deleted: []
 
@@ -86,6 +87,7 @@ defmodule BrandoAdmin.Components.Form.BlockField.Ops do
           statuses: %{optional(uid()) => status()},
           db_ids: %{optional(uid()) => {entry_block_id :: term() | nil, block_id :: term() | nil}},
           rel_ids: %{optional(uid()) => %{optional({String.t(), String.t()}) => term()}},
+          row_order: %{optional(uid()) => %{optional(String.t()) => [term()]}},
           keys: %{optional(uid()) => FractionalKey.t()},
           deleted: [uid()]
         }
@@ -157,7 +159,8 @@ defmodule BrandoAdmin.Components.Form.BlockField.Ops do
         | order: state.order ++ [uid],
           statuses: Map.put(state.statuses, uid, :persisted),
           db_ids: Map.put(state.db_ids, uid, {entry_block.id, entry_block.block.id}),
-          rel_ids: put_rel_ids(state.rel_ids, entry_block.block)
+          rel_ids: put_rel_ids(state.rel_ids, entry_block.block),
+          row_order: put_row_order(state.row_order, entry_block.block)
       }
 
       register_persisted_children(state, entry_block.block)
@@ -183,7 +186,8 @@ defmodule BrandoAdmin.Components.Form.BlockField.Ops do
           child_order: Map.update(state.child_order, parent_uid, [child.uid], &(&1 ++ [child.uid])),
           statuses: Map.put(state.statuses, child.uid, :persisted),
           db_ids: Map.put(state.db_ids, child.uid, {nil, child.id}),
-          rel_ids: put_rel_ids(state.rel_ids, child)
+          rel_ids: put_rel_ids(state.rel_ids, child),
+          row_order: put_row_order(state.row_order, child)
       }
 
       register_persisted_children(state, child)
@@ -197,6 +201,24 @@ defmodule BrandoAdmin.Components.Form.BlockField.Ops do
   # the block was new names its rows that way, and keeps naming them so when
   # it is replayed after a save gave them ids (`fill_rel_ids/2`).
   @rel_identities [{"refs", :uid}, {"vars", :key}, {"table_rows", :sync_uid}]
+
+  # What names a list item, in order (`identity/2`).
+  @row_identities ~w(id uid key sync_uid)
+  @content_identities %{"options" => ~w(value), "gallery_objects" => ~w(image_id video_id)}
+
+  # The ids of a block's rows, in their order, by relation: the rows as
+  # they are saved, for a rejoin whose session has no change to them
+  # (`carry/4`).
+  defp put_row_order(row_order, %{uid: uid} = block) do
+    ids =
+      for {key, _field} <- @rel_identities,
+          rows = Map.get(block, String.to_existing_atom(key)),
+          is_list(rows),
+          into: %{},
+          do: {key, for(%{id: id} <- rows, not is_nil(id), do: id)}
+
+    Map.put(row_order, uid, ids)
+  end
 
   defp put_rel_ids(rel_ids, %{uid: uid} = block) do
     ids =
@@ -220,11 +242,20 @@ defmodule BrandoAdmin.Components.Form.BlockField.Ops do
   block that has unsaved work, or had it when a save gave its rows ids,
   needs them. The edit session keeps the rest out of its state: for a long
   entry they are most of its size.
+
+  `row_order` goes the same way. With `rows: :all` both stay whole: the
+  session keeps them in its base, the rows as they are saved, which a
+  rejoin merges lists against (`carry/4`): a rejoiner may name a row by
+  the uid it had while new, after a save gave it an id.
   """
-  @spec keep_rel_ids(t(), Enumerable.t()) :: t()
-  def keep_rel_ids(%__MODULE__{} = state, uids \\ []) do
-    keep = state.diffs |> Enum.reject(fn {_uid, diff} -> diff == %{} end) |> Enum.map(&elem(&1, 0)) |> Enum.concat(uids)
-    %{state | rel_ids: Map.take(state.rel_ids, keep)}
+  @spec keep_rel_ids(t(), Enumerable.t(), keyword()) :: t()
+  def keep_rel_ids(%__MODULE__{} = state, uids \\ [], opts \\ []) do
+    if opts[:rows] == :all do
+      state
+    else
+      keep = state.diffs |> Enum.reject(fn {_uid, diff} -> diff == %{} end) |> Enum.map(&elem(&1, 0)) |> Enum.concat(uids)
+      %{state | rel_ids: Map.take(state.rel_ids, keep), row_order: Map.take(state.row_order, keep)}
+    end
   end
 
   @doc "The blocks of `state` with unsaved work: inserted, or with a diff."
@@ -989,12 +1020,21 @@ defmodule BrandoAdmin.Components.Form.BlockField.Ops do
   among their neighbours. Field changes merge as diffs do: an editor's
   changed fields win, fields they did not touch take the new values.
 
+  When `new_base` is live state rather than rows, a block's diff merges
+  with the one held there: the target's other fields stay. A list in it
+  keeps the carried side's rows (a recovery copy: its lists are whole),
+  unless `lists: :merge` is given (a rejoin, `Brando.EditSession.Data`):
+  then the block's row lists merge by row, keeping each side's additions,
+  removals and changes (`carry_list/4`).
+
   Returns `{state, conflicts}`. A conflict is unsaved work on a block the
   other writer deleted; it cannot be replayed onto rows that no longer
   exist, so it is reported (the editor's recovery copy keeps it).
   """
-  @spec carry(t(), t(), t()) :: {t(), [uid()]}
-  def carry(%__MODULE__{} = state, %__MODULE__{} = old_base, %__MODULE__{} = new_base) do
+  @spec carry(t(), t(), t(), keyword()) :: {t(), [uid()]}
+  def carry(%__MODULE__{} = state, %__MODULE__{} = old_base, %__MODULE__{} = new_base, opts \\ []) do
+    lists = Keyword.get(opts, :lists, :carried)
+    rows = Keyword.get(opts, :rows, new_base)
     acc = {adopt_keys(new_base, state), []}
     acc = Enum.reduce(state.deleted, acc, &carry_delete/2)
     acc = state |> inserted_tops() |> Enum.reduce(acc, &carry_insert(&1, &2, state))
@@ -1003,7 +1043,7 @@ defmodule BrandoAdmin.Components.Form.BlockField.Ops do
       state.diffs
       |> Enum.filter(fn {uid, diff} -> diff != %{} and state.statuses[uid] == :persisted end)
       |> Enum.sort_by(fn {uid, _} -> depth(state, uid) end)
-      |> Enum.reduce(acc, &carry_update(&1, &2, state))
+      |> Enum.reduce(acc, &carry_update(&1, &2, state, {lists, old_base, rows}))
 
     acc = state |> moved_children(old_base) |> Enum.reduce(acc, &carry_move(&1, &2, state))
 
@@ -1075,18 +1115,215 @@ defmodule BrandoAdmin.Components.Form.BlockField.Ops do
     end
   end
 
-  defp carry_update({uid, diff}, {acc, conflicts}, _state) do
+  defp carry_update({uid, diff}, {acc, conflicts}, state, {lists, old_base, rows}) do
     if known?(acc, uid) do
-      # Children store deltas that merge; an `:update` replaces a root's
-      # cumulative diff. Rows just loaded hold no diff, but live session
-      # state can (a rejoin, a recovery copy): other editors' changes to a
-      # root's other fields stay, and the carried fields win, as children's do.
-      diff = if uid in acc.order, do: deep_merge_params(Map.get(acc.diffs, uid, %{}), diff), else: diff
+      # Rows just loaded hold no diff, but live session state can (a
+      # rejoin, a recovery copy), so the diff is merged with the one held
+      # there. An `:update` replaces a root's diff and merges a child's onto
+      # its own, which the merged diff already holds. A row one side named
+      # by uid while it was new, and the other by the id a save gave it, is
+      # one row: both are named by id first.
+      root? = uid in acc.order
+
+      ids =
+        [state, rows, acc] |> Enum.map(&Map.get(&1.rel_ids, uid, %{})) |> Enum.reduce(&Map.merge(&2, &1))
+
+      now = acc.diffs |> Map.get(uid, %{}) |> fill_diff_ids(root?, ids)
+      diff = fill_diff_ids(diff, root?, ids)
+
+      diff =
+        case lists do
+          :merge ->
+            now |> with_saved_rows(diff, root?, rows, uid) |> carry_merge(diff, {:block, base_row_ids(old_base, uid)})
+
+          :carried ->
+            deep_merge_params(now, diff)
+        end
+
+      # the block keeps the names it was merged by: a save's replay of the
+      # merge (`rejoin_log/2`) and its materialization name its rows so
+      acc = if ids == %{}, do: acc, else: %{acc | rel_ids: Map.put(acc.rel_ids, uid, ids)}
       {carry_apply(acc, {:update, uid, diff}), conflicts}
     else
       {acc, [uid | conflicts]}
     end
   end
+
+  # A rejoiner's diff onto the diff the session holds for the block. The
+  # fields the rejoiner's diff has win; the session's other fields stay.
+  # The block's lists of rows (refs, vars, table rows) merge by row
+  # (`carry_list/4`), because a diff holds a whole list as its editor had
+  # it: a cell edit names its row in the list as it was then.
+  #
+  # Both sides were built on the same rows, which hold no diff, so a field
+  # the rejoiner's diff lacks is one its editor did not change: the
+  # session's value stays. (An editor who set a field back to its saved
+  # value with a whole-form `:update` sends no key for it, which reads the
+  # same.)
+  #
+  # `at` is `{:block, base_ids}` in the block's own params (a root's
+  # `"block"` included), whose lists are its rows, and `:nested` below.
+  defp carry_merge(now, value, at)
+       when is_map(now) and is_map(value) and not is_struct(now) and not is_struct(value),
+       do: Map.merge(now, value, &carry_merge(&1, &2, &3, at))
+
+  defp carry_merge(_now, value, _at), do: value
+
+  defp carry_merge(key, now, value, at) when is_list(now) and is_list(value), do: carry_list(key, now, value, at)
+  defp carry_merge("block", now, value, {:block, _} = at), do: carry_merge(now, value, at)
+  defp carry_merge(_key, now, value, _at), do: carry_merge(now, value, :nested)
+
+  # A list the rejoiner's diff has and the session's lacks is the rows as
+  # they are saved, in their order (`rows`): rows saved while the rejoiner
+  # was away are among them, and its list would drop them.
+  defp with_saved_rows(now, diff, root?, rows, uid) do
+    saved = saved_row_lists(rows, uid)
+    {now_block, diff_block} = if root?, do: {Map.get(now, "block", %{}), Map.get(diff, "block", %{})}, else: {now, diff}
+
+    filled =
+      Enum.reduce(saved, now_block, fn {key, ids}, block ->
+        if is_list(diff_block[key]) and not Map.has_key?(block, key),
+          do: Map.put(block, key, Enum.map(ids, &%{"id" => &1})),
+          else: block
+      end)
+
+    if root?, do: Map.put(now, "block", filled), else: filled
+  end
+
+  defp saved_row_lists(%__MODULE__{} = rows, uid), do: Map.get(rows.row_order, uid, %{})
+
+  # The ids of the rows the rejoiner's rows had, by relation
+  # (`row_order`): a saved row it lacks that is not among them was saved
+  # while it was away, not removed by it.
+  defp base_row_ids(%__MODULE__{} = base, uid) do
+    base.row_order |> Map.get(uid, %{}) |> Map.new(fn {key, ids} -> {key, MapSet.new(ids, &to_string/1)} end)
+  end
+
+  # `current` is the session's list, `carried` the rejoiner's. Both were
+  # built on the same rows, and every saved row has an id. Neither holds
+  # the saved rows, so a row one side changed cannot be told from one it
+  # left as it was (a list op leaves every row whole, a reorder gives each
+  # a new sequence): a saved row stays when both lists have it, and a
+  # saved row either side removed is removed, as a list op's removal is
+  # (`merge_list/4`). A row with no id is new: each side's stay. A row both
+  # have merges field by field, the rejoiner's fields winning. Items that
+  # cannot be named are set whole, as the rejoiner has them.
+  #
+  # A saved row the rejoiner's own rows did not have (`base_row_ids/2`) was
+  # saved while it was away: it stays.
+  #
+  # Below a row (`:nested`), an item without an id may be named by id on
+  # the other side (a gallery object by its image, before a save gave it a
+  # row), and only the block's own rows have ids to resolve that by
+  # (`fill_diff_ids/3`): such a list is the rejoiner's.
+  defp carry_list(key, current, carried, at) do
+    named = Enum.map(current, &row_key(&1, key))
+    carried_named = Enum.map(carried, &row_key(&1, key))
+
+    cond do
+      :none in named or :none in carried_named or repeated?(named) or repeated?(carried_named) ->
+        carried
+
+      at == :nested and not Enum.all?(current ++ carried, &saved_row?/1) ->
+        deep_merge_params(current, carried)
+
+      true ->
+        known = with {:block, ids} <- at, do: Map.get(ids, key)
+        merge_rows(key, current, named, carried, carried_named, known)
+    end
+  end
+
+  defp merge_rows(key, current, named, carried, carried_named, known) do
+    in_current = MapSet.new(named)
+    current_by = Map.new(Enum.zip(named, current))
+
+    before =
+      (carried ++ current)
+      |> Enum.filter(&(saved_row?(&1) and (not is_struct(known, MapSet) or MapSet.member?(known, to_string(&1["id"])))))
+      |> Enum.map(&identity_only(&1, key))
+      |> Enum.uniq()
+
+    # The rejoiner's saved rows the session no longer has are left out; the
+    # session's saved rows the rejoiner lacks are in `before`, so they stay
+    # out too; the new rows of both come through.
+    after_list =
+      carried
+      |> Enum.zip(carried_named)
+      |> Enum.reject(fn {row, k} -> saved_row?(row) and k not in in_current end)
+      |> Enum.map(&elem(&1, 0))
+
+    before
+    |> merge_list(after_list, current, key)
+    |> Enum.map(fn item ->
+      case Map.fetch(current_by, row_key(item, key)) do
+        {:ok, now} -> carry_merge(now, item, :nested)
+        :error -> item
+      end
+    end)
+  end
+
+  @doc """
+  What `Brando.EditSession.Data` logs of a rejoin (`carried`) to replay
+  onto rows a save in flight writes, given `merged`, what the rejoin made
+  of the session's state.
+
+  Replayed as it was, a list in `carried` would leave out rows the merge
+  kept; the save writes them, and the next save would delete them. So each
+  list holds the merged rows in the merged order: the rejoiner's rows as
+  it had them, the others by their identity alone, which carries no change.
+  """
+  @spec rejoin_log(t(), t()) :: t()
+  def rejoin_log(%__MODULE__{} = carried, %__MODULE__{} = merged) do
+    diffs =
+      Map.new(carried.diffs, fn {uid, diff} ->
+        merged_diff = Map.get(merged.diffs, uid, %{})
+        root? = uid in carried.order
+        # named as the merge named them: a row the rejoiner had new may be
+        # a row with an id by now
+        ids = Map.merge(Map.get(carried.rel_ids, uid, %{}), Map.get(merged.rel_ids, uid, %{}))
+        diff = fill_diff_ids(diff, root?, ids)
+
+        if root?,
+          do: {uid, Map.update(diff, "block", %{}, &log_lists(&1, Map.get(merged_diff, "block", %{})))},
+          else: {uid, log_lists(diff, merged_diff)}
+      end)
+
+    %{carried | diffs: diffs}
+  end
+
+  defp log_lists(%{} = diff, %{} = merged) when not is_struct(diff) and not is_struct(merged) do
+    Map.new(diff, fn
+      {key, list} when is_list(list) -> {key, log_list(key, list, merged[key])}
+      {key, %{} = map} -> {key, log_lists(map, Map.get(merged, key))}
+      pair -> pair
+    end)
+  end
+
+  defp log_lists(diff, _merged), do: diff
+
+  # The merged rows in the merged order: the rejoiner's own as it had them
+  # (with the lists inside them built the same way), the others by their
+  # identity alone.
+  defp log_list(key, carried, merged) when is_list(merged) do
+    own = carried |> Enum.reject(&(row_key(&1, key) == :none)) |> Map.new(&{row_key(&1, key), &1})
+
+    if Enum.any?(merged, &(row_key(&1, key) == :none)) or repeated_keys?(carried, key) or repeated_keys?(merged, key),
+      do: carried,
+      else: Enum.map(merged, &log_row(Map.fetch(own, row_key(&1, key)), &1, key))
+  end
+
+  defp log_list(_key, carried, _merged), do: carried
+
+  defp log_row({:ok, mine}, row, _key), do: log_lists(mine, row)
+  defp log_row(:error, row, key), do: identity_only(row, key)
+
+  defp identity_only(row, key) do
+    {name, _value} = identity(row, key)
+    Map.take(row, Enum.uniq([name | @row_identities]))
+  end
+
+  defp saved_row?(%{"id" => id}) when id not in [nil, ""], do: true
+  defp saved_row?(_item), do: false
 
   defp depth(state, uid) do
     case state.parents[uid] do
@@ -1335,8 +1572,6 @@ defmodule BrandoAdmin.Components.Form.BlockField.Ops do
   # id), a new gallery object by its image or video. A row's id comes
   # first, so two objects showing one image stay two; a list in which two
   # items are named alike is set whole (`repeated?/1`). Nothing is stored.
-  @content_identities %{"options" => ~w(value), "gallery_objects" => ~w(image_id video_id)}
-  @row_identities ~w(id uid key sync_uid)
 
   defp identity(%{} = item, key) when not is_struct(item) do
     Enum.find_value(@row_identities ++ Map.get(@content_identities, key, []), :none, fn name ->
@@ -1496,21 +1731,60 @@ defmodule BrandoAdmin.Components.Form.BlockField.Ops do
   """
   @spec merge_list([map()], [map()], [map()], String.t() | nil) :: [map()]
   def merge_list(before, after_list, current, key \\ nil) do
-    same_row? = &same_row?(&1, &2, key)
+    if Enum.any?([before, after_list, current], &repeated_keys?(&1, key)),
+      do: merge_list_alike(before, after_list, current, key),
+      else: merge_list_keyed(before, after_list, current, key)
+  end
+
+  # Identities once per item: a list of 200 rows is 40,000 comparisons
+  # otherwise, in the session and again in every editor.
+  defp merge_list_keyed(before, after_list, current, key) do
+    before_by = first_by_key(before, key)
+    current_keyed = Enum.map(current, &{row_key(&1, key), &1})
+    current_by = first_by_key(current, key)
 
     kept =
       Enum.flat_map(after_list, fn item ->
-        was = Enum.find(before, &same_row?.(&1, item))
-        now = Enum.find(current, &same_row?.(&1, item))
+        k = row_key(item, key)
+        kept_version(item, lookup(before_by, k), lookup(current_by, k))
+      end)
 
-        cond do
-          # added by this editor, or changed by it: its version
-          is_nil(was) or was != item -> [item]
-          # left as it was, and removed by someone else
-          is_nil(now) -> []
-          # left as it was: as it is now
-          true -> [now]
-        end
+    kept_keys = kept |> Enum.map(&row_key(&1, key)) |> MapSet.new()
+
+    # Items others added, each after the nearest item before it in
+    # `current` that the result holds (one added before it included), or
+    # first; several after one item, the later first.
+    {after_anchor, _} = Enum.reduce(current_keyed, {%{}, :start}, &place_added(&1, &2, kept_keys, before_by))
+
+    with_inserted = &[&1 | inserted_after(after_anchor, row_key(&1, key), key)]
+    Enum.flat_map(Map.get(after_anchor, :start, []), with_inserted) ++ Enum.flat_map(kept, with_inserted)
+  end
+
+  # added by this editor, or changed by it: its version; left as it was
+  # and removed by someone else: gone; left as it was: as it is now
+  defp kept_version(item, was, _now) when is_nil(was) or was != item, do: [item]
+  defp kept_version(_item, _was, nil), do: []
+  defp kept_version(_item, _was, now), do: [now]
+
+  defp place_added({:none, item}, {inserts, anchor}, _kept_keys, _before_by),
+    do: {Map.update(inserts, anchor, [item], &[item | &1]), anchor}
+
+  defp place_added({k, item}, {inserts, anchor}, kept_keys, before_by) do
+    cond do
+      MapSet.member?(kept_keys, k) -> {inserts, k}
+      Map.has_key?(before_by, k) -> {inserts, anchor}
+      true -> {Map.update(inserts, anchor, [item], &[item | &1]), k}
+    end
+  end
+
+  # The same merge, one comparison at a time, for lists with items named
+  # alike: an item goes after the first one named like the one before it.
+  defp merge_list_alike(before, after_list, current, key) do
+    same_row? = &(row_key(&1, key) != :none and row_key(&1, key) == row_key(&2, key))
+
+    kept =
+      Enum.flat_map(after_list, fn item ->
+        kept_version(item, Enum.find(before, &same_row?.(&1, item)), Enum.find(current, &same_row?.(&1, item)))
       end)
 
     current
@@ -1523,16 +1797,38 @@ defmodule BrandoAdmin.Components.Form.BlockField.Ops do
     end)
   end
 
-  # One identity per item, the first it has (`identity/2`): two rows that
-  # happen to share a key are not the same row.
-  defp same_row?(%{} = a, %{} = b, key) do
-    case {identity(a, key), identity(b, key)} do
-      {{name, x}, {name, y}} -> to_string(x) == to_string(y)
-      _ -> false
+  defp repeated_keys?(items, key) do
+    keys = items |> Enum.map(&row_key(&1, key)) |> Enum.reject(&(&1 == :none))
+    length(Enum.uniq(keys)) != length(keys)
+  end
+
+  defp inserted_after(_after_anchor, :none, _key), do: []
+
+  defp inserted_after(after_anchor, k, key) do
+    after_anchor |> Map.get(k, []) |> Enum.flat_map(&[&1 | inserted_after(after_anchor, row_key(&1, key), key)])
+  end
+
+  # An item's identity as a map key: `{name, value}`, or `:none`.
+  defp row_key(%{} = item, key) when not is_struct(item) do
+    case identity(item, key) do
+      {name, value} -> {name, to_string(value)}
+      :none -> :none
     end
   end
 
-  defp same_row?(_a, _b, _key), do: false
+  defp row_key(_item, _key), do: :none
+
+  defp first_by_key(items, key) do
+    Enum.reduce(items, %{}, fn item, acc ->
+      case row_key(item, key) do
+        :none -> acc
+        k -> Map.put_new(acc, k, item)
+      end
+    end)
+  end
+
+  defp lookup(_map, :none), do: nil
+  defp lookup(map, k), do: Map.get(map, k)
 
   defp as_map(%{} = map), do: map
   defp as_map(_), do: %{}

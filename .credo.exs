@@ -117,7 +117,16 @@
         {ExSlop.Check.Readability.UnaliasedModuleUse, []},
 
         # Brando's own checks (credo/checks)
-        {Brando.Credo.Check.TestCacheRestore, []}
+        {Brando.Credo.Check.TestCacheRestore, []},
+        {Brando.Credo.Check.TestSandboxShared,
+         [
+           allowed: %{
+             "test/support/conn_case.ex" =>
+               "async: false ConnCase, LiveCase and ChannelCase tests: the endpoint starts the LiveView and channel processes, which the test cannot allow by pid",
+             "e2e/test/support/data_case.ex" =>
+               "async: false E2E DataCase and ConnCase tests: the same, for the E2E app's endpoint"
+           }
+         ]}
       ]
     }
   ]

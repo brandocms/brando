@@ -262,6 +262,25 @@ defmodule BrandoAdmin.Components.Form.BlockField do
      |> assign(:restored_blocks, BlockIdentity.index(revision_blocks))}
   end
 
+  # A recovery copy of a revision's working copy, restored: a working copy
+  # of that revision again (`load_working_copy`), its blocks where the copy
+  # has them, with the revision's module versions (read by the Form).
+  def update(
+        %{event: "restore_draft", working_copy: revision_blocks, changesets: changesets, entry_blocks: originals},
+        socket
+      ) do
+    restored = BlockIdentity.index(revision_blocks)
+    # the copy was cast again: as when it was loaded, its blocks and table
+    # rows deleted since take the revision's sync uids before it is shown
+    changesets = Enum.map(changesets, &BlockIdentity.keep_entry_block(&1, %{}, restored))
+
+    {:ok,
+     socket
+     |> detach_session()
+     |> restore_draft(changesets, originals, place?: true)
+     |> assign(:restored_blocks, restored)}
+  end
+
   def update(%{event: "restore_draft", changesets: changesets, entry_blocks: originals} = message, socket) do
     if Map.get(message, :source) == :translation and joined_with_work?(socket) do
       # A synchronized translation's pending version, loaded by an editor who
@@ -546,6 +565,9 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     # whatever the others' replicas have not shown here yet.
     ops = session_ops(socket)
     cache = socket.assigns[:draft_snapshots] || %{}
+    # a revision's working copy: the copy holds the revision's sync uids for
+    # what it brings back, as the field does (`load_working_copy`)
+    restored = socket.assigns[:restored_blocks] || %{}
 
     # A root's snapshot is a pure function of its saved row, its store state
     # and the browser values overlaid on its subtree, so an unchanged key
@@ -555,7 +577,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
       Enum.map_reduce(ops.order, %{}, fn uid, acc ->
         {:ok, params} = Ops.materialize_root(ops, uid)
         base = materialize_base_struct(socket, uid)
-        key = {base, params, Map.take(forms, [uid | Ops.descendants(ops, uid)])}
+        key = {base, params, Map.take(forms, [uid | Ops.descendants(ops, uid)]), restored == %{}}
 
         snapshot =
           case cache do
@@ -564,9 +586,10 @@ defmodule BrandoAdmin.Components.Form.BlockField do
 
             _ ->
               module = socket.assigns.block_module
-              full = module.changeset(base, params, socket.assigns.current_user.id, true) |> Params.snapshot()
+              user_id = socket.assigns.current_user.id
+              full = base |> module.changeset(params, user_id, true) |> keep_restored(restored) |> Params.snapshot()
               full = Map.update!(full, "block", &Params.overlay_block(&1, forms))
-              module.changeset(base, full, socket.assigns.current_user.id, true) |> Params.snapshot()
+              base |> module.changeset(full, user_id, true) |> keep_restored(restored) |> Params.snapshot()
           end
 
         {snapshot, Map.put(acc, uid, {key, snapshot})}
@@ -766,6 +789,8 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     # the database first).
     held = Keyword.get(opts, :held, base)
     join_opts = [user_id: user.id, read_only: not may_update?(socket)]
+    # the rows `held` was built on, for the copies of removed blocks
+    loaded = socket.assigns.entry_blocks
 
     {socket, result} =
       case EditSession.join(ref, field, {base, held}, [rebase: Keyword.get(opts, :rebase, false)] ++ join_opts) do
@@ -788,11 +813,23 @@ defmodule BrandoAdmin.Components.Form.BlockField do
         # Work only this editor held that the session could not take: blocks
         # another write removed while it was away. It brings them back itself.
         rescues = Map.get(info, :rescues, [])
-        payloads = rescue_payloads(socket, rescues, info.state, MapSet.new(Ops.edited(socket.assigns.block_ops)))
+        # A removed block's copy is built over the rows this editor held it
+        # on: the rows read again for the join lack the block.
+        held_rows = assign(socket, :entry_blocks, loaded)
+        payloads = rescue_payloads(held_rows, rescues, info.state, MapSet.new(Ops.edited(socket.assigns.block_ops)))
+
+        # roots whose rows the join read again: their forms show the old ones
+        old_rows = rows_by_uid(loaded)
+
+        reread =
+          for {uid, row} <- rows_by_uid(socket.assigns.entry_blocks),
+              Map.has_key?(old_rows, uid),
+              old_rows[uid] != row,
+              do: uid
 
         socket
         |> assign(:session_base, Ops.from_entry_blocks(socket.assigns.entry_blocks || []))
-        |> adopt_session(ref, info, opts)
+        |> adopt_session(ref, info, Keyword.put(opts, :also, reread))
         |> rescue_own(rescues, payloads)
         |> announce_join()
 
@@ -813,7 +850,10 @@ defmodule BrandoAdmin.Components.Form.BlockField do
 
     socket
     |> assign(:edit_session, replica)
-    |> show_state(Replica.displayed(replica), :all, mounted?: Keyword.get(opts, :mounted?, true))
+    |> show_state(Replica.displayed(replica), :all,
+      mounted?: Keyword.get(opts, :mounted?, true),
+      also: Keyword.get(opts, :also, [])
+    )
   end
 
   defp may_update?(%{assigns: %{entry: entry, current_user: user}}) do
@@ -941,7 +981,10 @@ defmodule BrandoAdmin.Components.Form.BlockField do
 
     # The rows were written (by another editor's save, or outside the
     # editor): read them, as their content can change while their ids and
-    # order stay. A join that only carried work onto the state wrote none.
+    # order stay. A join that only carried work onto the state wrote none;
+    # one that moved the session onto rows a joiner read again
+    # (`:rows_read`) may have changed only rows, which the signature does
+    # not show.
     socket =
       if message.reason == :joined and
            Ops.signature(message.base) == Ops.signature(Ops.from_entry_blocks(socket.assigns.entry_blocks || [])),
@@ -1543,6 +1586,9 @@ defmodule BrandoAdmin.Components.Form.BlockField do
         |> assign(:block_bin, [])
     end
   end
+
+  defp keep_restored(changeset, restored) when restored == %{}, do: changeset
+  defp keep_restored(changeset, restored), do: BlockIdentity.keep_entry_block(changeset, %{}, restored)
 
   # The copy's children where the copy has them. Its params name every
   # child, but registering them leaves a child the field knows where it is

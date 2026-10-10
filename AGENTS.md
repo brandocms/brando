@@ -15,6 +15,7 @@
   - **Full suite with reset**: `cd e2e && source .envrc && ./test_e2e.sh --reset`
   - **Single test with reset**: `cd e2e && source .envrc && ./test_e2e.sh --reset tests/path/to/test.spec.js`
   - **When troubleshooting/fixing failing tests**: Always run only the specific failing test, not the full suite. Use the single test command above.
+  - **E2E app unit tests** (ExUnit in `e2e/test/unit`, no browser; CI runs them): `cd e2e && ./test_unit.sh`
   - **Individual tests** (server already running): `cd e2e/playwright && pnpm playwright test tests/path/to/test.spec.js`
   - **Start server manually**: `cd e2e && source .envrc && MIX_ENV=e2e PORT=4444 mix phx.server`
   - **Seeding**: `cd e2e && source .envrc && BRANDO_SEEDING=true MIX_ENV=e2e mix run priv/repo/e2e_seeds.exs`
@@ -25,6 +26,7 @@
   - Unit + E2E merged: `mix test --cover --export-coverage unit`, then an E2E run with `BRANDO_E2E_COVER=1` (the server exports `cover/e2e.coverdata` on shutdown), then `mix test.coverage` in the Brando root
   - lcov for Codecov (after the above): `MIX_ENV=test mix run --no-start .github/scripts/coverage_lcov.exs` writes `cover/lcov.info`
 - Translations: add strings in code, run `mix gettext.extract --merge` (never add or remove catalogue entries by hand), translate the new Norwegian entries; see [TRANSLATIONS.md](TRANSLATIONS.md), which also covers the merge driver for rebases.
+- Changelog entries: add a fragment file in `changelog.d/` rather than editing `CHANGELOG.md`; [its README](changelog.d/README.md) has the naming, sections and format.
 - Code analysis:
   - Refactoring opportunities: `mix credo suggest --format json --all --only refactor`
   - Design: `mix credo suggest --format json --all --only design`
@@ -58,7 +60,8 @@ Load only what the change touches:
 - **Live preview** (caches, transport, iframe recovery): [brando-live-preview](.claude/skills/brando-live-preview/SKILL.md).
 - **Deploying** (Florist releases, server layout, where assets and media live): [florist-deploy](.claude/skills/florist-deploy/SKILL.md).
 - **Changesets with associations or embeds** (`put_assoc`, copied structs, adding rows to a LiveView form): [Ecto changeset patterns](docs/ecto-changeset-patterns.md).
-- **Blueprint DSL**: `guides/blueprints.md` and the guides it links; authorization: `guides/authorization.md`; tenant job context: `Brando.Tenant.Job`. Before adding a skill, read [the skill audit](docs/agent-skill-audit.md).
+- **Background jobs** (Oban workers, job inserts, `unique`, snooze, tenant context): [Oban traps](docs/background-jobs.md).
+- **Blueprint DSL**: `guides/blueprints.md` and the guides it links; authorization: `guides/authorization.md`, its two modes and `:forbidden` in `Brando.Authorization.Boundary`. Before adding a skill, read [the skill audit](docs/agent-skill-audit.md).
 
 ## LiveView components
 - **Stable component IDs**: a live_component `id` must be stable (not nil, not derived from rebuilt form internals). LiveView raises for a nil ID; a changed ID, a fresh random UID included, mounts a new component with a new CID.

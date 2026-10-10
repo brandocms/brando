@@ -6,8 +6,12 @@ defmodule Brando.Drafts.Content do
 
   def checksum(payload), do: payload |> normalize_payload() |> Brando.Drafts.checksum()
 
+  # Which revision a copy is a working copy of says how to restore it, not
+  # what it holds: a working copy that holds the saved entry is no change.
   defp normalize_payload(%{"main" => _, "blocks" => blocks} = payload) when is_map(blocks) do
-    Map.new(payload, fn
+    payload
+    |> Map.delete("working_copy")
+    |> Map.new(fn
       {"blocks", fields} -> {"blocks", Map.new(fields, fn {name, rows} -> {name, ordered(rows, &entry_block/1)} end)}
       {key, value} -> {key, normalize(value)}
     end)
