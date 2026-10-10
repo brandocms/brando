@@ -370,15 +370,20 @@ defmodule Brando.Publisher do
   pending entries whose `publish_at` has passed, and deactivate published or
   pending entries whose `unpublish_at` has passed, through each entry's
   context like the jobs do. Dates arrive without jobs when an environment is
-  cloned or an archive restored, and a lost job leaves one behind.
+  cloned or an archive restored, and a lost job leaves one behind. With
+  group authorization, a publication whose job is still waiting, running or
+  retrying (made for that date, or with its time come) is left to the job,
+  which runs as the user who scheduled it; a job that user may no longer
+  carry out clears its date (see `Brando.Worker.EntryPublisher`).
 
     * Only dates from more than five minutes ago, so the jobs run first, and
       from the last seven days (`config :brando, Brando.Publisher,
       sweep_days: 7`), so older dates, from before the sweep existed, are
       left alone.
     * An entry it has handled no longer matches, so running it again does
-      nothing. Pages and fragments index both dates, and the window keeps
-      each query to a few days of them.
+      nothing. With group authorization, one that changed after it was found
+      (its job refused the date, or an editor saved it) is left out. Pages and fragments index
+      both dates, and the window keeps each query to a few days of them.
     * A content type whose table cannot be read (an environment whose
       migrations lag) is logged and skipped. An entry whose save fails is
       logged and left alone for a day, or until it is saved again.
@@ -400,7 +405,8 @@ defmodule Brando.Publisher do
     end)
   end
 
-  defp sweep_days do
+  @doc "How many days back `sweep/1` takes dates (`config :brando, Brando.Publisher, sweep_days: 7`)."
+  def sweep_days do
     config = Brando.config(__MODULE__) || []
     Keyword.get(config, :sweep_days, @sweep_days)
   end
@@ -410,7 +416,10 @@ defmodule Brando.Publisher do
     |> Enum.concat(due(schema, :unpublish_at, [:published, :pending], from, before))
     |> Enum.uniq_by(& &1.id)
     |> Enum.reject(&failed_before?(schema, &1))
-    |> Enum.map(&sweep_entry(schema, &1, now, dry_run?))
+    |> Enum.map(&{&1, sweep_action(&1, now)})
+    |> without_waiting_job(schema, now)
+    |> Enum.map(fn {entry, action} -> sweep_entry(schema, entry, action, dry_run?) end)
+    |> Enum.reject(&(&1.result == :changed))
   rescue
     error ->
       Logger.error(
@@ -444,17 +453,65 @@ defmodule Brando.Publisher do
     Repo.all(query)
   end
 
-  # An expiry that has passed wins over a publish that has
-  defp sweep_entry(schema, entry, now, dry_run?) do
-    expired? = match?(%DateTime{}, Map.get(entry, :unpublish_at)) and not DateTime.after?(entry.unpublish_at, now)
-    action = if expired?, do: :unpublish, else: :publish
+  # With group authorization a publication's job runs as the user who
+  # scheduled it and refuses what they may no longer do, so a publication
+  # whose job is still to run, running or retrying is left to the job: one
+  # made for the entry's date or with its time come, while one waiting for a
+  # later date the entry had before (an archive restored) does not hold it
+  # up. An expiry is carried out even when its user is refused, and does not
+  # wait; nor does anything without group authorization.
+  defp without_waiting_job(due, schema, now) do
+    ids = for {entry, :publish} <- due, do: to_string(entry.id)
 
+    if ids == [] or not Brando.Authorization.Engine.enabled?() do
+      due
+    else
+      waiting = waiting_publications(schema, ids)
+
+      Enum.reject(due, fn {entry, action} -> action == :publish and Enum.any?(waiting, &holds?(&1, entry, now)) end)
+    end
+  end
+
+  defp holds?(job, entry, now) do
+    job.id == to_string(entry.id) and
+      (made_for?(job.at, entry.publish_at) or not DateTime.after?(job.scheduled_at, now))
+  end
+
+  defp waiting_publications(schema, ids) do
+    args =
+      Map.merge(%{"schema" => to_string(schema), "status" => @publish_status}, TenantJob.context_fragment())
+
+    Repo.all(
+      from j in Oban.Job,
+        where:
+          j.worker == ^inspect(Worker.EntryPublisher) and j.state in @waiting_states and
+            fragment("? @> ?", j.args, ^args) and fragment("?->>'id'", j.args) in ^ids,
+        select: %{id: fragment("?->>'id'", j.args), at: fragment("?->>'at'", j.meta), scheduled_at: j.scheduled_at}
+    )
+  end
+
+  defp made_for?(at, %DateTime{} = date) when is_binary(at) do
+    case DateTime.from_iso8601(at) do
+      {:ok, made_for, _} -> same_second?(made_for, date)
+      _ -> false
+    end
+  end
+
+  defp made_for?(_at, _date), do: false
+
+  # An expiry that has passed wins over a publish that has
+  defp sweep_action(entry, now) do
+    expired? = match?(%DateTime{}, Map.get(entry, :unpublish_at)) and not DateTime.after?(entry.unpublish_at, now)
+    if expired?, do: :unpublish, else: :publish
+  end
+
+  defp sweep_entry(schema, entry, action, dry_run?) do
     found = %{
       schema: schema,
       id: entry.id,
       title: Map.get(entry, :title) || Map.get(entry, :name),
       action: action,
-      at: if(expired?, do: entry.unpublish_at, else: entry.publish_at)
+      at: if(action == :unpublish, do: entry.unpublish_at, else: entry.publish_at)
     }
 
     Map.put(found, :result, if(dry_run?, do: :dry_run, else: save_sweep(schema, entry, action)))
@@ -463,19 +520,31 @@ defmodule Brando.Publisher do
   defp save_sweep(schema, entry, action) do
     params = %{status: if(action == :unpublish, do: @unpublish_status, else: @publish_status)}
     context = schema.__modules__().context
+    update = :"update_#{schema.__naming__().singular}"
 
-    case apply(context, :"update_#{schema.__naming__().singular}", [entry.id, params, :system]) do
-      {:ok, _} ->
+    save = fn -> apply(context, update, [entry.id, params, :system]) end
+
+    # With group authorization a job may refuse the date and take it back
+    # while the sweep runs: the entry is locked and checked again. The save
+    # evicts the entry's cached queries before the commit, so again after it.
+    result =
+      if Brando.Authorization.Engine.enabled?(),
+        do: Repo.transaction(fn -> save_if_due(schema, entry, action, save) end),
+        else: {:ok, save.()}
+
+    case result do
+      {:ok, :changed} ->
+        :changed
+
+      {:ok, {:ok, _}} ->
+        Brando.Cache.Query.evict(entry)
         :ok
 
-      error ->
-        Logger.warning(
-          "[Brando.Publisher] sweep could not #{action} #{inspect(schema)} ##{entry.id}, " <>
-            "left alone for a day or until it is saved: #{inspect(sweep_error(error))}"
-        )
+      {:ok, error} ->
+        sweep_failed(schema, entry, action, error)
 
-        Brando.Cache.put(failed_key(schema, entry), true, @failed_ttl)
-        {:error, sweep_error(error)}
+      error ->
+        sweep_failed(schema, entry, action, error)
     end
   rescue
     error ->
@@ -485,6 +554,36 @@ defmodule Brando.Publisher do
 
       Brando.Cache.put(failed_key(schema, entry), true, @failed_ttl)
       {:error, error}
+  end
+
+  defp save_if_due(schema, entry, action, save),
+    do: if(still_due?(schema, entry, action), do: save.(), else: :changed)
+
+  # The entry still has the status and date the sweep found, out of the
+  # trash: a job that refused its date, or an editor, may have changed it
+  # since. Locked until it is saved.
+  defp still_due?(schema, entry, action) do
+    {field, statuses} =
+      if action == :unpublish, do: {:unpublish_at, [:published, :pending]}, else: {:publish_at, [:pending]}
+
+    case Repo.one(from e in schema, where: e.id == ^entry.id, lock: "FOR UPDATE") do
+      nil ->
+        false
+
+      current ->
+        current.status in statuses and Map.get(current, field) == Map.get(entry, field) and
+          is_nil(Map.get(current, :deleted_at))
+    end
+  end
+
+  defp sweep_failed(schema, entry, action, error) do
+    Logger.warning(
+      "[Brando.Publisher] sweep could not #{action} #{inspect(schema)} ##{entry.id}, " <>
+        "left alone for a day or until it is saved: #{inspect(sweep_error(error))}"
+    )
+
+    Brando.Cache.put(failed_key(schema, entry), true, @failed_ttl)
+    {:error, sweep_error(error)}
   end
 
   defp sweep_error({:error, %Changeset{errors: errors}}), do: errors

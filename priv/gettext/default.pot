@@ -5038,6 +5038,16 @@ msgstr ""
 msgid "Deactivated"
 msgstr ""
 
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "Deactivated as scheduled, by the system: the user who set the expiry is deactivated or deleted"
+msgstr ""
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "Deactivated as scheduled, by the system: the user who set the expiry may no longer deactivate it"
+msgstr ""
+
 #: lib/brando_admin/live/content/module_form_live.ex
 #, elixir-autogen, elixir-format
 msgid "Declare the reference at the top level with headless_ref and read it inside the condition. Saving is not blocked."
@@ -10972,6 +10982,16 @@ msgstr ""
 msgid "Not published"
 msgstr ""
 
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "Not published as scheduled: the user who scheduled it is deactivated or deleted"
+msgstr ""
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "Not published as scheduled: the user who scheduled it may no longer publish it"
+msgstr ""
+
 #: lib/brando_admin/live/users/sign_in_policy_live.ex
 #, elixir-autogen, elixir-format
 msgid "Not required"
@@ -15024,6 +15044,11 @@ msgstr ""
 #: lib/brando_admin/components/activity.ex
 #, elixir-autogen, elixir-format
 msgid "Set back by undoing the proposal"
+msgstr ""
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "Set back to draft"
 msgstr ""
 
 #: lib/brando_admin/components/activity.ex

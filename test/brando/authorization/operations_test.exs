@@ -123,8 +123,8 @@ defmodule Brando.Authorization.OperationsTest do
   test "a missing publishing actor never becomes a trusted system actor", c do
     Repo.update_all(Ecto.Query.from(p in Page, where: p.id == ^c.page.id), set: [status: :pending])
     job = %Oban.Job{args: %{"schema" => to_string(Page), "id" => c.page.id, "status" => "published", "user_id" => -1}}
-    assert {:error, :forbidden} = Brando.Worker.EntryPublisher.perform(job)
-    assert Repo.get!(Page, c.page.id).status == :pending
+    assert {:cancel, :scheduler_missing} = Brando.Worker.EntryPublisher.perform(job)
+    assert Repo.get!(Page, c.page.id).status == :draft
   end
 
   test "revision metadata and scheduling cannot bypass resource permissions", c do

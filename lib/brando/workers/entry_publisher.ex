@@ -6,14 +6,37 @@ defmodule Brando.Worker.EntryPublisher do
   context, like a change made by hand, so they record Activity and send their
   content events (webhooks, IndexNow, the search index) with the actor
   `"scheduler"`.
+
+  A publication or expiry runs as the user who scheduled it. With group
+  authorization, when that user may no longer make the change (a grant or a
+  record policy), or their account is deactivated or deleted, a
+  publication's job is cancelled rather than retried, and its date cleared
+  (the pending entry goes back to draft) so that `Brando.Publisher.sweep/1`
+  does not carry it out instead. An expiry still deactivates the entry on
+  time, as the system. Activity records why. While the site is suspended
+  the job waits, spending no attempts, until its date is older than the
+  sweep's window; then, or for an archived site, it ends and leaves the
+  entry as it is. A refusal for any other reason is retried, and taken back
+  on the last attempt. Without group authorization,
+  schedules run as they always have.
   """
   use Oban.Worker,
     queue: :default,
     max_attempts: 10
 
   require Logger
+  alias Brando.Authorization.Boundary
+  alias Brando.Authorization.Engine
+  alias Brando.Repo
   alias Brando.Revisions
   alias Brando.Tenant.Job, as: TenantJob
+
+  # Why a user's authorization refuses them for want of a grant
+  @grant_denials [:missing_grant, :backend_access_required]
+
+  # A site that is not active: while it is suspended, the job waits without
+  # spending its attempts, as long as the sweep would still take its date
+  @suspended_snooze_seconds 600
 
   # schedule publishing/depublishing an entry
   @impl Oban.Worker
@@ -39,18 +62,20 @@ defmodule Brando.Worker.EntryPublisher do
   # through the context's update like a status change made by hand. A job
   # whose date has since moved (the entry was rescheduled after it was
   # queued) or that no longer applies does nothing.
-  defp perform_tenant(%Oban.Job{
-         args: %{
-           "schema" => schema,
-           "id" => id,
-           "status" => status,
-           "user_id" => user_id
-         }
-       }) do
+  defp perform_tenant(
+         %Oban.Job{
+           args: %{
+             "schema" => schema,
+             "id" => id,
+             "status" => status,
+             "user_id" => user_id
+           }
+         } = job
+       ) do
     schema_module = Module.concat(List.wrap(schema))
     now = DateTime.utc_now()
 
-    case Brando.Repo.get(schema_module, id) do
+    case Repo.get(schema_module, id) do
       nil ->
         :ok
 
@@ -59,7 +84,7 @@ defmodule Brando.Worker.EntryPublisher do
 
       entry ->
         if due?(entry, status, now),
-          do: update_status(schema_module, entry, status, user_id, now),
+          do: update_status(job, schema_module, entry, status, user_id, now),
           else: :ok
     end
   end
@@ -78,7 +103,7 @@ defmodule Brando.Worker.EntryPublisher do
     match = Map.drop(args, ["user_id"])
 
     waiting =
-      Brando.Repo.all(
+      Repo.all(
         from j in Oban.Job,
           where:
             j.worker == ^inspect(__MODULE__) and j.state in ["available", "scheduled", "executing", "retryable"] and
@@ -146,9 +171,14 @@ defmodule Brando.Worker.EntryPublisher do
   defp passed?(%DateTime{} = at, now), do: not after?(at, now)
   defp passed?(_at, _now), do: false
 
-  defp update_status(schema_module, entry, status, user_id, now) do
-    user = publisher_user(user_id)
+  defp update_status(job, schema_module, entry, status, user_id, now) do
+    case scheduler(user_id) do
+      {:ok, user} -> save_status(job, schema_module, entry, status, user, user_id, now)
+      {:error, reason} -> refuse(schema_module, entry, status, user_id, reason)
+    end
+  end
 
+  defp save_status(job, schema_module, entry, status, user, user_id, now) do
     params =
       if status == "published",
         do: %{creator_id: user_id, status: status, publish_at: now},
@@ -166,12 +196,253 @@ defmodule Brando.Worker.EntryPublisher do
         """)
 
         BrandoAdmin.LiveView.Listing.update_list_entries(schema_module)
+        :ok
 
+      {:error, reason} = error when reason == :forbidden or (is_tuple(reason) and elem(reason, 1) == :not_found) ->
+        refused(job, error, schema_module, entry, status, user, user_id)
+
+      {:error, reason} ->
+        {:error, reason}
+    end
+  end
+
+  # A save its user is refused (a record policy may hide the entry from them
+  # instead, so it is not found), with group authorization. Refused for want
+  # of a grant or by a record policy, it is taken back at once. For a
+  # suspended site it waits, spending no attempts. For any other reason it is
+  # tried again, and taken back on its last attempt: a job that ran out of
+  # attempts must not leave the date for the sweep to carry out as the system.
+  defp refused(job, error, schema_module, entry, status, user, user_id) do
+    case refusal(user, schema_module, entry, status) do
+      :retry ->
+        error
+
+      {:inactive_site, scope} ->
+        wait_for_site(scope, schema_module, entry, status)
+
+      {:refused, reason} ->
+        refuse(schema_module, entry, status, user_id, reason)
+
+      {:unexplained, reason} ->
+        if last_attempt?(job), do: refuse(schema_module, entry, status, user_id, reason), else: error
+    end
+  end
+
+  defp refusal(:system, _schema_module, _entry, _status), do: :retry
+
+  defp refusal(user, schema_module, entry, status) do
+    if Engine.enabled?(), do: classify(user, schema_module, entry, status), else: :retry
+  end
+
+  # The save reads the entry first; a publication sets publish_at, which
+  # takes the right to schedule as well. An account deactivated or deleted
+  # since the job looked it up is gone like one it found so.
+  defp classify(user, schema_module, entry, status) do
+    snapshot = user |> Boundary.actor_scope() |> Engine.snapshot()
+    actions = if status == "published", do: [:read, :update, :publish, :schedule], else: [:read, :update, :publish]
+
+    cond do
+      snapshot.reason == :inactive_site -> {:inactive_site, snapshot.scope}
+      snapshot.reason == :inactive_account -> {:refused, :scheduler_inactive}
+      not is_nil(snapshot.reason) -> {:unexplained, snapshot.reason}
+      denial = Enum.find_value(actions, &denial(snapshot, &1, schema_module, entry)) -> {:refused, denial}
+      true -> {:unexplained, :forbidden}
+    end
+  end
+
+  defp denial(snapshot, action, schema_module, entry) do
+    reason = Engine.explain(snapshot, action, schema_module).reason || Engine.explain(snapshot, action, entry).reason
+
+    cond do
+      reason in @grant_denials -> :forbidden
+      reason == :policy_denied -> :policy_denied
+      true -> nil
+    end
+  end
+
+  # A suspended site may come back: the job waits. An archived one will not,
+  # and a date older than the sweep's window (`Brando.Publisher.sweep/1`) is
+  # past carrying out: the job ends and leaves the entry as it is, since no
+  # one refused it.
+  defp wait_for_site(scope, schema_module, entry, status) do
+    date = if status == "published", do: entry.publish_at, else: entry.unpublish_at
+
+    reason =
+      cond do
+        site_status(scope) != :suspended -> :site_inactive
+        DateTime.diff(DateTime.utc_now(), date, :day) >= Brando.Publisher.sweep_days() -> :schedule_outdated
+        true -> nil
+      end
+
+    if reason do
+      Logger.warning(
+        "[B/Pub] Gave up the #{status} job for #{schema_module.__naming__().singular} ##{entry.id}, " <>
+          "its site is not active (#{reason}); the entry is left as it is"
+      )
+
+      {:cancel, reason}
+    else
+      {:snooze, @suspended_snooze_seconds}
+    end
+  end
+
+  defp site_status(%{site_id: site_id}) when is_integer(site_id) do
+    case Repo.get(Brando.Sites.Site, site_id) do
+      %{status: status} -> status
+      nil -> nil
+    end
+  end
+
+  defp site_status(_scope), do: nil
+
+  defp last_attempt?(%Oban.Job{attempt: attempt, max_attempts: max}) when is_integer(attempt) and is_integer(max),
+    do: attempt >= max
+
+  defp last_attempt?(_job), do: false
+
+  # Who a job runs as: the user who scheduled it, or the system for a
+  # schedule made without a user. With group authorization the user's
+  # account must be active, and a user who is gone is never replaced by the
+  # system; without it, the job runs as whoever it finds, as it always has.
+  defp scheduler(nil), do: {:ok, :system}
+
+  defp scheduler(user_id) do
+    case {Engine.enabled?(), Brando.Users.get_user(user_id)} do
+      {false, {:ok, user}} -> {:ok, user}
+      {false, _} -> {:ok, nil}
+      {true, {:ok, %{active: true, deleted_at: nil} = user}} -> {:ok, user}
+      {true, {:ok, _user}} -> {:error, :scheduler_inactive}
+      {true, _} -> {:error, :scheduler_missing}
+    end
+  end
+
+  # The user who scheduled an expiry may no longer make it, or is gone: it
+  # is carried out all the same, as the system, so that a refusal never
+  # leaves an entry live for longer than planned. Activity says why.
+  defp refuse(schema_module, entry, "disabled" = status, user_id, reason) do
+    details = %{"schedule_refused" => %{"action" => "unpublish", "reason" => to_string(reason)}}
+    context = schema_module.__modules__().context
+    singular = schema_module.__naming__().singular
+
+    Logger.warning(
+      "[B/Pub] User ##{user_id} may no longer deactivate #{singular} ##{entry.id} (#{reason}): " <>
+        "deactivating it as the system"
+    )
+
+    expire = fn -> apply(context, :"update_#{singular}", [entry.id, %{status: status}, :system]) end
+
+    result =
+      Repo.transaction(fn ->
+        if still_due?(schema_module, entry, status), do: with_details(details, expire), else: :changed
+      end)
+
+    case result do
+      {:ok, {:error, reason}} ->
+        {:error, reason}
+
+      {:ok, _} ->
+        # The save evicted the entry's cached queries before the commit
+        Brando.Cache.Query.evict(entry)
+        BrandoAdmin.LiveView.Listing.update_list_entries(schema_module)
         :ok
 
       {:error, reason} ->
         {:error, reason}
     end
+  end
+
+  # The user who scheduled a publication may no longer make it, or is gone,
+  # so no one will: trying again would not help, and the sweep would carry
+  # out the date as the system. The job is cancelled and the date cleared,
+  # the entry going back to draft, as deleting the job does, and Activity
+  # says why. Saved as the system, which only takes back the plan.
+  defp refuse(schema_module, entry, status, user_id, reason) do
+    params = %{status: :draft, publish_at: nil}
+    details = %{"schedule_refused" => %{"action" => "publish", "reason" => to_string(reason)}}
+    singular = schema_module.__naming__().singular
+
+    Logger.warning(
+      "[B/Pub] Did not publish #{singular} ##{entry.id} as scheduled by user ##{user_id} (#{reason}): " <>
+        "cancelling the job and clearing the date"
+    )
+
+    result =
+      Repo.transaction(fn ->
+        if still_due?(schema_module, entry, status), do: clear_date(schema_module, entry, params, details)
+      end)
+
+    case result do
+      {:ok, _} ->
+        # The save evicted the entry's cached queries before the commit
+        Brando.Cache.Query.evict(entry)
+        BrandoAdmin.LiveView.Listing.update_list_entries(schema_module)
+        {:cancel, reason}
+
+      {:error, error} ->
+        {:error, error}
+    end
+  end
+
+  # The entry is still due, with the date the job read, out of the trash: an
+  # editor may have moved the date, or published or unpublished it by hand,
+  # since. Locked until it is saved.
+  defp still_due?(schema_module, entry, status) do
+    import Ecto.Query, only: [from: 2]
+
+    {field, statuses} =
+      if status == "published", do: {:publish_at, [:pending]}, else: {:unpublish_at, [:published, :pending]}
+
+    query = from e in schema_module, where: e.id == ^entry.id, lock: "FOR UPDATE"
+
+    case Repo.one(query) do
+      nil ->
+        false
+
+      current ->
+        current.status in statuses and Map.get(current, field) == Map.get(entry, field) and
+          is_nil(Map.get(current, :deleted_at))
+    end
+  end
+
+  defp with_details(details, fun), do: Brando.Activity.with_source(:scheduler, details, fun)
+
+  defp clear_date(schema_module, entry, params, details) do
+    context = schema_module.__modules__().context
+    update = :"update_#{schema_module.__naming__().singular}"
+
+    case with_details(details, fn -> apply(context, update, [entry.id, params, :system]) end) do
+      {:ok, _} -> :ok
+      {:error, error} -> clear_refused(schema_module, entry, params, details, error)
+    end
+  end
+
+  # An entry its context will not save (it no longer validates) still loses
+  # the date, so the sweep does not carry it out.
+  defp clear_refused(schema_module, entry, params, details, error) do
+    import Ecto.Query, only: [from: 2]
+
+    Logger.warning("[B/Pub] Could not save #{inspect(schema_module)} ##{entry.id}, clearing its date: #{inspect(error)}")
+
+    Repo.update_all(from(e in schema_module, where: e.id == ^entry.id), set: Map.to_list(params))
+
+    # What a save does that readers see: the entry's identifier, its cached
+    # queries, and Activity with its content event, as the entry is now
+    case Repo.get(schema_module, entry.id) do
+      nil -> :ok
+      updated -> after_clearing(schema_module, updated, params, details)
+    end
+  end
+
+  defp after_clearing(schema_module, updated, params, details) do
+    Brando.Content.update_identifier(schema_module, updated)
+    Repo.after_commit(fn -> Brando.Cache.Query.evict(updated) end)
+
+    if Brando.Activity.logged?(schema_module) do
+      fields = params |> Map.keys() |> Enum.map(&to_string/1)
+      Brando.Activity.record(:updated, updated, :system, fields: fields, details: details)
+    end
+
+    :ok
   end
 
   @impl Oban.Worker
