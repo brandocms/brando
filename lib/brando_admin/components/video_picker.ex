@@ -164,6 +164,7 @@ defmodule BrandoAdmin.Components.VideoPicker do
     |> assign_new(:library, fn -> nil end)
     |> assign_new(:url_input, fn -> "" end)
     |> assign_new(:creating_video, fn -> false end)
+    |> assign_new(:url_video_ref, fn -> nil end)
     |> assign_new(:playing_video, fn -> nil end)
     |> assign_new(:editing_video_id, fn -> nil end)
     # Folder state
@@ -508,7 +509,7 @@ defmodule BrandoAdmin.Components.VideoPicker do
     } = params
 
     video_type = url_video_type(source)
-    {title, description, _thumbnail_url} = url_video_metadata(video_type, url)
+    ref = make_ref()
 
     video_params = %{
       type: video_type,
@@ -516,37 +517,21 @@ defmodule BrandoAdmin.Components.VideoPicker do
       remote_id: url_remote_id(video_type, url, remote_id),
       width: width,
       height: height,
-      title: title,
-      caption: description,
       aspect_ratio: calculate_aspect_ratio(width, height),
       config_target: normalize_video_config_target(socket.assigns.config_target)
     }
 
-    case Brando.Videos.create_video(video_params, Map.get(socket.assigns, :current_user)) do
-      {:ok, video} ->
-        send_update(socket.assigns.event_target, %{
-          event: "video_created_from_url",
-          video_data: Map.from_struct(video),
-          video_changeset: Ecto.Changeset.change(video)
-        })
-
-        {:noreply,
-         socket
-         |> assign(:creating_video, false)
-         |> assign(:show_url_input, false)
-         |> update(:selected_videos, &Enum.uniq([video.id | &1]))
-         |> assign_videos()
-         |> assign_folder_state(socket.assigns.current_folder)
-         |> push_selection_state()}
-
-      {:error, changeset} ->
-        error_msg =
-          Enum.map_join(changeset.errors, ", ", fn {field, {msg, _}} -> "#{field}: #{msg}" end)
-
-        require Logger
-        Logger.warning("Video changeset error: #{error_msg}")
-        {:noreply, assign(socket, :creating_video, false)}
-    end
+    # The title comes from the provider's oEmbed endpoint. Asked from here, a
+    # slow provider would hold up the whole editor, so it is asked off the
+    # LiveView process.
+    {:noreply,
+     socket
+     |> assign(:creating_video, true)
+     |> assign(:url_video_ref, ref)
+     |> start_async(
+       :url_video,
+       Brando.Tenant.capture_context(fn -> {ref, video_params, url_video_metadata(video_type, url)} end)
+     )}
   end
 
   def handle_event(
@@ -688,6 +673,48 @@ defmodule BrandoAdmin.Components.VideoPicker do
   end
 
   def handle_async(:library_page, _result, socket), do: {:noreply, socket}
+
+  def handle_async(:url_video, {:ok, {ref, video_params, {title, description, _thumbnail_url}}}, socket) do
+    case socket.assigns do
+      %{url_video_ref: ^ref} -> create_url_video(socket, Map.merge(video_params, %{title: title, caption: description}))
+      # Superseded by a newer URL.
+      _ -> {:noreply, socket}
+    end
+  end
+
+  def handle_async(:url_video, {:exit, reason}, socket) do
+    require Logger
+    Logger.warning("Video from URL failed: #{inspect(reason)}")
+    {:noreply, assign(socket, :creating_video, false)}
+  end
+
+  defp create_url_video(socket, video_params) do
+    case Brando.Videos.create_video(video_params, Map.get(socket.assigns, :current_user)) do
+      {:ok, video} ->
+        send_update(socket.assigns.event_target, %{
+          event: "video_created_from_url",
+          video_data: Map.from_struct(video),
+          video_changeset: Ecto.Changeset.change(video)
+        })
+
+        {:noreply,
+         socket
+         |> assign(:creating_video, false)
+         |> assign(:show_url_input, false)
+         |> update(:selected_videos, &Enum.uniq([video.id | &1]))
+         |> assign_videos()
+         |> assign_folder_state(socket.assigns.current_folder)
+         |> push_selection_state()}
+
+      {:error, changeset} ->
+        error_msg =
+          Enum.map_join(changeset.errors, ", ", fn {field, {msg, _}} -> "#{field}: #{msg}" end)
+
+        require Logger
+        Logger.warning("Video changeset error: #{error_msg}")
+        {:noreply, assign(socket, :creating_video, false)}
+    end
+  end
 
   defp apply_library_page(library, cursor, {:ok, %{items: items, next: next}}) do
     items = if cursor, do: library.items ++ items, else: items
@@ -919,7 +946,9 @@ defmodule BrandoAdmin.Components.VideoPicker do
                       {gettext("Create video")}
                     <% end %>
                   </button>
-                  <div class="video-picker-analyzing hidden">
+                  <%!-- The hook shows this while it reads the URL; from then on the
+                       server keeps it up until the provider has answered. --%>
+                  <div class={["video-picker-analyzing", !@creating_video && "hidden"]}>
                     <div class="spinner"></div>
                     <span>{gettext("Analyzing video...")}</span>
                   </div>
