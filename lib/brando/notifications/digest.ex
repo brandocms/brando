@@ -14,7 +14,8 @@ defmodule Brando.Notifications.Digest do
   Without a digest, mention emails go out as before, at most one every ten
   minutes (`Brando.Notes`), and routed notifications as single emails.
   Notifications that were waiting for a digest the user has since turned off
-  go out with their next email.
+  go out with their next email. A mention goes out only while the user may
+  still see its entry (`Brando.Notes.mention_email_items/2`).
   """
 
   import Ecto.Query
@@ -193,10 +194,11 @@ defmodule Brando.Notifications.Digest do
     if is_nil(user) or not user.active or not is_nil(user.deleted_at) do
       finish(waiting, mentions, "cancelled", now, "recipient_unavailable")
     else
-      # Only while the route is active and still names the user
+      # Only while the route is active and still names the user, and mentions
+      # only while the user may still read their entry
       {readable, unreadable} = Enum.split_with(waiting, &Recipient.may_see?(user, &1, &1.route))
       notifications = Enum.map(readable, & &1.notification)
-      mention_items = Notes.mention_email_items(mentions)
+      mention_items = Notes.mention_email_items(user, mentions)
 
       send_email(user, notifications, mention_items, if(period == :off, do: :batch, else: period))
       finish(unreadable, [], "cancelled", now, "recipient_unavailable")

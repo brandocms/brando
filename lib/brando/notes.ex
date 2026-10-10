@@ -38,6 +38,7 @@ defmodule Brando.Notes do
 
   alias Brando.Notes.Mention
   alias Brando.Notes.Note
+  alias Brando.Notifications.Recipient
   alias Brando.Repo
   alias Brando.Tenant.Topic
   alias Brando.Users.User
@@ -636,7 +637,7 @@ defmodule Brando.Notes do
         mark_emailed(pending, now)
 
       true ->
-        items = mention_email_items(pending)
+        items = mention_email_items(user, pending)
 
         if items != [] do
           {:ok, _job} = user |> Brando.Notes.MentionEmail.build(items) |> Brando.Mailer.deliver_later()
@@ -657,30 +658,35 @@ defmodule Brando.Notes do
 
   @doc """
   `mentions` (newest first, as `mentions_for/2` returns them) as
-  `Brando.Notes.MentionEmail` lists them: oldest first, leaving out those
-  whose entry is gone.
+  `Brando.Notes.MentionEmail` lists them for `user`: oldest first, leaving
+  out those whose entry is gone or that `user` may no longer see (not a
+  member of the site, or no longer allowed to read the entry,
+  `Brando.Notifications.Recipient`).
   """
-  def mention_email_items(mentions), do: mentions |> Enum.reverse() |> Enum.flat_map(&email_item/1)
+  def mention_email_items(%User{} = user, mentions) do
+    if Recipient.member?(user),
+      do: mentions |> Enum.reverse() |> Enum.flat_map(&email_item(user, &1)),
+      else: []
+  end
 
-  defp email_item(%Mention{note: note}) do
+  defp email_item(user, %Mention{note: note}) do
     schema = schema_of(note)
+    entry = Repo.get(schema, note.entry_id)
 
-    case Repo.get(schema, note.entry_id) do
-      nil ->
-        []
+    if is_nil(entry) or not Recipient.may_read?(user, entry) do
+      []
+    else
+      names = mention_names([note])
 
-      entry ->
-        names = mention_names([note])
-
-        [
-          %{
-            author: note.author && note.author.name,
-            entry_title: entry_title(schema, entry),
-            anchor: note.anchor_label,
-            text: plain_text(note.body, names),
-            url: entry_url(schema, entry, note)
-          }
-        ]
+      [
+        %{
+          author: note.author && note.author.name,
+          entry_title: entry_title(schema, entry),
+          anchor: note.anchor_label,
+          text: plain_text(note.body, names),
+          url: entry_url(schema, entry, note)
+        }
+      ]
     end
   rescue
     _ -> []

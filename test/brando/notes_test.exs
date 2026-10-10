@@ -219,6 +219,38 @@ defmodule Brando.NotesTest do
       thread!(page, author, %{"body" => "@Trond Mjøen hei", "mentions" => [other.id]})
       assert_email_sent(fn email -> assert email.subject =~ "nevnte deg" end)
     end
+
+    test "go out only while the user may still read the entry", %{page: page} do
+      put_test_env(:authorization_mode, :groups)
+      put_test_env(:tenancy_mode, :none)
+      owner = Factory.insert(:random_user, role: :superuser)
+      reader = Factory.insert(:random_user, role: :user, name: "Kari Leser")
+      {:ok, _} = Brando.Authorization.Migration.run()
+      scope = Brando.Authorization.Scope.standalone(owner)
+      {:ok, backend} = Brando.Authorization.Groups.create(scope, %{name: "Backend"}, ["brando.admin.access"])
+      {:ok, readers} = Brando.Authorization.Groups.create(scope, %{name: "Readers"}, ["brando.pages.read"])
+      {:ok, :ok} = Brando.Authorization.Groups.add_member(scope, backend.id, reader.id)
+      {:ok, :ok} = Brando.Authorization.Groups.add_member(scope, readers.id, reader.id)
+
+      mention! = fn body ->
+        Oban.Testing.with_testing_mode(:manual, fn ->
+          thread!(page, owner, %{"body" => "@Kari Leser " <> body, "mentions" => [reader.id]})
+        end)
+      end
+
+      mention!.("still readable")
+      assert :ok = Notes.deliver_mentions(reader.id)
+      assert_email_sent(fn email -> assert email.text_body =~ "still readable" end)
+
+      # Read access removed before the next email: the mention is dropped, not kept for later
+      mention!.("confidential")
+      {:ok, :ok} = Brando.Authorization.Groups.remove_member(scope, readers.id, reader.id)
+      refute Brando.Authorization.can?(reader, :read, page)
+
+      assert :ok = Notes.deliver_mentions(reader.id, DateTime.add(DateTime.utc_now(), 601, :second))
+      assert_no_email_sent()
+      assert Notes.mentions_for(reader.id, unsent: true) == []
+    end
   end
 
   describe "permissions" do

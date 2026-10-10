@@ -77,8 +77,15 @@ defmodule Brando.Notifications.Recipient do
 
     case Repo.get(module, id) do
       nil -> false
-      entry -> Brando.Authorization.can?(Scope.current(user), :read, entry)
+      entry -> may_read?(user, entry)
     end
+  rescue
+    _ -> false
+  end
+
+  @doc "Whether `user` may read `entry`: with group authorization, by its read permission; otherwise yes."
+  def may_read?(%User{} = user, entry) do
+    not Brando.Authorization.enabled?() or Brando.Authorization.can?(Scope.current(user), :read, entry)
   rescue
     _ -> false
   end

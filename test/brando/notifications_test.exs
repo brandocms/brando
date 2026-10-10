@@ -647,6 +647,43 @@ defmodule Brando.NotificationsTest do
       assert [%{state: "succeeded"}] = deliveries(route)
     end
 
+    test "a mention goes in the digest only while the user may still read the entry", %{user: user} do
+      put_test_env(:authorization_mode, :groups)
+      put_test_env(:tenancy_mode, :none)
+      owner = Factory.insert(:random_user, role: :superuser)
+
+      reader =
+        Factory.insert(:random_user, role: :user, name: "Kari", config: %UserConfig{notification_digest: :daily})
+
+      {:ok, _} = Brando.Authorization.Migration.run()
+      scope = Brando.Authorization.Scope.standalone(owner)
+      {:ok, backend} = Brando.Authorization.Groups.create(scope, %{name: "Backend"}, ["brando.admin.access"])
+      {:ok, readers} = Brando.Authorization.Groups.create(scope, %{name: "Readers"}, ["brando.pages.read"])
+      {:ok, :ok} = Brando.Authorization.Groups.add_member(scope, backend.id, reader.id)
+      {:ok, :ok} = Brando.Authorization.Groups.add_member(scope, readers.id, reader.id)
+      page = Factory.insert(:page, creator: user)
+
+      {:ok, _note, _} =
+        Notes.create_thread(Page, page.id, owner, %{"body" => "@Kari still readable", "mentions" => [reader.id]})
+
+      [mention] = Notes.mentions_for(reader.id, unsent: true)
+      due = Digest.next_at(:daily, mention.inserted_at)
+      assert :ok = Notes.deliver_mentions(reader.id, due)
+      assert_email_sent(fn email -> assert email.text_body =~ "still readable" end)
+
+      # Read access removed before the next digest: the mention is dropped, not kept for later
+      {:ok, _note, _} =
+        Notes.create_thread(Page, page.id, owner, %{"body" => "@Kari confidential", "mentions" => [reader.id]})
+
+      {:ok, :ok} = Brando.Authorization.Groups.remove_member(scope, readers.id, reader.id)
+      refute Brando.Authorization.can?(reader, :read, page)
+
+      [mention] = Notes.mentions_for(reader.id, unsent: true)
+      assert :ok = Notes.deliver_mentions(reader.id, Digest.next_at(:daily, mention.inserted_at))
+      assert_no_email_sent()
+      assert Notes.mentions_for(reader.id, unsent: true) == []
+    end
+
     test "digest times are at the digest hour in the site's time zone, Mondays for weekly" do
       # Wednesday 7 October 2026, 10:00 in Oslo (08:00 UTC)
       wednesday = ~U[2026-10-07 08:00:00Z]
