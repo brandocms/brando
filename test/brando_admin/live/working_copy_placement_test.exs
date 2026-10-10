@@ -52,6 +52,15 @@ defmodule BrandoAdmin.WorkingCopyPlacementTest do
 
   defp body(uid), do: hd(row(uid).refs).data.data.text
 
+  defp edit!(c, uid, body) do
+    uid
+    |> row()
+    |> Map.get(:refs)
+    |> hd()
+    |> Brando.Content.Ref.changeset(%{"data" => text(body)}, c.user)
+    |> Repo.update!()
+  end
+
   # The page's tree: each root's uid with its children's, recursively.
   defp tree(page) do
     blocks = Repo.all(from(b in Block, order_by: b.sequence))
@@ -118,8 +127,10 @@ defmodule BrandoAdmin.WorkingCopyPlacementTest do
     # others' modules too, and one of them edited
     move!(c, "moved", "boxB", 0, "Moved on")
     stamp!("moved", module_version: 4)
-    stamp!("keepA", module_version: 2, description: "Edited since")
-    stamp!("keepB", module_version: 2, sequence: 1)
+    stamp!("keepA", module_version: 2)
+    edit!(c, "keepA", "Edited since")
+    # collapsed in the editor, which is not content
+    stamp!("keepB", module_version: 2, sequence: 1, collapsed: true)
     assert tree(c.page) != saved
 
     load_and_save(c, revision)
@@ -130,7 +141,7 @@ defmodule BrandoAdmin.WorkingCopyPlacementTest do
     assert body("moved") == "As in the revision"
     assert {moved.sync_uid, moved.module_version} == {"moved-sync", 3}
     # written with the revision's content, at the revision's version
-    assert {row("keepA").description, row("keepA").module_version} == {nil, 1}
+    assert {body("keepA"), row("keepA").module_version} == {"Stays in A", 1}
     # only moved back into place: its content is the one it has
     assert row("keepB").module_version == 2
   end
@@ -184,5 +195,67 @@ defmodule BrandoAdmin.WorkingCopyPlacementTest do
     nested = row("nested")
     assert body("nested") == "In the inner container"
     assert {nested.parent.uid, nested.sync_uid, nested.module_version} == {"inner", "nested-sync", 5}
+  end
+
+  # Review: the roots took their forms one update at a time, so a block
+  # moving between them showed in both in between (a duplicate DOM id) when
+  # it left a nested container, or when two blocks swapped containers.
+  test "a child moved into a nested container since goes back out of it", c do
+    roots!(c, [
+      container(c, "boxA", [container(c, "inner", [module_block(c, "keepI", "Stays inside")])]),
+      container(c, "boxB", [module_block(c, "moved", "As in the revision")])
+    ])
+
+    revision = revision!(c)
+    saved = tree(c.page)
+    move!(c, "moved", "inner", 1, "Moved on")
+    assert tree(c.page) != saved
+
+    load_and_save(c, revision)
+    await(fn -> tree(c.page) == saved end)
+    assert body("moved") == "As in the revision"
+  end
+
+  test "two children that swapped containers since swap back", c do
+    roots!(c, [
+      container(c, "boxA", [module_block(c, "first", "First")]),
+      container(c, "boxB", [module_block(c, "second", "Second")])
+    ])
+
+    revision = revision!(c)
+    saved = tree(c.page)
+    move!(c, "first", "boxB", 1, "First")
+    move!(c, "second", "boxA", 0, "Second")
+    assert tree(c.page) != saved
+
+    load_and_save(c, revision)
+    await(fn -> tree(c.page) == saved end)
+  end
+
+  # Review: a revision stored before blocks had a module version and a sync
+  # uid holds structs without those keys; the save read them.
+  test "a revision stored before blocks had module versions and sync uids", c do
+    roots!(c, [
+      container(c, "boxA", [module_block(c, "keepA", "Stays in A"), module_block(c, "moved", "As in the revision")]),
+      container(c, "boxB", [module_block(c, "keepB", "Stays in B")])
+    ])
+
+    revision = revision!(c)
+    :ok = Brando.OldRevisions.forget_block_identity!(c.page, revision)
+    saved = tree(c.page)
+
+    move!(c, "moved", "boxB", 0, "Moved on")
+    stamp!("moved", sync_uid: "moved-sync", module_version: 4)
+    stamp!("keepA", module_version: 2)
+    edit!(c, "keepA", "Edited since")
+    stamp!("keepB", sequence: 1)
+
+    load_and_save(c, revision)
+    await(fn -> tree(c.page) == saved end)
+
+    assert {body("moved"), row("moved").sync_uid, row("moved").module_version} ==
+             {"As in the revision", "moved-sync", 4}
+
+    assert {body("keepA"), row("keepA").module_version} == {"Stays in A", 2}
   end
 end

@@ -1527,13 +1527,12 @@ defmodule BrandoAdmin.Components.Form.BlockField do
         restore_into_session(socket, ops, Ops.from_entry_blocks(originals))
 
       _ ->
-        # Each root takes its form in an update of its own: the roots a
-        # block moves out of go before the ones it moves into, or it would
-        # show in both in between.
-        shown = socket.assigns.block_ops
+        # Each root takes its form in an update of its own, so a block the
+        # copy puts under another parent would show in both in between: its
+        # parent lets go of it first.
+        release_leaving(socket.assigns.block_ops, tree)
 
-        for {uid, form} <- Enum.sort_by(forms, &takes_in?(shown, tree, elem(&1, 0))),
-            uid in socket.assigns.root_order do
+        for {uid, form} <- forms, uid in socket.assigns.root_order do
           send_update(Block, id: "block-#{uid}", event: "replace_form", form: form)
         end
 
@@ -1565,15 +1564,36 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     Enum.reduce(leftover, ops, fn uid, acc -> if Ops.known?(acc, uid), do: next!(acc, {:delete, uid}), else: acc end)
   end
 
-  # Whether the copy puts a block under `root` that `shown` has under
-  # another root.
-  defp takes_in?(shown, tree, root) do
-    tree
-    |> copied_descendants(root)
-    |> Enum.any?(&(Ops.known?(shown, &1) and Ops.root_of(shown, &1) != root))
+  # Tell each shown parent to let go of the children the copy puts under
+  # another parent, the deepest first: a parent let go of with its own
+  # component is gone before its turn.
+  defp release_leaving(%Ops{} = shown, tree) do
+    copied_parent = for {parent, uids} <- tree, uid <- uids, into: %{}, do: {uid, parent}
+
+    shown.parents
+    |> Enum.filter(fn {uid, parent} -> Map.has_key?(copied_parent, uid) and copied_parent[uid] != parent end)
+    |> Enum.group_by(&elem(&1, 1), &elem(&1, 0))
+    |> Enum.sort_by(fn {parent, _uids} -> -depth(shown, parent) end)
+    |> Enum.each(fn {parent, uids} ->
+      send_update(Block, id: component_id(shown, parent), event: "release_children", uids: uids)
+    end)
   end
 
-  defp copied_descendants(tree, uid), do: Enum.flat_map(Map.get(tree, uid, []), &[&1 | copied_descendants(tree, &1)])
+  defp depth(%Ops{} = shown, uid) do
+    case shown.parents[uid] do
+      nil -> 0
+      parent -> 1 + depth(shown, parent)
+    end
+  end
+
+  # A root's component is `block-<uid>`, a child's its parent's with
+  # `-child-<uid>` (`Block.Render`).
+  defp component_id(%Ops{} = shown, uid) do
+    case shown.parents[uid] do
+      nil -> "block-#{uid}"
+      parent -> "#{component_id(shown, parent)}-child-#{uid}"
+    end
+  end
 
   # Each parent's children in the copy, by uid, in order.
   defp copied_children(tree, parent, %{"children" => children}) when is_list(children) do

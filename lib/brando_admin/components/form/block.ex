@@ -516,6 +516,21 @@ defmodule BrandoAdmin.Components.Form.Block do
   # which the client processes BEFORE this queued update — widgets would
   # re-read their inputs while the DOM still holds the old content (this is
   # exactly how remote tiptap edits stayed invisible).
+  # A revision's working copy puts these children under another parent
+  # (`BlockField.restore_draft/4`): this block stops showing them before
+  # any parent takes its new form, so none shows in two places at once.
+  # The op store already has them where they go.
+  def update(%{event: "release_children", uids: uids}, socket) do
+    block_list = socket.assigns.block_list -- uids
+
+    socket
+    |> assign(:block_list, block_list)
+    |> assign(:changesets, Enum.reject(socket.assigns.changesets, fn {uid, _} -> uid in uids end))
+    |> assign(:children_forms, Map.drop(socket.assigns.children_forms, uids))
+    |> assign(:has_children?, block_list != [])
+    |> then(&{:ok, &1})
+  end
+
   def update(%{event: "replace_form", form: form} = msg, socket) do
     belongs_to = socket.assigns.belongs_to
     current_user_id = socket.assigns.current_user_id
