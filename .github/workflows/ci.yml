@@ -657,7 +657,7 @@ jobs:
       # Feeds the README badge and the trend on codecov.io. Needs the
       # CODECOV_TOKEN repository secret.
       - name: Upload to Codecov
-        uses: codecov/codecov-action@v5
+        uses: codecov/codecov-action@v7
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: cover/lcov.info
