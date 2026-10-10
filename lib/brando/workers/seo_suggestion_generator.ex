@@ -11,7 +11,7 @@ defmodule Brando.Worker.SEOSuggestionGenerator do
   use Oban.Worker,
     queue: :default,
     max_attempts: 3,
-    unique: [keys: [:tenant_prefix, :suggestion_id], states: :incomplete]
+    unique: [keys: [:tenant_prefix, :suggestion_id], states: :incomplete, period: :infinity]
 
   alias Brando.SEO.Generate
   alias Brando.SEO.Suggestion

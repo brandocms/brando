@@ -112,6 +112,30 @@ defmodule Brando.SEO.SuggestionsTest do
     assert length(Suggestions.list_open("en")) == 3
   end
 
+  # Two editors asking at once both find nothing waiting, and both queue
+  # the same suggestion: it is written once.
+  test "a suggestion whose job still waits is not queued twice", %{user: user} do
+    page = create_page(user, "Asked twice", "asked-twice")
+
+    Oban.Testing.with_testing_mode(:manual, fn ->
+      assert {:ok, 1} = Suggestions.enqueue([row(page)], "en", user)
+      [%{id: id}] = Suggestions.list_open("en")
+      age_jobs(Brando.Worker.SEOSuggestionGenerator, 600)
+
+      # what the second editor's run saw: nothing waiting for the page
+      Brando.Repo.update_all(Ecto.Query.from(s in Suggestion, where: s.id == ^id), set: [status: :failed])
+      assert {:ok, 1} = Suggestions.enqueue([row(page)], "en", user)
+
+      assert [_one] = all_enqueued(worker: Brando.Worker.SEOSuggestionGenerator, args: %{"suggestion_id" => id})
+    end)
+  end
+
+  defp age_jobs(worker, seconds) do
+    import Ecto.Query, only: [from: 2]
+    inserted_at = DateTime.add(DateTime.utc_now(), -seconds)
+    Brando.Repo.update_all(from(j in Oban.Job, where: j.worker == ^inspect(worker)), set: [inserted_at: inserted_at])
+  end
+
   test "accept_all writes every pending suggestion", %{user: user} do
     Brando.AIStub.configure()
     Brando.AIStub.reply("Bulk text")

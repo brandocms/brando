@@ -93,7 +93,9 @@ defmodule Brando.SEO.Suggestions do
         |> SEOSuggestionGenerator.new()
       end)
 
-    Oban.insert_all(jobs)
+    # One at a time: `Oban.insert_all/1` skips the worker's uniqueness, and
+    # two runs that both found the entry free would write it twice.
+    Enum.each(jobs, &Oban.insert/1)
     {:ok, length(rows)}
   end
 
