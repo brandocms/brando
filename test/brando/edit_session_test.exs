@@ -818,6 +818,41 @@ defmodule Brando.EditSessionTest do
                Data.state(data, @field).diffs["a"]["block"]["table_rows"]
     end
 
+    # Sol audit: the log passed maps inside a row through as the rejoiner
+    # had them, so a list in one (a gallery's objects) lost the rows the
+    # merge kept.
+    test "a save's rebase replays a rejoin with the rows the merge kept in a map inside a row" do
+      base = Ops.from_entry_blocks([entry_block("a", 1, 10), entry_block("b", 2, 20)])
+      {:seeded, data} = Data.join(Data.new(1), @field, base, base)
+      ref = fn objects -> %{"block" => %{"refs" => [%{"id" => 3, "gallery" => %{"gallery_objects" => objects}}]}} end
+      {:ok, data} = Data.apply_op(data, @field, {:update, "a", ref.([%{"id" => 51}, %{"id" => 52, "caption" => "A"}])})
+      data = Data.mark_save(data, @field, :saver, 0)
+
+      {:ok, held} = Ops.apply_op(base, {:update, "a", ref.([%{"id" => 51, "caption" => "B"}])})
+      {{:merged, []}, data} = Data.join(data, @field, base, held)
+
+      {:ok, data, []} = Data.rebase(data, @field, base, {:client, :saver})
+
+      assert [%{"gallery" => %{"gallery_objects" => [%{"id" => 51, "caption" => "B"}, %{"id" => 52}]}}] =
+               Data.state(data, @field).diffs["a"]["block"]["refs"]
+    end
+
+    # Sol audit: the log indexed a list by identity even when two items are
+    # named alike, which the merge takes whole.
+    test "a save's rebase replays a rejoiner's list with items named alike as it had it" do
+      base = Ops.from_entry_blocks([entry_block("a", 1, 10), entry_block("b", 2, 20)])
+      {:seeded, data} = Data.join(Data.new(1), @field, base, base)
+      {:ok, data} = Data.apply_op(data, @field, anchor("a", "A, saving"))
+      data = Data.mark_save(data, @field, :saver, 0)
+
+      options = [%{"value" => "1", "label" => "One"}, %{"value" => "1", "label" => "Also one"}]
+      {:ok, held} = Ops.apply_op(base, {:update, "a", %{"block" => %{"vars" => [%{"id" => 5, "options" => options}]}}})
+      {{:merged, []}, data} = Data.join(data, @field, base, held)
+
+      {:ok, data, []} = Data.rebase(data, @field, base, {:client, :saver})
+      assert [%{"id" => 5, "options" => ^options}] = Data.state(data, @field).diffs["a"]["block"]["vars"]
+    end
+
     test "a rejoin carrying work after a save's read is kept by that save's rebase, on the session" do
       ref = new_ref()
       Phoenix.PubSub.subscribe(Brando.pubsub(), ref.topic)

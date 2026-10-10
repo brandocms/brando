@@ -1223,6 +1223,7 @@ defmodule BrandoAdmin.Components.Form.BlockField.Ops do
   defp log_lists(%{} = diff, %{} = merged) when not is_struct(diff) and not is_struct(merged) do
     Map.new(diff, fn
       {key, list} when is_list(list) -> {key, log_list(key, list, merged[key])}
+      {key, %{} = map} -> {key, log_lists(map, Map.get(merged, key))}
       pair -> pair
     end)
   end
@@ -1235,7 +1236,7 @@ defmodule BrandoAdmin.Components.Form.BlockField.Ops do
   defp log_list(key, carried, merged) when is_list(merged) do
     own = carried |> Enum.reject(&(row_key(&1, key) == :none)) |> Map.new(&{row_key(&1, key), &1})
 
-    if Enum.any?(merged, &(row_key(&1, key) == :none)),
+    if Enum.any?(merged, &(row_key(&1, key) == :none)) or repeated_keys?(carried, key) or repeated_keys?(merged, key),
       do: carried,
       else: Enum.map(merged, &log_row(Map.fetch(own, row_key(&1, key)), &1, key))
   end
@@ -1669,8 +1670,14 @@ defmodule BrandoAdmin.Components.Form.BlockField.Ops do
   """
   @spec merge_list([map()], [map()], [map()], String.t() | nil) :: [map()]
   def merge_list(before, after_list, current, key \\ nil) do
-    # identities once per item: a list of 200 rows is 40,000 comparisons
-    # otherwise, in the session and again in every editor
+    if Enum.any?([before, after_list, current], &repeated_keys?(&1, key)),
+      do: merge_list_alike(before, after_list, current, key),
+      else: merge_list_keyed(before, after_list, current, key)
+  end
+
+  # Identities once per item: a list of 200 rows is 40,000 comparisons
+  # otherwise, in the session and again in every editor.
+  defp merge_list_keyed(before, after_list, current, key) do
     before_by = first_by_key(before, key)
     current_keyed = Enum.map(current, &{row_key(&1, key), &1})
     current_by = first_by_key(current, key)
@@ -1678,17 +1685,7 @@ defmodule BrandoAdmin.Components.Form.BlockField.Ops do
     kept =
       Enum.flat_map(after_list, fn item ->
         k = row_key(item, key)
-        was = lookup(before_by, k)
-        now = lookup(current_by, k)
-
-        cond do
-          # added by this editor, or changed by it: its version
-          is_nil(was) or was != item -> [item]
-          # left as it was, and removed by someone else
-          is_nil(now) -> []
-          # left as it was: as it is now
-          true -> [now]
-        end
+        kept_version(item, lookup(before_by, k), lookup(current_by, k))
       end)
 
     kept_keys = kept |> Enum.map(&row_key(&1, key)) |> MapSet.new()
@@ -1696,17 +1693,52 @@ defmodule BrandoAdmin.Components.Form.BlockField.Ops do
     # Items others added, each after the nearest item before it in
     # `current` that the result holds (one added before it included), or
     # first; several after one item, the later first.
-    {after_anchor, _} =
-      Enum.reduce(current_keyed, {%{}, :start}, fn {k, item}, {inserts, anchor} ->
-        cond do
-          k != :none and MapSet.member?(kept_keys, k) -> {inserts, k}
-          k != :none and Map.has_key?(before_by, k) -> {inserts, anchor}
-          true -> {Map.update(inserts, anchor, [item], &[item | &1]), if(k == :none, do: anchor, else: k)}
-        end
-      end)
+    {after_anchor, _} = Enum.reduce(current_keyed, {%{}, :start}, &place_added(&1, &2, kept_keys, before_by))
 
     with_inserted = &[&1 | inserted_after(after_anchor, row_key(&1, key), key)]
     Enum.flat_map(Map.get(after_anchor, :start, []), with_inserted) ++ Enum.flat_map(kept, with_inserted)
+  end
+
+  # added by this editor, or changed by it: its version; left as it was
+  # and removed by someone else: gone; left as it was: as it is now
+  defp kept_version(item, was, _now) when is_nil(was) or was != item, do: [item]
+  defp kept_version(_item, _was, nil), do: []
+  defp kept_version(_item, _was, now), do: [now]
+
+  defp place_added({:none, item}, {inserts, anchor}, _kept_keys, _before_by),
+    do: {Map.update(inserts, anchor, [item], &[item | &1]), anchor}
+
+  defp place_added({k, item}, {inserts, anchor}, kept_keys, before_by) do
+    cond do
+      MapSet.member?(kept_keys, k) -> {inserts, k}
+      Map.has_key?(before_by, k) -> {inserts, anchor}
+      true -> {Map.update(inserts, anchor, [item], &[item | &1]), k}
+    end
+  end
+
+  # The same merge, one comparison at a time, for lists with items named
+  # alike: an item goes after the first one named like the one before it.
+  defp merge_list_alike(before, after_list, current, key) do
+    same_row? = &(row_key(&1, key) != :none and row_key(&1, key) == row_key(&2, key))
+
+    kept =
+      Enum.flat_map(after_list, fn item ->
+        kept_version(item, Enum.find(before, &same_row?.(&1, item)), Enum.find(current, &same_row?.(&1, item)))
+      end)
+
+    current
+    |> Enum.with_index()
+    |> Enum.reject(fn {item, _} -> Enum.any?(before, &same_row?.(&1, item)) or Enum.any?(kept, &same_row?.(&1, item)) end)
+    |> Enum.reduce(kept, fn {item, index}, merged ->
+      preceding = current |> Enum.take(index) |> Enum.reverse()
+      at = Enum.find_value(preceding, 0, fn prev -> (i = Enum.find_index(merged, &same_row?.(&1, prev))) && i + 1 end)
+      List.insert_at(merged, at, item)
+    end)
+  end
+
+  defp repeated_keys?(items, key) do
+    keys = items |> Enum.map(&row_key(&1, key)) |> Enum.reject(&(&1 == :none))
+    length(Enum.uniq(keys)) != length(keys)
   end
 
   defp inserted_after(_after_anchor, :none, _key), do: []

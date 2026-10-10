@@ -600,6 +600,16 @@ defmodule BrandoAdmin.Components.Form.BlockField.OpsTest do
       assert apply!(live, {:carry, copy, base}).diffs["b"]["block"]["table_rows"] == copy_rows
     end
 
+    # Sol audit: two items named alike in the list as it is made the
+    # rewritten merge anchor one on itself, forever.
+    test "merge_list keeps items named alike in the list as it is, in order" do
+      x1 = %{"value" => "x", "label" => "1"}
+      x2 = %{"value" => "x", "label" => "2"}
+      y = %{"value" => "y"}
+      task = Task.async(fn -> Ops.merge_list([], [y], [x1, x2], "options") end)
+      assert Task.await(task, 1_000) == [x1, x2, y]
+    end
+
     test "a rejoin merges a 200-row table quickly" do
       base = base_rows()
       rows = for id <- 1..200, do: %{"id" => id, "cols" => "saved #{id}"}
