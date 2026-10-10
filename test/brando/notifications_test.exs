@@ -722,6 +722,18 @@ defmodule Brando.NotificationsTest do
         assert DateTime.compare(job.scheduled_at, DateTime.utc_now()) != :gt
       end)
 
+      # Nor does one that came while the digest was being sent: the rest
+      # brings its job forward
+      Repo.update_all(from(d in Delivery, where: d.route_id == ^route.id), set: [state: "digest"])
+      Repo.delete_all(from(j in Oban.Job, where: j.worker == "Brando.Worker.NoteMentions"))
+
+      Oban.Testing.with_testing_mode(:manual, fn ->
+        assert {:ok, %{state: "scheduled"}} = Digest.schedule(reader.id)
+        assert :ok = Notes.deliver_mentions(reader.id, due)
+        assert [job] = all_enqueued(worker: Brando.Worker.NoteMentions, args: %{"user_id" => reader.id})
+        assert DateTime.compare(job.scheduled_at, DateTime.utc_now()) != :gt
+      end)
+
       assert :ok = Notes.deliver_mentions(reader.id, due)
       assert_email_sent(fn email -> email.text_body =~ "MyApp.Job201" end)
       assert states.() == [{"succeeded", 201}]

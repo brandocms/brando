@@ -110,14 +110,17 @@ defmodule Brando.Notifications.Digest do
   end
 
   # A job due now is inserted available, not scheduled: `replace` moves only a
-  # scheduled job, so a later item cannot push it back to the next digest
+  # scheduled job, so a later item cannot push it back to the next digest. Its
+  # `scheduled_at` still brings forward a scheduled job it conflicts with.
+  # (`Oban.Job.new/2` makes any job with a `scheduled_at` a scheduled one.)
   defp insert_job(user_id, delay) do
     seconds = delay.()
-    timing = if seconds > 0, do: [schedule_in: seconds], else: []
+    timing = if seconds > 0, do: [schedule_in: seconds], else: [scheduled_at: DateTime.utc_now()]
 
     %{"user_id" => user_id}
     |> Brando.Tenant.Job.attach_current()
     |> Brando.Worker.NoteMentions.new([replace: [scheduled: [:scheduled_at]]] ++ timing)
+    |> available_when_due(seconds)
     |> Oban.insert()
   rescue
     error ->
@@ -125,6 +128,9 @@ defmodule Brando.Notifications.Digest do
       Logger.warning("[Brando.Notifications] Could not queue an email: " <> Exception.message(error))
       {:error, error}
   end
+
+  defp available_when_due(changeset, seconds) when seconds > 0, do: changeset
+  defp available_when_due(changeset, _seconds), do: Ecto.Changeset.force_change(changeset, :state, "available")
 
   @doc """
   Sends the digest for `user_id` when it is due: `:ok` (sent, or nothing to
