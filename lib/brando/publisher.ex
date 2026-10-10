@@ -370,7 +370,10 @@ defmodule Brando.Publisher do
   pending entries whose `publish_at` has passed, and deactivate published or
   pending entries whose `unpublish_at` has passed, through each entry's
   context like the jobs do. Dates arrive without jobs when an environment is
-  cloned or an archive restored, and a lost job leaves one behind.
+  cloned or an archive restored, and a lost job leaves one behind. A date
+  with a publisher job still waiting, running or retrying is left to the
+  job, which runs as the user who scheduled it; a job that user may no
+  longer carry out clears its date (see `Brando.Worker.EntryPublisher`).
 
     * Only dates from more than five minutes ago, so the jobs run first, and
       from the last seven days (`config :brando, Brando.Publisher,
@@ -441,7 +444,30 @@ defmodule Brando.Publisher do
     query =
       if :deleted_at in schema.__schema__(:fields), do: from(e in query, where: is_nil(e.deleted_at)), else: query
 
-    Repo.all(query)
+    query
+    |> Repo.all()
+    |> without_waiting_job(schema, if(field == :publish_at, do: @publish_status, else: @unpublish_status))
+  end
+
+  # A date whose job is still to run, running or retrying is the job's: it
+  # runs as the user who scheduled it, and refuses what they may no longer do.
+  defp without_waiting_job([], _schema, _status), do: []
+
+  defp without_waiting_job(entries, schema, status) do
+    args = Map.merge(%{"schema" => to_string(schema), "status" => status}, TenantJob.context_fragment())
+    ids = Enum.map(entries, &to_string(&1.id))
+
+    waiting =
+      from(j in Oban.Job,
+        where:
+          j.worker == ^inspect(Worker.EntryPublisher) and j.state in @waiting_states and
+            fragment("? @> ?", j.args, ^args) and fragment("?->>'id'", j.args) in ^ids,
+        select: fragment("?->>'id'", j.args)
+      )
+      |> Repo.all()
+      |> MapSet.new()
+
+    Enum.reject(entries, &MapSet.member?(waiting, to_string(&1.id)))
   end
 
   # An expiry that has passed wins over a publish that has
