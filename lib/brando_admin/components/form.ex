@@ -5055,7 +5055,12 @@ defmodule BrandoAdmin.Components.Form do
 
       {:noreply,
        with_ai_blocks(socket, request, config[:from] || [], fn socket, blocks ->
-         RichTextAI.start(socket, params, write_with_ai_prompt(socket, config, params, blocks), RichTextAI.ai_opts(config))
+         RichTextAI.start(
+           socket,
+           params,
+           write_with_ai_prompt(socket, config, params, blocks),
+           RichTextAI.ai_opts(config)
+         )
        end)}
     else
       _ ->
@@ -7142,16 +7147,20 @@ defmodule BrandoAdmin.Components.Form do
         value -> [{field, value}]
       end
     else
-      case Phoenix.HTML.Form.input_value(form, field) do
-        value when is_binary(value) ->
-          case Brando.AI.Context.format_value(value) do
-            "" -> []
-            text -> [{field, text}]
-          end
+      form_field_context(field, form, entry)
+    end
+  end
 
-        _ ->
-          Brando.AI.Context.for_entry(entry, [field])
-      end
+  defp form_field_context(field, form, entry) do
+    case Phoenix.HTML.Form.input_value(form, field) do
+      value when is_binary(value) ->
+        case Brando.AI.Context.format_value(value) do
+          "" -> []
+          text -> [{field, text}]
+        end
+
+      _ ->
+        Brando.AI.Context.for_entry(entry, [field])
     end
   end
 
@@ -7182,8 +7191,15 @@ defmodule BrandoAdmin.Components.Form do
   # once every one has answered (`receive_ai_blocks/4`). Without blocks to
   # ask for, or before they have loaded, it goes at once with `blocks` nil.
   # `request` names what asks; asking again for the same thing replaces the
-  # request that is still waiting.
+  # request that is still waiting, also when the new one needs no blocks.
   defp with_ai_blocks(socket, request, context_fields, continue) do
+    waiting =
+      socket.assigns
+      |> Map.get(:ai_block_requests, %{})
+      |> Map.reject(fn {_token, waiting} -> same_ai_request?(waiting.request, request) end)
+
+    socket = assign(socket, :ai_block_requests, waiting)
+
     case ai_block_fields(socket, context_fields) do
       [] ->
         continue.(socket, nil)
@@ -7199,13 +7215,8 @@ defmodule BrandoAdmin.Components.Form do
           )
         end
 
-        waiting =
-          socket.assigns
-          |> Map.get(:ai_block_requests, %{})
-          |> Map.reject(fn {_token, waiting} -> same_ai_request?(waiting.request, request) end)
-          |> Map.put(token, %{request: request, parts: Map.new(fields, &{&1, nil}), continue: continue})
-
-        assign(socket, :ai_block_requests, waiting)
+        request = %{request: request, parts: Map.new(fields, &{&1, nil}), continue: continue}
+        assign(socket, :ai_block_requests, Map.put(waiting, token, request))
     end
   end
 
@@ -7228,17 +7239,20 @@ defmodule BrandoAdmin.Components.Form do
     case waiting do
       %{^token => %{parts: parts} = request} when is_map_key(parts, field) ->
         parts = Map.put(parts, field, for({_uid, cs} <- roots, not is_nil(cs), do: cs))
-
-        if Enum.any?(parts, fn {_field, part} -> is_nil(part) end) do
-          assign(socket, :ai_block_requests, Map.put(waiting, token, %{request | parts: parts}))
-        else
-          socket
-          |> assign(:ai_block_requests, Map.delete(waiting, token))
-          |> request.continue.(parts)
-        end
+        maybe_continue_ai_request(socket, waiting, token, %{request | parts: parts})
 
       _ ->
         socket
+    end
+  end
+
+  defp maybe_continue_ai_request(socket, waiting, token, %{parts: parts, continue: continue} = request) do
+    if Enum.any?(parts, fn {_field, part} -> is_nil(part) end) do
+      assign(socket, :ai_block_requests, Map.put(waiting, token, request))
+    else
+      socket
+      |> assign(:ai_block_requests, Map.delete(waiting, token))
+      |> continue.(parts)
     end
   end
 

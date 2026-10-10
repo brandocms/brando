@@ -349,6 +349,52 @@ defmodule BrandoAdmin.FieldActionsLiveTest do
       refute prompt =~ "Lagret notat"
     end
 
+    test "an action chosen while another waits for its blocks is the one that runs",
+         %{conn: conn, article: article, main_uid: main_uid, notes_uid: notes_uid} do
+      view = open_notes(conn, article, [main_uid, notes_uid])
+      replies("Svar")
+
+      # The outline asks the notes field for its blocks; the editor picks
+      # Shorten, which reads none, before they arrive. Both clicks are in the
+      # LiveView's mailbox ahead of the field's answer.
+      [cid] =
+        view
+        |> render()
+        |> LazyHTML.from_fragment()
+        |> LazyHTML.query("button[phx-click='run_field_action'][phx-value-action='outline']")
+        |> LazyHTML.attribute("phx-target")
+
+      cid = String.to_integer(cid)
+      :sys.suspend(view.pid)
+      click(view, cid, "outline", 1_000_001)
+      click(view, cid, "shorten", 1_000_002)
+      :sys.resume(view.pid)
+
+      assert_receive {:prompt, prompt}, 2_000
+      assert prompt =~ "Shorten the subtitle."
+      refute_receive {:prompt, _}, 500
+    end
+
+    # A click as the browser sends it, straight to the LiveView: Phoenix's
+    # test client waits for each one to be handled before sending the next
+    defp click(view, cid, action, ref) do
+      {_ref, topic, proxy} = view.proxy
+      %{join_ref: join_ref} = :sys.get_state(proxy)
+
+      send(view.pid, %Phoenix.Socket.Message{
+        join_ref: join_ref,
+        topic: topic,
+        event: "event",
+        ref: to_string(ref),
+        payload: %{
+          "type" => "click",
+          "event" => "run_field_action",
+          "value" => %{"field" => "subtitle", "action" => action},
+          "cid" => cid
+        }
+      })
+    end
+
     test "Write with AI reads a block field named in its from: as the editor has it",
          %{conn: conn, article: article, main_uid: main_uid, notes_uid: notes_uid} do
       view = open_notes(conn, article, [main_uid, notes_uid])

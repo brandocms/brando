@@ -152,7 +152,8 @@ defmodule Brando.SyncTest.Article do
             write_with_ai: [prompt: "Keep it short.", from: [:notes]],
             ai_actions: [
               outline: [prompt: "Outline the notes.", from: [:notes]],
-              everything: [prompt: "Summarize the blocks.", from: [:blocks]]
+              everything: [prompt: "Summarize the blocks.", from: [:blocks]],
+              shorten: [prompt: "Shorten the subtitle.", from: :subtitle]
             ]
         end
       end
