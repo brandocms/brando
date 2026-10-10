@@ -329,10 +329,9 @@ defmodule Brando.Notifications.Digest do
   notifications the user may still get and the mentions they may still see
   (`Brando.Notifications.Recipient`); those left out are marked so in the
   delivery log. Without a mailer or sender, the notifications are marked
-  failed and it is not tried again; when the mail provider refuses it on the
-  job's `final?` attempt, too, so they can be sent again from the log.
+  failed and it is not tried again.
   """
-  def send_queued(%{"user_id" => user_id, "kind" => kind} = args, final? \\ false) do
+  def send_queued(%{"user_id" => user_id, "kind" => kind} = args) do
     user = Repo.get(User, user_id)
     deliveries = sent_deliveries(args["deliveries"] || [])
     mentions = Notes.mentions_by_id(args["mentions"] || [])
@@ -341,11 +340,11 @@ defmodule Brando.Notifications.Digest do
       settle(deliveries, "cancelled", "recipient_unavailable")
       :ok
     else
-      send_visible(user, deliveries, mentions, kind, final?)
+      send_visible(user, deliveries, mentions, kind)
     end
   end
 
-  defp send_visible(user, deliveries, mentions, kind, final?) do
+  defp send_visible(user, deliveries, mentions, kind) do
     access = Enum.group_by(deliveries, &Recipient.access(user, &1, &1.route))
     settle(access[:denied] || [], "cancelled", "recipient_unavailable")
     settle(access[:unchecked] || [], "failed", "recipient_check_failed")
@@ -357,20 +356,19 @@ defmodule Brando.Notifications.Digest do
         settle(readable, "failed", to_string(reason))
         {:cancel, reason}
 
-      {:error, reason} = error ->
-        if final? do
-          Logger.error(
-            "[Brando.Notifications] The mail provider refused an email to user ##{user.id}: #{inspect(reason)}"
-          )
-
-          settle(readable, "failed", "mail_failed")
-        end
-
-        error
-
-      :ok ->
-        :ok
+      result ->
+        result
     end
+  end
+
+  @doc """
+  Gives back what a queued email took, when it failed for good: its
+  notifications are marked failed with `error`, to be sent again from the
+  delivery log, and its mentions are unclaimed, to go with the next email.
+  """
+  def give_up(args, error) do
+    settle(sent_deliveries(args["deliveries"] || []), "failed", error)
+    Notes.unclaim_mentions(args["mentions"] || [])
   end
 
   # Deliveries were marked sent when their email was queued

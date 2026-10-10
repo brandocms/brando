@@ -699,6 +699,14 @@ defmodule Brando.Notes do
     :ok
   end
 
+  @doc "Marks the mentions with these ids as not emailed, for the next email to take them."
+  def unclaim_mentions([]), do: :ok
+
+  def unclaim_mentions(ids) do
+    Repo.update_all(from(m in Mention, where: m.id in ^ids), set: [emailed_at: nil])
+    :ok
+  end
+
   @doc "Marks those of `mentions` not emailed yet as emailed at `now`."
   def mark_emailed(mentions, now) do
     claim_mentions(mentions, now)
