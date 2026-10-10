@@ -778,6 +778,43 @@ defmodule BrandoAdmin.Components.Form.BlockField.Ops do
   def block_diff_params(%Changeset{} = changeset), do: changes_to_params(changeset)
 
   @doc """
+  Params for a saved child block moved to another parent, from its full
+  snapshot (`snapshot_params/1`).
+
+  Under its new parent the block is a new row (`cast_assoc` does not take a
+  child's id), so it has to carry everything it holds, not only what
+  changed, and none of the old rows' ids: its refs, vars, table rows,
+  identifiers and children come along as new rows. A ref's gallery stays
+  the same gallery (`gallery_id`): the old ref goes with the old row.
+  """
+  @spec moved_params(params()) :: params()
+  def moved_params(%{} = block) do
+    block
+    |> Map.drop(["id", "parent_id"])
+    |> update_rows("refs", &(&1 |> keep_gallery() |> Map.drop(["id", "block_id"])))
+    |> update_rows("vars", &Map.drop(&1, ["id", "block_id", "table_row_id"]))
+    |> update_rows("table_rows", fn row ->
+      row
+      |> Map.drop(["id", "block_id"])
+      |> update_rows("vars", &Map.drop(&1, ["id", "block_id", "table_row_id"]))
+    end)
+    |> update_rows("block_identifiers", &Map.drop(&1, ["id", "block_id"]))
+    |> update_rows("children", &moved_params/1)
+  end
+
+  defp update_rows(params, key, fun) do
+    case params do
+      %{^key => rows} when is_list(rows) -> Map.put(params, key, Enum.map(rows, &if(is_map(&1), do: fun.(&1), else: &1)))
+      _ -> params
+    end
+  end
+
+  defp keep_gallery(%{"gallery" => %{"id" => id}} = ref) when id not in [nil, ""],
+    do: ref |> Map.delete("gallery") |> Map.put("gallery_id", id)
+
+  defp keep_gallery(ref), do: ref
+
+  @doc """
   Full castable params snapshot of a changeset's applied state.
   """
   @spec snapshot_params(Changeset.t()) :: params()

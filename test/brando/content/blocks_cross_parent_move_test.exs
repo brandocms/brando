@@ -407,6 +407,81 @@ defmodule Brando.Content.BlocksCrossParentMoveTest do
            "the edit made before the move must survive it"
   end
 
+  # Review: the move ships the child as BlockField's insert_extracted_child
+  # builds it, a changeset over its row (`Ops.block_diff_params/1`), which
+  # holds only its changes. Under the new parent the child is a new row, so
+  # whatever it did not change has to travel too.
+  test "a moved child keeps its refs, vars and fields it did not change" do
+    user = Factory.insert(:random_user)
+    page = Factory.insert(:page, creator: user)
+
+    child = %{
+      uid: "childR",
+      type: :module,
+      active: true,
+      source: "Elixir.Brando.Pages.Page.Blocks",
+      creator_id: user.id,
+      sequence: 0,
+      description: "unchanged",
+      anchor: "kept-anchor",
+      refs: [
+        %{
+          name: "body",
+          uid: "refR",
+          data: %Brando.Villain.Blocks.TextBlock{data: %Brando.Villain.Blocks.TextBlock.Data{text: "<p>Ref text</p>"}}
+        }
+      ],
+      vars: [%{type: :string, key: "heading", label: "Heading", value: "Var value"}],
+      children: [
+        %{
+          uid: "grandR",
+          type: :module,
+          active: true,
+          source: "Elixir.Brando.Pages.Page.Blocks",
+          creator_id: user.id,
+          sequence: 0,
+          description: "the grandchild",
+          children: []
+        }
+      ]
+    }
+
+    for {uid, children, seq} <- [{"containerA", [child], 0}, {"containerB", [], 1}] do
+      %Brando.Pages.Page.Blocks{}
+      |> Changeset.change(%{entry_id: page.id, sequence: seq})
+      |> Changeset.put_assoc(:block, %{
+        uid: uid,
+        type: :container,
+        active: true,
+        source: "Elixir.Brando.Pages.Page.Blocks",
+        creator_id: user.id,
+        sequence: seq,
+        children: children
+      })
+      |> Brando.Repo.insert!()
+    end
+
+    entry_blocks = preloaded_entry_blocks(page.id)
+    [%{block: %{children: [row]}} | _] = entry_blocks
+    ops = Ops.from_entry_blocks(entry_blocks)
+
+    # as BlockField's insert_extracted_child and the target Block do it
+    {:ok, params} = Ops.materialize_child(ops, "childR")
+    block_cs = Brando.Content.Block.recursive_block_changeset(row, params, user.id)
+    moved_cs = BrandoAdmin.Components.Form.BlockField.moved_child_changeset(block_cs, user.id)
+    {:ok, ops} = Ops.apply_op(ops, {:insert_child, "containerB", "childR", 0, Ops.block_diff_params(moved_cs)})
+
+    assert {:ok, _} = save_from_ops(page, entry_blocks, ops, user)
+
+    assert [%{block: %{children: []}}, %{block: %{children: [moved]}}] = preloaded_entry_blocks(page.id)
+    assert moved.uid == "childR"
+    assert moved.type == :module
+    assert moved.anchor == "kept-anchor"
+    assert [%{name: "body", data: %{data: %{text: "<p>Ref text</p>"}}}] = moved.refs
+    assert [%{key: "heading", value: "Var value"}] = moved.vars
+    assert [%{uid: "grandR", description: "the grandchild", type: :module}] = moved.children
+  end
+
   test "materialize_child rejects roots and unknown uids" do
     user = Factory.insert(:random_user)
     {page, _} = insert_page_with_containers(user)

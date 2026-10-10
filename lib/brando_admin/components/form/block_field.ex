@@ -443,7 +443,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
         send_update(Block,
           id: "block-#{target_uid}",
           event: "insert_pasted_block",
-          block_cs: cs,
+          block_cs: moved_child_changeset(cs, socket.assigns.current_user.id),
           sequence: seq
         )
 
@@ -1634,6 +1634,19 @@ defmodule BrandoAdmin.Components.Form.BlockField do
        |> child_base_struct(uid)
        |> Brando.Content.Block.recursive_block_changeset(params, socket.assigns.current_user.id)}
     end
+  end
+
+  @doc """
+  The changeset a child moved to another parent goes there as: a new block
+  holding everything the child holds (`Ops.moved_params/1`). Its diff is
+  then all of it, not only what changed: under the new parent it is a new
+  row, and a diff of changes would save it without its module, type, refs
+  and vars.
+  """
+  def moved_child_changeset(%Changeset{} = changeset, user_id) do
+    params = changeset |> Ops.snapshot_params() |> Ops.moved_params()
+    base = %Brando.Content.Block{vars: [], refs: [], table_rows: [], children: [], block_identifiers: []}
+    Brando.Content.Block.recursive_block_changeset(base, params, user_id)
   end
 
   # The persisted row a moved child should cast over, so `cast_assoc` matches
