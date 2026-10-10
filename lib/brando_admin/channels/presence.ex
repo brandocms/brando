@@ -1,6 +1,8 @@
 defmodule BrandoAdmin.Presence do
   @moduledoc false
 
+  require Logger
+
   @doc """
   The browser tab this process serves. An admin LiveView and its components
   run in one process per tab (a reconnect is a new process, so a new tab),
@@ -27,17 +29,37 @@ defmodule BrandoAdmin.Presence do
     )
   end
 
+  @doc false
+  # The users behind `presences`, by id. `Phoenix.Presence` runs `fetch/2` for
+  # each diff in a task the presence shard monitors, and has no clause for one
+  # that dies: a lookup that raised or exited there took the shard down, and
+  # every admin session tracked on it. Without the users, the presences are
+  # left out (lobby) or carry no user (url), as for a deleted account, and the
+  # next diff brings them back.
+  def users(presences) do
+    presences
+    |> Map.keys()
+    |> Brando.Users.get_users_map()
+    |> Map.new()
+  rescue
+    exception ->
+      Logger.error("==> Presence: could not look up users: " <> Exception.message(exception))
+      %{}
+  catch
+    # A pool checkout that fails exits: a connection timeout in production,
+    # or in tests a sandbox owner that has gone
+    :exit, reason ->
+      Logger.error("==> Presence: could not look up users: " <> Exception.format_exit(reason))
+      %{}
+  end
+
   defmodule LobbyFetcher do
     @moduledoc false
 
     require Logger
 
     def fetch(presences) do
-      users =
-        presences
-        |> Map.keys()
-        |> Brando.Users.get_users_map()
-        |> Map.new()
+      users = BrandoAdmin.Presence.users(presences)
 
       for {id, %{metas: metas}} <- presences,
           user = users[String.to_integer(id)],
@@ -163,11 +185,7 @@ defmodule BrandoAdmin.Presence do
     @moduledoc false
 
     def fetch(presences) do
-      users =
-        presences
-        |> Map.keys()
-        |> Brando.Users.get_users_map()
-        |> Map.new()
+      users = BrandoAdmin.Presence.users(presences)
 
       for {key, %{metas: metas}} <- presences, into: %{} do
         {key, %{metas: metas, user: users[String.to_integer(key)]}}
