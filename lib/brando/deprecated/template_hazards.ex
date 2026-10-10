@@ -42,15 +42,21 @@ defmodule Brando.Deprecated.TemplateHazards do
   end
 
   @doc """
-  `[{path, first_line, text, mode}]` for every template in `sources`
-  (`[{path, text}]`): template files, and in Elixir sources the template
-  sigils and the strings and files handed to EEx-style compilers.
+  `[{path, first_line, text, mode, owner}]` for every template in
+  `sources` (`[{path, text}]`): template files, and in Elixir sources the
+  template sigils and the strings and files handed to EEx-style compilers.
   `read_file` reads a file named that way, `{:ok, text}` or `:error`.
+
+  `owner` is the file whose modules the template can compile into, or
+  `:project` when it may be any: a sigil compiles into the module around
+  it, so it is its file's, unless it sits in a `quote` that a macro hands
+  to its callers. Template files and EEx-compiled strings and files are
+  the project's.
   """
   def corpus(sources, read_file) do
     Enum.flat_map(sources, fn {path, text} ->
       cond do
-        template_file?(path) -> [{path, 1, text, mode(path)}]
+        template_file?(path) -> [{path, 1, text, mode(path), :project}]
         Path.extname(path) in [".ex", ".exs"] -> embedded(path, text, read_file)
         true -> []
       end
@@ -60,27 +66,43 @@ defmodule Brando.Deprecated.TemplateHazards do
   defp embedded(path, text, read_file) do
     with true <- String.contains?(text, ["~", "_string", "_file"]),
          {:ok, ast} <- Code.string_to_quoted(text, columns: false, emit_warnings: false) do
-      {_ast, found} = Macro.prewalk(ast, [], &embedded_node(&1, &2, path, read_file))
+      {_ast, {found, 0}} = Macro.traverse(ast, {[], 0}, &enter(&1, &2, path, read_file), &leave/2)
       Enum.reverse(found)
     else
       _ -> []
     end
   end
 
-  defp embedded_node({sigil, meta, [{:<<>>, _, parts} | _]} = node, found, path, _read_file) when sigil in @sigils do
-    first_line = meta[:line] + if(meta[:delimiter] in [~s("""), ~s(''')], do: 1, else: 0)
-    mode = if sigil in [:sigil_H, :sigil_h, :sigil_F, :sigil_f], do: :heex, else: :eex
-    {node, [{path, first_line, parts |> Enum.filter(&is_binary/1) |> Enum.join(), mode} | found]}
+  # How many `quote`s the walk is inside: a sigil there is the project's
+  defp enter(node, {found, quotes}, path, read_file) do
+    quotes = if quote?(node), do: quotes + 1, else: quotes
+    {node, found} = embedded_node(node, found, {path, if(quotes > 0, do: :project, else: path)}, read_file)
+    {node, {found, quotes}}
   end
 
-  defp embedded_node({call, meta, args} = node, found, path, read_file) when is_list(args) do
+  defp leave(node, {found, quotes}), do: {node, {found, if(quote?(node), do: quotes - 1, else: quotes)}}
+
+  defp quote?(node), do: match?({:quote, _, [_ | _]}, node)
+
+  defp embedded_node({sigil, meta, [{:<<>>, _, parts} | _]} = node, found, {path, owner}, _read_file)
+       when sigil in @sigils do
+    first_line = meta[:line] + if(meta[:delimiter] in [~s("""), ~s(''')], do: 1, else: 0)
+    mode = if sigil in [:sigil_H, :sigil_h, :sigil_F, :sigil_f], do: :heex, else: :eex
+    {node, [{path, first_line, parts |> Enum.filter(&is_binary/1) |> Enum.join(), mode, owner} | found]}
+  end
+
+  defp embedded_node({call, meta, args} = node, found, {path, _owner}, read_file) when is_list(args) do
     case call_name(call) do
       name when name in @string_compilers ->
-        {node, Enum.reverse(for(arg <- args, is_binary(arg), do: {path, meta[:line] || 1, arg, :eex}), found)}
+        strings = for arg <- args, is_binary(arg), do: {path, meta[:line] || 1, arg, :eex, :project}
+        {node, Enum.reverse(strings, found)}
 
       name when name in @file_compilers ->
         files =
-          for file <- args, is_binary(file), {:ok, text} <- [read_file.(file)], do: {file, 1, text, file_mode(file)}
+          for file <- args,
+              is_binary(file),
+              {:ok, text} <- [read_file.(file)],
+              do: {file, 1, text, file_mode(file), :project}
 
         {node, Enum.reverse(files, found)}
 
@@ -99,25 +121,28 @@ defmodule Brando.Deprecated.TemplateHazards do
   defp call_name(_call), do: nil
 
   @doc """
-  `[{path, line}]` where a template in `corpus` (`{path, first_line, text}`
-  or `{path, first_line, text, mode}`) uses `token` (`Upload`, `Meta.HTML`,
-  whose dot may have whitespace around it) as a whole name, anywhere but
-  in provable prose (`prose_mask/2`).
+  `[{path, line}]` where a template in `corpus` (see `corpus/2`; `mode`
+  and `owner` may be left off) that `file` may own uses `token`
+  (`Upload`, `Meta.HTML`, whose dot may have whitespace around it) as a
+  whole name, anywhere but in provable prose (`prose_mask/2`). A nil
+  `file` reads every template.
   """
-  def uses(corpus, token) do
+  def uses(corpus, token, file \\ nil) do
     regex =
       Regex.compile!(
         "(?<![\\w.@])" <> (token |> String.split(".") |> Enum.map_join("\\s*\\.\\s*", &Regex.escape/1)) <> "(?![\\w])"
       )
 
     for entry <- corpus,
-        {path, first_line, text, mode} = with_mode(entry),
+        {path, first_line, text, mode, owner} = with_mode(entry),
+        is_nil(file) or owner in [:project, file],
         code = prose_mask(text, mode),
         [{at, _length}] <- [Regex.run(regex, code, return: :index)],
         do: {path, first_line + (code |> binary_part(0, at) |> :binary.matches("\n") |> length())}
   end
 
-  defp with_mode({path, first_line, text}), do: {path, first_line, text, mode(path)}
+  defp with_mode({path, first_line, text}), do: {path, first_line, text, mode(path), :project}
+  defp with_mode({path, first_line, text, mode}), do: {path, first_line, text, mode, :project}
   defp with_mode(entry), do: entry
 
   @doc "How a template file is read: `:heex` (HEEx, Surface), `:eex` (EEx, LEEx) or `:code`."

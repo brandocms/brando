@@ -700,7 +700,7 @@ if Code.ensure_loaded?(Igniter) do
     # the template may be this module's, wherever it lives
     defp project_template(content, path, hazards, corpus, igniter) do
       with {token, [_ | _] = uses} <-
-             Enum.find_value(hazards, fn token -> {token, TemplateHazards.uses(corpus, token)} |> nonempty() end),
+             Enum.find_value(hazards, fn token -> {token, TemplateHazards.uses(corpus, token, path)} |> nonempty() end),
            line when not is_nil(line) <- renders_templates(content, path, igniter) do
         {line, token, uses}
       else

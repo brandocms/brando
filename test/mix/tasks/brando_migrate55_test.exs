@@ -1646,6 +1646,75 @@ defmodule Mix.Tasks.Brando.Migrate55Test do
       assert source(igniter, path) == code
     end
 
+    test "an inline template compiles into its own module; one in a macro's quote may compile anywhere" do
+      contact = ~S'''
+      defmodule LegacyAppWeb.ContactLive do
+        use Phoenix.LiveView
+        alias Brando.Upload
+
+        def render(assigns) do
+          ~H"""
+          <p>{Upload.url(@upload)}</p>
+          """
+        end
+      end
+      '''
+
+      application = """
+      defmodule LegacyAppWeb.ApplicationLive do
+        use Phoenix.LiveView
+        alias Brando.Upload
+
+        def store(m, e, c, u), do: Upload.handle_upload(m, e, c, u)
+        def render(assigns), do: ~H"<p>{@name}</p>"
+      end
+      """
+
+      contact_path = "lib/legacy_app_web/live/contact_live.ex"
+      application_path = "lib/legacy_app_web/live/application_live.ex"
+      igniter = migrate(@blueprint_054, %{contact_path => contact, application_path => application})
+
+      assert source(igniter, contact_path) == contact
+      assert source(igniter, application_path) =~ "alias Brando.Uploads.Store"
+      refute Enum.any?(igniter.warnings, &String.contains?(&1, application_path))
+
+      web = ~S'''
+      defmodule LegacyAppWeb do
+        def html do
+          quote do
+            use Phoenix.Component
+
+            def upload_link(assigns) do
+              ~H"""
+              <a href={Upload.url(@upload)}>x</a>
+              """
+            end
+          end
+        end
+
+        defmacro __using__(which), do: apply(__MODULE__, which, [])
+      end
+      '''
+
+      page = """
+      defmodule LegacyAppWeb.PageHTML do
+        use LegacyAppWeb, :html
+        alias Brando.Upload
+
+        def store(m, e, c, u), do: Upload.handle_upload(m, e, c, u)
+      end
+      """
+
+      page_path = "lib/legacy_app_web/controllers/page_html.ex"
+      igniter = migrate(@blueprint_054, %{"lib/legacy_app_web.ex" => web, page_path => page})
+      assert source(igniter, page_path) == page
+
+      assert_has_warning(igniter, fn warning ->
+        String.contains?(warning, "#{page_path}:2 left unchanged: a template in this project uses `Upload`") and
+          String.contains?(warning, "lib/legacy_app_web.ex:8")
+      end)
+    end
+
     test "rendering through Phoenix.Template is not a template the task needs to read" do
       code = """
       defmodule LegacyApp.Render do
