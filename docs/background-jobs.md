@@ -36,11 +36,14 @@ a cap on `job.meta["snoozed"]`, which Oban counts up on each snooze.
 
 ## Pruning
 
-Completed, cancelled and discarded rows are deleted after 300 seconds (the
-Pruner in Brando's default config, `Brando.Supervisor.oban_config/0`; an
-application's own `config :brando, Oban` replaces it, and Oban's default is
-60). Later code that looks up a finished job finds nothing: keep the outcome
-in your own table.
+The Pruner deletes completed jobs once their `scheduled_at`, cancelled jobs
+once their `cancelled_at`, and discarded jobs once their `discarded_at` is
+older than 300 seconds (Brando's default config,
+`Brando.Supervisor.oban_config/0`; an application's own
+`config :brando, Oban` replaces it, and Oban's default is 60). A job that
+ran long after it was scheduled can go at the next run, seconds after it
+completed. Later code that looks up a finished job may find nothing: keep
+the outcome in your own table.
 
 ## Transactions
 
@@ -55,9 +58,9 @@ without risking it, see how `Brando.ContentEvents` inserts in a savepoint.
 ## Tests
 
 `config/test.exs` runs Oban with `testing: :inline`: the job runs at insert,
-inside the caller's transaction, with no row, no uniqueness and no snooze.
-Test uniqueness and scheduling under
-`Oban.Testing.with_testing_mode(:manual, fn -> ... end)`. The lock conflict
-never happens in tests (Oban takes the lock only outside testing modes), so
-test its branch by passing `%Oban.Job{conflict?: true, id: nil}` to your
-handler.
+inside the caller's transaction, with no row and no uniqueness; a snooze
+comes back on the returned job but never runs again. Test uniqueness and
+scheduling under `Oban.Testing.with_testing_mode(:manual, fn -> ... end)`.
+The lock conflict never happens in tests (Oban takes the lock only outside
+testing modes), so test its branch by passing
+`%Oban.Job{conflict?: true, id: nil}` to your handler.
