@@ -7,10 +7,8 @@
 #   bash test/scripts/queue_test.sh
 set -uo pipefail
 
-# Git sets GIT_DIR (and in worktrees GIT_WORK_TREE, GIT_INDEX_FILE) for hooks.
-# With them set, every git command below would act on the real repository and
-# push its HEAD to the real origin (this happened on 10 Oct 2026).
-unset GIT_DIR GIT_WORK_TREE GIT_INDEX_FILE GIT_PREFIX GIT_COMMON_DIR GIT_OBJECT_DIRECTORY GIT_ALTERNATE_OBJECT_DIRECTORIES GIT_IMPLICIT_WORK_TREE
+# shellcheck source=test/scripts/isolate.sh
+. "$(dirname "$0")/isolate.sh"
 
 root="$(cd "$(dirname "$0")/../.." && pwd)"
 tmp="$(mktemp -d "${TMPDIR:-/tmp}/queue-test.XXXXXX")"
@@ -23,8 +21,7 @@ git_q init -q --bare "$tmp/origin.git"
 git_q clone -q "$tmp/origin.git" "$tmp/repo" 2>/dev/null
 (
   cd "$tmp/repo" || exit 1
-  # Refuse to touch any repository but the scratch clone.
-  [ "$(git rev-parse --absolute-git-dir)" = "$(cd "$tmp/repo/.git" && pwd -P)" ] || { echo "queue_test: not in the scratch repository; refusing" >&2; exit 1; }
+  in_scratch "$tmp/repo"
   echo base >a.txt && echo base >b.txt && git_q add . && git_q commit -qm base
   git_q push -q origin HEAD:main
   git_q checkout -qb conflicting && echo theirs >a.txt && git_q commit -qam theirs

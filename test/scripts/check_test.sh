@@ -7,6 +7,9 @@
 #   bash test/scripts/check_test.sh
 set -uo pipefail
 
+# shellcheck source=test/scripts/isolate.sh
+. "$(dirname "$0")/isolate.sh"
+
 root="$(cd "$(dirname "$0")/../.." && pwd)"
 tmp="$(mktemp -d "${TMPDIR:-/tmp}/check-test.XXXXXX")"
 trap 'rm -rf "$tmp"' EXIT
@@ -33,7 +36,9 @@ scenario() {
   printf '%%{\n  "alpha": {:hex, :alpha, "1.0.0"},\n  "beta": {:hex, :beta, "1.0.0"},\n}\n' >"$repo/mix.lock"
   echo "# Brando" >"$repo/README.md"
   echo "defmodule A do end" >"$repo/lib/a.ex"
-  (cd "$repo" && git_q init -q && git_q add . && git_q commit -qm base && git_q branch base) || exit 1
+  (cd "$repo" && git_q init -q) || exit 1
+  in_scratch "$repo"
+  (cd "$repo" && git_q add . && git_q commit -qm base && git_q branch base) || exit 1
 }
 
 # change PATH... — the branch commits a change to each file.
