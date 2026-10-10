@@ -46,6 +46,10 @@ defmodule BrandoAdmin.Components.VideoPicker do
      # Opened by a field's "Add from URL" with the URL input showing; every
      # other opening starts on the library.
      |> assign(:show_url_input, !!assigns[:show_url_input] && resolved_config.allow_external_urls)
+     # Opened for a field: a URL still being looked up was pasted for the
+     # previous one, so its answer is dropped rather than handed to this field.
+     |> assign(:creating_video, false)
+     |> assign(:url_video_ref, nil)
      |> assign(:library, nil)
      |> assign(:video_config, resolved_config)
      |> assign(:new_folder, "")
@@ -677,7 +681,8 @@ defmodule BrandoAdmin.Components.VideoPicker do
   def handle_async(:url_video, {:ok, {ref, video_params, {title, description, _thumbnail_url}}}, socket) do
     case socket.assigns do
       %{url_video_ref: ^ref} -> create_url_video(socket, Map.merge(video_params, %{title: title, caption: description}))
-      # Superseded by a newer URL.
+      # The picker was opened for another field since (`update/2` clears the
+      # ref). A newer URL needs no check: LiveView drops a replaced task's reply.
       _ -> {:noreply, socket}
     end
   end

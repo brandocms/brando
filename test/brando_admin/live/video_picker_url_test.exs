@@ -36,6 +36,7 @@ defmodule BrandoAdmin.VideoPickerURLTest do
     def render(assigns) do
       ~H"""
       <.live_component module={Field} id="video-field" test_pid={@test_pid} />
+      <.live_component module={Field} id="other-video-field" test_pid={@test_pid} />
       <.live_component module={VideoPicker} id="video-picker" current_user={@current_user} />
       """
     end
@@ -105,19 +106,47 @@ defmodule BrandoAdmin.VideoPickerURLTest do
     assert_received {:video_created, ^id}
   end
 
+  test "an answer arriving after the picker was opened for another field is dropped",
+       %{conn: conn, current_user: user} do
+    test_pid = self()
+
+    Req.Test.stub(Brando.OEmbed, fn conn ->
+      send(test_pid, {:oembed_waiting, self()})
+
+      receive do
+        :answer -> Req.Test.json(conn, %{"title" => "Late answer"})
+      end
+    end)
+
+    view = paste_url(conn, user)
+    assert_receive {:oembed_waiting, provider}, 1000
+
+    open_picker(view, "#other-video-field")
+    refute render(view) =~ "Creating..."
+
+    send(provider, :answer)
+    render_async(view)
+
+    assert Brando.Repo.aggregate(Video, :count) == 0
+    refute_received {:video_created, _}
+  end
+
   defp paste_url(conn, user) do
     {:ok, view, _html} = live_isolated(conn, Host, session: %{"test_pid" => self(), "user" => user})
+    open_picker(view, "#video-field")
+    view |> with_target(cid_of(view, "#video-picker")) |> render_hook("url", @params)
+    view
+  end
 
+  # What a video field does when its "Add from URL" is clicked.
+  defp open_picker(view, field) do
     Phoenix.LiveView.send_update(view.pid, VideoPicker,
       id: "video-picker",
       config_target: nil,
-      event_target: %Phoenix.LiveComponent.CID{cid: cid_of(view, "#video-field")},
+      event_target: %Phoenix.LiveComponent.CID{cid: cid_of(view, field)},
       multi: false,
       show_url_input: true,
       selected_videos: []
     )
-
-    view |> with_target(cid_of(view, "#video-picker")) |> render_hook("url", @params)
-    view
   end
 end
