@@ -1940,16 +1940,6 @@ production dump.
 
 #### Fixes
 
-- **AI actions and Write with AI read the block editor as the editor has
-  it.** An `ai_actions:` or `write_with_ai:` that read `:blocks` got the
-  blocks the form opened with, and one that named a block field, such as
-  `from: [:body]`, got the text that field had when the entry was last
-  saved: an unsaved edit was missing from the prompt, and a field first
-  written since the last save had nothing to read. Both now ask the block
-  fields for their unsaved blocks first, as a save does; a named block field
-  gives its own text alone, and one the form does not show still reads what
-  was saved.
-
 - **Duplicating a module works again, and copies the whole module.** It
   failed on the unique module `uid`. The copy is now a new module at
   version 1 with its own `uid`, without the original's shared-library link.
@@ -2043,6 +2033,16 @@ production dump.
   sources do the same. An image's width and height are now recorded as it is
   shown, turned by its EXIF orientation; images uploaded earlier get them
   when they are next processed.
+
+- **AI actions and Write with AI read the block editor as the editor has
+  it.** An `ai_actions:` or `write_with_ai:` that read `:blocks` got the
+  blocks the form opened with, and one that named a block field, such as
+  `from: [:body]`, got the text that field had when the entry was last
+  saved: an unsaved edit was missing from the prompt, and a field first
+  written since the last save had nothing to read. Both now ask the block
+  fields for their unsaved blocks first, as a save does; a named block field
+  gives its own text alone, and one the form does not show still reads what
+  was saved.
 
 - **Nothing typed or changed in a shared entry is lost on the way to a
   save.** The save button and ⌘S no longer submit the form, which took the
