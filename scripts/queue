@@ -17,7 +17,8 @@
 #
 # When a PR drops out of the queue, it says why: the files that conflict with
 # main (from git merge-tree, which needs the remote named origin), the failed
-# merge-group jobs, or who dequeued it.
+# merge-group jobs, or who dequeued it. When every failed merge-group job is a
+# known flake, it puts the PR back in the queue once and says which flake.
 #
 # A PR whose base is another listed PR's branch waits for that PR to merge,
 # is retargeted to main, and then goes through the same steps; when that PR
@@ -129,6 +130,27 @@ explain_runs() {
   done
 }
 
+# only_flakes EXPLANATION — when every line of explain_runs output is a known
+# flake, prints "<flake> (<job>)" for each, joined with "; ".
+only_flakes() {
+  local line out="" re='^  ([^:]+): known flake: (.+) — rerun with: '
+  [ -n "$1" ] || return 1
+  while IFS= read -r line; do
+    [[ "$line" =~ $re ]] || return 1
+    out="${out:+$out; }${BASH_REMATCH[2]} (${BASH_REMATCH[1]})"
+  done <<<"$1"
+  printf '%s' "$out"
+}
+
+# enqueue_at ID SHA — puts the PR in the queue at that head commit and prints
+# its position; GitHub refuses it when the head has moved on since.
+enqueue_at() {
+  gh api graphql -f id="$1" -f oid="$2" -f query='
+    mutation($id: ID!, $oid: GitObjectID!) {
+      enqueuePullRequest(input: {pullRequestId: $id, expectedHeadOid: $oid}) { mergeQueueEntry { position } }
+    }' --jq '.data.enqueuePullRequest.mergeQueueEntry.position'
+}
+
 # The files in conflict between main and the branch, comma-separated; fails
 # when there are none or they cannot be worked out.
 conflicts() {
@@ -187,6 +209,7 @@ wait_for_checks() {
 # how many times it had left the queue before.
 follow_queue() {
   local pr="$1" before="$2" info state entry removal count reason files actor tries=0
+  local explained flakes position requeued=false
   while :; do
     if info="$(read_pr "$pr")"; then
       state="$(field "$info" .state)"
@@ -211,12 +234,25 @@ follow_queue() {
             fi
             return 1 ;;
           failed_checks)
-            say "$pr" "dropped from the queue: merge-group checks failed"
             # shellcheck disable=SC2046
-            explain_runs $(gh api "repos/$repo/actions/runs?head_sha=$(field "$removal" .commit)" --paginate \
+            explained="$(explain_runs $(gh api "repos/$repo/actions/runs?head_sha=$(field "$removal" .commit)" --paginate \
               --jq '.workflow_runs[] | select(.conclusion == "failure" or .conclusion == "timed_out") | .id' \
-              2>>"$work/err")
-            return 1 ;;
+              2>>"$work/err"))"
+            # Once per PR: a second drop is not the same bad luck.
+            if [ "$requeued" = false ] && flakes="$(only_flakes "$explained")" &&
+              position="$(enqueue_at "$(field "$info" .id)" "$(field "$info" .headRefOid)" 2>"$work/requeue-$pr")"; then
+              say "$pr" "dropped on known flake $flakes; re-queued at position $position"
+              requeued=true
+              before="$count"
+              tries=0
+            else
+              say "$pr" "dropped from the queue: merge-group checks failed"
+              [ -z "$explained" ] || printf '%s\n' "$explained"
+              if [ -s "$work/requeue-$pr" ]; then
+                echo "  not re-queued: $(head -n 1 "$work/requeue-$pr")"
+              fi
+              return 1
+            fi ;;
           manual)
             actor="$(field "$removal" .actor)"
             say "$pr" "dequeued${actor:+ by $actor}"
@@ -246,10 +282,7 @@ follow_queue() {
 # head has moved on since.
 enqueue() {
   local pr="$1" info="$2" sha="$3" position files
-  if position="$(gh api graphql -f id="$(field "$info" .id)" -f oid="$sha" -f query='
-    mutation($id: ID!, $oid: GitObjectID!) {
-      enqueuePullRequest(input: {pullRequestId: $id, expectedHeadOid: $oid}) { mergeQueueEntry { position } }
-    }' --jq '.data.enqueuePullRequest.mergeQueueEntry.position' 2>"$work/enqueue-$pr")"; then
+  if position="$(enqueue_at "$(field "$info" .id)" "$sha" 2>"$work/enqueue-$pr")"; then
     say "$pr" "checks green on ${sha:0:7}; queued at position $position"
     return 0
   fi
