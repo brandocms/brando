@@ -782,7 +782,9 @@ defmodule Brando.EditSession do
       {:mismatch, data} when rebase? ->
         {session, conflicts} =
           %{session | data: data}
-          |> do_rebase(field, base, :carry, pid, :joined, pid)
+          # the joiner read the rows again and they are not the ones the
+          # session was built on: every editor reads them (`:rows_read`)
+          |> do_rebase(field, base, :carry, pid, :rows_read, pid)
           |> merge_held(field, held, held_base, pid)
 
         {{:ok, joiner_info(session, field, pid, held, conflicts)}, session}

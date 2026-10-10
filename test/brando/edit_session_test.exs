@@ -265,7 +265,7 @@ defmodule Brando.EditSessionTest do
       assert {:ok, info} = EditSession.join(ref, @field, {newer, newer}, rebase: true)
       assert info.state.order == ["a", "b", "c"]
       assert info.state.diffs["b"] == %{"block" => %{"anchor" => "unsaved"}}
-      assert_receive {:edit_session, @field, %{kind: :rebase, reason: :joined}}
+      assert_receive {:edit_session, @field, %{kind: :rebase, reason: :rows_read}}
 
       {shown, state} = settled(a, ref)
       assert shown == state
