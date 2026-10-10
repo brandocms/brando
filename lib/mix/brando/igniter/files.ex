@@ -37,9 +37,39 @@ if Code.ensure_loaded?(Igniter) do
           end
 
         true ->
-          Igniter.create_new_file(igniter, path, contents)
+          create_new(igniter, path, contents)
       end
     end
+
+    # Igniter formats each new Elixir file inside a snapshot of the project's
+    # evaluated config, which costs more than the formatting itself: an install
+    # creates hundreds of files, most of them migrations, which phx.new gives a
+    # formatter without plugins. Only formatter plugins can read that config, so
+    # a file whose formatter has none is formatted directly, with the formatter
+    # Igniter would use.
+    #
+    # Checked against igniter 0.8.4 and rewrite 1.3.0: `Igniter.format/2` with
+    # no paths does Igniter's preparation (reading the config and formatter
+    # files) and formats nothing. InstallFormatTest compares both paths and
+    # checks that.
+    defp create_new(igniter, path, contents) do
+      with true <- Path.extname(path) in Rewrite.Source.Ex.extensions(),
+           false <- Path.basename(path) in [".formatter.exs", ".igniter.exs"],
+           false <- Map.get(igniter.assigns, :brando_format_each_file, false),
+           igniter = Igniter.format(igniter, []),
+           dot_formatter = Rewrite.dot_formatter(igniter.rewrite),
+           false <- plugins?(Rewrite.DotFormatter.formatter_opts_for_file(dot_formatter, path)),
+           {:ok, source} <- path |> source(contents) |> Rewrite.Source.format(dot_formatter: dot_formatter) do
+        Igniter.create_new_file(igniter, path, Rewrite.Source.get(source, :content), format?: false)
+      else
+        _ -> Igniter.create_new_file(igniter, path, contents)
+      end
+    end
+
+    defp source(path, contents), do: Rewrite.Source.Ex.from_string(contents, path: path)
+
+    defp plugins?(formatter_opts),
+      do: not Enum.empty?(List.wrap(formatter_opts[:plugins])) or not Enum.empty?(List.wrap(formatter_opts[:sigils]))
 
     defp equivalent?(_path, contents, contents), do: true
 
