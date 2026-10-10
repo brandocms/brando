@@ -655,8 +655,9 @@ defmodule BrandoAdmin.Components.Activity do
     |> Enum.filter(& &1)
   end
 
-  # `Brando.Worker.EntryPublisher`: a publication or expiry whose user may no
-  # longer make it, or whose account is gone, cleared instead
+  # `Brando.Worker.EntryPublisher`: a publication whose user may no longer
+  # make it, or whose account is gone, taken back; an expiry carried out by
+  # the system instead
   defp schedule_refused_lines(%{"action" => "publish", "reason" => "forbidden"}),
     do: [
       gettext("Not published as scheduled: the user who scheduled it may no longer publish it"),
@@ -670,16 +671,10 @@ defmodule BrandoAdmin.Components.Activity do
     ]
 
   defp schedule_refused_lines(%{"reason" => "forbidden"}),
-    do: [
-      gettext("Not deactivated as scheduled: the user who set the expiry may no longer deactivate it"),
-      gettext("Expiry cleared")
-    ]
+    do: [gettext("Deactivated as scheduled, by the system: the user who set the expiry may no longer deactivate it")]
 
   defp schedule_refused_lines(_refused),
-    do: [
-      gettext("Not deactivated as scheduled: the user who set the expiry is deactivated or deleted"),
-      gettext("Expiry cleared")
-    ]
+    do: [gettext("Deactivated as scheduled, by the system: the user who set the expiry is deactivated or deleted")]
 
   defp status_saved(%{"status" => %{"to" => status}}),
     do: gettext("Saved as %{status}", status: status |> status_label() |> downcase_first())

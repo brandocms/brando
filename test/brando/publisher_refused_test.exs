@@ -162,8 +162,7 @@ defmodule Brando.PublisherRefusedTest do
       assert swept(page) == []
     end
 
-    test "its user was deactivated, even without group authorization", c do
-      put_test_env(:authorization_mode, :roles)
+    test "its user was deactivated", c do
       page = scheduled_page(c.editor, %{publish_at: at(3600)})
       Repo.update!(Ecto.Changeset.change(c.editor, active: false))
       set_dates(page, publish_at: at(-600))
@@ -245,18 +244,78 @@ defmodule Brando.PublisherRefusedTest do
   end
 
   describe "an expiry refused when it runs" do
-    test "clears the expiry, keeps the entry published and cancels the job", c do
+    test "still deactivates the entry on time, as the system, and Activity says why", c do
       page = scheduled_page(c.editor, %{unpublish_at: at(3600)})
       assert page.status == :published
       revoke(c)
-      set_dates(page, unpublish_at: at(-600))
+      date = at(-600)
+      set_dates(page, unpublish_at: date)
 
-      assert {:cancel, :forbidden} = run_job(page, "disabled", c.editor.id)
+      assert :ok = run_job(page, "disabled", c.editor.id)
 
-      assert %{status: :published, unpublish_at: nil} = Repo.get!(Page, page.id)
-      assert [%{details: %{"schedule_refused" => %{"action" => "unpublish"}}}] = refused_events(page)
-      assert swept(page) == []
-      assert Repo.get!(Page, page.id).status == :published
+      assert %{status: :disabled, unpublish_at: ^date} = Repo.get!(Page, page.id)
+      assert [%{action: :unpublished, source: :scheduler, user_id: nil} = event] = refused_events(page)
+      assert event.details["schedule_refused"] == %{"action" => "unpublish", "reason" => "forbidden"}
+
+      html = render_component(&BrandoAdmin.Components.Activity.details/1, event: event, states: %{})
+      assert length(String.split(html, "activity-detail")) == 2
+    end
+
+    test "whose user is gone or deactivated", c do
+      missing = scheduled_page(c.editor, %{unpublish_at: at(3600)})
+      inactive = scheduled_page(c.editor, %{unpublish_at: at(3600)})
+      set_dates(missing, unpublish_at: at(-600))
+      set_dates(inactive, unpublish_at: at(-600))
+
+      assert :ok = run_job(missing, "disabled", -1)
+      Repo.update!(Ecto.Changeset.change(c.editor, active: false))
+      assert :ok = run_job(inactive, "disabled", c.editor.id)
+
+      assert Repo.get!(Page, missing.id).status == :disabled
+      assert Repo.get!(Page, inactive.id).status == :disabled
+      assert [%{details: %{"schedule_refused" => %{"reason" => "scheduler_missing"}}}] = refused_events(missing)
+      assert [%{details: %{"schedule_refused" => %{"reason" => "scheduler_inactive"}}}] = refused_events(inactive)
+    end
+  end
+
+  describe "without group authorization" do
+    setup do
+      put_test_env(:authorization_mode, :legacy)
+      :ok
+    end
+
+    test "a deactivated or deleted user's schedule still runs, as before", c do
+      deactivated = Factory.insert(:random_user)
+      deleted = Factory.insert(:random_user)
+      first = scheduled_page(c.editor, %{publish_at: at(3600)})
+      second = scheduled_page(c.editor, %{unpublish_at: at(3600)})
+      set_dates(first, publish_at: at(-600))
+      set_dates(second, unpublish_at: at(-600))
+      Repo.update!(Ecto.Changeset.change(deactivated, active: false))
+      Repo.update!(Ecto.Changeset.change(deleted, deleted_at: DateTime.truncate(DateTime.utc_now(), :second)))
+
+      assert :ok = run_job(first, "published", deactivated.id)
+      assert :ok = run_job(second, "disabled", deleted.id)
+      assert Repo.get!(Page, first.id).status == :published
+      assert Repo.get!(Page, second.id).status == :disabled
+      assert refused_events(first) == []
+      assert refused_events(second) == []
+    end
+
+    test "a schedule whose user no longer exists is not taken back, and the sweep publishes it", c do
+      page = scheduled_page(c.editor, %{publish_at: at(3600)})
+      date = at(-600)
+      set_dates(page, publish_at: date)
+
+      assert {:error, _} = run_job(page, "published", -1)
+      assert Repo.get!(Page, page.id).status == :pending
+      assert refused_events(page) == []
+
+      # Its job retrying does not hold the sweep back
+      [job] = jobs(page, "published")
+      Repo.update!(Ecto.Changeset.change(job, state: "retryable"))
+      on_date(job, date, at(600))
+      assert [%{action: :publish, result: :ok}] = swept(page)
     end
   end
 
@@ -338,7 +397,7 @@ defmodule Brando.PublisherRefusedTest do
       assert Repo.get!(Page, page.id).status == :published
     end
 
-    test "leaves an expiry to its job, even when the publication before it has no job", c do
+    test "deactivates an overdue expiry while its job waits, as it is carried out anyway", c do
       page = scheduled_page(c.editor, %{publish_at: at(3600), unpublish_at: at(7200)})
       for job <- jobs(page, "published"), do: Repo.delete!(job)
       [expiry] = jobs(page, "disabled")
@@ -346,8 +405,8 @@ defmodule Brando.PublisherRefusedTest do
       set_dates(page, publish_at: at(-1200), unpublish_at: at(-600))
       on_date(expiry, at(-600), at(600))
 
-      assert swept(page) == []
-      assert Repo.get!(Page, page.id).status == :pending
+      assert [%{action: :unpublish, result: :ok}] = swept(page)
+      assert Repo.get!(Page, page.id).status == :disabled
     end
 
     test "does not wait for a job made for another, later date", c do

@@ -370,11 +370,11 @@ defmodule Brando.Publisher do
   pending entries whose `publish_at` has passed, and deactivate published or
   pending entries whose `unpublish_at` has passed, through each entry's
   context like the jobs do. Dates arrive without jobs when an environment is
-  cloned or an archive restored, and a lost job leaves one behind. A date
-  with a publisher job still waiting, running or retrying (made for that
-  date, or with its time come) is left to the job, which runs as the user
-  who scheduled it; a job that user may no longer carry out clears its date
-  (see `Brando.Worker.EntryPublisher`).
+  cloned or an archive restored, and a lost job leaves one behind. With
+  group authorization, a publication whose job is still waiting, running or
+  retrying (made for that date, or with its time come) is left to the job,
+  which runs as the user who scheduled it; a job that user may no longer
+  carry out clears its date (see `Brando.Worker.EntryPublisher`).
 
     * Only dates from more than five minutes ago, so the jobs run first, and
       from the last seven days (`config :brando, Brando.Publisher,
@@ -452,39 +452,42 @@ defmodule Brando.Publisher do
     Repo.all(query)
   end
 
-  # A date whose job is still to run, running or retrying is the job's: it
-  # runs as the user who scheduled it, and refuses what they may no longer do.
-  # The job for what the sweep would do, an expiry winning over a publication,
-  # made for the entry's date or with its time come: one waiting for a later
-  # date the entry had before (an archive restored) does not hold it up.
-  defp without_waiting_job([], _schema, _now), do: []
-
+  # With group authorization a publication's job runs as the user who
+  # scheduled it and refuses what they may no longer do, so a publication
+  # whose job is still to run, running or retrying is left to the job: one
+  # made for the entry's date or with its time come, while one waiting for a
+  # later date the entry had before (an archive restored) does not hold it
+  # up. An expiry is carried out even when its user is refused, and does not
+  # wait; nor does anything without group authorization.
   defp without_waiting_job(due, schema, now) do
-    args = Map.merge(%{"schema" => to_string(schema)}, TenantJob.context_fragment())
-    ids = Enum.map(due, fn {entry, _action} -> to_string(entry.id) end)
+    ids = for {entry, :publish} <- due, do: to_string(entry.id)
 
-    waiting =
-      Repo.all(
-        from j in Oban.Job,
-          where:
-            j.worker == ^inspect(Worker.EntryPublisher) and j.state in @waiting_states and
-              fragment("? @> ?", j.args, ^args) and fragment("?->>'id'", j.args) in ^ids,
-          select: %{
-            id: fragment("?->>'id'", j.args),
-            status: fragment("?->>'status'", j.args),
-            at: fragment("?->>'at'", j.meta),
-            scheduled_at: j.scheduled_at
-          }
-      )
+    if ids == [] or not Brando.Authorization.Engine.enabled?() do
+      due
+    else
+      waiting = waiting_publications(schema, ids)
 
-    Enum.reject(due, fn {entry, action} ->
-      date = if action == :unpublish, do: entry.unpublish_at, else: entry.publish_at
-
-      Enum.any?(waiting, fn job ->
-        job.id == to_string(entry.id) and job.status == action_status(action) and
-          (made_for?(job.at, date) or not DateTime.after?(job.scheduled_at, now))
+      Enum.reject(due, fn {entry, action} ->
+        action == :publish and
+          Enum.any?(waiting, fn job ->
+            job.id == to_string(entry.id) and
+              (made_for?(job.at, entry.publish_at) or not DateTime.after?(job.scheduled_at, now))
+          end)
       end)
-    end)
+    end
+  end
+
+  defp waiting_publications(schema, ids) do
+    args =
+      Map.merge(%{"schema" => to_string(schema), "status" => @publish_status}, TenantJob.context_fragment())
+
+    Repo.all(
+      from j in Oban.Job,
+        where:
+          j.worker == ^inspect(Worker.EntryPublisher) and j.state in @waiting_states and
+            fragment("? @> ?", j.args, ^args) and fragment("?->>'id'", j.args) in ^ids,
+        select: %{id: fragment("?->>'id'", j.args), at: fragment("?->>'at'", j.meta), scheduled_at: j.scheduled_at}
+    )
   end
 
   defp made_for?(at, %DateTime{} = date) when is_binary(at) do
@@ -495,9 +498,6 @@ defmodule Brando.Publisher do
   end
 
   defp made_for?(_at, _date), do: false
-
-  defp action_status(:publish), do: @publish_status
-  defp action_status(:unpublish), do: @unpublish_status
 
   # An expiry that has passed wins over a publish that has
   defp sweep_action(entry, now) do
