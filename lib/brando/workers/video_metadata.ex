@@ -8,7 +8,7 @@ defmodule Brando.Worker.VideoMetadata do
   use Oban.Worker,
     queue: :default,
     max_attempts: 3,
-    unique: [keys: [:tenant_prefix, :video_id], states: :incomplete]
+    unique: [keys: [:tenant_prefix, :video_id], states: :incomplete, period: :infinity]
 
   alias Brando.Tenant.Job, as: TenantJob
   alias Brando.Videos.Video

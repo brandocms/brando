@@ -133,15 +133,16 @@ defmodule Brando.Videos do
         id when is_integer(id) -> id
       end
 
-    jobs =
-      Enum.map(video_ids, fn id ->
-        %{"video_id" => id, "user_id" => user_id}
-        |> Brando.Tenant.Job.attach()
-        |> Brando.Worker.VideoMetadata.new()
-      end)
+    # One at a time: `Oban.insert_all/1` skips the worker's uniqueness, and
+    # a video whose lookup still waits would be looked up twice.
+    Enum.each(video_ids, fn id ->
+      %{"video_id" => id, "user_id" => user_id}
+      |> Brando.Tenant.Job.attach()
+      |> Brando.Worker.VideoMetadata.new()
+      |> Oban.insert()
+    end)
 
-    Oban.insert_all(jobs)
-    {:ok, length(jobs)}
+    {:ok, length(video_ids)}
   end
 
   @doc """
