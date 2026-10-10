@@ -17,6 +17,11 @@ defmodule Brando.ContentEvents do
   | `entry.deleted` | An entry was moved to the trash or deleted for good. Emptying the trash later sends nothing more. |
   | `entry.restored` | An entry came back from the trash. |
 
+  An entry in the trash is not on the site, so a change made to it there (a
+  stale-block resolve, say) is recorded in Activity but sends no event; only
+  `entry.deleted` goes out while it is there, and `entry.restored` when it
+  comes back.
+
   Each one is a `Brando.ContentEvents.Event`: the site and environment, the
   entry's type, id, language, URL and status, the names (not the values) of
   the fields that changed, what kind of actor made the change, and when.
