@@ -471,6 +471,7 @@ defmodule BrandoAdmin.Components.Form.RevisionsDrawer do
         send_update(BrandoAdmin.Components.Form,
           id: socket.assigns.form_id,
           action: :load_working_copy,
+          revision: revision_number,
           revision_entry: decoded_entry
         )
 

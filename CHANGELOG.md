@@ -2154,7 +2154,8 @@ production dump.
   when a working copy of the revision was saved, with the revision's
   content written over it, and restoring the revision from History failed.
   It now goes back to its container and position, and a working copy also
-  removes blocks added since, as History does. A restored block keeps what
+  removes blocks added since, as History does, also when it comes back
+  from its recovery copy after a reload. A restored block keeps what
   translations match it by, also a nested block or table row deleted since;
   a top-level block deleted since still comes back as a new block in a
   working copy (History relinks it). A block whose references, variables or
