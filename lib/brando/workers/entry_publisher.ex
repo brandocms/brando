@@ -6,6 +6,13 @@ defmodule Brando.Worker.EntryPublisher do
   context, like a change made by hand, so they record Activity and send their
   content events (webhooks, IndexNow, the search index) with the actor
   `"scheduler"`.
+
+  A publication or expiry runs as the user who scheduled it. When that user
+  may no longer make the change, or their account is deactivated or deleted,
+  the job is cancelled rather than retried, and the date it was for is
+  cleared (a pending entry goes back to draft) so that
+  `Brando.Publisher.sweep/1` does not carry it out instead. Activity records
+  why.
   """
   use Oban.Worker,
     queue: :default,
@@ -14,6 +21,9 @@ defmodule Brando.Worker.EntryPublisher do
   require Logger
   alias Brando.Revisions
   alias Brando.Tenant.Job, as: TenantJob
+
+  # A schedule its user may no longer carry out, or whose user is gone
+  @refusals [:forbidden, :scheduler_missing, :scheduler_inactive]
 
   # schedule publishing/depublishing an entry
   @impl Oban.Worker
@@ -140,8 +150,6 @@ defmodule Brando.Worker.EntryPublisher do
   defp passed?(_at, _now), do: false
 
   defp update_status(schema_module, entry, status, user_id, now) do
-    user = publisher_user(user_id)
-
     params =
       if status == "published",
         do: %{creator_id: user_id, status: status, publish_at: now},
@@ -150,21 +158,82 @@ defmodule Brando.Worker.EntryPublisher do
     context = schema_module.__modules__().context
     singular = schema_module.__naming__().singular
 
-    case apply(context, :"update_#{singular}", [entry.id, params, user]) do
-      {:ok, _} ->
-        Logger.info("""
+    with {:ok, user} <- scheduler(user_id),
+         {:ok, _} <- apply(context, :"update_#{singular}", [entry.id, params, user]) do
+      Logger.info("""
 
-        ==> [B/Pub] #{(status == "published" && "Published") || "Depublished"} #{singular} ##{entry.id}
-        ==> [B/Pub] @ #{now.day}/#{now.month}/#{now.year} #{now.hour}:#{now.minute}:#{now.second} UTC
-        """)
+      ==> [B/Pub] #{(status == "published" && "Published") || "Depublished"} #{singular} ##{entry.id}
+      ==> [B/Pub] @ #{now.day}/#{now.month}/#{now.year} #{now.hour}:#{now.minute}:#{now.second} UTC
+      """)
 
-        BrandoAdmin.LiveView.Listing.update_list_entries(schema_module)
+      BrandoAdmin.LiveView.Listing.update_list_entries(schema_module)
 
-        :ok
-
-      {:error, reason} ->
-        {:error, reason}
+      :ok
+    else
+      {:error, reason} when reason in @refusals -> refuse(schema_module, entry, status, user_id, reason)
+      {:error, reason} -> {:error, reason}
     end
+  end
+
+  # Who a job runs as: the user who scheduled it, while their account is
+  # active, or the system for a schedule made without a user. A user who is
+  # gone is never replaced by the system.
+  defp scheduler(nil), do: {:ok, :system}
+
+  defp scheduler(user_id) do
+    case Brando.Users.get_user(user_id) do
+      {:ok, %{active: true, deleted_at: nil} = user} -> {:ok, user}
+      {:ok, _user} -> {:error, :scheduler_inactive}
+      _ -> {:error, :scheduler_missing}
+    end
+  end
+
+  # The user who scheduled the change may no longer make it, or is gone, so
+  # no one will: trying again would not help, and the sweep would carry out
+  # the date as the system. The job is cancelled and the date cleared, a
+  # publication's entry going back to draft, as deleting the job does, and
+  # Activity says why. Saved as the system, which only takes back the plan.
+  defp refuse(schema_module, entry, status, user_id, reason) do
+    {params, action} =
+      if status == "published",
+        do: {%{status: :draft, publish_at: nil}, "publish"},
+        else: {%{unpublish_at: nil}, "unpublish"}
+
+    details = %{"schedule_refused" => %{"action" => action, "reason" => to_string(reason)}}
+    context = schema_module.__modules__().context
+    singular = schema_module.__naming__().singular
+
+    Logger.warning(
+      "[B/Pub] Did not #{action} #{singular} ##{entry.id} as scheduled by user ##{user_id} (#{reason}): " <>
+        "the job is cancelled and its date cleared"
+    )
+
+    Brando.Activity.with_source(:scheduler, details, fn ->
+      case apply(context, :"update_#{singular}", [entry.id, params, :system]) do
+        {:ok, _} -> :ok
+        {:error, error} -> clear_refused(schema_module, entry, params, details, error)
+      end
+    end)
+
+    BrandoAdmin.LiveView.Listing.update_list_entries(schema_module)
+    {:cancel, reason}
+  end
+
+  # An entry its context will not save (it no longer validates) still loses
+  # the date, so the sweep does not carry it out.
+  defp clear_refused(schema_module, entry, params, details, error) do
+    import Ecto.Query, only: [from: 2]
+
+    Logger.warning("[B/Pub] Could not save #{inspect(schema_module)} ##{entry.id}, clearing its date: #{inspect(error)}")
+
+    Brando.Repo.update_all(from(e in schema_module, where: e.id == ^entry.id), set: Map.to_list(params))
+
+    if Brando.Activity.logged?(schema_module) do
+      fields = params |> Map.keys() |> Enum.map(&to_string/1)
+      Brando.Activity.record(:updated, entry, :system, fields: fields, details: details)
+    end
+
+    :ok
   end
 
   @impl Oban.Worker

@@ -605,6 +605,8 @@ defmodule BrandoAdmin.Components.Activity do
 
   defp lines(%{details: %{"stale_blocks" => resolved}}, _fields, _states), do: stale_blocks_lines(resolved)
 
+  defp lines(%{details: %{"schedule_refused" => refused}}, _fields, _states), do: schedule_refused_lines(refused)
+
   defp lines(%{action: :revision_restored, details: %{"replaced" => replaced}, revision: revision}, fields, _states)
        when replaced != revision,
        do: [gettext("Replaced revision #%{revision}", revision: replaced), also_changed(fields)]
@@ -652,6 +654,32 @@ defmodule BrandoAdmin.Components.Activity do
     ]
     |> Enum.filter(& &1)
   end
+
+  # `Brando.Worker.EntryPublisher`: a publication or expiry whose user may no
+  # longer make it, or whose account is gone, cleared instead
+  defp schedule_refused_lines(%{"action" => "publish", "reason" => "forbidden"}),
+    do: [
+      gettext("Not published as scheduled: the user who scheduled it may no longer publish it"),
+      gettext("Set back to draft")
+    ]
+
+  defp schedule_refused_lines(%{"action" => "publish"}),
+    do: [
+      gettext("Not published as scheduled: the user who scheduled it is deactivated or deleted"),
+      gettext("Set back to draft")
+    ]
+
+  defp schedule_refused_lines(%{"reason" => "forbidden"}),
+    do: [
+      gettext("Not deactivated as scheduled: the user who set the expiry may no longer deactivate it"),
+      gettext("Expiry cleared")
+    ]
+
+  defp schedule_refused_lines(_refused),
+    do: [
+      gettext("Not deactivated as scheduled: the user who set the expiry is deactivated or deleted"),
+      gettext("Expiry cleared")
+    ]
 
   defp status_saved(%{"status" => %{"to" => status}}),
     do: gettext("Saved as %{status}", status: status |> status_label() |> downcase_first())

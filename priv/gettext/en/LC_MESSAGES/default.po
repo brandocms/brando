@@ -6861,6 +6861,11 @@ msgstr ""
 msgid "Expiry"
 msgstr ""
 
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "Expiry cleared"
+msgstr ""
+
 #: lib/brando_admin/components/content/list.ex
 #: lib/brando_admin/live/users/groups_live.ex
 #, elixir-autogen, elixir-format
@@ -10881,6 +10886,16 @@ msgstr ""
 msgid "Not checked"
 msgstr ""
 
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "Not deactivated as scheduled: the user who set the expiry is deactivated or deleted"
+msgstr ""
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "Not deactivated as scheduled: the user who set the expiry may no longer deactivate it"
+msgstr ""
+
 #: lib/brando_admin/live/sites/seo_live.ex
 #, elixir-autogen, elixir-format
 msgid "Not found (404)"
@@ -10929,6 +10944,16 @@ msgstr ""
 #: lib/brando_admin/live/ai/assistant_live.ex
 #, elixir-autogen, elixir-format
 msgid "Not published"
+msgstr ""
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "Not published as scheduled: the user who scheduled it is deactivated or deleted"
+msgstr ""
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "Not published as scheduled: the user who scheduled it may no longer publish it"
 msgstr ""
 
 #: lib/brando_admin/live/users/sign_in_policy_live.ex
@@ -14983,6 +15008,11 @@ msgstr ""
 #: lib/brando_admin/components/activity.ex
 #, elixir-autogen, elixir-format
 msgid "Set back by undoing the proposal"
+msgstr ""
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "Set back to draft"
 msgstr ""
 
 #: lib/brando_admin/components/activity.ex
