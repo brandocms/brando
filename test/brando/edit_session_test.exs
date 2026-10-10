@@ -632,6 +632,67 @@ defmodule Brando.EditSessionTest do
       assert state.statuses["saved"] == :persisted
       assert state.diffs["a"]["block"]["anchor"] == "after the read"
     end
+
+    # Audit F1 (10 Oct 2026): a dirty rejoin between a save's read and its
+    # rebase cleared the log but kept the save's mark, so the rebase replayed
+    # nothing onto the saved rows: the op after the read and the rejoiner's
+    # work were both gone, with no conflict.
+    test "a rejoin carrying work while a save is in flight keeps that work and later ops through the save's rebase" do
+      base = rows()
+      {:seeded, data} = Data.join(Data.new(1), @field, base, base)
+      {:ok, data} = Data.apply_op(data, @field, anchor("a", "saved"))
+      data = Data.mark_save(data, @field, :saver, 0)
+      {:ok, data} = Data.apply_op(data, @field, anchor("a", "after the read"))
+
+      {:ok, held} = Ops.apply_op(base, anchor("b", "rejoiner's work"))
+      {{:merged, []}, data} = Data.join(data, @field, base, held)
+      {:ok, data} = Data.apply_op(data, @field, {:update, "a1", %{"description" => "after the rejoin"}})
+
+      {:ok, data, []} = Data.rebase(data, @field, base, {:client, :saver})
+      state = Data.state(data, @field)
+      assert state.diffs["a"]["block"]["anchor"] == "after the read"
+      assert state.diffs["b"]["block"]["anchor"] == "rejoiner's work"
+      assert state.diffs["a1"]["description"] == "after the rejoin"
+      assert data.fields[@field].log == []
+    end
+
+    test "a rejoin carrying work after a save's read is kept by that save's rebase, on the session" do
+      ref = new_ref()
+      Phoenix.PubSub.subscribe(Brando.pubsub(), ref.topic)
+      base = rows()
+
+      # The session was replaced; A came back first and seeded it.
+      {:ok, a} = EditSession.join(ref, @field, {base, base})
+      session = a.session
+      EditSession.submit(session, @field, anchor("a", "saved by A"), 1)
+      {:ok, %{state: read}} = EditSession.fetch(session, @field, purpose: :save)
+      assert read.diffs["a"]["block"]["anchor"] == "saved by A"
+
+      # C types while A's save runs; then B handles the session's exit late
+      # and comes back with work it held.
+      c =
+        Task.async(fn ->
+          {:ok, _} = EditSession.join(ref, @field, {base, base})
+          EditSession.submit(session, @field, {:update, "a1", %{"description" => "C, during the save"}}, 1)
+          EditSession.fetch(session, @field)
+        end)
+
+      {:ok, _} = Task.await(c)
+      {:ok, held} = Ops.apply_op(base, anchor("b", "held by B"))
+      {:ok, b} = Task.await(Task.async(fn -> EditSession.join(ref, @field, {base, held}) end))
+      assert b.state.diffs["b"]["block"]["anchor"] == "held by B"
+
+      # the rows A wrote: same blocks, its change is in them now
+      assert {:ok, after_save} = EditSession.rebase(session, @field, rows(), :own_save)
+
+      for state <- [after_save.state, elem(session_state(ref), 0)] do
+        assert state.diffs["a"] in [nil, %{}]
+        assert state.diffs["a1"]["description"] == "C, during the save"
+        assert state.diffs["b"]["block"]["anchor"] == "held by B"
+      end
+
+      assert_receive {:edit_session, @field, %{kind: :rebase, reason: :saved, conflicts: []}}
+    end
   end
 
   # Follow-up, round 2: who brings back unsaved work in blocks a write
