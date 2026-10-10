@@ -527,8 +527,9 @@ open onto the new rows. It needs the right to update the module and every
 entry. Entries in the trash count as entries: they are listed, marked as in
 the trash, and get their revisions, so restoring one brings its content back
 through History. An entry whose schema keeps no revisions, such as a
-template, gets none; the review names it. `Brando.Content.StaleBlocks` is the
-API both use.
+template, gets none; the review names it. A resolve is refused when anything
+the blocks hold changed after the review, even where the shortened value it
+shows did not. `Brando.Content.StaleBlocks` is the API both use.
 
 ## Calling the API
 

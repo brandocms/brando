@@ -1022,7 +1022,8 @@ production dump.
   moves editors who have an entry open onto the new rows; it needs the right
   to update the module and the entries. Entries in the trash are among them,
   marked as such; the review names entries that keep no revisions (templates),
-  which History cannot restore. `mix brando.modules resolve --uid UID`
+  which History cannot restore. A resolve is refused when anything a block
+  holds changed after the review, not only what its shortened values show. `mix brando.modules resolve --uid UID`
   does the same from the terminal (a dry run until `--apply`, with `--drop
   KEY` and `--map OLD=NEW`), and `refresh` now says what keeps blocks stale
   and points there. See `Brando.Content.StaleBlocks` and "Blocks left on an

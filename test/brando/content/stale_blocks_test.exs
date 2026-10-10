@@ -351,6 +351,48 @@ defmodule Brando.Content.StaleBlocksTest do
       assert var(block, "link")
     end
 
+    # The fingerprint is of what the rows hold, not of their previews: a
+    # preview is plain text cut at 140 characters.
+    test "is refused when a value changed where its preview does not show it", c do
+      prefix = String.duplicate("a", 160)
+      long = %{"type" => "text", "key" => "old", "label" => "Old", "value" => prefix <> "old"}
+      markup = text_ref("title", "<p>Overskrift</p>")
+      {_page, block} = page_with_block(c, [long], [markup])
+      resolutions = %{{:var, "old"} => :drop, {:ref, "title"} => :drop}
+
+      changes = [
+        fn -> Repo.update_all(from(v in Var, where: v.id == ^var(block, "old").id), set: [value: prefix <> "new"]) end,
+        fn ->
+          ref = Enum.find(refs(block), &(&1.name == "title"))
+          data = %{type: "text", data: %{text: "<p><strong>Overskrift</strong></p>"}}
+          ref |> Brando.Content.Ref.changeset(%{data: data}, c.user) |> Repo.update!()
+        end
+      ]
+
+      for change <- changes do
+        plan = StaleBlocks.plan(report!(c), resolutions)
+        change.()
+
+        assert {:error, message} = StaleBlocks.apply(c.module, resolutions, c.user, expect: plan.fingerprint)
+        assert message =~ "changed after you reviewed"
+      end
+
+      assert var(block, "old").value == prefix <> "new"
+      assert Enum.find(refs(block), &(&1.name == "title"))
+    end
+
+    test "is refused when an entry it changes went to the trash after the review", c do
+      {page, block} = page_with_block(c, [link_var()], [])
+      plan = StaleBlocks.plan(report!(c), %{{:var, "link"} => :drop})
+      page |> Ecto.Changeset.change(deleted_at: DateTime.utc_now(:second)) |> Repo.update!()
+
+      assert {:error, message} =
+               StaleBlocks.apply(c.module, %{{:var, "link"} => :drop}, c.user, expect: plan.fingerprint)
+
+      assert message =~ "changed after you reviewed"
+      assert var(block, "link")
+    end
+
     test "stores a revision of each entry before and after, and records the change in Activity", c do
       {page, _block} = page_with_block(c, [link_var()], [])
       before = revisions(page)
