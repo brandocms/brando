@@ -39,7 +39,8 @@ cat >"$tmp/bin/gh" <<'EOF'
 # State lives in $STATE: <pr>.base, <pr>.head, <pr>.sha, <pr>.queue (one
 # "STATE ENTRY [REASON [COMMIT]]" per poll once queued, the last one
 # repeating), <pr>.queued once enqueued, checks-<sha> (check runs JSON, one
-# per poll, the last repeating), runs-<sha> (workflow runs JSON) and calls.
+# per poll, the last repeating), runs-<sha> (workflow runs JSON),
+# unreadable-<run> (that run's jobs fail to load) and calls.
 s="$STATE"
 args=("$@")
 filter=""
@@ -129,6 +130,7 @@ case "$1 $2" in
       */actions/runs\?head_sha=*) cat "$s/runs-${2#*head_sha=}" | out ;;
       */actions/runs/*/jobs*)
         id="${2#*/actions/runs/}" && id="${id%%/*}"
+        [ -f "$s/unreadable-$id" ] && { echo "HTTP 502" >&2; exit 1; }
         jq -n --arg id "$id" '{jobs: [{name: "mix test", status: "completed", conclusion: "failure",
           html_url: "https://github.com/o/r/actions/runs/\($id)/job/\($id)"}]}' | out ;;
       */actions/jobs/*/logs) cat "$s/job.log" ;;
@@ -272,6 +274,16 @@ if [ "$(cat "$state/calls")" != "$(printf 'enqueue 14 8888888a\nenqueue 14 88888
   echo "FAIL     calls:"
   sed 's/^/     | /' "$state/calls"
 fi
+
+fresh flake-unreadable
+pr 16 feat-16 main 6666666c "OPEN AWAITING_CHECKS" "OPEN - failed_checks 9999992"
+checks 6666666c "$green"
+echo '{"workflow_runs": [{"id": 88, "conclusion": "failure"}, {"id": 90, "conclusion": "failure"}]}' \
+  >"$state/runs-9999992"
+touch "$state/unreadable-90"
+run "does not re-queue when a failed run cannot be read" 1 "PR 16: checks green on 6666666; queued at position 1
+PR 16: dropped from the queue: merge-group checks failed
+  mix test: known flake: beam-jit-crash — rerun with: gh run rerun 88 --failed" 16
 
 fresh flake-twice
 pr 15 feat-15 main 9999999b "OPEN AWAITING_CHECKS" "OPEN - failed_checks 9999990" "OPEN AWAITING_CHECKS" \

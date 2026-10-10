@@ -130,9 +130,26 @@ explain_runs() {
   done
 }
 
-# only_flakes EXPLANATION — when every line of explain_runs output is a known
-# flake, prints "<flake> (<job>)" for each, joined with "; ".
-only_flakes() {
+# explain_drop RUN... — explain_runs for the failed merge-group runs, and
+# succeeds only when there are some and ci-wait read each one and found known
+# flakes only.
+explain_drop() {
+  local run out flaky=true
+  [ $# -gt 0 ] || flaky=false
+  for run in "$@"; do
+    out="$("$here/ci-wait" --run "$run" --repo "$repo" 2>&1)"
+    case "$(head -n 1 <<<"$out")" in
+      "Run $run: FAILED (known flakes only):"*) ;;
+      *) flaky=false ;;
+    esac
+    sed -n '2,$p' <<<"$out"
+  done
+  [ "$flaky" = true ]
+}
+
+# flake_names EXPLANATION — "<flake> (<job>)" for each line of explain_drop
+# output, joined with "; "; fails on a line that is not a known flake.
+flake_names() {
   local line out="" re='^  ([^:]+): known flake: (.+) — rerun with: '
   [ -n "$1" ] || return 1
   while IFS= read -r line; do
@@ -209,7 +226,7 @@ wait_for_checks() {
 # how many times it had left the queue before.
 follow_queue() {
   local pr="$1" before="$2" info state entry removal count reason files actor tries=0
-  local explained flakes position requeued=false
+  local explained flaky flakes position requeued=false
   while :; do
     if info="$(read_pr "$pr")"; then
       state="$(field "$info" .state)"
@@ -235,11 +252,12 @@ follow_queue() {
             return 1 ;;
           failed_checks)
             # shellcheck disable=SC2046
-            explained="$(explain_runs $(gh api "repos/$repo/actions/runs?head_sha=$(field "$removal" .commit)" --paginate \
+            explained="$(explain_drop $(gh api "repos/$repo/actions/runs?head_sha=$(field "$removal" .commit)" --paginate \
               --jq '.workflow_runs[] | select(.conclusion == "failure" or .conclusion == "timed_out") | .id' \
               2>>"$work/err"))"
+            flaky=$?
             # Once per PR: a second drop is not the same bad luck.
-            if [ "$requeued" = false ] && flakes="$(only_flakes "$explained")" &&
+            if [ "$requeued" = false ] && [ "$flaky" -eq 0 ] && flakes="$(flake_names "$explained")" &&
               position="$(enqueue_at "$(field "$info" .id)" "$(field "$info" .headRefOid)" 2>"$work/requeue-$pr")"; then
               say "$pr" "dropped on known flake $flakes; re-queued at position $position"
               requeued=true
