@@ -630,6 +630,65 @@ defmodule Brando.Content.BlocksCrossParentMoveTest do
     assert [%{sync_uid: "source-grand", module_version: 2}] = moved.children
   end
 
+  # Sol audit: roots are saved in order, so a child moved into an earlier
+  # container was inserted before its old row was deleted, and the uid's
+  # unique index refused the save.
+  test "a child moved into an earlier container saves" do
+    user = Factory.insert(:random_user)
+    page = Factory.insert(:page, creator: user)
+
+    for {uid, children, seq} <- [
+          {"containerA", [], 0},
+          {"containerB",
+           [
+             %{
+               uid: "childE",
+               type: :module,
+               active: true,
+               source: "Elixir.Brando.Pages.Page.Blocks",
+               creator_id: user.id,
+               sequence: 0,
+               description: "moving up",
+               refs: [
+                 %{
+                   name: "body",
+                   uid: "refE",
+                   data: %Brando.Villain.Blocks.TextBlock{data: %Brando.Villain.Blocks.TextBlock.Data{text: "x"}}
+                 }
+               ],
+               children: []
+             }
+           ], 1}
+        ] do
+      %Brando.Pages.Page.Blocks{}
+      |> Changeset.change(%{entry_id: page.id, sequence: seq})
+      |> Changeset.put_assoc(:block, %{
+        uid: uid,
+        type: :container,
+        active: true,
+        source: "Elixir.Brando.Pages.Page.Blocks",
+        creator_id: user.id,
+        sequence: seq,
+        children: children
+      })
+      |> Brando.Repo.insert!()
+    end
+
+    entry_blocks = preloaded_entry_blocks(page.id)
+    [_, %{block: %{children: [row]}}] = entry_blocks
+    ops = Ops.from_entry_blocks(entry_blocks)
+
+    {:ok, params} = Ops.materialize_child(ops, "childE")
+    block_cs = Brando.Content.Block.recursive_block_changeset(row, params, user.id)
+    moved_cs = BrandoAdmin.Components.Form.BlockField.moved_child_changeset(block_cs, user.id)
+    {:ok, ops} = Ops.apply_op(ops, {:insert_child, "containerA", "childE", 0, Ops.block_diff_params(moved_cs)})
+    assert {:ok, _} = save_from_ops(page, entry_blocks, ops, user)
+
+    assert [%{block: %{children: [moved]}}, %{block: %{children: []}}] = preloaded_entry_blocks(page.id)
+    assert {moved.uid, moved.description} == {"childE", "moving up"}
+    assert [%{uid: "refE"}] = moved.refs
+  end
+
   test "materialize_child rejects roots and unknown uids" do
     user = Factory.insert(:random_user)
     {page, _} = insert_page_with_containers(user)

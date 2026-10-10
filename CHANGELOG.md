@@ -2142,7 +2142,8 @@ production dump.
   references, variables and child blocks. Unsaved changes to a moved
   block's gallery come along as a new gallery. A moved block keeps what
   translations match it by and its module version, so it no longer shows
-  as needing an upgrade. A block dropped at the same position in the
+  as needing an upgrade. A block moved into an earlier container no
+  longer fails to save, and a block dropped at the same position in the
   other container is moved too; the outline showed it moved while it
   stayed where it was.
 

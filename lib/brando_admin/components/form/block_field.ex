@@ -1708,6 +1708,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
           |> force_present(:module_version, row.module_version)
           |> force_present(:sync_uid, row.sync_uid)
           |> map_change(:table_rows, &restore_row_syncs(&1, row))
+          |> Changeset.prepare_changes(&delete_moved_row(&1, row))
 
         nil ->
           changeset
@@ -1748,6 +1749,19 @@ defmodule BrandoAdmin.Components.Form.BlockField do
   end
 
   defp restore_row_syncs(rows, _row), do: rows
+
+  # Its old parent deletes the row it leaves, but roots are saved in
+  # order: moved into an earlier one, the block would be inserted first,
+  # and its uid is unique. So the old row goes right before the insert, in
+  # the save's transaction (its refs, rows and children with it); the old
+  # parent's delete then finds it gone.
+  defp delete_moved_row(%Changeset{repo: repo} = changeset, %{id: id} = row) when not is_nil(id) do
+    opts = if prefix = row.__meta__.prefix, do: [prefix: prefix], else: []
+    repo.delete_all(from(b in Brando.Content.Block, where: b.id == ^id), opts)
+    changeset
+  end
+
+  defp delete_moved_row(changeset, _row), do: changeset
 
   defp force_present(changeset, _field, nil), do: changeset
   defp force_present(changeset, field, value), do: Changeset.force_change(changeset, field, value)
