@@ -64,7 +64,7 @@ chmod +x "$tmp/main/.git/hooks/pre-push"
 # What the push alone does: origin gains feature at the worktree's commit.
 before="$(state)"
 feature="$(git -C "$tmp/wt" rev-parse HEAD)"
-(cd "$tmp/wt" && git_q push -q origin feature 2>/dev/null) || exit 1
+(cd "$tmp/wt" && git_q -c core.hooksPath="$tmp/main/.git/hooks" push -q origin feature 2>/dev/null) || exit 1
 expected_main="$(printf '%s\n' "$before" | sed -n '/^== origin$/,$p' | grep 'refs/heads/main')"
 
 after="$(state)"
