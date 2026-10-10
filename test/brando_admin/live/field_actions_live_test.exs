@@ -378,9 +378,12 @@ defmodule BrandoAdmin.FieldActionsLiveTest do
       refute_receive {:prompt, _}, 500
     end
 
-    # A click as the browser sends it, straight to the LiveView: Phoenix's
+    defp click(view, cid, action, ref),
+      do: push_raw(view, cid, "click", "run_field_action", %{"field" => "subtitle", "action" => action}, ref)
+
+    # An event as the browser sends it, straight to the LiveView: Phoenix's
     # test client waits for each one to be handled before sending the next
-    defp click(view, cid, action, ref) do
+    defp push_raw(view, cid, type, event, value, ref) do
       {_ref, topic, proxy} = view.proxy
       %{join_ref: join_ref} = :sys.get_state(proxy)
 
@@ -389,13 +392,81 @@ defmodule BrandoAdmin.FieldActionsLiveTest do
         topic: topic,
         event: "event",
         ref: to_string(ref),
-        payload: %{
-          "type" => "click",
-          "event" => "run_field_action",
-          "value" => %{"field" => "subtitle", "action" => action},
-          "cid" => cid
-        }
+        payload: %{"type" => type, "event" => event, "value" => value, "cid" => cid}
       })
+    end
+
+    @generate %{
+      "field_key" => "subtitle",
+      "field_name" => "article[subtitle]",
+      "tiptap_id" => "article_subtitle-rich-text",
+      "request_id" => "request-1",
+      "mode" => "rewrite",
+      "instruction" => "",
+      "selection" => "Et hus."
+    }
+
+    # The block fields answer only once the entry's edit session does: held
+    # past the wait, the request is given up on before they answer
+    defp hold_blocks_past_the_wait(article, act) do
+      put_test_env(:ai_blocks_collect_ms, 50)
+      session = Brando.EditSession.whereis(Brando.EditSession.ref_for(article))
+      :sys.suspend(session)
+      act.()
+      Process.sleep(150)
+      :sys.resume(session)
+    end
+
+    test "an action whose blocks do not come in time says so, without asking the model",
+         %{conn: conn, article: article, main_uid: main_uid, notes_uid: notes_uid} do
+      view = open_notes(conn, article, [main_uid, notes_uid])
+      replies("Disposisjon")
+
+      hold_blocks_past_the_wait(article, fn -> run(view, "outline") end)
+
+      await_selector(view, "#{@suggestion} .ai-proposal[data-status='failed'] [role=alert]")
+      assert has_element?(view, "#{@suggestion} button[phx-click='run_field_action'][phx-value-action='outline']")
+      refute_receive {:prompt, _}, 300
+    end
+
+    test "Write with AI whose blocks do not come in time ends in an error, without asking the model",
+         %{conn: conn, article: article, main_uid: main_uid, notes_uid: notes_uid} do
+      view = open_notes(conn, article, [main_uid, notes_uid])
+      replies("Et forslag.")
+      cid = cid_of(view, "#article_form_form")
+
+      hold_blocks_past_the_wait(article, fn ->
+        view |> with_target(cid) |> render_hook("tiptap_ai_generate", @generate)
+      end)
+
+      event = "b:tiptap:ai:article_subtitle-rich-text"
+      assert_push_event(view, ^event, %{error: true, request_id: "request-1"})
+      refute_receive {:prompt, _}, 300
+    end
+
+    test "Write with AI cancelled while it waits for its blocks asks the model nothing",
+         %{conn: conn, article: article, main_uid: main_uid, notes_uid: notes_uid} do
+      view = open_notes(conn, article, [main_uid, notes_uid])
+      replies("Et forslag.")
+      cid = cid_of(view, "#article_form_form")
+
+      # Both in the LiveView's mailbox ahead of the block field's answer
+      :sys.suspend(view.pid)
+      push_raw(view, cid, "hook", "tiptap_ai_generate", @generate, 1_000_001)
+
+      push_raw(
+        view,
+        cid,
+        "hook",
+        "tiptap_ai_cancel",
+        %{"tiptap_id" => "article_subtitle-rich-text", "request_id" => "request-1"},
+        1_000_002
+      )
+
+      :sys.resume(view.pid)
+
+      settle(view)
+      refute_receive {:prompt, _}, 500
     end
 
     test "Write with AI reads a block field named in its from: as the editor has it",

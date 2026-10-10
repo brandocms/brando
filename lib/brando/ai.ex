@@ -243,6 +243,7 @@ defmodule Brando.AI do
   def error_message(:invalid_field_name), do: gettext("Could not update this field from AI response")
   def error_message(:no_context), do: gettext("This entry has no text to describe")
   def error_message(:empty_inputs), do: gettext("The fields this action reads are empty")
+  def error_message(:blocks_unanswered), do: gettext("The blocks could not be read. Try again.")
   def error_message(:no_image_input), do: gettext("The configured AI model cannot read images")
 
   def error_message(:unknown_model),

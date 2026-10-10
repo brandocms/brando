@@ -1060,6 +1060,10 @@ defmodule BrandoAdmin.Components.Form do
     {:ok, receive_ai_blocks(socket, token, field, roots)}
   end
 
+  def update(%{event: "ai_blocks_unanswered", token: token}, socket) do
+    {:ok, give_up_ai_request(socket, token)}
+  end
+
   def update(
         %{
           event: "provide_root_blocks",
@@ -5054,13 +5058,17 @@ defmodule BrandoAdmin.Components.Form do
       request = {:tiptap, params["tiptap_id"], params["request_id"]}
 
       {:noreply,
-       with_ai_blocks(socket, request, config[:from] || [], fn socket, blocks ->
-         RichTextAI.start(
-           socket,
-           params,
-           write_with_ai_prompt(socket, config, params, blocks),
-           RichTextAI.ai_opts(config)
-         )
+       with_ai_blocks(socket, request, config[:from] || [], fn
+         socket, {:ok, blocks} ->
+           RichTextAI.start(
+             socket,
+             params,
+             write_with_ai_prompt(socket, config, params, blocks),
+             RichTextAI.ai_opts(config)
+           )
+
+         socket, :unanswered ->
+           push_event(socket, "b:tiptap:ai:#{params["tiptap_id"]}", %{request_id: params["request_id"], error: true})
        end)}
     else
       _ ->
@@ -5087,9 +5095,15 @@ defmodule BrandoAdmin.Components.Form do
       panel = field_action_panel(socket, field_atom, params["panel"])
 
       {:noreply,
-       with_ai_blocks(socket, {:field_action, panel}, ai_action.from, fn socket, blocks ->
-         send_update(FieldActions, id: panel, run: field_action_run(socket, field_atom, ai_action, type, blocks))
-         socket
+       with_ai_blocks(socket, {:field_action, panel}, ai_action.from, fn
+         socket, {:ok, blocks} ->
+           send_update(FieldActions, id: panel, run: field_action_run(socket, field_atom, ai_action, type, blocks))
+           socket
+
+         socket, :unanswered ->
+           run = field_action_run(socket, field_atom, ai_action, type, nil)
+           send_update(FieldActions, id: panel, run: %{run | build: fn -> {:error, :blocks_unanswered} end})
+           socket
        end)}
     else
       _ -> {:noreply, socket}
@@ -7187,11 +7201,27 @@ defmodule BrandoAdmin.Components.Form do
 
   # An AI request that reads block fields asks their BlockFields for the
   # editor's blocks first (as save and preview do: the op store, not the
-  # rows the form loaded), and `continue.(socket, blocks)` makes the request
-  # once every one has answered (`receive_ai_blocks/4`). Without blocks to
-  # ask for, or before they have loaded, it goes at once with `blocks` nil.
-  # `request` names what asks; asking again for the same thing replaces the
-  # request that is still waiting, also when the new one needs no blocks.
+  # rows the form loaded), and `continue.(socket, {:ok, blocks})` makes the
+  # request once every one has answered (`receive_ai_blocks/4`). Without
+  # blocks to ask for, or before they have loaded, it goes at once with
+  # `blocks` nil. `request` names what asks; asking again for the same thing
+  # replaces the request that is still waiting, also when the new one needs
+  # no blocks.
+  #
+  # A block field that has not answered in `@ai_blocks_collect_ms` (its
+  # blocks reloaded while asked) is given up on as a save gives up on its
+  # collection: nothing is sent without the blocks, and
+  # `continue.(socket, :unanswered)` tells the editor, who can try again.
+  @ai_blocks_collect_ms 10_000
+
+  # Brando's own tests shorten the wait (`:ai_blocks_collect_ms`), compiled
+  # in only where `config :brando, :form_load_gate?, true`.
+  if Application.compile_env(:brando, :form_load_gate?, false) do
+    defp ai_blocks_collect_ms, do: Application.get_env(:brando, :ai_blocks_collect_ms, @ai_blocks_collect_ms)
+  else
+    defp ai_blocks_collect_ms, do: @ai_blocks_collect_ms
+  end
+
   defp with_ai_blocks(socket, request, context_fields, continue) do
     waiting =
       socket.assigns
@@ -7202,10 +7232,16 @@ defmodule BrandoAdmin.Components.Form do
 
     case ai_block_fields(socket, context_fields) do
       [] ->
-        continue.(socket, nil)
+        continue.(socket, {:ok, nil})
 
       fields ->
         token = make_ref()
+
+        send_update_after(
+          __MODULE__,
+          [id: socket.assigns.id, event: "ai_blocks_unanswered", token: token],
+          ai_blocks_collect_ms()
+        )
 
         for field <- fields do
           send_update(BlockField,
@@ -7252,7 +7288,19 @@ defmodule BrandoAdmin.Components.Form do
     else
       socket
       |> assign(:ai_block_requests, Map.delete(waiting, token))
-      |> continue.(parts)
+      |> continue.({:ok, parts})
+    end
+  end
+
+  defp give_up_ai_request(socket, token) do
+    case Map.pop(Map.get(socket.assigns, :ai_block_requests, %{}), token) do
+      {%{continue: continue}, waiting} ->
+        socket
+        |> assign(:ai_block_requests, waiting)
+        |> continue.(:unanswered)
+
+      {nil, _waiting} ->
+        socket
     end
   end
 
