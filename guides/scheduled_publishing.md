@@ -42,16 +42,20 @@ The worker runs a context update as the user who scheduled it, so publication
 validation and permission checks still apply at execution time.
 
 With group authorization, when that user may no longer make the change (their
-groups lost the right to update, publish or schedule the entry), or their
-account has been deactivated or deleted, the publication is not retried. The
+groups lost the right to update, publish or schedule the entry, or a record
+policy denies it), or their account has been deactivated or deleted, the
+publication is not retried. The
 job is cancelled, and the date is cleared as **Delete job** clears it:
 `publish_at` is removed and the pending entry goes back to draft, saved by the
 system. The entry's Activity says that it was not published as scheduled, and
 why. Someone who may publish it can schedule it again. An expiry refused the
 same way is still carried out on time, by the system, so that a refusal never
-leaves an entry live for longer than planned; Activity says so, and why. A
-save that fails for another reason, such as validation or a suspended site, is
-retried as before. Without group authorization, schedules run as the user who
+leaves an entry live for longer than planned; Activity says so, and why. While
+the site is suspended the job waits, checking every ten minutes without
+spending its attempts. A refusal for any other reason is retried, and on the
+last attempt taken back as above, so the sweep never publishes it as the
+system. A save that fails for another reason, such as validation, is retried
+as before. Without group authorization, schedules run as the user who
 made them whatever has become of the account, as they always have.
 
 The job publishes only an entry that is still pending when it runs: a future

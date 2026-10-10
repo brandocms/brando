@@ -8,13 +8,15 @@ defmodule Brando.Worker.EntryPublisher do
   `"scheduler"`.
 
   A publication or expiry runs as the user who scheduled it. With group
-  authorization, when that user may no longer make the change, or their
-  account is deactivated or deleted, a publication's job is cancelled rather
-  than retried, and its date cleared (the pending entry goes back to draft)
-  so that `Brando.Publisher.sweep/1` does not carry it out instead. An
-  expiry still deactivates the entry on time, as the system. Activity
-  records why. A refusal that may pass, such as for a suspended site, is
-  retried. Without group authorization, schedules run as they always have.
+  authorization, when that user may no longer make the change (a grant or a
+  record policy), or their account is deactivated or deleted, a
+  publication's job is cancelled rather than retried, and its date cleared
+  (the pending entry goes back to draft) so that `Brando.Publisher.sweep/1`
+  does not carry it out instead. An expiry still deactivates the entry on
+  time, as the system. Activity records why. While the site is suspended
+  the job waits, spending no attempts; a refusal for any other reason is
+  retried, and taken back on the last attempt. Without group authorization,
+  schedules run as they always have.
   """
   use Oban.Worker,
     queue: :default,
