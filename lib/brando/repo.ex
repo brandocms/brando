@@ -1,4 +1,6 @@
 defmodule Brando.Repo do
+  require Logger
+
   def repo do
     Application.get_env(:brando, :repo_module)
   end
@@ -150,7 +152,7 @@ defmodule Brando.Repo do
           Process.delete(@after_commit)
         end
 
-      if elem(result, 0) == :ok, do: held |> Enum.reverse() |> Enum.each(fn {_key, fun} -> fun.() end)
+      if elem(result, 0) == :ok, do: held |> Enum.reverse() |> Enum.each(&run_held/1)
       result
     end
   end
@@ -173,6 +175,23 @@ defmodule Brando.Repo do
   """
   @spec after_commit(term(), (-> any())) :: :ok
   def after_commit(key, fun) when is_function(fun, 0), do: hold({:key, key}, fun)
+
+  # The transaction has committed: work that fails is logged, and the rest
+  # still runs, rather than skipped with the error raised to a caller whose
+  # write is done.
+  defp run_held({key, fun}) do
+    fun.()
+  rescue
+    error -> log_held_failure(key, fun, Exception.format(:error, error, __STACKTRACE__))
+  catch
+    kind, reason -> log_held_failure(key, fun, Exception.format(kind, reason, __STACKTRACE__))
+  end
+
+  defp log_held_failure({:key, key}, _fun, message), do: log_held_failure(key, message)
+  defp log_held_failure(_ref, fun, message), do: log_held_failure(fun, message)
+
+  defp log_held_failure(work, message),
+    do: Logger.error("[Brando.Repo] After-commit work #{inspect(work)} failed: " <> message)
 
   defp hold(key, fun) do
     case Process.get(@after_commit) do
