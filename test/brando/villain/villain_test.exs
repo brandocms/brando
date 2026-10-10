@@ -540,6 +540,12 @@ defmodule Brando.VillainTest do
             name: :blocks,
             opts: %{module: :blocks},
             type: :has_many
+          },
+          %Brando.Blueprint.Relations.Relation{
+            __identifier__: :notes,
+            name: :notes,
+            opts: %{module: :blocks},
+            type: :has_many
           }
         ],
         "Elixir.Brando.TraitTest.Project": [
