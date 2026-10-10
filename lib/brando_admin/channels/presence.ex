@@ -196,7 +196,14 @@ defmodule BrandoAdmin.Presence do
 
         # `metas` are the user's sessions still here, `left` the ones that
         # went. An update of a meta is a leave and a join of the same tab.
-        user_data = %{user: presence.user, metas: metas, left: Map.get(presence, :metas, [])}
+        # `user_id` is the presence key: `user` is nil for an account that
+        # no longer loads (deleted), whose field locks still go by its id.
+        user_data = %{
+          user: presence.user,
+          user_id: String.to_integer(user_id),
+          metas: metas,
+          left: Map.get(presence, :metas, [])
+        }
 
         Phoenix.PubSub.local_broadcast(
           pubsub_server,
