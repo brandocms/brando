@@ -56,6 +56,7 @@ defmodule Brando.EditSession do
   Registry lookup in `whereis/1`.
   """
   use GenServer, restart: :temporary
+  use Brando.Tracing.Decorator
 
   alias Brando.EditSession.Data
   alias Brando.Tenant
@@ -280,7 +281,7 @@ defmodule Brando.EditSession do
   defp rebase_all(%schema{id: id} = entry, mode) do
     with pid when is_pid(pid) <- whereis(ref_for(entry)),
          true <- schema.has_trait(Brando.Trait.Blocks) do
-      for {field, base} <- saved_bases(schema, id), do: rebase(pid, field, base, mode)
+      rebase_fields(pid, schema, id, mode)
     end
 
     :ok
@@ -288,6 +289,11 @@ defmodule Brando.EditSession do
     error ->
       Logger.error("[EditSession] rebase after a save failed: " <> Exception.message(error))
       :ok
+  end
+
+  @decorate span("brando.edit_session.rebase", schema: :schema, entry_id: :id, mode: :mode)
+  defp rebase_fields(pid, schema, id, mode) do
+    for {field, base} <- saved_bases(schema, id), do: rebase(pid, field, base, mode)
   end
 
   @doc "Each block field's rows as they are in the database, as `Ops` bases."

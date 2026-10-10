@@ -1,0 +1,58 @@
+#!/usr/bin/env bash
+# Runs a throwaway tracing stack with podman (or docker): an OpenTelemetry
+# Collector on :4317/:4318 and Jaeger's UI on :16686. See README.md.
+#
+#   e2e/bench/otel/stack up       start (or restart) both containers
+#   e2e/bench/otel/stack down     stop and remove them; keeps the trace files
+#   e2e/bench/otel/stack status   containers, ports and the trace file
+#   e2e/bench/otel/stack clear    down, then delete the trace files
+#
+# Traces land in $BRANDO_OTEL_DATA (default ~/.local/share/brando-otel).
+# Jaeger keeps spans in memory only, so `down` empties its UI.
+set -euo pipefail
+
+here="$(cd "$(dirname "$0")" && pwd -P)"
+data="${BRANDO_OTEL_DATA:-$HOME/.local/share/brando-otel}"
+engine="$(command -v podman || command -v docker)"
+network=brando-otel
+collector_image="${BRANDO_OTEL_COLLECTOR_IMAGE:-docker.io/otel/opentelemetry-collector-contrib:latest}"
+jaeger_image="${BRANDO_OTEL_JAEGER_IMAGE:-docker.io/jaegertracing/jaeger:latest}"
+
+down() {
+  "$engine" rm -f brando-otel-collector brando-otel-jaeger >/dev/null 2>&1 || true
+}
+
+up() {
+  down
+  mkdir -p "$data"
+  "$engine" network inspect "$network" >/dev/null 2>&1 || "$engine" network create "$network" >/dev/null
+
+  "$engine" run -d --name brando-otel-jaeger --network "$network" \
+    -p 16686:16686 \
+    "$jaeger_image" >/dev/null
+
+  # Root inside a rootless container is the invoking user, so the trace files
+  # stay owned by you. :Z relabels the mounts for SELinux.
+  "$engine" run -d --name brando-otel-collector --network "$network" \
+    --user 0 \
+    -p 4317:4317 -p 4318:4318 \
+    -v "$here/collector.yaml:/etc/otelcol-contrib/config.yaml:ro,Z" \
+    -v "$data:/data:Z" \
+    "$collector_image" >/dev/null
+
+  status
+}
+
+status() {
+  "$engine" ps --filter name=brando-otel --format '{{.Names}}\t{{.Status}}\t{{.Ports}}'
+  echo "traces: $data/traces.jsonl"
+  echo "jaeger: http://$(hostname):16686"
+}
+
+case "${1:-}" in
+  up) up ;;
+  down) down ;;
+  status) status ;;
+  clear) down && rm -f "$data"/traces*.jsonl && echo "cleared $data" ;;
+  *) sed -n '2,11p' "$0" | sed 's/^# \{0,1\}//'; exit 1 ;;
+esac

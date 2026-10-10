@@ -2,6 +2,8 @@ defmodule Brando.Cache.Identity do
   @moduledoc """
   Interaction with identity cache
   """
+  use Brando.Tracing.Decorator
+
   alias Brando.Cache
   alias Brando.Sites
 
@@ -30,6 +32,7 @@ defmodule Brando.Cache.Identity do
   Set initial identity cache. Called on startup
   """
   @spec set :: map()
+  @decorate span("brando.cache.set_identity")
   def set do
     {:ok, identities} = Sites.list_identities(%{preload: @preloads})
     identity_map = process_identities(identities)

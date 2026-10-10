@@ -7,12 +7,15 @@ defmodule Brando.SSG do
   environment; `mix brando.ssg` remains available as an interactive wrapper.
   """
 
+  use Brando.Tracing.Decorator
+
   alias Brando.Assets.SiteAssetSet
   alias Brando.Environments.Environment
   alias Brando.Sites.Site
   alias Brando.SSG.Context
   alias Brando.Tenant
   alias Brando.Tenant.Storage
+  alias Brando.Tracing
 
   @default_base_url "http://localhost:4000"
   @default_receive_timeout 60_000
@@ -118,9 +121,11 @@ defmodule Brando.SSG do
   end
 
   @spec build(Site.t(), Environment.t(), keyword()) :: {:ok, map()} | {:error, term(), map()}
+  @decorate span("brando.ssg.build", site: [:site, :key], environment: [:environment, :key])
   def build(%Site{id: site_id} = site, %Environment{site_id: site_id} = environment, opts) do
     output_path = Keyword.fetch!(opts, :output_path)
     dry_run? = Keyword.get(opts, :dry_run, false)
+    Tracing.set_attributes(%{"brando.dry_run": dry_run?})
     progress = Keyword.get(opts, :progress, fn _event -> :ok end)
 
     Tenant.with_prefix(Tenant.prefix(site, environment), fn ->
@@ -128,6 +133,7 @@ defmodule Brando.SSG do
     end)
   end
 
+  @decorate span("brando.ssg.build")
   def build(%Site{}, %Environment{}, opts),
     do: {:error, :environment_belongs_to_another_site, empty_result(opts[:output_path], false)}
 
@@ -206,6 +212,7 @@ defmodule Brando.SSG do
 
   defp copy_assets(_site, _output_path, _opts, true), do: :ok
 
+  @decorate span("brando.ssg.copy_assets")
   defp copy_assets(site, output_path, opts, false) do
     source = asset_source(site, opts)
 
@@ -223,9 +230,11 @@ defmodule Brando.SSG do
     end
   end
 
+  @decorate span("brando.ssg.render_urls")
   defp render_urls(site, environment, urls, output_path, opts, dry_run?, progress) do
     token = if Tenant.enabled?(), do: Context.sign(site, environment)
     total = length(urls)
+    Tracing.set_attributes(%{"brando.url_count": total})
 
     urls
     |> Enum.with_index(1)
@@ -238,6 +247,8 @@ defmodule Brando.SSG do
       end
     end)
     |> then(fn {failures, processed} ->
+      Tracing.set_attributes(%{"brando.failed_url_count": length(failures)})
+
       {:ok,
        %{
          url_count: total,
@@ -320,6 +331,7 @@ defmodule Brando.SSG do
 
   defp copy_media(_site, _output_path, _opts, true), do: :ok
 
+  @decorate span("brando.ssg.copy_media")
   defp copy_media(site, output_path, opts, false) do
     source = Keyword.get(opts, :media_path, media_source(site))
 

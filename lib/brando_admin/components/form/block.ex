@@ -42,10 +42,12 @@ defmodule BrandoAdmin.Components.Form.Block do
   """
   use BrandoAdmin, :live_component
   use Gettext, backend: Brando.Gettext
+  use Brando.Tracing.Decorator
   alias Brando.Cache
   alias Brando.Content.Blocks, as: ContentBlocks
   alias Brando.Content.BlockSlots
   alias Brando.Content.BlockSlots.Lifecycle, as: CollectionLifecycle
+  alias Brando.Tracing
   alias Brando.Villain.Blocks.GalleryObjectOverride
   alias BrandoAdmin.Components.Form.Block.Events
   alias BrandoAdmin.Components.Form.Block.LiquidPreview
@@ -2528,7 +2530,10 @@ defmodule BrandoAdmin.Components.Form.Block do
     changeset
   end
 
+  @decorate span("brando.block.render", force_render: :force_render?)
   def render_and_update_entry_block_changeset(changeset, entry, has_vars?, has_table_rows?, force_render?, true) do
+    Tracing.set_attributes(render_attributes(Changeset.get_assoc(changeset, :block)))
+
     skip_children =
       if force_render? do
         :force_render
@@ -2560,13 +2565,22 @@ defmodule BrandoAdmin.Components.Form.Block do
     changeset
   end
 
+  @decorate span("brando.block.render", force_render: :force_render?)
   def render_and_update_block_changeset(changeset, entry, has_vars?, has_table_rows?, force_render?, true) do
+    Tracing.set_attributes(render_attributes(changeset))
     skip_children = if force_render?, do: :force_render, else: true
     rendered_html = render_block_html(changeset, entry, has_vars?, has_table_rows?, false, skip_children)
 
     changeset
     |> Changeset.put_change(:rendered_html, rendered_html)
     |> maybe_update_rendered_at()
+  end
+
+  defp render_attributes(block_changeset) do
+    %{
+      "brando.block.uid": Changeset.get_field(block_changeset, :uid),
+      "brando.module_id": Changeset.get_field(block_changeset, :module_id)
+    }
   end
 
   defp render_block_html(changeset, entry, has_vars?, has_table_rows?, is_root, skip_children) do

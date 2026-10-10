@@ -65,9 +65,12 @@ defmodule Brando.LivePreview do
     default_extensions: [extensions: [Brando.LivePreview.Dsl]],
     opts_to_document: []
 
+  use Brando.Tracing.Decorator
+
   require Logger
   alias Brando.Assets.SiteAssets
   alias Brando.Exception.LivePreviewError
+  alias Brando.Tracing
   alias Brando.Utils
   alias Brando.Worker
   alias Plug.Conn
@@ -83,7 +86,9 @@ defmodule Brando.LivePreview do
             template_css_classes: nil,
             assigns: []
 
+  @decorate span("brando.preview.render", schema: :schema_module, language: [:entry, :language])
   def render(schema_module, entry, cache_key, render_opts \\ []) do
+    Tracing.set_attributes(%{"brando.preview_target": Keyword.get(render_opts, :target)})
     Brando.Villain.RenderScope.run(fn -> do_render(schema_module, entry, cache_key, render_opts) end)
   end
 
@@ -291,6 +296,7 @@ defmodule Brando.LivePreview do
     end)
   end
 
+  @decorate span("brando.preview.initialize", schema: :schema)
   def initialize(schema, changeset, updated_entry_assocs \\ %{}, target \\ nil) do
     cache_key = build_cache_key(:erlang.system_time())
     schema_module = Module.concat([schema])
@@ -365,6 +371,7 @@ defmodule Brando.LivePreview do
   def reload(schema, changeset, cache_key, updated_entry_assocs \\ %{}),
     do: render_update(schema, changeset, cache_key, updated_entry_assocs, "reload")
 
+  @decorate span("brando.preview.update", schema: :schema, preview_event: :event)
   defp render_update(schema, changeset, cache_key, updated_entry_assocs, event) do
     with :ok <- Brando.Authorization.Preview.authorize_write(cache_key, changeset),
          :ok <- Brando.Authorization.Preview.register(cache_key, changeset) do
@@ -394,7 +401,12 @@ defmodule Brando.LivePreview do
   end
 
   @doc "Switch the view without changing the preview session or its block subscriptions."
-  def switch_target(schema, changeset, cache_key, target_name, updated_entry_assocs \\ %{}) do
+  # Not decorated directly: its implicit `rescue` would become a second span.
+  @decorate span("brando.preview.switch_target", schema: :schema, preview_target: :target_name)
+  def switch_target(schema, changeset, cache_key, target_name, updated_entry_assocs \\ %{}),
+    do: do_switch_target(schema, changeset, cache_key, target_name, updated_entry_assocs)
+
+  defp do_switch_target(schema, changeset, cache_key, target_name, updated_entry_assocs) do
     with :ok <- Brando.Authorization.Preview.authorize_write(cache_key, changeset) do
       schema_module = Module.concat([schema])
       target = get_target_config(schema_module, target_name)
@@ -455,6 +467,7 @@ defmodule Brando.LivePreview do
   current assets. A capture failure fails sharing instead of storing a preview
   tied to ephemeral release files.
   """
+  @decorate span("brando.preview.share", schema: :schema_module, preview_target: :target)
   def share(schema_module, changeset, user, updated_entry_assocs \\ %{}, target \\ nil) do
     with :ok <- Brando.Authorization.Preview.authorize_share(user, changeset),
          {:ok, scope} <- preview_asset_scope(),

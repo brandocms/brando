@@ -3,11 +3,13 @@ defmodule BrandoAdmin.Components.Content.List do
   use BrandoAdmin, :live_component
   use BrandoAdmin.Translator
   use Gettext, backend: Brando.Gettext
+  use Brando.Tracing.Decorator
 
   alias Brando.Blueprint.Listings
   alias Brando.ListingViews
   alias Brando.ListingViews.View, as: ListingView
   alias Brando.Query
+  alias Brando.Tracing
   alias Brando.Trait.Creator
   alias Brando.Trait.Sequenced
   alias Brando.Trait.SoftDelete
@@ -474,6 +476,7 @@ defmodule BrandoAdmin.Components.Content.List do
     assign(socket, :active_sort, sort)
   end
 
+  @decorate span("brando.list.assign_entries", schema: :schema)
   defp assign_entries(
          %{
            assigns: %{
@@ -494,6 +497,8 @@ defmodule BrandoAdmin.Components.Content.List do
       |> build_list_opts(schema, content_language)
       |> params_to_list_opts(params, listing)
 
+    Tracing.set_attributes(%{"brando.list.limit": list_opts[:limit], "brando.list.offset": list_opts[:offset]})
+
     # "off" only overrides a switched-on default; the context never sees it.
     sanitized_list_opts = list_opts |> Listings.drop_switched_off(listing) |> sanitize_list_opts(listing)
 
@@ -512,12 +517,18 @@ defmodule BrandoAdmin.Components.Content.List do
       |> decorate(&put_translation_status(&1, schema, socket.assigns.current_user))
       |> decorate(&put_trashed_by(&1, schema))
 
+    Tracing.set_attributes(%{"brando.entry_count": entry_count(entries)})
+
     socket
     |> assign(:list_opts, list_opts)
     |> assign(:status_counts, Map.get(entries, :status_counts))
     |> assign(:entries, entries)
     |> assign(:content_language, content_language)
   end
+
+  defp entry_count(%{entries: page}) when is_list(page), do: length(page)
+  defp entry_count(entries) when is_list(entries), do: length(entries)
+  defp entry_count(_entries), do: nil
 
   # Synchronized translations show each language version's open work, fetched
   # for the whole page at once.

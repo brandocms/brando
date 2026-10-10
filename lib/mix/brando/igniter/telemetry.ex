@@ -23,7 +23,7 @@ if Code.ensure_loaded?(Igniter) do
       {:opentelemetry_api, "~> 1.2"},
       {:opentelemetry_phoenix, "~> 2.0"},
       {:opentelemetry_ecto, "~> 1.2"},
-      {:opentelemetry_oban, "~> 1.0"}
+      {:opentelemetry_oban, "~> 1.2"}
     ]
 
     def plan(igniter) do
@@ -99,7 +99,7 @@ if Code.ensure_loaded?(Igniter) do
         {server, 0, "#{inspect(server)}.setup()"},
         {OpentelemetryPhoenix, 1, "OpentelemetryPhoenix.setup(adapter: #{inspect(adapter)})"},
         {wrapper, 1, "#{inspect(wrapper)}.setup(#{inspect(project.repo)}.config()[:telemetry_prefix])"},
-        {OpentelemetryOban, 1, "OpentelemetryOban.setup(trace: [:jobs])"}
+        {OpentelemetryOban, 1, "OpentelemetryOban.setup(plugin: :disabled)"}
       ]
 
       ProjectModule.find_and_update_module!(igniter, project.application_module, fn zipper ->

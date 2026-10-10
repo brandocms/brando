@@ -19,6 +19,8 @@ defmodule Brando.Translations do
   Groups are content, stored beside the entries in the current schema.
   """
 
+  use Brando.Tracing.Decorator
+
   import Ecto.Query
 
   alias Brando.Blueprint.Unique
@@ -431,6 +433,7 @@ defmodule Brando.Translations do
   unresolved work. Returns `{:ok, %{open: count, stale: boolean}}`; `stale`
   means the source was saved again after the loaded version was computed.
   """
+  @decorate span("brando.translations.target_saved", schema: :schema, entry_id: :entry_id)
   def target_saved(schema, entry_id, review \\ nil) do
     with true <- synchronized?(schema),
          %Member{role: :target, synchronized: true} = member <- get_member(schema, entry_id) do
@@ -478,6 +481,7 @@ defmodule Brando.Translations do
 
   Entries outside a group, sources and independent translations pass through.
   """
+  @decorate span("brando.translations.check_target_save", schema: :schema, entry_id: :entry_id)
   def check_target_save(schema, entry_id, %Changeset{} = changeset, version_id \\ nil) do
     with true <- synchronized?(schema),
          %Member{role: :target, synchronized: true} = member <- get_member(schema, entry_id) do

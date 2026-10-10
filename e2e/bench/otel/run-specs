@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+# Runs e2e specs one at a time against a traced server that is already up,
+# and records each spec's time window, so its traces can be read alone:
+#
+#   e2e/bench/otel/run-specs tests/pages/revisions.spec.js tests/search.spec.js
+#   elixir e2e/bench/otel/summary.exs --from <start> --to <end>
+#
+# Windows are appended to $BRANDO_OTEL_DATA/windows.tsv (spec, start, end,
+# result). Run from anywhere; `source e2e/.envrc` first so the port matches.
+set -uo pipefail
+
+here="$(cd "$(dirname "$0")" && pwd -P)"
+data="${BRANDO_OTEL_DATA:-$HOME/.local/share/brando-otel}"
+mkdir -p "$data"
+cd "$here/../../playwright" || exit 1
+
+for spec in "$@"; do
+  start=$(date +%s)
+  if npx playwright test --retries 0 --reporter dot "$spec" >"/tmp/run-specs-$(basename "$spec").log" 2>&1; then
+    result=passed
+  else
+    result=failed
+  fi
+  end=$(date +%s)
+  printf '%s\t%s\t%s\t%s\n' "$spec" "$start" "$end" "$result" | tee -a "$data/windows.tsv"
+done

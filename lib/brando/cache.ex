@@ -2,6 +2,8 @@ defmodule Brando.Cache do
   @moduledoc """
   Interface for the main cache module
   """
+  use Brando.Tracing.Decorator
+
   @cache_module Application.compile_env(:brando, :cache_module, Cachex)
 
   @spec get(any) :: any
@@ -44,6 +46,7 @@ defmodule Brando.Cache do
   navigation caches. For changes made outside this server — a seed, a mix
   task, another node — that it can't have heard about.
   """
+  @decorate span("brando.cache.reload_all")
   def reload_all do
     Cachex.clear(:query)
     Brando.Cache.Identity.set()

@@ -64,6 +64,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
   """
   use BrandoAdmin, :live_component
   use Gettext, backend: Brando.Gettext
+  use Brando.Tracing.Decorator
 
   import Ecto.Query, only: [from: 2]
 
@@ -72,6 +73,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
   alias Brando.Content.BlockSlots
   alias Brando.Content.BlockSlots.Lifecycle, as: CollectionLifecycle
   alias Brando.EditSession
+  alias Brando.Tracing
   alias BrandoAdmin.Components.AIAction
   alias BrandoAdmin.Components.Form.Block
   alias BrandoAdmin.Components.Form.BlockField.ModulePicker
@@ -607,7 +609,10 @@ defmodule BrandoAdmin.Components.Form.BlockField do
   # commit-complete (every commit point emits a diff op), so ONE
   # materialization pass builds all root changesets for any tag. The old
   # recursive fetch/provide gather across the component tree is gone.
+  @decorate span("brando.block_field.fetch_root_blocks", block_field: [:socket, :assigns, :block_field])
   def update(%{event: "fetch_root_blocks", tag: tag}, socket) do
+    Tracing.set_attributes(%{"brando.tag": tag_name(tag)})
+
     # The session's state, not the replica's: it holds every op this editor
     # cast before asking (a process's messages arrive in order) and every op
     # the others' did. A save marks the revision it read, so its rebase can
@@ -615,6 +620,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     {ops, socket} = session_ops_for(socket, tag)
     block_module = socket.assigns.block_module
     user_id = socket.assigns.current_user.id
+    Tracing.set_attributes(%{"brando.root_count": length(ops.order)})
 
     root_changesets =
       Enum.map(ops.order, fn uid ->
@@ -1397,6 +1403,10 @@ defmodule BrandoAdmin.Components.Form.BlockField do
 
   defp session_ops_for(socket, _tag), do: {session_ops(socket), socket}
 
+  defp tag_name({kind, _}) when is_atom(kind), do: Atom.to_string(kind)
+  defp tag_name(tag) when is_atom(tag), do: Atom.to_string(tag)
+  defp tag_name(_tag), do: nil
+
   # After a save: hand the session the saved rows. It replays the ops that
   # arrived while the save ran and tells the other replicas.
   defp rebase_session(%{assigns: %{edit_session: %Replica{session: session} = replica}} = socket, base) do
@@ -1604,7 +1614,13 @@ defmodule BrandoAdmin.Components.Form.BlockField do
   # its blocks go where it has them, and the ones it lacks go. A recovery
   # copy or a translation's version may predate blocks someone has saved
   # since, so for them the blocks stay where the field has them.
+  @decorate span("brando.block_field.restore_draft", block_field: [:socket, :assigns, :block_field])
   defp restore_draft(socket, changesets, originals, opts \\ []) do
+    Tracing.set_attributes(%{
+      "brando.block_count": length(changesets),
+      "brando.shared": match?(%Replica{}, socket.assigns[:edit_session])
+    })
+
     # Seed from the saved entry, then replay a complete replacement through the
     # reducer. This retains owned IDs and deletion tombstones for the next save.
     # The result reaches the session (and the other editors) as one
@@ -2583,9 +2599,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
       # Build forms for missing blocks by casting recovered params through
       # the normal changeset pipeline — this preserves all form field values
       recovered_forms =
-        for uid <- missing_uids, reduce: %{} do
-          acc -> put_recovered_form(acc, uid, forms, child_order, block_module, user_id, entry_id)
-        end
+        recover_forms(missing_uids, forms, child_order, block_module, user_id, entry_id, socket.assigns.block_field)
 
       if recovered_forms == %{} do
         {:reply, %{recovered: []}, socket}
@@ -2605,6 +2619,15 @@ defmodule BrandoAdmin.Components.Form.BlockField do
         |> refresh_live_preview()
         |> then(&{:reply, %{recovered: Map.keys(recovered_forms)}, &1})
       end
+    end
+  end
+
+  @decorate span("brando.block_field.recover_blocks")
+  defp recover_forms(missing_uids, forms, child_order, block_module, user_id, entry_id, block_field) do
+    Tracing.set_attributes(%{"brando.block_field": block_field, "brando.block_count": length(missing_uids)})
+
+    for uid <- missing_uids, reduce: %{} do
+      acc -> put_recovered_form(acc, uid, forms, child_order, block_module, user_id, entry_id)
     end
   end
 

@@ -2,6 +2,8 @@ defmodule Brando.Cache.Palettes do
   @moduledoc """
   Interaction with palettes cache
   """
+  use Brando.Tracing.Decorator
+
   alias Brando.Cache
   alias Brando.Content
 
@@ -37,6 +39,7 @@ defmodule Brando.Cache.Palettes do
   Set initial palette cache. Called on startup
   """
   @spec set :: {:error, boolean} | {:ok, boolean}
+  @decorate span("brando.cache.set_palettes")
   def set do
     {:ok, palettes} = get_palettes()
     palettes_css = get_palettes_css(palettes)

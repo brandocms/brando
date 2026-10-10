@@ -6,6 +6,8 @@ defmodule Brando.Content.Blocks do
   Extracted from `Brando.Villain` to establish a clean boundary:
   Content owns data and orchestration, Villain owns rendering.
   """
+  use Brando.Tracing.Decorator
+
   import Ecto.Query
 
   alias Brando.Content
@@ -15,6 +17,7 @@ defmodule Brando.Content.Blocks do
   alias Brando.Content.Var
   alias Brando.Repo
   alias Brando.RichText
+  alias Brando.Tracing
   alias Brando.Trait
   alias Brando.Utils
   alias Brando.Villain
@@ -80,8 +83,10 @@ defmodule Brando.Content.Blocks do
   changes blocks.
   """
   @spec render_block_fields(changeset) :: changeset
+  @decorate span("brando.blocks.render_fields", schema: :schema, entry_id: [:changeset, :data, :id])
   def render_block_fields(%Changeset{data: %{__struct__: schema}} = changeset) do
     fields = schema.__blocks_fields__()
+    Tracing.set_attributes(%{"brando.field_count": length(fields)})
 
     dropped =
       Enum.flat_map(fields, &[&1.name, :"entry_#{&1.name}", :"rendered_#{&1.name}", :"rendered_#{&1.name}_at"])
@@ -671,6 +676,7 @@ defmodule Brando.Content.Blocks do
   """
   @spec render_entry(schema :: module, entry_id :: integer | binary) ::
           {:ok, map} | {:error, changeset}
+  @decorate span("brando.blocks.render_entry", schema: :schema, entry_id: :id)
   def render_entry(schema, id) do
     case Brando.Blueprint.EntryQuery.get(schema, id) do
       {:ok, entry} ->
@@ -711,8 +717,12 @@ defmodule Brando.Content.Blocks do
   @doc """
   Renders all block fields for an entry and adds them to changeset
   """
+  @decorate span("brando.blocks.render_fields", schema: :schema, entry_id: [:entry, :id])
   def render_all_block_fields_and_add_to_changeset(changeset, schema, entry) do
-    Enum.reduce(schema.__blocks_fields__(), changeset, fn field, updated_changeset ->
+    fields = schema.__blocks_fields__()
+    Tracing.set_attributes(%{"brando.field_count": length(fields)})
+
+    Enum.reduce(fields, changeset, fn field, updated_changeset ->
       rendered_field = :"rendered_#{field.name}"
       rendered_at_field = :"rendered_#{field.name}_at"
       entry_blocks_field = :"entry_#{field.name}"
@@ -799,6 +809,7 @@ defmodule Brando.Content.Blocks do
   Gets all blocks with `module_id` and reapply refs and vars, then saves them.
   Returns a list of all updated block ids.
   """
+  @decorate span("brando.blocks.refresh_module", module_id: :module_id)
   def refresh_module_in_blocks(module_id) do
     {:ok, module} =
       Content.get_module(%{
@@ -811,6 +822,8 @@ defmodule Brando.Content.Blocks do
         filter: %{module_id: module_id},
         preload: [:vars, refs: Ref.preloads()]
       })
+
+    Tracing.set_attributes(%{"brando.block_count": length(blocks)})
 
     blocks
     |> Enum.reduce([], fn block, acc ->
@@ -940,7 +953,13 @@ defmodule Brando.Content.Blocks do
   def sync_blocks(block_ids, module_id, origin \\ :local)
   def sync_blocks([], _module_id, _origin), do: []
 
+  @decorate span("brando.blocks.sync", module_id: :module_id)
   def sync_blocks(block_ids, module_id, origin) do
+    Tracing.set_attributes(%{
+      "brando.library_origin": to_string(normalize_library_origin(origin)),
+      "brando.block_count": length(block_ids)
+    })
+
     module =
       case normalize_library_origin(origin) do
         :local ->

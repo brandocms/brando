@@ -48,6 +48,8 @@ defmodule Brando.FrontendEdit do
   the request process, which the LiveView socket does not share.
   """
 
+  use Brando.Tracing.Decorator
+
   require Logger
 
   alias Brando.Blueprint.EntryQuery
@@ -169,9 +171,13 @@ defmodule Brando.FrontendEdit do
     if key in Process.get(@stack_key, []) do
       stored
     else
-      memo(key, fn -> render_annotated(schema, id, field, stored) end)
+      memo(key, fn -> traced_render_annotated(schema, id, field, stored) end)
     end
   end
+
+  # Not on `render_annotated/4` directly: its implicit `rescue` would become a second span.
+  @decorate span("brando.frontend_edit.render", schema: :schema, entry_id: :id, field: :field)
+  defp traced_render_annotated(schema, id, field, stored), do: render_annotated(schema, id, field, stored)
 
   @doc """
   Replaces every stored block field on `entry` with its edit-mode rendering.

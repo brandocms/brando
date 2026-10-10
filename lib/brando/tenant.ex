@@ -95,17 +95,22 @@ defmodule Brando.Tenant do
     end
   end
 
-  @doc "Captures the current tenant context for work that will run in another process."
+  @doc """
+  Captures the current tenant context for work that will run in another process.
+  The trace context comes along, so spans there join the caller's trace.
+  """
   @spec capture_context((-> result)) :: (-> result) when result: var
   def capture_context(fun) when is_function(fun, 0) do
     prefix = current_prefix()
-    fn -> run_captured(prefix, fun) end
+    trace = Brando.Tracing.capture()
+    fn -> run_captured(prefix, trace, fun) end
   end
 
   @spec capture_context((arg -> result)) :: (arg -> result) when arg: var, result: var
   def capture_context(fun) when is_function(fun, 1) do
     prefix = current_prefix()
-    fn arg -> run_captured(prefix, fn -> fun.(arg) end) end
+    trace = Brando.Tracing.capture()
+    fn arg -> run_captured(prefix, trace, fn -> fun.(arg) end) end
   end
 
   @spec validate_config!() :: :ok
@@ -132,8 +137,8 @@ defmodule Brando.Tenant do
     end
   end
 
-  defp run_captured(nil, fun), do: fun.()
-  defp run_captured(prefix, fun), do: with_prefix(prefix, fun)
+  defp run_captured(nil, trace, fun), do: Brando.Tracing.with_context(trace, fun)
+  defp run_captured(prefix, trace, fun), do: Brando.Tracing.with_context(trace, fn -> with_prefix(prefix, fun) end)
 
   defp raise_invalid_mode(mode) do
     raise ConfigError,

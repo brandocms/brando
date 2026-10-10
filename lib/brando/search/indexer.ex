@@ -8,6 +8,8 @@ defmodule Brando.Search.Indexer do
   surrounding transaction (Oban's inline testing mode indexes inside the
   save), so a failure here never aborts the save.
   """
+  use Brando.Tracing.Decorator
+
   import Ecto.Query, only: [from: 2]
 
   alias Brando.ContentEvents
@@ -15,6 +17,7 @@ defmodule Brando.Search.Indexer do
   alias Brando.Search
   alias Brando.Search.Document
   alias Brando.Search.Text
+  alias Brando.Tracing
 
   require Logger
 
@@ -22,6 +25,7 @@ defmodule Brando.Search.Indexer do
 
   @doc "Reads `schema` entry `id` and writes its document, or removes it."
   @spec index(module(), integer()) :: :ok
+  @decorate span("brando.search.index", schema: :schema, entry_id: :id)
   def index(schema, id) do
     case load(schema, [id]) do
       [entry] ->
@@ -38,7 +42,9 @@ defmodule Brando.Search.Indexer do
   other document. Returns `{:ok, count}`, the number of documents written.
   """
   @spec rebuild([module()], (non_neg_integer(), non_neg_integer() -> any())) :: {:ok, non_neg_integer()}
+  @decorate span("brando.search.rebuild")
   def rebuild(schemas, progress) do
+    Tracing.set_attributes(%{"brando.schema_count": length(schemas)})
     started = Repo.repo().query!("SELECT clock_timestamp()::timestamp", [], savepoint()).rows |> hd() |> hd()
     counts = Enum.flat_map(schemas, &count/1)
     total = counts |> Enum.map(&elem(&1, 1)) |> Enum.sum()
@@ -57,6 +63,7 @@ defmodule Brando.Search.Indexer do
 
     mark_rebuilt(DateTime.utc_now())
     progress.(total, total)
+    Tracing.set_attributes(%{"brando.search.total": total, "brando.search.written": written})
     {:ok, written}
   end
 

@@ -21,12 +21,14 @@ defmodule Brando.Uploads.Store do
   @type upload_error_result :: {:error, binary}
 
   use Gettext, backend: Brando.Gettext
+  use Brando.Tracing.Decorator
   import Brando.Utils
 
   alias Brando.Assets.CompletedCallback
   alias Brando.Files
   alias Brando.Images
   alias Brando.Tenant.Storage
+  alias Brando.Tracing
   alias Brando.Type.FileConfig
   alias Brando.Type.ImageConfig
   alias Brando.Type.VideoConfig
@@ -39,14 +41,20 @@ defmodule Brando.Uploads.Store do
 
   Finally returns an image struct
   """
+  @decorate span("brando.uploads.handle", config_target: [:meta, :config_target])
   def handle_upload(%{uploader: "S3"} = meta, upload_entry, cfg, user) do
+    Tracing.set_attributes(%{"brando.asset_type": asset_type(cfg)})
+
     with :ok <- Brando.Authorization.Media.authorize_config(user, cfg),
          {:ok, upload} <- create_upload_struct(meta, upload_entry, cfg) do
       handle_upload_type(upload, user, :direct_to_s3)
     end
   end
 
+  @decorate span("brando.uploads.handle", config_target: [:meta, :config_target])
   def handle_upload(meta, upload_entry, cfg, user) do
+    Tracing.set_attributes(%{"brando.asset_type": asset_type(cfg)})
+
     with :ok <- Brando.Authorization.Media.authorize_config(user, cfg),
          {:ok, upload} <- create_upload_struct(meta, upload_entry, cfg),
          {:ok, upload} <- get_valid_filename(upload),
@@ -62,7 +70,10 @@ defmodule Brando.Uploads.Store do
     {:ok, image}
   end
 
+  @decorate span("brando.uploads.process", image_id: :image_id, config_target: [:image, :config_target])
   def process_upload(%{id: image_id} = image, cfg, user) do
+    Tracing.set_attributes(%{"brando.asset_type": :image})
+
     with {:ok, ops} <- Images.Operations.create(image, cfg, user),
          {:ok, %{^image_id => result}} <- Images.Operations.perform(ops, user) do
       image
@@ -78,6 +89,11 @@ defmodule Brando.Uploads.Store do
       |> run_completed_callback(cfg, user)
     end
   end
+
+  defp asset_type(%ImageConfig{}), do: :image
+  defp asset_type(%FileConfig{}), do: :file
+  defp asset_type(%VideoConfig{}), do: :video
+  defp asset_type(_cfg), do: nil
 
   @doc """
   Handle upload by type.

@@ -3,6 +3,12 @@ defmodule E2eProject.Application do
   use Application
 
   def start(_type, _args) do
+    OpentelemetryBandit.setup()
+    OpentelemetryPhoenix.setup(adapter: :bandit)
+    Brando.Tracing.LiveView.setup()
+    E2eProject.O11y.OpenTelemetryEcto.setup(E2eProject.Repo.config()[:telemetry_prefix], db_statement: :enabled)
+    # No OpentelemetryOban: e2e runs Oban's inline engine, whose jobs have no
+    # scheduled_at, and its job_start handler crashes on that and is detached.
     maybe_start_coverage()
 
     # List all child processes to be supervised

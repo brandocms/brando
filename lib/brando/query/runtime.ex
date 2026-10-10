@@ -113,11 +113,14 @@ defmodule Brando.Query.Runtime do
 
   """
 
+  use Brando.Tracing.Decorator
+
   import Ecto.Query
 
   alias Brando.Cache
   alias Brando.Repo
   alias Brando.Revisions
+  alias Brando.Tracing
 
   def with_order(query, order) when is_list(order) do
     Enum.reduce(order, query, fn
@@ -536,6 +539,7 @@ defmodule Brando.Query.Runtime do
   @doc """
   Handle list queries
   """
+  @decorate span("brando.query.list", schema: :module, stream: :stream)
   def handle_list_query(
         context,
         query_key,
@@ -544,6 +548,7 @@ defmodule Brando.Query.Runtime do
         module,
         stream \\ false
       ) do
+    Tracing.set_attributes(%{"brando.paginate": Map.get(args, :paginate) == true})
     args = Brando.Authorization.Boundary.cache_options(args)
     {status_counts?, args} = Map.pop(args, :status_counts, false)
     initial_query = Brando.Authorization.Boundary.query(initial_query, module)
@@ -560,10 +565,12 @@ defmodule Brando.Query.Runtime do
           )
 
         result = Repo.all(query)
+        Tracing.set_attributes(%{"brando.cache": "miss", "brando.result_count": length(result)})
         Brando.Cache.Query.put(cache_key, result, ttl)
         {:ok, result}
 
       {:hit, result} ->
+        Tracing.set_attributes(%{"brando.cache": "hit"})
         {:ok, result}
 
       :no_cache ->
@@ -593,6 +600,7 @@ defmodule Brando.Query.Runtime do
 
   defp list_entries(query, pagination_meta) do
     entries = Repo.all(query)
+    Tracing.set_attributes(%{"brando.result_count": length(entries)})
 
     if pagination_meta do
       {:ok, %{entries: entries, pagination_meta: pagination_meta}}

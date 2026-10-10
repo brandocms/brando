@@ -2,6 +2,8 @@ defmodule Brando.Cache.SEO do
   @moduledoc """
   Interaction with SEO cache
   """
+  use Brando.Tracing.Decorator
+
   alias Brando.Cache
   alias Brando.Sites
 
@@ -31,6 +33,7 @@ defmodule Brando.Cache.SEO do
   Set initial SEO cache. Called on startup
   """
   @spec set :: map()
+  @decorate span("brando.cache.set_seo")
   def set do
     {:ok, seos} = Sites.list_seos(%{preload: [:fallback_meta_image]})
     seo_map = process_seos(seos)

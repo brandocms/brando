@@ -1,0 +1,35 @@
+# OpenTelemetry Collector for local tracing sessions. See README.md.
+#
+# Receives OTLP from a traced app, writes every batch to a JSONL file (for
+# analysis with jq or DuckDB) and forwards the same spans to Jaeger (for
+# browsing). CORS is open so a browser exporter can post here too.
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+        cors:
+          allowed_origins: ["*"]
+
+processors:
+  batch: {}
+
+exporters:
+  file:
+    path: /data/traces.jsonl
+    rotation:
+      max_megabytes: 200
+      max_backups: 20
+  otlp_grpc/jaeger:
+    endpoint: brando-otel-jaeger:4317
+    tls:
+      insecure: true
+
+service:
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [file, otlp_grpc/jaeger]
