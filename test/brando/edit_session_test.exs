@@ -760,6 +760,64 @@ defmodule Brando.EditSessionTest do
              ]
     end
 
+    # Sol audit: the log matched the rejoiner's rows by the name it had for
+    # them, so a row it named by sync uid, which the session names by id,
+    # was logged without the rejoiner's change.
+    test "a save's rebase replays a rejoiner's change to a row it named by sync uid" do
+      rows_a = fn rows -> %{id: 1, block: %{uid: "a", id: 10, children: [], table_rows: rows}} end
+      old = Ops.from_entry_blocks([rows_a.([%{id: 5, sync_uid: "r5"}]), entry_block("b", 2, 20)])
+
+      base =
+        Ops.from_entry_blocks([rows_a.([%{id: 5, sync_uid: "r5"}, %{id: 8, sync_uid: "new"}]), entry_block("b", 2, 20)])
+
+      # the session names the rows of a block with unsaved work by id
+      {:ok, seed} = Ops.apply_op(base, anchor("a", "A, saving"))
+      {:seeded, data} = Data.join(Data.new(1), @field, base, seed)
+      assert Data.state(data, @field).rel_ids["a"][{"table_rows", "new"}] == 8
+      data = Data.mark_save(data, @field, :saver, 0)
+
+      {:ok, held} =
+        Ops.apply_op(
+          old,
+          {:update, "a", %{"block" => %{"table_rows" => [%{"id" => 5}, %{"sync_uid" => "new", "cols" => "B"}]}}}
+        )
+
+      {{:merged, []}, data} = Data.merge_held(data, @field, held, old)
+
+      {:ok, data, []} = Data.rebase(data, @field, base, {:client, :saver})
+      {:ok, params} = Ops.materialize_root(Data.state(data, @field), "a")
+      assert [%{"id" => 5}, %{"id" => 8, "cols" => "B"}] = params["block"]["table_rows"]
+    end
+
+    # Sol audit: the log took the rejoiner's row whole, so a list inside it
+    # lost the rows the merge kept from the session.
+    test "a save's rebase replays a rejoin with the rows the merge kept inside a row" do
+      base = Ops.from_entry_blocks([entry_block("a", 1, 10), entry_block("b", 2, 20)])
+      {:seeded, data} = Data.join(Data.new(1), @field, base, base)
+      vars_then = [%{"id" => 51}, %{"id" => 52}]
+
+      at_var = fn id ->
+        ["block", {:at, "table_rows", {"id", 5}, [%{"id" => 5}]}, {:at, "vars", {"id", id}, vars_then}, "value"]
+      end
+
+      {:ok, data} = Data.apply_op(data, @field, {:set_field, "a", at_var.(52), "A, saving", 0})
+      data = Data.mark_save(data, @field, :saver, 0)
+
+      {:ok, held} =
+        Ops.apply_op(
+          base,
+          {:update, "a", %{"block" => %{"table_rows" => [%{"id" => 5, "vars" => [%{"id" => 51, "value" => "B"}]}]}}}
+        )
+
+      {{:merged, []}, data} = Data.join(data, @field, base, held)
+      assert [%{"id" => 5, "vars" => [_, _]}] = Data.state(data, @field).diffs["a"]["block"]["table_rows"]
+
+      {:ok, data, []} = Data.rebase(data, @field, base, {:client, :saver})
+
+      assert [%{"id" => 5, "vars" => [%{"id" => 51, "value" => "B"}, %{"id" => 52}]}] =
+               Data.state(data, @field).diffs["a"]["block"]["table_rows"]
+    end
+
     test "a rejoin carrying work after a save's read is kept by that save's rebase, on the session" do
       ref = new_ref()
       Phoenix.PubSub.subscribe(Brando.pubsub(), ref.topic)

@@ -1206,8 +1206,13 @@ defmodule BrandoAdmin.Components.Form.BlockField.Ops do
     diffs =
       Map.new(carried.diffs, fn {uid, diff} ->
         merged_diff = Map.get(merged.diffs, uid, %{})
+        root? = uid in carried.order
+        # named as the merge named them: a row the rejoiner had new may be
+        # a row with an id by now
+        ids = Map.merge(Map.get(carried.rel_ids, uid, %{}), Map.get(merged.rel_ids, uid, %{}))
+        diff = fill_diff_ids(diff, root?, ids)
 
-        if uid in carried.order,
+        if root?,
           do: {uid, Map.update(diff, "block", %{}, &log_lists(&1, Map.get(merged_diff, "block", %{})))},
           else: {uid, log_lists(diff, merged_diff)}
       end)
@@ -1224,15 +1229,26 @@ defmodule BrandoAdmin.Components.Form.BlockField.Ops do
 
   defp log_lists(diff, _merged), do: diff
 
+  # The merged rows in the merged order: the rejoiner's own as it had them
+  # (with the lists inside them built the same way), the others by their
+  # identity alone.
   defp log_list(key, carried, merged) when is_list(merged) do
     own = carried |> Enum.reject(&(row_key(&1, key) == :none)) |> Map.new(&{row_key(&1, key), &1})
 
     if Enum.any?(merged, &(row_key(&1, key) == :none)),
       do: carried,
-      else: Enum.map(merged, &Map.get_lazy(own, row_key(&1, key), fn -> Map.take(&1, @row_identities) end))
+      else: Enum.map(merged, &log_row(Map.fetch(own, row_key(&1, key)), &1, key))
   end
 
   defp log_list(_key, carried, _merged), do: carried
+
+  defp log_row({:ok, mine}, row, _key), do: log_lists(mine, row)
+  defp log_row(:error, row, key), do: identity_only(row, key)
+
+  defp identity_only(row, key) do
+    {name, _value} = identity(row, key)
+    Map.take(row, Enum.uniq([name | @row_identities]))
+  end
 
   defp saved_row?(%{"id" => id}) when id not in [nil, ""], do: true
   defp saved_row?(_item), do: false
