@@ -130,6 +130,28 @@ defmodule Brando.SEO.SuggestionsTest do
     end)
   end
 
+  # The first run's job already wrote its text when the second run set the
+  # suggestion back to queued: that one needs a job of its own, or it stays
+  # queued with nothing to write it.
+  test "a suggestion queued again while its job runs gets another job", %{user: user} do
+    page = create_page(user, "Asked while running", "asked-while-running")
+
+    Oban.Testing.with_testing_mode(:manual, fn ->
+      assert {:ok, 1} = Suggestions.enqueue([row(page)], "en", user)
+      [%{id: id}] = Suggestions.list_open("en")
+
+      Brando.Repo.update_all(
+        Ecto.Query.from(j in Oban.Job, where: j.worker == "Brando.Worker.SEOSuggestionGenerator"),
+        set: [state: "executing", attempted_at: DateTime.utc_now()]
+      )
+
+      Brando.Repo.update_all(Ecto.Query.from(s in Suggestion, where: s.id == ^id), set: [status: :failed])
+      assert {:ok, 1} = Suggestions.enqueue([row(page)], "en", user)
+
+      assert [_waiting] = all_enqueued(worker: Brando.Worker.SEOSuggestionGenerator, args: %{"suggestion_id" => id})
+    end)
+  end
+
   defp age_jobs(worker, seconds) do
     import Ecto.Query, only: [from: 2]
     inserted_at = DateTime.add(DateTime.utc_now(), -seconds)

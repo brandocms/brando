@@ -1958,7 +1958,7 @@ production dump.
   beside the first until the video was ready; fetching video details twice
   while the first lookup still waited looked each video up twice; and two
   runs that queued the same meta description or alt text asked the AI for
-  it twice. Each now has one job until it has run.
+  it twice. Each now has one waiting job at a time.
 
 - **Removing a selection whose option is no longer offered removes it.** In
   a multi-select over a `has_many` relation, a selected entry missing from
