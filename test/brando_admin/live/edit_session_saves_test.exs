@@ -512,6 +512,133 @@ defmodule BrandoAdmin.EditSessionSavesTest do
     await(fn -> shown_refs(b, first) == 2 end)
   end
 
+  # Two editors held the same new block when the session died. The one who
+  # came back second had changed it (its op never reached the session):
+  # the session keeps the first's version, and the second's comes back as
+  # a copy beside it.
+  test "a new block both editors held comes back as a copy for the one whose version the session did not keep", c do
+    a = open(c.conn, c.identity)
+    b = open(c.other_conn, c.identity)
+    uid = added_block(a, b, c)
+
+    old = session_pid(c.identity)
+    :sys.suspend(old)
+    # a footnote marker in the text names a block of the copied subtree
+    type(b, uid, ~s(<p>B's version<sup data-footnote-uid="#{uid}">1</sup></p>))
+    :sys.suspend(b.pid)
+    Process.exit(old, :kill)
+    # A comes back first and seeds the new session with its version
+    await(fn -> session_pid(c.identity) not in [nil, old] end)
+    :sys.resume(b.pid)
+
+    kept = uid <> "-kept"
+    await(fn -> session_state(c.identity).statuses[kept] == :inserted end)
+    state = session_state(c.identity)
+    assert Enum.find_index(state.order, &(&1 == kept)) == Enum.find_index(state.order, &(&1 == uid)) + 1
+    copied? = fn view -> (shown_text(view, kept) || "") =~ ~r/version<sup data-footnote-uid="#{kept}">/ end
+    await(fn -> copied?.(b) end)
+    await(fn -> copied?.(a) end)
+    refute shown_text(a, uid) =~ "B's version"
+    refute state.diffs[kept]["block"]["sync_uid"] == uid
+  end
+
+  # Sol audit: copies placed by positions read before any went in landed
+  # before the second original.
+  test "copies of two new blocks each come right after their own", c do
+    a = open(c.conn, c.identity)
+    b = open(c.other_conn, c.identity)
+    first = added_block(a, b, c)
+    second = added_block(a, b, %{c | uids: [first | c.uids]})
+
+    old = session_pid(c.identity)
+    :sys.suspend(old)
+    type(b, first, "<p>B's first</p>")
+    type(b, second, "<p>B's second</p>")
+    :sys.suspend(b.pid)
+    Process.exit(old, :kill)
+    await(fn -> session_pid(c.identity) not in [nil, old] end)
+    :sys.resume(b.pid)
+
+    await(fn -> Enum.all?([first, second], &(session_state(c.identity).statuses[&1 <> "-kept"] == :inserted)) end)
+    order = session_state(c.identity).order
+
+    for uid <- [first, second] do
+      assert Enum.find_index(order, &(&1 == uid <> "-kept")) == Enum.find_index(order, &(&1 == uid)) + 1
+    end
+  end
+
+  # Review: the editor who never changed the block, coming back after the
+  # one who did, was given a copy of the older version.
+  test "a new block is not copied for the editor who did not change it", c do
+    a = open(c.conn, c.identity)
+    b = open(c.other_conn, c.identity)
+    uid = added_block(a, b, c)
+
+    old = session_pid(c.identity)
+    :sys.suspend(old)
+    type(b, uid, "<p>B's version</p>")
+    :sys.suspend(a.pid)
+    Process.exit(old, :kill)
+    # B comes back first, with its change
+    await(fn -> session_pid(c.identity) not in [nil, old] end)
+    await(fn -> shown_text(b, uid) == "<p>B's version</p>" end)
+    :sys.resume(a.pid)
+
+    await(fn -> shown_text(a, uid) == "<p>B's version</p>" end)
+    refute Map.has_key?(session_state(c.identity).statuses, uid <> "-kept")
+  end
+
+  # The same, when the editor finds itself behind and the session gone at
+  # once: it asks for the session's state, gets no answer, and joins again.
+  test "a new block is not copied for the editor who did not change it, after a failed resync", c do
+    a = open(c.conn, c.identity)
+    b = open(c.other_conn, c.identity)
+    uid = added_block(a, b, c)
+    {:ok, %{epoch: epoch, rev: rev}} = EditSession.fetch(session_pid(c.identity), :blocks)
+
+    old = session_pid(c.identity)
+    :sys.suspend(old)
+    type(b, uid, "<p>B's version</p>")
+    :sys.suspend(a.pid)
+    # an op A missed: it will ask the session for its state
+    gap = %{kind: :op, epoch: epoch, rev: rev + 2, op: {:delete, "nothing"}, origin: {self(), 1}}
+    send(a.pid, {:edit_session, :blocks, gap})
+    Process.exit(old, :kill)
+    await(fn -> session_pid(c.identity) not in [nil, old] end)
+    await(fn -> shown_text(b, uid) == "<p>B's version</p>" end)
+    :sys.resume(a.pid)
+
+    await(fn -> shown_text(a, uid) == "<p>B's version</p>" end)
+    refute Map.has_key?(session_state(c.identity).statuses, uid <> "-kept")
+  end
+
+  test "a new block both editors held in the same version is not copied when one rejoins", c do
+    a = open(c.conn, c.identity)
+    b = open(c.other_conn, c.identity)
+    uid = added_block(a, b, c)
+    type(b, uid, "<p>Seen by both</p>")
+    await(fn -> shown_text(a, uid) == "<p>Seen by both</p>" end)
+
+    old = session_pid(c.identity)
+    :sys.suspend(b.pid)
+    Process.exit(old, :kill)
+    await(fn -> session_pid(c.identity) not in [nil, old] end)
+    :sys.resume(b.pid)
+
+    await(fn ->
+      MapSet.size(
+        EditSession.whereis(EditSession.ref(Page, c.identity.id, c.identity.language))
+        |> :sys.get_state()
+        |> Map.get(:clients)
+        |> Map.keys()
+        |> MapSet.new()
+      ) == 2
+    end)
+
+    refute Map.has_key?(session_state(c.identity).statuses, uid <> "-kept")
+    assert shown_text(b, uid) == "<p>Seen by both</p>"
+  end
+
   # Review of #3055: the block came back after its rescue (the proposal was
   # undone) while the first copy stayed, and work in it was then removed
   # again. The first copy settled the second rescue, so nothing was

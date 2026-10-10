@@ -2188,6 +2188,16 @@ msgstr ""
 
 #: lib/brando_admin/components/form/block_field.ex
 #, elixir-autogen, elixir-format
+msgid "Another editor kept their version of a new block you had changed too. Your version is kept as a copy next to it."
+msgstr ""
+
+#: lib/brando_admin/components/form/block_field.ex
+#, elixir-autogen, elixir-format
+msgid "Another editor kept their version of a new block you had changed too. Yours could not be kept."
+msgstr ""
+
+#: lib/brando_admin/components/form/block_field.ex
+#, elixir-autogen, elixir-format
 msgid "Another editor removed the block you were changing."
 msgstr ""
 

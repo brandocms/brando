@@ -788,7 +788,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     # session carries onto its state (a fresh joiner may have seeded it from
     # the database first).
     held = Keyword.get(opts, :held, base)
-    join_opts = [user_id: user.id, read_only: not may_update?(socket)]
+    join_opts = [user_id: user.id, read_only: not may_update?(socket), changed: Keyword.get(opts, :changed, [])]
     # the rows `held` was built on, for the copies of removed blocks
     loaded = socket.assigns.entry_blocks
 
@@ -1025,6 +1025,22 @@ defmodule BrandoAdmin.Components.Form.BlockField do
   # as `-kept` shells holding only the way to them: a child block is made
   # for its parent (a multi module's entry, a container's child) and would
   # not read, or render, as a root of its own.
+  # A copy of a new block the session has in another version (`copy?`)
+  # goes right after it, whole: the session's block stays as it is.
+  defp rescue_payload(socket, %Ops{} = old, %Ops{} = new, %{copy?: true, group: group, kept: kept}, _worked) do
+    with true <- Ops.known?(old, group) and Ops.known?(new, group),
+         %{} = block <- rescued_block(socket, old, group) do
+      # where it is when the copy goes in: copies before it move it
+      place_rescued(socket, old, group, block, Map.get(new.parents, group), kept, {:after, group})
+    else
+      _ -> nil
+    end
+  rescue
+    error ->
+      Logger.error("BlockField could not keep its version of a new block: " <> Exception.message(error))
+      nil
+  end
+
   defp rescue_payload(socket, %Ops{} = old, %Ops{} = new, %{group: group, uids: uids, kept: kept}, worked) do
     whole =
       uids
@@ -1074,11 +1090,14 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     end
   end
 
-  defp place_rescued(_socket, _old, _group, block, parent, kept) when is_binary(parent),
-    do: {:child, parent, block, kept}
+  defp place_rescued(socket, old, group, block, parent, kept, at \\ :end)
 
-  defp place_rescued(socket, old, group, block, nil, kept) do
-    with %{} = entry_block <- rescued_params(socket, old, group), do: {:root, Map.put(entry_block, "block", block), kept}
+  defp place_rescued(_socket, _old, _group, block, parent, kept, at) when is_binary(parent),
+    do: {:child, parent, block, at, kept}
+
+  defp place_rescued(socket, old, group, block, nil, kept, at) do
+    with %{} = entry_block <- rescued_params(socket, old, group),
+         do: {:root, Map.put(entry_block, "block", block), at, kept}
   end
 
   defp rescued_block(socket, old, uid) do
@@ -1134,11 +1153,28 @@ defmodule BrandoAdmin.Components.Form.BlockField do
   end
 
   defp rescue_own(socket, rescues, payloads) do
-    Enum.reduce(rescues, socket, fn %{group: group}, socket ->
+    Enum.reduce(rescues, socket, fn %{group: group} = asked, socket ->
       {socket, ok?} = reinsert_payload(socket, payloads[group])
-      tell_rescued(ok?, true, false)
+      if asked[:copy?], do: tell_copied(ok?), else: tell_rescued(ok?, true, false)
       socket
     end)
+  end
+
+  defp tell_copied(true) do
+    send(
+      self(),
+      {:toast,
+       gettext(
+         "Another editor kept their version of a new block you had changed too. Your version is kept as a copy next to it."
+       )}
+    )
+  end
+
+  defp tell_copied(false) do
+    send(
+      self(),
+      {:toast, gettext("Another editor kept their version of a new block you had changed too. Yours could not be kept.")}
+    )
   end
 
   # Every editor hears how the session's rescue went: one whose work it
@@ -1215,17 +1251,46 @@ defmodule BrandoAdmin.Components.Form.BlockField do
   # copy that is already there is not made again (`reinsert_payload/2`): a
   # rescue brings a group back once. Its refs, whose uids are unique as
   # well, get new ones. Nothing else changes: a `"uid"` inside a ref's data
-  # is the data's own.
-  defp rename_copy(%{"uid" => uid} = block, kept), do: rename_block(block, String.replace_prefix(kept, uid, ""))
+  # is the data's own, except footnote markers in its text, which name the
+  # blocks of the copy by their new uids (as a duplicate's do).
+  defp rename_copy(%{"uid" => uid} = block, kept) do
+    suffix = String.replace_prefix(kept, uid, "")
+    mapping = block |> subtree_uids() |> Map.new(&{&1, &1 <> suffix})
+    block |> rename_block(suffix) |> remap_copy_markers(mapping)
+  end
 
+  defp subtree_uids(%{"uid" => uid} = block),
+    do: [uid | Enum.flat_map(Map.get(block, "children", []), &subtree_uids/1)]
+
+  defp remap_copy_markers(%{} = block, mapping) do
+    block
+    |> Map.update("refs", [], fn refs -> Enum.map(refs, &remap_ref_markers(&1, mapping)) end)
+    |> Map.update("vars", [], fn vars -> Enum.map(vars, &remap_var_markers(&1, mapping)) end)
+    |> Map.update("children", [], fn children -> Enum.map(children, &remap_copy_markers(&1, mapping)) end)
+  end
+
+  defp remap_ref_markers(%{"data" => %{"type" => "text", "data" => %{"text" => text} = data}} = ref, mapping),
+    do: put_in(ref, ["data", "data"], %{data | "text" => Brando.Content.BlockSlots.remap_markers(text, mapping)})
+
+  defp remap_ref_markers(ref, _mapping), do: ref
+
+  defp remap_var_markers(%{"type" => type, "value" => value} = var, mapping) when type in ["html", :html],
+    do: %{var | "value" => Brando.Content.BlockSlots.remap_markers(value, mapping)}
+
+  defp remap_var_markers(var, _mapping), do: var
+
+  # Its sync uid (and its table rows') would be the original's: a new block
+  # takes its own when it is cast.
   defp rename_block(%{} = block, suffix) do
     block
+    |> Map.delete("sync_uid")
+    |> Map.update("table_rows", [], fn rows -> Enum.map(rows, &Map.delete(&1, "sync_uid")) end)
     |> Map.update("uid", nil, &(&1 <> suffix))
     |> Map.update("refs", [], fn refs -> Enum.map(refs, &Map.put(&1, "uid", Brando.Utils.generate_uid())) end)
     |> Map.update("children", [], fn children -> Enum.map(children, &rename_block(&1, suffix)) end)
   end
 
-  defp reinsert(socket, {:root, params, kept}) do
+  defp reinsert(socket, {:root, params, at, kept}) do
     params = Map.update!(params, "block", &rename_copy(&1, kept))
     uid = params["block"]["uid"]
 
@@ -1239,16 +1304,16 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     socket =
       socket
       |> put_seed_form(uid, form)
-      |> apply_block_op({:insert, uid, :end, params}, :replay)
+      |> apply_block_op({:insert, uid, position(socket, nil, at), params}, :replay)
 
     {socket, uid}
   end
 
   # Under a block that is still there: its root shows it once it has it.
-  defp reinsert(socket, {:child, parent, block, kept}) do
+  defp reinsert(socket, {:child, parent, block, at, kept}) do
     block = rename_copy(block, kept)
     uid = block["uid"]
-    socket = apply_block_op(socket, {:insert_child, parent, uid, :end, block}, :replay)
+    socket = apply_block_op(socket, {:insert_child, parent, uid, position(socket, parent, at), block}, :replay)
 
     socket =
       if Ops.known?(socket.assigns.block_ops, uid),
@@ -1257,6 +1322,18 @@ defmodule BrandoAdmin.Components.Form.BlockField do
 
     {socket, uid}
   end
+
+  defp position(socket, parent, {:after, sibling}) do
+    ops = socket.assigns.block_ops
+    siblings = if parent, do: Map.get(ops.child_order, parent, []), else: ops.order
+
+    case Enum.find_index(siblings, &(&1 == sibling)) do
+      nil -> :end
+      index -> index + 1
+    end
+  end
+
+  defp position(_socket, _parent, at), do: at
 
   # An op turned away because another editor removed its block.
   defp report_rejection(socket, op, {:unknown_uid, _uid})
@@ -1290,9 +1367,14 @@ defmodule BrandoAdmin.Components.Form.BlockField do
   defp rejoin_session(%{assigns: %{edit_session: %Replica{} = replica}} = socket) do
     Process.delete({:brando_edit_session_monitor, replica.monitor})
 
+    # The blocks this editor's unconfirmed ops changed: a new block it
+    # holds in another version than the session's comes back as a copy
+    # only if it changed it itself (`Brando.EditSession.join/4`).
+    changed = Replica.changed(replica)
+
     socket
     |> assign(:edit_session, nil)
-    |> join_session(held: socket.assigns.block_ops)
+    |> join_session(held: socket.assigns.block_ops, changed: changed)
   end
 
   defp rejoin_session(socket), do: socket

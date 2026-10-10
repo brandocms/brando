@@ -897,12 +897,12 @@ defmodule Brando.EditSessionTest do
 
     # As `BlockField.join_session/2` does: rows that are not the session's
     # are read again (`rows_now`), and the join moves the session onto them.
-    defp rejoin_with_stale_rows(ref, loaded, held, rows_now \\ nil) do
+    defp rejoin_with_stale_rows(ref, loaded, held, rows_now \\ nil, opts \\ []) do
       Task.await(
         Task.async(fn ->
-          case EditSession.join(ref, @field, {loaded, held}) do
+          case EditSession.join(ref, @field, {loaded, held}, opts) do
             {:error, :base_mismatch} when rows_now != nil ->
-              EditSession.join(ref, @field, {rows_now, held}, rebase: true, held_base: loaded)
+              EditSession.join(ref, @field, {rows_now, held}, [rebase: true, held_base: loaded] ++ opts)
 
             result ->
               result
@@ -1027,6 +1027,213 @@ defmodule Brando.EditSessionTest do
 
       {:ok, params} = Ops.materialize_root(state, "a")
       assert [%{"id" => 5}, %{"id" => 8, "cols" => "C's cell"}] = params["block"]["table_rows"]
+    end
+
+    # Both editors held the same new block when the session died; the one
+    # who came back second held a different version of it. The session
+    # keeps the first's, and gives the rejoiner back its own as a copy.
+    test "a rejoiner holding another version of a new block the session has gets it back as a copy" do
+      ref = new_ref()
+      base = rows()
+      insert = fn text -> {:insert, "n", 1, %{"block" => %{"uid" => "n", "description" => text}}} end
+      {:ok, seed} = Ops.apply_op(base, insert.("A's version"))
+      {:ok, _} = EditSession.join(ref, @field, {base, seed})
+
+      {:ok, held} = Ops.apply_op(base, insert.("B's version"))
+      {:ok, held} = Ops.apply_op(held, {:insert_child, "n", "nc", 0, %{"uid" => "nc"}})
+      assert {:ok, info} = rejoin_with_stale_rows(ref, base, held, nil, changed: ["n"])
+
+      assert info.state.diffs["n"]["block"]["description"] == "A's version"
+      assert [%{group: "n", kept: "n-kept", uids: uids, copy?: true}] = info.rescues
+      assert Enum.sort(uids) == ["n", "nc"]
+    end
+
+    test "a copy a rejoiner brings back during another editor's save stays through that save's rebase" do
+      ref = new_ref()
+      base = rows()
+      insert = fn uid, text -> {:insert, uid, 1, %{"block" => %{"uid" => uid, "description" => text}}} end
+      {:ok, seed} = Ops.apply_op(base, insert.("n", "A's version"))
+      {:ok, a} = EditSession.join(ref, @field, {base, seed})
+      {:ok, _} = EditSession.fetch(a.session, @field, purpose: :save)
+
+      {:ok, held} = Ops.apply_op(base, insert.("n", "B's version"))
+
+      task =
+        Task.async(fn ->
+          {:ok, info} = EditSession.join(ref, @field, {base, held}, changed: ["n"])
+          [%{kept: kept}] = info.rescues
+          EditSession.submit(info.session, @field, insert.(kept, "B's version"), 1)
+          {:ok, _} = EditSession.fetch(info.session, @field)
+          kept
+        end)
+
+      kept = Task.await(task)
+
+      saved =
+        Ops.from_entry_blocks([
+          entry_block("a", 1, 10, [child("a1", 11)]),
+          entry_block("n", 9, 90),
+          entry_block("b", 2, 20)
+        ])
+
+      assert {:ok, %{state: state}} = EditSession.rebase(a.session, @field, saved, :own_save)
+      assert state.statuses["n"] == :persisted
+      assert state.statuses[kept] == :inserted
+      assert state.diffs[kept]["block"]["description"] == "B's version"
+    end
+
+    # Sol audit: two rejoiners were both given `n-kept`; the second insert
+    # was turned away and its version lost.
+    test "two rejoiners with their own versions of a new block get copies under different uids" do
+      ref = new_ref()
+      base = rows()
+      insert = fn text -> {:insert, "n", 1, %{"block" => %{"uid" => "n", "description" => text}}} end
+      {:ok, seed} = Ops.apply_op(base, insert.("A's version"))
+      {:ok, _} = EditSession.join(ref, @field, {base, seed})
+
+      kept =
+        for text <- ["B's version", "C's version"] do
+          {:ok, held} = Ops.apply_op(base, insert.(text))
+          parent = self()
+
+          spawn(fn ->
+            {:ok, info} = EditSession.join(ref, @field, {base, held}, changed: ["n"])
+            send(parent, {:kept, Enum.map(info.rescues, & &1.kept)})
+            Process.sleep(:infinity)
+          end)
+
+          assert_receive {:kept, [uid]}
+          uid
+        end
+
+      assert kept == ["n-kept", "n-kept-2"]
+    end
+
+    # Sol audit: a block saved before the rejoin is a row with no diff in
+    # the session, so any held version looked different from it.
+    test "a rejoiner holding a new block the session has saved since gets no copy" do
+      ref = new_ref()
+      base = rows()
+      {:ok, held} = Ops.apply_op(base, {:insert, "n", 1, %{"block" => %{"uid" => "n", "description" => "same"}}})
+
+      saved =
+        Ops.from_entry_blocks([
+          entry_block("a", 1, 10, [child("a1", 11)]),
+          entry_block("n", 9, 90),
+          entry_block("b", 2, 20)
+        ])
+
+      {:ok, _} = EditSession.join(ref, @field, {saved, saved})
+
+      assert {:ok, info} = EditSession.join(ref, @field, {saved, held}, held_base: base, rebase: true, changed: ["n"])
+      assert info.rescues == []
+    end
+
+    # Sol audit: a block a rejoin carried into a session seeded from the
+    # rows is stored as the carry made it, which a raw comparison took for
+    # another version: the rejoiner, and the next one holding the same,
+    # were given copies of it.
+    test "rejoiners holding the same new block a fresh session did not have get no copies" do
+      ref = new_ref()
+      base = rows()
+      {:ok, _} = EditSession.join(ref, @field, {base, base})
+      {:ok, held} = Ops.apply_op(base, {:insert, "n", 1, %{"block" => %{"uid" => "n", "description" => "same"}}})
+
+      for _editor <- [:a, :b] do
+        assert {:ok, info} = rejoin_with_stale_rows(ref, base, held, nil, changed: ["n"])
+        assert info.rescues == []
+        assert info.state.statuses["n"] == :inserted
+      end
+    end
+
+    # Sol audit: only a copy's own uid was reserved, so a copy of one of its
+    # children, asked of another rejoiner, could take a uid it would take.
+    test "a copy's children's uids are reserved for it" do
+      ref = new_ref()
+      base = rows()
+      insert = fn text -> {:insert, "n", 1, %{"block" => %{"uid" => "n", "description" => text}}} end
+      child = fn ops, text -> Ops.apply_op(ops, {:insert_child, "n", "c", 0, %{"uid" => "c", "description" => text}}) end
+
+      {:ok, seed} = Ops.apply_op(base, insert.("A's version"))
+      {:ok, seed} = child.(seed, "A's child")
+      {:ok, _} = EditSession.join(ref, @field, {base, seed})
+
+      {:ok, b_held} = Ops.apply_op(base, insert.("B's version"))
+      {:ok, b_held} = child.(b_held, "B's child")
+      assert {:ok, %{rescues: [%{kept: "n-kept"}]}} = rejoin_with_stale_rows(ref, base, b_held, nil, changed: ["n", "c"])
+
+      # C moved the child under a saved block and changed it
+      {:ok, c_held} = Ops.apply_op(base, insert.("A's version"))
+      {:ok, c_held} = child.(c_held, "C's child")
+      {:ok, c_held} = Ops.apply_op(c_held, {:move_to_parent, "c", "a", :end})
+      assert {:ok, %{rescues: rescues}} = rejoin_with_stale_rows(ref, base, c_held, nil, changed: ["c"])
+      assert %{kept: kept} = Enum.find(rescues, &(&1.group == "c"))
+      refute kept == "c-kept"
+    end
+
+    # Sol audit: a block whose children were all removed holds an empty list
+    # of them, which a carry does not store.
+    test "a new block whose children were all removed is the same without them" do
+      ref = new_ref()
+      base = rows()
+      {:ok, _} = EditSession.join(ref, @field, {base, base})
+      {:ok, held} = Ops.apply_op(base, {:insert, "n", 1, %{"block" => %{"uid" => "n"}}})
+      {:ok, held} = Ops.apply_op(held, {:insert_child, "n", "c", 0, %{"uid" => "c"}})
+      {:ok, held} = Ops.apply_op(held, {:delete, "c"})
+
+      for _editor <- [:a, :b] do
+        assert {:ok, %{rescues: []}} = rejoin_with_stale_rows(ref, base, held, nil, changed: ["n"])
+      end
+    end
+
+    # Review: an editor who never changed a new block, coming back after
+    # the one who did, held the older version, and was given a copy of it.
+    test "a rejoiner that did not change a new block itself gets no copy of its version" do
+      ref = new_ref()
+      base = rows()
+      insert = fn text -> {:insert, "n", 1, %{"block" => %{"uid" => "n", "description" => text}}} end
+      {:ok, seed} = Ops.apply_op(base, insert.("B's change"))
+      {:ok, _} = EditSession.join(ref, @field, {base, seed})
+
+      {:ok, held} = Ops.apply_op(base, insert.("as it was"))
+      {:ok, held} = Ops.apply_op(held, anchor("a", "A's own work"))
+      assert {:ok, info} = rejoin_with_stale_rows(ref, base, held, nil, changed: ["a"])
+      assert info.rescues == []
+      assert info.state.diffs["n"]["block"]["description"] == "B's change"
+    end
+
+    # Review: a pending delete, restore or recovery copy named no block, so
+    # a version they made was not the rejoiner's own, and was dropped
+    # without a word when the session died before confirming it.
+    test "a replica's changes name the blocks its pending deletes, restores and carries touched" do
+      base = rows()
+      {:ok, state} = Ops.apply_op(base, {:insert, "n", 1, %{"block" => %{"uid" => "n"}}})
+      {:ok, state} = Ops.apply_op(state, {:insert_child, "n", "c", 0, %{"uid" => "c"}})
+      snapshot = Ops.bin_snapshot(state, "c")
+      {:ok, copy} = Ops.apply_op(state, {:update, "n", %{"block" => %{"description" => "recovered"}}})
+
+      replica = Replica.new(nil, %{session: nil, epoch: 1, rev: 0, state: state}, nil)
+
+      for {op, named} <- [
+            {{:delete, "c"}, ["c", "n"]},
+            {{:restore, snapshot}, ["c", "n"]},
+            {{:carry, copy, base}, ["n"]}
+          ] do
+        {replica, _} = Replica.local(replica, op)
+        assert MapSet.subset?(MapSet.new(named), MapSet.new(Replica.changed(replica)))
+      end
+    end
+
+    test "a rejoiner holding the same version of a new block the session has gets no copy" do
+      ref = new_ref()
+      base = rows()
+      {:ok, held} = Ops.apply_op(base, {:insert, "n", 1, %{"block" => %{"uid" => "n", "description" => "same"}}})
+      {:ok, _} = EditSession.join(ref, @field, {base, held})
+      {:ok, held} = Ops.apply_op(held, anchor("a", "B's other work"))
+
+      assert {:ok, info} = rejoin_with_stale_rows(ref, base, held)
+      assert info.rescues == []
+      assert info.state.diffs["a"]["block"]["anchor"] == "B's other work"
     end
 
     test "a rejoin carrying work after a save's read is kept by that save's rebase, on the session" do

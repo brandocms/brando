@@ -50,6 +50,31 @@ defmodule BrandoAdmin.Components.Form.BlockField.Replica do
     %__MODULE__{session: session, monitor: monitor, ref: ref, epoch: epoch, rev: rev, confirmed: state}
   end
 
+  @doc """
+  The blocks this editor's unconfirmed ops changed: the ones they name
+  (`Ops.op_uids/1`), a deleted block and its parent, a restored subtree and
+  where it goes back, and the blocks a carried state (a recovery copy) has
+  work in. A rejoin sends them (`Brando.EditSession.join/4`, `:changed`).
+  """
+  @spec changed(t()) :: [String.t()]
+  def changed(%__MODULE__{confirmed: confirmed, pending: pending}) do
+    pending
+    |> Enum.flat_map(fn {_seq, op} -> changed_by(op, confirmed) end)
+    |> Enum.uniq()
+  end
+
+  defp changed_by({:delete, uid}, confirmed), do: [uid | List.wrap(confirmed && Map.get(confirmed.parents, uid))]
+
+  defp changed_by({:restore, %{uids: uids} = snapshot}, _confirmed) do
+    case snapshot[:location] do
+      {:child, parent, _at} -> [parent | uids]
+      _ -> uids
+    end
+  end
+
+  defp changed_by({:carry, %Ops{} = carried, _base}, _confirmed), do: Ops.edited(carried)
+  defp changed_by(op, _confirmed), do: Ops.op_uids(op)
+
   @doc "What the editor shows: the confirmed state with the pending ops on top."
   @spec displayed(t()) :: Ops.t()
   def displayed(%__MODULE__{confirmed: confirmed, pending: pending}), do: replay(confirmed, pending)
