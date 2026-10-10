@@ -306,6 +306,21 @@ defmodule Brando.QueryTest do
   end
 
   describe "mutations" do
+    # A listener that reads the entry when told of a save must find it saved
+    # (and not cache the old row after the save's cache eviction).
+    test "a save inside a transaction is announced once it has committed" do
+      page = Factory.insert(:page, title: "Before")
+      Phoenix.PubSub.subscribe(Brando.pubsub(), Brando.Tenant.Topic.scoped("brando:mutations:#{inspect(Page)}"))
+
+      {:ok, _} =
+        Brando.Repo.transaction(fn ->
+          {:ok, _} = __MODULE__.Context.update_page(Ecto.Changeset.change(page, title: "After"), :system)
+          refute_received {:mutation, Page, _, :updated}
+        end)
+
+      assert_received {:mutation, Page, %{title: "After"}, :updated}
+    end
+
     test "mutation :create" do
       usr = Factory.insert(:random_user)
 

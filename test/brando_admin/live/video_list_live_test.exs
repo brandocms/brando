@@ -23,6 +23,36 @@ defmodule BrandoAdmin.VideoListLiveTest do
     refute has_element?(view, "#video-player-modal")
   end
 
+  # Every video missing a thumbnail or title gets a lookup, one insert each:
+  # the list queues one job that does that, and is done.
+  test "fetching missing details queues one job for the lookups", %{conn: conn} do
+    video = Factory.insert(:video, title: nil)
+    Req.Test.stub(Brando.Videos.Metadata, &Plug.Conn.send_resp(&1, 404, ""))
+
+    test = self()
+    handler = "video-metadata-insert-#{System.unique_integer([:positive])}"
+
+    :telemetry.attach(
+      handler,
+      [:oban, :engine, :insert_job, :start],
+      fn _event, _measurements, %{changeset: changeset}, _config ->
+        send(test, {:queued, Ecto.Changeset.get_field(changeset, :worker), Ecto.Changeset.get_field(changeset, :args)})
+      end,
+      nil
+    )
+
+    on_exit(fn -> :telemetry.detach(handler) end)
+
+    {:ok, view, _html} = live(conn, "/admin/assets/videos")
+    view |> element("button[phx-click='fetch_metadata']") |> render_click()
+
+    # Oban runs inline in tests: the sweep, then the lookup it queued.
+    assert_received {:queued, "Brando.Worker.VideoMetadataSweep", _args}
+    assert_received {:queued, "Brando.Worker.VideoMetadata", %{"video_id" => video_id}}
+    assert video_id == video.id
+    refute has_element?(view, "button[phx-click='fetch_metadata']")
+  end
+
   test "the Not in use filter lists unused videos, and switching it off drops it", %{conn: conn} do
     unused = Factory.insert(:video, title: "Loose end")
 

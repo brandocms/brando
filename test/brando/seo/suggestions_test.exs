@@ -112,6 +112,70 @@ defmodule Brando.SEO.SuggestionsTest do
     assert length(Suggestions.list_open("en")) == 3
   end
 
+  # Two editors asking at once both find nothing waiting, and both queue
+  # the same suggestion: it is written once.
+  test "a suggestion whose job still waits is not queued twice", %{user: user} do
+    page = create_page(user, "Asked twice", "asked-twice")
+
+    Oban.Testing.with_testing_mode(:manual, fn ->
+      assert {:ok, 1} = Suggestions.enqueue([row(page)], "en", user)
+      [%{id: id}] = Suggestions.list_open("en")
+      age_jobs(Brando.Worker.SEOSuggestionGenerator, 600)
+
+      # what the second editor's run saw: nothing waiting for the page
+      Brando.Repo.update_all(Ecto.Query.from(s in Suggestion, where: s.id == ^id), set: [status: :failed])
+      assert {:ok, 1} = Suggestions.enqueue([row(page)], "en", user)
+
+      assert [_one] = all_enqueued(worker: Brando.Worker.SEOSuggestionGenerator, args: %{"suggestion_id" => id})
+    end)
+  end
+
+  # The first run's job already wrote its text when the second run set the
+  # suggestion back to queued: that one needs a job of its own, or it stays
+  # queued with nothing to write it.
+  test "a suggestion queued again while its job runs gets another job", %{user: user} do
+    page = create_page(user, "Asked while running", "asked-while-running")
+
+    Oban.Testing.with_testing_mode(:manual, fn ->
+      assert {:ok, 1} = Suggestions.enqueue([row(page)], "en", user)
+      [%{id: id}] = Suggestions.list_open("en")
+
+      Brando.Repo.update_all(
+        Ecto.Query.from(j in Oban.Job, where: j.worker == "Brando.Worker.SEOSuggestionGenerator"),
+        set: [state: "executing", attempted_at: DateTime.utc_now()]
+      )
+
+      Brando.Repo.update_all(Ecto.Query.from(s in Suggestion, where: s.id == ^id), set: [status: :failed])
+      assert {:ok, 1} = Suggestions.enqueue([row(page)], "en", user)
+
+      assert [_waiting] = all_enqueued(worker: Brando.Worker.SEOSuggestionGenerator, args: %{"suggestion_id" => id})
+    end)
+  end
+
+  # Left queued without a job, a suggestion would never be written, and
+  # every later run would skip it as waiting.
+  test "a suggestion whose job cannot be queued is not left queued", %{user: user} do
+    page = create_page(user, "No job", "no-job")
+
+    # Rolled back with the test's sandbox transaction.
+    Brando.Repo.repo().query!(
+      "ALTER TABLE public.oban_jobs ADD CONSTRAINT no_suggestion_jobs " <>
+        "CHECK (worker <> 'Brando.Worker.SEOSuggestionGenerator') NOT VALID"
+    )
+
+    Oban.Testing.with_testing_mode(:manual, fn ->
+      assert_raise Ecto.ConstraintError, fn -> Suggestions.enqueue([row(page)], "en", user) end
+    end)
+
+    assert Suggestions.list_open("en") == []
+  end
+
+  defp age_jobs(worker, seconds) do
+    import Ecto.Query, only: [from: 2]
+    inserted_at = DateTime.add(DateTime.utc_now(), -seconds)
+    Brando.Repo.update_all(from(j in Oban.Job, where: j.worker == ^inspect(worker)), set: [inserted_at: inserted_at])
+  end
+
   test "accept_all writes every pending suggestion", %{user: user} do
     Brando.AIStub.configure()
     Brando.AIStub.reply("Bulk text")

@@ -712,12 +712,13 @@ defmodule Brando.Query.Mutations do
 
   defp maybe_broadcast(_module, _entry, _action, false), do: :ok
 
+  # Once the save has committed (with group authorization it runs in a
+  # transaction): a listener that reads the entry when told finds it saved,
+  # and cannot cache the old row after the save's cache eviction. The topic
+  # is the write's environment, taken now.
   defp maybe_broadcast(module, entry, action, true) do
-    Phoenix.PubSub.broadcast(
-      Brando.pubsub(),
-      Brando.Tenant.Topic.scoped("brando:mutations:#{inspect(module)}"),
-      {:mutation, module, entry, action}
-    )
+    topic = Brando.Tenant.Topic.scoped("brando:mutations:#{inspect(module)}")
+    Repo.after_commit(fn -> Phoenix.PubSub.broadcast(Brando.pubsub(), topic, {:mutation, module, entry, action}) end)
   end
 
   defp enqueue_entry_cascade(module, entry, identifier_id) do

@@ -4,11 +4,18 @@ defmodule Brando.Worker.VideoMetadata do
   fills in what the video lacks (see `Brando.Videos.fetch_metadata/2`).
 
   A source that cannot be read, or a video that is gone, is not retried.
+
+  One job per video: another insert while one is waiting, retrying or
+  running joins it (`unique` with `states: :incomplete`). A job left
+  `executing` by a node that went down blocks new ones until `Oban.Lifeline`
+  rescues it, after an hour in Brando's default Oban config. An application
+  that sets `config :brando, Oban` itself keeps `lifeline:` in it, or such a
+  video is never looked up again.
   """
   use Oban.Worker,
     queue: :default,
     max_attempts: 3,
-    unique: [keys: [:tenant_prefix, :video_id], states: :incomplete]
+    unique: [keys: [:tenant_prefix, :video_id], states: :incomplete, period: :infinity]
 
   alias Brando.Tenant.Job, as: TenantJob
   alias Brando.Videos.Video

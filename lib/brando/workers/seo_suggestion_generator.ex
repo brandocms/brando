@@ -8,10 +8,13 @@ defmodule Brando.Worker.SEOSuggestionGenerator do
   once, and so does the last attempt, so the tab never waits on a job that
   has stopped.
   """
+  # One waiting job per suggestion. A running one does not count: it may
+  # have written its text already when another run queues the suggestion
+  # again, which then needs a job of its own.
   use Oban.Worker,
     queue: :default,
     max_attempts: 3,
-    unique: [keys: [:tenant_prefix, :suggestion_id], states: :incomplete]
+    unique: [keys: [:tenant_prefix, :suggestion_id], states: [:available, :scheduled, :retryable], period: :infinity]
 
   alias Brando.SEO.Generate
   alias Brando.SEO.Suggestion

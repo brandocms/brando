@@ -191,6 +191,20 @@ defmodule Brando.Videos.Uploaders.VimeoTest do
     test "backs off as the upload ages" do
       assert Enum.map([0, 900, 7_200, 30_000], &VimeoStatus.interval/1) == [15, 60, 300, 900]
     end
+
+    # The check queued when the upload began still waits when it completes,
+    # however long the upload took: one poller per video.
+    test "a completed upload joins the check still waiting from its start" do
+      video = insert_vimeo_video("702", :uploading)
+
+      Oban.Testing.with_testing_mode(:manual, fn ->
+        {:ok, _} = %{"video_id" => video.id} |> VimeoStatus.new(schedule_in: 60) |> Oban.insert()
+        age_jobs(VimeoStatus, 600)
+
+        assert {:ok, %{status: :processing}} = Vimeo.complete_upload(video, %{})
+        assert [_one] = all_enqueued(worker: VimeoStatus, args: %{"video_id" => video.id})
+      end)
+    end
   end
 
   test "completing the browser transfer moves the video to processing" do
@@ -238,6 +252,12 @@ defmodule Brando.Videos.Uploaders.VimeoTest do
 
   defp render(video) do
     render_component(&Brando.HTML.Video.video/1, video: video, opts: [])
+  end
+
+  defp age_jobs(worker, seconds) do
+    import Ecto.Query, only: [from: 2]
+    inserted_at = DateTime.add(DateTime.utc_now(), -seconds)
+    Brando.Repo.update_all(from(j in Oban.Job, where: j.worker == ^inspect(worker)), set: [inserted_at: inserted_at])
   end
 
   defp insert_vimeo_video(video_id, status) do

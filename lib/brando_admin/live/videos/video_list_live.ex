@@ -221,11 +221,22 @@ defmodule BrandoAdmin.Videos.VideoListLive do
 
   def handle_event("close_video", _, socket), do: {:noreply, assign(socket, :playing, nil)}
 
+  # Every video missing details gets a job of its own, one insert each: a
+  # job queues them (`Brando.Worker.VideoMetadataSweep`), so a library of
+  # thousands leaves the list responsive, and leaving it does not cut that
+  # short.
   def handle_event("fetch_metadata", _, socket) do
-    {:ok, count} = Videos.enqueue_metadata(Videos.list_video_ids_missing_metadata(), socket.assigns.current_user)
+    count = socket.assigns.missing_metadata_count
 
-    send(self(), {:toast, ngettext("Looking up %{count} video", "Looking up %{count} videos", count)})
-    {:noreply, assign(socket, :missing_metadata_count, 0)}
+    case Brando.Worker.VideoMetadataSweep.enqueue(socket.assigns.current_user) do
+      {:ok, _job} ->
+        send(self(), {:toast, ngettext("Looking up %{count} video", "Looking up %{count} videos", count)})
+        {:noreply, assign(socket, :missing_metadata_count, 0)}
+
+      {:error, _reason} ->
+        send(self(), {:toast, gettext("Could not look the videos up")})
+        {:noreply, socket}
+    end
   end
 
   defp blank_to_nil(""), do: nil

@@ -199,8 +199,11 @@ defmodule Brando.Search do
     if rebuild_running?() do
       {:error, :already_running}
     else
+      # Without tenancy there is no prefix to attach; a nil one gives the
+      # worker's uniqueness (one per site and environment) a key to compare.
       %{"user_id" => user && user.id}
       |> TenantJob.attach()
+      |> Map.put_new("tenant_prefix", nil)
       |> SearchIndexRebuild.new()
       |> Oban.insert()
     end
