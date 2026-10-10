@@ -221,6 +221,19 @@ defmodule BrandoAdmin.FieldActionsLiveTest do
   end
 
   defp text_block_article(user, text, write_with_ai) do
+    module = text_module(user, write_with_ai)
+
+    {:ok, article} =
+      SyncTest.create_article(
+        %{title: "Lang", slug: "lang", subtitle: "Et hus", language: "no", status: "draft", year: 2020},
+        user
+      )
+
+    {_block_uid, ref_uid} = put_text_block(user, article, module, SyncTest.Article.Blocks, text)
+    {article, ref_uid, module}
+  end
+
+  defp text_module(user, write_with_ai \\ false) do
     {:ok, module} =
       Brando.Content.create_module(
         Factory.params_for(:module,
@@ -234,23 +247,25 @@ defmodule BrandoAdmin.FieldActionsLiveTest do
         user
       )
 
-    {:ok, article} =
-      SyncTest.create_article(
-        %{title: "Lang", slug: "lang", subtitle: "Et hus", language: "no", status: "draft", year: 2020},
-        user
-      )
+    module
+  end
 
+  # A saved block of `module` in the article's block field `join` (its
+  # join schema), its `body` holding `text`. Saved as a fixture is: without
+  # rendering the field's `rendered_` column.
+  defp put_text_block(user, article, module, join, text) do
+    block_uid = Brando.Utils.generate_uid()
     ref_uid = Brando.Utils.generate_uid()
 
     block =
       %Brando.Content.Block{}
       |> Brando.Content.Block.recursive_block_changeset(
         %{
-          "uid" => Brando.Utils.generate_uid(),
+          "uid" => block_uid,
           "type" => "module",
           "module_id" => module.id,
           "creator_id" => user.id,
-          "source" => to_string(SyncTest.Article.Blocks),
+          "source" => to_string(join),
           "refs" => [
             %{"uid" => ref_uid, "name" => "body", "data" => %{"type" => "text", "data" => %{"text" => text}}}
           ]
@@ -259,8 +274,8 @@ defmodule BrandoAdmin.FieldActionsLiveTest do
       )
       |> Brando.Repo.insert!()
 
-    struct(SyncTest.Article.Blocks, %{entry_id: article.id, block_id: block.id, sequence: 0}) |> Brando.Repo.insert!()
-    {article, ref_uid, module}
+    struct(join, %{entry_id: article.id, block_id: block.id, sequence: 0}) |> Brando.Repo.insert!()
+    {block_uid, ref_uid}
   end
 
   test "gives the model at most the context's length of block text", %{conn: conn, current_user: user} do
@@ -277,6 +292,88 @@ defmodule BrandoAdmin.FieldActionsLiveTest do
     [_, blocks] = Regex.run(~r/^blocks: (.*)$/m, prompt)
     assert blocks =~ "ord ord"
     assert String.length(blocks) <= Brando.AI.Context.block_text_length()
+  end
+
+  describe "an action that reads block fields" do
+    # `form :notes`: the article's `blocks` and `notes` block fields; the
+    # subtitle's `outline` reads `notes` by name, `everything` reads `:blocks`
+    setup %{current_user: user, article: article} do
+      module = text_module(user)
+      {main_uid, _} = put_text_block(user, article, module, SyncTest.Article.Blocks, "<p>Hovedtekst</p>")
+      {notes_uid, _} = put_text_block(user, article, module, SyncTest.Article.Notes, "<p>Lagret notat</p>")
+      %{main_uid: main_uid, notes_uid: notes_uid}
+    end
+
+    defp open_notes(conn, article, block_uids) do
+      {view, _html} = live_form(conn, "/admin/articles/update/#{article.id}/notes", "article_form")
+      Enum.each(block_uids, &await_selector(view, "#entry_block_form-#{&1}"))
+      view
+    end
+
+    # As the block's text editor sends it, without saving the entry
+    defp edit_block_text(view, block_uid, html) do
+      selector = "#entry_block_form-#{block_uid}"
+      path = ["entry_block", "block", "refs", "0", "data", "data", "text"]
+      params = view |> render() |> form_params(selector) |> put_in(path, html) |> Map.put("_target", path)
+      view |> element(selector) |> render_change(params)
+    end
+
+    test "a block field named in from: is read as the editor has it, alone",
+         %{conn: conn, article: article, main_uid: main_uid, notes_uid: notes_uid} do
+      view = open_notes(conn, article, [main_uid, notes_uid])
+      replies("Disposisjon")
+
+      edit_block_text(view, notes_uid, "<p>Ulagret notat</p>")
+      run(view, "outline")
+      await_selector(view, "#{@suggestion} .ai-proposal[data-status='ready']")
+
+      assert_received {:prompt, prompt}
+      assert prompt =~ "notes: Ulagret notat"
+      refute prompt =~ "Lagret notat"
+      refute prompt =~ "Hovedtekst"
+    end
+
+    test ":blocks reads every block field as the editor has it",
+         %{conn: conn, article: article, main_uid: main_uid, notes_uid: notes_uid} do
+      view = open_notes(conn, article, [main_uid, notes_uid])
+      replies("Sammendrag")
+
+      edit_block_text(view, main_uid, "<p>Ulagret hovedtekst</p>")
+      edit_block_text(view, notes_uid, "<p>Ulagret notat</p>")
+      run(view, "everything")
+      await_selector(view, "#{@suggestion} .ai-proposal[data-status='ready']")
+
+      assert_received {:prompt, prompt}
+      assert prompt =~ "Ulagret hovedtekst"
+      assert prompt =~ "Ulagret notat"
+      refute prompt =~ "Lagret notat"
+    end
+
+    test "Write with AI reads a block field named in its from: as the editor has it",
+         %{conn: conn, article: article, main_uid: main_uid, notes_uid: notes_uid} do
+      view = open_notes(conn, article, [main_uid, notes_uid])
+      replies("Et forslag.")
+
+      edit_block_text(view, notes_uid, "<p>Ulagret notat</p>")
+
+      view
+      |> with_target(cid_of(view, "#article_form_form"))
+      |> render_hook("tiptap_ai_generate", %{
+        "field_key" => "subtitle",
+        "field_name" => "article[subtitle]",
+        "tiptap_id" => "article_subtitle-rich-text",
+        "request_id" => "request-1",
+        "mode" => "rewrite",
+        "instruction" => "",
+        "selection" => "Et hus."
+      })
+
+      event = "b:tiptap:ai:article_subtitle-rich-text"
+      assert_push_event(view, ^event, %{text: "Et forslag.", request_id: "request-1"})
+      assert_received {:prompt, prompt}
+      assert prompt =~ "notes: Ulagret notat"
+      refute prompt =~ "Hovedtekst"
+    end
   end
 
   describe "Write with AI in block text" do
