@@ -995,10 +995,8 @@ defmodule BrandoAdmin.Components.Form.BlockField do
   defp rescue_payload(socket, %Ops{} = old, %Ops{} = new, %{copy?: true, group: group, kept: kept}, _worked) do
     with true <- Ops.known?(old, group) and Ops.known?(new, group),
          %{} = block <- rescued_block(socket, old, group) do
-      parent = Map.get(new.parents, group)
-      siblings = if parent, do: Map.get(new.child_order, parent, []), else: new.order
-      at = Enum.find_index(siblings, &(&1 == group)) + 1
-      place_rescued(socket, old, group, block, parent, kept, at)
+      # where it is when the copy goes in: copies before it move it
+      place_rescued(socket, old, group, block, Map.get(new.parents, group), kept, {:after, group})
     else
       _ -> nil
     end
@@ -1246,7 +1244,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     socket =
       socket
       |> put_seed_form(uid, form)
-      |> apply_block_op({:insert, uid, at, params}, :replay)
+      |> apply_block_op({:insert, uid, position(socket, nil, at), params}, :replay)
 
     {socket, uid}
   end
@@ -1255,7 +1253,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
   defp reinsert(socket, {:child, parent, block, at, kept}) do
     block = rename_copy(block, kept)
     uid = block["uid"]
-    socket = apply_block_op(socket, {:insert_child, parent, uid, at, block}, :replay)
+    socket = apply_block_op(socket, {:insert_child, parent, uid, position(socket, parent, at), block}, :replay)
 
     socket =
       if Ops.known?(socket.assigns.block_ops, uid),
@@ -1264,6 +1262,18 @@ defmodule BrandoAdmin.Components.Form.BlockField do
 
     {socket, uid}
   end
+
+  defp position(socket, parent, {:after, sibling}) do
+    ops = socket.assigns.block_ops
+    siblings = if parent, do: Map.get(ops.child_order, parent, []), else: ops.order
+
+    case Enum.find_index(siblings, &(&1 == sibling)) do
+      nil -> :end
+      index -> index + 1
+    end
+  end
+
+  defp position(_socket, _parent, at), do: at
 
   # An op turned away because another editor removed its block.
   defp report_rejection(socket, op, {:unknown_uid, _uid})

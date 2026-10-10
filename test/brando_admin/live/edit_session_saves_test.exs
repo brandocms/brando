@@ -540,6 +540,31 @@ defmodule BrandoAdmin.EditSessionSavesTest do
     refute state.diffs[kept]["block"]["sync_uid"] == uid
   end
 
+  # Sol audit: copies placed by positions read before any went in landed
+  # before the second original.
+  test "copies of two new blocks each come right after their own", c do
+    a = open(c.conn, c.identity)
+    b = open(c.other_conn, c.identity)
+    first = added_block(a, b, c)
+    second = added_block(a, b, %{c | uids: [first | c.uids]})
+
+    old = session_pid(c.identity)
+    :sys.suspend(old)
+    type(b, first, "<p>B's first</p>")
+    type(b, second, "<p>B's second</p>")
+    :sys.suspend(b.pid)
+    Process.exit(old, :kill)
+    await(fn -> session_pid(c.identity) not in [nil, old] end)
+    :sys.resume(b.pid)
+
+    await(fn -> Enum.all?([first, second], &(session_state(c.identity).statuses[&1 <> "-kept"] == :inserted)) end)
+    order = session_state(c.identity).order
+
+    for uid <- [first, second] do
+      assert Enum.find_index(order, &(&1 == uid <> "-kept")) == Enum.find_index(order, &(&1 == uid)) + 1
+    end
+  end
+
   test "a new block both editors held in the same version is not copied when one rejoins", c do
     a = open(c.conn, c.identity)
     b = open(c.other_conn, c.identity)
