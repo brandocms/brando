@@ -169,13 +169,21 @@ jobs:
         # Incremental builds replay stored warnings, including unchanged files.
         run: mix compile --all-warnings --warnings-as-errors
 
-      - name: Reset db
-        if: needs.reuse.outputs.reused != 'true'
+      # A coverage run stays in one `mix test`, so it exports one file
+      - name: Reset db (coverage run)
+        if: inputs.coverage && matrix.elixir == '1.20.3' && needs.reuse.outputs.reused != 'true'
         run: mix ecto.reset
 
+      - name: Run Tests (coverage run)
+        if: inputs.coverage && matrix.elixir == '1.20.3' && needs.reuse.outputs.reused != 'true'
+        run: mix test --warnings-as-errors --cover --export-coverage unit
+
+      # Four `mix test --partitions 4` at once, each with its own database: the
+      # suite is mostly synchronous, so one run leaves most of the runner idle.
+      # The script creates, migrates and seeds the databases.
       - name: Run Tests
-        if: needs.reuse.outputs.reused != 'true'
-        run: mix test --warnings-as-errors ${{ inputs.coverage && matrix.elixir == '1.20.3' && '--cover --export-coverage unit' || '' }}
+        if: "!(inputs.coverage && matrix.elixir == '1.20.3') && needs.reuse.outputs.reused != 'true'"
+        run: scripts/test-partitions 4 --warnings-as-errors
 
       - name: Upload unit coverage data
         if: inputs.coverage && matrix.elixir == '1.20.3'

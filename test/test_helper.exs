@@ -2,9 +2,9 @@ alias BrandoIntegration.Repo, as: Repo
 
 :erlang.system_flag(:backtrace_depth, 30)
 
-# Clear tmp dir
-File.rm_rf!(Path.join([Mix.Project.app_path(), "tmp", "media"]))
-File.mkdir_p!(Path.join([Mix.Project.app_path(), "tmp", "media"]))
+# Clear the media directory (one per partition, config/test.exs)
+File.rm_rf!(Application.fetch_env!(:brando, :media_path))
+File.mkdir_p!(Application.fetch_env!(:brando, :media_path))
 
 BrandoIntegration.Repo.start_link()
 
