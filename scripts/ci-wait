@@ -126,6 +126,12 @@ fetch_run() {
     }]'
 }
 
+# Drops the checks that may fail without failing their run: ci.yml's
+# merge-queue record job (continue-on-error) only spares the queue a rerun.
+drop_ignored() {
+  jq '[.[] | select(.name != "Record the tested tree for the merge queue")]'
+}
+
 not_found() {
   grep -qiE 'could not resolve to a pullrequest|HTTP 404|no pull requests found' "$err"
 }
@@ -397,6 +403,7 @@ if [ -n "$run_id" ]; then
   rerun_flakes=false
   rerun_links=""
   checks="$(fetch_run)" || { echo "$subject: could not read the run in $repo"; exit 1; }
+  checks="$(drop_ignored <<<"$checks")"
   if [ "$(jq '[.[] | select(.bucket == "pending")] | length' <<<"$checks")" -gt 0 ]; then
     echo "$subject: still running"
     exit 1
@@ -409,6 +416,7 @@ confirmed=false
 while :; do
   : >"$err"
   if checks="$(fetch_graphql)" || checks="$(fetch_rest)"; then
+    checks="$(drop_ignored <<<"$checks")"
     total="$(jq length <<<"$checks")"
     pending="$(jq '[.[] | select(.bucket == "pending")] | length' <<<"$checks")"
     if [ "$total" -gt 0 ] && [ "$pending" -eq 0 ] &&

@@ -15,13 +15,16 @@ trap 'rm -rf "$stub"' EXIT
 
 cat >"$stub/gh" <<'EOF'
 #!/usr/bin/env bash
-# gh api <path> …: the run's one job, its log, or its failed step.
+# gh api <path> …: the run's failed job (and CASE_PASSING, a passed one), its
+# log, or its failed step.
 [ "$1" = api ] || exit 1
 case "$2" in
   */actions/runs/*/jobs*)
-    jq -n --arg name "$CASE_JOB" --arg id "$CASE_ID" '{jobs: [{name: $name,
+    jq -n --arg name "$CASE_JOB" --arg id "$CASE_ID" --arg passing "${CASE_PASSING:-}" '{jobs: ([{name: $name,
       html_url: "https://github.com/o/r/actions/runs/\($id)/job/\($id)",
-      status: "completed", conclusion: "failure"}]}' ;;
+      status: "completed", conclusion: "failure"}] + if $passing == "" then [] else [{name: $passing,
+      html_url: "https://github.com/o/r/actions/runs/\($id)/job/0",
+      status: "completed", conclusion: "success"}] end)}' ;;
   */actions/jobs/*/logs) cat "$CASE_LOG" ;;
   */actions/jobs/*) echo "Run Tests" ;;
   *) exit 1 ;;
@@ -62,6 +65,21 @@ check unparsed.log 'real failure: 2 failing test(s) not found in the log; also k
 for locale in '' C C.UTF-8; do
   check playwright.log 'real failure: [Google Chrome] › tests/pages/breadcrumbs.spec.js:4:5 › pages have JSON-LD breadcrumbs' "$locale"
 done
+
+# The merge queue's record job may fail without failing the run (ci.yml), so
+# a failure there is not reported.
+id=$((id + 1))
+output="$(env CASE_JOB="Record the tested tree for the merge queue" CASE_PASSING="mix test" CASE_ID="$id" \
+  CASE_LOG=/dev/null PATH="$stub:$PATH" "$ci_wait" --run "$id" --repo o/r 2>&1)"
+status=$?
+if [ "$status" -eq 0 ] && [ "$output" = "Run $id: all 1 checks green" ]; then
+  echo "ok   ignores the merge queue's record job"
+else
+  failures=$((failures + 1))
+  echo "FAIL ignores the merge queue's record job"
+  echo "     expected:   Run $id: all 1 checks green (exit 0)"
+  echo "     got:        $output (exit $status)"
+fi
 
 if [ "$failures" -gt 0 ]; then
   echo "$failures case(s) failed"
