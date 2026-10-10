@@ -449,15 +449,19 @@ jobs:
         working-directory: brando/e2e
         run: ./test_unit.sh
 
-  # Pull requests only, once every job the merge queue can reuse has passed
-  # (the implicit success() needs them all): uploads an artifact named after
-  # the tree this run tested and its base, which `reuse` looks up. The script
-  # matches this job by name. Not required, and a failure here only means the
-  # queue runs everything.
+  # Pull requests only, once every job the merge queue can reuse has passed:
+  # uploads an artifact named after the tree this run tested and its base,
+  # which `reuse` looks up. The script matches this job by name. Not required,
+  # and a failure here only means the queue runs everything. The `if` checks
+  # each need's result itself: the implicit success() also fails on `reuse`,
+  # which those jobs need and which is skipped on a pull request.
   record:
     name: Record the tested tree for the merge queue
     needs: [mix_test, css_colors, quality, docs, e2e_unit]
-    if: github.event_name == 'pull_request'
+    if: >-
+      ${{ !cancelled() && github.event_name == 'pull_request'
+      && !contains(needs.*.result, 'failure') && !contains(needs.*.result, 'cancelled')
+      && !contains(needs.*.result, 'skipped') }}
     continue-on-error: true
     runs-on: ubuntu-latest
     timeout-minutes: 5

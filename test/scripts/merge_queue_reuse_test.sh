@@ -229,16 +229,21 @@ else
   echo "ok   refuses to name the record for a commit that is not a two-parent merge"
 fi
 
-# ci.yml: the recording job carries the name the script looks for, and needs
+# ci.yml: the recording job carries the name the script looks for, needs
 # exactly the jobs that skip their steps on a reused run, so none is skipped
-# without having passed on the pull request.
+# without having passed on the pull request, and checks their results itself
+# (an implicit success() would also see the skipped reuse job and never run).
 workflow="$root/.github/workflows/ci.yml"
 gated="$(awk '/^  [a-z0-9_]+:$/ { job = substr($1, 1, length($1) - 1) }
   /^    needs: reuse$/ { print job }' "$workflow" | sort | tr '\n' ' ')"
 recorded="$(awk '/^  record:$/ { in_record = 1; next } /^  [a-z0-9_]+:$/ { in_record = 0 }
   in_record && /^    needs: \[/ { gsub(/^    needs: \[|\]$/, ""); gsub(/, */, "\n"); print }' "$workflow" |
   sort | tr '\n' ' ')"
-if grep -qxF "    name: $record" "$workflow" && [ -n "$gated" ] && [ "$gated" = "$recorded" ]; then
+record_if="$(awk '/^  record:$/ { in_record = 1; next } /^  [a-z0-9_]+:$/ { in_record = 0 }
+  in_record' "$workflow")"
+if grep -qxF "    name: $record" "$workflow" && [ -n "$gated" ] && [ "$gated" = "$recorded" ] &&
+  grep -qF '!cancelled()' <<<"$record_if" &&
+  [ "$(grep -oE "!contains\(needs\.\*\.result, '(failure|cancelled|skipped)'\)" <<<"$record_if" | sort -u | wc -l)" -eq 3 ]; then
   echo "ok   ci.yml records the tree after every job a reused run skips"
 else
   failures=$((failures + 1))
