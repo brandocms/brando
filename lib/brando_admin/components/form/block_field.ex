@@ -2238,8 +2238,13 @@ defmodule BrandoAdmin.Components.Form.BlockField do
   end
 
   # Outline: child reorder or cross-parent move
-  def handle_event("outline_reposition", %{"new" => new_idx, "old" => old_idx}, socket)
-      when new_idx == old_idx do
+  # Back where it was. A child dropped into another parent at the index it
+  # left is a move all the same.
+  def handle_event(
+        "outline_reposition",
+        %{"new" => index, "old" => index, "from" => %{"parentUid" => parent}, "to" => %{"parentUid" => parent}},
+        socket
+      ) do
     {:noreply, socket}
   end
 
