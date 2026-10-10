@@ -789,6 +789,8 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     # the database first).
     held = Keyword.get(opts, :held, base)
     join_opts = [user_id: user.id, read_only: not may_update?(socket)]
+    # the rows `held` was built on, for the copies of removed blocks
+    loaded = socket.assigns.entry_blocks
 
     {socket, result} =
       case EditSession.join(ref, field, {base, held}, [rebase: Keyword.get(opts, :rebase, false)] ++ join_opts) do
@@ -811,11 +813,23 @@ defmodule BrandoAdmin.Components.Form.BlockField do
         # Work only this editor held that the session could not take: blocks
         # another write removed while it was away. It brings them back itself.
         rescues = Map.get(info, :rescues, [])
-        payloads = rescue_payloads(socket, rescues, info.state, MapSet.new(Ops.edited(socket.assigns.block_ops)))
+        # A removed block's copy is built over the rows this editor held it
+        # on: the rows read again for the join lack the block.
+        held_rows = assign(socket, :entry_blocks, loaded)
+        payloads = rescue_payloads(held_rows, rescues, info.state, MapSet.new(Ops.edited(socket.assigns.block_ops)))
+
+        # roots whose rows the join read again: their forms show the old ones
+        old_rows = rows_by_uid(loaded)
+
+        reread =
+          for {uid, row} <- rows_by_uid(socket.assigns.entry_blocks),
+              Map.has_key?(old_rows, uid),
+              old_rows[uid] != row,
+              do: uid
 
         socket
         |> assign(:session_base, Ops.from_entry_blocks(socket.assigns.entry_blocks || []))
-        |> adopt_session(ref, info, opts)
+        |> adopt_session(ref, info, Keyword.put(opts, :also, reread))
         |> rescue_own(rescues, payloads)
         |> announce_join()
 
@@ -836,7 +850,10 @@ defmodule BrandoAdmin.Components.Form.BlockField do
 
     socket
     |> assign(:edit_session, replica)
-    |> show_state(Replica.displayed(replica), :all, mounted?: Keyword.get(opts, :mounted?, true))
+    |> show_state(Replica.displayed(replica), :all,
+      mounted?: Keyword.get(opts, :mounted?, true),
+      also: Keyword.get(opts, :also, [])
+    )
   end
 
   defp may_update?(%{assigns: %{entry: entry, current_user: user}}) do
@@ -964,7 +981,10 @@ defmodule BrandoAdmin.Components.Form.BlockField do
 
     # The rows were written (by another editor's save, or outside the
     # editor): read them, as their content can change while their ids and
-    # order stay. A join that only carried work onto the state wrote none.
+    # order stay. A join that only carried work onto the state wrote none;
+    # one that moved the session onto rows a joiner read again
+    # (`:rows_read`) may have changed only rows, which the signature does
+    # not show.
     socket =
       if message.reason == :joined and
            Ops.signature(message.base) == Ops.signature(Ops.from_entry_blocks(socket.assigns.entry_blocks || [])),

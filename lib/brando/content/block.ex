@@ -161,7 +161,14 @@ defmodule Brando.Content.Block do
     cast_assoc(changeset, :block, with: &block_changeset(&1, &2, user))
   end
 
+  # Relations whose rows `drop_vanished_rows/3` checks, and the keys that
+  # only name a row.
+  @row_relations [:table_rows, :vars, :refs]
+  @identity_keys ~w(id uid key sync_uid)
+
   def block_changeset(block, attrs, user) do
+    attrs = drop_vanished_rows(attrs, block, @row_relations)
+
     block
     |> cast(attrs, @block_attrs)
     |> validate_required(:uid)
@@ -212,6 +219,8 @@ defmodule Brando.Content.Block do
   end
 
   def recursive_block_changeset(block, attrs, user, opts \\ []) do
+    attrs = drop_vanished_rows(attrs, block, @row_relations)
+
     block
     |> cast(attrs, @block_attrs)
     |> validate_required(:uid)
@@ -252,6 +261,8 @@ defmodule Brando.Content.Block do
   end
 
   def table_row_changeset(table_row, attrs, position, user) do
+    attrs = drop_vanished_rows(attrs, table_row, [:vars])
+
     table_row
     |> cast(attrs, [:block_id])
     |> put_table_row_sync_uid()
@@ -338,6 +349,111 @@ defmodule Brando.Content.Block do
     end
   end
 
+  # A row param that only names a saved row (its id, perhaps with its uid,
+  # key or sync uid) carries no change: the edit session names the rows of
+  # a list it did not change so. When the block no longer has a row with
+  # that id (a write removed it after the diff was made), `cast_assoc/3`
+  # would insert it as a new, blank row; leave it out. Rows left out of the
+  # params are deleted only when the block has them, so this deletes
+  # nothing. A param without an id names a row not saved yet and is left
+  # alone.
+  defp drop_vanished_rows(attrs, owner, relations) when is_map(attrs) do
+    data = with %Ecto.Changeset{data: data} <- owner, do: data
+
+    Enum.reduce(relations, attrs, fn relation, attrs ->
+      ids = loaded_ids(data, relation)
+
+      attrs
+      |> reject_vanished_at(relation, ids)
+      |> reject_vanished_at(to_string(relation), ids)
+    end)
+  end
+
+  defp drop_vanished_rows(attrs, _owner, _relations), do: attrs
+
+  defp reject_vanished_at(attrs, key, ids) do
+    case attrs do
+      %{^key => rows} ->
+        kept = reject_vanished(rows, ids)
+        attrs |> Map.put(key, kept) |> drop_sorted(key, dropped_indexes(rows, kept))
+
+      _ ->
+        attrs
+    end
+  end
+
+  # Form params name rows by index and order them by a sort param, which
+  # turns an index it names without a row into a new, empty one.
+  @sort_params %{
+    "table_rows" => "sort_table_row_ids",
+    "vars" => "sort_var_ids",
+    "gallery_objects" => "sort_gallery_object_ids"
+  }
+
+  defp dropped_indexes(%{} = rows, %{} = kept) when not is_struct(rows), do: Map.keys(rows) -- Map.keys(kept)
+  defp dropped_indexes(_rows, _kept), do: []
+
+  defp drop_sorted(attrs, _key, []), do: attrs
+
+  defp drop_sorted(attrs, key, indexes) do
+    sort = @sort_params[to_string(key)]
+    indexes = Enum.map(indexes, &to_string/1)
+
+    Enum.reduce([sort, sort && String.to_existing_atom(sort)], attrs, fn
+      nil, attrs -> attrs
+      sort, %{} = attrs when is_map_key(attrs, sort) -> Map.update!(attrs, sort, &reject_indexes(&1, indexes))
+      _sort, attrs -> attrs
+    end)
+  end
+
+  defp reject_indexes(order, indexes) when is_list(order), do: Enum.reject(order, &(to_string(&1) in indexes))
+  defp reject_indexes(order, _indexes), do: order
+
+  defp drop_vanished_gallery_objects(attrs, ref) when is_map(attrs) do
+    data = with %Ecto.Changeset{data: data} <- ref, do: data
+
+    gallery =
+      case data do
+        %{gallery: %{} = gallery} when not is_struct(gallery, Ecto.Association.NotLoaded) -> gallery
+        _ -> nil
+      end
+
+    Enum.reduce(["gallery", :gallery], attrs, fn key, attrs ->
+      case attrs do
+        %{^key => %{} = params} when not is_struct(params) ->
+          Map.put(attrs, key, drop_vanished_rows(params, gallery || %{}, [:gallery_objects]))
+
+        _ ->
+          attrs
+      end
+    end)
+  end
+
+  defp drop_vanished_gallery_objects(attrs, _ref), do: attrs
+
+  defp loaded_ids(data, relation) do
+    case data do
+      %{^relation => rows} when is_list(rows) -> MapSet.new(rows, &to_string(&1.id))
+      _ -> MapSet.new()
+    end
+  end
+
+  defp reject_vanished(rows, ids) when is_list(rows), do: Enum.reject(rows, &vanished?(&1, ids))
+
+  defp reject_vanished(%{} = rows, ids) when not is_struct(rows),
+    do: rows |> Enum.reject(fn {_index, row} -> vanished?(row, ids) end) |> Map.new()
+
+  defp reject_vanished(rows, _ids), do: rows
+
+  defp vanished?(%{} = row, ids) when not is_struct(row) do
+    keys = Enum.map(Map.keys(row), &to_string/1)
+    id = Map.get(row, "id", Map.get(row, :id))
+
+    id not in [nil, ""] and keys -- @identity_keys == [] and not MapSet.member?(ids, to_string(id))
+  end
+
+  defp vanished?(_row, _ids), do: false
+
   defp user_id(%{id: id}), do: id
   defp user_id(id) when is_integer(id), do: id
   defp user_id(_), do: nil
@@ -362,6 +478,8 @@ defmodule Brando.Content.Block do
   end
 
   def ref_changeset(ref, attrs, user) do
+    attrs = drop_vanished_gallery_objects(attrs, ref)
+
     ref
     |> cast(attrs, [
       :name,
