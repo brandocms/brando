@@ -257,16 +257,17 @@ defmodule Brando.Revisions do
   Drops the schedule of `revision`, which scheduled publishing refused to
   publish because the entry was in the trash (`{:error, :in_trash}` from
   `set_entry_to_revision/5`), and notes it in Activity. Done under the
-  entry's lock and only while the entry is still in the trash and
-  `still_current?.()` (the refused job is still the revision's schedule): a
-  restore and a new schedule in between are left alone.
+  entry's lock and only while `still_current?.()` (the refused job is still
+  the revision's schedule): a new schedule made in between is left alone. A
+  restore in between changes nothing: the revision was refused, and without
+  this its schedule would have no job.
   """
   def drop_schedule_in_trash(entry_schema, entry_id, revision_number, user, still_current?) do
     Repo.transaction(fn ->
       lock_entry!(entry_schema, entry_id)
-      entry = Repo.get!(entry_schema, entry_id)
 
-      if Map.get(entry, :deleted_at) && still_current?.() do
+      if still_current?.() do
+        entry = Repo.get!(entry_schema, entry_id)
         mark_revision_scheduled(entry_schema, entry_id, revision_number, false)
         Brando.Activity.scheduled_revision_in_trash(entry, user, revision_number)
       end

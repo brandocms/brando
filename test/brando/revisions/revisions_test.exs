@@ -459,11 +459,12 @@ defmodule Brando.Revisions.RevisionsTest do
     assert scheduled?.()
     assert activity.() == 0
 
-    # restored since
+    # restored since, but not scheduled again: the refused job was the
+    # schedule, so it goes, or the revision would stay scheduled with no job
     {:ok, _} = Brando.Repo.restore(trashed)
     assert :ok = Revisions.drop_schedule_in_trash(Page, page.id, 0, user, fn -> true end)
-    assert scheduled?.()
-    assert activity.() == 0
+    refute scheduled?.()
+    assert activity.() == 1
   end
 
   # Checked under the entry's lock, so an entry trashed while the job starts
