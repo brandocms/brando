@@ -6,10 +6,14 @@ defmodule Brando.Environments.ArchiveUpgradeTest do
   #
   # Schemas are copied with SQL rather than pg_dump, which cannot see the
   # sandbox transaction; everything is undone with it.
+  #
+  # That state takes most of a second to build, so the module builds it once,
+  # in a sandbox it owns, and each test runs from a savepoint taken after it
+  # and is rolled back to it on exit.
   use ExUnit.Case, async: false
-  use Brando.ConnCase
 
   import Brando.MigrationTemplates
+  import Brando.Test.Support
 
   alias Brando.Environments
   alias Brando.Environments.ArchiveUpgrade
@@ -18,6 +22,8 @@ defmodule Brando.Environments.ArchiveUpgradeTest do
   alias Brando.Tenant
   alias Brando.Tenant.Cache
   alias Brando.Tenant.Registry
+  alias BrandoIntegration.Repo
+  alias Ecto.Adapters.SQL.Sandbox
 
   @live "tenant_acme_production"
 
@@ -90,21 +96,19 @@ defmodule Brando.Environments.ArchiveUpgradeTest do
     end
   end
 
-  setup do
+  @built "archive_upgrade_built"
+
+  setup_all do
+    owner = Sandbox.start_owner!(Repo)
+    on_exit(fn -> Sandbox.stop_owner(owner) end)
+
     directory = Path.join(System.tmp_dir!(), "brando_archive_upgrade_#{System.unique_integer([:positive])}")
     File.mkdir_p!(directory)
+    on_exit(fn -> File.rm_rf!(directory) end)
 
     put_test_env(:tenancy_mode, :multi)
-    put_test_env(:tenant_migrator, NoTenantMigrations)
-    put_test_env(:environment_schema_cloner, SqlSchemaCloner)
-    put_test_env(:public_migrations_path, directory)
-    put_test_env(:archive_upgrade_migrator, Brando.MigrationTemplates.InProcessMigrator)
     Cache.clear()
-
-    on_exit(fn ->
-      File.rm_rf!(directory)
-      Cache.clear()
-    end)
+    on_exit(&Cache.clear/0)
 
     {:ok, site} =
       Registry.create_site(%{
@@ -136,7 +140,37 @@ defmodule Brando.Environments.ArchiveUpgradeTest do
     copied = copy_2xx(directory)
     migrate(directory, :up)
 
-    %{site: site, archive: archive, content: content, directory: directory, copied: copied}
+    # Outside the per-query savepoints the sandbox wraps statements in, which
+    # would release it again
+    Repo.query!("SAVEPOINT #{@built}", [], sandbox_subtransaction: false)
+
+    %{owner: owner, built_in: directory, site: site, archive: archive, content: content, copied: copied}
+  end
+
+  # Runs first, so its on_exit runs last: every other callback has put back
+  # what it changed by then
+  setup %{owner: owner, built_in: built_in} do
+    Sandbox.allow(Repo, owner, self())
+
+    on_exit(fn ->
+      Sandbox.allow(Repo, owner, self())
+      Repo.query!("ROLLBACK TO SAVEPOINT #{@built}", [], sandbox_subtransaction: false)
+    end)
+
+    # Tests change the migration files, so each gets its own copy
+    directory = Path.join(System.tmp_dir!(), "brando_archive_upgrade_#{System.unique_integer([:positive])}")
+    File.cp_r!(built_in, directory)
+    on_exit(fn -> File.rm_rf!(directory) end)
+
+    put_test_env(:tenancy_mode, :multi)
+    put_test_env(:tenant_migrator, NoTenantMigrations)
+    put_test_env(:environment_schema_cloner, SqlSchemaCloner)
+    put_test_env(:public_migrations_path, directory)
+    put_test_env(:archive_upgrade_migrator, Brando.MigrationTemplates.InProcessMigrator)
+    Cache.clear()
+    on_exit(&Cache.clear/0)
+
+    %{directory: directory}
   end
 
   defp restored_schemas,
