@@ -67,6 +67,12 @@ test.describe('Block outline: moving a block between containers', () => {
 
     const movedUid = await children(containers(page).nth(from)).first().getAttribute('data-uid')
     const targetUid = await containers(page).nth(to).getAttribute('data-block-uid')
+    const headingUid = await children(containers(page).nth(to)).first().getAttribute('data-uid')
+    // the drop has to land where the test says: dropped below the Heading,
+    // a drop meant for the same index would pass as an ordinary move
+    const expectedOrder = position === 'above' ? [movedUid, headingUid] : [headingUid, movedUid]
+    const targetOrder = () =>
+      children(containers(page).nth(to)).evaluateAll(blocks => blocks.map(block => block.dataset.uid))
 
     // Open the outline from the block field's actions.
     await page.locator('[data-ui-dropdown-toggle$="-actions-dropdown"]').first().click()
@@ -93,11 +99,13 @@ test.describe('Block outline: moving a block between containers', () => {
     const moved = containers(page).nth(to).locator(`.block-children > [data-uid="${movedUid}"]`)
     await expect(moved).toHaveCount(1)
     await expect(children(containers(page).nth(from))).toHaveCount(0)
+    await expect.poll(targetOrder).toEqual(expectedOrder)
 
     await saveAndReopen(page, title)
 
     await expect(children(containers(page).nth(from))).toHaveCount(0)
     await expect(children(containers(page).nth(to))).toHaveCount(2)
+    await expect.poll(targetOrder).toEqual(expectedOrder)
     await expect(moved.locator('.block-vars').getByLabel('String label')).toHaveValue('Kept across the move')
   }
 
