@@ -229,6 +229,12 @@ jobs:
       - name: Check how ci-wait tells known flakes from real failures
         run: bash test/scripts/ci_wait_test.sh
 
+      - name: Validate the changelog fragments
+        run: scripts/changelog check
+
+      - name: Check how changelog fragments are validated and collated
+        run: bash test/scripts/changelog_test.sh
+
   docs:
     name: Published documentation
     runs-on: ubuntu-latest
