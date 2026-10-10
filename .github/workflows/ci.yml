@@ -13,6 +13,15 @@ on:
   # they behave the same on the queued commit. The E2E jobs stay PR-only
   # (informational, and the PR already ran them); igniter-smoke.yml has no
   # merge_group trigger because its path filter cannot apply to a queue run.
+  #
+  # A queue run reuses the PR's run when that run already passed on the same
+  # tree, usually a PR queued alone onto an unchanged main: the `reuse` job
+  # finds it, and those jobs keep reporting under their own names but skip
+  # every step. Skipping the jobs themselves would not do: a skipped matrix job
+  # reports once as `mix test (OTP ${{matrix.otp}} | …)`, never under the three
+  # required names. A PR run records what it tested in the `record` job; see
+  # .github/scripts/merge-queue-reuse.sh. The push to main after the merge
+  # still runs everything.
   merge_group:
     types: [checks_requested]
   # Lets the E2E job be run on demand without raising a PR — it is skipped on
@@ -37,8 +46,40 @@ concurrency:
   cancel-in-progress: ${{ github.event_name != 'merge_group' }}
 
 jobs:
+  # Merge queue only. Its `reused` output is 'true' when a pull_request run of
+  # this workflow passed on the queued commit's tree and base; the jobs that
+  # need it then skip their steps. They run with `!cancelled()`, so they still
+  # run in full when this job is skipped (any other event) or fails, and the
+  # lookup step may fail without failing the job. `record` must need every job
+  # that reads the output.
+  reuse:
+    name: Reuse a passed pull request run (merge queue)
+    if: github.event_name == 'merge_group'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      actions: read
+      contents: read
+    outputs:
+      reused: ${{ steps.lookup.outputs.reused }}
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          sparse-checkout: .github/scripts
+
+      - name: Look for a passed pull_request run of this tree
+        id: lookup
+        continue-on-error: true
+        timeout-minutes: 3
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BASE_REF: ${{ github.event.merge_group.base_ref }}
+        run: .github/scripts/merge-queue-reuse.sh lookup "$GITHUB_SHA" "$BASE_REF" | tee -a "$GITHUB_STEP_SUMMARY"
+
   mix_test:
     name: mix test (OTP ${{matrix.otp}} | Elixir ${{matrix.elixir}})
+    needs: reuse
+    if: ${{ !cancelled() }}
 
     env:
       MIX_ENV: test
@@ -58,7 +99,8 @@ jobs:
 
     services:
       db:
-        image: public.ecr.aws/docker/library/postgres:14
+        # An empty image starts no service: a reused merge queue run needs none.
+        image: ${{ needs.reuse.outputs.reused != 'true' && 'public.ecr.aws/docker/library/postgres:14' || '' }}
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
@@ -72,8 +114,10 @@ jobs:
 
     steps:
       - uses: actions/checkout@v7.0.1
+        if: needs.reuse.outputs.reused != 'true'
 
       - name: Set up Elixir
+        if: needs.reuse.outputs.reused != 'true'
         uses: erlef/setup-beam@v1
         with:
           elixir-version: ${{ matrix.elixir }}
@@ -95,7 +139,7 @@ jobs:
       # temporary branch could never reuse it, and the entries would evict
       # main's from the 10 GB cache.
       - name: Restore deps and _build cache (merge queue, restore only)
-        if: github.event_name == 'merge_group'
+        if: github.event_name == 'merge_group' && needs.reuse.outputs.reused != 'true'
         uses: actions/cache/restore@v6.1.0
         with:
           path: |
@@ -107,16 +151,20 @@ jobs:
             deps-${{ runner.os }}-${{ matrix.otp }}-${{ matrix.elixir }}
 
       - name: Install dependencies
+        if: needs.reuse.outputs.reused != 'true'
         run: mix deps.get --only test
 
       - name: Compile without warnings
+        if: needs.reuse.outputs.reused != 'true'
         # Incremental builds replay stored warnings, including unchanged files.
         run: mix compile --all-warnings --warnings-as-errors
 
       - name: Reset db
+        if: needs.reuse.outputs.reused != 'true'
         run: mix ecto.reset
 
       - name: Run Tests
+        if: needs.reuse.outputs.reused != 'true'
         run: mix test --warnings-as-errors ${{ inputs.coverage && matrix.elixir == '1.20.3' && '--cover --export-coverage unit' || '' }}
 
       - name: Upload unit coverage data
@@ -129,23 +177,31 @@ jobs:
 
   css_colors:
     name: Admin CSS colour tokens
+    needs: reuse
+    if: ${{ !cancelled() }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7.0.1
+        if: needs.reuse.outputs.reused != 'true'
 
       - name: Reject new hex colours outside the tokens file
+        if: needs.reuse.outputs.reused != 'true'
         run: bash .github/scripts/check_css_colors.sh
 
   quality:
     name: Blueprint quality gates
+    needs: reuse
+    if: ${{ !cancelled() }}
     runs-on: ubuntu-latest
     env:
       MIX_ENV: test
 
     steps:
       - uses: actions/checkout@v7.0.1
+        if: needs.reuse.outputs.reused != 'true'
 
       - name: Set up Elixir
+        if: needs.reuse.outputs.reused != 'true'
         uses: erlef/setup-beam@v1
         with:
           elixir-version: 1.20.3
@@ -167,7 +223,7 @@ jobs:
       # temporary branch could never reuse it, and the entries would evict
       # main's from the 10 GB cache.
       - name: Restore deps and _build cache (merge queue, restore only)
-        if: github.event_name == 'merge_group'
+        if: github.event_name == 'merge_group' && needs.reuse.outputs.reused != 'true'
         uses: actions/cache/restore@v6.1.0
         with:
           path: |
@@ -179,23 +235,29 @@ jobs:
             quality-${{ runner.os }}-28.4.1-1.20.3
 
       - name: Install dependencies
+        if: needs.reuse.outputs.reused != 'true'
         run: mix deps.get --only test
 
       - name: Check formatting
+        if: needs.reuse.outputs.reused != 'true'
         run: mix format --check-formatted
 
       - name: Compile without warnings
+        if: needs.reuse.outputs.reused != 'true'
         run: mix compile --warnings-as-errors
 
       - name: Check usage-rules.md matches the guides
+        if: needs.reuse.outputs.reused != 'true'
         run: mix brando.docs.agents --check
 
       - name: Run strict Blueprint code analysis
+        if: needs.reuse.outputs.reused != 'true'
         run: mix credo --strict lib/brando/blueprint.ex lib/brando/blueprint
 
       # Brando's own checks (credo/checks). Globs, not directories: Credo
       # finds no files for a bare `test` argument. scripts/check runs the same.
       - name: Check that tests put back the caches they change and keep the sandbox unshared
+        if: needs.reuse.outputs.reused != 'true'
         run: mix credo --strict --checks Brando.Credo.Check.TestCacheRestore,Brando.Credo.Check.TestSandboxShared "test/**/*.{ex,exs}" "e2e/test/**/*.{ex,exs}"
 
       # Back to zero. The 251-module cycle this gate used to tolerate was not
@@ -206,6 +268,7 @@ jobs:
       # macro-expansion-time function call) that crosses from a leaf into a
       # module the callee's own dependencies reach back to.
       - name: Reject compile-connected dependency cycles
+        if: needs.reuse.outputs.reused != 'true'
         run: mix xref graph --format cycles --label compile-connected --fail-above 0
 
       # `--check-up-to-date` only compares the POT files, so extract and merge
@@ -214,6 +277,7 @@ jobs:
       # The Norwegian translations themselves are checked by
       # test/brando/gettext_test.exs. See TRANSLATIONS.md.
       - name: Reject out-of-date Gettext catalogues
+        if: needs.reuse.outputs.reused != 'true'
         run: |
           mix gettext.extract --merge > /dev/null
           if [ -n "$(git status --porcelain --untracked-files=all -- priv/gettext)" ]; then
@@ -224,27 +288,39 @@ jobs:
           fi
 
       - name: Check the Gettext merge driver
+        if: needs.reuse.outputs.reused != 'true'
         run: python3 scripts/gettext-merge-driver --self-test
 
       - name: Check how ci-wait tells known flakes from real failures
+        if: needs.reuse.outputs.reused != 'true'
         run: bash test/scripts/ci_wait_test.sh
 
+      - name: Check when a merge queue run reuses a pull request run
+        if: needs.reuse.outputs.reused != 'true'
+        run: bash test/scripts/merge_queue_reuse_test.sh
+
       - name: Validate the changelog fragments
+        if: needs.reuse.outputs.reused != 'true'
         run: scripts/changelog check
 
       - name: Check how changelog fragments are validated and collated
+        if: needs.reuse.outputs.reused != 'true'
         run: bash test/scripts/changelog_test.sh
 
   docs:
     name: Published documentation
+    needs: reuse
+    if: ${{ !cancelled() }}
     runs-on: ubuntu-latest
     env:
       MIX_ENV: docs
 
     steps:
       - uses: actions/checkout@v7.0.1
+        if: needs.reuse.outputs.reused != 'true'
 
       - name: Set up Elixir
+        if: needs.reuse.outputs.reused != 'true'
         uses: erlef/setup-beam@v1
         with:
           elixir-version: 1.20.3
@@ -266,7 +342,7 @@ jobs:
       # temporary branch could never reuse it, and the entries would evict
       # main's from the 10 GB cache.
       - name: Restore docs dependencies and build cache (merge queue, restore only)
-        if: github.event_name == 'merge_group'
+        if: github.event_name == 'merge_group' && needs.reuse.outputs.reused != 'true'
         uses: actions/cache/restore@v6.1.0
         with:
           path: |
@@ -278,9 +354,11 @@ jobs:
             docs-${{ runner.os }}-28.4.1-1.20.3
 
       - name: Install documentation dependencies
+        if: needs.reuse.outputs.reused != 'true'
         run: mix deps.get --only docs
 
       - name: Build published documentation without warnings
+        if: needs.reuse.outputs.reused != 'true'
         run: mix docs --warnings-as-errors
 
   # The E2E app's own ExUnit tests (e2e/test/unit): Brando against a real
@@ -289,6 +367,8 @@ jobs:
   # run on every event, unlike those jobs.
   e2e_unit:
     name: E2E app unit tests
+    needs: reuse
+    if: ${{ !cancelled() }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     env:
@@ -297,7 +377,8 @@ jobs:
 
     services:
       db:
-        image: public.ecr.aws/docker/library/postgres:14
+        # An empty image starts no service: a reused merge queue run needs none.
+        image: ${{ needs.reuse.outputs.reused != 'true' && 'public.ecr.aws/docker/library/postgres:14' || '' }}
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
@@ -311,18 +392,22 @@ jobs:
 
     steps:
       - uses: actions/checkout@v7.0.1
+        if: needs.reuse.outputs.reused != 'true'
         with:
           path: brando
       - uses: actions/checkout@v7.0.1
+        if: needs.reuse.outputs.reused != 'true'
         with:
           repository: brandocms/brando_json_api
           path: brando_json_api
       - uses: actions/checkout@v7.0.1
+        if: needs.reuse.outputs.reused != 'true'
         with:
           repository: brandocms/brando_graphql
           path: brando_graphql
 
       - name: Set up Elixir
+        if: needs.reuse.outputs.reused != 'true'
         uses: erlef/setup-beam@v1
         with:
           elixir-version: 1.20.3
@@ -342,7 +427,7 @@ jobs:
 
       # As in mix_test: a merge queue run restores the cache but saves none.
       - name: Restore E2E unit-test dependencies and build (merge queue, restore only)
-        if: github.event_name == 'merge_group'
+        if: github.event_name == 'merge_group' && needs.reuse.outputs.reused != 'true'
         uses: actions/cache/restore@v6.1.0
         with:
           path: |
@@ -354,13 +439,49 @@ jobs:
             e2e-unit-v1-${{ runner.os }}-28.4.1-1.20.3-
 
       - name: Install Elixir dependencies
+        if: needs.reuse.outputs.reused != 'true'
         working-directory: brando/e2e
         run: source .envrc && mix deps.get
 
       # Creates, migrates and seeds the database, then runs mix test.
       - name: Run the E2E app's unit tests
+        if: needs.reuse.outputs.reused != 'true'
         working-directory: brando/e2e
         run: ./test_unit.sh
+
+  # Pull requests only, once every job the merge queue can reuse has passed
+  # (the implicit success() needs them all): uploads an artifact named after
+  # the tree this run tested and its base, which `reuse` looks up. The script
+  # matches this job by name. Not required, and a failure here only means the
+  # queue runs everything.
+  record:
+    name: Record the tested tree for the merge queue
+    needs: [mix_test, css_colors, quality, docs, e2e_unit]
+    if: github.event_name == 'pull_request'
+    continue-on-error: true
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          sparse-checkout: .github/scripts
+
+      - name: Name the record after the tested tree and base
+        id: record
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          name="$(.github/scripts/merge-queue-reuse.sh name "$GITHUB_SHA")"
+          echo "name=$name" >> "$GITHUB_OUTPUT"
+          echo "run $GITHUB_RUN_ID tested $GITHUB_SHA" > merge-queue-record.txt
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.record.outputs.name }}
+          path: merge-queue-record.txt
+          if-no-files-found: error
+          overwrite: true
+          retention-days: 30
 
   e2e_build:
     name: Compile E2E dependencies and application

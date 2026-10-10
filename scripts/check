@@ -171,6 +171,7 @@ run_step "xref compile cycles" mix_in test xref graph --format cycles --label co
 run_step "CSS colour tokens" bash .github/scripts/check_css_colors.sh
 run_step "E2E machine paths" bash .github/scripts/check-e2e-paths.sh
 run_step "ci-wait flake matching" bash test/scripts/ci_wait_test.sh
+run_step "merge queue reuse" bash test/scripts/merge_queue_reuse_test.sh
 run_step "changelog fragments" scripts/changelog check
 run_step "changelog script" bash test/scripts/changelog_test.sh
 
