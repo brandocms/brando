@@ -449,7 +449,8 @@ defmodule BrandoAdmin.EntryFieldSyncTest do
       blur(c.a)
       focus(c.a, "uri")
       await(fn -> presence_meta(c.page, c.me).active_field == "page[uri]" end)
-      Process.sleep(400)
+      # time for a second write (`:active_field_write_ms`) to show up
+      Process.sleep(2 * Application.fetch_env!(:brando, :active_field_write_ms))
 
       diffs = for %Phoenix.Socket.Broadcast{event: "presence_diff"} <- messages(), do: :diff
       assert length(diffs) == 1

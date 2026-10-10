@@ -1498,9 +1498,17 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     if socket.assigns.remote_refresh_scheduled? do
       socket
     else
-      send_update_after(__MODULE__, [id: socket.assigns.id, event: "flush_remote_refresh"], 120)
+      send_update_after(__MODULE__, [id: socket.assigns.id, event: "flush_remote_refresh"], remote_refresh_ms())
       assign(socket, :remote_refresh_scheduled?, true)
     end
+  end
+
+  # Brando's own tests refresh sooner (`:remote_refresh_ms`), compiled in
+  # only where `config :brando, :form_load_gate?, true`.
+  if Application.compile_env(:brando, :form_load_gate?, false) do
+    defp remote_refresh_ms, do: Application.get_env(:brando, :remote_refresh_ms, 120)
+  else
+    defp remote_refresh_ms, do: 120
   end
 
   # A root in use is refreshed as well — two editors can work in one block —
