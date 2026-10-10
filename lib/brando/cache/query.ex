@@ -13,8 +13,9 @@ defmodule Brando.Cache.Query do
   many writes the transaction makes, under the tenant prefix of the write
   (`Brando.Repo.after_commit/2`). Only a transaction begun with
   `Brando.Repo.transaction/2` holds that back; inside one begun on the repo
-  itself it runs at once. A generated mutation's `{:mutation, ...}`
-  broadcast also goes out after the commit.
+  itself it runs at once. The `{:mutation, ...}` broadcast of a generated
+  create, delete or changeset update also goes out after the commit (an
+  update by id sends none).
   """
   @type changeset :: Ecto.Changeset.t()
   @cache_module Application.compile_env(:brando, :cache_module, Cachex)
