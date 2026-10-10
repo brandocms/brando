@@ -1,6 +1,14 @@
 defmodule Brando.Cache.Query do
   @moduledoc """
   Interactions with query cache
+
+  ## Evict after commit
+
+  Inside a transaction, `evict/1`, `evict_entry/2` and `evict_schema/1`
+  evict at once and again once it has committed (`Brando.Repo.after_commit/1`,
+  under the tenant prefix of the write): a read by another process before
+  the commit still sees the old row and caches it again. Only a transaction
+  begun with `Brando.Repo.transaction/2` holds the second eviction back.
   """
   @type changeset :: Ecto.Changeset.t()
   @cache_module Application.compile_env(:brando, :cache_module, Cachex)
@@ -59,14 +67,16 @@ defmodule Brando.Cache.Query do
   def evict({:ok, entry}) when is_map(entry) do
     source = entry.__struct__.__schema__(:source)
 
-    perform_eviction(:list, source)
-    perform_eviction(:single, source, entry.id)
+    evict_committed(fn ->
+      perform_eviction(:list, source)
+      perform_eviction(:single, source, entry.id)
 
-    # TODO: a declarative way to specify any related entries to evict?
-    # Evict parent page if applicable
-    if Map.get(entry, :parent_id) do
-      perform_eviction(:single, source, entry.parent_id)
-    end
+      # TODO: a declarative way to specify any related entries to evict?
+      # Evict parent page if applicable
+      if Map.get(entry, :parent_id) do
+        perform_eviction(:single, source, entry.parent_id)
+      end
+    end)
 
     {:ok, entry}
   end
@@ -76,21 +86,40 @@ defmodule Brando.Cache.Query do
   # from insert!, update!, etc.
   def evict(entry) when is_map(entry) do
     source = entry.__struct__.__schema__(:source)
-    perform_eviction(:list, source)
-    perform_eviction(:single, source, entry.id)
+
+    evict_committed(fn ->
+      perform_eviction(:list, source)
+      perform_eviction(:single, source, entry.id)
+    end)
+
     entry
   end
 
   def evict_schema(schema) do
     source = schema.__schema__(:source)
-    perform_eviction(:list, source)
+    evict_committed(fn -> perform_eviction(:list, source) end)
     schema
   end
 
   def evict_entry(schema, id) do
     source = schema.__schema__(:source)
-    perform_eviction(:single, source, id)
+    evict_committed(fn -> perform_eviction(:single, source, id) end)
     schema
+  end
+
+  # Inside a transaction, evicts now, so this process reads its own write,
+  # and again once the transaction has committed: another process reading
+  # in between still sees the old row and caches it again. The second runs
+  # under the tenant prefix of the write, which may be gone by then.
+  defp evict_committed(evict) do
+    evict.()
+
+    if Brando.Repo.repo().in_transaction?() do
+      prefix = Brando.Tenant.current_prefix()
+      Brando.Repo.after_commit(fn -> Brando.Tenant.with_prefix(prefix, evict) end)
+    end
+
+    :ok
   end
 
   @spec perform_eviction(:list, binary()) :: [:ok]
