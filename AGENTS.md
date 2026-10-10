@@ -15,6 +15,7 @@
   - **Full suite with reset**: `cd e2e && source .envrc && ./test_e2e.sh --reset`
   - **Single test with reset**: `cd e2e && source .envrc && ./test_e2e.sh --reset tests/path/to/test.spec.js`
   - **When troubleshooting/fixing failing tests**: Always run only the specific failing test, not the full suite. Use the single test command above.
+  - **E2E app unit tests** (ExUnit in `e2e/test/unit`, no browser; CI runs them): `cd e2e && ./test_unit.sh`
   - **Individual tests** (server already running): `cd e2e/playwright && pnpm playwright test tests/path/to/test.spec.js`
   - **Start server manually**: `cd e2e && source .envrc && MIX_ENV=e2e PORT=4444 mix phx.server`
   - **Seeding**: `cd e2e && source .envrc && BRANDO_SEEDING=true MIX_ENV=e2e mix run priv/repo/e2e_seeds.exs`
