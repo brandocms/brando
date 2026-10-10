@@ -76,7 +76,7 @@ defmodule Brando.EditSession.Data do
     case data.fields do
       %{^field => %{base: known}} ->
         if Ops.signature(known) == Ops.signature(base),
-          do: merge_held(data, field, held, held_base),
+          do: merge_held(data, field, held, held_base, base),
           else: {:mismatch, data}
 
       _ ->
@@ -90,14 +90,16 @@ defmodule Brando.EditSession.Data do
   Carry the work an editor holds (`held`, built on `held_base`) onto the
   session's state of a known field. Nothing to carry is `:joined`.
   """
-  @spec merge_held(t(), field(), Ops.t(), Ops.t()) :: {:joined | {:merged, [String.t()]}, t()}
-  def merge_held(%__MODULE__{} = data, field, %Ops{} = held, %Ops{} = held_base) do
+  @spec merge_held(t(), field(), Ops.t(), Ops.t(), Ops.t() | nil) :: {:joined | {:merged, [String.t()]}, t()}
+  def merge_held(%__MODULE__{} = data, field, %Ops{} = held, %Ops{} = held_base, rows \\ nil) do
     entry = Map.fetch!(data.fields, field)
 
     if Ops.pristine?(held, held_base) do
       {:joined, data}
     else
-      {state, conflicts} = Ops.carry(held, held_base, entry.state, lists: :merge)
+      # `rows`: the session's rows as the joiner just read them, with every
+      # row named (the session keeps only some of them)
+      {state, conflicts} = Ops.carry(held, held_base, entry.state, lists: :merge, rows: rows || entry.state)
       state = Ops.keep_rel_ids(state, Map.keys(entry.state.rel_ids))
       rev = entry.rev + 1
       # A save in flight read the state before this merge: its rebase

@@ -1007,6 +1007,7 @@ defmodule BrandoAdmin.Components.Form.BlockField.Ops do
   @spec carry(t(), t(), t(), keyword()) :: {t(), [uid()]}
   def carry(%__MODULE__{} = state, %__MODULE__{} = old_base, %__MODULE__{} = new_base, opts \\ []) do
     lists = Keyword.get(opts, :lists, :carried)
+    rows = Keyword.get(opts, :rows, new_base)
     acc = {adopt_keys(new_base, state), []}
     acc = Enum.reduce(state.deleted, acc, &carry_delete/2)
     acc = state |> inserted_tops() |> Enum.reduce(acc, &carry_insert(&1, &2, state))
@@ -1015,7 +1016,7 @@ defmodule BrandoAdmin.Components.Form.BlockField.Ops do
       state.diffs
       |> Enum.filter(fn {uid, diff} -> diff != %{} and state.statuses[uid] == :persisted end)
       |> Enum.sort_by(fn {uid, _} -> depth(state, uid) end)
-      |> Enum.reduce(acc, &carry_update(&1, &2, state, {lists, old_base}))
+      |> Enum.reduce(acc, &carry_update(&1, &2, state, {lists, old_base, rows}))
 
     acc = state |> moved_children(old_base) |> Enum.reduce(acc, &carry_move(&1, &2, state))
 
@@ -1087,7 +1088,7 @@ defmodule BrandoAdmin.Components.Form.BlockField.Ops do
     end
   end
 
-  defp carry_update({uid, diff}, {acc, conflicts}, state, {lists, old_base}) do
+  defp carry_update({uid, diff}, {acc, conflicts}, state, {lists, old_base, rows}) do
     if known?(acc, uid) do
       # Rows just loaded hold no diff, but live session state can (a
       # rejoin, a recovery copy), so the diff is merged with the one held
@@ -1102,8 +1103,11 @@ defmodule BrandoAdmin.Components.Form.BlockField.Ops do
 
       diff =
         case lists do
-          :merge -> carry_merge(now, diff, {:block, base_row_ids(old_base, uid)})
-          :carried -> deep_merge_params(now, diff)
+          :merge ->
+            now |> with_saved_rows(diff, root?, rows, uid) |> carry_merge(diff, {:block, base_row_ids(old_base, uid)})
+
+          :carried ->
+            deep_merge_params(now, diff)
         end
 
       {carry_apply(acc, {:update, uid, diff}), conflicts}
@@ -1135,6 +1139,36 @@ defmodule BrandoAdmin.Components.Form.BlockField.Ops do
   defp carry_merge(key, now, value, at) when is_list(now) and is_list(value), do: carry_list(key, now, value, at)
   defp carry_merge("block", now, value, {:block, _} = at), do: carry_merge(now, value, at)
   defp carry_merge(_key, now, value, _at), do: carry_merge(now, value, :nested)
+
+  # A list the rejoiner's diff has and the session's lacks is the rows as
+  # they are saved (`rows`, whose `rel_ids` name them): rows saved while
+  # the rejoiner was away are among them, and its list would drop them.
+  defp with_saved_rows(now, diff, root?, rows, uid) do
+    saved = saved_row_lists(rows, uid)
+    {now_block, diff_block} = if root?, do: {Map.get(now, "block", %{}), Map.get(diff, "block", %{})}, else: {now, diff}
+
+    filled =
+      Enum.reduce(saved, now_block, fn {key, ids}, block ->
+        if is_list(diff_block[key]) and not Map.has_key?(block, key),
+          do: Map.put(block, key, Enum.map(ids, &%{"id" => &1})),
+          else: block
+      end)
+
+    if root?, do: Map.put(now, "block", filled), else: filled
+  end
+
+  defp saved_row_lists(%__MODULE__{} = rows, uid) do
+    if Map.has_key?(rows.statuses, uid) do
+      empty = Map.new(@rel_identities, fn {key, _field} -> {key, []} end)
+
+      rows.rel_ids
+      |> Map.get(uid, %{})
+      |> Enum.reduce(empty, fn {{key, _identity}, id}, acc -> Map.update(acc, key, [id], &[id | &1]) end)
+      |> Map.new(fn {key, ids} -> {key, Enum.sort(ids)} end)
+    else
+      %{}
+    end
+  end
 
   # The ids of the rows the rejoiner's rows had, by relation, where its
   # rows name them (`rel_ids`): a saved row it lacks that is not among them

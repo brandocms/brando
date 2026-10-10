@@ -478,8 +478,8 @@ defmodule Brando.EditSession do
 
   # A replica rejoining onto a session that moved on to other rows: what it
   # holds is carried onto the session's state.
-  defp merge_held(session, field, held, held_base, pid) do
-    case Data.merge_held(session.data, field, held, held_base) do
+  defp merge_held(session, field, held, held_base, rows, pid) do
+    case Data.merge_held(session.data, field, held, held_base, rows) do
       {:joined, _data} ->
         {session, []}
 
@@ -756,7 +756,7 @@ defmodule Brando.EditSession do
       session
       # the rows were written: every replica reads them again
       |> do_rebase(field, base, {:client, {:detached, pid}}, pid, :saved, pid)
-      |> merge_held(field, held, opts[:held_base] || base, pid)
+      |> merge_held(field, held, opts[:held_base] || base, base, pid)
 
     {{:ok, joiner_info(session, field, pid, held, conflicts)}, session}
   end
@@ -781,7 +781,7 @@ defmodule Brando.EditSession do
         {session, conflicts} =
           %{session | data: data}
           |> do_rebase(field, base, :carry, pid, :joined, pid)
-          |> merge_held(field, held, held_base, pid)
+          |> merge_held(field, held, held_base, base, pid)
 
         {{:ok, joiner_info(session, field, pid, held, conflicts)}, session}
 

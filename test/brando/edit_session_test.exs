@@ -380,6 +380,18 @@ defmodule Brando.EditSessionTest do
   describe "found in review" do
     defp anchor(uid, value), do: {:update, uid, %{"block" => %{"anchor" => value}}}
 
+    # The rows with block "a" holding `relations` (`table_rows: [5, 6]`).
+    defp rows_with(relations) do
+      named = %{table_rows: :sync_uid, refs: :uid, vars: :key}
+
+      block =
+        Enum.reduce(relations, %{uid: "a", id: 10, children: []}, fn {key, ids}, block ->
+          Map.put(block, key, Enum.map(ids, &Map.put(%{id: &1}, named[key], "#{key}-#{&1}")))
+        end)
+
+      Ops.from_entry_blocks([%{id: 1, block: block}, entry_block("b", 2, 20)])
+    end
+
     # R1: the session applied A's op and then a save's rebase; A takes the
     # rebase reply before its own op's broadcast. Replaying the op over the
     # rebased state put A's old value back over a later one.
@@ -734,7 +746,7 @@ defmodule Brando.EditSessionTest do
     # Review: the replayed rejoin held the merged lists whole, so rows the
     # save had just written came back as unsaved work.
     test "a save's rebase replays a rejoin without making the saved rows unsaved" do
-      base = Ops.from_entry_blocks([entry_block("a", 1, 10), entry_block("b", 2, 20)])
+      base = rows_with(table_rows: [5, 6])
       {:seeded, data} = Data.join(Data.new(1), @field, base, base)
       rows_then = [%{"id" => 5}, %{"id" => 6}]
 
@@ -792,7 +804,7 @@ defmodule Brando.EditSessionTest do
     # A row inside a row the rejoiner removed stays removed through the
     # save's replay, though the session changed it before the save read.
     test "a save's rebase replays a rejoin's removal inside a row" do
-      base = Ops.from_entry_blocks([entry_block("a", 1, 10), entry_block("b", 2, 20)])
+      base = rows_with(table_rows: [5])
       {:seeded, data} = Data.join(Data.new(1), @field, base, base)
       vars_then = [%{"id" => 51}, %{"id" => 52}]
 
@@ -822,7 +834,7 @@ defmodule Brando.EditSessionTest do
     # had them. The rows of a list in one (a gallery's objects) the session
     # added are kept through the save's replay.
     test "a save's rebase replays a rejoin with the rows of a list in a map inside a row" do
-      base = Ops.from_entry_blocks([entry_block("a", 1, 10), entry_block("b", 2, 20)])
+      base = rows_with(refs: [3])
       {:seeded, data} = Data.join(Data.new(1), @field, base, base)
       ref = fn objects -> %{"block" => %{"refs" => [%{"id" => 3, "gallery" => %{"gallery_objects" => objects}}]}} end
 
@@ -845,7 +857,7 @@ defmodule Brando.EditSessionTest do
     # Sol audit: the log indexed a list by identity even when two items are
     # named alike, which the merge takes whole.
     test "a save's rebase replays a rejoiner's list with items named alike as it had it" do
-      base = Ops.from_entry_blocks([entry_block("a", 1, 10), entry_block("b", 2, 20)])
+      base = rows_with(vars: [5])
       {:seeded, data} = Data.join(Data.new(1), @field, base, base)
       {:ok, data} = Data.apply_op(data, @field, anchor("a", "A, saving"))
       data = Data.mark_save(data, @field, :saver, 0)
@@ -856,6 +868,27 @@ defmodule Brando.EditSessionTest do
 
       {:ok, data, []} = Data.rebase(data, @field, base, {:client, :saver})
       assert [%{"id" => 5, "options" => ^options}] = Data.state(data, @field).diffs["a"]["block"]["vars"]
+    end
+
+    # Sol audit: a row saved while the rejoiner was away was deleted when
+    # the session held no change to that block's rows: the rejoiner's list
+    # was taken as it was.
+    test "a rejoin keeps a row saved while the rejoiner was away, though the session never changed the rows" do
+      table = fn rows -> %{id: 1, block: %{uid: "a", id: 10, children: [], table_rows: rows}} end
+      old = Ops.from_entry_blocks([table.([%{id: 5, sync_uid: "r5"}]), entry_block("b", 2, 20)])
+
+      fresh =
+        Ops.from_entry_blocks([table.([%{id: 5, sync_uid: "r5"}, %{id: 8, sync_uid: "r8"}]), entry_block("b", 2, 20)])
+
+      {:ok, seed} = Ops.apply_op(fresh, anchor("b", "A"))
+      {:seeded, data} = Data.join(Data.new(1), @field, fresh, seed)
+
+      cell = ["block", {:at, "table_rows", {"id", 5}, [%{"id" => 5}]}, "cols"]
+      {:ok, held} = Ops.apply_op(old, {:set_field, "a", cell, "B's cell", 0})
+      {{:merged, []}, data} = Data.join(data, @field, fresh, held, old)
+
+      {:ok, params} = Ops.materialize_root(Data.state(data, @field), "a")
+      assert params["block"]["table_rows"] |> Enum.map(& &1["id"]) |> Enum.sort() == [5, 8]
     end
 
     test "a rejoin carrying work after a save's read is kept by that save's rebase, on the session" do
