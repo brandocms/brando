@@ -383,15 +383,11 @@ defmodule Brando.NotesTest do
     test "mentions whose email cannot be queued stay unsent", %{author: author, other: other, page: page} do
       Oban.Testing.with_testing_mode(:manual, fn ->
         thread!(page, author, %{"body" => "@Trond Mjøen kept", "mentions" => [other.id]})
-
-        assert_raise Postgrex.Error, fn ->
-          Repo.transaction(fn ->
-            Repo.query!("ALTER TABLE oban_jobs RENAME TO oban_jobs_away")
-            Notes.deliver_mentions(other.id)
-          end)
-        end
       end)
 
+      # Queuing the email fails after the mentions were claimed
+      put_test_env(:mailer, nil)
+      assert_raise Brando.Exception.ConfigError, fn -> Notes.deliver_mentions(other.id) end
       assert [_] = Notes.mentions_for(other.id, unsent: true)
     end
 

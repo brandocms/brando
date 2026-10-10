@@ -592,10 +592,11 @@ defmodule Brando.NotificationsTest do
       Process.put(:authorization_test_policy_raises, %DBConnection.ConnectionError{message: "timeout"})
       job = %Oban.Job{args: %{"delivery" => delivery.id, "route" => route.id}, attempt: 1, max_attempts: 10}
 
-      assert {:error, _} = NotificationDelivery.deliver(job)
+      log = capture_log(fn -> assert {:error, _} = NotificationDelivery.deliver(job) end)
+      assert log =~ "timeout"
       assert %{state: "retrying", error: "recipient_check_failed"} = Repo.reload!(delivery)
 
-      assert {:cancel, _} = NotificationDelivery.deliver(%{job | attempt: 10})
+      capture_log(fn -> assert {:cancel, _} = NotificationDelivery.deliver(%{job | attempt: 10}) end)
       assert %{state: "failed", error: "recipient_check_failed"} = Repo.reload!(delivery)
 
       # Any other failure: there is no point in trying again
@@ -917,6 +918,32 @@ defmodule Brando.NotificationsTest do
 
       assert %{state: "failed", error: "recipient_check_failed"} = Repo.reload!(delivery)
       assert_no_email_sent()
+    end
+
+    test "a summary whose email cannot be queued leaves everything waiting", %{user: user} do
+      reader = Factory.insert(:random_user, name: "Kari", config: %UserConfig{notification_digest: :daily})
+      route = route!(user, %{"kind" => "email", "events" => ["failed_job"], "recipient_ids" => [reader.id]})
+      page = create_page(user)
+      {:ok, _note, _} = Notes.create_thread(Page, page.id, user, %{"body" => "@Kari kept", "mentions" => [reader.id]})
+
+      delivery =
+        Repo.insert!(%Delivery{
+          route_id: route.id,
+          recipient_id: reader.id,
+          event: "failed_job",
+          state: "digest",
+          notification: %{"event" => "failed_job", "job" => %{"worker" => "MyApp.Kept", "error" => "boom"}}
+        })
+
+      # Queuing the email fails after the items were claimed
+      put_test_env(:mailer, nil)
+
+      assert_raise Brando.Exception.ConfigError, fn ->
+        Notes.deliver_mentions(reader.id, Digest.next_at(:daily, delivery.inserted_at))
+      end
+
+      assert %{state: "digest"} = Repo.reload!(delivery)
+      assert [_] = Notes.mentions_for(reader.id, unsent: true)
     end
 
     test "one email job waits per user, however long ago it was queued", %{user: user} do
