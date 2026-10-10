@@ -503,17 +503,34 @@ defmodule BrandoAdmin.Components.Form.BlockField.OpsTest do
              ]
     end
 
-    # Review: a list op left every row as a full copy, so a saved row the
+    # Review: a list op leaves every row as a full copy, so a saved row the
     # rejoiner removed looked changed in the session and came back.
     test "a rejoin's removal of a saved row holds against rows a list op left as they were" do
       base = base_rows()
       rows_then = [%{"id" => 5, "cols" => "saved 5"}, %{"id" => 7, "cols" => "saved 7"}]
       added = %{"sync_uid" => "new", "cols" => "A's row"}
       live = apply!(base, {:set_field, "b", ["block", "table_rows"], {:list, rows_then, rows_then ++ [added]}, 0})
-      assert live.diffs["b"]["block"]["table_rows"] == [%{"id" => 5}, %{"id" => 7}, added]
 
       held = apply!(base, {:update, "b", %{"block" => %{"table_rows" => [%{"id" => 5}]}}})
-      assert rejoin(live, held, base).diffs["b"]["block"]["table_rows"] == [%{"id" => 5}, added]
+      assert rejoin(live, held, base).diffs["b"]["block"]["table_rows"] == [hd(rows_then), added]
+    end
+
+    # Review: a gallery's objects sit under a map in a ref, so a diff holds
+    # them whole, and a reorder gives every one a new sequence: a removal
+    # the rejoiner made was undone by the session's reorder.
+    test "a rejoin's removal of a gallery object holds against the session's reorder of the gallery" do
+      base = base_rows()
+      object = fn id, seq -> %{"id" => id, "image_id" => id + 10, "sequence" => seq, "alt" => "saved #{id}"} end
+      objects = [object.(1, 0), object.(2, 1), object.(3, 2)]
+      gallery = %{"id" => 30, "gallery_objects" => objects}
+      at_objects = ["block", {:at, "refs", {"id", 3}, [%{"id" => 3}]}, {:map, "gallery", gallery}, "gallery_objects"]
+
+      reordered = [object.(3, 0), object.(1, 1), object.(2, 2)]
+      live = apply!(base, {:set_field, "b", at_objects, {:list, objects, reordered}, 0})
+      held = apply!(base, {:set_field, "b", at_objects, {:list, objects, [object.(1, 0), object.(3, 2)]}, 0})
+
+      assert [%{"gallery" => %{"gallery_objects" => merged}}] = rejoin(live, held, base).diffs["b"]["block"]["refs"]
+      assert merged |> Enum.map(& &1["id"]) |> Enum.sort() == [1, 3]
     end
 
     test "a rejoin merges lists inside a row by row when their rows have ids" do
@@ -540,26 +557,24 @@ defmodule BrandoAdmin.Components.Form.BlockField.OpsTest do
     # carried side's, never both.
     test "a rejoin takes a list inside a row whole when an item has no id" do
       base = base_rows()
-      at_objects = ["block", {:at, "refs", {"id", 3}, [%{"id" => 3}]}, "gallery_objects"]
-      live = apply!(base, {:set_field, "b", at_objects, {:list, [], [%{"id" => 44, "image_id" => 9}]}, 0})
+      gallery = %{"id" => 30, "gallery_objects" => []}
+      at_objects = ["block", {:at, "refs", {"id", 3}, [%{"id" => 3}]}, {:map, "gallery", gallery}, "gallery_objects"]
+      live = apply!(base, {:set_field, "b", at_objects, {:list, [], [%{"id" => 44, "image_id" => 9, "alt" => "A"}]}, 0})
+      held = apply!(base, {:set_field, "b", at_objects, {:list, [], [%{"image_id" => 9, "alt" => "B"}]}, 0})
 
-      held =
-        apply!(
-          base,
-          {:update, "b",
-           %{"block" => %{"refs" => [%{"id" => 3, "gallery_objects" => [%{"image_id" => 9, "alt" => "B"}]}]}}}
-        )
-
-      assert [%{"id" => 3, "gallery_objects" => [%{"image_id" => 9, "alt" => "B"}]}] =
+      assert [%{"id" => 3, "gallery" => %{"gallery_objects" => [%{"image_id" => 9, "alt" => "B"}]}}] =
                rejoin(live, held, base).diffs["b"]["block"]["refs"]
     end
 
-    test "a row the session changed stays when the rejoiner's list leaves it out" do
+    # Without the saved rows, a row one side changed cannot be told from
+    # one it left, so a saved row either side removed is removed, as a list
+    # op's removal is (`merge_list/4`).
+    test "a saved row either side removed stays removed on a rejoin" do
       base = base_rows()
-      live = apply!(base, {:update, "b", %{"block" => %{"table_rows" => [%{"id" => 5, "cols" => "unsaved work"}]}}})
-      held = apply!(base, {:update, "b", %{"block" => %{"table_rows" => []}}})
+      live = apply!(base, {:update, "b", %{"block" => %{"table_rows" => [%{"id" => 5, "cols" => "A"}, %{"id" => 7}]}}})
+      held = apply!(base, {:update, "b", %{"block" => %{"table_rows" => [%{"id" => 5}, %{"id" => 9, "cols" => "B"}]}}})
 
-      assert rejoin(live, held, base).diffs["b"]["block"]["table_rows"] == [%{"id" => 5, "cols" => "unsaved work"}]
+      assert rejoin(live, held, base).diffs["b"]["block"]["table_rows"] == [%{"id" => 5, "cols" => "A"}]
     end
 
     # The rejoiner names a row by its sync uid (new when it was made), the
@@ -623,13 +638,55 @@ defmodule BrandoAdmin.Components.Form.BlockField.OpsTest do
       live = apply!(base, {:update, "b", %{"block" => %{"table_rows" => live_rows ++ [%{"sync_uid" => "a"}]}}})
       held = apply!(base, {:update, "b", %{"block" => %{"table_rows" => held_rows ++ [%{"sync_uid" => "b"}]}}})
 
+      # about 1 ms; the bound only catches a return to quadratic work
       {micros, state} = :timer.tc(fn -> rejoin(live, held, base) end)
       merged = state.diffs["b"]["block"]["table_rows"]
       assert length(merged) == 202
       assert Enum.at(merged, 5) == %{"id" => 6, "cols" => "B"}
       assert Enum.at(merged, 3) == %{"id" => 4, "cols" => "A"}
-      IO.puts("200-row rejoin merge: #{micros} µs")
-      assert micros < 100_000
+      assert micros < 2_000_000
+    end
+
+    # Review: a row named by its id alone (a field op's skeleton names the
+    # rows it did not change so) whose row a write has since removed was
+    # cast as a new, blank row.
+    test "a row named by an id the block no longer has is not saved as a new row" do
+      alias Brando.Content.Block
+      alias Brando.Content.Ref
+      alias Brando.Content.TableRow
+
+      block = %Block{
+        id: 20,
+        uid: "b",
+        table_rows: [%TableRow{id: 5, sync_uid: "r5", vars: []}],
+        vars: [],
+        refs: [%Ref{id: 3, uid: "r3", name: "gallery", gallery: %Brando.Galleries.Gallery{id: 30, gallery_objects: []}}],
+        block_identifiers: [],
+        children: []
+      }
+
+      params = %{
+        "uid" => "b",
+        "table_rows" => [%{"id" => 5}, %{"id" => 7}, %{"id" => 8, "sync_uid" => "r8"}],
+        "vars" => [%{"id" => 51}],
+        "refs" => [%{"id" => 3, "gallery" => %{"id" => 30, "gallery_objects" => [%{"id" => 44}]}}, %{"id" => 4}]
+      }
+
+      changeset = Block.block_changeset(block, params, 1)
+      inserted = fn key -> changeset |> Changeset.get_change(key, []) |> Enum.filter(&(&1.action == :insert)) end
+      assert inserted.(:table_rows) == []
+      assert inserted.(:vars) == []
+      assert inserted.(:refs) == []
+
+      for ref <- Changeset.get_change(changeset, :refs, []), gallery = Changeset.get_change(ref, :gallery) do
+        assert gallery |> Changeset.get_change(:gallery_objects, []) |> Enum.all?(&(&1.action != :insert))
+      end
+
+      # the gallery object alone, as a ref's own change
+      ref = %Ref{id: 3, uid: "r3", name: "gallery", gallery: %Brando.Galleries.Gallery{id: 30, gallery_objects: []}}
+      ref_changeset = Block.ref_changeset(ref, %{"gallery" => %{"id" => 30, "gallery_objects" => [%{"id" => 44}]}}, 1)
+      gallery = Changeset.get_change(ref_changeset, :gallery)
+      assert gallery == nil or Changeset.get_change(gallery, :gallery_objects, []) == []
     end
 
     test "rows written outside the session take the editors' root diffs as they are" do

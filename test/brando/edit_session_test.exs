@@ -789,9 +789,9 @@ defmodule Brando.EditSessionTest do
       assert [%{"id" => 5}, %{"id" => 8, "cols" => "B"}] = params["block"]["table_rows"]
     end
 
-    # Sol audit: the log took the rejoiner's row whole, so a list inside it
-    # lost the rows the merge kept from the session.
-    test "a save's rebase replays a rejoin with the rows the merge kept inside a row" do
+    # A row inside a row the rejoiner removed stays removed through the
+    # save's replay, though the session changed it before the save read.
+    test "a save's rebase replays a rejoin's removal inside a row" do
       base = Ops.from_entry_blocks([entry_block("a", 1, 10), entry_block("b", 2, 20)])
       {:seeded, data} = Data.join(Data.new(1), @field, base, base)
       vars_then = [%{"id" => 51}, %{"id" => 52}]
@@ -810,30 +810,35 @@ defmodule Brando.EditSessionTest do
         )
 
       {{:merged, []}, data} = Data.join(data, @field, base, held)
-      assert [%{"id" => 5, "vars" => [_, _]}] = Data.state(data, @field).diffs["a"]["block"]["table_rows"]
+      assert [%{"id" => 5, "vars" => [_]}] = Data.state(data, @field).diffs["a"]["block"]["table_rows"]
 
       {:ok, data, []} = Data.rebase(data, @field, base, {:client, :saver})
 
-      assert [%{"id" => 5, "vars" => [%{"id" => 51, "value" => "B"}, %{"id" => 52}]}] =
+      assert [%{"id" => 5, "vars" => [%{"id" => 51, "value" => "B"}]}] =
                Data.state(data, @field).diffs["a"]["block"]["table_rows"]
     end
 
     # Sol audit: the log passed maps inside a row through as the rejoiner
-    # had them, so a list in one (a gallery's objects) lost the rows the
-    # merge kept.
-    test "a save's rebase replays a rejoin with the rows the merge kept in a map inside a row" do
+    # had them. The rows of a list in one (a gallery's objects) the session
+    # added are kept through the save's replay.
+    test "a save's rebase replays a rejoin with the rows of a list in a map inside a row" do
       base = Ops.from_entry_blocks([entry_block("a", 1, 10), entry_block("b", 2, 20)])
       {:seeded, data} = Data.join(Data.new(1), @field, base, base)
       ref = fn objects -> %{"block" => %{"refs" => [%{"id" => 3, "gallery" => %{"gallery_objects" => objects}}]}} end
-      {:ok, data} = Data.apply_op(data, @field, {:update, "a", ref.([%{"id" => 51}, %{"id" => 52, "caption" => "A"}])})
+
+      {:ok, data} =
+        Data.apply_op(data, @field, {:update, "a", ref.([%{"id" => 51}, %{"id" => 52, "caption" => "A"}, %{"id" => 53}])})
+
       data = Data.mark_save(data, @field, :saver, 0)
 
-      {:ok, held} = Ops.apply_op(base, {:update, "a", ref.([%{"id" => 51, "caption" => "B"}])})
+      {:ok, held} =
+        Ops.apply_op(base, {:update, "a", ref.([%{"id" => 51, "caption" => "B"}, %{"id" => 52}, %{"id" => 53}])})
+
       {{:merged, []}, data} = Data.join(data, @field, base, held)
 
       {:ok, data, []} = Data.rebase(data, @field, base, {:client, :saver})
 
-      assert [%{"gallery" => %{"gallery_objects" => [%{"id" => 51, "caption" => "B"}, %{"id" => 52}]}}] =
+      assert [%{"gallery" => %{"gallery_objects" => [%{"id" => 51, "caption" => "B"}, %{"id" => 52}, %{"id" => 53}]}}] =
                Data.state(data, @field).diffs["a"]["block"]["refs"]
     end
 

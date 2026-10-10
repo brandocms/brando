@@ -2151,9 +2151,22 @@ production dump.
   changes to that block's other fields.** When an entry's edit session
   restarted, an editor coming back with changes to a top-level block replaced
   every change another editor had made to that block since, rows added to
-  or removed from its lists included. Now only the fields and rows the
-  returning editor changed take its values, and a field it set back to the
-  saved value counts as unchanged.
+  or removed from its lists included. Now only the fields the returning
+  editor changed take its values. In the block's lists (references,
+  variables, table rows, gallery images) each editor's new rows are kept
+  and a saved row either editor removed stays removed. A field the
+  returning editor set back to the saved value counts as unchanged.
+
+- **A row another save removed is no longer saved back as an empty row.**
+  An unsaved change to a block could hold one of its table rows, variables,
+  references or gallery images by its id alone. When another save had
+  removed that row meanwhile, saving the change added an empty row in its
+  place.
+
+- **A block another save removed while the edit session restarted comes
+  back.** An editor returning with unsaved changes in it was told the
+  changes could not be brought back. The block now comes back as a new
+  block with them, as it does while the session runs.
 
 - **Pages emit their Article again.** A page's structured data type
   (`WebPage`, `AboutPage`, `ContactPage`, …) was given to the page's Article as

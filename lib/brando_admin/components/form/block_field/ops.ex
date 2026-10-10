@@ -1134,16 +1134,15 @@ defmodule BrandoAdmin.Components.Form.BlockField.Ops do
 
   defp carry_merge(_key, now, value, nested?), do: carry_merge(now, value, nested?)
 
-  # `current` is the session's list, `carried` the rejoiner's. Neither holds
-  # the saved rows, but every saved row has an id, and a diff names a row
-  # it did not change by its identity alone (a list op leaves such rows
-  # so, `put_path/3`). So the list before is the rows with an id on either
-  # side, and `merge_list/4` keeps what each side added, removed and
-  # changed. A row both kept merges field by field, the rejoiner's fields
-  # winning. A row one side removed and the other changed stays, with the
-  # change: it is work. A row with no id (new) cannot be told added from
-  # removed, so both sides' are kept. Items that cannot be named are set
-  # whole, as the rejoiner has them.
+  # `current` is the session's list, `carried` the rejoiner's. Both were
+  # built on the same rows, and every saved row has an id. Neither holds
+  # the saved rows, so a row one side changed cannot be told from one it
+  # left as it was (a list op leaves every row whole, a reorder gives each
+  # a new sequence): a saved row stays when both lists have it, and a
+  # saved row either side removed is removed, as a list op's removal is
+  # (`merge_list/4`). A row with no id is new: each side's stay. A row both
+  # have merges field by field, the rejoiner's fields winning. Items that
+  # cannot be named are set whole, as the rejoiner has them.
   #
   # Below a row (`nested?`), an item without an id may be named by id on
   # the other side (a gallery object by its image, before a save gave it a
@@ -1166,20 +1165,18 @@ defmodule BrandoAdmin.Components.Form.BlockField.Ops do
   end
 
   defp merge_rows(key, current, named, carried, carried_named) do
-    carried_keys = MapSet.new(carried_named)
+    in_current = MapSet.new(named)
     current_by = Map.new(Enum.zip(named, current))
+    before = (carried ++ current) |> Enum.filter(&saved_row?/1) |> Enum.map(&identity_only(&1, key)) |> Enum.uniq()
 
-    # the session's changed rows the rejoiner removed read as added
-    kept =
-      for {k, row} <- Enum.zip(named, current), not unchanged_row?(row), k not in carried_keys, into: MapSet.new(), do: k
-
-    before =
-      (carried ++ current)
-      |> Enum.reject(&(row_key(&1, key) in kept))
-      |> Enum.flat_map(&saved_row/1)
-      |> Enum.uniq()
-
-    after_list = Enum.map(carried, &if(unchanged_row?(&1), do: Map.take(&1, ["id"]), else: &1))
+    # The rejoiner's saved rows the session no longer has are left out; the
+    # session's saved rows the rejoiner lacks are in `before`, so they stay
+    # out too; the new rows of both come through.
+    after_list =
+      carried
+      |> Enum.zip(carried_named)
+      |> Enum.reject(fn {row, k} -> saved_row?(row) and k not in in_current end)
+      |> Enum.map(&elem(&1, 0))
 
     before
     |> merge_list(after_list, current, key)
@@ -1253,12 +1250,6 @@ defmodule BrandoAdmin.Components.Form.BlockField.Ops do
 
   defp saved_row?(%{"id" => id}) when id not in [nil, ""], do: true
   defp saved_row?(_item), do: false
-
-  defp saved_row(%{"id" => id}) when id not in [nil, ""], do: [%{"id" => id}]
-  defp saved_row(_item), do: []
-
-  defp unchanged_row?(%{"id" => id} = item) when id not in [nil, ""], do: Map.keys(item) -- @row_identities == []
-  defp unchanged_row?(_item), do: false
 
   defp depth(state, uid) do
     case state.parents[uid] do
@@ -1577,17 +1568,13 @@ defmodule BrandoAdmin.Components.Form.BlockField.Ops do
   defp put_path(map, [key], {:list, before, after_list}) when is_binary(key) do
     map = as_map(map)
 
-    case Map.get(map, key) do
-      list when is_list(list) ->
-        Map.put(map, key, merge_list(before, after_list, list, key))
+    current =
+      case Map.get(map, key) do
+        list when is_list(list) -> list
+        _ -> before
+      end
 
-      _ ->
-        # A diff holds changes: a saved row the editor left as it was is
-        # named by its id alone, as a field op's skeleton names it.
-        unchanged = before |> Enum.filter(&saved_row?/1) |> MapSet.new()
-        merged = merge_list(before, after_list, before, key)
-        Map.put(map, key, Enum.map(merged, &if(&1 in unchanged, do: Map.take(&1, ["id"]), else: &1)))
-    end
+    Map.put(map, key, merge_list(before, after_list, current, key))
   end
 
   defp put_path(map, [key], value) when is_binary(key), do: Map.put(as_map(map), key, value)
