@@ -69,4 +69,80 @@ defmodule Brando.Test.BlocksTest do
     assert page.rendered_blocks =~ ~r/Default heading.*Second/s
     assert length(page.entry_blocks) == 2
   end
+
+  describe "in a tenant's schema" do
+    @prefix "tenant_blocks-test_preview"
+
+    setup do
+      put_test_env(:tenancy_mode, :multi)
+      repo = Brando.Repo.repo()
+      repo.query!(~s(CREATE SCHEMA "#{@prefix}"))
+
+      for table <-
+            ~w(content_modules content_blocks content_refs content_vars content_table_rows content_block_identifiers content_containers sites_identities pages pages_blocks pages_alternates pages_fragments content_palettes sites_global_sets) do
+        repo.query!(~s|CREATE TABLE "#{@prefix}"."#{table}" (LIKE public."#{table}" INCLUDING ALL)|)
+      end
+
+      :ok
+    end
+
+    test "adds the block and its join row in the tenant's schema", %{user: user} do
+      # A public page with the tenant page's id: a join row written to public
+      # would land on it without a foreign key error.
+      public_page =
+        Brando.Repo.insert!(%Page{
+          title: "Public page",
+          uri: "public-page",
+          language: :en,
+          template: "default.html",
+          creator_id: user.id
+        })
+
+      Brando.Tenant.with_prefix(@prefix, fn ->
+        module =
+          %Brando.Content.Module{}
+          |> Brando.Content.Module.changeset(
+            Brando.Factory.params_for(:module,
+              name: %{"en" => "Tenant teaser"},
+              namespace: %{"en" => "Content"},
+              help_text: %{"en" => "Help"},
+              code: "<h2>{{ heading }}</h2>{% ref refs.body %}",
+              refs: [Brando.ProposalFixtures.ref("body", %{type: "text", data: %{text: "<p>Tenant body</p>"}})],
+              vars: [%{type: "string", key: "heading", label: "Heading", value: "Tenant heading"}]
+            ),
+            user
+          )
+          |> Brando.Repo.insert!()
+
+        page =
+          Brando.Repo.insert!(%Page{
+            id: public_page.id,
+            title: "Tenant page",
+            uri: "tenant-page",
+            language: :en,
+            template: "default.html",
+            creator_id: user.id
+          })
+
+        first = insert_block(page, module, user: user)
+        second = insert_block(page, module, user: user)
+
+        assert Brando.Repo.get(Brando.Content.Block, first.id)
+        refute Brando.Repo.get(Brando.Content.Block, first.id, prefix: "public")
+
+        # The block's refs and vars, copied from the module, are the tenant's too.
+        for schema <- [Brando.Content.Ref, Brando.Content.Var] do
+          rows = from(r in schema, where: r.block_id == ^first.id)
+          assert [_] = Brando.Repo.all(rows)
+          assert Brando.Repo.all(rows, prefix: "public") == []
+        end
+
+        # The sequence counts the blocks the entry has in the tenant's schema.
+        joins = from(j in Page.Blocks, where: j.entry_id == ^page.id, order_by: j.sequence)
+        assert Brando.Repo.all(from(j in joins, select: {j.block_id, j.sequence})) == [{first.id, 0}, {second.id, 1}]
+        assert Brando.Repo.aggregate(joins, :count, prefix: "public") == 0
+        assert Brando.Repo.get!(Page, page.id).rendered_blocks =~ "<h2>Tenant heading</h2>"
+      end)
+    end
+  end
 end

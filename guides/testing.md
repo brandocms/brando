@@ -199,6 +199,13 @@ permissions. `log_in_as/2` adds `brando.admin.access`, which every admin user
 needs. A key the permission catalogue does not have raises.
 `log_in_user/2` logs in a user you already have.
 
+## Tenants
+
+Inside `Brando.Tenant.with_prefix/2`, the entry, asset and block helpers
+(`insert_entry/3`, the records `params_for/3` makes for required assets, and
+`insert_block/3`) write to that tenant's schema. Users, groups, grants and
+memberships stay in `public`, as they do outside tests.
+
 ## Recorded AI calls
 
 The content assistant, alt text, translation and the other AI helpers call a

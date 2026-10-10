@@ -32,6 +32,10 @@ defmodule Brando.Test do
   | `open_form/3`, `fill_form/4`, `add_block/4`, `save_form/4`, `form_errors/2` | an entry's admin form |
   | `use_cassette/3` | recorded AI calls, see `Brando.AI.Cassette` |
 
+  Inside `Brando.Tenant.with_prefix/2`, the entry, asset and block helpers
+  write to that tenant's schema. Users, groups, grants and memberships stay
+  in `public`.
+
   See the testing guide for setting up a project.
   """
 
