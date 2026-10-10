@@ -1940,6 +1940,17 @@ production dump.
 
 #### Fixes
 
+- **A scheduled publication its user may no longer make is taken back, not
+  retried or swept.** When the user who scheduled a publication or an expiry
+  has lost the right to make it, or their account is deactivated or deleted,
+  the job is now cancelled instead of retried ten times, and its date is
+  cleared as **Delete job** clears it: a pending entry goes back to draft,
+  and an expiry is removed with the entry left as it is. The entry's
+  Activity says why. The sweep for overdue dates leaves a date to its job
+  while the job waits, runs or retries, so it no longer publishes as the
+  system what the job was refused. See
+  [Scheduled publishing](guides/scheduled_publishing.md#schedule-the-current-entry).
+
 - **Duplicating a module works again, and copies the whole module.** It
   failed on the unique module `uid`. The copy is now a new module at
   version 1 with its own `uid`, without the original's shared-library link.
