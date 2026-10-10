@@ -437,6 +437,35 @@ defmodule Brando.Revisions.RevisionsTest do
     assert page.status == :draft
   end
 
+  # The job's cleanup runs after the refusal released the lock: by then the
+  # entry may be restored and the revision scheduled again, by a new job.
+  test "dropping a schedule in the trash leaves one made since alone", %{user: user} do
+    {:ok, page} = Pages.create_page(Factory.params_for(:page, vars: [], status: :draft), user)
+    {:ok, page} = Pages.update_page(page.id, %{title: "Current title"}, user)
+
+    scheduled? = fn ->
+      Enum.find(elem(Revisions.list_revision_metadata(Page, page.id), 1), &(&1.revision == 0)).scheduled
+    end
+
+    activity = fn ->
+      Brando.Activity.for_entry(Page, page.id) |> Enum.count(&(&1.details["scheduled_revision"] != nil))
+    end
+
+    Revisions.mark_revision_scheduled(Page, page.id, 0, true)
+    {:ok, trashed} = Brando.Repo.soft_delete(page)
+
+    # another job is the revision's schedule now
+    assert :ok = Revisions.drop_schedule_in_trash(Page, page.id, 0, user, fn -> false end)
+    assert scheduled?.()
+    assert activity.() == 0
+
+    # restored since
+    {:ok, _} = Brando.Repo.restore(trashed)
+    assert :ok = Revisions.drop_schedule_in_trash(Page, page.id, 0, user, fn -> true end)
+    assert scheduled?.()
+    assert activity.() == 0
+  end
+
   # Checked under the entry's lock, so an entry trashed while the job starts
   # is not published either.
   test "publishing a revision of an entry in the trash is refused, changing nothing", %{user: user} do

@@ -116,8 +116,7 @@ defmodule Brando.Worker.EntryPublisher do
       # with a note in Activity, so a restore brings back the entry as it
       # was; an editor can schedule the revision again.
       {:error, :in_trash} ->
-        Revisions.mark_revision_scheduled(schema, id, revision, false)
-        if entry = Brando.Repo.get(schema, id), do: Brando.Activity.scheduled_revision_in_trash(entry, user, revision)
+        Revisions.drop_schedule_in_trash(schema, id, revision, user, fn -> current_revision_job?(job) end)
         {:cancel, :in_trash}
 
       {:error, reason} ->
