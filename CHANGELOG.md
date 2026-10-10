@@ -2070,6 +2070,13 @@ production dump.
   save started, without a warning. The session now keeps them for the save,
   as it does for changes typed during a save.
 
+- **An editor rejoining with unsaved changes to a block keeps the others'
+  changes to that block's other fields.** When an entry's edit session
+  restarted, an editor coming back with changes to a top-level block replaced
+  every change another editor had made to that block since. The same
+  happened when a copy was carried into a shared session. Only the fields
+  the returning editor changed now take its values.
+
 - **Pages emit their Article again.** A page's structured data type
   (`WebPage`, `AboutPage`, `ContactPage`, …) was given to the page's Article as
   well, so the Article took the page's `@id` and the graph kept only the page.

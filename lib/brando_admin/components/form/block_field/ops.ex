@@ -986,9 +986,11 @@ defmodule BrandoAdmin.Components.Form.BlockField.Ops do
 
   defp carry_update({uid, diff}, {acc, conflicts}, _state) do
     if known?(acc, uid) do
-      # Children store deltas that merge, roots cumulative diffs that
-      # replace. Either way the new base holds no diff for the uid, so the
-      # editor's diff is what it ends up with.
+      # Children store deltas that merge; an `:update` replaces a root's
+      # cumulative diff. Rows just loaded hold no diff, but live session
+      # state can (a rejoin, a recovery copy): other editors' changes to a
+      # root's other fields stay, and the carried fields win, as children's do.
+      diff = if uid in acc.order, do: deep_merge_params(Map.get(acc.diffs, uid, %{}), diff), else: diff
       {carry_apply(acc, {:update, uid, diff}), conflicts}
     else
       {acc, [uid | conflicts]}

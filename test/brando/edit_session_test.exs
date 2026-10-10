@@ -656,6 +656,22 @@ defmodule Brando.EditSessionTest do
       assert data.fields[@field].log == []
     end
 
+    # The reviewer's follow-up to F1: carrying a rejoiner's root diff onto the
+    # session replaced the root's diff, so another editor's change to a
+    # different field of that root went, with no conflict.
+    test "a rejoin carrying work on a root keeps the session's changes to its other fields" do
+      base = rows()
+      {:seeded, data} = Data.join(Data.new(1), @field, base, base)
+      {:ok, data} = Data.apply_op(data, @field, {:set_field, "a", ["block", "description"], "A, after the crash", 0})
+
+      {:ok, held} = Ops.apply_op(base, anchor("a", "held by B"))
+      {{:merged, []}, data} = Data.join(data, @field, base, held)
+
+      assert Data.state(data, @field).diffs["a"] == %{
+               "block" => %{"description" => "A, after the crash", "anchor" => "held by B"}
+             }
+    end
+
     test "a rejoin carrying work after a save's read is kept by that save's rebase, on the session" do
       ref = new_ref()
       Phoenix.PubSub.subscribe(Brando.pubsub(), ref.topic)
