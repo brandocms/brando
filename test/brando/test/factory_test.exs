@@ -3,7 +3,23 @@ defmodule Brando.Test.FactoryTest do
   use Brando.Test
 
   alias Brando.Pages.Page
-  alias Brando.SyncTest.Article
+  alias Brando.SyncTest.{Article, ArticleItem}
+
+  defmodule RequiredAssets do
+    use Brando.Blueprint,
+      application: "Brando",
+      domain: "FactoryTest",
+      schema: "RequiredAssets",
+      singular: "required_asset",
+      plural: "required_assets",
+      gettext_module: Brando.Gettext
+
+    assets do
+      asset :cover, :image, required: true, cfg: :default
+      asset :clip, :video, required: true, cfg: :default
+      asset :pdf, :file, required: true, cfg: :default
+    end
+  end
 
   test "derives params from the blueprint's required attributes" do
     params = params_for(Article)
@@ -48,5 +64,46 @@ defmodule Brando.Test.FactoryTest do
 
   test "refuses a schema that is not a blueprint" do
     assert_raise ArgumentError, ~r/not a blueprint/, fn -> params_for(Brando.Users.UserToken) end
+  end
+
+  describe "in a tenant's schema" do
+    @prefix "tenant_factory-test_preview"
+
+    setup do
+      put_test_env(:tenancy_mode, :multi)
+      repo = Brando.Repo.repo()
+      repo.query!(~s(CREATE SCHEMA "#{@prefix}"))
+
+      for table <- ~w(images videos files synctest_article_items) do
+        repo.query!(~s|CREATE TABLE "#{@prefix}"."#{table}" (LIKE public."#{table}" INCLUDING ALL)|)
+      end
+
+      %{user: insert_user()}
+    end
+
+    test "required assets' default records are inserted in the tenant's schema", %{user: user} do
+      Brando.Tenant.with_prefix(@prefix, fn ->
+        params = params_for(RequiredAssets, %{}, user: user)
+
+        for {schema, id} <- [
+              {Brando.Images.Image, params.cover_id},
+              {Brando.Videos.Video, params.clip_id},
+              {Brando.Files.File, params.pdf_id}
+            ] do
+          assert Brando.Repo.get(schema, id)
+          refute Brando.Repo.get(schema, id, prefix: "public")
+        end
+      end)
+    end
+
+    test "an entry without a create function is inserted in the tenant's schema", %{user: user} do
+      Brando.Tenant.with_prefix(@prefix, fn ->
+        item = insert_entry(ArticleItem, %{label: "Tenant"}, user: user)
+
+        assert item.__meta__.prefix == @prefix
+        assert %ArticleItem{label: "Tenant"} = Brando.Repo.get(ArticleItem, item.id)
+        refute Brando.Repo.get(ArticleItem, item.id, prefix: "public")
+      end)
+    end
   end
 end
