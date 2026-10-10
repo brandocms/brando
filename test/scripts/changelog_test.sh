@@ -102,6 +102,14 @@ printf -- '- x\n\n  ```elixir\n  # Before\n' > "$fragments/a.fixes.md"
 expect_check "unclosed code fence" 1 "a.fixes.md: a code fence is not closed"
 
 fresh
+printf -- '- x\n\n  ```elixir\n  code\n  ~~~\n' > "$fragments/a.fixes.md"
+expect_check "a fence closed by the other fence character" 1 "a.fixes.md: a code fence is not closed"
+
+fresh
+printf -- '- x\n\n  ````markdown\n  ```\n  # Not a heading\n  ```\n  ````\n' > "$fragments/a.fixes.md"
+expect_check "a longer fence holding a shorter one" 0 "1 fragment(s) valid"
+
+fresh
 printf -- '- x\n' > "$fragments/a.fixes.md"
 printf 'x\n' > "$fragments/b.fixes.md"
 expect_check "summary counts the failing fragments" 1 "1 of 2 fragment(s) need fixing"
@@ -236,6 +244,52 @@ fresh
 printf '## 0.55.0 (Unreleased)\n' > "$changelog"
 output="$(run collate)"
 if [ "$output" = "changelog: no fragments to collate" ]; then pass "collate with no fragments"; else fail "collate with no fragments" "$output"; fi
+
+# Headings in the changelog's code blocks are not its structure.
+fresh
+cat > "$changelog" <<'EOF'
+## 0.55.0 (Unreleased)
+
+### Upgrading
+
+An example:
+
+```markdown
+#### Fixes
+~~~
+## Example
+```
+
+#### Fixes
+
+- Old fix.
+EOF
+printf -- '- **X.** Fixed.\n' > "$fragments/a.fixes.md"
+printf -- '- **Sec.** Secure.\n' > "$fragments/a.security.md"
+run collate > /dev/null
+expect_changelog "collate skips headings inside code blocks" <<'EOF'
+## 0.55.0 (Unreleased)
+
+### Upgrading
+
+An example:
+
+```markdown
+#### Fixes
+~~~
+## Example
+```
+
+#### Fixes
+
+- **X.** Fixed.
+
+- Old fix.
+
+#### Security
+
+- **Sec.** Secure.
+EOF
 
 # The repository's own fragments.
 output="$("$script" check 2>&1)" && pass "changelog.d/ in this checkout" || fail "changelog.d/ in this checkout" "$output"
