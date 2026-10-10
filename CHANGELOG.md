@@ -2149,6 +2149,19 @@ production dump.
   other container is moved too; the outline showed it moved while it
   stayed where it was.
 
+- **Restoring a revision puts blocks back where the revision had them.**
+  A block moved into another container after the revision stayed there
+  when a working copy of the revision was saved, with the revision's
+  content written over it, and restoring the revision from History failed.
+  It now goes back to its container and position, and a working copy also
+  removes blocks added since, as History does. A restored block keeps what
+  translations match it by, also a nested block or table row deleted since;
+  a top-level block deleted since still comes back as a new block in a
+  working copy (History relinks it). A block whose references, variables or
+  table rows the restore sets back to the revision's takes the revision's
+  module version, so a block from before a module change shows as needing
+  an upgrade; one the revision has no version for keeps its own.
+
 - **An editor rejoining with unsaved changes to a block keeps the others'
   changes to that block's other fields.** When an entry's edit session
   restarted, an editor coming back with changes to a top-level block replaced

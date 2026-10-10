@@ -14,6 +14,7 @@ defmodule Brando.Revisions do
 
   alias Brando.Cache
   alias Brando.Content
+  alias Brando.Content.BlockIdentity
   alias Brando.Query
   alias Brando.Repo
   alias Brando.Revisions.Revision
@@ -348,6 +349,7 @@ defmodule Brando.Revisions do
         changeset =
           current_entry
           |> entry_schema.changeset(restore_params, user, nil, cast_blocks: true)
+          |> keep_block_identity(entry_schema, current_entry, target_entry)
           |> Brando.Trait.run_trait_before_save_callbacks(entry_schema, user)
 
         with :ok <- Brando.Authorization.Boundary.change(user, :update, changeset),
@@ -455,6 +457,35 @@ defmodule Brando.Revisions do
     if schema.has_trait(Brando.Trait.SoftDelete),
       do: Keyword.get(schema.__trait__(Brando.Trait.SoftDelete), :obfuscated_fields, []),
       else: []
+  end
+
+  # A block the restore puts back under another parent than it has now is
+  # a new row there, under the uid its row still holds; a block deleted
+  # since is a new row too. Both keep their sync uids, and blocks written
+  # with the revision's content take its module version
+  # (`Brando.Content.BlockIdentity`).
+  defp keep_block_identity(changeset, entry_schema, current_entry, target_entry) do
+    if function_exported?(entry_schema, :__blocks_fields__, 0) do
+      Enum.reduce(entry_schema.__blocks_fields__(), changeset, fn block_field, changeset ->
+        assoc = :"entry_#{block_field.name}"
+        loaded = BlockIdentity.index(Map.get(current_entry, assoc))
+        restored = BlockIdentity.index(Map.get(target_entry, assoc))
+        keep_entry_blocks_identity(changeset, assoc, loaded, restored)
+      end)
+    else
+      changeset
+    end
+  end
+
+  defp keep_entry_blocks_identity(%{changes: changes} = changeset, assoc, loaded, restored) do
+    case changes do
+      %{^assoc => entry_blocks} when is_list(entry_blocks) ->
+        entry_blocks = Enum.map(entry_blocks, &BlockIdentity.keep_entry_block(&1, loaded, restored))
+        %{changeset | changes: Map.put(changes, assoc, entry_blocks)}
+
+      _ ->
+        changeset
+    end
   end
 
   # Removing a root block deletes its entry-specific join row while the shared

@@ -315,6 +315,252 @@ defmodule Brando.Revisions.RevisionsTest do
     assert [%{description: "Restore this child"}] = restored_entry_block.block.children
   end
 
+  # A child that moved to another container after the revision (the
+  # outline saves a move as a new row, the same uid) goes back where the
+  # revision had it, as the revision had it: its content and module
+  # version, and the sync uid it keeps throughout. A child deleted since
+  # comes back the same way; one added since goes.
+  describe "restoring blocks moved, deleted and added since" do
+    defp restore_block(user, uid, description, children \\ []),
+      do: %{
+        uid: uid,
+        type: if(children == [], do: :module, else: :container),
+        active: true,
+        source: "Elixir.Brando.Pages.Page.Blocks",
+        creator_id: user.id,
+        description: description,
+        children: Enum.with_index(children, &Map.put(&1, :sequence, &2))
+      }
+
+    defp restore_roots!(page, roots) do
+      for {block, n} <- Enum.with_index(roots) do
+        %Page.Blocks{}
+        |> Changeset.change(%{entry_id: page.id, sequence: n})
+        |> Changeset.put_assoc(:block, Map.put(block, :sequence, n))
+        |> Brando.Repo.insert!()
+      end
+    end
+
+    defp restore_block_with_var(user, uid),
+      do:
+        Map.put(restore_block(user, uid, nil), :vars, [
+          %{type: :string, key: "text", label: "Text", value: "As in the revision", sequence: 0}
+        ])
+
+    defp restore_var!(uid, value) do
+      import Ecto.Query, only: [from: 2]
+      %{id: id} = restore_row(uid)
+      Brando.Repo.update_all(from(v in Brando.Content.Var, where: v.block_id == ^id), set: [value: value])
+    end
+
+    defp restore_var(uid), do: hd(Brando.Repo.preload(restore_row(uid), :vars).vars).value
+
+    defp restore_row(uid),
+      do: Brando.Repo.get_by!(Brando.Content.Block, uid: uid) |> Brando.Repo.preload(:parent)
+
+    defp restore_stamp!(uid, fields) do
+      import Ecto.Query, only: [from: 2]
+      Brando.Repo.update_all(from(b in Brando.Content.Block, where: b.uid == ^uid), set: fields)
+    end
+
+    # each root's uid with its children's, as the entry has them now
+    defp restore_tree(page) do
+      import Ecto.Query, only: [from: 2]
+
+      Page.Blocks
+      |> Brando.Repo.all()
+      |> Enum.filter(&(&1.entry_id == page.id))
+      |> Enum.sort_by(& &1.sequence)
+      |> Brando.Repo.preload(block: [children: &Brando.Content.Blocks.preload_child_trees/1])
+      |> Enum.map(&restore_subtree(&1.block))
+    end
+
+    defp restore_subtree(block),
+      do: {block.uid, block.children |> Enum.sort_by(& &1.sequence) |> Enum.map(&restore_subtree/1)}
+
+    test "puts them back as the revision had them", %{user: user} do
+      page = Factory.insert(:page, creator: user)
+
+      restore_roots!(page, [
+        restore_block(user, "boxA", nil, [
+          restore_block(user, "keepA", "Stays in A"),
+          restore_block(user, "moved", "As in the revision"),
+          restore_block(user, "gone", "Deleted since")
+        ]),
+        restore_block(user, "boxB", nil, [restore_block_with_var(user, "keepB")])
+      ])
+
+      restore_stamp!("moved", sync_uid: "moved-sync", module_version: 3)
+      restore_stamp!("gone", sync_uid: "gone-sync", module_version: 2)
+      restore_stamp!("keepA", module_version: 1)
+      restore_stamp!("keepB", module_version: 1)
+      saved = restore_tree(page)
+      assert {:ok, revision} = Revisions.create_revision(page, user)
+
+      # since: moved to the top of B (a new row), edited, its module
+      # migrated; another child deleted and one added
+      moved = restore_row("moved")
+      Brando.Repo.delete!(moved)
+      Brando.Repo.delete!(restore_row("gone"))
+      [%{block: box_b}] = Enum.filter(Brando.Repo.all(Page.Blocks), &(&1.sequence == 1)) |> Brando.Repo.preload(:block)
+
+      for {uid, description, seq, parent} <- [
+            {"moved", "Moved on", 0, box_b},
+            {"added", "Added since", 1, restore_row("boxA")}
+          ] do
+        user
+        |> restore_block(uid, description)
+        |> Map.merge(%{parent_id: parent.id, sequence: seq})
+        |> then(&struct(Brando.Content.Block, &1))
+        |> Brando.Repo.insert!()
+      end
+
+      restore_stamp!("keepB", sequence: 1, module_version: 2)
+      restore_var!("keepB", "Edited since")
+      restore_stamp!("moved", sync_uid: "moved-sync", module_version: 4)
+      # a module change that left its content as it was, and the block
+      # collapsed in the editor
+      restore_stamp!("keepA", module_version: 2, collapsed: true)
+      assert restore_tree(page) != saved
+
+      assert {:ok, _} = Revisions.set_entry_to_revision(Page, page.id, revision.revision, user)
+
+      assert restore_tree(page) == saved
+      moved = restore_row("moved")
+      assert {moved.description, moved.sync_uid, moved.module_version} == {"As in the revision", "moved-sync", 3}
+      gone = restore_row("gone")
+      assert {gone.description, gone.sync_uid, gone.module_version} == {"Deleted since", "gone-sync", 2}
+      # the restore did not change it
+      assert restore_row("keepA").module_version == 2
+      # it wrote the revision's content to this one
+      assert {restore_var("keepB"), restore_row("keepB").module_version} == {"As in the revision", 1}
+    end
+
+    # Review: a block the revision holds at no module version (one saved
+    # before blocks had one, or never synced) is not known to be behind.
+    test "a block the revision has no module version for keeps its own", %{user: user} do
+      page = Factory.insert(:page, creator: user)
+      restore_roots!(page, [restore_block(user, "boxA", nil, [restore_block_with_var(user, "keepB")])])
+      assert {:ok, revision} = Revisions.create_revision(page, user)
+
+      restore_var!("keepB", "Edited since")
+      restore_stamp!("keepB", module_version: 4)
+
+      assert {:ok, _} = Revisions.set_entry_to_revision(Page, page.id, revision.revision, user)
+      assert {restore_var("keepB"), restore_row("keepB").module_version} == {"As in the revision", 4}
+    end
+
+    # Review: revisions stored before blocks had a module version and a sync
+    # uid hold structs without those keys. Restoring one now (or publishing
+    # it on schedule) keeps what the blocks have.
+    for publish? <- [false, true] do
+      test "of a revision stored before blocks had module versions and sync uids (publish? #{publish?})",
+           %{user: user} do
+        page = Factory.insert(:page, creator: user)
+        table_rows = [%{sequence: 0, sync_uid: "row-kept", vars: []}, %{sequence: 1, sync_uid: "row-gone", vars: []}]
+
+        restore_roots!(page, [
+          restore_block(user, "boxA", nil, [
+            Map.put(restore_block(user, "table", "Rows"), :table_rows, table_rows),
+            restore_block(user, "moved", "As in the revision"),
+            restore_block(user, "gone", "Deleted since")
+          ]),
+          restore_block(user, "boxB", nil, [restore_block(user, "keepB", "Stays in B")])
+        ])
+
+        saved = restore_tree(page)
+        assert {:ok, revision} = Revisions.create_revision(page, user)
+        :ok = Brando.OldRevisions.forget_block_identity!(page, revision.revision)
+
+        import Ecto.Query, only: [from: 2]
+        Brando.Repo.delete_all(from(r in Brando.Content.TableRow, where: r.sync_uid == "row-gone"))
+        Brando.Repo.delete!(restore_row("moved"))
+        Brando.Repo.delete!(restore_row("gone"))
+
+        user
+        |> restore_block("moved", "Moved on")
+        |> Map.merge(%{parent_id: restore_row("boxB").id, sequence: 0, sync_uid: "moved-sync", module_version: 4})
+        |> then(&struct(Brando.Content.Block, &1))
+        |> Brando.Repo.insert!()
+
+        restore_stamp!("keepB", sequence: 1)
+
+        assert {:ok, _} =
+                 Revisions.set_entry_to_revision(Page, page.id, revision.revision, user, publish?: unquote(publish?))
+
+        assert restore_tree(page) == saved
+        moved = restore_row("moved")
+        assert {moved.description, moved.sync_uid, moved.module_version} == {"As in the revision", "moved-sync", 4}
+        assert restore_row("gone").description == "Deleted since"
+
+        rows = Brando.Repo.preload(restore_row("table"), :table_rows).table_rows
+        assert ["row-kept", _new] = rows |> Enum.sort_by(& &1.sequence) |> Enum.map(& &1.sync_uid)
+      end
+    end
+  end
+
+  # Sol audit: a table row deleted since came back with a new sync uid, so
+  # its translation no longer matched it.
+  test "a table row deleted since comes back with its sync uid", %{user: user} do
+    page = Factory.insert(:page, creator: user)
+
+    rows = fn uid ->
+      [%{sequence: 0, sync_uid: "#{uid}-kept", vars: []}, %{sequence: 1, sync_uid: "#{uid}-gone", vars: []}]
+    end
+
+    blocks =
+      for uid <- ["inPlace", "moved"] do
+        %{
+          uid: uid,
+          type: :module,
+          active: true,
+          source: "Elixir.Brando.Pages.Page.Blocks",
+          creator_id: user.id,
+          table_rows: rows.(uid),
+          children: []
+        }
+      end
+
+    for {uid, children, n} <- [{"boxA", blocks, 0}, {"boxB", [], 1}] do
+      %Page.Blocks{}
+      |> Changeset.change(%{entry_id: page.id, sequence: n})
+      |> Changeset.put_assoc(:block, %{
+        uid: uid,
+        type: :container,
+        active: true,
+        source: "Elixir.Brando.Pages.Page.Blocks",
+        creator_id: user.id,
+        sequence: n,
+        children: Enum.with_index(children, &Map.put(&1, :sequence, &2))
+      })
+      |> Brando.Repo.insert!()
+    end
+
+    assert {:ok, revision} = Revisions.create_revision(page, user)
+
+    import Ecto.Query, only: [from: 2]
+    Brando.Repo.delete_all(from(r in Brando.Content.TableRow, where: r.sync_uid in ["inPlace-gone", "moved-gone"]))
+
+    # moved to B since, as the outline saves a move: a new row
+    moved = Brando.Repo.get_by!(Brando.Content.Block, uid: "moved") |> Brando.Repo.preload(:table_rows)
+    box_b = Brando.Repo.get_by!(Brando.Content.Block, uid: "boxB")
+    Brando.Repo.delete!(moved)
+
+    %Brando.Content.Block{}
+    |> Changeset.change(%{uid: "moved", sync_uid: moved.sync_uid, type: :module, active: true, parent_id: box_b.id})
+    |> Changeset.change(%{source: Brando.Pages.Page.Blocks, creator_id: user.id, sequence: 0})
+    |> Changeset.put_assoc(:table_rows, [%{sequence: 0, sync_uid: "moved-kept", vars: []}])
+    |> Brando.Repo.insert!()
+
+    assert {:ok, _} = Revisions.set_entry_to_revision(Page, page.id, revision.revision, user)
+
+    for uid <- ["inPlace", "moved"] do
+      block = Brando.Repo.get_by!(Brando.Content.Block, uid: uid) |> Brando.Repo.preload([:parent, :table_rows])
+      assert block.parent.uid == "boxA"
+      assert block.table_rows |> Enum.sort_by(& &1.sequence) |> Enum.map(& &1.sync_uid) == ["#{uid}-kept", "#{uid}-gone"]
+    end
+  end
+
   test "returns an error for a corrupt snapshot without changing the entry", %{user: user} do
     page = Factory.insert(:page, creator: user)
     assert {:ok, revision} = Revisions.create_revision(page, user)

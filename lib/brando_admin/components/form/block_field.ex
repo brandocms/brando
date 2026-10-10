@@ -67,6 +67,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
 
   import Ecto.Query, only: [from: 2]
 
+  alias Brando.Content.BlockIdentity
   alias Brando.Content.Blocks, as: ContentBlocks
   alias Brando.Content.BlockSlots
   alias Brando.Content.BlockSlots.Lifecycle, as: CollectionLifecycle
@@ -247,10 +248,18 @@ defmodule BrandoAdmin.Components.Form.BlockField do
   # The field leaves the edit session first (`EditSession.detach/2`): what
   # it shows now is not what the others edit, and the unsaved work the
   # session holds is what the working copy replaced.
+  #
+  # The save gives the blocks it writes with the revision's content the
+  # module version they had in it (`restored_blocks`, read here on the
+  # server; see `Brando.Content.BlockIdentity`).
   def update(%{event: "load_working_copy", entry_blocks: revision_blocks}, socket) do
     socket = detach_session(socket)
     rows = socket.assigns.entry_blocks || []
-    {:ok, restore_draft(socket, working_copy_changesets(socket, revision_blocks, rows), rows)}
+
+    {:ok,
+     socket
+     |> restore_draft(working_copy_changesets(socket, revision_blocks, rows), rows, place?: true)
+     |> assign(:restored_blocks, BlockIdentity.index(revision_blocks))}
   end
 
   def update(%{event: "restore_draft", changesets: changesets, entry_blocks: originals} = message, socket) do
@@ -595,7 +604,10 @@ defmodule BrandoAdmin.Components.Form.BlockField do
           socket
           |> materialize_base_struct(uid)
           |> block_module.changeset(params, user_id, true)
-          |> keep_moved_identity(socket.assigns.entry_blocks)
+          |> BlockIdentity.keep_entry_block(
+            BlockIdentity.index(socket.assigns.entry_blocks),
+            socket.assigns[:restored_blocks] || %{}
+          )
 
         {uid, changeset}
       end)
@@ -1463,7 +1475,11 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     assign(socket, :entry_blocks, entry_blocks)
   end
 
-  defp restore_draft(socket, changesets, originals) do
+  # `place?`: the copy is the whole field (a revision's working copy), so
+  # its blocks go where it has them, and the ones it lacks go. A recovery
+  # copy or a translation's version may predate blocks someone has saved
+  # since, so for them the blocks stay where the field has them.
+  defp restore_draft(socket, changesets, originals, opts \\ []) do
     # Seed from the saved entry, then replay a complete replacement through the
     # reducer. This retains owned IDs and deletion tombstones for the next save.
     # The result reaches the session (and the other editors) as one
@@ -1485,11 +1501,10 @@ defmodule BrandoAdmin.Components.Form.BlockField do
       end)
 
     saved = Map.new(originals, &{&1.block.uid, &1})
+    copied = Enum.map(forms, fn {uid, form} -> {uid, Brando.Drafts.Params.snapshot(form.source)} end)
 
     ops =
-      Enum.reduce(forms, ops, fn {uid, form}, acc ->
-        params = Brando.Drafts.Params.snapshot(form.source)
-
+      Enum.reduce(copied, ops, fn {uid, params}, acc ->
         cond do
           # A block the copy holds as it is saved is no change: in a shared
           # session it must not overwrite what others did to it.
@@ -1500,6 +1515,9 @@ defmodule BrandoAdmin.Components.Form.BlockField do
       end)
 
     {:ok, ops} = Ops.apply_op(ops, {:reorder, wanted})
+    tree = Enum.reduce(copied, %{}, fn {uid, params}, acc -> copied_children(acc, uid, params["block"]) end)
+    ops = if opts[:place?], do: place_as_copied(ops, Enum.map(copied, &elem(&1, 0)), tree), else: ops
+    socket = assign(socket, :restored_blocks, %{})
 
     case socket.assigns[:edit_session] do
       %Replica{} ->
@@ -1509,6 +1527,11 @@ defmodule BrandoAdmin.Components.Form.BlockField do
         restore_into_session(socket, ops, Ops.from_entry_blocks(originals))
 
       _ ->
+        # Each root takes its form in an update of its own, so a block the
+        # copy puts under another parent would show in both in between: its
+        # parent lets go of it first.
+        release_leaving(socket.assigns.block_ops, tree)
+
         for {uid, form} <- forms, uid in socket.assigns.root_order do
           send_update(Block, id: "block-#{uid}", event: "replace_form", form: form)
         end
@@ -1521,12 +1544,87 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     end
   end
 
+  # The copy's children where the copy has them. Its params name every
+  # child, but registering them leaves a child the field knows where it is
+  # now (`Ops.apply_op/2`): one moved to another parent since stayed there,
+  # one added since stayed too. So the children are put in the copy's
+  # parents and order, top down, and the ones it does not have go.
+  defp place_as_copied(ops, roots, tree) do
+    ops = Enum.reduce(roots, ops, &place_children(&2, &1, tree))
+    in_copy = tree |> Map.values() |> List.flatten() |> MapSet.new()
+
+    leftover =
+      for uid <- roots,
+          Ops.known?(ops, uid),
+          child <- Ops.descendants(ops, uid),
+          not MapSet.member?(in_copy, child),
+          do: child
+
+    # a leftover's descendants go with it
+    Enum.reduce(leftover, ops, fn uid, acc -> if Ops.known?(acc, uid), do: next!(acc, {:delete, uid}), else: acc end)
+  end
+
+  # Tell each shown parent to let go of the children the copy puts under
+  # another parent, the deepest first: a parent let go of with its own
+  # component is gone before its turn.
+  defp release_leaving(%Ops{} = shown, tree) do
+    copied_parent = for {parent, uids} <- tree, uid <- uids, into: %{}, do: {uid, parent}
+
+    shown.parents
+    |> Enum.filter(fn {uid, parent} -> Map.has_key?(copied_parent, uid) and copied_parent[uid] != parent end)
+    |> Enum.group_by(&elem(&1, 1), &elem(&1, 0))
+    |> Enum.sort_by(fn {parent, _uids} -> -depth(shown, parent) end)
+    |> Enum.each(fn {parent, uids} ->
+      send_update(Block, id: component_id(shown, parent), event: "release_children", uids: uids)
+    end)
+  end
+
+  defp depth(%Ops{} = shown, uid) do
+    case shown.parents[uid] do
+      nil -> 0
+      parent -> 1 + depth(shown, parent)
+    end
+  end
+
+  # A root's component is `block-<uid>`, a child's its parent's with
+  # `-child-<uid>` (`Block.Render`).
+  defp component_id(%Ops{} = shown, uid) do
+    case shown.parents[uid] do
+      nil -> "block-#{uid}"
+      parent -> "#{component_id(shown, parent)}-child-#{uid}"
+    end
+  end
+
+  # Each parent's children in the copy, by uid, in order.
+  defp copied_children(tree, parent, %{"children" => children}) when is_list(children) do
+    children = Enum.filter(children, &is_binary(&1["uid"]))
+    tree = Map.put(tree, parent, Enum.map(children, & &1["uid"]))
+    Enum.reduce(children, tree, &copied_children(&2, &1["uid"], &1))
+  end
+
+  defp copied_children(tree, parent, _block), do: Map.put(tree, parent, [])
+
+  defp place_children(ops, parent, tree) do
+    uids = Enum.filter(Map.get(tree, parent, []), &Ops.known?(ops, &1))
+
+    ops =
+      uids
+      |> Enum.with_index()
+      |> Enum.reduce(ops, fn {uid, at}, acc ->
+        if acc.parents[uid] == parent, do: acc, else: next!(acc, {:move_to_parent, uid, parent, at})
+      end)
+
+    ops = next!(ops, {:reorder_children, parent, uids})
+    Enum.reduce(uids, ops, &place_children(&2, &1, tree))
+  end
+
   # Each of the revision's blocks as a change to the row it has now. A
   # block the entry no longer has comes back as a new one: its old rows (a
   # revision keeps them) still hold its uid and its refs' uids.
   defp working_copy_changesets(socket, revision_blocks, rows) do
     %{block_module: block_module, current_user: %{id: user_id}} = socket.assigns
     by_uid = Map.new(rows, &{&1.block.uid, &1})
+    restored = BlockIdentity.index(revision_blocks)
 
     Enum.map(revision_blocks, fn entry_block ->
       params =
@@ -1540,8 +1638,13 @@ defmodule BrandoAdmin.Components.Form.BlockField do
           params = params |> strip_row_ids() |> Map.update!("block", &as_new_block/1)
           block_module |> struct(%{}) |> Map.put(:block, empty_block()) |> block_module.changeset(params, user_id, true)
 
+        # The cast gives a block or table row the entry no longer has a
+        # new sync uid, and the copy is shown, and saved, as cast: it takes
+        # the revision's here.
         row ->
-          block_module.changeset(row, params, user_id, true)
+          row
+          |> block_module.changeset(params, user_id, true)
+          |> BlockIdentity.keep_entry_block(%{}, restored)
       end
     end)
   end
@@ -1657,7 +1760,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     base
     |> Brando.Content.Block.recursive_block_changeset(params, user_id)
     # its diff is its applied state: it carries them to the save
-    |> restore_moved(index_by_uid([changeset.data], %{}))
+    |> BlockIdentity.keep(BlockIdentity.index([changeset.data]))
   end
 
   # The uids of the refs, in the block and below it, whose gallery has
@@ -1672,99 +1775,6 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     |> Changeset.get_change(:children, [])
     |> Enum.reduce(own, &MapSet.union(&2, changed_galleries(&1)))
   end
-
-  @doc """
-  Give the blocks a save inserts under a uid the loaded rows have (a child
-  moved to another parent, and the blocks under it) what the server keeps
-  of them: their `module_version` and `sync_uid` (translations match blocks
-  by it), and the `sync_uid` of their table rows.
-
-  Neither is castable, so the cast gives a moved block, a new row, a fresh
-  sync uid and no module version. Both come from the rows the editor
-  loaded, never from params; a table row's is kept only when the params
-  name one the same block has.
-  """
-  def keep_moved_identity(%Changeset{} = root, entry_blocks) do
-    loaded = entry_blocks |> List.wrap() |> Enum.map(& &1.block) |> index_by_uid(%{})
-    if loaded == %{}, do: root, else: map_change(root, :block, &restore_moved(&1, loaded))
-  end
-
-  defp index_by_uid(blocks, acc) do
-    Enum.reduce(blocks, acc, fn
-      %{uid: uid} = block, acc ->
-        children = if is_list(Map.get(block, :children)), do: block.children, else: []
-        index_by_uid(children, Map.put(acc, uid, block))
-
-      _, acc ->
-        acc
-    end)
-  end
-
-  defp restore_moved(%Changeset{action: :insert} = changeset, loaded) do
-    changeset =
-      case loaded[Changeset.get_field(changeset, :uid)] do
-        %{} = row ->
-          changeset
-          |> force_present(:module_version, row.module_version)
-          |> force_present(:sync_uid, row.sync_uid)
-          |> map_change(:table_rows, &restore_row_syncs(&1, row))
-          |> Changeset.prepare_changes(&delete_moved_row(&1, row))
-
-        nil ->
-          changeset
-      end
-
-    restore_children(changeset, loaded)
-  end
-
-  defp restore_moved(%Changeset{} = changeset, loaded), do: restore_children(changeset, loaded)
-  defp restore_moved(other, _loaded), do: other
-
-  defp restore_children(changeset, loaded),
-    do: map_change(changeset, :children, fn children -> Enum.map(children, &restore_moved(&1, loaded)) end)
-
-  # The changesets a cast made, edited in place: `put_change/3` would cast
-  # the relation again, which Ecto refuses for related changesets.
-  defp map_change(%Changeset{changes: changes} = changeset, key, fun) when is_map_key(changes, key),
-    do: %{changeset | changes: Map.update!(changes, key, fun)}
-
-  defp map_change(changeset, _key, _fun), do: changeset
-
-  defp restore_row_syncs(rows, %{table_rows: loaded_rows}) when is_list(rows) and is_list(loaded_rows) do
-    known = loaded_rows |> Enum.map(& &1.sync_uid) |> Enum.reject(&is_nil/1) |> MapSet.new()
-
-    # each once: two rows never share one
-    {rows, _known} =
-      Enum.map_reduce(rows, known, fn
-        %Changeset{action: :insert, params: %{"sync_uid" => sync_uid}} = row, known when is_binary(sync_uid) ->
-          if MapSet.member?(known, sync_uid),
-            do: {Changeset.force_change(row, :sync_uid, sync_uid), MapSet.delete(known, sync_uid)},
-            else: {row, known}
-
-        row, known ->
-          {row, known}
-      end)
-
-    rows
-  end
-
-  defp restore_row_syncs(rows, _row), do: rows
-
-  # Its old parent deletes the row it leaves, but roots are saved in
-  # order: moved into an earlier one, the block would be inserted first,
-  # and its uid is unique. So the old row goes right before the insert, in
-  # the save's transaction (its refs, rows and children with it); the old
-  # parent's delete then finds it gone.
-  defp delete_moved_row(%Changeset{repo: repo} = changeset, %{id: id} = row) when not is_nil(id) do
-    opts = if prefix = row.__meta__.prefix, do: [prefix: prefix], else: []
-    repo.delete_all(from(b in Brando.Content.Block, where: b.id == ^id), opts)
-    changeset
-  end
-
-  defp delete_moved_row(changeset, _row), do: changeset
-
-  defp force_present(changeset, _field, nil), do: changeset
-  defp force_present(changeset, field, value), do: Changeset.force_change(changeset, field, value)
 
   # The persisted row a moved child should cast over, so `cast_assoc` matches
   # existing ids instead of inserting duplicates. Children live anywhere in the
@@ -2021,6 +2031,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
   # per root) even when nothing in it changed — 1.1 MB for a save at 115
   # roots. See `holds_persisted?/2` for what "provably" means.
   defp reload_all_blocks(socket, scope \\ :all) do
+    socket = assign(socket, :restored_blocks, %{})
     user_id = socket.assigns.current_user.id
     block_module = socket.assigns.block_module
     entry_blocks = socket.assigns.entry_blocks || []

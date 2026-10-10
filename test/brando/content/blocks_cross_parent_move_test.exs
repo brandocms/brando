@@ -92,7 +92,7 @@ defmodule Brando.Content.BlocksCrossParentMoveTest do
         # default cast drops "children" params entirely
         by_uid[uid]
         |> Brando.Pages.Page.Blocks.changeset(params, user.id, true)
-        |> BrandoAdmin.Components.Form.BlockField.keep_moved_identity(entry_blocks)
+        |> Brando.Content.BlockIdentity.keep_entry_block(Brando.Content.BlockIdentity.index(entry_blocks))
       end)
 
     updated =
