@@ -46,11 +46,11 @@ in your own table.
 
 `Oban.insert/1` inside a `Repo.transaction` uses that transaction: the job
 commits or rolls back with it, the unique advisory lock is held until it
-commits, and a failed insert aborts it. With group authorization every
-generated context mutation runs in one (`Brando.Authorization.Boundary.run/4`);
-in legacy mode they do not, so a job inserted from a save behaves differently
-per mode. To queue from a save without risking it, see how
-`Brando.ContentEvents` inserts in a savepoint.
+ends, and a database error in the insert aborts it. With group authorization
+every generated context mutation by a user runs in one
+(`Brando.Authorization.Boundary.run/4`); in legacy mode they do not, so a
+job inserted from a save behaves differently per mode. To queue from a save
+without risking it, see how `Brando.ContentEvents` inserts in a savepoint.
 
 ## Tests
 
