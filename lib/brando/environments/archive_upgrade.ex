@@ -18,11 +18,16 @@ defmodule Brando.Environments.ArchiveUpgrade do
        files and classified:
 
          * a copy of one of Brando's templates that can run for one
-           environment is replayed;
+           environment is replayed, as long as it does what the template
+           does (compared as code: layout, comments, docs and module names
+           do not count);
          * one that does not touch the environment schemas is left alone;
          * anything else refuses the restore: a migration that touches them
            and cannot be replayed (Brando's older ones, or the application's
-           own), a version without a file, or a missing migrations directory.
+           own), a copy of a replayable template that the application changed
+           (`"<name> (differs from Brando's template)"`: the replay runs the
+           template, so a backfill added to the copy would be skipped), a
+           version without a file, or a missing migrations directory.
 
        Versions recorded before the archive was taken, or with no time (as
        loaded from a structure dump), are not looked at, so migration files
@@ -155,9 +160,19 @@ defmodule Brando.Environments.ArchiveUpgrade do
         template = Path.join(templates_dir, name <> ".exs")
 
         cond do
-          single_environment?(template) ->
+          single_environment?(template) and copy_of?(path, template) ->
             same_second? = NaiveDateTime.compare(NaiveDateTime.truncate(inserted_at, :second), taken_at) == :eq
             {:replay, %{version: version, name: name, template: template, same_second?: same_second?}}
+
+          # The replay would run the template, and what the application
+          # changed in its copy (a data backfill, say) would be skipped
+          single_environment?(template) ->
+            Logger.warning(
+              "[Brando.Environments] #{path} differs from Brando's template #{template}, " <>
+                "which a restored archive would run in its place; the restore is refused"
+            )
+
+            {:blocking, "#{name} (differs from Brando's template)"}
 
           File.read!(path) =~ @touches_environments ->
             {:blocking, name}
@@ -175,6 +190,24 @@ defmodule Brando.Environments.ArchiveUpgrade do
   end
 
   defp single_environment?(template), do: File.regular?(template) and File.read!(template) =~ @single_environment
+
+  # Whether the application's copy does what the template does. Compared as
+  # code, as `Brando.Migration.TemplateDrift` compares copies, and also
+  # without trailing whitespace, docs or module names: the copy is the
+  # template as `mix brando.gen.migrations` wrote it, but older versions put
+  # it in the application's namespace, and the replay renames it anyway.
+  defp copy_of?(path, template), do: as_replayed(File.read!(path)) == as_replayed(File.read!(template))
+
+  defp as_replayed(code) do
+    code
+    |> String.replace(~r/[ \t]+$/m, "")
+    |> TemplateDrift.normalize()
+    |> Macro.prewalk(fn
+      {:defmodule, meta, [_name | rest]} -> {:defmodule, meta, [:module | rest]}
+      {:@, _, [{doc, _, _}]} when doc in [:moduledoc, :doc] -> nil
+      node -> node
+    end)
+  end
 
   @doc """
   Runs each migration in `replays` in the `prefix` schema only. Returns

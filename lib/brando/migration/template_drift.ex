@@ -92,7 +92,12 @@ defmodule Brando.Migration.TemplateDrift do
 
   defp same_code?(path, template), do: normalize(File.read!(path)) == normalize(File.read!(template))
 
-  defp normalize(code) do
+  @doc """
+  `code` as copies are compared: quoted, without formatting or comments.
+  Code that does not parse is returned as it is.
+  """
+  @spec normalize(String.t()) :: Macro.t() | String.t()
+  def normalize(code) do
     case Code.string_to_quoted(code) do
       {:ok, quoted} -> Macro.prewalk(quoted, &Macro.update_meta(&1, fn _ -> [] end))
       {:error, _} -> code

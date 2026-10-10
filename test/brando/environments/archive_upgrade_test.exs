@@ -489,6 +489,52 @@ defmodule Brando.Environments.ArchiveUpgradeTest do
       assert_nothing_restored(site, archive)
     end
 
+    # The replay runs Brando's current template, not the application's copy,
+    # and the structure comparison afterwards cannot see a data backfill
+    test "a copy of a template the application changed", %{site: site, archive: archive, directory: directory} do
+      [copy] = Path.wildcard(Path.join(directory, "*_brando_210_*.exs"))
+
+      customised =
+        String.replace(copy |> File.read!(), "  def up do\n", """
+          def up do
+            execute "UPDATE pages SET meta_nosnippet = true WHERE uri LIKE 'internal/%'"
+        """)
+
+      File.write!(copy, customised)
+
+      assert {:error, {:archive_behind, {:migrations, [blocking]}}} = ArchiveUpgrade.plan(archive)
+      assert blocking == "brando_210_add_crawler_policy_and_snippet_limits (differs from Brando's template)"
+
+      assert {:error, {:archive_behind, {:migrations, [^blocking]}}} =
+               Environments.rollback(site, archive_schema: archive)
+
+      assert_nothing_restored(site, archive)
+    end
+
+    test "but not a copy that differs only in layout, comments, docs and module name", %{
+      archive: archive,
+      directory: directory,
+      copied: copied
+    } do
+      [copy] = Path.wildcard(Path.join(directory, "*_brando_210_*.exs"))
+
+      # As an older `mix brando.gen.migrations` copied it into the
+      # application's namespace, then formatted and annotated
+      relaid =
+        copy
+        |> File.read!()
+        |> String.replace("Brando.Repo.Migrations.", "MyApp.Repo.Migrations.")
+        |> String.replace("In every site environment:", "In every environment of the site:")
+        |> String.replace("  def up do\n", "  # Reviewed for the 0.55 upgrade\n  def up do   \n")
+        |> String.replace("add :meta_max_snippet, :integer", "add(:meta_max_snippet, :integer)")
+
+      File.write!(copy, relaid)
+
+      assert {:ok, replays} = ArchiveUpgrade.plan(archive)
+      assert length(replays) == length(loops(copied))
+      assert "brando_210_add_crawler_policy_and_snippet_limits" in Enum.map(replays, & &1.name)
+    end
+
     test "but finds migrations in subdirectories", %{archive: archive, directory: directory, copied: copied} do
       File.mkdir_p!(Path.join(directory, "brando"))
 
