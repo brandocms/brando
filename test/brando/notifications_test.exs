@@ -3,6 +3,7 @@ defmodule Brando.NotificationsTest do
   use Brando.ConnCase
 
   import Ecto.Query, only: [from: 2]
+  import ExUnit.CaptureLog
   import Swoosh.TestAssertions
 
   require Phoenix.LiveViewTest
@@ -567,6 +568,59 @@ defmodule Brando.NotificationsTest do
       refute_receive {:webhook_request, _}, 100
     end
 
+    test "an email whose recipient check fails on the database is retried, then marked failed", %{user: user} do
+      put_test_env(:authorization_mode, :groups)
+      put_test_env(:tenancy_mode, :none)
+      reader = Factory.insert(:random_user, role: :superuser)
+      {:ok, _} = Brando.Authorization.Migration.run()
+      route = route!(user, %{"kind" => "email", "recipient_ids" => [reader.id]})
+      page = Factory.insert(:page, creator: reader)
+
+      # About an entry read through a schema whose policy the test can make fail
+      {:ok, delivery} =
+        %Delivery{}
+        |> Ecto.Changeset.change(%{
+          route_id: route.id,
+          recipient_id: reader.id,
+          event: "scheduled_publish",
+          entry_schema: to_string(Brando.AuthorizationTestResources.Page),
+          entry_id: page.id,
+          notification: %{"event" => "test"}
+        })
+        |> Repo.insert()
+
+      Process.put(:authorization_test_policy_raises, %DBConnection.ConnectionError{message: "timeout"})
+      job = %Oban.Job{args: %{"delivery" => delivery.id, "route" => route.id}, attempt: 1, max_attempts: 10}
+
+      log = capture_log(fn -> assert {:error, _} = NotificationDelivery.deliver(job) end)
+      assert log =~ "timeout"
+      assert %{state: "retrying", error: "recipient_check_failed"} = Repo.reload!(delivery)
+
+      capture_log(fn -> assert {:cancel, _} = NotificationDelivery.deliver(%{job | attempt: 10}) end)
+      assert %{state: "failed", error: "recipient_check_failed"} = Repo.reload!(delivery)
+
+      # Any other failure: there is no point in trying again
+      other =
+        Repo.insert!(%Delivery{
+          route_id: route.id,
+          recipient_id: reader.id,
+          event: "scheduled_publish",
+          entry_schema: delivery.entry_schema,
+          entry_id: page.id,
+          notification: %{"event" => "test"}
+        })
+
+      Process.put(:authorization_test_policy_raises, %RuntimeError{message: "association not loaded"})
+
+      capture_log(fn ->
+        assert {:cancel, :recipient_check_failed} =
+                 NotificationDelivery.deliver(%{job | args: %{"delivery" => other.id, "route" => route.id}})
+      end)
+
+      assert %{state: "failed", error: "recipient_check_failed"} = Repo.reload!(other)
+      assert_no_email_sent()
+    end
+
     test "email that cannot be read by the recipient is not sent", %{user: user} do
       inactive = Factory.insert(:random_user)
       route = route!(user, %{"kind" => "email", "recipient_ids" => [inactive.id]})
@@ -645,6 +699,266 @@ defmodule Brando.NotificationsTest do
       # One notification: a single email
       assert_email_sent(fn email -> email.subject == "Published as scheduled: Spring launch" end)
       assert [%{state: "succeeded"}] = deliveries(route)
+    end
+
+    test "a mention goes in the digest only while the user may still read the entry", %{user: user} do
+      put_test_env(:authorization_mode, :groups)
+      put_test_env(:tenancy_mode, :none)
+      owner = Factory.insert(:random_user, role: :superuser)
+
+      reader =
+        Factory.insert(:random_user, role: :user, name: "Kari", config: %UserConfig{notification_digest: :daily})
+
+      {:ok, _} = Brando.Authorization.Migration.run()
+      scope = Brando.Authorization.Scope.standalone(owner)
+      {:ok, backend} = Brando.Authorization.Groups.create(scope, %{name: "Backend"}, ["brando.admin.access"])
+      {:ok, readers} = Brando.Authorization.Groups.create(scope, %{name: "Readers"}, ["brando.pages.read"])
+      {:ok, :ok} = Brando.Authorization.Groups.add_member(scope, backend.id, reader.id)
+      {:ok, :ok} = Brando.Authorization.Groups.add_member(scope, readers.id, reader.id)
+      page = Factory.insert(:page, creator: user)
+
+      {:ok, _note, _} =
+        Notes.create_thread(Page, page.id, owner, %{"body" => "@Kari still readable", "mentions" => [reader.id]})
+
+      [mention] = Notes.mentions_for(reader.id, unsent: true)
+      due = Digest.next_at(:daily, mention.inserted_at)
+      assert :ok = Notes.deliver_mentions(reader.id, due)
+      assert_email_sent(fn email -> assert email.text_body =~ "still readable" end)
+
+      # Read access removed before the next digest: the mention is dropped, not kept for later
+      {:ok, _note, _} =
+        Notes.create_thread(Page, page.id, owner, %{"body" => "@Kari confidential", "mentions" => [reader.id]})
+
+      {:ok, :ok} = Brando.Authorization.Groups.remove_member(scope, readers.id, reader.id)
+      refute Brando.Authorization.can?(reader, :read, page)
+
+      [mention] = Notes.mentions_for(reader.id, unsent: true)
+      assert :ok = Notes.deliver_mentions(reader.id, Digest.next_at(:daily, mention.inserted_at))
+      assert_no_email_sent()
+      assert Notes.mentions_for(reader.id, unsent: true) == []
+    end
+
+    test "a digest larger than one batch queues the rest at once", %{user: user} do
+      reader = Factory.insert(:random_user, config: %UserConfig{notification_digest: :daily})
+      route = route!(user, %{"kind" => "email", "events" => ["failed_job"], "recipient_ids" => [reader.id]})
+      now = DateTime.utc_now()
+
+      rows =
+        for n <- 1..201 do
+          %{
+            route_id: route.id,
+            recipient_id: reader.id,
+            event: "failed_job",
+            state: "digest",
+            notification: %{"event" => "failed_job", "job" => %{"worker" => "MyApp.Job#{n}", "error" => "boom"}},
+            inserted_at: DateTime.add(now, n, :microsecond),
+            updated_at: now
+          }
+        end
+
+      {201, _} = Repo.insert_all(Delivery, rows)
+      due = Digest.next_at(:daily, now)
+
+      states = fn ->
+        Repo.all(from(d in Delivery, where: d.route_id == ^route.id, group_by: d.state, select: {d.state, count(d.id)}))
+      end
+
+      # The first batch goes out, and the rest is queued to go now, not at the next digest
+      Oban.Testing.with_testing_mode(:manual, fn ->
+        assert :ok = Notes.deliver_mentions(reader.id, due)
+        assert Enum.sort(states.()) == [{"digest", 1}, {"succeeded", 200}]
+        assert [job] = all_enqueued(worker: Brando.Worker.NoteMentions, args: %{"user_id" => reader.id})
+        assert DateTime.compare(job.scheduled_at, DateTime.utc_now()) != :gt
+
+        # A new item meanwhile does not move it to the next digest
+        assert {:ok, _} = Digest.schedule(reader.id)
+        assert [job] = all_enqueued(worker: Brando.Worker.NoteMentions, args: %{"user_id" => reader.id})
+        assert DateTime.compare(job.scheduled_at, DateTime.utc_now()) != :gt
+      end)
+
+      # Nor does one that came while the digest was being sent: the rest
+      # brings its job forward
+      Repo.update_all(from(d in Delivery, where: d.route_id == ^route.id), set: [state: "digest"])
+      Repo.delete_all(from(j in Oban.Job, where: j.worker == "Brando.Worker.NoteMentions"))
+
+      Oban.Testing.with_testing_mode(:manual, fn ->
+        assert {:ok, %{state: "scheduled"} = waiting} = Digest.schedule(reader.id)
+        hours_ago = DateTime.add(DateTime.utc_now(), -3 * 3600, :second)
+        Repo.update_all(from(j in Oban.Job, where: j.id == ^waiting.id), set: [inserted_at: hours_ago])
+        assert :ok = Notes.deliver_mentions(reader.id, due)
+        assert [job] = all_enqueued(worker: Brando.Worker.NoteMentions, args: %{"user_id" => reader.id})
+        assert DateTime.compare(job.scheduled_at, DateTime.utc_now()) != :gt
+      end)
+
+      assert :ok = Notes.deliver_mentions(reader.id, due)
+      assert_email_sent(fn email -> email.text_body =~ "MyApp.Job201" end)
+      assert states.() == [{"succeeded", 201}]
+    end
+
+    test "the rest of a full summary is queued to go now, or the running job retries", %{user: user} do
+      reader = Factory.insert(:random_user, config: %UserConfig{notification_digest: :daily})
+      _route = route!(user, %{"kind" => "email", "events" => ["failed_job"], "recipient_ids" => [reader.id]})
+
+      Oban.Testing.with_testing_mode(:manual, fn ->
+        # A job waiting to retry, hours from now, is brought forward
+        {:ok, waiting} = Digest.schedule(reader.id)
+        later = DateTime.add(DateTime.utc_now(), 3 * 3600, :second)
+        Repo.update_all(from(j in Oban.Job, where: j.id == ^waiting.id), set: [state: "retryable", scheduled_at: later])
+
+        assert :ok = Digest.schedule_rest(reader.id)
+        assert [job] = Repo.all(from(j in Oban.Job, where: j.worker == "Brando.Worker.NoteMentions"))
+        assert DateTime.compare(job.scheduled_at, DateTime.utc_now()) != :gt
+
+        # So is one waiting for the next digest, and a new item does not
+        # push it back there before it runs
+        Repo.update_all(from(j in Oban.Job, where: j.id == ^waiting.id), set: [state: "scheduled", scheduled_at: later])
+        assert :ok = Digest.schedule_rest(reader.id)
+        assert {:ok, _} = Digest.schedule(reader.id)
+        assert [job] = Repo.all(from(j in Oban.Job, where: j.worker == "Brando.Worker.NoteMentions"))
+        assert job.state == "available"
+        assert DateTime.compare(job.scheduled_at, DateTime.utc_now()) != :gt
+      end)
+
+      # Oban reports a unique insert that could not take its lock as a
+      # conflict with nothing inserted: that is no queued job
+      due_by = DateTime.utc_now()
+      assert {:error, :locked} = Digest.rest_queued({:ok, %Oban.Job{conflict?: true, id: nil}}, due_by)
+      assert :ok = Digest.rest_queued({:ok, %Oban.Job{id: 1, state: "available", scheduled_at: due_by}}, due_by)
+
+      not_due = %Oban.Job{id: 1, conflict?: true, state: "scheduled", scheduled_at: DateTime.add(due_by, 3600)}
+      assert {:error, :not_due} = Digest.rest_queued({:ok, not_due}, due_by)
+    end
+
+    test "notifications another job sent meanwhile are not sent again", %{user: user} do
+      reader = Factory.insert(:random_user, config: %UserConfig{notification_digest: :daily})
+      route = route!(user, %{"kind" => "email", "events" => ["failed_job"], "recipient_ids" => [reader.id]})
+      now = DateTime.utc_now()
+
+      Repo.insert!(%Delivery{
+        route_id: route.id,
+        recipient_id: reader.id,
+        event: "failed_job",
+        state: "digest",
+        notification: %{"event" => "failed_job", "job" => %{"worker" => "MyApp.Once", "error" => "boom"}}
+      })
+
+      # Another job takes and sends them right after this one read them
+      test = self()
+      id = "digest-claim-#{System.unique_integer([:positive])}"
+
+      :telemetry.attach(
+        id,
+        [:brando_integration, :repo, :query],
+        fn _event, _measurements, meta, _config ->
+          if self() == test and meta.source == "notification_deliveries" and
+               String.starts_with?(meta.query, "SELECT") and !Process.get(id) do
+            Process.put(id, true)
+            Repo.update_all(from(d in Delivery, where: d.route_id == ^route.id), set: [state: "succeeded"])
+          end
+        end,
+        nil
+      )
+
+      on_exit(fn -> :telemetry.detach(id) end)
+
+      assert :ok = Notes.deliver_mentions(reader.id, Digest.next_at(:daily, now))
+      assert_no_email_sent()
+    end
+
+    test "the rest that cannot be brought forward fails the job, not crashes it", %{user: user} do
+      reader = Factory.insert(:random_user, config: %UserConfig{notification_digest: :daily})
+      _route = route!(user, %{"kind" => "email", "events" => ["failed_job"], "recipient_ids" => [reader.id]})
+
+      Oban.Testing.with_testing_mode(:manual, fn ->
+        {:ok, _waiting} = Digest.schedule(reader.id)
+
+        # The database fails between joining the waiting job and making it available
+        test = self()
+        id = "retry-fails-#{System.unique_integer([:positive])}"
+
+        :telemetry.attach(
+          id,
+          [:brando_integration, :repo, :query],
+          fn _event, _measurements, meta, _config ->
+            if self() == test and meta.source == "oban_jobs" and String.starts_with?(meta.query, "UPDATE") and
+                 !Process.get(id) do
+              Process.put(id, true)
+              Repo.query!("ALTER TABLE oban_jobs RENAME TO oban_jobs_away")
+            end
+          end,
+          nil
+        )
+
+        on_exit(fn -> :telemetry.detach(id) end)
+        assert {:error, _} = Digest.schedule_rest(reader.id)
+      end)
+    end
+
+    test "a summary item whose recipient could not be checked is marked so", %{user: user} do
+      put_test_env(:authorization_mode, :groups)
+      put_test_env(:tenancy_mode, :none)
+      reader = Factory.insert(:random_user, role: :superuser, config: %UserConfig{notification_digest: :daily})
+      {:ok, _} = Brando.Authorization.Migration.run()
+      route = route!(user, %{"kind" => "email", "recipient_ids" => [reader.id]})
+      page = Factory.insert(:page, creator: reader)
+
+      delivery =
+        Repo.insert!(%Delivery{
+          route_id: route.id,
+          recipient_id: reader.id,
+          event: "scheduled_publish",
+          state: "digest",
+          entry_schema: to_string(Brando.AuthorizationTestResources.Page),
+          entry_id: page.id,
+          notification: %{"event" => "test"}
+        })
+
+      Process.put(:authorization_test_policy_raises, %RuntimeError{message: "association not loaded"})
+      capture_log(fn -> assert :ok = Notes.deliver_mentions(reader.id, Digest.next_at(:daily, delivery.inserted_at)) end)
+
+      assert %{state: "failed", error: "recipient_check_failed"} = Repo.reload!(delivery)
+      assert_no_email_sent()
+    end
+
+    test "a summary whose email cannot be queued leaves everything waiting", %{user: user} do
+      reader = Factory.insert(:random_user, name: "Kari", config: %UserConfig{notification_digest: :daily})
+      route = route!(user, %{"kind" => "email", "events" => ["failed_job"], "recipient_ids" => [reader.id]})
+      page = create_page(user)
+      {:ok, _note, _} = Notes.create_thread(Page, page.id, user, %{"body" => "@Kari kept", "mentions" => [reader.id]})
+
+      delivery =
+        Repo.insert!(%Delivery{
+          route_id: route.id,
+          recipient_id: reader.id,
+          event: "failed_job",
+          state: "digest",
+          notification: %{"event" => "failed_job", "job" => %{"worker" => "MyApp.Kept", "error" => "boom"}}
+        })
+
+      # Queuing the email fails after the items were claimed
+      put_test_env(:mailer, nil)
+
+      assert_raise Brando.Exception.ConfigError, fn ->
+        Notes.deliver_mentions(reader.id, Digest.next_at(:daily, delivery.inserted_at))
+      end
+
+      assert %{state: "digest"} = Repo.reload!(delivery)
+      assert [_] = Notes.mentions_for(reader.id, unsent: true)
+    end
+
+    test "one email job waits per user, however long ago it was queued", %{user: user} do
+      reader = Factory.insert(:random_user, config: %UserConfig{notification_digest: :daily})
+      _route = route!(user, %{"kind" => "email", "events" => ["failed_job"], "recipient_ids" => [reader.id]})
+
+      Oban.Testing.with_testing_mode(:manual, fn ->
+        assert {:ok, first} = Digest.schedule(reader.id)
+        hours_ago = DateTime.add(DateTime.utc_now(), -3 * 3600, :second)
+        Repo.update_all(from(j in Oban.Job, where: j.id == ^first.id), set: [inserted_at: hours_ago])
+
+        assert {:ok, _} = Digest.schedule(reader.id)
+        assert [%{id: id}] = all_enqueued(worker: Brando.Worker.NoteMentions, args: %{"user_id" => reader.id})
+        assert id == first.id
+      end)
     end
 
     test "digest times are at the digest hour in the site's time zone, Mondays for weekly" do

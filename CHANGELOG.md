@@ -1962,6 +1962,14 @@ production dump.
   modules, joins the module sets the original is in, and gets the class
   `<class>-copy` (`-copy-2` and on when taken) instead of `<class> (copy)`.
 
+- **Mention emails go only to someone who may still read the entry, and
+  large summaries are sent in full.** A mention went out, with the note's
+  text and the entry's title, even when the person mentioned had lost read
+  access to the entry (or access to the site) before the email or summary
+  was sent. Such a mention is now dropped. A summary or mention email that
+  hit its limit of 200 notifications or 100 mentions left the rest waiting
+  until another notification arrived; the rest now follows in another email.
+
 - **The Assistant recovers from a stopped, reconnected or interrupted run,
   and from a failed apply.** Stopping a run while the model answered with
   tool calls left the message box disabled until a reload, while a reload

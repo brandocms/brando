@@ -38,6 +38,7 @@ defmodule Brando.Notes do
 
   alias Brando.Notes.Mention
   alias Brando.Notes.Note
+  alias Brando.Notifications.Recipient
   alias Brando.Repo
   alias Brando.Tenant.Topic
   alias Brando.Users.User
@@ -46,6 +47,7 @@ defmodule Brando.Notes do
 
   @mark_attribute "data-brando-note"
   @mention_token ~r/<@(\d+)>/
+  @mention_batch 100
 
   ## Reading
 
@@ -607,9 +609,11 @@ defmodule Brando.Notes do
 
   @doc """
   Emails `user_id` the mentions not sent yet, unless an email went out less
-  than ten minutes ago. Returns `:ok` (sent, or nothing to send) or
-  `{:snooze, seconds}` until the next email may go. With a daily or weekly
-  summary, the summary goes out instead, when it is due.
+  than ten minutes ago. Returns `:ok` (sent, or nothing to send),
+  `{:snooze, seconds}` until the next email may go, or `{:error, reason}`
+  when the rest of a full batch could not be queued, for the job to retry.
+  With a daily or weekly summary, the summary goes out instead, when it is
+  due.
   """
   def deliver_mentions(user_id, now \\ DateTime.utc_now()) do
     with :not_digest <- Brando.Notifications.Digest.deliver(user_id, now) do
@@ -624,9 +628,10 @@ defmodule Brando.Notes do
   def seconds_until_next_email(user_id, now),
     do: Brando.Notifications.Digest.seconds_until_next_email(user_id, now)
 
+  # A full batch leaves the rest for another run
   defp send_pending_mentions(user_id, now) do
     user = Repo.get(User, user_id)
-    pending = mentions_for(user_id, unsent: true, limit: 100)
+    pending = mentions_for(user_id, unsent: true, limit: @mention_batch)
 
     cond do
       pending == [] ->
@@ -636,54 +641,94 @@ defmodule Brando.Notes do
         mark_emailed(pending, now)
 
       true ->
-        items = mention_email_items(pending)
+        entries = mention_email_entries(user, pending)
 
-        if items != [] do
-          {:ok, _job} = user |> Brando.Notes.MentionEmail.build(items) |> Brando.Mailer.deliver_later()
-        end
-
-        mark_emailed(pending, now)
+        # Only what this job claims goes out, so two jobs never send the same
+        # mention; the email is queued in the same transaction, so a mention
+        # claimed is one queued to be sent
+        {:ok, :ok} = Repo.transaction(fn -> send_claimed(user, pending, entries, now) end)
     end
+
+    if length(pending) == @mention_batch, do: Brando.Notifications.Digest.schedule_rest(user_id, now), else: :ok
   end
 
-  @doc "Marks `mentions` as emailed at `now`."
-  def mark_emailed([], _now), do: :ok
+  defp send_claimed(user, pending, entries, now) do
+    claimed = claim_mentions(pending, now)
+    items = for {id, item} <- entries, MapSet.member?(claimed, id), do: item
+    if items != [], do: {:ok, _job} = user |> Brando.Notes.MentionEmail.build(items) |> Brando.Mailer.deliver_later()
+    :ok
+  end
 
-  def mark_emailed(mentions, now) do
+  @doc """
+  Marks those of `mentions` not emailed yet as emailed at `now`, and returns
+  their ids: what the caller has claimed to send. Another job sending at the
+  same time claims none of them.
+  """
+  def claim_mentions([], _now), do: MapSet.new()
+
+  def claim_mentions(mentions, now) do
     ids = Enum.map(mentions, & &1.id)
-    Repo.update_all(from(m in Mention, where: m.id in ^ids), set: [emailed_at: now])
+
+    {_, claimed} =
+      Repo.update_all(from(m in Mention, where: m.id in ^ids and is_nil(m.emailed_at), select: m.id),
+        set: [emailed_at: now]
+      )
+
+    MapSet.new(claimed)
+  end
+
+  @doc "Marks those of `mentions` not emailed yet as emailed at `now`."
+  def mark_emailed(mentions, now) do
+    claim_mentions(mentions, now)
     :ok
   end
 
   @doc """
   `mentions` (newest first, as `mentions_for/2` returns them) as
-  `Brando.Notes.MentionEmail` lists them: oldest first, leaving out those
-  whose entry is gone.
+  `Brando.Notes.MentionEmail` lists them for `user`: oldest first, leaving
+  out those whose entry is gone or that `user` may no longer see (not a
+  member of the site, or no longer allowed to read the entry,
+  `Brando.Notifications.Recipient`).
   """
-  def mention_email_items(mentions), do: mentions |> Enum.reverse() |> Enum.flat_map(&email_item/1)
+  def mention_email_items(%User{} = user, mentions),
+    do: user |> mention_email_entries(mentions) |> Enum.map(&elem(&1, 1))
 
-  defp email_item(%Mention{note: note}) do
-    schema = schema_of(note)
+  @doc "As `mention_email_items/2`, each item with its mention's id: `[{id, item}]`."
+  def mention_email_entries(%User{} = user, mentions) do
+    if Recipient.member?(user),
+      do: mentions |> Enum.reverse() |> Enum.flat_map(&email_item(user, &1)),
+      else: []
+  end
 
-    case Repo.get(schema, note.entry_id) do
+  # An entry (or schema) that is gone, or that the user may no longer read,
+  # is left out; how a failed check is handled: `Brando.Notifications.Recipient`
+  defp email_item(user, %Mention{id: id, note: note}) do
+    case Recipient.checked(fn -> readable_entry(user, note) end, nil) do
+      {schema, entry} ->
+        [
+          {id,
+           %{
+             author: note.author && note.author.name,
+             entry_title: entry_title(schema, entry),
+             anchor: note.anchor_label,
+             text: plain_text(note.body, mention_names([note])),
+             url: entry_url(schema, entry, note)
+           }}
+        ]
+
       nil ->
         []
-
-      entry ->
-        names = mention_names([note])
-
-        [
-          %{
-            author: note.author && note.author.name,
-            entry_title: entry_title(schema, entry),
-            anchor: note.anchor_label,
-            text: plain_text(note.body, names),
-            url: entry_url(schema, entry, note)
-          }
-        ]
     end
-  rescue
-    _ -> []
+  end
+
+  defp readable_entry(user, note) do
+    with {:ok, schema} <- Recipient.entry_schema(note.entry_type),
+         %{} = entry <- Repo.get(schema, note.entry_id),
+         true <- Recipient.may_read?(user, entry) do
+      {schema, entry}
+    else
+      _ -> nil
+    end
   end
 
   @doc "The entry's title as its identifier shows it."

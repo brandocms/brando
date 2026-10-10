@@ -3,6 +3,7 @@ defmodule Brando.NotesTest do
   use Brando.ConnCase
 
   import Ecto.Query
+  import ExUnit.CaptureLog
   import Swoosh.TestAssertions
 
   alias Brando.Activity.Event
@@ -24,6 +25,38 @@ defmodule Brando.NotesTest do
   defp thread!(page, user, attrs) do
     {:ok, note, mentioned} = Notes.create_thread(Page, page.id, user, attrs)
     {note, mentioned}
+  end
+
+  defp mention_on!(user, author, schema, entry, body) do
+    now = DateTime.utc_now()
+
+    note =
+      Repo.insert!(%Note{entry_type: to_string(schema), entry_id: entry.id, body: body, author_id: author.id})
+
+    Repo.insert!(%Mention{note_id: note.id, user_id: user.id, inserted_at: now})
+  end
+
+  # Runs `fun` once, in this process, right after the first query on
+  # `source` whose SQL contains `text`: what a concurrent job would do then
+  defp once_after_query(source, text, fun) do
+    test = self()
+    id = "once-after-query-#{System.unique_integer([:positive])}"
+    prefix = BrandoIntegration.Repo.config()[:telemetry_prefix] || [:brando_integration, :repo]
+
+    :telemetry.attach(
+      id,
+      prefix ++ [:query],
+      fn _event, _measurements, meta, _config ->
+        if self() == test and meta.source == source and String.starts_with?(meta.query, "SELECT") and
+             String.contains?(meta.query, text) and !Process.get(id) do
+          Process.put(id, true)
+          fun.()
+        end
+      end,
+      nil
+    )
+
+    on_exit(fn -> :telemetry.detach(id) end)
   end
 
   defp events(page, actions) do
@@ -218,6 +251,168 @@ defmodule Brando.NotesTest do
     test "the email is in the recipient's language", %{author: author, other: other, page: page} do
       thread!(page, author, %{"body" => "@Trond Mjøen hei", "mentions" => [other.id]})
       assert_email_sent(fn email -> assert email.subject =~ "nevnte deg" end)
+    end
+
+    test "go out only while the user may still read the entry", %{page: page} do
+      put_test_env(:authorization_mode, :groups)
+      put_test_env(:tenancy_mode, :none)
+      owner = Factory.insert(:random_user, role: :superuser)
+      reader = Factory.insert(:random_user, role: :user, name: "Kari Leser")
+      {:ok, _} = Brando.Authorization.Migration.run()
+      scope = Brando.Authorization.Scope.standalone(owner)
+      {:ok, backend} = Brando.Authorization.Groups.create(scope, %{name: "Backend"}, ["brando.admin.access"])
+      {:ok, readers} = Brando.Authorization.Groups.create(scope, %{name: "Readers"}, ["brando.pages.read"])
+      {:ok, :ok} = Brando.Authorization.Groups.add_member(scope, backend.id, reader.id)
+      {:ok, :ok} = Brando.Authorization.Groups.add_member(scope, readers.id, reader.id)
+
+      mention! = fn body ->
+        Oban.Testing.with_testing_mode(:manual, fn ->
+          thread!(page, owner, %{"body" => "@Kari Leser " <> body, "mentions" => [reader.id]})
+        end)
+      end
+
+      mention!.("still readable")
+      assert :ok = Notes.deliver_mentions(reader.id)
+      assert_email_sent(fn email -> assert email.text_body =~ "still readable" end)
+
+      # Read access removed before the next email: the mention is dropped, not kept for later
+      mention!.("confidential")
+      {:ok, :ok} = Brando.Authorization.Groups.remove_member(scope, readers.id, reader.id)
+      refute Brando.Authorization.can?(reader, :read, page)
+
+      assert :ok = Notes.deliver_mentions(reader.id, DateTime.add(DateTime.utc_now(), 601, :second))
+      assert_no_email_sent()
+      assert Notes.mentions_for(reader.id, unsent: true) == []
+    end
+
+    test "more than one email's worth goes out in a further email", %{author: author, other: other, page: page} do
+      now = DateTime.utc_now()
+
+      notes =
+        for n <- 1..101 do
+          %{
+            entry_type: to_string(Page),
+            entry_id: page.id,
+            body: "note #{n}",
+            author_id: author.id,
+            inserted_at: DateTime.add(now, n, :microsecond),
+            updated_at: now
+          }
+        end
+
+      {101, ids} = Repo.insert_all(Note, notes, returning: [:id])
+
+      mentions =
+        for {%{id: id}, n} <- Enum.with_index(ids, 1),
+            do: %{note_id: id, user_id: other.id, inserted_at: DateTime.add(now, n, :microsecond)}
+
+      {101, _} = Repo.insert_all(Mention, mentions)
+
+      # The newest hundred go out, and the next email is queued for the rest
+      Oban.Testing.with_testing_mode(:manual, fn ->
+        assert :ok = Notes.deliver_mentions(other.id, now)
+        assert [%{note: %{body: "note 1"}}] = Notes.mentions_for(other.id, unsent: true)
+        assert_enqueued(worker: Brando.Worker.Mail)
+        assert_enqueued(worker: Brando.Worker.NoteMentions, args: %{"user_id" => other.id})
+      end)
+
+      assert :ok = Notes.deliver_mentions(other.id, DateTime.add(now, 601, :second))
+      assert_email_sent(fn email -> email.text_body =~ "note 1\n" and not (email.text_body =~ "note 2\n") end)
+      assert Notes.mentions_for(other.id, unsent: true) == []
+    end
+
+    test "a database failure while checking access is retried, until the last attempt", %{author: author} do
+      put_test_env(:authorization_mode, :groups)
+      put_test_env(:tenancy_mode, :none)
+      reader = Factory.insert(:random_user, role: :superuser)
+      {:ok, _} = Brando.Authorization.Migration.run()
+      readable = Factory.insert(:page, creator: reader)
+      # Read through a schema whose policy the test can make fail
+      policed = Factory.insert(:page, creator: reader)
+      mention_on!(reader, author, Page, readable, "readable")
+      mention_on!(reader, author, Brando.AuthorizationTestResources.Page, policed, "policed")
+
+      Process.put(:authorization_test_policy_raises, %DBConnection.ConnectionError{message: "timeout"})
+      assert_raise DBConnection.ConnectionError, fn -> Notes.deliver_mentions(reader.id) end
+      assert length(Notes.mentions_for(reader.id, unsent: true)) == 2
+
+      # The last attempt drops the one it cannot check, and sends the rest
+      log =
+        capture_log(fn ->
+          assert :ok = perform_job(Brando.Worker.NoteMentions, %{"user_id" => reader.id}, attempt: 5)
+        end)
+
+      assert log =~ "timeout"
+      assert_email_sent(fn email -> email.text_body =~ "readable" and not (email.text_body =~ "policed") end)
+      assert Notes.mentions_for(reader.id, unsent: true) == []
+    end
+
+    test "any other failure while checking access drops the mention", %{author: author} do
+      put_test_env(:authorization_mode, :groups)
+      put_test_env(:tenancy_mode, :none)
+      reader = Factory.insert(:random_user, role: :superuser)
+      {:ok, _} = Brando.Authorization.Migration.run()
+      readable = Factory.insert(:page, creator: reader)
+      policed = Factory.insert(:page, creator: reader)
+      mention_on!(reader, author, Page, readable, "readable")
+      mention_on!(reader, author, Brando.AuthorizationTestResources.Page, policed, "policed")
+
+      # A policy that reads an association that is not loaded, say
+      Process.put(:authorization_test_policy_raises, %RuntimeError{message: "association not loaded"})
+      log = capture_log(fn -> assert :ok = Notes.deliver_mentions(reader.id) end)
+
+      assert log =~ "association not loaded"
+      assert_email_sent(fn email -> email.text_body =~ "readable" and not (email.text_body =~ "policed") end)
+      assert Notes.mentions_for(reader.id, unsent: true) == []
+    end
+
+    test "mentions another job sent meanwhile are not sent again", %{author: author, other: other, page: page} do
+      Oban.Testing.with_testing_mode(:manual, fn ->
+        thread!(page, author, %{"body" => "@Trond Mjøen once", "mentions" => [other.id]})
+      end)
+
+      # Another job takes and sends them right after this one read them
+      once_after_query("note_mentions", ~s("entry_notes"), fn ->
+        Repo.update_all(from(m in Mention, where: m.user_id == ^other.id), set: [emailed_at: DateTime.utc_now()])
+      end)
+
+      assert :ok = Notes.deliver_mentions(other.id)
+      assert_no_email_sent()
+    end
+
+    test "mentions whose email cannot be queued stay unsent", %{author: author, other: other, page: page} do
+      Oban.Testing.with_testing_mode(:manual, fn ->
+        thread!(page, author, %{"body" => "@Trond Mjøen kept", "mentions" => [other.id]})
+      end)
+
+      # Queuing the email fails after the mentions were claimed
+      put_test_env(:mailer, nil)
+      assert_raise Brando.Exception.ConfigError, fn -> Notes.deliver_mentions(other.id) end
+      assert [_] = Notes.mentions_for(other.id, unsent: true)
+    end
+
+    test "a further email that cannot be queued fails the job, to be retried", %{author: author, other: other} do
+      now = DateTime.utc_now()
+
+      # Mentions on an entry that is gone: no email to queue, only the further one
+      notes =
+        for n <- 1..100,
+            do: %{
+              entry_type: to_string(Page),
+              entry_id: -1,
+              body: "n#{n}",
+              author_id: author.id,
+              inserted_at: now,
+              updated_at: now
+            }
+
+      {100, ids} = Repo.insert_all(Note, notes, returning: [:id])
+      {100, _} = Repo.insert_all(Mention, Enum.map(ids, &%{note_id: &1.id, user_id: other.id, inserted_at: now}))
+
+      Repo.query!("ALTER TABLE oban_jobs RENAME TO oban_jobs_away")
+
+      assert {:error, _} =
+               Oban.Testing.with_testing_mode(:manual, fn -> Notes.deliver_mentions(other.id, now) end)
     end
   end
 

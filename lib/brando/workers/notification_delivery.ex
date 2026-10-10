@@ -121,32 +121,24 @@ defmodule Brando.Worker.NotificationDelivery do
   end
 
   defp attempt(%Route{kind: :email} = route, delivery, job) do
-    user = delivery.recipient_id && Repo.get(Brando.Users.User, delivery.recipient_id)
+    case recipient(delivery, route) do
+      {:ok, user} ->
+        send_email(user, route, delivery, job)
 
-    if user && Recipient.may_see?(user, delivery, route) do
-      started = System.monotonic_time(:millisecond)
+      :unavailable ->
+        finish(delivery, %{state: "cancelled", error: "recipient_unavailable"})
+        {:cancel, :recipient_unavailable}
 
-      result =
-        user
-        |> Brando.Notifications.Email.single(delivery.notification)
-        |> Brando.Mailer.deliver()
+      # The check failed in a way trying again won't mend
+      :unchecked ->
+        fail(route, delivery, %{status: nil, body: "", error: :recipient_check_failed, duration_ms: 0}, final?: true)
+        {:cancel, :recipient_check_failed}
 
-      duration = System.monotonic_time(:millisecond) - started
-
-      case result do
-        {:ok, _} ->
-          record(%{status: nil, body: "", error: nil, duration_ms: duration, ok?: true}, route, delivery, job)
-
-        {:error, reason} when reason in [:no_mailer, :no_sender] ->
-          fail(route, delivery, %{status: nil, body: "", error: reason, duration_ms: duration}, final?: true)
-          {:cancel, reason}
-
-        {:error, reason} ->
-          record(%{status: nil, body: "", error: mail_error(reason), duration_ms: duration}, route, delivery, job)
-      end
-    else
-      finish(delivery, %{state: "cancelled", error: "recipient_unavailable"})
-      {:cancel, :recipient_unavailable}
+      # The database failed while checking: a failed attempt, retried, and
+      # marked failed after the last, never left "sending"
+      :retry ->
+        result = %{status: nil, body: "", error: :recipient_check_failed, duration_ms: 0, ok?: false}
+        record(result, route, delivery, job)
     end
   end
 
@@ -173,6 +165,48 @@ defmodule Brando.Worker.NotificationDelivery do
       {:error, reason} ->
         record(%{status: nil, body: "", error: reason, duration_ms: 0, ok?: false}, route, delivery, job)
     end
+  end
+
+  defp send_email(user, route, delivery, job) do
+    started = System.monotonic_time(:millisecond)
+
+    result =
+      user
+      |> Brando.Notifications.Email.single(delivery.notification)
+      |> Brando.Mailer.deliver()
+
+    duration = System.monotonic_time(:millisecond) - started
+
+    case result do
+      {:ok, _} ->
+        record(%{status: nil, body: "", error: nil, duration_ms: duration, ok?: true}, route, delivery, job)
+
+      {:error, reason} when reason in [:no_mailer, :no_sender] ->
+        fail(route, delivery, %{status: nil, body: "", error: reason, duration_ms: duration}, final?: true)
+        {:cancel, reason}
+
+      {:error, reason} ->
+        record(%{status: nil, body: "", error: mail_error(reason), duration_ms: duration}, route, delivery, job)
+    end
+  end
+
+  # Whether the user may still get it; a failed check counts as "no" unless
+  # the database may recover (`Recipient.checked/2`), which comes back here
+  defp recipient(delivery, route) do
+    user = delivery.recipient_id && Repo.get(Brando.Users.User, delivery.recipient_id)
+
+    case user && Recipient.access(user, delivery, route) do
+      :ok -> {:ok, user}
+      :unchecked -> :unchecked
+      _ -> :unavailable
+    end
+  rescue
+    error ->
+      Logger.error(
+        "[Brando.Notifications] Delivery ##{delivery.id}: could not check the recipient: " <> Exception.message(error)
+      )
+
+      :retry
   end
 
   defp allowed_host(kind, url), do: if(Route.allowed_host?(kind, url), do: :ok, else: {:error, :host_not_allowed})

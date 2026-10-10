@@ -3,7 +3,12 @@ defmodule Brando.AuthorizationTestPolicy do
   import Ecto.Query, only: [where: 3]
 
   def authorize(_scope, _action, schema) when is_atom(schema), do: :ok
-  def authorize(scope, _action, entry), do: entry.creator_id == scope.user_id
+
+  def authorize(scope, _action, entry) do
+    # Lets a test make the check fail, as a broken policy or database would
+    if error = Process.get(:authorization_test_policy_raises), do: raise(error)
+    entry.creator_id == scope.user_id
+  end
 
   def scope(scope, :export, query),
     do: where(query, [entry], entry.creator_id == ^scope.user_id and entry.title == "Exportable")

@@ -14,7 +14,11 @@ defmodule Brando.Notifications.Digest do
   Without a digest, mention emails go out as before, at most one every ten
   minutes (`Brando.Notes`), and routed notifications as single emails.
   Notifications that were waiting for a digest the user has since turned off
-  go out with their next email.
+  go out with their next email. A mention goes out only while the user may
+  still see its entry (`Brando.Notes.mention_email_items/2`), and each item
+  goes out once, however many jobs run (`Brando.Notes.claim_mentions/2`). An email takes
+  at most 200 notifications and 100 mentions; a full batch queues the rest
+  (`schedule_rest/2`).
   """
 
   import Ecto.Query
@@ -26,9 +30,12 @@ defmodule Brando.Notifications.Digest do
   alias Brando.Repo
   alias Brando.Users.User
 
+  require Logger
+
   @periods [:off, :daily, :weekly]
   @email_interval 600
   @limit 200
+  @mention_limit 100
 
   @doc "The choices for the profile: `:off`, `:daily` and `:weekly`."
   def periods, do: @periods
@@ -81,28 +88,91 @@ defmodule Brando.Notifications.Digest do
   environment waits; a new item moves it to when the user's setting says.
   """
   def schedule(user_id, now \\ DateTime.utc_now()) do
-    delay =
+    delay = fn ->
       case period(user_id) do
         :off -> seconds_until_next_email(user_id, now)
         period -> max(DateTime.diff(next_at(period, now), now, :second), 0)
       end
+    end
 
-    %{"user_id" => user_id}
-    |> Brando.Tenant.Job.attach_current()
-    |> Brando.Worker.NoteMentions.new(schedule_in: delay, replace: [scheduled: [:scheduled_at]])
-    |> Oban.insert()
+    insert_job(user_id, delay, scheduled: [:scheduled_at])
+  end
+
+  @doc """
+  Queues what is left after an email that took a full batch: a digest's
+  rest at once, as it is due already; without a digest, with the next
+  email. The job running counts as no waiting job, so this queues another,
+  or brings forward the one waiting (to be retried, too). Returns `:ok`, or
+  `{:error, reason}` for the running job to fail and be retried, as nothing
+  else would send the rest.
+  """
+  def schedule_rest(user_id, now \\ DateTime.utc_now()) do
+    seconds = if period(user_id) == :off, do: seconds_until_next_email(user_id, now), else: 0
+    # A minute's leeway for the time the insert takes
+    due_by = DateTime.add(DateTime.utc_now(), seconds + 60, :second)
+
+    user_id
+    |> insert_job(fn -> seconds end, scheduled: [:scheduled_at], retryable: [:scheduled_at])
+    |> make_available(seconds)
+    |> rest_queued(due_by)
+  end
+
+  # A waiting job the rest joined, due now, is made available at once: while
+  # scheduled, a new item's `schedule/2` would move it back to the next digest
+  defp make_available({:ok, %Oban.Job{conflict?: true, id: id, state: state} = job}, 0)
+       when is_integer(id) and state in ["scheduled", "retryable"] do
+    case Oban.retry_job(id) do
+      :ok -> {:ok, %{job | state: "available"}}
+      other -> {:error, other}
+    end
   rescue
     error ->
-      require Logger
       Logger.warning("[Brando.Notifications] Could not queue an email: " <> Exception.message(error))
       {:error, error}
   end
 
+  defp make_available(result, _seconds), do: result
+
+  @doc false
+  # Whether an insert left a job for the rest that runs by `due_by`. A unique
+  # insert that could not take Oban's lock (another insert for the user held
+  # it) is reported as a conflict with nothing inserted, no id.
+  def rest_queued({:ok, %Oban.Job{conflict?: true, id: nil}}, _due_by), do: {:error, :locked}
+  def rest_queued({:ok, %Oban.Job{state: "available"}}, _due_by), do: :ok
+
+  def rest_queued({:ok, %Oban.Job{scheduled_at: at}}, due_by),
+    do: if(DateTime.compare(at, due_by) == :gt, do: {:error, :not_due}, else: :ok)
+
+  def rest_queued({:error, _} = error, _due_by), do: error
+
+  # A job due now is inserted available, not scheduled: `replace` moves only a
+  # scheduled job, so a later item cannot push it back to the next digest. Its
+  # `scheduled_at` still brings forward a scheduled job it conflicts with.
+  # (`Oban.Job.new/2` makes any job with a `scheduled_at` a scheduled one.)
+  defp insert_job(user_id, delay, replace) do
+    seconds = delay.()
+    timing = if seconds > 0, do: [schedule_in: seconds], else: [scheduled_at: DateTime.utc_now()]
+
+    %{"user_id" => user_id}
+    |> Brando.Tenant.Job.attach_current()
+    |> Brando.Worker.NoteMentions.new([replace: replace] ++ timing)
+    |> available_when_due(seconds)
+    |> Oban.insert()
+  rescue
+    error ->
+      Logger.warning("[Brando.Notifications] Could not queue an email: " <> Exception.message(error))
+      {:error, error}
+  end
+
+  defp available_when_due(changeset, seconds) when seconds > 0, do: changeset
+  defp available_when_due(changeset, _seconds), do: Ecto.Changeset.force_change(changeset, :state, "available")
+
   @doc """
   Sends the digest for `user_id` when it is due: `:ok` (sent, or nothing to
-  send), `{:snooze, seconds}` until it is due, or `:not_digest` when the
+  send), `{:snooze, seconds}` until it is due, `:not_digest` when the
   user has no digest and nothing waits for one, so the mention email goes
-  out as usual.
+  out as usual, or `{:error, reason}` when the rest of a full batch could
+  not be queued.
   """
   def deliver(user_id, now \\ DateTime.utc_now()) do
     period = period(user_id)
@@ -111,7 +181,7 @@ defmodule Brando.Notifications.Digest do
     if period == :off and waiting == [] do
       :not_digest
     else
-      mentions = Notes.mentions_for(user_id, unsent: true, limit: 100)
+      mentions = Notes.mentions_for(user_id, unsent: true, limit: @mention_limit)
       send_when_due(user_id, period, waiting, mentions, now)
     end
   end
@@ -187,21 +257,43 @@ defmodule Brando.Notifications.Digest do
     error in Postgrex.Error -> if error.postgres[:code] == :undefined_table, do: [], else: reraise(error, __STACKTRACE__)
   end
 
+  # A full batch leaves the rest for another run
   defp send_digest(user_id, period, waiting, mentions, now) do
+    :ok = send_batch(user_id, period, waiting, mentions, now)
+    if length(waiting) == @limit or length(mentions) == @mention_limit, do: schedule_rest(user_id, now), else: :ok
+  end
+
+  defp send_batch(user_id, period, waiting, mentions, now) do
     user = Repo.get(User, user_id)
 
-    if is_nil(user) or not user.active or not is_nil(user.deleted_at) do
-      finish(waiting, mentions, "cancelled", now, "recipient_unavailable")
-    else
-      # Only while the route is active and still names the user
-      {readable, unreadable} = Enum.split_with(waiting, &Recipient.may_see?(user, &1, &1.route))
-      notifications = Enum.map(readable, & &1.notification)
-      mention_items = Notes.mention_email_items(mentions)
+    if is_nil(user) or not user.active or not is_nil(user.deleted_at),
+      do: finish(waiting, mentions, "cancelled", now, "recipient_unavailable"),
+      else: send_claimed(user, period, waiting, mentions, now)
+  end
 
-      send_email(user, notifications, mention_items, if(period == :off, do: :batch, else: period))
-      finish(unreadable, [], "cancelled", now, "recipient_unavailable")
-      finish(readable, mentions, "succeeded", now)
-    end
+  # Only while the route is active and still names the user, and mentions
+  # only while the user may still read their entry. Only what this job claims
+  # goes out, so two jobs never send the same item; the email is queued in the
+  # same transaction, so an item claimed is one queued to be sent.
+  defp send_claimed(user, period, waiting, mentions, now) do
+    access = Enum.group_by(waiting, &Recipient.access(user, &1, &1.route))
+    entries = Notes.mention_email_entries(user, mentions)
+
+    {:ok, routes} =
+      Repo.transaction(fn ->
+        sent = claim(access[:ok] || [], "succeeded", now)
+        cancelled = claim(access[:denied] || [], "cancelled", now, "recipient_unavailable")
+        failed = claim(access[:unchecked] || [], "failed", now, "recipient_check_failed")
+        claimed = Notes.claim_mentions(mentions, now)
+        notifications = for d <- waiting, MapSet.member?(sent, d.id), do: d.notification
+        items = for {id, item} <- entries, MapSet.member?(claimed, id), do: item
+
+        send_email(user, notifications, items, if(period == :off, do: :batch, else: period))
+        routes(waiting, sent |> MapSet.union(cancelled) |> MapSet.union(failed))
+      end)
+
+    routes |> Enum.uniq() |> Enum.each(&broadcast/1)
+    :ok
   end
 
   defp send_email(_user, [], [], _period), do: :ok
@@ -216,16 +308,31 @@ defmodule Brando.Notifications.Digest do
     :ok
   end
 
-  defp finish(deliveries, mentions, state, now, error \\ nil) do
-    if deliveries != [] do
-      ids = Enum.map(deliveries, & &1.id)
-      Repo.update_all(from(d in Delivery, where: d.id in ^ids), set: [state: state, completed_at: now, error: error])
-      Enum.each(deliveries |> Enum.map(& &1.route_id) |> Enum.uniq(), &broadcast/1)
-    end
-
+  defp finish(deliveries, mentions, state, now, error) do
+    claimed = claim(deliveries, state, now, error)
+    deliveries |> routes(claimed) |> Enum.uniq() |> Enum.each(&broadcast/1)
     Notes.mark_emailed(mentions, now)
     :ok
   end
+
+  # Finishes those of `deliveries` still waiting for a digest, and returns
+  # their ids: what the caller has claimed. Another job finishing them at the
+  # same time claims none of them.
+  defp claim(deliveries, state, now, error \\ nil)
+  defp claim([], _state, _now, _error), do: MapSet.new()
+
+  defp claim(deliveries, state, now, error) do
+    ids = Enum.map(deliveries, & &1.id)
+
+    {_, claimed} =
+      Repo.update_all(from(d in Delivery, where: d.id in ^ids and d.state == "digest", select: d.id),
+        set: [state: state, completed_at: now, error: error]
+      )
+
+    MapSet.new(claimed)
+  end
+
+  defp routes(deliveries, claimed), do: for(d <- deliveries, MapSet.member?(claimed, d.id), do: d.route_id)
 
   defp broadcast(route_id), do: Brando.Notifications.Routing.broadcast({:delivery, route_id})
 end

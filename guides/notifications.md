@@ -79,6 +79,12 @@ for the first summary after it arrived. Without a summary, mention emails keep
 their batching (at most one every ten minutes). See
 `Brando.Notifications.Digest`.
 
+A mention, in its own email or in a summary, goes out only while the person
+mentioned may enter the site and, with group authorization, may still read
+the entry; one they may no longer see is dropped. An email takes at most 200
+notifications and 100 mentions; the rest follow in another email, at once
+for a summary, otherwise ten minutes on.
+
 ## Failed jobs
 
 `Brando.Notifications.JobFailures` listens to Oban's telemetry. When a job is

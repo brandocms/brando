@@ -4406,6 +4406,11 @@ msgid "Could not change IndexNow"
 msgstr "Kunne ikke endre IndexNow"
 
 #: lib/brando_admin/live/sites/notifications_live.ex
+#, elixir-autogen, elixir-format
+msgid "Could not check whether the recipient may read the entry"
+msgstr "Kunne ikke sjekke om mottakeren kan lese oppføringen"
+
+#: lib/brando_admin/live/sites/notifications_live.ex
 #: lib/brando_admin/live/sites/webhooks_live.ex
 #, elixir-autogen, elixir-format
 msgid "Could not connect"
