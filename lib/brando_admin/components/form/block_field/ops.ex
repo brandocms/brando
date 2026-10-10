@@ -1099,9 +1099,22 @@ defmodule BrandoAdmin.Components.Form.BlockField.Ops do
     |> Enum.filter(&(state.statuses[&1] == :inserted and new_subtree(held, &1) != new_subtree(state, &1)))
   end
 
+  # What the block holds, whichever way it got its params: as inserted,
+  # or as a carry stored it (`carry_insert/3`), with its position, render
+  # artifacts and children params in or out.
   defp new_subtree(state, uid) do
     uids = [uid | descendants(state, uid)]
-    {Map.new(uids, &{&1, Map.get(state.diffs, &1, %{})}), Map.take(state.child_order, uids)}
+    {Map.new(uids, &{&1, comparable(state, &1)}), Map.take(state.child_order, uids)}
+  end
+
+  @incidental ~w(sequence rendered_html rendered_at children)
+
+  defp comparable(state, uid) do
+    diff = Map.get(state.diffs, uid, %{})
+
+    if uid in state.order,
+      do: diff |> Map.drop(@incidental) |> Map.update("block", %{}, &Map.drop(&1, @incidental)),
+      else: Map.drop(diff, @incidental)
   end
 
   # The top of every subtree an editor added: an inserted block whose parent

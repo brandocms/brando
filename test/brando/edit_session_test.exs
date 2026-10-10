@@ -1129,6 +1129,23 @@ defmodule Brando.EditSessionTest do
       assert info.rescues == []
     end
 
+    # Sol audit: a block a rejoin carried into a session seeded from the
+    # rows is stored as the carry made it, which a raw comparison took for
+    # another version: the rejoiner, and the next one holding the same,
+    # were given copies of it.
+    test "rejoiners holding the same new block a fresh session did not have get no copies" do
+      ref = new_ref()
+      base = rows()
+      {:ok, _} = EditSession.join(ref, @field, {base, base})
+      {:ok, held} = Ops.apply_op(base, {:insert, "n", 1, %{"block" => %{"uid" => "n", "description" => "same"}}})
+
+      for _editor <- [:a, :b] do
+        assert {:ok, info} = rejoin_with_stale_rows(ref, base, held)
+        assert info.rescues == []
+        assert info.state.statuses["n"] == :inserted
+      end
+    end
+
     test "a rejoiner holding the same version of a new block the session has gets no copy" do
       ref = new_ref()
       base = rows()
