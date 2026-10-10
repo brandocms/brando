@@ -15,7 +15,8 @@ defmodule Brando.Notifications.Digest do
   minutes (`Brando.Notes`), and routed notifications as single emails.
   Notifications that were waiting for a digest the user has since turned off
   go out with their next email. A mention goes out only while the user may
-  still see its entry (`Brando.Notes.mention_email_items/2`). An email takes
+  still see its entry (`Brando.Notes.mention_email_items/2`), and each item
+  goes out once, however many jobs run (`Brando.Notes.claim_mentions/2`). An email takes
   at most 200 notifications and 100 mentions; a full batch queues the rest
   (`schedule_rest/2`).
   """
@@ -264,13 +265,27 @@ defmodule Brando.Notifications.Digest do
       # Only while the route is active and still names the user, and mentions
       # only while the user may still read their entry
       {readable, unreadable} = Enum.split_with(waiting, &Recipient.may_see?(user, &1, &1.route))
-      notifications = Enum.map(readable, & &1.notification)
-      mention_items = Notes.mention_email_items(user, mentions)
+      entries = Notes.mention_email_entries(user, mentions)
 
-      send_email(user, notifications, mention_items, if(period == :off, do: :batch, else: period))
-      finish(unreadable, [], "cancelled", now, "recipient_unavailable")
-      finish(readable, mentions, "succeeded", now)
+      # Only what this job claims goes out, so two jobs never send the same
+      # item; the email is queued in the same transaction, so an item claimed
+      # is one queued to be sent
+      {:ok, routes} =
+        Repo.transaction(fn ->
+          sent = claim(readable, "succeeded", now)
+          cancelled = claim(unreadable, "cancelled", now, "recipient_unavailable")
+          claimed = Notes.claim_mentions(mentions, now)
+          notifications = for d <- readable, MapSet.member?(sent, d.id), do: d.notification
+          items = for {id, item} <- entries, MapSet.member?(claimed, id), do: item
+
+          send_email(user, notifications, items, if(period == :off, do: :batch, else: period))
+          routes(readable, sent) ++ routes(unreadable, cancelled)
+        end)
+
+      routes |> Enum.uniq() |> Enum.each(&broadcast/1)
     end
+
+    :ok
   end
 
   defp send_email(_user, [], [], _period), do: :ok
@@ -285,16 +300,31 @@ defmodule Brando.Notifications.Digest do
     :ok
   end
 
-  defp finish(deliveries, mentions, state, now, error \\ nil) do
-    if deliveries != [] do
-      ids = Enum.map(deliveries, & &1.id)
-      Repo.update_all(from(d in Delivery, where: d.id in ^ids), set: [state: state, completed_at: now, error: error])
-      Enum.each(deliveries |> Enum.map(& &1.route_id) |> Enum.uniq(), &broadcast/1)
-    end
-
+  defp finish(deliveries, mentions, state, now, error) do
+    claimed = claim(deliveries, state, now, error)
+    deliveries |> routes(claimed) |> Enum.uniq() |> Enum.each(&broadcast/1)
     Notes.mark_emailed(mentions, now)
     :ok
   end
+
+  # Finishes those of `deliveries` still waiting for a digest, and returns
+  # their ids: what the caller has claimed. Another job finishing them at the
+  # same time claims none of them.
+  defp claim(deliveries, state, now, error \\ nil)
+  defp claim([], _state, _now, _error), do: MapSet.new()
+
+  defp claim(deliveries, state, now, error) do
+    ids = Enum.map(deliveries, & &1.id)
+
+    {_, claimed} =
+      Repo.update_all(from(d in Delivery, where: d.id in ^ids and d.state == "digest", select: d.id),
+        set: [state: state, completed_at: now, error: error]
+      )
+
+    MapSet.new(claimed)
+  end
+
+  defp routes(deliveries, claimed), do: for(d <- deliveries, MapSet.member?(claimed, d.id), do: d.route_id)
 
   defp broadcast(route_id), do: Brando.Notifications.Routing.broadcast({:delivery, route_id})
 end

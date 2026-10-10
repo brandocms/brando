@@ -36,6 +36,29 @@ defmodule Brando.NotesTest do
     Repo.insert!(%Mention{note_id: note.id, user_id: user.id, inserted_at: now})
   end
 
+  # Runs `fun` once, in this process, right after the first query on
+  # `source` whose SQL contains `text`: what a concurrent job would do then
+  defp once_after_query(source, text, fun) do
+    test = self()
+    id = "once-after-query-#{System.unique_integer([:positive])}"
+    prefix = BrandoIntegration.Repo.config()[:telemetry_prefix] || [:brando_integration, :repo]
+
+    :telemetry.attach(
+      id,
+      prefix ++ [:query],
+      fn _event, _measurements, meta, _config ->
+        if self() == test and meta.source == source and String.starts_with?(meta.query, "SELECT") and
+             String.contains?(meta.query, text) and !Process.get(id) do
+          Process.put(id, true)
+          fun.()
+        end
+      end,
+      nil
+    )
+
+    on_exit(fn -> :telemetry.detach(id) end)
+  end
+
   defp events(page, actions) do
     Repo.all(
       from(e in Event,
@@ -341,6 +364,35 @@ defmodule Brando.NotesTest do
       assert log =~ "association not loaded"
       assert_email_sent(fn email -> email.text_body =~ "readable" and not (email.text_body =~ "policed") end)
       assert Notes.mentions_for(reader.id, unsent: true) == []
+    end
+
+    test "mentions another job sent meanwhile are not sent again", %{author: author, other: other, page: page} do
+      Oban.Testing.with_testing_mode(:manual, fn ->
+        thread!(page, author, %{"body" => "@Trond Mjøen once", "mentions" => [other.id]})
+      end)
+
+      # Another job takes and sends them right after this one read them
+      once_after_query("note_mentions", ~s("entry_notes"), fn ->
+        Repo.update_all(from(m in Mention, where: m.user_id == ^other.id), set: [emailed_at: DateTime.utc_now()])
+      end)
+
+      assert :ok = Notes.deliver_mentions(other.id)
+      assert_no_email_sent()
+    end
+
+    test "mentions whose email cannot be queued stay unsent", %{author: author, other: other, page: page} do
+      Oban.Testing.with_testing_mode(:manual, fn ->
+        thread!(page, author, %{"body" => "@Trond Mjøen kept", "mentions" => [other.id]})
+
+        assert_raise Postgrex.Error, fn ->
+          Repo.transaction(fn ->
+            Repo.query!("ALTER TABLE oban_jobs RENAME TO oban_jobs_away")
+            Notes.deliver_mentions(other.id)
+          end)
+        end
+      end)
+
+      assert [_] = Notes.mentions_for(other.id, unsent: true)
     end
 
     test "a further email that cannot be queued fails the job, to be retried", %{author: author, other: other} do

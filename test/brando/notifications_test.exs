@@ -807,6 +807,42 @@ defmodule Brando.NotificationsTest do
       assert {:error, :not_due} = Digest.rest_queued({:ok, not_due}, due_by)
     end
 
+    test "notifications another job sent meanwhile are not sent again", %{user: user} do
+      reader = Factory.insert(:random_user, config: %UserConfig{notification_digest: :daily})
+      route = route!(user, %{"kind" => "email", "events" => ["failed_job"], "recipient_ids" => [reader.id]})
+      now = DateTime.utc_now()
+
+      Repo.insert!(%Delivery{
+        route_id: route.id,
+        recipient_id: reader.id,
+        event: "failed_job",
+        state: "digest",
+        notification: %{"event" => "failed_job", "job" => %{"worker" => "MyApp.Once", "error" => "boom"}}
+      })
+
+      # Another job takes and sends them right after this one read them
+      test = self()
+      id = "digest-claim-#{System.unique_integer([:positive])}"
+
+      :telemetry.attach(
+        id,
+        [:brando_integration, :repo, :query],
+        fn _event, _measurements, meta, _config ->
+          if self() == test and meta.source == "notification_deliveries" and
+               String.starts_with?(meta.query, "SELECT") and !Process.get(id) do
+            Process.put(id, true)
+            Repo.update_all(from(d in Delivery, where: d.route_id == ^route.id), set: [state: "succeeded"])
+          end
+        end,
+        nil
+      )
+
+      on_exit(fn -> :telemetry.detach(id) end)
+
+      assert :ok = Notes.deliver_mentions(reader.id, Digest.next_at(:daily, now))
+      assert_no_email_sent()
+    end
+
     test "one email job waits per user, however long ago it was queued", %{user: user} do
       reader = Factory.insert(:random_user, config: %UserConfig{notification_digest: :daily})
       _route = route!(user, %{"kind" => "email", "events" => ["failed_job"], "recipient_ids" => [reader.id]})
