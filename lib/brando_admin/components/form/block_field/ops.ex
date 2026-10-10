@@ -1084,8 +1084,9 @@ defmodule BrandoAdmin.Components.Form.BlockField.Ops do
 
   @doc """
   The new blocks `held` added (the tops of their subtrees) that `state`
-  has as well, in another version: their own or their descendants' params,
-  or the blocks under them, differ.
+  has as well, still unsaved, in another version: their own or their
+  descendants' params, or the blocks under them, differ. (A block `state`
+  has saved since is a row there, which holds no params to compare.)
 
   `carry/4` leaves a new block the target already has as it is there. A
   rejoining editor who held another version of it gets its own back as a
@@ -1095,7 +1096,7 @@ defmodule BrandoAdmin.Components.Form.BlockField.Ops do
   def diverged_inserts(%__MODULE__{} = held, %__MODULE__{} = state) do
     held
     |> inserted_tops()
-    |> Enum.filter(&(known?(state, &1) and new_subtree(held, &1) != new_subtree(state, &1)))
+    |> Enum.filter(&(state.statuses[&1] == :inserted and new_subtree(held, &1) != new_subtree(state, &1)))
   end
 
   defp new_subtree(state, uid) do

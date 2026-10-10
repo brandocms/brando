@@ -321,6 +321,9 @@ defmodule Brando.EditSession do
        # blocks with unsaved work a write removed, waiting for the editor
        # asked to bring them back (`assign_rescues/6`)
        rescues: %{},
+       # the uids of the copies joiners were told to make (`copies/5`):
+       # taken, though not in the state until their inserts arrive
+       copy_uids: MapSet.new(),
        # editors that left to show something else (`detach/2`), monitored so
        # their marks go when they do
        detached: %{},
@@ -511,7 +514,8 @@ defmodule Brando.EditSession do
         }
       end)
 
-    Map.put(info(session, field, pid, false), :rescues, rescues ++ copies(session, field, pid, held, new))
+    {copies, session} = copies(session, field, pid, held, new)
+    {Map.put(info(session, field, pid, false), :rescues, rescues ++ copies), session}
   end
 
   # New blocks the joiner held that the session has in another version (an
@@ -520,20 +524,24 @@ defmodule Brando.EditSession do
   defp copies(session, field, pid, %Ops{} = held, %Ops{} = new) do
     held
     |> Ops.diverged_inserts(new)
-    |> Enum.map(fn group ->
-      %{
+    |> Enum.map_reduce(session, fn group, session ->
+      kept = kept_uid(session, field, held, new, group)
+
+      copy = %{
         group: group,
-        kept: kept_uid(session, field, held, new, group),
+        kept: kept,
         uids: [group | Ops.descendants(held, group)],
         rescuer: pid,
         owners: [pid],
         orphan?: false,
         copy?: true
       }
+
+      {copy, %{session | copy_uids: MapSet.put(session.copy_uids, {field, kept})}}
     end)
   end
 
-  defp copies(_session, _field, _pid, _held, _new), do: []
+  defp copies(session, _field, _pid, _held, _new), do: {[], session}
 
   # `exclude`: an editor whose replica moves on with the reply of the call
   # that caused this rebase (a join, the replica's own rebase), and never
@@ -643,6 +651,7 @@ defmodule Brando.EditSession do
   # theirs is taken either.
   defp kept_uid(session, field, old, new, group) do
     claimed = for {{^field, _group}, %{kept: kept}} <- session.rescues, into: MapSet.new(), do: kept
+    claimed = for {^field, kept} <- session.copy_uids, into: claimed, do: kept
     uids = [group | if(match?(%Ops{}, old), do: Ops.descendants(old, group), else: [])]
     taken? = fn uid -> uid in claimed or (match?(%Ops{}, new) and Ops.known?(new, uid)) end
 
@@ -781,7 +790,8 @@ defmodule Brando.EditSession do
       |> do_rebase(field, base, {:client, {:detached, pid}}, pid, :saved, pid)
       |> merge_held(field, held, opts[:held_base] || base, pid)
 
-    {{:ok, joiner_info(session, field, pid, held, conflicts)}, session}
+    {info, session} = joiner_info(session, field, pid, held, conflicts)
+    {{:ok, info}, session}
   end
 
   defp do_join(session, pid, field, base, held, opts, _how) do
@@ -798,7 +808,8 @@ defmodule Brando.EditSession do
       {{:merged, conflicts}, data} ->
         session = %{session | data: data}
         broadcast_state(session, field, pid, :joined, conflicts, [])
-        {{:ok, joiner_info(session, field, pid, held, conflicts)}, session}
+        {info, session} = joiner_info(session, field, pid, held, conflicts)
+        {{:ok, info}, session}
 
       {:mismatch, data} when rebase? ->
         {session, conflicts} =
@@ -808,7 +819,8 @@ defmodule Brando.EditSession do
           |> do_rebase(field, base, :carry, pid, :rows_read, pid)
           |> merge_held(field, held, held_base, pid)
 
-        {{:ok, joiner_info(session, field, pid, held, conflicts)}, session}
+        {info, session} = joiner_info(session, field, pid, held, conflicts)
+        {{:ok, info}, session}
 
       {:mismatch, data} ->
         {{:error, :base_mismatch}, %{session | data: data}}

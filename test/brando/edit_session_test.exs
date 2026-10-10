@@ -1082,6 +1082,53 @@ defmodule Brando.EditSessionTest do
       assert state.diffs[kept]["block"]["description"] == "B's version"
     end
 
+    # Sol audit: two rejoiners were both given `n-kept`; the second insert
+    # was turned away and its version lost.
+    test "two rejoiners with their own versions of a new block get copies under different uids" do
+      ref = new_ref()
+      base = rows()
+      insert = fn text -> {:insert, "n", 1, %{"block" => %{"uid" => "n", "description" => text}}} end
+      {:ok, seed} = Ops.apply_op(base, insert.("A's version"))
+      {:ok, _} = EditSession.join(ref, @field, {base, seed})
+
+      kept =
+        for text <- ["B's version", "C's version"] do
+          {:ok, held} = Ops.apply_op(base, insert.(text))
+          parent = self()
+
+          spawn(fn ->
+            {:ok, info} = EditSession.join(ref, @field, {base, held})
+            send(parent, {:kept, Enum.map(info.rescues, & &1.kept)})
+            Process.sleep(:infinity)
+          end)
+
+          assert_receive {:kept, [uid]}
+          uid
+        end
+
+      assert kept == ["n-kept", "n-kept-2"]
+    end
+
+    # Sol audit: a block saved before the rejoin is a row with no diff in
+    # the session, so any held version looked different from it.
+    test "a rejoiner holding a new block the session has saved since gets no copy" do
+      ref = new_ref()
+      base = rows()
+      {:ok, held} = Ops.apply_op(base, {:insert, "n", 1, %{"block" => %{"uid" => "n", "description" => "same"}}})
+
+      saved =
+        Ops.from_entry_blocks([
+          entry_block("a", 1, 10, [child("a1", 11)]),
+          entry_block("n", 9, 90),
+          entry_block("b", 2, 20)
+        ])
+
+      {:ok, _} = EditSession.join(ref, @field, {saved, saved})
+
+      assert {:ok, info} = EditSession.join(ref, @field, {saved, held}, held_base: base, rebase: true)
+      assert info.rescues == []
+    end
+
     test "a rejoiner holding the same version of a new block the session has gets no copy" do
       ref = new_ref()
       base = rows()
