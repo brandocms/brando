@@ -314,7 +314,10 @@ end
 # the CDN entirely.
 Mox.defmock(Brando.CDN.Client.Mock, for: Brando.CDN.Client)
 
-ExUnit.start()
+# `render_async/2`, `assert_patch/2`, `assert_push/3` and friends default to
+# this timeout. ExUnit's 100 ms flaked on loaded CI runners; a longer one only
+# slows an assertion that fails anyway. `refute_receive` keeps its 100 ms.
+ExUnit.start(assert_receive_timeout: 1_000)
 
 # priv/repo/seeds.exs creates the identity and SEO rows that the Permalink,
 # IdentityServices and SEO tests read. These two cache fills are the only
