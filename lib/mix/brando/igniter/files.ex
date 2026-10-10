@@ -37,8 +37,57 @@ if Code.ensure_loaded?(Igniter) do
           end
 
         true ->
-          Igniter.create_new_file(igniter, path, contents)
+          create_new(igniter, path, contents)
       end
+    end
+
+    # Igniter formats each new Elixir file inside a snapshot of the project's
+    # evaluated config, which costs more than the formatting itself: an install
+    # creates hundreds of files. Only formatter plugins can read that config, so
+    # a file whose formatter has none is formatted directly, with the same
+    # formatter Igniter would use. `Igniter.format/2` with no paths does the
+    # rest of Igniter's preparation (reading the config and formatter files).
+    defp create_new(igniter, path, contents) do
+      with true <- Path.extname(path) in Rewrite.Source.Ex.extensions(),
+           false <- Map.get(igniter.assigns, :brando_format_each_file, false),
+           igniter = Igniter.format(igniter, []),
+           {:ok, formatted} <- format_without_plugins(igniter, path, contents) do
+        Igniter.create_new_file(igniter, path, formatted, format?: false)
+      else
+        _ -> Igniter.create_new_file(igniter, path, contents)
+      end
+    end
+
+    defp format_without_plugins(igniter, path, contents) do
+      dot_formatter = Rewrite.dot_formatter(igniter.rewrite)
+
+      if plugins?(dot_formatter_for_file(dot_formatter, path)) do
+        :plugins
+      else
+        with {:ok, source} <- path |> source(contents) |> Rewrite.Source.format(dot_formatter: dot_formatter) do
+          {:ok, Rewrite.Source.get(source, :content)}
+        end
+      end
+    end
+
+    defp source(path, contents), do: Rewrite.Source.Ex.from_string(contents, path: path)
+
+    defp plugins?(dot_formatter), do: Enum.any?(List.wrap(dot_formatter.plugins) ++ List.wrap(dot_formatter.sigils))
+
+    # The nearest formatter in the tree whose directory contains the file, as
+    # Rewrite.DotFormatter picks it.
+    defp dot_formatter_for_file(dot_formatter, path) do
+      Enum.find_value(List.wrap(dot_formatter.subs), dot_formatter, fn %{path: sub_path} = sub ->
+        size = byte_size(sub_path)
+
+        case path do
+          <<^sub_path::binary-size(^size), separator, _::binary>> when separator in [?/, ?\\] ->
+            dot_formatter_for_file(sub, path)
+
+          _ ->
+            nil
+        end
+      end)
     end
 
     defp equivalent?(_path, contents, contents), do: true
