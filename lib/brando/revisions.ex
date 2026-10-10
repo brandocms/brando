@@ -470,18 +470,21 @@ defmodule Brando.Revisions do
         assoc = :"entry_#{block_field.name}"
         loaded = BlockIdentity.index(Map.get(current_entry, assoc))
         restored = BlockIdentity.index(Map.get(target_entry, assoc))
-
-        case changeset.changes do
-          %{^assoc => entry_blocks} when is_list(entry_blocks) ->
-            entry_blocks = Enum.map(entry_blocks, &BlockIdentity.keep_entry_block(&1, loaded, restored))
-            %{changeset | changes: Map.put(changeset.changes, assoc, entry_blocks)}
-
-          _ ->
-            changeset
-        end
+        keep_entry_blocks_identity(changeset, assoc, loaded, restored)
       end)
     else
       changeset
+    end
+  end
+
+  defp keep_entry_blocks_identity(%{changes: changes} = changeset, assoc, loaded, restored) do
+    case changes do
+      %{^assoc => entry_blocks} when is_list(entry_blocks) ->
+        entry_blocks = Enum.map(entry_blocks, &BlockIdentity.keep_entry_block(&1, loaded, restored))
+        %{changeset | changes: Map.put(changes, assoc, entry_blocks)}
+
+      _ ->
+        changeset
     end
   end
 
