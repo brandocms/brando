@@ -528,7 +528,7 @@ defmodule Brando.Publisher do
     # evicts the entry's cached queries before the commit, so again after it.
     result =
       if Brando.Authorization.Engine.enabled?(),
-        do: Repo.transaction(fn -> if still_due?(schema, entry, action), do: save.(), else: :changed end),
+        do: Repo.transaction(fn -> save_if_due(schema, entry, action, save) end),
         else: {:ok, save.()}
 
     case result do
@@ -554,6 +554,9 @@ defmodule Brando.Publisher do
       Brando.Cache.put(failed_key(schema, entry), true, @failed_ttl)
       {:error, error}
   end
+
+  defp save_if_due(schema, entry, action, save),
+    do: if(still_due?(schema, entry, action), do: save.(), else: :changed)
 
   # The entry still has the status and date the sweep found, out of the
   # trash: a job that refused its date, or an editor, may have changed it
