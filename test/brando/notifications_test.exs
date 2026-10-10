@@ -986,6 +986,19 @@ defmodule Brando.NotificationsTest do
       {:ok, prefix: prefix}
     end
 
+    test "a user's email job outside any site is not taken for one in a site", %{prefix: prefix} do
+      reader = Factory.insert(:random_user, config: %UserConfig{notification_digest: :daily})
+
+      Oban.Testing.with_testing_mode(:manual, fn ->
+        assert {:ok, %{conflict?: false}} = Brando.Tenant.with_prefix(prefix, fn -> Digest.schedule(reader.id) end)
+        assert {:ok, %{conflict?: false}} = Digest.schedule(reader.id)
+        assert {:ok, %{conflict?: true}} = Digest.schedule(reader.id)
+
+        jobs = all_enqueued(worker: Brando.Worker.NoteMentions, args: %{"user_id" => reader.id})
+        assert jobs |> Enum.map(& &1.args["tenant_prefix"]) |> Enum.sort() == [prefix, nil] |> Enum.sort()
+      end)
+    end
+
     test "a copy's routes are paused, its log cleared, and resumed when it goes live", %{user: user, prefix: prefix} do
       {route, manual} =
         Brando.Tenant.with_prefix(prefix, fn ->

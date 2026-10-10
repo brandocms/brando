@@ -153,8 +153,11 @@ defmodule Brando.Notifications.Digest do
     seconds = delay.()
     timing = if seconds > 0, do: [schedule_in: seconds], else: [scheduled_at: DateTime.utc_now()]
 
+    # An explicit `nil` outside any site: Oban's uniqueness matches args by
+    # containment, so a job without the key would match every site's job
     %{"user_id" => user_id}
     |> Brando.Tenant.Job.attach_current()
+    |> Map.put_new("tenant_prefix", nil)
     |> Brando.Worker.NoteMentions.new([replace: replace] ++ timing)
     |> available_when_due(seconds)
     |> Oban.insert()
