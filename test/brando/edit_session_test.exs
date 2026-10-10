@@ -731,6 +731,40 @@ defmodule Brando.EditSessionTest do
       assert [%{"id" => 5, "cols" => "B's cell"}, %{"id" => 8}] = params["block"]["table_rows"]
     end
 
+    test "a save's rebase replays a carry op with the rows the merge kept" do
+      base = Ops.from_entry_blocks([entry_block("a", 1, 10), entry_block("b", 2, 20)])
+      {:seeded, data} = Data.join(Data.new(1), @field, base, base)
+      rows_then = [%{"id" => 5}]
+      added = %{"sync_uid" => "new", "cols" => "A's row"}
+
+      {:ok, data} =
+        Data.apply_op(
+          data,
+          @field,
+          {:set_field, "a", ["block", "table_rows"], {:list, rows_then, rows_then ++ [added]}, 0}
+        )
+
+      data = Data.mark_save(data, @field, :saver, 0)
+
+      # a recovery copy applied through the session (`restore_into_session/3`)
+      cell = ["block", {:at, "table_rows", {"id", 5}, rows_then}, "cols"]
+      {:ok, copy} = Ops.apply_op(base, {:set_field, "a", cell, "copy's cell", 0})
+      {:ok, data} = Data.apply_op(data, @field, {:carry, copy, base})
+
+      saved =
+        Ops.from_entry_blocks([
+          %{
+            id: 1,
+            block: %{uid: "a", id: 10, children: [], table_rows: [%{id: 5, sync_uid: "r5"}, %{id: 8, sync_uid: "new"}]}
+          },
+          entry_block("b", 2, 20)
+        ])
+
+      {:ok, data, []} = Data.rebase(data, @field, saved, {:client, :saver})
+      {:ok, params} = Ops.materialize_root(Data.state(data, @field), "a")
+      assert [%{"id" => 5, "cols" => "copy's cell"}, %{"id" => 8}] = params["block"]["table_rows"]
+    end
+
     test "a rejoin carrying work after a save's read is kept by that save's rebase, on the session" do
       ref = new_ref()
       Phoenix.PubSub.subscribe(Brando.pubsub(), ref.topic)

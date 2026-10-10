@@ -1079,13 +1079,18 @@ defmodule BrandoAdmin.Components.Form.BlockField.Ops do
     end
   end
 
-  defp carry_update({uid, diff}, {acc, conflicts}, _state) do
+  defp carry_update({uid, diff}, {acc, conflicts}, state) do
     if known?(acc, uid) do
       # Rows just loaded hold no diff, but live session state can (a
       # rejoin, a recovery copy), so the diff is merged with the one held
       # there (`carry_merge/2`). An `:update` replaces a root's diff and
       # merges a child's onto its own, which the merged diff already holds.
-      diff = carry_merge(Map.get(acc.diffs, uid, %{}), diff)
+      # A row one side named by uid while it was new, and the other by the
+      # id a save gave it, is one row: both are named by id first.
+      root? = uid in acc.order
+      ids = Map.merge(Map.get(state.rel_ids, uid, %{}), Map.get(acc.rel_ids, uid, %{}))
+      now = acc.diffs |> Map.get(uid, %{}) |> fill_diff_ids(root?, ids)
+      diff = carry_merge(now, fill_diff_ids(diff, root?, ids))
       {carry_apply(acc, {:update, uid, diff}), conflicts}
     else
       {acc, [uid | conflicts]}

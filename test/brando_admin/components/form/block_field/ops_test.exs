@@ -528,6 +528,27 @@ defmodule BrandoAdmin.Components.Form.BlockField.OpsTest do
       assert carried.diffs["b"]["block"]["table_rows"] == [%{"id" => 5, "cols" => "unsaved work"}]
     end
 
+    # Sol audit: the carried side names a row by its sync uid (new when it
+    # was made), the target by the id a save gave it since: one row.
+    test "a row named by uid on one side and by id on the other is one row" do
+      old_base = base_rows()
+
+      saved =
+        Ops.from_entry_blocks([
+          entry_block("a", 1, 10, [child("a1", 11), child("a2", 12)]),
+          %{id: 2, block: %{uid: "b", id: 20, children: [], table_rows: [%{id: 8, sync_uid: "new"}]}},
+          entry_block("c", 3, 30)
+        ])
+
+      live =
+        apply!(saved, {:update, "b", %{"block" => %{"table_rows" => [%{"id" => 8, "sync_uid" => "new", "cols" => "A"}]}}})
+
+      held = apply!(old_base, {:update, "b", %{"block" => %{"table_rows" => [%{"sync_uid" => "new", "cols" => "B"}]}}})
+
+      carried = apply!(live, {:carry, held, old_base})
+      assert [%{"id" => 8, "cols" => "B"}] = carried.diffs["b"]["block"]["table_rows"]
+    end
+
     test "rows written outside the session take the editors' root diffs as they are" do
       old_base = base_rows()
       state = apply!(old_base, {:update, "b", %{"block" => %{"anchor" => "editor"}}})

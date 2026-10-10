@@ -104,10 +104,14 @@ defmodule Brando.EditSession.Data do
       # replays the merge as the equivalent op, or the work would be lost.
       # Its row lists are the merged ones: the rows the merge kept may be
       # rows by then (`Ops.with_merged_lists/2`).
-      log = log(entry, rev, {:carry, Ops.with_merged_lists(held, state), held_base})
+      log = log(entry, rev, logged({:carry, held, held_base}, state))
       {{:merged, conflicts}, put_field(data, field, %{entry | state: state, rev: rev, log: log})}
     end
   end
+
+  # A carry replays with the row lists it merged into (`merge_held/4`).
+  defp logged({:carry, carried, base}, state), do: {:carry, Ops.with_merged_lists(carried, state), base}
+  defp logged(op, _state), do: op
 
   # What a mark's rebase replays: kept only while a save is in flight.
   defp log(%{marks: marks}, _rev, _op) when marks == %{}, do: []
@@ -160,7 +164,7 @@ defmodule Brando.EditSession.Data do
     with %{} = entry <- Map.get(data.fields, field, {:error, {:unknown_field, field}}),
          {:ok, state} <- safe_apply(entry.state, op) do
       rev = entry.rev + 1
-      data = put_field(data, field, %{entry | state: state, rev: rev, log: log(entry, rev, op)})
+      data = put_field(data, field, %{entry | state: state, rev: rev, log: log(entry, rev, logged(op, state))})
 
       case origin do
         {client, seq} -> {:ok, note_seq(data, field, client, seq)}
