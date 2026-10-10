@@ -1081,18 +1081,18 @@ defmodule BrandoAdmin.Components.Form.BlockField.Ops do
 
   defp carry_update({uid, diff}, {acc, conflicts}, _state) do
     if known?(acc, uid) do
-      # Children store deltas that merge; an `:update` replaces a root's
-      # cumulative diff. Rows just loaded hold no diff, but live session
-      # state can (a rejoin, a recovery copy), so a root's diff is merged
-      # with the one held there (`carry_root_diff/2`).
-      diff = if uid in acc.order, do: carry_root_diff(Map.get(acc.diffs, uid, %{}), diff), else: diff
+      # Rows just loaded hold no diff, but live session state can (a
+      # rejoin, a recovery copy), so the diff is merged with the one held
+      # there (`carry_merge/2`). An `:update` replaces a root's diff and
+      # merges a child's onto its own, which the merged diff already holds.
+      diff = carry_merge(Map.get(acc.diffs, uid, %{}), diff)
       {carry_apply(acc, {:update, uid, diff}), conflicts}
     else
       {acc, [uid | conflicts]}
     end
   end
 
-  # A root's carried diff onto the diff the target holds for it. The fields
+  # A carried diff onto the diff the target holds for the block. The fields
   # the carried diff has win; the target's other fields stay. Lists of
   # rows (refs, vars, table rows, a var's options, ...) merge by row
   # (`carry_list/3`), at every depth, because a diff holds a whole list as
@@ -1102,8 +1102,6 @@ defmodule BrandoAdmin.Components.Form.BlockField.Ops do
   # the carried diff lacks is one its editor did not change: the target's
   # value stays. (An editor who set a field back to its saved value with a
   # whole-form `:update` sends no key for it, which reads the same.)
-  defp carry_root_diff(current, carried), do: carry_merge(current, carried)
-
   defp carry_merge(now, value) when is_map(now) and is_map(value) and not is_struct(now) and not is_struct(value),
     do: Map.merge(now, value, &carry_merge/3)
 
@@ -1117,11 +1115,11 @@ defmodule BrandoAdmin.Components.Form.BlockField.Ops do
   # are named by id alone carry no change. So the list before is the rows
   # with an id on either side, and `merge_list/4` keeps what each side
   # added, removed and changed. A row both kept merges field by field
-  # (`carry_merge/2`), the carried fields winning; a row one removed and
-  # the other changed comes back with the change, as with two editors'
-  # list ops. An item with no id (a new row, a select option) cannot be
-  # told added from removed, so both sides' are kept. Items that cannot be
-  # named at all are set whole, as the carried editor has them.
+  # (`carry_merge/2`), the carried fields winning. A row one side removed
+  # and the other changed stays, with the change: it is work. An item with
+  # no id (a new row, a select option) cannot be told added from removed,
+  # so both sides' are kept. Items that cannot be named at all are set
+  # whole, as the carried editor has them.
   defp carry_list(key, current, carried) do
     named = Enum.map(current, &identity(&1, key))
     carried_named = Enum.map(carried, &identity(&1, key))
@@ -1129,7 +1127,15 @@ defmodule BrandoAdmin.Components.Form.BlockField.Ops do
     if :none in named or :none in carried_named or repeated?(named) or repeated?(carried_named) do
       carried
     else
-      before = (carried ++ current) |> Enum.flat_map(&saved_row/1) |> Enum.uniq()
+      # the target's changed rows the carried side removed read as added
+      kept = Enum.reject(current, &(unchanged_row?(&1) or Enum.any?(carried, fn item -> same_row?(item, &1, key) end)))
+
+      before =
+        (carried ++ current)
+        |> Enum.reject(fn item -> Enum.any?(kept, &same_row?(&1, item, key)) end)
+        |> Enum.flat_map(&saved_row/1)
+        |> Enum.uniq()
+
       after_list = Enum.map(carried, &if(unchanged_row?(&1), do: Map.take(&1, ["id"]), else: &1))
 
       before
@@ -1140,6 +1146,39 @@ defmodule BrandoAdmin.Components.Form.BlockField.Ops do
 
   defp merge_row(item, nil), do: item
   defp merge_row(item, now), do: carry_merge(now, item)
+
+  @doc """
+  `carried` with the row lists of its diffs as `merged` holds them, where
+  `merged` is what carrying it gave (`carry/3`).
+
+  The edit session logs a carry it made while a save was in flight, to
+  replay it onto the saved rows. Replayed as it was, a carried list would
+  leave out rows the merge kept, the save has written them, and the next
+  save would delete them. With the merged lists it keeps them, and its
+  other fields are still only the ones the carried editor changed.
+  """
+  @spec with_merged_lists(t(), t()) :: t()
+  def with_merged_lists(%__MODULE__{} = carried, %__MODULE__{} = merged) do
+    diffs =
+      Map.new(carried.diffs, fn {uid, diff} ->
+        merged_diff = Map.get(merged.diffs, uid, %{})
+
+        if uid in carried.order,
+          do: {uid, Map.update(diff, "block", %{}, &take_lists(&1, Map.get(merged_diff, "block", %{})))},
+          else: {uid, take_lists(diff, merged_diff)}
+      end)
+
+    %{carried | diffs: diffs}
+  end
+
+  defp take_lists(%{} = diff, %{} = merged) when not is_struct(diff) and not is_struct(merged) do
+    Map.new(diff, fn
+      {key, list} when is_list(list) -> {key, if(is_list(merged[key]), do: merged[key], else: list)}
+      pair -> pair
+    end)
+  end
+
+  defp take_lists(diff, _merged), do: diff
 
   defp saved_row(%{"id" => id}) when id not in [nil, ""], do: [%{"id" => id}]
   defp saved_row(_item), do: []

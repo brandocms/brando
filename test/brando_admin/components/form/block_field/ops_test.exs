@@ -517,6 +517,17 @@ defmodule BrandoAdmin.Components.Form.BlockField.OpsTest do
       assert Enum.map(merged, & &1["value"]) == ["25", "50", "75", "100"]
     end
 
+    # Sol audit: a row the carried side left out of its list, but the target
+    # changed, was dropped with the change.
+    test "a row the target changed stays when the carried list leaves it out" do
+      base = base_rows()
+      live = apply!(base, {:update, "b", %{"block" => %{"table_rows" => [%{"id" => 5, "cols" => "unsaved work"}]}}})
+      held = apply!(base, {:update, "b", %{"block" => %{"table_rows" => []}}})
+
+      carried = apply!(live, {:carry, held, base})
+      assert carried.diffs["b"]["block"]["table_rows"] == [%{"id" => 5, "cols" => "unsaved work"}]
+    end
+
     test "rows written outside the session take the editors' root diffs as they are" do
       old_base = base_rows()
       state = apply!(old_base, {:update, "b", %{"block" => %{"anchor" => "editor"}}})

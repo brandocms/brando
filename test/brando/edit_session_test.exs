@@ -695,6 +695,42 @@ defmodule Brando.EditSessionTest do
       assert Data.state(data, @field).diffs["a"]["block"]["table_rows"] == [%{"id" => 5, "cols" => "B's cell"}, added]
     end
 
+    # Sol audit: the save's rebase replayed the rejoiner's list as it held
+    # it, onto rows that now include a row the save wrote; the next save
+    # would delete that row.
+    test "a save's rebase replays a rejoin with the rows the merge kept" do
+      base = Ops.from_entry_blocks([entry_block("a", 1, 10), entry_block("b", 2, 20)])
+      {:seeded, data} = Data.join(Data.new(1), @field, base, base)
+      rows_then = [%{"id" => 5}]
+      added = %{"sync_uid" => "new", "cols" => "A's row"}
+
+      {:ok, data} =
+        Data.apply_op(
+          data,
+          @field,
+          {:set_field, "a", ["block", "table_rows"], {:list, rows_then, rows_then ++ [added]}, 0}
+        )
+
+      data = Data.mark_save(data, @field, :saver, 0)
+
+      cell = ["block", {:at, "table_rows", {"id", 5}, rows_then}, "cols"]
+      {:ok, held} = Ops.apply_op(base, {:set_field, "a", cell, "B's cell", 0})
+      {{:merged, []}, data} = Data.join(data, @field, base, held)
+
+      saved =
+        Ops.from_entry_blocks([
+          %{
+            id: 1,
+            block: %{uid: "a", id: 10, children: [], table_rows: [%{id: 5, sync_uid: "r5"}, %{id: 8, sync_uid: "new"}]}
+          },
+          entry_block("b", 2, 20)
+        ])
+
+      {:ok, data, []} = Data.rebase(data, @field, saved, {:client, :saver})
+      {:ok, params} = Ops.materialize_root(Data.state(data, @field), "a")
+      assert [%{"id" => 5, "cols" => "B's cell"}, %{"id" => 8}] = params["block"]["table_rows"]
+    end
+
     test "a rejoin carrying work after a save's read is kept by that save's rebase, on the session" do
       ref = new_ref()
       Phoenix.PubSub.subscribe(Brando.pubsub(), ref.topic)

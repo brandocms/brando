@@ -102,7 +102,9 @@ defmodule Brando.EditSession.Data do
       rev = entry.rev + 1
       # A save in flight read the state before this merge: its rebase
       # replays the merge as the equivalent op, or the work would be lost.
-      log = log(entry, rev, {:carry, held, held_base})
+      # Its row lists are the merged ones: the rows the merge kept may be
+      # rows by then (`Ops.with_merged_lists/2`).
+      log = log(entry, rev, {:carry, Ops.with_merged_lists(held, state), held_base})
       {{:merged, conflicts}, put_field(data, field, %{entry | state: state, rev: rev, log: log})}
     end
   end
