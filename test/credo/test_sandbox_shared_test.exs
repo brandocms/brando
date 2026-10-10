@@ -43,6 +43,21 @@ defmodule Brando.Credo.Check.TestSandboxSharedTest do
     end)
   end
 
+  test "follows an alias built on an earlier alias" do
+    """
+    defmodule SampleTest do
+      alias Ecto.Adapters.SQL
+      alias SQL.Sandbox
+
+      setup do
+        Sandbox.mode(Repo, {:shared, self()})
+      end
+    end
+    """
+    |> issues()
+    |> assert_issue(fn issue -> assert issue.trigger == "Sandbox.mode" end)
+  end
+
   test "leaves unshared sandboxes and other :shared values alone" do
     """
     defmodule SampleTest do
