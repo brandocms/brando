@@ -16370,6 +16370,11 @@ msgstr "Beskrivelsen begynner med å gjenta tittelen."
 msgid "The documents could not be added. Check the connection and try again."
 msgstr "Dokumentene kunne ikke legges til. Sjekk tilkoblingen og prøv igjen."
 
+#: lib/brando_admin/live/sites/notifications_live.ex
+#, elixir-autogen, elixir-format
+msgid "The email could not be made or sent"
+msgstr "E-posten kunne ikke lages eller sendes"
+
 #: lib/brando_admin/live/sites/seo_live.ex
 #, elixir-autogen, elixir-format
 msgid "The entry cannot be saved until these fields are fixed: %{fields}"

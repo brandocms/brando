@@ -236,24 +236,23 @@ defmodule BrandoAdmin.Sites.NotificationsLiveTest do
       refute has_element?(view, "#notification-delivery-#{again.id} [data-testid=notification-redeliver]")
     end
 
-    test "a delivery whose recipient could not be checked says so, not the database's words", %{
-      conn: conn,
-      current_user: user
-    } do
+    test "a delivery that failed on our side says why, in words, not a code", %{conn: conn, current_user: user} do
       route = create_route(user)
 
-      failed =
-        Repo.insert!(%Brando.Notifications.Delivery{
-          route_id: route.id,
-          event: "failed_job",
-          notification: %{"event" => "failed_job", "job" => %{"worker" => "MyApp.Sync"}},
-          state: "failed",
-          error: "recipient_check_failed"
-        })
+      for code <- ~w(recipient_check_failed mail_failed email_failed) do
+        failed =
+          Repo.insert!(%Brando.Notifications.Delivery{
+            route_id: route.id,
+            event: "failed_job",
+            notification: %{"event" => "failed_job", "job" => %{"worker" => "MyApp.Sync"}},
+            state: "failed",
+            error: code
+          })
 
-      {:ok, view, _html} = live(conn, "/admin/config/notifications/#{route.id}/deliveries")
-      html = view |> element("#notification-delivery-#{failed.id} .webhook-error") |> render()
-      refute html =~ "recipient_check_failed"
+        {:ok, view, _html} = live(conn, "/admin/config/notifications/#{route.id}/deliveries")
+        html = view |> element("#notification-delivery-#{failed.id} .webhook-error") |> render()
+        refute html =~ code
+      end
     end
 
     test "only a delivery of this environment", %{conn: conn, current_user: user} do
