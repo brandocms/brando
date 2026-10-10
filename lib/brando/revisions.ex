@@ -314,7 +314,7 @@ defmodule Brando.Revisions do
           |> Repo.get!(entry_id)
           |> Repo.preload(Brando.Blueprint.preloads_for(entry_schema))
 
-        restore_params = prepare_restore_params(target_entry, publish?)
+        restore_params = target_entry |> prepare_restore_params(publish?) |> keep_trash_state(current_entry)
 
         changeset =
           current_entry
@@ -393,14 +393,18 @@ defmodule Brando.Revisions do
   def restore_params(revision_entry), do: prepare_restore_params(revision_entry, false)
 
   # The entry's expiry is a plan for the entry, not content of the revision:
-  # restoring one keeps the expiry the entry has now.
+  # restoring one keeps the expiry the entry has now. So is the trash:
+  # restoring never moves the entry into or out of it (`deleted_at`), and a
+  # revision taken in the trash holds its obfuscated fields (a page's `uri`)
+  # in their trash form, which is no content either.
   defp prepare_restore_params(target_entry, publish?) do
     params =
       target_entry
       |> Utils.map_from_struct()
       |> Enum.reject(fn {key, _value} -> key |> to_string() |> String.starts_with?("rendered_") end)
       |> Map.new()
-      |> Map.delete(:unpublish_at)
+      |> Map.drop([:unpublish_at, :deleted_at])
+      |> drop_obfuscated_if_trashed(target_entry)
 
     if publish? do
       params
@@ -409,6 +413,19 @@ defmodule Brando.Revisions do
     else
       params
     end
+  end
+
+  # An entry in the trash keeps its obfuscated fields as they are: the
+  # revision's values would take the names the trash freed.
+  defp keep_trash_state(params, current_entry), do: drop_obfuscated_if_trashed(params, current_entry)
+
+  defp drop_obfuscated_if_trashed(params, %{deleted_at: %{}} = entry), do: Map.drop(params, obfuscated_fields(entry))
+  defp drop_obfuscated_if_trashed(params, _entry), do: params
+
+  defp obfuscated_fields(%schema{}) do
+    if schema.has_trait(Brando.Trait.SoftDelete),
+      do: Keyword.get(schema.__trait__(Brando.Trait.SoftDelete), :obfuscated_fields, []),
+      else: []
   end
 
   # Removing a root block deletes its entry-specific join row while the shared

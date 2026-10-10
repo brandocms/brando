@@ -422,7 +422,8 @@ defmodule Brando.Content.StaleBlocksTest do
 
     test "an entry in the trash is an owner: listed, revisioned, and History brings the value back", c do
       {page, block} = page_with_block(c, [link_var()], [])
-      page = page |> Ecto.Changeset.change(deleted_at: DateTime.utc_now(:second)) |> Repo.update!()
+      # trashed as the listing does it: Page obfuscates its `uri` there
+      {:ok, _} = Repo.soft_delete(page)
 
       assert [%{entries: [entry]}] = report!(c).blocks
       assert %{schema: Page, id: id, label: "Sommerro", trashed?: true, revisioned?: true} = entry
@@ -447,6 +448,10 @@ defmodule Brando.Content.StaleBlocksTest do
 
       [%{block: restored}] = Repo.all(from(b in Page.Blocks, where: b.entry_id == ^id, preload: [block: :vars]))
       assert %{value: "https://by.no/kultur", link_text: "Les mer"} = Enum.find(restored.vars, &(&1.key == "link"))
+
+      # and stays out of the trash, at its own address
+      assert %{deleted_at: nil, uri: uri} = Repo.get!(Page, id)
+      assert uri == page.uri
     end
 
     test "an entry in the trash is rendered again, so restoring it shows the resolved blocks", c do

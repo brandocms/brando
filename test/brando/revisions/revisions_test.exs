@@ -149,6 +149,58 @@ defmodule Brando.Revisions.RevisionsTest do
     assert identifier.title == "Title no. 2"
   end
 
+  describe "the trash is not content" do
+    # Page obfuscates `uri` in the trash (`trait :soft_delete, obfuscated_fields: [:uri]`).
+    setup %{user: user} do
+      {:ok, page} = Pages.create_page(Factory.params_for(:page, vars: [], uri: "kulturkalender"), user)
+      %{page: page}
+    end
+
+    test "a revision taken in the trash restores its content, not the trash", %{user: user, page: page} do
+      {:ok, trashed} = Brando.Repo.soft_delete(page)
+      assert trashed.uri =~ "$$$"
+      {:ok, revision} = Revisions.create_revision(%{trashed | title: "Fra papirkurven"}, user, false)
+
+      {:ok, _} = Brando.Repo.restore(Brando.Repo.get!(Page, page.id))
+      assert {:ok, _} = Revisions.set_entry_to_revision(Page, page.id, revision.revision, user)
+
+      restored = Brando.Repo.get!(Page, page.id)
+      assert restored.title == "Fra papirkurven"
+      assert restored.deleted_at == nil
+      assert restored.uri == "kulturkalender"
+    end
+
+    test "a revision restored in the trash leaves the entry there", %{user: user, page: page} do
+      {:ok, revision} = Revisions.create_revision(%{page | title: "Før papirkurven"}, user, false)
+      {:ok, trashed} = Brando.Repo.soft_delete(page)
+
+      assert {:ok, _} = Revisions.set_entry_to_revision(Page, page.id, revision.revision, user)
+
+      restored = Brando.Repo.get!(Page, page.id)
+      assert restored.title == "Før papirkurven"
+      assert restored.deleted_at == trashed.deleted_at
+      assert restored.uri == trashed.uri
+    end
+
+    test "an obfuscated field outside the trash is content", %{user: user, page: page} do
+      {:ok, revision} = Revisions.create_revision(page, user, false)
+      {:ok, _} = Pages.update_page(page.id, %{uri: "ny-adresse"}, user)
+
+      assert {:ok, _} = Revisions.set_entry_to_revision(Page, page.id, revision.revision, user)
+      assert Brando.Repo.get!(Page, page.id).uri == "kulturkalender"
+    end
+
+    test "a working copy from a revision taken in the trash carries neither", %{user: user, page: page} do
+      {:ok, trashed} = Brando.Repo.soft_delete(page)
+      {:ok, revision} = Revisions.create_revision(trashed, user, false)
+      {:ok, {_, {_, snapshot}}} = Revisions.get_revision(Page, page.id, revision.revision)
+
+      params = Revisions.restore_params(snapshot)
+      refute Map.has_key?(params, :deleted_at)
+      refute Map.has_key?(params, :uri)
+    end
+  end
+
   test "restores nested block content", %{user: user} do
     page = Factory.insert(:page, creator: user)
 
