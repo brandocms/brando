@@ -1140,6 +1140,9 @@ defmodule BrandoAdmin.Components.Form.BlockField.Ops do
             deep_merge_params(now, diff)
         end
 
+      # the block keeps the names it was merged by: a save's replay of the
+      # merge (`rejoin_log/2`) and its materialization name its rows so
+      acc = if ids == %{}, do: acc, else: %{acc | rel_ids: Map.put(acc.rel_ids, uid, ids)}
       {carry_apply(acc, {:update, uid, diff}), conflicts}
     else
       {acc, [uid | conflicts]}

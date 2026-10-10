@@ -965,6 +965,30 @@ defmodule Brando.EditSessionTest do
       assert [%{"id" => 5}, %{"id" => 8, "cols" => "B"}] = params["block"]["table_rows"]
     end
 
+    # Sol audit: the save's replay of that rejoin named the row as the
+    # rejoiner did, and logged it without the rejoiner's change.
+    test "a save's rebase keeps a late rejoiner's change to a row a save made of its new row" do
+      ref = new_ref()
+      loaded = table_rows_of([{5, "r5"}])
+      rows_then = [%{"id" => 5}]
+      saved = table_rows_of([{5, "r5"}, {8, "new"}])
+
+      {:ok, c} = EditSession.join(ref, @field, {saved, saved})
+      EditSession.submit(c.session, @field, anchor("b", "C, saving"), 1)
+      {:ok, _} = EditSession.fetch(c.session, @field, purpose: :save)
+
+      add =
+        {:set_field, "a", ["block", "table_rows"],
+         {:list, rows_then, rows_then ++ [%{"sync_uid" => "new", "cols" => "B"}]}, 0}
+
+      {:ok, held} = Ops.apply_op(loaded, add)
+      assert {:ok, _} = rejoin_with_stale_rows(ref, loaded, held)
+
+      assert {:ok, %{state: state}} = EditSession.rebase(c.session, @field, saved, :own_save)
+      {:ok, params} = Ops.materialize_root(state, "a")
+      assert [%{"id" => 5}, %{"id" => 8, "cols" => "B"}] = params["block"]["table_rows"]
+    end
+
     test "a rejoin carrying work after a save's read is kept by that save's rebase, on the session" do
       ref = new_ref()
       Phoenix.PubSub.subscribe(Brando.pubsub(), ref.topic)
