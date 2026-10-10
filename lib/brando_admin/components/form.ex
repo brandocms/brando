@@ -939,7 +939,7 @@ defmodule BrandoAdmin.Components.Form do
   def update(%{action: :load_working_copy, revision_entry: revision_entry}, socket) do
     %{schema: schema, entry: entry, current_user: current_user, form_blueprint: blueprint} = socket.assigns
     block_assocs = Enum.map(blueprint.blocks, &:"entry_#{&1.name}")
-    params = revision_entry |> Brando.Revisions.restore_params() |> Map.drop(block_assocs)
+    params = revision_entry |> Brando.Revisions.restore_params(entry) |> Map.drop(block_assocs)
 
     changeset =
       entry

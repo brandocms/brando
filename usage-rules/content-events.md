@@ -21,6 +21,11 @@ Guide: `deps/brando/guides/webhooks.md`
 | `entry.deleted` | An entry was moved to the trash or deleted. Emptying the trash later sends nothing more. |
 | `entry.restored` | An entry came back from the trash. |
 
+An entry in the trash is not on the site, so a change made to it there (a
+stale-block resolve, say) is recorded in Activity but sends no event; only
+`entry.deleted` goes out while it is there, and `entry.restored` when it
+comes back.
+
 Schemas that Activity does not log (its `ignore` list, media, Brando's
 internal records) send no events, and neither do changes to users.
 

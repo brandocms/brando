@@ -73,6 +73,19 @@ defmodule BrandoAdmin.ActivityLiveTest do
     assert render(element(view, "#activity-comparison")) =~ "Sommerro hotel"
   end
 
+  test "a scheduled revision not published because the entry was in the trash says so", %{
+    conn: conn,
+    current_user: user
+  } do
+    page = create_page(user, "Sommerro")
+    {:ok, trashed} = Pages.delete_page(page.id, user)
+    Brando.Activity.with_source(:scheduler, fn -> Brando.Activity.scheduled_revision_in_trash(trashed, user, 7) end)
+
+    {:ok, view, _} = live(conn, "/admin/config/activity")
+
+    assert has_element?(view, ".activity-row .activity-detail", "#7")
+  end
+
   test "an entry deleted for good keeps its title, without a link", %{conn: conn, current_user: user} do
     page = Factory.insert(:page, creator: user, title: "Gone")
     Brando.Repo.delete!(page)

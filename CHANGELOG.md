@@ -1023,7 +1023,10 @@ production dump.
   before the confirmation. Resolving stores a revision of each entry first,
   re-syncs, stamps and renders the blocks, records the change in Activity and
   moves editors who have an entry open onto the new rows; it needs the right
-  to update the module and the entries. `mix brando.modules resolve --uid UID`
+  to update the module and the entries. Entries in the trash are among them,
+  marked as such; the review names entries that keep no revisions (templates),
+  which History cannot restore. A resolve is refused when anything a block
+  holds changed after the review, not only what its shortened values show. `mix brando.modules resolve --uid UID`
   does the same from the terminal (a dry run until `--apply`, with `--drop
   KEY` and `--map OLD=NEW`), and `refresh` now says what keeps blocks stale
   and points there. See `Brando.Content.StaleBlocks` and "Blocks left on an
@@ -2018,6 +2021,24 @@ production dump.
   short of its geometry on originals of unusual proportions (`399×400` for a
   `400x400` crop); the size that covers the crop is now worked out from one
   scale, so it is exact. Recreate the affected images to get the new files.
+
+- **Restoring a revision leaves the trash alone.** Restoring a revision
+  taken while the entry was in the trash put the entry back in the trash,
+  under its trash address (a page's `kulturkalender$$$…` URI), and
+  restoring a revision of an entry in the trash took it out. A restore now
+  keeps the entry's `deleted_at`, and keeps its obfuscated fields (the
+  `obfuscated_fields` of `trait :soft_delete`) when the revision or the
+  entry is in the trash. Outside the trash those fields are restored as
+  before. Loading a revision as a working copy follows the same rule. A
+  scheduled revision that comes due while its entry is in the trash is no
+  longer published there: the schedule is cancelled and Activity says why, so
+  restoring the entry publishes nothing; schedule it again if it should still
+  go out.
+
+- **A change to an entry in the trash announces nothing.** Activity still
+  records it, but no `entry.updated` (or other content event) goes out, so
+  webhooks no longer hear of a deleted page changing and IndexNow does not
+  submit its URL. Trashing and deleting still send `entry.deleted`.
 
 - **A width-only image size is that width, and no size is enlarged.** Since
   the move to libvips, a size such as `"700"` was fitted inside a 700×700

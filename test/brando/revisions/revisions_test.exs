@@ -149,6 +149,58 @@ defmodule Brando.Revisions.RevisionsTest do
     assert identifier.title == "Title no. 2"
   end
 
+  describe "the trash is not content" do
+    # Page obfuscates `uri` in the trash (`trait :soft_delete, obfuscated_fields: [:uri]`).
+    setup %{user: user} do
+      {:ok, page} = Pages.create_page(Factory.params_for(:page, vars: [], uri: "kulturkalender"), user)
+      %{page: page}
+    end
+
+    test "a revision taken in the trash restores its content, not the trash", %{user: user, page: page} do
+      {:ok, trashed} = Brando.Repo.soft_delete(page)
+      assert trashed.uri =~ "$$$"
+      {:ok, revision} = Revisions.create_revision(%{trashed | title: "Fra papirkurven"}, user, false)
+
+      {:ok, _} = Brando.Repo.restore(Brando.Repo.get!(Page, page.id))
+      assert {:ok, _} = Revisions.set_entry_to_revision(Page, page.id, revision.revision, user)
+
+      restored = Brando.Repo.get!(Page, page.id)
+      assert restored.title == "Fra papirkurven"
+      assert restored.deleted_at == nil
+      assert restored.uri == "kulturkalender"
+    end
+
+    test "a revision restored in the trash leaves the entry there", %{user: user, page: page} do
+      {:ok, revision} = Revisions.create_revision(%{page | title: "Før papirkurven"}, user, false)
+      {:ok, trashed} = Brando.Repo.soft_delete(page)
+
+      assert {:ok, _} = Revisions.set_entry_to_revision(Page, page.id, revision.revision, user)
+
+      restored = Brando.Repo.get!(Page, page.id)
+      assert restored.title == "Før papirkurven"
+      assert restored.deleted_at == trashed.deleted_at
+      assert restored.uri == trashed.uri
+    end
+
+    test "an obfuscated field outside the trash is content", %{user: user, page: page} do
+      {:ok, revision} = Revisions.create_revision(page, user, false)
+      {:ok, _} = Pages.update_page(page.id, %{uri: "ny-adresse"}, user)
+
+      assert {:ok, _} = Revisions.set_entry_to_revision(Page, page.id, revision.revision, user)
+      assert Brando.Repo.get!(Page, page.id).uri == "kulturkalender"
+    end
+
+    test "a working copy from a revision taken in the trash carries neither", %{user: user, page: page} do
+      {:ok, trashed} = Brando.Repo.soft_delete(page)
+      {:ok, revision} = Revisions.create_revision(trashed, user, false)
+      {:ok, {_, {_, snapshot}}} = Revisions.get_revision(Page, page.id, revision.revision)
+
+      params = Revisions.restore_params(snapshot, Brando.Repo.restore!(trashed))
+      refute Map.has_key?(params, :deleted_at)
+      refute Map.has_key?(params, :uri)
+    end
+  end
+
   test "restores nested block content", %{user: user} do
     page = Factory.insert(:page, creator: user)
 
@@ -338,6 +390,97 @@ defmodule Brando.Revisions.RevisionsTest do
     assert {:ok, revisions} = Revisions.list_revision_metadata(Page, changed.id)
     assert Enum.find(revisions, &(&1.revision == 0)).active
     assert Enum.count(revisions, & &1.active) == 1
+  end
+
+  # Nothing surprising after a restore: the schedule is dropped, with a note
+  # in Activity, and an editor can schedule the revision again.
+  test "a scheduled revision due while its entry is in the trash is cancelled, with a note", %{user: user} do
+    {:ok, original} = Pages.create_page(Factory.params_for(:page, vars: [], status: :draft), user)
+    {:ok, changed} = Pages.update_page(original.id, %{title: "Current title"}, user)
+    assert {_, _} = Revisions.mark_revision_scheduled(Page, changed.id, 0, true)
+    {:ok, trashed} = Brando.Repo.soft_delete(changed)
+    job = %Oban.Job{args: %{"schema" => to_string(Page), "id" => changed.id, "revision" => 0, "user_id" => user.id}}
+
+    assert {:cancel, :in_trash} = Brando.Worker.EntryPublisher.perform(job)
+
+    page = Brando.Repo.get!(Page, changed.id)
+    assert page.title == "Current title"
+    assert page.status == :draft
+    assert page.deleted_at
+    assert {:ok, revisions} = Revisions.list_revision_metadata(Page, changed.id)
+    revision = Enum.find(revisions, &(&1.revision == 0))
+    refute revision.active
+    refute revision.scheduled
+
+    import Ecto.Query, only: [from: 2]
+
+    assert %{
+             source: :scheduler,
+             user_id: user_id,
+             revision: 0,
+             details: %{"scheduled_revision" => %{"reason" => "in_trash"}}
+           } =
+             Brando.Repo.one!(
+               from(e in Brando.Activity.Event,
+                 where: e.schema == ^to_string(Page) and e.entry_id == ^changed.id and e.action == :updated,
+                 order_by: [desc: e.id],
+                 limit: 1
+               )
+             )
+
+    assert user_id == user.id
+
+    # restored, the page is as it was: nothing is published behind the editor's back
+    {:ok, _} = Brando.Repo.restore(trashed)
+    page = Brando.Repo.get!(Page, changed.id)
+    assert page.title == "Current title"
+    assert page.status == :draft
+  end
+
+  # The job's cleanup runs after the refusal released the lock: by then the
+  # entry may be restored and the revision scheduled again, by a new job.
+  test "dropping a schedule in the trash leaves one made since alone", %{user: user} do
+    {:ok, page} = Pages.create_page(Factory.params_for(:page, vars: [], status: :draft), user)
+    {:ok, page} = Pages.update_page(page.id, %{title: "Current title"}, user)
+
+    scheduled? = fn ->
+      Enum.find(elem(Revisions.list_revision_metadata(Page, page.id), 1), &(&1.revision == 0)).scheduled
+    end
+
+    activity = fn ->
+      Brando.Activity.for_entry(Page, page.id) |> Enum.count(&(&1.details["scheduled_revision"] != nil))
+    end
+
+    Revisions.mark_revision_scheduled(Page, page.id, 0, true)
+    {:ok, trashed} = Brando.Repo.soft_delete(page)
+
+    # another job is the revision's schedule now
+    assert :ok = Revisions.drop_schedule_in_trash(Page, page.id, 0, user, fn -> false end)
+    assert scheduled?.()
+    assert activity.() == 0
+
+    # restored since, but not scheduled again: the refused job was the
+    # schedule, so it goes, or the revision would stay scheduled with no job
+    {:ok, _} = Brando.Repo.restore(trashed)
+    assert :ok = Revisions.drop_schedule_in_trash(Page, page.id, 0, user, fn -> true end)
+    refute scheduled?.()
+    assert activity.() == 1
+  end
+
+  # Checked under the entry's lock, so an entry trashed while the job starts
+  # is not published either.
+  test "publishing a revision of an entry in the trash is refused, changing nothing", %{user: user} do
+    {:ok, original} = Pages.create_page(Factory.params_for(:page, vars: [], status: :draft), user)
+    {:ok, changed} = Pages.update_page(original.id, %{title: "Current title"}, user)
+    {:ok, _} = Brando.Repo.soft_delete(changed)
+
+    assert {:error, :in_trash} = Revisions.set_entry_to_revision(Page, changed.id, 0, user, publish?: true)
+
+    page = Brando.Repo.get!(Page, changed.id)
+    assert page.title == "Current title"
+    assert page.status == :draft
+    assert {:ok, revisions} = Revisions.list_revision_metadata(Page, changed.id)
+    refute Enum.find(revisions, &(&1.revision == 0)).active
   end
 
   test "manual activation cancels the revision's pending publishing job", %{user: user} do
