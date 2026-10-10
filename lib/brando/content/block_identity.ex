@@ -15,10 +15,12 @@ defmodule Brando.Content.BlockIdentity do
       a block moved into an earlier one would otherwise be inserted while
       its old row still holds the uid.
     * `restored`, the blocks of a revision being restored (History, or a
-      working copy of a revision). A block written with the revision's
-      content takes the revision's module version, so a block from before a
-      module change shows as needing an upgrade. A block or a table row
-      the entry no longer has comes back with the revision's sync uid.
+      working copy of a revision). A block whose refs, vars or table rows
+      the restore sets back to the revision's takes the revision's module
+      version, so a block from before a module change shows as needing an
+      upgrade. A block or a table row the entry no longer has comes back
+      with the revision's sync uid. A revision stored before blocks had
+      either holds no identity for them: the blocks keep their own.
 
   A table row's sync uid is only ever one its own block has or had, named
   by the params, and given to one row.
