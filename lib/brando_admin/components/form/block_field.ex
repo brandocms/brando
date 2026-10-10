@@ -443,7 +443,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
         send_update(Block,
           id: "block-#{target_uid}",
           event: "insert_pasted_block",
-          block_cs: cs,
+          block_cs: moved_child_changeset(cs, socket.assigns.current_user.id),
           sequence: seq
         )
 
@@ -590,7 +590,14 @@ defmodule BrandoAdmin.Components.Form.BlockField do
         # silently is worse than any crash. recursive?: true is load-bearing —
         # the default block cast drops "children" params entirely.
         {:ok, params} = Ops.materialize_root(ops, uid)
-        {uid, block_module.changeset(materialize_base_struct(socket, uid), params, user_id, true)}
+
+        changeset =
+          socket
+          |> materialize_base_struct(uid)
+          |> block_module.changeset(params, user_id, true)
+          |> keep_moved_identity(socket.assigns.entry_blocks)
+
+        {uid, changeset}
       end)
 
     send_update(BrandoAdmin.Components.Form,
@@ -1636,6 +1643,129 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     end
   end
 
+  @doc """
+  The changeset a child moved to another parent goes there as: a new block
+  holding everything the child holds (`Ops.moved_params/1`). Its diff is
+  then all of it, not only what changed: under the new parent it is a new
+  row, and a diff of changes would save it without its module, type, refs
+  and vars.
+  """
+  def moved_child_changeset(%Changeset{} = changeset, user_id) do
+    params = changeset |> Ops.snapshot_params() |> Ops.moved_params(changed_galleries(changeset))
+    base = %Brando.Content.Block{vars: [], refs: [], table_rows: [], children: [], block_identifiers: []}
+
+    base
+    |> Brando.Content.Block.recursive_block_changeset(params, user_id)
+    # its diff is its applied state: it carries them to the save
+    |> restore_moved(index_by_uid([changeset.data], %{}))
+  end
+
+  # The uids of the refs, in the block and below it, whose gallery has
+  # unsaved changes.
+  defp changed_galleries(%Changeset{} = changeset) do
+    own =
+      for %Changeset{changes: %{gallery: _}} = ref <- Changeset.get_change(changeset, :refs, []),
+          into: MapSet.new(),
+          do: Changeset.get_field(ref, :uid)
+
+    changeset
+    |> Changeset.get_change(:children, [])
+    |> Enum.reduce(own, &MapSet.union(&2, changed_galleries(&1)))
+  end
+
+  @doc """
+  Give the blocks a save inserts under a uid the loaded rows have (a child
+  moved to another parent, and the blocks under it) what the server keeps
+  of them: their `module_version` and `sync_uid` (translations match blocks
+  by it), and the `sync_uid` of their table rows.
+
+  Neither is castable, so the cast gives a moved block, a new row, a fresh
+  sync uid and no module version. Both come from the rows the editor
+  loaded, never from params; a table row's is kept only when the params
+  name one the same block has.
+  """
+  def keep_moved_identity(%Changeset{} = root, entry_blocks) do
+    loaded = entry_blocks |> List.wrap() |> Enum.map(& &1.block) |> index_by_uid(%{})
+    if loaded == %{}, do: root, else: map_change(root, :block, &restore_moved(&1, loaded))
+  end
+
+  defp index_by_uid(blocks, acc) do
+    Enum.reduce(blocks, acc, fn
+      %{uid: uid} = block, acc ->
+        children = if is_list(Map.get(block, :children)), do: block.children, else: []
+        index_by_uid(children, Map.put(acc, uid, block))
+
+      _, acc ->
+        acc
+    end)
+  end
+
+  defp restore_moved(%Changeset{action: :insert} = changeset, loaded) do
+    changeset =
+      case loaded[Changeset.get_field(changeset, :uid)] do
+        %{} = row ->
+          changeset
+          |> force_present(:module_version, row.module_version)
+          |> force_present(:sync_uid, row.sync_uid)
+          |> map_change(:table_rows, &restore_row_syncs(&1, row))
+          |> Changeset.prepare_changes(&delete_moved_row(&1, row))
+
+        nil ->
+          changeset
+      end
+
+    restore_children(changeset, loaded)
+  end
+
+  defp restore_moved(%Changeset{} = changeset, loaded), do: restore_children(changeset, loaded)
+  defp restore_moved(other, _loaded), do: other
+
+  defp restore_children(changeset, loaded),
+    do: map_change(changeset, :children, fn children -> Enum.map(children, &restore_moved(&1, loaded)) end)
+
+  # The changesets a cast made, edited in place: `put_change/3` would cast
+  # the relation again, which Ecto refuses for related changesets.
+  defp map_change(%Changeset{changes: changes} = changeset, key, fun) when is_map_key(changes, key),
+    do: %{changeset | changes: Map.update!(changes, key, fun)}
+
+  defp map_change(changeset, _key, _fun), do: changeset
+
+  defp restore_row_syncs(rows, %{table_rows: loaded_rows}) when is_list(rows) and is_list(loaded_rows) do
+    known = loaded_rows |> Enum.map(& &1.sync_uid) |> Enum.reject(&is_nil/1) |> MapSet.new()
+
+    # each once: two rows never share one
+    {rows, _known} =
+      Enum.map_reduce(rows, known, fn
+        %Changeset{action: :insert, params: %{"sync_uid" => sync_uid}} = row, known when is_binary(sync_uid) ->
+          if MapSet.member?(known, sync_uid),
+            do: {Changeset.force_change(row, :sync_uid, sync_uid), MapSet.delete(known, sync_uid)},
+            else: {row, known}
+
+        row, known ->
+          {row, known}
+      end)
+
+    rows
+  end
+
+  defp restore_row_syncs(rows, _row), do: rows
+
+  # Its old parent deletes the row it leaves, but roots are saved in
+  # order: moved into an earlier one, the block would be inserted first,
+  # and its uid is unique. So the old row goes right before the insert, in
+  # the save's transaction (its refs, rows and children with it); the old
+  # parent's delete then finds it gone.
+  defp delete_moved_row(%Changeset{repo: repo} = changeset, %{id: id} = row) when not is_nil(id) do
+    opts = if prefix = row.__meta__.prefix, do: [prefix: prefix], else: []
+    repo.delete_all(from(b in Brando.Content.Block, where: b.id == ^id), opts)
+    changeset
+  end
+
+  defp delete_moved_row(changeset, _row), do: changeset
+
+  defp force_present(changeset, _field, nil), do: changeset
+  defp force_present(changeset, field, value), do: Changeset.force_change(changeset, field, value)
+
   # The persisted row a moved child should cast over, so `cast_assoc` matches
   # existing ids instead of inserting duplicates. Children live anywhere in the
   # tree, hence the walk; an unsaved child has no row and gets a fresh base.
@@ -2212,8 +2342,13 @@ defmodule BrandoAdmin.Components.Form.BlockField do
   end
 
   # Outline: child reorder or cross-parent move
-  def handle_event("outline_reposition", %{"new" => new_idx, "old" => old_idx}, socket)
-      when new_idx == old_idx do
+  # Back where it was. A child dropped into another parent at the index it
+  # left is a move all the same.
+  def handle_event(
+        "outline_reposition",
+        %{"new" => index, "old" => index, "from" => %{"parentUid" => parent}, "to" => %{"parentUid" => parent}},
+        socket
+      ) do
     {:noreply, socket}
   end
 

@@ -778,6 +778,65 @@ defmodule BrandoAdmin.Components.Form.BlockField.Ops do
   def block_diff_params(%Changeset{} = changeset), do: changes_to_params(changeset)
 
   @doc """
+  Params for a saved child block moved to another parent, from its full
+  snapshot (`snapshot_params/1`).
+
+  Under its new parent the block is a new row (`cast_assoc` does not take a
+  child's id), so it has to carry everything it holds, not only what
+  changed, and none of the old rows' ids: its refs, vars, table rows,
+  identifiers and children come along as new rows. A ref's gallery stays
+  the same gallery (`gallery_id`): the old ref goes with the old row. A
+  gallery with unsaved changes (its ref's uid in `changed_galleries`) can
+  only bring them as a new gallery; the saved one is left unused.
+  """
+  @spec moved_params(params(), MapSet.t()) :: params()
+  def moved_params(%{} = block, changed_galleries \\ MapSet.new()) do
+    block
+    |> Map.drop(["id", "parent_id"])
+    |> update_rows("refs", &(&1 |> keep_gallery(changed_galleries) |> Map.drop(["id", "block_id"])))
+    |> update_rows("vars", &moved_var/1)
+    |> update_rows("table_rows", fn row ->
+      row
+      |> Map.drop(["id", "block_id"])
+      |> update_rows("vars", &moved_var/1)
+    end)
+    |> update_rows("block_identifiers", &Map.drop(&1, ["id", "block_id"]))
+    |> update_rows("children", &moved_params(&1, changed_galleries))
+  end
+
+  # A var's gallery is one picked from the library: it goes by its id.
+  defp moved_var(var) do
+    var =
+      case var do
+        %{"gallery" => %{"id" => id}} when id not in [nil, ""] ->
+          var |> Map.delete("gallery") |> Map.put("gallery_id", id)
+
+        _ ->
+          var
+      end
+
+    Map.drop(var, ["id", "block_id", "table_row_id"])
+  end
+
+  defp update_rows(params, key, fun) do
+    case params do
+      %{^key => rows} when is_list(rows) -> Map.put(params, key, Enum.map(rows, &if(is_map(&1), do: fun.(&1), else: &1)))
+      _ -> params
+    end
+  end
+
+  defp keep_gallery(%{"gallery" => %{"id" => id} = gallery} = ref, changed) when id not in [nil, ""] do
+    if MapSet.member?(changed, ref["uid"]) do
+      gallery = gallery |> Map.delete("id") |> update_rows("gallery_objects", &Map.drop(&1, ["id", "gallery_id"]))
+      Map.put(ref, "gallery", gallery)
+    else
+      ref |> Map.delete("gallery") |> Map.put("gallery_id", id)
+    end
+  end
+
+  defp keep_gallery(ref, _changed), do: ref
+
+  @doc """
   Full castable params snapshot of a changeset's applied state.
   """
   @spec snapshot_params(Changeset.t()) :: params()
@@ -824,15 +883,37 @@ defmodule BrandoAdmin.Components.Form.BlockField.Ops do
     |> Enum.filter(&(&1 in @snapshot_assocs))
     |> Enum.reduce(field_params, fn assoc, acc ->
       case Map.get(struct, assoc) do
-        %Ecto.Association.NotLoaded{} -> acc
+        %Ecto.Association.NotLoaded{} ->
+          acc
+
         # A cleared association is expressed by its FK going nil, which the
         # field params already carry — emitting the assoc as nil as well would
         # take the FK's place below and say nothing.
-        nil -> acc
-        value -> acc |> drop_owner_key(mod, assoc) |> Map.put(to_string(assoc), change_value(value))
+        nil ->
+          acc
+
+        value ->
+          put_assoc_param(acc, struct, mod, assoc, value)
       end
     end)
   end
+
+  defp put_assoc_param(params, struct, mod, assoc, value) do
+    if stale_owner?(struct, mod, assoc, value),
+      do: params,
+      else: params |> drop_owner_key(mod, assoc) |> Map.put(to_string(assoc), change_value(value))
+  end
+
+  # A belongs_to still loaded from the row while its FK was changed (a
+  # gallery picked or cleared on a saved var): the FK says what it is now.
+  defp stale_owner?(struct, mod, assoc, %{id: id}) when not is_nil(id) do
+    case mod.__schema__(:association, assoc) do
+      %Ecto.Association.BelongsTo{owner_key: owner_key} -> Map.get(struct, owner_key) != id
+      _ -> false
+    end
+  end
+
+  defp stale_owner?(_struct, _mod, _assoc, _value), do: false
 
   # `cast_assoc` writes the foreign key itself, and Ecto refuses to accept both
   # at once — "cannot change belongs_to association `gallery` because there is
