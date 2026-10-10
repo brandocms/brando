@@ -883,15 +883,37 @@ defmodule BrandoAdmin.Components.Form.BlockField.Ops do
     |> Enum.filter(&(&1 in @snapshot_assocs))
     |> Enum.reduce(field_params, fn assoc, acc ->
       case Map.get(struct, assoc) do
-        %Ecto.Association.NotLoaded{} -> acc
+        %Ecto.Association.NotLoaded{} ->
+          acc
+
         # A cleared association is expressed by its FK going nil, which the
         # field params already carry — emitting the assoc as nil as well would
         # take the FK's place below and say nothing.
-        nil -> acc
-        value -> acc |> drop_owner_key(mod, assoc) |> Map.put(to_string(assoc), change_value(value))
+        nil ->
+          acc
+
+        value ->
+          put_assoc_param(acc, struct, mod, assoc, value)
       end
     end)
   end
+
+  defp put_assoc_param(params, struct, mod, assoc, value) do
+    if stale_owner?(struct, mod, assoc, value),
+      do: params,
+      else: params |> drop_owner_key(mod, assoc) |> Map.put(to_string(assoc), change_value(value))
+  end
+
+  # A belongs_to still loaded from the row while its FK was changed (a
+  # gallery picked or cleared on a saved var): the FK says what it is now.
+  defp stale_owner?(struct, mod, assoc, %{id: id}) when not is_nil(id) do
+    case mod.__schema__(:association, assoc) do
+      %Ecto.Association.BelongsTo{owner_key: owner_key} -> Map.get(struct, owner_key) != id
+      _ -> false
+    end
+  end
+
+  defp stale_owner?(_struct, _mod, _assoc, _value), do: false
 
   # `cast_assoc` writes the foreign key itself, and Ecto refuses to accept both
   # at once — "cannot change belongs_to association `gallery` because there is

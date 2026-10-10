@@ -630,6 +630,48 @@ defmodule Brando.Content.BlocksCrossParentMoveTest do
     assert [%{sync_uid: "source-grand", module_version: 2}] = moved.children
   end
 
+  # Sol audit: a gallery picked or cleared before the move went back to the
+  # saved one, which the var still had loaded.
+  test "a moved child's gallery var keeps the gallery picked before the move" do
+    user = Factory.insert(:random_user)
+    page = Factory.insert(:page, creator: user)
+    [saved, picked] = for _ <- 1..2, do: Brando.Repo.insert!(%Brando.Galleries.Gallery{})
+
+    child = %{
+      uid: "childP",
+      type: :module,
+      active: true,
+      source: "Elixir.Brando.Pages.Page.Blocks",
+      creator_id: user.id,
+      sequence: 0,
+      vars: [
+        %{type: :gallery, key: "picked", label: "Picked", gallery_id: saved.id},
+        %{type: :gallery, key: "cleared", label: "Cleared", gallery_id: saved.id}
+      ],
+      children: []
+    }
+
+    insert_containers(page, user, child)
+    entry_blocks = preloaded_entry_blocks(page.id)
+    [%{block: %{children: [row]}} | _] = entry_blocks
+    row = Brando.Repo.preload(row, [vars: :gallery], force: true)
+    [picked_var, cleared_var] = Enum.sort_by(row.vars, &(&1.key != "picked"))
+    ops = Ops.from_entry_blocks(entry_blocks)
+
+    vars = [%{"id" => picked_var.id, "gallery_id" => picked.id}, %{"id" => cleared_var.id, "gallery_id" => nil}]
+    {:ok, ops} = Ops.apply_op(ops, {:update, "childP", %{"vars" => vars}})
+
+    {:ok, params} = Ops.materialize_child(ops, "childP")
+    block_cs = Brando.Content.Block.recursive_block_changeset(row, params, user.id)
+    moved_cs = BrandoAdmin.Components.Form.BlockField.moved_child_changeset(block_cs, user.id)
+    {:ok, ops} = Ops.apply_op(ops, {:insert_child, "containerB", "childP", 0, Ops.block_diff_params(moved_cs)})
+    assert {:ok, _} = save_from_ops(page, entry_blocks, ops, user)
+
+    assert [%{block: %{children: []}}, %{block: %{children: [moved]}}] = preloaded_entry_blocks(page.id)
+    galleries = moved |> Brando.Repo.preload(:vars, force: true) |> Map.get(:vars) |> Map.new(&{&1.key, &1.gallery_id})
+    assert galleries == %{"picked" => picked.id, "cleared" => nil}
+  end
+
   # Sol audit: roots are saved in order, so a child moved into an earlier
   # container was inserted before its old row was deleted, and the uid's
   # unique index refused the save.
