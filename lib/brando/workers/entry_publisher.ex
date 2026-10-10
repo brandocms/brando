@@ -14,8 +14,10 @@ defmodule Brando.Worker.EntryPublisher do
   (the pending entry goes back to draft) so that `Brando.Publisher.sweep/1`
   does not carry it out instead. An expiry still deactivates the entry on
   time, as the system. Activity records why. While the site is suspended
-  the job waits, spending no attempts; a refusal for any other reason is
-  retried, and taken back on the last attempt. Without group authorization,
+  the job waits, spending no attempts, until its date is older than the
+  sweep's window; then, or for an archived site, it ends and leaves the
+  entry as it is. A refusal for any other reason is retried, and taken back
+  on the last attempt. Without group authorization,
   schedules run as they always have.
   """
   use Oban.Worker,
@@ -32,9 +34,8 @@ defmodule Brando.Worker.EntryPublisher do
   # Why a user's authorization refuses them for want of a grant
   @grant_denials [:missing_grant, :backend_access_required]
 
-  # A refusal for the scope that passes when the site is active again: the
-  # job waits, without spending its attempts, for as long as it takes
-  @temporary_denials [:inactive_site]
+  # A site that is not active: while it is suspended, the job waits without
+  # spending its attempts, as long as the sweep would still take its date
   @suspended_snooze_seconds 600
 
   # schedule publishing/depublishing an entry
@@ -209,8 +210,8 @@ defmodule Brando.Worker.EntryPublisher do
       :retry ->
         error
 
-      :temporary ->
-        {:snooze, @suspended_snooze_seconds}
+      {:inactive_site, scope} ->
+        wait_for_site(scope, schema_module, entry, status)
 
       {:refused, reason} ->
         refuse(schema_module, entry, status, user_id, reason)
@@ -234,7 +235,7 @@ defmodule Brando.Worker.EntryPublisher do
     actions = if status == "published", do: [:read, :update, :publish, :schedule], else: [:read, :update, :publish]
 
     cond do
-      snapshot.reason in @temporary_denials -> :temporary
+      snapshot.reason == :inactive_site -> {:inactive_site, snapshot.scope}
       snapshot.reason == :inactive_account -> {:refused, :scheduler_inactive}
       not is_nil(snapshot.reason) -> {:unexplained, snapshot.reason}
       denial = Enum.find_value(actions, &denial(snapshot, &1, schema_module, entry)) -> {:refused, denial}
@@ -251,6 +252,41 @@ defmodule Brando.Worker.EntryPublisher do
       true -> nil
     end
   end
+
+  # A suspended site may come back: the job waits. An archived one will not,
+  # and a date older than the sweep's window (`Brando.Publisher.sweep/1`) is
+  # past carrying out: the job ends and leaves the entry as it is, since no
+  # one refused it.
+  defp wait_for_site(scope, schema_module, entry, status) do
+    date = if status == "published", do: entry.publish_at, else: entry.unpublish_at
+
+    reason =
+      cond do
+        site_status(scope) != :suspended -> :site_inactive
+        DateTime.diff(DateTime.utc_now(), date, :day) >= Brando.Publisher.sweep_days() -> :schedule_outdated
+        true -> nil
+      end
+
+    if reason do
+      Logger.warning(
+        "[B/Pub] Gave up the #{status} job for #{schema_module.__naming__().singular} ##{entry.id}, " <>
+          "its site is not active (#{reason}); the entry is left as it is"
+      )
+
+      {:cancel, reason}
+    else
+      {:snooze, @suspended_snooze_seconds}
+    end
+  end
+
+  defp site_status(%{site_id: site_id}) when is_integer(site_id) do
+    case Repo.get(Brando.Sites.Site, site_id) do
+      %{status: status} -> status
+      nil -> nil
+    end
+  end
+
+  defp site_status(_scope), do: nil
 
   defp last_attempt?(%Oban.Job{attempt: attempt, max_attempts: max}) when is_integer(attempt) and is_integer(max),
     do: attempt >= max

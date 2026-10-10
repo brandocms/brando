@@ -52,7 +52,9 @@ why. Someone who may publish it can schedule it again. An expiry refused the
 same way is still carried out on time, by the system, so that a refusal never
 leaves an entry live for longer than planned; Activity says so, and why. While
 the site is suspended the job waits, checking every ten minutes without
-spending its attempts. A refusal for any other reason is retried, and on the
+spending its attempts, for as long as the sweep would still take the date
+(`sweep_days`); after that, or when the site is archived, the job ends and
+leaves the entry as it is. A refusal for any other reason is retried, and on the
 last attempt taken back as above, so the sweep never publishes it as the
 system. A save that fails for another reason, such as validation, is retried
 as before. Without group authorization, schedules run as the user who

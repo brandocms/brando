@@ -405,7 +405,8 @@ defmodule Brando.Publisher do
     end)
   end
 
-  defp sweep_days do
+  @doc "How many days back `sweep/1` takes dates (`config :brando, Brando.Publisher, sweep_days: 7`)."
+  def sweep_days do
     config = Brando.config(__MODULE__) || []
     Keyword.get(config, :sweep_days, @sweep_days)
   end

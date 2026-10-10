@@ -1948,8 +1948,8 @@ production dump.
   the pending entry goes back to draft. An expiry refused the same way is
   still carried out on time, by the system. The entry's Activity says what
   happened and why. While the site is suspended the job waits without
-  spending attempts; another refusal is retried and taken back on the last
-  attempt. The sweep for overdue dates leaves a publication to its job while
+  spending attempts, within the sweep's window; another refusal is retried
+  and taken back on the last attempt. The sweep for overdue dates leaves a publication to its job while
   the job for that date waits, runs or retries, so it no longer publishes as
   the system what the job was refused. Without group authorization nothing
   changes. See

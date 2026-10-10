@@ -441,13 +441,7 @@ defmodule Brando.PublisherRefusedTest do
     end
 
     test "waits while the site is suspended, and is taken back once its user may no longer run it", c do
-      {1, _} =
-        Repo.update_all(from(p in Page, where: p.id == ^c.page.id), [set: [status: :pending, publish_at: at(-600)]],
-          prefix: c.prefix
-        )
-
-      args = %{"schema" => to_string(Page), "id" => c.page.id, "status" => "published", "user_id" => c.editor.id}
-      args = Map.put(args, "tenant_prefix", c.prefix)
+      args = site_job(c, at(-600))
 
       {:ok, suspended} = Registry.update_site(c.site, %{status: :suspended})
       assert {:snooze, _} = perform_job(EntryPublisher, args)
@@ -462,6 +456,43 @@ defmodule Brando.PublisherRefusedTest do
       {:ok, :ok} = Groups.remove_member(c.site_scope, c.site_group.id, c.editor.id)
       assert {:cancel, :forbidden} = perform_job(EntryPublisher, args)
       assert %{status: :draft, publish_at: nil} = Repo.get!(Page, c.page.id, prefix: c.prefix)
+    end
+
+    test "publishes once a briefly suspended site is active again", c do
+      args = site_job(c, at(-600))
+      {:ok, suspended} = Registry.update_site(c.site, %{status: :suspended})
+      assert {:snooze, _} = perform_job(EntryPublisher, args)
+
+      {:ok, _} = Registry.update_site(suspended, %{status: :active})
+      assert :ok = perform_job(EntryPublisher, args)
+      assert Repo.get!(Page, c.page.id, prefix: c.prefix).status == :published
+    end
+
+    test "ends, leaving the entry alone, for an archived site", c do
+      args = site_job(c, at(-600))
+      {:ok, _} = Registry.update_site(c.site, %{status: :archived})
+
+      assert {:cancel, _} = perform_job(EntryPublisher, args)
+      assert %{status: :pending, publish_at: %DateTime{}} = Repo.get!(Page, c.page.id, prefix: c.prefix)
+      assert refused_events(c.page) == []
+    end
+
+    test "ends, leaving the entry alone, once a suspension outlasts the sweep's window", c do
+      args = site_job(c, at(-8 * 86_400))
+      {:ok, _} = Registry.update_site(c.site, %{status: :suspended})
+
+      assert {:cancel, _} = perform_job(EntryPublisher, args)
+      assert %{status: :pending, publish_at: %DateTime{}} = Repo.get!(Page, c.page.id, prefix: c.prefix)
+
+      # An expiry as well
+      Repo.update_all(
+        from(p in Page, where: p.id == ^c.page.id),
+        [set: [status: :published, unpublish_at: at(-8 * 86_400)]],
+        prefix: c.prefix
+      )
+
+      assert {:cancel, _} = perform_job(EntryPublisher, Map.put(args, "status", "disabled"))
+      assert Repo.get!(Page, c.page.id, prefix: c.prefix).status == :published
     end
   end
 
@@ -544,6 +575,17 @@ defmodule Brando.PublisherRefusedTest do
       assert Repo.get!(Page, lost.id).status == :published
       assert Repo.get!(Page, discarded.id).status == :published
     end
+  end
+
+  # A publication in the site's environment, due at `date`, and its job's args
+  defp site_job(c, date) do
+    {1, _} =
+      Repo.update_all(from(p in Page, where: p.id == ^c.page.id), [set: [status: :pending, publish_at: date]],
+        prefix: c.prefix
+      )
+
+    %{"schema" => to_string(Page), "id" => c.page.id, "status" => "published", "user_id" => c.editor.id}
+    |> Map.put("tenant_prefix", c.prefix)
   end
 
   defp environment(site, key) do
