@@ -180,7 +180,7 @@ defmodule Brando.Worker.EntryPublisher do
         :ok
 
       {:error, :forbidden} ->
-        if lost_right?(user, schema_module),
+        if lost_right?(user, schema_module, status),
           do: refuse(schema_module, entry, status, user_id, :forbidden),
           else: {:error, :forbidden}
 
@@ -189,17 +189,18 @@ defmodule Brando.Worker.EntryPublisher do
     end
   end
 
-  # Refused for want of a grant: the user's groups no longer let them update
-  # or publish the entry. A refusal for the scope instead, such as a
-  # suspended site, may pass, so the job is tried again (and the sweep waits
-  # for it).
-  defp lost_right?(:system, _schema_module), do: false
+  # Refused for want of a grant: the user's groups no longer let them make
+  # the change (a publication sets publish_at, which takes the right to
+  # schedule as well). A refusal for the scope instead, such as a suspended
+  # site, may pass, so the job is tried again (and the sweep waits for it).
+  defp lost_right?(:system, _schema_module, _status), do: false
 
-  defp lost_right?(user, schema_module) do
+  defp lost_right?(user, schema_module, status) do
     snapshot = user |> Boundary.actor_scope() |> Engine.snapshot()
+    actions = if status == "published", do: [:update, :publish, :schedule], else: [:update, :publish]
 
     is_nil(snapshot.reason) and
-      Enum.any?([:update, :publish], &(Engine.explain(snapshot, &1, schema_module).reason in @grant_denials))
+      Enum.any?(actions, &(Engine.explain(snapshot, &1, schema_module).reason in @grant_denials))
   end
 
   # Who a job runs as: the user who scheduled it, while their account is

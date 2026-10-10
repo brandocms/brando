@@ -140,6 +140,17 @@ defmodule Brando.PublisherRefusedTest do
       assert Repo.get!(Page, page.id).status == :draft
     end
 
+    test "its user lost only the right to schedule", c do
+      page = scheduled_page(c.editor, %{publish_at: at(3600)})
+      {:ok, others} = Groups.create(c.scope, %{name: "Publishers"}, @keys -- ["brando.pages.schedule"])
+      {:ok, :ok} = Groups.add_member(c.scope, others.id, c.editor.id)
+      revoke(c)
+      set_dates(page, publish_at: at(-600))
+
+      assert {:cancel, :forbidden} = run_job(page, "published", c.editor.id)
+      assert %{status: :draft, publish_at: nil} = Repo.get!(Page, page.id)
+    end
+
     test "its user no longer exists", c do
       page = scheduled_page(c.editor, %{publish_at: at(3600)})
       set_dates(page, publish_at: at(-600))
