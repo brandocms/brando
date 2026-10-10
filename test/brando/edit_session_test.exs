@@ -897,12 +897,12 @@ defmodule Brando.EditSessionTest do
 
     # As `BlockField.join_session/2` does: rows that are not the session's
     # are read again (`rows_now`), and the join moves the session onto them.
-    defp rejoin_with_stale_rows(ref, loaded, held, rows_now \\ nil) do
+    defp rejoin_with_stale_rows(ref, loaded, held, rows_now \\ nil, opts \\ []) do
       Task.await(
         Task.async(fn ->
-          case EditSession.join(ref, @field, {loaded, held}) do
+          case EditSession.join(ref, @field, {loaded, held}, opts) do
             {:error, :base_mismatch} when rows_now != nil ->
-              EditSession.join(ref, @field, {rows_now, held}, rebase: true, held_base: loaded)
+              EditSession.join(ref, @field, {rows_now, held}, [rebase: true, held_base: loaded] ++ opts)
 
             result ->
               result
@@ -1041,7 +1041,7 @@ defmodule Brando.EditSessionTest do
 
       {:ok, held} = Ops.apply_op(base, insert.("B's version"))
       {:ok, held} = Ops.apply_op(held, {:insert_child, "n", "nc", 0, %{"uid" => "nc"}})
-      assert {:ok, info} = rejoin_with_stale_rows(ref, base, held)
+      assert {:ok, info} = rejoin_with_stale_rows(ref, base, held, nil, changed: ["n"])
 
       assert info.state.diffs["n"]["block"]["description"] == "A's version"
       assert [%{group: "n", kept: "n-kept", uids: uids, copy?: true}] = info.rescues
@@ -1060,7 +1060,7 @@ defmodule Brando.EditSessionTest do
 
       task =
         Task.async(fn ->
-          {:ok, info} = EditSession.join(ref, @field, {base, held})
+          {:ok, info} = EditSession.join(ref, @field, {base, held}, changed: ["n"])
           [%{kept: kept}] = info.rescues
           EditSession.submit(info.session, @field, insert.(kept, "B's version"), 1)
           {:ok, _} = EditSession.fetch(info.session, @field)
@@ -1097,7 +1097,7 @@ defmodule Brando.EditSessionTest do
           parent = self()
 
           spawn(fn ->
-            {:ok, info} = EditSession.join(ref, @field, {base, held})
+            {:ok, info} = EditSession.join(ref, @field, {base, held}, changed: ["n"])
             send(parent, {:kept, Enum.map(info.rescues, & &1.kept)})
             Process.sleep(:infinity)
           end)
@@ -1125,7 +1125,7 @@ defmodule Brando.EditSessionTest do
 
       {:ok, _} = EditSession.join(ref, @field, {saved, saved})
 
-      assert {:ok, info} = EditSession.join(ref, @field, {saved, held}, held_base: base, rebase: true)
+      assert {:ok, info} = EditSession.join(ref, @field, {saved, held}, held_base: base, rebase: true, changed: ["n"])
       assert info.rescues == []
     end
 
@@ -1140,7 +1140,7 @@ defmodule Brando.EditSessionTest do
       {:ok, held} = Ops.apply_op(base, {:insert, "n", 1, %{"block" => %{"uid" => "n", "description" => "same"}}})
 
       for _editor <- [:a, :b] do
-        assert {:ok, info} = rejoin_with_stale_rows(ref, base, held)
+        assert {:ok, info} = rejoin_with_stale_rows(ref, base, held, nil, changed: ["n"])
         assert info.rescues == []
         assert info.state.statuses["n"] == :inserted
       end
@@ -1160,13 +1160,13 @@ defmodule Brando.EditSessionTest do
 
       {:ok, b_held} = Ops.apply_op(base, insert.("B's version"))
       {:ok, b_held} = child.(b_held, "B's child")
-      assert {:ok, %{rescues: [%{kept: "n-kept"}]}} = rejoin_with_stale_rows(ref, base, b_held)
+      assert {:ok, %{rescues: [%{kept: "n-kept"}]}} = rejoin_with_stale_rows(ref, base, b_held, nil, changed: ["n", "c"])
 
       # C moved the child under a saved block and changed it
       {:ok, c_held} = Ops.apply_op(base, insert.("A's version"))
       {:ok, c_held} = child.(c_held, "C's child")
       {:ok, c_held} = Ops.apply_op(c_held, {:move_to_parent, "c", "a", :end})
-      assert {:ok, %{rescues: rescues}} = rejoin_with_stale_rows(ref, base, c_held)
+      assert {:ok, %{rescues: rescues}} = rejoin_with_stale_rows(ref, base, c_held, nil, changed: ["c"])
       assert %{kept: kept} = Enum.find(rescues, &(&1.group == "c"))
       refute kept == "c-kept"
     end
@@ -1182,8 +1182,24 @@ defmodule Brando.EditSessionTest do
       {:ok, held} = Ops.apply_op(held, {:delete, "c"})
 
       for _editor <- [:a, :b] do
-        assert {:ok, %{rescues: []}} = rejoin_with_stale_rows(ref, base, held)
+        assert {:ok, %{rescues: []}} = rejoin_with_stale_rows(ref, base, held, nil, changed: ["n"])
       end
+    end
+
+    # Review: an editor who never changed a new block, coming back after
+    # the one who did, held the older version, and was given a copy of it.
+    test "a rejoiner that did not change a new block itself gets no copy of its version" do
+      ref = new_ref()
+      base = rows()
+      insert = fn text -> {:insert, "n", 1, %{"block" => %{"uid" => "n", "description" => text}}} end
+      {:ok, seed} = Ops.apply_op(base, insert.("B's change"))
+      {:ok, _} = EditSession.join(ref, @field, {base, seed})
+
+      {:ok, held} = Ops.apply_op(base, insert.("as it was"))
+      {:ok, held} = Ops.apply_op(held, anchor("a", "A's own work"))
+      assert {:ok, info} = rejoin_with_stale_rows(ref, base, held, nil, changed: ["a"])
+      assert info.rescues == []
+      assert info.state.diffs["n"]["block"]["description"] == "B's change"
     end
 
     test "a rejoiner holding the same version of a new block the session has gets no copy" do

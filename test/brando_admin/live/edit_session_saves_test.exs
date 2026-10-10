@@ -565,6 +565,51 @@ defmodule BrandoAdmin.EditSessionSavesTest do
     end
   end
 
+  # Review: the editor who never changed the block, coming back after the
+  # one who did, was given a copy of the older version.
+  test "a new block is not copied for the editor who did not change it", c do
+    a = open(c.conn, c.identity)
+    b = open(c.other_conn, c.identity)
+    uid = added_block(a, b, c)
+
+    old = session_pid(c.identity)
+    :sys.suspend(old)
+    type(b, uid, "<p>B's version</p>")
+    :sys.suspend(a.pid)
+    Process.exit(old, :kill)
+    # B comes back first, with its change
+    await(fn -> session_pid(c.identity) not in [nil, old] end)
+    await(fn -> shown_text(b, uid) == "<p>B's version</p>" end)
+    :sys.resume(a.pid)
+
+    await(fn -> shown_text(a, uid) == "<p>B's version</p>" end)
+    refute Map.has_key?(session_state(c.identity).statuses, uid <> "-kept")
+  end
+
+  # The same, when the editor finds itself behind and the session gone at
+  # once: it asks for the session's state, gets no answer, and joins again.
+  test "a new block is not copied for the editor who did not change it, after a failed resync", c do
+    a = open(c.conn, c.identity)
+    b = open(c.other_conn, c.identity)
+    uid = added_block(a, b, c)
+    {:ok, %{epoch: epoch, rev: rev}} = EditSession.fetch(session_pid(c.identity), :blocks)
+
+    old = session_pid(c.identity)
+    :sys.suspend(old)
+    type(b, uid, "<p>B's version</p>")
+    :sys.suspend(a.pid)
+    # an op A missed: it will ask the session for its state
+    gap = %{kind: :op, epoch: epoch, rev: rev + 2, op: {:delete, "nothing"}, origin: {self(), 1}}
+    send(a.pid, {:edit_session, :blocks, gap})
+    Process.exit(old, :kill)
+    await(fn -> session_pid(c.identity) not in [nil, old] end)
+    await(fn -> shown_text(b, uid) == "<p>B's version</p>" end)
+    :sys.resume(a.pid)
+
+    await(fn -> shown_text(a, uid) == "<p>B's version</p>" end)
+    refute Map.has_key?(session_state(c.identity).statuses, uid <> "-kept")
+  end
+
   test "a new block both editors held in the same version is not copied when one rejoins", c do
     a = open(c.conn, c.identity)
     b = open(c.other_conn, c.identity)

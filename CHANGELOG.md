@@ -2164,7 +2164,8 @@ production dump.
   two editors both held the same unsaved new block, the second to come back
   lost its changes to it without a word. The session keeps the first
   editor's version, and the second gets theirs back as a copy right after
-  it, with a message. An unchanged block is not copied.
+  it, with a message, when the difference is its own unsaved change. A
+  block the second editor did not change is not copied.
 
 - **A row another save removed is no longer saved back as an empty row.**
   An unsaved change to a block could hold one of its table rows, variables,

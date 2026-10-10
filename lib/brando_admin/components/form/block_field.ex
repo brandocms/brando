@@ -753,7 +753,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     # session carries onto its state (a fresh joiner may have seeded it from
     # the database first).
     held = Keyword.get(opts, :held, base)
-    join_opts = [user_id: user.id, read_only: not may_update?(socket)]
+    join_opts = [user_id: user.id, read_only: not may_update?(socket), changed: Keyword.get(opts, :changed, [])]
     # the rows `held` was built on, for the copies of removed blocks
     loaded = socket.assigns.entry_blocks
 
@@ -1307,9 +1307,14 @@ defmodule BrandoAdmin.Components.Form.BlockField do
   defp rejoin_session(%{assigns: %{edit_session: %Replica{} = replica}} = socket) do
     Process.delete({:brando_edit_session_monitor, replica.monitor})
 
+    # The blocks this editor's unconfirmed ops changed: a new block it
+    # holds in another version than the session's comes back as a copy
+    # only if it changed it itself (`Brando.EditSession.join/4`).
+    changed = Enum.flat_map(replica.pending, fn {_seq, op} -> Ops.op_uids(op) end)
+
     socket
     |> assign(:edit_session, nil)
-    |> join_session(held: socket.assigns.block_ops)
+    |> join_session(held: socket.assigns.block_ops, changed: changed)
   end
 
   defp rejoin_session(socket), do: socket

@@ -133,6 +133,10 @@ defmodule Brando.EditSession do
       rows again before joining;
     * `:read_only` — the editor may look but not change the entry: the
       session rejects its ops.
+    * `:changed` — the blocks the caller's unconfirmed ops named. A new
+      block the caller holds in another version than the session's comes
+      back to it as a copy (`rescues` with `copy?: true`) only if it is
+      among them.
   """
   @spec join(ref(), term(), {Ops.t(), Ops.t()}, keyword()) :: {:ok, map()} | {:error, term()}
   def join(ref, field, {%Ops{} = base, %Ops{} = state}, opts \\ []) do
@@ -499,7 +503,7 @@ defmodule Brando.EditSession do
   # (`rescues`, for it alone): its blocks another write removed meanwhile.
   # `before`: the session's state before the join carried the joiner's
   # work onto it. A new block the joiner brought in is the joiner's.
-  defp joiner_info(session, field, pid, held, conflicts, before) do
+  defp joiner_info(session, field, pid, held, conflicts, before, opts) do
     new = Data.state(session.data, field)
 
     rescues =
@@ -516,16 +520,20 @@ defmodule Brando.EditSession do
         }
       end)
 
-    {copies, session} = copies(session, field, pid, held, {before, new})
+    {copies, session} = copies(session, field, pid, held, {before, new}, MapSet.new(opts[:changed] || []))
     {Map.put(info(session, field, pid, false), :rescues, rescues ++ copies), session}
   end
 
   # New blocks the joiner held that the session has in another version (an
   # editor who came back first seeded it with theirs): the session keeps
   # its own, and the joiner brings its version back as a copy beside it.
-  defp copies(session, field, pid, %Ops{} = held, {%Ops{} = before, new}) do
+  # Only a version the joiner's own changes made (`changed`, the blocks its
+  # unconfirmed ops named): every op the session confirmed reached every
+  # editor before it went, so a joiner without changes holds an older one.
+  defp copies(session, field, pid, %Ops{} = held, {%Ops{} = before, new}, changed) do
     held
     |> Ops.diverged_inserts(before)
+    |> Enum.filter(fn group -> Enum.any?([group | Ops.descendants(held, group)], &MapSet.member?(changed, &1)) end)
     |> Enum.map_reduce(session, fn group, session ->
       kept = kept_uid(session, field, held, new, group)
 
@@ -546,7 +554,7 @@ defmodule Brando.EditSession do
     end)
   end
 
-  defp copies(session, _field, _pid, _held, _new), do: {[], session}
+  defp copies(session, _field, _pid, _held, _new, _changed), do: {[], session}
 
   # `exclude`: an editor whose replica moves on with the reply of the call
   # that caused this rebase (a join, the replica's own rebase), and never
@@ -794,7 +802,7 @@ defmodule Brando.EditSession do
     before = Data.state(session.data, field)
     {session, conflicts} = merge_held(session, field, held, opts[:held_base] || base, pid)
 
-    {info, session} = joiner_info(session, field, pid, held, conflicts, before)
+    {info, session} = joiner_info(session, field, pid, held, conflicts, before, opts)
     {{:ok, info}, session}
   end
 
@@ -814,7 +822,7 @@ defmodule Brando.EditSession do
       {{:merged, conflicts}, data} ->
         session = %{session | data: data}
         broadcast_state(session, field, pid, :joined, conflicts, [])
-        {info, session} = joiner_info(session, field, pid, held, conflicts, before)
+        {info, session} = joiner_info(session, field, pid, held, conflicts, before, opts)
         {{:ok, info}, session}
 
       {:mismatch, data} when rebase? ->
@@ -824,7 +832,7 @@ defmodule Brando.EditSession do
         before = Data.state(session.data, field)
         {session, conflicts} = merge_held(session, field, held, held_base, pid)
 
-        {info, session} = joiner_info(session, field, pid, held, conflicts, before)
+        {info, session} = joiner_info(session, field, pid, held, conflicts, before, opts)
         {{:ok, info}, session}
 
       {:mismatch, data} ->
