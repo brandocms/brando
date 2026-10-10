@@ -78,8 +78,8 @@ defmodule Brando.PublisherRefusedTest do
     )
   end
 
-  # Runs `change` once, the next time this process reads a user
-  defp meanwhile(change) do
+  # Runs `change` once, the next time this process queries `source`
+  defp meanwhile(source \\ "users", change) do
     id = make_ref()
     test = self()
 
@@ -87,7 +87,7 @@ defmodule Brando.PublisherRefusedTest do
       id,
       Repo.config()[:telemetry_prefix] ++ [:query],
       fn _event, _measurements, metadata, _config ->
-        if self() == test and metadata.source == "users" do
+        if self() == test and metadata.source == source do
           :telemetry.detach(id)
           change.()
         end
@@ -344,6 +344,17 @@ defmodule Brando.PublisherRefusedTest do
 
       assert [%{action: :publish, result: :ok}] = swept(page)
       assert Repo.get!(Page, page.id).status == :published
+    end
+
+    test "leaves an entry a refused job took back while the sweep ran", c do
+      page = scheduled_page(c.editor, %{publish_at: at(3600)})
+      set_dates(page, publish_at: at(-600))
+      for job <- jobs(page, "published"), do: Repo.delete!(job)
+
+      # Between the sweep finding the entry and saving it: when it looks for jobs
+      meanwhile("oban_jobs", fn -> set_dates(page, status: :draft, publish_at: nil) end)
+      assert swept(page) == []
+      assert %{status: :draft, publish_at: nil} = Repo.get!(Page, page.id)
     end
 
     test "publishes a date whose job is gone or done", c do

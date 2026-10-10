@@ -381,8 +381,9 @@ defmodule Brando.Publisher do
       sweep_days: 7`), so older dates, from before the sweep existed, are
       left alone.
     * An entry it has handled no longer matches, so running it again does
-      nothing. Pages and fragments index both dates, and the window keeps
-      each query to a few days of them.
+      nothing. One that changed after it was found (its job refused the
+      date, or an editor saved it) is left out. Pages and fragments index
+      both dates, and the window keeps each query to a few days of them.
     * A content type whose table cannot be read (an environment whose
       migrations lag) is logged and skipped. An entry whose save fails is
       logged and left alone for a day, or until it is saved again.
@@ -417,6 +418,7 @@ defmodule Brando.Publisher do
     |> Enum.map(&{&1, sweep_action(&1, now)})
     |> without_waiting_job(schema, now)
     |> Enum.map(fn {entry, action} -> sweep_entry(schema, entry, action, dry_run?) end)
+    |> Enum.reject(&(&1.result == :changed))
   rescue
     error ->
       Logger.error(
@@ -518,19 +520,18 @@ defmodule Brando.Publisher do
   defp save_sweep(schema, entry, action) do
     params = %{status: if(action == :unpublish, do: @unpublish_status, else: @publish_status)}
     context = schema.__modules__().context
+    update = :"update_#{schema.__naming__().singular}"
 
-    case apply(context, :"update_#{schema.__naming__().singular}", [entry.id, params, :system]) do
-      {:ok, _} ->
-        :ok
+    result =
+      Repo.transaction(fn ->
+        if still_due?(schema, entry, action), do: apply(context, update, [entry.id, params, :system]), else: :changed
+      end)
 
-      error ->
-        Logger.warning(
-          "[Brando.Publisher] sweep could not #{action} #{inspect(schema)} ##{entry.id}, " <>
-            "left alone for a day or until it is saved: #{inspect(sweep_error(error))}"
-        )
-
-        Brando.Cache.put(failed_key(schema, entry), true, @failed_ttl)
-        {:error, sweep_error(error)}
+    case result do
+      {:ok, :changed} -> :changed
+      {:ok, {:ok, _}} -> :ok
+      {:ok, error} -> sweep_failed(schema, entry, action, error)
+      error -> sweep_failed(schema, entry, action, error)
     end
   rescue
     error ->
@@ -540,6 +541,33 @@ defmodule Brando.Publisher do
 
       Brando.Cache.put(failed_key(schema, entry), true, @failed_ttl)
       {:error, error}
+  end
+
+  # The entry still has the status and date the sweep found, out of the
+  # trash: a job that refused its date, or an editor, may have changed it
+  # since. Locked until it is saved.
+  defp still_due?(schema, entry, action) do
+    {field, statuses} =
+      if action == :unpublish, do: {:unpublish_at, [:published, :pending]}, else: {:publish_at, [:pending]}
+
+    case Repo.one(from e in schema, where: e.id == ^entry.id, lock: "FOR UPDATE") do
+      nil ->
+        false
+
+      current ->
+        current.status in statuses and Map.get(current, field) == Map.get(entry, field) and
+          is_nil(Map.get(current, :deleted_at))
+    end
+  end
+
+  defp sweep_failed(schema, entry, action, error) do
+    Logger.warning(
+      "[Brando.Publisher] sweep could not #{action} #{inspect(schema)} ##{entry.id}, " <>
+        "left alone for a day or until it is saved: #{inspect(sweep_error(error))}"
+    )
+
+    Brando.Cache.put(failed_key(schema, entry), true, @failed_ttl)
+    {:error, sweep_error(error)}
   end
 
   defp sweep_error({:error, %Changeset{errors: errors}}), do: errors
