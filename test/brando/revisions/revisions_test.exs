@@ -392,6 +392,27 @@ defmodule Brando.Revisions.RevisionsTest do
     assert Enum.count(revisions, & &1.active) == 1
   end
 
+  # As a publish date does: the trash holds it, and it runs once restored.
+  test "a scheduled revision waits while its entry is in the trash", %{user: user} do
+    {:ok, original} = Pages.create_page(Factory.params_for(:page, vars: [], status: :draft), user)
+    {:ok, changed} = Pages.update_page(original.id, %{title: "Current title"}, user)
+    {:ok, trashed} = Brando.Repo.soft_delete(changed)
+    job = %Oban.Job{args: %{"schema" => to_string(Page), "id" => changed.id, "revision" => 0, "user_id" => user.id}}
+
+    assert {:snooze, _} = Brando.Worker.EntryPublisher.perform(job)
+
+    page = Brando.Repo.get!(Page, changed.id)
+    assert page.title == "Current title"
+    assert page.status == :draft
+    assert page.deleted_at
+    assert {:ok, revisions} = Revisions.list_revision_metadata(Page, changed.id)
+    refute Enum.find(revisions, &(&1.revision == 0)).active
+
+    {:ok, _} = Brando.Repo.restore(trashed)
+    assert {:ok, published} = Brando.Worker.EntryPublisher.perform(job)
+    assert published.status == :published
+  end
+
   test "manual activation cancels the revision's pending publishing job", %{user: user} do
     {:ok, original} = Pages.create_page(Factory.params_for(:page, vars: []), user)
     {:ok, changed} = Pages.update_page(original.id, %{title: "Later title"}, user)

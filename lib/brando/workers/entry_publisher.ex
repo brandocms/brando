@@ -15,6 +15,9 @@ defmodule Brando.Worker.EntryPublisher do
   alias Brando.Revisions
   alias Brando.Tenant.Job, as: TenantJob
 
+  # How often a scheduled revision of an entry in the trash looks again
+  @trash_snooze_seconds 3600
+
   # schedule publishing/depublishing an entry
   @impl Oban.Worker
   def perform(%Oban.Job{} = job),
@@ -30,9 +33,11 @@ defmodule Brando.Worker.EntryPublisher do
            }
          } = job
        ) do
-    if current_revision_job?(job),
-      do: publish_revision(job, schema, id, revision, user_id),
-      else: :ok
+    cond do
+      not current_revision_job?(job) -> :ok
+      in_trash?(schema, id) -> {:snooze, @trash_snooze_seconds}
+      true -> publish_revision(job, schema, id, revision, user_id)
+    end
   end
 
   # Publish an entry at its publish_at, or deactivate it at its unpublish_at,
@@ -87,6 +92,13 @@ defmodule Brando.Worker.EntryPublisher do
       )
 
     waiting == [job_id] and not after?(scheduled_at, DateTime.utc_now())
+  end
+
+  # An entry in the trash is not published, as its publish date is not (the
+  # sweep leaves it until it is restored): its scheduled revision waits, and
+  # runs once the entry is back. Emptying the trash cancels the job.
+  defp in_trash?(schema, id) do
+    match?(%{deleted_at: %DateTime{}}, Brando.Repo.get(Module.concat(List.wrap(schema)), id))
   end
 
   defp publish_revision(job, schema, id, revision, user_id) do
