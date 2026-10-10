@@ -90,7 +90,9 @@ defmodule Brando.Content.BlocksCrossParentMoveTest do
         {:ok, params} = Ops.materialize_root(ops, uid)
         # recursive?: true, exactly as BlockField's save clause does — the
         # default cast drops "children" params entirely
-        Brando.Pages.Page.Blocks.changeset(by_uid[uid], params, user.id, true)
+        by_uid[uid]
+        |> Brando.Pages.Page.Blocks.changeset(params, user.id, true)
+        |> BrandoAdmin.Components.Form.BlockField.keep_moved_identity(entry_blocks)
       end)
 
     updated =
@@ -576,6 +578,56 @@ defmodule Brando.Content.BlocksCrossParentMoveTest do
     assert gallery_id == gallery.id
     assert [%{vars: [%{key: "cell", gallery_id: cell_gallery_id}]}] = moved.table_rows
     assert cell_gallery_id == gallery.id
+  end
+
+  # Sol audit: a moved block is a new row, which the cast gives a new
+  # sync uid (translations match blocks and table rows by it) and no
+  # module version (it then reads as stale). Both are the server's, from
+  # the row the block leaves.
+  test "a moved child keeps its sync uids and module version" do
+    user = Factory.insert(:random_user)
+    page = Factory.insert(:page, creator: user)
+
+    child = %{
+      uid: "childS",
+      sync_uid: "source-child",
+      module_version: 3,
+      type: :module,
+      active: true,
+      source: "Elixir.Brando.Pages.Page.Blocks",
+      creator_id: user.id,
+      sequence: 0,
+      table_rows: [%{sequence: 0, sync_uid: "source-row", vars: []}],
+      children: [
+        %{
+          uid: "grandS",
+          sync_uid: "source-grand",
+          module_version: 2,
+          type: :module,
+          active: true,
+          source: "Elixir.Brando.Pages.Page.Blocks",
+          creator_id: user.id,
+          sequence: 0,
+          children: []
+        }
+      ]
+    }
+
+    insert_containers(page, user, child)
+    entry_blocks = preloaded_entry_blocks(page.id)
+    [%{block: %{children: [row]}} | _] = entry_blocks
+    ops = Ops.from_entry_blocks(entry_blocks)
+
+    {:ok, params} = Ops.materialize_child(ops, "childS")
+    block_cs = Brando.Content.Block.recursive_block_changeset(row, params, user.id)
+    moved_cs = BrandoAdmin.Components.Form.BlockField.moved_child_changeset(block_cs, user.id)
+    {:ok, ops} = Ops.apply_op(ops, {:insert_child, "containerB", "childS", 0, Ops.block_diff_params(moved_cs)})
+    assert {:ok, _} = save_from_ops(page, entry_blocks, ops, user)
+
+    assert [%{block: %{children: []}}, %{block: %{children: [moved]}}] = preloaded_entry_blocks(page.id)
+    assert {moved.sync_uid, moved.module_version} == {"source-child", 3}
+    assert [%{sync_uid: "source-row"}] = moved.table_rows
+    assert [%{sync_uid: "source-grand", module_version: 2}] = moved.children
   end
 
   test "materialize_child rejects roots and unknown uids" do

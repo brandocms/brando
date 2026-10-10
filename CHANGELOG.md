@@ -2140,9 +2140,11 @@ production dump.
   saved block from one container to another in the outline saved it under
   the new container with only its unsaved changes: without its module,
   references, variables and child blocks. Unsaved changes to a moved
-  block's gallery come along as a new gallery. A block dropped at the same
-  position in the other container is moved too; the outline showed it
-  moved while it stayed where it was.
+  block's gallery come along as a new gallery. A moved block keeps what
+  translations match it by and its module version, so it no longer shows
+  as needing an upgrade. A block dropped at the same position in the
+  other container is moved too; the outline showed it moved while it
+  stayed where it was.
 
 - **An editor rejoining with unsaved changes to a block keeps the others'
   changes to that block's other fields.** When an entry's edit session
