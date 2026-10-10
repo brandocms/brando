@@ -349,12 +349,14 @@ defmodule Brando.Content.Block do
     end
   end
 
-  # A row named by its id alone carries no change: the edit session names
-  # the rows of a list it did not change so. When the block no longer has a
-  # row with that id (a write removed it after the diff was made),
-  # `cast_assoc/3` would insert it as a new, blank row; leave it out. Rows
-  # left out of the params are deleted only when the block has them, so
-  # this deletes nothing.
+  # A row param that only names a saved row (its id, perhaps with its uid,
+  # key or sync uid) carries no change: the edit session names the rows of
+  # a list it did not change so. When the block no longer has a row with
+  # that id (a write removed it after the diff was made), `cast_assoc/3`
+  # would insert it as a new, blank row; leave it out. Rows left out of the
+  # params are deleted only when the block has them, so this deletes
+  # nothing. A param without an id names a row not saved yet and is left
+  # alone.
   defp drop_vanished_rows(attrs, owner, relations) when is_map(attrs) do
     data = with %Ecto.Changeset{data: data} <- owner, do: data
 

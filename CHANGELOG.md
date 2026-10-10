@@ -2152,9 +2152,11 @@ production dump.
   restarted, an editor coming back with changes to a top-level block replaced
   every change another editor had made to that block since, rows added to
   or removed from its lists included. Now only the fields the returning
-  editor changed take its values. In the block's lists (references,
-  variables, table rows, gallery images) each editor's new rows are kept
-  and a saved row either editor removed stays removed. A field the
+  editor changed take its values. In the block's own lists (references,
+  variables, table rows) each editor's new rows are kept, so are rows
+  saved while the editor was away, and a saved row either editor removed
+  stays removed. A list inside one of those rows, such as a gallery's
+  images, still takes the returning editor's list, and a field the
   returning editor set back to the saved value counts as unchanged.
 
 - **A row another save removed is no longer saved back as an empty row.**
