@@ -175,9 +175,13 @@ defmodule Brando.PublisherRefusedTest do
       page = scheduled_page(c.editor, %{publish_at: at(3600)})
       revoke(c)
       set_dates(page, publish_at: at(-600), title: nil)
+      assert {:ok, %{status: :pending}} = Pages.get_page(%{matches: %{id: page.id}, cache: true})
 
       assert {:cancel, :forbidden} = run_job(page, "published", c.editor.id)
       assert %{status: :draft, publish_at: nil} = Repo.get!(Page, page.id)
+      # Like a save: the query cache and the entry's identifier follow
+      assert {:ok, %{status: :draft}} = Pages.get_page(%{matches: %{id: page.id}, cache: true})
+      assert {:ok, %{status: :draft}} = Brando.Content.get_identifier(Page, page)
       assert [%{details: %{"schedule_refused" => %{"action" => "publish"}}}] = refused_events(page)
       assert swept(page) == []
     end

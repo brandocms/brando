@@ -21,6 +21,7 @@ defmodule Brando.Worker.EntryPublisher do
   require Logger
   alias Brando.Authorization.Boundary
   alias Brando.Authorization.Engine
+  alias Brando.Repo
   alias Brando.Revisions
   alias Brando.Tenant.Job, as: TenantJob
 
@@ -62,7 +63,7 @@ defmodule Brando.Worker.EntryPublisher do
     schema_module = Module.concat(List.wrap(schema))
     now = DateTime.utc_now()
 
-    case Brando.Repo.get(schema_module, id) do
+    case Repo.get(schema_module, id) do
       nil ->
         :ok
 
@@ -90,7 +91,7 @@ defmodule Brando.Worker.EntryPublisher do
     match = Map.drop(args, ["user_id"])
 
     waiting =
-      Brando.Repo.all(
+      Repo.all(
         from j in Oban.Job,
           where:
             j.worker == ^inspect(__MODULE__) and j.state in ["available", "scheduled", "executing", "retryable"] and
@@ -233,7 +234,7 @@ defmodule Brando.Worker.EntryPublisher do
         "cancelling the job and clearing the date"
     )
 
-    Brando.Repo.transaction(fn ->
+    Repo.transaction(fn ->
       if still_refused?(schema_module, entry, status), do: clear_date(schema_module, entry, params, details)
     end)
 
@@ -250,7 +251,7 @@ defmodule Brando.Worker.EntryPublisher do
     field = if status == "published", do: :publish_at, else: :unpublish_at
     query = from e in schema_module, where: e.id == ^entry.id, lock: "FOR UPDATE"
 
-    case Brando.Repo.one(query) do
+    case Repo.one(query) do
       nil ->
         false
 
@@ -277,7 +278,14 @@ defmodule Brando.Worker.EntryPublisher do
 
     Logger.warning("[B/Pub] Could not save #{inspect(schema_module)} ##{entry.id}, clearing its date: #{inspect(error)}")
 
-    Brando.Repo.update_all(from(e in schema_module, where: e.id == ^entry.id), set: Map.to_list(params))
+    Repo.update_all(from(e in schema_module, where: e.id == ^entry.id), set: Map.to_list(params))
+
+    # What a save does that readers see: the entry's identifier and its
+    # cached queries
+    with %{} = updated <- Repo.get(schema_module, entry.id) do
+      Brando.Content.update_identifier(schema_module, updated)
+      Repo.after_commit(fn -> Brando.Cache.Query.evict(updated) end)
+    end
 
     if Brando.Activity.logged?(schema_module) do
       fields = params |> Map.keys() |> Enum.map(&to_string/1)
