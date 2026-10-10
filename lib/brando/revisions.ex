@@ -316,8 +316,8 @@ defmodule Brando.Revisions do
           |> Repo.get!(entry_id)
           |> Repo.preload(Brando.Blueprint.preloads_for(entry_schema))
 
-        # An entry in the trash is not published (a scheduled revision waits
-        # for its restore). Read under the lock, so trashing can't slip in.
+        # An entry in the trash is not published (the scheduled revision's
+        # job is cancelled). Read under the lock, so trashing can't slip in.
         if publish? and Map.get(current_entry, :deleted_at), do: Repo.rollback(:in_trash)
 
         restore_params = prepare_restore_params(target_entry, current_entry, publish?)
