@@ -65,12 +65,13 @@ artifacts() {
   jq -n '{artifacts: [$ARGS.positional[] | {name: ., expired: false}]}' --args "$@" \
     > "$case_dir/artifacts-$id.json"
 }
-# jobs ID "NAME=CONCLUSION"…
+# jobs ID "NAME=CONCLUSION"… — an empty conclusion is a job still running.
 jobs() {
   local id="$1"
   shift
   printf '%s\n' "$@" | jq -R 'capture("^(?<name>.*)=(?<conclusion>[a-z]*)$")
-    | .conclusion |= (if . == "" then null else . end)' |
+    | if .conclusion == "" then .conclusion = null | .status = "in_progress"
+      else .status = "completed" end' |
     jq -s '{total_count: length, jobs: .}' > "$case_dir/jobs-$id.json"
 }
 passed_jobs() {
@@ -115,31 +116,47 @@ expect() {
 fresh
 expect true "reusing pull_request run 10, *" "reuses the passed run that tested the same tree on the same base"
 
+# Several runs on one head: the newest whose required checks have finished
+# decides. The API lists newest first; the script sorts by id regardless.
+fresh
+runs "10 .github/workflows/ci.yml pull_request $pr" "12 .github/workflows/ci.yml pull_request $pr"
+artifacts 12 "e2e-artifacts-legacy-1"
+jobs 12 "${required[0]}=failure" "${required[1]}=success" "$record=skipped"
+expect false "running every job: the newest finished pull_request run 12 *" "runs everything when a newer run failed on the same head, though an older one passed"
+
 fresh
 runs "12 .github/workflows/ci.yml pull_request $pr" "10 .github/workflows/ci.yml pull_request $pr"
 artifacts 12 "e2e-artifacts-legacy-1"
-expect true "reusing pull_request run 10, *" "skips a newer run that recorded nothing for the older one that did"
+passed_jobs 12
+jobs 12 "${required[0]}=success" "${required[1]}=success" "$record=failure"
+expect false "running every job: the newest finished pull_request run 12 *" "runs everything when the newest finished run passed but recorded nothing"
+
+fresh
+runs "12 .github/workflows/ci.yml pull_request $pr" "10 .github/workflows/ci.yml pull_request $pr"
+artifacts 12
+jobs 12 "${required[0]}=" "${required[1]}=success" "$record="
+expect true "reusing pull_request run 10, *" "passes over a newer run whose required checks are still running"
 
 fresh
 artifacts 10 "merge-queue-$tree-5555555555555555555555555555555555555555"
-expect false "running every job: no passed pull_request run *" "runs everything when main has moved since the PR's run"
+expect false "running every job: the newest finished pull_request run 10 *" "runs everything when main has moved since the PR's run"
 
 fresh
 artifacts 10 "merge-queue-6666666666666666666666666666666666666666-$main"
-expect false "running every job: no passed pull_request run *" "runs everything when the PR's run tested another tree"
+expect false "running every job: the newest finished pull_request run 10 *" "runs everything when the PR's run tested another tree"
 
 fresh
 commit "$queued" "$tree" "7777777777777777777777777777777777777777" "$pr"
 artifacts 10 "merge-queue-$tree-$main"
-expect false "running every job: no passed pull_request run *" "runs everything for a PR queued behind another (its base is a queue commit)"
+expect false "running every job: the newest finished pull_request run 10 *" "runs everything for a PR queued behind another (its base is a queue commit)"
 
 fresh
 artifacts 10
-expect false "running every job: no passed pull_request run *" "runs everything when the PR's run recorded nothing"
+expect false "running every job: the newest finished pull_request run 10 *" "runs everything when the PR's run recorded nothing"
 
 fresh
 artifacts 10 "merge-queue-$tree-$main-extra" "x-merge-queue-$tree-$main"
-expect false "running every job: no passed pull_request run *" "matches the artifact name exactly"
+expect false "running every job: the newest finished pull_request run 10 *" "matches the artifact name exactly"
 
 fresh
 commit "$queued" "$tree" "$main"
@@ -151,40 +168,40 @@ expect false "running every job: * is not a merge of one pull request onto its b
 
 fresh
 jobs 10 "${required[0]}=failure" "${required[1]}=success" "$record=success"
-expect false "running every job: no passed pull_request run *" "runs everything when a required job failed in the latest attempt"
+expect false "running every job: the newest finished pull_request run 10 *" "runs everything when a required job failed in the latest attempt"
 
 fresh
 jobs 10 "${required[0]}=success" "${required[1]}=success" "$record=skipped"
-expect false "running every job: no passed pull_request run *" "runs everything when the recording job did not succeed in the latest attempt"
+expect false "running every job: the newest finished pull_request run 10 *" "runs everything when the recording job did not succeed in the latest attempt"
 
 fresh
 jobs 10 "${required[0]}=success" "${required[1]}=success" "$record="
-expect false "running every job: no passed pull_request run *" "runs everything while a re-run of the recording job is in progress"
+expect false "running every job: the newest finished pull_request run 10 *" "runs everything while a re-run of the recording job is in progress"
 
 fresh
 jobs 10 "${required[0]}=success" "$record=success"
-expect false "running every job: no passed pull_request run *" "runs everything when the run lacks a check the ruleset requires"
+expect false "running every job: no pull_request run * has finished its required checks" "runs everything when the run lacks a check the ruleset requires"
 
 fresh
 jobs 10 "${required[0]}=success" "${required[0]}=cancelled" "${required[1]}=success" "$record=success"
-expect false "running every job: no passed pull_request run *" "runs everything when any job of a required name did not succeed"
+expect false "running every job: the newest finished pull_request run 10 *" "runs everything when any job of a required name did not succeed"
 
 fresh
 passed_jobs 10
 jq '.total_count = 150' "$case_dir/jobs-10.json" > "$case_dir/jobs.tmp" && mv "$case_dir/jobs.tmp" "$case_dir/jobs-10.json"
-expect false "running every job: no passed pull_request run *" "runs everything when the jobs list is incomplete"
+expect false "running every job: cannot read every job of run 10" "runs everything when the jobs list is incomplete"
 
 fresh
 runs "10 .github/workflows/other.yml pull_request $pr"
-expect false "running every job: no passed pull_request run *" "ignores runs of another workflow"
+expect false "running every job: no pull_request run * has finished its required checks" "ignores runs of another workflow"
 
 fresh
 runs "10 .github/workflows/ci.yml push $pr"
-expect false "running every job: no passed pull_request run *" "ignores runs of another event"
+expect false "running every job: no pull_request run * has finished its required checks" "ignores runs of another event"
 
 fresh
 runs "10 .github/workflows/ci.yml pull_request 9999999999999999999999999999999999999999"
-expect false "running every job: no passed pull_request run *" "ignores runs on another PR head"
+expect false "running every job: no pull_request run * has finished its required checks" "ignores runs on another PR head"
 
 fresh
 rules
@@ -229,7 +246,8 @@ else
   echo "ok   refuses to name the record for a commit that is not a two-parent merge"
 fi
 
-# ci.yml: the recording job carries the name the script looks for, needs
+# ci.yml: the recording job carries the name this script and ci-wait look
+# for, needs
 # exactly the jobs that skip their steps on a reused run, so none is skipped
 # without having passed on the pull request, and checks their results itself
 # (an implicit success() would also see the skipped reuse job and never run).
@@ -241,7 +259,8 @@ recorded="$(awk '/^  record:$/ { in_record = 1; next } /^  [a-z0-9_]+:$/ { in_re
   sort | tr '\n' ' ')"
 record_if="$(awk '/^  record:$/ { in_record = 1; next } /^  [a-z0-9_]+:$/ { in_record = 0 }
   in_record' "$workflow")"
-if grep -qxF "    name: $record" "$workflow" && [ -n "$gated" ] && [ "$gated" = "$recorded" ] &&
+if grep -qxF "    name: $record" "$workflow" && grep -qF "\"$record\"" "$root/scripts/ci-wait" &&
+  [ -n "$gated" ] && [ "$gated" = "$recorded" ] &&
   grep -qF '!cancelled()' <<<"$record_if" &&
   [ "$(grep -oE "!contains\(needs\.\*\.result, '(failure|cancelled|skipped)'\)" <<<"$record_if" | sort -u | wc -l)" -eq 3 ]; then
   echo "ok   ci.yml records the tree after every job a reused run skips"
@@ -250,6 +269,35 @@ else
   echo "FAIL ci.yml records the tree after every job a reused run skips"
   echo "     jobs needing reuse: ${gated:-<none>}"
   echo "     record needs:       ${recorded:-<none>}"
+fi
+
+# ci.yml: every step of a job that needs reuse skips on a reused run, or has
+# a condition that is never true in the merge queue. A step left to run would
+# fail or cost the time the reuse saves.
+unguarded="$(awk -v gated=" $gated" '
+  function check() {
+    if (step == "") return
+    guard = "needs.reuse.outputs.reused != '"'"'true'"'"'"
+    ok = (cond == guard) ||
+      (index(cond, "&& " guard) > 0 && index(cond, "||") == 0 && index(cond, "always()") == 0) ||
+      cond == "github.event_name != '"'"'merge_group'"'"'" ||
+      (cond ~ /^inputs\.coverage && / && index(cond, "||") == 0)
+    if (!ok) print job ": " step " (if: " (cond == "" ? "none" : cond) ")"
+    step = ""
+  }
+  /^  [a-z0-9_]+:$/ { check(); job = substr($1, 1, length($1) - 1); in_steps = 0; next }
+  /^    steps:$/ { in_steps = index(gated, " " job " ") > 0; next }
+  /^    [a-z]/ { check(); in_steps = 0; next }
+  in_steps && /^      - / { check(); step = $0; sub(/^      - /, "", step); cond = ""; next }
+  in_steps && /^        if: / { cond = $0; sub(/^        if: /, "", cond) }
+  END { check() }
+' "$workflow")"
+if [ -z "$unguarded" ] && [ "$(grep -c "^        if: .*needs.reuse.outputs.reused != 'true'" "$workflow")" -gt 0 ]; then
+  echo "ok   ci.yml skips every step of a reused job"
+else
+  failures=$((failures + 1))
+  echo "FAIL ci.yml skips every step of a reused job"
+  sed 's/^/     /' <<<"${unguarded:-no guarded steps found}"
 fi
 
 if [ "$failures" -gt 0 ]; then

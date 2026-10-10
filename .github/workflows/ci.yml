@@ -20,8 +20,10 @@ on:
   # every step. Skipping the jobs themselves would not do: a skipped matrix job
   # reports once as `mix test (OTP ${{matrix.otp}} | …)`, never under the three
   # required names. A PR run records what it tested in the `record` job; see
-  # .github/scripts/merge-queue-reuse.sh. The push to main after the merge
-  # still runs everything.
+  # .github/scripts/merge-queue-reuse.sh. A reused run trusts what lies
+  # outside the tree as it was at PR time (e2e_unit's brando_json_api and
+  # brando_graphql checkouts, action tags); the push to main after the merge
+  # reruns everything.
   merge_group:
     types: [checks_requested]
   # Lets the E2E job be run on demand without raising a PR — it is skipped on
