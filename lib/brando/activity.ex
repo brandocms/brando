@@ -224,6 +224,16 @@ defmodule Brando.Activity do
     end)
   end
 
+  @doc """
+  Record that scheduled publishing did not publish `revision` of `entry`
+  because the entry was in the trash, and dropped the schedule.
+  """
+  def scheduled_revision_in_trash(entry, user, revision) do
+    guard(entry, fn ->
+      record(:updated, entry, user, revision: revision, details: %{"scheduled_revision" => %{"reason" => "in_trash"}})
+    end)
+  end
+
   @doc "Record that `copy` was made from `original`."
   def duplicated(copy, original, user) do
     guard(copy, fn ->

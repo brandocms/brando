@@ -13921,6 +13921,11 @@ msgstr ""
 msgid "Revision #%{revision}"
 msgstr ""
 
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "Revision #%{revision} was not published as scheduled: the entry was in the trash"
+msgstr ""
+
 #: lib/brando_admin/components/form/revisions_drawer.ex
 #, elixir-autogen, elixir-format
 msgid "Revision %{revision} is loaded as an unsaved working copy."
@@ -16792,6 +16797,11 @@ msgstr ""
 #: lib/brando_admin/live/sites/notifications_live.ex
 #, elixir-autogen, elixir-format
 msgid "The route was paused"
+msgstr ""
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "The schedule was cancelled"
 msgstr ""
 
 #: lib/brando_admin/live/sites/environment_live.ex

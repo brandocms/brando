@@ -187,9 +187,10 @@ job cannot publish the revision early.
 At execution, Brando restores the snapshot transactionally, forces published
 status and the current publication timestamp, makes the revision active, and
 updates identifiers, caches, and rendered content. Later edits to the live entry
-do not change the scheduled snapshot. An entry in the trash is not published:
-the job checks again every hour and publishes the revision once the entry is
-restored, as a publish date does. Emptying the trash cancels it.
+do not change the scheduled snapshot. A revision that comes due while its entry
+is in the trash is not published: the job is cancelled, the revision is no
+longer scheduled, and the entry's Activity says why. Restoring the entry
+publishes nothing; schedule the revision again if it should still go out.
 
 To cancel before execution, use **Cancel schedule** in the revision row:
 

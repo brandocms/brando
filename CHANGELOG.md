@@ -1951,8 +1951,10 @@ production dump.
   `obfuscated_fields` of `trait :soft_delete`) when the revision or the
   entry is in the trash. Outside the trash those fields are restored as
   before. Loading a revision as a working copy follows the same rule. A
-  scheduled revision of an entry in the trash is no longer published there:
-  its job waits, and publishes it once the entry is restored.
+  scheduled revision that comes due while its entry is in the trash is no
+  longer published there: the schedule is cancelled and Activity says why, so
+  restoring the entry publishes nothing; schedule it again if it should still
+  go out.
 
 - **A change to an entry in the trash announces nothing.** Activity still
   records it, but no `entry.updated` (or other content event) goes out, so

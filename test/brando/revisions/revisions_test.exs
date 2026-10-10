@@ -392,25 +392,49 @@ defmodule Brando.Revisions.RevisionsTest do
     assert Enum.count(revisions, & &1.active) == 1
   end
 
-  # As a publish date does: the trash holds it, and it runs once restored.
-  test "a scheduled revision waits while its entry is in the trash", %{user: user} do
+  # Nothing surprising after a restore: the schedule is dropped, with a note
+  # in Activity, and an editor can schedule the revision again.
+  test "a scheduled revision due while its entry is in the trash is cancelled, with a note", %{user: user} do
     {:ok, original} = Pages.create_page(Factory.params_for(:page, vars: [], status: :draft), user)
     {:ok, changed} = Pages.update_page(original.id, %{title: "Current title"}, user)
+    assert {_, _} = Revisions.mark_revision_scheduled(Page, changed.id, 0, true)
     {:ok, trashed} = Brando.Repo.soft_delete(changed)
     job = %Oban.Job{args: %{"schema" => to_string(Page), "id" => changed.id, "revision" => 0, "user_id" => user.id}}
 
-    assert {:snooze, _} = Brando.Worker.EntryPublisher.perform(job)
+    assert {:cancel, :in_trash} = Brando.Worker.EntryPublisher.perform(job)
 
     page = Brando.Repo.get!(Page, changed.id)
     assert page.title == "Current title"
     assert page.status == :draft
     assert page.deleted_at
     assert {:ok, revisions} = Revisions.list_revision_metadata(Page, changed.id)
-    refute Enum.find(revisions, &(&1.revision == 0)).active
+    revision = Enum.find(revisions, &(&1.revision == 0))
+    refute revision.active
+    refute revision.scheduled
 
+    import Ecto.Query, only: [from: 2]
+
+    assert %{
+             source: :scheduler,
+             user_id: user_id,
+             revision: 0,
+             details: %{"scheduled_revision" => %{"reason" => "in_trash"}}
+           } =
+             Brando.Repo.one!(
+               from(e in Brando.Activity.Event,
+                 where: e.schema == ^to_string(Page) and e.entry_id == ^changed.id and e.action == :updated,
+                 order_by: [desc: e.id],
+                 limit: 1
+               )
+             )
+
+    assert user_id == user.id
+
+    # restored, the page is as it was: nothing is published behind the editor's back
     {:ok, _} = Brando.Repo.restore(trashed)
-    assert {:ok, published} = Brando.Worker.EntryPublisher.perform(job)
-    assert published.status == :published
+    page = Brando.Repo.get!(Page, changed.id)
+    assert page.title == "Current title"
+    assert page.status == :draft
   end
 
   # Checked under the entry's lock, so an entry trashed while the job starts
