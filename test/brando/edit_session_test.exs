@@ -672,6 +672,29 @@ defmodule Brando.EditSessionTest do
              }
     end
 
+    # A cell edit names its row in a list skeleton taken when it was made, so
+    # the rejoiner's diff carries the rows as it had them. Rows the session
+    # added or removed since stay that way.
+    test "a rejoin carrying a row edit keeps the rows the session added and removed" do
+      base = rows()
+      {:seeded, data} = Data.join(Data.new(1), @field, base, base)
+      rows_then = [%{"id" => 5}, %{"id" => 7}]
+      added = %{"sync_uid" => "new", "cols" => "A's row"}
+
+      {:ok, data} =
+        Data.apply_op(
+          data,
+          @field,
+          {:set_field, "a", ["block", "table_rows"], {:list, rows_then, [%{"id" => 5}, added]}, 0}
+        )
+
+      cell = ["block", {:at, "table_rows", {"id", 5}, rows_then}, "cols"]
+      {:ok, held} = Ops.apply_op(base, {:set_field, "a", cell, "B's cell", 0})
+      {{:merged, []}, data} = Data.join(data, @field, base, held)
+
+      assert Data.state(data, @field).diffs["a"]["block"]["table_rows"] == [%{"id" => 5, "cols" => "B's cell"}, added]
+    end
+
     test "a rejoin carrying work after a save's read is kept by that save's rebase, on the session" do
       ref = new_ref()
       Phoenix.PubSub.subscribe(Brando.pubsub(), ref.topic)

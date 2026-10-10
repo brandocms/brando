@@ -38,8 +38,8 @@ defmodule BrandoAdmin.Components.Form.BlockField.Ops do
     another's, and when that is live session state (a rejoin, a recovery
     copy) the target's root diff holds other editors' work, not an earlier
     diff of the same editor. So a carried root diff is merged into it field
-    by field, the carried fields winning, as for children; a list in it
-    keeps the carried side's rows. A field the carried diff lacks keeps the
+    by field, the carried fields winning, as for children, and its row
+    lists by row (see `carry/3`). A field the carried diff lacks keeps the
     target's value, including one its editor set back to the saved value
     with a whole-form `{:update, ...}`, which sends no key for it. A
     recovery copy holds each root it changed whole (`restore_draft`), so it
@@ -987,7 +987,11 @@ defmodule BrandoAdmin.Components.Form.BlockField.Ops do
   blocks (with whole subtrees), their field changes and, if they moved
   blocks, their order. Blocks the other writer added keep their place
   among their neighbours. Field changes merge as diffs do: an editor's
-  changed fields win, fields they did not touch take the new values.
+  changed fields win, fields they did not touch take the new values. When
+  `new_base` is live state rather than rows (a rejoin, a recovery copy), a
+  root's diff merges with the one held there: the other fields stay, and
+  the block's row lists merge by row, keeping each side's additions,
+  removals and changes.
 
   Returns `{state, conflicts}`. A conflict is unsaved work on a block the
   other writer deleted; it cannot be replayed onto rows that no longer
@@ -1079,14 +1083,70 @@ defmodule BrandoAdmin.Components.Form.BlockField.Ops do
     if known?(acc, uid) do
       # Children store deltas that merge; an `:update` replaces a root's
       # cumulative diff. Rows just loaded hold no diff, but live session
-      # state can (a rejoin, a recovery copy): other editors' changes to a
-      # root's other fields stay, and the carried fields win, as children's do.
-      diff = if uid in acc.order, do: deep_merge_params(Map.get(acc.diffs, uid, %{}), diff), else: diff
+      # state can (a rejoin, a recovery copy), so a root's diff is merged
+      # with the one held there (`carry_root_diff/2`).
+      diff = if uid in acc.order, do: carry_root_diff(Map.get(acc.diffs, uid, %{}), diff), else: diff
       {carry_apply(acc, {:update, uid, diff}), conflicts}
     else
       {acc, [uid | conflicts]}
     end
   end
+
+  # A root's carried diff onto the diff the target holds for it. The fields
+  # the carried diff has win; the target's other fields stay. A list of the
+  # block's rows (refs, vars, table rows, ...) merges by row, three ways
+  # (`carry_list/3`), because a diff holds the whole list as its editor had
+  # it: a cell edit names its row in the list as it was then.
+  #
+  # Both sides were built on the same rows, which hold no diff, so a field
+  # the carried diff lacks is one its editor did not change: the target's
+  # value stays. (An editor who set a field back to its saved value with a
+  # whole-form `:update` sends no key for it, which reads the same.)
+  defp carry_root_diff(current, carried) do
+    Map.merge(current, carried, fn
+      "block", %{} = now, %{} = block when not is_struct(now) and not is_struct(block) ->
+        Map.merge(now, block, fn
+          key, now, rows when is_list(now) and is_list(rows) -> carry_list(key, now, rows)
+          _key, now, value -> deep_merge_params(now, value)
+        end)
+
+      _key, now, value ->
+        deep_merge_params(now, value)
+    end)
+  end
+
+  # `current` is the target's list, `carried` the carried editor's; neither
+  # holds the saved rows, but every saved row has an id and the rows that
+  # are named by id alone carry no change. So the list before is the rows
+  # with an id on either side, and `merge_list/4` keeps what each side
+  # added, removed and changed. A row both changed takes the carried
+  # fields over the target's; a row one removed and the other changed comes
+  # back with the change, as with two editors' list ops. Items that cannot
+  # be named are set whole, as the carried editor has them.
+  defp carry_list(key, current, carried) do
+    named = Enum.map(current, &identity(&1, key))
+    carried_named = Enum.map(carried, &identity(&1, key))
+
+    if :none in named or :none in carried_named or repeated?(named) or repeated?(carried_named) do
+      carried
+    else
+      before = (carried ++ current) |> Enum.flat_map(&saved_row/1) |> Enum.uniq()
+      after_list = Enum.map(carried, &if(unchanged_row?(&1), do: Map.take(&1, ["id"]), else: &1))
+
+      before
+      |> merge_list(after_list, current, key)
+      |> Enum.map(&merge_row(&1, Enum.find(current, fn now -> same_row?(now, &1, key) end)))
+    end
+  end
+
+  defp merge_row(item, nil), do: item
+  defp merge_row(item, now), do: deep_merge_params(now, item)
+
+  defp saved_row(%{"id" => id}) when id not in [nil, ""], do: [%{"id" => id}]
+  defp saved_row(_item), do: []
+
+  defp unchanged_row?(%{"id" => id} = item) when id not in [nil, ""], do: Map.keys(item) -- ~w(id uid key sync_uid) == []
+  defp unchanged_row?(_item), do: false
 
   defp depth(state, uid) do
     case state.parents[uid] do

@@ -2150,11 +2150,10 @@ production dump.
 - **An editor rejoining with unsaved changes to a block keeps the others'
   changes to that block's other fields.** When an entry's edit session
   restarted, an editor coming back with changes to a top-level block replaced
-  every change another editor had made to that block since. Now only the
-  fields the returning editor changed take its values. A list in the block
-  (its references, variables or table rows) still keeps the returning
-  editor's rows, and a field it set back to the saved value counts as
-  unchanged.
+  every change another editor had made to that block since, rows added to
+  or removed from its lists included. Now only the fields and rows the
+  returning editor changed take its values, and a field it set back to the
+  saved value counts as unchanged.
 
 - **Pages emit their Article again.** A page's structured data type
   (`WebPage`, `AboutPage`, `ContactPage`, …) was given to the page's Article as

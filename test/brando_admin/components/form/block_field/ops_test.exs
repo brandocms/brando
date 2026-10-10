@@ -447,10 +447,11 @@ defmodule BrandoAdmin.Components.Form.BlockField.OpsTest do
       assert carried.order == ["a", "b"]
     end
 
-    # A recovery copy (`{:carry, copy, base}`) lands on live session state,
-    # where a root can hold another editor's changes: an `:update` replaced
-    # the root's whole diff, so those changes went without a conflict.
-    test "a copy carried onto live state keeps others' changes to its roots' other fields" do
+    # `{:carry, state, base}` (a rejoin, a recovery copy) lands on live
+    # session state, where a root can hold another editor's changes: an
+    # `:update` replaced the root's whole diff, so those changes went without
+    # a conflict.
+    test "state carried onto live state keeps others' changes to its roots' other fields" do
       base = base_rows()
 
       live =
@@ -459,15 +460,39 @@ defmodule BrandoAdmin.Components.Form.BlockField.OpsTest do
         |> apply!({:set_field, "b", ["block", "anchor"], "other editor", 0})
         |> apply!({:update, "a1", %{"description" => "other editor"}})
 
-      copy =
+      held =
         base
-        |> apply!({:update, "b", %{"block" => %{"anchor" => "copy"}}})
-        |> apply!({:update, "a1", %{"anchor" => "copy"}})
+        |> apply!({:update, "b", %{"block" => %{"anchor" => "carried"}}})
+        |> apply!({:update, "a1", %{"anchor" => "carried"}})
 
-      carried = apply!(live, {:carry, copy, base})
+      carried = apply!(live, {:carry, held, base})
 
-      assert carried.diffs["b"] == %{"block" => %{"description" => "other editor", "anchor" => "copy"}}
-      assert carried.diffs["a1"] == %{"description" => "other editor", "anchor" => "copy"}
+      assert carried.diffs["b"] == %{"block" => %{"description" => "other editor", "anchor" => "carried"}}
+      assert carried.diffs["a1"] == %{"description" => "other editor", "anchor" => "carried"}
+    end
+
+    test "rows carried onto live state merge by row: each side's additions, removals and row changes stay" do
+      base = base_rows()
+      rows_then = [%{"id" => 5}, %{"id" => 7}, %{"id" => 9}]
+
+      # The session: a cell of row 5 changed, row 9 removed.
+      live =
+        base
+        |> apply!({:set_field, "b", ["block", {:at, "table_rows", {"id", 5}, rows_then}, "cols"], "live", 0})
+        |> apply!({:set_field, "b", ["block", "table_rows"], {:list, rows_then, [%{"id" => 5}, %{"id" => 7}]}, 0})
+
+      # Carried: another cell of row 5 changed, row 7 removed, a row added.
+      added = %{"sync_uid" => "new", "cols" => "carried row"}
+
+      held =
+        apply!(
+          base,
+          {:update, "b", %{"block" => %{"table_rows" => [%{"id" => 5, "label" => "carried"}, %{"id" => 9}, added]}}}
+        )
+
+      carried = apply!(live, {:carry, held, base})
+
+      assert carried.diffs["b"]["block"]["table_rows"] == [%{"id" => 5, "cols" => "live", "label" => "carried"}, added]
     end
 
     test "rows written outside the session take the editors' root diffs as they are" do
