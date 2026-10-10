@@ -34,8 +34,10 @@ defmodule Brando.Content.BlockIdentity do
   @typedoc "Blocks by uid, the whole tree under each (`index/1`)."
   @type index :: %{optional(String.t()) => Block.t()}
 
-  # changes that say nothing about a block's content
-  @placement [:children, :sequence, :parent_id]
+  # the changes that make a block's content another one than its module
+  # version speaks for: where it sits, whether it is collapsed or active
+  # and its other settings do not
+  @content [:refs, :vars, :table_rows, :module_id]
 
   @doc """
   Index blocks, or entry blocks, by uid: the blocks and every child under
@@ -87,14 +89,14 @@ defmodule Brando.Content.BlockIdentity do
           changeset
 
         _ ->
-          known = row || revision
-          version = if revision, do: revision.module_version, else: row.module_version
+          sync_uid = identity(row, :sync_uid) || identity(revision, :sync_uid)
+          version = identity(revision, :module_version) || identity(row, :module_version)
 
           # the row it replaces goes first: its table rows' sync uids are free
           syncs = MapSet.union(row_syncs(row), row_syncs(revision))
 
           changeset
-          |> force_present(:sync_uid, known.sync_uid)
+          |> force_present(:sync_uid, sync_uid)
           |> force_present(:module_version, version)
           |> map_change(:table_rows, &keep_row_syncs(&1, syncs))
           |> delete_row_first(row)
@@ -120,15 +122,20 @@ defmodule Brando.Content.BlockIdentity do
     do: map_change(changeset, :children, fn children -> Enum.map(children, &keep(&1, loaded, restored)) end)
 
   # A block a restore writes the revision's content to is at the revision's
-  # module version. One it leaves as it is keeps its own.
-  defp restored_version(%Changeset{changes: changes, data: data} = changeset, %{module_version: version})
-       when version != data.module_version do
-    if changes |> Map.drop(@placement) |> map_size() > 0,
+  # module version. One it leaves as it is keeps its own, and so does one
+  # the revision has no version for: nothing says it is behind.
+  defp restored_version(%Changeset{changes: changes, data: data} = changeset, revision) do
+    version = identity(revision, :module_version)
+
+    if version && version != data.module_version && changes |> Map.take(@content) |> map_size() > 0,
       do: Changeset.force_change(changeset, :module_version, version),
       else: changeset
   end
 
-  defp restored_version(changeset, _revision), do: changeset
+  # A revision stored before blocks had a module version or a sync uid
+  # holds structs without the key: no identity, not nil.
+  defp identity(nil, _key), do: nil
+  defp identity(block, key), do: Map.get(block, key)
 
   # The changesets a cast made, edited in place: `put_change/3` would cast
   # the relation again, which Ecto refuses for related changesets.
@@ -138,7 +145,7 @@ defmodule Brando.Content.BlockIdentity do
   defp map_change(changeset, _key, _fun), do: changeset
 
   defp row_syncs(%{table_rows: rows}) when is_list(rows),
-    do: rows |> Enum.map(& &1.sync_uid) |> Enum.reject(&is_nil/1) |> MapSet.new()
+    do: rows |> Enum.map(&Map.get(&1, :sync_uid)) |> Enum.reject(&is_nil/1) |> MapSet.new()
 
   defp row_syncs(_block), do: MapSet.new()
 
