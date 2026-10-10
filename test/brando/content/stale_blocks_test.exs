@@ -15,6 +15,12 @@ defmodule Brando.Content.StaleBlocksTest do
   alias Brando.ProposalFixtures
   alias Brando.Repo
 
+  # Receives every content event in the test process (Oban runs inline).
+  defmodule Collector do
+    @behaviour Brando.ContentEvents.Subscriber
+    def handle_event(event), do: send(self(), {:collected, event})
+  end
+
   # A slider module on version 3. Version 1 had a `link` variable and a
   # `title` text reference; version 3 has `cta` (link), `caption` (text),
   # `label` (string), `size` (select) and a `body` picture reference.
@@ -452,6 +458,18 @@ defmodule Brando.Content.StaleBlocksTest do
       # and stays out of the trash, at its own address
       assert %{deleted_at: nil, uri: uri} = Repo.get!(Page, id)
       assert uri == page.uri
+    end
+
+    test "a change to an entry in the trash is in Activity, but no content event announces it", c do
+      put_test_env(Brando.ContentEvents, subscribers: [Collector], debounce_seconds: 0)
+      {page, _block} = page_with_block(c, [link_var()], [])
+      {:ok, _} = Repo.soft_delete(page)
+
+      assert {:ok, _} = StaleBlocks.apply(c.module, %{{:var, "link"} => :drop}, c.user)
+
+      assert Repo.one!(from(e in Brando.Activity.Event, where: e.schema == ^to_string(Page) and e.entry_id == ^page.id))
+      id = page.id
+      refute_received {:collected, %{entry_id: ^id}}
     end
 
     test "an entry in the trash is rendered again, so restoring it shows the resolved blocks", c do

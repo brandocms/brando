@@ -179,7 +179,7 @@ defmodule Brando.ContentEvents do
     with true <- enabled?(),
          %{__struct__: schema} <- entry,
          false <- schema in @excluded,
-         [_ | _] = types <- types_for(action, entry, opts) do
+         [_ | _] = types <- types(action, entry, opts) do
       base = %{
         "schema" => to_string(schema),
         "entry_id" => entry.id,
@@ -208,6 +208,16 @@ defmodule Brando.ContentEvents do
     trashed: ["entry.deleted"],
     restored: ["entry.restored"]
   }
+
+  # An entry in the trash is not on the site: a change to it (a stale-block
+  # resolve, say) is in Activity but announces nothing, or webhooks would
+  # hear of a deleted page changing and IndexNow submit its trash URL. Only
+  # its leaving (`entry.deleted`) goes out.
+  defp types(action, entry, opts) do
+    if Map.get(entry, :deleted_at) && action not in [:trashed, :deleted],
+      do: [],
+      else: types_for(action, entry, opts)
+  end
 
   defp types_for(action, _entry, _opts) when is_map_key(@types_for_action, action),
     do: Map.fetch!(@types_for_action, action)

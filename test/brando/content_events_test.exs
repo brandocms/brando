@@ -133,6 +133,27 @@ defmodule Brando.ContentEventsTest do
       assert collected() == []
     end
 
+    test "a change to an entry in the trash is recorded but not announced", %{user: user} do
+      page = create_page(user, %{status: :published})
+      {:ok, trashed} = Pages.delete_page(page.id, user)
+      collected()
+
+      for action <- [:updated, :revision_restored, :published, :unpublished, :imported] do
+        Activity.record(action, trashed, user)
+      end
+
+      assert collected() == []
+
+      assert Brando.Repo.aggregate(
+               from(e in Activity.Event, where: e.entry_id == ^page.id and e.action == :updated),
+               :count
+             ) == 1
+
+      # the trash's own events still go out
+      Activity.deleted(trashed, user, false)
+      assert types(collected()) == ["entry.deleted"]
+    end
+
     test "a duplicate is entry.created", %{user: user} do
       page = create_page(user)
       collected()
