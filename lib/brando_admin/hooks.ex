@@ -128,10 +128,8 @@ defmodule BrandoAdmin.Hooks do
   end
 
   def handle_info({_, {:uri_presence, %{user_left: presence}}}, socket) do
-    %{user: user} = presence
-
     if presence.metas == [] do
-      {:halt, remove_presence(socket, user)}
+      {:halt, remove_presence(socket, presence_user_id(presence))}
     else
       # Another of the user's sessions is still here, perhaps in a different
       # place (the admin form or the website).
@@ -188,18 +186,26 @@ defmodule BrandoAdmin.Hooks do
   # A tab of a user who still has others here closed: its field lock goes,
   # theirs stay. Updating a tab's meta (moving to another field) is a leave
   # and a join of the same tab, which is still among `metas`, so this never
-  # undoes the field it moved to. A user the presence fetcher could not load
-  # (`user: nil`, as `assign_uri_presence/2` and `remove_presence/2` also
-  # allow) has no id to release a field for.
-  defp release_closed_tabs(socket, %{user: nil}), do: socket
-
+  # undoes the field it moved to.
   defp release_closed_tabs(socket, presence) do
-    open = MapSet.new(presence.metas, &Map.get(&1, :tab))
+    case presence_user_id(presence) do
+      nil ->
+        socket
 
-    for %{tab: tab} <- Map.get(presence, :left, []), tab != nil, not MapSet.member?(open, tab), reduce: socket do
-      socket -> push_event(socket, "b:set_active_field", %{user_id: presence.user.id, field: nil, tab: tab})
+      user_id ->
+        open = MapSet.new(presence.metas, &Map.get(&1, :tab))
+
+        for %{tab: tab} <- Map.get(presence, :left, []), tab != nil, not MapSet.member?(open, tab), reduce: socket do
+          socket -> push_event(socket, "b:set_active_field", %{user_id: user_id, field: nil, tab: tab})
+        end
     end
   end
+
+  # A departure's user is nil for an account the presence fetcher can no
+  # longer load (deleted). Its field locks reached other editors with its
+  # id, so they go by the presence key it also carries.
+  defp presence_user_id(%{user: %{id: id}}), do: id
+  defp presence_user_id(presence), do: Map.get(presence, :user_id)
 
   defp replay_dirty_fields(%{assigns: %{current_user: %{id: user_id}}} = socket, %{user: %{id: user_id}}, _meta),
     do: socket
@@ -242,10 +248,10 @@ defmodule BrandoAdmin.Hooks do
 
   defp remove_presence(socket, nil), do: socket
 
-  defp remove_presence(socket, user) do
+  defp remove_presence(socket, user_id) do
     socket
-    |> update(:presences, &Map.delete(&1, user.id))
-    |> update(:presence_ids, &Map.delete(&1, user.id))
-    |> push_event("b:clear_user_presence", %{user_id: user.id})
+    |> update(:presences, &Map.delete(&1, user_id))
+    |> update(:presence_ids, &Map.delete(&1, user_id))
+    |> push_event("b:clear_user_presence", %{user_id: user_id})
   end
 end
