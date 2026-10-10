@@ -6451,7 +6451,7 @@ defmodule BrandoAdmin.Components.Form do
     socket =
       if working_copy,
         do: socket |> assign(:blocks_detached?, true) |> assign(:working_copy, working_copy["revision"]),
-        else: socket
+        else: assign(socket, :working_copy, nil)
 
     for {name, _, _} <- socket.assigns.form_blueprint.transformers do
       send_update(BrandoAdmin.Components.Form.Transformer,
