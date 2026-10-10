@@ -227,6 +227,13 @@ defmodule BrandoAdmin.Components.Form.Drafts do
       "modules" => modules
     }
 
+    # a revision's working copy, unsaved: restored, it is one again
+    payload =
+      case socket.assigns[:working_copy] do
+        nil -> payload
+        revision -> Map.put(payload, "working_copy", %{"revision" => revision})
+      end
+
     checksum = Content.checksum(payload)
     generation = max(capture.generation, draft.persisted + if(checksum != draft.checksum, do: 1, else: 0))
 

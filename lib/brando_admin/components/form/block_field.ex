@@ -262,6 +262,20 @@ defmodule BrandoAdmin.Components.Form.BlockField do
      |> assign(:restored_blocks, BlockIdentity.index(revision_blocks))}
   end
 
+  # A recovery copy of a revision's working copy, restored: a working copy
+  # of that revision again (`load_working_copy`), its blocks where the copy
+  # has them, with the revision's module versions (read by the Form).
+  def update(
+        %{event: "restore_draft", working_copy: revision_blocks, changesets: changesets, entry_blocks: originals},
+        socket
+      ) do
+    {:ok,
+     socket
+     |> detach_session()
+     |> restore_draft(changesets, originals, place?: true)
+     |> assign(:restored_blocks, BlockIdentity.index(revision_blocks))}
+  end
+
   def update(%{event: "restore_draft", changesets: changesets, entry_blocks: originals} = message, socket) do
     if Map.get(message, :source) == :translation and joined_with_work?(socket) do
       # A synchronized translation's pending version, loaded by an editor who

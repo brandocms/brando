@@ -284,4 +284,53 @@ defmodule BrandoAdmin.WorkingCopyPlacementTest do
     await(fn -> length(syncs.()) == 2 end)
     assert Enum.sort(syncs.()) == ["row-gone", "row-kept"]
   end
+
+  # Review: a working copy comes back after a reload through its recovery
+  # copy. Applied as any recovery copy, it left a block moved since where it
+  # is now, with the revision's content and the module version it has now.
+  test "a working copy brought back by its recovery copy still goes where the revision has it", c do
+    roots!(c, [
+      container(c, "boxA", [module_block(c, "keepA", "Stays in A"), module_block(c, "moved", "As in the revision")]),
+      container(c, "boxB", [module_block(c, "keepB", "Stays in B")])
+    ])
+
+    stamp!("moved", sync_uid: "moved-sync", module_version: 3)
+    revision = revision!(c)
+    saved = tree(c.page)
+    move!(c, "moved", "boxB", 0, "Moved on")
+    stamp!("moved", module_version: 4)
+    stamp!("keepB", sequence: 1)
+
+    # the working copy, and the recovery copy the form's hook takes of it
+    view = open(c)
+    drawer = cid_of(view, "#page_form-revisions-drawer-tab-activity")
+    view |> with_target(drawer) |> render_hook("select_revision", %{"revision" => revision})
+    await(fn -> render(view) =~ ~r/draft-save-state" data-state="dirty"/ end)
+    main = view |> render() |> form_params("#page_form_form") |> Plug.Conn.Query.encode()
+
+    view
+    |> with_target(cid_of(view, "#page_form-el"))
+    |> render_hook("draft_capture", %{"main" => main, "blocks" => %{}, "generation" => 1, "request_id" => 1})
+
+    copies = fn ->
+      Repo.all(from(d in Brando.Drafts.EntryDraft, where: d.entry_id == ^c.page.id and is_nil(d.resolved_at)))
+    end
+
+    await(fn -> copies.() != [] end)
+
+    # the page is loaded again, and the copy restored
+    view = open(c)
+    [copy] = copies.()
+    view |> with_target(cid_of(view, "#page_form-el")) |> render_hook("draft_restore", %{"id" => copy.id})
+    await(fn -> render(view) =~ ~r/draft-save-state" data-state="dirty"/ end)
+
+    view |> with_target(cid_of(view, "#page_form-el")) |> render_hook("save_redirect_target", %{})
+    view |> form("#page_form_form") |> render_submit()
+    assert_push_event(view, "b:submit", %{}, 5_000)
+    view |> form("#page_form_form") |> render_submit()
+
+    await(fn -> tree(c.page) == saved end)
+    moved = row("moved")
+    assert {body("moved"), moved.sync_uid, moved.module_version} == {"As in the revision", "moved-sync", 3}
+  end
 end

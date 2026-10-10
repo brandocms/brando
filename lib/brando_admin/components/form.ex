@@ -114,6 +114,7 @@ defmodule BrandoAdmin.Components.Form do
      |> assign(:held_remote, %{})
      |> assign(:field_clocks, %{})
      |> assign(:blocks_detached?, false)
+     |> assign(:working_copy, nil)
      |> assign(:hidden_block_fields, [])
      |> assign(:server_owned_assets, %{})
      |> assign(:draft, nil)
@@ -936,7 +937,11 @@ defmodule BrandoAdmin.Components.Form do
   # changes, its fields here and its blocks in each block field, so Save
   # writes them. The block fields leave the entry's edit session while it is
   # shown (`EditSession.detach/2`).
-  def update(%{action: :load_working_copy, revision_entry: revision_entry}, socket) do
+  #
+  # Until it is saved, its recovery copies say which revision it is
+  # (`:working_copy`), so one restored after a reload is again a working
+  # copy of it (`apply_restored_changeset/4`).
+  def update(%{action: :load_working_copy, revision_entry: revision_entry} = message, socket) do
     %{schema: schema, entry: entry, current_user: current_user, form_blueprint: blueprint} = socket.assigns
     block_assocs = Enum.map(blueprint.blocks, &:"entry_#{&1.name}")
     params = revision_entry |> Brando.Revisions.restore_params(entry) |> Map.drop(block_assocs)
@@ -956,6 +961,7 @@ defmodule BrandoAdmin.Components.Form do
 
     socket
     |> assign(:blocks_detached?, true)
+    |> assign(:working_copy, Map.get(message, :revision))
     |> put_local_form(to_form(changeset, []))
     |> assign_entry_for_blocks()
     |> clear_blocks_root_changesets()
@@ -972,6 +978,7 @@ defmodule BrandoAdmin.Components.Form do
     # edit session.
     socket
     |> assign(:blocks_detached?, false)
+    |> assign(:working_copy, nil)
     |> assign(:entry, updated_entry)
     |> assign_refreshed_form()
     |> assign(:block_map, [])
@@ -4338,7 +4345,7 @@ defmodule BrandoAdmin.Components.Form do
         {:noreply,
          socket
          |> Drafts.put_draft(draft)
-         |> apply_restored_changeset(changeset)}
+         |> apply_restored_changeset(changeset, :recovery_copy, draft.selected.payload["working_copy"])}
     end
   end
 
@@ -5945,6 +5952,7 @@ defmodule BrandoAdmin.Components.Form do
     # A saved revision preview is the entry now: its blocks rejoin the
     # entry's edit session.
     |> assign(:blocks_detached?, false)
+    |> assign(:working_copy, nil)
     |> reload_all_blocks(:changed)
     |> refresh_translation(stale?)
     |> push_patch(to: update_url)
@@ -5967,6 +5975,7 @@ defmodule BrandoAdmin.Components.Form do
     # A saved revision preview is the entry now: its blocks rejoin the
     # entry's edit session.
     |> assign(:blocks_detached?, false)
+    |> assign(:working_copy, nil)
     |> reload_all_blocks(:changed)
     |> refresh_translation(stale?)
   end
@@ -6413,18 +6422,36 @@ defmodule BrandoAdmin.Components.Form do
   # an editor who joins a translation others already work in finds the
   # version, and their work, in the edit session, and the block fields keep
   # it rather than load the version over it.
-  defp apply_restored_changeset(socket, changeset, source \\ :recovery_copy) do
+  #
+  # A recovery copy of a revision's working copy (`working_copy`, which
+  # revision) is again a working copy of it: the block fields put its blocks
+  # where it has them and take the revision's module versions, read here
+  # (`BlockField`'s `load_working_copy`).
+  defp apply_restored_changeset(socket, changeset, source, working_copy \\ nil) do
     form = to_form(changeset)
+    revision_entry = working_copy_revision(socket, working_copy)
 
     for field <- socket.assigns.form_blueprint.blocks do
-      send_update(BlockField,
+      message = [
         id: "#{socket.assigns.id}-blocks-#{field.name}",
         event: "restore_draft",
         source: source,
         entry_blocks: Map.get(changeset.data, :"entry_#{field.name}") || [],
         changesets: get_assoc(changeset, :"entry_#{field.name}")
-      )
+      ]
+
+      message =
+        if working_copy,
+          do: Keyword.put(message, :working_copy, Map.get(revision_entry || %{}, :"entry_#{field.name}") || []),
+          else: message
+
+      send_update(BlockField, message)
     end
+
+    socket =
+      if working_copy,
+        do: socket |> assign(:blocks_detached?, true) |> assign(:working_copy, working_copy["revision"]),
+        else: socket
 
     for {name, _, _} <- socket.assigns.form_blueprint.transformers do
       send_update(BrandoAdmin.Components.Form.Transformer,
@@ -6441,6 +6468,20 @@ defmodule BrandoAdmin.Components.Form do
     |> force_svelte_remounts(:all)
     |> Drafts.dirty()
   end
+
+  # The revision a recovered working copy is of, if it is still there: its
+  # blocks then go where the copy has them without the revision's module
+  # versions.
+  defp working_copy_revision(_socket, nil), do: nil
+
+  defp working_copy_revision(%{assigns: %{schema: schema, entry: entry}}, %{"revision" => number}) do
+    case Brando.Revisions.get_revision(schema, entry.id, number) do
+      {:ok, {_revision, {_number, revision_entry}}} -> revision_entry
+      _ -> nil
+    end
+  end
+
+  defp working_copy_revision(_socket, _working_copy), do: nil
 
   # A synchronized translation is checked against the version its editor
   # worked from before it is written (`Brando.Translations.check_target_save/4`).
