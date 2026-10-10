@@ -7,9 +7,8 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelectUnavailableOptionTest do
   use Brando.ConnCase
   import Phoenix.LiveViewTest
 
-  alias BrandoAdmin.Components.Form.Input.MultiSelect
-  alias Brando.Content.ModuleSet
   alias Brando.Content.ModuleSetModule
+  alias BrandoAdmin.Components.Form.Input.MultiSelect
   alias Ecto.Changeset
 
   defmodule Host do
@@ -18,6 +17,7 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelectUnavailableOptionTest do
     alias Brando.Content.ModuleSet
     alias Brando.Content.ModuleSetModule
     alias Ecto.Changeset
+    alias Phoenix.Component
 
     def mount(_, %{"test_pid" => test_pid}, socket) do
       # Join 7 points at module 42, which is not among the options. Join 9
@@ -43,14 +43,14 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelectUnavailableOptionTest do
 
       {:ok,
        socket
-       |> Phoenix.Component.assign(:test_pid, test_pid)
-       |> Phoenix.Component.assign(:on_change, &send(self(), {:on_change, &1}))
-       |> Phoenix.Component.assign(:form, Phoenix.Component.to_form(changeset, as: "module_set"))}
+       |> Component.assign(:test_pid, test_pid)
+       |> Component.assign(:on_change, &send(self(), {:on_change, &1}))
+       |> Component.assign(:form, Component.to_form(changeset, as: "module_set"))}
     end
 
     def handle_info({:on_change, %{action: :update_changeset, changeset: changeset}}, socket) do
       send(socket.assigns.test_pid, {:updated_changeset, changeset})
-      {:noreply, Phoenix.Component.assign(socket, :form, Phoenix.Component.to_form(changeset, as: "module_set"))}
+      {:noreply, Component.assign(socket, :form, Component.to_form(changeset, as: "module_set"))}
     end
 
     # The mutation listener registration and the live preview relation update.
