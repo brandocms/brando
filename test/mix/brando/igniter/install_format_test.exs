@@ -45,7 +45,8 @@ defmodule Mix.Brando.Igniter.InstallFormatTest do
     end
   end
 
-  defp contents(igniter), do: Map.new(igniter.rewrite.sources, fn {path, source} -> {path, source.content} end)
+  defp contents(igniter),
+    do: Map.new(igniter.rewrite.sources, fn {path, source} -> {path, {source.content, Rewrite.Source.issues(source)}} end)
 
   defp assert_same_plan(each, direct) do
     assert each.issues == direct.issues
@@ -53,7 +54,7 @@ defmodule Mix.Brando.Igniter.InstallFormatTest do
     assert each.notices == direct.notices
     assert each.tasks == direct.tasks
     assert Map.keys(contents(each)) == Map.keys(contents(direct))
-    assert Enum.reject(contents(direct), fn {path, content} -> contents(each)[path] == content end) == []
+    assert Enum.reject(contents(direct), fn {path, planned} -> contents(each)[path] == planned end) == []
   end
 
   test "installs without formatter plugins plan byte-identical files to Igniter's own formatting" do
