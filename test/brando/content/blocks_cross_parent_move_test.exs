@@ -539,6 +539,45 @@ defmodule Brando.Content.BlocksCrossParentMoveTest do
     assert ref.gallery.gallery_objects |> Enum.map(& &1.image_id) |> Enum.sort() == Enum.sort([first.id, second.id])
   end
 
+  # Sol audit: a var's gallery came along as a nested gallery the var's
+  # cast does not take, so the moved var lost it.
+  test "a moved child's gallery var keeps its gallery" do
+    user = Factory.insert(:random_user)
+    page = Factory.insert(:page, creator: user)
+    gallery = Brando.Repo.insert!(%Brando.Galleries.Gallery{})
+
+    child = %{
+      uid: "childV",
+      type: :module,
+      active: true,
+      source: "Elixir.Brando.Pages.Page.Blocks",
+      creator_id: user.id,
+      sequence: 0,
+      vars: [%{type: :gallery, key: "pics", label: "Pics", gallery_id: gallery.id}],
+      table_rows: [%{sequence: 0, vars: [%{type: :gallery, key: "cell", label: "Cell", gallery_id: gallery.id}]}],
+      children: []
+    }
+
+    insert_containers(page, user, child)
+    entry_blocks = preloaded_entry_blocks(page.id)
+    [%{block: %{children: [row]}} | _] = entry_blocks
+    row = Brando.Repo.preload(row, [vars: :gallery, table_rows: [vars: :gallery]], force: true)
+    ops = Ops.from_entry_blocks(entry_blocks)
+
+    {:ok, params} = Ops.materialize_child(ops, "childV")
+    block_cs = Brando.Content.Block.recursive_block_changeset(row, params, user.id)
+    moved_cs = BrandoAdmin.Components.Form.BlockField.moved_child_changeset(block_cs, user.id)
+    {:ok, ops} = Ops.apply_op(ops, {:insert_child, "containerB", "childV", 0, Ops.block_diff_params(moved_cs)})
+    assert {:ok, _} = save_from_ops(page, entry_blocks, ops, user)
+
+    assert [%{block: %{children: []}}, %{block: %{children: [moved]}}] = preloaded_entry_blocks(page.id)
+    moved = Brando.Repo.preload(moved, [:vars, table_rows: :vars], force: true)
+    assert [%{key: "pics", gallery_id: gallery_id}] = moved.vars
+    assert gallery_id == gallery.id
+    assert [%{vars: [%{key: "cell", gallery_id: cell_gallery_id}]}] = moved.table_rows
+    assert cell_gallery_id == gallery.id
+  end
+
   test "materialize_child rejects roots and unknown uids" do
     user = Factory.insert(:random_user)
     {page, _} = insert_page_with_containers(user)

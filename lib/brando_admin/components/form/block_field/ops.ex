@@ -794,14 +794,28 @@ defmodule BrandoAdmin.Components.Form.BlockField.Ops do
     block
     |> Map.drop(["id", "parent_id"])
     |> update_rows("refs", &(&1 |> keep_gallery(changed_galleries) |> Map.drop(["id", "block_id"])))
-    |> update_rows("vars", &Map.drop(&1, ["id", "block_id", "table_row_id"]))
+    |> update_rows("vars", &moved_var/1)
     |> update_rows("table_rows", fn row ->
       row
       |> Map.drop(["id", "block_id"])
-      |> update_rows("vars", &Map.drop(&1, ["id", "block_id", "table_row_id"]))
+      |> update_rows("vars", &moved_var/1)
     end)
     |> update_rows("block_identifiers", &Map.drop(&1, ["id", "block_id"]))
     |> update_rows("children", &moved_params(&1, changed_galleries))
+  end
+
+  # A var's gallery is one picked from the library: it goes by its id.
+  defp moved_var(var) do
+    var =
+      case var do
+        %{"gallery" => %{"id" => id}} when id not in [nil, ""] ->
+          var |> Map.delete("gallery") |> Map.put("gallery_id", id)
+
+        _ ->
+          var
+      end
+
+    Map.drop(var, ["id", "block_id", "table_row_id"])
   end
 
   defp update_rows(params, key, fun) do
