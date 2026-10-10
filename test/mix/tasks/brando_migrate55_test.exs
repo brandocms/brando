@@ -1574,6 +1574,15 @@ defmodule Mix.Tasks.Brando.Migrate55Test do
         # Only under priv/, which no embed_templates names
         upload.("lib/legacy_app_web/live/page_live.ex", "use LegacyAppWeb, :live_view", "", %{
           "priv/templates/page/show.html.heex" => template
+        }),
+        # A site's own use macro, with no atom option
+        upload.("lib/legacy_app_web/l.ex", "use LegacyAppWeb.Html", "", %{"lib/legacy_app_web/l/a.html.heex" => template}),
+        upload.("lib/legacy_app_web/live/page_live.ex", ~S|use LegacyAppWeb.Html, templates: "l/*"|, "", %{
+          "lib/legacy_app_web/l/a.html.heex" => template
+        }),
+        # Before end, in a branch
+        upload.("lib/legacy_app_web/live/page_live.ex", "use Phoenix.LiveView", "", %{
+          "lib/legacy_app_web/live/page_live.html.heex" => "<p>{if @a do\n  Upload\nelse\n  nil\nend}</p>\n"
         })
       ]
 

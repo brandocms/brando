@@ -18,14 +18,36 @@ defmodule Brando.Deprecated.TemplateHazardsTest do
           "<%= case @m do %><% Upload -> %>a<% end %>",
           "<%= if match?(%Upload{}, @x) do %>",
           "<%= inspect Upload %>",
-          "Upload.url(assigns.x)\n",
-          "inspect(Upload)\n",
-          "Upload"
+          "{case @x do\n  :a -> Upload\nend}",
+          "{if @a do\n  Upload\nelse\n  nil\nend}",
+          "{Enum.map(@xs, fn _ -> Upload end)}",
+          "<%= try do\n  Upload\nrescue\n  _ -> 1\nend %>",
+          "<%\n  mod = Upload\n  url = mod.url(@x)\n%>",
+          "{Upload != @x}",
+          "{Upload!=@x}",
+          "{@m !== Upload or 1}",
+          "<%= Upload # the store\n%>",
+          "{Upload; 1}",
+          "{Upload ^^^ 1}",
+          "{Upload \\\\ 1}",
+          "{!Upload}",
+          ~S|{"#{Upload.url(@x)}"}|,
+          "<p class=\"a{\">{Upload}</p>"
         ] do
       assert uses?(text), text
     end
 
-    assert uses?("<Meta.HTML.render_meta conn={@conn} />", "Meta.HTML")
+    # .html.exs templates are code throughout
+    for text <- ["div do\n  Upload\nend\n", "Upload.url(assigns.x)\n", "inspect(Upload)\n", "Upload"] do
+      assert TemplateHazards.uses([{"t.html.exs", 1, text}], "Upload") != [], text
+    end
+
+    # A template the scan cannot follow is all code
+    assert uses?("<p>{Upload a file</p>")
+
+    for text <- ["<Meta.HTML.render_meta conn={@conn} />", "{Meta . HTML.x()}", "{Meta.\nHTML.x()}"] do
+      assert uses?(text, "Meta.HTML"), text
+    end
   end
 
   test "prose, strings, element text and other names are not" do
@@ -39,7 +61,10 @@ defmodule Brando.Deprecated.TemplateHazardsTest do
           "Uploads",
           "{Brando.Upload.x()}",
           "<.icon name=\"upload\" />",
-          "<p>Upload! Upload? Upload;</p>"
+          "<p>Upload! Upload? Upload;</p>",
+          "<p title=\"Upload {x}\">Upload, Upload.</p>",
+          "<%!-- Upload.x --%><!-- Upload.y -->",
+          "<%= if @a do %>\n  Upload\n<% end %>"
         ] do
       refute uses?(text), text
     end
