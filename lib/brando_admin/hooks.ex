@@ -188,7 +188,11 @@ defmodule BrandoAdmin.Hooks do
   # A tab of a user who still has others here closed: its field lock goes,
   # theirs stay. Updating a tab's meta (moving to another field) is a leave
   # and a join of the same tab, which is still among `metas`, so this never
-  # undoes the field it moved to.
+  # undoes the field it moved to. A user the presence fetcher could not load
+  # (`user: nil`, as `assign_uri_presence/2` and `remove_presence/2` also
+  # allow) has no id to release a field for.
+  defp release_closed_tabs(socket, %{user: nil}), do: socket
+
   defp release_closed_tabs(socket, presence) do
     open = MapSet.new(presence.metas, &Map.get(&1, :tab))
 
