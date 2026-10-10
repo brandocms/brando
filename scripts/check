@@ -20,6 +20,10 @@
 set -uo pipefail
 
 cd "$(dirname "$0")/.." || exit 1
+# Run from a Git hook, GIT_DIR and friends point at this repository; a gate
+# that builds a scratch repository (test/scripts/queue_test.sh) would act on
+# this one instead. The gates discover the repository from the directory.
+unset GIT_DIR GIT_WORK_TREE GIT_INDEX_FILE GIT_PREFIX GIT_COMMON_DIR GIT_OBJECT_DIRECTORY GIT_ALTERNATE_OBJECT_DIRECTORIES GIT_IMPLICIT_WORK_TREE
 
 fast=false
 verbose=false
@@ -226,6 +230,7 @@ run_step "CSS colour tokens" bash .github/scripts/check_css_colors.sh
 run_step "E2E machine paths" bash .github/scripts/check-e2e-paths.sh
 run_step "ci-wait flake matching" bash test/scripts/ci_wait_test.sh
 run_step "queue merge-queue steps" bash test/scripts/queue_test.sh
+run_step "shell tests safe under a Git hook" bash test/scripts/hook_env_test.sh
 run_step "check gate selection" bash test/scripts/check_test.sh
 
 if [ "$fast" = true ]; then
