@@ -1,5 +1,6 @@
 defmodule Mix.Brando.Igniter.AgentFilesTest do
-  use ExUnit.Case, async: false
+  # Installs format with `config :swoosh` in the project's config.exs; see Brando.IgniterCase.
+  use ExUnit.Case, async: true, group: :igniter_config
 
   alias Brando.IgniterCase
   alias Mix.Brando.Igniter.AgentFiles

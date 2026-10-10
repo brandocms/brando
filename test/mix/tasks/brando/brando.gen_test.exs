@@ -39,7 +39,7 @@ defmodule GeneratorStudio.Catalog.Category do
 end
 
 defmodule Mix.Tasks.Brando.Gen.Test do
-  use ExUnit.Case, async: false
+  use ExUnit.Case, async: true
 
   alias Brando.IgniterCase
 

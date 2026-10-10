@@ -1,5 +1,5 @@
 defmodule Mix.Brando.Igniter.TelemetryTest do
-  use ExUnit.Case, async: false
+  use ExUnit.Case, async: true
 
   alias Brando.IgniterCase
 

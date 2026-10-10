@@ -1,6 +1,16 @@
 defmodule Brando.IgniterCase do
   @moduledoc false
 
+  # Igniter projects live in memory, but formatting a planned file is not
+  # free of global state: `Igniter.format/2` evaluates the project's
+  # config/config.exs and config/test.exs, puts every app they configure into
+  # the application environment and restores it afterwards. A test whose
+  # project configures `:brando` changes Brando's environment under concurrent
+  # tests, so it must be `async: false`. Projects that configure only their own
+  # app and `:swoosh` (which every install does) can be async in the
+  # `:igniter_config` group: two of them formatting at once could restore each
+  # other's snapshot and leave the change behind.
+
   def phoenix_project(options \\ []) do
     app = options[:app] || :studio
     module = options[:module] || "Studio"
@@ -84,6 +94,26 @@ defmodule Brando.IgniterCase do
       options = if String.starts_with?(path, "priv/templates/"), do: [source_handler: Rewrite.Source], else: []
       Igniter.include_existing_file(igniter, path, options)
     end)
+  end
+
+  # A Phoenix project with the config, assets and Gettext a Brando install starts from.
+  def install_project(files \\ %{}) do
+    phoenix_project(
+      files:
+        Map.merge(
+          %{
+            "config/config.exs" => """
+            import Config
+            config :studio, StudioWeb.Endpoint, secret_key_base: "existing-secret", live_view: [signing_salt: "existing-lv-salt"]
+            import_config "dev.exs"
+            """,
+            "config/dev.exs" => "import Config\n",
+            "assets/css/app.css" => "/* Existing Phoenix assets */",
+            "lib/studio_web/gettext.ex" => "defmodule StudioWeb.Gettext do\n use Gettext.Backend, otp_app: :studio\nend\n"
+          },
+          files
+        )
+    )
   end
 
   def source(igniter, path) do
