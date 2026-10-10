@@ -151,8 +151,9 @@ defmodule BrandoAdmin.FieldActionsLiveTest do
     view = open(conn, article)
     replies_slowly("Too late")
 
+    # The summary reads the blocks: it runs once the block field answered
     run(view, "summarize")
-    assert has_element?(view, "#{@suggestion} .ai-proposal[data-status='running']")
+    await_selector(view, "#{@suggestion} .ai-proposal[data-status='running']")
     view |> element("#{@suggestion} button", "Cancel") |> render_click()
 
     Process.sleep(400)
@@ -167,6 +168,7 @@ defmodule BrandoAdmin.FieldActionsLiveTest do
     replies_slowly("A summary")
 
     run(view, "summarize")
+    await_selector(view, "#{@suggestion} .ai-proposal[data-status='running']")
     run(view, "shorten")
     await_selector(view, "#{@suggestion} .ai-proposal[data-status='ready']")
     Process.sleep(400)
@@ -182,6 +184,7 @@ defmodule BrandoAdmin.FieldActionsLiveTest do
     replies_slowly("A summary")
 
     run(view, "summarize")
+    await_selector(view, "#{@suggestion} .ai-proposal[data-status='running']")
     view |> form("#article_form_form") |> render_change(%{"article" => %{"subtitle" => ""}})
     run(view, "shorten")
     await_selector(view, "#{@suggestion} .ai-proposal[data-status='failed']")
@@ -221,6 +224,19 @@ defmodule BrandoAdmin.FieldActionsLiveTest do
   end
 
   defp text_block_article(user, text, write_with_ai) do
+    module = text_module(user, write_with_ai)
+
+    {:ok, article} =
+      SyncTest.create_article(
+        %{title: "Lang", slug: "lang", subtitle: "Et hus", language: "no", status: "draft", year: 2020},
+        user
+      )
+
+    {_block_uid, ref_uid} = put_text_block(user, article, module, SyncTest.Article.Blocks, text)
+    {article, ref_uid, module}
+  end
+
+  defp text_module(user, write_with_ai \\ false) do
     {:ok, module} =
       Brando.Content.create_module(
         Factory.params_for(:module,
@@ -234,23 +250,25 @@ defmodule BrandoAdmin.FieldActionsLiveTest do
         user
       )
 
-    {:ok, article} =
-      SyncTest.create_article(
-        %{title: "Lang", slug: "lang", subtitle: "Et hus", language: "no", status: "draft", year: 2020},
-        user
-      )
+    module
+  end
 
+  # A saved block of `module` in the article's block field `join` (its
+  # join schema), its `body` holding `text`. Saved as a fixture is: without
+  # rendering the field's `rendered_` column.
+  defp put_text_block(user, article, module, join, text) do
+    block_uid = Brando.Utils.generate_uid()
     ref_uid = Brando.Utils.generate_uid()
 
     block =
       %Brando.Content.Block{}
       |> Brando.Content.Block.recursive_block_changeset(
         %{
-          "uid" => Brando.Utils.generate_uid(),
+          "uid" => block_uid,
           "type" => "module",
           "module_id" => module.id,
           "creator_id" => user.id,
-          "source" => to_string(SyncTest.Article.Blocks),
+          "source" => to_string(join),
           "refs" => [
             %{"uid" => ref_uid, "name" => "body", "data" => %{"type" => "text", "data" => %{"text" => text}}}
           ]
@@ -259,8 +277,8 @@ defmodule BrandoAdmin.FieldActionsLiveTest do
       )
       |> Brando.Repo.insert!()
 
-    struct(SyncTest.Article.Blocks, %{entry_id: article.id, block_id: block.id, sequence: 0}) |> Brando.Repo.insert!()
-    {article, ref_uid, module}
+    struct(join, %{entry_id: article.id, block_id: block.id, sequence: 0}) |> Brando.Repo.insert!()
+    {block_uid, ref_uid}
   end
 
   test "gives the model at most the context's length of block text", %{conn: conn, current_user: user} do
@@ -277,6 +295,205 @@ defmodule BrandoAdmin.FieldActionsLiveTest do
     [_, blocks] = Regex.run(~r/^blocks: (.*)$/m, prompt)
     assert blocks =~ "ord ord"
     assert String.length(blocks) <= Brando.AI.Context.block_text_length()
+  end
+
+  describe "an action that reads block fields" do
+    # `form :notes`: the article's `blocks` and `notes` block fields; the
+    # subtitle's `outline` reads `notes` by name, `everything` reads `:blocks`
+    setup %{current_user: user, article: article} do
+      module = text_module(user)
+      {main_uid, _} = put_text_block(user, article, module, SyncTest.Article.Blocks, "<p>Hovedtekst</p>")
+      {notes_uid, _} = put_text_block(user, article, module, SyncTest.Article.Notes, "<p>Lagret notat</p>")
+      %{main_uid: main_uid, notes_uid: notes_uid}
+    end
+
+    defp open_notes(conn, article, block_uids) do
+      {view, _html} = live_form(conn, "/admin/articles/update/#{article.id}/notes", "article_form")
+      Enum.each(block_uids, &await_selector(view, "#entry_block_form-#{&1}"))
+      view
+    end
+
+    # As the block's text editor sends it, without saving the entry
+    defp edit_block_text(view, block_uid, html) do
+      selector = "#entry_block_form-#{block_uid}"
+      path = ["entry_block", "block", "refs", "0", "data", "data", "text"]
+      params = view |> render() |> form_params(selector) |> put_in(path, html) |> Map.put("_target", path)
+      view |> element(selector) |> render_change(params)
+    end
+
+    test "a block field named in from: is read as the editor has it, alone",
+         %{conn: conn, article: article, main_uid: main_uid, notes_uid: notes_uid} do
+      view = open_notes(conn, article, [main_uid, notes_uid])
+      replies("Disposisjon")
+
+      edit_block_text(view, notes_uid, "<p>Ulagret notat</p>")
+      run(view, "outline")
+      await_selector(view, "#{@suggestion} .ai-proposal[data-status='ready']")
+
+      assert_received {:prompt, prompt}
+      assert prompt =~ "notes: Ulagret notat"
+      refute prompt =~ "Lagret notat"
+      refute prompt =~ "Hovedtekst"
+    end
+
+    test ":blocks reads every block field as the editor has it",
+         %{conn: conn, article: article, main_uid: main_uid, notes_uid: notes_uid} do
+      view = open_notes(conn, article, [main_uid, notes_uid])
+      replies("Sammendrag")
+
+      edit_block_text(view, main_uid, "<p>Ulagret hovedtekst</p>")
+      edit_block_text(view, notes_uid, "<p>Ulagret notat</p>")
+      run(view, "everything")
+      await_selector(view, "#{@suggestion} .ai-proposal[data-status='ready']")
+
+      assert_received {:prompt, prompt}
+      assert prompt =~ "Ulagret hovedtekst"
+      assert prompt =~ "Ulagret notat"
+      refute prompt =~ "Lagret notat"
+    end
+
+    test "an action chosen while another waits for its blocks is the one that runs",
+         %{conn: conn, article: article, main_uid: main_uid, notes_uid: notes_uid} do
+      view = open_notes(conn, article, [main_uid, notes_uid])
+      replies("Svar")
+
+      # The outline asks the notes field for its blocks; the editor picks
+      # Shorten, which reads none, before they arrive. Both clicks are in the
+      # LiveView's mailbox ahead of the field's answer.
+      [cid] =
+        view
+        |> render()
+        |> LazyHTML.from_fragment()
+        |> LazyHTML.query("button[phx-click='run_field_action'][phx-value-action='outline']")
+        |> LazyHTML.attribute("phx-target")
+
+      cid = String.to_integer(cid)
+      :sys.suspend(view.pid)
+      click(view, cid, "outline", 1_000_001)
+      click(view, cid, "shorten", 1_000_002)
+      :sys.resume(view.pid)
+
+      assert_receive {:prompt, prompt}, 2_000
+      assert prompt =~ "Shorten the subtitle."
+      refute_receive {:prompt, _}, 500
+    end
+
+    defp click(view, cid, action, ref),
+      do: push_raw(view, cid, "click", "run_field_action", %{"field" => "subtitle", "action" => action}, ref)
+
+    # An event as the browser sends it, straight to the LiveView: Phoenix's
+    # test client waits for each one to be handled before sending the next
+    defp push_raw(view, cid, type, event, value, ref) do
+      {_ref, topic, proxy} = view.proxy
+      %{join_ref: join_ref} = :sys.get_state(proxy)
+
+      send(view.pid, %Phoenix.Socket.Message{
+        join_ref: join_ref,
+        topic: topic,
+        event: "event",
+        ref: to_string(ref),
+        payload: %{"type" => type, "event" => event, "value" => value, "cid" => cid}
+      })
+    end
+
+    @generate %{
+      "field_key" => "subtitle",
+      "field_name" => "article[subtitle]",
+      "tiptap_id" => "article_subtitle-rich-text",
+      "request_id" => "request-1",
+      "mode" => "rewrite",
+      "instruction" => "",
+      "selection" => "Et hus."
+    }
+
+    # The block fields answer only once the entry's edit session does: held
+    # past the wait, the request is given up on before they answer
+    defp hold_blocks_past_the_wait(article, act) do
+      put_test_env(:ai_blocks_collect_ms, 50)
+      session = Brando.EditSession.whereis(Brando.EditSession.ref_for(article))
+      :sys.suspend(session)
+      act.()
+      Process.sleep(150)
+      :sys.resume(session)
+    end
+
+    test "an action whose blocks do not come in time says so, without asking the model",
+         %{conn: conn, article: article, main_uid: main_uid, notes_uid: notes_uid} do
+      view = open_notes(conn, article, [main_uid, notes_uid])
+      replies("Disposisjon")
+
+      hold_blocks_past_the_wait(article, fn -> run(view, "outline") end)
+
+      await_selector(view, "#{@suggestion} .ai-proposal[data-status='failed'] [role=alert]")
+      assert has_element?(view, "#{@suggestion} button[phx-click='run_field_action'][phx-value-action='outline']")
+      refute_receive {:prompt, _}, 300
+    end
+
+    test "Write with AI whose blocks do not come in time ends in an error, without asking the model",
+         %{conn: conn, article: article, main_uid: main_uid, notes_uid: notes_uid} do
+      view = open_notes(conn, article, [main_uid, notes_uid])
+      replies("Et forslag.")
+      cid = cid_of(view, "#article_form_form")
+
+      hold_blocks_past_the_wait(article, fn ->
+        view |> with_target(cid) |> render_hook("tiptap_ai_generate", @generate)
+      end)
+
+      event = "b:tiptap:ai:article_subtitle-rich-text"
+      assert_push_event(view, ^event, %{error: true, request_id: "request-1"})
+      refute_receive {:prompt, _}, 300
+    end
+
+    test "Write with AI cancelled while it waits for its blocks asks the model nothing",
+         %{conn: conn, article: article, main_uid: main_uid, notes_uid: notes_uid} do
+      view = open_notes(conn, article, [main_uid, notes_uid])
+      replies("Et forslag.")
+      cid = cid_of(view, "#article_form_form")
+
+      # Both in the LiveView's mailbox ahead of the block field's answer
+      :sys.suspend(view.pid)
+      push_raw(view, cid, "hook", "tiptap_ai_generate", @generate, 1_000_001)
+
+      push_raw(
+        view,
+        cid,
+        "hook",
+        "tiptap_ai_cancel",
+        %{"tiptap_id" => "article_subtitle-rich-text", "request_id" => "request-1"},
+        1_000_002
+      )
+
+      :sys.resume(view.pid)
+
+      settle(view)
+      refute_receive {:prompt, _}, 500
+    end
+
+    test "Write with AI reads a block field named in its from: as the editor has it",
+         %{conn: conn, article: article, main_uid: main_uid, notes_uid: notes_uid} do
+      view = open_notes(conn, article, [main_uid, notes_uid])
+      replies("Et forslag.")
+
+      edit_block_text(view, notes_uid, "<p>Ulagret notat</p>")
+
+      view
+      |> with_target(cid_of(view, "#article_form_form"))
+      |> render_hook("tiptap_ai_generate", %{
+        "field_key" => "subtitle",
+        "field_name" => "article[subtitle]",
+        "tiptap_id" => "article_subtitle-rich-text",
+        "request_id" => "request-1",
+        "mode" => "rewrite",
+        "instruction" => "",
+        "selection" => "Et hus."
+      })
+
+      event = "b:tiptap:ai:article_subtitle-rich-text"
+      assert_push_event(view, ^event, %{text: "Et forslag.", request_id: "request-1"})
+      assert_received {:prompt, prompt}
+      assert prompt =~ "notes: Ulagret notat"
+      refute prompt =~ "Hovedtekst"
+    end
   end
 
   describe "Write with AI in block text" do

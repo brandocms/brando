@@ -1054,6 +1054,17 @@ defmodule BrandoAdmin.Components.Form do
   end
 
   def update(
+        %{event: "provide_root_blocks", tag: {:ai_context, token}, block_field: field, root_changesets: roots},
+        socket
+      ) do
+    {:ok, receive_ai_blocks(socket, token, field, roots)}
+  end
+
+  def update(%{event: "ai_blocks_unanswered", token: token}, socket) do
+    {:ok, give_up_ai_request(socket, token)}
+  end
+
+  def update(
         %{
           event: "provide_root_blocks",
           root_changesets: root_changesets,
@@ -5044,8 +5055,21 @@ defmodule BrandoAdmin.Components.Form do
          false <- FieldActions.locked?(opts, socket.assigns.current_user),
          {:ok, _path, ^field, _segments} <- parse_form_field_name(params["field_name"], socket.assigns.singular),
          {:ok, _prompt} <- RichTextAI.prompt(nil, params) do
+      request = {:tiptap, params["tiptap_id"], params["request_id"]}
+
       {:noreply,
-       RichTextAI.start(socket, params, write_with_ai_prompt(socket, config, params), RichTextAI.ai_opts(config))}
+       with_ai_blocks(socket, request, config[:from] || [], fn
+         socket, {:ok, blocks} ->
+           RichTextAI.start(
+             socket,
+             params,
+             write_with_ai_prompt(socket, config, params, blocks),
+             RichTextAI.ai_opts(config)
+           )
+
+         socket, :unanswered ->
+           push_event(socket, "b:tiptap:ai:#{params["tiptap_id"]}", %{request_id: params["request_id"], error: true})
+       end)}
     else
       _ ->
         {:noreply,
@@ -5054,7 +5078,7 @@ defmodule BrandoAdmin.Components.Form do
   end
 
   def handle_event("tiptap_ai_cancel", params, socket) do
-    {:noreply, RichTextAI.cancel(socket, params)}
+    {:noreply, socket |> cancel_ai_blocks(params) |> RichTextAI.cancel(params)}
   end
 
   # An AI action on the field (`ai_actions:`, a deprecated `ai:`, or a meta
@@ -5068,12 +5092,19 @@ defmodule BrandoAdmin.Components.Form do
          false <- FieldActions.locked?(opts, socket.assigns.current_user),
          %BlueprintForms.AIAction{} = ai_action <- Enum.find(actions, &(&1.name == action_atom)),
          true <- FieldAction.available?(ai_action) do
-      send_update(FieldActions,
-        id: field_action_panel(socket, field_atom, params["panel"]),
-        run: field_action_run(socket, field_atom, ai_action, type)
-      )
+      panel = field_action_panel(socket, field_atom, params["panel"])
 
-      {:noreply, socket}
+      {:noreply,
+       with_ai_blocks(socket, {:field_action, panel}, ai_action.from, fn
+         socket, {:ok, blocks} ->
+           send_update(FieldActions, id: panel, run: field_action_run(socket, field_atom, ai_action, type, blocks))
+           socket
+
+         socket, :unanswered ->
+           run = field_action_run(socket, field_atom, ai_action, type, nil)
+           send_update(FieldActions, id: panel, run: %{run | build: fn -> {:error, :blocks_unanswered} end})
+           socket
+       end)}
     else
       _ -> {:noreply, socket}
     end
@@ -7051,10 +7082,10 @@ defmodule BrandoAdmin.Components.Form do
 
   # A Write with AI request's prompt, built in its task: the input's
   # `write_with_ai:` instructions (or the deprecated `ai:` they come from)
-  # with the fields they read as the form has them now. Reading `:blocks`
-  # renders the block editor's content, which stays out of this process.
-  defp write_with_ai_prompt(socket, config, params) do
-    context = ai_context_fun(socket, config[:from] || [])
+  # with the fields they read as the form has them now. `blocks` is the
+  # block editor's content (`with_ai_blocks/4`), rendered in the task.
+  defp write_with_ai_prompt(socket, config, params, blocks) do
+    context = ai_context_fun(socket, config[:from] || [], blocks)
 
     fn ->
       instructions =
@@ -7092,24 +7123,27 @@ defmodule BrandoAdmin.Components.Form do
   end
 
   # The values of the fields an AI action reads, as a function to call later:
-  # it holds the form and the block map, not the socket, so a task can render
-  # the blocks. `:blocks` keeps its own path: in a form the editor's unsaved
-  # state is what should be summarized, not the `rendered_blocks` column the
-  # entry was last saved with. Every other field reads the applied changeset
-  # headlessly.
-  defp ai_context_fun(socket, context_fields) do
+  # it holds the form and the blocks, not the socket, so a task can render
+  # the blocks. Block fields read the editor's unsaved blocks: `blocks` is
+  # what the block fields answered (`with_ai_blocks/4`), by field, or nil
+  # when there was no editor to ask. `:blocks` reads every block field the
+  # form shows, a block field's own name just that one. Every other field
+  # reads the applied changeset headlessly.
+  defp ai_context_fun(socket, context_fields, blocks) do
     form = socket.assigns.form
     block_map = if socket.assigns.has_blocks?, do: socket.assigns.block_map
     context_fields = Brando.AI.Context.normalize_fields(context_fields)
 
     fn ->
       entry = apply_changes(form.source)
-      Enum.flat_map(context_fields, &ai_context_value(&1, form, entry, block_map))
+      changeset = assoc_all_block_fields(blocks || %{}, form.source)
+      read = %{changeset: changeset, block_map: block_map, live: Map.keys(blocks || %{})}
+      Enum.flat_map(context_fields, &ai_context_value(&1, form, entry, read))
     end
   end
 
-  defp ai_context_value(:blocks, form, _entry, block_map) do
-    case render_ai_blocks_context(form.source, block_map) do
+  defp ai_context_value(:blocks, _form, _entry, %{changeset: changeset, block_map: block_map}) do
+    case render_ai_blocks_context(changeset, block_map, :all) do
       value when value in [nil, ""] -> []
       value -> [{:blocks, value}]
     end
@@ -7117,8 +7151,21 @@ defmodule BrandoAdmin.Components.Form do
 
   # A field's text as the editor sees it: the form's params, where the
   # browser sent one. The changeset keeps a required field's saved value when
-  # it is cleared, and that is not what the editor asked about.
-  defp ai_context_value(field, form, entry, _block_map) do
+  # it is cleared, and that is not what the editor asked about. A block field
+  # whose blocks were not collected (the form does not show it, or its blocks
+  # had not loaded) reads what was last saved.
+  defp ai_context_value(field, form, entry, %{changeset: changeset, block_map: block_map, live: live}) do
+    if field in live do
+      case render_ai_blocks_context(changeset, block_map, [field]) do
+        value when value in [nil, ""] -> []
+        value -> [{field, value}]
+      end
+    else
+      form_field_context(field, form, entry)
+    end
+  end
+
+  defp form_field_context(field, form, entry) do
     case Phoenix.HTML.Form.input_value(form, field) do
       value when is_binary(value) ->
         case Brando.AI.Context.format_value(value) do
@@ -7131,15 +7178,16 @@ defmodule BrandoAdmin.Components.Form do
     end
   end
 
-  # Each block field's text, cut to the length `Brando.AI.Context` gives a
-  # saved entry's blocks.
-  defp render_ai_blocks_context(_changeset, nil), do: nil
+  # The text of the block fields in `fields` (`:all` for every one), each cut
+  # to the length `Brando.AI.Context` gives a saved entry's blocks.
+  defp render_ai_blocks_context(_changeset, nil, _fields), do: nil
 
-  defp render_ai_blocks_context(changeset, block_map) do
+  defp render_ai_blocks_context(changeset, block_map, fields) do
     entry_for_blocks = build_entry_for_blocks(changeset, block_map)
-    rendered_changeset = render_blocks_for_entry(block_map, changeset, entry_for_blocks)
+    read = if fields == :all, do: block_map, else: Enum.filter(block_map, &(elem(&1, 0) in fields))
+    rendered_changeset = render_blocks_for_entry(read, changeset, entry_for_blocks)
 
-    block_map
+    read
     |> Enum.map(fn {block_field_name, _schema, _entry_blocks, _opts} ->
       rendered_field_name = :"rendered_#{block_field_name}"
 
@@ -7150,6 +7198,128 @@ defmodule BrandoAdmin.Components.Form do
     |> Enum.map_join("\n\n", &block_context_text/1)
     |> String.trim()
   end
+
+  # An AI request that reads block fields asks their BlockFields for the
+  # editor's blocks first (as save and preview do: the op store, not the
+  # rows the form loaded), and `continue.(socket, {:ok, blocks})` makes the
+  # request once every one has answered (`receive_ai_blocks/4`). Without
+  # blocks to ask for, or before they have loaded, it goes at once with
+  # `blocks` nil. `request` names what asks; asking again for the same thing
+  # replaces the request that is still waiting, also when the new one needs
+  # no blocks.
+  #
+  # A block field that has not answered in `@ai_blocks_collect_ms` (its
+  # blocks reloaded while asked) is given up on as a save gives up on its
+  # collection: nothing is sent without the blocks, and
+  # `continue.(socket, :unanswered)` tells the editor, who can try again.
+  @ai_blocks_collect_ms 10_000
+
+  # Brando's own tests shorten the wait (`:ai_blocks_collect_ms`), compiled
+  # in only where `config :brando, :form_load_gate?, true`.
+  if Application.compile_env(:brando, :form_load_gate?, false) do
+    defp ai_blocks_collect_ms, do: Application.get_env(:brando, :ai_blocks_collect_ms, @ai_blocks_collect_ms)
+  else
+    defp ai_blocks_collect_ms, do: @ai_blocks_collect_ms
+  end
+
+  defp with_ai_blocks(socket, request, context_fields, continue) do
+    waiting =
+      socket.assigns
+      |> Map.get(:ai_block_requests, %{})
+      |> Map.reject(fn {_token, waiting} -> same_ai_request?(waiting.request, request) end)
+
+    socket = assign(socket, :ai_block_requests, waiting)
+
+    case ai_block_fields(socket, context_fields) do
+      [] ->
+        continue.(socket, {:ok, nil})
+
+      fields ->
+        token = make_ref()
+
+        send_update_after(
+          __MODULE__,
+          [id: socket.assigns.id, event: "ai_blocks_unanswered", token: token],
+          ai_blocks_collect_ms()
+        )
+
+        for field <- fields do
+          send_update(BlockField,
+            id: "#{socket.assigns.id}-blocks-#{field}",
+            event: "fetch_root_blocks",
+            tag: {:ai_context, token}
+          )
+        end
+
+        request = %{request: request, parts: Map.new(fields, &{&1, nil}), continue: continue}
+        assign(socket, :ai_block_requests, Map.put(waiting, token, request))
+    end
+  end
+
+  defp ai_block_fields(%{assigns: %{has_blocks?: true, blocks_ready?: true, block_map: block_map}}, context_fields) do
+    fields = Brando.AI.Context.normalize_fields(context_fields)
+    names = Enum.map(block_map, &elem(&1, 0))
+    if :blocks in fields, do: names, else: Enum.filter(names, &(&1 in fields))
+  end
+
+  defp ai_block_fields(_socket, _context_fields), do: []
+
+  # A Write with AI request is one editor's, whichever request id it has.
+  defp same_ai_request?({:tiptap, id, _}, {:tiptap, id, _}), do: true
+  defp same_ai_request?(request, request), do: true
+  defp same_ai_request?(_waiting, _request), do: false
+
+  defp receive_ai_blocks(socket, token, field, roots) do
+    waiting = Map.get(socket.assigns, :ai_block_requests, %{})
+
+    case waiting do
+      %{^token => %{parts: parts} = request} when is_map_key(parts, field) ->
+        parts = Map.put(parts, field, for({_uid, cs} <- roots, not is_nil(cs), do: cs))
+        maybe_continue_ai_request(socket, waiting, token, %{request | parts: parts})
+
+      _ ->
+        socket
+    end
+  end
+
+  defp maybe_continue_ai_request(socket, waiting, token, %{parts: parts, continue: continue} = request) do
+    if Enum.any?(parts, fn {_field, part} -> is_nil(part) end) do
+      assign(socket, :ai_block_requests, Map.put(waiting, token, request))
+    else
+      socket
+      |> assign(:ai_block_requests, Map.delete(waiting, token))
+      |> continue.({:ok, parts})
+    end
+  end
+
+  defp give_up_ai_request(socket, token) do
+    case Map.pop(Map.get(socket.assigns, :ai_block_requests, %{}), token) do
+      {%{continue: continue}, waiting} ->
+        socket
+        |> assign(:ai_block_requests, waiting)
+        |> continue.(:unanswered)
+
+      {nil, _waiting} ->
+        socket
+    end
+  end
+
+  # A Write with AI request cancelled while its blocks were on their way.
+  defp cancel_ai_blocks(socket, %{"tiptap_id" => id} = params) do
+    expected = params["request_id"]
+
+    waiting =
+      socket.assigns
+      |> Map.get(:ai_block_requests, %{})
+      |> Map.reject(fn
+        {_token, %{request: {:tiptap, ^id, request_id}}} -> is_nil(expected) or request_id == expected
+        _ -> false
+      end)
+
+    assign(socket, :ai_block_requests, waiting)
+  end
+
+  defp cancel_ai_blocks(socket, _params), do: socket
 
   defp block_context_text(html) do
     html |> HtmlSanitizeEx.strip_tags() |> String.trim() |> String.slice(0, Brando.AI.Context.block_text_length())
@@ -7227,9 +7397,9 @@ defmodule BrandoAdmin.Components.Form do
   # now; nothing to read is an error, not a prompt for the model to make
   # something up from. `original` is the field's value now, so Accept can
   # tell whether it changed since.
-  defp field_action_run(socket, field, ai_action, type) do
+  defp field_action_run(socket, field, ai_action, type, blocks) do
     original = get_field(socket.assigns.form.source, field)
-    context = ai_context_fun(socket, ai_action.from)
+    context = ai_context_fun(socket, ai_action.from, blocks)
     language = field_action_language(socket)
 
     # An action from `ai:` or a site prompt sends its prompt even with

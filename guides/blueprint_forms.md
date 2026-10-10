@@ -681,8 +681,9 @@ Each action takes:
 * `from` (required): the fields it reads, one or a list: the schema's own
   values and its block fields, not associations or embeds. They are read from
   the form as the editor has it, saved or not. `:blocks` reads the block
-  editor's content, up to 2000 characters per block field. An action can read
-  its own field, to shorten or rewrite it.
+  editor's content in every block field the form shows, and a block field's
+  own name (`:body`) that field's alone, up to 2000 characters per block
+  field. An action can read its own field, to shorten or rewrite it.
 * `label`: the menu label, translated through the Blueprint's Gettext domain.
   Without it the humanized action name is shown.
 * `max`: the longest result, in characters. The prompt asks for it and the

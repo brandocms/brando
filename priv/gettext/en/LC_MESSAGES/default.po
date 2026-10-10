@@ -16307,6 +16307,11 @@ msgstr ""
 msgid "The blocks changed after you reviewed them. Review them again."
 msgstr ""
 
+#: lib/brando/ai.ex
+#, elixir-autogen, elixir-format
+msgid "The blocks could not be read. Try again."
+msgstr ""
+
 #: lib/brando_admin/components/form/structured_data.ex
 #, elixir-autogen, elixir-format
 msgid "The blueprint maps no author. A developer can add one with the :person field type."

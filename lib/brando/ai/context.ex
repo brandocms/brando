@@ -8,8 +8,9 @@ defmodule Brando.AI.Context do
   formatted as text, and block fields are read from the persisted
   `rendered_<field>` column instead of re-rendering the block tree.
 
-  The admin form keeps its own path for `:blocks`, because there the unsaved
-  editor state is what should be summarized. Everything else — and everything
+  The admin form keeps its own path for the block fields it shows, `:blocks`
+  or a block field's own name, because there the unsaved editor state is what
+  should be summarized. Everything else — and everything
   outside a form, like generating a meta description from the Content SEO tab —
   comes through here.
   """

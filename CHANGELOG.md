@@ -2067,6 +2067,16 @@ production dump.
   shown, turned by its EXIF orientation; images uploaded earlier get them
   when they are next processed.
 
+- **AI actions and Write with AI read the block editor as the editor has
+  it.** An `ai_actions:` or `write_with_ai:` that read `:blocks` got the
+  blocks the form opened with, and one that named a block field, such as
+  `from: [:body]`, got the text that field had when the entry was last
+  saved: an unsaved edit was missing from the prompt, and a field first
+  written since the last save had nothing to read. Both now ask the block
+  fields for their unsaved blocks first, as a save does; a named block field
+  gives its own text alone, and one the form does not show still reads what
+  was saved.
+
 - **Nothing typed or changed in a shared entry is lost on the way to a
   save.** The save button and ⌘S no longer submit the form, which took the
   focus from the field being typed in and ignored every key until the save
