@@ -546,7 +546,8 @@ defmodule Brando.Environments.ArchiveUpgradeTest do
       [copy] = Path.wildcard(Path.join(directory, "*_brando_201_*.exs"))
       template = path("brando_201_add_seo_basics.exs")
 
-      # As of 0157991c7, which looped over every environment itself
+      # As of 0157991c7, before the template looped over the environments:
+      # it changed the migrator's default prefix only
       earlier = File.read!(history("brando_201_add_seo_basics", "1b04dd7864c2.exs"))
       refute ArchiveUpgrade.same_code?(earlier, File.read!(template))
       File.write!(copy, String.replace(earlier, "Brando.Repo.Migrations.", "MyApp.Repo.Migrations."))

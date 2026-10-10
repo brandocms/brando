@@ -202,11 +202,16 @@ defmodule Brando.Environments.ArchiveUpgrade do
 
   An application's copy is whichever version was current when
   `mix brando.gen.migrations` copied it, and is never updated. A restore
-  replays the current template whichever version the application ran, since
-  the earlier ones changed every environment and cannot run for one; what
-  it must not do is replay over a copy the application changed. So a
-  template whose code changes keeps its earlier versions here, and a test
-  fails until the new one is added too.
+  replays the current template whichever version the application ran: only
+  the current one is written to run for one environment (earlier ones loop
+  over every environment, or, for a few versions that were on main briefly,
+  use the migrator's default prefix only). Every shipped version is accepted
+  on purpose, those early ones included: the current template may add
+  columns the copy never added, which the comparison with the live
+  environment accepts, since a restored environment may have more than the
+  live one. What a restore must not do is replay over a copy the application
+  changed. So a template whose code changes keeps its earlier versions here,
+  and a test fails until the new one is added too.
   """
   @spec shipped_versions(Path.t()) :: [Path.t()]
   def shipped_versions(template) do
