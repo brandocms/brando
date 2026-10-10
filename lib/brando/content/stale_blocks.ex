@@ -190,8 +190,6 @@ defmodule Brando.Content.StaleBlocks do
       end
     end)
 
-    Blocks.render_blocks(plan.changed)
-
     # Every owner, those in the trash too: one restored from it shows the
     # resolved blocks.
     plan.entries
