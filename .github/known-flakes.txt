@@ -20,6 +20,9 @@
 
 # The Erlang JIT crashing on the runner: mix test aborts with exit 134 after
 # an asmjit assertion in jitallocator.cpp, unrelated to the code under test.
+# Only ever seen on the OTP 28.0 leg (mix test (OTP 28 | Elixir 1.19.5)).
+# TEMPORARY (10 Oct 2026): expected fixed by moving the 1.19 leg off OTP 28.0;
+# remove after two weeks without a hit.
 beam-jit-crash log:\[asmjit\] Assertion failed at asmjit/core/jitallocator\.cpp.*exit code 134
 
 # A LiveView test (usually BrandoAdmin.ChromeSocketTokensTest) calls the

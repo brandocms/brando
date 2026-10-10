@@ -18,8 +18,8 @@ on:
   # tree, usually a PR queued alone onto an unchanged main: the `reuse` job
   # finds it, and those jobs keep reporting under their own names but skip
   # every step. Skipping the jobs themselves would not do: a skipped matrix job
-  # reports once as `mix test (OTP ${{matrix.otp}} | …)`, never under the three
-  # required names. A PR run records what it tested in the `record` job; see
+  # reports once as `mix test (OTP ${{matrix.otp_label}} | …)`, never under
+  # the three required names. A PR run records what it tested in the `record` job; see
   # .github/scripts/merge-queue-reuse.sh. A reused run trusts what lies
   # outside the tree as it was at PR time (e2e_unit's brando_json_api and
   # brando_graphql checkouts, action tags); the push to main after the merge
@@ -79,7 +79,7 @@ jobs:
         run: .github/scripts/merge-queue-reuse.sh lookup "$GITHUB_SHA" "$BASE_REF" | tee -a "$GITHUB_STEP_SUMMARY"
 
   mix_test:
-    name: mix test (OTP ${{matrix.otp}} | Elixir ${{matrix.elixir}})
+    name: mix test (OTP ${{matrix.otp_label}} | Elixir ${{matrix.elixir}})
     needs: reuse
     if: ${{ !cancelled() }}
 
@@ -88,14 +88,22 @@ jobs:
 
     strategy:
       fail-fast: false
+      # `otp_label` names the job, and the main ruleset requires these three
+      # names: changing a label means changing the ruleset with it. The 1.19
+      # leg keeps the label "28" from when it ran OTP 28.0, where the Erlang
+      # JIT crashed now and then (beam-jit-crash in .github/known-flakes.txt);
+      # OTP 28.4 upgraded asmjit to v1.18 (OTP-19979).
       matrix:
         include:
           - elixir: 1.18.1
-            otp: 27.2
+            otp: "27.2"
+            otp_label: "27.2"
           - elixir: 1.19.5
-            otp: 28.0
+            otp: "28.5.0.7"
+            otp_label: "28"
           - elixir: 1.20.3
-            otp: 28.4.1
+            otp: "28.4.1"
+            otp_label: "28.4.1"
 
     runs-on: ubuntu-latest
 
