@@ -465,15 +465,17 @@ jobs:
   # uploads an artifact named after the tree this run tested and its base,
   # which `reuse` looks up. The script matches this job by name. Not required,
   # and a failure here only means the queue runs everything. The `if` checks
-  # each need's result itself: the implicit success() also fails on `reuse`,
-  # which those jobs need and which is skipped on a pull request.
+  # each need's result by name: on a pull request `reuse` is skipped, and
+  # this job-level `if` sees it in `needs` as an ancestor, so the implicit
+  # success() and a `needs.*.result` filter both find a skipped job.
   record:
     name: Record the tested tree for the merge queue
     needs: [mix_test, css_colors, quality, docs, e2e_unit]
     if: >-
       ${{ !cancelled() && github.event_name == 'pull_request'
-      && !contains(needs.*.result, 'failure') && !contains(needs.*.result, 'cancelled')
-      && !contains(needs.*.result, 'skipped') }}
+      && needs.mix_test.result == 'success' && needs.css_colors.result == 'success'
+      && needs.quality.result == 'success' && needs.docs.result == 'success'
+      && needs.e2e_unit.result == 'success' }}
     continue-on-error: true
     runs-on: ubuntu-latest
     timeout-minutes: 5
