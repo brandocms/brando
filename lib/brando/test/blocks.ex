@@ -7,6 +7,7 @@ defmodule Brando.Test.Blocks do
   import Ecto.Query, only: [from: 2]
 
   alias Brando.Content.{Block, Blocks, Module, Ref, Var}
+  alias Brando.Repo
   alias Ecto.Changeset
 
   @doc """
@@ -150,13 +151,13 @@ defmodule Brando.Test.Blocks do
       |> Blocks.build_module_block(user_id(opts[:user]), nil, join, :module)
       |> Changeset.put_assoc(:refs, Enum.map(block.refs, &unload(&1, %Ref{}, [:image, :video, :file, :gallery])))
       |> Changeset.put_assoc(:vars, Enum.map(block.vars, &unload(&1, %Var{}, [:image, :video, :file])))
-      |> Brando.Repo.insert!()
+      |> Repo.insert!()
 
     sequence =
       opts[:sequence] ||
-        Brando.Repo.aggregate(from(j in join, where: j.entry_id == ^entry_id), :count)
+        Repo.aggregate(from(j in join, where: j.entry_id == ^entry_id), :count)
 
-    Brando.Repo.insert!(struct(join, entry_id: entry_id, block_id: saved.id, sequence: sequence))
+    Repo.insert!(struct(join, entry_id: entry_id, block_id: saved.id, sequence: sequence))
     {:ok, _} = Blocks.render_entry(schema, entry.id)
     saved
   end
