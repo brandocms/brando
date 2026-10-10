@@ -258,4 +258,30 @@ defmodule BrandoAdmin.WorkingCopyPlacementTest do
 
     assert {body("keepA"), row("keepA").module_version} == {"Stays in A", 2}
   end
+
+  # Sol audit: the working copy is cast before it is saved, which gave a
+  # table row deleted since a new sync uid; the save then kept that one.
+  test "a table row deleted since comes back with its sync uid", c do
+    rows = [%{"sequence" => 0, "vars" => []}, %{"sequence" => 1, "vars" => []}]
+    roots!(c, [container(c, "boxA", [Map.put(module_block(c, "table", "Rows"), "table_rows", rows)])])
+
+    for {sequence, sync_uid} <- [{0, "row-kept"}, {1, "row-gone"}] do
+      Repo.update_all(
+        from(r in Brando.Content.TableRow, where: r.block_id == ^row("table").id and r.sequence == ^sequence),
+        set: [sync_uid: sync_uid]
+      )
+    end
+
+    revision = revision!(c)
+    Repo.delete_all(from(r in Brando.Content.TableRow, where: r.sync_uid == "row-gone"))
+
+    load_and_save(c, revision)
+
+    syncs = fn ->
+      Repo.all(from(r in Brando.Content.TableRow, where: r.block_id == ^row("table").id, select: r.sync_uid))
+    end
+
+    await(fn -> length(syncs.()) == 2 end)
+    assert Enum.sort(syncs.()) == ["row-gone", "row-kept"]
+  end
 end

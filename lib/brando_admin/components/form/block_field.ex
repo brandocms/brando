@@ -1624,6 +1624,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
   defp working_copy_changesets(socket, revision_blocks, rows) do
     %{block_module: block_module, current_user: %{id: user_id}} = socket.assigns
     by_uid = Map.new(rows, &{&1.block.uid, &1})
+    restored = BlockIdentity.index(revision_blocks)
 
     Enum.map(revision_blocks, fn entry_block ->
       params =
@@ -1637,8 +1638,13 @@ defmodule BrandoAdmin.Components.Form.BlockField do
           params = params |> strip_row_ids() |> Map.update!("block", &as_new_block/1)
           block_module |> struct(%{}) |> Map.put(:block, empty_block()) |> block_module.changeset(params, user_id, true)
 
+        # The cast gives a block or table row the entry no longer has a
+        # new sync uid, and the copy is shown, and saved, as cast: it takes
+        # the revision's here.
         row ->
-          block_module.changeset(row, params, user_id, true)
+          row
+          |> block_module.changeset(params, user_id, true)
+          |> BlockIdentity.keep_entry_block(%{}, restored)
       end
     end)
   end
