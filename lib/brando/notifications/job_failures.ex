@@ -13,9 +13,11 @@ defmodule Brando.Notifications.JobFailures do
   counts; with it, only jobs that belong to a site environment do.
 
   Notification deliveries and dispatches themselves are never notified, nor
-  the jobs that send mention and summary email (`Brando.Worker.NoteMentions`,
-  `Brando.Worker.NotificationEmail`), so a broken route or mail provider
-  cannot notify itself in a loop.
+  `Brando.Worker.NoteMentions`, which queues mention and summary email: a
+  route that failed, or a summary of a failed-job notification, would queue
+  them again, in a loop. The job that sends that email,
+  `Brando.Worker.NotificationEmail`, is notified: its failure reaches an
+  email summary only with the next summary, at most once a day.
 
       config :brando, Brando.Notifications, failed_jobs: false   # off
   """
@@ -26,8 +28,7 @@ defmodule Brando.Notifications.JobFailures do
   @ignored [
     "Brando.Worker.NotificationDelivery",
     "Brando.Worker.NotificationDispatch",
-    "Brando.Worker.NoteMentions",
-    "Brando.Worker.NotificationEmail"
+    "Brando.Worker.NoteMentions"
   ]
   @error_length 200
 

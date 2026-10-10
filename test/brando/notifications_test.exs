@@ -439,14 +439,22 @@ defmodule Brando.NotificationsTest do
       route = slack_route!(user, receiver, %{"events" => ["failed_job"]})
 
       assert :ok = discard("Brando.Worker.NotificationDelivery")
-      # Nor the email jobs: an email route would notify their failure by email
-      assert :ok = discard("Brando.Worker.NotificationEmail")
+      # Nor the job that queues mention and summary email: a summary of a
+      # failed-job notification would queue it again
       assert :ok = discard("Brando.Worker.NoteMentions")
       put_test_env(Brando.Notifications, failed_jobs: false)
       assert :ok = discard("MyApp.Worker.Sync")
 
       refute_receive {:webhook_request, _}, 200
       assert deliveries(route) == []
+    end
+
+    test "a mention or summary email that failed for good is notified", %{user: user} do
+      receiver = WebhookReceiver.start()
+      _route = slack_route!(user, receiver, %{"events" => ["failed_job"]})
+
+      assert :ok = discard("Brando.Worker.NotificationEmail")
+      assert next_request().body =~ "Brando.Worker.NotificationEmail"
     end
 
     test "content-type filters do not hold them back", %{user: user} do
