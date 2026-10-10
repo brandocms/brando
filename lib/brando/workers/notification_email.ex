@@ -18,6 +18,8 @@ defmodule Brando.Worker.NotificationEmail do
 
   require Logger
 
+  @retry_give_up 300
+
   @impl Oban.Worker
   def perform(%Oban.Job{args: args} = job) do
     final? = final?(job)
@@ -30,25 +32,35 @@ defmodule Brando.Worker.NotificationEmail do
 
     case result do
       {:error, reason} when final? ->
-        give_up(job, "mail_failed", "the mail provider refused it: " <> inspect(reason))
-        result
+        with :ok <- give_up(job, "mail_failed", "the mail provider refused it: " <> inspect(reason)), do: result
 
       _ ->
         result
     end
   rescue
     error ->
-      if final?(job), do: give_up(job, "email_failed", Exception.message(error))
-      reraise error, __STACKTRACE__
+      with true <- final?(job),
+           {:snooze, _} = snooze <- give_up(job, "email_failed", Exception.message(error)) do
+        snooze
+      else
+        _ -> reraise error, __STACKTRACE__
+      end
   end
 
   defp final?(job), do: job.attempt >= job.max_attempts
 
-  # Its last attempt failed: what it took goes back (`Digest.give_up/2`)
+  # Its last attempt failed: what it took goes back (`Digest.give_up/2`).
+  # When that fails too (the database is down, say), the job waits and tries
+  # again, rather than end with its items marked sent and never sent.
   defp give_up(job, error, detail) do
     Logger.error("[Brando.Notifications] Email job ##{job.id} gave up: " <> detail)
     TenantJob.run_current(job, fn -> Digest.give_up(job.args, error) end)
   rescue
-    error -> Logger.error("[Brando.Notifications] Email job ##{job.id} could not give back: " <> Exception.message(error))
+    error ->
+      Logger.error(
+        "[Brando.Notifications] Email job ##{job.id} could not give back, will try again: " <> Exception.message(error)
+      )
+
+      {:snooze, @retry_give_up}
   end
 end

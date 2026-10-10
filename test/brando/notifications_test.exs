@@ -1130,6 +1130,54 @@ defmodule Brando.NotificationsTest do
       assert [_] = Notes.mentions_for(reader.id, unsent: true)
     end
 
+    test "an email job that cannot give back what it took tries again later", %{user: user} do
+      reader = Factory.insert(:random_user, config: %UserConfig{notification_digest: :daily})
+      route = route!(user, %{"kind" => "email", "events" => ["failed_job"], "recipient_ids" => [reader.id]})
+
+      delivery =
+        Repo.insert!(%Delivery{
+          route_id: route.id,
+          recipient_id: reader.id,
+          event: "scheduled_publish",
+          state: "digest",
+          notification: %{"event" => "scheduled_publish", "entry" => "not an entry"}
+        })
+
+      Oban.Testing.with_testing_mode(:manual, fn ->
+        assert :ok = Notes.deliver_mentions(reader.id, Digest.next_at(:daily, delivery.inserted_at))
+        assert [job] = all_enqueued(worker: Brando.Worker.NotificationEmail)
+
+        # The database fails while it gives back what it took, after reading it
+        test = self()
+        id = "give-back-fails-#{System.unique_integer([:positive])}"
+
+        :telemetry.attach(
+          id,
+          [:brando_integration, :repo, :query],
+          fn _event, _measurements, meta, _config ->
+            seen = Process.get(id, 0)
+
+            if self() == test and meta.source == "notification_deliveries" and String.starts_with?(meta.query, "SELECT") do
+              Process.put(id, seen + 1)
+              # The first read builds the email; the second gives back
+              if seen == 1, do: Repo.query!("ALTER TABLE notification_deliveries RENAME TO notification_deliveries_away")
+            end
+          end,
+          nil
+        )
+
+        on_exit(fn -> :telemetry.detach(id) end)
+
+        capture_log(fn ->
+          assert {:snooze, _} = perform_job(Brando.Worker.NotificationEmail, job.args, attempt: 5)
+        end)
+
+        :telemetry.detach(id)
+      end)
+
+      assert %{state: "succeeded"} = Repo.reload!(delivery)
+    end
+
     test "one email job waits per user, however long ago it was queued", %{user: user} do
       reader = Factory.insert(:random_user, config: %UserConfig{notification_digest: :daily})
       _route = route!(user, %{"kind" => "email", "events" => ["failed_job"], "recipient_ids" => [reader.id]})

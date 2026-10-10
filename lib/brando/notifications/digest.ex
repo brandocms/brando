@@ -365,10 +365,16 @@ defmodule Brando.Notifications.Digest do
   Gives back what a queued email took, when it failed for good: its
   notifications are marked failed with `error`, to be sent again from the
   delivery log, and its mentions are unclaimed, to go with the next email.
+  All or nothing: raises when it cannot.
   """
   def give_up(args, error) do
-    settle(sent_deliveries(args["deliveries"] || []), "failed", error)
-    Notes.unclaim_mentions(args["mentions"] || [])
+    {:ok, :ok} =
+      Repo.transaction(fn ->
+        settle(sent_deliveries(args["deliveries"] || []), "failed", error)
+        Notes.unclaim_mentions(args["mentions"] || [])
+      end)
+
+    :ok
   end
 
   # Deliveries were marked sent when their email was queued
@@ -394,7 +400,7 @@ defmodule Brando.Notifications.Digest do
       set: [state: state, error: error]
     )
 
-    deliveries |> Enum.map(& &1.route_id) |> Enum.uniq() |> Enum.each(&broadcast/1)
+    Repo.after_commit(fn -> deliveries |> Enum.map(& &1.route_id) |> Enum.uniq() |> Enum.each(&broadcast/1) end)
   end
 
   defp send_email(_user, [], [], _kind), do: :ok
