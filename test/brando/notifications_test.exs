@@ -439,6 +439,9 @@ defmodule Brando.NotificationsTest do
       route = slack_route!(user, receiver, %{"events" => ["failed_job"]})
 
       assert :ok = discard("Brando.Worker.NotificationDelivery")
+      # Nor the email jobs: an email route would notify their failure by email
+      assert :ok = discard("Brando.Worker.NotificationEmail")
+      assert :ok = discard("Brando.Worker.NoteMentions")
       put_test_env(Brando.Notifications, failed_jobs: false)
       assert :ok = discard("MyApp.Worker.Sync")
 

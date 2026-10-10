@@ -12,8 +12,10 @@ defmodule Brando.Notifications.JobFailures do
   failing jobs makes one message, not hundreds. Without tenancy every job
   counts; with it, only jobs that belong to a site environment do.
 
-  Notification deliveries and dispatches themselves are never notified, so
-  a broken route cannot notify itself in a loop.
+  Notification deliveries and dispatches themselves are never notified, nor
+  the jobs that send mention and summary email (`Brando.Worker.NoteMentions`,
+  `Brando.Worker.NotificationEmail`), so a broken route or mail provider
+  cannot notify itself in a loop.
 
       config :brando, Brando.Notifications, failed_jobs: false   # off
   """
@@ -21,7 +23,12 @@ defmodule Brando.Notifications.JobFailures do
   require Logger
 
   @handler "brando-notifications-failed-jobs"
-  @ignored ["Brando.Worker.NotificationDelivery", "Brando.Worker.NotificationDispatch"]
+  @ignored [
+    "Brando.Worker.NotificationDelivery",
+    "Brando.Worker.NotificationDispatch",
+    "Brando.Worker.NoteMentions",
+    "Brando.Worker.NotificationEmail"
+  ]
   @error_length 200
 
   @doc "Attaches the Oban telemetry handler. Called from `Brando.Telemetry.attach/0`."
