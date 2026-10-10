@@ -1146,6 +1146,46 @@ defmodule Brando.EditSessionTest do
       end
     end
 
+    # Sol audit: only a copy's own uid was reserved, so a copy of one of its
+    # children, asked of another rejoiner, could take a uid it would take.
+    test "a copy's children's uids are reserved for it" do
+      ref = new_ref()
+      base = rows()
+      insert = fn text -> {:insert, "n", 1, %{"block" => %{"uid" => "n", "description" => text}}} end
+      child = fn ops, text -> Ops.apply_op(ops, {:insert_child, "n", "c", 0, %{"uid" => "c", "description" => text}}) end
+
+      {:ok, seed} = Ops.apply_op(base, insert.("A's version"))
+      {:ok, seed} = child.(seed, "A's child")
+      {:ok, _} = EditSession.join(ref, @field, {base, seed})
+
+      {:ok, b_held} = Ops.apply_op(base, insert.("B's version"))
+      {:ok, b_held} = child.(b_held, "B's child")
+      assert {:ok, %{rescues: [%{kept: "n-kept"}]}} = rejoin_with_stale_rows(ref, base, b_held)
+
+      # C moved the child under a saved block and changed it
+      {:ok, c_held} = Ops.apply_op(base, insert.("A's version"))
+      {:ok, c_held} = child.(c_held, "C's child")
+      {:ok, c_held} = Ops.apply_op(c_held, {:move_to_parent, "c", "a", :end})
+      assert {:ok, %{rescues: rescues}} = rejoin_with_stale_rows(ref, base, c_held)
+      assert %{kept: kept} = Enum.find(rescues, &(&1.group == "c"))
+      refute kept == "c-kept"
+    end
+
+    # Sol audit: a block whose children were all removed holds an empty list
+    # of them, which a carry does not store.
+    test "a new block whose children were all removed is the same without them" do
+      ref = new_ref()
+      base = rows()
+      {:ok, _} = EditSession.join(ref, @field, {base, base})
+      {:ok, held} = Ops.apply_op(base, {:insert, "n", 1, %{"block" => %{"uid" => "n"}}})
+      {:ok, held} = Ops.apply_op(held, {:insert_child, "n", "c", 0, %{"uid" => "c"}})
+      {:ok, held} = Ops.apply_op(held, {:delete, "c"})
+
+      for _editor <- [:a, :b] do
+        assert {:ok, %{rescues: []}} = rejoin_with_stale_rows(ref, base, held)
+      end
+    end
+
     test "a rejoiner holding the same version of a new block the session has gets no copy" do
       ref = new_ref()
       base = rows()

@@ -539,7 +539,10 @@ defmodule Brando.EditSession do
         copy?: true
       }
 
-      {copy, %{session | copy_uids: MapSet.put(session.copy_uids, {field, kept})}}
+      # the blocks under it take the same suffix
+      suffix = String.replace_prefix(kept, group, "")
+      taken = Enum.map(copy.uids, &{field, &1 <> suffix})
+      {copy, %{session | copy_uids: Enum.into(taken, session.copy_uids)}}
     end)
   end
 

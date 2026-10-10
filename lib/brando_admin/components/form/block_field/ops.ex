@@ -1104,7 +1104,8 @@ defmodule BrandoAdmin.Components.Form.BlockField.Ops do
   # artifacts and children params in or out.
   defp new_subtree(state, uid) do
     uids = [uid | descendants(state, uid)]
-    {Map.new(uids, &{&1, comparable(state, &1)}), Map.take(state.child_order, uids)}
+    child_order = state.child_order |> Map.take(uids) |> Map.reject(fn {_uid, children} -> children == [] end)
+    {Map.new(uids, &{&1, comparable(state, &1)}), child_order}
   end
 
   @incidental ~w(sequence rendered_html rendered_at children)
