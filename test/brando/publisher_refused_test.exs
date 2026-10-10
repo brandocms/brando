@@ -95,6 +95,11 @@ defmodule Brando.PublisherRefusedTest do
     on_exit(fn -> :telemetry.detach(id) end)
   end
 
+  # What the sweep did with `page`
+  defp swept(page), do: Enum.filter(Brando.Publisher.sweep(), &for_page?(&1, page))
+
+  defp for_page?(result, page), do: result.schema == Page and result.id == page.id
+
   defp refused_events(page) do
     Repo.all(
       from e in Event,
@@ -120,7 +125,7 @@ defmodule Brando.PublisherRefusedTest do
       assert event.details["schedule_refused"] == %{"action" => "publish", "reason" => "forbidden"}
       assert event.details["status"] == %{"from" => "pending", "to" => "draft"}
 
-      assert Brando.Publisher.sweep() |> Enum.filter(&(&1.id == page.id)) == []
+      assert swept(page) == []
       assert Repo.get!(Page, page.id).status == :draft
     end
 
@@ -132,7 +137,7 @@ defmodule Brando.PublisherRefusedTest do
 
       assert %{status: :draft, publish_at: nil} = Repo.get!(Page, page.id)
       assert [%{details: %{"schedule_refused" => %{"reason" => "scheduler_missing"}}}] = refused_events(page)
-      assert Brando.Publisher.sweep() |> Enum.filter(&(&1.id == page.id)) == []
+      assert swept(page) == []
     end
 
     test "its user was deactivated, even without group authorization", c do
@@ -163,7 +168,7 @@ defmodule Brando.PublisherRefusedTest do
       assert {:cancel, :forbidden} = run_job(page, "published", c.editor.id)
       assert %{status: :draft, publish_at: nil} = Repo.get!(Page, page.id)
       assert [%{details: %{"schedule_refused" => %{"action" => "publish"}}}] = refused_events(page)
-      assert Brando.Publisher.sweep() |> Enum.filter(&(&1.id == page.id)) == []
+      assert swept(page) == []
     end
 
     test "leaves a date or status an editor changed while the job ran", c do
@@ -224,7 +229,7 @@ defmodule Brando.PublisherRefusedTest do
 
       assert %{status: :published, unpublish_at: nil} = Repo.get!(Page, page.id)
       assert [%{details: %{"schedule_refused" => %{"action" => "unpublish"}}}] = refused_events(page)
-      assert Brando.Publisher.sweep() |> Enum.filter(&(&1.id == page.id)) == []
+      assert swept(page) == []
       assert Repo.get!(Page, page.id).status == :published
     end
   end
@@ -237,7 +242,7 @@ defmodule Brando.PublisherRefusedTest do
 
       for state <- ~w(scheduled available executing retryable) do
         {1, _} = Repo.update_all(from(j in Oban.Job, where: j.id == ^job.id), set: [state: state])
-        assert Brando.Publisher.sweep() |> Enum.filter(&(&1.id == page.id)) == [], state
+        assert swept(page) == [], state
         assert Repo.get!(Page, page.id).status == :pending
       end
 
@@ -247,7 +252,7 @@ defmodule Brando.PublisherRefusedTest do
           set: [state: "retryable", args: Map.put(job.args, "status", "disabled")]
         )
 
-      assert [%{action: :publish, result: :ok}] = Brando.Publisher.sweep() |> Enum.filter(&(&1.id == page.id))
+      assert [%{action: :publish, result: :ok}] = swept(page)
       assert Repo.get!(Page, page.id).status == :published
     end
 
@@ -258,7 +263,7 @@ defmodule Brando.PublisherRefusedTest do
       Repo.update!(Ecto.Changeset.change(expiry, state: "retryable"))
       set_dates(page, publish_at: at(-1200), unpublish_at: at(-600))
 
-      assert Brando.Publisher.sweep() |> Enum.filter(&(&1.id == page.id)) == []
+      assert swept(page) == []
       assert Repo.get!(Page, page.id).status == :pending
     end
 
@@ -273,8 +278,8 @@ defmodule Brando.PublisherRefusedTest do
       for job <- jobs(discarded, "published"), do: Repo.update!(Ecto.Changeset.change(job, state: "discarded"))
 
       results = Brando.Publisher.sweep()
-      assert %{action: :publish, result: :ok} = Enum.find(results, &(&1.id == lost.id))
-      assert %{action: :publish, result: :ok} = Enum.find(results, &(&1.id == discarded.id))
+      assert [%{action: :publish, result: :ok}] = Enum.filter(results, &for_page?(&1, lost))
+      assert [%{action: :publish, result: :ok}] = Enum.filter(results, &for_page?(&1, discarded))
       assert Repo.get!(Page, lost.id).status == :published
       assert Repo.get!(Page, discarded.id).status == :published
     end
