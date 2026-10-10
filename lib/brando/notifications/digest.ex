@@ -266,34 +266,33 @@ defmodule Brando.Notifications.Digest do
   defp send_batch(user_id, period, waiting, mentions, now) do
     user = Repo.get(User, user_id)
 
-    if is_nil(user) or not user.active or not is_nil(user.deleted_at) do
-      finish(waiting, mentions, "cancelled", now, "recipient_unavailable")
-    else
-      # Only while the route is active and still names the user, and mentions
-      # only while the user may still read their entry
-      access = Enum.group_by(waiting, &Recipient.access(user, &1, &1.route))
-      {readable, unreadable, unchecked} = {access[:ok] || [], access[:denied] || [], access[:unchecked] || []}
-      entries = Notes.mention_email_entries(user, mentions)
+    if is_nil(user) or not user.active or not is_nil(user.deleted_at),
+      do: finish(waiting, mentions, "cancelled", now, "recipient_unavailable"),
+      else: send_claimed(user, period, waiting, mentions, now)
+  end
 
-      # Only what this job claims goes out, so two jobs never send the same
-      # item; the email is queued in the same transaction, so an item claimed
-      # is one queued to be sent
-      {:ok, routes} =
-        Repo.transaction(fn ->
-          sent = claim(readable, "succeeded", now)
-          cancelled = claim(unreadable, "cancelled", now, "recipient_unavailable")
-          failed = claim(unchecked, "failed", now, "recipient_check_failed")
-          claimed = Notes.claim_mentions(mentions, now)
-          notifications = for d <- readable, MapSet.member?(sent, d.id), do: d.notification
-          items = for {id, item} <- entries, MapSet.member?(claimed, id), do: item
+  # Only while the route is active and still names the user, and mentions
+  # only while the user may still read their entry. Only what this job claims
+  # goes out, so two jobs never send the same item; the email is queued in the
+  # same transaction, so an item claimed is one queued to be sent.
+  defp send_claimed(user, period, waiting, mentions, now) do
+    access = Enum.group_by(waiting, &Recipient.access(user, &1, &1.route))
+    entries = Notes.mention_email_entries(user, mentions)
 
-          send_email(user, notifications, items, if(period == :off, do: :batch, else: period))
-          routes(readable, sent) ++ routes(unreadable, cancelled) ++ routes(unchecked, failed)
-        end)
+    {:ok, routes} =
+      Repo.transaction(fn ->
+        sent = claim(access[:ok] || [], "succeeded", now)
+        cancelled = claim(access[:denied] || [], "cancelled", now, "recipient_unavailable")
+        failed = claim(access[:unchecked] || [], "failed", now, "recipient_check_failed")
+        claimed = Notes.claim_mentions(mentions, now)
+        notifications = for d <- waiting, MapSet.member?(sent, d.id), do: d.notification
+        items = for {id, item} <- entries, MapSet.member?(claimed, id), do: item
 
-      routes |> Enum.uniq() |> Enum.each(&broadcast/1)
-    end
+        send_email(user, notifications, items, if(period == :off, do: :batch, else: period))
+        routes(waiting, sent |> MapSet.union(cancelled) |> MapSet.union(failed))
+      end)
 
+    routes |> Enum.uniq() |> Enum.each(&broadcast/1)
     :ok
   end
 

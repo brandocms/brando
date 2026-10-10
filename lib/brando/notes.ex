@@ -646,20 +646,17 @@ defmodule Brando.Notes do
         # Only what this job claims goes out, so two jobs never send the same
         # mention; the email is queued in the same transaction, so a mention
         # claimed is one queued to be sent
-        {:ok, :ok} =
-          Repo.transaction(fn ->
-            claimed = claim_mentions(pending, now)
-            items = for {id, item} <- entries, MapSet.member?(claimed, id), do: item
-
-            if items != [] do
-              {:ok, _job} = user |> Brando.Notes.MentionEmail.build(items) |> Brando.Mailer.deliver_later()
-            end
-
-            :ok
-          end)
+        {:ok, :ok} = Repo.transaction(fn -> send_claimed(user, pending, entries, now) end)
     end
 
     if length(pending) == @mention_batch, do: Brando.Notifications.Digest.schedule_rest(user_id, now), else: :ok
+  end
+
+  defp send_claimed(user, pending, entries, now) do
+    claimed = claim_mentions(pending, now)
+    items = for {id, item} <- entries, MapSet.member?(claimed, id), do: item
+    if items != [], do: {:ok, _job} = user |> Brando.Notes.MentionEmail.build(items) |> Brando.Mailer.deliver_later()
+    :ok
   end
 
   @doc """
