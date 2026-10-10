@@ -1093,36 +1093,35 @@ defmodule BrandoAdmin.Components.Form.BlockField.Ops do
   end
 
   # A root's carried diff onto the diff the target holds for it. The fields
-  # the carried diff has win; the target's other fields stay. A list of the
-  # block's rows (refs, vars, table rows, ...) merges by row, three ways
-  # (`carry_list/3`), because a diff holds the whole list as its editor had
-  # it: a cell edit names its row in the list as it was then.
+  # the carried diff has win; the target's other fields stay. Lists of
+  # rows (refs, vars, table rows, a var's options, ...) merge by row
+  # (`carry_list/3`), at every depth, because a diff holds a whole list as
+  # its editor had it: a cell edit names its row in the list as it was then.
   #
   # Both sides were built on the same rows, which hold no diff, so a field
   # the carried diff lacks is one its editor did not change: the target's
   # value stays. (An editor who set a field back to its saved value with a
   # whole-form `:update` sends no key for it, which reads the same.)
-  defp carry_root_diff(current, carried) do
-    Map.merge(current, carried, fn
-      "block", %{} = now, %{} = block when not is_struct(now) and not is_struct(block) ->
-        Map.merge(now, block, fn
-          key, now, rows when is_list(now) and is_list(rows) -> carry_list(key, now, rows)
-          _key, now, value -> deep_merge_params(now, value)
-        end)
+  defp carry_root_diff(current, carried), do: carry_merge(current, carried)
 
-      _key, now, value ->
-        deep_merge_params(now, value)
-    end)
-  end
+  defp carry_merge(now, value) when is_map(now) and is_map(value) and not is_struct(now) and not is_struct(value),
+    do: Map.merge(now, value, &carry_merge/3)
+
+  defp carry_merge(_now, value), do: value
+
+  defp carry_merge(key, now, value) when is_list(now) and is_list(value), do: carry_list(key, now, value)
+  defp carry_merge(_key, now, value), do: carry_merge(now, value)
 
   # `current` is the target's list, `carried` the carried editor's; neither
   # holds the saved rows, but every saved row has an id and the rows that
   # are named by id alone carry no change. So the list before is the rows
   # with an id on either side, and `merge_list/4` keeps what each side
-  # added, removed and changed. A row both changed takes the carried
-  # fields over the target's; a row one removed and the other changed comes
-  # back with the change, as with two editors' list ops. Items that cannot
-  # be named are set whole, as the carried editor has them.
+  # added, removed and changed. A row both kept merges field by field
+  # (`carry_merge/2`), the carried fields winning; a row one removed and
+  # the other changed comes back with the change, as with two editors'
+  # list ops. An item with no id (a new row, a select option) cannot be
+  # told added from removed, so both sides' are kept. Items that cannot be
+  # named at all are set whole, as the carried editor has them.
   defp carry_list(key, current, carried) do
     named = Enum.map(current, &identity(&1, key))
     carried_named = Enum.map(carried, &identity(&1, key))
@@ -1140,7 +1139,7 @@ defmodule BrandoAdmin.Components.Form.BlockField.Ops do
   end
 
   defp merge_row(item, nil), do: item
-  defp merge_row(item, now), do: deep_merge_params(now, item)
+  defp merge_row(item, now), do: carry_merge(now, item)
 
   defp saved_row(%{"id" => id}) when id not in [nil, ""], do: [%{"id" => id}]
   defp saved_row(_item), do: []

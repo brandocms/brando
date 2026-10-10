@@ -495,6 +495,28 @@ defmodule BrandoAdmin.Components.Form.BlockField.OpsTest do
       assert carried.diffs["b"]["block"]["table_rows"] == [%{"id" => 5, "cols" => "live", "label" => "carried"}, added]
     end
 
+    # Sol audit: a row both sides changed merged its own lists by the
+    # carried side's alone, so the target's new select option went.
+    test "lists inside a row both sides changed merge by item too" do
+      base = base_rows()
+      var = [%{"id" => 5}]
+      options = [%{"value" => "25"}, %{"value" => "50"}]
+      at_options = ["block", {:at, "vars", {"id", 5}, var}, "options"]
+
+      live = apply!(base, {:set_field, "b", at_options, {:list, options, options ++ [%{"value" => "75"}]}, 0})
+
+      held =
+        apply!(
+          base,
+          {:update, "b", %{"block" => %{"vars" => [%{"id" => 5, "options" => options ++ [%{"value" => "100"}]}]}}}
+        )
+
+      carried = apply!(live, {:carry, held, base})
+
+      assert [%{"id" => 5, "options" => merged}] = carried.diffs["b"]["block"]["vars"]
+      assert Enum.map(merged, & &1["value"]) == ["25", "50", "75", "100"]
+    end
+
     test "rows written outside the session take the editors' root diffs as they are" do
       old_base = base_rows()
       state = apply!(old_base, {:update, "b", %{"block" => %{"anchor" => "editor"}}})
