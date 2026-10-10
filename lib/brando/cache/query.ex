@@ -1,6 +1,16 @@
 defmodule Brando.Cache.Query do
   @moduledoc """
   Interactions with query cache
+
+  ## Evict after commit
+
+  `Brando.Query.insert/2`, `update/2` and `delete/1` evict as soon as the
+  write returns. Inside a transaction that is before it commits (with group
+  authorization a generated context mutation always runs in one), so a read
+  between the eviction and the commit caches the old row again, for up to the
+  cache TTL. A write inside a transaction also evicts once it has committed:
+  `Brando.Repo.after_commit(fn -> Brando.Cache.Query.evict({:ok, entry}) end)`.
+  That waits only for a transaction begun with `Brando.Repo.transaction/2`.
   """
   @type changeset :: Ecto.Changeset.t()
   @cache_module Application.compile_env(:brando, :cache_module, Cachex)
