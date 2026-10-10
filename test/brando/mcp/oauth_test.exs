@@ -522,7 +522,7 @@ defmodule Brando.MCP.OAuthTest do
       assert json_response(refresh(tenant, tokens["refresh_token"]), 400)["error"] == "invalid_grant"
     end
 
-    test "a refresh token sent twice at once gets the same pair, within the grace period", %{
+    test "a refresh token sent again within the grace period gets the same pair", %{
       tenant: tenant,
       tokens: tokens
     } do
@@ -585,6 +585,37 @@ defmodule Brando.MCP.OAuthTest do
         set: [rotated_at: DateTime.add(DateTime.utc_now(), -11, :second)]
       )
 
+      assert json_response(refresh(tenant, tokens["refresh_token"]), 400)["error"] == "invalid_grant"
+      assert %Grant{revoked_reason: "refresh_token_reuse"} = Repo.one!(Grant)
+    end
+
+    test "a pair from a rotation that rolled back is never replayed", %{tenant: tenant, tokens: tokens} do
+      params = %{"grant_type" => "refresh_token", "refresh_token" => tokens["refresh_token"], "client_id" => client_id()}
+
+      # The pair is held before the rotation commits; this one rolls back
+      {:error, :abandoned} =
+        Repo.transaction(fn ->
+          {:ok, _pair} = Brando.MCP.OAuth.token(params, tenant)
+          Repo.rollback(:abandoned)
+        end)
+
+      original = Repo.get_by!(Token, token_hash: Brando.MCP.OAuth.hash(tokens["refresh_token"]))
+      assert %Token{rotated_at: nil} = original
+      assert {:ok, ciphertext} = Cachex.get(:cache, Brando.MCP.OAuth.replay_key(original))
+      assert is_binary(ciphertext)
+
+      # The token rotated elsewhere (another node), which held its pair there
+      successor =
+        Repo.insert!(%Token{
+          grant_id: original.grant_id,
+          kind: :refresh,
+          token_hash: Brando.MCP.OAuth.hash("bmcp_rt_elsewhere"),
+          expires_at: DateTime.add(DateTime.utc_now(), 3600, :second)
+        })
+
+      original |> Ecto.Changeset.change(rotated_at: DateTime.utc_now(), successor_id: successor.id) |> Repo.update!()
+
+      # Here, the entry left behind is not that rotation's: reuse
       assert json_response(refresh(tenant, tokens["refresh_token"]), 400)["error"] == "invalid_grant"
       assert %Grant{revoked_reason: "refresh_token_reuse"} = Repo.one!(Grant)
     end
