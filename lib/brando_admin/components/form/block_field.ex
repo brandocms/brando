@@ -1335,7 +1335,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     # The blocks this editor's unconfirmed ops changed: a new block it
     # holds in another version than the session's comes back as a copy
     # only if it changed it itself (`Brando.EditSession.join/4`).
-    changed = Enum.flat_map(replica.pending, fn {_seq, op} -> Ops.op_uids(op) end)
+    changed = Replica.changed(replica)
 
     socket
     |> assign(:edit_session, nil)

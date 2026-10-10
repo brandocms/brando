@@ -1202,6 +1202,28 @@ defmodule Brando.EditSessionTest do
       assert info.state.diffs["n"]["block"]["description"] == "B's change"
     end
 
+    # Review: a pending delete, restore or recovery copy named no block, so
+    # a version they made was not the rejoiner's own, and was dropped
+    # without a word when the session died before confirming it.
+    test "a replica's changes name the blocks its pending deletes, restores and carries touched" do
+      base = rows()
+      {:ok, state} = Ops.apply_op(base, {:insert, "n", 1, %{"block" => %{"uid" => "n"}}})
+      {:ok, state} = Ops.apply_op(state, {:insert_child, "n", "c", 0, %{"uid" => "c"}})
+      snapshot = Ops.bin_snapshot(state, "c")
+      {:ok, copy} = Ops.apply_op(state, {:update, "n", %{"block" => %{"description" => "recovered"}}})
+
+      replica = Replica.new(nil, %{session: nil, epoch: 1, rev: 0, state: state}, nil)
+
+      for {op, named} <- [
+            {{:delete, "c"}, ["c", "n"]},
+            {{:restore, snapshot}, ["c", "n"]},
+            {{:carry, copy, base}, ["n"]}
+          ] do
+        {replica, _} = Replica.local(replica, op)
+        assert MapSet.subset?(MapSet.new(named), MapSet.new(Replica.changed(replica)))
+      end
+    end
+
     test "a rejoiner holding the same version of a new block the session has gets no copy" do
       ref = new_ref()
       base = rows()
