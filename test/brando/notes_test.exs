@@ -287,6 +287,30 @@ defmodule Brando.NotesTest do
       assert_email_sent(fn email -> email.text_body =~ "note 1\n" and not (email.text_body =~ "note 2\n") end)
       assert Notes.mentions_for(other.id, unsent: true) == []
     end
+
+    test "a further email that cannot be queued fails the job, to be retried", %{author: author, other: other} do
+      now = DateTime.utc_now()
+
+      # Mentions on an entry that is gone: no email to queue, only the further one
+      notes =
+        for n <- 1..100,
+            do: %{
+              entry_type: to_string(Page),
+              entry_id: -1,
+              body: "n#{n}",
+              author_id: author.id,
+              inserted_at: now,
+              updated_at: now
+            }
+
+      {100, ids} = Repo.insert_all(Note, notes, returning: [:id])
+      {100, _} = Repo.insert_all(Mention, Enum.map(ids, &%{note_id: &1.id, user_id: other.id, inserted_at: now}))
+
+      Repo.query!("ALTER TABLE oban_jobs RENAME TO oban_jobs_away")
+
+      assert {:error, _} =
+               Oban.Testing.with_testing_mode(:manual, fn -> Notes.deliver_mentions(other.id, now) end)
+    end
   end
 
   describe "permissions" do

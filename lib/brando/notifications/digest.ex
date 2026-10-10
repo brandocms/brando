@@ -97,11 +97,16 @@ defmodule Brando.Notifications.Digest do
   Queues what is left after an email that took a full batch: a digest's
   rest at once, as it is due already; without a digest, with the next
   email. The job running counts as no waiting job, so this queues another.
+  Returns `:ok`, or `{:error, reason}` for the running job to fail and be
+  retried, as nothing else would send the rest.
   """
   def schedule_rest(user_id, now \\ DateTime.utc_now()) do
-    insert_job(user_id, fn ->
-      if period(user_id) == :off, do: seconds_until_next_email(user_id, now), else: 0
-    end)
+    delay = fn -> if period(user_id) == :off, do: seconds_until_next_email(user_id, now), else: 0 end
+
+    case insert_job(user_id, delay) do
+      {:ok, _job} -> :ok
+      {:error, _} = error -> error
+    end
   end
 
   defp insert_job(user_id, delay) do
@@ -118,9 +123,10 @@ defmodule Brando.Notifications.Digest do
 
   @doc """
   Sends the digest for `user_id` when it is due: `:ok` (sent, or nothing to
-  send), `{:snooze, seconds}` until it is due, or `:not_digest` when the
+  send), `{:snooze, seconds}` until it is due, `:not_digest` when the
   user has no digest and nothing waits for one, so the mention email goes
-  out as usual.
+  out as usual, or `{:error, reason}` when the rest of a full batch could
+  not be queued.
   """
   def deliver(user_id, now \\ DateTime.utc_now()) do
     period = period(user_id)
@@ -130,11 +136,7 @@ defmodule Brando.Notifications.Digest do
       :not_digest
     else
       mentions = Notes.mentions_for(user_id, unsent: true, limit: @mention_limit)
-
-      with :ok <- send_when_due(user_id, period, waiting, mentions, now) do
-        if length(waiting) == @limit or length(mentions) == @mention_limit, do: schedule_rest(user_id, now)
-        :ok
-      end
+      send_when_due(user_id, period, waiting, mentions, now)
     end
   end
 
@@ -209,7 +211,13 @@ defmodule Brando.Notifications.Digest do
     error in Postgrex.Error -> if error.postgres[:code] == :undefined_table, do: [], else: reraise(error, __STACKTRACE__)
   end
 
+  # A full batch leaves the rest for another run
   defp send_digest(user_id, period, waiting, mentions, now) do
+    :ok = send_batch(user_id, period, waiting, mentions, now)
+    if length(waiting) == @limit or length(mentions) == @mention_limit, do: schedule_rest(user_id, now), else: :ok
+  end
+
+  defp send_batch(user_id, period, waiting, mentions, now) do
     user = Repo.get(User, user_id)
 
     if is_nil(user) or not user.active or not is_nil(user.deleted_at) do

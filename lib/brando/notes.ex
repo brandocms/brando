@@ -609,9 +609,11 @@ defmodule Brando.Notes do
 
   @doc """
   Emails `user_id` the mentions not sent yet, unless an email went out less
-  than ten minutes ago. Returns `:ok` (sent, or nothing to send) or
-  `{:snooze, seconds}` until the next email may go. With a daily or weekly
-  summary, the summary goes out instead, when it is due.
+  than ten minutes ago. Returns `:ok` (sent, or nothing to send),
+  `{:snooze, seconds}` until the next email may go, or `{:error, reason}`
+  when the rest of a full batch could not be queued, for the job to retry.
+  With a daily or weekly summary, the summary goes out instead, when it is
+  due.
   """
   def deliver_mentions(user_id, now \\ DateTime.utc_now()) do
     with :not_digest <- Brando.Notifications.Digest.deliver(user_id, now) do
@@ -626,7 +628,7 @@ defmodule Brando.Notes do
   def seconds_until_next_email(user_id, now),
     do: Brando.Notifications.Digest.seconds_until_next_email(user_id, now)
 
-  # A full batch leaves the rest for a follow-up run
+  # A full batch leaves the rest for another run
   defp send_pending_mentions(user_id, now) do
     user = Repo.get(User, user_id)
     pending = mentions_for(user_id, unsent: true, limit: @mention_batch)
@@ -648,8 +650,7 @@ defmodule Brando.Notes do
         mark_emailed(pending, now)
     end
 
-    if length(pending) == @mention_batch, do: Brando.Notifications.Digest.schedule_rest(user_id, now)
-    :ok
+    if length(pending) == @mention_batch, do: Brando.Notifications.Digest.schedule_rest(user_id, now), else: :ok
   end
 
   @doc "Marks `mentions` as emailed at `now`."
