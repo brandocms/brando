@@ -86,8 +86,12 @@ test_database =
 
 test_database_url =
   case System.get_env("BRANDO_TEST_DATABASE_URL") do
-    nil -> "ecto://postgres:postgres@localhost/#{test_database}"
-    url -> %{URI.parse(url) | path: URI.parse(url).path <> partition} |> URI.to_string()
+    nil ->
+      "ecto://postgres:postgres@localhost/#{test_database}"
+
+    url ->
+      %URI{path: "/" <> name} = uri = URI.parse(url)
+      URI.to_string(%{uri | path: "/" <> String.slice(name, 0, 63 - String.length(partition)) <> partition})
   end
 
 config :brando, BrandoIntegration.Repo,

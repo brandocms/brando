@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Runs the unit suite as N partitions at once (`mix test --partitions N`),
-# each in its own BEAM with its own test database and media directory
+# each in its own BEAM with its own TMPDIR, test database and media directory
 # (config/test.exs appends MIX_TEST_PARTITION to both). Most of the suite is
 # synchronous, so one `mix test` leaves most cores idle. CI's mix test jobs
 # run this.
@@ -21,13 +21,15 @@ cd "$(dirname "$0")/.." || exit 1
 
 partitions=4
 case "${1:-}" in
-  -h|--help) sed -n '2,15p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
-  [0-9]*) partitions="$1"; shift ;;
+  -h|--help) sed -n '2,17p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+  [0-9]*)
+    case "$1" in
+      *[!0-9]*|0*) echo "test-partitions: the number of partitions must be a positive integer, not $1" >&2; exit 2 ;;
+    esac
+    partitions="$1"
+    shift
+    ;;
 esac
-if [ "$partitions" -lt 1 ]; then
-  echo "test-partitions: the number of partitions must be at least 1" >&2
-  exit 2
-fi
 
 if command -v mix >/dev/null 2>&1; then
   mix_cmd=(mix)
@@ -80,7 +82,10 @@ started=$SECONDS
 i=1
 pids=()
 while [ "$i" -le "$partitions" ]; do
-  MIX_TEST_PARTITION="$i" "${mix_cmd[@]}" test --no-compile --partitions "$partitions" ${1+"$@"} \
+  # Names made from System.unique_integer/1 repeat between BEAMs, so each
+  # partition's System.tmp_dir!/0 is a directory of its own
+  mkdir -p "$logs/tmp$i"
+  TMPDIR="$logs/tmp$i" MIX_TEST_PARTITION="$i" "${mix_cmd[@]}" test --no-compile --partitions "$partitions" ${1+"$@"} \
     > "$logs/test$i" 2>&1 &
   pids+=($!)
   i=$((i + 1))
