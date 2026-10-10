@@ -6081,9 +6081,10 @@ defmodule BrandoAdmin.Components.Form do
   defp refresh_saved_entry(socket, entry, %{schema: schema}) do
     maybe_refresh_revisions(socket, schema)
 
-    # update entry!
+    # update entry! A revision's working copy is saved: it is the entry now.
     socket
     |> assign(:entry_id, entry.id)
+    |> assign(:working_copy, nil)
     |> assign_refreshed_entry()
     |> assign_refreshed_form()
   end
@@ -7060,6 +7061,10 @@ defmodule BrandoAdmin.Components.Form do
     entry_for_blocks = build_entry_for_blocks(changeset, block_map)
     assign(socket, :entry_for_blocks, entry_for_blocks)
   end
+
+  # A schema without blocks has no block fields to give it to (a working
+  # copy of one of its revisions loaded).
+  def assign_entry_for_blocks(socket), do: socket
 
   @doc """
   Assigns a stripped down entry to be used in block fields
