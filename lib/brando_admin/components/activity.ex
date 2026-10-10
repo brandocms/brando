@@ -20,6 +20,8 @@ defmodule BrandoAdmin.Components.Activity do
   # Connected AI tools (`Brando.MCP`): a connection, and the endpoint's switch
   @mcp_grant "Elixir.Brando.MCP.Grant"
   @mcp_setting "Elixir.Brando.MCP.Setting"
+  # A schedule whose user's account is gone (`Brando.Worker.EntryPublisher`)
+  @gone_schedulers ["scheduler_missing", "scheduler_inactive"]
 
   ## Data
 
@@ -658,7 +660,7 @@ defmodule BrandoAdmin.Components.Activity do
   # `Brando.Worker.EntryPublisher`: a publication whose user may no longer
   # make it, or whose account is gone, taken back; an expiry carried out by
   # the system instead
-  defp schedule_refused_lines(%{"action" => "publish", "reason" => "forbidden"}),
+  defp schedule_refused_lines(%{"action" => "publish", "reason" => reason}) when reason not in @gone_schedulers,
     do: [
       gettext("Not published as scheduled: the user who scheduled it may no longer publish it"),
       gettext("Set back to draft")
@@ -670,7 +672,7 @@ defmodule BrandoAdmin.Components.Activity do
       gettext("Set back to draft")
     ]
 
-  defp schedule_refused_lines(%{"reason" => "forbidden"}),
+  defp schedule_refused_lines(%{"reason" => reason}) when reason not in @gone_schedulers,
     do: [gettext("Deactivated as scheduled, by the system: the user who set the expiry may no longer deactivate it")]
 
   defp schedule_refused_lines(_refused),

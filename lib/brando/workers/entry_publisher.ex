@@ -30,6 +30,11 @@ defmodule Brando.Worker.EntryPublisher do
   # Why a user's authorization refuses them for want of a grant
   @grant_denials [:missing_grant, :backend_access_required]
 
+  # A refusal for the scope that passes when the site is active again: the
+  # job waits, without spending its attempts, for as long as it takes
+  @temporary_denials [:inactive_site]
+  @suspended_snooze_seconds 600
+
   # schedule publishing/depublishing an entry
   @impl Oban.Worker
   def perform(%Oban.Job{} = job),
@@ -54,14 +59,16 @@ defmodule Brando.Worker.EntryPublisher do
   # through the context's update like a status change made by hand. A job
   # whose date has since moved (the entry was rescheduled after it was
   # queued) or that no longer applies does nothing.
-  defp perform_tenant(%Oban.Job{
-         args: %{
-           "schema" => schema,
-           "id" => id,
-           "status" => status,
-           "user_id" => user_id
-         }
-       }) do
+  defp perform_tenant(
+         %Oban.Job{
+           args: %{
+             "schema" => schema,
+             "id" => id,
+             "status" => status,
+             "user_id" => user_id
+           }
+         } = job
+       ) do
     schema_module = Module.concat(List.wrap(schema))
     now = DateTime.utc_now()
 
@@ -74,7 +81,7 @@ defmodule Brando.Worker.EntryPublisher do
 
       entry ->
         if due?(entry, status, now),
-          do: update_status(schema_module, entry, status, user_id, now),
+          do: update_status(job, schema_module, entry, status, user_id, now),
           else: :ok
     end
   end
@@ -154,14 +161,14 @@ defmodule Brando.Worker.EntryPublisher do
   defp passed?(%DateTime{} = at, now), do: not after?(at, now)
   defp passed?(_at, _now), do: false
 
-  defp update_status(schema_module, entry, status, user_id, now) do
+  defp update_status(job, schema_module, entry, status, user_id, now) do
     case scheduler(user_id) do
-      {:ok, user} -> save_status(schema_module, entry, status, user, user_id, now)
+      {:ok, user} -> save_status(job, schema_module, entry, status, user, user_id, now)
       {:error, reason} -> refuse(schema_module, entry, status, user_id, reason)
     end
   end
 
-  defp save_status(schema_module, entry, status, user, user_id, now) do
+  defp save_status(job, schema_module, entry, status, user, user_id, now) do
     params =
       if status == "published",
         do: %{creator_id: user_id, status: status, publish_at: now},
@@ -181,33 +188,69 @@ defmodule Brando.Worker.EntryPublisher do
         BrandoAdmin.LiveView.Listing.update_list_entries(schema_module)
         :ok
 
-      {:error, :forbidden} ->
-        if lost_right?(user, schema_module, status),
-          do: refuse(schema_module, entry, status, user_id, :forbidden),
-          else: {:error, :forbidden}
+      {:error, reason} = error when reason == :forbidden or (is_tuple(reason) and elem(reason, 1) == :not_found) ->
+        refused(job, error, schema_module, entry, status, user, user_id)
 
       {:error, reason} ->
         {:error, reason}
     end
   end
 
-  # Refused for want of a grant: the user's groups no longer let them make
-  # the change (a publication sets publish_at, which takes the right to
-  # schedule as well). A refusal for the scope instead, such as a suspended
-  # site, may pass, so the job is tried again (and the sweep waits for it).
-  defp lost_right?(:system, _schema_module, _status), do: false
+  # A save its user is refused (a record policy may hide the entry from them
+  # instead, so it is not found), with group authorization. Refused for want
+  # of a grant or by a record policy, it is taken back at once. For a
+  # suspended site it waits, spending no attempts. For any other reason it is
+  # tried again, and taken back on its last attempt: a job that ran out of
+  # attempts must not leave the date for the sweep to carry out as the system.
+  defp refused(job, error, schema_module, entry, status, user, user_id) do
+    case refusal(user, schema_module, entry, status) do
+      :retry ->
+        error
 
-  defp lost_right?(user, schema_module, status) do
-    Engine.enabled?() and grant_missing?(user, schema_module, status)
+      :temporary ->
+        {:snooze, @suspended_snooze_seconds}
+
+      {:refused, reason} ->
+        refuse(schema_module, entry, status, user_id, reason)
+
+      {:unexplained, reason} ->
+        if last_attempt?(job), do: refuse(schema_module, entry, status, user_id, reason), else: error
+    end
   end
 
-  defp grant_missing?(user, schema_module, status) do
+  defp refusal(:system, _schema_module, _entry, _status), do: :retry
+
+  defp refusal(user, schema_module, entry, status) do
+    if Engine.enabled?(), do: classify(user, schema_module, entry, status), else: :retry
+  end
+
+  # A publication sets publish_at, which takes the right to schedule as well
+  defp classify(user, schema_module, entry, status) do
     snapshot = user |> Boundary.actor_scope() |> Engine.snapshot()
     actions = if status == "published", do: [:update, :publish, :schedule], else: [:update, :publish]
 
-    is_nil(snapshot.reason) and
-      Enum.any?(actions, &(Engine.explain(snapshot, &1, schema_module).reason in @grant_denials))
+    cond do
+      snapshot.reason in @temporary_denials -> :temporary
+      not is_nil(snapshot.reason) -> {:unexplained, snapshot.reason}
+      denial = Enum.find_value(actions, &denial(snapshot, &1, schema_module, entry)) -> {:refused, denial}
+      true -> {:unexplained, :forbidden}
+    end
   end
+
+  defp denial(snapshot, action, schema_module, entry) do
+    reason = Engine.explain(snapshot, action, schema_module).reason || Engine.explain(snapshot, action, entry).reason
+
+    cond do
+      reason in @grant_denials -> :forbidden
+      reason == :policy_denied -> :policy_denied
+      true -> nil
+    end
+  end
+
+  defp last_attempt?(%Oban.Job{attempt: attempt, max_attempts: max}) when is_integer(attempt) and is_integer(max),
+    do: attempt >= max
+
+  defp last_attempt?(_job), do: false
 
   # Who a job runs as: the user who scheduled it, or the system for a
   # schedule made without a user. With group authorization the user's
@@ -245,12 +288,16 @@ defmodule Brando.Worker.EntryPublisher do
         if still_due?(schema_module, entry, status), do: with_details(details, expire), else: :changed
       end)
 
-    BrandoAdmin.LiveView.Listing.update_list_entries(schema_module)
-
     case result do
-      {:ok, {:error, reason}} -> {:error, reason}
-      {:ok, _} -> :ok
-      {:error, reason} -> {:error, reason}
+      {:ok, {:error, reason}} ->
+        {:error, reason}
+
+      {:ok, _} ->
+        BrandoAdmin.LiveView.Listing.update_list_entries(schema_module)
+        :ok
+
+      {:error, reason} ->
+        {:error, reason}
     end
   end
 

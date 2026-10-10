@@ -327,6 +327,45 @@ defmodule Brando.PublisherRefusedTest do
     end
   end
 
+  describe "a publication refused by a record policy" do
+    setup c do
+      keys = ~w(brando.admin.access authorization.scheduled_policy_pages.read authorization.scheduled_policy_pages.update
+                authorization.scheduled_policy_pages.publish authorization.scheduled_policy_pages.schedule)
+
+      {:ok, group} = Groups.create(c.scope, %{name: "Policy publishers"}, keys)
+      {:ok, :ok} = Groups.add_member(c.scope, group.id, c.editor.id)
+      :ok
+    end
+
+    defp run_policy_job(page, user_id),
+      do:
+        perform_job(EntryPublisher, %{
+          "schema" => to_string(Brando.ScheduledPolicyTest.Page),
+          "id" => page.id,
+          "status" => "published",
+          "user_id" => user_id
+        })
+
+    test "is taken back at once, not retried until the sweep publishes it", c do
+      off_limits = Factory.insert(:page, title: "Off limits", status: :draft)
+      open = Factory.insert(:page, title: "Open", status: :draft)
+      set_dates(off_limits, status: :pending, publish_at: at(-600))
+      set_dates(open, status: :pending, publish_at: at(-600))
+
+      assert {:cancel, :policy_denied} = run_policy_job(off_limits, c.editor.id)
+      assert %{status: :draft, publish_at: nil} = Repo.get!(Page, off_limits.id)
+      assert [%{details: %{"schedule_refused" => %{"reason" => "policy_denied"}}} = event] = refused_events(off_limits)
+
+      html = render_component(&BrandoAdmin.Components.Activity.details/1, event: event, states: %{})
+      forbidden = Map.update!(event, :details, &put_in(&1, ["schedule_refused", "reason"], "forbidden"))
+      assert html == render_component(&BrandoAdmin.Components.Activity.details/1, event: forbidden, states: %{})
+
+      # The same user may publish a page the policy allows
+      assert :ok = run_policy_job(open, c.editor.id)
+      assert Repo.get!(Page, open.id).status == :published
+    end
+  end
+
   describe "a schedule in a site's environment" do
     setup c do
       put_test_env(:tenancy_mode, :multi)
@@ -356,7 +395,7 @@ defmodule Brando.PublisherRefusedTest do
       %{site: site, prefix: Tenant.prefix(site, environment), site_scope: site_scope, site_group: group, page: page}
     end
 
-    test "is retried while the site is suspended, and taken back once its user may no longer run it", c do
+    test "waits while the site is suspended, and is taken back once its user may no longer run it", c do
       {1, _} =
         Repo.update_all(from(p in Page, where: p.id == ^c.page.id), [set: [status: :pending, publish_at: at(-600)]],
           prefix: c.prefix
@@ -366,7 +405,12 @@ defmodule Brando.PublisherRefusedTest do
       args = Map.put(args, "tenant_prefix", c.prefix)
 
       {:ok, suspended} = Registry.update_site(c.site, %{status: :suspended})
-      assert {:error, :forbidden} = perform_job(EntryPublisher, args)
+      assert {:snooze, _} = perform_job(EntryPublisher, args)
+      assert %{status: :pending, publish_at: %DateTime{}} = Repo.get!(Page, c.page.id, prefix: c.prefix)
+
+      # Waiting out a long suspension spends no attempts, and even a last
+      # attempt does not take the date back
+      assert {:snooze, _} = perform_job(EntryPublisher, args, attempt: 10, max_attempts: 10)
       assert %{status: :pending, publish_at: %DateTime{}} = Repo.get!(Page, c.page.id, prefix: c.prefix)
 
       {:ok, _} = Registry.update_site(suspended, %{status: :active})
