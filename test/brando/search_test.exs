@@ -401,6 +401,35 @@ defmodule Brando.SearchTest do
       refute Search.rebuild_running?()
     end
 
+    # Two editors asking at once both find no rebuild queued; the second
+    # insert joins the first instead of rebuilding twice.
+    test "two rebuilds asked for at once queue one", %{user: user} do
+      test = self()
+      calls = :counters.new(1, [])
+      handler = "search-rebuild-race-#{System.unique_integer([:positive])}"
+
+      # The other editor's request lands between this one's check and its insert.
+      :telemetry.attach(
+        handler,
+        [:oban, :engine, :insert_job, :start],
+        fn _event, _measurements, %{changeset: changeset}, _config ->
+          if self() == test and Ecto.Changeset.get_field(changeset, :worker) == "Brando.Worker.SearchIndexRebuild" and
+               :counters.get(calls, 1) == 0 do
+            :counters.add(calls, 1, 1)
+            Search.queue_rebuild(user)
+          end
+        end,
+        nil
+      )
+
+      on_exit(fn -> :telemetry.detach(handler) end)
+
+      Oban.Testing.with_testing_mode(:manual, fn ->
+        assert {:ok, %Oban.Job{}} = Search.queue_rebuild(user)
+        assert [_one] = all_enqueued(worker: SearchIndexRebuild)
+      end)
+    end
+
     test "records when it finished, and saves do not count", %{user: user} do
       page = Factory.insert(:page, title: "Saved", creator: user)
       assert Search.rebuilt_at() == nil

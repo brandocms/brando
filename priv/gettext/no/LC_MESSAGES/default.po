@@ -4446,6 +4446,11 @@ msgstr "Kunne ikke opprette oversettelsen"
 msgid "Could not generate a suggestion. Try again."
 msgstr "Klarte ikke lage et forslag. Prøv igjen."
 
+#: lib/brando_admin/live/videos/video_list_live.ex
+#, elixir-autogen, elixir-format
+msgid "Could not look the videos up"
+msgstr "Klarte ikke å slå opp videoene"
+
 #: lib/brando_admin/live/sites/publishing_live.ex
 #, elixir-autogen, elixir-format
 msgid "Could not queue the publishing action."

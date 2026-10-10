@@ -15,6 +15,9 @@ defmodule Brando.SEO.Suggestions do
   """
   import Ecto.Query, only: [from: 2]
 
+  require Logger
+
+  alias Brando.Repo
   alias Brando.SEO.Audit.Row
   alias Brando.SEO.Generate
   alias Brando.SEO.Suggestion
@@ -58,43 +61,59 @@ defmodule Brando.SEO.Suggestions do
       |> Enum.reject(&MapSet.member?(waiting, {inspect(&1.schema), &1.id}))
       |> Enum.take(max_batch())
 
-    jobs =
-      Enum.map(rows, fn row ->
-        suggestion =
-          Brando.Repo.insert!(
-            %Suggestion{
-              schema: inspect(row.schema),
-              entry_id: row.id,
-              language: language,
-              field: field,
-              title: row.title,
+    {:ok, Enum.count(rows, &match?({:ok, _}, queue(&1, language, field, user, now)))}
+  end
+
+  # A suggestion is queued together with its job, or not at all: one left
+  # queued without a job would never be written, and later runs skip it.
+  # One job at a time: `Oban.insert_all/1` skips the worker's uniqueness,
+  # and two runs that both found the entry free would write it twice.
+  defp queue(row, language, field, user, now) do
+    Repo.transaction(fn ->
+      suggestion =
+        Repo.insert!(
+          %Suggestion{
+            schema: inspect(row.schema),
+            entry_id: row.id,
+            language: language,
+            field: field,
+            title: row.title,
+            status: :queued,
+            requested_by_id: user_id(user)
+          },
+          on_conflict: [
+            set: [
               status: :queued,
-              requested_by_id: user_id(user)
-            },
-            on_conflict: [
-              set: [
-                status: :queued,
-                title: row.title,
-                text: nil,
-                model: nil,
-                error: nil,
-                generated_at: nil,
-                requested_by_id: user_id(user),
-                reviewed_by_id: nil,
-                updated_at: now
-              ]
-            ],
-            conflict_target: [:schema, :entry_id, :language, :field],
-            returning: true
+              title: row.title,
+              text: nil,
+              model: nil,
+              error: nil,
+              generated_at: nil,
+              requested_by_id: user_id(user),
+              reviewed_by_id: nil,
+              updated_at: now
+            ]
+          ],
+          conflict_target: [:schema, :entry_id, :language, :field],
+          returning: true
+        )
+
+      %{"suggestion_id" => suggestion.id}
+      |> Brando.Tenant.Job.attach()
+      |> SEOSuggestionGenerator.new()
+      |> Oban.insert()
+      |> case do
+        {:ok, _job} ->
+          suggestion
+
+        {:error, reason} ->
+          Logger.warning(
+            "[Brando.SEO] Could not queue a suggestion for #{inspect(row.schema)} ##{row.id}: #{inspect(reason)}"
           )
 
-        %{"suggestion_id" => suggestion.id}
-        |> Brando.Tenant.Job.attach()
-        |> SEOSuggestionGenerator.new()
-      end)
-
-    Oban.insert_all(jobs)
-    {:ok, length(rows)}
+          Repo.rollback(reason)
+      end
+    end)
   end
 
   @doc """
@@ -109,7 +128,7 @@ defmodule Brando.SEO.Suggestions do
         order_by: [asc: s.title, asc: s.id]
 
     query = if fields, do: from(s in query, where: s.field in ^fields), else: query
-    Brando.Repo.all(query)
+    Repo.all(query)
   end
 
   @doc "Fills in a queued suggestion with generated text."
@@ -123,7 +142,7 @@ defmodule Brando.SEO.Suggestions do
       error: nil,
       generated_at: DateTime.utc_now(:second)
     })
-    |> Brando.Repo.update()
+    |> Repo.update()
   end
 
   @doc """
@@ -145,7 +164,7 @@ defmodule Brando.SEO.Suggestions do
       error: nil,
       generated_at: DateTime.utc_now(:second)
     })
-    |> Brando.Repo.update()
+    |> Repo.update()
   end
 
   @doc "Marks a suggestion as failed, keeping a message an editor can read."
@@ -153,7 +172,7 @@ defmodule Brando.SEO.Suggestions do
   def fail(%Suggestion{} = suggestion, message) do
     suggestion
     |> Suggestion.changeset(%{status: :failed, error: message})
-    |> Brando.Repo.update()
+    |> Repo.update()
   end
 
   @doc """
@@ -174,7 +193,7 @@ defmodule Brando.SEO.Suggestions do
 
       suggestion
       |> Suggestion.changeset(Map.merge(attrs, %{status: :accepted, reviewed_by_id: user_id(user)}))
-      |> Brando.Repo.update()
+      |> Repo.update()
     end
   end
 
@@ -214,11 +233,11 @@ defmodule Brando.SEO.Suggestions do
   @doc "Rejects a pending suggestion, or dismisses a failed one. The entry is left alone."
   @spec reject(integer() | String.t(), map()) :: {:ok, Suggestion.t()} | {:error, term()}
   def reject(id, user) do
-    case Brando.Repo.get(Suggestion, id) do
+    case Repo.get(Suggestion, id) do
       %Suggestion{status: status} = suggestion when status in [:pending, :failed] ->
         suggestion
         |> Suggestion.changeset(%{status: :rejected, reviewed_by_id: user_id(user)})
-        |> Brando.Repo.update()
+        |> Repo.update()
 
       _ ->
         {:error, :not_found}
@@ -243,7 +262,7 @@ defmodule Brando.SEO.Suggestions do
     do: Generate.write(schema, suggestion.entry_id, suggestion.field, text, user)
 
   defp get_pending(id) do
-    case Brando.Repo.get(Suggestion, id) do
+    case Repo.get(Suggestion, id) do
       %Suggestion{status: :pending} = suggestion -> {:ok, suggestion}
       _ -> {:error, :not_found}
     end
@@ -261,7 +280,7 @@ defmodule Brando.SEO.Suggestions do
       where: s.language == ^language and s.field == ^field and s.status in [:queued, :pending],
       select: {s.schema, s.entry_id}
     )
-    |> Brando.Repo.all()
+    |> Repo.all()
     |> MapSet.new()
   end
 

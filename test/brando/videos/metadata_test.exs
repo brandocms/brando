@@ -145,6 +145,27 @@ defmodule Brando.Videos.MetadataTest do
     assert video.thumbnail.path =~ "images/videos/thumbnails/"
   end
 
+  # Asked for again while the first lookup still waits (the queue is busy,
+  # or it is retrying), the video is looked up once.
+  test "a lookup still waiting is not queued twice" do
+    user = Factory.insert(:random_user)
+    video = Factory.insert(:video, creator: user, type: :vimeo, remote_id: "8", source_url: "https://vimeo.com/8")
+
+    Oban.Testing.with_testing_mode(:manual, fn ->
+      Videos.enqueue_metadata([video.id], user)
+      age_jobs(Brando.Worker.VideoMetadata, 600)
+      Videos.enqueue_metadata([video.id], user)
+
+      assert [_one] = all_enqueued(worker: Brando.Worker.VideoMetadata, args: %{"video_id" => video.id})
+    end)
+  end
+
+  defp age_jobs(worker, seconds) do
+    import Ecto.Query, only: [from: 2]
+    inserted_at = DateTime.add(DateTime.utc_now(), -seconds)
+    Brando.Repo.update_all(from(j in Oban.Job, where: j.worker == ^inspect(worker)), set: [inserted_at: inserted_at])
+  end
+
   describe "a video added by URL" do
     setup do
       Application.put_env(:brando, Metadata, Keyword.put(Application.get_env(:brando, Metadata), :fetch_on_create, true))

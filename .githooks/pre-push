@@ -16,6 +16,10 @@ done
 [ "$pushing" = true ] || exit 0
 
 cd "$(git rev-parse --show-toplevel)" || exit 1
+# Git runs hooks with GIT_DIR (and in worktrees GIT_WORK_TREE, GIT_INDEX_FILE)
+# set to this repository. A gate that builds a scratch repository would then
+# commit and push in this one, so the gates run without them.
+unset GIT_DIR GIT_WORK_TREE GIT_INDEX_FILE GIT_PREFIX GIT_COMMON_DIR GIT_OBJECT_DIRECTORY GIT_ALTERNATE_OBJECT_DIRECTORIES GIT_IMPLICIT_WORK_TREE
 [ -x scripts/check ] || exit 0
 
 if ! scripts/check --fast; then

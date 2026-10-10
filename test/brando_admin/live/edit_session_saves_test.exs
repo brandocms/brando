@@ -5,6 +5,7 @@ defmodule BrandoAdmin.EditSessionSavesTest do
   use Brando.LiveCase
 
   import Brando.EditSessionEditors
+  import Brando.EditSessionRejoin
   import Ecto.Query, only: [from: 2, where: 3]
 
   alias Brando.Content.Proposals
@@ -497,19 +498,57 @@ defmodule BrandoAdmin.EditSessionSavesTest do
     b = open(c.other_conn, c.identity)
     assert shown_refs(b, first) == 1
 
-    :sys.suspend(b.pid)
-    old = session_pid(c.identity)
-    Process.exit(old, :kill)
+    hold(b)
+    kill_session(c.identity)
     # A comes back first and seeds the new session with the rows it has
-    await(fn -> session_pid(c.identity) not in [nil, old] end)
-    await(fn -> shown_text(a, first) != nil end)
+    await_joined(a, c.identity)
 
     add_ref_row(c.identity, first)
     _c = open(c.conn, c.identity)
     await(fn -> shown_refs(a, first) == 2 end)
 
-    :sys.resume(b.pid)
+    release(b)
+    await_joined(b, c.identity)
     await(fn -> shown_refs(b, first) == 2 end)
+  end
+
+  # Review: a row saved while a late rejoiner was away was deleted, and the
+  # rejoiner kept showing (and could seed the next session with) the rows
+  # it had loaded. Through two editors' block fields, as production rejoins.
+  test "a late rejoiner keeps its row change and shows the row saved while it was away", c do
+    %{page: page, uid: uid} = rows_page!(c.me)
+    a = open(c.conn, page)
+    b = open(c.other_conn, page)
+    [first, second] = shown_rows(b, uid, "table_rows")
+    cell = ["entry_block", "block", "table_rows", "0", "vars", "0", "value"]
+
+    # B changes a cell; the session dies before it confirms the change
+    hold_session(page)
+    set(b, uid, cell, "B's cell")
+    hold(b)
+    kill_session(page)
+    await_joined(a, page)
+
+    # A, back first, adds a row and saves while B is away
+    a |> element("#block-#{uid} [data-testid=add-table-row]") |> render_click()
+    stay(a)
+    save_read(a)
+    save_write(a)
+    await(fn -> page |> rows() |> hd() |> Map.get(:block) |> Map.get(:table_rows) |> length() == 3 end)
+
+    release(b)
+    await_joined(b, page)
+    await(fn -> length(shown_rows(b, uid, "table_rows")) == 3 end)
+    assert [^first, ^second, _added] = shown_rows(b, uid, "table_rows")
+
+    stay(a)
+    save_read(a)
+    save_write(a)
+
+    await(fn ->
+      cells = page |> rows() |> hd() |> Map.get(:block) |> Map.get(:table_rows) |> Enum.map(&hd(&1.vars).value)
+      length(cells) == 3 and hd(cells) == "B's cell"
+    end)
   end
 
   # Two editors held the same new block when the session died. The one who
@@ -521,15 +560,15 @@ defmodule BrandoAdmin.EditSessionSavesTest do
     b = open(c.other_conn, c.identity)
     uid = added_block(a, b, c)
 
-    old = session_pid(c.identity)
-    :sys.suspend(old)
+    hold_session(c.identity)
     # a footnote marker in the text names a block of the copied subtree
     type(b, uid, ~s(<p>B's version<sup data-footnote-uid="#{uid}">1</sup></p>))
-    :sys.suspend(b.pid)
-    Process.exit(old, :kill)
+    hold(b)
+    kill_session(c.identity)
     # A comes back first and seeds the new session with its version
-    await(fn -> session_pid(c.identity) not in [nil, old] end)
-    :sys.resume(b.pid)
+    await_joined(a, c.identity)
+    release(b)
+    await_joined(b, c.identity)
 
     kept = uid <> "-kept"
     await(fn -> session_state(c.identity).statuses[kept] == :inserted end)

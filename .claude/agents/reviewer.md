@@ -84,14 +84,20 @@ and the author; leave them out.
   revision: a change to it that announces itself (webhook, IndexNow), or a
   restore that moves `deleted_at` or its obfuscated fields
   (`Brando.Trait.SoftDelete` moduledoc).
-- **Query cache.** A `Brando.Query` write inside a transaction evicts before
-  the commit; a concurrent read re-caches the old row. Look for the evict
-  after commit (`Brando.Cache.Query` moduledoc).
+- **Query cache.** Evictions repeat once the transaction commits, once per
+  entry, and the `{:mutation, ...}` broadcasts of generated mutations wait
+  for the commit, on their own (`Brando.Cache.Query` moduledoc). Look for an announcement that
+  sends readers to the database from inside a transaction by another route,
+  and for a transaction begun on the repo itself, where after-commit work
+  runs at once.
 - **Translated copy.** New strings without Gettext, missing Norwegian
   entries, labels assembled from fragments, humanised English fallbacks.
 - **Tests that do not test the claim.** A test that passes without the fix,
   asserts on a mock instead of behaviour, races, or leaks shared state
-  (caches, application env) into other tests.
+  (caches, application env) into other tests. Or one that hands a function
+  arguments its production caller never passes (state it built, not what
+  the real caller loads): an edit-session rejoin goes through
+  `test/support/edit_session_rejoin.ex`.
 - **Removed or renamed selectors, labels, test ids, routes and events** still
   used in `e2e/playwright`, `scripts/` (including `scripts/igniter_smoke`),
   `test/` or JS hooks. Grep every one.
