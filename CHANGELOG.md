@@ -1940,6 +1940,15 @@ production dump.
 
 #### Fixes
 
+- **Removing a selection whose option is no longer offered removes it.** In
+  a multi-select over a `has_many` relation, a selected entry missing from
+  the options (filtered out by language or status, or deleted) showed under
+  "Currently selected" with the join row's id as its value. **Remove** then
+  added the entry with that id, or removed another selection that had it;
+  on a selection not saved yet it added an empty one. The row now carries
+  the relation key's value, as the other rows do, and shows the related
+  entry's title when it was loaded, with "Missing option" under it.
+
 - **Duplicating a module works again, and copies the whole module.** It
   failed on the unique module `uid`. The copy is now a new module at
   version 1 with its own `uid`, without the original's shared-library link.
