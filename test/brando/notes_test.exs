@@ -251,6 +251,42 @@ defmodule Brando.NotesTest do
       assert_no_email_sent()
       assert Notes.mentions_for(reader.id, unsent: true) == []
     end
+
+    test "more than one email's worth goes out in a further email", %{author: author, other: other, page: page} do
+      now = DateTime.utc_now()
+
+      notes =
+        for n <- 1..101 do
+          %{
+            entry_type: to_string(Page),
+            entry_id: page.id,
+            body: "note #{n}",
+            author_id: author.id,
+            inserted_at: DateTime.add(now, n, :microsecond),
+            updated_at: now
+          }
+        end
+
+      {101, ids} = Repo.insert_all(Note, notes, returning: [:id])
+
+      mentions =
+        for {%{id: id}, n} <- Enum.with_index(ids, 1),
+            do: %{note_id: id, user_id: other.id, inserted_at: DateTime.add(now, n, :microsecond)}
+
+      {101, _} = Repo.insert_all(Mention, mentions)
+
+      # The newest hundred go out, and the next email is queued for the rest
+      Oban.Testing.with_testing_mode(:manual, fn ->
+        assert :ok = Notes.deliver_mentions(other.id, now)
+        assert [%{note: %{body: "note 1"}}] = Notes.mentions_for(other.id, unsent: true)
+        assert_enqueued(worker: Brando.Worker.Mail)
+        assert_enqueued(worker: Brando.Worker.NoteMentions, args: %{"user_id" => other.id})
+      end)
+
+      assert :ok = Notes.deliver_mentions(other.id, DateTime.add(now, 601, :second))
+      assert_email_sent(fn email -> email.text_body =~ "note 1\n" and not (email.text_body =~ "note 2\n") end)
+      assert Notes.mentions_for(other.id, unsent: true) == []
+    end
   end
 
   describe "permissions" do

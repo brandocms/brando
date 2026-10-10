@@ -47,6 +47,7 @@ defmodule Brando.Notes do
 
   @mark_attribute "data-brando-note"
   @mention_token ~r/<@(\d+)>/
+  @mention_batch 100
 
   ## Reading
 
@@ -625,9 +626,10 @@ defmodule Brando.Notes do
   def seconds_until_next_email(user_id, now),
     do: Brando.Notifications.Digest.seconds_until_next_email(user_id, now)
 
+  # A full batch leaves the rest for a follow-up run
   defp send_pending_mentions(user_id, now) do
     user = Repo.get(User, user_id)
-    pending = mentions_for(user_id, unsent: true, limit: 100)
+    pending = mentions_for(user_id, unsent: true, limit: @mention_batch)
 
     cond do
       pending == [] ->
@@ -645,6 +647,9 @@ defmodule Brando.Notes do
 
         mark_emailed(pending, now)
     end
+
+    if length(pending) == @mention_batch, do: Brando.Notifications.Digest.schedule_rest(user_id, now)
+    :ok
   end
 
   @doc "Marks `mentions` as emailed at `now`."

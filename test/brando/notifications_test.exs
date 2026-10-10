@@ -684,6 +684,44 @@ defmodule Brando.NotificationsTest do
       assert Notes.mentions_for(reader.id, unsent: true) == []
     end
 
+    test "a digest larger than one batch queues the rest at once", %{user: user} do
+      reader = Factory.insert(:random_user, config: %UserConfig{notification_digest: :daily})
+      route = route!(user, %{"kind" => "email", "events" => ["failed_job"], "recipient_ids" => [reader.id]})
+      now = DateTime.utc_now()
+
+      rows =
+        for n <- 1..201 do
+          %{
+            route_id: route.id,
+            recipient_id: reader.id,
+            event: "failed_job",
+            state: "digest",
+            notification: %{"event" => "failed_job", "job" => %{"worker" => "MyApp.Job#{n}", "error" => "boom"}},
+            inserted_at: DateTime.add(now, n, :microsecond),
+            updated_at: now
+          }
+        end
+
+      {201, _} = Repo.insert_all(Delivery, rows)
+      due = Digest.next_at(:daily, now)
+
+      states = fn ->
+        Repo.all(from(d in Delivery, where: d.route_id == ^route.id, group_by: d.state, select: {d.state, count(d.id)}))
+      end
+
+      # The first batch goes out, and the rest is queued to go now, not at the next digest
+      Oban.Testing.with_testing_mode(:manual, fn ->
+        assert :ok = Notes.deliver_mentions(reader.id, due)
+        assert Enum.sort(states.()) == [{"digest", 1}, {"succeeded", 200}]
+        assert [job] = all_enqueued(worker: Brando.Worker.NoteMentions, args: %{"user_id" => reader.id})
+        assert DateTime.compare(job.scheduled_at, DateTime.utc_now()) != :gt
+      end)
+
+      assert :ok = Notes.deliver_mentions(reader.id, due)
+      assert_email_sent(fn email -> email.text_body =~ "MyApp.Job201" end)
+      assert states.() == [{"succeeded", 201}]
+    end
+
     test "digest times are at the digest hour in the site's time zone, Mondays for weekly" do
       # Wednesday 7 October 2026, 10:00 in Oslo (08:00 UTC)
       wednesday = ~U[2026-10-07 08:00:00Z]

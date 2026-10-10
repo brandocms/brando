@@ -15,7 +15,9 @@ defmodule Brando.Notifications.Digest do
   minutes (`Brando.Notes`), and routed notifications as single emails.
   Notifications that were waiting for a digest the user has since turned off
   go out with their next email. A mention goes out only while the user may
-  still see its entry (`Brando.Notes.mention_email_items/2`).
+  still see its entry (`Brando.Notes.mention_email_items/2`). An email takes
+  at most 200 notifications and 100 mentions; a full batch queues the rest
+  (`schedule_rest/2`).
   """
 
   import Ecto.Query
@@ -30,6 +32,7 @@ defmodule Brando.Notifications.Digest do
   @periods [:off, :daily, :weekly]
   @email_interval 600
   @limit 200
+  @mention_limit 100
 
   @doc "The choices for the profile: `:off`, `:daily` and `:weekly`."
   def periods, do: @periods
@@ -82,15 +85,29 @@ defmodule Brando.Notifications.Digest do
   environment waits; a new item moves it to when the user's setting says.
   """
   def schedule(user_id, now \\ DateTime.utc_now()) do
-    delay =
+    insert_job(user_id, fn ->
       case period(user_id) do
         :off -> seconds_until_next_email(user_id, now)
         period -> max(DateTime.diff(next_at(period, now), now, :second), 0)
       end
+    end)
+  end
 
+  @doc """
+  Queues what is left after an email that took a full batch: a digest's
+  rest at once, as it is due already; without a digest, with the next
+  email. The job running counts as no waiting job, so this queues another.
+  """
+  def schedule_rest(user_id, now \\ DateTime.utc_now()) do
+    insert_job(user_id, fn ->
+      if period(user_id) == :off, do: seconds_until_next_email(user_id, now), else: 0
+    end)
+  end
+
+  defp insert_job(user_id, delay) do
     %{"user_id" => user_id}
     |> Brando.Tenant.Job.attach_current()
-    |> Brando.Worker.NoteMentions.new(schedule_in: delay, replace: [scheduled: [:scheduled_at]])
+    |> Brando.Worker.NoteMentions.new(schedule_in: delay.(), replace: [scheduled: [:scheduled_at]])
     |> Oban.insert()
   rescue
     error ->
@@ -112,8 +129,12 @@ defmodule Brando.Notifications.Digest do
     if period == :off and waiting == [] do
       :not_digest
     else
-      mentions = Notes.mentions_for(user_id, unsent: true, limit: 100)
-      send_when_due(user_id, period, waiting, mentions, now)
+      mentions = Notes.mentions_for(user_id, unsent: true, limit: @mention_limit)
+
+      with :ok <- send_when_due(user_id, period, waiting, mentions, now) do
+        if length(waiting) == @limit or length(mentions) == @mention_limit, do: schedule_rest(user_id, now)
+        :ok
+      end
     end
   end
 

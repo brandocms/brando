@@ -1940,6 +1940,14 @@ production dump.
 
 #### Fixes
 
+- **Mention emails go only to someone who may still read the entry, and
+  large summaries are sent in full.** A mention went out, with the note's
+  text and the entry's title, even when the person mentioned had lost read
+  access to the entry (or access to the site) before the email or summary
+  was sent. Such a mention is now dropped. A summary or mention email that
+  hit its limit of 200 notifications or 100 mentions left the rest waiting
+  until another notification arrived; the rest now follows in another email.
+
 - **Duplicating a module works again, and copies the whole module.** It
   failed on the unique module `uid`. The copy is now a new module at
   version 1 with its own `uid`, without the original's shared-library link.
