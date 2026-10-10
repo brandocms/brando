@@ -1940,6 +1940,13 @@ production dump.
 
 #### Fixes
 
+- **Duplicating a module works again, and copies the whole module.** It
+  failed on the unique module `uid`. The copy is now a new module at
+  version 1 with its own `uid`, without the original's shared-library link.
+  It gets copies of the original's references, variables and child (entry)
+  modules, joins the module sets the original is in, and gets the class
+  `<class>-copy` (`-copy-2` and on when taken) instead of `<class> (copy)`.
+
 - **Mention emails go only to someone who may still read the entry, and
   large summaries are sent in full.** A mention went out, with the note's
   text and the entry's title, even when the person mentioned had lost read
@@ -1947,13 +1954,6 @@ production dump.
   was sent. Such a mention is now dropped. A summary or mention email that
   hit its limit of 200 notifications or 100 mentions left the rest waiting
   until another notification arrived; the rest now follows in another email.
-
-- **Duplicating a module works again, and copies the whole module.** It
-  failed on the unique module `uid`. The copy is now a new module at
-  version 1 with its own `uid`, without the original's shared-library link.
-  It gets copies of the original's references, variables and child (entry)
-  modules, joins the module sets the original is in, and gets the class
-  `<class>-copy` (`-copy-2` and on when taken) instead of `<class> (copy)`.
 
 - **The Assistant recovers from a stopped, reconnected or interrupted run,
   and from a failed apply.** Stopping a run while the model answered with
