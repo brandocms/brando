@@ -57,8 +57,9 @@ spending its attempts, for as long as the sweep would still take the date
 leaves the entry as it is. A refusal for any other reason is retried, and on the
 last attempt taken back as above, so the sweep never publishes it as the
 system. A save that fails for another reason, such as validation, is retried
-as before. Without group authorization, schedules run as the user who
-made them whatever has become of the account, as they always have.
+as before. Without group authorization nothing is refused: schedules run as
+the user who made them, deactivated or not, and as the system when the account
+no longer exists.
 
 The job publishes only an entry that is still pending when it runs: a future
 date on a draft or a deactivated entry queues a job that does nothing, and the

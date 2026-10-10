@@ -355,16 +355,32 @@ defmodule Brando.PublisherRefusedTest do
       refute_received {:locked, _}
     end
 
-    test "a schedule whose user no longer exists is not taken back, and the sweep publishes it", c do
+    test "a schedule whose user no longer exists runs as the system", c do
+      publication = scheduled_page(c.editor, %{publish_at: at(3600)})
+      expiry = scheduled_page(c.editor, %{unpublish_at: at(3600)})
+      set_dates(publication, publish_at: at(-600))
+      set_dates(expiry, unpublish_at: at(-600))
+
+      assert :ok = run_job(publication, "published", -1)
+      assert :ok = run_job(expiry, "disabled", -1)
+
+      assert %{status: :published, creator_id: creator_id} = Repo.get!(Page, publication.id)
+      assert creator_id == c.editor.id
+      assert Repo.get!(Page, expiry.id).status == :disabled
+
+      for {page, action} <- [{publication, :published}, {expiry, :unpublished}] do
+        assert [%{source: :scheduler, user_id: nil}] =
+                 Repo.all(from e in Event, where: e.entry_id == ^page.id and e.action == ^action)
+
+        assert refused_events(page) == []
+      end
+    end
+
+    test "a job retrying does not hold the sweep back", c do
       page = scheduled_page(c.editor, %{publish_at: at(3600)})
       date = at(-600)
       set_dates(page, publish_at: date)
 
-      assert {:error, _} = run_job(page, "published", -1)
-      assert Repo.get!(Page, page.id).status == :pending
-      assert refused_events(page) == []
-
-      # Its job retrying does not hold the sweep back
       [job] = jobs(page, "published")
       Repo.update!(Ecto.Changeset.change(job, state: "retryable"))
       on_date(job, date, at(600))
