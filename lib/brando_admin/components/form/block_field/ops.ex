@@ -1015,7 +1015,7 @@ defmodule BrandoAdmin.Components.Form.BlockField.Ops do
       state.diffs
       |> Enum.filter(fn {uid, diff} -> diff != %{} and state.statuses[uid] == :persisted end)
       |> Enum.sort_by(fn {uid, _} -> depth(state, uid) end)
-      |> Enum.reduce(acc, &carry_update(&1, &2, state, lists))
+      |> Enum.reduce(acc, &carry_update(&1, &2, state, {lists, old_base}))
 
     acc = state |> moved_children(old_base) |> Enum.reduce(acc, &carry_move(&1, &2, state))
 
@@ -1087,7 +1087,7 @@ defmodule BrandoAdmin.Components.Form.BlockField.Ops do
     end
   end
 
-  defp carry_update({uid, diff}, {acc, conflicts}, state, lists) do
+  defp carry_update({uid, diff}, {acc, conflicts}, state, {lists, old_base}) do
     if known?(acc, uid) do
       # Rows just loaded hold no diff, but live session state can (a
       # rejoin, a recovery copy), so the diff is merged with the one held
@@ -1102,7 +1102,7 @@ defmodule BrandoAdmin.Components.Form.BlockField.Ops do
 
       diff =
         case lists do
-          :merge -> carry_merge(now, diff, false)
+          :merge -> carry_merge(now, diff, {:block, base_row_ids(old_base, uid)})
           :carried -> deep_merge_params(now, diff)
         end
 
@@ -1123,16 +1123,35 @@ defmodule BrandoAdmin.Components.Form.BlockField.Ops do
   # session's value stays. (An editor who set a field back to its saved
   # value with a whole-form `:update` sends no key for it, which reads the
   # same.)
-  defp carry_merge(now, value, nested?)
+  #
+  # `at` is `{:block, base_ids}` in the block's own params (a root's
+  # `"block"` included), whose lists are its rows, and `:nested` below.
+  defp carry_merge(now, value, at)
        when is_map(now) and is_map(value) and not is_struct(now) and not is_struct(value),
-       do: Map.merge(now, value, &carry_merge(&1, &2, &3, nested?))
+       do: Map.merge(now, value, &carry_merge(&1, &2, &3, at))
 
-  defp carry_merge(_now, value, _nested?), do: value
+  defp carry_merge(_now, value, _at), do: value
 
-  defp carry_merge(key, now, value, nested?) when is_list(now) and is_list(value),
-    do: carry_list(key, now, value, nested?)
+  defp carry_merge(key, now, value, at) when is_list(now) and is_list(value), do: carry_list(key, now, value, at)
+  defp carry_merge("block", now, value, {:block, _} = at), do: carry_merge(now, value, at)
+  defp carry_merge(_key, now, value, _at), do: carry_merge(now, value, :nested)
 
-  defp carry_merge(_key, now, value, nested?), do: carry_merge(now, value, nested?)
+  # The ids of the rows the rejoiner's rows had, by relation, where its
+  # rows name them (`rel_ids`): a saved row it lacks that is not among them
+  # was saved while it was away, not removed by it.
+  defp base_row_ids(%__MODULE__{} = base, uid) do
+    if Map.has_key?(base.statuses, uid) do
+      empty = Map.new(@rel_identities, fn {key, _field} -> {key, MapSet.new()} end)
+
+      base.rel_ids
+      |> Map.get(uid, %{})
+      |> Enum.reduce(empty, fn {{key, _identity}, id}, acc ->
+        Map.update(acc, key, MapSet.new([to_string(id)]), &MapSet.put(&1, to_string(id)))
+      end)
+    else
+      %{}
+    end
+  end
 
   # `current` is the session's list, `carried` the rejoiner's. Both were
   # built on the same rows, and every saved row has an id. Neither holds
@@ -1144,11 +1163,14 @@ defmodule BrandoAdmin.Components.Form.BlockField.Ops do
   # have merges field by field, the rejoiner's fields winning. Items that
   # cannot be named are set whole, as the rejoiner has them.
   #
-  # Below a row (`nested?`), an item without an id may be named by id on
+  # A saved row the rejoiner's own rows did not have (`base_row_ids/2`) was
+  # saved while it was away: it stays.
+  #
+  # Below a row (`:nested`), an item without an id may be named by id on
   # the other side (a gallery object by its image, before a save gave it a
   # row), and only the block's own rows have ids to resolve that by
   # (`fill_diff_ids/3`): such a list is the rejoiner's.
-  defp carry_list(key, current, carried, nested?) do
+  defp carry_list(key, current, carried, at) do
     named = Enum.map(current, &row_key(&1, key))
     carried_named = Enum.map(carried, &row_key(&1, key))
 
@@ -1156,18 +1178,24 @@ defmodule BrandoAdmin.Components.Form.BlockField.Ops do
       :none in named or :none in carried_named or repeated?(named) or repeated?(carried_named) ->
         carried
 
-      nested? and not Enum.all?(current ++ carried, &saved_row?/1) ->
+      at == :nested and not Enum.all?(current ++ carried, &saved_row?/1) ->
         deep_merge_params(current, carried)
 
       true ->
-        merge_rows(key, current, named, carried, carried_named)
+        known = with {:block, ids} <- at, do: Map.get(ids, key)
+        merge_rows(key, current, named, carried, carried_named, known)
     end
   end
 
-  defp merge_rows(key, current, named, carried, carried_named) do
+  defp merge_rows(key, current, named, carried, carried_named, known) do
     in_current = MapSet.new(named)
     current_by = Map.new(Enum.zip(named, current))
-    before = (carried ++ current) |> Enum.filter(&saved_row?/1) |> Enum.map(&identity_only(&1, key)) |> Enum.uniq()
+
+    before =
+      (carried ++ current)
+      |> Enum.filter(&(saved_row?(&1) and (not is_struct(known, MapSet) or MapSet.member?(known, to_string(&1["id"])))))
+      |> Enum.map(&identity_only(&1, key))
+      |> Enum.uniq()
 
     # The rejoiner's saved rows the session no longer has are left out; the
     # session's saved rows the rejoiner lacks are in `before`, so they stay
@@ -1182,7 +1210,7 @@ defmodule BrandoAdmin.Components.Form.BlockField.Ops do
     |> merge_list(after_list, current, key)
     |> Enum.map(fn item ->
       case Map.fetch(current_by, row_key(item, key)) do
-        {:ok, now} -> carry_merge(now, item, true)
+        {:ok, now} -> carry_merge(now, item, :nested)
         :error -> item
       end
     end)

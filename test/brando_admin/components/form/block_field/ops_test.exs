@@ -478,8 +478,19 @@ defmodule BrandoAdmin.Components.Form.BlockField.OpsTest do
       state
     end
 
+    # The rows with block "b" holding table rows `ids`.
+    defp table_base(ids) do
+      rows = Enum.map(ids, &%{id: &1, sync_uid: "r#{&1}"})
+
+      Ops.from_entry_blocks([
+        entry_block("a", 1, 10, [child("a1", 11), child("a2", 12)]),
+        %{id: 2, block: %{uid: "b", id: 20, children: [], table_rows: rows}},
+        entry_block("c", 3, 30)
+      ])
+    end
+
     test "a rejoin merges rows: each side's additions, removals and row changes stay" do
-      base = base_rows()
+      base = table_base([5, 7, 9])
       rows_then = [%{"id" => 5}, %{"id" => 7}, %{"id" => 9}]
 
       # The session: a cell of row 5 changed, row 9 removed.
@@ -506,7 +517,7 @@ defmodule BrandoAdmin.Components.Form.BlockField.OpsTest do
     # Review: a list op leaves every row as a full copy, so a saved row the
     # rejoiner removed looked changed in the session and came back.
     test "a rejoin's removal of a saved row holds against rows a list op left as they were" do
-      base = base_rows()
+      base = table_base([5, 7])
       rows_then = [%{"id" => 5, "cols" => "saved 5"}, %{"id" => 7, "cols" => "saved 7"}]
       added = %{"sync_uid" => "new", "cols" => "A's row"}
       live = apply!(base, {:set_field, "b", ["block", "table_rows"], {:list, rows_then, rows_then ++ [added]}, 0})
@@ -566,11 +577,29 @@ defmodule BrandoAdmin.Components.Form.BlockField.OpsTest do
                rejoin(live, held, base).diffs["b"]["block"]["refs"]
     end
 
+    # Sol audit: a row another editor added and saved while the rejoiner
+    # was away is not one the rejoiner removed.
+    test "a rejoin keeps a saved row the rejoiner's rows never had" do
+      table = fn rows -> %{id: 2, block: %{uid: "b", id: 20, children: [], table_rows: rows}} end
+      held_base = Ops.from_entry_blocks([table.([%{id: 5, sync_uid: "r5"}])])
+      rows_now = Ops.from_entry_blocks([table.([%{id: 5, sync_uid: "r5"}, %{id: 8, sync_uid: "r8"}])])
+
+      live =
+        apply!(rows_now, {:update, "b", %{"block" => %{"table_rows" => [%{"id" => 5}, %{"id" => 8, "cols" => "A"}]}}})
+
+      held = apply!(held_base, {:update, "b", %{"block" => %{"table_rows" => [%{"id" => 5, "cols" => "B"}]}}})
+
+      assert rejoin(live, held, held_base).diffs["b"]["block"]["table_rows"] == [
+               %{"id" => 5, "cols" => "B"},
+               %{"id" => 8, "cols" => "A"}
+             ]
+    end
+
     # Without the saved rows, a row one side changed cannot be told from
     # one it left, so a saved row either side removed is removed, as a list
     # op's removal is (`merge_list/4`).
     test "a saved row either side removed stays removed on a rejoin" do
-      base = base_rows()
+      base = table_base([5, 7, 9])
       live = apply!(base, {:update, "b", %{"block" => %{"table_rows" => [%{"id" => 5, "cols" => "A"}, %{"id" => 7}]}}})
       held = apply!(base, {:update, "b", %{"block" => %{"table_rows" => [%{"id" => 5}, %{"id" => 9, "cols" => "B"}]}}})
 
@@ -626,7 +655,7 @@ defmodule BrandoAdmin.Components.Form.BlockField.OpsTest do
     end
 
     test "a rejoin merges a 200-row table quickly" do
-      base = base_rows()
+      base = table_base(1..200)
       rows = for id <- 1..200, do: %{"id" => id, "cols" => "saved #{id}"}
 
       live_rows =
