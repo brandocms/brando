@@ -316,12 +316,19 @@ defmodule Brando.Worker.EntryPublisher do
         "cancelling the job and clearing the date"
     )
 
-    Repo.transaction(fn ->
-      if still_due?(schema_module, entry, status), do: clear_date(schema_module, entry, params, details)
-    end)
+    result =
+      Repo.transaction(fn ->
+        if still_due?(schema_module, entry, status), do: clear_date(schema_module, entry, params, details)
+      end)
 
-    BrandoAdmin.LiveView.Listing.update_list_entries(schema_module)
-    {:cancel, reason}
+    case result do
+      {:ok, _} ->
+        BrandoAdmin.LiveView.Listing.update_list_entries(schema_module)
+        {:cancel, reason}
+
+      {:error, error} ->
+        {:error, error}
+    end
   end
 
   # The entry is still due, with the date the job read, out of the trash: an
