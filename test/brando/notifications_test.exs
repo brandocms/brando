@@ -786,6 +786,15 @@ defmodule Brando.NotificationsTest do
         assert :ok = Digest.schedule_rest(reader.id)
         assert [job] = Repo.all(from(j in Oban.Job, where: j.worker == "Brando.Worker.NoteMentions"))
         assert DateTime.compare(job.scheduled_at, DateTime.utc_now()) != :gt
+
+        # So is one waiting for the next digest, and a new item does not
+        # push it back there before it runs
+        Repo.update_all(from(j in Oban.Job, where: j.id == ^waiting.id), set: [state: "scheduled", scheduled_at: later])
+        assert :ok = Digest.schedule_rest(reader.id)
+        assert {:ok, _} = Digest.schedule(reader.id)
+        assert [job] = Repo.all(from(j in Oban.Job, where: j.worker == "Brando.Worker.NoteMentions"))
+        assert job.state == "available"
+        assert DateTime.compare(job.scheduled_at, DateTime.utc_now()) != :gt
       end)
 
       # Oban reports a unique insert that could not take its lock as a

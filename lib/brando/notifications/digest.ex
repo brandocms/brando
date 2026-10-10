@@ -110,8 +110,19 @@ defmodule Brando.Notifications.Digest do
 
     user_id
     |> insert_job(fn -> seconds end, scheduled: [:scheduled_at], retryable: [:scheduled_at])
+    |> make_available(seconds)
     |> rest_queued(due_by)
   end
+
+  # A waiting job the rest joined, due now, is made available at once: while
+  # scheduled, a new item's `schedule/2` would move it back to the next digest
+  defp make_available({:ok, %Oban.Job{conflict?: true, id: id, state: state} = job}, 0)
+       when is_integer(id) and state in ["scheduled", "retryable"] do
+    :ok = Oban.retry_job(id)
+    {:ok, %{job | state: "available"}}
+  end
+
+  defp make_available(result, _seconds), do: result
 
   @doc false
   # Whether an insert left a job for the rest that runs by `due_by`. A unique
