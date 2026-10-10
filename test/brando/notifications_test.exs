@@ -3,6 +3,7 @@ defmodule Brando.NotificationsTest do
   use Brando.ConnCase
 
   import Ecto.Query, only: [from: 2]
+  import ExUnit.CaptureLog
   import Swoosh.TestAssertions
 
   require Phoenix.LiveViewTest
@@ -592,10 +593,30 @@ defmodule Brando.NotificationsTest do
       job = %Oban.Job{args: %{"delivery" => delivery.id, "route" => route.id}, attempt: 1, max_attempts: 10}
 
       assert {:error, _} = NotificationDelivery.deliver(job)
-      assert %{state: "retrying"} = Repo.reload!(delivery)
+      assert %{state: "retrying", error: "recipient_check_failed"} = Repo.reload!(delivery)
 
       assert {:cancel, _} = NotificationDelivery.deliver(%{job | attempt: 10})
-      assert %{state: "failed"} = Repo.reload!(delivery)
+      assert %{state: "failed", error: "recipient_check_failed"} = Repo.reload!(delivery)
+
+      # Any other failure: there is no point in trying again
+      other =
+        Repo.insert!(%Delivery{
+          route_id: route.id,
+          recipient_id: reader.id,
+          event: "scheduled_publish",
+          entry_schema: delivery.entry_schema,
+          entry_id: page.id,
+          notification: %{"event" => "test"}
+        })
+
+      Process.put(:authorization_test_policy_raises, %RuntimeError{message: "association not loaded"})
+
+      capture_log(fn ->
+        assert {:cancel, :recipient_check_failed} =
+                 NotificationDelivery.deliver(%{job | args: %{"delivery" => other.id, "route" => route.id}})
+      end)
+
+      assert %{state: "failed", error: "recipient_check_failed"} = Repo.reload!(other)
       assert_no_email_sent()
     end
 
@@ -870,6 +891,32 @@ defmodule Brando.NotificationsTest do
         on_exit(fn -> :telemetry.detach(id) end)
         assert {:error, _} = Digest.schedule_rest(reader.id)
       end)
+    end
+
+    test "a summary item whose recipient could not be checked is marked so", %{user: user} do
+      put_test_env(:authorization_mode, :groups)
+      put_test_env(:tenancy_mode, :none)
+      reader = Factory.insert(:random_user, role: :superuser, config: %UserConfig{notification_digest: :daily})
+      {:ok, _} = Brando.Authorization.Migration.run()
+      route = route!(user, %{"kind" => "email", "recipient_ids" => [reader.id]})
+      page = Factory.insert(:page, creator: reader)
+
+      delivery =
+        Repo.insert!(%Delivery{
+          route_id: route.id,
+          recipient_id: reader.id,
+          event: "scheduled_publish",
+          state: "digest",
+          entry_schema: to_string(Brando.AuthorizationTestResources.Page),
+          entry_id: page.id,
+          notification: %{"event" => "test"}
+        })
+
+      Process.put(:authorization_test_policy_raises, %RuntimeError{message: "association not loaded"})
+      capture_log(fn -> assert :ok = Notes.deliver_mentions(reader.id, Digest.next_at(:daily, delivery.inserted_at)) end)
+
+      assert %{state: "failed", error: "recipient_check_failed"} = Repo.reload!(delivery)
+      assert_no_email_sent()
     end
 
     test "one email job waits per user, however long ago it was queued", %{user: user} do

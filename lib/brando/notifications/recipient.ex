@@ -37,17 +37,16 @@ defmodule Brando.Notifications.Recipient do
   end
 
   @doc "Whether `user` may enter the current site (see the moduledoc)."
-  def member?(%User{} = user) do
-    checked(fn ->
-      cond do
-        Engine.enabled?() -> Engine.can?(Scope.current(user), :access, :backend)
-        Brando.Tenant.enabled?() -> site_access?(user)
-        true -> true
-      end
-    end)
-  end
-
+  def member?(%User{} = user), do: checked(fn -> member_check(user) end)
   def member?(_), do: false
+
+  defp member_check(user) do
+    cond do
+      Engine.enabled?() -> Engine.can?(Scope.current(user), :access, :backend)
+      Brando.Tenant.enabled?() -> site_access?(user)
+      true -> true
+    end
+  end
 
   defp site_access?(user) do
     case Brando.Tenant.current_site_key() && Brando.Tenant.Registry.get_site_by_key(Brando.Tenant.current_site_key()) do
@@ -61,37 +60,47 @@ defmodule Brando.Notifications.Recipient do
   is active, sends email and names the user, who is an active member of the
   site and, for an entry, may read it.
   """
-  def may_see?(user, delivery, %Route{active: true, kind: :email, recipient_ids: ids}) do
-    user.id in ids and may_see?(user, delivery)
-  end
-
-  def may_see?(_user, _delivery, _route), do: false
+  def may_see?(user, delivery, route), do: access(user, delivery, route) == :ok
 
   @doc "Whether `delivery` may go to `user`, whatever route it came on."
-  def may_see?(%User{active: true, deleted_at: nil} = user, delivery) do
-    member?(user) and entry_readable?(user, delivery)
+  def may_see?(user, delivery), do: access(user, delivery) == :ok
+
+  @doc """
+  As `may_see?/3`, saying why not: `:ok`, `:denied`, or `:unchecked` when
+  the check failed and counts as "no" (see the moduledoc).
+  """
+  def access(user, delivery, %Route{active: true, kind: :email, recipient_ids: ids}) do
+    if user.id in ids, do: access(user, delivery), else: :denied
   end
 
-  def may_see?(_user, _delivery), do: false
+  def access(_user, _delivery, _route), do: :denied
 
-  defp entry_readable?(user, %{entry_schema: schema, entry_id: id}) when is_binary(schema) and is_integer(id) do
-    if Brando.Authorization.enabled?(), do: readable?(user, schema, id), else: true
+  @doc "As `may_see?/2`, saying why not, as `access/3`."
+  def access(%User{active: true, deleted_at: nil} = user, delivery) do
+    checked(
+      fn -> if member_check(user) and entry_readable?(user, delivery), do: :ok, else: :denied end,
+      :unchecked
+    )
   end
 
-  defp entry_readable?(_user, _delivery), do: true
+  def access(_user, _delivery), do: :denied
 
   # An entry that is gone, or of a schema that is gone, can no longer be
   # read, and is not sent about
-  defp readable?(user, schema, id) do
-    checked(fn ->
-      with {:ok, module} <- entry_schema(schema),
-           %{} = entry <- Repo.get(module, id) do
-        may_read?(user, entry)
-      else
-        _ -> false
+  defp entry_readable?(user, %{entry_schema: schema, entry_id: id}) when is_binary(schema) and is_integer(id) do
+    with true <- Brando.Authorization.enabled?(),
+         {:ok, module} <- entry_schema(schema) do
+      case Repo.get(module, id) do
+        nil -> false
+        entry -> read_check(user, entry)
       end
-    end)
+    else
+      false -> true
+      :error -> false
+    end
   end
+
+  defp entry_readable?(_user, _delivery), do: true
 
   @doc """
   The Ecto schema an entry type names (`"Elixir.MyApp.Projects.Project"`):
@@ -108,11 +117,10 @@ defmodule Brando.Notifications.Recipient do
   Whether `user` may read `entry`: with group authorization, by its read
   permission; otherwise yes. A failed check is handled as the moduledoc says.
   """
-  def may_read?(%User{} = user, entry) do
-    checked(fn ->
-      not Brando.Authorization.enabled?() or Brando.Authorization.can?(Scope.current(user), :read, entry)
-    end)
-  end
+  def may_read?(%User{} = user, entry), do: checked(fn -> read_check(user, entry) end)
+
+  defp read_check(user, entry),
+    do: not Brando.Authorization.enabled?() or Brando.Authorization.can?(Scope.current(user), :read, entry)
 
   @doc """
   Runs an access `check`, returning its result. When it raises, returns

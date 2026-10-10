@@ -271,7 +271,8 @@ defmodule Brando.Notifications.Digest do
     else
       # Only while the route is active and still names the user, and mentions
       # only while the user may still read their entry
-      {readable, unreadable} = Enum.split_with(waiting, &Recipient.may_see?(user, &1, &1.route))
+      access = Enum.group_by(waiting, &Recipient.access(user, &1, &1.route))
+      {readable, unreadable, unchecked} = {access[:ok] || [], access[:denied] || [], access[:unchecked] || []}
       entries = Notes.mention_email_entries(user, mentions)
 
       # Only what this job claims goes out, so two jobs never send the same
@@ -281,12 +282,13 @@ defmodule Brando.Notifications.Digest do
         Repo.transaction(fn ->
           sent = claim(readable, "succeeded", now)
           cancelled = claim(unreadable, "cancelled", now, "recipient_unavailable")
+          failed = claim(unchecked, "failed", now, "recipient_check_failed")
           claimed = Notes.claim_mentions(mentions, now)
           notifications = for d <- readable, MapSet.member?(sent, d.id), do: d.notification
           items = for {id, item} <- entries, MapSet.member?(claimed, id), do: item
 
           send_email(user, notifications, items, if(period == :off, do: :batch, else: period))
-          routes(readable, sent) ++ routes(unreadable, cancelled)
+          routes(readable, sent) ++ routes(unreadable, cancelled) ++ routes(unchecked, failed)
         end)
 
       routes |> Enum.uniq() |> Enum.each(&broadcast/1)

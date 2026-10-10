@@ -129,11 +129,16 @@ defmodule Brando.Worker.NotificationDelivery do
         finish(delivery, %{state: "cancelled", error: "recipient_unavailable"})
         {:cancel, :recipient_unavailable}
 
+      # The check failed in a way trying again won't mend
+      :unchecked ->
+        fail(route, delivery, %{status: nil, body: "", error: :recipient_check_failed, duration_ms: 0}, final?: true)
+        {:cancel, :recipient_check_failed}
+
       # The database failed while checking: a failed attempt, retried, and
       # marked failed after the last, never left "sending"
-      {:error, error} ->
-        result = %{status: nil, body: "", error: "recipient check: " <> Exception.message(error), duration_ms: 0}
-        record(Map.put(result, :ok?, false), route, delivery, job)
+      :retry ->
+        result = %{status: nil, body: "", error: :recipient_check_failed, duration_ms: 0, ok?: false}
+        record(result, route, delivery, job)
     end
   end
 
@@ -189,9 +194,19 @@ defmodule Brando.Worker.NotificationDelivery do
   # the database may recover (`Recipient.checked/2`), which comes back here
   defp recipient(delivery, route) do
     user = delivery.recipient_id && Repo.get(Brando.Users.User, delivery.recipient_id)
-    if user && Recipient.may_see?(user, delivery, route), do: {:ok, user}, else: :unavailable
+
+    case user && Recipient.access(user, delivery, route) do
+      :ok -> {:ok, user}
+      :unchecked -> :unchecked
+      _ -> :unavailable
+    end
   rescue
-    error -> {:error, error}
+    error ->
+      Logger.error(
+        "[Brando.Notifications] Delivery ##{delivery.id}: could not check the recipient: " <> Exception.message(error)
+      )
+
+      :retry
   end
 
   defp allowed_host(kind, url), do: if(Route.allowed_host?(kind, url), do: :ok, else: {:error, :host_not_allowed})

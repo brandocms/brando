@@ -786,6 +786,7 @@ defmodule BrandoAdmin.Sites.NotificationsLive do
   defp error_text("url_unreadable"), do: gettext("The URL could not be read; replace it")
   defp error_text("route_paused"), do: gettext("The route was paused")
   defp error_text("recipient_unavailable"), do: gettext("The recipient is inactive or may not read the entry")
+  defp error_text("recipient_check_failed"), do: gettext("Could not check whether the recipient may read the entry")
   defp error_text("no_mailer"), do: gettext("This site cannot send email")
   defp error_text("no_sender"), do: gettext("This site cannot send email")
   defp error_text("invalid_response"), do: gettext("Not a valid HTTP response")
