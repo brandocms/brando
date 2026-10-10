@@ -50,8 +50,9 @@ Environment archives are not migrated. Restoring one taken before a
 `brando_2xx` migration that changes every environment runs that migration in
 the restored environment; an archive that cannot be brought up to date is
 refused, and nothing is restored. The migration run is Brando's current
-template, so a restore is also refused when the application's copy of it was
-changed (a data backfill added, say), rather than skipping the change.
+template, so a restore is also refused when the application changed its copy
+(a data backfill added, say), rather than skipping the change. A copy of an
+earlier version of the template, as Brando shipped it, is not a change.
 
 The full ordered workflow, including Blueprint snapshot handling and Gettext
 recovery, is in [Migrating from 0.53 or 0.54](guides/migrating_from_053.md).

@@ -720,10 +720,11 @@ Rollback brings it up to date as it restores it:
   the archive's name), by finding its file under the migrations directory.
   Brando's `brando_2xx` ones that change every environment are run again in the
   restored schema only, and recorded in its `schema_migrations`. What runs is
-  Brando's current template, not the application's copy, so the copy must do
-  what the template does: they are compared as code, where layout, comments,
-  docs and the module name do not count. Ones that only change `public` are
-  left alone. Anything else refuses the restore with
+  Brando's current template, not the application's copy, so the copy must be
+  a version of the template Brando shipped: the current one or any earlier
+  one, as `mix brando.gen.migrations` copied it. They are compared as code,
+  where layout, comments, docs and the module name do not count. Ones that
+  only change `public` are left alone. Anything else refuses the restore with
   `{:error, {:archive_behind, reason}}`: a migration that changes the
   environments and cannot be run again (Brando's older ones, or the
   application's own), a copy of a `brando_2xx` template that the application
@@ -732,9 +733,16 @@ Rollback brings it up to date as it restores it:
   version without a file, or a migrations directory that is not there. To
   restore past a changed copy, compare it with the template, make the copy
   match it for the restore, and then run what the application added in the
-  restored environment by hand. An application that keeps its migrations
-  elsewhere, or in more than one directory, sets
-  `config :brando, :public_migrations_path` to a path or a list of paths.
+  restored environment by hand.
+
+  Brando keeps every version it has shipped of these templates in
+  `priv/templates/brando.upgrade/history/<name>/`, the current one included.
+  A change to a template's code adds the new version there; a test fails,
+  naming the file to add, until it does.
+
+  An application that keeps its migrations elsewhere, or in more than one
+  directory, sets `config :brando, :public_migrations_path` to a path or a
+  list of paths.
 - After the tenant migrations, the restored schema must have every table and
   column (with its type, nullability and default), index, foreign key and
   unique constraint the live environment has. If it does not, the restore is

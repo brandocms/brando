@@ -68,6 +68,18 @@ so it ships to the other editors in the entry. A write that bypasses it shows
 on one screen only, and the next field another editor ships puts the old value
 back. #3071 adds the coverage, `test/brando_admin/live/entry_field_sync_test.exs`.
 
+## Upgrade migration templates are history once shipped
+
+Applications copy `priv/templates/brando.upgrade/migrations/*` once and keep
+that copy; a later fix to a template reaches only applications that have not
+copied it yet (`mix brando.migrations.check` flags unrun copies). Restoring an
+archive replays a single-environment template (`case prefix() do`) only over
+a copy whose code is a version Brando shipped, so each of those keeps every
+shipped version in `priv/templates/brando.upgrade/history/<name>/`.
+`test/brando/environments/archive_upgrade_history_test.exs` fails, naming the
+file to add, when a template's code changes without a new version there. Add
+it; never edit or remove an earlier one.
+
 ## CSS: `:has()` never on an ancestor of the block editor
 
 A `:has()` whose subject contains the entry form is re-evaluated for every node
