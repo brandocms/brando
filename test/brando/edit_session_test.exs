@@ -895,8 +895,20 @@ defmodule Brando.EditSessionTest do
       {:ok, _} = EditSession.rebase(session, @field, saved, :own_save)
     end
 
-    defp rejoin_with_stale_rows(ref, loaded, held) do
-      Task.await(Task.async(fn -> EditSession.join(ref, @field, {loaded, held}) end))
+    # As `BlockField.join_session/2` does: rows that are not the session's
+    # are read again (`rows_now`), and the join moves the session onto them.
+    defp rejoin_with_stale_rows(ref, loaded, held, rows_now \\ nil) do
+      Task.await(
+        Task.async(fn ->
+          case EditSession.join(ref, @field, {loaded, held}) do
+            {:error, :base_mismatch} when rows_now != nil ->
+              EditSession.join(ref, @field, {rows_now, held}, rebase: true, held_base: loaded)
+
+            result ->
+              result
+          end
+        end)
+      )
     end
 
     # Review: a row saved while the rejoiner was away was deleted. Its
@@ -910,11 +922,12 @@ defmodule Brando.EditSessionTest do
       # the session was replaced; A came back first, added a row and saved
       {:ok, a} = EditSession.join(ref, @field, {loaded, loaded})
       add = {:set_field, "a", ["block", "table_rows"], {:list, rows_then, rows_then ++ [%{"sync_uid" => "r8"}]}, 0}
-      save_rows(a.session, [add], table_rows_of([{5, "r5"}, {8, "r8"}]))
+      saved = table_rows_of([{5, "r5"}, {8, "r8"}])
+      save_rows(a.session, [add], saved)
 
       cell = ["block", {:at, "table_rows", {"id", 5}, rows_then}, "cols"]
       {:ok, held} = Ops.apply_op(loaded, {:set_field, "a", cell, "B's cell", 0})
-      assert {:ok, %{state: state}} = rejoin_with_stale_rows(ref, loaded, held)
+      assert {:ok, %{state: state}} = rejoin_with_stale_rows(ref, loaded, held, saved)
 
       {:ok, params} = Ops.materialize_root(state, "a")
       assert [%{"id" => 5, "cols" => "B's cell"}, %{"id" => 8}] = params["block"]["table_rows"]
@@ -933,10 +946,11 @@ defmodule Brando.EditSessionTest do
       end
 
       {:ok, a} = EditSession.join(ref, @field, {loaded, loaded})
-      save_rows(a.session, [add.("A")], table_rows_of([{5, "r5"}, {8, "new"}]))
+      saved = table_rows_of([{5, "r5"}, {8, "new"}])
+      save_rows(a.session, [add.("A")], saved)
 
       {:ok, held} = Ops.apply_op(loaded, add.("B"))
-      assert {:ok, %{state: state}} = rejoin_with_stale_rows(ref, loaded, held)
+      assert {:ok, %{state: state}} = rejoin_with_stale_rows(ref, loaded, held, saved)
 
       {:ok, params} = Ops.materialize_root(state, "a")
       assert [%{"id" => 5}, %{"id" => 8, "cols" => "B"}] = params["block"]["table_rows"]
@@ -959,7 +973,7 @@ defmodule Brando.EditSessionTest do
          {:list, rows_then, rows_then ++ [%{"sync_uid" => "new", "cols" => "B"}]}, 0}
 
       {:ok, held} = Ops.apply_op(loaded, add)
-      assert {:ok, %{state: state}} = rejoin_with_stale_rows(ref, loaded, held)
+      assert {:ok, %{state: state}} = rejoin_with_stale_rows(ref, loaded, held, saved)
 
       {:ok, params} = Ops.materialize_root(state, "a")
       assert [%{"id" => 5}, %{"id" => 8, "cols" => "B"}] = params["block"]["table_rows"]
@@ -982,11 +996,37 @@ defmodule Brando.EditSessionTest do
          {:list, rows_then, rows_then ++ [%{"sync_uid" => "new", "cols" => "B"}]}, 0}
 
       {:ok, held} = Ops.apply_op(loaded, add)
-      assert {:ok, _} = rejoin_with_stale_rows(ref, loaded, held)
+      assert {:ok, _} = rejoin_with_stale_rows(ref, loaded, held, saved)
 
       assert {:ok, %{state: state}} = EditSession.rebase(c.session, @field, saved, :own_save)
       {:ok, params} = Ops.materialize_root(state, "a")
       assert [%{"id" => 5}, %{"id" => 8, "cols" => "B"}] = params["block"]["table_rows"]
+    end
+
+    # Review: a join compared blocks only, so an editor with older rows
+    # (that never read a save's added row) could seed or join a session as
+    # if its rows were the session's, and a later rejoin merged against them.
+    test "a joiner whose rows differ from the session's in their rows reads them again" do
+      ref = new_ref()
+      old_rows = table_rows_of([{5, "r5"}])
+      saved = table_rows_of([{5, "r5"}, {8, "r8"}])
+
+      # B, still on the rows before A's save, seeds a replacement session
+      {:ok, _} = EditSession.join(ref, @field, {old_rows, old_rows})
+
+      # C loaded the saved rows and changed row 8
+      cell = ["block", {:at, "table_rows", {"id", 8}, [%{"id" => 5}, %{"id" => 8}]}, "cols"]
+      {:ok, held} = Ops.apply_op(saved, {:set_field, "a", cell, "C's cell", 0})
+      assert {:error, :base_mismatch} = rejoin_with_stale_rows(ref, saved, held)
+
+      # it reads the rows again (the same) and moves the session onto them
+      assert {:ok, %{state: state}} =
+               Task.await(
+                 Task.async(fn -> EditSession.join(ref, @field, {saved, held}, rebase: true, held_base: saved) end)
+               )
+
+      {:ok, params} = Ops.materialize_root(state, "a")
+      assert [%{"id" => 5}, %{"id" => 8, "cols" => "C's cell"}] = params["block"]["table_rows"]
     end
 
     test "a rejoin carrying work after a save's read is kept by that save's rebase, on the session" do

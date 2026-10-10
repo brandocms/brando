@@ -64,10 +64,11 @@ defmodule Brando.EditSession.Data do
 
   * An unknown field is seeded with what the editor holds.
   * A known field is joined when the editor loaded the same rows the session
-    is built on. Work the editor holds is carried onto the session's state
-    (`{:merged, conflicts}`): a replica that comes back after a crash, after
-    a fresh joiner seeded the new session from the database, must not lose
-    what it had.
+    is built on: the same blocks with the same rows (`row_order`). Work the
+    editor holds is carried onto the session's state (`{:merged,
+    conflicts}`): a replica that comes back after a crash, after a fresh
+    joiner seeded the new session from the database, must not lose what it
+    had.
   * Otherwise `:mismatch`: the editor's rows are older or newer than the
     session's, and the caller decides (see `Brando.EditSession.join/4`).
   """
@@ -78,7 +79,9 @@ defmodule Brando.EditSession.Data do
 
     case data.fields do
       %{^field => %{base: known}} ->
-        if Ops.signature(known) == Ops.signature(base),
+        # the blocks and their rows: an editor that did not read a save's
+        # new row would merge, and later seed, against rows without it
+        if Ops.signature(known) == Ops.signature(base) and known.row_order == base.row_order,
           do: merge_held(data, field, held, held_base),
           else: {:mismatch, data}
 
