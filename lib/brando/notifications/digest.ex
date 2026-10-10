@@ -16,7 +16,10 @@ defmodule Brando.Notifications.Digest do
   Notifications that were waiting for a digest the user has since turned off
   go out with their next email. A mention goes out only while the user may
   still see its entry (`Brando.Notes.mention_email_items/2`), and each item
-  goes out once, however many jobs run (`Brando.Notes.claim_mentions/2`). An email takes
+  goes out once, however many jobs run (`Brando.Notes.claim_mentions/2`).
+  The email itself is built when it is sent, by
+  `Brando.Worker.NotificationEmail`, and leaves out what the user may no
+  longer see by then. An email takes
   at most 200 notifications and 100 mentions; a full batch queues the rest
   (`schedule_rest/2`).
   """
@@ -337,20 +340,24 @@ defmodule Brando.Notifications.Digest do
       settle(deliveries, "cancelled", "recipient_unavailable")
       :ok
     else
-      access = Enum.group_by(deliveries, &Recipient.access(user, &1, &1.route))
-      settle(access[:denied] || [], "cancelled", "recipient_unavailable")
-      settle(access[:unchecked] || [], "failed", "recipient_check_failed")
-      readable = access[:ok] || []
-      items = Notes.mention_email_items(user, mentions)
+      send_visible(user, deliveries, mentions, kind)
+    end
+  end
 
-      case send_email(user, Enum.map(readable, & &1.notification), items, kind) do
-        {:error, reason} when reason in [:no_mailer, :no_sender] ->
-          settle(readable, "failed", to_string(reason))
-          {:cancel, reason}
+  defp send_visible(user, deliveries, mentions, kind) do
+    access = Enum.group_by(deliveries, &Recipient.access(user, &1, &1.route))
+    settle(access[:denied] || [], "cancelled", "recipient_unavailable")
+    settle(access[:unchecked] || [], "failed", "recipient_check_failed")
+    readable = access[:ok] || []
+    items = Notes.mention_email_items(user, mentions)
 
-        result ->
-          result
-      end
+    case send_email(user, Enum.map(readable, & &1.notification), items, kind) do
+      {:error, reason} when reason in [:no_mailer, :no_sender] ->
+        settle(readable, "failed", to_string(reason))
+        {:cancel, reason}
+
+      result ->
+        result
     end
   end
 
