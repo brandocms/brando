@@ -4,6 +4,7 @@ defmodule Brando.Doctor.ChecksTest do
 
   import Ecto.Query, only: [from: 2]
 
+  alias Brando.Deprecated.RenamedModules
   alias Brando.Doctor.Checks
   alias Brando.Doctor.Context
   alias Brando.Doctor.Result
@@ -739,6 +740,142 @@ defmodule Brando.Doctor.ChecksTest do
              ] = code |> Code.string_to_quoted!() |> Checks.Deprecations.scan(@deprecated_calls)
 
       assert reason =~ "name the controller BrandoWeb.SEOController and add alias: false"
+    end
+
+    test "reads an alias from where it is declared, in its own module and function" do
+      code = """
+      defmodule MyAppWeb.Router do
+        alias MyAppWeb, as: B
+
+        scope "/", B do
+          get "/robots.txt", SEOController, :robots
+        end
+      end
+
+      defmodule MyApp.Files do
+        alias Brando.Upload
+        def a, do: %Upload{}
+        def b do
+          alias Plug.Upload
+          %Upload{}
+        end
+        def c, do: Upload.x()
+      end
+
+      defmodule MyApp.Later do
+        alias Brando, as: B
+        def d, do: B.Upload
+      end
+      """
+
+      assert [
+               %{line: 11, call: "Brando.Upload"},
+               %{line: 16, call: "Brando.Upload"},
+               %{line: 21, call: "Brando.Upload"}
+             ] = scan(code)
+    end
+
+    test "an import reaches the code after it in its own module or function" do
+      code = """
+      defmodule MyApp.A do
+        import Brando.HTML, only: [picture_tag: 2]
+        def a(img), do: picture_tag(img, [])
+      end
+
+      defmodule MyApp.B do
+        def b(img), do: picture_tag(img, [])
+        defp picture_tag(img, _), do: img
+
+        def c(video) do
+          import Brando.HTML, except: [picture_tag: 2]
+          {video_tag(video, []), picture_tag(video, [])}
+        end
+
+        def d(video), do: video_tag(video, [])
+      end
+      """
+
+      assert [%{line: 3, call: "Brando.HTML.picture_tag/2"}, %{line: 12, call: "Brando.HTML.video_tag/2"}] = scan(code)
+    end
+
+    test "reads module names in templates: ~H and the files embed_templates compiles in" do
+      root = tmp_dir("templates")
+      File.mkdir_p!(Path.join(root, "lib/my_app_web/layouts"))
+
+      File.write!(Path.join(root, "lib/my_app_web/layouts.ex"), ~S'''
+      defmodule MyAppWeb.Layouts do
+        use Phoenix.Component
+        alias Brando.Upload
+
+        embed_templates "layouts/*"
+
+        def head(assigns) do
+          ~H"""
+          <title>{@title}</title>
+          <Brando.Meta.HTML.render_meta conn={@conn} />
+          {Upload.url(@upload)}
+          """
+        end
+      end
+      ''')
+
+      File.write!(Path.join(root, "lib/my_app_web/layouts/app.html.heex"), "<main>\n  {Upload.url(@upload)}\n</main>\n")
+
+      result = Checks.Deprecations.run(context(root: root))
+
+      assert result.items == [
+               "lib/my_app_web/layouts.ex:11 Brando.Upload: " <> RenamedModules.reason(Brando.Upload),
+               "lib/my_app_web/layouts/app.html.heex:2 Brando.Upload: " <> RenamedModules.reason(Brando.Upload)
+             ]
+    end
+
+    test "a later import of a module replaces the earlier one, and only: :macros brings in no functions" do
+      code = """
+      defmodule MyApp.A do
+        import Brando.HTML
+
+        def a(img), do: picture_tag(img, [])
+
+        def b(img) do
+          import Brando.HTML, except: [picture_tag: 2]
+          picture_tag(img, [])
+        end
+
+        def c(img) do
+          import Brando.HTML, only: []
+          picture_tag(img, [])
+        end
+
+        def d(img) do
+          import Brando.HTML, only: :macros
+          picture_tag(img, [])
+        end
+
+        def e(img) do
+          import Brando.HTML, only: :functions
+          picture_tag(img, [])
+        end
+      end
+      """
+
+      assert [%{line: 4}, %{line: 23}] = scan(code)
+    end
+
+    test "an alias of a name that may be either module is checked as both" do
+      code = """
+      defmodule MyApp.A do
+        alias Brando.Upload
+
+        Some.Dsl.settings do
+          alias Plug.Upload
+        end
+
+        alias Upload, as: U
+        def a, do: %U{}
+      end
+      """
+
+      assert [%{line: 9, call: "Brando.Upload"}] = scan(code)
     end
 
     test "follows as: aliases" do

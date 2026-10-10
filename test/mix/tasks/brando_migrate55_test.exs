@@ -898,6 +898,865 @@ defmodule Mix.Tasks.Brando.Migrate55Test do
              end
              """
     end
+
+    test "an alias inside a function, or after a use, only reaches the code after it" do
+      code = """
+      defmodule LegacyApp.Files do
+        alias Brando.Upload
+
+        def store(m, e, c, u), do: Upload.handle_upload(m, e, c, u)
+
+        def plug_upload(path) do
+          alias Plug.Upload
+          %Upload{path: path}
+        end
+
+        def both(path) do
+          Upload.handle_upload(path, nil, nil, nil)
+          alias Plug.Upload
+          %Upload{path: path}
+        end
+
+        def after_both, do: %Upload{}
+      end
+
+      defmodule LegacyApp.Later do
+        def before, do: Upload.x()
+        alias Brando.Upload
+        def later, do: Upload.y()
+      end
+      """
+
+      path = "lib/legacy_app/files.ex"
+      igniter = migrate(@blueprint_054, %{path => code})
+      assert igniter.issues == []
+
+      expected = """
+      defmodule LegacyApp.Files do
+        alias Brando.Uploads.Store
+
+        def store(m, e, c, u), do: Store.handle_upload(m, e, c, u)
+
+        def plug_upload(path) do
+          alias Plug.Upload
+          %Upload{path: path}
+        end
+
+        def both(path) do
+          Store.handle_upload(path, nil, nil, nil)
+          alias Plug.Upload
+          %Upload{path: path}
+        end
+
+        def after_both, do: %Store{}
+      end
+
+      defmodule LegacyApp.Later do
+        def before, do: Upload.x()
+        alias Brando.Uploads.Store
+        def later, do: Store.y()
+      end
+      """
+
+      assert source(igniter, path) == expected
+      assert {:ok, _} = Code.string_to_quoted(expected)
+      assert_idempotent(igniter, path)
+
+      # The doctor reads the original the same way: the Plug structs are not Brando.Upload
+      assert [{4, "Brando.Upload"}, {12, "Brando.Upload"}, {17, "Brando.Upload"}, {23, "Brando.Upload"}] =
+               doctor_findings(code)
+    end
+
+    test "the same short name aliased twice in a module: each alias keeps its own uses" do
+      code = """
+      defmodule LegacyApp.Attachments do
+        alias Plug.Upload
+
+        def from_path(path), do: %Upload{path: path}
+
+        alias Brando.Upload
+
+        def store(m, e, c, u), do: Upload.handle_upload(m, e, c, u)
+      end
+      """
+
+      path = "lib/legacy_app/attachments.ex"
+      igniter = migrate(@blueprint_054, %{path => code})
+      assert igniter.issues == []
+
+      expected = """
+      defmodule LegacyApp.Attachments do
+        alias Plug.Upload
+
+        def from_path(path), do: %Upload{path: path}
+
+        alias Brando.Uploads.Store
+
+        def store(m, e, c, u), do: Store.handle_upload(m, e, c, u)
+      end
+      """
+
+      assert source(igniter, path) == expected
+      assert {:ok, _} = Code.string_to_quoted(expected)
+      assert_idempotent(igniter, path)
+      assert [{8, "Brando.Upload"}] = doctor_findings(code)
+    end
+
+    test "a scope's alias is read from its own module, where the scope is declared" do
+      router = """
+      defmodule LegacyAppWeb.Router do
+        use LegacyAppWeb, :router
+        alias LegacyAppWeb, as: B
+
+        scope "/", B do
+          get "/robots.txt", SEOController, :robots
+        end
+      end
+
+      defmodule LegacyAppWeb.LaterRouter do
+        use LegacyAppWeb, :router
+
+        scope "/", B do
+          get "/robots.txt", SEOController, :robots
+        end
+
+        alias Brando, as: B
+        def slug(s), do: B.Utils.slugify(s)
+      end
+
+      defmodule LegacyApp.Later do
+        alias Brando, as: B
+        def slug(s), do: B.Utils.slugify(s)
+      end
+      """
+
+      igniter = migrate(@blueprint_054, %{@router_path => router})
+      assert igniter.issues == []
+      assert source(igniter, @router_path) == router
+      refute Enum.any?(igniter.warnings, &String.contains?(&1, @router_path))
+      assert doctor_findings(router) == []
+    end
+
+    test "a brace alias under a renamed module's alias is spelled out" do
+      code = """
+      defmodule LegacyApp.Braced do
+        alias Brando.Meta
+        alias Meta.{HTML}
+
+        def meta, do: %Meta{}
+        def tags(assigns), do: HTML.render_meta(assigns)
+      end
+
+      defmodule LegacyApp.BracedOnly do
+        alias Brando.Meta
+        alias Meta.{HTML}
+
+        def tags(assigns), do: HTML.render_meta(assigns)
+      end
+      """
+
+      path = "lib/legacy_app/braced.ex"
+      igniter = migrate(@blueprint_054, %{path => code})
+      assert igniter.issues == []
+
+      expected = """
+      defmodule LegacyApp.Braced do
+        alias Brando.Sites.Meta
+        alias Brando.Meta.{HTML}
+
+        def meta, do: %Meta{}
+        def tags(assigns), do: HTML.render_meta(assigns)
+      end
+
+      defmodule LegacyApp.BracedOnly do
+        alias Brando.Meta
+        alias Meta.{HTML}
+
+        def tags(assigns), do: HTML.render_meta(assigns)
+      end
+      """
+
+      assert source(igniter, path) == expected
+      assert {:ok, _} = Code.string_to_quoted(expected)
+      assert_idempotent(igniter, path)
+      assert doctor_findings(expected) == []
+    end
+
+    test "a rewrite that would change what another module name means leaves the file, and reports it" do
+      code = """
+      defmodule LegacyApp.ShadowedNamespace do
+        alias Brando.Meta
+        alias LegacyApp.Brando
+
+        def meta, do: %Meta{}
+        def tags(conn), do: Meta.HTML.render_meta(conn)
+        def own, do: Brando.thing()
+      end
+      """
+
+      path = "lib/legacy_app/shadowed_namespace.ex"
+      igniter = migrate(@blueprint_054, %{path => code})
+      assert igniter.issues == []
+      assert source(igniter, path) == code
+
+      assert_has_warning(igniter, fn warning ->
+        String.contains?(warning, "#{path}:6") and String.contains?(warning, "the file is unchanged")
+      end)
+
+      assert [{5, "Brando.Meta"}] = doctor_findings(code)
+    end
+
+    test "an alias declared in another macro's block may reach past it, so the file is left and reported" do
+      code = """
+      defmodule LegacyApp.Dsl do
+        alias Brando.Upload
+
+        settings do
+          alias Plug.Upload
+        end
+
+        def f, do: %Upload{}
+      end
+      """
+
+      path = "lib/legacy_app/dsl.ex"
+      igniter = migrate(@blueprint_054, %{path => code})
+      assert igniter.issues == []
+      assert source(igniter, path) == code
+      assert_has_warning(igniter, &String.contains?(&1, "#{path}:8 names modules renamed in 0.55"))
+      assert [{8, "Brando.Upload"}] = doctor_findings(code)
+    end
+
+    test "each block of if, try, def and with keeps its own aliases" do
+      code = """
+      defmodule LegacyApp.Branches do
+        alias Brando.Upload
+
+        def f(x) do
+          if x do
+            alias Plug.Upload
+            Upload.foo()
+          else
+            %Upload{}
+          end
+        end
+
+        def g do
+          alias Plug.Upload
+          %Upload{}
+        rescue
+          _ -> Upload.x()
+        end
+
+        def h(x) do
+          try do
+            alias Plug.Upload
+            %Upload{}
+          rescue
+            _ -> Upload.x()
+          after
+            Upload.y()
+          end
+        end
+
+        def i(x) do
+          with {:ok, y} <- x do
+            alias Plug.Upload
+            %Upload{path: y}
+          else
+            _ -> Upload.x()
+          end
+        end
+      end
+      """
+
+      path = "lib/legacy_app/branches.ex"
+      igniter = migrate(@blueprint_054, %{path => code})
+      assert igniter.issues == []
+
+      expected = """
+      defmodule LegacyApp.Branches do
+        alias Brando.Uploads.Store
+
+        def f(x) do
+          if x do
+            alias Plug.Upload
+            Upload.foo()
+          else
+            %Store{}
+          end
+        end
+
+        def g do
+          alias Plug.Upload
+          %Upload{}
+        rescue
+          _ -> Store.x()
+        end
+
+        def h(x) do
+          try do
+            alias Plug.Upload
+            %Upload{}
+          rescue
+            _ -> Store.x()
+          after
+            Store.y()
+          end
+        end
+
+        def i(x) do
+          with {:ok, y} <- x do
+            alias Plug.Upload
+            %Upload{path: y}
+          else
+            _ -> Store.x()
+          end
+        end
+      end
+      """
+
+      assert source(igniter, path) == expected
+      assert {:ok, _} = Code.string_to_quoted(expected)
+      assert_idempotent(igniter, path)
+      assert [{9, _}, {17, _}, {25, _}, {27, _}, {36, _}] = doctor_findings(code)
+    end
+
+    test "an alias in a remote macro's do block may reach past it, so the file is left and reported" do
+      code = """
+      defmodule LegacyApp.RemoteDsl do
+        alias Brando.Upload
+
+        Some.Dsl.settings do
+          alias Plug.Upload
+        end
+
+        Kernel.if true do
+          alias Plug.Upload
+        end
+
+        def f, do: %Upload{}
+      end
+      """
+
+      path = "lib/legacy_app/remote_dsl.ex"
+      igniter = migrate(@blueprint_054, %{path => code})
+      assert igniter.issues == []
+      assert source(igniter, path) == code
+      assert_has_warning(igniter, &String.contains?(&1, "#{path}:12 names modules renamed in 0.55"))
+      assert [{12, "Brando.Upload"}] = doctor_findings(code)
+    end
+
+    test "a template that names a renamed alias leaves the file, and is reported" do
+      code = ~S'''
+      defmodule LegacyAppWeb.Head do
+        use Phoenix.Component
+        alias Brando.Meta
+
+        def meta, do: %Meta{}
+
+        def head(assigns) do
+          ~H"""
+          <title>{@title}</title>
+          <Meta.HTML.render_meta conn={@conn} />
+          """
+        end
+      end
+      '''
+
+      embedded = """
+      defmodule LegacyAppWeb.Layouts do
+        use Phoenix.Component
+        alias Brando.Upload
+
+        def store(m, e, c, u), do: Upload.handle_upload(m, e, c, u)
+
+        embed_templates "layouts/*"
+      end
+      """
+
+      template = """
+      <main>
+        {Upload.url(@upload)}
+      </main>
+      """
+
+      head_path = "lib/legacy_app_web/head.ex"
+      layouts_path = "lib/legacy_app_web/layouts.ex"
+
+      files = %{
+        head_path => code,
+        layouts_path => embedded,
+        "lib/legacy_app_web/layouts/app.html.heex" => template
+      }
+
+      igniter = migrate(@blueprint_054, files)
+      assert igniter.issues == []
+      assert source(igniter, head_path) == code
+      assert source(igniter, layouts_path) == embedded
+      assert_has_warning(igniter, &String.contains?(&1, "#{head_path}:10 names modules renamed in 0.55"))
+
+      assert_has_warning(
+        igniter,
+        &String.contains?(&1, "lib/legacy_app_web/layouts/app.html.heex:2, a template #{layouts_path} embeds")
+      )
+
+      assert [{5, "Brando.Meta"}] = doctor_findings(code)
+    end
+
+    test "templates whose pattern or root is computed cannot be read, so the file is left and reported" do
+      computed = """
+      defmodule LegacyAppWeb.Computed do
+        use Phoenix.Component
+        alias Brando.Upload
+
+        @pattern "computed/*"
+        def store(m, e, c, u), do: Upload.handle_upload(m, e, c, u)
+
+        embed_templates @pattern
+      end
+      """
+
+      rooted = """
+      defmodule LegacyAppWeb.Rooted do
+        use Phoenix.Component
+        alias Brando.Upload
+
+        def store(m, e, c, u), do: Upload.handle_upload(m, e, c, u)
+
+        embed_templates "rooted/*", root: Path.join(__DIR__, "x")
+      end
+      """
+
+      files = %{
+        "lib/legacy_app_web/computed.ex" => computed,
+        "lib/legacy_app_web/rooted.ex" => rooted,
+        "lib/legacy_app_web/computed/c.html.heex" => "{Upload.url(@x)}\n"
+      }
+
+      igniter = migrate(@blueprint_054, files)
+      assert igniter.issues == []
+      assert source(igniter, "lib/legacy_app_web/computed.ex") == computed
+      assert source(igniter, "lib/legacy_app_web/rooted.ex") == rooted
+      assert_has_warning(igniter, &String.contains?(&1, "lib/legacy_app_web/computed.ex:8 names modules renamed in 0.55"))
+      assert_has_warning(igniter, &String.contains?(&1, "lib/legacy_app_web/rooted.ex:7 names modules renamed in 0.55"))
+    end
+
+    test "only code in a template counts: text, comments and strings do not hold the file back" do
+      code = ~S'''
+      defmodule LegacyAppWeb.Drawer do
+        use Phoenix.Component
+        alias Brando.Upload
+
+        def store(m, e, c, u), do: Upload.handle_upload(m, e, c, u)
+
+        def drawer(assigns) do
+          ~H"""
+          <%!-- Upload is not a module here --%>
+          <h2>Store current editor state</h2>
+          <button aria-label={gettext("Upload media")}>{gettext("Upload")}</button>
+          <p>
+            {dgettext("drawer",
+              "Upload to %{folder}", folder: @folder)}
+          </p>
+          Upload here
+          """
+        end
+      end
+      '''
+
+      path = "lib/legacy_app_web/drawer.ex"
+      igniter = migrate(@blueprint_054, %{path => code})
+      assert igniter.issues == []
+
+      updated = source(igniter, path)
+      assert updated =~ "alias Brando.Uploads.Store\n"
+      assert updated =~ "do: Store.handle_upload(m, e, c, u)"
+      assert updated =~ ~s[{gettext("Upload")}]
+      refute Enum.any?(igniter.warnings, &String.contains?(&1, path))
+      assert_idempotent(igniter, path)
+    end
+
+    test "a template whose code the scan might miss holds the file back: any use of a renamed alias's name counts" do
+      layouts = """
+      defmodule LegacyAppWeb.Layouts do
+        use Phoenix.Component
+        alias Brando.Upload
+
+        def store(m, e, c, u), do: Upload.handle_upload(m, e, c, u)
+
+        embed_templates "layouts/*"
+      end
+      """
+
+      templates = [
+        ~S|<script><%= Upload.url(@x) %></script>|,
+        ~S|<script src={Upload.url(@x)}></script>|,
+        ~S|<style nonce={Upload.n(@x)}>a{}</style>|,
+        ~S|<style>.a { background: url(<%= Upload.url(@x) %>) }</style>|,
+        ~S|<!-- <%= Upload.url(@x) %> -->|,
+        ~S|<style-box></style-box><p>{Upload.url(@x)}</p>|,
+        ~S|<li :for={u <- Upload.list()}>{u}</li>|,
+        ~S|<.live_component module={Upload.Comp} id="x" />|,
+        ~S|<p>{"}" <> Upload.x()}</p>|,
+        "<%= for u <- Upload.list() do %>\n<%= u %>\n<% end %>",
+        ~S|<%= if "#{Upload.url(@x)}" != "" do %>x<% end %>|,
+        ~S|<p>{?" <> Upload.x()}</p>|,
+        ~S|<p>{~s(}) <> Upload.x()}</p>|,
+        ~S|<div data-x='{"a": "}"}'></div><p>{Upload.x()}</p>|,
+        ~S|<%= Upload.x("%>") %>|,
+        "<p>{\"\"\"\n}\n\"\"\" <> Upload.x()}</p>",
+        ~S|<div class="a{" title={Upload.x()}>|,
+        ~S|<%= if match?(%Upload{}, @x) do %>x<% end %>|,
+        ~S|<p>{inspect(Upload)}</p>|
+      ]
+
+      for template <- templates, extension <- ["html.heex", "html.eex"] do
+        files = %{"lib/legacy_app_web/layouts.ex" => layouts, "lib/legacy_app_web/layouts/app.#{extension}" => template}
+        igniter = migrate(@blueprint_054, files)
+
+        assert source(igniter, "lib/legacy_app_web/layouts.ex") == layouts, "rewritten past #{extension}: #{template}"
+        assert_has_warning(igniter, &String.contains?(&1, "names modules renamed in 0.55"))
+      end
+    end
+
+    test "Surface, Phoenix.View, a remote embed_templates and template sigils hold the file back" do
+      module = fn body ->
+        """
+        defmodule LegacyAppWeb.L do
+          use Phoenix.Component
+          alias Brando.Upload
+          def store(m, e, c, u), do: Upload.handle_upload(m, e, c, u)
+        #{body}
+        end
+        """
+      end
+
+      sigil = fn sigil, text -> "  def h(assigns) do\n    ~#{sigil}\"\"\"\n    #{text}\n    \"\"\"\n  end" end
+
+      cases = [
+        {~S|  Phoenix.Component.embed_templates "l/*"|,
+         %{"lib/legacy_app_web/l/app.html.heex" => "<p>{Upload.url(@x)}</p>\n"}},
+        {~S|  use Phoenix.View, root: "lib/legacy_app_web/templates"|,
+         %{"lib/legacy_app_web/templates/l/app.html.eex" => "<p><%= Upload.url(@x) %></p>\n"}},
+        {~S|  use LegacyAppWeb, :view|, %{}},
+        {sigil.("H", ~S|<script src={Upload.url(@x)}></script>|), %{}},
+        {sigil.("H", ~S|<!-- <%= Upload.url(@x) %> -->|), %{}},
+        {sigil.("F", ~S|{#if Upload.x?(@x)}a{/if}|), %{}},
+        {sigil.("F", ~S|<p>Store your files</p>|), %{}},
+        {sigil.("E", ~S|<!-- <%= Upload.url(@x) %> -->|), %{}}
+      ]
+
+      for {body, templates} <- cases do
+        path = "lib/legacy_app_web/l.ex"
+        code = module.(body)
+        igniter = migrate(@blueprint_054, Map.put(templates, path, code))
+        assert source(igniter, path) == code, "rewritten past:\n#{body}"
+        assert_has_warning(igniter, &String.contains?(&1, path))
+      end
+    end
+
+    test "templates a file may own beyond embed_templates hold it back: colocated, EEx and atom-spelled calls" do
+      module = fn use, body ->
+        """
+        defmodule LegacyAppWeb.PageLive do
+          #{use}
+          alias Brando.Upload
+          def store(m, e, c, u), do: Upload.handle_upload(m, e, c, u)
+        #{body}
+        end
+        """
+      end
+
+      path = "lib/legacy_app_web/live/page_live.ex"
+      colocated = %{"lib/legacy_app_web/live/page_live.html.heex" => "<p>{inspect(Upload)}</p>\n"}
+      leex = %{"lib/legacy_app_web/live/page_live.html.leex" => "<p><%= inspect(Upload) %></p>\n"}
+      eex = %{"lib/legacy_app_web/live/r.eex" => "<%= Upload.url(@x) %>\n"}
+
+      cases = [
+        {"use Phoenix.LiveView", "", colocated},
+        {"use Phoenix.LiveComponent", "", colocated},
+        {"use LegacyAppWeb, :live_view", "", colocated},
+        {"use LegacyAppWeb.Site", "", leex},
+        {"require EEx", ~S|  EEx.function_from_string(:def, :r, "<%= Upload.url(@x) %>", [:assigns])|, %{}},
+        {"require EEx", ~S|  EEx.function_from_file(:def, :r, "lib/legacy_app_web/live/r.eex", [:assigns])|, eex},
+        {"", ~S|  def r(a), do: unquote(EEx.compile_file("lib/legacy_app_web/live/r.eex"))|, eex},
+        {"", ~S|  def r(a), do: unquote(EEx.compile_string("<%= Upload.url(@x) %>"))|, %{}},
+        {"", ~S|  :"Elixir.Phoenix.Template".compile_all(&(&1), "x", "*")|, %{}},
+        {"", ~S|  def r(a), do: unquote(:"Elixir.EEx".compile_file("lib/legacy_app_web/live/r.eex"))|, eex},
+        {"", ~S|  :"Elixir.Phoenix.Component".embed_templates("l/*")|, %{}},
+        {"", "  def h(assigns), do: ~h\"<p>{Upload.url(@x)}</p>\"", %{}}
+      ]
+
+      for {use, body, templates} <- cases do
+        code = module.(use, body)
+        igniter = migrate(@blueprint_054, Map.put(templates, path, code))
+        assert source(igniter, path) == code, "rewritten past:\n#{code}"
+        assert_has_warning(igniter, &String.contains?(&1, path))
+      end
+    end
+
+    test "embed_templates is read from the filesystem, and a root that finds nothing holds the file back" do
+      dir = Path.join(System.tmp_dir!(), "migrate55_templates_#{System.unique_integer([:positive])}")
+      File.mkdir_p!(dir)
+      on_exit(fn -> File.rm_rf!(dir) end)
+      File.write!(Path.join(dir, "page.html.heex"), "<p>{Upload.url(@x)}</p>\n")
+
+      module = fn root ->
+        """
+        defmodule LegacyAppWeb.Pages do
+          use Phoenix.Component
+          alias Brando.Upload
+          def store(m, e, c, u), do: Upload.handle_upload(m, e, c, u)
+          embed_templates "*", root: #{inspect(root)}
+        end
+        """
+      end
+
+      for root <- [dir, Path.join(dir, "missing")] do
+        path = "lib/legacy_app_web/pages.ex"
+        code = module.(root)
+        igniter = migrate(@blueprint_054, %{path => code})
+        assert source(igniter, path) == code, "rewritten past root #{root}"
+        assert_has_warning(igniter, &String.contains?(&1, "names modules renamed in 0.55"))
+      end
+    end
+
+    test "a template anywhere in the project that uses a renamed alias's name holds back files that can render one" do
+      upload = fn path, use, body, templates ->
+        code = """
+        defmodule LegacyAppWeb.PageLive do
+          #{use}
+          alias Brando.Upload
+          def store(m, e, c, u), do: Upload.handle_upload(m, e, c, u)
+        #{body}
+        end
+        """
+
+        {path, code, templates}
+      end
+
+      template = "<p>{Upload.url(@x)}</p>\n"
+
+      cases = [
+        # Named after the module, not the file
+        upload.("lib/legacy_app_web/live/pages.ex", "use Phoenix.LiveView", "", %{
+          "lib/legacy_app_web/live/page_live.html.heex" => template
+        }),
+        # A nested LiveComponent's colocated template
+        upload.(
+          "lib/legacy_app_web/live/page_live.ex",
+          "use Phoenix.LiveView",
+          "  defmodule Form do\n    use Phoenix.LiveComponent\n  end",
+          %{"lib/legacy_app_web/live/form.html.heex" => template}
+        ),
+        # Phoenix's .exs template engine
+        upload.("lib/legacy_app_web/l.ex", "use Phoenix.Component", ~S|  embed_templates "l/*"|, %{
+          "lib/legacy_app_web/l/a.html.heex" => "<p>hi</p>\n",
+          "lib/legacy_app_web/l/b.html.exs" => "Upload.url(assigns.x)\n"
+        }),
+        upload.("lib/legacy_app_web/live/page_live.ex", "use Phoenix.LiveView", "", %{
+          "lib/legacy_app_web/live/page_live.html.exs" => "Upload.url(assigns.x)\n"
+        }),
+        # embed_templates from a site's use macro
+        upload.("lib/legacy_app_web/l.ex", "use LegacyAppWeb, :html_templates", "", %{
+          "lib/legacy_app_web/l/a.html.heex" => template
+        }),
+        # Nested directories
+        upload.("lib/legacy_app_web/l.ex", "use Phoenix.Component", ~S|  embed_templates "pages/**/*"|, %{
+          "lib/legacy_app_web/pages/a.html.heex" => "<p>hi</p>\n",
+          "lib/legacy_app_web/pages/x/y/b.html.heex" => template
+        }),
+        # Whitespace before a delimiter in a colocated template
+        upload.("lib/legacy_app_web/live/page_live.ex", "use Phoenix.LiveView", "", %{
+          "lib/legacy_app_web/live/page_live.html.heex" => "<.c ms={[Upload ]} />\n"
+        }),
+        # Only under priv/, which no embed_templates names
+        upload.("lib/legacy_app_web/live/page_live.ex", "use LegacyAppWeb, :live_view", "", %{
+          "priv/templates/page/show.html.heex" => template
+        }),
+        # A site's own use macro, with no atom option
+        upload.("lib/legacy_app_web/l.ex", "use LegacyAppWeb.Html", "", %{"lib/legacy_app_web/l/a.html.heex" => template}),
+        upload.("lib/legacy_app_web/live/page_live.ex", ~S|use LegacyAppWeb.Html, templates: "l/*"|, "", %{
+          "lib/legacy_app_web/l/a.html.heex" => template
+        }),
+        # Before end, in a branch
+        upload.("lib/legacy_app_web/live/page_live.ex", "use Phoenix.LiveView", "", %{
+          "lib/legacy_app_web/live/page_live.html.heex" => "<p>{if @a do\n  Upload\nelse\n  nil\nend}</p>\n"
+        })
+      ]
+
+      for {path, code, templates} <- cases do
+        igniter = migrate(@blueprint_054, Map.put(templates, path, code))
+        assert source(igniter, path) == code, "rewritten past #{inspect(Map.keys(templates))}:\n#{code}"
+        assert_has_warning(igniter, &String.contains?(&1, path))
+      end
+
+      # A module under Brando.Meta that kept its name, from a template no module claims
+      meta = """
+      defmodule LegacyAppWeb.Head do
+        use Phoenix.Component
+        alias Brando.Meta
+        def meta, do: %Meta{}
+      end
+      """
+
+      igniter =
+        migrate(@blueprint_054, %{
+          "lib/legacy_app_web/head.ex" => meta,
+          "priv/templates/layout/root.html.heex" => "<Meta.HTML.render_meta conn={@conn} />\n"
+        })
+
+      assert source(igniter, "lib/legacy_app_web/head.ex") == meta
+
+      assert_has_warning(igniter, fn warning ->
+        String.contains?(
+          warning,
+          "lib/legacy_app_web/head.ex:2 left unchanged: a template in this project uses `Meta.HTML`"
+        ) and
+          String.contains?(warning, "priv/templates/layout/root.html.heex")
+      end)
+    end
+
+    test "a module that cannot render a template is rewritten whatever the project's templates use" do
+      code = """
+      defmodule LegacyApp.Uploader do
+        alias Brando.Upload
+        def store(m, e, c, u), do: Upload.handle_upload(m, e, c, u)
+      end
+      """
+
+      path = "lib/legacy_app/uploader.ex"
+      igniter = migrate(@blueprint_054, %{path => code, "lib/legacy_app_web/x.html.heex" => "<p>{Upload.url(@x)}</p>\n"})
+      assert source(igniter, path) =~ "alias Brando.Uploads.Store"
+    end
+
+    test "an EEx module aliased from its atom is still EEx" do
+      code = """
+      defmodule LegacyAppWeb.Render do
+        alias :"Elixir.EEx", as: Templates
+        alias Brando.Upload
+        def store(m, e, c, u), do: Upload.handle_upload(m, e, c, u)
+        def r(a), do: unquote(Templates.compile_string("<%= Upload.url(@x) %>"))
+      end
+      """
+
+      path = "lib/legacy_app_web/render.ex"
+      igniter = migrate(@blueprint_054, %{path => code})
+      assert source(igniter, path) == code
+    end
+
+    test "an inline template compiles into its own module; one in a macro's quote may compile anywhere" do
+      contact = ~S'''
+      defmodule LegacyAppWeb.ContactLive do
+        use Phoenix.LiveView
+        alias Brando.Upload
+
+        def render(assigns) do
+          ~H"""
+          <p>{Upload.url(@upload)}</p>
+          """
+        end
+      end
+      '''
+
+      application = """
+      defmodule LegacyAppWeb.ApplicationLive do
+        use Phoenix.LiveView
+        alias Brando.Upload
+
+        def store(m, e, c, u), do: Upload.handle_upload(m, e, c, u)
+        def render(assigns), do: ~H"<p>{@name}</p>"
+      end
+      """
+
+      contact_path = "lib/legacy_app_web/live/contact_live.ex"
+      application_path = "lib/legacy_app_web/live/application_live.ex"
+      igniter = migrate(@blueprint_054, %{contact_path => contact, application_path => application})
+
+      assert source(igniter, contact_path) == contact
+      assert source(igniter, application_path) =~ "alias Brando.Uploads.Store"
+      refute Enum.any?(igniter.warnings, &String.contains?(&1, application_path))
+
+      web = ~S'''
+      defmodule LegacyAppWeb do
+        def html do
+          quote do
+            use Phoenix.Component
+
+            def upload_link(assigns) do
+              ~H"""
+              <a href={Upload.url(@upload)}>x</a>
+              """
+            end
+          end
+        end
+
+        defmacro __using__(which), do: apply(__MODULE__, which, [])
+      end
+      '''
+
+      page = """
+      defmodule LegacyAppWeb.PageHTML do
+        use LegacyAppWeb, :html
+        alias Brando.Upload
+
+        def store(m, e, c, u), do: Upload.handle_upload(m, e, c, u)
+      end
+      """
+
+      page_path = "lib/legacy_app_web/controllers/page_html.ex"
+      igniter = migrate(@blueprint_054, %{"lib/legacy_app_web.ex" => web, page_path => page})
+      assert source(igniter, page_path) == page
+
+      assert_has_warning(igniter, fn warning ->
+        String.contains?(warning, "#{page_path}:2 left unchanged: a template in this project uses `Upload`") and
+          String.contains?(warning, "lib/legacy_app_web.ex:8")
+      end)
+    end
+
+    test "rendering through Phoenix.Template is not a template the task needs to read" do
+      code = """
+      defmodule LegacyApp.Render do
+        alias Brando.Upload
+
+        def store(m, e, c, u), do: Upload.handle_upload(m, e, c, u)
+        def page(assigns), do: Phoenix.Template.render_to_string(LegacyAppWeb.PageHTML, "home", "html", assigns)
+      end
+      """
+
+      path = "lib/legacy_app/render.ex"
+      igniter = migrate(@blueprint_054, %{path => code})
+      assert source(igniter, path) =~ "do: Store.handle_upload(m, e, c, u)"
+      refute Enum.any?(igniter.warnings, &String.contains?(&1, path))
+    end
+
+    test "a name spelled from Elixir. keeps the prefix" do
+      code = """
+      defmodule LegacyApp.Prefixed do
+        alias LegacyApp.Brando
+
+        def store(m, e, c, u), do: Elixir.Brando.Upload.handle_upload(m, e, c, u)
+        def own, do: Brando.thing()
+      end
+      """
+
+      path = "lib/legacy_app/prefixed.ex"
+      igniter = migrate(@blueprint_054, %{path => code})
+      assert igniter.issues == []
+
+      expected = """
+      defmodule LegacyApp.Prefixed do
+        alias LegacyApp.Brando
+
+        def store(m, e, c, u), do: Elixir.Brando.Uploads.Store.handle_upload(m, e, c, u)
+        def own, do: Brando.thing()
+      end
+      """
+
+      assert source(igniter, path) == expected
+      assert_idempotent(igniter, path)
+    end
   end
 
   describe "image text reads" do
@@ -1091,6 +1950,14 @@ defmodule Mix.Tasks.Brando.Migrate55Test do
     refute Enum.any?(igniter.warnings, &String.contains?(&1, "Manual 0.54 decisions"))
     refute Enum.any?(igniter.warnings, &String.contains?(&1, "Brando.Type.Video"))
     refute Enum.any?(igniter.tasks, &match?({"igniter.update_gettext", _}, &1))
+  end
+
+  # `{line, module}` for each renamed module `mix brando.doctor` finds in `code`
+  defp doctor_findings(code) do
+    code
+    |> Code.string_to_quoted!()
+    |> Brando.Doctor.Checks.Deprecations.scan(%{})
+    |> Enum.map(&{&1.line, &1.call})
   end
 
   defp assert_idempotent(igniter, path) do
