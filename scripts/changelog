@@ -1,0 +1,196 @@
+#!/usr/bin/env bash
+# Checks and collates the changelog fragments in changelog.d/ (the format is in
+# changelog.d/README.md). Prints one summary line, or one line per problem.
+#
+#   scripts/changelog check     validate every fragment (mix check and CI)
+#   scripts/changelog collate   validate, then move every fragment into the
+#                               unreleased section of CHANGELOG.md
+#
+# Collating puts each section's fragments, in file name order, at the top of
+# the first heading of that section under the first `## ` heading, which must
+# say "Unreleased"; a section the release has no heading for yet gets one at
+# the end of the unreleased section. The fragments are deleted; commit the
+# result.
+#
+#   CHANGELOG_FILE       the changelog to collate into (default CHANGELOG.md)
+#   CHANGELOG_FRAGMENTS  the fragments directory (default changelog.d)
+set -uo pipefail
+
+# Section keys (the second-to-last part of a fragment's file name) and the
+# CHANGELOG headings they collate under, in the order the headings appear.
+keys="breaking improvements features fixes dependencies security"
+titles="Breaking Improvements Features Fixes Dependencies Security"
+
+usage() {
+  echo "usage: scripts/changelog check|collate" >&2
+  exit 1
+}
+
+root="$(cd "$(dirname "$0")/.." && pwd)"
+changelog="${CHANGELOG_FILE:-$root/CHANGELOG.md}"
+fragments="${CHANGELOG_FRAGMENTS:-$root/changelog.d}"
+
+[ $# -eq 1 ] || usage
+case "$1" in
+  check|collate) command="$1" ;;
+  -h|--help) awk 'NR > 1 && !/^#/ { exit } NR > 1 { sub(/^# ?/, ""); print }' "$0"; exit 0 ;;
+  *) usage ;;
+esac
+
+# Every fragment file, in collation order. Dotfiles and the README are not
+# fragments.
+list_fragments() {
+  [ -d "$fragments" ] || return 0
+  find "$fragments" -mindepth 1 -maxdepth 1 ! -name '.*' ! -name README.md -print |
+    sed 's|.*/||' | LC_ALL=C sort
+}
+
+# section_of <file name>: the section key, or nothing when the name is not
+# <name>.<section>.md with a known section.
+section_of() {
+  local name="$1" section
+  case "$name" in
+    *.md) ;;
+    *) return 0 ;;
+  esac
+  section="${name%.md}"
+  section="${section##*.}"
+  [ "${name%."$section".md}" != "$name" ] || return 0
+  case "${name%."$section".md}" in
+    ''|[!A-Za-z0-9]*|*[!A-Za-z0-9._-]*) return 0 ;;
+  esac
+  case " $keys " in
+    *" $section "*) echo "$section" ;;
+  esac
+}
+
+# check_text <path>: one "<path>: <problem>" line per problem with its text.
+check_text() {
+  awk -v path="$1" '
+    !/^[ \t]*$/ && !seen {
+      seen = 1
+      if ($0 !~ /^- /) print path ": the first line is not a list entry starting with \"- \""
+    }
+    /^ *(```|~~~)/ { fenced = !fenced; next }
+    !fenced && /^(   |  | )?#+([ \t]|$)/ {
+      print path ":" NR ": a heading; the file name sets the section, the text holds list entries"
+    }
+    END {
+      if (!seen) print path ": empty"
+      if (fenced) print path ": a code fence is not closed"
+    }
+  ' "$1"
+}
+
+validate() {
+  local name section problems count=0 failed=0
+  problems="$(
+    list_fragments | while IFS= read -r name; do
+      section="$(section_of "$name")"
+      if [ -z "$section" ]; then
+        echo "$fragments/$name: not named <name>.<section>.md with a section of: $keys"
+      elif [ ! -f "$fragments/$name" ]; then
+        echo "$fragments/$name: not a file"
+      else
+        check_text "$fragments/$name"
+      fi
+    done
+  )"
+  count="$(list_fragments | wc -l | tr -d ' ')"
+  if [ -n "$problems" ]; then
+    echo "$problems"
+    failed="$(echo "$problems" | sed 's/: .*//; s/:[0-9]*$//' | sort -u | wc -l | tr -d ' ')"
+    echo "changelog: $failed of $count fragment(s) need fixing (see changelog.d/README.md)" >&2
+    return 1
+  fi
+  fragment_count="$count"
+}
+
+fragment_count=0
+validate || exit 1
+
+if [ "$command" = check ]; then
+  echo "changelog: $fragment_count fragment(s) valid"
+  exit 0
+fi
+
+if [ "$fragment_count" -eq 0 ]; then
+  echo "changelog: no fragments to collate"
+  exit 0
+fi
+
+work="$(mktemp -d "${TMPDIR:-/tmp}/changelog.XXXXXX")"
+trap 'rm -rf "$work"' EXIT
+
+# One file per section: its fragments in name order, each without leading or
+# trailing blank lines, separated by one blank line.
+list_fragments | while IFS= read -r name; do
+  section="$(section_of "$name")"
+  [ -s "$work/$section" ] && echo >> "$work/$section"
+  awk '
+    /^[ \t]*$/ { if (started) blanks++; next }
+    { for (; blanks > 0; blanks--) print ""; started = 1; print }
+  ' "$fragments/$name" >> "$work/$section"
+done
+
+awk -v dir="$work" -v keys="$keys" -v titles="$titles" '
+  # Adds the sections the release has no heading for, at the end of it.
+  function flush(   i, added) {
+    for (i = 1; i <= n; i++) {
+      if (!(key[i] in text) || (key[i] in done)) continue
+      if (last != "") print ""
+      print "#### " title[i]
+      print ""
+      print text[key[i]]
+      last = "x"
+      done[key[i]] = 1
+      added = 1
+    }
+    return added
+  }
+  BEGIN {
+    n = split(keys, key, " ")
+    split(titles, title, " ")
+    for (i = 1; i <= n; i++) {
+      key_of[title[i]] = key[i]
+      file = dir "/" key[i]
+      if ((getline line < file) > 0) {
+        text[key[i]] = line
+        while ((getline line < file) > 0) text[key[i]] = text[key[i]] "\n" line
+        close(file)
+      }
+    }
+  }
+  /^## / && state == 0 {
+    if ($0 !~ /Unreleased/) { bad = 1; exit }
+    state = 1; print; last = $0; next
+  }
+  /^## / && state == 1 { if (flush()) print ""; state = 2 }
+  skip_blank { skip_blank = 0; if ($0 == "") next }
+  state == 1 && /^#### / {
+    heading = substr($0, 6)
+    sub(/[ \t]+$/, "", heading)
+    k = key_of[heading]
+    if (k != "" && (k in text) && !(k in done)) {
+      print; print ""; print text[k]; print ""
+      done[k] = 1; skip_blank = 1; last = ""
+      next
+    }
+  }
+  { print; last = $0 }
+  END {
+    if (bad || state == 0) exit 2
+    if (state == 1) flush()
+  }
+' "$changelog" > "$work/CHANGELOG.md"
+status=$?
+if [ "$status" -eq 2 ]; then
+  echo "changelog: the first ## heading in $changelog is not an Unreleased release; start one, then collate" >&2
+  exit 1
+elif [ "$status" -ne 0 ]; then
+  exit "$status"
+fi
+
+cat "$work/CHANGELOG.md" > "$changelog" || exit 1
+list_fragments | while IFS= read -r name; do rm -f "$fragments/$name"; done
+echo "changelog: collated $fragment_count fragment(s) into $(basename "$changelog")"
