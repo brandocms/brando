@@ -33,11 +33,9 @@ defmodule Brando.Worker.EntryPublisher do
            }
          } = job
        ) do
-    cond do
-      not current_revision_job?(job) -> :ok
-      in_trash?(schema, id) -> {:snooze, @trash_snooze_seconds}
-      true -> publish_revision(job, schema, id, revision, user_id)
-    end
+    if current_revision_job?(job),
+      do: publish_revision(job, schema, id, revision, user_id),
+      else: :ok
   end
 
   # Publish an entry at its publish_at, or deactivate it at its unpublish_at,
@@ -94,13 +92,6 @@ defmodule Brando.Worker.EntryPublisher do
     waiting == [job_id] and not after?(scheduled_at, DateTime.utc_now())
   end
 
-  # An entry in the trash is not published, as its publish date is not (the
-  # sweep leaves it until it is restored): its scheduled revision waits, and
-  # runs once the entry is back. Emptying the trash cancels the job.
-  defp in_trash?(schema, id) do
-    match?(%{deleted_at: %DateTime{}}, Brando.Repo.get(Module.concat(List.wrap(schema)), id))
-  end
-
   defp publish_revision(job, schema, id, revision, user_id) do
     user = publisher_user(user_id)
     now = DateTime.utc_now()
@@ -123,6 +114,12 @@ defmodule Brando.Worker.EntryPublisher do
 
         BrandoAdmin.LiveView.Listing.update_list_entries(schema)
         {:ok, new_entry}
+
+      # An entry in the trash is not published, as its publish date is not
+      # (the sweep leaves it until it is restored): the revision waits, and
+      # is published once the entry is back. Emptying the trash cancels it.
+      {:error, :in_trash} ->
+        {:snooze, @trash_snooze_seconds}
 
       {:error, reason} ->
         release_failed_revision_schedule(job, schema, id, revision)

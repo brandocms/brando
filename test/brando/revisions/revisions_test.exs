@@ -413,6 +413,22 @@ defmodule Brando.Revisions.RevisionsTest do
     assert published.status == :published
   end
 
+  # Checked under the entry's lock, so an entry trashed while the job starts
+  # is not published either.
+  test "publishing a revision of an entry in the trash is refused, changing nothing", %{user: user} do
+    {:ok, original} = Pages.create_page(Factory.params_for(:page, vars: [], status: :draft), user)
+    {:ok, changed} = Pages.update_page(original.id, %{title: "Current title"}, user)
+    {:ok, _} = Brando.Repo.soft_delete(changed)
+
+    assert {:error, :in_trash} = Revisions.set_entry_to_revision(Page, changed.id, 0, user, publish?: true)
+
+    page = Brando.Repo.get!(Page, changed.id)
+    assert page.title == "Current title"
+    assert page.status == :draft
+    assert {:ok, revisions} = Revisions.list_revision_metadata(Page, changed.id)
+    refute Enum.find(revisions, &(&1.revision == 0)).active
+  end
+
   test "manual activation cancels the revision's pending publishing job", %{user: user} do
     {:ok, original} = Pages.create_page(Factory.params_for(:page, vars: []), user)
     {:ok, changed} = Pages.update_page(original.id, %{title: "Later title"}, user)

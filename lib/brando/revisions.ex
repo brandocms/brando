@@ -287,7 +287,9 @@ defmodule Brando.Revisions do
   The restore is transactional, includes block associations, refreshes the
   content identifier, and atomically moves the active marker. Pass
   `publish?: true` when a scheduled job executes to force published status and
-  the current publication timestamp.
+  the current publication timestamp; it returns `{:error, :in_trash}`, changing
+  nothing, for an entry in the trash. A restore never moves the entry into or
+  out of the trash.
   """
   def set_entry_to_revision(entry_schema, entry_id, revision_number, user, opts \\ []) do
     Brando.Authorization.Boundary.run(user, :restore, entry_schema, fn user ->
@@ -313,6 +315,10 @@ defmodule Brando.Revisions do
           entry_schema
           |> Repo.get!(entry_id)
           |> Repo.preload(Brando.Blueprint.preloads_for(entry_schema))
+
+        # An entry in the trash is not published (a scheduled revision waits
+        # for its restore). Read under the lock, so trashing can't slip in.
+        if publish? and Map.get(current_entry, :deleted_at), do: Repo.rollback(:in_trash)
 
         restore_params = prepare_restore_params(target_entry, current_entry, publish?)
 
