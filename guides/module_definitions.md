@@ -524,7 +524,11 @@ a revision of every entry it changes first (History can restore it), re-syncs
 the blocks with the module, stamps their version, renders them and their
 entries, records the change in Activity, and moves editors who have an entry
 open onto the new rows. It needs the right to update the module and every
-entry. `Brando.Content.StaleBlocks` is the API both use.
+entry. Entries in the trash count as entries: they are listed, marked as in
+the trash, and get their revisions, so restoring one brings its content back
+through History. An entry whose schema keeps no revisions, such as a
+template, gets none; the review names it. `Brando.Content.StaleBlocks` is the
+API both use.
 
 ## Calling the API
 

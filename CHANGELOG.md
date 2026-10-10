@@ -1020,7 +1020,9 @@ production dump.
   before the confirmation. Resolving stores a revision of each entry first,
   re-syncs, stamps and renders the blocks, records the change in Activity and
   moves editors who have an entry open onto the new rows; it needs the right
-  to update the module and the entries. `mix brando.modules resolve --uid UID`
+  to update the module and the entries. Entries in the trash are among them,
+  marked as such; the review names entries that keep no revisions (templates),
+  which History cannot restore. `mix brando.modules resolve --uid UID`
   does the same from the terminal (a dry run until `--apply`, with `--drop
   KEY` and `--map OLD=NEW`), and `refresh` now says what keeps blocks stale
   and points there. See `Brando.Content.StaleBlocks` and "Blocks left on an

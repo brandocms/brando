@@ -81,6 +81,13 @@ msgstr[1] ""
 
 #: lib/brando_admin/live/content/stale_blocks_live.ex
 #, elixir-autogen, elixir-format
+msgid "%{count} block is not in any entry, so History cannot restore what changes in it."
+msgid_plural "%{count} blocks are not in any entry, so History cannot restore what changes in them."
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/brando_admin/live/content/stale_blocks_live.ex
+#, elixir-autogen, elixir-format
 msgid "%{count} block of %{module} is on an older version than the module's version %{version}. A module save keeps what the module no longer defines, so the block cannot be brought up to date until that is dropped or moved."
 msgid_plural "%{count} blocks of %{module} are on older versions than the module's version %{version}. A module save keeps what the module no longer defines, so the blocks cannot be brought up to date until that is dropped or moved."
 msgstr[0] ""
@@ -560,8 +567,8 @@ msgstr ""
 
 #: lib/brando_admin/live/content/stale_blocks_live.ex
 #, elixir-autogen, elixir-format
-msgid "%{count} value is dropped or replaced. A revision of each entry is stored first, so History can restore it."
-msgid_plural "%{count} values are dropped or replaced. A revision of each entry is stored first, so History can restore them."
+msgid "%{count} value is dropped or replaced."
+msgid_plural "%{count} values are dropped or replaced."
 msgstr[0] ""
 msgstr[1] ""
 
@@ -1199,6 +1206,25 @@ msgstr ""
 #: lib/brando_admin/components/form/module_props.ex
 #, elixir-autogen, elixir-format
 msgid "A reusable video value"
+msgstr ""
+
+#: lib/brando_admin/live/content/stale_blocks_live.ex
+#, elixir-autogen, elixir-format
+msgid "A revision of %{count} entry was stored first; History can restore it."
+msgid_plural "Revisions of %{count} entries were stored first; History can restore them."
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/brando_admin/live/content/stale_blocks_live.ex
+#, elixir-autogen, elixir-format
+msgid "A revision of %{count} of them is stored first, so History can restore it."
+msgid_plural "A revision of %{count} of them is stored first, so History can restore them."
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/brando_admin/live/content/stale_blocks_live.ex
+#, elixir-autogen, elixir-format
+msgid "A revision of each entry is stored first, so History can restore it."
 msgstr ""
 
 #: lib/brando_admin/live/content/stale_blocks_live.ex
@@ -7870,6 +7896,18 @@ msgstr ""
 msgid "History"
 msgstr ""
 
+#: lib/brando_admin/live/content/stale_blocks_live.ex
+#, elixir-autogen, elixir-format
+msgid "History cannot restore %{entries}: it keeps no revisions."
+msgid_plural "History cannot restore %{entries}: they keep no revisions."
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/brando_admin/live/content/stale_blocks_live.ex
+#, elixir-autogen, elixir-format
+msgid "History cannot restore all of it; see the review."
+msgstr ""
+
 #: lib/brando_admin/live/sites/seo_live.ex
 #, elixir-autogen, elixir-format
 msgid "Hits"
@@ -8202,6 +8240,11 @@ msgstr ""
 #: lib/brando_admin/components/form/var_layout.ex
 #, elixir-autogen, elixir-format
 msgid "In the block"
+msgstr ""
+
+#: lib/brando_admin/live/content/stale_blocks_live.ex
+#, elixir-autogen, elixir-format
+msgid "In the trash"
 msgstr ""
 
 #: lib/brando_admin/live/content/stale_blocks_live.ex
@@ -11139,11 +11182,6 @@ msgstr ""
 #: lib/brando_admin/live/content/stale_blocks_live.ex
 #, elixir-autogen, elixir-format
 msgid "Nothing that holds a value is dropped or replaced."
-msgstr ""
-
-#: lib/brando_admin/live/content/stale_blocks_live.ex
-#, elixir-autogen, elixir-format
-msgid "Nothing that holds a value is dropped or replaced. A revision of each entry is stored first."
 msgstr ""
 
 #: lib/brando_admin/live/sites/seo_live.ex
@@ -17099,6 +17137,13 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "This change affects existing content"
 msgstr ""
+
+#: lib/brando_admin/live/content/stale_blocks_live.ex
+#, elixir-autogen, elixir-format
+msgid "This changes %{count} entry."
+msgid_plural "This changes %{count} entries."
+msgstr[0] ""
+msgstr[1] ""
 
 #: lib/brando_admin/live/content/stale_blocks_live.ex
 #, elixir-autogen, elixir-format

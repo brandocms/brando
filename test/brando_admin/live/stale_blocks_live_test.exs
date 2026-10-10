@@ -7,6 +7,7 @@ defmodule BrandoAdmin.StaleBlocksLiveTest do
   import Ecto.Query, only: [from: 2]
 
   alias Brando.Content.Block
+  alias Brando.Content.Template
   alias Brando.Content.Var
   alias Brando.Pages.Page
 
@@ -132,6 +133,54 @@ defmodule BrandoAdmin.StaleBlocksLiveTest do
 
     assert has_element?(view, ".utils-feedback.error", "changed after you reviewed them")
     assert var(first, "title").value == "Typed since"
+  end
+
+  test "says which owners are in the trash, and what History cannot restore", %{conn: conn} = c do
+    [first, second, third] = c.blocks
+    identity = c.identity |> Ecto.Changeset.change(deleted_at: DateTime.utc_now(:second)) |> Repo.update!()
+
+    # the second block is in no entry; the third is a template's, which keeps no revisions
+    Repo.delete_all(from(b in Page.Blocks, where: b.block_id in ^[second.id, third.id]))
+    template = Repo.insert!(%Template{name: "Kulturmal", namespace: "pages", creator_id: c.me.id})
+    third |> Ecto.Changeset.change(source: Template.Blocks) |> Repo.update!()
+    Repo.insert!(%Template.Blocks{entry_id: template.id, block_id: third.id, sequence: 0})
+
+    {:ok, view, _} = live(conn, path(c))
+
+    assert has_element?(
+             view,
+             ~s(#stale-block-#{first.id} .stale-block-entry.is-trashed a[href="/admin/pages?status=deleted"]),
+             "Identity"
+           )
+
+    assert has_element?(view, "#stale-block-#{second.id} .stale-block-no-entry")
+    assert has_element?(view, "#stale-block-#{third.id} .stale-block-entry")
+    refute has_element?(view, "#stale-block-#{third.id} .stale-block-no-entry")
+
+    view |> form("#stale-blocks-form", %{"bulk" => %{"var:title" => "drop"}}) |> render_change()
+    view |> form("#stale-blocks-form") |> render_submit()
+
+    assert has_element?(view, "#stale-blocks-review .stale-blocks-history")
+    assert has_element?(view, "#stale-blocks-review .stale-blocks-no-history", "##{template.id}")
+    refute has_element?(view, "#stale-blocks-review .stale-blocks-no-history", "Identity")
+    assert has_element?(view, "#stale-blocks-review .stale-blocks-no-owner")
+
+    view |> element("#stale-blocks-resolve") |> render_click()
+
+    assert has_element?(view, ".stale-blocks-done .stale-blocks-history")
+    assert has_element?(view, ".stale-blocks-done .stale-blocks-no-history", "##{template.id}")
+
+    for block <- c.blocks, do: assert(var(block, "title") == nil)
+
+    revisions = fn type, id ->
+      Repo.aggregate(
+        from(r in Brando.Revisions.Revision, where: r.entry_type == ^to_string(type) and r.entry_id == ^id),
+        :count
+      )
+    end
+
+    assert revisions.(Page, identity.id) >= 2
+    assert revisions.(Template, template.id) == 0
   end
 
   test "an editor with the entry open moves onto the resolved rows, keeping its unsaved work", %{conn: conn} = c do
