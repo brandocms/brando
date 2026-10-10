@@ -690,6 +690,15 @@ defmodule Brando.Notes do
     MapSet.new(claimed)
   end
 
+  @doc "Locks `mentions` for the transaction around the caller, in id order, as claiming them in several steps needs."
+  def lock_mentions([]), do: :ok
+
+  def lock_mentions(mentions) do
+    ids = Enum.map(mentions, & &1.id)
+    Repo.all(from(m in Mention, where: m.id in ^ids, order_by: m.id, lock: "FOR UPDATE", select: m.id))
+    :ok
+  end
+
   @doc "Marks those of `mentions` not emailed yet as emailed at `now`."
   def mark_emailed(mentions, now) do
     claim_mentions(mentions, now)

@@ -284,6 +284,10 @@ defmodule Brando.Notifications.Digest do
 
     {:ok, routes} =
       Repo.transaction(fn ->
+        # Locked in one order first, deliveries then mentions: claimed in
+        # three updates, rows taken in different orders by two jobs could
+        # deadlock them
+        lock_rows(waiting, mentions)
         sent = claim(access[:ok] || [], "succeeded", now)
         cancelled = claim(access[:denied] || [], "cancelled", now, "recipient_unavailable")
         failed = claim(access[:unchecked] || [], "failed", now, "recipient_check_failed")
@@ -416,6 +420,15 @@ defmodule Brando.Notifications.Digest do
       )
 
     MapSet.new(claimed)
+  end
+
+  defp lock_rows(deliveries, mentions) do
+    ids = Enum.map(deliveries, & &1.id)
+
+    if ids != [],
+      do: Repo.all(from(d in Delivery, where: d.id in ^ids, order_by: d.id, lock: "FOR UPDATE", select: d.id))
+
+    Notes.lock_mentions(mentions)
   end
 
   defp routes(deliveries, claimed), do: for(d <- deliveries, MapSet.member?(claimed, d.id), do: d.route_id)
