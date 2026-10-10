@@ -420,6 +420,38 @@ defmodule BrandoAdmin.EditSessionSavesTest do
     assert length(rows(c.identity)) == 3
   end
 
+  # Review: an editor coming back to a session that moved onto other rows
+  # reads its rows again before it builds the copy of a removed block it
+  # worked in. Built over the new rows, which lack the block, the copy lost
+  # what the editor had not changed in it (its ref's name).
+  test "a block removed while the session was away comes back whole for the editor with unsaved work in it", c do
+    [_first, second | _] = c.uids
+    [ref] = c.identity |> rows() |> Enum.find(&(&1.block.uid == second)) |> then(& &1.block.refs)
+    b = open(c.other_conn, c.identity)
+    type(b, second, "<p>B's unsaved work</p>")
+    await(fn -> session_state(c.identity).diffs[second] not in [nil, %{}] end)
+
+    # B handles the session's exit late: the block goes, and a fresh editor
+    # seeds the new session from the rows without it, first.
+    :sys.suspend(b.pid)
+    old = session_pid(c.identity)
+    Process.exit(old, :kill)
+    await(fn -> session_pid(c.identity) != old end)
+
+    {:ok, proposal} = Proposals.propose([%DeleteBlock{target: {Page, c.identity.id}, block_uid: second}], c.user)
+    {:ok, _} = Proposals.approve(proposal.id, proposal.version, c.user)
+    {:ok, _} = Proposals.apply(proposal.id, proposal.version, c.user)
+
+    _a = open(c.conn, c.identity)
+    :sys.resume(b.pid)
+
+    kept = second <> "-kept"
+    await(fn -> session_state(c.identity).statuses[kept] == :inserted end)
+    await(fn -> shown_text(b, kept) == "<p>B's unsaved work</p>" end)
+    assert [%{"name" => name}] = session_state(c.identity).diffs[kept]["block"]["refs"]
+    assert name == ref.name
+  end
+
   # Review of #3055: the block came back after its rescue (the proposal was
   # undone) while the first copy stayed, and work in it was then removed
   # again. The first copy settled the second rescue, so nothing was

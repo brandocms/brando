@@ -754,6 +754,8 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     # the database first).
     held = Keyword.get(opts, :held, base)
     join_opts = [user_id: user.id, read_only: not may_update?(socket)]
+    # the rows `held` was built on, for the copies of removed blocks
+    loaded = socket.assigns.entry_blocks
 
     {socket, result} =
       case EditSession.join(ref, field, {base, held}, [rebase: Keyword.get(opts, :rebase, false)] ++ join_opts) do
@@ -776,7 +778,10 @@ defmodule BrandoAdmin.Components.Form.BlockField do
         # Work only this editor held that the session could not take: blocks
         # another write removed while it was away. It brings them back itself.
         rescues = Map.get(info, :rescues, [])
-        payloads = rescue_payloads(socket, rescues, info.state, MapSet.new(Ops.edited(socket.assigns.block_ops)))
+        # A removed block's copy is built over the rows this editor held it
+        # on: the rows read again for the join lack the block.
+        held_rows = assign(socket, :entry_blocks, loaded)
+        payloads = rescue_payloads(held_rows, rescues, info.state, MapSet.new(Ops.edited(socket.assigns.block_ops)))
 
         socket
         |> assign(:session_base, Ops.from_entry_blocks(socket.assigns.entry_blocks || []))
