@@ -314,10 +314,21 @@ end
 # the CDN entirely.
 Mox.defmock(Brando.CDN.Client.Mock, for: Brando.CDN.Client)
 
-ExUnit.start()
+# `render_async/2`, `assert_patch/2`, `assert_push/3` and friends default to
+# this timeout. ExUnit's 100 ms flaked on loaded CI runners; a longer one only
+# slows an assertion that fails anyway. `refute_receive` keeps its 100 ms.
+ExUnit.start(assert_receive_timeout: 1_000)
 
-Brando.Cache.Identity.set()
-Brando.Cache.SEO.set()
+# priv/repo/seeds.exs creates the identity and SEO rows that the Permalink,
+# IdentityServices and SEO tests read. These two cache fills are the only
+# queries the check needs.
+if Brando.Cache.Identity.set() == %{} or Brando.Cache.SEO.set() == %{} do
+  Mix.raise(
+    "The test database #{BrandoIntegration.Repo.config()[:database]} is not seeded; " <>
+      "rebuild it with `MIX_ENV=test mix ecto.reset` (drop, create, migrate, seed)."
+  )
+end
+
 Brando.Cache.Globals.set()
 
 fixture_src = Path.expand(".", __DIR__) <> "/fixtures/sample.jpg"
