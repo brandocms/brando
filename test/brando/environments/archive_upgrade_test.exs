@@ -536,6 +536,41 @@ defmodule Brando.Environments.ArchiveUpgradeTest do
       assert "brando_210_add_crawler_policy_and_snippet_limits" in Enum.map(replays, & &1.name)
     end
 
+    # An application keeps the version `mix brando.gen.migrations` copied,
+    # whatever Brando has changed in the template since
+    test "but not a copy of an earlier version of the template", %{
+      archive: archive,
+      directory: directory,
+      copied: copied
+    } do
+      [copy] = Path.wildcard(Path.join(directory, "*_brando_201_*.exs"))
+      template = path("brando_201_add_seo_basics.exs")
+
+      # As of 0157991c7, which looped over every environment itself
+      earlier = File.read!(history("brando_201_add_seo_basics", "1b04dd7864c2.exs"))
+      refute ArchiveUpgrade.same_code?(earlier, File.read!(template))
+      File.write!(copy, String.replace(earlier, "Brando.Repo.Migrations.", "MyApp.Repo.Migrations."))
+
+      assert {:ok, replays} = ArchiveUpgrade.plan(archive)
+      assert length(replays) == length(loops(copied))
+
+      # The current template is what replays
+      assert %{template: ^template} = Enum.find(replays, &(&1.name == "brando_201_add_seo_basics"))
+    end
+
+    test "and a changed copy of an earlier version", %{archive: archive, directory: directory} do
+      [copy] = Path.wildcard(Path.join(directory, "*_brando_201_*.exs"))
+      earlier = File.read!(history("brando_201_add_seo_basics", "1b04dd7864c2.exs"))
+
+      File.write!(
+        copy,
+        String.replace(earlier, "  def up do\n", "  def up do\n    execute \"UPDATE pages SET title = trim(title)\"\n")
+      )
+
+      assert {:error, {:archive_behind, {:migrations, ["brando_201_add_seo_basics (differs from Brando's template)"]}}} =
+               ArchiveUpgrade.plan(archive)
+    end
+
     test "but finds migrations in subdirectories", %{archive: archive, directory: directory, copied: copied} do
       File.mkdir_p!(Path.join(directory, "brando"))
 

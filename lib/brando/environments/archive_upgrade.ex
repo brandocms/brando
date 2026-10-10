@@ -18,16 +18,18 @@ defmodule Brando.Environments.ArchiveUpgrade do
        files and classified:
 
          * a copy of one of Brando's templates that can run for one
-           environment is replayed, as long as it does what the template
-           does (compared as code: layout, comments, docs and module names
-           do not count);
+           environment is replayed, as long as it is one of the versions of
+           that template Brando has shipped (compared as code: layout,
+           comments, docs and module names do not count; see
+           `shipped_versions/1`);
          * one that does not touch the environment schemas is left alone;
          * anything else refuses the restore: a migration that touches them
            and cannot be replayed (Brando's older ones, or the application's
            own), a copy of a replayable template that the application changed
            (`"<name> (differs from Brando's template)"`: the replay runs the
-           template, so a backfill added to the copy would be skipped), a
-           version without a file, or a missing migrations directory.
+           current template, so a backfill added to the copy would be
+           skipped), a version without a file, or a missing migrations
+           directory.
 
        Versions recorded before the archive was taken, or with no time (as
        loaded from a structure dump), are not looked at, so migration files
@@ -164,11 +166,12 @@ defmodule Brando.Environments.ArchiveUpgrade do
             same_second? = NaiveDateTime.compare(NaiveDateTime.truncate(inserted_at, :second), taken_at) == :eq
             {:replay, %{version: version, name: name, template: template, same_second?: same_second?}}
 
-          # The replay would run the template, and what the application
-          # changed in its copy (a data backfill, say) would be skipped
+          # The replay would run the current template, and what the
+          # application changed in its copy (a data backfill, say) would be
+          # skipped
           single_environment?(template) ->
             Logger.warning(
-              "[Brando.Environments] #{path} differs from Brando's template #{template}, " <>
+              "[Brando.Environments] #{path} is not a version of Brando's template #{template}, " <>
                 "which a restored archive would run in its place; the restore is refused"
             )
 
@@ -191,12 +194,40 @@ defmodule Brando.Environments.ArchiveUpgrade do
 
   defp single_environment?(template), do: File.regular?(template) and File.read!(template) =~ @single_environment
 
-  # Whether the application's copy does what the template does. Compared as
-  # code, as `Brando.Migration.TemplateDrift` compares copies, and also
-  # without trailing whitespace, docs or module names: the copy is the
-  # template as `mix brando.gen.migrations` wrote it, but older versions put
-  # it in the application's namespace, and the replay renames it anyway.
-  defp copy_of?(path, template), do: as_replayed(File.read!(path)) == as_replayed(File.read!(template))
+  @doc """
+  Every version of the single-environment `template` Brando has shipped,
+  the current one included: the files in
+  `priv/templates/brando.upgrade/history/<name>/`, beside the templates
+  directory.
+
+  An application's copy is whichever version was current when
+  `mix brando.gen.migrations` copied it, and is never updated. A restore
+  replays the current template whichever version the application ran, since
+  the earlier ones changed every environment and cannot run for one; what
+  it must not do is replay over a copy the application changed. So a
+  template whose code changes keeps its earlier versions here, and a test
+  fails until the new one is added too.
+  """
+  @spec shipped_versions(Path.t()) :: [Path.t()]
+  def shipped_versions(template) do
+    name = Path.basename(template, ".exs")
+    history = Path.join([template |> Path.dirname() |> Path.dirname(), "history", name])
+    [template | history |> Path.join("*.exs") |> Path.wildcard() |> Enum.sort()]
+  end
+
+  @doc """
+  Whether two migrations' sources have the same code. Layout, comments,
+  trailing whitespace, docs and module names do not count: older versions of
+  `mix brando.gen.migrations` put the copy in the application's namespace,
+  and the replay renames the module anyway.
+  """
+  @spec same_code?(String.t(), String.t()) :: boolean()
+  def same_code?(source, other), do: as_replayed(source) == as_replayed(other)
+
+  defp copy_of?(path, template) do
+    copy = as_replayed(File.read!(path))
+    Enum.any?(shipped_versions(template), &(as_replayed(File.read!(&1)) == copy))
+  end
 
   defp as_replayed(code) do
     code
