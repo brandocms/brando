@@ -26,6 +26,7 @@ defmodule BrandoAdmin.Components.Form do
   use BrandoAdmin.Translator
 
   use Gettext, backend: Brando.Gettext
+  use Brando.Tracing.Decorator
 
   import Ecto.Changeset
   import Phoenix.LiveView.TagEngine
@@ -39,6 +40,7 @@ defmodule BrandoAdmin.Components.Form do
   alias Brando.EditSession
   alias Brando.Images
   alias Brando.LivePreview
+  alias Brando.Tracing
   alias Brando.Villain
   alias BrandoAdmin.Components.Button
   alias BrandoAdmin.Components.Content
@@ -1410,6 +1412,10 @@ defmodule BrandoAdmin.Components.Form do
     |> finish_form_blocks()
   end
 
+  @decorate span("brando.form.finish_fields",
+              schema: [:socket, :assigns, :schema],
+              entry_id: [:socket, :assigns, :entry_id]
+            )
   defp finish_form_fields(socket) do
     socket
     # The entry as it was read, before recovery or deliveries change it: the
@@ -1424,6 +1430,10 @@ defmodule BrandoAdmin.Components.Form do
   end
 
   # Everything that reads the entry's blocks.
+  @decorate span("brando.form.finish_blocks",
+              schema: [:socket, :assigns, :schema],
+              entry_id: [:socket, :assigns, :entry_id]
+            )
   defp finish_form_blocks(socket) do
     socket
     |> maybe_assign_block_map()
@@ -1498,6 +1508,10 @@ defmodule BrandoAdmin.Components.Form do
   @doc "The most blocks an entry opens with in one step, see `open_entry/1`."
   def light_block_limit, do: @light_block_limit
 
+  @decorate span("brando.form.open_entry",
+              schema: [:socket, :assigns, :schema],
+              entry_id: [:socket, :assigns, :entry_id]
+            )
   defp open_entry(socket) do
     %{schema: schema, form_blueprint: form_blueprint} = socket.assigns
 
@@ -1524,7 +1538,15 @@ defmodule BrandoAdmin.Components.Form do
 
   defp open_with_blocks_counted(%{assigns: %{schema: schema}} = socket, entry) do
     counts = Blocks.count_entry_blocks_by_field(schema, entry.id)
-    load_blocks = fn -> Brando.Repo.preload(entry, Blocks.preloads_for(schema)) end
+    attributes = %{"brando.schema": schema, "brando.entry_id": entry.id, "brando.block_count": block_total(counts)}
+
+    load_blocks = fn ->
+      Tracing.span("brando.form.load_blocks", attributes, fn ->
+        Brando.Repo.preload(entry, Blocks.preloads_for(schema))
+      end)
+    end
+
+    Tracing.set_attributes(%{"brando.block_count": block_total(counts), "brando.form.light": light_entry?(counts)})
 
     if light_entry?(counts) do
       entry_opened(socket, load_blocks.())
@@ -1563,7 +1585,9 @@ defmodule BrandoAdmin.Components.Form do
     |> start_async(:entry_load, fn -> :not_found end)
   end
 
-  defp light_entry?(counts), do: counts |> Map.values() |> Enum.sum() <= @light_block_limit
+  defp light_entry?(counts), do: block_total(counts) <= @light_block_limit
+
+  defp block_total(counts), do: counts |> Map.values() |> Enum.sum()
 
   defp entry_opened(socket, entry) do
     socket
@@ -1580,7 +1604,10 @@ defmodule BrandoAdmin.Components.Form do
   # A missing entry is an expected answer, not a failure, so it comes back as
   # `:not_found`. `skip_blocks: true` leaves out the block preloads, which a
   # custom form query can't (it passes through untouched).
+  @decorate span("brando.form.fetch_entry", schema: :schema, entry_id: [:source, :entry_id])
   defp fetch_entry(%{schema: schema, form_blueprint: form_blueprint} = source, opts) do
+    Tracing.set_attributes(%{"brando.form.skip_blocks": Keyword.get(opts, :skip_blocks, false)})
+
     query_params =
       source.entry_id
       |> maybe_query(form_blueprint)
@@ -2015,6 +2042,7 @@ defmodule BrandoAdmin.Components.Form do
   # Also returns the fields whose value was kept over the browser's old form,
   # sent before another editor's change reached it (`drop_echoes/4`).
   # `target` is the entry field the event names.
+  @decorate span("brando.form.cast", schema: [:socket, :assigns, :schema], entry_id: [:entry, :id])
   defp cast_entry_edit(socket, entry, params, target) do
     %{schema: schema, current_user: current_user} = socket.assigns
     owned = owned_assets(socket)
@@ -3117,6 +3145,7 @@ defmodule BrandoAdmin.Components.Form do
       # The write that answers this `b:submit` carries its token; a save
       # that wrote already leaves a later one stale (`"save_form"`).
       token = System.unique_integer([:positive])
+      Tracing.set_attributes(%{"brando.form.collect_ms": collect_ms(socket.assigns[:save_collecting_since])})
 
       socket
       |> assign(:all_blocks_received?, true)
@@ -4588,6 +4617,10 @@ defmodule BrandoAdmin.Components.Form do
      })}
   end
 
+  @decorate span("brando.form.save",
+              schema: [:socket, :assigns, :schema],
+              entry_id: [:socket, :assigns, :entry_id]
+            )
   def handle_event(
         "save",
         params,
@@ -4621,6 +4654,7 @@ defmodule BrandoAdmin.Components.Form do
     singular = schema.__naming__().singular
     context = schema.__modules__().context
     mutation_type = (get_field(changeset, :id) && :update) || :create
+    Tracing.set_attributes(%{"brando.mutation": mutation_type})
 
     send(self(), {:progress_popup, "Associating block fields..."})
 
@@ -4685,6 +4719,10 @@ defmodule BrandoAdmin.Components.Form do
      |> assign(:processing, true)}
   end
 
+  @decorate span("brando.form.save",
+              schema: [:socket, :assigns, :schema],
+              entry_id: [:socket, :assigns, :entry_id]
+            )
   def handle_event(
         "save",
         params,
@@ -5877,6 +5915,11 @@ defmodule BrandoAdmin.Components.Form do
 
   defp upload_file_count(_count), do: 0
 
+  @decorate span("brando.form.after_save",
+              schema: [:save, :schema],
+              entry_id: [:entry, :id],
+              save_target: [:save, :save_redirect_target]
+            )
   defp saved_entry_with_blocks(socket, entry, save) do
     %{schema: schema, current_user: current_user, mutation_type: mutation_type} = save
     translated_singular = Brando.Blueprint.get_singular(schema)
@@ -6291,6 +6334,9 @@ defmodule BrandoAdmin.Components.Form do
     end
   end
 
+  defp collect_ms(nil), do: nil
+  defp collect_ms(since), do: System.monotonic_time(:millisecond) - since
+
   defp collect_for_save(socket) do
     fetch_transformer_data(socket, :save)
     send(self(), {:progress_popup, "Saving..."})
@@ -6328,12 +6374,22 @@ defmodule BrandoAdmin.Components.Form do
     assign(socket, :block_changesets, Map.new(blocks, &{&1.name, nil}))
   end
 
+  @decorate span("brando.form.preview_update",
+              schema: [:socket, :assigns, :schema],
+              entry_id: [:socket, :assigns, :entry_id],
+              "preview.mode": :mode
+            )
   defp render_preview_update(%{assigns: %{frontend_edit: %{}}} = socket, mode, block_changesets) do
     changeset = assoc_all_block_fields(block_changesets, socket.assigns.form.source)
     FrontendEditor.replace_fields(socket, changeset, mode)
     socket
   end
 
+  @decorate span("brando.form.preview_update",
+              schema: [:socket, :assigns, :schema],
+              entry_id: [:socket, :assigns, :entry_id],
+              "preview.mode": :mode
+            )
   defp render_preview_update(socket, mode, block_changesets) do
     changeset = assoc_all_block_fields(block_changesets, socket.assigns.form.source)
 
@@ -6486,6 +6542,11 @@ defmodule BrandoAdmin.Components.Form do
 
   # A synchronized translation is checked against the version its editor
   # worked from before it is written (`Brando.Translations.check_target_save/4`).
+  @decorate span("brando.form.save_entry",
+              schema: [:socket, :assigns, :schema],
+              entry_id: [:changeset, :data, :id],
+              mutation: :mutation_type
+            )
   defp save_entry(socket, context, mutation_type, singular, changeset) do
     entry_id = get_field(changeset, :id)
     user = socket.assigns.current_user
@@ -6576,7 +6637,10 @@ defmodule BrandoAdmin.Components.Form do
     socket
   end
 
+  @decorate span("brando.form.assoc_blocks")
   defp assoc_all_block_fields(block_changesets, changeset) do
+    Tracing.set_attributes(%{"brando.field_count": map_size(block_changesets)})
+
     Enum.reduce(block_changesets, changeset, fn {field_name, block_cs}, updated_changeset ->
       updated_block_cs =
         block_cs
@@ -7097,7 +7161,10 @@ defmodule BrandoAdmin.Components.Form do
     |> Map.drop(blocks_field_names)
   end
 
+  @decorate span("brando.form.render_blocks", entry_id: [:entry, :id])
   def render_blocks_for_entry(block_map, changeset, entry) do
+    Tracing.set_attributes(%{"brando.schema": changeset.data.__struct__, "brando.field_count": length(block_map)})
+
     Enum.reduce(block_map, changeset, fn {block_field_name, _schema, _entry_blocks, _opts}, updated_changeset ->
       entry_field_name = :"entry_#{block_field_name}"
       rendered_field_name = :"rendered_#{block_field_name}"

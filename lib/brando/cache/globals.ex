@@ -4,6 +4,8 @@ defmodule Brando.Cache.Globals do
 
   Globals get stored as a map with a key path
   """
+  use Brando.Tracing.Decorator
+
   alias Brando.Cache
   alias Brando.Sites
   alias Brando.Utils
@@ -28,6 +30,7 @@ defmodule Brando.Cache.Globals do
   Set initial globals cache. Called on startup
   """
   @spec set :: map()
+  @decorate span("brando.cache.set_globals")
   def set do
     {:ok, global_sets} = Sites.list_global_sets()
     global_map = process_globals(global_sets)

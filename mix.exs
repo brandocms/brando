@@ -337,6 +337,7 @@ defmodule Brando.Mixfile do
 
       # tracing
       {:opentelemetry_api, "~> 1.4"},
+      {:opentelemetry, "~> 1.5", only: :test},
 
       # Dev dependencies
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},

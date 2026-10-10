@@ -34,7 +34,11 @@ defmodule Brando.Sitemap do
   To generate an initial sitemap, call `Brando.Sitemap.generate_sitemap/0`
   """
 
+  use Brando.Tracing.Decorator
+
   require Logger
+
+  alias Brando.Tracing
 
   @doc """
   Convenience macro for creating a sitemap function
@@ -128,7 +132,11 @@ defmodule Brando.Sitemap do
     * `:gzip` (default: `true`) - Sets whether the files are gzipped
 
   """
-  def generate_sitemap(opts \\ []) do
+  # Not decorated directly: its implicit `rescue` would become a second span.
+  @decorate span("brando.sitemap.generate")
+  def generate_sitemap(opts \\ []), do: do_generate_sitemap(opts)
+
+  defp do_generate_sitemap(opts) do
     sitemap_module = Brando.web_module(Sitemap)
     sitemap_functions = sitemap_module.__info__(:functions)
 
@@ -155,6 +163,7 @@ defmodule Brando.Sitemap do
       |> Sitemapper.generate(opts)
       |> Sitemapper.persist(opts)
       |> Enum.to_list()
+      |> tap(&Tracing.set_attributes(%{"brando.file_count": length(&1)}))
     end)
   rescue
     UndefinedFunctionError ->

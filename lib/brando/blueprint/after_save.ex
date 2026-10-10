@@ -14,12 +14,14 @@ defmodule Brando.Blueprint.AfterSave do
   Blueprints' compile-connected component. Nothing compiles against this
   module; it is only called when an entry has been saved.
   """
+  use Brando.Tracing.Decorator
 
   @doc """
   Runs the traits' after-save callbacks for `entry` of `schema` and returns
   their results, as `Brando.Trait.run_trait_after_save_callbacks/4` does.
   """
   @spec run(module(), struct(), Ecto.Changeset.t(), map() | atom()) :: list()
+  @decorate span("brando.after_save", schema: :schema, entry_id: [:entry, :id])
   def run(schema, entry, changeset, user) do
     results = Brando.Trait.run_trait_after_save_callbacks(schema, entry, changeset, user)
     # Notes anchored to blocks follow what was saved: detached when their

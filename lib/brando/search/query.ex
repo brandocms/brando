@@ -16,11 +16,14 @@ defmodule Brando.Search.Query do
   with the text, then by `ts_rank_cd`; then published before pending, draft
   and disabled entries, then the most recently updated.
   """
+  use Brando.Tracing.Decorator
+
   import Ecto.Query
 
   alias Brando.Repo
   alias Brando.Search.Document
   alias Brando.Search.Highlight
+  alias Brando.Tracing
 
   @max_words 8
   # The first part of the body the snippet is taken from
@@ -89,7 +92,15 @@ defmodule Brando.Search.Query do
     end
   end
 
+  @decorate span("brando.search.query")
   defp run_parsed(base, text, parsed, opts) do
+    Tracing.set_attributes(%{
+      "brando.search.mode": Atom.to_string(elem(parsed, 0)),
+      "brando.search.sort": to_string(Keyword.get(opts, :sort, :relevance)),
+      "brando.search.limit": Keyword.get(opts, :limit, 20),
+      "brando.search.offset": Keyword.get(opts, :offset, 0)
+    })
+
     matches = base |> where(^matches(parsed)) |> filter(:language, opts[:language]) |> filter(:status, opts[:status])
 
     facets =
@@ -110,6 +121,7 @@ defmodule Brando.Search.Query do
         do: [],
         else: page(matches, text, parsed, opts)
 
+    Tracing.set_attributes(%{"brando.search.total": total, "brando.result_count": length(rows)})
     %{rows: rows, total: total, facets: facets}
   end
 

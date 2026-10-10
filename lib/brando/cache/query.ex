@@ -17,6 +17,10 @@ defmodule Brando.Cache.Query do
   create, delete or changeset update also goes out after the commit (an
   update by id sends none).
   """
+  use Brando.Tracing.Decorator
+
+  alias Brando.Tracing
+
   @type changeset :: Ecto.Changeset.t()
   @cache_module Application.compile_env(:brando, :cache_module, Cachex)
 
@@ -71,6 +75,7 @@ defmodule Brando.Cache.Query do
   defp get_from_cache(key), do: @cache_module.get(:query, key)
 
   @spec evict({:ok, map()} | {:error, changeset}) :: {:ok, map()} | {:error, changeset}
+  @decorate span("brando.cache.evict", entry_id: [:entry, :id])
   def evict({:ok, entry}) when is_map(entry) do
     source = entry.__struct__.__schema__(:source)
 
@@ -83,14 +88,17 @@ defmodule Brando.Cache.Query do
       evict_single(source, parent_id)
     end
 
+    Tracing.set_attributes(%{"brando.source": source})
     {:ok, entry}
   end
 
   def evict({:error, changeset}), do: {:error, changeset}
 
   # from insert!, update!, etc.
+  @decorate span("brando.cache.evict", entry_id: [:entry, :id])
   def evict(entry) when is_map(entry) do
     source = entry.__struct__.__schema__(:source)
+    Tracing.set_attributes(%{"brando.source": source})
     evict_list(source)
     evict_single(source, entry.id)
     entry

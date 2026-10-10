@@ -18,7 +18,8 @@ defmodule E2eProject.MixProject do
       releases: [
         e2e_project: [
           include_executables_for: [:unix],
-          steps: [:assemble, :tar]
+          steps: [:assemble, :tar],
+          applications: [opentelemetry_exporter: :permanent, opentelemetry: :temporary]
         ]
       ]
     ]
@@ -89,7 +90,13 @@ defmodule E2eProject.MixProject do
       # {:brando, github: "brandocms/brando"}
       {:brando, path: "../"},
       {:brando_json_api, path: "../../brando_json_api"},
-      {:brando_graphql, path: "../../brando_graphql"}
+      {:brando_graphql, path: "../../brando_graphql"},
+      {:opentelemetry_exporter, "~> 1.6"},
+      {:opentelemetry, "~> 1.3"},
+      {:opentelemetry_api, "~> 1.2"},
+      {:opentelemetry_phoenix, "~> 2.0"},
+      {:opentelemetry_ecto, "~> 1.2"},
+      {:opentelemetry_bandit, "~> 0.3.0"}
     ]
   end
 

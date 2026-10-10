@@ -18,6 +18,7 @@ defmodule Brando.Revisions do
   """
 
   use Brando.Query
+  use Brando.Tracing.Decorator
 
   import Ecto.Query
 
@@ -27,6 +28,7 @@ defmodule Brando.Revisions do
   alias Brando.Query
   alias Brando.Repo
   alias Brando.Revisions.Revision
+  alias Brando.Tracing
   alias Brando.Utils
 
   @type changeset :: Ecto.Changeset.t()
@@ -111,6 +113,7 @@ defmodule Brando.Revisions do
   @spec create_revision(map(), user(), revision_active()) :: {:ok, revision()} | {:error, term()}
   def create_revision(entry, user, set_active \\ true)
 
+  @decorate span("brando.revisions.create", schema: :entry_type, entry_id: :entry_id, revision_active: :set_active)
   def create_revision(%{__struct__: entry_type, id: entry_id} = entry, user, set_active)
       when not is_nil(entry_id) do
     entry_type_binary = to_string(entry_type)
@@ -324,7 +327,10 @@ defmodule Brando.Revisions do
   nothing, for an entry in the trash. A restore never moves the entry into or
   out of the trash.
   """
+  @decorate span("brando.revisions.restore", schema: :entry_schema, entry_id: :entry_id, revision: :revision_number)
   def set_entry_to_revision(entry_schema, entry_id, revision_number, user, opts \\ []) do
+    Tracing.set_attributes(%{"brando.publish": Keyword.get(opts, :publish?, false)})
+
     Brando.Authorization.Boundary.run(user, :restore, entry_schema, fn user ->
       do_set_entry_to_revision(entry_schema, entry_id, revision_number, user, opts)
     end)

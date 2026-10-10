@@ -2,7 +2,10 @@ defmodule Brando.Images.Operations do
   @moduledoc """
   This is where we process images
   """
+  use Brando.Tracing.Decorator
+
   alias Brando.Images
+  alias Brando.Tracing
   alias Brando.Utils
   alias BrandoAdmin.Progress
 
@@ -82,9 +85,16 @@ defmodule Brando.Images.Operations do
     {:ok, %{}}
   end
 
+  @decorate span("brando.images.process")
   def perform(operations, user, opts) do
     max_concurrency = Application.get_env(:brando, :concurrent_image_jobs) || 1
     silent? = Keyword.get(opts, :silent, false)
+
+    Tracing.set_attributes(%{
+      "brando.image_id": hd(operations).image_id,
+      "brando.operation_count": length(operations),
+      "brando.max_concurrency": max_concurrency
+    })
 
     # Silent runs (UploadManager-driven processing) skip the legacy Progress
     # popup — the manager drawer already shows a processing state.
@@ -153,6 +163,11 @@ defmodule Brando.Images.Operations do
     Map.new(transforms, &{&1.size_key, &1.image_path})
   end
 
+  @decorate span("brando.images.resize",
+              image_id: [:operation, :image_id],
+              size_key: [:operation, :size_key],
+              format: [:operation, :type]
+            )
   def resize_image(%Images.Operation{} = operation) do
     case Images.Operations.Sizing.create_image_size(operation) do
       {:ok, transform_result} ->

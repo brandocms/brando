@@ -157,3 +157,7 @@ config :brando, scope_default_language_routes: true
 config :logger, level: :error
 
 config :phoenix, :stacktrace_depth, 30
+
+# Spans are recorded but go nowhere, except where a test sends them to itself
+# (Brando.TracingTest).
+config :opentelemetry, traces_exporter: :none, processors: [{:otel_simple_processor, %{}}]

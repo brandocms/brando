@@ -6,12 +6,15 @@ defmodule Brando.Villain do
   All block data management (queries, orchestration, sync, duplication)
   lives in `Brando.Content.Blocks`.
   """
+  use Brando.Tracing.Decorator
+
   alias Brando.Blueprint.URL
   alias Brando.FrontendEdit
   alias Brando.Images
   alias Brando.Media.URL, as: MediaURL
   alias Brando.Pages.FragmentQuery
   alias Brando.RuntimeConfig
+  alias Brando.Tracing
   alias Brando.Villain.ContextCache
   alias Brando.Villain.RenderScope
   alias Brando.Villain.RenderSourceQuery
@@ -59,8 +62,15 @@ defmodule Brando.Villain do
   def parse("", _, _), do: ""
   def parse(nil, _, _), do: ""
 
+  @decorate span("brando.villain.parse", schema: [:entry, :__struct__], entry_id: [:entry, :id])
   def parse(entry_blocks_list, entry, opts) do
     annotate? = opts[:annotate_blocks] == true
+
+    Tracing.set_attributes(%{
+      "brando.block_count": if(is_list(entry_blocks_list), do: length(entry_blocks_list)),
+      "brando.annotate_blocks": annotate?,
+      "brando.footnotes": opts[:footnotes] != false
+    })
 
     RenderScope.run(fn ->
       FrontendEdit.annotation_scope(annotate?, fn -> do_parse(entry_blocks_list, entry, opts) end)
@@ -291,16 +301,20 @@ defmodule Brando.Villain do
     Context.assign(context, key, value)
   end
 
+  @decorate span("brando.villain.liquid")
   def parse_and_render(html, context) do
     html_string =
       html
       |> ensure_string()
       |> strip_identifier_data_attributes()
 
+    liquid? = String.contains?(html_string, ["{{", "{%"])
+    Tracing.set_attributes(%{"brando.html_bytes": byte_size(html_string), "brando.liquid": liquid?})
+
     # Refs can emit Liquid for this final pass. Ordinary rendered HTML needs
     # only the identifier cleanup, without allocating another parsed document.
     rendered =
-      if String.contains?(html_string, ["{{", "{%"]) do
+      if liquid? do
         liquex_parser = RuntimeConfig.get(Brando.Villain)[:liquex_parser] || Brando.Villain.LiquexParser
 
         case liquex_parse(html_string, liquex_parser) do
@@ -346,7 +360,12 @@ defmodule Brando.Villain do
         render_parsed_doc(html_string, parsed_doc, context)
 
       :miss ->
-        case liquex_parse(html_string, liquex_parser) do
+        parsed =
+          Tracing.span("brando.villain.liquid_parse", %{"brando.html_bytes": byte_size(html_string)}, fn ->
+            liquex_parse(html_string, liquex_parser)
+          end)
+
+        case parsed do
           {:ok, parsed_doc} ->
             put_cached_doc(key, parsed_doc)
             render_parsed_doc(html_string, parsed_doc, context)

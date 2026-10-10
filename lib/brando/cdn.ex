@@ -54,6 +54,7 @@ defmodule Brando.CDN do
   require Logger
   import Ecto.Query
   use Gettext, backend: Brando.Gettext
+  use Brando.Tracing.Decorator
   alias Brando.Worker
   alias ExAws.S3
   alias ExAws.S3.Upload
@@ -349,7 +350,12 @@ defmodule Brando.CDN do
     end
   end
 
-  defp s3_upload(s3_bucket, src_key, s3_dest_key, s3_config, user_id, progress_key, opts \\ []) do
+  # Not decorated directly: its implicit `rescue` would become a second span.
+  @decorate span("brando.cdn.upload", bucket: :s3_bucket, object_key: :s3_dest_key)
+  defp s3_upload(s3_bucket, src_key, s3_dest_key, s3_config, user_id, progress_key, opts \\ []),
+    do: do_s3_upload(s3_bucket, src_key, s3_dest_key, s3_config, user_id, progress_key, opts)
+
+  defp do_s3_upload(s3_bucket, src_key, s3_dest_key, s3_config, user_id, progress_key, opts) do
     upload_opts = Keyword.merge([acl: :public_read], opts)
 
     src_key
@@ -476,6 +482,7 @@ defmodule Brando.CDN do
   `content-length` and `content-type` before trusting a client-side completion
   signal.
   """
+  @decorate span("brando.cdn.head", bucket: [:field_cfg, :cdn, :bucket], object_key: :object_key)
   def head_object(object_key, field_cfg) do
     s3_config = get_s3_config(field_cfg, as: :keyword_list)
     cdn_config = Map.get(field_cfg, :cdn)
@@ -487,6 +494,7 @@ defmodule Brando.CDN do
   @doc """
   Download an object from the field's bucket, as `{:ok, binary}`.
   """
+  @decorate span("brando.cdn.get", bucket: [:field_cfg, :cdn, :bucket], object_key: :object_key)
   def get_object(object_key, field_cfg) do
     s3_config = get_s3_config(field_cfg, as: :keyword_list)
     bucket = Map.get(field_cfg, :cdn).bucket
@@ -507,6 +515,7 @@ defmodule Brando.CDN do
 
   S3 `DELETE` is idempotent: removing a key that was never written succeeds.
   """
+  @decorate span("brando.cdn.delete", bucket: [:field_cfg, :cdn, :bucket], object_key: :object_key)
   def delete_object(object_key, field_cfg) do
     s3_config = get_s3_config(field_cfg, as: :keyword_list)
     cdn_config = Map.get(field_cfg, :cdn)

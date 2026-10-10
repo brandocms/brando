@@ -33,6 +33,7 @@ defmodule Brando.Uploads do
   """
 
   use Gettext, backend: Brando.Gettext
+  use Brando.Tracing.Decorator
 
   import Ecto.Query, only: [from: 2]
 
@@ -280,6 +281,7 @@ defmodule Brando.Uploads do
   and expected metadata come from server-side item state (never from the
   completion event), so the client's "complete" signal is not trusted alone.
   """
+  @decorate span("brando.uploads.finalize", asset_type: "file", config_target: :resolved_target)
   def finalize_direct(:file, %{key: key, resolved_target: resolved_target} = params, user) do
     {cfg, _} = resolve_file_config(resolved_target)
     cdn_config = file_cdn_config(cfg)
@@ -305,6 +307,7 @@ defmodule Brando.Uploads do
     end
   end
 
+  @decorate span("brando.uploads.finalize", asset_type: "video", config_target: :resolved_target)
   def finalize_direct(:video, %{key: key, resolved_target: resolved_target} = params, user) do
     {cfg, _} = resolve_video_config(resolved_target)
     cdn_config = video_cdn_config(cfg)
@@ -330,6 +333,7 @@ defmodule Brando.Uploads do
     end
   end
 
+  @decorate span("brando.uploads.finalize", asset_type: "image", config_target: :resolved_target)
   def finalize_direct(:image, %{key: key, resolved_target: resolved_target} = params, user) do
     {cfg, _} = resolve_image_config(resolved_target)
     cfg = with_image_cdn(cfg)

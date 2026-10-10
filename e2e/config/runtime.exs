@@ -1,5 +1,20 @@
 import Config
 
+# Tracing records and exports only when an OTLP endpoint is set; see
+# bench/otel/README.md. Otherwise every span is non-recording, so tests and
+# bench runs don't pay for spans nobody reads.
+config :opentelemetry_exporter, otlp_protocol: :http_protobuf
+
+config :opentelemetry,
+  resource: [service: [name: "e2e_project", namespace: "E2eProject"]],
+  span_processor: :batch
+
+if System.get_env("OTEL_EXPORTER_OTLP_ENDPOINT") do
+  config :opentelemetry, traces_exporter: :otlp
+else
+  config :opentelemetry, traces_exporter: :none, sampler: :always_off
+end
+
 runtime_port =
   System.get_env("BRANDO_E2E_PORT", System.get_env("PORT", "4444"))
   |> String.to_integer()

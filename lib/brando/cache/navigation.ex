@@ -2,6 +2,8 @@ defmodule Brando.Cache.Navigation do
   @moduledoc """
   Interaction with navigation cache
   """
+  use Brando.Tracing.Decorator
+
   alias Brando.Cache
   alias Brando.Navigation
 
@@ -45,6 +47,7 @@ defmodule Brando.Cache.Navigation do
   Set initial navigation cache. Called on startup
   """
   @spec set :: {:error, boolean} | {:ok, boolean}
+  @decorate span("brando.cache.set_navigation")
   def set do
     menu_map = get_menu_map()
     Cache.put(:navigation, menu_map, :infinite)

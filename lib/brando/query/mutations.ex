@@ -1,5 +1,6 @@
 defmodule Brando.Query.Mutations do
   use Gettext, backend: Brando.Gettext
+  use Brando.Tracing.Decorator
 
   import Ecto.Query, only: [from: 2]
 
@@ -16,10 +17,12 @@ defmodule Brando.Query.Mutations do
   alias Brando.Revisions
   alias Brando.Tenant
   alias Brando.Tenant.Job
+  alias Brando.Tracing
   alias Brando.Trait
   alias Brando.Trait.Meta.ContentModified
   alias Brando.Utils
 
+  @decorate span("brando.query.create", schema: :module)
   def create(module, params, user, callback_block, opts) do
     Boundary.run(user, :create, module, &do_create(module, params, &1, callback_block, opts))
   end
@@ -42,6 +45,7 @@ defmodule Brando.Query.Mutations do
 
     case result do
       {:ok, entry} ->
+        Tracing.set_attributes(%{"brando.entry_id": entry.id})
         {:ok, entry} = maybe_preload(entry, preloads)
         {:ok, identifier_result} = Content.create_identifier(module, entry)
         {:ok, _} = Publisher.schedule_publishing(entry, changeset, user)
@@ -66,6 +70,7 @@ defmodule Brando.Query.Mutations do
     end
   end
 
+  @decorate span("brando.query.create", schema: :module)
   def create_with_changeset(module, changeset, user, callback_block, opts) do
     if changeset.data.__struct__ == module do
       Boundary.run(user, :create, module, &do_create_with_changeset(module, changeset, &1, callback_block, opts))
@@ -87,6 +92,8 @@ defmodule Brando.Query.Mutations do
          {:ok, entry} <- maybe_preload(entry, preloads),
          {:ok, identifier_result} <- Content.create_identifier(module, entry),
          {:ok, _} <- Publisher.schedule_publishing(entry, changeset, user) do
+      Tracing.set_attributes(%{"brando.entry_id": entry.id})
+
       # Enqueue async cascade (merged datasource + identifier)
       identifier_id = get_identifier_id(identifier_result)
       enqueue_entry_cascade(module, entry, identifier_id)
@@ -120,6 +127,7 @@ defmodule Brando.Query.Mutations do
   defp maybe_preload(entry, nil), do: {:ok, entry}
   defp maybe_preload(entry, preloads), do: {:ok, entry |> Brando.Repo.preload(preloads)}
 
+  @decorate span("brando.query.update", schema: :module, entry_id: :id)
   def update(context, module, name, id, params, opts) do
     user = Keyword.fetch!(opts, :user)
     Boundary.run(user, :update, module, &do_update(context, module, name, id, params, Keyword.put(opts, :user, &1)))
@@ -169,6 +177,7 @@ defmodule Brando.Query.Mutations do
     end
   end
 
+  @decorate span("brando.query.update", schema: :module, entry_id: [:changeset, :data, :id])
   def update_with_changeset(module, changeset, user, preloads, callback_block, opts) do
     if changeset.data.__struct__ == module do
       Boundary.run(
@@ -229,6 +238,7 @@ defmodule Brando.Query.Mutations do
     end
   end
 
+  @decorate span("brando.query.duplicate", schema: :module, entry_id: :id)
   def duplicate(context, module, name, id, opts) do
     user = Keyword.fetch!(opts, :user)
     Boundary.run(user, :duplicate, module, &do_duplicate(context, module, name, id, Keyword.put(opts, :user, &1)))
@@ -631,6 +641,7 @@ defmodule Brando.Query.Mutations do
 
   defp set_action(changeset, action), do: %{changeset | action: action}
 
+  @decorate span("brando.query.delete", schema: :module, entry_id: :id)
   def delete(context, module, name, id, opts) do
     user = Keyword.get(opts, :user, :system)
     Boundary.run(user, :delete, module, &do_delete(context, module, name, id, Keyword.put(opts, :user, &1)))

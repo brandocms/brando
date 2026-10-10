@@ -1,5 +1,7 @@
 defmodule BrandoAdmin.Components.Form.Drafts do
   @moduledoc "Recovery capture coordination. It never uses the save/preview accumulators or ships focus."
+  use Brando.Tracing.Decorator
+
   import Phoenix.Component, only: [assign: 3]
   import Phoenix.LiveView, only: [connected?: 1, push_event: 3, send_update: 2, send_update_after: 3]
   alias Brando.Drafts
@@ -12,6 +14,10 @@ defmodule BrandoAdmin.Components.Form.Drafts do
 
   def init(%{assigns: %{draft: %{initialized?: true}}} = socket), do: socket
 
+  @decorate span("brando.form.drafts_init",
+              schema: [:socket, :assigns, :schema],
+              entry_id: [:socket, :assigns, :entry, :id]
+            )
   def init(socket) do
     if connected?(socket) do
       %{schema: schema, entry: entry, current_user: user, form_blueprint: blueprint} = socket.assigns
