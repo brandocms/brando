@@ -11,3 +11,8 @@
   while the first lookup still waited looked each video up twice; and two
   runs that queued the same meta description or alt text asked the AI for
   it twice. Each now has one waiting job at a time.
+
+- **Two search index rebuilds asked for at once queue one.** Without
+  tenancy, a rebuild's job carried nothing for its uniqueness to compare,
+  so two editors starting a rebuild from Utilities at the same moment
+  rebuilt the index twice.
