@@ -109,10 +109,15 @@ defmodule Brando.Notifications.Digest do
     end
   end
 
+  # A job due now is inserted available, not scheduled: `replace` moves only a
+  # scheduled job, so a later item cannot push it back to the next digest
   defp insert_job(user_id, delay) do
+    seconds = delay.()
+    timing = if seconds > 0, do: [schedule_in: seconds], else: []
+
     %{"user_id" => user_id}
     |> Brando.Tenant.Job.attach_current()
-    |> Brando.Worker.NoteMentions.new(schedule_in: delay.(), replace: [scheduled: [:scheduled_at]])
+    |> Brando.Worker.NoteMentions.new([replace: [scheduled: [:scheduled_at]]] ++ timing)
     |> Oban.insert()
   rescue
     error ->

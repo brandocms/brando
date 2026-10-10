@@ -715,6 +715,11 @@ defmodule Brando.NotificationsTest do
         assert Enum.sort(states.()) == [{"digest", 1}, {"succeeded", 200}]
         assert [job] = all_enqueued(worker: Brando.Worker.NoteMentions, args: %{"user_id" => reader.id})
         assert DateTime.compare(job.scheduled_at, DateTime.utc_now()) != :gt
+
+        # A new item meanwhile does not move it to the next digest
+        assert {:ok, _} = Digest.schedule(reader.id)
+        assert [job] = all_enqueued(worker: Brando.Worker.NoteMentions, args: %{"user_id" => reader.id})
+        assert DateTime.compare(job.scheduled_at, DateTime.utc_now()) != :gt
       end)
 
       assert :ok = Notes.deliver_mentions(reader.id, due)
