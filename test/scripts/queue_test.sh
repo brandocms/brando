@@ -41,14 +41,18 @@ args=("$@")
 filter=""
 query=""
 number=""
+oid=""
+paginate=false
 for ((i = 0; i < ${#args[@]}; i++)); do
   case "${args[i]}" in
     --jq) filter="${args[i + 1]}" ;;
+    --paginate) paginate=true ;;
     -f|-F)
       case "${args[i + 1]}" in
         query=*) query="${args[i + 1]#query=}" ;;
         number=*) number="${args[i + 1]#number=}" ;;
         id=*) number="${args[i + 1]#id=PR_}" ;;
+        oid=*) oid="${args[i + 1]#oid=}" ;;
       esac ;;
   esac
 done
@@ -88,7 +92,7 @@ case "$1 $2" in
   "api graphql")
     case "$query" in
       *enqueuePullRequest*)
-        echo "enqueue $number" >>"$s/calls"
+        echo "enqueue $number${oid:+ $oid}" >>"$s/calls"
         touch "$s/$number.queued"
         echo '{"data": {"enqueuePullRequest": {"mergeQueueEntry": {"position": 1}}}}' | out ;;
       *dequeuePullRequest*)
@@ -109,7 +113,15 @@ case "$1 $2" in
     case "$2" in
       */commits/*/check-runs*)
         sha="${2#*/commits/}" && sha="${sha%%/*}"
-        next "$s/checks-$sha" | out ;;
+        # Someone pushes once the checks on this commit were read twice.
+        echo x >>"$s/reads-$sha"
+        if [ -f "$s/push-$sha" ] && [ "$(wc -l <"$s/reads-$sha")" -ge 2 ]; then
+          read -r n new <"$s/push-$sha" && echo "$new" >"$s/$n.sha"
+        fi
+        # A line holding an array is several pages; without --paginate,
+        # only the first.
+        next "$s/checks-$sha" | jq -c --argjson all "$paginate" \
+          'if type == "array" then (if $all then .[] else .[0] end) else . end' | out ;;
       */actions/runs\?head_sha=*) cat "$s/runs-${2#*head_sha=}" | out ;;
       */actions/runs/*/jobs*)
         id="${2#*/actions/runs/}" && id="${id%%/*}"
@@ -207,7 +219,7 @@ PR 4: merged
 PR 5: PR 4 merged; retargeted to main
 PR 5: checks green on eeeeeee; queued at position 1
 PR 5: merged" 5 4
-if [ "$(cat "$state/calls")" != "$(printf 'enqueue 4\nedit 5 --base main --repo o/r\nenqueue 5')" ]; then
+if [ "$(cat "$state/calls")" != "$(printf 'enqueue 4 ddddddd4\nedit 5 --base main --repo o/r\nenqueue 5 eeeeeee5')" ]; then
   failures=$((failures + 1))
   echo "FAIL     calls:"
   sed 's/^/     | /' "$state/calls"
@@ -218,6 +230,20 @@ pr 6 conflicting main fffffff6 "OPEN QUEUED" "OPEN UNMERGEABLE" "OPEN - merge_co
 checks fffffff6 "$green"
 run "names the files in conflict when the queue drops it" 1 "PR 6: checks green on fffffff; queued at position 1
 PR 6: dropped from the queue: conflicts with main in a.txt" 6
+
+fresh push
+pr 12 feat-12 main 5555555e "OPEN QUEUED" "MERGED - merged"
+checks 5555555e "$green"
+echo "12 6666666f" >"$state/push-5555555e"
+checks 6666666f "$red"
+run "checks a commit pushed after the checks passed before queueing it" 1 "PR 12: checks failed on 6666666, not queued: mix test
+  mix test: known flake: beam-jit-crash — rerun with: gh run rerun 77 --failed" 12
+
+fresh pages
+pr 13 feat-13 main 7777777a
+checks 7777777a "[$green, $red]"
+run "reads every page of check runs" 1 "PR 13: checks failed on 7777777, not queued: mix test
+  mix test: known flake: beam-jit-crash — rerun with: gh run rerun 77 --failed" 13
 
 fresh merge-group
 pr 7 feat-7 main 1111111a "OPEN AWAITING_CHECKS" "OPEN - failed_checks 9999999"

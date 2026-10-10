@@ -112,12 +112,12 @@ last_removal() {
          commit: .nodes[0].beforeCommit.oid}' 2>>"$work/err"
 }
 
-# The check runs on a commit, without "Coverage report": [{name, status,
-# conclusion, url}].
+# The check runs on a commit, every page, without "Coverage report":
+# [{name, status, conclusion, url}].
 check_runs() {
-  gh api "repos/$repo/commits/$1/check-runs?per_page=100" --jq '[.check_runs[]
+  gh api "repos/$repo/commits/$1/check-runs?per_page=100" --paginate --jq '.check_runs[]
     | select(.name != "Coverage report")
-    | {name, status, conclusion, url: .html_url}]' 2>>"$work/err"
+    | {name, status, conclusion, url: .html_url}' 2>>"$work/err" | jq -s .
 }
 
 # Explains each failed job of the workflow runs given, one indented line per
@@ -145,8 +145,9 @@ timed_out() {
   [ "$SECONDS" -ge "$deadline" ]
 }
 
-# Waits for the checks on the PR's head to finish. Succeeds when all passed;
-# otherwise says which failed, explains them and fails.
+# Waits for the checks on the PR's head to finish. Succeeds when all passed,
+# with the commit in $checked; otherwise says which failed, explains them and
+# fails.
 wait_for_checks() {
   local pr="$1" info sha runs total pending failed seen=""
   while :; do
@@ -160,7 +161,7 @@ wait_for_checks() {
         if [ "$seen" = "$sha" ]; then
           failed="$(jq -r '[.[] | select(.conclusion != "success" and .conclusion != "neutral"
             and .conclusion != "skipped") | .name] | join(", ")' <<<"$runs")"
-          [ -z "$failed" ] && return 0
+          [ -z "$failed" ] && { checked="$sha"; return 0; }
           say "$pr" "checks failed on ${sha:0:7}, not queued: $failed"
           # shellcheck disable=SC2046
           explain_runs $(jq -r '[.[] | select(.conclusion != "success" and .conclusion != "neutral"
@@ -212,7 +213,7 @@ follow_queue() {
           failed_checks)
             say "$pr" "dropped from the queue: merge-group checks failed"
             # shellcheck disable=SC2046
-            explain_runs $(gh api "repos/$repo/actions/runs?head_sha=$(field "$removal" .commit)" \
+            explain_runs $(gh api "repos/$repo/actions/runs?head_sha=$(field "$removal" .commit)" --paginate \
               --jq '.workflow_runs[] | select(.conclusion == "failure" or .conclusion == "timed_out") | .id' \
               2>>"$work/err")
             return 1 ;;
@@ -241,13 +242,15 @@ follow_queue() {
   done
 }
 
+# Queues the PR at the commit whose checks passed; GitHub refuses it when the
+# head has moved on since.
 enqueue() {
-  local pr="$1" info="$2" position files
-  if position="$(gh api graphql -f id="$(field "$info" .id)" -f query='
-    mutation($id: ID!) {
-      enqueuePullRequest(input: {pullRequestId: $id}) { mergeQueueEntry { position } }
+  local pr="$1" info="$2" sha="$3" position files
+  if position="$(gh api graphql -f id="$(field "$info" .id)" -f oid="$sha" -f query='
+    mutation($id: ID!, $oid: GitObjectID!) {
+      enqueuePullRequest(input: {pullRequestId: $id, expectedHeadOid: $oid}) { mergeQueueEntry { position } }
     }' --jq '.data.enqueuePullRequest.mergeQueueEntry.position' 2>"$work/enqueue-$pr")"; then
-    say "$pr" "checks green on $(field "$info" .headRefOid | cut -c 1-7); queued at position $position"
+    say "$pr" "checks green on ${sha:0:7}; queued at position $position"
     return 0
   fi
   if [ "$(field "$info" .mergeable)" = CONFLICTING ] && files="$(conflicts "$(field "$info" .headRefName)")"; then
@@ -277,7 +280,7 @@ wait_for_result() {
 }
 
 process() {
-  local pr="$1" info base base_pr removals
+  local pr="$1" info base base_pr removals checked
   info="$(cat "$work/$pr.info")"
   case "$(field "$info" .state)" in
     MERGED) say "$pr" "already merged"; return 0 ;;
@@ -306,10 +309,14 @@ process() {
   fi
 
   if [ -z "$(field "$info" .mergeQueueEntry.state)" ]; then
-    wait_for_checks "$pr" || return 1
-    info="$(read_pr "$pr")" || { say "$pr" "could not read it in $repo"; return 1; }
+    # A push while the checks finished starts the wait again.
+    while :; do
+      wait_for_checks "$pr" || return 1
+      info="$(read_pr "$pr")" || { say "$pr" "could not read it in $repo"; return 1; }
+      [ "$(field "$info" .headRefOid)" = "$checked" ] && break
+    done
     removals="$(last_removal "$pr")" || { say "$pr" "could not read its timeline in $repo"; return 1; }
-    enqueue "$pr" "$info" || return 1
+    enqueue "$pr" "$info" "$checked" || return 1
   else
     removals="$(last_removal "$pr")" || { say "$pr" "could not read its timeline in $repo"; return 1; }
   fi
