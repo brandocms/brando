@@ -30,7 +30,9 @@ defmodule Brando.Environments.StructureCloner.PostgresIntegrationTest do
 
   setup do
     # tenant_tables/1 reads through the application repo, so it needs an owner.
-    pid = Ecto.Adapters.SQL.Sandbox.start_owner!(BrandoIntegration.Repo, shared: true)
+    # Not shared: it runs in this process, and a shared connection would also
+    # serve processes earlier tests left behind (see the last test).
+    pid = Ecto.Adapters.SQL.Sandbox.start_owner!(BrandoIntegration.Repo)
 
     unique = System.unique_integer([:positive])
     source = "tenant_struct#{unique}_source"
@@ -151,6 +153,36 @@ defmodule Brando.Environments.StructureCloner.PostgresIntegrationTest do
              Postgres.clone_structure(context.source, context.target)
 
     assert source == context.source
+  end
+
+  # A process an earlier test left behind (the admin presence recording a
+  # user's last seen as its LiveView goes) can write `users` in this test.
+  # On a connection it shares with this test, that write holds a lock on
+  # `users` until the test ends, and every table here that references
+  # `users`, created or dropped through the other connection, waits for it.
+  test "a write to users by a process left from an earlier test holds nothing up", context do
+    # Spawned, not a Task: a Task's callers would make it this test's own
+    test = self()
+
+    spawn(fn ->
+      try do
+        BrandoIntegration.Repo.query!("UPDATE users SET last_seen = now() WHERE id = -1")
+      catch
+        _kind, _reason -> :ok
+      end
+
+      send(test, :written)
+    end)
+
+    assert_receive :written, 2_000
+
+    assert %{num_rows: 0} =
+             Ecto.Adapters.SQL.query!(
+               Repo,
+               ~s|CREATE TABLE "#{context.source}".notes (creator_id bigint REFERENCES "public".users(id))|,
+               [],
+               timeout: 2_000
+             )
   end
 
   defp query!(sql), do: Ecto.Adapters.SQL.query!(Repo, sql, [])
