@@ -65,9 +65,24 @@ if Code.ensure_loaded?(Igniter) do
 
     def find_call(zipper, name, arities, first_arg) do
       CodeFunction.move_to_function_call_in_current_scope(zipper, name, arities, fn call ->
-        CodeFunction.argument_equals?(call, 0, first_arg)
+        CodeFunction.argument_matches_predicate?(call, 0, &may_name?(&1.node, first_arg)) and
+          CodeFunction.argument_equals?(call, 0, first_arg)
       end)
     end
+
+    # `argument_equals?/3` expands an alias argument through the whole module's
+    # environment, which is slow, and an endpoint has many module arguments.
+    # Expanding an alias only replaces its first segment, so an alias whose other
+    # segments differ from the end of the module cannot name it.
+    defp may_name?({:__aliases__, _, [_ | rest]}, module) when rest != [] and is_atom(module) do
+      if Enum.all?(rest, &is_atom/1) and String.starts_with?(Atom.to_string(module), "Elixir.") do
+        module |> Module.split() |> Enum.take(-length(rest)) == Enum.map(rest, &Atom.to_string/1)
+      else
+        true
+      end
+    end
+
+    defp may_name?(_node, _first_arg), do: true
 
     defp insert(zipper, code, options) do
       case options[:before] do
