@@ -229,6 +229,10 @@ jobs:
       - name: Check how ci-wait tells known flakes from real failures
         run: bash test/scripts/ci_wait_test.sh
 
+      - name: Check when scripts/check skips its Elixir gates
+        run: |
+          bash test/scripts/check_test.sh
+
   docs:
     name: Published documentation
     runs-on: ubuntu-latest
