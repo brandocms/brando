@@ -151,8 +151,9 @@ defmodule BrandoAdmin.FieldActionsLiveTest do
     view = open(conn, article)
     replies_slowly("Too late")
 
+    # The summary reads the blocks: it runs once the block field answered
     run(view, "summarize")
-    assert has_element?(view, "#{@suggestion} .ai-proposal[data-status='running']")
+    await_selector(view, "#{@suggestion} .ai-proposal[data-status='running']")
     view |> element("#{@suggestion} button", "Cancel") |> render_click()
 
     Process.sleep(400)
@@ -167,6 +168,7 @@ defmodule BrandoAdmin.FieldActionsLiveTest do
     replies_slowly("A summary")
 
     run(view, "summarize")
+    await_selector(view, "#{@suggestion} .ai-proposal[data-status='running']")
     run(view, "shorten")
     await_selector(view, "#{@suggestion} .ai-proposal[data-status='ready']")
     Process.sleep(400)
@@ -182,6 +184,7 @@ defmodule BrandoAdmin.FieldActionsLiveTest do
     replies_slowly("A summary")
 
     run(view, "summarize")
+    await_selector(view, "#{@suggestion} .ai-proposal[data-status='running']")
     view |> form("#article_form_form") |> render_change(%{"article" => %{"subtitle" => ""}})
     run(view, "shorten")
     await_selector(view, "#{@suggestion} .ai-proposal[data-status='failed']")
