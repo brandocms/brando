@@ -16,7 +16,7 @@ defmodule Brando.Worker.VimeoStatus do
   use Oban.Worker,
     queue: :default,
     max_attempts: 5,
-    unique: [keys: [:tenant_prefix, :video_id], states: :incomplete]
+    unique: [keys: [:tenant_prefix, :video_id], states: :incomplete, period: :infinity]
 
   alias Brando.Tenant.Job, as: TenantJob
   alias Brando.Videos.Uploaders.Vimeo
