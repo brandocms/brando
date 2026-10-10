@@ -1,27 +1,13 @@
 defmodule Mix.Brando.Igniter.InstallTest do
-  use ExUnit.Case, async: false
+  # Each install formats with `config :swoosh` in the project's config.exs; see
+  # Brando.IgniterCase. Installs that configure `:brando` or prompt are in
+  # Mix.Brando.Igniter.InstallTenancyTest.
+  use ExUnit.Case, async: true, group: :igniter_config
 
   alias Brando.IgniterCase
   alias Mix.Tasks.Brando.Install
 
-  defp project(files \\ %{}) do
-    IgniterCase.phoenix_project(
-      files:
-        Map.merge(
-          %{
-            "config/config.exs" => """
-            import Config
-            config :studio, StudioWeb.Endpoint, secret_key_base: "existing-secret", live_view: [signing_salt: "existing-lv-salt"]
-            import_config "dev.exs"
-            """,
-            "config/dev.exs" => "import Config\n",
-            "assets/css/app.css" => "/* Existing Phoenix assets */",
-            "lib/studio_web/gettext.ex" => "defmodule StudioWeb.Gettext do\n use Gettext.Backend, otp_app: :studio\nend\n"
-          },
-          files
-        )
-    )
-  end
+  defp project(files \\ %{}), do: IgniterCase.install_project(files)
 
   defp install(igniter, args \\ []), do: Igniter.compose_task(igniter, Install, args)
 
@@ -170,41 +156,6 @@ defmodule Mix.Brando.Igniter.InstallTest do
       |> install()
 
     assert Enum.any?(igniter.issues, &String.contains?(&1, "children = [...]"))
-  end
-
-  test "interactive choices are opt-in and supplied answers are not requested again" do
-    Mix.shell(Mix.Shell.Process)
-    send(self(), {:mix_shell_input, :prompt, "guided-studio"})
-    igniter = project() |> install(["--interactive", "--tenancy-mode", "single"])
-    assert igniter.issues == []
-    assert_received {:mix_shell, :prompt, ["+ Site key [studio]"]}
-    refute_received {:mix_shell, :prompt, _}
-    assert IgniterCase.source(igniter, "config/brando.exs") =~ ~s(site_key: "guided-studio")
-  end
-
-  test "explicit tenancy changes update existing base config and remove a stale site key" do
-    for config <- [
-          ~s(config :brando, tenancy_mode: :single, site_key: "old-site"),
-          ~s(config :brando, :tenancy_mode, :single\nconfig :brando, :site_key, "old-site")
-        ] do
-      result = project(%{"config/config.exs" => "import Config\n" <> config}) |> install(["--tenancy-mode", "none"])
-      assert result.issues == []
-      assert {:ok, _, %{mode: :none, site_key: nil}} = Mix.Brando.Igniter.Install.Configuration.existing_tenancy(result)
-      refute IgniterCase.source(result, "config/config.exs") =~ "old-site"
-      rerun = install(result)
-      assert rerun.issues == []
-    end
-  end
-
-  test "conflicting or dynamic tenancy configuration is rejected without choosing a value" do
-    for config <- [
-          ~s|config :brando, tenancy_mode: System.get_env("TENANCY")|,
-          ~s(config :brando, tenancy_mode: :single\nconfig :brando, tenancy_mode: :multi)
-        ] do
-      result = project(%{"config/config.exs" => "import Config\n" <> config}) |> install()
-      assert Enum.any?(result.issues, &String.contains?(&1, "unambiguously"))
-      Igniter.Test.assert_unchanged(result)
-    end
   end
 
   test "historical migration timestamps and edits are preserved and new files follow them" do
