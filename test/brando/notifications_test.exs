@@ -741,6 +741,31 @@ defmodule Brando.NotificationsTest do
       assert states.() == [{"succeeded", 201}]
     end
 
+    test "the rest of a full summary is queued to go now, or the running job retries", %{user: user} do
+      reader = Factory.insert(:random_user, config: %UserConfig{notification_digest: :daily})
+      _route = route!(user, %{"kind" => "email", "events" => ["failed_job"], "recipient_ids" => [reader.id]})
+
+      Oban.Testing.with_testing_mode(:manual, fn ->
+        # A job waiting to retry, hours from now, is brought forward
+        {:ok, waiting} = Digest.schedule(reader.id)
+        later = DateTime.add(DateTime.utc_now(), 3 * 3600, :second)
+        Repo.update_all(from(j in Oban.Job, where: j.id == ^waiting.id), set: [state: "retryable", scheduled_at: later])
+
+        assert :ok = Digest.schedule_rest(reader.id)
+        assert [job] = Repo.all(from(j in Oban.Job, where: j.worker == "Brando.Worker.NoteMentions"))
+        assert DateTime.compare(job.scheduled_at, DateTime.utc_now()) != :gt
+      end)
+
+      # Oban reports a unique insert that could not take its lock as a
+      # conflict with nothing inserted: that is no queued job
+      due_by = DateTime.utc_now()
+      assert {:error, :locked} = Digest.rest_queued({:ok, %Oban.Job{conflict?: true, id: nil}}, due_by)
+      assert :ok = Digest.rest_queued({:ok, %Oban.Job{id: 1, state: "available", scheduled_at: due_by}}, due_by)
+
+      not_due = %Oban.Job{id: 1, conflict?: true, state: "scheduled", scheduled_at: DateTime.add(due_by, 3600)}
+      assert {:error, :not_due} = Digest.rest_queued({:ok, not_due}, due_by)
+    end
+
     test "one email job waits per user, however long ago it was queued", %{user: user} do
       reader = Factory.insert(:random_user, config: %UserConfig{notification_digest: :daily})
       _route = route!(user, %{"kind" => "email", "events" => ["failed_job"], "recipient_ids" => [reader.id]})

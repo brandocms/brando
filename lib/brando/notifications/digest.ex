@@ -85,41 +85,57 @@ defmodule Brando.Notifications.Digest do
   environment waits; a new item moves it to when the user's setting says.
   """
   def schedule(user_id, now \\ DateTime.utc_now()) do
-    insert_job(user_id, fn ->
+    delay = fn ->
       case period(user_id) do
         :off -> seconds_until_next_email(user_id, now)
         period -> max(DateTime.diff(next_at(period, now), now, :second), 0)
       end
-    end)
+    end
+
+    insert_job(user_id, delay, scheduled: [:scheduled_at])
   end
 
   @doc """
   Queues what is left after an email that took a full batch: a digest's
   rest at once, as it is due already; without a digest, with the next
-  email. The job running counts as no waiting job, so this queues another.
-  Returns `:ok`, or `{:error, reason}` for the running job to fail and be
-  retried, as nothing else would send the rest.
+  email. The job running counts as no waiting job, so this queues another,
+  or brings forward the one waiting (to be retried, too). Returns `:ok`, or
+  `{:error, reason}` for the running job to fail and be retried, as nothing
+  else would send the rest.
   """
   def schedule_rest(user_id, now \\ DateTime.utc_now()) do
-    delay = fn -> if period(user_id) == :off, do: seconds_until_next_email(user_id, now), else: 0 end
+    seconds = if period(user_id) == :off, do: seconds_until_next_email(user_id, now), else: 0
+    # A minute's leeway for the time the insert takes
+    due_by = DateTime.add(DateTime.utc_now(), seconds + 60, :second)
 
-    case insert_job(user_id, delay) do
-      {:ok, _job} -> :ok
-      {:error, _} = error -> error
-    end
+    user_id
+    |> insert_job(fn -> seconds end, scheduled: [:scheduled_at], retryable: [:scheduled_at])
+    |> rest_queued(due_by)
   end
+
+  @doc false
+  # Whether an insert left a job for the rest that runs by `due_by`. A unique
+  # insert that could not take Oban's lock (another insert for the user held
+  # it) is reported as a conflict with nothing inserted, no id.
+  def rest_queued({:ok, %Oban.Job{conflict?: true, id: nil}}, _due_by), do: {:error, :locked}
+  def rest_queued({:ok, %Oban.Job{state: "available"}}, _due_by), do: :ok
+
+  def rest_queued({:ok, %Oban.Job{scheduled_at: at}}, due_by),
+    do: if(DateTime.compare(at, due_by) == :gt, do: {:error, :not_due}, else: :ok)
+
+  def rest_queued({:error, _} = error, _due_by), do: error
 
   # A job due now is inserted available, not scheduled: `replace` moves only a
   # scheduled job, so a later item cannot push it back to the next digest. Its
   # `scheduled_at` still brings forward a scheduled job it conflicts with.
   # (`Oban.Job.new/2` makes any job with a `scheduled_at` a scheduled one.)
-  defp insert_job(user_id, delay) do
+  defp insert_job(user_id, delay, replace) do
     seconds = delay.()
     timing = if seconds > 0, do: [schedule_in: seconds], else: [scheduled_at: DateTime.utc_now()]
 
     %{"user_id" => user_id}
     |> Brando.Tenant.Job.attach_current()
-    |> Brando.Worker.NoteMentions.new([replace: [scheduled: [:scheduled_at]]] ++ timing)
+    |> Brando.Worker.NoteMentions.new([replace: replace] ++ timing)
     |> available_when_due(seconds)
     |> Oban.insert()
   rescue
