@@ -224,6 +224,7 @@ fi
 run_step "CSS colour tokens" bash .github/scripts/check_css_colors.sh
 run_step "E2E machine paths" bash .github/scripts/check-e2e-paths.sh
 run_step "ci-wait flake matching" bash test/scripts/ci_wait_test.sh
+run_step "queue merge-queue steps" bash test/scripts/queue_test.sh
 run_step "check gate selection" bash test/scripts/check_test.sh
 
 if [ "$fast" = true ]; then

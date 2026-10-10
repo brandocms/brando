@@ -1,0 +1,360 @@
+#!/usr/bin/env bash
+# Puts pull requests into the merge queue on main and follows each one until
+# it merges or drops out. Prints one line per event and nothing in between, so
+# run it in the background and read it when it exits; exits 0 when every PR
+# merged, 1 otherwise.
+#
+#   scripts/queue 3132
+#   scripts/queue 3133 3134            # 3134 is stacked on 3133
+#   scripts/queue 3132 --repo brandocms/brando
+#   scripts/queue --dequeue 3132       # take it out, to push to its branch
+#
+# A PR is queued once every check run on its head commit has finished and
+# passed ("Coverage report" aside). When some failed, it is not queued, and
+# each failed job is explained as scripts/ci-wait --run does: a known flake
+# from .github/known-flakes.txt with its rerun command, or a real failure.
+# A PR already in the queue is followed from where it is.
+#
+# When a PR drops out of the queue, it says why: the files that conflict with
+# main (from git merge-tree, which needs the remote named origin), the failed
+# merge-group jobs, or who dequeued it.
+#
+# A PR whose base is another listed PR's branch waits for that PR to merge,
+# is retargeted to main, and then goes through the same steps; when that PR
+# does not merge, neither does this one.
+#
+#   QUEUE_INTERVAL  seconds between polls (default 30)
+#   QUEUE_TIMEOUT   minutes before giving up (default 240)
+#   QUEUE_CONFIRM   seconds before re-reading finished checks (default 15)
+set -uo pipefail
+
+usage() {
+  echo "usage: scripts/queue <PR number>... [--repo owner/name]" >&2
+  echo "       scripts/queue --dequeue <PR number> [--repo owner/name]" >&2
+  exit 1
+}
+
+here="$(cd "$(dirname "$0")" && pwd)"
+root="$(cd "$here/.." && pwd)"
+target=main
+prs=()
+dequeue=false
+repo="${QUEUE_REPO:-}"
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --repo) [ $# -ge 2 ] || usage; repo="$2"; shift 2 ;;
+    --dequeue) dequeue=true; shift ;;
+    -h|--help) awk 'NR > 1 && !/^#/ { exit } NR > 1 { sub(/^# ?/, ""); print }' "$0"; exit 0 ;;
+    *[!0-9]*|'') usage ;;
+    *) prs+=("$1"); shift ;;
+  esac
+done
+[ "${#prs[@]}" -gt 0 ] || usage
+[ "$dequeue" = false ] || [ "${#prs[@]}" -eq 1 ] || usage
+
+for bin in gh jq git; do
+  command -v "$bin" >/dev/null 2>&1 || { echo "queue: needs $bin on PATH" >&2; exit 1; }
+done
+
+if [ -z "$repo" ]; then
+  repo="$(git -C "$root" remote get-url origin 2>/dev/null |
+    sed -E 's#^.*github\.com[:/]##; s#\.git$##')"
+  case "$repo" in */*) ;; *) repo="brandocms/brando" ;; esac
+fi
+owner="${repo%%/*}"
+name="${repo#*/}"
+
+interval="${QUEUE_INTERVAL:-30}"
+confirm="${QUEUE_CONFIRM:-15}"
+deadline=$((SECONDS + ${QUEUE_TIMEOUT:-240} * 60))
+work="$(mktemp -d "${TMPDIR:-/tmp}/queue.XXXXXX")"
+trap 'rm -rf "$work"' EXIT
+trap 'kill $(jobs -p) 2>/dev/null; exit 130' INT TERM
+
+# say PR MESSAGE — one event line.
+say() {
+  echo "PR $1: $2"
+}
+
+# The PR as JSON: id, state, mergeable, baseRefName, headRefName, headRefOid
+# and mergeQueueEntry ({position, state}, null when not in the queue).
+read_pr() {
+  gh api graphql -F number="$1" -f owner="$owner" -f name="$name" -f query='
+    query($owner: String!, $name: String!, $number: Int!) {
+      repository(owner: $owner, name: $name) {
+        pullRequest(number: $number) {
+          id state mergeable baseRefName headRefName headRefOid
+          mergeQueueEntry { position state }
+        }
+      }
+    }' --jq '.data.repository.pullRequest' 2>>"$work/err"
+}
+
+field() {
+  jq -r "$2 // empty" <<<"$1"
+}
+
+# The last time the PR left the queue: {count, reason, actor, commit}, where
+# count is how many times it has left it.
+last_removal() {
+  gh api graphql -F number="$1" -f owner="$owner" -f name="$name" -f query='
+    query($owner: String!, $name: String!, $number: Int!) {
+      repository(owner: $owner, name: $name) {
+        pullRequest(number: $number) {
+          timelineItems(itemTypes: [REMOVED_FROM_MERGE_QUEUE_EVENT], last: 1) {
+            filteredCount
+            nodes { ... on RemovedFromMergeQueueEvent { reason actor { login } beforeCommit { oid } } }
+          }
+        }
+      }
+    }' --jq '.data.repository.pullRequest.timelineItems
+      | {count: .filteredCount, reason: .nodes[0].reason, actor: .nodes[0].actor.login,
+         commit: .nodes[0].beforeCommit.oid}' 2>>"$work/err"
+}
+
+# The check runs on a commit, without "Coverage report": [{name, status,
+# conclusion, url}].
+check_runs() {
+  gh api "repos/$repo/commits/$1/check-runs?per_page=100" --jq '[.check_runs[]
+    | select(.name != "Coverage report")
+    | {name, status, conclusion, url: .html_url}]' 2>>"$work/err"
+}
+
+# Explains each failed job of the workflow runs given, one indented line per
+# job, through scripts/ci-wait --run.
+explain_runs() {
+  local run
+  for run in "$@"; do
+    "$here/ci-wait" --run "$run" --repo "$repo" 2>&1 | sed -n '2,$p'
+  done
+}
+
+# The files in conflict between main and the branch, comma-separated; fails
+# when there are none or they cannot be worked out.
+conflicts() {
+  local branch="$1" out
+  git -C "$root" fetch -q origin "+refs/heads/$target:refs/remotes/origin/$target" \
+    "+refs/heads/$branch:refs/remotes/origin/$branch" 2>>"$work/err" || return 1
+  out="$(git -C "$root" merge-tree --write-tree --name-only "origin/$target" "origin/$branch" 2>>"$work/err")"
+  [ $? -eq 1 ] || return 1
+  out="$(awk 'NR == 1 { next } /^$/ { exit } { print }' <<<"$out" | paste -sd ',' - | sed 's/,/, /g')"
+  [ -n "$out" ] && printf '%s' "$out"
+}
+
+timed_out() {
+  [ "$SECONDS" -ge "$deadline" ]
+}
+
+# Waits for the checks on the PR's head to finish. Succeeds when all passed;
+# otherwise says which failed, explains them and fails.
+wait_for_checks() {
+  local pr="$1" info sha runs total pending failed seen=""
+  while :; do
+    if info="$(read_pr "$pr")" && sha="$(field "$info" .headRefOid)" && [ -n "$sha" ] &&
+      runs="$(check_runs "$sha")"; then
+      total="$(jq length <<<"$runs")"
+      pending="$(jq '[.[] | select(.status != "completed")] | length' <<<"$runs")"
+      if [ "$total" -gt 0 ] && [ "$pending" -eq 0 ]; then
+        # Right after a push the next workflows may not have registered their
+        # runs yet; the same finished state twice rules that out.
+        if [ "$seen" = "$sha" ]; then
+          failed="$(jq -r '[.[] | select(.conclusion != "success" and .conclusion != "neutral"
+            and .conclusion != "skipped") | .name] | join(", ")' <<<"$runs")"
+          [ -z "$failed" ] && return 0
+          say "$pr" "checks failed on ${sha:0:7}, not queued: $failed"
+          # shellcheck disable=SC2046
+          explain_runs $(jq -r '[.[] | select(.conclusion != "success" and .conclusion != "neutral"
+            and .conclusion != "skipped") | (.url // "") | capture("/actions/runs/(?<id>[0-9]+)/")? | .id]
+            | unique | .[]' <<<"$runs")
+          return 1
+        fi
+        seen="$sha"
+        sleep "$confirm"
+        continue
+      fi
+      seen=""
+    fi
+    if timed_out; then
+      say "$pr" "gave up waiting for checks after ${QUEUE_TIMEOUT:-240} min"
+      return 1
+    fi
+    sleep "$interval"
+  done
+}
+
+# Follows a queued PR until it merges or leaves the queue. $1 is the PR, $2
+# how many times it had left the queue before.
+follow_queue() {
+  local pr="$1" before="$2" info state entry removal count reason files actor tries=0
+  while :; do
+    if info="$(read_pr "$pr")"; then
+      state="$(field "$info" .state)"
+      entry="$(field "$info" .mergeQueueEntry.state)"
+      case "$state" in
+        MERGED) say "$pr" "merged"; return 0 ;;
+        CLOSED) say "$pr" "closed without merging"; return 1 ;;
+      esac
+      count=0
+      if [ -z "$entry" ] && removal="$(last_removal "$pr")"; then
+        count="$(field "$removal" .count)"
+      fi
+      if [ -z "$entry" ] && [ "${count:-0}" -gt "$before" ]; then
+        reason="$(field "$removal" .reason)"
+        case "$reason" in
+          merged) ;; # the PR's state catches up on the next poll
+          merge_conflict)
+            if files="$(conflicts "$(field "$info" .headRefName)")"; then
+              say "$pr" "dropped from the queue: conflicts with $target in $files"
+            else
+              say "$pr" "dropped from the queue: conflicts with $target"
+            fi
+            return 1 ;;
+          failed_checks)
+            say "$pr" "dropped from the queue: merge-group checks failed"
+            # shellcheck disable=SC2046
+            explain_runs $(gh api "repos/$repo/actions/runs?head_sha=$(field "$removal" .commit)" \
+              --jq '.workflow_runs[] | select(.conclusion == "failure" or .conclusion == "timed_out") | .id' \
+              2>>"$work/err")
+            return 1 ;;
+          manual)
+            actor="$(field "$removal" .actor)"
+            say "$pr" "dequeued${actor:+ by $actor}"
+            return 1 ;;
+          *)
+            say "$pr" "dropped from the queue: ${reason:-no reason given}"
+            return 1 ;;
+        esac
+      elif [ -z "$entry" ]; then
+        # Out of the queue with no removal event yet: give it a few polls.
+        tries=$((tries + 1))
+        if [ "$tries" -ge 5 ]; then
+          say "$pr" "dropped from the queue (no reason recorded)"
+          return 1
+        fi
+      fi
+    fi
+    if timed_out; then
+      say "$pr" "gave up after ${QUEUE_TIMEOUT:-240} min, still in the queue${entry:+ ($entry)}"
+      return 1
+    fi
+    sleep "$interval"
+  done
+}
+
+enqueue() {
+  local pr="$1" info="$2" position files
+  if position="$(gh api graphql -f id="$(field "$info" .id)" -f query='
+    mutation($id: ID!) {
+      enqueuePullRequest(input: {pullRequestId: $id}) { mergeQueueEntry { position } }
+    }' --jq '.data.enqueuePullRequest.mergeQueueEntry.position' 2>"$work/enqueue-$pr")"; then
+    say "$pr" "checks green on $(field "$info" .headRefOid | cut -c 1-7); queued at position $position"
+    return 0
+  fi
+  if [ "$(field "$info" .mergeable)" = CONFLICTING ] && files="$(conflicts "$(field "$info" .headRefName)")"; then
+    say "$pr" "could not queue it: conflicts with $target in $files"
+  else
+    say "$pr" "could not queue it: $(head -n 1 "$work/enqueue-$pr")"
+  fi
+  return 1
+}
+
+# The listed PR whose branch is $1, if any.
+listed_pr_for_branch() {
+  local pr
+  for pr in "${prs[@]}"; do
+    [ "$(cat "$work/$pr.head" 2>/dev/null)" = "$1" ] && { echo "$pr"; return 0; }
+  done
+  return 1
+}
+
+# Waits for the result ("merged" or "failed") of another listed PR.
+wait_for_result() {
+  while [ ! -f "$work/$1.result" ]; do
+    timed_out && return 1
+    sleep "$interval"
+  done
+  [ "$(cat "$work/$1.result")" = merged ]
+}
+
+process() {
+  local pr="$1" info base base_pr removals
+  info="$(cat "$work/$pr.info")"
+  case "$(field "$info" .state)" in
+    MERGED) say "$pr" "already merged"; return 0 ;;
+    CLOSED) say "$pr" "closed without merging"; return 1 ;;
+  esac
+
+  base="$(field "$info" .baseRefName)"
+  if [ "$base" != "$target" ]; then
+    if ! base_pr="$(listed_pr_for_branch "$base")"; then
+      say "$pr" "targets $base, not $target; list the PR for $base too"
+      return 1
+    fi
+    if ! wait_for_result "$base_pr"; then
+      say "$pr" "not queued: PR $base_pr did not merge"
+      return 1
+    fi
+    # GitHub retargets it by itself when the base branch is deleted.
+    info="$(read_pr "$pr")" || { say "$pr" "could not read it in $repo"; return 1; }
+    if [ "$(field "$info" .baseRefName)" != "$target" ]; then
+      if ! gh pr edit "$pr" --base "$target" --repo "$repo" >/dev/null 2>"$work/edit-$pr"; then
+        say "$pr" "could not retarget it to $target: $(head -n 1 "$work/edit-$pr")"
+        return 1
+      fi
+    fi
+    say "$pr" "PR $base_pr merged; retargeted to $target"
+  fi
+
+  if [ -z "$(field "$info" .mergeQueueEntry.state)" ]; then
+    wait_for_checks "$pr" || return 1
+    info="$(read_pr "$pr")" || { say "$pr" "could not read it in $repo"; return 1; }
+    removals="$(last_removal "$pr")" || { say "$pr" "could not read its timeline in $repo"; return 1; }
+    enqueue "$pr" "$info" || return 1
+  else
+    removals="$(last_removal "$pr")" || { say "$pr" "could not read its timeline in $repo"; return 1; }
+  fi
+  follow_queue "$pr" "$(field "$removals" .count)"
+}
+
+if [ "$dequeue" = true ]; then
+  pr="${prs[0]}"
+  info="$(read_pr "$pr")" && [ -n "$info" ] || { say "$pr" "not found in $repo"; exit 1; }
+  if [ -z "$(field "$info" .mergeQueueEntry.state)" ]; then
+    say "$pr" "not in the queue"
+    exit 0
+  fi
+  if gh api graphql -f id="$(field "$info" .id)" -f query='
+    mutation($id: ID!) { dequeuePullRequest(input: {id: $id}) { clientMutationId } }' \
+    >/dev/null 2>"$work/err"; then
+    say "$pr" "dequeued"
+    exit 0
+  fi
+  say "$pr" "could not dequeue it: $(head -n 1 "$work/err")"
+  exit 1
+fi
+
+# Every PR is read first, so a stacked PR can find its base among them.
+for pr in "${prs[@]}"; do
+  if ! info="$(read_pr "$pr")" || [ -z "$info" ] || [ "$info" = null ]; then
+    say "$pr" "could not read it in $repo: $(head -n 1 "$work/err" 2>/dev/null)"
+    exit 1
+  fi
+  printf '%s' "$info" >"$work/$pr.info"
+  field "$info" .headRefName >"$work/$pr.head"
+done
+
+pids=()
+for pr in "${prs[@]}"; do
+  (
+    if process "$pr"; then result=merged; else result=failed; fi
+    echo "$result" >"$work/$pr.result.tmp" && mv "$work/$pr.result.tmp" "$work/$pr.result"
+    [ "$result" = merged ]
+  ) &
+  pids+=("$!")
+done
+
+status=0
+for pid in "${pids[@]}"; do
+  wait "$pid" || status=1
+done
+exit "$status"
