@@ -16,8 +16,10 @@ defmodule Brando.Worker.NotificationEmail do
   @impl Oban.Worker
   def perform(%Oban.Job{args: args} = job) do
     # On the last attempt, what cannot be checked is left out (`Recipient`)
-    Recipient.final_attempt(job.attempt >= job.max_attempts, fn ->
-      TenantJob.run_current(job, fn -> Brando.Notifications.Digest.send_queued(args) end)
+    final? = job.attempt >= job.max_attempts
+
+    Recipient.final_attempt(final?, fn ->
+      TenantJob.run_current(job, fn -> Brando.Notifications.Digest.send_queued(args, final?) end)
     end)
   end
 end

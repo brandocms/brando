@@ -1051,6 +1051,36 @@ defmodule Brando.NotificationsTest do
       assert Enum.any?(locks, &(&1 =~ "FOR UPDATE" and &1 =~ "ORDER BY"))
     end
 
+    test "a summary the mail provider kept refusing is marked failed, to be sent again", %{user: user} do
+      reader = Factory.insert(:random_user, config: %UserConfig{notification_digest: :daily})
+      route = route!(user, %{"kind" => "email", "events" => ["failed_job"], "recipient_ids" => [reader.id]})
+
+      delivery =
+        Repo.insert!(%Delivery{
+          route_id: route.id,
+          recipient_id: reader.id,
+          event: "failed_job",
+          state: "digest",
+          notification: %{"event" => "failed_job", "job" => %{"worker" => "MyApp.Job", "error" => "boom"}}
+        })
+
+      put_test_env(:mailer, BrandoIntegration.FailingMailer)
+
+      Oban.Testing.with_testing_mode(:manual, fn ->
+        assert :ok = Notes.deliver_mentions(reader.id, Digest.next_at(:daily, delivery.inserted_at))
+        assert [job] = all_enqueued(worker: Brando.Worker.NotificationEmail)
+
+        assert {:error, _} = perform_job(Brando.Worker.NotificationEmail, job.args, attempt: 1)
+        assert %{state: "succeeded"} = Repo.reload!(delivery)
+
+        log =
+          capture_log(fn -> assert {:error, _} = perform_job(Brando.Worker.NotificationEmail, job.args, attempt: 5) end)
+
+        assert log =~ "Service unavailable"
+        assert %{state: "failed", error: "mail_failed"} = Repo.reload!(delivery)
+      end)
+    end
+
     test "one email job waits per user, however long ago it was queued", %{user: user} do
       reader = Factory.insert(:random_user, config: %UserConfig{notification_digest: :daily})
       _route = route!(user, %{"kind" => "email", "events" => ["failed_job"], "recipient_ids" => [reader.id]})

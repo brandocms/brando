@@ -16569,6 +16569,11 @@ msgstr ""
 msgid "The live environment cannot be deleted."
 msgstr ""
 
+#: lib/brando_admin/live/sites/notifications_live.ex
+#, elixir-autogen, elixir-format
+msgid "The mail provider did not accept the email"
+msgstr ""
+
 #: lib/brando_admin/components/form/structured_data.ex
 #, elixir-autogen, elixir-format
 msgid "The mapping comes from the blueprint's json_ld_schema and is read-only here. Errors are properties Google requires; warnings are properties it recommends, or values it can't read."
