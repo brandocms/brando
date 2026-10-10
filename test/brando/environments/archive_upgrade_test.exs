@@ -524,8 +524,9 @@ defmodule Brando.Environments.ArchiveUpgradeTest do
         copy
         |> File.read!()
         |> String.replace("Brando.Repo.Migrations.", "MyApp.Repo.Migrations.")
-        |> String.replace("In every site environment:", "In every environment of the site:")
-        |> String.replace("  def up do\n", "  # Reviewed for the 0.55 upgrade\n  def up do   \n")
+        |> String.replace(~r/  @moduledoc """.*?"""\n/s, "")
+        |> String.replace("  def up do\n", "  # Reviewed for the 0.55 upgrade\n  @doc false\n  def up do   \n")
+        |> String.replace("  def down do\n", "  @doc false\n  def down do\n")
         |> String.replace("add :meta_max_snippet, :integer", "add(:meta_max_snippet, :integer)")
 
       File.write!(copy, relaid)

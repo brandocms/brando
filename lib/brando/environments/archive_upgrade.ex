@@ -202,12 +202,15 @@ defmodule Brando.Environments.ArchiveUpgrade do
     code
     |> String.replace(~r/[ \t]+$/m, "")
     |> TemplateDrift.normalize()
-    |> Macro.prewalk(fn
+    |> Macro.postwalk(fn
       {:defmodule, meta, [_name | rest]} -> {:defmodule, meta, [:module | rest]}
-      {:@, _, [{doc, _, _}]} when doc in [:moduledoc, :doc] -> nil
+      {:__block__, meta, expressions} -> {:__block__, meta, Enum.reject(expressions, &doc?/1)}
       node -> node
     end)
   end
+
+  defp doc?({:@, _, [{doc, _, _}]}), do: doc in [:moduledoc, :doc]
+  defp doc?(_expression), do: false
 
   @doc """
   Runs each migration in `replays` in the `prefix` schema only. Returns
