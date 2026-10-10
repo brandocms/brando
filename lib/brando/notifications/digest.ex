@@ -30,6 +30,8 @@ defmodule Brando.Notifications.Digest do
   alias Brando.Repo
   alias Brando.Users.User
 
+  require Logger
+
   @periods [:off, :daily, :weekly]
   @email_interval 600
   @limit 200
@@ -119,8 +121,14 @@ defmodule Brando.Notifications.Digest do
   # scheduled, a new item's `schedule/2` would move it back to the next digest
   defp make_available({:ok, %Oban.Job{conflict?: true, id: id, state: state} = job}, 0)
        when is_integer(id) and state in ["scheduled", "retryable"] do
-    :ok = Oban.retry_job(id)
-    {:ok, %{job | state: "available"}}
+    case Oban.retry_job(id) do
+      :ok -> {:ok, %{job | state: "available"}}
+      other -> {:error, other}
+    end
+  rescue
+    error ->
+      Logger.warning("[Brando.Notifications] Could not queue an email: " <> Exception.message(error))
+      {:error, error}
   end
 
   defp make_available(result, _seconds), do: result
@@ -152,7 +160,6 @@ defmodule Brando.Notifications.Digest do
     |> Oban.insert()
   rescue
     error ->
-      require Logger
       Logger.warning("[Brando.Notifications] Could not queue an email: " <> Exception.message(error))
       {:error, error}
   end

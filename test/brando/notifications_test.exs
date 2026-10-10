@@ -843,6 +843,35 @@ defmodule Brando.NotificationsTest do
       assert_no_email_sent()
     end
 
+    test "the rest that cannot be brought forward fails the job, not crashes it", %{user: user} do
+      reader = Factory.insert(:random_user, config: %UserConfig{notification_digest: :daily})
+      _route = route!(user, %{"kind" => "email", "events" => ["failed_job"], "recipient_ids" => [reader.id]})
+
+      Oban.Testing.with_testing_mode(:manual, fn ->
+        {:ok, _waiting} = Digest.schedule(reader.id)
+
+        # The database fails between joining the waiting job and making it available
+        test = self()
+        id = "retry-fails-#{System.unique_integer([:positive])}"
+
+        :telemetry.attach(
+          id,
+          [:brando_integration, :repo, :query],
+          fn _event, _measurements, meta, _config ->
+            if self() == test and meta.source == "oban_jobs" and String.starts_with?(meta.query, "UPDATE") and
+                 !Process.get(id) do
+              Process.put(id, true)
+              Repo.query!("ALTER TABLE oban_jobs RENAME TO oban_jobs_away")
+            end
+          end,
+          nil
+        )
+
+        on_exit(fn -> :telemetry.detach(id) end)
+        assert {:error, _} = Digest.schedule_rest(reader.id)
+      end)
+    end
+
     test "one email job waits per user, however long ago it was queued", %{user: user} do
       reader = Factory.insert(:random_user, config: %UserConfig{notification_digest: :daily})
       _route = route!(user, %{"kind" => "email", "events" => ["failed_job"], "recipient_ids" => [reader.id]})
