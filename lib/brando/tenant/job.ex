@@ -35,13 +35,14 @@ defmodule Brando.Tenant.Job do
 
   @doc """
   Runs a job queued with `attach_current/1`: under the prefix it was queued
-  with, as `run/2` does, or without one when it was queued outside any site.
+  with, as `run/2` does, or without one when it was queued outside any site
+  (no `tenant_prefix`, or `nil`, which a job unique per site sets).
   """
   @spec run_current(Oban.Job.t() | map(), (-> result)) :: result | {:cancel, atom()} when result: var
   def run_current(%Oban.Job{args: args}, fun), do: run_current(args, fun)
 
   def run_current(args, fun) when is_map(args) and is_function(fun, 0) do
-    if Map.has_key?(args, @prefix_key), do: run(args, fun), else: fun.()
+    if is_nil(Map.get(args, @prefix_key)), do: fun.(), else: run(args, fun)
   end
 
   @doc "Runs a tenant-owned job under the prefix captured when it was enqueued."

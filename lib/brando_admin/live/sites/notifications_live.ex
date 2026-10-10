@@ -789,6 +789,8 @@ defmodule BrandoAdmin.Sites.NotificationsLive do
   defp error_text("recipient_check_failed"), do: gettext("Could not check whether the recipient may read the entry")
   defp error_text("no_mailer"), do: gettext("This site cannot send email")
   defp error_text("no_sender"), do: gettext("This site cannot send email")
+  defp error_text("mail_failed"), do: gettext("The mail provider did not accept the email")
+  defp error_text("email_failed"), do: gettext("The email could not be made or sent")
   defp error_text("invalid_response"), do: gettext("Not a valid HTTP response")
   defp error_text("result_not_recorded"), do: gettext("Sent, but the answer could not be saved")
   defp error_text(other), do: other

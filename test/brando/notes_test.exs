@@ -312,7 +312,7 @@ defmodule Brando.NotesTest do
       Oban.Testing.with_testing_mode(:manual, fn ->
         assert :ok = Notes.deliver_mentions(other.id, now)
         assert [%{note: %{body: "note 1"}}] = Notes.mentions_for(other.id, unsent: true)
-        assert_enqueued(worker: Brando.Worker.Mail)
+        assert_enqueued(worker: Brando.Worker.NotificationEmail)
         assert_enqueued(worker: Brando.Worker.NoteMentions, args: %{"user_id" => other.id})
       end)
 
@@ -386,9 +386,35 @@ defmodule Brando.NotesTest do
       end)
 
       # Queuing the email fails after the mentions were claimed
-      put_test_env(:mailer, nil)
-      assert_raise Brando.Exception.ConfigError, fn -> Notes.deliver_mentions(other.id) end
+      Oban.Testing.with_testing_mode(:manual, fn ->
+        Repo.query!("ALTER TABLE oban_jobs RENAME TO oban_jobs_away")
+        assert_raise Postgrex.Error, fn -> Notes.deliver_mentions(other.id) end
+        Repo.query!("ALTER TABLE oban_jobs_away RENAME TO oban_jobs")
+      end)
+
       assert [_] = Notes.mentions_for(other.id, unsent: true)
+    end
+
+    test "a queued email leaves out a mention the user may no longer read when it goes out", %{author: author} do
+      put_test_env(:authorization_mode, :groups)
+      put_test_env(:tenancy_mode, :none)
+      reader = Factory.insert(:random_user, role: :superuser)
+      {:ok, _} = Brando.Authorization.Migration.run()
+      readable = Factory.insert(:page, creator: reader)
+      policed = Factory.insert(:page, creator: reader)
+      mention_on!(reader, author, Page, readable, "readable")
+      mention_on!(reader, author, Brando.AuthorizationTestResources.Page, policed, "policed")
+
+      Oban.Testing.with_testing_mode(:manual, fn ->
+        assert :ok = Notes.deliver_mentions(reader.id)
+        assert_no_email_sent()
+
+        # The policed entry is someone else's before the email goes out
+        Repo.update_all(from(p in Page, where: p.id == ^policed.id), set: [creator_id: author.id])
+        Oban.drain_queue(queue: :default)
+      end)
+
+      assert_email_sent(fn email -> email.text_body =~ "readable" and not (email.text_body =~ "policed") end)
     end
 
     test "a further email that cannot be queued fails the job, to be retried", %{author: author, other: other} do
