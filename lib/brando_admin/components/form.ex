@@ -973,7 +973,7 @@ defmodule BrandoAdmin.Components.Form do
   end
 
   def update(%{action: :update_entry_hard_reset, updated_entry: updated_entry}, socket) do
-    send_update_after(__MODULE__, [id: socket.assigns.id, event: "set_block_map"], 1000)
+    send_update_after(__MODULE__, [id: socket.assigns.id, event: "set_block_map"], block_map_ms(1000))
     send(self(), {:progress_popup, "Setting new block map..."})
 
     # The block fields are mounted again from `updated_entry`, in the entry's
@@ -995,7 +995,7 @@ defmodule BrandoAdmin.Components.Form do
     %{schema: schema, current_user: current_user} = socket.assigns
     new_changeset = schema.changeset(updated_entry, %{}, current_user)
 
-    send_update_after(__MODULE__, [id: socket.assigns.id, event: "set_block_map"], 500)
+    send_update_after(__MODULE__, [id: socket.assigns.id, event: "set_block_map"], block_map_ms(500))
 
     {:ok,
      socket
@@ -7329,6 +7329,16 @@ defmodule BrandoAdmin.Components.Form do
   # collection: nothing is sent without the blocks, and
   # `continue.(socket, :unanswered)` tells the editor, who can try again.
   @ai_blocks_collect_ms 10_000
+
+  # The block map is cleared, and set again only after the client has
+  # removed the old block fields, so they mount again from the new entry.
+  # Brando's own tests wait less (`:form_block_map_ms`), compiled in only
+  # where `config :brando, :form_load_gate?, true`.
+  if Application.compile_env(:brando, :form_load_gate?, false) do
+    defp block_map_ms(default), do: Application.get_env(:brando, :form_block_map_ms, default)
+  else
+    defp block_map_ms(default), do: default
+  end
 
   # Brando's own tests shorten the wait (`:ai_blocks_collect_ms`), compiled
   # in only where `config :brando, :form_load_gate?, true`.

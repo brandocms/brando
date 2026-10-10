@@ -1172,7 +1172,15 @@ defmodule BrandoAdmin.LiveView.Form.Hooks do
   defp schedule_active_field_write(path, field) do
     token = make_ref()
     Process.put(:brando_active_field_write, token)
-    Process.send_after(self(), {:brando_active_field_write, token, path, field}, 300)
+    Process.send_after(self(), {:brando_active_field_write, token, path, field}, active_field_write_ms())
+  end
+
+  # Brando's own tests write sooner (`:active_field_write_ms`), compiled in
+  # only where `config :brando, :form_load_gate?, true`.
+  if Application.compile_env(:brando, :form_load_gate?, false) do
+    defp active_field_write_ms, do: Application.get_env(:brando, :active_field_write_ms, 300)
+  else
+    defp active_field_write_ms, do: 300
   end
 
   # Field presence: the block and the field in it another editor is in, with

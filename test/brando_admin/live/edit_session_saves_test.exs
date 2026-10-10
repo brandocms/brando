@@ -77,6 +77,14 @@ defmodule BrandoAdmin.EditSessionSavesTest do
 
   defp block_count(uid), do: Repo.one(from(b in Brando.Content.Block, where: b.uid == ^uid, select: count(b.id)))
 
+  # The view has handled what it was sent and the chains of updates that
+  # sent itself (a save's goes Form → block field → Form), and the client
+  # has its pushes: what a fixed sleep or a long refute used to wait for.
+  defp idle(view) do
+    settle(view)
+    settle(view)
+  end
+
   defp session_pid(page), do: EditSession.whereis(EditSession.ref(Page, page.id, page.language))
 
   defp session_state(page) do
@@ -224,25 +232,21 @@ defmodule BrandoAdmin.EditSessionSavesTest do
     a |> with_target(cid) |> render_hook("save_form", %{"form" => form})
     a |> with_target(cid) |> render_hook("save_form", %{"form" => form})
 
-    # every b:submit is answered, as the browser does, with its token
-    answered =
-      Enum.reduce_while(1..4, 0, fn _, answered ->
-        receive do
-          {ref, {:push_event, "b:submit", %{token: token}}} when is_reference(ref) ->
-            a |> with_target(cid) |> render_hook("save_form", %{"form" => form, "token" => token})
-            {:cont, answered + 1}
-        after
-          1_000 -> {:halt, answered}
-        end
-      end)
+    # the b:submit is answered, as the browser does, with its token
+    assert_receive {ref, {:push_event, "b:submit", %{token: token}}} when is_reference(ref), 1_000
+    a |> with_target(cid) |> render_hook("save_form", %{"form" => form, "token" => token})
+    await(fn -> revisions.() - before == 1 end)
 
-    assert answered == 1
+    # no second one: the view has handled everything both saves started
+    idle(a)
+    refute_received {_, {:push_event, "b:submit", _}}
     assert revisions.() - before == 1
     assert Map.new(texts(c.identity))[first] == "<p>Saved once</p>"
 
     # a b:submit answered after its save wrote is ignored
     a |> with_target(cid) |> render_hook("save_form", %{"form" => form, "token" => 12_345})
-    refute_receive {_, {:push_event, "b:submit", _}}, 300
+    idle(a)
+    refute_received {_, {:push_event, "b:submit", _}}
     assert revisions.() - before == 1
   end
 
@@ -865,7 +869,10 @@ defmodule BrandoAdmin.EditSessionSavesTest do
     {:ok, _} = Proposals.apply(proposal.id, proposal.version, c.user)
 
     await(fn -> session_state(c.identity).statuses[second <> "-kept"] == :inserted end)
-    Process.sleep(300)
+    # both editors have handled the removal, and the session their inserts
+    idle(a)
+    idle(b)
+    :sys.get_state(session_pid(c.identity))
     assert length(session_state(c.identity).order) == 3
   end
 
@@ -979,12 +986,15 @@ defmodule BrandoAdmin.EditSessionSavesTest do
         Brando.Repo.rollback(:rolled_back)
       end)
 
-    refute_receive {:edit_session, _, %{kind: :rebase}}, 300
+    # the session has handled everything sent to it, and broadcast what it would
+    :sys.get_state(EditSession.whereis(ref))
+    refute_received {:edit_session, _, %{kind: :rebase}}
 
     {:ok, :committed} =
       Brando.Repo.transaction(fn ->
         EditSession.sync_saved(page)
-        refute_receive {:edit_session, _, %{kind: :rebase}}, 100
+        :sys.get_state(EditSession.whereis(ref))
+        refute_received {:edit_session, _, %{kind: :rebase}}
         :committed
       end)
 
@@ -1102,7 +1112,7 @@ defmodule BrandoAdmin.EditSessionSavesTest do
 
     type(b, first, "<p>One block changes</p>")
     await(fn -> shown_text(a, first) == "<p>One block changes</p>" end)
-    Process.sleep(200)
+    idle(a)
 
     updated = collect_block_updates([])
     # Once: the replaced form. Writing the root's seed form as well re-rendered
@@ -1176,10 +1186,11 @@ defmodule BrandoAdmin.EditSessionSavesTest do
       {drawer, revision}
     end
 
-    # the block fields mount again from the written entry
+    # the block fields mount again from the written entry, and join the
+    # entry's edit session
     defp await_remount(a, c) do
-      await(fn -> shown_text(a, c.first) != nil end)
-      Process.sleep(300)
+      await_joined(a, c.identity)
+      await(fn -> shown_text(a, c.first) == "<p>Working-copy block</p>" end)
     end
 
     for grace <- [0, 30_000] do
@@ -1250,7 +1261,7 @@ defmodule BrandoAdmin.EditSessionSavesTest do
       await(fn -> shown_text(b, c.first) == "<p>Working-copy block</p>" end)
       assert shown_text(b, c.second) == "<p>B, after the preview</p>"
       assert shown_text(a, c.first) == "<p>Working-copy block</p>"
-      assert shown_text(a, c.second) == "<p>B, after the preview</p>"
+      await(fn -> shown_text(a, c.second) == "<p>B, after the preview</p>" end)
     end
   end
 

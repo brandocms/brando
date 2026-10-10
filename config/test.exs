@@ -47,8 +47,14 @@ config :brando, Brando.Images,
   }
 
 config :brando, Brando.EditSession, grace_period: 0
-# Lets tests hold an entry form's load back (`:form_load_gate`)
+# Lets tests hold an entry form's load back (`:form_load_gate`), and shorten
+# the form's own waits that are not what a test is about. The block map wait
+# must still outlast the client's round trip that removes the old block
+# fields, or they are not mounted again.
 config :brando, :form_load_gate?, true
+config :brando, form_block_map_ms: 200
+config :brando, remote_refresh_ms: 20
+config :brando, active_field_write_ms: 100
 config :brando, Brando.Static, cdn: [enabled: false]
 config :brando, Brando.Type.Role, roles: %{staff: 1, admin: 2, superuser: 4}
 config :brando, Brando.Villain, extra_blocks: []
