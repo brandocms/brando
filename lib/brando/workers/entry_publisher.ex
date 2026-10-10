@@ -238,12 +238,11 @@ defmodule Brando.Worker.EntryPublisher do
         "deactivating it as the system"
     )
 
+    expire = fn -> apply(context, :"update_#{singular}", [entry.id, %{status: status}, :system]) end
+
     result =
       Repo.transaction(fn ->
-        if still_due?(schema_module, entry, status),
-          do:
-            with_details(details, fn -> apply(context, :"update_#{singular}", [entry.id, %{status: status}, :system]) end),
-          else: :changed
+        if still_due?(schema_module, entry, status), do: with_details(details, expire), else: :changed
       end)
 
     BrandoAdmin.LiveView.Listing.update_list_entries(schema_module)

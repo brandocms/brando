@@ -467,14 +467,13 @@ defmodule Brando.Publisher do
     else
       waiting = waiting_publications(schema, ids)
 
-      Enum.reject(due, fn {entry, action} ->
-        action == :publish and
-          Enum.any?(waiting, fn job ->
-            job.id == to_string(entry.id) and
-              (made_for?(job.at, entry.publish_at) or not DateTime.after?(job.scheduled_at, now))
-          end)
-      end)
+      Enum.reject(due, fn {entry, action} -> action == :publish and Enum.any?(waiting, &holds?(&1, entry, now)) end)
     end
+  end
+
+  defp holds?(job, entry, now) do
+    job.id == to_string(entry.id) and
+      (made_for?(job.at, entry.publish_at) or not DateTime.after?(job.scheduled_at, now))
   end
 
   defp waiting_publications(schema, ids) do
