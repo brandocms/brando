@@ -104,7 +104,9 @@ defmodule BrandoAdmin.Components.Form.Input.Image do
      |> prepare_input_component()
      |> assign(:file_name, file_name)
      |> assign_new(:editable, fn -> Keyword.get(socket.assigns.opts, :editable, true) end)
-     |> assign_new(:relation_field, fn -> relation_field end)
+     # Assigned on every update: a subform row's position, and so the name of
+     # its id input, changes when a row above it is removed (#3157)
+     |> assign(:relation_field, relation_field)
      |> ProcessingWatch.watch(__MODULE__, :image, [image])}
   end
 

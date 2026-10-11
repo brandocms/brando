@@ -157,6 +157,7 @@ defmodule BrandoAdmin.Components.Form.Input do
         id={"#{@field.id}-datepicker"}
         class="datetime-wrapper"
         phx-hook="Brando.DatePicker"
+        data-name={@field.name}
         data-locale={@locale}
         data-value={@value || ""}
       >
@@ -188,6 +189,7 @@ defmodule BrandoAdmin.Components.Form.Input do
         id={"#{@field.id}-datetimepicker"}
         class="datetime-wrapper"
         phx-hook="Brando.DateTimePicker"
+        data-name={@field.name}
         data-locale={@locale}
         data-alt-format={@alt_format}
         data-value={@value || ""}

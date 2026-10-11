@@ -14,6 +14,13 @@ export default app => ({
   },
 
   updated() {
+    // The named input lives inside the ignored Flatpickr subtree, so
+    // LiveView never renames it. A subform row's inputs are named by
+    // position, which changes when a row above it is removed; keep the name
+    // current, or the next change sends this value as a stray row (#3157).
+    const name = this.el.dataset.name
+    if (name && this.$targetEl.name !== name) this.$targetEl.name = name
+
     const value = this.el.dataset.value
     if (value === this.serverValue) return
 

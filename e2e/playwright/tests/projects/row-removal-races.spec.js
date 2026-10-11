@@ -4,13 +4,15 @@ import { syncLV, setEntryStatus } from '../../utils'
 
 // Rows are numbered by position, and the server rebuilds the entry from each
 // change's params. A change or Save sent before an add or a removal reached
-// the browser must not undo it (#3157, `PendingRows`). Removals with a held
-// reply also need the date and media fields' names patched: that follow-up
-// adds its own tests here.
+// the browser must not undo it (#3157, `PendingRows`). A client's inline
+// rows have date and media fields, whose inputs LiveView does not rename
+// (inside phx-update="ignore", or held by a component): after a removal they
+// must still name the row's new position, or they are sent as an extra row.
 
 const table = page => page.locator('.subform--table')
 const rows = page => table(page).locator('.subform-table-body > .subform-entry')
 const titleOf = row => row.locator('input[name$="[title]"]')
+const confirmedOf = row => row.getByRole('checkbox', { name: 'Confirmed' })
 
 async function threeRows(page) {
   await page.goto('/admin/projects/clients/create')
@@ -40,8 +42,40 @@ async function saved(page) {
   await syncLV(page)
   const titles = await rows(page).locator('input[name$="[title]"]').evaluateAll(els => els.map(el => el.value))
   const confirmed = await rows(page).locator('input[type="checkbox"][name$="[confirmed]"]').evaluateAll(els => els.map(el => el.checked))
-  return { titles, confirmed }
+  const startsOn = await rows(page).locator('input[name$="[starts_on]"]').evaluateAll(els => els.map(el => el.value))
+  return { titles, confirmed, startsOn }
 }
+
+test('a removal waiting for its reply leaves no extra row from date or media fields', async ({ page }) => {
+  const latency = await serverLatency(page)
+  await threeRows(page)
+  // C's date input sits in Flatpickr's ignored subtree: its value must stay C's
+  await rows(page).nth(2).locator('input[name$="[starts_on]"]').evaluate(el => el._flatpickr.setDate('2026-10-01', true))
+  await syncLV(page)
+  latency.set(1000)
+  await rows(page).nth(1).getByRole('button', { name: 'Remove entry' }).click()
+  latency.set(0)
+  await expect(rows(page)).toHaveCount(2)
+  await syncLV(page)
+  const { titles, startsOn } = await saved(page)
+  expect(titles).toEqual(['A', 'C'])
+  expect(startsOn).toEqual(['', '2026-10-01'])
+})
+
+// The row hook holds clicks in the list until the removal's patch lands, so
+// the tick itself may be held back; it must not corrupt the rows either way.
+test('ticking the next row before the removal lands keeps the rows intact', async ({ page }) => {
+  const latency = await serverLatency(page)
+  await threeRows(page)
+  latency.set(1000)
+  await rows(page).nth(1).getByRole('button', { name: 'Remove entry' }).click()
+  await confirmedOf(rows(page).nth(2)).focus()
+  await page.keyboard.press('Space')
+  latency.set(0)
+  await expect(rows(page)).toHaveCount(2)
+  await syncLV(page)
+  expect((await saved(page)).titles).toEqual(['A', 'C'])
+})
 
 test('saving straight after a removal saves without the row', async ({ page }) => {
   await threeRows(page)
