@@ -37,3 +37,10 @@
   trailing `;` gets one; only other headers are left for you. A country code
   in the locale's place (`dk`) is pointed at its language
   (`did you mean da?`).
+
+- **`mix brando.entries.resave` and `mix brando.ssg` take `--yes`, and fail
+  when nobody can answer their prompt**. Run without a terminal, they read the
+  closed stdin as "no" and exited 0 having done nothing. They now exit
+  non-zero, saying nothing was done and to pass `--yes` (`--force` still
+  works); answering "n" says so too. `mix brando.migrate_to_tenant` asks the
+  same way.

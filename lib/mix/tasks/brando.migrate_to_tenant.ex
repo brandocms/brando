@@ -97,15 +97,8 @@ defmodule Mix.Tasks.Brando.MigrateToTenant do
   end
 
   defp confirm_large_media!(opts) do
-    cond do
-      opts[:yes] ->
-        :ok
-
-      Mix.shell().yes?("Continue and copy this media tree?") ->
-        :ok
-
-      true ->
-        Mix.raise("Aborted before copying media")
+    if !Mix.Brando.confirm?("Continue and copy this media tree?", yes: opts[:yes]) do
+      Mix.raise("Aborted before copying media")
     end
   end
 

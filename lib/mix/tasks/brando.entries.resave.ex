@@ -9,7 +9,7 @@ defmodule Mix.Tasks.Brando.Entries.Resave do
   Re-save all entries
 
       mix brando.entries.resave
-      mix brando.entries.resave --force
+      mix brando.entries.resave --yes
 
   Re-save entries for specific blueprint
 
@@ -17,13 +17,14 @@ defmodule Mix.Tasks.Brando.Entries.Resave do
 
   Options:
 
-    * `--force` - Skip confirmation prompt
+    * `--yes` (or `--force`) - Skip the confirmation prompt. Without it and
+      without a terminal to answer on, the task does nothing and exits
+      non-zero.
 
   """
   @spec run(any) :: no_return
   def run(args) do
-    {opts, rest} = OptionParser.parse!(args, strict: [force: :boolean])
-    force? = Keyword.get(opts, :force, false)
+    {opts, rest} = OptionParser.parse!(args, strict: [yes: :boolean, force: :boolean], aliases: [y: :yes])
 
     Application.put_env(:logger, :level, :error)
 
@@ -37,12 +38,12 @@ defmodule Mix.Tasks.Brando.Entries.Resave do
     """)
 
     case rest do
-      [] -> resave_all(force?)
+      [] -> resave_all(opts)
       [blueprint_binary] -> resave_one(blueprint_binary)
     end
   end
 
-  defp resave_all(force?) do
+  defp resave_all(opts) do
     blueprints =
       ([Brando.Pages.Fragment] ++
          Brando.Blueprint.list_blueprints() ++ [Brando.Pages.Page])
@@ -54,12 +55,14 @@ defmodule Mix.Tasks.Brando.Entries.Resave do
       Mix.shell().info([:green, "    * #{inspect(blueprint, pretty: true)}"])
     end
 
-    if force? or Mix.shell().yes?("\n\nProceed?") do
+    if Mix.Brando.confirm?("\n\nProceed?", opts) do
       for blueprint <- blueprints, blueprint.__has_identifier__() do
         resave_entries(blueprint)
       end
 
       Mix.shell().info([:green, "\n==> Done.\n"])
+    else
+      Mix.shell().info("Nothing was done.")
     end
   end
 

@@ -59,6 +59,33 @@ defmodule Mix.Brando do
     end
   end
 
+  @doc """
+  Asks `message` as a `[Yn]` question, or answers yes without asking when
+  `opts` has `yes: true` or `force: true`.
+
+  A closed stdin (a script, CI) is no answer rather than a "no", as
+  `Mix.Shell.IO.yes?/1` takes it: it raises, so the task exits non-zero,
+  saying nothing was done and how to run without the prompt.
+  """
+  @spec confirm?(String.t(), keyword()) :: boolean()
+  def confirm?(message, opts \\ []) do
+    if opts[:yes] || opts[:force] do
+      true
+    else
+      case Mix.shell().prompt(message <> " [Yn]") do
+        answer when is_binary(answer) ->
+          String.trim(answer) =~ ~r/\A(y(es)?)?\z/i
+
+        :eof ->
+          Mix.raise("""
+          No answer given for: #{String.trim(message)}
+
+          stdin is closed, so nothing was done. Pass --yes to go ahead without asking.
+          """)
+      end
+    end
+  end
+
   @valid_attributes [
     :array,
     :boolean,
