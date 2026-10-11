@@ -4967,6 +4967,11 @@ msgstr ""
 msgid "Custom group"
 msgstr ""
 
+#: lib/brando_admin/components/content/list.ex
+#, elixir-autogen, elixir-format
+msgid "Custom order"
+msgstr ""
+
 #: lib/brando_admin/components/form/input/select.ex
 #, elixir-autogen, elixir-format
 msgid "Custom value"
@@ -9479,6 +9484,11 @@ msgstr ""
 #: lib/brando_admin/live/users/groups_live.ex
 #, elixir-autogen, elixir-format
 msgid "Manage your team’s access with groups."
+msgstr ""
+
+#: lib/brando_admin/components/content/list.ex
+#, elixir-autogen, elixir-format
+msgid "Manual order"
 msgstr ""
 
 #: lib/brando_admin/components/form/module_props.ex

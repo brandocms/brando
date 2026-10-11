@@ -17,8 +17,11 @@
   transform: translateY(0);
   opacity: 1;
 
-  [data-app-ready="true"] & { transition: transform 250ms ease, opacity 250ms ease; }
-  &.hidden { transform: translateY(calc(100% + 12px)); opacity: 0; pointer-events: none; }
+  /* `visibility` takes the hidden bar out of the tab order and the
+     accessibility tree; it switches after the slide out, and at once on the
+     way in. */
+  [data-app-ready="true"] & { transition: transform 250ms ease, opacity 250ms ease, visibility 250ms; }
+  &.hidden { transform: translateY(calc(100% + 12px)); opacity: 0; pointer-events: none; visibility: hidden; }
   .selection-actions { display: flex; align-items: center; gap: 12px; }
   .selection-count { display: inline-flex; align-items: center; gap: 8px; white-space: nowrap; }
   .selection-count strong { display: grid; place-items: center; min-width: 28px; height: 28px; padding: 0 6px; border-radius: 5px; background: var(--brando-surface-selected); color: var(--brando-accent); font-weight: 500; font-variant-numeric: tabular-nums; }

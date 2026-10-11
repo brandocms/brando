@@ -10,3 +10,13 @@
   (`#content`, `/about`, `https://…`), as modules made before link variables
   kept their links, are no longer indexed, so they stop showing up in result
   snippets. Rebuild the index to drop them from existing documents.
+
+- **A listing's sort menu shows the order its rows are in.** A menu link
+  carries the default listing's `query.order`, often
+  `[{:asc, :sequence}, …]`, and when none of the listing's sorts had that
+  order the menu named the first sort ("Title ↓") over rows in their stored
+  order, and hid the drag handles. Such an order now reads "Manual order"
+  when it sorts by `sequence` (with the handles) and "Custom order"
+  otherwise. The selection bar of a listing with nothing selected is now
+  hidden from the keyboard and screen readers as well as from view; it was
+  only transparent, so its "0 selected" and Actions could still be reached.

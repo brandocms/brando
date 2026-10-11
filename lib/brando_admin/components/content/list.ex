@@ -428,48 +428,50 @@ defmodule BrandoAdmin.Components.Content.List do
   # From the URL each time: a saved view or the browser's back button can
   # change the sort as well as the sort menu.
   defp assign_sort(%{assigns: %{listing: %{sorts: sorts}, params: params}} = socket) do
-    active_sort =
-      case params["sort"] && Enum.find(sorts, &(to_string(&1.key) == params["sort"])) do
-        nil -> find_active_sort(sorts, List.first(sorts), get_in(params, ["order"]))
-        sort -> sort
-      end
-
-    assign(socket, :active_sort, active_sort)
+    assign(socket, :active_sort, active_sort(sorts, params))
   end
 
-  defp find_active_sort(sorts, default_sort, param_order) do
-    cond do
-      # no param order, use default
-      is_nil(param_order) ->
-        default_sort
+  @doc """
+  The sort the listing shows for the URL's `params`: the one `sort` names, or
+  the one whose order is the URL's `order`, or the first. An `order` no sort
+  has (a menu link carries the listing's `query.order`, which may be none of
+  them) is the order the rows are in, so it is shown as it is: "Manual order"
+  when it orders by `:sequence`, otherwise "Custom order", rather than as the
+  first sort the rows are not in.
+  """
+  def active_sort([], _params), do: nil
 
-      # param order is a string
-      is_binary(param_order) ->
-        # find matching sort
-
-        Enum.find(sorts, default_sort, fn sort ->
-          Query.order_string_to_list(sort.order) ==
-            Query.order_string_to_list(param_order)
-        end)
-
-      # param order is a keyword list
-      is_list(param_order) ->
-        # find matching sort
-        Enum.find(sorts, default_sort, fn sort ->
-          Query.order_string_to_list(sort.order) == param_order
-        end)
-
-      is_map(param_order) ->
-        # find matching sort
-        parsed_order =
-          Map.new(param_order, fn {k, v} ->
-            {String.to_existing_atom(k), String.to_existing_atom(v)}
-          end)
-
-        Enum.find(sorts, default_sort, fn sort ->
-          Query.order_string_to_list(sort.order) == Map.to_list(parsed_order)
-        end)
+  def active_sort(sorts, params) do
+    case params["sort"] && Enum.find(sorts, &(to_string(&1.key) == params["sort"])) do
+      nil -> find_active_sort(sorts, parse_order(params["order"]))
+      sort -> sort
     end
+  end
+
+  defp find_active_sort(sorts, nil), do: List.first(sorts)
+
+  defp find_active_sort(sorts, order) do
+    Enum.find(sorts, fn sort -> Query.order_string_to_list(sort.order) == order end) || url_order(order)
+  end
+
+  defp parse_order(nil), do: nil
+  defp parse_order(order) when is_binary(order), do: Query.order_string_to_list(order)
+  defp parse_order(order) when is_list(order), do: order
+
+  # Grouped by direction: `order[asc]=title`
+  defp parse_order(order) when is_map(order) do
+    order
+    |> Map.new(fn {direction, field} -> {String.to_existing_atom(direction), String.to_existing_atom(field)} end)
+    |> Map.to_list()
+  end
+
+  defp url_order(order) do
+    label =
+      if Row.ordered_by_sequence?(%{order: order}),
+        do: gettext("Manual order"),
+        else: gettext("Custom order")
+
+    %{key: nil, label: label, order: order}
   end
 
   defp assign_sort(socket, sort) do

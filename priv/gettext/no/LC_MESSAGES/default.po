@@ -4967,6 +4967,11 @@ msgstr "Egendefinert"
 msgid "Custom group"
 msgstr "Egendefinert gruppe"
 
+#: lib/brando_admin/components/content/list.ex
+#, elixir-autogen, elixir-format
+msgid "Custom order"
+msgstr "Egendefinert rekkefølge"
+
 #: lib/brando_admin/components/form/input/select.ex
 #, elixir-autogen, elixir-format
 msgid "Custom value"
@@ -9480,6 +9485,11 @@ msgstr "Administrer hvem som har denne tilgangen under Medlemmer. Minst én akti
 #, elixir-autogen, elixir-format
 msgid "Manage your team’s access with groups."
 msgstr "Administrer teamets tilgang med grupper."
+
+#: lib/brando_admin/components/content/list.ex
+#, elixir-autogen, elixir-format
+msgid "Manual order"
+msgstr "Manuell rekkefølge"
 
 #: lib/brando_admin/components/form/module_props.ex
 #, elixir-autogen, elixir-format
