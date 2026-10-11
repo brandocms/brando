@@ -59,7 +59,7 @@ defmodule Brando.Blueprint.Migrations.Renderer do
 
         #{render_alter(:up, current.table, diff, reconcile)}
 
-        #{render_backfills(current, diff)}
+        #{render_backfills(current, diff, reconcile)}
 
         #{render_indexes(:create, diff.add_indexes, reconcile.guarded_indexes)}
 
@@ -67,6 +67,8 @@ defmodule Brando.Blueprint.Migrations.Renderer do
       end
 
       def down do
+        #{render_statements(reconcile_statements(:down, current.table, reconcile))}
+
         #{render_auxiliary_tables(:drop, Enum.reverse(diff.add_auxiliary_tables), reconcile)}
 
         #{render_indexes(:drop, added_indexes)}
@@ -120,11 +122,12 @@ defmodule Brando.Blueprint.Migrations.Renderer do
   # upper bound, as brando_175 does for Brando's own tables. Without it every
   # existing entry shows as never edited. `content_modified_at` (the Meta
   # trait) starts from the last edit the same way, as brando_201 does.
-  defp render_backfills(current, diff) do
+  defp render_backfills(current, diff, reconcile) do
     statements =
-      if current.timestamps and diff.timestamps != :add,
-        do: backfill_statements(current, diff),
-        else: []
+      reconcile_statements(:up, current.table, reconcile) ++
+        if current.timestamps and diff.timestamps != :add,
+          do: backfill_statements(current, diff),
+          else: []
 
     case statements do
       [] ->
@@ -134,9 +137,19 @@ defmodule Brando.Blueprint.Migrations.Renderer do
         """
         flush()
 
-        #{Enum.map_join(statements, "\n", &~s(execute "#{&1}"))}
+        #{render_statements(statements)}
         """
     end
+  end
+
+  defp render_statements(statements), do: Enum.map_join(statements, "\n", &~s(execute "#{&1}"))
+
+  # Raw SQL rather than `modify`: `modify` also sets the column's type, which
+  # for a column the Blueprint no longer describes is only the old snapshot's
+  # guess at what the database holds.
+  defp reconcile_statements(direction, table, reconcile) do
+    change = if direction == :up, do: "DROP NOT NULL", else: "SET NOT NULL"
+    Enum.map(reconcile.relaxed, &"ALTER TABLE #{table} ALTER COLUMN #{&1} #{change}")
   end
 
   defp backfill_statements(current, diff) do

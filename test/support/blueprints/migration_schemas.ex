@@ -832,6 +832,7 @@ defmodule Brando.MigrationTest.ReconcileArticleV1 do
     attribute :html, :text
     attribute :link, :string
     attribute :stale, :string
+    attribute :code, :string
     attribute :never_created, :string
   end
 end

@@ -502,6 +502,10 @@ copy of production. Then:
   index or table the database does not have is left out. The snapshot of an
   `alter` written in place of a `create table` is recorded as a baseline, so
   what it found stays unowned.
+- A kept column that is `NOT NULL` without a default would fail every insert,
+  since the schema no longer writes it. The migration drops its `NOT NULL` with
+  `ALTER TABLE ... DROP NOT NULL` (not `modify`, which would also reset its
+  type), says so in a comment, and sets it back in `down/0`.
 
 The first comment in each migration, and the summary printed after the
 previews, name the repo, database and schemas read, since that database decided

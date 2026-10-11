@@ -274,7 +274,9 @@ if Code.ensure_loaded?(Igniter) do
             "#{summary.table} already exists; the migration alters it, adding only what it lacks",
           summary.guarded != [] && "already exist, added with *_if_not_exists: #{Enum.join(summary.guarded, ", ")}",
           summary.left_out != [] && "left out: #{Enum.join(summary.left_out, ", ")}",
-          summary.kept != [] && "kept, dropping them is a separate decision: #{Enum.join(summary.kept, ", ")}"
+          summary.kept != [] && "kept, dropping them is a separate decision: #{Enum.join(summary.kept, ", ")}",
+          summary.relaxed != [] &&
+            "kept and no longer written, so their NOT NULL is dropped: #{Enum.join(summary.relaxed, ", ")}"
         ]
         |> Enum.filter(& &1)
         |> then(&if(&1 == [] and plan.migration_source, do: ["nothing to reconcile"], else: &1))

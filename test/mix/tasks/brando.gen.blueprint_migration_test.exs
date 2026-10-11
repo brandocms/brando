@@ -410,6 +410,10 @@ defmodule Mix.Tasks.Brando.Gen.BlueprintMigrationTest do
 
     defp table?(table), do: query!("SELECT to_regclass($1) IS NOT NULL", [table]).rows == [[true]]
 
+    defp nullable_sql do
+      "SELECT is_nullable::text FROM information_schema.columns WHERE table_schema = 'public' AND table_name = $1 AND column_name = $2"
+    end
+
     # The migration's comments as one line; the generator wraps them.
     defp comments(source) do
       for "#" <> line <- source |> String.split("\n") |> Enum.map(&String.trim/1), into: "", do: line
@@ -428,6 +432,7 @@ defmodule Mix.Tasks.Brando.Gen.BlueprintMigrationTest do
         html text,
         link text,
         stale text,
+        code text NOT NULL,
         rendered_blocks text,
         language text,
         creator_id bigint CONSTRAINT reconcile_articles_creator_id_fkey REFERENCES public.users (id),
@@ -449,8 +454,8 @@ defmodule Mix.Tasks.Brando.Gen.BlueprintMigrationTest do
       """)
 
       query!("""
-      INSERT INTO reconcile_articles (title, data, link)
-      VALUES ('First', '{"blocks": []}', 'https://example.com'), ('Second', '{}', NULL)
+      INSERT INTO reconcile_articles (title, data, link, code)
+      VALUES ('First', '{"blocks": []}', 'https://example.com', 'a'), ('Second', '{}', NULL, 'b')
       """)
     end
 
@@ -525,8 +530,13 @@ defmodule Mix.Tasks.Brando.Gen.BlueprintMigrationTest do
       # never had is left out.
       assert up =~ "remove :stale"
 
-      for column <- [:data, :html, :link, :never_created],
+      for column <- [:data, :html, :link, :code, :never_created],
           do: refute(plan.migration_source =~ "remove #{inspect(column)}")
+
+      # A kept NOT NULL column the schema no longer writes would fail every
+      # insert, so its NOT NULL goes, and comes back in down/0.
+      assert up =~ ~s(execute "ALTER TABLE reconcile_articles ALTER COLUMN code DROP NOT NULL")
+      assert down =~ ~s(execute "ALTER TABLE reconcile_articles ALTER COLUMN code SET NOT NULL")
 
       comments = comments(plan.migration_source)
       [[database]] = query!("SELECT current_database()").rows
@@ -541,6 +551,9 @@ defmodule Mix.Tasks.Brando.Gen.BlueprintMigrationTest do
                "reconcile_articles.data is a legacy Villain column holding 2 values; --reconcile never drops it."
 
       assert comments =~ "reconcile_articles.html is a legacy Villain column holding 0 values"
+
+      assert comments =~
+               "reconcile_articles.code is NOT NULL without a default and the Blueprint no longer writes it, so this migration drops its NOT NULL"
 
       assert comments =~
                "reconcile_articles.creator_id already exists with its foreign key, so this migration leaves it out."
@@ -571,7 +584,11 @@ defmodule Mix.Tasks.Brando.Gen.BlueprintMigrationTest do
 
         assert query!("SELECT count(data), count(link), count(edited_at) FROM reconcile_articles").rows == [[2, 1, 2]]
 
+        query!("INSERT INTO reconcile_articles (title) VALUES ('Written by the schema')")
+        query!("DELETE FROM reconcile_articles WHERE code IS NULL")
+
         down.()
+        assert query!(nullable_sql(), ["reconcile_articles", "code"]).rows == [["NO"]]
         assert columns("reconcile_articles") == legacy_columns
         assert table?("reconcile_articles_alternates")
         assert indexes("reconcile_articles_alternates") == ["reconcile_articles_alternates_pkey"]
@@ -625,7 +642,11 @@ defmodule Mix.Tasks.Brando.Gen.BlueprintMigrationTest do
       create_legacy_articles()
 
       [{_, [request]}] = reconcile(context, ReconcileArticleV2).tasks
-      query!("INSERT INTO reconcile_articles (title, data, link) VALUES ('Third', '{}', 'https://example.org')")
+
+      query!(
+        "INSERT INTO reconcile_articles (title, data, link, code) VALUES ('Third', '{}', 'https://example.org', 'c')"
+      )
+
       assert {:ok, metadata} = MigrationRequest.apply(request)
       assert comments(File.read!(metadata.migration)) =~ "reconcile_articles.link holds 2 values"
     end

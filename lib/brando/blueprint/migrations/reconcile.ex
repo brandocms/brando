@@ -36,37 +36,50 @@ defmodule Brando.Blueprint.Migrations.Reconcile do
           guarded_columns: MapSet.t(atom()),
           guarded_indexes: MapSet.t(String.t()),
           guarded_tables: MapSet.t(String.t()),
+          relaxed: [String.t()],
           comments: [text()],
           counts?: boolean(),
           summary: %{
+            optional(:database) => String.t(),
             table: String.t() | nil,
             create_as_alter?: boolean(),
             guarded: [text()],
             left_out: [text()],
-            kept: [text()]
+            kept: [text()],
+            relaxed: [String.t()]
           }
         }
 
   @typedoc """
-  What was reconciled, for the generator's report: the existing objects guarded
-  with `*_if_not_exists`, the operations left out, and the columns and tables
-  kept because they hold data.
+  What was reconciled, for the generator's report: the database read, the
+  existing objects guarded with `*_if_not_exists`, the operations left out, and
+  the columns and tables kept.
   """
   @type summary :: %{
+          optional(:database) => String.t(),
           table: String.t() | nil,
           create_as_alter?: boolean(),
           guarded: [String.t()],
           left_out: [String.t()],
-          kept: [String.t()]
+          kept: [String.t()],
+          relaxed: [String.t()]
         }
 
   defstruct create_as_alter?: false,
             guarded_columns: MapSet.new(),
             guarded_indexes: MapSet.new(),
             guarded_tables: MapSet.new(),
+            relaxed: [],
             comments: [],
             counts?: true,
-            summary: %{table: nil, create_as_alter?: false, guarded: [], left_out: [], kept: []}
+            summary: %{table: nil, create_as_alter?: false, guarded: [], left_out: [], kept: [], relaxed: []}
+
+  @doc """
+  Whether the migration has work of its own beyond the diff: a kept column's
+  NOT NULL to drop.
+  """
+  @spec operations?(t()) :: boolean()
+  def operations?(%__MODULE__{relaxed: relaxed}), do: relaxed != []
 
   @doc "The same reconciliation, with every count written as `N`."
   @spec without_counts(t()) :: t()
@@ -195,7 +208,8 @@ defmodule Brando.Blueprint.Migrations.Reconcile do
          create_as_alter?: true,
          guarded: [],
          left_out: Enum.map(unconstrained, &elem(&1, 0)),
-         kept: []
+         kept: [],
+         relaxed: []
        }
      }}
   end
@@ -269,7 +283,18 @@ defmodule Brando.Blueprint.Migrations.Reconcile do
         timestamps: timestamps
     }
 
-    notes = add_notes ++ column_notes ++ timestamp_notes ++ index_notes ++ table_notes
+    relaxed = relaxed_columns(diff, reconciled, columns, Map.get(database.required, table, MapSet.new()))
+
+    relax_notes =
+      Enum.flat_map(relaxed, fn name ->
+        [
+          {:relaxed, "#{table}.#{name}"},
+          {:comment,
+           "#{table}.#{name} is NOT NULL without a default and the Blueprint no longer writes it, so this migration drops its NOT NULL to keep inserts working."}
+        ]
+      end)
+
+    notes = add_notes ++ column_notes ++ timestamp_notes ++ relax_notes ++ index_notes ++ table_notes
     guarded_columns = add_columns |> Enum.map(& &1.name) |> Enum.filter(&MapSet.member?(columns, to_string(&1)))
 
     guarded =
@@ -282,15 +307,29 @@ defmodule Brando.Blueprint.Migrations.Reconcile do
        guarded_columns: MapSet.new(guarded_columns),
        guarded_indexes: guarded_indexes,
        guarded_tables: MapSet.new(guarded_tables),
+       relaxed: relaxed,
        comments: for({:comment, comment} <- notes, do: comment),
        summary: %{
          table: table,
          create_as_alter?: false,
          guarded: guarded,
          left_out: for({:left_out, entry} <- notes, do: entry),
-         kept: for({:kept, entry} <- notes, do: entry)
+         kept: for({:kept, entry} <- notes, do: entry),
+         relaxed: for({:relaxed, entry} <- notes, do: entry)
        }
      }}
+  end
+
+  # The columns the plan dropped but this migration keeps, that an insert
+  # leaving them out would fail on.
+  defp relaxed_columns(planned, reconciled, columns, required) do
+    timestamps = ~w(inserted_at updated_at)
+
+    kept =
+      Enum.map(planned.remove_columns -- reconciled.remove_columns, &to_string(&1.name)) ++
+        if(planned.timestamps == :remove and reconciled.timestamps == :unchanged, do: timestamps, else: [])
+
+    Enum.filter(kept, &(MapSet.member?(columns, &1) and MapSet.member?(required, &1)))
   end
 
   # An existing column with a foreign key is left out: `ADD COLUMN IF NOT
@@ -465,6 +504,7 @@ defmodule Brando.Blueprint.Migrations.Reconcile do
       tables: found,
       columns: names_by_table(repo, found, columns_query()),
       indexes: names_by_table(repo, found, indexes_query()),
+      required: names_by_table(repo, found, required_query()),
       foreign_keys: names_by_table(repo, found, foreign_keys_query())
     }
   end
@@ -478,6 +518,15 @@ defmodule Brando.Blueprint.Migrations.Reconcile do
 
   defp columns_query do
     "SELECT column_name::text FROM information_schema.columns WHERE table_schema::text = $1 AND table_name::text = $2"
+  end
+
+  # Columns an insert must give a value for.
+  defp required_query do
+    """
+    SELECT column_name::text FROM information_schema.columns
+    WHERE table_schema::text = $1 AND table_name::text = $2
+      AND is_nullable = 'NO' AND column_default IS NULL AND is_identity = 'NO' AND is_generated = 'NEVER'
+    """
   end
 
   defp indexes_query, do: "SELECT indexname::text FROM pg_indexes WHERE schemaname = $1 AND tablename = $2"

@@ -211,7 +211,7 @@ defmodule Brando.Blueprint.Migrations do
   defp prepare_reconciled(module, diff, schema, previous, opts) do
     {diff, reconcile} = Reconcile.reconcile(diff, schema, Brando.repo(), owned_storage(module, previous, opts))
 
-    if Diff.empty?(diff) do
+    if Diff.empty?(diff) and not Reconcile.operations?(reconcile) do
       snapshot = %{Snapshot.build_snapshot(module, snapshot_version(previous) + 1) | rebaseline?: true}
 
       metadata =
