@@ -1685,7 +1685,13 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
 
   def handle(assigns) do
     ~H"""
-    <div class="sort-handle block-action" data-sortable-group={1} data-popover={gettext("Reposition block (click&drag)")}>
+    <div
+      class="sort-handle block-action"
+      data-sortable-group={1}
+      role="img"
+      aria-label={gettext("Reposition block (click&drag)")}
+      data-popover={gettext("Reposition block (click&drag)")}
+    >
       <.icon name="arrow-up-down" />
     </div>
     """
@@ -2813,9 +2819,9 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
         <div
           :if={!@is_ref?}
           class="dirty block-action toggler"
-          data-popover={gettext("Block has changes")}
-          role="button"
-          aria-label={gettext("Block has changes")}
+          data-popover={gettext("Block has unsaved changes")}
+          role="img"
+          aria-label={gettext("Block has unsaved changes")}
           phx-click="show_dirty"
           phx-target={@target}
         >

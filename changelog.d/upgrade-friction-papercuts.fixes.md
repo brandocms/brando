@@ -20,3 +20,13 @@
   otherwise. The selection bar of a listing with nothing selected is now
   hidden from the keyboard and screen readers as well as from view; it was
   only transparent, so its "0 selected" and Actions could still be reached.
+
+- **The block editor no longer announces every block as changed.** Each
+  block's unsaved-changes dot was only transparent when the block had no
+  changes, so assistive technology read "Block has changes" on every block,
+  and the Norwegian "Blokken har oppdateringer" ("the block has updates")
+  read as if every block were behind its module, which `mix brando.doctor`
+  and Utilities contradicted. The dot is now hidden until the block has
+  unsaved changes and is named "Block has unsaved changes" ("Blokken har
+  ulagrede endringer"). A block's drag handle has an accessible name, and
+  the keyboard shortcut sheet lists undo and redo for typing.

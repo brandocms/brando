@@ -2678,7 +2678,7 @@ msgstr ""
 
 #: lib/brando_admin/components/form/block/render.ex
 #, elixir-autogen, elixir-format
-msgid "Block has changes"
+msgid "Block has unsaved changes"
 msgstr ""
 
 #: lib/brando_admin/live/content/module_set_list_live.ex
@@ -13061,6 +13061,11 @@ msgstr ""
 msgid "Redo"
 msgstr ""
 
+#: lib/brando_admin/components/shortcut_sheet.ex
+#, elixir-autogen, elixir-format
+msgid "Redo typing"
+msgstr ""
+
 #: lib/brando/content/stale_blocks.ex
 #, elixir-autogen, elixir-format
 msgid "Reference"
@@ -18135,6 +18140,11 @@ msgstr ""
 #: lib/brando_admin/live/ai/assistant_live.ex
 #, elixir-autogen, elixir-format
 msgid "Undo the proposal? Each entry goes back to how it was before, and new entries are deleted."
+msgstr ""
+
+#: lib/brando_admin/components/shortcut_sheet.ex
+#, elixir-autogen, elixir-format
+msgid "Undo typing"
 msgstr ""
 
 #: lib/brando_admin/live/ai/assistant_live.ex

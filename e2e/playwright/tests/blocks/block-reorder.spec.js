@@ -99,6 +99,10 @@ test.describe('Block reordering (root blocks)', () => {
     await addStyledHeader(page, 'Beta', 1)
     await addStyledHeader(page, 'Gamma', 2)
     await expectHeaderOrder(page, ['Alpha', 'Beta', 'Gamma'])
+    await expect(sortHandle(page, 0)).toHaveAccessibleName('Reposition block (click&drag)')
+    // New blocks are unsaved
+    const unsaved = page => page.getByRole('img', { name: 'Block has unsaved changes' })
+    await expect(unsaved(page)).toHaveCount(3)
 
     await toggleLivePreview(page)
     await waitForPreviewReady(page)
@@ -126,6 +130,9 @@ test.describe('Block reordering (root blocks)', () => {
     await page.getByRole('link', { name: 'Reorder Test', exact: true }).click()
     await syncLV(page)
     await expectHeaderOrder(page, ['Gamma', 'Alpha', 'Beta'])
+    // Saved blocks are not marked, for assistive technology either
+    await expect(unsaved(page)).toHaveCount(0)
+    await expect(rootBlocks(page).first().locator('.block-actions .dirty').first()).toBeHidden()
   })
 
   test('reordering up then back down restores the original order', async ({ page }) => {

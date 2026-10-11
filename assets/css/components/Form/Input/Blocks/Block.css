@@ -202,7 +202,9 @@
         .block-actions {
           .dirty {
             opacity: 1;
+            visibility: visible;
             pointer-events: all;
+            transition: opacity 450ms ease, visibility 0s;
           }
         }
       }
@@ -1738,11 +1740,14 @@ button.btn-palette {
         border-radius: 7px;
       }
 
+      /* Hidden, not just transparent, on a block without unsaved changes, so
+         assistive technology does not announce it on every block. */
       &.dirty {
         opacity: 0;
+        visibility: hidden;
         color: coral;
         font-size: 13px;
-        transition: opacity 450ms ease;
+        transition: opacity 450ms ease, visibility 0s 450ms;
         border-color: transparent !important;
         pointer-events: none;
       }

@@ -2678,8 +2678,8 @@ msgstr "Blokkfelt"
 
 #: lib/brando_admin/components/form/block/render.ex
 #, elixir-autogen, elixir-format
-msgid "Block has changes"
-msgstr "Blokken har oppdateringer"
+msgid "Block has unsaved changes"
+msgstr "Blokken har ulagrede endringer"
 
 #: lib/brando_admin/live/content/module_set_list_live.ex
 #: lib/brando_admin/menu.ex
@@ -13061,6 +13061,11 @@ msgstr "Omdirigering opprettet"
 msgid "Redo"
 msgstr "Gjør om"
 
+#: lib/brando_admin/components/shortcut_sheet.ex
+#, elixir-autogen, elixir-format
+msgid "Redo typing"
+msgstr "Gjør om skriving"
+
 #: lib/brando/content/stale_blocks.ex
 #, elixir-autogen, elixir-format
 msgid "Reference"
@@ -18138,6 +18143,11 @@ msgstr "Angre"
 #, elixir-autogen, elixir-format
 msgid "Undo the proposal? Each entry goes back to how it was before, and new entries are deleted."
 msgstr "Angre forslaget? Hver oppføring går tilbake til slik den var, og nye oppføringer slettes."
+
+#: lib/brando_admin/components/shortcut_sheet.ex
+#, elixir-autogen, elixir-format
+msgid "Undo typing"
+msgstr "Angre skriving"
 
 #: lib/brando_admin/live/ai/assistant_live.ex
 #, elixir-autogen, elixir-format
