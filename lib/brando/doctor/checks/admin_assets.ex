@@ -33,10 +33,30 @@ defmodule Brando.Doctor.Checks.AdminAssets do
         skipped(dgettext("doctor", "no assets/backend/package.json"))
 
       package ->
-        backend
-        |> installed(dependency(package))
-        |> report(version)
+        result =
+          backend
+          |> installed(dependency(package))
+          |> report(version)
+
+        if result.status != :ok and not pnpm?(backend, package),
+          do: %{result | fix: upgrade_fix(version)},
+          else: result
     end
+  end
+
+  # The admin is built with pnpm since 0.55; a yarn or npm `assets/backend`
+  # needs the template's package.json and lockfile before any install.
+  defp pnpm?(backend, package) do
+    File.regular?(Path.join(backend, "pnpm-lock.yaml")) or
+      String.starts_with?(to_string(package["packageManager"]), "pnpm@")
+  end
+
+  defp upgrade_fix(version) do
+    dgettext(
+      "doctor",
+      "expected %{version}; assets/backend is not a pnpm project yet: run mix brando.gen.backend --upgrade, then mix brando.assets.setup --backend-only",
+      version: version
+    )
   end
 
   defp dependency(package) do
@@ -90,7 +110,9 @@ defmodule Brando.Doctor.Checks.AdminAssets do
       summary,
       installed,
       version,
-      dgettext("doctor", "expected %{version}, run npx yalc update %{package} and pnpm install in assets/backend",
+      dgettext(
+        "doctor",
+        "expected %{version}, run npx yalc publish in Brando's assets, then npx yalc update %{package} and pnpm install in assets/backend (or mix brando.assets.setup --backend-only)",
         version: version,
         package: @package
       )

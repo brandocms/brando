@@ -21,7 +21,7 @@ defmodule Brando.Migrations.MigrateDatasourceWrappers do
         root_blocks->>'type' = 'datasource'
       """
 
-      {:ok, %{rows: rows}} = Ecto.Adapters.SQL.query(Brando.Repo.repo(), query, [])
+      {:ok, %{rows: rows}} = Brando.repo().query(query, [])
 
       for [_id, wrapper, template_id] <- rows do
         if wrapper do

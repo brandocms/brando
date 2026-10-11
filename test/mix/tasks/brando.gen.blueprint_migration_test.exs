@@ -170,6 +170,29 @@ defmodule Mix.Tasks.Brando.Gen.BlueprintMigrationTest do
     assert File.exists?(planned.assigns.brando_storage_plan.metadata.snapshot)
   end
 
+  # The fingerprint a request carried before --reconcile existed, so a request
+  # reviewed on the earlier version still applies after the upgrade.
+  test "a plan without --reconcile keeps its earlier fingerprint", context do
+    plan = plan(context, ["--dry-run"]).assigns.brando_storage_plan
+
+    options =
+      plan.options
+      |> Keyword.delete(:planned_migration_version)
+      |> Keyword.put(:rebaseline, plan.options[:rebaseline] || false)
+      |> Enum.sort()
+
+    earlier =
+      %{plan | snapshot: %{plan.snapshot | updated_at: nil}, options: options}
+      |> :erlang.term_to_binary([:deterministic])
+      |> then(&:crypto.hash(:sha256, &1))
+      |> Base.encode16(case: :lower)
+
+    assert Brando.Blueprint.Migrations.plan_digest(plan) == earlier
+
+    assert Brando.Blueprint.Migrations.plan_digest(%{plan | options: Keyword.put(plan.options, :reconcile, false)}) ==
+             earlier
+  end
+
   test "new tenant storage defaults to tenant migrations without changing explicit paths", context do
     for mode <- [:none, :single, :multi] do
       project =
@@ -353,6 +376,521 @@ defmodule Mix.Tasks.Brando.Gen.BlueprintMigrationTest do
       assert Enum.all?(plans, &File.exists?(&1.metadata.migration))
       assert Enum.all?(plans, &File.exists?(&1.metadata.snapshot))
       assert_received {:mix_shell, :info, ["Created " <> _]}
+    end
+  end
+
+  # The legacy tables are created inside the test's sandbox transaction, and the
+  # generated migrations run on its connection; Postgres DDL is transactional,
+  # so the sandbox undoes all of it.
+  describe "--reconcile" do
+    alias Brando.Blueprint.Migrations
+
+    alias Brando.MigrationTest.{
+      ReconcileArticleV1,
+      ReconcileArticleV2,
+      ReconcileArticleV3,
+      ReconcileFarm,
+      ReconcileFarmV2
+    }
+
+    defp query!(sql, params \\ []), do: Brando.repo().query!(sql, params, log: false)
+
+    defp columns(table) do
+      query!(
+        "SELECT column_name::text FROM information_schema.columns WHERE table_schema = 'public' AND table_name = $1 ORDER BY 1",
+        [table]
+      ).rows
+      |> List.flatten()
+    end
+
+    defp indexes(table) do
+      query!("SELECT indexname::text FROM pg_indexes WHERE schemaname = 'public' AND tablename = $1 ORDER BY 1", [table]).rows
+      |> List.flatten()
+    end
+
+    defp table?(table), do: query!("SELECT to_regclass($1) IS NOT NULL", [table]).rows == [[true]]
+
+    defp nullable_sql do
+      "SELECT is_nullable::text FROM information_schema.columns WHERE table_schema = 'public' AND table_name = $1 AND column_name = $2"
+    end
+
+    # The migration's comments as one line; the generator wraps them.
+    defp comments(source) do
+      for "#" <> line <- source |> String.split("\n") |> Enum.map(&String.trim/1), into: "", do: line
+    end
+
+    # `reconcile_articles` as a legacy site has it: the blocks conversion and
+    # the Translatable trait came after the snapshot, the Creator trait's
+    # `creator_id` was added by hand with its foreign key, and the alternates
+    # table exists without its unique index.
+    defp create_legacy_articles do
+      query!("""
+      CREATE TABLE reconcile_articles (
+        id bigserial PRIMARY KEY,
+        title text,
+        data jsonb,
+        html text,
+        link text,
+        stale text,
+        code text NOT NULL,
+        rendered_blocks text,
+        language text,
+        creator_id bigint CONSTRAINT reconcile_articles_creator_id_fkey REFERENCES public.users (id),
+        inserted_at timestamp(0) NOT NULL DEFAULT now(),
+        updated_at timestamp(0) NOT NULL DEFAULT now()
+      )
+      """)
+
+      query!("CREATE INDEX reconcile_articles_language_index ON reconcile_articles (language)")
+
+      query!("""
+      CREATE TABLE reconcile_articles_alternates (
+        id bigserial PRIMARY KEY,
+        entry_id bigint REFERENCES reconcile_articles (id) ON DELETE CASCADE,
+        linked_entry_id bigint REFERENCES reconcile_articles (id) ON DELETE CASCADE,
+        inserted_at timestamp(0) NOT NULL,
+        updated_at timestamp(0) NOT NULL
+      )
+      """)
+
+      query!("""
+      INSERT INTO reconcile_articles (title, data, link, code)
+      VALUES ('First', '{"blocks": []}', 'https://example.com', 'a'), ('Second', '{}', NULL, 'b')
+      """)
+    end
+
+    # `reconcile_farms` from before Blueprint snapshots: no Creator trait
+    # columns but a hand-added `creator_id` without its foreign key, and no slug index.
+    defp create_legacy_farms do
+      query!("""
+      CREATE TABLE reconcile_farms (
+        id bigserial PRIMARY KEY,
+        title text,
+        slug text,
+        creator_id bigint,
+        inserted_at timestamp(0) NOT NULL DEFAULT now(),
+        updated_at timestamp(0) NOT NULL DEFAULT now()
+      )
+      """)
+
+      query!("INSERT INTO reconcile_farms (title, slug) VALUES ('Farm', 'farm')")
+    end
+
+    defp reconcile(context, module, flags \\ []) do
+      Igniter.Test.test_project()
+      |> Igniter.compose_task(BlueprintMigration, [
+        inspect(module),
+        "--reconcile",
+        "--migration-path",
+        context.migration_path,
+        "--snapshot-path",
+        context.snapshot_path | flags
+      ])
+    end
+
+    # Runs `fun` with the migration compiled, after running its up/0.
+    defp migrate_up(source, fun) do
+      [{module, _}] = Code.compile_string(source)
+      repo = Brando.repo()
+      run = &Ecto.Migration.Runner.run(repo, repo.config(), 1, module, :forward, &1, &1, log: false)
+
+      try do
+        run.(:up)
+        fun.(fn -> run.(:down) end)
+      after
+        :code.purge(module)
+        :code.delete(module)
+      end
+    end
+
+    test "fits a legacy snapshot's plan to the tables, columns and indexes the database has", context do
+      opts = [migration_path: context.migration_path, snapshot_path: context.snapshot_path]
+      {:ok, _} = Migrations.create_migration(ReconcileArticleV1, opts)
+      create_legacy_articles()
+      legacy_columns = columns("reconcile_articles")
+
+      planned = reconcile(context, ReconcileArticleV2, ["--dry-run"])
+      assert planned.issues == []
+      plan = planned.assigns.brando_storage_plan
+      [up, down] = String.split(plan.migration_source, "def down do")
+
+      # Existing columns and indexes are guarded; existing ones with a foreign
+      # key are left out, since PostgreSQL would add the constraint again.
+      assert up =~ "add_if_not_exists :language, :text"
+      assert up =~ "add_if_not_exists :rendered_blocks, :text"
+      assert up =~ "add :summary, :text"
+      assert up =~ "add :edited_at, :utc_datetime"
+      assert up =~ ~r/add :updated_by_id,\s+references\(:users/
+      refute plan.migration_source =~ ":creator_id"
+      assert up =~ ~r/create_if_not_exists index\(:reconcile_articles, \[:language\]/
+      assert up =~ "create_if_not_exists table(:reconcile_articles_alternates)"
+      assert up =~ ~r/create unique_index\(:reconcile_articles_alternates/
+
+      # Only a column without data is dropped; the drop of one the database
+      # never had is left out.
+      assert up =~ "remove :stale"
+
+      for column <- [:data, :html, :link, :code, :never_created],
+          do: refute(plan.migration_source =~ "remove #{inspect(column)}")
+
+      # A kept NOT NULL column the schema no longer writes would fail every
+      # insert, so its NOT NULL goes, and comes back in down/0.
+      assert up =~ ~s(execute "ALTER TABLE reconcile_articles ALTER COLUMN code DROP NOT NULL")
+      assert down =~ ~s(execute "ALTER TABLE reconcile_articles ALTER COLUMN code SET NOT NULL")
+
+      comments = comments(plan.migration_source)
+      [[database]] = query!("SELECT current_database()").rows
+
+      assert comments =~
+               "Reconciled against #{inspect(Brando.repo())}, database #{database} (schemas: public)."
+
+      assert comments =~
+               "reconcile_articles.link holds 1 value, so this migration keeps it. Dropping it is a separate decision."
+
+      assert comments =~
+               "reconcile_articles.data is a legacy Villain column holding 2 values; --reconcile never drops it."
+
+      assert comments =~ "reconcile_articles.html is a legacy Villain column holding 0 values"
+
+      assert comments =~
+               "reconcile_articles.code is NOT NULL without a default and the Blueprint no longer writes it, so this migration drops its NOT NULL"
+
+      assert comments =~
+               "reconcile_articles.creator_id already exists with its foreign key, so this migration leaves it out."
+
+      # down/0 undoes only what up/0 added.
+      assert down =~ ~r/drop index\(:reconcile_articles_alternates/
+      refute down =~ "drop table"
+      refute down =~ "reconcile_articles_language_index"
+      refute down =~ ~r/remove :(language|rendered_blocks)/
+      assert down =~ "remove :summary"
+      assert down =~ "add :stale, :text"
+
+      refute Enum.any?(planned.warnings, &(&1 =~ "already exist in the database" or &1 =~ "legacy Villain"))
+      assert [notice] = Enum.filter(planned.notices, &(&1 =~ "Reconciled with the database"))
+      assert notice =~ "read from #{inspect(Brando.repo())}, database #{database}"
+      assert notice =~ "Brando.MigrationTest.ReconcileArticleV2: #{Path.relative_to_cwd(plan.metadata.migration)}"
+      assert notice =~ "reconcile_articles.language, reconcile_articles.rendered_blocks"
+      assert notice =~ "reconcile_articles.creator_id"
+      assert notice =~ "drop of reconcile_articles.never_created (not in the database)"
+      assert notice =~ "reconcile_articles.link (1 value)"
+      assert notice =~ "reconcile_articles.data (legacy Villain column, 2 values)"
+
+      migrate_up(plan.migration_source, fn down ->
+        migrated = columns("reconcile_articles")
+        assert Enum.all?(~w(summary edited_at updated_by_id), &(&1 in migrated))
+        refute "stale" in migrated
+        assert "reconcile_articles_alternates_entry_id_linked_entry_id_index" in indexes("reconcile_articles_alternates")
+
+        assert query!("SELECT count(data), count(link), count(edited_at) FROM reconcile_articles").rows == [[2, 1, 2]]
+
+        query!("INSERT INTO reconcile_articles (title) VALUES ('Written by the schema')")
+        query!("DELETE FROM reconcile_articles WHERE code IS NULL")
+
+        down.()
+        assert query!(nullable_sql(), ["reconcile_articles", "code"]).rows == [["NO"]]
+        assert columns("reconcile_articles") == legacy_columns
+        assert table?("reconcile_articles_alternates")
+        assert indexes("reconcile_articles_alternates") == ["reconcile_articles_alternates_pkey"]
+        assert "reconcile_articles_language_index" in indexes("reconcile_articles")
+      end)
+    end
+
+    test "the reviewed plan is applied as previewed, and a second run has nothing to do", context do
+      opts = [migration_path: context.migration_path, snapshot_path: context.snapshot_path]
+      {:ok, _} = Migrations.create_migration(ReconcileArticleV1, opts)
+      create_legacy_articles()
+
+      planned = reconcile(context, ReconcileArticleV2)
+      [{"brando.blueprint.apply_plan", [request]}] = planned.tasks
+      assert {:ok, metadata} = MigrationRequest.apply(request)
+      assert File.read!(metadata.migration) == planned.assigns.brando_storage_plan.migration_source
+      assert File.read!(metadata.migration) =~ "add_if_not_exists :rendered_blocks"
+
+      rerun = reconcile(context, ReconcileArticleV2, ["--dry-run"])
+      assert rerun.issues == []
+      assert rerun.tasks == []
+      assert rerun.notices == ["No storage changes necessary for Brando.MigrationTest.ReconcileArticleV2."]
+    end
+
+    # Whether a column is empty depends on the database read: on a development
+    # copy it may be, in production not.
+    test "never drops a column the Blueprint's own migrations did not create", context do
+      create_legacy_farms()
+      query!("UPDATE reconcile_farms SET slug = NULL")
+
+      [{_, [request]}] = reconcile(context, ReconcileFarm).tasks
+      assert {:ok, metadata} = MigrationRequest.apply(request)
+      assert Snapshot.get_latest_snapshot(ReconcileFarm, snapshot_path: context.snapshot_path).rebaseline?
+
+      migrate_up(File.read!(metadata.migration), fn _down ->
+        planned = reconcile(context, ReconcileFarmV2, ["--dry-run"])
+        plan = planned.assigns.brando_storage_plan
+        assert plan.migration_source =~ ~r/drop index\(:reconcile_farms, \[:slug\]/
+        refute plan.migration_source =~ "remove :slug"
+
+        assert comments(plan.migration_source) =~
+                 "reconcile_farms.slug predates this Blueprint's generated migrations, so --reconcile keeps it"
+
+        assert Enum.any?(planned.notices, &(&1 =~ "reconcile_farms.slug (predates the Blueprint's generated migrations)"))
+      end)
+    end
+
+    test "a change or rename of a column the database lacks becomes an add or is left out", context do
+      opts = [migration_path: context.migration_path, snapshot_path: context.snapshot_path]
+      {:ok, _} = Migrations.create_migration(Brando.MigrationTest.ReconcileNoteV1, opts)
+
+      # `body` and `label` were never created; `old_name` was renamed by hand.
+      query!("CREATE TABLE reconcile_notes (id bigserial PRIMARY KEY, title text, new_name text)")
+      legacy_columns = columns("reconcile_notes")
+
+      planned = reconcile(context, Brando.MigrationTest.ReconcileNoteV2, ["--dry-run"])
+      assert planned.issues == []
+      plan = planned.assigns.brando_storage_plan
+      [up, down] = String.split(plan.migration_source, "def down do")
+
+      assert up =~ ~s(modify :title, :text, default: "Untitled")
+      assert up =~ ~s(add :body, :text, default: "Empty")
+      assert up =~ "add :headline, :text"
+      refute plan.migration_source =~ "rename table"
+      refute plan.migration_source =~ ~r/modify :(body|headline)/
+      assert down =~ "remove :body"
+      assert down =~ "remove :headline"
+
+      comments = comments(plan.migration_source)
+      assert comments =~ "reconcile_notes.body is not in the database, so this migration adds it instead of changing it."
+
+      assert comments =~
+               "reconcile_notes.new_name already exists and old_name does not, so this migration leaves out the rename."
+
+      assert comments =~
+               "Neither reconcile_notes.label nor headline is in the database, so this migration adds headline instead of renaming."
+
+      migrate_up(plan.migration_source, fn down ->
+        assert Enum.all?(~w(body headline), &(&1 in columns("reconcile_notes")))
+        down.()
+        assert columns("reconcile_notes") == legacy_columns
+      end)
+
+      query!("ALTER TABLE reconcile_notes ADD COLUMN old_name text")
+      both = reconcile(context, Brando.MigrationTest.ReconcileNoteV2, ["--dry-run"])
+      assert [issue] = both.issues
+      assert issue =~ "reconcile_notes has both old_name and new_name"
+    end
+
+    test "is refused in an application with named environments", context do
+      for mode <- [:single, :multi] do
+        project =
+          Brando.IgniterCase.phoenix_project(
+            files: %{"config/brando.exs" => "import Config\nconfig :brando, tenancy_mode: :#{mode}\n"}
+          )
+
+        for args <- [["Brando.MigrationTest.ExecutionV1"], ["--all"]] do
+          refused =
+            project
+            |> Igniter.assign(:brando_blueprints, [Brando.MigrationTest.ExecutionV1])
+            |> Igniter.compose_task(BlueprintMigration, args ++ ["--reconcile", "--snapshot-path", context.snapshot_path])
+
+          assert [issue] = refused.issues
+          assert issue =~ "--reconcile"
+          assert issue =~ "named environments"
+          assert refused.tasks == []
+        end
+      end
+    end
+
+    test "counts that change after review do not make the plan stale", context do
+      opts = [migration_path: context.migration_path, snapshot_path: context.snapshot_path]
+      {:ok, _} = Migrations.create_migration(ReconcileArticleV1, opts)
+      create_legacy_articles()
+
+      [{_, [request]}] = reconcile(context, ReconcileArticleV2).tasks
+
+      query!(
+        "INSERT INTO reconcile_articles (title, data, link, code) VALUES ('Third', '{}', 'https://example.org', 'c')"
+      )
+
+      assert {:ok, metadata} = MigrationRequest.apply(request)
+      assert comments(File.read!(metadata.migration)) =~ "reconcile_articles.link holds 2 values"
+    end
+
+    test "a request goes stale when the database changes after review", context do
+      opts = [migration_path: context.migration_path, snapshot_path: context.snapshot_path]
+      {:ok, _} = Migrations.create_migration(ReconcileArticleV1, opts)
+      create_legacy_articles()
+
+      [{_, [request]}] = reconcile(context, ReconcileArticleV2).tasks
+      query!("UPDATE reconcile_articles SET stale = 'now in use'")
+      assert_raise Mix.Error, ~r/stale/, fn -> MigrationRequest.apply(request) end
+    end
+
+    test "a table with no snapshot history is altered, and once it matches only a baseline is recorded", context do
+      create_legacy_farms()
+      legacy_columns = columns("reconcile_farms")
+
+      planned = reconcile(context, ReconcileFarm, ["--dry-run"])
+      assert planned.issues == []
+      plan = planned.assigns.brando_storage_plan
+      [up, down] = String.split(plan.migration_source, "def down do")
+
+      comments = comments(plan.migration_source)
+
+      assert comments =~
+               "reconcile_farms predates this Blueprint's snapshots, so this migration adds only what the database lacks."
+
+      assert comments =~
+               "reconcile_farms.creator_id already exists without the foreign key reconcile_farms_creator_id_fkey"
+
+      refute plan.migration_source =~ "create table"
+      assert up =~ "alter table(:reconcile_farms)"
+      assert up =~ "add :edited_at, :utc_datetime"
+      assert up =~ ~r/add :updated_by_id,\s+references\(:users/
+      refute plan.migration_source =~ ~r/:(title|slug|creator_id),/
+      refute up =~ "timestamps()"
+      assert up =~ "UPDATE reconcile_farms SET edited_at = updated_at WHERE edited_at IS NULL"
+      assert up =~ ~r/create unique_index\(:reconcile_farms, \[:slug\]/
+      assert down =~ ~r/drop index\(:reconcile_farms, \[:slug\]/
+      assert down =~ "remove :edited_at"
+      refute down =~ "drop table"
+
+      assert Enum.any?(planned.notices, &(&1 =~ "reconcile_farms already exists; the migration alters it"))
+
+      migrate_up(plan.migration_source, fn down ->
+        assert query!("SELECT edited_at IS NOT NULL FROM reconcile_farms").rows == [[true]]
+
+        matched = reconcile(context, ReconcileFarm, ["--dry-run"])
+        assert matched.issues == []
+        baseline = matched.assigns.brando_storage_plan
+        assert baseline.migration_source == nil
+        assert baseline.snapshot.rebaseline?
+        assert [notice] = Enum.filter(matched.notices, &(&1 =~ "Reconciled with the database"))
+        assert notice =~ "(snapshot only, a baseline the database already matches)"
+        assert notice =~ "left out: reconcile_farms.creator_id (exists, without its foreign key)"
+        refute notice =~ "alters it"
+
+        down.()
+        assert columns("reconcile_farms") == legacy_columns
+        assert indexes("reconcile_farms") == ["reconcile_farms_pkey"]
+      end)
+    end
+
+    test "a removed trait's table and column are kept while they hold data", context do
+      opts = [migration_path: context.migration_path, snapshot_path: context.snapshot_path]
+      {:ok, created} = Migrations.create_migration(ReconcileArticleV2, opts)
+
+      migrate_up(File.read!(created.migration), fn _down ->
+        query!("""
+        INSERT INTO reconcile_articles (title, language, inserted_at, updated_at)
+        VALUES ('First', 'en', now(), now()), ('Second', 'no', now(), now())
+        """)
+
+        query!("""
+        INSERT INTO reconcile_articles_alternates (entry_id, linked_entry_id, inserted_at, updated_at)
+        SELECT min(id), max(id), now(), now() FROM reconcile_articles
+        """)
+
+        planned = reconcile(context, ReconcileArticleV3, ["--dry-run"])
+        assert planned.issues == []
+        plan = planned.assigns.brando_storage_plan
+        [up, down] = String.split(plan.migration_source, "def down do")
+        refute plan.migration_source =~ "table(:reconcile_articles_alternates)"
+        refute plan.migration_source =~ ":language,"
+        refute up =~ "remove :language"
+        assert up =~ ~r/drop index\(:reconcile_articles, \[:language\]/
+        assert down =~ ~r/create index\(:reconcile_articles, \[:language\]/
+
+        comments = comments(plan.migration_source)
+        assert comments =~ "reconcile_articles_alternates holds 1 row, so this migration keeps it."
+        assert comments =~ "reconcile_articles.language holds 2 values, so this migration keeps it."
+
+        migrate_up(plan.migration_source, fn down ->
+          refute "reconcile_articles_language_index" in indexes("reconcile_articles")
+          down.()
+          assert "reconcile_articles_language_index" in indexes("reconcile_articles")
+        end)
+
+        query!("DELETE FROM reconcile_articles_alternates")
+        emptied = reconcile(context, ReconcileArticleV3, ["--dry-run"]).assigns.brando_storage_plan
+        [up, down] = String.split(emptied.migration_source, "def down do")
+        assert up =~ "drop table(:reconcile_articles_alternates)"
+        assert down =~ "create table(:reconcile_articles_alternates)"
+      end)
+    end
+
+    test "a table with one of its timestamps gets only the other", context do
+      query!("""
+      CREATE TABLE reconcile_farms (
+        id bigserial PRIMARY KEY, title text, slug text, creator_id bigint,
+        inserted_at timestamp(0) NOT NULL DEFAULT now()
+      )
+      """)
+
+      query!("INSERT INTO reconcile_farms (title) VALUES ('Farm')")
+      legacy_columns = columns("reconcile_farms")
+
+      plan = reconcile(context, ReconcileFarm, ["--dry-run"]).assigns.brando_storage_plan
+      [up, down] = String.split(plan.migration_source, "def down do")
+      refute up =~ "timestamps()"
+      assert up =~ "timestamps(inserted_at: false, null: true)"
+
+      assert up =~
+               ~s[execute "UPDATE reconcile_farms SET updated_at = COALESCE(inserted_at, now()) WHERE updated_at IS NULL"]
+
+      assert up =~ ~s(execute "ALTER TABLE reconcile_farms ALTER COLUMN updated_at SET NOT NULL")
+      assert down =~ "remove :updated_at"
+      refute down =~ "remove :inserted_at"
+
+      migrate_up(plan.migration_source, fn down ->
+        assert query!(nullable_sql(), ["reconcile_farms", "updated_at"]).rows == [["NO"]]
+        assert query!("SELECT updated_at = inserted_at FROM reconcile_farms").rows == [[true]]
+        down.()
+        assert columns("reconcile_farms") == legacy_columns
+      end)
+    end
+
+    test "a table the database does not have is created as usual", context do
+      planned = reconcile(context, ReconcileFarm, ["--dry-run"])
+      assert planned.issues == []
+      assert planned.assigns.brando_storage_plan.migration_source =~ "create table(:reconcile_farms)"
+      assert Enum.any?(planned.notices, &(&1 =~ "Brando.MigrationTest.ReconcileFarm: " and &1 =~ "nothing to reconcile"))
+    end
+
+    test "plans every Blueprint with --all, and refuses --rebaseline", context do
+      create_legacy_farms()
+
+      planned =
+        Igniter.Test.test_project()
+        |> Igniter.assign(:brando_blueprints, [ReconcileFarm, Brando.MigrationTest.ExecutionV1])
+        |> Igniter.compose_task(BlueprintMigration, [
+          "--all",
+          "--reconcile",
+          "--dry-run",
+          "--snapshot-path",
+          context.snapshot_path
+        ])
+
+      assert planned.issues == []
+      assert [{"brando.blueprint.apply_plan", [_, _]}] = planned.tasks
+      assert [notice] = Enum.filter(planned.notices, &(&1 =~ "Reconciled with the database"))
+      assert notice =~ "Brando.MigrationTest.ReconcileFarm: priv/repo/migrations/"
+      assert notice =~ "reconcile_farms already exists; the migration alters it"
+      assert notice =~ "Brando.MigrationTest.ExecutionV1: priv/repo/migrations/"
+
+      refused = reconcile(context, ReconcileFarm, ["--rebaseline"])
+      assert [issue] = refused.issues
+      assert issue =~ "--reconcile"
+      assert issue =~ "--rebaseline"
+      assert refused.tasks == []
+    end
+
+    test "a planned alter of a table the database lacks stops instead of guessing", context do
+      opts = [migration_path: context.migration_path, snapshot_path: context.snapshot_path]
+      {:ok, _} = Migrations.create_migration(ReconcileArticleV1, opts)
+
+      planned = reconcile(context, ReconcileArticleV2, ["--dry-run"])
+      assert [issue] = planned.issues
+      assert issue =~ "reconcile_articles is not in it"
+      assert planned.tasks == []
     end
   end
 end

@@ -43,7 +43,8 @@ else
 fi
 
 export MIX_ENV=test
-logs="$(mktemp -d "${TMPDIR:-/tmp}/brando-partitions.XXXXXX")"
+tmp_root="${TMPDIR:-/tmp}"
+logs="$(mktemp -d "${tmp_root%/}/brando-partitions.XXXXXX")"
 trap 'rm -rf "$logs"' EXIT
 
 # Compiling in each partition at once would race on _build

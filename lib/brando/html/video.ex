@@ -13,7 +13,8 @@ defmodule Brando.HTML.Video do
 
     - `cover`
       - `:svg`
-      - `html` -> for instance, provide a rendered picture_tag
+      - `html` -> for instance, provide a rendered picture_tag (safe markup;
+        any other string gets the `:svg` placeholder)
     - `poster` -> url to poster, i.e. on vimeo.
     - `autoplay`
     - `controls`
@@ -461,15 +462,24 @@ defmodule Brando.HTML.Video do
     end
   end
 
-  # The editor stores `cover` as a string ("false", "svg", or a URL), so the
-  # block's own setting arrives as "svg" where a template would pass :svg.
+  # The editor stores `cover` as a string ("false" or "svg"), so the block's own
+  # setting arrives as "svg" where a template would pass :svg.
   defp get_video_cover("svg", width, height, opacity), do: get_video_cover(:svg, width, height, opacity)
 
   defp get_video_cover("true", _, _, _), do: nil
   defp get_video_cover(true, _, _, _), do: nil
   defp get_video_cover("false", _, _, _), do: nil
   defp get_video_cover(false, _, _, _), do: nil
-  defp get_video_cover(url, _, _, _), do: url
+  defp get_video_cover(nil, _, _, _), do: nil
+
+  # Any other string, such as the thumbnail URL a Villain-era block could hold,
+  # gets the placeholder Brando drew for it before 0.54, rather than being
+  # printed as text. Markup a template passes (`Phoenix.HTML.raw/1`, a
+  # rendered component) is used as it is.
+  defp get_video_cover(cover, width, height, opacity) when is_binary(cover),
+    do: get_video_cover(:svg, width, height, opacity)
+
+  defp get_video_cover(html, _, _, _), do: html
 
   defp get_play_button(false), do: Phoenix.HTML.raw("")
 

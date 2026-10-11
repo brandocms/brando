@@ -71,6 +71,8 @@ defmodule Brando.SEO.Audit do
   def schemas do
     :include_brando
     |> Brando.Blueprint.list_blueprints()
+    # Brando's own schemas are listed again when the application's list holds them
+    |> Enum.uniq()
     |> Enum.reject(&(&1 == Brando.Pages.Fragment))
     |> Enum.filter(&auditable?/1)
   end

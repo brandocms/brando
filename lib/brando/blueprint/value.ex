@@ -128,8 +128,12 @@ defmodule Brando.Blueprint.Value do
 
   @doc """
   Converts a language code to the locale expected by Open Graph consumers.
+  Takes the code as a string or as the atom a loaded entry's `language`
+  (an `Ecto.Enum`) holds.
   """
-  @spec encode_locale(String.t()) :: String.t()
+  @spec encode_locale(String.t() | atom()) :: String.t() | nil
+  def encode_locale(nil), do: nil
+  def encode_locale(locale) when is_atom(locale), do: locale |> Atom.to_string() |> encode_locale()
   def encode_locale("en"), do: "en_US"
   def encode_locale("no"), do: "nb_NO"
   def encode_locale("nb"), do: "nb_NO"

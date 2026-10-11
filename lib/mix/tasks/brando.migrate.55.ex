@@ -19,10 +19,13 @@ if Code.ensure_loaded?(Igniter) do
     names, adds the explicit listing component imports, gives Villain parsers
     back the `use Phoenix.Component`, imports and aliases they relied on from
     `use Brando.Villain.Parser`, configures Req as
-    Swoosh's API client, points Brando at the application's mailer, removes the
+    Swoosh's API client, points Brando at the application's mailer, adds
+    `Brando.Plug.Markdown` and `Brando.Plug.IndexNow` to the endpoint, removes the
     retired Sharp image processor from config, pins the declared `phoenix_live_view` JavaScript
     dependency, builds Vite source maps `hidden`, converts a legacy Fabric deployment to a reviewable Florist
-    configuration, refreshes the gettext recovery helper, completes
+    configuration, refreshes the gettext recovery helper, copies the
+    translations of each Blueprint's 0.53 `_naming`, `_forms` and `_listings`
+    Gettext domains into the domain 0.55 extracts to, completes
     `Plural-Forms` headers Gettext 1.0 warns about, and retires the
     consumer-owned `brando.upgrade` task that 0.54 installed.
 
@@ -51,7 +54,9 @@ if Code.ensure_loaded?(Igniter) do
       |> SourceUpgrade.pin_live_view_javascript()
       |> SourceUpgrade.hide_source_maps()
       |> SourceUpgrade.create_florist_config()
+      |> SourceUpgrade.add_content_plugs()
       |> SourceUpgrade.refresh_gettext_script()
+      |> SourceUpgrade.carry_blueprint_translations()
       |> SourceUpgrade.complete_plural_forms_headers()
       |> SourceUpgrade.warn_image_text_reads()
       |> SourceUpgrade.start_endpoint_last()
@@ -78,6 +83,15 @@ if Code.ensure_loaded?(Igniter) do
       `sourcemap: true` now build hidden maps, and `mix brando.digest` deletes
       them before release. See the Docker build section of
       `guides/deployment.md` to upload them to Sentry instead.
+
+      Translations in each Blueprint's 0.53 Gettext domains
+      (`<domain>_<schema>_naming`, `_forms`, `_listings`) are copied into
+      `<domain>_<schema>.po`, the domain 0.55 extracts to, so the Gettext
+      merge in the migration guide keeps them.
+
+      The endpoint gets `plug Brando.Plug.Markdown` (entries as Markdown at
+      their URL + `.md`) and `plug Brando.Plug.IndexNow` (the IndexNow key
+      file), before the router, unless it has them.
 
       When both legacy `deployment.cfg` and `fabfile.py` exist and no Florist
       configuration exists, the task also creates a reviewable
@@ -106,12 +120,18 @@ if Code.ensure_loaded?(Igniter) do
         6. Only after that review, run `mix brando.migrate`, followed by
            `mix brando.migrate --tenants` when the application has named
            environments.
-        7. After the database migration, run `mix brando.entries.resave` and
-           `mix brando.identifiers.sync`.
+        7. After the database migration, run `mix brando.entries.resave`,
+           `mix brando.identifiers.sync` and `mix brando.images.adopt` (try it
+           with `--dry-run` first), which records the config each image whose
+           files already match was made with.
         8. Run `mix brando.check.image_texts` to find module, container and
            menu templates that print an image's alt text, title or credits
            without the `i18n` filter. Templates live in the database, so this
            source migration cannot see them.
+        9. Reconcile Gettext catalogs: `mix gettext.extract`, then
+           `mix gettext.merge priv/gettext/<backend> --locale <locale>` for
+           each backend and locale the application has. Delete the old
+           domains' catalogs the merge leaves empty.
 
       See `guides/migrating_from_053.md` and `guides/blueprint_migrations.md` in
       Brando for the full recovery and rebaseline instructions.
@@ -123,7 +143,10 @@ if Code.ensure_loaded?(Igniter) do
       Manual 0.55 decisions remain:
 
         * Add `persist_identifier false` to every Blueprint that must not create
-          persisted identifiers. Persistence defaults to true.
+          persisted identifiers. Persistence defaults to true. A Blueprint with
+          no admin editor (no `admin_<singular>_form_path` route) should set it:
+          its entries cannot be opened from Search, the command palette or the
+          dashboard, so they are left out of them.
         * Table, primary-key, and existing column-level primary-key changes are
           never inferred. Write the Ecto migration, verify the live schema, then
           use the documented Blueprint `--rebaseline` workflow.

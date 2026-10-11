@@ -37,6 +37,13 @@ msgstr ""
 msgid "%{context} CDN: off"
 msgstr ""
 
+#: lib/brando/doctor/checks/admin_routes.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} Blueprint links to admin routes the router does not define"
+msgid_plural "%{count} Blueprints link to admin routes the router does not define"
+msgstr[0] ""
+msgstr[1] ""
+
 #: lib/brando/doctor/checks/image_configs.ex
 #, elixir-autogen, elixir-format
 msgid "%{count} already matches (mix brando.images.adopt records that)"
@@ -242,6 +249,11 @@ msgstr ""
 msgid "%{name} %{version}, needs %{requirement}"
 msgstr ""
 
+#: lib/brando/doctor/checks/admin_routes.ex
+#, elixir-autogen, elixir-format
+msgid "%{schema}: %{helpers}"
+msgstr ""
+
 #: lib/brando/doctor/checks/image_configs.ex
 #, elixir-autogen, elixir-format
 msgid "%{target}: %{count} image"
@@ -264,6 +276,11 @@ msgstr ""
 #: lib/brando/doctor/checks/admin_assets.ex
 #, elixir-autogen, elixir-format
 msgid "Admin assets"
+msgstr ""
+
+#: lib/brando/doctor/checks/admin_routes.ex
+#, elixir-autogen, elixir-format
+msgid "Admin routes"
 msgstr ""
 
 #: lib/brando_admin/components/system_check.ex
@@ -461,6 +478,11 @@ msgstr ""
 msgid "Utilities → Recreate changed images"
 msgstr ""
 
+#: lib/brando/doctor/checks/image_configs.ex
+#, elixir-autogen, elixir-format
+msgid "Utilities → Recreate changed images recreates the images that differ; mix brando.images.adopt --dry-run --verbose lists why each one differs"
+msgstr ""
+
 #: lib/brando/doctor/checks/versions.ex
 #, elixir-autogen, elixir-format
 msgid "Versions"
@@ -566,6 +588,11 @@ msgstr ""
 msgid "endpoint URL is localhost"
 msgstr ""
 
+#: lib/brando/doctor/checks/admin_routes.ex
+#, elixir-autogen, elixir-format
+msgid "every Blueprint's admin route helpers exist"
+msgstr ""
+
 #: lib/brando/doctor/checks/alt_text.ex
 #, elixir-autogen, elixir-format
 msgid "every image has alt text"
@@ -578,7 +605,12 @@ msgstr ""
 
 #: lib/brando/doctor/checks/admin_assets.ex
 #, elixir-autogen, elixir-format
-msgid "expected %{version}, run npx yalc update %{package} and pnpm install in assets/backend"
+msgid "expected %{version}, run npx yalc publish in Brando's assets, then npx yalc update %{package} and pnpm install in assets/backend (or mix brando.assets.setup --backend-only)"
+msgstr ""
+
+#: lib/brando/doctor/checks/admin_assets.ex
+#, elixir-autogen, elixir-format
+msgid "expected %{version}; assets/backend is not a pnpm project yet: run mix brando.gen.backend --upgrade, then mix brando.assets.setup --backend-only"
 msgstr ""
 
 #: lib/brando/doctor/checks/json_ld.ex
@@ -642,8 +674,8 @@ msgstr[1] ""
 
 #: lib/brando/doctor/checks/image_configs.ex
 #, elixir-autogen, elixir-format
-msgid "it differs (recreate it)"
-msgid_plural "none match (recreate them)"
+msgid "it differs from its config (recreate it)"
+msgid_plural "all %{count} differ from their config (recreate them)"
 msgstr[0] ""
 msgstr[1] ""
 
@@ -719,6 +751,11 @@ msgstr ""
 msgid "no queues, so background jobs never run"
 msgstr ""
 
+#: lib/brando/doctor/checks/admin_routes.ex
+#, elixir-autogen, elixir-format
+msgid "no router %{router}"
+msgstr ""
+
 #: lib/brando/doctor/checks/oban.ex
 #, elixir-autogen, elixir-format
 msgid "no scheduled publishing sweep"
@@ -792,6 +829,11 @@ msgstr ""
 #: lib/brando/doctor/checks/robots.ex
 #, elixir-autogen, elixir-format
 msgid "robots.txt"
+msgstr ""
+
+#: lib/brando/doctor/checks/admin_routes.ex
+#, elixir-autogen, elixir-format
+msgid "route each schema's FormLive as live \"/<plural>/create\", <Name>FormLive, :create and live \"/<plural>/update/:entry_id\", <Name>FormLive, :update (mix brando.migrate54 converts generated Create/Update LiveViews). Schemas sharing a singular need their routes in a scope with as: and the same router_scope on their Blueprints"
 msgstr ""
 
 #: lib/brando/doctor/checks/admin_assets.ex

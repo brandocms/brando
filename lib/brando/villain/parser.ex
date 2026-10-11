@@ -394,7 +394,7 @@ defmodule Brando.Villain.Parser do
           {child_block, index} -> render_multi_child(child_block, index, count, id, opts)
         end)
         |> Enum.intersperse("\n")
-        |> annotate_children(block.uid)
+        |> maybe_annotate_children(block.uid, opts)
       end
 
     base_vars = process_vars(block.vars)
@@ -530,6 +530,23 @@ defmodule Brando.Villain.Parser do
     %{width: width, height: height, orientation: orientation}
   end
 
+  # A block's own aspect ratio ("16:9" or "16/9") reshapes an embed, as it
+  # does a file video: the shared video record carries one size, and before
+  # 0.54 each block rendered its own. The width stays; the height follows.
+  defp override_shape(%{width: width} = fields, %{aspect_ratio: ratio}) when is_binary(ratio) and is_integer(width) do
+    with [w, h] <- String.split(ratio, ["/", ":"]),
+         {w, ""} <- w |> String.trim() |> Integer.parse(),
+         {h, ""} <- h |> String.trim() |> Integer.parse(),
+         true <- w > 0 and h > 0 do
+      height = round(width * h / w)
+      Map.merge(fields, %{height: height, orientation: (width > height && "landscape") || "portrait", ratio: h / w})
+    else
+      _ -> fields
+    end
+  end
+
+  defp override_shape(fields, _data), do: fields
+
   defp to_integer(val, _default) when is_integer(val), do: val
 
   defp to_integer(val, default) when is_binary(val) do
@@ -613,8 +630,8 @@ defmodule Brando.Villain.Parser do
   end
 
   def video(%{remote_id: remote_id, type: :youtube, autoplay: autoplay} = data, _) do
-    video_fields = extract_video_dimensions(data, 420, 315)
-    aspect_ratio = calculate_aspect_ratio(video_fields.width, video_fields.height)
+    video_fields = data |> extract_video_dimensions(420, 315) |> override_shape(data)
+    aspect_ratio = video_fields[:ratio] || calculate_aspect_ratio(video_fields.width, video_fields.height)
     params = "autoplay=#{(autoplay && 1) || 0}&controls=0&showinfo=0&rel=0"
 
     params =
@@ -636,10 +653,14 @@ defmodule Brando.Villain.Parser do
     video_fields = extract_video_dimensions(data, 500, 281)
 
     # Ensure values are integers
-    width = to_integer(video_fields.width, 500)
-    height = to_integer(video_fields.height, 281)
+    %{width: width, height: height} =
+      video_fields =
+      override_shape(
+        %{video_fields | width: to_integer(video_fields.width, 500), height: to_integer(video_fields.height, 281)},
+        data
+      )
 
-    aspect_ratio = calculate_aspect_ratio(width, height)
+    aspect_ratio = video_fields[:ratio] || calculate_aspect_ratio(width, height)
 
     render_iframe_video(
       width,
@@ -1289,7 +1310,7 @@ defmodule Brando.Villain.Parser do
       d, acc -> [apply(parser_module(opts), d.type, [d, opts]) | acc]
     end)
     |> Enum.reverse()
-    |> annotate_children(block.uid)
+    |> maybe_annotate_children(block.uid, opts)
   end
 
   def timeline(items, _) do
@@ -2148,6 +2169,9 @@ defmodule Brando.Villain.Parser do
   def annotate_children(code, uid) do
     ["<!-- [+:C<", uid, ">] -->\n  ", code, "\n<!-- [-:C<", uid, ">] -->\n"]
   end
+
+  defp maybe_annotate_children(code, uid, %{annotate_blocks: true}), do: annotate_children(code, uid)
+  defp maybe_annotate_children(code, _uid, _opts), do: code
 
   def maybe_format(html, %{format_html: true}) do
     html = IO.iodata_to_binary(html)

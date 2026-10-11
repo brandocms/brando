@@ -19,6 +19,7 @@ if Code.ensure_loaded?(Igniter) do
     alias Igniter.Project.Module, as: ProjectModule
     alias Igniter.Refactors.Rename
     alias Mix.Brando.Igniter.FloristConfig
+    alias Mix.Brando.Igniter.TemplateCode
     alias Rewrite.Source
     alias Sourceror.Zipper
 
@@ -77,10 +78,253 @@ if Code.ensure_loaded?(Igniter) do
            {:ok, zipper} <- rewrite_slug_source(zipper),
            {:ok, zipper} <- rewrite_json_ld_field(zipper),
            {:ok, zipper} <- rewrite_meta_field(zipper),
-           {:ok, zipper} <- remove_villain_attributes(zipper) do
-        add_villain_relations(zipper, villain_fields)
+           {:ok, zipper} <- remove_villain_attributes(zipper),
+           {:ok, zipper} <- add_villain_relations(zipper, villain_fields) do
+        move_block_editor_inputs(zipper)
       end
     end
+
+    # A 0.53 block editor was `input :data, :blocks` inside a fieldset. The
+    # Villain attribute became a `:blocks` relation, and its editor is now the
+    # form-level `blocks :blocks`, rendered below the tabs. An input whose name
+    # is no relation, but whose relation name is, is moved there with its
+    # options; a fieldset or tab left without content goes with it. Inputs an
+    # earlier run of this task left behind are matched the same way.
+    defp move_block_editor_inputs(zipper) do
+      zipper = Zipper.topmost(zipper)
+
+      renames =
+        zipper
+        |> Common.find_all(&CodeFunction.function_call?(&1, :input, [2, 3]))
+        |> Enum.flat_map(&block_editor_rename(zipper, single_child(&1)))
+        |> Map.new()
+
+      if renames == %{} do
+        {:ok, zipper}
+      else
+        Common.update_all_matches(zipper, &form_with_body?/1, fn form_zipper ->
+          {:ok,
+           form_zipper |> Common.maybe_move_to_single_child_block() |> Zipper.update(&move_form_block_inputs(&1, renames))}
+        end)
+      end
+    end
+
+    defp block_editor_rename(zipper, {:input, _, [name, type | _options]}) do
+      with :blocks <- literal_atom_value(type),
+           name when is_atom(name) and not is_nil(name) <- literal_atom_value(name),
+           false <- relation_declared?(zipper, name),
+           relation = villain_relation_name(name),
+           true <- relation_declared?(zipper, relation) do
+        [{name, relation}]
+      else
+        _ -> []
+      end
+    end
+
+    defp block_editor_rename(_zipper, _node), do: []
+
+    defp single_child(zipper), do: zipper |> Common.maybe_move_to_single_child_block() |> Zipper.node()
+
+    defp form_with_body?(zipper) do
+      CodeFunction.function_call?(zipper, :form) and match?({:ok, _}, do_body(single_child(zipper)))
+    end
+
+    defp move_form_block_inputs(form, renames) do
+      {:ok, statements} = do_body(form)
+
+      case strip_block_inputs(statements, renames) do
+        {_statements, []} ->
+          form
+
+        {statements, moved} ->
+          declared = for {:blocks, _, [name | _]} <- statements, do: literal_atom_value(name)
+
+          editors =
+            moved
+            |> Enum.uniq_by(fn {name, _options} -> name end)
+            |> Enum.reject(fn {name, _options} -> name in declared end)
+            |> Enum.map(fn {name, options} -> {:blocks, [], [name | options]} end)
+
+          {options, rest} = Enum.split_while(statements, &(not form_entity?(&1)))
+          put_do_body(form, options ++ editors ++ rest)
+      end
+    end
+
+    # Removes the block editor inputs named in `renames`, returning what is left
+    # and the `{relation_ast, options}` of each removed input.
+    defp strip_block_inputs(statements, renames) do
+      {kept, moved} =
+        Enum.map_reduce(statements, [], fn statement, moved ->
+          case block_editor_input(statement, renames) do
+            {:ok, editor} ->
+              {[], moved ++ [editor]}
+
+            :error ->
+              strip_nested_block_inputs(statement, renames, moved)
+          end
+        end)
+
+      {List.flatten(kept), moved}
+    end
+
+    defp strip_nested_block_inputs(statement, renames, moved) do
+      with {:ok, body} <- do_body(statement),
+           {body, [_ | _] = nested} <- strip_block_inputs(body, renames) do
+        if Enum.any?(body, &form_entity?/1),
+          do: {[put_do_body(statement, body)], moved ++ nested},
+          else: {[], moved ++ nested}
+      else
+        _ -> {[statement], moved}
+      end
+    end
+
+    defp block_editor_input({:input, _meta, [name, type | options]}, renames) do
+      with :blocks <- literal_atom_value(type),
+           {:ok, relation} <- Map.fetch(renames, literal_atom_value(name)) do
+        {:ok, {{:__block__, [], [relation]}, options |> accepted_options() |> Enum.map(&without_position/1)}}
+      else
+        _ -> :error
+      end
+    end
+
+    defp block_editor_input(_statement, _renames), do: :error
+
+    # The options `blocks` accepts, out of an input's literal keyword list.
+    # `warn_block_editor_options/1` names the rest.
+    defp accepted_options([options]) do
+      allowed = blocks_options()
+
+      case Enum.filter(option_entries(options), fn {key, _value} -> literal_atom_value(key) in allowed end) do
+        [] -> []
+        kept -> [kept]
+      end
+    end
+
+    defp accepted_options(_options), do: []
+
+    defp option_entries(options) do
+      Enum.filter(keyword_entries(options), &match?({_key, _value}, &1))
+    rescue
+      FunctionClauseError -> []
+    end
+
+    # Read from the forms DSL, so the list follows the entity's schema.
+    defp blocks_options do
+      Brando.Blueprint.Forms.Dsl.sections()
+      |> Enum.flat_map(& &1.entities)
+      |> Enum.find(&(&1.name == :form))
+      |> Map.fetch!(:entities)
+      |> Keyword.fetch!(:blocks)
+      |> hd()
+      |> Map.fetch!(:schema)
+      |> Keyword.fetch!(:opts)
+      |> Keyword.fetch!(:type)
+      |> keyword_list_keys()
+    end
+
+    defp keyword_list_keys({:or, types}), do: Enum.flat_map(types, &keyword_list_keys/1)
+    defp keyword_list_keys({:keyword_list, schema}), do: Keyword.keys(schema)
+    defp keyword_list_keys(_type), do: []
+
+    @doc """
+    Warns, with file and line, about each option of a Villain block editor
+    input (`input :data, :blocks, ...`) that the form-level `blocks` it
+    becomes does not accept. `upgrade_054_blueprint/1` drops them, since
+    `blocks` validates its options and the Blueprint would not compile.
+    Run it before the Blueprint rewrite, which removes the Villain
+    attributes the inputs are matched by.
+    """
+    def warn_block_editor_options(igniter) do
+      {igniter, blueprints} = find_blueprints(igniter)
+      allowed = blocks_options()
+
+      {igniter, findings} =
+        Enum.reduce(blueprints, {igniter, []}, fn module, {igniter, findings} ->
+          {:ok, {igniter, source, zipper}} = ProjectModule.find_module(igniter, module)
+          {igniter, findings ++ dropped_options(zipper, Source.get(source, :path), allowed)}
+        end)
+
+      case findings do
+        [] ->
+          igniter
+
+        findings ->
+          Igniter.add_warning(igniter, """
+          Block editor options that form-level `blocks` does not take were dropped
+          when the editors moved there (it takes #{Enum.map_join(allowed, ", ", &"`#{&1}`")}):
+
+          #{Enum.map_join(findings, "\n", &("  " <> &1))}
+          """)
+      end
+    end
+
+    defp dropped_options(zipper, path, allowed) do
+      villain = zipper |> Common.find_all(&villain_attribute?/1) |> Enum.map(&villain_attribute_name/1)
+
+      zipper
+      |> Common.find_all(&CodeFunction.function_call?(&1, :input, 3))
+      |> Enum.map(&single_child/1)
+      |> Enum.filter(&(villain_block_input?(&1, villain) or block_editor_rename(zipper, &1) != []))
+      |> Enum.flat_map(&dropped_input_options(&1, "#{path}:", allowed))
+    end
+
+    defp dropped_input_options({:input, meta, [_name, _type, options]}, location, allowed) do
+      case option_entries(options) do
+        [] ->
+          ["#{location}#{meta[:line]}: options that are not a literal keyword list"]
+
+        entries ->
+          for {key, _value} <- entries,
+              key = literal_atom_value(key),
+              key not in allowed,
+              do: "#{location}#{meta[:line]}: `#{key}`"
+      end
+    end
+
+    defp villain_block_input?({:input, _, [name, type | _options]}, villain),
+      do: literal_atom_value(type) == :blocks and literal_atom_value(name) in villain
+
+    defp villain_block_input?(_node, _villain), do: false
+
+    defp villain_attribute_name(attribute_zipper) do
+      attribute_zipper |> Zipper.node() |> Sourceror.get_args() |> List.first() |> literal_atom!()
+    end
+
+    # Comments are printed by line, so a node moved up the file keeps none:
+    # with its old lines, comments between the two places land inside it.
+    @position_meta [:line, :column, :end_of_expression, :closing, :newlines, :leading_comments, :trailing_comments]
+
+    defp without_position(ast) do
+      Macro.prewalk(ast, fn
+        {form, meta, args} when is_list(meta) -> {form, Keyword.drop(meta, @position_meta), args}
+        node -> node
+      end)
+    end
+
+    # The calls that give a tab, fieldset or form content; the rest are options.
+    defp form_entity?({name, _, _}) when name in [:tab, :fieldset, :alert, :input, :inputs_for, :component, :blocks],
+      do: true
+
+    defp form_entity?(_statement), do: false
+
+    defp do_body({_name, _meta, args}) when is_list(args) do
+      case Enum.reverse(args) do
+        [[{{:__block__, _, [:do]}, {:__block__, _, statements}}] | _] when is_list(statements) -> {:ok, statements}
+        [[{{:__block__, _, [:do]}, statement}] | _] -> {:ok, [statement]}
+        _ -> :error
+      end
+    end
+
+    defp do_body(_node), do: :error
+
+    defp put_do_body({name, meta, args}, statements) do
+      [[{{:__block__, do_meta, [:do]}, body}] | arguments] = Enum.reverse(args)
+      do_block = [{{:__block__, do_meta, [:do]}, {:__block__, block_meta(body), statements}}]
+      {name, meta, Enum.reverse(arguments, [do_block])}
+    end
+
+    defp block_meta({:__block__, meta, statements}) when is_list(statements), do: meta
+    defp block_meta(_statement), do: []
 
     defp rewrite_legacy_datasources(zipper) do
       if uses_legacy_datasource?(zipper) do
@@ -905,6 +1149,286 @@ if Code.ensure_loaded?(Igniter) do
       FunctionClauseError -> []
     end
 
+    ## Templates
+
+    @template_extensions ~w(.ex .heex .eex .leex)
+    @template_finding_limit 50
+    # Brando's own schemas whose templates read a Villain `html` until 0.54.
+    @brando_block_templates [{"page", [{"html", "rendered_blocks"}]}]
+
+    @doc """
+    Points templates at the fields 0.54 renders blocks into, and lists the
+    template code 0.54 breaks that it cannot rewrite.
+
+    A Villain field's HTML (`html` for `data`, `hero_html` for `hero_data`)
+    became `rendered_<relation>` (`rendered_blocks`, `rendered_hero_blocks`).
+    Reads of it on `entry`/`@entry` or the schema's singular are rewritten in
+    the schema's own templates: a `<singular>_html` directory or module,
+    `templates/<singular>`, or `<singular>_view.ex`, and there only in
+    Elixir code (`Mix.Brando.Igniter.TemplateCode`), never in a script or in
+    text. Pages count as the `page` schema. Run it before the Blueprint rewrite, which removes the
+    Villain attributes; a Blueprint an earlier run already moved is matched
+    by its block relations.
+
+    It warns, with file and line, about the reads it left, navigation items
+    read as 0.53 structs (`item.url`), and page var reads, which need the
+    page loaded with `preload: [:vars]`.
+    """
+    def upgrade_054_templates(igniter) do
+      {igniter, blueprints} = find_blueprints(igniter)
+
+      {igniter, fields} =
+        Enum.reduce(blueprints, {igniter, []}, fn module, {igniter, fields} ->
+          {:ok, {igniter, _source, zipper}} = ProjectModule.find_module(igniter, module)
+          {igniter, fields ++ blueprint_html_fields(zipper)}
+        end)
+
+      {by_singular, ambiguous} = template_renames(fields)
+      igniter = Igniter.include_glob(igniter, "lib/**/*.{ex,heex,eex,leex}")
+
+      igniter =
+        igniter
+        |> template_paths()
+        |> Enum.reduce(igniter, fn path, igniter ->
+          case template_singular(path, Map.keys(by_singular)) do
+            nil -> igniter
+            singular -> rewrite_html_reads(igniter, path, singular, by_singular[singular])
+          end
+        end)
+
+      html_fields = for {_singular, renames} <- fields, {html, _rendered} <- renames, uniq: true, do: html
+      warn_054_template_reads(igniter, html_fields, ambiguous)
+    end
+
+    # `{singular, [{html_field, rendered_field}]}` for one Blueprint.
+    defp blueprint_html_fields(zipper) do
+      case blueprint_naming(zipper) do
+        %{singular: singular} -> [{singular, html_renames(zipper)}]
+        _naming -> []
+      end
+    end
+
+    # The literal `domain`, `schema` and `singular` options of a Blueprint's
+    # `use Brando.Blueprint`, given its `defmodule` zipper.
+    defp blueprint_naming(zipper) do
+      with {:ok, body} <- Common.move_to_do_block(zipper),
+           {:ok, use_zipper} <- Igniter.Code.Module.move_to_use(body, Brando.Blueprint),
+           {:ok, options} <- CodeFunction.move_to_nth_argument(use_zipper, 1) do
+        for key <- [:domain, :schema, :singular],
+            {:ok, value} <- [Igniter.Code.Keyword.get_key(options, key)],
+            {:__block__, _, [string]} when is_binary(string) <- [Zipper.node(value)],
+            into: %{},
+            do: {key, string}
+      else
+        _ -> %{}
+      end
+    end
+
+    defp html_renames(zipper) do
+      attributes = declared_attribute_names(zipper)
+
+      villain =
+        zipper
+        |> Common.find_all(&villain_attribute?/1)
+        |> Enum.map(&(&1 |> Zipper.node() |> Sourceror.get_args() |> List.first() |> literal_atom!()))
+        |> Enum.filter(&String.contains?(Atom.to_string(&1), "data"))
+        |> Enum.map(&{String.replace(Atom.to_string(&1), "data", "html"), villain_relation_name(&1)})
+
+      relations =
+        for relation <- block_relation_names(zipper),
+            html = relation_html_field(relation),
+            not is_nil(html),
+            do: {html, relation}
+
+      (villain ++ relations)
+      |> Enum.uniq_by(&elem(&1, 0))
+      |> Enum.reject(fn {html, _relation} -> html in attributes end)
+      |> Enum.map(fn {html, relation} -> {html, "rendered_#{relation}"} end)
+      |> Enum.sort()
+    end
+
+    defp relation_html_field(:blocks), do: "html"
+
+    defp relation_html_field(relation) do
+      name = Atom.to_string(relation)
+      if String.ends_with?(name, "_blocks"), do: String.replace_suffix(name, "_blocks", "_html")
+    end
+
+    defp declared_attribute_names(zipper) do
+      zipper
+      |> Common.find_all(&CodeFunction.function_call?(&1, :attribute, [2, 3]))
+      |> Enum.flat_map(fn attribute ->
+        case single_child(attribute) do
+          {:attribute, _, [name | _]} -> [to_string(literal_atom_value(name))]
+          _ -> []
+        end
+      end)
+    end
+
+    defp block_relation_names(zipper) do
+      zipper
+      |> Common.find_all(&CodeFunction.function_call?(&1, :relation, 3))
+      |> Enum.flat_map(fn relation ->
+        with {:relation, _, [name, type, options]} <- single_child(relation),
+             :has_many <- literal_atom_value(type),
+             true <- block_module_option?(options),
+             name when is_atom(name) and not is_nil(name) <- literal_atom_value(name) do
+          [name]
+        else
+          _ -> []
+        end
+      end)
+    end
+
+    defp block_module_option?(options) do
+      Enum.any?(keyword_entries(options), fn
+        {key, value} -> literal_atom_value(key) == :module and literal_atom_value(value) == :blocks
+        _other -> false
+      end)
+    rescue
+      FunctionClauseError -> false
+    end
+
+    # Schemas sharing a singular share their template directories, so they
+    # are rewritten only when their fields agree.
+    defp template_renames(fields) do
+      (fields ++ @brando_block_templates)
+      |> Enum.group_by(&elem(&1, 0), &elem(&1, 1))
+      |> Enum.reduce({%{}, []}, fn {singular, renames}, {by_singular, ambiguous} ->
+        case Enum.uniq(renames) do
+          [[]] -> {by_singular, ambiguous}
+          [renames] -> {Map.put(by_singular, singular, renames), ambiguous}
+          _differing -> {by_singular, [singular | ambiguous]}
+        end
+      end)
+    end
+
+    defp template_paths(igniter) do
+      igniter.rewrite
+      |> Rewrite.sources()
+      |> Enum.map(&Source.get(&1, :path))
+      |> Enum.filter(&(String.starts_with?(&1, "lib/") and Path.extname(&1) in @template_extensions))
+      |> Enum.sort()
+    end
+
+    defp template_singular(path, singulars) do
+      {directories, [basename]} = path |> Path.split() |> Enum.split(-1)
+      pairs = Enum.chunk_every(directories, 2, 1, :discard)
+
+      Enum.find(singulars, fn singular ->
+        "#{singular}_html" in directories or ["templates", singular] in pairs or
+          basename in ["#{singular}_html.ex", "#{singular}_view.ex"]
+      end)
+    end
+
+    defp rewrite_html_reads(igniter, path, singular, renames) do
+      content = igniter.rewrite |> Rewrite.source!(path) |> Source.get(:content)
+      fields = Enum.map_join(renames, "|", &Regex.escape(elem(&1, 0)))
+      regex = ~r/(?<![\w.:"'\/@])(@?(?:entry|#{Regex.escape(singular)}))\.(#{fields})(?![\w.(])/
+      renames = Map.new(renames)
+      # Only Elixir code: the same text in a script or in prose is not a field read.
+      code? = TemplateCode.code?(content, path)
+
+      updated =
+        regex
+        |> Regex.scan(content, return: :index)
+        |> Enum.filter(fn [{start, _length} | _groups] -> code?.(start) end)
+        |> Enum.reverse()
+        |> Enum.reduce(content, fn [_read, _variable, {start, length}], content ->
+          field = binary_part(content, start, length)
+
+          binary_part(content, 0, start) <>
+            renames[field] <> binary_part(content, start + length, byte_size(content) - start - length)
+        end)
+
+      if updated == content,
+        do: igniter,
+        else: Igniter.update_file(igniter, path, &Source.update(&1, :content, updated))
+    end
+
+    defp warn_054_template_reads(igniter, html_fields, ambiguous) do
+      fields = Enum.map_join(Enum.uniq(["html" | html_fields]), "|", &Regex.escape/1)
+      html_read = ~r/(?<![\w.:"'\/@])@?[a-z_]\w*(?:\.[a-z_]\w*)*\.(?:#{fields})(?![\w.(])/
+      var_read = ~r/\bPages\.(get_var|has_var\?)\(/
+
+      sources =
+        igniter
+        |> template_paths()
+        |> Enum.map(&{&1, igniter.rewrite |> Rewrite.source!(&1) |> Source.get(:content)})
+
+      [
+        {"""
+         Villain HTML reads. 0.54 renders blocks into `rendered_<relation>`:
+         `entry.html` is now `entry.rendered_blocks`, `entry.hero_html` is
+         `entry.rendered_hero_blocks`. These lines were left as they are: they
+         are outside a schema's own templates#{ambiguous_note(ambiguous)}, or not
+         Elixir code (a script, CSS or text):
+         """, findings(sources, fn _content -> &Regex.match?(html_read, &1) end)},
+        {"""
+         Navigation items. An item no longer has `url`, `title`,
+         `open_in_new_window` or `items`; it holds a link var. Use
+         `Brando.HTML.get_menu_item_url(item)`, `get_menu_item_text(item)`,
+         `get_menu_item_target_blank(item)` and `item.children`:
+         """, findings(sources, &navigation_item_reads/1)},
+        {"""
+         Page vars. They are an association: load the page with
+         `preload: [:alternate_entries, :vars]` (or `Brando.Repo.preload(page, :vars)`)
+         before `get_var/2` or `has_var?/2`, which raise otherwise:
+         """, findings(sources, fn _content -> &Regex.match?(var_read, &1) end)}
+      ]
+      |> Enum.reject(fn {_text, findings} -> findings == [] end)
+      |> case do
+        [] ->
+          igniter
+
+        sections ->
+          Igniter.add_warning(igniter, """
+          Template code that 0.54 breaks and the task did not rewrite (matched
+          by name, so check each line):
+
+          #{Enum.map_join(sections, "\n", fn {text, findings} -> text <> format_findings(findings) end)}
+          """)
+      end
+    end
+
+    defp ambiguous_note([]), do: ""
+
+    defp ambiguous_note(singulars) do
+      ", or in templates of schemas that share a singular (#{singulars |> Enum.sort() |> Enum.join(", ")})"
+    end
+
+    # `line_predicate` takes a file's content and returns the test for its lines.
+    defp findings(sources, line_predicate) do
+      for {path, content} <- sources,
+          matches? = line_predicate.(content),
+          {line, number} <- content |> String.split("\n") |> Enum.with_index(1),
+          matches?.(line),
+          do: "#{path}:#{number}: #{String.trim(line)}"
+    end
+
+    # `item.url` where `item` comes from a navigation's or menu's `items`.
+    defp navigation_item_reads(content) do
+      variables =
+        for [_, variable, source] <- Regex.scan(~r/\b([a-z_]\w*)\s*<-\s*(@?[\w.\[\]"]*\.items)\b/, content),
+            source =~ ~r/nav|menu/i,
+            uniq: true,
+            do: Regex.escape(variable)
+
+      case variables do
+        [] ->
+          fn _line -> false end
+
+        variables ->
+          &Regex.match?(~r/(?<![\w.])(#{Enum.join(variables, "|")})\.(url|title|open_in_new_window|items)\b/, &1)
+      end
+    end
+
+    defp format_findings(findings) do
+      shown = Enum.take(findings, @template_finding_limit)
+      more = length(findings) - length(shown)
+      Enum.map_join(shown, "\n", &("  " <> &1)) <> if(more > 0, do: "\n  … and #{more} more\n", else: "\n")
+    end
+
     def rename_list_villains(igniter) do
       Rename.rename_function(
         igniter,
@@ -1189,13 +1713,145 @@ if Code.ensure_loaded?(Igniter) do
     defp function_head({name, _, args}) when is_atom(name) and is_list(args), do: {name, length(args)}
     defp function_head(_head), do: nil
 
+    # 0.53 Blueprints translated into one domain per context.
+    @context_catalog ~r/\A(?<domain>.+)_(?<context>naming|forms|listings)\.po\z/
+    @context_order %{"naming" => 0, "forms" => 1, "listings" => 2}
+
+    @doc """
+    Copies the translations of 0.53's per-context Blueprint domains into the
+    domain 0.55 uses, in every `priv/gettext/**/LC_MESSAGES` directory.
+
+    0.53 translated a Blueprint's strings into `<domain>_<schema>_naming`,
+    `_forms` and `_listings`; 0.55 into `<domain>_<schema>`. Extracting
+    writes the new domain with empty translations and empties the old ones,
+    so the translated messages are copied into `<domain>_<schema>.po` first,
+    where the merge keeps them. Only domains of the application's Blueprints
+    are read; a message already translated in the target is kept. When the
+    contexts translate a message differently, `naming` wins over `forms`
+    over `listings`, and the others are reported.
+    """
+    def carry_blueprint_translations(igniter) do
+      {igniter, blueprints} = find_blueprints(igniter)
+
+      domains =
+        MapSet.new(blueprints, fn module ->
+          {:ok, {_igniter, _source, zipper}} = ProjectModule.find_module(igniter, module)
+
+          case blueprint_naming(zipper) do
+            %{domain: domain, schema: schema} -> String.downcase("#{domain}_#{schema}")
+            _naming -> nil
+          end
+        end)
+
+      igniter = Igniter.include_glob(igniter, "priv/gettext/**/*.po")
+
+      {igniter, conflicts} =
+        igniter.rewrite
+        |> Rewrite.sources()
+        |> Enum.map(&Source.get(&1, :path))
+        |> Enum.filter(&(String.starts_with?(&1, "priv/gettext/") and Path.basename(Path.dirname(&1)) == "LC_MESSAGES"))
+        |> Enum.flat_map(fn path ->
+          case Regex.named_captures(@context_catalog, Path.basename(path)) do
+            %{"domain" => domain, "context" => context} ->
+              [{Path.join(Path.dirname(path), domain <> ".po"), context, path}]
+
+            nil ->
+              []
+          end
+        end)
+        |> Enum.filter(fn {target, _context, _path} -> Path.basename(target, ".po") in domains end)
+        |> Enum.group_by(&elem(&1, 0), fn {_target, context, path} -> {@context_order[context], path} end)
+        |> Enum.sort()
+        |> Enum.reduce({igniter, []}, fn {target, sources}, {igniter, conflicts} ->
+          paths = sources |> Enum.sort() |> Enum.map(&elem(&1, 1))
+          {igniter, found} = carry_translations(igniter, target, paths)
+          {igniter, conflicts ++ found}
+        end)
+
+      case conflicts do
+        [] ->
+          igniter
+
+        conflicts ->
+          Igniter.add_warning(igniter, """
+          These messages were translated differently in a Blueprint's old naming,
+          forms and listings catalogs. The first was copied to the new catalog;
+          check it:
+
+          #{Enum.map_join(conflicts, "\n", fn {target, msgid, kept, other} -> "  #{target}: #{inspect(msgid)} kept #{inspect(kept)}, not #{inspect(other)}" end)}
+          """)
+      end
+    end
+
+    defp carry_translations(igniter, target, paths) do
+      sources = for path <- paths, {:ok, catalog} <- [parse_catalog(igniter, path)], do: catalog
+      exists? = Igniter.exists?(igniter, target)
+      igniter = if exists?, do: Igniter.include_existing_file(igniter, target), else: igniter
+
+      with [first | _] <- sources,
+           {:ok, catalog} <- if(exists?, do: parse_catalog(igniter, target), else: {:ok, %{first | messages: []}}) do
+        {messages, conflicts} =
+          sources
+          |> Enum.flat_map(& &1.messages)
+          |> Enum.filter(&translated?/1)
+          |> Enum.reduce({catalog.messages, []}, &carry_message(&1, &2, target))
+
+        cond do
+          messages == catalog.messages ->
+            {igniter, conflicts}
+
+          exists? ->
+            {Igniter.update_file(igniter, target, &Source.update(&1, :content, compose(catalog, messages))), conflicts}
+
+          true ->
+            {Igniter.create_new_file(igniter, target, compose(catalog, messages)), conflicts}
+        end
+      else
+        _ -> {igniter, []}
+      end
+    end
+
+    defp carry_message(message, {messages, conflicts}, target) do
+      case Enum.find_index(messages, &Expo.Message.same?(&1, message)) do
+        nil ->
+          {messages ++ [message], conflicts}
+
+        index ->
+          existing = Enum.at(messages, index)
+
+          cond do
+            not translated?(existing) -> {List.replace_at(messages, index, message), conflicts}
+            translation(existing) == translation(message) -> {messages, conflicts}
+            true -> {messages, conflicts ++ [{target, msgid(message), shown(existing), shown(message)}]}
+          end
+      end
+    end
+
+    defp parse_catalog(igniter, path) do
+      igniter.rewrite |> Rewrite.source!(path) |> Source.get(:content) |> Expo.PO.parse_string()
+    end
+
+    defp compose(catalog, messages), do: %{catalog | messages: messages} |> Expo.PO.compose() |> IO.iodata_to_binary()
+
+    defp translated?(message), do: Enum.any?(translation(message), &(&1 != ""))
+
+    defp translation(%Expo.Message.Singular{msgstr: msgstr}), do: [IO.iodata_to_binary(msgstr)]
+
+    defp translation(%Expo.Message.Plural{msgstr: msgstr}),
+      do: msgstr |> Enum.sort() |> Enum.map(fn {_index, value} -> IO.iodata_to_binary(value) end)
+
+    defp msgid(message), do: IO.iodata_to_binary(message.msgid)
+    defp shown(message), do: message |> translation() |> Enum.join(" / ")
+
     @doc """
     Completes `Plural-Forms` headers in `priv/gettext/**/*.po`.
 
     Gettext 1.0 warns, once per catalog per compile, on a header it cannot
     parse: `nplurals=2;` without the rule, or a rule without its trailing `;`.
     An incomplete header for a locale Expo knows is replaced with the full
-    one; other locales are reported.
+    one. For other locales a missing `;` is added and a bare `nplurals=2;`
+    gets the two-form rule `plural=(n != 1);`, with a warning to check it;
+    any other header is reported.
     """
     def complete_plural_forms_headers(igniter) do
       igniter = Igniter.include_glob(igniter, "priv/gettext/**/*.po")
@@ -1216,20 +1872,71 @@ if Code.ensure_loaded?(Igniter) do
     end
 
     defp complete_plural_forms_header(igniter, path, header) do
-      with {:error, _} <- PluralForms.parse(header),
-           {:ok, plural_forms} <- path |> catalog_locale() |> PluralForms.plural_form() do
-        complete = PluralForms.to_string(plural_forms)
-        Igniter.update_file(igniter, path, &Source.update(&1, :content, replace_plural_forms(&1, header, complete)))
-      else
-        {:ok, %PluralForms{}} ->
-          igniter
+      locale = catalog_locale(path)
 
-        :error ->
+      with {:error, _} <- PluralForms.parse(header),
+           {:ok, plural_forms} <- PluralForms.plural_form(locale) do
+        put_plural_forms(igniter, path, header, PluralForms.to_string(plural_forms))
+      else
+        {:ok, %PluralForms{}} -> igniter
+        :error -> complete_unknown_plural_forms(igniter, path, header, locale)
+      end
+    end
+
+    @two_forms "nplurals=2; plural=(n != 1);"
+
+    # Country codes written where the language code belongs. Gettext knows the
+    # language, not the country.
+    @language_for_country %{
+      "cn" => "zh",
+      "cz" => "cs",
+      "dk" => "da",
+      "ee" => "et",
+      "gb" => "en",
+      "gr" => "el",
+      "jp" => "ja",
+      "kr" => "ko",
+      "rs" => "sr",
+      "ua" => "uk",
+      "us" => "en"
+    }
+
+    # A locale Gettext does not know: a rule only missing its `;` gets one, and
+    # a bare `nplurals=2;` the two-form rule nearly every two-form language
+    # uses. Anything else is left for a person.
+    defp complete_unknown_plural_forms(igniter, path, header, locale) do
+      terminated = String.trim_trailing(header) <> ";"
+      unknown = unknown_locale(locale)
+
+      cond do
+        not String.ends_with?(header, ";") and match?({:ok, _}, PluralForms.parse(terminated)) ->
+          put_plural_forms(igniter, path, header, terminated)
+
+        header =~ ~r/^nplurals\s*=\s*2\s*;?$/ ->
+          igniter
+          |> put_plural_forms(path, header, @two_forms)
+          |> Igniter.add_warning("""
+          #{path} had an incomplete Plural-Forms header (#{header}). #{unknown}
+          It was completed with the two-form rule `#{@two_forms}`; check that it fits the language.
+          """)
+
+        true ->
           Igniter.add_warning(igniter, """
-          #{path} has an incomplete Plural-Forms header (#{header}) for a locale Gettext does not know.
-          Complete it, for example `nplurals=2; plural=(n != 1);`, or remove the header.
+          #{path} has an incomplete Plural-Forms header (#{header}). #{unknown}
+          Complete it, for example `#{@two_forms}`, or remove the header.
           """)
       end
+    end
+
+    defp unknown_locale(locale) do
+      case Map.fetch(@language_for_country, locale) do
+        {:ok, language} -> "#{locale} is not a locale Gettext knows; did you mean #{language}?"
+        :error -> "#{locale} is not a locale Gettext knows."
+      end
+    end
+
+    defp put_plural_forms(igniter, path, header, complete) do
+      Igniter.update_file(igniter, path, &Source.update(&1, :content, replace_plural_forms(&1, header, complete)))
     end
 
     defp replace_plural_forms(source, header, complete) do
@@ -1714,31 +2421,72 @@ if Code.ensure_loaded?(Igniter) do
     the request falls through to the router and the check never passes.
     """
     def add_health_plug(igniter, endpoint \\ nil) do
-      endpoint = endpoint || Module.concat(Igniter.Libs.Phoenix.web_module(igniter), Endpoint)
+      endpoint = endpoint || default_endpoint(igniter)
       missing = "add `plug Brando.Plug.Health` to #{inspect(endpoint)}, before the router. Florist checks /health."
+      add_endpoint_plug(igniter, endpoint, Brando.Plug.Health, missing)
+    end
 
+    @content_plugs [
+      {Brando.Plug.Markdown, "serves entries as Markdown at their URL + .md"},
+      {Brando.Plug.IndexNow, "serves the IndexNow key file"}
+    ]
+
+    @doc """
+    Adds `plug Brando.Plug.Markdown` and `plug Brando.Plug.IndexNow` to the
+    endpoint, before the router, in that order. Both act before routing: an
+    entry's `.md` URL loses its extension before the router matches it, and
+    the IndexNow key file is answered without reaching it. They go before
+    `Brando.Plug.Health` when the endpoint has it, as in the install
+    template. A plug the endpoint already has is left where it is.
+    """
+    def add_content_plugs(igniter, endpoint \\ nil) do
+      endpoint = endpoint || default_endpoint(igniter)
+
+      case ProjectModule.module_exists(igniter, endpoint) do
+        {true, igniter} ->
+          Enum.reduce(@content_plugs, igniter, fn {plug, purpose}, igniter ->
+            missing = "add `plug #{inspect(plug)}` to #{inspect(endpoint)}, before the router. It #{purpose}."
+            add_endpoint_plug(igniter, endpoint, plug, missing)
+          end)
+
+        {false, igniter} ->
+          Igniter.add_warning(igniter, """
+          Could not find the endpoint #{inspect(endpoint)}; add `plug Brando.Plug.Markdown` and
+          `plug Brando.Plug.IndexNow` to it, before the router.
+          """)
+      end
+    end
+
+    defp default_endpoint(igniter), do: Module.concat(Igniter.Libs.Phoenix.web_module(igniter), Endpoint)
+
+    defp add_endpoint_plug(igniter, endpoint, plug, missing) do
       # Updating a module reformats its file, so an endpoint that already has
       # the plug is only read.
       with {:ok, {igniter, _source, defmodule}} <- ProjectModule.find_module(igniter, endpoint),
            {:ok, body} <- Common.move_to_do_block(defmodule),
-           :error <- move_to_plug(body, &Common.nodes_equal?(&1, Brando.Plug.Health)) do
-        case ProjectModule.find_and_update_module(igniter, endpoint, &health_plug_before_router(&1, missing)) do
+           :error <- move_to_plug(body, &Common.nodes_equal?(&1, plug)) do
+        case ProjectModule.find_and_update_module(igniter, endpoint, &plug_before_router(&1, plug, missing)) do
           {:ok, igniter} -> igniter
           {:error, igniter} -> Igniter.add_warning(igniter, "Could not find the endpoint; " <> missing)
         end
       else
-        {:ok, _health_plug} -> igniter
+        {:ok, _plug} -> igniter
         {:error, igniter} -> Igniter.add_warning(igniter, "Could not find the endpoint; " <> missing)
         :error -> Igniter.add_warning(igniter, "Could not read the endpoint; " <> missing)
       end
     end
 
-    defp health_plug_before_router(zipper, missing) do
-      case move_to_plug(zipper, &router?/1) do
-        {:ok, router} -> {:ok, Common.add_code(router, "plug Brando.Plug.Health", placement: :before)}
-        :error -> {:warning, "Could not find the router plug; " <> missing}
+    defp plug_before_router(zipper, plug, missing) do
+      with :error <- health_plug(zipper, plug),
+           :error <- move_to_plug(zipper, &router?/1) do
+        {:warning, "Could not find the router plug; " <> missing}
+      else
+        {:ok, anchor} -> {:ok, Common.add_code(anchor, "plug #{inspect(plug)}", placement: :before)}
       end
     end
+
+    defp health_plug(_zipper, Brando.Plug.Health), do: :error
+    defp health_plug(zipper, _plug), do: move_to_plug(zipper, &Common.nodes_equal?(&1, Brando.Plug.Health))
 
     defp move_to_plug(zipper, predicate) do
       CodeFunction.move_to_function_call_in_current_scope(zipper, :plug, [1, 2], fn call ->

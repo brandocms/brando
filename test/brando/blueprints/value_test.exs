@@ -60,6 +60,13 @@ defmodule Brando.Blueprint.ValueTest do
     assert Value.encode_locale("sv") == "sv"
   end
 
+  test "locale encoding takes a language as an Ecto.Enum loads it" do
+    assert Value.encode_locale(:no) == "nb_NO"
+    assert Value.encode_locale(:en) == "en_US"
+    assert Value.encode_locale(:sv) == "sv"
+    assert Value.encode_locale(nil) == nil
+  end
+
   describe "rendered_text/2" do
     test "separates adjacent block elements instead of running them together" do
       entry = %{rendered_blocks: "<h2>Tittel</h2><p>Brødtekst</p>"}

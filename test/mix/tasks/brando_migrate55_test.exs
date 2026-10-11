@@ -364,20 +364,72 @@ defmodule Mix.Tasks.Brando.Migrate55Test do
     igniter = migrate(@blueprint_054, %{endpoint_path => endpoint})
     # The test project's formatter has no Phoenix locals_without_parens.
     assert source(igniter, endpoint_path) =~
-             ~r/plug\(?Plug.Session, @session_options\)?\n\s*plug\(?Brando.Plug.Health\)?\n\s*plug\(?LegacyAppWeb.Router/
+             ~r/plug\(?Brando.Plug.IndexNow\)?\n\s*plug\(?Brando.Plug.Health\)?\n\s*plug\(?LegacyAppWeb.Router/
 
     rerun = igniter |> apply_igniter!() |> include_test_files() |> Migrate55.igniter()
     assert_unchanged(rerun, endpoint_path)
 
-    # An endpoint that already has the plug is not rewritten (or reformatted).
-    has_plug =
-      "defmodule LegacyAppWeb.Endpoint do\n  use Phoenix.Endpoint, otp_app: :legacy_app\n  plug Brando.Plug.Health\n  plug LegacyAppWeb.Router\nend\n"
+    # An endpoint that already has the plugs is not rewritten (or reformatted).
+    has_plugs = """
+    defmodule LegacyAppWeb.Endpoint do
+      use Phoenix.Endpoint, otp_app: :legacy_app
+      plug Brando.Plug.Markdown
+      plug Brando.Plug.IndexNow
+      plug Brando.Plug.Health
+      plug LegacyAppWeb.Router
+    end
+    """
 
-    assert_unchanged(migrate(@blueprint_054, %{endpoint_path => has_plug}), endpoint_path)
+    assert_unchanged(migrate(@blueprint_054, %{endpoint_path => has_plugs}), endpoint_path)
 
     # Only when the task creates the Florist configuration.
     existing = migrate(@blueprint_054, %{endpoint_path => endpoint, @florist_config_path => "use Florist.DSL\n"})
-    assert_unchanged(existing, endpoint_path)
+    refute source(existing, endpoint_path) =~ "Brando.Plug.Health"
+  end
+
+  test "adds the Markdown and IndexNow plugs to the endpoint, before the router" do
+    endpoint_path = "lib/legacy_app_web/endpoint.ex"
+
+    endpoint = """
+    defmodule LegacyAppWeb.Endpoint do
+      use Phoenix.Endpoint, otp_app: :legacy_app
+
+      plug Plug.Session, @session_options
+      plug LegacyAppWeb.Router
+    end
+    """
+
+    # No Florist conversion, so no health plug.
+    files = %{endpoint_path => endpoint, @deployment_config_path => nil, @fabfile_path => nil}
+    igniter = migrate(@blueprint_054, files)
+
+    # The test project's formatter has no Phoenix locals_without_parens.
+    assert source(igniter, endpoint_path) =~
+             ~r/plug\(?Plug.Session, @session_options\)?\n\s*plug\(?Brando.Plug.Markdown\)?\n\s*plug\(?Brando.Plug.IndexNow\)?\n\s*plug\(?LegacyAppWeb.Router/
+
+    rerun = igniter |> apply_igniter!() |> include_test_files() |> Migrate55.igniter()
+    assert_unchanged(rerun, endpoint_path)
+
+    # A plug the endpoint already has stays where it is, once.
+    has_markdown = """
+    defmodule LegacyAppWeb.Endpoint do
+      use Phoenix.Endpoint, otp_app: :legacy_app
+
+      plug Brando.Plug.Markdown, except: ["/admin", "/api", "/docs"]
+      plug Plug.Session, @session_options
+      plug LegacyAppWeb.Router
+    end
+    """
+
+    contents = migrate(@blueprint_054, %{files | endpoint_path => has_markdown}) |> source(endpoint_path)
+    assert length(String.split(contents, "Brando.Plug.Markdown")) == 2
+    assert contents =~ ~s|Brando.Plug.Markdown, except: ["/admin", "/api", "/docs"]|
+
+    assert contents =~
+             ~r/plug\(?Plug.Session, @session_options\)?\n\s*plug\(?Brando.Plug.IndexNow\)?\n\s*plug\(?LegacyAppWeb.Router/
+
+    without_endpoint = migrate(@blueprint_054, Map.delete(files, endpoint_path))
+    assert_has_warning(without_endpoint, &(&1 =~ "add `plug Brando.Plug.Markdown` and"))
   end
 
   test "points Brando at the application's mailer" do
@@ -1911,24 +1963,177 @@ defmodule Mix.Tasks.Brando.Migrate55Test do
       rule_missing: "priv/gettext/backend/no/LC_MESSAGES/default.po",
       semicolon_missing: "priv/gettext/en/LC_MESSAGES/default.po",
       complete: "priv/gettext/sv/LC_MESSAGES/default.po",
-      unknown: "priv/gettext/xx/LC_MESSAGES/default.po"
+      unknown_two_forms: "priv/gettext/frontend/dk/LC_MESSAGES/default.po",
+      unknown_semicolon_missing: "priv/gettext/xx/LC_MESSAGES/default.po",
+      unknown_three_forms: "priv/gettext/yy/LC_MESSAGES/default.po"
     }
+
+    three_forms = "nplurals=3; plural=(n==1 ? 0 : n==2 ? 1 : 2)"
 
     igniter =
       migrate(@blueprint_054, %{
         paths.rule_missing => po.("nplurals=2;"),
         paths.semicolon_missing => po.("nplurals=2; plural=(n != 1)"),
         paths.complete => po.("nplurals=2; plural=(n != 1);"),
-        paths.unknown => po.("nplurals=2;")
+        paths.unknown_two_forms => po.("nplurals=2;"),
+        paths.unknown_semicolon_missing => po.(three_forms),
+        paths.unknown_three_forms => po.("nplurals=3;")
       })
 
     assert source(igniter, paths.rule_missing) == po.("nplurals=2; plural=(n != 1);")
     assert source(igniter, paths.semicolon_missing) == po.("nplurals=2; plural=(n != 1);")
-    assert_unchanged(igniter, [paths.complete, paths.unknown])
-    assert_has_warning(igniter, &String.contains?(&1, paths.unknown))
+    assert_unchanged(igniter, [paths.complete, paths.unknown_three_forms])
+
+    # A locale Gettext does not know: the two-form rule for nplurals=2, with a
+    # warning to check it, and a missing `;` added to a rule that has one.
+    assert source(igniter, paths.unknown_two_forms) == po.("nplurals=2; plural=(n != 1);")
+
+    assert_has_warning(
+      igniter,
+      &(String.contains?(&1, paths.unknown_two_forms) and String.contains?(&1, "did you mean da?") and
+          String.contains?(&1, "check that it fits"))
+    )
+
+    assert source(igniter, paths.unknown_semicolon_missing) == po.(three_forms <> ";")
+    refute Enum.any?(igniter.warnings, &String.contains?(&1, paths.unknown_semicolon_missing))
+
+    assert_has_warning(
+      igniter,
+      &(String.contains?(&1, paths.unknown_three_forms) and String.contains?(&1, "yy is not a locale Gettext knows."))
+    )
 
     rerun = igniter |> apply_igniter!() |> include_test_files() |> Migrate55.igniter()
-    assert_unchanged(rerun, [paths.rule_missing, paths.semicolon_missing])
+
+    assert_unchanged(rerun, [
+      paths.rule_missing,
+      paths.semicolon_missing,
+      paths.unknown_two_forms,
+      paths.unknown_semicolon_missing
+    ])
+  end
+
+  describe "Blueprint translations" do
+    defp catalog(locale, messages) do
+      body =
+        Enum.map_join(messages, "\n", fn
+          {msgid, msgstr} ->
+            ~s|msgid "#{msgid}"\nmsgstr "#{msgstr}"\n|
+
+          {msgid, plural, [one, other]} ->
+            ~s|msgid "#{msgid}"\nmsgid_plural "#{plural}"\nmsgstr[0] "#{one}"\nmsgstr[1] "#{other}"\n|
+        end)
+
+      ~s|msgid ""\nmsgstr ""\n"Language: #{locale}\\n"\n"Plural-Forms: nplurals=2; plural=(n != 1);\\n"\n\n| <> body
+    end
+
+    defp translations(contents) do
+      contents
+      |> Expo.PO.parse_string!()
+      |> Map.fetch!(:messages)
+      |> Map.new(fn
+        %Expo.Message.Singular{msgid: msgid, msgstr: msgstr} ->
+          {IO.iodata_to_binary(msgid), IO.iodata_to_binary(msgstr)}
+
+        %Expo.Message.Plural{msgid: msgid, msgstr: msgstr} ->
+          {IO.iodata_to_binary(msgid), Map.new(msgstr, fn {i, s} -> {i, IO.iodata_to_binary(s)} end)}
+      end)
+    end
+
+    @backend_no "priv/gettext/backend/no/LC_MESSAGES"
+    @frontend_no "priv/gettext/frontend/no/LC_MESSAGES"
+
+    test "copies the old per-context domains' translations into the Blueprint's 0.55 domain" do
+      igniter =
+        migrate(@blueprint_054, %{
+          "#{@backend_no}/projects_project_naming.po" =>
+            catalog("no", [{"project", "prosjekt"}, {"projects", "prosjekter"}]),
+          "#{@backend_no}/projects_project_forms.po" =>
+            catalog("no", [
+              {"Title", "Overskrift"},
+              {"%{count} image", "%{count} images", ["%{count} bilde", "%{count} bilder"]}
+            ]),
+          "#{@backend_no}/projects_project_listings.po" =>
+            catalog("no", [{"Title", "Tittel"}, {"Delete project", "Slett prosjekt"}, {"Status", ""}]),
+          "priv/gettext/backend/en/LC_MESSAGES/projects_project_naming.po" => catalog("en", [{"project", ""}]),
+          "#{@backend_no}/unrelated_forms.po" => catalog("no", [{"Send", "Send"}]),
+          "#{@frontend_no}/projects_project.po" => catalog("no", [{"project", ""}, {"Title", "Navn"}]),
+          "#{@frontend_no}/projects_project_naming.po" => catalog("no", [{"project", "prosjekt"}, {"Title", "Tittel"}])
+        })
+
+      assert_creates(igniter, "#{@backend_no}/projects_project.po", fn contents ->
+        assert contents =~ ~s|"Plural-Forms: nplurals=2; plural=(n != 1);\\n"|
+
+        assert translations(contents) == %{
+                 "project" => "prosjekt",
+                 "projects" => "prosjekter",
+                 "Title" => "Overskrift",
+                 "%{count} image" => %{0 => "%{count} bilde", 1 => "%{count} bilder"},
+                 "Delete project" => "Slett prosjekt"
+               }
+      end)
+
+      refute_creates(igniter, "priv/gettext/backend/en/LC_MESSAGES/projects_project.po")
+      refute_creates(igniter, "#{@backend_no}/unrelated.po")
+
+      assert translations(source(igniter, "#{@frontend_no}/projects_project.po")) == %{
+               "project" => "prosjekt",
+               "Title" => "Navn"
+             }
+
+      assert_has_warning(igniter, fn warning ->
+        warning =~ "translated differently" and
+          warning =~ ~s(#{@backend_no}/projects_project.po: "Title" kept "Overskrift", not "Tittel") and
+          warning =~ ~s(#{@frontend_no}/projects_project.po: "Title" kept "Navn", not "Tittel")
+      end)
+
+      rerun = igniter |> apply_igniter!() |> include_test_files() |> Migrate55.igniter()
+      assert_unchanged(rerun, ["#{@backend_no}/projects_project.po", "#{@frontend_no}/projects_project.po"])
+    end
+
+    test "the copied translations survive the merge of the extracted template" do
+      igniter =
+        migrate(@blueprint_054, %{
+          "#{@backend_no}/projects_project_naming.po" => catalog("no", [{"project", "prosjekt"}]),
+          "#{@backend_no}/projects_project_listings.po" => catalog("no", [{"Delete project", "Slett prosjekt"}])
+        })
+
+      directory = Path.join(System.tmp_dir!(), "brando-gettext-carry-#{System.unique_integer([:positive])}")
+      File.mkdir_p!(directory)
+      on_exit(fn -> File.rm_rf!(directory) end)
+
+      po = Path.join(directory, "no/LC_MESSAGES/projects_project.po")
+      pot = Path.join(directory, "projects_project.pot")
+      File.mkdir_p!(Path.dirname(po))
+      File.write!(po, source(igniter, "#{@backend_no}/projects_project.po"))
+
+      File.write!(pot, """
+      msgid ""
+      msgstr ""
+
+      #: lib/legacy_app/projects/project.ex
+      #, elixir-autogen, elixir-format
+      msgid "Delete project"
+      msgstr ""
+
+      #: lib/legacy_app/projects/project.ex
+      #, elixir-autogen, elixir-format
+      msgid "Title"
+      msgstr ""
+
+      #: lib/legacy_app/projects/project.ex
+      #, elixir-autogen, elixir-format
+      msgid "project"
+      msgstr ""
+      """)
+
+      ExUnit.CaptureIO.capture_io(fn -> Mix.Tasks.Gettext.Merge.run([directory, "--locale", "no", "--no-fuzzy"]) end)
+
+      assert translations(File.read!(po)) == %{
+               "Delete project" => "Slett prosjekt",
+               "Title" => "",
+               "project" => "prosjekt"
+             }
+    end
   end
 
   test "reports only the 0.55 manual workflow" do
@@ -1936,6 +2141,7 @@ defmodule Mix.Tasks.Brando.Migrate55Test do
 
     assert_has_notice(igniter, &String.contains?(&1, "Continue in this order"))
     assert_has_notice(igniter, &String.contains?(&1, "mix brando.gen.migrations"))
+    assert_has_notice(igniter, &(&1 =~ ~r/mix brando.identifiers.sync`\s+and `mix brando.images.adopt`/))
     assert_has_notice(igniter, &String.contains?(&1, "Created `florist.config.exs`"))
     assert_has_notice(igniter, &String.contains?(&1, "Archived the recognized legacy task"))
     assert_has_warning(igniter, &String.contains?(&1, "Manual 0.55 decisions remain"))

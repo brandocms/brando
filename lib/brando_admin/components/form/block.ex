@@ -76,6 +76,9 @@ defmodule BrandoAdmin.Components.Form.Block do
     |> assign(:remap_slot_uid, nil)
     |> assign(:remap_targets, [])
     |> assign(:remap_error, nil)
+    # A synchronized translation's structure follows its source: set by the
+    # block field, and read where a block reorders its own children.
+    |> assign(:source_locked, false)
     |> assign_new(:paste_multi_module_id, fn -> nil end)
     |> Events.attach_block_events()
     |> then(&{:ok, &1})
@@ -708,6 +711,20 @@ defmodule BrandoAdmin.Components.Form.Block do
     socket
     |> maybe_reload_or_update_live_preview(media_ref?)
     |> then(&{:ok, &1})
+  end
+
+  # A child's "Move up" / "Move down" (`Events`, "move_block"): moved here,
+  # where the children's order is, as a drag moves it.
+  def update(%{event: "move_block", uid: uid, by: by}, socket) do
+    case move_positions(socket.assigns.block_list, uid, by) do
+      {old, new} ->
+        params = %{"uid" => uid, "old" => old, "new" => new, "parent_uid" => socket.assigns.uid}
+        {:halt, socket} = Events.handle_block_event("reposition", params, socket)
+        {:ok, socket}
+
+      nil ->
+        {:ok, socket}
+    end
   end
 
   # Entry changes refresh the editor's splits. Form renders the full preview
@@ -2332,6 +2349,22 @@ defmodule BrandoAdmin.Components.Form.Block do
 
   def maybe_put_empty_children(changeset, true) do
     changeset
+  end
+
+  @doc """
+  Where `uid` goes when moved `by` places (-1 up, 1 down) among `order`, its
+  siblings' uids: `{old_index, new_index}`, or nil when it is not there or
+  is already first (up) or last (down).
+  """
+  def move_positions(order, uid, by) do
+    count = length(order)
+
+    with old when is_integer(old) <- Enum.find_index(order, &(&1 == uid)),
+         new when new >= 0 and new < count <- old + by do
+      {old, new}
+    else
+      _ -> nil
+    end
   end
 
   @doc """

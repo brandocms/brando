@@ -651,6 +651,14 @@ defmodule BrandoAdmin.Components.Form.Block.Events do
     {:halt, socket}
   end
 
+  # In a synchronized translation the children follow the source. Their
+  # order is left as it is, and the block field is sent that unchanged
+  # order, which it refuses with the notice that says why, so neither this
+  # editor nor the others ever see a move that did not happen.
+  def handle_block_event("reposition", _params, %{assigns: %{source_locked: true}} = socket) do
+    {:halt, Block.emit_block_op(socket, {:reorder_children, socket.assigns.uid, socket.assigns.block_list})}
+  end
+
   # reposition a main block
   def handle_block_event(
         "reposition",
@@ -689,6 +697,16 @@ defmodule BrandoAdmin.Components.Form.Block.Events do
     |> Block.emit_block_op({:reorder_children, socket.assigns.uid, new_block_list})
     |> Block.refresh_live_preview()
     |> then(&{:halt, &1})
+  end
+
+  # "Move up" / "Move down" in the block's menu. The block does not hold its
+  # siblings' order, so the parent that does (`BlockField` for a root block,
+  # the container or multi module's `Block` for a child) moves it, through
+  # the same `reposition` a drag sends.
+  def handle_block_event("move_block", %{"by" => by}, socket) when by in ["-1", "1"] do
+    {parent, parent_id} = socket.assigns.parent_ref
+    send_update(parent, id: parent_id, event: "move_block", uid: socket.assigns.uid, by: String.to_integer(by))
+    {:halt, socket}
   end
 
   def handle_block_event("show_dirty", _params, socket) do

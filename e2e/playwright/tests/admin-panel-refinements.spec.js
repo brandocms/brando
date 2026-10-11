@@ -165,8 +165,11 @@ test('listing actions align with the header rule and selection covers presence',
   await entry.hover()
   await expect(entry).toHaveCSS('text-decoration-line', 'none')
   await expect.poll(() => entry.evaluate(el => getComputedStyle(el, '::after').opacity)).toBe('1')
-  await page.locator('.list-row').first().locator('.listing-creator').click({ modifiers: ['Shift'] })
+  // With nothing selected the bar is gone, for the keyboard and screen readers too
   const bar = page.locator('.selected-rows')
+  await expect(bar).toBeHidden()
+  await expect(bar.getByRole('button', { name: 'Clear selection' })).toBeHidden()
+  await page.locator('.list-row').first().locator('.listing-creator').click({ modifiers: ['Shift'] })
   await expect(bar).toBeVisible()
   await page.waitForTimeout(350)
   const presenceCovered = await page.locator('.presences').evaluate(el => {
@@ -187,6 +190,27 @@ test('listing actions align with the header rule and selection covers presence',
   await page.screenshot({ path: testInfo.outputPath('selection-bar-mobile.png') })
   await page.keyboard.press('Escape')
   await expect(bar.getByRole('button', { name: 'Actions', exact: true })).toBeFocused()
+})
+
+// A menu link carries the listing's query order, which need not be one of
+// its sorts: the sort menu says what order the rows are in.
+test('the sort menu names an order from the URL that no sort has', async ({ page }) => {
+  expect((await page.request.post('/e2e/setup_fixtures/norwegian-admin-user')).ok()).toBe(true)
+  const sortButton = page.locator('.sorts .simple-dropdown-button')
+
+  await page.goto('/admin/pages?order=asc+sequence')
+  await syncLV(page)
+  await expect(sortButton).toHaveText('Manuell rekkefølge')
+  await expect(page.locator('.list-row .sequence-handle').first()).toBeVisible()
+
+  await page.goto('/admin/pages?order=desc+inserted_at')
+  await syncLV(page)
+  await expect(sortButton).toHaveText('Egendefinert rekkefølge')
+  await expect(page.locator('.list-row .sequence-handle')).toHaveCount(0)
+
+  await page.goto('/admin/pages?order=asc+title')
+  await syncLV(page)
+  await expect(sortButton).not.toHaveText(/rekkefølge/)
 })
 
 test('block rich text keeps its toolbar below the form controls', async ({ page }, testInfo) => {

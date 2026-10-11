@@ -26,6 +26,26 @@ defmodule Brando.PagesTest do
              Pages.get_page(%{matches: %{path: "test/path", language: "no"}})
   end
 
+  test "get_var/2 and has_var?/2 read a page's preloaded vars" do
+    page = %Pages.Page{vars: [%Brando.Content.Var{key: "heading", type: :string, value: "Våre verdier"}]}
+
+    assert Pages.get_var(page, "heading") == "Våre verdier"
+    assert Pages.get_var(page, "missing") == nil
+    assert Pages.has_var?(page, "heading")
+    refute Pages.has_var?(page, "missing")
+    refute Pages.has_var?(%Pages.Page{vars: []}, "heading")
+  end
+
+  test "get_var/2 and has_var?/2 name the missing preload when vars are not loaded" do
+    page = Factory.insert(:page, uri: "vars/not-loaded")
+    {:ok, page} = Pages.get_page(%{matches: %{id: page.id}})
+
+    message = ~r/page vars are not loaded.*preload: \[:alternate_entries, :vars\]/s
+
+    assert_raise ArgumentError, message, fn -> Pages.get_var(page, "heading") end
+    assert_raise ArgumentError, message, fn -> Pages.has_var?(page, "heading") end
+  end
+
   test "get_fragment" do
     pf1 = Factory.insert(:fragment, key: "frag")
     {:ok, pf2} = Pages.get_fragment(%{matches: %{key: "frag"}})

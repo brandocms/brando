@@ -32,6 +32,18 @@ test('a translation opens with its pending version, is reviewed and saved', asyn
   await expect(page.locator('#article_year-field-wrapper')).toHaveAttribute('inert', '', { timeout: 5000 })
   await expect(page.locator('.blocks-wrapper.is-source-locked .blocks-source-note')).toBeVisible()
   await expect(page.locator('.blocks-wrapper.is-source-locked .block-plus:visible')).toHaveCount(0)
+  // Blocks are added, moved and removed only in the source: no drag handles,
+  // and no Move up / Move down, Duplicate, Copy or Delete in a block's menu,
+  // which goes when nothing else is in it. Read from the styles, without
+  // opening a menu: a click in a block would start this editor's focus there.
+  const locked = page.locator('.blocks-wrapper.is-source-locked')
+  const displays = selector => locked.locator(selector).evaluateAll(els => els.map(el => getComputedStyle(el).display))
+  await expect(locked.locator('.sort-handle:visible')).toHaveCount(0)
+  await expect(locked.locator('[data-block-move]')).not.toHaveCount(0)
+  expect(new Set(await displays('.block-structure-action'))).toEqual(new Set(['none']))
+  for (const display of await displays('.block-action-dropdown:not(:has(li:not(.block-structure-action)))')) {
+    expect(display).toBe('none')
+  }
   await expect(page.locator('.field-wrapper.subform').filter({ has: page.locator('[data-sortable-id="article[items]-sortable"]') }))
     .toHaveAttribute('data-source-structure', 'true')
   // The new block, still in Norwegian, is marked.

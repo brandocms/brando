@@ -42,6 +42,8 @@ defmodule BrandoAdmin.Components.ShortcutSheet do
       "save" => gettext("Save and continue editing"),
       "save-close" => gettext("Save and close"),
       "preview" => gettext("Open or close the live preview"),
+      "undo" => gettext("Undo typing"),
+      "redo" => gettext("Redo typing"),
       "bold" => gettext("Bold"),
       "italic" => gettext("Italic"),
       "rich-text-toolbar" => gettext("Move to the rich text toolbar"),

@@ -169,12 +169,15 @@ defmodule Brando.HTML.Images do
   end
 
   defp picture_tag(%{src: src, attrs: attrs, opts: opts} = assigns) do
+    # A picture block with no title or credits passes `caption: ""`; that is no
+    # caption, not an empty <figcaption>.
     caption =
       case Keyword.get(opts, :caption, false) do
-        false -> false
         true -> src.title
         caption -> caption
       end
+
+    caption = if caption in [nil, ""], do: false, else: caption
 
     # An explicit `alt: nil` — which a picture block with no alt text passes —
     # must still reach the tag as "", marking the image decorative. `Keyword.get/3`

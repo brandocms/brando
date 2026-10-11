@@ -6,13 +6,15 @@ defmodule Mix.Tasks.Brando.Ssg do
   worker.
 
       mix brando.ssg
-      mix brando.ssg --force
+      mix brando.ssg --yes
       mix brando.ssg --site acme --environment staging --output ./ssg
       mix brando.ssg --site acme --dry-run
 
   Options:
 
-    * `--force` - skip confirmation prompts
+    * `--yes` (or `--force`) - skip the confirmation prompt. Without it and
+      without a terminal to answer on, the task builds nothing and exits
+      non-zero
     * `--site` - site key in multi-site mode
     * `--environment` - environment key (defaults to the live environment)
     * `--output` - output directory (defaults to the application's SSG path)
@@ -34,6 +36,7 @@ defmodule Mix.Tasks.Brando.Ssg do
   alias Brando.Tenant.Registry
 
   @switches [
+    yes: :boolean,
     force: :boolean,
     site: :string,
     environment: :string,
@@ -71,7 +74,7 @@ defmodule Mix.Tasks.Brando.Ssg do
 
     show_plan(site, environment, asset_set, output_path, dry_run?)
 
-    if Keyword.get(opts, :force, false) or Mix.shell().yes?("\nGenerate this static snapshot?") do
+    if Mix.Brando.confirm?("\nGenerate this static snapshot?", opts) do
       maybe_compile_assets(asset_set, opts, dry_run?)
       result = run_build(site, environment, asset_set, output_path, dry_run?)
       report_result!(result)

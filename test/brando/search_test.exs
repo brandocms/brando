@@ -150,6 +150,16 @@ defmodule Brando.SearchTest do
   end
 
   describe "what is indexed" do
+    test "only types with an admin editor, whose results can link to it" do
+      schemas = Search.searchable_schemas()
+
+      assert Page in schemas
+      assert Brando.SyncTest.Article in schemas
+      # Persists identifiers, but the test router has no form route for it.
+      refute Brando.BlueprintTest.Project in schemas
+      refute Search.searchable?(Brando.BlueprintTest.Project)
+    end
+
     test "the body has the text fields and every kind of block text", %{user: user} do
       page = Factory.insert(:page, title: "Hotel", creator: user)
       image = Factory.insert(:image, alt: %{"en" => "A balcony at dusk"}, title: %{"en" => "Caption of the balcony"})
@@ -159,7 +169,12 @@ defmodule Brando.SearchTest do
         vars: [
           %{type: :string, key: "kicker", label: "Kicker", value: "Kicker line", sequence: 0},
           %{type: :html, key: "body", label: "Body", value: "<p>Rich <strong>var</strong> text</p>", sequence: 1},
-          %{type: :boolean, key: "flag", label: "Flag", value: "true", sequence: 2}
+          %{type: :boolean, key: "flag", label: "Flag", value: "true", sequence: 2},
+          # Addresses kept in text vars by modules older than link vars
+          %{type: :text, key: "link", label: "Link", value: "#content", sequence: 3},
+          %{type: :string, key: "url", label: "URL", value: " https://example.com/menu ", sequence: 4},
+          %{type: :string, key: "path", label: "Path", value: "/no/meny", sequence: 5},
+          %{type: :string, key: "tag", label: "Tag", value: "#1 in town", sequence: 6}
         ],
         refs: [
           %{
@@ -230,11 +245,15 @@ defmodule Brando.SearchTest do
             "A balcony at dusk",
             "Caption of the balcony",
             "Table cell",
-            "Nested child text"
+            "Nested child text",
+            "#1 in town"
           ] do
         assert body =~ text
       end
 
+      refute body =~ "#content"
+      refute body =~ "example.com"
+      refute body =~ "/no/meny"
       refute body =~ "Inactive"
       refute body =~ "secret"
       refute body =~ "true"

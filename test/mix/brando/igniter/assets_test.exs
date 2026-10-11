@@ -159,6 +159,28 @@ defmodule Mix.Brando.Igniter.AssetsTest do
       assert dockerfile =~ "RUN yarn build"
     end
 
+    test "says the assets_frontend stage keeps its Node image" do
+      [notice] = upgrade(old_backend()).notices |> Enum.filter(&(&1 =~ "assets_frontend"))
+      assert notice =~ "still builds on node:18"
+      assert notice =~ "the frontend on node:22"
+
+      {_, stage, _} = Mix.Brando.Igniter.Assets.dockerfile_stage(template("Dockerfile"), "assets_frontend")
+      current = old_backend()["Dockerfile"]
+      {before, _old, rest} = Mix.Brando.Igniter.Assets.dockerfile_stage(current, "assets_frontend")
+      plan = upgrade(old_backend(%{"Dockerfile" => Enum.join(before ++ stage ++ rest, "\n")}))
+      refute Enum.any?(plan.notices, &(&1 =~ "assets_frontend"))
+    end
+
+    test "runs Igniter's deps.get without Hex's package listing" do
+      parent = self()
+      System.delete_env("MIX_QUIET")
+
+      Mix.Brando.Igniter.Assets.without_hex_listing(fn -> send(parent, {:quiet, System.get_env("MIX_QUIET")}) end)
+
+      assert_received {:quiet, "1"}
+      assert System.get_env("MIX_QUIET") == nil
+    end
+
     test "is idempotent" do
       plan = upgrade(old_backend())
       rerun = plan |> IgniterCase.apply_and_reload() |> Igniter.compose_task(Mix.Tasks.Brando.Gen.Backend, ["--upgrade"])

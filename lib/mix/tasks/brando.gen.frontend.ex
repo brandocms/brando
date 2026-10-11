@@ -16,6 +16,9 @@ if Code.ensure_loaded?(Igniter) do
       %Igniter.Mix.Task.Info{group: :brando, schema: Mix.Brando.Igniter.Project.options()}
     end
 
+    @impl Mix.Task
+    def run(argv), do: Mix.Brando.Igniter.Assets.without_hex_listing(fn -> super(argv) end)
+
     @impl Igniter.Mix.Task
     def igniter(igniter) do
       with {:ok, igniter, options} <-

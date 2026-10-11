@@ -11,8 +11,11 @@ defmodule BrandoAdmin.SearchLive do
   use BrandoAdmin, :live_view
   use Gettext, backend: Brando.Gettext
 
+  alias BrandoAdmin.CommandPalette
   alias BrandoAdmin.Components.Content.List, as: ContentList
   alias BrandoAdmin.Search
+
+  @utilities "/admin/config/utils"
 
   def __authorization__, do: {:access, :backend}
 
@@ -27,7 +30,11 @@ defmodule BrandoAdmin.SearchLive do
        |> assign(:types, Search.types(socket.assigns.current_user))
        |> assign(:languages, Search.languages())
        |> assign(:statuses, Enum.map(Search.statuses(), &{&1, status_label(&1)}))
-       |> assign(:sorts, [{"relevance", gettext("Best match")}, {"updated", gettext("Recently updated")}])}
+       |> assign(:sorts, [{"relevance", gettext("Best match")}, {"updated", gettext("Recently updated")}])
+       |> assign(
+         :utilities?,
+         CommandPalette.in_menu?(socket.assigns.current_user, socket.assigns[:current_site], @utilities)
+       )}
     else
       {:ok, assign(socket, :socket_connected, false)}
     end
@@ -54,7 +61,9 @@ defmodule BrandoAdmin.SearchLive do
      |> assign(:total_pages, total_pages)}
   end
 
-  def handle_params(_params, _url, socket), do: {:noreply, socket}
+  # The first render's title, before the socket connects.
+  def handle_params(params, _url, socket),
+    do: {:noreply, assign(socket, :page_title, page_title(Search.filters(params, []).q))}
 
   defp page_title(""), do: gettext("Search")
   defp page_title(q), do: gettext("Search: %{query}", query: q)
@@ -149,6 +158,21 @@ defmodule BrandoAdmin.SearchLive do
             <div class="search-empty" id="search-unavailable">
               <h2>{gettext("Search is not set up here")}</h2>
               <p>{gettext("The search index needs its migration. Ask an administrator to run it.")}</p>
+            </div>
+          <% @results[:empty_index] -> %>
+            <div class="search-empty" id="search-empty-index" role="status">
+              <h2>{gettext("The search index is empty")}</h2>
+              <p :if={@utilities?}>
+                {gettext("Nothing has been indexed here yet, so no search finds anything.")}
+                <.link navigate="/admin/config/utils#utils-search-index">
+                  {gettext("Rebuild it under Utilities → Search index")}
+                </.link>
+              </p>
+              <p :if={!@utilities?}>
+                {gettext(
+                  "Nothing has been indexed here yet, so no search finds anything. Ask an administrator to rebuild it."
+                )}
+              </p>
             </div>
           <% @results.total == 0 -> %>
             <div class="search-empty" id="search-none" role="status">

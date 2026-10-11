@@ -104,7 +104,12 @@ asset :cover, :image,
   }
 ```
 
-When a config replaces `sizes` without its own `srcset`, the inherited default
+A declared `srcset` replaces the default `srcset`: a legacy flat one
+(`%{"large" => "1700w"}`) always, and a keyed one when an image config has
+its own `sizes`. A keyed `srcset` on the default sizes is merged key by key,
+so `%{cropped: [...]}` alone keeps the default's `default:` list; so is a
+gallery's, whose sizes merge over the default's. When a
+config replaces `sizes` without its own `srcset`, the inherited default
 `srcset` is dropped if it names sizes the config no longer has.
 
 Changing size definitions does not regenerate existing images by itself. Each

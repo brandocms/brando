@@ -27,16 +27,22 @@ defmodule E2eProject.DoctorTest do
     checks = Map.new(report["checks"], &{&1["id"], &1})
 
     assert Map.keys(checks) |> Enum.sort() ==
-             Enum.sort(~w(versions migrations oban configuration admin_assets image_configs modules sitemap robots json_ld alt_text deprecations))
+             Enum.sort(
+               ~w(versions migrations oban configuration admin_assets admin_routes image_configs modules sitemap robots json_ld alt_text deprecations)
+             )
 
     refute Enum.any?(report["checks"], &(&1["summary"] == "could not run")), json
 
     # Read from the project's source tree
-    assert %{"status" => "ok", "summary" => "linked to ../../../assets, brandojs " <> _} = checks["admin_assets"]
+    assert %{"status" => "ok", "summary" => "linked to ../../../assets, brandojs " <> _} =
+             checks["admin_assets"]
+
     assert %{"status" => "ok", "summary" => "none in lib/"} = checks["deprecations"]
     # The router has page_routes(); the monolithic test migration has run
     assert %{"status" => "ok"} = checks["robots"]
     assert %{"status" => "ok"} = checks["migrations"]
+    # Every Blueprint with an admin editor has its form route
+    assert %{"status" => "ok"} = checks["admin_routes"]
 
     assert status == if(report["status"] == "error", do: 1, else: 0)
     assert report["versions"]["brando"] == Brando.version()

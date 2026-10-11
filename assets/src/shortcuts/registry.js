@@ -55,6 +55,10 @@ export const SHORTCUTS = [
   { id: 'save', group: 'entry', keys: ['Mod+S'] },
   { id: 'save-close', group: 'entry', keys: ['Mod+Shift+S'] },
   { id: 'preview', group: 'entry', sequence: ['g', 'p'], dispatch: true },
+  // The browser's and the rich text editor's own undo, for typing; a deleted
+  // block comes back with the Undo button in its notice instead.
+  { id: 'undo', group: 'entry', keys: ['Mod+Z'] },
+  { id: 'redo', group: 'entry', keys: ['Mod+Shift+Z'] },
   { id: 'bold', group: 'entry', keys: ['Mod+B'] },
   { id: 'italic', group: 'entry', keys: ['Mod+I'] },
   { id: 'rich-text-toolbar', group: 'entry', keys: ['Alt+F10'] },

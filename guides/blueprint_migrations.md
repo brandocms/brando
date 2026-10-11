@@ -2,7 +2,8 @@
 
 Blueprint migrations turn storage-relevant DSL changes into reviewed Ecto migrations. The generator stores a
 versioned, normalized schema snapshot beside the migration history and compares the next Blueprint definition to that
-snapshot. It does not compare arbitrary runtime structs or infer state from the database.
+snapshot. It does not compare arbitrary runtime structs or infer state from the database, except under
+[`--reconcile`](#reconciling-with-an-existing-database), which reads it.
 
 <!-- usage-rules:start -->
 
@@ -43,7 +44,7 @@ order. After acceptance every plan is checked again before anything is
 written; if one is stale, no files are written. A Blueprint whose destination
 cannot be inferred (a fixed schema prefix, or history in the other directory)
 is left out with a warning; plan it on its own with `--migration-path`. `--all`
-takes `--dry-run` and `--snapshot-path`, but not a Blueprint module,
+takes `--dry-run`, `--snapshot-path` and `--reconcile`, but not a Blueprint module,
 `--migration-path` or `--rebaseline`. Brando's own tables are not included;
 they come from `mix brando.gen.migrations`.
 
@@ -101,7 +102,7 @@ migration against that application's own schema and data.
 <!-- usage-rules:start topic="generators" -->
 
 Deployment still uses the application's normal Ecto migration command. The Blueprint task generates source files; it
-does not connect to or mutate a database.
+never changes a database, and reads one only for warnings or with `--reconcile`.
 
 <!-- usage-rules:end -->
 
@@ -462,6 +463,78 @@ Before upgrading Brando:
 If decoding reports a corrupt or incompatible legacy snapshot, do not delete it and rerun the generator—that would
 make the current Blueprint look like a brand-new table. Restore a valid copy from version control. If none exists,
 compare the Blueprint with the database manually and use `--rebaseline` only after they are known to match.
+
+## Reconciling with an existing database
+
+A snapshot older than its table (one written before Brando's blocks conversion,
+say), or a table that predates snapshots altogether, makes the generator
+propose storage the database already has and drops that would lose data.
+`--reconcile` fits each plan to the database instead:
+
+```shell
+mix brando.gen.blueprint_migration --all --reconcile --dry-run
+mix brando.gen.blueprint_migration --all --reconcile
+```
+
+It reads the tables, columns, indexes and foreign keys of the planned tables
+from the configured repo (the schemas on its search path, `public` in a classic
+application), so the database must be reachable; point the repo at the
+production database or a current copy. It never reads `tenant_*` schemas, and
+it is refused in an application with named environments (`tenancy_mode`
+`:single` or `:multi`): content lives in one schema per environment there, and
+they may differ. Edit those migrations by hand as the [0.53 upgrade
+guide](migrating_from_053.md#legacy-snapshots) describes. Then:
+
+- A table the plan creates that already exists (no snapshot history) becomes an
+  `alter table` that adds only the columns and indexes it lacks. Of the
+  timestamps, only a missing one is added, filled from the other and then
+  made `NOT NULL`. A table that
+  already has them all gets no migration: its snapshot is recorded as a
+  baseline, as `--rebaseline` would.
+- A column, index or auxiliary table the plan adds that already exists is added
+  with `add_if_not_exists`/`create_if_not_exists`, and `down/0` leaves it alone.
+  An existing column with `references(...)` is left out: PostgreSQL adds the
+  named foreign key even when `ADD COLUMN IF NOT EXISTS` skips the column, and
+  stops with `constraint ... already exists`. A comment says when such a column
+  lacks its foreign key.
+- A column, timestamps or auxiliary table the plan drops is dropped only when a
+  generated migration in the Blueprint's history created it (it first appears
+  in a snapshot that is not a baseline) and it is empty in the database read.
+  Anything that predates the generated migrations is kept whatever it holds:
+  that it is empty on a development copy says nothing about production. Kept
+  storage gets a comment giving the number of values or rows, or why it was
+  kept; dropping it is a separate decision. Legacy Villain columns (`data`,
+  `html`, `*_data`, `*_html`) are never dropped this way. A drop of a column,
+  index or table the database does not have is left out. The snapshot of an
+  `alter` written in place of a `create table` is recorded as a baseline, so
+  what it found stays unowned.
+- A change (`modify`) of a column the database lacks becomes an `add` of the
+  new definition. A rename whose target already exists and whose source does
+  not is left out; one where neither exists becomes an `add` of the new name.
+  When both exist the plan stops: merge them by hand first. Each case gets a
+  comment.
+- A kept column that is `NOT NULL` without a default would fail every insert,
+  since the schema no longer writes it. The migration drops its `NOT NULL` with
+  `ALTER TABLE ... DROP NOT NULL` (not `modify`, which would also reset its
+  type), says so in a comment, and sets it back in `down/0`.
+
+The first comment in each migration, and the summary printed after the
+previews, name the repo, database and schemas read, since that database decided
+what is kept. Read the one the migration will run on, or a current copy of it.
+The summary lists per file what already existed, what was left out and what was
+kept. The snapshot records the Blueprint as usual, so a
+kept column is not proposed for dropping again; drop it later in a hand-written
+migration.
+
+Only names are compared. Check types, defaults and nullability against `\d`
+yourself, and run every migration down and up once on a scratch copy.
+`--reconcile` works for one Blueprint or with `--all`, and with `--dry-run`
+(which still reads the database). It cannot be combined with `--rebaseline`.
+Accepting the plan reads the database again. A change to what the migration
+does (a column that now holds data, an index that appeared) makes the plan
+stale; a changed count in a comment does not, and the file written gives the
+count read on acceptance. A plan whose Blueprint has snapshot history but
+whose table is missing stops: run the existing migrations first.
 
 ## Umbrella and custom paths
 

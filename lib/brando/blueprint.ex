@@ -766,6 +766,41 @@ defmodule Brando.Blueprint do
   @spec get_icon(module()) :: String.t()
   def get_icon(module), do: module.__content_icon__() || @default_icon
 
+  @doc """
+  Whether `module` has an admin editor: the router defines the `:update`
+  form route `module.__admin_route__(:update, [id])` links to. Every
+  Blueprint generates `__admin_route__/2`, so its presence says nothing; a
+  Blueprint with no admin routes raises `UndefinedFunctionError` from it, and
+  one routed only for `:create` raises `ArgumentError`.
+
+  `routes` are `Phoenix.Router.routes/1`, by default the application
+  router's. `Brando.Doctor.Checks.AdminRoutes` checks the same route.
+  """
+  @spec admin_editor?(module(), [map()] | nil) :: boolean()
+  def admin_editor?(module, routes \\ nil) do
+    function_exported?(module, :__admin_route_helper__, 1) and
+      route_defined?(routes || router_routes(), module.__admin_route_helper__(:update), :update)
+  end
+
+  @doc """
+  Whether `routes` (`Phoenix.Router.routes/1`) define the route helper
+  `helper` (`:admin_project_form_path`) for `action`. A helper's arity cannot
+  tell: a route for `:create` alone exports the same arities as `:update`.
+  """
+  @spec route_defined?([map()], atom(), atom()) :: boolean()
+  def route_defined?(routes, helper, action) do
+    name = helper |> Atom.to_string() |> String.replace_suffix("_path", "")
+    Enum.any?(routes, &(&1.helper == name and &1.plug_opts == action))
+  end
+
+  defp router_routes do
+    router = Brando.RuntimeConfig.router()
+
+    if Code.ensure_loaded?(router) and function_exported?(router, :__routes__, 0),
+      do: Phoenix.Router.routes(router),
+      else: []
+  end
+
   defp get_translation(translations, path) do
     Enum.reduce(path, translations, fn
       _key, nil -> nil
@@ -778,37 +813,51 @@ defmodule Brando.Blueprint do
 
   # Shims for syntax `mix brando.migrate54` rewrites. Remove in 0.56 with the task.
   defmacro inputs_for(_, _, _) do
-    IO.warn("inputs_for/3 is deprecated. Migrate with mix brando.migrate54")
+    deprecated(__CALLER__, "inputs_for/3 is deprecated. Migrate with mix brando.migrate54")
   end
 
   defmacro form_query(_) do
-    IO.warn("form_query/1 is deprecated. use query/1 instead. Migrate with mix brando.migrate54")
+    deprecated(__CALLER__, "form_query/1 is deprecated. use query/1 instead. Migrate with mix brando.migrate54")
   end
 
   defmacro listing_query(_) do
-    IO.warn("listing_query/1 is deprecated. use query/1 instead. Migrate with mix brando.migrate54")
+    deprecated(__CALLER__, "listing_query/1 is deprecated. use query/1 instead. Migrate with mix brando.migrate54")
   end
 
   defmacro filters(_) do
-    IO.warn("filters/1 is deprecated. use filter/1 instead. Migrate with mix brando.migrate54")
+    deprecated(__CALLER__, "filters/1 is deprecated. use filter/1 instead. Migrate with mix brando.migrate54")
   end
 
   defmacro actions(_) do
-    IO.warn("actions/1 is deprecated. use action/1 instead. Migrate with mix brando.migrate54")
+    deprecated(__CALLER__, "actions/1 is deprecated. use action/1 instead. Migrate with mix brando.migrate54")
   end
 
   defmacro actions(_, _) do
-    IO.warn(
+    deprecated(
+      __CALLER__,
       "actions/2 is deprecated. use action/1 instead with default_actions <bool>. Migrate with mix brando.migrate54"
     )
   end
 
+  # Legacy listing columns, which no task rewrites: the row they made is
+  # application markup.
   defmacro field(_name, _type, _opts \\ []) do
-    IO.warn("field/3 is deprecated. use component/1 instead. Migrate with mix brando.migrate54")
+    deprecated(__CALLER__, legacy_listing_column("field/3"))
   end
 
   defmacro template(_template, _opts \\ []) do
-    IO.warn("template/2 is deprecated. use component/1 instead. Migrate with mix brando.migrate54")
+    deprecated(__CALLER__, legacy_listing_column("template/2"))
+  end
+
+  defp legacy_listing_column(call) do
+    "#{call} in a listing is no longer supported and renders nothing. " <>
+      "Replace the listing's field and template columns with a row component " <>
+      "(component &__MODULE__.listing_row/1) by hand; mix brando.migrate54 does not rewrite them. " <>
+      "See guides/blueprint_listings.md#rows"
+  end
+
+  defp deprecated(caller, message) do
+    IO.warn(message, Macro.Env.stacktrace(caller))
   end
 
   def __after_compile__(env, _) do

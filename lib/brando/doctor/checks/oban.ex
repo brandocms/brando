@@ -255,8 +255,9 @@ defmodule Brando.Doctor.Checks.Oban do
     end)
   end
 
-  # Oban's table lives in its own prefix, not the tenant's
+  # Oban's table lives in its own prefix, not the tenant's. Not logged: the
+  # doctor runs in dev, where the query would print on every check.
   defp jobs(context, query) do
-    Brando.Repo.repo().all(query, prefix: context.oban[:prefix] || "public")
+    Brando.Repo.repo().all(query, prefix: context.oban[:prefix] || "public", log: false)
   end
 end

@@ -216,7 +216,9 @@ defmodule Brando.Blueprint.AssetConfigNormalizer do
   defp merge_config(asset, type, module, default, overrides) do
     default_map = if is_struct(default), do: Map.from_struct(default), else: Map.new(default)
     override_map = config_map!(asset, type, module, overrides)
-    build_struct!(asset, type, module, deep_merge(default_map, override_map))
+    merged = deep_merge(default_map, override_map)
+    merged = if type == :image, do: put_declared_srcset(merged, default_map, override_map, false), else: merged
+    build_struct!(asset, type, module, merged)
   end
 
   defp normalize_asset_config(_asset, module, config) when is_struct(config, module), do: config
@@ -276,7 +278,8 @@ defmodule Brando.Blueprint.AssetConfigNormalizer do
   end
 
   defp merge_image_config(default_config, override) do
-    merged = deep_merge(default_config, override)
+    merged =
+      put_declared_srcset(deep_merge(default_config, override), default_config, override, Map.has_key?(override, :sizes))
 
     cond do
       not Map.has_key?(override, :sizes) -> merged
@@ -284,6 +287,25 @@ defmodule Brando.Blueprint.AssetConfigNormalizer do
       true -> %{merged | sizes: override.sizes, srcset: inherited_srcset(merged.srcset, override.sizes)}
     end
   end
+
+  # A declared srcset replaces the default one, except that a keyed srcset
+  # adds its keys to a keyed default (`cropped:` alone still gets `default:`)
+  # while every default size still exists: on the default sizes, or in a
+  # gallery, whose sizes merge over the default's. Merged, a flat legacy
+  # srcset would sit among the default's keyed lists, and with sizes of its
+  # own an image's keyed one would inherit lists naming sizes it may not have.
+  defp put_declared_srcset(merged, default, %{srcset: srcset}, sizes_replaced?) do
+    default_srcset = Map.get(default, :srcset)
+
+    if keyed_srcset?(srcset) and keyed_srcset?(default_srcset) and not sizes_replaced?,
+      do: Map.put(merged, :srcset, Map.merge(default_srcset, srcset)),
+      else: Map.put(merged, :srcset, srcset)
+  end
+
+  defp put_declared_srcset(merged, _default, _override, _sizes_replaced?), do: merged
+
+  defp keyed_srcset?(srcset),
+    do: is_map(srcset) and map_size(srcset) > 0 and Enum.all?(Map.values(srcset), &is_list/1)
 
   # A config that replaces `sizes` but gives no `srcset` inherits the default
   # one, which may name sizes it no longer has. Only a field rendered with its

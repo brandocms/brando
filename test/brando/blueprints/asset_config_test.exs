@@ -377,6 +377,68 @@ defmodule Brando.Blueprint.AssetConfigTest do
     assert %{default: [_ | _]} = Assets.__asset__(module, :cover).opts.cfg.srcset
   end
 
+  test "a declared srcset replaces the keyed default, unless it only adds keys over the default sizes" do
+    # The default srcset is keyed: `%{default: [{"small", "700w"}, …]}`.
+    sizes = %{
+      "crop_md" => %{"size" => "600x750>", "crop" => true},
+      "crop_lg" => %{"size" => "900x1125>", "crop" => true}
+    }
+
+    module =
+      compile_blueprint(
+        quote do
+          assets do
+            asset :standard, :image, cfg: :default
+
+            # A legacy flat srcset replaces the default, with or without its own sizes.
+            asset :legacy, :image,
+              cfg: %{sizes: unquote(Macro.escape(sizes)), srcset: %{"crop_md" => "600w", "crop_lg" => "900w"}}
+
+            asset :legacy_default_sizes, :image, cfg: %{srcset: %{"small" => "700w"}}
+
+            # Own sizes: the default's lists may name sizes that are gone, so it is replaced.
+            asset :partial, :image,
+              cfg: %{
+                sizes: unquote(Macro.escape(sizes)),
+                srcset: %{cropped: [{"crop_md", "600w"}, {"crop_lg", "900w"}]}
+              }
+
+            # The default sizes: the default's lists still hold, so keys merge.
+            asset :cropped_only, :image, cfg: %{srcset: %{cropped: [{"small", "700w"}]}}
+            asset :default_key, :image, cfg: %{srcset: %{default: [{"large", "1700w"}]}}
+
+            asset :gallery, :gallery,
+              cfg: %{image: %{sizes: unquote(Macro.escape(sizes)), srcset: %{"crop_md" => "600w"}}}
+
+            # A gallery's sizes merge over the default's, so its keyed srcset
+            # merges too, own sizes or not.
+            asset :keyed_gallery, :gallery,
+              cfg: %{image: %{sizes: unquote(Macro.escape(sizes)), srcset: %{cropped: [{"crop_md", "600w"}]}}}
+          end
+        end
+      )
+
+    %{default: [_ | _]} = default = Assets.__asset__(module, :standard).opts.cfg.srcset
+
+    assert Assets.__asset__(module, :legacy).opts.cfg.srcset == %{"crop_md" => "600w", "crop_lg" => "900w"}
+    assert Assets.__asset__(module, :legacy_default_sizes).opts.cfg.srcset == %{"small" => "700w"}
+
+    assert Assets.__asset__(module, :partial).opts.cfg.srcset == %{
+             cropped: [{"crop_md", "600w"}, {"crop_lg", "900w"}]
+           }
+
+    assert Assets.__asset__(module, :cropped_only).opts.cfg.srcset ==
+             Map.put(default, :cropped, [{"small", "700w"}])
+
+    assert Assets.__asset__(module, :default_key).opts.cfg.srcset ==
+             Map.put(default, :default, [{"large", "1700w"}])
+
+    assert Assets.__asset__(module, :gallery).opts.cfg.image.srcset == %{"crop_md" => "600w"}
+
+    assert Assets.__asset__(module, :keyed_gallery).opts.cfg.image.srcset ==
+             Map.put(default, :cropped, [{"crop_md", "600w"}])
+  end
+
   test "validates deferred config functions when they are materialized" do
     module =
       compile_blueprint(

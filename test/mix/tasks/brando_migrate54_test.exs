@@ -274,6 +274,616 @@ defmodule Mix.Tasks.Brando.Migrate54Test do
     refute blueprint =~ "status(:published)"
   end
 
+  @villain_editor_blueprint """
+  defmodule LegacyApp.Vacancies.Vacancy do
+    use Brando.Blueprint,
+      application: "LegacyApp",
+      domain: "Vacancies",
+      schema: "Vacancy",
+      singular: "vacancy",
+      plural: "vacancies"
+
+    trait Brando.Trait.Villain
+
+    attributes do
+      attribute :title, :string
+      attribute :data, :villain
+      attribute :hero_data, :villain
+    end
+
+    forms do
+      form do
+        tab "Content" do
+          fieldset size: :full do
+            input :title, :text
+          end
+
+          fieldset size: :full do
+            input :data, :blocks, label: "Innholdsblokker", template_namespace: "vacancies"
+          end
+        end
+
+        tab "Hero" do
+          fieldset size: :full do
+            input :hero_data, :blocks
+          end
+        end
+      end
+
+      form :compact do
+        # Only the title
+        tab "Content" do
+          fieldset size: :full do
+            input :title, :text
+            input :data, :blocks
+          end
+        end
+      end
+    end
+  end
+  """
+
+  test "moves the Villain block editor inputs to form-level block editors" do
+    igniter = migrate(@villain_editor_blueprint, nil)
+    blueprint = source(igniter, @blueprint_path)
+
+    refute blueprint =~ ":blocks, :blocks"
+    refute blueprint =~ "input(:data"
+    refute blueprint =~ "input(:hero_data"
+    refute blueprint =~ ~s(tab "Hero")
+
+    assert blueprint =~
+             ~r/form do\n\s+blocks\(:blocks, label: "Innholdsblokker", template_namespace: "vacancies"\)\n\s+blocks\(:hero_blocks\)\n\n\s+tab "Content" do/
+
+    assert blueprint =~
+             ~r/form :compact do\n\s+blocks\(:blocks\)\n\s+# Only the title\n\s+tab "Content" do\n\s+fieldset do\n\s+size\(:full\)\n\s+input\(:title, :text\)\n\s+end/
+
+    assert count(blueprint, "input(:title, :text)") == 2
+    assert count(blueprint, "fieldset do") == 2
+
+    rerun = igniter |> apply_igniter!() |> include_test_files() |> Migrate54.igniter()
+    assert_unchanged(rerun, @blueprint_path)
+  end
+
+  test "carries only the options form-level blocks accepts, and names the others" do
+    blueprint = """
+    defmodule LegacyApp.Vacancies.Vacancy do
+      use Brando.Blueprint,
+        application: "LegacyApp",
+        domain: "Vacancies",
+        schema: "Vacancy",
+        singular: "vacancy",
+        plural: "vacancies"
+
+      trait Brando.Trait.Villain
+
+      attributes do
+        attribute :data, :villain
+      end
+
+      forms do
+        form do
+          tab "Content" do
+            fieldset size: :full do
+              input :data, :blocks,
+                label: "Innhold",
+                instructions: "Skriv innholdet her",
+                template_namespace: "vacancies",
+                monospace: true
+            end
+          end
+        end
+      end
+    end
+    """
+
+    igniter = migrate(blueprint, nil)
+    migrated = source(igniter, @blueprint_path)
+
+    assert migrated =~ ~s|blocks(:blocks, label: "Innhold", template_namespace: "vacancies")|
+    refute migrated =~ "instructions"
+    refute migrated =~ "monospace"
+
+    assert_has_warning(igniter, fn warning ->
+      warning =~ "#{@blueprint_path}:19: `instructions`" and warning =~ "#{@blueprint_path}:19: `monospace`"
+    end)
+
+    module = Module.concat(__MODULE__, "DroppedOptions#{System.unique_integer([:positive])}")
+
+    compiled =
+      migrated
+      |> String.replace("LegacyApp.Vacancies.Vacancy", inspect(module))
+      |> String.replace(~s|plural: "vacancies"|, ~s|plural: "vacancies",\n    gettext_module: Brando.Gettext|)
+
+    warnings = ExUnit.CaptureIO.capture_io(:stderr, fn -> Code.compile_string(compiled) end)
+    refute warnings =~ "DslError"
+    assert [%{name: :blocks, opts: opts}] = module.__form__().blocks
+    assert opts[:template_namespace] == "vacancies"
+  end
+
+  test "moves a block editor input an earlier migrate54 run left behind" do
+    left_behind = """
+    defmodule LegacyApp.Vacancies.Vacancy do
+      use Brando.Blueprint,
+        application: "LegacyApp",
+        domain: "Vacancies",
+        schema: "Vacancy",
+        singular: "vacancy",
+        plural: "vacancies"
+
+      trait Brando.Trait.Blocks
+
+      forms do
+        form do
+          tab "Content" do
+            fieldset do
+              size :full
+              input :data, :blocks, label: "Innholdsblokker"
+            end
+          end
+        end
+      end
+
+      relations do
+        relation :blocks, :has_many, module: :blocks
+      end
+    end
+    """
+
+    blueprint = left_behind |> migrate(nil) |> source(@blueprint_path)
+
+    refute blueprint =~ "input(:data"
+    assert blueprint =~ ~s|blocks(:blocks, label: "Innholdsblokker")|
+    refute blueprint =~ ~s(tab "Content")
+  end
+
+  test "points the moved schemas' templates at their rendered blocks and lists what it left" do
+    templates = %{
+      "lib/legacy_app_web/controllers/vacancy_html/detail.html.heex" => """
+      <main>
+        <%= @entry.html |> raw %>
+        <%= raw(@vacancy.hero_html) %>
+        <%= render("show.html") %>
+      </main>
+      """,
+      "lib/legacy_app_web/controllers/vacancy_html.ex" => """
+      defmodule LegacyAppWeb.VacancyHTML do
+        def body(vacancy), do: Phoenix.HTML.raw(vacancy.html)
+      end
+      """,
+      "lib/legacy_app_web/templates/vacancy/show.html.eex" => "<%= raw @entry.html %>\n",
+      "lib/legacy_app_web/controllers/page_html/show.html.heex" => "<%= @page.html |> raw %>\n",
+      "lib/legacy_app_web/components/featured.html.heex" => "<%= @featured.html |> raw %>\n",
+      "lib/legacy_app_web/components/navigation.html.heex" => """
+      <%= for item <- @navigation.items do %>
+        <a href={item.url}><%= item.title %></a>
+      <% end %>
+      <%= for product <- @products.items do %><%= product.url %><% end %>
+      """,
+      "lib/legacy_app_web/controllers/page_controller.ex" => """
+      defmodule LegacyAppWeb.PageController do
+        def heading(page), do: Brando.Pages.get_var(page, "heading")
+      end
+      """
+    }
+
+    igniter = migrate(@villain_editor_blueprint, nil, templates)
+
+    assert source(igniter, "lib/legacy_app_web/controllers/vacancy_html/detail.html.heex") == """
+           <main>
+             <%= @entry.rendered_blocks |> raw %>
+             <%= raw(@vacancy.rendered_hero_blocks) %>
+             <%= render("show.html") %>
+           </main>
+           """
+
+    assert source(igniter, "lib/legacy_app_web/controllers/vacancy_html.ex") =~ "raw(vacancy.rendered_blocks)"
+    assert source(igniter, "lib/legacy_app_web/templates/vacancy/show.html.eex") == "<%= raw @entry.rendered_blocks %>\n"
+
+    assert source(igniter, "lib/legacy_app_web/controllers/page_html/show.html.heex") ==
+             "<%= @page.rendered_blocks |> raw %>\n"
+
+    assert_unchanged(igniter, [
+      "lib/legacy_app_web/components/featured.html.heex",
+      "lib/legacy_app_web/components/navigation.html.heex",
+      "lib/legacy_app_web/controllers/page_controller.ex"
+    ])
+
+    assert_has_warning(igniter, fn warning ->
+      warning =~ "Template code that 0.54 breaks" and
+        warning =~ "lib/legacy_app_web/components/featured.html.heex:1: <%= @featured.html |> raw %>" and
+        warning =~ "lib/legacy_app_web/components/navigation.html.heex:2: <a href={item.url}>" and
+        not (warning =~ "navigation.html.heex:4") and
+        warning =~ "lib/legacy_app_web/controllers/page_controller.ex:2: def heading(page), do: Brando.Pages.get_var" and
+        not (warning =~ "vacancy_html")
+    end)
+
+    rerun = igniter |> apply_igniter!() |> include_test_files() |> Migrate54.igniter()
+    assert_unchanged(rerun, Map.keys(templates))
+  end
+
+  test "rewrites Villain html reads only in Elixir code, and lists the others" do
+    templates = %{
+      "lib/legacy_app_web/templates/vacancy/show.html.eex" => """
+      <script>const entry = {html: "Hello"}; el.innerHTML = entry.html;</script>
+      <%= raw @entry.html %>
+      <p>Read entry.html for details</p>
+      """,
+      "lib/legacy_app_web/controllers/vacancy_html/show.html.heex" => """
+      <div title="Ærlig">{@entry.html}</div>
+      <script>window.entry = {}; console.log(entry.html)</script>
+      <.card body={@entry.html} /><p>About entry.html</p>
+      """,
+      "lib/legacy_app_web/controllers/vacancy_html.ex" => ~S'''
+      defmodule LegacyAppWeb.VacancyHTML do
+        def body(vacancy), do: Phoenix.HTML.raw(vacancy.html)
+        def note, do: "Ærlig: see vacancy.html, or #{vacancy().html}"
+        def vacancy, do: %{html: ""}
+
+        def show(assigns) do
+          ~H"""
+          <div>{@entry.html}</div>
+          <script>let entry = {}; entry.html = 1</script>
+          """
+        end
+      end
+      '''
+    }
+
+    igniter = migrate(@villain_editor_blueprint, nil, templates)
+
+    assert source(igniter, "lib/legacy_app_web/templates/vacancy/show.html.eex") == """
+           <script>const entry = {html: "Hello"}; el.innerHTML = entry.html;</script>
+           <%= raw @entry.rendered_blocks %>
+           <p>Read entry.html for details</p>
+           """
+
+    assert source(igniter, "lib/legacy_app_web/controllers/vacancy_html/show.html.heex") == """
+           <div title="Ærlig">{@entry.rendered_blocks}</div>
+           <script>window.entry = {}; console.log(entry.html)</script>
+           <.card body={@entry.rendered_blocks} /><p>About entry.html</p>
+           """
+
+    assert source(igniter, "lib/legacy_app_web/controllers/vacancy_html.ex") == ~S'''
+           defmodule LegacyAppWeb.VacancyHTML do
+             def body(vacancy), do: Phoenix.HTML.raw(vacancy.rendered_blocks)
+             def note, do: "Ærlig: see vacancy.html, or #{vacancy().html}"
+             def vacancy, do: %{html: ""}
+
+             def show(assigns) do
+               ~H"""
+               <div>{@entry.rendered_blocks}</div>
+               <script>let entry = {}; entry.html = 1</script>
+               """
+             end
+           end
+           '''
+
+    assert_has_warning(igniter, fn warning ->
+      Enum.all?(
+        [
+          "templates/vacancy/show.html.eex:1:",
+          "templates/vacancy/show.html.eex:3:",
+          "vacancy_html/show.html.heex:2:",
+          "vacancy_html/show.html.heex:3:",
+          "vacancy_html.ex:3:",
+          "vacancy_html.ex:9:"
+        ],
+        &String.contains?(warning, &1)
+      ) and not (warning =~ "show.html.eex:2:") and not (warning =~ "vacancy_html.ex:2:")
+    end)
+  end
+
+  test "rewrites templates of a Blueprint an earlier run moved, unless another schema shares its singular" do
+    moved = """
+    defmodule LegacyApp.Articles.Category do
+      use Brando.Blueprint,
+        application: "LegacyApp",
+        domain: "Articles",
+        schema: "Category",
+        singular: "category",
+        plural: "categories"
+
+      trait Brando.Trait.Blocks
+
+      relations do
+        relation :blocks, :has_many, module: :blocks
+      end
+    end
+    """
+
+    plain = """
+    defmodule LegacyApp.Menu.Category do
+      use Brando.Blueprint,
+        application: "LegacyApp",
+        domain: "Menu",
+        schema: "Category",
+        singular: "category",
+        plural: "categories"
+
+      attributes do
+        attribute :html, :text
+      end
+    end
+    """
+
+    article =
+      String.replace(moved, ["Articles.Category", "\"Category\"", "\"category\"", "\"categories\""], fn
+        "Articles.Category" -> "Articles.Article"
+        "\"Category\"" -> "\"Article\""
+        "\"category\"" -> "\"article\""
+        "\"categories\"" -> "\"articles\""
+      end)
+
+    igniter =
+      migrate(article, nil, %{
+        "lib/legacy_app/articles/category.ex" => moved,
+        "lib/legacy_app/menu/category.ex" => plain,
+        "lib/legacy_app_web/controllers/article_html/show.html.heex" => "<%= @entry.html |> raw %>\n",
+        "lib/legacy_app_web/controllers/category_html/show.html.heex" => "<%= @entry.html |> raw %>\n"
+      })
+
+    assert source(igniter, "lib/legacy_app_web/controllers/article_html/show.html.heex") ==
+             "<%= @entry.rendered_blocks |> raw %>\n"
+
+    assert_unchanged(igniter, "lib/legacy_app_web/controllers/category_html/show.html.heex")
+
+    assert_has_warning(
+      igniter,
+      &(&1 =~ "schemas that share a singular (category)" and &1 =~ "category_html/show.html.heex:1")
+    )
+  end
+
+  @router_path "lib/legacy_app_web/router.ex"
+
+  @router """
+  defmodule LegacyAppWeb.Router do
+    use LegacyAppWeb, :router
+    import Brando.Router
+
+    admin_routes do
+      live "/", LegacyAppAdmin.DashboardLive
+
+      scope "/banners", LegacyAppAdmin.Banners do
+        live "/banners", BannerListLive
+        live "/banners/create", BannerCreateLive
+        live "/banners/update/:entry_id", BannerUpdateLive
+      end
+
+      scope "/menu", LegacyAppAdmin.Menu, as: :menu do
+        live "/categories", CategoryListLive
+        live "/categories/create", CategoryCreateLive
+        live "/categories/update/:entry_id", CategoryUpdateLive
+      end
+
+      live "/articles/articles", LegacyAppAdmin.Articles.ArticleListLive
+      live "/articles/articles/create", LegacyAppAdmin.Articles.ArticleCreateLive
+      live "/articles/articles/update/:entry_id", LegacyAppAdmin.Articles.ArticleUpdateLive
+      live "/articles/categories/create", LegacyAppAdmin.Articles.CategoryCreateLive
+      live "/articles/categories/update/:entry_id", LegacyAppAdmin.Articles.CategoryUpdateLive
+
+      live "/projects/projects/create", LegacyAppAdmin.Projects.ProjectCreateLive
+      live "/projects/projects/update/:entry_id", LegacyAppAdmin.Projects.ProjectUpdateLive
+    end
+  end
+  """
+
+  defp admin_view(module, schema, action, opts \\ []) do
+    singular = schema |> String.split(".") |> List.last() |> Macro.underscore()
+    entry_id = if action == :update, do: "\n      entry_id={@entry_id}", else: ""
+    presences = if action == :update, do: "\n      presences={@presences}", else: ""
+    header = Keyword.get(opts, :header, "Update #{singular}")
+
+    """
+    defmodule #{module} do
+      use BrandoAdmin.LiveView.Form, schema: #{Keyword.get(opts, :schema_prefix, "")}#{schema}
+      alias BrandoAdmin.Components.Form
+      #{Keyword.get(opts, :gettext, "import LegacyAppAdmin.Gettext, warn: false")}
+
+      def render(assigns) do
+        ~H\"\"\"
+        <.live_component module={Form}
+          id="#{singular}_form"#{entry_id}
+          current_user={@current_user}#{presences}
+          schema={@schema}>
+          <:header>
+            <%= gettext("#{header}") %>
+          </:header>
+        </.live_component>
+        \"\"\"
+      end
+    #{Keyword.get(opts, :extra, "")}end
+    """
+  end
+
+  @content_header_create """
+  defmodule LegacyAppAdmin.Menu.CategoryCreateLive do
+    use BrandoAdmin.LiveView.Form, schema: LegacyApp.Menu.Category
+    alias BrandoAdmin.Components.Content
+    alias BrandoAdmin.Components.Form
+
+    use Gettext,
+      backend: LegacyAppAdmin.Gettext
+
+    def render(assigns) do
+      ~H\"\"\"
+      <Content.header
+        title={gettext("Categories")}
+        subtitle={gettext("Create category")} />
+
+      <.live_component module={Form}
+        id="category_form"
+        current_user={@current_user}
+        schema={@schema}
+      />
+      \"\"\"
+    end
+  end
+  """
+
+  defp admin_views do
+    %{
+      @router_path => @router,
+      "lib/legacy_app_admin/live/banners/banner_create_live.ex" =>
+        admin_view("LegacyAppAdmin.Banners.BannerCreateLive", "LegacyApp.Banners.Banner", :create),
+      "lib/legacy_app_admin/live/banners/banner_update_live.ex" =>
+        admin_view("LegacyAppAdmin.Banners.BannerUpdateLive", "LegacyApp.Banners.Banner", :update,
+          schema_prefix: "Elixir."
+        ),
+      "lib/legacy_app_admin/live/menu/category_create_live.ex" => @content_header_create,
+      "lib/legacy_app_admin/live/menu/category_update_live.ex" =>
+        admin_view("LegacyAppAdmin.Menu.CategoryUpdateLive", "LegacyApp.Menu.Category", :update,
+          gettext: "use Gettext, backend: LegacyAppAdmin.Gettext"
+        ),
+      "lib/legacy_app_admin/live/articles/article_create_live.ex" =>
+        admin_view("LegacyAppAdmin.Articles.ArticleCreateLive", "LegacyApp.Articles.Article", :create),
+      "lib/legacy_app_admin/live/articles/article_update_live.ex" =>
+        admin_view("LegacyAppAdmin.Articles.ArticleUpdateLive", "LegacyApp.Articles.Article", :update),
+      "lib/legacy_app_admin/live/articles/category_create_live.ex" =>
+        admin_view("LegacyAppAdmin.Articles.CategoryCreateLive", "LegacyApp.Articles.Category", :create),
+      "lib/legacy_app_admin/live/articles/category_update_live.ex" =>
+        admin_view("LegacyAppAdmin.Articles.CategoryUpdateLive", "LegacyApp.Articles.Category", :update),
+      "lib/legacy_app_admin/live/projects/project_create_live.ex" =>
+        admin_view("LegacyAppAdmin.Projects.ProjectCreateLive", "LegacyApp.Projects.Project", :create),
+      "lib/legacy_app_admin/live/projects/project_update_live.ex" =>
+        admin_view("LegacyAppAdmin.Projects.ProjectUpdateLive", "LegacyApp.Projects.Project", :update,
+          extra: "\n  def handle_event(\"publish\", _params, socket), do: {:noreply, socket}\n"
+        )
+    }
+  end
+
+  test "replaces generated admin Create/Update LiveViews with a FormLive and routes it" do
+    igniter = migrate(@legacy_blueprint, nil, admin_views())
+
+    converted = [
+      {"banners/banner", "LegacyAppAdmin.Banners.BannerFormLive", "LegacyApp.Banners.Banner", "banner"},
+      {"menu/category", "LegacyAppAdmin.Menu.CategoryFormLive", "LegacyApp.Menu.Category", "category"},
+      {"articles/article", "LegacyAppAdmin.Articles.ArticleFormLive", "LegacyApp.Articles.Article", "article"},
+      {"articles/category", "LegacyAppAdmin.Articles.CategoryFormLive", "LegacyApp.Articles.Category", "category"}
+    ]
+
+    for {path, module, schema, singular} <- converted do
+      assert_creates(igniter, "lib/legacy_app_admin/live/#{path}_form_live.ex", fn contents ->
+        assert contents =~ "defmodule #{module} do"
+        assert contents =~ "use BrandoAdmin.LiveView.Form, schema: #{schema}\n"
+        assert contents =~ "use Gettext, backend: LegacyAppAdmin.Gettext, warn: false"
+        assert contents =~ ~s(id="#{singular}_form")
+        assert contents =~ "entry_id={@entry_id}"
+        refute contents =~ "header"
+      end)
+
+      assert "lib/legacy_app_admin/live/#{path}_create_live.ex" in igniter.rms
+      assert "lib/legacy_app_admin/live/#{path}_update_live.ex" in igniter.rms
+    end
+
+    router = source(igniter, @router_path)
+    assert router =~ ~s|live("/banners/create", BannerFormLive, :create)|
+    assert router =~ ~s|live("/banners/update/:entry_id", BannerFormLive, :update)|
+    assert router =~ ~s|live("/banners", BannerListLive)|
+    assert router =~ ~s|live("/categories/create", CategoryFormLive, :create)|
+    assert router =~ ~s|live("/articles/articles/create", LegacyAppAdmin.Articles.ArticleFormLive, :create)|
+
+    assert router =~
+             ~r|live\(\s*"/articles/categories/update/:entry_id",\s*LegacyAppAdmin.Articles.CategoryFormLive,\s*:update\s*\)|
+
+    # Edited: kept, routes unchanged, listed.
+    refute "lib/legacy_app_admin/live/projects/project_update_live.ex" in igniter.rms
+    assert router =~ ~s|live("/projects/projects/create", LegacyAppAdmin.Projects.ProjectCreateLive)|
+
+    assert_has_warning(igniter, fn warning ->
+      warning =~ "left for you to merge into one FormLive" and
+        warning =~ "LegacyAppAdmin.Projects.Project{Create,Update}Live" and
+        warning =~ "differs from what the generator wrote"
+    end)
+
+    # Articles.Category is not scoped `as:`; Menu.Category is.
+    assert_has_warning(igniter, fn warning ->
+      warning =~ "share a route helper" and
+        warning =~ "LegacyApp.Articles.Category, LegacyApp.Menu.Category: admin_category_form_path" and
+        warning =~ "router_scope: :menu"
+    end)
+
+    assert_has_notice(
+      igniter,
+      &(&1 =~ "LegacyAppAdmin.Banners.BannerFormLive (lib/legacy_app_admin/live/banners/banner_form_live.ex)")
+    )
+
+    rerun = igniter |> apply_igniter!() |> include_test_files() |> Migrate54.igniter()
+
+    assert_unchanged(rerun, [@router_path | Enum.map(converted, &"lib/legacy_app_admin/live/#{elem(&1, 0)}_form_live.ex")])
+  end
+
+  test "leaves a Create/Update pair not named as the generator named it" do
+    router = """
+    defmodule LegacyAppWeb.Router do
+      use LegacyAppWeb, :router
+      import Brando.Router
+
+      admin_routes do
+        live "/projects/create", LegacyAppAdmin.ProjectCreateLive
+        live "/projects/update/:entry_id", LegacyAppAdmin.ProjectUpdateLive
+        live "/articles/create", LegacyAppAdmin.Content.ArticleCreateLive
+        live "/articles/update/:entry_id", LegacyAppAdmin.Content.ArticleUpdateLive
+      end
+    end
+    """
+
+    views = %{
+      @router_path => router,
+      "lib/legacy_app_admin/live/project_create_live.ex" =>
+        admin_view("LegacyAppAdmin.ProjectCreateLive", "LegacyApp.Projects.Project", :create),
+      "lib/legacy_app_admin/live/project_update_live.ex" =>
+        admin_view("LegacyAppAdmin.ProjectUpdateLive", "LegacyApp.Projects.Project", :update),
+      # The generator named the views after the schema's domain.
+      "lib/legacy_app_admin/live/content/article_create_live.ex" =>
+        admin_view("LegacyAppAdmin.Content.ArticleCreateLive", "LegacyApp.Articles.Article", :create),
+      "lib/legacy_app_admin/live/content/article_update_live.ex" =>
+        admin_view("LegacyAppAdmin.Content.ArticleUpdateLive", "LegacyApp.Articles.Article", :update)
+    }
+
+    igniter = migrate(@legacy_blueprint, nil, views)
+
+    assert igniter.issues == []
+    assert igniter.rms == []
+    refute_creates(igniter, "lib/legacy_app_admin/live/project_form_live.ex")
+    refute_creates(igniter, "lib/legacy_app_admin/live/content/article_form_live.ex")
+    assert_unchanged(igniter, Map.keys(views))
+
+    assert_has_warning(igniter, fn warning ->
+      warning =~ "LegacyAppAdmin.Project{Create,Update}Live" and
+        warning =~ "LegacyAppAdmin.Content.Article{Create,Update}Live" and
+        warning =~ "is not named as the generator named it"
+    end)
+  end
+
+  test "leaves a Create/Update pair whose routes it cannot find" do
+    views =
+      admin_views()
+      |> Map.take([
+        "lib/legacy_app_admin/live/banners/banner_create_live.ex",
+        "lib/legacy_app_admin/live/banners/banner_update_live.ex"
+      ])
+      |> Map.put(@router_path, String.replace(@router, "BannerCreateLive", "BannerCreateLive, :create"))
+
+    igniter = migrate(@legacy_blueprint, nil, views)
+
+    assert igniter.rms == []
+    refute_creates(igniter, "lib/legacy_app_admin/live/banners/banner_form_live.ex")
+    assert_has_warning(igniter, &(&1 =~ "its routes are not `live \"path\", Module` lines in the router"))
+  end
+
+  test "lists the files it creates and changes, for --yes, which shows no diff" do
+    igniter = @legacy_blueprint |> migrate(nil) |> Mix.Brando.Igniter.SourceTask.list_written_files()
+
+    assert_has_notice(igniter, fn notice ->
+      notice =~ "Files written:" and
+        notice =~ "  created: scripts/sync_gettext.sh" and
+        notice =~ "  updated: #{@blueprint_path}" and
+        notice =~ "  updated: #{@dockerfile_path}" and
+        not (notice =~ @repo_path)
+    end)
+  end
+
   test "rewrites each LivePreview target with its own modules and preserves callback behavior" do
     igniter = migrate(@legacy_blueprint, @legacy_live_preview)
     live_preview = source(igniter, @live_preview_path)
@@ -316,7 +926,19 @@ defmodule Mix.Tasks.Brando.Migrate54Test do
 
       use Brando.Datasource
 
+      trait Brando.Trait.Villain
+
       attribute :data, :villain
+
+      forms do
+        form do
+          tab "Content" do
+            fieldset size: :full do
+              input :data, :blocks, label: "Content"
+            end
+          end
+        end
+      end
 
       datasources do
         single :one, &__MODULE__.get_one/2
@@ -357,7 +979,10 @@ defmodule Mix.Tasks.Brando.Migrate54Test do
 
     migrated_source = legacy_blueprint |> migrate(nil) |> source(@blueprint_path)
     assert migrated_source =~ "relation(:blocks, :has_many, module: :blocks)"
-    Code.compile_string(migrated_source)
+    warnings = ExUnit.CaptureIO.capture_io(:stderr, fn -> Code.compile_string(migrated_source) end)
+    refute warnings =~ "DslError"
+    refute warnings =~ "unknown"
+    assert [%{name: :blocks}] = module.__form__().blocks
 
     assert Brando.Datasource.get_single(module, :one, 42) ==
              {:ok, {to_string(module), 42}}

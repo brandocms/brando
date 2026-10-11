@@ -4,6 +4,7 @@ defmodule BrandoAdmin.Sites.SEOLive do
   use Gettext, backend: Brando.Gettext
 
   alias Brando.AI
+  alias Brando.IndexNow
   alias Brando.SEO.Analytics
   alias Brando.SEO.Analyze
   alias Brando.SEO.Audit
@@ -340,26 +341,39 @@ defmodule BrandoAdmin.Sites.SEOLive do
         </div>
       </header>
 
-      <div class="seo-audit-filters" role="group" aria-label={gettext("Content types")}>
-        <button
-          :for={schema <- @audit_schemas}
-          type="button"
-          class="seo-chip"
-          aria-pressed={to_string(schema in @selected_schemas)}
-          phx-click="toggle_schema"
-          phx-value-schema={inspect(schema)}
-        >
-          {Brando.Blueprint.get_plural(schema)}
-        </button>
-        <button
-          type="button"
-          class="seo-chip seo-chip-toggle"
-          aria-pressed={to_string(@include_drafts)}
-          phx-click="toggle_drafts"
-        >
-          {gettext("Include drafts")}
-        </button>
-      </div>
+      <%!-- What the audit checks, not a filter of its results: which content
+            types, and whether drafts too. Pages only until changed. --%>
+      <form id="seo-audit-scope" class="seo-audit-scope" phx-change="audit_scope">
+        <fieldset class="seo-audit-types">
+          <legend>{gettext("Content types to check")}</legend>
+          <input type="hidden" name="schemas[]" value="" />
+          <div class="seo-audit-type-list">
+            <div :for={schema <- @audit_schemas} class="check-wrapper small">
+              <input
+                type="checkbox"
+                id={"seo-audit-type-#{schema_key(schema)}"}
+                name="schemas[]"
+                value={inspect(schema)}
+                checked={schema in @selected_schemas}
+              />
+              <label for={"seo-audit-type-#{schema_key(schema)}"} class="control-label small">
+                {Brando.Blueprint.get_plural(schema)}
+              </label>
+            </div>
+          </div>
+        </fieldset>
+        <div class="check-wrapper small seo-audit-drafts">
+          <input type="hidden" name="include_drafts" value="false" />
+          <input
+            type="checkbox"
+            id="seo-audit-include-drafts"
+            name="include_drafts"
+            value="true"
+            checked={@include_drafts}
+          />
+          <label for="seo-audit-include-drafts" class="control-label small">{gettext("Include drafts")}</label>
+        </div>
+      </form>
 
       <div :if={@audit && @audit.analytics} class="seo-sources">
         <p>
@@ -1060,7 +1074,7 @@ defmodule BrandoAdmin.Sites.SEOLive do
   end
 
   def handle_event("toggle_indexnow", _params, socket) do
-    result = if socket.assigns.index_now.enabled, do: Brando.IndexNow.disable(), else: Brando.IndexNow.enable()
+    result = if socket.assigns.index_now.enabled, do: IndexNow.disable(), else: IndexNow.enable()
 
     case result do
       {:ok, settings} ->
@@ -1074,22 +1088,17 @@ defmodule BrandoAdmin.Sites.SEOLive do
     end
   end
 
-  def handle_event("toggle_schema", %{"schema" => schema}, socket) do
-    schema = Enum.find(socket.assigns.audit_schemas, &(inspect(&1) == schema))
-    selected = socket.assigns.selected_schemas
+  # The checked content types, in the order they are offered; only types
+  # the audit knows count.
+  def handle_event("audit_scope", params, socket) do
+    checked = List.wrap(params["schemas"])
+    selected = Enum.filter(socket.assigns.audit_schemas, &(inspect(&1) in checked))
 
-    selected =
-      cond do
-        is_nil(schema) -> selected
-        schema in selected -> List.delete(selected, schema)
-        true -> selected ++ [schema]
-      end
-
-    {:noreply, socket |> assign(:selected_schemas, selected) |> start_audit()}
-  end
-
-  def handle_event("toggle_drafts", _params, socket) do
-    {:noreply, socket |> update(:include_drafts, &(!&1)) |> start_audit()}
+    {:noreply,
+     socket
+     |> assign(:selected_schemas, selected)
+     |> assign(:include_drafts, params["include_drafts"] == "true")
+     |> start_audit()}
   end
 
   def handle_event("rerun_audit", _params, socket) do
@@ -1370,9 +1379,9 @@ defmodule BrandoAdmin.Sites.SEOLive do
   # Read from the database, so only once the socket is connected.
   defp assign_index_now(socket) do
     socket
-    |> assign(:index_now, if(connected?(socket), do: Brando.IndexNow.settings()))
-    |> assign(:index_now_live?, Brando.IndexNow.live_environment?())
-    |> assign(:index_now_available?, Brando.IndexNow.available?())
+    |> assign(:index_now, if(connected?(socket), do: IndexNow.settings()))
+    |> assign(:index_now_live?, IndexNow.live_environment?())
+    |> assign(:index_now_available?, IndexNow.available?())
   end
 
   defp assign_audit_defaults(socket) do
@@ -1504,6 +1513,9 @@ defmodule BrandoAdmin.Sites.SEOLive do
 
   defp source?(%{analytics: %{sources: sources}}, source), do: Enum.any?(sources, &(&1.source == source))
   defp source?(_audit, _source), do: false
+
+  # For a DOM id: `Brando.Pages.Page` → `brando-pages-page`
+  defp schema_key(schema), do: schema |> inspect() |> String.replace(".", "-") |> String.downcase()
 
   defp source_name(:plausible), do: "Plausible"
   defp source_name(:search_console), do: "Google Search Console"

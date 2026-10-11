@@ -84,7 +84,7 @@ defmodule Brando.Search do
   def searchable_schemas do
     :include_brando
     |> Brando.Content.Identifier.Registry.list_persistent_identifier_modules()
-    |> Enum.filter(&function_exported?(&1, :__admin_route__, 2))
+    |> Enum.filter(&Brando.Blueprint.admin_editor?/1)
     |> Enum.uniq()
   end
 

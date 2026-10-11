@@ -107,15 +107,7 @@ defmodule Brando.Doctor.Checks.ImageConfigs do
 
       summaries ->
         warning(Enum.join(summaries, "; "),
-          fix:
-            if(changed == [] and differ == 0,
-              do:
-                dgettext(
-                  "doctor",
-                  "run mix brando.images.adopt, or Utilities → Recreate changed images, which records them without recreating them"
-                ),
-              else: dgettext("doctor", "Utilities → Recreate changed images")
-            ),
+          fix: fix(changed, differ),
           link: {"#utils-image-sizes", dgettext("doctor", "Recreate changed images")},
           items:
             Enum.map(changed, fn {label, target, count} ->
@@ -140,6 +132,22 @@ defmodule Brando.Doctor.Checks.ImageConfigs do
     end
   end
 
+  defp fix([], 0),
+    do:
+      dgettext(
+        "doctor",
+        "run mix brando.images.adopt, or Utilities → Recreate changed images, which records them without recreating them"
+      )
+
+  defp fix(_changed, 0), do: dgettext("doctor", "Utilities → Recreate changed images")
+
+  defp fix(_changed, _differ),
+    do:
+      dgettext(
+        "doctor",
+        "Utilities → Recreate changed images recreates the images that differ; mix brando.images.adopt --dry-run --verbose lists why each one differs"
+      )
+
   defp unrecorded_split(total, total, 0, false),
     do:
       dngettext(
@@ -159,7 +167,13 @@ defmodule Brando.Doctor.Checks.ImageConfigs do
       )
 
   defp unrecorded_split(total, 0, total, _likely?),
-    do: dngettext("doctor", "it differs (recreate it)", "none match (recreate them)", total)
+    do:
+      dngettext(
+        "doctor",
+        "it differs from its config (recreate it)",
+        "all %{count} differ from their config (recreate them)",
+        total
+      )
 
   defp unrecorded_split(_total, matching, differ, likely?) do
     matches =

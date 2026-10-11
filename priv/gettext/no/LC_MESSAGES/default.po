@@ -2678,8 +2678,8 @@ msgstr "Blokkfelt"
 
 #: lib/brando_admin/components/form/block/render.ex
 #, elixir-autogen, elixir-format
-msgid "Block has changes"
-msgstr "Blokken har oppdateringer"
+msgid "Block has unsaved changes"
+msgstr "Blokken har ulagrede endringer"
 
 #: lib/brando_admin/live/content/module_set_list_live.ex
 #: lib/brando_admin/menu.ex
@@ -4279,11 +4279,15 @@ msgstr "Innholdstype"
 
 #: lib/brando_admin/components/content/select_identifier.ex
 #: lib/brando_admin/live/sites/notifications_live.ex
-#: lib/brando_admin/live/sites/seo_live.ex
 #: lib/brando_admin/live/sites/webhooks_live.ex
 #, elixir-autogen, elixir-format
 msgid "Content types"
 msgstr "Innholdstyper"
+
+#: lib/brando_admin/live/sites/seo_live.ex
+#, elixir-autogen, elixir-format
+msgid "Content types to check"
+msgstr "Innholdstyper som sjekkes"
 
 #: lib/brando_admin/live/users/user_list_live.ex
 #, elixir-autogen, elixir-format
@@ -4966,6 +4970,11 @@ msgstr "Egendefinert"
 #, elixir-autogen, elixir-format
 msgid "Custom group"
 msgstr "Egendefinert gruppe"
+
+#: lib/brando_admin/components/content/list.ex
+#, elixir-autogen, elixir-format
+msgid "Custom order"
+msgstr "Egendefinert rekkefølge"
 
 #: lib/brando_admin/components/form/input/select.ex
 #, elixir-autogen, elixir-format
@@ -9481,6 +9490,11 @@ msgstr "Administrer hvem som har denne tilgangen under Medlemmer. Minst én akti
 msgid "Manage your team’s access with groups."
 msgstr "Administrer teamets tilgang med grupper."
 
+#: lib/brando_admin/components/content/list.ex
+#, elixir-autogen, elixir-format
+msgid "Manual order"
+msgstr "Manuell rekkefølge"
+
 #: lib/brando_admin/components/form/module_props.ex
 #, elixir-autogen, elixir-format
 msgid "Map"
@@ -9877,6 +9891,11 @@ msgid_plural "Move %{key} to %{target} in %{count} blocks"
 msgstr[0] "Flytt %{key} til %{target} i %{count} blokk"
 msgstr[1] "Flytt %{key} til %{target} i %{count} blokker"
 
+#: lib/brando_admin/components/form/block/render.ex
+#, elixir-autogen, elixir-format
+msgid "Move down"
+msgstr "Flytt ned"
+
 #: lib/brando_admin/components/form/var_layout.ex
 #, elixir-autogen, elixir-format
 msgid "Move into the block"
@@ -9941,6 +9960,11 @@ msgstr "Gå til verktøylinjen for rik tekst"
 #, elixir-autogen, elixir-format
 msgid "Move to…"
 msgstr "Flytt til …"
+
+#: lib/brando_admin/components/form/block/render.ex
+#, elixir-autogen, elixir-format
+msgid "Move up"
+msgstr "Flytt opp"
 
 #: lib/brando_admin/live/calendar_live.ex
 #, elixir-autogen, elixir-format
@@ -11147,6 +11171,16 @@ msgstr "Ingenting utløper snart"
 #, elixir-autogen, elixir-format
 msgid "Nothing has been applied"
 msgstr "Ingenting er utført"
+
+#: lib/brando_admin/live/search_live.ex
+#, elixir-autogen, elixir-format
+msgid "Nothing has been indexed here yet, so no search finds anything."
+msgstr "Ingenting er indeksert her ennå, så ingen søk finner noe."
+
+#: lib/brando_admin/live/search_live.ex
+#, elixir-autogen, elixir-format
+msgid "Nothing has been indexed here yet, so no search finds anything. Ask an administrator to rebuild it."
+msgstr "Ingenting er indeksert her ennå, så ingen søk finner noe. Be en administrator bygge den på nytt."
 
 #: lib/brando_admin/components/form/revisions_drawer.ex
 #, elixir-autogen, elixir-format
@@ -12822,6 +12856,11 @@ msgstr "Leser oppføringen …"
 msgid "Ready for your review"
 msgstr "Klar til gjennomgang"
 
+#: lib/brando_admin/live/search_live.ex
+#, elixir-autogen, elixir-format
+msgid "Rebuild it under Utilities → Search index"
+msgstr "Bygg den på nytt under Verktøy → Søkeindeks"
+
 #: lib/brando_admin/command_palette.ex
 #: lib/brando_admin/live/sites/utils_live.ex
 #, elixir-autogen, elixir-format
@@ -13035,6 +13074,11 @@ msgstr "Omdirigering opprettet"
 #, elixir-autogen, elixir-format
 msgid "Redo"
 msgstr "Gjør om"
+
+#: lib/brando_admin/components/shortcut_sheet.ex
+#, elixir-autogen, elixir-format
+msgid "Redo typing"
+msgstr "Gjør om skriving"
 
 #: lib/brando/content/stale_blocks.ex
 #, elixir-autogen, elixir-format
@@ -16907,6 +16951,11 @@ msgstr "Den planlagte revisjonen flyttes fra %{from} til %{to}."
 
 #: lib/brando_admin/live/search_live.ex
 #, elixir-autogen, elixir-format
+msgid "The search index is empty"
+msgstr "Søkeindeksen er tom"
+
+#: lib/brando_admin/live/search_live.ex
+#, elixir-autogen, elixir-format
 msgid "The search index needs its migration. Ask an administrator to run it."
 msgstr "Søkeindeksen mangler migreringen sin. Be en administrator om å kjøre den."
 
@@ -18108,6 +18157,11 @@ msgstr "Angre"
 #, elixir-autogen, elixir-format
 msgid "Undo the proposal? Each entry goes back to how it was before, and new entries are deleted."
 msgstr "Angre forslaget? Hver oppføring går tilbake til slik den var, og nye oppføringer slettes."
+
+#: lib/brando_admin/components/shortcut_sheet.ex
+#, elixir-autogen, elixir-format
+msgid "Undo typing"
+msgstr "Angre skriving"
 
 #: lib/brando_admin/live/ai/assistant_live.ex
 #, elixir-autogen, elixir-format

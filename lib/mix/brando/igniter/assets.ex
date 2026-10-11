@@ -8,6 +8,25 @@ if Code.ensure_loaded?(Igniter) do
     alias Mix.Brando.Igniter.Install
     alias Mix.Brando.Install.Templates
 
+    @doc """
+    Runs an asset generator (`fun`, its Igniter task's `run/1`) without the
+    Hex resolution listing. Igniter runs `mix deps.get` before the tasks it
+    queued, here the binary asset copies, and Hex prints every locked
+    package as "Unchanged:", about 120 lines that bury the generator's own
+    output. `MIX_QUIET` reaches only those child `mix` commands; their
+    errors still print.
+    """
+    def without_hex_listing(fun) do
+      previous = System.get_env("MIX_QUIET")
+      System.put_env("MIX_QUIET", "1")
+
+      try do
+        fun.()
+      after
+        if previous, do: System.put_env("MIX_QUIET", previous), else: System.delete_env("MIX_QUIET")
+      end
+    end
+
     def plan(igniter, project, targets \\ [:backend, :frontend]) do
       prefixes = Enum.map(targets, &"assets/#{&1}/")
 
@@ -171,7 +190,9 @@ if Code.ensure_loaded?(Igniter) do
       if Igniter.exists?(igniter, "Dockerfile") do
         igniter = Igniter.include_existing_file(igniter, "Dockerfile")
         current = igniter.rewrite |> Rewrite.source!("Dockerfile") |> Rewrite.Source.get(:content)
-        {_, stage, _} = dockerfile_stage(Templates.contents(:copy, "Dockerfile"), "assets_backend")
+        template = Templates.contents(:copy, "Dockerfile")
+        {_, stage, _} = dockerfile_stage(template, "assets_backend")
+        igniter = frontend_image_notice(igniter, stage_image(current, "assets_frontend"), template)
 
         case dockerfile_stage(current, "assets_backend") do
           {_before, ^stage, _rest} ->
@@ -189,6 +210,34 @@ if Code.ensure_loaded?(Igniter) do
       else
         igniter
       end
+    end
+
+    # The upgrade replaces only the admin's stage; the frontend is the
+    # site's own build, so its Node image is left for the site to move.
+    defp frontend_image_notice(igniter, nil, _template), do: igniter
+
+    defp frontend_image_notice(igniter, image, template) do
+      case stage_image(template, "assets_frontend") do
+        ^image ->
+          igniter
+
+        wanted ->
+          Igniter.add_notice(igniter, """
+          The Dockerfile's assets_frontend stage still builds on #{image}: this task updates only the assets_backend stage.
+          Brando's template builds the frontend on #{wanted}. Update that stage's FROM line once the frontend builds on it.
+          """)
+      end
+    end
+
+    defp stage_image(contents, stage) do
+      contents
+      |> String.split("\n")
+      |> Enum.find_value(fn line ->
+        case Regex.run(~r/^FROM\s+(?:--platform=\S+\s+)?(\S+)\s+AS\s+#{stage}\s*$/i, line) do
+          [_, image] -> image
+          _ -> nil
+        end
+      end)
     end
 
     defp plan_asset({format, source, target} = file, igniter, project) do

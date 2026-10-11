@@ -170,31 +170,30 @@ defmodule Brando.Assets.Vite do
     Parses the Vite manifest for a given scope and separates assets into entries, critical, and legacy.
     Takes a manifest scope (`:app` or `:admin`) and returns a struct containing parsed entries.
 
-    Entry files with `critical` name are added to the :critical key, while regular entry files
+    The entry named `critical` is added to the :critical key, while regular entry files
     are added to :entries. CSS files are added under :css_files and JS files under :files.
+    Vite 5+ writes each entry's `name`; Vite 3 and 4 do not, and an entry
+    without one is named by its key's basename (`js/critical.js` → `critical`).
     """
     def parse(manifest) do
       Enum.reduce(manifest, %__MODULE__{}, fn
-        {_, %{"isEntry" => true, "name" => "critical", "file" => file, "css" => css_files}}, acc ->
+        {key, %{"isEntry" => true, "file" => file} = entry}, acc ->
+          type = if entry_name(key, entry) == "critical", do: :critical, else: :entries
+
           acc
-          |> add_css(css_files, :critical)
-          |> add_js(file, :critical)
-
-        {_, %{"isEntry" => true, "name" => "critical", "file" => file}}, acc ->
-          add_js(acc, file, :critical)
-
-        {_file, %{"isEntry" => true, "css" => css_files, "file" => file}}, acc ->
-          acc
-          |> add_css(css_files, :entries)
-          |> add_js(file, :entries)
-
-        {_file, %{"isEntry" => true, "file" => file}}, acc ->
-          add_js(acc, file, :entries)
+          |> maybe_add_css(entry, type)
+          |> add_js(file, type)
 
         _, acc ->
           acc
       end)
     end
+
+    defp entry_name(_key, %{"name" => name}), do: name
+    defp entry_name(key, _entry), do: key |> Path.basename() |> Path.rootname()
+
+    defp maybe_add_css(manifest, %{"css" => css_files}, type), do: add_css(manifest, css_files, type)
+    defp maybe_add_css(manifest, _entry, _type), do: manifest
 
     def critical_css(scope \\ :app) do
       # A process-local set override (shared preview rendering) must read that

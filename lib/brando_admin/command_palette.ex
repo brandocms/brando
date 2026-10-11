@@ -565,6 +565,12 @@ defmodule BrandoAdmin.CommandPalette do
     }
   end
 
+  @doc "Whether the screen at `path` is in the user's menu, so they may open it."
+  @spec in_menu?(map(), map() | nil, String.t()) :: boolean()
+  def in_menu?(user, site, path) do
+    user |> BrandoAdmin.Menu.get_menu(site) |> menu_links() |> Enum.any?(&(elem(&1, 0) == path))
+  end
+
   defp menu_links(menu) do
     menu
     |> Enum.flat_map(& &1.items)

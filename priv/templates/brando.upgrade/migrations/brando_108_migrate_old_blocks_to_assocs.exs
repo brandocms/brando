@@ -5,6 +5,14 @@ defmodule Brando.Repo.Migrations.MigrateOldBlocksToAssocs do
   @legacy_block_types ~w(text markdown image picture video divider header blockquote datasource map svg html)
 
   def up do
+    # Fragment blocks below are written with their fragment_id, a column
+    # brando_119 adds. brando_119 skips it when it is already here.
+    alter table(:content_blocks) do
+      add_if_not_exists :fragment_id, references(:pages_fragments, on_delete: :nilify_all)
+    end
+
+    flush()
+
     # First, ensure we have a wrapper module for legacy free-standing blocks
     {wrapper_module_id, created?} = ensure_legacy_wrapper_module()
 
@@ -189,6 +197,8 @@ defmodule Brando.Repo.Migrations.MigrateOldBlocksToAssocs do
         end
 
       %{"type" => "fragment", "data" => %{"fragment_id" => fragment_id}} = fragment_block ->
+        fragment_id = existing_fragment_id(fragment_id, table_name, entry_id)
+
         new_block = %{
           type: "fragment",
           multi: false,
@@ -242,6 +252,16 @@ defmodule Brando.Repo.Migrations.MigrateOldBlocksToAssocs do
           Brando.repo().insert_all(join_source, [
             %{entry_id: entry_id, block_id: block_id, sequence: idx}
           ])
+        end
+
+        # A multi module has vars and a datasource of its own, beside its
+        # entries' (a heading above a list, say)
+        if datasource_selected_ids = get_in(module, ["data", "datasource_selected_ids"]) do
+          process_datasource(block_id, datasource_selected_ids)
+        end
+
+        if vars = get_in(module, ["data", "vars"]) do
+          process_vars(block_id, vars)
         end
 
         entries = get_in(module, ["data", "entries"])
@@ -329,6 +349,25 @@ defmodule Brando.Repo.Migrations.MigrateOldBlocksToAssocs do
         before migrating.
 
         """
+    end
+  end
+
+  # A fragment block can point at a fragment deleted since. It rendered
+  # nothing, and its id would now break the foreign key and stop the migration,
+  # so the block keeps no fragment.
+  defp existing_fragment_id(nil, _table_name, _entry_id), do: nil
+
+  defp existing_fragment_id(fragment_id, table_name, entry_id) do
+    if Brando.repo().exists?(from(f in "pages_fragments", where: f.id == ^fragment_id)) do
+      fragment_id
+    else
+      IO.warn(
+        "brando_108: #{table_name} ##{entry_id} has a fragment block for fragment ##{fragment_id}, " <>
+          "which no longer exists. The block is kept without a fragment.",
+        []
+      )
+
+      nil
     end
   end
 
@@ -523,16 +562,23 @@ defmodule Brando.Repo.Migrations.MigrateOldBlocksToAssocs do
                 {_, [%{id: tid}]} =
                   Brando.repo().insert_all(
                     "content_table_templates",
-                    [%{name: "List item (#{ref_name})", creator_id: 1,
-                       inserted_at: now, updated_at: now}],
+                    [%{name: "List item (#{ref_name})", creator_id: 1, inserted_at: now, updated_at: now}],
                     returning: [:id]
                   )
 
                 Brando.repo().insert_all("content_vars", [
-                  %{type: "html", key: "text", label: "Text", value: "<p>Item</p>",
-                    table_template_id: tid, important: false,
-                    color_picker: false, color_opacity: false,
-                    inserted_at: now, updated_at: now}
+                  %{
+                    type: "html",
+                    key: "text",
+                    label: "Text",
+                    value: "<p>Item</p>",
+                    table_template_id: tid,
+                    important: false,
+                    color_picker: false,
+                    color_opacity: false,
+                    inserted_at: now,
+                    updated_at: now
+                  }
                 ])
 
                 tid
@@ -550,6 +596,7 @@ defmodule Brando.Repo.Migrations.MigrateOldBlocksToAssocs do
             attrs_str = if ul_attrs != [], do: " " <> Enum.join(ul_attrs, " "), else: ""
 
             ref_tag = ~s({% ref refs.#{ref_name} %})
+
             replacement = """
             {% if block.table_rows.size > 0 %}
             <ul#{attrs_str}>

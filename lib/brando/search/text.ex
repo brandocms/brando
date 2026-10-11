@@ -132,9 +132,18 @@ defmodule Brando.Search.Text do
 
   defp table_row(row), do: Enum.flat_map(by_sequence(Map.get(row, :vars)), &var/1)
 
-  defp var(%{type: type, value: value}) when type in @text_vars and is_binary(value), do: present(plain(value))
+  defp var(%{type: type, value: value}) when type in @text_vars and is_binary(value) do
+    text = plain(value)
+    if address?(text), do: [], else: present(text)
+  end
+
   defp var(%{type: :link, link_text: text}) when is_binary(text), do: present(plain(text))
   defp var(_), do: []
+
+  # A text variable that holds only an address ("#content", "/about",
+  # "https://…"), as modules made before link variables kept their links,
+  # has no words to find, and showed as such in a result's snippet.
+  defp address?(text), do: text =~ ~r/\A(?:#|\/|(?:https?|mailto|tel):)\S*\z/iu
 
   @doc "The text of one ref, by the kind of block it holds."
   @spec ref(struct(), String.t() | nil) :: [String.t()]

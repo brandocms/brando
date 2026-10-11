@@ -63,7 +63,7 @@ defmodule BrandoAdmin.Schedule do
 
   defp schedulable?(schema) do
     schema.has_trait(Brando.Trait.ScheduledPublishing) and :status in schema.__schema__(:fields) and
-      function_exported?(schema, :__admin_route__, 2)
+      Brando.Blueprint.admin_editor?(schema)
   end
 
   @doc """

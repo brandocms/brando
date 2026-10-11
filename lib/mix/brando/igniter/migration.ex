@@ -6,19 +6,56 @@ if Code.ensure_loaded?(Igniter) do
     @moduledoc false
 
     alias Brando.Blueprint.Migrations
+    alias Brando.Blueprint.Migrations.Reconcile
     alias Brando.Exception.BlueprintError
     alias Igniter.Project.Module, as: ProjectModule
     alias Mix.Brando.Igniter.Input
     alias Mix.Brando.Igniter.Install.Configuration
+    alias Mix.Brando.MigrationRequest
 
-    @storage_options [:migration_path, :snapshot_path, :rebaseline]
+    @storage_options [:migration_path, :snapshot_path, :rebaseline, :reconcile]
 
     def plan(igniter) do
       options = igniter.args.options
-      if options[:all], do: plan_all(igniter, options), else: plan_one(igniter, options)
+
+      cond do
+        options[:reconcile] && options[:rebaseline] ->
+          Igniter.add_issue(
+            igniter,
+            "--reconcile writes a migration fitted to the database, and --rebaseline records a snapshot without one. Use one or the other: --reconcile records a baseline by itself when the database already matches."
+          )
+
+        options[:reconcile] ->
+          plan_reconciled(igniter, options)
+
+        options[:all] ->
+          plan_all(igniter, options)
+
+        true ->
+          plan_one(igniter, options)
+      end
     rescue
       error in [BlueprintError, File.Error] -> Igniter.add_issue(igniter, Exception.message(error))
     end
+
+    defp plan_reconciled(igniter, options) do
+      with {:ok, igniter, mode} <- Configuration.read(igniter, :tenancy_mode),
+           :ok <- reconcilable(mode) do
+        if options[:all], do: plan_all(igniter, options), else: plan_one(igniter, options)
+      else
+        {:error, message} -> Igniter.add_issue(igniter, message)
+      end
+    end
+
+    # --reconcile reads the schemas on the repo's search path. With named
+    # environments, content lives in one schema per environment, and those may
+    # differ, so no single read can stand for the database a migration meets.
+    defp reconcilable(mode) when mode in [:single, :multi] do
+      {:error,
+       "--reconcile reads one database schema, and an application with named environments (tenancy_mode #{inspect(mode)}) keeps content in one schema per environment, which may differ. Plan without --reconcile and edit the migrations by hand, as guides/migrating_from_053.md describes under \"Legacy snapshots\"."}
+    end
+
+    defp reconcilable(_mode), do: :ok
 
     defp plan_one(igniter, options) do
       with {:ok, name} <- Input.required(igniter.args.positional[:blueprint], "Blueprint module", options[:interactive]),
@@ -28,7 +65,7 @@ if Code.ensure_loaded?(Igniter) do
            {:ok, _igniter} <- accepted_source?(igniter, module),
            :ok <- single_storage_plan(igniter),
            {:ok, igniter, options} <- storage_options(igniter, module, options) do
-        prepared = Migrations.plan(module, options)
+        prepared = MigrationRequest.with_database(reconcile?(options), fn -> Migrations.plan(module, options) end)
         attach(igniter, prepared)
       else
         {:error, message} -> Igniter.add_issue(igniter, message)
@@ -46,8 +83,8 @@ if Code.ensure_loaded?(Igniter) do
            {:ok, igniter, mode} <- Configuration.read(igniter, :tenancy_mode) do
         {entries, unplanned} = destinations(modules, Keyword.take(options, @storage_options), mode)
 
-        entries
-        |> Migrations.plan_all()
+        reconcile?(options)
+        |> MigrationRequest.with_database(fn -> Migrations.plan_all(entries) end)
         |> then(&attach_all(igniter, &1))
         |> warn_unplanned(unplanned)
       else
@@ -201,7 +238,10 @@ if Code.ensure_loaded?(Igniter) do
       |> Igniter.assign(:quiet_on_no_changes?, true)
       |> Igniter.add_task("brando.blueprint.apply_plan", [request])
       |> warn_legacy_snapshot(plan)
+      |> notice_reconciled([plan])
     end
+
+    defp reconcile?(options), do: options[:reconcile] == true
 
     defp attach_all(igniter, plans) do
       {up_to_date, planned} = Enum.split_with(plans, &match?(%{result: :noop, snapshot: nil}, &1))
@@ -218,7 +258,58 @@ if Code.ensure_loaded?(Igniter) do
         |> Igniter.assign(:quiet_on_no_changes?, true)
         |> Igniter.add_task("brando.blueprint.apply_plan", requests)
         |> Igniter.add_notice(summary(planned, up_to_date))
+        |> notice_reconciled(planned)
       end
+    end
+
+    # One block per reconciled plan, naming the file it changed: what already
+    # existed and is guarded, what was left out, and what was kept for its data.
+    defp notice_reconciled(igniter, plans) do
+      case Enum.filter(plans, & &1.metadata[:reconciled]) do
+        [] ->
+          igniter
+
+        reconciled ->
+          sources = reconciled |> Enum.map(& &1.metadata.reconciled.database) |> Enum.uniq() |> Enum.join("; ")
+
+          Igniter.add_notice(
+            igniter,
+            Enum.join(
+              ["Reconciled with the database (read from #{sources}):" | Enum.map(reconciled, &reconciled_lines/1)],
+              "\n"
+            )
+          )
+      end
+    end
+
+    @reconciled_labels [
+      guarded: "already exist, added with *_if_not_exists",
+      left_out: "left out",
+      kept: "kept, dropping them is a separate decision",
+      relaxed: "kept and no longer written, so their NOT NULL is dropped"
+    ]
+
+    defp reconciled_lines(plan) do
+      summary = plan.metadata.reconciled
+
+      file =
+        if plan.migration_source,
+          do: Path.relative_to_cwd(plan.metadata.migration),
+          else: "#{Path.relative_to_cwd(snapshot_path(plan))} (snapshot only, a baseline the database already matches)"
+
+      altered =
+        if summary.create_as_alter? && plan.migration_source,
+          do: ["#{summary.table} already exists; the migration alters it, adding only what it lacks"],
+          else: []
+
+      details =
+        altered ++
+          for {key, label} <- @reconciled_labels, summary[key] not in [nil, []] do
+            "#{label}: #{Enum.join(summary[key], ", ")}"
+          end
+
+      details = if details == [] and plan.migration_source, do: ["nothing to reconcile"], else: details
+      Enum.join(["  #{inspect(plan.module)}: #{file}" | Enum.map(details, &"    #{&1}")], "\n")
     end
 
     defp up_to_date_notice([]), do: "No application Blueprints to plan."
@@ -267,14 +358,16 @@ if Code.ensure_loaded?(Igniter) do
     # A snapshot older than the database it describes (one written before the
     # Villain-to-blocks conversion, say) makes the generator propose storage the
     # Brando migration chain already created, or drop the legacy Villain
-    # columns the conversion still reads.
+    # columns the conversion still reads. A reconciled plan has handled both.
+    defp warn_legacy_snapshot(igniter, %{metadata: %{reconciled: _}}), do: igniter
+
     defp warn_legacy_snapshot(igniter, plan) do
       existing =
         existing_storage(plan.metadata[:created_tables] || [], plan.metadata[:added_columns] || [])
 
       villain_columns =
         for {:remove_column, column} <- plan.metadata[:destructive_operations] || [],
-            legacy_villain_column?(column),
+            Reconcile.villain_column?(column),
             do: column
 
       igniter
@@ -299,11 +392,6 @@ if Code.ensure_loaded?(Igniter) do
             see #{@legacy_snapshot_guide}.
             """)
       end)
-    end
-
-    defp legacy_villain_column?(column) do
-      name = to_string(column)
-      name in ["data", "html"] or String.ends_with?(name, "_data") or String.ends_with?(name, "_html")
     end
 
     # The planned tables, and `table.column` for planned columns, that already

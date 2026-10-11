@@ -26,6 +26,7 @@ test('? opens the sheet, and escape gives the focus back', async ({ page }) => {
   await expect(sheet(page).getByRole('heading', { level: 3 })).toHaveCount(4)
   await expect(sheet(page).locator('[data-shortcut="go-dashboard"] dt')).toHaveText('Gå til Dashbord')
   await expect(sheet(page).locator('[data-shortcut="go-dashboard"] kbd')).toHaveText(['G', 'D'])
+  await expect(sheet(page).locator('[data-shortcut="undo"] dt')).toHaveText('Angre skriving')
 
   await page.keyboard.press('Escape')
   await expect(sheet(page)).toBeHidden()

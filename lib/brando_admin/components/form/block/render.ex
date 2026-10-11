@@ -140,6 +140,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
               belongs_to={:multi}
               paste_multi_module_id={@paste_multi_module_id}
               level={@level + 1}
+              source_locked={@source_locked}
               focus={Block.child_focus(@focus, @focus_role)}
             />
           </div>
@@ -315,6 +316,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
               belongs_to={:container}
               paste_multi_module_id={@paste_multi_module_id}
               level={@level + 1}
+              source_locked={@source_locked}
               focus={Block.child_focus(@focus, @focus_role)}
             >
             </.live_component>
@@ -480,6 +482,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
         slot_title={@slot_title}
         paste_multi_module_id={@paste_multi_module_id}
         level={@level + 1}
+        source_locked={@source_locked}
         focus={Block.child_focus(@focus, @focus_role)}
       />
     </div>
@@ -1685,7 +1688,13 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
 
   def handle(assigns) do
     ~H"""
-    <div class="sort-handle block-action" data-sortable-group={1} data-popover={gettext("Reposition block (click&drag)")}>
+    <div
+      class="sort-handle block-action"
+      data-sortable-group={1}
+      role="img"
+      aria-label={gettext("Reposition block (click&drag)")}
+      data-popover={gettext("Reposition block (click&drag)")}
+    >
       <.icon name="arrow-up-down" />
     </div>
     """
@@ -2813,9 +2822,9 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
         <div
           :if={!@is_ref?}
           class="dirty block-action toggler"
-          data-popover={gettext("Block has changes")}
-          role="button"
-          aria-label={gettext("Block has changes")}
+          data-popover={gettext("Block has unsaved changes")}
+          role="img"
+          aria-label={gettext("Block has unsaved changes")}
           phx-click="show_dirty"
           phx-target={@target}
         >
@@ -2864,19 +2873,34 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
             <.icon name="cog" /> {gettext("Configure")}
           </button>
         </li>
-        <li>
+        <%!-- Moving without dragging. `uiCommands.js` disables the first
+              sibling's Move up and the last one's Move down as the menu opens;
+              the parent ignores a move past either end anyway.
+              `.block-structure-action`: hidden where the structure follows a
+              source (a synchronized translation). --%>
+        <li class="block-structure-action">
+          <button type="button" phx-click="move_block" phx-value-by="-1" phx-target={@target} data-block-move="up">
+            <.icon name="arrow-up" /> {gettext("Move up")}
+          </button>
+        </li>
+        <li class="block-structure-action">
+          <button type="button" phx-click="move_block" phx-value-by="1" phx-target={@target} data-block-move="down">
+            <.icon name="arrow-down" /> {gettext("Move down")}
+          </button>
+        </li>
+        <li class="block-structure-action">
           <%!-- `handle_block_event/3` reads the uid off the component's own assigns, so
                the old `value: %{block_uid: @uid}` never reached anything. --%>
           <button type="button" phx-click="duplicate_block" phx-target={@target}>
             <.icon name="copy" /> {gettext("Duplicate here")}
           </button>
         </li>
-        <li>
+        <li class="block-structure-action">
           <button type="button" phx-click="copy_block" phx-target={@target}>
             <.icon name="clipboard" /> {gettext("Copy to clipboard")}
           </button>
         </li>
-        <li>
+        <li class="block-structure-action">
           <button type="button" phx-click="delete_block" phx-target={@target}>
             <.icon name="trash" /> {gettext("Delete")}
           </button>

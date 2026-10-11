@@ -17,6 +17,27 @@ defmodule BrandoAdmin.Components.Content.ListSortHandleTest do
     refute render_component(&Row.handle/1, active_sort: @by_title) =~ "seq"
   end
 
+  describe "the sort shown for the URL" do
+    test "is the one it names, or the one with its order, or the first" do
+      sorts = [@by_title, @by_sequence]
+      assert List.active_sort(sorts, %{}) == @by_title
+      assert List.active_sort(sorts, %{"sort" => "site_order"}) == @by_sequence
+      assert List.active_sort(sorts, %{"order" => "asc sequence, desc inserted_at"}) == @by_sequence
+      assert List.active_sort(sorts, %{"order" => %{"asc" => "title"}}) == @by_title
+      assert List.active_sort([], %{"order" => "asc title"}) == nil
+    end
+
+    # A menu link carries the listing's `query.order`, which need not be a sort
+    test "is the URL's own order when no sort has it, and allows dragging by sequence" do
+      sort = List.active_sort([@by_title], %{"order" => "asc sequence, desc inserted_at"})
+      assert sort.label == "Manual order"
+      assert Row.ordered_by_sequence?(sort)
+      assert render_component(&Row.handle/1, active_sort: sort) =~ "sequence-handle"
+
+      assert %{label: "Custom order"} = List.active_sort([@by_title], %{"order" => "desc inserted_at"})
+    end
+  end
+
   test "the sort menu marks the order rows can be dragged in, when the list is sortable" do
     sorts = [@by_title, @by_sequence]
     opts = [active_sort: @by_title, sorts: sorts, schema: Brando.Pages.Page, on_update: "update_sort"]

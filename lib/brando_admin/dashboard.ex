@@ -3,6 +3,7 @@ defmodule BrandoAdmin.Dashboard do
   import Ecto.Query, only: [from: 2]
 
   alias Brando.Authorization.{Boundary, Scope}
+  alias Brando.Blueprint
   alias Brando.Blueprint.Identifier.Generator
   alias Brando.Content.Identifier
   alias Brando.Images.{ConfigResolver, Image, Size}
@@ -28,7 +29,7 @@ defmodule BrandoAdmin.Dashboard do
   defp entries(user, kind, limit) do
     schemas =
       Brando.Content.Identifier.Registry.list_persistent_identifier_modules(:include_brando)
-      |> Enum.filter(&function_exported?(&1, :__admin_route__, 2))
+      |> Enum.filter(&Blueprint.admin_editor?/1)
 
     query = from i in Identifier, where: i.schema in ^schemas, order_by: [desc: i.updated_at, desc: i.id]
     query = if kind == :drafts, do: from(i in query, where: i.status == :draft), else: query
@@ -50,8 +51,8 @@ defmodule BrandoAdmin.Dashboard do
            true <- kind != :drafts or allowed?(user, :update, entry) do
         %{
           title: identifier.title,
-          type: Brando.Blueprint.get_singular(identifier.schema) |> Brando.Utils.humanize(),
-          icon: Brando.Blueprint.get_icon(identifier.schema),
+          type: Blueprint.get_singular(identifier.schema) |> Brando.Utils.humanize(),
+          icon: Blueprint.get_icon(identifier.schema),
           cover: cover(kind, identifier, entry),
           language: identifier.language,
           status: identifier.status,
@@ -136,7 +137,7 @@ defmodule BrandoAdmin.Dashboard do
     |> Brando.Publisher.waiting_jobs()
     |> Stream.flat_map(fn job ->
       with schema when not is_nil(schema) <- Brando.Authorization.Catalog.schema(job.args["schema"]),
-           true <- function_exported?(schema, :__admin_route__, 2),
+           true <- Blueprint.admin_editor?(schema),
            entry when not is_nil(entry) <- Repo.get(schema, job.args["id"]),
            true <- is_nil(Map.get(entry, :deleted_at)),
            true <- allowed?(user, :read, entry) and allowed?(user, :update, entry),
@@ -144,8 +145,8 @@ defmodule BrandoAdmin.Dashboard do
         [
           %{
             title: identifier.title,
-            type: Brando.Blueprint.get_singular(schema) |> Brando.Utils.humanize(),
-            icon: Brando.Blueprint.get_icon(schema),
+            type: Blueprint.get_singular(schema) |> Brando.Utils.humanize(),
+            icon: Blueprint.get_icon(schema),
             path: schema.__admin_route__(:update, [entry.id]),
             scheduled_at: job.scheduled_at
           }

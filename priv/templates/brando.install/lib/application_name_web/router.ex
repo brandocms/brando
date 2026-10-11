@@ -55,8 +55,8 @@ defmodule <%= application_module %>Web.Router do
   admin_routes do
     live "/", <%= application_module %>Admin.DashboardLive
     # live "/projects", <%= application_module %>Admin.Projects.ProjectListLive
-    # live "/projects/create", <%= application_module %>Admin.Projects.ProjectCreateLive
-    # live "/projects/update/:entry_id", <%= application_module %>Admin.Projects.ProjectUpdateLive
+    # live "/projects/create", <%= application_module %>Admin.Projects.ProjectFormLive, :create
+    # live "/projects/update/:entry_id", <%= application_module %>Admin.Projects.ProjectFormLive, :update
   end
 
   # The remote MCP endpoint (guides/mcp.md): lets people connect Claude,

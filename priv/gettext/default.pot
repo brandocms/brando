@@ -2676,7 +2676,7 @@ msgstr ""
 
 #: lib/brando_admin/components/form/block/render.ex
 #, elixir-autogen, elixir-format
-msgid "Block has changes"
+msgid "Block has unsaved changes"
 msgstr ""
 
 #: lib/brando_admin/live/content/module_set_list_live.ex
@@ -4277,10 +4277,14 @@ msgstr ""
 
 #: lib/brando_admin/components/content/select_identifier.ex
 #: lib/brando_admin/live/sites/notifications_live.ex
-#: lib/brando_admin/live/sites/seo_live.ex
 #: lib/brando_admin/live/sites/webhooks_live.ex
 #, elixir-autogen, elixir-format
 msgid "Content types"
+msgstr ""
+
+#: lib/brando_admin/live/sites/seo_live.ex
+#, elixir-autogen, elixir-format
+msgid "Content types to check"
 msgstr ""
 
 #: lib/brando_admin/live/users/user_list_live.ex
@@ -4963,6 +4967,11 @@ msgstr ""
 #: lib/brando_admin/live/users/groups_live.ex
 #, elixir-autogen, elixir-format
 msgid "Custom group"
+msgstr ""
+
+#: lib/brando_admin/components/content/list.ex
+#, elixir-autogen, elixir-format
+msgid "Custom order"
 msgstr ""
 
 #: lib/brando_admin/components/form/input/select.ex
@@ -9479,6 +9488,11 @@ msgstr ""
 msgid "Manage your team’s access with groups."
 msgstr ""
 
+#: lib/brando_admin/components/content/list.ex
+#, elixir-autogen, elixir-format
+msgid "Manual order"
+msgstr ""
+
 #: lib/brando_admin/components/form/module_props.ex
 #, elixir-autogen, elixir-format
 msgid "Map"
@@ -9875,6 +9889,11 @@ msgid_plural "Move %{key} to %{target} in %{count} blocks"
 msgstr[0] ""
 msgstr[1] ""
 
+#: lib/brando_admin/components/form/block/render.ex
+#, elixir-autogen, elixir-format
+msgid "Move down"
+msgstr ""
+
 #: lib/brando_admin/components/form/var_layout.ex
 #, elixir-autogen, elixir-format
 msgid "Move into the block"
@@ -9938,6 +9957,11 @@ msgstr ""
 #: lib/brando_admin/live/calendar_live.ex
 #, elixir-autogen, elixir-format
 msgid "Move to…"
+msgstr ""
+
+#: lib/brando_admin/components/form/block/render.ex
+#, elixir-autogen, elixir-format
+msgid "Move up"
 msgstr ""
 
 #: lib/brando_admin/live/calendar_live.ex
@@ -11144,6 +11168,16 @@ msgstr ""
 #: lib/brando_admin/components/module_files.ex
 #, elixir-autogen, elixir-format
 msgid "Nothing has been applied"
+msgstr ""
+
+#: lib/brando_admin/live/search_live.ex
+#, elixir-autogen, elixir-format
+msgid "Nothing has been indexed here yet, so no search finds anything."
+msgstr ""
+
+#: lib/brando_admin/live/search_live.ex
+#, elixir-autogen, elixir-format
+msgid "Nothing has been indexed here yet, so no search finds anything. Ask an administrator to rebuild it."
 msgstr ""
 
 #: lib/brando_admin/components/form/revisions_drawer.ex
@@ -12820,6 +12854,11 @@ msgstr ""
 msgid "Ready for your review"
 msgstr ""
 
+#: lib/brando_admin/live/search_live.ex
+#, elixir-autogen, elixir-format
+msgid "Rebuild it under Utilities → Search index"
+msgstr ""
+
 #: lib/brando_admin/command_palette.ex
 #: lib/brando_admin/live/sites/utils_live.ex
 #, elixir-autogen, elixir-format
@@ -13032,6 +13071,11 @@ msgstr ""
 #: lib/brando_admin/components/form/input/rich_text_labels.ex
 #, elixir-autogen, elixir-format
 msgid "Redo"
+msgstr ""
+
+#: lib/brando_admin/components/shortcut_sheet.ex
+#, elixir-autogen, elixir-format
+msgid "Redo typing"
 msgstr ""
 
 #: lib/brando/content/stale_blocks.ex
@@ -16903,6 +16947,11 @@ msgstr ""
 
 #: lib/brando_admin/live/search_live.ex
 #, elixir-autogen, elixir-format
+msgid "The search index is empty"
+msgstr ""
+
+#: lib/brando_admin/live/search_live.ex
+#, elixir-autogen, elixir-format
 msgid "The search index needs its migration. Ask an administrator to run it."
 msgstr ""
 
@@ -18103,6 +18152,11 @@ msgstr ""
 #: lib/brando_admin/live/ai/assistant_live.ex
 #, elixir-autogen, elixir-format
 msgid "Undo the proposal? Each entry goes back to how it was before, and new entries are deleted."
+msgstr ""
+
+#: lib/brando_admin/components/shortcut_sheet.ex
+#, elixir-autogen, elixir-format
+msgid "Undo typing"
 msgstr ""
 
 #: lib/brando_admin/live/ai/assistant_live.ex

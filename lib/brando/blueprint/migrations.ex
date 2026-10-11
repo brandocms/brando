@@ -7,7 +7,7 @@ defmodule Brando.Blueprint.Migrations do
   must be handled by a hand-written migration.
   """
 
-  alias Brando.Blueprint.Migrations.{Diff, Plan, Renderer, Schema}
+  alias Brando.Blueprint.Migrations.{Diff, Plan, Reconcile, Renderer, Schema}
   alias Brando.Blueprint.Snapshot
   alias Brando.Exception.BlueprintError
 
@@ -115,22 +115,39 @@ defmodule Brando.Blueprint.Migrations do
     end)
   end
 
-  @doc "Fingerprints the reviewed source and history, excluding the snapshot's informational creation time."
+  @doc """
+  Fingerprints the reviewed source and history, excluding the snapshot's
+  informational creation time. A reconciled plan is fingerprinted without the
+  value and row counts its comments give, so only a change to what the
+  migration does makes it stale.
+  """
   @spec plan_digest(Plan.t()) :: String.t()
   def plan_digest(%Plan{} = plan) do
     snapshot = if plan.snapshot, do: %{plan.snapshot | updated_at: nil}
 
+    # Without --reconcile the options are those of earlier versions, so a
+    # request reviewed before an upgrade still applies after it.
     options =
       plan.options
-      |> Keyword.delete(:planned_migration_version)
+      |> Keyword.drop([:planned_migration_version, :reconcile])
       |> Keyword.put(:rebaseline, plan.options[:rebaseline] || false)
+      |> then(&if(plan.options[:reconcile], do: Keyword.put(&1, :reconcile, true), else: &1))
       |> Enum.sort()
 
-    %{plan | snapshot: snapshot, options: options}
+    plan
+    |> without_counts()
+    |> Map.merge(%{snapshot: snapshot, options: options})
     |> :erlang.term_to_binary([:deterministic])
     |> then(&:crypto.hash(:sha256, &1))
     |> Base.encode16(case: :lower)
   end
+
+  defp without_counts(%Plan{metadata: %{reconciled_review: review}} = plan) do
+    metadata = plan.metadata |> Map.delete(:reconciled_review) |> Map.put(:reconciled, review.summary)
+    %{plan | migration_source: review.source, metadata: metadata}
+  end
+
+  defp without_counts(plan), do: plan
 
   @doc """
   Compares two snapshots using the normalized migration schema.
@@ -159,6 +176,12 @@ defmodule Brando.Blueprint.Migrations do
   end
 
   defp prepare(module, previous, schema, opts) do
+    if opts[:rebaseline] && opts[:reconcile] do
+      raise BlueprintError,
+        message:
+          "--rebaseline records a snapshot without a migration and --reconcile writes a migration fitted to the database. Use one or the other."
+    end
+
     if opts[:rebaseline] do
       version = snapshot_version(previous) + 1
       snapshot = %{Snapshot.build_snapshot(module, version) | rebaseline?: true}
@@ -172,19 +195,82 @@ defmodule Brando.Blueprint.Migrations do
   defp prepare_diff(module, previous, schema, opts) do
     case Diff.compare(schema, snapshot_schema(previous)) do
       {:ok, diff} ->
-        if Diff.empty?(diff),
-          do: prepare_noop(module, previous, schema),
-          else: prepare_migration(module, diff, schema, previous, opts)
+        cond do
+          Diff.empty?(diff) -> prepare_noop(module, previous, schema)
+          opts[:reconcile] -> prepare_reconciled(module, diff, schema, previous, opts)
+          true -> prepare_migration(module, diff, schema, previous, opts)
+        end
 
       {:error, reason} ->
         raise_unsupported_change!(module, reason)
     end
   end
 
-  defp prepare_migration(module, diff, schema, previous, opts) do
+  # Fits the diff to the database. When nothing is left to migrate, the
+  # snapshot is recorded on its own as a baseline the database already matches.
+  defp prepare_reconciled(module, diff, schema, previous, opts) do
+    {diff, reconcile} = Reconcile.reconcile(diff, schema, Brando.repo(), owned_storage(module, previous, opts))
+
+    if Diff.empty?(diff) and not Reconcile.operations?(reconcile) do
+      snapshot = %{Snapshot.build_snapshot(module, snapshot_version(previous) + 1) | rebaseline?: true}
+
+      metadata =
+        module
+        |> snapshot_metadata(snapshot, opts)
+        |> put_reconciled(reconcile, fn _reconcile -> nil end)
+
+      %{result: :ok, snapshot: snapshot, metadata: metadata}
+    else
+      prepare_migration(module, diff, schema, previous, opts, reconcile)
+    end
+  end
+
+  # The storage a generated migration in the Blueprint's history created: what
+  # first appears in a snapshot that is not a baseline. A baseline records
+  # storage that already existed, and a snapshot missing from the history
+  # leaves what follows it unattributed.
+  defp owned_storage(module, previous, opts) do
+    owned = %{columns: MapSet.new(), tables: MapSet.new(), timestamps?: false}
+
+    1..snapshot_version(previous)//1
+    |> Enum.reduce({nil, owned}, fn version, {before, owned} ->
+      case Snapshot.get_snapshot(module, version, opts) do
+        nil -> {:unknown, owned}
+        %Snapshot{schema: schema} = snapshot -> {schema, attribute_new_storage(owned, snapshot, before)}
+      end
+    end)
+    |> elem(1)
+  end
+
+  defp attribute_new_storage(owned, _snapshot, :unknown), do: owned
+  defp attribute_new_storage(owned, %Snapshot{rebaseline?: true}, _before), do: owned
+
+  defp attribute_new_storage(owned, %Snapshot{schema: schema}, before) do
+    names = fn schema, key -> if schema, do: MapSet.new(Map.fetch!(schema, key), & &1.name), else: MapSet.new() end
+    new = fn key -> MapSet.difference(names.(schema, key), names.(before, key)) end
+
+    %{
+      columns: MapSet.union(owned.columns, new.(:columns)),
+      tables: MapSet.union(owned.tables, new.(:auxiliary_tables)),
+      timestamps?: owned.timestamps? || (schema.timestamps && !(before && before.timestamps))
+    }
+  end
+
+  defp prepare_migration(module, diff, schema, previous, opts, reconcile \\ nil) do
     sequence = get_sequence(module, opts)
-    snapshot = Snapshot.build_snapshot(module, snapshot_version(previous) + 1)
-    contents = module |> Renderer.render(sequence, diff, schema, snapshot_schema(previous)) |> format_code()
+
+    # An alter of a table that predates the snapshots records storage that
+    # already existed, which --reconcile must not later treat as its own.
+    snapshot =
+      module
+      |> Snapshot.build_snapshot(snapshot_version(previous) + 1)
+      |> Map.update!(:rebaseline?, &(&1 or match?(%Reconcile{create_as_alter?: true}, reconcile)))
+
+    render = fn reconcile ->
+      module
+      |> Renderer.render(sequence, diff, schema, snapshot_schema(previous), reconcile)
+      |> format_code()
+    end
 
     metadata =
       snapshot_metadata(module, snapshot, opts)
@@ -195,8 +281,22 @@ defmodule Brando.Blueprint.Migrations do
         created_tables: Diff.created_tables(diff, schema),
         added_columns: Diff.added_columns(diff, schema)
       })
+      |> put_reconciled(reconcile, render)
 
-    %{result: :ok, migration_source: contents, snapshot: snapshot, metadata: metadata}
+    %{result: :ok, migration_source: render.(reconcile || %Reconcile{}), snapshot: snapshot, metadata: metadata}
+  end
+
+  # The summary to report, and the source and summary rendered without counts
+  # for `plan_digest/1`.
+  defp put_reconciled(metadata, nil, _render), do: metadata
+
+  defp put_reconciled(metadata, reconcile, render) do
+    uncounted = Reconcile.without_counts(reconcile)
+
+    Map.merge(metadata, %{
+      reconciled: Reconcile.summary(reconcile),
+      reconciled_review: %{source: render.(uncounted), summary: Reconcile.summary(uncounted)}
+    })
   end
 
   defp prepare_noop(module, previous, schema) do

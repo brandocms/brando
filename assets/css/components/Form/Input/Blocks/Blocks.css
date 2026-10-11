@@ -952,6 +952,12 @@ section.alert.danger {
   .sort-handle,
   .blocks-actions,
   .block-toolbar .switch,
+  /* The block menu's items: the menu panel's own `display` on its buttons
+     outranks the selectors below, so the whole row goes, and the menu with
+     it when nothing else is in it. The `:has()` subject is the menu, inside
+     one block's toolbar. */
+  .block-action-dropdown-content > .block-structure-action,
+  .block-action-dropdown:not(:has(> .block-action-dropdown-content > li:not(.block-structure-action))),
   [phx-click="duplicate_block"],
   [phx-click="copy_block"],
   [phx-click="delete_block"],

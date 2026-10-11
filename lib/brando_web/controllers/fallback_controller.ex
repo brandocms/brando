@@ -75,7 +75,7 @@ defmodule BrandoWeb.FallbackController do
     page_opts = %{
       matches: %{path: "404", language: language, has_url: false},
       status: :published,
-      preload: [:alternate_entries],
+      preload: [:alternate_entries, :vars],
       cache: {:ttl, :infinite}
     }
 
@@ -109,7 +109,7 @@ defmodule BrandoWeb.FallbackController do
     page_opts = %{
       matches: %{path: "410", language: language, has_url: false},
       status: :published,
-      preload: [:alternate_entries],
+      preload: [:alternate_entries, :vars],
       cache: {:ttl, :infinite}
     }
 

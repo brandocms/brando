@@ -37,6 +37,13 @@ msgstr "%{context}-CDN: mangler %{settings}"
 msgid "%{context} CDN: off"
 msgstr "%{context}-CDN: av"
 
+#: lib/brando/doctor/checks/admin_routes.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} Blueprint links to admin routes the router does not define"
+msgid_plural "%{count} Blueprints link to admin routes the router does not define"
+msgstr[0] "%{count} Blueprint lenker til admin-ruter som ruteren ikke definerer"
+msgstr[1] "%{count} Blueprints lenker til admin-ruter som ruteren ikke definerer"
+
 #: lib/brando/doctor/checks/image_configs.ex
 #, elixir-autogen, elixir-format
 msgid "%{count} already matches (mix brando.images.adopt records that)"
@@ -242,6 +249,11 @@ msgstr "%{name} %{version} (støttet: %{requirement})"
 msgid "%{name} %{version}, needs %{requirement}"
 msgstr "%{name} %{version}, krever %{requirement}"
 
+#: lib/brando/doctor/checks/admin_routes.ex
+#, elixir-autogen, elixir-format
+msgid "%{schema}: %{helpers}"
+msgstr "%{schema}: %{helpers}"
+
 #: lib/brando/doctor/checks/image_configs.ex
 #, elixir-autogen, elixir-format
 msgid "%{target}: %{count} image"
@@ -265,6 +277,11 @@ msgstr ".yalc brandojs %{version}"
 #, elixir-autogen, elixir-format
 msgid "Admin assets"
 msgstr "Admin-ressurser"
+
+#: lib/brando/doctor/checks/admin_routes.ex
+#, elixir-autogen, elixir-format
+msgid "Admin routes"
+msgstr "Admin-ruter"
 
 #: lib/brando_admin/components/system_check.ex
 #, elixir-autogen, elixir-format
@@ -461,6 +478,11 @@ msgstr "Verktøy → Generer nettstedskart"
 msgid "Utilities → Recreate changed images"
 msgstr "Verktøy → Lag endrede bilder på nytt"
 
+#: lib/brando/doctor/checks/image_configs.ex
+#, elixir-autogen, elixir-format
+msgid "Utilities → Recreate changed images recreates the images that differ; mix brando.images.adopt --dry-run --verbose lists why each one differs"
+msgstr "Verktøy → Lag endrede bilder på nytt lager bildene som avviker på nytt; mix brando.images.adopt --dry-run --verbose viser hvorfor hvert av dem avviker"
+
 #: lib/brando/doctor/checks/versions.ex
 #, elixir-autogen, elixir-format
 msgid "Versions"
@@ -566,6 +588,11 @@ msgstr "slett priv/static/robots.txt og fjern den fra static_paths"
 msgid "endpoint URL is localhost"
 msgstr "endpoint-URL er localhost"
 
+#: lib/brando/doctor/checks/admin_routes.ex
+#, elixir-autogen, elixir-format
+msgid "every Blueprint's admin route helpers exist"
+msgstr "admin-rutehjelperne til alle Blueprints finnes"
+
 #: lib/brando/doctor/checks/alt_text.ex
 #, elixir-autogen, elixir-format
 msgid "every image has alt text"
@@ -578,8 +605,13 @@ msgstr "forventet %{version}, kjør mix brando.assets.setup --backend-only"
 
 #: lib/brando/doctor/checks/admin_assets.ex
 #, elixir-autogen, elixir-format
-msgid "expected %{version}, run npx yalc update %{package} and pnpm install in assets/backend"
-msgstr "forventet %{version}, kjør npx yalc update %{package} og pnpm install i assets/backend"
+msgid "expected %{version}, run npx yalc publish in Brando's assets, then npx yalc update %{package} and pnpm install in assets/backend (or mix brando.assets.setup --backend-only)"
+msgstr "forventet %{version}, kjør npx yalc publish i Brandos assets, deretter npx yalc update %{package} og pnpm install i assets/backend (eller mix brando.assets.setup --backend-only)"
+
+#: lib/brando/doctor/checks/admin_assets.ex
+#, elixir-autogen, elixir-format
+msgid "expected %{version}; assets/backend is not a pnpm project yet: run mix brando.gen.backend --upgrade, then mix brando.assets.setup --backend-only"
+msgstr "forventet %{version}; assets/backend er ikke et pnpm-prosjekt ennå: kjør mix brando.gen.backend --upgrade, deretter mix brando.assets.setup --backend-only"
 
 #: lib/brando/doctor/checks/json_ld.ex
 #, elixir-autogen, elixir-format
@@ -642,10 +674,10 @@ msgstr[1] "alle samsvarer allerede (mix brando.images.adopt lagrer det)"
 
 #: lib/brando/doctor/checks/image_configs.ex
 #, elixir-autogen, elixir-format
-msgid "it differs (recreate it)"
-msgid_plural "none match (recreate them)"
-msgstr[0] "det avviker (lag det på nytt)"
-msgstr[1] "ingen samsvarer (lag dem på nytt)"
+msgid "it differs from its config (recreate it)"
+msgid_plural "all %{count} differ from their config (recreate them)"
+msgstr[0] "det avviker fra oppsettet sitt (lag det på nytt)"
+msgstr[1] "alle %{count} avviker fra oppsettet sitt (lag dem på nytt)"
 
 #: lib/brando/doctor/checks/image_configs.ex
 #, elixir-autogen, elixir-format
@@ -718,6 +750,11 @@ msgstr "ingen e-postmodul"
 #, elixir-autogen, elixir-format
 msgid "no queues, so background jobs never run"
 msgstr "ingen køer, så bakgrunnsjobber kjøres aldri"
+
+#: lib/brando/doctor/checks/admin_routes.ex
+#, elixir-autogen, elixir-format
+msgid "no router %{router}"
+msgstr "ingen ruter %{router}"
 
 #: lib/brando/doctor/checks/oban.ex
 #, elixir-autogen, elixir-format
@@ -793,6 +830,11 @@ msgstr "start køene som er satt på pause igjen"
 #, elixir-autogen, elixir-format
 msgid "robots.txt"
 msgstr "robots.txt"
+
+#: lib/brando/doctor/checks/admin_routes.ex
+#, elixir-autogen, elixir-format
+msgid "route each schema's FormLive as live \"/<plural>/create\", <Name>FormLive, :create and live \"/<plural>/update/:entry_id\", <Name>FormLive, :update (mix brando.migrate54 converts generated Create/Update LiveViews). Schemas sharing a singular need their routes in a scope with as: and the same router_scope on their Blueprints"
+msgstr "rut hvert skjemas FormLive som live \"/<plural>/create\", <Name>FormLive, :create og live \"/<plural>/update/:entry_id\", <Name>FormLive, :update (mix brando.migrate54 gjør om genererte Create/Update-LiveViews). Skjemaer med samme entallsnavn trenger rutene sine i et scope med as: og samme router_scope på sine Blueprints"
 
 #: lib/brando/doctor/checks/admin_assets.ex
 #, elixir-autogen, elixir-format
