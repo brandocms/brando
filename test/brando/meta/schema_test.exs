@@ -59,6 +59,20 @@ defmodule Brando.MetaSchemaTest do
     assert List.keyfind(extracted_meta, "og:locale", 0) == {"og:locale", "nb_NO"}
   end
 
+  test "og:locale from a page whose language Ecto has cast to an atom" do
+    page =
+      %Brando.Pages.Page{}
+      |> Ecto.Changeset.cast(%{title: "Our title", language: "no"}, [:title, :language])
+      |> Ecto.Changeset.apply_changes()
+
+    assert page.language == :no
+
+    page = Map.put(page, :__meta__, %{current_url: "http://localhost"})
+    extracted_meta = Brando.Blueprint.Meta.extract_meta(Brando.Pages.Page, page)
+
+    assert List.keyfind(extracted_meta, "og:locale", 0) == {"og:locale", "nb_NO"}
+  end
+
   test "fallback" do
     data = %{meta_title: "META title", title: "Title", foo: "bar"}
     assert Brando.Blueprint.Utils.fallback(data, [:meta_title, :title]) == "META title"
