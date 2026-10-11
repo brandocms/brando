@@ -1,5 +1,9 @@
 import Config
 
+# Manual UI reviews keep production motion after refresh; browser tests retain
+# their usual fast CSS unless explicitly opting in.
+config :brando, :e2e_real_motion, System.get_env("BRANDO_E2E_REAL_MOTION") == "1"
+
 # Tracing records and exports only when an OTLP endpoint is set; see
 # bench/otel/README.md. Otherwise every span is non-recording, so tests and
 # bench runs don't pay for spans nobody reads.

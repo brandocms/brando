@@ -414,7 +414,10 @@ defmodule BrandoAdmin.CalendarLive do
             </ul>
           </li>
         </ol>
-        <p :if={@count == 0} class="calendar-empty" id="calendar-empty" role="status">{empty_label(@view)}</p>
+        <div :if={@count == 0} class="calendar-empty" id="calendar-empty" role="status">
+          <.icon name="calendar-days" />
+          <span>{empty_label(@view)}</span>
+        </div>
       </div>
 
       <Content.modal

@@ -54,9 +54,9 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
           value={@selected_origin}
           publish={@publish}
         />
-        <div class="multiselect">
+        <div class="multiselect" data-select-input={@field.id} data-select-origin={@origin_field && @origin_field.id}>
           <div>
-            <span class="select-label">
+            <span class="select-label" data-select-preview={is_nil(@inner_block) && "true"}>
               <%= if @inner_block do %>
                 {render_slot(@inner_block)}
               <% else %>
@@ -100,10 +100,12 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
                 "options-option"
               ]}
               data-label={extract_label(opt)}
+              data-select-label={option_label_html(opt)}
               value={extract_value(opt)}
               phx-value-origin={extract_origin(opt)}
               phx-click={
                 JS.add_class("option-selected")
+                |> JS.dispatch("b:select-option")
                 |> JS.push("select_option", target: @myself)
                 |> JS.push("toggle_inline_options", target: @myself)
               }
@@ -171,10 +173,12 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
                       option_selected?(opt, @selected_option, @selected_origin) && "option-selected"
                     ]}
                     data-label={extract_label(opt)}
+                    data-select-label={option_label_html(opt)}
                     value={extract_value(opt)}
                     phx-value-origin={extract_origin(opt)}
                     phx-click={
                       JS.add_class("option-selected")
+                      |> JS.dispatch("b:select-option")
                       |> JS.push("select_option", target: @myself)
                       |> JS.push("close_modal", target: @myself)
                       |> hide_modal("##{@modal_id}")
@@ -529,16 +533,16 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
           gettext("No selection")
         end
 
-      %{entry: _} = opt ->
-        opt |> extract_label() |> escape_label()
-
-      %{label: _} = opt ->
-        extract_label(opt)
-
       opt ->
-        opt |> extract_label() |> escape_label()
+        option_label_html(opt)
     end
   end
+
+  # The optimistic label uses exactly the same escaping as the server label.
+  # Only developer-authored option labels may contain intentional HTML.
+  defp option_label_html(%{entry: _} = opt), do: opt |> extract_label() |> escape_label()
+  defp option_label_html(%{label: _} = opt), do: extract_label(opt)
+  defp option_label_html(opt), do: opt |> extract_label() |> escape_label()
 
   defp escape_label(value) do
     value |> Phoenix.HTML.html_escape() |> Phoenix.HTML.safe_to_string()

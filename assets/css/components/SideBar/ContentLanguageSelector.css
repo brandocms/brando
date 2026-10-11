@@ -30,7 +30,7 @@
     cursor: pointer;
     transition: background-color 200ms ease;
 
-    &:hover {
+    &:hover, &[aria-expanded="true"] {
       background-color: var(--brando-nav-hover);
     }
 
@@ -57,7 +57,8 @@
   }
 
   .languages {
-    display: flex;
+    display: none;
+    &[data-ui-open="true"] { display: flex; }
     flex-direction: column;
     gap: 2px;
     padding: 6px 15px;

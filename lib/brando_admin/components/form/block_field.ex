@@ -2942,28 +2942,124 @@ defmodule BrandoAdmin.Components.Form.BlockField do
           <span>{gettext("Blocks")}</span>
           <div class="field-presence" phx-update="ignore" id={"#{@form_name}[#{@block_field}]-field-presence"}></div>
         </label>
-        <%!-- With blocks, Build with AI sits by the label; an empty field
+        <div class="block-field-header-actions">
+          <%!-- With blocks, Build with AI sits by the label; an empty field
               offers it in its card instead, so it is never shown twice. --%>
-        <div :if={@assistant? && @root_order != []} class="block-field-assistant">
-          <span :if={@entry.id && @blocks_changed?} class="block-field-assistant-hint">
-            {gettext("The assistant reads the saved entry, without your unsaved changes")}
-          </span>
-          <span :if={!@entry.id} class="block-field-assistant-hint">
-            {gettext("Save the entry to build it with AI")}
-          </span>
-          <AIAction.button
-            :if={@entry.id}
-            href={assistant_url(@entry, @block_field)}
-            target="_blank"
-            rel="noopener"
-            size={:compact}
-            data-testid="build-with-ai"
-          >
-            {gettext("Build with AI")}
-          </AIAction.button>
-          <AIAction.button :if={!@entry.id} size={:compact} disabled data-testid="build-with-ai">
-            {gettext("Build with AI")}
-          </AIAction.button>
+          <div :if={@assistant? && @root_order != []} class="block-field-assistant">
+            <span :if={@entry.id && @blocks_changed?} class="block-field-assistant-hint">
+              {gettext("The assistant reads the saved entry, without your unsaved changes")}
+            </span>
+            <span :if={!@entry.id} class="block-field-assistant-hint">
+              {gettext("Save the entry to build it with AI")}
+            </span>
+            <AIAction.button
+              :if={@entry.id}
+              href={assistant_url(@entry, @block_field)}
+              target="_blank"
+              rel="noopener"
+              size={:compact}
+              data-testid="build-with-ai"
+            >
+              {gettext("Build with AI")}
+            </AIAction.button>
+            <AIAction.button :if={!@entry.id} size={:compact} disabled data-testid="build-with-ai">
+              {gettext("Build with AI")}
+            </AIAction.button>
+          </div>
+          <div :if={@root_order != [] or @clipboard_meta} class="blocks-actions">
+            <div
+              id={"block-field-#{@block_field}-config"}
+              class="block-field-dropdown"
+              phx-hook="Brando.FloatingDropdown"
+              data-placement="bottom-end"
+            >
+              <button
+                type="button"
+                class="block-field-dropdown-toggle"
+                aria-haspopup="menu"
+                aria-expanded="false"
+                aria-controls={"block-field-#{@block_field}-actions-dropdown"}
+                popovertarget={"block-field-#{@block_field}-actions-dropdown"}
+              >
+                <.icon name="settings-2" />
+                {gettext("Config")}
+                <.icon name="chevron-down" />
+              </button>
+              <ul
+                class="block-field-dropdown-content"
+                popover="auto"
+                data-floating-dropdown
+                id={"block-field-#{@block_field}-actions-dropdown"}
+              >
+                <%= if @root_order != [] do %>
+                  <li>
+                    <button
+                      type="button"
+                      phx-click={
+                        JS.push("rebuild_outline", target: @myself)
+                        |> toggle_drawer("#block-field-#{@block_field}-outline")
+                      }
+                    >
+                      <.icon name="text-align-start" /> {gettext("Block outline")}
+                    </button>
+                  </li>
+                  <li class="dropdown-separator"></li>
+                  <li>
+                    <button
+                      type="button"
+                      phx-click="collapse_root_blocks"
+                      phx-target={@myself}
+                    >
+                      <.icon name="eye-off" /> {gettext("Collapse root blocks")}
+                    </button>
+                  </li>
+                  <li>
+                    <button
+                      type="button"
+                      phx-click="expand_root_blocks"
+                      phx-target={@myself}
+                    >
+                      <.icon name="eye" /> {gettext("Expand root blocks")}
+                    </button>
+                  </li>
+                  <li>
+                    <button
+                      type="button"
+                      phx-click="collapse_multi_children"
+                      phx-target={@myself}
+                    >
+                      <.icon name="eye-off" /> {gettext("Collapse multi blocks")}
+                    </button>
+                  </li>
+                  <li>
+                    <button
+                      type="button"
+                      phx-click="expand_multi_children"
+                      phx-target={@myself}
+                    >
+                      <.icon name="eye" /> {gettext("Expand multi blocks")}
+                    </button>
+                  </li>
+                <% end %>
+                <li :if={@clipboard_meta && @root_order != []} class="dropdown-separator"></li>
+                <li :if={@clipboard_meta}>
+                  <button
+                    type="button"
+                    class="block-field-clipboard-clear"
+                    phx-click="clear_clipboard"
+                    phx-target={@myself}
+                    data-testid="clear-clipboard"
+                  >
+                    <.icon name="clipboard-check" />
+                    {gettext("Clear clipboard")}
+                    <span :if={@clipboard_meta.label} class="block-field-clipboard-label">
+                      {@clipboard_meta.label}
+                    </span>
+                  </button>
+                </li>
+              </ul>
+            </div>
+          </div>
         </div>
       </div>
       <p :if={@source_locked} class="blocks-source-note">
@@ -2971,88 +3067,6 @@ defmodule BrandoAdmin.Components.Form.BlockField do
         <.link :if={@source_url} navigate={@source_url}>{gettext("Change structure in the source")}</.link>
       </p>
       <div class={["blocks-content", @root_order == [] && !@note_collection? && !@source_locked && "is-empty"]}>
-        <div :if={!@note_collection? && (@root_order != [] or @clipboard_meta)} class="blocks-actions">
-          <div class="block-field-dropdown">
-            <button
-              type="button"
-              class="block-field-dropdown-toggle"
-              data-ui-dropdown-toggle={"block-field-#{@block_field}-actions-dropdown"}
-            >
-              <.icon name="circle-ellipsis" />
-            </button>
-            <ul
-              class="block-field-dropdown-content hidden"
-              id={"block-field-#{@block_field}-actions-dropdown"}
-            >
-              <%= if @root_order != [] do %>
-                <li>
-                  <button
-                    type="button"
-                    phx-click={
-                      JS.push("rebuild_outline", target: @myself)
-                      |> toggle_drawer("#block-field-#{@block_field}-outline")
-                    }
-                  >
-                    <.icon name="text-align-start" /> {gettext("Block outline")}
-                  </button>
-                </li>
-                <li class="dropdown-separator"></li>
-                <li>
-                  <button
-                    type="button"
-                    phx-click="collapse_root_blocks"
-                    phx-target={@myself}
-                  >
-                    <.icon name="eye-off" /> {gettext("Collapse root blocks")}
-                  </button>
-                </li>
-                <li>
-                  <button
-                    type="button"
-                    phx-click="expand_root_blocks"
-                    phx-target={@myself}
-                  >
-                    <.icon name="eye" /> {gettext("Expand root blocks")}
-                  </button>
-                </li>
-                <li>
-                  <button
-                    type="button"
-                    phx-click="collapse_multi_children"
-                    phx-target={@myself}
-                  >
-                    <.icon name="eye-off" /> {gettext("Collapse multi blocks")}
-                  </button>
-                </li>
-                <li>
-                  <button
-                    type="button"
-                    phx-click="expand_multi_children"
-                    phx-target={@myself}
-                  >
-                    <.icon name="eye" /> {gettext("Expand multi blocks")}
-                  </button>
-                </li>
-              <% end %>
-              <li :if={@clipboard_meta && @root_order != []} class="dropdown-separator"></li>
-              <li :if={@clipboard_meta}>
-                <button
-                  type="button"
-                  class="block-field-clipboard-clear"
-                  phx-click="clear_clipboard"
-                  phx-target={@myself}
-                  data-testid="clear-clipboard"
-                >
-                  <.icon name="clipboard-check" />
-                  {gettext("Clear clipboard")}
-                  <span :if={@clipboard_meta.label} class="block-field-clipboard-label">
-                    {@clipboard_meta.label}
-                  </span>
-                </button>
-              </li>
-            </ul>
-          </div>
-        </div>
         <.live_component
           module={BrandoAdmin.Components.Form.BlockField.ModulePicker}
           id={"block-field-#{@block_field}-module-picker"}

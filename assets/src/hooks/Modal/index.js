@@ -1,9 +1,11 @@
+import { motionDuration } from '../../motion'
+
 /**
  * Modal hook — keyboard and screen-reader behaviour for `Content.modal/1`.
  *
  * A modal in the admin is a pre-rendered element that is shown and hidden,
- * either by `JS.show`/`JS.hide` (inline display) or by the server toggling the
- * `visible` class. Neither moves keyboard focus, so before this hook a modal
+ * through shared motion commands, legacy `JS.show`/`JS.hide` (inline display),
+ * or the server's `visible` class. These do not move keyboard focus, so a modal
  * opened with focus still sitting behind it: Tab walked the page underneath,
  * and a screen reader never announced that a dialog had opened.
  *
@@ -14,10 +16,6 @@
  * Escape runs only the active dialog's close command. Nested pickers must not
  * close their parent editor or lose the original focus return target.
  */
-
-// `BrandoAdmin.JSCommands.show_modal/2` fades the dialog in over 200ms; nothing
-// inside it has a layout box until that finishes.
-const MODAL_TRANSITION_MS = 250
 
 const FOCUSABLE = [
   'a[href]',
@@ -32,6 +30,7 @@ const FOCUSABLE = [
 export default app => ({
   mounted() {
     this.opener = null
+    this.serverShow = this.el.dataset.modalShow
     this.wasOpen = this.isOpen()
 
     // Tab is handled on the modal itself: the wrap only applies while focus is
@@ -56,16 +55,22 @@ export default app => ({
     }
     this.el.addEventListener('keydown', this.onKeydown)
 
-    // `style` covers JS.show/JS.hide (inline display); `class` covers the
-    // server-gated `visible` variant. Watching both means the hook does not
-    // need to know which mechanism a given modal uses.
+    // Shared motion owns data-ui-open; class covers server-gated dialogs,
+    // and style covers legacy dialogs that use only JS.show/JS.hide.
     this.observer = new MutationObserver(() => this.syncOpenState())
-    this.observer.observe(this.el, { attributes: true, attributeFilter: ['style', 'class'] })
+    this.observer.observe(this.el, { attributes: true, attributeFilter: ['style', 'class', 'data-ui-open'] })
 
     if (this.wasOpen) this.onOpened()
   },
 
   updated() {
+    // A server-opened dialog may stay mounted after closing (variable editors,
+    // transfer user). A fresh server open must clear its previous local hide.
+    const serverShow = this.el.dataset.modalShow
+    if (serverShow === 'true' && this.serverShow !== 'true') {
+      this.js().removeAttribute(this.el, 'data-ui-open')
+    }
+    this.serverShow = serverShow
     this.syncOpenState()
   },
 
@@ -80,6 +85,8 @@ export default app => ({
   },
 
   isOpen() {
+    if (this.el.hasAttribute('data-ui-open')) return this.el.dataset.uiOpen === 'true'
+    if (this.el.style.display === 'none') return false
     if (this.el.classList.contains('visible')) return true
     // `JS.hide` leaves `display: none` inline; `JS.show` sets it to flex.
     return this.el.style.display !== '' && this.el.style.display !== 'none'
@@ -100,11 +107,13 @@ export default app => ({
     // once LiveView has restored it.
     this.opener = this.openerCandidate() || this.opener
 
-    // LiveView restores the previously focused control after a save reply.
-    // Take focus on the next frame, so the reply cannot move focus back
-    // behind a newly opened dialog.
+    // LiveView restores focus after patches, and JS.focus repeats on its
+    // second frame (e.g. closing an action menu). Follow that restoration so
+    // it cannot move focus behind a newly opened dialog.
     cancelAnimationFrame(this.openFrame)
-    this.openFrame = requestAnimationFrame(() => this.focusOpened())
+    this.openFrame = requestAnimationFrame(() => {
+      this.openFrame = requestAnimationFrame(() => this.focusOpened())
+    })
   },
 
   openerCandidate() {
@@ -122,7 +131,13 @@ export default app => ({
 
     this.opener = this.opener || this.openerCandidate()
 
-    // `show_modal/1` reveals the dialog with a 200ms transition, and this runs
+    const first = this.focusable()[0]
+    if (first) {
+      first.focus({ preventScroll: true })
+      return
+    }
+
+    // An application can still reveal the dialog with JS.show, and this runs
     // the instant `display` changes — before its contents have a layout box, so
     // `focusable()` sees nothing. Land on the dialog immediately (which is what
     // names it to a screen reader), then move to the first control once the
@@ -137,11 +152,12 @@ export default app => ({
       // already tabbed or clicked somewhere inside, leave them there.
       if (document.activeElement !== this.el) return
       this.focusable()[0]?.focus()
-    }, MODAL_TRANSITION_MS)
+    }, motionDuration(this.el, '--motion-enter') + 50)
   },
 
   restoreFocus() {
     cancelAnimationFrame(this.openFrame)
+    clearTimeout(this.focusTimer)
     const opener = this.opener
     this.opener = null
     // Only take focus back if it is still inside the modal; if something else

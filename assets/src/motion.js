@@ -14,14 +14,23 @@ export const ease = {
   circOut: 'circOut',
 }
 
-// A user setting rather than the OS one, so it is read from the page.
-const reducedMotion =
-  document.querySelector('meta[name="prefers_reduced_motion"]')?.getAttribute('content') === 'true'
+// Honour both the admin preference and the OS setting, including changes made
+// while the editor is open.
+export const prefersReducedMotion = () =>
+  document.querySelector('meta[name="prefers_reduced_motion"]')?.content === 'true' ||
+  window.matchMedia('(prefers-reduced-motion: reduce)').matches
+
+// The consumer's CSS optimiser can turn 350ms into .35s, including inside
+// custom properties. Web Animations and timers always expect milliseconds.
+export const motionDuration = (el, property) => {
+  const value = getComputedStyle(el).getPropertyValue(property).trim()
+  return (parseFloat(value) || 0) * (value.endsWith('ms') ? 1 : 1000)
+}
 
 // With reduced motion, every animation jumps straight to its end state but
 // still resolves `finished`, so completion handlers run as usual.
 const withMotionPreference = (options = {}) =>
-  reducedMotion ? { ...options, skipAnimations: true } : options
+  prefersReducedMotion() ? { ...options, skipAnimations: true } : options
 
 // Unless told otherwise, GSAP eased with Jupiter's `sine.out` default.
 export function animate(subject, keyframes, options) {

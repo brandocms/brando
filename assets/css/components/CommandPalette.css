@@ -17,17 +17,10 @@
   background: var(--brando-surface);
   color: var(--brando-ink);
   font: 14px/20px "Main", sans-serif;
-  box-shadow:
-    0 24px 60px color-mix(in srgb, var(--brando-ink) 18%, transparent),
-    0 2px 6px color-mix(in srgb, var(--brando-ink) 8%, transparent);
-
+  box-shadow: var(--brando-shadow-overlay);
   &[open] {
     display: flex;
     flex-direction: column;
-  }
-
-  &::backdrop {
-    background: var(--brando-overlay);
   }
 
   kbd {
@@ -111,10 +104,56 @@
   }
 }
 
+.command-palette-body {
+  position: relative;
+  overflow: hidden;
+
+  &[data-loading] {
+    height: min(280px, 60vh);
+  }
+}
+
+.command-palette-skeleton {
+  position: absolute;
+  inset: 0;
+  padding: 18px var(--palette-pad);
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity var(--motion-enter) var(--motion-ease), visibility var(--motion-enter);
+
+  .command-palette-body[data-loading] > & {
+    opacity: 1;
+    visibility: visible;
+    transition: none;
+  }
+}
+
+.command-palette-skeleton-heading { width: 72px; height: 9px; margin: 2px 0 12px; }
+.command-palette-skeleton-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  height: 44px;
+
+  .command-palette-skeleton-icon { width: 22px; height: 22px; flex: none; border-radius: 5px; }
+  .command-palette-skeleton-label { width: 48%; height: 11px; }
+  &:nth-child(3n) .command-palette-skeleton-label { width: 34%; }
+  &:nth-child(3n + 1) .command-palette-skeleton-label { width: 58%; }
+}
+
 .command-palette-results {
   max-height: min(60vh, 520px);
   overflow-y: auto;
   overscroll-behavior: contain;
+  opacity: 1;
+  transition: opacity var(--motion-enter) var(--motion-ease);
+
+  .command-palette-body[data-loading] > & {
+    opacity: 0;
+    pointer-events: none;
+    transition: none;
+  }
 
   &:empty {
     display: none;
@@ -356,19 +395,6 @@
     .command-palette-enter {
       display: none;
     }
-  }
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  .command-palette[open] {
-    animation: command-palette-in 120ms ease-out;
-  }
-}
-
-@keyframes command-palette-in {
-  from {
-    opacity: 0;
-    transform: translateY(-6px);
   }
 }
 

@@ -214,7 +214,7 @@
   }
 
   &.disabled,
-  &.collapsed {
+  &.collapsed:not([data-block-motion]) {
     > .block {
       padding: 0;
 

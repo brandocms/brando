@@ -15,11 +15,21 @@
   /* Clip, not hide: a hidden overflow would make this the scroll container
      and stop the inner column from sticking to the viewport. */
   overflow: clip;
+  visibility: hidden;
+  pointer-events: none;
+  transition:
+    width var(--motion-leave) var(--motion-ease),
+    margin-left var(--motion-leave) var(--motion-ease),
+    margin-right var(--motion-leave) var(--motion-ease),
+    visibility var(--motion-leave);
 
   &.is-open {
     width: 380px;
     margin-left: 24px;
     margin-right: -25px;
+    visibility: visible;
+    pointer-events: auto;
+    transition-duration: var(--motion-enter);
   }
 }
 
@@ -33,6 +43,15 @@
   border-left: 1px solid var(--brando-line);
   background: var(--brando-surface-page);
   color: var(--brando-ink);
+  opacity: 0;
+  transform: translateX(20px);
+  transition: opacity var(--motion-leave) var(--motion-ease), transform var(--motion-leave) var(--motion-ease);
+
+  .notes-panel.is-open > & {
+    opacity: 1;
+    transform: translateX(0);
+    transition-duration: var(--motion-enter);
+  }
 }
 
 .notes-header {
@@ -546,25 +565,58 @@
   white-space: nowrap;
 }
 
-/* The field note button, moved to the field in use. It hugs the label and
-   takes no height in the label row: its 18px is taller than a 13px label's
-   line (about 17px), and the row grew to fit it, nudging the label and
-   pushing the field down by a pixel on every hover. The negative block
-   margins give it a margin box of no height, centred on the label. */
-.field-note-add {
-  display: inline-flex;
-  flex: none;
+/* Reserve a quiet action gutter at the far end of the label row. Offering a
+   note never widens the label or moves the control under the pointer. */
+.field-note-slot { display: none; }
+
+.brando-form[data-notes] .label-wrapper {
+  padding-right: 30px;
+
+  > .field-errors { right: 30px; }
+}
+
+.brando-form[data-notes] .field-note-slot {
+  display: block;
+  position: absolute;
+  top: 50%;
+  right: 0;
+  width: 24px;
+  height: 0;
   align-self: center;
+}
+
+/* Inline variables share their line with the input. Anchor to the whole
+   field's right edge, outside its permanently reserved action gutter. */
+.brando-form[data-notes] :is(.block-vars, .table-block .subform-table)
+  .variable:not(.text, .html, .image, .video, .file) > div > .brando-input > :is(.field-wrapper, div > .field-wrapper) {
+  padding-right: 30px;
+
+  > .label-wrapper {
+    position: static;
+    padding-right: 0;
+
+    > .field-note-slot { top: auto; }
+  }
+}
+
+.field-note-add {
+  position: absolute;
+  top: -12px;
+  right: 0;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 18px;
-  height: 18px;
-  margin: -9px auto -9px 6px;
+  width: 24px;
+  height: 24px;
+  margin: 0;
   padding: 0;
   border: 0;
   border-radius: 5px;
   background: transparent;
   color: var(--brando-muted);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 150ms ease;
   cursor: pointer;
 
   [data-icon] { width: 14px; height: 14px; }
@@ -572,15 +624,12 @@
   &:focus-visible { outline: 2px solid var(--brando-accent); outline-offset: 1px; }
 }
 
-/* With a count on the label, the button sits between them, in room the
-   label keeps for it, so the count does not move when it is offered. */
-.label-wrapper[data-note-count] > label {
-  margin-right: 24px;
-}
-
-.label-wrapper[data-note-count] > .field-note-add {
-  margin-right: 0;
-  margin-left: -18px;
+/* Crossing an input does not reveal another action. A deliberate label hover
+   or focus inside the field does, including keyboard access to the button. */
+.field-note-add[data-note-offered],
+.field-wrapper:focus-within > .label-wrapper > .field-note-slot > .field-note-add {
+  opacity: 1;
+  pointer-events: auto;
 }
 
 /* "Add note" over a text selection */
@@ -637,16 +686,25 @@
 /* --- Phones and narrow windows: the panel covers the editor --- */
 
 @media (max-width: 768px) {
+  .notes-panel,
   .notes-panel.is-open {
     position: fixed;
     inset: 0;
     z-index: 1000;
-    width: auto;
+    width: 100%;
     margin: 0;
+  }
+
+  .notes-panel {
+    transform: translateX(100%);
+    transition-property: transform, visibility;
+
+    &.is-open { transform: translateX(0); }
   }
 
   .notes-panel-inner {
     width: 100%;
     border-left: 0;
+    transform: none;
   }
 }

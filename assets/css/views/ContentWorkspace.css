@@ -209,3 +209,26 @@
 @media (max-width: 600px) {
   .content-list :is(.main-content, .child-row) > .listing-translations { grid-column: 2 / -1; grid-row: 4; }
 }
+
+/* The layout already supplies the listing's top inset. Pages also has an
+   explicit workspace; nesting it must not double that inset. */
+.admin-workspace.content-workspace > .pages-workspace { padding-top: 0; }
+
+/* Keep the toolbar in proportion to its 12–13px labels. */
+.admin-workspace.content-workspace > :where(.content-list-wrapper) .list-tools-wrapper {
+  --listing-control-height: 32px;
+  .list-tools .statuses { min-height: var(--listing-control-height); }
+  .list-tools .statuses button,
+  .sorts .simple-dropdown-button,
+  .saved-views-trigger,
+  .list-tools .filter {
+    height: var(--listing-control-height);
+    min-height: var(--listing-control-height);
+  }
+  .list-tools .filter :is(input, .filter-key) {
+    height: calc(var(--listing-control-height) - 2px);
+    min-height: 0;
+    padding-block: 0;
+  }
+  @media (pointer: coarse) { --listing-control-height: 40px; }
+}

@@ -184,7 +184,15 @@ test('transfer summary keeps content and recipient visible on a shaded surface',
   await expect(modal.getByRole('button', { name: 'Transfer & Delete', exact: true })).toBeEnabled()
   await capture(page, modal, testInfo, 'transfer-delete')
   await modal.getByRole('button', { name: 'Cancel', exact: true }).click()
+  await expect(modal).toBeHidden()
   await expect(row).toBeVisible()
+  // This dialog stays mounted and the server opens it again. The previous
+  // local exit must not leave a sticky hide over the next server open.
+  await row.getByTestId('circle-dropdown-button').click()
+  await row.getByRole('button', { name: 'Delete user', exact: true }).click()
+  await expect(modal).toBeVisible()
+  await modal.getByRole('button', { name: 'Cancel', exact: true }).click()
+  await expect(modal).toBeHidden()
 })
 
 test('rich-text link picker applies, cancels and removes links', async ({ page }, testInfo) => {

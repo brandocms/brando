@@ -17,9 +17,7 @@
   background: var(--brando-surface);
   color: var(--brando-ink);
   font: 14px/20px "Main", sans-serif;
-  box-shadow:
-    0 24px 60px color-mix(in srgb, var(--brando-ink) 18%, transparent),
-    0 2px 6px color-mix(in srgb, var(--brando-ink) 8%, transparent);
+  box-shadow: var(--brando-shadow-overlay);
 
   &[open] {
     display: flex;
@@ -212,11 +210,5 @@
 
   .shortcut-sheet-body {
     columns: 1;
-  }
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  .shortcut-sheet[open] {
-    animation: command-palette-in 120ms ease-out;
   }
 }

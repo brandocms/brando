@@ -1,6 +1,7 @@
 import tippy from 'tippy.js'
 import draftRecovery from './draftRecovery'
 import saveForm from './saveForm'
+import formTabs from './tabs'
 import { matches } from '../../shortcuts/registry'
 import locateBlock from './locateBlock'
 import dirtyFields from '../../Presence/dirtyFields'
@@ -20,6 +21,7 @@ export default (app) => ({
     this.$input = this.$form.querySelector('input')
     this.submitListenerEvent = this.submitListener.bind(this)
     this.draftRecovery = draftRecovery(this)
+    this.tabs = formTabs(this)
     this.stopLocatingBlock = locateBlock(this)
     this.dirtyFields = dirtyFields(this)
     this.follow = follow(this)
@@ -84,9 +86,9 @@ export default (app) => ({
     this.handleEvent('b:show_drawer', ({ drawer_id }) => {
       const drawer = document.getElementById(drawer_id)
       if (drawer) {
-        this.js().removeClass(drawer, 'hidden x-100')
-        this.js().addClass(drawer, 'x-0')
-        this.js().show(drawer)
+        drawer.dispatchEvent(new CustomEvent('b:ui-surface', {
+          bubbles: true, detail: { kind: 'drawer', action: 'show' },
+        }))
       }
     })
 
@@ -197,6 +199,7 @@ export default (app) => ({
   },
 
   updated() {
+    this.tabs.updated()
     this.draftRecovery?.updated()
     this.updateToolbarOffset()
     this.observeStuckToolbar()
@@ -205,6 +208,7 @@ export default (app) => ({
   },
 
   destroyed() {
+    this.tabs?.destroy()
     this.trackOfflineEdits(false)
     this.follow?.destroy()
     this.notes?.destroy()

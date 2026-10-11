@@ -1,6 +1,6 @@
 /* A server-gated modal (block config) has no chrome in the DOM until it opens,
    so it cannot fade in via LiveView's JS transitions the way a pre-rendered one
-   does — it simply arrives visible. These keyframes give it the same 200ms
+   does — it simply arrives visible. These keyframes give it the same gentle
    entrance the JS `show_modal/1` command used to. */
 @keyframes modal-backdrop-in {
   from {
@@ -14,11 +14,11 @@
 @keyframes modal-dialog-in {
   from {
     opacity: 0;
-    transform: translateY(10px);
+    transform: translateY(12px) scale(0.985);
   }
   to {
     opacity: 1;
-    transform: translateY(0);
+    transform: translateY(0) scale(1);
   }
 }
 
@@ -36,20 +36,27 @@
   justify-content: center;
 
   &.visible {
-    display: flex !important;
+    display: flex;
 
-    .modal-backdrop {
-      opacity: 1 !important;
-      display: block !important;
-      animation: modal-backdrop-in 200ms ease-out;
+    > .modal-backdrop {
+      display: block;
+      animation: modal-backdrop-in var(--motion-enter) var(--motion-ease);
     }
 
-    .modal-dialog {
-      opacity: 1 !important;
-      display: flex !important;
-      animation: modal-dialog-in 200ms ease-out;
+    > .modal-dialog {
+      display: flex;
+      animation: modal-dialog-in var(--motion-enter) var(--motion-ease);
     }
+
   }
+
+  &[data-ui-open="true"] {
+    display: flex;
+    > .modal-backdrop { display: block; }
+    > .modal-dialog { display: flex; }
+  }
+  &[data-ui-open="false"] { display: none !important; }
+  &[data-ui-open] > :is(.modal-backdrop, .modal-dialog) { animation: none; }
 
   .text-center {
     text-align: center !important;
@@ -177,7 +184,7 @@
   position: relative;
   @space padding-bottom 15px;
   border-radius: 14px;
-  box-shadow: 0 20px 60px rgba(0,0,0,0.15), 0 4px 16px rgba(0,0,0,0.08);
+  box-shadow: var(--brando-shadow-overlay);
   height: 100%;
   /* `.modal-dialog` is a flex container, so without this the content box
      shrink-wraps its children and the narrow/medium/wide widths behave as

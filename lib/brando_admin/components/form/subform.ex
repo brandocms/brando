@@ -96,9 +96,9 @@ defmodule BrandoAdmin.Components.Form.Subform do
         <%!-- A listing is one bordered list too: a row per entry, its fields
               opening under it, and the same footer. --%>
         <div
-          id={@table? && "#{@field.id}-table"}
+          id={"#{@field.id}-table"}
           class={[@table? && "subform-table-frame", @listing? && "subform-list-frame"]}
-          phx-hook={@table? && "Brando.TableRows"}
+          phx-hook="Brando.TableRows"
         >
           <div class={@table? && "subform-table-scroll"}>
             <div class={@table? && "subform-table"}>

@@ -11,7 +11,9 @@
   overflow: hidden;
 }
 .modal > .modal-backdrop { background: var(--brando-overlay); backdrop-filter: blur(2px); overflow: hidden; }
-.modal > .modal-dialog { width: 760px; max-width: 100%; max-height: calc(100dvh - 64px); transform: none !important; }
+/* Only the entrance/exit applies a transform. At rest, nested fixed dialogs
+   must retain the viewport as their containing block. */
+.modal > .modal-dialog { width: 760px; max-width: 100%; max-height: calc(100dvh - 64px); transform: none; }
 .modal.narrow > .modal-dialog { width: 400px; }
 .modal.medium > .modal-dialog { width: 550px; }
 .modal.wide > .modal-dialog, .modal--editor > .modal-dialog { width: 960px; }
@@ -100,6 +102,7 @@
 .modal-section-nav > button[aria-selected="true"] { background: var(--brando-surface); color: var(--modal-accent); border-color: var(--modal-line); box-shadow: 0 1px 2px color-mix(in srgb, var(--brando-ink) 2%, transparent); }
 .modal-section-content { flex: 1; min-width: 0; min-height: 0; overflow: auto; padding: 24px 28px; scrollbar-width: thin; }
 .modal-section-panel[hidden] { display: none !important; }
+.modal-section-panel:not([hidden]) { animation: ui-content-in var(--motion-enter) var(--motion-ease); }
 .modal-sections--stacked { display: block; height: auto; }
 .modal-sections--stacked > .modal-section-content { overflow: visible; padding: 0; }
 .modal-maintenance-list { border: 1px solid var(--modal-line); border-radius: 7px; overflow: hidden; background: var(--brando-surface-shaded); }

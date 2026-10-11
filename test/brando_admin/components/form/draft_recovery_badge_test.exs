@@ -85,5 +85,47 @@ defmodule BrandoAdmin.Components.Form.DraftRecoveryBadgeTest do
       assert html =~ ~r/data-testid="draft-status"[^>]*>Recovery copy saved at/
       refute html =~ "draft-recovery-notice"
     end
+
+    test "toolbar errors stay compact and recovery copies remain named, with details below" do
+      assigns = %{
+        id: "draft",
+        part: :toolbar,
+        state: state(%{status: :error, candidates: [copy(nil)], open?: false}),
+        saved_at: nil,
+        target: nil,
+        entry_id: 1,
+        __changed__: nil
+      }
+
+      toolbar = assigns |> DraftRecovery.render() |> rendered_to_string() |> Floki.parse_document!()
+      assert Floki.find(toolbar, ".draft-save-label") |> Floki.text() |> String.trim() == "Recovery error"
+      button = Floki.find(toolbar, ".draft-save-history")
+      assert Floki.attribute(button, "aria-label") == ["Recovery copies (1)"]
+      assert button |> Floki.text() |> String.trim() == ""
+
+      details = %{assigns | part: :details} |> DraftRecovery.render() |> rendered_to_string()
+      assert details =~ "keep this editor open"
+      refute details =~ "draft-save-history"
+    end
+
+    test "settings save bars retain the full recovery error without a details companion" do
+      html =
+        %{
+          id: "draft",
+          part: :status,
+          state: state(%{status: :error, candidates: [], open?: false}),
+          saved_at: nil,
+          target: nil,
+          entry_id: 1,
+          __changed__: nil
+        }
+        |> DraftRecovery.render()
+        |> rendered_to_string()
+        |> Floki.parse_document!()
+
+      assert Floki.find(html, ".draft-save-label") |> Floki.text() =~ "keep this editor open"
+      assert length(Floki.find(html, ".draft-offline-status .draft-offline-idle")) == 1
+      assert length(Floki.find(html, ".draft-offline-status .draft-offline-pending")) == 1
+    end
   end
 end

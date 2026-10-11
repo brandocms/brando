@@ -8,6 +8,7 @@ defmodule BrandoAdmin.Components.Form.Input do
 
   import BrandoAdmin.Components.Content.List.Row, only: [status_circle: 1]
 
+  alias Brando.Type.I18nString
   alias BrandoAdmin.Components.AIAction
   alias BrandoAdmin.Components.Form.AltTextSuggestion
   alias BrandoAdmin.Components.Form.FieldActions
@@ -1422,7 +1423,14 @@ defmodule BrandoAdmin.Components.Form.Input do
   defp i18n_field(assigns) do
     opts = assigns.opts || []
     languages = i18n_languages(Keyword.get(opts, :languages, :admin))
-    value = if is_map(assigns.field.value), do: assigns.field.value, else: %{}
+
+    # change/2 and legacy values can carry an uncast string. Preserve it in
+    # the default language so submitting another field cannot erase it.
+    value =
+      case I18nString.cast(assigns.field.value) do
+        {:ok, value} -> value
+        :error -> %{}
+      end
 
     assigns =
       assigns

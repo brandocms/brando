@@ -1,5 +1,6 @@
 import { test, expect } from '../test-support/setupAuth'
 import { syncLV } from '../utils'
+import { serverLatency } from '../test-support/latency'
 
 // The command palette (⌘K, Ctrl+K elsewhere): BrandoAdmin.CommandPaletteLive
 // and the Brando.CommandPalette hook. Driven by roles and ids, not copy.
@@ -137,4 +138,157 @@ test('fits a phone', async ({ page }) => {
   const box = await palette(page).boundingBox()
   expect(box.x).toBeGreaterThanOrEqual(0)
   expect(box.x + box.width).toBeLessThanOrEqual(390)
+})
+
+test('Search fades its backdrop and closes smoothly, including a quick reversal', async ({ page }) => {
+  await page.request.post('/e2e/setup_fixtures/norwegian-admin-user')
+  await page.goto('/admin')
+  await syncLV(page)
+  await page.emulateMedia({ reducedMotion: 'no-preference' })
+  await page.evaluate(() => document.body.removeAttribute('data-env'))
+  // The nav delegates an open event; use its actual accessible name in this
+  // Norwegian view rather than relying on an implementation-only shortcut.
+  const trigger = page.locator('#navigation').getByRole('button', { name: /Søk/ })
+  await trigger.click()
+  const dialog = page.locator('dialog.command-palette')
+  const sample = () => dialog.evaluate(el => ({
+    panel: Number(getComputedStyle(el).opacity),
+    backdrop: Number(getComputedStyle(el, '::backdrop').opacity),
+    open: el.open,
+  }))
+  await expect.poll(async () => (await sample()).backdrop).toBe(1)
+  const leaving = await dialog.evaluate(el => new Promise(resolve => {
+    el.dispatchEvent(new Event('cancel', { cancelable: true }))
+    setTimeout(() => resolve({ panel: Number(getComputedStyle(el).opacity), backdrop: Number(getComputedStyle(el, '::backdrop').opacity), open: el.open }), 90)
+  }))
+  expect(leaving.open).toBe(true)
+  expect(leaving.panel).toBeGreaterThan(0)
+  expect(leaving.panel).toBeLessThan(1)
+  expect(leaving.backdrop).toBeGreaterThan(0)
+  expect(leaving.backdrop).toBeLessThan(1)
+  // Reopen before the delayed native close; it must cancel that close.
+  await page.evaluate(() => document.querySelector('[phx-hook="Brando.CommandPalette"]').dispatchEvent(new CustomEvent('brando:command-palette:open')))
+  await expect(dialog).toHaveAttribute('data-dialog-open', 'true')
+  await expect.poll(async () => (await sample()).panel).toBe(1)
+  await page.keyboard.press('Escape')
+  await expect(dialog).not.toBeVisible()
+  await expect(trigger).toBeFocused()
+  await page.emulateMedia({ reducedMotion: 'reduce' })
+  await trigger.click()
+  await page.keyboard.press('Escape')
+  await expect(dialog).not.toBeVisible()
+})
+
+for (const reduced of [false, true]) {
+  test(`Search reserves its loading layout and reveals the reply${reduced ? ' without motion' : ' smoothly'}`, async ({ page }) => {
+    const latency = await serverLatency(page)
+    await page.request.post('/e2e/setup_fixtures/norwegian-admin-user')
+    await page.emulateMedia({ reducedMotion: reduced ? 'reduce' : 'no-preference' })
+    if (reduced) await page.setViewportSize({ width: 390, height: 844 })
+    await page.goto('/admin')
+    await syncLV(page)
+    await page.evaluate(() => document.body.removeAttribute('data-env'))
+    latency.set(900)
+    await openWithShortcut(page)
+    const body = page.locator('#command-palette-body')
+    const skeleton = page.locator('.command-palette-skeleton')
+    await expect(body).toHaveAttribute('aria-busy', 'true')
+    await expect(results(page)).toHaveAttribute('inert', '')
+    await expect(results(page)).toHaveCSS('opacity', '0')
+    await expect(skeleton).toHaveCSS('opacity', '1')
+    expect((await body.boundingBox()).height).toBeCloseTo(280, 1)
+    await body.evaluate(el => {
+      window.paletteReveal = null
+      const observer = new MutationObserver(() => {
+        if (el.getAttribute('aria-busy') !== 'false') return
+        observer.disconnect()
+        setTimeout(() => {
+          window.paletteReveal = {
+            results: Number(getComputedStyle(el.querySelector('.command-palette-results')).opacity),
+            skeleton: Number(getComputedStyle(el.querySelector('.command-palette-skeleton')).opacity),
+            height: el.getBoundingClientRect().height,
+            target: el.querySelector('.command-palette-results').getBoundingClientRect().height,
+          }
+        }, 80)
+      })
+      observer.observe(el, { attributes: true, attributeFilter: ['aria-busy'] })
+    })
+    await expect(body).toHaveAttribute('aria-busy', 'false')
+    await expect.poll(() => page.evaluate(() => window.paletteReveal)).not.toBeNull()
+    const reveal = await page.evaluate(() => window.paletteReveal)
+    if (reduced) {
+      expect(reveal.results).toBe(1)
+      expect(reveal.skeleton).toBe(0)
+      expect(reveal.height).toBeCloseTo(reveal.target, 1)
+    } else {
+      expect(reveal.results).toBeGreaterThan(0)
+      expect(reveal.results).toBeLessThan(1)
+      expect(reveal.skeleton).toBeGreaterThan(0)
+      expect(reveal.skeleton).toBeLessThan(1)
+      expect(reveal.height).toBeGreaterThan(Math.min(280, reveal.target))
+      expect(reveal.height).toBeLessThan(Math.max(280, reveal.target))
+    }
+    await expect(results(page)).not.toHaveAttribute('inert', '')
+    await expect(results(page)).toHaveCSS('opacity', '1')
+    await expect(input(page)).toBeFocused()
+  })
+}
+
+test('Search accepts typing during loading and a late reply cannot undo closing and reopening', async ({ page }) => {
+  const latency = await serverLatency(page)
+  await page.request.post('/e2e/setup_fixtures/norwegian-admin-user')
+  const entry = await project(page, { title: 'Palette delayed entry', slug: 'palette-delayed', status: 'draft' })
+  await page.goto('/admin')
+  await syncLV(page)
+  latency.set(900)
+  await openWithShortcut(page)
+  await input(page).fill('Palette delayed entry')
+  await page.keyboard.press('Enter')
+  await page.keyboard.press('Escape')
+  await expect(palette(page)).toBeHidden()
+  latency.set(0)
+  await openWithShortcut(page)
+  await expect(page.locator('#command-palette-body')).toHaveAttribute('aria-busy', 'false')
+  await expect(input(page)).toHaveValue('')
+  await expect(page).toHaveURL('/admin')
+  await page.keyboard.press('Escape')
+  await expect(palette(page)).toBeHidden()
+
+  latency.set(900)
+  await openWithShortcut(page)
+  await input(page).fill('Palette delayed entry')
+  await page.keyboard.press('Enter')
+  await expect(page).toHaveURL(`/admin/projects/projects/update/${entry.id}`)
+})
+
+test('Search opened offline recovers its pending query when the connection returns', async ({ page }) => {
+  await page.request.post('/e2e/setup_fixtures/norwegian-admin-user')
+  await page.goto('/admin')
+  await syncLV(page)
+  await page.evaluate(() => window.liveSocket.disconnect())
+  await openWithShortcut(page)
+  await input(page).fill('Test Project Beta')
+  await expect(page.locator('#command-palette-body')).toHaveAttribute('aria-busy', 'true')
+  await page.evaluate(() => window.liveSocket.connect())
+  await syncLV(page)
+  await expect(results(page)).toHaveAttribute('data-query', 'Test Project Beta')
+  await expect(page.locator('#command-palette-body')).toHaveAttribute('aria-busy', 'false')
+  await expect(results(page)).not.toHaveAttribute('inert', '')
+  await expect(group(page, 'entries').getByRole('option').first()).toContainText('Test Project Beta')
+  await page.keyboard.press('Enter')
+  await expect(page).toHaveURL(/\/admin\/projects\/projects\/update\/\d+$/)
+})
+
+test('a long pasted query cannot leave the opening skeleton stuck', async ({ page }) => {
+  const latency = await serverLatency(page)
+  await page.request.post('/e2e/setup_fixtures/norwegian-admin-user')
+  await page.goto('/admin')
+  await syncLV(page)
+  latency.set(800)
+  await openWithShortcut(page)
+  await input(page).fill('x'.repeat(210))
+  await expect(input(page)).toHaveValue('x'.repeat(200))
+  await expect(results(page)).toHaveAttribute('data-query', 'x'.repeat(200))
+  await expect(page.locator('#command-palette-body')).toHaveAttribute('aria-busy', 'false')
+  await expect(results(page)).not.toHaveAttribute('inert', '')
 })

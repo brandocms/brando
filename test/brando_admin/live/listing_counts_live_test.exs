@@ -28,9 +28,9 @@ defmodule BrandoAdmin.ListingCountsLiveTest do
 
   defp count(view, status) do
     view
-    |> element(status_button(status) <> " .status-count")
     |> render()
-    |> Floki.parse_fragment!()
+    |> Floki.parse_document!()
+    |> Floki.find(status_button(status) <> " .status-count")
     |> Floki.text()
   end
 
@@ -60,7 +60,7 @@ defmodule BrandoAdmin.ListingCountsLiveTest do
     view = open(conn, "?filter:title=Counted")
 
     assert counts(view, ~w(draft pending published deleted)) ==
-             %{"draft" => "2", "pending" => "1", "published" => "0", "deleted" => "0"}
+             %{"draft" => "2", "pending" => "1", "published" => "", "deleted" => ""}
 
     # A status without entries stays, muted
     assert has_element?(view, status_button("published") <> ".is-empty")
@@ -113,6 +113,6 @@ defmodule BrandoAdmin.ListingCountsLiveTest do
     assert per_page(view) == []
 
     assert view |> render() |> Floki.parse_document!() |> Floki.find(".statuses .status-count") |> Enum.map(&Floki.text/1) ==
-             ["0", "0", "0", "0", "0"]
+             []
   end
 end

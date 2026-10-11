@@ -14,7 +14,7 @@
 // entry, inserts, restores) decorates itself through `decorateBlock`.
 //
 // It also opens the panel, starts a note from a block's button, a field
-// label's button (one button, moved to the hovered or focused field) or a
+// label's button (fixed beside its label, offered on hover or field focus) or a
 // text selection, and scrolls to a note's place when one is clicked.
 
 const COUNT = 'data-note-count'
@@ -27,8 +27,7 @@ export default function notes(hook) {
   let state = { panel: root.dataset.notes || null, enabled: false, blocks: {}, fields: {}, marks: [], labels: {} }
   let decoratedBlocks = new Set()
   let decoratedFields = new Set()
-  let fieldButton = null
-  let fieldWrapper = null
+  let offeredButton
 
   const style = document.createElement('style')
   style.dataset.notesHighlights = ''
@@ -45,6 +44,7 @@ export default function notes(hook) {
     const el = panel()
     if (!el) return
     const js = hook.js()
+    js.removeAttribute(el, 'inert')
     js.addClass(el, 'is-open')
     const toggle = toggleButton()
     if (toggle) js.setAttribute(toggle, 'aria-expanded', 'true')
@@ -54,11 +54,13 @@ export default function notes(hook) {
     const el = panel()
     if (!el) return
     const js = hook.js()
+    const returnFocus = el.contains(document.activeElement)
+    js.setAttribute(el, 'inert', '')
     js.removeClass(el, 'is-open')
     const toggle = toggleButton()
     if (toggle) {
       js.setAttribute(toggle, 'aria-expanded', 'false')
-      if (el.contains(document.activeElement)) toggle.focus()
+      if (returnFocus) toggle.focus({ preventScroll: true })
     }
   }
 
@@ -186,47 +188,49 @@ export default function notes(hook) {
       : ''
   }
 
-  // --- Field note button: one element, moved to the field in use
+  // --- Field note buttons: created on demand in a fixed, ignored label slot
 
-  function ensureFieldButton() {
-    if (fieldButton) return fieldButton
-    fieldButton = document.createElement('button')
-    fieldButton.type = 'button'
-    fieldButton.className = 'field-note-add'
+  function ensureFieldButton(wrapper, slot) {
+    if (slot.querySelector('.field-note-add')) return
+    const button = document.createElement('button')
+    button.type = 'button'
+    button.className = 'field-note-add'
+    const text = state.labels.add || 'Add note'
+    button.setAttribute('aria-label', text)
+    button.dataset.tooltip = text
     const icon = document.createElement('span')
     icon.setAttribute('data-icon', '')
     icon.className = 'lucide-message-square-plus'
     icon.setAttribute('aria-hidden', 'true')
-    fieldButton.append(icon)
-    fieldButton.addEventListener('pointerdown', event => event.preventDefault())
-    fieldButton.addEventListener('click', event => {
+    button.append(icon)
+    button.addEventListener('pointerdown', event => event.preventDefault())
+    button.addEventListener('click', event => {
       event.preventDefault()
       event.stopPropagation()
-      const anchor = fieldAnchor(fieldWrapper)
+      const anchor = fieldAnchor(wrapper)
       if (anchor) compose(anchor)
     })
-    return fieldButton
+    slot.append(button)
   }
 
-  function offerFieldButton(target) {
+  function offerFieldButton(target, fromFocus = false) {
     if (!state.enabled || !target?.closest) return
     const wrapper = target.closest('.field-wrapper')
-    if (!wrapper || wrapper === fieldWrapper && fieldButton?.isConnected) return
+    if (!wrapper) return
     if (wrapper.closest('[data-notes-panel], .block-config-carried, .tiptap-editor-shell.expanded')) return
     const labelWrapper = wrapper.querySelector(':scope > .label-wrapper')
-    const fieldLabel = labelWrapper?.querySelector(':scope > label')
-    if (!fieldLabel || labelWrapper.classList.contains('hidden') || !fieldAnchor(wrapper)) return
-
-    const button = ensureFieldButton()
-    // Not "Add note: <field>": tests and assistive tech find a field by its
-    // label, and a button named after it would be found too.
-    const text = state.labels.add || 'Add note'
-    button.setAttribute('aria-label', text)
-    button.dataset.tooltip = text
-    fieldWrapper = wrapper
-    // Beside the label, no taller than its line: offering the button must
-    // not move the field under the pointer.
-    fieldLabel.after(button)
+    const slot = labelWrapper?.querySelector(':scope > .field-note-slot')
+    if (!slot || labelWrapper.classList.contains('hidden') || !fieldAnchor(wrapper)) return
+    if (!fromFocus && !labelWrapper.contains(target)) return
+    // Each visited label keeps its own button. Moving the pointer to another
+    // field never relocates a focused button or changes the row's geometry.
+    ensureFieldButton(wrapper, slot)
+    if (!fromFocus) {
+      const button = slot.querySelector('.field-note-add')
+      if (offeredButton && offeredButton !== button) delete offeredButton.dataset.noteOffered
+      offeredButton = button
+      button.dataset.noteOffered = ''
+    }
   }
 
   // --- Locating a note's place
@@ -296,7 +300,13 @@ export default function notes(hook) {
   }
 
   const onPointerOver = event => offerFieldButton(event.target)
-  const onFocusIn = event => offerFieldButton(event.target)
+  const onPointerOut = event => {
+    if (offeredButton && !offeredButton.closest('.field-wrapper')?.contains(event.relatedTarget)) {
+      delete offeredButton.dataset.noteOffered
+      offeredButton = null
+    }
+  }
+  const onFocusIn = event => offerFieldButton(event.target, true)
 
   const onKeydown = event => {
     if (event.key === 'Escape' && isOpen() && panel()?.contains(event.target) && !event.defaultPrevented) close()
@@ -307,6 +317,7 @@ export default function notes(hook) {
   root.addEventListener('brando:notes:locate', onLocate)
   root.addEventListener('click', onClick)
   root.addEventListener('pointerover', onPointerOver)
+  root.addEventListener('pointerout', onPointerOut)
   root.addEventListener('focusin', onFocusIn)
   root.addEventListener('keydown', onKeydown)
 
@@ -346,9 +357,10 @@ export default function notes(hook) {
       root.removeEventListener('brando:notes:locate', onLocate)
       root.removeEventListener('click', onClick)
       root.removeEventListener('pointerover', onPointerOver)
+      root.removeEventListener('pointerout', onPointerOut)
       root.removeEventListener('focusin', onFocusIn)
       root.removeEventListener('keydown', onKeydown)
-      fieldButton?.remove()
+      root.querySelectorAll('.field-note-add').forEach(button => button.remove())
       style.remove()
     },
   }

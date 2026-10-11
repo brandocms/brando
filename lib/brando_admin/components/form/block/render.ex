@@ -1296,7 +1296,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
       layout="editor"
       id={"block-#{@uid}_config"}
       show={true}
-      close={JS.push("close_block_config", target: @target)}
+      close={hide_modal("#block-#{@uid}_config") |> JS.push("close_block_config", target: @target)}
       wide={true}
     >
       <Content.modal_sections id={"block-#{@uid}-config-sections"}>
@@ -1394,7 +1394,11 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
       </Content.modal_sections>
       <:footer>
         <span class="modal-footer-note">{gettext("Saved with the page")}</span>
-        <button type="button" class="primary" phx-click="close_block_config" phx-target={@target}>
+        <button
+          type="button"
+          class="primary"
+          phx-click={hide_modal("#block-#{@uid}_config") |> JS.push("close_block_config", target: @target)}
+        >
           {gettext("Done")}
         </button>
       </:footer>
@@ -3103,7 +3107,12 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
           </Entries.entry_picker>
         </Content.modal>
 
-        <div class="module-datasource-selected identifier-field">
+        <div
+          id={"block-#{@uid}-selected-identifiers"}
+          class="module-datasource-selected identifier-field"
+          phx-hook="Brando.TableRows"
+          data-row-selector=".identifier-list > .identifier"
+        >
           <div
             id={"sortable-#{@uid}-identifiers"}
             class="selected-entries identifier-list"

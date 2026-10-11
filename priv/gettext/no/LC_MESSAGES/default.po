@@ -3240,6 +3240,11 @@ msgstr "Endringene utføres først når du bekrefter dem."
 msgid "Changes are saved with this entry."
 msgstr "Endringer lagres sammen med dette elementet."
 
+#: lib/brando_admin/components/form/draft_recovery.ex
+#, elixir-autogen, elixir-format
+msgid "Changes are waiting to reach recovery storage. Keep this editor open while reconnecting."
+msgstr "Endringer venter på å bli lagret som gjenopprettingskopi. Hold redigeringen åpen mens forbindelsen gjenopprettes."
+
 #: lib/brando_admin/live/ai/assistant_live.ex
 #, elixir-autogen, elixir-format
 msgid "Changes by entry"
@@ -3922,6 +3927,11 @@ msgstr "Samtidighet"
 msgid "Conditional"
 msgstr "Betinget"
 
+#: lib/brando_admin/components/form/block_field.ex
+#, elixir-autogen, elixir-format
+msgid "Config"
+msgstr "Oppsett"
+
 #: lib/brando_admin/components/form/input/render_var.ex
 #: lib/brando_admin/components/form/module_props/ref_block_form.ex
 #, elixir-autogen, elixir-format
@@ -4122,6 +4132,11 @@ msgstr "Kobler til..."
 #, elixir-autogen, elixir-format
 msgid "Connection"
 msgstr "Tilkobling"
+
+#: lib/brando_admin/components/form/draft_recovery.ex
+#, elixir-autogen, elixir-format
+msgid "Connection interrupted — reconnecting…"
+msgstr "Forbindelsen er brutt — kobler til på nytt…"
 
 #: lib/brando_admin/live/sites/mcp_live.ex
 #, elixir-autogen, elixir-format
@@ -9056,6 +9071,7 @@ msgid "Live page"
 msgstr "Publisert side"
 
 #: lib/brando_admin/components/form.ex
+#: lib/brando_admin/components/form/entry_skeleton.ex
 #, elixir-autogen, elixir-format
 msgid "Live preview"
 msgstr "Direkte forhåndsvisning"
@@ -11367,8 +11383,8 @@ msgstr "Gir Skriv med KI i modulens tekstblokker når KI er satt opp. Hver fores
 
 #: lib/brando_admin/components/form/draft_recovery.ex
 #, elixir-autogen, elixir-format
-msgid "Offline — recent edits have not reached recovery storage"
-msgstr "Frakoblet — de siste endringene er ikke lagret i gjenopprettingskopien"
+msgid "Offline"
+msgstr "Frakoblet"
 
 #: lib/brando/users/user.ex
 #: lib/brando_admin/components/form/video_drawer.ex
@@ -12375,8 +12391,6 @@ msgstr "Klargjør…"
 msgid "Presence details"
 msgstr "Tilstedeværelse"
 
-#: lib/brando_admin/components/form.ex
-#: lib/brando_admin/components/form/entry_skeleton.ex
 #: lib/brando_admin/components/video_picker.ex
 #: lib/brando_admin/live/sites/publishing_live.ex
 #, elixir-autogen, elixir-format
@@ -12413,6 +12427,11 @@ msgstr "Forhåndsvisning av standard metadata. Enkeltsider kan overstyre disse v
 #, elixir-autogen, elixir-format
 msgid "Preview page"
 msgstr "Forhåndsvis siden"
+
+#: lib/brando_admin/components/form.ex
+#, elixir-autogen, elixir-format
+msgid "Preview size"
+msgstr "Forhåndsvisningsstørrelse"
 
 #: lib/brando_admin/live/ai/assistant_live.ex
 #, elixir-autogen, elixir-format
@@ -12943,6 +12962,11 @@ msgstr "Gjenopprettingskopien kunne ikke lagres — hold redigeringsvinduet åpe
 #, elixir-autogen, elixir-format
 msgid "Recovery copy saved at %{time}"
 msgstr "Gjenopprettingskopi lagret kl. %{time}"
+
+#: lib/brando_admin/components/form/draft_recovery.ex
+#, elixir-autogen, elixir-format
+msgid "Recovery error"
+msgstr "Gjenopprettingsfeil"
 
 #: lib/brando_admin/components/form/draft_recovery.ex
 #, elixir-autogen, elixir-format
@@ -13635,6 +13659,11 @@ msgstr "Nullstill verdi"
 #, elixir-autogen, elixir-format
 msgid "Reset your password"
 msgstr "Tilbakestill passordet ditt"
+
+#: lib/brando_admin/components/form.ex
+#, elixir-autogen, elixir-format
+msgid "Resize preview"
+msgstr "Endre størrelse på forhåndsvisning"
 
 #: lib/brando_admin/components/form/notes_drawer.ex
 #, elixir-autogen, elixir-format

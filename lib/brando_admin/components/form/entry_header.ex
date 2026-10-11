@@ -1,7 +1,7 @@
 defmodule BrandoAdmin.Components.Form.EntryHeader do
   @moduledoc """
   The entry editor's heading: a breadcrumb with the content type, the entry's
-  own title, and its status as one compact control beside it.
+  own title, and its status as one compact control below it.
 
   The heading follows the saved entry, not the title field: it changes when
   the entry is saved, so typing costs no server work. The status control is

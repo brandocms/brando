@@ -54,9 +54,9 @@
 
 .entry-heading {
   display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 10px 14px;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
   min-width: 0;
 
   h1 {
@@ -138,8 +138,8 @@
 
 :is(.entry-status-trigger, .entry-status-options) .status-dot {
   flex: none;
-  width: 10px;
-  height: 10px;
+  width: 1cap;
+  height: 1cap;
   margin: 0;
 
   circle {

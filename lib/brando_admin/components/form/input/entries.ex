@@ -150,7 +150,12 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
     <div>
       <Primitives.field_base field={@field} label={@label} instructions={@instructions} class={@class} compact={@compact}>
         <div class="entries-input identifier-field">
-          <div class="identifier-field-copy">
+          <div
+            id={"#{@field.id}-selected-identifiers"}
+            class="identifier-field-copy"
+            phx-hook="Brando.TableRows"
+            data-row-selector=".identifier-list > .identifier"
+          >
             <%= if !@has_entries do %>
               <div class="identifier-empty">
                 <span class="identifier-empty-icon" aria-hidden="true"><.icon name="link" /></span>

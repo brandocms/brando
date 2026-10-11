@@ -1350,7 +1350,7 @@ defmodule BrandoAdmin.Components.Content.List do
         <circle class={@status} r="6" cy="6" cx="6" />
       </svg>
       <span class="label">{@rendered_status_label}</span>
-      <span :if={@count} class="pill-tabs-count status-count">{@count}</span>
+      <span :if={@count && @count > 0} class="pill-tabs-count status-count">{@count}</span>
     </button>
     """
   end

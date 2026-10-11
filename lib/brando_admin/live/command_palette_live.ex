@@ -28,6 +28,7 @@ defmodule BrandoAdmin.CommandPaletteLive do
        recent: [],
        current_path: nil,
        groups: [],
+       skeleton_rows: 1..5,
        site_key: socket.assigns[:current_site] && socket.assigns.current_site.key
      )}
   end
@@ -103,6 +104,7 @@ defmodule BrandoAdmin.CommandPaletteLive do
             aria-label={gettext("Search entries, settings and actions")}
             placeholder={gettext("Search, or type > for commands")}
             autocomplete="off"
+            maxlength="200"
             spellcheck="false"
             phx-debounce="100"
           />
@@ -110,27 +112,36 @@ defmodule BrandoAdmin.CommandPaletteLive do
             <kbd>esc</kbd>
           </button>
         </form>
-        <div
-          id="command-palette-results"
-          class="command-palette-results"
-          role="listbox"
-          aria-label={gettext("Results")}
-          data-query={@query}
-        >
-          <p :if={@query != "" and nothing_found?(@groups)} class="command-palette-empty" role="status">
-            {gettext("No titles match “%{query}”", query: @query)}
-          </p>
-          <div
-            :for={group <- @groups}
-            id={"command-palette-group-#{group.key}"}
-            class="command-palette-group"
-            role="group"
-            aria-labelledby={"command-palette-heading-#{group.key}"}
-          >
-            <div id={"command-palette-heading-#{group.key}"} class="command-palette-heading" role="presentation">
-              {group.label}
+        <div class="command-palette-body" id="command-palette-body" aria-busy="false">
+          <div class="command-palette-skeleton" aria-hidden="true">
+            <span class="sk command-palette-skeleton-heading"></span>
+            <div :for={_ <- @skeleton_rows} class="command-palette-skeleton-row">
+              <span class="sk command-palette-skeleton-icon"></span>
+              <span class="sk command-palette-skeleton-label"></span>
             </div>
-            <.item :for={item <- group.items} item={item} />
+          </div>
+          <div
+            id="command-palette-results"
+            class="command-palette-results"
+            role="listbox"
+            aria-label={gettext("Results")}
+            data-query={@query}
+          >
+            <p :if={@query != "" and nothing_found?(@groups)} class="command-palette-empty" role="status">
+              {gettext("No titles match “%{query}”", query: @query)}
+            </p>
+            <div
+              :for={group <- @groups}
+              id={"command-palette-group-#{group.key}"}
+              class="command-palette-group"
+              role="group"
+              aria-labelledby={"command-palette-heading-#{group.key}"}
+            >
+              <div id={"command-palette-heading-#{group.key}"} class="command-palette-heading" role="presentation">
+                {group.label}
+              </div>
+              <.item :for={item <- group.items} item={item} />
+            </div>
           </div>
         </div>
         <footer class="command-palette-footer" aria-hidden="true">

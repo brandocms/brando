@@ -19,6 +19,7 @@ the second covers particular components and screens.
   [Metadata](#present-metadata-as-information) ·
   [Verify the rendered result](#verify-the-rendered-result)
 - Components and screens: [Tab views](#tab-views) ·
+  [Motion](#motion) ·
   [AI actions](#ai-actions-and-suggestions) ·
   [Confirmations, alerts and toasts](#confirmations-alerts-and-toasts) ·
   [Text diffs](#shared-text-diffs) · [External references](#external-references) ·
@@ -192,6 +193,59 @@ Two things are not tab views and keep their own look: the small mono language
 pills on translatable fields (`.i18n-tabs`), and toggles and filters (Grid /
 List switches, status filters, filter chips). Section rails in modals
 (`Content.modal_sections`) are vertical navigation, not a tab bar.
+
+## Motion
+
+Start feedback on the user's click and let it settle over 300–350ms. Small
+movements make the editor feel friendlier: dialogs lift and fade, drawers slide
+with their backdrop, menus settle into place, and blocks reveal or clip their
+contents as their frame opens and closes. Inserted variables, subform rows and
+identifiers use the same short reveal, without a colour flash. Keep controls
+that straddle a row's edge visible during the reveal and at rest. Destination
+pages fade in after LiveView navigation. Use the shared `--motion-enter`,
+`--motion-leave` and easing tokens in `transitions.css`. Both the admin preference and the OS reduced-motion
+setting must be respected; removing movement must also remove waiting for it.
+
+Use `show_modal`, `hide_modal` and `toggle_drawer` for shared overlays. These
+dispatch to `surfaceMotion.js`, which keeps visibility in LiveView's sticky
+attributes and cancels an old animation when a new action reverses it. An exit
+that precedes server removal must complete before LiveView removes the node.
+Keep nested dialogs independently controlled, return focus to the opener, and
+let server validation reveal the tab containing the error.
+
+Form tabs and modal sections keep their fields mounted. Animate their opacity,
+not their transform: a transformed ancestor temporarily changes the containing
+block of fixed dialogs inside it. Test real motion as well as E2E's usual 1ms
+mode, including delayed replies, quick reversals, and reduced motion. See
+`e2e/playwright/tests/editor-motion.spec.js`. For manual E2E previews, start the
+server with `BRANDO_E2E_REAL_MOTION=1`; normal timings then survive refreshes.
+Automated tests keep their fast CSS by default.
+
+The login reveals its box and form rows in one overlapping sequence, including
+recovery and passkey actions. Login and logout get a fixed 350ms exit before
+the native form submits: the login box fades around a spinner, or the sidebar
+slides left as the app fades. The delay never depends on credentials or the
+server response and is not a timing-attack defense. Intercept at document
+bubbling, before LiveView tears down its sockets for native navigation; honor
+canceled submissions and keep the original submitter and validation. Reduced
+motion submits immediately. Guard the app's first paint with root-layout opacity
+until its entrance animations are installed; hiding visibility would swallow
+mount-time keyboard focus. A timeout reveals the page if initialization fails,
+and late initialization must not hide it again. On a fresh app load the sidebar
+and content arrive in sequence; skeleton fields appear progressively. Alerts and confirmations use
+the same native-dialog close helper as Search and Keyboard shortcuts, including
+OK, Escape and backdrop clicks. Notes stays mounted while sliding so drafts
+survive closing and quick reversals. Field-note actions sit in a reserved gutter
+at the far right of the label row (the whole row for inline variables). Offer
+them on label hover or field focus, keep them reachable while crossing the row,
+and never move a control or a focused note button to make room. Existing-note
+indicators remain visible.
+
+Live preview keeps device sizes in a tall segmented group, with icon actions
+and tooltips above. Its full-height separator uses pointer capture, keeps
+dragging at its width limits, and accepts the arrow keys, Home and End. Disable
+iframe pointer input only during a drag; preserve the selected device when the
+window changes size.
 
 ## Use typography and color to establish hierarchy
 
@@ -388,6 +442,15 @@ on a Mac: Linux renders the admin's text differently.
 
 ## AI actions and suggestions
 
+The Assistant uses a violet orbit while a run is thinking, with a visible Stop
+action. New tool-step labels reveal word by word in at most 440ms; the full text
+and its final wrapping are present from the start. Replies enter in 350ms.
+History and reconnects do not replay these effects. Both reduced-motion
+preferences show the text immediately and leave the thinking indicator still.
+In the E2E app, send **Preview assistant animations** to replay a paced,
+read-only script without calling an AI provider. This demo exists only in
+`E2eProject.AssistantModel`, never in the production model client.
+
 Approved with issue #2983; the colour changed to violet in October 2026.
 Everything AI in the admin uses two looks, so an editor recognises AI the same
 way everywhere. Both are drawn in the AI violet, `--brando-ai` (`#634f8f`, 6.9:1
@@ -435,11 +498,12 @@ other small admin buttons. Render it with `AIAction.button/1`:
 - The assistant's send button keeps its shape, filled with the violet, as
   does "Use the ones I attached", which answers the assistant.
 
-The rule is the call, not the subject. Navigation to the Assistant (its
-sidebar row, the command palette's "Ask the Assistant") and the Assistant's
-own chrome (its heading, the "Assistant" label on its replies, Apply, Share)
-call nothing and keep the admin's look with the `sparkles` icon. Accepting or
-discarding a suggestion calls nothing either.
+For controls, the rule is the call, not the subject. Navigation to the
+Assistant (its sidebar row, the command palette's "Ask the Assistant") and
+the Assistant's own chrome (its heading, Apply, Share) call nothing and keep
+the admin's look with the `sparkles` icon. Accepting or discarding a suggestion
+calls nothing either. The "Assistant" author label and sparkle on a reply
+use `--brando-ai` to identify an AI response; the message text stays neutral.
 
 **The suggestion** is what AI hands back for review before it is content: a
 rich-text rewrite, a Content SEO review, suggested meta descriptions or alt
@@ -475,8 +539,8 @@ item.
 
 Do not:
 
-- use the AI violet for anything that does not call AI, or another colour for
-  something that does;
+- use the AI violet for controls that do not call AI, or another colour for
+  controls that do;
 - draw an AI action or a suggestion with a dashed border — dashed means
   "drop here" in the block editor;
 - write an AI result straight into a field: it waits as a suggestion until
@@ -626,7 +690,8 @@ child entries, open menus, and real form values.
 - Use 32px workspace headings, 17–18px section headings, and 15px listing titles.
   Keep secondary metadata smaller without making it pale or difficult to read.
 - A listing toolbar should share one surface and baseline. Filters and sort
-  controls use a 38px box with symmetric padding. Status dots are at least 1em,
+  controls use a 32px box with symmetric padding (40px for coarse pointers).
+  Zero-count badges are omitted. Status dots use 1cap,
   optically centered with their labels. Remove inherited margins before adjusting
   position. The font stored as Main can differ between consumer applications.
   Status labels use `text-box: trim-both cap alphabetic` so alignment follows the
@@ -670,7 +735,7 @@ a 12px muted breadcrumb (the content type's icon, its listing name linked to
 the listing, the blueprint's own name for its entries where it has one, and
 the language: `Projects · Case · EN`), then the entry's title as a 32px ink
 heading at weight 500, or "New case" before the first save. The status is one
-pill beside the title (dot, label, chevron) opening the choices as radios of
+pill below the title (dot, label, chevron) opening the choices as radios of
 the entry form; choices the user may not save are disabled, following
 `Engine.publication_allowed?/2`. `Form.EntryHeader` renders both, and
 `EntryHeader.css` styles them. The heading follows the saved entry, so typing
@@ -680,13 +745,19 @@ The toolbar under it is split (approved October 2026) and keeps to one row.
 On the left, straight on the page, the sections and drawers (Content, Meta,
 History, Scheduled publishing) as `.pill-tabs--small`. On the right, in their
 own white group with the bar's border, radius and surface: the editors
-present as compact overlapping avatars (the count of editors is in their
-tooltip), the save state ("Saved 23:20", "Unsaved changes", with the recovery
-status as its title), Notes as an icon with a badge counting open notes,
-Preview with its label and menu, a "⋯" More menu (Languages, Share preview;
+present as compact overlapping avatars with a subtle 1px border in each
+editor's colour (the count of editors is in their tooltip), the save state ("Saved 23:20", "Unsaved changes", with the recovery
+status in its tooltip), Recovery copies as a named icon (its tooltip includes
+the pending count, and an amber dot marks pending copies), Notes as an icon
+with a badge counting open notes,
+Preview as an eye icon with a tooltip and optional menu, a "⋯" More menu (Languages, Share preview;
 an item that doesn't apply is left out, and an empty menu isn't drawn) and
-Save and close with its options. Under 1366px Preview and Save drop their
-icons to keep the row; when the tabs and tools still don't fit, the tabs
+Save and close with its options. Long offline/recovery errors appear beneath
+the toolbar, aligned right and wrapping within the page; their short label and
+status dot stay beside Save, separated from the action icons by a hairline.
+A connection loss alone gets neutral reconnecting copy; only unacknowledged
+edits get the recovery-storage warning.
+Status dots are `1cap` square to match their labels. Under 1366px Save drops its icon to keep the row; when the tabs and tools still don't fit, the tabs
 scroll in their track, then the tools take a row of their own. On a phone the
 tabs take a row of their own and scroll inside their track.
 
@@ -699,7 +770,7 @@ Following another editor (click their avatar) draws a 2px frame in their
 presence colour round the editing area, fixed to its edges on screen, and a
 chip under the toolbar, "Following Ingrid ×". The frame takes no clicks;
 the chip's ×, Escape, the avatar again, or your own scroll or click stop
-following. The followed avatar has a double ring. Nothing about following
+following. The followed avatar has a tinted background and a stronger coloured border. Nothing about following
 sits in the toolbar.
 
 Opening an entry (approved October 2026) shows the entry, never a modal.
@@ -735,7 +806,9 @@ icon and language, then the status, when it changed and the last editor's
 avatar. The title's link is stretched over the card, so the whole card opens
 the entry. Drafts, scheduled publishing and "Expiring soon" (the next 14
 days) sit in a 300px side column of white panels with a count; a scheduled or
-expiring entry shows a small date tile. Under 1240px
+expiring entry shows a small date tile. Panel headers have an edge-to-edge
+divider; empty-state text aligns with the heading and uses compact spacing.
+Under 1240px
 the side column moves below the cards; on phones a card becomes a row with a
 square cover. No content-type shortcuts: the sidebar already lists them.
 
@@ -766,7 +839,7 @@ rows are both a table, built like `.identifier-list`: one `--brando-line` border
   shrink their column to fit; text columns share the rest.
 - The grip sits at the left and a ghost × at the right, shown on row hover. An
   insert button sits on the line above each row; "Add entry" and the count sit
-  in a `--brando-surface-shaded` footer. A row added either way fades in, tinted for a moment.
+  in a `--brando-surface-shaded` footer. A row added either way reveals over 350ms, without a colour flash.
 - A field hidden by `show_if` leaves an empty cell, so later columns stay under
   their headings.
 
@@ -832,6 +905,12 @@ button after Dashboard (or at the top of the first section) that opens the
 command palette, with the shortcut faint at its end (mono 11px, the muted nav
 colour at 60%). It is never the current row. On phones, where the sidebar is
 hidden, the round `.mobile-search` button opens the palette instead.
+
+The palette opens with skeleton rows in a reserved results area. Its first
+server reply crossfades into place while the body eases to the content height;
+the search field stays usable throughout. Keep stale results inert while
+loading, honor reduced motion, and retry initialization after reconnecting.
+Typing subsequent queries does not restart the opening skeleton.
 
 Configuration's submenu is grouped (#3102): Site, Publishing, Building blocks
 and Operations, each under a small heading in the section labels' mono capitals

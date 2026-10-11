@@ -45,3 +45,60 @@ test('the groups open and close with Configuration, and their links work', async
   await expect(nav.getByRole('group', { name: 'Byggeklosser' })).toBeVisible()
   await expect(blocks.getByRole('link', { name: 'Blokkmoduler' })).toBeVisible()
 })
+
+test('the content language picker slides up and fades both ways', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'no-preference' })
+  await page.goto('/admin')
+  await syncLV(page)
+  await page.evaluate(() => {
+    document.body.removeAttribute('data-env')
+    window.languageMotion = {}
+    window.languageTrigger = document.querySelector('.current-language')
+    const animate = Element.prototype.animate
+    Element.prototype.animate = function (...args) {
+      const animation = animate.apply(this, args)
+      if (this.id === 'content-language-options') {
+        animation.pause()
+        const samples = [0, 100, animation.effect.getComputedTiming().duration].map(time => {
+          animation.currentTime = time
+          return {
+            height: this.closest('.content-language-selector').getBoundingClientRect().height,
+            buttonBottom: window.languageTrigger.getBoundingClientRect().bottom,
+            opacity: Number(getComputedStyle(this).opacity),
+          }
+        })
+        window.languageMotion[args[0][0].opacity === 0 ? 'enter' : 'leave'] = samples
+        animation.currentTime = 0
+        animation.play()
+      }
+      return animation
+    }
+  })
+  const trigger = page.locator('.content-language-selector .current-language')
+  const picker = page.locator('#content-language-options')
+  await trigger.click()
+  await expect(trigger).toHaveAttribute('aria-expanded', 'true')
+  const enter = await page.evaluate(() => window.languageMotion.enter)
+  expect(enter[1].height).toBeGreaterThan(enter[0].height)
+  expect(enter[1].height).toBeLessThan(enter[2].height)
+  expect(enter.every(sample => sample.buttonBottom === enter[0].buttonBottom)).toBe(true)
+  expect(await page.evaluate(() => window.languageTrigger === document.querySelector('.current-language'))).toBe(true)
+  await expect(picker).toHaveCSS('opacity', '1')
+  await expect(picker).toHaveCSS('display', 'flex')
+
+  await trigger.click()
+  await expect(picker).toHaveCount(0)
+  await expect(trigger).toHaveAttribute('aria-expanded', 'false')
+  const leave = await page.evaluate(() => window.languageMotion.leave)
+  expect(leave[1].height).toBeLessThan(leave[0].height)
+  expect(leave[1].height).toBeGreaterThan(leave[2].height)
+  expect(leave[2].height).toBeCloseTo(enter[0].height, 0)
+  expect(leave.every(sample => sample.buttonBottom === leave[0].buttonBottom)).toBe(true)
+
+  await page.emulateMedia({ reducedMotion: 'reduce' })
+  await trigger.click()
+  await expect(picker).toBeVisible()
+  expect(await picker.evaluate(el => el.getAnimations().length)).toBe(0)
+  await trigger.click()
+  await expect(picker).toHaveCount(0)
+})

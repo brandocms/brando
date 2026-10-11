@@ -2,6 +2,14 @@
    the search result, the Open Graph and X cards, and the Markdown version. */
 
 /* The drawer widens while its Previews tab is open, as for Structured data. */
+.drawer.meta-drawer {
+  transition: width var(--motion-enter) var(--motion-ease);
+}
+
+.meta-drawer :is(.meta-drawer-fields, .meta-drawer-previews, .meta-drawer-structured-data) {
+  animation: ui-content-in var(--motion-enter) var(--motion-ease);
+}
+
 .drawer.media-workspace-drawer.editor-workspace-drawer.narrow.previews-open {
   width: min(1180px, 100vw);
 }

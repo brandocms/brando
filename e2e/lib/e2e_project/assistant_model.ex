@@ -17,6 +17,10 @@ defmodule E2eProject.AssistantModel do
   "Put the last team member first" reads the selected entry's outline and
   moves the last child of its first multi block before the first one; "… and
   switch off the first one" also switches the former first child off.
+
+  "Preview assistant animations" is a paced, read-only motion demo. It calls
+  three real lookup tools with scripted pauses, never a provider or a write
+  tool. Send it again to replay. Its reported token usage is zero.
   """
   alias ReqLLM.{Context, Message, Response, ToolCall}
   alias ReqLLM.Message.ContentPart
@@ -24,13 +28,36 @@ defmodule E2eProject.AssistantModel do
   def generate_text(model, %Context{messages: messages} = context, _opts) do
     system = Enum.find_value(messages, "", &(&1.role == :system && text(&1)))
 
-    reply =
-      case List.last(messages) do
-        %Message{role: :user} = message -> start(text(message), system)
-        %Message{role: :tool} -> continue(results(messages), user_text(messages), system)
-      end
+    if String.downcase(String.trim(user_text(messages))) == "preview assistant animations" do
+      Process.sleep(1600)
+      reply = motion_demo(results(messages))
+      {:ok, %{response(model, context, reply) | usage: %{input_tokens: 0, output_tokens: 0}}}
+    else
+      reply =
+        case List.last(messages) do
+          %Message{role: :user} = message -> start(text(message), system)
+          %Message{role: :tool} -> continue(results(messages), user_text(messages), system)
+        end
 
-    {:ok, response(model, context, reply)}
+      {:ok, response(model, context, reply)}
+    end
+  end
+
+  defp motion_demo(results) do
+    cond do
+      results["list_attachments"] ->
+        {:text,
+         "Animation preview complete. I searched the pages, checked the available modules and read the attachment list. This was a scripted demo: no AI provider was called and no content was changed."}
+
+      results["list_modules"] ->
+        {:call, "list_attachments", %{}}
+
+      results["search_entries"] ->
+        {:call, "list_modules", %{"content_type" => "Brando.Pages.Page"}}
+
+      true ->
+        {:call, "search_entries", %{"query" => "Index", "content_type" => "Brando.Pages.Page"}}
+    end
   end
 
   defp start(text, system) do
@@ -96,8 +123,7 @@ defmodule E2eProject.AssistantModel do
         {:call, "attach_folder", %{"kind" => "image", "folder_id" => folder["id"], "limit" => 1}}
 
       {[folder], %{"next_offset" => offset}} when is_integer(offset) ->
-        {:call, "attach_folder",
-         %{"kind" => "image", "folder_id" => folder["id"], "limit" => 1, "offset" => offset}}
+        {:call, "attach_folder", %{"kind" => "image", "folder_id" => folder["id"], "limit" => 1, "offset" => offset}}
 
       {[_folder], %{"total" => 0}} ->
         {:text, "The folder is empty."}
@@ -123,8 +149,7 @@ defmodule E2eProject.AssistantModel do
             {:text, "I could not prepare the proposal: #{error}"}
 
           %{"problems" => problems} ->
-            {:text,
-             "The proposal has problems: " <> Enum.map_join(problems, "; ", & &1["message"])}
+            {:text, "The proposal has problems: " <> Enum.map_join(problems, "; ", & &1["message"])}
         end
 
       results["list_attachments"] ->
@@ -309,8 +334,7 @@ defmodule E2eProject.AssistantModel do
   end
 
   defp response(model, context, {:text, text}),
-    do:
-      build(model, context, %Message{role: :assistant, content: [ContentPart.text(text)]}, :stop)
+    do: build(model, context, %Message{role: :assistant, content: [ContentPart.text(text)]}, :stop)
 
   defp build(model, context, message, finish_reason) do
     %Response{

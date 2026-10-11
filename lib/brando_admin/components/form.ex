@@ -3617,7 +3617,8 @@ defmodule BrandoAdmin.Components.Form do
                 type="button"
                 class={[@active_tab == tab && "active"]}
                 aria-pressed={to_string(@active_tab == tab)}
-                phx-click={JS.push("select_tab", target: @myself)}
+                phx-click={JS.dispatch("b:form-tab")}
+                data-form-tab={tab}
                 phx-value-name={tab}
               >
                 <span class="form-tab-label">{g(@schema, tab)}</span>
@@ -3625,6 +3626,8 @@ defmodule BrandoAdmin.Components.Form do
               <button
                 :if={@has_meta?}
                 class="form-tool-meta"
+                aria-controls={"#{@id}-meta-drawer"}
+                aria-expanded="false"
                 phx-click={toggle_drawer("##{@id}-meta-drawer")}
                 type="button"
                 aria-haspopup="dialog"
@@ -3634,6 +3637,8 @@ defmodule BrandoAdmin.Components.Form do
               <button
                 :if={@has_revisioning?}
                 class="form-tool-revisions"
+                aria-controls={"#{@id}-revisions-drawer"}
+                aria-expanded="false"
                 phx-click={toggle_revisions(@entry_id, @id, @myself)}
                 type="button"
                 aria-haspopup="dialog"
@@ -3643,6 +3648,8 @@ defmodule BrandoAdmin.Components.Form do
               <button
                 :if={@has_scheduled_publishing?}
                 class="form-tool-schedule"
+                aria-controls={"#{@id}-scheduled-publishing-drawer"}
+                aria-expanded="false"
                 phx-click={toggle_drawer("##{@id}-scheduled-publishing-drawer")}
                 type="button"
                 aria-haspopup="dialog"
@@ -3667,7 +3674,7 @@ defmodule BrandoAdmin.Components.Form do
                 module={DraftRecoveryComponent}
                 id={DraftRecoveryComponent.status_id(@id)}
                 dom_id={"#{@id}-save-state"}
-                part={:status}
+                part={:toolbar}
                 seed={@draft_seed}
                 saved_at={Map.get(@entry, :updated_at)}
                 target={@myself}
@@ -3692,14 +3699,14 @@ defmodule BrandoAdmin.Components.Form do
                 :if={@has_live_preview? && length(@live_preview_targets) == 1}
                 phx-click={JS.push("open_live_preview", target: @myself)}
                 data-toggle-preview={JS.push("open_live_preview", target: @myself)}
-                class={["live-preview-toggle form-tool-preview", @live_preview_active? && "active"]}
+                class={["live-preview-toggle form-tool-preview form-tool-icon", @live_preview_active? && "active"]}
                 type="button"
                 disabled={!@blocks_ready? && !@live_preview_active?}
                 aria-label={gettext("Live preview")}
+                data-tooltip={gettext("Live preview")}
                 aria-pressed={to_string(@live_preview_active?)}
               >
                 <.icon name="eye" class="s" />
-                <span class="tab-text">{gettext("Preview")}</span>
               </button>
               <div
                 :if={length(@live_preview_targets) > 1}
@@ -3718,17 +3725,9 @@ defmodule BrandoAdmin.Components.Form do
                   aria-label={gettext("Live preview")}
                   aria-expanded={to_string(@live_preview_menu_open?)}
                   aria-controls={"#{@id}-preview-choices"}
-                  title={gettext("Choose preview")}
+                  data-tooltip={gettext("Choose preview")}
                 >
                   <.icon name="eye" class="s" />
-                  <span :if={!@live_preview_active?} class="tab-text">{gettext("Preview")}</span>
-                  <span
-                    :for={preview <- @live_preview_targets}
-                    :if={
-                      @live_preview_active? && preview.name == (@live_preview_schema_target || @live_preview_default_target)
-                    }
-                    class="preview-current-view"
-                  >{preview.label}</span>
                   <.icon name="chevron-down" class="preview-chooser-chevron dropdown-chevron" />
                 </button>
                 <div
@@ -3829,6 +3828,17 @@ defmodule BrandoAdmin.Components.Form do
             </div>
             <EntrySkeleton.progress :if={!@blocks_ready?} label={gettext("Loading blocks")} />
           </div>
+
+          <.live_component
+            :if={@layout == :entry && @blocks_ready?}
+            module={DraftRecoveryComponent}
+            id={DraftRecoveryComponent.details_id(@id)}
+            dom_id={"#{@id}-save-details"}
+            part={:details}
+            seed={@draft_seed}
+            target={@myself}
+            entry_id={@entry_id}
+          />
 
           <.live_component module={FilePicker} id="file-picker" />
           <.live_component module={ImagePicker} id="image-picker" upload_in_form? />
@@ -4116,7 +4126,7 @@ defmodule BrandoAdmin.Components.Form do
   attr :presences, :list
   attr :current_user, :map, required: true
 
-  # The editors present, each ringed in the colour their field presence has
+  # The editors present, each dotted in the colour their field presence has
   # (`data-presence-color-index`, by position, as fieldPresence.js counts it).
   # Another editor's avatar is a button: it follows
   # where they work (the `Brando.Form` hook scrolls to the block and field
@@ -4217,6 +4227,7 @@ defmodule BrandoAdmin.Components.Form do
       :key={tab.name}
       class={["form-tab", @active_tab == tab.name && "active"]}
       data-tab-name={tab.name}
+      data-form-tab-panel
     >
       <div class="row">
         <.tab_fields
@@ -5886,7 +5897,10 @@ defmodule BrandoAdmin.Components.Form do
   end
 
   def handle_event("select_tab", %{"name" => tab_name}, socket) do
-    {:noreply, assign(socket, :active_tab, tab_name)}
+    {:noreply,
+     socket
+     |> assign(:active_tab, tab_name)
+     |> push_event("b:select_form_tab", %{id: "#{socket.assigns.id}-el", name: tab_name})}
   end
 
   def handle_event("save_redirect_target", _, socket) do
@@ -6797,6 +6811,7 @@ defmodule BrandoAdmin.Components.Form do
 
     socket
     |> assign(:active_tab, tab_with_first_error)
+    |> push_event("b:select_form_tab", %{id: "#{socket.assigns.id}-el", name: tab_with_first_error})
     |> push_event("b:alert", %{title: error_title, message: error_msg, type: "error"})
     |> push_event("b:scroll_to_first_error", %{})
   end
@@ -7693,36 +7708,60 @@ defmodule BrandoAdmin.Components.Form do
         phx-hook="Brando.LivePreview"
       >
         <div class="live-preview">
+          <div
+            class="live-preview-divider"
+            role="separator"
+            aria-label={gettext("Resize preview")}
+            aria-orientation="vertical"
+            aria-valuemin="320"
+            aria-controls="live-preview-frame"
+            tabindex="0"
+          >
+          </div>
           <div class="live-preview-targets">
-            <div class="live-preview-divider"></div>
-            <button
-              type="button"
-              class="tiny live-preview-refresh"
-              phx-click="refresh_live_preview"
-              phx-target={@target}
-              title={gettext("Refresh")}
-            >
-              <.icon name="refresh-cw" />
-              <span>{gettext("Refresh")}</span>
-            </button>
-            <button
-              type="button"
-              class="tiny live-preview-blank"
-              phx-click="open_live_preview_standalone"
-              phx-target={@target}
-            >
-              {gettext("Open preview in new window")}
-            </button>
-            <div class="live-preview-targets-buttons">
-              <button type="button" data-live-preview-target="desktop">
+            <div class="live-preview-actions">
+              <span class="live-preview-heading">{gettext("Live preview")}</span>
+              <button
+                type="button"
+                class="live-preview-refresh"
+                phx-click="refresh_live_preview"
+                phx-target={@target}
+                aria-label={gettext("Refresh")}
+                data-tooltip={gettext("Refresh")}
+              >
+                <.icon name="refresh-cw" />
+              </button>
+              <button
+                type="button"
+                class="live-preview-blank"
+                phx-click="open_live_preview_standalone"
+                phx-target={@target}
+                aria-label={gettext("Open preview in new window")}
+                data-tooltip={gettext("Open preview in new window")}
+              >
+                <.icon name="external-link" />
+              </button>
+              <button
+                type="button"
+                class="live-preview-close"
+                phx-click="open_live_preview"
+                phx-target={@target}
+                aria-label={gettext("Close preview")}
+                data-tooltip={gettext("Close preview")}
+              >
+                <.icon name="x" />
+              </button>
+            </div>
+            <div class="live-preview-targets-buttons segmented-buttons" role="group" aria-label={gettext("Preview size")}>
+              <button type="button" class="media-button" data-live-preview-target="desktop" aria-pressed="true">
                 <.icon name="monitor" />
                 <span>1440px</span>
               </button>
-              <button type="button" data-live-preview-target="tablet">
+              <button type="button" class="media-button" data-live-preview-target="tablet" aria-pressed="false">
                 <.icon name="tablet" />
                 <span>768px</span>
               </button>
-              <button type="button" data-live-preview-target="mobile">
+              <button type="button" class="media-button" data-live-preview-target="mobile" aria-pressed="false">
                 <.icon name="smartphone" />
                 <span>375px</span>
               </button>
@@ -7730,6 +7769,8 @@ defmodule BrandoAdmin.Components.Form do
           </div>
           <div class="live-preview-iframe-wrapper">
             <iframe
+              id="live-preview-frame"
+              title={gettext("Live preview")}
               data-live-preview-device={@live_preview_target}
               src={"/__livepreview?key=#{@live_preview_cache_key}"}
             ></iframe>

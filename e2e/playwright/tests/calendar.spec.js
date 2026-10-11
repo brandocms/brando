@@ -146,9 +146,14 @@ test('the type filter, and a list of days on a phone', async ({ page }, testInfo
   await expect(itemFor(page, project)).toBeVisible()
 
   const type = page.getByRole('combobox', { name: 'Innholdstype' })
+  const heights = await page.locator('.calendar-toolbar a, .calendar-toolbar select').evaluateAll(controls =>
+    controls.map(el => el.getBoundingClientRect().height))
+  expect(new Set(heights).size).toBe(1)
   await type.selectOption('pages.page')
   await expect(page).toHaveURL(/type=pages\.page/)
   await expect(itemFor(page, project)).toHaveCount(0)
+  await expect(page.locator('#calendar-empty')).toBeVisible()
+  expect(await page.locator('#calendar-empty').evaluate(el => parseFloat(getComputedStyle(el).paddingLeft))).toBeGreaterThanOrEqual(16)
   await type.selectOption('projects.project')
   await expect(itemFor(page, project)).toBeVisible()
 

@@ -49,6 +49,8 @@
 .media-drawer-backdrop { display: none; position: fixed; inset: 0; width: 100vw; height: 100dvh; margin: 0; padding: 0; border: 0; border-radius: 0; background: var(--brando-overlay); backdrop-filter: blur(2px); cursor: default; }
 .drawer.media-workspace-drawer[style*="display: block"]:not(.x-100) + .media-drawer-backdrop,
 .drawer.media-workspace-drawer[style*="display: flex"]:not(.x-100) + .media-drawer-backdrop { display: block; }
+.drawer.media-workspace-drawer[data-ui-open="true"] + .media-drawer-backdrop { display: block; }
+.drawer.media-workspace-drawer[data-ui-open="false"] + .media-drawer-backdrop { display: none; }
 
 /* Selection rows use the library's thumbnail/title/metadata hierarchy. */
 .drawer.admin-workspace.media-workspace-drawer .image-picker.list {

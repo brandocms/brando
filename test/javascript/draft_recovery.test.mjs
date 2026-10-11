@@ -12,6 +12,7 @@ function editor(t) {
   const listeners = new Map()
   const handlers = new Map()
   const sent = []
+  const classes = new Set()
   const main = { values: [['page[title]', 'Working title']], matches: () => true }
   const block = { id: 'entry_block_form-abc', values: [['entry_block[text]', 'Focused text']] }
   let connected = true
@@ -38,7 +39,7 @@ function editor(t) {
     pushEventTo: (_el, event, payload) => sent.push({ event, ...payload }),
     handleEvent: (name, fn) => handlers.set(name, fn),
     // Captures are pushed from their own element with `js().push`.
-    js: () => ({ addClass() {}, removeClass() {}, push: (_el, event, { value }) => sent.push({ event, ...value }) }),
+    js: () => ({ addClass: (_el, name) => classes.add(name), removeClass: (_el, name) => classes.delete(name), push: (_el, event, { value }) => sent.push({ event, ...value }) }),
   }
   const recovery = draftRecovery(hook)
   const emit = (name, data = {}) => handlers.get(`b:draft-${name}`)({ id: 'page_form', ...data })
@@ -48,7 +49,7 @@ function editor(t) {
     return prevented
   }
   return {
-    sent, main, recovery, emit, pending,
+    sent, main, recovery, emit, pending, classes,
     tick: ms => t.mock.timers.tick(ms),
     input: () => listeners.get('input')({ target: { closest: () => main } }),
     submit: () => listeners.get('submit')({ target: main }),
@@ -242,4 +243,22 @@ test('turning recovery on with nothing waiting captures nothing', t => {
   e.setEnabled(true)
   e.tick(60000)
   assert.equal(e.sent.length, 0)
+})
+
+test('offline storage warning follows unacknowledged edits, not the connection alone', t => {
+  const e = editor(t)
+  e.disconnect()
+  assert.equal(e.classes.has('draft-offline'), true)
+  assert.equal(e.classes.has('draft-pending'), false)
+  e.input()
+  assert.equal(e.classes.has('draft-pending'), true)
+  e.reconnect()
+  e.ack()
+  e.disconnect()
+  assert.equal(e.classes.has('draft-pending'), false)
+  e.reconnect()
+  e.input()
+  e.save()
+  e.emit('reset', { clean: true })
+  assert.equal(e.classes.has('draft-pending'), false)
 })

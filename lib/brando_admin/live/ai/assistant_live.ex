@@ -351,7 +351,14 @@ defmodule BrandoAdmin.AI.AssistantLive do
 
           <.destination target={(@conversation && @conversation.target) || @target} />
 
-          <div class="assistant-messages" id="assistant-messages" tabindex="0" aria-live="polite">
+          <div
+            class="assistant-messages"
+            id="assistant-messages"
+            phx-hook="Brando.AssistantMessages"
+            data-conversation={@conversation && @conversation.id}
+            tabindex="0"
+            aria-live="polite"
+          >
             <div class="assistant-messages-inner">
               <p :if={@messages == []} class="assistant-intro">
                 {gettext(
@@ -365,7 +372,7 @@ defmodule BrandoAdmin.AI.AssistantLive do
                 aliases={aliases(@conversation)}
                 available?={@available? and !running?(@run)}
               />
-              <div :if={@progress} class="assistant-progress" role="status">
+              <div :if={@progress} id="assistant-progress" class="assistant-progress" role="status">
                 <span class="assistant-spinner" aria-hidden="true"></span>
                 <span>{@progress}</span>
                 <button :if={!stopping?(@run)} type="button" class="assistant-link-button" phx-click="cancel_run">
@@ -608,7 +615,7 @@ defmodule BrandoAdmin.AI.AssistantLive do
 
   defp message(%{item: %{role: "user"}} = assigns) do
     ~H"""
-    <div class="assistant-message is-user">
+    <div id={"assistant-message-#{@item.id}"} class="assistant-message is-user">
       <span class="assistant-author">{gettext("You")}</span>
       <div class="assistant-bubble">{@item.content}</div>
     </div>
@@ -617,10 +624,10 @@ defmodule BrandoAdmin.AI.AssistantLive do
 
   defp message(%{item: %{role: "steps"}} = assigns) do
     ~H"""
-    <ul class="assistant-steps">
-      <li :for={step <- @item.steps}>
+    <ul id={"assistant-steps-#{hd(@item.steps).id}"} class="assistant-steps">
+      <li :for={step <- @item.steps} id={"assistant-step-#{step.id}"} data-assistant-step>
         <.icon name="check" />
-        <span><.step_part :for={part <- step} part={part} /></span>
+        <span class="assistant-step-label"><.step_part :for={part <- step.parts} part={part} /></span>
       </li>
     </ul>
     """
@@ -628,7 +635,7 @@ defmodule BrandoAdmin.AI.AssistantLive do
 
   defp message(assigns) do
     ~H"""
-    <div class="assistant-message is-assistant">
+    <div id={"assistant-message-#{@item.id}"} class="assistant-message is-assistant">
       <span class="assistant-author"><.icon name="sparkles" />{gettext("Assistant")}</span>
       <div class="assistant-text">{markdown(@item.content)}</div>
     </div>
@@ -2276,8 +2283,12 @@ defmodule BrandoAdmin.AI.AssistantLive do
 
       %{role: "assistant", tool_calls: [_ | _] = calls} = message, acc ->
         {requests, calls} = Enum.split_with(calls, &(&1["name"] == "request_media"))
-        steps = Enum.map(calls, &step_label(&1, results[&1["id"]] || %{}))
-        acc = if message.content in [nil, ""], do: acc, else: [%{role: "assistant", content: message.content} | acc]
+        steps = Enum.map(calls, &%{id: "#{message.id}-#{&1["id"]}", parts: step_label(&1, results[&1["id"]] || %{})})
+
+        acc =
+          if message.content in [nil, ""],
+            do: acc,
+            else: [%{id: message.id, role: "assistant", content: message.content} | acc]
 
         acc =
           case {steps, acc} do
@@ -2289,7 +2300,7 @@ defmodule BrandoAdmin.AI.AssistantLive do
         Enum.reduce(requests, acc, &[media_request(&1, results[&1["id"]] || %{}) | &2])
 
       message, acc ->
-        [%{role: message.role, content: message.content} | acc]
+        [%{id: message.id, role: message.role, content: message.content} | acc]
     end)
     |> Enum.reverse()
     |> mark_open_request()
@@ -2324,10 +2335,22 @@ defmodule BrandoAdmin.AI.AssistantLive do
   end
 
   # One part of a step's text, without whitespace around it.
-  defp step_part(%{part: {:term, _}} = assigns), do: ~H|<span class="assistant-step-term">{elem(@part, 1)}</span>|
-  defp step_part(%{part: {:type, _}} = assigns), do: ~H|<span class="assistant-step-type">{elem(@part, 1)}</span>|
-  defp step_part(%{part: {:strong, _}} = assigns), do: ~H|<strong>{elem(@part, 1)}</strong>|
-  defp step_part(assigns), do: ~H"{elem(@part, 1)}"
+  defp step_part(%{part: {:term, _}} = assigns),
+    do: ~H|<span class="assistant-step-term"><.step_words text={elem(@part, 1)} /></span>|
+
+  defp step_part(%{part: {:type, _}} = assigns),
+    do: ~H|<span class="assistant-step-type"><.step_words text={elem(@part, 1)} /></span>|
+
+  defp step_part(%{part: {:strong, _}} = assigns), do: ~H|<strong><.step_words text={elem(@part, 1)} /></strong>|
+  defp step_part(assigns), do: ~H"<.step_words text={elem(@part, 1)} />"
+
+  # Keep the complete text in the DOM for assistive technology and wrapping.
+  # Only the opacity of new words is animated; no simulated streamed text.
+  defp step_words(assigns) do
+    ~H"""
+    <span :for={[word] <- Regex.scan(~r/\S+\s*|\s+/u, @text)} class="assistant-step-word">{word}</span>
+    """
+  end
 
   defp step_label(%{"name" => name, "arguments" => arguments}, result) do
     args =

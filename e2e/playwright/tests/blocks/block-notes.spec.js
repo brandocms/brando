@@ -83,8 +83,9 @@ test.describe('Notes', () => {
     await expect(thread(secondUserPage, 'Is the heading final?')).toHaveCount(1)
 
     // A note on a field, mentioning the other editor
-    await page.getByLabel('Title', { exact: true }).hover()
-    await page.locator('.field-note-add').click()
+    const titleLabel = page.locator('.label-wrapper').filter({ has: page.locator('label[data-field-presence="page[title]"]') })
+    await titleLabel.hover()
+    await titleLabel.locator('.field-note-add').click()
     await expect(composer(page)).toContainText('Title')
     const box = composer(page).getByRole('textbox')
     await box.pressSequentially('@Sec')
