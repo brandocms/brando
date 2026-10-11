@@ -252,6 +252,16 @@ defmodule Brando.Repo.Migrations.MigrateOldBlocksToAssocs do
           ])
         end
 
+        # A multi module has vars and a datasource of its own, beside its
+        # entries' (a heading above a list, say)
+        if datasource_selected_ids = get_in(module, ["data", "datasource_selected_ids"]) do
+          process_datasource(block_id, datasource_selected_ids)
+        end
+
+        if vars = get_in(module, ["data", "vars"]) do
+          process_vars(block_id, vars)
+        end
+
         entries = get_in(module, ["data", "entries"])
 
         for {entry_block, entry_idx} <- Enum.with_index(entries || []) do
