@@ -6,10 +6,15 @@
   `references(...)` column is left out, since PostgreSQL would add its
   constraint again; the `create table` of a table with no snapshot history
   becomes an `alter` adding only what it lacks, or just a baseline snapshot
-  when nothing is missing. Columns and tables that hold data are kept, with a
-  comment giving the count, and Villain columns (`data`, `html`, `*_data`) are
-  never dropped. A summary lists what was reconciled per file. It works with
-  `--all` and `--dry-run`, not with `--rebaseline`; accepting the plan reads
-  the database again and rejects a plan the database has moved on from. The
-  "Legacy snapshots" steps in the 0.53 upgrade guide now say what it does
-  and what stays manual.
+  when nothing is missing. A change or rename of a column the database lacks
+  becomes an add or is left out. Only storage a generated migration in the
+  Blueprint's history created is ever dropped, and only when empty; columns
+  and tables that hold data or predate those migrations are kept, with a
+  comment, and lose a `NOT NULL` the schema would no longer satisfy. Villain
+  columns (`data`, `html`, `*_data`) are never dropped. Each migration names
+  the database it was read from, and a summary lists what was reconciled per
+  file. It works with `--all` and `--dry-run`, not with `--rebaseline`, and
+  is refused in an application with named environments. Accepting the plan
+  reads the database again and rejects it if what the migration does has
+  changed. The "Legacy snapshots" steps in the 0.53 upgrade guide now say
+  what it does and what stays manual.
