@@ -44,3 +44,9 @@
   non-zero, saying nothing was done and to pass `--yes` (`--force` still
   works); answering "n" says so too. `mix brando.migrate_to_tenant` asks the
   same way.
+
+- **Critical CSS is inlined again from Vite 3 and 4 manifests**. The manifest
+  parser found the critical entry by its `name`, which only Vite 5+ writes, so
+  a site still on Vite 3 or 4 rendered `/* no critical css */` and loaded the
+  critical bundle as an ordinary stylesheet, without a warning. An entry with
+  no `name` is now named by its key's basename (`js/critical.js`).

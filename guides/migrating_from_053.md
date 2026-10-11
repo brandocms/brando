@@ -269,7 +269,10 @@ correct rewrite depends on application semantics:
 - replacing legacy listing `field`, `template`, and positional `child_listing`
   declarations with application-specific row components/child schemas, and
   redesigning exports that use the removed `after_export` callback;
-- changing a Vite manifest only when that application actually uses Vite 5+;
+- setting `manifest: 'manifest.json'` in the frontend's Vite config only when
+  that application uses Vite 5+, which moved the default manifest into
+  `.vite/`. Vite 3 and 4 manifests keep working as they are: they name no
+  entries, so Brando finds the critical entry by its key (`js/critical.js`);
 - replacing custom processing that relied on sharp-cli, consolidating custom
   Create/Update LiveViews, adopting `<.head>`, and updating custom navigation
   markup;
