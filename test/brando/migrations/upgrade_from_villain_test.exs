@@ -20,7 +20,7 @@ defmodule Brando.Migrations.UpgradeFromVillainTest do
 
   setup do
     config = Repo.config()
-    database = "#{config[:database]}_villain_#{System.unique_integer([:positive])}"
+    database = "#{config[:database]}_villain_#{Base.encode16(:crypto.strong_rand_bytes(4), case: :lower)}"
     storage = Keyword.put(config, :database, database)
 
     :ok = Ecto.Adapters.Postgres.storage_up(storage)
@@ -41,7 +41,7 @@ defmodule Brando.Migrations.UpgradeFromVillainTest do
 
     on_exit(fn ->
       Application.put_env(:brando, :otp_app, otp_app)
-      Ecto.Adapters.Postgres.storage_down(storage)
+      :ok = Ecto.Adapters.Postgres.storage_down(storage)
     end)
 
     :ok
@@ -233,6 +233,23 @@ defmodule Brando.Migrations.UpgradeFromVillainTest do
           ],
           "vars" => []
         }
+      },
+      # The same file again at another size, as a second language's page
+      # might have it, and embeds saved with only their remote id
+      %{
+        "type" => "module",
+        "uid" => Utils.generate_uid(),
+        "hidden" => false,
+        "data" => %{
+          "module_id" => video_id,
+          "multi" => false,
+          "refs" => [
+            villain_video("video", %{"width" => 400, "height" => 300}),
+            villain_video("vimeo", %{"source" => "vimeo", "remote_id" => "76979871", "width" => 640, "height" => 360}),
+            villain_video("youtube", %{"source" => "youtube", "remote_id" => "dQw4w9WgXcQ"})
+          ],
+          "vars" => []
+        }
       }
     ]
 
@@ -264,8 +281,12 @@ defmodule Brando.Migrations.UpgradeFromVillainTest do
         [page_id]
       )
 
-    assert [[_, "fragment", false, ^fragment_id], [multi_block, "module", true, nil], [video_block, "module", false, nil]] =
-             blocks
+    assert [
+             [_, "fragment", false, ^fragment_id],
+             [multi_block, "module", true, nil],
+             [video_block, "module", false, nil],
+             [other_video_block, "module", false, nil]
+           ] = blocks
 
     # The multi module's own var, above its entries
     assert rows("SELECT key, value FROM content_vars WHERE block_id = $1", [multi_block]) == [["heading", "Our values"]]
@@ -287,5 +308,23 @@ defmodule Brando.Migrations.UpgradeFromVillainTest do
              """,
              [video_block]
            ) == [["cover_video", true, "svg"], ["video", true, "false"]]
+
+    # One video record per file, sized by the first block that used it; a
+    # block that drew it in another shape keeps that shape as its own
+    # aspect ratio
+    assert rows(
+             """
+             SELECT r.name, v.type, v.source_url, v.width, v.height, r.data->'data'->>'aspect_ratio'
+             FROM content_refs r JOIN videos v ON v.id = r.video_id
+             WHERE r.block_id IN ($1, $2) ORDER BY r.block_id, r.name
+             """,
+             [video_block, other_video_block]
+           ) == [
+             ["cover_video", "external_file", "https://cdn.example.com/video.mp4", 840, 1052, nil],
+             ["video", "external_file", "https://cdn.example.com/video.mp4", 840, 1052, nil],
+             ["video", "external_file", "https://cdn.example.com/video.mp4", 840, 1052, "400:300"],
+             ["vimeo", "vimeo", "https://vimeo.com/76979871", 640, 360, nil],
+             ["youtube", "youtube", "https://www.youtube.com/watch?v=dQw4w9WgXcQ", 840, 1052, nil]
+           ]
   end
 end

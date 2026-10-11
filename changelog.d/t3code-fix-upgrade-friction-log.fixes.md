@@ -20,3 +20,12 @@
   cover other than `"false"`, `"svg"` or `"true"` into `"svg"`, and
   `Brando.HTML.Video` draws the placeholder for a cover string it does not
   know. Safe markup passed as `cover` still renders as before.
+
+- **`brando_133` keeps legacy embeds and each block's video shape.** A Vimeo
+  or YouTube block saved with only its remote id got a video record under a
+  provider URL built from that id, but the refs were linked by the raw id, so
+  they were never linked and lost the video when their data was cleaned up.
+  Both steps now use the same source. Blocks that share a file share one
+  video, sized by the first block that used it (the choice was arbitrary
+  before); a block that drew the file in another shape keeps that shape as
+  its own aspect ratio.

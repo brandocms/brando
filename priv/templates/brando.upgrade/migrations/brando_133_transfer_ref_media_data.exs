@@ -15,28 +15,16 @@ defmodule Brando.Migrations.TransferRefMediaData do
     # Process refs with VideoBlock data
     # First, create video entries using the new video schema
     # IMPORTANT: Do this BEFORE cleaning up the ref data
-    # Use COALESCE to handle both url and remote_id as the video source
+    # One video per source (video_source/1), with the first block's settings;
+    # the link below matches on the same expression
     execute """
     INSERT INTO videos (
       source_url, type, title, caption, aspect_ratio,
       width, height, remote_id, config_target,
       inserted_at, updated_at, creator_id
     )
-    SELECT DISTINCT ON (COALESCE(r.data->'data'->>'url', r.data->'data'->>'remote_id'))
-      CASE 
-        -- For vimeo videos without url, construct the vimeo.com URL from remote_id
-        WHEN r.data->'data'->>'source' = 'vimeo' 
-             AND r.data->'data'->>'url' IS NULL 
-             AND r.data->'data'->>'remote_id' IS NOT NULL
-        THEN 'https://vimeo.com/' || SPLIT_PART(r.data->'data'->>'remote_id', '?', 1)
-        -- For youtube videos without url, construct the youtube.com URL from remote_id  
-        WHEN r.data->'data'->>'source' = 'youtube' 
-             AND r.data->'data'->>'url' IS NULL 
-             AND r.data->'data'->>'remote_id' IS NOT NULL
-        THEN 'https://www.youtube.com/watch?v=' || SPLIT_PART(r.data->'data'->>'remote_id', '?', 1)
-        -- Otherwise use the existing logic
-        ELSE COALESCE(r.data->'data'->>'url', r.data->'data'->>'remote_id')
-      END,
+    SELECT DISTINCT ON (#{video_source("r.data->'data'")})
+      #{video_source("r.data->'data'")},
       CASE
         WHEN r.data->'data'->>'source' = 'file' THEN 'external_file'
         WHEN r.data->'data'->>'source' = 'youtube' THEN 'youtube'
@@ -65,8 +53,9 @@ defmodule Brando.Migrations.TransferRefMediaData do
     AND COALESCE(r.data->'data'->>'url', r.data->'data'->>'remote_id') IS NOT NULL
     AND NOT EXISTS (
       SELECT 1 FROM videos v
-      WHERE v.source_url = COALESCE(r.data->'data'->>'url', r.data->'data'->>'remote_id')
+      WHERE v.source_url = #{video_source("r.data->'data'")}
     )
+    ORDER BY #{video_source("r.data->'data'")}, r.id
     """
 
     # Update refs with video_id using new schema
@@ -76,33 +65,22 @@ defmodule Brando.Migrations.TransferRefMediaData do
     SET video_id = v.id
     FROM videos v
     WHERE r.data->>'type' = 'video'
-    AND v.source_url = COALESCE(r.data->'data'->>'url', r.data->'data'->>'remote_id')
+    AND v.source_url = #{video_source("r.data->'data'")}
     """
+
+    execute keep_own_shape("video", ["data"])
 
     # Process MediaBlock refs that contain template_video
     # IMPORTANT: Do this BEFORE cleaning up the MediaBlock data
-    # Use COALESCE to handle both url and remote_id as the video source
+    # Same as for video refs above
     execute """
     INSERT INTO videos (
       source_url, type, title, caption, aspect_ratio,
       width, height, remote_id, config_target,
       inserted_at, updated_at, creator_id
     )
-    SELECT DISTINCT ON (COALESCE(r.data->'data'->'template_video'->>'url', r.data->'data'->'template_video'->>'remote_id'))
-      CASE 
-        -- For vimeo videos without url, construct the vimeo.com URL from remote_id
-        WHEN r.data->'data'->'template_video'->>'source' = 'vimeo' 
-             AND r.data->'data'->'template_video'->>'url' IS NULL 
-             AND r.data->'data'->'template_video'->>'remote_id' IS NOT NULL
-        THEN 'https://vimeo.com/' || SPLIT_PART(r.data->'data'->'template_video'->>'remote_id', '?', 1)
-        -- For youtube videos without url, construct the youtube.com URL from remote_id  
-        WHEN r.data->'data'->'template_video'->>'source' = 'youtube' 
-             AND r.data->'data'->'template_video'->>'url' IS NULL 
-             AND r.data->'data'->'template_video'->>'remote_id' IS NOT NULL
-        THEN 'https://www.youtube.com/watch?v=' || SPLIT_PART(r.data->'data'->'template_video'->>'remote_id', '?', 1)
-        -- Otherwise use the existing logic
-        ELSE COALESCE(r.data->'data'->'template_video'->>'url', r.data->'data'->'template_video'->>'remote_id')
-      END,
+    SELECT DISTINCT ON (#{video_source("r.data->'data'->'template_video'")})
+      #{video_source("r.data->'data'->'template_video'")},
       CASE
         WHEN r.data->'data'->'template_video'->>'source' = 'file' THEN 'external_file'
         WHEN r.data->'data'->'template_video'->>'source' = 'youtube' THEN 'youtube'
@@ -131,8 +109,9 @@ defmodule Brando.Migrations.TransferRefMediaData do
     AND COALESCE(r.data->'data'->'template_video'->>'url', r.data->'data'->'template_video'->>'remote_id') IS NOT NULL
     AND NOT EXISTS (
       SELECT 1 FROM videos v
-      WHERE v.source_url = COALESCE(r.data->'data'->'template_video'->>'url', r.data->'data'->'template_video'->>'remote_id')
+      WHERE v.source_url = #{video_source("r.data->'data'->'template_video'")}
     )
+    ORDER BY #{video_source("r.data->'data'->'template_video'")}, r.id
     """
 
     # Link MediaBlock refs to videos
@@ -141,8 +120,10 @@ defmodule Brando.Migrations.TransferRefMediaData do
     SET video_id = v.id
     FROM videos v
     WHERE r.data->>'type' = 'media'
-    AND v.source_url = COALESCE(r.data->'data'->'template_video'->>'url', r.data->'data'->'template_video'->>'remote_id')
+    AND v.source_url = #{video_source("r.data->'data'->'template_video'")}
     """
+
+    execute keep_own_shape("media", ["data", "template_video"])
 
     # Process MediaBlock refs that contain template_picture
     execute """
@@ -527,6 +508,44 @@ defmodule Brando.Migrations.TransferRefMediaData do
   # prefix (`/media/images/site/x.jpg`), while `images.path` has no prefix
   # (`images/site/x.jpg`). Match a stored path as it is, and with the configured
   # media URL's path (and the default `/media`) stripped off its front.
+  # The source a legacy video block points at: its url, or for an embed saved
+  # with only a remote id, the provider URL built from it. Creating the videos
+  # and linking the refs to them must use the same expression, or an embed
+  # without a url is never linked and loses its video when the ref data is
+  # cleaned up.
+  defp video_source(data) do
+    """
+    CASE
+      WHEN #{data}->>'source' = 'vimeo' AND #{data}->>'url' IS NULL AND #{data}->>'remote_id' IS NOT NULL
+      THEN 'https://vimeo.com/' || SPLIT_PART(#{data}->>'remote_id', '?', 1)
+      WHEN #{data}->>'source' = 'youtube' AND #{data}->>'url' IS NULL AND #{data}->>'remote_id' IS NOT NULL
+      THEN 'https://www.youtube.com/watch?v=' || SPLIT_PART(#{data}->>'remote_id', '?', 1)
+      ELSE COALESCE(#{data}->>'url', #{data}->>'remote_id')
+    END
+    """
+  end
+
+  # Blocks sharing a file share one video, sized by the first of them. Before
+  # 0.54 each block rendered its own width and height, so a block whose shape
+  # differs from the video's keeps it as its own aspect ratio.
+  defp keep_own_shape(type, path) do
+    data = Enum.map_join(["r.data" | Enum.map(path, &"'#{&1}'")], "->", & &1)
+    width = "(#{data}->>'width')"
+    height = "(#{data}->>'height')"
+
+    """
+    UPDATE content_refs r
+    SET data = jsonb_set(r.data, '{#{Enum.join(path, ",")},aspect_ratio}', to_jsonb(#{width} || ':' || #{height}))
+    FROM videos v
+    WHERE r.video_id = v.id
+    AND r.data->>'type' = '#{type}'
+    AND #{data}->>'aspect_ratio' IS NULL
+    AND #{width} ~ '^[1-9][0-9]*$' AND #{height} ~ '^[1-9][0-9]*$'
+    AND v.width > 0 AND v.height > 0
+    AND #{width}::integer * v.height <> #{height}::integer * v.width
+    """
+  end
+
   defp path_candidates(expression), do: expression |> path_variants() |> Enum.join(", ")
 
   # A gallery size path names the size directory in front of the filename and
