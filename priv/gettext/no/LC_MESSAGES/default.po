@@ -9887,6 +9887,11 @@ msgid_plural "Move %{key} to %{target} in %{count} blocks"
 msgstr[0] "Flytt %{key} til %{target} i %{count} blokk"
 msgstr[1] "Flytt %{key} til %{target} i %{count} blokker"
 
+#: lib/brando_admin/components/form/block/render.ex
+#, elixir-autogen, elixir-format
+msgid "Move down"
+msgstr "Flytt ned"
+
 #: lib/brando_admin/components/form/var_layout.ex
 #, elixir-autogen, elixir-format
 msgid "Move into the block"
@@ -9951,6 +9956,11 @@ msgstr "Gå til verktøylinjen for rik tekst"
 #, elixir-autogen, elixir-format
 msgid "Move to…"
 msgstr "Flytt til …"
+
+#: lib/brando_admin/components/form/block/render.ex
+#, elixir-autogen, elixir-format
+msgid "Move up"
+msgstr "Flytt opp"
 
 #: lib/brando_admin/live/calendar_live.ex
 #, elixir-autogen, elixir-format

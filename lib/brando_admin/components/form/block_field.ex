@@ -120,6 +120,19 @@ defmodule BrandoAdmin.Components.Form.BlockField do
 
   def update(%{event: "close_slot"}, socket), do: {:ok, assign(socket, :open_slot_uid, nil)}
 
+  # A root block's "Move up" / "Move down" (`Block.Events`, "move_block"):
+  # the `reposition` a drag sends, so a locked source refuses it the same way.
+  def update(%{event: "move_block", uid: uid, by: by}, socket) do
+    case Block.move_positions(socket.assigns.block_ops.order, uid, by) do
+      {old, new} ->
+        {:noreply, socket} = handle_event("reposition", %{"uid" => uid, "old" => old, "new" => new}, socket)
+        {:ok, socket}
+
+      nil ->
+        {:ok, socket}
+    end
+  end
+
   def update(%{event: "inspect_field_notes", field: field, html: html, reply_to: reply_to}, socket) do
     if Map.has_key?(socket.assigns.footnote_fields, field) do
       {:ok,

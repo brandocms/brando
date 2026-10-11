@@ -9885,6 +9885,11 @@ msgid_plural "Move %{key} to %{target} in %{count} blocks"
 msgstr[0] ""
 msgstr[1] ""
 
+#: lib/brando_admin/components/form/block/render.ex
+#, elixir-autogen, elixir-format
+msgid "Move down"
+msgstr ""
+
 #: lib/brando_admin/components/form/var_layout.ex
 #, elixir-autogen, elixir-format
 msgid "Move into the block"
@@ -9948,6 +9953,11 @@ msgstr ""
 #: lib/brando_admin/live/calendar_live.ex
 #, elixir-autogen, elixir-format
 msgid "Move to…"
+msgstr ""
+
+#: lib/brando_admin/components/form/block/render.ex
+#, elixir-autogen, elixir-format
+msgid "Move up"
 msgstr ""
 
 #: lib/brando_admin/live/calendar_live.ex

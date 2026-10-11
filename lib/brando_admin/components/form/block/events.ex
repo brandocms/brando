@@ -691,6 +691,16 @@ defmodule BrandoAdmin.Components.Form.Block.Events do
     |> then(&{:halt, &1})
   end
 
+  # "Move up" / "Move down" in the block's menu. The block does not hold its
+  # siblings' order, so the parent that does (`BlockField` for a root block,
+  # the container or multi module's `Block` for a child) moves it, through
+  # the same `reposition` a drag sends.
+  def handle_block_event("move_block", %{"by" => by}, socket) when by in ["-1", "1"] do
+    {parent, parent_id} = socket.assigns.parent_ref
+    send_update(parent, id: parent_id, event: "move_block", uid: socket.assigns.uid, by: String.to_integer(by))
+    {:halt, socket}
+  end
+
   def handle_block_event("show_dirty", _params, socket) do
     require Logger
 

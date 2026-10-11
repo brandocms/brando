@@ -95,6 +95,27 @@ export default (app) => {
     app.liveSocket.execJS(el, JSON.stringify(ops))
   }
 
+  // A block menu's Move up and Move down, as it opens: off for the first and
+  // the last of the block's siblings, the items of its sortable list. Read
+  // from the page rather than sent with every block, which would re-render a
+  // block's toolbar whenever a sibling is added or removed. A plain attribute:
+  // the menu closes on the next click, and the server ignores a move past an
+  // end regardless.
+  const markMoveEnds = (menu) => {
+    const buttons = menu.querySelectorAll('[data-block-move]')
+    if (buttons.length === 0) return
+    const list = menu.closest('[phx-hook="Brando.SortableBlocks"]')
+    let item = menu
+    while (item && item.parentElement !== list) item = item.parentElement
+    if (!list || !item) return
+    const items = [...list.children].filter(child => child.dataset.uid)
+    const index = items.indexOf(item)
+    for (const button of buttons) {
+      const end = button.dataset.blockMove === 'up' ? index <= 0 : index === items.length - 1
+      button.disabled = end
+    }
+  }
+
   // Only one dropdown is ever meaningfully open, so tracking the open id beats
   // scanning every `[data-ui-dropdown-toggle]` on the page for each click —
   // there are 115+ of them in a large entry.
@@ -127,6 +148,7 @@ export default (app) => {
 
       const el = document.getElementById(id)
       if (el) {
+        if (openDropdownId !== id) markMoveEnds(el)
         exec(el, toggleDropdownOps(idSelector(id)))
         openDropdownId = openDropdownId === id ? null : id
       }

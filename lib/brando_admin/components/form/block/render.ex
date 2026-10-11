@@ -2870,6 +2870,19 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
             <.icon name="cog" /> {gettext("Configure")}
           </button>
         </li>
+        <%!-- Moving without dragging. `uiCommands.js` disables the first
+              sibling's Move up and the last one's Move down as the menu opens;
+              the parent ignores a move past either end anyway. --%>
+        <li>
+          <button type="button" phx-click="move_block" phx-value-by="-1" phx-target={@target} data-block-move="up">
+            <.icon name="arrow-up" /> {gettext("Move up")}
+          </button>
+        </li>
+        <li>
+          <button type="button" phx-click="move_block" phx-value-by="1" phx-target={@target} data-block-move="down">
+            <.icon name="arrow-down" /> {gettext("Move down")}
+          </button>
+        </li>
         <li>
           <%!-- `handle_block_event/3` reads the uid off the component's own assigns, so
                the old `value: %{block_uid: @uid}` never reached anything. --%>
