@@ -19,6 +19,7 @@ if Code.ensure_loaded?(Igniter) do
     alias Igniter.Project.Module, as: ProjectModule
     alias Igniter.Refactors.Rename
     alias Mix.Brando.Igniter.FloristConfig
+    alias Mix.Brando.Igniter.TemplateCode
     alias Rewrite.Source
     alias Sourceror.Zipper
 
@@ -1062,8 +1063,9 @@ if Code.ensure_loaded?(Igniter) do
     became `rendered_<relation>` (`rendered_blocks`, `rendered_hero_blocks`).
     Reads of it on `entry`/`@entry` or the schema's singular are rewritten in
     the schema's own templates: a `<singular>_html` directory or module,
-    `templates/<singular>`, or `<singular>_view.ex`. Pages count as the
-    `page` schema. Run it before the Blueprint rewrite, which removes the
+    `templates/<singular>`, or `<singular>_view.ex`, and there only in
+    Elixir code (`Mix.Brando.Igniter.TemplateCode`), never in a script or in
+    text. Pages count as the `page` schema. Run it before the Blueprint rewrite, which removes the
     Villain attributes; a Blueprint an earlier run already moved is matched
     by its block relations.
 
@@ -1223,7 +1225,20 @@ if Code.ensure_loaded?(Igniter) do
       fields = Enum.map_join(renames, "|", &Regex.escape(elem(&1, 0)))
       regex = ~r/(?<![\w.:"'\/@])(@?(?:entry|#{Regex.escape(singular)}))\.(#{fields})(?![\w.(])/
       renames = Map.new(renames)
-      updated = Regex.replace(regex, content, fn _read, variable, field -> "#{variable}.#{renames[field]}" end)
+      # Only Elixir code: the same text in a script or in prose is not a field read.
+      code? = TemplateCode.code?(content, path)
+
+      updated =
+        regex
+        |> Regex.scan(content, return: :index)
+        |> Enum.filter(fn [{start, _length} | _groups] -> code?.(start) end)
+        |> Enum.reverse()
+        |> Enum.reduce(content, fn [_read, _variable, {start, length}], content ->
+          field = binary_part(content, start, length)
+
+          binary_part(content, 0, start) <>
+            renames[field] <> binary_part(content, start + length, byte_size(content) - start - length)
+        end)
 
       if updated == content,
         do: igniter,
@@ -1244,8 +1259,9 @@ if Code.ensure_loaded?(Igniter) do
         {"""
          Villain HTML reads. 0.54 renders blocks into `rendered_<relation>`:
          `entry.html` is now `entry.rendered_blocks`, `entry.hero_html` is
-         `entry.rendered_hero_blocks`. These lines are outside a schema's own
-         templates#{ambiguous_note(ambiguous)}, so they were left as they are:
+         `entry.rendered_hero_blocks`. These lines were left as they are: they
+         are outside a schema's own templates#{ambiguous_note(ambiguous)}, or not
+         Elixir code (a script, CSS or text):
          """, findings(sources, fn _content -> &Regex.match?(html_read, &1) end)},
         {"""
          Navigation items. An item no longer has `url`, `title`,

@@ -11,8 +11,9 @@
   own templates (`<singular>_html/`, `templates/<singular>/`), reads of
   `entry`, `@entry` or the singular are rewritten to `rendered_blocks`
   (`hero_html` to `rendered_hero_blocks`), and `@page.html` in page templates
-  too. The task then warns, by file and line, about other Villain `html`
-  reads, navigation items read as 0.53 structs (`item.url`), and
+  too, only in Elixir code: EEx tags, HEEx expressions and parsed `.ex`
+  code, never a `<script>` or text. The task then warns, by file and line,
+  about other Villain `html` reads, navigation items read as 0.53 structs (`item.url`), and
   `Brando.Pages.get_var/2` calls, whose page must be loaded with
   `preload: [:vars]`.
 

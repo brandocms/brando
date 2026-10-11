@@ -446,6 +446,78 @@ defmodule Mix.Tasks.Brando.Migrate54Test do
     assert_unchanged(rerun, Map.keys(templates))
   end
 
+  test "rewrites Villain html reads only in Elixir code, and lists the others" do
+    templates = %{
+      "lib/legacy_app_web/templates/vacancy/show.html.eex" => """
+      <script>const entry = {html: "Hello"}; el.innerHTML = entry.html;</script>
+      <%= raw @entry.html %>
+      <p>Read entry.html for details</p>
+      """,
+      "lib/legacy_app_web/controllers/vacancy_html/show.html.heex" => """
+      <div title="Ærlig">{@entry.html}</div>
+      <script>window.entry = {}; console.log(entry.html)</script>
+      <.card body={@entry.html} /><p>About entry.html</p>
+      """,
+      "lib/legacy_app_web/controllers/vacancy_html.ex" => ~S'''
+      defmodule LegacyAppWeb.VacancyHTML do
+        def body(vacancy), do: Phoenix.HTML.raw(vacancy.html)
+        def note, do: "Ærlig: see vacancy.html, or #{vacancy().html}"
+        def vacancy, do: %{html: ""}
+
+        def show(assigns) do
+          ~H"""
+          <div>{@entry.html}</div>
+          <script>let entry = {}; entry.html = 1</script>
+          """
+        end
+      end
+      '''
+    }
+
+    igniter = migrate(@villain_editor_blueprint, nil, templates)
+
+    assert source(igniter, "lib/legacy_app_web/templates/vacancy/show.html.eex") == """
+           <script>const entry = {html: "Hello"}; el.innerHTML = entry.html;</script>
+           <%= raw @entry.rendered_blocks %>
+           <p>Read entry.html for details</p>
+           """
+
+    assert source(igniter, "lib/legacy_app_web/controllers/vacancy_html/show.html.heex") == """
+           <div title="Ærlig">{@entry.rendered_blocks}</div>
+           <script>window.entry = {}; console.log(entry.html)</script>
+           <.card body={@entry.rendered_blocks} /><p>About entry.html</p>
+           """
+
+    assert source(igniter, "lib/legacy_app_web/controllers/vacancy_html.ex") == ~S'''
+           defmodule LegacyAppWeb.VacancyHTML do
+             def body(vacancy), do: Phoenix.HTML.raw(vacancy.rendered_blocks)
+             def note, do: "Ærlig: see vacancy.html, or #{vacancy().html}"
+             def vacancy, do: %{html: ""}
+
+             def show(assigns) do
+               ~H"""
+               <div>{@entry.rendered_blocks}</div>
+               <script>let entry = {}; entry.html = 1</script>
+               """
+             end
+           end
+           '''
+
+    assert_has_warning(igniter, fn warning ->
+      Enum.all?(
+        [
+          "templates/vacancy/show.html.eex:1:",
+          "templates/vacancy/show.html.eex:3:",
+          "vacancy_html/show.html.heex:2:",
+          "vacancy_html/show.html.heex:3:",
+          "vacancy_html.ex:3:",
+          "vacancy_html.ex:9:"
+        ],
+        &String.contains?(warning, &1)
+      ) and not (warning =~ "show.html.eex:2:") and not (warning =~ "vacancy_html.ex:2:")
+    end)
+  end
+
   test "rewrites templates of a Blueprint an earlier run moved, unless another schema shares its singular" do
     moved = """
     defmodule LegacyApp.Articles.Category do
