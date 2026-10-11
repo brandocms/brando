@@ -11,15 +11,18 @@
   were dropped without a warning, so templates printed them empty. Only the
   entries' vars came through.
 
-- **Legacy file videos keep looping, and a URL cover no longer prints as
-  text.** Brando before 0.54 rendered every file video with `loop` and drew its
-  SVG placeholder whatever the block's `cover` held. `brando_133` wrote
-  `loop: false` for blocks saved without the setting, and carried a cover
-  such as a Vimeo thumbnail URL over as-is, which `Brando.HTML.Video` then
-  printed on the page. `brando_133` now defaults `loop` to true and turns any
-  cover other than `"false"`, `"svg"` or `"true"` into `"svg"`, and
-  `Brando.HTML.Video` draws the placeholder for a cover string it does not
-  know. Safe markup passed as `cover` still renders as before.
+- **Legacy file videos keep looping and their cover placeholder, and a URL
+  cover no longer prints as text.** Brando before 0.54 rendered every file
+  video with `loop`, and drew its SVG placeholder for any file video with a
+  width, whatever the block's `cover` held. `brando_133` wrote `loop: false`
+  for blocks saved without the setting, kept the default `cover: "false"`
+  (which the renderer now honours, so the placeholder went), and carried a
+  cover such as a Vimeo thumbnail URL over as-is, which `Brando.HTML.Video`
+  then printed on the page. `brando_133` now defaults `loop` to true, writes
+  `"svg"` for every file video that had a width, and turns any other unknown
+  cover into `"svg"`; `Brando.HTML.Video` draws the placeholder for a cover
+  string it does not know. Safe markup passed as `cover` still renders as
+  before.
 
 - **`brando_133` keeps legacy embeds and each block's video shape.** A Vimeo
   or YouTube block saved with only its remote id got a video record under a

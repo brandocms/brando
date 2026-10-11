@@ -171,10 +171,8 @@ defmodule Brando.Migrations.TransferRefMediaData do
     # NOTE: active and collapsed are now database columns, not in JSONB data
     # NOTE: Set loop=true and muted=true if autoplay=true (required by browsers and makes UX sense)
     # NOTE: Brando before 0.54 rendered every file video with `loop` (blocks had
-    # no such setting) and passed `cover: :svg` whatever the block's `cover`
-    # held, so a missing `loop` becomes true and any other cover, such as a
-    # Vimeo thumbnail URL, becomes "svg". The media block's template_video below
-    # gets the same.
+    # no such setting), so a missing `loop` becomes true. For `cover`, see
+    # legacy_cover/1. The media block's template_video below gets the same.
     execute """
     UPDATE content_refs
     SET data = jsonb_build_object(
@@ -188,7 +186,7 @@ defmodule Brando.Migrations.TransferRefMediaData do
           'preload', data->'data'->'preload',
           'play_button', data->'data'->'play_button',
           'controls', data->'data'->'controls',
-          'cover', CASE WHEN data->'data'->>'cover' IN ('false', 'svg', 'true') THEN data->'data'->>'cover' WHEN data->'data'->>'cover' IS NOT NULL THEN 'svg' END,
+          'cover', #{legacy_cover("data->'data'")},
           'aspect_ratio', data->'data'->>'aspect_ratio',
           'cover_image', data->'data'->'cover_image',
           'loop', CASE WHEN data->'data'->'autoplay' = 'true'::jsonb THEN 'true'::jsonb ELSE COALESCE(data->'data'->'loop', 'true'::jsonb) END,
@@ -419,7 +417,7 @@ defmodule Brando.Migrations.TransferRefMediaData do
                   'preload', data->'data'->'template_video'->'preload',
                   'play_button', data->'data'->'template_video'->'play_button',
                   'controls', data->'data'->'template_video'->'controls',
-                  'cover', CASE WHEN data->'data'->'template_video'->>'cover' IN ('false', 'svg', 'true') THEN data->'data'->'template_video'->>'cover' WHEN data->'data'->'template_video'->>'cover' IS NOT NULL THEN 'svg' END,
+                  'cover', #{legacy_cover("data->'data'->'template_video'")},
                   'aspect_ratio', data->'data'->'template_video'->>'aspect_ratio',
                   'cover_image', data->'data'->'template_video'->'cover_image',
                   'loop', CASE WHEN data->'data'->'template_video'->'autoplay' = 'true'::jsonb THEN 'true'::jsonb ELSE COALESCE(data->'data'->'template_video'->'loop', 'true'::jsonb) END,
@@ -508,6 +506,21 @@ defmodule Brando.Migrations.TransferRefMediaData do
   # prefix (`/media/images/site/x.jpg`), while `images.path` has no prefix
   # (`images/site/x.jpg`). Match a stored path as it is, and with the configured
   # media URL's path (and the default `/media`) stripped off its front.
+  # Brando before 0.54 passed `cover: :svg` for every file video whatever the
+  # block's `cover` held (the default "false", or a Vimeo thumbnail URL), and
+  # the placeholder was drawn when the block had a width. The renderer now
+  # honours `cover`, so write "svg" where it was drawn. Anything else keeps
+  # "false", "svg" or "true", and an unknown string becomes "svg".
+  defp legacy_cover(data) do
+    """
+    CASE
+      WHEN #{data}->>'source' = 'file' AND #{data}->>'width' ~ '^[1-9][0-9]*$' THEN 'svg'
+      WHEN #{data}->>'cover' IN ('false', 'svg', 'true') THEN #{data}->>'cover'
+      WHEN #{data}->>'cover' IS NOT NULL THEN 'svg'
+    END
+    """
+  end
+
   # The source a legacy video block points at: its url, or for an embed saved
   # with only a remote id, the provider URL built from it. Creating the videos
   # and linking the refs to them must use the same expression, or an embed

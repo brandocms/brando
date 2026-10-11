@@ -264,7 +264,8 @@ defmodule Brando.Migrations.UpgradeFromVillainTest do
           "refs" => [
             villain_video("video", %{"width" => 400, "height" => 300}),
             villain_video("vimeo", %{"source" => "vimeo", "remote_id" => "76979871", "width" => 640, "height" => 360}),
-            villain_video("youtube", %{"source" => "youtube", "remote_id" => "dQw4w9WgXcQ"})
+            villain_video("youtube", %{"source" => "youtube", "remote_id" => "dQw4w9WgXcQ"}),
+            villain_video("unsized", %{"width" => nil, "height" => nil})
           ],
           "vars" => []
         }
@@ -406,14 +407,20 @@ defmodule Brando.Migrations.UpgradeFromVillainTest do
            ) == [["Value 1"], ["Value 2"]]
 
     # Pre-0.54 Brando always rendered file videos with `loop`, and drew its SVG
-    # placeholder whatever `cover` held
+    # placeholder for any file video with a width, whatever `cover` held
     assert rows(
              """
              SELECT name, data->'data'->'loop', data->'data'->>'cover' FROM content_refs
              WHERE block_id = $1 ORDER BY name
              """,
              [video_block]
-           ) == [["cover_video", true, "svg"], ["video", true, "false"]]
+           ) == [["cover_video", true, "svg"], ["video", true, "svg"]]
+
+    # The placeholder needed the block's width; embeds never had one
+    assert rows(
+             "SELECT name, data->'data'->>'cover' FROM content_refs WHERE block_id = $1 ORDER BY name",
+             [other_video_block]
+           ) == [["unsized", "false"], ["video", "svg"], ["vimeo", "false"], ["youtube", "false"]]
 
     # One video record per file, sized by the first block that used it; a
     # block that drew it in another shape keeps that shape as its own
@@ -428,6 +435,7 @@ defmodule Brando.Migrations.UpgradeFromVillainTest do
            ) == [
              ["cover_video", "external_file", "https://cdn.example.com/video.mp4", 840, 1052, nil],
              ["video", "external_file", "https://cdn.example.com/video.mp4", 840, 1052, nil],
+             ["unsized", "external_file", "https://cdn.example.com/video.mp4", 840, 1052, nil],
              ["video", "external_file", "https://cdn.example.com/video.mp4", 840, 1052, "400:300"],
              ["vimeo", "vimeo", "https://vimeo.com/76979871", 640, 360, nil],
              ["youtube", "youtube", "https://www.youtube.com/watch?v=dQw4w9WgXcQ", 840, 1052, nil]
