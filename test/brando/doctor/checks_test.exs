@@ -179,6 +179,15 @@ defmodule Brando.Doctor.ChecksTest do
                Checks.Oban.evaluate(%{testing: nil, queues: @queues, stuck: [], discarded: [], sweep: true})
     end
 
+    test "its job queries are not logged" do
+      level = Logger.level()
+      Logger.configure(level: :debug)
+      on_exit(fn -> Logger.configure(level: level) end)
+
+      log = ExUnit.CaptureLog.capture_log([level: :debug], fn -> Checks.Oban.run(context()) end)
+      refute log =~ "oban_jobs"
+    end
+
     test "finds the sweep in Brando's default crontab, or the cron plugin's" do
       assert Checks.Oban.sweep_scheduled?(cron: [crontab: [{"*/10 * * * *", Brando.Worker.ScheduledPublishingSweep}]])
 
@@ -294,11 +303,12 @@ defmodule Brando.Doctor.ChecksTest do
   end
 
   describe "AdminAssets" do
-    defp backend(package, files \\ %{}) do
+    defp backend(package, files \\ %{}, lockfile \\ "pnpm-lock.yaml") do
       root = tmp_dir("assets")
       backend = Path.join(root, "assets/backend")
       File.mkdir_p!(backend)
       File.write!(Path.join(backend, "package.json"), Jason.encode!(package))
+      File.write!(Path.join(backend, lockfile), "")
 
       for {path, json} <- files do
         File.mkdir_p!(Path.dirname(Path.join(backend, path)))
@@ -334,7 +344,20 @@ defmodule Brando.Doctor.ChecksTest do
       result = Checks.AdminAssets.evaluate(Path.join(root, "assets/backend"), "0.55.0")
       assert result.status == :warning
       assert result.summary == ".yalc brandojs 0.54.0"
-      assert result.fix =~ "npx yalc update"
+      assert result.fix =~ "npx yalc publish in Brando's assets, then npx yalc update"
+    end
+
+    test "a backend that is not a pnpm project yet is upgraded first" do
+      root = backend(@yalc, %{".yalc/@brandocms/brandojs/package.json" => %{"version" => "0.52.0"}}, "yarn.lock")
+      result = Checks.AdminAssets.evaluate(Path.join(root, "assets/backend"), "0.55.0")
+
+      assert result.status == :warning
+      assert result.summary == ".yalc brandojs 0.52.0"
+      assert result.fix =~ "mix brando.gen.backend --upgrade, then mix brando.assets.setup --backend-only"
+
+      pnpm = Map.put(@yalc, "packageManager", "pnpm@10.32.1")
+      root = backend(pnpm, %{".yalc/@brandocms/brandojs/package.json" => %{"version" => "0.52.0"}}, "yarn.lock")
+      refute Checks.AdminAssets.evaluate(Path.join(root, "assets/backend"), "0.55.0").fix =~ "gen.backend"
     end
 
     test "a checkout linked by path" do
@@ -385,11 +408,13 @@ defmodule Brando.Doctor.ChecksTest do
 
       # Factory images have five sizes where the config has six.
       assert result.summary ==
-               "1 config changed since its images were made (1 image); 1 image was made before Brando recorded its settings: it differs (recreate it)"
+               "1 config changed since its images were made (1 image); 1 image was made before Brando recorded its settings: it differs from its config (recreate it)"
 
       assert result.items == ["default: 1 image", "default: 1 image without recorded settings"]
       assert {"#utils-image-sizes", _label} = result.link
-      assert result.fix == "Utilities → Recreate changed images"
+
+      assert result.fix ==
+               "Utilities → Recreate changed images recreates the images that differ; mix brando.images.adopt --dry-run --verbose lists why each one differs"
     end
   end
 
@@ -433,7 +458,8 @@ defmodule Brando.Doctor.ChecksTest do
       assert result.summary ==
                "3 images were made before Brando recorded their settings: 2 already match (mix brando.images.adopt records that), 1 differs (recreate it)"
 
-      assert result.fix == "Utilities → Recreate changed images"
+      assert result.fix ==
+               "Utilities → Recreate changed images recreates the images that differ; mix brando.images.adopt --dry-run --verbose lists why each one differs"
     end
 
     test "none match" do
@@ -441,9 +467,14 @@ defmodule Brando.Doctor.ChecksTest do
       Factory.insert(:image, config_fingerprint: nil, path: "image/4.jpg")
 
       result = Checks.ImageConfigs.run(context())
-      assert result.summary == "2 images were made before Brando recorded their settings: none match (recreate them)"
+
+      assert result.summary ==
+               "2 images were made before Brando recorded their settings: all 2 differ from their config (recreate them)"
+
       assert result.items == ["default: 2 images without recorded settings"]
-      assert result.fix == "Utilities → Recreate changed images"
+
+      assert result.fix ==
+               "Utilities → Recreate changed images recreates the images that differ; mix brando.images.adopt --dry-run --verbose lists why each one differs"
     end
 
     test "none left to record" do
@@ -458,6 +489,15 @@ defmodule Brando.Doctor.ChecksTest do
 
       assert result.summary ==
                "10 images were made before Brando recorded their settings: 7 likely match (mix brando.images.adopt checks and records that), 3 differ (recreate them)"
+    end
+
+    test "only changed configs: recreate them" do
+      result =
+        Checks.ImageConfigs.evaluate([
+          {nil, %{changed: %{"default" => 2}, unrecorded: %{}, matching: %{}, check: :files}}
+        ])
+
+      assert result.fix == "Utilities → Recreate changed images"
     end
 
     test "each environment is checked against its own images and media" do

@@ -461,6 +461,11 @@ msgstr ""
 msgid "Utilities → Recreate changed images"
 msgstr ""
 
+#: lib/brando/doctor/checks/image_configs.ex
+#, elixir-autogen, elixir-format
+msgid "Utilities → Recreate changed images recreates the images that differ; mix brando.images.adopt --dry-run --verbose lists why each one differs"
+msgstr ""
+
 #: lib/brando/doctor/checks/versions.ex
 #, elixir-autogen, elixir-format
 msgid "Versions"
@@ -578,7 +583,12 @@ msgstr ""
 
 #: lib/brando/doctor/checks/admin_assets.ex
 #, elixir-autogen, elixir-format
-msgid "expected %{version}, run npx yalc update %{package} and pnpm install in assets/backend"
+msgid "expected %{version}, run npx yalc publish in Brando's assets, then npx yalc update %{package} and pnpm install in assets/backend (or mix brando.assets.setup --backend-only)"
+msgstr ""
+
+#: lib/brando/doctor/checks/admin_assets.ex
+#, elixir-autogen, elixir-format
+msgid "expected %{version}; assets/backend is not a pnpm project yet: run mix brando.gen.backend --upgrade, then mix brando.assets.setup --backend-only"
 msgstr ""
 
 #: lib/brando/doctor/checks/json_ld.ex
@@ -642,8 +652,8 @@ msgstr[1] ""
 
 #: lib/brando/doctor/checks/image_configs.ex
 #, elixir-autogen, elixir-format
-msgid "it differs (recreate it)"
-msgid_plural "none match (recreate them)"
+msgid "it differs from its config (recreate it)"
+msgid_plural "all %{count} differ from their config (recreate them)"
 msgstr[0] ""
 msgstr[1] ""
 

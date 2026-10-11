@@ -461,6 +461,11 @@ msgstr "Verktøy → Generer nettstedskart"
 msgid "Utilities → Recreate changed images"
 msgstr "Verktøy → Lag endrede bilder på nytt"
 
+#: lib/brando/doctor/checks/image_configs.ex
+#, elixir-autogen, elixir-format
+msgid "Utilities → Recreate changed images recreates the images that differ; mix brando.images.adopt --dry-run --verbose lists why each one differs"
+msgstr "Verktøy → Lag endrede bilder på nytt lager bildene som avviker på nytt; mix brando.images.adopt --dry-run --verbose viser hvorfor hvert av dem avviker"
+
 #: lib/brando/doctor/checks/versions.ex
 #, elixir-autogen, elixir-format
 msgid "Versions"
@@ -578,8 +583,13 @@ msgstr "forventet %{version}, kjør mix brando.assets.setup --backend-only"
 
 #: lib/brando/doctor/checks/admin_assets.ex
 #, elixir-autogen, elixir-format
-msgid "expected %{version}, run npx yalc update %{package} and pnpm install in assets/backend"
-msgstr "forventet %{version}, kjør npx yalc update %{package} og pnpm install i assets/backend"
+msgid "expected %{version}, run npx yalc publish in Brando's assets, then npx yalc update %{package} and pnpm install in assets/backend (or mix brando.assets.setup --backend-only)"
+msgstr "forventet %{version}, kjør npx yalc publish i Brandos assets, deretter npx yalc update %{package} og pnpm install i assets/backend (eller mix brando.assets.setup --backend-only)"
+
+#: lib/brando/doctor/checks/admin_assets.ex
+#, elixir-autogen, elixir-format
+msgid "expected %{version}; assets/backend is not a pnpm project yet: run mix brando.gen.backend --upgrade, then mix brando.assets.setup --backend-only"
+msgstr "forventet %{version}; assets/backend er ikke et pnpm-prosjekt ennå: kjør mix brando.gen.backend --upgrade, deretter mix brando.assets.setup --backend-only"
 
 #: lib/brando/doctor/checks/json_ld.ex
 #, elixir-autogen, elixir-format
@@ -642,10 +652,10 @@ msgstr[1] "alle samsvarer allerede (mix brando.images.adopt lagrer det)"
 
 #: lib/brando/doctor/checks/image_configs.ex
 #, elixir-autogen, elixir-format
-msgid "it differs (recreate it)"
-msgid_plural "none match (recreate them)"
-msgstr[0] "det avviker (lag det på nytt)"
-msgstr[1] "ingen samsvarer (lag dem på nytt)"
+msgid "it differs from its config (recreate it)"
+msgid_plural "all %{count} differ from their config (recreate them)"
+msgstr[0] "det avviker fra oppsettet sitt (lag det på nytt)"
+msgstr[1] "alle %{count} avviker fra oppsettet sitt (lag dem på nytt)"
 
 #: lib/brando/doctor/checks/image_configs.ex
 #, elixir-autogen, elixir-format
