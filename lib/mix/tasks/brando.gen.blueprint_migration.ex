@@ -66,7 +66,10 @@ if Code.ensure_loaded?(Igniter) do
         comment giving its count, and legacy Villain columns (data, html,
         *_data) are never dropped; a drop of something the database lacks is
         left out. A kept NOT NULL column without a default loses its NOT NULL,
-        so inserts that leave it out keep working.
+        so inserts that leave it out keep working;
+      * a change of a column the database lacks becomes an add; a rename
+        already done by hand is left out, one with neither column becomes an
+        add, and one with both stops the plan.
 
     The first comment of each migration and the summary name the repo,
     database and schemas read. A summary lists what was reconciled in each file. --reconcile works with a

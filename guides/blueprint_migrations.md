@@ -502,6 +502,11 @@ copy of production. Then:
   index or table the database does not have is left out. The snapshot of an
   `alter` written in place of a `create table` is recorded as a baseline, so
   what it found stays unowned.
+- A change (`modify`) of a column the database lacks becomes an `add` of the
+  new definition. A rename whose target already exists and whose source does
+  not is left out; one where neither exists becomes an `add` of the new name.
+  When both exist the plan stops: merge them by hand first. Each case gets a
+  comment.
 - A kept column that is `NOT NULL` without a default would fail every insert,
   since the schema no longer writes it. The migration drops its `NOT NULL` with
   `ALTER TABLE ... DROP NOT NULL` (not `modify`, which would also reset its

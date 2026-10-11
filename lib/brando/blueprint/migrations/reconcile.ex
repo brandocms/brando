@@ -264,6 +264,9 @@ defmodule Brando.Blueprint.Migrations.Reconcile do
     existing_tables = database.tables |> Map.keys() |> MapSet.new() |> MapSet.difference(dropped_tables)
 
     {add_columns, add_notes} = reconcile_added_columns(diff.add_columns, table, columns, database)
+    {renames, changes, instead, change_notes} = reconcile_renames_and_changes(diff, current, columns)
+    add_columns = add_columns ++ instead
+    add_notes = add_notes ++ change_notes
 
     guarded_indexes =
       (diff.add_indexes ++ Enum.flat_map(diff.add_auxiliary_tables, & &1.indexes))
@@ -277,6 +280,8 @@ defmodule Brando.Blueprint.Migrations.Reconcile do
     reconciled = %{
       diff
       | add_columns: add_columns,
+        change_columns: changes,
+        rename_columns: renames,
         remove_columns: remove_columns,
         remove_indexes: remove_indexes,
         remove_auxiliary_tables: remove_tables,
@@ -330,6 +335,77 @@ defmodule Brando.Blueprint.Migrations.Reconcile do
         if(planned.timestamps == :remove and reconciled.timestamps == :unchanged, do: timestamps, else: [])
 
     Enum.filter(kept, &(MapSet.member?(columns, &1) and MapSet.member?(required, &1)))
+  end
+
+  # A rename whose source is gone was done by hand, or never had a column to
+  # rename; a change to a column the database lacks has nothing to modify.
+  # Either way the Blueprint wants the new column, so it is added unless it is
+  # already there. Both columns present cannot be settled without the data.
+  defp reconcile_renames_and_changes(diff, current, columns) do
+    table = current.table
+    present? = &MapSet.member?(columns, to_string(&1))
+    defined = Map.new(current.columns, &{&1.name, &1})
+
+    {renames, added, notes} =
+      Enum.reduce(diff.rename_columns, {[], [], []}, fn {old, new}, {renames, added, notes} ->
+        case {present?.(old), present?.(new)} do
+          {true, true} ->
+            raise_both_columns!(table, old, new)
+
+          {true, false} ->
+            {renames ++ [{old, new}], added, notes}
+
+          {false, true} ->
+            {renames, added,
+             notes ++
+               [
+                 {:left_out, "rename of #{table}.#{old} to #{new} (#{new} already exists)"},
+                 {:comment,
+                  "#{table}.#{new} already exists and #{old} does not, so this migration leaves out the rename."}
+               ]}
+
+          {false, false} ->
+            {renames, added ++ [Map.fetch!(defined, new)],
+             notes ++
+               [
+                 {:comment,
+                  "Neither #{table}.#{old} nor #{new} is in the database, so this migration adds #{new} instead of renaming."}
+               ]}
+        end
+      end)
+
+    renamed_to = MapSet.new(diff.rename_columns, &elem(&1, 1))
+    added_names = MapSet.new(added, & &1.name)
+
+    {changes, instead, change_notes} =
+      Enum.reduce(diff.change_columns, {[], [], []}, fn {_old, new} = change, {changes, instead, notes} ->
+        cond do
+          MapSet.member?(added_names, new.name) ->
+            {changes, instead, notes}
+
+          present?.(new.name) or MapSet.member?(renamed_to, new.name) ->
+            {changes ++ [change], instead, notes}
+
+          true ->
+            {changes, instead ++ [new],
+             notes ++
+               [
+                 {:comment,
+                  "#{table}.#{new.name} is not in the database, so this migration adds it instead of changing it."}
+               ]}
+        end
+      end)
+
+    {renames, changes, added ++ instead, notes ++ change_notes}
+  end
+
+  defp raise_both_columns!(table, old, new) do
+    raise BlueprintError,
+      message: """
+      #{table} has both #{old} and #{new}, and the Blueprint renames #{old} to #{new}.
+      --reconcile cannot tell which holds the data to keep. Merge them in a
+      hand-written migration, then plan again.
+      """
   end
 
   # An existing column with a foreign key is left out: `ADD COLUMN IF NOT

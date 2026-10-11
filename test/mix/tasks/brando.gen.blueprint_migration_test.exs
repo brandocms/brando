@@ -636,6 +636,48 @@ defmodule Mix.Tasks.Brando.Gen.BlueprintMigrationTest do
       end)
     end
 
+    test "a change or rename of a column the database lacks becomes an add or is left out", context do
+      opts = [migration_path: context.migration_path, snapshot_path: context.snapshot_path]
+      {:ok, _} = Migrations.create_migration(Brando.MigrationTest.ReconcileNoteV1, opts)
+
+      # `body` and `label` were never created; `old_name` was renamed by hand.
+      query!("CREATE TABLE reconcile_notes (id bigserial PRIMARY KEY, title text, new_name text)")
+      legacy_columns = columns("reconcile_notes")
+
+      planned = reconcile(context, Brando.MigrationTest.ReconcileNoteV2, ["--dry-run"])
+      assert planned.issues == []
+      plan = planned.assigns.brando_storage_plan
+      [up, down] = String.split(plan.migration_source, "def down do")
+
+      assert up =~ ~s(modify :title, :text, default: "Untitled")
+      assert up =~ ~s(add :body, :text, default: "Empty")
+      assert up =~ "add :headline, :text"
+      refute plan.migration_source =~ "rename table"
+      refute plan.migration_source =~ ~r/modify :(body|headline)/
+      assert down =~ "remove :body"
+      assert down =~ "remove :headline"
+
+      comments = comments(plan.migration_source)
+      assert comments =~ "reconcile_notes.body is not in the database, so this migration adds it instead of changing it."
+
+      assert comments =~
+               "reconcile_notes.new_name already exists and old_name does not, so this migration leaves out the rename."
+
+      assert comments =~
+               "Neither reconcile_notes.label nor headline is in the database, so this migration adds headline instead of renaming."
+
+      migrate_up(plan.migration_source, fn down ->
+        assert Enum.all?(~w(body headline), &(&1 in columns("reconcile_notes")))
+        down.()
+        assert columns("reconcile_notes") == legacy_columns
+      end)
+
+      query!("ALTER TABLE reconcile_notes ADD COLUMN old_name text")
+      both = reconcile(context, Brando.MigrationTest.ReconcileNoteV2, ["--dry-run"])
+      assert [issue] = both.issues
+      assert issue =~ "reconcile_notes has both old_name and new_name"
+    end
+
     test "counts that change after review do not make the plan stale", context do
       opts = [migration_path: context.migration_path, snapshot_path: context.snapshot_path]
       {:ok, _} = Migrations.create_migration(ReconcileArticleV1, opts)

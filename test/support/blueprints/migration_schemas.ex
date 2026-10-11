@@ -913,3 +913,39 @@ defmodule Brando.MigrationTest.ReconcileFarmV2 do
     attribute :title, :string
   end
 end
+
+# `reconcile_notes`, whose snapshot (V1) disagrees with the table about the
+# columns V2 changes and renames.
+defmodule Brando.MigrationTest.ReconcileNoteV1 do
+  use Brando.Blueprint,
+    application: "Brando",
+    domain: "Reconcile",
+    schema: "Note",
+    singular: "reconcile_note",
+    plural: "notes",
+    gettext_module: Brando.Gettext
+
+  attributes do
+    attribute :title, :string
+    attribute :body, :string
+    attribute :label, :string
+    attribute :old_name, :string
+  end
+end
+
+defmodule Brando.MigrationTest.ReconcileNoteV2 do
+  use Brando.Blueprint,
+    application: "Brando",
+    domain: "Reconcile",
+    schema: "Note",
+    singular: "reconcile_note",
+    plural: "notes",
+    gettext_module: Brando.Gettext
+
+  attributes do
+    attribute :title, :string, default: "Untitled"
+    attribute :body, :string, default: "Empty"
+    attribute :headline, :string, rename_from: :label
+    attribute :new_name, :string, rename_from: :old_name
+  end
+end
