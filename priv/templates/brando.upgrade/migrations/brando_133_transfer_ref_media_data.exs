@@ -189,6 +189,11 @@ defmodule Brando.Migrations.TransferRefMediaData do
     # preload, play_button, controls, cover, aspect_ratio, cover_image, loop, muted, playsinline, video_class, container_class
     # NOTE: active and collapsed are now database columns, not in JSONB data
     # NOTE: Set loop=true and muted=true if autoplay=true (required by browsers and makes UX sense)
+    # NOTE: Brando before 0.54 rendered every file video with `loop` (blocks had
+    # no such setting) and passed `cover: :svg` whatever the block's `cover`
+    # held, so a missing `loop` becomes true and any other cover, such as a
+    # Vimeo thumbnail URL, becomes "svg". The media block's template_video below
+    # gets the same.
     execute """
     UPDATE content_refs
     SET data = jsonb_build_object(
@@ -202,10 +207,10 @@ defmodule Brando.Migrations.TransferRefMediaData do
           'preload', data->'data'->'preload',
           'play_button', data->'data'->'play_button',
           'controls', data->'data'->'controls',
-          'cover', data->'data'->>'cover',
+          'cover', CASE WHEN data->'data'->>'cover' IN ('false', 'svg', 'true') THEN data->'data'->>'cover' WHEN data->'data'->>'cover' IS NOT NULL THEN 'svg' END,
           'aspect_ratio', data->'data'->>'aspect_ratio',
           'cover_image', data->'data'->'cover_image',
-          'loop', CASE WHEN data->'data'->'autoplay' = 'true'::jsonb THEN 'true'::jsonb ELSE COALESCE(data->'data'->'loop', 'false'::jsonb) END,
+          'loop', CASE WHEN data->'data'->'autoplay' = 'true'::jsonb THEN 'true'::jsonb ELSE COALESCE(data->'data'->'loop', 'true'::jsonb) END,
           'muted', CASE WHEN data->'data'->'autoplay' = 'true'::jsonb THEN 'true'::jsonb ELSE COALESCE(data->'data'->'muted', 'false'::jsonb) END,
           'playsinline', 'true'::jsonb,
           'video_class', data->'data'->>'video_class',
@@ -433,10 +438,10 @@ defmodule Brando.Migrations.TransferRefMediaData do
                   'preload', data->'data'->'template_video'->'preload',
                   'play_button', data->'data'->'template_video'->'play_button',
                   'controls', data->'data'->'template_video'->'controls',
-                  'cover', data->'data'->'template_video'->>'cover',
+                  'cover', CASE WHEN data->'data'->'template_video'->>'cover' IN ('false', 'svg', 'true') THEN data->'data'->'template_video'->>'cover' WHEN data->'data'->'template_video'->>'cover' IS NOT NULL THEN 'svg' END,
                   'aspect_ratio', data->'data'->'template_video'->>'aspect_ratio',
                   'cover_image', data->'data'->'template_video'->'cover_image',
-                  'loop', CASE WHEN data->'data'->'template_video'->'autoplay' = 'true'::jsonb THEN 'true'::jsonb ELSE COALESCE(data->'data'->'template_video'->'loop', 'false'::jsonb) END,
+                  'loop', CASE WHEN data->'data'->'template_video'->'autoplay' = 'true'::jsonb THEN 'true'::jsonb ELSE COALESCE(data->'data'->'template_video'->'loop', 'true'::jsonb) END,
                   'muted', CASE WHEN data->'data'->'template_video'->'autoplay' = 'true'::jsonb THEN 'true'::jsonb ELSE COALESCE(data->'data'->'template_video'->'muted', 'false'::jsonb) END,
                   'playsinline', 'true'::jsonb,
                   'video_class', data->'data'->'template_video'->>'video_class',
