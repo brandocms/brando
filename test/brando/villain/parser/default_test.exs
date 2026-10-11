@@ -90,6 +90,23 @@ defmodule Brando.Villain.ParserTest do
     assert html =~ ~s(height="360")
   end
 
+  test "video/2 embeds take the shape of an aspect ratio override" do
+    # A block's own aspect ratio wins over the shared video record's size, as
+    # it does for file videos
+    youtube =
+      video(%{remote_id: "asdf1234", type: :youtube, autoplay: false, width: 640, height: 360, aspect_ratio: "4:3"}, [])
+
+    assert youtube =~ "--aspect-ratio: 0.75\""
+
+    vimeo = video(%{remote_id: "asdf1234", type: :vimeo, width: 640, height: 360, aspect_ratio: "9/16"}, [])
+    assert vimeo =~ "--aspect-ratio: 1.7777777777777777\""
+    assert vimeo =~ ~s(data-orientation="portrait")
+
+    # Not a ratio: the record's size decides
+    assert video(%{remote_id: "asdf1234", type: :vimeo, width: 640, height: 360, aspect_ratio: "wide"}, []) =~
+             "--aspect-ratio: 0.5625\""
+  end
+
   test "video/2 file" do
     assert video(
              %{

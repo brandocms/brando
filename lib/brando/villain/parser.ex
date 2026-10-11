@@ -530,6 +530,23 @@ defmodule Brando.Villain.Parser do
     %{width: width, height: height, orientation: orientation}
   end
 
+  # A block's own aspect ratio ("16:9" or "16/9") reshapes an embed, as it
+  # does a file video: the shared video record carries one size, and before
+  # 0.54 each block rendered its own. The width stays; the height follows.
+  defp override_shape(%{width: width} = fields, %{aspect_ratio: ratio}) when is_binary(ratio) and is_integer(width) do
+    with [w, h] <- String.split(ratio, ["/", ":"]),
+         {w, ""} <- w |> String.trim() |> Integer.parse(),
+         {h, ""} <- h |> String.trim() |> Integer.parse(),
+         true <- w > 0 and h > 0 do
+      height = round(width * h / w)
+      Map.merge(fields, %{height: height, orientation: (width > height && "landscape") || "portrait", ratio: h / w})
+    else
+      _ -> fields
+    end
+  end
+
+  defp override_shape(fields, _data), do: fields
+
   defp to_integer(val, _default) when is_integer(val), do: val
 
   defp to_integer(val, default) when is_binary(val) do
@@ -613,8 +630,8 @@ defmodule Brando.Villain.Parser do
   end
 
   def video(%{remote_id: remote_id, type: :youtube, autoplay: autoplay} = data, _) do
-    video_fields = extract_video_dimensions(data, 420, 315)
-    aspect_ratio = calculate_aspect_ratio(video_fields.width, video_fields.height)
+    video_fields = data |> extract_video_dimensions(420, 315) |> override_shape(data)
+    aspect_ratio = video_fields[:ratio] || calculate_aspect_ratio(video_fields.width, video_fields.height)
     params = "autoplay=#{(autoplay && 1) || 0}&controls=0&showinfo=0&rel=0"
 
     params =
@@ -636,10 +653,14 @@ defmodule Brando.Villain.Parser do
     video_fields = extract_video_dimensions(data, 500, 281)
 
     # Ensure values are integers
-    width = to_integer(video_fields.width, 500)
-    height = to_integer(video_fields.height, 281)
+    %{width: width, height: height} =
+      video_fields =
+      override_shape(
+        %{video_fields | width: to_integer(video_fields.width, 500), height: to_integer(video_fields.height, 281)},
+        data
+      )
 
-    aspect_ratio = calculate_aspect_ratio(width, height)
+    aspect_ratio = video_fields[:ratio] || calculate_aspect_ratio(width, height)
 
     render_iframe_video(
       width,

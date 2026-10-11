@@ -29,3 +29,9 @@
   video, sized by the first block that used it (the choice was arbitrary
   before); a block that drew the file in another shape keeps that shape as
   its own aspect ratio.
+
+- **YouTube and Vimeo blocks honour their aspect ratio override.** The
+  parser sized embeds from the video record's width and height and ignored the
+  block's own `aspect_ratio`, which file videos already used. An embed now
+  keeps the record's width and takes its height and `--aspect-ratio` from the
+  override when one is set.
