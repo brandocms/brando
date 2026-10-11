@@ -6,6 +6,31 @@ Treat the upgrade as a reviewed deployment, not as one automatic command.
 Applications on the `0.54` branch follow the same order; the source step below
 says which task they skip.
 
+## Which guide
+
+Find the newest Brando migration the application has copied:
+
+```shell
+ls priv/repo/migrations | grep -o 'brando_[0-9]*' | sort -t_ -k2 -n | tail -1
+```
+
+| Newest migration | The application is on | Follow |
+| --- | --- | --- |
+| `brando_55` or lower | 0.51 (`legacy`): Vue admin, no Blueprints | [Migrating from 0.51](migrating_from_051.md) |
+| `brando_56` to `brando_102` | 0.52 or 0.53: Blueprints, content still Villain JSON in `data` columns, no `*_blocks` tables | This guide, both source tasks |
+| `brando_103` to `brando_130` | 0.54: blocks | This guide, without `mix brando.migrate54` |
+| `brando_131` or higher | a 0.55 development build | This guide from section 3 |
+
+The `@version` in `deps/brando/mix.exs` is a weaker signal: a development
+checkout reported `0.53.0-dev` from mid-2022 to the 0.53.0 release in 2024.
+
+- On 0.52 (`brando_87` or lower), first make the changes in the 0.53.0
+  section of `CHANGELOG.md`. No task covers the 0.52 to 0.53 source changes.
+- With Villain content, `mix brando.migrate` converts it to blocks
+  (`brando_103` onward), and the Blueprint snapshots predate that conversion.
+  Read [Legacy snapshots](#legacy-snapshots) before generating Blueprint
+  migrations.
+
 ## 1. Establish a recovery point
 
 Before updating the dependency:
@@ -26,23 +51,82 @@ existing table look new to the generator.
 ### Dependencies and toolchain
 
 The source tasks run once the new Brando resolves, so fix `mix.exs` by hand
-first:
+first.
 
-- `{:gettext, "~> 1.0"}`. Brando requires Gettext 1.0; `~> 0.26` does not
-  resolve.
+Point the Brando dependency at a checkout, or at a commit on GitHub:
+
+```elixir
+# mix.exs
+{:brando, path: "/absolute/path/to/brando"},
+# or
+{:brando, github: "brandocms/brando", ref: "<commit sha>"},
+```
+
+Use `path:` to rehearse locally only. The release's Docker build fetches
+dependencies from `mix.exs` and cannot see a checkout outside the project, so
+deploy from `github:`. [Installation and generators](generators.md) describes
+working against a `path:` checkout, including `mix deps.compile brando` after
+changing it.
+
+The admin's JavaScript, BrandoJS, comes from the same Brando source through
+Yalc. `mix brando.assets.setup --backend-only` (see
+[Admin assets](#admin-assets)) publishes the dependency's `assets` directory to
+a store under `_build` and updates `assets/backend/.yalc`. By hand, the steps
+are `npx yalc publish` in Brando's `assets`, then
+`npx yalc update @brandocms/brandojs` and `pnpm install` in the application's
+`assets/backend`, and a restart of its Vite. Do not use `yalc push`: it
+rewrites every project registered with Yalc on the machine. Keep the Elixir and
+JavaScript sides on the same Brando revision.
+
+Brando requires exact or recent versions of packages a 2023 `mix.exs` also
+declares, and `mix deps.get` reports the conflicts one at a time. Change every
+one the application declares before fetching (the versions are Brando's own,
+from its `mix.exs`):
+
+```elixir
+# mix.exs
+{:phoenix, "~> 1.8.15"},
+{:phoenix_live_view, "~> 1.2.0"},
+{:phoenix_html, "~> 4.0"},
+{:ecto, "~> 3.14"},
+{:ecto_sql, "~> 3.14"},
+{:postgrex, "~> 0.20"},
+{:gettext, "~> 1.0"},
+{:floki, "~> 0.32"},
+{:swoosh, "~> 1.17"},
+{:igniter, "~> 0.8", only: [:dev, :test]},
+```
+
+Brando pins `phoenix` 1.8.15 and `phoenix_live_view` 1.2.12 exactly. If the
+application also declares `sentry` (`~> 13.0`), `oban` (`~> 2.23`), `cachex`
+(`~> 4.0`), `image`, `req` or another of Brando's dependencies, compare it with
+Brando's `mix.exs` as well. In particular:
+
+- Gettext 1.0 is required; `~> 0.26` does not resolve.
+- Remove `timex`. No Timex release accepts Gettext 1.0 (3.7.13 requires
+  `~> 0.26`), and Brando's installer added it to sites until 2021. Replace its
+  calls with `Date`, `DateTime` and `Calendar`; Brando makes the `tz`
+  package Elixir's time zone database at boot.
 - Drop `only: :test` from `floki` (the Phoenix generator default). Brando uses
   Floki at runtime, and `mix deps.get` stops with "Dependencies have diverged"
   while the application restricts it to tests.
-- Add Igniter, an optional Brando dependency the tasks are built on:
+- Igniter is an optional Brando dependency the source tasks are built on.
+- Brando depends on `ex_aws` 2.7, which accepts only hackney 4 whenever
+  anything else brings hackney in. Packages still on HTTPoison or hackney 1.x,
+  such as `ex_chimp` 0.1, fail with `version solving failed`. Upgrade them to a
+  release on hackney 4 or Req, or move those calls to Req, which Brando
+  already depends on.
 
-  ```elixir
-  # mix.exs
-  {:igniter, "~> 0.8", only: [:dev, :test]},
-  ```
+The old lock holds packages at versions the new Brando cannot use (`swoosh`
+1.14, or `elixir_make` 0.6, which `vix` and `image` cannot use), and Mix
+names `the lock` in the conflict. Unlock everything, then fetch:
 
-A lock from 2024 or early 2025 pins `elixir_make` 0.6, which `vix` and `image`
-cannot use, so they fail to resolve. Run `mix deps.unlock elixir_make`, or start
-from the `mix.lock` of a site already on 0.55, then fetch again.
+```shell
+mix deps.unlock --all
+mix deps.get
+```
+
+Starting from the `mix.lock` of a site already on 0.55 also works.
 
 Pin the toolchain with mise or asdf: a current Elixir and OTP, and Node 22 or
 24. The admin's `engines` (`^20.19 || ^22.12 || >=24`) rejects an odd release
@@ -51,10 +135,9 @@ Dockerfile's `node:` stages.
 
 ### Run the source tasks
 
-Update the Brando dependency and fetch it, then run:
+Once the dependencies resolve, run:
 
 ```shell
-mix deps.get
 mix brando.migrate54
 mix brando.migrate55
 ```
@@ -193,7 +276,9 @@ correct rewrite depends on application semantics:
 - refreshing the frontend's package-manager lockfile and rebuilding it after
   the task pins `phoenix_live_view` (the admin is covered in
   [Admin assets](#admin-assets)); nonstandard frontend manifests still need
-  manual review. Retain Hackney explicitly if application code uses it;
+  manual review. If application code calls Hackney directly, declare
+  `{:hackney, "~> 4.0"}`: hackney 1.x does not resolve next to Brando (see
+  [Dependencies and toolchain](#dependencies-and-toolchain));
 - updating callers of `Brando.Videos.Uploader.initiate_upload/3` for its new
   error tuples and provider credential behavior;
 - replacing the removed Brando.CDN key-existence check by hand. `key_available?/2` has inverted
@@ -218,6 +303,28 @@ correct rewrite depends on application semantics:
 
 The tasks report these items as warnings so they cannot be missed in the
 review.
+
+The tasks also leave alone what Phoenix 1.8 and phoenix_html 4 removed. Sites
+generated before 0.53 often still carry it:
+
+- `use Phoenix.HTML` raises "use Phoenix.HTML is no longer supported in v4.0",
+  typically from a Phoenix.View-era `ErrorHelpers` module or the
+  `view_helpers/0` function in `lib/my_app_web.ex`. Delete them if nothing
+  uses them. Otherwise add `{:phoenix_html_helpers, "~> 1.0"}` and replace
+  `use Phoenix.HTML` with `import Phoenix.HTML`, `import Phoenix.HTML.Form`
+  and `use PhoenixHTMLHelpers`.
+- Phoenix's code reloader needs a Mix listener; without it, boot warns "a Mix
+  listener expected by Phoenix.CodeReloader is missing". Add it to `project/0`
+  in `mix.exs`:
+
+  ```elixir
+  # mix.exs
+  listeners: [Phoenix.CodeReloader],
+  ```
+
+- LiveView 1.2 warns at compile time about `<input name="id">`, which
+  overrides the form's `id` property in the browser. Rename the field (to
+  `_id`, say) and map it back where the form is handled.
 
 Review every source change. In particular, decide which Blueprints should not
 persist identifiers:
@@ -249,8 +356,10 @@ It takes the template's package versions, `engines` and `packageManager`
 (keeping the application's own packages, scripts and BrandoJS source), replaces
 `vite.config.js`, removes `svelte.config.cjs` and yarn/npm lockfiles, and
 replaces the Dockerfile's `assets_backend` stage with the template's pnpm stage.
-Customized CSS and other existing files are kept. Review the diff, then install
-and build:
+Customized CSS and other existing files are kept. The other Dockerfile stages
+are left alone: an older Dockerfile may still build `assets_frontend` on
+`node:16`. Move it to the Node major you pinned above and check that the
+frontend still builds on it. Review the diff, then install and build:
 
 ```shell
 mix brando.assets.setup --backend-only
@@ -261,6 +370,10 @@ yarn or its own build; without it the task installs and builds both with pnpm.
 Commit the `assets/backend/pnpm-lock.yaml` it writes: the Docker build installs
 from it. The Docker image ships the admin from the local `assets/backend/.yalc`,
 so rerun the setup after updating BrandoJS.
+
+`mix brando.doctor` reports admin assets from an older BrandoJS and suggests
+`npx yalc update` and `pnpm install`. On a yarn-era `assets/backend` that is not
+enough: run `mix brando.gen.backend --upgrade` first, then the setup above.
 
 ### Review a generated Florist configuration
 
@@ -350,16 +463,35 @@ Brando migration chain has changed since. Diffed against it, the generator
 proposes storage that already exists (`create table(:projects_blocks)`,
 `rendered_blocks`) and drops the legacy Villain columns (`data`, `html`,
 `*_data`). It warns when a planned table or column already exists in the
-database or a planned drop looks like a Villain column. In that case:
+database or a planned drop looks like a Villain column. In that case, edit
+each generated migration by hand:
 
-- Compare `\d table` in a migrated copy of production with every generated
-  operation.
-- Where they disagree, switch to `create_if_not_exists`/`drop_if_exists` (and
-  `add_if_not_exists`/`remove_if_exists` for columns), and roll back and forward
-  once.
-- Keep `data`, `html` and the other Villain columns until the converted
-  content is verified on production data. They are the only record of what
-  the conversion started from, and repairs may need them.
+1. Compare `\d table` in a migrated copy of production with every generated
+   operation.
+2. For a table or index that already exists, use `create_if_not_exists`, and
+   `add_if_not_exists` for an existing column.
+3. Rewrite a `create table(...)` of a table that already exists (one that
+   predates Blueprint snapshots, so the generator saw no history) as an
+   `alter table(...)` that adds only what `\d` lacks, such as the Creator
+   trait's `edited_at` and `updated_by_id`. A table that already matches the
+   Blueprint needs no migration: establish its baseline with `--rebaseline`
+   as described above.
+4. Do not combine `add_if_not_exists` with `references(...)` on a column that
+   already exists. PostgreSQL skips the column but still adds the named
+   foreign-key constraint, and stops with `constraint ... already exists`.
+   Leave the column out, or drop the constraint first with
+   `drop_if_exists constraint(...)`.
+5. Keep `data`, `html` and the other Villain columns until the converted
+   content is verified on production data. They are the only record of what
+   the conversion started from, and repairs may need them. Keep any other
+   column the plan drops while it still holds data, such as one removed from
+   the Blueprint years ago without a migration; count its non-null values
+   before deciding.
+6. In `down/0`, undo only what `up/0` added: leave out the tables, indexes
+   and columns that existed before the migration.
+7. Roll back and forward once on a scratch copy. A second
+   `mix brando.gen.blueprint_migration --all --dry-run` should then propose
+   no changes.
 
 A trait removed from a Blueprint without a migration (Translatable, for
 example) surfaces in the first generator run as a proposal to drop its columns,
@@ -374,8 +506,21 @@ database: early copies use modules that no longer exist (such as
 `Brando.Sequence.Migration`), and `mix brando.gen.migrations` never refreshes an
 existing copy. Production is unaffected, because it only runs the new
 migrations. Load test and development databases from a `structure.sql` instead:
-migrate a copy of production, run `mix ecto.dump`, and commit the result. Check
-too that `test_paths` in `mix.exs` points at directories that exist.
+migrate a copy of production, run `mix ecto.dump` (it writes
+`priv/repo/structure.sql`), and commit the result. The usual `test` alias runs
+`ecto.migrate` on an empty database, which replays every migration, so load the
+dump before it:
+
+```elixir
+# mix.exs, in aliases/0
+test: ["ecto.create --quiet", "ecto.load --skip-if-loaded", "ecto.migrate", "test"]
+```
+
+`--skip-if-loaded` leaves a database that already has its migrations table
+alone, so if the old alias already created the test database, drop it once
+(`MIX_ENV=test mix ecto.drop`). `ecto.migrate` then runs only the migrations
+newer than the dump. Check too that `test_paths` in `mix.exs` points at
+directories that exist.
 
 Before touching a shared database:
 
@@ -398,6 +543,14 @@ work "in every environment" (their notes in the CHANGELOG say so) change
 `public` and every environment schema in that run. `--tenants` then runs the
 tenant migrations in each environment, including the Blueprint migrations of
 content stored there; tenant discovery needs the public migrations first.
+
+The migrations update every row of many tables (the generated Blueprint
+migrations backfill `edited_at` from `updated_at`, for example). PostgreSQL
+returns rows from a query without `ORDER BY` in storage order, and an update
+moves a row, so any page built on such a query may change order: the first
+category of a menu, or articles with equal `sequence`. Before diffing public
+pages against the old site, check the application's queries for a missing
+`order_by`, and add an `id` tiebreak where values can tie.
 
 ## 4. Repair derived data
 
