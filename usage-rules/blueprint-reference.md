@@ -129,9 +129,10 @@ Two special forms use `:has_many`:
 An image config's `sizes` replaces the default sizes; name the
 `{:standard, %{...}}` preset to extend them, as described in
 [Images, files, and galleries](deps/brando/guides/media.md#configure-a-cover-image). A declared
-`srcset` likewise replaces the default `srcset` whole. When the replacement
-has no `srcset`, the default `srcset` is kept only if all its sizes still
-exist.
+`srcset` replaces the default `srcset`, except that a keyed one
+(`%{cropped: [...]}`) in a config without its own `sizes` adds its keys to
+the default's. When a config replaces `sizes` but has no `srcset`, the
+default `srcset` is kept only if all its sizes still exist.
 
 ```elixir
 assets do
