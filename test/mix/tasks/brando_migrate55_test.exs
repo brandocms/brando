@@ -364,20 +364,72 @@ defmodule Mix.Tasks.Brando.Migrate55Test do
     igniter = migrate(@blueprint_054, %{endpoint_path => endpoint})
     # The test project's formatter has no Phoenix locals_without_parens.
     assert source(igniter, endpoint_path) =~
-             ~r/plug\(?Plug.Session, @session_options\)?\n\s*plug\(?Brando.Plug.Health\)?\n\s*plug\(?LegacyAppWeb.Router/
+             ~r/plug\(?Brando.Plug.IndexNow\)?\n\s*plug\(?Brando.Plug.Health\)?\n\s*plug\(?LegacyAppWeb.Router/
 
     rerun = igniter |> apply_igniter!() |> include_test_files() |> Migrate55.igniter()
     assert_unchanged(rerun, endpoint_path)
 
-    # An endpoint that already has the plug is not rewritten (or reformatted).
-    has_plug =
-      "defmodule LegacyAppWeb.Endpoint do\n  use Phoenix.Endpoint, otp_app: :legacy_app\n  plug Brando.Plug.Health\n  plug LegacyAppWeb.Router\nend\n"
+    # An endpoint that already has the plugs is not rewritten (or reformatted).
+    has_plugs = """
+    defmodule LegacyAppWeb.Endpoint do
+      use Phoenix.Endpoint, otp_app: :legacy_app
+      plug Brando.Plug.Markdown
+      plug Brando.Plug.IndexNow
+      plug Brando.Plug.Health
+      plug LegacyAppWeb.Router
+    end
+    """
 
-    assert_unchanged(migrate(@blueprint_054, %{endpoint_path => has_plug}), endpoint_path)
+    assert_unchanged(migrate(@blueprint_054, %{endpoint_path => has_plugs}), endpoint_path)
 
     # Only when the task creates the Florist configuration.
     existing = migrate(@blueprint_054, %{endpoint_path => endpoint, @florist_config_path => "use Florist.DSL\n"})
-    assert_unchanged(existing, endpoint_path)
+    refute source(existing, endpoint_path) =~ "Brando.Plug.Health"
+  end
+
+  test "adds the Markdown and IndexNow plugs to the endpoint, before the router" do
+    endpoint_path = "lib/legacy_app_web/endpoint.ex"
+
+    endpoint = """
+    defmodule LegacyAppWeb.Endpoint do
+      use Phoenix.Endpoint, otp_app: :legacy_app
+
+      plug Plug.Session, @session_options
+      plug LegacyAppWeb.Router
+    end
+    """
+
+    # No Florist conversion, so no health plug.
+    files = %{endpoint_path => endpoint, @deployment_config_path => nil, @fabfile_path => nil}
+    igniter = migrate(@blueprint_054, files)
+
+    # The test project's formatter has no Phoenix locals_without_parens.
+    assert source(igniter, endpoint_path) =~
+             ~r/plug\(?Plug.Session, @session_options\)?\n\s*plug\(?Brando.Plug.Markdown\)?\n\s*plug\(?Brando.Plug.IndexNow\)?\n\s*plug\(?LegacyAppWeb.Router/
+
+    rerun = igniter |> apply_igniter!() |> include_test_files() |> Migrate55.igniter()
+    assert_unchanged(rerun, endpoint_path)
+
+    # A plug the endpoint already has stays where it is, once.
+    has_markdown = """
+    defmodule LegacyAppWeb.Endpoint do
+      use Phoenix.Endpoint, otp_app: :legacy_app
+
+      plug Brando.Plug.Markdown, except: ["/admin", "/api", "/docs"]
+      plug Plug.Session, @session_options
+      plug LegacyAppWeb.Router
+    end
+    """
+
+    contents = migrate(@blueprint_054, %{files | endpoint_path => has_markdown}) |> source(endpoint_path)
+    assert length(String.split(contents, "Brando.Plug.Markdown")) == 2
+    assert contents =~ ~s|Brando.Plug.Markdown, except: ["/admin", "/api", "/docs"]|
+
+    assert contents =~
+             ~r/plug\(?Plug.Session, @session_options\)?\n\s*plug\(?Brando.Plug.IndexNow\)?\n\s*plug\(?LegacyAppWeb.Router/
+
+    without_endpoint = migrate(@blueprint_054, Map.delete(files, endpoint_path))
+    assert_has_warning(without_endpoint, &(&1 =~ "add `plug Brando.Plug.Markdown` and"))
   end
 
   test "points Brando at the application's mailer" do

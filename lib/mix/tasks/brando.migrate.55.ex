@@ -19,7 +19,8 @@ if Code.ensure_loaded?(Igniter) do
     names, adds the explicit listing component imports, gives Villain parsers
     back the `use Phoenix.Component`, imports and aliases they relied on from
     `use Brando.Villain.Parser`, configures Req as
-    Swoosh's API client, points Brando at the application's mailer, removes the
+    Swoosh's API client, points Brando at the application's mailer, adds
+    `Brando.Plug.Markdown` and `Brando.Plug.IndexNow` to the endpoint, removes the
     retired Sharp image processor from config, pins the declared `phoenix_live_view` JavaScript
     dependency, builds Vite source maps `hidden`, converts a legacy Fabric deployment to a reviewable Florist
     configuration, refreshes the gettext recovery helper, copies the
@@ -53,6 +54,7 @@ if Code.ensure_loaded?(Igniter) do
       |> SourceUpgrade.pin_live_view_javascript()
       |> SourceUpgrade.hide_source_maps()
       |> SourceUpgrade.create_florist_config()
+      |> SourceUpgrade.add_content_plugs()
       |> SourceUpgrade.refresh_gettext_script()
       |> SourceUpgrade.carry_blueprint_translations()
       |> SourceUpgrade.complete_plural_forms_headers()
@@ -86,6 +88,10 @@ if Code.ensure_loaded?(Igniter) do
       (`<domain>_<schema>_naming`, `_forms`, `_listings`) are copied into
       `<domain>_<schema>.po`, the domain 0.55 extracts to, so the Gettext
       merge in the migration guide keeps them.
+
+      The endpoint gets `plug Brando.Plug.Markdown` (entries as Markdown at
+      their URL + `.md`) and `plug Brando.Plug.IndexNow` (the IndexNow key
+      file), before the router, unless it has them.
 
       When both legacy `deployment.cfg` and `fabfile.py` exist and no Florist
       configuration exists, the task also creates a reviewable

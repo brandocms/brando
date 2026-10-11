@@ -2304,31 +2304,72 @@ if Code.ensure_loaded?(Igniter) do
     the request falls through to the router and the check never passes.
     """
     def add_health_plug(igniter, endpoint \\ nil) do
-      endpoint = endpoint || Module.concat(Igniter.Libs.Phoenix.web_module(igniter), Endpoint)
+      endpoint = endpoint || default_endpoint(igniter)
       missing = "add `plug Brando.Plug.Health` to #{inspect(endpoint)}, before the router. Florist checks /health."
+      add_endpoint_plug(igniter, endpoint, Brando.Plug.Health, missing)
+    end
 
+    @content_plugs [
+      {Brando.Plug.Markdown, "serves entries as Markdown at their URL + .md"},
+      {Brando.Plug.IndexNow, "serves the IndexNow key file"}
+    ]
+
+    @doc """
+    Adds `plug Brando.Plug.Markdown` and `plug Brando.Plug.IndexNow` to the
+    endpoint, before the router, in that order. Both act before routing: an
+    entry's `.md` URL loses its extension before the router matches it, and
+    the IndexNow key file is answered without reaching it. They go before
+    `Brando.Plug.Health` when the endpoint has it, as in the install
+    template. A plug the endpoint already has is left where it is.
+    """
+    def add_content_plugs(igniter, endpoint \\ nil) do
+      endpoint = endpoint || default_endpoint(igniter)
+
+      case ProjectModule.module_exists(igniter, endpoint) do
+        {true, igniter} ->
+          Enum.reduce(@content_plugs, igniter, fn {plug, purpose}, igniter ->
+            missing = "add `plug #{inspect(plug)}` to #{inspect(endpoint)}, before the router. It #{purpose}."
+            add_endpoint_plug(igniter, endpoint, plug, missing)
+          end)
+
+        {false, igniter} ->
+          Igniter.add_warning(igniter, """
+          Could not find the endpoint #{inspect(endpoint)}; add `plug Brando.Plug.Markdown` and
+          `plug Brando.Plug.IndexNow` to it, before the router.
+          """)
+      end
+    end
+
+    defp default_endpoint(igniter), do: Module.concat(Igniter.Libs.Phoenix.web_module(igniter), Endpoint)
+
+    defp add_endpoint_plug(igniter, endpoint, plug, missing) do
       # Updating a module reformats its file, so an endpoint that already has
       # the plug is only read.
       with {:ok, {igniter, _source, defmodule}} <- ProjectModule.find_module(igniter, endpoint),
            {:ok, body} <- Common.move_to_do_block(defmodule),
-           :error <- move_to_plug(body, &Common.nodes_equal?(&1, Brando.Plug.Health)) do
-        case ProjectModule.find_and_update_module(igniter, endpoint, &health_plug_before_router(&1, missing)) do
+           :error <- move_to_plug(body, &Common.nodes_equal?(&1, plug)) do
+        case ProjectModule.find_and_update_module(igniter, endpoint, &plug_before_router(&1, plug, missing)) do
           {:ok, igniter} -> igniter
           {:error, igniter} -> Igniter.add_warning(igniter, "Could not find the endpoint; " <> missing)
         end
       else
-        {:ok, _health_plug} -> igniter
+        {:ok, _plug} -> igniter
         {:error, igniter} -> Igniter.add_warning(igniter, "Could not find the endpoint; " <> missing)
         :error -> Igniter.add_warning(igniter, "Could not read the endpoint; " <> missing)
       end
     end
 
-    defp health_plug_before_router(zipper, missing) do
-      case move_to_plug(zipper, &router?/1) do
-        {:ok, router} -> {:ok, Common.add_code(router, "plug Brando.Plug.Health", placement: :before)}
-        :error -> {:warning, "Could not find the router plug; " <> missing}
+    defp plug_before_router(zipper, plug, missing) do
+      with :error <- health_plug(zipper, plug),
+           :error <- move_to_plug(zipper, &router?/1) do
+        {:warning, "Could not find the router plug; " <> missing}
+      else
+        {:ok, anchor} -> {:ok, Common.add_code(anchor, "plug #{inspect(plug)}", placement: :before)}
       end
     end
+
+    defp health_plug(_zipper, Brando.Plug.Health), do: :error
+    defp health_plug(zipper, _plug), do: move_to_plug(zipper, &Common.nodes_equal?(&1, Brando.Plug.Health))
 
     defp move_to_plug(zipper, predicate) do
       CodeFunction.move_to_function_call_in_current_scope(zipper, :plug, [1, 2], fn call ->

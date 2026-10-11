@@ -11,3 +11,9 @@
   removed files; a notice now names each file created or updated. The
   closing steps of `mix brando.migrate55` include `mix brando.images.adopt`,
   as the migration guide does.
+
+- **`mix brando.migrate55` adds `Brando.Plug.Markdown` and
+  `Brando.Plug.IndexNow` to the endpoint**, before the router (and before
+  `Brando.Plug.Health`), as the install template orders them. An endpoint
+  that already has one keeps it where it is; the migration guide no longer
+  lists them as a manual step.

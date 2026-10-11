@@ -205,6 +205,9 @@ when Igniter becomes available. The dependency remains optional at runtime.
 - points Brando at the application's `Mailer` when it has one
   (`config :brando, mailer: MyApp.Mailer`); set the address it sends from
   yourself, as described in [Email](email.md);
+- adds `plug Brando.Plug.Markdown` and `plug Brando.Plug.IndexNow` to the
+  endpoint, before the router (and before `Brando.Plug.Health`), unless it
+  already has them;
 - gives Villain parsers (`use Brando.Villain.Parser`) back what the parser's
   `__using__` no longer brings in, where they use it: `use Phoenix.Component`
   for `~H`, `import Brando.HTML` for components such as `<.picture>`,
@@ -600,8 +603,6 @@ describe each:
 - Rebuild the admin search index once in each environment, from
   Configuration → Utilities → Search index. `brando_212` creates the table
   empty.
-- Add `plug Brando.Plug.Markdown` and `plug Brando.Plug.IndexNow` to the
-  endpoint, before the router.
 - An application that sets `config :brando, Oban` itself adds the
   `content_events`, `webhooks`, `search_index` and `notifications` queues, and
   `Brando.Worker.WebhookDeliveryPurger` to its crontab.
