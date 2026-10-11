@@ -259,38 +259,23 @@ defmodule Brando.Blueprint.Dsl do
       end
 
       def __admin_route__(:create, args) do
-        form_path =
-          if @router_scope do
-            :"admin_#{@router_scope}_#{@singular}_form_path"
-          else
-            :"admin_#{@singular}_form_path"
-          end
-
-        base_args = [RuntimeConfig.endpoint()]
-
-        apply(
-          RuntimeConfig.router_helpers(),
-          form_path,
-          base_args ++ [:create] ++ args
-        )
+        apply(RuntimeConfig.router_helpers(), __admin_form_helper__(), [RuntimeConfig.endpoint(), :create] ++ args)
       end
 
       def __admin_route__(:update, args) do
-        form_path =
-          if @router_scope do
-            :"admin_#{@router_scope}_#{@singular}_form_path"
-          else
-            :"admin_#{@singular}_form_path"
-          end
+        apply(RuntimeConfig.router_helpers(), __admin_form_helper__(), [RuntimeConfig.endpoint(), :update] ++ args)
+      end
 
-        base_args = [RuntimeConfig.endpoint()]
-        full_args = base_args ++ [:update] ++ args
-
-        apply(
-          RuntimeConfig.router_helpers(),
-          form_path,
-          full_args
-        )
+      @doc """
+      The router helper behind the `:create` and `:update` admin routes. See
+      `Brando.Blueprint.admin_editor?/1`.
+      """
+      def __admin_form_helper__ do
+        if @router_scope do
+          :"admin_#{@router_scope}_#{@singular}_form_path"
+        else
+          :"admin_#{@singular}_form_path"
+        end
       end
     end
   end

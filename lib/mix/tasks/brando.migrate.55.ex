@@ -123,7 +123,10 @@ if Code.ensure_loaded?(Igniter) do
       Manual 0.55 decisions remain:
 
         * Add `persist_identifier false` to every Blueprint that must not create
-          persisted identifiers. Persistence defaults to true.
+          persisted identifiers. Persistence defaults to true. A Blueprint with
+          no admin editor (no `admin_<singular>_form_path` route) should set it:
+          its entries cannot be opened from Search, the command palette or the
+          dashboard, so they are left out of them.
         * Table, primary-key, and existing column-level primary-key changes are
           never inferred. Write the Ecto migration, verify the live schema, then
           use the documented Blueprint `--rebaseline` workflow.

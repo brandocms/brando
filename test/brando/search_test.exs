@@ -150,6 +150,16 @@ defmodule Brando.SearchTest do
   end
 
   describe "what is indexed" do
+    test "only types with an admin editor, whose results can link to it" do
+      schemas = Search.searchable_schemas()
+
+      assert Page in schemas
+      assert Brando.SyncTest.Article in schemas
+      # Persists identifiers, but the test router has no form route for it.
+      refute Brando.BlueprintTest.Project in schemas
+      refute Search.searchable?(Brando.BlueprintTest.Project)
+    end
+
     test "the body has the text fields and every kind of block text", %{user: user} do
       page = Factory.insert(:page, title: "Hotel", creator: user)
       image = Factory.insert(:image, alt: %{"en" => "A balcony at dusk"}, title: %{"en" => "Caption of the balcony"})

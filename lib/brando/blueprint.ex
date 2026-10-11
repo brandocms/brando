@@ -766,6 +766,20 @@ defmodule Brando.Blueprint do
   @spec get_icon(module()) :: String.t()
   def get_icon(module), do: module.__content_icon__() || @default_icon
 
+  @doc """
+  Whether `module` has an admin editor: the application's router defines the
+  form route `module.__admin_route__(:update, [id])` links to. Every
+  Blueprint generates `__admin_route__/2`, so its presence says nothing; a
+  Blueprint with no admin routes raises `UndefinedFunctionError` from it.
+  """
+  @spec admin_editor?(module()) :: boolean()
+  def admin_editor?(module) do
+    helpers = Brando.RuntimeConfig.router_helpers()
+
+    function_exported?(module, :__admin_form_helper__, 0) and Code.ensure_loaded?(helpers) and
+      function_exported?(helpers, module.__admin_form_helper__(), 3)
+  end
+
   defp get_translation(translations, path) do
     Enum.reduce(path, translations, fn
       _key, nil -> nil
