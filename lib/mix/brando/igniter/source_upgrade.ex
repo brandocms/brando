@@ -181,13 +181,114 @@ if Code.ensure_loaded?(Igniter) do
     defp block_editor_input({:input, _meta, [name, type | options]}, renames) do
       with :blocks <- literal_atom_value(type),
            {:ok, relation} <- Map.fetch(renames, literal_atom_value(name)) do
-        {:ok, {{:__block__, [], [relation]}, Enum.map(options, &without_position/1)}}
+        {:ok, {{:__block__, [], [relation]}, options |> accepted_options() |> Enum.map(&without_position/1)}}
       else
         _ -> :error
       end
     end
 
     defp block_editor_input(_statement, _renames), do: :error
+
+    # The options `blocks` accepts, out of an input's literal keyword list.
+    # `warn_block_editor_options/1` names the rest.
+    defp accepted_options([options]) do
+      allowed = blocks_options()
+
+      case Enum.filter(option_entries(options), fn {key, _value} -> literal_atom_value(key) in allowed end) do
+        [] -> []
+        kept -> [kept]
+      end
+    end
+
+    defp accepted_options(_options), do: []
+
+    defp option_entries(options) do
+      Enum.filter(keyword_entries(options), &match?({_key, _value}, &1))
+    rescue
+      FunctionClauseError -> []
+    end
+
+    # Read from the forms DSL, so the list follows the entity's schema.
+    defp blocks_options do
+      Brando.Blueprint.Forms.Dsl.sections()
+      |> Enum.flat_map(& &1.entities)
+      |> Enum.find(&(&1.name == :form))
+      |> Map.fetch!(:entities)
+      |> Keyword.fetch!(:blocks)
+      |> hd()
+      |> Map.fetch!(:schema)
+      |> Keyword.fetch!(:opts)
+      |> Keyword.fetch!(:type)
+      |> keyword_list_keys()
+    end
+
+    defp keyword_list_keys({:or, types}), do: Enum.flat_map(types, &keyword_list_keys/1)
+    defp keyword_list_keys({:keyword_list, schema}), do: Keyword.keys(schema)
+    defp keyword_list_keys(_type), do: []
+
+    @doc """
+    Warns, with file and line, about each option of a Villain block editor
+    input (`input :data, :blocks, ...`) that the form-level `blocks` it
+    becomes does not accept. `upgrade_054_blueprint/1` drops them, since
+    `blocks` validates its options and the Blueprint would not compile.
+    Run it before the Blueprint rewrite, which removes the Villain
+    attributes the inputs are matched by.
+    """
+    def warn_block_editor_options(igniter) do
+      {igniter, blueprints} = find_blueprints(igniter)
+      allowed = blocks_options()
+
+      {igniter, findings} =
+        Enum.reduce(blueprints, {igniter, []}, fn module, {igniter, findings} ->
+          {:ok, {igniter, source, zipper}} = ProjectModule.find_module(igniter, module)
+          {igniter, findings ++ dropped_options(zipper, Source.get(source, :path), allowed)}
+        end)
+
+      case findings do
+        [] ->
+          igniter
+
+        findings ->
+          Igniter.add_warning(igniter, """
+          Block editor options that form-level `blocks` does not take were dropped
+          when the editors moved there (it takes #{Enum.map_join(allowed, ", ", &"`#{&1}`")}):
+
+          #{Enum.map_join(findings, "\n", &("  " <> &1))}
+          """)
+      end
+    end
+
+    defp dropped_options(zipper, path, allowed) do
+      villain = zipper |> Common.find_all(&villain_attribute?/1) |> Enum.map(&villain_attribute_name/1)
+
+      zipper
+      |> Common.find_all(&CodeFunction.function_call?(&1, :input, 3))
+      |> Enum.map(&single_child/1)
+      |> Enum.filter(&(villain_block_input?(&1, villain) or block_editor_rename(zipper, &1) != []))
+      |> Enum.flat_map(&dropped_input_options(&1, "#{path}:", allowed))
+    end
+
+    defp dropped_input_options({:input, meta, [_name, _type, options]}, location, allowed) do
+      case option_entries(options) do
+        [] ->
+          ["#{location}#{meta[:line]}: options that are not a literal keyword list"]
+
+        entries ->
+          for {key, _value} <- entries,
+              key = literal_atom_value(key),
+              key not in allowed,
+              do: "#{location}#{meta[:line]}: `#{key}`"
+      end
+    end
+
+    defp villain_block_input?({:input, _, [name, type | _options]}, villain),
+      do: literal_atom_value(type) == :blocks and literal_atom_value(name) in villain
+
+    defp villain_block_input?(_node, _villain), do: false
+
+    defp villain_attribute_name(attribute_zipper) do
+      attribute_zipper |> Zipper.node() |> Sourceror.get_args() |> List.first() |> literal_atom!()
+    end
 
     # Comments are printed by line, so a node moved up the file keeps none:
     # with its old lines, comments between the two places land inside it.

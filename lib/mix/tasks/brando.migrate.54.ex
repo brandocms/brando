@@ -36,8 +36,9 @@ if Code.ensure_loaded?(Igniter) do
     def igniter(igniter) do
       igniter
       |> SourceUpgrade.rename_list_villains()
-      # Reads the Villain attributes the Blueprint rewrite removes.
+      # These two read the Villain attributes the Blueprint rewrite removes.
       |> SourceUpgrade.upgrade_054_templates()
+      |> SourceUpgrade.warn_block_editor_options()
       |> SourceUpgrade.rewrite_blueprints(&SourceUpgrade.upgrade_054_blueprint/1)
       |> SourceUpgrade.rewrite_preview_targets()
       |> SourceUpgrade.configure_repo_module()

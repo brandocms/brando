@@ -345,6 +345,62 @@ defmodule Mix.Tasks.Brando.Migrate54Test do
     assert_unchanged(rerun, @blueprint_path)
   end
 
+  test "carries only the options form-level blocks accepts, and names the others" do
+    blueprint = """
+    defmodule LegacyApp.Vacancies.Vacancy do
+      use Brando.Blueprint,
+        application: "LegacyApp",
+        domain: "Vacancies",
+        schema: "Vacancy",
+        singular: "vacancy",
+        plural: "vacancies"
+
+      trait Brando.Trait.Villain
+
+      attributes do
+        attribute :data, :villain
+      end
+
+      forms do
+        form do
+          tab "Content" do
+            fieldset size: :full do
+              input :data, :blocks,
+                label: "Innhold",
+                instructions: "Skriv innholdet her",
+                template_namespace: "vacancies",
+                monospace: true
+            end
+          end
+        end
+      end
+    end
+    """
+
+    igniter = migrate(blueprint, nil)
+    migrated = source(igniter, @blueprint_path)
+
+    assert migrated =~ ~s|blocks(:blocks, label: "Innhold", template_namespace: "vacancies")|
+    refute migrated =~ "instructions"
+    refute migrated =~ "monospace"
+
+    assert_has_warning(igniter, fn warning ->
+      warning =~ "#{@blueprint_path}:19: `instructions`" and warning =~ "#{@blueprint_path}:19: `monospace`"
+    end)
+
+    module = Module.concat(__MODULE__, "DroppedOptions#{System.unique_integer([:positive])}")
+
+    compiled =
+      migrated
+      |> String.replace("LegacyApp.Vacancies.Vacancy", inspect(module))
+      |> String.replace(~s|plural: "vacancies"|, ~s|plural: "vacancies",\n    gettext_module: Brando.Gettext|)
+
+    warnings = ExUnit.CaptureIO.capture_io(:stderr, fn -> Code.compile_string(compiled) end)
+    refute warnings =~ "DslError"
+    assert [%{name: :blocks, opts: opts}] = module.__form__().blocks
+    assert opts[:template_namespace] == "vacancies"
+  end
+
   test "moves a block editor input an earlier migrate54 run left behind" do
     left_behind = """
     defmodule LegacyApp.Vacancies.Vacancy do
