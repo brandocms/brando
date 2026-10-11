@@ -2913,6 +2913,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
                 live_preview_cache_key={@live_preview_cache_key}
                 focus={@focus}
                 level={0}
+                source_locked={@source_locked}
               />
             </div>
           </.inputs_for>
@@ -3253,6 +3254,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
                 live_preview_active?={@live_preview_active?}
                 live_preview_cache_key={@live_preview_cache_key}
                 level={0}
+                source_locked={@source_locked}
               />
             </div>
           </.inputs_for>

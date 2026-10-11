@@ -76,6 +76,9 @@ defmodule BrandoAdmin.Components.Form.Block do
     |> assign(:remap_slot_uid, nil)
     |> assign(:remap_targets, [])
     |> assign(:remap_error, nil)
+    # A synchronized translation's structure follows its source: set by the
+    # block field, and read where a block reorders its own children.
+    |> assign(:source_locked, false)
     |> assign_new(:paste_multi_module_id, fn -> nil end)
     |> Events.attach_block_events()
     |> then(&{:ok, &1})

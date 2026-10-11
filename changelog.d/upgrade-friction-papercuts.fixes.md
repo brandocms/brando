@@ -30,3 +30,12 @@
   unsaved changes and is named "Block has unsaved changes" ("Blokken har
   ulagrede endringer"). A block's drag handle has an accessible name, and
   the keyboard shortcut sheet lists undo and redo for typing.
+
+- **A synchronized translation's blocks keep their order when a move is
+  refused.** Moving a container's child or a multi module's entry, by drag
+  or from the block menu, reordered it on the editor's screen before the
+  block field refused the move, so the order shown was one that would never
+  be saved or reach the other editors. The move is now refused before
+  anything changes, with the same notice. The block menu also hides Move
+  up, Move down, Duplicate, Copy and Delete there, as it already meant to:
+  the menu's own styles had kept Duplicate, Copy and Delete showing.

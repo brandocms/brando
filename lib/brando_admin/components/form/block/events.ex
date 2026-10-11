@@ -651,6 +651,14 @@ defmodule BrandoAdmin.Components.Form.Block.Events do
     {:halt, socket}
   end
 
+  # In a synchronized translation the children follow the source. Their
+  # order is left as it is, and the block field is sent that unchanged
+  # order, which it refuses with the notice that says why, so neither this
+  # editor nor the others ever see a move that did not happen.
+  def handle_block_event("reposition", _params, %{assigns: %{source_locked: true}} = socket) do
+    {:halt, Block.emit_block_op(socket, {:reorder_children, socket.assigns.uid, socket.assigns.block_list})}
+  end
+
   # reposition a main block
   def handle_block_event(
         "reposition",
