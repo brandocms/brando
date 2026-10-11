@@ -505,8 +505,10 @@ Only names are compared. Check types, defaults and nullability against `\d`
 yourself, and run every migration down and up once on a scratch copy.
 `--reconcile` works for one Blueprint or with `--all`, and with `--dry-run`
 (which still reads the database). It cannot be combined with `--rebaseline`.
-Accepting the plan reads the database again, and a database that changed since
-review makes the plan stale. A plan whose Blueprint has snapshot history but
+Accepting the plan reads the database again. A change to what the migration
+does (a column that now holds data, an index that appeared) makes the plan
+stale; a changed count in a comment does not, and the file written gives the
+count read on acceptance. A plan whose Blueprint has snapshot history but
 whose table is missing stops: run the existing migrations first.
 
 ## Umbrella and custom paths

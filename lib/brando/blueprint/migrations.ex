@@ -115,23 +115,39 @@ defmodule Brando.Blueprint.Migrations do
     end)
   end
 
-  @doc "Fingerprints the reviewed source and history, excluding the snapshot's informational creation time."
+  @doc """
+  Fingerprints the reviewed source and history, excluding the snapshot's
+  informational creation time. A reconciled plan is fingerprinted without the
+  value and row counts its comments give, so only a change to what the
+  migration does makes it stale.
+  """
   @spec plan_digest(Plan.t()) :: String.t()
   def plan_digest(%Plan{} = plan) do
     snapshot = if plan.snapshot, do: %{plan.snapshot | updated_at: nil}
 
+    # Without --reconcile the options are those of earlier versions, so a
+    # request reviewed before an upgrade still applies after it.
     options =
       plan.options
-      |> Keyword.delete(:planned_migration_version)
+      |> Keyword.drop([:planned_migration_version, :reconcile])
       |> Keyword.put(:rebaseline, plan.options[:rebaseline] || false)
-      |> Keyword.put(:reconcile, plan.options[:reconcile] || false)
+      |> then(&if(plan.options[:reconcile], do: Keyword.put(&1, :reconcile, true), else: &1))
       |> Enum.sort()
 
-    %{plan | snapshot: snapshot, options: options}
+    plan
+    |> without_counts()
+    |> Map.merge(%{snapshot: snapshot, options: options})
     |> :erlang.term_to_binary([:deterministic])
     |> then(&:crypto.hash(:sha256, &1))
     |> Base.encode16(case: :lower)
   end
+
+  defp without_counts(%Plan{metadata: %{reconciled_review: review}} = plan) do
+    metadata = plan.metadata |> Map.delete(:reconciled_review) |> Map.put(:reconciled, review.summary)
+    %{plan | migration_source: review.source, metadata: metadata}
+  end
+
+  defp without_counts(plan), do: plan
 
   @doc """
   Compares two snapshots using the normalized migration schema.
@@ -197,7 +213,12 @@ defmodule Brando.Blueprint.Migrations do
 
     if Diff.empty?(diff) do
       snapshot = %{Snapshot.build_snapshot(module, snapshot_version(previous) + 1) | rebaseline?: true}
-      metadata = module |> snapshot_metadata(snapshot, opts) |> Map.put(:reconciled, reconcile.summary)
+
+      metadata =
+        module
+        |> snapshot_metadata(snapshot, opts)
+        |> put_reconciled(reconcile, fn _reconcile -> nil end)
+
       %{result: :ok, snapshot: snapshot, metadata: metadata}
     else
       prepare_migration(module, diff, schema, previous, opts, reconcile)
@@ -208,10 +229,11 @@ defmodule Brando.Blueprint.Migrations do
     sequence = get_sequence(module, opts)
     snapshot = Snapshot.build_snapshot(module, snapshot_version(previous) + 1)
 
-    contents =
+    render = fn reconcile ->
       module
-      |> Renderer.render(sequence, diff, schema, snapshot_schema(previous), reconcile || %Reconcile{})
+      |> Renderer.render(sequence, diff, schema, snapshot_schema(previous), reconcile)
       |> format_code()
+    end
 
     metadata =
       snapshot_metadata(module, snapshot, opts)
@@ -222,9 +244,22 @@ defmodule Brando.Blueprint.Migrations do
         created_tables: Diff.created_tables(diff, schema),
         added_columns: Diff.added_columns(diff, schema)
       })
-      |> then(&if(reconcile, do: Map.put(&1, :reconciled, reconcile.summary), else: &1))
+      |> put_reconciled(reconcile, render)
 
-    %{result: :ok, migration_source: contents, snapshot: snapshot, metadata: metadata}
+    %{result: :ok, migration_source: render.(reconcile || %Reconcile{}), snapshot: snapshot, metadata: metadata}
+  end
+
+  # The summary to report, and the source and summary rendered without counts
+  # for `plan_digest/1`.
+  defp put_reconciled(metadata, nil, _render), do: metadata
+
+  defp put_reconciled(metadata, reconcile, render) do
+    uncounted = Reconcile.without_counts(reconcile)
+
+    Map.merge(metadata, %{
+      reconciled: Reconcile.summary(reconcile),
+      reconciled_review: %{source: render.(uncounted), summary: Reconcile.summary(uncounted)}
+    })
   end
 
   defp prepare_noop(module, previous, schema) do

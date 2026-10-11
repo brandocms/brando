@@ -290,7 +290,7 @@ defmodule Brando.Blueprint.Migrations.Renderer do
     end)
   end
 
-  defp reconcile_comment(%Reconcile{comments: comments}), do: Enum.map_join(comments, "\n", &comment/1)
+  defp reconcile_comment(reconcile), do: reconcile |> Reconcile.comments() |> Enum.map_join("\n", &comment/1)
 
   defp comment(text) do
     text

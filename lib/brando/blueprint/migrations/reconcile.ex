@@ -25,13 +25,26 @@ defmodule Brando.Blueprint.Migrations.Reconcile do
   alias Brando.Blueprint.Migrations.Diff
   alias Brando.Exception.BlueprintError
 
+  @typedoc """
+  Text that may give a number of values or rows. The counts change with the
+  data, so a plan is fingerprinted with them left out (`without_counts/1`).
+  """
+  @type text :: String.t() | [String.t() | {:count, non_neg_integer(), :value | :row}]
+
   @type t :: %__MODULE__{
           create_as_alter?: boolean(),
           guarded_columns: MapSet.t(atom()),
           guarded_indexes: MapSet.t(String.t()),
           guarded_tables: MapSet.t(String.t()),
-          comments: [String.t()],
-          summary: summary()
+          comments: [text()],
+          counts?: boolean(),
+          summary: %{
+            table: String.t() | nil,
+            create_as_alter?: boolean(),
+            guarded: [text()],
+            left_out: [text()],
+            kept: [text()]
+          }
         }
 
   @typedoc """
@@ -52,7 +65,33 @@ defmodule Brando.Blueprint.Migrations.Reconcile do
             guarded_indexes: MapSet.new(),
             guarded_tables: MapSet.new(),
             comments: [],
+            counts?: true,
             summary: %{table: nil, create_as_alter?: false, guarded: [], left_out: [], kept: []}
+
+  @doc "The same reconciliation, with every count written as `N`."
+  @spec without_counts(t()) :: t()
+  def without_counts(%__MODULE__{} = reconcile), do: %{reconcile | counts?: false}
+
+  @doc "The comments for the migration."
+  @spec comments(t()) :: [String.t()]
+  def comments(%__MODULE__{} = reconcile), do: Enum.map(reconcile.comments, &text(&1, reconcile.counts?))
+
+  @doc "The report of what was reconciled."
+  @spec summary(t()) :: summary()
+  def summary(%__MODULE__{summary: summary, counts?: counts?}) do
+    Map.new(summary, fn
+      {key, entries} when key in [:guarded, :left_out, :kept] -> {key, Enum.map(entries, &text(&1, counts?))}
+      entry -> entry
+    end)
+  end
+
+  defp text(text, _counts?) when is_binary(text), do: text
+  defp text(segments, counts?), do: Enum.map_join(segments, &segment(&1, counts?))
+
+  defp segment({:count, 1, unit}, true), do: "1 #{unit}"
+  defp segment({:count, count, unit}, true), do: "#{count} #{unit}s"
+  defp segment({:count, _count, unit}, false), do: "N #{unit}s"
+  defp segment(text, _counts?), do: text
 
   @doc """
   Reads the planned tables from `repo` and returns the diff to render with how
@@ -272,9 +311,13 @@ defmodule Brando.Blueprint.Migrations.Reconcile do
           {[],
            notes ++
              [
-               {:kept, "#{table}.#{name} (legacy Villain column, #{values(count)})"},
+               {:kept, ["#{table}.#{name} (legacy Villain column, ", values(count), ")"]},
                {:comment,
-                "#{table}.#{name} is a legacy Villain column holding #{values(count)}; --reconcile never drops it. Keep it until the blocks conversion is verified on production data."}
+                [
+                  "#{table}.#{name} is a legacy Villain column holding ",
+                  values(count),
+                  "; --reconcile never drops it. Keep it until the blocks conversion is verified on production data."
+                ]}
              ]}
 
         (count = count_values(repo, database, table, name)) > 0 ->
@@ -312,9 +355,9 @@ defmodule Brando.Blueprint.Migrations.Reconcile do
 
   defp kept_with_data(table, name, count) do
     [
-      {:kept, "#{table}.#{name} (#{values(count)})"},
+      {:kept, ["#{table}.#{name} (", values(count), ")"]},
       {:comment,
-       "#{table}.#{name} holds #{values(count)}, so this migration keeps it. Dropping it is a separate decision."}
+       ["#{table}.#{name} holds ", values(count), ", so this migration keeps it. Dropping it is a separate decision."]}
     ]
   end
 
@@ -333,9 +376,9 @@ defmodule Brando.Blueprint.Migrations.Reconcile do
           {[],
            notes ++
              [
-               {:kept, "table #{table.name} (#{rows(rows)})"},
+               {:kept, ["table #{table.name} (", rows(rows), ")"]},
                {:comment,
-                "#{table.name} holds #{rows(rows)}, so this migration keeps it. Dropping it is a separate decision."}
+                ["#{table.name} holds ", rows(rows), ", so this migration keeps it. Dropping it is a separate decision."]}
              ]}
 
         true ->
@@ -344,11 +387,8 @@ defmodule Brando.Blueprint.Migrations.Reconcile do
     end)
   end
 
-  defp values(1), do: "1 value"
-  defp values(count), do: "#{count} values"
-
-  defp rows(1), do: "1 row"
-  defp rows(count), do: "#{count} rows"
+  defp values(count), do: {:count, count, :value}
+  defp rows(count), do: {:count, count, :row}
 
   defp planned_tables(diff, current) do
     Enum.uniq([current.table | Enum.map(diff.add_auxiliary_tables ++ diff.remove_auxiliary_tables, & &1.name)])

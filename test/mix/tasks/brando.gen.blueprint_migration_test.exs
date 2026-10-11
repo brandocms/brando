@@ -170,6 +170,29 @@ defmodule Mix.Tasks.Brando.Gen.BlueprintMigrationTest do
     assert File.exists?(planned.assigns.brando_storage_plan.metadata.snapshot)
   end
 
+  # The fingerprint a request carried before --reconcile existed, so a request
+  # reviewed on the earlier version still applies after the upgrade.
+  test "a plan without --reconcile keeps its earlier fingerprint", context do
+    plan = plan(context, ["--dry-run"]).assigns.brando_storage_plan
+
+    options =
+      plan.options
+      |> Keyword.delete(:planned_migration_version)
+      |> Keyword.put(:rebaseline, plan.options[:rebaseline] || false)
+      |> Enum.sort()
+
+    earlier =
+      %{plan | snapshot: %{plan.snapshot | updated_at: nil}, options: options}
+      |> :erlang.term_to_binary([:deterministic])
+      |> then(&:crypto.hash(:sha256, &1))
+      |> Base.encode16(case: :lower)
+
+    assert Brando.Blueprint.Migrations.plan_digest(plan) == earlier
+
+    assert Brando.Blueprint.Migrations.plan_digest(%{plan | options: Keyword.put(plan.options, :reconcile, false)}) ==
+             earlier
+  end
+
   test "new tenant storage defaults to tenant migrations without changing explicit paths", context do
     for mode <- [:none, :single, :multi] do
       project =
@@ -559,6 +582,17 @@ defmodule Mix.Tasks.Brando.Gen.BlueprintMigrationTest do
       assert rerun.issues == []
       assert rerun.tasks == []
       assert rerun.notices == ["No storage changes necessary for Brando.MigrationTest.ReconcileArticleV2."]
+    end
+
+    test "counts that change after review do not make the plan stale", context do
+      opts = [migration_path: context.migration_path, snapshot_path: context.snapshot_path]
+      {:ok, _} = Migrations.create_migration(ReconcileArticleV1, opts)
+      create_legacy_articles()
+
+      [{_, [request]}] = reconcile(context, ReconcileArticleV2).tasks
+      query!("INSERT INTO reconcile_articles (title, data, link) VALUES ('Third', '{}', 'https://example.org')")
+      assert {:ok, metadata} = MigrationRequest.apply(request)
+      assert comments(File.read!(metadata.migration)) =~ "reconcile_articles.link holds 2 values"
     end
 
     test "a request goes stale when the database changes after review", context do

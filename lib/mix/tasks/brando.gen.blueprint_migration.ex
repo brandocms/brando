@@ -67,7 +67,8 @@ if Code.ensure_loaded?(Igniter) do
     A summary lists what was reconciled in each file. --reconcile works with a
     Blueprint module or --all, and with --dry-run, which still reads the
     database. It cannot be combined with --rebaseline. Accepting the plan reads
-    the database again and rejects the plan if it changed since review. Without
+    the database again and rejects the plan if what the migration does changed
+    since review; changed counts in its comments do not make it stale. Without
     --reconcile the database is only consulted for warnings.
     """
 
