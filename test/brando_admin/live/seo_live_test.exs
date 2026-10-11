@@ -105,6 +105,41 @@ defmodule BrandoAdmin.Sites.SEOLiveTest do
     refute Enum.any?(Brando.Cache.SEO.get("en").redirects || [], &(&1.from == "/projects/old-case"))
   end
 
+  test "the content types to check are a labelled checkbox group, Pages until changed", %{conn: conn} do
+    user = Factory.insert(:random_user)
+
+    {:ok, _} =
+      Pages.create_page(
+        %{title: "Draft page", uri: "draft-audit", language: "en", template: "default.html", status: :draft},
+        user
+      )
+
+    {:ok, view, _html} = live(conn, "/admin/config/seo?tab=content")
+    render_async(view, 5_000)
+
+    assert has_element?(view, "#seo-audit-scope fieldset > legend", "Content types to check")
+    assert has_element?(view, "#seo-audit-type-brando-pages-page[checked]")
+    assert [_] = view |> render() |> Floki.parse_document!() |> Floki.find("#seo-audit-scope fieldset input[checked]")
+    refute has_element?(view, "#seo-audit-include-drafts[checked]")
+    refute render(view) =~ "Draft page"
+
+    view
+    |> form("#seo-audit-scope", %{"schemas" => ["", "Brando.Pages.Page"], "include_drafts" => "true"})
+    |> render_change()
+
+    assert render_async(view, 5_000) =~ "Draft page"
+    assert has_element?(view, "#seo-audit-include-drafts[checked]")
+
+    view |> form("#seo-audit-scope", %{"schemas" => [""], "include_drafts" => "false"}) |> render_change()
+    render_async(view, 5_000)
+    refute has_element?(view, "#seo-audit-type-brando-pages-page[checked]")
+
+    # Only the types the audit offers count
+    render_hook(view, "audit_scope", %{"schemas" => ["Not.A.Schema"]})
+    render_async(view, 5_000)
+    refute has_element?(view, "#seo-audit-scope fieldset input[checked]")
+  end
+
   test "opening the content tab directly runs the audit", %{conn: conn} do
     {:ok, view, _html} = live(conn, "/admin/config/seo?tab=content")
     html = render_async(view, 5_000)

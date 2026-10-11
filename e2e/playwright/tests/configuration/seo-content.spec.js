@@ -67,11 +67,30 @@ test('the content SEO tab audits published pages', async ({ page }, testInfo) =>
     }
   }
 
-  // Drafts toggle re-runs the audit; the table stays populated.
-  const drafts = audit.locator('.seo-chip-toggle')
-  await drafts.click()
+  // What the audit checks is a labelled group of checkboxes, Pages only to
+  // begin with; checking another type re-runs the audit.
+  const scope = audit.locator('#seo-audit-scope')
+  await expect(scope.getByRole('group')).toHaveAccessibleName(await scope.locator('fieldset > legend').innerText())
+  await expect(scope.locator('#seo-audit-type-brando-pages-page')).toBeChecked()
+  const others = scope.locator('fieldset input[type="checkbox"]:not(#seo-audit-type-brando-pages-page)')
+  for (const other of await others.all()) await expect(other).not.toBeChecked()
+
+  if (await others.count()) {
+    const other = others.first()
+    await scope.locator(`label[for="${await other.getAttribute('id')}"]`).click()
+    await syncLV(page)
+    await expect(other).toBeChecked()
+    await expect(audit.locator('.seo-stats')).toBeVisible({ timeout: 15000 })
+    await scope.locator(`label[for="${await other.getAttribute('id')}"]`).click()
+    await syncLV(page)
+    await expect(other).not.toBeChecked()
+  }
+
+  // Drafts re-runs the audit; the table stays populated.
+  const drafts = scope.locator('#seo-audit-include-drafts')
+  await scope.locator('label[for="seo-audit-include-drafts"]').click()
   await syncLV(page)
-  await expect(drafts).toHaveAttribute('aria-pressed', 'true')
+  await expect(drafts).toBeChecked()
   await expect(audit.locator('.seo-stats')).toBeVisible({ timeout: 15000 })
 
   await page.setViewportSize({ width: 390, height: 844 })

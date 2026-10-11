@@ -4277,10 +4277,14 @@ msgstr ""
 
 #: lib/brando_admin/components/content/select_identifier.ex
 #: lib/brando_admin/live/sites/notifications_live.ex
-#: lib/brando_admin/live/sites/seo_live.ex
 #: lib/brando_admin/live/sites/webhooks_live.ex
 #, elixir-autogen, elixir-format
 msgid "Content types"
+msgstr ""
+
+#: lib/brando_admin/live/sites/seo_live.ex
+#, elixir-autogen, elixir-format
+msgid "Content types to check"
 msgstr ""
 
 #: lib/brando_admin/live/users/user_list_live.ex

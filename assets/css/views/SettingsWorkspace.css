@@ -266,12 +266,14 @@
     cursor: pointer;
   }
   .seo-chip[aria-pressed="true"] { background: var(--brando-chip-active-bg); border-color: var(--brando-line-strong); color: var(--brando-chip-active-fg); }
-  /* A chip like its neighbours rather than a checkbox in a pill: one centering
-     rule for the whole row. The box is drawn, so it holds the label's line. */
-  .seo-chip-toggle { margin-left: auto; }
-  .seo-chip-toggle::before { content: ""; flex: 0 0 12px; height: 12px; border: 1px solid var(--brando-line-strong); border-radius: 3px; background: var(--brando-surface); }
-  .seo-chip-toggle[aria-pressed="true"] { background: var(--brando-chip-active-bg); border-color: var(--brando-line-strong); color: var(--brando-chip-active-fg); }
-  .seo-chip-toggle[aria-pressed="true"]::before { border-color: var(--brando-accent); background: var(--brando-accent); }
+
+  /* What the audit checks: the admin's checkboxes under a legend, drafts at
+     the right edge. */
+  .seo-audit-scope { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px 24px; padding: 14px 18px; border-bottom: 1px solid var(--workspace-line); }
+  .seo-audit-types { min-width: 0; margin: 0; padding: 0; border: 0; }
+  .seo-audit-types legend { margin: 0 0 8px; padding: 0; color: var(--workspace-muted); font-size: 12px; font-weight: 500; }
+  .seo-audit-type-list { display: flex; flex-wrap: wrap; gap: 8px 20px; }
+  .seo-audit-scope .check-wrapper { margin-bottom: 0; font-size: 13px; }
 
   .seo-audit-status { display: flex; gap: 10px; align-items: center; padding: 13px 18px; font-size: 12px; color: var(--workspace-muted); }
   .seo-audit-status.error { color: var(--brando-error-ink); }

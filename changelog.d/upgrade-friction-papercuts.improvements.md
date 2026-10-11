@@ -11,6 +11,13 @@
   check's job queries are no longer logged, so a doctor run in development
   stops printing a raw `SELECT … FROM oban_jobs`.
 
+- **Content SEO says which content types it checks.** The types were
+  toggle chips that read as filters of the results; they are now a group of
+  checkboxes under "Content types to check", with "Include drafts" beside
+  them. Pages is still the only type checked until another is chosen. A
+  Brando schema the application's blueprint list also holds is offered
+  once, not twice.
+
 - **`mix brando.gen.backend` and `mix brando.gen.frontend` no longer print
   Hex's list of unchanged packages.** Before the binary asset copies they
   queue, Igniter runs `mix deps.get`, whose "Unchanged:" listing of every
