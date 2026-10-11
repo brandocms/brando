@@ -260,6 +260,13 @@ if Code.ensure_loaded?(Igniter) do
       end
     end
 
+    @reconciled_labels [
+      guarded: "already exist, added with *_if_not_exists",
+      left_out: "left out",
+      kept: "kept, dropping them is a separate decision",
+      relaxed: "kept and no longer written, so their NOT NULL is dropped"
+    ]
+
     defp reconciled_lines(plan) do
       summary = plan.metadata.reconciled
 
@@ -268,21 +275,19 @@ if Code.ensure_loaded?(Igniter) do
           do: Path.relative_to_cwd(plan.metadata.migration),
           else: "#{Path.relative_to_cwd(snapshot_path(plan))} (snapshot only, a baseline the database already matches)"
 
-      details =
-        [
-          summary.create_as_alter? && plan.migration_source &&
-            "#{summary.table} already exists; the migration alters it, adding only what it lacks",
-          summary.guarded != [] && "already exist, added with *_if_not_exists: #{Enum.join(summary.guarded, ", ")}",
-          summary.left_out != [] && "left out: #{Enum.join(summary.left_out, ", ")}",
-          summary.kept != [] && "kept, dropping them is a separate decision: #{Enum.join(summary.kept, ", ")}",
-          summary.relaxed != [] &&
-            "kept and no longer written, so their NOT NULL is dropped: #{Enum.join(summary.relaxed, ", ")}"
-        ]
-        |> Enum.filter(& &1)
-        |> then(&if(&1 == [] and plan.migration_source, do: ["nothing to reconcile"], else: &1))
-        |> Enum.map(&"    #{&1}")
+      altered =
+        if summary.create_as_alter? && plan.migration_source,
+          do: ["#{summary.table} already exists; the migration alters it, adding only what it lacks"],
+          else: []
 
-      Enum.join(["  #{inspect(plan.module)}: #{file}" | details], "\n")
+      details =
+        altered ++
+          for {key, label} <- @reconciled_labels, summary[key] not in [nil, []] do
+            "#{label}: #{Enum.join(summary[key], ", ")}"
+          end
+
+      details = if details == [] and plan.migration_source, do: ["nothing to reconcile"], else: details
+      Enum.join(["  #{inspect(plan.module)}: #{file}" | Enum.map(details, &"    #{&1}")], "\n")
     end
 
     defp up_to_date_notice([]), do: "No application Blueprints to plan."
