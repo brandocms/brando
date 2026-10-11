@@ -22,3 +22,11 @@
   markers are. A picture with no title or credits no longer gets an empty
   `<figcaption>`. Pages lost `og:locale`, which read the language from Ecto's
   `__meta__`; it now comes from the page (`nb_NO` for `no`).
+
+- **Blueprint deprecation warnings name the file and line, and legacy listing
+  columns say the change is manual**. The warnings for syntax
+  `mix brando.migrate54` rewrites, and for listing `field/3` and
+  `template/2`, pointed only into the compiler. They now point at the Blueprint line, and
+  `field/3`/`template/2` no longer send you to `mix brando.migrate54`, which
+  does not rewrite them: replace them with a row component
+  (`guides/blueprint_listings.md#rows`).

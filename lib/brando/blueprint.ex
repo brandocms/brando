@@ -792,37 +792,51 @@ defmodule Brando.Blueprint do
 
   # Shims for syntax `mix brando.migrate54` rewrites. Remove in 0.56 with the task.
   defmacro inputs_for(_, _, _) do
-    IO.warn("inputs_for/3 is deprecated. Migrate with mix brando.migrate54")
+    deprecated(__CALLER__, "inputs_for/3 is deprecated. Migrate with mix brando.migrate54")
   end
 
   defmacro form_query(_) do
-    IO.warn("form_query/1 is deprecated. use query/1 instead. Migrate with mix brando.migrate54")
+    deprecated(__CALLER__, "form_query/1 is deprecated. use query/1 instead. Migrate with mix brando.migrate54")
   end
 
   defmacro listing_query(_) do
-    IO.warn("listing_query/1 is deprecated. use query/1 instead. Migrate with mix brando.migrate54")
+    deprecated(__CALLER__, "listing_query/1 is deprecated. use query/1 instead. Migrate with mix brando.migrate54")
   end
 
   defmacro filters(_) do
-    IO.warn("filters/1 is deprecated. use filter/1 instead. Migrate with mix brando.migrate54")
+    deprecated(__CALLER__, "filters/1 is deprecated. use filter/1 instead. Migrate with mix brando.migrate54")
   end
 
   defmacro actions(_) do
-    IO.warn("actions/1 is deprecated. use action/1 instead. Migrate with mix brando.migrate54")
+    deprecated(__CALLER__, "actions/1 is deprecated. use action/1 instead. Migrate with mix brando.migrate54")
   end
 
   defmacro actions(_, _) do
-    IO.warn(
+    deprecated(
+      __CALLER__,
       "actions/2 is deprecated. use action/1 instead with default_actions <bool>. Migrate with mix brando.migrate54"
     )
   end
 
+  # Legacy listing columns, which no task rewrites: the row they made is
+  # application markup.
   defmacro field(_name, _type, _opts \\ []) do
-    IO.warn("field/3 is deprecated. use component/1 instead. Migrate with mix brando.migrate54")
+    deprecated(__CALLER__, legacy_listing_column("field/3"))
   end
 
   defmacro template(_template, _opts \\ []) do
-    IO.warn("template/2 is deprecated. use component/1 instead. Migrate with mix brando.migrate54")
+    deprecated(__CALLER__, legacy_listing_column("template/2"))
+  end
+
+  defp legacy_listing_column(call) do
+    "#{call} in a listing is no longer supported and renders nothing. " <>
+      "Replace the listing's field and template columns with a row component " <>
+      "(component &__MODULE__.listing_row/1) by hand; mix brando.migrate54 does not rewrite them. " <>
+      "See guides/blueprint_listings.md#rows"
+  end
+
+  defp deprecated(caller, message) do
+    IO.warn(message, Macro.Env.stacktrace(caller))
   end
 
   def __after_compile__(env, _) do
