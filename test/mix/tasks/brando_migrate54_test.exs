@@ -506,6 +506,201 @@ defmodule Mix.Tasks.Brando.Migrate54Test do
     )
   end
 
+  @router_path "lib/legacy_app_web/router.ex"
+
+  @router """
+  defmodule LegacyAppWeb.Router do
+    use LegacyAppWeb, :router
+    import Brando.Router
+
+    admin_routes do
+      live "/", LegacyAppAdmin.DashboardLive
+
+      scope "/banners", LegacyAppAdmin.Banners do
+        live "/banners", BannerListLive
+        live "/banners/create", BannerCreateLive
+        live "/banners/update/:entry_id", BannerUpdateLive
+      end
+
+      scope "/menu", LegacyAppAdmin.Menu, as: :menu do
+        live "/categories", CategoryListLive
+        live "/categories/create", CategoryCreateLive
+        live "/categories/update/:entry_id", CategoryUpdateLive
+      end
+
+      live "/articles/articles", LegacyAppAdmin.Articles.ArticleListLive
+      live "/articles/articles/create", LegacyAppAdmin.Articles.ArticleCreateLive
+      live "/articles/articles/update/:entry_id", LegacyAppAdmin.Articles.ArticleUpdateLive
+      live "/articles/categories/create", LegacyAppAdmin.Articles.CategoryCreateLive
+      live "/articles/categories/update/:entry_id", LegacyAppAdmin.Articles.CategoryUpdateLive
+
+      live "/projects/projects/create", LegacyAppAdmin.Projects.ProjectCreateLive
+      live "/projects/projects/update/:entry_id", LegacyAppAdmin.Projects.ProjectUpdateLive
+    end
+  end
+  """
+
+  defp admin_view(module, schema, action, opts \\ []) do
+    singular = schema |> String.split(".") |> List.last() |> Macro.underscore()
+    entry_id = if action == :update, do: "\n      entry_id={@entry_id}", else: ""
+    presences = if action == :update, do: "\n      presences={@presences}", else: ""
+    header = Keyword.get(opts, :header, "Update #{singular}")
+
+    """
+    defmodule #{module} do
+      use BrandoAdmin.LiveView.Form, schema: #{Keyword.get(opts, :schema_prefix, "")}#{schema}
+      alias BrandoAdmin.Components.Form
+      #{Keyword.get(opts, :gettext, "import LegacyAppAdmin.Gettext, warn: false")}
+
+      def render(assigns) do
+        ~H\"\"\"
+        <.live_component module={Form}
+          id="#{singular}_form"#{entry_id}
+          current_user={@current_user}#{presences}
+          schema={@schema}>
+          <:header>
+            <%= gettext("#{header}") %>
+          </:header>
+        </.live_component>
+        \"\"\"
+      end
+    #{Keyword.get(opts, :extra, "")}end
+    """
+  end
+
+  @content_header_create """
+  defmodule LegacyAppAdmin.Menu.CategoryCreateLive do
+    use BrandoAdmin.LiveView.Form, schema: LegacyApp.Menu.Category
+    alias BrandoAdmin.Components.Content
+    alias BrandoAdmin.Components.Form
+
+    use Gettext,
+      backend: LegacyAppAdmin.Gettext
+
+    def render(assigns) do
+      ~H\"\"\"
+      <Content.header
+        title={gettext("Categories")}
+        subtitle={gettext("Create category")} />
+
+      <.live_component module={Form}
+        id="category_form"
+        current_user={@current_user}
+        schema={@schema}
+      />
+      \"\"\"
+    end
+  end
+  """
+
+  defp admin_views do
+    %{
+      @router_path => @router,
+      "lib/legacy_app_admin/live/banners/banner_create_live.ex" =>
+        admin_view("LegacyAppAdmin.Banners.BannerCreateLive", "LegacyApp.Banners.Banner", :create),
+      "lib/legacy_app_admin/live/banners/banner_update_live.ex" =>
+        admin_view("LegacyAppAdmin.Banners.BannerUpdateLive", "LegacyApp.Banners.Banner", :update,
+          schema_prefix: "Elixir."
+        ),
+      "lib/legacy_app_admin/live/menu/category_create_live.ex" => @content_header_create,
+      "lib/legacy_app_admin/live/menu/category_update_live.ex" =>
+        admin_view("LegacyAppAdmin.Menu.CategoryUpdateLive", "LegacyApp.Menu.Category", :update,
+          gettext: "use Gettext, backend: LegacyAppAdmin.Gettext"
+        ),
+      "lib/legacy_app_admin/live/articles/article_create_live.ex" =>
+        admin_view("LegacyAppAdmin.Articles.ArticleCreateLive", "LegacyApp.Articles.Article", :create),
+      "lib/legacy_app_admin/live/articles/article_update_live.ex" =>
+        admin_view("LegacyAppAdmin.Articles.ArticleUpdateLive", "LegacyApp.Articles.Article", :update),
+      "lib/legacy_app_admin/live/articles/category_create_live.ex" =>
+        admin_view("LegacyAppAdmin.Articles.CategoryCreateLive", "LegacyApp.Articles.Category", :create),
+      "lib/legacy_app_admin/live/articles/category_update_live.ex" =>
+        admin_view("LegacyAppAdmin.Articles.CategoryUpdateLive", "LegacyApp.Articles.Category", :update),
+      "lib/legacy_app_admin/live/projects/project_create_live.ex" =>
+        admin_view("LegacyAppAdmin.Projects.ProjectCreateLive", "LegacyApp.Projects.Project", :create),
+      "lib/legacy_app_admin/live/projects/project_update_live.ex" =>
+        admin_view("LegacyAppAdmin.Projects.ProjectUpdateLive", "LegacyApp.Projects.Project", :update,
+          extra: "\n  def handle_event(\"publish\", _params, socket), do: {:noreply, socket}\n"
+        )
+    }
+  end
+
+  test "replaces generated admin Create/Update LiveViews with a FormLive and routes it" do
+    igniter = migrate(@legacy_blueprint, nil, admin_views())
+
+    converted = [
+      {"banners/banner", "LegacyAppAdmin.Banners.BannerFormLive", "LegacyApp.Banners.Banner", "banner"},
+      {"menu/category", "LegacyAppAdmin.Menu.CategoryFormLive", "LegacyApp.Menu.Category", "category"},
+      {"articles/article", "LegacyAppAdmin.Articles.ArticleFormLive", "LegacyApp.Articles.Article", "article"},
+      {"articles/category", "LegacyAppAdmin.Articles.CategoryFormLive", "LegacyApp.Articles.Category", "category"}
+    ]
+
+    for {path, module, schema, singular} <- converted do
+      assert_creates(igniter, "lib/legacy_app_admin/live/#{path}_form_live.ex", fn contents ->
+        assert contents =~ "defmodule #{module} do"
+        assert contents =~ "use BrandoAdmin.LiveView.Form, schema: #{schema}\n"
+        assert contents =~ "use Gettext, backend: LegacyAppAdmin.Gettext, warn: false"
+        assert contents =~ ~s(id="#{singular}_form")
+        assert contents =~ "entry_id={@entry_id}"
+        refute contents =~ "header"
+      end)
+
+      assert "lib/legacy_app_admin/live/#{path}_create_live.ex" in igniter.rms
+      assert "lib/legacy_app_admin/live/#{path}_update_live.ex" in igniter.rms
+    end
+
+    router = source(igniter, @router_path)
+    assert router =~ ~s|live("/banners/create", BannerFormLive, :create)|
+    assert router =~ ~s|live("/banners/update/:entry_id", BannerFormLive, :update)|
+    assert router =~ ~s|live("/banners", BannerListLive)|
+    assert router =~ ~s|live("/categories/create", CategoryFormLive, :create)|
+    assert router =~ ~s|live("/articles/articles/create", LegacyAppAdmin.Articles.ArticleFormLive, :create)|
+
+    assert router =~
+             ~r|live\(\s*"/articles/categories/update/:entry_id",\s*LegacyAppAdmin.Articles.CategoryFormLive,\s*:update\s*\)|
+
+    # Edited: kept, routes unchanged, listed.
+    refute "lib/legacy_app_admin/live/projects/project_update_live.ex" in igniter.rms
+    assert router =~ ~s|live("/projects/projects/create", LegacyAppAdmin.Projects.ProjectCreateLive)|
+
+    assert_has_warning(igniter, fn warning ->
+      warning =~ "left for you to merge into one FormLive" and
+        warning =~ "LegacyAppAdmin.Projects.Project{Create,Update}Live" and
+        warning =~ "differs from what the generator wrote"
+    end)
+
+    # Articles.Category is not scoped `as:`; Menu.Category is.
+    assert_has_warning(igniter, fn warning ->
+      warning =~ "share a route helper" and
+        warning =~ "LegacyApp.Articles.Category, LegacyApp.Menu.Category: admin_category_form_path" and
+        warning =~ "router_scope: :menu"
+    end)
+
+    assert_has_notice(
+      igniter,
+      &(&1 =~ "LegacyAppAdmin.Banners.BannerFormLive (lib/legacy_app_admin/live/banners/banner_form_live.ex)")
+    )
+
+    rerun = igniter |> apply_igniter!() |> include_test_files() |> Migrate54.igniter()
+
+    assert_unchanged(rerun, [@router_path | Enum.map(converted, &"lib/legacy_app_admin/live/#{elem(&1, 0)}_form_live.ex")])
+  end
+
+  test "leaves a Create/Update pair whose routes it cannot find" do
+    views =
+      admin_views()
+      |> Map.take([
+        "lib/legacy_app_admin/live/banners/banner_create_live.ex",
+        "lib/legacy_app_admin/live/banners/banner_update_live.ex"
+      ])
+      |> Map.put(@router_path, String.replace(@router, "BannerCreateLive", "BannerCreateLive, :create"))
+
+    igniter = migrate(@legacy_blueprint, nil, views)
+
+    assert igniter.rms == []
+    refute_creates(igniter, "lib/legacy_app_admin/live/banners/banner_form_live.ex")
+    assert_has_warning(igniter, &(&1 =~ "its routes are not `live \"path\", Module` lines in the router"))
+  end
+
   test "rewrites each LivePreview target with its own modules and preserves callback behavior" do
     igniter = migrate(@legacy_blueprint, @legacy_live_preview)
     live_preview = source(igniter, @live_preview_path)

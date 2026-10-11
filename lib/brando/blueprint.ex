@@ -776,8 +776,8 @@ defmodule Brando.Blueprint do
   def admin_editor?(module) do
     helpers = Brando.RuntimeConfig.router_helpers()
 
-    function_exported?(module, :__admin_form_helper__, 0) and Code.ensure_loaded?(helpers) and
-      function_exported?(helpers, module.__admin_form_helper__(), 3)
+    function_exported?(module, :__admin_route_helper__, 1) and Code.ensure_loaded?(helpers) and
+      function_exported?(helpers, module.__admin_route_helper__(:update), 3)
   end
 
   defp get_translation(translations, path) do

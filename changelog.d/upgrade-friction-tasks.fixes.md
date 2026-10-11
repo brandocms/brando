@@ -22,3 +22,16 @@
   `preload: [:alternate_entries, :vars]`. `get_page` still loads only what it
   is asked for. The 404 and 410 pages load their vars, and `has_var?/2`
   returns `false`, not `nil`, for a page without vars.
+
+- **`mix brando.migrate54` replaces generated admin Create/Update LiveViews
+  with one FormLive.** 0.54 Blueprints link to `admin_<singular>_form_path`,
+  so a site still routing `<Name>CreateLive`/`<Name>UpdateLive` had listings
+  that crashed. A pair the generator wrote and nobody edited (any generator
+  version since 2021) becomes `<Name>FormLive` from the `brando.gen`
+  template, the pair is deleted, and its routes become
+  `live "...", <Name>FormLive, :create` and `:update`. Edited pairs, pairs
+  whose routes are not plain `live` lines, FormLives that would share a
+  route helper (two schemas with the same singular, outside a scope with
+  `as:`), and other code still naming a removed module are listed with the
+  fix. The commented example routes in the install template's router now
+  use a FormLive too.

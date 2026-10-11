@@ -37,6 +37,13 @@ msgstr "%{context}-CDN: mangler %{settings}"
 msgid "%{context} CDN: off"
 msgstr "%{context}-CDN: av"
 
+#: lib/brando/doctor/checks/admin_routes.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} Blueprint links to admin routes the router does not define"
+msgid_plural "%{count} Blueprints link to admin routes the router does not define"
+msgstr[0] "%{count} Blueprint lenker til admin-ruter som ruteren ikke definerer"
+msgstr[1] "%{count} Blueprints lenker til admin-ruter som ruteren ikke definerer"
+
 #: lib/brando/doctor/checks/image_configs.ex
 #, elixir-autogen, elixir-format
 msgid "%{count} already matches (mix brando.images.adopt records that)"
@@ -242,6 +249,11 @@ msgstr "%{name} %{version} (støttet: %{requirement})"
 msgid "%{name} %{version}, needs %{requirement}"
 msgstr "%{name} %{version}, krever %{requirement}"
 
+#: lib/brando/doctor/checks/admin_routes.ex
+#, elixir-autogen, elixir-format
+msgid "%{schema}: %{helpers}"
+msgstr "%{schema}: %{helpers}"
+
 #: lib/brando/doctor/checks/image_configs.ex
 #, elixir-autogen, elixir-format
 msgid "%{target}: %{count} image"
@@ -265,6 +277,11 @@ msgstr ".yalc brandojs %{version}"
 #, elixir-autogen, elixir-format
 msgid "Admin assets"
 msgstr "Admin-ressurser"
+
+#: lib/brando/doctor/checks/admin_routes.ex
+#, elixir-autogen, elixir-format
+msgid "Admin routes"
+msgstr "Admin-ruter"
 
 #: lib/brando_admin/components/system_check.ex
 #, elixir-autogen, elixir-format
@@ -571,6 +588,11 @@ msgstr "slett priv/static/robots.txt og fjern den fra static_paths"
 msgid "endpoint URL is localhost"
 msgstr "endpoint-URL er localhost"
 
+#: lib/brando/doctor/checks/admin_routes.ex
+#, elixir-autogen, elixir-format
+msgid "every Blueprint's admin route helpers exist"
+msgstr "admin-rutehjelperne til alle Blueprints finnes"
+
 #: lib/brando/doctor/checks/alt_text.ex
 #, elixir-autogen, elixir-format
 msgid "every image has alt text"
@@ -729,6 +751,11 @@ msgstr "ingen e-postmodul"
 msgid "no queues, so background jobs never run"
 msgstr "ingen køer, så bakgrunnsjobber kjøres aldri"
 
+#: lib/brando/doctor/checks/admin_routes.ex
+#, elixir-autogen, elixir-format
+msgid "no router %{router}"
+msgstr "ingen ruter %{router}"
+
 #: lib/brando/doctor/checks/oban.ex
 #, elixir-autogen, elixir-format
 msgid "no scheduled publishing sweep"
@@ -803,6 +830,11 @@ msgstr "start køene som er satt på pause igjen"
 #, elixir-autogen, elixir-format
 msgid "robots.txt"
 msgstr "robots.txt"
+
+#: lib/brando/doctor/checks/admin_routes.ex
+#, elixir-autogen, elixir-format
+msgid "route each schema's FormLive as live \"/<plural>/create\", <Name>FormLive, :create and live \"/<plural>/update/:entry_id\", <Name>FormLive, :update (mix brando.migrate54 converts generated Create/Update LiveViews). Schemas sharing a singular need their routes in a scope with as: and the same router_scope on their Blueprints"
+msgstr "rut hvert skjemas FormLive som live \"/<plural>/create\", <Name>FormLive, :create og live \"/<plural>/update/:entry_id\", <Name>FormLive, :update (mix brando.migrate54 gjør om genererte Create/Update-LiveViews). Skjemaer med samme entallsnavn trenger rutene sine i et scope med as: og samme router_scope på sine Blueprints"
 
 #: lib/brando/doctor/checks/admin_assets.ex
 #, elixir-autogen, elixir-format

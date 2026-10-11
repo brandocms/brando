@@ -16,6 +16,7 @@ Brando 0.55.0-dev (git 12c2289, branch main) · Phoenix 1.8.15 · LiveView 1.2.1
 ✓ Migrations                 up to date
 ✓ Oban queues                6 queues, 0 stuck
 ✓ Configuration              URL, mailer and media settings in place
+✓ Admin routes               every Blueprint's admin route helpers exist
 ! Admin assets               .yalc brandojs 0.55.0-beta.0
                              expected 0.55.0-dev, run npx yalc update @brandocms/brandojs and pnpm install in assets/backend
 ! Image configs              2 configs changed since their images were made (14 images)
@@ -110,6 +111,7 @@ and summaries are prose.
 | Migrations | Public migrations not run (Brando's upgrade migrations included), tenant migrations not run in each environment, pending copies that differ from Brando's templates (as `mix brando.migrations.check`), and upgrade migrations Brando added since they were copied |
 | Oban queues | The configured queues (in the admin, the running ones, so a paused queue shows), that the `content_events`, `webhooks` and `search_index` queues are among them, jobs waiting or executing for over an hour, jobs discarded in the last 24 hours |
 | Configuration | The endpoint URL, the mailer and its sender, the CDN settings of `Brando.Images` and `Brando.Files` when enabled, and the Assistant's API key when a model is configured |
+| Admin routes | For each of the application's Blueprints with an admin listing or form route, the route helper its rows and links call, `admin_<singular>_form_path` with `:update` (`admin_<scope>_<singular>_form_path` with `router_scope:`). A site still routing 0.53's `<Name>CreateLive`/`<Name>UpdateLive` fails here; `mix brando.migrate54` converts generated ones |
 | Admin assets | The `@brandocms/brandojs` version in `assets/backend/.yalc` (or the checkout it links to) against Brando's |
 | Image configs | Images made with an older image config: what Utilities → Recreate changed images recreates. Images made before Brando recorded configs are split, as a dry run of `mix brando.images.adopt`, into those whose files already match and those that differ |
 | Modules | Blocks behind their module's version, per module |

@@ -239,43 +239,30 @@ defmodule Brando.Blueprint.Dsl do
 
   defp generated_admin_routes do
     quote location: :keep, unquote: false do
+      @doc """
+      The router helper `__admin_route__/2` calls for `type` (`:list`,
+      `:create` or `:update`). `mix brando.doctor` checks that the router
+      defines it, and `Brando.Blueprint.admin_editor?/1` uses it to tell
+      whether the type has an editor at all.
+      """
+      def __admin_route_helper__(:list) do
+        if @router_scope, do: :"admin_#{@router_scope}_live_path", else: :admin_live_path
+      end
+
+      def __admin_route_helper__(type) when type in [:create, :update] do
+        if @router_scope,
+          do: :"admin_#{@router_scope}_#{@singular}_form_path",
+          else: :"admin_#{@singular}_form_path"
+      end
+
       def __admin_route__(type, args \\ [])
 
       def __admin_route__(:list, args) do
-        live_path =
-          if @router_scope do
-            :"admin_#{@router_scope}_live_path"
-          else
-            :admin_live_path
-          end
-
-        base_args = [RuntimeConfig.endpoint()]
-
-        apply(
-          RuntimeConfig.router_helpers(),
-          live_path,
-          base_args ++ args
-        )
+        apply(RuntimeConfig.router_helpers(), __admin_route_helper__(:list), [RuntimeConfig.endpoint() | args])
       end
 
-      def __admin_route__(:create, args) do
-        apply(RuntimeConfig.router_helpers(), __admin_form_helper__(), [RuntimeConfig.endpoint(), :create] ++ args)
-      end
-
-      def __admin_route__(:update, args) do
-        apply(RuntimeConfig.router_helpers(), __admin_form_helper__(), [RuntimeConfig.endpoint(), :update] ++ args)
-      end
-
-      @doc """
-      The router helper behind the `:create` and `:update` admin routes. See
-      `Brando.Blueprint.admin_editor?/1`.
-      """
-      def __admin_form_helper__ do
-        if @router_scope do
-          :"admin_#{@router_scope}_#{@singular}_form_path"
-        else
-          :"admin_#{@singular}_form_path"
-        end
+      def __admin_route__(type, args) when type in [:create, :update] do
+        apply(RuntimeConfig.router_helpers(), __admin_route_helper__(type), [RuntimeConfig.endpoint(), type | args])
       end
     end
   end
