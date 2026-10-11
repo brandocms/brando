@@ -38,3 +38,41 @@ test('a click on a fading result cannot navigate', t => {
   assert.equal(prevented, true)
   assert.equal(stopped, true)
 })
+
+test('typing during loading waits for its own search, not a stale data-query', t => {
+  const saved = globalThis.window
+  t.after(() => { globalThis.window = saved })
+  globalThis.window = { location: { pathname: '/admin' } }
+  const box = { getBoundingClientRect: () => ({ height: 10 }), animate: () => ({ finished: Promise.resolve(), cancel() {} }) }
+  const pushes = []
+  let activated = 0
+  const hook = {
+    ...palette(),
+    dialog: { open: true },
+    // Left over from an earlier opening: it already names the typed text.
+    results: { ...box, dataset: { query: 'Palette delayed entry' } },
+    body: box,
+    input: { value: 'Palette delayed entry' },
+    openVersion: 0,
+    pendingEnter: { newTab: false },
+    query: '',
+    js: () => ({ setAttribute() {}, removeAttribute() {} }),
+    readRecent: () => [],
+    mark() {},
+    activate() { activated++ },
+    pushEvent: (event, payload, reply) => pushes.push({ event, payload, reply }),
+  }
+  hook.beginLoading()
+  hook.requestOpen()
+
+  // The opening's reply carries the rows for an empty query.
+  pushes[0].reply()
+  assert.equal(activated, 0)
+  assert.equal(hook.loading, true)
+  assert.deepEqual(pushes.map(push => push.event), ['open', 'search'])
+  assert.equal(pushes[1].payload.q, 'Palette delayed entry')
+
+  pushes[1].reply()
+  assert.equal(hook.loading, false)
+  assert.equal(activated, 1)
+})

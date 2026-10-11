@@ -49,6 +49,13 @@ export default () => ({
     this.el.addEventListener('brando:command-palette:open', this.onOpenRequest)
 
     this.input.addEventListener('keydown', e => this.onKey(e))
+    // Text typed while the opening loads is searched from here too, so the
+    // reply that holds its results is known (`searchedFor`).
+    this.input.addEventListener('input', () => {
+      if (!this.loading || !this.openReady) return
+      clearTimeout(this.searchTimer)
+      this.searchTimer = setTimeout(() => this.searchWhileLoading(), 100)
+    })
 
     this.dialog.addEventListener('click', e => {
       if (this.closing) {
@@ -84,6 +91,7 @@ export default () => ({
 
     this.dialog.addEventListener('close', () => {
       resetDialog(this)
+      clearTimeout(this.searchTimer)
       this.openVersion++
       this.revealAnimation?.cancel()
       this.revealAnimation = null
@@ -125,6 +133,7 @@ export default () => ({
     this.observer?.disconnect()
     clearTimeout(this.rememberTimer)
     clearTimeout(this.closeTimer)
+    clearTimeout(this.searchTimer)
     this.revealAnimation?.cancel()
   },
 
@@ -133,7 +142,7 @@ export default () => ({
     // then restore any query typed while the connection was unavailable.
     if (this.dialog.open) {
       this.beginLoading()
-      this.requestOpen(true)
+      this.requestOpen()
     }
   },
 
@@ -161,6 +170,8 @@ export default () => ({
     this.revealAnimation = null
     this.loading = true
     this.openReady = false
+    this.searchedFor = null
+    clearTimeout(this.searchTimer)
     const js = this.js()
     js.setAttribute(this.body, 'data-loading', '')
     js.setAttribute(this.body, 'aria-busy', 'true')
@@ -168,12 +179,28 @@ export default () => ({
     js.removeAttribute(this.input, 'aria-activedescendant')
   },
 
-  requestOpen(recoverQuery = false) {
+  requestOpen() {
     const version = ++this.openVersion
     this.pushEvent('open', { recent: this.readRecent(), path: window.location.pathname }, () => {
       if (version !== this.openVersion || !this.dialog.open) return
       this.openReady = true
-      if (recoverQuery && this.input.value) this.pushEvent('search', { q: this.input.value })
+      // The reply holds the rows for an empty query. Text typed meanwhile
+      // (or offline, before a reconnect) needs a search of its own.
+      if (this.input.value) this.searchWhileLoading()
+      else this.searchedFor = ''
+      this.sync()
+    })
+  },
+
+  // The results' `data-query` can lag the rows when replies from an earlier
+  // opening are still arriving, so loading ends on a reply to a search pushed
+  // from here, for the current opening and text.
+  searchWhileLoading() {
+    const version = this.openVersion
+    const q = this.input.value
+    this.pushEvent('search', { q }, () => {
+      if (version !== this.openVersion || !this.dialog.open) return
+      this.searchedFor = q
       this.sync()
     })
   },
@@ -237,7 +264,7 @@ export default () => ({
   },
 
   sync() {
-    if (this.loading && this.openReady && this.dialog.open && !this.closing && this.results.dataset.query === this.input.value) {
+    if (this.loading && this.openReady && this.dialog.open && !this.closing && this.searchedFor === this.input.value) {
       const from = this.body.getBoundingClientRect().height
       this.loading = false
       const js = this.js()
