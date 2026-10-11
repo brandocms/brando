@@ -417,9 +417,11 @@ while :; do
   : >"$err"
   if checks="$(fetch_graphql)" || checks="$(fetch_rest)"; then
     checks="$(drop_ignored <<<"$checks")"
-    total="$(jq length <<<"$checks")"
-    pending="$(jq '[.[] | select(.bucket == "pending")] | length' <<<"$checks")"
-    if [ "$total" -gt 0 ] && [ "$pending" -eq 0 ] &&
+    # A reply jq cannot count (empty, or not the expected array) is waited
+    # out like a pending one, rather than tripping the integer tests below.
+    total="$(jq length <<<"$checks" 2>/dev/null)"
+    pending="$(jq '[.[] | select(.bucket == "pending")] | length' <<<"$checks" 2>/dev/null)"
+    if [ "${total:-0}" -gt 0 ] && [ "${pending:-1}" -eq 0 ] &&
       { [ -z "$rerun_links" ] || [ "$(failed_links "$checks")" != "$rerun_links" ]; }; then
       # Right after a push the PR can still point at the previous commit, whose
       # checks are done. Seeing the same finished state twice rules that out.
