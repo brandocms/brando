@@ -3,9 +3,10 @@
   legacy flat srcset (`%{"crop_md" => "600w"}`) failed compilation as mixing
   keyed lists with size entries, and a keyed one declaring only `cropped:`
   inherited the default's `default:` list and failed on sizes it does not
-  have. A flat `srcset`, or a keyed one in a config with its own `sizes`, now
-  replaces the default; a keyed one on the default sizes is still merged key
-  by key, so `cropped:` alone keeps the default's `default:` list.
+  have. A flat `srcset`, or a keyed one in an image config with its own
+  `sizes`, now replaces the default; a keyed one on the default sizes, or in
+  a gallery (whose sizes merge over the default's), is still merged key by
+  key, so `cropped:` alone keeps the default's `default:` list.
 
 - **Search, the command palette, the dashboard and the schedule skip types
   with no admin editor**. They kept every Blueprint with persisted

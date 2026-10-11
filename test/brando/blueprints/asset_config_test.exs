@@ -409,6 +409,11 @@ defmodule Brando.Blueprint.AssetConfigTest do
 
             asset :gallery, :gallery,
               cfg: %{image: %{sizes: unquote(Macro.escape(sizes)), srcset: %{"crop_md" => "600w"}}}
+
+            # A gallery's sizes merge over the default's, so its keyed srcset
+            # merges too, own sizes or not.
+            asset :keyed_gallery, :gallery,
+              cfg: %{image: %{sizes: unquote(Macro.escape(sizes)), srcset: %{cropped: [{"crop_md", "600w"}]}}}
           end
         end
       )
@@ -429,6 +434,9 @@ defmodule Brando.Blueprint.AssetConfigTest do
              Map.put(default, :default, [{"large", "1700w"}])
 
     assert Assets.__asset__(module, :gallery).opts.cfg.image.srcset == %{"crop_md" => "600w"}
+
+    assert Assets.__asset__(module, :keyed_gallery).opts.cfg.image.srcset ==
+             Map.put(default, :cropped, [{"crop_md", "600w"}])
   end
 
   test "validates deferred config functions when they are materialized" do
