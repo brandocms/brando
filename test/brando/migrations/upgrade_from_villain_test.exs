@@ -27,10 +27,21 @@ defmodule Brando.Migrations.UpgradeFromVillainTest do
 
     :ok = Ecto.Adapters.Postgres.storage_up(storage)
 
-    repo =
-      start_supervised!(
-        {Repo, name: nil, url: nil, database: database, pool: DBConnection.ConnectionPool, pool_size: 2, log: false}
+    # The test repo's own connection settings (parsed from its url, which CI
+    # gives credentials in), pointed at the new database and out of the sandbox
+    repo_config =
+      config
+      |> Keyword.drop([:ownership_pool, :pool_size, :pool_overflow])
+      |> Keyword.merge(
+        name: nil,
+        url: nil,
+        database: database,
+        pool: DBConnection.ConnectionPool,
+        pool_size: 2,
+        log: false
       )
+
+    repo = start_supervised!({Repo, repo_config})
 
     Repo.put_dynamic_repo(repo)
 
