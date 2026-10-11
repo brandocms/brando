@@ -414,6 +414,12 @@ defmodule Brando.VillainTest do
     assert parsed =~ "Custom headline text"
     assert parsed =~ "<picture"
     assert parsed =~ "/media/image/small/1.jpg 300w" || parsed =~ image.path
+
+    # Live-preview markers belong to annotated renders only, never public HTML.
+    refute parsed =~ "[+:C<"
+    annotated = Brando.Villain.parse([block], %Brando.Pages.Page{}, annotate_blocks: true)
+    assert annotated =~ "<!-- [+:C<#{block.block.uid}>] -->"
+    assert annotated =~ "<!-- [+:B<#{child_block.uid}>] -->"
   end
 
   test "multi modules dispatch each child through its own template adapter", %{user: user} do
@@ -976,7 +982,7 @@ defmodule Brando.VillainTest do
     {:ok, page} = Brando.Content.Blocks.render_entry(Brando.Pages.Page, page.id)
 
     assert page.rendered_blocks ==
-             "<section b-section=\"general-green\" style=\"--color_bg: #000000;--color_fg: #FFFFFF;--color_accent: #FF00FF\">\n  <!-- [+:C<container-a1>] -->\n  -- this is some code Some text! -- <div class=\"paragraph\"><p>A REF!</p></div>\n<!-- [-:C<container-a1>] -->\n\n</section>\n"
+             "<section b-section=\"general-green\" style=\"--color_bg: #000000;--color_fg: #FFFFFF;--color_accent: #FF00FF\">\n  -- this is some code Some text! -- <div class=\"paragraph\"><p>A REF!</p></div>\n</section>\n"
 
     module2_params = %{
       code: "-- this is some NEW code {{ testvar }} -- {% ref refs.lede %}",
@@ -1008,7 +1014,7 @@ defmodule Brando.VillainTest do
     {:ok, updated_page} = Brando.Pages.get_page(page.id)
 
     assert updated_page.rendered_blocks ==
-             "<section b-section=\"general-green\" style=\"--color_bg: #000000;--color_fg: #FFFFFF;--color_accent: #FF00FF\">\n  <!-- [+:C<container-a1>] -->\n  -- this is some NEW code Some text! -- <div class=\"lede\"><p>A REF!</p></div>\n<!-- [-:C<container-a1>] -->\n\n</section>\n"
+             "<section b-section=\"general-green\" style=\"--color_bg: #000000;--color_fg: #FFFFFF;--color_accent: #FF00FF\">\n  -- this is some NEW code Some text! -- <div class=\"lede\"><p>A REF!</p></div>\n</section>\n"
   end
 
   test "access refs in context", %{user: user} do

@@ -656,6 +656,15 @@ defmodule Brando.HTMLTest do
 
     assert Floki.find(doc, "figcaption") == [{"figcaption", [], ["A custom caption"]}]
 
+    # An empty caption, as a picture block with no title or credits passes, is no caption.
+    assigns = %{user: user, opts: Keyword.put(opts, :caption, "")}
+
+    comp = ~H"""
+    <.picture src={@user.avatar} opts={@opts} />
+    """
+
+    refute rendered_to_string(comp) =~ "figcaption"
+
     # ---
     opts = [
       srcset: srcset,

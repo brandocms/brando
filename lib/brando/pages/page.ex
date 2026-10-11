@@ -341,7 +341,7 @@ defmodule Brando.Pages.Page do
     field ["description", "og:description"], & &1.meta_description
     field ["title", "og:title"], &fallback([Map.get(&1, :meta_title), Map.get(&1, :title)])
     field "og:image", &Map.get(&1, :meta_image)
-    field "og:locale", &encode_locale(try_path(&1, [:__meta__, :language]))
+    field "og:locale", &encode_locale(Map.get(&1, :language))
   end
 
   json_ld_schema JSONLD.Schema.Article do

@@ -394,7 +394,7 @@ defmodule Brando.Villain.Parser do
           {child_block, index} -> render_multi_child(child_block, index, count, id, opts)
         end)
         |> Enum.intersperse("\n")
-        |> annotate_children(block.uid)
+        |> maybe_annotate_children(block.uid, opts)
       end
 
     base_vars = process_vars(block.vars)
@@ -1289,7 +1289,7 @@ defmodule Brando.Villain.Parser do
       d, acc -> [apply(parser_module(opts), d.type, [d, opts]) | acc]
     end)
     |> Enum.reverse()
-    |> annotate_children(block.uid)
+    |> maybe_annotate_children(block.uid, opts)
   end
 
   def timeline(items, _) do
@@ -2148,6 +2148,9 @@ defmodule Brando.Villain.Parser do
   def annotate_children(code, uid) do
     ["<!-- [+:C<", uid, ">] -->\n  ", code, "\n<!-- [-:C<", uid, ">] -->\n"]
   end
+
+  defp maybe_annotate_children(code, uid, %{annotate_blocks: true}), do: annotate_children(code, uid)
+  defp maybe_annotate_children(code, _uid, _opts), do: code
 
   def maybe_format(html, %{format_html: true}) do
     html = IO.iodata_to_binary(html)

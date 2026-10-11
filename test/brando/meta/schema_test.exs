@@ -6,13 +6,13 @@ defmodule Brando.MetaSchemaTest do
     description: "Our description"
   }
 
+  # As `Brando.Plug.HTML.put_meta/3` passes an entry: its `__meta__` replaced
+  # by one holding only the current URL.
   @data %{
     title: "Our title",
     meta_description: "Our description",
-    __meta__: %{
-      current_url: "http://localhost",
-      language: "en"
-    }
+    language: "no",
+    __meta__: %{current_url: "http://localhost"}
   }
 
   defmodule Page do
@@ -56,6 +56,7 @@ defmodule Brando.MetaSchemaTest do
     extracted_meta = Brando.Blueprint.Meta.extract_meta(Brando.Pages.Page, @data)
     assert List.keyfind(extracted_meta, "description", 0) == {"description", "Our description"}
     assert List.keyfind(extracted_meta, "title", 0) == {"title", "Our title"}
+    assert List.keyfind(extracted_meta, "og:locale", 0) == {"og:locale", "nb_NO"}
   end
 
   test "fallback" do
