@@ -1911,24 +1911,53 @@ defmodule Mix.Tasks.Brando.Migrate55Test do
       rule_missing: "priv/gettext/backend/no/LC_MESSAGES/default.po",
       semicolon_missing: "priv/gettext/en/LC_MESSAGES/default.po",
       complete: "priv/gettext/sv/LC_MESSAGES/default.po",
-      unknown: "priv/gettext/xx/LC_MESSAGES/default.po"
+      unknown_two_forms: "priv/gettext/frontend/dk/LC_MESSAGES/default.po",
+      unknown_semicolon_missing: "priv/gettext/xx/LC_MESSAGES/default.po",
+      unknown_three_forms: "priv/gettext/yy/LC_MESSAGES/default.po"
     }
+
+    three_forms = "nplurals=3; plural=(n==1 ? 0 : n==2 ? 1 : 2)"
 
     igniter =
       migrate(@blueprint_054, %{
         paths.rule_missing => po.("nplurals=2;"),
         paths.semicolon_missing => po.("nplurals=2; plural=(n != 1)"),
         paths.complete => po.("nplurals=2; plural=(n != 1);"),
-        paths.unknown => po.("nplurals=2;")
+        paths.unknown_two_forms => po.("nplurals=2;"),
+        paths.unknown_semicolon_missing => po.(three_forms),
+        paths.unknown_three_forms => po.("nplurals=3;")
       })
 
     assert source(igniter, paths.rule_missing) == po.("nplurals=2; plural=(n != 1);")
     assert source(igniter, paths.semicolon_missing) == po.("nplurals=2; plural=(n != 1);")
-    assert_unchanged(igniter, [paths.complete, paths.unknown])
-    assert_has_warning(igniter, &String.contains?(&1, paths.unknown))
+    assert_unchanged(igniter, [paths.complete, paths.unknown_three_forms])
+
+    # A locale Gettext does not know: the two-form rule for nplurals=2, with a
+    # warning to check it, and a missing `;` added to a rule that has one.
+    assert source(igniter, paths.unknown_two_forms) == po.("nplurals=2; plural=(n != 1);")
+
+    assert_has_warning(
+      igniter,
+      &(String.contains?(&1, paths.unknown_two_forms) and String.contains?(&1, "did you mean da?") and
+          String.contains?(&1, "check that it fits"))
+    )
+
+    assert source(igniter, paths.unknown_semicolon_missing) == po.(three_forms <> ";")
+    refute Enum.any?(igniter.warnings, &String.contains?(&1, paths.unknown_semicolon_missing))
+
+    assert_has_warning(
+      igniter,
+      &(String.contains?(&1, paths.unknown_three_forms) and String.contains?(&1, "yy is not a locale Gettext knows."))
+    )
 
     rerun = igniter |> apply_igniter!() |> include_test_files() |> Migrate55.igniter()
-    assert_unchanged(rerun, [paths.rule_missing, paths.semicolon_missing])
+
+    assert_unchanged(rerun, [
+      paths.rule_missing,
+      paths.semicolon_missing,
+      paths.unknown_two_forms,
+      paths.unknown_semicolon_missing
+    ])
   end
 
   test "reports only the 0.55 manual workflow" do

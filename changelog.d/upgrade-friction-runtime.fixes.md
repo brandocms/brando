@@ -26,7 +26,14 @@
 - **Blueprint deprecation warnings name the file and line, and legacy listing
   columns say the change is manual**. The warnings for syntax
   `mix brando.migrate54` rewrites, and for listing `field/3` and
-  `template/2`, pointed only into the compiler. They now point at the Blueprint line, and
-  `field/3`/`template/2` no longer send you to `mix brando.migrate54`, which
-  does not rewrite them: replace them with a row component
-  (`guides/blueprint_listings.md#rows`).
+  `template/2`, pointed only into the compiler. They now point at the
+  Blueprint line, and `field/3`/`template/2` no longer send you to
+  `mix brando.migrate54`, which does not rewrite them: replace them with a row
+  component (`guides/blueprint_listings.md#rows`).
+
+- **`mix brando.migrate55` completes Plural-Forms headers for locales Gettext
+  does not know**. A bare `nplurals=2;` now gets the two-form rule
+  `plural=(n != 1);`, with a warning to check it, and a rule missing its
+  trailing `;` gets one; only other headers are left for you. A country code
+  in the locale's place (`dk`) is pointed at its language
+  (`did you mean da?`).

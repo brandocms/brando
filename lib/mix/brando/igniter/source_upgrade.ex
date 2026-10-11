@@ -1195,7 +1195,9 @@ if Code.ensure_loaded?(Igniter) do
     Gettext 1.0 warns, once per catalog per compile, on a header it cannot
     parse: `nplurals=2;` without the rule, or a rule without its trailing `;`.
     An incomplete header for a locale Expo knows is replaced with the full
-    one; other locales are reported.
+    one. For other locales a missing `;` is added and a bare `nplurals=2;`
+    gets the two-form rule `plural=(n != 1);`, with a warning to check it;
+    any other header is reported.
     """
     def complete_plural_forms_headers(igniter) do
       igniter = Igniter.include_glob(igniter, "priv/gettext/**/*.po")
@@ -1216,20 +1218,71 @@ if Code.ensure_loaded?(Igniter) do
     end
 
     defp complete_plural_forms_header(igniter, path, header) do
-      with {:error, _} <- PluralForms.parse(header),
-           {:ok, plural_forms} <- path |> catalog_locale() |> PluralForms.plural_form() do
-        complete = PluralForms.to_string(plural_forms)
-        Igniter.update_file(igniter, path, &Source.update(&1, :content, replace_plural_forms(&1, header, complete)))
-      else
-        {:ok, %PluralForms{}} ->
-          igniter
+      locale = catalog_locale(path)
 
-        :error ->
+      with {:error, _} <- PluralForms.parse(header),
+           {:ok, plural_forms} <- PluralForms.plural_form(locale) do
+        put_plural_forms(igniter, path, header, PluralForms.to_string(plural_forms))
+      else
+        {:ok, %PluralForms{}} -> igniter
+        :error -> complete_unknown_plural_forms(igniter, path, header, locale)
+      end
+    end
+
+    @two_forms "nplurals=2; plural=(n != 1);"
+
+    # Country codes written where the language code belongs. Gettext knows the
+    # language, not the country.
+    @language_for_country %{
+      "cn" => "zh",
+      "cz" => "cs",
+      "dk" => "da",
+      "ee" => "et",
+      "gb" => "en",
+      "gr" => "el",
+      "jp" => "ja",
+      "kr" => "ko",
+      "rs" => "sr",
+      "ua" => "uk",
+      "us" => "en"
+    }
+
+    # A locale Gettext does not know: a rule only missing its `;` gets one, and
+    # a bare `nplurals=2;` the two-form rule nearly every two-form language
+    # uses. Anything else is left for a person.
+    defp complete_unknown_plural_forms(igniter, path, header, locale) do
+      terminated = String.trim_trailing(header) <> ";"
+      unknown = unknown_locale(locale)
+
+      cond do
+        not String.ends_with?(header, ";") and match?({:ok, _}, PluralForms.parse(terminated)) ->
+          put_plural_forms(igniter, path, header, terminated)
+
+        header =~ ~r/^nplurals\s*=\s*2\s*;?$/ ->
+          igniter
+          |> put_plural_forms(path, header, @two_forms)
+          |> Igniter.add_warning("""
+          #{path} had an incomplete Plural-Forms header (#{header}). #{unknown}
+          It was completed with the two-form rule `#{@two_forms}`; check that it fits the language.
+          """)
+
+        true ->
           Igniter.add_warning(igniter, """
-          #{path} has an incomplete Plural-Forms header (#{header}) for a locale Gettext does not know.
-          Complete it, for example `nplurals=2; plural=(n != 1);`, or remove the header.
+          #{path} has an incomplete Plural-Forms header (#{header}). #{unknown}
+          Complete it, for example `#{@two_forms}`, or remove the header.
           """)
       end
+    end
+
+    defp unknown_locale(locale) do
+      case Map.fetch(@language_for_country, locale) do
+        {:ok, language} -> "#{locale} is not a locale Gettext knows; did you mean #{language}?"
+        :error -> "#{locale} is not a locale Gettext knows."
+      end
+    end
+
+    defp put_plural_forms(igniter, path, header, complete) do
+      Igniter.update_file(igniter, path, &Source.update(&1, :content, replace_plural_forms(&1, header, complete)))
     end
 
     defp replace_plural_forms(source, header, complete) do
