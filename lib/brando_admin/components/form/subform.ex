@@ -121,7 +121,11 @@ defmodule BrandoAdmin.Components.Form.Subform do
                 data-sortable-selector=".subform-entry"
               >
                 <.empty_subform :if={@empty_subform_fields} field={@field} />
-                <.inputs_for :let={sub_form} field={@field}>
+                <%!-- The row's hidden inputs (its id, LiveView's _persistent_id)
+                      go inside the row, not beside it: beside it they were
+                      matched by position, and after a removal one was left
+                      over and sent as an extra, empty row (#3157). --%>
+                <.inputs_for :let={sub_form} field={@field} skip_hidden>
                   <div
                     id={"#{sub_form.id}-entry"}
                     class={[
@@ -130,6 +134,12 @@ defmodule BrandoAdmin.Components.Form.Subform do
                       @subform.style == :listing && "summary-entry"
                     ]}
                   >
+                    <input
+                      :for={{name, value} <- sub_form.hidden}
+                      type="hidden"
+                      name={Phoenix.HTML.Form.input_name(sub_form, name)}
+                      value={value}
+                    />
                     <input type="hidden" name={"#{@field.form.name}[#{@sort_param}][]"} value={sub_form.index} />
                     <input
                       :if={SubformHelpers.new_row_key(sub_form)}
@@ -178,7 +188,10 @@ defmodule BrandoAdmin.Components.Form.Subform do
                         <.icon name={if entry_open?(sub_form, @open_entries), do: "chevron-up", else: "square-pen"} />
                         {if entry_open?(sub_form, @open_entries), do: gettext("Done"), else: gettext("Edit")}
                       </button>
-                      <.subentry_remove name={"#{@field.form.name}[#{@drop_param}][]"} index={sub_form.index} />
+                      <.subentry_remove
+                        name={"#{@field.form.name}[#{@drop_param}][]"}
+                        index={sub_form.index}
+                      />
                     </div>
                     <div
                       id={"#{sub_form.id}-fields"}
@@ -198,7 +211,10 @@ defmodule BrandoAdmin.Components.Form.Subform do
                       />
                     </div>
                     <div :if={@table?} class="subform-row-end">
-                      <.subentry_remove name={"#{@field.form.name}[#{@drop_param}][]"} index={sub_form.index} />
+                      <.subentry_remove
+                        name={"#{@field.form.name}[#{@drop_param}][]"}
+                        index={sub_form.index}
+                      />
                     </div>
                   </div>
                 </.inputs_for>

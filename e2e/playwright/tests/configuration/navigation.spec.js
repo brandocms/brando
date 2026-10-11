@@ -14,12 +14,11 @@ test('reorder menu items', async ({ page }) => {
 
   await page.locator('.subform-handle').first().hover()
   await page.mouse.down()
-  await page
-    .locator('div:nth-child(9) > .subform-tools > .subform-handle')
-    .hover()
-  await page
-    .locator('div:nth-child(9) > .subform-tools > .subform-handle')
-    .hover()
+  // The third row's handle. Rows hold their own hidden inputs, so a row is
+  // addressed as a row rather than by its place among the container's nodes.
+  const third = page.locator('.subform-entry').nth(2).locator('.subform-tools > .subform-handle')
+  await third.hover()
+  await third.hover()
   await page.waitForTimeout(300)
   await page.mouse.up()
 

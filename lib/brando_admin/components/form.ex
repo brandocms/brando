@@ -63,6 +63,7 @@ defmodule BrandoAdmin.Components.Form do
   alias BrandoAdmin.Components.Form.Input.SubformHelpers
   alias BrandoAdmin.Components.Form.MetaDrawer
   alias BrandoAdmin.Components.Form.NotesDrawer
+  alias BrandoAdmin.Components.Form.PendingRows
   alias BrandoAdmin.Components.Form.Preview
   alias BrandoAdmin.Components.Form.Primitives
   alias BrandoAdmin.Components.Form.RevisionsDrawer
@@ -1140,8 +1141,19 @@ defmodule BrandoAdmin.Components.Form do
       entries ->
         updated = SubformHelpers.put_entries(changeset, field, entries)
 
+        # Until the browser shows this, a change it sends lists the rows as
+        # they were (`PendingRows`).
+        pending =
+          PendingRows.record(
+            pending_rows(socket),
+            field,
+            SubformHelpers.row_keys(changeset, field),
+            SubformHelpers.row_keys(updated, field)
+          )
+
         socket =
           socket
+          |> assign(:pending_rows, pending)
           |> put_local_form(to_form(updated, []))
           |> Drafts.dirty()
           |> broadcast_dirty_fields()
@@ -2037,6 +2049,8 @@ defmodule BrandoAdmin.Components.Form do
 
   # The one place entry params become a changeset (validate, commit_tiptap and
   # both save paths).
+  defp pending_rows(socket), do: socket.assigns[:pending_rows] || %{}
+
   defp cast_entry_params(socket, entry, params), do: socket |> cast_entry_edit(entry, params, nil) |> elem(0)
 
   # Also returns the fields whose value was kept over the browser's old form,
@@ -4655,7 +4669,9 @@ defmodule BrandoAdmin.Components.Form do
     block_changesets = socket.assigns.block_changesets
     block_map = socket.assigns.block_map
 
-    entry_params = Map.get(params, singular)
+    {entry_params, _listed_rows} =
+      PendingRows.correct(Map.get(params, singular), pending_rows(socket), socket.assigns.form.source)
+
     entry_or_default = entry || struct(schema)
 
     changeset =
@@ -4749,7 +4765,9 @@ defmodule BrandoAdmin.Components.Form do
     form_blueprint = socket.assigns.form_blueprint
     save_redirect_target = socket.assigns.save_redirect_target
 
-    entry_params = Map.get(params, singular)
+    {entry_params, _listed_rows} =
+      PendingRows.correct(Map.get(params, singular), pending_rows(socket), socket.assigns.form.source)
+
     entry_or_default = entry || struct(schema)
 
     changeset =
@@ -8334,16 +8352,30 @@ defmodule BrandoAdmin.Components.Form do
     singular = socket.assigns.singular
     has_blocks? = socket.assigns.has_blocks?
 
-    entry_params = Map.get(params, singular)
-    entry_or_default = entry || struct(schema)
     previous = socket.assigns.form.source
     target = target_field(socket, singular, params["_target"])
+
+    # Rows added or removed since the browser last drew them (`PendingRows`).
+    # Recovery is the browser's own rows, so nothing is pending after it.
+    {entry_params, listed_rows} =
+      if recovery?,
+        do: {Map.get(params, singular), %{}},
+        else: PendingRows.correct(Map.get(params, singular), pending_rows(socket), previous)
+
+    entry_or_default = entry || struct(schema)
 
     {changeset, echoed} = cast_entry_edit(socket, entry_or_default, entry_params, target)
     changeset = Map.put(changeset, :action, :validate)
 
     edit = %{previous: previous, echoed: echoed, target: target, params: params, entry_params: entry_params}
     {changeset, socket, offline} = settle_edit(recovery?, socket, changeset, edit)
+
+    socket =
+      assign(
+        socket,
+        :pending_rows,
+        if(recovery?, do: %{}, else: PendingRows.settle(pending_rows(socket), listed_rows, changeset))
+      )
 
     # The recomputed form is assigned before the `_target` branch, and that
     # placement is load-bearing. Form *recovery* pushes this same event with a
