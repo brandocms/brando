@@ -10,8 +10,10 @@ defmodule Brando.Migrations.UpgradeFromVillainTest do
   # already has today's tables, cannot stand in for the old one.
   use ExUnit.Case, async: false
 
+  alias Brando.Migration.LegacyConversion
   alias Brando.Utils
   alias BrandoIntegration.Repo
+  alias Mix.Tasks.Brando.Check.LegacyConversion, as: CheckTask
 
   @moduletag timeout: :timer.minutes(5)
 
@@ -62,8 +64,9 @@ defmodule Brando.Migrations.UpgradeFromVillainTest do
     String.to_integer(number)
   end
 
-  defp migrate(path) do
-    [{module, _bytecode}] = Code.compile_file(path)
+  # `edit` changes the template's source before it is compiled
+  defp migrate(path, edit \\ & &1) do
+    [{module, _bytecode}] = path |> File.read!() |> edit.() |> Code.compile_string(path)
 
     try do
       :ok = Ecto.Migrator.up(Repo, System.unique_integer([:positive]), module, log: false)
@@ -139,12 +142,27 @@ defmodule Brando.Migrations.UpgradeFromVillainTest do
     }
   end
 
-  defp var(key, value), do: %{"key" => key, "type" => "string", "label" => key, "value" => value, "important" => true}
+  defp var(key, value, type \\ "string"),
+    do: %{"key" => key, "type" => type, "label" => key, "value" => value, "important" => true}
+
+  defp table_ref(name, cells) do
+    %{
+      "name" => name,
+      "data" => %{
+        "type" => "table",
+        "uid" => Utils.generate_uid(),
+        "hidden" => false,
+        "data" => %{"rows" => Enum.map(cells, &%{"cols" => [var("cell", &1)]})}
+      }
+    }
+  end
 
   # Content as a 0.53.0-dev site's editor saved it: a fragment block, a multi
   # module whose own vars sit above its entries, and a module with two file
   # videos, saved before blocks had a `loop` setting, one of them with a
-  # Vimeo thumbnail URL in `cover`.
+  # Vimeo thumbnail URL in `cover`. A second page has a container holding a
+  # free-standing text block and a module with a table ref, then a
+  # free-standing header.
   defp insert_villain_site do
     now = ~N[2023-11-01 12:00:00]
 
@@ -262,7 +280,95 @@ defmodule Brando.Migrations.UpgradeFromVillainTest do
         [blocks, now]
       )
 
-    %{page: page_id, fragment: fragment_id}
+    contact = [
+      %{
+        "type" => "container",
+        "uid" => Utils.generate_uid(),
+        "hidden" => false,
+        "data" => %{
+          "description" => "Intro",
+          "blocks" => [
+            %{
+              "type" => "text",
+              "uid" => Utils.generate_uid(),
+              "hidden" => false,
+              "data" => %{"text" => "<p>Hello</p>", "type" => "paragraph"}
+            },
+            %{
+              "type" => "module",
+              "uid" => Utils.generate_uid(),
+              "hidden" => false,
+              "data" => %{
+                "module_id" => video_id,
+                "multi" => false,
+                "refs" => [villain_video("video"), villain_video("cover_video"), table_ref("hours", ["Mon", "Tue"])],
+                "vars" => [var("autoplay", true, "boolean")]
+              }
+            }
+          ]
+        }
+      },
+      %{
+        "type" => "header",
+        "uid" => Utils.generate_uid(),
+        "hidden" => false,
+        "data" => %{"text" => "Contact", "level" => 2}
+      }
+    ]
+
+    [[contact_id]] =
+      insert!(
+        """
+        INSERT INTO pages (uri, language, title, template, status, data, inserted_at, updated_at)
+        VALUES ('contact', 'en', 'Contact', 'default.html', 1, $1, $2, $2)
+        """,
+        [contact, now]
+      )
+
+    %{page: page_id, contact: contact_id, fragment: fragment_id}
+  end
+
+  defp root_block(page_id, sequence) do
+    [[id]] = rows("SELECT block_id FROM pages_blocks WHERE entry_id = $1 AND sequence = $2", [page_id, sequence])
+    id
+  end
+
+  defp child_block(parent_id, sequence) do
+    [[id]] = rows("SELECT id FROM content_blocks WHERE parent_id = $1 AND sequence = $2", [parent_id, sequence])
+    id
+  end
+
+  defp findings do
+    assert {:ok, report} = LegacyConversion.check("public")
+    Enum.map(report.findings, &{&1.severity, LegacyConversion.format(&1)})
+  end
+
+  defp run_check(args) do
+    shell = Mix.shell()
+    Mix.shell(Mix.Shell.Process)
+
+    try do
+      result =
+        try do
+          CheckTask.run(args)
+        catch
+          :exit, reason -> {:exit, reason}
+        end
+
+      {result, shell_output()}
+    after
+      Mix.shell(shell)
+    end
+  end
+
+  defp last_line(output), do: output |> Enum.reverse() |> hd()
+
+  defp shell_output do
+    receive do
+      {:mix_shell, _kind, [line]} -> [line | shell_output()]
+    after
+      0 -> []
+    end
   end
 
   test "a pre-blocks site's Villain content comes through brando_103 onwards" do
@@ -326,5 +432,101 @@ defmodule Brando.Migrations.UpgradeFromVillainTest do
              ["vimeo", "vimeo", "https://vimeo.com/76979871", 640, 360, nil],
              ["youtube", "youtube", "https://www.youtube.com/watch?v=dQw4w9WgXcQ", 840, 1052, nil]
            ]
+  end
+
+  describe "mix brando.check.legacy_conversion" do
+    test "finds the Villain content in the converted blocks, and lists what they have beyond it" do
+      load_schema()
+      %{contact: contact_id} = insert_villain_site()
+      Enum.each(templates(103..1000), &migrate/1)
+
+      assert {:ok, report} = LegacyConversion.check("public")
+      assert report.findings == []
+      assert report.dropped == []
+
+      assert report.sources == [
+               %{table: "content_templates", column: "data", join_table: "content_templates_blocks", entries: 0},
+               %{table: "pages", column: "data", join_table: "pages_blocks", entries: 2},
+               %{table: "pages_fragments", column: "data", join_table: "pages_fragments_blocks", entries: 1}
+             ]
+
+      assert {nil, ["Comparing Villain content with its blocks in public\n" | output]} = run_check([])
+
+      assert last_line(output) =~
+               "Checked 3 entries (content_templates.data, pages.data, pages_fragments.data): every Villain block"
+
+      # A table row an editor added since
+      video_block = contact_id |> root_block(0) |> child_block(1)
+
+      rows(
+        "INSERT INTO content_table_rows (block_id, sequence, inserted_at, updated_at) VALUES ($1, 2, now(), now())",
+        [video_block]
+      )
+
+      assert findings() == [
+               {:extra,
+                ~s|pages ##{contact_id} › block 1 (container) › block 2 (module "Video") › table rows: 2 in Villain, 3 now|}
+             ]
+
+      assert {nil, output} = run_check([])
+      assert last_line(output) =~ "nothing missing, 1 beyond Villain's (fails with --strict)"
+      assert {{:exit, {:shutdown, 1}}, _output} = run_check(["--strict"])
+    end
+
+    test "names the refs and fragment_id the converted blocks lost" do
+      load_schema()
+      %{page: page_id, fragment: fragment_id} = insert_villain_site()
+      Enum.each(templates(103..1000), &migrate/1)
+
+      first_entry = page_id |> root_block(1) |> child_block(0)
+      rows("DELETE FROM content_refs WHERE block_id = $1 AND name = 'p'", [first_entry])
+      rows("UPDATE content_blocks SET fragment_id = NULL WHERE type = 'fragment'")
+
+      expected = [
+        "pages ##{page_id} › block 1 (fragment) › fragment_id: #{fragment_id} in Villain, none now",
+        ~s|pages ##{page_id} › block 2 (module "Values") › entry 1 › refs: p missing|
+      ]
+
+      assert findings() == Enum.map(expected, &{:missing, &1})
+
+      assert {{:exit, {:shutdown, 1}}, output} = run_check([])
+      assert Enum.map(expected, &("  " <> &1)) -- output == []
+
+      assert last_line(output) =~
+               "Checked 3 entries (content_templates.data, pages.data, pages_fragments.data): 2 missing"
+
+      # Once a Villain column is dropped, its blocks are no longer checked
+      rows("ALTER TABLE pages_fragments DROP COLUMN data")
+
+      assert {:ok, %{dropped: [%{table: "pages_fragments", column: "data", join_table: "pages_fragments_blocks"}]}} =
+               LegacyConversion.check("public")
+
+      assert {{:exit, {:shutdown, 1}}, output} = run_check([])
+      assert "  pages_fragments_blocks (pages_fragments.data)" in output
+      assert last_line(output) =~ "Checked 2 entries (content_templates.data, pages.data): 2 missing"
+    end
+
+    test "finds the vars of a multi module that brando_108 dropped" do
+      load_schema()
+      %{page: page_id} = insert_villain_site()
+
+      # brando_108 as it shipped before it carried a multi module's own vars
+      without_multi_vars = fn source ->
+        multi_vars = """
+                if vars = get_in(module, ["data", "vars"]) do
+                  process_vars(block_id, vars)
+                end
+        """
+
+        assert source =~ multi_vars
+        String.replace(source, multi_vars, "")
+      end
+
+      for path <- templates(103..1000) do
+        if number(path) == 108, do: migrate(path, without_multi_vars), else: migrate(path)
+      end
+
+      assert findings() == [{:missing, ~s|pages ##{page_id} › block 2 (module "Values") › vars: heading missing|}]
+    end
   end
 end

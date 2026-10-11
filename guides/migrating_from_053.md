@@ -513,6 +513,15 @@ each generated migration by hand:
    column the plan drops while it still holds data, such as one removed from
    the Blueprint years ago without a migration; count its non-null values
    before deciding.
+
+   `mix brando.check.legacy_conversion` does that verification: for every
+   entry, it compares the Villain JSON with the blocks the upgrade migrations
+   made of it (blocks at each level, vars and their values, refs, table rows,
+   fragments) and names what is missing, such as
+   `pages #12 › block 3 (module "Values") › vars: heading missing`. Run it
+   straight after `mix brando.migrate`; it exits with status 1 while anything
+   is missing. Its documentation lists what it leaves out, such as rendered
+   HTML, which a diff of the public pages covers.
 6. In `down/0`, undo only what `up/0` added: leave out the tables, indexes
    and columns that existed before the migration.
 7. Roll back and forward once on a scratch copy. A second
