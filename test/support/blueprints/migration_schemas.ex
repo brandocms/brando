@@ -894,3 +894,21 @@ defmodule Brando.MigrationTest.ReconcileFarm do
     attribute :slug, :slug, unique: true
   end
 end
+
+# ReconcileFarm with its slug taken out.
+defmodule Brando.MigrationTest.ReconcileFarmV2 do
+  use Brando.Blueprint,
+    application: "Brando",
+    domain: "Reconcile",
+    schema: "Farm",
+    singular: "reconcile_farm",
+    plural: "farms",
+    gettext_module: Brando.Gettext
+
+  trait Brando.Trait.Creator
+  trait Brando.Trait.Timestamped
+
+  attributes do
+    attribute :title, :string
+  end
+end

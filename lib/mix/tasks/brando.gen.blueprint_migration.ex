@@ -60,11 +60,15 @@ if Code.ensure_loaded?(Igniter) do
         with add_if_not_exists/create_if_not_exists and left out of down/0; an
         existing column with references(...) is left out, since PostgreSQL adds
         its foreign key even when it skips the column;
-      * a column or auxiliary table that holds data is kept, with a comment
-        giving its count, and legacy Villain columns (data, html, *_data) are
-        never dropped; a drop of something the database lacks is left out.
+      * a column or auxiliary table is dropped only when a generated migration
+        in the Blueprint's history created it and it is empty; anything older
+        is kept whatever it holds, a column or table with data is kept with a
+        comment giving its count, and legacy Villain columns (data, html,
+        *_data) are never dropped; a drop of something the database lacks is
+        left out.
 
-    A summary lists what was reconciled in each file. --reconcile works with a
+    The first comment of each migration and the summary name the repo,
+    database and schemas read. A summary lists what was reconciled in each file. --reconcile works with a
     Blueprint module or --all, and with --dry-run, which still reads the
     database. It cannot be combined with --rebaseline. Accepting the plan reads
     the database again and rejects the plan if what the migration does changed

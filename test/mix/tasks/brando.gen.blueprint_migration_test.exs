@@ -384,7 +384,14 @@ defmodule Mix.Tasks.Brando.Gen.BlueprintMigrationTest do
   # so the sandbox undoes all of it.
   describe "--reconcile" do
     alias Brando.Blueprint.Migrations
-    alias Brando.MigrationTest.{ReconcileArticleV1, ReconcileArticleV2, ReconcileArticleV3, ReconcileFarm}
+
+    alias Brando.MigrationTest.{
+      ReconcileArticleV1,
+      ReconcileArticleV2,
+      ReconcileArticleV3,
+      ReconcileFarm,
+      ReconcileFarmV2
+    }
 
     defp query!(sql, params \\ []), do: Brando.repo().query!(sql, params, log: false)
 
@@ -522,6 +529,10 @@ defmodule Mix.Tasks.Brando.Gen.BlueprintMigrationTest do
           do: refute(plan.migration_source =~ "remove #{inspect(column)}")
 
       comments = comments(plan.migration_source)
+      [[database]] = query!("SELECT current_database()").rows
+
+      assert comments =~
+               "Reconciled against #{inspect(Brando.repo())}, database #{database} (schemas: public)."
 
       assert comments =~
                "reconcile_articles.link holds 1 value, so this migration keeps it. Dropping it is a separate decision."
@@ -544,6 +555,7 @@ defmodule Mix.Tasks.Brando.Gen.BlueprintMigrationTest do
 
       refute Enum.any?(planned.warnings, &(&1 =~ "already exist in the database" or &1 =~ "legacy Villain"))
       assert [notice] = Enum.filter(planned.notices, &(&1 =~ "Reconciled with the database"))
+      assert notice =~ "read from #{inspect(Brando.repo())}, database #{database}"
       assert notice =~ "Brando.MigrationTest.ReconcileArticleV2: #{Path.relative_to_cwd(plan.metadata.migration)}"
       assert notice =~ "reconcile_articles.language, reconcile_articles.rendered_blocks"
       assert notice =~ "reconcile_articles.creator_id"
@@ -582,6 +594,29 @@ defmodule Mix.Tasks.Brando.Gen.BlueprintMigrationTest do
       assert rerun.issues == []
       assert rerun.tasks == []
       assert rerun.notices == ["No storage changes necessary for Brando.MigrationTest.ReconcileArticleV2."]
+    end
+
+    # Whether a column is empty depends on the database read: on a development
+    # copy it may be, in production not.
+    test "never drops a column the Blueprint's own migrations did not create", context do
+      create_legacy_farms()
+      query!("UPDATE reconcile_farms SET slug = NULL")
+
+      [{_, [request]}] = reconcile(context, ReconcileFarm).tasks
+      assert {:ok, metadata} = MigrationRequest.apply(request)
+      assert Snapshot.get_latest_snapshot(ReconcileFarm, snapshot_path: context.snapshot_path).rebaseline?
+
+      migrate_up(File.read!(metadata.migration), fn _down ->
+        planned = reconcile(context, ReconcileFarmV2, ["--dry-run"])
+        plan = planned.assigns.brando_storage_plan
+        assert plan.migration_source =~ ~r/drop index\(:reconcile_farms, \[:slug\]/
+        refute plan.migration_source =~ "remove :slug"
+
+        assert comments(plan.migration_source) =~
+                 "reconcile_farms.slug predates this Blueprint's generated migrations, so --reconcile keeps it"
+
+        assert Enum.any?(planned.notices, &(&1 =~ "reconcile_farms.slug (predates the Blueprint's generated migrations)"))
+      end)
     end
 
     test "counts that change after review do not make the plan stale", context do

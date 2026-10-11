@@ -93,20 +93,42 @@ defmodule Brando.Blueprint.Migrations.Reconcile do
   defp segment({:count, _count, unit}, false), do: "N #{unit}s"
   defp segment(text, _counts?), do: text
 
+  @typedoc """
+  The storage a generated migration in the Blueprint's history created. Only
+  that is ever dropped: whether anything else is empty depends on which
+  database was read.
+  """
+  @type owned :: %{columns: MapSet.t(atom()), tables: MapSet.t(String.t()), timestamps?: boolean()}
+
   @doc """
   Reads the planned tables from `repo` and returns the diff to render with how
   it was reconciled. The repo must be started; tables are looked up in the
   schemas on its search path.
   """
-  @spec reconcile(Diff.t(), map(), module()) :: {Diff.t(), t()}
-  def reconcile(%Diff{} = diff, current, repo) do
+  @spec reconcile(Diff.t(), map(), module(), owned()) :: {Diff.t(), t()}
+  def reconcile(%Diff{} = diff, current, repo, owned) do
     database = read_database(repo, planned_tables(diff, current))
 
-    cond do
-      diff.create? and Map.has_key?(database.tables, current.table) -> create_as_alter(current, database)
-      diff.create? or Map.has_key?(database.tables, current.table) -> against_database(diff, current, database, repo)
-      true -> raise_missing_table!(current.table)
-    end
+    {diff, reconcile} =
+      cond do
+        diff.create? and Map.has_key?(database.tables, current.table) ->
+          create_as_alter(current, database)
+
+        diff.create? or Map.has_key?(database.tables, current.table) ->
+          against_database(diff, current, database, repo, owned)
+
+        true ->
+          raise_missing_table!(current.table)
+      end
+
+    source = "#{inspect(repo)}, database #{database.name} (schemas: #{Enum.join(database.schemas, ", ")})"
+
+    {diff,
+     %{
+       reconcile
+       | comments: ["Reconciled against #{source}. Its data decided what is kept." | reconcile.comments],
+         summary: Map.put(reconcile.summary, :database, source)
+     }}
   end
 
   # Without the table, every drop would look like one of a column that does not
@@ -204,14 +226,18 @@ defmodule Brando.Blueprint.Migrations.Reconcile do
 
   defp ensure_primary_key!(_current, _columns), do: :ok
 
-  defp against_database(diff, current, database, repo) do
+  defp against_database(diff, current, database, repo, owned) do
     table = current.table
     columns = Map.get(database.columns, table, MapSet.new())
 
-    {remove_columns, column_notes} = reconcile_removed_columns(diff.remove_columns, table, columns, database, repo)
-    {timestamps, timestamp_notes} = reconcile_timestamps(diff.timestamps, table, columns, database, repo)
+    {remove_columns, column_notes} =
+      reconcile_removed_columns(diff.remove_columns, table, columns, database, repo, owned.columns)
+
+    {timestamps, timestamp_notes} =
+      reconcile_timestamps(diff.timestamps, table, columns, database, repo, owned.timestamps?)
+
     {remove_indexes, index_notes} = reconcile_removed_indexes(diff.remove_indexes, all_indexes(database))
-    {remove_tables, table_notes} = reconcile_removed_tables(diff.remove_auxiliary_tables, database, repo)
+    {remove_tables, table_notes} = reconcile_removed_tables(diff.remove_auxiliary_tables, database, repo, owned.tables)
 
     dropped_tables = MapSet.new(remove_tables, & &1.name)
 
@@ -297,13 +323,16 @@ defmodule Brando.Blueprint.Migrations.Reconcile do
     end
   end
 
-  defp reconcile_removed_columns(remove_columns, table, columns, database, repo) do
+  defp reconcile_removed_columns(remove_columns, table, columns, database, repo, owned) do
     Enum.flat_map_reduce(remove_columns, [], fn column, notes ->
       name = to_string(column.name)
 
       cond do
         not MapSet.member?(columns, name) ->
           {[], notes ++ [{:left_out, "drop of #{table}.#{name} (not in the database)"}]}
+
+        not MapSet.member?(owned, column.name) and not villain_column?(name) ->
+          {[], notes ++ kept_unowned("#{table}.#{name}")}
 
         villain_column?(name) ->
           count = count_values(repo, database, table, name)
@@ -329,29 +358,40 @@ defmodule Brando.Blueprint.Migrations.Reconcile do
     end)
   end
 
-  defp reconcile_timestamps(:remove, table, columns, database, repo) do
+  defp reconcile_timestamps(:remove, table, columns, database, repo, owned?) do
     present = Enum.filter(~w(inserted_at updated_at), &MapSet.member?(columns, &1))
-    counts = Enum.map(present, &{&1, count_values(repo, database, table, &1)})
 
     cond do
       present == [] ->
         {:unchanged, [{:left_out, "drop of #{table} timestamps (not in the database)"}]}
 
-      Enum.any?(counts, &(elem(&1, 1) > 0)) ->
-        {:unchanged, Enum.flat_map(counts, fn {name, count} -> kept_with_data(table, name, count) end)}
+      not owned? ->
+        {:unchanged, Enum.flat_map(present, &kept_unowned("#{table}.#{&1}"))}
 
       true ->
-        {:remove, []}
+        counts = Enum.map(present, &{&1, count_values(repo, database, table, &1)})
+
+        if Enum.any?(counts, &(elem(&1, 1) > 0)),
+          do: {:unchanged, Enum.flat_map(counts, fn {name, count} -> kept_with_data(table, name, count) end)},
+          else: {:remove, []}
     end
   end
 
-  defp reconcile_timestamps(:add, table, columns, _database, _repo) do
+  defp reconcile_timestamps(:add, table, columns, _database, _repo, _owned?) do
     if Enum.all?(~w(inserted_at updated_at), &MapSet.member?(columns, &1)),
       do: {:unchanged, [{:left_out, "#{table} timestamps (already exist)"}]},
       else: {:add, []}
   end
 
-  defp reconcile_timestamps(timestamps, _table, _columns, _database, _repo), do: {timestamps, []}
+  defp reconcile_timestamps(timestamps, _table, _columns, _database, _repo, _owned?), do: {timestamps, []}
+
+  defp kept_unowned(name) do
+    [
+      {:kept, "#{name} (predates the Blueprint's generated migrations)"},
+      {:comment,
+       "#{name} predates this Blueprint's generated migrations, so --reconcile keeps it whatever it holds. Dropping it is a separate decision."}
+    ]
+  end
 
   defp kept_with_data(table, name, count) do
     [
@@ -366,11 +406,14 @@ defmodule Brando.Blueprint.Migrations.Reconcile do
     {present, Enum.map(absent, &{:left_out, "drop of index #{&1.name} (not in the database)"})}
   end
 
-  defp reconcile_removed_tables(remove_tables, database, repo) do
+  defp reconcile_removed_tables(remove_tables, database, repo, owned) do
     Enum.flat_map_reduce(remove_tables, [], fn table, notes ->
       cond do
         not Map.has_key?(database.tables, table.name) ->
           {[], notes ++ [{:left_out, "drop of table #{table.name} (not in the database)"}]}
+
+        not MapSet.member?(owned, table.name) ->
+          {[], notes ++ kept_unowned("table #{table.name}")}
 
         (rows = count_rows(repo, database, table.name)) > 0 ->
           {[],
@@ -414,8 +457,11 @@ defmodule Brando.Blueprint.Migrations.Reconcile do
       )
 
     found = Map.new(rows, fn [table, schema] -> {table, schema} end)
+    %{rows: [[name]]} = repo.query!("SELECT current_database()::text", [], log: false)
 
     %{
+      name: name,
+      schemas: schemas,
       tables: found,
       columns: names_by_table(repo, found, columns_query()),
       indexes: names_by_table(repo, found, indexes_query()),

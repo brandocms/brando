@@ -248,9 +248,14 @@ if Code.ensure_loaded?(Igniter) do
           igniter
 
         reconciled ->
+          sources = reconciled |> Enum.map(& &1.metadata.reconciled.database) |> Enum.uniq() |> Enum.join("; ")
+
           Igniter.add_notice(
             igniter,
-            Enum.join(["Reconciled with the database:" | Enum.map(reconciled, &reconciled_lines/1)], "\n")
+            Enum.join(
+              ["Reconciled with the database (read from #{sources}):" | Enum.map(reconciled, &reconciled_lines/1)],
+              "\n"
+            )
           )
       end
     end

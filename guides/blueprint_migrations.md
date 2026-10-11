@@ -491,13 +491,23 @@ copy of production. Then:
   named foreign key even when `ADD COLUMN IF NOT EXISTS` skips the column, and
   stops with `constraint ... already exists`. A comment says when such a column
   lacks its foreign key.
-- A column or auxiliary table that holds data is kept, with a comment giving the
-  number of values or rows: dropping it is a separate decision. Legacy Villain
-  columns (`data`, `html`, `*_data`, `*_html`) are never dropped this way. A drop of a
-  column, index or table the database does not have is left out.
+- A column, timestamps or auxiliary table the plan drops is dropped only when a
+  generated migration in the Blueprint's history created it (it first appears
+  in a snapshot that is not a baseline) and it is empty in the database read.
+  Anything that predates the generated migrations is kept whatever it holds:
+  that it is empty on a development copy says nothing about production. Kept
+  storage gets a comment giving the number of values or rows, or why it was
+  kept; dropping it is a separate decision. Legacy Villain columns (`data`,
+  `html`, `*_data`, `*_html`) are never dropped this way. A drop of a column,
+  index or table the database does not have is left out. The snapshot of an
+  `alter` written in place of a `create table` is recorded as a baseline, so
+  what it found stays unowned.
 
-After the previews, a summary lists per file what already existed, what was
-left out and what was kept. The snapshot records the Blueprint as usual, so a
+The first comment in each migration, and the summary printed after the
+previews, name the repo, database and schemas read, since that database decided
+what is kept. Read the one the migration will run on, or a current copy of it.
+The summary lists per file what already existed, what was left out and what was
+kept. The snapshot records the Blueprint as usual, so a
 kept column is not proposed for dropping again; drop it later in a hand-written
 migration.
 

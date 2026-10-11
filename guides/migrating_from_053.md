@@ -536,9 +536,12 @@ mix brando.gen.blueprint_migration --all --reconcile
 `--reconcile` reads the database for steps 2 to 6: it guards what exists with
 `*_if_not_exists`, turns the `create table` of an existing table into an
 `alter`, or records only a baseline when the table already matches, leaves out
-existing `references(...)` columns, keeps every Villain column and every column
-or table that holds data (with a comment giving the count), and keeps
-pre-existing storage out of `down/0`. It prints what it did per file; see
+existing `references(...)` columns, keeps every Villain column, every column
+or table that holds data (with a comment giving the count) and anything the
+Blueprint's generated migrations did not create, and keeps pre-existing storage
+out of `down/0`. Run it against the production database or a current copy: the
+data it reads decides what is kept, and each migration names that database in
+its first comment. It prints what it did per file; see
 [Reconciling with an existing database](blueprint_migrations.md#reconciling-with-an-existing-database).
 Still by hand:
 

@@ -209,7 +209,7 @@ defmodule Brando.Blueprint.Migrations do
   # Fits the diff to the database. When nothing is left to migrate, the
   # snapshot is recorded on its own as a baseline the database already matches.
   defp prepare_reconciled(module, diff, schema, previous, opts) do
-    {diff, reconcile} = Reconcile.reconcile(diff, schema, Brando.repo())
+    {diff, reconcile} = Reconcile.reconcile(diff, schema, Brando.repo(), owned_storage(module, previous, opts))
 
     if Diff.empty?(diff) do
       snapshot = %{Snapshot.build_snapshot(module, snapshot_version(previous) + 1) | rebaseline?: true}
@@ -225,9 +225,46 @@ defmodule Brando.Blueprint.Migrations do
     end
   end
 
+  # The storage a generated migration in the Blueprint's history created: what
+  # first appears in a snapshot that is not a baseline. A baseline records
+  # storage that already existed, and a snapshot missing from the history
+  # leaves what follows it unattributed.
+  defp owned_storage(module, previous, opts) do
+    owned = %{columns: MapSet.new(), tables: MapSet.new(), timestamps?: false}
+
+    1..snapshot_version(previous)//1
+    |> Enum.reduce({nil, owned}, fn version, {before, owned} ->
+      case Snapshot.get_snapshot(module, version, opts) do
+        nil -> {:unknown, owned}
+        %Snapshot{schema: schema} = snapshot -> {schema, attribute_new_storage(owned, snapshot, before)}
+      end
+    end)
+    |> elem(1)
+  end
+
+  defp attribute_new_storage(owned, _snapshot, :unknown), do: owned
+  defp attribute_new_storage(owned, %Snapshot{rebaseline?: true}, _before), do: owned
+
+  defp attribute_new_storage(owned, %Snapshot{schema: schema}, before) do
+    names = fn schema, key -> if schema, do: MapSet.new(Map.fetch!(schema, key), & &1.name), else: MapSet.new() end
+    new = fn key -> MapSet.difference(names.(schema, key), names.(before, key)) end
+
+    %{
+      columns: MapSet.union(owned.columns, new.(:columns)),
+      tables: MapSet.union(owned.tables, new.(:auxiliary_tables)),
+      timestamps?: owned.timestamps? || (schema.timestamps && !(before && before.timestamps))
+    }
+  end
+
   defp prepare_migration(module, diff, schema, previous, opts, reconcile \\ nil) do
     sequence = get_sequence(module, opts)
-    snapshot = Snapshot.build_snapshot(module, snapshot_version(previous) + 1)
+
+    # An alter of a table that predates the snapshots records storage that
+    # already existed, which --reconcile must not later treat as its own.
+    snapshot =
+      module
+      |> Snapshot.build_snapshot(snapshot_version(previous) + 1)
+      |> Map.update!(:rebaseline?, &(&1 or match?(%Reconcile{create_as_alter?: true}, reconcile)))
 
     render = fn reconcile ->
       module
