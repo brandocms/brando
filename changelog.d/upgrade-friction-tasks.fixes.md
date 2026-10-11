@@ -35,3 +35,15 @@
   `as:`), and other code still naming a removed module are listed with the
   fix. The commented example routes in the install template's router now
   use a FormLive too.
+
+- **`mix brando.migrate55` keeps the translations of Blueprint strings.**
+  0.53 translated a Blueprint's strings into `<domain>_<schema>_naming`,
+  `_forms` and `_listings`; 0.55 extracts them to `<domain>_<schema>`. The
+  migration guide's `gettext.extract --merge` wrote the new catalogs empty and
+  emptied the old ones, so nothing was left for `scripts/sync_gettext.sh` to
+  copy. The task now copies each translated message into the new domain's
+  `.po` file in every backend and locale, where the merge keeps it, and
+  reports messages the old domains translated differently. The guide now
+  extracts once and merges each backend with `mix gettext.merge DIR --locale`,
+  because `gettext.extract --merge DIR --locale` merges every backend and
+  creates the locale in each.

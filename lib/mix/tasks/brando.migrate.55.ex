@@ -22,7 +22,9 @@ if Code.ensure_loaded?(Igniter) do
     Swoosh's API client, points Brando at the application's mailer, removes the
     retired Sharp image processor from config, pins the declared `phoenix_live_view` JavaScript
     dependency, builds Vite source maps `hidden`, converts a legacy Fabric deployment to a reviewable Florist
-    configuration, refreshes the gettext recovery helper, completes
+    configuration, refreshes the gettext recovery helper, copies the
+    translations of each Blueprint's 0.53 `_naming`, `_forms` and `_listings`
+    Gettext domains into the domain 0.55 extracts to, completes
     `Plural-Forms` headers Gettext 1.0 warns about, and retires the
     consumer-owned `brando.upgrade` task that 0.54 installed.
 
@@ -52,6 +54,7 @@ if Code.ensure_loaded?(Igniter) do
       |> SourceUpgrade.hide_source_maps()
       |> SourceUpgrade.create_florist_config()
       |> SourceUpgrade.refresh_gettext_script()
+      |> SourceUpgrade.carry_blueprint_translations()
       |> SourceUpgrade.complete_plural_forms_headers()
       |> SourceUpgrade.warn_image_text_reads()
       |> SourceUpgrade.start_endpoint_last()
@@ -78,6 +81,11 @@ if Code.ensure_loaded?(Igniter) do
       `sourcemap: true` now build hidden maps, and `mix brando.digest` deletes
       them before release. See the Docker build section of
       `guides/deployment.md` to upload them to Sentry instead.
+
+      Translations in each Blueprint's 0.53 Gettext domains
+      (`<domain>_<schema>_naming`, `_forms`, `_listings`) are copied into
+      `<domain>_<schema>.po`, the domain 0.55 extracts to, so the Gettext
+      merge in the migration guide keeps them.
 
       When both legacy `deployment.cfg` and `fabfile.py` exist and no Florist
       configuration exists, the task also creates a reviewable
@@ -112,6 +120,10 @@ if Code.ensure_loaded?(Igniter) do
            menu templates that print an image's alt text, title or credits
            without the `i18n` filter. Templates live in the database, so this
            source migration cannot see them.
+        9. Reconcile Gettext catalogs: `mix gettext.extract`, then
+           `mix gettext.merge priv/gettext/<backend> --locale <locale>` for
+           each backend and locale the application has. Delete the old
+           domains' catalogs the merge leaves empty.
 
       See `guides/migrating_from_053.md` and `guides/blueprint_migrations.md` in
       Brando for the full recovery and rebaseline instructions.

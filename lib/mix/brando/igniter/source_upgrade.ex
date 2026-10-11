@@ -1099,14 +1099,25 @@ if Code.ensure_loaded?(Igniter) do
 
     # `{singular, [{html_field, rendered_field}]}` for one Blueprint.
     defp blueprint_html_fields(zipper) do
-      with {:ok, zipper} <- Common.move_to_do_block(zipper),
-           {:ok, use_zipper} <- Igniter.Code.Module.move_to_use(zipper, Brando.Blueprint),
-           {:ok, options} <- CodeFunction.move_to_nth_argument(use_zipper, 1),
-           {:ok, singular} <- Igniter.Code.Keyword.get_key(options, :singular),
-           {:__block__, _, [singular]} when is_binary(singular) <- Zipper.node(singular) do
-        [{singular, html_renames(zipper)}]
+      case blueprint_naming(zipper) do
+        %{singular: singular} -> [{singular, html_renames(zipper)}]
+        _naming -> []
+      end
+    end
+
+    # The literal `domain`, `schema` and `singular` options of a Blueprint's
+    # `use Brando.Blueprint`, given its `defmodule` zipper.
+    defp blueprint_naming(zipper) do
+      with {:ok, body} <- Common.move_to_do_block(zipper),
+           {:ok, use_zipper} <- Igniter.Code.Module.move_to_use(body, Brando.Blueprint),
+           {:ok, options} <- CodeFunction.move_to_nth_argument(use_zipper, 1) do
+        for key <- [:domain, :schema, :singular],
+            {:ok, value} <- [Igniter.Code.Keyword.get_key(options, key)],
+            {:__block__, _, [string]} when is_binary(string) <- [Zipper.node(value)],
+            into: %{},
+            do: {key, string}
       else
-        _ -> []
+        _ -> %{}
       end
     end
 
@@ -1584,6 +1595,136 @@ if Code.ensure_loaded?(Igniter) do
 
     defp function_head({name, _, args}) when is_atom(name) and is_list(args), do: {name, length(args)}
     defp function_head(_head), do: nil
+
+    # 0.53 Blueprints translated into one domain per context.
+    @context_catalog ~r/\A(?<domain>.+)_(?<context>naming|forms|listings)\.po\z/
+    @context_order %{"naming" => 0, "forms" => 1, "listings" => 2}
+
+    @doc """
+    Copies the translations of 0.53's per-context Blueprint domains into the
+    domain 0.55 uses, in every `priv/gettext/**/LC_MESSAGES` directory.
+
+    0.53 translated a Blueprint's strings into `<domain>_<schema>_naming`,
+    `_forms` and `_listings`; 0.55 into `<domain>_<schema>`. Extracting
+    writes the new domain with empty translations and empties the old ones,
+    so the translated messages are copied into `<domain>_<schema>.po` first,
+    where the merge keeps them. Only domains of the application's Blueprints
+    are read; a message already translated in the target is kept. When the
+    contexts translate a message differently, `naming` wins over `forms`
+    over `listings`, and the others are reported.
+    """
+    def carry_blueprint_translations(igniter) do
+      {igniter, blueprints} = find_blueprints(igniter)
+
+      domains =
+        MapSet.new(blueprints, fn module ->
+          {:ok, {_igniter, _source, zipper}} = ProjectModule.find_module(igniter, module)
+
+          case blueprint_naming(zipper) do
+            %{domain: domain, schema: schema} -> String.downcase("#{domain}_#{schema}")
+            _naming -> nil
+          end
+        end)
+
+      igniter = Igniter.include_glob(igniter, "priv/gettext/**/*.po")
+
+      {igniter, conflicts} =
+        igniter.rewrite
+        |> Rewrite.sources()
+        |> Enum.map(&Source.get(&1, :path))
+        |> Enum.filter(&(String.starts_with?(&1, "priv/gettext/") and Path.basename(Path.dirname(&1)) == "LC_MESSAGES"))
+        |> Enum.flat_map(fn path ->
+          case Regex.named_captures(@context_catalog, Path.basename(path)) do
+            %{"domain" => domain, "context" => context} ->
+              [{Path.join(Path.dirname(path), domain <> ".po"), context, path}]
+
+            nil ->
+              []
+          end
+        end)
+        |> Enum.filter(fn {target, _context, _path} -> Path.basename(target, ".po") in domains end)
+        |> Enum.group_by(&elem(&1, 0), fn {_target, context, path} -> {@context_order[context], path} end)
+        |> Enum.sort()
+        |> Enum.reduce({igniter, []}, fn {target, sources}, {igniter, conflicts} ->
+          paths = sources |> Enum.sort() |> Enum.map(&elem(&1, 1))
+          {igniter, found} = carry_translations(igniter, target, paths)
+          {igniter, conflicts ++ found}
+        end)
+
+      case conflicts do
+        [] ->
+          igniter
+
+        conflicts ->
+          Igniter.add_warning(igniter, """
+          These messages were translated differently in a Blueprint's old naming,
+          forms and listings catalogs. The first was copied to the new catalog;
+          check it:
+
+          #{Enum.map_join(conflicts, "\n", fn {target, msgid, kept, other} -> "  #{target}: #{inspect(msgid)} kept #{inspect(kept)}, not #{inspect(other)}" end)}
+          """)
+      end
+    end
+
+    defp carry_translations(igniter, target, paths) do
+      sources = for path <- paths, {:ok, catalog} <- [parse_catalog(igniter, path)], do: catalog
+      exists? = Igniter.exists?(igniter, target)
+      igniter = if exists?, do: Igniter.include_existing_file(igniter, target), else: igniter
+
+      with [first | _] <- sources,
+           {:ok, catalog} <- if(exists?, do: parse_catalog(igniter, target), else: {:ok, %{first | messages: []}}) do
+        {messages, conflicts} =
+          sources
+          |> Enum.flat_map(& &1.messages)
+          |> Enum.filter(&translated?/1)
+          |> Enum.reduce({catalog.messages, []}, &carry_message(&1, &2, target))
+
+        cond do
+          messages == catalog.messages ->
+            {igniter, conflicts}
+
+          exists? ->
+            {Igniter.update_file(igniter, target, &Source.update(&1, :content, compose(catalog, messages))), conflicts}
+
+          true ->
+            {Igniter.create_new_file(igniter, target, compose(catalog, messages)), conflicts}
+        end
+      else
+        _ -> {igniter, []}
+      end
+    end
+
+    defp carry_message(message, {messages, conflicts}, target) do
+      case Enum.find_index(messages, &Expo.Message.same?(&1, message)) do
+        nil ->
+          {messages ++ [message], conflicts}
+
+        index ->
+          existing = Enum.at(messages, index)
+
+          cond do
+            not translated?(existing) -> {List.replace_at(messages, index, message), conflicts}
+            translation(existing) == translation(message) -> {messages, conflicts}
+            true -> {messages, conflicts ++ [{target, msgid(message), shown(existing), shown(message)}]}
+          end
+      end
+    end
+
+    defp parse_catalog(igniter, path) do
+      igniter.rewrite |> Rewrite.source!(path) |> Source.get(:content) |> Expo.PO.parse_string()
+    end
+
+    defp compose(catalog, messages), do: %{catalog | messages: messages} |> Expo.PO.compose() |> IO.iodata_to_binary()
+
+    defp translated?(message), do: Enum.any?(translation(message), &(&1 != ""))
+
+    defp translation(%Expo.Message.Singular{msgstr: msgstr}), do: [IO.iodata_to_binary(msgstr)]
+
+    defp translation(%Expo.Message.Plural{msgstr: msgstr}),
+      do: msgstr |> Enum.sort() |> Enum.map(fn {_index, value} -> IO.iodata_to_binary(value) end)
+
+    defp msgid(message), do: IO.iodata_to_binary(message.msgid)
+    defp shown(message), do: message |> translation() |> Enum.join(" / ")
 
     @doc """
     Completes `Plural-Forms` headers in `priv/gettext/**/*.po`.

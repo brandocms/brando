@@ -604,14 +604,31 @@ mix brando.check.image_texts
 ## 5. Reconcile Gettext catalogs
 
 `mix brando.migrate55` has already completed incomplete `Plural-Forms` headers
-in existing catalogs. Extract each application's actual locales. For example:
+in existing catalogs, and copied the translations of each Blueprint's 0.53
+domains into the one 0.55 uses. 0.53 translated a Blueprint's strings into
+`<domain>_<schema>_naming`, `_forms` and `_listings`; 0.55 extracts them all to
+`<domain>_<schema>`, so `menu_menuitem_naming.po` and
+`menu_menuitem_listings.po` became `menu_menuitem.po`. The merge keeps a
+translation only when the new domain's `.po` already has it, so run the task
+before extracting. It reports messages the old domains translated differently.
+
+Extract once, then merge each backend's actual locales:
 
 ```shell
-mix gettext.extract --merge priv/gettext/backend --locale no \
+mix gettext.extract
+mix gettext.merge priv/gettext/backend --locale no \
   --plural-forms-header "nplurals=2; plural=(n != 1);"
-mix gettext.extract --merge priv/gettext/frontend --locale no \
+mix gettext.merge priv/gettext/frontend --locale no \
   --plural-forms-header "nplurals=2; plural=(n != 1);"
 ```
+
+Avoid `mix gettext.extract --merge DIR --locale LOCALE` here: it merges every
+backend it extracted, whatever directory it is given, and creates `LOCALE` in
+each one (a `frontend/en` or `backend/se` the site never had).
+`mix gettext.merge DIR --locale LOCALE` changes only `DIR/LOCALE`.
+
+After the merge, the old domains' `.pot` and `.po` files are empty; delete
+them.
 
 The copied helper can fill an empty, single-line `msgstr` from the same `msgid`
 in a sibling catalog:

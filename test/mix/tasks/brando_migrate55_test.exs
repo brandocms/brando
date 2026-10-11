@@ -1960,6 +1960,130 @@ defmodule Mix.Tasks.Brando.Migrate55Test do
     ])
   end
 
+  describe "Blueprint translations" do
+    defp catalog(locale, messages) do
+      body =
+        Enum.map_join(messages, "\n", fn
+          {msgid, msgstr} ->
+            ~s|msgid "#{msgid}"\nmsgstr "#{msgstr}"\n|
+
+          {msgid, plural, [one, other]} ->
+            ~s|msgid "#{msgid}"\nmsgid_plural "#{plural}"\nmsgstr[0] "#{one}"\nmsgstr[1] "#{other}"\n|
+        end)
+
+      ~s|msgid ""\nmsgstr ""\n"Language: #{locale}\\n"\n"Plural-Forms: nplurals=2; plural=(n != 1);\\n"\n\n| <> body
+    end
+
+    defp translations(contents) do
+      contents
+      |> Expo.PO.parse_string!()
+      |> Map.fetch!(:messages)
+      |> Map.new(fn
+        %Expo.Message.Singular{msgid: msgid, msgstr: msgstr} ->
+          {IO.iodata_to_binary(msgid), IO.iodata_to_binary(msgstr)}
+
+        %Expo.Message.Plural{msgid: msgid, msgstr: msgstr} ->
+          {IO.iodata_to_binary(msgid), Map.new(msgstr, fn {i, s} -> {i, IO.iodata_to_binary(s)} end)}
+      end)
+    end
+
+    @backend_no "priv/gettext/backend/no/LC_MESSAGES"
+    @frontend_no "priv/gettext/frontend/no/LC_MESSAGES"
+
+    test "copies the old per-context domains' translations into the Blueprint's 0.55 domain" do
+      igniter =
+        migrate(@blueprint_054, %{
+          "#{@backend_no}/projects_project_naming.po" =>
+            catalog("no", [{"project", "prosjekt"}, {"projects", "prosjekter"}]),
+          "#{@backend_no}/projects_project_forms.po" =>
+            catalog("no", [
+              {"Title", "Overskrift"},
+              {"%{count} image", "%{count} images", ["%{count} bilde", "%{count} bilder"]}
+            ]),
+          "#{@backend_no}/projects_project_listings.po" =>
+            catalog("no", [{"Title", "Tittel"}, {"Delete project", "Slett prosjekt"}, {"Status", ""}]),
+          "priv/gettext/backend/en/LC_MESSAGES/projects_project_naming.po" => catalog("en", [{"project", ""}]),
+          "#{@backend_no}/unrelated_forms.po" => catalog("no", [{"Send", "Send"}]),
+          "#{@frontend_no}/projects_project.po" => catalog("no", [{"project", ""}, {"Title", "Navn"}]),
+          "#{@frontend_no}/projects_project_naming.po" => catalog("no", [{"project", "prosjekt"}, {"Title", "Tittel"}])
+        })
+
+      assert_creates(igniter, "#{@backend_no}/projects_project.po", fn contents ->
+        assert contents =~ ~s|"Plural-Forms: nplurals=2; plural=(n != 1);\\n"|
+
+        assert translations(contents) == %{
+                 "project" => "prosjekt",
+                 "projects" => "prosjekter",
+                 "Title" => "Overskrift",
+                 "%{count} image" => %{0 => "%{count} bilde", 1 => "%{count} bilder"},
+                 "Delete project" => "Slett prosjekt"
+               }
+      end)
+
+      refute_creates(igniter, "priv/gettext/backend/en/LC_MESSAGES/projects_project.po")
+      refute_creates(igniter, "#{@backend_no}/unrelated.po")
+
+      assert translations(source(igniter, "#{@frontend_no}/projects_project.po")) == %{
+               "project" => "prosjekt",
+               "Title" => "Navn"
+             }
+
+      assert_has_warning(igniter, fn warning ->
+        warning =~ "translated differently" and
+          warning =~ ~s(#{@backend_no}/projects_project.po: "Title" kept "Overskrift", not "Tittel") and
+          warning =~ ~s(#{@frontend_no}/projects_project.po: "Title" kept "Navn", not "Tittel")
+      end)
+
+      rerun = igniter |> apply_igniter!() |> include_test_files() |> Migrate55.igniter()
+      assert_unchanged(rerun, ["#{@backend_no}/projects_project.po", "#{@frontend_no}/projects_project.po"])
+    end
+
+    test "the copied translations survive the merge of the extracted template" do
+      igniter =
+        migrate(@blueprint_054, %{
+          "#{@backend_no}/projects_project_naming.po" => catalog("no", [{"project", "prosjekt"}]),
+          "#{@backend_no}/projects_project_listings.po" => catalog("no", [{"Delete project", "Slett prosjekt"}])
+        })
+
+      directory = Path.join(System.tmp_dir!(), "brando-gettext-carry-#{System.unique_integer([:positive])}")
+      File.mkdir_p!(directory)
+      on_exit(fn -> File.rm_rf!(directory) end)
+
+      po = Path.join(directory, "no/LC_MESSAGES/projects_project.po")
+      pot = Path.join(directory, "projects_project.pot")
+      File.mkdir_p!(Path.dirname(po))
+      File.write!(po, source(igniter, "#{@backend_no}/projects_project.po"))
+
+      File.write!(pot, """
+      msgid ""
+      msgstr ""
+
+      #: lib/legacy_app/projects/project.ex
+      #, elixir-autogen, elixir-format
+      msgid "Delete project"
+      msgstr ""
+
+      #: lib/legacy_app/projects/project.ex
+      #, elixir-autogen, elixir-format
+      msgid "Title"
+      msgstr ""
+
+      #: lib/legacy_app/projects/project.ex
+      #, elixir-autogen, elixir-format
+      msgid "project"
+      msgstr ""
+      """)
+
+      ExUnit.CaptureIO.capture_io(fn -> Mix.Tasks.Gettext.Merge.run([directory, "--locale", "no", "--no-fuzzy"]) end)
+
+      assert translations(File.read!(po)) == %{
+               "Delete project" => "Slett prosjekt",
+               "Title" => "",
+               "project" => "prosjekt"
+             }
+    end
+  end
+
   test "reports only the 0.55 manual workflow" do
     igniter = migrate(@blueprint_054)
 
