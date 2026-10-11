@@ -767,17 +767,38 @@ defmodule Brando.Blueprint do
   def get_icon(module), do: module.__content_icon__() || @default_icon
 
   @doc """
-  Whether `module` has an admin editor: the application's router defines the
+  Whether `module` has an admin editor: the router defines the `:update`
   form route `module.__admin_route__(:update, [id])` links to. Every
   Blueprint generates `__admin_route__/2`, so its presence says nothing; a
-  Blueprint with no admin routes raises `UndefinedFunctionError` from it.
-  """
-  @spec admin_editor?(module()) :: boolean()
-  def admin_editor?(module) do
-    helpers = Brando.RuntimeConfig.router_helpers()
+  Blueprint with no admin routes raises `UndefinedFunctionError` from it, and
+  one routed only for `:create` raises `ArgumentError`.
 
-    function_exported?(module, :__admin_route_helper__, 1) and Code.ensure_loaded?(helpers) and
-      function_exported?(helpers, module.__admin_route_helper__(:update), 3)
+  `routes` are `Phoenix.Router.routes/1`, by default the application
+  router's. `Brando.Doctor.Checks.AdminRoutes` checks the same route.
+  """
+  @spec admin_editor?(module(), [map()] | nil) :: boolean()
+  def admin_editor?(module, routes \\ nil) do
+    function_exported?(module, :__admin_route_helper__, 1) and
+      route_defined?(routes || router_routes(), module.__admin_route_helper__(:update), :update)
+  end
+
+  @doc """
+  Whether `routes` (`Phoenix.Router.routes/1`) define the route helper
+  `helper` (`:admin_project_form_path`) for `action`. A helper's arity cannot
+  tell: a route for `:create` alone exports the same arities as `:update`.
+  """
+  @spec route_defined?([map()], atom(), atom()) :: boolean()
+  def route_defined?(routes, helper, action) do
+    name = helper |> Atom.to_string() |> String.replace_suffix("_path", "")
+    Enum.any?(routes, &(&1.helper == name and &1.plug_opts == action))
+  end
+
+  defp router_routes do
+    router = Brando.RuntimeConfig.router()
+
+    if Code.ensure_loaded?(router) and function_exported?(router, :__routes__, 0),
+      do: Phoenix.Router.routes(router),
+      else: []
   end
 
   defp get_translation(translations, path) do

@@ -75,6 +75,20 @@ defmodule Brando.Doctor.AdminRoutesTest do
     assert %Result{status: :ok} = AdminRoutes.evaluate([])
   end
 
+  test "Brando.Blueprint.admin_editor?/2 agrees: an editor is an :update form route" do
+    update = [live("admin_category_form", :update, ArticleCategoryUpdateLive)]
+    # A create-only route still exports the helper at arity 3 (with params).
+    create_only = [live("admin_category_form", :create, ArticleCategoryUpdateLive)]
+
+    assert Brando.Blueprint.admin_editor?(ArticleCategory, update)
+    refute Brando.Blueprint.admin_editor?(ArticleCategory, create_only)
+    refute Brando.Blueprint.admin_editor?(ArticleCategory, [])
+    refute Brando.Blueprint.admin_editor?(MenuCategory, update)
+
+    assert AdminRoutes.missing_routes(update) == []
+    assert AdminRoutes.missing_routes(create_only) == [{ArticleCategory, [admin_category_form_path: :update]}]
+  end
+
   test "the Blueprint resolves its helpers by router_scope" do
     assert ArticleCategory.__admin_route_helper__(:update) == :admin_category_form_path
     assert ArticleCategory.__admin_route_helper__(:list) == :admin_live_path

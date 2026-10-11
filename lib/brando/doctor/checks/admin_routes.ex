@@ -11,6 +11,8 @@ defmodule Brando.Doctor.Checks.AdminRoutes do
   use Brando.Doctor.Check
   use Gettext, backend: Brando.Gettext
 
+  alias Brando.Blueprint
+
   @impl true
   def id, do: "admin_routes"
 
@@ -34,13 +36,13 @@ defmodule Brando.Doctor.Checks.AdminRoutes do
   `{:admin_project_form_path, :update}`.
   """
   def missing_routes(routes) do
-    defined = MapSet.new(routes, &{&1.helper, &1.plug_opts})
-
     routes
     |> Enum.flat_map(&admin_resource/1)
     |> Enum.uniq()
     |> Enum.filter(&application_blueprint?/1)
-    |> Enum.map(&{&1, Enum.reject(needed(&1), fn helper -> defined?(defined, helper) end)})
+    |> Enum.map(
+      &{&1, Enum.reject(needed(&1), fn {helper, action} -> Blueprint.route_defined?(routes, helper, action) end)}
+    )
     |> Enum.reject(fn {_schema, missing} -> missing == [] end)
     |> Enum.sort()
   end
@@ -65,10 +67,6 @@ defmodule Brando.Doctor.Checks.AdminRoutes do
   end
 
   defp needed(schema), do: [{schema.__admin_route_helper__(:update), :update}]
-
-  defp defined?(defined, {helper, action}) do
-    MapSet.member?(defined, {helper |> Atom.to_string() |> String.replace_suffix("_path", ""), action})
-  end
 
   @doc "Turns `missing_routes/1` into a result."
   def evaluate([]), do: ok(dgettext("doctor", "every Blueprint's admin route helpers exist"))
