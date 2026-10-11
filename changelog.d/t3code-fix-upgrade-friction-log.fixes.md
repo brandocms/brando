@@ -2,7 +2,9 @@
   `content_blocks.fragment_id`, a column `brando_119` adds, so a pre-blocks
   site with a fragment block stopped at `brando_108` with `column
   "fragment_id" of relation "content_blocks" does not exist`. `brando_108`
-  now adds the column itself, and `brando_119` leaves it in place. If your
+  now adds the column itself, and `brando_119` leaves it in place. A fragment
+  block whose fragment was deleted since keeps no fragment, with a warning,
+  rather than stopping the migration on the foreign key. If your
   application has copied these two migrations but not run them,
   `mix brando.migrations.check --update` replaces the copies.
 

@@ -196,6 +196,10 @@ defmodule Brando.Migration.LegacyConversion do
         "SELECT block_id, name FROM #{name(schema, "content_refs")} WHERE block_id IS NOT NULL ORDER BY block_id, sequence, id"
         |> rows()
         |> Enum.group_by(&hd/1, fn [_block_id, name] -> name end),
+      fragments:
+        "SELECT id FROM #{name(schema, "pages_fragments")}"
+        |> rows()
+        |> MapSet.new(&hd/1),
       table_rows: counts(schema, "content_table_rows"),
       identifiers: counts(schema, "content_block_identifiers"),
       modules:
@@ -296,11 +300,14 @@ defmodule Brando.Migration.LegacyConversion do
     compare_names("refs", ["content"], Map.get(content.refs, new.id, []), at)
   end
 
-  defp compare_block(%{"type" => "fragment"} = legacy, new, at, _content) do
-    case data(legacy, "fragment_id") do
-      nil -> []
-      id when id == new.fragment_id -> []
-      id -> [missing(at, "fragment_id: #{id} in Villain, #{new.fragment_id || "none"} now")]
+  # brando_108 keeps no fragment for one deleted since, which rendered nothing
+  defp compare_block(%{"type" => "fragment"} = legacy, new, at, content) do
+    id = data(legacy, "fragment_id")
+
+    cond do
+      is_nil(id) or id == new.fragment_id -> []
+      is_nil(new.fragment_id) and not MapSet.member?(content.fragments, id) -> []
+      true -> [missing(at, "fragment_id: #{id} in Villain, #{new.fragment_id || "none"} now")]
     end
   end
 

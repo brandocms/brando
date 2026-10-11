@@ -218,6 +218,13 @@ defmodule Brando.Migrations.UpgradeFromVillainTest do
         "hidden" => false,
         "data" => %{"fragment_id" => fragment_id}
       },
+      # A fragment deleted since; the block rendered nothing
+      %{
+        "type" => "fragment",
+        "uid" => Utils.generate_uid(),
+        "hidden" => false,
+        "data" => %{"fragment_id" => fragment_id + 1000}
+      },
       %{
         "type" => "module",
         "uid" => Utils.generate_uid(),
@@ -390,6 +397,7 @@ defmodule Brando.Migrations.UpgradeFromVillainTest do
 
     assert [
              [_, "fragment", false, ^fragment_id],
+             [_, "fragment", false, nil],
              [multi_block, "module", true, nil],
              [video_block, "module", false, nil],
              [other_video_block, "module", false, nil]
@@ -486,13 +494,13 @@ defmodule Brando.Migrations.UpgradeFromVillainTest do
       %{page: page_id, fragment: fragment_id} = insert_villain_site()
       Enum.each(templates(103..1000), &migrate/1)
 
-      first_entry = page_id |> root_block(1) |> child_block(0)
+      first_entry = page_id |> root_block(2) |> child_block(0)
       rows("DELETE FROM content_refs WHERE block_id = $1 AND name = 'p'", [first_entry])
       rows("UPDATE content_blocks SET fragment_id = NULL WHERE type = 'fragment'")
 
       expected = [
         "pages ##{page_id} › block 1 (fragment) › fragment_id: #{fragment_id} in Villain, none now",
-        ~s|pages ##{page_id} › block 2 (module "Values") › entry 1 › refs: p missing|
+        ~s|pages ##{page_id} › block 3 (module "Values") › entry 1 › refs: p missing|
       ]
 
       assert findings() == Enum.map(expected, &{:missing, &1})
@@ -534,7 +542,7 @@ defmodule Brando.Migrations.UpgradeFromVillainTest do
         if number(path) == 108, do: migrate(path, without_multi_vars), else: migrate(path)
       end
 
-      assert findings() == [{:missing, ~s|pages ##{page_id} › block 2 (module "Values") › vars: heading missing|}]
+      assert findings() == [{:missing, ~s|pages ##{page_id} › block 3 (module "Values") › vars: heading missing|}]
     end
   end
 end
