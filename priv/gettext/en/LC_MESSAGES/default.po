@@ -11148,6 +11148,16 @@ msgstr ""
 msgid "Nothing has been applied"
 msgstr ""
 
+#: lib/brando_admin/live/search_live.ex
+#, elixir-autogen, elixir-format
+msgid "Nothing has been indexed here yet, so no search finds anything."
+msgstr ""
+
+#: lib/brando_admin/live/search_live.ex
+#, elixir-autogen, elixir-format
+msgid "Nothing has been indexed here yet, so no search finds anything. Ask an administrator to rebuild it."
+msgstr ""
+
 #: lib/brando_admin/components/form/revisions_drawer.ex
 #, elixir-autogen, elixir-format
 msgid "Nothing has been recorded for this entry yet."
@@ -12820,6 +12830,11 @@ msgstr ""
 #: lib/brando_admin/live/ai/assistant_live.ex
 #, elixir-autogen, elixir-format
 msgid "Ready for your review"
+msgstr ""
+
+#: lib/brando_admin/live/search_live.ex
+#, elixir-autogen, elixir-format
+msgid "Rebuild it under Utilities → Search index"
 msgstr ""
 
 #: lib/brando_admin/command_palette.ex
@@ -16901,6 +16916,11 @@ msgstr ""
 #: lib/brando_admin/live/calendar_live.ex
 #, elixir-autogen, elixir-format
 msgid "The scheduled revision moves from %{from} to %{to}."
+msgstr ""
+
+#: lib/brando_admin/live/search_live.ex
+#, elixir-autogen, elixir-format
+msgid "The search index is empty"
 msgstr ""
 
 #: lib/brando_admin/live/search_live.ex

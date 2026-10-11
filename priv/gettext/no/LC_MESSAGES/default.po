@@ -11148,6 +11148,16 @@ msgstr "Ingenting utløper snart"
 msgid "Nothing has been applied"
 msgstr "Ingenting er utført"
 
+#: lib/brando_admin/live/search_live.ex
+#, elixir-autogen, elixir-format
+msgid "Nothing has been indexed here yet, so no search finds anything."
+msgstr "Ingenting er indeksert her ennå, så ingen søk finner noe."
+
+#: lib/brando_admin/live/search_live.ex
+#, elixir-autogen, elixir-format
+msgid "Nothing has been indexed here yet, so no search finds anything. Ask an administrator to rebuild it."
+msgstr "Ingenting er indeksert her ennå, så ingen søk finner noe. Be en administrator bygge den på nytt."
+
 #: lib/brando_admin/components/form/revisions_drawer.ex
 #, elixir-autogen, elixir-format
 msgid "Nothing has been recorded for this entry yet."
@@ -12821,6 +12831,11 @@ msgstr "Leser oppføringen …"
 #, elixir-autogen, elixir-format
 msgid "Ready for your review"
 msgstr "Klar til gjennomgang"
+
+#: lib/brando_admin/live/search_live.ex
+#, elixir-autogen, elixir-format
+msgid "Rebuild it under Utilities → Search index"
+msgstr "Bygg den på nytt under Verktøy → Søkeindeks"
 
 #: lib/brando_admin/command_palette.ex
 #: lib/brando_admin/live/sites/utils_live.ex
@@ -16904,6 +16919,11 @@ msgstr "Den planlagte operasjonen finnes ikke lenger."
 #, elixir-autogen, elixir-format
 msgid "The scheduled revision moves from %{from} to %{to}."
 msgstr "Den planlagte revisjonen flyttes fra %{from} til %{to}."
+
+#: lib/brando_admin/live/search_live.ex
+#, elixir-autogen, elixir-format
+msgid "The search index is empty"
+msgstr "Søkeindeksen er tom"
 
 #: lib/brando_admin/live/search_live.ex
 #, elixir-autogen, elixir-format

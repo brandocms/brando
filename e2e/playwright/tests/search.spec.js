@@ -113,6 +113,21 @@ test('a published entry is found by its block text from the palette and the sear
   await expect(page).toHaveURL(`/admin/projects/projects/update/${project.id}`)
 })
 
+test('an empty index says so and links to where it is rebuilt', async ({ page }) => {
+  expect((await page.request.post('/e2e/setup_fixtures/norwegian-admin-user')).ok()).toBe(true)
+  // The first search after the server starts, too: its sort and status
+  // options once named atoms that were not loaded yet.
+  await page.goto('/admin/search?q=g%C3%A5rder&sort=updated&status=draft')
+  await syncLV(page)
+
+  await expect(page).toHaveTitle(/^Søk: gårder/)
+  await expect(page.locator('#search-none')).toHaveCount(0)
+  const rebuild = page.locator('#search-empty-index').getByRole('link', { name: 'Bygg den på nytt under Verktøy → Søkeindeks' })
+  await expect(rebuild).toHaveAttribute('href', '/admin/config/utils#utils-search-index')
+  await rebuild.click()
+  await expect(page).toHaveURL(/\/admin\/config\/utils#utils-search-index$/)
+})
+
 test('the palette opens from a button on a phone', async ({ page }) => {
   expect((await page.request.post('/e2e/setup_fixtures/norwegian-admin-user')).ok()).toBe(true)
   await page.setViewportSize({ width: 390, height: 844 })

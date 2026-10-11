@@ -101,12 +101,40 @@ defmodule BrandoAdmin.SearchLiveTest do
     assert view |> element("#search-list") |> render() |> String.split("search-row-body") |> length() == 4
   end
 
-  test "before a search and when nothing matches", %{conn: conn} do
+  test "before a search and when nothing matches", %{conn: conn, current_user: user} do
+    page(user, "Sommerro")
+
     {:ok, view, _} = live(conn, "/admin/search")
     assert has_element?(view, "#search-start")
 
     {:ok, view, _} = live(conn, "/admin/search?q=zzqx")
     assert has_element?(view, "#search-none", "zzqx")
+    refute has_element?(view, "#search-empty-index")
+  end
+
+  test "an empty index says so, and where to rebuild it", %{conn: conn} do
+    {:ok, view, _} = live(conn, "/admin/search?q=sommerro")
+    refute has_element?(view, "#search-none")
+    assert has_element?(view, "#search-empty-index a[href='/admin/config/utils#utils-search-index']")
+  end
+
+  test "the title is set before the socket connects", %{conn: conn} do
+    html = conn |> get("/admin/search", %{"q" => "fjord"}) |> html_response(200)
+    assert html =~ ~r/<title[^>]*>\s*Search: fjord/
+  end
+
+  test "types with the same plural are told apart by their domain" do
+    types = [
+      %{key: "pages.page", schema: Page, label: "Categories", icon: "file"},
+      %{key: "synctest.article", schema: Article, label: "Categories", icon: "file"},
+      %{key: "other", schema: Page, label: "Articles", icon: "file"}
+    ]
+
+    assert Enum.map(BrandoAdmin.Search.disambiguate(types), & &1.label) == [
+             "Categories · Pages",
+             "Categories · SyncTest",
+             "Articles"
+           ]
   end
 
   describe "with groups" do
@@ -144,6 +172,14 @@ defmodule BrandoAdmin.SearchLiveTest do
       # Text only in the article's content finds nothing either
       {:ok, view, _} = live(conn, "/admin/search?q=by+the+lighthouse")
       refute has_element?(view, ".search-title", "Lighthouse article")
+    end
+
+    test "an empty index sends someone without Utilities to an administrator", c do
+      grant(c, [Catalog.get(:access, :backend).key, Catalog.get(:read, Page).key])
+
+      {:ok, view, _} = live(log_in_user(build_conn(), c.editor), "/admin/search?q=lighthouse")
+      assert has_element?(view, "#search-empty-index", "Ask an administrator")
+      refute has_element?(view, "#search-empty-index a")
     end
 
     test "an entry the user may read but not edit is listed without a link", c do

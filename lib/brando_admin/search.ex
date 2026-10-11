@@ -25,6 +25,10 @@ defmodule BrandoAdmin.Search do
   @max_page 500
   @statuses ~w(published pending draft disabled)
   @sorts ~w(relevance updated)
+  # Atoms named here, not by `String.to_existing_atom/1`: in development a
+  # module is loaded on first use, so the atom may not exist yet.
+  @status_atoms %{"published" => :published, "pending" => :pending, "draft" => :draft, "disabled" => :disabled}
+  @sort_atoms %{"relevance" => :relevance, "updated" => :updated}
 
   @type filters :: %{
           q: String.t(),
@@ -56,7 +60,23 @@ defmodule BrandoAdmin.Search do
       }
     end)
     |> Enum.reject(&is_nil(&1.key))
+    |> disambiguate()
     |> Enum.sort_by(&String.downcase(&1.label))
+  end
+
+  @doc """
+  `types` with the labels they share told apart: two types with the same
+  plural ("Categories" in Articles and in Menu) take their domain as well,
+  or the type filter lists the same name twice.
+  """
+  def disambiguate(types) do
+    shared = types |> Enum.frequencies_by(& &1.label) |> Enum.filter(&(elem(&1, 1) > 1)) |> Map.new()
+
+    Enum.map(types, fn type ->
+      if Map.has_key?(shared, type.label),
+        do: %{type | label: "#{type.label} · #{type.schema.__naming__().domain}"},
+        else: type
+    end)
   end
 
   @doc "The site's languages, `{code, name}`."
@@ -120,8 +140,10 @@ defmodule BrandoAdmin.Search do
   end
 
   @doc """
-  The results for `filters`: `%{rows, total, facets}`, where `facets` maps a
-  type's key to its number of matches before the type filter.
+  The results for `filters`: `%{rows, total, facets, empty_index}`, where
+  `facets` maps a type's key to its number of matches before the type filter,
+  and `empty_index` is true when nothing matched because the index holds no
+  documents at all.
   """
   def results(user, types, filters) do
     CommandPalette.in_scope(user, fn ->
@@ -132,8 +154,8 @@ defmodule BrandoAdmin.Search do
         Brando.Search.Query.run(scope(schemas), filters.q,
           schemas: type && [type.schema],
           language: filters.language,
-          status: filters.status && String.to_existing_atom(filters.status),
-          sort: String.to_existing_atom(filters.sort),
+          status: filters.status && Map.fetch!(@status_atoms, filters.status),
+          sort: Map.fetch!(@sort_atoms, filters.sort),
           limit: @page_size,
           offset: (filters.page - 1) * @page_size
         )
@@ -143,7 +165,9 @@ defmodule BrandoAdmin.Search do
       %{
         rows: rows(user, result.rows),
         total: result.total,
-        facets: Map.new(result.facets, fn {schema, count} -> {keys[schema], count} end)
+        facets: Map.new(result.facets, fn {schema, count} -> {keys[schema], count} end),
+        # An index nobody has built finds nothing for anyone: say so, not "no match".
+        empty_index: result.total == 0 and is_nil(Repo.one(from(d in Document, select: d.id, limit: 1)))
       }
     end)
   rescue
