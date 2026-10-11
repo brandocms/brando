@@ -486,7 +486,9 @@ they may differ. Edit those migrations by hand as the [0.53 upgrade
 guide](migrating_from_053.md#legacy-snapshots) describes. Then:
 
 - A table the plan creates that already exists (no snapshot history) becomes an
-  `alter table` that adds only the columns and indexes it lacks. A table that
+  `alter table` that adds only the columns and indexes it lacks. Of the
+  timestamps, only a missing one is added, filled from the other and then
+  made `NOT NULL`. A table that
   already has them all gets no migration: its snapshot is recorded as a
   baseline, as `--rebaseline` would.
 - A column, index or auxiliary table the plan adds that already exists is added

@@ -147,9 +147,24 @@ defmodule Brando.Blueprint.Migrations.Renderer do
   # Raw SQL rather than `modify`: `modify` also sets the column's type, which
   # for a column the Blueprint no longer describes is only the old snapshot's
   # guess at what the database holds.
+  # A timestamp added beside an existing one starts from it, then becomes NOT
+  # NULL as timestamps() would make it.
   defp reconcile_statements(direction, table, reconcile) do
     change = if direction == :up, do: "DROP NOT NULL", else: "SET NOT NULL"
-    Enum.map(reconcile.relaxed, &"ALTER TABLE #{table} ALTER COLUMN #{&1} #{change}")
+
+    timestamp =
+      case {direction, reconcile.missing_timestamp} do
+        {:up, {missing, present}} ->
+          [
+            "UPDATE #{table} SET #{missing} = COALESCE(#{present}, now()) WHERE #{missing} IS NULL",
+            "ALTER TABLE #{table} ALTER COLUMN #{missing} SET NOT NULL"
+          ]
+
+        _ ->
+          []
+      end
+
+    Enum.map(reconcile.relaxed, &"ALTER TABLE #{table} ALTER COLUMN #{&1} #{change}") ++ timestamp
   end
 
   defp backfill_statements(current, diff) do
@@ -170,7 +185,7 @@ defmodule Brando.Blueprint.Migrations.Renderer do
   end
 
   defp render_alter(direction, table, diff, reconcile) do
-    lines = alter_lines(direction, diff, reconcile.guarded_columns)
+    lines = alter_lines(direction, diff, reconcile.guarded_columns) ++ missing_timestamp_lines(direction, reconcile)
 
     if lines == [] do
       ""
@@ -196,6 +211,13 @@ defmodule Brando.Blueprint.Migrations.Renderer do
       Enum.map(diff.remove_columns, &render_column(:add, &1)) ++
       timestamp_lines(:down, diff.timestamps)
   end
+
+  defp missing_timestamp_lines(_direction, %Reconcile{missing_timestamp: nil}), do: []
+
+  defp missing_timestamp_lines(:up, %Reconcile{missing_timestamp: {_, present}}),
+    do: ["timestamps(#{present}: false, null: true)"]
+
+  defp missing_timestamp_lines(:down, %Reconcile{missing_timestamp: {missing, _}}), do: ["remove :#{missing}"]
 
   defp add_operation(column, guarded), do: if(MapSet.member?(guarded, column.name), do: :add_if_not_exists, else: :add)
 

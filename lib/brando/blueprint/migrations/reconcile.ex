@@ -37,6 +37,7 @@ defmodule Brando.Blueprint.Migrations.Reconcile do
           guarded_indexes: MapSet.t(String.t()),
           guarded_tables: MapSet.t(String.t()),
           relaxed: [String.t()],
+          missing_timestamp: {missing :: String.t(), present :: String.t()} | nil,
           comments: [text()],
           counts?: boolean(),
           summary: %{
@@ -70,16 +71,17 @@ defmodule Brando.Blueprint.Migrations.Reconcile do
             guarded_indexes: MapSet.new(),
             guarded_tables: MapSet.new(),
             relaxed: [],
+            missing_timestamp: nil,
             comments: [],
             counts?: true,
             summary: %{table: nil, create_as_alter?: false, guarded: [], left_out: [], kept: [], relaxed: []}
 
   @doc """
   Whether the migration has work of its own beyond the diff: a kept column's
-  NOT NULL to drop.
+  NOT NULL to drop, or one missing timestamp column to add.
   """
   @spec operations?(t()) :: boolean()
-  def operations?(%__MODULE__{relaxed: relaxed}), do: relaxed != []
+  def operations?(%__MODULE__{} = reconcile), do: reconcile.relaxed != [] or reconcile.missing_timestamp != nil
 
   @doc "The same reconciliation, with every count written as `N`."
   @spec without_counts(t()) :: t()
@@ -177,10 +179,8 @@ defmodule Brando.Blueprint.Migrations.Reconcile do
     add_indexes =
       Enum.reject(current.indexes ++ Enum.flat_map(existing_tables, & &1.indexes), &MapSet.member?(indexes, &1.name))
 
-    timestamps =
-      if current.timestamps and not Enum.any?(~w(inserted_at updated_at), &MapSet.member?(columns, &1)),
-        do: :add,
-        else: :unchanged
+    {timestamps, missing_timestamp} =
+      if current.timestamps, do: timestamps_to_add(columns), else: {:unchanged, nil}
 
     diff = %Diff{
       add_columns: add_columns,
@@ -202,6 +202,7 @@ defmodule Brando.Blueprint.Migrations.Reconcile do
     {diff,
      %__MODULE__{
        create_as_alter?: true,
+       missing_timestamp: missing_timestamp,
        comments: [comment | for({_, missing} <- unconstrained, {:comment, text} <- missing, do: text)],
        summary: %{
          table: table,
@@ -313,6 +314,11 @@ defmodule Brando.Blueprint.Migrations.Reconcile do
        guarded_indexes: guarded_indexes,
        guarded_tables: MapSet.new(guarded_tables),
        relaxed: relaxed,
+       missing_timestamp:
+         Enum.find_value(notes, fn
+           {:missing_timestamp, pair} -> pair
+           _note -> nil
+         end),
        comments: for({:comment, comment} <- notes, do: comment),
        summary: %{
          table: table,
@@ -493,12 +499,25 @@ defmodule Brando.Blueprint.Migrations.Reconcile do
   end
 
   defp reconcile_timestamps(:add, table, columns, _database, _repo, _owned?) do
-    if Enum.all?(~w(inserted_at updated_at), &MapSet.member?(columns, &1)),
-      do: {:unchanged, [{:left_out, "#{table} timestamps (already exist)"}]},
-      else: {:add, []}
+    case timestamps_to_add(columns) do
+      {:add, nil} -> {:add, []}
+      {:unchanged, nil} -> {:unchanged, [{:left_out, "#{table} timestamps (already exist)"}]}
+      {:unchanged, pair} -> {:unchanged, [{:missing_timestamp, pair}]}
+    end
   end
 
   defp reconcile_timestamps(timestamps, _table, _columns, _database, _repo, _owned?), do: {timestamps, []}
+
+  # Ecto's timestamps() adds both columns, and fails when one exists; then
+  # only the missing one is added, as `{missing, present}`.
+  defp timestamps_to_add(columns) do
+    case Enum.filter(~w(inserted_at updated_at), &MapSet.member?(columns, &1)) do
+      [] -> {:add, nil}
+      ["inserted_at"] -> {:unchanged, {"updated_at", "inserted_at"}}
+      ["updated_at"] -> {:unchanged, {"inserted_at", "updated_at"}}
+      _both -> {:unchanged, nil}
+    end
+  end
 
   defp kept_unowned(name) do
     [

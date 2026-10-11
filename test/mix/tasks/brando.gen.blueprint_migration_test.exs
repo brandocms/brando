@@ -817,6 +817,37 @@ defmodule Mix.Tasks.Brando.Gen.BlueprintMigrationTest do
       end)
     end
 
+    test "a table with one of its timestamps gets only the other", context do
+      query!("""
+      CREATE TABLE reconcile_farms (
+        id bigserial PRIMARY KEY, title text, slug text, creator_id bigint,
+        inserted_at timestamp(0) NOT NULL DEFAULT now()
+      )
+      """)
+
+      query!("INSERT INTO reconcile_farms (title) VALUES ('Farm')")
+      legacy_columns = columns("reconcile_farms")
+
+      plan = reconcile(context, ReconcileFarm, ["--dry-run"]).assigns.brando_storage_plan
+      [up, down] = String.split(plan.migration_source, "def down do")
+      refute up =~ "timestamps()"
+      assert up =~ "timestamps(inserted_at: false, null: true)"
+
+      assert up =~
+               ~s[execute "UPDATE reconcile_farms SET updated_at = COALESCE(inserted_at, now()) WHERE updated_at IS NULL"]
+
+      assert up =~ ~s(execute "ALTER TABLE reconcile_farms ALTER COLUMN updated_at SET NOT NULL")
+      assert down =~ "remove :updated_at"
+      refute down =~ "remove :inserted_at"
+
+      migrate_up(plan.migration_source, fn down ->
+        assert query!(nullable_sql(), ["reconcile_farms", "updated_at"]).rows == [["NO"]]
+        assert query!("SELECT updated_at = inserted_at FROM reconcile_farms").rows == [[true]]
+        down.()
+        assert columns("reconcile_farms") == legacy_columns
+      end)
+    end
+
     test "a table the database does not have is created as usual", context do
       planned = reconcile(context, ReconcileFarm, ["--dry-run"])
       assert planned.issues == []
