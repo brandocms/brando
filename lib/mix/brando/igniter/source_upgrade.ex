@@ -1036,6 +1036,260 @@ if Code.ensure_loaded?(Igniter) do
       FunctionClauseError -> []
     end
 
+    ## Templates
+
+    @template_extensions ~w(.ex .heex .eex .leex)
+    @template_finding_limit 50
+    # Brando's own schemas whose templates read a Villain `html` until 0.54.
+    @brando_block_templates [{"page", [{"html", "rendered_blocks"}]}]
+
+    @doc """
+    Points templates at the fields 0.54 renders blocks into, and lists the
+    template code 0.54 breaks that it cannot rewrite.
+
+    A Villain field's HTML (`html` for `data`, `hero_html` for `hero_data`)
+    became `rendered_<relation>` (`rendered_blocks`, `rendered_hero_blocks`).
+    Reads of it on `entry`/`@entry` or the schema's singular are rewritten in
+    the schema's own templates: a `<singular>_html` directory or module,
+    `templates/<singular>`, or `<singular>_view.ex`. Pages count as the
+    `page` schema. Run it before the Blueprint rewrite, which removes the
+    Villain attributes; a Blueprint an earlier run already moved is matched
+    by its block relations.
+
+    It warns, with file and line, about the reads it left, navigation items
+    read as 0.53 structs (`item.url`), and page var reads, which need the
+    page loaded with `preload: [:vars]`.
+    """
+    def upgrade_054_templates(igniter) do
+      {igniter, blueprints} = find_blueprints(igniter)
+
+      {igniter, fields} =
+        Enum.reduce(blueprints, {igniter, []}, fn module, {igniter, fields} ->
+          {:ok, {igniter, _source, zipper}} = ProjectModule.find_module(igniter, module)
+          {igniter, fields ++ blueprint_html_fields(zipper)}
+        end)
+
+      {by_singular, ambiguous} = template_renames(fields)
+      igniter = Igniter.include_glob(igniter, "lib/**/*.{ex,heex,eex,leex}")
+
+      igniter =
+        igniter
+        |> template_paths()
+        |> Enum.reduce(igniter, fn path, igniter ->
+          case template_singular(path, Map.keys(by_singular)) do
+            nil -> igniter
+            singular -> rewrite_html_reads(igniter, path, singular, by_singular[singular])
+          end
+        end)
+
+      html_fields = for {_singular, renames} <- fields, {html, _rendered} <- renames, uniq: true, do: html
+      warn_054_template_reads(igniter, html_fields, ambiguous)
+    end
+
+    # `{singular, [{html_field, rendered_field}]}` for one Blueprint.
+    defp blueprint_html_fields(zipper) do
+      with {:ok, zipper} <- Common.move_to_do_block(zipper),
+           {:ok, use_zipper} <- Igniter.Code.Module.move_to_use(zipper, Brando.Blueprint),
+           {:ok, options} <- CodeFunction.move_to_nth_argument(use_zipper, 1),
+           {:ok, singular} <- Igniter.Code.Keyword.get_key(options, :singular),
+           {:__block__, _, [singular]} when is_binary(singular) <- Zipper.node(singular) do
+        [{singular, html_renames(zipper)}]
+      else
+        _ -> []
+      end
+    end
+
+    defp html_renames(zipper) do
+      attributes = declared_attribute_names(zipper)
+
+      villain =
+        zipper
+        |> Common.find_all(&villain_attribute?/1)
+        |> Enum.map(&(&1 |> Zipper.node() |> Sourceror.get_args() |> List.first() |> literal_atom!()))
+        |> Enum.filter(&String.contains?(Atom.to_string(&1), "data"))
+        |> Enum.map(&{String.replace(Atom.to_string(&1), "data", "html"), villain_relation_name(&1)})
+
+      relations =
+        for relation <- block_relation_names(zipper),
+            html = relation_html_field(relation),
+            not is_nil(html),
+            do: {html, relation}
+
+      (villain ++ relations)
+      |> Enum.uniq_by(&elem(&1, 0))
+      |> Enum.reject(fn {html, _relation} -> html in attributes end)
+      |> Enum.map(fn {html, relation} -> {html, "rendered_#{relation}"} end)
+      |> Enum.sort()
+    end
+
+    defp relation_html_field(:blocks), do: "html"
+
+    defp relation_html_field(relation) do
+      name = Atom.to_string(relation)
+      if String.ends_with?(name, "_blocks"), do: String.replace_suffix(name, "_blocks", "_html")
+    end
+
+    defp declared_attribute_names(zipper) do
+      zipper
+      |> Common.find_all(&CodeFunction.function_call?(&1, :attribute, [2, 3]))
+      |> Enum.flat_map(fn attribute ->
+        case single_child(attribute) do
+          {:attribute, _, [name | _]} -> [to_string(literal_atom_value(name))]
+          _ -> []
+        end
+      end)
+    end
+
+    defp block_relation_names(zipper) do
+      zipper
+      |> Common.find_all(&CodeFunction.function_call?(&1, :relation, 3))
+      |> Enum.flat_map(fn relation ->
+        with {:relation, _, [name, type, options]} <- single_child(relation),
+             :has_many <- literal_atom_value(type),
+             true <- block_module_option?(options),
+             name when is_atom(name) and not is_nil(name) <- literal_atom_value(name) do
+          [name]
+        else
+          _ -> []
+        end
+      end)
+    end
+
+    defp block_module_option?(options) do
+      Enum.any?(keyword_entries(options), fn
+        {key, value} -> literal_atom_value(key) == :module and literal_atom_value(value) == :blocks
+        _other -> false
+      end)
+    rescue
+      FunctionClauseError -> false
+    end
+
+    # Schemas sharing a singular share their template directories, so they
+    # are rewritten only when their fields agree.
+    defp template_renames(fields) do
+      (fields ++ @brando_block_templates)
+      |> Enum.group_by(&elem(&1, 0), &elem(&1, 1))
+      |> Enum.reduce({%{}, []}, fn {singular, renames}, {by_singular, ambiguous} ->
+        case Enum.uniq(renames) do
+          [[]] -> {by_singular, ambiguous}
+          [renames] -> {Map.put(by_singular, singular, renames), ambiguous}
+          _differing -> {by_singular, [singular | ambiguous]}
+        end
+      end)
+    end
+
+    defp template_paths(igniter) do
+      igniter.rewrite
+      |> Rewrite.sources()
+      |> Enum.map(&Source.get(&1, :path))
+      |> Enum.filter(&(String.starts_with?(&1, "lib/") and Path.extname(&1) in @template_extensions))
+      |> Enum.sort()
+    end
+
+    defp template_singular(path, singulars) do
+      {directories, [basename]} = path |> Path.split() |> Enum.split(-1)
+      pairs = Enum.chunk_every(directories, 2, 1, :discard)
+
+      Enum.find(singulars, fn singular ->
+        "#{singular}_html" in directories or ["templates", singular] in pairs or
+          basename in ["#{singular}_html.ex", "#{singular}_view.ex"]
+      end)
+    end
+
+    defp rewrite_html_reads(igniter, path, singular, renames) do
+      content = igniter.rewrite |> Rewrite.source!(path) |> Source.get(:content)
+      fields = Enum.map_join(renames, "|", &Regex.escape(elem(&1, 0)))
+      regex = ~r/(?<![\w.:"'\/@])(@?(?:entry|#{Regex.escape(singular)}))\.(#{fields})(?![\w.(])/
+      renames = Map.new(renames)
+      updated = Regex.replace(regex, content, fn _read, variable, field -> "#{variable}.#{renames[field]}" end)
+
+      if updated == content,
+        do: igniter,
+        else: Igniter.update_file(igniter, path, &Source.update(&1, :content, updated))
+    end
+
+    defp warn_054_template_reads(igniter, html_fields, ambiguous) do
+      fields = Enum.map_join(Enum.uniq(["html" | html_fields]), "|", &Regex.escape/1)
+      html_read = ~r/(?<![\w.:"'\/@])@?[a-z_]\w*(?:\.[a-z_]\w*)*\.(?:#{fields})(?![\w.(])/
+      var_read = ~r/\bPages\.(get_var|has_var\?)\(/
+
+      sources =
+        igniter
+        |> template_paths()
+        |> Enum.map(&{&1, igniter.rewrite |> Rewrite.source!(&1) |> Source.get(:content)})
+
+      [
+        {"""
+         Villain HTML reads. 0.54 renders blocks into `rendered_<relation>`:
+         `entry.html` is now `entry.rendered_blocks`, `entry.hero_html` is
+         `entry.rendered_hero_blocks`. These lines are outside a schema's own
+         templates#{ambiguous_note(ambiguous)}, so they were left as they are:
+         """, findings(sources, fn _content -> &Regex.match?(html_read, &1) end)},
+        {"""
+         Navigation items. An item no longer has `url`, `title`,
+         `open_in_new_window` or `items`; it holds a link var. Use
+         `Brando.HTML.get_menu_item_url(item)`, `get_menu_item_text(item)`,
+         `get_menu_item_target_blank(item)` and `item.children`:
+         """, findings(sources, &navigation_item_reads/1)},
+        {"""
+         Page vars. They are an association: load the page with
+         `preload: [:alternate_entries, :vars]` (or `Brando.Repo.preload(page, :vars)`)
+         before `get_var/2` or `has_var?/2`, which raise otherwise:
+         """, findings(sources, fn _content -> &Regex.match?(var_read, &1) end)}
+      ]
+      |> Enum.reject(fn {_text, findings} -> findings == [] end)
+      |> case do
+        [] ->
+          igniter
+
+        sections ->
+          Igniter.add_warning(igniter, """
+          Template code that 0.54 breaks and the task did not rewrite (matched
+          by name, so check each line):
+
+          #{Enum.map_join(sections, "\n", fn {text, findings} -> text <> format_findings(findings) end)}
+          """)
+      end
+    end
+
+    defp ambiguous_note([]), do: ""
+
+    defp ambiguous_note(singulars) do
+      ", or in templates of schemas that share a singular (#{singulars |> Enum.sort() |> Enum.join(", ")})"
+    end
+
+    # `line_predicate` takes a file's content and returns the test for its lines.
+    defp findings(sources, line_predicate) do
+      for {path, content} <- sources,
+          matches? = line_predicate.(content),
+          {line, number} <- content |> String.split("\n") |> Enum.with_index(1),
+          matches?.(line),
+          do: "#{path}:#{number}: #{String.trim(line)}"
+    end
+
+    # `item.url` where `item` comes from a navigation's or menu's `items`.
+    defp navigation_item_reads(content) do
+      variables =
+        for [_, variable, source] <- Regex.scan(~r/\b([a-z_]\w*)\s*<-\s*(@?[\w.\[\]"]*\.items)\b/, content),
+            source =~ ~r/nav|menu/i,
+            uniq: true,
+            do: Regex.escape(variable)
+
+      case variables do
+        [] ->
+          fn _line -> false end
+
+        variables ->
+          &Regex.match?(~r/(?<![\w.])(#{Enum.join(variables, "|")})\.(url|title|open_in_new_window|items)\b/, &1)
+      end
+    end
+
+    defp format_findings(findings) do
+      shown = Enum.take(findings, @template_finding_limit)
+      more = length(findings) - length(shown)
+      Enum.map_join(shown, "\n", &("  " <> &1)) <> if(more > 0, do: "\n  … and #{more} more\n", else: "\n")
+    end
+
     def rename_list_villains(igniter) do
       Rename.rename_function(
         igniter,

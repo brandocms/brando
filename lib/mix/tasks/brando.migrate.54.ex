@@ -35,6 +35,8 @@ if Code.ensure_loaded?(Igniter) do
     def igniter(igniter) do
       igniter
       |> SourceUpgrade.rename_list_villains()
+      # Reads the Villain attributes the Blueprint rewrite removes.
+      |> SourceUpgrade.upgrade_054_templates()
       |> SourceUpgrade.rewrite_blueprints(&SourceUpgrade.upgrade_054_blueprint/1)
       |> SourceUpgrade.rewrite_preview_targets()
       |> SourceUpgrade.configure_repo_module()
@@ -53,10 +55,11 @@ if Code.ensure_loaded?(Igniter) do
 
       In addition to the Blueprint and LivePreview rewrites, the task moves
       each Villain editor (`input :data, :blocks` in a fieldset) to a
-      form-level `blocks :blocks`, which renders below the tabs; converts
-      legacy list, single, and selection datasources; expands listing filters,
-      actions, selection actions, and supported exports into Spark blocks; and
-      preserves Meta and JSON-LD path/mutator behavior.
+      form-level `blocks :blocks`, which renders below the tabs; points
+      `entry.html` in the schema's own templates at `entry.rendered_blocks`;
+      converts legacy list, single, and selection datasources; expands
+      listing filters, actions, selection actions, and supported exports into
+      Spark blocks; and preserves Meta and JSON-LD path/mutator behavior.
 
       The task also updates `Brando.Villain.list_villains/0`, legacy listing
       `filter:` keys, root Docker digest commands, and font cache suffixes. It
@@ -97,9 +100,9 @@ if Code.ensure_loaded?(Igniter) do
           option sets beyond `default_actions:` also remain for manual redesign.
         * Vite 5 manifest configuration, custom processing that relied on
           sharp-cli, merged admin Create/Update LiveViews, `<.head>` adoption,
-          and navigation markup depend on the application's frontend and
-          custom code. Apply the corresponding 0.54 changelog instructions
-          manually where relevant.
+          and navigation markup the template warning does not list depend on
+          the application's frontend and custom code. Apply the corresponding
+          0.54 changelog instructions manually where relevant.
         * Back up Gettext catalogs before attempting recovery. After extracting
           the backend and frontend catalogs, run the copied helper explicitly
           with Bash, for example:

@@ -494,11 +494,16 @@ defmodule Brando.Pages do
   @doc """
   Get a var from Page.
 
-  Returns the rendered value of the var.
+  Returns the rendered value of the var. Vars are an association: load the
+  page with `preload: [:vars]`, as in
+
+      Pages.get_page(%{matches: %{path: path}, preload: [:alternate_entries, :vars]})
+
+  A page whose vars are not loaded raises an `ArgumentError` saying so.
   """
   @spec get_var(page, binary) :: any
+  def get_var(%Page{vars: %Ecto.Association.NotLoaded{}} = page, _), do: raise_vars_not_loaded(page)
   def get_var(%Page{vars: nil}, _), do: nil
-  def get_var(%Page{vars: []}, _), do: nil
 
   def get_var(%Page{vars: vars}, var_key) do
     case Enum.find(vars, &(&1.key == var_key)) do
@@ -510,16 +515,21 @@ defmodule Brando.Pages do
   def get_var(_, _), do: nil
 
   @doc """
-  Checks if page has var
+  Checks if page has var. Like `get_var/2`, it needs the page's vars preloaded.
   """
   @spec has_var?(page, binary) :: boolean
-  def has_var?(%Page{vars: []}, _), do: nil
+  def has_var?(%Page{vars: %Ecto.Association.NotLoaded{}} = page, _), do: raise_vars_not_loaded(page)
+  def has_var?(%Page{vars: nil}, _), do: false
+  def has_var?(%Page{vars: vars}, var), do: Enum.any?(vars, &(&1.key == var))
 
-  def has_var?(%Page{vars: vars}, var) do
-    case Enum.find(vars, &(&1.key == var)) do
-      nil -> false
-      _ -> true
-    end
+  defp raise_vars_not_loaded(page) do
+    raise ArgumentError, """
+    the page vars are not loaded (page #{inspect(page.id)}, #{inspect(page.uri)}).
+
+    Page vars are an association since Brando 0.54. Load the page with them, for example
+    `Brando.Pages.get_page(%{matches: ..., preload: [:alternate_entries, :vars]})`,
+    or `Brando.Repo.preload(page, :vars)`.
+    """
   end
 
   @doc """

@@ -380,6 +380,131 @@ defmodule Mix.Tasks.Brando.Migrate54Test do
     refute blueprint =~ ~s(tab "Content")
   end
 
+  test "points the moved schemas' templates at their rendered blocks and lists what it left" do
+    templates = %{
+      "lib/legacy_app_web/controllers/vacancy_html/detail.html.heex" => """
+      <main>
+        <%= @entry.html |> raw %>
+        <%= raw(@vacancy.hero_html) %>
+        <%= render("show.html") %>
+      </main>
+      """,
+      "lib/legacy_app_web/controllers/vacancy_html.ex" => """
+      defmodule LegacyAppWeb.VacancyHTML do
+        def body(vacancy), do: Phoenix.HTML.raw(vacancy.html)
+      end
+      """,
+      "lib/legacy_app_web/templates/vacancy/show.html.eex" => "<%= raw @entry.html %>\n",
+      "lib/legacy_app_web/controllers/page_html/show.html.heex" => "<%= @page.html |> raw %>\n",
+      "lib/legacy_app_web/components/featured.html.heex" => "<%= @featured.html |> raw %>\n",
+      "lib/legacy_app_web/components/navigation.html.heex" => """
+      <%= for item <- @navigation.items do %>
+        <a href={item.url}><%= item.title %></a>
+      <% end %>
+      <%= for product <- @products.items do %><%= product.url %><% end %>
+      """,
+      "lib/legacy_app_web/controllers/page_controller.ex" => """
+      defmodule LegacyAppWeb.PageController do
+        def heading(page), do: Brando.Pages.get_var(page, "heading")
+      end
+      """
+    }
+
+    igniter = migrate(@villain_editor_blueprint, nil, templates)
+
+    assert source(igniter, "lib/legacy_app_web/controllers/vacancy_html/detail.html.heex") == """
+           <main>
+             <%= @entry.rendered_blocks |> raw %>
+             <%= raw(@vacancy.rendered_hero_blocks) %>
+             <%= render("show.html") %>
+           </main>
+           """
+
+    assert source(igniter, "lib/legacy_app_web/controllers/vacancy_html.ex") =~ "raw(vacancy.rendered_blocks)"
+    assert source(igniter, "lib/legacy_app_web/templates/vacancy/show.html.eex") == "<%= raw @entry.rendered_blocks %>\n"
+
+    assert source(igniter, "lib/legacy_app_web/controllers/page_html/show.html.heex") ==
+             "<%= @page.rendered_blocks |> raw %>\n"
+
+    assert_unchanged(igniter, [
+      "lib/legacy_app_web/components/featured.html.heex",
+      "lib/legacy_app_web/components/navigation.html.heex",
+      "lib/legacy_app_web/controllers/page_controller.ex"
+    ])
+
+    assert_has_warning(igniter, fn warning ->
+      warning =~ "Template code that 0.54 breaks" and
+        warning =~ "lib/legacy_app_web/components/featured.html.heex:1: <%= @featured.html |> raw %>" and
+        warning =~ "lib/legacy_app_web/components/navigation.html.heex:2: <a href={item.url}>" and
+        not (warning =~ "navigation.html.heex:4") and
+        warning =~ "lib/legacy_app_web/controllers/page_controller.ex:2: def heading(page), do: Brando.Pages.get_var" and
+        not (warning =~ "vacancy_html")
+    end)
+
+    rerun = igniter |> apply_igniter!() |> include_test_files() |> Migrate54.igniter()
+    assert_unchanged(rerun, Map.keys(templates))
+  end
+
+  test "rewrites templates of a Blueprint an earlier run moved, unless another schema shares its singular" do
+    moved = """
+    defmodule LegacyApp.Articles.Category do
+      use Brando.Blueprint,
+        application: "LegacyApp",
+        domain: "Articles",
+        schema: "Category",
+        singular: "category",
+        plural: "categories"
+
+      trait Brando.Trait.Blocks
+
+      relations do
+        relation :blocks, :has_many, module: :blocks
+      end
+    end
+    """
+
+    plain = """
+    defmodule LegacyApp.Menu.Category do
+      use Brando.Blueprint,
+        application: "LegacyApp",
+        domain: "Menu",
+        schema: "Category",
+        singular: "category",
+        plural: "categories"
+
+      attributes do
+        attribute :html, :text
+      end
+    end
+    """
+
+    article =
+      String.replace(moved, ["Articles.Category", "\"Category\"", "\"category\"", "\"categories\""], fn
+        "Articles.Category" -> "Articles.Article"
+        "\"Category\"" -> "\"Article\""
+        "\"category\"" -> "\"article\""
+        "\"categories\"" -> "\"articles\""
+      end)
+
+    igniter =
+      migrate(article, nil, %{
+        "lib/legacy_app/articles/category.ex" => moved,
+        "lib/legacy_app/menu/category.ex" => plain,
+        "lib/legacy_app_web/controllers/article_html/show.html.heex" => "<%= @entry.html |> raw %>\n",
+        "lib/legacy_app_web/controllers/category_html/show.html.heex" => "<%= @entry.html |> raw %>\n"
+      })
+
+    assert source(igniter, "lib/legacy_app_web/controllers/article_html/show.html.heex") ==
+             "<%= @entry.rendered_blocks |> raw %>\n"
+
+    assert_unchanged(igniter, "lib/legacy_app_web/controllers/category_html/show.html.heex")
+
+    assert_has_warning(
+      igniter,
+      &(&1 =~ "schemas that share a singular (category)" and &1 =~ "category_html/show.html.heex:1")
+    )
+  end
+
   test "rewrites each LivePreview target with its own modules and preserves callback behavior" do
     igniter = migrate(@legacy_blueprint, @legacy_live_preview)
     live_preview = source(igniter, @live_preview_path)
