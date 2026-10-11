@@ -177,16 +177,27 @@ if Code.ensure_loaded?(Igniter) do
       end
     end
 
-    defp block_editor_input({:input, meta, [name, type | options]}, renames) do
+    defp block_editor_input({:input, _meta, [name, type | options]}, renames) do
       with :blocks <- literal_atom_value(type),
            {:ok, relation} <- Map.fetch(renames, literal_atom_value(name)) do
-        {:ok, {{:__block__, meta, [relation]}, options}}
+        {:ok, {{:__block__, [], [relation]}, Enum.map(options, &without_position/1)}}
       else
         _ -> :error
       end
     end
 
     defp block_editor_input(_statement, _renames), do: :error
+
+    # Comments are printed by line, so a node moved up the file keeps none:
+    # with its old lines, comments between the two places land inside it.
+    @position_meta [:line, :column, :end_of_expression, :closing, :newlines, :leading_comments, :trailing_comments]
+
+    defp without_position(ast) do
+      Macro.prewalk(ast, fn
+        {form, meta, args} when is_list(meta) -> {form, Keyword.drop(meta, @position_meta), args}
+        node -> node
+      end)
+    end
 
     # The calls that give a tab, fieldset or form content; the rest are options.
     defp form_entity?({name, _, _}) when name in [:tab, :fieldset, :alert, :input, :inputs_for, :component, :blocks],

@@ -311,6 +311,7 @@ defmodule Mix.Tasks.Brando.Migrate54Test do
       end
 
       form :compact do
+        # Only the title
         tab "Content" do
           fieldset size: :full do
             input :title, :text
@@ -335,7 +336,7 @@ defmodule Mix.Tasks.Brando.Migrate54Test do
              ~r/form do\n\s+blocks\(:blocks, label: "Innholdsblokker", template_namespace: "vacancies"\)\n\s+blocks\(:hero_blocks\)\n\n\s+tab "Content" do/
 
     assert blueprint =~
-             ~r/form :compact do\n\s+blocks\(:blocks\)\n\n\s+tab "Content" do\n\s+fieldset do\n\s+size\(:full\)\n\s+input\(:title, :text\)\n\s+end/
+             ~r/form :compact do\n\s+blocks\(:blocks\)\n\s+# Only the title\n\s+tab "Content" do\n\s+fieldset do\n\s+size\(:full\)\n\s+input\(:title, :text\)\n\s+end/
 
     assert count(blueprint, "input(:title, :text)") == 2
     assert count(blueprint, "fieldset do") == 2
