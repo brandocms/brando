@@ -216,7 +216,9 @@ defmodule Brando.Blueprint.AssetConfigNormalizer do
   defp merge_config(asset, type, module, default, overrides) do
     default_map = if is_struct(default), do: Map.from_struct(default), else: Map.new(default)
     override_map = config_map!(asset, type, module, overrides)
-    build_struct!(asset, type, module, deep_merge(default_map, override_map))
+    merged = deep_merge(default_map, override_map)
+    merged = if type == :image, do: put_declared_srcset(merged, override_map), else: merged
+    build_struct!(asset, type, module, merged)
   end
 
   defp normalize_asset_config(_asset, module, config) when is_struct(config, module), do: config
@@ -276,7 +278,7 @@ defmodule Brando.Blueprint.AssetConfigNormalizer do
   end
 
   defp merge_image_config(default_config, override) do
-    merged = deep_merge(default_config, override)
+    merged = default_config |> deep_merge(override) |> put_declared_srcset(override)
 
     cond do
       not Map.has_key?(override, :sizes) -> merged
@@ -284,6 +286,12 @@ defmodule Brando.Blueprint.AssetConfigNormalizer do
       true -> %{merged | sizes: override.sizes, srcset: inherited_srcset(merged.srcset, override.sizes)}
     end
   end
+
+  # A declared srcset replaces the default one whole: merged, a flat legacy
+  # srcset would sit among the default's keyed lists, and a keyed one would
+  # inherit lists naming sizes the Blueprint may not have.
+  defp put_declared_srcset(merged, %{srcset: srcset}), do: Map.put(merged, :srcset, srcset)
+  defp put_declared_srcset(merged, _override), do: merged
 
   # A config that replaces `sizes` but gives no `srcset` inherits the default
   # one, which may name sizes it no longer has. Only a field rendered with its

@@ -377,6 +377,44 @@ defmodule Brando.Blueprint.AssetConfigTest do
     assert %{default: [_ | _]} = Assets.__asset__(module, :cover).opts.cfg.srcset
   end
 
+  test "a declared srcset replaces the keyed default instead of merging into it" do
+    # The default srcset is keyed: `%{default: [{"small", "700w"}, …]}`.
+    sizes = %{
+      "crop_md" => %{"size" => "600x750>", "crop" => true},
+      "crop_lg" => %{"size" => "900x1125>", "crop" => true}
+    }
+
+    module =
+      compile_blueprint(
+        quote do
+          assets do
+            asset :legacy, :image,
+              cfg: %{sizes: unquote(Macro.escape(sizes)), srcset: %{"crop_md" => "600w", "crop_lg" => "900w"}}
+
+            asset :partial, :image,
+              cfg: %{
+                sizes: unquote(Macro.escape(sizes)),
+                srcset: %{cropped: [{"crop_md", "600w"}, {"crop_lg", "900w"}]}
+              }
+
+            asset :srcset_only, :image, cfg: %{srcset: %{cropped: [{"small", "700w"}]}}
+
+            asset :gallery, :gallery,
+              cfg: %{image: %{sizes: unquote(Macro.escape(sizes)), srcset: %{"crop_md" => "600w"}}}
+          end
+        end
+      )
+
+    assert Assets.__asset__(module, :legacy).opts.cfg.srcset == %{"crop_md" => "600w", "crop_lg" => "900w"}
+
+    assert Assets.__asset__(module, :partial).opts.cfg.srcset == %{
+             cropped: [{"crop_md", "600w"}, {"crop_lg", "900w"}]
+           }
+
+    assert Assets.__asset__(module, :srcset_only).opts.cfg.srcset == %{cropped: [{"small", "700w"}]}
+    assert Assets.__asset__(module, :gallery).opts.cfg.image.srcset == %{"crop_md" => "600w"}
+  end
+
   test "validates deferred config functions when they are materialized" do
     module =
       compile_blueprint(

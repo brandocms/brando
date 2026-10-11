@@ -671,9 +671,10 @@ configs are checked when they are first read.
 
 An image config's `sizes` replaces the default sizes; name the
 `{:standard, %{...}}` preset to extend them, as described in
-[Images, files, and galleries](media.md#configure-a-cover-image). When the
-replacement has no `srcset`, the default `srcset` is kept only if all its
-sizes still exist.
+[Images, files, and galleries](media.md#configure-a-cover-image). A declared
+`srcset` likewise replaces the default `srcset` whole. When the replacement
+has no `srcset`, the default `srcset` is kept only if all its sizes still
+exist.
 
 ```elixir
 assets do

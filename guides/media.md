@@ -104,7 +104,8 @@ asset :cover, :image,
   }
 ```
 
-When a config replaces `sizes` without its own `srcset`, the inherited default
+A declared `srcset` replaces the default `srcset` whole, keys and all. When a
+config replaces `sizes` without its own `srcset`, the inherited default
 `srcset` is dropped if it names sizes the config no longer has.
 
 Changing size definitions does not regenerate existing images by itself. Each
