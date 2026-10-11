@@ -701,6 +701,18 @@ defmodule Mix.Tasks.Brando.Migrate54Test do
     assert_has_warning(igniter, &(&1 =~ "its routes are not `live \"path\", Module` lines in the router"))
   end
 
+  test "lists the files it creates and changes, for --yes, which shows no diff" do
+    igniter = @legacy_blueprint |> migrate(nil) |> Mix.Brando.Igniter.SourceTask.list_written_files()
+
+    assert_has_notice(igniter, fn notice ->
+      notice =~ "Files written:" and
+        notice =~ "  created: scripts/sync_gettext.sh" and
+        notice =~ "  updated: #{@blueprint_path}" and
+        notice =~ "  updated: #{@dockerfile_path}" and
+        not (notice =~ @repo_path)
+    end)
+  end
+
   test "rewrites each LivePreview target with its own modules and preserves callback behavior" do
     igniter = migrate(@legacy_blueprint, @legacy_live_preview)
     live_preview = source(igniter, @live_preview_path)

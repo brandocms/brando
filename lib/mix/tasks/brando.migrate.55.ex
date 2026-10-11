@@ -114,8 +114,10 @@ if Code.ensure_loaded?(Igniter) do
         6. Only after that review, run `mix brando.migrate`, followed by
            `mix brando.migrate --tenants` when the application has named
            environments.
-        7. After the database migration, run `mix brando.entries.resave` and
-           `mix brando.identifiers.sync`.
+        7. After the database migration, run `mix brando.entries.resave`,
+           `mix brando.identifiers.sync` and `mix brando.images.adopt` (try it
+           with `--dry-run` first), which records the config each image whose
+           files already match was made with.
         8. Run `mix brando.check.image_texts` to find module, container and
            menu templates that print an image's alt text, title or credits
            without the `i18n` filter. Templates live in the database, so this

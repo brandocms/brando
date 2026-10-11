@@ -2089,6 +2089,7 @@ defmodule Mix.Tasks.Brando.Migrate55Test do
 
     assert_has_notice(igniter, &String.contains?(&1, "Continue in this order"))
     assert_has_notice(igniter, &String.contains?(&1, "mix brando.gen.migrations"))
+    assert_has_notice(igniter, &(&1 =~ ~r/mix brando.identifiers.sync`\s+and `mix brando.images.adopt`/))
     assert_has_notice(igniter, &String.contains?(&1, "Created `florist.config.exs`"))
     assert_has_notice(igniter, &String.contains?(&1, "Archived the recognized legacy task"))
     assert_has_warning(igniter, &String.contains?(&1, "Manual 0.55 decisions remain"))
