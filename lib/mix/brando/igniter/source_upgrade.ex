@@ -77,10 +77,141 @@ if Code.ensure_loaded?(Igniter) do
            {:ok, zipper} <- rewrite_slug_source(zipper),
            {:ok, zipper} <- rewrite_json_ld_field(zipper),
            {:ok, zipper} <- rewrite_meta_field(zipper),
-           {:ok, zipper} <- remove_villain_attributes(zipper) do
-        add_villain_relations(zipper, villain_fields)
+           {:ok, zipper} <- remove_villain_attributes(zipper),
+           {:ok, zipper} <- add_villain_relations(zipper, villain_fields) do
+        move_block_editor_inputs(zipper)
       end
     end
+
+    # A 0.53 block editor was `input :data, :blocks` inside a fieldset. The
+    # Villain attribute became a `:blocks` relation, and its editor is now the
+    # form-level `blocks :blocks`, rendered below the tabs. An input whose name
+    # is no relation, but whose relation name is, is moved there with its
+    # options; a fieldset or tab left without content goes with it. Inputs an
+    # earlier run of this task left behind are matched the same way.
+    defp move_block_editor_inputs(zipper) do
+      zipper = Zipper.topmost(zipper)
+
+      renames =
+        zipper
+        |> Common.find_all(&CodeFunction.function_call?(&1, :input, [2, 3]))
+        |> Enum.flat_map(&block_editor_rename(zipper, single_child(&1)))
+        |> Map.new()
+
+      if renames == %{} do
+        {:ok, zipper}
+      else
+        Common.update_all_matches(zipper, &form_with_body?/1, fn form_zipper ->
+          {:ok,
+           form_zipper |> Common.maybe_move_to_single_child_block() |> Zipper.update(&move_form_block_inputs(&1, renames))}
+        end)
+      end
+    end
+
+    defp block_editor_rename(zipper, {:input, _, [name, type | _options]}) do
+      with :blocks <- literal_atom_value(type),
+           name when is_atom(name) and not is_nil(name) <- literal_atom_value(name),
+           false <- relation_declared?(zipper, name),
+           relation = villain_relation_name(name),
+           true <- relation_declared?(zipper, relation) do
+        [{name, relation}]
+      else
+        _ -> []
+      end
+    end
+
+    defp block_editor_rename(_zipper, _node), do: []
+
+    defp single_child(zipper), do: zipper |> Common.maybe_move_to_single_child_block() |> Zipper.node()
+
+    defp form_with_body?(zipper) do
+      CodeFunction.function_call?(zipper, :form) and match?({:ok, _}, do_body(single_child(zipper)))
+    end
+
+    defp move_form_block_inputs(form, renames) do
+      {:ok, statements} = do_body(form)
+
+      case strip_block_inputs(statements, renames) do
+        {_statements, []} ->
+          form
+
+        {statements, moved} ->
+          declared = for {:blocks, _, [name | _]} <- statements, do: literal_atom_value(name)
+
+          editors =
+            moved
+            |> Enum.uniq_by(fn {name, _options} -> name end)
+            |> Enum.reject(fn {name, _options} -> name in declared end)
+            |> Enum.map(fn {name, options} -> {:blocks, [], [name | options]} end)
+
+          {options, rest} = Enum.split_while(statements, &(not form_entity?(&1)))
+          put_do_body(form, options ++ editors ++ rest)
+      end
+    end
+
+    # Removes the block editor inputs named in `renames`, returning what is left
+    # and the `{relation_ast, options}` of each removed input.
+    defp strip_block_inputs(statements, renames) do
+      {kept, moved} =
+        Enum.map_reduce(statements, [], fn statement, moved ->
+          case block_editor_input(statement, renames) do
+            {:ok, editor} ->
+              {[], moved ++ [editor]}
+
+            :error ->
+              strip_nested_block_inputs(statement, renames, moved)
+          end
+        end)
+
+      {List.flatten(kept), moved}
+    end
+
+    defp strip_nested_block_inputs(statement, renames, moved) do
+      with {:ok, body} <- do_body(statement),
+           {body, [_ | _] = nested} <- strip_block_inputs(body, renames) do
+        if Enum.any?(body, &form_entity?/1),
+          do: {[put_do_body(statement, body)], moved ++ nested},
+          else: {[], moved ++ nested}
+      else
+        _ -> {[statement], moved}
+      end
+    end
+
+    defp block_editor_input({:input, meta, [name, type | options]}, renames) do
+      with :blocks <- literal_atom_value(type),
+           {:ok, relation} <- Map.fetch(renames, literal_atom_value(name)) do
+        {:ok, {{:__block__, meta, [relation]}, options}}
+      else
+        _ -> :error
+      end
+    end
+
+    defp block_editor_input(_statement, _renames), do: :error
+
+    # The calls that give a tab, fieldset or form content; the rest are options.
+    defp form_entity?({name, _, _}) when name in [:tab, :fieldset, :alert, :input, :inputs_for, :component, :blocks],
+      do: true
+
+    defp form_entity?(_statement), do: false
+
+    defp do_body({_name, _meta, args}) when is_list(args) do
+      case Enum.reverse(args) do
+        [[{{:__block__, _, [:do]}, {:__block__, _, statements}}] | _] when is_list(statements) -> {:ok, statements}
+        [[{{:__block__, _, [:do]}, statement}] | _] -> {:ok, [statement]}
+        _ -> :error
+      end
+    end
+
+    defp do_body(_node), do: :error
+
+    defp put_do_body({name, meta, args}, statements) do
+      [[{{:__block__, do_meta, [:do]}, body}] | arguments] = Enum.reverse(args)
+      do_block = [{{:__block__, do_meta, [:do]}, {:__block__, block_meta(body), statements}}]
+      {name, meta, Enum.reverse(arguments, [do_block])}
+    end
+
+    defp block_meta({:__block__, meta, statements}) when is_list(statements), do: meta
+    defp block_meta(_statement), do: []
 
     defp rewrite_legacy_datasources(zipper) do
       if uses_legacy_datasource?(zipper) do

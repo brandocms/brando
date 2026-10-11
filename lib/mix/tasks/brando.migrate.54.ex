@@ -51,7 +51,9 @@ if Code.ensure_loaded?(Igniter) do
       Igniter.add_notice(igniter, """
       Brando 0.54 source migration prepared.
 
-      In addition to the Blueprint and LivePreview rewrites, the task converts
+      In addition to the Blueprint and LivePreview rewrites, the task moves
+      each Villain editor (`input :data, :blocks` in a fieldset) to a
+      form-level `blocks :blocks`, which renders below the tabs; converts
       legacy list, single, and selection datasources; expands listing filters,
       actions, selection actions, and supported exports into Spark blocks; and
       preserves Meta and JSON-LD path/mutator behavior.

@@ -274,6 +274,112 @@ defmodule Mix.Tasks.Brando.Migrate54Test do
     refute blueprint =~ "status(:published)"
   end
 
+  @villain_editor_blueprint """
+  defmodule LegacyApp.Vacancies.Vacancy do
+    use Brando.Blueprint,
+      application: "LegacyApp",
+      domain: "Vacancies",
+      schema: "Vacancy",
+      singular: "vacancy",
+      plural: "vacancies"
+
+    trait Brando.Trait.Villain
+
+    attributes do
+      attribute :title, :string
+      attribute :data, :villain
+      attribute :hero_data, :villain
+    end
+
+    forms do
+      form do
+        tab "Content" do
+          fieldset size: :full do
+            input :title, :text
+          end
+
+          fieldset size: :full do
+            input :data, :blocks, label: "Innholdsblokker", template_namespace: "vacancies"
+          end
+        end
+
+        tab "Hero" do
+          fieldset size: :full do
+            input :hero_data, :blocks
+          end
+        end
+      end
+
+      form :compact do
+        tab "Content" do
+          fieldset size: :full do
+            input :title, :text
+            input :data, :blocks
+          end
+        end
+      end
+    end
+  end
+  """
+
+  test "moves the Villain block editor inputs to form-level block editors" do
+    igniter = migrate(@villain_editor_blueprint, nil)
+    blueprint = source(igniter, @blueprint_path)
+
+    refute blueprint =~ ":blocks, :blocks"
+    refute blueprint =~ "input(:data"
+    refute blueprint =~ "input(:hero_data"
+    refute blueprint =~ ~s(tab "Hero")
+
+    assert blueprint =~
+             ~r/form do\n\s+blocks\(:blocks, label: "Innholdsblokker", template_namespace: "vacancies"\)\n\s+blocks\(:hero_blocks\)\n\n\s+tab "Content" do/
+
+    assert blueprint =~
+             ~r/form :compact do\n\s+blocks\(:blocks\)\n\n\s+tab "Content" do\n\s+fieldset do\n\s+size\(:full\)\n\s+input\(:title, :text\)\n\s+end/
+
+    assert count(blueprint, "input(:title, :text)") == 2
+    assert count(blueprint, "fieldset do") == 2
+
+    rerun = igniter |> apply_igniter!() |> include_test_files() |> Migrate54.igniter()
+    assert_unchanged(rerun, @blueprint_path)
+  end
+
+  test "moves a block editor input an earlier migrate54 run left behind" do
+    left_behind = """
+    defmodule LegacyApp.Vacancies.Vacancy do
+      use Brando.Blueprint,
+        application: "LegacyApp",
+        domain: "Vacancies",
+        schema: "Vacancy",
+        singular: "vacancy",
+        plural: "vacancies"
+
+      trait Brando.Trait.Blocks
+
+      forms do
+        form do
+          tab "Content" do
+            fieldset do
+              size :full
+              input :data, :blocks, label: "Innholdsblokker"
+            end
+          end
+        end
+      end
+
+      relations do
+        relation :blocks, :has_many, module: :blocks
+      end
+    end
+    """
+
+    blueprint = left_behind |> migrate(nil) |> source(@blueprint_path)
+
+    refute blueprint =~ "input(:data"
+    assert blueprint =~ ~s|blocks(:blocks, label: "Innholdsblokker")|
+    refute blueprint =~ ~s(tab "Content")
+  end
+
   test "rewrites each LivePreview target with its own modules and preserves callback behavior" do
     igniter = migrate(@legacy_blueprint, @legacy_live_preview)
     live_preview = source(igniter, @live_preview_path)
@@ -316,7 +422,19 @@ defmodule Mix.Tasks.Brando.Migrate54Test do
 
       use Brando.Datasource
 
+      trait Brando.Trait.Villain
+
       attribute :data, :villain
+
+      forms do
+        form do
+          tab "Content" do
+            fieldset size: :full do
+              input :data, :blocks, label: "Content"
+            end
+          end
+        end
+      end
 
       datasources do
         single :one, &__MODULE__.get_one/2
@@ -357,7 +475,10 @@ defmodule Mix.Tasks.Brando.Migrate54Test do
 
     migrated_source = legacy_blueprint |> migrate(nil) |> source(@blueprint_path)
     assert migrated_source =~ "relation(:blocks, :has_many, module: :blocks)"
-    Code.compile_string(migrated_source)
+    warnings = ExUnit.CaptureIO.capture_io(:stderr, fn -> Code.compile_string(migrated_source) end)
+    refute warnings =~ "DslError"
+    refute warnings =~ "unknown"
+    assert [%{name: :blocks}] = module.__form__().blocks
 
     assert Brando.Datasource.get_single(module, :one, 42) ==
              {:ok, {to_string(module), 42}}
