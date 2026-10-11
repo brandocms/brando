@@ -48,7 +48,10 @@ test('preview resize keeps capture across the iframe and bounds, and devices ret
   await page.getByRole('button', { name: 'Oppdater', exact: true }).click()
   await waitForPreviewReady(page)
   await expect(mobile).toHaveAttribute('aria-pressed', 'true')
-  await page.getByRole('button', { name: 'Lukk forhåndsvisningen', exact: true }).click()
+  // Closing from the keyboard returns focus to the trigger, not to the page.
+  await page.getByRole('button', { name: 'Lukk forhåndsvisningen', exact: true }).focus()
+  await page.keyboard.press('Enter')
   await expect(preview).toHaveCount(0)
   await expect(page.locator('.preview-chooser-trigger')).not.toHaveClass(/active/)
+  await expect(page.locator('.preview-chooser-trigger')).toBeFocused()
 })

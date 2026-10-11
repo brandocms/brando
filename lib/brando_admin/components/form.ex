@@ -3697,6 +3697,7 @@ defmodule BrandoAdmin.Components.Form do
               </button>
               <button
                 :if={@has_live_preview? && length(@live_preview_targets) == 1}
+                id={"#{@id}-preview-trigger"}
                 phx-click={JS.push("open_live_preview", target: @myself)}
                 data-toggle-preview={JS.push("open_live_preview", target: @myself)}
                 class={["live-preview-toggle form-tool-preview form-tool-icon", @live_preview_active? && "active"]}
@@ -4047,6 +4048,7 @@ defmodule BrandoAdmin.Components.Form do
           live_preview_cache_key={@live_preview_cache_key}
           live_preview_target={@live_preview_target}
           target={@myself}
+          trigger_id={"#{@id}-preview-trigger"}
         />
       </div>
     </div>
@@ -7744,8 +7746,7 @@ defmodule BrandoAdmin.Components.Form do
               <button
                 type="button"
                 class="live-preview-close"
-                phx-click="open_live_preview"
-                phx-target={@target}
+                phx-click={JS.push("open_live_preview", target: @target) |> JS.focus(to: "##{@trigger_id}")}
                 aria-label={gettext("Close preview")}
                 data-tooltip={gettext("Close preview")}
               >
