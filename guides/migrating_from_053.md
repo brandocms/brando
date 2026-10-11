@@ -173,7 +173,23 @@ when Igniter becomes available. The dependency remains optional at runtime.
   `use Gettext, backend: ...`, leaving the `gettext` requirement alone;
 - creates the `scripts/sync_gettext.sh` helper in the application, replacing a
   copy of the 0.54 helper. A copy the application edited is left alone with a
-  warning.
+  warning;
+- moves a Villain editor (`input :data, :blocks`, inside a tab or fieldset) to
+  a form-level `blocks :blocks`, and removes the tab or fieldset it leaves
+  empty;
+- rewrites reads of a Villain HTML field (`entry.html`, `@entry.html`,
+  `hero_html`) in a moved schema's own templates to `rendered_blocks`
+  (`rendered_hero_blocks`), and lists, with file and line, the `.html` reads
+  it left, 0.53-style navigation item reads (`item.url`, `item.title`, …) and
+  `Brando.Pages.get_var` calls (the page needs `preload: [:alternate_entries,
+  :vars]`);
+- converts each admin Create/Update LiveView pair the generator made and the
+  application did not edit into one `<Name>FormLive`, deletes the pair and
+  points both routes at the new module. Edited pairs, and two schemas that
+  would share a route helper (two `Category` schemas, say), are listed with
+  the fix: a `scope …, as:` in the router and `router_scope` on the
+  Blueprint. Without the form route, the listing's edit links crash, and
+  `mix brando.doctor` reports each Blueprint whose route helper is missing.
 
 `mix brando.migrate55` covers the 0.54 to 0.55 source changes. It:
 
@@ -198,6 +214,9 @@ when Igniter becomes available. The dependency remains optional at runtime.
   (slideshows became `gallery` in `brando_77`). Delete those; nothing calls
   them;
 - removes the Sharp `processor_module` setting, as `mix brando.migrate54` does;
+- copies each Blueprint's translations from its 0.54 `*_naming`, `*_forms`
+  and `*_listings` catalogs into the 0.55 domain for its schema, in every
+  backend and locale (see [Reconcile Gettext catalogs](#5-reconcile-gettext-catalogs));
 - completes `Plural-Forms` headers in `priv/gettext/**/*.po`. Gettext 1.0 warns
   on `nplurals=2;` without a rule and on a rule without its trailing `;`, once
   per catalog per compile, so `--warnings-as-errors` fails until they read
@@ -273,9 +292,10 @@ correct rewrite depends on application semantics:
   that application uses Vite 5+, which moved the default manifest into
   `.vite/`. Vite 3 and 4 manifests keep working as they are: they name no
   entries, so Brando finds the critical entry by its key (`js/critical.js`);
-- replacing custom processing that relied on sharp-cli, consolidating custom
-  Create/Update LiveViews, adopting `<.head>`, and updating custom navigation
-  markup;
+- replacing custom processing that relied on sharp-cli, consolidating the
+  Create/Update LiveViews `mix brando.migrate54` listed, adopting `<.head>`,
+  and updating the navigation markup it listed
+  (`Brando.HTML.get_menu_item_url/1` and `get_menu_item_text/1`);
 - refreshing the frontend's package-manager lockfile and rebuilding it after
   the task pins `phoenix_live_view` (the admin is covered in
   [Admin assets](#admin-assets)); nonstandard frontend manifests still need
