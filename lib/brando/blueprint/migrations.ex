@@ -7,7 +7,7 @@ defmodule Brando.Blueprint.Migrations do
   must be handled by a hand-written migration.
   """
 
-  alias Brando.Blueprint.Migrations.{Diff, Plan, Renderer, Schema}
+  alias Brando.Blueprint.Migrations.{Diff, Plan, Reconcile, Renderer, Schema}
   alias Brando.Blueprint.Snapshot
   alias Brando.Exception.BlueprintError
 
@@ -124,6 +124,7 @@ defmodule Brando.Blueprint.Migrations do
       plan.options
       |> Keyword.delete(:planned_migration_version)
       |> Keyword.put(:rebaseline, plan.options[:rebaseline] || false)
+      |> Keyword.put(:reconcile, plan.options[:reconcile] || false)
       |> Enum.sort()
 
     %{plan | snapshot: snapshot, options: options}
@@ -159,6 +160,12 @@ defmodule Brando.Blueprint.Migrations do
   end
 
   defp prepare(module, previous, schema, opts) do
+    if opts[:rebaseline] && opts[:reconcile] do
+      raise BlueprintError,
+        message:
+          "--rebaseline records a snapshot without a migration and --reconcile writes a migration fitted to the database. Use one or the other."
+    end
+
     if opts[:rebaseline] do
       version = snapshot_version(previous) + 1
       snapshot = %{Snapshot.build_snapshot(module, version) | rebaseline?: true}
@@ -172,19 +179,39 @@ defmodule Brando.Blueprint.Migrations do
   defp prepare_diff(module, previous, schema, opts) do
     case Diff.compare(schema, snapshot_schema(previous)) do
       {:ok, diff} ->
-        if Diff.empty?(diff),
-          do: prepare_noop(module, previous, schema),
-          else: prepare_migration(module, diff, schema, previous, opts)
+        cond do
+          Diff.empty?(diff) -> prepare_noop(module, previous, schema)
+          opts[:reconcile] -> prepare_reconciled(module, diff, schema, previous, opts)
+          true -> prepare_migration(module, diff, schema, previous, opts)
+        end
 
       {:error, reason} ->
         raise_unsupported_change!(module, reason)
     end
   end
 
-  defp prepare_migration(module, diff, schema, previous, opts) do
+  # Fits the diff to the database. When nothing is left to migrate, the
+  # snapshot is recorded on its own as a baseline the database already matches.
+  defp prepare_reconciled(module, diff, schema, previous, opts) do
+    {diff, reconcile} = Reconcile.reconcile(diff, schema, Brando.repo())
+
+    if Diff.empty?(diff) do
+      snapshot = %{Snapshot.build_snapshot(module, snapshot_version(previous) + 1) | rebaseline?: true}
+      metadata = module |> snapshot_metadata(snapshot, opts) |> Map.put(:reconciled, reconcile.summary)
+      %{result: :ok, snapshot: snapshot, metadata: metadata}
+    else
+      prepare_migration(module, diff, schema, previous, opts, reconcile)
+    end
+  end
+
+  defp prepare_migration(module, diff, schema, previous, opts, reconcile \\ nil) do
     sequence = get_sequence(module, opts)
     snapshot = Snapshot.build_snapshot(module, snapshot_version(previous) + 1)
-    contents = module |> Renderer.render(sequence, diff, schema, snapshot_schema(previous)) |> format_code()
+
+    contents =
+      module
+      |> Renderer.render(sequence, diff, schema, snapshot_schema(previous), reconcile || %Reconcile{})
+      |> format_code()
 
     metadata =
       snapshot_metadata(module, snapshot, opts)
@@ -195,6 +222,7 @@ defmodule Brando.Blueprint.Migrations do
         created_tables: Diff.created_tables(diff, schema),
         added_columns: Diff.added_columns(diff, schema)
       })
+      |> then(&if(reconcile, do: Map.put(&1, :reconciled, reconcile.summary), else: &1))
 
     %{result: :ok, migration_source: contents, snapshot: snapshot, metadata: metadata}
   end

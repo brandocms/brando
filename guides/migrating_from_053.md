@@ -489,8 +489,13 @@ Brando migration chain has changed since. Diffed against it, the generator
 proposes storage that already exists (`create table(:projects_blocks)`,
 `rendered_blocks`) and drops the legacy Villain columns (`data`, `html`,
 `*_data`). It warns when a planned table or column already exists in the
-database or a planned drop looks like a Villain column. In that case, edit
-each generated migration by hand:
+database or a planned drop looks like a Villain column. In that case, generate
+the migrations with `--reconcile` against a migrated copy of production, which
+does steps 2 to 6 below for you, or edit each generated migration by hand:
+
+```shell
+mix brando.gen.blueprint_migration --all --reconcile
+```
 
 1. Compare `\d table` in a migrated copy of production with every generated
    operation.
@@ -528,11 +533,28 @@ each generated migration by hand:
    `mix brando.gen.blueprint_migration --all --dry-run` should then propose
    no changes.
 
+`--reconcile` reads the database for steps 2 to 6: it guards what exists with
+`*_if_not_exists`, turns the `create table` of an existing table into an
+`alter`, or records only a baseline when the table already matches, leaves out
+existing `references(...)` columns, keeps every Villain column and every column
+or table that holds data (with a comment giving the count), and keeps
+pre-existing storage out of `down/0`. It prints what it did per file; see
+[Reconciling with an existing database](blueprint_migrations.md#reconciling-with-an-existing-database).
+Still by hand:
+
+- Step 1 for types, defaults and nullability: `--reconcile` compares names
+  only.
+- Step 7.
+- Whether to drop the columns and tables kept for their data, later, in a
+  migration of your own.
+- A foreign key missing from an existing column, which a comment in the
+  migration names.
+
 A trait removed from a Blueprint without a migration (Translatable, for
 example) surfaces in the first generator run as a proposal to drop its columns,
 indexes and tables: `language`, its index, `*_alternates`. That is correct but
 destructive. Decide whether the data can go before accepting it, or put the
-trait back for now.
+trait back for now; `--reconcile` keeps the ones that hold data.
 
 ### Test and development databases
 

@@ -1,0 +1,423 @@
+defmodule Brando.Blueprint.Migrations.Reconcile do
+  @moduledoc """
+  Fits a planned Blueprint migration to a database that already holds some of
+  its storage, for `mix brando.gen.blueprint_migration --reconcile`.
+
+  A snapshot older than its database (or a table with no snapshot at all) makes
+  the diff propose storage that exists and drops that would lose data. Against
+  the tables, columns and indexes the database reports, the diff is changed so
+  that:
+
+    * a table the plan creates but the database has becomes an alter that adds
+      only what the database lacks, and a table that already has everything
+      needs no migration;
+    * an existing column, index or auxiliary table the plan adds is guarded
+      with `add_if_not_exists`/`create_if_not_exists` and left out of `down/0`;
+      an existing column with a foreign key is left out, since PostgreSQL adds
+      the named constraint even when it skips the column;
+    * a column or auxiliary table that holds data, and a legacy Villain column
+      (`data`, `html`, `*_data`, `*_html`), is kept; a drop of something the
+      database does not have is left out.
+
+  Only names are compared. Types, defaults and nullability are not checked.
+  """
+
+  alias Brando.Blueprint.Migrations.Diff
+  alias Brando.Exception.BlueprintError
+
+  @type t :: %__MODULE__{
+          create_as_alter?: boolean(),
+          guarded_columns: MapSet.t(atom()),
+          guarded_indexes: MapSet.t(String.t()),
+          guarded_tables: MapSet.t(String.t()),
+          comments: [String.t()],
+          summary: summary()
+        }
+
+  @typedoc """
+  What was reconciled, for the generator's report: the existing objects guarded
+  with `*_if_not_exists`, the operations left out, and the columns and tables
+  kept because they hold data.
+  """
+  @type summary :: %{
+          table: String.t() | nil,
+          create_as_alter?: boolean(),
+          guarded: [String.t()],
+          left_out: [String.t()],
+          kept: [String.t()]
+        }
+
+  defstruct create_as_alter?: false,
+            guarded_columns: MapSet.new(),
+            guarded_indexes: MapSet.new(),
+            guarded_tables: MapSet.new(),
+            comments: [],
+            summary: %{table: nil, create_as_alter?: false, guarded: [], left_out: [], kept: []}
+
+  @doc """
+  Reads the planned tables from `repo` and returns the diff to render with how
+  it was reconciled. The repo must be started; tables are looked up in the
+  schemas on its search path.
+  """
+  @spec reconcile(Diff.t(), map(), module()) :: {Diff.t(), t()}
+  def reconcile(%Diff{} = diff, current, repo) do
+    database = read_database(repo, planned_tables(diff, current))
+
+    cond do
+      diff.create? and Map.has_key?(database.tables, current.table) -> create_as_alter(current, database)
+      diff.create? or Map.has_key?(database.tables, current.table) -> against_database(diff, current, database, repo)
+      true -> raise_missing_table!(current.table)
+    end
+  end
+
+  # Without the table, every drop would look like one of a column that does not
+  # exist and be left out of a migration the next database still needs.
+  defp raise_missing_table!(table) do
+    raise BlueprintError,
+      message: """
+      --reconcile compares the plan with the database, but #{table} is not in it, although
+      the Blueprint's snapshot history says it was created. Run the existing migrations
+      first (mix brando.migrate), or plan without --reconcile.
+      """
+  end
+
+  @doc "Whether a column name looks like one of the legacy Villain columns the blocks conversion reads."
+  @spec villain_column?(atom() | String.t()) :: boolean()
+  def villain_column?(column) do
+    name = to_string(column)
+    name in ["data", "html"] or String.ends_with?(name, "_data") or String.ends_with?(name, "_html")
+  end
+
+  # The plan creates a table that already exists: the table predates the
+  # Blueprint's snapshots. Add only the columns, indexes and auxiliary tables
+  # the database lacks.
+  defp create_as_alter(current, database) do
+    table = current.table
+    columns = Map.fetch!(database.columns, table)
+    ensure_primary_key!(current, columns)
+    indexes = all_indexes(database)
+    {existing_tables, new_tables} = Enum.split_with(current.auxiliary_tables, &Map.has_key?(database.tables, &1.name))
+
+    add_columns = Enum.reject(current.columns, &MapSet.member?(columns, to_string(&1.name)))
+
+    add_indexes =
+      Enum.reject(current.indexes ++ Enum.flat_map(existing_tables, & &1.indexes), &MapSet.member?(indexes, &1.name))
+
+    timestamps =
+      if current.timestamps and not Enum.any?(~w(inserted_at updated_at), &MapSet.member?(columns, &1)),
+        do: :add,
+        else: :unchanged
+
+    diff = %Diff{
+      add_columns: add_columns,
+      add_indexes: add_indexes,
+      add_auxiliary_tables: new_tables,
+      timestamps: timestamps
+    }
+
+    comment =
+      "#{table} predates this Blueprint's snapshots, so this migration adds only what the database lacks."
+
+    unconstrained =
+      for column <- current.columns,
+          column not in add_columns,
+          missing = missing_foreign_key(table, column, database),
+          missing != [],
+          do: {"#{table}.#{column.name} (exists, without its foreign key)", missing}
+
+    {diff,
+     %__MODULE__{
+       create_as_alter?: true,
+       comments: [comment | for({_, missing} <- unconstrained, {:comment, text} <- missing, do: text)],
+       summary: %{
+         table: table,
+         create_as_alter?: true,
+         guarded: [],
+         left_out: Enum.map(unconstrained, &elem(&1, 0)),
+         kept: []
+       }
+     }}
+  end
+
+  defp missing_foreign_key(_table, %{reference: nil}, _database), do: []
+
+  defp missing_foreign_key(table, column, database) do
+    name = Map.get(column.reference, :name)
+
+    if is_nil(name) or MapSet.member?(Map.get(database.foreign_keys, table, MapSet.new()), name),
+      do: [],
+      else: [
+        {:comment,
+         "#{table}.#{column.name} already exists without the foreign key #{name}, so this migration leaves it out. Add the constraint by hand if the Blueprint needs it."}
+      ]
+  end
+
+  defp ensure_primary_key!(%{primary_key: %{name: name}, table: table}, columns) do
+    unless MapSet.member?(columns, to_string(name)) do
+      raise BlueprintError,
+        message: """
+        #{table} exists without the Blueprint's primary key column #{inspect(name)}.
+        --reconcile does not change primary keys. Write that migration by hand, then
+        record the Blueprint with --rebaseline as described in guides/blueprint_migrations.md.
+        """
+    end
+  end
+
+  defp ensure_primary_key!(_current, _columns), do: :ok
+
+  defp against_database(diff, current, database, repo) do
+    table = current.table
+    columns = Map.get(database.columns, table, MapSet.new())
+
+    {remove_columns, column_notes} = reconcile_removed_columns(diff.remove_columns, table, columns, database, repo)
+    {timestamps, timestamp_notes} = reconcile_timestamps(diff.timestamps, table, columns, database, repo)
+    {remove_indexes, index_notes} = reconcile_removed_indexes(diff.remove_indexes, all_indexes(database))
+    {remove_tables, table_notes} = reconcile_removed_tables(diff.remove_auxiliary_tables, database, repo)
+
+    dropped_tables = MapSet.new(remove_tables, & &1.name)
+
+    existing_indexes =
+      database
+      |> Map.update!(:indexes, &Map.drop(&1, MapSet.to_list(dropped_tables)))
+      |> all_indexes()
+      |> MapSet.difference(MapSet.new(remove_indexes, & &1.name))
+
+    existing_tables = database.tables |> Map.keys() |> MapSet.new() |> MapSet.difference(dropped_tables)
+
+    {add_columns, add_notes} = reconcile_added_columns(diff.add_columns, table, columns, database)
+
+    guarded_indexes =
+      (diff.add_indexes ++ Enum.flat_map(diff.add_auxiliary_tables, & &1.indexes))
+      |> Enum.map(& &1.name)
+      |> Enum.filter(&MapSet.member?(existing_indexes, &1))
+      |> MapSet.new()
+
+    guarded_tables =
+      diff.add_auxiliary_tables |> Enum.map(& &1.name) |> Enum.filter(&MapSet.member?(existing_tables, &1))
+
+    reconciled = %{
+      diff
+      | add_columns: add_columns,
+        remove_columns: remove_columns,
+        remove_indexes: remove_indexes,
+        remove_auxiliary_tables: remove_tables,
+        timestamps: timestamps
+    }
+
+    notes = add_notes ++ column_notes ++ timestamp_notes ++ index_notes ++ table_notes
+    guarded_columns = add_columns |> Enum.map(& &1.name) |> Enum.filter(&MapSet.member?(columns, to_string(&1)))
+
+    guarded =
+      Enum.map(guarded_columns, &"#{table}.#{&1}") ++
+        Enum.map(guarded_tables, &"table #{&1}") ++
+        Enum.map(Enum.sort(guarded_indexes), &"index #{&1}")
+
+    {reconciled,
+     %__MODULE__{
+       guarded_columns: MapSet.new(guarded_columns),
+       guarded_indexes: guarded_indexes,
+       guarded_tables: MapSet.new(guarded_tables),
+       comments: for({:comment, comment} <- notes, do: comment),
+       summary: %{
+         table: table,
+         create_as_alter?: false,
+         guarded: guarded,
+         left_out: for({:left_out, entry} <- notes, do: entry),
+         kept: for({:kept, entry} <- notes, do: entry)
+       }
+     }}
+  end
+
+  # An existing column with a foreign key is left out: `ADD COLUMN IF NOT
+  # EXISTS ... REFERENCES` skips the column but still adds the constraint.
+  defp reconcile_added_columns(add_columns, table, columns, database) do
+    Enum.flat_map_reduce(add_columns, [], fn column, notes ->
+      cond do
+        not MapSet.member?(columns, to_string(column.name)) ->
+          {[column], notes}
+
+        column.reference ->
+          {[], notes ++ reference_notes(table, column, database)}
+
+        true ->
+          {[column], notes}
+      end
+    end)
+  end
+
+  defp reference_notes(table, column, database) do
+    case missing_foreign_key(table, column, database) do
+      [] ->
+        [
+          {:left_out, "#{table}.#{column.name} (exists with its foreign key)"},
+          {:comment, "#{table}.#{column.name} already exists with its foreign key, so this migration leaves it out."}
+        ]
+
+      missing ->
+        [{:left_out, "#{table}.#{column.name} (exists, without its foreign key)"} | missing]
+    end
+  end
+
+  defp reconcile_removed_columns(remove_columns, table, columns, database, repo) do
+    Enum.flat_map_reduce(remove_columns, [], fn column, notes ->
+      name = to_string(column.name)
+
+      cond do
+        not MapSet.member?(columns, name) ->
+          {[], notes ++ [{:left_out, "drop of #{table}.#{name} (not in the database)"}]}
+
+        villain_column?(name) ->
+          count = count_values(repo, database, table, name)
+
+          {[],
+           notes ++
+             [
+               {:kept, "#{table}.#{name} (legacy Villain column, #{values(count)})"},
+               {:comment,
+                "#{table}.#{name} is a legacy Villain column holding #{values(count)}; --reconcile never drops it. Keep it until the blocks conversion is verified on production data."}
+             ]}
+
+        (count = count_values(repo, database, table, name)) > 0 ->
+          {[], notes ++ kept_with_data(table, name, count)}
+
+        true ->
+          {[column], notes}
+      end
+    end)
+  end
+
+  defp reconcile_timestamps(:remove, table, columns, database, repo) do
+    present = Enum.filter(~w(inserted_at updated_at), &MapSet.member?(columns, &1))
+    counts = Enum.map(present, &{&1, count_values(repo, database, table, &1)})
+
+    cond do
+      present == [] ->
+        {:unchanged, [{:left_out, "drop of #{table} timestamps (not in the database)"}]}
+
+      Enum.any?(counts, &(elem(&1, 1) > 0)) ->
+        {:unchanged, Enum.flat_map(counts, fn {name, count} -> kept_with_data(table, name, count) end)}
+
+      true ->
+        {:remove, []}
+    end
+  end
+
+  defp reconcile_timestamps(:add, table, columns, _database, _repo) do
+    if Enum.all?(~w(inserted_at updated_at), &MapSet.member?(columns, &1)),
+      do: {:unchanged, [{:left_out, "#{table} timestamps (already exist)"}]},
+      else: {:add, []}
+  end
+
+  defp reconcile_timestamps(timestamps, _table, _columns, _database, _repo), do: {timestamps, []}
+
+  defp kept_with_data(table, name, count) do
+    [
+      {:kept, "#{table}.#{name} (#{values(count)})"},
+      {:comment,
+       "#{table}.#{name} holds #{values(count)}, so this migration keeps it. Dropping it is a separate decision."}
+    ]
+  end
+
+  defp reconcile_removed_indexes(remove_indexes, existing) do
+    {present, absent} = Enum.split_with(remove_indexes, &MapSet.member?(existing, &1.name))
+    {present, Enum.map(absent, &{:left_out, "drop of index #{&1.name} (not in the database)"})}
+  end
+
+  defp reconcile_removed_tables(remove_tables, database, repo) do
+    Enum.flat_map_reduce(remove_tables, [], fn table, notes ->
+      cond do
+        not Map.has_key?(database.tables, table.name) ->
+          {[], notes ++ [{:left_out, "drop of table #{table.name} (not in the database)"}]}
+
+        (rows = count_rows(repo, database, table.name)) > 0 ->
+          {[],
+           notes ++
+             [
+               {:kept, "table #{table.name} (#{rows(rows)})"},
+               {:comment,
+                "#{table.name} holds #{rows(rows)}, so this migration keeps it. Dropping it is a separate decision."}
+             ]}
+
+        true ->
+          {[table], notes}
+      end
+    end)
+  end
+
+  defp values(1), do: "1 value"
+  defp values(count), do: "#{count} values"
+
+  defp rows(1), do: "1 row"
+  defp rows(count), do: "#{count} rows"
+
+  defp planned_tables(diff, current) do
+    Enum.uniq([current.table | Enum.map(diff.add_auxiliary_tables ++ diff.remove_auxiliary_tables, & &1.name)])
+  end
+
+  defp all_indexes(database), do: database.indexes |> Map.values() |> Enum.reduce(MapSet.new(), &MapSet.union/2)
+
+  # The tables found, the schema each was found in (the first on the search
+  # path), and their column, index and foreign-key names.
+  defp read_database(repo, tables) do
+    %{rows: [[schemas]]} = repo.query!("SELECT current_schemas(false)::text[]", [], log: false)
+
+    %{rows: rows} =
+      repo.query!(
+        """
+        SELECT DISTINCT ON (table_name) table_name::text, table_schema::text
+        FROM information_schema.tables
+        WHERE table_schema::text = ANY($1::text[]) AND table_name::text = ANY($2::text[])
+        ORDER BY table_name, array_position($1::text[], table_schema::text)
+        """,
+        [schemas, tables],
+        log: false
+      )
+
+    found = Map.new(rows, fn [table, schema] -> {table, schema} end)
+
+    %{
+      tables: found,
+      columns: names_by_table(repo, found, columns_query()),
+      indexes: names_by_table(repo, found, indexes_query()),
+      foreign_keys: names_by_table(repo, found, foreign_keys_query())
+    }
+  end
+
+  defp names_by_table(repo, found, query) do
+    Map.new(found, fn {table, schema} ->
+      %{rows: rows} = repo.query!(query, [schema, table], log: false)
+      {table, MapSet.new(rows, &hd/1)}
+    end)
+  end
+
+  defp columns_query do
+    "SELECT column_name::text FROM information_schema.columns WHERE table_schema::text = $1 AND table_name::text = $2"
+  end
+
+  defp indexes_query, do: "SELECT indexname::text FROM pg_indexes WHERE schemaname = $1 AND tablename = $2"
+
+  defp foreign_keys_query do
+    """
+    SELECT c.conname::text
+    FROM pg_constraint c
+    JOIN pg_class t ON t.oid = c.conrelid
+    JOIN pg_namespace n ON n.oid = t.relnamespace
+    WHERE c.contype = 'f' AND n.nspname = $1 AND t.relname = $2
+    """
+  end
+
+  defp count_values(repo, database, table, column) do
+    count(repo, "SELECT count(#{quote_name(column)}) FROM #{qualified(database, table)}")
+  end
+
+  defp count_rows(repo, database, table), do: count(repo, "SELECT count(*) FROM #{qualified(database, table)}")
+
+  defp count(repo, sql) do
+    %{rows: [[count]]} = repo.query!(sql, [], log: false)
+    count
+  end
+
+  defp qualified(database, table), do: "#{quote_name(Map.fetch!(database.tables, table))}.#{quote_name(table)}"
+
+  defp quote_name(name), do: ~s("#{String.replace(name, ~s("), ~s(""))}")
+end

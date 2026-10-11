@@ -20,7 +20,7 @@ Before committing a generated migration:
 4. Run the affected application tests.
 
 Deployment still uses the application's normal Ecto migration command. The Blueprint task generates source files; it
-does not connect to or mutate a database.
+never changes a database, and reads one only for warnings or with `--reconcile`.
 
 ### Renaming an attribute
 

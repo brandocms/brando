@@ -810,3 +810,87 @@ defmodule Brando.MigrationTest.LegacyProjectV2 do
     attribute :never_added, :string
   end
 end
+
+# `reconcile_articles` on a legacy site: the snapshot (V1) predates the Creator
+# and Translatable traits and still lists the Villain columns and two columns
+# removed from the Blueprint since; the database has moved on (see the
+# --reconcile tests).
+defmodule Brando.MigrationTest.ReconcileArticleV1 do
+  use Brando.Blueprint,
+    application: "Brando",
+    domain: "Reconcile",
+    schema: "Article",
+    singular: "reconcile_article",
+    plural: "articles",
+    gettext_module: Brando.Gettext
+
+  trait Brando.Trait.Timestamped
+
+  attributes do
+    attribute :title, :string
+    attribute :data, :map
+    attribute :html, :text
+    attribute :link, :string
+    attribute :stale, :string
+    attribute :never_created, :string
+  end
+end
+
+defmodule Brando.MigrationTest.ReconcileArticleV2 do
+  use Brando.Blueprint,
+    application: "Brando",
+    domain: "Reconcile",
+    schema: "Article",
+    singular: "reconcile_article",
+    plural: "articles",
+    gettext_module: Brando.Gettext
+
+  trait Brando.Trait.Creator
+  trait Brando.Trait.Timestamped
+  trait Brando.Trait.Translatable
+
+  attributes do
+    attribute :title, :string
+    attribute :rendered_blocks, :text
+    attribute :summary, :text
+  end
+end
+
+# V2 with the Translatable trait taken out again.
+defmodule Brando.MigrationTest.ReconcileArticleV3 do
+  use Brando.Blueprint,
+    application: "Brando",
+    domain: "Reconcile",
+    schema: "Article",
+    singular: "reconcile_article",
+    plural: "articles",
+    gettext_module: Brando.Gettext
+
+  trait Brando.Trait.Creator
+  trait Brando.Trait.Timestamped
+
+  attributes do
+    attribute :title, :string
+    attribute :rendered_blocks, :text
+    attribute :summary, :text
+  end
+end
+
+# `reconcile_farms` predates Blueprint snapshots: there is no history for it.
+defmodule Brando.MigrationTest.ReconcileFarm do
+  use Brando.Blueprint,
+    application: "Brando",
+    domain: "Reconcile",
+    schema: "Farm",
+    singular: "reconcile_farm",
+    plural: "farms",
+    gettext_module: Brando.Gettext
+
+  trait Brando.Trait.Creator
+  trait Brando.Trait.Timestamped
+
+  attributes do
+    attribute :title, :string
+    attribute :slug, :slug, unique: true
+  end
+end

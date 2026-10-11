@@ -1,29 +1,35 @@
 defmodule Brando.Blueprint.Migrations.Renderer do
   @moduledoc false
 
-  alias Brando.Blueprint.Migrations.Diff
+  alias Brando.Blueprint.Migrations.{Diff, Reconcile}
 
   @doc """
   Renders an explicit reversible Ecto migration from a normalized schema diff.
+
+  With a `Reconcile` result, the storage it found in the database is added with
+  `add_if_not_exists`/`create_if_not_exists` and left out of `down/0`.
   """
-  @spec render(module(), String.t(), Diff.t(), map(), map() | nil) :: String.t()
-  def render(module, sequence, %Diff{create?: true}, current, _previous) do
+  @spec render(module(), String.t(), Diff.t(), map(), map() | nil, Reconcile.t()) :: String.t()
+  def render(module, sequence, diff, current, previous, reconcile \\ %Reconcile{})
+
+  def render(module, sequence, %Diff{create?: true}, current, _previous, reconcile) do
     migration_module = migration_module(module, sequence)
 
     """
     defmodule #{migration_module} do
       use Ecto.Migration
 
+      #{reconcile_comment(reconcile)}
       def up do
         #{create_primary_table(current)}
 
         #{render_indexes(:create, current.indexes)}
 
-        #{render_auxiliary_tables(:create, current.auxiliary_tables)}
+        #{render_auxiliary_tables(:create, current.auxiliary_tables, reconcile)}
       end
 
       def down do
-        #{render_auxiliary_tables(:drop, Enum.reverse(current.auxiliary_tables))}
+        #{render_auxiliary_tables(:drop, Enum.reverse(current.auxiliary_tables), reconcile)}
 
         drop table(#{table_atom(current.table)})
       end
@@ -31,15 +37,17 @@ defmodule Brando.Blueprint.Migrations.Renderer do
     """
   end
 
-  def render(module, sequence, %Diff{} = diff, current, previous) do
+  def render(module, sequence, %Diff{} = diff, current, previous, reconcile) do
     migration_module = migration_module(module, sequence)
     destructive_comment = destructive_comment(diff)
+    added_indexes = Enum.reject(diff.add_indexes, &MapSet.member?(reconcile.guarded_indexes, &1.name))
 
     """
     defmodule #{migration_module} do
       use Ecto.Migration
 
       #{destructive_comment}
+      #{reconcile_comment(reconcile)}
       def up do
         #{render_auxiliary_tables(:drop, Enum.reverse(diff.remove_auxiliary_tables))}
 
@@ -49,23 +57,23 @@ defmodule Brando.Blueprint.Migrations.Renderer do
 
         #{render_renames(:up, current.table, diff.rename_columns)}
 
-        #{render_alter(:up, current.table, diff)}
+        #{render_alter(:up, current.table, diff, reconcile)}
 
         #{render_backfills(current, diff)}
 
-        #{render_indexes(:create, diff.add_indexes)}
+        #{render_indexes(:create, diff.add_indexes, reconcile.guarded_indexes)}
 
-        #{render_auxiliary_tables(:create, diff.add_auxiliary_tables)}
+        #{render_auxiliary_tables(:create, diff.add_auxiliary_tables, reconcile)}
       end
 
       def down do
-        #{render_auxiliary_tables(:drop, Enum.reverse(diff.add_auxiliary_tables))}
+        #{render_auxiliary_tables(:drop, Enum.reverse(diff.add_auxiliary_tables), reconcile)}
 
-        #{render_indexes(:drop, diff.add_indexes)}
+        #{render_indexes(:drop, added_indexes)}
 
         #{render_changed_reference_constraints(:down, current.table, diff.change_columns)}
 
-        #{render_alter(:down, current.table, diff)}
+        #{render_alter(:down, current.table, diff, reconcile)}
 
         #{render_renames(:down, current.table, diff.rename_columns)}
 
@@ -75,7 +83,7 @@ defmodule Brando.Blueprint.Migrations.Renderer do
       end
     end
     """
-    |> ensure_previous_schema!(previous)
+    |> ensure_previous_schema!(previous, reconcile)
   end
 
   defp create_primary_table(schema) do
@@ -148,8 +156,8 @@ defmodule Brando.Blueprint.Migrations.Renderer do
     )
   end
 
-  defp render_alter(direction, table, diff) do
-    lines = alter_lines(direction, diff)
+  defp render_alter(direction, table, diff, reconcile) do
+    lines = alter_lines(direction, diff, reconcile.guarded_columns)
 
     if lines == [] do
       ""
@@ -162,19 +170,21 @@ defmodule Brando.Blueprint.Migrations.Renderer do
     end
   end
 
-  defp alter_lines(:up, diff) do
-    Enum.map(diff.add_columns, &render_column(:add, &1)) ++
+  defp alter_lines(:up, diff, guarded) do
+    Enum.map(diff.add_columns, &render_column(add_operation(&1, guarded), &1)) ++
       Enum.map(diff.change_columns, fn {_old, new} -> render_column(:modify, new) end) ++
       Enum.map(diff.remove_columns, &"remove #{inspect(&1.name)}") ++
       timestamp_lines(:up, diff.timestamps)
   end
 
-  defp alter_lines(:down, diff) do
-    Enum.map(diff.add_columns, &"remove #{inspect(&1.name)}") ++
+  defp alter_lines(:down, diff, guarded) do
+    for(column <- diff.add_columns, !MapSet.member?(guarded, column.name), do: "remove #{inspect(column.name)}") ++
       Enum.map(diff.change_columns, fn {old, _new} -> render_column(:modify, old) end) ++
       Enum.map(diff.remove_columns, &render_column(:add, &1)) ++
       timestamp_lines(:down, diff.timestamps)
   end
+
+  defp add_operation(column, guarded), do: if(MapSet.member?(guarded, column.name), do: :add_if_not_exists, else: :add)
 
   defp timestamp_lines(:up, :add), do: ["timestamps()"]
   defp timestamp_lines(:up, :remove), do: ["remove :inserted_at", "remove :updated_at"]
@@ -202,41 +212,52 @@ defmodule Brando.Blueprint.Migrations.Renderer do
     "references(#{table_atom(reference.table)}#{render_keyword_args(opts)})"
   end
 
-  defp render_indexes(_operation, []), do: ""
+  defp render_indexes(operation, indexes, guarded \\ MapSet.new())
 
-  defp render_indexes(:create, indexes) do
+  defp render_indexes(_operation, [], _guarded), do: ""
+
+  defp render_indexes(:create, indexes, guarded) do
     Enum.map_join(indexes, "\n", fn index ->
       index_fun = if index.unique, do: "unique_index", else: "index"
+      create = if MapSet.member?(guarded, index.name), do: "create_if_not_exists", else: "create"
 
-      "create #{index_fun}(#{table_atom(index.table)}, #{inspect(index.fields)}, name: #{inspect(index.name)})"
+      "#{create} #{index_fun}(#{table_atom(index.table)}, #{inspect(index.fields)}, name: #{inspect(index.name)})"
     end)
   end
 
-  defp render_indexes(:drop, indexes) do
+  defp render_indexes(:drop, indexes, _guarded) do
     Enum.map_join(indexes, "\n", fn index ->
       "drop index(#{table_atom(index.table)}, #{inspect(index.fields)}, name: #{inspect(index.name)})"
     end)
   end
 
-  defp render_auxiliary_tables(_operation, []), do: ""
+  defp render_auxiliary_tables(operation, tables, reconcile \\ %Reconcile{})
 
-  defp render_auxiliary_tables(:create, tables) do
+  defp render_auxiliary_tables(_operation, [], _reconcile), do: ""
+
+  defp render_auxiliary_tables(:create, tables, reconcile) do
     Enum.map_join(tables, "\n", fn table ->
       column_lines = Enum.map(table.columns, &render_column(:add, &1))
       timestamp_lines = if table.timestamps, do: ["timestamps()"], else: []
+      create = if MapSet.member?(reconcile.guarded_tables, table.name), do: "create_if_not_exists", else: "create"
 
       """
-      create table(#{table_atom(table.name)}) do
+      #{create} table(#{table_atom(table.name)}) do
         #{join_lines(column_lines ++ timestamp_lines)}
       end
 
-      #{render_indexes(:create, table.indexes)}
+      #{render_indexes(:create, table.indexes, reconcile.guarded_indexes)}
       """
     end)
   end
 
-  defp render_auxiliary_tables(:drop, tables) do
-    Enum.map_join(tables, "\n", &"drop table(#{table_atom(&1.name)})")
+  # A table that was already there stays; only the indexes added to it go.
+  defp render_auxiliary_tables(:drop, tables, reconcile) do
+    Enum.map_join(tables, "\n", fn table ->
+      if MapSet.member?(reconcile.guarded_tables, table.name),
+        do: render_indexes(:drop, Enum.reject(table.indexes, &MapSet.member?(reconcile.guarded_indexes, &1.name))),
+        else: "drop table(#{table_atom(table.name)})"
+    end)
   end
 
   defp render_changed_reference_constraints(_direction, _table, []), do: ""
@@ -267,6 +288,20 @@ defmodule Brando.Blueprint.Migrations.Renderer do
     Enum.map_join(Enum.reverse(renames), "\n", fn {old_name, new_name} ->
       "rename table(#{table_atom(table)}), #{inspect(new_name)}, to: #{inspect(old_name)}"
     end)
+  end
+
+  defp reconcile_comment(%Reconcile{comments: comments}), do: Enum.map_join(comments, "\n", &comment/1)
+
+  defp comment(text) do
+    text
+    |> String.split(" ")
+    |> Enum.reduce([], fn
+      word, [] -> [word]
+      word, [line | lines] when byte_size(line) + byte_size(word) >= 96 -> [word, line | lines]
+      word, [line | lines] -> ["#{line} #{word}" | lines]
+    end)
+    |> Enum.reverse()
+    |> Enum.map_join("\n", &"# #{&1}")
   end
 
   defp destructive_comment(diff) do
@@ -303,9 +338,9 @@ defmodule Brando.Blueprint.Migrations.Renderer do
     |> Enum.join("\n")
   end
 
-  defp ensure_previous_schema!(_content, nil) do
+  defp ensure_previous_schema!(_content, nil, %Reconcile{create_as_alter?: false}) do
     raise ArgumentError, "alter migration requires a previous Blueprint schema"
   end
 
-  defp ensure_previous_schema!(content, _previous), do: content
+  defp ensure_previous_schema!(content, _previous, _reconcile), do: content
 end
