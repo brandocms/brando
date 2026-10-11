@@ -813,6 +813,49 @@ defmodule Mix.Tasks.Brando.Migrate54Test do
     assert_unchanged(rerun, [@router_path | Enum.map(converted, &"lib/legacy_app_admin/live/#{elem(&1, 0)}_form_live.ex")])
   end
 
+  test "leaves a Create/Update pair not named as the generator named it" do
+    router = """
+    defmodule LegacyAppWeb.Router do
+      use LegacyAppWeb, :router
+      import Brando.Router
+
+      admin_routes do
+        live "/projects/create", LegacyAppAdmin.ProjectCreateLive
+        live "/projects/update/:entry_id", LegacyAppAdmin.ProjectUpdateLive
+        live "/articles/create", LegacyAppAdmin.Content.ArticleCreateLive
+        live "/articles/update/:entry_id", LegacyAppAdmin.Content.ArticleUpdateLive
+      end
+    end
+    """
+
+    views = %{
+      @router_path => router,
+      "lib/legacy_app_admin/live/project_create_live.ex" =>
+        admin_view("LegacyAppAdmin.ProjectCreateLive", "LegacyApp.Projects.Project", :create),
+      "lib/legacy_app_admin/live/project_update_live.ex" =>
+        admin_view("LegacyAppAdmin.ProjectUpdateLive", "LegacyApp.Projects.Project", :update),
+      # The generator named the views after the schema's domain.
+      "lib/legacy_app_admin/live/content/article_create_live.ex" =>
+        admin_view("LegacyAppAdmin.Content.ArticleCreateLive", "LegacyApp.Articles.Article", :create),
+      "lib/legacy_app_admin/live/content/article_update_live.ex" =>
+        admin_view("LegacyAppAdmin.Content.ArticleUpdateLive", "LegacyApp.Articles.Article", :update)
+    }
+
+    igniter = migrate(@legacy_blueprint, nil, views)
+
+    assert igniter.issues == []
+    assert igniter.rms == []
+    refute_creates(igniter, "lib/legacy_app_admin/live/project_form_live.ex")
+    refute_creates(igniter, "lib/legacy_app_admin/live/content/article_form_live.ex")
+    assert_unchanged(igniter, Map.keys(views))
+
+    assert_has_warning(igniter, fn warning ->
+      warning =~ "LegacyAppAdmin.Project{Create,Update}Live" and
+        warning =~ "LegacyAppAdmin.Content.Article{Create,Update}Live" and
+        warning =~ "is not named as the generator named it"
+    end)
+  end
+
   test "leaves a Create/Update pair whose routes it cannot find" do
     views =
       admin_views()

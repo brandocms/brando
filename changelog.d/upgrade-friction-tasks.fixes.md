@@ -29,7 +29,8 @@
   with one FormLive.** 0.54 Blueprints link to `admin_<singular>_form_path`,
   so a site still routing `<Name>CreateLive`/`<Name>UpdateLive` had listings
   that crashed. A pair the generator wrote and nobody edited (any generator
-  version since 2021) becomes `<Name>FormLive` from the `brando.gen`
+  version since 2021), named `<App>Admin.<Domain>.<Name>CreateLive` for the
+  schema `<App>.<Domain>.<Schema>`, becomes `<Name>FormLive` from the `brando.gen`
   template, the pair is deleted, and its routes become
   `live "...", <Name>FormLive, :create` and `:update`. Edited pairs, pairs
   whose routes are not plain `live` lines, FormLives that would share a

@@ -315,7 +315,7 @@ if Code.ensure_loaded?(Igniter) do
            {:schema, true} <- {:schema, created.schema == updated.schema},
            {:form, {false, igniter}} <- {:form, ProjectModule.module_exists(igniter, form)},
            {:routes, true} <- {:routes, routed?(routes, create.module) and routed?(routes, update.module)},
-           {:name, [_ | [_ | _]]} <- {:name, Module.split(form)} do
+           {:name, true} <- {:name, generated_name?(form, updated.schema)} do
         {:ok, igniter,
          %{
            base: base,
@@ -332,7 +332,17 @@ if Code.ensure_loaded?(Igniter) do
         {:schema, false} -> {:error, igniter, "the two LiveViews name different schemas"}
         {:form, {true, igniter}} -> {:error, igniter, "#{inspect(form)} already exists"}
         {:routes, false} -> {:error, igniter, "its routes are not `live \"path\", Module` lines in the router"}
-        {:name, _parts} -> {:error, igniter, "its module name has no namespace for a FormLive"}
+        {:name, false} -> {:error, igniter, "is not named as the generator named it (<App>Admin.<Domain>.<Name>)"}
+      end
+    end
+
+    # Every generator version named the views `<App>Admin.<Domain>.<Name>CreateLive`
+    # for the schema `<App>.<Domain>.<Schema>`; `convert/2` renders the
+    # FormLive from those parts.
+    defp generated_name?(form, schema) do
+      case {Module.split(form), Module.split(schema)} do
+        {[admin, domain, _view], [app, domain, _schema]} -> admin == app <> "Admin"
+        _other -> false
       end
     end
 
