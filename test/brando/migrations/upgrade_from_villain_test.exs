@@ -1,0 +1,291 @@
+defmodule Brando.Migrations.UpgradeFromVillainTest do
+  # A database as a pre-blocks 0.53 site leaves it, with its content still
+  # Villain JSON in `pages.data` and its newest Brando migration brando_102,
+  # taken through every later upgrade template in order, as `mix brando.migrate`
+  # does on the site.
+  #
+  # The chain runs in a database of its own, created for this test and dropped
+  # afterwards. The templates read `information_schema` for `public` and create
+  # and drop tables across it, so a sandboxed copy of the test database, which
+  # already has today's tables, cannot stand in for the old one.
+  use ExUnit.Case, async: false
+
+  alias Brando.Utils
+  alias BrandoIntegration.Repo
+
+  @moduletag timeout: :timer.minutes(5)
+
+  @schema "test/fixtures/upgrade/brando_102_schema.sql"
+  @templates Application.app_dir(:brando, "priv/templates/brando.upgrade/migrations")
+
+  setup do
+    config = Repo.config()
+    database = "#{config[:database]}_villain_#{System.unique_integer([:positive])}"
+    storage = Keyword.put(config, :database, database)
+
+    :ok = Ecto.Adapters.Postgres.storage_up(storage)
+
+    repo =
+      start_supervised!(
+        {Repo, name: nil, url: nil, database: database, pool: DBConnection.ConnectionPool, pool_size: 2, log: false}
+      )
+
+    Repo.put_dynamic_repo(repo)
+
+    # Templates that walk the site's Blueprints (`Brando.Blueprint.list_blueprints/0`)
+    # would find the test app's, whose tables this database never had. The
+    # Villain content here lives in Brando's own tables, which the templates
+    # find through `information_schema`.
+    otp_app = Application.get_env(:brando, :otp_app)
+    Application.put_env(:brando, :otp_app, :eex)
+
+    on_exit(fn ->
+      Application.put_env(:brando, :otp_app, otp_app)
+      Ecto.Adapters.Postgres.storage_down(storage)
+    end)
+
+    :ok
+  end
+
+  defp templates(range) do
+    @templates
+    |> Path.join("brando_*.exs")
+    |> Path.wildcard()
+    |> Enum.map(&{number(&1), &1})
+    |> Enum.filter(fn {number, _} -> number in range end)
+    |> Enum.sort()
+    |> Enum.map(&elem(&1, 1))
+  end
+
+  defp number(path) do
+    [_, number] = Regex.run(~r/brando_(\d+)_/, Path.basename(path))
+    String.to_integer(number)
+  end
+
+  defp migrate(path) do
+    [{module, _bytecode}] = Code.compile_file(path)
+
+    try do
+      :ok = Ecto.Migrator.up(Repo, System.unique_integer([:positive]), module, log: false)
+    rescue
+      error -> reraise RuntimeError, "#{Path.basename(path)}: #{Exception.message(error)}", __STACKTRACE__
+    after
+      :code.purge(module)
+      :code.delete(module)
+    end
+  end
+
+  # pg_dump output, one statement at a time; a `;` inside a function body
+  # (between `$$`) does not end one
+  defp load_schema do
+    @schema
+    |> File.read!()
+    |> String.split(~r/;\n/)
+    |> Enum.reduce([], fn
+      part, [open | done] = statements ->
+        if odd_dollar_quotes?(open), do: [open <> ";\n" <> part | done], else: [part | statements]
+
+      part, [] ->
+        [part]
+    end)
+    |> Enum.reverse()
+    |> Enum.map(&String.trim/1)
+    |> Enum.reject(&(&1 == "" or (String.starts_with?(&1, "--") and not String.contains?(&1, "\n"))))
+    |> Enum.each(&Repo.query!/1)
+  end
+
+  defp odd_dollar_quotes?(sql), do: sql |> String.split("$$") |> length() |> rem(2) == 0
+
+  defp rows(sql, params \\ []), do: Repo.query!(sql, params).rows
+
+  defp insert!(sql, params), do: [[_id]] = rows(sql <> " RETURNING id", params)
+
+  defp villain_video(name, extra \\ %{}) do
+    %{
+      "name" => name,
+      "data" => %{
+        "type" => "video",
+        "uid" => Utils.generate_uid(),
+        "hidden" => false,
+        "data" =>
+          Map.merge(
+            %{
+              "source" => "file",
+              "remote_id" => "https://cdn.example.com/video.mp4",
+              "cover" => "false",
+              "width" => 840,
+              "height" => 1052,
+              "opacity" => 0,
+              "preload" => true,
+              "autoplay" => false,
+              "controls" => false,
+              "play_button" => false
+            },
+            extra
+          )
+      }
+    }
+  end
+
+  defp text_ref(name, text) do
+    %{
+      "name" => name,
+      "data" => %{
+        "type" => "text",
+        "uid" => Utils.generate_uid(),
+        "hidden" => false,
+        "data" => %{"text" => text, "type" => "paragraph"}
+      }
+    }
+  end
+
+  defp var(key, value), do: %{"key" => key, "type" => "string", "label" => key, "value" => value, "important" => true}
+
+  # Content as a 0.53.0-dev site's editor saved it: a fragment block, a multi
+  # module whose own vars sit above its entries, and a module with two file
+  # videos, saved before blocks had a `loop` setting, one of them with a
+  # Vimeo thumbnail URL in `cover`.
+  defp insert_villain_site do
+    now = ~N[2023-11-01 12:00:00]
+
+    rows(
+      "INSERT INTO users (id, name, email, inserted_at, updated_at) VALUES (1, 'Admin', 'admin@example.com', $1, $1)",
+      [now]
+    )
+
+    [[multi_id]] =
+      insert!(
+        """
+        INSERT INTO content_modules (name, namespace, class, code, refs, vars, wrapper, entry_template, inserted_at, updated_at)
+        VALUES ('Values', 'pages', 'values', '<h2>{{ heading }}</h2>{{ content }}', '[]', $1, true, $2, $3, $3)
+        """,
+        [
+          [var("heading", "Our values")],
+          %{
+            "id" => Ecto.UUID.generate(),
+            "name" => "Value",
+            "namespace" => "pages",
+            "class" => "value",
+            "code" => "{% ref refs.p %}",
+            "refs" => [text_ref("p", "Text")],
+            "vars" => [var("headerContent", "Value")],
+            "wrapper" => false
+          },
+          now
+        ]
+      )
+
+    [[video_id]] =
+      insert!(
+        """
+        INSERT INTO content_modules (name, namespace, class, code, refs, vars, wrapper, inserted_at, updated_at)
+        VALUES ('Video', 'pages', 'video', '{% ref refs.video %}{% ref refs.cover_video %}', $1, '[]', false, $2, $2)
+        """,
+        [[villain_video("video"), villain_video("cover_video")], now]
+      )
+
+    [[fragment_id]] =
+      insert!(
+        """
+        INSERT INTO pages_fragments (title, parent_key, key, language, data, wrapper, inserted_at, updated_at)
+        VALUES ('Footer', 'shared', 'footer', 'en', '[]', '', $1, $1)
+        """,
+        [now]
+      )
+
+    blocks = [
+      %{
+        "type" => "fragment",
+        "uid" => Utils.generate_uid(),
+        "hidden" => false,
+        "data" => %{"fragment_id" => fragment_id}
+      },
+      %{
+        "type" => "module",
+        "uid" => Utils.generate_uid(),
+        "hidden" => false,
+        "data" => %{
+          "module_id" => multi_id,
+          "multi" => true,
+          "refs" => [],
+          "vars" => [var("heading", "Our values")],
+          "entries" =>
+            for n <- 1..2 do
+              %{
+                "type" => "module_entry",
+                "uid" => Utils.generate_uid(),
+                "hidden" => false,
+                "data" => %{"refs" => [text_ref("p", "Value #{n}")], "vars" => [var("headerContent", "Value #{n}")]}
+              }
+            end
+        }
+      },
+      %{
+        "type" => "module",
+        "uid" => Utils.generate_uid(),
+        "hidden" => false,
+        "data" => %{
+          "module_id" => video_id,
+          "multi" => false,
+          "refs" => [
+            villain_video("video"),
+            villain_video("cover_video", %{"cover" => "https://i.vimeocdn.com/video/898839635_1290.jpg"})
+          ],
+          "vars" => []
+        }
+      }
+    ]
+
+    [[page_id]] =
+      insert!(
+        """
+        INSERT INTO pages (uri, language, title, template, status, data, inserted_at, updated_at)
+        VALUES ('about', 'en', 'About', 'default.html', 1, $1, $2, $2)
+        """,
+        [blocks, now]
+      )
+
+    %{page: page_id, fragment: fragment_id}
+  end
+
+  test "a pre-blocks site's Villain content comes through brando_103 onwards" do
+    load_schema()
+    %{page: page_id, fragment: fragment_id} = insert_villain_site()
+
+    Enum.each(templates(103..1000), &migrate/1)
+
+    blocks =
+      rows(
+        """
+        SELECT b.id, b.type, b.multi, b.fragment_id FROM content_blocks b
+        JOIN pages_blocks pb ON pb.block_id = b.id
+        WHERE pb.entry_id = $1 ORDER BY pb.sequence
+        """,
+        [page_id]
+      )
+
+    assert [[_, "fragment", false, ^fragment_id], [multi_block, "module", true, nil], [video_block, "module", false, nil]] =
+             blocks
+
+    # The multi module's own var, above its entries
+    assert rows("SELECT key, value FROM content_vars WHERE block_id = $1", [multi_block]) == [["heading", "Our values"]]
+
+    assert rows(
+             """
+             SELECT v.value FROM content_vars v JOIN content_blocks b ON v.block_id = b.id
+             WHERE b.parent_id = $1 ORDER BY b.sequence
+             """,
+             [multi_block]
+           ) == [["Value 1"], ["Value 2"]]
+
+    # Pre-0.54 Brando always rendered file videos with `loop`, and drew its SVG
+    # placeholder whatever `cover` held
+    assert rows(
+             """
+             SELECT name, data->'data'->'loop', data->'data'->>'cover' FROM content_refs
+             WHERE block_id = $1 ORDER BY name
+             """,
+             [video_block]
+           ) == [["cover_video", true, "svg"], ["video", true, "false"]]
+  end
+end

@@ -9,10 +9,7 @@ defmodule Brando.Repo.Migrations.ExtractEmbedsOneFileFields do
         %{type: :file, name: field_name} <- Brando.Blueprint.Assets.__assets__(blueprint) do
       # Lookup if we have the old format `field_name` in the fields
       %{columns: existing_columns} =
-        Ecto.Adapters.SQL.query!(
-          Brando.Repo.repo(),
-          "select * from #{blueprint.__schema__(:source)} where false;"
-        )
+        Brando.repo().query!("select * from #{blueprint.__schema__(:source)} where false;")
 
       if to_string(field_name) in existing_columns do
         file_field_query =
