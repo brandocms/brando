@@ -678,6 +678,27 @@ defmodule Mix.Tasks.Brando.Gen.BlueprintMigrationTest do
       assert issue =~ "reconcile_notes has both old_name and new_name"
     end
 
+    test "is refused in an application with named environments", context do
+      for mode <- [:single, :multi] do
+        project =
+          Brando.IgniterCase.phoenix_project(
+            files: %{"config/brando.exs" => "import Config\nconfig :brando, tenancy_mode: :#{mode}\n"}
+          )
+
+        for args <- [["Brando.MigrationTest.ExecutionV1"], ["--all"]] do
+          refused =
+            project
+            |> Igniter.assign(:brando_blueprints, [Brando.MigrationTest.ExecutionV1])
+            |> Igniter.compose_task(BlueprintMigration, args ++ ["--reconcile", "--snapshot-path", context.snapshot_path])
+
+          assert [issue] = refused.issues
+          assert issue =~ "--reconcile"
+          assert issue =~ "named environments"
+          assert refused.tasks == []
+        end
+      end
+    end
+
     test "counts that change after review do not make the plan stale", context do
       opts = [migration_path: context.migration_path, snapshot_path: context.snapshot_path]
       {:ok, _} = Migrations.create_migration(ReconcileArticleV1, opts)

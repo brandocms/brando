@@ -50,8 +50,10 @@ if Code.ensure_loaded?(Igniter) do
 
     --reconcile fits each plan to the database, for snapshots older than their
     tables (see "Legacy snapshots" in guides/migrating_from_053.md). It reads
-    the configured repo, so the database must be reachable, and compares names
-    only, not types, defaults or nullability:
+    the schemas on the configured repo's search path, so the database must be
+    reachable, and compares names only, not types, defaults or nullability. It
+    is refused when tenancy_mode is :single or :multi, where content lives in
+    one schema per environment:
 
       * a table the plan creates but the database has (no snapshot history)
         becomes an alter adding only the missing columns and indexes; a table

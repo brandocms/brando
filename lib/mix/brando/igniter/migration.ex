@@ -25,6 +25,9 @@ if Code.ensure_loaded?(Igniter) do
             "--reconcile writes a migration fitted to the database, and --rebaseline records a snapshot without one. Use one or the other: --reconcile records a baseline by itself when the database already matches."
           )
 
+        options[:reconcile] ->
+          plan_reconciled(igniter, options)
+
         options[:all] ->
           plan_all(igniter, options)
 
@@ -34,6 +37,25 @@ if Code.ensure_loaded?(Igniter) do
     rescue
       error in [BlueprintError, File.Error] -> Igniter.add_issue(igniter, Exception.message(error))
     end
+
+    defp plan_reconciled(igniter, options) do
+      with {:ok, igniter, mode} <- Configuration.read(igniter, :tenancy_mode),
+           :ok <- reconcilable(mode) do
+        if options[:all], do: plan_all(igniter, options), else: plan_one(igniter, options)
+      else
+        {:error, message} -> Igniter.add_issue(igniter, message)
+      end
+    end
+
+    # --reconcile reads the schemas on the repo's search path. With named
+    # environments, content lives in one schema per environment, and those may
+    # differ, so no single read can stand for the database a migration meets.
+    defp reconcilable(mode) when mode in [:single, :multi] do
+      {:error,
+       "--reconcile reads one database schema, and an application with named environments (tenancy_mode #{inspect(mode)}) keeps content in one schema per environment, which may differ. Plan without --reconcile and edit the migrations by hand, as guides/migrating_from_053.md describes under \"Legacy snapshots\"."}
+    end
+
+    defp reconcilable(_mode), do: :ok
 
     defp plan_one(igniter, options) do
       with {:ok, name} <- Input.required(igniter.args.positional[:blueprint], "Blueprint module", options[:interactive]),

@@ -491,7 +491,9 @@ proposes storage that already exists (`create table(:projects_blocks)`,
 `*_data`). It warns when a planned table or column already exists in the
 database or a planned drop looks like a Villain column. In that case, generate
 the migrations with `--reconcile` against a migrated copy of production, which
-does steps 2 to 6 below for you, or edit each generated migration by hand:
+does steps 2 to 6 below for you, or edit each generated migration by hand
+(always, in an application with named environments, where `--reconcile` is
+refused):
 
 ```shell
 mix brando.gen.blueprint_migration --all --reconcile

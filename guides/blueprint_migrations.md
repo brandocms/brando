@@ -478,8 +478,12 @@ mix brando.gen.blueprint_migration --all --reconcile
 
 It reads the tables, columns, indexes and foreign keys of the planned tables
 from the configured repo (the schemas on its search path, `public` in a classic
-application), so the database must be reachable; point the repo at a migrated
-copy of production. Then:
+application), so the database must be reachable; point the repo at the
+production database or a current copy. It never reads `tenant_*` schemas, and
+it is refused in an application with named environments (`tenancy_mode`
+`:single` or `:multi`): content lives in one schema per environment there, and
+they may differ. Edit those migrations by hand as the [0.53 upgrade
+guide](migrating_from_053.md#legacy-snapshots) describes. Then:
 
 - A table the plan creates that already exists (no snapshot history) becomes an
   `alter table` that adds only the columns and indexes it lacks. A table that
