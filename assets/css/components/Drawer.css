@@ -59,6 +59,8 @@ figcaption.tiny {
 }
 
 .drawer {
+  &[data-ui-open="true"] { display: block; }
+  &[data-ui-open="false"] { display: none !important; }
   height: 100vh;
   z-index: 999;
   width: 650px;

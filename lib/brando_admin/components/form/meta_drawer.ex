@@ -40,6 +40,7 @@ defmodule BrandoAdmin.Components.Form.MetaDrawer do
     ~H"""
     <Content.drawer
       id={@id}
+      class="meta-drawer"
       title={gettext("Meta properties")}
       close={@close}
       icon="file-search"

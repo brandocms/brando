@@ -20,6 +20,7 @@
   --dialog-line: var(--brando-line);
   --dialog-green: var(--brando-accent);
   --dialog-red: var(--brando-error-ink);
+  --dialog-motion-offset: 8px;
 
   box-sizing: border-box;
   width: 440px;
@@ -30,9 +31,8 @@
   border-radius: 8px;
   background: var(--brando-surface);
   color: var(--dialog-ink);
-  box-shadow: 0 16px 40px rgb(22 28 25 / 18%);
+  box-shadow: var(--brando-shadow-overlay);
   text-align: left;
-  animation: admin-dialog-in 160ms ease-out;
 
   &::backdrop {
     background: rgb(22 28 25 / 45%);
@@ -41,13 +41,6 @@
 
   &:focus {
     outline: none;
-  }
-}
-
-@keyframes admin-dialog-in {
-  from {
-    opacity: 0;
-    transform: translateY(8px);
   }
 }
 

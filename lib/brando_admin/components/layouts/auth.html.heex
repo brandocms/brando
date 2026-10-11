@@ -13,15 +13,20 @@
           which LiveView never touches, and is added the moment the reveal starts
           so a later patch can never strand the form invisible. --%>
     <style>
-      html.moonwalk [data-moonwalk-run],html.moonwalk [data-moonwalk-section],html.moonwalk [data-moonwalk]{opacity:0}html.moonwalk:not(.login-revealed) #application-login{opacity:0}.fader{background-color:#fff;position:fixed;top:0;left:0;right:0;bottom:0;z-index:9998;display:none}
+      html.moonwalk [data-moonwalk-run],html.moonwalk [data-moonwalk-section],html.moonwalk [data-moonwalk]{opacity:0}html.moonwalk:not(.login-revealed) #application-login{opacity:0}html.moonwalk:not(.app-revealed) :is(#navigation,#admin,#brando-chrome){opacity:0}.fader{background-color:var(--brando-surface-page,#fafbf9);position:fixed;top:0;left:0;right:0;bottom:0;z-index:9998;display:none}
     </style>
     <link rel="stylesheet" href={Brando.Icons.stylesheet_path()} />
     <.include_assets admin />
   </head>
-  <body id="app" data-env={Brando.env()} class="auth-login">
+  <body
+    id="app"
+    data-env={Brando.env()}
+    data-real-motion={Application.get_env(:brando, :e2e_real_motion, false) && "true"}
+    class="auth-login"
+  >
     <div class="fader" id="fader">
       <script>
-        var zf = document.getElementById("fader");zf.style.display = 'block';window.bfTO = setTimeout(function(){zf.style.display = 'none'},5000);
+        var zf = document.getElementById("fader");zf.style.display = 'block';window.bfTO = setTimeout(function(){zf.style.display = 'none';document.documentElement.classList.add('app-revealed','login-revealed')},5000);
       </script>
       <div class="loading-container"></div>
     </div>

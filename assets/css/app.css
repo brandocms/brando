@@ -181,7 +181,7 @@ html.moonwalk [data-moonwalk-run].moonwalked {
 }
 
 [data-env="e2e"] {
-  * {
+  &:not([data-real-motion="true"]) * {
     animation-duration: 1ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 1ms !important;

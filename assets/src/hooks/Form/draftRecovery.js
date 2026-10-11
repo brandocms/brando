@@ -17,6 +17,9 @@ export default function draftRecovery(hook) {
   const editedForms = new Set()
   let captureAll = true
   const formUid = form => form.id.replace(/^(entry_block_form|child_block_form)-/, '')
+  // Only unacknowledged work warrants an offline storage warning. Sticky
+  // state survives unrelated patches and clears after capture/save succeeds.
+  const showPending = () => hook.js()[pending ? 'addClass' : 'removeClass'](hook.el, 'draft-pending')
   const enabled = () => hook.el.dataset.draftEnabled === 'true'
   const ours = ({ id }) => id === hook.el.dataset.draftFormId
   const encode = form => {
@@ -62,6 +65,7 @@ export default function draftRecovery(hook) {
     if (!enabled()) return
     generation += 1
     pending = true
+    showPending()
     lastChanged = Date.now()
     dirtySince ??= lastChanged
     schedule()
@@ -128,6 +132,7 @@ export default function draftRecovery(hook) {
   hook.handleEvent('b:draft-saved', event => {
     if (!ours(event) || !inFlight || event.request_id !== inFlight.requestId) return
     pending = inFlight.generation !== generation
+    showPending()
     if (inFlight.all) captureAll = false
     clearTimeout(flightTimer)
     inFlight = null
@@ -143,6 +148,7 @@ export default function draftRecovery(hook) {
       pending = false
       editedForms.clear()
     }
+    showPending()
     saveGeneration = null
     inFlight = null
     dirtySince = pending ? Date.now() : null
@@ -163,6 +169,7 @@ export default function draftRecovery(hook) {
     },
     disconnected() {
       hook.js().addClass(hook.el, 'draft-offline')
+      showPending()
       inFlight = null
       clearTimeout(captureTimer)
       clearTimeout(flightTimer)

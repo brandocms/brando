@@ -2,6 +2,7 @@
 import AuthorizationHook from './hooks/Authorization'
 import AdminHook from './hooks/Admin'
 import AssistantComposerHook from './hooks/AssistantComposer'
+import AssistantMessagesHook from './hooks/AssistantMessages'
 import ProposalPreviewHook from './hooks/ProposalPreview'
 import TranslationWorkHook from './hooks/TranslationWork'
 import ModulePickerKeysHook from './hooks/ModulePickerKeys'
@@ -76,6 +77,7 @@ export default (app) => {
     'Brando.Authorization': AuthorizationHook(app),
     'Brando.Admin': AdminHook(app),
     'Brando.AssistantComposer': AssistantComposerHook(app),
+    'Brando.AssistantMessages': AssistantMessagesHook(app),
     'Brando.ProposalPreview': ProposalPreviewHook(app),
     'Brando.TranslationWork': TranslationWorkHook(app),
     'Brando.ModulePickerKeys': ModulePickerKeysHook(app),

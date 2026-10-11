@@ -50,12 +50,14 @@ defmodule BrandoAdmin.Components.Content do
       |> assign_new(:subtitle, fn -> nil end)
       |> assign_new(:footer, fn -> nil end)
       |> assign_new(:hidden, fn -> true end)
+      |> assign_new(:class, fn -> nil end)
 
     ~H"""
     <div
       id={@id}
       class={[
         "drawer",
+        @class,
         @hidden && "hidden",
         @narrow && "narrow",
         @wide && "wide",
@@ -176,6 +178,7 @@ defmodule BrandoAdmin.Components.Content do
       aria-modal="true"
       aria-labelledby={"#{@id}-title"}
       phx-hook="Brando.Modal"
+      data-modal-show={to_string(@show)}
       data-modal-close={@close}
       {@rest}
     >

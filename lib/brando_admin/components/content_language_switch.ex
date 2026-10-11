@@ -36,24 +36,38 @@ defmodule BrandoAdmin.Components.ContentLanguageSwitch do
       class={["content-language-selector", @show_language_picker && "open"]}
       phx-click-away={@show_language_picker && JS.push("hide_language_picker", target: @myself)}
     >
-      <div :if={@show_language_picker} class="languages" role="listbox" aria-label={gettext("Content language")}>
-        <button
-          :for={language <- @languages}
-          type="button"
-          role="option"
-          aria-selected={to_string(to_string(language[:value]) == to_string(@content_language))}
-          class={[to_string(language[:value]) == to_string(@content_language) && "current"]}
-          phx-click={JS.push("select_language", target: @myself)}
-          phx-value-id={language[:value]}
+      <%!-- Keep the trigger after a stable slot: pending phx-remove nodes are
+           otherwise moved after it while their exit is still running. --%>
+      <div id="content-language-panel">
+        <div
+          :if={@show_language_picker}
+          id="content-language-options"
+          class="languages"
+          role="listbox"
+          aria-label={gettext("Content language")}
+          phx-mounted={JS.dispatch("b:ui-reveal")}
+          phx-remove={JS.dispatch("b:ui-reveal", detail: %{remove: true}, blocking: true)}
         >
-          {language[:text]}
-          <.icon :if={to_string(language[:value]) == to_string(@content_language)} name="check" />
-        </button>
+          <button
+            :for={language <- @languages}
+            type="button"
+            role="option"
+            aria-selected={to_string(to_string(language[:value]) == to_string(@content_language))}
+            class={[to_string(language[:value]) == to_string(@content_language) && "current"]}
+            phx-click={JS.push("select_language", target: @myself)}
+            phx-value-id={language[:value]}
+          >
+            {language[:text]}
+            <.icon :if={to_string(language[:value]) == to_string(@content_language)} name="check" />
+          </button>
+        </div>
       </div>
       <button
+        id="content-language-trigger"
         type="button"
         class="current-language"
         aria-haspopup="listbox"
+        aria-controls="content-language-options"
         aria-expanded={to_string(@show_language_picker)}
         title={gettext("Choose the content language you wish to edit entries in")}
         phx-click={JS.push("show_language_picker", target: @myself)}

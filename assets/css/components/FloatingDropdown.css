@@ -8,9 +8,12 @@
   max-width: calc(100vw - 16px) !important;
   max-height: calc(100dvh - 16px) !important;
   overflow: auto !important;
+  /* The closing transition still paints this flex box after :popover-open
+     stops matching. Keep its items stacked until it is fully hidden. */
+  flex-direction: column;
 
   &:not(:popover-open) { display: none !important; }
-  &:popover-open { display: flex !important; flex-direction: column; }
+  &:popover-open { display: flex !important; }
 
   button, a {
     max-width: 100%;
@@ -63,4 +66,35 @@
     > [data-icon] { width: 14px; height: 14px; flex-shrink: 0; }
   }
   @media (pointer: coarse) { button, a { min-height: 40px; } }
+}
+
+/* Native popovers keep their top-layer position until the exit is finished.
+   Browsers without discrete transitions simply use the existing instant exit.
+   Legacy LiveView menus have their own JS transitions; do not animate twice. */
+[phx-hook="Brando.FloatingDropdown"] [popover] {
+  pointer-events: none;
+  opacity: 0;
+  transform: translateY(6px) scale(0.985);
+  transform-origin: top center;
+  transition:
+    opacity var(--motion-leave) var(--motion-ease),
+    transform var(--motion-leave) var(--motion-ease),
+    display var(--motion-leave) allow-discrete,
+    overlay var(--motion-leave) allow-discrete;
+
+  &:popover-open {
+    pointer-events: auto;
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+
+}
+
+/* Keep this outside the nested rule: the consumer's nesting plugin otherwise
+   emits it before :popover-open, whose resting values override the entrance. */
+@starting-style {
+  [phx-hook="Brando.FloatingDropdown"] [popover]:popover-open {
+    opacity: 0;
+    transform: translateY(6px) scale(0.985);
+  }
 }

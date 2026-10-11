@@ -16,8 +16,10 @@ defmodule BrandoAdmin.Components.Form.DraftRecoveryComponent do
   @doc "The component id for the form with `form_id`."
   def id(form_id), do: "#{form_id}-draft-recovery-component"
 
-  @doc "The id of the form's save state (`part={:status}`) beside its Save."
+  @doc "The id of the form's save state (`:toolbar` or `:status`) beside Save."
   def status_id(form_id), do: "#{form_id}-save-state-component"
+
+  def details_id(form_id), do: "#{form_id}-save-details-component"
 
   def mount(socket), do: {:ok, socket |> assign(:state, nil) |> assign(:part, :all) |> assign(:saved_at, nil)}
 

@@ -1,3 +1,43 @@
+/* Shared admin motion: respond on the click, settle gently. Keep movement
+   small on menus/dialogs and reserve a full slide for drawers. */
+:root {
+  --motion-enter: 350ms;
+  --motion-leave: 300ms;
+  --motion-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --motion-ease-close: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+:root[data-reduced-motion="true"] {
+  --motion-enter: 1ms;
+  --motion-leave: 1ms;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --motion-enter: 1ms;
+    --motion-leave: 1ms;
+  }
+}
+
+.ui-menu-motion {
+  transition-property: opacity, transform;
+  transition-duration: var(--motion-leave);
+  transition-timing-function: var(--motion-ease);
+}
+.ui-surface-away { opacity: 0; transform: translateY(6px); }
+.ui-surface-rest { opacity: 1; transform: translateY(0) scale(1); }
+
+/* Keep the hover already painted under a stationary pointer when a removed,
+   index-keyed row is patched into its neighbour. Only held for two frames. */
+[data-rows-settling] :is(.subform-entry, .table-row, .identifier, .subform-insert, .subform-delete, .identifier-remove button) {
+  transition-duration: 0s !important;
+}
+
+@keyframes ui-content-in {
+  from { opacity: 0.65; }
+  to { opacity: 1; }
+}
+
 .h-0 {
   height: 0;
   transition-property: height;
@@ -123,4 +163,29 @@
   transition-property: height, background-color, border-color, color, fill, stroke, opacity,
     box-shadow, transform, filter, backdrop-filter;
   transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Native dialogs keep their top layer and backdrop through the shared exit. */
+:is(.command-palette, .shortcut-sheet, .admin-dialog) {
+  opacity: 0;
+  transform: translateY(var(--dialog-motion-offset, -6px));
+  transition: opacity var(--motion-leave) var(--motion-ease), transform var(--motion-leave) var(--motion-ease);
+  &[data-dialog-open="true"] {
+    opacity: 1;
+    transform: translateY(0);
+    transition-duration: var(--motion-enter);
+  }
+  &::backdrop {
+    background: var(--brando-overlay);
+    opacity: 0;
+    transition: opacity var(--motion-leave) var(--motion-ease);
+  }
+  &[data-dialog-open="true"]::backdrop {
+    opacity: 1;
+    transition-duration: var(--motion-enter);
+  }
+}
+@starting-style {
+  :is(.command-palette, .shortcut-sheet, .admin-dialog)[data-dialog-open="true"] { opacity: 0; transform: translateY(var(--dialog-motion-offset, -6px)); }
+  :is(.command-palette, .shortcut-sheet, .admin-dialog)[data-dialog-open="true"]::backdrop { opacity: 0; }
 }

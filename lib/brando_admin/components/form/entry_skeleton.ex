@@ -96,12 +96,18 @@ defmodule BrandoAdmin.Components.Form.EntrySkeleton do
           <div class="form-tab-builtins">
             <div class="page-presences" aria-hidden="true"><span class="sk sk-circle"></span></div>
             <.load_state label={gettext("Opening")} />
+            <span class="form-tool-divider" aria-hidden="true"></span>
             <button type="button" class="form-tool-notes form-tool-icon" aria-label={gettext("Notes")} disabled>
               <.icon name="message-square" class="s" />
             </button>
-            <button :if={@skeleton.preview?} type="button" class="live-preview-toggle form-tool-preview" disabled>
+            <button
+              :if={@skeleton.preview?}
+              type="button"
+              class="live-preview-toggle form-tool-preview form-tool-icon"
+              aria-label={gettext("Live preview")}
+              disabled
+            >
               <.icon name="eye" class="s" />
-              <span class="tab-text">{gettext("Preview")}</span>
             </button>
             <div :if={@skeleton.more?} class="form-tool-more">
               <button type="button" class="form-tool-more-trigger form-tool-icon" aria-label={gettext("More")} disabled>

@@ -57,7 +57,9 @@
     white-space: nowrap;
     opacity: 0.6;
     cursor: pointer;
-    transition: background-color 0.2s ease, opacity 0.2s ease;
+    transition: background-color var(--motion-leave) var(--motion-ease),
+      opacity var(--motion-leave) var(--motion-ease),
+      box-shadow var(--motion-leave) var(--motion-ease);
 
     > [data-icon] {
       display: block;
@@ -83,7 +85,7 @@
     }
   }
 
-  > :is(.active, [aria-current="page"], [aria-selected="true"], [aria-pressed="true"]),
+  > :is(.active, [aria-current="page"], [aria-selected="true"], [aria-pressed="true"], [aria-expanded="true"]),
   > .form-check > label:has(input:checked) {
     &,
     &:hover {

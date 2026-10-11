@@ -157,6 +157,7 @@ export default app => ({
     set([...this.dropdownGroups(dd), ...lis], { visibility: 'visible' })
     animate(lis, { opacity: 1, x: 0 }, { duration: 0 })
     animate(dl, { height: 'auto' }, { duration: 0 })
+    dd.inert = false
     trigger.classList.add('open')
   },
 
@@ -166,13 +167,18 @@ export default app => ({
     const lis = this.dropdownRows(dd)
     const { track } = this.animations
 
-    if (trigger.classList.contains('open')) {
-      this.hideItems(lis, { duration: 0.1, delay: stagger(0.015) }, this.dropdownGroups(dd))
+    // Keep a large section inside its shrinking frame; a long reverse
+    // stagger used to leave its last rows painted over the following menu.
+    dl.style.overflow = 'clip'
+    const expanding = !trigger.classList.contains('open')
+    dd.inert = !expanding
+    if (!expanding) {
+      this.hideItems(lis, { duration: 0.18 }, this.dropdownGroups(dd))
       track(
         animate(
           dl,
           { height: `${trigger.dataset.height}px` },
-          { duration: 0.18, delay: 0.04, ease: ease.power2InOut }
+          { duration: 0.32, ease: ease.power2InOut }
         )
       )
       trigger.classList.remove('open')
@@ -180,8 +186,8 @@ export default app => ({
     } else {
       trigger.dataset.height ||= dl.offsetHeight
       set(dd, { opacity: 1, display: 'block' })
-      track(animate(dl, { height: 'auto' }, { duration: 0.18, ease: ease.power2Out }))
-      this.showItems(lis, { duration: 0.14, delay: stagger(0.02, { startDelay: 0.05 }) }, this.dropdownGroups(dd))
+      track(animate(dl, { height: 'auto' }, { duration: 0.35, ease: ease.power2Out }))
+      this.showItems(lis, { duration: 0.14, delay: stagger(Math.min(0.02, 0.1 / Math.max(lis.length, 1)), { startDelay: 0.05 }) }, this.dropdownGroups(dd))
       trigger.classList.add('open')
       this.saveOpen(trigger.dataset.navKey, true)
     }

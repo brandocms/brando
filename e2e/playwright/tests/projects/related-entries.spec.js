@@ -103,6 +103,20 @@ test('related entries can be cleared, saved and selected again without losing ot
   await expect(selected.first()).toContainText('The garden rooms')
   await expect(input).toHaveValue(introduction)
 
+  // A row can still be sliding closed when Save serializes the form.
+  await page.emulateMedia({ reducedMotion: 'no-preference' })
+  await page.evaluate(() => document.body.removeAttribute('data-env'))
+  await selected.first().getByRole('button', { name: 'Remove', exact: true }).click()
+  await page.keyboard.press('ControlOrMeta+s')
+  await syncLV(page)
+  await expect(selected).toHaveCount(1)
+  await expect(page.locator('.draft-save-state')).toHaveAttribute('data-state', 'clean')
+  await page.reload()
+  await syncLV(page)
+  await expect(selected).toHaveCount(1)
+  await expect(selected.first()).toContainText('Beta')
+  await expect(input).toHaveValue(introduction)
+
   expect((await page.request.post('/e2e/setup_fixtures/norwegian-admin-user')).ok()).toBe(true)
   await page.reload()
   await syncLV(page)

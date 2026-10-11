@@ -143,6 +143,6 @@ export default () => ({
     }
     const remember = this.el.dataset.remember && document.querySelector(this.el.dataset.remember)
     if (remember) form.querySelector('[name="remember_me"]').value = remember.checked ? 'true' : 'false'
-    form.submit()
+    form.requestSubmit()
   },
 })

@@ -8,6 +8,8 @@
 // links (a download, a share URL). Callers with user text escape it first —
 // see confirm.js.
 
+import { openDialog as openNativeDialog, closeDialog, resetDialog } from './nativeDialogMotion'
+
 function openDialog({ title, html, tone, buttons }) {
   const dialog = document.createElement('dialog')
   dialog.className = `admin-dialog${tone ? ` admin-dialog--${tone}` : ''}`
@@ -31,6 +33,14 @@ function openDialog({ title, html, tone, buttons }) {
 
   return new Promise(resolve => {
     let result = false
+    const motion = { dialog }
+    const close = (value = false) => {
+      // Keep the first decision while fading out, even if Escape or another
+      // button is pressed before the dialog has left the top layer.
+      if (motion.closing) return
+      result = value
+      closeDialog(motion)
+    }
 
     for (const { label, value, kind, focus } of buttons) {
       const button = document.createElement('button')
@@ -38,25 +48,28 @@ function openDialog({ title, html, tone, buttons }) {
       button.className = `admin-dialog-button${kind ? ` ${kind}` : ''}`
       button.textContent = label
       button.autofocus = !!focus
-      button.addEventListener('click', () => {
-        result = value
-        dialog.close()
-      })
+      button.addEventListener('click', () => close(value))
       $actions.appendChild(button)
     }
 
     // Clicking the backdrop (the dialog element itself, outside its box) cancels.
     dialog.addEventListener('click', e => {
-      if (e.target === dialog) dialog.close()
+      if (e.target === dialog) close()
+    })
+
+    dialog.addEventListener('cancel', e => {
+      e.preventDefault()
+      close()
     })
 
     dialog.addEventListener('close', () => {
+      resetDialog(motion)
       dialog.remove()
       resolve(result)
     })
 
     document.body.appendChild(dialog)
-    dialog.showModal()
+    openNativeDialog(motion)
   })
 }
 

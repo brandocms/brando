@@ -399,7 +399,6 @@ h2.titlecase + .button-group-vertical button:first-of-type {
       }
 
       &:active {
-        transform: scale(0.99);
         filter: brightness(0.96);
       }
 

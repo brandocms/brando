@@ -1,32 +1,25 @@
+import { prefersReducedMotion } from './motion'
+import surfaceMotion from './surfaceMotion'
+import blockMotion from './blockMotion'
+import revealRow from './rowMotion'
+
 /**
- * Delegated UI commands.
- *
- * Serialising a LiveView JS command into every trigger's `phx-click` is a large
- * part of why a 115-block entry costs 6 MB to mount: `show_modal/1` encodes to
- * 749 bytes, `toggle_dropdown/1` to 443, and the block editor emits them once
- * per block — several times over, at every nesting level.
- *
- * These particular triggers only ever vary by the id they act on. So the markup
- * carries just the id in a data attribute and this module rebuilds the command
- * client-side, handing it to LiveView's own executor. Same ops, same
- * transitions, ~40 bytes on the wire instead of ~750.
- *
- * Keep the op arrays below in sync with `BrandoAdmin.Utils.show_modal/2`,
- * `hide_modal/2`, `toggle_dropdown/2` and `hide_dropdown/2` — they are the
- * server-side definition of the same commands, still used by the one-off
- * triggers where inlining costs nothing.
+ * Shared UI commands. Repeated block controls carry only a target id, keeping
+ * mount payloads small. One-off controls use BrandoAdmin.JSCommands; both routes
+ * share the same motion controller and LiveView's patch-aware visibility.
+ * Keep dropdown ops in sync with JSCommands' dropdown builders.
  */
 
 const DROPDOWN_IN = [
-  ['transition', 'ease-out', 'duration-300'],
-  ['opacity-0', 'y-100'],
-  ['opacity-100', 'y-0'],
+  ['ui-menu-motion'],
+  ['ui-surface-away'],
+  ['ui-surface-rest'],
 ]
 
 const DROPDOWN_OUT = [
-  ['transition', 'ease-in', 'duration-300'],
-  ['opacity-100', 'y-0'],
-  ['opacity-0', 'y-100'],
+  ['ui-menu-motion'],
+  ['ui-surface-rest'],
+  ['ui-surface-away'],
 ]
 
 const toggleDropdownOps = (sel) => [
@@ -37,72 +30,11 @@ const hideDropdownOps = (sel) => [
   ['hide', { time: 300, to: sel, transition: DROPDOWN_OUT }],
 ]
 
-const showModalOps = (sel) => [
-  ['show', { display: 'flex', time: 0, to: sel, blocking: false }],
-  [
-    'show',
-    {
-      time: 200,
-      to: `${sel} .modal-backdrop`,
-      transition: [
-        ['transition', 'ease-out', 'duration-200'],
-        ['opacity-0'],
-        ['opacity-100'],
-      ],
-      blocking: false,
-    },
-  ],
-  [
-    'show',
-    {
-      time: 200,
-      to: `${sel} .modal-dialog`,
-      transition: [
-        ['transition', 'ease-out', 'duration-200'],
-        ['opacity-0', 'y-100'],
-        ['opacity-100', 'y-0'],
-      ],
-      blocking: false,
-    },
-  ],
-]
-
-const hideModalOps = (sel) => [
-  [
-    'hide',
-    {
-      time: 100,
-      to: `${sel} .modal-dialog`,
-      transition: [
-        ['transition', 'ease-in', 'duration-100'],
-        ['opacity-100', 'y-0'],
-        ['opacity-0', 'y-100'],
-      ],
-      blocking: true,
-    },
-  ],
-  [
-    'hide',
-    {
-      time: 100,
-      to: `${sel} .modal-backdrop`,
-      transition: [
-        ['transition', 'ease-in', 'duration-100'],
-        ['opacity-100'],
-        ['opacity-0'],
-      ],
-      blocking: false,
-    },
-  ],
-  [
-    'hide',
-    {
-      time: 100,
-      to: sel,
-      transition: [['transition'], ['opacity-100'], ['opacity-100']],
-      blocking: false,
-    },
-  ],
+const modalOps = (sel, action) => [
+  ['dispatch', {
+    event: 'b:ui-surface', to: sel, detail: { kind: 'modal', action },
+    blocking: action === 'hide',
+  }],
 ]
 
 /**
@@ -112,6 +44,52 @@ const hideModalOps = (sel) => [
 const idSelector = (id) => `#${window.CSS && CSS.escape ? CSS.escape(id) : id}`
 
 export default (app) => {
+  const moveBlock = blockMotion(app.liveSocket)
+  const moveSurface = surfaceMotion(app.liveSocket)
+  document.addEventListener('b:ui-surface', event => {
+    const { kind, action, done } = event.detail
+    // Always release a blocking dispatch, including a detached element or an
+    // unexpected animation failure.
+    Promise.resolve().then(() => moveSurface(event.target, kind, action)).finally(() => done?.())
+  })
+  document.addEventListener('b:ui-reveal', event => {
+    const { remove, done } = event.detail
+    if (!remove) app.liveSocket.js().setAttribute(event.target, 'data-ui-open', 'true')
+    const animation = revealRow(event.target, remove)
+    if (!animation) { done?.(); return }
+    let timer
+    let finished = false
+    const finish = () => {
+      if (finished) return
+      finished = true
+      clearTimeout(timer)
+      done?.()
+    }
+    animation.finished.then(finish, finish)
+    // A background tab must still release a pending LiveView removal.
+    if (done) timer = setTimeout(finish, animation.effect.getTiming().duration + 50)
+  })
+  document.addEventListener('b:select-option', event => {
+    const option = event.target
+    const select = option.closest('.multiselect[data-select-input]')
+    if (!select) return
+    const input = document.getElementById(select.dataset.selectInput)
+    const origin = document.getElementById(select.dataset.selectOrigin)
+    // The visible choice and the submitted value change together. Otherwise
+    // Save during the exit/reply delay serializes the previous selection.
+    if (origin) origin.value = option.getAttribute('phx-value-origin') || 'local'
+    if (input) input.value = option.value
+    const label = select.querySelector(':scope > div > .select-label[data-select-preview="true"]')
+    // The server uses the same escaping for this label. Custom slots opt out.
+    if (label && option.dataset.selectLabel !== undefined) label.innerHTML = option.dataset.selectLabel
+    // Use the ordinary form change path, including field sync and LiveView's
+    // pending-input protection. Respect inputs that opted out of publishing.
+    for (const field of [origin, input]) {
+      if (field?.getAttribute('phx-hook') === 'Brando.PublishInput') {
+        field.dispatchEvent(new Event('input', { bubbles: true }))
+      }
+    }
+  })
   const exec = (el, ops) => {
     if (!app.liveSocket) return
     app.liveSocket.execJS(el, JSON.stringify(ops))
@@ -160,7 +138,7 @@ export default (app) => {
     if (modalShow) {
       const id = modalShow.getAttribute('data-ui-modal-show')
       if (document.getElementById(id)) {
-        exec(modalShow, showModalOps(idSelector(id)))
+        exec(modalShow, modalOps(idSelector(id), 'show'))
       }
       return
     }
@@ -169,7 +147,7 @@ export default (app) => {
     if (modalHide) {
       const id = modalHide.getAttribute('data-ui-modal-hide')
       if (document.getElementById(id)) {
-        exec(modalHide, hideModalOps(idSelector(id)))
+        exec(modalHide, modalOps(idSelector(id), 'hide'))
       }
     }
   })
@@ -184,7 +162,8 @@ export default (app) => {
     if (!input || typeof input.matches !== 'function') return
     if (!input.matches('.block-action.toggler input[type="checkbox"]')) return
     const block = input.closest('.base-block')
-    if (block) block.classList.toggle('collapsed', input.checked)
+    if (!block) return
+    moveBlock(block, input.checked)
   })
 
   // A patch can remove the open dropdown from the DOM (block deleted, list
@@ -193,5 +172,24 @@ export default (app) => {
     if (openDropdownId && !document.getElementById(openDropdownId)) {
       openDropdownId = null
     }
+  })
+
+  // Let the destination appear gently without delaying navigation or making
+  // fixed drawers descendants of a transformed element.
+  let pageAnimation
+  let pageFrame
+  window.addEventListener('phx:page-loading-stop', ({ detail }) => {
+    if (detail?.kind !== 'redirect') return
+    pageAnimation?.cancel()
+    cancelAnimationFrame(pageFrame)
+    // Redirect completion can fire just before the new layout mounts.
+    pageFrame = requestAnimationFrame(() => {
+      const main = document.getElementById('brando-main')
+      if (!main || prefersReducedMotion()) return
+      pageAnimation = main.animate([{ opacity: 0.35 }, { opacity: 1 }], {
+        duration: 350,
+        easing: 'cubic-bezier(0.22, 1, 0.36, 1)',
+      })
+    })
   })
 }

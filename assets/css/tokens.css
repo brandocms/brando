@@ -40,6 +40,13 @@
      notice, a section header, an icon tile, a hovered secondary button */
   --brando-surface-tint: #f1f5ef;
   --brando-overlay: rgb(30 43 37 / 30%);
+  /* The login box's layered shadow: a soft, deep lift for floating panels. */
+  --brando-shadow-overlay: 0 2.8px 2.2px rgba(0, 0, 0, 0.02),
+    0 6.7px 5.3px rgba(0, 0, 0, 0.028),
+    0 12.5px 10px rgba(0, 0, 0, 0.035),
+    0 22.3px 17.9px rgba(0, 0, 0, 0.042),
+    0 41.8px 33.4px rgba(0, 0, 0, 0.05),
+    0 100px 80px rgba(0, 0, 0, 0.07);
 
   /* Badges: a sage pill with muted ink */
   --brando-badge-bg: #eef0eb;

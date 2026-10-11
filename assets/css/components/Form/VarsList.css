@@ -8,7 +8,19 @@
   border: 1px solid var(--table-line);
   border-radius: 6px;
   background: var(--brando-surface);
-  overflow: clip;
+  /* Insert straddles the top rule, including on the first row. */
+  overflow: visible;
+
+  &.is-empty {
+    border-color: transparent;
+    background: transparent;
+
+    > .subform-table-foot {
+      padding: 0;
+      border: 0;
+      background: transparent;
+    }
+  }
 
   .vars-list-body > .vars-row {
     display: flex;
@@ -26,6 +38,8 @@
     & + .vars-row {
       border-top: 1px solid var(--table-line);
     }
+
+    &:first-child { border-radius: 6px 6px 0 0; }
 
     &:hover {
       background: var(--table-hover);
@@ -116,4 +130,6 @@
   .vars-row .variable-content {
     padding: 4px 10px 20px;
   }
+
+  > .subform-table-foot { border-radius: 0 0 6px 6px; }
 }

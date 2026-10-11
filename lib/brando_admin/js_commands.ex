@@ -17,8 +17,8 @@ defmodule BrandoAdmin.JSCommands do
   def toggle_dropdown(js \\ %JS{}, dropdown_id) do
     JS.toggle(js,
       to: dropdown_id,
-      in: {"transition ease-out duration-300", "opacity-0 y-100", "opacity-100 y-0"},
-      out: {"transition ease-in duration-300", "opacity-100 y-0", "opacity-0 y-100"},
+      in: {"ui-menu-motion", "ui-surface-away", "ui-surface-rest"},
+      out: {"ui-menu-motion", "ui-surface-rest", "ui-surface-away"},
       time: 300
     )
   end
@@ -26,7 +26,7 @@ defmodule BrandoAdmin.JSCommands do
   def show_dropdown(js \\ %JS{}, dropdown_id) do
     JS.show(js,
       to: dropdown_id,
-      transition: {"transition ease-out duration-300", "opacity-0 y-100", "opacity-100 y-0"},
+      transition: {"ui-menu-motion", "ui-surface-away", "ui-surface-rest"},
       time: 300
     )
   end
@@ -34,62 +34,24 @@ defmodule BrandoAdmin.JSCommands do
   def hide_dropdown(js \\ %JS{}, dropdown_id) do
     JS.hide(js,
       to: dropdown_id,
-      transition: {"transition ease-in duration-300", "opacity-100 y-0", "opacity-0 y-100"},
+      transition: {"ui-menu-motion", "ui-surface-rest", "ui-surface-away"},
       time: 300
     )
   end
 
+  # The client reads the motion preference at the time of the action and can
+  # reverse an in-flight animation. A hide blocks patch removal only until the
+  # client calls the dispatch's done callback (immediate with reduced motion).
   def show_modal(js \\ %JS{}, modal_id) do
-    js
-    |> JS.show(
-      to: "#{modal_id}",
-      display: "flex",
-      blocking: false,
-      time: 0
-    )
-    |> JS.show(
-      to: "#{modal_id} > .modal-backdrop",
-      transition: {"transition ease-out duration-200", "opacity-0", "opacity-100"},
-      blocking: false,
-      time: 200
-    )
-    |> JS.show(
-      to: "#{modal_id} > .modal-dialog",
-      blocking: false,
-      transition: {"transition ease-out duration-200", "opacity-0 y-100", "opacity-100 y-0"},
-      time: 200
-    )
+    JS.dispatch(js, "b:ui-surface", to: modal_id, detail: %{kind: "modal", action: "show"})
   end
 
   def hide_modal(js \\ %JS{}, modal_id) do
-    js
-    |> JS.hide(
-      to: "#{modal_id} > .modal-dialog",
-      transition: {"transition ease-in duration-100", "opacity-100 y-0", "opacity-0 y-100"},
-      blocking: true,
-      time: 100
-    )
-    |> JS.hide(
-      to: "#{modal_id} > .modal-backdrop",
-      transition: {"transition ease-in duration-100", "opacity-100", "opacity-0"},
-      blocking: false,
-      time: 100
-    )
-    |> JS.hide(
-      to: "#{modal_id}",
-      transition: {"transition", "opacity-100", "opacity-100"},
-      blocking: false,
-      time: 100
-    )
+    JS.dispatch(js, "b:ui-surface", to: modal_id, detail: %{kind: "modal", action: "hide"}, blocking: true)
   end
 
   def toggle_drawer(js \\ %JS{}, drawer_id) do
-    JS.toggle(js,
-      to: drawer_id,
-      in: {"transition ease-out duration-300", "x-100", "x-0"},
-      out: {"transition ease-in duration-300", "x-0", "x-100"},
-      time: 300
-    )
+    JS.dispatch(js, "b:ui-surface", to: drawer_id, detail: %{kind: "drawer", action: "toggle"})
   end
 
   # Open the image editor, marking it busy for the wait the drawer itself hides.

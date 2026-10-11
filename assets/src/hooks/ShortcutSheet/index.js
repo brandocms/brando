@@ -12,6 +12,7 @@
  * The switch at its foot turns single-key shortcuts off and on in this
  * browser; ⌘K and ⌘S are not affected.
  */
+import { openDialog, closeDialog, resetDialog } from '../../nativeDialogMotion'
 import { GROUPS, SHORTCUTS, displayKeys, isMacPlatform } from '../../shortcuts/registry'
 import { available, bindShortcut, characterKeysEnabled, setCharacterKeysEnabled } from '../../shortcuts'
 
@@ -54,12 +55,18 @@ export default () => ({
 
     this.el.addEventListener('click', e => {
       // A click on the backdrop lands on the dialog itself
-      if (e.target === this.dialog || e.target.closest('[data-shortcut-sheet-close]')) this.dialog.close()
+      if (e.target === this.dialog || e.target.closest('[data-shortcut-sheet-close]')) closeDialog(this)
     })
 
     this.toggle?.addEventListener('change', () => setCharacterKeysEnabled(this.toggle.checked))
 
+    this.dialog.addEventListener('cancel', event => {
+      event.preventDefault()
+      closeDialog(this)
+    })
+
     this.dialog.addEventListener('close', () => {
+      resetDialog(this)
       const opener = this.opener
       this.opener = null
       this.restoreFocus(opener)
@@ -68,15 +75,17 @@ export default () => ({
 
   destroyed() {
     this.unbind?.()
+    clearTimeout(this.closeTimer)
     this.el.removeEventListener('brando:shortcuts:open', this.onOpen)
   },
 
   open(opener) {
-    if (this.dialog.open) return true
+    if (this.dialog.open && !this.closing) return true
+    if (this.closing) { openDialog(this); return true }
     this.opener = opener || document.activeElement
     this.render()
     if (this.toggle) this.toggle.checked = characterKeysEnabled()
-    this.dialog.showModal()
+    openDialog(this)
     // The title, not the close button: a screen reader reads the dialog's
     // name, and Tab goes on to the close button.
     this.el.querySelector('#shortcut-sheet-title')?.focus()

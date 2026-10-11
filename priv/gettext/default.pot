@@ -3238,6 +3238,11 @@ msgstr ""
 msgid "Changes are saved with this entry."
 msgstr ""
 
+#: lib/brando_admin/components/form/draft_recovery.ex
+#, elixir-autogen, elixir-format
+msgid "Changes are waiting to reach recovery storage. Keep this editor open while reconnecting."
+msgstr ""
+
 #: lib/brando_admin/live/ai/assistant_live.ex
 #, elixir-autogen, elixir-format
 msgid "Changes by entry"
@@ -3920,6 +3925,11 @@ msgstr ""
 msgid "Conditional"
 msgstr ""
 
+#: lib/brando_admin/components/form/block_field.ex
+#, elixir-autogen, elixir-format
+msgid "Config"
+msgstr ""
+
 #: lib/brando_admin/components/form/input/render_var.ex
 #: lib/brando_admin/components/form/module_props/ref_block_form.ex
 #, elixir-autogen, elixir-format
@@ -4119,6 +4129,11 @@ msgstr ""
 #: lib/brando_admin/live/sites/markdown_sources_live.ex
 #, elixir-autogen, elixir-format
 msgid "Connection"
+msgstr ""
+
+#: lib/brando_admin/components/form/draft_recovery.ex
+#, elixir-autogen, elixir-format
+msgid "Connection interrupted — reconnecting…"
 msgstr ""
 
 #: lib/brando_admin/live/sites/mcp_live.ex
@@ -9054,6 +9069,7 @@ msgid "Live page"
 msgstr ""
 
 #: lib/brando_admin/components/form.ex
+#: lib/brando_admin/components/form/entry_skeleton.ex
 #, elixir-autogen, elixir-format
 msgid "Live preview"
 msgstr ""
@@ -11365,7 +11381,7 @@ msgstr ""
 
 #: lib/brando_admin/components/form/draft_recovery.ex
 #, elixir-autogen, elixir-format
-msgid "Offline — recent edits have not reached recovery storage"
+msgid "Offline"
 msgstr ""
 
 #: lib/brando/users/user.ex
@@ -12373,8 +12389,6 @@ msgstr ""
 msgid "Presence details"
 msgstr ""
 
-#: lib/brando_admin/components/form.ex
-#: lib/brando_admin/components/form/entry_skeleton.ex
 #: lib/brando_admin/components/video_picker.ex
 #: lib/brando_admin/live/sites/publishing_live.ex
 #, elixir-autogen, elixir-format
@@ -12410,6 +12424,11 @@ msgstr ""
 #: lib/brando_admin/live/ai/assistant_live.ex
 #, elixir-autogen, elixir-format
 msgid "Preview page"
+msgstr ""
+
+#: lib/brando_admin/components/form.ex
+#, elixir-autogen, elixir-format
+msgid "Preview size"
 msgstr ""
 
 #: lib/brando_admin/live/ai/assistant_live.ex
@@ -12940,6 +12959,11 @@ msgstr ""
 #: lib/brando_admin/components/form/draft_recovery.ex
 #, elixir-autogen, elixir-format
 msgid "Recovery copy saved at %{time}"
+msgstr ""
+
+#: lib/brando_admin/components/form/draft_recovery.ex
+#, elixir-autogen, elixir-format
+msgid "Recovery error"
 msgstr ""
 
 #: lib/brando_admin/components/form/draft_recovery.ex
@@ -13632,6 +13656,11 @@ msgstr ""
 #: lib/brando/users/user_notifier.ex
 #, elixir-autogen, elixir-format
 msgid "Reset your password"
+msgstr ""
+
+#: lib/brando_admin/components/form.ex
+#, elixir-autogen, elixir-format
+msgid "Resize preview"
 msgstr ""
 
 #: lib/brando_admin/components/form/notes_drawer.ex

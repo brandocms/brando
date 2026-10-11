@@ -647,3 +647,8 @@
     min-height: 40px;
   }
 }
+
+.draft-offline-pending { display: none; }
+.draft-pending .draft-offline-idle { display: none; }
+.draft-pending .draft-offline-pending { display: inline; }
+.draft-offline .draft-save-detail { display: none; }

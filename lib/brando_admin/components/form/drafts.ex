@@ -124,7 +124,11 @@ defmodule BrandoAdmin.Components.Form.Drafts do
         do: assign(socket, :draft_seed, draft),
         else: socket
 
-    for id <- [DraftRecoveryComponent.id(socket.assigns.id), DraftRecoveryComponent.status_id(socket.assigns.id)] do
+    for id <- [
+          DraftRecoveryComponent.id(socket.assigns.id),
+          DraftRecoveryComponent.status_id(socket.assigns.id),
+          DraftRecoveryComponent.details_id(socket.assigns.id)
+        ] do
       send_update(DraftRecoveryComponent, id: id, state: draft)
     end
 

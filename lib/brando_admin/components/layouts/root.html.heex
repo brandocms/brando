@@ -1,5 +1,8 @@
 <!DOCTYPE html>
-<html lang={Gettext.get_locale(Brando.Gettext)}>
+<html
+  lang={Gettext.get_locale(Brando.Gettext)}
+  data-reduced-motion={@current_user && @current_user.config.prefers_reduced_motion && "true"}
+>
   <head>
     {Application.get_env(:live_debugger, :live_debugger_tags)}
     <.csrf_meta_tag />
@@ -24,7 +27,7 @@
           which LiveView never touches, and is added the moment the reveal starts
           so a later patch can never strand the form invisible. --%>
     <style>
-      html.moonwalk [data-moonwalk-run],html.moonwalk [data-moonwalk-section],html.moonwalk [data-moonwalk]{opacity:0}html.moonwalk:not(.login-revealed) #application-login{opacity:0}.fader{background-color:#fff;position:fixed;top:0;left:0;right:0;bottom:0;z-index:9998;display:none}
+      html.moonwalk [data-moonwalk-run],html.moonwalk [data-moonwalk-section],html.moonwalk [data-moonwalk]{opacity:0}html.moonwalk:not(.login-revealed) #application-login{opacity:0}html.moonwalk:not(.app-revealed) :is(#navigation,#admin,#brando-chrome){opacity:0}.fader{background-color:var(--brando-surface-page,#fafbf9);position:fixed;top:0;left:0;right:0;bottom:0;z-index:9998;display:none}
     </style>
     <link rel="stylesheet" href={Brando.Icons.stylesheet_path()} />
     <.include_assets admin />
@@ -32,13 +35,14 @@
   <body
     id="app"
     data-env={Brando.env()}
+    data-real-motion={Application.get_env(:brando, :e2e_real_motion, false) && "true"}
     data-confirm-ok={gettext("OK")}
     data-confirm-cancel={gettext("Cancel")}
     data-toast-close={gettext("Close")}
   >
     <div class="fader" id="fader">
       <script>
-        var zf = document.getElementById("fader");zf.style.display = 'block';window.bfTO = setTimeout(function(){zf.style.display = 'none'},5000);
+        var zf = document.getElementById("fader");zf.style.display = 'block';window.bfTO = setTimeout(function(){zf.style.display = 'none';document.documentElement.classList.add('app-revealed','login-revealed')},5000);
       </script>
       <div class="loading-container"></div>
     </div>

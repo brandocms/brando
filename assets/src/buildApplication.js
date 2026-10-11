@@ -16,7 +16,8 @@ import installShortcuts from './shortcuts'
 import installConfirm from './confirm'
 import configureFader from './config/FADER'
 import { alertError } from './alerts'
-import { animate, ease, sequence, set, stagger } from './motion'
+import { animate, ease, set } from './motion'
+import installAuthMotion from './authMotion'
 
 topbar.config({
   barThickness: 1,
@@ -81,60 +82,7 @@ export default (hooks, enableDebug = false) => {
     installOpeningRows(app.liveSocket)
     installTooltips()
     installShortcuts(app)
-    // if login screen, do some animations
-    const el = Dom.find('#application-login')
-    if (el) {
-      // Lists rather than single elements: Motion throws on a missing target.
-      const loginBox = Dom.all(el, '.login-box')
-      const figureWrapper = Dom.all(el, '.figure-wrapper')
-      const versioning = Dom.all('.brando-versioning')
-      const fields = ['.title', '.field-wrapper', '.primary'].flatMap(selector => Dom.all(selector))
-
-      // Run once, whichever trigger arrives first. The reveal is driven by the
-      // element's own mount rather than a fixed delay, so it starts as soon as
-      // LiveView has finished patching instead of racing it. The timer is only a
-      // safety net: on a dead render — or if the socket never connects —
-      // phx-mounted never fires, and the form must not stay invisible.
-      let revealed = false
-
-      const revealLogin = () => {
-        if (revealed) return
-        revealed = true
-
-        // Hide the pieces before lifting the rule, so the container never paints
-        // fully assembled for a frame on its way to the animation.
-        set(loginBox, { opacity: 0, transform: 'translateY(35px)' })
-        set(figureWrapper, { opacity: 0, transform: 'translateX(-10px)' })
-        set(fields, { opacity: 0, transform: 'translateX(-15px)' })
-        set(versioning, { opacity: 0, transform: 'translateX(-200%)' })
-
-        // Hand the container from the stylesheet rule to an inline opacity
-        // before lifting the rule, so the sequence's opening beat still fades it
-        // in rather than finding it already opaque and idling for half a second.
-        // From here visibility is an inline style, so a patch that strips it
-        // leaves the form visible rather than blank.
-        set(el, { opacity: 0 })
-        document.documentElement.classList.add('login-revealed')
-
-        // Only now is there something worth looking at — tell the fader to lift.
-        window.dispatchEvent(new CustomEvent('brando:login-revealing'))
-
-        sequence([
-          [el, { opacity: 1 }, { duration: 0.5, ease: ease.none }],
-          [loginBox, { y: 0 }, { duration: 0.5, ease: ease.power3Out }],
-          [loginBox, { opacity: 1 }, { duration: 0.5, ease: ease.none, at: '<' }],
-          [figureWrapper, { x: 0 }, { duration: 0.35, ease: ease.circOut, at: '<0.25' }],
-          [figureWrapper, { opacity: 1 }, { duration: 0.35, ease: ease.none, at: '<' }],
-          [fields, { x: 0 }, { duration: 0.35, ease: ease.circOut, delay: stagger(0.1), at: '<' }],
-          [fields, { opacity: 1 }, { duration: 0.35, ease: ease.none, delay: stagger(0.1), at: '<' }],
-          [versioning, { opacity: 1 }, { duration: 0.5, ease: ease.none }],
-          [versioning, { x: 0 }, { duration: 0.5, ease: ease.circOut }],
-        ])
-      }
-
-      window.addEventListener('brando:login-mounted', revealLogin, { once: true })
-      setTimeout(revealLogin, 1200)
-    }
+    installAuthMotion()
   })
 
   // Optimistic (non-sticky) class toggle for select option rows. Dispatched

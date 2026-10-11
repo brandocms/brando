@@ -37,77 +37,115 @@
       pointer-events: all;
     }
 
+    background: var(--brando-surface);
+    border-left: 1px solid var(--brando-line);
+
     .live-preview-divider {
       position: absolute;
-      left: 0;
-      top: 0;
-      height: 100%;
-      width: 10px;
+      inset: 0 auto 0 0;
+      width: 12px;
       z-index: 10;
-      background-color: transparent;
       cursor: col-resize;
-      border-left: 1px solid var(--brando-line);
+      touch-action: none;
+      background: transparent;
+      transition: background-color 150ms ease;
+
+      &::after {
+        content: "";
+        position: absolute;
+        top: 50%;
+        left: 3px;
+        width: 3px;
+        height: 36px;
+        border-radius: 3px;
+        background: var(--brando-line-strong);
+        transition: background-color 150ms ease;
+      }
+
+      &:hover, &:focus-visible {
+        background: color-mix(in srgb, var(--brando-accent) 8%, transparent);
+        outline: none;
+        &::after { background: var(--brando-accent); }
+      }
+    }
+
+    &.is-resizing {
+      cursor: col-resize;
+      iframe { pointer-events: none; }
+      .live-preview-divider::after { background: var(--brando-accent); }
     }
 
     .live-preview-targets {
+      flex: none;
       display: flex;
       flex-direction: column;
-      align-items: center;
-      position: relative;
-      padding-top: 5px;
-      padding-bottom: 5px;
+      align-items: stretch;
+      gap: 12px;
+      padding: 12px 16px 14px 24px;
       border-bottom: 1px solid var(--brando-line);
+      background: var(--brando-surface-shaded);
 
-      .live-preview-targets-buttons {
-        @space margin-top 7px;
+      .live-preview-actions {
         display: flex;
         align-items: center;
-        justify-content: center;
-
-        [data-icon] {
-          width: 24px;
-          height: 24px;
-        }
+        gap: 6px;
       }
 
-      .live-preview-refresh {
-        position: absolute;
-        top: 5px;
-        right: 7px;
-        flex-direction: row !important;
-        gap: 4px;
+      .live-preview-heading {
+        margin-right: auto;
+        font: 500 13px/20px "Main", sans-serif;
+        color: var(--brando-muted);
       }
 
       button {
-        border: none;
-        z-index: 99;
-        pointer-events: all;
-        user-select: none;
-        display: flex;
+        display: inline-flex;
         align-items: center;
         justify-content: center;
-        flex-direction: column;
-        padding: 4px 10px;
-        margin: 0 7px;
+        flex: none;
+        margin: 0;
+        padding: 6px;
+        min-width: 32px;
+        min-height: 32px;
+        border: 1px solid transparent;
+        border-radius: 5px;
+        color: var(--brando-muted);
+        background: transparent;
+        cursor: pointer;
+        transition: background-color 150ms ease, color 150ms ease;
 
-        &:hover {
-          background-color: ghostwhite;
-        }
+        [data-icon] { width: 16px; height: 16px; }
+        &:hover { color: var(--brando-ink); background: var(--brando-surface-tint); }
+        &:focus-visible { outline: 2px solid var(--brando-accent); outline-offset: -3px; }
+      }
 
-        &:focus-visible {
-          outline: 2px solid var(--brando-accent);
-          outline-offset: -2px;
-        }
+      .live-preview-targets-buttons {
+        align-self: center;
+        width: 100%;
+        max-width: 320px;
 
-        span {
-          font-size: 11px;
-          text-align: center;
+        button {
+          flex: 1;
+          flex-direction: column;
+          gap: 5px;
+          padding: 10px 16px;
+          min-height: 62px;
+          border-color: var(--brando-line);
+          border-radius: 0;
+          border-right-width: 0;
+          background: var(--brando-surface);
+          font: 12px/16px "Main", sans-serif;
+          [data-icon] { flex: 0 0 20px; width: 20px; height: 20px; }
+          &:first-child { border-radius: 7px 0 0 7px; }
+          &:last-child { border-radius: 0 7px 7px 0; border-right-width: 1px; }
+          &:hover { color: var(--brando-ink); background: var(--brando-surface-hover); }
+          &[aria-pressed="true"] { background: var(--brando-surface-selected); color: var(--brando-accent); }
         }
       }
     }
 
     .live-preview-iframe-wrapper {
-      border-left: 1px solid var(--brando-line);
+      flex: 1;
+      min-height: 0;
     }
 
     iframe {
@@ -198,7 +236,12 @@
     display: none;
     &.active {
       display: block;
+      /* Opacity only: a transform would temporarily contain fixed dialogs
+         inside this tab and move them away from the viewport. */
+      animation: ui-content-in var(--motion-enter) var(--motion-ease);
     }
+    &[data-tab-active="true"] { display: block; }
+    &[data-tab-active="false"] { display: none; }
   }
 
   .row {
@@ -517,12 +560,12 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      border: 0;
+      border: 1px solid var(--brando-line);
       background-color: var(--brando-surface-hover);
       color: var(--brando-muted);
-      box-shadow: 0 2px 7px color-mix(in srgb, var(--brando-ink) 12%, transparent), 0 1px 2px color-mix(in srgb, var(--brando-ink) 5%, transparent);
+      box-shadow: none;
 
-      /* A quiet, static shadow replaces the toolbar's pulsing presence glow. */
+      /* The thin border carries presence; no outer ring. */
       &::before {
         display: none;
       }
@@ -533,14 +576,13 @@
       }
     }
 
-    /* The editor's presence colour, as their fields show it */
+    /* A quiet coloured edge identifies each editor without a halo or badge. */
     .user-presence[data-presence-color-index] > .avatar {
-      box-shadow: 0 0 0 2px var(--presence-ink), 0 2px 7px rgb(39 43 42 / 12%);
+      border-color: color-mix(in srgb, var(--presence-ink) 65%, var(--brando-line));
+      &::after { display: none; }
     }
 
-    /* Another editor's avatar follows them: a plain button around the
-       avatar, ringed in their presence colour (set on .user-presence by
-       position, as in app.css) while followed. */
+    /* Another editor's avatar follows them; the frame and chip show who. */
     button.user-presence {
       padding: 0;
       border: 0;
@@ -553,14 +595,16 @@
         outline-offset: 2px;
       }
 
-      /* Followed: a double ring, above the avatars it overlaps */
+      /* Keep the followed editor above overlapping avatars. */
       &[aria-pressed="true"] {
         position: relative;
         z-index: 1;
       }
 
       &[aria-pressed="true"] > .avatar {
-        box-shadow: 0 0 0 2px var(--presence-ink), 0 0 0 4px var(--brando-surface), 0 0 0 6px var(--presence-ink);
+        background-color: var(--brando-surface-selected);
+
+        border-color: var(--presence-ink);
       }
     }
   }
@@ -790,7 +834,7 @@
       padding-inline: 9px;
     }
 
-    .form-tab-builtins :is(button.form-tool-preview, .preview-chooser-trigger, .form-tool-save-button) > [data-icon]:not(.dropdown-chevron) {
+    .form-tab-builtins .form-tool-save-button > [data-icon] {
       display: none;
     }
   }
@@ -959,7 +1003,27 @@
   }
 }
 
-/* The entry's save state, beside Save: "Saved 23:20", "Unsaved changes".
+/* Long recovery details live beneath the toolbar, leaving the status dot,
+   short label and recovery action beside Save. No space when all is well. */
+.form-save-details {
+  display: flex;
+  justify-content: flex-end;
+  min-width: 0;
+  text-align: right;
+  color: var(--brando-status-disabled);
+  font: 400 12px/18px "Main", sans-serif;
+
+  .draft-save-message {
+    max-width: 100%;
+    padding: 0 0 16px;
+    margin-top: -12px;
+    overflow-wrap: anywhere;
+  }
+
+  .draft-offline-status { display: none; }
+}
+
+/* The entry's save state: "Saved 23:20", "Unsaved changes".
    The recovery storage's own status is the title, and read out. */
 .draft-save-state {
   display: inline-flex;
@@ -973,8 +1037,8 @@
 
   .draft-save-dot {
     flex: none;
-    width: 7px;
-    height: 7px;
+    width: 1cap;
+    height: 1cap;
     border-radius: 50%;
     background-color: var(--brando-status-published);
   }
@@ -997,6 +1061,7 @@
 
   .draft-save-label {
     white-space: nowrap;
+    text-box: trim-both cap alphabetic;
   }
 
   &[data-state="error"] .draft-save-label {
@@ -1017,6 +1082,19 @@
   }
 
   .draft-save-history {
+    position: relative;
+    &[data-compact] {
+      width: 30px;
+      height: 30px;
+      justify-content: center;
+      margin: 0;
+      padding: 0;
+      border: 0;
+      background: transparent;
+
+      .draft-icon { width: 16px; height: 16px; }
+    }
+
     display: inline-flex;
     align-items: center;
     gap: 5px;
@@ -1048,11 +1126,30 @@
   }
 }
 
+.form-tool-divider {
+  width: 1px;
+  height: 18px;
+  flex: none;
+  margin-inline: 5px;
+  background: var(--brando-line);
+}
+
+.draft-history-indicator {
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  width: 7px;
+  height: 7px;
+  border: 1px solid var(--brando-surface);
+  border-radius: 50%;
+  background: var(--brando-status-pending);
+}
+
 .draft-offline .draft-save-state {
-  color: var(--brando-status-disabled);
+  color: var(--brando-muted);
 
   .draft-save-dot {
-    background-color: var(--brando-status-disabled);
+    background-color: var(--brando-muted);
   }
 }
 
@@ -1350,3 +1447,7 @@ html.not-mac .shortcut-other { display: inline; }
 .disclosed-text.is-open .disclosed-text-summary { display: none; }
 .disclosed-text.is-open .disclosed-text-field { display: block; }
 
+
+.draft-offline .form-save-details { color: var(--brando-muted); }
+.draft-offline.draft-pending :is(.draft-save-state, .form-save-details) { color: var(--brando-attention-ink); }
+.draft-offline.draft-pending .draft-save-dot { background: var(--brando-status-pending); }

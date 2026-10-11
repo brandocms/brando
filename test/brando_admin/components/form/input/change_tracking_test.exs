@@ -220,6 +220,24 @@ defmodule BrandoAdmin.Components.Form.Input.ChangeTrackingTest do
     assert socket.assigns.select_label == "Refreshed"
   end
 
+  test "Select optimistic labels preserve developer markup and escape entry titles" do
+    field = to_form(Changeset.change(%Brando.Pages.Page{title: "one"}), as: "entry")[:title]
+    title = ~s|<img src=x onerror="alert(1)"> & title|
+
+    for {option, expected} <- [
+          {%{label: "<em>Emphasis</em>", value: "one"}, "<em>Emphasis</em>"},
+          {%{entry: nil, status: :draft, label: title, value: "one"},
+           Phoenix.HTML.html_escape(title) |> Phoenix.HTML.safe_to_string()}
+        ] do
+      html =
+        Phoenix.LiveViewTest.render_component(Select, id: "select", field: field, opts: [options: [option]], open: true)
+        |> Floki.parse_document!()
+
+      assert Floki.attribute(html, "button.options-option", "data-select-label") == [expected]
+      assert Floki.find(html, ".select-label img, .options-option img") == []
+    end
+  end
+
   defp picture_assigns(image) do
     block = %Brando.Villain.Blocks.PictureBlock{data: %Brando.Villain.Blocks.PictureBlock.Data{}}
     ref = %Brando.Content.Ref{uid: "picture-ref", image_id: image && image.id, image: image}

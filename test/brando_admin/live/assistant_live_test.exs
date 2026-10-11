@@ -187,10 +187,11 @@ defmodule BrandoAdmin.AssistantLiveTest do
     assert html =~ "Ready for your review"
     # A step's search words, content type and version are marked out; the
     # quotes stay with the words, so the font's kerning holds.
-    assert html =~
-             ~s(Searched for <span class="assistant-step-term">“Ident”</span> in <span class="assistant-step-type">Pages</span>)
-
-    assert html =~ "Prepared version <strong>1</strong> of the proposal"
+    assert has_element?(view, ".assistant-steps li", "Searched for “Ident” in Pages")
+    assert has_element?(view, ".assistant-step-term", "“Ident”")
+    assert has_element?(view, ".assistant-step-type", "Pages")
+    assert has_element?(view, ".assistant-steps li", "Prepared version 1 of the proposal")
+    assert has_element?(view, ".assistant-steps strong", "1")
     assert html =~ "Add a Text block"
     assert html =~ "Written in the assistant"
     assert html =~ "Live page"
@@ -208,8 +209,9 @@ defmodule BrandoAdmin.AssistantLiveTest do
     bind(c)
     {:ok, view, _} = live(conn, "/admin/assistant")
     view |> form("#assistant-composer", %{message: "What is on Identity?"}) |> render_submit()
-    html = eventually(view, &(&1 =~ "Identity has three text blocks."))
-    assert html =~ ~s(Read <span class="assistant-step-term">“Identity”</span>)
+    eventually(view, &(&1 =~ "Identity has three text blocks."))
+    assert has_element?(view, ".assistant-steps li", "Read “Identity”")
+    assert has_element?(view, ".assistant-step-term", "“Identity”")
 
     [conversation] = Agent.list_conversations(c.current_user)
     run = Agent.latest_run(conversation.id, c.current_user)

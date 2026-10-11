@@ -156,11 +156,12 @@
 
   .dashboard-side { display: grid; gap: 16px; }
   .dashboard-side > .dashboard-panel { margin: 0; border-radius: 12px; }
-  .dashboard-panel-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding: 16px 18px 10px; }
+  .dashboard-panel-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding: 14px 18px; border-bottom: 1px solid var(--dash-line); }
   .dashboard-panel-heading h2 { margin: 0; font-size: 15px; line-height: 22px; font-weight: 500; }
   .dashboard-count { color: var(--workspace-muted); font: 12px "Mono", monospace; }
   .dashboard-entry-list { padding: 0 18px 6px; }
   .dashboard-entry { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-top: 1px solid var(--dash-line); }
+  .dashboard-entry:first-child { border-top: 0; }
   .dashboard-entry > div { display: grid; gap: 2px; min-width: 0; }
   .dashboard-entry a, .dashboard-entry strong { color: var(--workspace-ink); font-size: 14px; line-height: 20px; font-weight: 500; text-decoration: none; overflow-wrap: anywhere; }
   .dashboard-entry a:hover { text-decoration: underline; text-underline-offset: 3px; }
@@ -169,6 +170,13 @@
   .dashboard-date b { font-size: 15px; font-weight: 500; }
   .dashboard-date small { margin-top: -4px; font-size: 10px; text-transform: uppercase; letter-spacing: .04em; }
   .workspace-empty { padding: 20px 18px; }
+  .dashboard-panel > .workspace-empty {
+    padding: 14px 18px 16px;
+    text-align: left;
+    align-items: flex-start;
+  }
+  .dashboard-panel > .workspace-empty h3 { font-size: 14px; line-height: 20px; }
+  .dashboard-panel > .workspace-empty p { font-size: 13px; line-height: 1.5; }
 
   /* The cards need two columns beside the side column; below that the side
      column moves under them, its panels side by side while they fit */

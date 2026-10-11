@@ -106,6 +106,7 @@ defmodule BrandoAdmin.Components.Form.Primitives do
           >
           </div>
         </label>
+        <span id={"#{@f_id}-note-slot"} class="field-note-slot" phx-update="ignore"></span>
         <.error_tag
           :if={@field}
           field={@field}

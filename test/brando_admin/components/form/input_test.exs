@@ -47,6 +47,35 @@ defmodule BrandoAdmin.Components.Form.InputTest do
     end
   end
 
+  for kind <- [:i18n_text, :i18n_textarea] do
+    test "#{kind} preserves an uncast string in the default content language" do
+      # New variable changesets use change/2, which leaves labels as strings.
+      # The header reads them correctly; the editor must submit them too.
+      put_test_env(:default_language, "no")
+
+      form =
+        %Brando.Content.Var{}
+        |> Ecto.Changeset.change(label: "Label")
+        |> to_form(as: :var)
+
+      html = render_component(Function.capture(Input, unquote(kind), 1), field: form[:label], label: "Label", opts: [])
+      doc = Floki.parse_document!(html)
+      input = Floki.find(doc, ~s([name="var[label][no]"]))
+      other_language_input = Floki.find(doc, ~s([name="var[label][en]"]))
+
+      assert input != []
+      assert other_language_input != []
+
+      if unquote(kind) == :i18n_text do
+        assert Floki.attribute(input, "value") == ["Label"]
+        assert Floki.attribute(other_language_input, "value") in [[], [""]]
+      else
+        assert Floki.text(input) == "Label"
+        assert Floki.text(other_language_input) == ""
+      end
+    end
+  end
+
   describe "radios/1" do
     test "options may come from a function given the form, as a select's can" do
       form = %TestEntry{} |> cast(%{"title" => "m"}, [:title]) |> to_form(as: :entry)

@@ -13,15 +13,26 @@ defmodule BrandoAdmin.Components.Form.DraftRecovery do
 
   attr :part, :atom,
     default: :all,
-    values: [:all, :status, :panels],
-    doc: "`:status` is the save state for a toolbar or save bar, `:panels` the notice and recovery panel"
+    values: [:all, :status, :toolbar, :details, :panels],
+    doc: "`:toolbar` is compact with `:details` below it; `:status` is the full save-bar state; `:panels` is recovery"
 
   attr :saved_at, :any, default: nil, doc: "When the entry was last saved, for \"Saved 23:20\""
 
-  def render(%{part: :status} = assigns) do
+  def render(%{part: part} = assigns) when part in [:status, :toolbar] do
     ~H"""
-    <div id={@id} class="draft-save-state" data-state={save_state(@state, @saved_at)} title={status(@state)}>
-      <.save_status state={@state} saved_at={@saved_at} target={@target} />
+    <div id={@id} class="draft-save-state" data-state={save_state(@state, @saved_at)} data-tooltip={status(@state)}>
+      <.save_status state={@state} saved_at={@saved_at} target={@target} compact={@part == :toolbar} />
+    </div>
+    """
+  end
+
+  def render(%{part: :details} = assigns) do
+    ~H"""
+    <div id={@id} class="form-save-details">
+      <p :if={save_state(@state) == "error"} class="draft-save-message draft-online-status">{status(@state)}</p>
+      <p class="draft-save-message draft-offline-status" role="status">
+        <.offline_message />
+      </p>
     </div>
     """
   end
@@ -366,6 +377,7 @@ defmodule BrandoAdmin.Components.Form.DraftRecovery do
   attr :state, :any, required: true
   attr :saved_at, :any, required: true
   attr :target, :any, required: true
+  attr :compact, :boolean, default: false
 
   # The visible label is short ("Saved 23:20", "Unsaved changes"); the
   # recovery storage's own status is read out to screen readers and shown on
@@ -373,9 +385,18 @@ defmodule BrandoAdmin.Components.Form.DraftRecovery do
   defp save_status(assigns) do
     ~H"""
     <span class="draft-save-dot" aria-hidden="true"></span>
-    <span class="draft-save-label draft-online-status" aria-hidden="true">{save_label(@state, @saved_at)}</span>
+    <span class="draft-save-label draft-online-status" aria-hidden="true">
+      {if @compact && save_state(@state) == "error", do: gettext("Recovery error"), else: save_label(@state, @saved_at)}
+    </span>
     <span class="draft-save-detail" role="status" data-testid="draft-status">{status(@state)}</span>
-    <span class="draft-offline-status">{gettext("Offline — recent edits have not reached recovery storage")}</span>
+    <span class="draft-offline-status" aria-hidden={@compact && "true"}>
+      <%= if @compact do %>
+        {gettext("Offline")}
+      <% else %>
+        <.offline_message />
+      <% end %>
+    </span>
+    <span :if={@compact} class="form-tool-divider" aria-hidden="true"></span>
     <%!-- Counts only copies still waiting for a decision: a dismissed copy
           doesn't call for attention, but the button stays so it can still
           be reopened (e.g. content left out of a partial restore). --%>
@@ -386,10 +407,23 @@ defmodule BrandoAdmin.Components.Form.DraftRecovery do
       phx-click="draft_open"
       phx-target={@target}
       aria-expanded={to_string(@state.open?)}
+      aria-label={history_label(@state.candidates)}
+      data-tooltip={history_label(@state.candidates)}
+      data-compact={@compact && "true"}
     >
       <Brando.HTML.Icon.icon name="rotate-ccw-clock" class="draft-icon" />
-      {history_label(@state.candidates)}
+      <span :if={@compact && actionable(@state.candidates) != []} class="draft-history-indicator" aria-hidden="true"></span>
+      <span :if={!@compact}>{history_label(@state.candidates)}</span>
     </button>
+    """
+  end
+
+  defp offline_message(assigns) do
+    ~H"""
+    <span class="draft-offline-idle">{gettext("Connection interrupted — reconnecting…")}</span>
+    <span class="draft-offline-pending">{gettext(
+      "Changes are waiting to reach recovery storage. Keep this editor open while reconnecting."
+    )}</span>
     """
   end
 

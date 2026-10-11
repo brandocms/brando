@@ -51,8 +51,9 @@
 }
 
 /* The toolbar's controls share the listing filters' 38px box */
-.calendar-toolbar :is(.calendar-step, .calendar-today, select.admin-select) {
+#calendar-workspace.calendar-workspace .calendar-toolbar :is(.calendar-step, .calendar-today, .calendar-views a, select.admin-select) {
   height: 38px;
+  min-height: 38px;
 }
 
 .calendar-step {
@@ -218,6 +219,8 @@
   height: 24px;
   border-radius: 12px;
   color: var(--brando-ink);
+  font-size: 11px;
+  line-height: 1;
   font-variant-numeric: tabular-nums;
 }
 
@@ -348,11 +351,19 @@
   }
 }
 
-.calendar-empty {
-  padding: 12px 16px;
+.calendar-workspace .calendar-empty {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 56px;
+  padding: 16px;
   border-top: 1px solid var(--brando-line-soft);
+  background: var(--brando-surface-shaded);
   color: var(--brando-muted);
   font-size: 13px;
+  line-height: 20px;
+
+  [data-icon] { flex: none; width: 18px; height: 18px; color: var(--brando-faint); }
 }
 
 /* "Move to…": the day, what the move does, and the action */
@@ -391,6 +402,10 @@
 }
 
 @media (pointer: coarse) {
+  #calendar-workspace.calendar-workspace .calendar-toolbar :is(.calendar-step, .calendar-today, .calendar-views a, select.admin-select) {
+    height: 40px;
+    min-height: 40px;
+  }
   .calendar-item-move {
     top: 0;
     right: 0;

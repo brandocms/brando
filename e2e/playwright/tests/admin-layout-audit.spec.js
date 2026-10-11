@@ -20,7 +20,7 @@ test('listing filters align, disclose children by keyboard and retain creators o
   await syncLV(page)
   const filter = page.locator('.list-tools .filter').first()
   const sort = page.locator('.sorts .simple-dropdown-button')
-  await sameHeight([filter, sort], 38)
+  await sameHeight([filter, sort], 32)
   expect((await filter.boundingBox()).y).toBeCloseTo((await sort.boundingBox()).y, 0)
   // A status dot is as tall as a capital letter of its label and level with it
   for (const status of await page.locator('.statuses button').all()) {

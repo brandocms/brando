@@ -43,7 +43,7 @@ defmodule BrandoAdmin.Components.Form.Input.Vars do
     ~H"""
     <fieldset>
       <Primitives.field_base field={@field} label={@label} instructions={@instructions} class="subform subform--vars">
-        <div id={"#{@field.id}-list"} class="vars-list" phx-hook="Brando.TableRows">
+        <div id={"#{@field.id}-list"} class={["vars-list", @empty_subform && "is-empty"]} phx-hook="Brando.TableRows">
           <div
             id={"#{@field.id}-sortable"}
             class="vars-list-body"

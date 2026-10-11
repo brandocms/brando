@@ -56,17 +56,19 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
           invalid_options={@invalid_options}
           target={@myself}
         />
-        <.selected_options
-          selected_options={@selected_options}
-          relation_fields={@relation_fields}
-          relation_type={@relation_type}
-          relation_key={@relation_key}
-          input_options={@input_options}
-          wrapped_labels={@wrapped_labels}
-          sequenced?={@sequenced?}
-          field={@field}
-          empty_array?={@presets != [] && (@array_touched || is_list(@field.value))}
-        />
+        <div id={"#{@field.id}-selected-rows"} phx-hook="Brando.TableRows" data-row-selector=".selected-label, .identifier">
+          <.selected_options
+            selected_options={@selected_options}
+            relation_fields={@relation_fields}
+            relation_type={@relation_type}
+            relation_key={@relation_key}
+            input_options={@input_options}
+            wrapped_labels={@wrapped_labels}
+            sequenced?={@sequenced?}
+            field={@field}
+            empty_array?={@presets != [] && (@array_touched || is_list(@field.value))}
+          />
+        </div>
 
         <details :if={@presets != []} class="tiptap-preset-picker">
           <summary>{gettext("Add preset…")}</summary>

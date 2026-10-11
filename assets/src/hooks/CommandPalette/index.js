@@ -22,6 +22,8 @@
  * user and site, and sent to the server when the palette opens.
  */
 import { bindShortcut } from '../../shortcuts'
+import { openDialog, closeDialog, resetDialog } from '../../nativeDialogMotion'
+import { motionDuration, prefersReducedMotion } from '../../motion'
 
 const RECENT_LIMIT = 12
 
@@ -30,13 +32,16 @@ export default () => ({
     this.dialog = this.el.querySelector('dialog')
     this.input = this.el.querySelector('#command-palette-input')
     this.results = this.el.querySelector('#command-palette-results')
+    this.body = this.el.querySelector('#command-palette-body')
+    this.openVersion = 0
+    this.loading = false
     this.index = 0
     this.query = this.results.dataset.query
     this.pendingEnter = null
     this.restoreFocus = true
 
     this.unbindShortcut = bindShortcut('palette', () => {
-      if (this.dialog.open) this.close()
+      if (this.dialog.open && !this.closing) this.close()
       else this.open()
     })
 
@@ -44,8 +49,20 @@ export default () => ({
     this.el.addEventListener('brando:command-palette:open', this.onOpenRequest)
 
     this.input.addEventListener('keydown', e => this.onKey(e))
+    // Text typed while the opening loads is searched from here too, so the
+    // reply that holds its results is known (`searchedFor`).
+    this.input.addEventListener('input', () => {
+      if (!this.loading || !this.openReady) return
+      clearTimeout(this.searchTimer)
+      this.searchTimer = setTimeout(() => this.searchWhileLoading(), 100)
+    })
 
     this.dialog.addEventListener('click', e => {
+      if (this.closing) {
+        e.preventDefault()
+        e.stopPropagation()
+        return
+      }
       // A click on the backdrop lands on the dialog itself
       if (e.target === this.dialog || e.target.closest('[data-palette-close]')) {
         this.close()
@@ -73,6 +90,11 @@ export default () => ({
     })
 
     this.dialog.addEventListener('close', () => {
+      resetDialog(this)
+      clearTimeout(this.searchTimer)
+      this.openVersion++
+      this.revealAnimation?.cancel()
+      this.revealAnimation = null
       const opener = this.opener
       this.opener = null
       this.pendingEnter = null
@@ -80,6 +102,11 @@ export default () => ({
       if (this.restoreFocus && opener && opener.isConnected && typeof opener.focus === 'function') {
         opener.focus({ preventScroll: true })
       }
+    })
+
+    this.dialog.addEventListener('cancel', event => {
+      event.preventDefault()
+      this.close()
     })
 
     // The rows change under us: new results, or a patch. The selection goes
@@ -100,30 +127,93 @@ export default () => ({
   },
 
   destroyed() {
+    this.openVersion++
     this.unbindShortcut?.()
     window.removeEventListener('phx:page-loading-stop', this.onPage)
     this.observer?.disconnect()
     clearTimeout(this.rememberTimer)
+    clearTimeout(this.closeTimer)
+    clearTimeout(this.searchTimer)
+    this.revealAnimation?.cancel()
+  },
+
+  reconnected() {
+    // An open pushed while offline has no reply callback. Reinitialize it,
+    // then restore any query typed while the connection was unavailable.
+    if (this.dialog.open) {
+      this.beginLoading()
+      this.requestOpen()
+    }
   },
 
   open() {
-    if (this.dialog.open) return
+    if (this.dialog.open) {
+      if (this.closing) {
+        openDialog(this)
+        this.input.focus()
+        this.sync()
+      }
+      return
+    }
     this.opener = document.activeElement
     this.restoreFocus = true
     this.input.value = ''
     this.index = 0
-    this.dialog.showModal()
+    this.beginLoading()
+    openDialog(this)
     this.input.focus()
-    this.pushEvent('open', { recent: this.readRecent(), path: window.location.pathname })
+    this.requestOpen()
+  },
+
+  beginLoading() {
+    this.revealAnimation?.cancel()
+    this.revealAnimation = null
+    this.loading = true
+    this.openReady = false
+    this.searchedFor = null
+    clearTimeout(this.searchTimer)
+    const js = this.js()
+    js.setAttribute(this.body, 'data-loading', '')
+    js.setAttribute(this.body, 'aria-busy', 'true')
+    js.setAttribute(this.results, 'inert', '')
+    js.removeAttribute(this.input, 'aria-activedescendant')
+  },
+
+  requestOpen() {
+    const version = ++this.openVersion
+    this.pushEvent('open', { recent: this.readRecent(), path: window.location.pathname }, () => {
+      if (version !== this.openVersion || !this.dialog.open) return
+      this.openReady = true
+      // The reply holds the rows for an empty query. Text typed meanwhile
+      // (or offline, before a reconnect) needs a search of its own.
+      if (this.input.value) this.searchWhileLoading()
+      else this.searchedFor = ''
+      this.sync()
+    })
+  },
+
+  // The results' `data-query` can lag the rows when replies from an earlier
+  // opening are still arriving, so loading ends on a reply to a search pushed
+  // from here, for the current opening and text.
+  searchWhileLoading() {
+    const version = this.openVersion
+    const q = this.input.value
+    this.pushEvent('search', { q }, () => {
+      if (version !== this.openVersion || !this.dialog.open) return
+      this.searchedFor = q
+      this.sync()
+    })
   },
 
   close({ restoreFocus = true } = {}) {
-    if (!this.dialog.open) return
+    if (!this.dialog.open || this.closing) return
     this.restoreFocus = restoreFocus
-    this.dialog.close()
+    this.pendingEnter = null
+    closeDialog(this)
   },
 
   onKey(e) {
+    if (this.closing) return
     if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
       e.preventDefault()
       const items = this.items()
@@ -141,6 +231,7 @@ export default () => ({
   },
 
   activate(newTab) {
+    if (!this.dialog.open || this.closing || this.loading) return
     const item = this.items()[this.index]
     if (!item) return
 
@@ -153,8 +244,7 @@ export default () => ({
       window.open(item.href, '_blank', 'noopener')
       this.close()
     } else {
-      this.close({ restoreFocus: false })
-      // The row is a LiveView link: clicking it navigates in place
+      // The delegated click closes the palette and lets LiveView navigate.
       item.click()
     }
   },
@@ -170,17 +260,29 @@ export default () => ({
   },
 
   stale() {
-    return this.results.dataset.query !== this.input.value
+    return this.loading || this.results.dataset.query !== this.input.value
   },
 
   sync() {
+    if (this.loading && this.openReady && this.dialog.open && !this.closing && this.searchedFor === this.input.value) {
+      const from = this.body.getBoundingClientRect().height
+      this.loading = false
+      const js = this.js()
+      js.removeAttribute(this.body, 'data-loading')
+      js.setAttribute(this.body, 'aria-busy', 'false')
+      js.removeAttribute(this.results, 'inert')
+      this.revealHeight(from)
+    } else if (this.revealAnimation && !this.loading) {
+      // Typing during the initial reveal can change its destination height.
+      this.revealHeight(this.body.getBoundingClientRect().height)
+    }
     if (this.results.dataset.query !== this.query) {
       this.query = this.results.dataset.query
       this.index = 0
     }
     this.mark(false)
 
-    if (this.pendingEnter && !this.stale()) {
+    if (this.dialog.open && !this.closing && this.pendingEnter && !this.stale()) {
       const { newTab } = this.pendingEnter
       this.pendingEnter = null
       this.activate(newTab)
@@ -188,7 +290,24 @@ export default () => ({
   },
 
   items() {
-    return Array.from(this.results.querySelectorAll('[data-palette-item]'))
+    return this.loading ? [] : Array.from(this.results.querySelectorAll('[data-palette-item]'))
+  },
+
+  revealHeight(from) {
+    const to = this.results.getBoundingClientRect().height
+    if (this.revealAnimation && this.revealHeightTarget === to) return
+    this.revealAnimation?.cancel()
+    this.revealAnimation = null
+    const duration = prefersReducedMotion() ? 0 : motionDuration(this.body, '--motion-enter')
+    if (duration <= 1 || Math.abs(from - to) < 1) return
+    this.revealHeightTarget = to
+    const animation = this.body.animate([{ height: `${from}px` }, { height: `${to}px` }], {
+      duration, easing: 'cubic-bezier(0.22, 1, 0.36, 1)',
+    })
+    this.revealAnimation = animation
+    animation.finished.then(() => {
+      if (this.revealAnimation === animation) this.revealAnimation = null
+    }, () => {})
   },
 
   mark(scroll) {

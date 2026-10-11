@@ -75,12 +75,15 @@ test.describe('Block outline: moving a block between containers', () => {
       children(containers(page).nth(to)).evaluateAll(blocks => blocks.map(block => block.dataset.uid))
 
     // Open the outline from the block field's actions.
-    await page.locator('[data-ui-dropdown-toggle$="-actions-dropdown"]').first().click()
+    await page.getByRole('button', { name: 'Config', exact: true }).first().click()
     await page.getByRole('button', { name: 'Block outline' }).click()
     await expect(page.locator(`#outline-${movedUid}`)).toBeVisible()
 
     // Drag the block's outline row into the other container's list.
     const source = page.locator(`#outline-${movedUid} > .outline-item-row`)
+    // Coordinate-based mouse actions do not wait for the drawer's slide to
+    // settle; use the same actionability check as a normal click first.
+    await source.click({ trial: true })
     const targetList = page.locator(`#outline-children-${targetUid}`)
     const targetRow = targetList.locator('.outline-item-row').first()
     const sourceBox = await source.boundingBox()
