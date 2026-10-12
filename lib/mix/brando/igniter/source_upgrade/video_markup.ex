@@ -52,8 +52,8 @@ if Code.ensure_loaded?(Igniter) do
       preloads, and `src` otherwise, so code that reads `data-src` from the
       `<video>` gets `null` (a video with `src="null"` does not play). Read it
       from the wrapper, `el.closest('[data-smart-video]').dataset.src`, or fall
-      back to it. File videos converted from the old block editor stay muted,
-      as the old markup always rendered them.
+      back to it. File videos converted from the old block editor without a
+      play button or controls stay muted, as the old markup rendered them.
       """
     end
 
