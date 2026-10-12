@@ -19,6 +19,8 @@ if Code.ensure_loaded?(Igniter) do
     alias Igniter.Project.Module, as: ProjectModule
     alias Igniter.Refactors.Rename
     alias Mix.Brando.Igniter.FloristConfig
+    alias Mix.Brando.Igniter.SourceUpgrade.NavigationItems
+    alias Mix.Brando.Igniter.SourceUpgrade.PageVars
     alias Mix.Brando.Igniter.TemplateCode
     alias Rewrite.Source
     alias Sourceror.Zipper
@@ -948,7 +950,8 @@ if Code.ensure_loaded?(Igniter) do
     defp keyword_entries({:__block__, _, [entries]}) when is_list(entries), do: entries
     defp keyword_entries(entries) when is_list(entries), do: entries
 
-    defp find_blueprints(igniter) do
+    @doc "Finds every module that `use Brando.Blueprint`: `{igniter, modules}`."
+    def find_blueprints(igniter) do
       ProjectModule.find_all_matching_modules(igniter, fn _module, zipper ->
         case Igniter.Code.Module.move_to_use(zipper, Brando.Blueprint) do
           {:ok, _zipper} -> true
@@ -1170,9 +1173,17 @@ if Code.ensure_loaded?(Igniter) do
     Villain attributes; a Blueprint an earlier run already moved is matched
     by its block relations.
 
-    It warns, with file and line, about the reads it left, navigation items
-    read as 0.53 structs (`item.url`), and page var reads, which need the
-    page loaded with `preload: [:vars]`.
+    Navigation item reads (`item.url`, `item.title`, `item.open_in_new_window`,
+    `item.items`) become `Brando.HTML.get_menu_item_url(item)` and the other
+    link helpers, and `item.children`, for a variable bound by a generator
+    over a navigation's or menu's `items` (`Mix.Brando.Igniter.SourceUpgrade.NavigationItems`).
+
+    When a template reads `@page`'s vars, `:vars` is added to the `preload`
+    of each `Pages.get_page/1` call written with a map
+    (`Mix.Brando.Igniter.SourceUpgrade.PageVars`).
+
+    It warns, with file and line, about the reads it left, and page var
+    reads it cannot tell are loaded with `preload: [:vars]`.
     """
     def upgrade_054_templates(igniter) do
       {igniter, blueprints} = find_blueprints(igniter)
@@ -1197,7 +1208,10 @@ if Code.ensure_loaded?(Igniter) do
         end)
 
       html_fields = for {_singular, renames} <- fields, {html, _rendered} <- renames, uniq: true, do: html
-      warn_054_template_reads(igniter, html_fields, ambiguous)
+
+      igniter
+      |> NavigationItems.rewrite(template_paths(igniter))
+      |> warn_054_template_reads(html_fields, ambiguous)
     end
 
     # `{singular, [{html_field, rendered_field}]}` for one Blueprint.
@@ -1349,12 +1363,13 @@ if Code.ensure_loaded?(Igniter) do
     defp warn_054_template_reads(igniter, html_fields, ambiguous) do
       fields = Enum.map_join(Enum.uniq(["html" | html_fields]), "|", &Regex.escape/1)
       html_read = ~r/(?<![\w.:"'\/@])@?[a-z_]\w*(?:\.[a-z_]\w*)*\.(?:#{fields})(?![\w.(])/
-      var_read = ~r/\bPages\.(get_var|has_var\?)\(/
 
       sources =
         igniter
         |> template_paths()
         |> Enum.map(&{&1, igniter.rewrite |> Rewrite.source!(&1) |> Source.get(:content)})
+
+      {igniter, page_vars} = PageVars.preload(igniter, sources)
 
       [
         {"""
@@ -1366,16 +1381,14 @@ if Code.ensure_loaded?(Igniter) do
          """, findings(sources, fn _content -> &Regex.match?(html_read, &1) end)},
         {"""
          Navigation items. An item no longer has `url`, `title`,
-         `open_in_new_window` or `items`; it holds a link var. Use
-         `Brando.HTML.get_menu_item_url(item)`, `get_menu_item_text(item)`,
-         `get_menu_item_target_blank(item)` and `item.children`:
-         """, findings(sources, &navigation_item_reads/1)},
-        {"""
-         Page vars. They are an association: load the page with
-         `preload: [:alternate_entries, :vars]` (or `Brando.Repo.preload(page, :vars)`)
-         before `get_var/2` or `has_var?/2`, which raise otherwise:
-         """, findings(sources, fn _content -> &Regex.match?(var_read, &1) end)}
+         `open_in_new_window` or `items`; it holds a link var. The task rewrote
+         these reads where the file binds the item name only to navigation
+         items; use `Brando.HTML.get_menu_item_url(item)`,
+         `get_menu_item_text(item)`, `get_menu_item_target_blank(item)` and
+         `item.children` in these lines:
+         """, findings(sources, &NavigationItems.read?/1)}
       ]
+      |> Kernel.++(page_vars)
       |> Enum.reject(fn {_text, findings} -> findings == [] end)
       |> case do
         [] ->
@@ -1404,23 +1417,6 @@ if Code.ensure_loaded?(Igniter) do
           {line, number} <- content |> String.split("\n") |> Enum.with_index(1),
           matches?.(line),
           do: "#{path}:#{number}: #{String.trim(line)}"
-    end
-
-    # `item.url` where `item` comes from a navigation's or menu's `items`.
-    defp navigation_item_reads(content) do
-      variables =
-        for [_, variable, source] <- Regex.scan(~r/\b([a-z_]\w*)\s*<-\s*(@?[\w.\[\]"]*\.items)\b/, content),
-            source =~ ~r/nav|menu/i,
-            uniq: true,
-            do: Regex.escape(variable)
-
-      case variables do
-        [] ->
-          fn _line -> false end
-
-        variables ->
-          &Regex.match?(~r/(?<![\w.])(#{Enum.join(variables, "|")})\.(url|title|open_in_new_window|items)\b/, &1)
-      end
     end
 
     defp format_findings(findings) do
@@ -2099,7 +2095,7 @@ if Code.ensure_loaded?(Igniter) do
 
     def rewrite_font_urls(igniter) do
       igniter
-      |> Igniter.include_glob("assets/**/*.{css,pcss,sass,scss}")
+      |> include_asset_glob("assets/**/*.{css,pcss,sass,scss}")
       |> Igniter.include_glob("lib/**/*.{eex,ex,exs,heex,leex}")
       |> rewrite_matching_sources(&font_source?/1, fn content ->
         Regex.replace(@font_vsn_regex, content, "\\1")
@@ -2111,7 +2107,7 @@ if Code.ensure_loaded?(Igniter) do
 
       igniter
       |> Igniter.include_glob("assets/package.json")
-      |> Igniter.include_glob("assets/**/package.json")
+      |> include_asset_glob("assets/**/package.json")
       |> rewrite_matching_sources(&assets_package_json?/1, fn content ->
         Regex.replace(@live_view_package_regex, content, fn _match, prefix, suffix ->
           prefix <> version <> suffix
@@ -2212,7 +2208,7 @@ if Code.ensure_loaded?(Igniter) do
 
     defp font_source?(path) do
       (String.starts_with?(path, "assets/") or String.starts_with?(path, "lib/")) and
-        Path.extname(path) in @font_source_extensions
+        Path.extname(path) in @font_source_extensions and not dependency_path?(path)
     end
 
     defp vite_config?(path) do
@@ -2220,8 +2216,25 @@ if Code.ensure_loaded?(Igniter) do
     end
 
     defp assets_package_json?(path) do
-      String.starts_with?(path, "assets/") and Path.basename(path) == "package.json"
+      String.starts_with?(path, "assets/") and Path.basename(path) == "package.json" and
+        not dependency_path?(path)
     end
+
+    # Installed packages under `assets/` are not the application's source, and
+    # a glob over them reads thousands of files, so list the files and leave
+    # `node_modules` and Yalc's store out.
+    defp include_asset_glob(igniter, glob) do
+      if igniter.assigns[:test_mode?] do
+        Igniter.include_glob(igniter, glob)
+      else
+        glob
+        |> Path.wildcard()
+        |> Enum.reject(&dependency_path?/1)
+        |> Enum.reduce(igniter, &Igniter.include_existing_file(&2, &1))
+      end
+    end
+
+    defp dependency_path?(path), do: path |> Path.split() |> Enum.any?(&(&1 in ["node_modules", ".yalc"]))
 
     def rewrite_preview_targets(igniter) do
       rewriting_module = Igniter.Libs.Phoenix.web_module_name(igniter, LivePreview)

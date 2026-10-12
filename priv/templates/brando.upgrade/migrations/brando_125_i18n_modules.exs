@@ -39,7 +39,7 @@ defmodule Brando.Repo.Migrations.I18nModules do
       from(m in "content_modules", where: m.id == ^module.id)
       |> Brando.Repo.update_all(set: [
         i18n_name: i18n_name,
-        i18n_namespace: module.namespace == "general" && nil || i18n_namespace,
+        i18n_namespace: i18n_namespace,
         i18n_help_text: i18n_help_text
         ])
     end

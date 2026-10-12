@@ -55,11 +55,11 @@ defmodule Brando.Images.AdoptionTest do
       assert %{adopted: 0, differ: 6, skipped: 0} = reasons.counts
 
       assert reasons.verdicts == %{
-               missing_key.id => {:differ, :size_keys},
-               extra_key.id => {:differ, :size_keys},
-               formats.id => {:differ, :formats},
-               dimensions.id => {:differ, {:dimensions, "small"}},
-               cropped.id => {:differ, {:dimensions, "thumb"}},
+               missing_key.id => {:differ, {:size_keys, ["xlarge"], []}},
+               extra_key.id => {:differ, {:size_keys, [], ["hero"]}},
+               formats.id => {:differ, {:formats, [:jpg, :webp], [:jpg]}},
+               dimensions.id => {:differ, {:dimensions, "small", {640, 480}, {700, 525}}},
+               cropped.id => {:differ, {:dimensions, "thumb", {400, 300}, {400, 400}}},
                missing_file.id => {:differ, {:missing, "medium"}}
              }
 
@@ -76,7 +76,7 @@ defmodule Brando.Images.AdoptionTest do
       reasons = collect_differ(fn on_differ -> Processing.adopt_unrecorded(on_differ: on_differ) end)
 
       assert reasons.counts == %{adopted: 1, differ: 1, skipped: 0}
-      assert reasons.verdicts == %{unmeasured.id => {:differ, {:dimensions, "large"}}}
+      assert reasons.verdicts == %{unmeasured.id => {:differ, {:dimensions, "large", nil, nil}}}
       assert Repo.get!(Image, measured.id).config_fingerprint
     end
 
@@ -195,7 +195,7 @@ defmodule Brando.Images.AdoptionTest do
       end
 
       image = unrecorded("sideways-other", original: {1200, 900}, sizes: %{"medium" => {400, 300}})
-      assert Adoption.check(image, config) == {:differ, {:dimensions, "medium"}}
+      assert Adoption.check(image, config) == {:differ, {:dimensions, "medium", {400, 300}, {700, 525}}}
     end
 
     test "records only: formats and size keys, without reading files" do

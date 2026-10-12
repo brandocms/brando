@@ -105,8 +105,8 @@ defmodule Brando.Repo.Migrations.MigrateOldBlocksToAssocs do
          parent_id,
          table_name,
          entry_id,
-         new_block_rel \\ "blocks",
-         wrapper_module_id \\ nil
+         new_block_rel,
+         wrapper_module_id
        ) do
     join_source = Enum.join([table_name, new_block_rel], "_")
 

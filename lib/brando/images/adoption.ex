@@ -54,6 +54,18 @@ defmodule Brando.Images.Adoption do
   alias Brando.Images.Processing
   alias Brando.Images.Size
 
+  @typedoc """
+  What `check/3` found. A difference names what differs:
+
+    * `{:formats, has, config}` - the image's formats and the config's;
+    * `{:size_keys, missing, extra}` - the config's size keys the image lacks,
+      and the image's keys the config no longer has;
+    * `{:missing, key}` - a size's file is missing;
+    * `{:dimensions, key, actual, config}` - a size's `{width, height}` and
+      what processing makes of the original with today's spec; either is
+      `nil` when it can't be read or worked out;
+    * `{:error, message}` - the check raised.
+  """
   @type verdict :: :match | {:differ, reason :: term} | {:skipped, reason :: term}
   @type counts :: %{adopted: non_neg_integer, differ: non_neg_integer, skipped: non_neg_integer}
 
@@ -237,17 +249,24 @@ defmodule Brando.Images.Adoption do
 
   defp same_formats(%{path: path, formats: formats}, config) when is_binary(path) and is_list(formats) do
     expected = Images.get_processed_formats(path, config.formats)
-    if Enum.sort(formats) == Enum.sort(expected), do: :ok, else: {:differ, :formats}
+    if Enum.sort(formats) == Enum.sort(expected), do: :ok, else: {:differ, {:formats, formats, expected}}
   end
 
-  defp same_formats(_image, _config), do: {:differ, :formats}
+  defp same_formats(image, config), do: {:differ, {:formats, image.formats, config.formats}}
 
   defp same_size_keys(%{sizes: sizes}, %{sizes: config_sizes}) when is_map(sizes) and is_map(config_sizes) do
     keys = fn map -> map |> Map.keys() |> Enum.map(&to_string/1) |> Enum.sort() end
-    if keys.(sizes) == keys.(config_sizes), do: :ok, else: {:differ, :size_keys}
+    {has, expected} = {keys.(sizes), keys.(config_sizes)}
+
+    if has == expected,
+      do: :ok,
+      else: {:differ, {:size_keys, expected -- has, has -- expected}}
   end
 
-  defp same_size_keys(_image, _config), do: {:differ, :size_keys}
+  defp same_size_keys(image, config) do
+    keys = fn map -> if is_map(map), do: map |> Map.keys() |> Enum.map(&to_string/1) |> Enum.sort(), else: [] end
+    {:differ, {:size_keys, keys.(config.sizes) -- keys.(image.sizes), keys.(image.sizes) -- keys.(config.sizes)}}
+  end
 
   defp check_files(image, config) do
     header_format = Enum.min_by(image.formats, &(Enum.find_index(@format_preference, fn f -> f == &1 end) || 99))
@@ -288,12 +307,24 @@ defmodule Brando.Images.Adoption do
 
   defp check_dimensions(image, key, file, size_cfg, _format) do
     with {:ok, original} <- original_dimensions(image),
-         {:ok, actual} <- header_dimensions(file),
-         true <- Enum.any?(candidates(size_cfg, original), fn {spec, dimensions} -> fits?(spec, dimensions, actual) end) do
-      :ok
+         {:ok, actual} <- header_dimensions(file) do
+      dimensions_verdict(key, size_cfg, original, actual)
     else
-      _ -> {:differ, {:dimensions, key}}
+      _ -> {:differ, {:dimensions, key, nil, nil}}
     end
+  end
+
+  defp dimensions_verdict(key, size_cfg, original, actual) do
+    if Enum.any?(candidates(size_cfg, original), fn {spec, dimensions} -> fits?(spec, dimensions, actual) end),
+      do: :ok,
+      else: {:differ, {:dimensions, key, actual, processed_dimensions(size_cfg, original)}}
+  end
+
+  # What processing makes of the original today, for saying what was expected.
+  defp processed_dimensions(size_cfg, original) do
+    Sizing.processed_dimensions(size_cfg, original)
+  rescue
+    _error -> nil
   end
 
   defp original_dimensions(%{width: width, height: height})

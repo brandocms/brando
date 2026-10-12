@@ -97,6 +97,13 @@ from its `mix.exs`):
 {:igniter, "~> 0.8", only: [:dev, :test]},
 ```
 
+Or run `elixir /path/to/brando/scripts/prepare_055_deps.exs --brando-path
+/path/to/brando` (or `--brando-ref <sha>`) from the application's root. It makes
+these edits as text, and those in the list below, prints each one, lists what
+`mix.lock` still has on HTTPoison or hackney 1, and leaves
+`mix deps.unlock --all && mix deps.get` for you to run. `--dry-run` writes
+nothing.
+
 Brando pins `phoenix` 1.8.15 and `phoenix_live_view` 1.2.12 exactly. If the
 application also declares `sentry` (`~> 13.0`), `oban` (`~> 2.23`), `cachex`
 (`~> 4.0`), `image`, `req` or another of Brando's dependencies, compare it with
@@ -113,9 +120,10 @@ Brando's `mix.exs` as well. In particular:
 - Igniter is an optional Brando dependency the source tasks are built on.
 - Brando depends on `ex_aws` 2.7, which accepts only hackney 4 whenever
   anything else brings hackney in. Packages still on HTTPoison or hackney 1.x,
-  such as `ex_chimp` 0.1, fail with `version solving failed`. Upgrade them to a
-  release on hackney 4 or Req, or move those calls to Req, which Brando
-  already depends on.
+  such as `ex_chimp` 0.1, fail with `version solving failed`. Bump `ex_chimp`
+  to `{:ex_chimp, "~> 0.2.0"}`, which uses Req with the same API. Upgrade
+  other such packages to a release on hackney 4 or Req, or move those calls to
+  Req, which Brando already depends on.
 
 The old lock holds packages at versions the new Brando cannot use (`swoosh`
 1.14, or `elixir_make` 0.6, which `vix` and `image` cannot use), and Mix
@@ -153,6 +161,12 @@ nothing.
 
 Brando's optional task and helper modules automatically request recompilation
 when Igniter becomes available. The dependency remains optional at runtime.
+`mix brando.migrate55` compiles Brando once more when `mix brando.migrate54`
+has edited `config/brando.exs` (to add `repo_module`, say): Mix recompiles a
+dependency whose compile-time configuration changed.
+
+If the application has never been run through `mix format`, run it and commit
+the result before the source tasks, so their diff holds only their changes.
 
 `mix brando.migrate54` covers the 0.53 to 0.54 source changes. It:
 
@@ -180,16 +194,51 @@ when Igniter becomes available. The dependency remains optional at runtime.
 - rewrites reads of a Villain HTML field (`entry.html`, `@entry.html`,
   `hero_html`) in a moved schema's own templates to `rendered_blocks`
   (`rendered_hero_blocks`), and lists, with file and line, the `.html` reads
-  it left, 0.53-style navigation item reads (`item.url`, `item.title`, …) and
-  `Brando.Pages.get_var` calls (the page needs `preload: [:alternate_entries,
-  :vars]`);
+  it left;
+- rewrites 0.53 navigation item reads inside `for item <- @navigation.items`
+  (and `:for`) to `Brando.HTML.get_menu_item_url/1`, `get_menu_item_text/1`,
+  `get_menu_item_target_blank/1` and `item.children`, and, when templates read
+  `@page` vars, adds `:vars` to the `preload` of the `Pages.get_page/1` calls
+  written with a map. Reads it cannot rewrite, and page loads it cannot
+  update, are listed with file and line;
 - converts each admin Create/Update LiveView pair the generator made and the
-  application did not edit into one `<Name>FormLive`, deletes the pair and
-  points both routes at the new module. Edited pairs, and two schemas that
-  would share a route helper (two `Category` schemas, say), are listed with
-  the fix: a `scope …, as:` in the router and `router_scope` on the
-  Blueprint. Without the form route, the listing's edit links crash, and
-  `mix brando.doctor` reports each Blueprint whose route helper is missing.
+  application did not edit into one `<Name>FormLive`, written beside the
+  `UpdateLive` it replaces, deletes the pair and points both routes at the new
+  module. Edited pairs are listed. When two FormLives would share a route
+  helper (two `Category` schemas, say) and one is routed in a plain
+  `scope "/menu", MyAppAdmin.Menu do` holding only that domain's admin
+  LiveViews, the task adds `as: :menu` to the scope and `router_scope: :menu`
+  to every Blueprint routed in it. Other shapes are listed with the same fix.
+  Without the form route, the listing's edit links crash, and
+  `mix brando.doctor` reports each Blueprint whose route helper is missing;
+- rewrites a listing's 0.53 `field` and `template` columns into a row
+  component when it can convert every column: `component
+  &__MODULE__.listing_row/1` in the listing and a `listing_row/1` at the end of
+  the module. An `:image` field becomes `<.cover>`, a `:url` field `<.url>`,
+  and a Liquid template whose only link goes to the entry's admin update form
+  becomes `<.update_link>`, with the markup before the link in its `:before`
+  slot (`{{ entry.a.b }}` becomes `{@entry.a && @entry.a.b}`,
+  `{% if entry.x %}` an `:if`). Language columns and inline `<svg>` icons in
+  badges are dropped. Any other listing is left as it is and listed with file
+  and line;
+- removes listing actions whose event is `edit_entry`, `duplicate_entry` or
+  `delete_entry` from listings that keep `default_actions`, which already
+  offers them, and names each one; an action with options beyond `label`,
+  `event` and `confirm` is listed instead;
+- writes Blueprint labels given as `gettext("…")` as `t("…")` where the admin
+  translates them in the schema's domain (tab names, alerts, `label:`,
+  `placeholder:` and `instructions:`, listing filter, action, sort and export
+  labels, action confirmations, `translate` values), and lists the Gettext
+  calls there it cannot rewrite. `gettext/1` extracts into `default`, so such
+  a label stayed in English;
+- deletes a Phoenix.View-era `ErrorHelpers` module, `view/0` and
+  `view_helpers/0` when nothing uses them. Otherwise it replaces their
+  `use Phoenix.HTML` with `import Phoenix.HTML`, `import Phoenix.HTML.Form` and
+  `use PhoenixHTMLHelpers` and asks you to add `{:phoenix_html_helpers,
+  "~> 1.0"}`. It lists any other `use Phoenix.HTML`;
+- adds `listeners: [Phoenix.CodeReloader]` to `project/0` (Phoenix 1.8's code
+  reloader warns at boot without it), turns `use Mix.Config` into
+  `import Config`, and Logger's `:warn` level into `:warning`.
 
 `mix brando.migrate55` covers the 0.54 to 0.55 source changes. It:
 
@@ -202,9 +251,24 @@ when Igniter becomes available. The dependency remains optional at runtime.
 - defaults an unconfigured Swoosh API client to `Swoosh.ApiClient.Req` and
   pins declared `phoenix_live_view` dependencies in `assets/**/package.json`
   to the loaded server version;
-- points Brando at the application's `Mailer` when it has one
-  (`config :brando, mailer: MyApp.Mailer`); set the address it sends from
-  yourself, as described in [Email](email.md);
+- points Brando at the application's `Mailer` (`config :brando, mailer:
+  MyApp.Mailer`), or, when it has none, creates `MyApp.Mailer` with the local
+  adapter in development and the test adapter in test, and writes a
+  placeholder sender (`noreply@example.com`). Replace the placeholder with an
+  address your mail provider sends for, and configure the mailer's production
+  adapter in `runtime.exs`, as described in [Email](email.md);
+  `mix brando.doctor` warns until you do;
+- gives calls to the application's `list_*` queries that order a Sequenced
+  schema only by `sequence` a tiebreak (`"asc sequence, desc inserted_at"`, or
+  `"asc sequence, asc id"` without timestamps), and lists the calls with no
+  `order:` with file and line (see the ordering note in section 3);
+- lists front-end scripts under `assets/` that read `data-src` from a
+  `<video>`. A file video's `data-src` is on its `[data-smart-video]` wrapper,
+  and the `<video>` carries `src` unless it preloads, so read
+  `el.closest('[data-smart-video]').dataset.src` or fall back to it;
+- warns when `config/runtime.exs` reads the Repo `url:` from the environment
+  in `:test` too, and when `test_paths` names a missing directory (see
+  [Test and development databases](#test-and-development-databases));
 - adds `plug Brando.Plug.Markdown` and `plug Brando.Plug.IndexNow` to the
   endpoint, before the router (and before `Brando.Plug.Health`), unless it
   already has them;
@@ -217,9 +281,17 @@ when Igniter becomes available. The dependency remains optional at runtime.
   (slideshows became `gallery` in `brando_77`). Delete those; nothing calls
   them;
 - removes the Sharp `processor_module` setting, as `mix brando.migrate54` does;
-- copies each Blueprint's translations from its 0.54 `*_naming`, `*_forms`
-  and `*_listings` catalogs into the 0.55 domain for its schema, in every
-  backend and locale (see [Reconcile Gettext catalogs](#5-reconcile-gettext-catalogs));
+- copies each Blueprint's translations from its 0.53 `*_naming`, `*_forms`
+  and `*_listings` catalogs, and the `default` domain's translations of its
+  `t/1` labels, into its schema's domain, in every backend and locale that has
+  it (see [Reconcile Gettext catalogs](#5-reconcile-gettext-catalogs));
+- sets `persist_identifier false` on Blueprints with no admin editor (no
+  `:update` form route and no admin LiveView), no `absolute_url`, and nothing
+  that could select their entries (no `:selection` or `:single` datasource,
+  no `:entries` relation or input that could include them), and lists the
+  Blueprints it could not decide. `mix brando.identifiers.sync` then deletes
+  such a Blueprint's existing identifiers, and any pick that still points at
+  them;
 - completes `Plural-Forms` headers in `priv/gettext/**/*.po`. Gettext 1.0 warns
   on `nplurals=2;` without a rule and on a rule without its trailing `;`, once
   per catalog per compile, so `--warnings-as-errors` fails until they read
@@ -288,17 +360,17 @@ correct rewrite depends on application semantics:
   `:entries` relations, whose join entries are now exposed directly;
 - moving datasource declarations that still use `Brando.Datasource` outside a
   Blueprint module onto the appropriate Blueprint;
-- replacing legacy listing `field`, `template`, and positional `child_listing`
-  declarations with application-specific row components/child schemas, and
-  redesigning exports that use the removed `after_export` callback;
+- writing the row component for each listing `mix brando.migrate54` listed
+  (see [Rows](blueprint_listings.md#rows)), replacing positional
+  `child_listing` declarations with child schemas, and redesigning exports
+  that use the removed `after_export` callback;
 - setting `manifest: 'manifest.json'` in the frontend's Vite config only when
   that application uses Vite 5+, which moved the default manifest into
   `.vite/`. Vite 3 and 4 manifests keep working as they are: they name no
   entries, so Brando finds the critical entry by its key (`js/critical.js`);
 - replacing custom processing that relied on sharp-cli, consolidating the
   Create/Update LiveViews `mix brando.migrate54` listed, adopting `<.head>`,
-  and updating the navigation markup it listed
-  (`Brando.HTML.get_menu_item_url/1` and `get_menu_item_text/1`);
+  and updating the navigation reads and page loads it listed;
 - refreshing the frontend's package-manager lockfile and rebuilding it after
   the task pins `phoenix_live_view` (the admin is covered in
   [Admin assets](#admin-assets)); nonstandard frontend manifests still need
@@ -325,35 +397,39 @@ correct rewrite depends on application semantics:
   because the call sites are in application markup. `mix compile
   --warnings-as-errors` reports every one as an undefined function;
 - transferring ownership of PostgreSQL's `oban_job_state` enum before the Oban
-  v14 migration when deploying through the bundled Fabric workflow.
+  v14 migration when deploying through the bundled Fabric workflow;
+- showing Brando's dashboard. The admin's start page is the application's own
+  `MyAppAdmin.DashboardLive`, and one from an older installer renders only a
+  header. Render the dashboard component in it, as the installer's template
+  does:
+
+  ```elixir
+  def render(assigns) do
+    assigns = assign_new(assigns, :authorization, fn -> nil end)
+
+    ~H"""
+    <.live_component
+      module={BrandoAdmin.Components.Dashboard}
+      id="admin-dashboard"
+      current_user={@current_user}
+      authorization={@authorization}
+    />
+    """
+  end
+  ```
 
 The tasks report these items as warnings so they cannot be missed in the
 review.
 
-The tasks also leave alone what Phoenix 1.8 and phoenix_html 4 removed. Sites
-generated before 0.53 often still carry it:
+Of what Phoenix 1.8 and phoenix_html 4 removed, `mix brando.migrate54`
+handles the Phoenix.View-era helpers and the code reloader's listener (see
+above). One thing is left to you: LiveView 1.2 warns at compile time about
+`<input name="id">`, which overrides the form's `id` property in the browser.
+Rename the field (to `_id`, say) and map it back where the form is handled.
 
-- `use Phoenix.HTML` raises "use Phoenix.HTML is no longer supported in v4.0",
-  typically from a Phoenix.View-era `ErrorHelpers` module or the
-  `view_helpers/0` function in `lib/my_app_web.ex`. Delete them if nothing
-  uses them. Otherwise add `{:phoenix_html_helpers, "~> 1.0"}` and replace
-  `use Phoenix.HTML` with `import Phoenix.HTML`, `import Phoenix.HTML.Form`
-  and `use PhoenixHTMLHelpers`.
-- Phoenix's code reloader needs a Mix listener; without it, boot warns "a Mix
-  listener expected by Phoenix.CodeReloader is missing". Add it to `project/0`
-  in `mix.exs`:
-
-  ```elixir
-  # mix.exs
-  listeners: [Phoenix.CodeReloader],
-  ```
-
-- LiveView 1.2 warns at compile time about `<input name="id">`, which
-  overrides the form's `id` property in the browser. Rename the field (to
-  `_id`, say) and map it back where the form is handled.
-
-Review every source change. In particular, decide which Blueprints should not
-persist identifiers:
+Review every source change. `mix brando.migrate55` sets
+`persist_identifier false` on Blueprints with no admin editor that nothing can
+select; set it on any other Blueprint that should not persist identifiers:
 
 ```elixir
 persist_identifier false
@@ -382,10 +458,11 @@ It takes the template's package versions, `engines` and `packageManager`
 (keeping the application's own packages, scripts and BrandoJS source), replaces
 `vite.config.js`, removes `svelte.config.cjs` and yarn/npm lockfiles, and
 replaces the Dockerfile's `assets_backend` stage with the template's pnpm stage.
-Customized CSS and other existing files are kept. The other Dockerfile stages
-are left alone: an older Dockerfile may still build `assets_frontend` on
-`node:16`. Move it to the Node major you pinned above and check that the
-frontend still builds on it. Review the diff, then install and build:
+Customized CSS and other existing files are kept. It also moves the
+`assets_frontend` stage up to the same Node major when
+`assets/frontend/package.json` sets no `engines.node`, or one that allows it;
+otherwise a notice says why it was kept. Either way, check that the frontend
+builds on that Node. Review the diff, then install and build:
 
 ```shell
 mix brando.assets.setup --backend-only
@@ -442,8 +519,18 @@ commit after the Florist deployment has been proven.
 ## 3. Generate and review database migrations
 
 A project already on a 0.55 development build skips the source tasks above and
-starts here, to pick up the migrations added since it last upgraded. First copy
-every missing Brando-owned migration:
+starts here, to pick up the migrations added since it last upgraded.
+
+`mix brando.upgrade.database` runs this section and section 4 for you in an
+application without named environments. Each run works out where the database
+stands, runs the next steps of the order below, and stops wherever this guide
+has you review something: after copying Brando's migrations, after a failed
+conversion check, and after writing the Blueprint migrations (always with
+`--reconcile`). It asks before every step that changes the database. Run it
+again after each stop until it says the database phase is done; `--dry-run`
+shows the plan. With named environments, follow the steps below by hand.
+
+First copy every missing Brando-owned migration:
 
 ```shell
 mix brando.gen.migrations
@@ -451,6 +538,10 @@ mix brando.gen.migrations
 
 There are no `brando_206` or `brando_208` migrations: both numbers were
 reserved and never needed, so the gap is not a missed migration.
+
+`mix brando.migrations.check`, run against the database you will migrate,
+lists copies made earlier that have not run yet and differ from Brando's
+templates.
 
 The Igniter migration-file command does not start the application or touch the
 database. It allocates monotonically increasing Ecto versions and preserves
@@ -498,6 +589,13 @@ refused):
 ```shell
 mix brando.gen.blueprint_migration --all --reconcile
 ```
+
+That order is: `mix brando.gen.migrations`, `mix brando.migrate` (Brando's own
+migrations, the blocks conversion among them), `mix brando.check.legacy_conversion`,
+`mix brando.gen.blueprint_migration --all --reconcile`, review with a rollback
+and forward, then `mix brando.migrate` again. `mix brando.migrate55` prints this
+order when it sees `brando_102` or older as the newest copied migration, or a
+snapshot with a Villain field.
 
 1. Compare `\d table` in a migrated copy of production with every generated
    operation.
@@ -582,8 +680,13 @@ test: ["ecto.create --quiet", "ecto.load --skip-if-loaded", "ecto.migrate", "tes
 `--skip-if-loaded` leaves a database that already has its migrations table
 alone, so if the old alias already created the test database, drop it once
 (`MIX_ENV=test mix ecto.drop`). `ecto.migrate` then runs only the migrations
-newer than the dump. Check too that `test_paths` in `mix.exs` points at
-directories that exist.
+newer than the dump.
+
+`mix brando.migrate55` warns when `test_paths` names a missing directory, and
+when `config/runtime.exs` reads the Repo `url:` from the environment in `:test`
+too. In that case `mix test` uses, and its alias migrates, whatever database
+the shell names: guard it with `if config_env() != :test do … end`.
+`mix brando.doctor` checks the same in development.
 
 Before touching a shared database:
 
@@ -611,9 +714,12 @@ The migrations update every row of many tables (the generated Blueprint
 migrations backfill `edited_at` from `updated_at`, for example). PostgreSQL
 returns rows from a query without `ORDER BY` in storage order, and an update
 moves a row, so any page built on such a query may change order: the first
-category of a menu, or articles with equal `sequence`. Before diffing public
-pages against the old site, check the application's queries for a missing
-`order_by`, and add an `id` tiebreak where values can tie.
+category of a menu, or articles with equal `sequence`. `mix brando.migrate55`
+already gave calls to the application's `list_*` queries that ordered a
+Sequenced schema only by `sequence` a tiebreak, and listed the calls with no
+`order:` with file and line. Give each of those an order before diffing public
+pages against the old site, and check other queries (`Repo` and `Ecto.Query`)
+by hand.
 
 ## 4. Repair derived data
 
@@ -626,10 +732,16 @@ mix brando.identifiers.sync
 mix brando.images.adopt
 ```
 
+All three accept `--yes`, so they can run from a script, and
+`mix brando.upgrade.database` runs them, then `mix brando.check.image_texts`,
+then rebuilds the search index.
+
 `mix brando.images.adopt` records which config each image was made with, for
 the images whose files already match it, so Utilities → Recreate changed
-images only recreates the ones that differ. Try it with `--dry-run` first; see
-[Media](media.md#images-made-before-fingerprints).
+images only recreates the ones that differ. Try it with `--dry-run` first;
+`--verbose` names each image's difference (`sizes: missing ["xlarge"]`,
+`formats: has [:jpg], config [:jpg, :avif]`) and ends with a count per config
+target and reason. See [Media](media.md#images-made-before-fingerprints).
 
 Run these against staging first and inspect counts and representative entries.
 They mutate application data and are not reversed by `mix ecto.rollback`.
@@ -663,47 +775,67 @@ mix brando.check.image_texts
 
 `mix brando.migrate55` has already completed incomplete `Plural-Forms` headers
 in existing catalogs, and copied the translations of each Blueprint's 0.53
-domains into the one 0.55 uses. 0.53 translated a Blueprint's strings into
-`<domain>_<schema>_naming`, `_forms` and `_listings`; 0.55 extracts them all to
-`<domain>_<schema>`, so `menu_menuitem_naming.po` and
-`menu_menuitem_listings.po` became `menu_menuitem.po`. The merge keeps a
-translation only when the new domain's `.po` already has it, so run the task
-before extracting. It reports messages the old domains translated differently.
+domains into the one it uses now. 0.53 translated a Blueprint's strings into
+`<domain>_<schema>_naming`, `_forms` and `_listings`; since 0.54 they are all
+extracted to `<domain>_<schema>`, so `menu_menuitem_naming.po` and
+`menu_menuitem_listings.po` became `menu_menuitem.po`. It also copied the
+`default` domain's translations of the labels `mix brando.migrate54` moved from
+`gettext/1` to `t/1`. The merge keeps a translation only when the new domain's
+`.po` already has it, so run the task before extracting. It reports messages
+the old domains translated differently.
 
-Extract once, then merge each backend's actual locales:
+Then run:
 
 ```shell
-mix gettext.extract
-mix gettext.merge priv/gettext/backend --locale no \
-  --plural-forms-header "nplurals=2; plural=(n != 1);"
-mix gettext.merge priv/gettext/frontend --locale no \
-  --plural-forms-header "nplurals=2; plural=(n != 1);"
+mix brando.gettext.reconcile --dry-run
+mix brando.gettext.reconcile
 ```
 
+It extracts the messages, merges each Gettext backend's existing locales (and
+only those, with the `Plural-Forms` header the locale's catalogs use), fills an
+empty single-line translation from the same `msgid` in a sibling catalog, and
+deletes the old `_naming`/`_forms`/`_listings` catalogs the merge leaves
+empty. It then lists, per Blueprint domain and locale, the translations
+carried over and the ones dropped because their `msgid` is no longer in the
+source; on a 0.53 site these are mostly the old generator's action labels
+("Edit vacancy", "Are you sure?"). Review the catalog diff before committing.
+It does not guess multiline, plural, or contextual translations; reconcile
+those by hand.
+
+By hand, the same is `mix gettext.extract`, then
+`mix gettext.merge priv/gettext/<backend> --locale <locale>
+--plural-forms-header "nplurals=2; plural=(n != 1);"` per backend and locale,
+then `bash scripts/sync_gettext.sh priv/gettext/<backend>/<locale>/LC_MESSAGES`.
 Avoid `mix gettext.extract --merge DIR --locale LOCALE` here: it merges every
 backend it extracted, whatever directory it is given, and creates `LOCALE` in
 each one (a `frontend/en` or `backend/se` the site never had).
-`mix gettext.merge DIR --locale LOCALE` changes only `DIR/LOCALE`.
-
-After the merge, the old domains' `.pot` and `.po` files are empty; delete
-them.
-
-The copied helper can fill an empty, single-line `msgstr` from the same `msgid`
-in a sibling catalog:
-
-```shell
-bash scripts/sync_gettext.sh priv/gettext/backend/no/LC_MESSAGES
-```
-
-Run it only on backed-up catalogs and review the diff. It deliberately does not
-guess multiline, plural, or contextual translations; reconcile those manually.
 
 ## 6. Final deployment gate
 
 Before deploying, run the application unit suite and its full serial E2E suite,
 including a clean database reset. Verify at least forms, listings, uploads,
 LivePreview, block rendering, identifier-backed selections, rollback, and a
-second forward migration.
+second forward migration. If the application has no meaningful tests, the
+public-page comparison below is the gate.
+
+Compare the public pages before and after the upgrade with
+`mix brando.upgrade.snapshot`. Keep the old site running from a checkout of
+the pre-upgrade commit on a copy of the database (port 4000, say). In the
+upgraded application, once its database is migrated:
+
+```shell
+mix brando.upgrade.snapshot urls --output urls.txt
+mix brando.upgrade.snapshot capture tmp/before --base-url http://localhost:4000 --urls urls.txt
+# start the upgraded site on another port
+mix brando.upgrade.snapshot capture tmp/after --base-url http://localhost:4001 --urls urls.txt
+mix brando.upgrade.snapshot diff tmp/before tmp/after
+```
+
+It reports status, visible text, `<head>` tags and element structure
+separately, so a moved `data-src` or a reordered list shows even when the
+text is the same. Then open a page with a video in a browser: a site's own
+video script may read markup 0.55 changed (see the CHANGELOG's Breaking
+notes).
 
 If the upgrade must be abandoned, restore both the pre-upgrade application
 release and database backup. Code rollback plus `mix ecto.rollback` does not

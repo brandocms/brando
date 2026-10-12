@@ -159,10 +159,11 @@ defmodule Mix.Brando.Igniter.AssetsTest do
       assert dockerfile =~ "RUN yarn build"
     end
 
-    test "says the assets_frontend stage keeps its Node image" do
+    test "says the assets_frontend stage keeps its Node image when there is no frontend package to check" do
       [notice] = upgrade(old_backend()).notices |> Enum.filter(&(&1 =~ "assets_frontend"))
       assert notice =~ "still builds on node:18"
-      assert notice =~ "the frontend on node:22"
+      assert notice =~ "which builds on node:22"
+      assert notice =~ "There is no assets/frontend/package.json"
 
       {_, stage, _} = Mix.Brando.Igniter.Assets.dockerfile_stage(template("Dockerfile"), "assets_frontend")
       current = old_backend()["Dockerfile"]

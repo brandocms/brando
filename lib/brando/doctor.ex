@@ -39,7 +39,8 @@ defmodule Brando.Doctor do
     Checks.Robots,
     Checks.JSONLD,
     Checks.AltText,
-    Checks.Deprecations
+    Checks.Deprecations,
+    Checks.TestDatabase
   ]
 
   @timeout :timer.seconds(60)

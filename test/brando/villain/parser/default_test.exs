@@ -107,6 +107,37 @@ defmodule Brando.Villain.ParserTest do
              "--aspect-ratio: 0.5625\""
   end
 
+  test "picture/2 without alt text is described by its caption's text" do
+    picture = fn attrs -> :image |> Brando.Factory.build(Map.merge(%{alt: nil, credits: nil}, attrs)) |> picture([]) end
+
+    html = picture.(%{title: "<h3>Burrata og ovnsbakt squash</h3>", credits: "Foto: Lett &amp; co"})
+    assert html =~ ~s(alt="Burrata og ovnsbakt squash — Foto: Lett &amp; co")
+
+    assert picture.(%{title: "Caption", alt: ""}) =~ ~s(alt="Caption")
+    assert picture.(%{title: "Caption", alt: "Own alt"}) =~ ~s(alt="Own alt")
+    assert picture.(%{title: nil}) =~ ~s(alt="")
+  end
+
+  test "video/2 file takes the shape of an aspect ratio override" do
+    # The record is sized by the first block that used the file; a block of
+    # another shape keeps the record's width and its own height, so the
+    # attributes, orientation and placeholder agree with its style
+    html =
+      video(
+        %{source_url: "my_video.mp4", type: :external_file, width: 1920, height: 1080, aspect_ratio: "1:1", cover: "svg"},
+        []
+      )
+
+    assert html =~ ~s(width="1920" height="1920")
+    assert html =~ ~s(data-orientation="portrait")
+    assert html =~ "--aspect-ratio-division: 1/1"
+    assert html =~ "height%3D%271920%27"
+
+    # Not a ratio: the record's size decides
+    assert video(%{source_url: "my_video.mp4", type: :external_file, width: 1920, height: 1080, aspect_ratio: "wide"}, []) =~
+             ~s(width="1920" height="1080")
+  end
+
   test "video/2 file" do
     assert video(
              %{
@@ -123,7 +154,7 @@ defmodule Brando.Villain.ParserTest do
              },
              []
            ) ==
-             "<div class=\"video-wrapper video-file\" data-smart-video data-orientation=\"portrait\" data-preload=\"my_video.mp4\" data-src=\"my_video.mp4\" data-autoplay style=\"--aspect-ratio: 1.0; --aspect-ratio-division: 300/300;\">\n  <video width=\"300\" height=\"300\" alt=\"\" tabindex=\"0\" preload=\"auto\" autoplay muted loop playsinline data-video style=\"--aspect-ratio: 1.0; --aspect-ratio-division: 300/300;\" data-src=\"my_video.mp4\">\n  </video>\n\n  <noscript>\n    <video width=\"300\" height=\"300\" alt=\"\" tabindex=\"0\" preload=\"metadata\" muted loop playsinline src=\"my_video.mp4\">\n    </video>\n  </noscript>\n\n  \n\n  \n    \n      \n         <div data-cover>\n           <img\n             width=\"300\"\n             height=\"300\"\n             alt=\"Video cover image\"\n             src=\"data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20width%3D%27300%27%20height%3D%27300%27%20style%3D%27background%3Argba%280%2C0%2C0%2C0%29%27%2F%3E\" />\n         </div>\n       \n    \n  \n  \n</div>"
+             "<div class=\"video-wrapper video-file\" data-smart-video data-orientation=\"portrait\" data-preload=\"my_video.mp4\" data-src=\"my_video.mp4\" data-autoplay style=\"--aspect-ratio: 1.0; --aspect-ratio-division: 300/300;\">\n  <video width=\"300\" height=\"300\" alt=\"\" tabindex=\"0\" preload=\"auto\" autoplay muted loop playsinline data-video style=\"--aspect-ratio: 1.0; --aspect-ratio-division: 300/300;\" data-src=\"my_video.mp4\">\n  </video>\n\n  <noscript>\n    <video width=\"300\" height=\"300\" alt=\"\" tabindex=\"0\" preload=\"metadata\" muted loop playsinline src=\"my_video.mp4\">\n    </video>\n  </noscript>\n\n  \n\n  \n    \n      \n         <div data-cover aria-hidden=\"true\">\n           <img\n             width=\"300\"\n             height=\"300\"\n             alt=\"\"\n             src=\"data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20width%3D%27300%27%20height%3D%27300%27%20style%3D%27background%3Argba%280%2C0%2C0%2C0%29%27%2F%3E\" />\n         </div>\n       \n    \n  \n  \n</div>"
   end
 
   test "video/2 file with caption" do
@@ -143,7 +174,7 @@ defmodule Brando.Villain.ParserTest do
              },
              []
            ) ==
-             "<div class=\"video-wrapper video-file\" data-smart-video data-orientation=\"portrait\" data-preload=\"my_video.mp4\" data-src=\"my_video.mp4\" data-autoplay style=\"--aspect-ratio: 1.0; --aspect-ratio-division: 300/300;\">\n  <video width=\"300\" height=\"300\" alt=\"\" tabindex=\"0\" preload=\"auto\" autoplay muted loop playsinline data-video style=\"--aspect-ratio: 1.0; --aspect-ratio-division: 300/300;\" data-src=\"my_video.mp4\">\n  </video>\n\n  <noscript>\n    <video width=\"300\" height=\"300\" alt=\"\" tabindex=\"0\" preload=\"metadata\" muted loop playsinline src=\"my_video.mp4\">\n    </video>\n  </noscript>\n\n  \n\n  \n    \n      \n         <div data-cover>\n           <img\n             width=\"300\"\n             height=\"300\"\n             alt=\"Video cover image\"\n             src=\"data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20width%3D%27300%27%20height%3D%27300%27%20style%3D%27background%3Argba%280%2C0%2C0%2C0%29%27%2F%3E\" />\n         </div>\n       \n    \n  \n  <figcaption><p>This is a caption</p></figcaption>\n</div>"
+             "<div class=\"video-wrapper video-file\" data-smart-video data-orientation=\"portrait\" data-preload=\"my_video.mp4\" data-src=\"my_video.mp4\" data-autoplay style=\"--aspect-ratio: 1.0; --aspect-ratio-division: 300/300;\">\n  <video width=\"300\" height=\"300\" alt=\"\" tabindex=\"0\" preload=\"auto\" autoplay muted loop playsinline data-video style=\"--aspect-ratio: 1.0; --aspect-ratio-division: 300/300;\" data-src=\"my_video.mp4\">\n  </video>\n\n  <noscript>\n    <video width=\"300\" height=\"300\" alt=\"\" tabindex=\"0\" preload=\"metadata\" muted loop playsinline src=\"my_video.mp4\">\n    </video>\n  </noscript>\n\n  \n\n  \n    \n      \n         <div data-cover aria-hidden=\"true\">\n           <img\n             width=\"300\"\n             height=\"300\"\n             alt=\"\"\n             src=\"data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20width%3D%27300%27%20height%3D%27300%27%20style%3D%27background%3Argba%280%2C0%2C0%2C0%29%27%2F%3E\" />\n         </div>\n       \n    \n  \n  <figcaption><p>This is a caption</p></figcaption>\n</div>"
   end
 
   # The parser used to hardcode `cover: :svg`, so every video block grew a cover

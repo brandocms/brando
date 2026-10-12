@@ -24,7 +24,11 @@ defmodule Mix.Tasks.Brando.Entries.Resave do
   """
   @spec run(any) :: no_return
   def run(args) do
-    {opts, rest} = OptionParser.parse!(args, strict: [yes: :boolean, force: :boolean], aliases: [y: :yes])
+    {opts, rest} =
+      Mix.Brando.parse_options!("brando.entries.resave", args, [yes: :boolean, force: :boolean],
+        aliases: [y: :yes],
+        max_positional: 1
+      )
 
     Application.put_env(:logger, :level, :error)
 
@@ -100,21 +104,24 @@ defmodule Mix.Tasks.Brando.Entries.Resave do
     for entry <- entries do
       title = blueprint_module.__identifier__(entry, skip_cover: true).title
 
-      IO.write([
-        "* [",
-        ANSI.blue(),
-        "#{singular}",
-        ANSI.reset(),
-        ":",
-        ANSI.blue(),
-        "#{entry.id}",
-        ANSI.reset(),
-        "] → ",
-        ANSI.blue(),
-        title,
-        ANSI.reset(),
-        " ... "
-      ])
+      # IO.ANSI.format/1 drops the colours when stdout is not a terminal.
+      IO.write(
+        ANSI.format([
+          "* [",
+          :blue,
+          "#{singular}",
+          :reset,
+          ":",
+          :blue,
+          "#{entry.id}",
+          :reset,
+          "] → ",
+          :blue,
+          title,
+          :reset,
+          " ... "
+        ])
+      )
 
       changeset =
         entry
@@ -124,10 +131,10 @@ defmodule Mix.Tasks.Brando.Entries.Resave do
 
       case Brando.Repo.update(changeset, force: true) do
         {:ok, _} ->
-          IO.write([ANSI.green(), "done!\n", ANSI.reset()])
+          IO.write(ANSI.format([:green, "done!\n"]))
 
         {:error, _} ->
-          IO.write([ANSI.red(), "failed!\n", ANSI.reset()])
+          IO.write(ANSI.format([:red, "failed!\n"]))
       end
     end
   end

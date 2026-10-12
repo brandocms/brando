@@ -14,8 +14,9 @@ defmodule Mix.Tasks.Brando.Doctor do
   It checks versions, pending migrations, Oban, required configuration, the
   admin route helpers Blueprints link to, the admin's BrandoJS, image
   configs, module versions, the sitemap and robots.txt, the identity behind
-  JSON-LD, alt text, and calls to deprecated Brando functions in `lib/`, plus
-  any checks the application registers (see `Brando.Doctor`).
+  JSON-LD, alt text, calls to deprecated Brando functions in `lib/`, and
+  whether `mix test` would use the development database, plus any checks the
+  application registers (see `Brando.Doctor`).
 
   Nothing is changed. The application starts without its web server and with
   Oban's queues stopped, so no job runs while the doctor looks.

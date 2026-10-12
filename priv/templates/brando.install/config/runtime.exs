@@ -9,9 +9,13 @@ config :<%= application_name %>, <%= application_module %>Web.Endpoint,
     port: System.get_env("BRANDO_URL_PORT")
   ]
 
-config :<%= application_name %>, <%= application_module %>.Repo,
-  url: System.get_env("BRANDO_DB_URL"),
-  pool_size: String.to_integer(System.get_env("POOL_SIZE") || "15")
+# Tests use the database in test.exs: a BRANDO_DB_URL in the shell must not
+# point them at the development database.
+if config_env() not in [:test, :e2e] do
+  config :<%= application_name %>, <%= application_module %>.Repo,
+    url: System.get_env("BRANDO_DB_URL"),
+    pool_size: String.to_integer(System.get_env("POOL_SIZE") || "15")
+end
 
 config :brando, concurrent_image_jobs: System.get_env("BRANDO_CONCURRENT_IMAGE_JOBS", "1") |> String.to_integer()
 config :brando, default_language: System.get_env("BRANDO_DEFAULT_LANGUAGE", "no")

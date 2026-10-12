@@ -14,12 +14,12 @@ test.describe('Multi-select reordering', () => {
     await syncLV(page)
     await expect(page.locator('input[name="client[slug]"]')).toHaveValue('test-client', { timeout: 10000 })
     await page.getByTestId('submit').click()
-    await expect(page).toHaveURL(/\/clients/)
+    await expect(page).toHaveURL(/\/clients(\?|$)/)
     await syncLV(page)
 
     // Create three categories
     await page.locator('#nav-sections').getByRole('link', { name: 'Categories', exact: true }).click()
-    await expect(page).toHaveURL(/\/categories/)
+    await expect(page).toHaveURL(/\/categories(\?|$)/)
     await syncLV(page)
     await page.getByRole('link', { name: 'Create new' }).click()
     await syncLV(page)
@@ -28,7 +28,7 @@ test.describe('Multi-select reordering', () => {
     await syncLV(page)
     await expect(page.locator('input[name="category[slug]"]')).toHaveValue('category-a', { timeout: 10000 })
     await page.getByTestId('submit').click()
-    await expect(page).toHaveURL(/\/categories/)
+    await expect(page).toHaveURL(/\/categories(\?|$)/)
     await syncLV(page)
 
     await page.getByRole('link', { name: 'Create new' }).click()
@@ -38,7 +38,7 @@ test.describe('Multi-select reordering', () => {
     await syncLV(page)
     await expect(page.locator('input[name="category[slug]"]')).toHaveValue('category-b', { timeout: 10000 })
     await page.getByTestId('submit').click()
-    await expect(page).toHaveURL(/\/categories/)
+    await expect(page).toHaveURL(/\/categories(\?|$)/)
     await syncLV(page)
 
     await page.getByRole('link', { name: 'Create new' }).click()
@@ -48,14 +48,14 @@ test.describe('Multi-select reordering', () => {
     await syncLV(page)
     await expect(page.locator('input[name="category[slug]"]')).toHaveValue('category-c', { timeout: 10000 })
     await page.getByTestId('submit').click()
-    await expect(page).toHaveURL(/\/categories/)
+    await expect(page).toHaveURL(/\/categories(\?|$)/)
     await syncLV(page)
   })
 
   test('reorders selected items in multi-select and persists order', async ({ page }) => {
     // Navigate to Projects and create new
     await page.locator('#nav-sections').getByRole('link', { name: 'Projects' }).click()
-    await expect(page).toHaveURL(/\/projects\/projects/)
+    await expect(page).toHaveURL(/\/projects\/projects(\?|$)/)
     await syncLV(page)
     await page.getByRole('link', { name: 'Create new' }).click()
     await syncLV(page)
@@ -161,7 +161,7 @@ test.describe('Multi-select reordering', () => {
 
     // Save the project
     await page.getByTestId('submit').click()
-    await expect(page).toHaveURL(/\/admin\/projects\/projects/)
+    await expect(page).toHaveURL(/\/admin\/projects\/projects(\?|$)/)
     await syncLV(page)
 
     // Re-open the project to verify order persisted
@@ -183,7 +183,7 @@ test.describe('Multi-select reordering', () => {
     // every previously selected option (reset only cleared local assigns,
     // while select_option rebuilds its list from the form changeset)
     await page.locator('#nav-sections').getByRole('link', { name: 'Projects' }).click()
-    await expect(page).toHaveURL(/\/projects\/projects/)
+    await expect(page).toHaveURL(/\/projects\/projects(\?|$)/)
     await syncLV(page)
     await page.getByRole('link', { name: 'Create new' }).click()
     await syncLV(page)
@@ -244,7 +244,7 @@ test.describe('Multi-select reordering', () => {
 
     // Save and re-open to verify only Category B persisted
     await page.getByTestId('submit').click()
-    await expect(page).toHaveURL(/\/admin\/projects\/projects/)
+    await expect(page).toHaveURL(/\/admin\/projects\/projects(\?|$)/)
     await syncLV(page)
     await page.getByRole('link', { name: 'Reset Test Project' }).click()
     await syncLV(page)
@@ -270,7 +270,7 @@ test.describe('Multi-select reordering', () => {
     await syncLV(page)
 
     await page.getByTestId('submit').click()
-    await expect(page).toHaveURL(/\/admin\/projects\/projects/)
+    await expect(page).toHaveURL(/\/admin\/projects\/projects(\?|$)/)
     await syncLV(page)
     await page.getByRole('link', { name: 'Reset Test Project' }).click()
     await syncLV(page)

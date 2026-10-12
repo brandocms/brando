@@ -212,6 +212,11 @@ msgid_plural "%{count} warnings"
 msgstr[0] "%{count} advarsel"
 msgstr[1] "%{count} advarsler"
 
+#: lib/brando/doctor/checks/test_database.ex
+#, elixir-autogen, elixir-format
+msgid "%{database}, not the development database"
+msgstr "%{database}, ikke utviklingsdatabasen"
+
 #: lib/brando/doctor/checks/migrations.ex
 #, elixir-autogen, elixir-format
 msgid "%{file} differs from %{template}"
@@ -380,6 +385,11 @@ msgstr "E-post: %{mailer} finnes ikke"
 
 #: lib/brando/doctor/checks/configuration.ex
 #, elixir-autogen, elixir-format
+msgid "Mailer: %{mailer}, adapter %{adapter}"
+msgstr "E-post: %{mailer}, adapter %{adapter}"
+
+#: lib/brando/doctor/checks/configuration.ex
+#, elixir-autogen, elixir-format
 msgid "Mailer: %{mailer}, from %{from}"
 msgstr "E-post: %{mailer}, fra %{from}"
 
@@ -387,6 +397,11 @@ msgstr "E-post: %{mailer}, fra %{from}"
 #, elixir-autogen, elixir-format
 msgid "Mailer: %{mailer}, no sender"
 msgstr "E-post: %{mailer}, ingen avsender"
+
+#: lib/brando/doctor/checks/configuration.ex
+#, elixir-autogen, elixir-format
+msgid "Mailer: %{mailer}, placeholder sender %{from}"
+msgstr "E-post: %{mailer}, plassholderavsender %{from}"
 
 #: lib/brando/doctor/checks/configuration.ex
 #, elixir-autogen, elixir-format
@@ -423,6 +438,11 @@ msgstr "Åpne SEO"
 msgid "Open identity"
 msgstr "Åpne identitet"
 
+#: lib/brando/doctor/checks/alt_text.ex
+#, elixir-autogen, elixir-format
+msgid "Open images"
+msgstr "Åpne bilder"
+
 #: lib/brando/doctor/checks/image_configs.ex
 #, elixir-autogen, elixir-format
 msgid "Recreate changed images"
@@ -457,6 +477,11 @@ msgstr "Hoppet over"
 #, elixir-autogen, elixir-format
 msgid "System check"
 msgstr "Systemkontroll"
+
+#: lib/brando/doctor/checks/test_database.ex
+#, elixir-autogen, elixir-format
+msgid "Test database"
+msgstr "Testdatabase"
 
 #: lib/brando_admin/components/system_check.ex
 #, elixir-autogen, elixir-format
@@ -568,10 +593,25 @@ msgstr "sjekk at den nattlige SitemapGenerator-jobben kjører, eller Verktøy �
 msgid "check the errors of the discarded jobs"
 msgstr "se feilene til de forkastede jobbene"
 
+#: lib/brando/doctor/checks/test_database.ex
+#, elixir-autogen, elixir-format
+msgid "checked in development"
+msgstr "sjekkes i utvikling"
+
 #: lib/brando/doctor/checks/versions.ex
 #, elixir-autogen, elixir-format
 msgid "commit %{commit} from %{url}"
 msgstr "commit %{commit} fra %{url}"
+
+#: lib/brando/doctor/checks/configuration.ex
+#, elixir-autogen, elixir-format
+msgid "configure the mailer's production adapter and credentials in config/runtime.exs"
+msgstr "sett opp e-postmodulens produksjonsadapter og tilgangsnøkler i config/runtime.exs"
+
+#: lib/brando/doctor/checks/test_database.ex
+#, elixir-autogen, elixir-format
+msgid "could not read the test config: %{error}"
+msgstr "kunne ikke lese testkonfigurasjonen: %{error}"
 
 #: lib/brando/doctor.ex
 #, elixir-autogen, elixir-format
@@ -711,6 +751,11 @@ msgstr "logo"
 msgid "mailer module missing"
 msgstr "e-postmodulen mangler"
 
+#: lib/brando/doctor/checks/test_database.ex
+#, elixir-autogen, elixir-format
+msgid "mix test would use the development database %{database}"
+msgstr "mix test ville brukt utviklingsdatabasen %{database}"
+
 #: lib/brando/doctor/checks/json_ld.ex
 #, elixir-autogen, elixir-format
 msgid "name"
@@ -731,6 +776,16 @@ msgstr "ingen API-nøkkel for assistenten"
 msgid "no assets/backend/package.json"
 msgstr "ingen assets/backend/package.json"
 
+#: lib/brando/doctor/checks/test_database.ex
+#, elixir-autogen, elixir-format
+msgid "no config/config.exs"
+msgstr "ingen config/config.exs"
+
+#: lib/brando/doctor/checks/test_database.ex
+#, elixir-autogen, elixir-format
+msgid "no database name to compare"
+msgstr "ingen databasenavn å sammenligne"
+
 #: lib/brando/doctor/checks/configuration.ex
 #, elixir-autogen, elixir-format
 msgid "no endpoint URL"
@@ -745,6 +800,11 @@ msgstr "ingen identitet"
 #, elixir-autogen, elixir-format
 msgid "no mailer"
 msgstr "ingen e-postmodul"
+
+#: lib/brando/doctor/checks/configuration.ex
+#, elixir-autogen, elixir-format
+msgid "no production mail adapter"
+msgstr "ingen e-postadapter for produksjon"
 
 #: lib/brando/doctor/checks/oban.ex
 #, elixir-autogen, elixir-format
@@ -801,10 +861,20 @@ msgstr "ikke generert"
 msgid "not served by Brando"
 msgstr "serveres ikke av Brando"
 
+#: lib/brando/doctor/checks/alt_text.ex
+#, elixir-autogen, elixir-format
+msgid "open each image marked “No alt text” under Images and write its Alt. text (no AI provider is configured to draft it)"
+msgstr "åpne hvert bilde merket «Ingen alt. tekst» under Bilder og skriv inn Alternativ tekst (ingen AI-leverandør er satt opp til å foreslå den)"
+
 #: lib/brando/doctor/source.ex
 #, elixir-autogen, elixir-format
 msgid "path %{path}"
 msgstr "sti %{path}"
+
+#: lib/brando/doctor/checks/configuration.ex
+#, elixir-autogen, elixir-format
+msgid "placeholder sender address"
+msgstr "plassholder som avsenderadresse"
 
 #: lib/brando/doctor/checks/oban.ex
 #, elixir-autogen, elixir-format
@@ -815,6 +885,11 @@ msgstr "kø %{queue}, grense %{limit}"
 #, elixir-autogen, elixir-format
 msgid "queue %{queue}, limit %{limit}, paused"
 msgstr "kø %{queue}, grense %{limit}, satt på pause"
+
+#: lib/brando/doctor/checks/test_database.ex
+#, elixir-autogen, elixir-format
+msgid "read the Repo url: in config/runtime.exs only outside tests, inside if config_env() != :test do … end"
+msgstr "les Repo-ens url: i config/runtime.exs bare utenfor tester, inni if config_env() != :test do … end"
 
 #: lib/brando/doctor/checks/deprecations.ex
 #, elixir-autogen, elixir-format
@@ -835,6 +910,11 @@ msgstr "robots.txt"
 #, elixir-autogen, elixir-format
 msgid "route each schema's FormLive as live \"/<plural>/create\", <Name>FormLive, :create and live \"/<plural>/update/:entry_id\", <Name>FormLive, :update (mix brando.migrate54 converts generated Create/Update LiveViews). Schemas sharing a singular need their routes in a scope with as: and the same router_scope on their Blueprints"
 msgstr "rut hvert skjemas FormLive som live \"/<plural>/create\", <Name>FormLive, :create og live \"/<plural>/update/:entry_id\", <Name>FormLive, :update (mix brando.migrate54 gjør om genererte Create/Update-LiveViews). Skjemaer med samme entallsnavn trenger rutene sine i et scope med as: og samme router_scope på sine Blueprints"
+
+#: lib/brando/doctor/checks/configuration.ex
+#, elixir-autogen, elixir-format
+msgid "run `mix brando.gen.mail`, then set `config :brando, Brando.Mailer, from: …` and the mailer's production adapter in runtime.exs"
+msgstr "kjør `mix brando.gen.mail`, og sett så `config :brando, Brando.Mailer, from: …` og e-postmodulens produksjonsadapter i runtime.exs"
 
 #: lib/brando/doctor/checks/admin_assets.ex
 #, elixir-autogen, elixir-format
@@ -886,15 +966,35 @@ msgstr "se veiledningene for e-post, CDN-levering og innholdsassistenten"
 msgid "served from SEO settings"
 msgstr "serveres fra SEO-innstillingene"
 
+#: lib/brando/doctor/checks/configuration.ex
+#, elixir-autogen, elixir-format
+msgid "set `config :brando, Brando.Mailer, from: …` to an address your mail provider sends for"
+msgstr "sett `config :brando, Brando.Mailer, from: …` til en adresse e-postleverandøren sender for"
+
+#: lib/brando/doctor/checks/configuration.ex
+#, elixir-autogen, elixir-format
+msgid "set the address Brando sends from: `config :brando, Brando.Mailer, from: …`"
+msgstr "sett adressen Brando sender fra: `config :brando, Brando.Mailer, from: …`"
+
 #: lib/brando/doctor.ex
 #, elixir-autogen, elixir-format
 msgid "skipped in a release: needs the project's source files"
 msgstr "hoppet over i en release: trenger prosjektets kildefiler"
 
+#: lib/brando/doctor/checks/test_database.ex
+#, elixir-autogen, elixir-format
+msgid "test and development both connect to %{database}"
+msgstr "test og utvikling kobler begge til %{database}"
+
 #: lib/brando/doctor/checks/oban.ex
 #, elixir-autogen, elixir-format
 msgid "testing mode, jobs run inline"
 msgstr "testmodus, jobber kjøres direkte"
+
+#: lib/brando/doctor/checks/test_database.ex
+#, elixir-autogen, elixir-format
+msgid "the config files read Mix.env(), which cannot be read for :test from here"
+msgstr "konfigurasjonsfilene leser Mix.env(), som ikke kan leses for :test herfra"
 
 #: lib/brando/doctor/checks/versions.ex
 #, elixir-autogen, elixir-format

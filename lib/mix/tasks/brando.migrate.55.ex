@@ -5,7 +5,14 @@ if Code.ensure_loaded?(Igniter) do
 
     use Igniter.Mix.Task
 
+    alias Mix.Brando.Igniter.Mailer
+    alias Mix.Brando.Igniter.PersistIdentifiers
     alias Mix.Brando.Igniter.SourceUpgrade
+    alias Mix.Brando.Igniter.SourceUpgrade.BlueprintGettext
+    alias Mix.Brando.Igniter.SourceUpgrade.ListOrder
+    alias Mix.Brando.Igniter.SourceUpgrade.TestEnvironment
+    alias Mix.Brando.Igniter.SourceUpgrade.VideoMarkup
+    alias Mix.Brando.Igniter.UpgradeOrder
 
     @shortdoc "Migrates application source from Brando 0.54 to 0.55"
     @moduledoc """
@@ -19,19 +26,44 @@ if Code.ensure_loaded?(Igniter) do
     names, adds the explicit listing component imports, gives Villain parsers
     back the `use Phoenix.Component`, imports and aliases they relied on from
     `use Brando.Villain.Parser`, configures Req as
-    Swoosh's API client, points Brando at the application's mailer, adds
+    Swoosh's API client, points Brando at the application's mailer (creating
+    `MyApp.Mailer`, its development and test adapters and a placeholder
+    sender when the application has none), adds
     `Brando.Plug.Markdown` and `Brando.Plug.IndexNow` to the endpoint, removes the
     retired Sharp image processor from config, pins the declared `phoenix_live_view` JavaScript
     dependency, builds Vite source maps `hidden`, converts a legacy Fabric deployment to a reviewable Florist
     configuration, refreshes the gettext recovery helper, copies the
     translations of each Blueprint's 0.53 `_naming`, `_forms` and `_listings`
-    Gettext domains into the domain 0.55 extracts to, completes
+    Gettext domains into the domain 0.55 extracts to, along with the `default`
+    domain's translations of the Blueprint's `t/1` labels, sets
+    `persist_identifier false` on Blueprints with no admin editor, completes
     `Plural-Forms` headers Gettext 1.0 warns about, and retires the
     consumer-owned `brando.upgrade` task that 0.54 installed.
 
+    Calls to the application's `list_<plural>/1` queries whose options order
+    a Sequenced Blueprint only by `sequence` get the admin listing's
+    tiebreak, `order: "asc sequence, desc inserted_at"` (`"asc sequence,
+    asc id"` without `Brando.Trait.Timestamped`). The 0.55 data
+    migrations rewrite rows, and rows with equal `sequence` came back in
+    storage order. Calls with no `order:` at all are listed, since adding one
+    changes what the site shows.
+
+    It also lists, without changing them:
+
+      * front-end scripts under `assets/` that read a video's `data-src`,
+        which 0.55 moved from the `<video>` to its `[data-smart-video]`
+        wrapper;
+      * a Repo `url:` that `config/runtime.exs` reads from the environment
+        in `:test` too, so `mix test` would use, and migrate, that database;
+      * `test_paths` in `mix.exs` that name missing directories.
+
     The task changes source files only. Review and compile its diff before
     generating or running database migrations. The complete ordered workflow is
-    documented in `guides/migrating_from_053.md`.
+    documented in `guides/migrating_from_053.md`; the task's closing notice
+    lists its remaining steps in that order, and in the guide's "Legacy
+    snapshots" order (Brando's migrations, then the Blueprint migrations with
+    `--reconcile`) when the newest copied Brando migration is `brando_102` or
+    older, or a Blueprint's latest snapshot still has a Villain field.
     """
 
     def info(_argv, _source) do
@@ -49,7 +81,7 @@ if Code.ensure_loaded?(Igniter) do
       |> SourceUpgrade.update_villain_parsers()
       |> SourceUpgrade.rename_moved_modules()
       |> SourceUpgrade.configure_swoosh_client()
-      |> SourceUpgrade.configure_brando_mailer()
+      |> Mailer.configure_for_upgrade()
       |> SourceUpgrade.remove_sharp_processor()
       |> SourceUpgrade.pin_live_view_javascript()
       |> SourceUpgrade.hide_source_maps()
@@ -57,8 +89,13 @@ if Code.ensure_loaded?(Igniter) do
       |> SourceUpgrade.add_content_plugs()
       |> SourceUpgrade.refresh_gettext_script()
       |> SourceUpgrade.carry_blueprint_translations()
+      |> BlueprintGettext.carry_default_translations()
       |> SourceUpgrade.complete_plural_forms_headers()
       |> SourceUpgrade.warn_image_text_reads()
+      |> PersistIdentifiers.update()
+      |> VideoMarkup.warn_video_data_src_reads()
+      |> ListOrder.order_list_queries()
+      |> TestEnvironment.warn_test_hazards()
       |> SourceUpgrade.start_endpoint_last()
       |> Mix.Brando.Igniter.Upgrade.prepare()
       |> add_notices()
@@ -66,6 +103,8 @@ if Code.ensure_loaded?(Igniter) do
     end
 
     defp add_notices(igniter) do
+      {igniter, order} = UpgradeOrder.notice(igniter)
+
       Igniter.add_notice(igniter, """
       Brando 0.55 source migration prepared.
 
@@ -77,7 +116,7 @@ if Code.ensure_loaded?(Igniter) do
       `Phoenix.HTML` imports, and aliases they used, which
       `use Brando.Villain.Parser` no longer brings in. The task
       adds Req as Swoosh's API client when none is configured, points Brando at
-      the application's `Mailer` when it has one, and pins the
+      the application's `Mailer`, creating one when it has none, and pins the
       declared `phoenix_live_view` JavaScript dependency under `assets/` to the
       loaded server version. Vite configs under `assets/` that set
       `sourcemap: true` now build hidden maps, and `mix brando.digest` deletes
@@ -86,8 +125,18 @@ if Code.ensure_loaded?(Igniter) do
 
       Translations in each Blueprint's 0.53 Gettext domains
       (`<domain>_<schema>_naming`, `_forms`, `_listings`) are copied into
-      `<domain>_<schema>.po`, the domain 0.55 extracts to, so the Gettext
-      merge in the migration guide keeps them.
+      `<domain>_<schema>.po`, the domain 0.55 extracts to, so
+      `mix brando.gettext.reconcile` keeps them. So are the `default` domain's
+      translations of the Blueprint's `t/1` labels, which were extracted
+      there while they were written with `gettext/1`; a translation the
+      schema's catalog has is kept.
+
+      Calls to the application's `list_<plural>/1` queries that order a
+      Sequenced Blueprint only by `sequence` now order by
+      `"asc sequence, desc inserted_at"`, as the admin listing does (by
+      `"asc sequence, asc id"` without timestamps), so
+      entries with equal `sequence` no longer come back in storage order,
+      which the data migrations change.
 
       The endpoint gets `plug Brando.Plug.Markdown` (entries as Markdown at
       their URL + `.md`) and `plug Brando.Plug.IndexNow` (the IndexNow key
@@ -105,34 +154,7 @@ if Code.ensure_loaded?(Igniter) do
       `mix brando.setup.tenancy` after this general source upgrade to prepare
       their configuration, router pipelines, and tenant migration support.
 
-      Continue in this order:
-
-        1. Review the complete Igniter diff, then run `mix format` and
-           `mix compile --warnings-as-errors`.
-        2. If `florist.config.exs` was created, set its required password
-           environment variables and complete the deployment review in the
-           migration guide before running Florist.
-        3. Run `mix brando.gen.migrations` to plan missing Brando Ecto migrations.
-        4. For every application Blueprint with generated migration history,
-           run `mix brando.gen.blueprint_migration MyApp.Domain.Schema`.
-        5. Review every generated `up/0` and `down/0`, test rollback/forward,
-           and commit the source, migrations, and snapshots together.
-        6. Only after that review, run `mix brando.migrate`, followed by
-           `mix brando.migrate --tenants` when the application has named
-           environments.
-        7. After the database migration, run `mix brando.entries.resave`,
-           `mix brando.identifiers.sync` and `mix brando.images.adopt` (try it
-           with `--dry-run` first), which records the config each image whose
-           files already match was made with.
-        8. Run `mix brando.check.image_texts` to find module, container and
-           menu templates that print an image's alt text, title or credits
-           without the `i18n` filter. Templates live in the database, so this
-           source migration cannot see them.
-        9. Reconcile Gettext catalogs: `mix gettext.extract`, then
-           `mix gettext.merge priv/gettext/<backend> --locale <locale>` for
-           each backend and locale the application has. Delete the old
-           domains' catalogs the merge leaves empty.
-
+      #{order}
       See `guides/migrating_from_053.md` and `guides/blueprint_migrations.md` in
       Brando for the full recovery and rebaseline instructions.
       """)
@@ -142,11 +164,12 @@ if Code.ensure_loaded?(Igniter) do
       Igniter.add_warning(igniter, """
       Manual 0.55 decisions remain:
 
-        * Add `persist_identifier false` to every Blueprint that must not create
-          persisted identifiers. Persistence defaults to true. A Blueprint with
-          no admin editor (no `admin_<singular>_form_path` route) should set it:
-          its entries cannot be opened from Search, the command palette or the
-          dashboard, so they are left out of them.
+        * Add `persist_identifier false` to every other Blueprint that must not
+          create persisted identifiers. Persistence defaults to true. The task
+          sets it on Blueprints with no admin editor (no
+          `admin_<singular>_form_path` route for `:update` and no admin
+          LiveView) and no `absolute_url`, whose entries cannot be opened from
+          Search, the command palette or the dashboard; its notice lists them.
         * Table, primary-key, and existing column-level primary-key changes are
           never inferred. Write the Ecto migration, verify the live schema, then
           use the documented Blueprint `--rebaseline` workflow.
@@ -171,9 +194,11 @@ if Code.ensure_loaded?(Igniter) do
           onto their Blueprint schema. The hardened resolver rejects plain helper
           modules and there is no safe target schema the task can choose.
         * Brando now sends email through the application's Swoosh mailer
-          (`config :brando, mailer: MyApp.Mailer`; `mix brando.gen.mail` adds
-          one). Set the address it sends from, which the mail provider must
-          accept: `config :brando, Brando.Mailer, from: {"My site", "noreply@example.com"}`.
+          (`config :brando, mailer: MyApp.Mailer`; this task creates one when
+          the application has none). Set the address it sends from, which the
+          mail provider must accept, in place of any `noreply@example.com`
+          placeholder: `config :brando, Brando.Mailer, from: {"My site", "noreply@my-site.com"}`,
+          and the mailer's production adapter in `config/runtime.exs`.
         * Fabric deployments must ensure the application database role owns the
           `oban_job_state` enum before `brando_153` upgrades Oban to v14. Follow
           the changelog's updated `grant_db`/`ALTER TYPE ... OWNER TO` procedure.

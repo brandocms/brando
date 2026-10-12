@@ -212,6 +212,11 @@ msgid_plural "%{count} warnings"
 msgstr[0] ""
 msgstr[1] ""
 
+#: lib/brando/doctor/checks/test_database.ex
+#, elixir-autogen, elixir-format
+msgid "%{database}, not the development database"
+msgstr ""
+
 #: lib/brando/doctor/checks/migrations.ex
 #, elixir-autogen, elixir-format
 msgid "%{file} differs from %{template}"
@@ -380,12 +385,22 @@ msgstr ""
 
 #: lib/brando/doctor/checks/configuration.ex
 #, elixir-autogen, elixir-format
+msgid "Mailer: %{mailer}, adapter %{adapter}"
+msgstr ""
+
+#: lib/brando/doctor/checks/configuration.ex
+#, elixir-autogen, elixir-format
 msgid "Mailer: %{mailer}, from %{from}"
 msgstr ""
 
 #: lib/brando/doctor/checks/configuration.ex
 #, elixir-autogen, elixir-format
 msgid "Mailer: %{mailer}, no sender"
+msgstr ""
+
+#: lib/brando/doctor/checks/configuration.ex
+#, elixir-autogen, elixir-format
+msgid "Mailer: %{mailer}, placeholder sender %{from}"
 msgstr ""
 
 #: lib/brando/doctor/checks/configuration.ex
@@ -423,6 +438,11 @@ msgstr ""
 msgid "Open identity"
 msgstr ""
 
+#: lib/brando/doctor/checks/alt_text.ex
+#, elixir-autogen, elixir-format
+msgid "Open images"
+msgstr ""
+
 #: lib/brando/doctor/checks/image_configs.ex
 #, elixir-autogen, elixir-format
 msgid "Recreate changed images"
@@ -456,6 +476,11 @@ msgstr ""
 #: lib/brando_admin/components/system_check.ex
 #, elixir-autogen, elixir-format
 msgid "System check"
+msgstr ""
+
+#: lib/brando/doctor/checks/test_database.ex
+#, elixir-autogen, elixir-format
+msgid "Test database"
 msgstr ""
 
 #: lib/brando_admin/components/system_check.ex
@@ -568,9 +593,24 @@ msgstr ""
 msgid "check the errors of the discarded jobs"
 msgstr ""
 
+#: lib/brando/doctor/checks/test_database.ex
+#, elixir-autogen, elixir-format
+msgid "checked in development"
+msgstr ""
+
 #: lib/brando/doctor/checks/versions.ex
 #, elixir-autogen, elixir-format
 msgid "commit %{commit} from %{url}"
+msgstr ""
+
+#: lib/brando/doctor/checks/configuration.ex
+#, elixir-autogen, elixir-format
+msgid "configure the mailer's production adapter and credentials in config/runtime.exs"
+msgstr ""
+
+#: lib/brando/doctor/checks/test_database.ex
+#, elixir-autogen, elixir-format
+msgid "could not read the test config: %{error}"
 msgstr ""
 
 #: lib/brando/doctor.ex
@@ -711,6 +751,11 @@ msgstr ""
 msgid "mailer module missing"
 msgstr ""
 
+#: lib/brando/doctor/checks/test_database.ex
+#, elixir-autogen, elixir-format
+msgid "mix test would use the development database %{database}"
+msgstr ""
+
 #: lib/brando/doctor/checks/json_ld.ex
 #, elixir-autogen, elixir-format
 msgid "name"
@@ -731,6 +776,16 @@ msgstr ""
 msgid "no assets/backend/package.json"
 msgstr ""
 
+#: lib/brando/doctor/checks/test_database.ex
+#, elixir-autogen, elixir-format
+msgid "no config/config.exs"
+msgstr ""
+
+#: lib/brando/doctor/checks/test_database.ex
+#, elixir-autogen, elixir-format
+msgid "no database name to compare"
+msgstr ""
+
 #: lib/brando/doctor/checks/configuration.ex
 #, elixir-autogen, elixir-format
 msgid "no endpoint URL"
@@ -744,6 +799,11 @@ msgstr ""
 #: lib/brando/doctor/checks/configuration.ex
 #, elixir-autogen, elixir-format
 msgid "no mailer"
+msgstr ""
+
+#: lib/brando/doctor/checks/configuration.ex
+#, elixir-autogen, elixir-format
+msgid "no production mail adapter"
 msgstr ""
 
 #: lib/brando/doctor/checks/oban.ex
@@ -801,9 +861,19 @@ msgstr ""
 msgid "not served by Brando"
 msgstr ""
 
+#: lib/brando/doctor/checks/alt_text.ex
+#, elixir-autogen, elixir-format
+msgid "open each image marked “No alt text” under Images and write its Alt. text (no AI provider is configured to draft it)"
+msgstr ""
+
 #: lib/brando/doctor/source.ex
 #, elixir-autogen, elixir-format
 msgid "path %{path}"
+msgstr ""
+
+#: lib/brando/doctor/checks/configuration.ex
+#, elixir-autogen, elixir-format
+msgid "placeholder sender address"
 msgstr ""
 
 #: lib/brando/doctor/checks/oban.ex
@@ -814,6 +884,11 @@ msgstr ""
 #: lib/brando/doctor/checks/oban.ex
 #, elixir-autogen, elixir-format
 msgid "queue %{queue}, limit %{limit}, paused"
+msgstr ""
+
+#: lib/brando/doctor/checks/test_database.ex
+#, elixir-autogen, elixir-format
+msgid "read the Repo url: in config/runtime.exs only outside tests, inside if config_env() != :test do … end"
 msgstr ""
 
 #: lib/brando/doctor/checks/deprecations.ex
@@ -834,6 +909,11 @@ msgstr ""
 #: lib/brando/doctor/checks/admin_routes.ex
 #, elixir-autogen, elixir-format
 msgid "route each schema's FormLive as live \"/<plural>/create\", <Name>FormLive, :create and live \"/<plural>/update/:entry_id\", <Name>FormLive, :update (mix brando.migrate54 converts generated Create/Update LiveViews). Schemas sharing a singular need their routes in a scope with as: and the same router_scope on their Blueprints"
+msgstr ""
+
+#: lib/brando/doctor/checks/configuration.ex
+#, elixir-autogen, elixir-format
+msgid "run `mix brando.gen.mail`, then set `config :brando, Brando.Mailer, from: …` and the mailer's production adapter in runtime.exs"
 msgstr ""
 
 #: lib/brando/doctor/checks/admin_assets.ex
@@ -886,14 +966,34 @@ msgstr ""
 msgid "served from SEO settings"
 msgstr ""
 
+#: lib/brando/doctor/checks/configuration.ex
+#, elixir-autogen, elixir-format
+msgid "set `config :brando, Brando.Mailer, from: …` to an address your mail provider sends for"
+msgstr ""
+
+#: lib/brando/doctor/checks/configuration.ex
+#, elixir-autogen, elixir-format
+msgid "set the address Brando sends from: `config :brando, Brando.Mailer, from: …`"
+msgstr ""
+
 #: lib/brando/doctor.ex
 #, elixir-autogen, elixir-format
 msgid "skipped in a release: needs the project's source files"
 msgstr ""
 
+#: lib/brando/doctor/checks/test_database.ex
+#, elixir-autogen, elixir-format
+msgid "test and development both connect to %{database}"
+msgstr ""
+
 #: lib/brando/doctor/checks/oban.ex
 #, elixir-autogen, elixir-format
 msgid "testing mode, jobs run inline"
+msgstr ""
+
+#: lib/brando/doctor/checks/test_database.ex
+#, elixir-autogen, elixir-format
+msgid "the config files read Mix.env(), which cannot be read for :test from here"
 msgstr ""
 
 #: lib/brando/doctor/checks/versions.ex

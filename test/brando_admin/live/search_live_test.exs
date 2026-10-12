@@ -137,6 +137,20 @@ defmodule BrandoAdmin.SearchLiveTest do
            ]
   end
 
+  test "the domain that tells types apart is translated as the sidebar translates it" do
+    types = [
+      %{key: "pages.page", schema: Page, label: "Kategorier", icon: "file"},
+      %{key: "synctest.article", schema: Article, label: "Kategorier", icon: "file"}
+    ]
+
+    Gettext.put_locale("no")
+
+    assert Enum.map(BrandoAdmin.Search.disambiguate(types), & &1.label) == [
+             "Kategorier · Sider",
+             "Kategorier · SyncTest"
+           ]
+  end
+
   describe "with groups" do
     setup %{current_user: owner} do
       put_test_env(:authorization_mode, :groups)

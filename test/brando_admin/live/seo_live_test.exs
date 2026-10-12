@@ -105,7 +105,7 @@ defmodule BrandoAdmin.Sites.SEOLiveTest do
     refute Enum.any?(Brando.Cache.SEO.get("en").redirects || [], &(&1.from == "/projects/old-case"))
   end
 
-  test "the content types to check are a labelled checkbox group, Pages until changed", %{conn: conn} do
+  test "the content types to check are a labelled checkbox group, every type until changed", %{conn: conn} do
     user = Factory.insert(:random_user)
 
     {:ok, _} =
@@ -119,7 +119,10 @@ defmodule BrandoAdmin.Sites.SEOLiveTest do
 
     assert has_element?(view, "#seo-audit-scope fieldset > legend", "Content types to check")
     assert has_element?(view, "#seo-audit-type-brando-pages-page[checked]")
-    assert [_] = view |> render() |> Floki.parse_document!() |> Floki.find("#seo-audit-scope fieldset input[checked]")
+    document = view |> render() |> Floki.parse_document!()
+    offered = Floki.find(document, "#seo-audit-scope fieldset input[type=checkbox]")
+    assert offered != []
+    assert Floki.find(document, "#seo-audit-scope fieldset input[type=checkbox][checked]") == offered
     refute has_element?(view, "#seo-audit-include-drafts[checked]")
     refute render(view) =~ "Draft page"
 
@@ -129,6 +132,8 @@ defmodule BrandoAdmin.Sites.SEOLiveTest do
 
     assert render_async(view, 5_000) =~ "Draft page"
     assert has_element?(view, "#seo-audit-include-drafts[checked]")
+    # The first problem by name, the rest counted in words
+    assert has_element?(view, ".seo-audit-row td", ~r/ \+\d+ more/)
 
     view |> form("#seo-audit-scope", %{"schemas" => [""], "include_drafts" => "false"}) |> render_change()
     render_async(view, 5_000)

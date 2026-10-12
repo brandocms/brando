@@ -800,13 +800,18 @@ defmodule Brando.Villain.Parser do
     end
   end
 
-  # Determine alt text with proper fallbacks
-  defp get_alt_text(alt, caption) do
-    cond do
-      alt != "" -> alt
-      caption != "" -> caption
-      true -> ""
-    end
+  # A picture without alt text of its own is described by its caption, as
+  # before 0.55. Legacy captions hold HTML (`<h3>…</h3>`), which an attribute
+  # can't carry, so the alt gets the caption's text.
+  defp get_alt_text(alt, _caption) when alt not in [nil, ""], do: alt
+  defp get_alt_text(_alt, caption) when caption in [nil, ""], do: ""
+
+  defp get_alt_text(_alt, caption) do
+    caption
+    |> Floki.parse_fragment!()
+    |> Floki.text(sep: " ")
+    |> String.split()
+    |> Enum.join(" ")
   end
 
   # Build assigns map for the template
@@ -1377,9 +1382,14 @@ defmodule Brando.Villain.Parser do
     # Determine if autoplay should be enabled
     autoplay = autoplay_setting not in [nil, false]
 
+    # A block's own aspect ratio reshapes the record's size, as for embeds, so
+    # the width/height attributes, orientation and cover agree with its style
+    %{width: width, height: height} =
+      override_shape(%{width: Map.get(data, :width), height: Map.get(data, :height)}, data)
+
     [
-      width: Map.get(data, :width),
-      height: Map.get(data, :height),
+      width: width,
+      height: height,
       cover: Map.get(data, :cover, false),
       autoplay: autoplay,
       poster: Map.get(data, :poster),

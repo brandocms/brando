@@ -734,7 +734,19 @@ defmodule Brando.Blueprint do
 
     app_modules
     |> Enum.uniq()
+    |> load_modules()
     |> Enum.filter(&__MODULE__.blueprint?/1)
+  end
+
+  @doc """
+  Loads `modules` in one batch and returns them. Checking each module of an
+  application in turn loads it on first use, one code server call at a time,
+  and scans running side by side queue behind each other.
+  """
+  @spec load_modules([module()]) :: [module()]
+  def load_modules(modules) do
+    _ = :code.ensure_modules_loaded(modules)
+    modules
   end
 
   def list_blueprints(:include_brando) do
@@ -839,8 +851,8 @@ defmodule Brando.Blueprint do
     )
   end
 
-  # Legacy listing columns, which no task rewrites: the row they made is
-  # application markup.
+  # Legacy listing columns. `mix brando.migrate54` rewrites the common shapes
+  # into a row component and lists the rest.
   defmacro field(_name, _type, _opts \\ []) do
     deprecated(__CALLER__, legacy_listing_column("field/3"))
   end
@@ -852,8 +864,8 @@ defmodule Brando.Blueprint do
   defp legacy_listing_column(call) do
     "#{call} in a listing is no longer supported and renders nothing. " <>
       "Replace the listing's field and template columns with a row component " <>
-      "(component &__MODULE__.listing_row/1) by hand; mix brando.migrate54 does not rewrite them. " <>
-      "See guides/blueprint_listings.md#rows"
+      "(component &__MODULE__.listing_row/1): mix brando.migrate54 converts the common shapes and " <>
+      "lists the listings it leaves. See guides/blueprint_listings.md#rows"
   end
 
   defp deprecated(caller, message) do

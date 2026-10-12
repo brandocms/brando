@@ -86,6 +86,41 @@ defmodule Mix.Brando do
     end
   end
 
+  @doc """
+  Parses a task's `args` with `OptionParser` in strict mode and returns
+  `{opts, positional}`.
+
+  An unknown or malformed option, or more positional arguments than
+  `:max_positional` (default 0), stops the task with a `Mix.raise/1` naming
+  the offender and the options the task takes, rather than an
+  `OptionParser.ParseError` or a `FunctionClauseError`.
+  """
+  @spec parse_options!(String.t(), [String.t()], keyword(), keyword()) :: {keyword(), [String.t()]}
+  def parse_options!(task, args, switches, opts \\ []) do
+    aliases = Keyword.get(opts, :aliases, [])
+    max_positional = Keyword.get(opts, :max_positional, 0)
+    {parsed, positional, invalid} = OptionParser.parse(args, strict: switches, aliases: aliases)
+
+    cond do
+      invalid != [] ->
+        options = Enum.map_join(invalid, ", ", fn {option, _value} -> option end)
+        Mix.raise("mix #{task}: unknown or invalid option #{options}. #{accepted(switches)}")
+
+      length(positional) > max_positional ->
+        Mix.raise("mix #{task}: unexpected argument #{Enum.join(positional, " ")}. #{accepted(switches)}")
+
+      true ->
+        {parsed, positional}
+    end
+  end
+
+  defp accepted([]), do: "It takes no options."
+
+  defp accepted(switches) do
+    "It takes: " <>
+      Enum.map_join(switches, ", ", fn {name, _type} -> "--" <> String.replace(to_string(name), "_", "-") end)
+  end
+
   @valid_attributes [
     :array,
     :boolean,

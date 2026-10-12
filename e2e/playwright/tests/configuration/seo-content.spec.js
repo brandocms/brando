@@ -67,23 +67,23 @@ test('the content SEO tab audits published pages', async ({ page }, testInfo) =>
     }
   }
 
-  // What the audit checks is a labelled group of checkboxes, Pages only to
-  // begin with; checking another type re-runs the audit.
+  // What the audit checks is a labelled group of checkboxes, every type to
+  // begin with; unchecking one re-runs the audit.
   const scope = audit.locator('#seo-audit-scope')
   await expect(scope.getByRole('group')).toHaveAccessibleName(await scope.locator('fieldset > legend').innerText())
   await expect(scope.locator('#seo-audit-type-brando-pages-page')).toBeChecked()
   const others = scope.locator('fieldset input[type="checkbox"]:not(#seo-audit-type-brando-pages-page)')
-  for (const other of await others.all()) await expect(other).not.toBeChecked()
+  for (const other of await others.all()) await expect(other).toBeChecked()
 
   if (await others.count()) {
     const other = others.first()
     await scope.locator(`label[for="${await other.getAttribute('id')}"]`).click()
     await syncLV(page)
-    await expect(other).toBeChecked()
+    await expect(other).not.toBeChecked()
     await expect(audit.locator('.seo-stats')).toBeVisible({ timeout: 15000 })
     await scope.locator(`label[for="${await other.getAttribute('id')}"]`).click()
     await syncLV(page)
-    await expect(other).not.toBeChecked()
+    await expect(other).toBeChecked()
   }
 
   // Drafts re-runs the audit; the table stays populated.

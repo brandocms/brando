@@ -485,15 +485,16 @@ defmodule Mix.Tasks.Brando.Migrate54Test do
 
     assert_unchanged(igniter, [
       "lib/legacy_app_web/components/featured.html.heex",
-      "lib/legacy_app_web/components/navigation.html.heex",
       "lib/legacy_app_web/controllers/page_controller.ex"
     ])
+
+    assert source(igniter, "lib/legacy_app_web/components/navigation.html.heex") =~
+             "<a href={Brando.HTML.get_menu_item_url(item)}><%= Brando.HTML.get_menu_item_text(item) %></a>"
 
     assert_has_warning(igniter, fn warning ->
       warning =~ "Template code that 0.54 breaks" and
         warning =~ "lib/legacy_app_web/components/featured.html.heex:1: <%= @featured.html |> raw %>" and
-        warning =~ "lib/legacy_app_web/components/navigation.html.heex:2: <a href={item.url}>" and
-        not (warning =~ "navigation.html.heex:4") and
+        not (warning =~ "navigation.html.heex") and
         warning =~ "lib/legacy_app_web/controllers/page_controller.ex:2: def heading(page), do: Brando.Pages.get_var" and
         not (warning =~ "vacancy_html")
     end)

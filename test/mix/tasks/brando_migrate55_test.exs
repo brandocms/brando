@@ -440,9 +440,7 @@ defmodule Mix.Tasks.Brando.Migrate55Test do
     assert_has_warning(igniter, &String.contains?(&1, "config :brando, Brando.Mailer, from:"))
   end
 
-  test "leaves the mailer alone when the application has none, or has chosen one" do
-    assert_unchanged(migrate(@blueprint_054), @brando_config_path)
-
+  test "leaves the mailer alone when the application has chosen one" do
     chosen = @brando_config <> "\nconfig :brando, mailer: LegacyApp.Notifications.Mailer\n"
     mailer = "defmodule LegacyApp.Mailer do\n  use Swoosh.Mailer, otp_app: :legacy_app\nend\n"
     igniter = migrate(@blueprint_054, %{"lib/legacy_app/mailer.ex" => mailer, @brando_config_path => chosen})
@@ -2141,6 +2139,7 @@ defmodule Mix.Tasks.Brando.Migrate55Test do
 
     assert_has_notice(igniter, &String.contains?(&1, "Continue in this order"))
     assert_has_notice(igniter, &String.contains?(&1, "mix brando.gen.migrations"))
+    assert_has_notice(igniter, &String.contains?(&1, "mix brando.gen.blueprint_migration --all` to plan"))
     assert_has_notice(igniter, &(&1 =~ ~r/mix brando.identifiers.sync`\s+and `mix brando.images.adopt`/))
     assert_has_notice(igniter, &String.contains?(&1, "Created `florist.config.exs`"))
     assert_has_notice(igniter, &String.contains?(&1, "Archived the recognized legacy task"))
@@ -2169,6 +2168,15 @@ defmodule Mix.Tasks.Brando.Migrate55Test do
   defp assert_idempotent(igniter, path) do
     rerun = igniter |> apply_igniter!() |> include_test_files() |> Migrate55.igniter()
     assert_unchanged(rerun, path)
+  end
+
+  test "leaves installed packages under assets/ alone" do
+    installed = "assets/backend/node_modules/some-hooks/package.json"
+    igniter = migrate(@blueprint_054, %{installed => @package_json})
+
+    live_view_version = to_string(Application.spec(:phoenix_live_view, :vsn))
+    assert source(igniter, @package_json_path) =~ ~s("phoenix_live_view": "#{live_view_version}")
+    assert source(igniter, installed) == @package_json
   end
 
   defp migrate(blueprint, overrides \\ %{}) do

@@ -183,7 +183,7 @@ defmodule Brando.Migrations.MoveDatasourceToModule do
 
     # build a module block from the updated module -^
     generated_uid = Brando.Utils.generate_uid()
-    refs_with_generated_uids = Brando.Villain.add_uid_to_refs(module.refs)
+    refs_with_generated_uids = Brando.Content.Blocks.add_uid_to_refs(module.refs)
 
     vars_for_block = set_block_var(updated_vars, datasource_arg)
 

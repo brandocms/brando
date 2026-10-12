@@ -676,8 +676,10 @@ msgstr ""
 
 #: lib/brando_admin/live/sites/seo_live.ex
 #, elixir-autogen, elixir-format
-msgid "%{label} +%{count}"
-msgstr ""
+msgid "%{label} +%{count} more"
+msgid_plural "%{label} +%{count} more"
+msgstr[0] ""
+msgstr[1] ""
 
 #: lib/brando_admin/components/form/var_layout.ex
 #, elixir-autogen, elixir-format
@@ -12997,7 +12999,7 @@ msgstr ""
 
 #: lib/brando_admin/components/form/draft_recovery.ex
 #, elixir-autogen, elixir-format
-msgid "Recovery copy saved at %{time}"
+msgid "Recovery copy saved at %{time} on %{date}"
 msgstr ""
 
 #: lib/brando_admin/components/form/draft_recovery.ex
@@ -18847,11 +18849,6 @@ msgstr ""
 #: lib/brando_admin/components/form/input/gallery.ex
 #, elixir-autogen, elixir-format
 msgid "Video configuration"
-msgstr ""
-
-#: lib/brando/html/video.ex
-#, elixir-autogen, elixir-format
-msgid "Video cover image"
 msgstr ""
 
 #: lib/brando_admin/components/video_picker.ex

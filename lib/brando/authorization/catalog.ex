@@ -151,8 +151,9 @@ defmodule Brando.Authorization.Catalog do
         _ -> []
       end
     end)
-    |> Enum.filter(&blueprint?/1)
     |> Enum.uniq()
+    |> Brando.Blueprint.load_modules()
+    |> Enum.filter(&blueprint?/1)
   end
 
   @doc "Resolves a schema name against registered resources only."

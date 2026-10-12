@@ -325,7 +325,7 @@ if Code.ensure_loaded?(Igniter) do
               do: Path.relative_to_cwd(plan.metadata.migration),
               else: "snapshot only, #{Path.relative_to_cwd(snapshot_path(plan))}"
 
-          "  #{inspect(plan.module)}: #{file}"
+          "  #{inspect(plan.module)}: #{file}#{numbering_suffix(plan)}"
         end)
 
       up_to_date =
@@ -455,10 +455,48 @@ if Code.ensure_loaded?(Igniter) do
       #{migration}
       Snapshot: #{snapshot} (version #{plan.metadata.snapshot_version}, format #{plan.snapshot.format_version})
       Rebaseline: #{plan.snapshot.rebaseline?}
-      #{schema}
+      #{numbering(plan)}#{schema}
       Both files will be persisted together only after acceptance and a fresh history/schema check.
       """
     end
+
+    # Snapshots and migrations are numbered separately, so a snapshot recorded
+    # without a migration leaves every later pair a number apart.
+    defp numbering(plan) do
+      if numbers_differ?(plan) do
+        snapshots = plan.module |> Brando.Blueprint.Snapshot.build_path(plan.options) |> Path.join("*.snapshot")
+        snapshots = snapshots |> Path.wildcard() |> Enum.map(&Path.basename(&1, ".snapshot")) |> Enum.sort()
+
+        migrations =
+          plan.module
+          |> Migrations.migration_files(plan.options)
+          |> Enum.map(&(&1 |> Path.basename(".exs") |> String.split("_") |> List.last()))
+          |> Enum.sort()
+
+        """
+        Numbering: snapshot #{pad(plan.metadata.snapshot_version)} goes with migration #{plan.metadata.sequence}. \
+        Snapshots and migrations are numbered separately: the history has snapshots #{list(snapshots)} and \
+        migrations #{list(migrations)}, and a snapshot recorded without a migration (--rebaseline, a --reconcile \
+        baseline, or an earlier Brando version) moves the numbers apart. No migration is missing because of it.
+        """
+      else
+        ""
+      end
+    end
+
+    defp numbering_suffix(plan) do
+      if numbers_differ?(plan), do: " (snapshot #{pad(plan.metadata.snapshot_version)})", else: ""
+    end
+
+    defp numbers_differ?(%{migration_source: nil}), do: false
+
+    defp numbers_differ?(plan),
+      do: String.to_integer(plan.metadata.sequence) != plan.metadata.snapshot_version
+
+    defp pad(version), do: version |> to_string() |> String.pad_leading(3, "0")
+
+    defp list([]), do: "(none)"
+    defp list(numbers), do: Enum.join(numbers, ", ")
 
     defp snapshot_path(plan) do
       plan.metadata[:snapshot] ||

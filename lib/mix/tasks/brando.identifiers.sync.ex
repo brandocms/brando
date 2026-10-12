@@ -4,13 +4,24 @@ defmodule Mix.Tasks.Brando.Identifiers.Sync do
   @moduledoc """
   This task will clean up, update existing and recreate missing identifiers.
 
+      mix brando.identifiers.sync
+      mix brando.identifiers.sync --yes
+
+  It asks nothing, so `--yes` (or `--force`) is accepted and ignored: the
+  derived-data tasks (`brando.entries.resave`, `brando.identifiers.sync`,
+  `brando.images.adopt`) all take it. Any other option stops the task.
+
   An entry that raises is skipped and listed at the end, and the task then
   exits with status 1.
   """
   use Mix.Task
 
+  @switches [yes: :boolean, force: :boolean]
+
   @spec run(any) :: no_return
-  def run([]) do
+  def run(args) do
+    Mix.Brando.parse_options!("brando.identifiers.sync", args, @switches, aliases: [y: :yes])
+
     Application.put_env(:logger, :level, :error)
 
     Mix.Tasks.Run.run([])

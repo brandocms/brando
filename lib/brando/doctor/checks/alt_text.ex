@@ -20,11 +20,15 @@ defmodule Brando.Doctor.Checks.AltText do
   def run(%Context{} = context) do
     context
     |> Context.each_environment(&AltText.missing_count_by_language/0)
-    |> evaluate()
+    |> evaluate(Brando.AI.configured?(AltText.ai_opts()))
   end
 
-  @doc "Turns `[{environment_label, %{language => {missing, total}}}]` into a result."
-  def evaluate(per_environment) do
+  @doc """
+  Turns `[{environment_label, %{language => {missing, total}}}]` into a
+  result. `ai?` is whether an AI provider can describe images; without one
+  the fix is to write the text on each image.
+  """
+  def evaluate(per_environment, ai? \\ false) do
     totals =
       for {_label, counts} <- per_environment, {language, {missing, _total}} <- counts, reduce: %{} do
         acc -> Map.update(acc, language, missing, &(&1 + missing))
@@ -59,12 +63,26 @@ defmodule Brando.Doctor.Checks.AltText do
             )
           end)
 
-        warning(summary,
-          fix: dgettext("doctor", "Images → Alt text drafts it with AI, for review before saving"),
-          link: {BrandoAdmin.Images.AltTextLive, dgettext("doctor", "Write alt text")},
-          items: items
-        )
+        warning(summary, [items: items] ++ remedy(ai?))
     end
+  end
+
+  defp remedy(true) do
+    [
+      fix: dgettext("doctor", "Images → Alt text drafts it with AI, for review before saving"),
+      link: {BrandoAdmin.Images.AltTextLive, dgettext("doctor", "Write alt text")}
+    ]
+  end
+
+  defp remedy(false) do
+    [
+      fix:
+        dgettext(
+          "doctor",
+          "open each image marked “No alt text” under Images and write its Alt. text (no AI provider is configured to draft it)"
+        ),
+      link: {BrandoAdmin.Images.ImageListLive, dgettext("doctor", "Open images")}
+    ]
   end
 
   defp coverage(_missing, 0), do: "100%"

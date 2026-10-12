@@ -283,7 +283,10 @@ defmodule Brando.Migrations.UpgradeFromVillainTest do
             villain_video("video", %{"width" => 400, "height" => 300}),
             villain_video("vimeo", %{"source" => "vimeo", "remote_id" => "76979871", "width" => 640, "height" => 360}),
             villain_video("youtube", %{"source" => "youtube", "remote_id" => "dQw4w9WgXcQ"}),
-            villain_video("unsized", %{"width" => nil, "height" => nil})
+            villain_video("unsized", %{"width" => nil, "height" => nil}),
+            villain_video("scaled", %{"width" => 971, "height" => 1216}),
+            villain_video("with_button", %{"play_button" => true}),
+            villain_video("autoplaying", %{"autoplay" => true})
           ],
           "vars" => []
         }
@@ -439,7 +442,33 @@ defmodule Brando.Migrations.UpgradeFromVillainTest do
     assert rows(
              "SELECT name, data->'data'->>'cover' FROM content_refs WHERE block_id = $1 ORDER BY name",
              [other_video_block]
-           ) == [["unsized", "false"], ["video", "svg"], ["vimeo", "false"], ["youtube", "false"]]
+           ) == [
+             ["autoplaying", "svg"],
+             ["scaled", "svg"],
+             ["unsized", "false"],
+             ["video", "svg"],
+             ["vimeo", "false"],
+             ["with_button", "svg"],
+             ["youtube", "false"]
+           ]
+
+    # Blocks had no `muted`. Brando before 0.53 muted every file video, and a
+    # file video only the site's script starts must be muted to play; one with
+    # a play button or controls keeps its sound, and autoplay always mutes
+    assert rows(
+             "SELECT name, data->'data'->'muted' FROM content_refs WHERE block_id IN ($1, $2) ORDER BY block_id, name",
+             [video_block, other_video_block]
+           ) == [
+             ["cover_video", true],
+             ["video", true],
+             ["autoplaying", true],
+             ["scaled", true],
+             ["unsized", true],
+             ["video", true],
+             ["vimeo", false],
+             ["with_button", false],
+             ["youtube", false]
+           ]
 
     # One video record per file, sized by the first block that used it; a
     # block that drew it in another shape keeps that shape as its own
@@ -454,9 +483,13 @@ defmodule Brando.Migrations.UpgradeFromVillainTest do
            ) == [
              ["cover_video", "external_file", "https://cdn.example.com/video.mp4", 840, 1052, nil],
              ["video", "external_file", "https://cdn.example.com/video.mp4", 840, 1052, nil],
+             ["autoplaying", "external_file", "https://cdn.example.com/video.mp4", 840, 1052, nil],
+             # The same shape at another scale (971×1216 against 840×1052)
+             ["scaled", "external_file", "https://cdn.example.com/video.mp4", 840, 1052, nil],
              ["unsized", "external_file", "https://cdn.example.com/video.mp4", 840, 1052, nil],
              ["video", "external_file", "https://cdn.example.com/video.mp4", 840, 1052, "400:300"],
              ["vimeo", "vimeo", "https://vimeo.com/76979871", 640, 360, nil],
+             ["with_button", "external_file", "https://cdn.example.com/video.mp4", 840, 1052, nil],
              ["youtube", "youtube", "https://www.youtube.com/watch?v=dQw4w9WgXcQ", 840, 1052, nil]
            ]
   end

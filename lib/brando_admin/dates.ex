@@ -4,7 +4,9 @@ defmodule BrandoAdmin.Dates do
   `Brando.timezone/0` and the admin's language, with the full timestamp on
   hover.
 
-    * `short/1` — `28.09.26 18:40`, for lists and tight rows
+    * `short/1` — `28.09.26 18:40`, for lists and tight rows; `short_date/1`
+      (`28.09.26`) and `short_time/1` (`18:40`) are its two halves, for a
+      sentence that words them apart ("saved 28.09.26 kl. 18:40")
     * `clock/1` — `18:40` today, or the short form, for a recent moment
     * `long/1` — `28. sep. 2026 kl. 18:40` (`28 Sep 2026, 18:40`), where
       there is room
@@ -22,6 +24,14 @@ defmodule BrandoAdmin.Dates do
   @doc "`28.09.26 18:40`"
   def short(nil), do: ""
   def short(datetime), do: Datetime.format_datetime(datetime, "%d.%m.%y %H:%M", locale())
+
+  @doc "`28.09.26`, the date of `short/1`"
+  def short_date(nil), do: ""
+  def short_date(datetime), do: datetime |> local() |> Calendar.strftime("%d.%m.%y")
+
+  @doc "`18:40`, the time of `short/1`"
+  def short_time(nil), do: ""
+  def short_time(datetime), do: datetime |> local() |> Calendar.strftime("%H:%M")
 
   @doc "`18:40` today, the `short/1` form on another day"
   def clock(nil), do: ""
