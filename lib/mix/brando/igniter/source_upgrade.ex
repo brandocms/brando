@@ -948,7 +948,8 @@ if Code.ensure_loaded?(Igniter) do
     defp keyword_entries({:__block__, _, [entries]}) when is_list(entries), do: entries
     defp keyword_entries(entries) when is_list(entries), do: entries
 
-    defp find_blueprints(igniter) do
+    @doc "Finds every module that `use Brando.Blueprint`: `{igniter, modules}`."
+    def find_blueprints(igniter) do
       ProjectModule.find_all_matching_modules(igniter, fn _module, zipper ->
         case Igniter.Code.Module.move_to_use(zipper, Brando.Blueprint) do
           {:ok, _zipper} -> true

@@ -7,15 +7,18 @@ if Code.ensure_loaded?(Igniter) do
 
     alias Mix.Brando.Igniter.AdminFormViews
     alias Mix.Brando.Igniter.SourceUpgrade
+    alias Mix.Brando.Igniter.SourceUpgrade.ListingRows
 
     @shortdoc "Migrates application source from Brando 0.53 to 0.54"
     @moduledoc """
     #{@shortdoc}.
 
     Run this task from a clean, committed worktree after updating the Brando
-    dependency. It rewrites legacy Blueprint and LivePreview syntax, preserves
-    legacy Meta and JSON-LD path extraction semantics, creates the gettext
-    recovery helper, and moves Gettext backends to `use Gettext.Backend`.
+    dependency. It rewrites legacy Blueprint and LivePreview syntax, turns
+    legacy listing `field`/`template` columns into a `listing_row/1` row
+    component where it can convert every column, preserves legacy Meta and
+    JSON-LD path extraction semantics, creates the gettext recovery helper,
+    and moves Gettext backends to `use Gettext.Backend`.
 
     The task changes source files only, and every rewrite matches 0.53 syntax
     only, so rerunning it is safe. An application that already uses 0.54
@@ -40,6 +43,7 @@ if Code.ensure_loaded?(Igniter) do
       |> SourceUpgrade.upgrade_054_templates()
       |> SourceUpgrade.warn_block_editor_options()
       |> SourceUpgrade.rewrite_blueprints(&SourceUpgrade.upgrade_054_blueprint/1)
+      |> ListingRows.rewrite()
       |> SourceUpgrade.rewrite_preview_targets()
       |> SourceUpgrade.configure_repo_module()
       |> SourceUpgrade.remove_sharp_processor()
@@ -63,6 +67,12 @@ if Code.ensure_loaded?(Igniter) do
       converts legacy list, single, and selection datasources; expands
       listing filters, actions, selection actions, and supported exports into
       Spark blocks; and preserves Meta and JSON-LD path/mutator behavior.
+
+      Legacy listing columns become a row component: image fields
+      `<.cover>`, url fields `<.url>`, a Liquid template linking to the
+      entry's update form `<.update_link>`, with `{{ entry.x }}` and
+      `{% if entry.x %}` written as HEEx. Language columns are dropped. A
+      listing with any other column is left as it is and listed below.
 
       Generated admin `<Name>CreateLive`/`<Name>UpdateLive` pairs become one
       `<Name>FormLive`, routed with `:create` and `:update`; edited pairs are
@@ -101,10 +111,9 @@ if Code.ensure_loaded?(Igniter) do
         * The task rewrites `use Brando.Datasource` only inside Blueprint
           modules. Search for any remaining uses in standalone Ecto schemas and
           move those datasource declarations onto the appropriate Blueprint.
-        * Legacy listing `field`, `template`, and positional `child_listing`
-          declarations require an application-specific row component or child
-          schema. Exports using the removed `after_export` callback and action
-          option sets beyond `default_actions:` also remain for manual redesign.
+        * Positional `child_listing` declarations require a child schema.
+          Exports using the removed `after_export` callback and action option
+          sets beyond `default_actions:` also remain for manual redesign.
         * Vite 5 manifest configuration, custom processing that relied on
           sharp-cli, `<.head>` adoption, and navigation markup the template
           warning does not list depend on the application's frontend and
