@@ -593,6 +593,42 @@ defmodule Brando.Doctor.ChecksTest do
     end
   end
 
+  describe "Module entry paths" do
+    test "module code reading entries through .data.vars or .data.refs is a warning" do
+      assert %Result{status: :ok} = Checks.ModuleEntryPaths.run(context())
+
+      services =
+        Factory.insert(:module,
+          name: %{"en" => "Services"},
+          multi: true,
+          code: """
+          <ul>
+            {% for link in entries %}
+              <li><a href="{{ link.data.vars.url }}">{% if link.data.refs.cover %}x{% endif %}</a></li>
+            {% endfor %}
+          </ul>
+          {% assign sorted = entries | sort: "data.vars.order" %}
+          """
+        )
+
+      # Datasource entries are records, HTML text and quoted strings are not
+      # Liquid paths, and the rewritten form is right
+      Factory.insert(:module, datasource: true, code: "{% for e in entries %}{{ e.data.vars.x }}{% endfor %}")
+      Factory.insert(:module, code: ~s(<p class="data.vars">{{ 'x.data.vars.y' }}</p>{{ link.vars.url }}))
+
+      result = Checks.ModuleEntryPaths.run(context())
+      assert result.status == :warning
+      assert result.summary == "1 module reads its entries through .data.vars or .data.refs, which renders nothing"
+      assert result.fix =~ "brando_219"
+
+      assert result.items == [
+               ~s|Services (##{services.id}), line 3: {{ link.data.vars.url }}|,
+               ~s|Services (##{services.id}), line 3: {% if link.data.refs.cover %}|,
+               ~s|Services (##{services.id}), line 6: {% assign sorted = entries \| sort: "data.vars.order" %}|
+             ]
+    end
+  end
+
   describe "Sitemap" do
     test "not generated is an error" do
       assert %Result{status: :error, summary: "not generated"} = Checks.Sitemap.evaluate([{nil, nil}], @now)
