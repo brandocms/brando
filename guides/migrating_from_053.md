@@ -397,7 +397,26 @@ correct rewrite depends on application semantics:
   because the call sites are in application markup. `mix compile
   --warnings-as-errors` reports every one as an undefined function;
 - transferring ownership of PostgreSQL's `oban_job_state` enum before the Oban
-  v14 migration when deploying through the bundled Fabric workflow.
+  v14 migration when deploying through the bundled Fabric workflow;
+- showing Brando's dashboard. The admin's start page is the application's own
+  `MyAppAdmin.DashboardLive`, and one from an older installer renders only a
+  header. Render the dashboard component in it, as the installer's template
+  does:
+
+  ```elixir
+  def render(assigns) do
+    assigns = assign_new(assigns, :authorization, fn -> nil end)
+
+    ~H"""
+    <.live_component
+      module={BrandoAdmin.Components.Dashboard}
+      id="admin-dashboard"
+      current_user={@current_user}
+      authorization={@authorization}
+    />
+    """
+  end
+  ```
 
 The tasks report these items as warnings so they cannot be missed in the
 review.
