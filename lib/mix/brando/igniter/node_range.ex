@@ -49,6 +49,9 @@ if Code.ensure_loaded?(Igniter) do
           alternative
           |> String.split(~r/\s+/, trim: true)
           |> Enum.reduce_while({:ok, {{{0, 0, 0}, true}, nil}}, &intersect/2)
+
+        _hyphens ->
+          :error
       end
     end
 

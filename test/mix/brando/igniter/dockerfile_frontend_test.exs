@@ -43,7 +43,7 @@ defmodule Mix.Brando.Igniter.DockerfileFrontendTest do
   end
 
   test "moves it when engines.node allows that major, keeping the image's variant" do
-    dockerfile = String.replace(@dockerfile, "FROM node:16 AS", "FROM node:16.20-alpine AS")
+    dockerfile = String.replace(@dockerfile, "FROM node:16 AS", "FROM node:16.20-bookworm-slim AS")
 
     plan =
       upgrade(%{
@@ -51,7 +51,7 @@ defmodule Mix.Brando.Igniter.DockerfileFrontendTest do
         "assets/frontend/package.json" => package(%{"engines" => %{"node" => ">=16 <23"}})
       })
 
-    assert frontend_from(plan) == "FROM node:22-alpine AS assets_frontend"
+    assert frontend_from(plan) == "FROM node:22-bookworm-slim AS assets_frontend"
     assert frontend_notice(plan) =~ ~s|allows it (engines.node ">=16 <23")|
   end
 
@@ -77,6 +77,26 @@ defmodule Mix.Brando.Igniter.DockerfileFrontendTest do
 
     assert frontend_from(plan) == "FROM ghcr.io/acme/node-builder:3 AS assets_frontend"
     assert frontend_notice(plan) =~ "does not build on a `node:<version>` image"
+  end
+
+  test "never moves it down, nor a pinned digest or an unusual variant" do
+    package = %{"assets/frontend/package.json" => package(%{})}
+
+    newer = String.replace(@dockerfile, "FROM node:16 AS", "FROM node:24 AS")
+    plan = upgrade(Map.put(package, "Dockerfile", newer))
+    assert frontend_from(plan) == "FROM node:24 AS assets_frontend"
+    refute frontend_notice(plan)
+
+    for {image, reason} <- [
+          {"node:16@sha256:0123abcd", "pinned to a digest"},
+          {"node:16-buster-slim", "variant may not be published"},
+          {"node:16-alpine3.15", "variant may not be published"}
+        ] do
+      plan = upgrade(Map.put(package, "Dockerfile", String.replace(@dockerfile, "FROM node:16 AS", "FROM #{image} AS")))
+      assert frontend_from(plan) == "FROM #{image} AS assets_frontend"
+      assert frontend_notice(plan) =~ "still builds on #{image}"
+      assert frontend_notice(plan) =~ reason
+    end
   end
 
   test "is idempotent" do

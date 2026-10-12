@@ -19,10 +19,11 @@ if Code.ensure_loaded?(Igniter) do
     existing files are kept. Install and build afterwards with
     `mix brando.assets.setup --backend-only`.
 
-    The Dockerfile's `assets_frontend` stage moves to the `assets_backend`
+    The Dockerfile's `assets_frontend` stage moves up to the `assets_backend`
     stage's Node major when `assets/frontend/package.json` sets no
-    `engines.node` or one that allows it; otherwise a notice says why it was
-    kept.
+    `engines.node` or one that allows it, and its image is a plain
+    `node:<version>` or an `-alpine`, `-slim`, `-bookworm` or `-bullseye`
+    variant; otherwise a notice says why it was kept.
     """
 
     @impl Igniter.Mix.Task

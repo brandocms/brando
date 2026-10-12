@@ -16,7 +16,7 @@ defmodule Mix.Brando.Igniter.NodeRangeTest do
   end
 
   test "is :error for what it cannot read" do
-    for range <- ["lts/*", "node", ">=22 <foo", "22.1.2.3"] do
+    for range <- ["lts/*", "node", ">=22 <foo", "22.1.2.3", "16 - 18 - 22"] do
       assert NodeRange.allows_major?(range, 22) == :error, range
     end
   end

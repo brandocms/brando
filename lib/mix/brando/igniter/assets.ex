@@ -215,16 +215,19 @@ if Code.ensure_loaded?(Igniter) do
       end
     end
 
-    # The frontend is the site's own build. Its stage moves to the admin's
-    # Node major when the frontend's `engines.node` allows it (or has none).
+    @movable_node ~r/^node:(\d+(?:\.\d+)*)(-(?:alpine|slim|bookworm|bullseye|bookworm-slim|bullseye-slim))?$/
+
+    # The frontend is the site's own build. Its stage moves up to the admin's
+    # Node major when the frontend's `engines.node` allows it (or has none),
+    # for the image variants published for every major.
     defp upgrade_frontend_image(igniter, contents, wanted) do
       with image when is_binary(image) <- stage_image(contents, "assets_frontend"),
            {:ok, major} <- node_major(wanted),
-           false <- node_major(image) == {:ok, major} do
+           true <- older_node?(image, major) do
         range =
-          case node_major(image) do
-            {:ok, _major} -> frontend_node_range(igniter, major)
-            :error -> {igniter, :kept, "It does not build on a `node:<version>` image this task can move."}
+          case Regex.run(@movable_node, image) do
+            [_, _version | _variant] -> frontend_node_range(igniter, major)
+            nil -> {igniter, :kept, unmovable_reason(image)}
           end
 
         frontend_image(range, contents, image, wanted, major)
@@ -233,8 +236,34 @@ if Code.ensure_loaded?(Igniter) do
       end
     end
 
+    # A `node:<version>` image below `major`, or an image that is not one.
+    defp older_node?(image, major) do
+      case node_major(image) do
+        {:ok, current} -> current < major
+        :error -> true
+      end
+    end
+
+    defp unmovable_reason("node:" <> _ = image) do
+      if String.contains?(image, "@"),
+        do: "It is pinned to a digest, which names one Node release.",
+        else: "Its variant may not be published for newer Node majors."
+    end
+
+    defp unmovable_reason(_image), do: "It does not build on a `node:<version>` image this task can move."
+
     defp frontend_image({igniter, :allowed, reason}, contents, image, _wanted, major) do
-      upgraded = Regex.replace(frontend_from(), contents, fn _line, from, _version, rest -> "#{from}#{major}#{rest}" end)
+      variant =
+        case Regex.run(@movable_node, image) do
+          [_, _version, variant] -> variant
+          _no_variant -> ""
+        end
+
+      upgraded =
+        Regex.replace(frontend_from(), contents, fn _line, from, _image, rest ->
+          "#{from}node:#{major}#{variant}#{rest}"
+        end)
+
       frontend_image_notice(igniter, upgraded, image, stage_image(upgraded, "assets_frontend"), reason)
     end
 
@@ -254,7 +283,7 @@ if Code.ensure_loaded?(Igniter) do
        """), contents}
     end
 
-    defp frontend_from, do: ~r/^(FROM\s+(?:--platform=\S+\s+)?node:)(\d+(?:\.\d+)*)(\S*\s+AS\s+assets_frontend\s*)$/im
+    defp frontend_from, do: ~r/^(FROM\s+(?:--platform=\S+\s+)?)(\S+)(\s+AS\s+assets_frontend\s*)$/im
 
     defp node_major(image) do
       case Regex.run(~r/^node:(\d+)/, image || "") do
