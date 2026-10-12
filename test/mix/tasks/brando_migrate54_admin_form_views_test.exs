@@ -39,6 +39,14 @@ defmodule Mix.Tasks.Brando.Migrate54AdminFormViewsTest do
   end
   """
 
+  # Phoenix's `import_deps` formatting, without the dependency.
+  @formatter """
+  [
+    inputs: ["{mix,.formatter}.exs", "{config,lib,test}/**/*.{ex,exs}"],
+    locals_without_parens: [live: 2, live: 3, live: 4, get: 3, get: 4]
+  ]
+  """
+
   @views [
     {"banners/banner", "Banners", "Banner"},
     {"menu/category", "Menu", "Category"},
@@ -68,8 +76,120 @@ defmodule Mix.Tasks.Brando.Migrate54AdminFormViewsTest do
     end
   end
 
+  test "scopes a domain's admin routes `as:` when its FormLive shares a route helper" do
+    igniter = migrate(Map.merge(views(), blueprints()))
+
+    router = source(igniter, @router_path)
+    assert router =~ ~s(scope "/menu", LettAdmin.Menu, as: :menu do\n      live "/categories", CategoryListLive\n)
+    assert router =~ ~s(scope "/banners", LettAdmin.Banners do)
+    assert router =~ ~s|live "/articles/categories/update/:entry_id", LettAdmin.Articles.CategoryFormLive, :update|
+
+    for {schema, plural} <- [{"Category", "categories"}, {"Menuitem", "menuitems"}] do
+      assert source(igniter, "lib/lett/menu/#{Macro.underscore(schema)}.ex") =~ """
+               use Brando.Blueprint,
+                 application: "Lett",
+                 domain: "Menu",
+                 schema: "#{schema}",
+                 singular: "#{Macro.underscore(schema)}",
+                 plural: "#{plural}",
+                 router_scope: :menu
+
+             """
+    end
+
+    refute source(igniter, "lib/lett/articles/category.ex") =~ "router_scope"
+    refute Enum.any?(igniter.warnings, &(&1 =~ "share a route helper"))
+
+    assert_has_notice(igniter, fn notice ->
+      notice =~ "admin_category_form_path" and notice =~ ~s(#{@router_path}:15: scope "/menu", LettAdmin.Menu, as: :menu) and
+        notice =~ "router_scope: :menu" and notice =~ "Lett.Menu.Category, Lett.Menu.Menuitem"
+    end)
+
+    rerun = igniter |> apply_igniter!() |> include_test_files() |> Migrate54.igniter()
+    assert_unchanged(rerun, [@router_path, "lib/lett/menu/category.ex", "lib/lett/menu/menuitem.ex"])
+  end
+
+  test "keeps the shared route helper warning when the scope holds another domain's routes" do
+    router =
+      String.replace(
+        @router,
+        ~s(live "/menuitems", MenuitemListLive),
+        ~s(live "/menuitems", MenuitemListLive\n      get "/export", MenuExportController, :export)
+      )
+
+    igniter = migrate(views() |> Map.merge(blueprints()) |> Map.put(@router_path, router))
+
+    assert source(igniter, @router_path) =~ ~s(scope "/menu", LettAdmin.Menu do)
+    refute source(igniter, "lib/lett/menu/category.ex") =~ "router_scope"
+
+    assert_has_warning(igniter, fn warning ->
+      warning =~ "share a route helper" and
+        warning =~ "Lett.Articles.Category, Lett.Menu.Category: admin_category_form_path" and
+        warning =~ "#{@router_path}:18" and warning =~ "#{@router_path}:28" and
+        warning =~ "router_scope: :menu"
+    end)
+  end
+
+  test "keeps the shared route helper warning when other code names the scope's route helpers" do
+    helper_call = """
+    defmodule LettAdmin.Shortcuts do
+      def menu(socket), do: LettWeb.Router.Helpers.admin_live_path(socket, LettAdmin.Menu.MenuitemListLive)
+    end
+    """
+
+    igniter = migrate(views() |> Map.merge(blueprints()) |> Map.put("lib/lett_admin/shortcuts.ex", helper_call))
+
+    assert source(igniter, @router_path) =~ ~s(scope "/menu", LettAdmin.Menu do)
+
+    assert_has_warning(igniter, fn warning ->
+      warning =~ "share a route helper" and warning =~ "lib/lett_admin/shortcuts.ex:2"
+    end)
+  end
+
+  defp blueprints do
+    for {domain, schema, plural} <- [
+          {"Menu", "Category", "categories"},
+          {"Menu", "Menuitem", "menuitems"},
+          {"Articles", "Category", "categories"}
+        ],
+        into: %{} do
+      singular = Macro.underscore(schema)
+
+      {"lib/lett/#{Macro.underscore(domain)}/#{singular}.ex",
+       """
+       defmodule Lett.#{domain}.#{schema} do
+         @moduledoc \"\"\"
+         Blueprint for #{schema}
+         \"\"\"
+
+         use Brando.Blueprint,
+           application: "Lett",
+           domain: "#{domain}",
+           schema: "#{schema}",
+           singular: "#{singular}",
+           plural: "#{plural}"
+
+         identifier "{{ entry.name }}"
+       end
+       """}
+    end
+  end
+
+  defp list_views do
+    for {path, domain, schema} <- @views, into: %{} do
+      {"lib/lett_admin/live/#{path}_list_live.ex",
+       """
+       defmodule LettAdmin.#{domain}.#{schema}ListLive do
+         use BrandoAdmin.LiveView.Listing, schema: Lett.#{domain}.#{schema}
+       end
+       """}
+    end
+  end
+
   defp views do
-    for {path, domain, schema} <- @views, action <- [:create, :update], into: %{@router_path => @router} do
+    for {path, domain, schema} <- @views,
+        action <- [:create, :update],
+        into: Map.put(list_views(), @router_path, @router) do
       module = "LettAdmin.#{domain}.#{schema}#{action |> to_string() |> Macro.camelize()}Live"
       {"lib/lett_admin/live/#{path}_#{action}_live.ex", admin_view(module, "Lett.#{domain}.#{schema}", action)}
     end
@@ -103,11 +223,13 @@ defmodule Mix.Tasks.Brando.Migrate54AdminFormViewsTest do
   end
 
   defp migrate(files) do
-    [app_name: :lett, files: files]
+    [app_name: :lett, files: Map.put_new(files, ".formatter.exs", @formatter)]
     |> test_project()
     |> include_test_files()
     |> Migrate54.igniter()
   end
+
+  defp source(igniter, path), do: igniter.rewrite |> Rewrite.source!(path) |> Rewrite.Source.get(:content)
 
   defp include_test_files(igniter) do
     Enum.reduce(Map.keys(igniter.assigns.test_files), igniter, &Igniter.include_existing_file(&2, &1))

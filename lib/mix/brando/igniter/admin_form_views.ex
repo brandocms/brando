@@ -15,12 +15,14 @@ if Code.ensure_loaded?(Igniter) do
     # version of the generator produced: the `use`, the Form and Content
     # aliases, the Gettext import, and a `render/1` holding only the Form
     # live component with the generated attributes, under an optional
-    # gettext header. Anything else is listed for the developer.
+    # gettext header. Anything else is listed for the developer. FormLives that
+    # would share a route helper go to `AdminRouteScopes`.
 
     alias Igniter.Code.Common
     alias Igniter.Code.Function, as: CodeFunction
     alias Igniter.Project.IgniterConfig
     alias Igniter.Project.Module, as: ProjectModule
+    alias Mix.Brando.Igniter.AdminRouteScopes
     alias Mix.Brando.Igniter.Files
     alias Mix.Brando.Igniter.RouteInventory
     alias Mix.Brando.Igniter.Template
@@ -75,7 +77,7 @@ if Code.ensure_loaded?(Igniter) do
       igniter
       |> convert(pairs)
       |> rewrite_routes(routers, renames)
-      |> report(pairs, Enum.reverse(manual), routes)
+      |> report(pairs, Enum.reverse(manual), routes, routers)
     end
 
     defp lib_sources(igniter) do
@@ -398,11 +400,11 @@ if Code.ensure_loaded?(Igniter) do
 
     ## Report
 
-    defp report(igniter, pairs, manual, routes) do
+    defp report(igniter, pairs, manual, routes, routers) do
       igniter
       |> converted_notice(pairs)
       |> manual_warning(manual)
-      |> collision_warning(pairs, routes)
+      |> resolve_collisions(pairs, routes, routers)
       |> reference_warning(pairs)
     end
 
@@ -439,29 +441,93 @@ if Code.ensure_loaded?(Igniter) do
 
     # Phoenix names a route helper after the LiveView, so two FormLives with
     # the same name in different domains share `admin_<name>_form_path`, and
-    # one Blueprint's links lead to the other's form.
-    defp collision_warning(igniter, pairs, routes) do
+    # one Blueprint's links lead to the other's form. `AdminRouteScopes`
+    # scopes the ones it can; the rest are listed.
+    defp resolve_collisions(igniter, pairs, routes, routers) do
+      collisions = collisions(pairs, routes)
+      candidates = for {_short, pairs} <- collisions, pair <- pairs, unscoped?(pair, routes), do: pair
+
+      {igniter, scoped, refused} =
+        if candidates == [],
+          do: {igniter, [], %{}},
+          else: AdminRouteScopes.resolve(igniter, candidates, routers, lib_sources(igniter))
+
+      scoped_forms = for scope <- scoped, form <- scope.forms, do: form
+      left = pairs |> Enum.reject(&(&1.form in scoped_forms)) |> collisions(routes)
+
+      igniter
+      |> scoped_notice(scoped, pairs)
+      |> collision_warning(left, refused, routers)
+    end
+
+    defp collisions(pairs, routes) do
       pairs
       |> Enum.group_by(&short_name(&1.form))
       |> Enum.filter(fn {_short, pairs} -> match?([_, _ | _], pairs) and Enum.any?(pairs, &unscoped?(&1, routes)) end)
-      |> case do
-        [] ->
-          igniter
+    end
 
-        collisions ->
-          Igniter.add_warning(igniter, """
-          These FormLives share a route helper, so their Blueprints' links go to the
-          same form:
+    defp form_helper(short), do: "admin_#{Macro.underscore(String.replace_suffix(short, "Live", ""))}_path"
 
-          #{Enum.map_join(collisions, "\n", fn {short, pairs} -> "  #{Enum.map_join(pairs, ", ", &inspect(&1.schema))}: admin_#{Macro.underscore(String.replace_suffix(short, "Live", ""))}_path" end)}
+    defp scoped_notice(igniter, [], _pairs), do: igniter
 
-          Give each schema's admin routes their own helper prefix, for example
-          `scope "/menu", MyAppAdmin.Menu, as: :menu do`, and set the same
-          `router_scope: :menu` in the `use Brando.Blueprint` options of every
-          Blueprint routed in that scope (its list route becomes
-          `admin_menu_live_path` too).
-          """)
-      end
+    defp scoped_notice(igniter, scoped, pairs) do
+      Igniter.add_notice(igniter, """
+      These FormLives shared a route helper with a FormLive in another domain, so
+      the task gave their admin scope its own helper prefix and set the same
+      `router_scope` on every Blueprint routed in it (its list route helper
+      becomes `admin_<scope>_live_path` too):
+
+      #{Enum.map_join(scoped, "\n", &scoped_lines(&1, pairs))}
+      """)
+    end
+
+    defp scoped_lines(scope, pairs) do
+      shared =
+        for form <- scope.forms,
+            short = short_name(form),
+            do:
+              "  #{form_helper(short)}: #{pairs |> Enum.filter(&(short_name(&1.form) == short)) |> Enum.map_join(", ", &inspect(&1.schema))}"
+
+      Enum.join(
+        shared ++
+          [
+            "    #{scope.router}:#{scope.line}: #{scope.code}, as: :#{scope.name}",
+            "    router_scope: :#{scope.name} in #{Enum.map_join(scope.schemas, ", ", &inspect/1)}"
+          ],
+        "\n"
+      )
+    end
+
+    defp collision_warning(igniter, [], _refused, _routers), do: igniter
+
+    defp collision_warning(igniter, collisions, refused, routers) do
+      Igniter.add_warning(igniter, """
+      These FormLives share a route helper, so their Blueprints' links go to the
+      same form:
+
+      #{Enum.map_join(collisions, "\n", &collision_lines(igniter, &1, refused, routers))}
+
+      Give each schema's admin routes their own helper prefix, for example
+      `scope "/menu", MyAppAdmin.Menu, as: :menu do`, and set the same
+      `router_scope: :menu` in the `use Brando.Blueprint` options of every
+      Blueprint routed in that scope (its list route becomes
+      `admin_menu_live_path` too). The task does this itself only for a plain
+      `scope "/menu", MyAppAdmin.Menu do` that routes nothing but that domain's
+      admin LiveViews.
+      """)
+    end
+
+    defp collision_lines(igniter, {short, pairs}, refused, routers) do
+      forms = Enum.map(pairs, & &1.form)
+
+      reasons =
+        for form <- forms, reason <- Map.get(refused, form, []), do: "    #{inspect(form)}: #{reason}"
+
+      Enum.join(
+        ["  #{Enum.map_join(pairs, ", ", &inspect(&1.schema))}: #{form_helper(short)}"] ++
+          Enum.map(AdminRouteScopes.route_lines(igniter, routers, forms), &"    #{&1}") ++ reasons,
+        "\n"
+      )
     end
 
     # A pair routed outside a scope with `as:` gets the bare helper name.
