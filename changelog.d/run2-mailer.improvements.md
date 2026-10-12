@@ -6,8 +6,10 @@
   `mailer: MyApp.Mailer` in Brando's config, and a placeholder sender,
   `config :brando, Brando.Mailer, from: {"MyApp", "noreply@example.com"}`, with
   a warning to set the real address and the production adapter in
-  `config/runtime.exs`. You no longer run `mix brando.gen.mail` and delete its
-  contact form afterwards.
+  `config/runtime.exs`. A Swoosh mailer under another name
+  (`MyAppWeb.Mailer`) is used instead of creating one; with several, the task
+  lists them for you to choose. You no longer run `mix brando.gen.mail` and
+  delete its contact form afterwards.
 
 - **`mix brando.gen.mail` scaffolds the contact form only with `--contact`.**
   Without it the task creates or reuses the mailer, its adapters and Brando's

@@ -117,6 +117,30 @@ defmodule Mix.Brando.Igniter.MailerTest do
       refute source(igniter, "config/brando.exs") =~ "example.com"
     end
 
+    test "uses the application's Swoosh mailer whatever its name" do
+      mailer = "defmodule LettWeb.Mailer do\n  use Swoosh.Mailer, otp_app: :lett\nend\n"
+      igniter = Mailer.configure_for_upgrade(lett(%{"lib/lett_web/mailer.ex" => mailer}))
+
+      assert source(igniter, "config/brando.exs") =~ "mailer: LettWeb.Mailer"
+      refute Rewrite.has_source?(igniter.rewrite, "lib/lett/mailer.ex")
+      assert_unchanged(igniter, ["config/dev.exs", "config/test.exs", "lib/lett_web/mailer.ex"])
+      assert igniter.warnings == []
+    end
+
+    test "with several Swoosh mailers, names them and changes nothing" do
+      igniter =
+        lett(%{
+          "lib/lett/mailer.ex" => "defmodule Lett.Mailer do\n  use Swoosh.Mailer, otp_app: :lett\nend\n",
+          "lib/lett_web/mailer.ex" => "defmodule LettWeb.Mailer do\n  use Swoosh.Mailer, otp_app: :lett\nend\n"
+        })
+        |> Mailer.configure_for_upgrade()
+
+      assert_unchanged(igniter)
+      assert [warning] = igniter.warnings
+      assert warning =~ "Lett.Mailer, LettWeb.Mailer"
+      assert warning =~ "config :brando, mailer:"
+    end
+
     test "points Brando at an existing mailer without creating anything" do
       mailer = "defmodule Lett.Mailer do\n  use Swoosh.Mailer, otp_app: :lett\nend\n"
       igniter = Mailer.configure_for_upgrade(lett(%{"lib/lett/mailer.ex" => mailer}))
@@ -142,6 +166,22 @@ defmodule Mix.Brando.Igniter.MailerTest do
       assert [notice] = Enum.filter(result.notices, &(&1 =~ "Studio.Mailer is ready"))
       refute notice =~ "Emails.contact"
       assert notice =~ "production\nadapter and credentials in `config/runtime.exs`"
+    end
+
+    test "reuses a Swoosh mailer with another name" do
+      project =
+        IgniterCase.phoenix_project(
+          module: "Studio",
+          files: %{
+            "lib/studio_web/mailer.ex" => "defmodule StudioWeb.Mailer do\n  use Swoosh.Mailer, otp_app: :studio\nend\n"
+          }
+        )
+
+      result = Igniter.compose_task(project, "brando.gen.mail", [])
+
+      refute Rewrite.has_source?(result.rewrite, "lib/studio/mailer.ex")
+      assert IgniterCase.source(result, "config/config.exs") =~ "mailer: StudioWeb.Mailer"
+      assert Enum.any?(result.notices, &(&1 =~ "StudioWeb.Mailer is ready"))
     end
 
     test "--contact also scaffolds the contact form" do

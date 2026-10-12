@@ -25,9 +25,8 @@ if Code.ensure_loaded?(Igniter) do
     end
 
     defp generate(igniter, project, :mail) do
-      mailer = Module.concat(project.app_module, "Mailer")
       contact? = igniter.args.options[:contact] == true
-      {igniter, _created?} = Mailer.ensure(igniter, project)
+      {igniter, mailer} = Mailer.ensure(igniter, project)
 
       igniter
       |> add_unless_brando_brings({:swoosh, "~> 1.0"})

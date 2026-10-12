@@ -22,21 +22,16 @@ if Code.ensure_loaded?(Igniter) do
     """
 
     @doc """
-    Gives the application `<App>.Mailer` unless it has one, with the local
-    adapter in development and the test adapter in test, points Brando at
-    it, and sets a placeholder sender for Brando's email when none is set.
+    Gives the application `<App>.Mailer` unless it has one, or has one other
+    module that does `use Swoosh.Mailer`, with the local adapter in
+    development and the test adapter in test, points Brando at it, and sets
+    a placeholder sender for Brando's email when none is set.
 
     `project` needs `:otp_app` and `:app_module`. Returns the igniter and
-    whether the mailer was created.
+    the mailer.
     """
     def ensure(igniter, %{otp_app: otp_app, app_module: app_module}) do
-      mailer = Module.concat(app_module, "Mailer")
-
-      {igniter, created?} =
-        case ProjectModule.find_module(igniter, mailer) do
-          {:ok, {igniter, _source, _zipper}} -> {igniter, false}
-          {:error, igniter} -> {create(igniter, otp_app, app_module, mailer), true}
-        end
+      {igniter, mailer} = find_or_create(igniter, otp_app, app_module)
 
       igniter =
         igniter
@@ -45,31 +40,78 @@ if Code.ensure_loaded?(Igniter) do
         |> SourceUpgrade.configure_brando_mailer(mailer)
         |> put_placeholder_sender(app_module)
 
-      {igniter, created?}
+      {igniter, mailer}
+    end
+
+    defp find_or_create(igniter, otp_app, app_module) do
+      mailer = Module.concat(app_module, "Mailer")
+
+      case ProjectModule.find_module(igniter, mailer) do
+        {:ok, {igniter, _source, _zipper}} ->
+          {igniter, mailer}
+
+        {:error, igniter} ->
+          case swoosh_mailers(igniter) do
+            {igniter, [existing]} -> {igniter, existing}
+            {igniter, _none_or_several} -> {create(igniter, otp_app, app_module, mailer), mailer}
+          end
+      end
     end
 
     @doc """
     Points Brando at the application's mailer for `mix brando.migrate55`.
-    A configured `config :brando, mailer:` is left alone; an existing
-    `<App>.Mailer` is used as it is; without one, `ensure/2` creates it and
-    a warning says what is left to set.
+    A configured `config :brando, mailer:` is left alone. The application's
+    one module that does `use Swoosh.Mailer`, whatever its name, or else
+    `<App>.Mailer`, is used as it is; with several, they are listed in a
+    warning and nothing changes. Without one, `ensure/2` creates
+    `<App>.Mailer` and a warning says what is left to set.
     """
     def configure_for_upgrade(igniter) do
       app_module = ProjectModule.module_name_prefix(igniter)
       mailer = Module.concat(app_module, "Mailer")
 
-      cond do
-        brando_mailer_configured?(igniter) ->
-          igniter
-
-        match?({true, _igniter}, ProjectModule.module_exists(igniter, mailer)) ->
-          SourceUpgrade.configure_brando_mailer(igniter, mailer)
-
-        true ->
-          project = %{otp_app: ProjectApplication.app_name(igniter), app_module: app_module}
-          {igniter, _created?} = ensure(igniter, project)
-          Igniter.add_warning(igniter, created_warning(mailer, igniter))
+      if brando_mailer_configured?(igniter) do
+        igniter
+      else
+        {igniter, mailers} = swoosh_mailers(igniter)
+        use_mailer(igniter, mailers, app_module, mailer)
       end
+    end
+
+    defp use_mailer(igniter, [existing], _app_module, _mailer),
+      do: SourceUpgrade.configure_brando_mailer(igniter, existing)
+
+    defp use_mailer(igniter, [_ | _] = mailers, _app_module, _mailer),
+      do: Igniter.add_warning(igniter, several_warning(mailers))
+
+    defp use_mailer(igniter, [], app_module, mailer) do
+      if match?({true, _igniter}, ProjectModule.module_exists(igniter, mailer)),
+        do: SourceUpgrade.configure_brando_mailer(igniter, mailer),
+        else: create_for_upgrade(igniter, app_module)
+    end
+
+    defp create_for_upgrade(igniter, app_module) do
+      project = %{otp_app: ProjectApplication.app_name(igniter), app_module: app_module}
+      {igniter, mailer} = ensure(igniter, project)
+      Igniter.add_warning(igniter, created_warning(mailer, igniter))
+    end
+
+    defp swoosh_mailers(igniter) do
+      {igniter, modules} =
+        ProjectModule.find_all_matching_modules(igniter, fn _module, zipper ->
+          match?({:ok, _zipper}, Igniter.Code.Module.move_to_use(zipper, Swoosh.Mailer))
+        end)
+
+      {igniter, Enum.sort(modules)}
+    end
+
+    defp several_warning(mailers) do
+      """
+      The application has several Swoosh mailers: #{Enum.map_join(mailers, ", ", &inspect/1)}.
+      Point Brando at the one its email (password resets, form notifications)
+      should go through, the one configured for production:
+      `config :brando, mailer: MyApp.Mailer`.
+      """
     end
 
     @doc "The notice lines that tell what is left to set for `mailer`."
