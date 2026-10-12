@@ -179,15 +179,27 @@ defmodule BrandoAdmin.Components.Content.List.Row do
     """
   end
 
-  defp process_actions(actions, language, entry_id) do
-    Enum.map(actions, fn
-      %{event: event} = action when is_binary(event) ->
-        %{action | event: JS.push(event, value: %{language: language, id: entry_id})}
-
-      action ->
-        action
+  # A confirmation is translated in the schema's domain, as the label is and
+  # as a selection action's confirmation is.
+  defp process_actions(actions, schema, language, entry_id) do
+    Enum.map(actions, fn action ->
+      action
+      |> push_action_event(language, entry_id)
+      |> translate_confirm(schema)
     end)
   end
+
+  defp push_action_event(%{event: event} = action, language, entry_id) when is_binary(event),
+    do: %{action | event: JS.push(event, value: %{language: language, id: entry_id})}
+
+  defp push_action_event(action, _language, _entry_id), do: action
+
+  defp translate_confirm(%{confirm: confirm} = action, schema) when is_binary(confirm) do
+    {:safe, text} = g(schema, confirm)
+    %{action | confirm: text}
+  end
+
+  defp translate_confirm(action, _schema), do: action
 
   # Action button component
   attr :id, :string, required: true
@@ -236,7 +248,7 @@ defmodule BrandoAdmin.Components.Content.List.Row do
 
   def entry_menu(assigns) do
     language = Map.get(assigns.entry, :language)
-    processed_actions = process_actions(assigns.listing.actions, language, assigns.entry.id)
+    processed_actions = process_actions(assigns.listing.actions, assigns.schema, language, assigns.entry.id)
     default_actions? = assigns.listing.default_actions
 
     ctx = assigns.schema.__modules__().context

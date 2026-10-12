@@ -14,9 +14,9 @@ if Code.ensure_loaded?(Igniter) do
     # admin translates the value through the schema domain: tab names, alert
     # texts, the `label`, `placeholder` and `instructions` of form entries and
     # of literal option maps, the labels of listing filters, actions,
-    # selection actions, sorts and exports, a selection action's `confirm`,
-    # and `translate` values. Row action confirmations, filter options and
-    # the `blocks` label are shown as compiled, so they keep `gettext/1`.
+    # selection actions, sorts and exports, an action's or selection
+    # action's `confirm`, and `translate` values. Filter options and the
+    # `blocks` label are shown as compiled, so they keep `gettext/1`.
     # Other Gettext calls in those places are listed.
     #
     # `carry_default_translations/1` then copies each `t/1` msgid's
@@ -109,7 +109,7 @@ if Code.ensure_loaded?(Igniter) do
     defp rewrite_entry({name, _, [_ | _]} = node, acc, :forms, path) when is_atom(name),
       do: rewrite_options(node, @text_keys, acc, path)
 
-    defp rewrite_entry({:selection_action, _, [_ | _]} = node, acc, :listings, path),
+    defp rewrite_entry({name, _, [_ | _]} = node, acc, :listings, path) when name in [:action, :selection_action],
       do: rewrite_options(node, [:label, :confirm], acc, path)
 
     defp rewrite_entry({name, _, [_ | _]} = node, acc, :listings, path) when name in @listing_labelled,

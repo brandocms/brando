@@ -73,7 +73,18 @@ defmodule Mix.Tasks.Brando.MigrateBlueprintGettextTest do
     igniter = migrate54(%{@path => @article})
     blueprint = source(igniter, @path)
 
-    for label <- ["Content", "Title", "A title", "Short", "Mind the title", "Name", "Publish", "Archive", "Archive them?"] do
+    for label <- [
+          "Content",
+          "Title",
+          "A title",
+          "Short",
+          "Mind the title",
+          "Name",
+          "Publish",
+          "Publish it?",
+          "Archive",
+          "Archive them?"
+        ] do
       assert blueprint =~ ~s|t("#{label}")|
       refute blueprint =~ ~s|gettext("#{label}")|
     end
@@ -82,7 +93,6 @@ defmodule Mix.Tasks.Brando.MigrateBlueprintGettextTest do
 
     for kept <- [
           ~s|gettext("Blocks")|,
-          ~s|gettext("Publish it?")|,
           ~s|gettext("Not a label")|,
           ~s|dgettext("codes", "Code")|
         ] do
@@ -93,7 +103,7 @@ defmodule Mix.Tasks.Brando.MigrateBlueprintGettextTest do
 
     assert_has_notice(
       igniter,
-      &(&1 =~ "Blueprint labels written with `gettext/1` now use `t/1`" and &1 =~ "#{@path} (10)")
+      &(&1 =~ "Blueprint labels written with `gettext/1` now use `t/1`" and &1 =~ "#{@path} (11)")
     )
 
     assert_has_warning(igniter, fn warning ->
