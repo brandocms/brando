@@ -628,10 +628,12 @@ defmodule Brando.Blueprint.Migrations do
 
   defp pad_sequence(number), do: number |> to_string() |> String.pad_leading(3, "0")
 
+  # Code.format_string!/2 leaves out the final newline `mix format` adds.
   defp format_code(content) do
     content
     |> Code.format_string!(locals_without_parens: locals_without_parens())
     |> IO.iodata_to_binary()
+    |> Kernel.<>("\n")
   end
 
   defp atomic_write!(filename, contents) do

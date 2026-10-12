@@ -67,6 +67,8 @@ defmodule Mix.Tasks.Brando.Gen.BlueprintMigrationTest do
     assert File.exists?(metadata.migration)
     assert File.exists?(metadata.snapshot)
     assert File.read!(metadata.migration) == planned.assigns.brando_storage_plan.migration_source
+    # As `mix format` leaves it: one final newline.
+    assert File.read!(metadata.migration) =~ ~r/\nend\n\z/
     rerun = plan(context)
     assert rerun.issues == []
     assert rerun.tasks == []
@@ -118,6 +120,30 @@ defmodule Mix.Tasks.Brando.Gen.BlueprintMigrationTest do
       assert warning =~ ":data, :hero_data, :html"
       assert warning =~ ~s("Legacy snapshots")
     end
+  end
+
+  test "a snapshot recorded without a migration is explained where the numbers part", context do
+    opts = [migration_path: context.migration_path, snapshot_path: context.snapshot_path]
+    {:ok, _} = Brando.Blueprint.Migrations.create_migration(Brando.MigrationTest.VillainV1, opts)
+    {:ok, _} = Brando.Blueprint.Migrations.rebaseline_snapshot(Brando.MigrationTest.VillainV1, opts)
+
+    planned = plan_for(context, Brando.MigrationTest.VillainV2)
+    assert_received {:mix_shell, :info, preview}
+    preview = IO.iodata_to_binary(preview)
+
+    assert preview =~ "_002.exs"
+    assert preview =~ "003.snapshot"
+
+    assert preview =~
+             "Numbering: snapshot 003 goes with migration 002. Snapshots and migrations are numbered separately: " <>
+               "the history has snapshots 001, 002 and migrations 001, and a snapshot recorded without a migration"
+
+    assert planned.issues == []
+
+    # In step, nothing is said.
+    plan(context, ["--dry-run"])
+    assert_received {:mix_shell, :info, in_step}
+    refute IO.iodata_to_binary(in_step) =~ "Numbering:"
   end
 
   test "rebaseline is explicitly reviewed and persists only after acceptance", context do
