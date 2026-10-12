@@ -10,6 +10,7 @@ if Code.ensure_loaded?(Igniter) do
     alias Mix.Brando.Igniter.SourceUpgrade
     alias Mix.Brando.Igniter.SourceUpgrade.BlueprintGettext
     alias Mix.Brando.Igniter.SourceUpgrade.ListOrder
+    alias Mix.Brando.Igniter.SourceUpgrade.PoHeaders
     alias Mix.Brando.Igniter.SourceUpgrade.ReloadableApps
     alias Mix.Brando.Igniter.SourceUpgrade.TestEnvironment
     alias Mix.Brando.Igniter.SourceUpgrade.VideoMarkup
@@ -38,7 +39,8 @@ if Code.ensure_loaded?(Igniter) do
     Gettext domains into the domain 0.55 extracts to, along with the `default`
     domain's translations of the Blueprint's `t/1` labels, sets
     `persist_identifier false` on Blueprints with no admin editor, completes
-    `Plural-Forms` headers Gettext 1.0 warns about, and retires the
+    `Plural-Forms` headers Gettext 1.0 warns about (including a rule that ran
+    into the next header line for want of its `\\n`), and retires the
     consumer-owned `brando.upgrade` task that 0.54 installed.
 
     An endpoint `reloadable_apps` list that names a dependency (`[:my_app,
@@ -96,6 +98,7 @@ if Code.ensure_loaded?(Igniter) do
       |> SourceUpgrade.refresh_gettext_script()
       |> SourceUpgrade.carry_blueprint_translations()
       |> BlueprintGettext.carry_default_translations()
+      |> PoHeaders.split_joined_lines()
       |> SourceUpgrade.complete_plural_forms_headers()
       |> SourceUpgrade.warn_image_text_reads()
       |> PersistIdentifiers.update()

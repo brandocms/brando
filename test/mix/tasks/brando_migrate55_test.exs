@@ -1944,6 +1944,62 @@ defmodule Mix.Tasks.Brando.Migrate55Test do
     end
   end
 
+  test "gives a Plural-Forms rule that ran into the next header line a line of its own" do
+    # koi's 0.53 backend catalogs, written by Poedit 3.0.1
+    po = fn header_lines ->
+      ~s|# A comment\nmsgid ""\nmsgstr ""\n"Language: no\\n"\n| <>
+        header_lines <> ~s|\n#: lib/koi/team/member.ex:121\nmsgid "Hello"\nmsgstr "Hei"\n|
+    end
+
+    paths = %{
+      next_header: "priv/gettext/backend/no/LC_MESSAGES/default.po",
+      repeated_header: "priv/gettext/backend/no/LC_MESSAGES/menus.po",
+      split_name: "priv/gettext/backend/no/LC_MESSAGES/articles_article_forms.po",
+      stray_line: "priv/gettext/backend/no/LC_MESSAGES/projects_project_forms.po",
+      complete: "priv/gettext/backend/en/LC_MESSAGES/default.po"
+    }
+
+    rule = ~s|"Plural-Forms: nplurals=2; plural=(n != 1);\\n"\n|
+    poedit_330 = ~s|"X-Generator: Poedit 3.3.2\\n"\n|
+
+    igniter =
+      migrate(@blueprint_054, %{
+        paths.next_header => po.(~s|"Plural-Forms: nplurals=2; plural=(n != 1);"\n"X-Generator: Poedit 3.0.1\\n"\n|),
+        paths.repeated_header =>
+          po.(~s|"Plural-Forms: nplurals=2; plural=(n != 1);"\n"X-Generator: Poedit 3.0.1;\\n"\n| <> poedit_330),
+        paths.split_name =>
+          po.(~s|"Plural-Forms: nplurals=2; plural=(n != 1);X-"\n"Generator: Poedit 3.0.1;\\n"\n| <> poedit_330),
+        paths.stray_line =>
+          po.(~s|"Plural-Forms: nplurals=2; plural=(n != 1);X-Generator: Poedit "\n"3.0.1;\\n"\n| <> poedit_330),
+        paths.complete => po.(rule <> poedit_330)
+      })
+
+    assert source(igniter, paths.next_header) == po.(rule <> ~s|"X-Generator: Poedit 3.0.1\\n"\n|)
+
+    for path <- [paths.repeated_header, paths.split_name, paths.stray_line] do
+      assert source(igniter, path) == po.(rule <> poedit_330)
+    end
+
+    assert_unchanged(igniter, paths.complete)
+
+    for path <- [paths.next_header, paths.stray_line] do
+      assert {:ok, %Expo.PluralForms{nplurals: 2}} =
+               igniter
+               |> source(path)
+               |> Expo.PO.parse_string!()
+               |> Expo.Messages.get_header("Plural-Forms")
+               |> Enum.join()
+               |> Expo.PluralForms.parse()
+    end
+
+    assert_has_notice(igniter, fn notice ->
+      notice =~ "ran into the next header line" and notice =~ "#{paths.next_header}\n" and
+        notice =~ ~s|#{paths.stray_line} (removed "X-Generator: Poedit 3.0.1;")|
+    end)
+
+    assert_idempotent(igniter, Map.values(paths))
+  end
+
   describe "reloadable_apps" do
     # koi's 0.53 config/dev.exs
     defp dev_config(apps) do

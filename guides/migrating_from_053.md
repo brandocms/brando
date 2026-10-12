@@ -301,7 +301,12 @@ the result before the source tasks, so their diff holds only their changes.
 - completes `Plural-Forms` headers in `priv/gettext/**/*.po`. Gettext 1.0 warns
   on `nplurals=2;` without a rule and on a rule without its trailing `;`, once
   per catalog per compile, so `--warnings-as-errors` fails until they read
-  `nplurals=2; plural=(n != 1);`;
+  `nplurals=2; plural=(n != 1);`. Older Poedit releases wrote the line without
+  its `\n`, so Gettext reads it joined to the next header
+  (`plural=(n != 1);X-Generator: Poedit 3.0.1`) and warns although the rule is
+  complete. The task gives such a rule a line of its own, keeps the header that
+  followed it, and drops text that is no header of its own (a stray
+  `"3.0.1;\n"`) or a header a later line sets again, listing each file;
 - refreshes `scripts/sync_gettext.sh` and archives the consumer-owned
   `mix brando.upgrade` task that 0.54 installed, wherever it lives under `lib/`,
   so Brando's own `mix brando.upgrade FROM TO` hook can take over the task name
