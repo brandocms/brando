@@ -23,3 +23,9 @@
   same field.** `Brando.Images.find_duplicate/1` matched the file alone, so
   uploading a file into a meta image field could put a copy cut to the cover
   field's sizes there, without the size the meta tags render.
+
+- **The block picker no longer offers the "Legacy Content Wrapper".** The
+  `brando_108` upgrade migration makes this module (namespace "migration")
+  to hold converted Villain blocks, and `brando_188` removes it only where
+  nothing uses it, so a site with converted content listed a "migration"
+  group in the block picker. Blocks that hold legacy content keep it.
