@@ -31,7 +31,9 @@ if Code.ensure_loaded?(Igniter) do
     as `%{router:, line:, code:, name:, schemas:, forms:}`, and `refused` maps
     each FormLive left alone to the lines saying why.
     """
-    def resolve(igniter, pairs, routers, sources) do
+    def resolve(igniter, pairs, routers) do
+      igniter = Igniter.include_glob(igniter, "{lib,test}/**/*.{ex,exs,heex,eex,leex}")
+      sources = sources(igniter)
       scopes = Enum.flat_map(routers, &plain_scopes(igniter, &1))
 
       {plans, refused} =
@@ -44,6 +46,14 @@ if Code.ensure_loaded?(Igniter) do
 
       plans = plans |> Map.values() |> Enum.sort_by(&{&1.router, &1.line})
       {Enum.reduce(plans, igniter, &apply_scope(&2, &1)), plans, refused}
+    end
+
+    defp sources(igniter) do
+      igniter.rewrite
+      |> Rewrite.sources()
+      |> Enum.map(&{Source.get(&1, :path), Source.get(&1, :content)})
+      |> Enum.filter(fn {path, _content} -> String.starts_with?(path, ["lib/", "test/"]) end)
+      |> Enum.sort()
     end
 
     @doc "`path:line: code` for each route in `routers` naming one of `modules`."
@@ -220,29 +230,38 @@ if Code.ensure_loaded?(Igniter) do
       end
     end
 
-    # Other code calling a helper the scope renames: the FormLives'
-    # `admin_<name>_form_path` or `admin_live_path` with one of its views.
+    # Other code calling a helper the scope renames: `admin_<name>_path` of a
+    # route with an action (`CategoryFormLive, :update` routes
+    # `admin_category_form_path`), or `admin_live_path` with one of its views
+    # within the next few lines.
     defp unreferenced(scope, sources) do
       shorts = for %{module: module} <- scope.routes, do: module |> Module.split() |> List.last()
 
-      forms =
-        for short <- shorts,
-            String.ends_with?(short, "FormLive"),
-            do: short |> Macro.underscore() |> String.replace_suffix("_live", "")
+      named =
+        for %{module: module, action: action} <- scope.routes,
+            is_atom(action) and not is_nil(action),
+            uniq: true,
+            do: module |> Module.split() |> List.last() |> Macro.underscore() |> String.replace_suffix("_live", "")
 
-      helper = ~r/\badmin_(?:#{Enum.join(forms, "|")})_(?:path|url)\b/
+      helper = ~r/\badmin_(?:#{Enum.join(named, "|")})_(?:path|url)\b/
       live_helper = ~r/\badmin_live_(?:path|url)\b/
 
       findings =
         for {path, content} <- sources,
             path != scope.router,
-            {line, number} <- content |> String.split("\n") |> Enum.with_index(1),
-            (forms != [] and line =~ helper) or (line =~ live_helper and Enum.any?(shorts, &String.contains?(line, &1))),
+            lines = String.split(content, "\n"),
+            {line, number} <- Enum.with_index(lines, 1),
+            (named != [] and line =~ helper) or (line =~ live_helper and names_view?(lines, number, shorts)),
             do: "#{path}:#{number}: #{String.trim(line)}"
 
       if findings == [],
         do: :ok,
         else: {:error, Enum.map(findings, &"#{&1} (names a route helper `as:` would rename)")}
+    end
+
+    defp names_view?(lines, number, shorts) do
+      call = lines |> Enum.slice(number - 1, 4) |> Enum.join(" ")
+      Enum.any?(shorts, &(call =~ ~r/\b#{&1}\b/))
     end
 
     ## Rewrite

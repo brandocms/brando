@@ -132,17 +132,33 @@ defmodule Mix.Tasks.Brando.Migrate54AdminFormViewsTest do
 
   test "keeps the shared route helper warning when other code names the scope's route helpers" do
     helper_call = """
-    defmodule LettAdmin.Shortcuts do
-      def menu(socket), do: LettWeb.Router.Helpers.admin_live_path(socket, LettAdmin.Menu.MenuitemListLive)
+    defmodule LettAdmin.ShortcutsTest do
+      test "menu" do
+        LettWeb.Router.Helpers.admin_live_path(
+          socket,
+          LettAdmin.Menu.MenuitemListLive
+        )
+      end
     end
     """
 
-    igniter = migrate(views() |> Map.merge(blueprints()) |> Map.put("lib/lett_admin/shortcuts.ex", helper_call))
+    template = """
+    <.link navigate={Routes.admin_menuitem_form_path(@socket, :update, 1)}>Edit</.link>
+    """
+
+    files =
+      views()
+      |> Map.merge(blueprints())
+      |> Map.put("test/lett_admin/shortcuts_test.exs", helper_call)
+      |> Map.put("lib/lett_web/components/edit.html.heex", template)
+
+    igniter = migrate(files)
 
     assert source(igniter, @router_path) =~ ~s(scope "/menu", LettAdmin.Menu do)
 
     assert_has_warning(igniter, fn warning ->
-      warning =~ "share a route helper" and warning =~ "lib/lett_admin/shortcuts.ex:2"
+      warning =~ "share a route helper" and warning =~ "test/lett_admin/shortcuts_test.exs:3" and
+        warning =~ "lib/lett_web/components/edit.html.heex:1"
     end)
   end
 

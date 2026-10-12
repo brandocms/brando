@@ -452,7 +452,7 @@ if Code.ensure_loaded?(Igniter) do
       {igniter, scoped, refused} =
         if candidates == [],
           do: {igniter, [], %{}},
-          else: AdminRouteScopes.resolve(igniter, candidates, routers, lib_sources(igniter))
+          else: AdminRouteScopes.resolve(igniter, candidates, routers)
 
       scoped_forms = for scope <- scoped, form <- scope.forms, do: form
       left = pairs |> Enum.reject(&(&1.form in scoped_forms)) |> collisions(routes)
