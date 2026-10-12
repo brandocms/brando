@@ -10,6 +10,7 @@ if Code.ensure_loaded?(Igniter) do
     alias Mix.Brando.Igniter.SourceUpgrade.BlueprintGettext
     alias Mix.Brando.Igniter.SourceUpgrade.BuiltinActions
     alias Mix.Brando.Igniter.SourceUpgrade.ListingRows
+    alias Mix.Brando.Igniter.SourceUpgrade.ViewHelpers
 
     @shortdoc "Migrates application source from Brando 0.53 to 0.54"
     @moduledoc """
@@ -58,6 +59,7 @@ if Code.ensure_loaded?(Igniter) do
       |> SourceUpgrade.copy_gettext_script()
       |> SourceUpgrade.update_gettext_backends()
       |> AdminFormViews.consolidate()
+      |> ViewHelpers.upgrade()
       |> add_notices()
       |> add_warnings()
     end
@@ -94,7 +96,10 @@ if Code.ensure_loaded?(Igniter) do
       `filter:` keys, root Docker digest commands, and font cache suffixes. It
       adds the Brando Repo configuration when exactly one Ecto Repo is
       available, and removes `processor_module: Brando.Images.Processor.Sharp`
-      (Brando refuses to boot with it; Vix is the default).
+      (Brando refuses to boot with it; Vix is the default). Phoenix.View-era
+      `ErrorHelpers`, `view/0` and `view_helpers/0`, which phoenix_html 4 no
+      longer compiles, are deleted when nothing uses them, and their
+      `use Phoenix.HTML` replaced when something does.
 
       Continue in this order:
 
