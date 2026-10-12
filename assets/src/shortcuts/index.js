@@ -113,10 +113,28 @@ export function available(shortcut) {
   return true
 }
 
+// The block field whose last structural change (a block moved or deleted) is
+// the newest: each block field says when, in `data-undo-at`.
+function newestBlockUndo() {
+  let newest = null
+  for (const field of document.querySelectorAll('[data-undo-at][data-undo]')) {
+    if (!newest || Number(field.dataset.undoAt) > Number(newest.dataset.undoAt)) newest = field
+  }
+  return newest
+}
+
 function builtIn(app, id) {
   const shortcut = SHORTCUTS.find(s => s.id === id)
   if (id.startsWith('go-')) return () => navigate(app, destination(shortcut))
   if (id === 'new-entry') return () => navigate(app, createUrl())
+  if (id === 'undo') {
+    return () => {
+      const field = newestBlockUndo()
+      if (!field || !app?.liveSocket) return false
+      app.liveSocket.execJS(field, field.dataset.undo)
+      return true
+    }
+  }
   if (id === 'preview') {
     return () => {
       const toggle = previewToggle()

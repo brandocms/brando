@@ -18190,7 +18190,7 @@ msgstr ""
 
 #: lib/brando_admin/components/shortcut_sheet.ex
 #, elixir-autogen, elixir-format
-msgid "Undo typing"
+msgid "Undo typing, or else the last block moved or deleted"
 msgstr ""
 
 #: lib/brando_admin/live/ai/assistant_live.ex

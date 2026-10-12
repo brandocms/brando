@@ -18192,8 +18192,8 @@ msgstr "Angre forslaget? Hver oppføring går tilbake til slik den var, og nye o
 
 #: lib/brando_admin/components/shortcut_sheet.ex
 #, elixir-autogen, elixir-format
-msgid "Undo typing"
-msgstr "Angre skriving"
+msgid "Undo typing, or else the last block moved or deleted"
+msgstr "Angre skriving, ellers siste blokk som ble flyttet eller slettet"
 
 #: lib/brando_admin/live/ai/assistant_live.ex
 #, elixir-autogen, elixir-format
