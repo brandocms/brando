@@ -286,8 +286,12 @@ the result before the source tasks, so their diff holds only their changes.
   `t/1` labels, into its schema's domain, in every backend and locale that has
   it (see [Reconcile Gettext catalogs](#5-reconcile-gettext-catalogs));
 - sets `persist_identifier false` on Blueprints with no admin editor (no
-  `:update` form route and no admin LiveView) and no `absolute_url`, and lists
-  the Blueprints it could not decide;
+  `:update` form route and no admin LiveView), no `absolute_url`, and nothing
+  that could select their entries (no `:selection` or `:single` datasource,
+  no `:entries` relation or input that could include them), and lists the
+  Blueprints it could not decide. `mix brando.identifiers.sync` then deletes
+  such a Blueprint's existing identifiers, and any pick that still points at
+  them;
 - completes `Plural-Forms` headers in `priv/gettext/**/*.po`. Gettext 1.0 warns
   on `nplurals=2;` without a rule and on a rule without its trailing `;`, once
   per catalog per compile, so `--warnings-as-errors` fails until they read
@@ -405,8 +409,8 @@ above). One thing is left to you: LiveView 1.2 warns at compile time about
 Rename the field (to `_id`, say) and map it back where the form is handled.
 
 Review every source change. `mix brando.migrate55` sets
-`persist_identifier false` on Blueprints with no admin editor; set it on any
-other Blueprint that should not persist identifiers:
+`persist_identifier false` on Blueprints with no admin editor that nothing can
+select; set it on any other Blueprint that should not persist identifiers:
 
 ```elixir
 persist_identifier false
