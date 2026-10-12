@@ -109,6 +109,35 @@ defmodule Brando.MailerTest do
       assert_no_email_sent()
     end
 
+    # The upgrade tasks write `noreply@example.com` as a placeholder; reset
+    # links must not go out from a domain reserved for examples.
+    test "in production, a sender on a reserved example domain counts as none" do
+      Application.put_env(:brando, :env, :prod)
+      previous = Logger.level()
+      Logger.configure(level: :warning)
+      on_exit(fn -> Logger.configure(level: previous) end)
+
+      for from <- [
+            {"Lett", "noreply@example.com"},
+            "noreply@mail.example.org",
+            {"Lett", "post@example.net"},
+            "noreply@lett.example"
+          ] do
+        Application.put_env(:brando, Brando.Mailer, from: from)
+        assert Mailer.sender()[:from] == nil
+
+        log = capture_log(fn -> assert {:error, :no_sender} = Mailer.deliver(Email.new(to: "ada@lett.no")) end)
+        assert log =~ "no address to send email from"
+      end
+
+      Application.put_env(:brando, Brando.Mailer, from: {"Lett", "noreply@examples.com"})
+      assert Mailer.sender()[:from] == {"Lett", "noreply@examples.com"}
+
+      Application.put_env(:brando, :env, :dev)
+      Application.put_env(:brando, Brando.Mailer, from: {"Lett", "noreply@example.com"})
+      assert Mailer.sender()[:from] == {"Lett", "noreply@example.com"}
+    end
+
     test "without a sender, production warns, and a queued email is not retried" do
       Application.put_env(:brando, Brando.Mailer, [])
       Application.put_env(:brando, :env, :prod)

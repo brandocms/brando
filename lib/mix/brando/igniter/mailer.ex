@@ -173,6 +173,9 @@ if Code.ensure_loaded?(Igniter) do
         Enum.any?(@sender_files, &Config.configures_key?(igniter, &1, :brando, [Brando.Mailer, :from])) ->
           igniter
 
+        sender_written?(igniter) ->
+          igniter
+
         sender_file(igniter) == "brando.exs" ->
           Igniter.update_file(igniter, "config/brando.exs", fn source ->
             Rewrite.Source.update(source, :content, &(String.trim_trailing(&1) <> "\n\n" <> @sender_comment <> sender))
@@ -182,6 +185,17 @@ if Code.ensure_loaded?(Igniter) do
           sender = quote(do: {unquote(name), "noreply@example.com"})
           Config.configure_new(igniter, "config.exs", :brando, [Brando.Mailer, :from], {:code, sender})
       end
+    end
+
+    # `configures_key?/4` reads top-level `config` calls only; a sender set
+    # inside `if config_env() == :prod do` in runtime.exs is one too.
+    defp sender_written?(igniter) do
+      igniter = Igniter.include_glob(igniter, "config/*.exs")
+
+      igniter.rewrite
+      |> Rewrite.sources()
+      |> Enum.filter(&(Path.dirname(&1.path) == "config" and Path.extname(&1.path) == ".exs"))
+      |> Enum.any?(&(Rewrite.Source.get(&1, :content) =~ ~r/\bBrando\.Mailer\s*,[^)]*?\bfrom:/s))
     end
 
     defp sender_file(igniter), do: if(Igniter.exists?(igniter, "config/brando.exs"), do: "brando.exs", else: "config.exs")

@@ -12,7 +12,10 @@ defmodule Brando.Mailer do
   `mix brando.gen.mail` creates the mailer and sets `:mailer`. The sender is
   the address your mail provider lets you send from; `:reply_to` is optional.
   `:from` may be a plain address, which is then sent in the name of the
-  site's identity.
+  site's identity. Outside development and test, a sender on a domain
+  reserved for examples (`example.com`, `example.org`, `example.net`,
+  `*.example`), such as the placeholder the upgrade tasks write, counts as
+  no sender.
 
   On a multi-site installation, a site can send as itself, by site key:
 
@@ -64,9 +67,29 @@ defmodule Brando.Mailer do
     site = site_config(config)
 
     [
-      from: (site[:from] || config[:from]) |> named(),
+      from: (site[:from] || config[:from]) |> named() |> unless_placeholder(),
       reply_to: site[:reply_to] || config[:reply_to]
     ]
+  end
+
+  @doc """
+  Whether `from` (`{name, address}` or an address) is on a domain reserved
+  for examples (RFC 2606): `example.com`, `example.org`, `example.net` and
+  `*.example`. `mix brando.migrate54` and `mix brando.gen.mail` write
+  `noreply@example.com` as a placeholder sender.
+  """
+  @spec placeholder?(term()) :: boolean()
+  def placeholder?({_name, address}), do: placeholder?(address)
+
+  def placeholder?(address) when is_binary(address),
+    do: address =~ ~r/@(?:[^@]+\.)?(?:example\.(?:com|org|net)|example)$/i
+
+  def placeholder?(_address), do: false
+
+  # Outside development and test, a placeholder sender is no sender: email
+  # from a reserved domain would not arrive, or arrive as spam.
+  defp unless_placeholder(from) do
+    if placeholder?(from) and Brando.env() not in [:dev, :test, :e2e], do: nil, else: from
   end
 
   @doc "The application's Swoosh mailer, or nil when none is configured."
@@ -147,8 +170,9 @@ defmodule Brando.Mailer do
       [from: nil, reply_to: _] ->
         missing!(
           :no_sender,
-          "Brando has no address to send email from. Set it to an address your mail provider sends for:\n\n" <>
-            "    config :brando, Brando.Mailer, from: {\"My site\", \"noreply@example.com\"}"
+          "Brando has no address to send email from (outside development, a placeholder on a domain reserved " <>
+            "for examples, such as example.com, counts as none). Set it to an address your mail provider sends for:\n\n" <>
+            "    config :brando, Brando.Mailer, from: {\"My site\", \"noreply@my-site.com\"}"
         )
 
       [from: from, reply_to: reply_to] ->

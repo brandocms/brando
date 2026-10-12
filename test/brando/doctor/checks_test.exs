@@ -275,10 +275,10 @@ defmodule Brando.Doctor.ChecksTest do
       refute fix =~ "see the guides"
     end
 
-    test "a placeholder sender is a warning" do
+    test "a placeholder sender is an error: Brando sends nothing from it in production" do
       put_test_env(Brando.Mailer, from: {"Lett", "noreply@example.com"})
 
-      assert {:warning, "Mailer: " <> item, "placeholder sender address", fix} = Checks.Configuration.mailer()
+      assert {:error, "Mailer: " <> item, "placeholder sender address", fix} = Checks.Configuration.mailer()
       assert item =~ "placeholder sender Lett <noreply@example.com>"
       assert fix =~ "an address your mail provider sends for"
     end

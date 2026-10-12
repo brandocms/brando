@@ -167,7 +167,10 @@ setting the upgrade asks for at once (`repo_module`, `mailer` and a placeholder
 sender), and `mix brando.migrate55` finds them in place. Replace the
 placeholder sender's `noreply@example.com` with the address Brando should send
 from before you first compile, and make your own configuration changes in the
-same pass.
+same pass. Outside development and test, Brando treats a sender on a domain
+reserved for examples as no sender: it sends nothing, and `mix brando.doctor`
+fails until it is replaced. A sender set anywhere in `config/*.exs`, inside an
+`if config_env() == :prod` block included, gets no placeholder.
 
 If the application has never been run through `mix format`, run it and commit
 the result before the source tasks, so their diff holds only their changes.

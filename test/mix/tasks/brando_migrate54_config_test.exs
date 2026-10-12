@@ -88,6 +88,29 @@ defmodule Mix.Tasks.Brando.Migrate54ConfigTest do
     assert_unchanged(rerun, ["config/brando.exs"])
   end
 
+  test "writes no placeholder sender when a config file sets one, however nested" do
+    runtime = """
+    import Config
+
+    if config_env() == :prod do
+      config :brando, Brando.Mailer,
+        from: {"Lett", System.get_env("MAIL_FROM", "post@lett.no")}
+    end
+    """
+
+    files = %{
+      "config/brando.exs" => @brando_config,
+      "config/runtime.exs" => runtime,
+      "lib/lett/mailer.ex" => @mailer,
+      "config/config.exs" => "import Config\n\nimport_config \"brando.exs\"\n"
+    }
+
+    brando = files |> migrate() |> source("config/brando.exs")
+
+    assert brando =~ "mailer: Lett.Mailer"
+    refute brando =~ "example.com"
+  end
+
   test "adds the code reloader listener and updates deprecated config" do
     igniter = migrate(%{"mix.exs" => @mix_exs, "config/test.exs" => @test_config, "lib/lett/mailer.ex" => @mailer})
 

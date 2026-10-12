@@ -78,12 +78,15 @@ defmodule Brando.Doctor.Checks.Configuration do
 
   @doc """
   The mailer and its sender as a finding, with the fix (see `evaluate/1`):
-  a placeholder sender on an `example.com` domain is a warning, and so is
-  a development adapter (or none) in production.
+  a placeholder sender on an `example.com` domain is an error, since Brando
+  sends nothing from it outside development, and a development adapter (or
+  none) in production is a warning.
   """
   def mailer do
     mailer = Brando.Mailer.mailer()
-    from = Brando.Mailer.sender()[:from]
+    # As configured: `Brando.Mailer.sender/0` drops a placeholder outside
+    # development.
+    from = Application.get_env(:brando, Brando.Mailer, [])[:from]
 
     cond do
       is_nil(mailer) ->
@@ -102,8 +105,8 @@ defmodule Brando.Doctor.Checks.Configuration do
          dgettext("doctor", "no sender address"),
          dgettext("doctor", "set the address Brando sends from: `config :brando, Brando.Mailer, from: …`")}
 
-      placeholder?(from) ->
-        {:warning,
+      Brando.Mailer.placeholder?(from) ->
+        {:error,
          dgettext("doctor", "Mailer: %{mailer}, placeholder sender %{from}",
            mailer: inspect(mailer),
            from: format_from(from)
@@ -126,15 +129,6 @@ defmodule Brando.Doctor.Checks.Configuration do
          nil}
     end
   end
-
-  # The domains reserved for examples (RFC 2606), as in the placeholder
-  # `mix brando.gen.mail` writes.
-  defp placeholder?({_name, address}), do: placeholder?(address)
-
-  defp placeholder?(address) when is_binary(address),
-    do: address =~ ~r/@(.+\.)?example\.(com|org|net)$/i
-
-  defp placeholder?(_address), do: false
 
   defp development_adapter?(mailer), do: adapter(mailer) in [nil, Swoosh.Adapters.Local, Swoosh.Adapters.Test]
 

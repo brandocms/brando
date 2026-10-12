@@ -4,7 +4,15 @@
   Brando at the application's mailer (creating `MyApp.Mailer` when it has
   none) and writes a placeholder sender, so the settings change once; replace
   the placeholder before you first compile. The mailer step writes the
-  placeholder whenever no sender is set.
+  placeholder whenever no `config/*.exs` file sets a sender, inside an
+  `if config_env() == :prod` block included.
+
+- **A placeholder sender counts as no sender outside development.** Brando
+  sends nothing from an address on a domain reserved for examples
+  (`example.com`, `example.org`, `example.net`, `*.example`) outside `:dev`
+  and `:test`: it logs and returns `{:error, :no_sender}`, as without a
+  sender, and `mix brando.doctor` reports it as an error instead of a
+  warning.
 
 - **`mix brando.migrate55` removes dependencies from the endpoint's
   `reloadable_apps`.** With `reloadable_apps: [:my_app, :brando]`, the code
