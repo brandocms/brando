@@ -15,6 +15,7 @@ if Code.ensure_loaded?(Igniter) do
 
     alias Igniter.Code.Common
     alias Igniter.Project.Module, as: ProjectModule
+    alias Mix.Brando.Igniter.Source, as: IgniterSource
     alias Rewrite.Source
     alias Sourceror.Zipper
 
@@ -83,14 +84,6 @@ if Code.ensure_loaded?(Igniter) do
 
     defp content(igniter, path), do: igniter.rewrite |> Rewrite.source!(path) |> Source.get(:content)
 
-    defp sources(igniter) do
-      igniter.rewrite
-      |> Rewrite.sources()
-      |> Enum.map(&{Source.get(&1, :path), Source.get(&1, :content)})
-      |> Enum.filter(fn {path, _content} -> String.starts_with?(path, ["lib/", "test/"]) end)
-      |> Enum.sort()
-    end
-
     ## References
 
     # The helpers are deleted with their file, so they need one of their own.
@@ -108,7 +101,7 @@ if Code.ensure_loaded?(Igniter) do
       name = Regex.escape(inspect(web))
       pattern = ~r/use\s+#{name}\s*,\s*:view\b|\b#{name}\.view\b|\bErrorHelpers\b|\bview_helpers\b/
 
-      for {path, content} <- sources(igniter),
+      for {path, content} <- IgniterSource.project_sources(igniter),
           path != helpers_path,
           {line, number} <- path |> code_lines(content, web_path) |> Enum.with_index(1),
           line =~ pattern or (path == web_path and line =~ ~r/\bview\(\)/),
@@ -219,7 +212,7 @@ if Code.ensure_loaded?(Igniter) do
 
     defp warn_other_uses(igniter, removed) do
       findings =
-        for {path, content} <- sources(igniter),
+        for {path, content} <- IgniterSource.project_sources(igniter),
             String.starts_with?(path, "lib/"),
             path not in removed,
             {line, number} <- content |> String.split("\n") |> Enum.with_index(1),

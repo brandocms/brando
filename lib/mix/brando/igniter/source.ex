@@ -10,6 +10,15 @@ if Code.ensure_loaded?(Igniter) do
     alias Igniter.Code.Keyword, as: CodeKeyword
     alias Igniter.Project.Module, as: ProjectModule
 
+    @doc "`{path, content}` for the `lib/` and `test/` files the igniter holds, by path."
+    def project_sources(igniter) do
+      igniter.rewrite
+      |> Rewrite.sources()
+      |> Enum.map(&{Rewrite.Source.get(&1, :path), Rewrite.Source.get(&1, :content)})
+      |> Enum.filter(fn {path, _content} -> String.starts_with?(path, ["lib/", "test/"]) end)
+      |> Enum.sort()
+    end
+
     def ensure_import(igniter, module, imported, only) do
       ProjectModule.find_and_update_module!(igniter, module, &update_import(&1, imported, only))
     end

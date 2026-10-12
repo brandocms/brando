@@ -17,6 +17,7 @@ if Code.ensure_loaded?(Igniter) do
     alias Igniter.Code.Keyword, as: CodeKeyword
     alias Igniter.Project.Module, as: ProjectModule
     alias Mix.Brando.Igniter.RouteInventory
+    alias Mix.Brando.Igniter.Source, as: IgniterSource
     alias Rewrite.Source
     alias Sourceror.Zipper
 
@@ -33,7 +34,7 @@ if Code.ensure_loaded?(Igniter) do
     """
     def resolve(igniter, pairs, routers) do
       igniter = Igniter.include_glob(igniter, "{lib,test}/**/*.{ex,exs,heex,eex,leex}")
-      sources = sources(igniter)
+      sources = IgniterSource.project_sources(igniter)
       scopes = Enum.flat_map(routers, &plain_scopes(igniter, &1))
 
       {plans, refused} =
@@ -46,14 +47,6 @@ if Code.ensure_loaded?(Igniter) do
 
       plans = plans |> Map.values() |> Enum.sort_by(&{&1.router, &1.line})
       {Enum.reduce(plans, igniter, &apply_scope(&2, &1)), plans, refused}
-    end
-
-    defp sources(igniter) do
-      igniter.rewrite
-      |> Rewrite.sources()
-      |> Enum.map(&{Source.get(&1, :path), Source.get(&1, :content)})
-      |> Enum.filter(fn {path, _content} -> String.starts_with?(path, ["lib/", "test/"]) end)
-      |> Enum.sort()
     end
 
     @doc "`path:line: code` for each route in `routers` naming one of `modules`."
