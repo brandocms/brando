@@ -301,6 +301,25 @@ defmodule Mix.Tasks.Brando.Upgrade.SnapshotTest do
       assert Snapshot.URLs.heaviest(Pages.Page, %{language: "en"}, 5) |> List.last() |> Map.get(:id) == empty.id
     end
 
+    test "entries without a URL don't use up the candidates" do
+      user = Brando.Factory.insert(:random_user)
+      module = Brando.Factory.insert(:module)
+
+      for n <- 1..12 do
+        user
+        |> page_with_blocks(module, "snapshot-section-#{n}", 2)
+        |> Ecto.Changeset.change(has_url: false)
+        |> Brando.Repo.update!()
+      end
+
+      page_with_blocks(user, module, "snapshot-light-public", 1)
+
+      assert Enum.any?(
+               Snapshot.URLs.candidate_paths(Pages.Page, %{language: "en"}),
+               &String.ends_with?(&1, "/snapshot-light-public")
+             )
+    end
+
     test "leaves out entry URLs the old site answers with 404" do
       user = Brando.Factory.insert(:random_user)
 

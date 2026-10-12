@@ -25,12 +25,13 @@ defmodule Mix.Brando.MigrationRequest do
   # Igniter lists a queued task with its arguments ("These tasks will be
   # run") and runs it as a `mix` command of its own, and an encoded request is
   # a long base64 string. Each request is kept in a file under the build path,
-  # named after its Blueprint, and the task's arguments are the Blueprints'
-  # names. An argument that names no kept request is taken as an encoded
+  # named after its Blueprint and this run, and the task's arguments are
+  # those names (`MyApp.Article@3f9a2c1b`). An argument that names no kept request is taken as an encoded
   # request; the digest inside still refuses a plan that changed since.
   def task_args(plans) do
     Enum.map(plans, fn plan ->
-      name = inspect(plan.module)
+      # Another run planning the same Blueprint must not replace this one.
+      name = "#{inspect(plan.module)}@#{Base.encode16(:crypto.strong_rand_bytes(4), case: :lower)}"
       file = kept_file(name)
       File.mkdir_p!(Path.dirname(file))
       File.write!(file, encode(plan))
@@ -63,7 +64,7 @@ defmodule Mix.Brando.MigrationRequest do
   end
 
   defp kept_file(name) do
-    if Regex.match?(~r/\A[A-Z][A-Za-z0-9_]*(\.[A-Z][A-Za-z0-9_]*)*\z/, name),
+    if Regex.match?(~r/\A[A-Z][A-Za-z0-9_]*(\.[A-Z][A-Za-z0-9_]*)*@[0-9a-f]{8}\z/, name),
       do: Path.join([Mix.Project.build_path(), "brando", "blueprint_plans", name])
   end
 

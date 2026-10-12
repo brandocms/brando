@@ -257,6 +257,16 @@ defmodule Brando.Images.AdoptionTest do
       assert Adoption.media_status() == :ok
     end
 
+    test "files in the images' folders count when the sample has none" do
+      folder = "images/partial-#{System.unique_integer([:positive])}"
+      for n <- 1..25, do: Factory.insert(:image, path: "#{folder}/gone-#{n}.jpg", sizes: %{})
+      # None of the images has its file, but the folder they are in holds files.
+      write("#{folder}/kept.jpg", {10, 10})
+      on_exit(fn -> File.rm_rf!(media(folder)) end)
+
+      assert Adoption.media_status() == :ok
+    end
+
     test "images on the CDN without a local copy are not looked for" do
       Factory.insert(:image, path: "images/unsynced/4.jpg", cdn: true)
 

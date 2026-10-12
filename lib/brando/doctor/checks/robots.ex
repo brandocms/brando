@@ -132,10 +132,11 @@ defmodule Brando.Doctor.Checks.Robots do
 
     lists = [only: list(only), only_matching: list(only_matching)]
 
+    # Plug.Static serves everything when both lists are absent or empty.
     cond do
-      is_nil(only) and is_nil(only_matching) -> {:served, {:all, file}}
       Enum.any?(lists, fn {_option, value} -> value == :unknown end) -> {:unknown, nil}
-      true -> lists |> Enum.reject(fn {_option, value} -> is_nil(value) end) |> verdict(file)
+      Enum.all?(lists, fn {_option, value} -> is_nil(value) or elem(value, 0) == [] end) -> {:served, {:all, file}}
+      true -> lists |> Enum.reject(fn {_option, value} -> is_nil(value) or elem(value, 0) == [] end) |> verdict(file)
     end
   end
 

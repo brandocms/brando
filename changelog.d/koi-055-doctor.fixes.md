@@ -38,6 +38,6 @@
 - **`mix brando.gen.blueprint_migration` lists the Blueprints it will write,
   not their encoded plans.** "These tasks will be run" showed one long base64
   argument per Blueprint (`brando.blueprint.apply_plan eyJk…`); it now shows
-  `brando.blueprint.apply_plan MyApp.Articles.Article MyApp.Projects.Project`.
-  The reviewed plans are kept under `_build` until the task writes them, and
-  a plan that changed since its review is still refused.
+  `brando.blueprint.apply_plan MyApp.Articles.Article@3f9a2c1b`. The reviewed
+  plans are kept under `_build`, one file per run, until the task writes
+  them, and a plan that changed since its review is still refused.

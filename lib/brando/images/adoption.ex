@@ -196,32 +196,53 @@ defmodule Brando.Images.Adoption do
   Whether the current environment's media folder holds its images' files.
 
   Looks for the files, original or size, of #{@media_sample} images picked at
-  random among those kept locally (not on the CDN without a local copy).
-  `{:empty, media_root}` when none of them has a file there: the folder is
-  empty or not mounted, or the media was never synced to this machine. Every
-  image then differs for want of its files, and recreating them needs the
+  random among those kept locally (not on the CDN without a local copy), and
+  when none of them has one, for any file in the folders the images live in.
+  `{:empty, media_root}` when there is none either: the folder is empty or
+  not mounted, or the media was never synced to this machine. Every image
+  then differs for want of its files, and recreating them needs the
   originals, so neither the counts nor a recreate mean anything until the
   media is in place. `:ok` otherwise, and when there are no such images.
   """
   @spec media_status() :: :ok | {:empty, String.t()}
   def media_status do
-    sample =
-      Brando.Repo.all(
-        from i in Images.Image,
-          where: is_nil(i.deleted_at) and not is_nil(i.path) and (is_nil(i.cdn) or i.cdn == false),
-          order_by: fragment("random()"),
-          limit: @media_sample,
-          select: {i.path, i.sizes}
-      )
+    local =
+      from i in Images.Image, where: is_nil(i.deleted_at) and not is_nil(i.path) and (is_nil(i.cdn) or i.cdn == false)
 
-    if sample == [] or Enum.any?(sample, &any_file?/1),
-      do: :ok,
-      else: {:empty, Images.Utils.media_path()}
+    sample =
+      Brando.Repo.all(from i in local, order_by: fragment("random()"), limit: @media_sample, select: {i.path, i.sizes})
+
+    cond do
+      sample == [] -> :ok
+      Enum.any?(sample, &any_file?/1) -> :ok
+      local |> image_folders() |> Enum.any?(&files_in?/1) -> :ok
+      true -> {:empty, Images.Utils.media_path()}
+    end
   end
 
   defp any_file?({path, sizes}) do
     size_paths = if is_map(sizes), do: Enum.filter(Map.values(sizes), &is_binary/1), else: []
     Enum.any?([path | size_paths], &(&1 |> Images.Utils.media_path() |> File.exists?()))
+  end
+
+  # The folders the originals are in: a sample can miss the few images whose
+  # files are there.
+  defp image_folders(query) do
+    Brando.Repo.all(
+      from i in query,
+        distinct: true,
+        limit: 1_000,
+        select: fragment("substring(? from '^(.*)/[^/]*$')", i.path)
+    )
+  end
+
+  defp files_in?(nil), do: false
+
+  defp files_in?(folder) do
+    case File.ls(Images.Utils.media_path(folder)) do
+      {:ok, [_ | _]} -> true
+      _ -> false
+    end
   end
 
   defp unrecorded_batch(after_id, batch_size) do

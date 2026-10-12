@@ -302,6 +302,26 @@ defmodule Mix.Tasks.Brando.Upgrade.Database do
     end
   end
 
+  # Without the media, adopting stops: every image would differ for want of
+  # its files. That is the media's state, not a failed upgrade, so the run
+  # carries on to the steps after it.
+  def run_step(step, opts) when step in [:adopt_dry_run, :adopt] do
+    Mix.Brando.start_quietly()
+
+    case Mix.Tasks.Brando.Images.Adopt.unsynced(Brando.Doctor.Context.new(mode: :mix).environments) do
+      [] ->
+        {task, args} = task(step, opts[:yes] == true)
+
+        case run_task(task, args) do
+          {:ok, _result} -> :ok
+          error -> error
+        end
+
+      roots ->
+        {:ok, "skipped: no image files under #{Enum.join(roots, ", ")}; run mix brando.images.adopt where the media is"}
+    end
+  end
+
   def run_step(step, opts) do
     # The data tasks start the application themselves, some through `mix run`,
     # which would start the web server and Oban's queues.

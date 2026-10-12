@@ -16,6 +16,11 @@ defmodule Brando.Upgrade.Snapshot.URLs do
   are left out, and for each other Blueprint the next-heaviest entry is tried
   instead: comparing two 404 pages tells nothing about the entry.
 
+  Entries are read from the Blueprint's table (published, not deleted, in
+  the language), not through its context's list function, so scoping a
+  site adds in its own `query :list` does not apply; with `:found?` the old
+  site has the last word.
+
   Paths are relative to the site's root, sorted and without duplicates.
   A Blueprint whose entries cannot be listed is left out, with a warning
   returned beside the paths.
@@ -66,16 +71,36 @@ defmodule Brando.Upgrade.Snapshot.URLs do
   """
   @spec heaviest(module(), map(), pos_integer() | nil) :: [struct()]
   def heaviest(schema, args, limit) do
-    counts = block_counts(schema)
-    ids = schema |> published_ids(args) |> Enum.sort_by(&{-Map.get(counts, &1, 0), &1})
-    ids = if limit, do: Enum.take(ids, limit), else: ids
+    ids = heaviest_ids(schema, args)
+    load(schema, if(limit, do: Enum.take(ids, limit), else: ids))
+  end
 
-    entries = Brando.Repo.all(from(e in schema, where: e.id in ^ids))
-    by_id = Map.new(entries, &{&1.id, &1})
+  defp heaviest_ids(schema, args) do
+    counts = block_counts(schema)
+    schema |> published_ids(args) |> Enum.sort_by(&{-Map.get(counts, &1, 0), &1})
+  end
+
+  defp load(schema, ids) do
+    by_id = from(e in schema, where: e.id in ^ids) |> Brando.Repo.all() |> Map.new(&{&1.id, &1})
 
     ids
-    |> Enum.map(&by_id[&1])
+    |> Enum.flat_map(&List.wrap(by_id[&1]))
     |> Brando.Repo.preload(schema.__absolute_url_preloads__())
+  end
+
+  @doc """
+  The paths of up to #{@candidates} of `schema`'s heaviest published entries
+  matching `args` that have a URL, the ones `list/1` tries in turn. Entries
+  are loaded a few at a time, so those without a URL don't use up the
+  candidates.
+  """
+  @spec candidate_paths(module(), map()) :: [String.t()]
+  def candidate_paths(schema, args) do
+    schema
+    |> heaviest_ids(args)
+    |> Stream.chunk_every(@candidates)
+    |> Stream.flat_map(&(schema |> load(&1) |> paths(schema)))
+    |> Enum.take(@candidates)
   end
 
   defp languages do
@@ -98,17 +123,23 @@ defmodule Brando.Upgrade.Snapshot.URLs do
 
   # Every published page; one entry of anything else, per language when it
   # is translated.
-  defp blueprint_paths(Page, _languages, found?) do
+  defp blueprint_paths(schema, languages, found?) do
+    if schema == Page, do: page_paths(found?), else: entry_paths(schema, languages, found?)
+  rescue
+    exception -> {:error, "#{inspect(schema)}: #{Exception.message(exception)}"}
+  end
+
+  defp page_paths(found?) do
     {found, missing} = Page |> heaviest(%{}, nil) |> paths(Page) |> Enum.split_with(found?)
     {:ok, found, Enum.map(missing, &"404 on the old site: #{&1}")}
   end
 
-  defp blueprint_paths(schema, languages, found?) do
+  defp entry_paths(schema, languages, found?) do
     args = if schema.has_trait(Brando.Trait.Translatable), do: Enum.map(languages, &%{language: &1}), else: [%{}]
 
     {paths, left_out} =
       Enum.reduce(args, {[], []}, fn args, {paths, left_out} ->
-        candidates = schema |> heaviest(args, @candidates) |> paths(schema)
+        candidates = candidate_paths(schema, args)
 
         case {Enum.find(candidates, found?), candidates} do
           {nil, []} ->
@@ -124,8 +155,6 @@ defmodule Brando.Upgrade.Snapshot.URLs do
       end)
 
     {:ok, paths, left_out}
-  rescue
-    exception -> {:error, "#{inspect(schema)}: #{Exception.message(exception)}"}
   end
 
   defp language(%{language: language}), do: " (#{language})"

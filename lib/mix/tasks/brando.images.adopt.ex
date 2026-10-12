@@ -102,6 +102,17 @@ defmodule Mix.Tasks.Brando.Images.Adopt do
     results
   end
 
+  @doc """
+  The media roots of `environments` (`{label, prefix}`) that have images to
+  adopt but none of their files, so adopting there would stop.
+  `mix brando.upgrade.database` skips the step for them.
+  """
+  def unsynced(environments) do
+    for {_label, prefix} <- environments,
+        {:empty, root} <- [Tenant.with_prefix(prefix, fn -> Adoption.unrecorded?() and Adoption.media_status() end)],
+        do: root
+  end
+
   # `{:empty, media_root}` instead of counts when no image has its files here.
   defp adopt_here(dry_run?, on_differ) do
     case Adoption.unrecorded?() and Adoption.media_status() do

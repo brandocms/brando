@@ -395,6 +395,15 @@ defmodule Mix.Tasks.Brando.Upgrade.DatabaseTest do
       assert_received {:task_ran, "ok"}
     end
 
+    test "adopting images without the media is skipped with a note, not a failure" do
+      Brando.Repo.update_all(Brando.Images.Image, set: [deleted_at: DateTime.utc_now()])
+      Brando.Factory.insert(:image, path: "images/unsynced/1.jpg", config_fingerprint: nil)
+      root = Brando.Images.Utils.media_path()
+
+      assert {:ok, note} = Task.run_step(:adopt_dry_run, [])
+      assert note == "skipped: no image files under #{root}; run mix brando.images.adopt where the media is"
+    end
+
     test "runs a read-only check in the running application" do
       assert Task.run_step(:image_texts, []) == :ok
       assert output() =~ "No template prints an image's alt text"

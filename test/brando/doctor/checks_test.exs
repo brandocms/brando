@@ -523,7 +523,7 @@ defmodule Brando.Doctor.ChecksTest do
     test "no image files in the media folder: asks for the media, not a recreate" do
       Brando.Repo.update_all(from(i in Image, where: is_nil(i.deleted_at)), set: [deleted_at: DateTime.utc_now()])
       Factory.insert(:image, config_fingerprint: nil, path: "images/unsynced/1.jpg")
-      ImageFileFixtures.unrecorded_image("doctor-unsynced-formats", formats: [:jpg, :webp], write: [])
+      Factory.insert(:image, config_fingerprint: nil, path: "images/unsynced/2.jpg", formats: [:jpg, :webp])
       root = Brando.Images.Utils.media_path()
 
       result = Checks.ImageConfigs.run(context())
@@ -752,6 +752,11 @@ defmodule Brando.Doctor.ChecksTest do
 
       assert everything.fix ==
                "delete priv/static/robots.txt: Plug.Static in endpoint.ex has no only:, so it serves every file in priv/static"
+
+      # Plug.Static takes empty lists as no filter at all.
+      empty = Checks.Robots.evaluate(BrandoWeb.SEOController, static("only: []"))
+      assert empty.status == :warning
+      assert empty.fix =~ "has no only:, so it serves every file in priv/static"
 
       matching = Checks.Robots.evaluate(BrandoWeb.SEOController, static(~s|only_matching: ~w(robots)|))
       assert matching.fix =~ "remove robots from Plug.Static's only_matching: in endpoint.ex"
