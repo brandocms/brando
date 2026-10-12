@@ -22,7 +22,7 @@ if Code.ensure_loaded?(Igniter) do
     @replacement "\\1import Phoenix.HTML\n\\1import Phoenix.HTML.Form\n\\1use PhoenixHTMLHelpers"
 
     def upgrade(igniter) do
-      igniter = Igniter.include_glob(igniter, "{lib,test}/**/*.{ex,exs}")
+      igniter = Igniter.include_glob(igniter, "{lib,test}/**/*.{ex,exs,heex,eex,leex}")
       web = Igniter.Libs.Phoenix.web_module(igniter)
       {igniter, web_path} = module_path(igniter, web)
       {igniter, helpers_path} = module_path(igniter, Module.concat(web, ErrorHelpers))
@@ -39,9 +39,8 @@ if Code.ensure_loaded?(Igniter) do
     defp upgrade(igniter, web, web_path, helpers_path) do
       paths = Enum.uniq(Enum.reject([web_path, helpers_path], &is_nil/1))
 
-      case references(igniter, web, web_path, helpers_path) do
-        # The helpers are deleted with their file, so they need one of their own.
-        [] when helpers_path == nil or helpers_path != web_path ->
+      case references(igniter, web, web_path, helpers_path) ++ shared_file(igniter, web_path, helpers_path) do
+        [] ->
           igniter
           |> remove_helpers(helpers_path)
           |> remove_view(web_path)
@@ -94,8 +93,17 @@ if Code.ensure_loaded?(Igniter) do
 
     ## References
 
+    # The helpers are deleted with their file, so they need one of their own.
+    defp shared_file(_igniter, _web_path, nil), do: []
+
+    defp shared_file(igniter, web_path, helpers_path) do
+      if helpers_path == web_path or length(Regex.scan(~r/^\s*defmodule\s/m, content(igniter, helpers_path))) > 1,
+        do: ["#{helpers_path}: defines other modules too, so the task does not delete it"],
+        else: []
+    end
+
     # Lines outside `view/0`, `view_helpers/0` and the ErrorHelpers module
-    # that use the view or the helpers.
+    # that use the view or the helpers, templates included.
     defp references(igniter, web, web_path, helpers_path) do
       name = Regex.escape(inspect(web))
       pattern = ~r/use\s+#{name}\s*,\s*:view\b|\b#{name}\.view\b|\bErrorHelpers\b|\bview_helpers\b/
@@ -103,7 +111,7 @@ if Code.ensure_loaded?(Igniter) do
       for {path, content} <- sources(igniter),
           path != helpers_path,
           {line, number} <- path |> code_lines(content, web_path) |> Enum.with_index(1),
-          line =~ pattern,
+          line =~ pattern or (path == web_path and line =~ ~r/\bview\(\)/),
           do: "#{path}:#{number}: #{String.trim(line)}"
     end
 

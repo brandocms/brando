@@ -306,6 +306,34 @@ defmodule Mix.Tasks.Brando.Migrate54ViewHelpersTest do
     end)
   end
 
+  test "keeps the helpers a template or another web module function uses" do
+    template = "<%= LettWeb.ErrorHelpers.error_tag(f, :email) %>\n"
+    igniter = migrate(%{"lib/lett_web/templates/contact/form.html.eex" => template})
+
+    refute @helpers_path in igniter.rms
+    assert_has_warning(igniter, &(&1 =~ "lib/lett_web/templates/contact/form.html.eex:1:"))
+
+    live_view =
+      String.replace(
+        @web,
+        "  def router do",
+        "  def live_view do\n    quote do\n      unquote(view())\n    end\n  end\n\n  def router do"
+      )
+
+    igniter = migrate(%{@web_path => live_view})
+
+    assert source(igniter, @web_path) =~ "def view do"
+    assert_has_warning(igniter, &(&1 =~ "unquote(view())"))
+  end
+
+  test "keeps a helpers file that defines other modules too" do
+    helpers = @helpers <> "\ndefmodule LettWeb.InputHelpers do\nend\n"
+    igniter = migrate(%{@helpers_path => helpers})
+
+    refute @helpers_path in igniter.rms
+    assert_has_warning(igniter, &(&1 =~ "#{@helpers_path}: defines other modules too"))
+  end
+
   test "lists other `use Phoenix.HTML`" do
     other = """
     defmodule LettWeb.LegacyHelpers do
