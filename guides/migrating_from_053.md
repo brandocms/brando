@@ -740,8 +740,14 @@ then rebuilds the search index.
 the images whose files already match it, so Utilities → Recreate changed
 images only recreates the ones that differ. Try it with `--dry-run` first;
 `--verbose` names each image's difference (`sizes: missing ["xlarge"]`,
-`formats: has [:jpg], config [:jpg, :avif]`) and ends with a count per config
-target and reason. See [Media](media.md#images-made-before-fingerprints).
+`formats: has [:jpg], config [:jpg, :avif]`,
+`large: file missing: images/site/default/large/x.jpg`) and ends with a count
+per config target and reason. Run it where the media is: on a copy without
+the media files it stops with `No image files found under <media path>`, and
+the doctor and Utilities say the same instead of recommending a recreate. A
+`formats` difference is real (the default config gained `:webp`, say) and the
+images need recreating on the server; a missing file on a machine without
+the media is not. See [Media](media.md#images-made-before-fingerprints).
 
 Run these against staging first and inspect counts and representative entries.
 They mutate application data and are not reversed by `mix ecto.rollback`.

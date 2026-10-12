@@ -143,6 +143,27 @@ msgstr[1] ""
 
 #: lib/brando/doctor/checks/image_configs.ex
 #, elixir-autogen, elixir-format
+msgid "%{count} in dimensions"
+msgid_plural "%{count} in dimensions"
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/brando/doctor/checks/image_configs.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} in formats"
+msgid_plural "%{count} in formats"
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/brando/doctor/checks/image_configs.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} in sizes"
+msgid_plural "%{count} in sizes"
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/brando/doctor/checks/image_configs.ex
+#, elixir-autogen, elixir-format
 msgid "%{count} likely matches (mix brando.images.adopt checks and records that)"
 msgid_plural "%{count} likely match (mix brando.images.adopt checks and records that)"
 msgstr[0] ""
@@ -159,6 +180,13 @@ msgstr[1] ""
 #, elixir-autogen, elixir-format
 msgid "%{count} new Brando migration not copied"
 msgid_plural "%{count} new Brando migrations not copied"
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/brando/doctor/checks/image_configs.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} on the CDN only"
+msgid_plural "%{count} on the CDN only"
 msgstr[0] ""
 msgstr[1] ""
 
@@ -197,6 +225,13 @@ msgid_plural "%{count} stuck"
 msgstr[0] ""
 msgstr[1] ""
 
+#: lib/brando/doctor/checks/image_configs.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} unreadable"
+msgid_plural "%{count} unreadable"
+msgstr[0] ""
+msgstr[1] ""
+
 #: lib/brando/doctor/checks/migrations.ex
 #, elixir-autogen, elixir-format
 msgid "%{count} upgrade migration differs from Brando's template"
@@ -208,6 +243,13 @@ msgstr[1] ""
 #, elixir-autogen, elixir-format
 msgid "%{count} warning"
 msgid_plural "%{count} warnings"
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/brando/doctor/checks/image_configs.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} with a missing file"
+msgid_plural "%{count} with missing files"
 msgstr[0] ""
 msgstr[1] ""
 
@@ -795,6 +837,11 @@ msgstr ""
 msgid "no identity"
 msgstr ""
 
+#: lib/brando/doctor/checks/image_configs.ex
+#, elixir-autogen, elixir-format
+msgid "no image files under %{path} (is the media synced?)"
+msgstr ""
+
 #: lib/brando/doctor/checks/configuration.ex
 #, elixir-autogen, elixir-format
 msgid "no mailer"
@@ -858,6 +905,11 @@ msgstr ""
 #: lib/brando/doctor/checks/robots.ex
 #, elixir-autogen, elixir-format
 msgid "not served by Brando"
+msgstr ""
+
+#: lib/brando/doctor/checks/image_configs.ex
+#, elixir-autogen, elixir-format
+msgid "of those: %{differences}"
 msgstr ""
 
 #: lib/brando/doctor/checks/alt_text.ex
@@ -978,6 +1030,11 @@ msgstr ""
 #: lib/brando/doctor.ex
 #, elixir-autogen, elixir-format
 msgid "skipped in a release: needs the project's source files"
+msgstr ""
+
+#: lib/brando/doctor/checks/image_configs.ex
+#, elixir-autogen, elixir-format
+msgid "sync the media to this machine (or mount its volume) and check again; until then every image counts as differing, and recreating needs the originals"
 msgstr ""
 
 #: lib/brando/doctor/checks/test_database.ex

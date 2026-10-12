@@ -114,7 +114,7 @@ and summaries are prose.
 | Configuration | The endpoint URL, the mailer and its sender, the CDN settings of `Brando.Images` and `Brando.Files` when enabled, and the Assistant's API key when a model is configured |
 | Admin routes | For each of the application's Blueprints with an admin listing or form route, the route helper its rows and links call, `admin_<singular>_form_path` with `:update` (`admin_<scope>_<singular>_form_path` with `router_scope:`). A site still routing 0.53's `<Name>CreateLive`/`<Name>UpdateLive` fails here; `mix brando.migrate54` converts generated ones |
 | Admin assets | The `@brandocms/brandojs` version in `assets/backend/.yalc` (or the checkout it links to) against Brando's |
-| Image configs | Images made with an older image config: what Utilities → Recreate changed images recreates. Images made before Brando recorded configs are split, as a dry run of `mix brando.images.adopt`, into those whose files already match and those that differ |
+| Image configs | Images made with an older image config: what Utilities → Recreate changed images recreates. Images made before Brando recorded configs are split, as a dry run of `mix brando.images.adopt`, into those whose files already match and those that differ, counted by how they differ (formats, sizes, missing files, dimensions). With no image files in the media folder at all, it says so and asks for the media instead of a recreate |
 | Modules | Blocks behind their module's version, per module |
 | Sitemap | A sitemap module, and a sitemap generated within two days |
 | robots.txt | `/robots.txt` routed to Brando, and no static file in front of it |

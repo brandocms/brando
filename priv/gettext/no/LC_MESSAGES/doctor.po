@@ -144,6 +144,27 @@ msgstr[1] "%{count} bilder uten alt-tekst (%{language})"
 
 #: lib/brando/doctor/checks/image_configs.ex
 #, elixir-autogen, elixir-format
+msgid "%{count} in dimensions"
+msgid_plural "%{count} in dimensions"
+msgstr[0] "%{count} i dimensjoner"
+msgstr[1] "%{count} i dimensjoner"
+
+#: lib/brando/doctor/checks/image_configs.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} in formats"
+msgid_plural "%{count} in formats"
+msgstr[0] "%{count} i formater"
+msgstr[1] "%{count} i formater"
+
+#: lib/brando/doctor/checks/image_configs.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} in sizes"
+msgid_plural "%{count} in sizes"
+msgstr[0] "%{count} i størrelser"
+msgstr[1] "%{count} i størrelser"
+
+#: lib/brando/doctor/checks/image_configs.ex
+#, elixir-autogen, elixir-format
 msgid "%{count} likely matches (mix brando.images.adopt checks and records that)"
 msgid_plural "%{count} likely match (mix brando.images.adopt checks and records that)"
 msgstr[0] "%{count} samsvarer trolig (mix brando.images.adopt sjekker og lagrer det)"
@@ -162,6 +183,13 @@ msgid "%{count} new Brando migration not copied"
 msgid_plural "%{count} new Brando migrations not copied"
 msgstr[0] "%{count} ny Brando-migrering ikke kopiert"
 msgstr[1] "%{count} nye Brando-migreringer ikke kopiert"
+
+#: lib/brando/doctor/checks/image_configs.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} on the CDN only"
+msgid_plural "%{count} on the CDN only"
+msgstr[0] "%{count} bare på CDN"
+msgstr[1] "%{count} bare på CDN"
 
 #: lib/brando/doctor/checks/oban.ex
 #, elixir-autogen, elixir-format
@@ -198,6 +226,13 @@ msgid_plural "%{count} stuck"
 msgstr[0] "%{count} fastlåst"
 msgstr[1] "%{count} fastlåst"
 
+#: lib/brando/doctor/checks/image_configs.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} unreadable"
+msgid_plural "%{count} unreadable"
+msgstr[0] "%{count} uleselig"
+msgstr[1] "%{count} uleselige"
+
 #: lib/brando/doctor/checks/migrations.ex
 #, elixir-autogen, elixir-format
 msgid "%{count} upgrade migration differs from Brando's template"
@@ -211,6 +246,13 @@ msgid "%{count} warning"
 msgid_plural "%{count} warnings"
 msgstr[0] "%{count} advarsel"
 msgstr[1] "%{count} advarsler"
+
+#: lib/brando/doctor/checks/image_configs.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} with a missing file"
+msgid_plural "%{count} with missing files"
+msgstr[0] "%{count} med en manglende fil"
+msgstr[1] "%{count} med manglende filer"
 
 #: lib/brando/doctor/checks/test_database.ex
 #, elixir-autogen, elixir-format
@@ -796,6 +838,11 @@ msgstr "ingen endpoint-URL"
 msgid "no identity"
 msgstr "ingen identitet"
 
+#: lib/brando/doctor/checks/image_configs.ex
+#, elixir-autogen, elixir-format
+msgid "no image files under %{path} (is the media synced?)"
+msgstr "ingen bildefiler under %{path} (er mediene synkronisert?)"
+
 #: lib/brando/doctor/checks/configuration.ex
 #, elixir-autogen, elixir-format
 msgid "no mailer"
@@ -860,6 +907,11 @@ msgstr "ikke generert"
 #, elixir-autogen, elixir-format
 msgid "not served by Brando"
 msgstr "serveres ikke av Brando"
+
+#: lib/brando/doctor/checks/image_configs.ex
+#, elixir-autogen, elixir-format
+msgid "of those: %{differences}"
+msgstr "av dem: %{differences}"
 
 #: lib/brando/doctor/checks/alt_text.ex
 #, elixir-autogen, elixir-format
@@ -980,6 +1032,11 @@ msgstr "sett adressen Brando sender fra: `config :brando, Brando.Mailer, from: �
 #, elixir-autogen, elixir-format
 msgid "skipped in a release: needs the project's source files"
 msgstr "hoppet over i en release: trenger prosjektets kildefiler"
+
+#: lib/brando/doctor/checks/image_configs.ex
+#, elixir-autogen, elixir-format
+msgid "sync the media to this machine (or mount its volume) and check again; until then every image counts as differing, and recreating needs the originals"
+msgstr "synkroniser mediene til denne maskinen (eller monter volumet) og sjekk igjen; til da regnes alle bilder som ulike, og å lage dem på nytt krever originalene"
 
 #: lib/brando/doctor/checks/test_database.ex
 #, elixir-autogen, elixir-format

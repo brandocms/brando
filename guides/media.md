@@ -144,10 +144,20 @@ crop's focal point: if a config changed
 only those, use **Recreate image sizes**. Images on the CDN without a local
 copy (`keep_local_copy: false`) can't be checked and are left as they are.
 
+Run it where the media is. When none of the images has a file under the
+media folder (an empty or unmounted folder, or media never synced to this
+machine), the task stops with `No image files found under <media path>`
+instead of reporting every image as different: recreating them would need
+the originals too. A single missing file is named with `--verbose`, as
+`large: file missing: images/site/default/large/x.jpg`.
+
 The task covers every environment of every active site and is safe to run
 again. **Recreate changed images** adopts the same way before recreating, so
 from the admin only the images that differ are recreated; it reports how many
-of each. `mix brando.doctor` shows the split as a dry run. See
+of each. `mix brando.doctor` shows the split as a dry run, with how the images
+differ: in formats or sizes (the config changed, so recreate them) or in their
+files (missing, other dimensions). With no image files in the media folder,
+the doctor and Utilities ask for the media rather than a recreate. See
 `Brando.Images.Adoption`.
 
 <!-- usage-rules:start topic="media" -->

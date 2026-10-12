@@ -60,7 +60,7 @@ defmodule Brando.Images.AdoptionTest do
                formats.id => {:differ, {:formats, [:jpg, :webp], [:jpg]}},
                dimensions.id => {:differ, {:dimensions, "small", {640, 480}, {700, 525}}},
                cropped.id => {:differ, {:dimensions, "thumb", {400, 300}, {400, 400}}},
-               missing_file.id => {:differ, {:missing, "medium"}}
+               missing_file.id => {:differ, {:missing, "medium", "images/adoption/medium/missing-file.jpg"}}
              }
 
       for image <- differing, do: assert(Repo.get!(Image, image.id).config_fingerprint == nil)
@@ -84,7 +84,8 @@ defmodule Brando.Images.AdoptionTest do
       config = config()
       image = unrecorded("two-formats", formats: [:jpg, :webp], write: [:jpg])
 
-      assert Adoption.check(image, %{config | formats: [:jpg, :webp]}) == {:differ, {:missing, "large"}}
+      assert Adoption.check(image, %{config | formats: [:jpg, :webp]}) ==
+               {:differ, {:missing, "large", "images/adoption/large/two-formats.webp"}}
 
       for {key, dimensions} <- @sizes, do: write("images/adoption/#{key}/two-formats.webp", dimensions)
       assert Adoption.check(image, %{config | formats: [:jpg, :webp]}) == :match
@@ -202,7 +203,7 @@ defmodule Brando.Images.AdoptionTest do
       image = unrecorded("records", write: [])
 
       assert Adoption.check(image, config(), check: :records) == :match
-      assert Adoption.check(image, config()) == {:differ, {:missing, "large"}}
+      assert Adoption.check(image, config()) == {:differ, {:missing, "large", "images/adoption/large/records.jpg"}}
     end
 
     test "images already fingerprinted are left alone" do
@@ -230,6 +231,46 @@ defmodule Brando.Images.AdoptionTest do
       assert Processing.adopt_unrecorded(batch_size: 2) == %{adopted: 5, differ: 0, skipped: 0}
       assert Enum.all?(images, &Repo.get!(Image, &1.id).config_fingerprint)
     end
+  end
+
+  describe "media_status/0" do
+    setup do
+      Repo.update_all(from(i in Image, where: is_nil(i.deleted_at)), set: [deleted_at: DateTime.utc_now()])
+      :ok
+    end
+
+    test "no images, nothing to look for" do
+      assert Adoption.media_status() == :ok
+    end
+
+    test "an empty media folder: none of the images has a file there" do
+      Factory.insert(:image, path: "images/unsynced/1.jpg", sizes: %{"large" => "images/unsynced/large/1.jpg"})
+      Factory.insert(:image, path: "images/unsynced/2.jpg", sizes: %{})
+
+      assert Adoption.media_status() == {:empty, Brando.Images.Utils.media_path()}
+    end
+
+    test "one image with a file is enough, a size or the original" do
+      Factory.insert(:image, path: "images/unsynced/3.jpg", sizes: %{})
+      unrecorded("media-size-only")
+
+      assert Adoption.media_status() == :ok
+    end
+
+    test "images on the CDN without a local copy are not looked for" do
+      Factory.insert(:image, path: "images/unsynced/4.jpg", cdn: true)
+
+      assert Adoption.media_status() == :ok
+    end
+  end
+
+  test "difference/1 tells config differences from file differences" do
+    assert Adoption.difference({:differ, {:formats, [:jpg], [:jpg, :webp]}}) == :formats
+    assert Adoption.difference({:differ, {:size_keys, ["xlarge"], []}}) == :sizes
+    assert Adoption.difference({:differ, {:missing, "large", "images/x/large/1.jpg"}}) == :missing_file
+    assert Adoption.difference({:differ, {:dimensions, "large", nil, nil}}) == :dimensions
+    assert Adoption.difference({:skipped, :cdn}) == :cdn
+    assert Adoption.difference(:match) == nil
   end
 
   describe "tenancy" do

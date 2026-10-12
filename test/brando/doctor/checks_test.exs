@@ -431,13 +431,14 @@ defmodule Brando.Doctor.ChecksTest do
 
       Factory.insert(:image, config_fingerprint: "0123456789ab")
       Factory.insert(:image, config_fingerprint: nil, path: "image/2.jpg")
+      ImageFileFixtures.write_image("image/2.jpg", {300, 292})
 
       result = Checks.ImageConfigs.run(context())
       assert result.status == :warning
 
       # Factory images have five sizes where the config has six.
       assert result.summary ==
-               "1 config changed since its images were made (1 image); 1 image was made before Brando recorded its settings: it differs from its config (recreate it)"
+               "1 config changed since its images were made (1 image); 1 image was made before Brando recorded its settings: it differs from its config (recreate it); of those: 1 in sizes"
 
       assert result.items == ["default: 1 image", "default: 1 image without recorded settings"]
       assert {"#utils-image-sizes", _label} = result.link
@@ -485,7 +486,7 @@ defmodule Brando.Doctor.ChecksTest do
       result = Checks.ImageConfigs.run(context())
 
       assert result.summary ==
-               "3 images were made before Brando recorded their settings: 2 already match (mix brando.images.adopt records that), 1 differs (recreate it)"
+               "3 images were made before Brando recorded their settings: 2 already match (mix brando.images.adopt records that), 1 differs (recreate it); of those: 1 in formats"
 
       assert result.fix ==
                "Utilities → Recreate changed images recreates the images that differ; mix brando.images.adopt --dry-run --verbose lists why each one differs"
@@ -494,16 +495,46 @@ defmodule Brando.Doctor.ChecksTest do
     test "none match" do
       Factory.insert(:image, config_fingerprint: nil, path: "image/3.jpg")
       Factory.insert(:image, config_fingerprint: nil, path: "image/4.jpg")
+      ImageFileFixtures.write_image("image/3.jpg", {300, 292})
 
       result = Checks.ImageConfigs.run(context())
 
       assert result.summary ==
-               "2 images were made before Brando recorded their settings: all 2 differ from their config (recreate them)"
+               "2 images were made before Brando recorded their settings: all 2 differ from their config (recreate them); of those: 2 in sizes"
 
       assert result.items == ["default: 2 images without recorded settings"]
 
       assert result.fix ==
                "Utilities → Recreate changed images recreates the images that differ; mix brando.images.adopt --dry-run --verbose lists why each one differs"
+    end
+
+    test "counts config differences apart from missing files" do
+      ImageFileFixtures.unrecorded_image("doctor-kinds-match")
+      ImageFileFixtures.unrecorded_image("doctor-kinds-formats", formats: [:jpg, :webp], write: [:jpg])
+      ImageFileFixtures.unrecorded_image("doctor-kinds-missing")
+      File.rm!(Brando.Images.Utils.media_path("images/adoption/large/doctor-kinds-missing.jpg"))
+
+      result = Checks.ImageConfigs.run(context())
+
+      assert result.summary ==
+               "3 images were made before Brando recorded their settings: 1 already matches (mix brando.images.adopt records that), 2 differ (recreate them); of those: 1 in formats, 1 with a missing file"
+    end
+
+    test "no image files in the media folder: asks for the media, not a recreate" do
+      Brando.Repo.update_all(from(i in Image, where: is_nil(i.deleted_at)), set: [deleted_at: DateTime.utc_now()])
+      Factory.insert(:image, config_fingerprint: nil, path: "images/unsynced/1.jpg")
+      ImageFileFixtures.unrecorded_image("doctor-unsynced-formats", formats: [:jpg, :webp], write: [])
+      root = Brando.Images.Utils.media_path()
+
+      result = Checks.ImageConfigs.run(context())
+
+      # Without files, only formats and size keys are compared.
+      assert result.summary ==
+               "no image files under #{root} (is the media synced?); 2 images were made before Brando recorded their settings: all 2 differ from their config (recreate them); of those: 1 in formats, 1 in sizes"
+
+      assert result.link == nil
+      assert result.fix =~ "sync the media to this machine"
+      refute result.fix =~ "Recreate"
     end
 
     test "none left to record" do
@@ -544,7 +575,7 @@ defmodule Brando.Doctor.ChecksTest do
 
       Brando.Tenant.with_prefix("tenant_adoption_two", fn ->
         # Environments of a site share its media folder: another name.
-        ImageFileFixtures.unrecorded_image("doctor-env-two", write: [])
+        ImageFileFixtures.unrecorded_image("doctor-env-two", formats: [:jpg, :webp], write: [:jpg])
       end)
 
       result =
@@ -553,7 +584,7 @@ defmodule Brando.Doctor.ChecksTest do
         )
 
       assert result.summary ==
-               "2 images were made before Brando recorded their settings: 1 already matches (mix brando.images.adopt records that), 1 differs (recreate it)"
+               "2 images were made before Brando recorded their settings: 1 already matches (mix brando.images.adopt records that), 1 differs (recreate it); of those: 1 in formats"
 
       assert result.items == [
                "[adoption/one] default: 1 image without recorded settings",
