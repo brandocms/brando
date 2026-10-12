@@ -286,33 +286,30 @@ if Code.ensure_loaded?(Igniter) do
 
     defp declare_alias({:alias, _, [{{:., _, [base, :{}]}, _, children}]}, current, aliases) do
       Enum.reduce(children, aliases, fn {:__aliases__, meta, parts}, aliases ->
-        case expand(base, current, aliases) do
-          {:ok, base_parts} ->
-            put_alias(aliases, List.last(parts), expand({:__aliases__, meta, base_parts ++ parts}, current, %{}))
+        expanded =
+          with {:ok, base_parts} <- expand(base, current, aliases),
+               do: expand({:__aliases__, meta, base_parts ++ parts}, current, %{})
 
-          :error ->
-            Map.put(aliases, List.last(parts), :error)
-        end
+        put_alias(aliases, last_part(parts), expanded)
       end)
     end
 
     defp declare_alias({:alias, _, [{:__aliases__, _, parts} = reference | options]}, current, aliases) do
-      as =
-        case options do
-          [options] when is_list(options) ->
-            Enum.find_value(options, fn
-              {key, {:__aliases__, _, [as]}} -> if unwrap(key) == :as, do: as
-              _option -> nil
-            end)
-
-          _options ->
-            nil
-        end
-
-      put_alias(aliases, as || List.last(parts), expand(reference, current, aliases))
+      put_alias(aliases, alias_as(options) || last_part(parts), expand(reference, current, aliases))
     end
 
     defp declare_alias(_statement, _current, aliases), do: aliases
+
+    defp alias_as([options]) when is_list(options) do
+      Enum.find_value(options, fn
+        {key, {:__aliases__, _, [as]}} -> if unwrap(key) == :as, do: as
+        _option -> nil
+      end)
+    end
+
+    defp alias_as(_options), do: nil
+
+    defp last_part(parts), do: parts |> Enum.reverse() |> hd()
 
     defp put_alias(aliases, name, expanded) when is_atom(name), do: Map.put(aliases, name, expanded)
     defp put_alias(aliases, _name, _expanded), do: aliases

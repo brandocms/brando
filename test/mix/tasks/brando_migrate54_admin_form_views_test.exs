@@ -435,13 +435,7 @@ defmodule Mix.Tasks.Brando.Migrate54AdminFormViewsTest do
   end
 
   defp flat_files(router) do
-    views =
-      for {path, domain, schema} <- @flat_views,
-          action <- [:create, :update],
-          into: %{} do
-        module = "LettAdmin.#{domain}.#{schema}#{action |> to_string() |> Macro.camelize()}Live"
-        {"lib/lett_admin/live/#{path}_#{action}_live.ex", admin_view(module, "Lett.#{domain}.#{schema}", action)}
-      end
+    views = pair_views(@flat_views, %{})
 
     lists =
       for {path, domain, schema} <- @flat_views, into: %{} do
@@ -519,10 +513,11 @@ defmodule Mix.Tasks.Brando.Migrate54AdminFormViewsTest do
     end
   end
 
-  defp views do
-    for {path, domain, schema} <- @views,
-        action <- [:create, :update],
-        into: Map.put(list_views(), @router_path, @router) do
+  defp views, do: pair_views(@views, Map.put(list_views(), @router_path, @router))
+
+  # The generated Create/Update LiveViews of each `{path, domain, schema}`, into `files`.
+  defp pair_views(views, files) do
+    for {path, domain, schema} <- views, action <- [:create, :update], into: files do
       module = "LettAdmin.#{domain}.#{schema}#{action |> to_string() |> Macro.camelize()}Live"
       {"lib/lett_admin/live/#{path}_#{action}_live.ex", admin_view(module, "Lett.#{domain}.#{schema}", action)}
     end

@@ -22,15 +22,13 @@ if Code.ensure_loaded?(Igniter) do
     def remove_use(zipper, use_datasource?) do
       ast = zipper |> Zipper.topmost() |> Zipper.node()
 
-      cond do
-        not uses_ecto_query?(ast) or plain_import?(ast) ->
-          {:ok, Common.remove_all_matches(zipper, use_datasource?)}
-
-        true ->
-          zipper
-          |> Common.remove_all_matches(&partial_import?/1)
-          |> Zipper.topmost()
-          |> Common.update_all_matches(use_datasource?, &{:ok, Common.replace_code(&1, "import Ecto.Query")})
+      if not uses_ecto_query?(ast) or plain_import?(ast) do
+        {:ok, Common.remove_all_matches(zipper, use_datasource?)}
+      else
+        zipper
+        |> Common.remove_all_matches(&partial_import?/1)
+        |> Zipper.topmost()
+        |> Common.update_all_matches(use_datasource?, &{:ok, Common.replace_code(&1, "import Ecto.Query")})
       end
     end
 

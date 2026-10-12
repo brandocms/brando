@@ -467,8 +467,8 @@ if Code.ensure_loaded?(Igniter) do
         |> Enum.sort_by(fn {range, _move} -> range.start[:line] end)
 
       if length(ranges) == length(scope.moves) do
-        first = hd(ranges) |> elem(0) |> Map.fetch!(:start) |> Keyword.fetch!(:line)
-        last = List.last(ranges) |> elem(0) |> Map.fetch!(:end) |> Keyword.fetch!(:line)
+        first = ranges |> Enum.map(fn {range, _move} -> range.start[:line] end) |> Enum.min()
+        last = ranges |> Enum.map(fn {range, _move} -> range.end[:line] end) |> Enum.max()
         indent = lines |> Enum.at(first - 1) |> leading_whitespace()
 
         wrapped =

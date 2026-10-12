@@ -43,16 +43,19 @@ if Code.ensure_loaded?(Igniter) do
       |> Rewrite.sources()
       |> Enum.filter(&(Path.dirname(&1.path) == "config" and Path.extname(&1.path) == ".exs"))
       |> Enum.flat_map(&Regex.scan(call, Rewrite.Source.get(&1, :content), capture: :all_but_first))
-      |> Enum.map(fn [options] ->
-        case Regex.run(~r/\bpriv:\s*"([^"\\#]+)"\s*(?:[,\])]|\z)/, options) do
-          [_, priv] -> {:ok, String.trim_trailing(priv, "/")}
-          nil -> if options =~ ~r/\bpriv:/, do: :unknown, else: :none
-        end
-      end)
+      |> Enum.map(fn [options] -> options_config_priv(options) end)
       |> Enum.reject(&(&1 == :none))
+      |> Enum.reverse()
       |> case do
         [] -> :none
-        found -> if :unknown in found, do: :unknown, else: List.last(found)
+        [latest | _] = found -> if :unknown in found, do: :unknown, else: latest
+      end
+    end
+
+    defp options_config_priv(options) do
+      case Regex.run(~r/\bpriv:\s*"([^"\\#]+)"\s*(?:[,\])]|\z)/, options) do
+        [_, priv] -> {:ok, String.trim_trailing(priv, "/")}
+        nil -> if options =~ ~r/\bpriv:/, do: :unknown, else: :none
       end
     end
 
