@@ -18849,11 +18849,6 @@ msgstr ""
 msgid "Video configuration"
 msgstr ""
 
-#: lib/brando/html/video.ex
-#, elixir-autogen, elixir-format
-msgid "Video cover image"
-msgstr ""
-
 #: lib/brando_admin/components/video_picker.ex
 #, elixir-autogen, elixir-format
 msgid "Video deleted"
