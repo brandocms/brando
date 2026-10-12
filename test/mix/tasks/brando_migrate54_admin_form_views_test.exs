@@ -162,6 +162,27 @@ defmodule Mix.Tasks.Brando.Migrate54AdminFormViewsTest do
     end)
   end
 
+  test "keeps the shared route helper warning when other code aliases one of the scope's views" do
+    aliased = """
+    defmodule LettWeb.Shortcuts do
+      alias LettAdmin.Menu.MenuitemListLive,
+        as: MenuList
+
+      def menu(conn), do: LettWeb.Router.Helpers.admin_live_path(conn, MenuList)
+    end
+    """
+
+    igniter = migrate(views() |> Map.merge(blueprints()) |> Map.put("lib/lett_web/shortcuts.ex", aliased))
+
+    assert source(igniter, @router_path) =~ ~s(scope "/menu", LettAdmin.Menu do)
+    refute source(igniter, "lib/lett/menu/category.ex") =~ "router_scope"
+
+    assert_has_warning(igniter, fn warning ->
+      warning =~ "share a route helper" and
+        warning =~ "lib/lett_web/shortcuts.ex:2: alias LettAdmin.Menu.MenuitemListLive,"
+    end)
+  end
+
   defp blueprints do
     for {domain, schema, plural} <- [
           {"Menu", "Category", "categories"},

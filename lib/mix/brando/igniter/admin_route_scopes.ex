@@ -228,6 +228,13 @@ if Code.ensure_loaded?(Igniter) do
     # `admin_category_form_path`), or `admin_live_path` with one of its views
     # within the next few lines.
     defp unreferenced(scope, sources) do
+      case helper_calls(scope, sources) ++ renaming_aliases(scope, sources) do
+        [] -> :ok
+        findings -> {:error, findings}
+      end
+    end
+
+    defp helper_calls(scope, sources) do
       shorts = for %{module: module} <- scope.routes, do: module |> Module.split() |> List.last()
 
       named =
@@ -239,17 +246,27 @@ if Code.ensure_loaded?(Igniter) do
       helper = ~r/\badmin_(?:#{Enum.join(named, "|")})_(?:path|url)\b/
       live_helper = ~r/\badmin_live_(?:path|url)\b/
 
-      findings =
-        for {path, content} <- sources,
-            path != scope.router,
-            lines = String.split(content, "\n"),
-            {line, number} <- Enum.with_index(lines, 1),
-            (named != [] and line =~ helper) or (line =~ live_helper and names_view?(lines, number, shorts)),
-            do: "#{path}:#{number}: #{String.trim(line)}"
+      for {path, content} <- sources,
+          path != scope.router,
+          lines = String.split(content, "\n"),
+          {line, number} <- Enum.with_index(lines, 1),
+          (named != [] and line =~ helper) or (line =~ live_helper and names_view?(lines, number, shorts)),
+          do: "#{path}:#{number}: #{String.trim(line)} (names a route helper `as:` would rename)"
+    end
 
-      if findings == [],
-        do: :ok,
-        else: {:error, Enum.map(findings, &"#{&1} (names a route helper `as:` would rename)")}
+    # `alias App.Menu.CategoryListLive, as: List` (or an alias of the domain's
+    # namespace under another name) hides the view's name from the search
+    # above, so any such alias outside the router leaves the scope alone.
+    defp renaming_aliases(scope, sources) do
+      namespace = scope.routes |> hd() |> Map.fetch!(:module) |> Module.split() |> Enum.drop(-1) |> Enum.join(".")
+      pattern = ~r/\balias\s+#{Regex.escape(namespace)}(?:\.[\w.]+)?\s*,\s*as:/
+
+      for {path, content} <- sources,
+          path != scope.router,
+          [{start, _length}] <- Regex.scan(pattern, content, return: :index),
+          number = content |> binary_part(0, start) |> String.split("\n") |> length(),
+          line = content |> String.split("\n") |> Enum.at(number - 1) |> String.trim(),
+          do: "#{path}:#{number}: #{line} (renames one of the scope's LiveViews)"
     end
 
     defp names_view?(lines, number, shorts) do
