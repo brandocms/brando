@@ -268,12 +268,13 @@ if Code.ensure_loaded?(Igniter) do
       before = binary_part(content, 0, call_start)
       escaped = Regex.escape(variable)
 
-      assignments =
-        for [{start, _}] = match <- Regex.scan(~r/(?<![\w.])#{escaped}\s*=(?!=)\s*%\{/, before, return: :index),
-            call.code?.(start),
-            do: match
+      last_assignment =
+        ~r/(?<![\w.])#{escaped}\s*=(?!=)\s*%\{/
+        |> Regex.scan(before, return: :index)
+        |> Enum.reverse()
+        |> Enum.find(fn [{start, _length}] -> call.code?.(start) end)
 
-      case List.last(assignments) do
+      case last_assignment do
         [{assignment, length}] ->
           between = binary_part(before, assignment + length, byte_size(before) - assignment - length)
 
