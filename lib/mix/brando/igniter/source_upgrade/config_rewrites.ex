@@ -15,6 +15,7 @@ if Code.ensure_loaded?(Igniter) do
 
     alias Igniter.Code.Common
     alias Igniter.Code.Function, as: CodeFunction
+    alias Igniter.Code.List, as: CodeList
     alias Igniter.Project.MixProject
     alias Rewrite.Source
     alias Sourceror.Zipper
@@ -41,15 +42,15 @@ if Code.ensure_loaded?(Igniter) do
 
     defp add_listener(zipper) do
       cond do
-        not Igniter.Code.List.list?(zipper) ->
+        not CodeList.list?(zipper) ->
           {:warning,
            "`listeners` in `project/0` of mix.exs is not a list. Add `Phoenix.CodeReloader` to it: Phoenix 1.8's code reloader needs that Mix listener."}
 
-        match?({:ok, _}, Igniter.Code.List.move_to_list_item(zipper, &Common.nodes_equal?(&1, Phoenix.CodeReloader))) ->
+        match?({:ok, _}, CodeList.move_to_list_item(zipper, &Common.nodes_equal?(&1, Phoenix.CodeReloader))) ->
           {:ok, zipper}
 
         true ->
-          Igniter.Code.List.append_to_list(zipper, quote(do: Phoenix.CodeReloader))
+          CodeList.append_to_list(zipper, quote(do: Phoenix.CodeReloader))
       end
     end
 
@@ -87,14 +88,17 @@ if Code.ensure_loaded?(Igniter) do
       if quoted |> Zipper.zip() |> Common.find_all(&warn_level?/1) == [] do
         igniter
       else
-        Igniter.update_elixir_file(igniter, path, fn zipper ->
-          Common.update_all_matches(zipper, &warn_level?/1, fn zipper ->
-            {:ok,
-             Zipper.update(zipper, fn {key, {:__block__, meta, [:warn]}} -> {key, {:__block__, meta, [:warning]}} end)}
-          end)
-        end)
+        Igniter.update_elixir_file(
+          igniter,
+          path,
+          &Common.update_all_matches(&1, fn z -> warn_level?(z) end, fn z -> to_warning(z) end)
+        )
       end
     end
+
+    defp to_warning(zipper), do: {:ok, Zipper.update(zipper, &warning/1)}
+
+    defp warning({key, {:__block__, meta, [:warn]}}), do: {key, {:__block__, meta, [:warning]}}
 
     # A `level: :warn` pair (or another level key) in a `config :logger` call.
     defp warn_level?(zipper) do
