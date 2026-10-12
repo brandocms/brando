@@ -548,7 +548,9 @@ defmodule BrandoAdmin.Components.ImagePicker do
                 <.icon name="image" />
                 <h4>{gettext("No images in this folder")}</h4>
                 <%= if @library_offered? and @scope == :field do %>
-                  <p>{gettext("Upload one here, or pick one from the whole library to have it cut to this field's sizes.")}</p>
+                  <p>
+                    {gettext("Upload one here, or pick one from the whole library to have it cut to this field's sizes.")}
+                  </p>
                   <button
                     type="button"
                     class="folder-action"
@@ -989,13 +991,13 @@ defmodule BrandoAdmin.Components.ImagePicker do
   end
 
   defp scope_hint(:field, true) do
-    gettext("Only images set up for this field. Whole library offers the rest, cut to this field's sizes when you pick one.")
+    gettext(
+      "Only images set up for this field. Whole library offers the rest, cut to this field's sizes when you pick one."
+    )
   end
 
   defp scope_hint(:field, false) do
-    gettext(
-      "Only images set up for this field. The rest of the library is cut to other sizes and is not offered here."
-    )
+    gettext("Only images set up for this field. The rest of the library is cut to other sizes and is not offered here.")
   end
 
   defp picker_upload_root(:all), do: FolderBrowser.scope_for(nil)
