@@ -322,7 +322,7 @@ if Code.ensure_loaded?(Igniter) do
       if current && Enum.all?(rest, &is_atom/1), do: {:ok, current ++ rest}, else: :error
     end
 
-    defp expand({:__aliases__, _, [first | rest] = parts}, current, aliases) do
+    defp expand({:__aliases__, _, [first | rest] = parts}, _current, aliases) do
       cond do
         not Enum.all?(parts, &is_atom/1) -> :error
         first == :"Elixir" -> {:ok, rest}

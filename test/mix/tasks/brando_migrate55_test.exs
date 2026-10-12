@@ -2088,8 +2088,44 @@ defmodule Mix.Tasks.Brando.Migrate55Test do
 
       # Line 13: the mailer step adds its adapter config above the endpoint's.
       assert_has_notice(igniter, fn notice ->
-        notice =~ "Removed `reloadable_apps`" and
+        notice =~ "Removed Brando and the Hex and git dependencies" and
           notice =~ "config/dev.exs:13: reloadable_apps: [:legacy_app, :brando]"
+      end)
+
+      assert_idempotent(igniter, "config/dev.exs")
+    end
+
+    test "keeps a path dependency the team edits alongside the application" do
+      mix_exs = """
+      defmodule LegacyApp.MixProject do
+        use Mix.Project
+
+        def project do
+          [app: :legacy_app, version: "0.1.0", deps: deps()]
+        end
+
+        defp deps do
+          [
+            {:brando, path: "../brando", override: true},
+            {:fehn, path: "../fehn"},
+            {:jason, "~> 1.4"},
+            {:lettering, github: "lett/lettering"}
+          ]
+        end
+      end
+      """
+
+      igniter =
+        migrate(@blueprint_054, %{
+          "mix.exs" => mix_exs,
+          "config/dev.exs" => dev_config("[:legacy_app, :brando, :fehn, :jason, :lettering]")
+        })
+
+      assert source(igniter, "config/dev.exs") =~ "reloadable_apps: [:legacy_app, :fehn]\n"
+
+      assert_has_notice(igniter, fn notice ->
+        notice =~ "reloadable_apps: [:legacy_app, :brando, :fehn, :jason, :lettering]" and
+          notice =~ "now [:legacy_app, :fehn]" and notice =~ "which you may edit alongside it"
       end)
 
       assert_idempotent(igniter, "config/dev.exs")

@@ -298,12 +298,13 @@ the result before the source tasks, so their diff holds only their changes.
 - warns when `config/runtime.exs` reads the Repo `url:` from the environment
   in `:test` too, and when `test_paths` names a missing directory (see
   [Test and development databases](#test-and-development-databases));
-- removes `reloadable_apps` from the endpoint config (usually `config/dev.exs`)
-  when it names a dependency, as in `reloadable_apps: [:my_app, :brando]`, and
-  lists each one with file and line. With `:brando` listed, the code reloader
-  checks Brando's sources on every development request, and on Elixir 1.19 and
-  later each check rebuilds the application's protocols. Phoenix's default
-  reloads the application itself;
+- removes `:brando` and the Hex and git dependencies from the endpoint's
+  `reloadable_apps` (usually in `config/dev.exs`), and lists each list it
+  changed with file and line. With `:brando` listed, the code reloader checks
+  Brando's sources on every development request, and on Elixir 1.19 and later
+  each check rebuilds the application's protocols. The application and path
+  dependencies you edit alongside it stay; a list left with only the
+  application goes, since Phoenix's default reloads the application itself;
 - adds `plug Brando.Plug.Markdown` and `plug Brando.Plug.IndexNow` to the
   endpoint, before the router (and before `Brando.Plug.Health`), unless it
   already has them;

@@ -8,10 +8,12 @@ if Code.ensure_loaded?(Igniter) do
     # has the code reloader check that dependency's sources on every dev
     # request, and since Elixir 1.19 compiling a dependency deletes the
     # application's consolidated protocols, which the next request then
-    # rebuilds. Brando's installer never set it. Phoenix's default, `nil`, is
-    # the application itself, so a literal list that names a dependency loses
-    # the key; what remains of it is at most the application. Umbrella
-    # projects, whose default is every child application, are left alone.
+    # rebuilds. Brando's installer never set it. `:brando` and the Hex and git
+    # dependencies `mix.exs` declares leave a literal list; the application
+    # and path dependencies, which a team may edit alongside it, stay. A list
+    # left with at most the application loses the key: Phoenix's default,
+    # `nil`, is the application itself. Umbrella projects, whose default is
+    # every child application, are left alone.
 
     alias Igniter.Code.Common
     alias Igniter.Code.Function, as: CodeFunction
@@ -19,63 +21,101 @@ if Code.ensure_loaded?(Igniter) do
     alias Rewrite.Source
     alias Sourceror.Zipper
 
-    @doc "Drops `reloadable_apps:` that name a dependency from `config/*.exs`, and lists each one."
+    @doc "Drops `:brando` and Hex and git dependencies from `reloadable_apps:` in `config/*.exs`, and lists each list."
     def drop_dependencies(igniter) do
       igniter = Igniter.include_glob(igniter, "config/*.exs")
       app = ProjectApplication.app_name(igniter)
+      {igniter, mix_exs} = mix_exs(igniter)
 
-      if umbrella?(igniter) do
+      if mix_exs =~ ~r/\bapps_path:/ do
         igniter
       else
-        {igniter, dropped} =
+        dropped? = &(&1 == :brando or &1 in fetched_dependencies(mix_exs))
+
+        {igniter, changed} =
           igniter.rewrite
           |> Rewrite.sources()
           |> Enum.filter(&(Path.dirname(&1.path) == "config" and Source.get(&1, :content) =~ "reloadable_apps"))
           |> Enum.map(&Source.get(&1, :path))
           |> Enum.sort()
-          |> Enum.reduce({igniter, []}, &drop_in(&1, &2, app))
+          |> Enum.reduce({igniter, []}, &drop_in(&1, &2, app, dropped?))
 
-        notice(igniter, dropped)
+        notice(igniter, changed)
       end
     end
 
-    defp umbrella?(igniter) do
-      Igniter.exists?(igniter, "mix.exs") and
-        igniter
-        |> Igniter.include_existing_file("mix.exs")
-        |> Map.fetch!(:rewrite)
-        |> Rewrite.source!("mix.exs")
-        |> Source.get(:content) =~
-          ~r/\bapps_path:/
+    defp mix_exs(igniter) do
+      if Igniter.exists?(igniter, "mix.exs") do
+        igniter = Igniter.include_existing_file(igniter, "mix.exs")
+        {igniter, igniter.rewrite |> Rewrite.source!("mix.exs") |> Source.get(:content)}
+      else
+        {igniter, ""}
+      end
     end
 
-    defp drop_in(path, {igniter, dropped}, app) do
+    # The dependencies `mix.exs` declares without `path:` (or `in_umbrella:`).
+    defp fetched_dependencies(mix_exs) do
+      case Sourceror.parse_string(mix_exs) do
+        {:ok, ast} ->
+          {_ast, deps} =
+            Macro.prewalk(ast, [], fn
+              {:{}, _, [name | rest]} = node, deps -> {node, dependency(name, rest, deps)}
+              {:__block__, _, [{name, second}]} = node, deps -> {node, dependency(name, [second], deps)}
+              node, deps -> {node, deps}
+            end)
+
+          deps
+
+        _error ->
+          []
+      end
+    end
+
+    defp dependency(name, rest, deps) do
+      with name when is_atom(name) and not is_nil(name) <- unwrap(name),
+           false <- Enum.any?(rest, &local_option?/1) do
+        [name | deps]
+      else
+        _ -> deps
+      end
+    end
+
+    defp local_option?(options) when is_list(options),
+      do:
+        Enum.any?(
+          options,
+          &(match?({key, _value} when is_tuple(key), &1) and unwrap(elem(&1, 0)) in [:path, :in_umbrella])
+        )
+
+    defp local_option?({:__block__, _, [options]}) when is_list(options), do: local_option?(options)
+    defp local_option?(_option), do: false
+
+    defp drop_in(path, {igniter, changed}, app, dropped?) do
       zipper = igniter.rewrite |> Rewrite.source!(path) |> Source.get(:quoted) |> Zipper.zip()
 
       found =
         for config <- Common.find_all(zipper, &CodeFunction.function_call?(&1, :config, 3)),
             {line, apps} <- [reloadable_apps(config)],
-            Enum.any?(apps, &(&1 != app)),
-            do: {path, line, apps}
+            Enum.any?(apps, dropped?),
+            kept = Enum.reject(apps, dropped?),
+            do: {path, line, apps, if(kept in [[], [app]], do: :removed, else: kept)}
 
       if found == [] do
-        {igniter, dropped}
+        {igniter, changed}
       else
-        lines = Enum.map(found, &elem(&1, 1))
-
         igniter =
           Igniter.update_elixir_file(igniter, path, fn zipper ->
-            Common.update_all_matches(zipper, &dropped_config?(&1, lines, app), &drop_key/1)
+            Common.update_all_matches(zipper, &changed_config?(&1, found), &update_key(&1, found))
           end)
 
-        {igniter, dropped ++ found}
+        {igniter, changed ++ found}
       end
     end
 
-    defp dropped_config?(zipper, lines, app) do
+    defp changed_config?(zipper, found) do
       with true <- CodeFunction.function_call?(zipper, :config, 3),
-           {line, apps} <- reloadable_apps(zipper) do
-        line in lines and Enum.any?(apps, &(&1 != app))
+           {line, _apps} <- reloadable_apps(zipper) do
+        Enum.any?(found, &(elem(&1, 1) == line))
       else
         _ -> false
       end
@@ -99,28 +139,45 @@ if Code.ensure_loaded?(Igniter) do
     defp unwrap({:__block__, _, [value]}), do: value
     defp unwrap(value), do: value
 
-    defp drop_key(zipper) do
+    defp update_key(zipper, found) do
+      {line, _apps} = reloadable_apps(zipper)
+      {_path, _line, _apps, kept} = Enum.find(found, &(elem(&1, 1) == line))
+
       with {:ok, options} <- CodeFunction.move_to_nth_argument(zipper, 2),
-           {:ok, options} <- Igniter.Code.Keyword.remove_keyword_key(options, :reloadable_apps) do
+           {:ok, options} <- kept_key(options, kept) do
         {:ok, Zipper.up(options)}
       else
         _ -> {:ok, zipper}
       end
     end
 
+    defp kept_key(options, :removed), do: Igniter.Code.Keyword.remove_keyword_key(options, :reloadable_apps)
+
+    defp kept_key(options, kept) do
+      Igniter.Code.Keyword.set_keyword_key(options, :reloadable_apps, kept, fn zipper ->
+        {:ok, Common.replace_code(zipper, kept)}
+      end)
+    end
+
     defp notice(igniter, []), do: igniter
 
-    defp notice(igniter, dropped) do
+    defp notice(igniter, changed) do
       Igniter.add_notice(igniter, """
-      Removed `reloadable_apps` from the endpoint config: it named a
-      dependency, so the code reloader checked that dependency's sources on
-      every development request (since Elixir 1.19 it also rebuilt the
-      application's protocols each time). Phoenix's default reloads the
-      application itself:
+      Removed Brando and the Hex and git dependencies from the endpoint's
+      `reloadable_apps`: the code reloader checked their sources on every
+      development request (since Elixir 1.19 it also rebuilt the
+      application's protocols each time). The application and path
+      dependencies, which you may edit alongside it, stay; a list left with
+      only the application goes, since Phoenix's default reloads it:
 
-      #{Enum.map_join(dropped, "\n", fn {path, line, apps} -> "  #{path}:#{line}: reloadable_apps: #{inspect(apps)}" end)}
+      #{Enum.map_join(changed, "\n", &changed_line/1)}
       """)
     end
+
+    defp changed_line({path, line, apps, :removed}), do: "  #{path}:#{line}: reloadable_apps: #{inspect(apps)}, removed"
+
+    defp changed_line({path, line, apps, kept}),
+      do: "  #{path}:#{line}: reloadable_apps: #{inspect(apps)}, now #{inspect(kept)}"
   end
 else
   defmodule Mix.Brando.Igniter.SourceUpgrade.ReloadableApps do

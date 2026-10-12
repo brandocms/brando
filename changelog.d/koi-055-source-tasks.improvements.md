@@ -18,9 +18,10 @@
   `reloadable_apps`.** With `reloadable_apps: [:my_app, :brando]`, the code
   reloader checks Brando's sources on every development request, and on
   Elixir 1.19 and later each check rebuilds the application's protocols
-  (requests of ~155 ms instead of ~35 ms). A literal list naming anything
-  besides the application is removed, leaving Phoenix's default, and listed
-  with file and line.
+  (requests of ~155 ms instead of ~35 ms). `:brando` and the Hex and git
+  dependencies leave the list; the application and path dependencies stay.
+  A list left with only the application is removed, leaving Phoenix's
+  default. Each change is listed with file and line.
 
 - **`mix brando.migrate55` replaces the old installer's `DashboardLive`.** The
   installer before 0.55 wrote one that renders only a header. A
