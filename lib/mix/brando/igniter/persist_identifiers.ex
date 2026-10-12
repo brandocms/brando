@@ -17,6 +17,7 @@ if Code.ensure_loaded?(Igniter) do
     alias Igniter.Code.Common
     alias Igniter.Code.Function, as: CodeFunction
     alias Igniter.Project.Module, as: ProjectModule
+    alias Mix.Brando.Igniter.AdminFormViews
     alias Mix.Brando.Igniter.RouteInventory
     alias Rewrite.Source
     alias Sourceror.Zipper
@@ -26,7 +27,7 @@ if Code.ensure_loaded?(Igniter) do
 
     def update(igniter) do
       igniter = Igniter.include_glob(igniter, "lib/**/*.ex")
-      sources = lib_sources(igniter)
+      sources = AdminFormViews.lib_sources(igniter)
 
       {igniter, blueprints} =
         ProjectModule.find_all_matching_modules(igniter, fn _module, zipper ->
@@ -48,13 +49,6 @@ if Code.ensure_loaded?(Igniter) do
           Blueprints the router gives no editor.
           """)
       end
-    end
-
-    defp lib_sources(igniter) do
-      igniter.rewrite
-      |> Rewrite.sources()
-      |> Enum.map(&{Source.get(&1, :path), Source.get(&1, :content)})
-      |> Enum.filter(fn {path, _content} -> String.starts_with?(path, "lib/") and Path.extname(path) == ".ex" end)
     end
 
     ## Routes

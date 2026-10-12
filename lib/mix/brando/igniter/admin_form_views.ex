@@ -80,7 +80,9 @@ if Code.ensure_loaded?(Igniter) do
       |> report(pairs, Enum.reverse(manual), routes, routers)
     end
 
-    defp lib_sources(igniter) do
+    @doc false
+    # `{path, content}` for the `lib/**/*.ex` files the igniter holds.
+    def lib_sources(igniter) do
       igniter.rewrite
       |> Rewrite.sources()
       |> Enum.map(&{Source.get(&1, :path), Source.get(&1, :content)})
