@@ -1273,6 +1273,12 @@ defmodule Brando.Blueprint.VerifierTest do
       end
     end
 
+    test "suggests the options without an order by a column identifiers lack, written as a tuple" do
+      assert_raise Spark.Error.DslError, ~r/`order` by sequence.*Write `\{.*MediaItem, %\{status: :published\}\}`/s, fn ->
+        compile_blueprint(entries_blueprint([{MediaItem, %{order: {:asc, :sequence}, status: :published}}]))
+      end
+    end
+
     test "rejects sources that are not {module, map} pairs, and a missing sources:" do
       assert_raise Spark.Error.DslError, ~r/`sources:` takes a list of \{module, options\}/, fn ->
         compile_blueprint(entries_blueprint([MediaItem]))
@@ -1291,6 +1297,8 @@ defmodule Brando.Blueprint.VerifierTest do
             %{order: "asc language, asc title", status: :published},
             %{preload: [], order: "asc title", status: :published},
             %{order: [{:desc, :updated_at}], language: "en", limit: 20},
+            # The list query skips these.
+            %{preload: nil, paginate: true, with_deleted: true},
             %{}
           ] do
         module = compile_blueprint(entries_blueprint([{MediaItem, options}]))

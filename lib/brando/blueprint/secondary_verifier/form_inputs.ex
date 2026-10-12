@@ -121,7 +121,7 @@ defmodule Brando.Blueprint.SecondaryVerifier.FormInputs do
     example = ~s(`sources: [{MyApp.Articles.Article, %{order: "asc title"}}]`)
 
     case Keyword.get(opts || [], :sources) do
-      [_ | _] = sources ->
+      sources when is_list(sources) ->
         if Enum.all?(sources, &match?({module, options} when is_atom(module) and is_map(options), &1)) do
           Support.validate_entities(sources, &verify_entries_source(dsl_state, path, input, subject, &1))
         else
@@ -160,6 +160,13 @@ defmodule Brando.Blueprint.SecondaryVerifier.FormInputs do
     end
   end
 
+  @doc "Why identifiers do not take the `sources:` option, or `[]` when they do."
+  def source_option_problems(option), do: identifier_source_problem(option)
+
+  # The list query reducer skips a nil option, and these ones.
+  defp identifier_source_problem({_key, nil}), do: []
+  defp identifier_source_problem({key, true}) when key in [:paginate, :with_deleted], do: []
+  defp identifier_source_problem({key, _value}) when key in [:current_user, :status_counts], do: []
   defp identifier_source_problem({:preload, []}), do: []
 
   defp identifier_source_problem({:preload, preload}),
@@ -195,6 +202,13 @@ defmodule Brando.Blueprint.SecondaryVerifier.FormInputs do
     case Enum.filter(order, &(order_fields(&1) -- @orderable == [])) do
       [] -> []
       kept -> [order: kept]
+    end
+  end
+
+  def identifier_order({_direction, _field} = order) do
+    case identifier_order([order]) do
+      [order: [kept]] -> [order: kept]
+      [] -> []
     end
   end
 

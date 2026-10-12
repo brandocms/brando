@@ -40,12 +40,13 @@ if Code.ensure_loaded?(Igniter) do
           {:ok, {igniter, source, zipper}} = ProjectModule.find_module(igniter, module)
           path = Source.get(source, :path)
 
-          case findings(zipper) do
+          case findings(Zipper.subtree(zipper)) do
             [] ->
               {igniter, changes}
 
             found ->
-              igniter = ProjectModule.find_and_update_module!(igniter, module, &{:ok, update(&1)})
+              igniter = ProjectModule.find_and_update_module!(igniter, module, &update_body/1)
+
               {igniter, changes ++ Enum.map(found, fn {line, text} -> "#{path}:#{line}: #{text}" end)}
           end
         end)
@@ -69,9 +70,12 @@ if Code.ensure_loaded?(Igniter) do
       Enum.sort(identifiers ++ srcsets)
     end
 
-    defp update(zipper) do
-      zipper = Zipper.topmost(zipper)
+    # Within the module's body: the file may hold other modules.
+    defp update_body(zipper), do: Common.within(zipper, &{:ok, update(&1)})
 
+    # `zipper` is the module's body, as a subtree: the file may hold other
+    # modules.
+    defp update(zipper) do
       lines = zipper |> embedded_identifiers() |> MapSet.new(&line/1)
 
       Zipper.traverse(zipper, &update_node(&1, lines))

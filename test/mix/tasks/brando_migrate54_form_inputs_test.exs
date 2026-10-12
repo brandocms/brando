@@ -127,6 +127,77 @@ defmodule Mix.Tasks.Brando.Migrate54FormInputsTest do
     assert article =~ "relation_key: :category_id,\n            relation: :kind,"
   end
 
+  test "reads a join schema named from __MODULE__, and a relation in another module of the file" do
+    article =
+      @article
+      |> String.replace("module: Articles.ArticleCategory,", "module: __MODULE__.ArticleCategory,")
+      |> Kernel.<>("""
+
+      defmodule Koi.Articles.Other do
+        use Brando.Blueprint,
+          application: "Koi",
+          domain: "Articles",
+          schema: "Other",
+          singular: "other",
+          plural: "others"
+
+        relations do
+          relation :article_categories, :has_many, module: Koi.Articles.Elsewhere
+        end
+      end
+      """)
+
+    join = String.replace(@join, "Koi.Articles.ArticleCategory do", "Koi.Articles.Article.ArticleCategory do")
+    igniter = migrate(%{@article_path => article, "lib/koi/articles/article/article_category.ex" => join})
+
+    assert source(igniter, @article_path) =~ "relation_key: :category_id,\n            relation: :category,"
+    refute Enum.any?(igniter.warnings, &(&1 =~ "Koi.Articles.Elsewhere"))
+  end
+
+  test "adds relation: to a multi select in inputs_for, from the subform schema's relation" do
+    article =
+      String.replace(
+        @article,
+        """
+                  input :article_categories, :multi_select,
+                    options: &__MODULE__.get_categories/2,
+                    relation_key: :category_id,
+                    resetable: true,
+                    label: t("Categories")
+        """,
+        """
+                  inputs_for :items, cardinality: :many do
+                    input :item_categories, :multi_select,
+                      options: &__MODULE__.get_categories/2,
+                      relation_key: :category_id
+                  end
+        """
+      )
+      |> String.replace(
+        "relation :related_entries, :entries,",
+        "relation :items, :has_many, module: Articles.Item\n    relation :related_entries, :entries,"
+      )
+
+    item = """
+    defmodule Koi.Articles.Item do
+      use Brando.Blueprint,
+        application: "Koi",
+        domain: "Articles",
+        schema: "Item",
+        singular: "item",
+        plural: "items"
+
+      relations do
+        relation :item_categories, :has_many, module: Koi.Articles.ArticleCategory
+      end
+    end
+    """
+
+    igniter = migrate(%{@article_path => article, @join_path => @join, "lib/koi/articles/item.ex" => item})
+
+    assert source(igniter, @article_path) =~ ~r/relation_key: :category_id,\s+relation: :category/
+  end
+
   test "lists the multi selects whose relation it cannot tell" do
     join = String.replace(@join, "relation :category, :belongs_to", "relation :topic, :belongs_to")
     igniter = migrate(%{@article_path => @article, @join_path => join})

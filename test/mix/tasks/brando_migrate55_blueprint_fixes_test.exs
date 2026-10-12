@@ -132,6 +132,14 @@ defmodule Mix.Tasks.Brando.Migrate55BlueprintFixesTest do
     assert source(igniter, @partner_path) =~ ~s(identifier "{{ entry.name }}")
   end
 
+  test "leaves the identifier of a Blueprint that shares a file with an embedded one" do
+    igniter = migrate(%{@project_path => @project <> "\n" <> @property})
+    migrated = source(igniter, @project_path)
+
+    assert migrated =~ ~s(identifier "{{ entry.title }}")
+    assert migrated =~ "data_layer :embedded\n  identifier false\n"
+  end
+
   test "writes an image cfg's default_srcset as srcset: %{default: …}" do
     igniter = migrate(%{@partner_path => @partner})
     partner = source(igniter, @partner_path)

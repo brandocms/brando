@@ -47,8 +47,9 @@ if Code.ensure_loaded?(Igniter) do
     defp rewrite_blueprint(igniter, module) do
       {:ok, {igniter, source, zipper}} = ProjectModule.find_module(igniter, module)
       path = Source.get(source, :path)
+      blueprint = %{module: module, zipper: zipper}
 
-      {relations, multi_unresolved} = multi_select_relations(igniter, zipper, path)
+      {relations, multi_unresolved} = multi_select_relations(igniter, blueprint, path)
       {sources, sources_changes, sources_unresolved} = entries_sources(zipper, path)
 
       multi_changes =
@@ -62,17 +63,11 @@ if Code.ensure_loaded?(Igniter) do
           renames = Map.new(relations, fn {line, _name, relation} -> {line, relation} end)
 
           ProjectModule.find_and_update_module!(igniter, module, fn zipper ->
-            {:ok, update_inputs(zipper, renames, sources)}
+            Common.within(zipper, &{:ok, Zipper.traverse(&1, fn input -> update_input(input, renames, sources) end)})
           end)
         end
 
       {igniter, multi_changes ++ sources_changes, multi_unresolved ++ sources_unresolved}
-    end
-
-    defp update_inputs(zipper, relations, sources) do
-      zipper
-      |> Zipper.topmost()
-      |> Zipper.traverse(&update_input(&1, relations, sources))
     end
 
     defp update_input(zipper, relations, sources) do
@@ -95,14 +90,15 @@ if Code.ensure_loaded?(Igniter) do
 
     ## Multi selects
 
-    defp multi_select_relations(igniter, zipper, path) do
-      zipper
+    # A multi select in `inputs_for` edits a relation of the subform's schema.
+    defp multi_select_relations(igniter, blueprint, path) do
+      blueprint.zipper
       |> inputs(:multi_select)
-      |> Enum.reject(fn {_line, _name, options} -> option(options, :relation) end)
-      |> Enum.flat_map(fn {line, name, options} ->
+      |> Enum.reject(fn {_line, _name, options, _subform} -> option(options, :relation) end)
+      |> Enum.flat_map(fn {line, name, options, subform} ->
         relation_key = literal(option(options, :relation_key))
 
-        case relation(zipper, name) do
+        case igniter |> owner(blueprint, subform) |> has_many(name) do
           {:has_many, join_module} -> [multi_select_relation(igniter, path, line, name, relation_key, join_module)]
           _not_a_has_many -> []
         end
@@ -137,46 +133,65 @@ if Code.ensure_loaded?(Igniter) do
       end
     end
 
-    # `{:has_many, join_module | nil}`, `:through` or nil for the Blueprint's
-    # relation `name`.
-    defp relation(zipper, name) do
-      zipper
+    defp owner(_igniter, blueprint, nil), do: blueprint
+
+    defp owner(igniter, blueprint, subform) do
+      with {_type, options} <- relation(blueprint, subform),
+           module when is_atom(module) and not is_nil(module) <- expand_module(blueprint, option(options, :module)),
+           {:ok, {_igniter, _source, zipper}} <- ProjectModule.find_module(igniter, module) do
+        %{module: module, zipper: zipper}
+      else
+        _ -> nil
+      end
+    end
+
+    # `{:has_many, join_module | nil}` for a has_many (not `through:`) relation
+    # `name` of the Blueprint, or nil.
+    defp has_many(nil, _name), do: nil
+
+    defp has_many(blueprint, name) do
+      with {:has_many, options} <- relation(blueprint, name),
+           nil <- option(options, :through) do
+        {:has_many, expand_module(blueprint, option(options, :module))}
+      else
+        _ -> nil
+      end
+    end
+
+    # `{type, options}` of the Blueprint's relation `name`, or nil.
+    defp relation(blueprint, name) do
+      blueprint.zipper
+      |> Zipper.subtree()
       |> Common.find_all(&CodeFunction.function_call?(&1, :relation, 3))
       |> Enum.find_value(fn relation_zipper ->
         with {:relation, _, [relation_name, type, options]} <- single_child_node(relation_zipper),
-             ^name <- literal(relation_name),
-             :has_many <- literal(type) do
-          has_many_target(relation_zipper, options)
+             ^name <- literal(relation_name) do
+          {literal(type), options}
         else
           _ -> nil
         end
       end)
     end
 
-    defp has_many_target(relation_zipper, options) do
-      cond do
-        option(options, :through) -> :through
-        module = option(options, :module) -> {:has_many, expand_module(relation_zipper, module)}
-        true -> {:has_many, nil}
-      end
+    # The module an alias names where the Blueprint declares it.
+    defp expand_module(blueprint, {:__aliases__, _, [{:__MODULE__, _, _} | parts]}) do
+      if Enum.all?(parts, &is_atom/1), do: Module.concat([blueprint.module | parts])
     end
 
-    defp expand_module(relation_zipper, {:__aliases__, _, parts} = module) do
+    defp expand_module(blueprint, {:__aliases__, _, parts} = module) do
       expanded =
-        relation_zipper
-        |> Zipper.find(&(&1 == module))
-        |> case do
+        case Zipper.find(blueprint.zipper, &(&1 == module)) do
           nil -> module
           module_zipper -> module_zipper |> Common.expand_alias() |> Zipper.node()
         end
 
       case expanded do
-        {:__aliases__, _, expanded_parts} -> Module.concat(expanded_parts)
-        _ -> Module.concat(parts)
+        {:__aliases__, _, expanded_parts} -> if Enum.all?(expanded_parts, &is_atom/1), do: Module.concat(expanded_parts)
+        _ -> if Enum.all?(parts, &is_atom/1), do: Module.concat(parts)
       end
     end
 
-    defp expand_module(_relation_zipper, module) do
+    defp expand_module(_blueprint, module) do
       case literal(module) do
         module when is_atom(module) and module not in [nil, :blocks] -> module
         _ -> nil
@@ -191,6 +206,7 @@ if Code.ensure_loaded?(Igniter) do
       case ProjectModule.find_module(igniter, join_module) do
         {:ok, {_igniter, _source, zipper}} ->
           zipper
+          |> Zipper.subtree()
           |> Common.find_all(
             &(CodeFunction.function_call?(&1, :relation, 3) or CodeFunction.function_call?(&1, :belongs_to))
           )
@@ -238,7 +254,7 @@ if Code.ensure_loaded?(Igniter) do
     defp entries_sources(zipper, path) do
       zipper
       |> inputs(:entries)
-      |> Enum.flat_map(fn {line, name, options} ->
+      |> Enum.flat_map(fn {line, name, options, _subform} ->
         case Enum.find(keyword_entries(options), &(entry_key(&1) in [:for, :sources])) do
           nil -> []
           option -> [{line, entries_source(path, line, name, option)}]
@@ -313,16 +329,23 @@ if Code.ensure_loaded?(Igniter) do
           {[pair], []}
 
         {:order, {:ok, order}} ->
-          dropped = Enum.map(Check.unknown_order_fields(order), &"`order` by #{&1}")
+          rewrite_order(pair, order)
 
-          case Check.identifier_order(order) do
-            [order: ^order] -> {[pair], []}
-            [order: kept] -> {[{key_ast, Sourceror.parse_string!(inspect(kept))}], dropped}
-            [] -> {[], dropped}
-          end
+        {_key, {:ok, value}} ->
+          if Check.source_option_problems({key, value}) == [], do: {[pair], []}, else: {[], [shown]}
 
-        {key, _value} ->
+        {key, :error} ->
           if key in Check.identifier_source_keys() and key != :preload, do: {[pair], []}, else: {[], [shown]}
+      end
+    end
+
+    defp rewrite_order({key_ast, _value_ast} = pair, order) do
+      dropped = Enum.map(Check.unknown_order_fields(order), &"`order` by #{&1}")
+
+      case Check.identifier_order(order) do
+        [order: ^order] -> {[pair], []}
+        [order: kept] -> {[{key_ast, Sourceror.parse_string!(inspect(kept))}], dropped}
+        [] -> {[], dropped}
       end
     end
 
@@ -363,21 +386,33 @@ if Code.ensure_loaded?(Igniter) do
 
     ## AST helpers
 
-    # `{line, name, options}` of each `input name, type, options`.
+    # `{line, name, options, subform}` of each `input name, type, options` in
+    # the module, `subform` naming the `inputs_for` it is in, or nil.
     defp inputs(zipper, type) do
       zipper
+      |> Zipper.subtree()
       |> Common.find_all(&CodeFunction.function_call?(&1, :input, 3))
       |> Enum.flat_map(fn input_zipper ->
         with {:input, meta, [name, input_type, options]} <- single_child_node(input_zipper),
              ^type <- literal(input_type),
              name when is_atom(name) and not is_nil(name) <- literal(name),
              true <- keyword_list?(options) do
-          [{meta[:line], name, options}]
+          [{meta[:line], name, options, subform(input_zipper)}]
         else
           _ -> []
         end
       end)
     end
+
+    defp subform(zipper) do
+      case Zipper.up(zipper) do
+        nil -> nil
+        parent -> subform_name(Zipper.node(parent)) || subform(parent)
+      end
+    end
+
+    defp subform_name({:inputs_for, _, [name | _]}), do: literal(name)
+    defp subform_name(_node), do: nil
 
     defp single_child_node(zipper), do: zipper |> Common.maybe_move_to_single_child_block() |> Zipper.node()
 

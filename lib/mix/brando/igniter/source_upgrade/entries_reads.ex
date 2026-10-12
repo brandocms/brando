@@ -54,7 +54,7 @@ if Code.ensure_loaded?(Igniter) do
         {:ok, {igniter, _source, zipper}} = ProjectModule.find_module(igniter, module)
 
         found =
-          for relation <- Common.find_all(zipper, &CodeFunction.function_call?(&1, :relation, [2, 3])),
+          for relation <- Common.find_all(Zipper.subtree(zipper), &CodeFunction.function_call?(&1, :relation, [2, 3])),
               {:relation, _, [name, type | _]} <- [relation |> Common.maybe_move_to_single_child_block() |> Zipper.node()],
               literal(type) == :entries,
               name = literal(name),
