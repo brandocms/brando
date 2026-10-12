@@ -12997,7 +12997,7 @@ msgstr ""
 
 #: lib/brando_admin/components/form/draft_recovery.ex
 #, elixir-autogen, elixir-format
-msgid "Recovery copy saved at %{time}"
+msgid "Recovery copy saved at %{time} on %{date}"
 msgstr ""
 
 #: lib/brando_admin/components/form/draft_recovery.ex

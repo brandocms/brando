@@ -12999,8 +12999,8 @@ msgstr "Gjenopprettingskopien kunne ikke lagres — hold redigeringsvinduet åpe
 
 #: lib/brando_admin/components/form/draft_recovery.ex
 #, elixir-autogen, elixir-format
-msgid "Recovery copy saved at %{time}"
-msgstr "Gjenopprettingskopi lagret kl. %{time}"
+msgid "Recovery copy saved at %{time} on %{date}"
+msgstr "Gjenopprettingskopi lagret %{date} kl. %{time}"
 
 #: lib/brando_admin/components/form/draft_recovery.ex
 #, elixir-autogen, elixir-format

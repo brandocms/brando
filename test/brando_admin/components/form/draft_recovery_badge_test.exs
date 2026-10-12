@@ -82,8 +82,27 @@ defmodule BrandoAdmin.Components.Form.DraftRecoveryBadgeTest do
 
       assert html =~ ~s(data-state="dirty")
       assert html =~ "Unsaved changes"
-      assert html =~ ~r/data-testid="draft-status"[^>]*>Recovery copy saved at/
+      assert html =~ ~r/data-testid="draft-status"[^>]*>Recovery copy saved at 18:40 on 28.09.26/
       refute html =~ "draft-recovery-notice"
+    end
+
+    test "the recovery status words the date and the time apart in Norwegian" do
+      Gettext.put_locale(Brando.Gettext, "no")
+
+      html =
+        %{
+          id: "draft",
+          part: :status,
+          state: state(%{checksum: "b", saved_at: ~U[2026-09-28 16:40:12Z], candidates: [], open?: false}),
+          saved_at: nil,
+          target: nil,
+          entry_id: 1,
+          __changed__: nil
+        }
+        |> DraftRecovery.render()
+        |> rendered_to_string()
+
+      assert html =~ "Gjenopprettingskopi lagret 28.09.26 kl. 18:40"
     end
 
     test "toolbar errors stay compact and recovery copies remain named, with details below" do

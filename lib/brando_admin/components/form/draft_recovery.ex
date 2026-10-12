@@ -462,7 +462,11 @@ defmodule BrandoAdmin.Components.Form.DraftRecovery do
     do: gettext("No unsaved changes in this editor")
 
   defp status(%{saved_at: %DateTime{} = at}),
-    do: gettext("Recovery copy saved at %{time}", time: BrandoAdmin.Dates.short(at))
+    do:
+      gettext("Recovery copy saved at %{time} on %{date}",
+        date: BrandoAdmin.Dates.short_date(at),
+        time: BrandoAdmin.Dates.short_time(at)
+      )
 
   defp status(_), do: gettext("Recovery copies are saved automatically")
 

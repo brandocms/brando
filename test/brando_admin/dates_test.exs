@@ -30,6 +30,14 @@ defmodule BrandoAdmin.DatesTest do
     assert Dates.long(~U[2026-05-04 10:00:00Z]) == "4. mai 2026 kl. 12:00"
   end
 
+  test "short_date/1 and short_time/1 are the two halves of short/1" do
+    assert Dates.short_date(@at) == "28.09.26"
+    assert Dates.short_time(@at) == "18:40"
+    assert Dates.short_time(~N[2026-09-28 16:40:12]) == "18:40"
+    assert Dates.short_date(nil) == ""
+    assert Dates.short_time(nil) == ""
+  end
+
   test "naive datetimes are UTC" do
     Gettext.put_locale(Brando.Gettext, "no")
     assert Dates.short(~N[2026-09-28 16:40:12]) == "28.09.26 18:40"
