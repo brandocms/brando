@@ -8,6 +8,7 @@ if Code.ensure_loaded?(Igniter) do
     alias Mix.Brando.Igniter.Mailer
     alias Mix.Brando.Igniter.PersistIdentifiers
     alias Mix.Brando.Igniter.SourceUpgrade
+    alias Mix.Brando.Igniter.SourceUpgrade.BlueprintCompileFixes
     alias Mix.Brando.Igniter.SourceUpgrade.BlueprintGettext
     alias Mix.Brando.Igniter.SourceUpgrade.ListOrder
     alias Mix.Brando.Igniter.SourceUpgrade.TestEnvironment
@@ -77,6 +78,8 @@ if Code.ensure_loaded?(Igniter) do
 
     def igniter(igniter) do
       igniter
+      # First, so it reports the lines as they are in the files.
+      |> BlueprintCompileFixes.rewrite()
       |> SourceUpgrade.rewrite_blueprints(&SourceUpgrade.add_listing_component_imports/1)
       |> SourceUpgrade.update_villain_parsers()
       |> SourceUpgrade.rename_moved_modules()

@@ -1,0 +1,180 @@
+defmodule Mix.Tasks.Brando.Migrate55BlueprintFixesTest do
+  use ExUnit.Case, async: false
+
+  import Igniter.Test
+
+  alias Mix.Tasks.Brando.Migrate55
+
+  @formatter """
+  [
+    inputs: ["{mix,.formatter}.exs", "{config,lib,test}/**/*.{ex,exs}"],
+    locals_without_parens: [
+      trait: 1, identifier: 1, data_layer: 1, attribute: 2, attribute: 3, relation: 2, relation: 3, asset: 3, input: 3
+    ]
+  ]
+  """
+
+  @property_path "lib/koi/projects/project/property.ex"
+  @partner_path "lib/koi/team/partner.ex"
+  @project_path "lib/koi/projects/project.ex"
+  @controller_path "lib/koi_web/controllers/project_controller.ex"
+
+  # As koi had them on 0.53.
+  @property """
+  defmodule Koi.Projects.Project.Property do
+    @moduledoc \"""
+    Blueprint for Project Property
+    \"""
+    use Brando.Blueprint,
+      application: "Koi",
+      domain: "Projects",
+      schema: "Property",
+      singular: "property",
+      plural: "properties"
+
+    data_layer :embedded
+    identifier "{{ entry.id }}"
+
+    attributes do
+      attribute :key, :text, required: true
+      attribute :value, :text, required: true
+    end
+  end
+  """
+
+  @partner """
+  defmodule Koi.Team.Partner do
+    use Brando.Blueprint,
+      application: "Koi",
+      domain: "Team",
+      schema: "Partner",
+      singular: "partner",
+      plural: "partners"
+
+    identifier "{{ entry.name }}"
+
+    @logo_cfg [
+      allowed_mimetypes: ["image/jpeg", "image/png", "image/gif"],
+      default_size: "xlarge",
+      upload_path: Path.join(["images", "team", "partner"]),
+      sizes: %{
+        "small" => %{"quality" => 85, "size" => "700"},
+        "xlarge" => %{"quality" => 85, "size" => "1900"}
+      },
+      default_srcset: [
+        {"small", "700w"},
+        {"xlarge", "1900w"}
+      ]
+    ]
+
+    attributes do
+      attribute :name, :string, required: true
+    end
+
+    assets do
+      asset :logo, :image, cfg: @logo_cfg
+    end
+  end
+  """
+
+  @project """
+  defmodule Koi.Projects.Project do
+    use Brando.Blueprint,
+      application: "Koi",
+      domain: "Projects",
+      schema: "Project",
+      singular: "project",
+      plural: "projects"
+
+    identifier "{{ entry.title }}"
+
+    attributes do
+      attribute :title, :text, required: true
+    end
+
+    relations do
+      relation :related_entries, :entries, constraints: [max_length: 3]
+    end
+  end
+  """
+
+  @controller """
+  defmodule KoiWeb.ProjectController do
+    use KoiWeb, :controller
+    alias Koi.Projects
+
+    def get_related_projects(project) do
+      ids = Enum.map(project.related_entries || [], & &1.entry_id)
+
+      Projects.list_projects(%{filter: %{ids: ids}, status: :published})
+    end
+
+    def related_titles(project) do
+      Enum.map(project.related_entries, & &1.identifier.title)
+    end
+  end
+  """
+
+  test "turns off the identifier of an embedded Blueprint, and says so" do
+    igniter = migrate(%{@property_path => @property})
+    property = source(igniter, @property_path)
+
+    assert property =~ "data_layer :embedded\n  identifier false\n"
+    refute property =~ "entry.id"
+    assert_has_notice(igniter, &(&1 =~ "#{@property_path}:13: `identifier false`"))
+
+    rerun = igniter |> apply_igniter!() |> include_test_files() |> Migrate55.igniter()
+    assert_unchanged(rerun, @property_path)
+  end
+
+  test "leaves the identifier of a Blueprint that is not embedded" do
+    igniter = migrate(%{@partner_path => @partner})
+    assert source(igniter, @partner_path) =~ ~s(identifier "{{ entry.name }}")
+  end
+
+  test "writes an image cfg's default_srcset as srcset: %{default: …}" do
+    igniter = migrate(%{@partner_path => @partner})
+    partner = source(igniter, @partner_path)
+
+    refute partner =~ "default_srcset"
+
+    assert partner =~ """
+               srcset: %{
+                 default: [
+                   {"small", "700w"},
+                   {"xlarge", "1900w"}
+                 ]
+               }
+           """
+
+    assert_has_notice(igniter, &(&1 =~ "#{@partner_path}:19: `default_srcset:` is now `srcset: %{default: …}`"))
+
+    rerun = igniter |> apply_igniter!() |> include_test_files() |> Migrate55.igniter()
+    assert_unchanged(rerun, @partner_path)
+  end
+
+  test "drops default_srcset beside a srcset, which 0.53 used instead" do
+    partner =
+      String.replace(@partner, ~s|default_size: "xlarge",|, ~s|default_size: "xlarge",\n    srcset: [{"small", "700w"}],|)
+
+    igniter = migrate(%{@partner_path => partner})
+    migrated = source(igniter, @partner_path)
+
+    refute migrated =~ "default_srcset"
+    assert migrated =~ ~s|srcset: [{"small", "700w"}]|
+    assert_has_notice(igniter, &(&1 =~ "#{@partner_path}:20: `default_srcset:` removed"))
+  end
+
+  defp migrate(files) do
+    [app_name: :koi, files: Map.put(files, ".formatter.exs", @formatter)]
+    |> test_project()
+    |> include_test_files()
+    |> Migrate55.igniter()
+  end
+
+  defp source(igniter, path), do: igniter.rewrite |> Rewrite.source!(path) |> Rewrite.Source.get(:content)
+
+  defp include_test_files(igniter) do
+    Enum.reduce(Map.keys(igniter.assigns.test_files), igniter, &Igniter.include_existing_file(&2, &1))
+  end
+end
