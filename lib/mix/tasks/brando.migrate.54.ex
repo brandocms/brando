@@ -10,6 +10,7 @@ if Code.ensure_loaded?(Igniter) do
     alias Mix.Brando.Igniter.SourceUpgrade.BlueprintGettext
     alias Mix.Brando.Igniter.SourceUpgrade.BuiltinActions
     alias Mix.Brando.Igniter.SourceUpgrade.ListingRows
+    alias Mix.Brando.Igniter.SourceUpgrade.ConfigRewrites
     alias Mix.Brando.Igniter.SourceUpgrade.ViewHelpers
 
     @shortdoc "Migrates application source from Brando 0.53 to 0.54"
@@ -60,6 +61,7 @@ if Code.ensure_loaded?(Igniter) do
       |> SourceUpgrade.update_gettext_backends()
       |> AdminFormViews.consolidate()
       |> ViewHelpers.upgrade()
+      |> ConfigRewrites.upgrade()
       |> add_notices()
       |> add_warnings()
     end
@@ -99,7 +101,10 @@ if Code.ensure_loaded?(Igniter) do
       (Brando refuses to boot with it; Vix is the default). Phoenix.View-era
       `ErrorHelpers`, `view/0` and `view_helpers/0`, which phoenix_html 4 no
       longer compiles, are deleted when nothing uses them, and their
-      `use Phoenix.HTML` replaced when something does.
+      `use Phoenix.HTML` replaced when something does. A Phoenix
+      application gets `listeners: [Phoenix.CodeReloader]` in `project/0`,
+      and `config/*.exs` get `import Config` for `use Mix.Config` and
+      Logger's `:warning` for `:warn`.
 
       Continue in this order:
 
