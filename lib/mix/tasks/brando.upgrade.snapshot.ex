@@ -105,11 +105,13 @@ defmodule Mix.Tasks.Brando.Upgrade.Snapshot do
     end
   end
 
-  # Logging off, so `urls > urls.txt` holds only the paths.
+  # Logging off, so `urls > urls.txt` holds only the paths. The application
+  # starts without its endpoint and with Oban's queues stopped: this runs
+  # against a migrated copy of production, maybe beside the old site.
   defp database_urls do
     Application.put_env(:logger, :level, :error)
     Logger.configure(level: :error)
-    Mix.Task.run("app.start")
+    Mix.Brando.start_quietly()
 
     {paths, warnings} = Snapshot.URLs.list()
     Enum.each(warnings, &Mix.shell().error("Left out #{&1}"))
