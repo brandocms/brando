@@ -8,7 +8,9 @@ defmodule Brando.Doctor.Result do
     * `:fix` — what to do about it, when the status is not `:ok`. A command
       or a place in the admin; the doctor never runs it.
     * `:link` — `{admin_live_view_or_path, label}`, the admin screen that
-      fixes it. The Utilities card shows it as a button.
+      fixes it. The Utilities card shows it as a button. It only goes
+      there, so its label names the place ("Open SEO", "Go to sitemap"),
+      never the action that the place's own button runs.
     * `:items` — the affected things, listed by `mix brando.doctor --verbose`.
 
   `:check`, `:id` and `:label` are filled in by `Brando.Doctor.run/1`.

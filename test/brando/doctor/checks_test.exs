@@ -440,7 +440,9 @@ defmodule Brando.Doctor.ChecksTest do
                "1 config changed since its images were made (1 image); 1 image was made before Brando recorded its settings: it differs from its config (recreate it)"
 
       assert result.items == ["default: 1 image", "default: 1 image without recorded settings"]
-      assert {"#utils-image-sizes", _label} = result.link
+      # The link only scrolls to Utilities → Image sizes, so it says so
+      # rather than naming the button there that recreates them.
+      assert result.link == {"#utils-image-sizes", "Go to image sizes"}
 
       assert result.fix ==
                "Utilities → Recreate changed images recreates the images that differ; mix brando.images.adopt --dry-run --verbose lists why each one differs"
@@ -596,6 +598,12 @@ defmodule Brando.Doctor.ChecksTest do
   describe "Sitemap" do
     test "not generated is an error" do
       assert %Result{status: :error, summary: "not generated"} = Checks.Sitemap.evaluate([{nil, nil}], @now)
+    end
+
+    test "links to the Utilities row that generates it, by the row's name" do
+      for generated_at <- [nil, DateTime.add(@now, -3 * 86_400, :second)] do
+        assert Checks.Sitemap.evaluate([{nil, generated_at}], @now).link == {"#utils-sitemap", "Go to sitemap"}
+      end
     end
 
     test "older than two days is a warning" do

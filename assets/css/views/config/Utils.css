@@ -134,6 +134,9 @@
   .utils-maintenance-list { border: 1px solid var(--utils-line); border-radius: 8px; overflow: hidden; }
   .utils-maintenance-list article { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 24px; padding: 20px 24px; }
   .utils-maintenance-list article + article { border-top: 1px solid var(--utils-line); }
+  /* The row a system check's "Go to …" link leads to */
+  .utils-maintenance-list article { scroll-margin-top: 24px; transition: background-color var(--motion-enter) var(--motion-ease); }
+  .utils-maintenance-list article:target { background: color-mix(in srgb, var(--brando-accent) 7%, transparent); }
   .utils-maintenance-list h3 { font-size: 13px; margin-bottom: 4px; }
   .utils-maintenance-list p { color: var(--utils-muted); font-size: 12px; line-height: 1.65; }
   .utils-maintenance-list small { display: block; font-size: 11px; color: var(--utils-muted); margin-top: 8px; }

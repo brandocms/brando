@@ -54,7 +54,7 @@ defmodule Brando.Doctor.Checks.Sitemap do
       end)
 
     fix = dgettext("doctor", "Utilities → Generate sitemap")
-    link = {"#utils-sitemap", dgettext("doctor", "Generate sitemap")}
+    link = {"#utils-sitemap", dgettext("doctor", "Go to sitemap")}
 
     cond do
       missing != [] ->

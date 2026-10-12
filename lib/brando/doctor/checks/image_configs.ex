@@ -108,7 +108,7 @@ defmodule Brando.Doctor.Checks.ImageConfigs do
       summaries ->
         warning(Enum.join(summaries, "; "),
           fix: fix(changed, differ),
-          link: {"#utils-image-sizes", dgettext("doctor", "Recreate changed images")},
+          link: {"#utils-image-sizes", dgettext("doctor", "Go to image sizes")},
           items:
             Enum.map(changed, fn {label, target, count} ->
               Context.label_item(

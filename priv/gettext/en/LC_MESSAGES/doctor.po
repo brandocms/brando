@@ -353,9 +353,14 @@ msgstr ""
 msgid "GET /robots.txt goes to %{plug}"
 msgstr ""
 
+#: lib/brando/doctor/checks/image_configs.ex
+#, elixir-autogen, elixir-format
+msgid "Go to image sizes"
+msgstr ""
+
 #: lib/brando/doctor/checks/sitemap.ex
 #, elixir-autogen, elixir-format
-msgid "Generate sitemap"
+msgid "Go to sitemap"
 msgstr ""
 
 #: lib/brando/doctor/source.ex
@@ -441,11 +446,6 @@ msgstr ""
 #: lib/brando/doctor/checks/alt_text.ex
 #, elixir-autogen, elixir-format
 msgid "Open images"
-msgstr ""
-
-#: lib/brando/doctor/checks/image_configs.ex
-#, elixir-autogen, elixir-format
-msgid "Recreate changed images"
 msgstr ""
 
 #: lib/brando/doctor/checks/modules.ex
