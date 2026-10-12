@@ -796,6 +796,14 @@ images only recreates the ones that differ. Try it with `--dry-run` first;
 `formats: has [:jpg], config [:jpg, :avif]`) and ends with a count per config
 target and reason. See [Media](media.md#images-made-before-fingerprints).
 
+The comparison reads the image files, so it means something only where the
+media is. In a local checkout without the production media every image
+"differs", and `mix brando.doctor` and Utilities then recommend recreating
+them all. Do not press Recreate changed images on that advice. Run
+`mix brando.images.adopt --dry-run --verbose` with the real media first (a
+copy of the server's `media` folder in the rehearsal checkout), and decide
+from its counts.
+
 Run these against staging first and inspect counts and representative entries.
 They mutate application data and are not reversed by `mix ecto.rollback`.
 
