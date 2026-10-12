@@ -107,6 +107,17 @@ defmodule Brando.Villain.ParserTest do
              "--aspect-ratio: 0.5625\""
   end
 
+  test "picture/2 without alt text is described by its caption's text" do
+    picture = fn attrs -> :image |> Brando.Factory.build(Map.merge(%{alt: nil, credits: nil}, attrs)) |> picture([]) end
+
+    html = picture.(%{title: "<h3>Burrata og ovnsbakt squash</h3>", credits: "Foto: Lett &amp; co"})
+    assert html =~ ~s(alt="Burrata og ovnsbakt squash — Foto: Lett &amp; co")
+
+    assert picture.(%{title: "Caption", alt: ""}) =~ ~s(alt="Caption")
+    assert picture.(%{title: "Caption", alt: "Own alt"}) =~ ~s(alt="Own alt")
+    assert picture.(%{title: nil}) =~ ~s(alt="")
+  end
+
   test "video/2 file takes the shape of an aspect ratio override" do
     # The record is sized by the first block that used the file; a block of
     # another shape keeps the record's width and its own height, so the
