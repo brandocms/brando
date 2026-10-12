@@ -1944,6 +1944,57 @@ defmodule Mix.Tasks.Brando.Migrate55Test do
     end
   end
 
+  describe "reloadable_apps" do
+    # koi's 0.53 config/dev.exs
+    defp dev_config(apps) do
+      """
+      import Config
+
+      config :legacy_app, LegacyAppWeb.Endpoint,
+        http: [port: 4000],
+        live_reload: [
+          patterns: [
+            ~r"priv/gettext/.*(po)$"
+          ]
+        ],
+        # reloadable_compilers: [:gettext, :phoenix, :elixir],
+        reloadable_apps: #{apps}
+
+      config :logger, :console, format: "[$level] $message\\n"
+      """
+    end
+
+    test "drops reloadable_apps that name Brando, and lists it" do
+      igniter = migrate(@blueprint_054, %{"config/dev.exs" => dev_config("[:legacy_app, :brando]")})
+      dev = source(igniter, "config/dev.exs")
+
+      refute dev =~ "reloadable_apps"
+      assert dev =~ ~S|~r"priv/gettext/.*(po)$"|
+      assert dev =~ ~S|config :logger, :console, format: "[$level] $message\n"|
+
+      # Line 13: the mailer step adds its adapter config above the endpoint's.
+      assert_has_notice(igniter, fn notice ->
+        notice =~ "Removed `reloadable_apps`" and
+          notice =~ "config/dev.exs:13: reloadable_apps: [:legacy_app, :brando]"
+      end)
+
+      assert_idempotent(igniter, "config/dev.exs")
+    end
+
+    test "drops a list of dependencies only" do
+      dev = @blueprint_054 |> migrate(%{"config/dev.exs" => dev_config("[:brando]")}) |> source("config/dev.exs")
+      refute dev =~ "reloadable_apps"
+    end
+
+    test "leaves the application's own name, and an empty list, alone" do
+      for apps <- ["[:legacy_app]", "[]"] do
+        igniter = migrate(@blueprint_054, %{"config/dev.exs" => dev_config(apps)})
+        assert source(igniter, "config/dev.exs") =~ "reloadable_apps: #{apps}\n"
+        refute Enum.any?(igniter.notices, &(&1 =~ "reloadable_apps"))
+      end
+    end
+  end
+
   test "completes Plural-Forms headers Gettext 1.0 cannot parse" do
     po = fn plural_forms ->
       """

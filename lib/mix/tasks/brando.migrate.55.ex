@@ -10,6 +10,7 @@ if Code.ensure_loaded?(Igniter) do
     alias Mix.Brando.Igniter.SourceUpgrade
     alias Mix.Brando.Igniter.SourceUpgrade.BlueprintGettext
     alias Mix.Brando.Igniter.SourceUpgrade.ListOrder
+    alias Mix.Brando.Igniter.SourceUpgrade.ReloadableApps
     alias Mix.Brando.Igniter.SourceUpgrade.TestEnvironment
     alias Mix.Brando.Igniter.SourceUpgrade.VideoMarkup
     alias Mix.Brando.Igniter.UpgradeOrder
@@ -39,6 +40,11 @@ if Code.ensure_loaded?(Igniter) do
     `persist_identifier false` on Blueprints with no admin editor, completes
     `Plural-Forms` headers Gettext 1.0 warns about, and retires the
     consumer-owned `brando.upgrade` task that 0.54 installed.
+
+    An endpoint `reloadable_apps` list that names a dependency (`[:my_app,
+    :brando]`) is removed, so Phoenix's default reloads the application
+    alone: with Brando listed, every development request checks Brando's
+    sources.
 
     Calls to the application's `list_<plural>/1` queries whose options order
     a Sequenced Blueprint only by `sequence` get the admin listing's
@@ -96,6 +102,7 @@ if Code.ensure_loaded?(Igniter) do
       |> VideoMarkup.warn_video_data_src_reads()
       |> ListOrder.order_list_queries()
       |> TestEnvironment.warn_test_hazards()
+      |> ReloadableApps.drop_dependencies()
       |> SourceUpgrade.start_endpoint_last()
       |> Mix.Brando.Igniter.Upgrade.prepare()
       |> add_notices()
