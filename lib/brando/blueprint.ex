@@ -734,7 +734,19 @@ defmodule Brando.Blueprint do
 
     app_modules
     |> Enum.uniq()
+    |> load_modules()
     |> Enum.filter(&__MODULE__.blueprint?/1)
+  end
+
+  @doc """
+  Loads `modules` in one batch and returns them. Checking each module of an
+  application in turn loads it on first use, one code server call at a time,
+  and scans running side by side queue behind each other.
+  """
+  @spec load_modules([module()]) :: [module()]
+  def load_modules(modules) do
+    _ = :code.ensure_modules_loaded(modules)
+    modules
   end
 
   def list_blueprints(:include_brando) do

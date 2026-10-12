@@ -51,6 +51,7 @@ defmodule Brando.Datasource.Registry do
 
     {:ok,
      modules
+     |> Brando.Blueprint.load_modules()
      |> Enum.filter(&datasource?/1)
      |> Enum.map(&to_string/1)}
   end

@@ -300,6 +300,7 @@ defmodule Brando.Content.Usage do
       end
     end)
     |> Enum.uniq()
+    |> Brando.Blueprint.load_modules()
     |> Enum.filter(&(Brando.Blueprint.blueprint?(&1) and is_binary(&1.__schema__(:source))))
     |> Enum.flat_map(fn schema ->
       for asset <- Brando.Blueprint.Assets.__assets__(schema),
