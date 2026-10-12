@@ -135,8 +135,8 @@ if Code.ensure_loaded?(Igniter) do
           create persisted identifiers. Persistence defaults to true. The task
           sets it on Blueprints with no admin editor (no
           `admin_<singular>_form_path` route for `:update` and no admin
-          LiveView), whose entries cannot be opened from Search, the command
-          palette or the dashboard; its notice lists them.
+          LiveView) and no `absolute_url`, whose entries cannot be opened from
+          Search, the command palette or the dashboard; its notice lists them.
         * Table, primary-key, and existing column-level primary-key changes are
           never inferred. Write the Ecto migration, verify the live schema, then
           use the documented Blueprint `--rebaseline` workflow.

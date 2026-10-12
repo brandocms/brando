@@ -12,7 +12,8 @@ if Code.ensure_loaded?(Igniter) do
     # `admin_<router_scope>_<singular>_form_path` (`__admin_route_helper__/1`),
     # routed for `:update`, as `mix brando.doctor`'s admin routes check reads
     # it from the compiled router. The router is read from source here, so a
-    # Blueprint is changed only when no admin LiveView names it either.
+    # Blueprint is changed only when no admin LiveView names it either, and
+    # one with an `absolute_url` (a link target) is listed instead.
 
     alias Igniter.Code.Common
     alias Igniter.Code.Function, as: CodeFunction
@@ -142,7 +143,7 @@ if Code.ensure_loaded?(Igniter) do
       {:ok, {igniter, source, zipper}} = ProjectModule.find_module(igniter, module)
       path = Source.get(source, :path)
 
-      case blueprint(zipper) do
+      case if(String.starts_with?(path, "lib/"), do: blueprint(zipper), else: :skip) do
         :skip ->
           {igniter, results}
 
@@ -157,6 +158,14 @@ if Code.ensure_loaded?(Igniter) do
             admin_view?(module, sources) ->
               {igniter,
                [{:unknown, module, path, "has admin LiveViews but no `#{helper}_path` route for `:update`"} | results]}
+
+            public?(zipper) ->
+              {igniter,
+               [
+                 {:unknown, module, path,
+                  "has no admin editor, but has an `absolute_url`, so menus and entry pickers may link to its entries"}
+                 | results
+               ]}
 
             true ->
               {ProjectModule.find_and_update_module!(igniter, module, &persist_false/1),
@@ -176,6 +185,13 @@ if Code.ensure_loaded?(Igniter) do
         call?(body, :data_layer, &(&1 == :embedded)) -> :skip
         true -> helper(body)
       end
+    end
+
+    # Navigation links and entry pickers reach entries through their
+    # identifiers, so a Blueprint with a page of its own keeps them.
+    defp public?(zipper) do
+      {:ok, body} = Common.move_to_do_block(zipper)
+      call?(body, :absolute_url, &(&1 != ""))
     end
 
     defp call?(body, name, value?) do

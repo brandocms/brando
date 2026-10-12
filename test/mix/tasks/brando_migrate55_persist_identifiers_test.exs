@@ -13,7 +13,7 @@ defmodule Mix.Tasks.Brando.Migrate55PersistIdentifiersTest do
   [
     inputs: ["{mix,.formatter}.exs", "{config,lib,test}/**/*.{ex,exs}"],
     locals_without_parens: [
-      live: 2, live: 3, trait: 1, identifier: 1, persist_identifier: 1, data_layer: 1, attribute: 3
+      live: 2, live: 3, trait: 1, identifier: 1, persist_identifier: 1, data_layer: 1, attribute: 3, absolute_url: 1
     ]
   ]
   """
@@ -87,7 +87,8 @@ defmodule Mix.Tasks.Brando.Migrate55PersistIdentifiersTest do
       "lib/lett/articles/category.ex",
       "lib/lett/prices/price.ex",
       "lib/lett/projects/inline_row.ex",
-      "lib/lett/pages/landing.ex"
+      "lib/lett/pages/landing.ex",
+      "lib/lett/stores/store.ex"
     ])
 
     assert_has_notice(igniter, fn notice ->
@@ -100,7 +101,8 @@ defmodule Mix.Tasks.Brando.Migrate55PersistIdentifiersTest do
     # helper is missing; it has a LiveView, so it is listed, not changed.
     assert_has_warning(igniter, fn warning ->
       warning =~ "Decide whether these Blueprints persist identifiers" and
-        warning =~ "Lett.Menu.Menuitem (lib/lett/menu/menuitem.ex): has admin LiveViews but no `admin_menuitem_form_path`"
+        warning =~ "Lett.Menu.Menuitem (lib/lett/menu/menuitem.ex): has admin LiveViews but no `admin_menuitem_form_path`" and
+        warning =~ "Lett.Stores.Store (lib/lett/stores/store.ex): has no admin editor, but has an `absolute_url`"
     end)
 
     rerun = igniter |> apply_igniter!() |> include_test_files() |> Migrate55.igniter()
@@ -125,6 +127,8 @@ defmodule Mix.Tasks.Brando.Migrate55PersistIdentifiersTest do
       "lib/lett/prices/price.ex" => blueprint("Prices", "Price", "price", "", "data_layer :embedded"),
       "lib/lett/projects/inline_row.ex" => blueprint("Projects", "InlineRow", "inline_row", "", "identifier false"),
       "lib/lett/pages/landing.ex" => blueprint("Pages", "Landing", "landing", "", "persist_identifier true"),
+      "lib/lett/stores/store.ex" =>
+        blueprint("Stores", "Store", "store", "", ~s(absolute_url "{% route store_path show { entry.slug } %}")),
       "lib/lett_admin/live/menu/menuitem_list_live.ex" => """
       defmodule LettAdmin.Menu.MenuitemListLive do
         use BrandoAdmin.LiveView.Listing, schema: Lett.Menu.Menuitem
