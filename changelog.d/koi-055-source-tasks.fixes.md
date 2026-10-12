@@ -24,9 +24,10 @@
 
 - **`mix brando.migrate54` converts more legacy listing templates.** Markup
   after the update link goes into `update_link`'s `:outside` slot,
-  `{% for c in entry.categories %}` becomes `:for={c <- @entry.categories}`,
-  Liquid outputs in attributes become expressions, and `entry.a[0]` reads
-  `Enum.at(@entry.a, 0)`.
+  `{% for c in entry.categories %}` becomes
+  `:for={c <- @entry.categories || []}`, Liquid outputs in attributes become
+  expressions, and `entry.a[0]` reads `Enum.at(@entry.a || [], 0)`. A loop
+  variable that shadows `entry` is read as the loop variable.
 
 - **A list and a selection datasource may share a name again.** 0.53 allowed
   `list :all` beside `selection :all`, and content modules store a

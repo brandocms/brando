@@ -432,7 +432,7 @@ defmodule Mix.Tasks.Brando.Migrate54ListingRowsTest do
                  {@entry.title}
                  <:outside>
                    <br />
-                   <small :for={category <- @entry.categories}>{category.name}</small>
+                   <small :for={category <- @entry.categories || []}>{category.name}</small>
                  </:outside>
                </.update_link>
                <.url entry={@entry} />
@@ -451,9 +451,10 @@ defmodule Mix.Tasks.Brando.Migrate54ListingRowsTest do
                      class="circle"
                      data-color-no="0"
                      data-popover={
-                       Enum.at(@entry.palette.colors, 0) && Enum.at(@entry.palette.colors, 0).hex_value
+                       Enum.at(@entry.palette.colors || [], 0) &&
+                         Enum.at(@entry.palette.colors || [], 0).hex_value
                      }
-                     style={"background-color: #{Enum.at(@entry.palette.colors, 0) && Enum.at(@entry.palette.colors, 0).hex_value}"}
+                     style={"background-color: #{Enum.at(@entry.palette.colors || [], 0) && Enum.at(@entry.palette.colors || [], 0).hex_value}"}
                    >
                    </div>
                  </div>
@@ -462,7 +463,7 @@ defmodule Mix.Tasks.Brando.Migrate54ListingRowsTest do
                  {@entry.title}
                  <:outside>
                    <br />
-                   <small :for={category <- @entry.categories}>{category.name}</small>
+                   <small :for={category <- @entry.categories || []}>{category.name}</small>
                  </:outside>
                </.update_link>
                <.url entry={@entry} />
@@ -533,6 +534,36 @@ defmodule Mix.Tasks.Brando.Migrate54ListingRowsTest do
 
     assert html =~ ~s|title="Fish (Koi)"|
     assert html =~ ~s|style="color: #fff"|
+
+    # Liquid renders nothing for a missing association; so does the row.
+    html =
+      %{entry: %{entry | categories: nil, palette: %{colors: nil}}, __changed__: nil}
+      |> module.swatches_listing_row()
+      |> Phoenix.HTML.Safe.to_iodata()
+      |> IO.iodata_to_binary()
+
+    refute html =~ "<small"
+    assert html =~ ~s|style="color: "|
+  end
+
+  test "reads a loop variable that shadows `entry` as the loop variable" do
+    blueprint =
+      koi_blueprint("Article", ~S'''
+            template(
+              """
+              {% for entry in entry.children %}<b>{{ entry.title }}</b>{% endfor %}
+              {% if entry.parent %}<i>{% for entry in entry.children %}{{ entry.parent.title }}{% endfor %}</i>{% endif %}
+              """,
+              columns: 5
+            )
+      ''')
+
+    row = blueprint |> row("Article") |> String.replace(~r/\s*\n\s*/, " ")
+    assert row =~ ~s|<b :for={entry <- @entry.children \|\| []}>{entry.title}</b>|
+
+    # The outer `{% if %}` tested the entry's parent, not the loop variable's.
+    assert row =~
+             ~s|<i :if={@entry.parent}><span :for={entry <- @entry.children \|\| []}>{entry.parent && entry.parent.title}</span></i>|
   end
 
   defp row(blueprint, schema) do

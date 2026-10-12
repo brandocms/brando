@@ -632,12 +632,21 @@ if Code.ensure_loaded?(Igniter) do
     end
 
     # A `{% for %}` over an association of the entry, or of a loop variable.
+    # Liquid loops over nothing when the association is nil; `:for` raises.
+    # Inside, the loop variable shadows a name it shares (`entry`), and what
+    # an enclosing `{% if %}` tested of that name no longer holds.
     defp render({:for, variable, collection, children}, scope) do
       shown = "{% for #{variable} in #{collection} %}"
 
       with {:ok, expression} <- entry_expression(collection, shown, scope) do
-        expression = if String.contains?(expression, " && "), do: "(#{expression}) || []", else: expression
-        scope = %{scope | variables: [variable | scope.variables]}
+        expression = if String.contains?(expression, " && "), do: "(#{expression}) || []", else: "#{expression} || []"
+
+        scope = %{
+          scope
+          | variables: [variable | scope.variables],
+            tested: Enum.reject(scope.tested, &(&1 == variable or String.starts_with?(&1, variable <> ".")))
+        }
+
         render_wrapped(trim(children), ":for={#{variable} <- #{expression}}", shown, scope)
       end
     end
@@ -731,12 +740,12 @@ if Code.ensure_loaded?(Igniter) do
 
     # `entry.a.b` reads `@entry.a && @entry.a.b`: Liquid prints nothing for a
     # missing association, where HEEx would raise. A path an enclosing
-    # `{% if %}` tested is not tested again, and `a[0]` reads `Enum.at(a, 0)`.
+    # `{% if %}` tested is not tested again, and `a[0]` reads `Enum.at(a || [], 0)`.
     defp entry_expression(expression, shown, scope) do
       with [_match, root, path] <- Regex.run(@liquid_path, String.trim(expression)),
            true <- root in scope.variables or (root == "entry" and path != "") do
         segments = Regex.scan(~r/\.([a-z_]\w*)(?:\[(\d+)\])?/, path, capture: :all_but_first)
-        start = if root == "entry", do: {"entry", "@entry"}, else: {root, root}
+        start = if root in scope.variables, do: {root, root}, else: {"entry", "@entry"}
         {reads, _last} = Enum.map_reduce(segments, start, &segment_read/2)
         {:ok, guarded(reads, root, scope)}
       else
@@ -747,7 +756,7 @@ if Code.ensure_loaded?(Igniter) do
     defp segment_read([name], {liquid, code}), do: twice({"#{liquid}.#{name}", "#{code}.#{name}"})
 
     defp segment_read([name, index], {liquid, code}),
-      do: twice({"#{liquid}.#{name}[#{index}]", "Enum.at(#{code}.#{name}, #{index})"})
+      do: twice({"#{liquid}.#{name}[#{index}]", "Enum.at(#{code}.#{name} || [], #{index})"})
 
     defp twice(read), do: {read, read}
 

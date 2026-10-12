@@ -246,8 +246,8 @@ the result before the source tasks, so their diff holds only their changes.
   slot and the markup after it in its `:outside` slot (`{{ entry.a.b }}`
   becomes `{@entry.a && @entry.a.b}`, also inside attributes,
   `{% if entry.x %}` an `:if`, and `{% for c in entry.categories %}` a
-  `:for={c <- @entry.categories}`). Language columns and inline `<svg>` icons in
-  badges are dropped. Any other listing is left as it is and listed with file
+  `:for={c <- @entry.categories || []}`). Language columns and inline `<svg>`
+  icons in badges are dropped. Any other listing is left as it is and listed with file
   and line;
 - removes listing actions whose event is `edit_entry`, `duplicate_entry` or
   `delete_entry` from listings that keep `default_actions`, which already
