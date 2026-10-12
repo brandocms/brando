@@ -155,6 +155,15 @@ defmodule Mix.Tasks.Brando.Upgrade.SnapshotTest do
       end
     end
 
+    test "status/3 asks a site for one path, without following redirects" do
+      old_site = site(%{"/no/meny" => {200, "text/html", "<p>Meny</p>"}, "/en/menu" => {404, "text/html", ""}})
+      opts = [req_options: [plug: old_site]]
+
+      assert Snapshot.status("/no/meny", "http://lett.test:4000/", opts) == 200
+      assert Snapshot.status("/en/menu", "http://lett.test:4000", opts) == 404
+      assert Snapshot.status("/elsewhere", "http://lett.test:4000", opts) == 302
+    end
+
     test "captures each URL's status and body, and diffs two captures URL by URL", %{tmp_dir: tmp_dir} do
       urls = Path.join(tmp_dir, "urls.txt")
       File.write!(urls, "/\n\n# a comment\n[info] stray log line\n/no/meny\n/no/kjøpsvilkår\n/robots.txt\n")
@@ -277,5 +286,67 @@ defmodule Mix.Tasks.Brando.Upgrade.SnapshotTest do
       refute Enum.any?(paths, &String.ends_with?(&1, "/snapshot-draft"))
       assert paths == paths |> Enum.uniq() |> Enum.sort()
     end
+
+    test "picks the entries with the most blocks" do
+      user = Brando.Factory.insert(:random_user)
+      module = Brando.Factory.insert(:module)
+
+      pages =
+        for {uri, blocks} <- [{"snapshot-light", 1}, {"snapshot-heavy", 3}, {"snapshot-empty", 0}] do
+          page_with_blocks(user, module, uri, blocks)
+        end
+
+      [light, heavy, empty] = pages
+      assert Snapshot.URLs.heaviest(Pages.Page, %{language: "en"}, 2) |> Enum.map(& &1.id) == [heavy.id, light.id]
+      assert Snapshot.URLs.heaviest(Pages.Page, %{language: "en"}, 5) |> List.last() |> Map.get(:id) == empty.id
+    end
+
+    test "leaves out entry URLs the old site answers with 404" do
+      user = Brando.Factory.insert(:random_user)
+
+      for {uri, language} <- [{"snapshot-kept", "en"}, {"snapshot-gone", "en"}] do
+        {:ok, _} =
+          Pages.create_page(%{title: uri, uri: uri, language: language, template: "default.html", status: :published}, user)
+      end
+
+      {paths, warnings} = Snapshot.URLs.list(found?: &(not String.ends_with?(&1, "/snapshot-gone")))
+
+      assert Enum.any?(paths, &String.ends_with?(&1, "/snapshot-kept"))
+      refute Enum.any?(paths, &String.ends_with?(&1, "/snapshot-gone"))
+      # The 404 probes, robots and sitemap stay: they are there to compare.
+      assert "/brando-upgrade-snapshot-missing" in paths
+      assert Enum.any?(warnings, &(&1 =~ "404 on the old site: /en/snapshot-gone"))
+    end
+  end
+
+  defp page_with_blocks(user, module, uri, count) do
+    blocks =
+      for n <- 1..count//1 do
+        %Brando.Pages.Page.Blocks{
+          sequence: n,
+          block: %Brando.Content.Block{
+            type: :module,
+            source: "Elixir.Brando.Pages.Page.Blocks",
+            module_id: module.id,
+            uid: Brando.Utils.generate_uid(),
+            sequence: n,
+            refs: [],
+            vars: []
+          }
+        }
+        |> Ecto.Changeset.change()
+        |> Map.put(:action, :insert)
+      end
+
+    params = %{title: uri, uri: uri, language: "en", template: "default.html", status: :published}
+
+    changeset =
+      %Pages.Page{}
+      |> Pages.Page.changeset(params, user)
+      |> Ecto.Changeset.put_assoc(:entry_blocks, blocks)
+      |> Map.put(:action, :insert)
+
+    {:ok, page} = Pages.create_page(changeset, user)
+    page
   end
 end

@@ -835,12 +835,18 @@ the pre-upgrade commit on a copy of the database (port 4000, say). In the
 upgraded application, once its database is migrated:
 
 ```shell
-mix brando.upgrade.snapshot urls --output urls.txt
+mix brando.upgrade.snapshot urls --output urls.txt --base-url http://localhost:4000
 mix brando.upgrade.snapshot capture tmp/before --base-url http://localhost:4000 --urls urls.txt
 # start the upgraded site on another port
 mix brando.upgrade.snapshot capture tmp/after --base-url http://localhost:4001 --urls urls.txt
 mix brando.upgrade.snapshot diff tmp/before tmp/after
 ```
+
+`urls` picks, for each Blueprint other than pages, the entry with the most
+blocks in each language. With `--base-url` it asks the old site for each
+entry URL, leaves out those it answers with 404 (a language whose routes are
+switched off, for instance) and tries the next-heaviest entry instead. Add
+entries you know are unusual to the list by hand.
 
 It reports status, visible text, `<head>` tags and element structure
 separately, so a moved `data-src` or a reordered list shows even when the
