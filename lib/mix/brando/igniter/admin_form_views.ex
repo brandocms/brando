@@ -519,7 +519,8 @@ if Code.ensure_loaded?(Igniter) do
       Blueprint routed in that scope (its list route becomes
       `admin_menu_live_path` too). The task does this itself only for a plain
       `scope "/menu", MyAppAdmin.Menu do` that routes nothing but that domain's
-      admin LiveViews.
+      admin LiveViews, and wraps a domain's routes in a new scope only when
+      they are adjacent lines with no other route between them.
       """)
     end
 

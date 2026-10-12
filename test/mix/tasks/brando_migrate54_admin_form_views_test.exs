@@ -34,6 +34,7 @@ defmodule Mix.Tasks.Brando.Migrate54AdminFormViewsTest do
 
       live "/articles/categories", LettAdmin.Articles.CategoryListLive
       live "/articles/categories/create", LettAdmin.Articles.CategoryCreateLive
+      live "/articles/categories/import", LettAdmin.ImportLive
       live "/articles/categories/update/:entry_id", LettAdmin.Articles.CategoryUpdateLive
     end
   end
@@ -125,7 +126,7 @@ defmodule Mix.Tasks.Brando.Migrate54AdminFormViewsTest do
     assert_has_warning(igniter, fn warning ->
       warning =~ "share a route helper" and
         warning =~ "Lett.Articles.Category, Lett.Menu.Category: admin_category_form_path" and
-        warning =~ "#{@router_path}:18" and warning =~ "#{@router_path}:28" and
+        warning =~ "#{@router_path}:18" and warning =~ "#{@router_path}:29" and
         warning =~ "router_scope: :menu"
     end)
   end
@@ -298,6 +299,152 @@ defmodule Mix.Tasks.Brando.Migrate54AdminFormViewsTest do
         warning =~ "LettAdmin.Articles.Article{Create,Update}Live" and
         warning =~ "differs from what the generator wrote"
     end)
+  end
+
+  # koi's 0.53 router: every domain's routes flat in `admin_routes`.
+  @flat_router """
+  defmodule LettWeb.Router do
+    use BrandoWeb, :router
+
+    import Brando.Router
+
+    admin_routes do
+      live "/", LettAdmin.DashboardLive
+      live "/projects/projects", LettAdmin.Projects.ProjectListLive
+
+      live "/projects/categories", LettAdmin.Projects.CategoryListLive
+      live "/projects/categories/create", LettAdmin.Projects.CategoryCreateLive
+      live "/projects/categories/update/:entry_id", LettAdmin.Projects.CategoryUpdateLive
+
+      live "/articles/categories", LettAdmin.Articles.CategoryListLive
+      live "/articles/categories/create", LettAdmin.Articles.CategoryCreateLive
+      live "/articles/categories/update/:entry_id", LettAdmin.Articles.CategoryUpdateLive
+    end
+  end
+  """
+
+  @flat_views [{"projects/category", "Projects", "Category"}, {"articles/category", "Articles", "Category"}]
+
+  test "wraps flat admin routes that share a route helper in a scope of their own" do
+    igniter = migrate(flat_files(@flat_router))
+
+    assert source(igniter, @router_path) == """
+           defmodule LettWeb.Router do
+             use BrandoWeb, :router
+
+             import Brando.Router
+
+             admin_routes do
+               live "/", LettAdmin.DashboardLive
+               live "/projects/projects", LettAdmin.Projects.ProjectListLive
+
+               scope "/projects/categories", LettAdmin.Projects, as: :projects do
+                 live "/", CategoryListLive
+                 live "/create", CategoryFormLive, :create
+                 live "/update/:entry_id", CategoryFormLive, :update
+               end
+
+               scope "/articles/categories", LettAdmin.Articles, as: :articles do
+                 live "/", CategoryListLive
+                 live "/create", CategoryFormLive, :create
+                 live "/update/:entry_id", CategoryFormLive, :update
+               end
+             end
+           end
+           """
+
+    assert source(igniter, "lib/lett/projects/category.ex") =~ ~s(plural: "categories",\n    router_scope: :projects\n)
+    assert source(igniter, "lib/lett/articles/category.ex") =~ ~s(plural: "categories",\n    router_scope: :articles\n)
+    refute Enum.any?(igniter.warnings, &(&1 =~ "share a route helper"))
+
+    assert_has_notice(igniter, fn notice ->
+      notice =~ "admin_category_form_path" and
+        notice =~ ~s(#{@router_path}:10: scope "/projects/categories", LettAdmin.Projects, as: :projects) and
+        notice =~ ~s(#{@router_path}:16: scope "/articles/categories", LettAdmin.Articles, as: :articles)
+    end)
+
+    rerun = igniter |> apply_igniter!() |> include_test_files() |> Migrate54.igniter()
+    assert_unchanged(rerun, [@router_path, "lib/lett/projects/category.ex", "lib/lett/articles/category.ex"])
+  end
+
+  test "wraps the flat routes it can move, and leaves the others" do
+    # Another route between the domain's lines: moving them could change
+    # which route matches first.
+    router = separate_articles_routes(@flat_router)
+    igniter = migrate(flat_files(router))
+
+    router = source(igniter, @router_path)
+    assert router =~ ~s(scope "/projects/categories", LettAdmin.Projects, as: :projects do)
+    refute router =~ ~s(scope "/articles/categories")
+    refute source(igniter, "lib/lett/articles/category.ex") =~ "router_scope"
+    refute Enum.any?(igniter.warnings, &(&1 =~ "share a route helper"))
+  end
+
+  test "lists flat admin routes it cannot wrap, with the reason" do
+    router =
+      @flat_router
+      |> separate_articles_routes()
+      |> String.replace(
+        ~s(live "/projects/categories/update/:entry_id"),
+        ~s(live "/projects/categories/:slug", LettAdmin.ExportLive\n    live "/projects/categories/update/:entry_id")
+      )
+
+    igniter = migrate(flat_files(router))
+
+    refute source(igniter, @router_path) =~ "scope"
+
+    assert_has_warning(igniter, fn warning ->
+      warning =~ "share a route helper" and
+        warning =~ "Lett.Articles.Category, Lett.Projects.Category: admin_category_form_path" and
+        warning =~ "LettAdmin.Projects.CategoryFormLive: other routes stand between its routes"
+    end)
+  end
+
+  defp separate_articles_routes(router) do
+    String.replace(
+      router,
+      ~s(live "/articles/categories/create", LettAdmin.Articles.CategoryCreateLive),
+      ~s(live "/articles/categories/export", LettAdmin.ExportLive\n    live "/articles/categories/create", LettAdmin.Articles.CategoryCreateLive)
+    )
+  end
+
+  defp flat_files(router) do
+    views =
+      for {path, domain, schema} <- @flat_views,
+          action <- [:create, :update],
+          into: %{} do
+        module = "LettAdmin.#{domain}.#{schema}#{action |> to_string() |> Macro.camelize()}Live"
+        {"lib/lett_admin/live/#{path}_#{action}_live.ex", admin_view(module, "Lett.#{domain}.#{schema}", action)}
+      end
+
+    lists =
+      for {path, domain, schema} <- @flat_views, into: %{} do
+        {"lib/lett_admin/live/#{path}_list_live.ex",
+         """
+         defmodule LettAdmin.#{domain}.#{schema}ListLive do
+           use BrandoAdmin.LiveView.Listing, schema: Lett.#{domain}.#{schema}
+         end
+         """}
+      end
+
+    blueprints =
+      for {path, domain, schema} <- @flat_views, into: %{} do
+        {"lib/lett/#{path}.ex",
+         """
+         defmodule Lett.#{domain}.#{schema} do
+           use Brando.Blueprint,
+             application: "Lett",
+             domain: "#{domain}",
+             schema: "#{schema}",
+             singular: "category",
+             plural: "categories"
+
+           identifier "{{ entry.name }}"
+         end
+         """}
+      end
+
+    views |> Map.merge(lists) |> Map.merge(blueprints) |> Map.put(@router_path, router)
   end
 
   # `@router` with `routes` added at the end of `admin_routes`.
