@@ -58,7 +58,7 @@ defmodule Brando.Repo.Migrations.CreateBlocksTable do
   def down do
     drop table(:content_block_identifiers)
 
-    for {table, blocks_name} <- list_villain_tables() do
+    for {_table, blocks_name} <- list_villain_tables() do
       drop table(blocks_name)
     end
 

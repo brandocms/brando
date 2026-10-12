@@ -38,8 +38,6 @@ defmodule Brando.Repo.Migrations.ConvertVillainPictureGalleryURLToPath do
   end
 
   def find_and_replace_vars(map) when is_map(map) do
-    require Logger
-
     cond do
       match?(%{"type" => "picture"}, map) ->
         case get_in(map, ["data", "url"]) do

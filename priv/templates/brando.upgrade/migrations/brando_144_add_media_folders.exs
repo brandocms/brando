@@ -374,7 +374,7 @@ defmodule Brando.Migrations.Media.AddMediaFolders do
     end
   end
 
-  defp normalize_config_target(config_target, fallback)
+  defp normalize_config_target(config_target, _fallback)
        when is_binary(config_target) and config_target != "",
        do: config_target
 
