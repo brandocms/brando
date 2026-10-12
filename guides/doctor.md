@@ -30,6 +30,7 @@ Brando 0.55.0-dev (git 12c2289, branch main) · Phoenix 1.8.15 · LiveView 1.2.1
 ! Alt text                   38 images without alt (en)
                              Images → Alt text drafts it with AI, for review before saving
 ✓ Deprecations               none in lib/
+✓ Test database              my_app_test, not the development database
 
 5 warnings, 1 error. Details: mix brando.doctor --verbose
 ```
@@ -120,6 +121,7 @@ and summaries are prose.
 | JSON-LD | An identity for each language with a name and a logo, and a site URL |
 | Alt text | Images without alt text, per content language |
 | Deprecations | Calls to Brando functions marked `@deprecated` in the project's `lib/`, following aliases, imports and pipes |
+| Test database | In development, the Repo's database for `:test` (read from `config/config.exs` and `config/runtime.exs` in the current shell) against the one in use: a `runtime.exs` that reads the Repo `url:` from the environment in every environment makes `mix test` use, and migrate, the development database |
 
 With tenancy enabled, the content checks (image configs, modules, sitemap,
 JSON-LD, alt text) run in every environment of every active site, and their

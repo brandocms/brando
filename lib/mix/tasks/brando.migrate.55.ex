@@ -11,6 +11,7 @@ if Code.ensure_loaded?(Igniter) do
     alias Mix.Brando.Igniter.SourceUpgrade.BlueprintGettext
     alias Mix.Brando.Igniter.UpgradeOrder
     alias Mix.Brando.Igniter.SourceUpgrade.ListOrder
+    alias Mix.Brando.Igniter.SourceUpgrade.TestEnvironment
     alias Mix.Brando.Igniter.SourceUpgrade.VideoMarkup
 
     @shortdoc "Migrates application source from Brando 0.54 to 0.55"
@@ -46,9 +47,14 @@ if Code.ensure_loaded?(Igniter) do
     storage order. Calls with no `order:` at all are listed, since adding one
     changes what the site shows.
 
-    It also lists, without changing them, front-end scripts under `assets/`
-    that read a video's `data-src`, which 0.55 moved from the `<video>` to
-    its `[data-smart-video]` wrapper.
+    It also lists, without changing them:
+
+      * front-end scripts under `assets/` that read a video's `data-src`,
+        which 0.55 moved from the `<video>` to its `[data-smart-video]`
+        wrapper;
+      * a Repo `url:` that `config/runtime.exs` reads from the environment
+        in `:test` too, so `mix test` would use, and migrate, that database;
+      * `test_paths` in `mix.exs` that name missing directories.
 
     The task changes source files only. Review and compile its diff before
     generating or running database migrations. The complete ordered workflow is
@@ -88,6 +94,7 @@ if Code.ensure_loaded?(Igniter) do
       |> PersistIdentifiers.update()
       |> VideoMarkup.warn_video_data_src_reads()
       |> ListOrder.order_list_queries()
+      |> TestEnvironment.warn_test_hazards()
       |> SourceUpgrade.start_endpoint_last()
       |> Mix.Brando.Igniter.Upgrade.prepare()
       |> add_notices()

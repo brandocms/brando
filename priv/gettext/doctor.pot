@@ -211,6 +211,11 @@ msgid_plural "%{count} warnings"
 msgstr[0] ""
 msgstr[1] ""
 
+#: lib/brando/doctor/checks/test_database.ex
+#, elixir-autogen, elixir-format
+msgid "%{database}, not the development database"
+msgstr ""
+
 #: lib/brando/doctor/checks/migrations.ex
 #, elixir-autogen, elixir-format
 msgid "%{file} differs from %{template}"
@@ -462,6 +467,11 @@ msgstr ""
 msgid "System check"
 msgstr ""
 
+#: lib/brando/doctor/checks/test_database.ex
+#, elixir-autogen, elixir-format
+msgid "Test database"
+msgstr ""
+
 #: lib/brando_admin/components/system_check.ex
 #, elixir-autogen, elixir-format
 msgid "The checks could not run. Check the application logs, or run mix brando.doctor."
@@ -572,9 +582,19 @@ msgstr ""
 msgid "check the errors of the discarded jobs"
 msgstr ""
 
+#: lib/brando/doctor/checks/test_database.ex
+#, elixir-autogen, elixir-format
+msgid "checked in development"
+msgstr ""
+
 #: lib/brando/doctor/checks/versions.ex
 #, elixir-autogen, elixir-format
 msgid "commit %{commit} from %{url}"
+msgstr ""
+
+#: lib/brando/doctor/checks/test_database.ex
+#, elixir-autogen, elixir-format
+msgid "could not read the test config: %{error}"
 msgstr ""
 
 #: lib/brando/doctor.ex
@@ -715,6 +735,11 @@ msgstr ""
 msgid "mailer module missing"
 msgstr ""
 
+#: lib/brando/doctor/checks/test_database.ex
+#, elixir-autogen, elixir-format
+msgid "mix test would use the development database %{database}"
+msgstr ""
+
 #: lib/brando/doctor/checks/json_ld.ex
 #, elixir-autogen, elixir-format
 msgid "name"
@@ -733,6 +758,16 @@ msgstr ""
 #: lib/brando/doctor/checks/admin_assets.ex
 #, elixir-autogen, elixir-format
 msgid "no assets/backend/package.json"
+msgstr ""
+
+#: lib/brando/doctor/checks/test_database.ex
+#, elixir-autogen, elixir-format
+msgid "no config/config.exs"
+msgstr ""
+
+#: lib/brando/doctor/checks/test_database.ex
+#, elixir-autogen, elixir-format
+msgid "no database name to compare"
 msgstr ""
 
 #: lib/brando/doctor/checks/configuration.ex
@@ -825,6 +860,11 @@ msgstr ""
 msgid "queue %{queue}, limit %{limit}, paused"
 msgstr ""
 
+#: lib/brando/doctor/checks/test_database.ex
+#, elixir-autogen, elixir-format
+msgid "read the Repo url: in config/runtime.exs only outside tests, inside if config_env() != :test do … end"
+msgstr ""
+
 #: lib/brando/doctor/checks/deprecations.ex
 #, elixir-autogen, elixir-format
 msgid "replace them as the deprecation notes say (mix brando.doctor --verbose)"
@@ -910,9 +950,19 @@ msgstr ""
 msgid "skipped in a release: needs the project's source files"
 msgstr ""
 
+#: lib/brando/doctor/checks/test_database.ex
+#, elixir-autogen, elixir-format
+msgid "test and development both connect to %{database}"
+msgstr ""
+
 #: lib/brando/doctor/checks/oban.ex
 #, elixir-autogen, elixir-format
 msgid "testing mode, jobs run inline"
+msgstr ""
+
+#: lib/brando/doctor/checks/test_database.ex
+#, elixir-autogen, elixir-format
+msgid "the config files read Mix.env(), which cannot be read for :test from here"
 msgstr ""
 
 #: lib/brando/doctor/checks/versions.ex
