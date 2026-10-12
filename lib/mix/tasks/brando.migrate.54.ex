@@ -7,6 +7,7 @@ if Code.ensure_loaded?(Igniter) do
 
     alias Mix.Brando.Igniter.AdminFormViews
     alias Mix.Brando.Igniter.SourceUpgrade
+    alias Mix.Brando.Igniter.SourceUpgrade.BlueprintGettext
     alias Mix.Brando.Igniter.SourceUpgrade.BuiltinActions
     alias Mix.Brando.Igniter.SourceUpgrade.ListingRows
 
@@ -18,9 +19,10 @@ if Code.ensure_loaded?(Igniter) do
     dependency. It rewrites legacy Blueprint and LivePreview syntax, turns
     legacy listing `field`/`template` columns into a `listing_row/1` row
     component where it can convert every column, removes listing actions that
-    repeat the built-in edit, duplicate and delete actions, preserves legacy
-    Meta and JSON-LD path extraction semantics, creates the gettext recovery
-    helper, and moves Gettext backends to `use Gettext.Backend`.
+    repeat the built-in edit, duplicate and delete actions, writes Blueprint
+    labels given as `gettext("...")` with `t/1`, preserves legacy Meta and
+    JSON-LD path extraction semantics, creates the gettext recovery helper,
+    and moves Gettext backends to `use Gettext.Backend`.
 
     The task changes source files only, and every rewrite matches 0.53 syntax
     only, so rerunning it is safe. An application that already uses 0.54
@@ -47,6 +49,7 @@ if Code.ensure_loaded?(Igniter) do
       |> SourceUpgrade.rewrite_blueprints(&SourceUpgrade.upgrade_054_blueprint/1)
       |> ListingRows.rewrite()
       |> BuiltinActions.remove()
+      |> BlueprintGettext.rewrite()
       |> SourceUpgrade.rewrite_preview_targets()
       |> SourceUpgrade.configure_repo_module()
       |> SourceUpgrade.remove_sharp_processor()
@@ -78,7 +81,10 @@ if Code.ensure_loaded?(Igniter) do
       listing with any other column is left as it is and listed below.
       Actions whose event is `edit_entry`, `duplicate_entry` or
       `delete_entry` are removed from listings that keep `default_actions`,
-      which already offers them.
+      which already offers them. Labels the admin translates in the schema's
+      domain (tabs, alerts, `label:`, `placeholder:`, `instructions:`,
+      listing labels, `translate`) given as `gettext("...")` become
+      `t("...")`.
 
       Generated admin `<Name>CreateLive`/`<Name>UpdateLive` pairs become one
       `<Name>FormLive`, routed with `:create` and `:update`; edited pairs are

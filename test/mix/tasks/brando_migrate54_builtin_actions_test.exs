@@ -48,7 +48,7 @@ defmodule Mix.Tasks.Brando.Migrate54BuiltinActionsTest do
     blueprint = source(igniter, @path)
 
     refute blueprint =~ ~r/"(edit|duplicate|delete)_entry"/
-    assert blueprint =~ ~r/action\(\s*label: gettext\("Publish"\),\s*event: "publish_entry"\s*\)/
+    assert blueprint =~ ~r/action\(\s*label: t\("Publish"\),\s*event: "publish_entry"\s*\)/
     refute blueprint =~ "Are you sure?"
 
     assert_has_notice(igniter, fn notice ->
@@ -117,7 +117,7 @@ defmodule Mix.Tasks.Brando.Migrate54BuiltinActionsTest do
     blueprint = without_defaults |> migrate() |> source(@path)
 
     assert blueprint =~ "default_actions(false)"
-    assert blueprint =~ ~r/action\(\s*label: gettext\("Edit category"\),\s*event: "edit_entry"\s*\)/
+    assert blueprint =~ ~r/action\(\s*label: t\("Edit category"\),\s*event: "edit_entry"\s*\)/
     assert blueprint =~ ~s|event: "delete_entry"|
 
     with_options =

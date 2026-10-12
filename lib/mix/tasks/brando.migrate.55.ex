@@ -6,6 +6,7 @@ if Code.ensure_loaded?(Igniter) do
     use Igniter.Mix.Task
 
     alias Mix.Brando.Igniter.SourceUpgrade
+    alias Mix.Brando.Igniter.SourceUpgrade.BlueprintGettext
 
     @shortdoc "Migrates application source from Brando 0.54 to 0.55"
     @moduledoc """
@@ -25,7 +26,8 @@ if Code.ensure_loaded?(Igniter) do
     dependency, builds Vite source maps `hidden`, converts a legacy Fabric deployment to a reviewable Florist
     configuration, refreshes the gettext recovery helper, copies the
     translations of each Blueprint's 0.53 `_naming`, `_forms` and `_listings`
-    Gettext domains into the domain 0.55 extracts to, completes
+    Gettext domains into the domain 0.55 extracts to, along with the `default`
+    domain's translations of the Blueprint's `t/1` labels, completes
     `Plural-Forms` headers Gettext 1.0 warns about, and retires the
     consumer-owned `brando.upgrade` task that 0.54 installed.
 
@@ -57,6 +59,7 @@ if Code.ensure_loaded?(Igniter) do
       |> SourceUpgrade.add_content_plugs()
       |> SourceUpgrade.refresh_gettext_script()
       |> SourceUpgrade.carry_blueprint_translations()
+      |> BlueprintGettext.carry_default_translations()
       |> SourceUpgrade.complete_plural_forms_headers()
       |> SourceUpgrade.warn_image_text_reads()
       |> SourceUpgrade.start_endpoint_last()
@@ -87,7 +90,10 @@ if Code.ensure_loaded?(Igniter) do
       Translations in each Blueprint's 0.53 Gettext domains
       (`<domain>_<schema>_naming`, `_forms`, `_listings`) are copied into
       `<domain>_<schema>.po`, the domain 0.55 extracts to, so the Gettext
-      merge in the migration guide keeps them.
+      merge in the migration guide keeps them. So are the `default` domain's
+      translations of the Blueprint's `t/1` labels, which were extracted
+      there while they were written with `gettext/1`; a translation the
+      schema's catalog has is kept.
 
       The endpoint gets `plug Brando.Plug.Markdown` (entries as Markdown at
       their URL + `.md`) and `plug Brando.Plug.IndexNow` (the IndexNow key
