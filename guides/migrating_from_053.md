@@ -294,8 +294,10 @@ the result before the source tasks, so their diff holds only their changes.
 - sets `persist_identifier false` on Blueprints with no admin editor (no
   `:update` form route and no admin LiveView), no `absolute_url`, and nothing
   that could select their entries (no `:selection` or `:single` datasource,
-  no `:entries` relation or input that could include them), and lists the
-  Blueprints it could not decide. `mix brando.identifiers.sync` then deletes
+  no `:entries` input whose `sources:` name them, no `:entries` relation
+  without an input that lists its `sources:`), and lists the Blueprints it
+  could not decide. A join schema such as `ArticleCategory`, which only
+  `belongs_to` its two sides, is set too. `mix brando.identifiers.sync` then deletes
   such a Blueprint's existing identifiers, and any pick that still points at
   them;
 - completes `Plural-Forms` headers in `priv/gettext/**/*.po`. Gettext 1.0 warns

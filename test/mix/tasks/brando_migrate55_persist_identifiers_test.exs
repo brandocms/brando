@@ -176,6 +176,99 @@ defmodule Mix.Tasks.Brando.Migrate55PersistIdentifiersTest do
     assert_unchanged(igniter, ["lib/lett/shops/shop.ex", "lib/lett/articles/article.ex"])
   end
 
+  # koi's Article after migrate54: it names its join schema in a relation,
+  # and its `:entries` input selects only Articles.
+  @koi_article """
+  defmodule Lett.Articles.Article do
+    use Brando.Blueprint,
+      application: "Lett",
+      domain: "Articles",
+      schema: "Article",
+      singular: "article",
+      plural: "articles"
+
+    alias Lett.Articles
+
+    identifier "[{{ entry.language }}] {{ entry.title }}"
+    absolute_url "{% route article_path detail { entry.slug } %}"
+
+    relations do
+      relation :article_categories, :has_many,
+        module: Articles.ArticleCategory,
+        preload_order: [asc: :sequence],
+        on_replace: :delete_if_exists
+
+      relation :related_entries, :entries, constraints: [max_length: 3]
+    end
+
+    forms do
+      form do
+        tab t("Content") do
+          fieldset do
+            input :related_entries, :entries,
+              sources: [
+                {__MODULE__, %{preload: [:categories], order: "asc language, asc sequence"}}
+              ],
+              label: t("Related entries")
+          end
+        end
+      end
+    end
+  end
+  """
+
+  @koi_article_category """
+  defmodule Lett.Articles.ArticleCategory do
+    use Brando.Blueprint,
+      application: "Lett",
+      domain: "Articles",
+      schema: "ArticleCategory",
+      singular: "article_category",
+      plural: "article_categories"
+
+    alias Lett.Articles
+    @allow_mark_as_deleted true
+
+    trait Brando.Trait.Sequenced
+
+    relations do
+      relation :article, :belongs_to, module: Articles.Article
+      relation :category, :belongs_to, module: Articles.Category
+    end
+  end
+  """
+
+  test "reads the `:entries` input's sources, not the modules its file names" do
+    files =
+      files()
+      |> Map.put("lib/lett/articles/article.ex", @koi_article)
+      |> Map.put("lib/lett/articles/article_category.ex", @koi_article_category)
+
+    igniter = migrate(files)
+
+    assert source(igniter, "lib/lett/articles/article_category.ex") =~
+             ~s(plural: "article_categories"\n\n  persist_identifier false\n)
+
+    refute Enum.any?(igniter.warnings, &(&1 =~ "Lett.Articles.ArticleCategory"))
+    refute source(igniter, "lib/lett/articles/article.ex") =~ "persist_identifier"
+
+    # A source written with the file's alias names the join schema.
+    selecting =
+      String.replace(
+        @koi_article,
+        "{__MODULE__, %{preload: [:categories], order: \"asc language, asc sequence\"}}",
+        "{__MODULE__, %{}},\n            Articles.ArticleCategory"
+      )
+
+    igniter = migrate(Map.put(files, "lib/lett/articles/article.ex", selecting))
+    refute source(igniter, "lib/lett/articles/article_category.ex") =~ "persist_identifier"
+
+    assert_has_warning(igniter, fn warning ->
+      warning =~
+        "Lett.Articles.ArticleCategory (lib/lett/articles/article_category.ex): an `:entries` relation or input in lib/lett/articles/article.ex may select it"
+    end)
+  end
+
   test "keeps the advice when it cannot read the router" do
     igniter = migrate(Map.delete(files(), @router_path))
 

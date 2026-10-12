@@ -209,23 +209,114 @@ if Code.ensure_loaded?(Igniter) do
 
     defp datasource_name(code), do: with([_, name] <- Regex.run(~r/datasource\(?\s*(:\w+)/, code), do: name)
 
-    # A file with an `:entries` relation or input that names the Blueprint,
-    # or whose `:entries` inputs do not all list their `sources:`.
+    # A file with an `:entries` input whose `sources:` name the Blueprint, or
+    # cannot be read, or an `:entries` relation no input with sources edits.
+    # Other modules the file names (a join schema in a `has_many`) are not
+    # what its entries pickers select.
     defp entries_reference(module, sources) do
-      name = module |> Module.split() |> List.last()
-
       Enum.find_value(sources, fn {path, content} ->
-        relations = Regex.scan(~r/\brelation\s*\(?\s*:\w+\s*,\s*:entries\b/, content)
-        inputs = Regex.split(~r/\binput\s*\(?\s*:\w+\s*,\s*:entries\b/, content) |> tl()
-
-        cond do
-          relations == [] and inputs == [] -> nil
-          content =~ ~r/(?<![\w])#{Regex.escape(name)}\b/ -> path
-          inputs == [] or length(inputs) < length(relations) -> path
-          Enum.any?(inputs, &(not (&1 |> String.split(~r/\binput\b/) |> hd() |> String.contains?("sources:")))) -> path
-          true -> nil
-        end
+        if content =~ ~r/:entries\b/ and entries_may_select?(content, module), do: path
       end)
+    end
+
+    defp entries_may_select?(content, module) do
+      case Sourceror.parse_string(content) do
+        {:ok, ast} ->
+          {relations, inputs} = entries_calls(ast)
+          resolve = module_resolver(ast)
+          sourced = for {name, {:ok, _modules}} <- inputs, do: name
+
+          Enum.any?(relations, &(&1 not in sourced)) or
+            Enum.any?(inputs, fn
+              {_name, {:ok, modules}} -> module in Enum.map(modules, resolve)
+              {_name, :unknown} -> true
+            end)
+
+        _error ->
+          true
+      end
+    end
+
+    # The names of the `:entries` relations, and `{name, {:ok, sources} |
+    # :unknown}` for each `:entries` input.
+    defp entries_calls(ast) do
+      {_ast, found} =
+        Macro.prewalk(ast, {[], []}, fn
+          {:relation, _, [name, type | _]} = node, {relations, inputs} ->
+            if unwrap(type) == :entries,
+              do: {node, {[unwrap(name) | relations], inputs}},
+              else: {node, {relations, inputs}}
+
+          {:input, _, [name, type | options]} = node, {relations, inputs} ->
+            if unwrap(type) == :entries,
+              do: {node, {relations, [{unwrap(name), input_sources(options)} | inputs]}},
+              else: {node, {relations, inputs}}
+
+          node, acc ->
+            {node, acc}
+        end)
+
+      found
+    end
+
+    defp input_sources([options]) when is_list(options) do
+      Enum.find_value(options, :unknown, fn
+        {key, value} ->
+          if unwrap(key) == :sources, do: source_modules(unwrap(value))
+
+        _option ->
+          nil
+      end)
+    end
+
+    defp input_sources(_options), do: :unknown
+
+    defp source_modules(entries) when is_list(entries) do
+      modules =
+        Enum.map(entries, fn entry ->
+          case unwrap(entry) do
+            {module, _options} -> module
+            module -> module
+          end
+        end)
+
+      if Enum.all?(modules, &module_reference?/1), do: {:ok, modules}, else: :unknown
+    end
+
+    defp source_modules(_value), do: :unknown
+
+    defp module_reference?({:__MODULE__, _, context}) when is_atom(context), do: true
+    defp module_reference?({:__aliases__, _, parts}), do: Enum.all?(parts, &is_atom/1)
+    defp module_reference?(_ast), do: false
+
+    # Turns a module reference into the module, by the file's first
+    # `defmodule` and its `alias`es.
+    defp module_resolver(ast) do
+      {_ast, {current, aliases}} =
+        Macro.prewalk(ast, {nil, %{}}, fn
+          {:defmodule, _, [{:__aliases__, _, parts} | _]} = node, {nil, aliases} ->
+            {node, {Module.concat(parts), aliases}}
+
+          {:alias, _, [{:__aliases__, _, parts}]} = node, {current, aliases} ->
+            {node, {current, Map.put(aliases, List.last(parts), parts)}}
+
+          {:alias, _, [{:__aliases__, _, parts}, [{key, {:__aliases__, _, [as]}}]]} = node, {current, aliases} ->
+            if unwrap(key) == :as, do: {node, {current, Map.put(aliases, as, parts)}}, else: {node, {current, aliases}}
+
+          node, acc ->
+            {node, acc}
+        end)
+
+      fn
+        {:__MODULE__, _, _} ->
+          current
+
+        {:__aliases__, _, [first | rest]} ->
+          case Map.fetch(aliases, first) do
+            {:ok, parts} -> Module.concat(parts ++ rest)
+            :error -> Module.concat([first | rest])
+          end
+      end
     end
 
     # `{:ok, helper}`, `:skip` for a Blueprint that already decides or never
