@@ -91,13 +91,7 @@ defmodule Mix.Tasks.Brando.Images.Adopt do
 
     results =
       Enum.map(environments, fn {label, prefix} ->
-        counts =
-          Tenant.with_prefix(prefix, fn ->
-            case Adoption.unrecorded?() and Adoption.media_status() do
-              {:empty, _root} = empty -> empty
-              _ok -> Brando.Images.Processing.adopt_unrecorded(dry_run: dry_run?, on_differ: on_differ)
-            end
-          end)
+        counts = Tenant.with_prefix(prefix, fn -> adopt_here(dry_run?, on_differ) end)
 
         Mix.shell().info(line(label, counts, dry_run?))
         {label, counts}
@@ -106,6 +100,14 @@ defmodule Mix.Tasks.Brando.Images.Adopt do
     if verbose?, do: print_groups(Agent.get(groups, & &1))
     Agent.stop(groups)
     results
+  end
+
+  # `{:empty, media_root}` instead of counts when no image has its files here.
+  defp adopt_here(dry_run?, on_differ) do
+    case Adoption.unrecorded?() and Adoption.media_status() do
+      {:empty, _root} = empty -> empty
+      _ok -> Brando.Images.Processing.adopt_unrecorded(dry_run: dry_run?, on_differ: on_differ)
+    end
   end
 
   defp line(label, {:empty, root}, _dry_run?), do: label(label, "no image files under #{root}, nothing checked")

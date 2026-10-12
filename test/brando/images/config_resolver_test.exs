@@ -24,7 +24,10 @@ defmodule Brando.Images.ConfigResolverTest do
       end)
 
     assert [_once] = Regex.scan(~r/Images point at/, log)
-    assert log =~ "Images point at a field Brando.Pages.Page no longer has (#{target}); they use the default image config."
+
+    assert log =~
+             "Images point at a field Brando.Pages.Page no longer has (#{target}); they use the default image config."
+
     refute log =~ "%Brando.Images.Image{"
     refute log =~ "stacktrace"
   end

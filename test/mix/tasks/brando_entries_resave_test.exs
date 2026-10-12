@@ -38,12 +38,16 @@ defmodule Mix.Tasks.Brando.Entries.ResaveTest do
   test "says that running servers keep their cached pages" do
     Resave.run(["--yes", "Brando.Pages.Fragment"])
 
-    assert_received {:mix_shell, :info, ["Servers that were already running keep serving what they cached before." <> _ = note]}
+    assert_received {:mix_shell, :info,
+                     ["Servers that were already running keep serving what they cached before." <> _ = note]}
+
     assert note =~ "Configuration → Cache → Empty all caches"
   end
 
   test "ends with one line per image config target that no longer resolves" do
-    for n <- 1..10, do: Brando.Factory.insert(:image, path: "images/gallery/#{n}.jpg", config_target: "image:Brando.Pages.Page:gallery")
+    for n <- 1..10,
+        do:
+          Brando.Factory.insert(:image, path: "images/gallery/#{n}.jpg", config_target: "image:Brando.Pages.Page:gallery")
 
     Resave.run(["--yes", "Brando.Pages.Fragment"])
 

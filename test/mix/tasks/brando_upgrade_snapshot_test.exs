@@ -306,7 +306,10 @@ defmodule Mix.Tasks.Brando.Upgrade.SnapshotTest do
 
       for {uri, language} <- [{"snapshot-kept", "en"}, {"snapshot-gone", "en"}] do
         {:ok, _} =
-          Pages.create_page(%{title: uri, uri: uri, language: language, template: "default.html", status: :published}, user)
+          Pages.create_page(
+            %{title: uri, uri: uri, language: language, template: "default.html", status: :published},
+            user
+          )
       end
 
       {paths, warnings} = Snapshot.URLs.list(found?: &(not String.ends_with?(&1, "/snapshot-gone")))

@@ -691,7 +691,9 @@ defmodule Brando.Doctor.ChecksTest do
     end
 
     test "the advice comes from Brando.Toolchain" do
-      assert Brando.Toolchain.node_advice() == "Node #{Brando.Toolchain.node_major()} (or another even LTS major ≥ #{Brando.Toolchain.node_major()})"
+      assert Brando.Toolchain.node_advice() ==
+               "Node #{Brando.Toolchain.node_major()} (or another even LTS major ≥ #{Brando.Toolchain.node_major()})"
+
       assert Brando.Toolchain.check_node("23.1.0") == {:odd, 23}
       assert Brando.Toolchain.check_node("not a version") == :unknown
     end
@@ -734,7 +736,10 @@ defmodule Brando.Doctor.ChecksTest do
 
       result = Checks.Robots.evaluate(BrandoWeb.SEOController, static)
       assert %Result{status: :ok, summary: "served from SEO settings"} = result
-      assert result.items == ["priv/static/robots.txt is not served (not in Plug.Static's only: in endpoint.ex); delete it"]
+
+      assert result.items == [
+               "priv/static/robots.txt is not served (not in Plug.Static's only: in endpoint.ex); delete it"
+             ]
     end
 
     test "the fix names the setting the endpoint has" do
@@ -758,7 +763,10 @@ defmodule Brando.Doctor.ChecksTest do
       end
 
       result =
-        Checks.Robots.evaluate(BrandoWeb.SEOController, static("only: Brando.Doctor.ChecksTest.StaticPathsWeb.static_paths()"))
+        Checks.Robots.evaluate(
+          BrandoWeb.SEOController,
+          static("only: Brando.Doctor.ChecksTest.StaticPathsWeb.static_paths()")
+        )
 
       assert result.status == :warning
 

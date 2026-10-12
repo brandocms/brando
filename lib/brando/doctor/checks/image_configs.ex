@@ -49,6 +49,7 @@ defmodule Brando.Doctor.Checks.ImageConfigs do
     check = if unrecorded > @file_check_limit or media != :ok, do: :records, else: :files
 
     {matching, differences} = if unrecorded == 0, do: {%{}, %{}}, else: dry_run(check)
+
     Map.merge(breakdown, %{
       matching: matching,
       differences: differences,
@@ -82,7 +83,7 @@ defmodule Brando.Doctor.Checks.ImageConfigs do
   It may have `differences`, `%{difference => image_count}` by
   `Brando.Images.Adoption.difference/1`, and `media`, what
   `Brando.Images.Adoption.media_status/0` said, and `stale`, the targets that
-  no longer resolve (`Brando.Images.Processing.stale_config_targets/0`), which
+  no longer resolve (a removed or renamed field, say), which
   are listed without a warning: those images use the default config.
 
   Images made before Brando recorded image configs (`unrecorded`) are told

@@ -112,20 +112,21 @@ defmodule Brando.Images.ConfigResolver do
 
   defp stale_target(config_target) do
     case String.split(config_target, ":") do
-      [type, schema, field_name] when type in ["image", "gallery"] ->
-        case ConfigTarget.blueprint_asset(schema, field_name) do
-          {:ok, %{type: actual_type}} ->
-            "#{schema}.#{field_name}, which is now a #{actual_type} field (#{config_target})"
+      [type, schema, field_name] when type in ["image", "gallery"] -> stale_field(config_target, schema, field_name)
+      _other -> "the config target #{config_target}, which no longer resolves"
+    end
+  end
 
-          :error ->
-            case ConfigTarget.schema_module(schema) do
-              {:ok, _module} -> "a field #{schema} no longer has (#{config_target})"
-              :error -> "#{schema}, which is no longer a Blueprint (#{config_target})"
-            end
-        end
+  defp stale_field(config_target, schema, field_name) do
+    case {ConfigTarget.blueprint_asset(schema, field_name), ConfigTarget.schema_module(schema)} do
+      {{:ok, %{type: actual_type}}, _module} ->
+        "#{schema}.#{field_name}, which is now a #{actual_type} field (#{config_target})"
 
-      _other ->
-        "the config target #{config_target}, which no longer resolves"
+      {:error, {:ok, _module}} ->
+        "a field #{schema} no longer has (#{config_target})"
+
+      {:error, :error} ->
+        "#{schema}, which is no longer a Blueprint (#{config_target})"
     end
   end
 

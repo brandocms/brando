@@ -46,12 +46,17 @@ defmodule Brando.Doctor.Checks.Node do
         )
 
       {:old, major} ->
-        warning(dgettext("doctor", "%{version}: Node %{major} is older than Brando is tested on", version: version, major: major),
+        warning(
+          dgettext("doctor", "%{version}: Node %{major} is older than Brando is tested on",
+            version: version,
+            major: major
+          ),
           fix: dgettext("doctor", "use %{advice}", advice: advice())
         )
 
       {:below_minimum, minimum} ->
-        warning(dgettext("doctor", "%{version}: older than Vite 8 accepts (%{minimum})", version: version, minimum: minimum),
+        warning(
+          dgettext("doctor", "%{version}: older than Vite 8 accepts (%{minimum})", version: version, minimum: minimum),
           fix: dgettext("doctor", "use %{advice}", advice: advice())
         )
 

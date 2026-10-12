@@ -141,7 +141,10 @@ defmodule Brando.Scripts.Prepare055DepsTest do
     dir = app(Path.join(tmp_dir, "app"), @before_state)
 
     odd = run_script(["--dry-run", dir], node_on_path(Path.join(tmp_dir, "odd"), "v23.11.0"))
-    assert odd =~ "Node: v23.11.0. Node 23 is an odd release, which pnpm and yarn refuse for Vite 8 and the asset packages"
+
+    assert odd =~
+             "Node: v23.11.0. Node 23 is an odd release, which pnpm and yarn refuse for Vite 8 and the asset packages"
+
     assert odd =~ "use Node 22 (or another even LTS major ≥ 22)."
 
     even = run_script(["--dry-run", dir], node_on_path(Path.join(tmp_dir, "even"), "v22.15.0"))

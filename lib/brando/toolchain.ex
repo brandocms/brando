@@ -55,7 +55,8 @@ defmodule Brando.Toolchain do
       accepts
     * `:unknown` - not a version this reads
   """
-  @spec check_node(String.t()) :: :ok | {:odd, pos_integer()} | {:old, non_neg_integer()} | {:below_minimum, String.t()} | :unknown
+  @spec check_node(String.t()) ::
+          :ok | {:odd, pos_integer()} | {:old, non_neg_integer()} | {:below_minimum, String.t()} | :unknown
   def check_node(version) do
     case Regex.run(~r/^v?(\d+)\.(\d+)/, String.trim(version)) do
       [_, major, minor] -> classify(String.to_integer(major), String.to_integer(minor))
