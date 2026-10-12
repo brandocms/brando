@@ -399,7 +399,7 @@ defmodule Brando.Migrations.UpgradeFromVillainTest do
         VALUES ('Jobb med oss', 'pages', 'jobs', $1, $2, '[]', false, $3, $3)
         """,
         [
-          Enum.map_join(~w(pic pic2 pic3 pic4 pic5 gallery), &"{% ref refs.#{&1} %}"),
+          Enum.map_join(~w(pic pic2 pic3 pic4 pic5 gallery media), &"{% ref refs.#{&1} %}"),
           Enum.map(~w(pic pic2 pic3 pic4 pic5), &picture_ref(&1, %{})),
           now
         ]
@@ -494,7 +494,24 @@ defmodule Brando.Migrations.UpgradeFromVillainTest do
               "path" => "images/site/posts/linked.jpg",
               "sizes" => legacy_sizes("posts", "linked.jpg")
             }),
-            gallery
+            gallery,
+            # A media slot nobody filled. 0.53 rendered it as nothing, and its
+            # templates only lent their settings to the picture or gallery an
+            # editor picked (`path`, `sizes` and `images` are protected), so
+            # an image named here was never shown and is not a loss.
+            %{
+              "name" => "media",
+              "data" => %{
+                "type" => "media",
+                "uid" => Utils.generate_uid(),
+                "hidden" => false,
+                "data" => %{
+                  "available_blocks" => ["picture", "gallery"],
+                  "template_picture" => %{"path" => "images/site/posts/template-only.jpg", "img_class" => "wide"},
+                  "template_gallery" => %{"images" => [%{"path" => "images/site/gallery/template-only.jpg"}]}
+                }
+              }
+            }
           ]
         }
       },
@@ -725,7 +742,8 @@ defmodule Brando.Migrations.UpgradeFromVillainTest do
                ["pic3", "images/site/posts/by-size.png", false, nil],
                ["pic4", nil, false, nil],
                ["pic5", "images/site/posts/linked.jpg", false, nil],
-               ["gallery", nil, false, gallery_id]
+               ["gallery", nil, false, gallery_id],
+               ["media", nil, false, nil]
              ] = ref_media(page_id)
 
       assert [["images/site/posts/1n60vo3o9p06.jpg", sizes, 1600, 1067, "#9a8f7e", ["jpg"]]] =
@@ -821,7 +839,8 @@ defmodule Brando.Migrations.UpgradeFromVillainTest do
                ["pic3", "images/site/posts/by-size.png", false, nil],
                ["pic4", nil, false, nil],
                ["pic5", "images/site/posts/linked.jpg", false, nil],
-               ["gallery", nil, false, gallery_id]
+               ["gallery", nil, false, gallery_id],
+               ["media", nil, false, nil]
              ] = ref_media(page_id)
 
       assert [["images/site/posts/1n60vo3o9p06.jpg", sizes, 1600, 1067, "#9a8f7e", ["jpg"]]] =
