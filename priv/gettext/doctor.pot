@@ -384,12 +384,22 @@ msgstr ""
 
 #: lib/brando/doctor/checks/configuration.ex
 #, elixir-autogen, elixir-format
+msgid "Mailer: %{mailer}, adapter %{adapter}"
+msgstr ""
+
+#: lib/brando/doctor/checks/configuration.ex
+#, elixir-autogen, elixir-format
 msgid "Mailer: %{mailer}, from %{from}"
 msgstr ""
 
 #: lib/brando/doctor/checks/configuration.ex
 #, elixir-autogen, elixir-format
 msgid "Mailer: %{mailer}, no sender"
+msgstr ""
+
+#: lib/brando/doctor/checks/configuration.ex
+#, elixir-autogen, elixir-format
+msgid "Mailer: %{mailer}, placeholder sender %{from}"
 msgstr ""
 
 #: lib/brando/doctor/checks/configuration.ex
@@ -592,6 +602,11 @@ msgstr ""
 msgid "commit %{commit} from %{url}"
 msgstr ""
 
+#: lib/brando/doctor/checks/configuration.ex
+#, elixir-autogen, elixir-format
+msgid "configure the mailer's production adapter and credentials in config/runtime.exs"
+msgstr ""
+
 #: lib/brando/doctor/checks/test_database.ex
 #, elixir-autogen, elixir-format
 msgid "could not read the test config: %{error}"
@@ -785,6 +800,11 @@ msgstr ""
 msgid "no mailer"
 msgstr ""
 
+#: lib/brando/doctor/checks/configuration.ex
+#, elixir-autogen, elixir-format
+msgid "no production mail adapter"
+msgstr ""
+
 #: lib/brando/doctor/checks/oban.ex
 #, elixir-autogen, elixir-format
 msgid "no queues, so background jobs never run"
@@ -848,6 +868,11 @@ msgstr ""
 #: lib/brando/doctor/source.ex
 #, elixir-autogen, elixir-format
 msgid "path %{path}"
+msgstr ""
+
+#: lib/brando/doctor/checks/configuration.ex
+#, elixir-autogen, elixir-format
+msgid "placeholder sender address"
 msgstr ""
 
 #: lib/brando/doctor/checks/oban.ex
@@ -938,6 +963,11 @@ msgstr ""
 #: lib/brando/doctor/checks/robots.ex
 #, elixir-autogen, elixir-format
 msgid "served from SEO settings"
+msgstr ""
+
+#: lib/brando/doctor/checks/configuration.ex
+#, elixir-autogen, elixir-format
+msgid "set `config :brando, Brando.Mailer, from: …` to an address your mail provider sends for"
 msgstr ""
 
 #: lib/brando/doctor/checks/configuration.ex

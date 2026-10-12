@@ -17,7 +17,9 @@
 
 - **`mix brando.doctor` names the fix for a missing mailer or sender**: run
   `mix brando.gen.mail`, then set `config :brando, Brando.Mailer, from: …` and
-  the mailer's production adapter, instead of pointing at the guides. The Alt
+  the mailer's production adapter, instead of pointing at the guides. It
+  warns about a sender on `example.com`, such as that placeholder, and, in
+  production, about a mailer still on the local or test adapter. The Alt
   text check suggests drafting alt text with AI only when an AI provider can
   describe images; otherwise it says to write it on each image marked "No alt
   text" under Images, and links there.

@@ -76,7 +76,11 @@ defmodule Brando.Doctor.Checks.Configuration do
     end
   end
 
-  @doc "The mailer and its sender as a finding, with the fix (see `evaluate/1`)."
+  @doc """
+  The mailer and its sender as a finding, with the fix (see `evaluate/1`):
+  a placeholder sender on an `example.com` domain is a warning, and so is
+  a development adapter (or none) in production.
+  """
   def mailer do
     mailer = Brando.Mailer.mailer()
     from = Brando.Mailer.sender()[:from]
@@ -98,11 +102,43 @@ defmodule Brando.Doctor.Checks.Configuration do
          dgettext("doctor", "no sender address"),
          dgettext("doctor", "set the address Brando sends from: `config :brando, Brando.Mailer, from: …`")}
 
+      placeholder?(from) ->
+        {:warning,
+         dgettext("doctor", "Mailer: %{mailer}, placeholder sender %{from}",
+           mailer: inspect(mailer),
+           from: format_from(from)
+         ), dgettext("doctor", "placeholder sender address"),
+         dgettext(
+           "doctor",
+           "set `config :brando, Brando.Mailer, from: …` to an address your mail provider sends for"
+         )}
+
+      Brando.env() == :prod and development_adapter?(mailer) ->
+        {:warning,
+         dgettext("doctor", "Mailer: %{mailer}, adapter %{adapter}",
+           mailer: inspect(mailer),
+           adapter: inspect(adapter(mailer))
+         ), dgettext("doctor", "no production mail adapter"),
+         dgettext("doctor", "configure the mailer's production adapter and credentials in config/runtime.exs")}
+
       true ->
         {:ok, dgettext("doctor", "Mailer: %{mailer}, from %{from}", mailer: inspect(mailer), from: format_from(from)),
          nil}
     end
   end
+
+  # The domains reserved for examples (RFC 2606), as in the placeholder
+  # `mix brando.gen.mail` writes.
+  defp placeholder?({_name, address}), do: placeholder?(address)
+
+  defp placeholder?(address) when is_binary(address),
+    do: address =~ ~r/@(.+\.)?example\.(com|org|net)$/i
+
+  defp placeholder?(_address), do: false
+
+  defp development_adapter?(mailer), do: adapter(mailer) in [nil, Swoosh.Adapters.Local, Swoosh.Adapters.Test]
+
+  defp adapter(mailer), do: (Application.get_env(Brando.otp_app(), mailer) || [])[:adapter]
 
   defp format_from({name, address}), do: "#{name} <#{address}>"
   defp format_from(address), do: to_string(address)

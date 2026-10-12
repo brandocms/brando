@@ -261,6 +261,7 @@ defmodule Brando.Doctor.ChecksTest do
 
   describe "Configuration" do
     test "the test application's settings are in place" do
+      put_test_env(Brando.Mailer, from: {"Brando", "noreply@brandocms.com"})
       assert %Result{status: :ok, items: items} = Checks.Configuration.run(context())
       assert Enum.any?(items, &(&1 =~ "Mailer: "))
     end
@@ -272,6 +273,22 @@ defmodule Brando.Doctor.ChecksTest do
       assert fix =~ "run `mix brando.gen.mail`, then set `config :brando, Brando.Mailer, from: …`"
       assert fix =~ "production adapter in runtime.exs"
       refute fix =~ "see the guides"
+    end
+
+    test "a placeholder sender is a warning" do
+      put_test_env(Brando.Mailer, from: {"Lett", "noreply@example.com"})
+
+      assert {:warning, "Mailer: " <> item, "placeholder sender address", fix} = Checks.Configuration.mailer()
+      assert item =~ "placeholder sender Lett <noreply@example.com>"
+      assert fix =~ "an address your mail provider sends for"
+    end
+
+    test "a development adapter in production is a warning" do
+      put_test_env(Brando.Mailer, from: {"Brando", "noreply@brandocms.com"})
+      put_test_env(:env, :prod)
+
+      assert {:warning, _item, "no production mail adapter", fix} = Checks.Configuration.mailer()
+      assert fix =~ "config/runtime.exs"
     end
 
     test "an enabled CDN without a bucket or credentials is an error" do

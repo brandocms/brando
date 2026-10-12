@@ -385,6 +385,11 @@ msgstr "E-post: %{mailer} finnes ikke"
 
 #: lib/brando/doctor/checks/configuration.ex
 #, elixir-autogen, elixir-format
+msgid "Mailer: %{mailer}, adapter %{adapter}"
+msgstr "E-post: %{mailer}, adapter %{adapter}"
+
+#: lib/brando/doctor/checks/configuration.ex
+#, elixir-autogen, elixir-format
 msgid "Mailer: %{mailer}, from %{from}"
 msgstr "E-post: %{mailer}, fra %{from}"
 
@@ -392,6 +397,11 @@ msgstr "E-post: %{mailer}, fra %{from}"
 #, elixir-autogen, elixir-format
 msgid "Mailer: %{mailer}, no sender"
 msgstr "E-post: %{mailer}, ingen avsender"
+
+#: lib/brando/doctor/checks/configuration.ex
+#, elixir-autogen, elixir-format
+msgid "Mailer: %{mailer}, placeholder sender %{from}"
+msgstr "E-post: %{mailer}, plassholderavsender %{from}"
 
 #: lib/brando/doctor/checks/configuration.ex
 #, elixir-autogen, elixir-format
@@ -593,6 +603,11 @@ msgstr "sjekkes i utvikling"
 msgid "commit %{commit} from %{url}"
 msgstr "commit %{commit} fra %{url}"
 
+#: lib/brando/doctor/checks/configuration.ex
+#, elixir-autogen, elixir-format
+msgid "configure the mailer's production adapter and credentials in config/runtime.exs"
+msgstr "sett opp e-postmodulens produksjonsadapter og tilgangsnøkler i config/runtime.exs"
+
 #: lib/brando/doctor/checks/test_database.ex
 #, elixir-autogen, elixir-format
 msgid "could not read the test config: %{error}"
@@ -786,6 +801,11 @@ msgstr "ingen identitet"
 msgid "no mailer"
 msgstr "ingen e-postmodul"
 
+#: lib/brando/doctor/checks/configuration.ex
+#, elixir-autogen, elixir-format
+msgid "no production mail adapter"
+msgstr "ingen e-postadapter for produksjon"
+
 #: lib/brando/doctor/checks/oban.ex
 #, elixir-autogen, elixir-format
 msgid "no queues, so background jobs never run"
@@ -850,6 +870,11 @@ msgstr "åpne hvert bilde merket «Ingen alt. tekst» under Bilder og skriv inn 
 #, elixir-autogen, elixir-format
 msgid "path %{path}"
 msgstr "sti %{path}"
+
+#: lib/brando/doctor/checks/configuration.ex
+#, elixir-autogen, elixir-format
+msgid "placeholder sender address"
+msgstr "plassholder som avsenderadresse"
 
 #: lib/brando/doctor/checks/oban.ex
 #, elixir-autogen, elixir-format
@@ -940,6 +965,11 @@ msgstr "se veiledningene for e-post, CDN-levering og innholdsassistenten"
 #, elixir-autogen, elixir-format
 msgid "served from SEO settings"
 msgstr "serveres fra SEO-innstillingene"
+
+#: lib/brando/doctor/checks/configuration.ex
+#, elixir-autogen, elixir-format
+msgid "set `config :brando, Brando.Mailer, from: …` to an address your mail provider sends for"
+msgstr "sett `config :brando, Brando.Mailer, from: …` til en adresse e-postleverandøren sender for"
 
 #: lib/brando/doctor/checks/configuration.ex
 #, elixir-autogen, elixir-format
