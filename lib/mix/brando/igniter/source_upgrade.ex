@@ -19,6 +19,7 @@ if Code.ensure_loaded?(Igniter) do
     alias Igniter.Project.Module, as: ProjectModule
     alias Igniter.Refactors.Rename
     alias Mix.Brando.Igniter.FloristConfig
+    alias Mix.Brando.Igniter.SourceUpgrade.Datasources
     alias Mix.Brando.Igniter.SourceUpgrade.NavigationItems
     alias Mix.Brando.Igniter.SourceUpgrade.PageVars
     alias Mix.Brando.Igniter.TemplateCode
@@ -405,7 +406,13 @@ if Code.ensure_loaded?(Igniter) do
     end
 
     defp remove_use_datasource(zipper) do
-      {:ok, Common.remove_all_matches(zipper, &use_datasource?(&1))}
+      case Datasources.ecto_query_import(zipper) do
+        nil ->
+          {:ok, Common.remove_all_matches(zipper, &use_datasource?(&1))}
+
+        import ->
+          Common.update_all_matches(zipper, &use_datasource?(&1), &{:ok, Common.replace_code(&1, import)})
+      end
     end
 
     defp rewrite_listing_filters(zipper), do: rewrite_keyword_collection(zipper, :filters, :filter)
