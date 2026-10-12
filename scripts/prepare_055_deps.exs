@@ -186,17 +186,52 @@ defmodule Brando.Prepare055Deps do
     line = Enum.at(state.lines, index)
     lines = List.delete_at(state.lines, index)
 
-    lines =
-      if String.ends_with?(String.trim_trailing(line), ",") do
-        lines
-      else
-        case previous_code_line(lines, index - 1) do
-          nil -> lines
-          previous -> List.update_at(lines, previous, &String.replace(&1, ~r/,(\s*)$/, "\\1"))
-        end
-      end
+    lines = if trailing_comma?(line), do: lines, else: drop_previous_comma(lines, index - 1)
 
     %{state | lines: lines, changes: ["#{String.trim(line)}  →  (removed)" | state.changes]}
+  end
+
+  # A dependency line's code and its trailing `# comment`, which the comma
+  # belongs in front of.
+  defp split_comment(line) do
+    case comment_start(line, 0, false) do
+      nil -> {line, ""}
+      at -> String.split_at(line, at)
+    end
+  end
+
+  defp comment_start(line, at, in_string?) do
+    case String.at(line, at) do
+      nil -> nil
+      "\\" -> comment_start(line, at + 2, in_string?)
+      "\"" -> comment_start(line, at + 1, not in_string?)
+      "#" when not in_string? -> at
+      _ -> comment_start(line, at + 1, in_string?)
+    end
+  end
+
+  defp update_code(line, fun) do
+    {code, comment} = split_comment(line)
+    {code, space} = split_trailing_space(code)
+    fun.(code) <> space <> comment
+  end
+
+  defp split_trailing_space(code) do
+    trimmed = String.trim_trailing(code)
+    {trimmed, binary_part(code, byte_size(trimmed), byte_size(code) - byte_size(trimmed))}
+  end
+
+  defp trailing_comma?(line), do: line |> split_comment() |> elem(0) |> String.trim_trailing() |> String.ends_with?(",")
+
+  # The line removed was the last dependency: the one before it is now.
+  defp drop_previous_comma(lines, index) do
+    case previous_code_line(lines, index) do
+      nil ->
+        lines
+
+      previous ->
+        List.update_at(lines, previous, &update_code(&1, fn code -> String.replace(code, ~r/,(\s*)$/, "\\1") end))
+    end
   end
 
   defp previous_code_line(_lines, index) when index < 0, do: nil
@@ -242,11 +277,11 @@ defmodule Brando.Prepare055Deps do
       index = brando_index(state.lines) ->
         line = Enum.at(state.lines, index)
         indent = line |> String.replace(~r/\S.*$/, "")
-        last? = not String.ends_with?(String.trim_trailing(line), ",")
+        last? = not trailing_comma?(line)
 
         {brando_line, igniter_line} =
           if last?,
-            do: {String.trim_trailing(line) <> ",", indent <> @igniter},
+            do: {update_code(line, &(&1 <> ",")), indent <> @igniter},
             else: {line, indent <> @igniter <> ","}
 
         lines = state.lines |> List.replace_at(index, brando_line) |> List.insert_at(index + 1, igniter_line)

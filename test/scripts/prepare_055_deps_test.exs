@@ -163,6 +163,51 @@ defmodule Brando.Scripts.Prepare055DepsTest do
     assert output =~ "mailchimp_extra 1.0.0 (hackney ~> 1.8): declared in mix.exs: move to a release on hackney 4 or Req"
   end
 
+  test "puts commas in front of a dependency line's comment", %{tmp_dir: tmp_dir} do
+    mix_exs = """
+    defmodule Commented.MixProject do
+      use Mix.Project
+
+      def project do
+        [app: :commented, elixir: "~> 1.18", listeners: [Phoenix.CodeReloader], deps: deps()]
+      end
+
+      defp deps do
+        [
+          {:jason, "~> 1.0"}, # json
+          {:brando, github: "brandocms/brando"} # the CMS
+          , {:timex, "~> 3.7"} # dates
+        ]
+      end
+    end
+    """
+
+    dir = app(tmp_dir, mix_exs)
+    run_script(["--brando-ref", "abc123", dir])
+    written = File.read!(Path.join(dir, "mix.exs"))
+
+    assert {:ok, _} = Code.string_to_quoted(written), written
+    refute written =~ "timex"
+    assert written =~ ~s|{:igniter, "~> 0.8", only: [:dev, :test]}|
+    assert written =~ "# the CMS"
+
+    last = """
+    defp deps do
+        [
+          {:jason, "~> 1.0"}, # json
+          {:brando, github: "brandocms/brando"} # the CMS
+        ]
+      end
+    """
+
+    dir = app(Path.join(tmp_dir, "last"), String.replace(mix_exs, ~r/defp deps do.*?\n  end\n/s, last))
+    run_script(["--brando-ref", "abc123", dir])
+    written = File.read!(Path.join(dir, "mix.exs"))
+
+    assert {:ok, _} = Code.string_to_quoted(written), written
+    assert written =~ ~r/\{:brando, [^\n]*\},\s*# the CMS\n\s*\{:igniter/
+  end
+
   test "the constraints are the guide's" do
     guide = File.read!(@guide)
     [_, section] = String.split(guide, "### Dependencies and toolchain", parts: 2)
