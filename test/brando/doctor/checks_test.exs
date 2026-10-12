@@ -265,10 +265,13 @@ defmodule Brando.Doctor.ChecksTest do
       assert Enum.any?(items, &(&1 =~ "Mailer: "))
     end
 
-    test "no mailer is a warning" do
+    test "no mailer is a warning, with the task that creates one" do
       put_test_env(:mailer, nil)
-      assert {:warning, "Mailer: not set", "no mailer"} = Checks.Configuration.mailer()
-      assert %Result{status: :warning, summary: "no mailer"} = Checks.Configuration.run(context())
+      assert {:warning, "Mailer: not set", "no mailer", _fix} = Checks.Configuration.mailer()
+      assert %Result{status: :warning, summary: "no mailer", fix: fix} = Checks.Configuration.run(context())
+      assert fix =~ "run `mix brando.gen.mail`, then set `config :brando, Brando.Mailer, from: …`"
+      assert fix =~ "production adapter in runtime.exs"
+      refute fix =~ "see the guides"
     end
 
     test "an enabled CDN without a bucket or credentials is an error" do
@@ -299,6 +302,15 @@ defmodule Brando.Doctor.ChecksTest do
 
       assert result.status == :error
       assert result.summary == "no mailer, Images CDN incomplete"
+      assert result.fix == "see the guides for email, CDN delivery and the content assistant"
+
+      result =
+        Checks.Configuration.evaluate([
+          {:warning, "Mailer: not set", "no mailer", "run `mix brando.gen.mail`"},
+          {:error, "Images CDN: missing bucket", "Images CDN incomplete"}
+        ])
+
+      assert result.fix == "run `mix brando.gen.mail`; see the guides for email, CDN delivery and the content assistant"
     end
   end
 
@@ -638,6 +650,19 @@ defmodule Brando.Doctor.ChecksTest do
 
     test "full coverage passes" do
       assert %Result{status: :ok} = Checks.AltText.evaluate([{nil, %{"en" => {0, 4}, "no" => {0, 4}}}])
+    end
+
+    test "points at the AI drafter only when an AI provider can describe images" do
+      missing = [{nil, %{"en" => {2, 4}}}]
+
+      assert %Result{fix: fix, link: {BrandoAdmin.Images.AltTextLive, _}} = Checks.AltText.evaluate(missing, true)
+      assert fix =~ "drafts it with AI"
+
+      assert %Result{fix: fix, link: {BrandoAdmin.Images.ImageListLive, "Open images"}} =
+               Checks.AltText.evaluate(missing, false)
+
+      assert fix =~ "marked “No alt text” under Images and write its Alt. text"
+      refute fix =~ "drafts it with AI"
     end
   end
 

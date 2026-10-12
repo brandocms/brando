@@ -440,9 +440,7 @@ defmodule Mix.Tasks.Brando.Migrate55Test do
     assert_has_warning(igniter, &String.contains?(&1, "config :brando, Brando.Mailer, from:"))
   end
 
-  test "leaves the mailer alone when the application has none, or has chosen one" do
-    assert_unchanged(migrate(@blueprint_054), @brando_config_path)
-
+  test "leaves the mailer alone when the application has chosen one" do
     chosen = @brando_config <> "\nconfig :brando, mailer: LegacyApp.Notifications.Mailer\n"
     mailer = "defmodule LegacyApp.Mailer do\n  use Swoosh.Mailer, otp_app: :legacy_app\nend\n"
     igniter = migrate(@blueprint_054, %{"lib/legacy_app/mailer.ex" => mailer, @brando_config_path => chosen})

@@ -1,0 +1,146 @@
+if Code.ensure_loaded?(Igniter) do
+  defmodule Mix.Brando.Igniter.Mailer do
+    @doc "Requests recompilation when optional Igniter support is removed."
+    def __mix_recompile__?, do: not Code.ensure_loaded?(Igniter)
+
+    @moduledoc false
+    # The application's Swoosh mailer, which Brando sends its own email
+    # through. Shared by `mix brando.gen.mail` and `mix brando.migrate55`.
+
+    alias Igniter.Project.Application, as: ProjectApplication
+    alias Igniter.Project.Config
+    alias Igniter.Project.Module, as: ProjectModule
+    alias Mix.Brando.Igniter.Files
+    alias Mix.Brando.Igniter.SourceUpgrade
+    alias Mix.Brando.Igniter.Template
+
+    @sender_files ~w(config.exs brando.exs prod.exs runtime.exs)
+    @sender_comment """
+    # Sender for Brando's own email (password resets, form notifications). Set an
+    # address the mail provider sends for; the production adapter goes in
+    # runtime.exs.
+    """
+
+    @doc """
+    Gives the application `<App>.Mailer` unless it has one, with the local
+    adapter in development and the test adapter in test, points Brando at
+    it, and sets a placeholder sender for Brando's email when none is set.
+
+    `project` needs `:otp_app` and `:app_module`. Returns the igniter and
+    whether the mailer was created.
+    """
+    def ensure(igniter, %{otp_app: otp_app, app_module: app_module}) do
+      mailer = Module.concat(app_module, "Mailer")
+
+      {igniter, created?} =
+        case ProjectModule.find_module(igniter, mailer) do
+          {:ok, {igniter, _source, _zipper}} -> {igniter, false}
+          {:error, igniter} -> {create(igniter, otp_app, app_module, mailer), true}
+        end
+
+      igniter =
+        igniter
+        |> Config.configure_new("dev.exs", otp_app, [mailer, :adapter], Swoosh.Adapters.Local)
+        |> Config.configure_new("test.exs", otp_app, [mailer, :adapter], Swoosh.Adapters.Test)
+        |> SourceUpgrade.configure_brando_mailer(mailer)
+        |> put_placeholder_sender(app_module)
+
+      {igniter, created?}
+    end
+
+    @doc """
+    Points Brando at the application's mailer for `mix brando.migrate55`.
+    A configured `config :brando, mailer:` is left alone; an existing
+    `<App>.Mailer` is used as it is; without one, `ensure/2` creates it and
+    a warning says what is left to set.
+    """
+    def configure_for_upgrade(igniter) do
+      app_module = ProjectModule.module_name_prefix(igniter)
+      mailer = Module.concat(app_module, "Mailer")
+
+      cond do
+        brando_mailer_configured?(igniter) ->
+          igniter
+
+        match?({true, _igniter}, ProjectModule.module_exists(igniter, mailer)) ->
+          SourceUpgrade.configure_brando_mailer(igniter, mailer)
+
+        true ->
+          project = %{otp_app: ProjectApplication.app_name(igniter), app_module: app_module}
+          {igniter, _created?} = ensure(igniter, project)
+          Igniter.add_warning(igniter, created_warning(mailer, igniter))
+      end
+    end
+
+    @doc "The notice lines that tell what is left to set for `mailer`."
+    def remaining_setup(mailer, igniter) do
+      """
+      Set the address Brando sends from in `config/#{sender_file(igniter)}`, replacing the
+      placeholder: `config :brando, Brando.Mailer, from: {"My site", "noreply@my-site.com"}`.
+      Your mail provider must send for it. Then configure #{inspect(mailer)}'s production
+      adapter and credentials in `config/runtime.exs`, for example:
+
+          config :#{otp_app_name(igniter)}, #{inspect(mailer)},
+            adapter: Swoosh.Adapters.Mailgun,
+            api_key: System.fetch_env!("MAILGUN_API_KEY"),
+            domain: "mg.my-site.com"
+      """
+    end
+
+    defp created_warning(mailer, igniter) do
+      """
+      The application had no Swoosh mailer, so Brando could not send email
+      (password resets, form notifications). The task created #{inspect(mailer)},
+      with the local adapter in development and the test adapter in test, and
+      pointed Brando at it.
+
+      #{remaining_setup(mailer, igniter)}
+      """
+    end
+
+    defp otp_app_name(igniter), do: ProjectApplication.app_name(igniter)
+
+    defp brando_mailer_configured?(igniter) do
+      Enum.any?(~w(config.exs brando.exs), &Config.configures_key?(igniter, &1, :brando, :mailer))
+    end
+
+    defp create(igniter, otp_app, app_module, mailer) do
+      binding = [application_name: to_string(otp_app), application_module: inspect(app_module)]
+
+      case Template.render(igniter, "brando.gen.mail", "lib/application_name/mailer.ex", binding) do
+        {:ok, igniter, contents} -> Files.create(igniter, "lib/#{Macro.underscore(mailer)}.ex", contents)
+        {:error, message} -> Igniter.add_issue(igniter, message)
+      end
+    end
+
+    # Appended to `config/brando.exs`, Brando's own file, with a comment;
+    # `config/config.exs` ends by importing the environment's config, so the
+    # setting goes in through Igniter there.
+    defp put_placeholder_sender(igniter, app_module) do
+      name = app_module |> Module.split() |> List.last()
+      sender = ~s(config :brando, Brando.Mailer, from: {"#{name}", "noreply@example.com"}\n)
+
+      cond do
+        Enum.any?(@sender_files, &Config.configures_key?(igniter, &1, :brando, [Brando.Mailer, :from])) ->
+          igniter
+
+        sender_file(igniter) == "brando.exs" ->
+          Igniter.update_file(igniter, "config/brando.exs", fn source ->
+            Rewrite.Source.update(source, :content, &(String.trim_trailing(&1) <> "\n\n" <> @sender_comment <> sender))
+          end)
+
+        true ->
+          sender = quote(do: {unquote(name), "noreply@example.com"})
+          Config.configure_new(igniter, "config.exs", :brando, [Brando.Mailer, :from], {:code, sender})
+      end
+    end
+
+    defp sender_file(igniter), do: if(Igniter.exists?(igniter, "config/brando.exs"), do: "brando.exs", else: "config.exs")
+  end
+else
+  defmodule Mix.Brando.Igniter.Mailer do
+    @moduledoc false
+    # Revisit this source when the optional dependency becomes available.
+    def __mix_recompile__?, do: Code.ensure_loaded?(Igniter)
+  end
+end

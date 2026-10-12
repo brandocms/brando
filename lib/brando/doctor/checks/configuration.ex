@@ -25,7 +25,9 @@ defmodule Brando.Doctor.Checks.Configuration do
   @doc """
   Turns findings into a result. Each finding is `{status, item, problem}`:
   the status of one setting, the line `--verbose` shows for it, and the
-  short problem for the summary (nil when it is fine).
+  short problem for the summary (nil when it is fine). A finding may add a
+  fourth element, the fix for its problem; problems without one point at
+  the guides.
   """
   def evaluate(findings) do
     items = Enum.map(findings, &elem(&1, 1))
@@ -38,10 +40,13 @@ defmodule Brando.Doctor.Checks.Configuration do
 
       problems ->
         summary = Enum.map_join(problems, ", ", &elem(&1, 2))
-        fix = dgettext("doctor", "see the guides for email, CDN delivery and the content assistant")
+        fix = problems |> Enum.map(&finding_fix/1) |> Enum.uniq() |> Enum.join("; ")
         apply(Result, status, [summary, [fix: fix, items: items]])
     end
   end
+
+  defp finding_fix({_status, _item, _problem, fix}), do: fix
+  defp finding_fix(_finding), do: dgettext("doctor", "see the guides for email, CDN delivery and the content assistant")
 
   @doc """
   The site's URL from the endpoint, or nil when the endpoint is not running
@@ -71,14 +76,18 @@ defmodule Brando.Doctor.Checks.Configuration do
     end
   end
 
-  @doc "The mailer and its sender as a finding (see `evaluate/1`)."
+  @doc "The mailer and its sender as a finding, with the fix (see `evaluate/1`)."
   def mailer do
     mailer = Brando.Mailer.mailer()
     from = Brando.Mailer.sender()[:from]
 
     cond do
       is_nil(mailer) ->
-        {:warning, dgettext("doctor", "Mailer: not set"), dgettext("doctor", "no mailer")}
+        {:warning, dgettext("doctor", "Mailer: not set"), dgettext("doctor", "no mailer"),
+         dgettext(
+           "doctor",
+           "run `mix brando.gen.mail`, then set `config :brando, Brando.Mailer, from: …` and the mailer's production adapter in runtime.exs"
+         )}
 
       not Code.ensure_loaded?(mailer) ->
         {:error, dgettext("doctor", "Mailer: %{mailer} does not exist", mailer: inspect(mailer)),
@@ -86,7 +95,8 @@ defmodule Brando.Doctor.Checks.Configuration do
 
       is_nil(from) ->
         {:warning, dgettext("doctor", "Mailer: %{mailer}, no sender", mailer: inspect(mailer)),
-         dgettext("doctor", "no sender address")}
+         dgettext("doctor", "no sender address"),
+         dgettext("doctor", "set the address Brando sends from: `config :brando, Brando.Mailer, from: …`")}
 
       true ->
         {:ok, dgettext("doctor", "Mailer: %{mailer}, from %{from}", mailer: inspect(mailer), from: format_from(from)),

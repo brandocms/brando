@@ -394,11 +394,14 @@ storage uses tenant migrations in single/multi mode; run `mix brando.migrate --t
 after public migrations. History in a different directory requires an explicit
 transition decision.
 
-Mail generation reuses a Phoenix mailer, adds missing Swoosh/Req dependencies,
-and supplies local/test adapter defaults plus a default Req API client. It
-also points Brando at the mailer, for the email Brando sends itself; see
-[Email](email.md).
-Build notifications with `MyApp.Emails.contact(changeset, from: ..., to: ...)`.
+Mail generation reuses a Phoenix mailer or creates `MyApp.Mailer`, and
+supplies local/test adapter defaults plus a default Req API client; Swoosh and
+Req come with Brando, so no dependency is added. It also points Brando at the
+mailer, for the email Brando sends itself, and writes a placeholder sender
+(`noreply@example.com`) to replace; see [Email](email.md).
+`mix brando.gen.mail --contact` also scaffolds a contact form,
+`MyApp.Contact.ContactForm`; build its notifications with
+`MyApp.Emails.contact(changeset, from: ..., to: ...)`.
 Invalid form data raises before constructing an email. Configure the production
 adapter and credentials deliberately; generating mail helpers never sends mail.
 

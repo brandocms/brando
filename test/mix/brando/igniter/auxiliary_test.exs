@@ -9,7 +9,8 @@ defmodule Mix.Brando.Igniter.AuxiliaryTest do
     project = IgniterCase.phoenix_project(app: :shop, module: "Acme.Shop", web: "Acme.Web")
     result = Enum.reduce(@tasks, project, &Igniter.compose_task(&2, "brando.gen.#{&1}", []))
     assert result.issues == []
-    assert result.tasks == [{"deps.get", []}]
+    # Swoosh and Req come with Brando: nothing to fetch.
+    assert result.tasks == []
     assert result.rms == []
     assert IgniterCase.source(result, "lib/acme/shop/mailer.ex") =~ "otp_app: :shop"
     assert IgniterCase.source(result, "config/config.exs") =~ "mailer: Acme.Shop.Mailer"
@@ -49,7 +50,7 @@ defmodule Mix.Brando.Igniter.AuxiliaryTest do
       end)
 
     project = IgniterCase.apply_and_reload(project)
-    result = Igniter.compose_task(project, "brando.gen.mail", [])
+    result = Igniter.compose_task(project, "brando.gen.mail", ["--contact"])
     assert result.issues == []
     Igniter.Test.assert_unchanged(result, path)
     Igniter.Test.assert_unchanged(result, "config/dev.exs")
@@ -70,7 +71,7 @@ defmodule Mix.Brando.Igniter.AuxiliaryTest do
         ] do
       result =
         IgniterCase.phoenix_project(files: %{path => "defmodule #{module} do\n def custom, do: true\nend"})
-        |> Igniter.compose_task("brando.gen.#{task}", ["--yes"])
+        |> Igniter.compose_task("brando.gen.#{task}", ["--yes" | if(task == "mail", do: ["--contact"], else: [])])
 
       assert Enum.any?(result.issues, &String.contains?(&1, "different content"))
       Igniter.Test.assert_unchanged(result, path)

@@ -5,7 +5,7 @@ defmodule Mix.Tasks.Brando.Gen.MailTest do
 
   test "compilation of the generated contact form rejects incomplete submissions" do
     project = IgniterCase.phoenix_project(module: "MailGeneratorStudio")
-    result = Igniter.compose_task(project, "brando.gen.mail", [])
+    result = Igniter.compose_task(project, "brando.gen.mail", ["--contact"])
     assert result.issues == []
     module = MailGeneratorStudio.Contact.ContactForm
 

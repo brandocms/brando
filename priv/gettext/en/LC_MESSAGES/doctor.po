@@ -423,6 +423,11 @@ msgstr ""
 msgid "Open identity"
 msgstr ""
 
+#: lib/brando/doctor/checks/alt_text.ex
+#, elixir-autogen, elixir-format
+msgid "Open images"
+msgstr ""
+
 #: lib/brando/doctor/checks/image_configs.ex
 #, elixir-autogen, elixir-format
 msgid "Recreate changed images"
@@ -801,6 +806,11 @@ msgstr ""
 msgid "not served by Brando"
 msgstr ""
 
+#: lib/brando/doctor/checks/alt_text.ex
+#, elixir-autogen, elixir-format
+msgid "open each image marked “No alt text” under Images and write its Alt. text (no AI provider is configured to draft it)"
+msgstr ""
+
 #: lib/brando/doctor/source.ex
 #, elixir-autogen, elixir-format
 msgid "path %{path}"
@@ -834,6 +844,11 @@ msgstr ""
 #: lib/brando/doctor/checks/admin_routes.ex
 #, elixir-autogen, elixir-format
 msgid "route each schema's FormLive as live \"/<plural>/create\", <Name>FormLive, :create and live \"/<plural>/update/:entry_id\", <Name>FormLive, :update (mix brando.migrate54 converts generated Create/Update LiveViews). Schemas sharing a singular need their routes in a scope with as: and the same router_scope on their Blueprints"
+msgstr ""
+
+#: lib/brando/doctor/checks/configuration.ex
+#, elixir-autogen, elixir-format
+msgid "run `mix brando.gen.mail`, then set `config :brando, Brando.Mailer, from: …` and the mailer's production adapter in runtime.exs"
 msgstr ""
 
 #: lib/brando/doctor/checks/admin_assets.ex
@@ -884,6 +899,11 @@ msgstr ""
 #: lib/brando/doctor/checks/robots.ex
 #, elixir-autogen, elixir-format
 msgid "served from SEO settings"
+msgstr ""
+
+#: lib/brando/doctor/checks/configuration.ex
+#, elixir-autogen, elixir-format
+msgid "set the address Brando sends from: `config :brando, Brando.Mailer, from: …`"
 msgstr ""
 
 #: lib/brando/doctor.ex

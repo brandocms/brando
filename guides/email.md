@@ -10,10 +10,12 @@ through your application's own Swoosh mailer. It needs to know which mailer that
 
 ## Set up
 
-`mix brando.gen.mail` creates `MyApp.Mailer` when you don't have one, adds
-Swoosh, and points Brando at the mailer. On an existing application,
-`mix brando.migrate55` does the last part when it finds `MyApp.Mailer`. Either
-way, the configuration is:
+`mix brando.gen.mail` creates `MyApp.Mailer` when you don't have one, with the
+local adapter in development and the test adapter in test, points Brando at the
+mailer, and writes a placeholder sender (`noreply@example.com`) for you to
+replace. On an existing application, `mix brando.migrate55` does the same: it
+points Brando at `MyApp.Mailer`, or creates it when there is none. Either way,
+the configuration is:
 
 ```elixir
 config :brando, mailer: MyApp.Mailer

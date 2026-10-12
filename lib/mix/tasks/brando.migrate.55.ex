@@ -6,6 +6,7 @@ if Code.ensure_loaded?(Igniter) do
     use Igniter.Mix.Task
 
     alias Mix.Brando.Igniter.PersistIdentifiers
+    alias Mix.Brando.Igniter.Mailer
     alias Mix.Brando.Igniter.SourceUpgrade
     alias Mix.Brando.Igniter.SourceUpgrade.BlueprintGettext
     alias Mix.Brando.Igniter.UpgradeOrder
@@ -24,7 +25,9 @@ if Code.ensure_loaded?(Igniter) do
     names, adds the explicit listing component imports, gives Villain parsers
     back the `use Phoenix.Component`, imports and aliases they relied on from
     `use Brando.Villain.Parser`, configures Req as
-    Swoosh's API client, points Brando at the application's mailer, adds
+    Swoosh's API client, points Brando at the application's mailer (creating
+    `MyApp.Mailer`, its development and test adapters and a placeholder
+    sender when the application has none), adds
     `Brando.Plug.Markdown` and `Brando.Plug.IndexNow` to the endpoint, removes the
     retired Sharp image processor from config, pins the declared `phoenix_live_view` JavaScript
     dependency, builds Vite source maps `hidden`, converts a legacy Fabric deployment to a reviewable Florist
@@ -71,7 +74,7 @@ if Code.ensure_loaded?(Igniter) do
       |> SourceUpgrade.update_villain_parsers()
       |> SourceUpgrade.rename_moved_modules()
       |> SourceUpgrade.configure_swoosh_client()
-      |> SourceUpgrade.configure_brando_mailer()
+      |> Mailer.configure_for_upgrade()
       |> SourceUpgrade.remove_sharp_processor()
       |> SourceUpgrade.pin_live_view_javascript()
       |> SourceUpgrade.hide_source_maps()
@@ -105,7 +108,7 @@ if Code.ensure_loaded?(Igniter) do
       `Phoenix.HTML` imports, and aliases they used, which
       `use Brando.Villain.Parser` no longer brings in. The task
       adds Req as Swoosh's API client when none is configured, points Brando at
-      the application's `Mailer` when it has one, and pins the
+      the application's `Mailer`, creating one when it has none, and pins the
       declared `phoenix_live_view` JavaScript dependency under `assets/` to the
       loaded server version. Vite configs under `assets/` that set
       `sourcemap: true` now build hidden maps, and `mix brando.digest` deletes
@@ -182,9 +185,11 @@ if Code.ensure_loaded?(Igniter) do
           onto their Blueprint schema. The hardened resolver rejects plain helper
           modules and there is no safe target schema the task can choose.
         * Brando now sends email through the application's Swoosh mailer
-          (`config :brando, mailer: MyApp.Mailer`; `mix brando.gen.mail` adds
-          one). Set the address it sends from, which the mail provider must
-          accept: `config :brando, Brando.Mailer, from: {"My site", "noreply@example.com"}`.
+          (`config :brando, mailer: MyApp.Mailer`; this task creates one when
+          the application has none). Set the address it sends from, which the
+          mail provider must accept, in place of any `noreply@example.com`
+          placeholder: `config :brando, Brando.Mailer, from: {"My site", "noreply@my-site.com"}`,
+          and the mailer's production adapter in `config/runtime.exs`.
         * Fabric deployments must ensure the application database role owns the
           `oban_job_state` enum before `brando_153` upgrades Oban to v14. Follow
           the changelog's updated `grant_db`/`ALTER TYPE ... OWNER TO` procedure.

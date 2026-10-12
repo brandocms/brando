@@ -423,6 +423,11 @@ msgstr "Åpne SEO"
 msgid "Open identity"
 msgstr "Åpne identitet"
 
+#: lib/brando/doctor/checks/alt_text.ex
+#, elixir-autogen, elixir-format
+msgid "Open images"
+msgstr "Åpne bilder"
+
 #: lib/brando/doctor/checks/image_configs.ex
 #, elixir-autogen, elixir-format
 msgid "Recreate changed images"
@@ -801,6 +806,11 @@ msgstr "ikke generert"
 msgid "not served by Brando"
 msgstr "serveres ikke av Brando"
 
+#: lib/brando/doctor/checks/alt_text.ex
+#, elixir-autogen, elixir-format
+msgid "open each image marked “No alt text” under Images and write its Alt. text (no AI provider is configured to draft it)"
+msgstr "åpne hvert bilde merket «Ingen alt. tekst» under Bilder og skriv inn Alternativ tekst (ingen AI-leverandør er satt opp til å foreslå den)"
+
 #: lib/brando/doctor/source.ex
 #, elixir-autogen, elixir-format
 msgid "path %{path}"
@@ -835,6 +845,11 @@ msgstr "robots.txt"
 #, elixir-autogen, elixir-format
 msgid "route each schema's FormLive as live \"/<plural>/create\", <Name>FormLive, :create and live \"/<plural>/update/:entry_id\", <Name>FormLive, :update (mix brando.migrate54 converts generated Create/Update LiveViews). Schemas sharing a singular need their routes in a scope with as: and the same router_scope on their Blueprints"
 msgstr "rut hvert skjemas FormLive som live \"/<plural>/create\", <Name>FormLive, :create og live \"/<plural>/update/:entry_id\", <Name>FormLive, :update (mix brando.migrate54 gjør om genererte Create/Update-LiveViews). Skjemaer med samme entallsnavn trenger rutene sine i et scope med as: og samme router_scope på sine Blueprints"
+
+#: lib/brando/doctor/checks/configuration.ex
+#, elixir-autogen, elixir-format
+msgid "run `mix brando.gen.mail`, then set `config :brando, Brando.Mailer, from: …` and the mailer's production adapter in runtime.exs"
+msgstr "kjør `mix brando.gen.mail`, og sett så `config :brando, Brando.Mailer, from: …` og e-postmodulens produksjonsadapter i runtime.exs"
 
 #: lib/brando/doctor/checks/admin_assets.ex
 #, elixir-autogen, elixir-format
@@ -885,6 +900,11 @@ msgstr "se veiledningene for e-post, CDN-levering og innholdsassistenten"
 #, elixir-autogen, elixir-format
 msgid "served from SEO settings"
 msgstr "serveres fra SEO-innstillingene"
+
+#: lib/brando/doctor/checks/configuration.ex
+#, elixir-autogen, elixir-format
+msgid "set the address Brando sends from: `config :brando, Brando.Mailer, from: …`"
+msgstr "sett adressen Brando sender fra: `config :brando, Brando.Mailer, from: …`"
 
 #: lib/brando/doctor.ex
 #, elixir-autogen, elixir-format
