@@ -21,6 +21,12 @@ defmodule Brando.Blueprint.SecondaryVerifier.FormInputs do
   def identifier_columns, do: @identifier_columns
 
   @doc false
+  def identifier_source_keys, do: @identifier_source_keys
+
+  @doc "The columns an `order` names that identifiers do not have."
+  def unknown_order_fields(order), do: Enum.uniq(order_fields(order) -- @orderable)
+
+  @doc false
   def verify(dsl_state) do
     relations = Verifier.get_entities(dsl_state, [:relations])
 
@@ -149,7 +155,7 @@ defmodule Brando.Blueprint.SecondaryVerifier.FormInputs do
     do: ["`preload: #{inspect(preload)}` (identifiers have no associations)"]
 
   defp identifier_source_problem({:order, order}) do
-    for field <- order_fields(order), field not in @orderable, do: "`order` by #{field} (not an identifier column)"
+    for field <- unknown_order_fields(order), do: "`order` by #{field} (not an identifier column)"
   end
 
   defp identifier_source_problem({key, _value}) when key in @identifier_source_keys, do: []
@@ -166,21 +172,22 @@ defmodule Brando.Blueprint.SecondaryVerifier.FormInputs do
     |> Map.new()
   end
 
-  defp identifier_order(order) when is_binary(order) do
+  @doc "`[order: order]` without the columns identifiers do not have, or `[]` when none is left."
+  def identifier_order(order) when is_binary(order) do
     case Enum.filter(order_segments(order), fn {_segment, field} -> field in @orderable end) do
       [] -> []
       kept -> [order: Enum.map_join(kept, ", ", &elem(&1, 0))]
     end
   end
 
-  defp identifier_order(order) when is_list(order) do
+  def identifier_order(order) when is_list(order) do
     case Enum.filter(order, &(order_fields(&1) -- @orderable == [])) do
       [] -> []
       kept -> [order: kept]
     end
   end
 
-  defp identifier_order(order), do: [order: order]
+  def identifier_order(order), do: [order: order]
 
   # The columns an order names, as `Brando.Query`'s order reducer reads it.
   # An association path (`"asc category.name"`, `{:asc, {:category, :name}}`)
