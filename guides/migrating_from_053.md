@@ -832,6 +832,104 @@ migration cannot see them; list the ones to fix with:
 mix brando.check.image_texts
 ```
 
+### Check what the tasks may have missed
+
+The source tasks and checks find most of the following now. A site that ran
+`mix brando.migrate54`, `mix brando.migrate55` or the conversion migrations
+with an earlier Brando revision can still have them: each let a 0.53 site
+compile and then fail at runtime or lose content. Check each one from the
+application's root:
+
+1. **`.html` on fragments and partials.** Fragments have no `html` since the
+   blocks conversion, so a read such as `@partials["footer"].html` raises a
+   `KeyError` on every page that renders it.
+
+   ```shell
+   grep -rnE '(\]|\w)\.html([^.a-zA-Z_"]|$)' lib
+   ```
+
+   Read `rendered_blocks` instead, or render the fragment with
+   `Brando.Pages.render_fragment/1`.
+2. **`:entries` relations mapped to `entry_id`.** An `:entries` relation
+   (`relation :related_entries, :entries`) now holds join rows that point at
+   an identifier, so `Enum.map(entry.related_entries, & &1.entry_id)` raises a
+   `KeyError`.
+
+   ```shell
+   grep -rnE 'relation :\w+, :entries' lib
+   grep -rn '\.entry_id' lib
+   ```
+
+   For each relation the first command lists, preload the identifier
+   (`preload: [related_entries: :identifier]`) and map
+   `& &1.identifier.entry_id`.
+3. **`:multi_select` on a `has_many` without `relation:`.** The admin form
+   crashes on open with "Multi selects for a :has_many relation needs a
+   `relation_key` and a `relation`".
+
+   ```shell
+   grep -rn -A6 ':multi_select' lib
+   ```
+
+   Give each such input `relation:` as well as `relation_key:`: the
+   `belongs_to` in the join schema that `relation_key` points at
+   (`relation_key: :category_id, relation: :category`).
+4. **`sources:` options on an `:entries` input that mention `sequence` or
+   `preload`.** The options load identifiers (`content_identifiers`), which
+   have `title`, `language`, `status`, `url`, `schema`, `entry_id`, `cover` and
+   `updated_at`, and no associations. An order on `sequence` crashes the form
+   with `column c0.sequence does not exist`.
+
+   ```shell
+   grep -rn -A4 'sources:' lib | grep -E 'sequence|preload'
+   ```
+
+   Order by identifier columns (`%{order: "asc language, asc title"}`) and
+   drop `preload:`.
+5. **Module code in the database that reads `data.vars` or `data.refs`.** A
+   multi-module's children are blocks now, so a template that reads
+   `{{ link.data.vars.url }}` in `{% for link in entries %}` renders them
+   empty, and no check reports it:
+
+   ```sql
+   select id, name from content_modules where code ~ 'data\.(vars|refs)';
+   ```
+
+   Change `.data.vars.` to `.vars.` and `.data.refs.` to `.refs.` in each
+   module's code, then run `mix brando.entries.resave`.
+6. **Picture refs that lost their image.** The conversion links a legacy
+   picture ref to a live `images` row by its path, and empties a ref with no
+   such row. `mix brando.check.legacy_conversion` compares ref names, so it
+   still passes. The legacy Villain column is then the only copy of that
+   image's data, so check before anyone drops it. Run this for each table
+   that still has a Villain column (`pages.data`, `pages_fragments.data` and
+   the application's own), with its table and column in place of
+   `pages.data`:
+
+   ```sql
+   select distinct legacy.path
+   from pages,
+     jsonb_path_query(pages.data,
+       'strict $.**.refs[*].data ? (@.type == "picture").data.path', '{}', true) p,
+     lateral (select p #>> '{}' as path) legacy
+   where legacy.path is not null
+     and not exists (
+       select 1 from images i
+       where i.deleted_at is null
+         and i.path in (legacy.path, regexp_replace(legacy.path, '^/media/', ''))
+     );
+   ```
+
+   Each path it lists is an image that refs had on the old site and have
+   lost. The picture-ref repair (see [Legacy snapshots](#legacy-snapshots))
+   restores them from the legacy data.
+7. **Every admin form, opened once.** On one 0.53 site, two of the four
+   crashes showed only in the admin: open an entry of every Blueprint there
+   before the gate below. Restart the server after any CLI repair task
+   (`mix brando.entries.resave`, `mix brando.identifiers.sync`, a repair of
+   your own): the task runs outside the server, which keeps serving the pages
+   it has cached until it restarts.
+
 ## 5. Reconcile Gettext catalogs
 
 `mix brando.migrate55` has already completed incomplete `Plural-Forms` headers
