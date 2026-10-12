@@ -557,6 +557,51 @@ defmodule Mix.Brando.Igniter.SourceUpgrade.ListOrderTest do
              ~s|alias Lett.Menu, as: Articles\n\n  def categories, do: Articles.list_categories(%{order: "asc sequence, asc id"})|
   end
 
+  test "only code is read: not strings, sigils, comments or template text" do
+    controller = ~S'''
+    defmodule LettWeb.ArticleController do
+      @moduledoc """
+      Lists articles: `Lett.Articles.list_articles(%{order: "asc sequence"})`.
+      """
+      alias Lett.Articles
+
+      # Articles.list_articles(%{order: "asc sequence"})
+      @example ~S"Articles.list_categories(%{status: :published})"
+
+      def index(conn, _params) do
+        {:ok, articles} = Articles.list_articles(%{order: "asc sequence"})
+        render(conn, :index, articles: articles, example: @example)
+      end
+    end
+    '''
+
+    template = """
+    <p>Call Lett.Articles.list_articles(%{order: "asc sequence"}) for more.</p>
+    <span>{length(Lett.Articles.list_articles!(%{order: "asc sequence"}))}</span>
+    """
+
+    igniter = lett(%{controller: controller, template: template})
+
+    assert source(igniter, :controller) ==
+             String.replace(
+               controller,
+               ~s|{:ok, articles} = Articles.list_articles(%{order: "asc sequence"})|,
+               ~s|{:ok, articles} = Articles.list_articles(%{order: "asc sequence, desc inserted_at"})|
+             )
+
+    assert source(igniter, :template) ==
+             String.replace(
+               template,
+               ~s|list_articles!(%{order: "asc sequence"})|,
+               ~s|list_articles!(%{order: "asc sequence, desc inserted_at"})|
+             )
+
+    for warning <- igniter.warnings do
+      refute warning =~ "article_controller.ex"
+      refute warning =~ "menu.html.heex"
+    end
+  end
+
   test "is idempotent" do
     igniter = lett()
     rewritten = for key <- [:article, :menuitem, :vacancy, :controller], into: %{}, do: {key, source(igniter, key)}

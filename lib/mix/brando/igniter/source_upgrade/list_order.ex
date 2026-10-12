@@ -12,6 +12,7 @@ if Code.ensure_loaded?(Igniter) do
     # earlier in the same function and passed as it is. The rewrite edits that
     # map's text, so `.heex` templates and unformatted code keep their layout.
 
+    alias Mix.Brando.Igniter.TemplateCode
     alias Rewrite.Source
 
     @sequence_order ~s("asc sequence, desc inserted_at")
@@ -181,9 +182,11 @@ if Code.ensure_loaded?(Igniter) do
 
     defp file_findings(path, content, contexts) do
       scope = scopes(path, content)
+      code? = TemplateCode.code?(content, path)
 
       qualified =
         for [{start, _}, {q_start, q_length}, {f_start, f_length}] <- Regex.scan(@call, content, return: :index),
+            code?.(start),
             {_module, aliases} = scope.(start),
             context = context_for(binary_part(content, q_start, q_length), aliases, contexts),
             context != nil,
@@ -193,6 +196,7 @@ if Code.ensure_loaded?(Igniter) do
 
       local =
         for [{start, _}, {f_start, f_length}] <- Regex.scan(@local_call, content, return: :index),
+            code?.(start),
             {module, _aliases} = scope.(start),
             functions = Map.get(contexts, module),
             functions != nil,
@@ -203,7 +207,7 @@ if Code.ensure_loaded?(Igniter) do
 
       for {start, name_end, context, function} <- qualified ++ local,
           call = %{path: path, call: call_name(context, function), order: contexts[context][function]},
-          finding <- call_findings(content, start, open_paren(content, name_end), call),
+          finding <- call_findings(content, start, open_paren(content, name_end), Map.put(call, :code?, code?)),
           do: finding
     end
 
@@ -264,7 +268,12 @@ if Code.ensure_loaded?(Igniter) do
       before = binary_part(content, 0, call_start)
       escaped = Regex.escape(variable)
 
-      case Regex.scan(~r/(?<![\w.])#{escaped}\s*=(?!=)\s*%\{/, before, return: :index) |> List.last() do
+      assignments =
+        for [{start, _}] = match <- Regex.scan(~r/(?<![\w.])#{escaped}\s*=(?!=)\s*%\{/, before, return: :index),
+            call.code?.(start),
+            do: match
+
+      case List.last(assignments) do
         [{assignment, length}] ->
           between = binary_part(before, assignment + length, byte_size(before) - assignment - length)
 
@@ -326,7 +335,7 @@ if Code.ensure_loaded?(Igniter) do
     defp finding(content, offset, kind, call) do
       line = content |> binary_part(0, offset) |> String.split("\n") |> length()
       text = content |> String.split("\n") |> Enum.at(line - 1) |> String.trim()
-      Map.merge(call, %{kind: kind, line: line, text: text, span: nil, offset: offset})
+      call |> Map.delete(:code?) |> Map.merge(%{kind: kind, line: line, text: text, span: nil, offset: offset})
     end
 
     ## Scanning Elixir source text
