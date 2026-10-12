@@ -322,6 +322,21 @@ msgid_plural "%{target}: %{count} images without recorded settings"
 msgstr[0] ""
 msgstr[1] ""
 
+#: lib/brando/doctor/checks/node.ex
+#, elixir-autogen, elixir-format
+msgid "%{version}: Node %{major} is an odd release"
+msgstr ""
+
+#: lib/brando/doctor/checks/node.ex
+#, elixir-autogen, elixir-format
+msgid "%{version}: Node %{major} is older than Brando is tested on"
+msgstr ""
+
+#: lib/brando/doctor/checks/node.ex
+#, elixir-autogen, elixir-format
+msgid "%{version}: older than Vite 8 accepts (%{minimum})"
+msgstr ""
+
 #: lib/brando/doctor/checks/admin_assets.ex
 #, elixir-autogen, elixir-format
 msgid ".yalc brandojs %{version}"
@@ -465,6 +480,16 @@ msgstr ""
 #: lib/brando/doctor/checks/modules.ex
 #, elixir-autogen, elixir-format
 msgid "Modules"
+msgstr ""
+
+#: lib/brando/doctor/checks/node.ex
+#, elixir-autogen, elixir-format
+msgid "Node %{major} (or another even LTS major ≥ %{major})"
+msgstr ""
+
+#: lib/brando/doctor/checks/node.ex
+#, elixir-autogen, elixir-format
+msgid "Node.js"
 msgstr ""
 
 #: lib/brando_admin/components/system_check.ex
@@ -870,6 +895,11 @@ msgstr ""
 msgid "no mailer"
 msgstr ""
 
+#: lib/brando/doctor/checks/node.ex
+#, elixir-autogen, elixir-format
+msgid "no node on the PATH"
+msgstr ""
+
 #: lib/brando/doctor/checks/configuration.ex
 #, elixir-autogen, elixir-format
 msgid "no production mail adapter"
@@ -903,6 +933,11 @@ msgstr ""
 #: lib/brando/doctor/checks/sitemap.ex
 #, elixir-autogen, elixir-format
 msgid "no sitemap module"
+msgstr ""
+
+#: lib/brando/doctor/checks/node.ex
+#, elixir-autogen, elixir-format
+msgid "node --version printed %{version}"
 msgstr ""
 
 #: lib/brando/doctor/checks/deprecations.ex
@@ -1075,6 +1110,11 @@ msgstr ""
 msgid "testing mode, jobs run inline"
 msgstr ""
 
+#: lib/brando/doctor/checks/node.ex
+#, elixir-autogen, elixir-format
+msgid "the admin and frontend assets build with %{advice}"
+msgstr ""
+
 #: lib/brando/doctor/checks/test_database.ex
 #, elixir-autogen, elixir-format
 msgid "the config files read Mix.env(), which cannot be read for :test from here"
@@ -1108,6 +1148,16 @@ msgstr ""
 #: lib/brando/doctor/checks/migrations.ex
 #, elixir-autogen, elixir-format
 msgid "up to date"
+msgstr ""
+
+#: lib/brando/doctor/checks/node.ex
+#, elixir-autogen, elixir-format
+msgid "use %{advice}"
+msgstr ""
+
+#: lib/brando/doctor/checks/node.ex
+#, elixir-autogen, elixir-format
+msgid "use %{advice}: odd releases are not LTS, and pnpm and yarn refuse them for Vite 8 and the asset packages"
 msgstr ""
 
 #: lib/brando/doctor/checks/versions.ex

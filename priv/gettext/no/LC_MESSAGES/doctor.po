@@ -322,6 +322,21 @@ msgid_plural "%{target}: %{count} images without recorded settings"
 msgstr[0] "%{target}: %{count} bilde uten lagrede innstillinger"
 msgstr[1] "%{target}: %{count} bilder uten lagrede innstillinger"
 
+#: lib/brando/doctor/checks/node.ex
+#, elixir-autogen, elixir-format
+msgid "%{version}: Node %{major} is an odd release"
+msgstr "%{version}: Node %{major} er en oddetallsutgivelse"
+
+#: lib/brando/doctor/checks/node.ex
+#, elixir-autogen, elixir-format
+msgid "%{version}: Node %{major} is older than Brando is tested on"
+msgstr "%{version}: Node %{major} er eldre enn det Brando er testet på"
+
+#: lib/brando/doctor/checks/node.ex
+#, elixir-autogen, elixir-format
+msgid "%{version}: older than Vite 8 accepts (%{minimum})"
+msgstr "%{version}: eldre enn Vite 8 godtar (%{minimum})"
+
 #: lib/brando/doctor/checks/admin_assets.ex
 #, elixir-autogen, elixir-format
 msgid ".yalc brandojs %{version}"
@@ -466,6 +481,16 @@ msgstr "Migreringer"
 #, elixir-autogen, elixir-format
 msgid "Modules"
 msgstr "Moduler"
+
+#: lib/brando/doctor/checks/node.ex
+#, elixir-autogen, elixir-format
+msgid "Node %{major} (or another even LTS major ≥ %{major})"
+msgstr "Node %{major} (eller en annen LTS-hovedversjon med partall ≥ %{major})"
+
+#: lib/brando/doctor/checks/node.ex
+#, elixir-autogen, elixir-format
+msgid "Node.js"
+msgstr "Node.js"
 
 #: lib/brando_admin/components/system_check.ex
 #, elixir-autogen, elixir-format
@@ -870,6 +895,11 @@ msgstr "ingen bildefiler under %{path} (er mediene synkronisert?)"
 msgid "no mailer"
 msgstr "ingen e-postmodul"
 
+#: lib/brando/doctor/checks/node.ex
+#, elixir-autogen, elixir-format
+msgid "no node on the PATH"
+msgstr "ingen node i PATH"
+
 #: lib/brando/doctor/checks/configuration.ex
 #, elixir-autogen, elixir-format
 msgid "no production mail adapter"
@@ -904,6 +934,11 @@ msgstr "ingen URL for nettstedet"
 #, elixir-autogen, elixir-format
 msgid "no sitemap module"
 msgstr "ingen modul for nettstedskart"
+
+#: lib/brando/doctor/checks/node.ex
+#, elixir-autogen, elixir-format
+msgid "node --version printed %{version}"
+msgstr "node --version skrev %{version}"
 
 #: lib/brando/doctor/checks/deprecations.ex
 #, elixir-autogen, elixir-format
@@ -1075,6 +1110,11 @@ msgstr "test og utvikling kobler begge til %{database}"
 msgid "testing mode, jobs run inline"
 msgstr "testmodus, jobber kjøres direkte"
 
+#: lib/brando/doctor/checks/node.ex
+#, elixir-autogen, elixir-format
+msgid "the admin and frontend assets build with %{advice}"
+msgstr "admin- og frontend-ressursene bygges med %{advice}"
+
 #: lib/brando/doctor/checks/test_database.ex
 #, elixir-autogen, elixir-format
 msgid "the config files read Mix.env(), which cannot be read for :test from here"
@@ -1109,6 +1149,16 @@ msgstr "tok for lang tid"
 #, elixir-autogen, elixir-format
 msgid "up to date"
 msgstr "oppdatert"
+
+#: lib/brando/doctor/checks/node.ex
+#, elixir-autogen, elixir-format
+msgid "use %{advice}"
+msgstr "bruk %{advice}"
+
+#: lib/brando/doctor/checks/node.ex
+#, elixir-autogen, elixir-format
+msgid "use %{advice}: odd releases are not LTS, and pnpm and yarn refuse them for Vite 8 and the asset packages"
+msgstr "bruk %{advice}: oddetallsutgivelser er ikke LTS, og pnpm og yarn avviser dem for Vite 8 og ressurspakkene"
 
 #: lib/brando/doctor/checks/versions.ex
 #, elixir-autogen, elixir-format

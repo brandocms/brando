@@ -13,6 +13,7 @@ $ mix brando.doctor
 Brando 0.55.0-dev (git 12c2289, branch main) · Phoenix 1.8.15 · LiveView 1.2.12
 
 ✓ Versions                   Brando 0.55.0-dev (git 12c2289, branch main) · Elixir 1.20.3 · OTP 28
+✓ Node.js                    v22.15.0
 ✓ Migrations                 up to date
 ✓ Oban queues                6 queues, 0 stuck
 ✓ Configuration              URL, mailer and media settings in place
@@ -109,6 +110,7 @@ and summaries are prose.
 | Check | Looks at |
 | --- | --- |
 | Versions | Brando's version and source, and Elixir, OTP, Phoenix and LiveView against the versions this Brando supports |
+| Node.js | The `node` on the PATH, which builds the admin and frontend assets: an odd release, or one older than Brando is tested on (`Brando.Toolchain`), is a warning. Skipped in a release |
 | Migrations | Public migrations not run (Brando's upgrade migrations included), tenant migrations not run in each environment, pending copies that differ from Brando's templates (as `mix brando.migrations.check`), and upgrade migrations Brando added since they were copied |
 | Oban queues | The configured queues (in the admin, the running ones, so a paused queue shows), that the `content_events`, `webhooks` and `search_index` queues are among them, jobs waiting or executing for over an hour, jobs discarded in the last 24 hours |
 | Configuration | The endpoint URL, the mailer and its sender, the CDN settings of `Brando.Images` and `Brando.Files` when enabled, and the Assistant's API key when a model is configured |

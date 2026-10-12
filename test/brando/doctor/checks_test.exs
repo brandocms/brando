@@ -663,6 +663,40 @@ defmodule Brando.Doctor.ChecksTest do
     end
   end
 
+  describe "Node" do
+    test "an even LTS major from the tested one on passes" do
+      assert %Result{status: :ok, summary: "v22.15.0"} = Checks.Node.evaluate("v22.15.0")
+      assert %Result{status: :ok} = Checks.Node.evaluate("v24.9.0")
+    end
+
+    test "an odd release is a warning that names what to use" do
+      result = Checks.Node.evaluate("v23.11.0")
+      assert result.status == :warning
+      assert result.summary == "v23.11.0: Node 23 is an odd release"
+      assert result.fix =~ "use Node 22 (or another even LTS major ≥ 22): odd releases are not LTS"
+    end
+
+    test "older than tested, or than Vite 8 accepts" do
+      assert %Result{status: :warning, summary: "v20.19.0: Node 20 is older than Brando is tested on"} =
+               Checks.Node.evaluate("v20.19.0")
+
+      assert %Result{status: :warning, summary: "v22.3.0: older than Vite 8 accepts (22.12)"} =
+               Checks.Node.evaluate("v22.3.0")
+    end
+
+    test "no node on the PATH is skipped, with what to install" do
+      result = Checks.Node.evaluate(nil)
+      assert result.status == :skipped
+      assert result.fix =~ "Node 22"
+    end
+
+    test "the advice comes from Brando.Toolchain" do
+      assert Brando.Toolchain.node_advice() == "Node #{Brando.Toolchain.node_major()} (or another even LTS major ≥ #{Brando.Toolchain.node_major()})"
+      assert Brando.Toolchain.check_node("23.1.0") == {:odd, 23}
+      assert Brando.Toolchain.check_node("not a version") == :unknown
+    end
+  end
+
   describe "Robots" do
     test "served by Brando" do
       assert %Result{status: :ok} = Checks.Robots.evaluate(BrandoWeb.SEOController, false)

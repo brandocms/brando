@@ -141,6 +141,10 @@ Pin the toolchain with mise or asdf: a current Elixir and OTP, and Node 22 or
 such as Node 23 in both yarn and pnpm installs. Use the same Node major as the
 Dockerfile's `node:` stages.
 
+`scripts/prepare_055_deps.exs` and `mix brando.doctor` print the `node` on the
+PATH and warn when it is an odd release or older than the one Brando is tested
+on, before an install fails on it.
+
 ### Run the source tasks
 
 Once the dependencies resolve, run:

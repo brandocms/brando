@@ -122,9 +122,30 @@ defmodule Brando.Scripts.Prepare055DepsTest do
     dir
   end
 
-  defp run_script(args) do
-    {output, 0} = System.cmd(System.find_executable("elixir"), [@script | args], stderr_to_stdout: true)
+  defp run_script(args, env \\ []) do
+    {output, 0} = System.cmd(System.find_executable("elixir"), [@script | args], stderr_to_stdout: true, env: env)
     output
+  end
+
+  # A `node` on the PATH that prints `version`.
+  defp node_on_path(dir, version) do
+    bin = Path.join(dir, "bin")
+    File.mkdir_p!(bin)
+    node = Path.join(bin, "node")
+    File.write!(node, "#!/bin/sh\necho #{version}\n")
+    File.chmod!(node, 0o755)
+    [{"PATH", bin <> ":" <> System.get_env("PATH")}]
+  end
+
+  test "prints the running Node, and what to use instead of an odd release", %{tmp_dir: tmp_dir} do
+    dir = app(Path.join(tmp_dir, "app"), @before_state)
+
+    odd = run_script(["--dry-run", dir], node_on_path(Path.join(tmp_dir, "odd"), "v23.11.0"))
+    assert odd =~ "Node: v23.11.0. Node 23 is an odd release, which pnpm and yarn refuse for Vite 8 and the asset packages"
+    assert odd =~ "use Node 22 (or another even LTS major ≥ 22)."
+
+    even = run_script(["--dry-run", dir], node_on_path(Path.join(tmp_dir, "even"), "v22.15.0"))
+    assert even =~ "Node: v22.15.0\n"
   end
 
   test "rewrites a Lett-shaped mix.exs as the upgrade did by hand", %{tmp_dir: tmp_dir} do
