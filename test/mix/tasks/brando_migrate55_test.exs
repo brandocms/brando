@@ -2324,6 +2324,51 @@ defmodule Mix.Tasks.Brando.Migrate55Test do
       refute_creates(igniter, "#{@frontend_no}/projects_project.po")
     end
 
+    test "reads a backend's catalog directory from the application's config" do
+      backends = """
+      defmodule LegacyAppWeb.Gettext do
+        use Gettext.Backend, otp_app: :legacy_app
+      end
+
+      defmodule LegacyAppAdmin.Gettext do
+        use Gettext.Backend, otp_app: :legacy_app
+      end
+      """
+
+      config =
+        @config <>
+          """
+
+          config :legacy_app, LegacyAppWeb.Gettext, priv: "priv/gettext/frontend"
+          config :legacy_app, LegacyAppAdmin.Gettext, priv: "priv/gettext/backend"
+          """
+
+      igniter =
+        migrate(@blueprint_054, %{
+          @config_path => config,
+          "lib/legacy_app_web/gettext.ex" => backends,
+          "#{@backend_no}/projects_project_naming.po" => catalog("no", [{"project", "prosjekt"}]),
+          "#{@frontend_no}/projects_project_naming.po" => catalog("no", [{"project", "prosjekt"}])
+        })
+
+      assert_creates(igniter, "#{@backend_no}/projects_project.po")
+      refute_creates(igniter, "#{@frontend_no}/projects_project.po")
+
+      # A directory the task cannot read copies everywhere, as before.
+      dynamic = String.replace(config, ~s(priv: "priv/gettext/backend"), ~s|priv: System.get_env("CATALOGS")|)
+
+      igniter =
+        migrate(@blueprint_054, %{
+          @config_path => dynamic,
+          "lib/legacy_app_web/gettext.ex" => backends,
+          "#{@backend_no}/projects_project_naming.po" => catalog("no", [{"project", "prosjekt"}]),
+          "#{@frontend_no}/projects_project_naming.po" => catalog("no", [{"project", "prosjekt"}])
+        })
+
+      assert_creates(igniter, "#{@backend_no}/projects_project.po")
+      assert_creates(igniter, "#{@frontend_no}/projects_project.po")
+    end
+
     test "the copied translations survive the merge of the extracted template" do
       igniter =
         migrate(@blueprint_054, %{

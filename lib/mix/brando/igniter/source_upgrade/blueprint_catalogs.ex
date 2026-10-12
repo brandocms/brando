@@ -22,10 +22,37 @@ if Code.ensure_loaded?(Igniter) do
     """
     def priv(igniter, zipper) do
       with {:ok, backend} <- gettext_module(zipper),
-           {:ok, {_igniter, _source, backend_zipper}} <- ProjectModule.find_module(igniter, backend) do
-        backend_priv(backend_zipper)
+           {:ok, {igniter, _source, backend_zipper}} <- ProjectModule.find_module(igniter, backend) do
+        case config_priv(igniter, backend) do
+          :none -> backend_priv(backend_zipper)
+          priv -> priv
+        end
       else
         _ -> :unknown
+      end
+    end
+
+    # The backend's application config, `config :my_app, MyApp.Gettext,
+    # priv: "…"`, which Gettext merges over the `use` options: `{:ok, priv}`,
+    # `:unknown` when it sets `priv:` to anything but a literal, or `:none`.
+    defp config_priv(igniter, backend) do
+      igniter = Igniter.include_glob(igniter, "config/*.exs")
+      call = ~r/\bconfig\s*\(?\s*:\w+\s*,\s*#{Regex.escape(inspect(backend))}\s*,(.*?)(?=\n(?!\s)|\z)/s
+
+      igniter.rewrite
+      |> Rewrite.sources()
+      |> Enum.filter(&(Path.dirname(&1.path) == "config" and Path.extname(&1.path) == ".exs"))
+      |> Enum.flat_map(&Regex.scan(call, Rewrite.Source.get(&1, :content), capture: :all_but_first))
+      |> Enum.map(fn [options] ->
+        case Regex.run(~r/\bpriv:\s*"([^"\\#]+)"\s*(?:[,\])]|\z)/, options) do
+          [_, priv] -> {:ok, String.trim_trailing(priv, "/")}
+          nil -> if options =~ ~r/\bpriv:/, do: :unknown, else: :none
+        end
+      end)
+      |> Enum.reject(&(&1 == :none))
+      |> case do
+        [] -> :none
+        found -> if :unknown in found, do: :unknown, else: List.last(found)
       end
     end
 
