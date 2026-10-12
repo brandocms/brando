@@ -297,8 +297,11 @@ the result before the source tasks, so their diff holds only their changes.
 - removes the Sharp `processor_module` setting, as `mix brando.migrate54` does;
 - copies each Blueprint's translations from its 0.53 `*_naming`, `*_forms`
   and `*_listings` catalogs, and the `default` domain's translations of its
-  `t/1` labels, into its schema's domain, in every backend and locale that has
-  it (see [Reconcile Gettext catalogs](#5-reconcile-gettext-catalogs));
+  `t/1` labels, into its schema's domain, in every locale of the Gettext
+  backend the Blueprint translates through (its `gettext_module`, by default
+  `MyAppAdmin.Gettext`). Copies of those catalogs in another backend, such as
+  the frontend's, are read by nothing and are left alone (see
+  [Reconcile Gettext catalogs](#5-reconcile-gettext-catalogs));
 - sets `persist_identifier false` on Blueprints with no admin editor (no
   `:update` form route and no admin LiveView), no `absolute_url`, and nothing
   that could select their entries (no `:selection` or `:single` datasource,

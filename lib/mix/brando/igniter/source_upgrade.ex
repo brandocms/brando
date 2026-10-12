@@ -19,6 +19,7 @@ if Code.ensure_loaded?(Igniter) do
     alias Igniter.Project.Module, as: ProjectModule
     alias Igniter.Refactors.Rename
     alias Mix.Brando.Igniter.FloristConfig
+    alias Mix.Brando.Igniter.SourceUpgrade.BlueprintCatalogs
     alias Mix.Brando.Igniter.SourceUpgrade.Datasources
     alias Mix.Brando.Igniter.SourceUpgrade.NavigationItems
     alias Mix.Brando.Igniter.SourceUpgrade.PageVars
@@ -1756,15 +1757,22 @@ if Code.ensure_loaded?(Igniter) do
     def carry_blueprint_translations(igniter) do
       {igniter, blueprints} = find_blueprints(igniter)
 
+      # Each Blueprint domain, and the catalog directories of the Gettext
+      # backends that translate it: a copy elsewhere is read by nothing.
       domains =
-        MapSet.new(blueprints, fn module ->
+        blueprints
+        |> Enum.flat_map(fn module ->
           {:ok, {_igniter, _source, zipper}} = ProjectModule.find_module(igniter, module)
 
           case blueprint_naming(zipper) do
-            %{domain: domain, schema: schema} -> String.downcase("#{domain}_#{schema}")
-            _naming -> nil
+            %{domain: domain, schema: schema} ->
+              [{String.downcase("#{domain}_#{schema}"), BlueprintCatalogs.priv(igniter, zipper)}]
+
+            _naming ->
+              []
           end
         end)
+        |> Enum.group_by(&elem(&1, 0), &elem(&1, 1))
 
       igniter = Igniter.include_glob(igniter, "priv/gettext/**/*.po")
 
@@ -1782,7 +1790,10 @@ if Code.ensure_loaded?(Igniter) do
               []
           end
         end)
-        |> Enum.filter(fn {target, _context, _path} -> Path.basename(target, ".po") in domains end)
+        |> Enum.filter(fn {target, _context, _path} ->
+          privs = Map.get(domains, Path.basename(target, ".po"), [])
+          Enum.any?(privs, &BlueprintCatalogs.in_priv?(target, &1))
+        end)
         |> Enum.group_by(&elem(&1, 0), fn {_target, context, path} -> {@context_order[context], path} end)
         |> Enum.sort()
         |> Enum.reduce({igniter, []}, fn {target, sources}, {igniter, conflicts} ->

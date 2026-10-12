@@ -2253,6 +2253,41 @@ defmodule Mix.Tasks.Brando.Migrate55Test do
       assert_unchanged(rerun, ["#{@backend_no}/projects_project.po", "#{@frontend_no}/projects_project.po"])
     end
 
+    test "copies only into the catalogs of the Gettext backend the Blueprint translates through" do
+      # koi's two backends, as migrate54 leaves them
+      backends = """
+      defmodule LegacyAppWeb.Gettext do
+        use Gettext.Backend, otp_app: :legacy_app, priv: "priv/gettext/frontend"
+      end
+
+      defmodule LegacyAppAdmin.Gettext do
+        use Gettext.Backend, otp_app: :legacy_app, priv: "priv/gettext/backend"
+      end
+      """
+
+      blueprint =
+        String.replace(
+          @blueprint_054,
+          "attribute :title, :string",
+          ~s|attribute :title, :string\n\n  forms do\n    form do\n      tab t("Content") do\n      end\n    end\n  end|
+        )
+
+      igniter =
+        migrate(blueprint, %{
+          "lib/legacy_app_web/gettext.ex" => backends,
+          "#{@backend_no}/projects_project_naming.po" => catalog("no", [{"project", "prosjekt"}]),
+          "#{@frontend_no}/projects_project_naming.po" => catalog("no", [{"project", "prosjekt"}]),
+          "#{@frontend_no}/default.po" => catalog("no", [{"Content", "Innhold"}]),
+          "#{@backend_no}/default.po" => catalog("no", [{"Content", "Innhold"}])
+        })
+
+      assert_creates(igniter, "#{@backend_no}/projects_project.po", fn contents ->
+        assert translations(contents) == %{"project" => "prosjekt", "Content" => "Innhold"}
+      end)
+
+      refute_creates(igniter, "#{@frontend_no}/projects_project.po")
+    end
+
     test "the copied translations survive the merge of the extracted template" do
       igniter =
         migrate(@blueprint_054, %{
