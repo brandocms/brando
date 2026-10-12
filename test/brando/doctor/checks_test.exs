@@ -656,6 +656,74 @@ defmodule Brando.Doctor.ChecksTest do
       assert %Result{status: :warning, summary: "not served by Brando"} = Checks.Robots.evaluate(nil, false)
       assert %Result{status: :warning} = Checks.Robots.evaluate(BrandoWeb.SEOController, true)
     end
+
+    @endpoint_source """
+    defmodule MyAppWeb.Endpoint do
+      use Phoenix.Endpoint, otp_app: :my_app
+
+      plug Brando.Plug.Media, at: "/media"
+
+      plug Plug.Static,
+        at: "/",
+        from: :my_app,
+        gzip: Brando.env() == :prod,
+        ONLY
+
+      plug MyAppWeb.Router
+    end
+    """
+
+    defp static(only), do: Checks.Robots.static_serving(String.replace(@endpoint_source, "ONLY", only), "endpoint.ex")
+
+    test "a static robots.txt the endpoint's Plug.Static never serves is no warning" do
+      # The pre-1.7 layout Brando's installer writes: a literal `only:`.
+      static = static("only: ~w(assets js fonts images ico favicon.ico)")
+      assert {:not_served, _layout} = static
+
+      result = Checks.Robots.evaluate(BrandoWeb.SEOController, static)
+      assert %Result{status: :ok, summary: "served from SEO settings"} = result
+      assert result.items == ["priv/static/robots.txt is not served (not in Plug.Static's only: in endpoint.ex); delete it"]
+    end
+
+    test "the fix names the setting the endpoint has" do
+      literal = Checks.Robots.evaluate(BrandoWeb.SEOController, static(~s|only: ~w(assets robots.txt)|))
+      assert literal.status == :warning
+      assert literal.summary == "a static robots.txt stands in front of the SEO text"
+      assert literal.fix == "delete priv/static/robots.txt and remove robots.txt from Plug.Static's only: in endpoint.ex"
+
+      everything = Checks.Robots.evaluate(BrandoWeb.SEOController, static("cache_control_for_etags: false"))
+
+      assert everything.fix ==
+               "delete priv/static/robots.txt: Plug.Static in endpoint.ex has no only:, so it serves every file in priv/static"
+
+      matching = Checks.Robots.evaluate(BrandoWeb.SEOController, static(~s|only_matching: ~w(robots)|))
+      assert matching.fix =~ "remove robots from Plug.Static's only_matching: in endpoint.ex"
+    end
+
+    test "only: from static_paths/0 is called" do
+      defmodule StaticPathsWeb do
+        def static_paths, do: ~w(assets fonts images favicon.ico robots.txt)
+      end
+
+      result =
+        Checks.Robots.evaluate(BrandoWeb.SEOController, static("only: Brando.Doctor.ChecksTest.StaticPathsWeb.static_paths()"))
+
+      assert result.status == :warning
+
+      assert result.fix ==
+               "delete priv/static/robots.txt and remove robots.txt from static_paths/0 in Brando.Doctor.ChecksTest.StaticPathsWeb"
+    end
+
+    test "an endpoint it can't read keeps the warning, worded for both layouts" do
+      assert {:unknown, nil} = Checks.Robots.static_serving(nil, nil)
+      assert {:unknown, nil} = static("only: paths()")
+
+      result = Checks.Robots.evaluate(BrandoWeb.SEOController, {:unknown, nil})
+      assert result.summary == "a static robots.txt may stand in front of the SEO text"
+
+      assert result.fix ==
+               "delete priv/static/robots.txt, and remove robots.txt from the only: list of the endpoint's Plug.Static (static_paths/0 in the web module on Phoenix 1.7 and later), if it is there"
+    end
   end
 
   describe "JSONLD" do

@@ -575,6 +575,11 @@ msgstr "Skriv alt-tekst"
 msgid "a static robots.txt may stand in front of the SEO text"
 msgstr "en statisk robots.txt kan skygge for SEO-teksten"
 
+#: lib/brando/doctor/checks/robots.ex
+#, elixir-autogen, elixir-format
+msgid "a static robots.txt stands in front of the SEO text"
+msgstr "en statisk robots.txt skygger for SEO-teksten"
+
 #: lib/brando/doctor/checks/oban.ex
 #, elixir-autogen, elixir-format
 msgid "add %{queues} to the queues in config :brando, Oban (see Brando.Supervisor)"
@@ -662,8 +667,18 @@ msgstr "kunne ikke kjøres"
 
 #: lib/brando/doctor/checks/robots.ex
 #, elixir-autogen, elixir-format
-msgid "delete priv/static/robots.txt and remove it from static_paths"
-msgstr "slett priv/static/robots.txt og fjern den fra static_paths"
+msgid "delete priv/static/robots.txt and remove %{entry} from %{setting}"
+msgstr "slett priv/static/robots.txt og fjern %{entry} fra %{setting}"
+
+#: lib/brando/doctor/checks/robots.ex
+#, elixir-autogen, elixir-format
+msgid "delete priv/static/robots.txt, and remove robots.txt from the only: list of the endpoint's Plug.Static (static_paths/0 in the web module on Phoenix 1.7 and later), if it is there"
+msgstr "slett priv/static/robots.txt, og fjern robots.txt fra only:-listen til endepunktets Plug.Static (static_paths/0 i web-modulen fra Phoenix 1.7), om den står der"
+
+#: lib/brando/doctor/checks/robots.ex
+#, elixir-autogen, elixir-format
+msgid "delete priv/static/robots.txt: Plug.Static in %{file} has no only:, so it serves every file in priv/static"
+msgstr "slett priv/static/robots.txt: Plug.Static i %{file} har ingen only:, så den serverer alle filer i priv/static"
 
 #: lib/brando/doctor/checks/configuration.ex
 #, elixir-autogen, elixir-format
@@ -927,6 +942,11 @@ msgstr "sti %{path}"
 #, elixir-autogen, elixir-format
 msgid "placeholder sender address"
 msgstr "plassholder som avsenderadresse"
+
+#: lib/brando/doctor/checks/robots.ex
+#, elixir-autogen, elixir-format
+msgid "priv/static/robots.txt is not served (not in %{setting}); delete it"
+msgstr "priv/static/robots.txt blir ikke servert (ikke i %{setting}); slett den"
 
 #: lib/brando/doctor/checks/oban.ex
 #, elixir-autogen, elixir-format

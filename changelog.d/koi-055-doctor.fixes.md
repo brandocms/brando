@@ -15,3 +15,11 @@
   doctor also counts how the images that differ differ (in formats, sizes,
   missing files or dimensions), so a real config change, such as a default
   config that gained `:webp`, stands apart from files missing on this machine.
+
+- **The doctor's robots.txt check asks the endpoint before warning.** A
+  `priv/static/robots.txt` only counts when the endpoint's `Plug.Static`
+  serves it: by its `only:` list (a literal, as Brando's installer and
+  pre-1.7 Phoenix write it, or `static_paths/0`), its `only_matching:`, or
+  for want of either. A file it never serves is mentioned under `--verbose`
+  and no longer warns, and the fix names the setting the site has instead of
+  `static_paths`, which sites without it went looking for.

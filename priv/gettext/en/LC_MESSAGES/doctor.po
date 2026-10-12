@@ -575,6 +575,11 @@ msgstr ""
 msgid "a static robots.txt may stand in front of the SEO text"
 msgstr ""
 
+#: lib/brando/doctor/checks/robots.ex
+#, elixir-autogen, elixir-format
+msgid "a static robots.txt stands in front of the SEO text"
+msgstr ""
+
 #: lib/brando/doctor/checks/oban.ex
 #, elixir-autogen, elixir-format
 msgid "add %{queues} to the queues in config :brando, Oban (see Brando.Supervisor)"
@@ -662,7 +667,17 @@ msgstr ""
 
 #: lib/brando/doctor/checks/robots.ex
 #, elixir-autogen, elixir-format
-msgid "delete priv/static/robots.txt and remove it from static_paths"
+msgid "delete priv/static/robots.txt and remove %{entry} from %{setting}"
+msgstr ""
+
+#: lib/brando/doctor/checks/robots.ex
+#, elixir-autogen, elixir-format
+msgid "delete priv/static/robots.txt, and remove robots.txt from the only: list of the endpoint's Plug.Static (static_paths/0 in the web module on Phoenix 1.7 and later), if it is there"
+msgstr ""
+
+#: lib/brando/doctor/checks/robots.ex
+#, elixir-autogen, elixir-format
+msgid "delete priv/static/robots.txt: Plug.Static in %{file} has no only:, so it serves every file in priv/static"
 msgstr ""
 
 #: lib/brando/doctor/checks/configuration.ex
@@ -926,6 +941,11 @@ msgstr ""
 #: lib/brando/doctor/checks/configuration.ex
 #, elixir-autogen, elixir-format
 msgid "placeholder sender address"
+msgstr ""
+
+#: lib/brando/doctor/checks/robots.ex
+#, elixir-autogen, elixir-format
+msgid "priv/static/robots.txt is not served (not in %{setting}); delete it"
 msgstr ""
 
 #: lib/brando/doctor/checks/oban.ex

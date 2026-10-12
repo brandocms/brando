@@ -117,7 +117,7 @@ and summaries are prose.
 | Image configs | Images made with an older image config: what Utilities → Recreate changed images recreates. Images made before Brando recorded configs are split, as a dry run of `mix brando.images.adopt`, into those whose files already match and those that differ, counted by how they differ (formats, sizes, missing files, dimensions). With no image files in the media folder at all, it says so and asks for the media instead of a recreate |
 | Modules | Blocks behind their module's version, per module |
 | Sitemap | A sitemap module, and a sitemap generated within two days |
-| robots.txt | `/robots.txt` routed to Brando, and no static file in front of it |
+| robots.txt | `/robots.txt` routed to Brando, and no static file in front of it: a `priv/static/robots.txt` counts only when the endpoint's `Plug.Static` serves it, by its `only:` (a literal list, or `static_paths/0` on Phoenix 1.7 and later) or for want of one, and the fix names that setting |
 | JSON-LD | An identity for each language with a name and a logo, and a site URL |
 | Alt text | Images without alt text, per content language |
 | Deprecations | Calls to Brando functions marked `@deprecated` in the project's `lib/`, following aliases, imports and pipes |
