@@ -42,9 +42,31 @@ Before updating the dependency:
    database.
 4. Record which database-backed Blueprints already have generated snapshots
    under `priv/blueprints/snapshots`.
+5. Start the old site and leave it running through the upgrade (below).
 
 Do not delete a snapshot to repair history. A missing snapshot can make an
 existing table look new to the generator.
+
+### Keep the old site running
+
+The final gate compares the public pages before and after the upgrade with
+`mix brando.upgrade.snapshot` (see [Final deployment gate](#6-final-deployment-gate)),
+which fetches the pages from both sites while they run. Start the old site now,
+before changing anything:
+
+1. Restore the production dump twice: one database to upgrade, and an
+   untouched copy for the old site.
+2. Run the old site from a checkout of the pre-upgrade commit, such as a Git
+   worktree (`git worktree add ../myapp-before HEAD`), against the untouched
+   copy and on a port of its own (4000, say).
+3. Check that it compiles and serves, and leave it running.
+
+A new worktree compiles every dependency from scratch, and an old lock may not
+build on a current OTP: one 0.53 site's lock held a `mochiweb` that does not
+compile on OTP 27, where `maybe` is a reserved word, and built on OTP 26 with
+Elixir 1.17. Give the worktree the toolchain its lock builds on, in a
+`.mise.toml` of its own. Finding that out now is easier than at the end, when
+the application's own `_build` holds the upgrade.
 
 ## 2. Update source with Igniter
 
@@ -839,9 +861,9 @@ second forward migration. If the application has no meaningful tests, the
 public-page comparison below is the gate.
 
 Compare the public pages before and after the upgrade with
-`mix brando.upgrade.snapshot`. Keep the old site running from a checkout of
-the pre-upgrade commit on a copy of the database (port 4000, say). In the
-upgraded application, once its database is migrated:
+`mix brando.upgrade.snapshot`, against the old site started in
+[Keep the old site running](#keep-the-old-site-running) (on port 4000, say).
+In the upgraded application, once its database is migrated:
 
 ```shell
 mix brando.upgrade.snapshot urls --output urls.txt
