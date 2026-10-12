@@ -113,18 +113,18 @@ defmodule Mix.Brando.GettextReconcile do
   defp legacy_domains(dir, pots, blueprint_domains) do
     known = MapSet.new(Map.keys(pots) ++ blueprint_domains)
 
-    [Path.join(dir, "*.pot"), Path.join(dir, "*/LC_MESSAGES/*.po")]
-    |> Enum.flat_map(&Path.wildcard/1)
-    |> Enum.map(&Path.rootname(Path.basename(&1)))
-    |> Kernel.++(Map.keys(pots))
-    |> Enum.uniq()
-    |> Enum.flat_map(fn name ->
-      case Regex.named_captures(@legacy_domain, name) do
-        %{"domain" => domain} -> if domain in known, do: [{name, domain}], else: []
-        nil -> []
-      end
-    end)
-    |> Map.new()
+    names =
+      [Path.join(dir, "*.pot"), Path.join(dir, "*/LC_MESSAGES/*.po")]
+      |> Enum.flat_map(&Path.wildcard/1)
+      |> Enum.map(&Path.rootname(Path.basename(&1)))
+      |> Kernel.++(Map.keys(pots))
+      |> Enum.uniq()
+
+    for name <- names,
+        %{"domain" => domain} <- [Regex.named_captures(@legacy_domain, name)],
+        domain in known,
+        into: %{},
+        do: {name, domain}
   end
 
   defp legacy_file?(path, legacy), do: Map.has_key?(legacy, Path.rootname(Path.basename(path)))
@@ -243,30 +243,36 @@ defmodule Mix.Brando.GettextReconcile do
       end)
 
     Enum.reduce(merged, {merged, %{}}, fn {domain, catalog}, {merged, filled} ->
-      {messages, found} =
-        Enum.map_reduce(catalog.messages, [], fn message, found ->
-          with {msgid, ""} <- fillable(message),
-               {:ok, translation} <- Map.fetch(sources, msgid) do
-            {%{message | msgstr: [translation]}, [msgid | found]}
-          else
-            _ -> {message, found}
-          end
-        end)
-
+      {messages, found} = Enum.map_reduce(catalog.messages, [], &fill_message(&1, &2, sources))
       {Map.put(merged, domain, %{catalog | messages: messages}), Map.put(filled, domain, Enum.reverse(found))}
     end)
   end
 
+  defp fill_message(message, found, sources) do
+    with {msgid, ""} <- fillable(message),
+         {:ok, translation} <- Map.fetch(sources, msgid) do
+      {%{message | msgstr: [translation]}, [msgid | found]}
+    else
+      _ -> {message, found}
+    end
+  end
+
+  # `{msgid, translation}` for a singular message without context whose msgid
+  # and translation are each on one line.
   defp fillable(%Message.Singular{msgctxt: nil, obsolete: false, msgid: msgid, msgstr: msgstr}) do
     with [_] <- Enum.reject(msgid, &(&1 == "")),
-         segments when length(segments) <= 1 <- Enum.reject(msgstr, &(&1 == "")) do
-      {IO.iodata_to_binary(msgid), IO.iodata_to_binary(segments)}
+         {:ok, translation} <- one_line(Enum.reject(msgstr, &(&1 == ""))) do
+      {IO.iodata_to_binary(msgid), translation}
     else
       _ -> nil
     end
   end
 
   defp fillable(_message), do: nil
+
+  defp one_line([]), do: {:ok, ""}
+  defp one_line([line]), do: {:ok, IO.iodata_to_binary(line)}
+  defp one_line(_lines), do: :error
 
   # `[{key, msgid}]` for the translated messages of a catalog.
   defp translated(nil), do: []

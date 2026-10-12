@@ -1,7 +1,10 @@
 defmodule Mix.Tasks.Brando.Gettext.Reconcile do
   use Mix.Task
 
+  alias Gettext.Extractor
   alias Mix.Brando.GettextReconcile
+  alias Mix.Task
+  alias Mix.Tasks.Compile
 
   @shortdoc "Extracts, merges and tidies the application's Gettext catalogs after an upgrade"
 
@@ -69,29 +72,29 @@ defmodule Mix.Tasks.Brando.Gettext.Reconcile do
   # The POT files the extractor composes, `%{path => contents}`, without
   # writing them: `mix gettext.extract` with the writing left to the caller.
   defp extract(app, gettext_config) do
-    Gettext.Extractor.enable()
+    Extractor.enable()
     force_compile()
 
-    for {path, result} <- Gettext.Extractor.pot_files(app, gettext_config), into: %{} do
+    for {path, result} <- Extractor.pot_files(app, gettext_config), into: %{} do
       case result do
         {:changed, contents} -> {Path.relative_to_cwd(path), IO.iodata_to_binary(contents)}
         :unchanged -> {Path.relative_to_cwd(path), File.read!(path)}
       end
     end
   after
-    Gettext.Extractor.disable()
+    Extractor.disable()
   end
 
   # As `mix gettext.extract` does: the extractor sees only what compiles.
   defp force_compile do
     if not Version.match?(System.version(), ">= 1.19.3") do
-      Mix.Tasks.Compile.Elixir.clean()
-      Enum.each(Mix.Tasks.Compile.Elixir.manifests(), &File.rm/1)
+      Compile.Elixir.clean()
+      Enum.each(Compile.Elixir.manifests(), &File.rm/1)
     end
 
-    Mix.Task.reenable("compile.elixir")
-    Mix.Task.run("compile", ["--force-elixir"])
-    Mix.Task.run("compile.elixir", ["--force"])
+    Task.reenable("compile.elixir")
+    Task.run("compile", ["--force-elixir"])
+    Task.run("compile.elixir", ["--force"])
   end
 
   # The priv directories of the application's Gettext backends.
