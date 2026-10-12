@@ -7,6 +7,7 @@ if Code.ensure_loaded?(Igniter) do
 
     alias Mix.Brando.Igniter.AdminFormViews
     alias Mix.Brando.Igniter.SourceUpgrade
+    alias Mix.Brando.Igniter.SourceUpgrade.BuiltinActions
     alias Mix.Brando.Igniter.SourceUpgrade.ListingRows
 
     @shortdoc "Migrates application source from Brando 0.53 to 0.54"
@@ -16,9 +17,10 @@ if Code.ensure_loaded?(Igniter) do
     Run this task from a clean, committed worktree after updating the Brando
     dependency. It rewrites legacy Blueprint and LivePreview syntax, turns
     legacy listing `field`/`template` columns into a `listing_row/1` row
-    component where it can convert every column, preserves legacy Meta and
-    JSON-LD path extraction semantics, creates the gettext recovery helper,
-    and moves Gettext backends to `use Gettext.Backend`.
+    component where it can convert every column, removes listing actions that
+    repeat the built-in edit, duplicate and delete actions, preserves legacy
+    Meta and JSON-LD path extraction semantics, creates the gettext recovery
+    helper, and moves Gettext backends to `use Gettext.Backend`.
 
     The task changes source files only, and every rewrite matches 0.53 syntax
     only, so rerunning it is safe. An application that already uses 0.54
@@ -44,6 +46,7 @@ if Code.ensure_loaded?(Igniter) do
       |> SourceUpgrade.warn_block_editor_options()
       |> SourceUpgrade.rewrite_blueprints(&SourceUpgrade.upgrade_054_blueprint/1)
       |> ListingRows.rewrite()
+      |> BuiltinActions.remove()
       |> SourceUpgrade.rewrite_preview_targets()
       |> SourceUpgrade.configure_repo_module()
       |> SourceUpgrade.remove_sharp_processor()
@@ -73,6 +76,9 @@ if Code.ensure_loaded?(Igniter) do
       entry's update form `<.update_link>`, with `{{ entry.x }}` and
       `{% if entry.x %}` written as HEEx. Language columns are dropped. A
       listing with any other column is left as it is and listed below.
+      Actions whose event is `edit_entry`, `duplicate_entry` or
+      `delete_entry` are removed from listings that keep `default_actions`,
+      which already offers them.
 
       Generated admin `<Name>CreateLive`/`<Name>UpdateLive` pairs become one
       `<Name>FormLive`, routed with `:create` and `:update`; edited pairs are
