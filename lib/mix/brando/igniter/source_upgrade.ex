@@ -20,6 +20,7 @@ if Code.ensure_loaded?(Igniter) do
     alias Igniter.Refactors.Rename
     alias Mix.Brando.Igniter.FloristConfig
     alias Mix.Brando.Igniter.SourceUpgrade.NavigationItems
+    alias Mix.Brando.Igniter.SourceUpgrade.PageVars
     alias Mix.Brando.Igniter.TemplateCode
     alias Rewrite.Source
     alias Sourceror.Zipper
@@ -1177,8 +1178,12 @@ if Code.ensure_loaded?(Igniter) do
     link helpers, and `item.children`, for a variable bound by a generator
     over a navigation's or menu's `items` (`Mix.Brando.Igniter.SourceUpgrade.NavigationItems`).
 
+    When a template reads `@page`'s vars, `:vars` is added to the `preload`
+    of each `Pages.get_page/1` call written with a map
+    (`Mix.Brando.Igniter.SourceUpgrade.PageVars`).
+
     It warns, with file and line, about the reads it left, and page var
-    reads, which need the page loaded with `preload: [:vars]`.
+    reads it cannot tell are loaded with `preload: [:vars]`.
     """
     def upgrade_054_templates(igniter) do
       {igniter, blueprints} = find_blueprints(igniter)
@@ -1358,12 +1363,13 @@ if Code.ensure_loaded?(Igniter) do
     defp warn_054_template_reads(igniter, html_fields, ambiguous) do
       fields = Enum.map_join(Enum.uniq(["html" | html_fields]), "|", &Regex.escape/1)
       html_read = ~r/(?<![\w.:"'\/@])@?[a-z_]\w*(?:\.[a-z_]\w*)*\.(?:#{fields})(?![\w.(])/
-      var_read = ~r/\bPages\.(get_var|has_var\?)\(/
 
       sources =
         igniter
         |> template_paths()
         |> Enum.map(&{&1, igniter.rewrite |> Rewrite.source!(&1) |> Source.get(:content)})
+
+      {igniter, page_vars} = PageVars.preload(igniter, sources)
 
       [
         {"""
@@ -1380,13 +1386,9 @@ if Code.ensure_loaded?(Igniter) do
          items; use `Brando.HTML.get_menu_item_url(item)`,
          `get_menu_item_text(item)`, `get_menu_item_target_blank(item)` and
          `item.children` in these lines:
-         """, findings(sources, &NavigationItems.read?/1)},
-        {"""
-         Page vars. They are an association: load the page with
-         `preload: [:alternate_entries, :vars]` (or `Brando.Repo.preload(page, :vars)`)
-         before `get_var/2` or `has_var?/2`, which raise otherwise:
-         """, findings(sources, fn _content -> &Regex.match?(var_read, &1) end)}
+         """, findings(sources, &NavigationItems.read?/1)}
       ]
+      |> Kernel.++(page_vars)
       |> Enum.reject(fn {_text, findings} -> findings == [] end)
       |> case do
         [] ->

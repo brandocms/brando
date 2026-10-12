@@ -100,6 +100,116 @@ defmodule Mix.Tasks.Brando.Migrate54TemplatesTest do
     end)
   end
 
+  @controller_path "lib/lett_web/controllers/page_controller.ex"
+
+  @controller """
+  defmodule LettWeb.PageController do
+    use BrandoWeb, :controller
+
+    alias Brando.Pages
+
+    def index(conn, _params) do
+      language = Map.get(conn.assigns, :language)
+
+      page_opts = %{
+        matches: %{uri: "index", language: language},
+        status: :published,
+        preload: [:alternate_entries],
+        cache: {:ttl, :infinite}
+      }
+
+      with {:ok, page} <- Pages.get_page(page_opts) do
+        conn
+        |> assign(:page, page)
+        |> render(page.template)
+      end
+    end
+
+    def show(conn, %{"path" => path}) when is_list(path) do
+      language = Map.get(conn.assigns, :language)
+
+      page_opts = %{
+        matches: %{path: path, language: language},
+        status: :published,
+        preload: [:alternate_entries],
+        cache: {:ttl, :infinite}
+      }
+
+      with {:ok, page} <- Pages.get_page(page_opts) do
+        render(conn, page.template, page: page)
+      end
+    end
+  end
+  """
+
+  @header """
+  <header
+    data-nav
+    class={render_classes(["light-header": assigns[:page] && Brando.Pages.get_var(@page, "light_header")])}>
+  </header>
+  """
+
+  test "adds :vars to the page loads when a template reads the page's vars" do
+    igniter = migrate(%{@navigation_path => @header, @controller_path => @controller})
+
+    controller = source(igniter, @controller_path)
+    assert count(controller, "preload: [:alternate_entries, :vars],") == 2
+    refute controller =~ "preload: [:alternate_entries],"
+    assert_unchanged(igniter, [@navigation_path])
+    refute Enum.any?(igniter.warnings, &(&1 =~ "Page vars"))
+
+    assert_has_notice(igniter, fn notice ->
+      notice =~ "added `:vars`" and notice =~ "#{@controller_path}:16" and notice =~ "#{@controller_path}:33"
+    end)
+
+    rerun = igniter |> apply_igniter!() |> include_test_files() |> Migrate54.igniter()
+    assert_unchanged(rerun, [@controller_path, @navigation_path])
+    refute Enum.any?(rerun.warnings, &(&1 =~ "Page vars"))
+  end
+
+  test "adds a preload to a page load written with a map and none" do
+    controller = """
+    defmodule LettWeb.PageController do
+      def index(conn, _params) do
+        {:ok, page} = Brando.Pages.get_page(%{matches: %{uri: "index"}, status: :published})
+        render(conn, :index, page: page)
+      end
+    end
+    """
+
+    igniter = migrate(%{@navigation_path => @header, @controller_path => controller})
+
+    assert source(igniter, @controller_path) =~
+             ~s|Brando.Pages.get_page(%{matches: %{uri: "index"}, status: :published, preload: [:vars]})|
+  end
+
+  test "keeps listing page var reads when a page load cannot be updated" do
+    controller = """
+    defmodule LettWeb.PageController do
+      alias Brando.Pages
+
+      def index(conn, _params), do: load(conn, %{matches: %{uri: "index"}, preload: [:alternate_entries]})
+
+      defp load(conn, opts) do
+        {:ok, page} = Pages.get_page(opts)
+        render(conn, :index, page: page)
+      end
+    end
+    """
+
+    igniter = migrate(%{@navigation_path => @header, @controller_path => controller})
+
+    assert_unchanged(igniter, [@controller_path])
+
+    assert_has_warning(igniter, fn warning ->
+      warning =~ "Page vars" and warning =~ "stays listed after you add the preload" and
+        warning =~ "#{@navigation_path}:3:" and
+        warning =~ "#{@controller_path}:7: `opts` is not assigned one map in the same function"
+    end)
+  end
+
+  defp count(content, pattern), do: content |> String.split(pattern) |> length() |> Kernel.-(1)
+
   defp migrate(files) do
     [app_name: :lett, files: files]
     |> test_project()
