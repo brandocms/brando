@@ -44,12 +44,30 @@ if Code.ensure_loaded?(Igniter) do
             uniq: true,
             do: finding
 
-      rewrites = Enum.filter(findings, &(&1.kind == :sequence_only and &1.order != nil))
-      warnings = findings -- rewrites
+      candidates = Enum.filter(findings, &(&1.kind == :sequence_only and &1.order != nil))
+
+      {rewrites, conflicts} =
+        candidates
+        |> Enum.group_by(&{&1.path, &1.span})
+        |> Enum.map(fn {_span, calls} -> merge_calls(calls) end)
+        |> Enum.split_with(&(&1.kind == :sequence_only))
+
+      warnings = (findings -- candidates) ++ conflicts
 
       igniter
       |> rewrite(rewrites)
       |> warn(warnings)
+    end
+
+    # One options map passed to several calls is rewritten once, and only
+    # when every call needs the same tiebreak.
+    defp merge_calls([finding | _] = calls) do
+      merged = Map.put(finding, :call, calls |> Enum.map(& &1.call) |> Enum.uniq() |> Enum.join(" and "))
+
+      case calls |> Enum.map(& &1.order) |> Enum.uniq() do
+        [_order] -> merged
+        orders -> Map.merge(merged, %{kind: :mixed_order, orders: orders})
+      end
     end
 
     ## Contexts and Blueprints
@@ -377,11 +395,20 @@ if Code.ensure_loaded?(Igniter) do
       """)
     end
 
+    # `spans` run from the end of the file, so earlier offsets stay valid; a
+    # span overlapping one already replaced is left alone.
     defp replace(content, spans) do
-      Enum.reduce(spans, content, fn {start, length, order}, content ->
-        binary_part(content, 0, start) <>
-          order <> binary_part(content, start + length, byte_size(content) - start - length)
-      end)
+      {content, _limit} =
+        Enum.reduce(spans, {content, byte_size(content)}, fn {start, length, order}, {content, limit} ->
+          if start + length <= limit do
+            rest = binary_part(content, start + length, byte_size(content) - start - length)
+            {binary_part(content, 0, start) <> order <> rest, start}
+          else
+            {content, limit}
+          end
+        end)
+
+      content
     end
 
     defp warn(igniter, []), do: igniter
@@ -419,6 +446,9 @@ if Code.ensure_loaded?(Igniter) do
 
     defp hint(%{kind: :sequence_only, order: nil}),
       do: " (orders by `sequence` without the Sequenced trait; add a tiebreak)"
+
+    defp hint(%{kind: :mixed_order, orders: orders}),
+      do: " (they need different tiebreaks: #{Enum.join(orders, ", ")})"
 
     defp hint(_finding), do: ""
   end

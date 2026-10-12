@@ -497,6 +497,40 @@ defmodule Mix.Brando.Igniter.SourceUpgrade.ListOrderTest do
     for warning <- igniter.warnings, do: refute(warning =~ "article_controller.ex")
   end
 
+  test "an options map passed to calls that need different tiebreaks is warned, not rewritten" do
+    category = String.replace(@category, "  trait Brando.Trait.Timestamped\n", "")
+
+    controller = """
+    defmodule LettWeb.ArticleController do
+      alias Lett.Articles
+
+      def index(conn, _params) do
+        opts = %{order: "asc sequence"}
+        {:ok, articles} = Articles.list_articles(opts)
+        {:ok, categories} = Articles.list_categories(opts)
+        shared = %{order: "asc sequence"}
+        {:ok, featured} = Articles.list_articles(shared)
+        {:ok, latest} = Articles.list_articles(shared)
+        render(conn, :index, articles: articles ++ featured ++ latest, categories: categories)
+      end
+    end
+    """
+
+    igniter = lett(%{category: category, controller: controller})
+
+    assert source(igniter, :controller) ==
+             String.replace(
+               controller,
+               ~s(shared = %{order: "asc sequence"}),
+               ~s(shared = %{order: "asc sequence, desc inserted_at"})
+             )
+
+    assert [warning] = Enum.filter(igniter.warnings, &(&1 =~ "leave the order of their rows"))
+
+    assert warning =~
+             ~s|article_controller.ex:5: opts = %{order: "asc sequence"}, passed to Articles.list_articles and Articles.list_categories (they need different tiebreaks: "asc sequence, desc inserted_at", "asc sequence, asc id")|
+  end
+
   test "is idempotent" do
     igniter = lett()
     rewritten = for key <- [:article, :menuitem, :vacancy, :controller], into: %{}, do: {key, source(igniter, key)}
