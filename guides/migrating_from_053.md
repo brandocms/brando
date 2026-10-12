@@ -175,7 +175,10 @@ Pin the toolchain with mise or asdf:
 - Elixir 1.18 or newer (Brando's `mix.exs` requires `~> 1.18`) on OTP 27 or
   newer. CI runs Brando's tests on Elixir 1.18.1 with OTP 27.2, 1.19.5 with
   OTP 28.5 and 1.20.3 with OTP 28.4.1, and Brando's own `.mise.toml` pins
-  1.20.3 and 28.4.1.
+  1.20.3 and 28.4.1. Develop on 1.19 or later: on older Elixir, Phoenix
+  1.8's code reloader unloads every consolidated protocol on every request,
+  which adds 50 to 70 ms to each request in development. Releases have no
+  code reloader.
 - Node 22. Brando's `.mise.toml` pins it, CI builds with it, and the template
   Dockerfile's `node:22` stages, which `mix brando.gen.backend --upgrade`
   writes (see [Admin assets](#admin-assets)), build with it. The admin's
@@ -210,6 +213,15 @@ minute) whenever the application's `config :brando` changes, in
 `repo_module`, `mix brando.migrate55` adds `mailer` and a sender, and
 `mix brando.doctor` asks for a real sender address, so expect a full compile
 after each. Make your own `config :brando` edits in one go.
+
+Remove `:brando`, and any other dependency, from `reloadable_apps` in the
+endpoint's configuration (usually `config/dev.exs`), keeping only the
+application's own apps. With `:brando` listed, Phoenix's code reloader checks
+Brando's whole source tree on every request, and on Elixir 1.19 and later it
+also rebuilds the application's consolidated protocols each time: 0.6 to 3
+seconds a request. After editing a local Brando checkout, run
+`mix deps.compile brando` and restart the server instead (see
+[Installation and generators](generators.md)).
 
 If the application has never been run through `mix format`, run it and commit
 the result before the source tasks, so their diff holds only their changes.

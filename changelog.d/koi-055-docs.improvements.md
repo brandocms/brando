@@ -17,3 +17,14 @@
   `:entries` relations mapped to `entry_id`, multi-selects without
   `relation:`, `sources:` options on `sequence` or `preload`, module code
   reading `data.vars` or `data.refs`, and picture refs that lost their image.
+
+- **The guides say to keep `:brando` out of `reloadable_apps`.** With it
+  listed, Phoenix's code reloader checks Brando's whole source tree on every
+  development request, and on Elixir 1.19 and later also rebuilds the
+  application's consolidated protocols each time (0.6 to 3 seconds a
+  request). `guides/generators.md` said the setting never recompiles a
+  dependency; it does, at that cost. The 0.53 upgrade guide now says to
+  remove dependencies from `reloadable_apps`, to run `mix deps.compile brando`
+  and restart after editing a local checkout, and to develop on Elixir 1.19
+  or later, where Phoenix 1.8's code reloader no longer unloads every
+  consolidated protocol on each request.
