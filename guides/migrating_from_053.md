@@ -916,7 +916,8 @@ application's root:
    to a live `images` row and drops what it cannot link. A picture ref, and
    the `template_picture` of a media ref, are linked by path and emptied
    without a row. A gallery image is linked by its `sizes`, then by its path,
-   and left out of the gallery without a row.
+   and left out of the gallery without a row. The images of a media ref's
+   `template_gallery` are dropped whether they have a row or not.
    `mix brando.check.legacy_conversion` compares ref names, so it still
    passes. The legacy Villain column is then the only copy of that image
    data, so check before anyone drops it. Run this for each table that still
@@ -935,23 +936,27 @@ application's root:
      union all
      select 'media', p #>> '{}' from legacy, jsonb_path_query(legacy.data,
        'strict $.**.refs[*].data ? (@.type == "media").data.template_picture.path', '{}', true) p
+     union all
+     select 'media gallery', p #>> '{}' from legacy, jsonb_path_query(legacy.data,
+       'strict $.**.refs[*].data ? (@.type == "media").data.template_gallery.images[*].path', '{}', true) p
    )
    select distinct kind, path from paths
    where path is not null
-     and not exists (
+     and (kind = 'media gallery' or not exists (
        select 1 from images i
        where i.deleted_at is null
          and i.path in (paths.path, regexp_replace(paths.path, '^/media/', ''))
-     );
+     ));
    ```
 
    The conversion also matched a path with the media URL's path in front, so
    with a `media_url` other than `/media`, put its path in place of `/media/`
-   in the last line. A gallery image the query lists can still have come
-   through by its `sizes`; check that gallery in the admin. Every other path
-   it lists is an image that refs had on the old site and have lost. The
-   picture-ref repair (see [Legacy snapshots](#legacy-snapshots)) restores
-   them from the legacy data.
+   on the second-last line. A `gallery` image the query lists can still have
+   come through by its `sizes`; check that gallery in the admin. A
+   `media gallery` path can have a live row, but no ref points at it any more.
+   Every other path it lists is an image that refs had on the old site and
+   have lost. The picture-ref repair (see [Legacy snapshots](#legacy-snapshots))
+   restores them from the legacy data.
 7. **Every admin form, opened once.** On one 0.53 site, two of the four
    crashes showed only in the admin: open an entry of every Blueprint there
    before the gate below. Restart the server after any CLI repair task

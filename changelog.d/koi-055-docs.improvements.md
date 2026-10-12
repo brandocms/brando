@@ -17,7 +17,8 @@
   `:entries` relations mapped to `entry_id`, multi-selects without
   `relation:`, `sources:` options on `sequence` or `preload`, module code
   reading `data.vars` or `data.refs`, and picture refs, gallery images and
-  media refs' `template_picture` that lost their image.
+  media refs' `template_picture` and `template_gallery` that lost their
+  image.
 
 - **The guides say to keep `:brando` out of `reloadable_apps`.** With it
   listed, Phoenix's code reloader checks Brando's whole source tree on every
