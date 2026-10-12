@@ -183,6 +183,129 @@ defmodule Mix.Tasks.Brando.Migrate54AdminFormViewsTest do
     end)
   end
 
+  test "merges a pair whose header is plain text, which the 0.55 form does not show" do
+    # koi's 0.53 article views: the create header was hard-coded.
+    create = """
+    defmodule LettAdmin.Articles.ArticleCreateLive do
+      use BrandoAdmin.LiveView.Form, schema: Elixir.Lett.Articles.Article
+      alias BrandoAdmin.Components.Form
+      # import LettWeb.Gettext
+
+      def render(assigns) do
+        ~H\"\"\"
+        <.live_component module={Form} id="article_form" current_user={@current_user} schema={@schema}>
+          <:header>
+            Opprett artikkel
+          </:header>
+        </.live_component>
+        \"\"\"
+      end
+    end
+    """
+
+    update = """
+    defmodule LettAdmin.Articles.ArticleUpdateLive do
+      use BrandoAdmin.LiveView.Form, schema: Elixir.Lett.Articles.Article
+      alias BrandoAdmin.Components.Form
+
+      use Gettext,
+        backend: LettWeb.Gettext
+
+      def render(assigns) do
+        ~H\"\"\"
+        <.live_component
+          module={Form}
+          id="article_form"
+          entry_id={@entry_id}
+          current_user={@current_user}
+          schema={@schema}
+        >
+          <:header>
+            {gettext("Update article")}
+          </:header>
+        </.live_component>
+        \"\"\"
+      end
+    end
+    """
+
+    router =
+      with_routes("""
+      live "/articles/articles", LettAdmin.Articles.ArticleListLive
+      live "/articles/articles/create", LettAdmin.Articles.ArticleCreateLive
+      live "/articles/articles/update/:entry_id", LettAdmin.Articles.ArticleUpdateLive
+      """)
+
+    igniter =
+      migrate(%{
+        @router_path => router,
+        "lib/lett_admin/live/articles/article_create_live.ex" => create,
+        "lib/lett_admin/live/articles/article_update_live.ex" => update
+      })
+
+    assert "lib/lett_admin/live/articles/article_create_live.ex" in igniter.rms
+    assert "lib/lett_admin/live/articles/article_update_live.ex" in igniter.rms
+    refute Enum.any?(igniter.warnings, &(&1 =~ "left for you to merge"))
+
+    router = source(igniter, @router_path)
+    assert router =~ ~s|live "/articles/articles/create", LettAdmin.Articles.ArticleFormLive, :create|
+    assert router =~ ~s|live "/articles/articles/update/:entry_id", LettAdmin.Articles.ArticleFormLive, :update|
+
+    written = igniter |> apply_igniter!() |> Map.fetch!(:assigns) |> Map.fetch!(:test_files)
+    form = written["lib/lett_admin/live/articles/article_form_live.ex"]
+    assert form =~ "defmodule LettAdmin.Articles.ArticleFormLive do"
+    assert form =~ "use BrandoAdmin.LiveView.Form, schema: Lett.Articles.Article"
+    assert form =~ "backend: LettWeb.Gettext"
+  end
+
+  test "lists a pair whose header holds markup" do
+    view = fn action ->
+      """
+      defmodule LettAdmin.Articles.Article#{action}Live do
+        use BrandoAdmin.LiveView.Form, schema: Lett.Articles.Article
+        alias BrandoAdmin.Components.Form
+
+        def render(assigns) do
+          ~H\"\"\"
+          <.live_component module={Form} id="article_form" current_user={@current_user} schema={@schema}>
+            <:header>
+              <span class="custom">Artikkel</span>
+            </:header>
+          </.live_component>
+          \"\"\"
+        end
+      end
+      """
+    end
+
+    router =
+      with_routes("""
+      live "/articles/articles/create", LettAdmin.Articles.ArticleCreateLive
+      live "/articles/articles/update/:entry_id", LettAdmin.Articles.ArticleUpdateLive
+      """)
+
+    igniter =
+      migrate(%{
+        @router_path => router,
+        "lib/lett_admin/live/articles/article_create_live.ex" => view.("Create"),
+        "lib/lett_admin/live/articles/article_update_live.ex" => view.("Update")
+      })
+
+    refute "lib/lett_admin/live/articles/article_create_live.ex" in igniter.rms
+
+    assert_has_warning(igniter, fn warning ->
+      warning =~ "left for you to merge" and
+        warning =~ "LettAdmin.Articles.Article{Create,Update}Live" and
+        warning =~ "differs from what the generator wrote"
+    end)
+  end
+
+  # `@router` with `routes` added at the end of `admin_routes`.
+  defp with_routes(routes) do
+    lines = routes |> String.split("\n", trim: true) |> Enum.map_join(&"\n    #{&1}")
+    String.replace(@router, ~r/\n  end\nend\n\z/, lines <> "\n  end\nend\n")
+  end
+
   defp blueprints do
     for {domain, schema, plural} <- [
           {"Menu", "Category", "categories"},

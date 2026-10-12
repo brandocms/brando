@@ -15,7 +15,8 @@ if Code.ensure_loaded?(Igniter) do
     # version of the generator produced: the `use`, the Form and Content
     # aliases, the Gettext import, and a `render/1` holding only the Form
     # live component with the generated attributes, under an optional
-    # gettext header. Anything else is listed for the developer. FormLives that
+    # `<:header>` of text or `gettext` calls. Anything else is listed for the
+    # developer. FormLives that
     # would share a route helper go to `AdminRouteScopes`.
 
     alias Igniter.Code.Common
@@ -44,6 +45,9 @@ if Code.ensure_loaded?(Igniter) do
     }
     @required_attributes ~w(module id current_user schema)
     @gettext_call ~S/gettext\("[^"\\]*"\)/
+    # The 0.55 form shows no `<:header>`, so its text, translated or not, was
+    # never an edit worth keeping. Markup in it was.
+    @header_slot ~r/<:header>(?:[^<{}]|\{[^{}]*\}|<%=?(?:[^%]|%(?!>))*%>)*<\/:header>/
 
     def consolidate(igniter) do
       igniter = Igniter.include_glob(igniter, "lib/**/*.ex")
@@ -206,7 +210,7 @@ if Code.ensure_loaded?(Igniter) do
     defp generated_template(template) do
       rest =
         template
-        |> String.replace(~r/<:header>\s*(?:<%=\s*#{@gettext_call}\s*%>|\{#{@gettext_call}\})\s*<\/:header>/, "")
+        |> String.replace(@header_slot, "")
         |> String.replace(
           ~r/<Content\.header(?:\s+(?:title|subtitle)=(?:\{#{@gettext_call}\}|"[^"]*"))+\s*\/>/,
           ""
