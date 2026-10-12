@@ -96,8 +96,8 @@ if Code.ensure_loaded?(Igniter) do
 
       Translations in each Blueprint's 0.53 Gettext domains
       (`<domain>_<schema>_naming`, `_forms`, `_listings`) are copied into
-      `<domain>_<schema>.po`, the domain 0.55 extracts to, so the Gettext
-      merge in the migration guide keeps them. So are the `default` domain's
+      `<domain>_<schema>.po`, the domain 0.55 extracts to, so
+      `mix brando.gettext.reconcile` keeps them. So are the `default` domain's
       translations of the Blueprint's `t/1` labels, which were extracted
       there while they were written with `gettext/1`; a translation the
       schema's catalog has is kept.

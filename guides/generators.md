@@ -461,6 +461,7 @@ Run `mix help TASK` for current options. These are separate operations:
 | `brando.gen.tenant_migration` | Tenant migration source; see the tenancy guide |
 | `brando.doctor` | Read-only checks of versions, migrations, configuration, assets and content; see [System check](doctor.md) |
 | `brando.images.adopt` | Records the config of images made before 0.55 whose files already match it, so they aren't recreated; `--dry-run` counts only. See [Media](media.md#images-made-before-fingerprints) |
+| `brando.gettext.reconcile` | Extracts, merges each Gettext backend's existing locales, fills empty translations from sibling catalogs, deletes the emptied 0.53 Blueprint domains and reports per Blueprint domain; `--dry-run` writes nothing |
 
 <!-- usage-rules:start topic="generators" -->
 

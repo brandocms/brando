@@ -179,10 +179,11 @@ if Code.ensure_loaded?(Igniter) do
            menu templates that print an image's alt text, title or credits
            without the `i18n` filter. Templates live in the database, so this
            source migration cannot see them.
-        #{first + 2}. Reconcile Gettext catalogs: `mix gettext.extract`, then
-           `mix gettext.merge priv/gettext/<backend> --locale <locale>` for
-           each backend and locale the application has. Delete the old
-           domains' catalogs the merge leaves empty.\
+        #{first + 2}. Run `mix brando.gettext.reconcile` (with `--dry-run` first). It
+           extracts, merges each Gettext backend's existing locales, fills
+           empty translations from sibling catalogs, deletes the 0.53
+           `_naming`/`_forms`/`_listings` catalogs the merge empties, and
+           lists per Blueprint domain the translations kept and dropped.\
       """
     end
   end

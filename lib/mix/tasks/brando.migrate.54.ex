@@ -131,14 +131,11 @@ if Code.ensure_loaded?(Igniter) do
           warning does not list depend on the application's frontend and
           custom code. Apply the corresponding 0.54 changelog instructions
           manually where relevant.
-        * Back up Gettext catalogs before attempting recovery. After extracting
-          the backend and frontend catalogs, run the copied helper explicitly
-          with Bash, for example:
-
-              bash scripts/sync_gettext.sh priv/gettext/backend/no/LC_MESSAGES
-
-          Review its diff; it only fills empty single-line translations from
-          sibling `.po` files and cannot decide plural or contextual translations.
+        * Back up Gettext catalogs before attempting recovery. After
+          `mix brando.migrate55`, `mix brando.gettext.reconcile` extracts and
+          merges them, and fills empty single-line translations from sibling
+          `.po` files as `scripts/sync_gettext.sh` does. Review its diff; it
+          cannot decide plural or contextual translations.
       """)
     end
   end

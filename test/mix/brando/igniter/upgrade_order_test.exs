@@ -59,7 +59,7 @@ defmodule Mix.Brando.Igniter.UpgradeOrderTest do
       "8. Run `mix brando.migrate` again for the Blueprint migrations",
       "9. After the database migration, run `mix brando.entries.resave`",
       "10. Run `mix brando.check.image_texts`",
-      "11. Reconcile Gettext catalogs"
+      "11. Run `mix brando.gettext.reconcile`"
     ]
 
     positions = Enum.map(steps, &position(notice, &1))
@@ -94,6 +94,6 @@ defmodule Mix.Brando.Igniter.UpgradeOrderTest do
     assert position(notice, "4. Run `mix brando.gen.blueprint_migration --all`") <
              position(notice, "6. Only after that review, run `mix brando.migrate`")
 
-    assert notice =~ "9. Reconcile Gettext catalogs"
+    assert notice =~ "9. Run `mix brando.gettext.reconcile`"
   end
 end
