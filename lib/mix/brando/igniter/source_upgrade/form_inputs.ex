@@ -72,26 +72,25 @@ if Code.ensure_loaded?(Igniter) do
     defp update_inputs(zipper, relations, sources) do
       zipper
       |> Zipper.topmost()
-      |> Zipper.traverse(fn zipper ->
-        case Zipper.node(zipper) do
-          {:input, meta, [name, type, options]} ->
-            line = meta[:line]
+      |> Zipper.traverse(&update_input(&1, relations, sources))
+    end
 
-            cond do
-              Map.has_key?(relations, line) ->
-                Zipper.replace(zipper, {:input, meta, [name, type, add_relation(options, relations[line])]})
+    defp update_input(zipper, relations, sources) do
+      case Zipper.node(zipper) do
+        {:input, meta, [name, type, options]} ->
+          Zipper.replace(zipper, {:input, meta, [name, type, updated_options(options, meta[:line], relations, sources)]})
 
-              Map.has_key?(sources, line) ->
-                Zipper.replace(zipper, {:input, meta, [name, type, put_sources(options, sources[line])]})
+        _node ->
+          zipper
+      end
+    end
 
-              true ->
-                zipper
-            end
-
-          _node ->
-            zipper
-        end
-      end)
+    defp updated_options(options, line, relations, sources) do
+      cond do
+        Map.has_key?(relations, line) -> add_relation(options, relations[line])
+        Map.has_key?(sources, line) -> put_sources(options, sources[line])
+        true -> options
+      end
     end
 
     ## Multi selects
@@ -104,21 +103,22 @@ if Code.ensure_loaded?(Igniter) do
         relation_key = literal(option(options, :relation_key))
 
         case relation(zipper, name) do
-          {:has_many, join_module} when relation_key not in [nil, :id] ->
-            case belongs_to_names(igniter, join_module, relation_key) do
-              [relation] -> [{:ok, {line, name, relation}}]
-              _none_or_many -> [{:unresolved, multi_select_finding(path, line, name, relation_key, join_module)}]
-            end
-
-          {:has_many, _join_module} ->
-            [{:unresolved, multi_select_finding(path, line, name, nil, nil)}]
-
-          _not_a_has_many ->
-            []
+          {:has_many, join_module} -> [multi_select_relation(igniter, path, line, name, relation_key, join_module)]
+          _not_a_has_many -> []
         end
       end)
       |> Enum.split_with(&match?({:ok, _}, &1))
       |> then(fn {resolved, unresolved} -> {Enum.map(resolved, &elem(&1, 1)), Enum.map(unresolved, &elem(&1, 1))} end)
+    end
+
+    defp multi_select_relation(_igniter, path, line, name, relation_key, _join_module) when relation_key in [nil, :id],
+      do: {:unresolved, multi_select_finding(path, line, name, nil, nil)}
+
+    defp multi_select_relation(igniter, path, line, name, relation_key, join_module) do
+      case belongs_to_names(igniter, join_module, relation_key) do
+        [relation] -> {:ok, {line, name, relation}}
+        _none_or_many -> {:unresolved, multi_select_finding(path, line, name, relation_key, join_module)}
+      end
     end
 
     defp multi_select_finding(path, line, name, relation_key, join_module) do
@@ -146,15 +146,19 @@ if Code.ensure_loaded?(Igniter) do
         with {:relation, _, [relation_name, type, options]} <- single_child_node(relation_zipper),
              ^name <- literal(relation_name),
              :has_many <- literal(type) do
-          cond do
-            option(options, :through) -> :through
-            module = option(options, :module) -> {:has_many, expand_module(relation_zipper, module)}
-            true -> {:has_many, nil}
-          end
+          has_many_target(relation_zipper, options)
         else
           _ -> nil
         end
       end)
+    end
+
+    defp has_many_target(relation_zipper, options) do
+      cond do
+        option(options, :through) -> :through
+        module = option(options, :module) -> {:has_many, expand_module(relation_zipper, module)}
+        true -> {:has_many, nil}
+      end
     end
 
     defp expand_module(relation_zipper, {:__aliases__, _, parts} = module) do
@@ -234,48 +238,52 @@ if Code.ensure_loaded?(Igniter) do
     defp entries_sources(zipper, path) do
       zipper
       |> inputs(:entries)
-      |> Enum.reduce({%{}, [], []}, fn {line, name, options}, {updates, changes, unresolved} ->
+      |> Enum.flat_map(fn {line, name, options} ->
         case Enum.find(keyword_entries(options), &(entry_key(&1) in [:for, :sources])) do
-          nil ->
-            {updates, changes, unresolved}
-
-          {key, value} ->
-            location = "#{path}:#{line}: input #{inspect(name)}, :entries"
-
-            case rewrite_sources(value) do
-              {:ok, _sources, [], []} ->
-                {updates, changes, unresolved}
-
-              {:ok, sources, dropped, unreadable} ->
-                updates = if dropped == [], do: updates, else: Map.put(updates, line, {key, sources})
-
-                changes =
-                  if dropped == [], do: changes, else: changes ++ ["#{location} dropped #{Enum.join(dropped, ", ")}"]
-
-                {updates, changes, unresolved ++ Enum.map(unreadable, &"#{location}: #{&1}")}
-
-              :error ->
-                {updates, changes, unresolved ++ ["#{location}: `#{entry_key({key, value})}:` is not a literal list"]}
-            end
+          nil -> []
+          option -> [{line, entries_source(path, line, name, option)}]
         end
       end)
+      |> Enum.reduce({%{}, [], []}, fn {line, {update, input_changes, input_unresolved}},
+                                       {updates, changes, unresolved} ->
+        updates = if update, do: Map.put(updates, line, update), else: updates
+        {updates, changes ++ input_changes, unresolved ++ input_unresolved}
+      end)
+    end
+
+    # `{update | nil, changes, unresolved}` for one input's `for:`/`sources:`.
+    defp entries_source(path, line, name, {key, value}) do
+      location = "#{path}:#{line}: input #{inspect(name)}, :entries"
+
+      case rewrite_sources(value) do
+        {:ok, _sources, [], unreadable} ->
+          {nil, [], Enum.map(unreadable, &"#{location}: #{&1}")}
+
+        {:ok, sources, dropped, unreadable} ->
+          {{key, sources}, ["#{location} dropped #{Enum.join(dropped, ", ")}"],
+           Enum.map(unreadable, &"#{location}: #{&1}")}
+
+        :error ->
+          {nil, [], ["#{location}: `#{entry_key({key, value})}:` is not a literal list"]}
+      end
     end
 
     defp rewrite_sources(value) do
       case unwrap(value) do
         sources when is_list(sources) ->
-          {sources, {dropped, unreadable}} =
-            Enum.map_reduce(sources, {[], []}, fn source, {dropped, unreadable} ->
-              case rewrite_source(source) do
-                {:ok, source, source_dropped} -> {source, {dropped ++ source_dropped, unreadable}}
-                :error -> {source, {dropped, unreadable ++ [Sourceror.to_string(source)]}}
-              end
-            end)
+          {sources, {dropped, unreadable}} = Enum.map_reduce(sources, {[], []}, &rewrite_listed_source/2)
 
           {:ok, rewrap(value, sources), dropped, unreadable}
 
         _ ->
           :error
+      end
+    end
+
+    defp rewrite_listed_source(source, {dropped, unreadable}) do
+      case rewrite_source(source) do
+        {:ok, source, source_dropped} -> {source, {dropped ++ source_dropped, unreadable}}
+        :error -> {source, {dropped, unreadable ++ [Sourceror.to_string(source)]}}
       end
     end
 

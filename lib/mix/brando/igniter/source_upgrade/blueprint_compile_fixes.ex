@@ -74,24 +74,23 @@ if Code.ensure_loaded?(Igniter) do
 
       lines = zipper |> embedded_identifiers() |> MapSet.new(&line/1)
 
-      zipper
-      |> Zipper.traverse(fn zipper ->
-        case Zipper.node(zipper) do
-          {:identifier, meta, [_template]} = node ->
-            if MapSet.member?(lines, line(node)),
-              do: Zipper.replace(zipper, {:identifier, meta, [{:__block__, [], [false]}]}),
-              else: zipper
+      Zipper.traverse(zipper, &update_node(&1, lines))
+    end
 
-          node ->
-            case pairs(node) do
-              {:ok, pairs} ->
-                if default_srcset(pairs), do: Zipper.replace(zipper, rewrite_pairs(node, pairs)), else: zipper
+    defp update_node(zipper, identifier_lines) do
+      case Zipper.node(zipper) do
+        {:identifier, meta, [_template]} = node ->
+          if MapSet.member?(identifier_lines, line(node)),
+            do: Zipper.replace(zipper, {:identifier, meta, [{:__block__, [], [false]}]}),
+            else: zipper
 
-              :error ->
-                zipper
-            end
-        end
-      end)
+        node ->
+          with {:ok, pairs} <- pairs(node), {_key, _value} <- default_srcset(pairs) do
+            Zipper.replace(zipper, rewrite_pairs(node, pairs))
+          else
+            _ -> zipper
+          end
+      end
     end
 
     ## Embedded identifiers

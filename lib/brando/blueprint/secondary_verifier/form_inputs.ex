@@ -17,10 +17,10 @@ defmodule Brando.Blueprint.SecondaryVerifier.FormInputs do
   # no associations and no `deleted_at`.
   @identifier_source_keys [:order, :status, :language, :exclude_language, :limit, :offset, :preload]
 
-  @doc false
+  @doc "The columns of `Brando.Content.Identifier`, which `sources:` options can order by."
   def identifier_columns, do: @identifier_columns
 
-  @doc false
+  @doc "The `sources:` option keys the identifier list query runs."
   def identifier_source_keys, do: @identifier_source_keys
 
   @doc "The columns an `order` names that identifiers do not have."
@@ -64,30 +64,41 @@ defmodule Brando.Blueprint.SecondaryVerifier.FormInputs do
     relation_key = Keyword.get(opts || [], :relation_key)
     relation = Keyword.get(opts || [], :relation)
     subject = "input #{inspect(name)}, :multi_select on the :has_many relation #{inspect(name)} needs"
-    belongs_to = join_belongs_to(join_schema)
 
-    cond do
-      relation_key in [nil, :id] and is_nil(relation) ->
-        {key, field} = List.first(belongs_to) || {:category_id, :category}
-
-        "#{subject} `relation_key:` and `relation:`, the join schema's foreign key to the option " <>
-          "and its belongs_to. Add them, as in `relation_key: #{inspect(key)}, relation: #{inspect(field)}`."
-
-      relation_key in [nil, :id] ->
-        key = Enum.find_value(belongs_to, fn {key, field} -> field == relation && key end) || "#{relation}_id"
-        "#{subject} `relation_key:`, the join schema's foreign key to the option. Add `relation_key: :#{key}`."
-
-      is_nil(relation) ->
-        field =
-          Enum.find_value(belongs_to, fn {key, field} -> key == relation_key && field end) ||
-            relation_key |> Atom.to_string() |> String.replace_suffix("_id", "")
-
-        "#{subject} `relation:`, the join schema's belongs_to that `relation_key: #{inspect(relation_key)}` " <>
-          "points at. Add `relation: :#{field}`."
-
-      true ->
-        nil
+    case missing_multi_select_option(relation_key, relation) do
+      nil -> nil
+      missing -> "#{subject} #{missing_multi_select_hint(missing, relation_key, relation, join_belongs_to(join_schema))}"
     end
+  end
+
+  defp missing_multi_select_option(relation_key, relation) do
+    case {relation_key in [nil, :id], is_nil(relation)} do
+      {true, true} -> :both
+      {true, false} -> :relation_key
+      {false, true} -> :relation
+      {false, false} -> nil
+    end
+  end
+
+  defp missing_multi_select_hint(:both, _relation_key, _relation, belongs_to) do
+    {key, field} = List.first(belongs_to) || {:category_id, :category}
+
+    "`relation_key:` and `relation:`, the join schema's foreign key to the option " <>
+      "and its belongs_to. Add them, as in `relation_key: #{inspect(key)}, relation: #{inspect(field)}`."
+  end
+
+  defp missing_multi_select_hint(:relation_key, _relation_key, relation, belongs_to) do
+    key = Enum.find_value(belongs_to, fn {key, field} -> field == relation && key end) || "#{relation}_id"
+    "`relation_key:`, the join schema's foreign key to the option. Add `relation_key: :#{key}`."
+  end
+
+  defp missing_multi_select_hint(:relation, relation_key, _relation, belongs_to) do
+    field =
+      Enum.find_value(belongs_to, fn {key, field} -> key == relation_key && field end) ||
+        relation_key |> Atom.to_string() |> String.replace_suffix("_id", "")
+
+    "`relation:`, the join schema's belongs_to that `relation_key: #{inspect(relation_key)}` " <>
+      "points at. Add `relation: :#{field}`."
   end
 
   # `{foreign_key, name}` of each belongs_to. A join schema still compiling

@@ -269,9 +269,7 @@ defmodule Brando.Blueprint.Forms.Verifier do
           )
 
         MapSet.member?(related_fields, input.name) ->
-          with :ok <- verify_sub_field_visibility(context, form, subform, input, related_fields, related_module) do
-            verify_sub_field_multi_select(context, [form.name, subform.name, input.name], related_module, input)
-          end
+          verify_sub_field(context, form, subform, input, related_fields, related_module)
 
         true ->
           error(
@@ -282,6 +280,12 @@ defmodule Brando.Blueprint.Forms.Verifier do
           )
       end
     end)
+  end
+
+  defp verify_sub_field(context, form, subform, input, related_fields, related_module) do
+    with :ok <- verify_sub_field_visibility(context, form, subform, input, related_fields, related_module) do
+      verify_sub_field_multi_select(context, [form.name, subform.name, input.name], related_module, input)
+    end
   end
 
   # `hidden: {field, _}` / `show_if: {field, _}` in a subform refer to the
