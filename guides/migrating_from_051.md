@@ -83,8 +83,10 @@ Configuration changes at the same time:
 - Cachex 4 renamed `ttl:` to `expire:`. Calls still passing `ttl:` silently
   lose their expiry.
 
-Current Brando needs a current Elixir and OTP (pin them with mise or asdf), and
-the admin's `engines` field rejects some Node versions, so pin Node as well.
+Current Brando needs Elixir 1.18 or newer on OTP 27 or newer (pin them with
+mise or asdf), and the admin's `engines` field rejects some Node versions, so
+pin Node 22 as well (see
+[Dependencies and toolchain](migrating_from_053.md#dependencies-and-toolchain)).
 
 ## 3. Application source
 

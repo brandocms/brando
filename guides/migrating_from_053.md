@@ -136,10 +136,18 @@ mix deps.get
 
 Starting from the `mix.lock` of a site already on 0.55 also works.
 
-Pin the toolchain with mise or asdf: a current Elixir and OTP, and Node 22 or
-24. The admin's `engines` (`^20.19 || ^22.12 || >=24`) rejects an odd release
-such as Node 23 in both yarn and pnpm installs. Use the same Node major as the
-Dockerfile's `node:` stages.
+Pin the toolchain with mise or asdf:
+
+- Elixir 1.18 or newer (Brando's `mix.exs` requires `~> 1.18`) on OTP 27 or
+  newer. CI runs Brando's tests on Elixir 1.18.1 with OTP 27.2, 1.19.5 with
+  OTP 28.5 and 1.20.3 with OTP 28.4.1, and Brando's own `.mise.toml` pins
+  1.20.3 and 28.4.1.
+- Node 22. Brando's `.mise.toml` pins it, CI builds with it, and the template
+  Dockerfile's `node:22` stages, which `mix brando.gen.backend --upgrade` writes (see
+  [Admin assets](#admin-assets)), build with it. The admin's `engines`
+  (`^20.19 || ^22.12 || >=24`) rejects an odd release such as Node 23 in both
+  yarn and pnpm installs, and nothing checks the `node` on `PATH` before an
+  install does.
 
 ### Run the source tasks
 
