@@ -130,20 +130,88 @@ defmodule Brando.Images do
   end
 
   @doc """
-  An earlier image of the same file as `image` (the same `content_hash`), not
-  deleted, or nil. Only uploads have a hash, so copies made with "Duplicate"
-  are never offered in place of an upload.
+  An earlier image of the same file as `image` (the same `content_hash`) made
+  for the same image config, not deleted, or nil. Only uploads have a hash, so
+  copies made with "Duplicate" are never offered in place of an upload. One
+  made for another config has that config's sizes, not the ones the upload's
+  field renders.
   """
-  def find_duplicate(%Image{content_hash: hash, id: id}) when is_binary(hash) do
-    from(i in Image,
-      where: i.content_hash == ^hash and i.id != ^id and is_nil(i.deleted_at),
-      order_by: [asc: i.id],
-      limit: 1
-    )
+  def find_duplicate(%Image{content_hash: hash, id: id, config_target: config_target}) when is_binary(hash) do
+    hash
+    |> same_file_query(config_target)
+    |> where([i], i.id != ^id)
     |> Brando.Repo.one()
   end
 
   def find_duplicate(_image), do: nil
+
+  defp same_file_query(hash, config_target) do
+    query =
+      from(i in Image,
+        where: i.content_hash == ^hash and is_nil(i.deleted_at),
+        order_by: [asc: i.id],
+        limit: 1
+      )
+
+    if config_target,
+      do: where(query, [i], i.config_target == ^config_target),
+      else: where(query, [i], is_nil(i.config_target))
+  end
+
+  @doc """
+  `image` made for `config_target`, the image config of the field, ref or var
+  it is picked for.
+
+  An image is processed into its own config's sizes and formats, and renders
+  by their names, so an image made for another config is not used as it is:
+  this returns an earlier copy of the same file made for `config_target` (the
+  same `content_hash`), or makes one. A new copy is the original file copied
+  into the config's upload path, as an upload to the field would put it, and
+  queued for processing; it keeps the image's texts and focal point. `image`
+  itself is never changed, so what shows it keeps its sizes.
+  """
+  @spec for_config_target(Image.t(), String.t(), user) :: {:ok, Image.t()} | {:error, term()}
+  def for_config_target(%Image{config_target: config_target} = image, config_target, _user), do: {:ok, image}
+
+  def for_config_target(%Image{} = image, config_target, user) when is_binary(config_target) do
+    existing = if is_binary(image.content_hash), do: Brando.Repo.one(same_file_query(image.content_hash, config_target))
+
+    case existing do
+      %Image{} = copy -> {:ok, copy}
+      nil -> copy_for_config_target(image, config_target, user)
+    end
+  end
+
+  defp copy_for_config_target(image, config_target, user) do
+    {:ok, cfg} = get_config_for(config_target)
+    path = Path.join(cfg.upload_path, Brando.Utils.unique_filename(Path.basename(image.path)))
+    dest = Images.Utils.media_path(path)
+
+    with :ok <- File.mkdir_p(Path.dirname(dest)),
+         :ok <- File.cp(Images.Utils.media_path(image.path), dest),
+         {:ok, copy} <-
+           create_image(
+             %{
+               path: path,
+               config_target: config_target,
+               content_hash: image.content_hash,
+               width: image.width,
+               height: image.height,
+               dominant_color: image.dominant_color,
+               title: image.title,
+               credits: image.credits,
+               alt: image.alt,
+               focal: if(image.focal, do: Map.take(image.focal, [:x, :y]), else: %{x: 50, y: 50}),
+               sizes: %{},
+               status: :unprocessed,
+               folder_id: Brando.Media.Folders.upload_folder_id(nil, cfg)
+             },
+             user
+           ),
+         {:ok, _job} <- Images.Processing.queue_processing(copy, user) do
+      {:ok, copy}
+    end
+  end
 
   @doc """
   Delete `ids` from database

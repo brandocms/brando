@@ -8185,6 +8185,11 @@ msgstr ""
 msgid "Images matching “%{query}”"
 msgstr ""
 
+#: lib/brando_admin/components/image_picker.ex
+#, elixir-autogen, elixir-format
+msgid "Images to choose from"
+msgstr ""
+
 #: lib/brando_admin/components/form/input/gallery.ex
 #, elixir-autogen, elixir-format
 msgid "Images up to %{image_size} · Videos up to %{video_size} each"
@@ -11568,6 +11573,11 @@ msgstr ""
 #: lib/brando_admin/components/image_picker.ex
 #, elixir-autogen, elixir-format
 msgid "Only images set up for this field. The rest of the library is cut to other sizes and is not offered here."
+msgstr ""
+
+#: lib/brando_admin/components/image_picker.ex
+#, elixir-autogen, elixir-format
+msgid "Only images set up for this field. Whole library offers the rest, cut to this field's sizes when you pick one."
 msgstr ""
 
 #: lib/brando_admin/components/module_files.ex
@@ -15187,6 +15197,11 @@ msgstr ""
 msgid "Set up"
 msgstr ""
 
+#: lib/brando_admin/components/image_picker.ex
+#, elixir-autogen, elixir-format
+msgid "Set up for this field"
+msgstr ""
+
 #: lib/brando_admin/live/mcp/consent_live.ex
 #: lib/brando_admin/live/user_two_factor_setup_live.ex
 #: lib/brando_admin/live/users/user_security_live.ex
@@ -15404,6 +15419,11 @@ msgstr ""
 #: lib/brando_admin/components/form/revisions_drawer.ex
 #, elixir-autogen, elixir-format
 msgid "Show older activity"
+msgstr ""
+
+#: lib/brando_admin/components/image_picker.ex
+#, elixir-autogen, elixir-format
+msgid "Show the whole library"
 msgstr ""
 
 #: lib/brando_admin/components/form/notes_drawer.ex
@@ -16668,6 +16688,11 @@ msgstr ""
 msgid "The host name could not be found"
 msgstr ""
 
+#: lib/brando_admin/components/image_picker.ex
+#, elixir-autogen, elixir-format
+msgid "The image could not be copied for this field"
+msgstr ""
+
 #: lib/brando/ai.ex
 #, elixir-autogen, elixir-format
 msgid "The image file could not be read"
@@ -17105,6 +17130,11 @@ msgstr ""
 #: lib/brando_admin/live/sites/webhooks_live.ex
 #, elixir-autogen, elixir-format
 msgid "The webhook was saved."
+msgstr ""
+
+#: lib/brando_admin/components/image_picker.ex
+#, elixir-autogen, elixir-format
+msgid "The whole library. An image set up for another field is copied and cut to this field's sizes when you pick it."
 msgstr ""
 
 #: lib/brando_admin/components/form/block/render.ex
@@ -18496,6 +18526,11 @@ msgstr ""
 msgid "Upload media or choose from your library."
 msgstr ""
 
+#: lib/brando_admin/components/image_picker.ex
+#, elixir-autogen, elixir-format
+msgid "Upload one here, or pick one from the whole library to have it cut to this field's sizes."
+msgstr ""
+
 #: lib/brando_admin/components/assets/media_field.ex
 #: lib/brando_admin/components/form/transformer.ex
 #, elixir-autogen, elixir-format
@@ -19221,6 +19256,11 @@ msgstr ""
 #: lib/brando_admin/components/form/notes_drawer.ex
 #, elixir-autogen, elixir-format
 msgid "Whole entry"
+msgstr ""
+
+#: lib/brando_admin/components/image_picker.ex
+#, elixir-autogen, elixir-format
+msgid "Whole library"
 msgstr ""
 
 #: lib/brando_admin/components/form/input/form_fields.ex

@@ -82,6 +82,14 @@ export default app => ({
     document.addEventListener('dragstart', this._dragStartHandler, true)
     document.addEventListener('dragend', this._dragEndHandler, false)
 
+    // A pick from the whole library: the server answers with the image made
+    // for the field (the picked one, or its copy cut to the field's sizes),
+    // and the field takes it through its own `select_image`.
+    this.handleEvent('b:image_picker:pick', ({ id }) => {
+      const eventTarget = this.el.dataset.eventTarget
+      if (eventTarget) this.pushEventTo(eventTarget, 'select_image', { id: String(id) })
+    })
+
     // Server pushes unified selection state
     this.handleEvent('image_picker_selection_changed', ({ selected_ids, organize_ids }) => {
       const selectedSet = new Set(selected_ids.map(String))

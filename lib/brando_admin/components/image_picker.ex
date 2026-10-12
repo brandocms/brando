@@ -31,6 +31,7 @@ defmodule BrandoAdmin.Components.ImagePicker do
     {:ok,
      socket
      |> assign(:picker_mode, :block_upload)
+     |> assign(:scope, :field)
      |> assign(:opened?, true)
      |> assign(:pending_upload_name, assigns[:upload_name])
      |> assign(:pending_request_id, assigns[:request_id])
@@ -69,6 +70,9 @@ defmodule BrandoAdmin.Components.ImagePicker do
      |> assign(:event_target, event_target)
      |> assign(:multi, multi)
      |> assign(:selected_images, selected_images)
+     |> assign(:scope, :field)
+     |> assign(:custom_folders, [])
+     |> assign(:current_folder, "")
      |> assign_config_target()
      |> assign_folder_state(nil)
      |> push_selection_state()}
@@ -132,8 +136,18 @@ defmodule BrandoAdmin.Components.ImagePicker do
   # there `assign_folder_state/2` is reached from a dozen places that do not
   # reload, so the assign is a real cache.)
   def assign_config_target(socket) do
-    assign(socket, :config_target, resolve_config_target(socket.assigns.config_target))
+    socket = assign(socket, :config_target, resolve_config_target(socket.assigns.config_target))
+    assign(socket, :library_offered?, library_offered?(socket.assigns))
   end
+
+  # The rest of the library is offered to a pick for one field, ref or var,
+  # whose image config a picked image is copied into (`for_config_target/3`),
+  # and only to an editor who may add images.
+  defp library_offered?(%{picker_mode: :select, multi: false, config_target: target, current_user: user})
+       when is_binary(target) and not is_nil(user),
+       do: Brando.Authorization.Media.authorize(user, :image) == :ok
+
+  defp library_offered?(_assigns), do: false
 
   # The image fields a picker row needs.
   @list_fields [:id, :width, :height, :formats, :status, :path, :sizes, :cdn, :config_target, :folder_id, :focal, :title]
@@ -144,10 +158,15 @@ defmodule BrandoAdmin.Components.ImagePicker do
 
   # `config_target: :all` browses the whole library from the images root, for
   # pickers that are not choosing for a field (the AI assistant's attachments).
-  defp list_images(config_target) do
+  # `scope: :library` does the same for a field's pick, which copies an image
+  # made for another config into the field's.
+  defp list_images(config_target, scope) do
     # Browsing everything still leaves out hidden folders: media the site's
     # visitors sent is not the site's to pick from.
-    filter = if config_target == :all, do: %{library: true}, else: %{config_target: config_target}
+    filter =
+      if config_target == :all or scope == :library,
+        do: %{library: true},
+        else: %{config_target: config_target}
 
     {:ok, images} =
       Brando.Images.list_images(%{
@@ -203,6 +222,57 @@ defmodule BrandoAdmin.Components.ImagePicker do
   end
 
   def handle_event("reopen", _, socket), do: {:noreply, socket}
+
+  def handle_event("set_scope", %{"scope" => scope}, socket) when scope in ["field", "library"] do
+    if socket.assigns.library_offered? do
+      {:noreply, socket |> switch_scope(String.to_existing_atom(scope), "") |> push_selection_state()}
+    else
+      {:noreply, socket}
+    end
+  end
+
+  # Root and Up at the root of the field's own images lead on into the rest
+  # of the library: to its root, or to the folder above the field's.
+  def handle_event("picker_go_root", _, %{assigns: %{scope: :field, library_offered?: true}} = socket) do
+    {:noreply, socket |> switch_scope(:library, "") |> push_selection_state()}
+  end
+
+  def handle_event("picker_go_root", params, socket), do: handle_event("go_root", params, socket)
+
+  def handle_event(
+        "picker_go_parent",
+        _,
+        %{assigns: %{scope: :field, library_offered?: true, current_folder: ""}} = socket
+      ) do
+    parent =
+      socket.assigns.upload_root
+      |> Path.dirname()
+      |> FolderBrowser.relative_folder(picker_upload_root(:all))
+
+    {:noreply, socket |> switch_scope(:library, parent) |> push_selection_state()}
+  end
+
+  def handle_event("picker_go_parent", params, socket), do: handle_event("go_parent_folder", params, socket)
+
+  # A pick from the whole library: the image, or a copy of it cut to this
+  # field's config, goes to the field through its own `select_image`
+  # (`ImagePickerGrid` sends it on).
+  def handle_event("pick_library_image", %{"id" => id}, %{assigns: %{library_offered?: true}} = socket) do
+    user = socket.assigns.current_user
+
+    with {:ok, image_id} <- parse_item_id(id),
+         :ok <- Brando.Authorization.Media.authorize(user, :image),
+         {:ok, image} <- Brando.Images.get_image(image_id),
+         {:ok, picked} <- Brando.Images.for_config_target(image, socket.assigns.config_target, user) do
+      {:noreply, push_event(socket, "b:image_picker:pick", %{id: picked.id})}
+    else
+      _ ->
+        send(self(), {:toast, gettext("The image could not be copied for this field")})
+        {:noreply, socket}
+    end
+  end
+
+  def handle_event("pick_library_image", _, socket), do: {:noreply, socket}
 
   def handle_event("search_images", %{"search" => search}, socket) do
     {:noreply,
@@ -390,6 +460,9 @@ defmodule BrandoAdmin.Components.ImagePicker do
           main_id={"image-picker-main-#{@id}"}
           enable_folder_drop={@picker_mode == :select}
           folder_drop_event="picker_move_to_folder"
+          go_root_event="picker_go_root"
+          go_parent_event="picker_go_parent"
+          leave_root={@library_offered? and @scope == :field}
         >
           <:main_header>
             <div class="image-picker-main-header">
@@ -397,12 +470,32 @@ defmodule BrandoAdmin.Components.ImagePicker do
                     field's own upload path, so "root" names somewhere different
                     for every field and tells you nothing about where you are. --%>
               <div class="image-picker-main-heading">
+                <nav
+                  :if={@library_offered?}
+                  class="pill-tabs pill-tabs--small image-picker-scope"
+                  aria-label={gettext("Images to choose from")}
+                >
+                  <button
+                    type="button"
+                    aria-pressed={to_string(@scope == :field)}
+                    phx-click="set_scope"
+                    phx-value-scope="field"
+                    phx-target={@myself}
+                  >
+                    {gettext("Set up for this field")}
+                  </button>
+                  <button
+                    type="button"
+                    aria-pressed={to_string(@scope == :library)}
+                    phx-click="set_scope"
+                    phx-value-scope="library"
+                    phx-target={@myself}
+                  >
+                    {gettext("Whole library")}
+                  </button>
+                </nav>
                 <h3>{FolderBrowser.absolute_folder(@current_folder, @upload_root)}</h3>
-                <p class="image-picker-main-hint">
-                  {gettext(
-                    "Only images set up for this field. The rest of the library is cut to other sizes and is not offered here."
-                  )}
-                </p>
+                <p class="image-picker-main-hint">{scope_hint(@scope, @library_offered?)}</p>
               </div>
               <div class="image-picker-main-actions">
                 <form
@@ -454,7 +547,20 @@ defmodule BrandoAdmin.Components.ImagePicker do
               <div class="image-picker-empty">
                 <.icon name="image" />
                 <h4>{gettext("No images in this folder")}</h4>
-                <p>{gettext("Choose another folder to find an image")}</p>
+                <%= if @library_offered? and @scope == :field do %>
+                  <p>{gettext("Upload one here, or pick one from the whole library to have it cut to this field's sizes.")}</p>
+                  <button
+                    type="button"
+                    class="folder-action"
+                    phx-click="set_scope"
+                    phx-value-scope="library"
+                    phx-target={@myself}
+                  >
+                    {gettext("Show the whole library")}
+                  </button>
+                <% else %>
+                  <p>{gettext("Choose another folder to find an image")}</p>
+                <% end %>
               </div>
             <% end %>
 
@@ -492,24 +598,35 @@ defmodule BrandoAdmin.Components.ImagePicker do
               </button>
             </div>
 
+            <%!-- The hook sits on a wrapper: LiveView gives an element with
+                  phx-viewport-bottom its own InfiniteScroll hook in place of
+                  the one in its phx-hook. --%>
             <div
               id={"image-picker-grid-#{@id}"}
-              phx-update="stream"
+              class="image-picker-grid"
               phx-hook="Brando.ImagePickerGrid"
-              phx-viewport-bottom={JS.push("load_more_images", target: @myself)}
               data-target-component={@myself}
+              data-event-target={@event_target}
               data-thumbs-id={"image-picker-organize-thumbs-#{@id}"}
             >
-              <.image_row
-                :for={{dom_id, image} <- @streams.visible_images}
-                id={dom_id}
-                image={image}
-                selected={Enum.any?(@selected_images, &same_item_id?(&1, image.id))}
-                multi={@multi}
-                event_target={@event_target}
-                picker_mode={@picker_mode}
-                myself={@myself}
-              />
+              <div
+                id={"image-picker-rows-#{@id}"}
+                class="image-picker-rows"
+                phx-update="stream"
+                phx-viewport-bottom={JS.push("load_more_images", target: @myself)}
+              >
+                <.image_row
+                  :for={{dom_id, image} <- @streams.visible_images}
+                  id={dom_id}
+                  image={image}
+                  selected={Enum.any?(@selected_images, &same_item_id?(&1, image.id))}
+                  multi={@multi}
+                  event_target={@event_target}
+                  picker_mode={@picker_mode}
+                  from_library={@scope == :library}
+                  myself={@myself}
+                />
+              </div>
             </div>
             <button
               :if={@rendered_count < @image_count}
@@ -608,16 +725,26 @@ defmodule BrandoAdmin.Components.ImagePicker do
       phx-key="Enter"
       phx-keydown={if @picker_mode == :select, do: JS.exec("phx-click")}
       phx-click={
-        if @picker_mode == :select do
+        cond do
+          @picker_mode != :select ->
+            nil
+
           # Marked at once, before the round trip through the field; the
           # selection state the picker pushes back then confirms it.
-          if @multi,
-            do: "selected" |> JS.toggle_class() |> JS.push("select_image", target: @event_target),
-            else:
-              "select_image"
-              |> JS.push(target: @event_target)
-              |> JS.push("picker_closed", target: @myself)
-              |> toggle_drawer("#image-picker")
+          @multi ->
+            "selected" |> JS.toggle_class() |> JS.push("select_image", target: @event_target)
+
+          @from_library ->
+            "pick_library_image"
+            |> JS.push(target: @myself)
+            |> JS.push("picker_closed", target: @myself)
+            |> toggle_drawer("#image-picker")
+
+          true ->
+            "select_image"
+            |> JS.push(target: @event_target)
+            |> JS.push("picker_closed", target: @myself)
+            |> toggle_drawer("#image-picker")
         end
       }
       phx-value-id={@image.id}
@@ -683,6 +810,9 @@ defmodule BrandoAdmin.Components.ImagePicker do
   defp assign_defaults(socket) do
     socket
     |> assign_new(:multi, fn -> false end)
+    |> assign_new(:current_user, fn -> nil end)
+    |> assign_new(:scope, fn -> :field end)
+    |> assign_new(:library_offered?, fn -> false end)
     |> assign_new(:config_target, fn -> nil end)
     |> assign_new(:event_target, fn -> nil end)
     |> assign_new(:selected_images, fn -> [] end)
@@ -712,8 +842,9 @@ defmodule BrandoAdmin.Components.ImagePicker do
   end
 
   defp assign_folder_state(socket, requested_folder) do
-    upload_root = picker_upload_root(socket.assigns.config_target)
-    images = list_images(socket.assigns.config_target)
+    scope = socket.assigns.scope
+    upload_root = picker_upload_root(if scope == :library, do: :all, else: socket.assigns.config_target)
+    images = list_images(socket.assigns.config_target, scope)
 
     folders =
       FolderBrowser.folders_from_entries(images, upload_root)
@@ -821,7 +952,8 @@ defmodule BrandoAdmin.Components.ImagePicker do
   # outside a form (`upload_in_form?`, set where the form renders the picker),
   # whose root carries the topic the upload is delivered on.
   defp upload_target(
-         %{assigns: %{picker_mode: :select, upload_in_form?: true, config_target: config_target}} = socket,
+         %{assigns: %{picker_mode: :select, upload_in_form?: true, scope: :field, config_target: config_target}} =
+           socket,
          root,
          folder
        )
@@ -837,6 +969,34 @@ defmodule BrandoAdmin.Components.ImagePicker do
   end
 
   defp upload_target(_socket, _root, _folder), do: nil
+
+  # The library's own folders differ from the field's, so a switch starts
+  # over in `folder`, relative to the new scope's root.
+  defp switch_scope(socket, scope, folder) do
+    socket
+    |> assign(:scope, scope)
+    |> assign(:custom_folders, [])
+    |> assign(:organize_selected, [])
+    |> assign(:last_organize_selected_id, nil)
+    |> assign(:current_folder, "")
+    |> assign_folder_state(folder)
+  end
+
+  defp scope_hint(:library, _offered?) do
+    gettext(
+      "The whole library. An image set up for another field is copied and cut to this field's sizes when you pick it."
+    )
+  end
+
+  defp scope_hint(:field, true) do
+    gettext("Only images set up for this field. Whole library offers the rest, cut to this field's sizes when you pick one.")
+  end
+
+  defp scope_hint(:field, false) do
+    gettext(
+      "Only images set up for this field. The rest of the library is cut to other sizes and is not offered here."
+    )
+  end
 
   defp picker_upload_root(:all), do: FolderBrowser.scope_for(nil)
   defp picker_upload_root(config_target), do: FolderBrowser.upload_root(config_target)

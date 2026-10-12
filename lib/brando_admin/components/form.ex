@@ -3856,7 +3856,7 @@ defmodule BrandoAdmin.Components.Form do
           />
 
           <.live_component module={FilePicker} id="file-picker" />
-          <.live_component module={ImagePicker} id="image-picker" upload_in_form? />
+          <.live_component module={ImagePicker} id="image-picker" current_user={@current_user} upload_in_form? />
           <.live_component module={VideoPicker} id="video-picker" current_user={@current_user} />
           <.live_component module={TipTapLinkDialog} id="tiptap-link-dialog" />
 

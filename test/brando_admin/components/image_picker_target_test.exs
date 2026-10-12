@@ -93,4 +93,88 @@ defmodule BrandoAdmin.Components.ImagePickerTargetTest do
       assert socket.assigns.visible_item_ids == []
     end
   end
+
+  describe "the whole library, for one field's pick" do
+    @meta_target "image:Brando.Pages.Page:meta_image"
+
+    setup do
+      user = Brando.Factory.insert(:random_user)
+
+      cover =
+        Brando.Factory.insert(:image,
+          creator_id: user.id,
+          status: :processed,
+          config_target: "default",
+          path: "images/articles/cover/harbour.jpg"
+        )
+
+      {:ok, user: user, cover: cover}
+    end
+
+    defp open_for_field(user, params \\ %{}) do
+      socket = picker()
+
+      socket = %{
+        socket
+        | assigns: Map.merge(socket.assigns, %{id: "image-picker", upload_in_form?: true, current_user: user})
+      }
+
+      {:ok, socket} =
+        ImagePicker.update(
+          Map.merge(%{config_target: @meta_target, event_target: nil, multi: false, selected_images: []}, params),
+          socket
+        )
+
+      socket
+    end
+
+    test "opens on the field's own images, and offers the rest", %{user: user} do
+      socket = open_for_field(user)
+
+      assert socket.assigns.scope == :field
+      assert socket.assigns.library_offered?
+      assert socket.assigns.upload_root == "images/meta"
+      assert socket.assigns.image_count == 0
+    end
+
+    test "is not offered to a pick of several, or without an editor", %{user: user} do
+      refute open_for_field(user, %{multi: true}).assigns.library_offered?
+      refute open_for_field(nil).assigns.library_offered?
+
+      {:noreply, socket} = ImagePicker.handle_event("set_scope", %{"scope" => "library"}, open_for_field(nil))
+      assert socket.assigns.scope == :field
+    end
+
+    test "lists the library from its root, without an upload", %{user: user, cover: cover} do
+      {:noreply, socket} = ImagePicker.handle_event("set_scope", %{"scope" => "library"}, open_for_field(user))
+
+      assert socket.assigns.scope == :library
+      assert socket.assigns.upload_root == "images"
+      assert socket.assigns.upload_target == nil
+      assert "articles" in socket.assigns.child_folders
+
+      {:noreply, socket} = ImagePicker.handle_event("go_folder", %{"folder" => "articles/cover"}, socket)
+      assert cover.id in socket.assigns.visible_item_ids
+    end
+
+    test "Root and Up at the field's root lead into the library", %{user: user} do
+      socket = open_for_field(user)
+
+      {:noreply, at_root} = ImagePicker.handle_event("picker_go_root", %{}, socket)
+      assert {at_root.assigns.scope, at_root.assigns.current_folder} == {:library, ""}
+
+      # The folder above images/meta is the library's root
+      {:noreply, up} = ImagePicker.handle_event("picker_go_parent", %{}, socket)
+      assert {up.assigns.scope, up.assigns.current_folder} == {:library, ""}
+
+      # Opening it again starts on the field's own images
+      {:ok, reopened} =
+        ImagePicker.update(
+          %{config_target: @meta_target, event_target: nil, multi: false, selected_images: []},
+          at_root
+        )
+
+      assert reopened.assigns.scope == :field
+    end
+  end
 end

@@ -12,3 +12,14 @@
   labels of the buttons on those rows, so clicking one and waiting for the
   action did nothing. They read "Go to sitemap" and "Go to image sizes", and
   the row they lead to is marked. The checks still only read.
+
+- **The image picker's organize selection, drag to folder and selection
+  marks work again.** Its list's `phx-viewport-bottom` (rows a page at a
+  time) made LiveView mount its own InfiniteScroll hook on the element in
+  place of `Brando.ImagePickerGrid`, so the picker's hook never ran. The hook
+  sits on a wrapper now.
+
+- **"Use existing" for a re-uploaded file only offers an image made for the
+  same field.** `Brando.Images.find_duplicate/1` matched the file alone, so
+  uploading a file into a meta image field could put a copy cut to the cover
+  field's sizes there, without the size the meta tags render.
