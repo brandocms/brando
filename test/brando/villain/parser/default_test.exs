@@ -107,6 +107,26 @@ defmodule Brando.Villain.ParserTest do
              "--aspect-ratio: 0.5625\""
   end
 
+  test "video/2 file takes the shape of an aspect ratio override" do
+    # The record is sized by the first block that used the file; a block of
+    # another shape keeps the record's width and its own height, so the
+    # attributes, orientation and placeholder agree with its style
+    html =
+      video(
+        %{source_url: "my_video.mp4", type: :external_file, width: 1920, height: 1080, aspect_ratio: "1:1", cover: "svg"},
+        []
+      )
+
+    assert html =~ ~s(width="1920" height="1920")
+    assert html =~ ~s(data-orientation="portrait")
+    assert html =~ "--aspect-ratio-division: 1/1"
+    assert html =~ "height%3D%271920%27"
+
+    # Not a ratio: the record's size decides
+    assert video(%{source_url: "my_video.mp4", type: :external_file, width: 1920, height: 1080, aspect_ratio: "wide"}, []) =~
+             ~s(width="1920" height="1080")
+  end
+
   test "video/2 file" do
     assert video(
              %{

@@ -171,8 +171,9 @@ defmodule Brando.Migrations.TransferRefMediaData do
     # NOTE: active and collapsed are now database columns, not in JSONB data
     # NOTE: Set loop=true and muted=true if autoplay=true (required by browsers and makes UX sense)
     # NOTE: Brando before 0.54 rendered every file video with `loop` (blocks had
-    # no such setting), so a missing `loop` becomes true. For `cover`, see
-    # legacy_cover/1. The media block's template_video below gets the same.
+    # no such setting), so a missing `loop` becomes true. For `muted`, see
+    # legacy_muted/1, and for `cover`, legacy_cover/1. The media block's
+    # template_video below gets the same.
     execute """
     UPDATE content_refs
     SET data = jsonb_build_object(
@@ -190,7 +191,7 @@ defmodule Brando.Migrations.TransferRefMediaData do
           'aspect_ratio', data->'data'->>'aspect_ratio',
           'cover_image', data->'data'->'cover_image',
           'loop', CASE WHEN data->'data'->'autoplay' = 'true'::jsonb THEN 'true'::jsonb ELSE COALESCE(data->'data'->'loop', 'true'::jsonb) END,
-          'muted', CASE WHEN data->'data'->'autoplay' = 'true'::jsonb THEN 'true'::jsonb ELSE COALESCE(data->'data'->'muted', 'false'::jsonb) END,
+          'muted', #{legacy_muted("data->'data'")},
           'playsinline', 'true'::jsonb,
           'video_class', data->'data'->>'video_class',
           'container_class', data->'data'->>'container_class'
@@ -421,7 +422,7 @@ defmodule Brando.Migrations.TransferRefMediaData do
                   'aspect_ratio', data->'data'->'template_video'->>'aspect_ratio',
                   'cover_image', data->'data'->'template_video'->'cover_image',
                   'loop', CASE WHEN data->'data'->'template_video'->'autoplay' = 'true'::jsonb THEN 'true'::jsonb ELSE COALESCE(data->'data'->'template_video'->'loop', 'true'::jsonb) END,
-                  'muted', CASE WHEN data->'data'->'template_video'->'autoplay' = 'true'::jsonb THEN 'true'::jsonb ELSE COALESCE(data->'data'->'template_video'->'muted', 'false'::jsonb) END,
+                  'muted', #{legacy_muted("data->'data'->'template_video'")},
                   'playsinline', 'true'::jsonb,
                   'video_class', data->'data'->'template_video'->>'video_class',
                   'container_class', data->'data'->'template_video'->>'container_class'
@@ -521,6 +522,27 @@ defmodule Brando.Migrations.TransferRefMediaData do
     """
   end
 
+  # Blocks had no `muted` setting. Brando before September 2022 (0.52 and
+  # earlier) rendered every file video muted, and pages saved then still show
+  # that HTML; later the renderer muted only autoplaying ones. A file video
+  # with neither a play button nor controls can only be started by the site's
+  # own script, and browsers refuse to play it with sound, so it stays muted.
+  # One the visitor starts keeps its sound, as it had since 0.53. Autoplay
+  # always mutes.
+  defp legacy_muted(data) do
+    """
+    CASE
+      WHEN #{data}->'autoplay' = 'true'::jsonb THEN 'true'::jsonb
+      WHEN #{data}->'muted' IS NOT NULL THEN #{data}->'muted'
+      WHEN #{data}->>'source' = 'file'
+        AND #{data}->'play_button' IS DISTINCT FROM 'true'::jsonb
+        AND #{data}->'controls' IS DISTINCT FROM 'true'::jsonb
+      THEN 'true'::jsonb
+      ELSE 'false'::jsonb
+    END
+    """
+  end
+
   # The source a legacy video block points at: its url, or for an embed saved
   # with only a remote id, the provider URL built from it. Creating the videos
   # and linking the refs to them must use the same expression, or an embed
@@ -540,7 +562,9 @@ defmodule Brando.Migrations.TransferRefMediaData do
 
   # Blocks sharing a file share one video, sized by the first of them. Before
   # 0.54 each block rendered its own width and height, so a block whose shape
-  # differs from the video's keeps it as its own aspect ratio.
+  # differs from the video's keeps it as its own aspect ratio. Sizes of one
+  # shape at another scale rarely multiply out exactly (840×1052 and 971×1216
+  # differ by 0.005%), so ratios within half a percent count as the same shape.
   defp keep_own_shape(type, path) do
     data = Enum.map_join(["r.data" | Enum.map(path, &"'#{&1}'")], "->", & &1)
     width = "(#{data}->>'width')"
@@ -555,7 +579,7 @@ defmodule Brando.Migrations.TransferRefMediaData do
     AND #{data}->>'aspect_ratio' IS NULL
     AND #{width} ~ '^[1-9][0-9]*$' AND #{height} ~ '^[1-9][0-9]*$'
     AND v.width > 0 AND v.height > 0
-    AND #{width}::integer * v.height <> #{height}::integer * v.width
+    AND abs(#{width}::numeric * v.height - #{height}::numeric * v.width) > 0.005 * #{height}::numeric * v.width
     """
   end
 
