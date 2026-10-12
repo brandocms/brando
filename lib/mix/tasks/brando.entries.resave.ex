@@ -21,6 +21,10 @@ defmodule Mix.Tasks.Brando.Entries.Resave do
       without a terminal to answer on, the task does nothing and exits
       non-zero.
 
+  A server that is already running keeps serving the pages it cached before
+  (pages are cached without expiry): restart it, or use Configuration → Cache
+  → Empty all caches in its admin. The task says so when it is done.
+
   """
   @spec run(any) :: no_return
   def run(args) do
@@ -66,6 +70,7 @@ defmodule Mix.Tasks.Brando.Entries.Resave do
 
       report_stale_config_targets()
       Mix.shell().info([:green, "\n==> Done.\n"])
+      Mix.Brando.running_server_note()
     else
       Mix.shell().info("Nothing was done.")
     end
@@ -87,6 +92,7 @@ defmodule Mix.Tasks.Brando.Entries.Resave do
       resave_entries(blueprint_module)
       report_stale_config_targets()
       Mix.shell().info([:green, "\n==> Done.\n"])
+      Mix.Brando.running_server_note()
     end
   end
 

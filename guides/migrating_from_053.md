@@ -736,6 +736,11 @@ All three accept `--yes`, so they can run from a script, and
 `mix brando.upgrade.database` runs them, then `mix brando.check.image_texts`,
 then rebuilds the search index.
 
+The tasks write to the database, not to a running server's cache. A server
+that was running meanwhile keeps serving the pages it cached before (pages
+are cached without expiry): restart it, or use Configuration → Cache → Empty
+all caches in its admin.
+
 `mix brando.images.adopt` records which config each image was made with, for
 the images whose files already match it, so Utilities → Recreate changed
 images only recreates the ones that differ. Try it with `--dry-run` first;
