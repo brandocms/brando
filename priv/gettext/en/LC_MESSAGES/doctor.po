@@ -310,6 +310,13 @@ msgstr[1] ""
 
 #: lib/brando/doctor/checks/image_configs.ex
 #, elixir-autogen, elixir-format
+msgid "%{target}: %{count} image whose config target no longer resolves uses the default image config"
+msgid_plural "%{target}: %{count} images whose config target no longer resolves use the default image config"
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/brando/doctor/checks/image_configs.ex
+#, elixir-autogen, elixir-format
 msgid "%{target}: %{count} image without recorded settings"
 msgid_plural "%{target}: %{count} images without recorded settings"
 msgstr[0] ""

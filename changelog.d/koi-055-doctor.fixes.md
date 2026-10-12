@@ -23,3 +23,14 @@
   for want of either. A file it never serves is mentioned under `--verbose`
   and no longer warns, and the fix names the setting the site has instead of
   `static_paths`, which sites without it went looking for.
+
+- **An image whose `config_target` field is gone no longer prints the whole
+  image and a stacktrace.** Rendering such an image (its field removed or
+  renamed in the Blueprint) logged the full `%Brando.Images.Image{}` with a
+  stacktrace for every image, in the middle of `mix brando.migrate` and
+  `mix brando.entries.resave`. It now logs one line per target and node,
+  saying what it means: `Images point at a field MyApp.Article no longer has
+  (image:MyApp.Article:gallery); they use the default image config.`
+  `mix brando.entries.resave` ends with the same line per target with a
+  count, and `mix brando.doctor --verbose` lists the targets under Image
+  configs without warning.

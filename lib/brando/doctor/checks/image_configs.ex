@@ -49,7 +49,13 @@ defmodule Brando.Doctor.Checks.ImageConfigs do
     check = if unrecorded > @file_check_limit or media != :ok, do: :records, else: :files
 
     {matching, differences} = if unrecorded == 0, do: {%{}, %{}}, else: dry_run(check)
-    Map.merge(breakdown, %{matching: matching, differences: differences, check: check, media: media})
+    Map.merge(breakdown, %{
+      matching: matching,
+      differences: differences,
+      check: check,
+      media: media,
+      stale: Processing.stale_config_targets()
+    })
   end
 
   defp dry_run(check) do
@@ -75,7 +81,9 @@ defmodule Brando.Doctor.Checks.ImageConfigs do
   `Brando.Images.Adoption.adopt_unrecorded/1` would with `dry_run: true`.
   It may have `differences`, `%{difference => image_count}` by
   `Brando.Images.Adoption.difference/1`, and `media`, what
-  `Brando.Images.Adoption.media_status/0` said.
+  `Brando.Images.Adoption.media_status/0` said, and `stale`, the targets that
+  no longer resolve (`Brando.Images.Processing.stale_config_targets/0`), which
+  are listed without a warning: those images use the default config.
 
   Images made before Brando recorded image configs (`unrecorded`) are told
   apart from configs that really changed: after an upgrade from 0.54 every
@@ -131,9 +139,23 @@ defmodule Brando.Doctor.Checks.ImageConfigs do
         &(&1 == false)
       )
 
+    stale =
+      for {label, target, count} <- rows.(:stale) do
+        Context.label_item(
+          label,
+          dngettext(
+            "doctor",
+            "%{target}: %{count} image whose config target no longer resolves uses the default image config",
+            "%{target}: %{count} images whose config target no longer resolves use the default image config",
+            count,
+            target: target
+          )
+        )
+      end
+
     case summaries do
       [] ->
-        ok(dgettext("doctor", "all images match their settings"))
+        ok(dgettext("doctor", "all images match their settings"), items: stale)
 
       summaries ->
         warning(Enum.join(summaries, "; "),
@@ -157,7 +179,7 @@ defmodule Brando.Doctor.Checks.ImageConfigs do
                     target: target
                   )
                 )
-              end)
+              end) ++ stale
         )
     end
   end

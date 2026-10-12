@@ -64,6 +64,7 @@ defmodule Mix.Tasks.Brando.Entries.Resave do
         resave_entries(blueprint)
       end
 
+      report_stale_config_targets()
       Mix.shell().info([:green, "\n==> Done.\n"])
     else
       Mix.shell().info("Nothing was done.")
@@ -84,7 +85,22 @@ defmodule Mix.Tasks.Brando.Entries.Resave do
 
     if blueprint_module.__has_identifier__() do
       resave_entries(blueprint_module)
+      report_stale_config_targets()
       Mix.shell().info([:green, "\n==> Done.\n"])
+    end
+  end
+
+  # Rendering falls back to the default image config for images whose
+  # config target no longer resolves; one line per target says how many.
+  defp report_stale_config_targets do
+    stale = Brando.Images.Processing.stale_config_targets()
+
+    if stale != %{} do
+      Mix.shell().info([:yellow, "\n==> Images with a config target that no longer resolves:\n"])
+
+      for {target, count} <- Enum.sort(stale) do
+        Mix.shell().info("    * " <> Brando.Images.ConfigResolver.stale_target_message(target, count))
+      end
     end
   end
 

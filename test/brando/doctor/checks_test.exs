@@ -537,6 +537,24 @@ defmodule Brando.Doctor.ChecksTest do
       refute result.fix =~ "Recreate"
     end
 
+    test "images whose config target no longer resolves are listed, not warned about" do
+      for n <- 1..10 do
+        Factory.insert(:image,
+          path: "images/gallery/#{n}.jpg",
+          config_target: "image:Brando.Pages.Page:gallery",
+          config_fingerprint: nil
+        )
+      end
+
+      result = Checks.ImageConfigs.run(context())
+
+      assert %Result{status: :ok, summary: "all images match their settings"} = result
+
+      assert result.items == [
+               "image:Brando.Pages.Page:gallery: 10 images whose config target no longer resolves use the default image config"
+             ]
+    end
+
     test "none left to record" do
       assert %Result{status: :ok, summary: "all images match their settings"} = Checks.ImageConfigs.run(context())
     end

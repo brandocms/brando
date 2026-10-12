@@ -35,6 +35,17 @@ defmodule Mix.Tasks.Brando.Entries.ResaveTest do
     assert_received {:mix_shell, :info, ["\n==> Done.\n"]}
   end
 
+  test "ends with one line per image config target that no longer resolves" do
+    for n <- 1..10, do: Brando.Factory.insert(:image, path: "images/gallery/#{n}.jpg", config_target: "image:Brando.Pages.Page:gallery")
+
+    Resave.run(["--yes", "Brando.Pages.Fragment"])
+
+    assert_received {:mix_shell, :info,
+                     [
+                       "    * 10 images point at a field Brando.Pages.Page no longer has (image:Brando.Pages.Page:gallery); they use the default image config."
+                     ]}
+  end
+
   test "prints no colour codes when stdout is not a terminal" do
     ansi = Application.get_env(:elixir, :ansi_enabled)
     Application.put_env(:elixir, :ansi_enabled, false)

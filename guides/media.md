@@ -69,6 +69,14 @@ such as `"crp"`, an unreadable geometry, or a `srcset` naming a size that isn't
 in `sizes` fails the build with the field and the size it is about. Configs
 from a function or `config_target` are checked when they are first read.
 
+An image keeps the `config_target` of the field it was uploaded for. When
+that field is removed or renamed, the image renders with the default image
+config, and the log says so once per target: `Images point at a field
+MyApp.Article no longer has (image:MyApp.Article:gallery); they use the
+default image config.` `mix brando.entries.resave` ends with the same line
+per target with a count, and `mix brando.doctor --verbose` lists them under
+Image configs.
+
 `"700"` makes an image 700 pixels wide and `"x400"` 400 tall, the other side
 following its proportions, for portraits and landscapes alike; `"700x400"`
 fits it inside the box. No size is made larger than the original: from an
