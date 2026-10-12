@@ -108,6 +108,7 @@ locals_without_parens = [
   cannot: 2,
   cannot: 3,
   rules: 2,
+  types: 1,
   merge: 1,
   many: 2,
   list: 2,
@@ -120,6 +121,7 @@ locals_without_parens = [
   schema_module: 1,
   # blueprints
   application: 1,
+  authorization: 1,
   domain: 1,
   factory: 1,
   import_forms: 1,
