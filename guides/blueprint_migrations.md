@@ -25,6 +25,11 @@ Commit the Blueprint, migration, and snapshot together. Never edit a snapshot by
 or migration files. If no storage-relevant configuration changed, the task reports that no migration is needed and
 does not create another version.
 
+When a snapshot was recorded without a migration (`--rebaseline`, a
+`--reconcile` baseline, or an older Brando), later snapshot and migration
+numbers part (`004.snapshot` with `…_003.exs`); the plan says so, and no
+migration is missing.
+
 After an upgrade that changes every Blueprint with a trait, or after editing
 several Blueprints, plan them all in one run:
 
