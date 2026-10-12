@@ -3,7 +3,8 @@
   `use Phoenix.HTML is no longer supported in v4.0`, from
   `<App>Web.ErrorHelpers` or `view_helpers/0` in `<App>Web`. When nothing in
   `lib/` or `test/` uses `use <App>Web, :view`, `<App>Web.view` or
-  `ErrorHelpers` outside them, the task deletes `ErrorHelpers`, `view/0` and
+  `ErrorHelpers` outside them (or aliases `<App>Web`, which could hide such
+  a use), the task deletes `ErrorHelpers`, `view/0` and
   `view_helpers/0` (and the `use …, :view` example in the moduledoc).
   Otherwise it replaces their `use Phoenix.HTML` with `import Phoenix.HTML`,
   `import Phoenix.HTML.Form` and `use PhoenixHTMLHelpers`, and warns, with

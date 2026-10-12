@@ -326,6 +326,34 @@ defmodule Mix.Tasks.Brando.Migrate54ViewHelpersTest do
     assert_has_warning(igniter, &(&1 =~ "unquote(view())"))
   end
 
+  test "keeps the view when a use of it spans lines or goes through an alias" do
+    split = """
+    defmodule LettWeb.ErrorView do
+      use LettWeb,
+          :view
+    end
+    """
+
+    igniter = migrate(%{"lib/lett_web/views/error_view.ex" => split})
+
+    refute @helpers_path in igniter.rms
+    assert source(igniter, @web_path) =~ "def view do"
+    assert_has_warning(igniter, &(&1 =~ "lib/lett_web/views/error_view.ex:2: use LettWeb,"))
+
+    aliased = """
+    defmodule LettWeb.PageView do
+      alias LettWeb, as: Web
+      use Web, :view
+    end
+    """
+
+    igniter = migrate(%{"lib/lett_web/views/page_view.ex" => aliased})
+
+    refute @helpers_path in igniter.rms
+    assert source(igniter, @web_path) =~ "def view do"
+    assert_has_warning(igniter, &(&1 =~ "lib/lett_web/views/page_view.ex:2: alias LettWeb, as: Web"))
+  end
+
   test "keeps a helpers file that defines other modules too" do
     helpers = @helpers <> "\ndefmodule LettWeb.InputHelpers do\nend\n"
     igniter = migrate(%{@helpers_path => helpers})

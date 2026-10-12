@@ -95,18 +95,31 @@ if Code.ensure_loaded?(Igniter) do
         else: []
     end
 
-    # Lines outside `view/0`, `view_helpers/0` and the ErrorHelpers module
-    # that use the view or the helpers, templates included.
+    # Uses of the view or the helpers outside `view/0`, `view_helpers/0` and
+    # the ErrorHelpers module, templates included, as `path:line: text` for
+    # the line each starts on. A use may span lines (`use MyAppWeb,\n :view`),
+    # and any alias of the web module counts, since `use Web, :view` through
+    # it cannot be told apart.
     defp references(igniter, web, web_path, helpers_path) do
       name = Regex.escape(inspect(web))
-      pattern = ~r/use\s+#{name}\s*,\s*:view\b|\b#{name}\.view\b|\bErrorHelpers\b|\bview_helpers\b/
+
+      pattern =
+        ~r/\b#{name}\s*,\s*:view\b|\b#{name}\.view\b|\bErrorHelpers\b|\bview_helpers\b|\balias\s+#{name}\s*(?:,|$)/m
 
       for {path, content} <- IgniterSource.project_sources(igniter),
           path != helpers_path,
-          {line, number} <- path |> code_lines(content, web_path) |> Enum.with_index(1),
-          line =~ pattern or (path == web_path and line =~ ~r/\bview\(\)/),
-          do: "#{path}:#{number}: #{String.trim(line)}"
+          lines = code_lines(path, content, web_path),
+          code = Enum.join(lines, "\n"),
+          [{start, _length}] <-
+            Regex.scan(pattern, code, return: :index, capture: :first) ++ local_view(path, web_path, code),
+          number = line_number(code, start),
+          do: "#{path}:#{number}: #{lines |> Enum.at(number - 1) |> String.trim()}"
     end
+
+    defp local_view(web_path, web_path, code), do: Regex.scan(~r/\bview\(\)/, code, return: :index)
+    defp local_view(_path, _web_path, _code), do: []
+
+    defp line_number(code, offset), do: code |> binary_part(0, offset) |> String.split("\n") |> length()
 
     # `<App>Web` itself counts without the view functions and its moduledoc
     # (`use MyAppWeb, :view` there is an example). Their lines are blanked so
