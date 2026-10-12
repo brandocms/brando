@@ -2095,7 +2095,7 @@ if Code.ensure_loaded?(Igniter) do
 
     def rewrite_font_urls(igniter) do
       igniter
-      |> Igniter.include_glob("assets/**/*.{css,pcss,sass,scss}")
+      |> include_asset_glob("assets/**/*.{css,pcss,sass,scss}")
       |> Igniter.include_glob("lib/**/*.{eex,ex,exs,heex,leex}")
       |> rewrite_matching_sources(&font_source?/1, fn content ->
         Regex.replace(@font_vsn_regex, content, "\\1")
@@ -2107,7 +2107,7 @@ if Code.ensure_loaded?(Igniter) do
 
       igniter
       |> Igniter.include_glob("assets/package.json")
-      |> Igniter.include_glob("assets/**/package.json")
+      |> include_asset_glob("assets/**/package.json")
       |> rewrite_matching_sources(&assets_package_json?/1, fn content ->
         Regex.replace(@live_view_package_regex, content, fn _match, prefix, suffix ->
           prefix <> version <> suffix
@@ -2208,7 +2208,7 @@ if Code.ensure_loaded?(Igniter) do
 
     defp font_source?(path) do
       (String.starts_with?(path, "assets/") or String.starts_with?(path, "lib/")) and
-        Path.extname(path) in @font_source_extensions
+        Path.extname(path) in @font_source_extensions and not dependency_path?(path)
     end
 
     defp vite_config?(path) do
@@ -2216,8 +2216,25 @@ if Code.ensure_loaded?(Igniter) do
     end
 
     defp assets_package_json?(path) do
-      String.starts_with?(path, "assets/") and Path.basename(path) == "package.json"
+      String.starts_with?(path, "assets/") and Path.basename(path) == "package.json" and
+        not dependency_path?(path)
     end
+
+    # Installed packages under `assets/` are not the application's source, and
+    # a glob over them reads thousands of files, so list the files and leave
+    # `node_modules` and Yalc's store out.
+    defp include_asset_glob(igniter, glob) do
+      if igniter.assigns[:test_mode?] do
+        Igniter.include_glob(igniter, glob)
+      else
+        glob
+        |> Path.wildcard()
+        |> Enum.reject(&dependency_path?/1)
+        |> Enum.reduce(igniter, &Igniter.include_existing_file(&2, &1))
+      end
+    end
+
+    defp dependency_path?(path), do: path |> Path.split() |> Enum.any?(&(&1 in ["node_modules", ".yalc"]))
 
     def rewrite_preview_targets(igniter) do
       rewriting_module = Igniter.Libs.Phoenix.web_module_name(igniter, LivePreview)

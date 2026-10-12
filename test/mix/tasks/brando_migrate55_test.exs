@@ -2170,6 +2170,15 @@ defmodule Mix.Tasks.Brando.Migrate55Test do
     assert_unchanged(rerun, path)
   end
 
+  test "leaves installed packages under assets/ alone" do
+    installed = "assets/backend/node_modules/some-hooks/package.json"
+    igniter = migrate(@blueprint_054, %{installed => @package_json})
+
+    live_view_version = to_string(Application.spec(:phoenix_live_view, :vsn))
+    assert source(igniter, @package_json_path) =~ ~s("phoenix_live_view": "#{live_view_version}")
+    assert source(igniter, installed) == @package_json
+  end
+
   defp migrate(blueprint, overrides \\ %{}) do
     blueprint |> migrate_files(overrides) |> Migrate55.igniter()
   end
