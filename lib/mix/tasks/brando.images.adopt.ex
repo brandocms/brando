@@ -23,6 +23,8 @@ defmodule Mix.Tasks.Brando.Images.Adopt do
 
     * `--dry-run` counts without writing anything.
     * `--verbose` lists the images that differ and why.
+    * `--yes` (or `--force`) is accepted and ignored: the task asks nothing,
+      and the derived-data tasks all take it.
 
   The application starts without its web server and with Oban's queues
   stopped.
@@ -33,12 +35,12 @@ defmodule Mix.Tasks.Brando.Images.Adopt do
   alias Brando.Doctor.Context
   alias Brando.Tenant
 
-  @switches [dry_run: :boolean, verbose: :boolean]
-  @aliases [n: :dry_run, v: :verbose]
+  @switches [dry_run: :boolean, verbose: :boolean, yes: :boolean, force: :boolean]
+  @aliases [n: :dry_run, v: :verbose, y: :yes]
 
   @impl Mix.Task
   def run(args) do
-    {opts, _positional} = OptionParser.parse!(args, strict: @switches, aliases: @aliases)
+    {opts, _positional} = Mix.Brando.parse_options!("brando.images.adopt", args, @switches, aliases: @aliases)
     Mix.Brando.start_quietly()
 
     dry_run? = opts[:dry_run] == true

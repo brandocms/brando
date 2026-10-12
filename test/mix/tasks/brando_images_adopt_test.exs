@@ -61,6 +61,13 @@ defmodule Mix.Tasks.Brando.Images.AdoptTest do
     assert "  image #{differing.id} (default): its sizes differ" in output()
   end
 
+  test "--yes is accepted and an unknown option stops the task" do
+    Adopt.run(["--yes", "--dry-run"])
+    assert ["0 already match, 0 differ, 0 skipped"] = output()
+
+    assert_raise Mix.Error, ~r/mix brando.images.adopt: unknown or invalid option --all/, fn -> Adopt.run(["--all"]) end
+  end
+
   describe "tenancy" do
     @prefix "tenant_adopttask_preview"
 

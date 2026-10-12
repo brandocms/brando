@@ -24,7 +24,11 @@ defmodule Mix.Tasks.Brando.Entries.Resave do
   """
   @spec run(any) :: no_return
   def run(args) do
-    {opts, rest} = OptionParser.parse!(args, strict: [yes: :boolean, force: :boolean], aliases: [y: :yes])
+    {opts, rest} =
+      Mix.Brando.parse_options!("brando.entries.resave", args, [yes: :boolean, force: :boolean],
+        aliases: [y: :yes],
+        max_positional: 1
+      )
 
     Application.put_env(:logger, :level, :error)
 

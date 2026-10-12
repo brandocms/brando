@@ -35,6 +35,14 @@ defmodule Mix.Tasks.Brando.Entries.ResaveTest do
     assert_received {:mix_shell, :info, ["\n==> Done.\n"]}
   end
 
+  test "an unknown option or a second Blueprint stops the task" do
+    assert_raise Mix.Error, ~r/unknown or invalid option --all. It takes: --yes, --force/, fn -> Resave.run(["--all"]) end
+
+    assert_raise Mix.Error, ~r/unexpected argument Brando.Pages.Fragment Brando.Pages.Page/, fn ->
+      Resave.run(["Brando.Pages.Fragment", "Brando.Pages.Page"])
+    end
+  end
+
   describe "Mix.Brando.confirm?/2" do
     test "--yes and --force answer without asking" do
       assert Mix.Brando.confirm?("Proceed?", yes: true)
