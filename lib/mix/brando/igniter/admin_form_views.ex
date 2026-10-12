@@ -19,6 +19,7 @@ if Code.ensure_loaded?(Igniter) do
 
     alias Igniter.Code.Common
     alias Igniter.Code.Function, as: CodeFunction
+    alias Igniter.Project.IgniterConfig
     alias Igniter.Project.Module, as: ProjectModule
     alias Mix.Brando.Igniter.Files
     alias Mix.Brando.Igniter.RouteInventory
@@ -371,11 +372,22 @@ if Code.ensure_loaded?(Igniter) do
             pair.views
             |> Enum.reduce(igniter, &Igniter.rm(&2, &1.path))
             |> Files.create(pair.path, contents)
+            |> keep_in_place(pair.path)
 
           {:error, message} ->
             Igniter.add_issue(igniter, message)
         end
       end)
+    end
+
+    # Before writing, Igniter moves every new file to the path its module name
+    # maps to (`lib/app_admin/menu/…`), away from the list LiveViews under
+    # `lib/app_admin/live/menu/`. Its `dont_move_files` setting, normally read
+    # from `.igniter.exs`, exempts the path.
+    defp keep_in_place(igniter, path) do
+      config = igniter.assigns[:igniter_exs] || []
+      kept = Keyword.get(config, :dont_move_files) || IgniterConfig.get(igniter, :dont_move_files)
+      Igniter.assign(igniter, :igniter_exs, Keyword.put(config, :dont_move_files, Enum.uniq(kept ++ [path])))
     end
 
     # The view's own Gettext backend, when the template's default differs.

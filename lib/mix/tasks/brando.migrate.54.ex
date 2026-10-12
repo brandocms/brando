@@ -87,8 +87,8 @@ if Code.ensure_loaded?(Igniter) do
       `t("...")`.
 
       Generated admin `<Name>CreateLive`/`<Name>UpdateLive` pairs become one
-      `<Name>FormLive`, routed with `:create` and `:update`; edited pairs are
-      listed below.
+      `<Name>FormLive`, written beside the `UpdateLive` it replaces and routed
+      with `:create` and `:update`; edited pairs are listed below.
 
       The task also updates `Brando.Villain.list_villains/0`, legacy listing
       `filter:` keys, root Docker digest commands, and font cache suffixes. It
