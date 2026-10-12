@@ -15,6 +15,7 @@ if Code.ensure_loaded?(Igniter) do
     alias Rewrite.Source
 
     @sequence_order ~s("asc sequence, desc inserted_at")
+    @id_order ~s("asc sequence, asc id")
     @extensions ~w(.ex .heex)
     @limit 50
 
@@ -43,7 +44,7 @@ if Code.ensure_loaded?(Igniter) do
             uniq: true,
             do: finding
 
-      rewrites = Enum.filter(findings, &(&1.kind == :sequence_only and &1.sequenced?))
+      rewrites = Enum.filter(findings, &(&1.kind == :sequence_only and &1.order != nil))
       warnings = findings -- rewrites
 
       igniter
@@ -53,37 +54,58 @@ if Code.ensure_loaded?(Igniter) do
 
     ## Contexts and Blueprints
 
-    # `%{context_module => %{"list_<plural>" => sequenced?}}`
+    # `%{context_module => %{"list_<plural>" => order}}`, where `order` is
+    # the tiebreak order for a Sequenced Blueprint and nil for any other.
     defp contexts(sources) do
       blueprints =
         for {_path, content} <- sources,
-            content =~ ~r/use Brando\.Blueprint\b/,
-            module = module_name(content),
-            [_, plural] <- [Regex.run(~r/\bplural:\s*"([^"]+)"/, content)],
+            {module, chunk} <- modules(content),
+            chunk =~ ~r/use Brando\.Blueprint\b/,
+            [_, plural] <- [Regex.run(~r/\bplural:\s*"([^"]+)"/, chunk)],
             into: %{},
-            do: {module, {plural, content =~ ~r/^\s*trait[\s(]+Brando\.Trait\.Sequenced\b/m}}
+            do: {module, {plural, sequence_order(chunk)}}
 
       for {_path, content} <- sources,
-          content =~ ~r/use Brando\.Query\b/,
-          context = module_name(content),
+          {context, chunk} <- modules(content),
+          chunk =~ ~r/use Brando\.Query\b/,
           aliases = aliases(content, context),
-          functions = list_functions(content, aliases, blueprints),
+          functions = list_functions(chunk, aliases, blueprints),
           functions != %{},
           into: %{},
           do: {context, functions}
     end
 
+    # Only Timestamped Blueprints have `inserted_at`.
+    defp sequence_order(blueprint) do
+      cond do
+        not trait?(blueprint, "Sequenced") -> nil
+        trait?(blueprint, "Timestamped") -> @sequence_order
+        true -> @id_order
+      end
+    end
+
+    defp trait?(blueprint, name), do: blueprint =~ ~r/^\s*trait[\s(]+Brando\.Trait\.#{name}\b/m
+
     defp list_functions(content, aliases, blueprints) do
       for [_, schema] <- Regex.scan(~r/^\s*query[\s(]+:list,\s*([\w.]+)/m, content),
-          {plural, sequenced?} <- [Map.get(blueprints, resolve(schema, aliases))],
+          {plural, order} <- [Map.get(blueprints, resolve(schema, aliases))],
           into: %{},
-          do: {"list_#{plural}", sequenced?}
+          do: {"list_#{plural}", order}
+    end
+
+    # `[{module_name, text}]`: each `defmodule` in the file, up to the next one.
+    defp modules(content) do
+      starts = Regex.scan(~r/^\s*defmodule\s+([\w.]+)\s+do/m, content, return: :index)
+      ends = Enum.map(Enum.drop(starts, 1), fn [{start, _} | _] -> start end) ++ [byte_size(content)]
+
+      for {[{start, _}, {name_start, name_length}], stop} <- Enum.zip(starts, ends),
+          do: {binary_part(content, name_start, name_length), binary_part(content, start, stop - start)}
     end
 
     defp module_name(content) do
-      case Regex.run(~r/^\s*defmodule\s+([\w.]+)\s+do/m, content) do
-        [_, module] -> module
-        nil -> nil
+      case modules(content) do
+        [{module, _text} | _] -> module
+        [] -> nil
       end
     end
 
@@ -119,17 +141,24 @@ if Code.ensure_loaded?(Igniter) do
     end
 
     # A template has no aliases of its own: a qualifier that names no
-    # context in full is taken as the one context it is the last part of.
+    # context in full, and is no alias, is taken as the one context it is
+    # the last part of.
     defp context_for(qualifier, aliases, contexts) do
       resolved = resolve(qualifier, aliases)
+      aliased? = Map.has_key?(aliases, qualifier |> String.split(".") |> hd())
 
-      if Map.has_key?(contexts, resolved) do
-        resolved
-      else
-        case Enum.filter(Map.keys(contexts), &String.ends_with?(&1, "." <> qualifier)) do
-          [context] -> context
-          _ -> nil
-        end
+      cond do
+        Map.has_key?(contexts, resolved) ->
+          resolved
+
+        aliased? ->
+          nil
+
+        true ->
+          case Enum.filter(Map.keys(contexts), &String.ends_with?(&1, "." <> qualifier)) do
+            [context] -> context
+            _ -> nil
+          end
       end
     end
 
@@ -157,7 +186,7 @@ if Code.ensure_loaded?(Igniter) do
             do: {start, f_start + f_length, module, function}
 
       for {start, name_end, context, function} <- qualified ++ local,
-          call = %{path: path, call: call_name(context, function), sequenced?: contexts[context][function]},
+          call = %{path: path, call: call_name(context, function), order: contexts[context][function]},
           finding <- call_findings(content, start, open_paren(content, name_end), call),
           do: finding
     end
@@ -328,24 +357,30 @@ if Code.ensure_loaded?(Igniter) do
         findings
         |> Enum.group_by(& &1.path)
         |> Enum.reduce(igniter, fn {path, findings}, igniter ->
-          spans = findings |> Enum.map(& &1.span) |> Enum.uniq() |> Enum.sort(:desc)
+          spans =
+            findings
+            |> Enum.map(fn %{span: {start, length}, order: order} -> {start, length, order} end)
+            |> Enum.uniq()
+            |> Enum.sort(:desc)
+
           Igniter.update_file(igniter, path, &Source.update(&1, :content, fn content -> replace(content, spans) end))
         end)
 
       Igniter.add_notice(igniter, """
       These list queries ordered only by `sequence`, so entries with equal
       `sequence` came back in storage order, which the 0.55 data migrations
-      change. They now order by #{@sequence_order}, the admin listing's
-      order, which keeps every order they defined:
+      change. They now break ties as the admin listing does, with
+      #{@sequence_order}, or with #{@id_order} for a schema without
+      timestamps, which keeps every order they defined:
 
-      #{format(findings)}
+      #{format(findings, &" → #{&1.order}")}
       """)
     end
 
     defp replace(content, spans) do
-      Enum.reduce(spans, content, fn {start, length}, content ->
+      Enum.reduce(spans, content, fn {start, length, order}, content ->
         binary_part(content, 0, start) <>
-          @sequence_order <> binary_part(content, start + length, byte_size(content) - start - length)
+          order <> binary_part(content, start + length, byte_size(content) - start - length)
       end)
     end
 
@@ -358,31 +393,31 @@ if Code.ensure_loaded?(Igniter) do
       order on the site can change (the first tab of a menu, or entries with
       equal `sequence`):
 
-      #{format(findings)}
+      #{format(findings, &hint/1)}
 
-      Give each an explicit `order:`: `order: #{@sequence_order}` (the admin
-      listing's order) for a Sequenced schema, or a column order such as
+      Give each an explicit `order:`: the order named for a Sequenced schema
+      (#{@sequence_order} is the admin listing's), or a column order such as
       `order: "asc title"`. Adding one is a visible change from the old
       accidental order, so check the pages that show these lists.
       """)
     end
 
-    defp format(findings) do
+    defp format(findings, note) do
       shown = findings |> Enum.sort_by(&{&1.path, &1.line}) |> Enum.take(@limit)
       more = length(findings) - length(shown)
 
-      Enum.map_join(shown, "\n", &("  " <> describe(&1))) <>
+      Enum.map_join(shown, "\n", &("  " <> describe(&1) <> note.(&1))) <>
         if more > 0, do: "\n  … and #{more} more", else: ""
     end
 
     defp describe(finding) do
       passed = if finding[:variable], do: ", passed to #{finding.call}", else: ""
-      "#{finding.path}:#{finding.line}: #{finding.text}#{passed}#{hint(finding)}"
+      "#{finding.path}:#{finding.line}: #{finding.text}#{passed}"
     end
 
-    defp hint(%{kind: :missing, sequenced?: true}), do: " (Sequenced)"
+    defp hint(%{kind: :missing, order: order}) when is_binary(order), do: " (Sequenced: order: #{order})"
 
-    defp hint(%{kind: :sequence_only, sequenced?: false}),
+    defp hint(%{kind: :sequence_only, order: nil}),
       do: " (orders by `sequence` without the Sequenced trait; add a tiebreak)"
 
     defp hint(_finding), do: ""

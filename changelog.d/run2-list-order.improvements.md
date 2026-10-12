@@ -6,7 +6,8 @@
   options map, in the call or bound to a variable earlier in the function,
   orders a Sequenced Blueprint only by `sequence` (`"asc sequence"`,
   `{:asc, :sequence}`, `[{:asc, :sequence}]`) now order by
-  `"asc sequence, desc inserted_at"`, the admin listing's order. Calls with
+  `"asc sequence, desc inserted_at"`, the admin listing's order, or by
+  `"asc sequence, asc id"` when the Blueprint has no timestamps. Calls with
   no `order:` at all, in `.ex` files and `.heex` templates, are listed with
   file and line for you to choose an order, since adding one changes what
   the page shows.

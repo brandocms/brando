@@ -42,7 +42,8 @@ if Code.ensure_loaded?(Igniter) do
 
     Calls to the application's `list_<plural>/1` queries whose options order
     a Sequenced Blueprint only by `sequence` get the admin listing's
-    tiebreak, `order: "asc sequence, desc inserted_at"`. The 0.55 data
+    tiebreak, `order: "asc sequence, desc inserted_at"` (`"asc sequence,
+    asc id"` without `Brando.Trait.Timestamped`). The 0.55 data
     migrations rewrite rows, and rows with equal `sequence` came back in
     storage order. Calls with no `order:` at all are listed, since adding one
     changes what the site shows.
@@ -132,7 +133,8 @@ if Code.ensure_loaded?(Igniter) do
 
       Calls to the application's `list_<plural>/1` queries that order a
       Sequenced Blueprint only by `sequence` now order by
-      `"asc sequence, desc inserted_at"`, as the admin listing does, so
+      `"asc sequence, desc inserted_at"`, as the admin listing does (by
+      `"asc sequence, asc id"` without timestamps), so
       entries with equal `sequence` no longer come back in storage order,
       which the data migrations change.
 

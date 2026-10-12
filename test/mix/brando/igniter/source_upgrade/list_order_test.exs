@@ -76,6 +76,7 @@ defmodule Mix.Brando.Igniter.SourceUpgrade.ListOrderTest do
     alias Lett.Articles
 
     trait Brando.Trait.Sequenced
+    trait Brando.Trait.Timestamped
 
     def last_3_featured_articles(lang) do
       Lett.Articles.list_articles(%{
@@ -104,6 +105,7 @@ defmodule Mix.Brando.Igniter.SourceUpgrade.ListOrderTest do
       plural: "categories"
 
     trait Brando.Trait.Sequenced
+    trait Brando.Trait.Timestamped
   end
   """
 
@@ -117,6 +119,7 @@ defmodule Mix.Brando.Igniter.SourceUpgrade.ListOrderTest do
       plural: "categories"
 
     trait Brando.Trait.Sequenced
+    trait Brando.Trait.Timestamped
   end
   """
 
@@ -132,6 +135,7 @@ defmodule Mix.Brando.Igniter.SourceUpgrade.ListOrderTest do
     alias Lett.Menu
 
     trait Brando.Trait.Sequenced
+    trait Brando.Trait.Timestamped
 
     datasources do
       datasource :all do
@@ -165,6 +169,7 @@ defmodule Mix.Brando.Igniter.SourceUpgrade.ListOrderTest do
     alias Lett.Vacancies
 
     trait Brando.Trait.Sequenced
+    trait Brando.Trait.Timestamped
 
     datasources do
       datasource :all do
@@ -192,6 +197,7 @@ defmodule Mix.Brando.Igniter.SourceUpgrade.ListOrderTest do
       plural: "farms"
 
     trait Brando.Trait.Status
+    trait Brando.Trait.Timestamped
   end
   """
 
@@ -314,9 +320,9 @@ defmodule Mix.Brando.Igniter.SourceUpgrade.ListOrderTest do
     assert source(igniter, :controller) == controller
 
     assert [notice] = Enum.filter(igniter.notices, &(&1 =~ "ordered only by `sequence`"))
-    assert notice =~ "lib/lett/articles/article.ex:14: Lett.Articles.list_articles(%{"
-    assert notice =~ "lib/lett/menu/menuitem.ex:18: entries_opts = %{, passed to Menu.list_menuitems"
-    assert notice =~ "lib/lett/vacancies/vacancy.ex:18: Vacancies.list_vacancies(%{"
+    assert notice =~ "lib/lett/articles/article.ex:15: Lett.Articles.list_articles(%{"
+    assert notice =~ "lib/lett/menu/menuitem.ex:19: entries_opts = %{, passed to Menu.list_menuitems"
+    assert notice =~ "lib/lett/vacancies/vacancy.ex:19: Vacancies.list_vacancies(%{"
     assert notice =~ "lib/lett_web/controllers/article_controller.ex:8: list_opts = %{, passed to Articles.list_articles"
 
     assert notice =~
@@ -330,12 +336,11 @@ defmodule Mix.Brando.Igniter.SourceUpgrade.ListOrderTest do
     assert [warning] = Enum.filter(igniter.warnings, &(&1 =~ "leave the order of their rows"))
 
     assert warning =~
-             "lib/lett_web/controllers/article_controller.ex:15: cat_opts = %{filter: %{language: language}}, passed to Articles.list_categories (Sequenced)"
+             "lib/lett_web/controllers/article_controller.ex:15: cat_opts = %{filter: %{language: language}}, passed to Articles.list_categories (Sequenced: order: \"asc sequence, desc inserted_at\")"
 
     assert warning =~
-             "lib/lett_web/controllers/page_html/menu.html.heex:3: {:ok, categories} = Lett.Menu.list_categories(%{ (Sequenced)"
+             "lib/lett_web/controllers/page_html/menu.html.heex:3: {:ok, categories} = Lett.Menu.list_categories(%{ (Sequenced: order: \"asc sequence, desc inserted_at\")"
 
-    assert warning =~ ~s(`order: "asc sequence, desc inserted_at"`)
     assert warning =~ "visible change"
 
     # Explicit orders, and `get_categories`' admin-side order, are left alone.
@@ -393,6 +398,102 @@ defmodule Mix.Brando.Igniter.SourceUpgrade.ListOrderTest do
     igniter = lett(%{controller: controller})
     assert_unchanged(igniter, @paths.controller)
 
+    for warning <- igniter.warnings, do: refute(warning =~ "article_controller.ex")
+  end
+
+  test "breaks ties on id for a Sequenced Blueprint without timestamps" do
+    category = String.replace(@category, "  trait Brando.Trait.Timestamped\n", "")
+
+    controller = """
+    defmodule LettWeb.CategoryController do
+      alias Lett.Articles
+
+      def index(conn, _params) do
+        {:ok, categories} = Articles.list_categories(%{order: "asc sequence"})
+        {:ok, other} = Articles.list_categories(%{status: :published})
+        render(conn, :index, categories: categories ++ other)
+      end
+    end
+    """
+
+    igniter = lett(%{category: category, controller: controller})
+
+    assert source(igniter, :controller) ==
+             String.replace(controller, ~s(%{order: "asc sequence"}), ~s(%{order: "asc sequence, asc id"}))
+
+    assert Enum.any?(
+             igniter.notices,
+             &(&1 =~
+                 ~s|article_controller.ex:5: {:ok, categories} = Articles.list_categories(%{order: "asc sequence"}) → "asc sequence, asc id"|)
+           )
+
+    assert Enum.any?(
+             igniter.warnings,
+             &(&1 =~
+                 ~s|article_controller.ex:6: {:ok, other} = Articles.list_categories(%{status: :published}) (Sequenced: order: "asc sequence, asc id")|)
+           )
+  end
+
+  test "reads each module of a file on its own" do
+    # The Article Blueprint is not Sequenced; the item Blueprint after it is.
+    article =
+      String.replace(@article, "  trait Brando.Trait.Sequenced\n", "") <>
+        """
+
+        defmodule Lett.Articles.ArticleItem do
+          use Brando.Blueprint,
+            application: "Lett",
+            domain: "Articles",
+            schema: "ArticleItem",
+            singular: "article_item",
+            plural: "article_items"
+
+          trait Brando.Trait.Sequenced
+          trait Brando.Trait.Timestamped
+        end
+        """
+
+    articles =
+      String.replace(
+        @articles,
+        "  alias Lett.Articles.Category\n",
+        "  alias Lett.Articles.Category\n  alias Lett.Articles.ArticleItem\n"
+      )
+      |> String.replace(
+        "  query :list, Category do",
+        "  query :list, ArticleItem do\n    fn query -> from(t in query) end\n  end\n\n  query :list, Category do"
+      )
+
+    controller = """
+    defmodule LettWeb.ArticleController do
+      alias Lett.Articles
+
+      def index(conn, _params) do
+        {:ok, articles} = Articles.list_articles(%{order: "asc sequence"})
+        {:ok, items} = Articles.list_article_items(%{order: "asc sequence"})
+        render(conn, :index, articles: articles, items: items)
+      end
+    end
+    """
+
+    igniter = lett(%{article: article, articles: articles, controller: controller})
+    rewritten = source(igniter, :controller)
+
+    assert rewritten =~ ~s|list_articles(%{order: "asc sequence"})|
+    assert rewritten =~ ~s|list_article_items(%{order: "asc sequence, desc inserted_at"})|
+  end
+
+  test "an alias to another module is not taken for the context of the same name" do
+    controller = """
+    defmodule LettWeb.PageController do
+      alias LettWeb.Menu
+
+      def index(conn, _params), do: render(conn, :index, items: Menu.list_categories(%{order: "asc sequence"}))
+    end
+    """
+
+    igniter = lett(%{controller: controller})
+    assert source(igniter, :controller) == controller
     for warning <- igniter.warnings, do: refute(warning =~ "article_controller.ex")
   end
 
