@@ -738,20 +738,23 @@ dump before it:
 test: ["ecto.create --quiet", "ecto.load --skip-if-loaded", "ecto.migrate", "test"]
 ```
 
-`--skip-if-loaded` leaves a database that already has its migrations table
-alone, so if the old alias already created the test database, drop it once
-(`MIX_ENV=test mix ecto.drop`), or give the test database a new name instead.
-Phoenix's generated `config/test.exs` appends `MIX_TEST_PARTITION` to it
-(`"myapp_test#{System.get_env("MIX_TEST_PARTITION")}"`), so
-`MIX_TEST_PARTITION=_055 mix test` creates and loads `myapp_test_055`; to keep
-the new name without the variable, change it in `config/test.exs`.
-`ecto.migrate` then runs only the migrations newer than the dump.
-
-`mix brando.migrate55` warns when `test_paths` names a missing directory, and
-when `config/runtime.exs` reads the Repo `url:` from the environment in `:test`
-too. In that case `mix test` uses, and its alias migrates, whatever database
-the shell names: guard it with `if config_env() != :test do … end`.
+Check `config/runtime.exs` before running the alias. The 0.53 installer's
+sets the Repo's `url: System.get_env("BRANDO_DB_URL")` in every environment,
+and a `url:` overrides the `database:` in `config/test.exs`. Until it is
+guarded with `if config_env() != :test do … end`, `mix test` uses, and its
+alias loads and migrates, whatever database the shell names, and
+`MIX_ENV=test mix ecto.drop` drops it. `mix brando.migrate55` warns about
+such a `url:`, and when `test_paths` names a missing directory;
 `mix brando.doctor` checks the same in development.
+
+With the guard in place, `--skip-if-loaded` leaves a database that already
+has its migrations table alone, so if the old alias already created the test
+database, drop it once (`MIX_ENV=test mix ecto.drop`), or give the test
+database a new name instead. Phoenix's generated `config/test.exs` appends
+`MIX_TEST_PARTITION` to it (`"myapp_test#{System.get_env("MIX_TEST_PARTITION")}"`),
+so `MIX_TEST_PARTITION=_055 mix test` creates and loads `myapp_test_055`; to
+keep the new name without the variable, change it in `config/test.exs`.
+`ecto.migrate` then runs only the migrations newer than the dump.
 
 Before touching a shared database:
 
