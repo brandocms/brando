@@ -19,6 +19,7 @@ if Code.ensure_loaded?(Igniter) do
     alias Igniter.Project.Module, as: ProjectModule
     alias Igniter.Refactors.Rename
     alias Mix.Brando.Igniter.FloristConfig
+    alias Mix.Brando.Igniter.SourceUpgrade.NavigationItems
     alias Mix.Brando.Igniter.TemplateCode
     alias Rewrite.Source
     alias Sourceror.Zipper
@@ -1171,9 +1172,13 @@ if Code.ensure_loaded?(Igniter) do
     Villain attributes; a Blueprint an earlier run already moved is matched
     by its block relations.
 
-    It warns, with file and line, about the reads it left, navigation items
-    read as 0.53 structs (`item.url`), and page var reads, which need the
-    page loaded with `preload: [:vars]`.
+    Navigation item reads (`item.url`, `item.title`, `item.open_in_new_window`,
+    `item.items`) become `Brando.HTML.get_menu_item_url(item)` and the other
+    link helpers, and `item.children`, for a variable bound by a generator
+    over a navigation's or menu's `items` (`Mix.Brando.Igniter.SourceUpgrade.NavigationItems`).
+
+    It warns, with file and line, about the reads it left, and page var
+    reads, which need the page loaded with `preload: [:vars]`.
     """
     def upgrade_054_templates(igniter) do
       {igniter, blueprints} = find_blueprints(igniter)
@@ -1198,7 +1203,10 @@ if Code.ensure_loaded?(Igniter) do
         end)
 
       html_fields = for {_singular, renames} <- fields, {html, _rendered} <- renames, uniq: true, do: html
-      warn_054_template_reads(igniter, html_fields, ambiguous)
+
+      igniter
+      |> NavigationItems.rewrite(template_paths(igniter))
+      |> warn_054_template_reads(html_fields, ambiguous)
     end
 
     # `{singular, [{html_field, rendered_field}]}` for one Blueprint.
@@ -1367,10 +1375,12 @@ if Code.ensure_loaded?(Igniter) do
          """, findings(sources, fn _content -> &Regex.match?(html_read, &1) end)},
         {"""
          Navigation items. An item no longer has `url`, `title`,
-         `open_in_new_window` or `items`; it holds a link var. Use
-         `Brando.HTML.get_menu_item_url(item)`, `get_menu_item_text(item)`,
-         `get_menu_item_target_blank(item)` and `item.children`:
-         """, findings(sources, &navigation_item_reads/1)},
+         `open_in_new_window` or `items`; it holds a link var. The task rewrote
+         these reads where the file binds the item name only to navigation
+         items; use `Brando.HTML.get_menu_item_url(item)`,
+         `get_menu_item_text(item)`, `get_menu_item_target_blank(item)` and
+         `item.children` in these lines:
+         """, findings(sources, &NavigationItems.read?/1)},
         {"""
          Page vars. They are an association: load the page with
          `preload: [:alternate_entries, :vars]` (or `Brando.Repo.preload(page, :vars)`)
@@ -1405,23 +1415,6 @@ if Code.ensure_loaded?(Igniter) do
           {line, number} <- content |> String.split("\n") |> Enum.with_index(1),
           matches?.(line),
           do: "#{path}:#{number}: #{String.trim(line)}"
-    end
-
-    # `item.url` where `item` comes from a navigation's or menu's `items`.
-    defp navigation_item_reads(content) do
-      variables =
-        for [_, variable, source] <- Regex.scan(~r/\b([a-z_]\w*)\s*<-\s*(@?[\w.\[\]"]*\.items)\b/, content),
-            source =~ ~r/nav|menu/i,
-            uniq: true,
-            do: Regex.escape(variable)
-
-      case variables do
-        [] ->
-          fn _line -> false end
-
-        variables ->
-          &Regex.match?(~r/(?<![\w.])(#{Enum.join(variables, "|")})\.(url|title|open_in_new_window|items)\b/, &1)
-      end
     end
 
     defp format_findings(findings) do

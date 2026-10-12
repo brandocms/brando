@@ -1,0 +1,122 @@
+if Code.ensure_loaded?(Igniter) do
+  defmodule Mix.Brando.Igniter.SourceUpgrade.NavigationItems do
+    @doc "Requests recompilation when optional Igniter support is removed."
+    def __mix_recompile__?, do: not Code.ensure_loaded?(Igniter)
+
+    @moduledoc false
+    # 0.54 navigation items hold a link var instead of `url`, `title` and
+    # `open_in_new_window`, and their sub-items are `children`. A template
+    # variable bound by a generator over a navigation's or menu's `items`
+    # (`for item <- @navigation.items`, `:for={item <- @menu.items}`), or over
+    # such an item's `items` or `children`, is a navigation item. Its reads are
+    # rewritten in Elixir code (`Mix.Brando.Igniter.TemplateCode`) when the
+    # file binds the name nowhere else; the others stay listed.
+
+    alias Mix.Brando.Igniter.TemplateCode
+    alias Rewrite.Source
+
+    @replacements %{
+      "url" => "Brando.HTML.get_menu_item_url",
+      "title" => "Brando.HTML.get_menu_item_text",
+      "open_in_new_window" => "Brando.HTML.get_menu_item_target_blank"
+    }
+
+    @generator ~r/\b([a-z_]\w*)\s*<-\s*(@?[\w.\[\]"]*)\.(items|children)\b/
+
+    @doc "Rewrites the navigation item reads in `paths`."
+    def rewrite(igniter, paths) do
+      Enum.reduce(paths, igniter, fn path, igniter ->
+        content = igniter.rewrite |> Rewrite.source!(path) |> Source.get(:content)
+
+        case rewrite_content(content, path) do
+          ^content -> igniter
+          updated -> Igniter.update_file(igniter, path, &Source.update(&1, :content, updated))
+        end
+      end)
+    end
+
+    @doc "A function of a line of `content`: whether it reads a navigation item the 0.53 way."
+    def read?(content) do
+      case variables(content) do
+        [] -> fn _line -> false end
+        variables -> &Regex.match?(reads(variables), &1)
+      end
+    end
+
+    defp rewrite_content(content, path) do
+      variables = variables(content)
+
+      case Enum.reject(variables, &bound_elsewhere?(content, &1, variables)) do
+        [] ->
+          content
+
+        variables ->
+          code? = TemplateCode.code?(content, path)
+
+          variables
+          |> reads()
+          |> Regex.scan(content, return: :index)
+          |> Enum.filter(fn [{start, _length} | _groups] -> code?.(start) end)
+          |> Enum.reverse()
+          |> Enum.reduce(content, fn [{start, length}, variable, field], content ->
+            replacement = replacement(part(content, variable), part(content, field))
+
+            binary_part(content, 0, start) <>
+              replacement <> binary_part(content, start + length, byte_size(content) - start - length)
+          end)
+      end
+    end
+
+    defp part(content, {start, length}), do: binary_part(content, start, length)
+
+    defp replacement(variable, "items"), do: "#{variable}.children"
+    defp replacement(variable, field), do: "#{@replacements[field]}(#{variable})"
+
+    defp reads(variables),
+      do:
+        ~r/(?<![\w.@])(#{Enum.map_join(variables, "|", &Regex.escape/1)})\.(url|title|open_in_new_window|items)(?![\w?!(])/
+
+    # Generators over a navigation's or menu's items, then over those items'
+    # own items, until no new variable turns up.
+    defp variables(content) do
+      generators = Regex.scan(@generator, content, capture: :all_but_first)
+      variables(generators, [])
+    end
+
+    defp variables(generators, found) do
+      more =
+        for [variable, source, _field] <- generators,
+            variable not in found,
+            item_source?(source, found),
+            uniq: true,
+            do: variable
+
+      if more == [], do: Enum.sort(found), else: variables(generators, found ++ more)
+    end
+
+    defp item_source?(source, variables), do: source =~ ~r/nav|menu/i or source in variables
+
+    # A name the file also binds to something else: another generator, a
+    # function argument, `:let`, or a match.
+    defp bound_elsewhere?(content, variable, variables) do
+      name = Regex.escape(variable)
+
+      item_generators =
+        for [^variable, source, _field] <- Regex.scan(@generator, content, capture: :all_but_first),
+            item_source?(source, variables),
+            do: source
+
+      generators = Regex.scan(~r/(?<![\w.@])#{name}\s*<-/, content)
+
+      length(generators) > length(item_generators) or
+        Regex.match?(~r/\bfn\s*\(?\s*#{name}\b|:let=\{\s*#{name}\s*\}|(?<![\w.@:])#{name}\s*=(?![=~>{"])/, content) or
+        Regex.match?(~r/\bdefp?\s+\w+[?!]?\(([^)]*[\s,(])?#{name}\b/, content)
+    end
+  end
+else
+  defmodule Mix.Brando.Igniter.SourceUpgrade.NavigationItems do
+    @moduledoc false
+    # Revisit this source when the optional dependency becomes available.
+    def __mix_recompile__?, do: Code.ensure_loaded?(Igniter)
+  end
+end
