@@ -269,6 +269,46 @@ defmodule Mix.Tasks.Brando.Migrate55PersistIdentifiersTest do
     end)
   end
 
+  test "resolves sources through a multi-alias and through `__MODULE__`" do
+    producer = blueprint("Producers", "Producer", "producer")
+    featured = blueprint("Articles.Article", "Featured", "featured")
+
+    article =
+      @koi_article
+      |> String.replace(
+        "  alias Lett.Articles\n",
+        "  alias Lett.Articles\n  alias Lett.Producers.{Producer, Farm}\n  alias __MODULE__.Featured\n"
+      )
+      |> String.replace(
+        "{__MODULE__, %{preload: [:categories], order: \"asc language, asc sequence\"}}",
+        "{Producer, %{}},\n            Featured"
+      )
+
+    files =
+      files()
+      |> Map.put("lib/lett/articles/article.ex", article)
+      |> Map.put("lib/lett/producers/producer.ex", producer)
+      |> Map.put("lib/lett/articles/article/featured.ex", featured)
+
+    igniter = migrate(files)
+
+    for {module, path} <- [
+          {"Lett.Producers.Producer", "lib/lett/producers/producer.ex"},
+          {"Lett.Articles.Article.Featured", "lib/lett/articles/article/featured.ex"}
+        ] do
+      refute source(igniter, path) =~ "persist_identifier"
+
+      assert_has_warning(igniter, fn warning ->
+        warning =~ "#{module} (#{path}): an `:entries` relation or input in lib/lett/articles/article.ex may select it"
+      end)
+    end
+
+    # An alias the task cannot resolve keeps the Blueprint.
+    unresolved = String.replace(article, "  alias __MODULE__.Featured\n", "  alias unquote(:dynamic).Featured\n")
+    igniter = migrate(Map.put(files, "lib/lett/articles/article.ex", unresolved))
+    refute source(igniter, "lib/lett/articles/article/featured.ex") =~ "persist_identifier"
+  end
+
   test "keeps the advice when it cannot read the router" do
     igniter = migrate(Map.delete(files(), @router_path))
 

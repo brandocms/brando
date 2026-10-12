@@ -221,23 +221,124 @@ if Code.ensure_loaded?(Igniter) do
 
     defp entries_may_select?(content, module) do
       case Sourceror.parse_string(content) do
-        {:ok, ast} ->
-          {relations, inputs} = entries_calls(ast)
-          resolve = module_resolver(ast)
-          sourced = for {name, {:ok, _modules}} <- inputs, do: name
-
-          Enum.any?(relations, &(&1 not in sourced)) or
-            Enum.any?(inputs, fn
-              {_name, {:ok, modules}} -> module in Enum.map(modules, resolve)
-              {_name, :unknown} -> true
-            end)
-
-        _error ->
-          true
+        {:ok, ast} -> ast |> module_scopes(nil) |> Enum.any?(&scope_may_select?(&1, module))
+        _error -> true
       end
     end
 
-    # The names of the `:entries` relations, and `{name, {:ok, sources} |
+    defp scope_may_select?(%{relations: relations, inputs: inputs} = scope, module) do
+      sourced = for {name, {:ok, _references}} <- inputs, do: name
+
+      Enum.any?(relations, &(&1 not in sourced)) or
+        Enum.any?(inputs, fn
+          {_name, {:ok, references}} ->
+            resolved = Enum.map(references, &resolve_reference(&1, scope))
+            :error in resolved or {:ok, module} in resolved
+
+          {_name, :unknown} ->
+            true
+        end)
+    end
+
+    # One scope per `defmodule` in the file: its name, the aliases its body
+    # declares, in order, and the `:entries` relations and inputs in it (not
+    # in a module nested in it).
+    defp module_scopes(ast, parent) do
+      {_ast, scopes} =
+        Macro.prewalk(ast, [], fn
+          {:defmodule, _, [name, [{_do, body}]]}, scopes ->
+            {:skipped, scopes ++ module_scope(name, body, parent)}
+
+          node, scopes ->
+            {node, scopes}
+        end)
+
+      scopes
+    end
+
+    defp module_scope(name, body, parent) do
+      # A nested `defmodule Name` defines `Parent.Name`.
+      current =
+        case {expand(name, parent, %{}), name} do
+          {{:ok, parts}, {:__aliases__, _, [:"Elixir" | _]}} -> parts
+          {{:ok, parts}, {:__aliases__, _, _}} when is_list(parent) -> parent ++ parts
+          {{:ok, parts}, _name} -> parts
+          {:error, _name} -> nil
+        end
+
+      statements = statements(body)
+      aliases = Enum.reduce(statements, %{}, &declare_alias(&1, current, &2))
+      {relations, inputs} = statements |> Enum.map(&without_modules/1) |> entries_calls()
+      nested = Enum.flat_map(statements, &module_scopes(&1, current))
+
+      [%{current: current, aliases: aliases, relations: relations, inputs: inputs} | nested]
+    end
+
+    defp statements({:__block__, _, statements}) when is_list(statements), do: statements
+    defp statements(statement), do: [statement]
+
+    defp without_modules(ast) do
+      Macro.prewalk(ast, fn
+        {:defmodule, _, _} -> :skipped
+        node -> node
+      end)
+    end
+
+    defp declare_alias({:alias, _, [{{:., _, [base, :{}]}, _, children}]}, current, aliases) do
+      Enum.reduce(children, aliases, fn {:__aliases__, meta, parts}, aliases ->
+        case expand(base, current, aliases) do
+          {:ok, base_parts} ->
+            put_alias(aliases, List.last(parts), expand({:__aliases__, meta, base_parts ++ parts}, current, %{}))
+
+          :error ->
+            Map.put(aliases, List.last(parts), :error)
+        end
+      end)
+    end
+
+    defp declare_alias({:alias, _, [{:__aliases__, _, parts} = reference | options]}, current, aliases) do
+      as =
+        case options do
+          [options] when is_list(options) ->
+            Enum.find_value(options, fn
+              {key, {:__aliases__, _, [as]}} -> if unwrap(key) == :as, do: as
+              _option -> nil
+            end)
+
+          _options ->
+            nil
+        end
+
+      put_alias(aliases, as || List.last(parts), expand(reference, current, aliases))
+    end
+
+    defp declare_alias(_statement, _current, aliases), do: aliases
+
+    defp put_alias(aliases, name, expanded) when is_atom(name), do: Map.put(aliases, name, expanded)
+    defp put_alias(aliases, _name, _expanded), do: aliases
+
+    # `{:ok, parts}` of the module a reference names, or `:error`.
+    defp expand({:__aliases__, _, [{:__MODULE__, _, _} | rest]}, current, _aliases) do
+      if current && Enum.all?(rest, &is_atom/1), do: {:ok, current ++ rest}, else: :error
+    end
+
+    defp expand({:__aliases__, _, [first | rest] = parts}, current, aliases) do
+      cond do
+        not Enum.all?(parts, &is_atom/1) -> :error
+        first == :"Elixir" -> {:ok, rest}
+        Map.has_key?(aliases, first) -> with {:ok, base} <- aliases[first], do: {:ok, base ++ rest}
+        true -> {:ok, parts}
+      end
+    end
+
+    defp expand({:__MODULE__, _, _}, current, _aliases), do: if(current, do: {:ok, current}, else: :error)
+    defp expand(_reference, _current, _aliases), do: :error
+
+    defp resolve_reference(reference, %{current: current, aliases: aliases}) do
+      with {:ok, parts} <- expand(reference, current, aliases), do: {:ok, Module.concat(parts)}
+    end
+
+    # The names of the `:entries` relations, and `{name, {:ok, references} |
     # :unknown}` for each `:entries` input.
     defp entries_calls(ast) do
       {_ast, found} =
@@ -272,7 +373,7 @@ if Code.ensure_loaded?(Igniter) do
     defp input_sources(_options), do: :unknown
 
     defp source_modules(entries) when is_list(entries) do
-      modules =
+      references =
         Enum.map(entries, fn entry ->
           case unwrap(entry) do
             {module, _options} -> module
@@ -280,44 +381,14 @@ if Code.ensure_loaded?(Igniter) do
           end
         end)
 
-      if Enum.all?(modules, &module_reference?/1), do: {:ok, modules}, else: :unknown
+      if Enum.all?(references, &module_reference?/1), do: {:ok, references}, else: :unknown
     end
 
     defp source_modules(_value), do: :unknown
 
     defp module_reference?({:__MODULE__, _, context}) when is_atom(context), do: true
-    defp module_reference?({:__aliases__, _, parts}), do: Enum.all?(parts, &is_atom/1)
+    defp module_reference?({:__aliases__, _, [_ | _]}), do: true
     defp module_reference?(_ast), do: false
-
-    # Turns a module reference into the module, by the file's first
-    # `defmodule` and its `alias`es.
-    defp module_resolver(ast) do
-      {_ast, {current, aliases}} =
-        Macro.prewalk(ast, {nil, %{}}, fn
-          {:defmodule, _, [{:__aliases__, _, parts} | _]} = node, {nil, aliases} ->
-            {node, {Module.concat(parts), aliases}}
-
-          {:alias, _, [{:__aliases__, _, parts}]} = node, {current, aliases} ->
-            {node, {current, Map.put(aliases, parts |> Enum.reverse() |> hd(), parts)}}
-
-          {:alias, _, [{:__aliases__, _, parts}, [{key, {:__aliases__, _, [as]}}]]} = node, {current, aliases} ->
-            if unwrap(key) == :as, do: {node, {current, Map.put(aliases, as, parts)}}, else: {node, {current, aliases}}
-
-          node, acc ->
-            {node, acc}
-        end)
-
-      fn
-        {:__MODULE__, _, _} ->
-          current
-
-        {:__aliases__, _, [first | rest]} ->
-          case Map.fetch(aliases, first) do
-            {:ok, parts} -> Module.concat(parts ++ rest)
-            :error -> Module.concat([first | rest])
-          end
-      end
-    end
 
     # `{:ok, helper}`, `:skip` for a Blueprint that already decides or never
     # persists, or `{:unknown, reason}`.
