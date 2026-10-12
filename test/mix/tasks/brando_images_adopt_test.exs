@@ -63,21 +63,23 @@ defmodule Mix.Tasks.Brando.Images.AdoptTest do
     Adopt.run(["--verbose"])
     lines = output()
 
-    assert "  image #{keys.id} (default): sizes: missing [\"large\", \"medium\", \"micro\", \"thumb\", \"xlarge\"], extra [\"hero\"]" in lines
+    sizes_reason = ~s{sizes: missing ["large", "medium", "micro", "thumb", "xlarge"], extra ["hero"]}
+    assert "  image #{keys.id} (default): #{sizes_reason}" in lines
 
     assert "  image #{formats.id} (default): formats: has [:jpg, :webp], config [:jpg]" in lines
     assert "  image #{small.id} (default): large: 1200×800 vs config 800×600" in lines
     assert "  image #{other.id} (default): large: 1000×700 vs config 800×600" in lines
 
-    assert List.last(lines) =~ "Recreate the 4 that differ"
+    [hint, summary | _] = Enum.reverse(lines)
+    assert hint =~ "Recreate the 4 that differ"
 
-    assert Enum.at(lines, -2) ==
+    assert summary ==
              Enum.join(
                [
                  "\nBy config target and reason:",
                  "  2 × (default): large: other dimensions",
                  "  1 × (default): formats: has [:jpg, :webp], config [:jpg]",
-                 "  1 × (default): sizes: missing [\"large\", \"medium\", \"micro\", \"thumb\", \"xlarge\"], extra [\"hero\"]"
+                 "  1 × (default): #{sizes_reason}"
                ],
                "\n"
              )

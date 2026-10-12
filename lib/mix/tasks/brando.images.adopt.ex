@@ -73,13 +73,7 @@ defmodule Mix.Tasks.Brando.Images.Adopt do
     verbose? = Keyword.get(opts, :verbose, false)
     {:ok, groups} = Agent.start_link(fn -> %{} end)
 
-    on_differ =
-      if verbose? do
-        fn image, verdict ->
-          print_differ(image, verdict)
-          Agent.update(groups, &Map.update(&1, {image.config_target, group(verdict)}, 1, fn n -> n + 1 end))
-        end
-      end
+    on_differ = if verbose?, do: &print_and_count(&1, &2, groups)
 
     results =
       Enum.map(environments, fn {label, prefix} ->
@@ -105,6 +99,11 @@ defmodule Mix.Tasks.Brando.Images.Adopt do
 
   defp print_differ(image, verdict) do
     Mix.shell().info("  image #{image.id} (#{image.config_target}): #{reason(verdict)}")
+  end
+
+  defp print_and_count(image, verdict, groups) do
+    print_differ(image, verdict)
+    Agent.update(groups, &Map.update(&1, {image.config_target, group(verdict)}, 1, fn n -> n + 1 end))
   end
 
   defp print_groups(groups) when map_size(groups) == 0, do: :ok

@@ -308,12 +308,16 @@ defmodule Brando.Images.Adoption do
   defp check_dimensions(image, key, file, size_cfg, _format) do
     with {:ok, original} <- original_dimensions(image),
          {:ok, actual} <- header_dimensions(file) do
-      if Enum.any?(candidates(size_cfg, original), fn {spec, dimensions} -> fits?(spec, dimensions, actual) end),
-        do: :ok,
-        else: {:differ, {:dimensions, key, actual, processed_dimensions(size_cfg, original)}}
+      dimensions_verdict(key, size_cfg, original, actual)
     else
       _ -> {:differ, {:dimensions, key, nil, nil}}
     end
+  end
+
+  defp dimensions_verdict(key, size_cfg, original, actual) do
+    if Enum.any?(candidates(size_cfg, original), fn {spec, dimensions} -> fits?(spec, dimensions, actual) end),
+      do: :ok,
+      else: {:differ, {:dimensions, key, actual, processed_dimensions(size_cfg, original)}}
   end
 
   # What processing makes of the original today, for saying what was expected.
