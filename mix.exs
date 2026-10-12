@@ -292,7 +292,7 @@ defmodule Brando.Mixfile do
       {:spark, "~> 2.4"},
 
       # monitoring
-      {:sentry, "~> 13.0"},
+      {:sentry, "~> 14.0"},
 
       # cache
       {:cachex, "~> 4.0"},
