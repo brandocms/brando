@@ -728,8 +728,12 @@ test: ["ecto.create --quiet", "ecto.load --skip-if-loaded", "ecto.migrate", "tes
 
 `--skip-if-loaded` leaves a database that already has its migrations table
 alone, so if the old alias already created the test database, drop it once
-(`MIX_ENV=test mix ecto.drop`). `ecto.migrate` then runs only the migrations
-newer than the dump.
+(`MIX_ENV=test mix ecto.drop`), or give the test database a new name instead.
+Phoenix's generated `config/test.exs` appends `MIX_TEST_PARTITION` to it
+(`"myapp_test#{System.get_env("MIX_TEST_PARTITION")}"`), so
+`MIX_TEST_PARTITION=_055 mix test` creates and loads `myapp_test_055`; to keep
+the new name without the variable, change it in `config/test.exs`.
+`ecto.migrate` then runs only the migrations newer than the dump.
 
 `mix brando.migrate55` warns when `test_paths` names a missing directory, and
 when `config/runtime.exs` reads the Repo `url:` from the environment in `:test`
