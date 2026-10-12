@@ -5,6 +5,7 @@ if Code.ensure_loaded?(Igniter) do
 
     use Igniter.Mix.Task
 
+    alias Mix.Brando.Igniter.PersistIdentifiers
     alias Mix.Brando.Igniter.SourceUpgrade
     alias Mix.Brando.Igniter.SourceUpgrade.BlueprintGettext
     alias Mix.Brando.Igniter.UpgradeOrder
@@ -28,7 +29,8 @@ if Code.ensure_loaded?(Igniter) do
     configuration, refreshes the gettext recovery helper, copies the
     translations of each Blueprint's 0.53 `_naming`, `_forms` and `_listings`
     Gettext domains into the domain 0.55 extracts to, along with the `default`
-    domain's translations of the Blueprint's `t/1` labels, completes
+    domain's translations of the Blueprint's `t/1` labels, sets
+    `persist_identifier false` on Blueprints with no admin editor, completes
     `Plural-Forms` headers Gettext 1.0 warns about, and retires the
     consumer-owned `brando.upgrade` task that 0.54 installed.
 
@@ -67,6 +69,7 @@ if Code.ensure_loaded?(Igniter) do
       |> BlueprintGettext.carry_default_translations()
       |> SourceUpgrade.complete_plural_forms_headers()
       |> SourceUpgrade.warn_image_text_reads()
+      |> PersistIdentifiers.update()
       |> SourceUpgrade.start_endpoint_last()
       |> Mix.Brando.Igniter.Upgrade.prepare()
       |> add_notices()
@@ -128,11 +131,12 @@ if Code.ensure_loaded?(Igniter) do
       Igniter.add_warning(igniter, """
       Manual 0.55 decisions remain:
 
-        * Add `persist_identifier false` to every Blueprint that must not create
-          persisted identifiers. Persistence defaults to true. A Blueprint with
-          no admin editor (no `admin_<singular>_form_path` route) should set it:
-          its entries cannot be opened from Search, the command palette or the
-          dashboard, so they are left out of them.
+        * Add `persist_identifier false` to every other Blueprint that must not
+          create persisted identifiers. Persistence defaults to true. The task
+          sets it on Blueprints with no admin editor (no
+          `admin_<singular>_form_path` route for `:update` and no admin
+          LiveView), whose entries cannot be opened from Search, the command
+          palette or the dashboard; its notice lists them.
         * Table, primary-key, and existing column-level primary-key changes are
           never inferred. Write the Ecto migration, verify the live schema, then
           use the documented Blueprint `--rebaseline` workflow.
