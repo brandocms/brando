@@ -367,6 +367,32 @@ defmodule Mix.Tasks.Brando.Migrate54AdminFormViewsTest do
     assert_unchanged(rerun, [@router_path, "lib/lett/projects/category.ex", "lib/lett/articles/category.ex"])
   end
 
+  test "keeps the comments of the routes it wraps" do
+    router =
+      @flat_router
+      |> String.replace(
+        ~s(    live "/projects/categories", LettAdmin),
+        ~s(    # Project categories\n    live "/projects/categories", LettAdmin)
+      )
+      |> String.replace(
+        ~s(    live "/projects/categories/update/:entry_id"),
+        ~s|    # The FormLive edits too\n    # (one per entry)\n    live "/projects/categories/update/:entry_id"|
+      )
+
+    router = migrate(flat_files(router)) |> source(@router_path)
+
+    assert router =~ """
+               # Project categories
+               scope "/projects/categories", LettAdmin.Projects, as: :projects do
+                 live "/", CategoryListLive
+                 live "/create", CategoryFormLive, :create
+                 # The FormLive edits too
+                 # (one per entry)
+                 live "/update/:entry_id", CategoryFormLive, :update
+               end
+           """
+  end
+
   test "wraps the flat routes it can move, and leaves the others" do
     # Another route between the domain's lines: moving them could change
     # which route matches first.

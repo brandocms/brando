@@ -445,22 +445,74 @@ if Code.ensure_loaded?(Igniter) do
       plans
     end
 
-    defp wrap_flat(zipper, scope, name) do
-      [first | rest] = scope.moves
+    # The routes' lines are rewritten as text, so the comments and blank
+    # lines between them, and a comment at the end of a route's line, stay
+    # where they were; a comment above the first route stays above the scope.
+    defp wrap_flat(content, scope) do
+      lines = String.split(content, "\n")
 
-      zipper =
-        Enum.reduce(rest, zipper, fn move, zipper ->
-          zipper |> Zipper.topmost() |> Common.remove(&moved_route?(&1, move))
+      ranges =
+        content
+        |> Sourceror.parse_string!()
+        |> Zipper.zip()
+        |> Common.find_all(&live_call?/1)
+        |> Enum.flat_map(fn zipper ->
+          node = Zipper.node(zipper)
+
+          case Enum.find(scope.moves, &moved_route?(node, &1)) do
+            nil -> []
+            move -> [{Sourceror.get_range(node), move}]
+          end
         end)
+        |> Enum.sort_by(fn {range, _move} -> range.start[:line] end)
 
-      case Common.move_to(Zipper.topmost(zipper), &moved_route?(&1, first)) do
-        {:ok, route} -> {:ok, Common.replace_code(route, flat_scope_code(scope, name))}
-        :error -> {:ok, zipper}
+      if length(ranges) == length(scope.moves) do
+        first = hd(ranges) |> elem(0) |> Map.fetch!(:start) |> Keyword.fetch!(:line)
+        last = List.last(ranges) |> elem(0) |> Map.fetch!(:end) |> Keyword.fetch!(:line)
+        indent = lines |> Enum.at(first - 1) |> leading_whitespace()
+
+        wrapped =
+          ["#{indent}#{scope.code}, as: :#{scope.name} do"] ++
+            wrapped_lines(lines, first, last, ranges, indent <> "  ") ++ ["#{indent}end"]
+
+        Enum.join(Enum.take(lines, first - 1) ++ wrapped ++ Enum.drop(lines, last), "\n")
+      else
+        content
       end
     end
 
-    defp moved_route?(zipper, move) do
-      case Zipper.node(zipper) do
+    defp wrapped_lines(lines, first, last, ranges, indent) do
+      starts = Map.new(ranges, fn {range, move} -> {range.start[:line], {range, move}} end)
+
+      first
+      |> Stream.unfold(fn
+        number when number > last ->
+          nil
+
+        number ->
+          case Map.fetch(starts, number) do
+            {:ok, {range, move}} -> {route_line(lines, range, move, indent), range.end[:line] + 1}
+            :error -> {kept_line(Enum.at(lines, number - 1), indent), number + 1}
+          end
+      end)
+      |> Enum.to_list()
+    end
+
+    defp route_line(lines, range, move, indent) do
+      route = Enum.join(["live #{inspect(move.inner)}", move.short | move.rest], ", ")
+      # What follows the route on its last line: an end-of-line comment.
+      rest = lines |> Enum.at(range.end[:line] - 1) |> String.slice((range.end[:column] - 1)..-1//1)
+      indent <> route <> if(rest =~ ~r/^\s*#/, do: rest, else: "")
+    end
+
+    defp kept_line(line, indent) do
+      if String.trim(line) == "", do: "", else: indent <> String.trim_leading(line)
+    end
+
+    defp leading_whitespace(line), do: line |> String.split(~r/\S/, parts: 2) |> hd()
+
+    defp moved_route?(node, move) do
+      case node do
         {:live, _, [{:__block__, _, [path]}, {:__aliases__, _, parts} | _]} ->
           path == move.path and Enum.join(parts, ".") == move.written
 
@@ -469,30 +521,29 @@ if Code.ensure_loaded?(Igniter) do
       end
     end
 
-    defp flat_scope_code(scope, name) do
-      routes =
-        Enum.map_join(scope.moves, "\n", fn move ->
-          "  " <> Enum.join(["live #{inspect(move.inner)}", move.short | move.rest], ", ")
-        end)
-
-      "#{scope.code}, as: :#{name} do\n#{routes}\nend"
-    end
-
     ## Rewrite
+
+    defp apply_scope(igniter, %{kind: :flat} = scope) do
+      name = Sourceror.parse_string!(":" <> scope.name)
+
+      igniter
+      |> Igniter.update_file(scope.router, &Source.update(&1, :content, fn content -> wrap_flat(content, scope) end))
+      |> set_router_scopes(scope, name)
+    end
 
     defp apply_scope(igniter, scope) do
       name = Sourceror.parse_string!(":" <> scope.name)
 
       igniter
       |> Igniter.update_elixir_file(scope.router, fn zipper ->
-        if Map.get(scope, :kind) == :flat,
-          do: wrap_flat(zipper, scope, scope.name),
-          else: Common.update_all_matches(zipper, &scope_at?(&1, scope.code), &add_as(&1, name))
+        Common.update_all_matches(zipper, &scope_at?(&1, scope.code), &add_as(&1, name))
       end)
-      |> then(fn igniter ->
-        Enum.reduce(scope.schemas, igniter, fn schema, igniter ->
-          ProjectModule.find_and_update_module!(igniter, schema, &set_router_scope(&1, name))
-        end)
+      |> set_router_scopes(scope, name)
+    end
+
+    defp set_router_scopes(igniter, scope, name) do
+      Enum.reduce(scope.schemas, igniter, fn schema, igniter ->
+        ProjectModule.find_and_update_module!(igniter, schema, &set_router_scope(&1, name))
       end)
     end
 
