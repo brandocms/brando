@@ -174,10 +174,21 @@ the result before the source tasks, so their diff holds only their changes.
 
 `mix brando.migrate54` covers the 0.53 to 0.54 source changes. It:
 
+- renames a single or selection datasource that shares its name with another
+  (0.53 allowed `list :all` beside `selection :all`; 0.54 refuses to compile
+  two `datasource :all`) to `:all_selection` or `:all_single`, and lists each
+  rename with file and line. A content module that used the renamed one stores
+  its old name: choose the new name in the module's datasource settings after
+  the database upgrade;
 - rewrites legacy Blueprint list, single, and selection datasources; trait,
   villain/block, form, input, metadata, and JSON-LD syntax; and listing queries,
   filters, actions, selection actions, and supported exports;
-- preserves legacy Meta and JSON-LD path/mutator behavior;
+- preserves legacy Meta and JSON-LD path/mutator behavior
+  (`meta_field "og:locale", [:language], &encode_locale/1` becomes
+  `field "og:locale", fn entry -> encode_locale(get_in(entry, [Access.key(:language)])) end`);
+- replaces `use Brando.Datasource`, which imported `Ecto.Query`, with
+  `import Ecto.Query, only: [...]` in a Blueprint whose functions call its
+  macros (`from`, `where` and the rest);
 - renames legacy listing `filter:` keys and `list_villains/0` calls on
   `Brando.Villain`;
 - rewrites every legacy LivePreview target with its own layout and template
@@ -205,17 +216,26 @@ the result before the source tasks, so their diff holds only their changes.
 - rewrites 0.53 navigation item reads inside `for item <- @navigation.items`
   (and `:for`) to `Brando.HTML.get_menu_item_url/1`, `get_menu_item_text/1`,
   `get_menu_item_target_blank/1` and `item.children`, and, when templates read
-  `@page` vars, adds `:vars` to the `preload` of the `Pages.get_page/1` calls
-  written with a map. Reads it cannot rewrite, and page loads it cannot
-  update, are listed with file and line;
+  the page's vars (`@page`, `assigns[:page]`), adds `:vars` to the `preload` of
+  the `Pages.get_page/1` calls written with a map, or with a variable the same
+  function assigns one (`page_opts = %{…}`). Reads it cannot rewrite, and page
+  loads it cannot update, are listed with file and line. When vars are read
+  on something other than the page, the `Pages.get_page/1` calls are listed
+  beside the reads, for you to give `preload: [:vars]` where their page
+  reaches them;
 - converts each admin Create/Update LiveView pair the generator made and the
   application did not edit into one `<Name>FormLive`, written beside the
   `UpdateLive` it replaces, deletes the pair and points both routes at the new
-  module. Edited pairs are listed. When two FormLives would share a route
+  module. A pair that differs from the generator's only in the text of its
+  `<:header>` slot counts as unedited, since the 0.55 form shows no header.
+  Edited pairs are listed. When two FormLives would share a route
   helper (two `Category` schemas, say) and one is routed in a plain
   `scope "/menu", MyAppAdmin.Menu do` holding only that domain's admin
   LiveViews, the task adds `as: :menu` to the scope and `router_scope: :menu`
-  to every Blueprint routed in it. Other shapes are listed with the same fix.
+  to every Blueprint routed in it. Routes listed flat in `admin_routes`, as the
+  0.53 generator wrote them, are wrapped in a new
+  `scope "/menu/categories", MyAppAdmin.Menu, as: :menu do` when the domain's
+  lines are adjacent. Other shapes are listed with the same fix.
   Without the form route, the listing's edit links crash, and
   `mix brando.doctor` reports each Blueprint whose route helper is missing;
 - rewrites a listing's 0.53 `field` and `template` columns into a row
@@ -224,8 +244,10 @@ the result before the source tasks, so their diff holds only their changes.
   the module. An `:image` field becomes `<.cover>`, a `:url` field `<.url>`,
   and a Liquid template whose only link goes to the entry's admin update form
   becomes `<.update_link>`, with the markup before the link in its `:before`
-  slot (`{{ entry.a.b }}` becomes `{@entry.a && @entry.a.b}`,
-  `{% if entry.x %}` an `:if`). Language columns and inline `<svg>` icons in
+  slot and the markup after it in its `:outside` slot (`{{ entry.a.b }}`
+  becomes `{@entry.a && @entry.a.b}`, also inside attributes,
+  `{% if entry.x %}` an `:if`, and `{% for c in entry.categories %}` a
+  `:for={c <- @entry.categories}`). Language columns and inline `<svg>` icons in
   badges are dropped. Any other listing is left as it is and listed with file
   and line;
 - removes listing actions whose event is `edit_entry`, `duplicate_entry` or
