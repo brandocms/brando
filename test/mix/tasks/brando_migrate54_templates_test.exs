@@ -100,6 +100,25 @@ defmodule Mix.Tasks.Brando.Migrate54TemplatesTest do
     end)
   end
 
+  test "lists navigation reads when the file binds the name in a pattern elsewhere" do
+    for other <- [
+          "<p :for={{item, index} <- Enum.with_index(@products)}>{index}: {item.title}</p>",
+          "<%= with %{product: item} = @featured do %><%= item.title %><% end %>",
+          "<%= Enum.map(@products, fn {item, _} -> item.title end) %>",
+          "<%= case @featured do %><% {:ok, item} -> %><%= item.title %><% end %>"
+        ] do
+      navigation = """
+      <a :for={item <- @navigation.items} href={item.url}>{item.title}</a>
+      #{other}
+      """
+
+      igniter = migrate(%{@navigation_path => navigation})
+
+      assert_unchanged(igniter, [@navigation_path])
+      assert_has_warning(igniter, &(&1 =~ "Navigation items" and &1 =~ "#{@navigation_path}:1:"))
+    end
+  end
+
   test "only lists item reads when the application has a schema of its own with items" do
     navigation = """
     <li :for={dish <- @menu.items}>{dish.title}</li>

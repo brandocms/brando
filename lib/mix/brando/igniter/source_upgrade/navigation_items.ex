@@ -110,22 +110,52 @@ if Code.ensure_loaded?(Igniter) do
 
     defp item_source?(source, variables), do: source =~ ~r/nav|menu/i or source in variables
 
-    # A name the file also binds to something else: another generator, a
-    # function argument, `:let`, or a match.
+    # A name the file also binds to something else, in any pattern: another
+    # generator (`{item, index} <- …`), a match (`%{product: item} = …`), a
+    # clause (`fn {item, _} ->`, `{:ok, item} ->`), a function argument or
+    # `:let`.
     defp bound_elsewhere?(content, variable, variables) do
-      name = Regex.escape(variable)
+      name = ~r/(?<![\w.@:])#{Regex.escape(variable)}(?![\w:.(])/
 
       item_generators =
         for [^variable, source, _field] <- Regex.scan(@generator, content, capture: :all_but_first),
             item_source?(source, variables),
             do: source
 
-      generators = Regex.scan(~r/(?<![\w.@])#{name}\s*<-/, content)
+      generators = for pattern <- patterns(content, ~r/<-/), pattern =~ name, do: pattern
 
       length(generators) > length(item_generators) or
-        Regex.match?(~r/\bfn\s*\(?\s*#{name}\b|:let=\{\s*#{name}\s*\}|(?<![\w.@:])#{name}\s*=(?![=~>{"])/, content) or
-        Regex.match?(~r/\bdefp?\s+\w+[?!]?\(([^)]*[\s,(])?#{name}\b/, content)
+        Enum.any?(patterns(content, ~r/(?<![=!<>~%])=(?![=~>{"])|->/), &(&1 =~ name)) or
+        Regex.match?(~r/:let=\{[^}]*#{Regex.source(name)}/, content) or
+        Regex.match?(~r/\bdefp?\s+\w+[?!]?\(([^)]*[\s,({\[])?#{Regex.escape(variable)}\b/, content)
     end
+
+    # The pattern left of each `operator`: back to a comma, an opening
+    # bracket or the start of the line outside brackets, less a leading
+    # `for`, `with`, `fn` or `case` keyword.
+    defp patterns(content, operator) do
+      for [{start, _length}] <- Regex.scan(operator, content, return: :index) do
+        content
+        |> binary_part(0, start)
+        |> String.reverse()
+        |> String.graphemes()
+        |> take_pattern(0, [])
+        |> String.replace(~r/^\s*(?:for|with|fn|case|<%=?|<%|%>)\s+/, "")
+      end
+    end
+
+    defp take_pattern([], _depth, taken), do: Enum.join(taken)
+    defp take_pattern(["\n" | _rest], 0, taken), do: Enum.join(taken)
+    defp take_pattern(["," | _rest], 0, taken), do: Enum.join(taken)
+    defp take_pattern([char | _rest], 0, taken) when char in ["(", "[", "{"], do: Enum.join(taken)
+
+    defp take_pattern([char | rest], depth, taken) when char in [")", "]", "}"],
+      do: take_pattern(rest, depth + 1, [char | taken])
+
+    defp take_pattern([char | rest], depth, taken) when char in ["(", "[", "{"],
+      do: take_pattern(rest, depth - 1, [char | taken])
+
+    defp take_pattern([char | rest], depth, taken), do: take_pattern(rest, depth, [char | taken])
   end
 else
   defmodule Mix.Brando.Igniter.SourceUpgrade.NavigationItems do
