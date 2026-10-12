@@ -79,9 +79,28 @@ rewrites every project registered with Yalc on the machine. Keep the Elixir and
 JavaScript sides on the same Brando revision.
 
 Brando requires exact or recent versions of packages a 2023 `mix.exs` also
-declares, and `mix deps.get` reports the conflicts one at a time. Change every
-one the application declares before fetching (the versions are Brando's own,
-from its `mix.exs`):
+declares, and `mix deps.get` reports the conflicts one at a time. Brando's
+script makes all of those changes at once; run it from the application's
+root:
+
+```shell
+elixir /path/to/brando/scripts/prepare_055_deps.exs --brando-path /path/to/brando
+```
+
+Give it `--brando-ref <sha>` instead of `--brando-path` to point Brando at a
+commit on GitHub; `--dry-run` writes nothing. It needs no resolved
+dependencies: it edits `mix.exs` as text and prints each change. It applies
+the constraints below to the packages the application declares, bumps
+`ex_chimp` to 0.2, drops `only: :test` from `floki`, removes `timex` once `lib/`
+no longer calls it (and lists the calls otherwise), adds Igniter, sets
+`elixir: "~> 1.18"` and `listeners: [Phoenix.CodeReloader]` in `project/0`,
+and points the Brando dependency at the checkout or commit. It then lists what
+`mix.lock` still has on HTTPoison or hackney 1. Running it again changes
+nothing. Then unlock and fetch, as described below; on a 0.53 site that
+resolved on the first `mix deps.get`.
+
+By hand, change every one of these the application declares before fetching
+(the versions are Brando's own, from its `mix.exs`):
 
 ```elixir
 # mix.exs
@@ -96,13 +115,6 @@ from its `mix.exs`):
 {:swoosh, "~> 1.17"},
 {:igniter, "~> 0.8", only: [:dev, :test]},
 ```
-
-Or run `elixir /path/to/brando/scripts/prepare_055_deps.exs --brando-path
-/path/to/brando` (or `--brando-ref <sha>`) from the application's root. It makes
-these edits as text, and those in the list below, prints each one, lists what
-`mix.lock` still has on HTTPoison or hackney 1, and leaves
-`mix deps.unlock --all && mix deps.get` for you to run. `--dry-run` writes
-nothing.
 
 Brando pins `phoenix` 1.8.15 and `phoenix_live_view` 1.2.12 exactly. If the
 application also declares `sentry` (`~> 13.0`), `oban` (`~> 2.23`), `cachex`
