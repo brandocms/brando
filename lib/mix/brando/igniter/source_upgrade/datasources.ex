@@ -38,24 +38,22 @@ if Code.ensure_loaded?(Igniter) do
     """
     def rename_shared_names(igniter) do
       {igniter, blueprints} = SourceUpgrade.find_blueprints(igniter)
-
-      {igniter, renames} =
-        Enum.reduce(blueprints, {igniter, []}, fn module, {igniter, renames} ->
-          {:ok, {igniter, source, zipper}} = ProjectModule.find_module(igniter, module)
-
-          case plan(zipper) do
-            [] ->
-              {igniter, renames}
-
-            planned ->
-              path = Source.get(source, :path)
-              found = for {line, type, from, to} <- planned, do: {path, line, module, type, from, to}
-
-              {ProjectModule.find_and_update_module!(igniter, module, &rename(&1, planned)), renames ++ found}
-          end
-        end)
-
+      {igniter, renames} = Enum.reduce(blueprints, {igniter, []}, &rename_module/2)
       notice(igniter, renames)
+    end
+
+    defp rename_module(module, {igniter, renames}) do
+      {:ok, {igniter, source, zipper}} = ProjectModule.find_module(igniter, module)
+
+      case plan(zipper) do
+        [] ->
+          {igniter, renames}
+
+        planned ->
+          path = Source.get(source, :path)
+          found = for {line, type, from, to} <- planned, do: {path, line, module, type, from, to}
+          {ProjectModule.find_and_update_module!(igniter, module, &rename(&1, planned)), renames ++ found}
+      end
     end
 
     # `{line, type, old_name, new_name}` for each legacy datasource to rename.
@@ -96,9 +94,7 @@ if Code.ensure_loaded?(Igniter) do
       Common.update_all_matches(zipper, &legacy_datasource?/1, fn zipper ->
         {type, meta, [key | rest]} = Zipper.node(zipper)
 
-        case Enum.find(planned, fn {line, planned_type, name, _new} ->
-               line == meta[:line] and planned_type == type and name == unwrap(key)
-             end) do
+        case Enum.find(planned, &planned?(&1, meta[:line], type, unwrap(key))) do
           nil ->
             {:ok, zipper}
 
@@ -107,6 +103,9 @@ if Code.ensure_loaded?(Igniter) do
         end
       end)
     end
+
+    defp planned?({line, type, name, _new_name}, line, type, name), do: true
+    defp planned?(_planned, _line, _type, _name), do: false
 
     defp replace_atom({:__block__, meta, [_atom]}, new_name), do: {:__block__, meta, [new_name]}
     defp replace_atom(_atom, new_name), do: new_name

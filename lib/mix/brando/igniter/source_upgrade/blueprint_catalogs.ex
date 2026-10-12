@@ -36,20 +36,21 @@ if Code.ensure_loaded?(Igniter) do
     defp gettext_module(zipper) do
       with {:ok, options} <- use_options(zipper) do
         case Igniter.Code.Keyword.get_key(options, :gettext_module) do
-          {:ok, value} ->
-            case Zipper.node(value) do
-              {:__aliases__, _, parts} -> {:ok, Module.concat(parts)}
-              _other -> :error
-            end
-
-          :error ->
-            with {:ok, value} <- Igniter.Code.Keyword.get_key(options, :application),
-                 {:__block__, _, [application]} when is_binary(application) <- Zipper.node(value) do
-              {:ok, Module.concat(["#{application}Admin", "Gettext"])}
-            else
-              _ -> :error
-            end
+          {:ok, value} -> alias_module(Zipper.node(value))
+          :error -> admin_gettext(options)
         end
+      end
+    end
+
+    defp alias_module({:__aliases__, _, parts}), do: {:ok, Module.concat(parts)}
+    defp alias_module(_ast), do: :error
+
+    defp admin_gettext(options) do
+      with {:ok, value} <- Igniter.Code.Keyword.get_key(options, :application),
+           {:__block__, _, [application]} when is_binary(application) <- Zipper.node(value) do
+        {:ok, Module.concat(["#{application}Admin", "Gettext"])}
+      else
+        _ -> :error
       end
     end
 
@@ -64,29 +65,25 @@ if Code.ensure_loaded?(Igniter) do
       with {:ok, body} <- Common.move_to_do_block(zipper),
            {:ok, use_zipper} <- backend_use(body) do
         case CodeFunction.move_to_nth_argument(use_zipper, 1) do
-          {:ok, options} ->
-            case {Igniter.Code.Keyword.get_key(options, :backend), Igniter.Code.Keyword.get_key(options, :priv)} do
-              # `use Gettext, backend: …` uses a backend; it is not one.
-              {{:ok, _backend}, _priv} ->
-                :unknown
-
-              {:error, {:ok, value}} ->
-                case Zipper.node(value) do
-                  {:__block__, _, [priv]} when is_binary(priv) -> {:ok, String.trim_trailing(priv, "/")}
-                  _other -> :unknown
-                end
-
-              {:error, :error} ->
-                {:ok, "priv/gettext"}
-            end
-
-          :error ->
-            {:ok, "priv/gettext"}
+          {:ok, options} -> options_priv(options)
+          :error -> {:ok, "priv/gettext"}
         end
       else
         _ -> :unknown
       end
     end
+
+    defp options_priv(options) do
+      case {Igniter.Code.Keyword.get_key(options, :backend), Igniter.Code.Keyword.get_key(options, :priv)} do
+        # `use Gettext, backend: …` uses a backend; it is not one.
+        {{:ok, _backend}, _priv} -> :unknown
+        {:error, {:ok, value}} -> literal_priv(Zipper.node(value))
+        {:error, :error} -> {:ok, "priv/gettext"}
+      end
+    end
+
+    defp literal_priv({:__block__, _, [priv]}) when is_binary(priv), do: {:ok, String.trim_trailing(priv, "/")}
+    defp literal_priv(_ast), do: :unknown
 
     defp backend_use(body) do
       case Igniter.Code.Module.move_to_use(body, Gettext.Backend) do

@@ -658,18 +658,17 @@ if Code.ensure_loaded?(Igniter) do
     end
 
     defp render_element({:element, name, attributes, children}, extra, scope) do
-      with {:ok, attributes} <- render_attributes(name, attributes, scope) do
-        open = Enum.join([name | extra] ++ attributes, " ")
-
-        if children == :void do
-          {:ok, {:element, "<#{open} />"}}
-        else
-          with {:ok, inner} <- render_inline(children, scope) do
-            {:ok, {:element, "<#{open}>#{inner}</#{name}>"}}
-          end
-        end
+      with {:ok, attributes} <- render_attributes(name, attributes, scope),
+           {:ok, inner} <- render_children(children, scope) do
+        {:ok, {:element, element_markup(name, Enum.join([name | extra] ++ attributes, " "), inner)}}
       end
     end
+
+    defp render_children(:void, _scope), do: {:ok, :void}
+    defp render_children(children, scope), do: render_inline(children, scope)
+
+    defp element_markup(_name, open, :void), do: "<#{open} />"
+    defp element_markup(name, open, inner), do: "<#{open}>#{inner}</#{name}>"
 
     defp render_attributes(element, attributes, scope) do
       Enum.reduce_while(attributes, {:ok, []}, fn attribute, {:ok, rendered} ->

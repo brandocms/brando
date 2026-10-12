@@ -68,19 +68,20 @@ if Code.ensure_loaded?(Igniter) do
       |> Enum.with_index()
       |> Enum.reduce({[], []}, fn {line, index}, {kept, removed} ->
         later = lines |> Enum.drop(index + 1) |> Enum.map(&header_name/1)
-
-        case split_plural_forms(line) do
-          {:split, plural_forms, rest} ->
-            if header_name(rest) in [nil | later],
-              do: {kept ++ [plural_forms], removed ++ [rest]},
-              else: {kept ++ [plural_forms, rest], removed}
-
-          :keep ->
-            if header_name(line) == nil and String.trim(line) != "",
-              do: {kept, removed ++ [line]},
-              else: {kept ++ [line], removed}
-        end
+        {keep, remove} = split_line(line, later)
+        {kept ++ keep, removed ++ remove}
       end)
+    end
+
+    # `{lines kept, text removed}` for one header line.
+    defp split_line(line, later) do
+      case split_plural_forms(line) do
+        {:split, plural_forms, rest} ->
+          if header_name(rest) in [nil | later], do: {[plural_forms], [rest]}, else: {[plural_forms, rest], []}
+
+        :keep ->
+          if header_name(line) == nil and String.trim(line) != "", do: {[], [line]}, else: {[line], []}
+      end
     end
 
     defp header_name(line) do

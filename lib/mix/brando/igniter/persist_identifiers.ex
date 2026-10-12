@@ -298,7 +298,7 @@ if Code.ensure_loaded?(Igniter) do
             {node, {Module.concat(parts), aliases}}
 
           {:alias, _, [{:__aliases__, _, parts}]} = node, {current, aliases} ->
-            {node, {current, Map.put(aliases, List.last(parts), parts)}}
+            {node, {current, Map.put(aliases, parts |> Enum.reverse() |> hd(), parts)}}
 
           {:alias, _, [{:__aliases__, _, parts}, [{key, {:__aliases__, _, [as]}}]]} = node, {current, aliases} ->
             if unwrap(key) == :as, do: {node, {current, Map.put(aliases, as, parts)}}, else: {node, {current, aliases}}
