@@ -2009,6 +2009,55 @@ defmodule Mix.Tasks.Brando.Migrate55Test do
     assert_idempotent(igniter, Map.values(paths))
   end
 
+  describe "DashboardLive" do
+    @dashboard_path "lib/legacy_app_admin/live/dashboard_live.ex"
+
+    # koi's: the old installer's, without its Gettext import
+    @old_dashboard """
+    defmodule LegacyAppAdmin.DashboardLive do
+      use BrandoAdmin.LiveView.Listing, schema: nil
+      alias BrandoAdmin.Components.Content
+
+      def render(assigns) do
+        ~H\"\"\"
+        <Content.header title="Dashboard" subtitle={@current_user.name} />
+        \"\"\"
+      end
+    end
+    """
+
+    test "replaces the old installer's DashboardLive, which renders only a header" do
+      with_import =
+        String.replace(@old_dashboard, "Content\n", "Content\n  import LegacyAppAdmin.Gettext\n")
+
+      for dashboard <- [@old_dashboard, with_import] do
+        igniter = migrate(@blueprint_054, %{@dashboard_path => dashboard})
+        replaced = source(igniter, @dashboard_path)
+
+        assert replaced =~ "defmodule LegacyAppAdmin.DashboardLive do"
+        assert replaced =~ "alias BrandoAdmin.Components.Dashboard"
+        assert replaced =~ ~s(<.live_component module={Dashboard} id="admin-dashboard")
+        refute replaced =~ "Content.header"
+        assert_has_notice(igniter, &(&1 =~ "#{@dashboard_path} was the old installer's DashboardLive"))
+        assert_idempotent(igniter, @dashboard_path)
+      end
+    end
+
+    test "lists a DashboardLive that renders a header and something else" do
+      edited =
+        String.replace(
+          @old_dashboard,
+          ~s(<Content.header title="Dashboard" subtitle={@current_user.name} />),
+          ~s(<Content.header title="Dashboard" subtitle={@current_user.name} />\n    <p>Velkommen</p>)
+        )
+
+      igniter = migrate(@blueprint_054, %{@dashboard_path => edited})
+
+      assert_unchanged(igniter, @dashboard_path)
+      assert_has_warning(igniter, &(&1 =~ "#{@dashboard_path} renders `Content.header`"))
+    end
+  end
+
   describe "reloadable_apps" do
     # koi's 0.53 config/dev.exs
     defp dev_config(apps) do

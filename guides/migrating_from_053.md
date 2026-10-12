@@ -421,8 +421,10 @@ correct rewrite depends on application semantics:
   v14 migration when deploying through the bundled Fabric workflow;
 - showing Brando's dashboard. The admin's start page is the application's own
   `MyAppAdmin.DashboardLive`, and one from an older installer renders only a
-  header. Render the dashboard component in it, as the installer's template
-  does:
+  header. `mix brando.migrate55` replaces a `DashboardLive` that is exactly the
+  old installer's with the current template, and lists one that renders
+  `Content.header` but differs. In that one, render the dashboard component,
+  as the installer's template does:
 
   ```elixir
   def render(assigns) do
