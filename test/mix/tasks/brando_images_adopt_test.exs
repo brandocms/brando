@@ -53,12 +53,34 @@ defmodule Mix.Tasks.Brando.Images.AdoptTest do
     assert Repo.get!(Image, matching.id).config_fingerprint == nil
   end
 
-  test "--verbose says why an image differs" do
-    differing = ImageFileFixtures.unrecorded_image("task-verbose", sizes: %{"small" => {700, 525}})
+  test "--verbose says what differs, then counts by config target and reason" do
+    sizes = ImageFileFixtures.standard_sizes()
+    keys = ImageFileFixtures.unrecorded_image("task-keys", sizes: %{"small" => {700, 525}, "hero" => {2400, 1800}})
+    formats = ImageFileFixtures.unrecorded_image("task-formats", formats: [:jpg, :webp])
+    small = ImageFileFixtures.unrecorded_image("task-small", sizes: %{sizes | "large" => {1200, 800}})
+    other = ImageFileFixtures.unrecorded_image("task-small-2", sizes: %{sizes | "large" => {1000, 700}})
 
     Adopt.run(["--verbose"])
+    lines = output()
 
-    assert "  image #{differing.id} (default): its sizes differ" in output()
+    assert "  image #{keys.id} (default): sizes: missing [\"large\", \"medium\", \"micro\", \"thumb\", \"xlarge\"], extra [\"hero\"]" in lines
+
+    assert "  image #{formats.id} (default): formats: has [:jpg, :webp], config [:jpg]" in lines
+    assert "  image #{small.id} (default): large: 1200×800 vs config 800×600" in lines
+    assert "  image #{other.id} (default): large: 1000×700 vs config 800×600" in lines
+
+    assert List.last(lines) =~ "Recreate the 4 that differ"
+
+    assert Enum.at(lines, -2) ==
+             Enum.join(
+               [
+                 "\nBy config target and reason:",
+                 "  2 × (default): large: other dimensions",
+                 "  1 × (default): formats: has [:jpg, :webp], config [:jpg]",
+                 "  1 × (default): sizes: missing [\"large\", \"medium\", \"micro\", \"thumb\", \"xlarge\"], extra [\"hero\"]"
+               ],
+               "\n"
+             )
   end
 
   test "--yes is accepted and an unknown option stops the task" do
