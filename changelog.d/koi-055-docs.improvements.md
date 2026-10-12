@@ -16,7 +16,8 @@
   earlier Brando revision may still have: `.html` reads on fragments,
   `:entries` relations mapped to `entry_id`, multi-selects without
   `relation:`, `sources:` options on `sequence` or `preload`, module code
-  reading `data.vars` or `data.refs`, and picture refs that lost their image.
+  reading `data.vars` or `data.refs`, and picture refs, gallery images and
+  media refs' `template_picture` that lost their image.
 
 - **The guides say to keep `:brando` out of `reloadable_apps`.** With it
   listed, Phoenix's code reloader checks Brando's whole source tree on every

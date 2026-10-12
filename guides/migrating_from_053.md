@@ -912,32 +912,46 @@ application's root:
 
    Change `.data.vars.` to `.vars.` and `.data.refs.` to `.refs.` in each
    module's code, then run `mix brando.entries.resave`.
-6. **Picture refs that lost their image.** The conversion links a legacy
-   picture ref to a live `images` row by its path, and empties a ref with no
-   such row. `mix brando.check.legacy_conversion` compares ref names, so it
-   still passes. The legacy Villain column is then the only copy of that
-   image's data, so check before anyone drops it. Run this for each table
-   that still has a Villain column (`pages.data`, `pages_fragments.data` and
-   the application's own), with its table and column in place of
-   `pages.data`:
+6. **Refs that lost their image.** The conversion links legacy image data
+   to a live `images` row and drops what it cannot link. A picture ref, and
+   the `template_picture` of a media ref, are linked by path and emptied
+   without a row. A gallery image is linked by its `sizes`, then by its path,
+   and left out of the gallery without a row.
+   `mix brando.check.legacy_conversion` compares ref names, so it still
+   passes. The legacy Villain column is then the only copy of that image
+   data, so check before anyone drops it. Run this for each table that still
+   has a Villain column (`pages.data`, `pages_fragments.data` and the
+   application's own), with its table and column in place of `pages.data` on
+   the first line:
 
    ```sql
-   select distinct legacy.path
-   from pages,
-     jsonb_path_query(pages.data,
-       'strict $.**.refs[*].data ? (@.type == "picture").data.path', '{}', true) p,
-     lateral (select p #>> '{}' as path) legacy
-   where legacy.path is not null
+   with legacy(data) as (select data from pages),
+   paths(kind, path) as (
+     select 'picture', p #>> '{}' from legacy, jsonb_path_query(legacy.data,
+       'strict $.**.refs[*].data ? (@.type == "picture").data.path', '{}', true) p
+     union all
+     select 'gallery', p #>> '{}' from legacy, jsonb_path_query(legacy.data,
+       'strict $.**.refs[*].data ? (@.type == "gallery").data.images[*].path', '{}', true) p
+     union all
+     select 'media', p #>> '{}' from legacy, jsonb_path_query(legacy.data,
+       'strict $.**.refs[*].data ? (@.type == "media").data.template_picture.path', '{}', true) p
+   )
+   select distinct kind, path from paths
+   where path is not null
      and not exists (
        select 1 from images i
        where i.deleted_at is null
-         and i.path in (legacy.path, regexp_replace(legacy.path, '^/media/', ''))
+         and i.path in (paths.path, regexp_replace(paths.path, '^/media/', ''))
      );
    ```
 
-   Each path it lists is an image that refs had on the old site and have
-   lost. The picture-ref repair (see [Legacy snapshots](#legacy-snapshots))
-   restores them from the legacy data.
+   The conversion also matched a path with the media URL's path in front, so
+   with a `media_url` other than `/media`, put its path in place of `/media/`
+   in the last line. A gallery image the query lists can still have come
+   through by its `sizes`; check that gallery in the admin. Every other path
+   it lists is an image that refs had on the old site and have lost. The
+   picture-ref repair (see [Legacy snapshots](#legacy-snapshots)) restores
+   them from the legacy data.
 7. **Every admin form, opened once.** On one 0.53 site, two of the four
    crashes showed only in the admin: open an entry of every Blueprint there
    before the gate below. Restart the server after any CLI repair task
