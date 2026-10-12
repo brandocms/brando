@@ -9,8 +9,8 @@ if Code.ensure_loaded?(Igniter) do
     alias Mix.Brando.Igniter.SourceUpgrade
     alias Mix.Brando.Igniter.SourceUpgrade.BlueprintGettext
     alias Mix.Brando.Igniter.SourceUpgrade.BuiltinActions
-    alias Mix.Brando.Igniter.SourceUpgrade.ListingRows
     alias Mix.Brando.Igniter.SourceUpgrade.ConfigRewrites
+    alias Mix.Brando.Igniter.SourceUpgrade.ListingRows
     alias Mix.Brando.Igniter.SourceUpgrade.ViewHelpers
 
     @shortdoc "Migrates application source from Brando 0.53 to 0.54"

@@ -5,14 +5,14 @@ if Code.ensure_loaded?(Igniter) do
 
     use Igniter.Mix.Task
 
-    alias Mix.Brando.Igniter.PersistIdentifiers
     alias Mix.Brando.Igniter.Mailer
+    alias Mix.Brando.Igniter.PersistIdentifiers
     alias Mix.Brando.Igniter.SourceUpgrade
     alias Mix.Brando.Igniter.SourceUpgrade.BlueprintGettext
-    alias Mix.Brando.Igniter.UpgradeOrder
     alias Mix.Brando.Igniter.SourceUpgrade.ListOrder
     alias Mix.Brando.Igniter.SourceUpgrade.TestEnvironment
     alias Mix.Brando.Igniter.SourceUpgrade.VideoMarkup
+    alias Mix.Brando.Igniter.UpgradeOrder
 
     @shortdoc "Migrates application source from Brando 0.54 to 0.55"
     @moduledoc """
