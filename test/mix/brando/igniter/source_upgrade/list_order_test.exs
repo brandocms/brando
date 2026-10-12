@@ -531,6 +531,32 @@ defmodule Mix.Brando.Igniter.SourceUpgrade.ListOrderTest do
              ~s|article_controller.ex:5: opts = %{order: "asc sequence"}, passed to Articles.list_articles and Articles.list_categories (they need different tiebreaks: "asc sequence, desc inserted_at", "asc sequence, asc id")|
   end
 
+  test "each module in a file resolves its own aliases" do
+    menu_category = String.replace(@menu_category, "  trait Brando.Trait.Timestamped\n", "")
+
+    controller = """
+    defmodule LettWeb.ArticleHelpers do
+      alias Lett.Articles
+
+      def categories, do: Articles.list_categories(%{order: "asc sequence"})
+    end
+
+    defmodule LettWeb.MenuHelpers do
+      alias Lett.Menu, as: Articles
+
+      def categories, do: Articles.list_categories(%{order: "asc sequence"})
+    end
+    """
+
+    rewritten = source(lett(%{menu_category: menu_category, controller: controller}), :controller)
+
+    assert rewritten =~
+             ~s|alias Lett.Articles\n\n  def categories, do: Articles.list_categories(%{order: "asc sequence, desc inserted_at"})|
+
+    assert rewritten =~
+             ~s|alias Lett.Menu, as: Articles\n\n  def categories, do: Articles.list_categories(%{order: "asc sequence, asc id"})|
+  end
+
   test "is idempotent" do
     igniter = lett()
     rewritten = for key <- [:article, :menuitem, :vacancy, :controller], into: %{}, do: {key, source(igniter, key)}

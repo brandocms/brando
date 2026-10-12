@@ -86,7 +86,7 @@ if Code.ensure_loaded?(Igniter) do
       for {_path, content} <- sources,
           {context, chunk} <- modules(content),
           chunk =~ ~r/use Brando\.Query\b/,
-          aliases = aliases(content, context),
+          aliases = aliases(chunk, context),
           functions = list_functions(chunk, aliases, blueprints),
           functions != %{},
           into: %{},
@@ -113,18 +113,15 @@ if Code.ensure_loaded?(Igniter) do
 
     # `[{module_name, text}]`: each `defmodule` in the file, up to the next one.
     defp modules(content) do
+      for {name, start, stop} <- module_spans(content), do: {name, binary_part(content, start, stop - start)}
+    end
+
+    defp module_spans(content) do
       starts = Regex.scan(~r/^\s*defmodule\s+([\w.]+)\s+do/m, content, return: :index)
       ends = Enum.map(Enum.drop(starts, 1), fn [{start, _} | _] -> start end) ++ [byte_size(content)]
 
       for {[{start, _}, {name_start, name_length}], stop} <- Enum.zip(starts, ends),
-          do: {binary_part(content, name_start, name_length), binary_part(content, start, stop - start)}
-    end
-
-    defp module_name(content) do
-      case modules(content) do
-        [{module, _text} | _] -> module
-        [] -> nil
-      end
+          do: {binary_part(content, name_start, name_length), start, stop}
     end
 
     # `%{"Short" => "Full.Module"}` from the file's `alias` lines.
@@ -183,11 +180,11 @@ if Code.ensure_loaded?(Igniter) do
     ## Call sites
 
     defp file_findings(path, content, contexts) do
-      module = if Path.extname(path) == ".ex", do: module_name(content)
-      aliases = aliases(content, module)
+      scope = scopes(path, content)
 
       qualified =
         for [{start, _}, {q_start, q_length}, {f_start, f_length}] <- Regex.scan(@call, content, return: :index),
+            {_module, aliases} = scope.(start),
             context = context_for(binary_part(content, q_start, q_length), aliases, contexts),
             context != nil,
             function = binary_part(content, f_start, f_length),
@@ -195,9 +192,10 @@ if Code.ensure_loaded?(Igniter) do
             do: {start, f_start + f_length, context, function}
 
       local =
-        for functions <- [Map.get(contexts, module)],
+        for [{start, _}, {f_start, f_length}] <- Regex.scan(@local_call, content, return: :index),
+            {module, _aliases} = scope.(start),
+            functions = Map.get(contexts, module),
             functions != nil,
-            [{start, _}, {f_start, f_length}] <- Regex.scan(@local_call, content, return: :index),
             function = binary_part(content, f_start, f_length),
             Map.has_key?(functions, function),
             not definition?(content, start),
@@ -208,6 +206,24 @@ if Code.ensure_loaded?(Igniter) do
           finding <- call_findings(content, start, open_paren(content, name_end), call),
           do: finding
     end
+
+    # A function of an offset: the module around it and that module's
+    # aliases. A template has neither.
+    defp scopes(path, content) do
+      # Last module first, so the first that starts before an offset holds it.
+      modules =
+        if Path.extname(path) == ".ex",
+          do: content |> module_spans() |> Enum.map(&module_scope(content, &1)) |> Enum.reverse(),
+          else: []
+
+      fn offset ->
+        {_start, name, aliases} = Enum.find(modules, {nil, nil, %{}}, &(elem(&1, 0) <= offset))
+        {name, aliases}
+      end
+    end
+
+    defp module_scope(content, {name, start, stop}),
+      do: {start, name, aliases(binary_part(content, start, stop - start), name)}
 
     defp call_name(context, function), do: "#{context |> String.split(".") |> List.last()}.#{function}"
 
