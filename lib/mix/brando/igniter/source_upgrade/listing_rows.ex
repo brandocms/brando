@@ -18,11 +18,13 @@ if Code.ensure_loaded?(Igniter) do
     #   * a `:language` field is dropped: a listing shows the content language
     #     only;
     #   * a template whose one link is the entry's admin update URL is
-    #     `Core.update_link/1`, the markup before the link its `:before` slot;
-    #     a template without a link is `Core.field/1`.
+    #     `Core.update_link/1`, the markup before the link its `:before` slot
+    #     and the markup after it its `:outside` slot; a template without a
+    #     link is `Core.field/1`.
     #
-    # Templates convert from a Liquid subset: `{{ entry.a.b }}`, and
-    # `{% if entry.a %}` around one element or around text. Inline `<svg>`
+    # Templates convert from a Liquid subset: `{{ entry.a.b }}` (also
+    # `entry.a[0].b`, and in attributes), `{% if entry.a %}` and
+    # `{% for x in entry.a %}` around one element or around text. Inline `<svg>`
     # icons in a `.badge` are dropped, since 0.55's badge wraps them onto a
     # line of their own. Any other column, Liquid or markup leaves the whole
     # listing as it is, and is listed with file and line.
@@ -47,7 +49,8 @@ if Code.ensure_loaded?(Igniter) do
     @close ~r/\A<\/([a-zA-Z][\w:-]*)\s*>\z/
     @open Regex.compile!(~S"\A<([a-zA-Z][\w:-]*)(" <> @attributes <> ~S")\s*(/?)>\z", "s")
     @attribute ~r/([^\s"'<>\/=]+)(?:\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'=<>`]+)))?/
-    @entry_path ~r/\Aentry((?:\.[a-z_]\w*)+)\z/
+    @liquid_path ~r/\A([a-z_]\w*)((?:\.[a-z_]\w*(?:\[\d+\])?)*)\z/
+    @for_clause ~r/\A([a-z_]\w*)\s+in\s+(\S+)\z/
     @update_href ~r/\A\/admin\/\S+\/update\/\{\{-?\s*entry\.id\s*-?\}\}\z/
     @link_attributes ~w(href class data-phx-link data-phx-link-state)
 
@@ -370,10 +373,10 @@ if Code.ensure_loaded?(Igniter) do
         {before, [{:element, "a", link_attributes, content} | after_link]} ->
           with :ok <- one_link(before ++ content ++ after_link),
                :ok <- update_link(link_attributes),
-               :ok <- nothing_after(after_link),
                {:ok, before} <- render_block(before),
-               {:ok, content} <- render_block(content) do
-            {:ok, update_link_cell(attributes, before, content)}
+               {:ok, content} <- render_block(content),
+               {:ok, outside} <- render_block(after_link) do
+            {:ok, update_link_cell(attributes, before, content, outside)}
           end
 
         {nodes, []} ->
@@ -384,22 +387,21 @@ if Code.ensure_loaded?(Igniter) do
       end
     end
 
-    defp update_link_cell(attributes, "", content),
+    defp update_link_cell(attributes, "", content, ""),
       do: wrap("<.update_link entry={@entry} #{Enum.join(attributes, " ")}>", content, "</.update_link>")
 
-    defp update_link_cell(attributes, before, content) do
+    # Markup before the link goes in the `:before` slot, markup after it in
+    # `:outside`, which renders after the link inside the same cell.
+    defp update_link_cell(attributes, before, content, outside) do
       Enum.join(
-        [
-          "<.update_link entry={@entry} #{Enum.join(attributes, " ")}>",
-          "<:before>",
-          before,
-          "</:before>",
-          content,
-          "</.update_link>"
-        ],
+        ["<.update_link entry={@entry} #{Enum.join(attributes, " ")}>"] ++
+          slot("before", before) ++ [content] ++ slot("outside", outside) ++ ["</.update_link>"],
         "\n"
       )
     end
+
+    defp slot(_name, ""), do: []
+    defp slot(name, content), do: ["<:#{name}>", content, "</:#{name}>"]
 
     defp wrap(open, content, close) do
       if String.contains?(content, "\n"),
@@ -422,6 +424,7 @@ if Code.ensure_loaded?(Igniter) do
       do: Enum.any?(children, &contains_link?/1)
 
     defp contains_link?({:if, _condition, children}), do: Enum.any?(children, &contains_link?/1)
+    defp contains_link?({:for, _variable, _collection, children}), do: Enum.any?(children, &contains_link?/1)
     defp contains_link?(_node), do: false
 
     defp update_link(attributes) do
@@ -440,10 +443,6 @@ if Code.ensure_loaded?(Igniter) do
         true ->
           :ok
       end
-    end
-
-    defp nothing_after(nodes) do
-      if Enum.all?(nodes, &blank?/1), do: :ok, else: {:error, "markup after the link"}
     end
 
     ## Liquid and HTML
@@ -479,6 +478,10 @@ if Code.ensure_loaded?(Igniter) do
 
     defp build([], [{:root, children}]), do: {:ok, Enum.reverse(children)}
     defp build([], [{:if, _condition, _children} | _stack]), do: {:error, "a `{% if %}` without `{% endif %}`"}
+
+    defp build([], [{:for, _variable, _collection, _children} | _stack]),
+      do: {:error, "a `{% for %}` without `{% endfor %}`"}
+
     defp build([], [{{:element, name, _}, _children} | _stack]), do: {:error, "an unclosed `<#{name}>`"}
 
     defp build([{:open, name, attributes, true} | tokens], stack),
@@ -498,11 +501,25 @@ if Code.ensure_loaded?(Igniter) do
     defp build([{:tag, "endif"} | tokens], [{:if, condition, children} | stack]),
       do: build(tokens, add({:if, condition, Enum.reverse(children)}, stack))
 
+    defp build([{:tag, "for " <> clause = tag} | tokens], stack) do
+      case Regex.run(@for_clause, clause) do
+        [_clause, variable, collection] -> build(tokens, [{:for, variable, collection, []} | stack])
+        nil -> {:error, "the Liquid tag `{% #{tag} %}`"}
+      end
+    end
+
+    defp build([{:tag, "endfor"} | tokens], [{:for, variable, collection, children} | stack]),
+      do: build(tokens, add({:for, variable, collection, Enum.reverse(children)}, stack))
+
     defp build([{:tag, tag} | _tokens], _stack), do: {:error, "the Liquid tag `{% #{tag} %}`"}
     defp build([node | tokens], stack), do: build(tokens, add(node, stack))
 
     defp add(node, [{:root, children} | stack]), do: [{:root, [node | children]} | stack]
     defp add(node, [{:if, condition, children} | stack]), do: [{:if, condition, [node | children]} | stack]
+
+    defp add(node, [{:for, variable, collection, children} | stack]),
+      do: [{:for, variable, collection, [node | children]} | stack]
+
     defp add(node, [{element, children} | stack]), do: [{element, [node | children]} | stack]
 
     # 0.55's `.badge` lays an icon out on a line of its own.
@@ -521,6 +538,10 @@ if Code.ensure_loaded?(Igniter) do
         {:if, condition, children}, dropped ->
           {children, icons} = drop_badge_icons(children)
           {{:if, condition, children}, dropped or icons}
+
+        {:for, variable, collection, children}, dropped ->
+          {children, icons} = drop_badge_icons(children)
+          {{:for, variable, collection, children}, dropped or icons}
 
         node, dropped ->
           {node, dropped}
@@ -549,8 +570,10 @@ if Code.ensure_loaded?(Igniter) do
     end
 
     # Elements go on lines of their own; text and values keep their spacing.
-    defp render_block(nodes) do
-      with {:ok, parts} <- render_all(trim(nodes)) do
+    # `scope` holds the loop variables in reach and the Liquid paths an
+    # enclosing `{% if %}` already tested.
+    defp render_block(nodes, scope \\ %{variables: [], tested: []}) do
+      with {:ok, parts} <- render_all(trim(nodes), scope) do
         {:ok, join_block(parts, nil, "")}
       end
     end
@@ -568,22 +591,22 @@ if Code.ensure_loaded?(Igniter) do
       join_block(rest, kind, acc <> separator <> text)
     end
 
-    defp render_inline(nodes) do
-      with {:ok, parts} <- render_all(nodes) do
+    defp render_inline(nodes, scope) do
+      with {:ok, parts} <- render_all(nodes, scope) do
         {:ok, Enum.map_join(parts, &elem(&1, 1))}
       end
     end
 
-    defp render_all(nodes) do
+    defp render_all(nodes, scope) do
       Enum.reduce_while(nodes, {:ok, []}, fn node, {:ok, parts} ->
-        case render(node) do
+        case render(node, scope) do
           {:ok, part} -> {:cont, {:ok, parts ++ [part]}}
           {:error, _reason} = error -> {:halt, error}
         end
       end)
     end
 
-    defp render({:text, text}) do
+    defp render({:text, text}, _scope) do
       cond do
         String.contains?(text, ["{", "}"]) -> {:error, "a `{` or `}` in the template's text"}
         String.trim(text) == "" -> {:ok, {:space, text}}
@@ -591,73 +614,153 @@ if Code.ensure_loaded?(Igniter) do
       end
     end
 
-    defp render({:comment, comment}), do: {:ok, {:element, comment}}
+    defp render({:comment, comment}, _scope), do: {:ok, {:element, comment}}
 
-    defp render({:output, expression}) do
-      with {:ok, expression} <- entry_expression(expression, "{{ #{expression} }}") do
+    defp render({:output, expression}, scope) do
+      with {:ok, expression} <- entry_expression(expression, "{{ #{expression} }}", scope) do
         {:ok, {:text, "{#{expression}}"}}
       end
     end
 
-    defp render({:element, _name, _attributes, _children} = element), do: render_element(element, [])
+    defp render({:element, _name, _attributes, _children} = element, scope), do: render_element(element, [], scope)
 
-    defp render({:if, condition, children}) do
-      with {:ok, expression} <- entry_expression(condition, "{% if #{condition} %}") do
-        render_conditional(trim(children), expression, condition)
+    defp render({:if, condition, children}, scope) do
+      with {:ok, expression} <- entry_expression(condition, "{% if #{condition} %}", scope) do
+        scope = %{scope | tested: [String.trim(condition) | scope.tested]}
+        render_wrapped(trim(children), ":if={#{expression}}", "{% if #{condition} %}", scope)
       end
     end
 
-    # One element takes the `:if`; text is wrapped in a `<span>` that does.
-    defp render_conditional([{:element, _name, _attributes, _children} = element], expression, _condition),
-      do: render_element(element, [":if={#{expression}}"])
+    # A `{% for %}` over an association of the entry, or of a loop variable.
+    defp render({:for, variable, collection, children}, scope) do
+      shown = "{% for #{variable} in #{collection} %}"
 
-    defp render_conditional(children, expression, condition) do
+      with {:ok, expression} <- entry_expression(collection, shown, scope) do
+        expression = if String.contains?(expression, " && "), do: "(#{expression}) || []", else: expression
+        scope = %{scope | variables: [variable | scope.variables]}
+        render_wrapped(trim(children), ":for={#{variable} <- #{expression}}", shown, scope)
+      end
+    end
+
+    # One element takes the `:if` or `:for`; text is wrapped in a `<span>`
+    # that does.
+    defp render_wrapped([{:element, _name, _attributes, _children} = element], attribute, _shown, scope),
+      do: render_element(element, [attribute], scope)
+
+    defp render_wrapped(children, attribute, shown, scope) do
       with true <- Enum.all?(children, &match?({kind, _} when kind in [:text, :output], &1)),
-           {:ok, text} <- render_inline(children) do
-        {:ok, {:element, "<span :if={#{expression}}>#{String.trim(text)}</span>"}}
+           {:ok, text} <- render_inline(children, scope) do
+        {:ok, {:element, "<span #{attribute}>#{String.trim(text)}</span>"}}
       else
-        false -> {:error, "a `{% if #{condition} %}` around more than one element, or around an element and text"}
+        false -> {:error, "a `#{shown}` around more than one element, or around an element and text"}
         {:error, _reason} = error -> error
       end
     end
 
-    defp render_element({:element, name, attributes, children}, extra) do
-      open = Enum.join([name | extra] ++ Enum.map(attributes, &attribute/1), " ")
+    defp render_element({:element, name, attributes, children}, extra, scope) do
+      with {:ok, attributes} <- render_attributes(name, attributes, scope) do
+        open = Enum.join([name | extra] ++ attributes, " ")
 
-      cond do
-        Enum.any?(attributes, fn {_name, value} -> is_binary(value) and String.contains?(value, ["{", "}"]) end) ->
-          {:error, "Liquid in the attributes of a `<#{name}>`"}
-
-        children == :void ->
+        if children == :void do
           {:ok, {:element, "<#{open} />"}}
-
-        true ->
-          with {:ok, inner} <- render_inline(children) do
+        else
+          with {:ok, inner} <- render_inline(children, scope) do
             {:ok, {:element, "<#{open}>#{inner}</#{name}>"}}
           end
+        end
       end
     end
 
-    defp attribute({name, nil}), do: name
-
-    defp attribute({name, value}) do
-      if String.contains?(value, "\""), do: "#{name}='#{value}'", else: "#{name}=\"#{value}\""
+    defp render_attributes(element, attributes, scope) do
+      Enum.reduce_while(attributes, {:ok, []}, fn attribute, {:ok, rendered} ->
+        case attribute(attribute, element, scope) do
+          {:ok, attribute} -> {:cont, {:ok, rendered ++ [attribute]}}
+          {:error, _reason} = error -> {:halt, error}
+        end
+      end)
     end
 
-    # `entry.a.b` reads `@entry.a && @entry.a.b`: Liquid prints nothing for a
-    # missing association, where HEEx would raise.
-    defp entry_expression(expression, shown) do
-      case Regex.run(@entry_path, String.trim(expression)) do
-        [_match, path] ->
-          {:ok,
-           path
-           |> String.split(".", trim: true)
-           |> Enum.scan(&"#{&2}.#{&1}")
-           |> Enum.map_join(" && ", &"@entry.#{&1}")}
+    defp attribute({name, nil}, _element, _scope), do: {:ok, name}
+
+    defp attribute({name, value}, element, scope) do
+      cond do
+        not String.contains?(value, ["{", "}"]) ->
+          {:ok, if(String.contains?(value, "\""), do: "#{name}='#{value}'", else: "#{name}=\"#{value}\"")}
+
+        String.contains?(value, "{%") ->
+          {:error, "a Liquid tag in the attributes of a `<#{element}>`"}
+
+        true ->
+          liquid_attribute(name, value, element, scope)
+      end
+    end
+
+    # `{{ entry.x }}` in an attribute becomes an expression, and text around
+    # it a string with the value interpolated.
+    defp liquid_attribute(name, value, element, scope) do
+      ~r/\{\{.*?\}\}/s
+      |> Regex.split(value, include_captures: true, trim: true)
+      |> Enum.reduce_while({:ok, []}, fn part, {:ok, parts} ->
+        case attribute_part(part, element, scope) do
+          {:ok, part} -> {:cont, {:ok, parts ++ [part]}}
+          {:error, _reason} = error -> {:halt, error}
+        end
+      end)
+      |> case do
+        {:ok, [{:expression, expression}]} -> {:ok, "#{name}={#{expression}}"}
+        {:ok, parts} -> {:ok, "#{name}={\"#{Enum.map_join(parts, &interpolated/1)}\"}"}
+        {:error, _reason} = error -> error
+      end
+    end
+
+    defp attribute_part(part, element, scope) do
+      case Regex.run(@output, part) do
+        [_part, expression] ->
+          with {:ok, expression} <- entry_expression(expression, part, scope), do: {:ok, {:expression, expression}}
 
         nil ->
-          {:error, "the Liquid `#{shown}`"}
+          if String.contains?(part, ["{", "}"]),
+            do: {:error, "a `{` or `}` in the attributes of a `<#{element}>`"},
+            else: {:ok, {:text, part}}
       end
+    end
+
+    defp interpolated({:expression, expression}), do: "\#{" <> expression <> "}"
+
+    defp interpolated({:text, text}),
+      do: text |> String.replace("\\", "\\\\") |> String.replace("\"", "\\\"") |> String.replace("\#{", "\\\#{")
+
+    # `entry.a.b` reads `@entry.a && @entry.a.b`: Liquid prints nothing for a
+    # missing association, where HEEx would raise. A path an enclosing
+    # `{% if %}` tested is not tested again, and `a[0]` reads `Enum.at(a, 0)`.
+    defp entry_expression(expression, shown, scope) do
+      with [_match, root, path] <- Regex.run(@liquid_path, String.trim(expression)),
+           true <- root in scope.variables or (root == "entry" and path != "") do
+        segments = Regex.scan(~r/\.([a-z_]\w*)(?:\[(\d+)\])?/, path, capture: :all_but_first)
+        start = if root == "entry", do: {"entry", "@entry"}, else: {root, root}
+        {reads, _last} = Enum.map_reduce(segments, start, &segment_read/2)
+        {:ok, guarded(reads, root, scope)}
+      else
+        _ -> {:error, "the Liquid `#{shown}`"}
+      end
+    end
+
+    defp segment_read([name], {liquid, code}), do: twice({"#{liquid}.#{name}", "#{code}.#{name}"})
+
+    defp segment_read([name, index], {liquid, code}),
+      do: twice({"#{liquid}.#{name}[#{index}]", "Enum.at(#{code}.#{name}, #{index})"})
+
+    defp twice(read), do: {read, read}
+
+    defp guarded([], root, _scope), do: root
+
+    defp guarded(reads, _root, scope) do
+      {tested, [last]} = Enum.split(reads, -1)
+
+      tested
+      |> Enum.reject(fn {liquid, _code} -> liquid in scope.tested end)
+      |> Kernel.++([last])
+      |> Enum.map_join(" && ", &elem(&1, 1))
     end
 
     ## Report

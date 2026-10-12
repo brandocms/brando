@@ -80,8 +80,9 @@ if Code.ensure_loaded?(Igniter) do
 
       Legacy listing columns become a row component: image fields
       `<.cover>`, url fields `<.url>`, a Liquid template linking to the
-      entry's update form `<.update_link>`, with `{{ entry.x }}` and
-      `{% if entry.x %}` written as HEEx. Language columns are dropped. A
+      entry's update form `<.update_link>` (markup after the link in its
+      `:outside` slot), with `{{ entry.x }}`, `{% if entry.x %}` and
+      `{% for x in entry.xs %}` written as HEEx. Language columns are dropped. A
       listing with any other column is left as it is and listed below.
       Actions whose event is `edit_entry`, `duplicate_entry` or
       `delete_entry` are removed from listings that keep `default_actions`,
