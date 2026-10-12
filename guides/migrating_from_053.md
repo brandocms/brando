@@ -251,9 +251,24 @@ the result before the source tasks, so their diff holds only their changes.
 - defaults an unconfigured Swoosh API client to `Swoosh.ApiClient.Req` and
   pins declared `phoenix_live_view` dependencies in `assets/**/package.json`
   to the loaded server version;
-- points Brando at the application's `Mailer` when it has one
-  (`config :brando, mailer: MyApp.Mailer`); set the address it sends from
-  yourself, as described in [Email](email.md);
+- points Brando at the application's `Mailer` (`config :brando, mailer:
+  MyApp.Mailer`), or, when it has none, creates `MyApp.Mailer` with the local
+  adapter in development and the test adapter in test, and writes a
+  placeholder sender (`noreply@example.com`). Replace the placeholder with an
+  address your mail provider sends for, and configure the mailer's production
+  adapter in `runtime.exs`, as described in [Email](email.md);
+  `mix brando.doctor` warns until you do;
+- gives calls to the application's `list_*` queries that order a Sequenced
+  schema only by `sequence` a tiebreak (`"asc sequence, desc inserted_at"`, or
+  `"asc sequence, asc id"` without timestamps), and lists the calls with no
+  `order:` with file and line (see the ordering note in section 3);
+- lists front-end scripts under `assets/` that read `data-src` from a
+  `<video>`. A file video's `data-src` is on its `[data-smart-video]` wrapper,
+  and the `<video>` carries `src` unless it preloads, so read
+  `el.closest('[data-smart-video]').dataset.src` or fall back to it;
+- warns when `config/runtime.exs` reads the Repo `url:` from the environment
+  in `:test` too, and when `test_paths` names a missing directory (see
+  [Test and development databases](#test-and-development-databases));
 - adds `plug Brando.Plug.Markdown` and `plug Brando.Plug.IndexNow` to the
   endpoint, before the router (and before `Brando.Plug.Health`), unless it
   already has them;
@@ -420,10 +435,11 @@ It takes the template's package versions, `engines` and `packageManager`
 (keeping the application's own packages, scripts and BrandoJS source), replaces
 `vite.config.js`, removes `svelte.config.cjs` and yarn/npm lockfiles, and
 replaces the Dockerfile's `assets_backend` stage with the template's pnpm stage.
-Customized CSS and other existing files are kept. The other Dockerfile stages
-are left alone: an older Dockerfile may still build `assets_frontend` on
-`node:16`. Move it to the Node major you pinned above and check that the
-frontend still builds on it. Review the diff, then install and build:
+Customized CSS and other existing files are kept. It also moves the
+`assets_frontend` stage up to the same Node major when
+`assets/frontend/package.json` sets no `engines.node`, or one that allows it;
+otherwise a notice says why it was kept. Either way, check that the frontend
+builds on that Node. Review the diff, then install and build:
 
 ```shell
 mix brando.assets.setup --backend-only
@@ -641,8 +657,13 @@ test: ["ecto.create --quiet", "ecto.load --skip-if-loaded", "ecto.migrate", "tes
 `--skip-if-loaded` leaves a database that already has its migrations table
 alone, so if the old alias already created the test database, drop it once
 (`MIX_ENV=test mix ecto.drop`). `ecto.migrate` then runs only the migrations
-newer than the dump. Check too that `test_paths` in `mix.exs` points at
-directories that exist.
+newer than the dump.
+
+`mix brando.migrate55` warns when `test_paths` names a missing directory, and
+when `config/runtime.exs` reads the Repo `url:` from the environment in `:test`
+too. In that case `mix test` uses, and its alias migrates, whatever database
+the shell names: guard it with `if config_env() != :test do … end`.
+`mix brando.doctor` checks the same in development.
 
 Before touching a shared database:
 
@@ -670,9 +691,12 @@ The migrations update every row of many tables (the generated Blueprint
 migrations backfill `edited_at` from `updated_at`, for example). PostgreSQL
 returns rows from a query without `ORDER BY` in storage order, and an update
 moves a row, so any page built on such a query may change order: the first
-category of a menu, or articles with equal `sequence`. Before diffing public
-pages against the old site, check the application's queries for a missing
-`order_by`, and add an `id` tiebreak where values can tie.
+category of a menu, or articles with equal `sequence`. `mix brando.migrate55`
+already gave calls to the application's `list_*` queries that ordered a
+Sequenced schema only by `sequence` a tiebreak, and listed the calls with no
+`order:` with file and line. Give each of those an order before diffing public
+pages against the old site, and check other queries (`Repo` and `Ecto.Query`)
+by hand.
 
 ## 4. Repair derived data
 
