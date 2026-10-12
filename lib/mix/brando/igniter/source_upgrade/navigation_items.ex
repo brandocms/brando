@@ -23,10 +23,22 @@ if Code.ensure_loaded?(Igniter) do
 
     @generator ~r/\b([a-z_]\w*)\s*<-\s*(@?[\w.\[\]"]*)\.(items|children)\b/
 
+    # A schema of the application's own with `items` (a restaurant's menu,
+    # say) may be what `@menu.items` reads, so its reads are only listed.
+    @own_items ~r/\b(?:relation|attribute|field|has_many|many_to_many|embeds_many|embeds_one)\s*\(?\s*:items\b/
+
     @doc "Rewrites the navigation item reads in `paths`."
     def rewrite(igniter, paths) do
+      contents = Map.new(paths, &{&1, igniter.rewrite |> Rewrite.source!(&1) |> Source.get(:content)})
+
+      if Enum.any?(contents, fn {path, content} -> Path.extname(path) == ".ex" and content =~ @own_items end),
+        do: igniter,
+        else: rewrite(igniter, paths, contents)
+    end
+
+    defp rewrite(igniter, paths, contents) do
       Enum.reduce(paths, igniter, fn path, igniter ->
-        content = igniter.rewrite |> Rewrite.source!(path) |> Source.get(:content)
+        content = contents[path]
 
         case rewrite_content(content, path) do
           ^content -> igniter
@@ -39,7 +51,8 @@ if Code.ensure_loaded?(Igniter) do
     def read?(content) do
       case variables(content) do
         [] -> fn _line -> false end
-        variables -> &Regex.match?(reads(variables), &1)
+        # `@item.url` too: an item passed on to a component is read there.
+        variables -> &Regex.match?(reads(variables, "(?<![\\w.])"), &1)
       end
     end
 
@@ -54,7 +67,7 @@ if Code.ensure_loaded?(Igniter) do
           code? = TemplateCode.code?(content, path)
 
           variables
-          |> reads()
+          |> reads("(?<![\\w.@])")
           |> Regex.scan(content, return: :index)
           |> Enum.filter(fn [{start, _length} | _groups] -> code?.(start) end)
           |> Enum.reverse()
@@ -72,9 +85,10 @@ if Code.ensure_loaded?(Igniter) do
     defp replacement(variable, "items"), do: "#{variable}.children"
     defp replacement(variable, field), do: "#{@replacements[field]}(#{variable})"
 
-    defp reads(variables),
-      do:
-        ~r/(?<![\w.@])(#{Enum.map_join(variables, "|", &Regex.escape/1)})\.(url|title|open_in_new_window|items)(?![\w?!(])/
+    defp reads(variables, lookbehind) do
+      names = Enum.map_join(variables, "|", &Regex.escape/1)
+      Regex.compile!(lookbehind <> "(#{names})\\.(url|title|open_in_new_window|items)(?![\\w?!(])")
+    end
 
     # Generators over a navigation's or menu's items, then over those items'
     # own items, until no new variable turns up.

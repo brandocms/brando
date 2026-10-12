@@ -100,6 +100,53 @@ defmodule Mix.Tasks.Brando.Migrate54TemplatesTest do
     end)
   end
 
+  test "only lists item reads when the application has a schema of its own with items" do
+    navigation = """
+    <li :for={dish <- @menu.items}>{dish.title}</li>
+    """
+
+    schema = """
+    defmodule Lett.Restaurant.Menu do
+      use Ecto.Schema
+
+      schema "menus" do
+        has_many :items, Lett.Restaurant.Dish
+      end
+    end
+    """
+
+    igniter = migrate(%{@navigation_path => navigation, "lib/lett/restaurant/menu.ex" => schema})
+
+    assert_unchanged(igniter, [@navigation_path])
+    assert_has_warning(igniter, &(&1 =~ "Navigation items" and &1 =~ "#{@navigation_path}:1:"))
+  end
+
+  test "lists an item's reads in the component it is passed to" do
+    component = """
+    defmodule LettWeb.Navigation do
+      use Phoenix.Component
+
+      def navigation(assigns) do
+        ~H\"\"\"
+        <.nav_item :for={item <- @navigation.items} item={item} />
+        \"\"\"
+      end
+
+      def nav_item(assigns) do
+        ~H\"\"\"
+        <a href={@item.url}>{@item.title}</a>
+        \"\"\"
+      end
+    end
+    """
+
+    path = "lib/lett_web/components/navigation.ex"
+    igniter = migrate(%{path => component})
+
+    assert_unchanged(igniter, [path])
+    assert_has_warning(igniter, &(&1 =~ "Navigation items" and &1 =~ "#{path}:12: <a href={@item.url}>"))
+  end
+
   @controller_path "lib/lett_web/controllers/page_controller.ex"
 
   @controller """
