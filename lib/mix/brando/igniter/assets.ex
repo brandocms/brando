@@ -192,42 +192,108 @@ if Code.ensure_loaded?(Igniter) do
         current = igniter.rewrite |> Rewrite.source!("Dockerfile") |> Rewrite.Source.get(:content)
         template = Templates.contents(:copy, "Dockerfile")
         {_, stage, _} = dockerfile_stage(template, "assets_backend")
-        igniter = frontend_image_notice(igniter, stage_image(current, "assets_frontend"), template)
 
-        case dockerfile_stage(current, "assets_backend") do
-          {_before, ^stage, _rest} ->
-            igniter
+        {igniter, contents} =
+          case dockerfile_stage(current, "assets_backend") do
+            {_before, ^stage, _rest} ->
+              {igniter, current}
 
-          {before, _old, rest} ->
-            replace_file(igniter, "Dockerfile", Enum.join(before ++ stage ++ rest, "\n"))
+            {before, _old, rest} ->
+              {igniter, Enum.join(before ++ stage ++ rest, "\n")}
 
-          nil ->
-            Igniter.add_warning(
-              igniter,
-              "The Dockerfile has no assets_backend stage; build the admin with pnpm as Brando's Dockerfile template does."
-            )
-        end
+            nil ->
+              {Igniter.add_warning(
+                 igniter,
+                 "The Dockerfile has no assets_backend stage; build the admin with pnpm as Brando's Dockerfile template does."
+               ), current}
+          end
+
+        {igniter, contents} = upgrade_frontend_image(igniter, contents, stage_image(template, "assets_backend"))
+        if contents == current, do: igniter, else: replace_file(igniter, "Dockerfile", contents)
       else
         igniter
       end
     end
 
-    # The upgrade replaces only the admin's stage; the frontend is the
-    # site's own build, so its Node image is left for the site to move.
-    defp frontend_image_notice(igniter, nil, _template), do: igniter
+    # The frontend is the site's own build. Its stage moves to the admin's
+    # Node major when the frontend's `engines.node` allows it (or has none).
+    defp upgrade_frontend_image(igniter, contents, wanted) do
+      with image when is_binary(image) <- stage_image(contents, "assets_frontend"),
+           {:ok, major} <- node_major(wanted),
+           false <- node_major(image) == {:ok, major} do
+        range =
+          case node_major(image) do
+            {:ok, _major} -> frontend_node_range(igniter, major)
+            :error -> {igniter, :kept, "It does not build on a `node:<version>` image this task can move."}
+          end
 
-    defp frontend_image_notice(igniter, image, template) do
-      case stage_image(template, "assets_frontend") do
-        ^image ->
-          igniter
-
-        wanted ->
-          Igniter.add_notice(igniter, """
-          The Dockerfile's assets_frontend stage still builds on #{image}: this task updates only the assets_backend stage.
-          Brando's template builds the frontend on #{wanted}. Update that stage's FROM line once the frontend builds on it.
-          """)
+        frontend_image(range, contents, image, wanted, major)
+      else
+        _ -> {igniter, contents}
       end
     end
+
+    defp frontend_image({igniter, :allowed, reason}, contents, image, _wanted, major) do
+      upgraded = Regex.replace(frontend_from(), contents, fn _line, from, _version, rest -> "#{from}#{major}#{rest}" end)
+      frontend_image_notice(igniter, upgraded, image, stage_image(upgraded, "assets_frontend"), reason)
+    end
+
+    defp frontend_image({igniter, :kept, reason}, contents, image, wanted, _major) do
+      {Igniter.add_notice(igniter, """
+       The Dockerfile's assets_frontend stage still builds on #{image}: this task updates only the assets_backend stage, which builds on #{wanted}.
+       #{reason} Update that stage's FROM line once the frontend builds on #{wanted}.
+       """), contents}
+    end
+
+    defp frontend_image_notice(igniter, contents, image, image, _reason), do: {igniter, contents}
+
+    defp frontend_image_notice(igniter, contents, old, new, reason) do
+      {Igniter.add_notice(igniter, """
+       The Dockerfile's assets_frontend stage now builds on #{new} (was #{old}), the Node the admin builds on: #{reason}.
+       Build the frontend with that Node before deploying.
+       """), contents}
+    end
+
+    defp frontend_from, do: ~r/^(FROM\s+(?:--platform=\S+\s+)?node:)(\d+(?:\.\d+)*)(\S*\s+AS\s+assets_frontend\s*)$/im
+
+    defp node_major(image) do
+      case Regex.run(~r/^node:(\d+)/, image || "") do
+        [_, major] -> {:ok, String.to_integer(major)}
+        nil -> :error
+      end
+    end
+
+    @frontend_package "assets/frontend/package.json"
+
+    defp frontend_node_range(igniter, major) do
+      if Igniter.exists?(igniter, @frontend_package) do
+        igniter = Igniter.include_existing_file(igniter, @frontend_package)
+        package = igniter.rewrite |> Rewrite.source!(@frontend_package) |> Rewrite.Source.get(:content)
+        node_range_status(igniter, Jason.decode(package), major)
+      else
+        {igniter, :kept, "There is no #{@frontend_package} to check its Node versions against."}
+      end
+    end
+
+    defp node_range_status(igniter, {:ok, %{"engines" => %{"node" => range}}}, major) when is_binary(range) do
+      case Mix.Brando.Igniter.NodeRange.allows_major?(range, major) do
+        {:ok, true} ->
+          {igniter, :allowed, "#{@frontend_package} allows it (engines.node #{inspect(range)})"}
+
+        {:ok, false} ->
+          {igniter, :kept,
+           "#{@frontend_package} requires Node #{inspect(range)} (engines.node), which excludes Node #{major}."}
+
+        :error ->
+          {igniter, :kept, "This task cannot read #{@frontend_package}'s engines.node #{inspect(range)}."}
+      end
+    end
+
+    defp node_range_status(igniter, {:ok, package}, _major) when is_map(package),
+      do: {igniter, :allowed, "#{@frontend_package} sets no engines.node"}
+
+    defp node_range_status(igniter, _package, _major),
+      do: {igniter, :kept, "This task cannot read #{@frontend_package}."}
 
     defp stage_image(contents, stage) do
       contents
