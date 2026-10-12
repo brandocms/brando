@@ -523,9 +523,11 @@ defmodule Mix.Tasks.Brando.Migrate54ListingRowsTest do
     warnings = ExUnit.CaptureIO.capture_io(:stderr, fn -> Code.compile_string(compiled) end)
     assert warnings == ""
 
+    entry = %{title: "Koi", categories: [%{name: "Fish"}], palette: %{colors: [%{hex_value: "#fff"}]}}
+
     html =
-      %{entry: %{title: "Koi", categories: [%{name: "Fish"}], palette: %{colors: [%{hex_value: "#fff"}]}}}
-      |> then(&apply(module, :swatches_listing_row, [Map.put(&1, :__changed__, nil)]))
+      %{entry: entry, __changed__: nil}
+      |> module.swatches_listing_row()
       |> Phoenix.HTML.Safe.to_iodata()
       |> IO.iodata_to_binary()
 
