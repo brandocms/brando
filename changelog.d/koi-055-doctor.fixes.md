@@ -34,3 +34,10 @@
   `mix brando.entries.resave` ends with the same line per target with a
   count, and `mix brando.doctor --verbose` lists the targets under Image
   configs without warning.
+
+- **`mix brando.gen.blueprint_migration` lists the Blueprints it will write,
+  not their encoded plans.** "These tasks will be run" showed one long base64
+  argument per Blueprint (`brando.blueprint.apply_plan eyJk…`); it now shows
+  `brando.blueprint.apply_plan MyApp.Articles.Article MyApp.Projects.Project`.
+  The reviewed plans are kept under `_build` until the task writes them, and
+  a plan that changed since its review is still refused.
