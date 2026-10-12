@@ -9,6 +9,7 @@ if Code.ensure_loaded?(Igniter) do
     alias Mix.Brando.Igniter.SourceUpgrade
     alias Mix.Brando.Igniter.SourceUpgrade.BlueprintGettext
     alias Mix.Brando.Igniter.UpgradeOrder
+    alias Mix.Brando.Igniter.SourceUpgrade.VideoMarkup
 
     @shortdoc "Migrates application source from Brando 0.54 to 0.55"
     @moduledoc """
@@ -33,6 +34,10 @@ if Code.ensure_loaded?(Igniter) do
     `persist_identifier false` on Blueprints with no admin editor, completes
     `Plural-Forms` headers Gettext 1.0 warns about, and retires the
     consumer-owned `brando.upgrade` task that 0.54 installed.
+
+    It also lists, without changing them, front-end scripts under `assets/`
+    that read a video's `data-src`, which 0.55 moved from the `<video>` to
+    its `[data-smart-video]` wrapper.
 
     The task changes source files only. Review and compile its diff before
     generating or running database migrations. The complete ordered workflow is
@@ -70,6 +75,7 @@ if Code.ensure_loaded?(Igniter) do
       |> SourceUpgrade.complete_plural_forms_headers()
       |> SourceUpgrade.warn_image_text_reads()
       |> PersistIdentifiers.update()
+      |> VideoMarkup.warn_video_data_src_reads()
       |> SourceUpgrade.start_endpoint_last()
       |> Mix.Brando.Igniter.Upgrade.prepare()
       |> add_notices()
