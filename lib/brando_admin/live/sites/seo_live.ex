@@ -342,7 +342,7 @@ defmodule BrandoAdmin.Sites.SEOLive do
       </header>
 
       <%!-- What the audit checks, not a filter of its results: which content
-            types, and whether drafts too. Pages only until changed. --%>
+            types, and whether drafts too. Every type until changed. --%>
       <form id="seo-audit-scope" class="seo-audit-scope" phx-change="audit_scope">
         <fieldset class="seo-audit-types">
           <legend>{gettext("Content types to check")}</legend>
@@ -1386,7 +1386,6 @@ defmodule BrandoAdmin.Sites.SEOLive do
 
   defp assign_audit_defaults(socket) do
     schemas = Audit.schemas()
-    default = if Brando.Pages.Page in schemas, do: [Brando.Pages.Page], else: schemas
 
     socket
     |> assign(:tab, "settings")
@@ -1397,7 +1396,7 @@ defmodule BrandoAdmin.Sites.SEOLive do
     |> assign(:structured_data_unchecked, [])
     |> assign(:structured_data_status, :idle)
     |> assign(:audit_schemas, schemas)
-    |> assign(:selected_schemas, default)
+    |> assign(:selected_schemas, schemas)
     |> assign(:include_drafts, false)
     |> assign(:expanded, MapSet.new())
     |> assign(:generating, MapSet.new())
@@ -1608,7 +1607,7 @@ defmodule BrandoAdmin.Sites.SEOLive do
     case failing do
       [] -> gettext("None")
       [check] -> check.label
-      [check | rest] -> gettext("%{label} +%{count}", label: check.label, count: length(rest))
+      [check | rest] -> ngettext("%{label} +%{count} more", "%{label} +%{count} more", length(rest), label: check.label)
     end
   end
 

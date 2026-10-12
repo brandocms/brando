@@ -678,8 +678,10 @@ msgstr ""
 
 #: lib/brando_admin/live/sites/seo_live.ex
 #, elixir-autogen, elixir-format
-msgid "%{label} +%{count}"
-msgstr ""
+msgid "%{label} +%{count} more"
+msgid_plural "%{label} +%{count} more"
+msgstr[0] ""
+msgstr[1] ""
 
 #: lib/brando_admin/components/form/var_layout.ex
 #, elixir-autogen, elixir-format
