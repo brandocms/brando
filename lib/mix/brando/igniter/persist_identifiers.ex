@@ -13,7 +13,7 @@ if Code.ensure_loaded?(Igniter) do
     # routed for `:update`, as `mix brando.doctor`'s admin routes check reads
     # it from the compiled router. The router is read from source here, so a
     # Blueprint is changed only when no admin LiveView names it either, and
-    # one with an `absolute_url` (a link target) is listed instead.
+    # one something could select (`kept/4`) is listed instead.
 
     alias Igniter.Code.Common
     alias Igniter.Code.Function, as: CodeFunction
@@ -155,23 +155,77 @@ if Code.ensure_loaded?(Igniter) do
             MapSet.member?(routes, {helper, :update}) ->
               {igniter, results}
 
-            admin_view?(module, sources) ->
-              {igniter,
-               [{:unknown, module, path, "has admin LiveViews but no `#{helper}_path` route for `:update`"} | results]}
-
-            public?(zipper) ->
-              {igniter,
-               [
-                 {:unknown, module, path,
-                  "has no admin editor, but has an `absolute_url`, so menus and entry pickers may link to its entries"}
-                 | results
-               ]}
+            reason = kept(module, zipper, helper, sources) ->
+              {igniter, [{:unknown, module, path, reason} | results]}
 
             true ->
               {ProjectModule.find_and_update_module!(igniter, module, &persist_false/1),
                [{:changed, module, path, helper} | results]}
           end
       end
+    end
+
+    # Why a Blueprint with no editor keeps its identifiers, or nil.
+    # `identifiers.sync` deletes the identifiers of a Blueprint that stops
+    # persisting them, and with them every `:entries` pick, block selection
+    # and link that pointed at them, so anything that could select them
+    # leaves the decision to the developer.
+    defp kept(module, zipper, helper, sources) do
+      cond do
+        admin_view?(module, sources) ->
+          "has admin LiveViews but no `#{helper}_path` route for `:update`"
+
+        public?(zipper) ->
+          "has no admin editor, but has an `absolute_url`, so menus and entry pickers may link to its entries"
+
+        datasource = selecting_datasource(zipper) ->
+          datasource
+
+        path = entries_reference(module, sources) ->
+          "an `:entries` relation or input in #{path} may select it"
+
+        true ->
+          nil
+      end
+    end
+
+    # A `:selection` or `:single` datasource works on the Blueprint's
+    # identifiers; a `:list` one returns entries.
+    defp selecting_datasource(zipper) do
+      {:ok, body} = Common.move_to_do_block(zipper)
+
+      body
+      |> Common.find_all(&CodeFunction.function_call?(&1, :datasource, :any))
+      |> Enum.find_value(fn datasource ->
+        code = datasource |> Zipper.node() |> Sourceror.to_string()
+
+        case Regex.run(~r/\btype:?\s*\(?\s*:(\w+)/, code) do
+          [_, "list"] -> nil
+          [_, type] -> "its `:#{type}` datasource `#{datasource_name(code)}` selects its identifiers"
+          nil -> "its datasource `#{datasource_name(code)}` has no literal `type`"
+        end
+      end)
+    end
+
+    defp datasource_name(code), do: with([_, name] <- Regex.run(~r/datasource\(?\s*(:\w+)/, code), do: name)
+
+    # A file with an `:entries` relation or input that names the Blueprint,
+    # or whose `:entries` inputs do not all list their `sources:`.
+    defp entries_reference(module, sources) do
+      name = module |> Module.split() |> List.last()
+
+      Enum.find_value(sources, fn {path, content} ->
+        relations = Regex.scan(~r/\brelation\s*\(?\s*:\w+\s*,\s*:entries\b/, content)
+        inputs = Regex.split(~r/\binput\s*\(?\s*:\w+\s*,\s*:entries\b/, content) |> tl()
+
+        cond do
+          relations == [] and inputs == [] -> nil
+          content =~ ~r/(?<![\w])#{Regex.escape(name)}\b/ -> path
+          inputs == [] or length(inputs) < length(relations) -> path
+          Enum.any?(inputs, &(not (&1 |> String.split(~r/\binput\b/) |> hd() |> String.contains?("sources:")))) -> path
+          true -> nil
+        end
+      end)
     end
 
     # `{:ok, helper}`, `:skip` for a Blueprint that already decides or never
@@ -270,9 +324,15 @@ if Code.ensure_loaded?(Igniter) do
     defp notice(igniter, changed) do
       Igniter.add_notice(igniter, """
       These Blueprints have no admin editor, neither an `:update` form route
-      nor an admin LiveView, so the task set `persist_identifier false` on them.
-      Their entries could not be opened from Search, the command palette or the
-      dashboard, which leave them out:
+      nor an admin LiveView, and nothing in the application selects their
+      entries (no `:entries` relation or input that could, no `:selection`
+      datasource, no `absolute_url`), so the task
+      set `persist_identifier false` on them. Their entries could not be opened
+      from Search, the command palette or the dashboard, which leave them out.
+      `mix brando.identifiers.sync` (which `mix brando.upgrade.database` runs)
+      then deletes their existing identifiers, and with them anything that
+      still selects them: `:entries` picks, block selections and links. Remove
+      the line from a Blueprint whose entries editors pick:
 
       #{Enum.join(changed, "\n")}
       """)

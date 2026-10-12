@@ -13,7 +13,7 @@ defmodule Mix.Tasks.Brando.Migrate55PersistIdentifiersTest do
   [
     inputs: ["{mix,.formatter}.exs", "{config,lib,test}/**/*.{ex,exs}"],
     locals_without_parens: [
-      live: 2, live: 3, trait: 1, identifier: 1, persist_identifier: 1, data_layer: 1, attribute: 3, absolute_url: 1
+      live: 2, live: 3, trait: 1, identifier: 1, persist_identifier: 1, data_layer: 1, attribute: 3, absolute_url: 1, relation: 2, type: 1, list: 1, datasource: 2, input: 3
     ]
   ]
   """
@@ -67,6 +67,13 @@ defmodule Mix.Tasks.Brando.Migrate55PersistIdentifiersTest do
     attributes do
       attribute :name, :string, required: true
     end
+
+    datasources do
+      datasource :farms do
+        type :list
+        list fn _, _, _ -> Lett.Farms.list_farms() end
+      end
+    end
   end
   """
 
@@ -92,7 +99,7 @@ defmodule Mix.Tasks.Brando.Migrate55PersistIdentifiersTest do
     ])
 
     assert_has_notice(igniter, fn notice ->
-      notice =~ "set `persist_identifier false`" and
+      notice =~ "set `persist_identifier false`" and notice =~ "`mix brando.identifiers.sync`" and
         notice =~ "Lett.Farms.Farm (lib/lett/farms/farm.ex): no `admin_farm_form_path`" and
         not (notice =~ "Lett.Menu")
     end)
@@ -108,6 +115,64 @@ defmodule Mix.Tasks.Brando.Migrate55PersistIdentifiersTest do
     rerun = igniter |> apply_igniter!() |> include_test_files() |> Migrate55.igniter()
     assert_unchanged(rerun, ["lib/lett/farms/farm.ex"])
     refute Enum.any?(rerun.notices, &(&1 =~ "set `persist_identifier false`"))
+  end
+
+  test "lists Blueprints whose identifiers something could select" do
+    producer = blueprint("Producers", "Producer", "producer")
+
+    shop =
+      blueprint(
+        "Shops",
+        "Shop",
+        "shop",
+        "",
+        ~s|identifier "{{ entry.name }}"\n\n  datasources do\n    datasource :featured do\n      type :selection\n      list fn _, _, _ -> {:ok, []} end\n    end\n  end|
+      )
+
+    article =
+      blueprint(
+        "Articles",
+        "Article",
+        "article",
+        "",
+        ~s|identifier "{{ entry.title }}"\n\n  relations do\n    relation :related, :entries\n  end|
+      )
+
+    files =
+      files()
+      |> Map.put("lib/lett/producers/producer.ex", producer)
+      |> Map.put("lib/lett/shops/shop.ex", shop)
+      |> Map.put("lib/lett/articles/article.ex", article)
+
+    igniter = migrate(files)
+
+    # An `:entries` relation without `sources:` could select any of them.
+    assert_unchanged(igniter, [
+      "lib/lett/farms/farm.ex",
+      "lib/lett/producers/producer.ex",
+      "lib/lett/shops/shop.ex",
+      "lib/lett/articles/article.ex"
+    ])
+
+    assert_has_warning(igniter, fn warning ->
+      warning =~
+        "Lett.Producers.Producer (lib/lett/producers/producer.ex): an `:entries` relation or input in lib/lett/articles/article.ex may select it" and
+        warning =~
+          "Lett.Shops.Shop (lib/lett/shops/shop.ex): its `:selection` datasource `:featured` selects its identifiers"
+    end)
+
+    # With sources that leave it out, the `:entries` input selects nothing of it.
+    sourced =
+      String.replace(
+        article,
+        "relation :related, :entries\n  end",
+        "relation :related, :entries\n  end\n\n  forms do\n    form do\n      input :related, :entries, sources: [{Lett.Articles.Article, %{}}]\n    end\n  end"
+      )
+
+    igniter = migrate(Map.put(files, "lib/lett/articles/article.ex", sourced))
+    assert source(igniter, "lib/lett/producers/producer.ex") =~ "persist_identifier false"
+    assert source(igniter, "lib/lett/farms/farm.ex") =~ "persist_identifier false"
+    assert_unchanged(igniter, ["lib/lett/shops/shop.ex", "lib/lett/articles/article.ex"])
   end
 
   test "keeps the advice when it cannot read the router" do
