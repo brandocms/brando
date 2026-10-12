@@ -7,6 +7,7 @@ if Code.ensure_loaded?(Igniter) do
 
     alias Mix.Brando.Igniter.SourceUpgrade
     alias Mix.Brando.Igniter.SourceUpgrade.BlueprintGettext
+    alias Mix.Brando.Igniter.UpgradeOrder
 
     @shortdoc "Migrates application source from Brando 0.54 to 0.55"
     @moduledoc """
@@ -33,7 +34,11 @@ if Code.ensure_loaded?(Igniter) do
 
     The task changes source files only. Review and compile its diff before
     generating or running database migrations. The complete ordered workflow is
-    documented in `guides/migrating_from_053.md`.
+    documented in `guides/migrating_from_053.md`; the task's closing notice
+    lists its remaining steps in that order, and in the guide's "Legacy
+    snapshots" order (Brando's migrations, then the Blueprint migrations with
+    `--reconcile`) when the newest copied Brando migration is `brando_102` or
+    older, or a Blueprint's latest snapshot still has a Villain field.
     """
 
     def info(_argv, _source) do
@@ -69,6 +74,8 @@ if Code.ensure_loaded?(Igniter) do
     end
 
     defp add_notices(igniter) do
+      {igniter, order} = UpgradeOrder.notice(igniter)
+
       Igniter.add_notice(igniter, """
       Brando 0.55 source migration prepared.
 
@@ -111,34 +118,7 @@ if Code.ensure_loaded?(Igniter) do
       `mix brando.setup.tenancy` after this general source upgrade to prepare
       their configuration, router pipelines, and tenant migration support.
 
-      Continue in this order:
-
-        1. Review the complete Igniter diff, then run `mix format` and
-           `mix compile --warnings-as-errors`.
-        2. If `florist.config.exs` was created, set its required password
-           environment variables and complete the deployment review in the
-           migration guide before running Florist.
-        3. Run `mix brando.gen.migrations` to plan missing Brando Ecto migrations.
-        4. For every application Blueprint with generated migration history,
-           run `mix brando.gen.blueprint_migration MyApp.Domain.Schema`.
-        5. Review every generated `up/0` and `down/0`, test rollback/forward,
-           and commit the source, migrations, and snapshots together.
-        6. Only after that review, run `mix brando.migrate`, followed by
-           `mix brando.migrate --tenants` when the application has named
-           environments.
-        7. After the database migration, run `mix brando.entries.resave`,
-           `mix brando.identifiers.sync` and `mix brando.images.adopt` (try it
-           with `--dry-run` first), which records the config each image whose
-           files already match was made with.
-        8. Run `mix brando.check.image_texts` to find module, container and
-           menu templates that print an image's alt text, title or credits
-           without the `i18n` filter. Templates live in the database, so this
-           source migration cannot see them.
-        9. Reconcile Gettext catalogs: `mix gettext.extract`, then
-           `mix gettext.merge priv/gettext/<backend> --locale <locale>` for
-           each backend and locale the application has. Delete the old
-           domains' catalogs the merge leaves empty.
-
+      #{order}
       See `guides/migrating_from_053.md` and `guides/blueprint_migrations.md` in
       Brando for the full recovery and rebaseline instructions.
       """)
