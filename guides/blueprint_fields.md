@@ -509,6 +509,20 @@ join schema, `<Schema>.<Name>Identifier`, and its table,
 `constraints:` to limit the count and the [`:entries`
 input](blueprint_forms.md#related-entries) to edit it.
 
+The relation holds the join rows, in the order the editor picked them, each
+with its `identifier`. Preload the identifiers through the rows to read the
+picked entries:
+
+```elixir
+project = Brando.Repo.preload(project, related_entries: :identifier)
+ids = Enum.map(project.related_entries, & &1.identifier.entry_id)
+```
+
+A list query on those ids returns the entries in its own order.
+`Brando.Content.get_entries_from_identifiers(identifiers, %{preload: [:cover]})`
+returns `{:ok, entries}` in the picked order, from any of the Blueprints they
+belong to; an entry its options leave out (`status: :published`) is `nil`.
+
 <!-- usage-rules:start -->
 
 ### Block relations

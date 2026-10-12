@@ -119,8 +119,9 @@ shows. Use `hidden:` for a function.
 * an array attribute, such as `{:array, :string}`, storing the chosen values;
 * a `has_many` relation to a join schema, storing one join entry per choice.
   Set `relation_key:` to the join schema's foreign key and `relation:` to its
-  association to the chosen schema. The join schema needs
-  `@allow_mark_as_deleted true`, and the relation `cast: true`.
+  association to the chosen schema; a Blueprint that leaves out either does
+  not compile. The join schema needs `@allow_mark_as_deleted true`, and the
+  relation `cast: true`.
 
 To let editors reorder the chosen entries, give the join schema
 `trait :sequenced` and the relation `sort_param:` and `drop_param:`.

@@ -498,8 +498,9 @@ input :article_categories, :multi_select,
 * an array attribute, such as `{:array, :string}`, storing the chosen values;
 * a `has_many` relation to a join schema, storing one join entry per choice.
   Set `relation_key:` to the join schema's foreign key and `relation:` to its
-  association to the chosen schema. The join schema needs
-  `@allow_mark_as_deleted true`, and the relation `cast: true`.
+  association to the chosen schema; a Blueprint that leaves out either does
+  not compile. The join schema needs `@allow_mark_as_deleted true`, and the
+  relation `cast: true`.
 
 To let editors reorder the chosen entries, give the join schema
 `trait :sequenced` and the relation `sort_param:` and `drop_param:`.
@@ -526,10 +527,18 @@ input :related_entries, :entries,
 
 `:entries` is the input for an `:entries` relation: a list of entries of any
 Blueprint with persisted identifiers. `sources:` (required) lists the
-schemas editors can pick from, each with the list options used to load the
+schemas editors can pick from, each with a map of options for the list of
 choices. `filter_language: true` offers only entries in the same language as
 the entry being edited. The relation's `constraints: [max_length: n]` and
 `min_length` limit how many can be picked.
+
+The picker lists the schema's identifiers (`Brando.Content.Identifier`), not
+its entries, so the options apply to the identifiers: `order:` by their
+columns (`id`, `entry_id`, `schema`, `title`, `status`, `language`, `cover`, `url`,
+`updated_at`), `status:`, `language:`, `exclude_language:`, `limit:` and
+`offset:`. Identifiers have no associations and no filters, so `preload:`,
+`filter:` and an order by another column, such as `sequence`, fail the
+compile. Without `order:`, choices are ordered by language and title.
 
 ### Media
 
