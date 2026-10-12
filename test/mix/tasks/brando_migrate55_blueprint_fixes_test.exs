@@ -165,6 +165,18 @@ defmodule Mix.Tasks.Brando.Migrate55BlueprintFixesTest do
     assert_has_notice(igniter, &(&1 =~ "#{@partner_path}:20: `default_srcset:` removed"))
   end
 
+  test "lists every read of an :entries relation, which holds join rows since 0.54" do
+    igniter = migrate(%{@project_path => @project, @controller_path => @controller})
+
+    assert_unchanged(igniter, @controller_path)
+
+    assert_has_warning(igniter, fn warning ->
+      warning =~ "#{@controller_path}:6: ids = Enum.map(project.related_entries || [], & &1.entry_id)" and
+        warning =~ "& &1.identifier.entry_id" and
+        not (warning =~ "#{@controller_path}:12:")
+    end)
+  end
+
   defp migrate(files) do
     [app_name: :koi, files: Map.put(files, ".formatter.exs", @formatter)]
     |> test_project()
