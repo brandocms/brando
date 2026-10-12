@@ -14,11 +14,15 @@ defmodule Brando.Migrations.UpgradeFromVillainTest do
   alias Brando.Utils
   alias BrandoIntegration.Repo
   alias Mix.Tasks.Brando.Check.LegacyConversion, as: CheckTask
+  alias Mix.Tasks.Brando.Repair.LegacyMedia, as: RepairTask
 
   @moduletag timeout: :timer.minutes(5)
 
   @schema "test/fixtures/upgrade/brando_102_schema.sql"
   @templates Application.app_dir(:brando, "priv/templates/brando.upgrade/migrations")
+  # brando_133 as sites ran it until it created images for legacy media that
+  # matched no row: it linked pictures by path only and left the rest empty
+  @shipped_133 "test/fixtures/upgrade/brando_133_transfer_ref_media_data.shipped.txt"
 
   setup do
     config = Repo.config()
@@ -528,6 +532,13 @@ defmodule Brando.Migrations.UpgradeFromVillainTest do
     %{page: page_id, images: images, services: services_id, koi_path: koi_path}
   end
 
+  # The chain from brando_103 on, with brando_133 as sites ran it before it
+  # created images for legacy media that matched no row
+  defp migrate_with_shipped_133 do
+    shipped = fn _source -> File.read!(@shipped_133) end
+    for path <- templates(103..1000), do: migrate(path, if(number(path) == 133, do: shipped, else: & &1))
+  end
+
   defp ref_media(page_id) do
     rows(
       """
@@ -586,6 +597,8 @@ defmodule Brando.Migrations.UpgradeFromVillainTest do
   end
 
   defp last_line(output), do: output |> Enum.reverse() |> hd()
+
+  defp summary_line(output), do: Enum.find(output, &(&1 =~ " refs "))
 
   defp shell_output do
     receive do
@@ -741,6 +754,122 @@ defmodule Brando.Migrations.UpgradeFromVillainTest do
       refute Map.has_key?(data, "path")
 
       assert {:ok, %{findings: []}} = LegacyConversion.check("public")
+    end
+
+    test "the check names the media the shipped brando_133 lost" do
+      load_schema()
+      insert_villain_site()
+      %{page: page_id, koi_path: koi_path} = insert_koi_page()
+
+      migrate_with_shipped_133()
+
+      at = ~s|pages ##{page_id} › block 1 (module "Jobb med oss")|
+
+      expected = [
+        "#{at} › ref pic: legacy image #{koi_path} is not linked; the picture is empty",
+        "#{at} › ref pic2: legacy image images/site/posts/trashed.jpg is not linked; the picture is empty",
+        "#{at} › ref pic3: legacy image images/site/posts/stale.jpg is not linked; the picture is empty",
+        "#{at} › ref gallery: 2 legacy images, 1 in its gallery now"
+      ]
+
+      assert findings() == Enum.map(expected, &{:missing, &1})
+
+      assert {{:exit, {:shutdown, 1}}, output} = run_check([])
+      assert Enum.map(expected, &("  " <> &1)) -- output == []
+      assert last_line(output) =~ "4 missing"
+    end
+
+    test "the repair task puts back what the shipped brando_133 lost, after a dry run that writes nothing" do
+      load_schema()
+      insert_villain_site()
+      %{page: page_id, images: images} = insert_koi_page()
+
+      migrate_with_shipped_133()
+
+      state = fn ->
+        {ref_media(page_id), rows("SELECT id, path, deleted_at FROM images ORDER BY id"),
+         rows("SELECT id, gallery_id, image_id, sequence, config FROM galleries_gallery_objects ORDER BY id")}
+      end
+
+      before = state.()
+      at = ~s|pages ##{page_id} › block 1 (module "Jobb med oss")|
+
+      assert {nil, ["Repairing legacy media in public (dry run: nothing is written)\n" | output]} =
+               run_task(RepairTask, ["--dry-run"])
+
+      assert [
+               "  #{at} › ref pic › makes an image of images/site/posts/1n60vo3o9p06.jpg from the legacy data and links it",
+               "  #{at} › ref pic2 › makes an image of images/site/posts/trashed.jpg from the legacy data and links it",
+               "  #{at} › ref pic3 › links image ##{images.by_size} (images/site/posts/by-size.png)",
+               "  #{at} › ref gallery › adds 1 image to gallery #1 (1 made from the legacy data)"
+             ] == Enum.slice(output, 0, 4)
+
+      assert summary_line(output) =~ "4 refs to repair: 3 images and 0 videos to make from the legacy data."
+      assert last_line(output) == "Run without --dry-run to write them, then mix brando.entries.resave."
+      assert state.() == before
+      assert length(findings()) == 4
+
+      assert {nil, output} = run_task(RepairTask, [])
+      assert summary_line(output) =~ "4 refs repaired: 3 images and 0 videos made from the legacy data."
+      assert last_line(output) == "Run mix brando.entries.resave, and restart a running server."
+
+      assert findings() == []
+
+      assert [
+               ["pic", "images/site/posts/1n60vo3o9p06.jpg", false, nil],
+               ["pic2", "images/site/posts/trashed.jpg", false, nil],
+               ["pic3", "images/site/posts/by-size.png", false, nil],
+               ["pic4", nil, false, nil],
+               ["pic5", "images/site/posts/linked.jpg", false, nil],
+               ["gallery", nil, false, gallery_id]
+             ] = ref_media(page_id)
+
+      assert [["images/site/posts/1n60vo3o9p06.jpg", sizes, 1600, 1067, "#9a8f7e", ["jpg"]]] =
+               rows(
+                 "SELECT path, sizes, width, height, dominant_color, formats FROM images WHERE path LIKE '%1n60vo3o9p06%'"
+               )
+
+      assert sizes["small"] == "images/site/posts/small/1n60vo3o9p06.jpg"
+
+      assert gallery_images(gallery_id) == [
+               ["images/site/gallery/known.jpg", %{"title" => "Known"}],
+               ["images/site/gallery/lost.jpg", %{"alt" => "Lost"}]
+             ]
+
+      assert [[0], [1]] =
+               rows("SELECT sequence FROM galleries_gallery_objects WHERE gallery_id = $1 ORDER BY sequence", [gallery_id])
+
+      # Nothing left to do
+      repaired = state.()
+      assert {nil, ["No media to repair in public."]} = run_task(RepairTask, [])
+      assert state.() == repaired
+
+      assert {nil, output} = run_check([])
+      assert last_line(output) =~ "every Villain block, var, ref and fragment came through"
+    end
+
+    test "the repair task skips a block whose module changed, and stops when the Villain columns are gone" do
+      load_schema()
+      insert_villain_site()
+      %{page: page_id} = insert_koi_page()
+
+      migrate_with_shipped_133()
+
+      [[other_module]] = rows("SELECT id FROM content_modules WHERE class = 'video'")
+      rows("UPDATE content_blocks SET module_id = $1 WHERE id = $2", [other_module, root_block(page_id, 0)])
+
+      assert {nil, ["Repairing legacy media in public\n" | output]} = run_task(RepairTask, [])
+      assert Enum.at(output, 0) =~ "› ref pic › skipped: module "
+      assert summary_line(output) =~ "0 refs repaired, 4 skipped"
+      assert length(findings()) == 4
+
+      for table <- ~w(pages pages_fragments content_templates), do: rows("ALTER TABLE #{table} DROP COLUMN data")
+
+      assert {nil, [message]} = run_task(RepairTask, [])
+      assert message =~ "No Villain column left in public: there is no legacy data to repair from."
+
+      assert message =~
+               "Not repaired, the Villain column is gone: content_templates.data, pages.data, pages_fragments.data."
     end
 
     test "brando_219 rewrites the services module to read its entries' vars" do

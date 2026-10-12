@@ -10,6 +10,10 @@ defmodule Brando.Migration.LegacyConversion do
   Blocks are paired by position: brando_123 gave every block a new uid, and
   brando_108 stored a block's place in its Villain list as its `sequence` (on
   the join table row for root blocks).
+
+  A media ref that lost its media carries what `Brando.Migration.LegacyMediaRepair`
+  needs to put it back in its finding's `:repair`: the ref, and the Villain
+  data its picture, gallery or video came from.
   """
 
   alias Brando.Type.I18nString
@@ -24,15 +28,20 @@ defmodule Brando.Migration.LegacyConversion do
   # Refs brando_108 turns into table rows
   @row_ref_types ~w(table list)
 
-  @content_tables ~w(content_blocks content_vars content_refs content_table_rows content_block_identifiers content_modules)
+  @content_tables ~w(content_blocks content_vars content_refs content_table_rows content_block_identifiers content_modules galleries_gallery_objects)
 
   @type severity :: :missing | :extra
+  @type repair ::
+          {:picture | :video, ref_id :: integer(), legacy_data :: map()}
+          | {:gallery, ref_id :: integer(), gallery_id :: integer() | nil, legacy_images :: [map()]}
+          | {:unpaired, reason :: String.t()}
   @type finding :: %{
           table: String.t(),
           entry_id: term(),
           path: [String.t()],
           message: String.t(),
-          severity: severity()
+          severity: severity(),
+          repair: repair() | nil
         }
   @type source :: %{table: String.t(), column: String.t(), join_table: String.t()}
   @type report :: %{
@@ -193,9 +202,16 @@ defmodule Brando.Migration.LegacyConversion do
         |> Enum.group_by(& &1.parent_id, &{&1.sequence, &1}),
       vars: vars,
       refs:
-        "SELECT block_id, name FROM #{name(schema, "content_refs")} WHERE block_id IS NOT NULL ORDER BY block_id, sequence, id"
+        """
+        SELECT r.block_id, r.id, r.name, r.image_id IS NOT NULL, r.video_id IS NOT NULL, r.gallery_id,
+               (SELECT count(*) FROM #{name(schema, "galleries_gallery_objects")} o
+                WHERE o.gallery_id = r.gallery_id AND (o.image_id IS NOT NULL OR o.video_id IS NOT NULL))
+        FROM #{name(schema, "content_refs")} r WHERE r.block_id IS NOT NULL ORDER BY r.block_id, r.sequence, r.id
+        """
         |> rows()
-        |> Enum.group_by(&hd/1, fn [_block_id, name] -> name end),
+        |> Enum.group_by(&hd/1, fn [_block_id, id, name, image, video, gallery_id, gallery_count] ->
+          %{id: id, name: name, image: image, video: video, gallery_id: gallery_id, gallery_count: gallery_count}
+        end),
       fragments:
         "SELECT id FROM #{name(schema, "pages_fragments")}"
         |> rows()
@@ -230,7 +246,7 @@ defmodule Brando.Migration.LegacyConversion do
 
     findings =
       for [id, legacy] <- entries, is_list(legacy) do
-        at = %{table: source.table, entry_id: id, path: []}
+        at = %{table: source.table, entry_id: id, path: [], unpaired: nil}
         compare_level(legacy, Map.get(roots, id, []), at, content, :block)
       end
 
@@ -296,8 +312,11 @@ defmodule Brando.Migration.LegacyConversion do
     counts |> Enum.sort() |> Enum.map_join(", ", fn {type, count} -> "#{count} #{type}" end)
   end
 
-  defp compare_block(%{"type" => type}, new, at, content) when type in @wrapped_types do
-    compare_names("refs", ["content"], Map.get(content.refs, new.id, []), at)
+  defp compare_block(%{"type" => type} = legacy, new, at, content) when type in @wrapped_types do
+    refs = Map.get(content.refs, new.id, [])
+
+    compare_names("refs", ["content"], ref_names(refs), at) ++
+      compare_media([%{"name" => "content", "data" => legacy}], refs, at)
   end
 
   # brando_108 keeps no fragment for one deleted since, which rendered nothing
@@ -314,15 +333,13 @@ defmodule Brando.Migration.LegacyConversion do
   defp compare_block(legacy, new, at, content) do
     refs = legacy |> list("refs") |> Enum.filter(&is_map/1)
     {row_refs, refs} = Enum.split_with(refs, &(ref_type(&1) in @row_ref_types))
+    new_refs = Map.get(content.refs, new.id, [])
+    at = check_module(at, legacy, new)
 
     Enum.concat([
       compare_vars(legacy |> list("vars") |> Enum.filter(&is_map/1), Map.get(content.vars, new.id, []), at),
-      compare_names(
-        "refs",
-        refs |> Enum.map(& &1["name"]) |> Enum.reject(&is_nil/1),
-        Map.get(content.refs, new.id, []),
-        at
-      ),
+      compare_names("refs", refs |> Enum.map(& &1["name"]) |> Enum.reject(&is_nil/1), ref_names(new_refs), at),
+      compare_media(refs, new_refs, at),
       compare_count(
         "table rows",
         row_refs |> Enum.map(&row_count/1) |> Enum.sum(),
@@ -371,6 +388,112 @@ defmodule Brando.Migration.LegacyConversion do
       deficit("vars", key, length(vars), length(now), at) ++ emptied
     end)
   end
+
+  # A module block whose module is not the one Villain had is still compared
+  # by position, but its media is not repaired from the Villain data
+  defp check_module(at, %{"type" => "module"} = legacy, new) do
+    case data(legacy, "module_id") do
+      id when is_nil(id) or id == new.module_id -> at
+      id -> %{at | unpaired: at.unpaired || "module #{id} in Villain, #{new.module_id || "none"} now"}
+    end
+  end
+
+  defp check_module(at, _legacy, _new), do: at
+
+  defp ref_names(refs), do: Enum.map(refs, & &1.name)
+
+  # Each Villain ref that showed media against the ref of the same name (the
+  # nth of that name against the nth): a picture needs an image, a gallery as
+  # many images as Villain listed, a video a video. A Villain ref that showed
+  # nothing (no path, no images, no url) has nothing to lose.
+  defp compare_media(legacy, new, at) do
+    new_by_name = Enum.group_by(new, & &1.name)
+
+    legacy
+    |> Enum.filter(&(is_map(&1) and is_binary(&1["name"])))
+    |> Enum.map_reduce(%{}, fn ref, seen ->
+      index = Map.get(seen, ref["name"], 0)
+      {{ref, new_by_name |> Map.get(ref["name"], []) |> Enum.at(index)}, Map.put(seen, ref["name"], index + 1)}
+    end)
+    |> elem(0)
+    |> Enum.flat_map(fn
+      {_ref, nil} -> []
+      {ref, new_ref} -> media_loss(ref["name"], ref["data"], new_ref, at)
+    end)
+  end
+
+  defp media_loss(name, %{"type" => "picture", "data" => %{} = data}, %{image: false} = ref, at) do
+    case legacy_path(data) do
+      nil ->
+        []
+
+      path ->
+        message = "ref #{name}: legacy image #{path} is not linked; the picture is empty"
+        [media_missing(at, message, {:picture, ref.id, data})]
+    end
+  end
+
+  defp media_loss(name, %{"type" => "video", "data" => %{} = data}, %{video: false} = ref, at) do
+    case legacy_video(data) do
+      nil ->
+        []
+
+      url ->
+        message = "ref #{name}: legacy video #{url} is not linked; the video is empty"
+        [media_missing(at, message, {:video, ref.id, data})]
+    end
+  end
+
+  defp media_loss(name, %{"type" => "gallery", "data" => %{} = data}, ref, at) do
+    images = legacy_gallery_images(data)
+    count = length(images)
+
+    cond do
+      ref.gallery_count >= count ->
+        []
+
+      is_nil(ref.gallery_id) ->
+        [media_missing(at, "ref #{name}: #{count} legacy images, no gallery now", {:gallery, ref.id, nil, images})]
+
+      true ->
+        message = "ref #{name}: #{count} legacy images, #{ref.gallery_count} in its gallery now"
+        [media_missing(at, message, {:gallery, ref.id, ref.gallery_id, images})]
+    end
+  end
+
+  defp media_loss(_name, _legacy, _ref, _at), do: []
+
+  defp media_missing(%{unpaired: nil} = at, message, repair), do: %{missing(at, message) | repair: repair}
+  defp media_missing(at, message, _repair), do: %{missing(at, message) | repair: {:unpaired, at.unpaired}}
+
+  @doc """
+  The image a Villain picture's data (or a Villain gallery image) showed, its
+  `path` as stored there, or nil for one never picked.
+  """
+  @spec legacy_path(map()) :: String.t() | nil
+  def legacy_path(data), do: present(data["path"])
+
+  @doc """
+  The source a Villain video block's data played, its `url` or else its
+  `remote_id`, or nil for one never picked.
+  """
+  @spec legacy_video(map()) :: String.t() | nil
+  def legacy_video(data), do: present(data["url"]) || present(data["remote_id"])
+
+  defp present(value) when is_binary(value), do: if(String.trim(value) == "", do: nil, else: value)
+  defp present(_value), do: nil
+
+  # The images of a Villain gallery that named a file
+  defp legacy_gallery_images(%{"images" => images}) when is_list(images) do
+    Enum.filter(images, &(is_map(&1) and (legacy_path(&1) != nil or legacy_sizes?(&1))))
+  end
+
+  defp legacy_gallery_images(_data), do: []
+
+  defp legacy_sizes?(%{"sizes" => %{} = sizes}),
+    do: Enum.any?(sizes, fn {_, value} -> is_binary(value) and value != "" end)
+
+  defp legacy_sizes?(_image), do: false
 
   defp compare_names(label, legacy, new, at) do
     now = Enum.frequencies(new)
@@ -451,7 +574,7 @@ defmodule Brando.Migration.LegacyConversion do
   defp extra(at, message), do: finding(at, message, :extra)
 
   defp finding(at, message, severity) do
-    %{table: at.table, entry_id: at.entry_id, path: at.path, message: message, severity: severity}
+    %{table: at.table, entry_id: at.entry_id, path: at.path, message: message, severity: severity, repair: nil}
   end
 
   ## SQL
