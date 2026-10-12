@@ -174,12 +174,6 @@ the result before the source tasks, so their diff holds only their changes.
 
 `mix brando.migrate54` covers the 0.53 to 0.54 source changes. It:
 
-- renames a single or selection datasource that shares its name with another
-  (0.53 allowed `list :all` beside `selection :all`; 0.54 refuses to compile
-  two `datasource :all`) to `:all_selection` or `:all_single`, and lists each
-  rename with file and line. A content module that used the renamed one stores
-  its old name: choose the new name in the module's datasource settings after
-  the database upgrade;
 - rewrites legacy Blueprint list, single, and selection datasources; trait,
   villain/block, form, input, metadata, and JSON-LD syntax; and listing queries,
   filters, actions, selection actions, and supported exports;
@@ -187,8 +181,10 @@ the result before the source tasks, so their diff holds only their changes.
   (`meta_field "og:locale", [:language], &encode_locale/1` becomes
   `field "og:locale", fn entry -> encode_locale(get_in(entry, [Access.key(:language)])) end`);
 - replaces `use Brando.Datasource`, which imported `Ecto.Query`, with
-  `import Ecto.Query, only: [...]` in a Blueprint whose functions call its
-  macros (`from`, `where` and the rest);
+  `import Ecto.Query` in a Blueprint whose functions call its macros (`from`,
+  `where` and the rest). A list and a selection datasource may still share a
+  name (`list :all` beside `selection :all`): content modules name a
+  datasource by its type and name;
 - renames legacy listing `filter:` keys and `list_villains/0` calls on
   `Brando.Villain`;
 - rewrites every legacy LivePreview target with its own layout and template

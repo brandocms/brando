@@ -138,7 +138,7 @@ defmodule Brando.Villain.TemplateAdapter.Heex do
           |> map_vars()
           |> Map.merge(%{"request" => request})
 
-        {:ok, entries} = Brando.Datasource.list_results(ds_module, query, mapped_vars, language)
+        {:ok, entries} = Brando.Datasource.list_results(ds_module, query, mapped_vars, language, :list)
         Map.put(assigns, :entries, entries || [])
 
       %{datasource: true, datasource_type: :selection, datasource_module: ds_module, datasource_query: query} ->

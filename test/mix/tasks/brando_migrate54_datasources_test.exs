@@ -57,29 +57,71 @@ defmodule Mix.Tasks.Brando.Migrate54DatasourcesTest do
   end
   """
 
-  test "renames the selection that shares the list's name, and lists it" do
+  test "keeps the list and the selection that share a name, as content modules name them" do
     igniter = migrate(@member)
     blueprint = source(igniter, @path)
 
     assert blueprint =~ "datasource(:all) do\n      type(:list)"
-    assert blueprint =~ "datasource(:all_selection) do\n      type(:selection)"
-    assert count(blueprint, "datasource(:all)") == 1
-
-    assert_has_notice(igniter, fn notice ->
-      notice =~ "declared more than once" and
-        notice =~ "#{@path}:25: Lett.Team.Member `selection :all` is now :all_selection" and
-        notice =~ "choose the new name"
-    end)
+    assert blueprint =~ "datasource(:all) do\n      type(:selection)"
+    refute blueprint =~ "all_selection"
+    refute Enum.any?(igniter.notices, &(&1 =~ "declared more than once"))
 
     rerun = igniter |> apply_igniter!() |> Igniter.include_existing_file(@path) |> Migrate54.igniter()
     assert_unchanged(rerun, @path)
   end
 
-  test "keeps Ecto.Query's macros imported when it removes `use Brando.Datasource`" do
+  test "leaves a converted Blueprint's own function heads alone" do
+    converted = """
+    defmodule Lett.Team.Member do
+      use Brando.Blueprint,
+        application: "Lett",
+        domain: "Team",
+        schema: "Member",
+        singular: "member",
+        plural: "members"
+
+      datasources do
+        datasource :all do
+          type :list
+          list fn _module, _language, vars -> list(:all, vars) end
+        end
+      end
+
+      def list(:all, vars), do: {:ok, vars}
+      def selection(:all, ids, _user), do: ids
+      def selection(:other, ids, _user), do: ids
+    end
+    """
+
+    blueprint = converted |> migrate() |> source(@path)
+    assert blueprint =~ "def selection(:all, ids, _user)"
+    assert blueprint =~ "def selection(:other, ids, _user)"
+  end
+
+  test "imports Ecto.Query as `use Brando.Datasource` did when it removes the `use`" do
     blueprint = @member |> migrate() |> source(@path)
 
     refute blueprint =~ "use Brando.Datasource"
-    assert blueprint =~ "import Ecto.Query, only: [from: 2]"
+    assert blueprint =~ "\n  import Ecto.Query\n"
+  end
+
+  test "imports all of Ecto.Query for piped calls, and over a partial import" do
+    member =
+      @member
+      |> String.replace(
+        "  import LettAdmin.Gettext\n",
+        "  import LettAdmin.Gettext\n  import Ecto.Query, only: [from: 2]\n"
+      )
+      |> String.replace(
+        "{:ok, Lett.Repo.all(results)}",
+        "{:ok, results |> where([t], t.status == :published) |> union_all(^results) |> Lett.Repo.all()}"
+      )
+
+    blueprint = member |> migrate() |> source(@path)
+
+    assert blueprint =~ "\n  import Ecto.Query\n"
+    refute blueprint =~ "only: [from: 2]"
+    assert count(blueprint, "import Ecto.Query") == 1
   end
 
   test "imports nothing for a module that does not build queries" do
@@ -91,7 +133,6 @@ defmodule Mix.Tasks.Brando.Migrate54DatasourcesTest do
 
     refute blueprint =~ "use Brando.Datasource"
     refute blueprint =~ "Ecto.Query"
-    refute blueprint =~ "all_selection"
   end
 
   defp migrate(blueprint) do

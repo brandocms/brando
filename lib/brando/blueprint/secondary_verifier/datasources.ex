@@ -13,8 +13,10 @@ defmodule Brando.Blueprint.SecondaryVerifier.Datasources do
     end
   end
 
+  # A content module names its datasource by type and key, so a list and a
+  # selection may share a key, as they could before 0.54.
   defp verify_unique_keys(dsl_state, datasources) do
-    case Support.find_duplicate(datasources, & &1.key) do
+    case Support.find_duplicate(datasources, &{&1.type, &1.key}) do
       nil ->
         :ok
 

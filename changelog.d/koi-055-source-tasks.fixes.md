@@ -28,13 +28,18 @@
   Liquid outputs in attributes become expressions, and `entry.a[0]` reads
   `Enum.at(@entry.a, 0)`.
 
-- **`mix brando.migrate54` renames datasources that share a name, and keeps
-  `Ecto.Query` imported.** 0.53 allowed `list :all` beside `selection :all`;
-  the rewrite produced two `datasource :all`, which does not compile. The
-  single or selection one becomes `:all_selection` (or `:all_single`), listed
-  with file and line. Removing `use Brando.Datasource` also removed its
-  `import Ecto.Query`; a Blueprint whose functions call `from` and the other
-  query macros now gets `import Ecto.Query, only: [...]` in its place.
+- **A list and a selection datasource may share a name again.** 0.53 allowed
+  `list :all` beside `selection :all`, and content modules store a
+  datasource's type beside its name. Since 0.54 the Blueprint refused to
+  compile `datasource :all` twice. Names are now unique per type, and every
+  lookup passes the type (`Brando.Datasource.list_results/5`; without one,
+  the list is found first).
+
+- **`mix brando.migrate54` keeps `Ecto.Query` imported.** Removing
+  `use Brando.Datasource` also removed its `import Ecto.Query`, so a
+  datasource callback with `from t in …` no longer compiled. A Blueprint
+  whose functions call Ecto.Query's macros now gets `import Ecto.Query` in
+  the `use`'s place, which replaces a partial `import Ecto.Query, only: […]`.
 
 - **`mix brando.migrate54` writes readable meta and datasource functions.**
   A captured mutator such as `&encode_locale/1` is called by name,

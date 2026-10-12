@@ -407,15 +407,7 @@ if Code.ensure_loaded?(Igniter) do
       )
     end
 
-    defp remove_use_datasource(zipper) do
-      case Datasources.ecto_query_import(zipper) do
-        nil ->
-          {:ok, Common.remove_all_matches(zipper, &use_datasource?(&1))}
-
-        import ->
-          Common.update_all_matches(zipper, &use_datasource?(&1), &{:ok, Common.replace_code(&1, import)})
-      end
-    end
+    defp remove_use_datasource(zipper), do: Datasources.remove_use(zipper, &use_datasource?/1)
 
     defp rewrite_listing_filters(zipper), do: rewrite_keyword_collection(zipper, :filters, :filter)
 

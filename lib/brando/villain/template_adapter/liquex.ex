@@ -119,7 +119,7 @@ defmodule Brando.Villain.TemplateAdapter.Liquex do
       |> map_vars()
       |> Map.merge(%{"request" => request})
 
-    {:ok, entries} = Brando.Datasource.list_results(module, query, mapped_vars, language)
+    {:ok, entries} = Brando.Datasource.list_results(module, query, mapped_vars, language, :list)
 
     Context.assign(context, :entries, entries || [])
   end

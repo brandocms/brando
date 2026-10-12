@@ -254,11 +254,15 @@ defmodule Brando.Datasource do
   def list_datasource_keys(module_name), do: Registry.grouped_keys(module_name)
 
   @doc """
-  Grab list of entries from database
+  Grab list of entries from database.
+
+  `type` is the datasource's type, `:list` for a list module and
+  `:selection` for the options of a selection. A list and a selection may
+  share a key; with `:*`, the list is found first.
   """
-  def list_results(module_binary, key, vars, language) do
+  def list_results(module_binary, key, vars, language, type \\ :*) do
     {module, atom_key} = Registry.resolve(module_binary, key)
-    ds = get_datasource(module, :*, atom_key)
+    ds = get_datasource(module, type, atom_key)
     Callback.call(ds.list, [module_binary, language, vars])
   end
 

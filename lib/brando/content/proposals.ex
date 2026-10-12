@@ -581,7 +581,13 @@ defmodule Brando.Content.Proposals do
       when is_binary(ds_module) do
     vars = Enum.map(module.vars || [], &Changeset.change/1)
 
-    case Brando.Datasource.list_results(Module.concat([ds_module]), query, vars, language && to_string(language)) do
+    case Brando.Datasource.list_results(
+           Module.concat([ds_module]),
+           query,
+           vars,
+           language && to_string(language),
+           :selection
+         ) do
       {:ok, identifiers} when is_list(identifiers) -> identifiers
       _ -> []
     end

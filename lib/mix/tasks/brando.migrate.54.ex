@@ -11,7 +11,6 @@ if Code.ensure_loaded?(Igniter) do
     alias Mix.Brando.Igniter.SourceUpgrade.BlueprintGettext
     alias Mix.Brando.Igniter.SourceUpgrade.BuiltinActions
     alias Mix.Brando.Igniter.SourceUpgrade.ConfigRewrites
-    alias Mix.Brando.Igniter.SourceUpgrade.Datasources
     alias Mix.Brando.Igniter.SourceUpgrade.ListingRows
     alias Mix.Brando.Igniter.SourceUpgrade.ViewHelpers
 
@@ -50,7 +49,6 @@ if Code.ensure_loaded?(Igniter) do
       # These two read the Villain attributes the Blueprint rewrite removes.
       |> SourceUpgrade.upgrade_054_templates()
       |> SourceUpgrade.warn_block_editor_options()
-      |> Datasources.rename_shared_names()
       |> SourceUpgrade.rewrite_blueprints(&SourceUpgrade.upgrade_054_blueprint/1)
       |> ListingRows.rewrite()
       |> BuiltinActions.remove()
