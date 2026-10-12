@@ -6,9 +6,9 @@ if Code.ensure_loaded?(Igniter) do
     @moduledoc false
     # 0.54 page vars are an association, and `Brando.Pages.get_var/2` and
     # `has_var?/2` raise when it is not loaded. When a template reads vars on
-    # `@page`, each `Pages.get_page/1` call whose options are a literal map,
-    # or a variable the same function assigns one, gets `:vars` in its
-    # `preload` list. Reads on anything but `@page`, and every read when a
+    # `@page`, each `Pages.get_page/1` call (or pipe into it) whose options
+    # are a literal map, or a variable the same function assigns one, gets
+    # `:vars` in its `preload` list. Reads on anything but `@page`, and every read when a
     # load cannot be updated or none is found, stay listed.
 
     alias Rewrite.Source
@@ -25,7 +25,7 @@ if Code.ensure_loaded?(Igniter) do
       reads = for {path, content} <- sources, {line, number} <- lines(content), line =~ @read, do: {path, number, line}
 
       if Enum.any?(reads, fn {_path, _number, line} -> line =~ @page_read end) do
-        loads = for {path, content} <- sources, Path.extname(path) == ".ex", content =~ "get_page(", do: path
+        loads = for {path, content} <- sources, Path.extname(path) == ".ex", content =~ ~r/\bget_page\b/, do: path
         {igniter, results} = Enum.reduce(loads, {igniter, []}, &update_loads/2)
         report(igniter, reads, results)
       else
@@ -82,13 +82,26 @@ if Code.ensure_loaded?(Igniter) do
     ## Loads
 
     defp update_loads(path, {igniter, results}) do
-      ast = igniter.rewrite |> Rewrite.source!(path) |> Source.get(:quoted)
+      source = Rewrite.source!(igniter.rewrite, path)
+      ast = Source.get(source, :quoted)
       {updated, found} = Macro.prewalk(ast, [], &update_definition/2)
-      found = Enum.map(found, fn {line, result} -> {path, line, result} end)
+      found = Enum.map(found, fn {line, result} -> {path, line, result} end) ++ unread(path, source, found)
 
       if updated == ast,
         do: {igniter, results ++ found},
         else: {Igniter.update_elixir_file(igniter, path, &{:ok, Sourceror.Zipper.replace(&1, updated)}), results ++ found}
+    end
+
+    # Lines naming `get_page` that hold no call the task read: a pipe into it,
+    # an imported call, a function of the application's own.
+    defp unread(path, source, found) do
+      read = MapSet.new(found, &elem(&1, 0))
+
+      for {line, number} <- source |> Source.get(:content) |> lines(),
+          line =~ ~r/\bget_page\b/,
+          not (line =~ ~r/^\s*(#|import\b|alias\b|require\b)/),
+          not MapSet.member?(read, number),
+          do: {path, number, {:unknown, "a `get_page` call the task cannot read"}}
     end
 
     # Within one function: the `get_page/1` calls and the maps they load with.
@@ -111,6 +124,9 @@ if Code.ensure_loaded?(Igniter) do
             if match?([_], targets[name]),
               do: {:=, assign_meta, [variable, with_vars(map)]},
               else: {:=, assign_meta, [variable, map]}
+
+          {:|>, pipe_meta, [{:%{}, _, _} = map, call]} = node ->
+            if get_page?(node), do: {:|>, pipe_meta, [with_vars(map), call]}, else: node
 
           {call, call_meta, [{:%{}, _, _} = map]} = node ->
             if get_page?(node), do: {call, call_meta, [with_vars(map)]}, else: node
@@ -136,8 +152,12 @@ if Code.ensure_loaded?(Igniter) do
     defp get_page?({{:., _, [{:__aliases__, _, parts}, :get_page]}, _, [_options]}),
       do: parts in [[:Pages], [:Brando, :Pages]]
 
+    defp get_page?({:|>, _, [_options, {{:., _, [{:__aliases__, _, parts}, :get_page]}, _, []}]}),
+      do: parts in [[:Pages], [:Brando, :Pages]]
+
     defp get_page?(_node), do: false
 
+    defp argument({:|>, meta, [options, _call]}), do: argument({:get_page, meta, [options]})
     defp argument({_call, _, [{:%{}, _, _} = map]}), do: {:map, map}
     defp argument({_call, _, [{name, _, context}]}) when is_atom(name) and is_atom(context), do: {:variable, name}
     defp argument(_call), do: :other

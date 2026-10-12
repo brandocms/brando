@@ -255,6 +255,33 @@ defmodule Mix.Tasks.Brando.Migrate54TemplatesTest do
     end)
   end
 
+  test "adds :vars to a piped page load, and keeps listing the reads for one it cannot read" do
+    controller =
+      @controller
+      |> String.replace(
+        "with {:ok, page} <- Pages.get_page(page_opts) do\n      render(",
+        "with {:ok, page} <- page_opts |> Pages.get_page() do\n      render("
+      )
+      |> String.replace("  alias Brando.Pages\n", "  alias Brando.Pages\n  import Brando.Pages, only: [get_page: 1]\n")
+      |> String.replace(
+        "with {:ok, page} <- Pages.get_page(page_opts) do\n      conn",
+        "with {:ok, page} <- get_page(page_opts) do\n      conn"
+      )
+
+    igniter = migrate(%{@navigation_path => @header, @controller_path => controller})
+
+    controller = source(igniter, @controller_path)
+    assert controller =~ "preload: [:alternate_entries],"
+    assert count(controller, "preload: [:alternate_entries, :vars],") == 1
+    assert controller =~ "page_opts |> Pages.get_page()"
+
+    assert_has_warning(igniter, fn warning ->
+      warning =~ "#{@navigation_path}:3:" and
+        warning =~ "#{@controller_path}:17: a `get_page` call the task cannot read" and
+        not (warning =~ "#{@controller_path}:5:")
+    end)
+  end
+
   defp count(content, pattern), do: content |> String.split(pattern) |> length() |> Kernel.-(1)
 
   defp migrate(files) do
