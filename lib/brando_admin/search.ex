@@ -67,14 +67,15 @@ defmodule BrandoAdmin.Search do
   @doc """
   `types` with the labels they share told apart: two types with the same
   plural ("Categories" in Articles and in Menu) take their domain as well,
-  or the type filter lists the same name twice.
+  named as the sidebar names it (`BrandoAdmin.Menu.domain_name/1`), or the
+  type filter lists the same name twice.
   """
   def disambiguate(types) do
     shared = types |> Enum.frequencies_by(& &1.label) |> Enum.filter(&(elem(&1, 1) > 1)) |> Map.new()
 
     Enum.map(types, fn type ->
       if Map.has_key?(shared, type.label),
-        do: %{type | label: "#{type.label} · #{type.schema.__naming__().domain}"},
+        do: %{type | label: "#{type.label} · #{BrandoAdmin.Menu.domain_name(type.schema.__naming__().domain)}"},
         else: type
     end)
   end

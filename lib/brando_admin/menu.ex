@@ -69,6 +69,18 @@ defmodule BrandoAdmin.Menu do
     Gettext.dgettext(Brando.gettext_admin(), "menus", msgid)
   end
 
+  @doc """
+  A Blueprint domain ("Articles") as the sidebar names it: the site's
+  `menu_item t("Articles")` label from its "menus" catalog, else Brando's own
+  name for its domains ("Pages"), else the domain as it is.
+  """
+  def domain_name(domain) do
+    case translate_msgid(domain) do
+      ^domain -> Gettext.dgettext(Brando.Gettext, "default", domain)
+      translated -> translated
+    end
+  end
+
   defmacro menus(do: block) do
     menus(__CALLER__, block)
   end
