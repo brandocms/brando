@@ -1,5 +1,5 @@
 defmodule Mix.Tasks.Brando.Migrate54ViewHelpersTest do
-  use ExUnit.Case, async: true
+  use ExUnit.Case, async: false
 
   import Igniter.Test
 

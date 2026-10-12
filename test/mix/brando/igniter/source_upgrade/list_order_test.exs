@@ -1,5 +1,5 @@
 defmodule Mix.Brando.Igniter.SourceUpgrade.ListOrderTest do
-  use ExUnit.Case, async: true
+  use ExUnit.Case, async: false
 
   import Igniter.Test
 

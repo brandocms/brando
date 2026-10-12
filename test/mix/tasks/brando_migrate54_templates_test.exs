@@ -1,5 +1,5 @@
 defmodule Mix.Tasks.Brando.Migrate54TemplatesTest do
-  use ExUnit.Case, async: true
+  use ExUnit.Case, async: false
 
   import Igniter.Test
 

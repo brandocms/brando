@@ -1,5 +1,5 @@
 defmodule Mix.Tasks.Brando.Migrate55PersistIdentifiersTest do
-  use ExUnit.Case, async: true
+  use ExUnit.Case, async: false
 
   import Igniter.Test
 
