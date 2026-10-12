@@ -12,7 +12,12 @@ defmodule Brando.Migrations.TransferRefMediaDataTest do
 
   setup_all do
     [{module, _bytecode}] = Code.compile_file(@migration)
-    on_exit(fn -> :code.purge(module) && :code.delete(module) end)
+
+    on_exit(fn ->
+      :code.purge(module)
+      :code.delete(module)
+    end)
+
     %{migration: module}
   end
 
@@ -50,8 +55,11 @@ defmodule Brando.Migrations.TransferRefMediaDataTest do
 
     assert image_id(prefixed_ref) == prefixed.id
     assert image_id(unprefixed_ref) == unprefixed.id
-    assert image_id(missing_ref) == nil
     assert image_id(template_ref) == template.id
+
+    # 0.53 showed it from the ref's own data, so its row is made from that
+    assert %{path: "images/site/posts/gone.jpg", formats: [:jpg]} =
+             Repo.get!(Brando.Images.Image, image_id(missing_ref))
   end
 
   test "links gallery images whose legacy path or sizes carry the media prefix", %{migration: migration} do

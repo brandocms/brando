@@ -350,6 +350,206 @@ defmodule Brando.Migrations.UpgradeFromVillainTest do
     %{page: page_id, contact: contact_id, fragment: fragment_id}
   end
 
+  defp picture_ref(name, data) do
+    %{"name" => name, "data" => %{"type" => "picture", "uid" => Utils.generate_uid(), "hidden" => false, "data" => data}}
+  end
+
+  defp legacy_sizes(dir, file, prefix \\ "") do
+    Map.new(~w(micro thumb small medium large xlarge), &{&1, "#{prefix}images/site/#{dir}/#{&1}/#{file}"})
+  end
+
+  defp insert_image!(path, extra \\ "") do
+    [[id]] =
+      insert!(
+        """
+        INSERT INTO images (path, sizes, width, height, formats, config_target, status, inserted_at, updated_at#{if extra != "", do: ", deleted_at"})
+        VALUES ($1, $2, 800, 600, '{jpg}', 'default', 'processed', now(), now()#{extra})
+        """,
+        [path, legacy_sizes(path |> Path.dirname() |> Path.basename(), Path.basename(path))]
+      )
+
+    id
+  end
+
+  # koi's Kontakt page, as 0.53 rendered it. Its "Jobb med oss" module showed
+  # two pictures purely from the ref data: the images rows for them were gone.
+  # Next to those, a picture whose only row is in the trash, one whose stale
+  # path matches nothing but whose sizes name a row, one already empty on
+  # 0.53 and one linked by path, and a gallery with an image that has a row
+  # and one that has none. A services module reads its entries the Villain
+  # way, `link.data.vars.url`.
+  defp insert_koi_page do
+    now = ~N[2023-11-01 12:00:00]
+
+    images = %{
+      linked: insert_image!("images/site/posts/linked.jpg"),
+      deleted: insert_image!("images/site/posts/trashed.jpg", ", now()"),
+      by_size: insert_image!("images/site/posts/by-size.png"),
+      known: insert_image!("images/site/gallery/known.jpg")
+    }
+
+    [[jobs_id]] =
+      insert!(
+        """
+        INSERT INTO content_modules (name, namespace, class, code, refs, vars, wrapper, inserted_at, updated_at)
+        VALUES ('Jobb med oss', 'pages', 'jobs', $1, $2, '[]', false, $3, $3)
+        """,
+        [
+          Enum.map_join(~w(pic pic2 pic3 pic4 pic5 gallery), &"{% ref refs.#{&1} %}"),
+          Enum.map(~w(pic pic2 pic3 pic4 pic5), &picture_ref(&1, %{})),
+          now
+        ]
+      )
+
+    [[services_id]] =
+      insert!(
+        """
+        INSERT INTO content_modules (name, namespace, class, code, refs, vars, wrapper, entry_template, inserted_at, updated_at)
+        VALUES ('Tjenester', 'pages', 'services', $1, '[]', '[]', true, $2, $3, $3)
+        """,
+        [
+          """
+          {% assign first_entry = entries.first %}<p>{{ first_entry.data.vars.text }}</p>
+          {% for link in entries %}<a href="{{ link.data.vars.url }}">{{ link.data.vars.text }}</a>{% endfor %}
+          {{ content | renderless }}
+          """,
+          %{
+            "id" => Ecto.UUID.generate(),
+            "name" => "Tjeneste",
+            "namespace" => "pages",
+            "class" => "service",
+            "code" => "{{ text }}",
+            "refs" => [],
+            "vars" => [var("url", ""), var("text", "")],
+            "wrapper" => false
+          },
+          now
+        ]
+      )
+
+    koi_path = "/media/images/site/posts/1n60vo3o9p06.jpg"
+
+    gallery = %{
+      "name" => "gallery",
+      "data" => %{
+        "type" => "gallery",
+        "uid" => Utils.generate_uid(),
+        "hidden" => false,
+        "data" => %{
+          "images" => [
+            %{
+              "path" => "images/site/gallery/known.jpg",
+              "title" => "Known",
+              "sizes" => legacy_sizes("gallery", "known.jpg")
+            },
+            %{
+              "path" => "/media/images/site/gallery/lost.jpg",
+              "alt" => "Lost",
+              "width" => 1200,
+              "height" => 800,
+              "sizes" => legacy_sizes("gallery", "lost.jpg", "/media/")
+            }
+          ]
+        }
+      }
+    }
+
+    blocks = [
+      %{
+        "type" => "module",
+        "uid" => Utils.generate_uid(),
+        "hidden" => false,
+        "data" => %{
+          "module_id" => jobs_id,
+          "multi" => false,
+          "vars" => [],
+          "refs" => [
+            picture_ref("pic", %{
+              "path" => koi_path,
+              "sizes" => legacy_sizes("posts", "1n60vo3o9p06.jpg", "/media/"),
+              "width" => 1600,
+              "height" => 1067,
+              "dominant_color" => "#9a8f7e",
+              "title" => "Jobb med oss",
+              "alt" => "Verkstedet"
+            }),
+            picture_ref("pic2", %{
+              "path" => "images/site/posts/trashed.jpg",
+              "sizes" => legacy_sizes("posts", "trashed.jpg"),
+              "width" => 800,
+              "height" => 600
+            }),
+            picture_ref("pic3", %{
+              "path" => "images/site/posts/stale.jpg",
+              "sizes" => legacy_sizes("posts", "by-size.jpg"),
+              "width" => 800,
+              "height" => 600
+            }),
+            picture_ref("pic4", %{"title" => "Never picked", "path" => nil}),
+            picture_ref("pic5", %{
+              "path" => "images/site/posts/linked.jpg",
+              "sizes" => legacy_sizes("posts", "linked.jpg")
+            }),
+            gallery
+          ]
+        }
+      },
+      %{
+        "type" => "module",
+        "uid" => Utils.generate_uid(),
+        "hidden" => false,
+        "data" => %{
+          "module_id" => services_id,
+          "multi" => true,
+          "refs" => [],
+          "vars" => [],
+          "entries" =>
+            for n <- 1..2 do
+              %{
+                "type" => "module_entry",
+                "uid" => Utils.generate_uid(),
+                "hidden" => false,
+                "data" => %{"refs" => [], "vars" => [var("url", "/tjeneste-#{n}"), var("text", "Tjeneste #{n}")]}
+              }
+            end
+        }
+      }
+    ]
+
+    [[page_id]] =
+      insert!(
+        """
+        INSERT INTO pages (uri, language, title, template, status, data, inserted_at, updated_at)
+        VALUES ('kontakt', 'no', 'Kontakt', 'default.html', 1, $1, $2, $2)
+        """,
+        [blocks, now]
+      )
+
+    %{page: page_id, images: images, services: services_id, koi_path: koi_path}
+  end
+
+  defp ref_media(page_id) do
+    rows(
+      """
+      SELECT r.name, i.path, i.deleted_at IS NOT NULL, r.gallery_id FROM content_refs r
+      JOIN pages_blocks pb ON pb.block_id = r.block_id
+      LEFT JOIN images i ON i.id = r.image_id
+      WHERE pb.entry_id = $1 ORDER BY r.sequence
+      """,
+      [page_id]
+    )
+  end
+
+  defp gallery_images(gallery_id) do
+    rows(
+      """
+      SELECT i.path, o.config FROM galleries_gallery_objects o JOIN images i ON i.id = o.image_id
+      WHERE o.gallery_id = $1 ORDER BY o.sequence
+      """,
+      [gallery_id]
+    )
+  end
+
   defp root_block(page_id, sequence) do
     [[id]] = rows("SELECT block_id FROM pages_blocks WHERE entry_id = $1 AND sequence = $2", [page_id, sequence])
     id
@@ -365,14 +565,16 @@ defmodule Brando.Migrations.UpgradeFromVillainTest do
     Enum.map(report.findings, &{&1.severity, LegacyConversion.format(&1)})
   end
 
-  defp run_check(args) do
+  defp run_check(args), do: run_task(CheckTask, args)
+
+  defp run_task(task, args) do
     shell = Mix.shell()
     Mix.shell(Mix.Shell.Process)
 
     try do
       result =
         try do
-          CheckTask.run(args)
+          task.run(args)
         catch
           :exit, reason -> {:exit, reason}
         end
@@ -492,6 +694,70 @@ defmodule Brando.Migrations.UpgradeFromVillainTest do
              ["with_button", "external_file", "https://cdn.example.com/video.mp4", 840, 1052, nil],
              ["youtube", "youtube", "https://www.youtube.com/watch?v=dQw4w9WgXcQ", 840, 1052, nil]
            ]
+  end
+
+  describe "legacy media and multi module code (koi)" do
+    test "brando_133 makes images of picture and gallery data that matches no row" do
+      load_schema()
+      insert_villain_site()
+      %{page: page_id, images: images} = insert_koi_page()
+
+      Enum.each(templates(103..1000), &migrate/1)
+
+      assert [
+               ["pic", "images/site/posts/1n60vo3o9p06.jpg", false, nil],
+               # A new row, not the one in the trash: that one is purged with
+               # everything linked to it
+               ["pic2", "images/site/posts/trashed.jpg", false, nil],
+               ["pic3", "images/site/posts/by-size.png", false, nil],
+               ["pic4", nil, false, nil],
+               ["pic5", "images/site/posts/linked.jpg", false, nil],
+               ["gallery", nil, false, gallery_id]
+             ] = ref_media(page_id)
+
+      assert [["images/site/posts/1n60vo3o9p06.jpg", sizes, 1600, 1067, "#9a8f7e", ["jpg"]]] =
+               rows(
+                 "SELECT path, sizes, width, height, dominant_color, formats FROM images WHERE path LIKE '%1n60vo3o9p06%'"
+               )
+
+      assert sizes["small"] == "images/site/posts/small/1n60vo3o9p06.jpg"
+
+      [[trashed_rows]] = rows("SELECT count(*) FROM images WHERE path = 'images/site/posts/trashed.jpg'")
+      assert trashed_rows == 2
+      assert [[_]] = rows("SELECT id FROM images WHERE id = $1 AND deleted_at IS NOT NULL", [images.deleted])
+
+      assert gallery_images(gallery_id) == [
+               ["images/site/gallery/known.jpg", %{"title" => "Known"}],
+               ["images/site/gallery/lost.jpg", %{"alt" => "Lost"}]
+             ]
+
+      # The ref keeps its own texts; the image data is on the image now
+      assert [[%{"title" => "Jobb med oss", "alt" => "Verkstedet"} = data]] =
+               rows(
+                 "SELECT r.data->'data' FROM content_refs r JOIN pages_blocks pb ON pb.block_id = r.block_id WHERE pb.entry_id = $1 AND r.name = 'pic'",
+                 [page_id]
+               )
+
+      refute Map.has_key?(data, "path")
+
+      assert {:ok, %{findings: []}} = LegacyConversion.check("public")
+    end
+
+    test "brando_219 rewrites the services module to read its entries' vars" do
+      load_schema()
+      insert_villain_site()
+      %{services: services_id} = insert_koi_page()
+
+      Enum.each(templates(103..1000), &migrate/1)
+
+      assert [[code]] = rows("SELECT code FROM content_modules WHERE id = $1", [services_id])
+
+      assert code == """
+             {% assign first_entry = entries.first %}<p>{{ first_entry.vars.text }}</p>
+             {% for link in entries %}<a href="{{ link.vars.url }}">{{ link.vars.text }}</a>{% endfor %}
+             {{ content | renderless }}
+             """
+    end
   end
 
   describe "mix brando.check.legacy_conversion" do
