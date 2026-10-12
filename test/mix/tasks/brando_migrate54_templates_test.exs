@@ -301,6 +301,87 @@ defmodule Mix.Tasks.Brando.Migrate54TemplatesTest do
     end)
   end
 
+  # As koi had them on 0.53: the router plugs the fragments in as
+  # `@partials`, a controller assigns `get_fragments/1`'s map.
+  @fragment_router """
+  defmodule LettWeb.Router do
+    use LettWeb, :router
+
+    pipeline :browser do
+      plug :accepts, ["html"]
+      plug Brando.Plug.Fragment, parent_key: "partials", as: :partials
+    end
+  end
+  """
+
+  @fragment_controller """
+  defmodule LettWeb.PageController do
+    use LettWeb, :controller
+    alias Brando.Pages
+
+    def index(conn, %{"language" => language}) do
+      fragment_opts = %{filter: %{parent_key: "index", language: language}}
+
+      with {:ok, index_fragments} <- Pages.get_fragments(fragment_opts) do
+        conn
+        |> assign(:index_fragments, index_fragments)
+        |> render(:index)
+      end
+    end
+  end
+  """
+
+  @footer_path "lib/lett_web/components/partials/footer.html.heex"
+  @router_path "lib/lett_web/router.ex"
+  @index_path "lib/lett_web/controllers/page_html/index.html.heex"
+
+  test "points fragment map reads at rendered_blocks, and lists the map reads it cannot tell" do
+    footer = """
+    <footer b-section="general-nedersteFooter">
+      <%= @partials["footer"] %>
+    </footer>
+
+    <%= @partials["newsletter"].html |> replace_csrf_token() |> raw %>
+    <%= @partials["contact"].html |> replace_csrf_token() |> raw %>
+    """
+
+    index = """
+    <%= raw(@index_fragments["intro"].html) %>
+    <div>{@products["intro"].html}</div>
+    """
+
+    igniter =
+      migrate(%{
+        @footer_path => footer,
+        @router_path => @fragment_router,
+        @controller_path => @fragment_controller,
+        @index_path => index
+      })
+
+    assert source(igniter, @footer_path) == """
+           <footer b-section="general-nedersteFooter">
+             <%= @partials["footer"] %>
+           </footer>
+
+           <%= @partials["newsletter"].rendered_blocks |> replace_csrf_token() |> raw %>
+           <%= @partials["contact"].rendered_blocks |> replace_csrf_token() |> raw %>
+           """
+
+    assert source(igniter, @index_path) == """
+           <%= raw(@index_fragments["intro"].rendered_blocks) %>
+           <div>{@products["intro"].html}</div>
+           """
+
+    assert_has_notice(igniter, fn notice ->
+      notice =~ "#{@footer_path}:5:" and notice =~ "#{@footer_path}:6:" and notice =~ "#{@index_path}:1:"
+    end)
+
+    assert_has_warning(igniter, &(&1 =~ ~s|#{@index_path}:2: <div>{@products["intro"].html}</div>|))
+
+    rerun = igniter |> apply_igniter!() |> include_test_files() |> Migrate54.igniter()
+    assert_unchanged(rerun, [@footer_path, @index_path])
+  end
+
   defp count(content, pattern), do: content |> String.split(pattern) |> length() |> Kernel.-(1)
 
   defp migrate(files) do
