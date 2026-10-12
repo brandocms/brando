@@ -444,6 +444,15 @@ defmodule Mix.Tasks.Brando.Migrate55Test do
     chosen = @brando_config <> "\nconfig :brando, mailer: LegacyApp.Notifications.Mailer\n"
     mailer = "defmodule LegacyApp.Mailer do\n  use Swoosh.Mailer, otp_app: :legacy_app\nend\n"
     igniter = migrate(@blueprint_054, %{"lib/legacy_app/mailer.ex" => mailer, @brando_config_path => chosen})
+    brando = source(igniter, @brando_config_path)
+
+    assert brando =~ "config :brando, mailer: LegacyApp.Notifications.Mailer\n"
+    refute brando =~ "mailer: LegacyApp.Mailer"
+    # The sender `mix brando.doctor` asks for goes in with it.
+    assert brando =~ ~s|config :brando, Brando.Mailer, from: {"LegacyApp", "noreply@example.com"}|
+
+    sent = chosen <> ~s|\nconfig :brando, Brando.Mailer, from: {"Lett", "post@lett.no"}\n|
+    igniter = migrate(@blueprint_054, %{"lib/legacy_app/mailer.ex" => mailer, @brando_config_path => sent})
     assert_unchanged(igniter, @brando_config_path)
   end
 

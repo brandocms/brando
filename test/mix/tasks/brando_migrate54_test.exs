@@ -1192,7 +1192,11 @@ defmodule Mix.Tasks.Brando.Migrate54Test do
     refute prod =~ "Brando.Images"
     assert prod =~ "server: true"
 
-    assert_unchanged(igniter, ["config/dev.exs", "config/e2e.exs"])
+    # The application has no mailer, so dev.exs gets the one the task creates.
+    assert source(igniter, "config/dev.exs") =~
+             "config :brando, Brando.Images, processor_module: LegacyApp.Processor"
+
+    assert_unchanged(igniter, ["config/e2e.exs"])
 
     rerun = igniter |> apply_igniter!() |> include_test_files() |> Migrate54.igniter()
     assert_unchanged(rerun, [@brando_config_path, "config/prod.exs"])

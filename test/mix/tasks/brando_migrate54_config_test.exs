@@ -41,8 +41,55 @@ defmodule Mix.Tasks.Brando.Migrate54ConfigTest do
   config :lett, :mailer, log: :warn
   """
 
+  @mailer """
+  defmodule Lett.Mailer do
+    use Swoosh.Mailer, otp_app: :lett
+  end
+  """
+
+  # koi's config/brando.exs before the upgrade
+  @brando_config """
+  import Config
+
+  config :brando,
+    otp_app: :lett,
+    app_name: "Lett"
+
+  config :brando, Brando.CDN,
+    enabled: false,
+    bucket: "lett"
+  """
+
+  @repo """
+  defmodule Lett.Repo do
+    use Ecto.Repo, otp_app: :lett, adapter: Ecto.Adapters.Postgres
+  end
+  """
+
+  test "writes the Brando settings migrate55 and doctor ask for in one go" do
+    files = %{
+      "config/brando.exs" => @brando_config,
+      "lib/lett/mailer.ex" => @mailer,
+      "lib/lett/repo.ex" => @repo,
+      "config/config.exs" => "import Config\n\nconfig :lett, ecto_repos: [Lett.Repo]\nimport_config \"brando.exs\"\n"
+    }
+
+    igniter = migrate(files)
+    brando = source(igniter, "config/brando.exs")
+
+    assert brando =~ "repo_module: Lett.Repo"
+    assert brando =~ "mailer: Lett.Mailer"
+    assert brando =~ ~s|config :brando, Brando.Mailer, from: {"Lett", "noreply@example.com"}|
+
+    assert_has_notice(igniter, &(&1 =~ "replace the\nplaceholder's `noreply@example.com` before you first compile"))
+
+    # migrate55 then leaves Brando's configuration as it is.
+    rerun = igniter |> apply_igniter!() |> include_test_files() |> Mix.Tasks.Brando.Migrate55.igniter()
+    assert_unchanged(rerun, ["config/brando.exs"])
+  end
+
   test "adds the code reloader listener and updates deprecated config" do
-    igniter = migrate(%{"mix.exs" => @mix_exs, "config/test.exs" => @test_config})
+    igniter = migrate(%{"mix.exs" => @mix_exs, "config/test.exs" => @test_config, "lib/lett/mailer.ex" => @mailer})
 
     assert source(igniter, "mix.exs") =~ "      deps: deps(),\n      listeners: [Phoenix.CodeReloader]\n    ]\n"
 

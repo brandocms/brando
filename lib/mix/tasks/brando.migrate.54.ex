@@ -6,6 +6,7 @@ if Code.ensure_loaded?(Igniter) do
     use Igniter.Mix.Task
 
     alias Mix.Brando.Igniter.AdminFormViews
+    alias Mix.Brando.Igniter.Mailer
     alias Mix.Brando.Igniter.SourceUpgrade
     alias Mix.Brando.Igniter.SourceUpgrade.BlueprintGettext
     alias Mix.Brando.Igniter.SourceUpgrade.BuiltinActions
@@ -64,6 +65,10 @@ if Code.ensure_loaded?(Igniter) do
       |> AdminFormViews.consolidate()
       |> ViewHelpers.upgrade()
       |> ConfigRewrites.upgrade()
+      # migrate55's `config :brando` settings too, since each later edit of
+      # the configuration recompiles Brando. It evaluates the config files,
+      # so it runs after `use Mix.Config` became `import Config`.
+      |> Mailer.configure_for_upgrade()
       |> add_notices()
       |> add_warnings()
     end
@@ -101,7 +106,16 @@ if Code.ensure_loaded?(Igniter) do
       `filter:` keys, root Docker digest commands, and font cache suffixes. It
       adds the Brando Repo configuration when exactly one Ecto Repo is
       available, and removes `processor_module: Brando.Images.Processor.Sharp`
-      (Brando refuses to boot with it; Vix is the default). Phoenix.View-era
+      (Brando refuses to boot with it; Vix is the default).
+
+      It also writes the settings `mix brando.migrate55` and
+      `mix brando.doctor` ask for: `config :brando, mailer:` (creating
+      `MyApp.Mailer` when the application has no Swoosh mailer) and a
+      placeholder sender, `config :brando, Brando.Mailer, from:`. Every
+      change to the configuration recompiles Brando, so replace the
+      placeholder's `noreply@example.com` before you first compile.
+
+      Phoenix.View-era
       `ErrorHelpers`, `view/0` and `view_helpers/0`, which phoenix_html 4 no
       longer compiles, are deleted when nothing uses them, and their
       `use Phoenix.HTML` replaced when something does. A Phoenix

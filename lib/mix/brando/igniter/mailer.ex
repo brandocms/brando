@@ -59,34 +59,41 @@ if Code.ensure_loaded?(Igniter) do
     end
 
     @doc """
-    Points Brando at the application's mailer for `mix brando.migrate55`.
-    A configured `config :brando, mailer:` is left alone. The application's
-    one module that does `use Swoosh.Mailer`, whatever its name, or else
-    `<App>.Mailer`, is used as it is; with several, they are listed in a
-    warning and nothing changes. Without one, `ensure/2` creates
-    `<App>.Mailer` and a warning says what is left to set.
+    Points Brando at the application's mailer for `mix brando.migrate54`
+    and `mix brando.migrate55`. A configured `config :brando, mailer:` is
+    left alone. The application's one module that does `use Swoosh.Mailer`,
+    whatever its name, or else `<App>.Mailer`, is used as it is; with
+    several, they are listed in a warning and nothing changes. Without one,
+    `ensure/2` creates `<App>.Mailer` and a warning says what is left to
+    set. Unless several mailers leave the choice open, a placeholder sender
+    is written when none is set.
     """
     def configure_for_upgrade(igniter) do
       app_module = ProjectModule.module_name_prefix(igniter)
       mailer = Module.concat(app_module, "Mailer")
 
       if brando_mailer_configured?(igniter) do
-        igniter
+        put_placeholder_sender(igniter, app_module)
       else
         {igniter, mailers} = swoosh_mailers(igniter)
         use_mailer(igniter, mailers, app_module, mailer)
       end
     end
 
-    defp use_mailer(igniter, [existing], _app_module, _mailer),
-      do: SourceUpgrade.configure_brando_mailer(igniter, existing)
+    # A sender goes in with the mailer: `mix brando.doctor` asks for one, and
+    # each later edit of Brando's config recompiles Brando.
+    defp use_mailer(igniter, [existing], app_module, _mailer) do
+      igniter
+      |> SourceUpgrade.configure_brando_mailer(existing)
+      |> put_placeholder_sender(app_module)
+    end
 
     defp use_mailer(igniter, [_ | _] = mailers, _app_module, _mailer),
       do: Igniter.add_warning(igniter, several_warning(mailers))
 
     defp use_mailer(igniter, [], app_module, mailer) do
       if match?({true, _igniter}, ProjectModule.module_exists(igniter, mailer)),
-        do: SourceUpgrade.configure_brando_mailer(igniter, mailer),
+        do: igniter |> SourceUpgrade.configure_brando_mailer(mailer) |> put_placeholder_sender(app_module),
         else: create_for_upgrade(igniter, app_module)
     end
 

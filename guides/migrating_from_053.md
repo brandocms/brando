@@ -161,9 +161,13 @@ nothing.
 
 Brando's optional task and helper modules automatically request recompilation
 when Igniter becomes available. The dependency remains optional at runtime.
-`mix brando.migrate55` compiles Brando once more when `mix brando.migrate54`
-has edited `config/brando.exs` (to add `repo_module`, say): Mix recompiles a
-dependency whose compile-time configuration changed.
+Any change to the application's configuration recompiles Brando, which takes
+about a minute. `mix brando.migrate54` therefore writes every `config :brando`
+setting the upgrade asks for at once (`repo_module`, `mailer` and a placeholder
+sender), and `mix brando.migrate55` finds them in place. Replace the
+placeholder sender's `noreply@example.com` with the address Brando should send
+from before you first compile, and make your own configuration changes in the
+same pass.
 
 If the application has never been run through `mix format`, run it and commit
 the result before the source tasks, so their diff holds only their changes.
@@ -181,6 +185,9 @@ the result before the source tasks, so their diff holds only their changes.
 - replaces `mix phx.digest` in a root Dockerfile, removes `?vsn=d` from font
   URLs in application styles/templates, and adds a missing single-Repo
   `config :brando, repo_module:` setting;
+- points Brando at the application's mailer and writes a placeholder sender
+  when none is set, as `mix brando.migrate55` does (see below), so Brando's
+  configuration changes only once;
 - removes `processor_module: Brando.Images.Processor.Sharp` from config. Brando
   refuses to boot with it, and Vix is the default;
 - moves Gettext backends to `use Gettext.Backend` and their importers to
@@ -254,7 +261,8 @@ the result before the source tasks, so their diff holds only their changes.
 - points Brando at the application's `Mailer` (`config :brando, mailer:
   MyApp.Mailer`), or, when it has none, creates `MyApp.Mailer` with the local
   adapter in development and the test adapter in test, and writes a
-  placeholder sender (`noreply@example.com`). Replace the placeholder with an
+  placeholder sender (`noreply@example.com`) when none is set. After
+  `mix brando.migrate54` these are already in place. Replace the placeholder with an
   address your mail provider sends for, and configure the mailer's production
   adapter in `runtime.exs`, as described in [Email](email.md);
   `mix brando.doctor` warns until you do;
