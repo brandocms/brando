@@ -180,10 +180,10 @@ defmodule Brando.Content.Identifier.Sync do
   end
 
   defp log_red(message) do
-    IO.puts(IO.ANSI.red() <> message <> IO.ANSI.reset())
+    IO.puts(IO.ANSI.format([:red, message]))
   end
 
   defp log_green(message) do
-    IO.puts(IO.ANSI.green() <> message <> IO.ANSI.reset())
+    IO.puts(IO.ANSI.format([:green, message]))
   end
 end

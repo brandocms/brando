@@ -35,6 +35,20 @@ defmodule Mix.Tasks.Brando.Entries.ResaveTest do
     assert_received {:mix_shell, :info, ["\n==> Done.\n"]}
   end
 
+  test "prints no colour codes when stdout is not a terminal" do
+    ansi = Application.get_env(:elixir, :ansi_enabled)
+    Application.put_env(:elixir, :ansi_enabled, false)
+    on_exit(fn -> Application.put_env(:elixir, :ansi_enabled, ansi) end)
+
+    user = Brando.Factory.insert(:random_user)
+    Brando.Factory.insert(:fragment, creator: user, key: "plain", title: "Plain")
+
+    output = ExUnit.CaptureIO.capture_io(fn -> Resave.run(["--yes", "Brando.Pages.Fragment"]) end)
+
+    assert output =~ "done!"
+    refute output =~ "\e["
+  end
+
   test "an unknown option or a second Blueprint stops the task" do
     assert_raise Mix.Error, ~r/unknown or invalid option --all. It takes: --yes, --force/, fn -> Resave.run(["--all"]) end
 
