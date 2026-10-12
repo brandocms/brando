@@ -9,6 +9,7 @@ if Code.ensure_loaded?(Igniter) do
     alias Mix.Brando.Igniter.SourceUpgrade
     alias Mix.Brando.Igniter.SourceUpgrade.BlueprintGettext
     alias Mix.Brando.Igniter.UpgradeOrder
+    alias Mix.Brando.Igniter.SourceUpgrade.ListOrder
     alias Mix.Brando.Igniter.SourceUpgrade.VideoMarkup
 
     @shortdoc "Migrates application source from Brando 0.54 to 0.55"
@@ -34,6 +35,13 @@ if Code.ensure_loaded?(Igniter) do
     `persist_identifier false` on Blueprints with no admin editor, completes
     `Plural-Forms` headers Gettext 1.0 warns about, and retires the
     consumer-owned `brando.upgrade` task that 0.54 installed.
+
+    Calls to the application's `list_<plural>/1` queries whose options order
+    a Sequenced Blueprint only by `sequence` get the admin listing's
+    tiebreak, `order: "asc sequence, desc inserted_at"`. The 0.55 data
+    migrations rewrite rows, and rows with equal `sequence` came back in
+    storage order. Calls with no `order:` at all are listed, since adding one
+    changes what the site shows.
 
     It also lists, without changing them, front-end scripts under `assets/`
     that read a video's `data-src`, which 0.55 moved from the `<video>` to
@@ -76,6 +84,7 @@ if Code.ensure_loaded?(Igniter) do
       |> SourceUpgrade.warn_image_text_reads()
       |> PersistIdentifiers.update()
       |> VideoMarkup.warn_video_data_src_reads()
+      |> ListOrder.order_list_queries()
       |> SourceUpgrade.start_endpoint_last()
       |> Mix.Brando.Igniter.Upgrade.prepare()
       |> add_notices()
@@ -110,6 +119,12 @@ if Code.ensure_loaded?(Igniter) do
       translations of the Blueprint's `t/1` labels, which were extracted
       there while they were written with `gettext/1`; a translation the
       schema's catalog has is kept.
+
+      Calls to the application's `list_<plural>/1` queries that order a
+      Sequenced Blueprint only by `sequence` now order by
+      `"asc sequence, desc inserted_at"`, as the admin listing does, so
+      entries with equal `sequence` no longer come back in storage order,
+      which the data migrations change.
 
       The endpoint gets `plug Brando.Plug.Markdown` (entries as Markdown at
       their URL + `.md`) and `plug Brando.Plug.IndexNow` (the IndexNow key
