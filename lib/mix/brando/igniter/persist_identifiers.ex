@@ -270,15 +270,20 @@ if Code.ensure_loaded?(Igniter) do
       end
     end
 
+    # `get_key/2` unwraps an atom's block (`router_scope: :menu`) but not a
+    # string's.
     defp literal(options, key, valid?) do
       with {:ok, value} <- Igniter.Code.Keyword.get_key(options, key),
-           {:__block__, _, [value]} <- Zipper.node(value),
+           value = unwrap(Zipper.node(value)),
            true <- valid?.(value) do
         {:ok, value}
       else
         _ -> :error
       end
     end
+
+    defp unwrap({:__block__, _, [value]}), do: value
+    defp unwrap(value), do: value
 
     defp optional_literal(options, key) do
       case Igniter.Code.Keyword.get_key(options, key) do

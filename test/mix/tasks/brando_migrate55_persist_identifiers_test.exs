@@ -109,7 +109,8 @@ defmodule Mix.Tasks.Brando.Migrate55PersistIdentifiersTest do
     assert_has_warning(igniter, fn warning ->
       warning =~ "Decide whether these Blueprints persist identifiers" and
         warning =~ "Lett.Menu.Menuitem (lib/lett/menu/menuitem.ex): has admin LiveViews but no `admin_menuitem_form_path`" and
-        warning =~ "Lett.Stores.Store (lib/lett/stores/store.ex): has no admin editor, but has an `absolute_url`"
+        warning =~ "Lett.Stores.Store (lib/lett/stores/store.ex): has no admin editor, but has an `absolute_url`" and
+        not (warning =~ "Lett.Menu.Category")
     end)
 
     rerun = igniter |> apply_igniter!() |> include_test_files() |> Migrate55.igniter()
