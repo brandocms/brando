@@ -64,6 +64,9 @@ defmodule Mix.Brando.Igniter.UpgradeOrderTest do
 
     positions = Enum.map(steps, &position(notice, &1))
     assert positions == Enum.sort(positions)
+
+    # The database phase, without the Gettext step, as one task
+    assert notice =~ "`mix brando.upgrade.database` walks steps 3\nto 10 for you"
   end
 
   test "a latest snapshot with a Villain field is legacy whatever migrations were copied since" do
@@ -95,5 +98,6 @@ defmodule Mix.Brando.Igniter.UpgradeOrderTest do
              position(notice, "6. Only after that review, run `mix brando.migrate`")
 
     assert notice =~ "9. Run `mix brando.gettext.reconcile`"
+    assert notice =~ "`mix brando.upgrade.database` walks steps 3\nto 8 for you"
   end
 end

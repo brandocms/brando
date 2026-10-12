@@ -122,6 +122,8 @@ if Code.ensure_loaded?(Igniter) do
            `mix brando.migrate --tenants` when the application has named
            environments.
       #{derived_data_steps(7)}
+
+      #{database_task(8)}
       """
     end
 
@@ -158,6 +160,19 @@ if Code.ensure_loaded?(Igniter) do
            followed by `mix brando.migrate --tenants` when the application has
            named environments.
       #{derived_data_steps(9)}
+
+      #{database_task(10)}
+      """
+    end
+
+    # The database phase, steps 3 to `last`, as one rerunnable task.
+    defp database_task(last) do
+      """
+      Without named environments, `mix brando.upgrade.database` walks steps 3
+      to #{last} for you: it runs each in turn, asks before changing the
+      database, stops at every review point, and rebuilds the search index at
+      the end. Rerun it after each stop until it says the database phase is
+      done; `--dry-run` shows the plan.\
       """
     end
 
