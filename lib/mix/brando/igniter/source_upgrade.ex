@@ -347,6 +347,7 @@ if Code.ensure_loaded?(Igniter) do
         &single_datasource?(&1),
         fn zipper ->
           [key, get_callback] = zipper |> Zipper.node() |> Sourceror.get_args()
+          get = capture_call(get_callback, [quote(do: to_string(__MODULE__)), quote(do: identifier)])
 
           new_datasource =
             quote do
@@ -354,7 +355,7 @@ if Code.ensure_loaded?(Igniter) do
                 type :single
 
                 get fn identifier ->
-                  unquote(get_callback).(to_string(__MODULE__), identifier)
+                  unquote(get)
                 end
               end
             end
@@ -730,11 +731,10 @@ if Code.ensure_loaded?(Igniter) do
             fn entry -> get_in(entry, unquote(access_path)) end
           end
         else
+          value = quote(do: get_in(entry, unquote(access_path)))
+
           quote do
-            fn entry ->
-              value = get_in(entry, unquote(access_path))
-              unquote(mutator).(value)
-            end
+            fn entry -> unquote(capture_call(mutator, [value])) end
           end
         end
 
@@ -757,6 +757,26 @@ if Code.ensure_loaded?(Igniter) do
         Access.key(unquote(key))
       end
     end
+
+    # `&encode_locale/1` applied to `args` reads `encode_locale(value)`, and
+    # `&Mod.fun/2` `Mod.fun(a, b)`; any other function value is called with `.()`.
+    defp capture_call({:&, _, [{:/, _, [function, arity]}]} = capture, args) do
+      case {function, literal_integer(arity) == length(args)} do
+        {{name, _, context}, true} when is_atom(name) and is_atom(context) ->
+          {name, [], args}
+
+        {{{:., _, [module, name]}, _, []}, true} when is_atom(name) ->
+          {{:., [], [module, name]}, [], args}
+
+        _other ->
+          quote(do: unquote(capture).(unquote_splicing(args)))
+      end
+    end
+
+    defp capture_call(function, args), do: quote(do: unquote(function).(unquote_splicing(args)))
+
+    defp literal_integer({:__block__, _, [value]}), do: value
+    defp literal_integer(value), do: value
 
     defp rename_call(zipper, new_name) do
       case Zipper.node(zipper) do

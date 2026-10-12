@@ -94,6 +94,7 @@ defmodule Mix.Tasks.Brando.Migrate54Test do
       meta_field "title", [:title]
       meta_field ["description", "og:description"], [:metadata, :description], &String.trim/1
       meta_field "generated", & &1.title
+      meta_field "og:locale", [:language], &encode_locale/1
     end
 
     def list(left, right), do: {left, right}
@@ -102,6 +103,7 @@ defmodule Mix.Tasks.Brando.Migrate54Test do
     def get_featured(identifiers), do: identifiers
     def get_one(module, identifier), do: {module, identifier}
     def format_date(value), do: value
+    def encode_locale(value), do: value
 
     def listing_row(assigns) do
       ~H\"""
@@ -228,7 +230,8 @@ defmodule Mix.Tasks.Brando.Migrate54Test do
     assert blueprint =~ "datasource(:one) do"
     assert blueprint =~ "type(:single)"
     assert blueprint =~ "get(fn identifier ->"
-    assert blueprint =~ "(&__MODULE__.get_one/2).(to_string(__MODULE__), identifier)"
+    assert blueprint =~ "__MODULE__.get_one(to_string(__MODULE__), identifier)"
+    refute blueprint =~ ").("
     assert blueprint =~ "def list(left, right), do: {left, right}"
     assert blueprint =~ "Brando.Villain.list_blocks()"
     refute blueprint =~ "list_villains"
@@ -252,7 +255,7 @@ defmodule Mix.Tasks.Brando.Migrate54Test do
     assert blueprint =~ "field(:name, :string, fn entry ->"
     assert blueprint =~ "get_in(entry, [Access.key(:title)])"
     assert blueprint =~ "field(:dateModified, :string, fn entry ->"
-    assert blueprint =~ "(&__MODULE__.format_date/1).(value)"
+    assert blueprint =~ "__MODULE__.format_date(get_in(entry, [Access.key(:updated_at)]))"
     assert blueprint =~ "field(:image, LegacyApp.JSONLD.ImageObject, fn entry ->"
     assert blueprint =~ "Access.key(:metadata), Access.key(:image)"
     assert blueprint =~ "field(:generated, :string, & &1.title)"
@@ -261,7 +264,9 @@ defmodule Mix.Tasks.Brando.Migrate54Test do
     assert blueprint =~
              ~r/field\(\s*\["description", "og:description"\],\s*fn entry ->/
 
-    assert blueprint =~ "(&String.trim/1).(value)"
+    assert blueprint =~ "String.trim(get_in(entry, [Access.key(:metadata), Access.key(:description)]))"
+    # koi's og:locale
+    assert blueprint =~ ~s|field("og:locale", fn entry -> encode_locale(get_in(entry, [Access.key(:language)])) end)|
     assert blueprint =~ "field(\"generated\", & &1.title)"
 
     refute blueprint =~ "Listings.Components"
