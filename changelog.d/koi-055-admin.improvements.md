@@ -10,3 +10,9 @@
   template's `postcss.config.cjs` gives them the source of the file whose
   at-rule wrote them; `mix brando.gen.backend --upgrade` brings an unchanged
   earlier template's config up to date. The built CSS is the same.
+
+- **The admin no longer pulls in core-js 2.** `idle-js`, used for the
+  lobby's away state, bundled `@babel/polyfill` (core-js 2): pnpm 10 printed
+  "Ignored build scripts: core-js" on every install of the backend, and the
+  admin bundle carried 86 kB of polyfills. The away state is a few lines in
+  `Presence` now, with the same 30 seconds and hidden-tab rules.

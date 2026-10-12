@@ -94,9 +94,6 @@ importers:
       hls.js:
         specifier: ^1.6.0
         version: 1.7.3
-      idle-js:
-        specifier: ^1.2.0
-        version: 1.2.0
       lodash:
         specifier: ^4.18.1
         version: 4.18.1
@@ -145,10 +142,6 @@ importers:
         version: 8.3.3(esbuild@0.27.3)
 
 packages:
-
-  '@babel/polyfill@7.12.1':
-    resolution: {integrity: sha512-X0pi0V6gxLi6lFZpGmeNa4zxtwEmCs42isWLNjZZDE0Y8yVfgu0T2OAHlzBbdYlqbW/YXVvoBHpATEM+goCj8g==}
-    deprecated: 🚨 This package has been deprecated in favor of separate inclusion of a polyfill and regenerator-runtime (when needed). See the @babel/polyfill docs (https://babeljs.io/docs/en/babel-polyfill) for more information.
 
   '@brandocms/europacss@0.13.1':
     resolution: {integrity: sha512-SzoAe/F9jtJQPLTyLCgUADaV2UIGejHK+xi5OZgkteGihiyZtsDK20/iD6+6vX75hCnqP72MC/v6kVGe15vZig==}
@@ -776,10 +769,6 @@ packages:
   concat-map@0.0.1:
     resolution: {integrity: sha512-/Srv4dswyQNBfohGpz9o6Yb3Gz3SrUDqBH5rTuhGR7ahtlbYKnVxw2bCFMRljaA7EXHaXZ8wsHdodFvbkhKmqg==}
 
-  core-js@2.6.12:
-    resolution: {integrity: sha512-Kb2wC0fvsWfQrgk8HU5lW6U/Lcs8+9aaYcy4ZFc6DDlo4nZ7n70dEgE5rtR0oG6ufKDUnrwfWL1mXR5ljDatrQ==}
-    deprecated: core-js@<3.23.3 is no longer maintained and not recommended for usage due to the number of issues. Because of the V8 engine whims, feature detection in old core-js versions could cause a slowdown up to 100x even if nothing is polyfilled. Some versions have web compatibility issues. Please, upgrade your dependencies to the actual version of core-js.
-
   crelt@1.0.6:
     resolution: {integrity: sha512-VQ2MBenTq1fWZUH9DJNGti7kKv6EeAuYr3cLwxUWhIu1baTaXh4Ib5W2CqHVqib4/MqbYGJqiL3Zb8GJZr3l4g==}
 
@@ -895,9 +884,6 @@ packages:
 
   hls.js@1.7.3:
     resolution: {integrity: sha512-MsPlx6yVW4Qv4C7mEVou4/gk/5cN2dVxOTnrNjPSmyH2f0Ln+/UkG10Ax1PE6OvrmTVPKgQYozTtBaPOuCzq7A==}
-
-  idle-js@1.2.0:
-    resolution: {integrity: sha512-ssRtcpcg8WMvXHOkNaq04NXftpuVR+npN0ke8d7EDSxoPyCxcpeZv1EkKft9KmB/v/Q1Q47z89d/9+5VKkvpxw==}
 
   inflight@1.0.6:
     resolution: {integrity: sha512-k92I/b08q4wvFscXCLvqfsHCrjrF7yiXsQuIVvVE7N82W3+aqpzuUdBbfhWcy/FZR3/4IgflMgKLOsvPDrGCJA==}
@@ -1213,9 +1199,6 @@ packages:
   reduce-css-calc@2.1.8:
     resolution: {integrity: sha512-8liAVezDmUcH+tdzoEGrhfbGcP7nOV4NkGE3a74+qqvE7nt9i4sKLGBuZNOnpI4WiGksiNPklZxva80061QiPg==}
 
-  regenerator-runtime@0.13.11:
-    resolution: {integrity: sha512-kY1AZVr2Ra+t+piVaJ4gxaFaReZVH40AKNo7UCX6W+dEwBo/2oZJzqfuN1qLq1oL45o56cPaTXELwrTh8Fpggg==}
-
   requires-port@1.0.0:
     resolution: {integrity: sha512-KigOCHcocU3XODJxsu8i/j8T9tzT4adHiecwORRQ0ZZFcp7ahwXuRU1m+yuO90C5ZUyGeGfocHDI14M3L3yDAQ==}
 
@@ -1357,11 +1340,6 @@ packages:
     resolution: {integrity: sha512-B58NGBEoc8Y9MWWCQGl/gq9xBCe4IiKM0a2x7GZdQKOW5Exr8S1W24J6OgM1njK8xCRGvAJIL/MxXHf6SkmQKQ==}
 
 snapshots:
-
-  '@babel/polyfill@7.12.1':
-    dependencies:
-      core-js: 2.6.12
-      regenerator-runtime: 0.13.11
 
   '@brandocms/europacss@0.13.1':
     dependencies:
@@ -1965,8 +1943,6 @@ snapshots:
 
   concat-map@0.0.1: {}
 
-  core-js@2.6.12: {}
-
   crelt@1.0.6: {}
 
   css-unit-converter@1.1.2: {}
@@ -2071,10 +2047,6 @@ snapshots:
   has-flag@3.0.0: {}
 
   hls.js@1.7.3: {}
-
-  idle-js@1.2.0:
-    dependencies:
-      '@babel/polyfill': 7.12.1
 
   inflight@1.0.6:
     dependencies:
@@ -2380,8 +2352,6 @@ snapshots:
     dependencies:
       css-unit-converter: 1.1.2
       postcss-value-parser: 3.3.1
-
-  regenerator-runtime@0.13.11: {}
 
   requires-port@1.0.0: {}
 
