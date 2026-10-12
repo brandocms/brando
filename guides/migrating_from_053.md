@@ -203,12 +203,19 @@ nothing.
 
 Brando's optional task and helper modules automatically request recompilation
 when Igniter becomes available. The dependency remains optional at runtime.
-`mix brando.migrate55` compiles Brando once more when `mix brando.migrate54`
-has edited `config/brando.exs` (to add `repo_module`, say): Mix recompiles a
-dependency whose compile-time configuration changed.
+
+With Brando as a `path:` dependency, Mix compiles all of Brando again (about a
+minute) whenever the application's `config :brando` changes, in
+`config/brando.exs` or any other config file. `mix brando.migrate54` adds
+`repo_module`, `mix brando.migrate55` adds `mailer` and a sender, and
+`mix brando.doctor` asks for a real sender address, so expect a full compile
+after each. Make your own `config :brando` edits in one go.
 
 If the application has never been run through `mix format`, run it and commit
 the result before the source tasks, so their diff holds only their changes.
+The `mix format` after the source tasks (below) runs LiveView 1.x's HEEx
+formatter, which rewrites `<%= expr %>` in HEEx templates to `{expr}`; expect
+those changes in the same commit.
 
 `mix brando.migrate54` covers the 0.53 to 0.54 source changes. It:
 
