@@ -708,4 +708,10 @@ if Code.ensure_loaded?(Igniter) do
 
     defp lines(items), do: Enum.map_join(items, "\n", &("  " <> &1))
   end
+else
+  defmodule Mix.Brando.Igniter.SourceUpgrade.ListingRows do
+    @moduledoc false
+    # Revisit this source when the optional dependency becomes available.
+    def __mix_recompile__?, do: Code.ensure_loaded?(Igniter)
+  end
 end
