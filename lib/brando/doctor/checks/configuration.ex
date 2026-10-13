@@ -107,8 +107,9 @@ defmodule Brando.Doctor.Checks.Configuration do
   defp sender_finding(mailer) do
     senders = senders()
 
+    # The worst first: a placeholder is an error, a missing sender a warning.
     {site, from} =
-      Enum.find(senders, &is_nil(elem(&1, 1))) || Enum.find(senders, &Mailer.placeholder?(elem(&1, 1))) || hd(senders)
+      Enum.find(senders, &Mailer.placeholder?(elem(&1, 1))) || Enum.find(senders, &is_nil(elem(&1, 1))) || hd(senders)
 
     cond do
       is_nil(from) ->
@@ -138,18 +139,14 @@ defmodule Brando.Doctor.Checks.Configuration do
 
   # `{site_key | nil, from}` for each sender Brando sends from, as
   # configured: `Brando.Mailer.sender/0` drops a placeholder outside
-  # development. Each site sends from its own sender, or else the general
-  # one; without tenancy, or with sites that may fall back to it, the
-  # general one is checked too.
+  # development. The general one sends account email outside any site (a
+  # password reset from the login page), and each site sends from its own,
+  # or else the general one.
   defp senders do
     config = Application.get_env(:brando, Mailer, [])
     sites = if is_map(config[:sites]), do: config[:sites], else: %{}
-    general = {nil, config[:from]}
 
-    site_senders =
-      for key <- site_keys(sites), do: {key, (sites[key] || [])[:from] || config[:from]}
-
-    if site_senders == [] or general_used?(sites), do: [general | site_senders], else: site_senders
+    [{nil, config[:from]} | for(key <- site_keys(sites), do: {key, (sites[key] || [])[:from] || config[:from]})]
   end
 
   defp site_keys(sites) do
@@ -160,17 +157,6 @@ defmodule Brando.Doctor.Checks.Configuration do
     end
   rescue
     _error -> []
-  end
-
-  # A multi-site installation's sites without a sender of their own send
-  # from the general one.
-  defp general_used?(sites) do
-    case Brando.Tenant.mode() do
-      :multi -> Enum.any?(Brando.Tenant.Registry.list_sites(), &is_nil((sites[&1.key] || [])[:from]))
-      _mode -> false
-    end
-  rescue
-    _error -> true
   end
 
   defp no_sender_item(mailer, nil), do: dgettext("doctor", "Mailer: %{mailer}, no sender", mailer: inspect(mailer))
