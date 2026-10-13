@@ -86,6 +86,7 @@ defmodule E2eProjectWeb.Router do
       live "/clients", ClientListLive
       live "/clients/create", ClientFormLive, :create
       live "/clients/update/:entry_id", ClientFormLive, :update
+      live "/clients/transformer/:entry_id", ClientTransformerFormLive, :update
       live "/categories", CategoryListLive
       live "/categories/create", CategoryFormLive, :create
       live "/categories/update/:entry_id", CategoryFormLive, :update

@@ -26,6 +26,11 @@ defmodule BrandoAdmin.Components.Form.TransformerTest do
     attributes do
       attribute :title, :string
       attribute :size, :enum, values: [:small, :large]
+      attribute :label, Brando.Type.I18nString
+      attribute :description, Brando.Type.I18nString
+      attribute :aliases, Brando.Type.StringList
+      attribute :tags, {:array, :string}
+      attribute :featured, :boolean
       # The save path orders entries by sequence.
       attribute :sequence, :integer
     end
@@ -79,7 +84,16 @@ defmodule BrandoAdmin.Components.Form.TransformerTest do
     |> Component.assign(:image_field, :cover)
     |> Component.assign(:video_field, nil)
     |> Component.assign(:subform, %Subform{
-      sub_fields: [input(:cover, :image), input(:title, :text), input(:size, :radios)]
+      sub_fields: [
+        input(:cover, :image),
+        input(:title, :text),
+        input(:size, :radios),
+        input(:label, :i18n_text),
+        input(:description, :i18n_textarea),
+        input(:aliases, :string_list),
+        input(:tags, :multi_select),
+        input(:featured, :checkbox)
+      ]
     })
     |> Phoenix.LiveView.stream(:transformer_items, [])
   end
@@ -104,6 +118,96 @@ defmodule BrandoAdmin.Components.Form.TransformerTest do
   end
 
   describe "editing an entry's fields" do
+    test "decodes complete translated fields for one row and collects them for save" do
+      source = %MediaItem{id: 1, title: "First", label: %{"en" => "Before", "de" => "Deutsch"}}
+      other = Transformer.new_item("item-2", %MediaItem{id: 2, label: %{"en" => "Other"}}, is_new: false)
+
+      socket =
+        recovery_socket(Transformer.new_item("item-1", source, is_new: false))
+        |> Component.update(:items, &(&1 ++ [other]))
+
+      for {field, value} <- [
+            {"label", %{"en" => "Edited & escaped", "no" => "", "de" => "Deutsch"}},
+            {"description", %{"en" => "Line 1\nLine 2", "no" => "Beskrivelse"}}
+          ],
+          reduce: socket do
+        socket ->
+          {:noreply, socket} =
+            Transformer.handle_event(
+              "update_field",
+              %{
+                "dom_id" => "item-1",
+                "field" => field,
+                "params" => Plug.Conn.Query.encode(%{"transformer_item" => %{field => value}})
+              },
+              socket
+            )
+
+          assert Enum.at(socket.assigns.items, 1) == other
+          assert hd(socket.assigns.items).changes[String.to_existing_atom(field)] == value
+          {:ok, _} = Transformer.update(%{event: "fetch_transformer_data", tag: "save"}, socket)
+
+          assert_receive {:phoenix, :send_update,
+                          {{BrandoAdmin.Components.Form, "collection_form"},
+                           %{event: "provide_transformer_data", transformer_data: [saved, untouched]}}}
+
+          assert Ecto.Changeset.get_field(saved, String.to_existing_atom(field)) == value
+          assert Ecto.Changeset.get_field(saved, :title) == "First"
+          assert Ecto.Changeset.get_field(untouched, :label) == %{"en" => "Other"}
+          socket
+      end
+    end
+
+    test "casts arrays and checkbox values from the browser, including clearing every array member" do
+      socket = recovery_socket(Transformer.new_item("item-1", %MediaItem{id: 1}, is_new: false))
+
+      for {field, value, expected} <- [
+            {"aliases", ["One", "Two", ""], ["One", "Two"]},
+            {"aliases", [""], []},
+            {"tags", ["a", "b"], ["a", "b"]},
+            {"tags", [""], []},
+            {"featured", "true", true},
+            {"featured", "false", false}
+          ],
+          reduce: socket do
+        socket ->
+          {:noreply, socket} =
+            Transformer.handle_event(
+              "update_field",
+              %{
+                "dom_id" => "item-1",
+                "field" => field,
+                "params" => Plug.Conn.Query.encode(%{"transformer_item" => %{field => value}})
+              },
+              socket
+            )
+
+          name = String.to_existing_atom(field)
+          assert Ecto.Type.equal?(MediaItem.__schema__(:type, name), hd(socket.assigns.items).changes[name], expected)
+          socket
+      end
+    end
+
+    test "serialized params cannot change another field, an asset or an unknown row" do
+      socket = recovery_socket(Transformer.new_item("item-1", %MediaItem{id: 1, title: "Before"}))
+
+      for {dom_id, field, values} <- [
+            {"item-1", "title", %{"size" => "large"}},
+            {"item-1", "cover_id", %{"cover_id" => "42"}},
+            {"item-1", "cover", %{"cover" => "42"}},
+            {"missing", "title", %{"title" => "Changed"}}
+          ] do
+        {:noreply, updated} =
+          Transformer.handle_event(
+            "update_field",
+            %{"dom_id" => dom_id, "field" => field, "params" => Plug.Conn.Query.encode(%{"transformer_item" => values})},
+            socket
+          )
+
+        assert updated.assigns.items == socket.assigns.items
+      end
+    end
+
     test "casts the value, so an enum is saved as an atom" do
       source = %MediaItem{id: 1, title: "The Reins", size: :small}
       socket = recovery_socket(Transformer.new_item("item-1", source, is_new: false))
@@ -260,7 +364,9 @@ defmodule BrandoAdmin.Components.Form.TransformerTest do
 
   test "a transformer without a summary renders its fields directly, including a requested grid" do
     field =
-      %Collection{items: [%MediaItem{id: 1, title: "Editable caption", cover: nil}]}
+      %Collection{
+        items: [%MediaItem{id: 1, title: "Editable caption", cover: nil}, %MediaItem{id: 2, title: "Another", cover: nil}]
+      }
       |> Ecto.Changeset.change()
       |> Component.to_form()
       |> Access.get(:items)
@@ -288,6 +394,8 @@ defmodule BrandoAdmin.Components.Form.TransformerTest do
     assert [_] = Floki.find(document, ".layout-list .subform-fields input[value='Editable caption']")
     assert [] = Floki.find(document, ".subform-edit")
     assert [] = Floki.find(document, ".modal")
+    ids = document |> Floki.find("[id]") |> Floki.attribute("id")
+    assert length(ids) == length(Enum.uniq(ids))
 
     # "Upload" sits inside the uploader hook, which opens the file dialog and
     # registers the file as a replacement for this entry.

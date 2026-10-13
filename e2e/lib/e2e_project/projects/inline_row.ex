@@ -38,6 +38,8 @@ defmodule E2eProject.Projects.InlineRow do
     attribute :kind, :string
     attribute :size, :string
     attribute :aliases, Brando.Type.StringList
+    attribute :label, Brando.Type.I18nString
+    attribute :description, Brando.Type.I18nString
   end
 
   assets do
