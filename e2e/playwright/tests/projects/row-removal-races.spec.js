@@ -34,12 +34,13 @@ async function threeRows(page, { norwegian = false } = {}) {
 // What the server kept: save, reload and read the rows back.
 async function saved(page) {
   // Saving an existing entry keeps the URL: wait for the write's reply too.
-  await page.evaluate(() => {
+  const alreadySaved = /\/update\/\d+/.test(page.url())
+  if (alreadySaved) await page.evaluate(() => {
     window.rowRemovalSaved = false
     window.addEventListener('phx:b:draft-reset', () => { window.rowRemovalSaved = true }, { once: true })
   })
   await page.keyboard.press('ControlOrMeta+s')
-  await page.waitForFunction(() => window.rowRemovalSaved)
+  if (alreadySaved) await page.waitForFunction(() => window.rowRemovalSaved)
   await expect(page).toHaveURL(/\/admin\/projects\/clients\/update\/\d+/)
   await syncLV(page)
   await page.reload()
@@ -152,7 +153,7 @@ test('typing in the next row before a removal lands keeps the removal and the te
   // lists B, and must not bring it back
   latency.set(1000)
   await prices.nth(1).getByRole('button', { name: 'Remove entry' }).click()
-  await prices.nth(2).getByRole('textbox', { name: 'Title', includeHidden: true }).press('End')
+  await prices.nth(2).getByRole('textbox', { name: 'Title', includeHidden: true }).press('ArrowRight')
   await page.keyboard.type('2')
   latency.set(0)
   await expect(prices).toHaveCount(2)
