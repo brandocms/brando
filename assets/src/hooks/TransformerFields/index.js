@@ -52,12 +52,7 @@ export default () => ({
       // Capture at the edit, before another field's reply can patch the row.
       // Coalescing by the top-level field keeps sibling translations together.
       const params = fieldParams(this.el, field)
-      const push = () =>
-        this.pushEventTo(this.el.dataset.target, 'update_field', {
-          dom_id: this.el.dataset.domId,
-          field,
-          params
-        })
+      const push = () => this.publishField(field, params)
 
       clearTimeout(this.timers[field])
       delete this.pending[field]
@@ -73,6 +68,17 @@ export default () => ({
       }
     }
 
+    this.onArraySelection = (e) => {
+      const { name, values } = e.detail
+      const match = name.match(FIELD)
+      if (!match) return
+      e.stopPropagation()
+      e.preventDefault()
+      const params = new URLSearchParams()
+      for (const value of values.length ? values : ['']) params.append(name, value)
+      this.publishField(match[1], params.toString())
+    }
+
     // A save asks for what is held back (`Form/pendingChange.js`), so the
     // text typed last reaches the transformer before the save collects it.
     this.onFlush = () => {
@@ -86,6 +92,17 @@ export default () => ({
 
     this.el.addEventListener('input', this.onEvent)
     this.el.addEventListener('change', this.onEvent)
+    this.el.addEventListener('brando:array-selection', this.onArraySelection)
+  },
+
+  publishField(field, params) {
+    clearTimeout(this.timers[field])
+    delete this.pending[field]
+    this.pushEventTo(this.el.dataset.target, 'update_field', {
+      dom_id: this.el.dataset.domId,
+      field,
+      params
+    })
   },
 
   destroyed() {
@@ -93,5 +110,6 @@ export default () => ({
     Object.values(this.timers).forEach(clearTimeout)
     this.el.removeEventListener('input', this.onEvent)
     this.el.removeEventListener('change', this.onEvent)
+    this.el.removeEventListener('brando:array-selection', this.onArraySelection)
   }
 })

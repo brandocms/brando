@@ -1119,6 +1119,8 @@ retains the entry's other translations. Adding, removing or clearing list
 values affects only that entry, and saving includes edits still waiting for
 the input's debounce. String-list removals take effect immediately, including
 when an earlier edit is still waiting for its reply.
+Array multi-selects publish the complete selection even while another filter
+edit is waiting for validation.
 
 ### Custom subform components
 

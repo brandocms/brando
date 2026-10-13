@@ -133,6 +133,73 @@ test('transformer array MultiSelect persists adding, removing and clearing selec
   await expectTags(second, ['red'])
 })
 
+test('transformer array selection survives a newer filter validation locking the form', async ({ page }) => {
+  let hold = false
+  const held = []
+  const validations = []
+  const updates = []
+  let selectionRef
+  let deliver
+  const isReply = (message, ref) => {
+    const [, replyRef, , event] = JSON.parse(message)
+    return replyRef === ref && event === 'phx_reply'
+  }
+  await page.routeWebSocket('**/live/websocket*', socket => {
+    const server = socket.connectToServer()
+    socket.onMessage(message => {
+      const [, ref, , event, payload] = JSON.parse(message)
+      if (hold && event === 'event') {
+        if (payload.event === 'validate') validations.push(ref)
+        if (payload.event === 'select_option') selectionRef = ref
+        if (payload.event === 'update_field' && payload.value.field === 'tags') updates.push(payload.value)
+      }
+      server.send(message)
+    })
+    server.onMessage(message => {
+      if (hold) held.push(message)
+      else socket.send(message)
+    })
+    deliver = ref => {
+      while (held.length) {
+        const message = held.shift()
+        socket.send(message)
+        if (isReply(message, ref)) break
+      }
+    }
+  })
+  const url = await createClient(page)
+  const first = rows(page).nth(0)
+  await first.locator('[data-component=":multi_select"]').getByRole('button', { name: 'Velg', exact: true }).click()
+  await syncLV(page)
+  const dialog = page.getByRole('dialog', { name: 'Velg alternativer', exact: true })
+  const filter = dialog.locator('input[name="select-modal-search"]')
+  hold = true
+  await filter.fill('G')
+  await expect.poll(() => validations.length).toBe(1)
+  await expect.poll(() => held.some(message => isReply(message, validations[0]))).toBe(true)
+  await dialog.getByRole('checkbox', { name: 'Green', exact: true }).click()
+  await expect.poll(() => held.some(message => isReply(message, selectionRef))).toBe(true)
+  await filter.pressSequentially('r')
+  await expect.poll(() => validations.length).toBe(2)
+  await expect.poll(() => held.some(message => isReply(message, validations[1]))).toBe(true)
+
+  // Deliver through the selection reply in wire order, keeping the newer
+  // validation outstanding. LiveView patches a locked clone of the form but
+  // dispatches b:validate immediately, while the visible inputs still say red.
+  deliver(selectionRef)
+  await expect(page.locator('form.main-form')).toHaveAttribute('data-phx-ref-lock', /.+/)
+  await expect.poll(() => updates.length).toBe(1)
+  hold = false
+  deliver()
+  await syncLV(page)
+  await dialog.getByRole('button', { name: 'Lukk dialog', exact: true }).click()
+  await saveAndReload(page, url)
+  const tags = row => row.locator('input[name="transformer_item[tags][]"]')
+  await expect.poll(() => tags(first).evaluateAll(inputs => inputs.map(input => input.value).filter(Boolean))).toEqual(['red', 'green'])
+  await expect.poll(() => tags(rows(page).nth(1)).evaluateAll(inputs => inputs.map(input => input.value).filter(Boolean))).toEqual(['blue'])
+  expect(new URLSearchParams(updates[0].params).getAll('transformer_item[tags][]')).toEqual(['red', 'green'])
+})
+
 test('an earlier transformer reply cannot restore a removed string list member before the next keystroke', async ({ page }) => {
   await page.clock.install()
   let hold = false

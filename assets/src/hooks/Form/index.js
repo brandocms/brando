@@ -71,6 +71,17 @@ export default (app) => ({
     this.handleEvent(`b:validate`, (opts) => {
       const scope = opts.scope ? this.$form.querySelector(`#${CSS.escape(opts.scope)}`) : this.$form
       if (!scope) return
+      if (Array.isArray(opts.values)) {
+        // Transformer rows consume the explicit selection even while a newer
+        // validation locks the visible DOM. Ordinary fields still validate
+        // through their input below.
+        const selection = new CustomEvent('brando:array-selection', {
+          bubbles: true,
+          cancelable: true,
+          detail: { name: opts.target, values: opts.values }
+        })
+        if (!scope.dispatchEvent(selection)) return
+      }
       if (opts.target) {
         const sel = `[name="${opts.target}"]`
         const target = scope.querySelector(sel)

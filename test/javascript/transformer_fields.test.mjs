@@ -104,6 +104,51 @@ test('array edits send every current member and preserve a final empty control w
   assert.deepEqual(params(calls[2]), [['transformer_item[aliases][]', '']])
 })
 
+test('explicit array selections bypass stale controls and remain scoped to their own row and field', t => {
+  const { calls, row } = setup(t)
+  const title = input('title', 'Pending title')
+  const first = row('first', [input('tags][', 'red', { type: 'hidden' }), title])
+  const second = row('second', [input('tags][', 'blue', { type: 'hidden' })])
+  change(first, title)
+  const select = (hook, values) => hook.el.dispatchEvent(new CustomEvent('brando:array-selection', {
+    cancelable: true, detail: { name: 'transformer_item[tags][]', values },
+  }))
+
+  assert.equal(select(first, ['red', 'green & gold']), false)
+  assert.equal(select(first, []), false)
+  assert.equal(select(second, ['blue', 'red']), false)
+  document.dispatchEvent(new Event('brando:flush'))
+
+  assert.deepEqual(calls.map(({ dom_id, field }) => ({ dom_id, field })), [
+    { dom_id: 'first', field: 'tags' },
+    { dom_id: 'first', field: 'tags' },
+    { dom_id: 'second', field: 'tags' },
+    { dom_id: 'first', field: 'title' },
+  ])
+  assert.deepEqual(calls.map(params), [
+    [['transformer_item[tags][]', 'red'], ['transformer_item[tags][]', 'green & gold']],
+    [['transformer_item[tags][]', '']],
+    [['transformer_item[tags][]', 'blue'], ['transformer_item[tags][]', 'red']],
+    [[title.name, title.value]],
+  ])
+})
+
+test('explicit selections work before controls are patched; unrelated names and unmounted rows are ignored', t => {
+  const { calls, row } = setup(t)
+  const hook = row('first', [])
+  const selection = name => new CustomEvent('brando:array-selection', {
+    cancelable: true, detail: { name, values: ['green'] },
+  })
+
+  assert.equal(hook.el.dispatchEvent(selection('client[tags][]')), true)
+  assert.deepEqual(calls, [])
+  assert.equal(hook.el.dispatchEvent(selection('transformer_item[tags][]')), false)
+  assert.deepEqual(params(calls[0]), [['transformer_item[tags][]', 'green']])
+  hook.destroyed()
+  assert.equal(hook.el.dispatchEvent(selection('transformer_item[tags][]')), true)
+  assert.equal(calls.length, 1)
+})
+
 test('scalar controls, checkbox fallbacks, radio groups and multiple selects follow form submission', t => {
   const { calls, row } = setup(t)
   const title = input('title', 'A title')

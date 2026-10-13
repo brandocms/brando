@@ -1573,13 +1573,17 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
     put_in(struct, [Access.key(relation_key)], assoc_data)
   end
 
-  # The patch installs every selected input (including an empty-array sentinel)
-  # before this event publishes them. Transformer rows share input names, so
-  # identify this field's own container rather than the first name in the form.
+  # A newer validation can keep the visible form locked when this event arrives.
+  # Publish the values too, so transformers do not read stale hidden inputs.
+  # Rows share input names, so identify this field's own container.
   defp publish_array_selection(%{assigns: %{relation_type: {:array, _}, field: field}} = socket) do
     socket
     |> assign(:array_touched, true)
-    |> push_event("b:validate", %{scope: "#{field.id}-selected-rows", target: "#{field.name}[]"})
+    |> push_event("b:validate", %{
+      scope: "#{field.id}-selected-rows",
+      target: "#{field.name}[]",
+      values: socket.assigns.selected_options
+    })
   end
 
   defp publish_array_selection(socket), do: socket

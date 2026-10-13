@@ -46,12 +46,13 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelectPickerTest do
     %{view: view}
   end
 
-  test "array selections publish their own complete controls, including an empty selection", %{view: view} do
+  test "array selections publish explicit values, including an empty selection", %{view: view} do
     view |> element(option("Contact")) |> render_click()
 
     assert_push_event(view, "b:validate", %{
       scope: "var_link_identifier_schemas-selected-rows",
-      target: "var[link_identifier_schemas][]"
+      target: "var[link_identifier_schemas][]",
+      values: ["contact"]
     })
 
     assert has_element?(view, ~s(#var_link_identifier_schemas-selected-rows input[value="contact"]))
@@ -60,7 +61,8 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelectPickerTest do
 
     assert_push_event(view, "b:validate", %{
       scope: "var_link_identifier_schemas-selected-rows",
-      target: "var[link_identifier_schemas][]"
+      target: "var[link_identifier_schemas][]",
+      values: []
     })
 
     assert has_element?(
@@ -75,7 +77,8 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelectPickerTest do
 
     assert_push_event(view, "b:validate", %{
       scope: "var_link_identifier_schemas-selected-rows",
-      target: "var[link_identifier_schemas][]"
+      target: "var[link_identifier_schemas][]",
+      values: []
     })
 
     assert has_element?(
@@ -90,7 +93,8 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelectPickerTest do
 
     assert_push_event(view, "b:validate", %{
       scope: "var_link_identifier_schemas-selected-rows",
-      target: "var[link_identifier_schemas][]"
+      target: "var[link_identifier_schemas][]",
+      values: []
     })
 
     assert has_element?(
