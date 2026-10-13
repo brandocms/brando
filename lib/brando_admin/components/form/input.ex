@@ -1434,10 +1434,21 @@ defmodule BrandoAdmin.Components.Form.Input do
         :error -> %{}
       end
 
+    # Validation params include LiveView's unused-field markers. They are
+    # form metadata, not translations to preserve as hidden controls.
+    unlisted_translations =
+      value
+      |> Map.drop(Enum.map(languages, &elem(&1, 0)))
+      |> Map.reject(fn
+        {"_unused_" <> _, _} -> true
+        _ -> false
+      end)
+
     assigns =
       assigns
       |> assign(:languages, languages)
       |> assign(:value, value)
+      |> assign(:unlisted_translations, unlisted_translations)
       |> assign(:rows, opts[:rows] || 3)
       |> assign(:i18n_id, "#{assigns.field.id}-i18n")
       # `suggest_alt: true` on an image form's alt field, or the event name
@@ -1467,6 +1478,14 @@ defmodule BrandoAdmin.Components.Form.Input do
     ~H"""
     <Primitives.field_base field={@field} label={@label} instructions={@instructions} class={@class} compact={@compact}>
       <div class={["i18n-field", "i18n-#{@kind}"]} id={@i18n_id}>
+        <%!-- Removing a configured language hides its tab, not its stored text. --%>
+        <input
+          :for={{language, text} <- @unlisted_translations}
+          type="hidden"
+          name={"#{@field.name}[#{language}]"}
+          value={text}
+          disabled={@disabled}
+        />
         <div class="i18n-head">
           <div class="i18n-tabs" role="tablist" aria-label={@label}>
             <button
@@ -1513,6 +1532,7 @@ defmodule BrandoAdmin.Components.Form.Input do
             class="text"
             lang={language}
             aria-label={"#{@label_text} (#{name})"}
+            disabled={@disabled}
             phx-debounce={@debounce}
             phx-target={@target}
             data-watch-focus
