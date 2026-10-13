@@ -742,7 +742,8 @@ defmodule BrandoAdmin.Components.Form.BlockField do
           socket
       end
 
-    {:ok, assign(socket, blocks_initialized: false, remount_pending?: true)}
+    # a mounted field has no working copy, so no module versions from one
+    {:ok, assign(socket, blocks_initialized: false, remount_pending?: true, restored_blocks: %{})}
   end
 
   def update(assigns, socket) do

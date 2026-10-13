@@ -1296,6 +1296,10 @@ defmodule BrandoAdmin.EditSessionSavesTest do
       await_remount(a, c)
       await(fn -> shown_text(b, c.first) == "<p>Working-copy block</p>" end)
       await(fn -> shown_text(a, c.second) == "<p>B, after the preview</p>" end)
+
+      # The working copy's module versions went with it: a save from here
+      # writes the rows' own
+      assert Enum.all?(block_field_assigns(a), &(Map.get(&1, :restored_blocks, %{}) == %{}))
     end
 
     # Suspend `proxy` in the LiveView as its form takes the hard reset, so
@@ -1321,6 +1325,13 @@ defmodule BrandoAdmin.EditSessionSavesTest do
       )
 
       on_exit(fn -> :telemetry.detach(id) end)
+    end
+
+    defp block_field_assigns(view) do
+      {components, _, _} = :sys.get_state(view.pid).components
+
+      for {_cid, {BrandoAdmin.Components.Form.BlockField, _id, assigns, _private, _prints}} <- components,
+          do: assigns
     end
 
     defp form_assigns(view) do
