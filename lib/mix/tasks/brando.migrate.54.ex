@@ -109,9 +109,8 @@ if Code.ensure_loaded?(Igniter) do
       It also writes the settings `mix brando.migrate55` and
       `mix brando.doctor` ask for: `config :brando, mailer:` (creating
       `MyApp.Mailer` when the application has no Swoosh mailer) and a
-      placeholder sender, `config :brando, Brando.Mailer, from:`. Every
-      change to the configuration recompiles Brando, so replace the
-      placeholder's `noreply@example.com` before you first compile.
+      placeholder sender, `config :brando, Brando.Mailer, from:`, when none
+      is set. Every change to the configuration recompiles Brando#{placeholder_note(igniter)}
 
       Phoenix.View-era
       `ErrorHelpers`, `view/0` and `view_helpers/0`, which phoenix_html 4 no
@@ -132,6 +131,12 @@ if Code.ensure_loaded?(Igniter) do
       See `guides/migrating_from_053.md` in Brando for the full recovery,
       rebaseline, and gettext instructions.
       """)
+    end
+
+    defp placeholder_note(igniter) do
+      if Mailer.sender_to_set?(igniter),
+        do: ", so replace the\nplaceholder's `noreply@example.com` before you first compile.",
+        else: "."
     end
 
     defp add_warnings(igniter) do

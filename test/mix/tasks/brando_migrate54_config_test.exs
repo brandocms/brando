@@ -105,10 +105,12 @@ defmodule Mix.Tasks.Brando.Migrate54ConfigTest do
       "config/config.exs" => "import Config\n\nimport_config \"brando.exs\"\n"
     }
 
-    brando = files |> migrate() |> source("config/brando.exs")
+    igniter = migrate(files)
+    brando = source(igniter, "config/brando.exs")
 
     assert brando =~ "mailer: Lett.Mailer"
     refute brando =~ "example.com"
+    refute Enum.any?(igniter.notices, &(&1 =~ "before you first compile"))
   end
 
   test "adds the code reloader listener and updates deprecated config" do

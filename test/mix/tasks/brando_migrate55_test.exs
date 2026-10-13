@@ -454,6 +454,15 @@ defmodule Mix.Tasks.Brando.Migrate55Test do
     sent = chosen <> ~s|\nconfig :brando, Brando.Mailer, from: {"Lett", "post@lett.no"}\n|
     igniter = migrate(@blueprint_054, %{"lib/legacy_app/mailer.ex" => mailer, @brando_config_path => sent})
     assert_unchanged(igniter, @brando_config_path)
+
+    # A real sender is set, so nothing asks to replace a placeholder.
+    refute Enum.any?(igniter.warnings, &(&1 =~ "noreply@example.com"))
+    assert_has_warning(igniter, &(&1 =~ "the mailer's production adapter in `config/runtime.exs`"))
+
+    # A placeholder still is.
+    placeholder = chosen <> ~s|\nconfig :brando, Brando.Mailer, from: {"Lett", "noreply@example.com"}\n|
+    igniter = migrate(@blueprint_054, %{"lib/legacy_app/mailer.ex" => mailer, @brando_config_path => placeholder})
+    assert_has_warning(igniter, &(&1 =~ "in place of the\n    `noreply@example.com` placeholder"))
   end
 
   describe "modules renamed in 0.55" do

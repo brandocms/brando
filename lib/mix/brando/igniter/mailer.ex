@@ -187,16 +187,34 @@ if Code.ensure_loaded?(Igniter) do
       end
     end
 
-    # `configures_key?/4` reads top-level `config` calls only; a sender set
-    # inside `if config_env() == :prod do` in runtime.exs is one too.
-    defp sender_written?(igniter) do
+    @doc """
+    Whether the address Brando sends from is still to be set: no
+    `config/*.exs` file sets one, or the one set is on a domain reserved for
+    examples, like the placeholder the tasks write.
+    """
+    def sender_to_set?(igniter) do
+      senders =
+        igniter
+        |> config_contents()
+        |> Enum.flat_map(&Regex.scan(~r/\bBrando\.Mailer\s*,[^)]*?\bfrom:([^\n]*)/s, &1, capture: :all_but_first))
+
+      senders == [] or
+        Enum.any?(senders, fn [from] -> from =~ ~r/@(?:[^@"\s]+\.)?(?:example\.(?:com|org|net)|example)"/i end)
+    end
+
+    defp config_contents(igniter) do
       igniter = Igniter.include_glob(igniter, "config/*.exs")
 
       igniter.rewrite
       |> Rewrite.sources()
       |> Enum.filter(&(Path.dirname(&1.path) == "config" and Path.extname(&1.path) == ".exs"))
-      |> Enum.any?(&(Rewrite.Source.get(&1, :content) =~ ~r/\bBrando\.Mailer\s*,[^)]*?\bfrom:/s))
+      |> Enum.map(&Rewrite.Source.get(&1, :content))
     end
+
+    # `configures_key?/4` reads top-level `config` calls only; a sender set
+    # inside `if config_env() == :prod do` in runtime.exs is one too.
+    defp sender_written?(igniter),
+      do: igniter |> config_contents() |> Enum.any?(&(&1 =~ ~r/\bBrando\.Mailer\s*,[^)]*?\bfrom:/s))
 
     defp sender_file(igniter), do: if(Igniter.exists?(igniter, "config/brando.exs"), do: "brando.exs", else: "config.exs")
   end

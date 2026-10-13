@@ -176,6 +176,19 @@ if Code.ensure_loaded?(Igniter) do
       """)
     end
 
+    defp sender_step(igniter) do
+      if Mailer.sender_to_set?(igniter) do
+        """
+        Set the address it sends from, which the
+            mail provider must accept, in place of the
+            `noreply@example.com` placeholder: `config :brando, Brando.Mailer, from: {"My site", "noreply@my-site.com"}`,
+            and the mailer's production adapter in `config/runtime.exs`.\
+        """
+      else
+        "Configure the mailer's production adapter in `config/runtime.exs`."
+      end
+    end
+
     defp add_warnings(igniter) do
       Igniter.add_warning(igniter, """
       Manual 0.55 decisions remain:
@@ -211,10 +224,7 @@ if Code.ensure_loaded?(Igniter) do
           modules and there is no safe target schema the task can choose.
         * Brando now sends email through the application's Swoosh mailer
           (`config :brando, mailer: MyApp.Mailer`; this task creates one when
-          the application has none). Set the address it sends from, which the
-          mail provider must accept, in place of any `noreply@example.com`
-          placeholder: `config :brando, Brando.Mailer, from: {"My site", "noreply@my-site.com"}`,
-          and the mailer's production adapter in `config/runtime.exs`.
+          the application has none). #{sender_step(igniter)}
         * Fabric deployments must ensure the application database role owns the
           `oban_job_state` enum before `brando_153` upgrades Oban to v14. Follow
           the changelog's updated `grant_db`/`ALTER TYPE ... OWNER TO` procedure.
