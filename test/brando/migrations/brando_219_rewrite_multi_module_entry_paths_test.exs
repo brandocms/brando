@@ -97,6 +97,50 @@ defmodule Brando.Migrations.RewriteMultiModuleEntryPathsTest do
              {% assign names = entries | map: "vars.name" %}{% for name in names %}{{ name.data.vars.x }}{% endfor %}
              """
     end
+
+    test "stops at a variable bound again: an inner loop of the same name, or an assign", %{migration: migration} do
+      code = """
+      {% for item in entries %}{{ item.data.vars.title }}
+        {% for item in item.data.refs.cards.data.items %}{{ item.data.vars.title }}{% endfor %}
+        {{ item.data.vars.after }}
+        {% assign item = other %}{{ item.data.vars.gone }}
+      {% endfor %}
+      {{ item.data.vars.outside }}
+      {% assign first = entries.first %}{{ first.data.vars.a }}
+      {% assign first = other.first %}{{ first.data.vars.b }}
+      {% capture last %}x{% endcapture %}{% assign last = entries.last %}{{ last.data.vars.c }}
+      """
+
+      assert migration.rewrite(code) == """
+             {% for item in entries %}{{ item.vars.title }}
+               {% for item in item.refs.cards.data.items %}{{ item.data.vars.title }}{% endfor %}
+               {{ item.vars.after }}
+               {% assign item = other %}{{ item.data.vars.gone }}
+             {% endfor %}
+             {{ item.data.vars.outside }}
+             {% assign first = entries.first %}{{ first.vars.a }}
+             {% assign first = other.first %}{{ first.data.vars.b }}
+             {% capture last %}x{% endcapture %}{% assign last = entries.last %}{{ last.vars.c }}
+             """
+    end
+
+    test "rewrites only the property arguments of filters applied to the entries", %{migration: migration} do
+      code = """
+      {{ entries | size | append: "data.vars.count" }}
+      {{ title | sort: "data.vars.order" }}
+      {% assign picked = entries | where: "data.refs.cover" | sort: 'data.vars.order' | map: "data.vars.name" | join: "data.vars.x" %}
+      {% comment %}{{ link.data.vars.url }} {% for link in entries %}{% endcomment %}
+      {% for link in entries %}{% raw %}{{ link.data.vars.url }}{% endraw %}{{ link.data.vars.url }}{% endfor %}
+      """
+
+      assert migration.rewrite(code) == """
+             {{ entries | size | append: "data.vars.count" }}
+             {{ title | sort: "data.vars.order" }}
+             {% assign picked = entries | where: "refs.cover" | sort: 'vars.order' | map: "vars.name" | join: "data.vars.x" %}
+             {% comment %}{{ link.data.vars.url }} {% for link in entries %}{% endcomment %}
+             {% for link in entries %}{% raw %}{{ link.data.vars.url }}{% endraw %}{{ link.vars.url }}{% endfor %}
+             """
+    end
   end
 
   test "koi's services module renders its entries' vars once rewritten, and nothing before", %{migration: migration} do

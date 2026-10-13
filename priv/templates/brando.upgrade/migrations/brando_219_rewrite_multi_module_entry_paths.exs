@@ -16,17 +16,19 @@ defmodule Brando.Repo.Migrations.Brando219RewriteMultiModuleEntryPaths do
       {% assign first_entry = entries.first %}{{ first_entry.refs.cover }}
 
   The old paths render nothing. Rewritten are, inside Liquid tags and
-  output (not HTML text, not quoted strings):
+  output (not HTML text, quoted strings, comments or raw blocks):
 
     * a loop variable over `entries`, `for` or `tablerow`, in the loop's
-      body;
+      body, unless a loop or assign inside binds the name again;
     * a variable assigned an entry (`entries.first`, `entries.last`,
-      `entries[0]`, `entries | first`, `entries | last`), after the assign;
+      `entries[0]`, `entries | first`, `entries | last`), until it is
+      assigned again;
     * those paths read straight off `entries` (`entries.first.data.vars.x`);
     * the same through a variable assigned the list
       (`{% assign items = entries | reverse %}`);
-    * a property path in quotes given to a filter of `entries`
-      (`entries | sort: "data.vars.order"` becomes `"vars.order"`).
+    * the property path given to a filter of the entries that takes one
+      (`entries | sort: "data.vars.order"` becomes `"vars.order"`); other
+      quoted strings are left as they are.
 
   Datasource modules, whose `entries` are the datasource's records, and HEEx
   modules are left alone. Code already reading `link.vars` is left as it is,
@@ -38,11 +40,17 @@ defmodule Brando.Repo.Migrations.Brando219RewriteMultiModuleEntryPaths do
   running server, which caches modules.
   """
 
-  @tag ~r/\{%-?\s*(\w+)(.*?)-?%\}/s
   @liquid ~r/\{\{.*?\}\}|\{%.*?%\}/s
+  @tag ~r/^\{%-?\s*(\w+)(.*?)-?%\}$/s
   @quoted ~r/('[^']*'|"[^"]*")/
+  @loops ~w(for tablerow)
+  @loop_ends ~w(endfor endtablerow)
+  # Filters that keep a list of entries a list of entries; the first five
+  # take a property path, as `sort: "data.vars.order"`
+  @list_filters ~w(sort sort_natural where reject uniq reverse compact slice concat)
+  # Filters that take a property path of an entry and return something else
+  @path_filters ~w(map sum group_by find find_index has)
   @entry_filters ~w(first last)
-  @list_filters ~w(reverse sort sort_natural where uniq compact slice)
 
   def up do
     for prefix <- prefixes(), {id, code} <- modules(prefix) do
@@ -55,128 +63,202 @@ defmodule Brando.Repo.Migrations.Brando219RewriteMultiModuleEntryPaths do
 
   def down, do: :ok
 
+  # Walks the Liquid tags and output in order, tracking which variables
+  # hold the list of entries (`entries`, and lists assigned from it) and
+  # which hold one entry (a loop variable over such a list, or one assigned
+  # its first, last or nth). A loop binds its variable for its body only,
+  # and an assign or capture binds a variable again from there on; inside a
+  # comment or raw block nothing is read.
   @doc false
   def rewrite(code) do
-    lists = list_aliases(code)
-    sources = ["entries" | MapSet.to_list(lists)]
+    initial = %{bindings: %{"entries" => :list}, loops: [], skip: nil}
 
-    code
-    |> rewrite_assigned_entries(sources)
-    |> rewrite_loops(sources, 0)
-    |> rewrite_liquid(fn liquid -> liquid |> rewrite_paths(sources_pattern(sources)) |> rewrite_filter_paths(sources) end)
+    {parts, rest_at, _state} =
+      @liquid
+      |> Regex.scan(code, return: :index)
+      |> Enum.reduce({[], 0, initial}, fn [{start, length}], {parts, at, state} ->
+        {liquid, state} = step(binary_part(code, start, length), state)
+        {[liquid, binary_part(code, at, start - at) | parts], start + length, state}
+      end)
+
+    [binary_part(code, rest_at, byte_size(code) - rest_at) | parts]
+    |> Enum.reverse()
+    |> IO.iodata_to_binary()
   end
 
-  # Variables assigned the list of entries, through filters that keep it a
-  # list of entries: `{% assign items = entries | reverse %}`.
-  defp list_aliases(code) do
-    Enum.reduce(Regex.scan(~r/\{%-?\s*assign\s+(\w+)\s*=\s*(\w+)((?:\s*\|[^%|]*)*)\s*-?%\}/, code), MapSet.new(), fn
-      [_, var, source, filters], acc ->
-        if (source == "entries" or MapSet.member?(acc, source)) and list_filters?(filters),
-          do: MapSet.put(acc, var),
-          else: acc
-    end)
-  end
+  defp step(liquid, %{skip: nil} = state) do
+    case tag(liquid) do
+      {name, _args} when name in ["comment", "raw"] ->
+        {liquid, %{state | skip: "end" <> name}}
 
-  defp list_filters?(filters) do
-    filters
-    |> String.split("|")
-    |> Enum.map(&String.trim/1)
-    |> Enum.reject(&(&1 == ""))
-    |> Enum.all?(&(filter_name(&1) in @list_filters))
-  end
+      {name, args} when name in @loops ->
+        fixed = rewrite_liquid(liquid, state.bindings)
 
-  defp filter_name(filter), do: filter |> String.split(~r/[\s:]/, parts: 2) |> hd()
+        case Regex.run(~r/^\s*(\w+)\s+in\s+([\w.\[\]]+)/, args) do
+          [_, var, source] ->
+            binding = if kind(source, state.bindings) == :list, do: :entry, else: :other
+            loop = {var, Map.fetch(state.bindings, var)}
+            {fixed, %{state | bindings: Map.put(state.bindings, var, binding), loops: [loop | state.loops]}}
 
-  # A variable assigned one entry is rewritten from its assign to the end of
-  # the code.
-  defp rewrite_assigned_entries(code, sources) do
-    source = Enum.map_join(sources, "|", &Regex.escape/1)
-
-    entry =
-      ~r/\{%-?\s*assign\s+(\w+)\s*=\s*(?:(?:#{source})(?:\.first|\.last|\[\d+\])|(?:#{source})\s*\|\s*(?:#{Enum.join(@entry_filters, "|")}))\s*-?%\}/
-
-    case Regex.scan(entry, code, return: :index) do
-      [] ->
-        code
-
-      matches ->
-        Enum.reduce(Enum.reverse(matches), code, fn [{start, length}, var], code ->
-          from = start + length
-          rest = binary_part(code, from, byte_size(code) - from)
-          var = part(code, var)
-          binary_part(code, 0, from) <> rewrite_liquid(rest, &rewrite_paths(&1, Regex.escape(var)))
-        end)
-    end
-  end
-
-  # Rewrites the body of the `nth` loop over the entries and moves on. Loops
-  # are found again after every rewrite, because rewriting a body shifts the
-  # offsets after it.
-  defp rewrite_loops(code, sources, nth) do
-    tags = Regex.scan(@tag, code, return: :index)
-
-    case tags |> Enum.with_index() |> Enum.filter(&loop_tag?(code, &1)) |> Enum.at(nth) do
-      nil ->
-        code
-
-      {[{tag_start, tag_length} | _] = tag, index} ->
-        with var when is_binary(var) <- entry_loop_var(code, tag, sources),
-             {body_start, body_end} <- body(code, tags, index, tag_start + tag_length) do
-          body = binary_part(code, body_start, body_end - body_start)
-          fixed = rewrite_liquid(body, &rewrite_paths(&1, Regex.escape(var)))
-          code = binary_part(code, 0, body_start) <> fixed <> binary_part(code, body_end, byte_size(code) - body_end)
-          rewrite_loops(code, sources, nth + 1)
-        else
-          _ -> rewrite_loops(code, sources, nth + 1)
+          nil ->
+            {fixed, %{state | loops: [nil | state.loops]}}
         end
+
+      {name, _args} when name in @loop_ends ->
+        {liquid, end_loop(state)}
+
+      {"assign", args} ->
+        fixed = rewrite_liquid(liquid, state.bindings)
+
+        case Regex.run(~r/^\s*(\w+)\s*=(.*)$/s, args) do
+          [_, var, value] -> {fixed, bind(state, var, kind(value, state.bindings))}
+          nil -> {fixed, state}
+        end
+
+      {"capture", args} ->
+        case Regex.run(~r/^\s*(\w+)/, args) do
+          [_, var] -> {liquid, bind(state, var, :other)}
+          nil -> {liquid, state}
+        end
+
+      _output_or_tag ->
+        {rewrite_liquid(liquid, state.bindings), state}
     end
   end
 
-  defp loop_tag?(code, {[_, name | _], _}), do: part(code, name) in ["for", "tablerow"]
+  defp step(liquid, %{skip: end_tag} = state) do
+    case tag(liquid) do
+      {^end_tag, _args} -> {liquid, %{state | skip: nil}}
+      _ -> {liquid, state}
+    end
+  end
 
-  defp entry_loop_var(code, [_, _, args], sources) do
-    case Regex.run(~r/^\s*(\w+)\s+in\s+(\w+)(?=\s|$)/, part(code, args)) do
-      [_, var, source] -> if source in sources, do: var
+  defp tag(liquid) do
+    case Regex.run(@tag, liquid) do
+      [_, name, args] -> {name, args}
       nil -> nil
     end
   end
 
-  # The body runs from the end of the loop tag to its matching end tag.
-  defp body(code, tags, index, body_start) do
-    tags
-    |> Enum.drop(index + 1)
-    |> Enum.reduce_while(1, fn [{start, _}, name | _], depth ->
-      case part(code, name) do
-        tag when tag in ["for", "tablerow"] -> {:cont, depth + 1}
-        tag when tag in ["endfor", "endtablerow"] and depth == 1 -> {:halt, {body_start, start}}
-        tag when tag in ["endfor", "endtablerow"] -> {:cont, depth - 1}
-        _ -> {:cont, depth}
+  defp end_loop(%{loops: [{var, previous} | loops]} = state) do
+    bindings =
+      case previous do
+        {:ok, binding} -> Map.put(state.bindings, var, binding)
+        :error -> Map.delete(state.bindings, var)
       end
-    end)
-    |> case do
-      {_, _} = body -> body
-      _unclosed -> nil
+
+    %{state | bindings: bindings, loops: loops}
+  end
+
+  defp end_loop(%{loops: [nil | loops]} = state), do: %{state | loops: loops}
+  defp end_loop(state), do: state
+
+  defp bind(state, var, :other), do: %{state | bindings: Map.delete(state.bindings, var)}
+  defp bind(state, var, kind), do: %{state | bindings: Map.put(state.bindings, var, kind)}
+
+  # What an expression holds: the list of entries, one entry, or other
+  defp kind(expression, bindings) do
+    [head | filters] = split_filters(expression)
+    filters = Enum.map(filters, &filter_name/1)
+
+    case {reference(String.trim(head), bindings), filters} do
+      {:list, filters} ->
+        cond do
+          Enum.all?(filters, &(&1 in @list_filters)) -> :list
+          List.last(filters) in @entry_filters and Enum.all?(Enum.drop(filters, -1), &(&1 in @list_filters)) -> :entry
+          true -> :other
+        end
+
+      {:entry, []} ->
+        :entry
+
+      _ ->
+        :other
     end
   end
 
-  defp rewrite_liquid(code, fun), do: Regex.replace(@liquid, code, fn liquid -> fun.(liquid) end)
-
-  defp sources_pattern(sources) do
-    "(?:" <> Enum.map_join(sources, "|", &Regex.escape/1) <> ")(?:\\.first|\\.last|\\[\\d+\\])"
+  defp reference(head, bindings) do
+    case Regex.run(~r/^(\w+)((?:\.first|\.last|\[\d+\])?)$/, head) do
+      [_, var, ""] -> Map.get(bindings, var)
+      [_, var, _nth] -> if Map.get(bindings, var) == :list, do: :entry
+      nil -> nil
+    end
   end
 
-  # `<var>.data.vars` → `<var>.vars`, `<var>.data.refs` → `<var>.refs`, outside
-  # quoted strings.
-  defp rewrite_paths(liquid, var) do
-    unquoted(liquid, &Regex.replace(~r/(?<![\w.])(#{var})\.data\.(vars|refs)\b/, &1, "\\1.\\2"))
+  # `<entry>.data.vars` → `<entry>.vars` and `<list>.first.data.refs` →
+  # `<list>.first.refs` outside quoted strings, and the property paths of
+  # the filters applied to a list of entries.
+  defp rewrite_liquid(liquid, bindings) do
+    entries = for {var, :entry} <- bindings, do: Regex.escape(var)
+    lists = for {var, :list} <- bindings, do: Regex.escape(var)
+
+    liquid
+    |> unquoted(fn text ->
+      text
+      |> replace_paths(entries, "")
+      |> replace_paths(lists, "(?:\\.first|\\.last|\\[\\d+\\])")
+    end)
+    |> rewrite_filters(lists)
   end
 
-  # `entries | sort: "data.vars.order"` → `entries | sort: "vars.order"`
-  defp rewrite_filter_paths(liquid, sources) do
-    if Regex.match?(~r/(?<![\w.])(?:#{Enum.map_join(sources, "|", &Regex.escape/1)})\s*\|/, liquid),
-      do: Regex.replace(~r/(['"])data\.(vars|refs)\./, liquid, "\\1\\2."),
-      else: liquid
+  defp replace_paths(text, [], _suffix), do: text
+
+  defp replace_paths(text, vars, suffix) do
+    Regex.replace(~r/(?<![\w.])((?:#{Enum.join(vars, "|")})#{suffix})\.data\.(vars|refs)\b/, text, "\\1.\\2")
   end
+
+  defp rewrite_filters(liquid, []), do: liquid
+
+  defp rewrite_filters(liquid, lists) do
+    case split_filters(liquid) do
+      [_no_filters] ->
+        liquid
+
+      [head | filters] ->
+        if Regex.match?(~r/(?<![\w.])(?:#{Enum.join(lists, "|")})\s*$/, head),
+          do: Enum.join([head | rewrite_filter_paths(filters)], "|"),
+          else: liquid
+    end
+  end
+
+  # Rewrites the path argument of each filter while the value is still the
+  # list of entries, and of the first filter that turns it into something
+  # else by a path; stops at any other filter.
+  defp rewrite_filter_paths([filter | rest]) do
+    name = filter_name(filter)
+
+    cond do
+      name in @list_filters -> [rewrite_path_argument(filter) | rewrite_filter_paths(rest)]
+      name in @path_filters -> [rewrite_path_argument(filter) | rest]
+      true -> [filter | rest]
+    end
+  end
+
+  defp rewrite_filter_paths([]), do: []
+
+  defp rewrite_path_argument(filter),
+    do: Regex.replace(~r/^(\s*\w+\s*:\s*)(['"])data\.(vars|refs)\./, filter, "\\1\\2\\3.")
+
+  defp filter_name(filter) do
+    case Regex.run(~r/^\s*(\w+)/, filter) do
+      [_, name] -> name
+      nil -> nil
+    end
+  end
+
+  # Splits at each `|` outside quoted strings
+  defp split_filters(text) do
+    @quoted
+    |> Regex.split(text, include_captures: true)
+    |> Enum.reduce([""], fn
+      "'" <> _ = quoted, [current | done] -> [current <> quoted | done]
+      "\"" <> _ = quoted, [current | done] -> [current <> quoted | done]
+      unquoted, [current | done] -> unquoted |> String.split("|") |> merge(current, done)
+    end)
+    |> Enum.reverse()
+  end
+
+  defp merge([first | rest], current, done), do: Enum.reverse(rest, [current <> first | done])
 
   defp unquoted(liquid, fun) do
     @quoted
@@ -187,8 +269,6 @@ defmodule Brando.Repo.Migrations.Brando219RewriteMultiModuleEntryPaths do
       unquoted -> fun.(unquoted)
     end)
   end
-
-  defp part(code, {start, length}), do: binary_part(code, start, length)
 
   defp modules(prefix) do
     %{rows: rows} =
