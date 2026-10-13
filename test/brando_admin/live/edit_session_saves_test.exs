@@ -1263,6 +1263,74 @@ defmodule BrandoAdmin.EditSessionSavesTest do
       assert shown_text(a, c.first) == "<p>Working-copy block</p>"
       await(fn -> shown_text(a, c.second) == "<p>B, after the preview</p>" end)
     end
+
+    # Activating takes the block field out of the form and renders it again
+    # a moment later. LiveView keeps a component rendered again before the
+    # client has confirmed it gone, with its state. Here the client (the
+    # test's proxy) is held from the moment the form resets until the block
+    # field has been rendered again, so it comes back as it was.
+    test "activating it rejoins the session when the block field comes back before it was gone", c do
+      Application.put_env(:brando, EditSession, grace_period: 30_000)
+      a = open(c.conn, c.identity)
+      b = open(c.other_conn, c.identity)
+      {drawer, revision} = load_working_copy(a, c)
+      type(b, c.second, "<p>B, after the preview</p>")
+      await(fn -> inspect(session_state(c.identity).diffs) =~ "B, after the preview" end)
+
+      {_ref, _topic, proxy} = a.proxy
+      hold_client_at_reset(a, proxy)
+
+      activation =
+        Task.async(fn -> a |> with_target(drawer) |> render_hook("activate_revision", %{"value" => revision}) end)
+
+      try do
+        await(fn ->
+          form = form_assigns(a)
+          form.working_copy == nil and form.block_map != []
+        end)
+      after
+        :sys.resume(proxy)
+      end
+
+      Task.await(activation)
+      await_remount(a, c)
+      await(fn -> shown_text(b, c.first) == "<p>Working-copy block</p>" end)
+      await(fn -> shown_text(a, c.second) == "<p>B, after the preview</p>" end)
+    end
+
+    # Suspend `proxy` in the LiveView as its form takes the hard reset, so
+    # the client sees nothing of the reset until it is resumed.
+    defp hold_client_at_reset(view, proxy) do
+      id = {__MODULE__, :hold_client, make_ref()}
+      lv = view.pid
+
+      :telemetry.attach(
+        id,
+        [:phoenix, :live_component, :update, :start],
+        fn _event, _measure, meta, _config ->
+          reset? =
+            self() == lv and meta.component == BrandoAdmin.Components.Form and
+              Enum.any?(meta.assigns_sockets, fn {assigns, _} -> assigns[:action] == :update_entry_hard_reset end)
+
+          if reset? do
+            :telemetry.detach(id)
+            :sys.suspend(proxy)
+          end
+        end,
+        nil
+      )
+
+      on_exit(fn -> :telemetry.detach(id) end)
+    end
+
+    defp form_assigns(view) do
+      {components, _, _} = :sys.get_state(view.pid).components
+
+      Enum.find_value(components, fn
+        {_cid, {BrandoAdmin.Components.Form, _id, assigns, _private, _prints}} -> assigns
+        _ -> nil
+      end)
+    end
   end
 
   # Loading a revision as a working copy made the revision's rows the form's

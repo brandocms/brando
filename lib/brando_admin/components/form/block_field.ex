@@ -725,10 +725,31 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     end
   end
 
+  # The Form takes the block fields out and renders them again to mount them
+  # from a written entry. LiveView keeps a component that is rendered again
+  # before the client has confirmed it gone, with its state and its blocks'
+  # (a slow client, a loaded test run): this one then starts over as if
+  # mounted, and its blocks take the new rows.
+  def update(%{event: "remount"}, socket) do
+    socket =
+      case socket.assigns[:edit_session] do
+        %Replica{monitor: monitor} ->
+          Process.demonitor(monitor, [:flush])
+          Process.delete({:brando_edit_session_monitor, monitor})
+          socket
+
+        _ ->
+          socket
+      end
+
+    {:ok, assign(socket, blocks_initialized: false, remount_pending?: true)}
+  end
+
   def update(assigns, socket) do
+    revived? = !!socket.assigns[:remount_pending?]
     # On the first update no block has mounted yet: a session state shown
-    # now only needs seed forms.
-    mounted? = !!socket.assigns[:blocks_initialized]
+    # now only needs seed forms. A revived field's blocks are there.
+    mounted? = !!socket.assigns[:blocks_initialized] or revived?
 
     socket
     |> assign(assigns)
@@ -736,6 +757,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     |> assign_new(:focus, fn -> nil end)
     |> assign_new(:session_detached?, fn -> false end)
     |> initialize_blocks(assigns)
+    |> reseed_revived(revived?)
     |> maybe_join_session(mounted?)
     |> assign_module_set()
     |> assign_new(:templates, fn -> [] end)
@@ -776,6 +798,17 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     |> assign(:manages_templates?, manages_templates?(assigns))
     |> assign_new(:source_locked, fn -> false end)
     |> assign_new(:source_url, fn -> nil end)
+  end
+
+  # A revived field's blocks own the forms they had; they take the new rows'.
+  defp reseed_revived(socket, false), do: socket
+
+  defp reseed_revived(socket, true) do
+    for {uid, form} <- socket.assigns.seed_forms do
+      send_update(Block, id: "block-#{uid}", event: "replace_form", form: form)
+    end
+
+    assign(socket, :remount_pending?, false)
   end
 
   ## Edit session
