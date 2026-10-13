@@ -20,6 +20,7 @@ if Code.ensure_loaded?(Igniter) do
     alias Igniter.Code.Function, as: CodeFunction
     alias Igniter.Project.Module, as: ProjectModule
     alias Mix.Brando.Igniter.SourceUpgrade
+    alias Mix.Brando.Igniter.SourceUpgrade.ModuleScope
     alias Rewrite.Source
     alias Sourceror.Zipper
 
@@ -76,12 +77,13 @@ if Code.ensure_loaded?(Igniter) do
     # `zipper` is the module's body, as a subtree: the file may hold other
     # modules.
     defp update(zipper) do
-      lines = zipper |> embedded_identifiers() |> MapSet.new(&line/1)
+      identifier_lines = zipper |> embedded_identifiers() |> MapSet.new(&line/1)
+      srcset_lines = zipper |> default_srcsets() |> MapSet.new(fn {key, _sibling_srcset?} -> line(key) end)
 
-      Zipper.traverse(zipper, &update_node(&1, lines))
+      Zipper.traverse(zipper, &update_node(&1, identifier_lines, srcset_lines))
     end
 
-    defp update_node(zipper, identifier_lines) do
+    defp update_node(zipper, identifier_lines, srcset_lines) do
       case Zipper.node(zipper) do
         {:identifier, meta, [_template]} = node ->
           if MapSet.member?(identifier_lines, line(node)),
@@ -89,7 +91,9 @@ if Code.ensure_loaded?(Igniter) do
             else: zipper
 
         node ->
-          with {:ok, pairs} <- pairs(node), {_key, _value} <- default_srcset(pairs) do
+          with {:ok, pairs} <- pairs(node),
+               {key, _value} <- default_srcset(pairs),
+               true <- MapSet.member?(srcset_lines, line(key)) do
             Zipper.replace(zipper, rewrite_pairs(node, pairs))
           else
             _ -> zipper
@@ -102,7 +106,7 @@ if Code.ensure_loaded?(Igniter) do
     defp embedded_identifiers(zipper) do
       if embedded?(zipper) do
         zipper
-        |> Common.find_all(&(CodeFunction.function_call?(&1, :identifier, 1) and declaration?(&1)))
+        |> ModuleScope.find_all(&(CodeFunction.function_call?(&1, :identifier, 1) and declaration?(&1)))
         |> Enum.map(&call_node/1)
         |> Enum.reject(fn {:identifier, _meta, [template]} -> literal(template) in [false, nil] end)
       else
@@ -112,7 +116,7 @@ if Code.ensure_loaded?(Igniter) do
 
     defp embedded?(zipper) do
       zipper
-      |> Common.find_all(&(CodeFunction.function_call?(&1, :data_layer, 1) and declaration?(&1)))
+      |> ModuleScope.find_all(&(CodeFunction.function_call?(&1, :data_layer, 1) and declaration?(&1)))
       |> Enum.any?(&embedded_layer?(call_node(&1)))
     end
 
@@ -131,20 +135,46 @@ if Code.ensure_loaded?(Igniter) do
 
     ## default_srcset
 
-    # `{key_node, sibling_srcset?}` of each `default_srcset:` in a keyword
-    # list or map.
+    # `{key_node, sibling_srcset?}` of each `default_srcset:` in an asset's
+    # `cfg:`: given inline, or as a module attribute the module defines.
     defp default_srcsets(zipper) do
-      zipper
-      |> Common.find_all(&match?({:ok, _}, pairs(Zipper.node(&1))))
-      |> Enum.flat_map(fn list ->
-        {:ok, pairs} = pairs(Zipper.node(list))
+      {inline, attributes} =
+        zipper
+        |> ModuleScope.find_all(&CodeFunction.function_call?(&1, :asset, 3))
+        |> Enum.flat_map(&asset_cfg(call_node(&1)))
+        |> Enum.split_with(&(not match?({:attribute, _name}, &1)))
 
-        case default_srcset(pairs) do
-          {key, _value} -> [{key, Enum.any?(pairs, &(key(&1) == :srcset))}]
-          nil -> []
-        end
-      end)
+      attribute_names = for {:attribute, name} <- attributes, do: name
+
+      attribute_values =
+        for attribute <- ModuleScope.find_all(zipper, &match?({:@, _, [{_name, _, [_value]}]}, Zipper.node(&1))),
+            {:@, _, [{name, _, [value]}]} = Zipper.node(attribute),
+            name in attribute_names,
+            do: value
+
+      for config <- inline ++ attribute_values,
+          {:ok, pairs} <- [config |> unwrap() |> pairs()],
+          {key, _value} <- [default_srcset(pairs)],
+          do: {key, Enum.any?(pairs, &(key(&1) == :srcset))}
     end
+
+    defp asset_cfg({:asset, _, [_name, _type, options]}) do
+      case options |> unwrap() |> pairs() do
+        {:ok, pairs} ->
+          for {key, value} <- pairs, literal(key) == :cfg, do: cfg_value(value)
+
+        :error ->
+          []
+      end
+    end
+
+    defp asset_cfg(_node), do: []
+
+    defp cfg_value({:@, _, [{name, _, context}]}) when is_atom(context), do: {:attribute, name}
+    defp cfg_value(config), do: config
+
+    defp unwrap({:__block__, _meta, [value]}) when is_list(value), do: value
+    defp unwrap(value), do: value
 
     defp default_srcset(pairs), do: Enum.find(pairs, &(key(&1) == :default_srcset))
 

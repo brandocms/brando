@@ -22,6 +22,7 @@ if Code.ensure_loaded?(Igniter) do
     alias Igniter.Code.Function, as: CodeFunction
     alias Igniter.Project.Module, as: ProjectModule
     alias Mix.Brando.Igniter.SourceUpgrade
+    alias Mix.Brando.Igniter.SourceUpgrade.ModuleScope
     alias Rewrite.Source
     alias Sourceror.Zipper
 
@@ -161,8 +162,7 @@ if Code.ensure_loaded?(Igniter) do
     # `{type, options}` of the Blueprint's relation `name`, or nil.
     defp relation(blueprint, name) do
       blueprint.zipper
-      |> Zipper.subtree()
-      |> Common.find_all(&CodeFunction.function_call?(&1, :relation, 3))
+      |> ModuleScope.find_all(&CodeFunction.function_call?(&1, :relation, 3))
       |> Enum.find_value(fn relation_zipper ->
         with {:relation, _, [relation_name, type, options]} <- single_child_node(relation_zipper),
              ^name <- literal(relation_name) do
@@ -206,8 +206,7 @@ if Code.ensure_loaded?(Igniter) do
       case ProjectModule.find_module(igniter, join_module) do
         {:ok, {_igniter, _source, zipper}} ->
           zipper
-          |> Zipper.subtree()
-          |> Common.find_all(
+          |> ModuleScope.find_all(
             &(CodeFunction.function_call?(&1, :relation, 3) or CodeFunction.function_call?(&1, :belongs_to))
           )
           |> Enum.flat_map(&belongs_to(single_child_node(&1)))
@@ -335,7 +334,7 @@ if Code.ensure_loaded?(Igniter) do
           if Check.source_option_problems({key, value}) == [], do: {[pair], []}, else: {[], [shown]}
 
         {key, :error} ->
-          if key in Check.identifier_source_keys() and key != :preload, do: {[pair], []}, else: {[], [shown]}
+          if key in Check.identifier_source_keys(), do: {[pair], []}, else: {[], [shown]}
       end
     end
 
@@ -390,8 +389,7 @@ if Code.ensure_loaded?(Igniter) do
     # the module, `subform` naming the `inputs_for` it is in, or nil.
     defp inputs(zipper, type) do
       zipper
-      |> Zipper.subtree()
-      |> Common.find_all(&CodeFunction.function_call?(&1, :input, 3))
+      |> ModuleScope.find_all(&CodeFunction.function_call?(&1, :input, 3))
       |> Enum.flat_map(fn input_zipper ->
         with {:input, meta, [name, input_type, options]} <- single_child_node(input_zipper),
              ^type <- literal(input_type),

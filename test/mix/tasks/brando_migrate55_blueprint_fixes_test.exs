@@ -185,6 +185,81 @@ defmodule Mix.Tasks.Brando.Migrate55BlueprintFixesTest do
     end)
   end
 
+  test "leaves the identifier of a Blueprint whose nested module is embedded" do
+    nested =
+      String.replace(
+        @project,
+        "  relations do",
+        """
+          defmodule Property do
+            use Brando.Blueprint,
+              application: "Koi",
+              domain: "Projects",
+              schema: "Property",
+              singular: "property",
+              plural: "properties"
+
+            data_layer :embedded
+            identifier "{{ entry.id }}"
+          end
+
+          relations do
+        """
+      )
+
+    migrated = migrate(%{@project_path => nested}) |> source(@project_path)
+
+    assert migrated =~ ~s(identifier "{{ entry.title }}")
+    assert migrated =~ "data_layer :embedded\n    identifier false\n"
+  end
+
+  test "rewrites default_srcset only in an asset cfg, not in other data" do
+    partner =
+      String.replace(@partner, "  attributes do", """
+        def picture_options, do: %{default_srcset: [{"small", "700w"}]}
+
+        attributes do
+      """)
+
+    migrated = migrate(%{@partner_path => partner}) |> source(@partner_path)
+
+    assert migrated =~ ~s|def picture_options, do: %{default_srcset: [{"small", "700w"}]}|
+    assert migrated =~ "srcset: %{\n      default: ["
+  end
+
+  test "rewrites default_srcset in a cfg given inline" do
+    partner =
+      @partner
+      |> String.replace(
+        "asset :logo, :image, cfg: @logo_cfg",
+        ~s|asset :logo, :image, cfg: [upload_path: "x", default_srcset: [{"small", "700w"}]]|
+      )
+
+    migrated = migrate(%{@partner_path => partner}) |> source(@partner_path)
+
+    assert migrated =~ ~s|cfg: [upload_path: "x", srcset: %{default: [{"small", "700w"}]}]|
+    # The attribute no asset reads as its cfg is left alone.
+    assert migrated =~ "default_srcset: [\n      {\"small\", \"700w\"},"
+  end
+
+  test "lists a read of an :entries relation whose line mentions .identifier only in a comment" do
+    controller = """
+    defmodule KoiWeb.ProjectController do
+      def ids(project) do
+        Enum.map(project.related_entries, & &1.entry_id) # preload .identifier
+      end
+
+      def titles(project), do: Enum.map(project.related_entries, & &1.identifier.title)
+    end
+    """
+
+    igniter = migrate(%{@project_path => @project, @controller_path => controller})
+
+    assert_has_warning(igniter, fn warning ->
+      warning =~ "#{@controller_path}:3:" and not (warning =~ "#{@controller_path}:6:")
+    end)
+  end
+
   defp migrate(files) do
     [app_name: :koi, files: Map.put(files, ".formatter.exs", @formatter)]
     |> test_project()

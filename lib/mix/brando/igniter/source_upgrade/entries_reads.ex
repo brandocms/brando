@@ -13,6 +13,7 @@ if Code.ensure_loaded?(Igniter) do
     alias Igniter.Code.Function, as: CodeFunction
     alias Igniter.Project.Module, as: ProjectModule
     alias Mix.Brando.Igniter.SourceUpgrade
+    alias Mix.Brando.Igniter.SourceUpgrade.ModuleScope
     alias Mix.Brando.Igniter.TemplateCode
     alias Rewrite.Source
     alias Sourceror.Zipper
@@ -54,7 +55,7 @@ if Code.ensure_loaded?(Igniter) do
         {:ok, {igniter, _source, zipper}} = ProjectModule.find_module(igniter, module)
 
         found =
-          for relation <- Common.find_all(Zipper.subtree(zipper), &CodeFunction.function_call?(&1, :relation, [2, 3])),
+          for relation <- ModuleScope.find_all(zipper, &CodeFunction.function_call?(&1, :relation, [2, 3])),
               {:relation, _, [name, type | _]} <- [relation |> Common.maybe_move_to_single_child_block() |> Zipper.node()],
               literal(type) == :entries,
               name = literal(name),
@@ -72,12 +73,26 @@ if Code.ensure_loaded?(Igniter) do
           content = Source.get(source, :content),
           code? = TemplateCode.code?(content, path),
           {line, number, offset} <- lines(content),
-          not String.contains?(line, ".identifier"),
-          Enum.any?(Regex.scan(read, line, return: :index), fn [{start, _length}] -> code?.(offset + start) end) do
+          Enum.any?(unfixed_reads(line, read), &code?.(offset + &1)) do
         "#{path}:#{number}: #{String.trim(line)}"
       end
       |> Enum.sort()
     end
+
+    # The offsets of the reads in `line` that do not go on through
+    # `.identifier` before the next read or a comment.
+    defp unfixed_reads(line, read) do
+      starts = for [{start, length}] <- Regex.scan(read, line, return: :index), do: {start, start + length}
+      ends = Enum.map(Enum.drop(starts, 1), &elem(&1, 0)) ++ [byte_size(line)]
+
+      for {{start, read_end}, next} <- Enum.zip(starts, ends),
+          rest = binary_part(line, read_end, next - read_end),
+          not (rest |> strip_comment() |> String.match?(~r/\.identifier\b/)),
+          do: start
+    end
+
+    # A `#` that starts a comment, not an interpolation.
+    defp strip_comment(text), do: text |> String.split(~r/(^|\s)#(?!\{)/, parts: 2) |> hd()
 
     # `{line, number, offset}` for each line of `content`.
     defp lines(content) do
