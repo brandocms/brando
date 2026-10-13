@@ -1273,6 +1273,53 @@ defmodule Brando.Blueprint.VerifierTest do
       end
     end
 
+    test "rejects an order through an association, which identifiers do not have" do
+      for order <- ["asc cover.path", [{:asc, {:cover, :path}}], {:desc, {:status, :x, :y}}] do
+        assert_raise Spark.Error.DslError, ~r/`order` by (cover\.path|status\.x\.y)/, fn ->
+          compile_blueprint(entries_blueprint([{MediaItem, %{order: order}}]))
+        end
+      end
+    end
+
+    test "rejects a select: of columns identifiers do not have" do
+      assert_raise Spark.Error.DslError, ~r/`select: \[:id, :sequence\]`/, fn ->
+        compile_blueprint(entries_blueprint([{MediaItem, %{select: [:id, :sequence]}}]))
+      end
+    end
+
+    test "checks sources: in inputs_for once the subform's schema has compiled" do
+      parent =
+        compile_blueprint(
+          quote do
+            relations do
+              relation :related_entries, :entries
+            end
+          end
+        )
+
+      assert_form_error(
+        quote do
+          relations do
+            relation :parents, :has_many, module: unquote(parent)
+          end
+
+          forms do
+            form do
+              tab "Content" do
+                fieldset do
+                  inputs_for :parents do
+                    cardinality :many
+                    input :related_entries, :entries, sources: [{unquote(parent), %{order: "asc sequence"}}]
+                  end
+                end
+              end
+            end
+          end
+        end,
+        ~r/input :related_entries, :entries has `sources:` options .*`order` by sequence/
+      )
+    end
+
     test "suggests the options without an order by a column identifiers lack, written as a tuple" do
       assert_raise Spark.Error.DslError, ~r/`order` by sequence.*Write `\{.*MediaItem, %\{status: :published\}\}`/s, fn ->
         compile_blueprint(entries_blueprint([{MediaItem, %{order: {:asc, :sequence}, status: :published}}]))
@@ -1299,6 +1346,9 @@ defmodule Brando.Blueprint.VerifierTest do
             %{order: [{:desc, :updated_at}], language: "en", limit: 20},
             # The list query skips these.
             %{preload: nil, paginate: true, with_deleted: true},
+            %{join: [], include: []},
+            %{select: [:id, :title, :entry_id, :schema]},
+            %{select: {:struct, [:id, :title]}},
             %{}
           ] do
         module = compile_blueprint(entries_blueprint([{MediaItem, options}]))

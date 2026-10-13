@@ -283,10 +283,22 @@ defmodule Brando.Blueprint.Forms.Verifier do
   end
 
   defp verify_sub_field(context, form, subform, input, related_fields, related_module) do
-    with :ok <- verify_sub_field_visibility(context, form, subform, input, related_fields, related_module) do
-      verify_sub_field_multi_select(context, [form.name, subform.name, input.name], related_module, input)
+    path = [form.name, subform.name, input.name]
+
+    with :ok <- verify_sub_field_visibility(context, form, subform, input, related_fields, related_module),
+         :ok <- verify_sub_field_multi_select(context, path, related_module, input) do
+      verify_sub_field_entries_sources(context, path, input)
     end
   end
+
+  defp verify_sub_field_entries_sources(context, path, %Forms.Input{type: :entries} = input) do
+    case FormInputs.entries_sources_problem(input) do
+      nil -> :ok
+      problem -> error(context, input, path, problem)
+    end
+  end
+
+  defp verify_sub_field_entries_sources(_context, _path, _input), do: :ok
 
   # `hidden: {field, _}` / `show_if: {field, _}` in a subform refer to the
   # row's own fields.

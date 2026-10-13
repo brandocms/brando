@@ -12,10 +12,11 @@
   The options filter and order the identifiers the picker lists, not the
   source schema, so a 0.53 `for: [{__MODULE__, %{preload: [:categories],
   order: "asc language, asc sequence"}}]` carried over as `sources:` crashed
-  the form with `column c0.sequence does not exist`. `preload:`, `filter:`,
-  other unknown keys and an order by a column identifiers lack now fail the
-  compile, naming the options to write instead; so does a missing
-  `sources:`. `migrate54` drops those options and says what it dropped.
+  the form with `column c0.sequence does not exist`. `filter:`, a non-empty
+  `preload:`, other keys the identifier query does not run, and an order by
+  a column identifiers lack or through an association now fail the compile,
+  naming the options to write instead; so does a missing `sources:`. In
+  `inputs_for` they are compile warnings. `migrate54` drops those options and says what it dropped.
   `guides/blueprint_forms.md` lists what the options apply to.
 - **`mix brando.migrate54` points fragment map reads at `rendered_blocks`** (#3169).
   A fragment lost `html` in 0.54, and `@partials["newsletter"].html`, a read

@@ -535,10 +535,13 @@ the entry being edited. The relation's `constraints: [max_length: n]` and
 The picker lists the schema's identifiers (`Brando.Content.Identifier`), not
 its entries, so the options apply to the identifiers: `order:` by their
 columns (`id`, `entry_id`, `schema`, `title`, `status`, `language`, `cover`, `url`,
-`updated_at`), `status:`, `language:`, `exclude_language:`, `limit:` and
-`offset:`. Identifiers have no associations and no filters, so `preload:`,
-`filter:` and an order by another column, such as `sequence`, fail the
-compile. Without `order:`, choices are ordered by language and title.
+`updated_at`), `status:`, `language:`, `exclude_language:`, `limit:`,
+`offset:` and `select:` of those columns. Identifiers have no associations
+and no filters, so `filter:`, a `preload:`, `join:` or `include:` that is
+not empty, and an order by another column (`sequence`) or through an
+association (`"asc cover.path"`) fail the compile; in `inputs_for` they are
+compile warnings. Without `order:`, choices are ordered by language and
+title.
 
 ### Media
 

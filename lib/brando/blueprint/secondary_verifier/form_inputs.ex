@@ -14,13 +14,15 @@ defmodule Brando.Blueprint.SecondaryVerifier.FormInputs do
   @orderable ["random" | @identifier_columns]
   # The keys of `sources:` options the identifier list query runs. It
   # crashes on the rest (`filter:`, `cache:`, …): identifiers have no filters,
-  # no associations and no `deleted_at`.
-  @identifier_source_keys [:order, :status, :language, :exclude_language, :limit, :offset, :preload]
+  # no associations and no `deleted_at`. `preload:`, `join:` and `include:`
+  # name associations, so only an empty one runs.
+  @identifier_source_keys [:order, :status, :language, :exclude_language, :limit, :offset, :select]
+  @association_keys [:preload, :join, :include]
 
   @doc "The columns of `Brando.Content.Identifier`, which `sources:` options can order by."
   def identifier_columns, do: @identifier_columns
 
-  @doc "The `sources:` option keys the identifier list query runs."
+  @doc "The `sources:` option keys the identifier list query runs on any value it takes."
   def identifier_source_keys, do: @identifier_source_keys
 
   @doc "The columns an `order` names that identifiers do not have."
@@ -116,47 +118,44 @@ defmodule Brando.Blueprint.SecondaryVerifier.FormInputs do
   # `sources:` options do not load the source schema's entries: the picker
   # lists their identifiers, and `Brando.Content.list_identifiers/2` runs the
   # options on `Brando.Content.Identifier`.
-  defp verify_entries_sources(dsl_state, path, %Forms.Input{type: :entries, name: name, opts: opts} = input) do
-    subject = "input #{inspect(name)}, :entries"
-    example = ~s(`sources: [{MyApp.Articles.Article, %{order: "asc title"}}]`)
-
-    case Keyword.get(opts || [], :sources) do
-      sources when is_list(sources) ->
-        if Enum.all?(sources, &match?({module, options} when is_atom(module) and is_map(options), &1)) do
-          Support.validate_entities(sources, &verify_entries_source(dsl_state, path, input, subject, &1))
-        else
-          Support.error(
-            dsl_state,
-            path,
-            input,
-            "#{subject} `sources:` takes a list of {module, options} pairs, as in #{example}, got: #{inspect(sources)}"
-          )
-        end
-
-      _missing ->
-        Support.error(
-          dsl_state,
-          path,
-          input,
-          "#{subject} needs `sources:`, the schemas it offers entries of, as in #{example}"
-        )
+  defp verify_entries_sources(dsl_state, path, %Forms.Input{type: :entries} = input) do
+    case entries_sources_problem(input) do
+      nil -> :ok
+      problem -> Support.error(dsl_state, path, input, problem)
     end
   end
 
   defp verify_entries_sources(_dsl_state, _path, _input), do: :ok
 
-  defp verify_entries_source(dsl_state, path, input, subject, {module, options}) do
+  @doc "What is wrong with an `:entries` input's `sources:`, or nil."
+  def entries_sources_problem(%Forms.Input{name: name, opts: opts}) do
+    subject = "input #{inspect(name)}, :entries"
+    example = ~s(`sources: [{MyApp.Articles.Article, %{order: "asc title"}}]`)
+
+    case Keyword.get(opts || [], :sources) do
+      sources when is_list(sources) ->
+        if Enum.all?(sources, &match?({module, options} when is_atom(module) and is_map(options), &1)),
+          do: Enum.find_value(sources, &entries_source_problem(subject, &1)),
+          else:
+            "#{subject} `sources:` takes a list of {module, options} pairs, as in #{example}, got: #{inspect(sources)}"
+
+      _missing ->
+        "#{subject} needs `sources:`, the schemas it offers entries of, as in #{example}"
+    end
+  end
+
+  defp entries_source_problem(subject, {module, options}) do
     case Enum.flat_map(options, &identifier_source_problem/1) do
       [] ->
-        :ok
+        nil
 
       problems ->
-        Support.error(dsl_state, path, input, """
+        """
         #{subject} has `sources:` options for #{inspect(module)} that the identifiers it lists do not take: \
         #{Enum.join(problems, ", ")}. The options filter and order the identifiers the entry picker offers \
         (`Brando.Content.Identifier`, with the columns #{Enum.join(@identifier_columns, ", ")}), \
         not #{inspect(module)} entries. Write `{#{inspect(module)}, #{inspect(identifier_source_options(options))}}`.\
-        """)
+        """
     end
   end
 
@@ -167,13 +166,19 @@ defmodule Brando.Blueprint.SecondaryVerifier.FormInputs do
   defp identifier_source_problem({_key, nil}), do: []
   defp identifier_source_problem({key, true}) when key in [:paginate, :with_deleted], do: []
   defp identifier_source_problem({key, _value}) when key in [:current_user, :status_counts], do: []
-  defp identifier_source_problem({:preload, []}), do: []
+  defp identifier_source_problem({key, []}) when key in @association_keys, do: []
 
-  defp identifier_source_problem({:preload, preload}),
-    do: ["`preload: #{inspect(preload)}` (identifiers have no associations)"]
+  defp identifier_source_problem({key, value}) when key in @association_keys,
+    do: ["`#{key}: #{inspect(value)}` (identifiers have no associations)"]
 
   defp identifier_source_problem({:order, order}) do
     for field <- unknown_order_fields(order), do: "`order` by #{field} (not an identifier column)"
+  end
+
+  defp identifier_source_problem({:select, select}) do
+    if select |> select_fields() |> Enum.all?(&(to_string(&1) in @identifier_columns)),
+      do: [],
+      else: ["`select: #{inspect(select)}` (not identifier columns)"]
   end
 
   defp identifier_source_problem({key, _value}) when key in @identifier_source_keys, do: []
@@ -183,9 +188,8 @@ defmodule Brando.Blueprint.SecondaryVerifier.FormInputs do
   defp identifier_source_options(options) do
     options
     |> Enum.flat_map(fn
-      {:preload, _preload} -> []
       {:order, order} -> identifier_order(order)
-      {key, _value} = option -> if key in @identifier_source_keys, do: [option], else: []
+      option -> if identifier_source_problem(option) == [], do: [option], else: []
     end)
     |> Map.new()
   end
@@ -214,9 +218,14 @@ defmodule Brando.Blueprint.SecondaryVerifier.FormInputs do
 
   def identifier_order(order), do: [order: order]
 
+  # The fields a `select:` names, in the forms `Brando.Query`'s reducer takes.
+  defp select_fields({kind, fields}) when kind in [:map, :struct, :raw] and is_list(fields), do: fields
+  defp select_fields(fields) when is_list(fields), do: fields
+  defp select_fields(_select), do: [:unknown]
+
   # The columns an order names, as `Brando.Query`'s order reducer reads it.
-  # An association path (`"asc category.name"`, `{:asc, {:category, :name}}`)
-  # counts as its first segment, which identifiers do not have either.
+  # An association path (`"asc cover.path"`, `{:asc, {:category, :name}}`)
+  # is named whole: identifiers have no associations to join.
   defp order_fields(order) when is_binary(order), do: Enum.map(order_segments(order), &elem(&1, 1))
   defp order_fields(order) when is_list(order), do: Enum.flat_map(order, &order_fields/1)
   defp order_fields({_direction, :random}), do: []
@@ -224,7 +233,10 @@ defmodule Brando.Blueprint.SecondaryVerifier.FormInputs do
   defp order_fields({:array_position, _ids}), do: []
   defp order_fields({_modulo, :modulo}), do: ["inserted_at"]
   defp order_fields({_direction, field}) when is_atom(field), do: [Atom.to_string(field)]
-  defp order_fields({_direction, path}) when is_tuple(path), do: [path |> elem(0) |> to_string()]
+
+  defp order_fields({_direction, path}) when is_tuple(path),
+    do: [path |> Tuple.to_list() |> Enum.map_join(".", &to_string/1)]
+
   defp order_fields(_order), do: []
 
   # `{segment, column}` of each comma-separated `"asc title"`.
@@ -232,8 +244,7 @@ defmodule Brando.Blueprint.SecondaryVerifier.FormInputs do
     for segment <- String.split(order, ","),
         segment = String.trim(segment),
         segment != "" do
-      field = segment |> String.split(~r/\s+/) |> List.last() |> String.split(".") |> hd()
-      {segment, field}
+      {segment, segment |> String.split(~r/\s+/) |> List.last()}
     end
   end
 end
