@@ -163,22 +163,30 @@ defmodule Brando.Mailer do
     end
   end
 
-  defp put_sender(%Email{from: from} = email) when from not in [nil, {"", ""}], do: {:ok, email}
+  # The sender the email already carries, set by the caller or queued before
+  # the configuration changed, is held to the same rule as the configured one.
+  defp put_sender(%Email{from: from} = email) when from not in [nil, {"", ""}] do
+    if unless_placeholder(from), do: {:ok, email}, else: no_sender()
+  end
 
   defp put_sender(email) do
     case sender() do
       [from: nil, reply_to: _] ->
-        missing!(
-          :no_sender,
-          "Brando has no address to send email from (outside development, a placeholder on a domain reserved " <>
-            "for examples, such as example.com, counts as none). Set it to an address your mail provider sends for:\n\n" <>
-            "    config :brando, Brando.Mailer, from: {\"My site\", \"noreply@my-site.com\"}"
-        )
+        no_sender()
 
       [from: from, reply_to: reply_to] ->
         email = Email.from(email, from)
         {:ok, if(is_nil(email.reply_to) and reply_to, do: Email.reply_to(email, reply_to), else: email)}
     end
+  end
+
+  defp no_sender do
+    missing!(
+      :no_sender,
+      "Brando has no address to send email from (outside development, a placeholder on a domain reserved " <>
+        "for examples, such as example.com, counts as none). Set it to an address your mail provider sends for:\n\n" <>
+        "    config :brando, Brando.Mailer, from: {\"My site\", \"noreply@my-site.com\"}"
+    )
   end
 
   # Raised where a developer sees it; logged in production, where the caller
