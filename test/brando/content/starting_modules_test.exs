@@ -164,6 +164,23 @@ defmodule Brando.Content.StartingModulesTest do
     refute Enum.any?(ModulePicker.root_modules("all"), &(&1.id == c.hero.id))
   end
 
+  test "the picker leaves out the upgrade's legacy content wrapper", c do
+    {:ok, wrapper} =
+      Content.create_module(
+        Factory.params_for(:module,
+          name: %{"en" => "Legacy Content Wrapper"},
+          namespace: %{"en" => "migration"},
+          help_text: %{},
+          class: "legacy-content"
+        ),
+        c.user
+      )
+
+    ids = Enum.map(ModulePicker.root_modules("all"), & &1.id)
+    assert c.hero.id in ids
+    refute wrapper.id in ids
+  end
+
   test "a field's counts are cached per site, field and language", c do
     assert StartingModules.cache_key(Page.Blocks, :en) == {:starting_modules, Page.Blocks, "en"}
     assert StartingModules.cache_key(Page.Blocks, "en") == StartingModules.cache_key(Page.Blocks, :en)

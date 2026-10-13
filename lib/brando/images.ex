@@ -26,6 +26,7 @@ defmodule Brando.Images do
 
   alias Brando.Images
   alias Brando.Images.Image
+  alias Brando.Repo
   alias Brando.Users.User
 
   @type id :: binary | integer
@@ -114,7 +115,7 @@ defmodule Brando.Images do
   def create_image(params, user) do
     %Image{}
     |> Image.changeset(params, user)
-    |> Brando.Repo.insert()
+    |> Repo.insert()
   end
 
   @doc """
@@ -126,24 +127,179 @@ defmodule Brando.Images do
       from t in Image,
         where: t.id == ^id and is_nil(t.deleted_at)
 
-    Brando.Repo.one!(query)
+    Repo.one!(query)
   end
 
   @doc """
-  An earlier image of the same file as `image` (the same `content_hash`), not
-  deleted, or nil. Only uploads have a hash, so copies made with "Duplicate"
-  are never offered in place of an upload.
+  An earlier image of the same file as `image` (the same `content_hash`) made
+  for the same image config, not deleted, or nil. Only uploads have a hash, so
+  copies made with "Duplicate" are never offered in place of an upload. One
+  made for another config has that config's sizes, not the ones the upload's
+  field renders.
   """
-  def find_duplicate(%Image{content_hash: hash, id: id}) when is_binary(hash) do
-    from(i in Image,
-      where: i.content_hash == ^hash and i.id != ^id and is_nil(i.deleted_at),
-      order_by: [asc: i.id],
-      limit: 1
-    )
-    |> Brando.Repo.one()
+  def find_duplicate(%Image{content_hash: hash, id: id, config_target: config_target}) when is_binary(hash) do
+    hash
+    |> same_file_query(config_target)
+    |> where([i], i.id != ^id)
+    |> Repo.one()
   end
 
   def find_duplicate(_image), do: nil
+
+  defp same_file_query(hash, config_target) do
+    query =
+      from(i in Image,
+        where: i.content_hash == ^hash and is_nil(i.deleted_at),
+        order_by: [asc: i.id],
+        limit: 1
+      )
+
+    if config_target,
+      do: where(query, [i], i.config_target == ^config_target),
+      else: where(query, [i], is_nil(i.config_target))
+  end
+
+  @doc """
+  `image` made for `config_target`, the image config of the field, ref or var
+  it is picked for.
+
+  An image is processed into its own config's sizes and formats, and renders
+  by their names, so an image made for another config is not used as it is:
+  this returns the copy of the same file made for `config_target`, or makes
+  one. A copy is the original file in the config's upload path, as an upload
+  to the field would put it, queued for processing; it keeps the image's
+  texts and focal point. `image` itself is never changed, so what shows it
+  keeps its sizes.
+
+  The file is what identifies a copy: its `content_hash`, the SHA-256 of the
+  original. An image uploaded before Brando stored hashes gets its hash
+  recorded on the first pick, so later picks find the copy. The original is
+  read from the media folder, or from the CDN when only the CDN has it
+  (`keep_local_copy: false`). Picks of one file for one config are taken one
+  at a time (a transaction-scoped advisory lock), so two editors picking it
+  at once get the same copy. A copy whose processing never got queued is
+  queued again.
+  """
+  @spec for_config_target(Image.t(), String.t(), user) :: {:ok, Image.t()} | {:error, term()}
+  def for_config_target(%Image{config_target: config_target} = image, config_target, _user), do: {:ok, image}
+
+  def for_config_target(%Image{} = image, config_target, user) when is_binary(config_target) do
+    with {:ok, hash, original} <- source_hash(image) do
+      Repo.transaction(fn -> copy_once(image, hash, original, config_target, user) end)
+    end
+  end
+
+  # In the transaction: one pick of the file for the config at a time
+  defp copy_once(image, hash, original, config_target, user) do
+    lock_copy(hash, config_target)
+    if is_nil(image.content_hash), do: record_hash(image, hash)
+
+    result =
+      case Repo.one(same_file_query(hash, config_target)) do
+        %Image{} = copy -> requeue_unqueued(copy, user)
+        nil -> copy_for_config_target(%{image | content_hash: hash}, original, config_target, user)
+      end
+
+    case result do
+      {:ok, copy} -> copy
+      {:error, reason} -> Repo.rollback(reason)
+    end
+  end
+
+  # The hash identifies the copies; the original is read only when it is not
+  # stored, or when a copy has to be made (`original` is then a function).
+  defp source_hash(%Image{content_hash: hash} = image) when is_binary(hash),
+    do: {:ok, hash, fn -> read_original(image) end}
+
+  defp source_hash(image) do
+    with {:ok, bytes} <- read_original(image) do
+      {:ok, :sha256 |> :crypto.hash(bytes) |> Base.encode16(case: :lower), fn -> {:ok, bytes} end}
+    end
+  end
+
+  defp read_original(image) do
+    case File.read(Images.Utils.media_path(image.path)) do
+      {:ok, bytes} -> {:ok, bytes}
+      {:error, :enoent} -> read_original_from_cdn(image)
+      {:error, reason} -> {:error, reason}
+    end
+  end
+
+  # The CDN the original was uploaded to: its config's own, or, as the
+  # uploader falls back to it, the one configured for `Brando.Images`
+  defp read_original_from_cdn(image) do
+    {:ok, cfg} = get_config_for(image)
+
+    case effective_cdn(cfg) do
+      %{enabled: true} = cdn -> Brando.CDN.get_object(Path.join("media", image.path), Map.put(cfg, :cdn, cdn))
+      _ -> {:error, :enoent}
+    end
+  end
+
+  defp effective_cdn(%{cdn: %{enabled: true} = cdn}), do: cdn
+  defp effective_cdn(_cfg), do: Brando.CDN.config(Brando.Images)
+
+  defp lock_copy(hash, config_target) do
+    key = :erlang.phash2({Brando.Tenant.current_prefix(), hash, config_target}, 4_294_967_296)
+    Repo.repo().query!("SELECT pg_advisory_xact_lock($1)", [key])
+  end
+
+  defp record_hash(image, hash) do
+    Repo.update_all(from(i in Image, where: i.id == ^image.id and is_nil(i.content_hash)),
+      set: [content_hash: hash]
+    )
+  end
+
+  defp requeue_unqueued(%Image{status: :unprocessed} = copy, user) do
+    if Images.Processing.processing_queued?(copy) do
+      {:ok, copy}
+    else
+      with {:ok, _job} <- Images.Processing.queue_processing(copy, user), do: {:ok, copy}
+    end
+  end
+
+  defp requeue_unqueued(copy, _user), do: {:ok, copy}
+
+  defp copy_for_config_target(image, original, config_target, user) do
+    {:ok, cfg} = get_config_for(config_target)
+    path = Path.join(cfg.upload_path, Brando.Utils.unique_filename(Path.basename(image.path)))
+    dest = Images.Utils.media_path(path)
+
+    with {:ok, bytes} <- original.(),
+         :ok <- File.mkdir_p(Path.dirname(dest)),
+         :ok <- File.write(dest, bytes),
+         {:ok, copy} <- create_copy(image, path, config_target, cfg, user, dest),
+         {:ok, _job} <- Images.Processing.queue_processing(copy, user) do
+      {:ok, copy}
+    end
+  end
+
+  defp create_copy(image, path, config_target, cfg, user, dest) do
+    %{
+      path: path,
+      config_target: config_target,
+      content_hash: image.content_hash,
+      width: image.width,
+      height: image.height,
+      dominant_color: image.dominant_color,
+      title: image.title,
+      credits: image.credits,
+      alt: image.alt,
+      focal: if(image.focal, do: Map.take(image.focal, [:x, :y]), else: %{x: 50, y: 50}),
+      sizes: %{},
+      status: :unprocessed,
+      folder_id: Brando.Media.Folders.upload_folder_id(nil, cfg)
+    }
+    |> create_image(user)
+    |> case do
+      {:ok, copy} ->
+        {:ok, copy}
+
+      error ->
+        File.rm(dest)
+        error
+    end
+  end
 
   @doc """
   Delete `ids` from database
@@ -151,7 +307,7 @@ defmodule Brando.Images do
   """
   def delete_images(ids) when is_list(ids) do
     q = from m in Image, where: m.id in ^ids
-    Brando.Repo.soft_delete_all(q)
+    Repo.soft_delete_all(q)
   end
 
   @doc "Returns the image orientation for dimensions or an image-like map."

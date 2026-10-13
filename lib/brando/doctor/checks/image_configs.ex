@@ -161,7 +161,7 @@ defmodule Brando.Doctor.Checks.ImageConfigs do
       summaries ->
         warning(Enum.join(summaries, "; "),
           fix: if(unsynced == [], do: fix(changed, differ), else: unsynced_fix()),
-          link: if(unsynced == [], do: {"#utils-image-sizes", dgettext("doctor", "Recreate changed images")}),
+          link: if(unsynced == [], do: {"#utils-image-sizes", dgettext("doctor", "Go to image sizes")}),
           items:
             Enum.map(changed, fn {label, target, count} ->
               Context.label_item(

@@ -61,6 +61,19 @@ defmodule BrandoAdmin.Components.Form.BlockField do
   `replace_form` cascade. The op reaches the other editors like any other.
   The bin clears on save — the save deletes the underlying rows, so stashed
   db ids go stale.
+
+  ## Undoing structure with ⌘Z
+
+  `@undo_stack` lists this editor's structural changes, newest first, each
+  with what undoes it: `:delete` (its snapshot is the bin's newest), a root
+  block's move (`{:move, uid, index, order}`) and a reorder of a parent's
+  children (`{:reorder_children, parent_uid, before, after}`). ⌘Z outside a
+  text field (`shortcuts/index.js`) undoes the newest, in the block field the
+  editor last worked in, if it shows; a delete goes through the same restore
+  as the bin toast's Undo. Any other change to the structure, this editor's
+  (an insert, a paste, a move to another parent) or another editor's, empties
+  it, so ⌘Z never steps over a change it cannot undo; and a move is only
+  undone while the order is still the one it left. It clears with the bin.
   """
   use BrandoAdmin, :live_component
   use Gettext, backend: Brando.Gettext
@@ -89,6 +102,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     {:ok,
      assign(socket,
        outline_items: [],
+       undo_stack: [],
        open_slot_uid: nil,
        slot_title: nil,
        note_observers: %{},
@@ -445,7 +459,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
   end
 
   def update(%{event: "delete_block", uid: uid}, socket) do
-    {:ok, socket |> stash_in_bin(uid) |> remove_block_from_state(uid)}
+    {:ok, recorded_delete(socket, uid, &remove_block_from_state(&1, uid))}
   end
 
   # blocks (any level) emit their content/structural ops directly — see
@@ -454,10 +468,21 @@ defmodule BrandoAdmin.Components.Form.BlockField do
   # Child deletes pass through the bin first — the op tears the subtree out
   # of the store, so the undo snapshot must be captured here.
   def update(%{event: "block_op", op: {:delete, uid} = op}, socket) do
-    {:ok,
-     socket
-     |> stash_in_bin(uid)
-     |> apply_block_op(op)}
+    {:ok, recorded_delete(socket, uid, &apply_block_op(&1, op, :recorded))}
+  end
+
+  # A reorder of a parent's children, remembered for ⌘Z when it only
+  # reordered them (a move to another parent changes which children it has).
+  def update(%{event: "block_op", op: {:reorder_children, parent_uid, _uids} = op}, socket) do
+    before = Map.get(socket.assigns.block_ops.child_order, parent_uid, [])
+    socket = apply_block_op(socket, op, :recorded)
+    now = Map.get(socket.assigns.block_ops.child_order, parent_uid, [])
+
+    cond do
+      now == before -> {:ok, socket}
+      Enum.sort(now) == Enum.sort(before) -> {:ok, push_undo(socket, {:reorder_children, parent_uid, before, now})}
+      true -> {:ok, assign(socket, :undo_stack, [])}
+    end
   end
 
   def update(%{event: "block_op", op: op}, socket) do
@@ -758,7 +783,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     # Bare id, not a selector — consumed by `data-ui-modal-show`.
     |> assign(:module_picker_id, "block-field-#{assigns.block_field}-module-picker")
     |> assign_clipboard_meta(read_clipboard(user_id))
-    |> assign(:block_bin, [])
+    |> clear_undo()
     |> assign(:blocks_changed?, false)
     |> assign(:edit_session, nil)
     |> assign(:local_focus, nil)
@@ -938,6 +963,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
         socket
         |> assign(:edit_session, replica)
         |> show_state(displayed, hint_uids(message.op))
+        |> forget_undo(message.op, :remote)
 
       :stale ->
         socket
@@ -953,6 +979,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
         socket
         |> assign(:edit_session, replica)
         |> show_state(displayed, :all)
+        |> assign(:undo_stack, [])
         |> report_rejection(op, message.reason)
 
       :stale ->
@@ -1017,7 +1044,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     socket
     |> assign(:edit_session, replica)
     |> assign(:session_base, message.base)
-    |> assign(:block_bin, [])
+    |> clear_undo()
     |> show_state(displayed, :all, also: rewritten, base: message.base)
     |> perform_rescues(rescues, payloads)
   end
@@ -1702,7 +1729,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
         |> assign(:entry_blocks, originals)
         |> assign(:seed_forms, Map.new(forms))
         |> apply_block_op({:replace_state, ops}, :replay)
-        |> assign(:block_bin, [])
+        |> clear_undo()
     end
   end
 
@@ -1854,7 +1881,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     |> show_state(restored, :all)
     |> refresh_roots(restored.order -- (restored.order -- socket.assigns.root_order))
     |> submit_to_session(op)
-    |> assign(:block_bin, [])
+    |> clear_undo()
     |> assign(:blocks_changed?, true)
     |> tap(fn socket -> send_update(BrandoAdmin.Components.Form, id: socket.assigns.form_id, event: "draft_dirty") end)
   end
@@ -2021,8 +2048,8 @@ defmodule BrandoAdmin.Components.Form.BlockField do
   # applied recovery copy — replay what was already accepted.
   defp apply_block_op(socket, op, mode \\ :local)
 
-  defp apply_block_op(%{assigns: %{source_locked: true}} = socket, op, :local)
-       when elem(op, 0) in @structural_ops,
+  defp apply_block_op(%{assigns: %{source_locked: true}} = socket, op, mode)
+       when mode in [:local, :recorded] and elem(op, 0) in @structural_ops,
        do: refuse_structure(socket, elem(op, 0))
 
   defp apply_block_op(socket, op, mode) do
@@ -2032,11 +2059,12 @@ defmodule BrandoAdmin.Components.Form.BlockField do
       {:ok, ops_state} ->
         send_update(BrandoAdmin.Components.Form, id: socket.assigns.form_id, event: "draft_dirty")
         # The frontend editor's own edits, not ones synced from other editors.
-        if mode == :local and socket.assigns.focus, do: send(self(), {:frontend_edit, :dirty})
+        if mode in [:local, :recorded, :undo] and socket.assigns.focus, do: send(self(), {:frontend_edit, :dirty})
 
         socket
         |> assign_ops(ops_state)
         |> assign(:blocks_changed?, true)
+        |> forget_undo(op, mode)
         |> submit_to_session(op)
         |> recheck_after_race(op)
 
@@ -2235,7 +2263,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     socket
     |> assign(:seed_forms, Map.merge(forms, seeds_for_new_roots(socket, state, Map.keys(forms))))
     |> assign_ops(state)
-    |> assign(:block_bin, [])
+    |> clear_undo()
     |> assign(:blocks_changed?, not Ops.pristine?(state, base))
   end
 
@@ -2249,7 +2277,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     |> assign_ops(base)
     # bin snapshots don't survive a save — the save deleted the underlying
     # rows, so their captured db ids are stale.
-    |> assign(:block_bin, [])
+    |> clear_undo()
     |> assign(:blocks_changed?, false)
   end
 
@@ -2301,6 +2329,94 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     end
   end
 
+  # A delete with its snapshot in the bin, and its ⌘Z entry after it
+  defp recorded_delete(socket, uid, delete) do
+    stashed? = Ops.known?(socket.assigns.block_ops, uid)
+    socket = socket |> stash_in_bin(uid) |> delete.()
+    if stashed?, do: push_undo(socket, :delete), else: socket
+  end
+
+  # Structural changes the stack does not record empty it: ⌘Z must not step
+  # over them to an older change. `:recorded` ops are the ones it records,
+  # `:undo` the ones it undoes with.
+  @unrecorded_structure @structural_ops ++ [:restore, :carry, :replace_state]
+
+  defp forget_undo(socket, _op, mode) when mode in [:recorded, :undo], do: socket
+  # This editor's own restore of a delete (the toast's Undo, or ⌘Z)
+  defp forget_undo(socket, {:restore, _}, mode) when mode != :remote, do: socket
+  defp forget_undo(socket, op, _mode) when elem(op, 0) in @unrecorded_structure, do: assign(socket, :undo_stack, [])
+  defp forget_undo(socket, _op, _mode), do: socket
+
+  defp clear_undo(socket), do: assign(socket, block_bin: [], undo_stack: [])
+
+  # `at` orders the changes of every block field in the form, for ⌘Z
+  defp push_undo(%{assigns: %{source_locked: true}} = socket, _entry), do: socket
+
+  defp push_undo(socket, entry),
+    do: update(socket, :undo_stack, &[{entry, System.unique_integer([:positive, :monotonic])} | &1])
+
+  defp drop_newest_delete(stack) do
+    case Enum.find_index(stack, &match?({:delete, _at}, &1)) do
+      nil -> stack
+      index -> List.delete_at(stack, index)
+    end
+  end
+
+  # A root block moved, with where it was and the order it left, so it is
+  # only moved back while that order still stands
+  defp recorded_root_move(socket, uid, to) do
+    case Enum.find_index(socket.assigns.block_ops.order, &(&1 == uid)) do
+      nil ->
+        apply_block_op(socket, {:move, uid, to})
+
+      index ->
+        socket = apply_block_op(socket, {:move, uid, to}, :recorded)
+        order = socket.assigns.block_ops.order
+        if Enum.at(order, index) == uid, do: socket, else: push_undo(socket, {:move, uid, index, order})
+    end
+  end
+
+  # Undoes a move or reorder from `@undo_stack`, with the ops a local change
+  # would send, so it reaches the other editors. Children belong to their
+  # mounted root, which takes them in the new order through `replace_form`,
+  # as a restored child does.
+  defp undo_structure(socket, {:move, uid, index, order}) do
+    if socket.assigns.block_ops.order == order do
+      socket
+      |> apply_block_op({:move, uid, index}, :undo)
+      |> refresh_live_preview()
+      |> maybe_rebuild_outline()
+      |> push_event("b:scroll_to", %{selector: "[data-block-uid=\"#{uid}\"]"})
+    else
+      socket
+    end
+  end
+
+  defp undo_structure(socket, {:reorder_children, parent_uid, before, after_reorder}) do
+    ops = socket.assigns.block_ops
+
+    if Ops.known?(ops, parent_uid) and Map.get(ops.child_order, parent_uid) == after_reorder do
+      socket = apply_block_op(socket, {:reorder_children, parent_uid, before}, :undo)
+      updated_ops = socket.assigns.block_ops
+      root_uid = Ops.root_of(updated_ops, parent_uid)
+      new_form = materialized_form(socket, updated_ops, root_uid)
+      send_update(Block, id: "block-#{root_uid}", event: "replace_form", form: new_form, remount_js: true)
+
+      socket
+      |> refresh_live_preview()
+      |> maybe_rebuild_outline()
+      |> push_event("b:scroll_to", %{selector: "[data-block-uid=\"#{parent_uid}\"]"})
+    else
+      socket
+    end
+  end
+
+  defp undo_at([{_entry, at} | _]), do: at
+  defp undo_at([]), do: nil
+
+  defp maybe_rebuild_outline(%{assigns: %{outline_items: []}} = socket), do: socket
+  defp maybe_rebuild_outline(socket), do: rebuild_outline_items(socket)
+
   # Undo a delete: replay the bin snapshot into the op store (a `{:restore,
   # snapshot}` op), then bring the block back on screen. A restored ROOT
   # mounts a fresh component from its re-materialized seed form (the shell
@@ -2333,7 +2449,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
   defp remove_block_from_state(socket, uid) do
     socket
     |> update(:seed_forms, &Map.delete(&1, uid))
-    |> apply_block_op({:delete, uid})
+    |> apply_block_op({:delete, uid}, :recorded)
     |> refresh_live_preview()
   end
 
@@ -2384,7 +2500,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
 
   def handle_event("reposition", %{"uid" => uid, "new" => new_idx, "old" => _old_idx}, socket) do
     socket
-    |> apply_block_op({:move, uid, new_idx})
+    |> recorded_root_move(uid, new_idx)
     |> refresh_live_preview()
     |> then(&{:noreply, &1})
   end
@@ -2453,7 +2569,10 @@ defmodule BrandoAdmin.Components.Form.BlockField do
         {:noreply, socket}
 
       [snapshot | rest] ->
-        socket = assign(socket, :block_bin, rest)
+        socket =
+          socket
+          |> assign(:block_bin, rest)
+          |> update(:undo_stack, &drop_newest_delete/1)
 
         case restore_from_snapshot(socket, snapshot) do
           {:ok, socket} ->
@@ -2471,7 +2590,24 @@ defmodule BrandoAdmin.Components.Form.BlockField do
   end
 
   def handle_event("clear_block_bin", _, socket) do
-    {:noreply, assign(socket, :block_bin, [])}
+    {:noreply,
+     socket
+     |> assign(:block_bin, [])
+     |> update(:undo_stack, fn stack -> Enum.reject(stack, &match?({:delete, _at}, &1)) end)}
+  end
+
+  # ⌘Z outside a text field: the newest structural change in this field
+  def handle_event("undo_structure", _, socket) do
+    case socket.assigns.undo_stack do
+      [] ->
+        {:noreply, socket}
+
+      [{:delete, _at} | _] ->
+        handle_event("restore_block", %{}, socket)
+
+      [{entry, _at} | rest] ->
+        {:noreply, socket |> assign(:undo_stack, rest) |> undo_structure(entry)}
+    end
   end
 
   # Outline: rebuild items when drawer opens
@@ -2505,7 +2641,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
 
   def handle_event("outline_root_reposition", %{"uid" => uid, "new" => new_idx, "old" => _old_idx}, socket) do
     socket
-    |> apply_block_op({:move, uid, new_idx})
+    |> recorded_root_move(uid, new_idx)
     |> refresh_live_preview()
     |> rebuild_outline_items()
     |> then(&{:noreply, &1})
@@ -2863,6 +2999,8 @@ defmodule BrandoAdmin.Components.Form.BlockField do
       data-block-field={"#{@form_name}[#{@block_field}]"}
       data-entry-id={@entry.id}
       data-paste-allow={Block.Render.paste_allow(@clipboard_meta)}
+      data-undo-at={undo_at(@undo_stack)}
+      data-undo={JS.push("undo_structure", target: @myself)}
     >
       <p :if={@source_locked && @focus.root} class="blocks-source-note">
         {gettext("Blocks, their order and media follow the source. Edit the text here.")}
@@ -2950,6 +3088,8 @@ defmodule BrandoAdmin.Components.Form.BlockField do
       data-block-field={"#{@form_name}[#{@block_field}]"}
       data-entry-id={@entry.id}
       data-paste-allow={Block.Render.paste_allow(@clipboard_meta)}
+      data-undo-at={undo_at(@undo_stack)}
+      data-undo={JS.push("undo_structure", target: @myself)}
     >
       <div :if={!@note_collection?} class="label-wrapper">
         <label class="control-label" data-field-presence={"#{@form_name}[#{@block_field}]"}>

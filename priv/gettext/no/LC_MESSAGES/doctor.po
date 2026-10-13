@@ -431,10 +431,15 @@ msgstr "Feil"
 msgid "GET /robots.txt goes to %{plug}"
 msgstr "GET /robots.txt går til %{plug}"
 
+#: lib/brando/doctor/checks/image_configs.ex
+#, elixir-autogen, elixir-format
+msgid "Go to image sizes"
+msgstr "Gå til bildestørrelser"
+
 #: lib/brando/doctor/checks/sitemap.ex
 #, elixir-autogen, elixir-format
-msgid "Generate sitemap"
-msgstr "Generer nettstedskart"
+msgid "Go to sitemap"
+msgstr "Gå til nettstedskart"
 
 #: lib/brando/doctor/source.ex
 #, elixir-autogen, elixir-format
@@ -530,11 +535,6 @@ msgstr "Åpne identitet"
 #, elixir-autogen, elixir-format
 msgid "Open images"
 msgstr "Åpne bilder"
-
-#: lib/brando/doctor/checks/image_configs.ex
-#, elixir-autogen, elixir-format
-msgid "Recreate changed images"
-msgstr "Lag endrede bilder på nytt"
 
 #: lib/brando/doctor/checks/modules.ex
 #, elixir-autogen, elixir-format

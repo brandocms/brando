@@ -1143,6 +1143,29 @@ h3 {
       margin-left: 0;
     }
   }
+
+  /* The -30px above overlaps 40px circles; tiny ones overlap by about half */
+  .circle.tiny {
+    margin-left: -12px;
+  }
+
+  &:hover .circle.tiny {
+    margin-left: 3px;
+  }
+
+  .circle.tiny:nth-of-type(1) {
+    margin-left: 0;
+  }
+}
+
+/* A palette option's label is the swatches followed by the name, as HTML,
+   in the select field and in its options dialog: keep them on one line */
+.select-label,
+.options-option {
+  .circle-stack {
+    display: inline-flex;
+    vertical-align: middle;
+  }
 }
 
 .circle {

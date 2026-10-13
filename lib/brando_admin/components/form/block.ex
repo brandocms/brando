@@ -48,6 +48,7 @@ defmodule BrandoAdmin.Components.Form.Block do
   alias Brando.Content.BlockSlots
   alias Brando.Content.BlockSlots.Lifecycle, as: CollectionLifecycle
   alias Brando.Tracing
+  alias Brando.Utils
   alias Brando.Villain.Blocks.GalleryObjectOverride
   alias BrandoAdmin.Components.Form.Block.Events
   alias BrandoAdmin.Components.Form.Block.LiquidPreview
@@ -1749,7 +1750,7 @@ defmodule BrandoAdmin.Components.Form.Block do
       entry = socket.assigns.entry
       changeset = maybe_preload_changeset_data(changeset, :vars, belongs_to)
       vars = liquid_block_vars(changeset, belongs_to)
-      splits = liquid_splits(module_code, vars, entry, socket.assigns)
+      splits = liquid_splits(module_code, vars, entry)
 
       socket
       |> assign(:liquid_splits, drop_empty_preview(splits))
@@ -1799,21 +1800,24 @@ defmodule BrandoAdmin.Components.Form.Block do
     end
   end
 
-  defp liquid_splits(module_code, vars, entry, assigns) do
+  @doc false
+  # The module's code in pieces for the editor's inline preview: markup as it
+  # is, and refs, vars and pictures to render in place.
+  def liquid_splits(module_code, vars, entry) do
     case LiquidPreview.strip_logic(module_code) do
       {:ok, module_code} ->
         module_code = strip_datasources(module_code)
 
         ~r/{% (?:ref|headless_ref) refs.(\w+) %}|<.*?>|\{\{\s?(.*?)\s?\}\}|{% picture ([a-zA-Z0-9_.?|"-]+) {.*} %}/
         |> Regex.split(module_code, include_captures: true)
-        |> Enum.map(&liquid_split(&1, vars, entry, assigns))
+        |> Enum.map(&liquid_split(&1, vars, entry))
 
       {:error, reason} ->
         [{:liquid_error, reason}]
     end
   end
 
-  defp liquid_split(chunk, vars, entry, assigns) do
+  defp liquid_split(chunk, vars, entry) do
     case Regex.run(
            ~r/^{% (?:ref|headless_ref) refs.(?<ref>\w+) %}$|^{{ (?<content>[\w\s.|\"\']+) }}$|^{% picture (?<picture>[a-zA-Z0-9_.?|"-]+) {.*} %}$/,
            chunk,
@@ -1834,8 +1838,8 @@ defmodule BrandoAdmin.Components.Form.Block do
       [module_variable, "", ""] ->
         {:module_variable, module_variable, liquid_render_module_variable(module_variable, vars)}
 
-      ["", "entry." <> pic = pic_var, ""] ->
-        {:entry_picture, pic_var, liquid_render_entry_picture_src(pic, assigns)}
+      ["", "entry." <> pic, ""] ->
+        {:entry_picture, "entry." <> pic, liquid_render_entry_picture_src(pic, entry)}
 
       ["", pic, ""] ->
         {:module_picture, pic, liquid_render_module_picture_src(pic, vars)}
@@ -2748,6 +2752,9 @@ defmodule BrandoAdmin.Components.Form.Block do
       {:entry_variable, variable, _}, acc ->
         [{:entry_variable, variable, liquid_render_entry_variable(variable, entry)} | acc]
 
+      {:entry_picture, "entry." <> pic = pic_var, _}, acc ->
+        [{:entry_picture, pic_var, liquid_render_entry_picture_src(pic, entry)} | acc]
+
       item, acc ->
         [item | acc]
     end)
@@ -2931,18 +2938,23 @@ defmodule BrandoAdmin.Components.Form.Block do
   defp strip_datasources(code),
     do: Regex.replace(~r/{% datasource %}.*?{% enddatasource %}/s, code, "")
 
-  defp liquid_render_entry_picture_src("entry." <> var_path_string, assigns) do
-    entry = assigns.entry
-
+  # `var_path_string` is the path after `entry.`, as for entry variables
+  defp liquid_render_entry_picture_src(var_path_string, entry) do
     var_path =
       var_path_string
       |> String.split(".")
       |> Enum.map(&String.to_existing_atom/1)
 
-    case Brando.Utils.try_path(entry, var_path ++ [:path]) do
-      nil -> ""
-      path -> Brando.Utils.media_url(path)
+    # The image, not only its path: one only the CDN has is served from there
+    case Utils.try_path(entry, var_path) do
+      %{path: path} = image when is_binary(path) ->
+        Utils.img_url(image, :original, prefix: Utils.media_url())
+
+      _ ->
+        ""
     end
+  rescue
+    ArgumentError -> ""
   end
 
   defp liquid_render_module_picture_src(var_name, vars) do
