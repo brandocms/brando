@@ -66,9 +66,37 @@ export default () => ({
       this.pending = { index: index < 0 ? rows.length : index }
     }
 
-    this.observer = new MutationObserver(() => this.reveal())
-    this.observer.observe(this.el, { childList: true, subtree: true })
+    this.observer = new MutationObserver(() => {
+      this.syncNames()
+      this.reveal()
+    })
+    this.observer.observe(this.el, { childList: true, subtree: true, attributes: true, attributeFilter: ['name'] })
     this.el.addEventListener('click', this.onClick)
+  },
+
+  updated() {
+    this.syncNames()
+  },
+
+  // inputs_for keeps a row's DOM id stable but names its inputs by position.
+  // A removal can patch the hidden identity while a pending change still
+  // locks an input under the old position. Match names to the rendered row,
+  // leaving values, focus and LiveView's locks alone. Observe descendant
+  // patches too: unlocking an input need not update this hook's element.
+  syncNames() {
+    for (const row of this.el.querySelectorAll('.subform-entry')) {
+      const identity = row.querySelector(':scope > input[name$="[_persistent_id]"]')
+      if (!identity) continue
+      const name = identity.name.slice(0, -'[_persistent_id]'.length)
+      const position = name.match(/^(.*)\[\d+\]$/)
+      if (!position) continue
+      const prefix = position[1].replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+      const previous = new RegExp(`^${prefix}\\[\\d+\\](?=\\[)`)
+      for (const input of row.querySelectorAll('input[name], textarea[name], select[name], button[name]')) {
+        const next = input.name.replace(previous, () => name)
+        if (input.name !== next) input.name = next
+      }
+    }
   },
 
   destroyed() {

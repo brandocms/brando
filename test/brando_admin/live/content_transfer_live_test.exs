@@ -82,6 +82,23 @@ defmodule BrandoAdmin.ContentTransferLiveTest do
   defp apply_disabled?(view), do: disabled?(view, "#transfer-apply")
   defp review_disabled?(view), do: disabled?(view, "#transfer-upload-form button[type=submit]")
 
+  # cancel_upload marks a live upload cancelled immediately, but removes its
+  # entry only after the upload channel's :DOWN. render_async does not wait
+  # for that monitor message, so observe removal before testing the empty UI.
+  defp wait_for_upload_removal(view, attempts \\ 100) do
+    cond do
+      not has_element?(view, "#transfer-upload-form button[aria-label='Remove file']") ->
+        :ok
+
+      attempts == 0 ->
+        flunk("upload was not removed after cancellation")
+
+      true ->
+        Process.sleep(10)
+        wait_for_upload_removal(view, attempts - 1)
+    end
+  end
+
   defp search(view, query), do: view |> element("#transfer-search") |> render_change(%{"query" => query})
 
   defp export(view, conn) do
@@ -526,6 +543,7 @@ defmodule BrandoAdmin.ContentTransferLiveTest do
     assert text(view, "#transfer-upload-form") =~ "Bundle uploaded"
     assert view |> find("#transfer-upload-form input[type=file]") |> Floki.attribute("hidden") != []
     click(view, "#transfer-upload-form button[aria-label='Remove file']")
+    wait_for_upload_removal(view)
     assert review_disabled?(view)
     assert view |> find("#transfer-upload-form input[type=file]") |> Floki.attribute("hidden") == []
     upload(view, binary, name)
