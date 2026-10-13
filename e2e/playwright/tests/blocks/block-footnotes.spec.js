@@ -18,9 +18,11 @@ const appendModule = async (page, name) => {
 const placeCaretAtEnd = async editor => {
   const text = await editor.innerText()
   await editor.click()
-  // Bare End scrolls on macOS; it did not move the caret in the old example.
-  await editor.press('ControlOrMeta+a')
-  await editor.press('ArrowRight')
+  await expect(editor).toBeEditable()
+  // Set the model's caret too: ProseMirror's deferred focus can restore the
+  // select-all range between a native ArrowRight and its selectionchange event.
+  await editor.evaluate(element => element.editor.commands.focus('end'))
+  await expect(editor).toBeFocused()
   await expect.poll(() => editor.evaluate(element => {
     const selection = window.getSelection()
     if (!selection?.rangeCount || !selection.isCollapsed || !element.contains(selection.anchorNode)) return null
