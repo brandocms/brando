@@ -36,6 +36,7 @@ test('unlisted translations survive unrelated edits and clearing configured lang
     await expect(page).toHaveURL(/\/admin\/config\/content\/modules$/)
     await page.goto(url)
     await syncLV(page)
+    await page.getByRole('tab', { name: 'Oversikt', exact: true }).click()
   }
 
   async function retainedTranslations() {
@@ -49,6 +50,7 @@ test('unlisted translations survive unrelated edits and clearing configured lang
 
   await page.goto(url)
   await syncLV(page)
+  await page.getByRole('tab', { name: 'Oversikt', exact: true }).click()
   // Neither edit touches a translated field, but both submit the form's
   // current language maps. The nested label must survive the patches too.
   await page.getByLabel('CSS-klasse', { exact: true }).fill('unlisted-translations-edited')
