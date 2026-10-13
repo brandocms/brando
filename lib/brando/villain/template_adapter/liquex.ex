@@ -119,7 +119,7 @@ defmodule Brando.Villain.TemplateAdapter.Liquex do
       |> map_vars()
       |> Map.merge(%{"request" => request})
 
-    {:ok, entries} = Brando.Datasource.list_results(module, query, mapped_vars, language)
+    {:ok, entries} = Brando.Datasource.list_results(module, query, mapped_vars, language, :list)
 
     Context.assign(context, :entries, entries || [])
   end
@@ -141,6 +141,17 @@ defmodule Brando.Villain.TemplateAdapter.Liquex do
     context
     |> Context.assign(:entries, entries || [])
     |> Context.assign(:entries_with_meta, entries_with_meta || [])
+  end
+
+  # The one entry chosen for a `:single` block, as `entries`.
+  defp add_datasource_entries_to_context(
+         context,
+         %{datasource: true, datasource_type: :single, datasource_module: module, datasource_query: query},
+         block
+       ) do
+    ids = block.block_identifiers |> Enum.sort_by(&(&1.sequence || 0)) |> Enum.map(& &1.identifier_id)
+    {:ok, entries} = Brando.Datasource.get_single_entries(module, query, ids)
+    Context.assign(context, :entries, entries)
   end
 
   defp add_datasource_entries_to_context(context, _, _),

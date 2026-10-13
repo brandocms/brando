@@ -6,6 +6,7 @@ if Code.ensure_loaded?(Igniter) do
     use Igniter.Mix.Task
 
     alias Mix.Brando.Igniter.AdminFormViews
+    alias Mix.Brando.Igniter.Mailer
     alias Mix.Brando.Igniter.SourceUpgrade
     alias Mix.Brando.Igniter.SourceUpgrade.BlueprintGettext
     alias Mix.Brando.Igniter.SourceUpgrade.BuiltinActions
@@ -67,6 +68,10 @@ if Code.ensure_loaded?(Igniter) do
       |> AdminFormViews.consolidate()
       |> ViewHelpers.upgrade()
       |> ConfigRewrites.upgrade()
+      # migrate55's `config :brando` settings too, since each later edit of
+      # the configuration recompiles Brando. It evaluates the config files,
+      # so it runs after `use Mix.Config` became `import Config`.
+      |> Mailer.configure_for_upgrade()
       |> add_notices()
       |> add_warnings()
     end
@@ -85,8 +90,9 @@ if Code.ensure_loaded?(Igniter) do
 
       Legacy listing columns become a row component: image fields
       `<.cover>`, url fields `<.url>`, a Liquid template linking to the
-      entry's update form `<.update_link>`, with `{{ entry.x }}` and
-      `{% if entry.x %}` written as HEEx. Language columns are dropped. A
+      entry's update form `<.update_link>` (markup after the link in its
+      `:outside` slot), with `{{ entry.x }}`, `{% if entry.x %}` and
+      `{% for x in entry.xs %}` written as HEEx. Language columns are dropped. A
       listing with any other column is left as it is and listed below.
       Actions whose event is `edit_entry`, `duplicate_entry` or
       `delete_entry` are removed from listings that keep `default_actions`,
@@ -103,7 +109,15 @@ if Code.ensure_loaded?(Igniter) do
       `filter:` keys, root Docker digest commands, and font cache suffixes. It
       adds the Brando Repo configuration when exactly one Ecto Repo is
       available, and removes `processor_module: Brando.Images.Processor.Sharp`
-      (Brando refuses to boot with it; Vix is the default). Phoenix.View-era
+      (Brando refuses to boot with it; Vix is the default).
+
+      It also writes the settings `mix brando.migrate55` and
+      `mix brando.doctor` ask for: `config :brando, mailer:` (creating
+      `MyApp.Mailer` when the application has no Swoosh mailer) and a
+      placeholder sender, `config :brando, Brando.Mailer, from:`, when none
+      is set. Every change to the configuration recompiles Brando#{placeholder_note(igniter)}
+
+      Phoenix.View-era
       `ErrorHelpers`, `view/0` and `view_helpers/0`, which phoenix_html 4 no
       longer compiles, are deleted when nothing uses them, and their
       `use Phoenix.HTML` replaced when something does. A Phoenix
@@ -122,6 +136,12 @@ if Code.ensure_loaded?(Igniter) do
       See `guides/migrating_from_053.md` in Brando for the full recovery,
       rebaseline, and gettext instructions.
       """)
+    end
+
+    defp placeholder_note(igniter) do
+      if Mailer.sender_to_set?(igniter),
+        do: ", so replace the\nplaceholder's `noreply@example.com` before you first compile.",
+        else: "."
     end
 
     defp add_warnings(igniter) do

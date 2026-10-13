@@ -444,7 +444,42 @@ defmodule Mix.Tasks.Brando.Migrate55Test do
     chosen = @brando_config <> "\nconfig :brando, mailer: LegacyApp.Notifications.Mailer\n"
     mailer = "defmodule LegacyApp.Mailer do\n  use Swoosh.Mailer, otp_app: :legacy_app\nend\n"
     igniter = migrate(@blueprint_054, %{"lib/legacy_app/mailer.ex" => mailer, @brando_config_path => chosen})
+    brando = source(igniter, @brando_config_path)
+
+    assert brando =~ "config :brando, mailer: LegacyApp.Notifications.Mailer\n"
+    refute brando =~ "mailer: LegacyApp.Mailer"
+    # The sender `mix brando.doctor` asks for goes in with it.
+    assert brando =~ ~s|config :brando, Brando.Mailer, from: {"LegacyApp", "noreply@example.com"}|
+
+    sent = chosen <> ~s|\nconfig :brando, Brando.Mailer, from: {"Lett", "post@lett.no"}\n|
+    igniter = migrate(@blueprint_054, %{"lib/legacy_app/mailer.ex" => mailer, @brando_config_path => sent})
     assert_unchanged(igniter, @brando_config_path)
+
+    # A real sender is set, so nothing asks to replace a placeholder.
+    refute Enum.any?(igniter.warnings, &(&1 =~ "noreply@example.com"))
+    assert_has_warning(igniter, &(&1 =~ "the mailer's production adapter in `config/runtime.exs`"))
+
+    # A placeholder in development, but production sends from a real one.
+    environments = %{
+      "lib/legacy_app/mailer.ex" => mailer,
+      @brando_config_path => chosen,
+      "config/dev.exs" => ~s|import Config\nconfig :brando, Brando.Mailer, from: {"Lett", "noreply@example.com"}\n|,
+      "config/runtime.exs" => """
+      import Config
+
+      if config_env() == :prod do
+        config :brando, Brando.Mailer, from: {"Lett", "post@lett.no"}
+      end
+      """
+    }
+
+    igniter = migrate(@blueprint_054, environments)
+    refute Enum.any?(igniter.warnings, &(&1 =~ "noreply@example.com"))
+
+    # A placeholder still is.
+    placeholder = chosen <> ~s|\nconfig :brando, Brando.Mailer, from: {"Lett", "noreply@example.com"}\n|
+    igniter = migrate(@blueprint_054, %{"lib/legacy_app/mailer.ex" => mailer, @brando_config_path => placeholder})
+    assert_has_warning(igniter, &(&1 =~ "in place of the\n    `noreply@example.com` placeholder"))
   end
 
   describe "modules renamed in 0.55" do
@@ -1944,6 +1979,383 @@ defmodule Mix.Tasks.Brando.Migrate55Test do
     end
   end
 
+  test "gives a Plural-Forms rule that ran into the next header line a line of its own" do
+    # koi's 0.53 backend catalogs, written by Poedit 3.0.1
+    po = fn header_lines ->
+      ~s|# A comment\nmsgid ""\nmsgstr ""\n"Language: no\\n"\n| <>
+        header_lines <> ~s|\n#: lib/koi/team/member.ex:121\nmsgid "Hello"\nmsgstr "Hei"\n|
+    end
+
+    paths = %{
+      next_header: "priv/gettext/backend/no/LC_MESSAGES/default.po",
+      repeated_header: "priv/gettext/backend/no/LC_MESSAGES/menus.po",
+      split_name: "priv/gettext/backend/no/LC_MESSAGES/articles_article_forms.po",
+      stray_line: "priv/gettext/backend/no/LC_MESSAGES/projects_project_forms.po",
+      complete: "priv/gettext/backend/en/LC_MESSAGES/default.po"
+    }
+
+    rule = ~s|"Plural-Forms: nplurals=2; plural=(n != 1);\\n"\n|
+    poedit_330 = ~s|"X-Generator: Poedit 3.3.2\\n"\n|
+
+    igniter =
+      migrate(@blueprint_054, %{
+        paths.next_header => po.(~s|"Plural-Forms: nplurals=2; plural=(n != 1);"\n"X-Generator: Poedit 3.0.1\\n"\n|),
+        paths.repeated_header =>
+          po.(~s|"Plural-Forms: nplurals=2; plural=(n != 1);"\n"X-Generator: Poedit 3.0.1;\\n"\n| <> poedit_330),
+        paths.split_name =>
+          po.(~s|"Plural-Forms: nplurals=2; plural=(n != 1);X-"\n"Generator: Poedit 3.0.1;\\n"\n| <> poedit_330),
+        paths.stray_line =>
+          po.(~s|"Plural-Forms: nplurals=2; plural=(n != 1);X-Generator: Poedit "\n"3.0.1;\\n"\n| <> poedit_330),
+        paths.complete => po.(rule <> poedit_330)
+      })
+
+    assert source(igniter, paths.next_header) == po.(rule <> ~s|"X-Generator: Poedit 3.0.1\\n"\n|)
+
+    for path <- [paths.repeated_header, paths.split_name, paths.stray_line] do
+      assert source(igniter, path) == po.(rule <> poedit_330)
+    end
+
+    assert_unchanged(igniter, paths.complete)
+
+    for path <- [paths.next_header, paths.stray_line] do
+      assert {:ok, %Expo.PluralForms{nplurals: 2}} =
+               igniter
+               |> source(path)
+               |> Expo.PO.parse_string!()
+               |> Expo.Messages.get_header("Plural-Forms")
+               |> Enum.join()
+               |> Expo.PluralForms.parse()
+    end
+
+    assert_has_notice(igniter, fn notice ->
+      notice =~ "ran into the next header line" and notice =~ "#{paths.next_header}\n" and
+        notice =~ ~s|#{paths.stray_line} (removed "X-Generator: Poedit 3.0.1;")|
+    end)
+
+    assert_idempotent(igniter, Map.values(paths))
+  end
+
+  test "writes get_entries_from_identifiers' preloads as options, and lists a call it cannot" do
+    # koi's Project selection datasource
+    path = "lib/legacy_app/projects/featured.ex"
+
+    featured = """
+    defmodule LegacyApp.Projects.Featured do
+      alias Brando.Content
+
+      def get(identifiers) do
+        Brando.Content.get_entries_from_identifiers(
+          identifiers,
+          [:categories, :cover, :palette]
+        )
+      end
+
+      def piped(identifiers), do: identifiers |> Content.get_entries_from_identifiers([:cover])
+      def mapped(identifiers), do: Content.get_entries_from_identifiers(identifiers, %{preload: [:cover]})
+      def given(identifiers, preloads), do: Content.get_entries_from_identifiers(identifiers, preloads)
+    end
+    """
+
+    igniter = migrate(@blueprint_054, %{path => featured})
+    migrated = source(igniter, path)
+
+    assert migrated =~ "%{preload: [:categories, :cover, :palette]}"
+    assert migrated =~ "identifiers |> Content.get_entries_from_identifiers(%{preload: [:cover]})"
+    assert migrated =~ "Content.get_entries_from_identifiers(identifiers, %{preload: [:cover]})"
+    assert migrated =~ "Content.get_entries_from_identifiers(identifiers, preloads)"
+    refute migrated =~ ~r/get_entries_from_identifiers\([^%]*\[:/
+
+    assert_has_warning(igniter, fn warning ->
+      warning =~ "get_entries_from_identifiers" and warning =~ "#{path}:13" and
+        warning =~ "%{preload: preloads}"
+    end)
+
+    assert_idempotent(igniter, path)
+  end
+
+  test "rewrites get_entries_from_identifiers only where Content is Brando.Content" do
+    path = "lib/legacy_app/featured.ex"
+
+    featured = """
+    # alias Brando.Content
+    defmodule LegacyApp.Featured do
+      alias Brando.Content
+
+      def a(ids), do: Content.get_entries_from_identifiers(ids, [:cover])
+      def b(ids), do: ids |> Brando.Content.get_entries_from_identifiers(%{preload: [:cover]})
+    end
+
+    defmodule LegacyApp.Shop do
+      alias LegacyApp.Content
+
+      def c(ids), do: Content.get_entries_from_identifiers(ids, [:price])
+    end
+
+    defmodule LegacyApp.Plain do
+      def d(ids), do: Content.get_entries_from_identifiers(ids, [:price])
+    end
+    """
+
+    igniter = migrate(@blueprint_054, %{path => featured})
+    migrated = source(igniter, path)
+
+    assert migrated =~ "def a(ids), do: Content.get_entries_from_identifiers(ids, %{preload: [:cover]})"
+    assert migrated =~ "def c(ids), do: Content.get_entries_from_identifiers(ids, [:price])"
+    assert migrated =~ "def d(ids), do: Content.get_entries_from_identifiers(ids, [:price])"
+
+    # Nothing to list: the piped call already passes options, and the others
+    # are not Brando's.
+    refute Enum.any?(igniter.warnings, &(&1 =~ "get_entries_from_identifiers"))
+  end
+
+  describe "redundant `use Phoenix.Component`" do
+    # koi's 0.53 controller HTML modules
+    @page_html_path "lib/legacy_app_web/controllers/page_html.ex"
+    @page_html """
+    defmodule LegacyAppWeb.PageHTML do
+      use BrandoWeb, :html
+      use Phoenix.Component
+      import LegacyAppWeb.Components
+      embed_templates "page_html/*"
+    end
+    """
+
+    @web_path "lib/legacy_app_web.ex"
+    @web """
+    defmodule LegacyAppWeb do
+      def html do
+        quote do
+          use Phoenix.Component
+          import Phoenix.HTML
+        end
+      end
+
+      def controller do
+        quote do
+          use Phoenix.Controller, formats: [:html]
+        end
+      end
+
+      defmacro __using__(which) when is_atom(which), do: apply(__MODULE__, which, [])
+    end
+    """
+
+    test "drops it after a `use` that already brings Phoenix.Component in" do
+      own = """
+      defmodule LegacyAppWeb.ArticleHTML do
+        use LegacyAppWeb, :html
+        use Phoenix.Component
+      end
+      """
+
+      controller = """
+      defmodule LegacyAppWeb.Partials do
+        use LegacyAppWeb, :controller
+        use Phoenix.Component
+      end
+      """
+
+      igniter =
+        migrate(@blueprint_054, %{
+          @page_html_path => @page_html,
+          @web_path => @web,
+          "lib/legacy_app_web/controllers/article_html.ex" => own,
+          "lib/legacy_app_web/partials.ex" => controller
+        })
+
+      assert source(igniter, @page_html_path) == """
+             defmodule LegacyAppWeb.PageHTML do
+               use BrandoWeb, :html
+               import LegacyAppWeb.Components
+               embed_templates "page_html/*"
+             end
+             """
+
+      refute source(igniter, "lib/legacy_app_web/controllers/article_html.ex") =~ "use Phoenix.Component"
+      assert source(igniter, "lib/legacy_app_web/partials.ex") =~ "use Phoenix.Component"
+
+      assert_has_notice(igniter, &(&1 =~ "#{@page_html_path}:3" and &1 =~ "use Phoenix.Component"))
+      assert_idempotent(igniter, @page_html_path)
+    end
+
+    test "keeps one that comes before the `use` that brings it in" do
+      first = """
+      defmodule LegacyAppWeb.CardHTML do
+        use Phoenix.Component
+
+        attr :title, :string
+        def card(assigns), do: ~H"<h2>{@title}</h2>"
+
+        use BrandoWeb, :html
+      end
+      """
+
+      path = "lib/legacy_app_web/components/card_html.ex"
+      igniter = migrate(@blueprint_054, %{path => first})
+
+      assert source(igniter, path) =~ "use Phoenix.Component\n"
+      refute Enum.any?(igniter.notices, &(&1 =~ path))
+    end
+  end
+
+  describe "DashboardLive" do
+    @dashboard_path "lib/legacy_app_admin/live/dashboard_live.ex"
+
+    # koi's: the old installer's, without its Gettext import
+    @old_dashboard """
+    defmodule LegacyAppAdmin.DashboardLive do
+      use BrandoAdmin.LiveView.Listing, schema: nil
+      alias BrandoAdmin.Components.Content
+
+      def render(assigns) do
+        ~H\"\"\"
+        <Content.header title="Dashboard" subtitle={@current_user.name} />
+        \"\"\"
+      end
+    end
+    """
+
+    test "replaces the old installer's DashboardLive, which renders only a header" do
+      with_import =
+        String.replace(@old_dashboard, "Content\n", "Content\n  import LegacyAppAdmin.Gettext\n")
+
+      for dashboard <- [@old_dashboard, with_import] do
+        igniter = migrate(@blueprint_054, %{@dashboard_path => dashboard})
+        replaced = source(igniter, @dashboard_path)
+
+        assert replaced =~ "defmodule LegacyAppAdmin.DashboardLive do"
+        assert replaced =~ "alias BrandoAdmin.Components.Dashboard"
+        assert replaced =~ ~s(<.live_component module={Dashboard} id="admin-dashboard")
+        refute replaced =~ "Content.header"
+        assert_has_notice(igniter, &(&1 =~ "#{@dashboard_path} was the old installer's DashboardLive"))
+        assert_idempotent(igniter, @dashboard_path)
+      end
+    end
+
+    test "formats the DashboardLive it writes, as the application's formatter does" do
+      formatter = """
+      [
+        plugins: [Phoenix.LiveView.HTMLFormatter],
+        inputs: ["*.{heex,ex,exs}", "{config,lib,test}/**/*.{heex,ex,exs}"]
+      ]
+      """
+
+      igniter = migrate(@blueprint_054, %{@dashboard_path => @old_dashboard, ".formatter.exs" => formatter})
+
+      assert source(igniter, @dashboard_path) =~ """
+                 ~H\"\"\"
+                 <.live_component
+                   module={Dashboard}
+                   id="admin-dashboard"
+                   current_user={@current_user}
+                   authorization={@authorization}
+                 />
+                 \"\"\"
+             """
+    end
+
+    test "lists a DashboardLive that renders a header and something else" do
+      edited =
+        String.replace(
+          @old_dashboard,
+          ~s(<Content.header title="Dashboard" subtitle={@current_user.name} />),
+          ~s(<Content.header title="Dashboard" subtitle={@current_user.name} />\n    <p>Velkommen</p>)
+        )
+
+      igniter = migrate(@blueprint_054, %{@dashboard_path => edited})
+
+      assert_unchanged(igniter, @dashboard_path)
+      assert_has_warning(igniter, &(&1 =~ "#{@dashboard_path} renders `Content.header`"))
+    end
+  end
+
+  describe "reloadable_apps" do
+    # koi's 0.53 config/dev.exs
+    defp dev_config(apps) do
+      """
+      import Config
+
+      config :legacy_app, LegacyAppWeb.Endpoint,
+        http: [port: 4000],
+        live_reload: [
+          patterns: [
+            ~r"priv/gettext/.*(po)$"
+          ]
+        ],
+        # reloadable_compilers: [:gettext, :phoenix, :elixir],
+        reloadable_apps: #{apps}
+
+      config :logger, :console, format: "[$level] $message\\n"
+      """
+    end
+
+    test "drops reloadable_apps that name Brando, and lists it" do
+      igniter = migrate(@blueprint_054, %{"config/dev.exs" => dev_config("[:legacy_app, :brando]")})
+      dev = source(igniter, "config/dev.exs")
+
+      refute dev =~ "reloadable_apps"
+      assert dev =~ ~S|~r"priv/gettext/.*(po)$"|
+      assert dev =~ ~S|config :logger, :console, format: "[$level] $message\n"|
+
+      # Line 13: the mailer step adds its adapter config above the endpoint's.
+      assert_has_notice(igniter, fn notice ->
+        notice =~ "Removed Brando and the Hex and git dependencies" and
+          notice =~ "config/dev.exs:13: reloadable_apps: [:legacy_app, :brando]"
+      end)
+
+      assert_idempotent(igniter, "config/dev.exs")
+    end
+
+    test "keeps a path dependency the team edits alongside the application" do
+      mix_exs = """
+      defmodule LegacyApp.MixProject do
+        use Mix.Project
+
+        def project do
+          [app: :legacy_app, version: "0.1.0", deps: deps()]
+        end
+
+        defp deps do
+          [
+            {:brando, path: "../brando", override: true},
+            {:fehn, path: "../fehn"},
+            {:jason, "~> 1.4"},
+            {:lettering, github: "lett/lettering"}
+          ]
+        end
+      end
+      """
+
+      igniter =
+        migrate(@blueprint_054, %{
+          "mix.exs" => mix_exs,
+          "config/dev.exs" => dev_config("[:legacy_app, :brando, :fehn, :jason, :lettering]")
+        })
+
+      assert source(igniter, "config/dev.exs") =~ "reloadable_apps: [:legacy_app, :fehn]\n"
+
+      assert_has_notice(igniter, fn notice ->
+        notice =~ "reloadable_apps: [:legacy_app, :brando, :fehn, :jason, :lettering]" and
+          notice =~ "now [:legacy_app, :fehn]" and notice =~ "which you may edit alongside it"
+      end)
+
+      assert_idempotent(igniter, "config/dev.exs")
+    end
+
+    test "drops a list of dependencies only" do
+      dev = @blueprint_054 |> migrate(%{"config/dev.exs" => dev_config("[:brando]")}) |> source("config/dev.exs")
+      refute dev =~ "reloadable_apps"
+    end
+
+    test "leaves the application's own name, and an empty list, alone" do
+      for apps <- ["[:legacy_app]", "[]"] do
+        igniter = migrate(@blueprint_054, %{"config/dev.exs" => dev_config(apps)})
+        assert source(igniter, "config/dev.exs") =~ "reloadable_apps: #{apps}\n"
+        refute Enum.any?(igniter.notices, &(&1 =~ "reloadable_apps"))
+      end
+    end
+  end
+
   test "completes Plural-Forms headers Gettext 1.0 cannot parse" do
     po = fn plural_forms ->
       """
@@ -2086,6 +2498,127 @@ defmodule Mix.Tasks.Brando.Migrate55Test do
 
       rerun = igniter |> apply_igniter!() |> include_test_files() |> Migrate55.igniter()
       assert_unchanged(rerun, ["#{@backend_no}/projects_project.po", "#{@frontend_no}/projects_project.po"])
+    end
+
+    test "copies only into the catalogs of the Gettext backend the Blueprint translates through" do
+      # koi's two backends, as migrate54 leaves them
+      backends = """
+      defmodule LegacyAppWeb.Gettext do
+        use Gettext.Backend, otp_app: :legacy_app, priv: "priv/gettext/frontend"
+      end
+
+      defmodule LegacyAppAdmin.Gettext do
+        use Gettext.Backend, otp_app: :legacy_app, priv: "priv/gettext/backend"
+      end
+      """
+
+      blueprint =
+        String.replace(
+          @blueprint_054,
+          "attribute :title, :string",
+          ~s|attribute :title, :string\n\n  forms do\n    form do\n      tab t("Content") do\n      end\n    end\n  end|
+        )
+
+      igniter =
+        migrate(blueprint, %{
+          "lib/legacy_app_web/gettext.ex" => backends,
+          "#{@backend_no}/projects_project_naming.po" => catalog("no", [{"project", "prosjekt"}]),
+          "#{@frontend_no}/projects_project_naming.po" => catalog("no", [{"project", "prosjekt"}]),
+          "#{@frontend_no}/default.po" => catalog("no", [{"Content", "Innhold"}]),
+          "#{@backend_no}/default.po" => catalog("no", [{"Content", "Innhold"}])
+        })
+
+      assert_creates(igniter, "#{@backend_no}/projects_project.po", fn contents ->
+        assert translations(contents) == %{"project" => "prosjekt", "Content" => "Innhold"}
+      end)
+
+      refute_creates(igniter, "#{@frontend_no}/projects_project.po")
+    end
+
+    test "reads a backend's catalog directory from the application's config" do
+      backends = """
+      defmodule LegacyAppWeb.Gettext do
+        use Gettext.Backend, otp_app: :legacy_app
+      end
+
+      defmodule LegacyAppAdmin.Gettext do
+        use Gettext.Backend, otp_app: :legacy_app
+      end
+      """
+
+      config =
+        @config <>
+          """
+
+          config :legacy_app, LegacyAppWeb.Gettext, priv: "priv/gettext/frontend"
+          config :legacy_app, LegacyAppAdmin.Gettext, priv: "priv/gettext/backend"
+          """
+
+      igniter =
+        migrate(@blueprint_054, %{
+          @config_path => config,
+          "lib/legacy_app_web/gettext.ex" => backends,
+          "#{@backend_no}/projects_project_naming.po" => catalog("no", [{"project", "prosjekt"}]),
+          "#{@frontend_no}/projects_project_naming.po" => catalog("no", [{"project", "prosjekt"}])
+        })
+
+      assert_creates(igniter, "#{@backend_no}/projects_project.po")
+      refute_creates(igniter, "#{@frontend_no}/projects_project.po")
+
+      # A directory the task cannot read copies everywhere, as before.
+      dynamic = String.replace(config, ~s(priv: "priv/gettext/backend"), ~s|priv: System.get_env("CATALOGS")|)
+
+      igniter =
+        migrate(@blueprint_054, %{
+          @config_path => dynamic,
+          "lib/legacy_app_web/gettext.ex" => backends,
+          "#{@backend_no}/projects_project_naming.po" => catalog("no", [{"project", "prosjekt"}]),
+          "#{@frontend_no}/projects_project_naming.po" => catalog("no", [{"project", "prosjekt"}])
+        })
+
+      assert_creates(igniter, "#{@backend_no}/projects_project.po")
+      assert_creates(igniter, "#{@frontend_no}/projects_project.po")
+
+      # Commented-out config is not config.
+      commented =
+        String.replace(
+          config,
+          ~s(config :legacy_app, LegacyAppAdmin.Gettext, priv: "priv/gettext/backend"),
+          ~s(config :legacy_app, LegacyAppAdmin.Gettext, priv: "priv/gettext/backend"\n# config :legacy_app, LegacyAppAdmin.Gettext, priv: "priv/gettext/old")
+        )
+
+      igniter =
+        migrate(@blueprint_054, %{
+          @config_path => commented,
+          "lib/legacy_app_web/gettext.ex" => backends,
+          "#{@backend_no}/projects_project_naming.po" => catalog("no", [{"project", "prosjekt"}]),
+          "#{@frontend_no}/projects_project_naming.po" => catalog("no", [{"project", "prosjekt"}])
+        })
+
+      assert_creates(igniter, "#{@backend_no}/projects_project.po")
+      refute_creates(igniter, "#{@frontend_no}/projects_project.po")
+    end
+
+    test "carries translations to every directory a config file names for the backend" do
+      backends = """
+      defmodule LegacyAppAdmin.Gettext do
+        use Gettext.Backend, otp_app: :legacy_app
+      end
+      """
+
+      # The directory the environments load comes from brando.exs; test.exs,
+      # which the task does not run with, names another.
+      brando = @brando_config <> ~s|\nconfig :legacy_app, LegacyAppAdmin.Gettext, priv: "priv/gettext/backend"\n|
+
+      igniter =
+        migrate(@blueprint_054, %{
+          @brando_config_path => brando,
+          "config/test.exs" => ~s|import Config\nconfig :legacy_app, LegacyAppAdmin.Gettext, priv: "priv/gettext/test"\n|,
+          "lib/legacy_app_admin/gettext.ex" => backends,
+          "#{@backend_no}/projects_project_naming.po" => catalog("no", [{"project", "prosjekt"}])
+        })
+
+      assert_creates(igniter, "#{@backend_no}/projects_project.po")
     end
 
     test "the copied translations survive the merge of the extracted template" do

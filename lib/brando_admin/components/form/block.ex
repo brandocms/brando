@@ -1494,7 +1494,13 @@ defmodule BrandoAdmin.Components.Form.Block do
     module = Module.concat([socket.assigns.module_datasource_module])
     language = socket.assigns[:entry] && Map.get(socket.assigns.entry, :language)
 
-    case Brando.Datasource.list_results(module, socket.assigns.module_datasource_query, block_vars(socket), language) do
+    case Brando.Datasource.list_results(
+           module,
+           socket.assigns.module_datasource_query,
+           block_vars(socket),
+           language,
+           :list
+         ) do
       # A list can come grouped, e.g. split into columns for the template
       {:ok, entries} when is_list(entries) ->
         entries = entries |> List.flatten() |> Enum.filter(&is_map/1)
@@ -1904,7 +1910,11 @@ defmodule BrandoAdmin.Components.Form.Block do
         module,
         query,
         block_vars(socket),
-        Map.get(entry, :language)
+        Map.get(entry, :language),
+        if(socket.assigns[:module_datasource_type] in [:selection, :single],
+          do: socket.assigns.module_datasource_type,
+          else: :*
+        )
       )
 
     socket

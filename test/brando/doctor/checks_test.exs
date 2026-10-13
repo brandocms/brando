@@ -275,12 +275,55 @@ defmodule Brando.Doctor.ChecksTest do
       refute fix =~ "see the guides"
     end
 
-    test "a placeholder sender is a warning" do
+    test "a placeholder sender is an error: Brando sends nothing from it in production" do
       put_test_env(Brando.Mailer, from: {"Lett", "noreply@example.com"})
 
-      assert {:warning, "Mailer: " <> item, "placeholder sender address", fix} = Checks.Configuration.mailer()
+      assert {:error, "Mailer: " <> item, "placeholder sender address", fix} = Checks.Configuration.mailer()
       assert item =~ "placeholder sender Lett <noreply@example.com>"
       assert fix =~ "an address your mail provider sends for"
+    end
+
+    test "checks the sender each site sends from" do
+      put_test_env(:tenancy_mode, :single)
+      put_test_env(:site_key, "acme")
+
+      # A valid general sender, but the site's own is a placeholder.
+      put_test_env(Brando.Mailer,
+        from: {"Brando", "noreply@brandocms.com"},
+        sites: %{"acme" => [from: {"Acme", "noreply@example.com"}]}
+      )
+
+      assert {:error, item, "placeholder sender address", _fix} = Checks.Configuration.mailer()
+      assert item =~ "placeholder sender Acme <noreply@example.com> for site acme"
+
+      # A placeholder general sender, though the site sends from its own: a
+      # password reset from the login page is sent outside any site.
+      put_test_env(Brando.Mailer,
+        from: {"Brando", "noreply@example.com"},
+        sites: %{"acme" => [from: {"Acme", "post@acme.no"}]}
+      )
+
+      assert {:error, item, "placeholder sender address", _fix} = Checks.Configuration.mailer()
+      assert item =~ "placeholder sender Brando <noreply@example.com>"
+      refute item =~ "for site"
+
+      put_test_env(Brando.Mailer,
+        from: {"Brando", "post@brando.no"},
+        sites: %{"acme" => [from: {"Acme", "post@acme.no"}]}
+      )
+
+      assert {:ok, _item, nil} = Checks.Configuration.mailer()
+    end
+
+    test "a placeholder sender is reported over a missing one" do
+      put_test_env(:tenancy_mode, :single)
+      put_test_env(:site_key, "acme")
+
+      # No general sender, and the site's own is a placeholder.
+      put_test_env(Brando.Mailer, sites: %{"acme" => [from: {"Acme", "noreply@example.com"}]})
+
+      assert {:error, item, "placeholder sender address", _fix} = Checks.Configuration.mailer()
+      assert item =~ "for site acme"
     end
 
     test "a development adapter in production is a warning" do
@@ -947,6 +990,28 @@ defmodule Brando.Doctor.ChecksTest do
                %{line: 8},
                %{line: 9, call: "Brando.HTML.video_tag/2"}
              ] = scan(code)
+    end
+
+    # koi's Project datasource: only the list form of the second argument is
+    # deprecated, so the function carries no `@deprecated`.
+    test "reports get_entries_from_identifiers with a list of preloads" do
+      code = """
+      defmodule MyApp.Project do
+        alias Brando.Content
+
+        def a(ids), do: Brando.Content.get_entries_from_identifiers(ids, [:cover, :palette])
+        def b(ids), do: Content.get_entries_from_identifiers(ids, %{preload: [:cover]})
+        def c(ids), do: ids |> Content.get_entries_from_identifiers([:cover])
+        def d(ids, preloads), do: Content.get_entries_from_identifiers(ids, preloads)
+      end
+      """
+
+      assert [
+               %{line: 4, call: "Brando.Content.get_entries_from_identifiers/2", reason: reason},
+               %{line: 6}
+             ] = scan(code)
+
+      assert reason =~ "%{preload: preloads}"
     end
 
     test "a local function of the same name is not a call without an import" do

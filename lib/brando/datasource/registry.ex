@@ -30,10 +30,11 @@ defmodule Brando.Datasource.Registry do
   Finds a datasource by key, optionally restricting it to `type`.
   """
   @spec get(module(), atom(), atom()) :: struct() | nil
+  # Keys are unique per type, so a list and a selection may share one: the
+  # list wins.
   def get(module, :*, key) do
-    module
-    |> all()
-    |> Enum.find(&(&1.key == key))
+    datasources = all(module)
+    Enum.find(datasources, &(&1.type == :list && &1.key == key)) || Enum.find(datasources, &(&1.key == key))
   end
 
   def get(module, type, key) do

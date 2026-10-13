@@ -6,15 +6,17 @@ if Code.ensure_loaded?(Igniter) do
     @moduledoc false
     # 0.54 page vars are an association, and `Brando.Pages.get_var/2` and
     # `has_var?/2` raise when it is not loaded. When a template reads vars on
-    # `@page`, each `Pages.get_page/1` call (or pipe into it) whose options
-    # are a literal map, or a variable the same function assigns one, gets
-    # `:vars` in its `preload` list. Reads on anything but `@page`, and every read when a
-    # load cannot be updated or none is found, stay listed.
+    # the page assign (`@page`, `assigns[:page]`, `assigns.page`), each
+    # `Pages.get_page/1` call (or pipe into it) whose options are a literal
+    # map, or a variable the same function assigns one, gets `:vars` in its
+    # `preload` list. Reads on anything else, and every read when a load
+    # cannot be updated or none is found, stay listed. When no read is on the
+    # page assign, the loads are listed beside the reads, unchanged.
 
     alias Rewrite.Source
 
     @read ~r/(?:\bPages\.|(?<![\w.]))(get_var|has_var\?)\(/
-    @page_read ~r/(?:\bPages\.|(?<![\w.]))(?:get_var|has_var\?)\(\s*@page\b/
+    @page_read ~r/(?:\bPages\.|(?<![\w.]))(?:get_var|has_var\?)\(\s*(?:@page\b|assigns\[:page\]|assigns\.page\b)/
 
     @doc """
     Adds `:vars` to the page loads in `sources` (`{path, content}`) when a
@@ -24,13 +26,41 @@ if Code.ensure_loaded?(Igniter) do
     def preload(igniter, sources) do
       reads = for {path, content} <- sources, {line, number} <- lines(content), line =~ @read, do: {path, number, line}
 
-      if Enum.any?(reads, fn {_path, _number, line} -> line =~ @page_read end) do
-        loads = for {path, content} <- sources, Path.extname(path) == ".ex", content =~ ~r/\bget_page\b/, do: path
-        {igniter, results} = Enum.reduce(loads, {igniter, []}, &update_loads/2)
-        report(igniter, reads, results)
-      else
-        {igniter, sections(reads, [])}
+      loads = for {path, content} <- sources, Path.extname(path) == ".ex", content =~ ~r/\bget_page\b/, do: path
+
+      cond do
+        Enum.any?(reads, fn {_path, _number, line} -> line =~ @page_read end) ->
+          {igniter, results} = Enum.reduce(loads, {igniter, []}, &update_loads(&1, &2, :update))
+          report(igniter, reads, results)
+
+        reads == [] ->
+          {igniter, []}
+
+        true ->
+          {igniter, results} = Enum.reduce(loads, {igniter, []}, &update_loads(&1, &2, :list))
+          {igniter, sections(reads, []) ++ unchanged_loads(results)}
       end
+    end
+
+    # The loads beside reads that are not on the page assign: which page
+    # reaches them is the application's to tell.
+    defp unchanged_loads(results) do
+      findings =
+        for {path, line, result} <- results, result != :has_vars do
+          case result do
+            :added -> "#{path}:#{line}: `Pages.get_page/1`"
+            {:unknown, reason} -> "#{path}:#{line}: `Pages.get_page/1`, #{reason}"
+          end
+        end
+
+      [
+        {"""
+         Page loads the task left alone, since no read above is on the page
+         assign. Add `preload: [:vars]` to the options of each one whose page
+         reaches those reads:
+         """, findings}
+      ]
+      |> Enum.reject(fn {_text, findings} -> findings == [] end)
     end
 
     defp lines(content), do: content |> String.split("\n") |> Enum.with_index(1)
@@ -81,13 +111,13 @@ if Code.ensure_loaded?(Igniter) do
 
     ## Loads
 
-    defp update_loads(path, {igniter, results}) do
+    defp update_loads(path, {igniter, results}, mode) do
       source = Rewrite.source!(igniter.rewrite, path)
       ast = Source.get(source, :quoted)
       {updated, found} = Macro.prewalk(ast, [], &update_definition/2)
       found = Enum.map(found, fn {line, result} -> {path, line, result} end) ++ unread(path, source, found)
 
-      if updated == ast,
+      if updated == ast or mode == :list,
         do: {igniter, results ++ found},
         else: {Igniter.update_elixir_file(igniter, path, &{:ok, Sourceror.Zipper.replace(&1, updated)}), results ++ found}
     end

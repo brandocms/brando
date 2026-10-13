@@ -495,8 +495,18 @@ msgstr "E-post: %{mailer}, ingen avsender"
 
 #: lib/brando/doctor/checks/configuration.ex
 #, elixir-autogen, elixir-format
+msgid "Mailer: %{mailer}, no sender for site %{site}"
+msgstr "E-post: %{mailer}, ingen avsender for nettstedet %{site}"
+
+#: lib/brando/doctor/checks/configuration.ex
+#, elixir-autogen, elixir-format
 msgid "Mailer: %{mailer}, placeholder sender %{from}"
 msgstr "E-post: %{mailer}, plassholderavsender %{from}"
+
+#: lib/brando/doctor/checks/configuration.ex
+#, elixir-autogen, elixir-format
+msgid "Mailer: %{mailer}, placeholder sender %{from} for site %{site}"
+msgstr "E-post: %{mailer}, plassholderavsender %{from} for nettstedet %{site}"
 
 #: lib/brando/doctor/checks/configuration.ex
 #, elixir-autogen, elixir-format

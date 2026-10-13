@@ -209,24 +209,217 @@ if Code.ensure_loaded?(Igniter) do
 
     defp datasource_name(code), do: with([_, name] <- Regex.run(~r/datasource\(?\s*(:\w+)/, code), do: name)
 
-    # A file with an `:entries` relation or input that names the Blueprint,
-    # or whose `:entries` inputs do not all list their `sources:`.
+    # A file with an `:entries` input whose `sources:` name the Blueprint, or
+    # cannot be read, or an `:entries` relation no input with sources edits.
+    # Other modules the file names (a join schema in a `has_many`) are not
+    # what its entries pickers select.
     defp entries_reference(module, sources) do
-      name = module |> Module.split() |> List.last()
-
       Enum.find_value(sources, fn {path, content} ->
-        relations = Regex.scan(~r/\brelation\s*\(?\s*:\w+\s*,\s*:entries\b/, content)
-        inputs = Regex.split(~r/\binput\s*\(?\s*:\w+\s*,\s*:entries\b/, content) |> tl()
-
-        cond do
-          relations == [] and inputs == [] -> nil
-          content =~ ~r/(?<![\w])#{Regex.escape(name)}\b/ -> path
-          inputs == [] or length(inputs) < length(relations) -> path
-          Enum.any?(inputs, &(not (&1 |> String.split(~r/\binput\b/) |> hd() |> String.contains?("sources:")))) -> path
-          true -> nil
-        end
+        if content =~ ~r/:entries\b/ and entries_may_select?(content, module), do: path
       end)
     end
+
+    defp entries_may_select?(content, module) do
+      case Sourceror.parse_string(content) do
+        {:ok, ast} -> ast |> statements() |> scopes_in(nil, %{}) |> Enum.any?(&scope_may_select?(&1, module))
+        _error -> true
+      end
+    end
+
+    defp scope_may_select?(%{relations: relations, inputs: inputs, current: current}, module) do
+      sourced = for {name, {:ok, _references}, _aliases} <- inputs, do: name
+
+      Enum.any?(relations, &(&1 not in sourced)) or
+        Enum.any?(inputs, fn
+          {_name, {:ok, references}, aliases} ->
+            resolved = Enum.map(references, &resolve_reference(&1, current, aliases))
+            :error in resolved or {:ok, module} in resolved
+
+          {_name, :unknown, _aliases} ->
+            true
+        end)
+    end
+
+    # The scopes of the modules among `statements`, read in order, as the
+    # compiler does: an alias reaches the statements after it, in its own
+    # module and the modules nested in it after it.
+    defp scopes_in(statements, parent, aliases) do
+      {_aliases, scopes} =
+        Enum.reduce(statements, {aliases, []}, fn
+          {:alias, _, _} = statement, {aliases, scopes} ->
+            {declare_alias(statement, parent, aliases), scopes}
+
+          statement, {aliases, scopes} ->
+            {aliases, scopes ++ modules_within(statement, parent, aliases)}
+        end)
+
+      scopes
+    end
+
+    # A module's scope: its name, the `:entries` relations and inputs in its
+    # body (not in a module nested in it), each input with the aliases in
+    # reach where it stands, and the scopes of its nested modules.
+    defp module_scope(name, body, parent, enclosing) do
+      # A nested `defmodule Name` defines `Parent.Name`.
+      current =
+        case {expand(name, parent, %{}), name} do
+          {{:ok, parts}, {:__aliases__, _, [:"Elixir" | _]}} -> parts
+          {{:ok, parts}, {:__aliases__, _, _}} when is_list(parent) -> parent ++ parts
+          {{:ok, parts}, _name} -> parts
+          {:error, _name} -> nil
+        end
+
+      statements = statements(body)
+
+      {_aliases, relations, inputs} =
+        Enum.reduce(statements, {enclosing, [], []}, fn statement, {aliases, relations, inputs} ->
+          aliases = declare_alias(statement, current, aliases)
+          {found_relations, found_inputs} = statement |> without_modules() |> entries_calls()
+
+          {aliases, relations ++ found_relations,
+           inputs ++ Enum.map(found_inputs, fn {name, sources} -> {name, sources, aliases} end)}
+        end)
+
+      nested = nested_scopes(statements, current, enclosing)
+      [%{current: current, relations: relations, inputs: inputs} | nested]
+    end
+
+    defp nested_scopes(statements, current, enclosing) do
+      {_aliases, scopes} =
+        Enum.reduce(statements, {enclosing, []}, fn statement, {aliases, scopes} ->
+          aliases = declare_alias(statement, current, aliases)
+          {aliases, scopes ++ modules_within(statement, current, aliases)}
+        end)
+
+      scopes
+    end
+
+    # The modules defined in `ast`, which may be a `defmodule` or hold some.
+    defp modules_within(ast, parent, aliases) do
+      {_ast, scopes} =
+        Macro.prewalk(ast, [], fn
+          {:defmodule, _, [name, [{_do, body}]]}, scopes ->
+            {:skipped, scopes ++ module_scope(name, body, parent, aliases)}
+
+          node, scopes ->
+            {node, scopes}
+        end)
+
+      scopes
+    end
+
+    defp statements({:__block__, _, statements}) when is_list(statements), do: statements
+    defp statements(statement), do: [statement]
+
+    defp without_modules(ast) do
+      Macro.prewalk(ast, fn
+        {:defmodule, _, _} -> :skipped
+        node -> node
+      end)
+    end
+
+    defp declare_alias({:alias, _, [{{:., _, [base, :{}]}, _, children}]}, current, aliases) do
+      Enum.reduce(children, aliases, fn {:__aliases__, meta, parts}, aliases ->
+        expanded =
+          with {:ok, base_parts} <- expand(base, current, aliases),
+               do: expand({:__aliases__, meta, base_parts ++ parts}, current, %{})
+
+        put_alias(aliases, last_part(parts), expanded)
+      end)
+    end
+
+    defp declare_alias({:alias, _, [{:__aliases__, _, parts} = reference | options]}, current, aliases) do
+      put_alias(aliases, alias_as(options) || last_part(parts), expand(reference, current, aliases))
+    end
+
+    defp declare_alias(_statement, _current, aliases), do: aliases
+
+    defp alias_as([options]) when is_list(options) do
+      Enum.find_value(options, fn
+        {key, {:__aliases__, _, [as]}} -> if unwrap(key) == :as, do: as
+        _option -> nil
+      end)
+    end
+
+    defp alias_as(_options), do: nil
+
+    defp last_part(parts), do: parts |> Enum.reverse() |> hd()
+
+    defp put_alias(aliases, name, expanded) when is_atom(name), do: Map.put(aliases, name, expanded)
+    defp put_alias(aliases, _name, _expanded), do: aliases
+
+    # `{:ok, parts}` of the module a reference names, or `:error`.
+    defp expand({:__aliases__, _, [{:__MODULE__, _, _} | rest]}, current, _aliases) do
+      if current && Enum.all?(rest, &is_atom/1), do: {:ok, current ++ rest}, else: :error
+    end
+
+    defp expand({:__aliases__, _, [first | rest] = parts}, _current, aliases) do
+      cond do
+        not Enum.all?(parts, &is_atom/1) -> :error
+        first == :"Elixir" -> {:ok, rest}
+        Map.has_key?(aliases, first) -> with {:ok, base} <- aliases[first], do: {:ok, base ++ rest}
+        true -> {:ok, parts}
+      end
+    end
+
+    defp expand({:__MODULE__, _, _}, current, _aliases), do: if(current, do: {:ok, current}, else: :error)
+    defp expand(_reference, _current, _aliases), do: :error
+
+    defp resolve_reference(reference, current, aliases) do
+      with {:ok, parts} <- expand(reference, current, aliases), do: {:ok, Module.concat(parts)}
+    end
+
+    # The names of the `:entries` relations, and `{name, {:ok, references} |
+    # :unknown}` for each `:entries` input.
+    defp entries_calls(ast) do
+      {_ast, found} =
+        Macro.prewalk(ast, {[], []}, fn
+          {:relation, _, [name, type | _]} = node, {relations, inputs} ->
+            if unwrap(type) == :entries,
+              do: {node, {[unwrap(name) | relations], inputs}},
+              else: {node, {relations, inputs}}
+
+          {:input, _, [name, type | options]} = node, {relations, inputs} ->
+            if unwrap(type) == :entries,
+              do: {node, {relations, [{unwrap(name), input_sources(options)} | inputs]}},
+              else: {node, {relations, inputs}}
+
+          node, acc ->
+            {node, acc}
+        end)
+
+      found
+    end
+
+    defp input_sources([options]) when is_list(options) do
+      Enum.find_value(options, :unknown, fn
+        {key, value} ->
+          if unwrap(key) == :sources, do: source_modules(unwrap(value))
+
+        _option ->
+          nil
+      end)
+    end
+
+    defp input_sources(_options), do: :unknown
+
+    defp source_modules(entries) when is_list(entries) do
+      references =
+        Enum.map(entries, fn entry ->
+          case unwrap(entry) do
+            {module, _options} -> module
+            module -> module
+          end
+        end)
+
+      if Enum.all?(references, &module_reference?/1), do: {:ok, references}, else: :unknown
+    end
+
+    defp source_modules(_value), do: :unknown
+
+    defp module_reference?({:__MODULE__, _, context}) when is_atom(context), do: true
+    defp module_reference?({:__aliases__, _, [_ | _]}), do: true
+    defp module_reference?(_ast), do: false
 
     # `{:ok, helper}`, `:skip` for a Blueprint that already decides or never
     # persists, or `{:unknown, reason}`.

@@ -27,6 +27,7 @@ if Code.ensure_loaded?(Igniter) do
     alias Igniter.Code.Function, as: CodeFunction
     alias Igniter.Project.Module, as: ProjectModule
     alias Mix.Brando.Igniter.SourceUpgrade
+    alias Mix.Brando.Igniter.SourceUpgrade.BlueprintCatalogs
     alias Rewrite.Source
     alias Sourceror.Zipper
 
@@ -214,16 +215,19 @@ if Code.ensure_loaded?(Igniter) do
         blueprints
         |> Enum.map(fn module ->
           {:ok, {_igniter, _source, zipper}} = ProjectModule.find_module(igniter, module)
-          {catalog_domain(zipper), t_msgids(Zipper.node(zipper))}
+          {catalog_domain(zipper), t_msgids(Zipper.node(zipper)), BlueprintCatalogs.priv(igniter, zipper)}
         end)
-        |> Enum.reject(fn {domain, msgids} -> is_nil(domain) or msgids == [] end)
-        |> Enum.reduce(%{}, fn {domain, msgids}, acc -> Map.update(acc, domain, msgids, &Enum.uniq(&1 ++ msgids)) end)
+        |> Enum.reject(fn {domain, msgids, _priv} -> is_nil(domain) or msgids == [] end)
+        |> Enum.reduce(%{}, fn {domain, msgids, priv}, acc ->
+          Map.update(acc, domain, {msgids, [priv]}, fn {known, privs} -> {Enum.uniq(known ++ msgids), [priv | privs]} end)
+        end)
 
       paths = igniter.rewrite |> Rewrite.sources() |> Enum.map(&Source.get(&1, :path))
 
       for path <- paths,
           Path.basename(path) == "default.po" and Path.basename(Path.dirname(path)) == "LC_MESSAGES",
-          {domain, domain_msgids} <- msgids,
+          {domain, {domain_msgids, privs}} <- msgids,
+          Enum.any?(privs, &BlueprintCatalogs.in_priv?(path, &1)),
           domain_catalog?(paths, path, domain),
           reduce: igniter do
         igniter -> carry(igniter, path, Path.join(Path.dirname(path), domain <> ".po"), domain_msgids)

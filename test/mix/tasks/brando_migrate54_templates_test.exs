@@ -301,6 +301,85 @@ defmodule Mix.Tasks.Brando.Migrate54TemplatesTest do
     end)
   end
 
+  # koi's 0.53 layouts module: the page comes from `assigns[:page]`, and the
+  # controllers build their options in a `page_opts` binding first.
+  @layouts_path "lib/lett_web/layouts.ex"
+
+  @layouts """
+  defmodule LettWeb.Layouts do
+    use BrandoWeb, :html
+
+    def build_menu_style(assigns) do
+      if assigns[:page] do
+        fg_color = Brando.Pages.get_var(assigns[:page], "color_menu_fg")
+        if fg_color, do: "--color_fg: \#{fg_color};", else: ""
+      else
+        ""
+      end
+    end
+  end
+  """
+
+  @article_controller_path "lib/lett_web/controllers/article_controller.ex"
+
+  @article_controller """
+  defmodule LettWeb.ArticleController do
+    use BrandoWeb, :controller
+    alias Brando.Pages
+
+    def list(conn, _params) do
+      language = conn.assigns.language
+
+      page_opts = %{
+        matches: %{uri: "article_listing", language: language},
+        status: :published
+      }
+
+      with {:ok, page} <- Pages.get_page(page_opts) do
+        conn
+        |> assign(:page, page)
+        |> render(:list)
+      end
+    end
+  end
+  """
+
+  test "adds :vars to the page loads when a module reads vars on assigns[:page]" do
+    igniter =
+      migrate(%{
+        @layouts_path => @layouts,
+        @controller_path => @controller,
+        @article_controller_path => @article_controller
+      })
+
+    assert count(source(igniter, @controller_path), "preload: [:alternate_entries, :vars],") == 2
+    assert source(igniter, @article_controller_path) =~ "status: :published,\n      preload: [:vars]\n    }"
+    assert_unchanged(igniter, [@layouts_path])
+    refute Enum.any?(igniter.warnings, &(&1 =~ "Page vars"))
+
+    assert_has_notice(igniter, fn notice ->
+      notice =~ "added `:vars`" and notice =~ "#{@article_controller_path}:13" and notice =~ "#{@controller_path}:16"
+    end)
+  end
+
+  test "lists the page loads, with what to add, when vars are read on something other than the page" do
+    helper = """
+    defmodule LettWeb.Helpers do
+      def heading(entry), do: Brando.Pages.get_var(entry, "heading")
+    end
+    """
+
+    igniter = migrate(%{"lib/lett_web/helpers.ex" => helper, @article_controller_path => @article_controller})
+
+    assert_unchanged(igniter, [@article_controller_path])
+
+    assert_has_warning(igniter, fn warning ->
+      warning =~ "lib/lett_web/helpers.ex:2: def heading(entry)" and
+        warning =~ "#{@article_controller_path}:13: `Pages.get_page/1`" and
+        warning =~ "preload: [:vars]"
+    end)
+  end
+
   # As koi had them on 0.53: the router plugs the fragments in as
   # `@partials`, a controller assigns `get_fragments/1`'s map.
   @fragment_router """

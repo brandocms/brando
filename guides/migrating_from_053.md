@@ -165,9 +165,16 @@ nothing.
 
 Brando's optional task and helper modules automatically request recompilation
 when Igniter becomes available. The dependency remains optional at runtime.
-`mix brando.migrate55` compiles Brando once more when `mix brando.migrate54`
-has edited `config/brando.exs` (to add `repo_module`, say): Mix recompiles a
-dependency whose compile-time configuration changed.
+Any change to the application's configuration recompiles Brando, which takes
+about a minute. `mix brando.migrate54` therefore writes every `config :brando`
+setting the upgrade asks for at once (`repo_module`, `mailer` and a placeholder
+sender), and `mix brando.migrate55` finds them in place. Replace the
+placeholder sender's `noreply@example.com` with the address Brando should send
+from before you first compile, and make your own configuration changes in the
+same pass. Outside development and test, Brando treats a sender on a domain
+reserved for examples as no sender: it sends nothing, and `mix brando.doctor`
+fails until it is replaced. A sender set anywhere in `config/*.exs`, inside an
+`if config_env() == :prod` block included, gets no placeholder.
 
 If the application has never been run through `mix format`, run it and commit
 the result before the source tasks, so their diff holds only their changes.
@@ -177,7 +184,14 @@ the result before the source tasks, so their diff holds only their changes.
 - rewrites legacy Blueprint list, single, and selection datasources; trait,
   villain/block, form, input, metadata, and JSON-LD syntax; and listing queries,
   filters, actions, selection actions, and supported exports;
-- preserves legacy Meta and JSON-LD path/mutator behavior;
+- preserves legacy Meta and JSON-LD path/mutator behavior
+  (`meta_field "og:locale", [:language], &encode_locale/1` becomes
+  `field "og:locale", fn entry -> encode_locale(get_in(entry, [Access.key(:language)])) end`);
+- replaces `use Brando.Datasource`, which imported `Ecto.Query`, with
+  `import Ecto.Query` in a Blueprint whose functions call its macros (`from`,
+  `where` and the rest). A list and a selection datasource may still share a
+  name (`list :all` beside `selection :all`): content modules name a
+  datasource by its type and name;
 - renames legacy listing `filter:` keys and `list_villains/0` calls on
   `Brando.Villain`;
 - rewrites every legacy LivePreview target with its own layout and template
@@ -185,6 +199,9 @@ the result before the source tasks, so their diff holds only their changes.
 - replaces `mix phx.digest` in a root Dockerfile, removes `?vsn=d` from font
   URLs in application styles/templates, and adds a missing single-Repo
   `config :brando, repo_module:` setting;
+- points Brando at the application's mailer and writes a placeholder sender
+  when none is set, as `mix brando.migrate55` does (see below), so Brando's
+  configuration changes only once;
 - removes `processor_module: Brando.Images.Processor.Sharp` from config. Brando
   refuses to boot with it, and Vix is the default;
 - moves Gettext backends to `use Gettext.Backend` and their importers to
@@ -219,17 +236,26 @@ the result before the source tasks, so their diff holds only their changes.
 - rewrites 0.53 navigation item reads inside `for item <- @navigation.items`
   (and `:for`) to `Brando.HTML.get_menu_item_url/1`, `get_menu_item_text/1`,
   `get_menu_item_target_blank/1` and `item.children`, and, when templates read
-  `@page` vars, adds `:vars` to the `preload` of the `Pages.get_page/1` calls
-  written with a map. Reads it cannot rewrite, and page loads it cannot
-  update, are listed with file and line;
+  the page's vars (`@page`, `assigns[:page]`), adds `:vars` to the `preload` of
+  the `Pages.get_page/1` calls written with a map, or with a variable the same
+  function assigns one (`page_opts = %{…}`). Reads it cannot rewrite, and page
+  loads it cannot update, are listed with file and line. When vars are read
+  on something other than the page, the `Pages.get_page/1` calls are listed
+  beside the reads, for you to give `preload: [:vars]` where their page
+  reaches them;
 - converts each admin Create/Update LiveView pair the generator made and the
   application did not edit into one `<Name>FormLive`, written beside the
   `UpdateLive` it replaces, deletes the pair and points both routes at the new
-  module. Edited pairs are listed. When two FormLives would share a route
+  module. A pair that differs from the generator's only in the text of its
+  `<:header>` slot counts as unedited, since the 0.55 form shows no header.
+  Edited pairs are listed. When two FormLives would share a route
   helper (two `Category` schemas, say) and one is routed in a plain
   `scope "/menu", MyAppAdmin.Menu do` holding only that domain's admin
   LiveViews, the task adds `as: :menu` to the scope and `router_scope: :menu`
-  to every Blueprint routed in it. Other shapes are listed with the same fix.
+  to every Blueprint routed in it. Routes listed flat in `admin_routes`, as the
+  0.53 generator wrote them, are wrapped in a new
+  `scope "/menu/categories", MyAppAdmin.Menu, as: :menu do` when the domain's
+  lines are adjacent. Other shapes are listed with the same fix.
   Without the form route, the listing's edit links crash, and
   `mix brando.doctor` reports each Blueprint whose route helper is missing;
 - rewrites a listing's 0.53 `field` and `template` columns into a row
@@ -238,9 +264,11 @@ the result before the source tasks, so their diff holds only their changes.
   the module. An `:image` field becomes `<.cover>`, a `:url` field `<.url>`,
   and a Liquid template whose only link goes to the entry's admin update form
   becomes `<.update_link>`, with the markup before the link in its `:before`
-  slot (`{{ entry.a.b }}` becomes `{@entry.a && @entry.a.b}`,
-  `{% if entry.x %}` an `:if`). Language columns and inline `<svg>` icons in
-  badges are dropped. Any other listing is left as it is and listed with file
+  slot and the markup after it in its `:outside` slot (`{{ entry.a.b }}`
+  becomes `{@entry.a && @entry.a.b}`, also inside attributes,
+  `{% if entry.x %}` an `:if`, and `{% for c in entry.categories %}` a
+  `:for={c <- @entry.categories || []}`). Language columns and inline `<svg>`
+  icons in badges are dropped. Any other listing is left as it is and listed with file
   and line;
 - removes listing actions whose event is `edit_entry`, `duplicate_entry` or
   `delete_entry` from listings that keep `default_actions`, which already
@@ -275,7 +303,8 @@ the result before the source tasks, so their diff holds only their changes.
 - points Brando at the application's `Mailer` (`config :brando, mailer:
   MyApp.Mailer`), or, when it has none, creates `MyApp.Mailer` with the local
   adapter in development and the test adapter in test, and writes a
-  placeholder sender (`noreply@example.com`). Replace the placeholder with an
+  placeholder sender (`noreply@example.com`) when none is set. After
+  `mix brando.migrate54` these are already in place. Replace the placeholder with an
   address your mail provider sends for, and configure the mailer's production
   adapter in `runtime.exs`, as described in [Email](email.md);
   `mix brando.doctor` warns until you do;
@@ -290,6 +319,21 @@ the result before the source tasks, so their diff holds only their changes.
 - warns when `config/runtime.exs` reads the Repo `url:` from the environment
   in `:test` too, and when `test_paths` names a missing directory (see
   [Test and development databases](#test-and-development-databases));
+- removes `:brando` and the Hex and git dependencies from the endpoint's
+  `reloadable_apps` (usually in `config/dev.exs`), and lists each list it
+  changed with file and line. With `:brando` listed, the code reloader checks
+  Brando's sources on every development request, and on Elixir 1.19 and later
+  each check rebuilds the application's protocols. The application and path
+  dependencies you edit alongside it stay; a list left with only the
+  application goes, since Phoenix's default reloads the application itself;
+- removes a bare `use Phoenix.Component` from a module whose
+  `use BrandoWeb, :html` (or a kind of the application's web module that uses
+  Phoenix.Component) already does it. Elixir 1.20 warns about the second one,
+  which fails `--warnings-as-errors`;
+- writes `Brando.Content.get_entries_from_identifiers(ids, [:cover])`, whose
+  list of preloads is deprecated, as
+  `get_entries_from_identifiers(ids, %{preload: [:cover]})`, and lists a call
+  whose preloads it cannot read;
 - adds `plug Brando.Plug.Markdown` and `plug Brando.Plug.IndexNow` to the
   endpoint, before the router (and before `Brando.Plug.Health`), unless it
   already has them;
@@ -313,19 +357,29 @@ the result before the source tasks, so their diff holds only their changes.
   below);
 - copies each Blueprint's translations from its 0.53 `*_naming`, `*_forms`
   and `*_listings` catalogs, and the `default` domain's translations of its
-  `t/1` labels, into its schema's domain, in every backend and locale that has
-  it (see [Reconcile Gettext catalogs](#5-reconcile-gettext-catalogs));
+  `t/1` labels, into its schema's domain, in every locale of the Gettext
+  backend the Blueprint translates through (its `gettext_module`, by default
+  `MyAppAdmin.Gettext`). Copies of those catalogs in another backend, such as
+  the frontend's, are read by nothing and are left alone (see
+  [Reconcile Gettext catalogs](#5-reconcile-gettext-catalogs));
 - sets `persist_identifier false` on Blueprints with no admin editor (no
   `:update` form route and no admin LiveView), no `absolute_url`, and nothing
   that could select their entries (no `:selection` or `:single` datasource,
-  no `:entries` relation or input that could include them), and lists the
-  Blueprints it could not decide. `mix brando.identifiers.sync` then deletes
+  no `:entries` input whose `sources:` name them, no `:entries` relation
+  without an input that lists its `sources:`), and lists the Blueprints it
+  could not decide. A join schema such as `ArticleCategory`, which only
+  `belongs_to` its two sides, is set too. `mix brando.identifiers.sync` then deletes
   such a Blueprint's existing identifiers, and any pick that still points at
   them;
 - completes `Plural-Forms` headers in `priv/gettext/**/*.po`. Gettext 1.0 warns
   on `nplurals=2;` without a rule and on a rule without its trailing `;`, once
   per catalog per compile, so `--warnings-as-errors` fails until they read
-  `nplurals=2; plural=(n != 1);`;
+  `nplurals=2; plural=(n != 1);`. Older Poedit releases wrote the line without
+  its `\n`, so Gettext reads it joined to the next header
+  (`plural=(n != 1);X-Generator: Poedit 3.0.1`) and warns although the rule is
+  complete. The task gives such a rule a line of its own, keeps the header that
+  followed it, and drops text that is no header of its own (a stray
+  `"3.0.1;\n"`) or a header a later line sets again, listing each file;
 - refreshes `scripts/sync_gettext.sh` and archives the consumer-owned
   `mix brando.upgrade` task that 0.54 installed, wherever it lives under `lib/`,
   so Brando's own `mix brando.upgrade FROM TO` hook can take over the task name
@@ -441,8 +495,10 @@ correct rewrite depends on application semantics:
   v14 migration when deploying through the bundled Fabric workflow;
 - showing Brando's dashboard. The admin's start page is the application's own
   `MyAppAdmin.DashboardLive`, and one from an older installer renders only a
-  header. Render the dashboard component in it, as the installer's template
-  does:
+  header. `mix brando.migrate55` replaces a `DashboardLive` that is exactly the
+  old installer's with the current template, and lists one that renders
+  `Content.header` but differs. In that one, render the dashboard component,
+  as the installer's template does:
 
   ```elixir
   def render(assigns) do

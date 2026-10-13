@@ -462,6 +462,18 @@ defmodule Brando.Content.Proposals.ToolsTest do
       assert id == identifier.id
 
       assert {:error, _} = Tools.call("list_selection_options", %{"module" => "local:#{table.id}"}, c.context)
+
+      # A `:single` datasource offers its options the same way.
+      single =
+        Brando.ProposalFixtures.module!(c.user, "Featured page", "<div></div>",
+          datasource: true,
+          datasource_type: :single,
+          datasource_module: "Elixir.BrandoIntegration.ModuleWithDatasource",
+          datasource_query: "chosen_page"
+        )
+
+      %{options: options} = call!("list_selection_options", %{"module" => "local:#{single.id}"}, c.context)
+      assert Enum.any?(options, &(&1.identifier_id == identifier.id))
     end
 
     test "media requests suggest an entry's own media, which the assistant can also list", c do

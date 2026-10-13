@@ -8,6 +8,7 @@ defmodule Brando.Doctor.Checks.Configuration do
   use Gettext, backend: Brando.Gettext
 
   alias Brando.Doctor.Result
+  alias Brando.Mailer
 
   @cdn_contexts [Brando.Images, Brando.Files]
 
@@ -78,12 +79,12 @@ defmodule Brando.Doctor.Checks.Configuration do
 
   @doc """
   The mailer and its sender as a finding, with the fix (see `evaluate/1`):
-  a placeholder sender on an `example.com` domain is a warning, and so is
-  a development adapter (or none) in production.
+  a placeholder sender on an `example.com` domain is an error, since Brando
+  sends nothing from it outside development, and a development adapter (or
+  none) in production is a warning.
   """
   def mailer do
-    mailer = Brando.Mailer.mailer()
-    from = Brando.Mailer.sender()[:from]
+    mailer = Mailer.mailer()
 
     cond do
       is_nil(mailer) ->
@@ -97,17 +98,26 @@ defmodule Brando.Doctor.Checks.Configuration do
         {:error, dgettext("doctor", "Mailer: %{mailer} does not exist", mailer: inspect(mailer)),
          dgettext("doctor", "mailer module missing")}
 
+      true ->
+        sender_finding(mailer)
+    end
+  end
+
+  # The first sender with a problem, else the first, and the adapter.
+  defp sender_finding(mailer) do
+    senders = senders()
+
+    # The worst first: a placeholder is an error, a missing sender a warning.
+    {site, from} =
+      Enum.find(senders, &Mailer.placeholder?(elem(&1, 1))) || Enum.find(senders, &is_nil(elem(&1, 1))) || hd(senders)
+
+    cond do
       is_nil(from) ->
-        {:warning, dgettext("doctor", "Mailer: %{mailer}, no sender", mailer: inspect(mailer)),
-         dgettext("doctor", "no sender address"),
+        {:warning, no_sender_item(mailer, site), dgettext("doctor", "no sender address"),
          dgettext("doctor", "set the address Brando sends from: `config :brando, Brando.Mailer, from: …`")}
 
-      placeholder?(from) ->
-        {:warning,
-         dgettext("doctor", "Mailer: %{mailer}, placeholder sender %{from}",
-           mailer: inspect(mailer),
-           from: format_from(from)
-         ), dgettext("doctor", "placeholder sender address"),
+      Mailer.placeholder?(from) ->
+        {:error, placeholder_item(mailer, from, site), dgettext("doctor", "placeholder sender address"),
          dgettext(
            "doctor",
            "set `config :brando, Brando.Mailer, from: …` to an address your mail provider sends for"
@@ -127,14 +137,47 @@ defmodule Brando.Doctor.Checks.Configuration do
     end
   end
 
-  # The domains reserved for examples (RFC 2606), as in the placeholder
-  # `mix brando.gen.mail` writes.
-  defp placeholder?({_name, address}), do: placeholder?(address)
+  # `{site_key | nil, from}` for each sender Brando sends from, as
+  # configured: `Brando.Mailer.sender/0` drops a placeholder outside
+  # development. The general one sends account email outside any site (a
+  # password reset from the login page), and each site sends from its own,
+  # or else the general one.
+  defp senders do
+    config = Application.get_env(:brando, Mailer, [])
+    sites = if is_map(config[:sites]), do: config[:sites], else: %{}
 
-  defp placeholder?(address) when is_binary(address),
-    do: address =~ ~r/@(.+\.)?example\.(com|org|net)$/i
+    [{nil, config[:from]} | for(key <- site_keys(sites), do: {key, (sites[key] || [])[:from] || config[:from]})]
+  end
 
-  defp placeholder?(_address), do: false
+  defp site_keys(sites) do
+    case Brando.Tenant.mode() do
+      :single -> [Brando.config(:site_key)]
+      :multi -> sites |> Map.keys() |> Enum.sort()
+      _none -> []
+    end
+  rescue
+    _error -> []
+  end
+
+  defp no_sender_item(mailer, nil), do: dgettext("doctor", "Mailer: %{mailer}, no sender", mailer: inspect(mailer))
+
+  defp no_sender_item(mailer, site),
+    do: dgettext("doctor", "Mailer: %{mailer}, no sender for site %{site}", mailer: inspect(mailer), site: site)
+
+  defp placeholder_item(mailer, from, nil),
+    do:
+      dgettext("doctor", "Mailer: %{mailer}, placeholder sender %{from}",
+        mailer: inspect(mailer),
+        from: format_from(from)
+      )
+
+  defp placeholder_item(mailer, from, site),
+    do:
+      dgettext("doctor", "Mailer: %{mailer}, placeholder sender %{from} for site %{site}",
+        mailer: inspect(mailer),
+        from: format_from(from),
+        site: site
+      )
 
   defp development_adapter?(mailer), do: adapter(mailer) in [nil, Swoosh.Adapters.Local, Swoosh.Adapters.Test]
 
