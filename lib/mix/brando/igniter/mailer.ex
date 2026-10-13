@@ -187,19 +187,31 @@ if Code.ensure_loaded?(Igniter) do
       end
     end
 
+    # Read in the order production loads them; development and test config
+    # is not what production sends from.
+    @production_config ~w(config.exs brando.exs prod.exs runtime.exs)
+
     @doc """
-    Whether the address Brando sends from is still to be set: no
-    `config/*.exs` file sets one, or the one set is on a domain reserved for
+    Whether the address Brando sends from in production is still to be set:
+    the last sender the production config files set (config.exs, brando.exs,
+    prod.exs, then runtime.exs) is missing or on a domain reserved for
     examples, like the placeholder the tasks write.
     """
     def sender_to_set?(igniter) do
-      senders =
-        igniter
-        |> config_contents()
-        |> Enum.flat_map(&Regex.scan(~r/\bBrando\.Mailer\s*,[^)]*?\bfrom:([^\n]*)/s, &1, capture: :all_but_first))
+      igniter = Igniter.include_glob(igniter, "config/*.exs")
 
-      senders == [] or
-        Enum.any?(senders, fn [from] -> from =~ ~r/@(?:[^@"\s]+\.)?(?:example\.(?:com|org|net)|example)"/i end)
+      @production_config
+      |> Enum.map(&"config/#{&1}")
+      |> Enum.filter(&Rewrite.has_source?(igniter.rewrite, &1))
+      |> Enum.flat_map(fn path ->
+        content = igniter.rewrite |> Rewrite.source!(path) |> Rewrite.Source.get(:content)
+        Regex.scan(~r/\bBrando\.Mailer\s*,[^)]*?\bfrom:([^\n]*)/s, content, capture: :all_but_first)
+      end)
+      |> List.last()
+      |> case do
+        nil -> true
+        [from] -> from =~ ~r/@(?:[^@"\s]+\.)?(?:example\.(?:com|org|net)|example)"/i
+      end
     end
 
     defp config_contents(igniter) do

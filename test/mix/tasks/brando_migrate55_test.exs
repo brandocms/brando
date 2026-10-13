@@ -459,6 +459,23 @@ defmodule Mix.Tasks.Brando.Migrate55Test do
     refute Enum.any?(igniter.warnings, &(&1 =~ "noreply@example.com"))
     assert_has_warning(igniter, &(&1 =~ "the mailer's production adapter in `config/runtime.exs`"))
 
+    # A placeholder in development, but production sends from a real one.
+    environments = %{
+      "lib/legacy_app/mailer.ex" => mailer,
+      @brando_config_path => chosen,
+      "config/dev.exs" => ~s|import Config\nconfig :brando, Brando.Mailer, from: {"Lett", "noreply@example.com"}\n|,
+      "config/runtime.exs" => """
+      import Config
+
+      if config_env() == :prod do
+        config :brando, Brando.Mailer, from: {"Lett", "post@lett.no"}
+      end
+      """
+    }
+
+    igniter = migrate(@blueprint_054, environments)
+    refute Enum.any?(igniter.warnings, &(&1 =~ "noreply@example.com"))
+
     # A placeholder still is.
     placeholder = chosen <> ~s|\nconfig :brando, Brando.Mailer, from: {"Lett", "noreply@example.com"}\n|
     igniter = migrate(@blueprint_054, %{"lib/legacy_app/mailer.ex" => mailer, @brando_config_path => placeholder})
