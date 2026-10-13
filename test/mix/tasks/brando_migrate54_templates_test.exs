@@ -382,6 +382,58 @@ defmodule Mix.Tasks.Brando.Migrate54TemplatesTest do
     assert_unchanged(rerun, [@footer_path, @index_path])
   end
 
+  test "rewrites a fragments variable only in the function that binds it" do
+    controller = """
+    defmodule LettWeb.PartsController do
+      alias Brando.Pages
+
+      def fragment(opts) do
+        {:ok, parts} = Pages.get_fragments(opts)
+        parts["intro"].html
+      end
+
+      def custom do
+        parts = %{"x" => %{html: "custom"}}
+        parts["x"].html
+      end
+    end
+    """
+
+    path = "lib/lett_web/controllers/parts_controller.ex"
+    igniter = migrate(%{path => controller})
+    migrated = source(igniter, path)
+
+    assert migrated =~ ~s|parts["intro"].rendered_blocks|
+    assert migrated =~ ~s|parts["x"].html|
+    assert_has_warning(igniter, &(&1 =~ ~s|#{path}:11: parts["x"].html|))
+  end
+
+  test "lists, and leaves, reads of an assign that is also given other data" do
+    other = """
+    defmodule LettWeb.ShopController do
+      use LettWeb, :controller
+
+      def index(conn, _params) do
+        conn
+        |> assign(:partials, %{"intro" => %{html: "Shop"}})
+        |> render(:index)
+      end
+    end
+    """
+
+    footer = ~s|<%= @partials["newsletter"].html \|> raw %>\n|
+
+    igniter =
+      migrate(%{
+        @footer_path => footer,
+        @router_path => @fragment_router,
+        "lib/lett_web/controllers/shop_controller.ex" => other
+      })
+
+    assert_unchanged(igniter, [@footer_path])
+    assert_has_warning(igniter, &(&1 =~ ~s|#{@footer_path}:1: <%= @partials["newsletter"].html \|> raw %>|))
+  end
+
   defp count(content, pattern), do: content |> String.split(pattern) |> length() |> Kernel.-(1)
 
   defp migrate(files) do
