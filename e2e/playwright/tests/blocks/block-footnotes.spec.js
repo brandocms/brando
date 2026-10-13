@@ -18,9 +18,11 @@ const appendModule = async (page, name) => {
 const placeCaretAtEnd = async editor => {
   const text = await editor.innerText()
   await editor.click()
-  // Bare End scrolls on macOS; it did not move the caret in the old example.
-  await editor.press('ControlOrMeta+a')
-  await editor.press('ArrowRight')
+  await expect(editor).toBeEditable()
+  // Set the model's caret too: ProseMirror's deferred focus can restore the
+  // select-all range between a native ArrowRight and its selectionchange event.
+  await editor.evaluate(element => element.editor.commands.focus('end'))
+  await expect(editor).toBeFocused()
   await expect.poll(() => editor.evaluate(element => {
     const selection = window.getSelection()
     if (!selection?.rangeCount || !selection.isCollapsed || !element.contains(selection.anchorNode)) return null
@@ -48,6 +50,8 @@ test('uses Norwegian footnote buttons and numbered labels', async ({ page }) => 
   await placeCaretAtEnd(page.locator('[data-footnote-field="introduction"] .tiptap'))
   await page.getByRole('button', { name: 'Legg til fotnote', exact: true }).click()
   const drawer = page.locator('.block-slot-drawer.visible')
+  // The drawer can appear before its preview is replaced by the focused editor.
+  await expect(drawer.locator('.tiptap')).toBeFocused()
   await drawer.locator('.tiptap').fill('En norsk kilde.')
   await drawer.getByRole('button', { name: 'Ferdig', exact: true }).click()
   await page.getByRole('button', { name: 'Rediger fotnote 1', exact: true }).click()
@@ -130,6 +134,7 @@ test('Blueprint rich text keeps its own notes across save and reload', async ({ 
   await page.getByRole('button', { name: 'Add footnote' }).click()
   const drawer = page.locator('.block-slot-drawer.visible')
   await expect(drawer).toBeVisible()
+  await expect(drawer.locator('.tiptap')).toBeFocused()
   await drawer.locator('.tiptap').fill('A source belonging to the introduction.')
   await drawer.getByRole('button', { name: 'Done', exact: true }).click()
   await expect(editor.locator('p')).toHaveText(`${originalText}1`)
@@ -198,6 +203,7 @@ test('a recovery copy restores an unsaved note and keeps it through the next sav
   const originalText = await placeCaretAtEnd(editor)
   await page.getByRole('button', { name: 'Add footnote' }).click()
   const drawer = page.locator('.block-slot-drawer.visible')
+  await expect(drawer.locator('.tiptap')).toBeFocused()
   await drawer.locator('.tiptap').fill('A source recovered with its reference.')
   await drawer.getByRole('button', { name: 'Done', exact: true }).click()
   await expect(page.getByTestId('draft-status')).toContainText('Recovery copy saved at', { timeout: 25000 })
