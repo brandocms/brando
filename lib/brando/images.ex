@@ -164,52 +164,134 @@ defmodule Brando.Images do
 
   An image is processed into its own config's sizes and formats, and renders
   by their names, so an image made for another config is not used as it is:
-  this returns an earlier copy of the same file made for `config_target` (the
-  same `content_hash`), or makes one. A new copy is the original file copied
-  into the config's upload path, as an upload to the field would put it, and
-  queued for processing; it keeps the image's texts and focal point. `image`
-  itself is never changed, so what shows it keeps its sizes.
+  this returns the copy of the same file made for `config_target`, or makes
+  one. A copy is the original file in the config's upload path, as an upload
+  to the field would put it, queued for processing; it keeps the image's
+  texts and focal point. `image` itself is never changed, so what shows it
+  keeps its sizes.
+
+  The file is what identifies a copy: its `content_hash`, the SHA-256 of the
+  original. An image uploaded before Brando stored hashes gets its hash
+  recorded on the first pick, so later picks find the copy. The original is
+  read from the media folder, or from the CDN when only the CDN has it
+  (`keep_local_copy: false`). Picks of one file for one config are taken one
+  at a time (a transaction-scoped advisory lock), so two editors picking it
+  at once get the same copy. A copy whose processing never got queued is
+  queued again.
   """
   @spec for_config_target(Image.t(), String.t(), user) :: {:ok, Image.t()} | {:error, term()}
   def for_config_target(%Image{config_target: config_target} = image, config_target, _user), do: {:ok, image}
 
   def for_config_target(%Image{} = image, config_target, user) when is_binary(config_target) do
-    existing = if is_binary(image.content_hash), do: Brando.Repo.one(same_file_query(image.content_hash, config_target))
+    with {:ok, hash, original} <- source_hash(image) do
+      fn ->
+        lock_copy(hash, config_target)
+        if is_nil(image.content_hash), do: record_hash(image, hash)
 
-    case existing do
-      %Image{} = copy -> {:ok, copy}
-      nil -> copy_for_config_target(image, config_target, user)
+        result =
+          case Brando.Repo.one(same_file_query(hash, config_target)) do
+            %Image{} = copy -> requeue_unqueued(copy, user)
+            nil -> copy_for_config_target(%{image | content_hash: hash}, original, config_target, user)
+          end
+
+        case result do
+          {:ok, copy} -> copy
+          {:error, reason} -> Brando.Repo.rollback(reason)
+        end
+      end
+      |> Brando.Repo.transaction()
+      |> case do
+        {:ok, copy} -> {:ok, copy}
+        {:error, reason} -> {:error, reason}
+      end
     end
   end
 
-  defp copy_for_config_target(image, config_target, user) do
+  # The hash identifies the copies; the original is read only when it is not
+  # stored, or when a copy has to be made (`original` is then a function).
+  defp source_hash(%Image{content_hash: hash} = image) when is_binary(hash),
+    do: {:ok, hash, fn -> read_original(image) end}
+
+  defp source_hash(image) do
+    with {:ok, bytes} <- read_original(image) do
+      {:ok, :sha256 |> :crypto.hash(bytes) |> Base.encode16(case: :lower), fn -> {:ok, bytes} end}
+    end
+  end
+
+  defp read_original(image) do
+    case File.read(Images.Utils.media_path(image.path)) do
+      {:ok, bytes} -> {:ok, bytes}
+      {:error, :enoent} -> read_original_from_cdn(image)
+      {:error, reason} -> {:error, reason}
+    end
+  end
+
+  defp read_original_from_cdn(image) do
+    case get_config_for(image) do
+      {:ok, %{cdn: %{enabled: true}} = cfg} -> Brando.CDN.get_object(Path.join("media", image.path), cfg)
+      _ -> {:error, :enoent}
+    end
+  end
+
+  defp lock_copy(hash, config_target) do
+    key = :erlang.phash2({Brando.Tenant.current_prefix(), hash, config_target}, 4_294_967_296)
+    Brando.Repo.repo().query!("SELECT pg_advisory_xact_lock($1)", [key])
+  end
+
+  defp record_hash(image, hash) do
+    Brando.Repo.update_all(from(i in Image, where: i.id == ^image.id and is_nil(i.content_hash)),
+      set: [content_hash: hash]
+    )
+  end
+
+  defp requeue_unqueued(%Image{status: :unprocessed} = copy, user) do
+    if Images.Processing.processing_queued?(copy) do
+      {:ok, copy}
+    else
+      with {:ok, _job} <- Images.Processing.queue_processing(copy, user), do: {:ok, copy}
+    end
+  end
+
+  defp requeue_unqueued(copy, _user), do: {:ok, copy}
+
+  defp copy_for_config_target(image, original, config_target, user) do
     {:ok, cfg} = get_config_for(config_target)
     path = Path.join(cfg.upload_path, Brando.Utils.unique_filename(Path.basename(image.path)))
     dest = Images.Utils.media_path(path)
 
-    with :ok <- File.mkdir_p(Path.dirname(dest)),
-         :ok <- File.cp(Images.Utils.media_path(image.path), dest),
-         {:ok, copy} <-
-           create_image(
-             %{
-               path: path,
-               config_target: config_target,
-               content_hash: image.content_hash,
-               width: image.width,
-               height: image.height,
-               dominant_color: image.dominant_color,
-               title: image.title,
-               credits: image.credits,
-               alt: image.alt,
-               focal: if(image.focal, do: Map.take(image.focal, [:x, :y]), else: %{x: 50, y: 50}),
-               sizes: %{},
-               status: :unprocessed,
-               folder_id: Brando.Media.Folders.upload_folder_id(nil, cfg)
-             },
-             user
-           ),
+    with {:ok, bytes} <- original.(),
+         :ok <- File.mkdir_p(Path.dirname(dest)),
+         :ok <- File.write(dest, bytes),
+         {:ok, copy} <- create_copy(image, path, config_target, cfg, user, dest),
          {:ok, _job} <- Images.Processing.queue_processing(copy, user) do
       {:ok, copy}
+    end
+  end
+
+  defp create_copy(image, path, config_target, cfg, user, dest) do
+    %{
+      path: path,
+      config_target: config_target,
+      content_hash: image.content_hash,
+      width: image.width,
+      height: image.height,
+      dominant_color: image.dominant_color,
+      title: image.title,
+      credits: image.credits,
+      alt: image.alt,
+      focal: if(image.focal, do: Map.take(image.focal, [:x, :y]), else: %{x: 50, y: 50}),
+      sizes: %{},
+      status: :unprocessed,
+      folder_id: Brando.Media.Folders.upload_folder_id(nil, cfg)
+    }
+    |> create_image(user)
+    |> case do
+      {:ok, copy} ->
+        {:ok, copy}
+
+      error ->
+        File.rm(dest)
+        error
     end
   end
 
