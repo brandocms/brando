@@ -2056,6 +2056,41 @@ defmodule Mix.Tasks.Brando.Migrate55Test do
     assert_idempotent(igniter, path)
   end
 
+  test "rewrites get_entries_from_identifiers only where Content is Brando.Content" do
+    path = "lib/legacy_app/featured.ex"
+
+    featured = """
+    # alias Brando.Content
+    defmodule LegacyApp.Featured do
+      alias Brando.Content
+
+      def a(ids), do: Content.get_entries_from_identifiers(ids, [:cover])
+      def b(ids), do: ids |> Brando.Content.get_entries_from_identifiers(%{preload: [:cover]})
+    end
+
+    defmodule LegacyApp.Shop do
+      alias LegacyApp.Content
+
+      def c(ids), do: Content.get_entries_from_identifiers(ids, [:price])
+    end
+
+    defmodule LegacyApp.Plain do
+      def d(ids), do: Content.get_entries_from_identifiers(ids, [:price])
+    end
+    """
+
+    igniter = migrate(@blueprint_054, %{path => featured})
+    migrated = source(igniter, path)
+
+    assert migrated =~ "def a(ids), do: Content.get_entries_from_identifiers(ids, %{preload: [:cover]})"
+    assert migrated =~ "def c(ids), do: Content.get_entries_from_identifiers(ids, [:price])"
+    assert migrated =~ "def d(ids), do: Content.get_entries_from_identifiers(ids, [:price])"
+
+    # Nothing to list: the piped call already passes options, and the others
+    # are not Brando's.
+    refute Enum.any?(igniter.warnings, &(&1 =~ "get_entries_from_identifiers"))
+  end
+
   describe "redundant `use Phoenix.Component`" do
     # koi's 0.53 controller HTML modules
     @page_html_path "lib/legacy_app_web/controllers/page_html.ex"

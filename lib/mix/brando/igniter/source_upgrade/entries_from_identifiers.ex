@@ -32,58 +32,127 @@ if Code.ensure_loaded?(Igniter) do
     end
 
     defp rewrite_in({path, content}, {igniter, listed}) do
-      content_alias? = content =~ ~r/\balias Brando\.Content\b(?!\.)(?!\s*,\s*as:)/
-
       case Sourceror.parse_string(content) do
         {:ok, ast} ->
-          calls = calls(ast, content_alias?)
-          unknown = for {line, :unknown} <- calls, do: "#{path}:#{line}"
+          calls = ast |> statements() |> walk(%{}, [])
+          rewrite = for {line, :list, :brando} <- calls, do: line
+
+          unsure =
+            for {line, form, receiver} <- calls,
+                (receiver == :brando and form == :unknown) or (receiver == :unsure and form in [:list, :unknown]),
+                do: "#{path}:#{line}"
 
           igniter =
-            if Enum.any?(calls, &match?({_line, :list}, &1)),
-              do: Igniter.update_elixir_file(igniter, path, &rewrite_calls(&1, content_alias?)),
-              else: igniter
+            if rewrite == [],
+              do: igniter,
+              else: Igniter.update_elixir_file(igniter, path, &rewrite_calls(&1, rewrite))
 
-          {igniter, listed ++ unknown}
+          {igniter, listed ++ unsure}
 
         _error ->
           {igniter, listed}
       end
     end
 
-    # `{line, :list | :map | :unknown}` for each call, by its preloads.
-    defp calls(ast, content_alias?) do
-      {_ast, calls} =
-        Macro.prewalk(ast, [], fn node, calls ->
-          case preloads(node, content_alias?) do
-            nil -> {node, calls}
-            preloads -> {node, calls ++ [{Sourceror.get_line(node), form(preloads)}]}
-          end
+    defp statements({:__block__, _, statements}) when is_list(statements), do: statements
+    defp statements(statement), do: [statement]
+
+    # `{line, :list | :map | :unknown, :brando | :unsure}` for each call to a
+    # `get_entries_from_identifiers/2` that may be Brando.Content's, read in
+    # order with the aliases in reach where it stands.
+    defp walk(statements, aliases, calls) do
+      {_aliases, calls} =
+        Enum.reduce(statements, {aliases, calls}, fn
+          {:alias, _, _} = statement, {aliases, calls} -> {declare_alias(statement, aliases), calls}
+          statement, {aliases, calls} -> {aliases, collect(statement, aliases, calls)}
         end)
 
       calls
     end
 
-    defp rewrite_calls(zipper, content_alias?) do
-      Common.update_all_matches(zipper, &(form(preloads(Zipper.node(&1), content_alias?)) == :list), fn zipper ->
+    defp collect(ast, aliases, calls) do
+      {_ast, calls} =
+        Macro.prewalk(ast, calls, fn
+          {:defmodule, _, [_name, [{_do, body}]]}, calls ->
+            {:skipped, walk(statements(body), aliases, calls)}
+
+          {:|>, _, [identifiers, {_call, meta, [preloads]} = call]} = node, calls ->
+            case receiver(call, aliases) do
+              nil -> {node, calls}
+              receiver -> {identifiers, calls ++ [{meta[:line], form(preloads), receiver}]}
+            end
+
+          {_call, meta, [_identifiers, preloads]} = node, calls ->
+            case receiver(node, aliases) do
+              nil -> {node, calls}
+              receiver -> {node, calls ++ [{meta[:line], form(preloads), receiver}]}
+            end
+
+          node, calls ->
+            {node, calls}
+        end)
+
+      calls
+    end
+
+    # `:brando` for Brando.Content's function, `:unsure` when an alias in the
+    # way cannot be read, nil for any other.
+    defp receiver({{:., _, [{:__aliases__, _, [first | rest]}, :get_entries_from_identifiers]}, _, _args}, aliases) do
+      case Map.get(aliases, first, [first]) do
+        :unknown -> :unsure
+        base -> if base ++ rest == [:Brando, :Content], do: :brando
+      end
+    end
+
+    defp receiver(_node, _aliases), do: nil
+
+    defp declare_alias({:alias, _, [{{:., _, [{:__aliases__, _, base}, :{}]}, _, children}]}, aliases) do
+      Enum.reduce(children, aliases, fn
+        {:__aliases__, _, parts}, aliases -> Map.put(aliases, List.last(parts), expand(base ++ parts, aliases))
+        _child, aliases -> aliases
+      end)
+    end
+
+    defp declare_alias({:alias, _, [{:__aliases__, _, parts} | options]}, aliases) do
+      as =
+        Enum.find_value(List.flatten(options), fn
+          {key, {:__aliases__, _, [as]}} -> if unwrap(key) == :as, do: as
+          _option -> nil
+        end)
+
+      Map.put(aliases, as || List.last(parts), expand(parts, aliases))
+    end
+
+    defp declare_alias(_statement, aliases), do: aliases
+
+    defp expand([first | rest] = parts, aliases) do
+      cond do
+        not Enum.all?(parts, &is_atom/1) -> :unknown
+        Map.get(aliases, first) == :unknown -> :unknown
+        Map.has_key?(aliases, first) -> aliases[first] ++ rest
+        true -> parts
+      end
+    end
+
+    defp unwrap({:__block__, _, [value]}), do: value
+    defp unwrap(value), do: value
+
+    defp rewrite_calls(zipper, lines) do
+      Common.update_all_matches(zipper, &rewritten?(Zipper.node(&1), lines), fn zipper ->
         {:ok, Zipper.update(zipper, &with_preload_map/1)}
       end)
     end
 
-    # The preloads argument of a call to `Brando.Content.get_entries_from_identifiers/2`.
-    defp preloads({:|>, _, [_identifiers, call]}, content_alias?) do
-      with {_call, _meta, [preloads]} <- content_call(call, content_alias?), do: preloads
-    end
+    defp rewritten?({:|>, _, [_identifiers, {_call, meta, [preloads]} = call]}, lines),
+      do: meta[:line] in lines and form(preloads) == :list and content_call?(call)
 
-    defp preloads(node, content_alias?) do
-      with {_call, _meta, [_identifiers, preloads]} <- content_call(node, content_alias?), do: preloads
-    end
+    defp rewritten?({_call, meta, [_identifiers, preloads]} = call, lines),
+      do: meta[:line] in lines and form(preloads) == :list and content_call?(call)
 
-    defp content_call({{:., _, [{:__aliases__, _, receiver}, :get_entries_from_identifiers]}, _, _args} = call, alias?) do
-      if receiver == [:Brando, :Content] or (alias? and receiver == [:Content]), do: call
-    end
+    defp rewritten?(_node, _lines), do: false
 
-    defp content_call(_node, _alias?), do: nil
+    defp content_call?({{:., _, [{:__aliases__, _, _receiver}, :get_entries_from_identifiers]}, _, _args}), do: true
+    defp content_call?(_node), do: false
 
     defp form({:__block__, _, [list]}) when is_list(list), do: :list
     defp form({:%{}, _, _}), do: :map
