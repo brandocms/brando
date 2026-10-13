@@ -183,7 +183,8 @@ attribute :aliases, :string_list, default: []
 `:string_list` uses `Brando.Type.StringList`, stored as `{:array, :string}`.
 It accepts a list, an indexed map submitted by a form, or a comma-separated
 string. Casting trims each entry and drops blanks. Use `{:array, :string}`
-when entries should keep their whitespace and empty strings. Edit a
+to preserve whitespace around nonblank entries; the generated changeset's
+default Ecto cast still drops empty and whitespace-only entries. Edit a
 `:string_list` attribute with the form's `:string_list` input.
 
 ### Polymorphic embeds
