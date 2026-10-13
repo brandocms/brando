@@ -27,14 +27,15 @@ if Code.ensure_loaded?(Igniter) do
       with {:ok, backend} <- gettext_module(zipper),
            {:ok, {igniter, _source, backend_zipper}} <- ProjectModule.find_module(igniter, backend),
            {:ok, configured} <- config_privs(igniter, backend) do
-        # Config replaces the `use` option; without any, the option decides.
-        if configured == [],
-          do: with({:ok, own} <- backend_priv(backend_zipper), do: {:ok, [own]}),
-          else: {:ok, Enum.uniq(configured)}
+        candidates(configured, backend_zipper)
       else
         _ -> :unknown
       end
     end
+
+    # Config replaces the `use` option; without any, the option decides.
+    defp candidates([], backend_zipper), do: with({:ok, own} <- backend_priv(backend_zipper), do: {:ok, [own]})
+    defp candidates(configured, _backend_zipper), do: {:ok, Enum.uniq(configured)}
 
     # The backend's application config, `config :my_app, MyApp.Gettext,
     # priv: "…"`, which Gettext merges over the `use` options: `{:ok, privs}`

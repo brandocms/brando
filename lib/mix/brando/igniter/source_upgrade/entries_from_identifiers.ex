@@ -108,7 +108,7 @@ if Code.ensure_loaded?(Igniter) do
 
     defp declare_alias({:alias, _, [{{:., _, [{:__aliases__, _, base}, :{}]}, _, children}]}, aliases) do
       Enum.reduce(children, aliases, fn
-        {:__aliases__, _, parts}, aliases -> Map.put(aliases, List.last(parts), expand(base ++ parts, aliases))
+        {:__aliases__, _, parts}, aliases -> Map.put(aliases, last_part(parts), expand(base ++ parts, aliases))
         _child, aliases -> aliases
       end)
     end
@@ -120,10 +120,12 @@ if Code.ensure_loaded?(Igniter) do
           _option -> nil
         end)
 
-      Map.put(aliases, as || List.last(parts), expand(parts, aliases))
+      Map.put(aliases, as || last_part(parts), expand(parts, aliases))
     end
 
     defp declare_alias(_statement, aliases), do: aliases
+
+    defp last_part(parts), do: parts |> Enum.reverse() |> hd()
 
     defp expand([first | rest] = parts, aliases) do
       cond do
