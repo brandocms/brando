@@ -14,7 +14,7 @@ const rows = page => table(page).locator('.subform-table-body > .subform-entry')
 const titleOf = row => row.locator('input[name$="[title]"]')
 const confirmedOf = row => row.getByRole('checkbox', { name: 'Confirmed' })
 
-async function threeRows(page) {
+async function threeRows(page, { norwegian = false } = {}) {
   await page.goto('/admin/projects/clients/create')
   await syncLV(page)
   await page.getByRole('textbox', { name: 'Name' }).fill(`Row removal ${Date.now()}`)
@@ -23,7 +23,7 @@ async function threeRows(page) {
   // All three rows first: on main, Add straight after typing was lost too
   // (the last test here).
   for (const count of [1, 2, 3]) {
-    await table(page).getByRole('button', { name: 'Add entry' }).click()
+    await table(page).getByRole('button', { name: norwegian ? 'Ny rad' : 'Add entry' }).click()
     await expect(rows(page)).toHaveCount(count)
     await syncLV(page)
   }
@@ -75,6 +75,25 @@ test('ticking the next row before the removal lands keeps the rows intact', asyn
   await expect(rows(page)).toHaveCount(2)
   await syncLV(page)
   expect((await saved(page)).titles).toEqual(['A', 'C'])
+})
+
+for (const persisted of [false, true]) test(`typing across a delayed removal keeps every character in ${persisted ? 'saved' : 'new'} rows`, async ({ page }) => {
+  const latency = await serverLatency(page)
+  expect((await page.request.post('/e2e/setup_fixtures/norwegian-admin-user')).ok()).toBe(true)
+  await threeRows(page, { norwegian: true })
+  if (persisted) expect((await saved(page)).titles).toEqual(['A', 'B', 'C'])
+  latency.set(1000)
+  await rows(page).nth(1).getByRole('button', { name: 'Fjern element' }).click()
+  await titleOf(rows(page).nth(2)).focus()
+  await page.keyboard.press('End')
+  // Each pause exceeds the input debounce. Continue typing while removal
+  // and validation replies arrive, so the focused input stays locked as
+  // the surrounding row changes position (#3160).
+  await page.keyboard.type('2345', { delay: 400 })
+  latency.set(0)
+  await expect(rows(page)).toHaveCount(2)
+  await syncLV(page)
+  expect((await saved(page)).titles).toEqual(['A', 'C2345'])
 })
 
 test('saving straight after a removal saves without the row', async ({ page }) => {

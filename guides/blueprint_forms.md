@@ -997,7 +997,9 @@ needs `cast: true` (embeds are always cast). Rows can be dragged into order
 when the related schema has `trait :sequenced` or the relation is an
 `embeds_many`. The parameter names for ordering and removal come from the
 relation's `sort_param:` and `drop_param:`, and default to
-`sort_<name>_ids` and `drop_<name>_ids`.
+`sort_<name>_ids` and `drop_<name>_ids`. You can keep typing in a remaining
+row while a removal is waiting for its reply; the typed values stay with
+that row when its position changes.
 
 What a subform input cannot do: generate with `ai:`, use `update_relation:`
 on a select, take `:unless_superuser`, or carry footnotes.
