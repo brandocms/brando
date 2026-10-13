@@ -16712,6 +16712,11 @@ msgstr "Bildet er i et format KI-modellen ikke kan lese"
 msgid "The image this content type shares, as it is shared."
 msgstr "Bildet denne innholdstypen deler, slik det deles."
 
+#: lib/brando_admin/components/image_picker.ex
+#, elixir-autogen, elixir-format
+msgid "The image was not set: the picker was opened for another field before its copy was ready"
+msgstr "Bildet ble ikke satt inn: bildevelgeren ble åpnet for et annet felt før kopien var klar"
+
 #: lib/brando_admin/live/sites/scheduled_publishing_live.ex
 #, elixir-autogen, elixir-format
 msgid "The job could not be deleted. Refresh the list and try again."

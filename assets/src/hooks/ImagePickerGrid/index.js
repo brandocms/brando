@@ -85,9 +85,9 @@ export default app => ({
     // A pick from the whole library: the server answers with the image made
     // for the field (the picked one, or its copy cut to the field's sizes),
     // and the field takes it through its own `select_image`.
-    this.handleEvent('b:image_picker:pick', ({ id }) => {
-      const eventTarget = this.el.dataset.eventTarget
-      if (eventTarget) this.pushEventTo(eventTarget, 'select_image', { id: String(id) })
+    this.handleEvent('b:image_picker:pick', ({ id, target }) => {
+      // The field the image was picked for, which the server names
+      if (target) this.pushEventTo(target, 'select_image', { id: String(id) })
     })
 
     // Server pushes unified selection state

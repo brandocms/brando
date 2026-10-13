@@ -43,8 +43,7 @@ defmodule BrandoAdmin.Components.ImagePicker do
      |> assign(:show_new_folder_form, false)
      |> assign(:form_id, assigns[:form_id] || socket.assigns.form_id)
      |> assign(:recent_folders, recent_folders)
-     |> assign(:config_target, config_target)
-     |> assign_config_target()
+     |> open_for(config_target)
      |> assign_folder_state(assigns[:initial_folder])
      # Show the drawer from HERE (not the Form handler) so the event rides the
      # same diff as this component's re-render — pushed from the Form it races
@@ -66,12 +65,11 @@ defmodule BrandoAdmin.Components.ImagePicker do
      |> assign(:new_folder, "")
      |> assign(:show_new_folder_form, false)
      |> assign(:form_id, params[:form_id] || socket.assigns.form_id)
-     |> assign(:config_target, config_target)
      |> assign(:event_target, event_target)
      |> assign(:multi, multi)
      |> assign(:selected_images, selected_images)
      |> leave_library()
-     |> assign_config_target()
+     |> open_for(config_target)
      |> assign_folder_state(nil)
      |> push_selection_state()}
   end
@@ -390,8 +388,20 @@ defmodule BrandoAdmin.Components.ImagePicker do
     end
   end
 
-  def handle_async(:pick_library_image, {:ok, {:ok, picked}}, socket) do
-    {:noreply, push_event(socket, "b:image_picker:pick", %{id: picked.id})}
+  # The copy is for the field the picker was open for when it was picked.
+  # Opened since for another one, the picker would hand it to that field, so
+  # the reply is dropped instead.
+  def handle_async(:pick_library_image, {:ok, {{generation, target}, {:ok, picked}}}, socket) do
+    if generation == socket.assigns.open_generation do
+      {:noreply, push_event(socket, "b:image_picker:pick", %{id: picked.id, target: to_string(target)})}
+    else
+      send(
+        self(),
+        {:toast, gettext("The image was not set: the picker was opened for another field before its copy was ready")}
+      )
+
+      {:noreply, socket}
+    end
   end
 
   def handle_async(:pick_library_image, _result, socket) do
@@ -405,6 +415,7 @@ defmodule BrandoAdmin.Components.ImagePicker do
   defp start_pick(socket, image_id) do
     user = socket.assigns.current_user
     config_target = socket.assigns.config_target
+    origin = {socket.assigns.open_generation, socket.assigns.event_target}
     scope = Brando.Authorization.Boundary.current_scope()
     parent = self()
 
@@ -413,7 +424,7 @@ defmodule BrandoAdmin.Components.ImagePicker do
         if Application.get_env(Brando.config(:otp_app), :sql_sandbox),
           do: Ecto.Adapters.SQL.Sandbox.allow(Brando.Repo.repo(), parent, self())
 
-        Brando.Authorization.Boundary.with_scope(scope, fn -> pick_for(image_id, config_target, user) end)
+        {origin, Brando.Authorization.Boundary.with_scope(scope, fn -> pick_for(image_id, config_target, user) end)}
       end)
 
     start_async(socket, :pick_library_image, pick)
@@ -852,6 +863,8 @@ defmodule BrandoAdmin.Components.ImagePicker do
     |> assign_new(:current_user, fn -> nil end)
     |> assign_new(:scope, fn -> :field end)
     |> assign_new(:library_offered?, fn -> false end)
+    |> assign_new(:open_generation, fn -> 0 end)
+    |> assign_new(:folder_memory, fn -> %{} end)
     |> assign_new(:config_target, fn -> nil end)
     |> assign_new(:event_target, fn -> nil end)
     |> assign_new(:selected_images, fn -> [] end)
@@ -1017,6 +1030,29 @@ defmodule BrandoAdmin.Components.ImagePicker do
   end
 
   defp upload_target(_socket, _root, _folder), do: nil
+
+  # Each opening is a new generation, so a copy picked in an earlier one is
+  # not handed to the field this one is for. The folder browsed and the
+  # folders made are kept per target: another field's are relative to
+  # another root, and would point into folders that its root does not have.
+  defp open_for(socket, config_target) do
+    previous = socket.assigns.config_target
+
+    memory =
+      if is_nil(previous),
+        do: socket.assigns.folder_memory,
+        else:
+          Map.put(socket.assigns.folder_memory, previous, {socket.assigns.current_folder, socket.assigns.custom_folders})
+
+    socket = socket |> assign(:config_target, config_target) |> assign_config_target()
+    {current_folder, custom_folders} = Map.get(memory, socket.assigns.config_target, {"", []})
+
+    socket
+    |> assign(:folder_memory, memory)
+    |> assign(:current_folder, current_folder)
+    |> assign(:custom_folders, custom_folders)
+    |> update(:open_generation, &(&1 + 1))
+  end
 
   # Opening for a field starts on its own images. A folder from the library
   # means nothing there, but the field's last folder, and folders made in the

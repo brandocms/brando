@@ -225,12 +225,19 @@ defmodule Brando.Images do
     end
   end
 
+  # The CDN the original was uploaded to: its config's own, or, as the
+  # uploader falls back to it, the one configured for `Brando.Images`
   defp read_original_from_cdn(image) do
-    case get_config_for(image) do
-      {:ok, %{cdn: %{enabled: true}} = cfg} -> Brando.CDN.get_object(Path.join("media", image.path), cfg)
+    {:ok, cfg} = get_config_for(image)
+
+    case effective_cdn(cfg) do
+      %{enabled: true} = cdn -> Brando.CDN.get_object(Path.join("media", image.path), Map.put(cfg, :cdn, cdn))
       _ -> {:error, :enoent}
     end
   end
+
+  defp effective_cdn(%{cdn: %{enabled: true} = cdn}), do: cdn
+  defp effective_cdn(_cfg), do: Brando.CDN.config(Brando.Images)
 
   defp lock_copy(hash, config_target) do
     key = :erlang.phash2({Brando.Tenant.current_prefix(), hash, config_target}, 4_294_967_296)

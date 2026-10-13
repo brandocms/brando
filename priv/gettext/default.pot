@@ -16708,6 +16708,11 @@ msgstr ""
 msgid "The image this content type shares, as it is shared."
 msgstr ""
 
+#: lib/brando_admin/components/image_picker.ex
+#, elixir-autogen, elixir-format
+msgid "The image was not set: the picker was opened for another field before its copy was ready"
+msgstr ""
+
 #: lib/brando_admin/live/sites/scheduled_publishing_live.ex
 #, elixir-autogen, elixir-format
 msgid "The job could not be deleted. Refresh the list and try again."

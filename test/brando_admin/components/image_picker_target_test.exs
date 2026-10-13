@@ -94,6 +94,10 @@ defmodule BrandoAdmin.Components.ImagePickerTargetTest do
     end
   end
 
+  defp picks(socket) do
+    for ["b:image_picker:pick", payload] <- Phoenix.LiveView.Utils.get_push_events(socket), do: payload
+  end
+
   describe "the whole library, for one field's pick" do
     @meta_target "image:Brando.Pages.Page:meta_image"
 
@@ -198,6 +202,52 @@ defmodule BrandoAdmin.Components.ImagePickerTargetTest do
 
       assert socket.assigns.current_folder == "sub"
       assert "sub/fresh" in socket.assigns.child_folders
+    end
+
+    test "a folder browsed for one field is not where another field's opening starts", %{user: user} do
+      Brando.Factory.insert(:image,
+        creator_id: user.id,
+        status: :processed,
+        config_target: @meta_target,
+        path: "images/meta/sub/one.jpg"
+      )
+
+      {:noreply, socket} = ImagePicker.handle_event("go_folder", %{"folder" => "sub"}, open_for_field(user))
+      {:noreply, socket} = ImagePicker.handle_event("picker_closed", %{}, socket)
+
+      {:ok, other} =
+        ImagePicker.update(%{config_target: "default", event_target: nil, multi: false, selected_images: []}, socket)
+
+      assert {other.assigns.current_folder, other.assigns.custom_folders} == {"", []}
+      refute "sub" in other.assigns.folders
+
+      {:ok, back} =
+        ImagePicker.update(%{config_target: @meta_target, event_target: nil, multi: false, selected_images: []}, other)
+
+      assert back.assigns.current_folder == "sub"
+    end
+
+    test "a copy ready after the picker opened for another field is not handed to that field", %{user: user} do
+      picked = Brando.Factory.insert(:image, creator_id: user.id, config_target: @meta_target, status: :processed)
+      field_a = %Phoenix.LiveComponent.CID{cid: 11}
+      field_b = %Phoenix.LiveComponent.CID{cid: 22}
+
+      socket = open_for_field(user, %{event_target: field_a})
+      origin = {socket.assigns.open_generation, socket.assigns.event_target}
+
+      # Still open for field A: the copy goes to A
+      {:noreply, same} = ImagePicker.handle_async(:pick_library_image, {:ok, {origin, {:ok, picked}}}, socket)
+      assert picks(same) == [%{id: picked.id, target: "11"}]
+
+      # Opened for field B in the meantime: dropped
+      {:ok, reopened} =
+        ImagePicker.update(
+          %{config_target: @meta_target, event_target: field_b, multi: false, selected_images: []},
+          socket
+        )
+
+      {:noreply, later} = ImagePicker.handle_async(:pick_library_image, {:ok, {origin, {:ok, picked}}}, reopened)
+      assert picks(later) == []
     end
 
     test "Root and Up at the field's root lead into the library", %{user: user} do

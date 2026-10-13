@@ -166,6 +166,44 @@ defmodule Brando.Images.ForConfigTargetTest do
     end
   end
 
+  describe "an original only the CDN configured for all images has" do
+    import Mox
+
+    setup :verify_on_exit!
+
+    # The image's own config has no CDN; the uploader falls back to the one
+    # under `config :brando, Brando.Images, cdn: …`
+    setup %{image: image} do
+      original = Application.get_env(:brando, Brando.Images, [])
+
+      cdn = %{
+        enabled: true,
+        bucket: "globalbucket",
+        media_url: "https://globalbucket.example.com",
+        s3: %Brando.CDN.S3Config{access_key_id: "KEY", secret_access_key: "SECRET", region: "ams3"},
+        keep_local_copy: false
+      }
+
+      default_config = original |> Keyword.get(:default_config, %{}) |> Map.new() |> Map.put(:cdn, nil)
+      put_test_env(Brando.Images, original |> Keyword.put(:cdn, cdn) |> Keyword.put(:default_config, default_config))
+
+      bytes = File.read!(Images.Utils.media_path(image.path))
+      File.rm!(Images.Utils.media_path(image.path))
+      {:ok, bytes: bytes}
+    end
+
+    test "is read from that CDN", %{image: image, user: user, bytes: bytes} do
+      object_key = Path.join("media", image.path)
+
+      expect(Brando.CDN.Client.Mock, :get_object, fn "globalbucket", ^object_key, _ ->
+        {:ok, %{status_code: 200, body: bytes}}
+      end)
+
+      {:ok, copy} = Oban.Testing.with_testing_mode(:manual, fn -> Images.for_config_target(image, @meta_target, user) end)
+      assert File.read!(Images.Utils.media_path(copy.path)) == bytes
+    end
+  end
+
   describe "find_duplicate/1" do
     test "only offers an image of the same file made for the upload's config" do
       _other_config = Factory.insert(:image, content_hash: "same", config_target: "default")
