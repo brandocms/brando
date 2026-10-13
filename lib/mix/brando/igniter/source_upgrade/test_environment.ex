@@ -79,6 +79,14 @@ if Code.ensure_loaded?(Igniter) do
       collect_branches(value, branches, reachable?, env_bound, acc)
     end
 
+    defp collect(
+           {:case, meta, [{{:., _, [{:__aliases__, _, [:Config]}, :config_env]}, _, []}, body]},
+           reachable?,
+           env_bound,
+           acc
+         ),
+         do: collect({:case, meta, [{:config_env, [], []}, body]}, reachable?, env_bound, acc)
+
     defp collect({:case, _, [{:config_env, _, []}, [do: clauses]]}, reachable?, env_bound, acc) do
       Enum.reduce(clauses, acc, fn {:->, _, [[pattern], body]}, acc ->
         collect(body, reachable? and test_pattern?(pattern), env_bound, acc)
@@ -120,6 +128,7 @@ if Code.ensure_loaded?(Igniter) do
     # Evaluates a condition on `config_env()` for `:test`, from literals and
     # comparison and boolean operators only.
     defp test_value({:config_env, _, []}), do: {:ok, :test}
+    defp test_value({{:., _, [{:__aliases__, _, [:Config]}, :config_env]}, _, []}), do: {:ok, :test}
     defp test_value(value) when is_atom(value) or is_binary(value) or is_number(value), do: {:ok, value}
 
     defp test_value(list) when is_list(list) do
