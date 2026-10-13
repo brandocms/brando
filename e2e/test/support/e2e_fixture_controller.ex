@@ -57,6 +57,15 @@ defmodule E2EFixtureController do
 
           get_admin_user()
 
+        # An image whose file is in the media folder, so checks that look
+        # for the media find it. Stays signed in as the Norwegian admin when
+        # a spec has made one.
+        "image-file" ->
+          create_directory_avatar()
+
+          Brando.Repo.get_by(Brando.Users.User, email: "norwegian-admin@brandocms.com") ||
+            get_admin_user()
+
         "site-form" ->
           create_site_form()
 
@@ -103,12 +112,21 @@ defmodule E2EFixtureController do
   # last message failed for good, with that message in its delivery log.
   defp create_paused_notification_route do
     user = get_admin_user()
-    url = String.trim_trailing(E2eProjectWeb.Endpoint.url(), "/") <> "/e2e/webhook-receiver/notification-route-paused"
+
+    url =
+      String.trim_trailing(E2eProjectWeb.Endpoint.url(), "/") <>
+        "/e2e/webhook-receiver/notification-route-paused"
+
     routing = Brando.Notifications.Routing
 
     {:ok, route} =
       routing.create_route(
-        %{"name" => "Editors' channel", "kind" => "slack", "url" => url, "events" => ["scheduled_publish", "failed_job"]},
+        %{
+          "name" => "Editors' channel",
+          "kind" => "slack",
+          "url" => url,
+          "events" => ["scheduled_publish", "failed_job"]
+        },
         user
       )
 
@@ -118,7 +136,12 @@ defmodule E2EFixtureController do
       notification: %{
         "event" => "failed_job",
         "site" => "e2e",
-        "job" => %{"worker" => "E2eProject.Worker.Sync", "attempt" => 10, "max_attempts" => 10, "error" => "timeout"}
+        "job" => %{
+          "worker" => "E2eProject.Worker.Sync",
+          "attempt" => 10,
+          "max_attempts" => 10,
+          "error" => "timeout"
+        }
       },
       state: "failed",
       response_status: 500,
@@ -472,7 +495,11 @@ defmodule E2EFixtureController do
       context = %Tools.Context{actor: user, origin: origin, client: client}
 
       {:ok, %{proposal_id: id, version: version}} =
-        Tools.call("prepare_proposal", %{"summary" => "Retitle #{page.title}", "operations" => [op]}, context)
+        Tools.call(
+          "prepare_proposal",
+          %{"summary" => "Retitle #{page.title}", "operations" => [op]},
+          context
+        )
 
       {:ok, _} = Proposals.approve(id, version, user)
       {:ok, _} = Proposals.apply(id, version, user)
@@ -481,8 +508,19 @@ defmodule E2EFixtureController do
     hotel = page.("Sommerro", "activity-sommerro")
     {:ok, _} = Brando.Pages.update_page(hotel.id, %{meta_description: "By the sea"}, user)
 
-    apply_proposal.(page.("Villa Tide", "activity-villa-tide"), "Villa Tide, by the fjord", :assistant, nil)
-    apply_proposal.(page.("Aker brygge", "activity-aker-brygge"), "Aker brygge, the wharf", :mcp, "Claude Code")
+    apply_proposal.(
+      page.("Villa Tide", "activity-villa-tide"),
+      "Villa Tide, by the fjord",
+      :assistant,
+      nil
+    )
+
+    apply_proposal.(
+      page.("Aker brygge", "activity-aker-brygge"),
+      "Aker brygge, the wharf",
+      :mcp,
+      "Claude Code"
+    )
 
     Brando.Activity.with_source(:scheduler, fn ->
       {:ok, _} = Brando.Pages.update_page(hotel.id, %{status: :published}, user)
@@ -1207,7 +1245,10 @@ defmodule E2EFixtureController do
 
     image =
       image
-      |> Ecto.Changeset.change(config_target: "default", title: %{"en" => "Ferries", "no" => "Ferjer"})
+      |> Ecto.Changeset.change(
+        config_target: "default",
+        title: %{"en" => "Ferries", "no" => "Ferjer"}
+      )
       |> Brando.Repo.update!()
 
     json(conn, %{id: image.id})
@@ -1465,11 +1506,21 @@ defmodule E2EFixtureController do
 
     {:ok, video_cfg} = Brando.Videos.get_config_for(%{config_target: "default"})
     {:ok, file_cfg} = Brando.Files.get_config_for(%{config_target: "default"})
-    video_folder = FolderBrowser.folder_id_for("Sweep", FolderBrowser.scope_for(video_cfg.upload_path))
-    file_folder = FolderBrowser.folder_id_for("Sweep", FolderBrowser.scope_for(file_cfg.upload_path))
+
+    video_folder =
+      FolderBrowser.folder_id_for("Sweep", FolderBrowser.scope_for(video_cfg.upload_path))
+
+    file_folder =
+      FolderBrowser.folder_id_for("Sweep", FolderBrowser.scope_for(file_cfg.upload_path))
 
     [teaser, film, walkthrough, _reel] =
-      for {title, n} <- Enum.with_index(["Spring teaser", "Spring film", "Studio walkthrough", "Old showreel"]) do
+      for {title, n} <-
+            Enum.with_index([
+              "Spring teaser",
+              "Spring film",
+              "Studio walkthrough",
+              "Old showreel"
+            ]) do
         Brando.Repo.insert!(%Brando.Videos.Video{
           title: title,
           type: :external_file,
@@ -1486,7 +1537,8 @@ defmodule E2EFixtureController do
 
     [price_list, brochure, floor_plan, _old] =
       for {filename, mime} <- [
-            {"price-list.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"},
+            {"price-list.xlsx",
+             "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"},
             {"spring-brochure.pdf", "application/pdf"},
             {"floor-plan.zip", "application/zip"},
             {"old-terms.pdf", "application/pdf"}
@@ -1501,11 +1553,19 @@ defmodule E2EFixtureController do
         })
       end
 
-    spring = sweep_page(owner, "Spring campaign", :en, videos: [teaser, film], files: [price_list, brochure])
+    spring =
+      sweep_page(owner, "Spring campaign", :en,
+        videos: [teaser, film],
+        files: [price_list, brochure]
+      )
+
     norwegian = sweep_page(owner, "Vårkampanje", :no, videos: [film], files: [])
 
     Brando.Repo.insert!(
-      struct(Module.concat([Brando.Pages.Page, Alternate]), entry_id: norwegian.id, linked_entry_id: spring.id)
+      struct(Module.concat([Brando.Pages.Page, Alternate]),
+        entry_id: norwegian.id,
+        linked_entry_id: spring.id
+      )
     )
 
     sweep_page(owner, "Studio visits", :en, videos: [walkthrough], files: [floor_plan])
@@ -1532,9 +1592,12 @@ defmodule E2EFixtureController do
         uid: Brando.Utils.generate_uid()
       })
 
-    Brando.Repo.insert!(struct(Brando.Pages.Page.Blocks, %{entry_id: page.id, block_id: block.id, sequence: 0}))
+    Brando.Repo.insert!(
+      struct(Brando.Pages.Page.Blocks, %{entry_id: page.id, block_id: block.id, sequence: 0})
+    )
 
-    refs = Enum.map(media[:videos], &{:video_id, &1.id}) ++ Enum.map(media[:files], &{:file_id, &1.id})
+    refs =
+      Enum.map(media[:videos], &{:video_id, &1.id}) ++ Enum.map(media[:files], &{:file_id, &1.id})
 
     for {{key, id}, n} <- Enum.with_index(refs) do
       Brando.Repo.insert!(
@@ -1544,7 +1607,10 @@ defmodule E2EFixtureController do
           uid: Brando.Utils.generate_uid(),
           block_id: block.id,
           sequence: n,
-          data: %Brando.Villain.Blocks.TextBlock{type: "text", data: %Brando.Villain.Blocks.TextBlock.Data{text: ""}}
+          data: %Brando.Villain.Blocks.TextBlock{
+            type: "text",
+            data: %Brando.Villain.Blocks.TextBlock.Data{text: ""}
+          }
         ])
       )
     end

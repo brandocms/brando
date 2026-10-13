@@ -18,6 +18,8 @@ test.beforeEach(async ({ page }) => {
 })
 
 test('an image config warning links to the Image sizes row by its name', async ({ page }) => {
+  // The media is here: without it the check asks for the media instead
+  expect((await page.request.post('/e2e/setup_fixtures/image-file')).ok()).toBe(true)
   // An image processed with settings that have changed since
   await factory(page, 'Brando.Images.Image', {
     path: 'images/default/stale.jpg',
