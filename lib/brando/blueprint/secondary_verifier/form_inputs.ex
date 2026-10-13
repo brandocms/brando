@@ -16,7 +16,7 @@ defmodule Brando.Blueprint.SecondaryVerifier.FormInputs do
   # crashes on the rest (`filter:`, `cache:`, …): identifiers have no filters,
   # no associations and no `deleted_at`. `preload:`, `join:` and `include:`
   # name associations, so only an empty one runs.
-  @identifier_source_keys [:order, :status, :language, :exclude_language, :limit, :offset, :select]
+  @identifier_source_keys [:order, :status, :language, :exclude_language, :limit, :offset]
   @association_keys [:preload, :join, :include]
 
   @doc "The columns of `Brando.Content.Identifier`, which `sources:` options can order by."
@@ -175,11 +175,10 @@ defmodule Brando.Blueprint.SecondaryVerifier.FormInputs do
     for field <- unknown_order_fields(order), do: "`order` by #{field} (not an identifier column)"
   end
 
-  defp identifier_source_problem({:select, select}) do
-    if select |> select_fields() |> Enum.all?(&(to_string(&1) in @identifier_columns)),
-      do: [],
-      else: ["`select: #{inspect(select)}` (not identifier columns)"]
-  end
+  # The picker reads the identifiers' every field (`schema` for the entry
+  # type, `title`, `cover`, …), which a `select:` would leave out.
+  defp identifier_source_problem({:select, select}),
+    do: ["`select: #{inspect(select)}` (the picker reads every identifier field)"]
 
   defp identifier_source_problem({key, _value}) when key in @identifier_source_keys, do: []
   defp identifier_source_problem({key, value}), do: ["`#{key}: #{inspect(value)}`"]
@@ -217,11 +216,6 @@ defmodule Brando.Blueprint.SecondaryVerifier.FormInputs do
   end
 
   def identifier_order(order), do: [order: order]
-
-  # The fields a `select:` names, in the forms `Brando.Query`'s reducer takes.
-  defp select_fields({kind, fields}) when kind in [:map, :struct, :raw] and is_list(fields), do: fields
-  defp select_fields(fields) when is_list(fields), do: fields
-  defp select_fields(_select), do: [:unknown]
 
   # The columns an order names, as `Brando.Query`'s order reducer reads it.
   # An association path (`"asc cover.path"`, `{:asc, {:category, :name}}`)

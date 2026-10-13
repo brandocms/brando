@@ -1281,6 +1281,14 @@ defmodule Brando.Blueprint.VerifierTest do
       end
     end
 
+    test "rejects a select:, which leaves out fields the picker reads" do
+      for select <- [{:struct, [:id, :title]}, [:id, :title, :entry_id, :schema]] do
+        assert_raise Spark.Error.DslError, ~r/`select: /, fn ->
+          compile_blueprint(entries_blueprint([{MediaItem, %{select: select}}]))
+        end
+      end
+    end
+
     test "rejects a select: of columns identifiers do not have" do
       assert_raise Spark.Error.DslError, ~r/`select: \[:id, :sequence\]`/, fn ->
         compile_blueprint(entries_blueprint([{MediaItem, %{select: [:id, :sequence]}}]))
@@ -1347,8 +1355,6 @@ defmodule Brando.Blueprint.VerifierTest do
             # The list query skips these.
             %{preload: nil, paginate: true, with_deleted: true},
             %{join: [], include: []},
-            %{select: [:id, :title, :entry_id, :schema]},
-            %{select: {:struct, [:id, :title]}},
             %{}
           ] do
         module = compile_blueprint(entries_blueprint([{MediaItem, options}]))
