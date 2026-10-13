@@ -303,6 +303,14 @@ defmodule Mix.Tasks.Brando.Migrate55PersistIdentifiersTest do
       end)
     end
 
+    # An alias declared above the module, at the file's top level.
+    file_level =
+      "alias Lett.Producers.Producer\n\n" <>
+        String.replace(article, "  alias Lett.Producers.{Producer, Farm}\n", "")
+
+    igniter = migrate(Map.put(files, "lib/lett/articles/article.ex", file_level))
+    refute source(igniter, "lib/lett/producers/producer.ex") =~ "persist_identifier"
+
     # An alias the task cannot resolve keeps the Blueprint.
     unresolved = String.replace(article, "  alias __MODULE__.Featured\n", "  alias unquote(:dynamic).Featured\n")
     igniter = migrate(Map.put(files, "lib/lett/articles/article.ex", unresolved))

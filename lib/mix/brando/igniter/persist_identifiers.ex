@@ -221,7 +221,7 @@ if Code.ensure_loaded?(Igniter) do
 
     defp entries_may_select?(content, module) do
       case Sourceror.parse_string(content) do
-        {:ok, ast} -> ast |> module_scopes(nil) |> Enum.any?(&scope_may_select?(&1, module))
+        {:ok, ast} -> ast |> module_scopes(nil, file_aliases(ast)) |> Enum.any?(&scope_may_select?(&1, module))
         _error -> true
       end
     end
@@ -240,14 +240,17 @@ if Code.ensure_loaded?(Igniter) do
         end)
     end
 
-    # One scope per `defmodule` in the file: its name, the aliases its body
-    # declares, in order, and the `:entries` relations and inputs in it (not
-    # in a module nested in it).
-    defp module_scopes(ast, parent) do
+    # Aliases declared at the file's top level, outside any module.
+    defp file_aliases(ast), do: ast |> statements() |> Enum.reduce(%{}, &declare_alias(&1, nil, &2))
+
+    # One scope per `defmodule` in the file: its name, the aliases in reach
+    # (the enclosing ones, then its body's, in order), and the `:entries`
+    # relations and inputs in it (not in a module nested in it).
+    defp module_scopes(ast, parent, enclosing) do
       {_ast, scopes} =
         Macro.prewalk(ast, [], fn
           {:defmodule, _, [name, [{_do, body}]]}, scopes ->
-            {:skipped, scopes ++ module_scope(name, body, parent)}
+            {:skipped, scopes ++ module_scope(name, body, parent, enclosing)}
 
           node, scopes ->
             {node, scopes}
@@ -256,7 +259,7 @@ if Code.ensure_loaded?(Igniter) do
       scopes
     end
 
-    defp module_scope(name, body, parent) do
+    defp module_scope(name, body, parent, enclosing) do
       # A nested `defmodule Name` defines `Parent.Name`.
       current =
         case {expand(name, parent, %{}), name} do
@@ -267,9 +270,9 @@ if Code.ensure_loaded?(Igniter) do
         end
 
       statements = statements(body)
-      aliases = Enum.reduce(statements, %{}, &declare_alias(&1, current, &2))
+      aliases = Enum.reduce(statements, enclosing, &declare_alias(&1, current, &2))
       {relations, inputs} = statements |> Enum.map(&without_modules/1) |> entries_calls()
-      nested = Enum.flat_map(statements, &module_scopes(&1, current))
+      nested = Enum.flat_map(statements, &module_scopes(&1, current, aliases))
 
       [%{current: current, aliases: aliases, relations: relations, inputs: inputs} | nested]
     end
