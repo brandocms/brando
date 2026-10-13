@@ -586,7 +586,7 @@ defmodule Brando.Content.Proposals do
            query,
            vars,
            language && to_string(language),
-           :selection
+           datasource_type(module)
          ) do
       {:ok, identifiers} when is_list(identifiers) -> identifiers
       _ -> []
@@ -596,6 +596,12 @@ defmodule Brando.Content.Proposals do
   end
 
   def selection_options(_module, _language), do: []
+
+  # A selection or a single datasource lists its options; the module names
+  # which one it uses, by type and key.
+  defp datasource_type(%{datasource_type: type}) when type in [:selection, :single], do: type
+  defp datasource_type(%{datasource_type: type}) when type in ["selection", "single"], do: String.to_existing_atom(type)
+  defp datasource_type(_module), do: :*
 
   defp language({:new, ref}, proposal) do
     case Enum.find(proposal.operations, &match?(%CreateEntry{ref: ^ref}, &1)) do

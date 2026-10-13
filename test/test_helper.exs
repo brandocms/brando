@@ -292,6 +292,13 @@ defmodule BrandoIntegration.ModuleWithDatasource do
       get(fn identifiers -> {:ok, identifiers} end)
     end
 
+    # One page, chosen from the same options.
+    datasource :chosen_page do
+      type :single
+      list(fn _schema, language, _vars -> Brando.Content.list_identifiers([Brando.Pages.Page], %{language: language}) end)
+      get(fn identifier -> {:ok, identifier} end)
+    end
+
     # Pages' identifiers straight from the table, as a site's own datasource
     # may list them, without the admin's read filter.
     datasource :page_identifiers do

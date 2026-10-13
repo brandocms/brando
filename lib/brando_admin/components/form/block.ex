@@ -1907,7 +1907,10 @@ defmodule BrandoAdmin.Components.Form.Block do
         query,
         block_vars(socket),
         Map.get(entry, :language),
-        :selection
+        if(socket.assigns[:module_datasource_type] in [:selection, :single],
+          do: socket.assigns.module_datasource_type,
+          else: :*
+        )
       )
 
     socket
