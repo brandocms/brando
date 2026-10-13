@@ -29,3 +29,10 @@
   to hold converted Villain blocks, and `brando_188` removes it only where
   nothing uses it, so a site with converted content listed a "migration"
   group in the block picker. Blocks that hold legacy content keep it.
+
+- **An entry form no longer crashes on a module that shows the entry's
+  picture.** The block editor's preview of `{% picture entry.cover {…} %}`
+  (and any `entry.<field>` picture) raised a `FunctionClauseError`, so the
+  form never opened (since 0.54). It previews the entry's image, or none when
+  the entry has none, has it unloaded or has no such field, and follows the
+  entry when its picture changes.
