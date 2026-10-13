@@ -182,6 +182,23 @@ defmodule Brando.Images.Processing do
   end
 
   @doc """
+  The config targets of images that no longer resolve to a config (a removed
+  or renamed field, say), and how many images each. Such images are rendered
+  with the default image config; `Brando.Images.ConfigResolver.stale_target_message/2`
+  says so.
+  """
+  @spec stale_config_targets() :: %{String.t() => pos_integer}
+  def stale_config_targets do
+    query =
+      from i in Image,
+        where: is_nil(i.deleted_at) and not is_nil(i.config_target),
+        group_by: i.config_target,
+        select: {i.config_target, count(i.id)}
+
+    for {target, count} <- Brando.Repo.all(query), current_config(target) == :error, into: %{}, do: {target, count}
+  end
+
+  @doc """
   The images `changed_config_targets/0` counts, split in two, by config target:
   `changed` were made with a config that has since changed; `unrecorded` were
   made before Brando recorded configs, so whether theirs changed isn't known.

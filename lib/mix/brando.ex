@@ -34,6 +34,19 @@ defmodule Mix.Brando do
   end
 
   @doc """
+  Says, after a task that rewrote rendered content or identifiers, that a
+  server already running keeps serving what it cached: pages are fetched with
+  `cache: {:ttl, :infinite}`, and a task's process can't reach another node's
+  cache.
+  """
+  def running_server_note do
+    Mix.shell().info(
+      "Servers that were already running keep serving what they cached before. " <>
+        "Restart them, or empty their caches in the admin under Configuration → Cache → Empty all caches."
+    )
+  end
+
+  @doc """
   Asks a question, and refuses to guess when nobody is there to answer.
 
   `Mix.Shell.IO.prompt/1` hands back `IO.gets/1`'s `:eof` when stdin is closed —

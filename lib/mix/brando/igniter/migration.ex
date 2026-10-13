@@ -231,12 +231,11 @@ if Code.ensure_loaded?(Igniter) do
       # Display the exact source now, before Igniter's acceptance prompt, and
       # defer both writes to the checked storage writer instead of Rewrite.
       Mix.shell().info(preview(plan))
-      request = Mix.Brando.MigrationRequest.encode(plan)
 
       igniter
       |> Igniter.assign(:brando_storage_plan, plan)
       |> Igniter.assign(:quiet_on_no_changes?, true)
-      |> Igniter.add_task("brando.blueprint.apply_plan", [request])
+      |> Igniter.add_task("brando.blueprint.apply_plan", Mix.Brando.MigrationRequest.task_args([plan]))
       |> warn_legacy_snapshot(plan)
       |> notice_reconciled([plan])
     end
@@ -250,7 +249,7 @@ if Code.ensure_loaded?(Igniter) do
         Igniter.add_notice(igniter, up_to_date_notice(up_to_date))
       else
         Enum.each(planned, &Mix.shell().info(preview(&1)))
-        requests = Enum.map(planned, &Mix.Brando.MigrationRequest.encode/1)
+        requests = Mix.Brando.MigrationRequest.task_args(planned)
 
         planned
         |> Enum.reduce(igniter, &warn_legacy_snapshot(&2, &1))

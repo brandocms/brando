@@ -10,7 +10,10 @@ defmodule Mix.Tasks.Brando.Images.Adopt do
       mix brando.images.adopt --dry-run
       mix brando.images.adopt --verbose
 
-  Run it once after upgrading from 0.54. It goes through every environment of
+  Run it once after upgrading from 0.54, where the media is: on the server,
+  or on a machine the media has been synced to. When none of the images has
+  a file under the media folder, the task stops and says so instead of
+  reporting every image as different. It goes through every environment of
   every active site when tenancy is on. Each image's formats, size keys, files
   and the files' pixel dimensions are checked against its config, reading only
   the files' headers; a match gets the config's fingerprint and nothing else
@@ -23,8 +26,9 @@ defmodule Mix.Tasks.Brando.Images.Adopt do
 
     * `--dry-run` counts without writing anything.
     * `--verbose` lists the images that differ and what differs (the size
-      keys or formats missing or extra, a size's dimensions against what the
-      config makes), then counts them by config target and reason.
+      keys or formats missing or extra, the path of a missing file, a size's
+      dimensions against what the config makes), then counts them by config
+      target and reason.
     * `--yes` (or `--force`) is accepted and ignored: the task asks nothing,
       and the derived-data tasks all take it.
 
@@ -35,6 +39,7 @@ defmodule Mix.Tasks.Brando.Images.Adopt do
   use Mix.Task
 
   alias Brando.Doctor.Context
+  alias Brando.Images.Adoption
   alias Brando.Tenant
 
   @switches [dry_run: :boolean, verbose: :boolean, yes: :boolean, force: :boolean]
@@ -47,11 +52,20 @@ defmodule Mix.Tasks.Brando.Images.Adopt do
 
     dry_run? = opts[:dry_run] == true
     results = adopt(Context.new(mode: :mix).environments, dry_run: dry_run?, verbose: opts[:verbose] == true)
+    {unsynced, results} = Enum.split_with(results, &match?({_label, {:empty, _root}}, &1))
 
     totals =
       Enum.reduce(results, %{adopted: 0, differ: 0, skipped: 0}, &Map.merge(&2, elem(&1, 1), fn _k, a, b -> a + b end))
 
     cond do
+      unsynced != [] ->
+        Mix.raise("""
+        No image files found under #{Enum.map_join(unsynced, ", ", fn {_label, {:empty, root}} -> root end)}. \
+        Is the media synced to this machine (or its volume mounted)? \
+        Every image would differ for want of its files, and recreating needs the originals.
+        Run the task where the media is, or sync it first.\
+        """)
+
       totals.differ > 0 ->
         Mix.shell().info(
           "\nRecreate the #{totals.differ} that differ with Utilities → Recreate changed images. It recreates only those."
@@ -77,10 +91,7 @@ defmodule Mix.Tasks.Brando.Images.Adopt do
 
     results =
       Enum.map(environments, fn {label, prefix} ->
-        counts =
-          Tenant.with_prefix(prefix, fn ->
-            Brando.Images.Processing.adopt_unrecorded(dry_run: dry_run?, on_differ: on_differ)
-          end)
+        counts = Tenant.with_prefix(prefix, fn -> adopt_here(dry_run?, on_differ) end)
 
         Mix.shell().info(line(label, counts, dry_run?))
         {label, counts}
@@ -91,11 +102,34 @@ defmodule Mix.Tasks.Brando.Images.Adopt do
     results
   end
 
+  @doc """
+  The media roots of `environments` (`{label, prefix}`) that have images to
+  adopt but none of their files, so adopting there would stop.
+  `mix brando.upgrade.database` skips the step for them.
+  """
+  def unsynced(environments) do
+    for {_label, prefix} <- environments,
+        {:empty, root} <- [Tenant.with_prefix(prefix, fn -> Adoption.unrecorded?() and Adoption.media_status() end)],
+        do: root
+  end
+
+  # `{:empty, media_root}` instead of counts when no image has its files here.
+  defp adopt_here(dry_run?, on_differ) do
+    case Adoption.unrecorded?() and Adoption.media_status() do
+      {:empty, _root} = empty -> empty
+      _ok -> Brando.Images.Processing.adopt_unrecorded(dry_run: dry_run?, on_differ: on_differ)
+    end
+  end
+
+  defp line(label, {:empty, root}, _dry_run?), do: label(label, "no image files under #{root}, nothing checked")
+
   defp line(label, %{adopted: adopted, differ: differ, skipped: skipped}, dry_run?) do
     adopted = if dry_run?, do: "#{adopted} already match", else: "#{adopted} adopted"
-    text = "#{adopted}, #{differ} differ, #{skipped} skipped"
-    if label, do: "[#{label}] #{text}", else: text
+    label(label, "#{adopted}, #{differ} differ, #{skipped} skipped")
   end
+
+  defp label(nil, text), do: text
+  defp label(label, text), do: "[#{label}] #{text}"
 
   defp print_differ(image, verdict) do
     Mix.shell().info("  image #{image.id} (#{image.config_target}): #{reason(verdict)}")
@@ -120,6 +154,7 @@ defmodule Mix.Tasks.Brando.Images.Adopt do
   # The reason without what differs image by image (a size's dimensions), so
   # the images that differ the same way count together.
   defp group({:differ, {:dimensions, key, _actual, _config}}), do: "#{key}: other dimensions"
+  defp group({:differ, {:missing, key, file}}) when is_binary(file), do: "#{key}: file missing"
   defp group({:differ, {:error, _message}}), do: "could not be checked"
   defp group(verdict), do: reason(verdict)
 
@@ -130,7 +165,8 @@ defmodule Mix.Tasks.Brando.Images.Adopt do
     "sizes: " <> Enum.map_join(differences, ", ", fn {label, keys} -> "#{label} #{inspect(keys)}" end)
   end
 
-  defp reason({:differ, {:missing, key}}), do: "#{key} is missing"
+  defp reason({:differ, {:missing, key, nil}}), do: "#{key}: no file path recorded"
+  defp reason({:differ, {:missing, key, file}}), do: "#{key}: file missing: #{file}"
   defp reason({:differ, {:dimensions, key, nil, _config}}), do: "#{key}: its dimensions could not be read"
   defp reason({:differ, {:dimensions, key, actual, nil}}), do: "#{key}: #{size(actual)}, not what its config makes"
   defp reason({:differ, {:dimensions, key, actual, config}}), do: "#{key}: #{size(actual)} vs config #{size(config)}"

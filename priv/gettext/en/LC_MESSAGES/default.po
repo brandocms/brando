@@ -10509,6 +10509,11 @@ msgstr ""
 msgid "No image associated with field"
 msgstr ""
 
+#: lib/brando_admin/live/sites/utils_live.ex
+#, elixir-autogen, elixir-format
+msgid "No image files found under %{path}. Is the media synced to this server?"
+msgstr ""
+
 #: lib/brando_admin/components/image_picker.ex
 #, elixir-autogen, elixir-format
 msgid "No images in this folder"

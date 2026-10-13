@@ -141,6 +141,10 @@ Pin the toolchain with mise or asdf: a current Elixir and OTP, and Node 22 or
 such as Node 23 in both yarn and pnpm installs. Use the same Node major as the
 Dockerfile's `node:` stages.
 
+`scripts/prepare_055_deps.exs` and `mix brando.doctor` print the `node` on the
+PATH and warn when it is an odd release or older than the one Brando is tested
+on, before an install fails on it.
+
 ### Run the source tasks
 
 Once the dependencies resolve, run:
@@ -736,12 +740,23 @@ All three accept `--yes`, so they can run from a script, and
 `mix brando.upgrade.database` runs them, then `mix brando.check.image_texts`,
 then rebuilds the search index.
 
+The tasks write to the database, not to a running server's cache. A server
+that was running meanwhile keeps serving the pages it cached before (pages
+are cached without expiry): restart it, or use Configuration → Cache → Empty
+all caches in its admin.
+
 `mix brando.images.adopt` records which config each image was made with, for
 the images whose files already match it, so Utilities → Recreate changed
 images only recreates the ones that differ. Try it with `--dry-run` first;
 `--verbose` names each image's difference (`sizes: missing ["xlarge"]`,
-`formats: has [:jpg], config [:jpg, :avif]`) and ends with a count per config
-target and reason. See [Media](media.md#images-made-before-fingerprints).
+`formats: has [:jpg], config [:jpg, :avif]`,
+`large: file missing: images/site/default/large/x.jpg`) and ends with a count
+per config target and reason. Run it where the media is: on a copy without
+the media files it stops with `No image files found under <media path>`, and
+the doctor and Utilities say the same instead of recommending a recreate. A
+`formats` difference is real (the default config gained `:webp`, say) and the
+images need recreating on the server; a missing file on a machine without
+the media is not. See [Media](media.md#images-made-before-fingerprints).
 
 Run these against staging first and inspect counts and representative entries.
 They mutate application data and are not reversed by `mix ecto.rollback`.
@@ -824,12 +839,18 @@ the pre-upgrade commit on a copy of the database (port 4000, say). In the
 upgraded application, once its database is migrated:
 
 ```shell
-mix brando.upgrade.snapshot urls --output urls.txt
+mix brando.upgrade.snapshot urls --output urls.txt --base-url http://localhost:4000
 mix brando.upgrade.snapshot capture tmp/before --base-url http://localhost:4000 --urls urls.txt
 # start the upgraded site on another port
 mix brando.upgrade.snapshot capture tmp/after --base-url http://localhost:4001 --urls urls.txt
 mix brando.upgrade.snapshot diff tmp/before tmp/after
 ```
+
+`urls` picks, for each Blueprint other than pages, the entry with the most
+blocks in each language. With `--base-url` it asks the old site for each
+entry URL, leaves out those it answers with 404 (a language whose routes are
+switched off, for instance) and tries the next-heaviest entry instead. Add
+entries you know are unusual to the list by hand.
 
 It reports status, visible text, `<head>` tags and element structure
 separately, so a moved `data-src` or a reordered list shows even when the
