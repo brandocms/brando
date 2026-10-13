@@ -55,10 +55,31 @@ if Code.ensure_loaded?(Igniter) do
         end)
 
       Enum.reduce(modules, {igniter, []}, fn statements, {igniter, lines} ->
-        {igniter, brings?} = brings_component?(igniter, statements)
-        found = for statement <- statements, brings?, bare_component_use?(statement), do: Sourceror.get_line(statement)
+        {igniter, found} = after_providing_use(igniter, statements)
         {igniter, lines ++ found}
       end)
+    end
+
+    # A `use Phoenix.Component` before the use that brings it in is what the
+    # code between them (an `attr`, a `~H` function) compiles with, so only
+    # one after it goes.
+    defp after_providing_use(igniter, statements) do
+      {igniter, _provided?, lines} =
+        Enum.reduce(statements, {igniter, false, []}, fn statement, {igniter, provided?, lines} ->
+          cond do
+            provided? and bare_component_use?(statement) ->
+              {igniter, true, lines ++ [Sourceror.get_line(statement)]}
+
+            provided? ->
+              {igniter, true, lines}
+
+            true ->
+              {igniter, provides?} = brings_component?(igniter, [statement])
+              {igniter, provides?, lines}
+          end
+        end)
+
+      {igniter, lines}
     end
 
     defp statements({:__block__, _, statements}) when is_list(statements), do: statements

@@ -2160,6 +2160,25 @@ defmodule Mix.Tasks.Brando.Migrate55Test do
       assert_has_notice(igniter, &(&1 =~ "#{@page_html_path}:3" and &1 =~ "use Phoenix.Component"))
       assert_idempotent(igniter, @page_html_path)
     end
+
+    test "keeps one that comes before the `use` that brings it in" do
+      first = """
+      defmodule LegacyAppWeb.CardHTML do
+        use Phoenix.Component
+
+        attr :title, :string
+        def card(assigns), do: ~H"<h2>{@title}</h2>"
+
+        use BrandoWeb, :html
+      end
+      """
+
+      path = "lib/legacy_app_web/components/card_html.ex"
+      igniter = migrate(@blueprint_054, %{path => first})
+
+      assert source(igniter, path) =~ "use Phoenix.Component\n"
+      refute Enum.any?(igniter.notices, &(&1 =~ path))
+    end
   end
 
   describe "DashboardLive" do
