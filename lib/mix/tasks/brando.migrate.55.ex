@@ -12,6 +12,7 @@ if Code.ensure_loaded?(Igniter) do
     alias Mix.Brando.Igniter.SourceUpgrade.Dashboard
     alias Mix.Brando.Igniter.SourceUpgrade.ListOrder
     alias Mix.Brando.Igniter.SourceUpgrade.PoHeaders
+    alias Mix.Brando.Igniter.SourceUpgrade.RedundantComponentUse
     alias Mix.Brando.Igniter.SourceUpgrade.ReloadableApps
     alias Mix.Brando.Igniter.SourceUpgrade.TestEnvironment
     alias Mix.Brando.Igniter.SourceUpgrade.VideoMarkup
@@ -108,6 +109,7 @@ if Code.ensure_loaded?(Igniter) do
       |> TestEnvironment.warn_test_hazards()
       |> ReloadableApps.drop_dependencies()
       |> Dashboard.replace_installer_dashboard()
+      |> RedundantComponentUse.remove()
       |> SourceUpgrade.start_endpoint_last()
       |> Mix.Brando.Igniter.Upgrade.prepare()
       |> add_notices()

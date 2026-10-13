@@ -2009,6 +2009,77 @@ defmodule Mix.Tasks.Brando.Migrate55Test do
     assert_idempotent(igniter, Map.values(paths))
   end
 
+  describe "redundant `use Phoenix.Component`" do
+    # koi's 0.53 controller HTML modules
+    @page_html_path "lib/legacy_app_web/controllers/page_html.ex"
+    @page_html """
+    defmodule LegacyAppWeb.PageHTML do
+      use BrandoWeb, :html
+      use Phoenix.Component
+      import LegacyAppWeb.Components
+      embed_templates "page_html/*"
+    end
+    """
+
+    @web_path "lib/legacy_app_web.ex"
+    @web """
+    defmodule LegacyAppWeb do
+      def html do
+        quote do
+          use Phoenix.Component
+          import Phoenix.HTML
+        end
+      end
+
+      def controller do
+        quote do
+          use Phoenix.Controller, formats: [:html]
+        end
+      end
+
+      defmacro __using__(which) when is_atom(which), do: apply(__MODULE__, which, [])
+    end
+    """
+
+    test "drops it after a `use` that already brings Phoenix.Component in" do
+      own = """
+      defmodule LegacyAppWeb.ArticleHTML do
+        use LegacyAppWeb, :html
+        use Phoenix.Component
+      end
+      """
+
+      controller = """
+      defmodule LegacyAppWeb.Partials do
+        use LegacyAppWeb, :controller
+        use Phoenix.Component
+      end
+      """
+
+      igniter =
+        migrate(@blueprint_054, %{
+          @page_html_path => @page_html,
+          @web_path => @web,
+          "lib/legacy_app_web/controllers/article_html.ex" => own,
+          "lib/legacy_app_web/partials.ex" => controller
+        })
+
+      assert source(igniter, @page_html_path) == """
+             defmodule LegacyAppWeb.PageHTML do
+               use BrandoWeb, :html
+               import LegacyAppWeb.Components
+               embed_templates "page_html/*"
+             end
+             """
+
+      refute source(igniter, "lib/legacy_app_web/controllers/article_html.ex") =~ "use Phoenix.Component"
+      assert source(igniter, "lib/legacy_app_web/partials.ex") =~ "use Phoenix.Component"
+
+      assert_has_notice(igniter, &(&1 =~ "#{@page_html_path}:3" and &1 =~ "use Phoenix.Component"))
+      assert_idempotent(igniter, @page_html_path)
+    end
+  end
+
   describe "DashboardLive" do
     @dashboard_path "lib/legacy_app_admin/live/dashboard_live.ex"
 
