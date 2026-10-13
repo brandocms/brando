@@ -67,3 +67,16 @@
   had a 0.53 `_naming`, `_forms` or `_listings` catalog, including the
   frontend's, where nothing reads them and `mix brando.gettext.reconcile`
   left them as orphans.
+
+- **A `:single` datasource's options are listed again.** The assistant's
+  `list_selection_options` and the `set_block_selection` check looked up the
+  `:selection` datasource only, so a module on a `:single` one showed no
+  options and valid choices were refused.
+
+- **`mix brando.doctor` checks the sender each site sends from.** A site's
+  own placeholder sender beside a valid general one went unreported, and a
+  placeholder general sender failed a site that sends from its own.
+
+- **`mix brando.migrate55` reads `Config.config_env()` in runtime.exs.** A
+  Repo URL read only under `if Config.config_env() == :e2e` was listed as
+  one `mix test` reads.

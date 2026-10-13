@@ -305,6 +305,14 @@ the result before the source tasks, so their diff holds only their changes.
   each check rebuilds the application's protocols. The application and path
   dependencies you edit alongside it stay; a list left with only the
   application goes, since Phoenix's default reloads the application itself;
+- removes a bare `use Phoenix.Component` from a module whose
+  `use BrandoWeb, :html` (or a kind of the application's web module that uses
+  Phoenix.Component) already does it. Elixir 1.20 warns about the second one,
+  which fails `--warnings-as-errors`;
+- writes `Brando.Content.get_entries_from_identifiers(ids, [:cover])`, whose
+  list of preloads is deprecated, as
+  `get_entries_from_identifiers(ids, %{preload: [:cover]})`, and lists a call
+  whose preloads it cannot read;
 - adds `plug Brando.Plug.Markdown` and `plug Brando.Plug.IndexNow` to the
   endpoint, before the router (and before `Brando.Plug.Health`), unless it
   already has them;
