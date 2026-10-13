@@ -106,6 +106,7 @@ jobs:
             otp_label: "28.4.1"
 
     runs-on: ubuntu-latest
+    timeout-minutes: 20
 
     steps:
       # The runner's own PostgreSQL (16 on ubuntu-latest). A service
@@ -194,6 +195,7 @@ jobs:
     needs: reuse
     if: ${{ !cancelled() }}
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
       - uses: actions/checkout@v7.0.1
         if: needs.reuse.outputs.reused != 'true'
@@ -207,6 +209,7 @@ jobs:
     needs: reuse
     if: ${{ !cancelled() }}
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     env:
       MIX_ENV: test
 
@@ -336,6 +339,7 @@ jobs:
     needs: reuse
     if: ${{ !cancelled() }}
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     env:
       MIX_ENV: docs
 
@@ -555,9 +559,78 @@ jobs:
         working-directory: brando/e2e
         run: source .envrc && MIX_ENV=e2e mix compile --all-warnings --warnings-as-errors
 
+  # Build the same consumer assets once, alongside the Elixir compilation.
+  # Main warms the download caches; only browser runs need the built artifact.
+  e2e_assets:
+    name: Build E2E consumer assets
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    continue-on-error: true
+    if: github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          path: brando
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.32.1
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: |
+            brando/assets/pnpm-lock.yaml
+            brando/e2e/assets/backend/pnpm-lock.yaml
+            brando/e2e/playwright/pnpm-lock.yaml
+      - name: Restore frontend download cache
+        uses: actions/cache@v6.1.0
+        with:
+          path: ${{ runner.temp }}/brando-yarn-cache
+          key: e2e-yarn-v1-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('brando/e2e/assets/frontend/yarn.lock') }}
+          restore-keys: |
+            e2e-yarn-v1-${{ runner.os }}-${{ runner.arch }}-
+      # europacss has a public dependency pinned to an SSH GitHub URL.
+      - name: Fetch GitHub git dependencies over HTTPS
+        run: git config --global url."https://github.com/".insteadOf "git@github.com:"
+      - name: Install Brando asset dependencies
+        working-directory: brando/assets
+        run: pnpm install --frozen-lockfile
+      - name: Build backend assets through the E2E consumer
+        working-directory: brando/e2e/assets/backend
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm build
+      - name: Build frontend assets
+        working-directory: brando/e2e/assets/frontend
+        env:
+          YARN_CACHE_FOLDER: ${{ runner.temp }}/brando-yarn-cache
+        # Enable only yarn: enabling every shim also replaces the pinned pnpm.
+        run: |
+          corepack enable yarn
+          yarn install --frozen-lockfile
+          yarn build
+      - name: Warm Playwright's package download cache
+        working-directory: brando/e2e/playwright
+        run: pnpm install --frozen-lockfile
+      - name: Check both consumer manifests
+        working-directory: brando/e2e/priv/static
+        run: test -s admin_manifest.json && test -s manifest.json
+      - name: Share assets with the E2E jobs
+        if: github.event_name != 'push'
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-consumer-assets
+          path: |
+            brando/e2e/priv/static/admin_manifest.json
+            brando/e2e/priv/static/manifest.json
+            brando/e2e/priv/static/assets/
+          if-no-files-found: error
+          overwrite: true
+          retention-days: 1
+
   e2e:
     name: E2E (${{ matrix.suite }})
-    needs: e2e_build
+    needs: [e2e_build, e2e_assets]
     runs-on: ubuntu-latest
     timeout-minutes: 30
     strategy:
@@ -653,6 +726,11 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22
+          cache: pnpm
+          cache-dependency-path: |
+            brando/assets/pnpm-lock.yaml
+            brando/e2e/assets/backend/pnpm-lock.yaml
+            brando/e2e/playwright/pnpm-lock.yaml
 
       # `@brandocms/europacss` pins postcss-functions to an SSH remote
       # (git@github.com:twined/postcss-functions.git) in its own published
@@ -682,24 +760,23 @@ jobs:
         working-directory: brando/e2e
         run: source .envrc && MIX_ENV=e2e mix compile --all-warnings --warnings-as-errors
 
-      - name: Install Brando asset dependencies
+      - name: Download this run's consumer assets
+        uses: actions/download-artifact@v4
+        with:
+          name: e2e-consumer-assets
+          path: brando/e2e/priv/static
+
+      # The first shard also runs Vite-backed component tests and Node tests
+      # against source. They need linked dependencies, even with built assets.
+      - name: Install Brando asset dependencies for component tests
+        if: matrix.suite == 'legacy-1'
         working-directory: brando/assets
         run: pnpm install --frozen-lockfile
 
-      - name: Build backend assets through the E2E consumer
+      - name: Install backend dependencies for component tests
+        if: matrix.suite == 'legacy-1'
         working-directory: brando/e2e/assets/backend
-        run: |
-          pnpm install --frozen-lockfile
-          pnpm build
-
-      - name: Build frontend assets
-        working-directory: brando/e2e/assets/frontend
-        # Only the yarn shim: a bare `corepack enable` also replaces the pnpm
-        # pinned above with whatever pnpm is newest that day.
-        run: |
-          corepack enable yarn
-          yarn install --frozen-lockfile
-          yarn build
+        run: pnpm install --frozen-lockfile
 
       - name: Install Playwright
         working-directory: brando/e2e/playwright
