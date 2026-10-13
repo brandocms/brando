@@ -30,8 +30,8 @@ Phoenix 1.8.13, LiveView 1.2.11, Elixir 1.20.3 and OTP 28.4.1. This is evidence 
 that combination with PostgreSQL 16.1, not qualification of every version in
 Brando's unit-test matrix. The `igniter.new` archive 0.5.28 one-shot path also
 installs and compiles successfully from outside an existing Mix project.
-Local asset/browser checks used Node.js 23.11.0, pnpm 10.4.1 and Yalc
-1.0.0-pre.53. The four consumer cases also
+Local asset/browser checks used pnpm 10.4.1 and Yalc 1.0.0-pre.53, on
+Node.js 23.11.0, which the admin's `engines` has rejected since; use Node 22. The four consumer cases also
 [passed on Linux CI](https://github.com/brandocms/brando/actions/runs/34073198244)
 with Node.js 22, pnpm 10.32.1 and PostgreSQL 14.
 

@@ -42,9 +42,31 @@ Before updating the dependency:
    database.
 4. Record which database-backed Blueprints already have generated snapshots
    under `priv/blueprints/snapshots`.
+5. Start the old site and leave it running through the upgrade (below).
 
 Do not delete a snapshot to repair history. A missing snapshot can make an
 existing table look new to the generator.
+
+### Keep the old site running
+
+The final gate compares the public pages before and after the upgrade with
+`mix brando.upgrade.snapshot` (see [Final deployment gate](#6-final-deployment-gate)),
+which fetches the pages from both sites while they run. Start the old site now,
+before changing anything:
+
+1. Restore the production dump twice: one database to upgrade, and an
+   untouched copy for the old site.
+2. Run the old site from a checkout of the pre-upgrade commit, such as a Git
+   worktree (`git worktree add ../myapp-before HEAD`), against the untouched
+   copy and on a port of its own (4000, say).
+3. Check that it compiles and serves, and leave it running.
+
+A new worktree compiles every dependency from scratch, and an old lock may not
+build on a current OTP: one 0.53 site's lock held a `mochiweb` that does not
+compile on OTP 27, where `maybe` is a reserved word, and built on OTP 26 with
+Elixir 1.17. Give the worktree the toolchain its lock builds on, in a
+`.mise.toml` of its own. Finding that out now is easier than at the end, when
+the application's own `_build` holds the upgrade.
 
 ## 2. Update source with Igniter
 
@@ -79,9 +101,28 @@ rewrites every project registered with Yalc on the machine. Keep the Elixir and
 JavaScript sides on the same Brando revision.
 
 Brando requires exact or recent versions of packages a 2023 `mix.exs` also
-declares, and `mix deps.get` reports the conflicts one at a time. Change every
-one the application declares before fetching (the versions are Brando's own,
-from its `mix.exs`):
+declares, and `mix deps.get` reports the conflicts one at a time. Brando's
+script makes all of those changes at once; run it from the application's
+root:
+
+```shell
+elixir /path/to/brando/scripts/prepare_055_deps.exs --brando-path /path/to/brando
+```
+
+Give it `--brando-ref <sha>` instead of `--brando-path` to point Brando at a
+commit on GitHub; `--dry-run` writes nothing. It needs no resolved
+dependencies: it edits `mix.exs` as text and prints each change. It applies
+the constraints below to the packages the application declares, bumps
+`ex_chimp` to 0.2, drops `only: :test` from `floki`, removes `timex` once `lib/`
+no longer calls it (and lists the calls otherwise), adds Igniter, sets
+`elixir: "~> 1.18"` and `listeners: [Phoenix.CodeReloader]` in `project/0`,
+and points the Brando dependency at the checkout or commit. It then lists what
+`mix.lock` still has on HTTPoison or hackney 1. Running it again changes
+nothing. Then unlock and fetch, as described below; on a 0.53 site that
+resolved on the first `mix deps.get`.
+
+By hand, change every one of these the application declares before fetching
+(the versions are Brando's own, from its `mix.exs`):
 
 ```elixir
 # mix.exs
@@ -96,13 +137,6 @@ from its `mix.exs`):
 {:swoosh, "~> 1.17"},
 {:igniter, "~> 0.8", only: [:dev, :test]},
 ```
-
-Or run `elixir /path/to/brando/scripts/prepare_055_deps.exs --brando-path
-/path/to/brando` (or `--brando-ref <sha>`) from the application's root. It makes
-these edits as text, and those in the list below, prints each one, lists what
-`mix.lock` still has on HTTPoison or hackney 1, and leaves
-`mix deps.unlock --all && mix deps.get` for you to run. `--dry-run` writes
-nothing.
 
 Brando pins `phoenix` 1.8.15 and `phoenix_live_view` 1.2.12 exactly. If the
 application also declares `sentry` (`~> 13.0`), `oban` (`~> 2.23`), `cachex`
@@ -136,10 +170,20 @@ mix deps.get
 
 Starting from the `mix.lock` of a site already on 0.55 also works.
 
-Pin the toolchain with mise or asdf: a current Elixir and OTP, and Node 22 or
-24. The admin's `engines` (`^20.19 || ^22.12 || >=24`) rejects an odd release
-such as Node 23 in both yarn and pnpm installs. Use the same Node major as the
-Dockerfile's `node:` stages.
+Pin the toolchain with mise or asdf:
+
+- Elixir 1.18 or newer (Brando's `mix.exs` requires `~> 1.18`) on OTP 27 or
+  newer. CI runs Brando's tests on Elixir 1.18.1 with OTP 27.2, 1.19.5 with
+  OTP 28.5 and 1.20.3 with OTP 28.4.1, and Brando's own `.mise.toml` pins
+  1.20.3 and 28.4.1. Develop on 1.19 or later: on older Elixir, Phoenix
+  1.8's code reloader unloads every consolidated protocol on every request,
+  which adds 50 to 70 ms to each request in development. Releases have no
+  code reloader.
+- Node 22. Brando's `.mise.toml` pins it, CI builds with it, and the template
+  Dockerfile's `node:22` stages, which `mix brando.gen.backend --upgrade`
+  writes (see [Admin assets](#admin-assets)), build with it. The admin's
+  `engines` (`^20.19 || ^22.12 || >=24`) rejects an odd release such as
+  Node 23 in both yarn and pnpm installs.
 
 `scripts/prepare_055_deps.exs` and `mix brando.doctor` print the `node` on the
 PATH and warn when it is an odd release or older than the one Brando is tested
@@ -176,8 +220,16 @@ reserved for examples as no sender: it sends nothing, and `mix brando.doctor`
 fails until it is replaced. A sender set anywhere in `config/*.exs`, inside an
 `if config_env() == :prod` block included, gets no placeholder.
 
+After editing a local Brando checkout, run `mix deps.compile brando` and
+restart the server: `mix brando.migrate55` takes `:brando` out of the
+endpoint's `reloadable_apps` (see below), so the code reloader no longer
+picks up Brando's changes (see [Installation and generators](generators.md)).
+
 If the application has never been run through `mix format`, run it and commit
 the result before the source tasks, so their diff holds only their changes.
+The `mix format` after the source tasks (below) runs LiveView 1.x's HEEx
+formatter, which rewrites `<%= expr %>` in HEEx templates to `{expr}`; expect
+those changes in the same commit.
 
 `mix brando.migrate54` covers the 0.53 to 0.54 source changes. It:
 
@@ -794,16 +846,23 @@ dump before it:
 test: ["ecto.create --quiet", "ecto.load --skip-if-loaded", "ecto.migrate", "test"]
 ```
 
-`--skip-if-loaded` leaves a database that already has its migrations table
-alone, so if the old alias already created the test database, drop it once
-(`MIX_ENV=test mix ecto.drop`). `ecto.migrate` then runs only the migrations
-newer than the dump.
-
-`mix brando.migrate55` warns when `test_paths` names a missing directory, and
-when `config/runtime.exs` reads the Repo `url:` from the environment in `:test`
-too. In that case `mix test` uses, and its alias migrates, whatever database
-the shell names: guard it with `if config_env() != :test do … end`.
+Check `config/runtime.exs` before running the alias. The 0.53 installer's
+sets the Repo's `url: System.get_env("BRANDO_DB_URL")` in every environment,
+and a `url:` overrides the `database:` in `config/test.exs`. Until it is
+guarded with `if config_env() != :test do … end`, `mix test` uses, and its
+alias loads and migrates, whatever database the shell names, and
+`MIX_ENV=test mix ecto.drop` drops it. `mix brando.migrate55` warns about
+such a `url:`, and when `test_paths` names a missing directory;
 `mix brando.doctor` checks the same in development.
+
+With the guard in place, `--skip-if-loaded` leaves a database that already
+has its migrations table alone, so if the old alias already created the test
+database, drop it once (`MIX_ENV=test mix ecto.drop`), or give the test
+database a new name instead. Phoenix's generated `config/test.exs` appends
+`MIX_TEST_PARTITION` to it (`"myapp_test#{System.get_env("MIX_TEST_PARTITION")}"`),
+so `MIX_TEST_PARTITION=_055 mix test` creates and loads `myapp_test_055`; to
+keep the new name without the variable, change it in `config/test.exs`.
+`ecto.migrate` then runs only the migrations newer than the dump.
 
 Before touching a shared database:
 
@@ -871,6 +930,14 @@ the doctor and Utilities say the same instead of recommending a recreate. A
 images need recreating on the server; a missing file on a machine without
 the media is not. See [Media](media.md#images-made-before-fingerprints).
 
+The comparison reads the image files, so it means something only where the
+media is. In a local checkout without the production media every image
+"differs", and `mix brando.doctor` and Utilities then recommend recreating
+them all. Do not press Recreate changed images on that advice. Run
+`mix brando.images.adopt --dry-run --verbose` with the real media first (a
+copy of the server's `media` folder in the rehearsal checkout), and decide
+from its counts.
+
 Run these against staging first and inspect counts and representative entries.
 They mutate application data and are not reversed by `mix ecto.rollback`.
 
@@ -909,6 +976,82 @@ and those paths read directly or through a variable assigned the list.
 `.data.refs` (Module entry paths). The migration runs with the others, before
 `mix brando.entries.resave`; a site that has resaved already resaves again
 after it.
+
+### Check what the tasks may have missed
+
+The source tasks and checks find most of the following now. A site that ran
+`mix brando.migrate54`, `mix brando.migrate55` or the conversion migrations
+with an earlier Brando revision can still have them: each let a 0.53 site
+compile and then fail at runtime or lose content. Check each one from the
+application's root:
+
+1. **`.html` on fragments and partials.** Fragments have no `html` since the
+   blocks conversion, so a read such as `@partials["footer"].html` raises a
+   `KeyError` on every page that renders it.
+
+   ```shell
+   grep -rnE '(\]|\w)\.html([^.a-zA-Z_"]|$)' lib
+   ```
+
+   Read `rendered_blocks` instead, or render the fragment with
+   `Brando.Pages.render_fragment/1`.
+2. **`:entries` relations mapped to `entry_id`.** An `:entries` relation
+   (`relation :related_entries, :entries`) now holds join rows that point at
+   an identifier, so `Enum.map(entry.related_entries, & &1.entry_id)` raises a
+   `KeyError`.
+
+   ```shell
+   grep -rnE 'relation :\w+, :entries' lib
+   grep -rn '\.entry_id' lib
+   ```
+
+   For each relation the first command lists, preload the identifier
+   (`preload: [related_entries: :identifier]`) and map
+   `& &1.identifier.entry_id`.
+3. **`:multi_select` on a `has_many` without `relation:`.** The admin form
+   crashes on open with "Multi selects for a :has_many relation needs a
+   `relation_key` and a `relation`".
+
+   ```shell
+   grep -rn -A6 ':multi_select' lib
+   ```
+
+   Give each such input `relation:` as well as `relation_key:`: the
+   `belongs_to` in the join schema that `relation_key` points at
+   (`relation_key: :category_id, relation: :category`).
+4. **`sources:` options on an `:entries` input that mention `sequence` or
+   `preload`.** The options load identifiers (`content_identifiers`), which
+   have `title`, `language`, `status`, `url`, `schema`, `entry_id`, `cover` and
+   `updated_at`, and no associations. An order on `sequence` crashes the form
+   with `column c0.sequence does not exist`.
+
+   ```shell
+   grep -rn -A4 'sources:' lib | grep -E 'sequence|preload'
+   ```
+
+   Order by identifier columns (`%{order: "asc language, asc title"}`) and
+   drop `preload:`.
+5. **Module code in the database that reads `data.vars` or `data.refs`.** A
+   multi-module's children are blocks now, so a template that reads
+   `{{ link.data.vars.url }}` in `{% for link in entries %}` renders them
+   empty. `brando_219` rewrites these paths (see above) and leaves a
+   variable it cannot follow, such as one assigned an entry and then assigned
+   again; `mix brando.doctor` lists what is left under Module entry paths.
+   Change `.data.vars.` to `.vars.` and `.data.refs.` to `.refs.` in each
+   module it lists, then run `mix brando.entries.resave`.
+6. **Refs that lost their image.** A `brando_133` copied before the fix
+   emptied a picture ref whose image had no live row, and left such images
+   out of galleries. `mix brando.check.legacy_conversion` lists each one, and
+   `mix brando.repair.legacy_media` restores those it can tell were lost in
+   the conversion (see [Legacy snapshots](#legacy-snapshots)). The legacy
+   Villain column is then the only copy of that image data, so run both
+   before anyone drops it.
+7. **Every admin form, opened once.** On one 0.53 site, two of the four
+   crashes showed only in the admin: open an entry of every Blueprint there
+   before the gate below. Restart the server after any CLI repair task
+   (`mix brando.entries.resave`, `mix brando.identifiers.sync`, a repair of
+   your own): the task runs outside the server, which keeps serving the pages
+   it has cached until it restarts.
 
 ## 5. Reconcile Gettext catalogs
 
@@ -958,9 +1101,9 @@ second forward migration. If the application has no meaningful tests, the
 public-page comparison below is the gate.
 
 Compare the public pages before and after the upgrade with
-`mix brando.upgrade.snapshot`. Keep the old site running from a checkout of
-the pre-upgrade commit on a copy of the database (port 4000, say). In the
-upgraded application, once its database is migrated:
+`mix brando.upgrade.snapshot`, against the old site started in
+[Keep the old site running](#keep-the-old-site-running) (on port 4000, say).
+In the upgraded application, once its database is migrated:
 
 ```shell
 mix brando.upgrade.snapshot urls --output urls.txt --base-url http://localhost:4000

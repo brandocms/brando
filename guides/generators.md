@@ -8,7 +8,7 @@ preserved. Conflicting generated files stop the plan, including with `--yes`.
 The developing branch uses Yalc for BrandoJS. Keep the Elixir and JavaScript
 sources on the same revision; npm publication belongs to release preparation.
 The working consumer combination is phx_new 1.8.13, Phoenix 1.8.15, LiveView 1.2.12,
-Elixir 1.20.3, OTP 28.4.1 and PostgreSQL 16.1. Install Node.js, pnpm, Yalc, PostgreSQL, the matching
+Elixir 1.20.3, OTP 28.4.1 and PostgreSQL 16.1. Install Node.js 22, pnpm, Yalc, PostgreSQL, the matching
 Phoenix generator and an Image/Vix-supported build environment first.
 
 The old `install.sh` entry point is retired and prints these instructions without
@@ -89,8 +89,12 @@ mix igniter.install brando@path:/absolute/path/to/brando
 While Brando is a path dependency, a running site doesn't pick up changes in
 the checkout: the site builds its own copy of the dependency, `mix compile` in
 the Brando repository doesn't touch it, and Phoenix's code reloader only
-recompiles the site's own code (`reloadable_apps` doesn't help — it reloads,
-but never recompiles a dependency). After changing Brando:
+recompiles the site's own code. Adding `:brando` to the endpoint's
+`reloadable_apps` does make the reloader compile Brando's edits, but it checks
+Brando's whole source tree (about 1,600 files) on every request: 40 to 70 ms
+on Elixir 1.18, and on 1.19 and later every request also rebuilds the site's
+consolidated protocols, 0.6 to 3 seconds. Leave `:brando`, and every other
+dependency, out of `reloadable_apps`. After changing Brando:
 
 ```sh
 mix deps.compile brando   # in the site
