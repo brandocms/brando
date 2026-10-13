@@ -31,7 +31,7 @@ defmodule BrandoAdmin.Components.ImagePicker do
     {:ok,
      socket
      |> assign(:picker_mode, :block_upload)
-     |> assign(:scope, :field)
+     |> leave_library()
      |> assign(:opened?, true)
      |> assign(:pending_upload_name, assigns[:upload_name])
      |> assign(:pending_request_id, assigns[:request_id])
@@ -70,9 +70,7 @@ defmodule BrandoAdmin.Components.ImagePicker do
      |> assign(:event_target, event_target)
      |> assign(:multi, multi)
      |> assign(:selected_images, selected_images)
-     |> assign(:scope, :field)
-     |> assign(:custom_folders, [])
-     |> assign(:current_folder, "")
+     |> leave_library()
      |> assign_config_target()
      |> assign_folder_state(nil)
      |> push_selection_state()}
@@ -152,6 +150,10 @@ defmodule BrandoAdmin.Components.ImagePicker do
   # The image fields a picker row needs.
   @list_fields [:id, :width, :height, :formats, :status, :path, :sizes, :cdn, :config_target, :folder_id, :focal, :title]
 
+  # What placing an image in a folder and searching it need. The whole
+  # library is listed with these; rows are loaded a page at a time.
+  @index_fields [:id, :path, :folder_id, :title]
+
   # Rows rendered at a time. The rest load as the list scrolls (or from the
   # "show more" button), so a big folder doesn't put 1000+ rows in the form.
   @page_size 100
@@ -170,7 +172,7 @@ defmodule BrandoAdmin.Components.ImagePicker do
 
     {:ok, images} =
       Brando.Images.list_images(%{
-        select: @list_fields,
+        select: @index_fields,
         filter: Map.put(filter, :status, :processed),
         order: "desc id"
       })
@@ -184,9 +186,12 @@ defmodule BrandoAdmin.Components.ImagePicker do
   defp resolve_config_target(nil), do: "default"
   defp resolve_config_target(:all), do: :all
 
+  # Fields send `{"image", schema, field}` as well as the serialized string.
   defp resolve_config_target(config_target) do
-    case Brando.Images.get_config_for(config_target) do
-      {:ok, _} -> config_target
+    target = Brando.Assets.ConfigTarget.serialize(config_target)
+
+    case Brando.Images.get_config_for(target) do
+      {:ok, _} -> target
       _ -> "default"
     end
   rescue
@@ -233,7 +238,11 @@ defmodule BrandoAdmin.Components.ImagePicker do
 
   # Root and Up at the root of the field's own images lead on into the rest
   # of the library: to its root, or to the folder above the field's.
-  def handle_event("picker_go_root", _, %{assigns: %{scope: :field, library_offered?: true}} = socket) do
+  def handle_event(
+        "picker_go_root",
+        _,
+        %{assigns: %{scope: :field, library_offered?: true, current_folder: ""}} = socket
+      ) do
     {:noreply, socket |> switch_scope(:library, "") |> push_selection_state()}
   end
 
@@ -258,17 +267,9 @@ defmodule BrandoAdmin.Components.ImagePicker do
   # field's config, goes to the field through its own `select_image`
   # (`ImagePickerGrid` sends it on).
   def handle_event("pick_library_image", %{"id" => id}, %{assigns: %{library_offered?: true}} = socket) do
-    user = socket.assigns.current_user
-
-    with {:ok, image_id} <- parse_item_id(id),
-         :ok <- Brando.Authorization.Media.authorize(user, :image),
-         {:ok, image} <- Brando.Images.get_image(image_id),
-         {:ok, picked} <- Brando.Images.for_config_target(image, socket.assigns.config_target, user) do
-      {:noreply, push_event(socket, "b:image_picker:pick", %{id: picked.id})}
-    else
-      _ ->
-        send(self(), {:toast, gettext("The image could not be copied for this field")})
-        {:noreply, socket}
+    case parse_item_id(id) do
+      {:ok, image_id} -> {:noreply, start_pick(socket, image_id)}
+      _ -> {:noreply, socket}
     end
   end
 
@@ -387,6 +388,40 @@ defmodule BrandoAdmin.Components.ImagePicker do
          |> assign_folder_state(socket.assigns.current_folder)
          |> push_selection_state()}
     end
+  end
+
+  def handle_async(:pick_library_image, {:ok, {:ok, picked}}, socket) do
+    {:noreply, push_event(socket, "b:image_picker:pick", %{id: picked.id})}
+  end
+
+  def handle_async(:pick_library_image, _result, socket) do
+    send(self(), {:toast, gettext("The image could not be copied for this field")})
+    {:noreply, socket}
+  end
+
+  # Copying can mean reading the original from the CDN and writing a file, so
+  # it runs beside the page: as this process would, in its site, with its
+  # authorization scope, and in the E2E server's test sandbox.
+  defp start_pick(socket, image_id) do
+    user = socket.assigns.current_user
+    config_target = socket.assigns.config_target
+    scope = Brando.Authorization.Boundary.current_scope()
+    parent = self()
+
+    pick =
+      Brando.Tenant.capture_context(fn ->
+        if Application.get_env(Brando.config(:otp_app), :sql_sandbox),
+          do: Ecto.Adapters.SQL.Sandbox.allow(Brando.Repo.repo(), parent, self())
+
+        Brando.Authorization.Boundary.with_scope(scope, fn ->
+          with :ok <- Brando.Authorization.Media.authorize(user, :image),
+               {:ok, image} <- Brando.Images.get_image(image_id) do
+            Brando.Images.for_config_target(image, config_target, user)
+          end
+        end)
+      end)
+
+    start_async(socket, :pick_library_image, pick)
   end
 
   def render(assigns) do
@@ -889,7 +924,7 @@ defmodule BrandoAdmin.Components.ImagePicker do
     |> assign(:image_count, length(visible_images))
     |> assign(:visible_item_ids, Enum.map(visible_images, & &1.id))
     |> assign(:rendered_count, min(@page_size, length(visible_images)))
-    |> stream(:visible_images, Enum.take(visible_images, @page_size), reset: true)
+    |> stream(:visible_images, load_page(Enum.take(visible_images, @page_size)), reset: true)
     |> assign(:child_folders, child_folders)
     |> assign(:breadcrumbs, breadcrumbs)
     |> assign(:recent_folders_for_root, recent_folders_for_root)
@@ -918,16 +953,25 @@ defmodule BrandoAdmin.Components.ImagePicker do
         socket
 
       page_ids ->
-        by_id = page_ids |> load_images() |> Map.new(&{&1.id, &1})
-        images = for id <- page_ids, image = by_id[id], do: image
-
         socket
         |> assign(:rendered_count, rendered + length(page_ids))
-        |> stream(:visible_images, images)
+        |> stream(:visible_images, load_page(page_ids))
     end
   end
 
   defp stream_next_page(socket), do: socket
+
+  # The rows of `images_or_ids`, in their order
+  defp load_page([]), do: []
+
+  defp load_page(images_or_ids) do
+    ids = Enum.map(images_or_ids, &item_id/1)
+    by_id = ids |> load_images() |> Map.new(&{&1.id, &1})
+    for id <- ids, image = by_id[id], do: image
+  end
+
+  defp item_id(%{id: id}), do: id
+  defp item_id(id), do: id
 
   defp load_images(ids) do
     import Ecto.Query, only: [from: 2]
@@ -971,6 +1015,14 @@ defmodule BrandoAdmin.Components.ImagePicker do
   end
 
   defp upload_target(_socket, _root, _folder), do: nil
+
+  # Opening for a field starts on its own images. A folder from the library
+  # means nothing there, but the field's last folder, and folders made in the
+  # picker, are kept for the next opening.
+  defp leave_library(%{assigns: %{scope: :library}} = socket),
+    do: assign(socket, scope: :field, custom_folders: [], current_folder: "")
+
+  defp leave_library(socket), do: assign(socket, :scope, :field)
 
   # The library's own folders differ from the field's, so a switch starts
   # over in `folder`, relative to the new scope's root.

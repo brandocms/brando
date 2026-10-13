@@ -157,6 +157,49 @@ defmodule BrandoAdmin.Components.ImagePickerTargetTest do
       assert cover.id in socket.assigns.visible_item_ids
     end
 
+    test "a field that sends its target as a tuple is offered the library too", %{user: user} do
+      socket = open_for_field(user, %{config_target: {"image", Brando.Pages.Page, :meta_image}})
+
+      assert socket.assigns.config_target == @meta_target
+      assert socket.assigns.library_offered?
+    end
+
+    test "Root in a folder of the field's own goes to the field's root", %{user: user} do
+      Brando.Factory.insert(:image,
+        creator_id: user.id,
+        status: :processed,
+        config_target: @meta_target,
+        path: "images/meta/sub/one.jpg"
+      )
+
+      {:noreply, socket} = ImagePicker.handle_event("go_folder", %{"folder" => "sub"}, open_for_field(user))
+      assert {socket.assigns.scope, socket.assigns.current_folder} == {:field, "sub"}
+
+      {:noreply, socket} = ImagePicker.handle_event("picker_go_root", %{}, socket)
+      assert {socket.assigns.scope, socket.assigns.current_folder} == {:field, ""}
+    end
+
+    test "opening again returns to the field's last folder and keeps folders made in it", %{user: user} do
+      Brando.Factory.insert(:image,
+        creator_id: user.id,
+        status: :processed,
+        config_target: @meta_target,
+        path: "images/meta/sub/one.jpg"
+      )
+
+      {:noreply, socket} = ImagePicker.handle_event("go_folder", %{"folder" => "sub"}, open_for_field(user))
+      {:noreply, socket} = ImagePicker.handle_event("create_folder", %{"folder" => %{"name" => "fresh"}}, socket)
+      assert socket.assigns.current_folder == "sub/fresh"
+      {:noreply, socket} = ImagePicker.handle_event("go_folder", %{"folder" => "sub"}, socket)
+      {:noreply, socket} = ImagePicker.handle_event("picker_closed", %{}, socket)
+
+      {:ok, socket} =
+        ImagePicker.update(%{config_target: @meta_target, event_target: nil, multi: false, selected_images: []}, socket)
+
+      assert socket.assigns.current_folder == "sub"
+      assert "sub/fresh" in socket.assigns.child_folders
+    end
+
     test "Root and Up at the field's root lead into the library", %{user: user} do
       socket = open_for_field(user)
 

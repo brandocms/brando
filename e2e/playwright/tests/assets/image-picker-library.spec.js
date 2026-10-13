@@ -55,6 +55,23 @@ test('a meta image can be picked from the whole library and is cut to the field'
   await picker.getByRole('button', { name: 'Lukk', exact: true }).click()
   await expect(picker).not.toBeVisible()
 
+  // The image drawer's "Velg bilde" opens the picker for the field too, and
+  // the library is offered there; picking the same file again gives the
+  // same copy
+  await imageField.getByRole('button', { name: 'Konfigurer', exact: true }).click()
+  const imageDrawer = page.locator('#image-drawer')
+  await imageDrawer.getByRole('button', { name: 'Erstatt', exact: true }).click()
+  await imageDrawer.getByRole('button', { name: 'Velg bilde', exact: true }).click()
+  await expect(picker).toBeVisible()
+  await scope.getByRole('button', { name: 'Hele biblioteket' }).click()
+  await expect(scope.getByRole('button', { name: 'Hele biblioteket' })).toHaveAttribute('aria-pressed', 'true')
+  await picker.locator(`.image-picker__image[data-id="${libraryImageId}"]`).click()
+  await expect(picker).not.toBeVisible()
+  await syncLV(page)
+  await expect(picked).toHaveValue(copyId)
+  await imageDrawer.getByRole('button', { name: 'Lukk', exact: true }).first().click()
+  await syncLV(page)
+
   await page.locator('[id$="-meta-drawer"]').getByRole('button', { name: 'Lukk', exact: true }).click()
   await syncLV(page)
   await page.getByTestId('submit').click()
