@@ -2009,6 +2009,44 @@ defmodule Mix.Tasks.Brando.Migrate55Test do
     assert_idempotent(igniter, Map.values(paths))
   end
 
+  test "writes get_entries_from_identifiers' preloads as options, and lists a call it cannot" do
+    # koi's Project selection datasource
+    path = "lib/legacy_app/projects/featured.ex"
+
+    featured = """
+    defmodule LegacyApp.Projects.Featured do
+      alias Brando.Content
+
+      def get(identifiers) do
+        Brando.Content.get_entries_from_identifiers(
+          identifiers,
+          [:categories, :cover, :palette]
+        )
+      end
+
+      def piped(identifiers), do: identifiers |> Content.get_entries_from_identifiers([:cover])
+      def mapped(identifiers), do: Content.get_entries_from_identifiers(identifiers, %{preload: [:cover]})
+      def given(identifiers, preloads), do: Content.get_entries_from_identifiers(identifiers, preloads)
+    end
+    """
+
+    igniter = migrate(@blueprint_054, %{path => featured})
+    migrated = source(igniter, path)
+
+    assert migrated =~ "%{preload: [:categories, :cover, :palette]}"
+    assert migrated =~ "identifiers |> Content.get_entries_from_identifiers(%{preload: [:cover]})"
+    assert migrated =~ "Content.get_entries_from_identifiers(identifiers, %{preload: [:cover]})"
+    assert migrated =~ "Content.get_entries_from_identifiers(identifiers, preloads)"
+    refute migrated =~ ~r/get_entries_from_identifiers\([^%]*\[:/
+
+    assert_has_warning(igniter, fn warning ->
+      warning =~ "get_entries_from_identifiers" and warning =~ "#{path}:13" and
+        warning =~ "%{preload: preloads}"
+    end)
+
+    assert_idempotent(igniter, path)
+  end
+
   describe "redundant `use Phoenix.Component`" do
     # koi's 0.53 controller HTML modules
     @page_html_path "lib/legacy_app_web/controllers/page_html.ex"

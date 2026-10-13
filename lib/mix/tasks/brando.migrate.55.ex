@@ -10,6 +10,7 @@ if Code.ensure_loaded?(Igniter) do
     alias Mix.Brando.Igniter.SourceUpgrade
     alias Mix.Brando.Igniter.SourceUpgrade.BlueprintGettext
     alias Mix.Brando.Igniter.SourceUpgrade.Dashboard
+    alias Mix.Brando.Igniter.SourceUpgrade.EntriesFromIdentifiers
     alias Mix.Brando.Igniter.SourceUpgrade.ListOrder
     alias Mix.Brando.Igniter.SourceUpgrade.PoHeaders
     alias Mix.Brando.Igniter.SourceUpgrade.RedundantComponentUse
@@ -110,6 +111,7 @@ if Code.ensure_loaded?(Igniter) do
       |> ReloadableApps.drop_dependencies()
       |> Dashboard.replace_installer_dashboard()
       |> RedundantComponentUse.remove()
+      |> EntriesFromIdentifiers.rewrite()
       |> SourceUpgrade.start_endpoint_last()
       |> Mix.Brando.Igniter.Upgrade.prepare()
       |> add_notices()

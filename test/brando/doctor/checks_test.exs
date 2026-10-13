@@ -738,6 +738,28 @@ defmodule Brando.Doctor.ChecksTest do
              ] = scan(code)
     end
 
+    # koi's Project datasource: only the list form of the second argument is
+    # deprecated, so the function carries no `@deprecated`.
+    test "reports get_entries_from_identifiers with a list of preloads" do
+      code = """
+      defmodule MyApp.Project do
+        alias Brando.Content
+
+        def a(ids), do: Brando.Content.get_entries_from_identifiers(ids, [:cover, :palette])
+        def b(ids), do: Content.get_entries_from_identifiers(ids, %{preload: [:cover]})
+        def c(ids), do: ids |> Content.get_entries_from_identifiers([:cover])
+        def d(ids, preloads), do: Content.get_entries_from_identifiers(ids, preloads)
+      end
+      """
+
+      assert [
+               %{line: 4, call: "Brando.Content.get_entries_from_identifiers/2", reason: reason},
+               %{line: 6}
+             ] = scan(code)
+
+      assert reason =~ "%{preload: preloads}"
+    end
+
     test "a local function of the same name is not a call without an import" do
       assert scan("defmodule A do\n  def x(v), do: video_tag(v, [])\nend") == []
     end
