@@ -31,6 +31,16 @@ test.describe('Block media save persistence', () => {
     await expect(page.locator('.module-picker-namespace.active')).toContainText('05 LIVE PREVIEW TEST')
     await page.getByRole('button', { name: moduleName }).click()
     await syncLV(page)
+    // The Admin hook scrolls to the inserted block after a timer. LiveView
+    // settling does not cover that scroll, which can close a sibling's action
+    // menu if we open it before the inserted block reaches its destination.
+    // Match scrollToNode's -50 px offset, clamped to the document's bounds.
+    await expect.poll(() => page.locator('.entry-block').last().evaluate(block => {
+      const top = block.getBoundingClientRect().top + window.scrollY - 50
+      const maxScroll = document.documentElement.scrollHeight - window.innerHeight
+      const destination = Math.max(0, Math.min(top, maxScroll))
+      return Math.abs(window.scrollY - destination)
+    })).toBeLessThanOrEqual(1)
   }
 
   const uploadPicture = async (page) => {
