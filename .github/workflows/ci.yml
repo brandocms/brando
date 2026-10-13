@@ -758,7 +758,7 @@ jobs:
         run: source .envrc && MIX_ENV=e2e mix compile --all-warnings --warnings-as-errors
 
       - name: Download this run's consumer assets
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: e2e-consumer-assets
           path: brando/e2e/priv/static
@@ -926,7 +926,7 @@ jobs:
         run: mix compile
 
       - name: Download coverage data
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           pattern: coverdata-*
           path: cover
