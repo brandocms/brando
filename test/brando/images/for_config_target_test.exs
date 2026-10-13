@@ -92,20 +92,23 @@ defmodule Brando.Images.ForConfigTargetTest do
     assert id == copy.id
   end
 
-  test "two picks of one file at once make one copy", %{image: image, user: user} do
-    parent = self()
+  # Two editors picking one file for one config at once would both find no
+  # copy and both make one. A pick looks for the copy and makes it under a
+  # transaction-scoped advisory lock on the file and config; the sandbox
+  # shares one connection between processes, so the race itself cannot be
+  # run here, but the lock can be seen: it is held until the transaction
+  # around the test ends.
+  test "a pick takes the copy lock for the file and config", %{image: image, user: user} do
+    advisory_locks = fn ->
+      %{rows: [[count]]} =
+        Brando.Repo.repo().query!("SELECT count(*) FROM pg_locks WHERE locktype = 'advisory' AND pid = pg_backend_pid()")
 
-    picks =
-      for _ <- 1..2 do
-        Task.async(fn ->
-          Ecto.Adapters.SQL.Sandbox.allow(Brando.Repo.repo(), parent, self())
-          Oban.Testing.with_testing_mode(:manual, fn -> Images.for_config_target(image, @meta_target, user) end)
-        end)
-      end
+      count
+    end
 
-    [{:ok, first}, {:ok, second}] = Task.await_many(picks, 10_000)
-    assert first.id == second.id
-    assert Brando.Repo.aggregate(from(i in Image, where: i.config_target == @meta_target), :count) == 1
+    before = advisory_locks.()
+    {:ok, _copy} = Oban.Testing.with_testing_mode(:manual, fn -> Images.for_config_target(image, @meta_target, user) end)
+    assert advisory_locks.() == before + 1
   end
 
   test "a copy whose processing was never queued is queued again", %{image: image, user: user} do
