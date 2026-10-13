@@ -15,6 +15,7 @@ if Code.ensure_loaded?(Igniter) do
     # assigns from such a variable, and that nothing assigns anything else.
     # Other `…].html` reads are listed.
 
+    alias Mix.Brando.Igniter.SourceUpgrade.FragmentSources
     alias Mix.Brando.Igniter.TemplateCode
     alias Rewrite.Source
 
@@ -22,14 +23,11 @@ if Code.ensure_loaded?(Igniter) do
     @limit 50
 
     @plug_as ~r/\bplug[\s(]+(?:Brando\.)?Plug\.Fragment\b[^\n]*?\bas:\s*:(\w+)/
-    @bound_ok ~r/\{:ok,\s*([a-z_]\w*)\}\s*(?:<-|=)[^\n]*\bget_fragments\(/
-    @bound ~r/(?<![\w.:])([a-z_]\w*)\s*=\s*(?:[A-Z][\w.]*\.)?get_fragments\(/
     # A map read of `html`, from the start of the expression, where the
     # Elixir code check looks for code in a module; templates also get the
     # bare `].html`, for maps read off a call.
     @map_read ~r/(?<![\w.@])@?[a-z_][\w.]*\[[^\[\]\n]*\]\.html(?![\w(?])/
     @bare_map_read ~r/\]\.html(?![\w(?])/
-    @assign_site ~r/assign\(\s*(?:[a-z_]\w*\s*,\s*)?:([a-z_]\w*)\s*,\s*([^,)]+)|(?<![\w:@.])([a-z_]\w*):\s+([^,)\]}]+)/
 
     @doc """
     Rewrites fragment map reads of `html` to `rendered_blocks`, notes them
@@ -37,11 +35,14 @@ if Code.ensure_loaded?(Igniter) do
     """
     def rewrite(igniter) do
       igniter = Igniter.include_glob(igniter, "lib/**/*.{ex,heex,eex,leex}")
-      sources = Enum.map(sources(igniter), fn {path, content} -> {path, content, bindings(path, content)} end)
+
+      sources =
+        Enum.map(sources(igniter), fn {path, content} -> {path, content, FragmentSources.analyze(path, content)} end)
+
       assigns = sources |> fragment_assigns() |> Enum.map(&"@#{&1}")
 
       {igniter, rewritten} =
-        Enum.reduce(sources, {igniter, []}, fn {path, content, bindings}, {igniter, rewritten} ->
+        Enum.reduce(sources, {igniter, []}, fn {path, content, %{bindings: bindings}}, {igniter, rewritten} ->
           {updated, lines} = rewrite_reads(content, path, assigns, bindings)
 
           if lines == [] do
@@ -81,62 +82,16 @@ if Code.ensure_loaded?(Igniter) do
       |> Enum.sort()
     end
 
-    # `{variable, first_line, last_line}`: the variables `get_fragments` binds
-    # in a module's functions, with each function's lines.
-    defp bindings(path, content) do
-      if Path.extname(path) == ".ex" do
-        for {first, last} <- function_ranges(content),
-            body = content |> String.split("\n") |> Enum.slice((first - 1)..(last - 1)//1) |> Enum.join("\n"),
-            regex <- [@bound_ok, @bound],
-            [_, variable] <- Regex.scan(regex, body),
-            uniq: true,
-            do: {variable, first, last}
-      else
-        []
-      end
-    end
-
-    defp function_ranges(content) do
-      content
-      |> Sourceror.parse_string!()
-      |> Macro.prewalk([], fn
-        {kind, _meta, _args} = node, ranges when kind in [:def, :defp] ->
-          %{start: start, end: finish} = Sourceror.get_range(node)
-          {node, [{start[:line], finish[:line]} | ranges]}
-
-        node, ranges ->
-          {node, ranges}
-      end)
-      |> elem(1)
-    rescue
-      _unparsable -> []
-    end
-
-    defp bound?(bindings, variable, line),
-      do: Enum.any?(bindings, fn {name, first, last} -> name == variable and line in first..last//1 end)
-
     # The assigns that hold a fragments map: those the plug names or a
     # function assigns from a fragments variable, unless something assigns
     # them other data too.
     defp fragment_assigns(sources) do
-      plugged = for {_path, content, _bindings} <- sources, [_, name] <- Regex.scan(@plug_as, content), do: name
-      sites = Enum.flat_map(sources, fn {_path, content, bindings} -> assign_sites(content, bindings) end)
+      plugged = for {_path, content, _analysis} <- sources, [_, name] <- Regex.scan(@plug_as, content), do: name
+      sites = Enum.flat_map(sources, fn {_path, _content, analysis} -> analysis.sites end)
       assigned = for {name, true} <- sites, do: name
       mixed = for {name, false} <- sites, do: name
 
       Enum.uniq(plugged ++ assigned) -- mixed
-    end
-
-    # `{assign, from_fragments?}` for each `assign(:name, value)` and
-    # `name: value` in `content`.
-    defp assign_sites(content, bindings) do
-      for {line, number, _offset} <- lines(content),
-          match <- Regex.scan(@assign_site, line),
-          # A group the match leaves out at the end is missing, not "".
-          [_, call_name, call_value, keyword_name, keyword_value] = match ++ List.duplicate("", 5 - length(match)),
-          name = if(call_name == "", do: keyword_name, else: call_name),
-          value = String.trim(if(call_name == "", do: keyword_value, else: call_value)),
-          do: {name, bound?(bindings, value, number)}
     end
 
     # `{content, [line]}`: the content with each `<name>[…].html` read of a
@@ -163,7 +118,7 @@ if Code.ensure_loaded?(Igniter) do
           name = binary_part(content, name_start, name_length)
 
           code?.(start) and
-            (name in assigns or bound?(bindings, name, line_number(content, start)))
+            (name in assigns or FragmentSources.bound?(bindings, name, line_number(content, start)))
         end)
 
       updated =

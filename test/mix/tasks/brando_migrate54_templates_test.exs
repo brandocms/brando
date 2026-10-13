@@ -408,6 +408,54 @@ defmodule Mix.Tasks.Brando.Migrate54TemplatesTest do
     assert_has_warning(igniter, &(&1 =~ ~s|#{path}:11: parts["x"].html|))
   end
 
+  test "lists, and leaves, a fragments variable that the function binds again" do
+    controller = """
+    defmodule LettWeb.PartsController do
+      alias Brando.Pages
+
+      def fragment(opts, custom_maps) do
+        {:ok, parts} = Pages.get_fragments(opts)
+        Enum.map(custom_maps, fn parts -> parts["x"].html end)
+      end
+    end
+    """
+
+    path = "lib/lett_web/controllers/parts_controller.ex"
+    igniter = migrate(%{path => controller})
+
+    assert_unchanged(igniter, [path])
+    assert_has_warning(igniter, &(&1 =~ ~s|#{path}:6: Enum.map(custom_maps, fn parts -> parts["x"].html end)|))
+  end
+
+  test "lists, and leaves, reads of an assign another module gives other data over several lines" do
+    other = """
+    defmodule LettWeb.ShopController do
+      use LettWeb, :controller
+
+      def index(conn, _params) do
+        conn
+        |> assign(
+          # Not fragments
+          :partials,
+          %{"newsletter" => %{html: "Shop"}}
+        )
+        |> render(:index)
+      end
+    end
+    """
+
+    footer = ~s|<%= @partials["newsletter"].html \|> raw %>\n|
+
+    igniter =
+      migrate(%{
+        @footer_path => footer,
+        @router_path => @fragment_router,
+        "lib/lett_web/controllers/shop_controller.ex" => other
+      })
+
+    assert_unchanged(igniter, [@footer_path])
+  end
+
   test "lists, and leaves, reads of an assign that is also given other data" do
     other = """
     defmodule LettWeb.ShopController do
