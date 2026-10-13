@@ -88,6 +88,13 @@ msgstr[1] ""
 
 #: lib/brando/doctor/checks/image_configs.ex
 #, elixir-autogen, elixir-format
+msgid "%{count} differs"
+msgid_plural "%{count} differ"
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/brando/doctor/checks/image_configs.ex
+#, elixir-autogen, elixir-format
 msgid "%{count} differs (recreate it)"
 msgid_plural "%{count} differ (recreate them)"
 msgstr[0] ""
@@ -160,6 +167,13 @@ msgstr[1] ""
 #, elixir-autogen, elixir-format
 msgid "%{count} in sizes"
 msgid_plural "%{count} in sizes"
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/brando/doctor/checks/image_configs.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} likely matches"
+msgid_plural "%{count} likely match"
 msgstr[0] ""
 msgstr[1] ""
 
@@ -647,6 +661,25 @@ msgstr ""
 msgid "brandojs not installed"
 msgstr ""
 
+#: lib/brando/doctor/checks/image_configs.ex
+#, elixir-autogen, elixir-format
+msgid "by its record it differs from its config"
+msgid_plural "by their records all %{count} differ"
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/brando/doctor/checks/image_configs.ex
+#, elixir-autogen, elixir-format
+msgid "by its record it likely matches its config"
+msgid_plural "by their records all likely match their config"
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/brando/doctor/checks/image_configs.ex
+#, elixir-autogen, elixir-format
+msgid "by their records"
+msgstr ""
+
 #: lib/brando/doctor/checks/robots.ex
 #, elixir-autogen, elixir-format
 msgid "call page_routes() in the router's browser scope"
@@ -1095,11 +1128,6 @@ msgstr ""
 msgid "skipped in a release: needs the project's source files"
 msgstr ""
 
-#: lib/brando/doctor/checks/image_configs.ex
-#, elixir-autogen, elixir-format
-msgid "sync the media to this machine (or mount its volume) and check again; until then every image counts as differing, and recreating needs the originals"
-msgstr ""
-
 #: lib/brando/doctor/checks/test_database.ex
 #, elixir-autogen, elixir-format
 msgid "test and development both connect to %{database}"
@@ -1163,4 +1191,9 @@ msgstr ""
 #: lib/brando/doctor/checks/versions.ex
 #, elixir-autogen, elixir-format
 msgid "use the versions this Brando supports (see the installation guide)"
+msgstr ""
+
+#: lib/brando/doctor/checks/image_configs.ex
+#, elixir-autogen, elixir-format
+msgid "where the media is (on the server, or here once it is synced or mounted), run mix brando.images.adopt to record the images that match, then Utilities → Recreate changed images for the rest; here neither works, as adopting needs the files and recreating the originals"
 msgstr ""

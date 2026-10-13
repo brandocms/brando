@@ -528,13 +528,39 @@ defmodule Brando.Doctor.ChecksTest do
 
       result = Checks.ImageConfigs.run(context())
 
-      # Without files, only formats and size keys are compared.
+      # Without files, only formats and size keys are compared, and nothing
+      # here can adopt or recreate them.
       assert result.summary ==
-               "no image files under #{root} (is the media synced?); 2 images were made before Brando recorded their settings: all 2 differ from their config (recreate them); of those: 1 in formats, 1 in sizes"
+               "no image files under #{root} (is the media synced?); 2 images were made before Brando recorded their settings: by their records all 2 differ; of those: 1 in formats, 1 in sizes"
 
       assert result.link == nil
-      assert result.fix =~ "sync the media to this machine"
-      refute result.fix =~ "Recreate"
+
+      assert result.fix ==
+               "where the media is (on the server, or here once it is synced or mounted), run mix brando.images.adopt to record the images that match, then Utilities → Recreate changed images for the rest; here neither works, as adopting needs the files and recreating the originals"
+    end
+
+    test "no image files, some match by their records: one plain account, no advice to adopt here" do
+      Brando.Repo.update_all(from(i in Image, where: is_nil(i.deleted_at)), set: [deleted_at: DateTime.utc_now()])
+      Factory.insert(:image, config_fingerprint: nil, path: "images/unsynced/3.jpg", formats: [:jpg, :webp])
+
+      # The config's size keys and formats: a match by its record.
+      for n <- 1..2 do
+        Factory.insert(:image,
+          config_fingerprint: nil,
+          path: "images/unsynced/match-#{n}.jpg",
+          sizes:
+            Map.new(ImageFileFixtures.standard_sizes(), fn {key, _} -> {key, "images/unsynced/#{key}/match-#{n}.jpg"} end)
+        )
+      end
+
+      result = Checks.ImageConfigs.run(context())
+
+      assert result.summary ==
+               "no image files under #{Brando.Images.Utils.media_path()} (is the media synced?); 3 images were made before Brando recorded their settings: by their records 2 likely match, 1 differs; of those: 1 in formats"
+
+      refute result.summary =~ "checks and records that"
+      refute result.summary =~ "recreate"
+      assert result.fix =~ "here neither works"
     end
 
     test "images whose config target no longer resolves are listed, not warned about" do

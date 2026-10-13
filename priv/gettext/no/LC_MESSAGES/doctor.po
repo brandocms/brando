@@ -88,6 +88,13 @@ msgstr[1] "%{count} detaljer"
 
 #: lib/brando/doctor/checks/image_configs.ex
 #, elixir-autogen, elixir-format
+msgid "%{count} differs"
+msgid_plural "%{count} differ"
+msgstr[0] "%{count} avviker"
+msgstr[1] "%{count} avviker"
+
+#: lib/brando/doctor/checks/image_configs.ex
+#, elixir-autogen, elixir-format
 msgid "%{count} differs (recreate it)"
 msgid_plural "%{count} differ (recreate them)"
 msgstr[0] "%{count} avviker (lag det på nytt)"
@@ -162,6 +169,13 @@ msgid "%{count} in sizes"
 msgid_plural "%{count} in sizes"
 msgstr[0] "%{count} i størrelser"
 msgstr[1] "%{count} i størrelser"
+
+#: lib/brando/doctor/checks/image_configs.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} likely matches"
+msgid_plural "%{count} likely match"
+msgstr[0] "%{count} stemmer trolig"
+msgstr[1] "%{count} stemmer trolig"
 
 #: lib/brando/doctor/checks/image_configs.ex
 #, elixir-autogen, elixir-format
@@ -647,6 +661,25 @@ msgstr "brandojs er ikke en avhengighet i assets/backend"
 msgid "brandojs not installed"
 msgstr "brandojs er ikke installert"
 
+#: lib/brando/doctor/checks/image_configs.ex
+#, elixir-autogen, elixir-format
+msgid "by its record it differs from its config"
+msgid_plural "by their records all %{count} differ"
+msgstr[0] "etter registreringen avviker det fra oppsettet sitt"
+msgstr[1] "etter registreringene avviker alle %{count}"
+
+#: lib/brando/doctor/checks/image_configs.ex
+#, elixir-autogen, elixir-format
+msgid "by its record it likely matches its config"
+msgid_plural "by their records all likely match their config"
+msgstr[0] "etter registreringen stemmer det trolig med oppsettet sitt"
+msgstr[1] "etter registreringene stemmer alle trolig med oppsettet sitt"
+
+#: lib/brando/doctor/checks/image_configs.ex
+#, elixir-autogen, elixir-format
+msgid "by their records"
+msgstr "etter registreringene"
+
 #: lib/brando/doctor/checks/robots.ex
 #, elixir-autogen, elixir-format
 msgid "call page_routes() in the router's browser scope"
@@ -1095,11 +1128,6 @@ msgstr "sett adressen Brando sender fra: `config :brando, Brando.Mailer, from: �
 msgid "skipped in a release: needs the project's source files"
 msgstr "hoppet over i en release: trenger prosjektets kildefiler"
 
-#: lib/brando/doctor/checks/image_configs.ex
-#, elixir-autogen, elixir-format
-msgid "sync the media to this machine (or mount its volume) and check again; until then every image counts as differing, and recreating needs the originals"
-msgstr "synkroniser mediene til denne maskinen (eller monter volumet) og sjekk igjen; til da regnes alle bilder som ulike, og å lage dem på nytt krever originalene"
-
 #: lib/brando/doctor/checks/test_database.ex
 #, elixir-autogen, elixir-format
 msgid "test and development both connect to %{database}"
@@ -1164,3 +1192,8 @@ msgstr "bruk %{advice}: oddetallsutgivelser er ikke LTS, og pnpm og yarn avviser
 #, elixir-autogen, elixir-format
 msgid "use the versions this Brando supports (see the installation guide)"
 msgstr "bruk versjonene denne Brando støtter (se installasjonsveiledningen)"
+
+#: lib/brando/doctor/checks/image_configs.ex
+#, elixir-autogen, elixir-format
+msgid "where the media is (on the server, or here once it is synced or mounted), run mix brando.images.adopt to record the images that match, then Utilities → Recreate changed images for the rest; here neither works, as adopting needs the files and recreating the originals"
+msgstr "der mediene ligger (på serveren, eller her når de er synkronisert eller montert), kjør mix brando.images.adopt for å registrere bildene som stemmer, og deretter Verktøy → Lag endrede bilder på nytt for resten; her virker ingen av delene, for registreringen trenger filene og å lage dem på nytt trenger originalene"

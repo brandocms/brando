@@ -134,7 +134,7 @@ defmodule Brando.Doctor.Checks.ImageConfigs do
               "%{count} image was made before Brando recorded its settings",
               "%{count} images were made before Brando recorded their settings",
               unrecorded_count
-            ) <> ": " <> unrecorded_split(unrecorded_count, matching, differ, likely?),
+            ) <> ": " <> split(unsynced != [], unrecorded_count, matching, differ, likely?),
           differ > 0 && differences != %{} && differences(differences)
         ],
         &(&1 == false)
@@ -185,12 +185,38 @@ defmodule Brando.Doctor.Checks.ImageConfigs do
     end
   end
 
+  # Without the files nothing can be done here: adopting finds no files to
+  # compare, and Recreate changed images adopts none and queues every image
+  # for processing, which fails without its original.
   defp unsynced_fix,
     do:
       dgettext(
         "doctor",
-        "sync the media to this machine (or mount its volume) and check again; until then every image counts as differing, and recreating needs the originals"
+        "where the media is (on the server, or here once it is synced or mounted), run mix brando.images.adopt to record the images that match, then Utilities → Recreate changed images for the rest; here neither works, as adopting needs the files and recreating the originals"
       )
+
+  # Without the media only the records were compared: what they suggest, and
+  # nothing to do about it here (the fix says where).
+  defp split(true, total, total, 0, _likely?),
+    do:
+      dngettext(
+        "doctor",
+        "by its record it likely matches its config",
+        "by their records all likely match their config",
+        total
+      )
+
+  defp split(true, total, 0, total, _likely?),
+    do: dngettext("doctor", "by its record it differs from its config", "by their records all %{count} differ", total)
+
+  defp split(true, _total, matching, differ, _likely?) do
+    dgettext("doctor", "by their records") <>
+      " " <>
+      dngettext("doctor", "%{count} likely matches", "%{count} likely match", matching) <>
+      ", " <> dngettext("doctor", "%{count} differs", "%{count} differ", differ)
+  end
+
+  defp split(false, total, matching, differ, likely?), do: unrecorded_split(total, matching, differ, likely?)
 
   # Config differences call for recreating; missing files may be media not
   # synced here.
