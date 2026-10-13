@@ -25,7 +25,40 @@ defmodule Brando.Authorization.Engine do
     |> Enum.filter(&can?(Scope.site(actor, &1), :access, :backend))
   end
 
+  @snapshots {__MODULE__, :snapshots}
+
+  def with_snapshots(fun) do
+    if Process.get(@snapshots) do
+      fun.()
+    else
+      Process.put(@snapshots, %{})
+
+      try do
+        fun.()
+      after
+        Process.delete(@snapshots)
+      end
+    end
+  end
+
   def snapshot(%Scope{} = scope) do
+    case Process.get(@snapshots) do
+      %{^scope => snapshot} ->
+        snapshot
+
+      %{} = snapshots ->
+        snapshot = load_snapshot(scope)
+        Process.put(@snapshots, Map.put(snapshots, scope, snapshot))
+        snapshot
+
+      nil ->
+        load_snapshot(scope)
+    end
+  end
+
+  def snapshot(actor), do: actor |> Scope.current() |> snapshot()
+
+  defp load_snapshot(scope) do
     user = scope.user_id && Repo.get(Brando.Users.User, scope.user_id)
 
     with :ok <- eligible_user(user), :ok <- eligible_scope(scope) do
@@ -54,8 +87,6 @@ defmodule Brando.Authorization.Engine do
       {:error, reason} -> %Snapshot{scope: scope, user: user, reason: reason}
     end
   end
-
-  def snapshot(actor), do: actor |> Scope.current() |> snapshot()
 
   def can?(%Snapshot{} = snapshot, action, subject), do: explain(snapshot, action, subject).allowed?
   def can?(actor, action, subject), do: actor |> snapshot() |> can?(action, subject)

@@ -2,6 +2,27 @@ import { test, expect } from '../test-support/setupAuth'
 import { syncLV } from '../utils'
 
 test.beforeEach(async ({ page }) => {
+  // A transition's rendered value only advances when the browser paints a
+  // frame, which a loaded runner may not do for a hundred milliseconds or
+  // more. This seeks the CSS transitions just started on `elements` (or their
+  // ::backdrop) to their midpoint, so a style read afterwards is a value from
+  // the middle of the motion, whatever the frame rate.
+  await page.addInitScript(() => {
+    window.seekTransitionsToMidpoint = elements => {
+      const transitions = document.getAnimations().filter(animation =>
+        animation instanceof CSSTransition && elements.includes(animation.effect.target))
+
+      for (const transition of transitions) {
+        transition.currentTime = transition.effect.getComputedTiming().duration / 2
+      }
+
+      return transitions.map(transition => ({
+        property: transition.transitionProperty,
+        pseudoElement: transition.effect.pseudoElement,
+        to: transition.effect.getKeyframes().at(-1)[transition.transitionProperty.replace(/-./g, s => s[1].toUpperCase())]
+      }))
+    }
+  })
   await page.request.post('/e2e/setup_fixtures/norwegian-admin-user')
   await page.emulateMedia({ reducedMotion: 'no-preference' })
   await page.goto('/admin/pages/update/1')
@@ -23,15 +44,22 @@ for (const action of ['OK', 'backdrop', 'Escape']) {
     const dialog = await sharePreview(page)
     await dialog.evaluate((el, action) => {
       window.alertExitSample = null
+      // Registered after the alert's own listeners, so the exit has begun.
       el.addEventListener(action === 'Escape' ? 'cancel' : 'click', () => {
-        setTimeout(() => {
-          window.alertExitSample = {
-            connected: el.isConnected,
-            open: el.open,
-            panel: Number(getComputedStyle(el).opacity),
-            backdrop: Number(getComputedStyle(el, '::backdrop').opacity)
-          }
-        }, 80)
+        const closedAt = performance.now()
+        const transitions = window.seekTransitionsToMidpoint([el])
+        window.alertExitSample = {
+          connected: el.isConnected,
+          open: el.open,
+          transitions,
+          panel: Number(getComputedStyle(el).opacity),
+          backdrop: Number(getComputedStyle(el, '::backdrop').opacity),
+          leave: (value => parseFloat(value) * (value.endsWith('ms') ? 1 : 1000))(
+            getComputedStyle(el).getPropertyValue('--motion-leave').trim())
+        }
+        el.addEventListener('close', () => {
+          window.alertExitSample.closedAfter = performance.now() - closedAt
+        }, { once: true })
       }, { once: true })
     }, action)
 
@@ -43,11 +71,17 @@ for (const action of ['OK', 'backdrop', 'Escape']) {
     const exit = await page.evaluate(() => window.alertExitSample)
     expect(exit.connected).toBe(true)
     expect(exit.open).toBe(true)
+    // Panel and backdrop both fade out, and are partly visible midway.
+    expect(exit.transitions).toContainEqual({ property: 'opacity', pseudoElement: null, to: '0' })
+    expect(exit.transitions).toContainEqual({ property: 'opacity', pseudoElement: '::backdrop', to: '0' })
     expect(exit.panel).toBeGreaterThan(0)
     expect(exit.panel).toBeLessThan(1)
     expect(exit.backdrop).toBeGreaterThan(0)
     expect(exit.backdrop).toBeLessThan(1)
     await expect(dialog).toHaveCount(0)
+    // It stayed in the top layer until the fade had run its course.
+    expect(exit.leave).toBeGreaterThan(1)
+    expect(await page.evaluate(() => window.alertExitSample.closedAfter)).toBeGreaterThanOrEqual(exit.leave - 1)
   })
 }
 
@@ -96,15 +130,21 @@ for (const width of [1440, 390]) {
     const inner = panel.locator('.notes-panel-inner')
     await expect(panel).toBeHidden()
 
+    // The panel's geometry and opacity midway through the motion a click
+    // starts. LiveView applies the panel's class change on the next frame.
     const sampleAfterClick = button => button.evaluate(el => new Promise(resolve => {
-      el.click()
-      setTimeout(() => {
-        const panel = document.querySelector('.notes-panel')
+      const panel = document.querySelector('.notes-panel')
+      const inner = panel.querySelector('.notes-panel-inner')
+      new MutationObserver((_, observer) => {
+        observer.disconnect()
+        const transitions = window.seekTransitionsToMidpoint([panel, inner])
         const box = panel.getBoundingClientRect()
-        resolve({ width: box.width, x: box.x, opacity: Number(getComputedStyle(panel.querySelector('.notes-panel-inner')).opacity) })
-      }, 80)
+        resolve({ transitions, width: box.width, x: box.x, opacity: Number(getComputedStyle(inner).opacity) })
+      }).observe(panel, { attributeFilter: ['class'] })
+      el.click()
     }))
     const opening = await sampleAfterClick(trigger)
+    expect(opening.transitions).toContainEqual({ property: 'opacity', pseudoElement: null, to: '1' })
     expect(opening.opacity).toBeGreaterThan(0)
     expect(opening.opacity).toBeLessThan(1)
     if (width > 768) {
@@ -120,6 +160,7 @@ for (const width of [1440, 390]) {
     await draft.fill('Behold dette utkastet')
 
     const closing = await sampleAfterClick(panel.getByRole('button', { name: 'Lukk notater', exact: true }))
+    expect(closing.transitions).toContainEqual({ property: 'opacity', pseudoElement: null, to: '0' })
     expect(closing.opacity).toBeGreaterThan(0)
     expect(closing.opacity).toBeLessThan(1)
     if (width > 768) {
