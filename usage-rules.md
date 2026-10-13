@@ -265,14 +265,17 @@ Brando checks a Blueprint in three stages:
 * While the module compiles, Brando checks the root settings, every
   attribute, relation and asset with their options and constraints,
   uniqueness scopes, duplicate field and column names, asset configs,
-  identifier and URL templates, datasources, metadata, translations and
-  listings. A failure stops the compilation with a `Spark.Error.DslError` or
+  identifier and URL templates, datasources, metadata, translations,
+  listings, and the form inputs the admin form cannot open without (a
+  `:multi_select` on a has_many needs `relation_key:` and `relation:`; an
+  `:entries` input's `sources:` options must apply to identifiers). A
+  failure stops the compilation with a `Spark.Error.DslError` or
   `Brando.Exception.BlueprintError` naming the section and entry.
-* After the module compiles, Brando checks forms, which need the related
-  schemas compiled, and runs each trait's `validate/2`. Form errors are
-  printed as **warnings** and the module still compiles; trait validation
-  errors raise. Build with `mix compile --warnings-as-errors` so form
-  mistakes fail too.
+* After the module compiles, Brando checks the rest of the forms, which
+  need the related schemas compiled, and runs each trait's `validate/2`.
+  Form errors are printed as **warnings** and the module still compiles;
+  trait validation errors raise. Build with `mix compile --warnings-as-errors`
+  so form mistakes fail too.
 
 The checks need no database. Fix declarations reported after an upgrade; if
 a fix changes stored columns, follow [Blueprint migrations](deps/brando/guides/blueprint_migrations.md).

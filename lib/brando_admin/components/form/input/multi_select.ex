@@ -571,24 +571,8 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
         relation_type
       end
 
-    if relation_type in [:has_many, {:subform, :has_many}] and
-         (socket.assigns.relation_key == :id || socket.assigns.relation == nil) do
-      raise BlueprintError,
-        message: """
-        Multi selects for a #{inspect(relation_type)} relation needs a
-        `relation_key` and a `relation`.
-
-        Set this in your form:
-
-            input :article_contributors, :multi_select,
-              options: &__MODULE__.get_contributors/2,
-              relation_key: :contributor_id,
-              relation: :contributor,
-              resetable: true,
-              label: t("Contributors")
-        """
-    end
-
+    # `Brando.Blueprint.Forms.Verifier` makes a has_many's multi select name
+    # its `relation_key` and `relation` when the Blueprint compiles.
     assign(socket, :relation_type, relation_type)
   end
 

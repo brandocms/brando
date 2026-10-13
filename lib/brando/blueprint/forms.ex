@@ -336,9 +336,11 @@ defmodule Brando.Blueprint.Forms do
 
   #### Options
 
-      - `for`: List of tuples with {module, listing_opts}. I.e:
+      - `sources`: List of tuples with {module, options}. The options apply to
+        the identifiers the picker lists (`order:` by their columns, `status:`,
+        `language:`, `limit:`), not to the module's entries. I.e:
         ```elixir
-        for: [{__MODULE__, %{preload: [], order: "asc title", status: :published}}],
+        sources: [{__MODULE__, %{order: "asc title", status: :published}}],
         ```
       - `filter_language`: `bool` — Only show entries in same language as main entry
 
