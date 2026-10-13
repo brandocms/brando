@@ -191,6 +191,13 @@ msgid_plural "%{count} migrations not run"
 msgstr[0] "%{count} migrering ikke kjørt"
 msgstr[1] "%{count} migreringer ikke kjørt"
 
+#: lib/brando/doctor/checks/module_entry_paths.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} module reads its entries through .data.vars or .data.refs, which renders nothing"
+msgid_plural "%{count} modules read their entries through .data.vars or .data.refs, which renders nothing"
+msgstr[0] "%{count} modul leser oppføringene sine gjennom .data.vars eller .data.refs, som ikke viser noe"
+msgstr[1] "%{count} moduler leser oppføringene sine gjennom .data.vars eller .data.refs, som ikke viser noe"
+
 #: lib/brando/doctor/checks/migrations.ex
 #, elixir-autogen, elixir-format
 msgid "%{count} new Brando migration not copied"
@@ -292,6 +299,11 @@ msgstr "%{language}: %{missing} av %{total} uten alt-tekst (%{coverage} dekket)"
 #, elixir-autogen, elixir-format
 msgid "%{language}: no %{missing}"
 msgstr "%{language}: mangler %{missing}"
+
+#: lib/brando/doctor/checks/module_entry_paths.ex
+#, elixir-autogen, elixir-format
+msgid "%{module} (#%{id}), line %{line}: %{code}"
+msgstr "%{module} (#%{id}), linje %{line}: %{code}"
 
 #: lib/brando/doctor/checks/modules.ex
 #, elixir-autogen, elixir-format
@@ -496,6 +508,11 @@ msgstr "E-post: ikke satt opp"
 msgid "Migrations"
 msgstr "Migreringer"
 
+#: lib/brando/doctor/checks/module_entry_paths.ex
+#, elixir-autogen, elixir-format
+msgid "Module entry paths"
+msgstr "Modulers oppføringsstier"
+
 #: lib/brando/doctor/checks/modules.ex
 #, elixir-autogen, elixir-format
 msgid "Modules"
@@ -525,6 +542,11 @@ msgstr "Oban-køer"
 #, elixir-autogen, elixir-format
 msgid "Open SEO"
 msgstr "Åpne SEO"
+
+#: lib/brando/doctor/checks/module_entry_paths.ex
+#, elixir-autogen, elixir-format
+msgid "Open block modules"
+msgstr "Åpne blokkmoduler"
 
 #: lib/brando/doctor/checks/json_ld.ex
 #, elixir-autogen, elixir-format
@@ -645,6 +667,11 @@ msgstr "alle blokker er på modulens gjeldende versjon"
 #, elixir-autogen, elixir-format
 msgid "all images match their settings"
 msgstr "alle bilder samsvarer med innstillingene sine"
+
+#: lib/brando/doctor/checks/module_entry_paths.ex
+#, elixir-autogen, elixir-format
+msgid "an entry's vars and refs are entry.vars and entry.refs since the blocks conversion: run brando_219 (mix brando.gen.migrations, mix brando.migrate) or edit the module code, then mix brando.entries.resave"
+msgstr "etter blokkonverteringen er en oppførings variabler og referanser entry.vars og entry.refs: kjør brando_219 (mix brando.gen.migrations, mix brando.migrate) eller rediger modulkoden, og deretter mix brando.entries.resave"
 
 #: lib/brando/doctor/checks/admin_assets.ex
 #, elixir-autogen, elixir-format
@@ -927,6 +954,11 @@ msgstr "ingen bildefiler under %{path} (er mediene synkronisert?)"
 #, elixir-autogen, elixir-format
 msgid "no mailer"
 msgstr "ingen e-postmodul"
+
+#: lib/brando/doctor/checks/module_entry_paths.ex
+#, elixir-autogen, elixir-format
+msgid "no module reads its entries through .data.vars or .data.refs"
+msgstr "ingen modul leser oppføringene sine gjennom .data.vars eller .data.refs"
 
 #: lib/brando/doctor/checks/node.ex
 #, elixir-autogen, elixir-format

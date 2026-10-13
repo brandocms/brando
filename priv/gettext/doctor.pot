@@ -190,6 +190,13 @@ msgid_plural "%{count} migrations not run"
 msgstr[0] ""
 msgstr[1] ""
 
+#: lib/brando/doctor/checks/module_entry_paths.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} module reads its entries through .data.vars or .data.refs, which renders nothing"
+msgid_plural "%{count} modules read their entries through .data.vars or .data.refs, which renders nothing"
+msgstr[0] ""
+msgstr[1] ""
+
 #: lib/brando/doctor/checks/migrations.ex
 #, elixir-autogen, elixir-format
 msgid "%{count} new Brando migration not copied"
@@ -290,6 +297,11 @@ msgstr ""
 #: lib/brando/doctor/checks/json_ld.ex
 #, elixir-autogen, elixir-format
 msgid "%{language}: no %{missing}"
+msgstr ""
+
+#: lib/brando/doctor/checks/module_entry_paths.ex
+#, elixir-autogen, elixir-format
+msgid "%{module} (#%{id}), line %{line}: %{code}"
 msgstr ""
 
 #: lib/brando/doctor/checks/modules.ex
@@ -495,6 +507,11 @@ msgstr ""
 msgid "Migrations"
 msgstr ""
 
+#: lib/brando/doctor/checks/module_entry_paths.ex
+#, elixir-autogen, elixir-format
+msgid "Module entry paths"
+msgstr ""
+
 #: lib/brando/doctor/checks/modules.ex
 #, elixir-autogen, elixir-format
 msgid "Modules"
@@ -523,6 +540,11 @@ msgstr ""
 #: lib/brando/doctor/checks/robots.ex
 #, elixir-autogen, elixir-format
 msgid "Open SEO"
+msgstr ""
+
+#: lib/brando/doctor/checks/module_entry_paths.ex
+#, elixir-autogen, elixir-format
+msgid "Open block modules"
 msgstr ""
 
 #: lib/brando/doctor/checks/json_ld.ex
@@ -643,6 +665,11 @@ msgstr ""
 #: lib/brando/doctor/checks/image_configs.ex
 #, elixir-autogen, elixir-format
 msgid "all images match their settings"
+msgstr ""
+
+#: lib/brando/doctor/checks/module_entry_paths.ex
+#, elixir-autogen, elixir-format
+msgid "an entry's vars and refs are entry.vars and entry.refs since the blocks conversion: run brando_219 (mix brando.gen.migrations, mix brando.migrate) or edit the module code, then mix brando.entries.resave"
 msgstr ""
 
 #: lib/brando/doctor/checks/admin_assets.ex
@@ -925,6 +952,11 @@ msgstr ""
 #: lib/brando/doctor/checks/configuration.ex
 #, elixir-autogen, elixir-format
 msgid "no mailer"
+msgstr ""
+
+#: lib/brando/doctor/checks/module_entry_paths.ex
+#, elixir-autogen, elixir-format
+msgid "no module reads its entries through .data.vars or .data.refs"
 msgstr ""
 
 #: lib/brando/doctor/checks/node.ex

@@ -2,15 +2,20 @@ defmodule Brando.Migrations.TransferRefMediaData do
   use Ecto.Migration
 
   def up do
-    # Process refs with PictureBlock data to extract image_id
-    execute """
-    UPDATE content_refs r
-    SET image_id = i.id
-    FROM images i
-    WHERE r.data->>'type' = 'picture'
-    AND i.path IN (#{path_candidates("r.data->'data'->>'path'")})
-    AND i.deleted_at IS NULL
-    """
+    # Postgres can't estimate how many refs the jsonb filters below select,
+    # takes it for one, and joins every ref against every image in a nested
+    # loop: minutes for 20,000 refs and 50,000 images, against a second with
+    # hash joins. Until the gallery objects are made.
+    execute "SET LOCAL enable_nestloop = off"
+
+    # Link each picture ref to the image its legacy data shows (see
+    # resolve_images/1). A picture whose image has no live row, because the
+    # row was deleted or never made, was still shown by 0.53 from the ref's
+    # own data: make the row from that data, then link the ref to it.
+    # IMPORTANT: Do this BEFORE cleaning up the ref data
+    execute link_pictures()
+    execute insert_images(picture_items())
+    execute link_pictures()
 
     # Process refs with VideoBlock data
     # First, create video entries using the new video schema
@@ -163,6 +168,7 @@ defmodule Brando.Migrations.TransferRefMediaData do
       )
     )
     WHERE data->>'type' = 'picture'
+    AND (image_id IS NOT NULL OR #{legacy_path("data->'data'")} IS NULL)
     """
 
     # Clean up VideoBlock data - keep only override fields
@@ -201,25 +207,29 @@ defmodule Brando.Migrations.TransferRefMediaData do
     WHERE data->>'type' = 'video'
     """
 
-    # Process refs with GalleryBlock data
-    # First, create galleries from gallery refs
+    # Process refs with GalleryBlock data: a gallery for each gallery ref with
+    # images, its id taken first so each ref is linked to its own
     execute """
-    INSERT INTO galleries (
-      config_target, creator_id,
-      inserted_at, updated_at
+    WITH refs AS (
+      SELECT
+        r.id AS ref_id,
+        nextval(pg_get_serial_sequence('galleries', 'id')) AS gallery_id,
+        COALESCE(b.creator_id, 1) AS creator_id
+      FROM content_refs r
+      LEFT JOIN content_blocks b ON r.block_id = b.id
+      WHERE r.data->>'type' = 'gallery'
+      AND r.gallery_id IS NULL
+      AND jsonb_array_length(#{gallery_images("r.data->'data'")}) > 0
+    ),
+    created AS (
+      INSERT INTO galleries (id, config_target, creator_id, inserted_at, updated_at)
+      SELECT gallery_id, 'default', creator_id, NOW(), NOW() FROM refs
+      RETURNING id
     )
-    SELECT DISTINCT ON (r.data->>'uid')
-      'default',
-      COALESCE(b.creator_id, 1),
-      NOW(),
-      NOW()
-    FROM content_refs r
-    LEFT JOIN content_blocks b ON r.block_id = b.id
-    WHERE r.data->>'type' = 'gallery'
-    AND r.data->'data' IS NOT NULL
-    AND r.data->>'uid' IS NOT NULL
-    AND r.data->'data'->'images' IS NOT NULL
-    AND jsonb_array_length(r.data->'data'->'images') > 0
+    UPDATE content_refs r
+    SET gallery_id = refs.gallery_id
+    FROM refs
+    WHERE r.id = refs.ref_id
     """
 
     # `config` carries the per-placement metadata below, and it is added by a
@@ -230,101 +240,36 @@ defmodule Brando.Migrations.TransferRefMediaData do
     ADD COLUMN IF NOT EXISTS config jsonb DEFAULT '{}'::jsonb
     """
 
-    # Create gallery_objects for each image in the gallery
-    # We need to match each ref to its corresponding gallery by order
+    # As for pictures: a gallery image without a live row gets one made from
+    # its data, so the gallery keeps every image 0.53 showed
+    execute insert_images(gallery_items())
+
+    # A gallery object for each image, in the legacy order
     execute """
     INSERT INTO galleries_gallery_objects (
       gallery_id, image_id, sequence, creator_id, config,
       inserted_at, updated_at
     )
-    WITH ref_galleries AS (
-      SELECT
-        r.id as ref_id,
-        ROW_NUMBER() OVER (ORDER BY r.id) as ref_order
-      FROM content_refs r
-      WHERE r.data->>'type' = 'gallery'
-      AND r.data->'data' IS NOT NULL
-      AND r.data->>'uid' IS NOT NULL
-      AND r.data->'data'->'images' IS NOT NULL
-      AND jsonb_array_length(r.data->'data'->'images') > 0
-    ),
-    gallery_ids AS (
-      SELECT
-        id,
-        ROW_NUMBER() OVER (ORDER BY id) as gallery_order
-      FROM galleries
-      WHERE config_target = 'default'
-    ),
-    gallery_images AS (
-      SELECT
-        gi.id AS gallery_id,
-        imgs.img_ord,
-        imgs.img_data,
-        COALESCE(b.creator_id, 1) AS creator_id
-      FROM content_refs r
-      CROSS JOIN LATERAL jsonb_array_elements(r.data->'data'->'images') WITH ORDINALITY AS imgs(img_data, img_ord)
-      INNER JOIN ref_galleries rg ON r.id = rg.ref_id
-      INNER JOIN gallery_ids gi ON rg.ref_order = gi.gallery_order
-      LEFT JOIN content_blocks b ON r.block_id = b.id
-      WHERE r.data->>'type' = 'gallery'
-    ),
-    resolved AS (
-      SELECT
-        gallery_images.*,
-        COALESCE(by_size.id, by_path.id) AS image_id
-      FROM gallery_images
-      -- Prefer the identity implied by `sizes` over `path`. Legacy gallery data
-      -- can carry a stale `path` next to correct `sizes` — a replaced image
-      -- wrote one but not the other. The old renderer read `sizes`, so that is
-      -- the image the site actually displayed; matching `path` here would
-      -- silently swap it for a different picture.
-      LEFT JOIN LATERAL (
-        SELECT value
-        FROM jsonb_each_text(
-          CASE WHEN jsonb_typeof(gallery_images.img_data->'sizes') = 'object'
-               THEN gallery_images.img_data->'sizes' ELSE '{}'::jsonb END
-        )
-        WHERE value IS NOT NULL AND value <> ''
-        LIMIT 1
-      ) sz ON TRUE
-      -- The size file may carry a converted extension (a .png source renders to
-      -- .jpg), so compare the extensionless path rather than the filename.
-      LEFT JOIN LATERAL (
-        SELECT i.id
-        FROM images i
-        WHERE sz.value IS NOT NULL
-        AND i.deleted_at IS NULL
-        AND regexp_replace(i.path, '\\.[^.]+$', '') IN (#{size_path_candidates("sz.value")})
-        LIMIT 1
-      ) by_size ON TRUE
-      -- Fall back to `path` when the ref has no sizes, or when the image its
-      -- sizes name is gone.
-      LEFT JOIN LATERAL (
-        SELECT i.id
-        FROM images i
-        WHERE i.deleted_at IS NULL
-        AND i.path IN (#{path_candidates("gallery_images.img_data->>'path'")})
-        LIMIT 1
-      ) by_path ON TRUE
-    )
+    WITH items AS (#{gallery_items()}),
+    resolved AS (#{resolve_images("items")})
     SELECT
       gallery_id,
       image_id,
-      (row_number() OVER (PARTITION BY gallery_id ORDER BY img_ord)) - 1,
+      (row_number() OVER (PARTITION BY gallery_id ORDER BY ord)) - 1,
       creator_id,
       -- The same image can sit in several galleries, or twice in one, with a
       -- different caption each time, so this metadata belongs on the placement
       -- rather than on the image. An absent key means "not overridden", which is
       -- what the admin's override fields write.
       (
-        CASE WHEN COALESCE(img_data->>'title', '') <> ''
-             THEN jsonb_build_object('title', img_data->>'title') ELSE '{}'::jsonb END
+        CASE WHEN COALESCE(d->>'title', '') <> ''
+             THEN jsonb_build_object('title', d->>'title') ELSE '{}'::jsonb END
         ||
-        CASE WHEN COALESCE(img_data->>'alt', '') <> ''
-             THEN jsonb_build_object('alt', img_data->>'alt') ELSE '{}'::jsonb END
+        CASE WHEN COALESCE(d->>'alt', '') <> ''
+             THEN jsonb_build_object('alt', d->>'alt') ELSE '{}'::jsonb END
         ||
-        CASE WHEN COALESCE(img_data->>'credits', '') <> ''
-             THEN jsonb_build_object('credits', img_data->>'credits') ELSE '{}'::jsonb END
+        CASE WHEN COALESCE(d->>'credits', '') <> ''
+             THEN jsonb_build_object('credits', d->>'credits') ELSE '{}'::jsonb END
       ),
       NOW(),
       NOW()
@@ -332,33 +277,7 @@ defmodule Brando.Migrations.TransferRefMediaData do
     WHERE image_id IS NOT NULL
     """
 
-    # Update refs with gallery_id - we need a way to link each ref to its specific gallery
-    # Since we can't use config_target anymore, we'll need to match by the gallery creation order
-    execute """
-    WITH gallery_mapping AS (
-      SELECT 
-        r.id as ref_id,
-        ROW_NUMBER() OVER (ORDER BY r.id) as gallery_order
-      FROM content_refs r
-      WHERE r.data->>'type' = 'gallery'
-      AND r.data->'data' IS NOT NULL
-      AND r.data->>'uid' IS NOT NULL
-      AND r.data->'data'->'images' IS NOT NULL
-      AND jsonb_array_length(r.data->'data'->'images') > 0
-    ),
-    gallery_ids AS (
-      SELECT 
-        id,
-        ROW_NUMBER() OVER (ORDER BY id) as gallery_order
-      FROM galleries
-      WHERE config_target = 'default'
-    )
-    UPDATE content_refs r
-    SET gallery_id = gi.id
-    FROM gallery_mapping gm
-    JOIN gallery_ids gi ON gm.gallery_order = gi.gallery_order
-    WHERE r.id = gm.ref_id
-    """
+    execute "SET LOCAL enable_nestloop = DEFAULT"
 
     # Clean up gallery data - remove the images array
     # NOTE: active and collapsed are now database columns, not in JSONB data
@@ -369,6 +288,7 @@ defmodule Brando.Migrations.TransferRefMediaData do
       'data', (data->'data')::jsonb - 'images'
     )
     WHERE data->>'type' = 'gallery'
+    AND (gallery_id IS NOT NULL OR jsonb_array_length(#{gallery_images("data->'data'")}) = 0)
     """
 
     # Clean up MediaBlock data
@@ -583,18 +503,193 @@ defmodule Brando.Migrations.TransferRefMediaData do
     """
   end
 
-  defp path_candidates(expression), do: expression |> path_variants() |> Enum.join(", ")
-
-  # A gallery size path names the size directory in front of the filename and
-  # may carry a converted extension, so compare it extensionless and without
-  # the size directory.
-  defp size_path_candidates(expression) do
-    expression
-    |> path_variants()
-    |> Enum.map_join(", ", fn variant ->
-      "regexp_replace(regexp_replace(#{variant}, '/[^/]+/([^/]+)$', '/\\1'), '\\.[^.]+$', '')"
-    end)
+  # The picture refs still without an image, as `(item_id, d, ord, creator_id)`
+  # with `d` the legacy picture data
+  defp picture_items do
+    """
+    SELECT r.id AS item_id, r.data->'data' AS d, r.id AS ord, b.creator_id
+    FROM content_refs r
+    LEFT JOIN content_blocks b ON r.block_id = b.id
+    WHERE r.data->>'type' = 'picture'
+    AND r.image_id IS NULL
+    AND jsonb_typeof(r.data->'data') = 'object'
+    """
   end
+
+  # Every image of a linked gallery ref, as `(gallery_id, d, ord, creator_id)`
+  # with `d` the legacy image data
+  defp gallery_items do
+    """
+    SELECT r.gallery_id, imgs.d, imgs.ord, COALESCE(b.creator_id, 1) AS creator_id
+    FROM content_refs r
+    CROSS JOIN LATERAL jsonb_array_elements(#{gallery_images("r.data->'data'")}) WITH ORDINALITY AS imgs(d, ord)
+    LEFT JOIN content_blocks b ON r.block_id = b.id
+    WHERE r.data->>'type' = 'gallery'
+    AND r.gallery_id IS NOT NULL
+    """
+  end
+
+  defp gallery_images(data) do
+    "CASE WHEN jsonb_typeof(#{data}->'images') = 'array' THEN #{data}->'images' ELSE '[]'::jsonb END"
+  end
+
+  defp link_pictures do
+    """
+    WITH items AS (#{picture_items()}),
+    resolved AS (#{resolve_images("items")})
+    UPDATE content_refs r
+    SET image_id = resolved.image_id
+    FROM resolved
+    WHERE r.id = resolved.item_id
+    AND resolved.image_id IS NOT NULL
+    """
+  end
+
+  # The live image each item's legacy data `d` shows, as `image_id` next to
+  # the item's columns, and whether a row may be made for it (`makeable`).
+  # A soft-deleted row is not a match: emptying the trash deletes it, and
+  # what links to it with it.
+  #
+  # `sizes` and `path` usually name the same image (a size file is
+  # `<dir>/<size>/<name>`, or the file itself for an SVG; its extension may
+  # be a converted one). Then only a row with that exact `path` is a match,
+  # as two images can share a stem (`team.png`, `team.jpg`), and when there
+  # is none a row is made from the data.
+  #
+  # When they name different images, `path` is stale: a replaced image wrote
+  # one but not the other, and the old renderer read `sizes`, so that is the
+  # image the site displayed. It is linked when exactly one row has its
+  # stem; otherwise the ref is left unlinked, keeping its data, rather than
+  # linked to what the stale path names.
+  #
+  # The live images are read once, and matched on equality, so this joins
+  # rather than scanning `images` per item.
+  defp resolve_images(items) do
+    """
+    WITH live AS MATERIALIZED (
+      SELECT id, path, regexp_replace(path, '\\.[^.]+$', '') AS stem
+      FROM images
+      WHERE deleted_at IS NULL
+    ),
+    normalised AS MATERIALIZED (
+      SELECT x.*, n.cpath, n.csize,
+        regexp_replace(n.cpath, '\\.[^.]+$', '') AS pstem,
+        ARRAY[
+          regexp_replace(n.csize, '\\.[^.]+$', ''),
+          regexp_replace(regexp_replace(n.csize, '/[^/]+/([^/]+)$', '/\\1'), '\\.[^.]+$', '')
+        ] AS sstems
+      FROM (SELECT #{items}.*, row_number() OVER () AS item_key FROM #{items}) x
+      CROSS JOIN LATERAL (
+        SELECT
+          #{canonical_path("x.d->>'path'")} AS cpath,
+          (
+            SELECT #{canonical_path("value")}
+            FROM jsonb_each_text(CASE WHEN jsonb_typeof(x.d->'sizes') = 'object' THEN x.d->'sizes' ELSE '{}'::jsonb END)
+            WHERE value IS NOT NULL AND btrim(value) <> ''
+            ORDER BY key
+            LIMIT 1
+          ) AS csize
+      ) n
+    ),
+    exact AS (
+      SELECT o.item_key, min(live.id) AS id
+      FROM normalised o
+      CROSS JOIN LATERAL unnest(ARRAY[o.d->>'path', o.cpath]) AS v(path)
+      JOIN live ON live.path = v.path
+      GROUP BY o.item_key
+    ),
+    by_size AS (
+      SELECT o.item_key, count(DISTINCT live.id) AS n, min(live.id) AS id
+      FROM normalised o
+      CROSS JOIN LATERAL unnest(o.sstems) AS v(stem)
+      JOIN live ON live.stem = v.stem
+      GROUP BY o.item_key
+    ),
+    judged AS (
+      SELECT o.*, (o.csize IS NULL OR o.pstem IS NULL OR o.pstem = ANY(o.sstems)) AS agree
+      FROM normalised o
+    )
+    SELECT j.*,
+      CASE
+        WHEN j.agree AND j.cpath IS NOT NULL THEN e.id
+        WHEN z.n = 1 THEN z.id
+      END AS image_id,
+      (j.agree AND j.cpath IS NOT NULL AND e.id IS NULL) AS makeable
+    FROM judged j
+    LEFT JOIN exact e ON e.item_key = j.item_key
+    LEFT JOIN by_size z ON z.item_key = j.item_key
+    """
+  end
+
+  # An image row for each legacy path among `items` that no live row shows,
+  # made from the first item's data, as 0.53 rendered it: its path and sizes
+  # (without the media prefix), dimensions, formats (from the extension when
+  # the data has none), dominant color and focal point. Its texts stay on the
+  # ref or gallery object that set them.
+  defp insert_images(items) do
+    path = "cpath"
+
+    """
+    INSERT INTO images (
+      path, sizes, width, height, formats, dominant_color, focal, cdn,
+      config_target, status, creator_id, inserted_at, updated_at
+    )
+    WITH items AS (#{items}),
+    resolved AS (#{resolve_images("items")})
+    SELECT DISTINCT ON (#{path})
+      #{path},
+      CASE WHEN jsonb_typeof(d->'sizes') = 'object' THEN
+        (SELECT jsonb_object_agg(key, #{canonical_path("value")}) FROM jsonb_each_text(d->'sizes'))
+      END,
+      CASE WHEN d->>'width' ~ '^[0-9]+$' THEN (d->>'width')::integer END,
+      CASE WHEN d->>'height' ~ '^[0-9]+$' THEN (d->>'height')::integer END,
+      CASE
+        WHEN jsonb_typeof(d->'formats') = 'array' AND jsonb_array_length(d->'formats') > 0
+        THEN ARRAY(SELECT jsonb_array_elements_text(d->'formats'))::varchar[]
+        ELSE ARRAY[
+          CASE lower(substring(#{path} from '\\.([^./]+)$'))
+            WHEN 'jpeg' THEN 'jpg'
+            WHEN 'jpg' THEN 'jpg'
+            WHEN 'png' THEN 'png'
+            WHEN 'gif' THEN 'gif'
+            WHEN 'webp' THEN 'webp'
+            WHEN 'avif' THEN 'avif'
+            WHEN 'svg' THEN 'svg'
+            ELSE 'original'
+          END
+        ]::varchar[]
+      END,
+      d->>'dominant_color',
+      CASE WHEN jsonb_typeof(d->'focal') = 'object' THEN d->'focal' ELSE '{"x": 50, "y": 50}'::jsonb END,
+      COALESCE(d->'cdn' = 'true'::jsonb, false),
+      'default',
+      'processed',
+      creator_id,
+      NOW(),
+      NOW()
+    FROM resolved
+    WHERE makeable
+    ORDER BY #{path}, ord
+    """
+  end
+
+  # A legacy `path`, or NULL when the data has none (a picture never picked)
+  defp legacy_path(data), do: "NULLIF(btrim(#{data}->>'path'), '')"
+
+  # How a legacy path is stored in `images.path`: without the media prefix
+  # or a leading slash. path_variants/1 includes this form, so a ref finds
+  # the row made from its data.
+  defp canonical_path(expression) do
+    stripped =
+      Enum.reduce(Enum.reverse(media_prefixes()), "ltrim(#{expression}, '/')", fn prefix, rest ->
+        "CASE WHEN substr(#{expression}, 1, #{String.length(prefix)}) = #{literal(prefix)} " <>
+          "THEN substr(#{expression}, #{String.length(prefix) + 1}) ELSE #{rest} END"
+      end)
+
+    "NULLIF(btrim(#{stripped}), '')"
+  end
+
+  defp path_candidates(expression), do: expression |> path_variants() |> Enum.join(", ")
 
   defp path_variants(expression) do
     stripped =
@@ -603,7 +698,7 @@ defmodule Brando.Migrations.TransferRefMediaData do
           "THEN substr(#{expression}, #{String.length(prefix) + 1}) ELSE #{expression} END"
       end)
 
-    [expression | stripped]
+    [expression | stripped] ++ ["ltrim(#{expression}, '/')"]
   end
 
   defp media_prefixes do

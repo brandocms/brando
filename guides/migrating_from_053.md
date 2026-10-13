@@ -668,6 +668,26 @@ snapshot with a Villain field.
    straight after `mix brando.migrate`; it exits with status 1 while anything
    is missing. Its documentation lists what it leaves out, such as rendered
    HTML, which a diff of the public pages covers.
+
+   It also checks that media refs kept their media: a picture whose Villain
+   data had a `path` has an image, a gallery has as many images as Villain
+   listed, a video has a video. Until it was fixed, `brando_133` linked a
+   picture to an image by `path` only, and left it empty when the image had
+   no row (deleted, or in the trash), although 0.53 showed it from the
+   picture's own data; galleries lost such images too. A site that ran that
+   copy sees findings like
+   `pages #2 › block 3 (module "Jobb med oss") › ref pic: legacy image images/site/posts/1n60vo3o9p06.jpg has no image now (lost in the conversion, or removed by an editor since)`.
+   `mix brando.repair.legacy_media --dry-run` lists what it would do about
+   each; without `--dry-run` it links the image the Villain data names, or
+   makes its row from that data, and adds missing gallery images in their
+   places. It writes only where it can tell the media was lost in the
+   conversion: it skips, with the reason, an entry whose blocks no longer
+   line up with Villain's, an entry, block or gallery edited since the
+   conversion, and, once the conversion is more than 30 days old, any image
+   it would have to make, as emptying the trash leaves no trace of what an
+   editor deleted. Run it soon after the upgrade, while the Villain columns
+   are there, then run the check again; what it skipped is for an editor.
+   A site that has resaved its entries since resaves them again afterwards.
 6. In `down/0`, undo only what `up/0` added: leave out the tables, indexes
    and columns that existed before the migration.
 7. Roll back and forward once on a scratch copy. A second
@@ -822,6 +842,17 @@ migration cannot see them; list the ones to fix with:
 ```shell
 mix brando.check.image_texts
 ```
+
+A multi module's code that reads its entries the 0.53 way,
+`{% for link in entries %}{{ link.data.vars.url }}{% endfor %}`, renders
+nothing now: each entry is a block, with its vars at `link.vars.url` and its
+refs at `link.refs`. `brando_219` rewrites the stored module code: a loop
+over `entries`, a variable assigned an entry (`{% assign first_entry = entries.first %}`),
+and those paths read directly or through a variable assigned the list.
+`mix brando.doctor` lists module code that still reads `.data.vars` or
+`.data.refs` (Module entry paths). The migration runs with the others, before
+`mix brando.entries.resave`; a site that has resaved already resaves again
+after it.
 
 ## 5. Reconcile Gettext catalogs
 
