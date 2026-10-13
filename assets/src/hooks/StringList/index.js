@@ -57,7 +57,10 @@ export default () => ({
 
     const input = next?.querySelector('input')
     if (!input) return
-    input.dispatchEvent(new Event('input', { bubbles: true }))
+    // A structural change must reach the transformer immediately. Its hook
+    // locks the row until this reply arrives, so an older reply cannot restore
+    // removed members while a text debounce is still waiting to send them.
+    input.dispatchEvent(new Event('change', { bubbles: true }))
     input.focus()
   },
 

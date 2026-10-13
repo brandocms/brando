@@ -22,6 +22,9 @@ defmodule BrandoIntegration.Repo.Migrations.AddInlineRowsFixture do
       add :kind, :text
       add :size, :text
       add :aliases, {:array, :text}
+      add :tags, {:array, :text}
+      add :label, :map
+      add :description, :map
       add :cover_id, references(:images, on_delete: :nilify_all)
       add :attachment_id, references(:files, on_delete: :nilify_all)
       add :clip_id, references(:videos, on_delete: :nilify_all)

@@ -8,8 +8,12 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelectPickerTest do
   defmodule Host do
     use Phoenix.LiveView, layout: false
 
-    def mount(_, _, socket) do
-      form = Phoenix.Component.to_form(Ecto.Changeset.change(%Brando.Content.Var{link_identifier_schemas: []}), as: "var")
+    def mount(_, session, socket) do
+      values = Map.get(session, "values", [])
+
+      form =
+        Phoenix.Component.to_form(Ecto.Changeset.change(%Brando.Content.Var{link_identifier_schemas: values}), as: "var")
+
       {:ok, Phoenix.Component.assign(socket, :form, form)}
     end
 
@@ -21,6 +25,7 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelectPickerTest do
         field={@form[:link_identifier_schemas]}
         label="Schemas"
         opts={[
+          resetable: true,
           options: [
             %{label: "Om oss", value: "about", status: :published, language: :no},
             %{label: "Contact", value: "contact"},
@@ -35,10 +40,67 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelectPickerTest do
   defp option(label), do: "#var_link_identifier_schemas-options [role=checkbox][data-label='#{label}']"
   defp chosen(label), do: ".multiselect-chosen-row[data-label='#{label}']"
 
-  setup %{conn: conn} do
-    {:ok, view, _html} = live_isolated(conn, Host)
+  setup %{conn: conn} = context do
+    {:ok, view, _html} = live_isolated(conn, Host, session: %{"values" => Map.get(context, :values, [])})
     view |> element(".multiselect > .button-edit") |> render_click()
     %{view: view}
+  end
+
+  test "array selections publish explicit values, including an empty selection", %{view: view} do
+    view |> element(option("Contact")) |> render_click()
+
+    assert_push_event(view, "b:validate", %{
+      scope: "var_link_identifier_schemas-selected-rows",
+      target: "var[link_identifier_schemas][]",
+      values: ["contact"]
+    })
+
+    assert has_element?(view, ~s(#var_link_identifier_schemas-selected-rows input[value="contact"]))
+
+    view |> element(option("Contact")) |> render_click()
+
+    assert_push_event(view, "b:validate", %{
+      scope: "var_link_identifier_schemas-selected-rows",
+      target: "var[link_identifier_schemas][]",
+      values: []
+    })
+
+    assert has_element?(
+             view,
+             ~s(#var_link_identifier_schemas-selected-rows input[name="var[link_identifier_schemas][]"][value=""])
+           )
+  end
+
+  @tag values: ["contact"]
+  test "reset publishes an explicit empty array", %{view: view} do
+    view |> element("button", "Reset value") |> render_click()
+
+    assert_push_event(view, "b:validate", %{
+      scope: "var_link_identifier_schemas-selected-rows",
+      target: "var[link_identifier_schemas][]",
+      values: []
+    })
+
+    assert has_element?(
+             view,
+             ~s(#var_link_identifier_schemas-selected-rows input[name="var[link_identifier_schemas][]"][value=""])
+           )
+  end
+
+  @tag values: ["missing"]
+  test "removing the last invalid option publishes an explicit empty array", %{view: view} do
+    view |> element("button", "Remove invalid") |> render_click()
+
+    assert_push_event(view, "b:validate", %{
+      scope: "var_link_identifier_schemas-selected-rows",
+      target: "var[link_identifier_schemas][]",
+      values: []
+    })
+
+    assert has_element?(
+             view,
+             ~s(#var_link_identifier_schemas-selected-rows input[name="var[link_identifier_schemas][]"][value=""])
+           )
   end
 
   test "options are checkbox rows with their status and language", %{view: view} do

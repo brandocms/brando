@@ -4,7 +4,7 @@ defmodule E2eProject.Projects.InlineRow do
   line, so `style :inline` is laid out and tested against all of them at once.
   Shown under the client form's "Inline fields" tab.
 
-  Link, multi-select, gallery and entries inputs need their own relations and
+  Link, relation multi-select, gallery and entries inputs need their own relations and
   are covered by the menus, form builder and project forms instead.
   """
 
@@ -38,6 +38,9 @@ defmodule E2eProject.Projects.InlineRow do
     attribute :kind, :string
     attribute :size, :string
     attribute :aliases, Brando.Type.StringList
+    attribute :tags, {:array, :string}
+    attribute :label, Brando.Type.I18nString
+    attribute :description, Brando.Type.I18nString
   end
 
   assets do

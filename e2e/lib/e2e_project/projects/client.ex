@@ -43,6 +43,32 @@ defmodule E2eProject.Projects.Client do
   end
 
   forms do
+    # The same persisted rows through the transformer state/save path.
+    form :transformer do
+      tab gettext("Content") do
+        fieldset do
+          input :name, :text, label: t("Name")
+
+          inputs_for :inline_rows do
+            cardinality :many
+            style {:transformer, :cover}
+
+            input :title, :text, label: t("Title")
+            input :label, :i18n_text
+            input :description, :i18n_textarea
+            input :aliases, :string_list
+
+            input :tags, :multi_select,
+              options: [%{label: "Red", value: "red"}, %{label: "Green", value: "green"}, %{label: "Blue", value: "blue"}]
+
+            input :featured, :checkbox
+            input :size, :radios, options: &__MODULE__.size_options/2
+            input :kind, :select, options: &__MODULE__.kind_options/2
+          end
+        end
+      end
+    end
+
     form do
       default_params %{"status" => "draft"}
 

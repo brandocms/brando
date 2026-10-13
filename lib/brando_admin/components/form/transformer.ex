@@ -663,7 +663,7 @@ defmodule BrandoAdmin.Components.Form.Transformer do
     data = resolve_item_data(item)
 
     changeset = change(data, item.changes)
-    form = Phoenix.HTML.FormData.to_form(changeset, as: "transformer_item")
+    form = Phoenix.HTML.FormData.to_form(changeset, as: "transformer_item", id: item.dom_id)
 
     # Asset fields get their own picker row rather than a regular input — the
     # standard image/video inputs bind to a changeset field path, and a
@@ -1039,6 +1039,19 @@ defmodule BrandoAdmin.Components.Form.Transformer do
   end
 
   def handle_event("validate", _params, socket), do: {:noreply, socket}
+
+  # The hook serializes one field inside one row. Decode the regular form
+  # names here so nested maps and repeated array controls keep their shape.
+  def handle_event("update_field", %{"field" => field, "params" => params} = event, socket)
+      when is_binary(params) do
+    case Plug.Conn.Query.decode(params) do
+      %{"transformer_item" => %{^field => value}} ->
+        handle_event("update_field", event |> Map.delete("params") |> Map.put("value", value), socket)
+
+      _ ->
+        {:noreply, socket}
+    end
+  end
 
   # Sent by the `Brando.TransformerFields` hook around an entry's inputs. The
   # value is cast here, because saving applies the changes with `change/2`,
