@@ -30,14 +30,18 @@ defmodule Brando.Migration.LegacyMediaRepair do
       list at any level (`LegacyConversion` sets `:unpaired`), or whose ref
       is of another type now;
     * every ref of an entry edited since the conversion (its `edited_at`,
-      which only an editor's save moves), and a ref whose block, or a
-      gallery whose objects, were edited or added since;
+      which only an editor's save moves), and a ref whose block was edited
+      since;
+    * a gallery that does not hold exactly what brando_133 as shipped left
+      in it (the legacy images it found a row for among those live then, in
+      their order), or that was saved or had objects edited or added since:
+      emptying or trimming a gallery in its own form leaves no time behind;
     * a ref whose image or video would have to be made, once the conversion
       is more than 30 days old: the trash is emptied after 30 days, which
       nils the refs to what it deletes and leaves no trace (the activity log
       does not record media), so an image an editor deleted since can't be
-      told from one the conversion lost; and one whose path names an image
-      put in the trash since;
+      told from one the conversion lost; and one whose path names an image,
+      or whose URL a video, put in the trash since;
     * a picture whose `path` and `sizes` name different images when the one
       `sizes` names, which 0.53 displayed, has no row, or several.
 
@@ -47,9 +51,10 @@ defmodule Brando.Migration.LegacyMediaRepair do
   in the migrations directory; `converted_at:` gives the time instead. When
   it cannot be told, nothing is written.
 
-  Writing locks each ref, and writes only while it is still empty, so media
-  an editor picks while the repair runs stays. A second run finds nothing to
-  do.
+  Writing locks each entry and ref, checks again that neither the entry nor
+  the block was edited since the conversion, and writes only while the ref
+  is still empty, so a save made after planning wins. A second run finds
+  nothing to do.
   """
 
   alias Brando.Migration.LegacyConversion
@@ -177,7 +182,8 @@ defmodule Brando.Migration.LegacyMediaRepair do
       columns: columns,
       entries: entries,
       deletions: deletions(converted_at),
-      images: image_index(schema)
+      images: image_index(schema),
+      converted_images: converted_index(schema, converted_at, local_cutoff)
     }
   end
 
@@ -291,6 +297,21 @@ defmodule Brando.Migration.LegacyMediaRepair do
     |> index_images()
   end
 
+  # The images that were live when the conversion ran (made before it, and
+  # not in the trash since before it), by path and by extensionless path
+  defp converted_index(_schema, {:error, _}, _local_cutoff), do: index_images([])
+
+  defp converted_index(schema, {:ok, converted_at}, local_cutoff) do
+    """
+    SELECT id, path FROM #{name(schema, "images")}
+    WHERE path IS NOT NULL AND inserted_at <= $1 AND (deleted_at IS NULL OR deleted_at > $2)
+    ORDER BY id
+    """
+    |> rows([local_cutoff, converted_at])
+    |> Enum.map(&List.to_tuple/1)
+    |> index_images()
+  end
+
   @doc """
   The live images, `[{id, path}]` in id order, as `resolve_image/2` reads
   them.
@@ -353,7 +374,7 @@ defmodule Brando.Migration.LegacyMediaRepair do
     url = video_source(data)
 
     case find_video(context.schema, url) do
-      nil -> doubt_or(deleted_since(context), {:make_video, url})
+      nil -> doubt_or(video_trashed(context, url) || deleted_since(context), {:make_video, url})
       id -> {:link_video, id, url}
     end
   end
@@ -390,6 +411,21 @@ defmodule Brando.Migration.LegacyMediaRepair do
       _ ->
         nil
     end || deleted_since(context)
+  end
+
+  # A video with this source that went to the trash since the conversion:
+  # making another would bring back what an editor deleted
+  defp video_trashed(context, url) do
+    case rows(
+           "SELECT max(deleted_at) FROM #{name(context.schema, "videos")} WHERE source_url = $1 AND deleted_at IS NOT NULL",
+           [url]
+         ) do
+      [[%NaiveDateTime{} = at]] ->
+        if later?(at, elem(context.converted_at, 1)), do: "its video went to the trash #{at} UTC"
+
+      _ ->
+        nil
+    end
   end
 
   defp deleted_since(%{deletions: {:error, reason}}), do: reason
@@ -433,10 +469,13 @@ defmodule Brando.Migration.LegacyMediaRepair do
     end
   end
 
-  # Where each legacy image goes: the gallery's objects must be legacy
-  # images it still has, in their legacy order (what brando_133 linked), and
-  # the others are added at their legacy places. Returns the objects kept
-  # and the images to add, each with its legacy index.
+  # Where each legacy image goes. The gallery must hold exactly what
+  # brando_133 as shipped put in it: the legacy images it found a row for
+  # among those live then, in their order (`shipped_match/2`). Anything else
+  # means an editor changed it, in the entry or in the gallery's own form,
+  # where removing objects leaves no time behind. The images the conversion
+  # could not place are added at their legacy places. Returns the objects
+  # kept and the images to add, each with its legacy index.
   defp placements(context, index, gallery_id, images) do
     case gallery_edited(context, gallery_id) do
       nil -> place(context, index, gallery_id, images)
@@ -445,7 +484,8 @@ defmodule Brando.Migration.LegacyMediaRepair do
   end
 
   defp place(context, index, gallery_id, images) do
-    targets = Enum.map(images, &image_target(context, index, &1))
+    placed = Enum.map(images, &shipped_match(context.converted_images, &1))
+    expected = Enum.reject(placed, &is_nil/1)
 
     current =
       if gallery_id,
@@ -456,27 +496,82 @@ defmodule Brando.Migration.LegacyMediaRepair do
           ),
         else: []
 
-    {left, kept, add} =
-      targets
-      |> Enum.with_index()
-      |> Enum.reduce({current, [], []}, fn
-        {{:link_image, image_id, _}, index}, {[[object_id, image_id] | rest], kept, add} ->
-          {rest, [{object_id, index} | kept], add}
-
-        {target, index}, {rest, kept, add} ->
-          {rest, kept, [{index, target} | add]}
-      end)
-
     cond do
-      left != [] ->
-        {:error, "its gallery is not the legacy images in their order now"}
+      is_nil(gallery_id) and expected != [] ->
+        {:error, "its gallery was removed since the conversion, which had put #{length(expected)} images in it"}
 
-      skip = Enum.find_value(add, fn {_, target} -> match?({:skip, _}, target) and elem(target, 1) end) ->
-        {:error, "a legacy image can't be placed: #{skip}"}
+      Enum.map(current, &List.last/1) != expected ->
+        {:error,
+         "its gallery is not what the conversion left in it (#{length(expected)} legacy images then, " <>
+           "#{length(current)} objects now): an editor may have changed it"}
 
       true ->
-        {:ok, %{kept: Enum.reverse(kept), add: Enum.reverse(add)}}
+        add_missing(context, index, images, placed, current)
     end
+  end
+
+  defp add_missing(context, index, images, placed, current) do
+    kept =
+      placed
+      |> Enum.with_index()
+      |> Enum.reject(&is_nil(elem(&1, 0)))
+      |> Enum.zip(current)
+      |> Enum.map(fn {{_image_id, position}, [object_id, _]} -> {object_id, position} end)
+
+    add =
+      for {nil, position} <- Enum.with_index(placed),
+          do: {position, image_target(context, index, Enum.at(images, position))}
+
+    case Enum.find(add, &match?({_, {:skip, _}}, &1)) do
+      nil -> {:ok, %{kept: kept, add: add}}
+      {_, {:skip, reason}} -> {:error, "a legacy image can't be placed: #{reason}"}
+    end
+  end
+
+  # The image brando_133 as shipped linked a legacy gallery image to: the
+  # first row whose extensionless path its first size names (the size
+  # folder dropped), else the first with its path, among `index`
+  defp shipped_match(index, data) do
+    size = shipped_size(data["sizes"])
+
+    by_size =
+      size &&
+        size
+        |> shipped_variants()
+        |> Enum.map(&stem(String.replace(&1, ~r{/[^/]+/([^/]+)$}, "/\\1")))
+        |> Enum.flat_map(&Map.get(index.by_stem, &1, []))
+        |> Enum.min(fn -> nil end)
+
+    by_size ||
+      case LegacyConversion.legacy_path(data) do
+        nil ->
+          nil
+
+        path ->
+          path
+          |> shipped_variants()
+          |> Enum.map(&Map.get(index.by_path, &1))
+          |> Enum.reject(&is_nil/1)
+          |> Enum.min(fn -> nil end)
+      end
+  end
+
+  # The first non-empty size in jsonb's key order (shorter keys first), as
+  # `jsonb_each_text` read it
+  defp shipped_size(%{} = sizes) do
+    sizes
+    |> Enum.filter(fn {_, value} -> is_binary(value) and value != "" end)
+    |> Enum.min_by(fn {key, _} -> {byte_size(key), key} end, fn -> {nil, nil} end)
+    |> elem(1)
+  end
+
+  defp shipped_size(_sizes), do: nil
+
+  defp shipped_variants(path) do
+    [
+      path
+      | for(prefix <- media_prefixes(), String.starts_with?(path, prefix), do: String.replace_prefix(path, prefix, ""))
+    ]
   end
 
   defp gallery_edited(_context, nil), do: nil
@@ -484,8 +579,11 @@ defmodule Brando.Migration.LegacyMediaRepair do
   defp gallery_edited(context, gallery_id) do
     edited = if MapSet.member?(context.columns, "galleries_gallery_objects"), do: " OR edited_at > $2", else: ""
 
-    sql =
-      "SELECT 1 FROM #{name(context.schema, "galleries_gallery_objects")} WHERE gallery_id = $1 AND (inserted_at > $2#{edited})"
+    sql = """
+    SELECT 1 FROM #{name(context.schema, "galleries")} WHERE id = $1 AND updated_at > $2
+    UNION ALL
+    SELECT 1 FROM #{name(context.schema, "galleries_gallery_objects")} WHERE gallery_id = $1 AND (inserted_at > $2#{edited})
+    """
 
     if query!(sql, [gallery_id, context.local_cutoff]).rows != [], do: "its gallery was edited since the conversion"
   end
@@ -511,10 +609,30 @@ defmodule Brando.Migration.LegacyMediaRepair do
   defp write_one(_context, {_finding, {:skip, _}} = skipped, index), do: {skipped, index}
 
   defp write_one(context, {finding, action}, index) do
-    case repair(context, index, finding.repair, action) do
+    result =
+      case locked_edits(context, finding) do
+        nil -> repair(context, index, finding.repair, action)
+        reason -> {:skip, reason}
+      end
+
+    case result do
       {:ok, index} -> {{finding, action}, index}
       {:skip, reason} -> {{finding, {:skip, reason}}, index}
     end
+  end
+
+  # The entry, locked so a save waits for the repair, and the ref's block,
+  # checked again: an editor may have saved since the plan was made
+  defp locked_edits(context, %{table: table, entry_id: id} = finding) do
+    {:ok, converted_at} = context.converted_at
+
+    edited =
+      case rows("SELECT edited_at FROM #{name(context.schema, table)} WHERE id = $1 FOR UPDATE", [id]) do
+        [[%NaiveDateTime{} = at]] -> if later?(at, converted_at), do: "edited #{at} UTC, after the conversion"
+        _ -> nil
+      end
+
+    edited || ref_edited(context, ref_id(finding.repair))
   end
 
   defp repair(context, index, {:picture, ref_id, data}, _action) do

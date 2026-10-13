@@ -939,16 +939,17 @@ defmodule Brando.Migrations.UpgradeFromVillainTest do
   # sees it, and a way to tell nothing was written
   defp lost_media do
     load_schema()
-    insert_villain_site()
+    %{page: about} = insert_villain_site()
     koi = insert_koi_page()
     migrate_with_shipped_133()
 
     state = fn ->
       {ref_media(koi.page), rows("SELECT id, path, deleted_at FROM images ORDER BY id"),
-       rows("SELECT id, gallery_id, image_id, sequence, config FROM galleries_gallery_objects ORDER BY id")}
+       rows("SELECT id, gallery_id, image_id, sequence, config FROM galleries_gallery_objects ORDER BY id"),
+       rows("SELECT id, video_id FROM content_refs ORDER BY id"), rows("SELECT id, deleted_at FROM videos ORDER BY id")}
     end
 
-    Map.put(koi, :state, state)
+    koi |> Map.put(:state, state) |> Map.put(:about, about)
   end
 
   defp repairs(opts \\ []) do
@@ -1084,6 +1085,51 @@ defmodule Brando.Migrations.UpgradeFromVillainTest do
 
       assert %{"ref pic2" => {:skip, "its image went to the trash " <> _}, "ref pic" => {:make_image, _}} =
                Map.new(repairs())
+    end
+
+    test "a gallery an editor emptied in its own form is not filled again" do
+      %{state: state} = lost_media()
+
+      # The gallery form saves the gallery, not the page, and leaves no
+      # object to carry a time
+      [[gallery_id]] = rows("SELECT gallery_id FROM content_refs WHERE name = 'gallery' AND gallery_id IS NOT NULL")
+      rows("DELETE FROM galleries_gallery_objects WHERE gallery_id = $1", [gallery_id])
+      before = state.()
+
+      assert %{"ref gallery" => {:skip, "its gallery is not what the conversion left in it" <> _}} = Map.new(repairs())
+      run_task(RepairTask, [])
+      assert {_, _, [], _, _} = state.()
+      assert elem(state.(), 2) == elem(before, 2)
+    end
+
+    test "an entry edited between planning and writing is left alone" do
+      %{page: page_id, state: state} = lost_media()
+      before = state.()
+
+      # An editor picks an image for pic, saves, clears it and saves again
+      edit = fn -> rows("UPDATE pages SET edited_at = $1 WHERE id = $2", [utc_in(60), page_id]) end
+
+      assert Enum.all?(repairs(before_write: edit), &match?({_, {:skip, "edited " <> _}}, &1))
+      assert state.() == before
+    end
+
+    test "a video trashed since the conversion is not made again" do
+      %{about: about} = lost_media()
+
+      video_block = root_block(about, 3)
+
+      [[ref_id, video_id]] =
+        rows("SELECT id, video_id FROM content_refs WHERE block_id = $1 AND name = 'video'", [video_block])
+
+      # The ref lost its video, and an editor put the video in the trash
+      rows("UPDATE content_refs SET video_id = NULL WHERE id = $1", [ref_id])
+      rows("UPDATE videos SET deleted_at = $1 WHERE id = $2", [utc_in(0), video_id])
+      videos = rows("SELECT id, deleted_at FROM videos ORDER BY id")
+
+      assert %{"ref video" => {:skip, "its video went to the trash " <> _}} = Map.new(repairs())
+      run_task(RepairTask, [])
+      assert rows("SELECT video_id FROM content_refs WHERE id = $1", [ref_id]) == [[nil]]
+      assert rows("SELECT id, deleted_at FROM videos ORDER BY id") == videos
     end
 
     test "an image picked while the repair runs stays" do
