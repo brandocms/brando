@@ -41,6 +41,14 @@ defmodule Brando.Authorization do
   @doc "Loads one presentation snapshot for repeated checks in a render."
   defdelegate snapshot(scope), to: Brando.Authorization.Engine
 
+  @doc """
+  Runs `fun` with each scope's snapshot loaded once: every check inside it,
+  `authorize/3` included, reads the account and group state as it was at the
+  scope's first check. For a presentation that checks many permissions (the
+  admin menu); never wrap a write.
+  """
+  defdelegate with_snapshots(fun), to: Brando.Authorization.Engine
+
   defmacro __using__(_) do
     quote do
       Module.register_attribute(__MODULE__, :rules, accumulate: true)

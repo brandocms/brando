@@ -42,23 +42,20 @@ jobs:
             bootstrap: fresh
           - tenancy: none
             bootstrap: precompiled
-    services:
-      postgres:
-        image: public.ecr.aws/docker/library/postgres:14
-        env:
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres
-        ports: ['5432:5432']
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
     env:
       BRANDO_SMOKE_PGPORT: '5432'
       BRANDO_SMOKE_PGPASSWORD: postgres
       BRANDO_SMOKE_BOOTSTRAP: ${{ matrix.bootstrap }}
     steps:
+      # The runner's own PostgreSQL (16 on ubuntu-latest). A service
+      # container pulled its image on every job, and the registry's pull
+      # limits failed jobs before a test ran.
+      - name: Start PostgreSQL
+        run: |
+          sudo systemctl start postgresql.service
+          timeout 60 sh -c 'until pg_isready -h localhost -q; do sleep 1; done'
+          sudo -u postgres psql -q -c "ALTER USER postgres PASSWORD 'postgres'"
+
       - uses: actions/checkout@v7.0.1
       - uses: erlef/setup-beam@v1
         with:

@@ -20,11 +20,12 @@ defmodule Brando.HTML.ViteAssetsTest do
   </script>
   <!-- end dev/test -->
   """
+  # In development the admin's scripts show a notice when they fail to load
   @admin_html """
   <!-- admin dev/test -->
-  <script type="module" src="http://localhost:3333/@vite/client">
+  <script type="module" src="http://localhost:3333/@vite/client" onerror="brandoAdminAssetsMissing()">
   </script>
-  <script type="module" src="http://localhost:3333/src/main.js">
+  <script type="module" src="http://localhost:3333/src/main.js" onerror="brandoAdminAssetsMissing()">
   </script>
   <!-- end admin dev/test -->
   """
@@ -69,7 +70,51 @@ defmodule Brando.HTML.ViteAssetsTest do
   test "unconfigured HMR output is byte-identical" do
     assert render_component(&HTML.include_assets/1) == @frontend_html
     assert render_component(&HTML.include_assets/1, only_css: true) == @frontend_html
-    assert render_component(&HTML.include_assets/1, admin: true) == @admin_html
+    assert admin_scripts() == @admin_html
+  end
+
+  describe "the notice when the admin's assets are missing in development" do
+    test "waits for the dev server's scripts to fail, and names the server" do
+      System.put_env("BRANDO_VITE_ADMIN_PORT", "3334")
+      html = render_component(&HTML.include_assets/1, admin: true)
+
+      assert html =~ ~s(<template id="brando-admin-assets-notice">)
+      assert html =~ "Admin assets not reachable at http://localhost:3334"
+      assert html =~ "config :brando_html_vite_test, hmr: false"
+      refute html =~ "brandoAdminAssetsMissing();"
+    end
+
+    test "shows at once when there is no build" do
+      Application.put_env(@host_app, :hmr, false)
+      cache(Brando.Tenant.cache_key({:vite, "cache_admin_manifest"}), %Brando.Assets.Vite.Manifest{})
+      html = render_component(&HTML.include_assets/1, admin: true)
+
+      assert html =~ "Admin assets not built"
+      assert html =~ "brandoAdminAssetsMissing();"
+    end
+
+    test "is not there with a build" do
+      Application.put_env(@host_app, :hmr, false)
+      refute render_component(&HTML.include_assets/1, admin: true) =~ "brando-admin-assets-notice"
+    end
+
+    for env <- [:prod, :staging, :e2e, :test] do
+      test "is never there in #{env}" do
+        Application.put_env(:brando, :env, unquote(env))
+        cache(Brando.Tenant.cache_key({:vite, "cache_admin_manifest"}), %Brando.Assets.Vite.Manifest{})
+        html = render_component(&HTML.include_assets/1, admin: true)
+
+        refute html =~ "brando-admin-assets-notice"
+        refute html =~ "brandoAdminAssetsMissing"
+      end
+    end
+  end
+
+  # The dev server's scripts, without the notice before them
+  defp admin_scripts do
+    html = render_component(&HTML.include_assets/1, admin: true)
+    [_notice, scripts] = String.split(html, ~s(<script type="module"), parts: 2)
+    "<!-- admin dev/test -->\n" <> ~s(<script type="module") <> scripts
   end
 
   test "frontend overrides affect all frontend scripts without moving the admin server" do
@@ -79,15 +124,14 @@ defmodule Brando.HTML.ViteAssetsTest do
 
     assert render_component(&HTML.include_assets/1) == expected
     assert render_component(&HTML.include_assets/1, only_css: true) == expected
-    assert render_component(&HTML.include_assets/1, admin: true) == @admin_html
+    assert admin_scripts() == @admin_html
   end
 
   test "admin overrides do not move the frontend server" do
     System.put_env("BRANDO_VITE_ADMIN_HOST", "admin.localhost")
     System.put_env("BRANDO_VITE_ADMIN_PORT", "4333")
 
-    assert render_component(&HTML.include_assets/1, admin: true) ==
-             String.replace(@admin_html, "localhost:3333", "admin.localhost:4333")
+    assert admin_scripts() == String.replace(@admin_html, "localhost:3333", "admin.localhost:4333")
 
     assert render_component(&HTML.include_assets/1) == @frontend_html
   end
@@ -97,7 +141,7 @@ defmodule Brando.HTML.ViteAssetsTest do
     System.put_env("BRANDO_VITE_ADMIN_PORT", "3334")
 
     assert render_component(&HTML.include_assets/1) == String.replace(@frontend_html, ":3000", ":3001")
-    assert render_component(&HTML.include_assets/1, admin: true) == String.replace(@admin_html, ":3333", ":3334")
+    assert admin_scripts() == String.replace(@admin_html, ":3333", ":3334")
 
     System.put_env("BRANDO_VITE_FRONTEND_PORT", "3002")
     assert render_component(&HTML.include_assets/1) == String.replace(@frontend_html, ":3000", ":3002")
@@ -109,8 +153,7 @@ defmodule Brando.HTML.ViteAssetsTest do
 
     assert render_component(&HTML.include_assets/1) == String.replace(@frontend_html, "localhost", "127.0.0.1")
 
-    assert render_component(&HTML.include_assets/1, admin: true) ==
-             String.replace(@admin_html, "localhost", "[::1]")
+    assert admin_scripts() == String.replace(@admin_html, "localhost", "[::1]")
   end
 
   test "only_js and legacy helpers do not load a dev server a second time" do

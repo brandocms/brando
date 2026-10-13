@@ -28,6 +28,7 @@ defmodule Brando.Doctor do
 
   @default_checks [
     Checks.Versions,
+    Checks.Node,
     Checks.Migrations,
     Checks.Oban,
     Checks.Configuration,

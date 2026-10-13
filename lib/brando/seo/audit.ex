@@ -253,6 +253,7 @@ defmodule Brando.SEO.Audit do
   end
 
   # Any image asset other than the meta image counts as a cover for sharing.
+  # Returns the image id, not a path.
   defp cover(schema, entry) do
     schema
     |> Brando.Blueprint.Assets.__assets__()

@@ -48,6 +48,23 @@ defmodule BrandoAdmin.UtilsImageToolsLiveTest do
     refute has_element?(view, "button[phx-click=recreate_image_sizes][disabled]")
   end
 
+  test "with no image files in the media folder, asks for the media instead of urging a recreate", %{conn: conn} do
+    Brando.Repo.update_all(Brando.Images.Image, set: [deleted_at: DateTime.utc_now()])
+    Factory.insert(:image, path: "images/unsynced/1.jpg", config_fingerprint: nil)
+    root = Brando.Images.Utils.media_path()
+
+    {:ok, view, _} = live(conn, "/admin/config/utils")
+
+    assert has_element?(view, "#utils-unsynced-media", "No image files found under #{root}")
+    refute has_element?(view, "button.primary[phx-click=recreate_changed_image_sizes]")
+
+    Factory.insert(:image, path: "images/avatars/27i97a.jpeg", config_fingerprint: nil)
+    {:ok, view, _} = live(conn, "/admin/config/utils")
+
+    refute has_element?(view, "#utils-unsynced-media")
+    assert has_element?(view, "button.primary[phx-click=recreate_changed_image_sizes]")
+  end
+
   test "keeps unrecorded images that already match and says how many it recreated", %{conn: conn} do
     Brando.Repo.update_all(Brando.Images.Image, set: [config_fingerprint: "0123456789ab"])
     matching = Brando.ImageFileFixtures.unrecorded_image("utils-match")

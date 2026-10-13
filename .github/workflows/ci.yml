@@ -107,22 +107,18 @@ jobs:
 
     runs-on: ubuntu-latest
 
-    services:
-      db:
-        # An empty image starts no service: a reused merge queue run needs none.
-        image: ${{ needs.reuse.outputs.reused != 'true' && 'public.ecr.aws/docker/library/postgres:14' || '' }}
-        env:
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: brando_test
-        ports: ["5432:5432"]
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-
     steps:
+      # The runner's own PostgreSQL (16 on ubuntu-latest). A service
+      # container pulled its image on every job, and the registry's pull
+      # limits failed jobs before a test ran.
+      - name: Start PostgreSQL
+        if: needs.reuse.outputs.reused != 'true'
+        run: |
+          sudo systemctl start postgresql.service
+          timeout 60 sh -c 'until pg_isready -h localhost -q; do sleep 1; done'
+          sudo -u postgres psql -q -c "ALTER USER postgres PASSWORD 'postgres'"
+          sudo -u postgres createdb brando_test
+
       - uses: actions/checkout@v7.0.1
         if: needs.reuse.outputs.reused != 'true'
 
@@ -403,22 +399,18 @@ jobs:
       MIX_ENV: test
       BRANDO_E2E_INSTANCE: ci
 
-    services:
-      db:
-        # An empty image starts no service: a reused merge queue run needs none.
-        image: ${{ needs.reuse.outputs.reused != 'true' && 'public.ecr.aws/docker/library/postgres:14' || '' }}
-        env:
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: e2e_project_dev
-        ports: ["5432:5432"]
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-
     steps:
+      # The runner's own PostgreSQL (16 on ubuntu-latest). A service
+      # container pulled its image on every job, and the registry's pull
+      # limits failed jobs before a test ran.
+      - name: Start PostgreSQL
+        if: needs.reuse.outputs.reused != 'true'
+        run: |
+          sudo systemctl start postgresql.service
+          timeout 60 sh -c 'until pg_isready -h localhost -q; do sleep 1; done'
+          sudo -u postgres psql -q -c "ALTER USER postgres PASSWORD 'postgres'"
+          sudo -u postgres createdb e2e_project_dev
+
       - uses: actions/checkout@v7.0.1
         if: needs.reuse.outputs.reused != 'true'
         with:
@@ -588,7 +580,7 @@ jobs:
           - suite: authorization
             shard: ''
     env:
-      # Each CI job has its own PostgreSQL service, so a stable key keeps the
+      # Each CI job has its own PostgreSQL (the runner's), so a stable key keeps the
       # generated database and port predictable while exercising the same
       # worktree-aware path used locally.
       BRANDO_E2E_INSTANCE: ci
@@ -597,7 +589,7 @@ jobs:
       # BRANDO_E2E_COVER_EXPORT on shutdown. Every step that starts a server
       # names its own file so a later server does not overwrite an earlier one.
       BRANDO_E2E_COVER: ${{ inputs.coverage && '1' || '' }}
-    # Each shard gets its own runner, PostgreSQL service, server, PubSub and
+    # Each shard gets its own runner, PostgreSQL, server, PubSub and
     # caches. Keep workers: 1 within a server; only isolated jobs run in parallel.
     # Authorization runs independently so it need not wait for the legacy suite.
     # PRs only, avoiding duplicate E2E runs for push + pull_request events,
@@ -614,21 +606,17 @@ jobs:
     # drop it.
     continue-on-error: true
 
-    services:
-      db:
-        image: public.ecr.aws/docker/library/postgres:14
-        env:
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: e2e_project_dev
-        ports: ["5432:5432"]
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-
     steps:
+      # The runner's own PostgreSQL (16 on ubuntu-latest). A service
+      # container pulled its image on every job, and the registry's pull
+      # limits failed jobs before a test ran.
+      - name: Start PostgreSQL
+        run: |
+          sudo systemctl start postgresql.service
+          timeout 60 sh -c 'until pg_isready -h localhost -q; do sleep 1; done'
+          sudo -u postgres psql -q -c "ALTER USER postgres PASSWORD 'postgres'"
+          sudo -u postgres createdb e2e_project_dev
+
       - name: Check out Brando
         uses: actions/checkout@v7.0.1
         with:

@@ -13,6 +13,7 @@ $ mix brando.doctor
 Brando 0.55.0-dev (git 12c2289, branch main) · Phoenix 1.8.15 · LiveView 1.2.12
 
 ✓ Versions                   Brando 0.55.0-dev (git 12c2289, branch main) · Elixir 1.20.3 · OTP 28
+✓ Node.js                    v22.15.0
 ✓ Migrations                 up to date
 ✓ Oban queues                6 queues, 0 stuck
 ✓ Configuration              URL, mailer and media settings in place
@@ -109,16 +110,17 @@ and summaries are prose.
 | Check | Looks at |
 | --- | --- |
 | Versions | Brando's version and source, and Elixir, OTP, Phoenix and LiveView against the versions this Brando supports |
+| Node.js | The `node` on the PATH, which builds the admin and frontend assets: an odd release, or one older than Brando is tested on (`Brando.Toolchain`), is a warning. Skipped in a release |
 | Migrations | Public migrations not run (Brando's upgrade migrations included), tenant migrations not run in each environment, pending copies that differ from Brando's templates (as `mix brando.migrations.check`), and upgrade migrations Brando added since they were copied |
 | Oban queues | The configured queues (in the admin, the running ones, so a paused queue shows), that the `content_events`, `webhooks` and `search_index` queues are among them, jobs waiting or executing for over an hour, jobs discarded in the last 24 hours |
 | Configuration | The endpoint URL, the mailer and its sender, the CDN settings of `Brando.Images` and `Brando.Files` when enabled, and the Assistant's API key when a model is configured |
 | Admin routes | For each of the application's Blueprints with an admin listing or form route, the route helper its rows and links call, `admin_<singular>_form_path` with `:update` (`admin_<scope>_<singular>_form_path` with `router_scope:`). A site still routing 0.53's `<Name>CreateLive`/`<Name>UpdateLive` fails here; `mix brando.migrate54` converts generated ones |
 | Admin assets | The `@brandocms/brandojs` version in `assets/backend/.yalc` (or the checkout it links to) against Brando's |
-| Image configs | Images made with an older image config: what Utilities → Recreate changed images recreates. Images made before Brando recorded configs are split, as a dry run of `mix brando.images.adopt`, into those whose files already match and those that differ |
+| Image configs | Images made with an older image config: what Utilities → Recreate changed images recreates. Images made before Brando recorded configs are split, as a dry run of `mix brando.images.adopt`, into those whose files already match and those that differ, counted by how they differ (formats, sizes, missing files, dimensions). With no image files in the media folder at all, it says so and asks for the media instead of a recreate |
 | Modules | Blocks behind their module's version, per module |
 | Module entry paths | Liquid module code that reads a multi module's entries as Villain stored them, `{{ link.data.vars.url }}`, which renders nothing since the blocks conversion; `brando_219` rewrites it to `{{ link.vars.url }}`. Datasource modules are left out: their `entries` are records |
 | Sitemap | A sitemap module, and a sitemap generated within two days |
-| robots.txt | `/robots.txt` routed to Brando, and no static file in front of it |
+| robots.txt | `/robots.txt` routed to Brando, and no static file in front of it: a `priv/static/robots.txt` counts only when the endpoint's `Plug.Static` serves it, by its `only:` (a literal list, or `static_paths/0` on Phoenix 1.7 and later) or for want of one, and the fix names that setting |
 | JSON-LD | An identity for each language with a name and a logo, and a site URL |
 | Alt text | Images without alt text, per content language |
 | Deprecations | Calls to Brando functions marked `@deprecated` in the project's `lib/`, following aliases, imports and pipes |

@@ -10,6 +10,8 @@ if Code.ensure_loaded?(Igniter) do
     alias Mix.Brando.Igniter.SourceUpgrade.BlueprintGettext
     alias Mix.Brando.Igniter.SourceUpgrade.BuiltinActions
     alias Mix.Brando.Igniter.SourceUpgrade.ConfigRewrites
+    alias Mix.Brando.Igniter.SourceUpgrade.FormInputs
+    alias Mix.Brando.Igniter.SourceUpgrade.FragmentReads
     alias Mix.Brando.Igniter.SourceUpgrade.ListingRows
     alias Mix.Brando.Igniter.SourceUpgrade.ViewHelpers
 
@@ -45,9 +47,12 @@ if Code.ensure_loaded?(Igniter) do
     def igniter(igniter) do
       igniter
       |> SourceUpgrade.rename_list_villains()
+      |> FragmentReads.rewrite()
       # These two read the Villain attributes the Blueprint rewrite removes.
       |> SourceUpgrade.upgrade_054_templates()
       |> SourceUpgrade.warn_block_editor_options()
+      # Before the Blueprint rewrite, so it reports the 0.53 lines.
+      |> FormInputs.rewrite()
       |> SourceUpgrade.rewrite_blueprints(&SourceUpgrade.upgrade_054_blueprint/1)
       |> ListingRows.rewrite()
       |> BuiltinActions.remove()

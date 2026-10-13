@@ -85,6 +85,29 @@ defmodule Mix.Tasks.Brando.Images.AdoptTest do
              )
   end
 
+  test "--verbose names a missing file" do
+    image = ImageFileFixtures.unrecorded_image("task-missing-file")
+    File.rm!(Brando.Images.Utils.media_path("images/adoption/large/task-missing-file.jpg"))
+
+    Adopt.run(["--verbose", "--dry-run"])
+    lines = output()
+
+    assert "  image #{image.id} (default): large: file missing: images/adoption/large/task-missing-file.jpg" in lines
+    assert Enum.any?(lines, &(&1 =~ "  1 × (default): large: file missing"))
+  end
+
+  test "stops when none of the images has a file in the media folder" do
+    Repo.update_all(from(i in Image, where: is_nil(i.deleted_at)), set: [deleted_at: DateTime.utc_now()])
+    image = Brando.Factory.insert(:image, path: "images/unsynced/1.jpg", config_fingerprint: nil)
+    root = Brando.Images.Utils.media_path()
+
+    message = "No image files found under #{root}. Is the media synced to this machine (or its volume mounted)?"
+    assert_raise Mix.Error, ~r/#{Regex.escape(message)}/, fn -> Adopt.run(["--dry-run"]) end
+
+    assert output() == ["no image files under #{root}, nothing checked"]
+    assert Repo.get!(Image, image.id).config_fingerprint == nil
+  end
+
   test "--yes is accepted and an unknown option stops the task" do
     Adopt.run(["--yes", "--dry-run"])
     assert ["0 already match, 0 differ, 0 skipped"] = output()

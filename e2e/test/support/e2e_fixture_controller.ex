@@ -57,6 +57,13 @@ defmodule E2EFixtureController do
 
           get_admin_user()
 
+        # An image whose file is in the media folder, so checks that look
+        # for the media find it. Stays signed in as the Norwegian admin when
+        # a spec has made one.
+        "image-file" ->
+          create_directory_avatar()
+          Brando.Repo.get_by(Brando.Users.User, email: "norwegian-admin@brandocms.com") || get_admin_user()
+
         "site-form" ->
           create_site_form()
 

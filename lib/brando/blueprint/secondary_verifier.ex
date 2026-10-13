@@ -4,6 +4,7 @@ defmodule Brando.Blueprint.SecondaryVerifier do
   use Spark.Dsl.Verifier
 
   alias Brando.Blueprint.SecondaryVerifier.Datasources
+  alias Brando.Blueprint.SecondaryVerifier.FormInputs
   alias Brando.Blueprint.SecondaryVerifier.Listings
   alias Brando.Blueprint.SecondaryVerifier.Metadata
   alias Brando.Blueprint.SecondaryVerifier.Translations
@@ -12,7 +13,8 @@ defmodule Brando.Blueprint.SecondaryVerifier do
   def verify(dsl_state) do
     with :ok <- Datasources.verify(dsl_state),
          :ok <- Metadata.verify(dsl_state),
-         :ok <- Listings.verify(dsl_state) do
+         :ok <- Listings.verify(dsl_state),
+         :ok <- FormInputs.verify(dsl_state) do
       Translations.verify(dsl_state)
     end
   end

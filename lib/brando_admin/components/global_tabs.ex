@@ -25,7 +25,7 @@ defmodule BrandoAdmin.Components.GlobalTabs do
         </.alert>
       <% else %>
         <div class="global-tabs">
-          <.live_component module={ImagePicker} id="image-picker" />
+          <.live_component module={ImagePicker} id="image-picker" current_user={@current_user} />
           <nav class="pill-tabs global-set-tabs" aria-label={gettext("Global sets")}>
             <button
               :for={{global_set, index} <- @indexed_global_sets}

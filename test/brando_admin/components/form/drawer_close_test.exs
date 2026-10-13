@@ -48,6 +48,7 @@ defmodule BrandoAdmin.Components.Form.DrawerCloseTest do
       |> Component.assign(:singular, "page")
       |> Component.assign(:current_user, ctx.user)
       |> Component.assign(:processing_images, [])
+      |> Component.assign(:blocks_wanting_entry, %{})
       |> Component.assign(:editing_image?, false)
       |> Component.assign(:editing_video?, false)
       |> Component.assign(:editing_file?, false)
