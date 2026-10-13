@@ -33,7 +33,13 @@ async function threeRows(page, { norwegian = false } = {}) {
 
 // What the server kept: save, reload and read the rows back.
 async function saved(page) {
+  // Saving an existing entry keeps the URL: wait for the write's reply too.
+  await page.evaluate(() => {
+    window.rowRemovalSaved = false
+    window.addEventListener('phx:b:draft-reset', () => { window.rowRemovalSaved = true }, { once: true })
+  })
   await page.keyboard.press('ControlOrMeta+s')
+  await page.waitForFunction(() => window.rowRemovalSaved)
   await expect(page).toHaveURL(/\/admin\/projects\/clients\/update\/\d+/)
   await syncLV(page)
   await page.reload()
@@ -85,7 +91,7 @@ for (const persisted of [false, true]) test(`typing across a delayed removal kee
   latency.set(1000)
   await rows(page).nth(1).getByRole('button', { name: 'Fjern element' }).click()
   await titleOf(rows(page).nth(2)).focus()
-  await page.keyboard.press('End')
+  await page.keyboard.press('ArrowRight')
   // Each pause exceeds the input debounce. Continue typing while removal
   // and validation replies arrive, so the focused input stays locked as
   // the surrounding row changes position (#3160).
