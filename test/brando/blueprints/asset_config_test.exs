@@ -181,6 +181,17 @@ defmodule Brando.Blueprint.AssetConfigTest do
       )
     end
 
+    # 0.53 ignored it; the error names what to write instead.
+    assert_raise BlueprintError, ~r/unknown image config fields: \[:default_srcset\].*srcset: %\{default: \[/s, fn ->
+      compile_blueprint(
+        quote do
+          assets do
+            asset :cover, :image, cfg: [upload_path: "images/logo", default_srcset: [{"small", "700w"}]]
+          end
+        end
+      )
+    end
+
     assert_raise BlueprintError, ~r/matching config struct/, fn ->
       compile_blueprint(
         quote do

@@ -8,7 +8,9 @@ if Code.ensure_loaded?(Igniter) do
     alias Mix.Brando.Igniter.Mailer
     alias Mix.Brando.Igniter.PersistIdentifiers
     alias Mix.Brando.Igniter.SourceUpgrade
+    alias Mix.Brando.Igniter.SourceUpgrade.BlueprintCompileFixes
     alias Mix.Brando.Igniter.SourceUpgrade.BlueprintGettext
+    alias Mix.Brando.Igniter.SourceUpgrade.EntriesReads
     alias Mix.Brando.Igniter.SourceUpgrade.ListOrder
     alias Mix.Brando.Igniter.SourceUpgrade.TestEnvironment
     alias Mix.Brando.Igniter.SourceUpgrade.VideoMarkup
@@ -77,6 +79,8 @@ if Code.ensure_loaded?(Igniter) do
 
     def igniter(igniter) do
       igniter
+      # First, so it reports the lines as they are in the files.
+      |> BlueprintCompileFixes.rewrite()
       |> SourceUpgrade.rewrite_blueprints(&SourceUpgrade.add_listing_component_imports/1)
       |> SourceUpgrade.update_villain_parsers()
       |> SourceUpgrade.rename_moved_modules()
@@ -92,6 +96,7 @@ if Code.ensure_loaded?(Igniter) do
       |> BlueprintGettext.carry_default_translations()
       |> SourceUpgrade.complete_plural_forms_headers()
       |> SourceUpgrade.warn_image_text_reads()
+      |> EntriesReads.warn()
       |> PersistIdentifiers.update()
       |> VideoMarkup.warn_video_data_src_reads()
       |> ListOrder.order_list_queries()
@@ -173,9 +178,10 @@ if Code.ensure_loaded?(Igniter) do
         * Table, primary-key, and existing column-level primary-key changes are
           never inferred. Write the Ecto migration, verify the live schema, then
           use the documented Blueprint `--rebaseline` workflow.
-        * Update code that traverses generated `*_identifiers` associations for
-          `:entries` relations. The relation now exposes its join entries
-          directly, and application query/preload intent cannot be inferred.
+        * Update code that reads an `:entries` relation: it holds join rows
+          with the picked entries' identifiers, not the identifiers, and the
+          generated `*_identifiers` associations are gone. The reads found are
+          listed with the fix; which entries to load is the application's call.
         * The task pins declared `phoenix_live_view` dependencies in
           `assets/**/package.json` to the loaded server version. Review any
           nonstandard frontend manifest, refresh the package-manager lockfile,

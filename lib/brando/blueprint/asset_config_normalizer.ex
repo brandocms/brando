@@ -261,7 +261,19 @@ defmodule Brando.Blueprint.AssetConfigNormalizer do
     if unknown_fields == [] do
       struct(module, values)
     else
-      invalid_config!(asset, "unknown #{type} config fields: #{inspect(Enum.sort(unknown_fields))}")
+      invalid_config!(
+        asset,
+        "unknown #{type} config fields: #{inspect(Enum.sort(unknown_fields))}" <> replacement_hint(unknown_fields)
+      )
+    end
+  end
+
+  # Fields that older Brando versions ignored here without a word.
+  defp replacement_hint(unknown_fields) do
+    if :default_srcset in unknown_fields do
+      ~s(. `default_srcset` is not an asset config field; write the list as `srcset: %{default: [{"small", "700w"}, …]}`)
+    else
+      ""
     end
   end
 

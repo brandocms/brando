@@ -199,6 +199,23 @@ the result before the source tasks, so their diff holds only their changes.
   `hero_html`) in a moved schema's own templates to `rendered_blocks`
   (`rendered_hero_blocks`), and lists, with file and line, the `.html` reads
   it left;
+- rewrites a fragment's `html` read out of a fragments map to
+  `rendered_blocks` (`@partials["footer"].html`, where
+  `plug Brando.Plug.Fragment, as: :partials` or a `get_fragments` call fills
+  the map), and lists the other `…].html` map reads with file and line. A
+  fragment has no `html` since 0.54, and such a read fails the page with a
+  `KeyError`;
+- adds `relation:` to a `:multi_select` on a has_many relation that has only
+  `relation_key:`, naming the join schema's belongs_to on that key
+  (`relation_key: :category_id` gets `relation: :category`). The admin form
+  crashed without it, and a Blueprint without it no longer compiles. An input
+  whose belongs_to it cannot find is listed;
+- drops the options of an `:entries` input's `for:` (now `sources:`) that
+  the identifiers it lists do not have, such as `preload:` and an order by
+  `sequence`, and says what it dropped. The options apply to the identifiers,
+  not the source schema (see [Related entries](blueprint_forms.md#related-entries));
+  a Blueprint with such options no longer compiles. Options it cannot read
+  are listed;
 - rewrites 0.53 navigation item reads inside `for item <- @navigation.items`
   (and `:for`) to `Brando.HTML.get_menu_item_url/1`, `get_menu_item_text/1`,
   `get_menu_item_target_blank/1` and `item.children`, and, when templates read
@@ -285,6 +302,15 @@ the result before the source tasks, so their diff holds only their changes.
   (slideshows became `gallery` in `brando_77`). Delete those; nothing calls
   them;
 - removes the Sharp `processor_module` setting, as `mix brando.migrate54` does;
+- writes `identifier false` on an embedded Blueprint (`data_layer :embedded`)
+  that declares an identifier, which 0.55 refuses to compile;
+- writes `default_srcset:` in an image asset's `cfg` as `srcset: %{default:
+  […]}`, or removes it beside a `srcset:`. Brando ignored `default_srcset`
+  there, so the asset used its `srcset` or the default config's; 0.55 rejects
+  the field. Check that the sizes the list names are in the asset's `sizes`;
+- lists, with file and line, each read of an `:entries` relation
+  (`project.related_entries`) that does not go through `.identifier` (see
+  below);
 - copies each Blueprint's translations from its 0.53 `*_naming`, `*_forms`
   and `*_listings` catalogs, and the `default` domain's translations of its
   `t/1` labels, into its schema's domain, in every backend and locale that has
@@ -360,8 +386,19 @@ correct rewrite depends on application semantics:
   `Brando.Videos.Video` records and migrating their data;
 - updating source-controlled Liquid/HEEx ref paths and `gallery_images` access
   (Brando-owned migrations handle database-stored module/fragment code);
-- updating code that traverses generated `*_identifiers` associations for
-  `:entries` relations, whose join entries are now exposed directly;
+- updating code that reads an `:entries` relation. It holds the join rows,
+  each with its `identifier`, where it held identifiers, so
+  `Enum.map(project.related_entries, & &1.entry_id)` fails with a `KeyError`.
+  `mix brando.migrate55` lists the reads. Preload the identifiers through the
+  rows and read the entry id there:
+
+  ```elixir
+  project = Brando.Repo.preload(project, related_entries: :identifier)
+  ids = Enum.map(project.related_entries, & &1.identifier.entry_id)
+  ```
+
+  The rows come in the order the editor picked them; a list query on `ids`
+  does not keep it (see [Entries](blueprint_fields.md#entries));
 - moving datasource declarations that still use `Brando.Datasource` outside a
   Blueprint module onto the appropriate Blueprint;
 - writing the row component for each listing `mix brando.migrate54` listed

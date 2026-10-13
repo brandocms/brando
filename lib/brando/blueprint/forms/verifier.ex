@@ -5,6 +5,7 @@ defmodule Brando.Blueprint.Forms.Verifier do
 
   alias Brando.Blueprint.Forms
   alias Brando.Blueprint.Relations
+  alias Brando.Blueprint.SecondaryVerifier.FormInputs
   alias Spark.Dsl.Entity
   alias Spark.Dsl.Verifier
   alias Spark.Error.DslError
@@ -81,6 +82,20 @@ defmodule Brando.Blueprint.Forms.Verifier do
       verify_write_with_ai(context, form, input)
     end
   end
+
+  # The top-level inputs are checked while the module compiles
+  # (`Brando.Blueprint.SecondaryVerifier.FormInputs`); a subform's only now
+  # that its schema is compiled.
+  defp verify_sub_field_multi_select(context, path, module, %Forms.Input{type: :multi_select, name: name} = input) do
+    with %Ecto.Association.Has{cardinality: :many, related: join_schema} <- module.__schema__(:association, name),
+         problem when is_binary(problem) <- FormInputs.multi_select_problem(input, join_schema) do
+      error(context, input, path, problem)
+    else
+      _ -> :ok
+    end
+  end
+
+  defp verify_sub_field_multi_select(_context, _path, _module, _input), do: :ok
 
   # `write_with_ai: [from: …]` reads fields as an AI action does. Not checked
   # when it comes from a deprecated `ai:`, whose `context:` never was.
@@ -254,7 +269,7 @@ defmodule Brando.Blueprint.Forms.Verifier do
           )
 
         MapSet.member?(related_fields, input.name) ->
-          verify_sub_field_visibility(context, form, subform, input, related_fields, related_module)
+          verify_sub_field(context, form, subform, input, related_fields, related_module)
 
         true ->
           error(
@@ -266,6 +281,24 @@ defmodule Brando.Blueprint.Forms.Verifier do
       end
     end)
   end
+
+  defp verify_sub_field(context, form, subform, input, related_fields, related_module) do
+    path = [form.name, subform.name, input.name]
+
+    with :ok <- verify_sub_field_visibility(context, form, subform, input, related_fields, related_module),
+         :ok <- verify_sub_field_multi_select(context, path, related_module, input) do
+      verify_sub_field_entries_sources(context, path, input)
+    end
+  end
+
+  defp verify_sub_field_entries_sources(context, path, %Forms.Input{type: :entries} = input) do
+    case FormInputs.entries_sources_problem(input) do
+      nil -> :ok
+      problem -> error(context, input, path, problem)
+    end
+  end
+
+  defp verify_sub_field_entries_sources(_context, _path, _input), do: :ok
 
   # `hidden: {field, _}` / `show_if: {field, _}` in a subform refer to the
   # row's own fields.
