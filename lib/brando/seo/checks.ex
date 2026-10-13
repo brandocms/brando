@@ -180,7 +180,7 @@ defmodule Brando.SEO.Checks do
   end
 
   def meta_image(row) do
-    check(:meta_image, row.has_meta_image or present?(row.cover), :normal, gettext("Sharing image"),
+    check(:meta_image, row.has_meta_image or not is_nil(row.cover), :normal, gettext("Sharing image"),
       hint: gettext("Add a meta image or a cover image so shares get a picture.")
     )
   end

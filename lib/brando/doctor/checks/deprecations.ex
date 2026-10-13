@@ -147,6 +147,8 @@ defmodule Brando.Doctor.Checks.Deprecations do
             |> LexicalAliases.modules()
             |> Enum.reduce(acc, &check_call(&1, {name, arity(meta, args)}, meta, deprecated, &2))
 
+          acc = receiver |> LexicalAliases.modules() |> Enum.reduce(acc, &deprecated_form(&1, name, meta, args, &2))
+
           {{:__block__, [], args}, acc}
 
         {:__aliases__, meta, parts} = node, acc when is_list(parts) ->
@@ -167,6 +169,30 @@ defmodule Brando.Doctor.Checks.Deprecations do
   end
 
   defp arity(meta, args), do: length(args) + if(meta[:piped], do: 1, else: 0)
+
+  # Calls deprecated in one form only, which `@deprecated` cannot mark,
+  # matched on the arguments as written (a piped call's first one is the
+  # pipe's left side).
+  @deprecated_forms %{
+    {Brando.Content, :get_entries_from_identifiers, 2} =>
+      "get_entries_from_identifiers(identifiers, preloads) is deprecated, " <>
+        "use get_entries_from_identifiers(identifiers, %{preload: preloads}) instead"
+  }
+
+  defp deprecated_form(module, name, meta, args, acc) do
+    arity = arity(meta, args)
+    args = if meta[:piped], do: [:piped | args], else: args
+
+    with reason when is_binary(reason) <- Map.get(@deprecated_forms, {module, name, arity}),
+         true <- deprecated_form?({module, name}, args) do
+      [%{file: nil, line: meta[:line], call: "#{inspect(module)}.#{name}/#{arity}", reason: reason} | acc]
+    else
+      _ -> acc
+    end
+  end
+
+  defp deprecated_form?({Brando.Content, :get_entries_from_identifiers}, [_identifiers, preloads]),
+    do: is_list(preloads)
 
   defp check_call(module, {name, arity}, meta, deprecated, acc) do
     case check(module, name, arity, meta, deprecated, acc) do

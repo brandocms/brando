@@ -94,7 +94,7 @@ defmodule BrandoAdmin.Components.Assets.FileBrowser do
               type="button"
               class="folder-action icon-only"
               phx-click={push_browser_event(@go_parent_event, @target)}
-              disabled={@current_folder == ""}
+              disabled={@current_folder == "" and not @leave_root}
               data-tooltip={gettext("Up")}
               aria-label={gettext("Up")}
             >
@@ -104,7 +104,7 @@ defmodule BrandoAdmin.Components.Assets.FileBrowser do
               type="button"
               class="folder-action"
               phx-click={push_browser_event(@go_root_event, @target)}
-              disabled={@current_folder == ""}
+              disabled={@current_folder == "" and not @leave_root}
             >
               {gettext("Root")}
             </button>
@@ -207,6 +207,8 @@ defmodule BrandoAdmin.Components.Assets.FileBrowser do
     |> assign_new(:show_new_folder_form, fn -> false end)
     |> assign_new(:new_folder, fn -> "" end)
     |> assign_new(:go_root_event, fn -> "go_root" end)
+    # Up and Root stay enabled at the root: the picker leads them above it
+    |> assign_new(:leave_root, fn -> false end)
     |> assign_new(:go_folder_event, fn -> "go_folder" end)
     |> assign_new(:go_parent_event, fn -> "go_parent_folder" end)
     |> assign_new(:go_recent_event, fn -> "go_recent_folder" end)

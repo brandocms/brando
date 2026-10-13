@@ -120,6 +120,29 @@ defmodule Mix.Brando.Igniter.SourceUpgrade.TestEnvironmentTest do
     assert runtime_warnings(~s|import Config\nconfig :lett, Lett.Cache, url: System.get_env("REDIS_URL")\n|) == []
   end
 
+  test "reads `Config.config_env()` as `config_env()`" do
+    # koi's config/runtime.exs: the e2e branch is not reached in :test, the
+    # else branch is.
+    runtime = """
+    import Config
+
+    if Config.config_env() == :e2e do
+      config :koi, Koi.Repo,
+        url: System.get_env("BRANDO_DB_TEST_URL"),
+        pool: Ecto.Adapters.SQL.Sandbox
+    else
+      config :koi, Koi.Repo,
+        url: System.get_env("BRANDO_DB_URL"),
+        pool_size: 15
+    end
+    """
+
+    assert [warning] = runtime_warnings(runtime)
+    assert warning =~ "runtime.exs:8:"
+    refute warning =~ "runtime.exs:4:"
+    refute warning =~ "BRANDO_DB_TEST_URL"
+  end
+
   test "the installer's runtime.exs reads the URL only outside tests" do
     template = File.read!(Application.app_dir(:brando, "priv/templates/brando.install/config/runtime.exs"))
     runtime = EEx.eval_string(template, application_name: "lett", application_module: "Lett")

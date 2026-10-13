@@ -7,6 +7,8 @@ defmodule Brando.Images.ConfigResolver do
   into their dependency graph.
   """
 
+  require Logger
+
   alias Brando.Assets.ConfigTarget
   alias Brando.Blueprint.AssetConfigNormalizer
   alias Brando.RuntimeConfig
@@ -60,23 +62,72 @@ defmodule Brando.Images.ConfigResolver do
       :error ->
         handle_invalid_field(
           resolution_mode,
+          config_target,
           "invalid config_target field #{inspect(field_name)} for Blueprint #{inspect(schema)}"
         )
 
       {:ok, %{type: actual_type}} ->
         handle_invalid_field(
           resolution_mode,
+          config_target,
           "config_target #{inspect(config_target)} resolves to #{inspect(actual_type)}, " <>
             "expected #{inspect(expected_type)}"
         )
     end
   end
 
-  defp handle_invalid_field(:strict, message), do: raise(ArgumentError, message)
+  defp handle_invalid_field(:strict, _config_target, message), do: raise(ArgumentError, message)
 
-  defp handle_invalid_field({:stored, image}, message) do
-    IO.warn("#{message}; using the default image config for #{inspect(image)}")
+  # An image keeps the target it was uploaded for after its field is removed
+  # or renamed. Rendering a page of them would warn once per image and render;
+  # once per target and node is enough to know.
+  defp handle_invalid_field({:stored, _image}, config_target, _message) do
+    key = {__MODULE__, :warned, config_target}
+
+    if !:persistent_term.get(key, false) do
+      :persistent_term.put(key, true)
+      Logger.warning(stale_target_message(config_target, nil) <> " `mix brando.doctor --verbose` counts them.")
+    end
+
     default_config()
+  end
+
+  @doc """
+  What a stored `config_target` that no longer resolves to an image config
+  means, as one line: `count` images (or, when nil, "Images") point at a
+  field their Blueprint no longer has, or that is no longer an image field,
+  and use the default image config.
+  """
+  @spec stale_target_message(String.t(), non_neg_integer | nil) :: String.t()
+  def stale_target_message(config_target, count) do
+    {subject, verb, pronoun} =
+      case count do
+        nil -> {"Images", "point", "they use"}
+        1 -> {"1 image", "points", "it uses"}
+        count -> {"#{count} images", "point", "they use"}
+      end
+
+    "#{subject} #{verb} at #{stale_target(config_target)}; #{pronoun} the default image config."
+  end
+
+  defp stale_target(config_target) do
+    case String.split(config_target, ":") do
+      [type, schema, field_name] when type in ["image", "gallery"] -> stale_field(config_target, schema, field_name)
+      _other -> "the config target #{config_target}, which no longer resolves"
+    end
+  end
+
+  defp stale_field(config_target, schema, field_name) do
+    case {ConfigTarget.blueprint_asset(schema, field_name), ConfigTarget.schema_module(schema)} do
+      {{:ok, %{type: actual_type}}, _module} ->
+        "#{schema}.#{field_name}, which is now a #{actual_type} field (#{config_target})"
+
+      {:error, {:ok, _module}} ->
+        "a field #{schema} no longer has (#{config_target})"
+
+      {:error, :error} ->
+        "#{schema}, which is no longer a Blueprint (#{config_target})"
+    end
   end
 
   defp default_config do

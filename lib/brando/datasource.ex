@@ -254,11 +254,15 @@ defmodule Brando.Datasource do
   def list_datasource_keys(module_name), do: Registry.grouped_keys(module_name)
 
   @doc """
-  Grab list of entries from database
+  Grab list of entries from database.
+
+  `type` is the datasource's type, `:list` for a list module and
+  `:selection` for the options of a selection. A list and a selection may
+  share a key; with `:*`, the list is found first.
   """
-  def list_results(module_binary, key, vars, language) do
+  def list_results(module_binary, key, vars, language, type \\ :*) do
     {module, atom_key} = Registry.resolve(module_binary, key)
-    ds = get_datasource(module, :*, atom_key)
+    ds = get_datasource(module, type, atom_key)
     Callback.call(ds.list, [module_binary, language, vars])
   end
 
@@ -273,6 +277,28 @@ defmodule Brando.Datasource do
     ds = get_datasource(module, :selection, atom_key)
     {:ok, identifiers} = Content.list_identifiers(ids)
     Callback.call(ds.get, [identifiers])
+  end
+
+  @doc """
+  The entry a `:single` datasource block shows, as a list: the first of
+  `ids` (the block's identifier ids, in order) through the datasource's
+  `get`, or `{:ok, []}` when none is chosen or the datasource finds none.
+  """
+  @spec get_single_entries(module() | String.t(), atom() | String.t(), [integer()] | nil) :: {:ok, list()}
+  def get_single_entries(_module_binary, _key, ids) when ids in [nil, []], do: {:ok, []}
+
+  def get_single_entries(module_binary, key, [id | _]) do
+    case Content.list_identifiers([id]) do
+      {:ok, [identifier]} ->
+        case get_single(module_binary, key, identifier) do
+          {:ok, nil} -> {:ok, []}
+          {:ok, entry} -> {:ok, [entry]}
+          _error -> {:ok, []}
+        end
+
+      _none ->
+        {:ok, []}
+    end
   end
 
   @doc """

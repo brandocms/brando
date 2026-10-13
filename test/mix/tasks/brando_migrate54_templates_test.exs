@@ -301,6 +301,266 @@ defmodule Mix.Tasks.Brando.Migrate54TemplatesTest do
     end)
   end
 
+  # koi's 0.53 layouts module: the page comes from `assigns[:page]`, and the
+  # controllers build their options in a `page_opts` binding first.
+  @layouts_path "lib/lett_web/layouts.ex"
+
+  @layouts """
+  defmodule LettWeb.Layouts do
+    use BrandoWeb, :html
+
+    def build_menu_style(assigns) do
+      if assigns[:page] do
+        fg_color = Brando.Pages.get_var(assigns[:page], "color_menu_fg")
+        if fg_color, do: "--color_fg: \#{fg_color};", else: ""
+      else
+        ""
+      end
+    end
+  end
+  """
+
+  @article_controller_path "lib/lett_web/controllers/article_controller.ex"
+
+  @article_controller """
+  defmodule LettWeb.ArticleController do
+    use BrandoWeb, :controller
+    alias Brando.Pages
+
+    def list(conn, _params) do
+      language = conn.assigns.language
+
+      page_opts = %{
+        matches: %{uri: "article_listing", language: language},
+        status: :published
+      }
+
+      with {:ok, page} <- Pages.get_page(page_opts) do
+        conn
+        |> assign(:page, page)
+        |> render(:list)
+      end
+    end
+  end
+  """
+
+  test "adds :vars to the page loads when a module reads vars on assigns[:page]" do
+    igniter =
+      migrate(%{
+        @layouts_path => @layouts,
+        @controller_path => @controller,
+        @article_controller_path => @article_controller
+      })
+
+    assert count(source(igniter, @controller_path), "preload: [:alternate_entries, :vars],") == 2
+    assert source(igniter, @article_controller_path) =~ "status: :published,\n      preload: [:vars]\n    }"
+    assert_unchanged(igniter, [@layouts_path])
+    refute Enum.any?(igniter.warnings, &(&1 =~ "Page vars"))
+
+    assert_has_notice(igniter, fn notice ->
+      notice =~ "added `:vars`" and notice =~ "#{@article_controller_path}:13" and notice =~ "#{@controller_path}:16"
+    end)
+  end
+
+  test "lists the page loads, with what to add, when vars are read on something other than the page" do
+    helper = """
+    defmodule LettWeb.Helpers do
+      def heading(entry), do: Brando.Pages.get_var(entry, "heading")
+    end
+    """
+
+    igniter = migrate(%{"lib/lett_web/helpers.ex" => helper, @article_controller_path => @article_controller})
+
+    assert_unchanged(igniter, [@article_controller_path])
+
+    assert_has_warning(igniter, fn warning ->
+      warning =~ "lib/lett_web/helpers.ex:2: def heading(entry)" and
+        warning =~ "#{@article_controller_path}:13: `Pages.get_page/1`" and
+        warning =~ "preload: [:vars]"
+    end)
+  end
+
+  # As koi had them on 0.53: the router plugs the fragments in as
+  # `@partials`, a controller assigns `get_fragments/1`'s map.
+  @fragment_router """
+  defmodule LettWeb.Router do
+    use LettWeb, :router
+
+    pipeline :browser do
+      plug :accepts, ["html"]
+      plug Brando.Plug.Fragment, parent_key: "partials", as: :partials
+    end
+  end
+  """
+
+  @fragment_controller """
+  defmodule LettWeb.PageController do
+    use LettWeb, :controller
+    alias Brando.Pages
+
+    def index(conn, %{"language" => language}) do
+      fragment_opts = %{filter: %{parent_key: "index", language: language}}
+
+      with {:ok, index_fragments} <- Pages.get_fragments(fragment_opts) do
+        conn
+        |> assign(:index_fragments, index_fragments)
+        |> render(:index)
+      end
+    end
+  end
+  """
+
+  @footer_path "lib/lett_web/components/partials/footer.html.heex"
+  @router_path "lib/lett_web/router.ex"
+  @index_path "lib/lett_web/controllers/page_html/index.html.heex"
+
+  test "points fragment map reads at rendered_blocks, and lists the map reads it cannot tell" do
+    footer = """
+    <footer b-section="general-nedersteFooter">
+      <%= @partials["footer"] %>
+    </footer>
+
+    <%= @partials["newsletter"].html |> replace_csrf_token() |> raw %>
+    <%= @partials["contact"].html |> replace_csrf_token() |> raw %>
+    """
+
+    index = """
+    <%= raw(@index_fragments["intro"].html) %>
+    <div>{@products["intro"].html}</div>
+    """
+
+    igniter =
+      migrate(%{
+        @footer_path => footer,
+        @router_path => @fragment_router,
+        @controller_path => @fragment_controller,
+        @index_path => index
+      })
+
+    assert source(igniter, @footer_path) == """
+           <footer b-section="general-nedersteFooter">
+             <%= @partials["footer"] %>
+           </footer>
+
+           <%= @partials["newsletter"].rendered_blocks |> replace_csrf_token() |> raw %>
+           <%= @partials["contact"].rendered_blocks |> replace_csrf_token() |> raw %>
+           """
+
+    assert source(igniter, @index_path) == """
+           <%= raw(@index_fragments["intro"].rendered_blocks) %>
+           <div>{@products["intro"].html}</div>
+           """
+
+    assert_has_notice(igniter, fn notice ->
+      notice =~ "#{@footer_path}:5:" and notice =~ "#{@footer_path}:6:" and notice =~ "#{@index_path}:1:"
+    end)
+
+    assert_has_warning(igniter, &(&1 =~ ~s|#{@index_path}:2: <div>{@products["intro"].html}</div>|))
+
+    rerun = igniter |> apply_igniter!() |> include_test_files() |> Migrate54.igniter()
+    assert_unchanged(rerun, [@footer_path, @index_path])
+  end
+
+  test "rewrites a fragments variable only in the function that binds it" do
+    controller = """
+    defmodule LettWeb.PartsController do
+      alias Brando.Pages
+
+      def fragment(opts) do
+        {:ok, parts} = Pages.get_fragments(opts)
+        parts["intro"].html
+      end
+
+      def custom do
+        parts = %{"x" => %{html: "custom"}}
+        parts["x"].html
+      end
+    end
+    """
+
+    path = "lib/lett_web/controllers/parts_controller.ex"
+    igniter = migrate(%{path => controller})
+    migrated = source(igniter, path)
+
+    assert migrated =~ ~s|parts["intro"].rendered_blocks|
+    assert migrated =~ ~s|parts["x"].html|
+    assert_has_warning(igniter, &(&1 =~ ~s|#{path}:11: parts["x"].html|))
+  end
+
+  test "lists, and leaves, a fragments variable that the function binds again" do
+    controller = """
+    defmodule LettWeb.PartsController do
+      alias Brando.Pages
+
+      def fragment(opts, custom_maps) do
+        {:ok, parts} = Pages.get_fragments(opts)
+        Enum.map(custom_maps, fn parts -> parts["x"].html end)
+      end
+    end
+    """
+
+    path = "lib/lett_web/controllers/parts_controller.ex"
+    igniter = migrate(%{path => controller})
+
+    assert_unchanged(igniter, [path])
+    assert_has_warning(igniter, &(&1 =~ ~s|#{path}:6: Enum.map(custom_maps, fn parts -> parts["x"].html end)|))
+  end
+
+  test "lists, and leaves, reads of an assign another module gives other data over several lines" do
+    other = """
+    defmodule LettWeb.ShopController do
+      use LettWeb, :controller
+
+      def index(conn, _params) do
+        conn
+        |> assign(
+          # Not fragments
+          :partials,
+          %{"newsletter" => %{html: "Shop"}}
+        )
+        |> render(:index)
+      end
+    end
+    """
+
+    footer = ~s|<%= @partials["newsletter"].html \|> raw %>\n|
+
+    igniter =
+      migrate(%{
+        @footer_path => footer,
+        @router_path => @fragment_router,
+        "lib/lett_web/controllers/shop_controller.ex" => other
+      })
+
+    assert_unchanged(igniter, [@footer_path])
+  end
+
+  test "lists, and leaves, reads of an assign that is also given other data" do
+    other = """
+    defmodule LettWeb.ShopController do
+      use LettWeb, :controller
+
+      def index(conn, _params) do
+        conn
+        |> assign(:partials, %{"intro" => %{html: "Shop"}})
+        |> render(:index)
+      end
+    end
+    """
+
+    footer = ~s|<%= @partials["newsletter"].html \|> raw %>\n|
+
+    igniter =
+      migrate(%{
+        @footer_path => footer,
+        @router_path => @fragment_router,
+        "lib/lett_web/controllers/shop_controller.ex" => other
+      })
+
+    assert_unchanged(igniter, [@footer_path])
+    assert_has_warning(igniter, &(&1 =~ ~s|#{@footer_path}:1: <%= @partials["newsletter"].html \|> raw %>|))
+  end
+
   defp count(content, pattern), do: content |> String.split(pattern) |> length() |> Kernel.-(1)
 
   defp migrate(files) do

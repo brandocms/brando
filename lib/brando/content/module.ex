@@ -9,11 +9,11 @@ defmodule Brando.Content.Module do
   A module can be setup as a multi module, meaning it can contain X other entries.
 
   If the entry template is not floating your boat, you can access the child entries directly
-  from you main module's code:
+  from you main module's code. Each entry is a block, with its vars on it:
 
   ```
   {% for link in entries %}
-    <h2>{{ link.data.vars.header_text }}</h2>
+    <h2>{{ link.vars.header_text }}</h2>
   {% endfor %}
 
   {{ content | renderless }}

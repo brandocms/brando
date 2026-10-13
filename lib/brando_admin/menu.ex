@@ -344,6 +344,11 @@ defmodule BrandoAdmin.Menu do
   `grouped_items/1`), while `items` stays one flat list in group order.
   """
   def get_menu(current_user \\ nil, current_site \\ nil) do
+    # Every item is checked against the same few scopes.
+    Brando.Authorization.with_snapshots(fn -> build_menu(current_user, current_site) end)
+  end
+
+  defp build_menu(current_user, current_site) do
     content_menus = Brando.admin_module(Menus).__menus__()
 
     menus = [

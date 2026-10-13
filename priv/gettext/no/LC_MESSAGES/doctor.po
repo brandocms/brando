@@ -88,6 +88,13 @@ msgstr[1] "%{count} detaljer"
 
 #: lib/brando/doctor/checks/image_configs.ex
 #, elixir-autogen, elixir-format
+msgid "%{count} differs"
+msgid_plural "%{count} differ"
+msgstr[0] "%{count} avviker"
+msgstr[1] "%{count} avviker"
+
+#: lib/brando/doctor/checks/image_configs.ex
+#, elixir-autogen, elixir-format
 msgid "%{count} differs (recreate it)"
 msgid_plural "%{count} differ (recreate them)"
 msgstr[0] "%{count} avviker (lag det på nytt)"
@@ -144,6 +151,34 @@ msgstr[1] "%{count} bilder uten alt-tekst (%{language})"
 
 #: lib/brando/doctor/checks/image_configs.ex
 #, elixir-autogen, elixir-format
+msgid "%{count} in dimensions"
+msgid_plural "%{count} in dimensions"
+msgstr[0] "%{count} i dimensjoner"
+msgstr[1] "%{count} i dimensjoner"
+
+#: lib/brando/doctor/checks/image_configs.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} in formats"
+msgid_plural "%{count} in formats"
+msgstr[0] "%{count} i formater"
+msgstr[1] "%{count} i formater"
+
+#: lib/brando/doctor/checks/image_configs.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} in sizes"
+msgid_plural "%{count} in sizes"
+msgstr[0] "%{count} i størrelser"
+msgstr[1] "%{count} i størrelser"
+
+#: lib/brando/doctor/checks/image_configs.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} likely matches"
+msgid_plural "%{count} likely match"
+msgstr[0] "%{count} stemmer trolig"
+msgstr[1] "%{count} stemmer trolig"
+
+#: lib/brando/doctor/checks/image_configs.ex
+#, elixir-autogen, elixir-format
 msgid "%{count} likely matches (mix brando.images.adopt checks and records that)"
 msgid_plural "%{count} likely match (mix brando.images.adopt checks and records that)"
 msgstr[0] "%{count} samsvarer trolig (mix brando.images.adopt sjekker og lagrer det)"
@@ -156,12 +191,26 @@ msgid_plural "%{count} migrations not run"
 msgstr[0] "%{count} migrering ikke kjørt"
 msgstr[1] "%{count} migreringer ikke kjørt"
 
+#: lib/brando/doctor/checks/module_entry_paths.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} module reads its entries through .data.vars or .data.refs, which renders nothing"
+msgid_plural "%{count} modules read their entries through .data.vars or .data.refs, which renders nothing"
+msgstr[0] "%{count} modul leser oppføringene sine gjennom .data.vars eller .data.refs, som ikke viser noe"
+msgstr[1] "%{count} moduler leser oppføringene sine gjennom .data.vars eller .data.refs, som ikke viser noe"
+
 #: lib/brando/doctor/checks/migrations.ex
 #, elixir-autogen, elixir-format
 msgid "%{count} new Brando migration not copied"
 msgid_plural "%{count} new Brando migrations not copied"
 msgstr[0] "%{count} ny Brando-migrering ikke kopiert"
 msgstr[1] "%{count} nye Brando-migreringer ikke kopiert"
+
+#: lib/brando/doctor/checks/image_configs.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} on the CDN only"
+msgid_plural "%{count} on the CDN only"
+msgstr[0] "%{count} bare på CDN"
+msgstr[1] "%{count} bare på CDN"
 
 #: lib/brando/doctor/checks/oban.ex
 #, elixir-autogen, elixir-format
@@ -198,6 +247,13 @@ msgid_plural "%{count} stuck"
 msgstr[0] "%{count} fastlåst"
 msgstr[1] "%{count} fastlåst"
 
+#: lib/brando/doctor/checks/image_configs.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} unreadable"
+msgid_plural "%{count} unreadable"
+msgstr[0] "%{count} uleselig"
+msgstr[1] "%{count} uleselige"
+
 #: lib/brando/doctor/checks/migrations.ex
 #, elixir-autogen, elixir-format
 msgid "%{count} upgrade migration differs from Brando's template"
@@ -211,6 +267,13 @@ msgid "%{count} warning"
 msgid_plural "%{count} warnings"
 msgstr[0] "%{count} advarsel"
 msgstr[1] "%{count} advarsler"
+
+#: lib/brando/doctor/checks/image_configs.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} with a missing file"
+msgid_plural "%{count} with missing files"
+msgstr[0] "%{count} med en manglende fil"
+msgstr[1] "%{count} med manglende filer"
 
 #: lib/brando/doctor/checks/test_database.ex
 #, elixir-autogen, elixir-format
@@ -236,6 +299,11 @@ msgstr "%{language}: %{missing} av %{total} uten alt-tekst (%{coverage} dekket)"
 #, elixir-autogen, elixir-format
 msgid "%{language}: no %{missing}"
 msgstr "%{language}: mangler %{missing}"
+
+#: lib/brando/doctor/checks/module_entry_paths.ex
+#, elixir-autogen, elixir-format
+msgid "%{module} (#%{id}), line %{line}: %{code}"
+msgstr "%{module} (#%{id}), linje %{line}: %{code}"
 
 #: lib/brando/doctor/checks/modules.ex
 #, elixir-autogen, elixir-format
@@ -268,10 +336,32 @@ msgstr[1] "%{target}: %{count} bilder"
 
 #: lib/brando/doctor/checks/image_configs.ex
 #, elixir-autogen, elixir-format
+msgid "%{target}: %{count} image whose config target no longer resolves uses the default image config"
+msgid_plural "%{target}: %{count} images whose config target no longer resolves use the default image config"
+msgstr[0] "%{target}: %{count} bilde med et bildeoppsett som ikke lenger finnes, bruker standardoppsettet"
+msgstr[1] "%{target}: %{count} bilder med et bildeoppsett som ikke lenger finnes, bruker standardoppsettet"
+
+#: lib/brando/doctor/checks/image_configs.ex
+#, elixir-autogen, elixir-format
 msgid "%{target}: %{count} image without recorded settings"
 msgid_plural "%{target}: %{count} images without recorded settings"
 msgstr[0] "%{target}: %{count} bilde uten lagrede innstillinger"
 msgstr[1] "%{target}: %{count} bilder uten lagrede innstillinger"
+
+#: lib/brando/doctor/checks/node.ex
+#, elixir-autogen, elixir-format
+msgid "%{version}: Node %{major} is an odd release"
+msgstr "%{version}: Node %{major} er en oddetallsutgivelse"
+
+#: lib/brando/doctor/checks/node.ex
+#, elixir-autogen, elixir-format
+msgid "%{version}: Node %{major} is older than Brando is tested on"
+msgstr "%{version}: Node %{major} er eldre enn det Brando er testet på"
+
+#: lib/brando/doctor/checks/node.ex
+#, elixir-autogen, elixir-format
+msgid "%{version}: older than Vite 8 accepts (%{minimum})"
+msgstr "%{version}: eldre enn Vite 8 godtar (%{minimum})"
 
 #: lib/brando/doctor/checks/admin_assets.ex
 #, elixir-autogen, elixir-format
@@ -353,10 +443,15 @@ msgstr "Feil"
 msgid "GET /robots.txt goes to %{plug}"
 msgstr "GET /robots.txt går til %{plug}"
 
+#: lib/brando/doctor/checks/image_configs.ex
+#, elixir-autogen, elixir-format
+msgid "Go to image sizes"
+msgstr "Gå til bildestørrelser"
+
 #: lib/brando/doctor/checks/sitemap.ex
 #, elixir-autogen, elixir-format
-msgid "Generate sitemap"
-msgstr "Generer nettstedskart"
+msgid "Go to sitemap"
+msgstr "Gå til nettstedskart"
 
 #: lib/brando/doctor/source.ex
 #, elixir-autogen, elixir-format
@@ -400,8 +495,18 @@ msgstr "E-post: %{mailer}, ingen avsender"
 
 #: lib/brando/doctor/checks/configuration.ex
 #, elixir-autogen, elixir-format
+msgid "Mailer: %{mailer}, no sender for site %{site}"
+msgstr "E-post: %{mailer}, ingen avsender for nettstedet %{site}"
+
+#: lib/brando/doctor/checks/configuration.ex
+#, elixir-autogen, elixir-format
 msgid "Mailer: %{mailer}, placeholder sender %{from}"
 msgstr "E-post: %{mailer}, plassholderavsender %{from}"
+
+#: lib/brando/doctor/checks/configuration.ex
+#, elixir-autogen, elixir-format
+msgid "Mailer: %{mailer}, placeholder sender %{from} for site %{site}"
+msgstr "E-post: %{mailer}, plassholderavsender %{from} for nettstedet %{site}"
 
 #: lib/brando/doctor/checks/configuration.ex
 #, elixir-autogen, elixir-format
@@ -413,10 +518,25 @@ msgstr "E-post: ikke satt opp"
 msgid "Migrations"
 msgstr "Migreringer"
 
+#: lib/brando/doctor/checks/module_entry_paths.ex
+#, elixir-autogen, elixir-format
+msgid "Module entry paths"
+msgstr "Modulers oppføringsstier"
+
 #: lib/brando/doctor/checks/modules.ex
 #, elixir-autogen, elixir-format
 msgid "Modules"
 msgstr "Moduler"
+
+#: lib/brando/doctor/checks/node.ex
+#, elixir-autogen, elixir-format
+msgid "Node %{major} (or another even LTS major ≥ %{major})"
+msgstr "Node %{major} (eller en annen LTS-hovedversjon med partall ≥ %{major})"
+
+#: lib/brando/doctor/checks/node.ex
+#, elixir-autogen, elixir-format
+msgid "Node.js"
+msgstr "Node.js"
 
 #: lib/brando_admin/components/system_check.ex
 #, elixir-autogen, elixir-format
@@ -433,6 +553,11 @@ msgstr "Oban-køer"
 msgid "Open SEO"
 msgstr "Åpne SEO"
 
+#: lib/brando/doctor/checks/module_entry_paths.ex
+#, elixir-autogen, elixir-format
+msgid "Open block modules"
+msgstr "Åpne blokkmoduler"
+
 #: lib/brando/doctor/checks/json_ld.ex
 #, elixir-autogen, elixir-format
 msgid "Open identity"
@@ -442,11 +567,6 @@ msgstr "Åpne identitet"
 #, elixir-autogen, elixir-format
 msgid "Open images"
 msgstr "Åpne bilder"
-
-#: lib/brando/doctor/checks/image_configs.ex
-#, elixir-autogen, elixir-format
-msgid "Recreate changed images"
-msgstr "Lag endrede bilder på nytt"
 
 #: lib/brando/doctor/checks/modules.ex
 #, elixir-autogen, elixir-format
@@ -533,6 +653,11 @@ msgstr "Skriv alt-tekst"
 msgid "a static robots.txt may stand in front of the SEO text"
 msgstr "en statisk robots.txt kan skygge for SEO-teksten"
 
+#: lib/brando/doctor/checks/robots.ex
+#, elixir-autogen, elixir-format
+msgid "a static robots.txt stands in front of the SEO text"
+msgstr "en statisk robots.txt skygger for SEO-teksten"
+
 #: lib/brando/doctor/checks/oban.ex
 #, elixir-autogen, elixir-format
 msgid "add %{queues} to the queues in config :brando, Oban (see Brando.Supervisor)"
@@ -553,6 +678,11 @@ msgstr "alle blokker er på modulens gjeldende versjon"
 msgid "all images match their settings"
 msgstr "alle bilder samsvarer med innstillingene sine"
 
+#: lib/brando/doctor/checks/module_entry_paths.ex
+#, elixir-autogen, elixir-format
+msgid "an entry's vars and refs are entry.vars and entry.refs since the blocks conversion: run brando_219 (mix brando.gen.migrations, mix brando.migrate) or edit the module code, then mix brando.entries.resave"
+msgstr "etter blokkonverteringen er en oppførings variabler og referanser entry.vars og entry.refs: kjør brando_219 (mix brando.gen.migrations, mix brando.migrate) eller rediger modulkoden, og deretter mix brando.entries.resave"
+
 #: lib/brando/doctor/checks/admin_assets.ex
 #, elixir-autogen, elixir-format
 msgid "brandojs %{version}"
@@ -567,6 +697,25 @@ msgstr "brandojs er ikke en avhengighet i assets/backend"
 #, elixir-autogen, elixir-format
 msgid "brandojs not installed"
 msgstr "brandojs er ikke installert"
+
+#: lib/brando/doctor/checks/image_configs.ex
+#, elixir-autogen, elixir-format
+msgid "by its record it differs from its config"
+msgid_plural "by their records all %{count} differ"
+msgstr[0] "etter registreringen avviker det fra oppsettet sitt"
+msgstr[1] "etter registreringene avviker alle %{count}"
+
+#: lib/brando/doctor/checks/image_configs.ex
+#, elixir-autogen, elixir-format
+msgid "by its record it likely matches its config"
+msgid_plural "by their records all likely match their config"
+msgstr[0] "etter registreringen stemmer det trolig med oppsettet sitt"
+msgstr[1] "etter registreringene stemmer alle trolig med oppsettet sitt"
+
+#: lib/brando/doctor/checks/image_configs.ex
+#, elixir-autogen, elixir-format
+msgid "by their records"
+msgstr "etter registreringene"
 
 #: lib/brando/doctor/checks/robots.ex
 #, elixir-autogen, elixir-format
@@ -620,8 +769,18 @@ msgstr "kunne ikke kjøres"
 
 #: lib/brando/doctor/checks/robots.ex
 #, elixir-autogen, elixir-format
-msgid "delete priv/static/robots.txt and remove it from static_paths"
-msgstr "slett priv/static/robots.txt og fjern den fra static_paths"
+msgid "delete priv/static/robots.txt and remove %{entry} from %{setting}"
+msgstr "slett priv/static/robots.txt og fjern %{entry} fra %{setting}"
+
+#: lib/brando/doctor/checks/robots.ex
+#, elixir-autogen, elixir-format
+msgid "delete priv/static/robots.txt, and remove robots.txt from the only: list of the endpoint's Plug.Static (static_paths/0 in the web module on Phoenix 1.7 and later), if it is there"
+msgstr "slett priv/static/robots.txt, og fjern robots.txt fra only:-listen til endepunktets Plug.Static (static_paths/0 i web-modulen fra Phoenix 1.7), om den står der"
+
+#: lib/brando/doctor/checks/robots.ex
+#, elixir-autogen, elixir-format
+msgid "delete priv/static/robots.txt: Plug.Static in %{file} has no only:, so it serves every file in priv/static"
+msgstr "slett priv/static/robots.txt: Plug.Static i %{file} har ingen only:, så den serverer alle filer i priv/static"
 
 #: lib/brando/doctor/checks/configuration.ex
 #, elixir-autogen, elixir-format
@@ -796,10 +955,25 @@ msgstr "ingen endpoint-URL"
 msgid "no identity"
 msgstr "ingen identitet"
 
+#: lib/brando/doctor/checks/image_configs.ex
+#, elixir-autogen, elixir-format
+msgid "no image files under %{path} (is the media synced?)"
+msgstr "ingen bildefiler under %{path} (er mediene synkronisert?)"
+
 #: lib/brando/doctor/checks/configuration.ex
 #, elixir-autogen, elixir-format
 msgid "no mailer"
 msgstr "ingen e-postmodul"
+
+#: lib/brando/doctor/checks/module_entry_paths.ex
+#, elixir-autogen, elixir-format
+msgid "no module reads its entries through .data.vars or .data.refs"
+msgstr "ingen modul leser oppføringene sine gjennom .data.vars eller .data.refs"
+
+#: lib/brando/doctor/checks/node.ex
+#, elixir-autogen, elixir-format
+msgid "no node on the PATH"
+msgstr "ingen node i PATH"
 
 #: lib/brando/doctor/checks/configuration.ex
 #, elixir-autogen, elixir-format
@@ -836,6 +1010,11 @@ msgstr "ingen URL for nettstedet"
 msgid "no sitemap module"
 msgstr "ingen modul for nettstedskart"
 
+#: lib/brando/doctor/checks/node.ex
+#, elixir-autogen, elixir-format
+msgid "node --version printed %{version}"
+msgstr "node --version skrev %{version}"
+
 #: lib/brando/doctor/checks/deprecations.ex
 #, elixir-autogen, elixir-format
 msgid "none in lib/"
@@ -861,6 +1040,11 @@ msgstr "ikke generert"
 msgid "not served by Brando"
 msgstr "serveres ikke av Brando"
 
+#: lib/brando/doctor/checks/image_configs.ex
+#, elixir-autogen, elixir-format
+msgid "of those: %{differences}"
+msgstr "av dem: %{differences}"
+
 #: lib/brando/doctor/checks/alt_text.ex
 #, elixir-autogen, elixir-format
 msgid "open each image marked “No alt text” under Images and write its Alt. text (no AI provider is configured to draft it)"
@@ -875,6 +1059,11 @@ msgstr "sti %{path}"
 #, elixir-autogen, elixir-format
 msgid "placeholder sender address"
 msgstr "plassholder som avsenderadresse"
+
+#: lib/brando/doctor/checks/robots.ex
+#, elixir-autogen, elixir-format
+msgid "priv/static/robots.txt is not served (not in %{setting}); delete it"
+msgstr "priv/static/robots.txt blir ikke servert (ikke i %{setting}); slett den"
 
 #: lib/brando/doctor/checks/oban.ex
 #, elixir-autogen, elixir-format
@@ -991,6 +1180,11 @@ msgstr "test og utvikling kobler begge til %{database}"
 msgid "testing mode, jobs run inline"
 msgstr "testmodus, jobber kjøres direkte"
 
+#: lib/brando/doctor/checks/node.ex
+#, elixir-autogen, elixir-format
+msgid "the admin and frontend assets build with %{advice}"
+msgstr "admin- og frontend-ressursene bygges med %{advice}"
+
 #: lib/brando/doctor/checks/test_database.ex
 #, elixir-autogen, elixir-format
 msgid "the config files read Mix.env(), which cannot be read for :test from here"
@@ -1026,7 +1220,22 @@ msgstr "tok for lang tid"
 msgid "up to date"
 msgstr "oppdatert"
 
+#: lib/brando/doctor/checks/node.ex
+#, elixir-autogen, elixir-format
+msgid "use %{advice}"
+msgstr "bruk %{advice}"
+
+#: lib/brando/doctor/checks/node.ex
+#, elixir-autogen, elixir-format
+msgid "use %{advice}: odd releases are not LTS, and pnpm and yarn refuse them for Vite 8 and the asset packages"
+msgstr "bruk %{advice}: oddetallsutgivelser er ikke LTS, og pnpm og yarn avviser dem for Vite 8 og ressurspakkene"
+
 #: lib/brando/doctor/checks/versions.ex
 #, elixir-autogen, elixir-format
 msgid "use the versions this Brando supports (see the installation guide)"
 msgstr "bruk versjonene denne Brando støtter (se installasjonsveiledningen)"
+
+#: lib/brando/doctor/checks/image_configs.ex
+#, elixir-autogen, elixir-format
+msgid "where the media is (on the server, or here once it is synced or mounted), run mix brando.images.adopt to record the images that match, then Utilities → Recreate changed images for the rest; here neither works, as adopting needs the files and recreating the originals"
+msgstr "der mediene ligger (på serveren, eller her når de er synkronisert eller montert), kjør mix brando.images.adopt for å registrere bildene som stemmer, og deretter Verktøy → Lag endrede bilder på nytt for resten; her virker ingen av delene, for registreringen trenger filene og å lage dem på nytt trenger originalene"

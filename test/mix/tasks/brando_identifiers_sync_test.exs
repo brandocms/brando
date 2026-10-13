@@ -29,6 +29,7 @@ defmodule Mix.Tasks.Brando.Identifiers.SyncTest do
 
     assert_received {:mix_shell, :info, [header]}
     assert header =~ "% Brando Sync Identifiers"
+    assert_received {:mix_shell, :info, ["Servers that were already running keep serving what they cached before." <> _]}
   end
 
   test "an unknown option stops the task and names the options it takes" do

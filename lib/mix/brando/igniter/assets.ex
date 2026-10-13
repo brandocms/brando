@@ -44,6 +44,13 @@ if Code.ensure_loaded?(Igniter) do
     @legacy_backend_lockfiles ~w(assets/backend/yarn.lock assets/backend/package-lock.json)
     @backend_package "assets/backend/package.json"
     @backend_vite_config "assets/backend/vite.config.js"
+    @backend_postcss_config "assets/backend/postcss.config.cjs"
+    # postcss.config.cjs as earlier templates wrote it, compared without
+    # whitespace. One that still reads like this is the template's, and takes
+    # the current one; a site's own is left alone.
+    @previous_backend_postcss_configs [
+      "module.exports={plugins:[require('@brandocms/europacss'),require('autoprefixer')()]}"
+    ]
 
     @doc """
     Brings an existing `assets/backend` up to the current template.
@@ -52,7 +59,8 @@ if Code.ensure_loaded?(Igniter) do
     the application's (its own extra packages, scripts and BrandoJS source
     stay), `vite.config.js` is replaced, files the template retired and
     yarn/npm lockfiles are removed, and the Dockerfile's `assets_backend`
-    stage becomes the template's pnpm stage. CSS and every other existing
+    stage becomes the template's pnpm stage. `postcss.config.cjs` is replaced
+    when it is an earlier template's, unchanged. CSS and every other existing
     file are kept; missing template files are created.
     """
     def upgrade(igniter, project) do
@@ -81,9 +89,21 @@ if Code.ensure_loaded?(Igniter) do
         target == @backend_vite_config ->
           replace_file(igniter, target, template_contents(file, project))
 
+        target == @backend_postcss_config ->
+          upgrade_postcss_config(igniter, file, project)
+
         true ->
           igniter
       end
+    end
+
+    defp upgrade_postcss_config(igniter, file, project) do
+      igniter = Igniter.include_existing_file(igniter, @backend_postcss_config)
+      contents = igniter.rewrite |> Rewrite.source!(@backend_postcss_config) |> Rewrite.Source.get(:content)
+
+      if String.replace(contents, ~r/\s/, "") in @previous_backend_postcss_configs,
+        do: replace_file(igniter, @backend_postcss_config, template_contents(file, project)),
+        else: igniter
     end
 
     defp template_contents({format, source, _target}, project) do

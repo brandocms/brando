@@ -146,8 +146,10 @@ if Code.ensure_loaded?(Igniter) do
            migrations, the Villain-to-blocks conversion among them; the
            Blueprint migrations come later.
         5. Run `mix brando.check.legacy_conversion`. It names every Villain
-           block, var, ref or fragment the conversion lost, and exits with
-           status 1 while anything is missing.
+           block, var, ref or fragment the conversion lost, and every picture,
+           gallery image or video a ref lost, and exits with status 1 while
+           anything is missing. `mix brando.repair.legacy_media` puts back
+           lost media from the Villain columns.
         6. Run `mix brando.gen.blueprint_migration --all --reconcile` (with
            `--dry-run` first) against that migrated database. It keeps the
            Villain columns and the storage that holds data, and guards what

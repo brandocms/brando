@@ -292,6 +292,13 @@ defmodule BrandoIntegration.ModuleWithDatasource do
       get(fn identifiers -> {:ok, identifiers} end)
     end
 
+    # One page, chosen from the same options.
+    datasource :chosen_page do
+      type :single
+      list(fn _schema, language, _vars -> Brando.Content.list_identifiers([Brando.Pages.Page], %{language: language}) end)
+      get(fn identifier -> {:ok, identifier} end)
+    end
+
     # Pages' identifiers straight from the table, as a site's own datasource
     # may list them, without the admin's read filter.
     datasource :page_identifiers do
@@ -330,6 +337,10 @@ if Brando.Cache.Identity.set() == %{} or Brando.Cache.SEO.set() == %{} do
 end
 
 Brando.Cache.Globals.set()
+
+# ReqLLM's model catalogue loads on its first lookup, which takes seconds on a
+# loaded runner. Loaded here, no test pays for it inside a timed wait.
+{:ok, _} = LLMDB.load()
 
 fixture_src = Path.expand(".", __DIR__) <> "/fixtures/sample.jpg"
 media_path = Brando.config(:media_path)

@@ -176,6 +176,160 @@ defmodule Mix.Tasks.Brando.Migrate55PersistIdentifiersTest do
     assert_unchanged(igniter, ["lib/lett/shops/shop.ex", "lib/lett/articles/article.ex"])
   end
 
+  # koi's Article after migrate54: it names its join schema in a relation,
+  # and its `:entries` input selects only Articles.
+  @koi_article """
+  defmodule Lett.Articles.Article do
+    use Brando.Blueprint,
+      application: "Lett",
+      domain: "Articles",
+      schema: "Article",
+      singular: "article",
+      plural: "articles"
+
+    alias Lett.Articles
+
+    identifier "[{{ entry.language }}] {{ entry.title }}"
+    absolute_url "{% route article_path detail { entry.slug } %}"
+
+    relations do
+      relation :article_categories, :has_many,
+        module: Articles.ArticleCategory,
+        preload_order: [asc: :sequence],
+        on_replace: :delete_if_exists
+
+      relation :related_entries, :entries, constraints: [max_length: 3]
+    end
+
+    forms do
+      form do
+        tab t("Content") do
+          fieldset do
+            input :related_entries, :entries,
+              sources: [
+                {__MODULE__, %{preload: [:categories], order: "asc language, asc sequence"}}
+              ],
+              label: t("Related entries")
+          end
+        end
+      end
+    end
+  end
+  """
+
+  @koi_article_category """
+  defmodule Lett.Articles.ArticleCategory do
+    use Brando.Blueprint,
+      application: "Lett",
+      domain: "Articles",
+      schema: "ArticleCategory",
+      singular: "article_category",
+      plural: "article_categories"
+
+    alias Lett.Articles
+    @allow_mark_as_deleted true
+
+    trait Brando.Trait.Sequenced
+
+    relations do
+      relation :article, :belongs_to, module: Articles.Article
+      relation :category, :belongs_to, module: Articles.Category
+    end
+  end
+  """
+
+  test "reads the `:entries` input's sources, not the modules its file names" do
+    files =
+      files()
+      |> Map.put("lib/lett/articles/article.ex", @koi_article)
+      |> Map.put("lib/lett/articles/article_category.ex", @koi_article_category)
+
+    igniter = migrate(files)
+
+    assert source(igniter, "lib/lett/articles/article_category.ex") =~
+             ~s(plural: "article_categories"\n\n  persist_identifier false\n)
+
+    refute Enum.any?(igniter.warnings, &(&1 =~ "Lett.Articles.ArticleCategory"))
+    refute source(igniter, "lib/lett/articles/article.ex") =~ "persist_identifier"
+
+    # A source written with the file's alias names the join schema.
+    selecting =
+      String.replace(
+        @koi_article,
+        "{__MODULE__, %{preload: [:categories], order: \"asc language, asc sequence\"}}",
+        "{__MODULE__, %{}},\n            Articles.ArticleCategory"
+      )
+
+    igniter = migrate(Map.put(files, "lib/lett/articles/article.ex", selecting))
+    refute source(igniter, "lib/lett/articles/article_category.ex") =~ "persist_identifier"
+
+    assert_has_warning(igniter, fn warning ->
+      warning =~
+        "Lett.Articles.ArticleCategory (lib/lett/articles/article_category.ex): an `:entries` relation or input in lib/lett/articles/article.ex may select it"
+    end)
+  end
+
+  test "resolves sources through a multi-alias and through `__MODULE__`" do
+    producer = blueprint("Producers", "Producer", "producer")
+    featured = blueprint("Articles.Article", "Featured", "featured")
+
+    article =
+      @koi_article
+      |> String.replace(
+        "  alias Lett.Articles\n",
+        "  alias Lett.Articles\n  alias Lett.Producers.{Producer, Farm}\n  alias __MODULE__.Featured\n"
+      )
+      |> String.replace(
+        "{__MODULE__, %{preload: [:categories], order: \"asc language, asc sequence\"}}",
+        "{Producer, %{}},\n            Featured"
+      )
+
+    files =
+      files()
+      |> Map.put("lib/lett/articles/article.ex", article)
+      |> Map.put("lib/lett/producers/producer.ex", producer)
+      |> Map.put("lib/lett/articles/article/featured.ex", featured)
+
+    igniter = migrate(files)
+
+    for {module, path} <- [
+          {"Lett.Producers.Producer", "lib/lett/producers/producer.ex"},
+          {"Lett.Articles.Article.Featured", "lib/lett/articles/article/featured.ex"}
+        ] do
+      refute source(igniter, path) =~ "persist_identifier"
+
+      assert_has_warning(igniter, fn warning ->
+        warning =~ "#{module} (#{path}): an `:entries` relation or input in lib/lett/articles/article.ex may select it"
+      end)
+    end
+
+    # An alias declared above the module, at the file's top level.
+    file_level =
+      "alias Lett.Producers.Producer\n\n" <>
+        String.replace(article, "  alias Lett.Producers.{Producer, Farm}\n", "")
+
+    igniter = migrate(Map.put(files, "lib/lett/articles/article.ex", file_level))
+    refute source(igniter, "lib/lett/producers/producer.ex") =~ "persist_identifier"
+
+    # A later alias of the same name does not reach back: at the top of the
+    # file, and in the module's body after the input.
+    later_alias = file_level <> "\nalias Lett.Archived.Producer\n"
+    igniter = migrate(Map.put(files, "lib/lett/articles/article.ex", later_alias))
+    refute source(igniter, "lib/lett/producers/producer.ex") =~ "persist_identifier"
+
+    in_body =
+      String.replace(article, "  alias Lett.Producers.{Producer, Farm}\n", "  alias Lett.Producers.Producer\n")
+      |> String.replace(~r/\nend\n\z/, "\n\n  alias Lett.Archived.Producer\nend\n")
+
+    igniter = migrate(Map.put(files, "lib/lett/articles/article.ex", in_body))
+    refute source(igniter, "lib/lett/producers/producer.ex") =~ "persist_identifier"
+
+    # An alias the task cannot resolve keeps the Blueprint.
+    unresolved = String.replace(article, "  alias __MODULE__.Featured\n", "  alias unquote(:dynamic).Featured\n")
+    igniter = migrate(Map.put(files, "lib/lett/articles/article.ex", unresolved))
+    refute source(igniter, "lib/lett/articles/article/featured.ex") =~ "persist_identifier"
+  end
+
   test "keeps the advice when it cannot read the router" do
     igniter = migrate(Map.delete(files(), @router_path))
 

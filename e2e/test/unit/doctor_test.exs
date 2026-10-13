@@ -28,7 +28,7 @@ defmodule E2eProject.DoctorTest do
 
     assert Map.keys(checks) |> Enum.sort() ==
              Enum.sort(
-               ~w(versions migrations oban configuration admin_assets admin_routes image_configs modules sitemap robots json_ld alt_text test_database deprecations)
+               ~w(versions node migrations oban configuration admin_assets admin_routes image_configs modules module_entry_paths sitemap robots json_ld alt_text test_database deprecations)
              )
 
     refute Enum.any?(report["checks"], &(&1["summary"] == "could not run")), json

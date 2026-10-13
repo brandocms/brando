@@ -59,34 +59,41 @@ if Code.ensure_loaded?(Igniter) do
     end
 
     @doc """
-    Points Brando at the application's mailer for `mix brando.migrate55`.
-    A configured `config :brando, mailer:` is left alone. The application's
-    one module that does `use Swoosh.Mailer`, whatever its name, or else
-    `<App>.Mailer`, is used as it is; with several, they are listed in a
-    warning and nothing changes. Without one, `ensure/2` creates
-    `<App>.Mailer` and a warning says what is left to set.
+    Points Brando at the application's mailer for `mix brando.migrate54`
+    and `mix brando.migrate55`. A configured `config :brando, mailer:` is
+    left alone. The application's one module that does `use Swoosh.Mailer`,
+    whatever its name, or else `<App>.Mailer`, is used as it is; with
+    several, they are listed in a warning and nothing changes. Without one,
+    `ensure/2` creates `<App>.Mailer` and a warning says what is left to
+    set. Unless several mailers leave the choice open, a placeholder sender
+    is written when none is set.
     """
     def configure_for_upgrade(igniter) do
       app_module = ProjectModule.module_name_prefix(igniter)
       mailer = Module.concat(app_module, "Mailer")
 
       if brando_mailer_configured?(igniter) do
-        igniter
+        put_placeholder_sender(igniter, app_module)
       else
         {igniter, mailers} = swoosh_mailers(igniter)
         use_mailer(igniter, mailers, app_module, mailer)
       end
     end
 
-    defp use_mailer(igniter, [existing], _app_module, _mailer),
-      do: SourceUpgrade.configure_brando_mailer(igniter, existing)
+    # A sender goes in with the mailer: `mix brando.doctor` asks for one, and
+    # each later edit of Brando's config recompiles Brando.
+    defp use_mailer(igniter, [existing], app_module, _mailer) do
+      igniter
+      |> SourceUpgrade.configure_brando_mailer(existing)
+      |> put_placeholder_sender(app_module)
+    end
 
     defp use_mailer(igniter, [_ | _] = mailers, _app_module, _mailer),
       do: Igniter.add_warning(igniter, several_warning(mailers))
 
     defp use_mailer(igniter, [], app_module, mailer) do
       if match?({true, _igniter}, ProjectModule.module_exists(igniter, mailer)),
-        do: SourceUpgrade.configure_brando_mailer(igniter, mailer),
+        do: igniter |> SourceUpgrade.configure_brando_mailer(mailer) |> put_placeholder_sender(app_module),
         else: create_for_upgrade(igniter, app_module)
     end
 
@@ -166,6 +173,9 @@ if Code.ensure_loaded?(Igniter) do
         Enum.any?(@sender_files, &Config.configures_key?(igniter, &1, :brando, [Brando.Mailer, :from])) ->
           igniter
 
+        sender_written?(igniter) ->
+          igniter
+
         sender_file(igniter) == "brando.exs" ->
           Igniter.update_file(igniter, "config/brando.exs", fn source ->
             Rewrite.Source.update(source, :content, &(String.trim_trailing(&1) <> "\n\n" <> @sender_comment <> sender))
@@ -176,6 +186,47 @@ if Code.ensure_loaded?(Igniter) do
           Config.configure_new(igniter, "config.exs", :brando, [Brando.Mailer, :from], {:code, sender})
       end
     end
+
+    # Read in the order production loads them; development and test config
+    # is not what production sends from.
+    @production_config ~w(config.exs brando.exs prod.exs runtime.exs)
+
+    @doc """
+    Whether the address Brando sends from in production is still to be set:
+    the last sender the production config files set (config.exs, brando.exs,
+    prod.exs, then runtime.exs) is missing or on a domain reserved for
+    examples, like the placeholder the tasks write.
+    """
+    def sender_to_set?(igniter) do
+      igniter = Igniter.include_glob(igniter, "config/*.exs")
+
+      @production_config
+      |> Enum.map(&"config/#{&1}")
+      |> Enum.filter(&Rewrite.has_source?(igniter.rewrite, &1))
+      |> Enum.flat_map(fn path ->
+        content = igniter.rewrite |> Rewrite.source!(path) |> Rewrite.Source.get(:content)
+        Regex.scan(~r/\bBrando\.Mailer\s*,[^)]*?\bfrom:([^\n]*)/s, content, capture: :all_but_first)
+      end)
+      |> List.last()
+      |> case do
+        nil -> true
+        [from] -> from =~ ~r/@(?:[^@"\s]+\.)?(?:example\.(?:com|org|net)|example)"/i
+      end
+    end
+
+    defp config_contents(igniter) do
+      igniter = Igniter.include_glob(igniter, "config/*.exs")
+
+      igniter.rewrite
+      |> Rewrite.sources()
+      |> Enum.filter(&(Path.dirname(&1.path) == "config" and Path.extname(&1.path) == ".exs"))
+      |> Enum.map(&Rewrite.Source.get(&1, :content))
+    end
+
+    # `configures_key?/4` reads top-level `config` calls only; a sender set
+    # inside `if config_env() == :prod do` in runtime.exs is one too.
+    defp sender_written?(igniter),
+      do: igniter |> config_contents() |> Enum.any?(&(&1 =~ ~r/\bBrando\.Mailer\s*,[^)]*?\bfrom:/s))
 
     defp sender_file(igniter), do: if(Igniter.exists?(igniter, "config/brando.exs"), do: "brando.exs", else: "config.exs")
   end

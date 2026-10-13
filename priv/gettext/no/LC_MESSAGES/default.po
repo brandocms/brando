@@ -8187,6 +8187,11 @@ msgstr "Bilder og videoer"
 msgid "Images matching “%{query}”"
 msgstr "Bilder som passer til «%{query}»"
 
+#: lib/brando_admin/components/image_picker.ex
+#, elixir-autogen, elixir-format
+msgid "Images to choose from"
+msgstr "Bilder å velge fra"
+
 #: lib/brando_admin/components/form/input/gallery.ex
 #, elixir-autogen, elixir-format
 msgid "Images up to %{image_size} · Videos up to %{video_size} each"
@@ -10509,6 +10514,11 @@ msgstr "Ikke noe bilde"
 msgid "No image associated with field"
 msgstr "Inget bilde knyttet til feltet"
 
+#: lib/brando_admin/live/sites/utils_live.ex
+#, elixir-autogen, elixir-format
+msgid "No image files found under %{path}. Is the media synced to this server?"
+msgstr "Fant ingen bildefiler under %{path}. Er mediene synkronisert til denne serveren?"
+
 #: lib/brando_admin/components/image_picker.ex
 #, elixir-autogen, elixir-format
 msgid "No images in this folder"
@@ -11571,6 +11581,11 @@ msgstr "Bare bilder laget med eldre innstillinger lages på nytt. Dette kjører 
 #, elixir-autogen, elixir-format
 msgid "Only images set up for this field. The rest of the library is cut to other sizes and is not offered here."
 msgstr "Kun bilder som er satt opp for dette feltet. Resten av biblioteket er beskåret til andre størrelser og tilbys ikke her."
+
+#: lib/brando_admin/components/image_picker.ex
+#, elixir-autogen, elixir-format
+msgid "Only images set up for this field. Whole library offers the rest, cut to this field's sizes when you pick one."
+msgstr "Kun bilder som er satt opp for dette feltet. Under Hele biblioteket finner du resten, og de beskjæres til feltets størrelser når du velger ett."
 
 #: lib/brando_admin/components/module_files.ex
 #, elixir-autogen, elixir-format
@@ -15189,6 +15204,11 @@ msgstr "Lagre passord"
 msgid "Set up"
 msgstr "Sett opp"
 
+#: lib/brando_admin/components/image_picker.ex
+#, elixir-autogen, elixir-format
+msgid "Set up for this field"
+msgstr "Satt opp for dette feltet"
+
 #: lib/brando_admin/live/mcp/consent_live.ex
 #: lib/brando_admin/live/user_two_factor_setup_live.ex
 #: lib/brando_admin/live/users/user_security_live.ex
@@ -15407,6 +15427,11 @@ msgstr "Vis innebygde spillerkontroller"
 #, elixir-autogen, elixir-format
 msgid "Show older activity"
 msgstr "Vis eldre aktivitet"
+
+#: lib/brando_admin/components/image_picker.ex
+#, elixir-autogen, elixir-format
+msgid "Show the whole library"
+msgstr "Vis hele biblioteket"
 
 #: lib/brando_admin/components/form/notes_drawer.ex
 #, elixir-autogen, elixir-format
@@ -16672,6 +16697,11 @@ msgstr "Frontenden som følger med gjeldende release, er aktiv til Florist regis
 msgid "The host name could not be found"
 msgstr "Vertsnavnet ble ikke funnet"
 
+#: lib/brando_admin/components/image_picker.ex
+#, elixir-autogen, elixir-format
+msgid "The image could not be copied for this field"
+msgstr "Bildet kunne ikke kopieres til dette feltet"
+
 #: lib/brando/ai.ex
 #, elixir-autogen, elixir-format
 msgid "The image file could not be read"
@@ -16686,6 +16716,11 @@ msgstr "Bildet er i et format KI-modellen ikke kan lese"
 #, elixir-autogen, elixir-format
 msgid "The image this content type shares, as it is shared."
 msgstr "Bildet denne innholdstypen deler, slik det deles."
+
+#: lib/brando_admin/components/image_picker.ex
+#, elixir-autogen, elixir-format
+msgid "The image was not set: the picker was opened for another field before its copy was ready"
+msgstr "Bildet ble ikke satt inn: bildevelgeren ble åpnet for et annet felt før kopien var klar"
 
 #: lib/brando_admin/live/sites/scheduled_publishing_live.ex
 #, elixir-autogen, elixir-format
@@ -17066,6 +17101,11 @@ msgstr "Teksten ble endret mens dialogen var åpen. Avbryt og velg teksten på n
 msgid "The text is marked when you save the entry."
 msgstr "Teksten blir merket når du lagrer oppføringen."
 
+#: lib/brando_admin/components/form.ex
+#, elixir-autogen, elixir-format
+msgid "The thumbnail was set on the video it was picked for"
+msgstr "Miniatyrbildet ble satt på videoen det ble valgt for"
+
 #: lib/brando_admin/components/form/meta_drawer.ex
 #, elixir-autogen, elixir-format
 msgid "The title, description and image that search engines and social media show for this entry."
@@ -17110,6 +17150,11 @@ msgstr "Webhooken var satt på pause"
 #, elixir-autogen, elixir-format
 msgid "The webhook was saved."
 msgstr "Webhooken ble lagret."
+
+#: lib/brando_admin/components/image_picker.ex
+#, elixir-autogen, elixir-format
+msgid "The whole library. An image set up for another field is copied and cut to this field's sizes when you pick it."
+msgstr "Hele biblioteket. Et bilde som er satt opp for et annet felt, kopieres og beskjæres til dette feltets størrelser når du velger det."
 
 #: lib/brando_admin/components/form/block/render.ex
 #, elixir-autogen, elixir-format
@@ -18162,8 +18207,8 @@ msgstr "Angre forslaget? Hver oppføring går tilbake til slik den var, og nye o
 
 #: lib/brando_admin/components/shortcut_sheet.ex
 #, elixir-autogen, elixir-format
-msgid "Undo typing"
-msgstr "Angre skriving"
+msgid "Undo typing, or else the last block moved or deleted"
+msgstr "Angre skriving, ellers siste blokk som ble flyttet eller slettet"
 
 #: lib/brando_admin/live/ai/assistant_live.ex
 #, elixir-autogen, elixir-format
@@ -18499,6 +18544,11 @@ msgstr "Last opp medier"
 #, elixir-autogen, elixir-format
 msgid "Upload media or choose from your library."
 msgstr "Last opp medier eller velg fra biblioteket ditt."
+
+#: lib/brando_admin/components/image_picker.ex
+#, elixir-autogen, elixir-format
+msgid "Upload one here, or pick one from the whole library to have it cut to this field's sizes."
+msgstr "Last opp et bilde her, eller velg et fra hele biblioteket, så beskjæres det til dette feltets størrelser."
 
 #: lib/brando_admin/components/assets/media_field.ex
 #: lib/brando_admin/components/form/transformer.ex
@@ -19226,6 +19276,11 @@ msgstr "Hvem som må bruke tofaktorautentisering. Gjelder alle nettsteder i denn
 #, elixir-autogen, elixir-format
 msgid "Whole entry"
 msgstr "Hele oppføringen"
+
+#: lib/brando_admin/components/image_picker.ex
+#, elixir-autogen, elixir-format
+msgid "Whole library"
+msgstr "Hele biblioteket"
 
 #: lib/brando_admin/components/form/input/form_fields.ex
 #: lib/brando_admin/components/form/input/render_var.ex

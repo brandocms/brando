@@ -10,7 +10,9 @@ if Code.ensure_loaded?(Igniter) do
     # form. A FormLive routed in a plain `scope "/menu", App.Menu do`, whose
     # routes are all that domain's admin LiveViews, gets its own helpers from
     # `as: :menu` on the scope, and the Blueprints routed there follow them
-    # with `router_scope: :menu`. Anything else is left for the developer.
+    # with `router_scope: :menu`. Flat routes, the generated 0.53 shape, are
+    # wrapped in a new scope (`plan_flat/6`). Anything else is left for the
+    # developer.
 
     alias Igniter.Code.Common
     alias Igniter.Code.Function, as: CodeFunction
@@ -45,7 +47,8 @@ if Code.ensure_loaded?(Igniter) do
           end
         end)
 
-      plans = plans |> Map.values() |> Enum.sort_by(&{&1.router, &1.line})
+      {plans, refused} = plan_flat(igniter, pairs, Map.values(plans), refused, {routers, scopes}, sources)
+      plans = Enum.sort_by(plans, &{&1.router, &1.line})
       {Enum.reduce(plans, igniter, &apply_scope(&2, &1)), plans, refused}
     end
 
@@ -274,7 +277,259 @@ if Code.ensure_loaded?(Igniter) do
       Enum.any?(shorts, &(call =~ ~r/\b#{&1}\b/))
     end
 
+    ## Flat routes
+
+    # The generated 0.53 router listed every domain's routes flat in
+    # `admin_routes`. When two or more FormLives of a group still share a
+    # helper after the plain scopes, each whose routes are adjacent lines of
+    # their own (the FormLive's, and its ListLive's) is wrapped in a new
+    # `scope "<common path>", App.Domain, as: :domain do`. Lines with other
+    # routes between them are left: moving them could change which route
+    # matches first.
+    defp plan_flat(igniter, pairs, plans, refused, {routers, scopes}, sources) do
+      planned = for plan <- plans, form <- plan.forms, do: form
+
+      {plans, refused} =
+        pairs
+        |> Enum.reject(&(&1.form in planned))
+        |> Enum.group_by(&(&1.form |> Module.split() |> List.last()))
+        |> Enum.filter(fn {_short, group} -> match?([_, _ | _], group) end)
+        |> Enum.flat_map(&elem(&1, 1))
+        |> Enum.filter(&match?({:error, _}, find_scope(scopes, &1.form)))
+        |> Enum.reduce({plans, refused}, fn pair, {plans, refused} ->
+          case plan_flat_pair(igniter, pair, pairs, routers, sources) do
+            {:ok, plan} -> {[plan | plans], Map.delete(refused, pair.form)}
+            {:error, reasons} -> {plans, Map.put(refused, pair.form, reasons)}
+          end
+        end)
+
+      {shift_lines(plans), refused}
+    end
+
+    defp plan_flat_pair(igniter, pair, pairs, routers, sources) do
+      namespace = pair.form |> Module.split() |> Enum.drop(-1)
+      modules = [pair.form, Module.concat([pair.base <> "ListLive"])]
+
+      with {:ok, router, routes} <- flat_routes(igniter, routers, modules),
+           {:ok, scope} <- flat_scope(router, routes),
+           {:ok, schemas} <- schemas(scope, pairs, sources),
+           :ok <- blueprints(igniter, schemas),
+           :ok <- unreferenced(scope, sources) do
+        name = namespace |> List.last() |> Macro.underscore()
+        {:ok, Map.merge(scope, %{name: name, schemas: schemas, forms: [pair.form]})}
+      end
+    end
+
+    # `{zipper, inventory}` of each route to `modules`, when they are
+    # adjacent statements of one block outside any scope with `as:`.
+    defp flat_routes(igniter, routers, modules) do
+      found =
+        for router <- routers,
+            zipper <- router |> quoted_router(igniter) |> Common.find_all(&live_call?/1),
+            [%{module: module} = route] <- [RouteInventory.at(zipper)],
+            module in modules,
+            do: {router, zipper, route}
+
+      parents =
+        found |> Enum.map(fn {_router, zipper, _route} -> zipper |> Zipper.up() |> Zipper.node() end) |> Enum.uniq()
+
+      cond do
+        found == [] ->
+          {:error, ["its routes were not found"]}
+
+        found |> Enum.map(&elem(&1, 0)) |> Enum.uniq() |> length() > 1 ->
+          {:error, ["its routes are in more than one router"]}
+
+        Enum.any?(found, fn {_router, zipper, _route} -> named_ancestor?(zipper) end) ->
+          {:error, ["its routes are in a scope that already names its helpers with `as:`"]}
+
+        not match?([{:__block__, _, statements}] when is_list(statements), parents) ->
+          {:error, ["its routes are not lines of the same block"]}
+
+        not adjacent?(hd(parents), Enum.map(found, &(&1 |> elem(1) |> Zipper.node()))) ->
+          {:error, ["other routes stand between its routes, so moving them could change which route matches"]}
+
+        true ->
+          [{router, _zipper, _route} | _] = found
+          {:ok, router, Enum.map(found, fn {_router, zipper, route} -> {Zipper.node(zipper), route} end)}
+      end
+    end
+
+    defp quoted_router(router, igniter),
+      do: igniter.rewrite |> Rewrite.source!(router) |> Source.get(:quoted) |> Zipper.zip()
+
+    defp adjacent?({:__block__, _, statements}, nodes) do
+      indexes = nodes |> Enum.map(fn node -> Enum.find_index(statements, &(&1 == node)) end) |> Enum.sort()
+      nil not in indexes and indexes == Enum.to_list(hd(indexes)..(hd(indexes) + length(indexes) - 1))
+    end
+
+    # The scope's path is what the routes' paths share, and its namespace
+    # what their modules are written with.
+    defp flat_scope(router, routes) do
+      moves = Enum.map(routes, fn {node, _route} -> flat_move(node) end)
+
+      with nil <- Enum.find(moves, &match?({:error, _}, &1)),
+           moves = Enum.map(moves, &elem(&1, 1)),
+           [namespace] <- moves |> Enum.map(& &1.namespace) |> Enum.uniq(),
+           [_ | _] = prefix <- common_prefix(Enum.map(moves, & &1.segments)) do
+        path = "/" <> Enum.join(prefix, "/")
+        moves = Enum.map(moves, &Map.put(&1, :inner, inner_path(&1.segments, length(prefix))))
+        code = "scope #{inspect(path)}, #{namespace}"
+        {first, _route} = hd(routes)
+
+        {:ok,
+         %{
+           kind: :flat,
+           key: {router, code},
+           router: router,
+           line: Sourceror.get_line(first),
+           code: code,
+           routes: Enum.map(routes, &elem(&1, 1)),
+           moves: moves
+         }}
+      else
+        {:error, reason} -> {:error, [reason]}
+        [] -> {:error, ["its routes share no path"]}
+        _namespaces -> {:error, ["its routes do not name their LiveViews with the same namespace"]}
+      end
+    end
+
+    defp flat_move({:live, _, [{:__block__, _, [path]}, {:__aliases__, _, [_, _ | _] = parts} | rest]})
+         when is_binary(path) do
+      if Enum.all?(parts, &is_atom/1) and hd(parts) != :"Elixir" do
+        {namespace, [short]} = Enum.split(parts, -1)
+
+        {:ok,
+         %{
+           path: path,
+           written: Enum.join(parts, "."),
+           namespace: Enum.join(namespace, "."),
+           short: to_string(short),
+           segments: String.split(path, "/", trim: true),
+           rest: Enum.map(rest, &Sourceror.to_string/1)
+         }}
+      else
+        {:error, "a route names its LiveView in a way the task cannot rewrite"}
+      end
+    end
+
+    defp flat_move(_node), do: {:error, "a route names its LiveView without its domain namespace"}
+
+    defp common_prefix([first | rest]) do
+      Enum.reduce(rest, first, fn segments, prefix ->
+        prefix |> Enum.zip(segments) |> Enum.take_while(fn {left, right} -> left == right end) |> Enum.map(&elem(&1, 0))
+      end)
+    end
+
+    defp inner_path(segments, depth) do
+      case Enum.drop(segments, depth) do
+        [] -> "/"
+        rest -> "/" <> Enum.join(rest, "/")
+      end
+    end
+
+    # Each wrapped group gains a `scope` and an `end` line.
+    defp shift_lines(plans) do
+      {plans, _shifts} =
+        plans
+        |> Enum.sort_by(&{&1.router, &1.line})
+        |> Enum.map_reduce(%{}, fn plan, shifts ->
+          shift = Map.get(shifts, plan.router, 0)
+          plan = %{plan | line: plan.line + shift}
+
+          if Map.get(plan, :kind) == :flat,
+            do: {plan, Map.put(shifts, plan.router, shift + 2)},
+            else: {plan, shifts}
+        end)
+
+      plans
+    end
+
+    # The routes' lines are rewritten as text, so the comments and blank
+    # lines between them, and a comment at the end of a route's line, stay
+    # where they were; a comment above the first route stays above the scope.
+    defp wrap_flat(content, scope) do
+      lines = String.split(content, "\n")
+
+      ranges =
+        content
+        |> Sourceror.parse_string!()
+        |> Zipper.zip()
+        |> Common.find_all(&live_call?/1)
+        |> Enum.flat_map(fn zipper ->
+          node = Zipper.node(zipper)
+
+          case Enum.find(scope.moves, &moved_route?(node, &1)) do
+            nil -> []
+            move -> [{Sourceror.get_range(node), move}]
+          end
+        end)
+        |> Enum.sort_by(fn {range, _move} -> range.start[:line] end)
+
+      if length(ranges) == length(scope.moves) do
+        first = ranges |> Enum.map(fn {range, _move} -> range.start[:line] end) |> Enum.min()
+        last = ranges |> Enum.map(fn {range, _move} -> range.end[:line] end) |> Enum.max()
+        indent = lines |> Enum.at(first - 1) |> leading_whitespace()
+
+        wrapped =
+          ["#{indent}#{scope.code}, as: :#{scope.name} do"] ++
+            wrapped_lines(lines, first, last, ranges, indent <> "  ") ++ ["#{indent}end"]
+
+        Enum.join(Enum.take(lines, first - 1) ++ wrapped ++ Enum.drop(lines, last), "\n")
+      else
+        content
+      end
+    end
+
+    defp wrapped_lines(lines, first, last, ranges, indent) do
+      starts = Map.new(ranges, fn {range, move} -> {range.start[:line], {range, move}} end)
+
+      first
+      |> Stream.unfold(fn
+        number when number > last ->
+          nil
+
+        number ->
+          case Map.fetch(starts, number) do
+            {:ok, {range, move}} -> {route_line(lines, range, move, indent), range.end[:line] + 1}
+            :error -> {kept_line(Enum.at(lines, number - 1), indent), number + 1}
+          end
+      end)
+      |> Enum.to_list()
+    end
+
+    defp route_line(lines, range, move, indent) do
+      route = Enum.join(["live #{inspect(move.inner)}", move.short | move.rest], ", ")
+      # What follows the route on its last line: an end-of-line comment.
+      rest = lines |> Enum.at(range.end[:line] - 1) |> String.slice((range.end[:column] - 1)..-1//1)
+      indent <> route <> if(rest =~ ~r/^\s*#/, do: rest, else: "")
+    end
+
+    defp kept_line(line, indent) do
+      if String.trim(line) == "", do: "", else: indent <> String.trim_leading(line)
+    end
+
+    defp leading_whitespace(line), do: line |> String.split(~r/\S/, parts: 2) |> hd()
+
+    defp moved_route?(node, move) do
+      case node do
+        {:live, _, [{:__block__, _, [path]}, {:__aliases__, _, parts} | _]} ->
+          path == move.path and Enum.join(parts, ".") == move.written
+
+        _node ->
+          false
+      end
+    end
+
     ## Rewrite
+
+    defp apply_scope(igniter, %{kind: :flat} = scope) do
+      name = Sourceror.parse_string!(":" <> scope.name)
+
+      igniter
+      |> Igniter.update_file(scope.router, &Source.update(&1, :content, fn content -> wrap_flat(content, scope) end))
+      |> set_router_scopes(scope, name)
+    end
 
     defp apply_scope(igniter, scope) do
       name = Sourceror.parse_string!(":" <> scope.name)
@@ -283,10 +538,12 @@ if Code.ensure_loaded?(Igniter) do
       |> Igniter.update_elixir_file(scope.router, fn zipper ->
         Common.update_all_matches(zipper, &scope_at?(&1, scope.code), &add_as(&1, name))
       end)
-      |> then(fn igniter ->
-        Enum.reduce(scope.schemas, igniter, fn schema, igniter ->
-          ProjectModule.find_and_update_module!(igniter, schema, &set_router_scope(&1, name))
-        end)
+      |> set_router_scopes(scope, name)
+    end
+
+    defp set_router_scopes(igniter, scope, name) do
+      Enum.reduce(scope.schemas, igniter, fn schema, igniter ->
+        ProjectModule.find_and_update_module!(igniter, schema, &set_router_scope(&1, name))
       end)
     end
 

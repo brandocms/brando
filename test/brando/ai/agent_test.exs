@@ -16,6 +16,14 @@ defmodule Brando.AI.AgentTest do
     Brando.Content.create_identifier(Page, c.identity)
     {:ok, conversation} = Agent.start_conversation(c.user)
     put_config([])
+
+    # A run still working when its test ends would write into the next test's
+    # shared sandbox.
+    on_exit(fn ->
+      for pid <- Task.Supervisor.children(Brando.AI.Agent.Supervisor),
+          do: Task.Supervisor.terminate_child(Brando.AI.Agent.Supervisor, pid)
+    end)
+
     Map.put(c, :conversation, conversation)
   end
 

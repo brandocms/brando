@@ -8,6 +8,7 @@ defmodule Brando.Villain.TemplateAdapter.Heex do
 
   @behaviour Brando.Villain.TemplateAdapter
 
+  alias Brando.Datasource
   alias Brando.Villain.HeexRenderer
   alias Brando.Villain.TemplateAdapter
 
@@ -138,17 +139,23 @@ defmodule Brando.Villain.TemplateAdapter.Heex do
           |> map_vars()
           |> Map.merge(%{"request" => request})
 
-        {:ok, entries} = Brando.Datasource.list_results(ds_module, query, mapped_vars, language)
+        {:ok, entries} = Datasource.list_results(ds_module, query, mapped_vars, language, :list)
         Map.put(assigns, :entries, entries || [])
 
       %{datasource: true, datasource_type: :selection, datasource_module: ds_module, datasource_query: query} ->
         identifier_ids = Enum.map(block.block_identifiers, & &1.identifier_id)
-        {:ok, entries} = Brando.Datasource.get_selection(ds_module, query, identifier_ids)
+        {:ok, entries} = Datasource.get_selection(ds_module, query, identifier_ids)
         entries_with_meta = Brando.Villain.Parser.add_meta_to_entries(entries, block)
 
         assigns
         |> Map.put(:entries, entries || [])
         |> Map.put(:entries_with_meta, entries_with_meta || [])
+
+      # The one entry chosen for a `:single` block, as `entries`.
+      %{datasource: true, datasource_type: :single, datasource_module: ds_module, datasource_query: query} ->
+        ids = block.block_identifiers |> Enum.sort_by(&(&1.sequence || 0)) |> Enum.map(& &1.identifier_id)
+        {:ok, entries} = Datasource.get_single_entries(ds_module, query, ids)
+        Map.put(assigns, :entries, entries)
 
       _ ->
         Map.put(assigns, :entries, [])

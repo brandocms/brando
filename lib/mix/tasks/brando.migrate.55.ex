@@ -8,8 +8,15 @@ if Code.ensure_loaded?(Igniter) do
     alias Mix.Brando.Igniter.Mailer
     alias Mix.Brando.Igniter.PersistIdentifiers
     alias Mix.Brando.Igniter.SourceUpgrade
+    alias Mix.Brando.Igniter.SourceUpgrade.BlueprintCompileFixes
     alias Mix.Brando.Igniter.SourceUpgrade.BlueprintGettext
+    alias Mix.Brando.Igniter.SourceUpgrade.Dashboard
+    alias Mix.Brando.Igniter.SourceUpgrade.EntriesFromIdentifiers
+    alias Mix.Brando.Igniter.SourceUpgrade.EntriesReads
     alias Mix.Brando.Igniter.SourceUpgrade.ListOrder
+    alias Mix.Brando.Igniter.SourceUpgrade.PoHeaders
+    alias Mix.Brando.Igniter.SourceUpgrade.RedundantComponentUse
+    alias Mix.Brando.Igniter.SourceUpgrade.ReloadableApps
     alias Mix.Brando.Igniter.SourceUpgrade.TestEnvironment
     alias Mix.Brando.Igniter.SourceUpgrade.VideoMarkup
     alias Mix.Brando.Igniter.UpgradeOrder
@@ -37,8 +44,14 @@ if Code.ensure_loaded?(Igniter) do
     Gettext domains into the domain 0.55 extracts to, along with the `default`
     domain's translations of the Blueprint's `t/1` labels, sets
     `persist_identifier false` on Blueprints with no admin editor, completes
-    `Plural-Forms` headers Gettext 1.0 warns about, and retires the
+    `Plural-Forms` headers Gettext 1.0 warns about (including a rule that ran
+    into the next header line for want of its `\\n`), and retires the
     consumer-owned `brando.upgrade` task that 0.54 installed.
+
+    An endpoint `reloadable_apps` list that names a dependency (`[:my_app,
+    :brando]`) is removed, so Phoenix's default reloads the application
+    alone: with Brando listed, every development request checks Brando's
+    sources.
 
     Calls to the application's `list_<plural>/1` queries whose options order
     a Sequenced Blueprint only by `sequence` get the admin listing's
@@ -77,6 +90,8 @@ if Code.ensure_loaded?(Igniter) do
 
     def igniter(igniter) do
       igniter
+      # First, so it reports the lines as they are in the files.
+      |> BlueprintCompileFixes.rewrite()
       |> SourceUpgrade.rewrite_blueprints(&SourceUpgrade.add_listing_component_imports/1)
       |> SourceUpgrade.update_villain_parsers()
       |> SourceUpgrade.rename_moved_modules()
@@ -90,12 +105,18 @@ if Code.ensure_loaded?(Igniter) do
       |> SourceUpgrade.refresh_gettext_script()
       |> SourceUpgrade.carry_blueprint_translations()
       |> BlueprintGettext.carry_default_translations()
+      |> PoHeaders.split_joined_lines()
       |> SourceUpgrade.complete_plural_forms_headers()
       |> SourceUpgrade.warn_image_text_reads()
+      |> EntriesReads.warn()
       |> PersistIdentifiers.update()
       |> VideoMarkup.warn_video_data_src_reads()
       |> ListOrder.order_list_queries()
       |> TestEnvironment.warn_test_hazards()
+      |> ReloadableApps.drop_dependencies()
+      |> Dashboard.replace_installer_dashboard()
+      |> RedundantComponentUse.remove()
+      |> EntriesFromIdentifiers.rewrite()
       |> SourceUpgrade.start_endpoint_last()
       |> Mix.Brando.Igniter.Upgrade.prepare()
       |> add_notices()
@@ -160,6 +181,19 @@ if Code.ensure_loaded?(Igniter) do
       """)
     end
 
+    defp sender_step(igniter) do
+      if Mailer.sender_to_set?(igniter) do
+        """
+        Set the address it sends from, which the
+            mail provider must accept, in place of the
+            `noreply@example.com` placeholder: `config :brando, Brando.Mailer, from: {"My site", "noreply@my-site.com"}`,
+            and the mailer's production adapter in `config/runtime.exs`.\
+        """
+      else
+        "Configure the mailer's production adapter in `config/runtime.exs`."
+      end
+    end
+
     defp add_warnings(igniter) do
       Igniter.add_warning(igniter, """
       Manual 0.55 decisions remain:
@@ -173,9 +207,10 @@ if Code.ensure_loaded?(Igniter) do
         * Table, primary-key, and existing column-level primary-key changes are
           never inferred. Write the Ecto migration, verify the live schema, then
           use the documented Blueprint `--rebaseline` workflow.
-        * Update code that traverses generated `*_identifiers` associations for
-          `:entries` relations. The relation now exposes its join entries
-          directly, and application query/preload intent cannot be inferred.
+        * Update code that reads an `:entries` relation: it holds join rows
+          with the picked entries' identifiers, not the identifiers, and the
+          generated `*_identifiers` associations are gone. The reads found are
+          listed with the fix; which entries to load is the application's call.
         * The task pins declared `phoenix_live_view` dependencies in
           `assets/**/package.json` to the loaded server version. Review any
           nonstandard frontend manifest, refresh the package-manager lockfile,
@@ -195,10 +230,7 @@ if Code.ensure_loaded?(Igniter) do
           modules and there is no safe target schema the task can choose.
         * Brando now sends email through the application's Swoosh mailer
           (`config :brando, mailer: MyApp.Mailer`; this task creates one when
-          the application has none). Set the address it sends from, which the
-          mail provider must accept, in place of any `noreply@example.com`
-          placeholder: `config :brando, Brando.Mailer, from: {"My site", "noreply@my-site.com"}`,
-          and the mailer's production adapter in `config/runtime.exs`.
+          the application has none). #{sender_step(igniter)}
         * Fabric deployments must ensure the application database role owns the
           `oban_job_state` enum before `brando_153` upgrades Oban to v14. Follow
           the changelog's updated `grant_db`/`ALTER TYPE ... OWNER TO` procedure.

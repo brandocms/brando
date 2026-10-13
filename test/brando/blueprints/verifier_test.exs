@@ -1136,6 +1136,233 @@ defmodule Brando.Blueprint.VerifierTest do
     assert_form_error(blueprint.(nil), ~r/listing style requires a listing function component/)
   end
 
+  defmodule Tagging do
+    use Brando.Blueprint,
+      application: "Brando",
+      domain: "VerifierTest",
+      schema: "Tagging",
+      singular: "tagging",
+      plural: "taggings",
+      gettext_module: Brando.Gettext
+
+    relations do
+      relation :media_item, :belongs_to, module: Brando.Blueprint.VerifierTest.MediaItem
+    end
+  end
+
+  describe "multi_select on a has_many relation" do
+    defp multi_select_blueprint(options) do
+      tagging = Tagging
+
+      quote do
+        relations do
+          relation :taggings, :has_many, module: unquote(tagging)
+        end
+
+        forms do
+          form do
+            tab "Content" do
+              fieldset do
+                input :taggings, :multi_select, unquote([{:options, []} | options])
+              end
+            end
+          end
+        end
+      end
+    end
+
+    test "needs relation:, and the error names the belongs_to it should be" do
+      error =
+        assert_raise Spark.Error.DslError,
+                     ~r/input :taggings, :multi_select on the :has_many relation :taggings needs `relation:`/,
+                     fn -> compile_blueprint(multi_select_blueprint(relation_key: :media_item_id)) end
+
+      assert Exception.message(error) =~ "Add `relation: :media_item`"
+      assert Exception.message(error) =~ "forms -> default -> taggings"
+    end
+
+    test "needs relation_key:" do
+      assert_raise Spark.Error.DslError, ~r/needs `relation_key:`.*`relation_key: :media_item_id`/s, fn ->
+        compile_blueprint(multi_select_blueprint(relation: :media_item))
+      end
+    end
+
+    test "compiles with both" do
+      module = compile_blueprint(multi_select_blueprint(relation_key: :media_item_id, relation: :media_item))
+      assert :ok = Brando.Blueprint.Forms.Verifier.verify(module.spark_dsl_config())
+    end
+
+    test "is checked in inputs_for once the subform's schema has compiled" do
+      tagging = Tagging
+
+      parent =
+        compile_blueprint(
+          quote do
+            relations do
+              relation :taggings, :has_many, module: unquote(tagging)
+            end
+          end
+        )
+
+      assert_form_error(
+        quote do
+          relations do
+            relation :parents, :has_many, module: unquote(parent)
+          end
+
+          forms do
+            form do
+              tab "Content" do
+                fieldset do
+                  inputs_for :parents do
+                    cardinality :many
+                    input :taggings, :multi_select, options: [], relation_key: :media_item_id
+                  end
+                end
+              end
+            end
+          end
+        end,
+        ~r/input :taggings, :multi_select on the :has_many relation :taggings needs `relation:`/
+      )
+    end
+  end
+
+  describe "entries sources" do
+    defp entries_blueprint(sources) do
+      quote do
+        attributes do
+          attribute :title, :string
+        end
+
+        relations do
+          relation :related_entries, :entries
+        end
+
+        forms do
+          form do
+            tab "Content" do
+              fieldset do
+                input :related_entries, :entries, sources: unquote(Macro.escape(sources))
+              end
+            end
+          end
+        end
+      end
+    end
+
+    test "rejects options identifiers do not have, as a 0.53 `for:` carried over" do
+      error =
+        assert_raise Spark.Error.DslError,
+                     ~r/input :related_entries, :entries has `sources:` options for .*MediaItem that the identifiers it lists do not take/,
+                     fn ->
+                       compile_blueprint(
+                         entries_blueprint([{MediaItem, %{preload: [:categories], order: "asc language, asc sequence"}}])
+                       )
+                     end
+
+      message = Exception.message(error)
+      assert message =~ "`preload: [:categories]`"
+      assert message =~ "`order` by sequence"
+      assert message =~ ~s(%{order: "asc language"})
+    end
+
+    test "rejects keys the identifier query does not run" do
+      assert_raise Spark.Error.DslError, ~r/`filter: %\{title: "x"\}`/, fn ->
+        compile_blueprint(entries_blueprint([{MediaItem, %{filter: %{title: "x"}}}]))
+      end
+    end
+
+    test "rejects an order through an association, which identifiers do not have" do
+      for order <- ["asc cover.path", [{:asc, {:cover, :path}}], {:desc, {:status, :x, :y}}] do
+        assert_raise Spark.Error.DslError, ~r/`order` by (cover\.path|status\.x\.y)/, fn ->
+          compile_blueprint(entries_blueprint([{MediaItem, %{order: order}}]))
+        end
+      end
+    end
+
+    test "rejects a select:, which leaves out fields the picker reads" do
+      for select <- [{:struct, [:id, :title]}, [:id, :title, :entry_id, :schema]] do
+        assert_raise Spark.Error.DslError, ~r/`select: /, fn ->
+          compile_blueprint(entries_blueprint([{MediaItem, %{select: select}}]))
+        end
+      end
+    end
+
+    test "rejects a select: of columns identifiers do not have" do
+      assert_raise Spark.Error.DslError, ~r/`select: \[:id, :sequence\]`/, fn ->
+        compile_blueprint(entries_blueprint([{MediaItem, %{select: [:id, :sequence]}}]))
+      end
+    end
+
+    test "checks sources: in inputs_for once the subform's schema has compiled" do
+      parent =
+        compile_blueprint(
+          quote do
+            relations do
+              relation :related_entries, :entries
+            end
+          end
+        )
+
+      assert_form_error(
+        quote do
+          relations do
+            relation :parents, :has_many, module: unquote(parent)
+          end
+
+          forms do
+            form do
+              tab "Content" do
+                fieldset do
+                  inputs_for :parents do
+                    cardinality :many
+                    input :related_entries, :entries, sources: [{unquote(parent), %{order: "asc sequence"}}]
+                  end
+                end
+              end
+            end
+          end
+        end,
+        ~r/input :related_entries, :entries has `sources:` options .*`order` by sequence/
+      )
+    end
+
+    test "suggests the options without an order by a column identifiers lack, written as a tuple" do
+      assert_raise Spark.Error.DslError, ~r/`order` by sequence.*Write `\{.*MediaItem, %\{status: :published\}\}`/s, fn ->
+        compile_blueprint(entries_blueprint([{MediaItem, %{order: {:asc, :sequence}, status: :published}}]))
+      end
+    end
+
+    test "rejects sources that are not {module, map} pairs, and a missing sources:" do
+      assert_raise Spark.Error.DslError, ~r/`sources:` takes a list of \{module, options\}/, fn ->
+        compile_blueprint(entries_blueprint([MediaItem]))
+      end
+
+      assert_raise Spark.Error.DslError, ~r/needs `sources:`/, fn -> compile_blueprint(entries_blueprint(nil)) end
+    end
+
+    test "checks against the identifier schema's columns" do
+      assert Brando.Blueprint.SecondaryVerifier.FormInputs.identifier_columns() ==
+               Enum.map(Brando.Content.Identifier.__schema__(:fields), &Atom.to_string/1)
+    end
+
+    test "accepts options on the identifiers' own columns" do
+      for options <- [
+            %{order: "asc language, asc title", status: :published},
+            %{preload: [], order: "asc title", status: :published},
+            %{order: [{:desc, :updated_at}], language: "en", limit: 20},
+            # The list query skips these.
+            %{preload: nil, paginate: true, with_deleted: true},
+            %{join: [], include: []},
+            %{}
+          ] do
+        module = compile_blueprint(entries_blueprint([{MediaItem, options}]))
+        assert :ok = Brando.Blueprint.Forms.Verifier.verify(module.spark_dsl_config())
+      end
+    end
+  end
+
   describe "ai_actions" do
     defp ai_actions_blueprint(input) do
       quote do

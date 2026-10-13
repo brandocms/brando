@@ -6,8 +6,14 @@ defmodule Brando.Doctor.Checks.ImageConfigs do
 
   Images made before Brando recorded settings are split into those whose
   files already match their config, which `mix brando.images.adopt` records,
-  and those that differ. Only a dry run: nothing is written. See
-  `Brando.Images.Adoption`.
+  and those that differ, counted by how they differ: in formats or sizes (the
+  config changed) or in their files (missing, other dimensions). Only a dry
+  run: nothing is written. See `Brando.Images.Adoption`.
+
+  When none of the images has a file in the media folder (see
+  `Brando.Images.Adoption.media_status/0`), the check says so and asks for
+  the media instead of recommending a recreate: only the records are
+  compared then.
   """
   use Brando.Doctor.Check
   use Gettext, backend: Brando.Gettext
@@ -38,17 +44,33 @@ defmodule Brando.Doctor.Checks.ImageConfigs do
   defp breakdown do
     breakdown = Processing.config_breakdown()
     unrecorded = breakdown.unrecorded |> Map.values() |> Enum.sum()
-    check = if unrecorded > @file_check_limit, do: :records, else: :files
+    media = if breakdown.changed == %{} and unrecorded == 0, do: :ok, else: Adoption.media_status()
+    # Without the files, only the records can be compared.
+    check = if unrecorded > @file_check_limit or media != :ok, do: :records, else: :files
+
+    {matching, differences} = if unrecorded == 0, do: {%{}, %{}}, else: dry_run(check)
+
+    Map.merge(breakdown, %{
+      matching: matching,
+      differences: differences,
+      check: check,
+      media: media,
+      stale: Processing.stale_config_targets()
+    })
+  end
+
+  defp dry_run(check) do
+    {:ok, differences} = Agent.start_link(fn -> %{} end)
+    count = &Agent.update(differences, fn acc -> Map.update(acc, &1, 1, fn n -> n + 1 end) end)
 
     matching =
-      if unrecorded == 0,
-        do: %{},
-        else:
-          [dry_run: true, check: check]
-          |> Adoption.by_target()
-          |> Map.new(fn {target, counts} -> {target, counts.adopted} end)
+      [dry_run: true, check: check, on_differ: fn _image, verdict -> verdict |> Adoption.difference() |> count.() end]
+      |> Adoption.by_target()
+      |> Map.new(fn {target, counts} -> {target, counts.adopted} end)
 
-    Map.merge(breakdown, %{matching: matching, check: check})
+    counted = Agent.get(differences, &Map.delete(&1, nil))
+    Agent.stop(differences)
+    {matching, counted}
   end
 
   @doc """
@@ -58,6 +80,11 @@ defmodule Brando.Doctor.Checks.ImageConfigs do
   how many of each target's unrecorded images already match their config,
   checked by `check` (`:files` or `:records`) as
   `Brando.Images.Adoption.adopt_unrecorded/1` would with `dry_run: true`.
+  It may have `differences`, `%{difference => image_count}` by
+  `Brando.Images.Adoption.difference/1`, and `media`, what
+  `Brando.Images.Adoption.media_status/0` said, and `stale`, the targets that
+  no longer resolve (a removed or renamed field, say), which
+  are listed without a warning: those images use the default config.
 
   Images made before Brando recorded image configs (`unrecorded`) are told
   apart from configs that really changed: after an upgrade from 0.54 every
@@ -80,9 +107,20 @@ defmodule Brando.Doctor.Checks.ImageConfigs do
     matching = min(sum.(rows.(:matching)), unrecorded_count)
     differ = unrecorded_count - matching
 
+    unsynced =
+      for {label, %{media: {:empty, root}}} <- per_environment do
+        Context.label_item(label, dgettext("doctor", "no image files under %{path} (is the media synced?)", path: root))
+      end
+
+    differences =
+      per_environment
+      |> Enum.map(fn {_label, breakdown} -> Map.get(breakdown, :differences, %{}) end)
+      |> Enum.reduce(%{}, &Map.merge(&1, &2, fn _kind, a, b -> a + b end))
+
     summaries =
       Enum.reject(
         [
+          unsynced != [] && Enum.join(unsynced, "; "),
           changed != [] &&
             dngettext(
               "doctor",
@@ -96,19 +134,34 @@ defmodule Brando.Doctor.Checks.ImageConfigs do
               "%{count} image was made before Brando recorded its settings",
               "%{count} images were made before Brando recorded their settings",
               unrecorded_count
-            ) <> ": " <> unrecorded_split(unrecorded_count, matching, differ, likely?)
+            ) <> ": " <> split(unsynced != [], unrecorded_count, matching, differ, likely?),
+          differ > 0 && differences != %{} && differences(differences)
         ],
         &(&1 == false)
       )
 
+    stale =
+      for {label, target, count} <- rows.(:stale) do
+        Context.label_item(
+          label,
+          dngettext(
+            "doctor",
+            "%{target}: %{count} image whose config target no longer resolves uses the default image config",
+            "%{target}: %{count} images whose config target no longer resolves use the default image config",
+            count,
+            target: target
+          )
+        )
+      end
+
     case summaries do
       [] ->
-        ok(dgettext("doctor", "all images match their settings"))
+        ok(dgettext("doctor", "all images match their settings"), items: stale)
 
       summaries ->
         warning(Enum.join(summaries, "; "),
-          fix: fix(changed, differ),
-          link: {"#utils-image-sizes", dgettext("doctor", "Recreate changed images")},
+          fix: if(unsynced == [], do: fix(changed, differ), else: unsynced_fix()),
+          link: if(unsynced == [], do: {"#utils-image-sizes", dgettext("doctor", "Go to image sizes")}),
           items:
             Enum.map(changed, fn {label, target, count} ->
               Context.label_item(
@@ -127,10 +180,70 @@ defmodule Brando.Doctor.Checks.ImageConfigs do
                     target: target
                   )
                 )
-              end)
+              end) ++ stale
         )
     end
   end
+
+  # Without the files nothing can be done here: adopting finds no files to
+  # compare, and Recreate changed images adopts none and queues every image
+  # for processing, which fails without its original.
+  defp unsynced_fix,
+    do:
+      dgettext(
+        "doctor",
+        "where the media is (on the server, or here once it is synced or mounted), run mix brando.images.adopt to record the images that match, then Utilities → Recreate changed images for the rest; here neither works, as adopting needs the files and recreating the originals"
+      )
+
+  # Without the media only the records were compared: what they suggest, and
+  # nothing to do about it here (the fix says where).
+  defp split(true, total, total, 0, _likely?),
+    do:
+      dngettext(
+        "doctor",
+        "by its record it likely matches its config",
+        "by their records all likely match their config",
+        total
+      )
+
+  defp split(true, total, 0, total, _likely?),
+    do: dngettext("doctor", "by its record it differs from its config", "by their records all %{count} differ", total)
+
+  defp split(true, _total, matching, differ, _likely?) do
+    dgettext("doctor", "by their records") <>
+      " " <>
+      dngettext("doctor", "%{count} likely matches", "%{count} likely match", matching) <>
+      ", " <> dngettext("doctor", "%{count} differs", "%{count} differ", differ)
+  end
+
+  defp split(false, total, matching, differ, likely?), do: unrecorded_split(total, matching, differ, likely?)
+
+  # Config differences call for recreating; missing files may be media not
+  # synced here.
+  @difference_order [:formats, :sizes, :missing_file, :dimensions, :error, :cdn]
+
+  defp differences(counts) do
+    parts =
+      for kind <- @difference_order, count = counts[kind], count && count > 0 do
+        difference(kind, count)
+      end
+
+    dgettext("doctor", "of those: %{differences}", differences: Enum.join(parts, ", "))
+  end
+
+  defp difference(:formats, count), do: dngettext("doctor", "%{count} in formats", "%{count} in formats", count)
+  defp difference(:sizes, count), do: dngettext("doctor", "%{count} in sizes", "%{count} in sizes", count)
+
+  defp difference(:missing_file, count),
+    do: dngettext("doctor", "%{count} with a missing file", "%{count} with missing files", count)
+
+  defp difference(:dimensions, count),
+    do: dngettext("doctor", "%{count} in dimensions", "%{count} in dimensions", count)
+
+  defp difference(:error, count), do: dngettext("doctor", "%{count} unreadable", "%{count} unreadable", count)
+
+  defp difference(:cdn, count),
+    do: dngettext("doctor", "%{count} on the CDN only", "%{count} on the CDN only", count)
 
   defp fix([], 0),
     do:

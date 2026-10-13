@@ -326,6 +326,253 @@ defmodule Mix.Tasks.Brando.Migrate54ListingRowsTest do
     refute migrated =~ "Components.Cover"
   end
 
+  # koi's 0.53 listings: categories looped over after the link, a palette
+  # swatch with Liquid in its attributes, and contact lines after the link.
+  defp koi_blueprint(schema, columns) do
+    """
+    defmodule Lett.Koi.#{schema} do
+      use Brando.Blueprint,
+        application: "Lett",
+        domain: "Koi",
+        schema: "#{schema}",
+        singular: "#{Macro.underscore(schema)}",
+        plural: "#{Macro.underscore(schema)}s"
+
+      listings do
+        listing do
+          field :language, :language, columns: 1
+          field :cover, :image, columns: 2, class: "padded"
+
+    #{columns}
+        end
+      end
+    end
+    """
+  end
+
+  test "writes koi's loops over an association and markup after the link into the row" do
+    article =
+      koi_blueprint("Article", ~S'''
+            template(
+              """
+              <a
+                data-phx-link="redirect"
+                data-phx-link-state="push"
+                href="/admin/articles/articles/update/{{ entry.id }}"
+                class="entry-link">
+                {{ entry.title }}
+              </a>
+              <br>
+              {% for category in entry.categories %}
+                <small>{{ category.name }}</small>
+              {% endfor %}
+              """,
+              columns: 5
+            )
+
+            field :url, :url
+      ''')
+
+    project =
+      koi_blueprint("Project", ~S'''
+            template(
+              """
+              <div class="circle-stack">
+              {% if entry.palette %}
+                <div class="circle" data-color-no="0" data-popover="{{ entry.palette.colors[0].hex_value }}" style="background-color: {{ entry.palette.colors[0].hex_value }}"></div>
+              {% endif %}
+              </div>
+              """,
+              columns: 1
+            )
+
+            template(
+              """
+              <a
+                data-phx-link="redirect"
+                data-phx-link-state="push"
+                href="/admin/projects/projects/update/{{ entry.id }}"
+                class="entry-link">
+                {{ entry.title }}
+              </a>
+              <br>
+              {% for category in entry.categories %}
+                <small>{{ category.name }}</small>
+              {% endfor %}
+              """,
+              columns: 4
+            )
+
+            field :url, :url
+      ''')
+
+    member =
+      koi_blueprint("Member", ~S'''
+            template(
+              """
+              <a
+                data-phx-link="redirect"
+                data-phx-link-state="push"
+                href="/admin/team/members/update/{{ entry.id }}"
+                class="entry-link">
+                {{ entry.name }}
+              </a><br>
+              <small>{{ entry.email }}</small><br>
+              <small>{{ entry.phone }}</small><br>
+              """,
+              columns: 7
+            )
+      ''')
+
+    assert row(article, "Article") == ~S'''
+             def listing_row(assigns) do
+               ~H"""
+               <.cover image={@entry.cover} columns={2} padded />
+               <.update_link entry={@entry} columns={5}>
+                 {@entry.title}
+                 <:outside>
+                   <br />
+                   <small :for={category <- @entry.categories || []}>{category.name}</small>
+                 </:outside>
+               </.update_link>
+               <.url entry={@entry} />
+               """
+             end
+           '''
+
+    assert row(project, "Project") == ~S'''
+             def listing_row(assigns) do
+               ~H"""
+               <.cover image={@entry.cover} columns={2} padded />
+               <.field columns={1}>
+                 <div class="circle-stack">
+                   <div
+                     :if={@entry.palette}
+                     class="circle"
+                     data-color-no="0"
+                     data-popover={
+                       Enum.at(@entry.palette.colors || [], 0) &&
+                         Enum.at(@entry.palette.colors || [], 0).hex_value
+                     }
+                     style={"background-color: #{Enum.at(@entry.palette.colors || [], 0) && Enum.at(@entry.palette.colors || [], 0).hex_value}"}
+                   >
+                   </div>
+                 </div>
+               </.field>
+               <.update_link entry={@entry} columns={4}>
+                 {@entry.title}
+                 <:outside>
+                   <br />
+                   <small :for={category <- @entry.categories || []}>{category.name}</small>
+                 </:outside>
+               </.update_link>
+               <.url entry={@entry} />
+               """
+             end
+           '''
+
+    assert row(member, "Member") == ~S'''
+             def listing_row(assigns) do
+               ~H"""
+               <.cover image={@entry.cover} columns={2} padded />
+               <.update_link entry={@entry} columns={7}>
+                 {@entry.name}
+                 <:outside>
+                   <br />
+                   <small>{@entry.email}</small>
+                   <br />
+                   <small>{@entry.phone}</small>
+                   <br />
+                 </:outside>
+               </.update_link>
+               """
+             end
+           '''
+  end
+
+  test "koi's converted rows compile" do
+    blueprint =
+      koi_blueprint("Article", ~S'''
+            template(
+              """
+              <a href="/admin/articles/articles/update/{{ entry.id }}" class="entry-link">{{ entry.title }}</a>
+              {% for category in entry.categories %}<small>{{ category.name }}</small>{% endfor %}
+              """,
+              columns: 5
+            )
+          end
+
+          listing :swatches do
+            template(
+              """
+              {% for category in entry.categories %}<small title="{{ category.name }} ({{ entry.title }})">{{ category.name }}</small>{% endfor %}
+              <div class="swatch" style="color: {{ entry.palette.colors[0].hex_value }}"></div>
+              """,
+              columns: 5
+            )
+      ''')
+
+    path = "lib/lett/koi/article.ex"
+    migrated = blueprint |> migrate(path) |> source(path)
+    module = Module.concat(__MODULE__, "Article#{System.unique_integer([:positive])}")
+
+    compiled =
+      migrated
+      |> String.replace("Lett.Koi.Article", inspect(module))
+      |> String.replace(~s|plural: "articles"|, ~s|plural: "articles",\n    gettext_module: Brando.Gettext|)
+
+    warnings = ExUnit.CaptureIO.capture_io(:stderr, fn -> Code.compile_string(compiled) end)
+    assert warnings == ""
+
+    entry = %{title: "Koi", categories: [%{name: "Fish"}], palette: %{colors: [%{hex_value: "#fff"}]}}
+
+    html =
+      %{entry: entry, __changed__: nil}
+      |> module.swatches_listing_row()
+      |> Phoenix.HTML.Safe.to_iodata()
+      |> IO.iodata_to_binary()
+
+    assert html =~ ~s|title="Fish (Koi)"|
+    assert html =~ ~s|style="color: #fff"|
+
+    # Liquid renders nothing for a missing association; so does the row.
+    html =
+      %{entry: %{entry | categories: nil, palette: %{colors: nil}}, __changed__: nil}
+      |> module.swatches_listing_row()
+      |> Phoenix.HTML.Safe.to_iodata()
+      |> IO.iodata_to_binary()
+
+    refute html =~ "<small"
+    assert html =~ ~s|style="color: "|
+  end
+
+  test "reads a loop variable that shadows `entry` as the loop variable" do
+    blueprint =
+      koi_blueprint("Article", ~S'''
+            template(
+              """
+              {% for entry in entry.children %}<b>{{ entry.title }}</b>{% endfor %}
+              {% if entry.parent %}<i>{% for entry in entry.children %}{{ entry.parent.title }}{% endfor %}</i>{% endif %}
+              """,
+              columns: 5
+            )
+      ''')
+
+    row = blueprint |> row("Article") |> String.replace(~r/\s*\n\s*/, " ")
+    assert row =~ ~s|<b :for={entry <- @entry.children \|\| []}>{entry.title}</b>|
+
+    # The outer `{% if %}` tested the entry's parent, not the loop variable's.
+    assert row =~
+             ~s|<i :if={@entry.parent}><span :for={entry <- @entry.children \|\| []}>{entry.parent && entry.parent.title}</span></i>|
+  end
+
+  defp row(blueprint, schema) do
+    path = "lib/lett/koi/#{Macro.underscore(schema)}.ex"
+    migrated = blueprint |> migrate(path) |> source(path)
+    [_, row] = String.split(migrated, "\n\n  def listing_row", parts: 2)
+    "  def listing_row" <> String.replace_suffix(row, "end\n", "")
+  end
+
   test "is idempotent" do
     igniter = migrate(@article)
 
@@ -371,7 +618,13 @@ defmodule Mix.Tasks.Brando.Migrate54ListingRowsTest do
            "a link that is not to the entry's update form"},
           {"</a>", "</a><a href=\"/admin/x/update/{{ entry.id }}\">x</a>",
            "a template with a link that is not its only one"},
-          {"{% if entry.featured %}", "{% for tag in entry.tags %}", "the Liquid tag `{% for tag in entry.tags %}`"},
+          {"{% if entry.featured %}", "{% for tag in entry.tags limit:2 %}",
+           "the Liquid tag `{% for tag in entry.tags limit:2 %}`"},
+          {"{% if entry.featured %} ⭐️ {% endif %}", "{% for tag in tags %}{{ tag }}{% endfor %}",
+           "the Liquid `{% for tag in tags %}`"},
+          {"{% if entry.featured %} ⭐️ {% endif %}",
+           "{% for tag in entry.tags %}<b>{{ tag.name }}</b><i>{{ tag.slug }}</i>{% endfor %}",
+           "a `{% for tag in entry.tags %}` around more than one element"},
           {"field :cover, :image, columns: 2, class: \"padded\"", "field :children, :children_button, columns: 1",
            "#{@path}:24: a `:children_button` field"},
           {"field :cover, :image, columns: 2, class: \"padded\"", "field :cover, :image, class: \"padded\"",

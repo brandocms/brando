@@ -19,6 +19,8 @@ if Code.ensure_loaded?(Igniter) do
     alias Igniter.Project.Module, as: ProjectModule
     alias Igniter.Refactors.Rename
     alias Mix.Brando.Igniter.FloristConfig
+    alias Mix.Brando.Igniter.SourceUpgrade.BlueprintCatalogs
+    alias Mix.Brando.Igniter.SourceUpgrade.Datasources
     alias Mix.Brando.Igniter.SourceUpgrade.NavigationItems
     alias Mix.Brando.Igniter.SourceUpgrade.PageVars
     alias Mix.Brando.Igniter.TemplateCode
@@ -346,6 +348,7 @@ if Code.ensure_loaded?(Igniter) do
         &single_datasource?(&1),
         fn zipper ->
           [key, get_callback] = zipper |> Zipper.node() |> Sourceror.get_args()
+          get = capture_call(get_callback, [quote(do: to_string(__MODULE__)), quote(do: identifier)])
 
           new_datasource =
             quote do
@@ -353,7 +356,7 @@ if Code.ensure_loaded?(Igniter) do
                 type :single
 
                 get fn identifier ->
-                  unquote(get_callback).(to_string(__MODULE__), identifier)
+                  unquote(get)
                 end
               end
             end
@@ -404,9 +407,7 @@ if Code.ensure_loaded?(Igniter) do
       )
     end
 
-    defp remove_use_datasource(zipper) do
-      {:ok, Common.remove_all_matches(zipper, &use_datasource?(&1))}
-    end
+    defp remove_use_datasource(zipper), do: Datasources.remove_use(zipper, &use_datasource?/1)
 
     defp rewrite_listing_filters(zipper), do: rewrite_keyword_collection(zipper, :filters, :filter)
 
@@ -723,11 +724,10 @@ if Code.ensure_loaded?(Igniter) do
             fn entry -> get_in(entry, unquote(access_path)) end
           end
         else
+          value = quote(do: get_in(entry, unquote(access_path)))
+
           quote do
-            fn entry ->
-              value = get_in(entry, unquote(access_path))
-              unquote(mutator).(value)
-            end
+            fn entry -> unquote(capture_call(mutator, [value])) end
           end
         end
 
@@ -750,6 +750,26 @@ if Code.ensure_loaded?(Igniter) do
         Access.key(unquote(key))
       end
     end
+
+    # `&encode_locale/1` applied to `args` reads `encode_locale(value)`, and
+    # `&Mod.fun/2` `Mod.fun(a, b)`; any other function value is called with `.()`.
+    defp capture_call({:&, _, [{:/, _, [function, arity]}]} = capture, args) do
+      case {function, literal_integer(arity) == length(args)} do
+        {{name, _, context}, true} when is_atom(name) and is_atom(context) ->
+          {name, [], args}
+
+        {{{:., _, [module, name]}, _, []}, true} when is_atom(name) ->
+          {{:., [], [module, name]}, [], args}
+
+        _other ->
+          quote(do: unquote(capture).(unquote_splicing(args)))
+      end
+    end
+
+    defp capture_call(function, args), do: quote(do: unquote(function).(unquote_splicing(args)))
+
+    defp literal_integer({:__block__, _, [value]}), do: value
+    defp literal_integer(value), do: value
 
     defp rename_call(zipper, new_name) do
       case Zipper.node(zipper) do
@@ -1729,15 +1749,22 @@ if Code.ensure_loaded?(Igniter) do
     def carry_blueprint_translations(igniter) do
       {igniter, blueprints} = find_blueprints(igniter)
 
+      # Each Blueprint domain, and the catalog directories of the Gettext
+      # backends that translate it: a copy elsewhere is read by nothing.
       domains =
-        MapSet.new(blueprints, fn module ->
+        blueprints
+        |> Enum.flat_map(fn module ->
           {:ok, {_igniter, _source, zipper}} = ProjectModule.find_module(igniter, module)
 
           case blueprint_naming(zipper) do
-            %{domain: domain, schema: schema} -> String.downcase("#{domain}_#{schema}")
-            _naming -> nil
+            %{domain: domain, schema: schema} ->
+              [{String.downcase("#{domain}_#{schema}"), BlueprintCatalogs.priv(igniter, zipper)}]
+
+            _naming ->
+              []
           end
         end)
+        |> Enum.group_by(&elem(&1, 0), &elem(&1, 1))
 
       igniter = Igniter.include_glob(igniter, "priv/gettext/**/*.po")
 
@@ -1755,7 +1782,10 @@ if Code.ensure_loaded?(Igniter) do
               []
           end
         end)
-        |> Enum.filter(fn {target, _context, _path} -> Path.basename(target, ".po") in domains end)
+        |> Enum.filter(fn {target, _context, _path} ->
+          privs = Map.get(domains, Path.basename(target, ".po"), [])
+          Enum.any?(privs, &BlueprintCatalogs.in_priv?(target, &1))
+        end)
         |> Enum.group_by(&elem(&1, 0), fn {_target, context, path} -> {@context_order[context], path} end)
         |> Enum.sort()
         |> Enum.reduce({igniter, []}, fn {target, sources}, {igniter, conflicts} ->

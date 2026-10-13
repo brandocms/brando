@@ -1,4 +1,6 @@
-import IdleJs from 'idle-js'
+// No input for this long, or the tab hidden, and the editor shows as away
+const IDLE_AFTER = 30000
+const ACTIVITY_EVENTS = ['mousemove', 'keydown', 'mousedown', 'touchstart']
 
 export default class Presence {
   constructor(app) {
@@ -7,28 +9,38 @@ export default class Presence {
 
   trackIdle() {
     // Called on every lobby join, rejoins included; one checker is enough
-    if (this.idle) return
+    if (this.trackingIdle) return
+    this.trackingIdle = true
 
-    this.idle = new IdleJs({
-      idle: 30000, // idle time in ms
-      events: ['mousemove', 'keydown', 'mousedown', 'touchstart'], // events that will trigger the idle resetter
-      onIdle: () => {
-        this.setActive(false)
-      },
-      onActive: () => {
-        this.setActive(true)
-      },
-      onHide: () => {
-        this.setActive(false)
-      },
-      onShow: () => {
-        this.setActive(true)
-      },
-      keepTracking: true,
-      startAtIdle: false
+    let idle = false
+    let timer = null
+
+    const goIdle = () => {
+      if (idle) return
+      idle = true
+      this.setActive(false)
+    }
+
+    const activity = () => {
+      clearTimeout(timer)
+      timer = setTimeout(goIdle, IDLE_AFTER)
+      if (!idle) return
+      idle = false
+      this.setActive(true)
+    }
+
+    for (const event of ACTIVITY_EVENTS) window.addEventListener(event, activity, { passive: true })
+
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) {
+        clearTimeout(timer)
+        goIdle()
+      } else {
+        activity()
+      }
     })
 
-    this.idle.start()
+    timer = setTimeout(goIdle, IDLE_AFTER)
   }
 
   setActive(status) {

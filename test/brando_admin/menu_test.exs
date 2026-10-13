@@ -179,6 +179,37 @@ defmodule BrandoAdmin.MenuTest do
     end
   end
 
+  # Every open admin page builds the menu again when any user or group
+  # changes; it read the user and their groups once per item it checked.
+  test "with groups, the menu reads each scope's permissions once" do
+    put_test_env(:authorization_mode, :groups)
+    put_test_env(:tenancy_mode, :none)
+    user = Brando.Factory.insert(:random_user, role: :superuser, config: %Brando.Users.UserConfig{})
+    {:ok, _} = Brando.Authorization.Migration.run()
+
+    test = self()
+    event = BrandoIntegration.Repo.config()[:telemetry_prefix] ++ [:query]
+    id = {__MODULE__, make_ref()}
+    :telemetry.attach(id, event, fn _, _, meta, _ -> send(test, {:query, meta.source}) end, nil)
+
+    try do
+      assert BrandoAdmin.Menu.get_menu(user) != []
+    after
+      :telemetry.detach(id)
+    end
+
+    # the installation's scope and the site's
+    assert Enum.count(queried([]), &(&1 == "authorization_groups")) in 1..2
+  end
+
+  defp queried(sources) do
+    receive do
+      {:query, source} -> queried([source | sources])
+    after
+      0 -> sources
+    end
+  end
+
   describe "Configuration's groups" do
     test "a superuser gets every group, in order, with its items in order" do
       assert [

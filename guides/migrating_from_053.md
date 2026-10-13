@@ -183,8 +183,11 @@ Pin the toolchain with mise or asdf:
   Dockerfile's `node:22` stages, which `mix brando.gen.backend --upgrade`
   writes (see [Admin assets](#admin-assets)), build with it. The admin's
   `engines` (`^20.19 || ^22.12 || >=24`) rejects an odd release such as
-  Node 23 in both yarn and pnpm installs, and nothing checks the `node` on
-  `PATH` before an install does.
+  Node 23 in both yarn and pnpm installs.
+
+`scripts/prepare_055_deps.exs` and `mix brando.doctor` print the `node` on the
+PATH and warn when it is an odd release or older than the one Brando is tested
+on, before an install fails on it.
 
 ### Run the source tasks
 
@@ -206,22 +209,21 @@ nothing.
 
 Brando's optional task and helper modules automatically request recompilation
 when Igniter becomes available. The dependency remains optional at runtime.
+Any change to the application's configuration recompiles Brando, which takes
+about a minute. `mix brando.migrate54` therefore writes every `config :brando`
+setting the upgrade asks for at once (`repo_module`, `mailer` and a placeholder
+sender), and `mix brando.migrate55` finds them in place. Replace the
+placeholder sender's `noreply@example.com` with the address Brando should send
+from before you first compile, and make your own configuration changes in the
+same pass. Outside development and test, Brando treats a sender on a domain
+reserved for examples as no sender: it sends nothing, and `mix brando.doctor`
+fails until it is replaced. A sender set anywhere in `config/*.exs`, inside an
+`if config_env() == :prod` block included, gets no placeholder.
 
-With Brando as a `path:` dependency, Mix compiles all of Brando again (about a
-minute) whenever the application's `config :brando` changes, in
-`config/brando.exs` or any other config file. `mix brando.migrate54` adds
-`repo_module`, `mix brando.migrate55` adds `mailer` and a sender, and
-`mix brando.doctor` asks for a real sender address, so expect a full compile
-after each. Make your own `config :brando` edits in one go.
-
-Remove `:brando`, and any other dependency, from `reloadable_apps` in the
-endpoint's configuration (usually `config/dev.exs`), keeping only the
-application's own apps. With `:brando` listed, Phoenix's code reloader checks
-Brando's whole source tree on every request, and on Elixir 1.19 and later it
-also rebuilds the application's consolidated protocols each time: 0.6 to 3
-seconds a request. After editing a local Brando checkout, run
-`mix deps.compile brando` and restart the server instead (see
-[Installation and generators](generators.md)).
+After editing a local Brando checkout, run `mix deps.compile brando` and
+restart the server: `mix brando.migrate55` takes `:brando` out of the
+endpoint's `reloadable_apps` (see below), so the code reloader no longer
+picks up Brando's changes (see [Installation and generators](generators.md)).
 
 If the application has never been run through `mix format`, run it and commit
 the result before the source tasks, so their diff holds only their changes.
@@ -234,7 +236,14 @@ those changes in the same commit.
 - rewrites legacy Blueprint list, single, and selection datasources; trait,
   villain/block, form, input, metadata, and JSON-LD syntax; and listing queries,
   filters, actions, selection actions, and supported exports;
-- preserves legacy Meta and JSON-LD path/mutator behavior;
+- preserves legacy Meta and JSON-LD path/mutator behavior
+  (`meta_field "og:locale", [:language], &encode_locale/1` becomes
+  `field "og:locale", fn entry -> encode_locale(get_in(entry, [Access.key(:language)])) end`);
+- replaces `use Brando.Datasource`, which imported `Ecto.Query`, with
+  `import Ecto.Query` in a Blueprint whose functions call its macros (`from`,
+  `where` and the rest). A list and a selection datasource may still share a
+  name (`list :all` beside `selection :all`): content modules name a
+  datasource by its type and name;
 - renames legacy listing `filter:` keys and `list_villains/0` calls on
   `Brando.Villain`;
 - rewrites every legacy LivePreview target with its own layout and template
@@ -242,6 +251,9 @@ those changes in the same commit.
 - replaces `mix phx.digest` in a root Dockerfile, removes `?vsn=d` from font
   URLs in application styles/templates, and adds a missing single-Repo
   `config :brando, repo_module:` setting;
+- points Brando at the application's mailer and writes a placeholder sender
+  when none is set, as `mix brando.migrate55` does (see below), so Brando's
+  configuration changes only once;
 - removes `processor_module: Brando.Images.Processor.Sharp` from config. Brando
   refuses to boot with it, and Vix is the default;
 - moves Gettext backends to `use Gettext.Backend` and their importers to
@@ -256,20 +268,46 @@ those changes in the same commit.
   `hero_html`) in a moved schema's own templates to `rendered_blocks`
   (`rendered_hero_blocks`), and lists, with file and line, the `.html` reads
   it left;
+- rewrites a fragment's `html` read out of a fragments map to
+  `rendered_blocks` (`@partials["footer"].html`, where
+  `plug Brando.Plug.Fragment, as: :partials` or a `get_fragments` call fills
+  the map), and lists the other `…].html` map reads with file and line. A
+  fragment has no `html` since 0.54, and such a read fails the page with a
+  `KeyError`;
+- adds `relation:` to a `:multi_select` on a has_many relation that has only
+  `relation_key:`, naming the join schema's belongs_to on that key
+  (`relation_key: :category_id` gets `relation: :category`). The admin form
+  crashed without it, and a Blueprint without it no longer compiles. An input
+  whose belongs_to it cannot find is listed;
+- drops the options of an `:entries` input's `for:` (now `sources:`) that
+  the identifiers it lists do not have, such as `preload:` and an order by
+  `sequence`, and says what it dropped. The options apply to the identifiers,
+  not the source schema (see [Related entries](blueprint_forms.md#related-entries));
+  a Blueprint with such options no longer compiles. Options it cannot read
+  are listed;
 - rewrites 0.53 navigation item reads inside `for item <- @navigation.items`
   (and `:for`) to `Brando.HTML.get_menu_item_url/1`, `get_menu_item_text/1`,
   `get_menu_item_target_blank/1` and `item.children`, and, when templates read
-  `@page` vars, adds `:vars` to the `preload` of the `Pages.get_page/1` calls
-  written with a map. Reads it cannot rewrite, and page loads it cannot
-  update, are listed with file and line;
+  the page's vars (`@page`, `assigns[:page]`), adds `:vars` to the `preload` of
+  the `Pages.get_page/1` calls written with a map, or with a variable the same
+  function assigns one (`page_opts = %{…}`). Reads it cannot rewrite, and page
+  loads it cannot update, are listed with file and line. When vars are read
+  on something other than the page, the `Pages.get_page/1` calls are listed
+  beside the reads, for you to give `preload: [:vars]` where their page
+  reaches them;
 - converts each admin Create/Update LiveView pair the generator made and the
   application did not edit into one `<Name>FormLive`, written beside the
   `UpdateLive` it replaces, deletes the pair and points both routes at the new
-  module. Edited pairs are listed. When two FormLives would share a route
+  module. A pair that differs from the generator's only in the text of its
+  `<:header>` slot counts as unedited, since the 0.55 form shows no header.
+  Edited pairs are listed. When two FormLives would share a route
   helper (two `Category` schemas, say) and one is routed in a plain
   `scope "/menu", MyAppAdmin.Menu do` holding only that domain's admin
   LiveViews, the task adds `as: :menu` to the scope and `router_scope: :menu`
-  to every Blueprint routed in it. Other shapes are listed with the same fix.
+  to every Blueprint routed in it. Routes listed flat in `admin_routes`, as the
+  0.53 generator wrote them, are wrapped in a new
+  `scope "/menu/categories", MyAppAdmin.Menu, as: :menu do` when the domain's
+  lines are adjacent. Other shapes are listed with the same fix.
   Without the form route, the listing's edit links crash, and
   `mix brando.doctor` reports each Blueprint whose route helper is missing;
 - rewrites a listing's 0.53 `field` and `template` columns into a row
@@ -278,9 +316,11 @@ those changes in the same commit.
   the module. An `:image` field becomes `<.cover>`, a `:url` field `<.url>`,
   and a Liquid template whose only link goes to the entry's admin update form
   becomes `<.update_link>`, with the markup before the link in its `:before`
-  slot (`{{ entry.a.b }}` becomes `{@entry.a && @entry.a.b}`,
-  `{% if entry.x %}` an `:if`). Language columns and inline `<svg>` icons in
-  badges are dropped. Any other listing is left as it is and listed with file
+  slot and the markup after it in its `:outside` slot (`{{ entry.a.b }}`
+  becomes `{@entry.a && @entry.a.b}`, also inside attributes,
+  `{% if entry.x %}` an `:if`, and `{% for c in entry.categories %}` a
+  `:for={c <- @entry.categories || []}`). Language columns and inline `<svg>`
+  icons in badges are dropped. Any other listing is left as it is and listed with file
   and line;
 - removes listing actions whose event is `edit_entry`, `duplicate_entry` or
   `delete_entry` from listings that keep `default_actions`, which already
@@ -315,7 +355,8 @@ those changes in the same commit.
 - points Brando at the application's `Mailer` (`config :brando, mailer:
   MyApp.Mailer`), or, when it has none, creates `MyApp.Mailer` with the local
   adapter in development and the test adapter in test, and writes a
-  placeholder sender (`noreply@example.com`). Replace the placeholder with an
+  placeholder sender (`noreply@example.com`) when none is set. After
+  `mix brando.migrate54` these are already in place. Replace the placeholder with an
   address your mail provider sends for, and configure the mailer's production
   adapter in `runtime.exs`, as described in [Email](email.md);
   `mix brando.doctor` warns until you do;
@@ -330,6 +371,21 @@ those changes in the same commit.
 - warns when `config/runtime.exs` reads the Repo `url:` from the environment
   in `:test` too, and when `test_paths` names a missing directory (see
   [Test and development databases](#test-and-development-databases));
+- removes `:brando` and the Hex and git dependencies from the endpoint's
+  `reloadable_apps` (usually in `config/dev.exs`), and lists each list it
+  changed with file and line. With `:brando` listed, the code reloader checks
+  Brando's sources on every development request, and on Elixir 1.19 and later
+  each check rebuilds the application's protocols. The application and path
+  dependencies you edit alongside it stay; a list left with only the
+  application goes, since Phoenix's default reloads the application itself;
+- removes a bare `use Phoenix.Component` from a module whose
+  `use BrandoWeb, :html` (or a kind of the application's web module that uses
+  Phoenix.Component) already does it. Elixir 1.20 warns about the second one,
+  which fails `--warnings-as-errors`;
+- writes `Brando.Content.get_entries_from_identifiers(ids, [:cover])`, whose
+  list of preloads is deprecated, as
+  `get_entries_from_identifiers(ids, %{preload: [:cover]})`, and lists a call
+  whose preloads it cannot read;
 - adds `plug Brando.Plug.Markdown` and `plug Brando.Plug.IndexNow` to the
   endpoint, before the router (and before `Brando.Plug.Health`), unless it
   already has them;
@@ -342,21 +398,40 @@ those changes in the same commit.
   (slideshows became `gallery` in `brando_77`). Delete those; nothing calls
   them;
 - removes the Sharp `processor_module` setting, as `mix brando.migrate54` does;
+- writes `identifier false` on an embedded Blueprint (`data_layer :embedded`)
+  that declares an identifier, which 0.55 refuses to compile;
+- writes `default_srcset:` in an image asset's `cfg` as `srcset: %{default:
+  […]}`, or removes it beside a `srcset:`. Brando ignored `default_srcset`
+  there, so the asset used its `srcset` or the default config's; 0.55 rejects
+  the field. Check that the sizes the list names are in the asset's `sizes`;
+- lists, with file and line, each read of an `:entries` relation
+  (`project.related_entries`) that does not go through `.identifier` (see
+  below);
 - copies each Blueprint's translations from its 0.53 `*_naming`, `*_forms`
   and `*_listings` catalogs, and the `default` domain's translations of its
-  `t/1` labels, into its schema's domain, in every backend and locale that has
-  it (see [Reconcile Gettext catalogs](#5-reconcile-gettext-catalogs));
+  `t/1` labels, into its schema's domain, in every locale of the Gettext
+  backend the Blueprint translates through (its `gettext_module`, by default
+  `MyAppAdmin.Gettext`). Copies of those catalogs in another backend, such as
+  the frontend's, are read by nothing and are left alone (see
+  [Reconcile Gettext catalogs](#5-reconcile-gettext-catalogs));
 - sets `persist_identifier false` on Blueprints with no admin editor (no
   `:update` form route and no admin LiveView), no `absolute_url`, and nothing
   that could select their entries (no `:selection` or `:single` datasource,
-  no `:entries` relation or input that could include them), and lists the
-  Blueprints it could not decide. `mix brando.identifiers.sync` then deletes
+  no `:entries` input whose `sources:` name them, no `:entries` relation
+  without an input that lists its `sources:`), and lists the Blueprints it
+  could not decide. A join schema such as `ArticleCategory`, which only
+  `belongs_to` its two sides, is set too. `mix brando.identifiers.sync` then deletes
   such a Blueprint's existing identifiers, and any pick that still points at
   them;
 - completes `Plural-Forms` headers in `priv/gettext/**/*.po`. Gettext 1.0 warns
   on `nplurals=2;` without a rule and on a rule without its trailing `;`, once
   per catalog per compile, so `--warnings-as-errors` fails until they read
-  `nplurals=2; plural=(n != 1);`;
+  `nplurals=2; plural=(n != 1);`. Older Poedit releases wrote the line without
+  its `\n`, so Gettext reads it joined to the next header
+  (`plural=(n != 1);X-Generator: Poedit 3.0.1`) and warns although the rule is
+  complete. The task gives such a rule a line of its own, keeps the header that
+  followed it, and drops text that is no header of its own (a stray
+  `"3.0.1;\n"`) or a header a later line sets again, listing each file;
 - refreshes `scripts/sync_gettext.sh` and archives the consumer-owned
   `mix brando.upgrade` task that 0.54 installed, wherever it lives under `lib/`,
   so Brando's own `mix brando.upgrade FROM TO` hook can take over the task name
@@ -417,8 +492,19 @@ correct rewrite depends on application semantics:
   `Brando.Videos.Video` records and migrating their data;
 - updating source-controlled Liquid/HEEx ref paths and `gallery_images` access
   (Brando-owned migrations handle database-stored module/fragment code);
-- updating code that traverses generated `*_identifiers` associations for
-  `:entries` relations, whose join entries are now exposed directly;
+- updating code that reads an `:entries` relation. It holds the join rows,
+  each with its `identifier`, where it held identifiers, so
+  `Enum.map(project.related_entries, & &1.entry_id)` fails with a `KeyError`.
+  `mix brando.migrate55` lists the reads. Preload the identifiers through the
+  rows and read the entry id there:
+
+  ```elixir
+  project = Brando.Repo.preload(project, related_entries: :identifier)
+  ids = Enum.map(project.related_entries, & &1.identifier.entry_id)
+  ```
+
+  The rows come in the order the editor picked them; a list query on `ids`
+  does not keep it (see [Entries](blueprint_fields.md#entries));
 - moving datasource declarations that still use `Brando.Datasource` outside a
   Blueprint module onto the appropriate Blueprint;
 - writing the row component for each listing `mix brando.migrate54` listed
@@ -461,8 +547,10 @@ correct rewrite depends on application semantics:
   v14 migration when deploying through the bundled Fabric workflow;
 - showing Brando's dashboard. The admin's start page is the application's own
   `MyAppAdmin.DashboardLive`, and one from an older installer renders only a
-  header. Render the dashboard component in it, as the installer's template
-  does:
+  header. `mix brando.migrate55` replaces a `DashboardLive` that is exactly the
+  old installer's with the current template, and lists one that renders
+  `Content.header` but differs. In that one, render the dashboard component,
+  as the installer's template does:
 
   ```elixir
   def render(assigns) do
@@ -688,6 +776,26 @@ snapshot with a Villain field.
    straight after `mix brando.migrate`; it exits with status 1 while anything
    is missing. Its documentation lists what it leaves out, such as rendered
    HTML, which a diff of the public pages covers.
+
+   It also checks that media refs kept their media: a picture whose Villain
+   data had a `path` has an image, a gallery has as many images as Villain
+   listed, a video has a video. Until it was fixed, `brando_133` linked a
+   picture to an image by `path` only, and left it empty when the image had
+   no row (deleted, or in the trash), although 0.53 showed it from the
+   picture's own data; galleries lost such images too. A site that ran that
+   copy sees findings like
+   `pages #2 › block 3 (module "Jobb med oss") › ref pic: legacy image images/site/posts/1n60vo3o9p06.jpg has no image now (lost in the conversion, or removed by an editor since)`.
+   `mix brando.repair.legacy_media --dry-run` lists what it would do about
+   each; without `--dry-run` it links the image the Villain data names, or
+   makes its row from that data, and adds missing gallery images in their
+   places. It writes only where it can tell the media was lost in the
+   conversion: it skips, with the reason, an entry whose blocks no longer
+   line up with Villain's, an entry, block or gallery edited since the
+   conversion, and, once the conversion is more than 30 days old, any image
+   it would have to make, as emptying the trash leaves no trace of what an
+   editor deleted. Run it soon after the upgrade, while the Villain columns
+   are there, then run the check again; what it skipped is for an editor.
+   A site that has resaved its entries since resaves them again afterwards.
 6. In `down/0`, undo only what `up/0` added: leave out the tables, indexes
    and columns that existed before the migration.
 7. Roll back and forward once on a scratch copy. A second
@@ -804,12 +912,23 @@ All three accept `--yes`, so they can run from a script, and
 `mix brando.upgrade.database` runs them, then `mix brando.check.image_texts`,
 then rebuilds the search index.
 
+The tasks write to the database, not to a running server's cache. A server
+that was running meanwhile keeps serving the pages it cached before (pages
+are cached without expiry): restart it, or use Configuration → Cache → Empty
+all caches in its admin.
+
 `mix brando.images.adopt` records which config each image was made with, for
 the images whose files already match it, so Utilities → Recreate changed
 images only recreates the ones that differ. Try it with `--dry-run` first;
 `--verbose` names each image's difference (`sizes: missing ["xlarge"]`,
-`formats: has [:jpg], config [:jpg, :avif]`) and ends with a count per config
-target and reason. See [Media](media.md#images-made-before-fingerprints).
+`formats: has [:jpg], config [:jpg, :avif]`,
+`large: file missing: images/site/default/large/x.jpg`) and ends with a count
+per config target and reason. Run it where the media is: on a copy without
+the media files it stops with `No image files found under <media path>`, and
+the doctor and Utilities say the same instead of recommending a recreate. A
+`formats` difference is real (the default config gained `:webp`, say) and the
+images need recreating on the server; a missing file on a machine without
+the media is not. See [Media](media.md#images-made-before-fingerprints).
 
 The comparison reads the image files, so it means something only where the
 media is. In a local checkout without the production media every image
@@ -846,6 +965,17 @@ migration cannot see them; list the ones to fix with:
 ```shell
 mix brando.check.image_texts
 ```
+
+A multi module's code that reads its entries the 0.53 way,
+`{% for link in entries %}{{ link.data.vars.url }}{% endfor %}`, renders
+nothing now: each entry is a block, with its vars at `link.vars.url` and its
+refs at `link.refs`. `brando_219` rewrites the stored module code: a loop
+over `entries`, a variable assigned an entry (`{% assign first_entry = entries.first %}`),
+and those paths read directly or through a variable assigned the list.
+`mix brando.doctor` lists module code that still reads `.data.vars` or
+`.data.refs` (Module entry paths). The migration runs with the others, before
+`mix brando.entries.resave`; a site that has resaved already resaves again
+after it.
 
 ### Check what the tasks may have missed
 
@@ -904,59 +1034,18 @@ application's root:
 5. **Module code in the database that reads `data.vars` or `data.refs`.** A
    multi-module's children are blocks now, so a template that reads
    `{{ link.data.vars.url }}` in `{% for link in entries %}` renders them
-   empty, and no check reports it:
-
-   ```sql
-   select id, name from content_modules where code ~ 'data\.(vars|refs)';
-   ```
-
+   empty. `brando_219` rewrites these paths (see above) and leaves a
+   variable it cannot follow, such as one assigned an entry and then assigned
+   again; `mix brando.doctor` lists what is left under Module entry paths.
    Change `.data.vars.` to `.vars.` and `.data.refs.` to `.refs.` in each
-   module's code, then run `mix brando.entries.resave`.
-6. **Refs that lost their image.** The conversion links legacy image data
-   to a live `images` row and drops what it cannot link. A picture ref, and
-   the `template_picture` of a media ref, are linked by path and emptied
-   without a row. A gallery image is linked by its `sizes`, then by its path,
-   and left out of the gallery without a row. The images of a media ref's
-   `template_gallery` are dropped whether they have a row or not.
-   `mix brando.check.legacy_conversion` compares ref names, so it still
-   passes. The legacy Villain column is then the only copy of that image
-   data, so check before anyone drops it. Run this for each table that still
-   has a Villain column (`pages.data`, `pages_fragments.data` and the
-   application's own), with its table and column in place of `pages.data` on
-   the first line:
-
-   ```sql
-   with legacy(data) as (select data from pages),
-   paths(kind, path) as (
-     select 'picture', p #>> '{}' from legacy, jsonb_path_query(legacy.data,
-       'strict $.**.refs[*].data ? (@.type == "picture").data.path', '{}', true) p
-     union all
-     select 'gallery', p #>> '{}' from legacy, jsonb_path_query(legacy.data,
-       'strict $.**.refs[*].data ? (@.type == "gallery").data.images[*].path', '{}', true) p
-     union all
-     select 'media', p #>> '{}' from legacy, jsonb_path_query(legacy.data,
-       'strict $.**.refs[*].data ? (@.type == "media").data.template_picture.path', '{}', true) p
-     union all
-     select 'media gallery', p #>> '{}' from legacy, jsonb_path_query(legacy.data,
-       'strict $.**.refs[*].data ? (@.type == "media").data.template_gallery.images[*].path', '{}', true) p
-   )
-   select distinct kind, path from paths
-   where path is not null
-     and (kind = 'media gallery' or not exists (
-       select 1 from images i
-       where i.deleted_at is null
-         and i.path in (paths.path, regexp_replace(paths.path, '^/media/', ''))
-     ));
-   ```
-
-   The conversion also matched a path with the media URL's path in front, so
-   with a `media_url` other than `/media`, put its path in place of `/media/`
-   on the second-last line. A `gallery` image the query lists can still have
-   come through by its `sizes`; check that gallery in the admin. A
-   `media gallery` path can have a live row, but no ref points at it any more.
-   Every other path it lists is an image that refs had on the old site and
-   have lost. The picture-ref repair (see [Legacy snapshots](#legacy-snapshots))
-   restores them from the legacy data.
+   module it lists, then run `mix brando.entries.resave`.
+6. **Refs that lost their image.** A `brando_133` copied before the fix
+   emptied a picture ref whose image had no live row, and left such images
+   out of galleries. `mix brando.check.legacy_conversion` lists each one, and
+   `mix brando.repair.legacy_media` restores those it can tell were lost in
+   the conversion (see [Legacy snapshots](#legacy-snapshots)). The legacy
+   Villain column is then the only copy of that image data, so run both
+   before anyone drops it.
 7. **Every admin form, opened once.** On one 0.53 site, two of the four
    crashes showed only in the admin: open an entry of every Blueprint there
    before the gate below. Restart the server after any CLI repair task
@@ -1017,12 +1106,18 @@ Compare the public pages before and after the upgrade with
 In the upgraded application, once its database is migrated:
 
 ```shell
-mix brando.upgrade.snapshot urls --output urls.txt
+mix brando.upgrade.snapshot urls --output urls.txt --base-url http://localhost:4000
 mix brando.upgrade.snapshot capture tmp/before --base-url http://localhost:4000 --urls urls.txt
 # start the upgraded site on another port
 mix brando.upgrade.snapshot capture tmp/after --base-url http://localhost:4001 --urls urls.txt
 mix brando.upgrade.snapshot diff tmp/before tmp/after
 ```
+
+`urls` picks, for each Blueprint other than pages, the entry with the most
+blocks in each language. With `--base-url` it asks the old site for each
+entry URL, leaves out those it answers with 404 (a language whose routes are
+switched off, for instance) and tries the next-heaviest entry instead. Add
+entries you know are unusual to the list by hand.
 
 It reports status, visible text, `<head>` tags and element structure
 separately, so a moved `data-src` or a reordered list shows even when the

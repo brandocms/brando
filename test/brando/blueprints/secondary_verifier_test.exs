@@ -48,6 +48,34 @@ defmodule Brando.Blueprint.SecondaryVerifierTest do
     assert Brando.Datasource.get_single(module, :one, 123) == {:ok, {123, :configured}}
   end
 
+  # 0.53 kept list, single and selection datasources apart, and content
+  # modules store the type beside the name (koi's Team.Member).
+  test "lets datasources of different types share a name, and finds each by its type" do
+    module =
+      compile_blueprint(
+        quote do
+          datasources do
+            datasource :all do
+              type :list
+              list fn _, _, _ -> {:ok, :listed} end
+            end
+
+            datasource :all do
+              type :selection
+              list fn _, _, _ -> {:ok, :selectable} end
+              get fn _ -> {:ok, :selected} end
+            end
+          end
+        end
+      )
+
+    assert Brando.Datasource.list_results(module, :all, %{}, "en") == {:ok, :listed}
+    assert Brando.Datasource.list_results(module, :all, %{}, "en", :list) == {:ok, :listed}
+    assert Brando.Datasource.list_results(module, "all", %{}, "en", :selection) == {:ok, :selectable}
+    assert Brando.Datasource.get_datasource(module, :selection, :all).type == :selection
+    assert {:ok, %{list: [:all], selection: [:all]}} = Brando.Datasource.list_datasource_keys(module)
+  end
+
   test "requires the callbacks used by each datasource type" do
     assert_compile_error(
       ~r/`:list` datasource requires a `list` callback/,

@@ -28,6 +28,7 @@ defmodule Brando.Doctor do
 
   @default_checks [
     Checks.Versions,
+    Checks.Node,
     Checks.Migrations,
     Checks.Oban,
     Checks.Configuration,
@@ -35,6 +36,7 @@ defmodule Brando.Doctor do
     Checks.AdminAssets,
     Checks.ImageConfigs,
     Checks.Modules,
+    Checks.ModuleEntryPaths,
     Checks.Sitemap,
     Checks.Robots,
     Checks.JSONLD,

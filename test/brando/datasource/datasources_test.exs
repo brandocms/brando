@@ -140,6 +140,42 @@ defmodule Brando.DatasourcesTest do
              {:ok, %Brando.Content.Identifier{}}
   end
 
+  # A :single datasource block shows the one entry chosen for it, as
+  # `entries`, the way a :selection block shows its.
+  test "a :single datasource block renders its chosen entry, in Liquid and HEEx" do
+    usr = Factory.insert(:random_user)
+    {:ok, page} = Brando.Pages.create_page(Factory.params_for(:page, title: "Chosen"), usr)
+    {:ok, identifier} = Brando.Content.get_identifier(Brando.Pages.Page, page)
+
+    block = %{
+      module_id: 1,
+      uid: "single-block",
+      vars: [],
+      refs: [],
+      table_rows: [],
+      block_identifiers: [%{identifier_id: identifier.id, sequence: 0}]
+    }
+
+    base = %Brando.Content.Module{
+      id: 1,
+      datasource: true,
+      datasource_type: :single,
+      datasource_module: "Elixir.Brando.DatasourcesTest.TestDatasource",
+      datasource_query: "single"
+    }
+
+    liquid = %{base | type: :liquid, code: "{% for entry in entries %}<b>{{ entry.title }}</b>{% endfor %}"}
+    heex = %{base | type: :heex, code: ~S(<b :for={entry <- @entries}>{entry.title}</b>)}
+    opts = %{context: Brando.Villain.get_base_context(), parser_module: Brando.Villain.Parser}
+
+    assert Brando.Villain.TemplateAdapter.Liquex.render_module(liquid, block, %{}, %{}, opts) =~ "<b>Chosen</b>"
+    assert Brando.Villain.TemplateAdapter.Heex.render_module(heex, block, %{}, %{}, opts) =~ "<b>Chosen</b>"
+
+    # None chosen yet: nothing, as for an empty selection.
+    none = %{block | block_identifiers: []}
+    refute Brando.Villain.TemplateAdapter.Liquex.render_module(liquid, none, %{}, %{}, opts) =~ "<b>"
+  end
+
   test "list_selection" do
     usr = Factory.insert(:random_user)
 
