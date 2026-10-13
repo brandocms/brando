@@ -390,6 +390,7 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
   end
 
   attr :block_identifier, :any
+  attr :draggable, :boolean, default: true
   attr :identifier, :any
   attr :block_identifiers, :list, default: nil
   attr :identifier_id, :integer
@@ -422,7 +423,7 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
       data-id={@identifier.id}
       data-label={@identifier.title}
       class={[
-        "draggable",
+        @draggable && "draggable",
         "identifier"
       ]}
       phx-click={@select}
@@ -432,7 +433,7 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
       <Input.hidden field={@block_identifier[:block_id]} />
       <Input.hidden field={@block_identifier[:identifier_id]} />
 
-      <.identifier_content draggable has_cover?={@has_cover?} identifier={@identifier}>
+      <.identifier_content draggable={@draggable} has_cover?={@has_cover?} identifier={@identifier}>
         <:delete>
           {render_slot(@delete)}
         </:delete>

@@ -3538,6 +3538,11 @@ msgstr "Velg én ZIP-fil."
 msgid "Choose one configuration file at a time."
 msgstr "Velg én konfigurasjonsfil om gangen."
 
+#: lib/brando_admin/components/form/block/render.ex
+#, elixir-autogen, elixir-format
+msgid "Choose one entry to show."
+msgstr "Velg ett element som skal vises."
+
 #: lib/brando_admin/live/upload_manager.ex
 #, elixir-autogen, elixir-format
 msgid "Choose one file for this field"
@@ -14855,6 +14860,11 @@ msgstr "Velg innlegg"
 msgid "Select entries to link"
 msgstr "Velg innlegg som skal sammenkobles"
 
+#: lib/brando_admin/components/form/block/render.ex
+#, elixir-autogen, elixir-format
+msgid "Select entry"
+msgstr "Velg element"
+
 #: lib/brando_admin/components/assets/media_field.ex
 #: lib/brando_admin/components/file_picker.ex
 #: lib/brando_admin/components/form/file_drawer.ex
@@ -14943,6 +14953,7 @@ msgstr "Utvalgte %{plural}"
 msgid "Selected destination"
 msgstr "Valgt mål"
 
+#: lib/brando_admin/components/form/block/render.ex
 #: lib/brando_admin/live/ai/assistant_live.ex
 #, elixir-autogen, elixir-format
 msgid "Selected entry"
