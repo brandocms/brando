@@ -4,7 +4,7 @@
 - Fresh worktree: `scripts/worktree-setup` (deps, private test DB, pnpm 10 installs, Git hooks; prints the env to use)
 - Whole unit suite as CI runs it, in partitions: `scripts/test-partitions`
 - Before pushing: `mix check` (CI's fast gates; the pre-push hook runs `--fast`, `SKIP_CHECK=1` bypasses)
-- Wait for CI: `scripts/ci-wait <PR>` (background; silent until a summary line, then one line per failed job: known flake from `.github/known-flakes.txt` or real failure; `--rerun-flakes` reruns flakes once)
+- Wait for CI: `scripts/ci-wait <PR>` (background; silent until a summary line, then one line per failed job: known flake from `.github/known-flakes.txt`, CI infrastructure (failed setting up) or real failure; `--rerun-flakes` reruns flakes and infrastructure failures once)
 - Merge: `scripts/queue <PR…>` (background; queues PRs once green, retargets stacked ones, follows each to merged or says why it dropped; `--dequeue <PR>` before pushing to a queued branch)
 - Start e2e project server (for use with MCP): `cd e2e && ./run_e2e.sh` - the server starts on port 4444
 - End to end tests: the whole E2E suite green is the bar for done (CI runs it on every PR). While working, run the single specs that cover your change (below); for the whole suite locally, `cd e2e && source .envrc && ./test_e2e_parallel.sh 2 --reset`
