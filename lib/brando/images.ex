@@ -26,6 +26,7 @@ defmodule Brando.Images do
 
   alias Brando.Images
   alias Brando.Images.Image
+  alias Brando.Repo
   alias Brando.Users.User
 
   @type id :: binary | integer
@@ -114,7 +115,7 @@ defmodule Brando.Images do
   def create_image(params, user) do
     %Image{}
     |> Image.changeset(params, user)
-    |> Brando.Repo.insert()
+    |> Repo.insert()
   end
 
   @doc """
@@ -126,7 +127,7 @@ defmodule Brando.Images do
       from t in Image,
         where: t.id == ^id and is_nil(t.deleted_at)
 
-    Brando.Repo.one!(query)
+    Repo.one!(query)
   end
 
   @doc """
@@ -140,7 +141,7 @@ defmodule Brando.Images do
     hash
     |> same_file_query(config_target)
     |> where([i], i.id != ^id)
-    |> Brando.Repo.one()
+    |> Repo.one()
   end
 
   def find_duplicate(_image), do: nil
@@ -184,26 +185,24 @@ defmodule Brando.Images do
 
   def for_config_target(%Image{} = image, config_target, user) when is_binary(config_target) do
     with {:ok, hash, original} <- source_hash(image) do
-      fn ->
-        lock_copy(hash, config_target)
-        if is_nil(image.content_hash), do: record_hash(image, hash)
+      Repo.transaction(fn -> copy_once(image, hash, original, config_target, user) end)
+    end
+  end
 
-        result =
-          case Brando.Repo.one(same_file_query(hash, config_target)) do
-            %Image{} = copy -> requeue_unqueued(copy, user)
-            nil -> copy_for_config_target(%{image | content_hash: hash}, original, config_target, user)
-          end
+  # In the transaction: one pick of the file for the config at a time
+  defp copy_once(image, hash, original, config_target, user) do
+    lock_copy(hash, config_target)
+    if is_nil(image.content_hash), do: record_hash(image, hash)
 
-        case result do
-          {:ok, copy} -> copy
-          {:error, reason} -> Brando.Repo.rollback(reason)
-        end
+    result =
+      case Repo.one(same_file_query(hash, config_target)) do
+        %Image{} = copy -> requeue_unqueued(copy, user)
+        nil -> copy_for_config_target(%{image | content_hash: hash}, original, config_target, user)
       end
-      |> Brando.Repo.transaction()
-      |> case do
-        {:ok, copy} -> {:ok, copy}
-        {:error, reason} -> {:error, reason}
-      end
+
+    case result do
+      {:ok, copy} -> copy
+      {:error, reason} -> Repo.rollback(reason)
     end
   end
 
@@ -235,11 +234,11 @@ defmodule Brando.Images do
 
   defp lock_copy(hash, config_target) do
     key = :erlang.phash2({Brando.Tenant.current_prefix(), hash, config_target}, 4_294_967_296)
-    Brando.Repo.repo().query!("SELECT pg_advisory_xact_lock($1)", [key])
+    Repo.repo().query!("SELECT pg_advisory_xact_lock($1)", [key])
   end
 
   defp record_hash(image, hash) do
-    Brando.Repo.update_all(from(i in Image, where: i.id == ^image.id and is_nil(i.content_hash)),
+    Repo.update_all(from(i in Image, where: i.id == ^image.id and is_nil(i.content_hash)),
       set: [content_hash: hash]
     )
   end
@@ -301,7 +300,7 @@ defmodule Brando.Images do
   """
   def delete_images(ids) when is_list(ids) do
     q = from m in Image, where: m.id in ^ids
-    Brando.Repo.soft_delete_all(q)
+    Repo.soft_delete_all(q)
   end
 
   @doc "Returns the image orientation for dimensions or an image-like map."

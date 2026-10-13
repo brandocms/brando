@@ -413,15 +413,17 @@ defmodule BrandoAdmin.Components.ImagePicker do
         if Application.get_env(Brando.config(:otp_app), :sql_sandbox),
           do: Ecto.Adapters.SQL.Sandbox.allow(Brando.Repo.repo(), parent, self())
 
-        Brando.Authorization.Boundary.with_scope(scope, fn ->
-          with :ok <- Brando.Authorization.Media.authorize(user, :image),
-               {:ok, image} <- Brando.Images.get_image(image_id) do
-            Brando.Images.for_config_target(image, config_target, user)
-          end
-        end)
+        Brando.Authorization.Boundary.with_scope(scope, fn -> pick_for(image_id, config_target, user) end)
       end)
 
     start_async(socket, :pick_library_image, pick)
+  end
+
+  defp pick_for(image_id, config_target, user) do
+    with :ok <- Brando.Authorization.Media.authorize(user, :image),
+         {:ok, image} <- Brando.Images.get_image(image_id) do
+      Brando.Images.for_config_target(image, config_target, user)
+    end
   end
 
   def render(assigns) do
