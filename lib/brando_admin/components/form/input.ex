@@ -1434,11 +1434,21 @@ defmodule BrandoAdmin.Components.Form.Input do
         :error -> %{}
       end
 
+    # Validation params include LiveView's unused-field markers. They are
+    # form metadata, not translations to preserve as hidden controls.
+    unlisted_translations =
+      value
+      |> Map.drop(Enum.map(languages, &elem(&1, 0)))
+      |> Map.reject(fn
+        {"_unused_" <> _, _} -> true
+        _ -> false
+      end)
+
     assigns =
       assigns
       |> assign(:languages, languages)
       |> assign(:value, value)
-      |> assign(:unlisted_translations, Map.drop(value, Enum.map(languages, &elem(&1, 0))))
+      |> assign(:unlisted_translations, unlisted_translations)
       |> assign(:rows, opts[:rows] || 3)
       |> assign(:i18n_id, "#{assigns.field.id}-i18n")
       # `suggest_alt: true` on an image form's alt field, or the event name

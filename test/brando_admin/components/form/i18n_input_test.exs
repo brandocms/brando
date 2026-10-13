@@ -17,6 +17,17 @@ defmodule BrandoAdmin.Components.Form.I18nInputTest do
   end
 
   for kind <- [:i18n_text, :i18n_textarea], {source, other_language} <- [admin: "no", content: "fr"] do
+    test "#{kind} with #{source} languages excludes LiveView metadata after validation" do
+      stored = %{"en" => "English", unquote(other_language) => "Translated", "de" => "Deutsch"}
+      var = %Var{label: stored}
+      unused = Map.new(stored, fn {language, _} -> {"_unused_#{language}", ""} end)
+      validated = cast(var, %{"label" => Map.merge(stored, unused)}, [:label])
+      html = render_input(unquote(kind), validated, unquote(source))
+
+      label = get_field(cast(var, submitted_params(html), [:label]), :label)
+      assert {:ok, ^stored} = I18nString.dump(label)
+    end
+
     test "#{kind} with #{source} languages preserves unlisted translations and allows clearing a tab" do
       stored = %{"en" => "English", "de" => "Größe & \"Maße\" <cm>", "ja" => "一行目\n二行目"}
       var = %Var{label: stored}

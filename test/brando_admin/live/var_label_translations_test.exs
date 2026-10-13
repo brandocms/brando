@@ -45,6 +45,50 @@ defmodule BrandoAdmin.VarLabelTranslationsTest do
              Repo.preload(Repo.get!(Module, module.id), :vars, force: true).vars
   end
 
+  test "validation then a reverted edit saves complete translations without unused metadata",
+       %{conn: conn, module: module} do
+    put_test_env(:admin_languages, [[value: "en", text: "English"], [value: "no", text: "Norsk"]])
+
+    module =
+      module
+      |> Ecto.Changeset.change(
+        name: %{"en" => "Hero", "no" => "Hovedfelt", "de" => "Titel"},
+        namespace: %{"en" => "Content", "no" => "Innhold"},
+        help_text: %{"en" => "Help", "no" => "Hjelp", "de" => "Hilfe"}
+      )
+      |> Repo.update!()
+
+    {:ok, view, _html} = live(conn, "/admin/config/content/modules/update/#{module.id}")
+
+    # LiveViewTest does not add the browser's unused-field markers. Add
+    # them to validation, then save only the controls the view renders.
+    unused = %{"_unused_en" => "", "_unused_no" => ""}
+
+    metadata = %{
+      "module" => %{
+        "name" => unused,
+        "namespace" => unused,
+        "help_text" => unused,
+        "vars" => %{"0" => %{"label" => unused}}
+      }
+    }
+
+    for class <- ["temporarily-edited", module.class || ""] do
+      view
+      |> form("#module_form", %{"module" => %{"class" => class}})
+      |> render_change(metadata)
+    end
+
+    view |> form("#module_form") |> render_submit()
+
+    saved = Repo.preload(Repo.get!(Module, module.id), :vars)
+    assert saved.name == module.name
+    assert saved.namespace == module.namespace
+    assert saved.help_text == module.help_text
+    assert Enum.map(saved.vars, & &1.label) == Enum.map(module.vars, & &1.label)
+    assert saved.version == module.version
+  end
+
   # The lint was a browser test in configuration/modules.spec.js; typing
   # into CodeMirror only writes the code textarea this changes.
   test "the editor warns when a ref sits inside a conditional, until it is declared at the top level",
