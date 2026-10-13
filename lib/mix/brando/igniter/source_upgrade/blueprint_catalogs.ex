@@ -16,27 +16,32 @@ if Code.ensure_loaded?(Igniter) do
     alias Sourceror.Zipper
 
     @doc """
-    `{:ok, priv}`, the catalog directory of the Gettext backend the
-    Blueprint in `zipper` translates through, or `:unknown` when the
-    backend's source cannot be read.
+    `{:ok, privs}`, the catalog directories the Gettext backend the
+    Blueprint in `zipper` translates through may use, or `:unknown` when one
+    cannot be read. Each directory a config file of any environment sets is
+    a candidate, since which environment's config applies is not the task's
+    to know, and translations go to each; with none set, the backend's own
+    `priv:` decides.
     """
     def priv(igniter, zipper) do
       with {:ok, backend} <- gettext_module(zipper),
-           {:ok, {igniter, _source, backend_zipper}} <- ProjectModule.find_module(igniter, backend) do
-        case config_priv(igniter, backend) do
-          :none -> backend_priv(backend_zipper)
-          priv -> priv
-        end
+           {:ok, {igniter, _source, backend_zipper}} <- ProjectModule.find_module(igniter, backend),
+           {:ok, configured} <- config_privs(igniter, backend) do
+        # Config replaces the `use` option; without any, the option decides.
+        if configured == [],
+          do: with({:ok, own} <- backend_priv(backend_zipper), do: {:ok, [own]}),
+          else: {:ok, Enum.uniq(configured)}
       else
         _ -> :unknown
       end
     end
 
     # The backend's application config, `config :my_app, MyApp.Gettext,
-    # priv: "…"`, which Gettext merges over the `use` options: `{:ok, priv}`,
-    # `:unknown` when it sets `priv:` to anything but a literal, or `:none`.
-    # Read from the config calls themselves, so commented-out config is not.
-    defp config_priv(igniter, backend) do
+    # priv: "…"`, which Gettext merges over the `use` options: `{:ok, privs}`
+    # in every config file, or `:unknown` when one sets `priv:` to anything
+    # but a literal. Read from the config calls themselves, so commented-out
+    # config is not.
+    defp config_privs(igniter, backend) do
       igniter = Igniter.include_glob(igniter, "config/*.exs")
 
       igniter.rewrite
@@ -46,11 +51,7 @@ if Code.ensure_loaded?(Igniter) do
       |> Enum.flat_map(&backend_config_calls(Rewrite.Source.get(&1, :content), backend))
       |> Enum.map(&options_config_priv/1)
       |> Enum.reject(&(&1 == :none))
-      |> Enum.reverse()
-      |> case do
-        [] -> :none
-        [latest | _] = found -> if :unknown in found, do: :unknown, else: latest
-      end
+      |> then(fn found -> if :unknown in found, do: :unknown, else: {:ok, for({:ok, priv} <- found, do: priv)} end)
     end
 
     # The options of each `config _app, backend, options` call in `content`.
@@ -81,9 +82,9 @@ if Code.ensure_loaded?(Igniter) do
 
     defp options_config_priv(_options), do: :unknown
 
-    @doc "Whether `po_path` (`<priv>/<locale>/LC_MESSAGES/<domain>.po`) is in `priv`."
+    @doc "Whether `po_path` (`<priv>/<locale>/LC_MESSAGES/<domain>.po`) is in one of `privs`."
     def in_priv?(_po_path, :unknown), do: true
-    def in_priv?(po_path, {:ok, priv}), do: po_path |> Path.dirname() |> Path.dirname() |> Path.dirname() == priv
+    def in_priv?(po_path, {:ok, privs}), do: (po_path |> Path.dirname() |> Path.dirname() |> Path.dirname()) in privs
 
     defp gettext_module(zipper) do
       with {:ok, options} <- use_options(zipper) do

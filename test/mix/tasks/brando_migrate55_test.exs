@@ -2582,6 +2582,28 @@ defmodule Mix.Tasks.Brando.Migrate55Test do
       refute_creates(igniter, "#{@frontend_no}/projects_project.po")
     end
 
+    test "carries translations to every directory a config file names for the backend" do
+      backends = """
+      defmodule LegacyAppAdmin.Gettext do
+        use Gettext.Backend, otp_app: :legacy_app
+      end
+      """
+
+      # The directory the environments load comes from brando.exs; test.exs,
+      # which the task does not run with, names another.
+      brando = @brando_config <> ~s|\nconfig :legacy_app, LegacyAppAdmin.Gettext, priv: "priv/gettext/backend"\n|
+
+      igniter =
+        migrate(@blueprint_054, %{
+          @brando_config_path => brando,
+          "config/test.exs" => ~s|import Config\nconfig :legacy_app, LegacyAppAdmin.Gettext, priv: "priv/gettext/test"\n|,
+          "lib/legacy_app_admin/gettext.ex" => backends,
+          "#{@backend_no}/projects_project_naming.po" => catalog("no", [{"project", "prosjekt"}])
+        })
+
+      assert_creates(igniter, "#{@backend_no}/projects_project.po")
+    end
+
     test "the copied translations survive the merge of the extracted template" do
       igniter =
         migrate(@blueprint_054, %{
