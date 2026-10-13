@@ -35,15 +35,16 @@ if Code.ensure_loaded?(Igniter) do
     # The backend's application config, `config :my_app, MyApp.Gettext,
     # priv: "…"`, which Gettext merges over the `use` options: `{:ok, priv}`,
     # `:unknown` when it sets `priv:` to anything but a literal, or `:none`.
+    # Read from the config calls themselves, so commented-out config is not.
     defp config_priv(igniter, backend) do
       igniter = Igniter.include_glob(igniter, "config/*.exs")
-      call = ~r/\bconfig\s*\(?\s*:\w+\s*,\s*#{Regex.escape(inspect(backend))}\s*,(.*?)(?=\n(?!\s)|\z)/s
 
       igniter.rewrite
       |> Rewrite.sources()
       |> Enum.filter(&(Path.dirname(&1.path) == "config" and Path.extname(&1.path) == ".exs"))
-      |> Enum.flat_map(&Regex.scan(call, Rewrite.Source.get(&1, :content), capture: :all_but_first))
-      |> Enum.map(fn [options] -> options_config_priv(options) end)
+      |> Enum.sort_by(& &1.path)
+      |> Enum.flat_map(&backend_config_calls(Rewrite.Source.get(&1, :content), backend))
+      |> Enum.map(&options_config_priv/1)
       |> Enum.reject(&(&1 == :none))
       |> Enum.reverse()
       |> case do
@@ -52,12 +53,35 @@ if Code.ensure_loaded?(Igniter) do
       end
     end
 
-    defp options_config_priv(options) do
-      case Regex.run(~r/\bpriv:\s*"([^"\\#]+)"\s*(?:[,\])]|\z)/, options) do
-        [_, priv] -> {:ok, String.trim_trailing(priv, "/")}
-        nil -> if options =~ ~r/\bpriv:/, do: :unknown, else: :none
+    # The options of each `config _app, backend, options` call in `content`.
+    defp backend_config_calls(content, backend) do
+      case Code.string_to_quoted(content) do
+        {:ok, ast} ->
+          {_ast, calls} =
+            Macro.prewalk(ast, [], fn
+              {:config, _, [_app, {:__aliases__, _, parts}, options]} = node, calls ->
+                if Module.concat(parts) == backend, do: {node, calls ++ [options]}, else: {node, calls}
+
+              node, calls ->
+                {node, calls}
+            end)
+
+          calls
+
+        _error ->
+          [:unreadable]
       end
     end
+
+    defp options_config_priv(options) when is_list(options) do
+      case if(Keyword.keyword?(options), do: Keyword.fetch(options, :priv), else: {:ok, :unreadable}) do
+        {:ok, priv} when is_binary(priv) -> {:ok, String.trim_trailing(priv, "/")}
+        {:ok, _expression} -> :unknown
+        :error -> :none
+      end
+    end
+
+    defp options_config_priv(_options), do: :unknown
 
     @doc "Whether `po_path` (`<priv>/<locale>/LC_MESSAGES/<domain>.po`) is in `priv`."
     def in_priv?(_po_path, :unknown), do: true

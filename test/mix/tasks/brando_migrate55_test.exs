@@ -2367,6 +2367,25 @@ defmodule Mix.Tasks.Brando.Migrate55Test do
 
       assert_creates(igniter, "#{@backend_no}/projects_project.po")
       assert_creates(igniter, "#{@frontend_no}/projects_project.po")
+
+      # Commented-out config is not config.
+      commented =
+        String.replace(
+          config,
+          ~s(config :legacy_app, LegacyAppAdmin.Gettext, priv: "priv/gettext/backend"),
+          ~s(config :legacy_app, LegacyAppAdmin.Gettext, priv: "priv/gettext/backend"\n# config :legacy_app, LegacyAppAdmin.Gettext, priv: "priv/gettext/old")
+        )
+
+      igniter =
+        migrate(@blueprint_054, %{
+          @config_path => commented,
+          "lib/legacy_app_web/gettext.ex" => backends,
+          "#{@backend_no}/projects_project_naming.po" => catalog("no", [{"project", "prosjekt"}]),
+          "#{@frontend_no}/projects_project_naming.po" => catalog("no", [{"project", "prosjekt"}])
+        })
+
+      assert_creates(igniter, "#{@backend_no}/projects_project.po")
+      refute_creates(igniter, "#{@frontend_no}/projects_project.po")
     end
 
     test "the copied translations survive the merge of the extracted template" do
