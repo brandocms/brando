@@ -1528,7 +1528,8 @@ defmodule BrandoAdmin.Components.Form.Block do
   # as bare ids (a synchronized translation's pending version, a restored
   # recovery copy) had neither and rendered nothing, not even their hidden
   # inputs. Their identifiers are loaded here, only the ones not yet known.
-  def assign_selected_identifiers(%{assigns: %{is_datasource?: true, module_datasource_type: :selection}} = socket) do
+  def assign_selected_identifiers(%{assigns: %{is_datasource?: true, module_datasource_type: type}} = socket)
+      when type in [:selection, :single] do
     known = MapSet.new(socket.assigns.available_identifiers, & &1.id)
 
     missing =

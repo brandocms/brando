@@ -285,6 +285,18 @@ defmodule E2eProject.Projects.Project do
   end
 
   datasources do
+    datasource :one_project do
+      type :single
+
+      list fn module, _language, _vars ->
+        Brando.Content.list_identifiers(module, %{status: :published})
+      end
+
+      get fn identifier ->
+        Projects.get_project(%{matches: %{id: identifier.entry_id}})
+      end
+    end
+
     datasource :all do
       type :list
 

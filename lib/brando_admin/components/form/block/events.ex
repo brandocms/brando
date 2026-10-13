@@ -170,6 +170,14 @@ defmodule BrandoAdmin.Components.Form.Block.Events do
 
     block_changeset = Block.get_block_changeset(changeset, belongs_to)
     block_identifiers = Changeset.get_assoc(block_changeset, :block_identifiers)
+
+    # A single datasource uses the same association and toggle behavior as a
+    # selection, but choosing another entry replaces the current choice.
+    block_identifiers =
+      if socket.assigns[:module_datasource_type] == :single,
+        do: Enum.filter(block_identifiers, &(Changeset.get_field(&1, :identifier_id) == identifier_id)),
+        else: block_identifiers
+
     # Get original identifiers stored at mount time (not from changeset which gets mutated)
     original_identifiers = socket.assigns.original_block_identifiers
 

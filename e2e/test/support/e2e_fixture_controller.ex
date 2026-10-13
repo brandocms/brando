@@ -26,6 +26,9 @@ defmodule E2EFixtureController do
         "norwegian-admin-user" ->
           create_norwegian_admin_user()
 
+        "single-datasource-modules" ->
+          create_single_datasource_modules()
+
         # The E2E admin itself in Norwegian, so it still sees what it owns
         # (assistant proposals, drafts). Rolled back with the sandbox.
         "admin-language-no" ->
@@ -104,6 +107,30 @@ defmodule E2EFixtureController do
     conn = login_user(conn, scenario)
 
     send_resp(conn, 200, "")
+  end
+
+  defp create_single_datasource_modules do
+    for {type, label, code} <- [
+          {:liquid, "Liquid",
+           "<div class=\"single-project\">{% for entry in entries %}{{ entry.title }}{% endfor %}</div>"},
+          {:heex, "HEEx",
+           "<div class=\"single-project\"><span :for={entry <- @entries}>{entry.title}</span></div>"}
+        ] do
+      Brando.Repo.insert!(%Brando.Content.Module{
+        uid: Brando.Utils.generate_uid(),
+        type: type,
+        name: %{"en" => "One project (#{label})", "no" => "Ett prosjekt (#{label})"},
+        namespace: %{"en" => "03 DATASOURCE", "no" => "03 DATAKILDE"},
+        class: "single-project-#{type}",
+        code: code,
+        datasource: true,
+        datasource_module: "Elixir.E2eProject.Projects.Project",
+        datasource_type: :single,
+        datasource_query: "one_project"
+      })
+    end
+
+    get_admin_user()
   end
 
   # A Slack notification route posting to the E2E receiver, paused after its

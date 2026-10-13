@@ -2,9 +2,8 @@
 
 A datasource supplies entries to a reusable content module. Use a **list** for an
 automatically queried collection and a **selection** when editors choose and order
-the entries. The Blueprint also supports a **single** callback for callers that
-resolve one identifier; the standard module render adapters currently populate
-entries for list and selection types.
+the entries. Use **single** when editors choose one entry. All three types
+populate `entries` in Liquid and `@entries` in HEEx modules.
 
 This example adds related page cards to an existing application Blueprint. It
 assumes working [modules and blocks](block_editor.md), persisted page identifiers,
@@ -175,11 +174,16 @@ That metadata belongs to the selected entry's placement. Render adapters expose
 `meta` is nil when no placement metadata was stored. For the caption above, use
 `get_in(item, [:meta, "caption"])` and render an empty/missing caption conditionally.
 
-A single resolver takes one identifier, with an application-defined return value:
+A single datasource lists identifiers for the picker and resolves the chosen
+identifier to `{:ok, entry}`:
 
 ```elixir
 datasource :one_page do
   type :single
+  list fn module, language, _vars ->
+    Brando.Content.list_identifiers(module, %{language: language, status: :published})
+  end
+
   get fn identifier ->
     Brando.Pages.get_page(%{
       matches: %{id: identifier.entry_id},
@@ -189,10 +193,17 @@ datasource :one_page do
 end
 ```
 
-Call it through `Brando.Datasource.get_single(YourBlueprint, "one_page", identifier)`.
-It does not automatically populate a standard module's `@entries`; use list or
-selection for that editor workflow. Function callbacks can also be MFA tuples;
-runtime arguments come first, followed by the tuple's extra-argument list.
+In a module configured with this datasource, **Select entry** opens the same
+picker as a selection datasource. Choosing another entry replaces the current
+choice; choosing the selected entry again or using its remove button clears it.
+The block stores the choice in `block_identifiers`, just like assistant selections.
+Liquid receives `entries` and HEEx receives `@entries` as a list with zero or one
+entry, so the same iteration patterns work for both selection types.
+
+Outside a module, call
+`Brando.Datasource.get_single(YourBlueprint, "one_page", identifier)` directly.
+Function callbacks can also be MFA tuples; runtime arguments come first, followed
+by the tuple's extra-argument list.
 
 ## Request-dependent content
 

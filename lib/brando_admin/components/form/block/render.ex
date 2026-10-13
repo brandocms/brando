@@ -3102,6 +3102,9 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
           <span :if={@module_datasource_type == :selection} class="datasource-help">
             {gettext("Choose which to show, and in what order.")}
           </span>
+          <span :if={@module_datasource_type == :single} class="datasource-help">
+            {gettext("Choose one entry to show.")}
+          </span>
           <span :if={@module_datasource_type == :list && @datasource_preview} class="datasource-help">
             {ngettext("%{count} is shown automatically", "%{count} are shown automatically", @datasource_preview.count)}
           </span>
@@ -3118,8 +3121,13 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
         </p>
       </div>
 
-      <%= if @module_datasource_type == :selection do %>
-        <Content.modal title={gettext("Select entries")} id={"select-entries-#{@uid}"} remember_scroll_position narrow>
+      <%= if @module_datasource_type in [:selection, :single] do %>
+        <Content.modal
+          title={datasource_picker_label(@module_datasource_type)}
+          id={"select-entries-#{@uid}"}
+          remember_scroll_position
+          narrow
+        >
           <Entries.entry_picker id={"block-#{@uid}-entries"}>
             <Entries.block_identifier
               :for={identifier <- @available_identifiers}
@@ -3140,7 +3148,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
           <div
             id={"sortable-#{@uid}-identifiers"}
             class="selected-entries identifier-list"
-            phx-hook="Brando.SortableAssocs"
+            phx-hook={@module_datasource_type == :selection && "Brando.SortableAssocs"}
             data-target={@target}
             data-sortable-id={"sortable-#{@uid}-identifiers"}
             data-sortable-handle=".identifier"
@@ -3148,7 +3156,11 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
             data-sortable-dispatch-event="true"
           >
             <.inputs_for :let={block_identifier} field={@block_identifiers}>
-              <Entries.block_identifier block_identifier={block_identifier} available_identifiers={@available_identifiers}>
+              <Entries.block_identifier
+                block_identifier={block_identifier}
+                available_identifiers={@available_identifiers}
+                draggable={@module_datasource_type == :selection}
+              >
                 <input
                   type="hidden"
                   name={"#{@block_identifiers.form.name}[sort_block_identifier_ids][]"}
@@ -3186,7 +3198,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
               phx-target={@target}
               data-ui-modal-show={"select-entries-#{@uid}"}
             >
-              {gettext("Select entries")}
+              {datasource_picker_label(@module_datasource_type)}
             </button>
           </div>
         </div>
@@ -3197,8 +3209,12 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
 
   @doc "What a datasource block shows, e.g. \"Selected cases\"."
   def datasource_title(:selection, plural), do: gettext("Selected %{plural}", plural: plural)
+  def datasource_title(:single, _plural), do: gettext("Selected entry")
   def datasource_title(:list, plural), do: gettext("All %{plural}", plural: plural)
   def datasource_title(_type, plural), do: String.capitalize(plural || "")
+
+  defp datasource_picker_label(:single), do: gettext("Select entry")
+  defp datasource_picker_label(_type), do: gettext("Select entries")
 
   attr :datasource_meta, :any, required: true
   attr :identifier, :any, required: true
