@@ -80,6 +80,9 @@ if Code.ensure_loaded?(Igniter) do
         {:ok, igniter, contents} ->
           igniter
           |> Igniter.update_file(path, &Source.update(&1, :content, contents))
+          # With the application's formatter and its plugins: the template's
+          # one-line `~H` is wider than any line length.
+          |> Igniter.format([path])
           |> Igniter.add_notice("""
           #{path} was the old installer's DashboardLive, which renders only a
           header. The task replaced it with the installer's current one, which

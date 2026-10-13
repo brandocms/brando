@@ -2152,6 +2152,28 @@ defmodule Mix.Tasks.Brando.Migrate55Test do
       end
     end
 
+    test "formats the DashboardLive it writes, as the application's formatter does" do
+      formatter = """
+      [
+        plugins: [Phoenix.LiveView.HTMLFormatter],
+        inputs: ["*.{heex,ex,exs}", "{config,lib,test}/**/*.{heex,ex,exs}"]
+      ]
+      """
+
+      igniter = migrate(@blueprint_054, %{@dashboard_path => @old_dashboard, ".formatter.exs" => formatter})
+
+      assert source(igniter, @dashboard_path) =~ """
+                 ~H\"\"\"
+                 <.live_component
+                   module={Dashboard}
+                   id="admin-dashboard"
+                   current_user={@current_user}
+                   authorization={@authorization}
+                 />
+                 \"\"\"
+             """
+    end
+
     test "lists a DashboardLive that renders a header and something else" do
       edited =
         String.replace(
