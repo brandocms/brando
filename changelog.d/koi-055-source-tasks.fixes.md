@@ -80,3 +80,9 @@
 - **`mix brando.migrate55` reads `Config.config_env()` in runtime.exs.** A
   Repo URL read only under `if Config.config_env() == :e2e` was listed as
   one `mix test` reads.
+
+- **A `:single` datasource block renders its chosen entry.** The assistant
+  can choose the entry of a `:single` datasource block, but both template
+  adapters rendered only `:list` and `:selection` datasources, so the block
+  showed nothing. It now renders the entry the datasource's `get` returns
+  for the block's first identifier, as `entries`.
