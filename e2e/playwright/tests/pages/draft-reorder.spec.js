@@ -1,5 +1,5 @@
 import { test, expect } from '../../test-support/setupAuth'
-import { syncLV, awaitBlockShip, confirmUploadFolder } from '../../utils'
+import { syncLV, awaitBlockShip } from '../../utils'
 
 async function addBlock(page, name) {
   await page.getByRole('button', { name: 'Add block' }).last().click()
@@ -58,7 +58,6 @@ test('recovery shows block and gallery moves, preserves accompanying edits and l
   await addBlock(page, 'Gallery with Controls')
   const gallery = page.locator('.gallery-block')
   await gallery.locator('.file-input').setInputFiles(['./fixtures/image.jpg', './fixtures/image2.jpg'])
-  await confirmUploadFolder(page)
   await expect(gallery.locator('.gallery-object')).toHaveCount(2, { timeout: 30000 })
   await page.getByTestId('submit').click()
   await expect(page).toHaveURL(/\/admin\/pages$/, { timeout: 30000 })

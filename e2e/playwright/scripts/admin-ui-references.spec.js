@@ -3,7 +3,7 @@
 // tests/ and only the references config matches them. Each test runs in its own
 // SQL sandbox, so the data it creates is rolled back afterwards.
 import { test, expect } from '../test-support/setupAuth'
-import { syncLV, confirmUploadFolder } from '../utils'
+import { syncLV } from '../utils'
 
 const sommerro = 'Put image1 on the Index page and create a case called Sommerro with image2'
 
@@ -210,7 +210,6 @@ test('image refs while processing', async ({ page }, testInfo) => {
       } }
     })
     await picture.locator('input[type="file"]').setInputFiles(file)
-    await confirmUploadFolder(page)
     await captured
     await expect(picture.locator('.media-field-preview img')).toBeVisible({ timeout: 20000 })
   }

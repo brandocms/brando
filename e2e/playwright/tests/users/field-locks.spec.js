@@ -1,5 +1,5 @@
 import { test, expect } from '../../test-support/setupAuth'
-import { syncLV, confirmUploadFolder, keepDuplicateUploads, routeLiveSocket, dropConnection, restoreConnection } from '../../utils'
+import { syncLV, keepDuplicateUploads, routeLiveSocket, dropConnection, restoreConnection } from '../../utils'
 
 // The fields another editor is in are locked for us until they leave them:
 // rich text, a multi-select's options, and an image, video or file field
@@ -43,9 +43,8 @@ test.describe('Field locks', () => {
     // An image field, for each way its drawer closes
     const image = page.locator('#project_listing_image-media')
     await image.locator('input[type="file"]').setInputFiles('./fixtures/image.jpg')
-    await confirmUploadFolder(page)
-    await keepDuplicateUploads(page)
     await expect(image.locator('img')).toBeVisible({ timeout: 30000 })
+    await keepDuplicateUploads(page)
 
     const imageDrawer = page.locator('#image-drawer')
     const done = imageDrawer.getByRole('button', { name: 'Done', exact: true })

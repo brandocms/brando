@@ -1,5 +1,5 @@
 import { test, expect } from '../../test-support/setupAuth'
-import { syncLV, dragAndDrop, fillSlugSource, confirmUploadFolder, keepDuplicateUploads, setEntryStatus } from '../../utils'
+import { syncLV, dragAndDrop, fillSlugSource, keepDuplicateUploads, setEntryStatus } from '../../utils'
 
 test('creates project', async ({ page }, testInfo) => {
   test.setTimeout(120000)
@@ -12,6 +12,7 @@ test('creates project', async ({ page }, testInfo) => {
   await page.getByRole('textbox', { name: 'Name' }).click()
   await page.getByRole('textbox', { name: 'Name' }).fill('Microsoft')
   await page.getByTestId('submit').click()
+  await expect(page).toHaveURL('/admin/projects/clients')
   await syncLV(page)
   await page.locator('#nav-sections').getByRole('link', { name: 'Categories', exact: true }).click()
   await expect(page).toHaveURL(/\/categories/)
@@ -21,11 +22,13 @@ test('creates project', async ({ page }, testInfo) => {
   await page.getByRole('textbox', { name: 'Title' }).click()
   await page.getByRole('textbox', { name: 'Title' }).fill('Design')
   await page.getByTestId('submit').click()
+  await expect(page).toHaveURL('/admin/projects/categories')
   await syncLV(page)
   await page.getByRole('link', { name: 'Create new' }).click()
   await page.getByRole('textbox', { name: 'Title' }).click()
   await page.getByRole('textbox', { name: 'Title' }).fill('Strategy')
   await page.getByTestId('submit').click()
+  await expect(page).toHaveURL('/admin/projects/categories')
   await syncLV(page)
   await page.locator('#nav-sections').getByRole('link', { name: 'Projects' }).click()
   await expect(page).toHaveURL(/\/projects\/projects/)
@@ -83,11 +86,9 @@ test('creates project', async ({ page }, testInfo) => {
   // available for the compatible-library selection checks below.
   const listingImage = page.locator('#project_listing_image-media')
   await listingImage.locator('input[type="file"]').setInputFiles('./fixtures/image.jpg')
-  await confirmUploadFolder(page)
   await expect(listingImage.locator('img')).toBeVisible({ timeout: 30000 })
   const firstImageId = await listingImage.getAttribute('data-asset-id')
   await listingImage.locator('input[type="file"]').setInputFiles('./fixtures/image2.jpg')
-  await confirmUploadFolder(page)
   await expect(listingImage).not.toHaveAttribute('data-asset-id', firstImageId, { timeout: 30000 })
   await expect(listingImage.locator('img')).toBeVisible({ timeout: 30000 })
   const secondImageId = await listingImage.getAttribute('data-asset-id')
@@ -102,7 +103,6 @@ test('creates project', async ({ page }, testInfo) => {
   const galleryFileChooser = page.waitForEvent('filechooser')
   await page.locator('.gallery-input').getByRole('button', { name: 'Upload', exact: true }).click()
   await (await galleryFileChooser).setFiles(['./fixtures/image2.jpg', './fixtures/image.jpg'])
-  await confirmUploadFolder(page)
 
   // Wait for progress bars to complete (image uploads can take a while)
   await expect(page.locator('progress')).toHaveCount(0, { timeout: 15000 })

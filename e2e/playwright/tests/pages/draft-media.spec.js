@@ -1,5 +1,5 @@
 import { test, expect } from '../../test-support/setupAuth'
-import { syncLV, confirmUploadFolder, mediaMenu, mediaMenuButton, setEntryStatus } from '../../utils'
+import { syncLV, mediaMenu, mediaMenuButton, setEntryStatus } from '../../utils'
 
 const mediaState = async (page, schema, id = 'new') => {
   const response = await page.request.post('/e2e/drafts/media-state', { data: { schema, entry_id: String(id) } })
@@ -63,7 +63,6 @@ const uploadField = async (page, type, file) => {
   const field = projectMediaField(page, type)
   const previous = await field.getAttribute('data-asset-id')
   await field.locator('input[type="file"]').setInputFiles(file)
-  if (type === 'image') await confirmUploadFolder(page)
   await expect(field).toHaveAttribute('data-asset-id', /\d+/, { timeout: 30000 })
   if (previous) await expect(field).not.toHaveAttribute('data-asset-id', previous, { timeout: 30000 })
   if (type === 'image') await expect(field.locator('img')).toBeVisible({ timeout: 20000 })
@@ -180,7 +179,6 @@ test.describe('Media in entry recovery copies', () => {
     await addBlock(page, 'Gallery with Controls')
     const gallery = page.locator('.gallery-block')
     await gallery.locator('.file-input').setInputFiles(['./fixtures/image.jpg'])
-    await confirmUploadFolder(page)
     await expect(gallery.locator('.gallery-object')).toHaveCount(1, { timeout: 30000 })
     const id = await savePage(page, title)
     expect((await page.request.post('/e2e/drafts/legacy-copies', { data: { entry_id: id } })).ok()).toBeTruthy()
@@ -299,7 +297,6 @@ test.describe('Media in entry recovery copies', () => {
     const chooser = page.waitForEvent('filechooser')
     await gallery.getByRole('button', { name: 'Upload', exact: true }).click()
     await (await chooser).setFiles(['./fixtures/image.jpg', './fixtures/image2.jpg'])
-    await confirmUploadFolder(page)
     await expect(gallery.locator('.gallery-object')).toHaveCount(2, { timeout: 30000 })
     await gallery.locator('input[type="file"]').setInputFiles('./fixtures/video.mp4')
     await expect(gallery.locator('.gallery-object')).toHaveCount(3, { timeout: 30000 })
@@ -361,7 +358,6 @@ test.describe('Media in entry recovery copies', () => {
     await addBlock(page, 'Gallery with Controls')
     const gallery = page.locator('.gallery-block')
     await gallery.locator('.file-input').setInputFiles(['./fixtures/image.jpg', './fixtures/image2.jpg'])
-    await confirmUploadFolder(page)
     await expect(gallery.locator('.gallery-object')).toHaveCount(2, { timeout: 30000 })
     await gallery.getByRole('button', { name: 'Select videos', exact: true }).click()
     await page.locator('.video-picker__video', { hasText: 'Test Video' }).first().click()
@@ -394,7 +390,6 @@ test.describe('Media in entry recovery copies', () => {
     await addBlock(page, 'Single Image with Caption')
     const picture = page.locator('.picture-block')
     await picture.locator('.file-input').last().setInputFiles('./fixtures/image.jpg')
-    await confirmUploadFolder(page)
     await expect(picture.locator('.media-field--block:visible img')).toBeVisible({ timeout: 30000 })
     await addBlock(page, 'Video Player')
     await page.locator('.video-block .media-field:visible').getByRole('button', { name: 'Select video', exact: true }).click()
@@ -406,7 +401,6 @@ test.describe('Media in entry recovery copies', () => {
       const chooser = page.waitForEvent('filechooser')
       await mediaMenu(field, 'Upload')
       await (await chooser).setFiles(`./fixtures/${file}`)
-      if (type === 'image') await confirmUploadFolder(page)
       await expect(field).toHaveAttribute('data-asset-id', /\d+/, { timeout: 30000 })
       if (type === 'image') await expect(field.locator('img')).toBeVisible({ timeout: 30000 })
     }
@@ -476,7 +470,6 @@ test.describe('Media in entry recovery copies', () => {
         await expect(field).toContainText('Test Video')
       } else {
         await field.locator('input[type="file"]').setInputFiles(type === 'image' ? './fixtures/image.jpg' : './fixtures/test.pdf')
-        if (type === 'image') await confirmUploadFolder(page)
       }
       await expect(field).toHaveAttribute('data-asset-id', /\d+/, { timeout: 30000 })
     }

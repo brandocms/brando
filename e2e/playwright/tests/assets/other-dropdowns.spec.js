@@ -1,5 +1,5 @@
 import { test, expect } from '../../test-support/setupAuth'
-import { syncLV, confirmUploadFolder } from '../../utils'
+import { syncLV } from '../../utils'
 
 async function checkMenu(page, trigger, menu, testInfo, name) {
   await trigger.evaluate(el => el.scrollIntoView({ block: 'end' }))
@@ -119,7 +119,6 @@ test('image and video picker action menus escape scrolling rows', async ({ page 
   for (const [type, fieldId, file] of [['image', 'project_listing_image', 'image.jpg'], ['video', 'project_cover_video', 'video.mp4']]) {
     const field = page.locator(`#${fieldId}-media`)
     await field.locator('input[type=file]').setInputFiles(`./fixtures/${file}`)
-    if (type === 'image') await confirmUploadFolder(page)
     await expect(field).toHaveAttribute('data-asset-id', /\d+/, { timeout: 30000 })
     await field.getByRole('button', { name: `Select ${type}`, exact: true }).click()
     const picker = page.locator(`#${type}-picker`)

@@ -1,5 +1,5 @@
 import { test, expect } from '../../test-support/setupAuth'
-import { syncLV, confirmUploadFolder } from '../../utils'
+import { syncLV } from '../../utils'
 
 test.describe('Gallery block image replacement', () => {
   test.describe.configure({ mode: 'serial' })
@@ -28,9 +28,7 @@ test.describe('Gallery block image replacement', () => {
     await page
       .locator('.gallery-block .file-input')
       .setInputFiles(['./fixtures/image.jpg', './fixtures/image2.jpg'])
-    await confirmUploadFolder(page)
     await syncLV(page)
-    await page.waitForTimeout(3000)
 
     // Wait for both gallery objects to appear
     await expect(page.locator('.gallery-block .gallery-object')).toHaveCount(2, {
@@ -50,9 +48,7 @@ test.describe('Gallery block image replacement', () => {
     const fileChooser = page.waitForEvent('filechooser')
     await page.locator('.gallery-block').getByRole('button', { name: 'Upload', exact: true }).click()
     await (await fileChooser).setFiles('./fixtures/image.jpg')
-    await confirmUploadFolder(page)
     await syncLV(page)
-    await page.waitForTimeout(3000)
 
     // Should have 2 images again
     await expect(page.locator('.gallery-block .gallery-object')).toHaveCount(2, {

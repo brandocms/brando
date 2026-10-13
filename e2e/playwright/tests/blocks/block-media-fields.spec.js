@@ -1,5 +1,5 @@
 import { test, expect } from '../../test-support/setupAuth'
-import { syncLV, confirmUploadFolder, keepDuplicateUploads, mediaMenu } from '../../utils'
+import { syncLV, keepDuplicateUploads, mediaMenu } from '../../utils'
 import fs from 'node:fs'
 
 async function createPage(page, title, module) {
@@ -111,7 +111,6 @@ test('processing image refs reserve their proportions and show one animated stat
       } }
     })
     await field.locator('input[type="file"]').setInputFiles(file)
-    await confirmUploadFolder(page)
     await captured
     const img = field.locator('.media-field-preview img')
     await expect(img).toBeVisible({ timeout: 20000 })
@@ -130,8 +129,10 @@ test('image refs use a fixed thumbnail width and natural portrait and landscape 
     buffer: Buffer.from('<svg xmlns="http://www.w3.org/2000/svg" width="240" height="400" viewBox="0 0 240 400"><rect width="240" height="400" fill="#dce7d3"/><rect x="16" y="16" width="208" height="368" rx="8" fill="#254e3f"/><circle cx="120" cy="148" r="64" fill="#e8c384"/><path d="M16 280L95 210L224 330V384H16Z" fill="#a5bd97"/><text x="120" y="360" fill="white" font-family="sans-serif" font-size="16" text-anchor="middle">240 × 400</text></svg>'),
   }
   for (const [shape, file] of [['portrait', portrait], ['landscape', './fixtures/image.jpg']]) {
+    const previousId = await field.getAttribute('data-asset-id')
     await field.locator('input[type="file"]').setInputFiles(file)
-    await confirmUploadFolder(page)
+    await expect(field).toHaveAttribute('data-asset-id', /\d+/, { timeout: 20000 })
+    if (previousId) await expect(field).not.toHaveAttribute('data-asset-id', previousId, { timeout: 20000 })
     const img = field.locator('.media-field-preview img')
     await expect.poll(() => img.evaluate(el => el.complete && el.naturalWidth > 0).catch(() => false)).toBe(true)
     await expect.poll(() => img.evaluate(el => el.naturalHeight > el.naturalWidth)).toBe(shape === 'portrait')
@@ -187,7 +188,7 @@ test('image drops validate destination, preserve ref settings, and keep the moda
   // Cancelling the folder choice leaves the uploaded image in place.
   await expect(picture(page)).toHaveAttribute('data-asset-id', uploadedId)
   await drop(page, picture(page), [['image.jpg', 'image/jpeg']])
-  await confirmUploadFolder(page)
+  await expect(picture(page)).not.toHaveAttribute('data-asset-id', uploadedId, { timeout: 20000 })
   await expect(picture(page).locator('img')).toBeVisible({ timeout: 20000 })
   // The same file again: answer the upload manager before it covers the modal.
   await keepDuplicateUploads(page)
@@ -204,13 +205,20 @@ test('image drops validate destination, preserve ref settings, and keep the moda
   expect(box.width).toBeGreaterThan(300)
   await modal.getByRole('button', { name: 'Done', exact: true }).click()
   await page.setViewportSize({ width: 1440, height: 1000 })
+  const removedImageId = await picture(page).getAttribute('data-asset-id')
   await picture(page).getByRole('button', { name: 'Remove', exact: true }).click()
+  // Removal must reach the upload target before it captures the next intent.
+  await expect(picture(page)).not.toHaveAttribute('data-asset-id', /\d+/)
+  await expect(picture(page).locator('img')).toHaveCount(0)
   await drop(page, picture(page), [['image2.jpg', 'image/jpeg']])
-  await confirmUploadFolder(page)
+  await expect(picture(page)).toHaveAttribute('data-asset-id', /\d+/, { timeout: 20000 })
+  await expect(picture(page)).not.toHaveAttribute('data-asset-id', removedImageId)
   await expect(picture(page).locator('img')).toBeVisible({ timeout: 20000 })
+  const replacementImageId = await picture(page).getAttribute('data-asset-id')
   await page.getByTestId('submit').click()
   await expect(page).not.toHaveURL(/\/create$/, { timeout: 30000 })
   await page.getByRole('link', { name: title, exact: true }).click()
+  await expect(picture(page)).toHaveAttribute('data-asset-id', replacementImageId)
   await picture(page).getByRole('button', { name: 'Configure', exact: true }).click()
   await expect(modal.getByLabel('Alternative text', { exact: true })).toHaveValue('Specific to this reference')
   await modal.getByRole('tab', { name: 'Display', exact: true }).click()
@@ -223,7 +231,6 @@ test('a mixed drop on the empty gallery preserves order and survives save', asyn
   await createPage(page, title, 'Gallery with Controls')
   const gallery = page.locator('.gallery-block .media-gallery:visible')
   await drop(page, gallery.locator('.media-gallery-empty'), [['image.jpg', 'image/jpeg'], ['video.mp4', 'video/mp4'], ['image2.jpg', 'image/jpeg']])
-  await confirmUploadFolder(page)
   await expect(gallery.locator('.gallery-object')).toHaveCount(3, { timeout: 30000 })
   // Both image/video association inputs are carried for every item, preserving typed IDs.
   const mediaIds = () => gallery.locator('.gallery-object').evaluateAll(items => items.map(item => ({
@@ -252,7 +259,6 @@ test('the gallery resource editor accepts a mixed drop and saves its collection'
   const gallery = page.locator('[data-kind="resource_gallery"]')
   const initial = await gallery.locator('.gallery-object').count()
   await drop(page, gallery, [['image.jpg', 'image/jpeg'], ['video.mp4', 'video/mp4']])
-  await confirmUploadFolder(page)
   await expect(gallery.locator('.gallery-object')).toHaveCount(initial + 2, { timeout: 20000 })
   await expect(gallery.locator('img').last()).toBeVisible({ timeout: 20000 })
   await page.getByTestId('submit').click()
@@ -265,7 +271,6 @@ test('the gallery resource editor accepts a mixed drop and saves its collection'
 test('a queued replacement cannot reattach an image after Remove', async ({ page }, testInfo) => {
   await createPage(page, 'Ignore removed upload', 'Single Image with Caption')
   await drop(page, picture(page), [['image.jpg', 'image/jpeg']])
-  await confirmUploadFolder(page)
   await expect(picture(page).locator('img')).toBeVisible({ timeout: 20000 })
   // Hold the real manager queue before transfer so the intervening edit is deterministic.
   await page.evaluate(() => { window.BrandoUploads._hook._maxTransfers = 0 })

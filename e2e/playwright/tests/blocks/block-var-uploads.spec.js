@@ -1,5 +1,5 @@
 import { test, expect } from '../../test-support/setupAuth'
-import { syncLV, confirmUploadFolder, mediaMenu, mediaMenuButton } from '../../utils'
+import { syncLV, mediaMenu, mediaMenuButton } from '../../utils'
 
 async function createVarPage(page, title) {
   await page.goto('/admin/pages/create')
@@ -25,7 +25,6 @@ for (const type of ['image', 'file']) {
     const field = mediaField(page, type)
     await expect(mediaMenuButton(field)).toHaveText('Add')
     await field.locator('input[type="file"]').setInputFiles(type === 'image' ? './fixtures/image.jpg' : './fixtures/test.pdf')
-    if (type === 'image') await confirmUploadFolder(page)
     await expect(field).toHaveAttribute('data-asset-id', /\d+/, { timeout: 20000 })
     if (type === 'image') await expect(field.locator('img')).toBeVisible({ timeout: 20000 })
     await mediaMenu(field, 'Configure')
@@ -45,7 +44,6 @@ for (const type of ['image', 'file']) {
     await createVarPage(page, `Var ${type} Remove Test`)
     const field = mediaField(page, type)
     await field.locator('input[type="file"]').setInputFiles(type === 'image' ? './fixtures/image.jpg' : './fixtures/test.pdf')
-    if (type === 'image') await confirmUploadFolder(page)
     await expect(field).toHaveAttribute('data-asset-id', /\d+/, { timeout: 20000 })
     await mediaMenu(field, 'Configure')
     const modal = page.locator(`[id$="${type}-config"]:visible`)

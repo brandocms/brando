@@ -1,5 +1,5 @@
 import { test, expect } from '../../test-support/setupAuth'
-import { syncLV, confirmUploadFolder, mediaMenu } from '../../utils'
+import { syncLV, mediaMenu } from '../../utils'
 
 const fixture = async (page, schema, attributes) => {
   const response = await page.request.post('/__e2e/db/factory', {
@@ -167,7 +167,6 @@ test('a note uses the existing image, video and file controls and keeps media on
   }
   await add('Note image')
   await drawer.locator('.picture-block .file-input').first().setInputFiles('./fixtures/image.jpg')
-  await confirmUploadFolder(page)
   await expect(drawer.locator('.picture-block .media-field--block:visible img')).toBeVisible({ timeout: 30000 })
   await add('Note video')
   await drawer.locator('.video-block .media-field:visible').getByRole('button', { name: 'Select video', exact: true }).click()

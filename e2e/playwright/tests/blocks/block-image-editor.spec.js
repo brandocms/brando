@@ -1,5 +1,12 @@
 import { test, expect } from '../../test-support/setupAuth'
-import { syncLV, confirmUploadFolder, expectCanvasOverlayAligned } from '../../utils'
+import { syncLV, expectCanvasOverlayAligned } from '../../utils'
+
+// Visibility alone allows crop/save before the hook has decoded the source.
+// onerror also clears aria-busy, so require successful image dimensions too.
+const expectImageEditorReady = async page => {
+  await expect(page.locator('#image-editor-hook')).toHaveAttribute('aria-busy', 'false', { timeout: 15000 })
+  await expect(page.locator('#image-editor-dimensions')).toHaveText(/^[1-9]\d* × [1-9]\d*$/)
+}
 
 test.describe('Image Editor from Blocks', () => {
 
@@ -25,9 +32,7 @@ test.describe('Image Editor from Blocks', () => {
 
     // Upload image to the picture block
     await page.locator('.picture-block .file-input').first().setInputFiles('./fixtures/image.jpg')
-    await confirmUploadFolder(page)
     await syncLV(page)
-    await page.waitForTimeout(2000)
 
     // Wait for image to appear in preview
     await expect(page.locator('.picture-block .media-field--block:visible img')).toBeVisible({
@@ -45,7 +50,7 @@ test.describe('Image Editor from Blocks', () => {
     // Verify canvas loaded
     const mainCanvas = page.locator('#image-editor-canvas')
     await expect(mainCanvas).toBeVisible({ timeout: 10000 })
-    await page.waitForTimeout(2000)
+    await expectImageEditorReady(page)
 
     // Verify "Save as new copy" is visible when opened from block
     const saveNewBtn = page.locator('#image-editor-save-new')
@@ -166,7 +171,6 @@ test.describe('Image Editor from Blocks', () => {
       canvasBox.x + canvasBox.width * 0.3,
       canvasBox.y + canvasBox.height * 0.6
     )
-    await page.waitForTimeout(300)
 
     // Save via "Update focal point"
     const saveReplaceBtn = page.locator('#image-editor-save-replace')
@@ -199,9 +203,7 @@ test.describe('Image Editor from Blocks', () => {
 
     // Upload image to the picture block
     await page.locator('.picture-block .file-input').first().setInputFiles('./fixtures/image.jpg')
-    await confirmUploadFolder(page)
     await syncLV(page)
-    await page.waitForTimeout(2000)
 
     // Wait for image to appear
     await expect(page.locator('.picture-block .media-field--block:visible img')).toBeVisible({
@@ -226,7 +228,7 @@ test.describe('Image Editor from Blocks', () => {
     // Verify canvas loaded
     const mainCanvas = page.locator('#image-editor-canvas')
     await expect(mainCanvas).toBeVisible({ timeout: 10000 })
-    await page.waitForTimeout(2000)
+    await expectImageEditorReady(page)
 
     // Verify "Save as new copy" is visible when opened from block
     await expect(page.locator('#image-editor-save-new')).toBeVisible()
@@ -235,7 +237,7 @@ test.describe('Image Editor from Blocks', () => {
     await page.evaluate(() =>
       document.querySelector('#image-editor-drawer .drawer-close-button').click()
     )
-    await page.waitForTimeout(1000)
+    await expect(editorDrawer).toBeHidden()
   })
 
   test('opens image editor from gallery block thumbnail', async ({ page }) => {
@@ -262,9 +264,7 @@ test.describe('Image Editor from Blocks', () => {
     await page
       .locator('.gallery-block .file-input')
       .setInputFiles(['./fixtures/image.jpg', './fixtures/image2.jpg'])
-    await confirmUploadFolder(page)
     await syncLV(page)
-    await page.waitForTimeout(3000)
 
     // Wait for gallery objects to appear
     await expect(page.locator('.gallery-block .gallery-object')).toHaveCount(2, {
@@ -282,7 +282,7 @@ test.describe('Image Editor from Blocks', () => {
     // Verify canvas loaded
     const mainCanvas = page.locator('#image-editor-canvas')
     await expect(mainCanvas).toBeVisible({ timeout: 10000 })
-    await page.waitForTimeout(2000)
+    await expectImageEditorReady(page)
 
     // Verify "Save as new copy" is visible when opened from block
     await expect(page.locator('#image-editor-save-new')).toBeVisible()
@@ -293,7 +293,6 @@ test.describe('Image Editor from Blocks', () => {
       canvasBox.x + canvasBox.width * 0.5,
       canvasBox.y + canvasBox.height * 0.5
     )
-    await page.waitForTimeout(300)
 
     await page.locator('#image-editor-save-replace').click()
 
@@ -324,9 +323,7 @@ test.describe('Image Editor from Blocks', () => {
 
     // Upload 1 image to the gallery block
     await page.locator('.gallery-block .file-input').setInputFiles('./fixtures/image.jpg')
-    await confirmUploadFolder(page)
     await syncLV(page)
-    await page.waitForTimeout(3000)
 
     // Wait for the gallery object to appear
     await expect(page.locator('.gallery-block .gallery-object')).toHaveCount(1, {
@@ -345,13 +342,13 @@ test.describe('Image Editor from Blocks', () => {
     // Verify image editor drawer opened and canvas loaded
     const mainCanvas = page.locator('#image-editor-canvas')
     await expect(mainCanvas).toBeVisible({ timeout: 10000 })
-    await page.waitForTimeout(2000)
+    await expectImageEditorReady(page)
 
     // Zoom in to apply an actual crop
     const zoomSlider = page.locator('#image-editor-zoom')
     await zoomSlider.fill('2')
     await zoomSlider.dispatchEvent('input')
-    await page.waitForTimeout(500)
+    await expect(page.locator('#image-editor-zoom-value')).toHaveText('2.00x')
 
     // Click "Save as new copy" — uses LiveView upload
     await page.locator('#image-editor-save-new').click()
@@ -394,14 +391,16 @@ test.describe('Image Editor from Blocks', () => {
 
     // Upload 1 image to the gallery block
     await page.locator('.gallery-block .file-input').setInputFiles('./fixtures/image.jpg')
-    await confirmUploadFolder(page)
     await syncLV(page)
-    await page.waitForTimeout(3000)
 
     // Wait for the gallery object to appear
     await expect(page.locator('.gallery-block .gallery-object')).toHaveCount(1, {
       timeout: 15000,
     })
+
+    const imgLocator = page.locator('.gallery-block .gallery-object .gallery-tile-square img').first()
+    await expect(imgLocator).toBeVisible({ timeout: 15000 })
+    const srcBefore = await imgLocator.getAttribute('src')
 
     // Click edit icon on the image
     await page.locator('.gallery-block .gallery-object .edit-image-btn').first().click()
@@ -410,7 +409,7 @@ test.describe('Image Editor from Blocks', () => {
     // Wait for canvas to load
     const mainCanvas = page.locator('#image-editor-canvas')
     await expect(mainCanvas).toBeVisible({ timeout: 10000 })
-    await page.waitForTimeout(2000)
+    await expectImageEditorReady(page)
 
     // Save as new copy (replaces the image)
     const saveNewBtn = page.locator('#image-editor-save-new')
@@ -420,7 +419,7 @@ test.describe('Image Editor from Blocks', () => {
     // Wait for drawer to close and processing to complete
     await page.waitForSelector('#image-editor-drawer', { state: 'hidden', timeout: 10000 })
     await syncLV(page)
-    await page.waitForTimeout(5000)
+    await expect(imgLocator).not.toHaveAttribute('src', srcBefore, { timeout: 20000 })
 
     // Verify the gallery object shows a processed image (not a spinner)
     await expect(page.locator('.gallery-block .gallery-object')).toHaveCount(1)
@@ -431,18 +430,15 @@ test.describe('Image Editor from Blocks', () => {
     // Open image picker and select the original image (adds a second image)
     await page.locator('.gallery-block').getByRole('button', { name: 'Select images', exact: true }).click()
     await syncLV(page)
-    await page.waitForTimeout(1000)
 
     // The image picker should show images - click the first non-selected one
     const pickerImages = page.locator('.image-picker__image:not(.selected)')
     await expect(pickerImages.first()).toBeVisible({ timeout: 5000 })
     await pickerImages.first().click()
     await syncLV(page)
-    await page.waitForTimeout(2000)
 
     // Close the image picker
     await page.locator('#image-picker .drawer-close-button').click()
-    await page.waitForTimeout(1000)
 
     // Gallery should now have 2 objects
     await expect(page.locator('.gallery-block .gallery-object')).toHaveCount(2, {
@@ -477,9 +473,7 @@ test.describe('Image Editor from Blocks', () => {
 
     // Upload an image
     await page.locator('.gallery-block .file-input').setInputFiles('./fixtures/image.jpg')
-    await confirmUploadFolder(page)
     await syncLV(page)
-    await page.waitForTimeout(3000)
 
     await expect(page.locator('.gallery-block .gallery-object')).toHaveCount(1, {
       timeout: 15000,
@@ -488,7 +482,6 @@ test.describe('Image Editor from Blocks', () => {
     // Open image picker - the uploaded image should be selected
     await page.locator('.gallery-block').getByRole('button', { name: 'Select images', exact: true }).click()
     await syncLV(page)
-    await page.waitForTimeout(1000)
 
     const selectedImages = page.locator('.image-picker__image.selected')
     await expect(selectedImages).toHaveCount(1, { timeout: 15000 })
@@ -496,7 +489,6 @@ test.describe('Image Editor from Blocks', () => {
     // Click the selected image to deselect it
     await selectedImages.first().click()
     await syncLV(page)
-    await page.waitForTimeout(1000)
 
     // Image should now be deselected in picker
     await expect(page.locator('.image-picker__image.selected')).toHaveCount(0, {
@@ -505,7 +497,6 @@ test.describe('Image Editor from Blocks', () => {
 
     // Close picker
     await page.locator('#image-picker .drawer-close-button').click()
-    await page.waitForTimeout(1000)
 
     // Gallery should have 0 objects
     await expect(page.locator('.gallery-block .gallery-object')).toHaveCount(0, {
@@ -535,9 +526,7 @@ test.describe('Image Editor from Blocks', () => {
 
     // Upload an image first so we have something to compare
     await page.locator('.gallery-block .file-input').setInputFiles('./fixtures/image.jpg')
-    await confirmUploadFolder(page)
     await syncLV(page)
-    await page.waitForTimeout(2000)
 
     // Wait for the image gallery object
     await expect(page.locator('.gallery-block .gallery-object')).toHaveCount(1, {
@@ -575,9 +564,7 @@ test.describe('Image Editor from Blocks', () => {
 
     // Upload image to the picture block
     await page.locator('.picture-block .file-input').first().setInputFiles('./fixtures/image.jpg')
-    await confirmUploadFolder(page)
     await syncLV(page)
-    await page.waitForTimeout(2000)
 
     // Wait for image to appear in preview
     const imgLocator = page.locator('.picture-block .media-field--block:visible img')
@@ -591,13 +578,13 @@ test.describe('Image Editor from Blocks', () => {
     await expect(page.locator('#image-editor-drawer')).toBeVisible({ timeout: 5000 })
     const mainCanvas = page.locator('#image-editor-canvas')
     await expect(mainCanvas).toBeVisible({ timeout: 10000 })
-    await page.waitForTimeout(2000)
+    await expectImageEditorReady(page)
 
     // Zoom in using the slider (this triggers crop detection in _onSaveReplace)
     const zoomSlider = page.locator('#image-editor-zoom')
     await zoomSlider.fill('2')
     await zoomSlider.dispatchEvent('input')
-    await page.waitForTimeout(500)
+    await expect(page.locator('#image-editor-zoom-value')).toHaveText('2.00x')
 
     // Click "Save changes" — wait for the HTTP replace_crop to complete
     const replacePromise = page.waitForResponse(
@@ -615,16 +602,10 @@ test.describe('Image Editor from Blocks', () => {
       timeout: 20000,
     })
 
-    // Verify the crop was applied by checking the rendered image dimensions changed.
-    // Original fixture is landscape; after 2x zoom crop, dimensions should be smaller.
-    const dims = await page.locator('.picture-block .media-field--block:visible img').evaluate((img) => ({
-      w: img.naturalWidth,
-      h: img.naturalHeight,
-    }))
-    // At 2x zoom the cropped region is ~half the original in each dimension,
-    // so the processed size should be noticeably smaller than the original.
-    expect(dims.w).toBeGreaterThan(0)
-    expect(dims.h).toBeGreaterThan(0)
+    // The reprocessed image must be decoded, not just laid out in the DOM.
+    await expect.poll(() => imgLocator.evaluate(img =>
+      img.complete && img.naturalWidth > 0 && img.naturalHeight > 0
+    )).toBe(true)
   })
 
   test('save changes with zoom applies crop to gallery block image', async ({ page }) => {
@@ -649,9 +630,7 @@ test.describe('Image Editor from Blocks', () => {
 
     // Upload 1 image to the gallery block
     await page.locator('.gallery-block .file-input').setInputFiles('./fixtures/image.jpg')
-    await confirmUploadFolder(page)
     await syncLV(page)
-    await page.waitForTimeout(3000)
 
     // Wait for the gallery object to appear
     await expect(page.locator('.gallery-block .gallery-object')).toHaveCount(1, {
@@ -666,13 +645,13 @@ test.describe('Image Editor from Blocks', () => {
     await expect(page.locator('#image-editor-drawer')).toBeVisible({ timeout: 5000 })
     const mainCanvas = page.locator('#image-editor-canvas')
     await expect(mainCanvas).toBeVisible({ timeout: 10000 })
-    await page.waitForTimeout(2000)
+    await expectImageEditorReady(page)
 
     // Zoom in to apply a crop
     const zoomSlider = page.locator('#image-editor-zoom')
     await zoomSlider.fill('2')
     await zoomSlider.dispatchEvent('input')
-    await page.waitForTimeout(500)
+    await expect(page.locator('#image-editor-zoom-value')).toHaveText('2.00x')
 
     // Click "Save changes" — wait for the HTTP replace_crop to complete
     const replacePromise = page.waitForResponse(
@@ -718,9 +697,7 @@ test.describe('Image Editor from Blocks', () => {
 
     // Upload image to the picture block
     await page.locator('.picture-block .file-input').first().setInputFiles('./fixtures/image.jpg')
-    await confirmUploadFolder(page)
     await syncLV(page)
-    await page.waitForTimeout(2000)
 
     // Wait for image to appear in preview
     const imgLocator = page.locator('.picture-block .media-field--block:visible img')
@@ -737,13 +714,13 @@ test.describe('Image Editor from Blocks', () => {
     await expect(page.locator('#image-editor-drawer')).toBeVisible({ timeout: 5000 })
     const mainCanvas = page.locator('#image-editor-canvas')
     await expect(mainCanvas).toBeVisible({ timeout: 10000 })
-    await page.waitForTimeout(2000)
+    await expectImageEditorReady(page)
 
     // Zoom in to apply a crop
     const zoomSlider = page.locator('#image-editor-zoom')
     await zoomSlider.fill('2')
     await zoomSlider.dispatchEvent('input')
-    await page.waitForTimeout(500)
+    await expect(page.locator('#image-editor-zoom-value')).toHaveText('2.00x')
 
     // Click "Save as new copy" — uses LiveView upload
     await page.locator('#image-editor-save-new').click()

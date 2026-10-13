@@ -1,5 +1,5 @@
 import { test, expect } from '../../test-support/setupAuth'
-import { syncLV, confirmUploadFolder } from '../../utils'
+import { syncLV } from '../../utils'
 
 // Save → reload persistence guards for block media.
 //
@@ -35,7 +35,6 @@ test.describe('Block media save persistence', () => {
 
   const uploadPicture = async (page) => {
     await page.locator('.picture-block .file-input').first().setInputFiles('./fixtures/image.jpg')
-    await confirmUploadFolder(page)
     await syncLV(page)
     // upload + processing; the block swaps the upload canvas for the image
     await expect(page.locator('.picture-block img:visible').first()).toBeVisible({ timeout: 20000 })
@@ -142,7 +141,6 @@ test.describe('Block media save persistence', () => {
     const imageField = page.locator('.media-field[data-kind="block_var"][id$="-image-media"]')
     const fileField = page.locator('.media-field[data-kind="block_var"][id$="-file-media"]')
     await imageField.locator('input[type="file"]').setInputFiles('./fixtures/image.jpg')
-    await confirmUploadFolder(page)
     await expect(imageField.locator('img')).toBeVisible({ timeout: 20000 })
     const imageId = await imageField.getAttribute('data-asset-id')
     expect(imageId).toMatch(/^\d+$/)

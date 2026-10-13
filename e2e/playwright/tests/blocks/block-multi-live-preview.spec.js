@@ -3,8 +3,7 @@ import {
   syncLV,
   toggleLivePreview,
   getPreviewFrame,
-  waitForPreviewReady,
-  waitForPreviewUpdate
+  waitForPreviewReady
 } from '../../utils'
 
 // Live preview coverage for MULTI modules and their children. The existing
@@ -44,18 +43,17 @@ test.describe('Live Preview with multi modules', () => {
     const frame = getPreviewFrame(page)
 
     await addTeamSection(page)
-    await waitForPreviewUpdate(page)
+    await syncLV(page)
     await expect(frame.locator('section[b-tpl="team-section"]')).toBeAttached({ timeout: 15000 })
 
     const multiBlock = page.locator('[data-module-multi="true"]').first()
     await addChild(page, multiBlock, 'Team Member')
-    await waitForPreviewUpdate(page)
+    await syncLV(page)
     await expect(frame.locator('div[b-tpl="team-member"]')).toBeAttached({ timeout: 15000 })
 
     const memberBlock = multiBlock.locator('.block-children [data-uid]').first()
     await memberBlock.locator('.block-vars').getByLabel('Name').fill('Ada Lovelace')
-    await page.waitForTimeout(600)
-    await waitForPreviewUpdate(page)
+    await syncLV(page)
     await expect(frame.locator('div[b-tpl="team-member"] h3')).toHaveText('Ada Lovelace', {
       timeout: 15000
     })
@@ -78,8 +76,7 @@ test.describe('Live Preview with multi modules', () => {
 
     const memberBlock = multiBlock.locator('.block-children [data-uid]').first()
     await memberBlock.locator('.block-vars').getByLabel('Name').fill('Grace Hopper')
-    await page.waitForTimeout(600)
-    await waitForPreviewUpdate(page)
+    await syncLV(page)
     await expect(frame.locator('div[b-tpl="team-member"] h3')).toHaveText('Grace Hopper', {
       timeout: 15000
     })
@@ -105,13 +102,12 @@ test.describe('Live Preview with multi modules', () => {
 
     const multiBlock = page.locator('[data-module-multi="true"]').first()
     await addChild(page, multiBlock, 'Team Member')
-    await waitForPreviewUpdate(page)
+    await syncLV(page)
     await expect(frame.locator('div[b-tpl="team-member"]')).toBeAttached({ timeout: 15000 })
 
     const memberBlock = multiBlock.locator('.block-children [data-uid]').first()
     await memberBlock.locator('.block-vars').getByLabel('Name').fill('Alan Turing')
-    await page.waitForTimeout(600)
-    await waitForPreviewUpdate(page)
+    await syncLV(page)
     await expect(frame.locator('div[b-tpl="team-member"] h3')).toHaveText('Alan Turing', {
       timeout: 15000
     })
@@ -142,8 +138,7 @@ test.describe('Live Preview with multi modules', () => {
       .locator('.block-children [data-uid]')
       .first()
     await memberBlock.locator('.block-vars').getByLabel('Name').fill('Katherine Johnson')
-    await page.waitForTimeout(600)
-    await waitForPreviewUpdate(page)
+    await syncLV(page)
     await expect(frame.locator('div[b-tpl="team-member"] h3')).toHaveText('Katherine Johnson', {
       timeout: 15000
     })
@@ -160,17 +155,16 @@ test.describe('Live Preview with multi modules', () => {
     const frame = getPreviewFrame(page)
 
     await addTeamSection(page)
-    await waitForPreviewUpdate(page)
+    await syncLV(page)
 
     const multiBlock = page.locator('[data-module-multi="true"]').first()
     await addChild(page, multiBlock, 'Team Lead')
-    await waitForPreviewUpdate(page)
+    await syncLV(page)
     await expect(frame.locator('div[b-tpl="team-lead"]')).toBeAttached({ timeout: 15000 })
 
     const leadBlock = multiBlock.locator('.block-children [data-uid]').first()
     await leadBlock.locator('.block-vars').getByLabel('Lead name').fill('Ada Lovelace')
-    await page.waitForTimeout(600)
-    await waitForPreviewUpdate(page)
+    await syncLV(page)
     await expect(frame.locator('div[b-tpl="team-lead"] h3')).toHaveText('Ada Lovelace', {
       timeout: 15000
     })
