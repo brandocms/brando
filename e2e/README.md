@@ -43,6 +43,21 @@ the final HTML/JSON reports. Ordinary actions have a 15-second deadline;
 operations that need longer should set an explicit timeout. CI's Playwright
 deadline leaves time to finish reports before GitHub's job deadline.
 
+CI compiles Elixir and builds the E2E consumer's backend/frontend assets in
+parallel preparation jobs. All five browser jobs download the same run's
+`e2e-consumer-assets` artifact, containing the complete generated `priv/static`
+tree, including both manifests, bundled assets and Vite's copied public files.
+The first legacy shard still installs Brando/backend dependencies for its
+Vite component tests; the other shards only install Playwright's Node packages.
+Every install keeps the frozen lockfile check. pnpm's package store and Yarn's
+download cache are keyed by their lockfiles, with main runs warming them for
+new PRs; built assets are shared within a run, not restored from a source cache.
+
+If asset preparation fails, fix that job before rerunning the affected browser
+jobs. The shared asset artifact is retained for one day; after it expires,
+rerun all jobs to build and upload it again. Failure traces and test reports
+retain their separate seven-day lifetime.
+
 To start your server:
 
   * Install dependencies with `mix deps.get`
