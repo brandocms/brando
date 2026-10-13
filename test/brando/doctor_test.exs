@@ -48,8 +48,8 @@ defmodule Brando.DoctorTest do
     test "Brando's checks run without crashing in a standalone application" do
       results = Doctor.run(mode: :mix)
 
-      assert Enum.map(results, & &1.id) ==
-               ~w(versions node migrations oban configuration admin_routes admin_assets image_configs modules module_entry_paths sitemap robots json_ld alt_text deprecations test_database)
+      # Every one of Brando's checks, in the order `default_checks/0` lists them
+      assert Enum.map(results, & &1.id) == Enum.map(Doctor.default_checks(), & &1.id())
 
       refute Enum.any?(results, &(&1.summary in ["could not run", "took too long"])),
              inspect(Enum.filter(results, &(&1.summary in ["could not run", "took too long"])))
