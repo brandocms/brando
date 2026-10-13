@@ -620,10 +620,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: e2e-consumer-assets
-          path: |
-            brando/e2e/priv/static/admin_manifest.json
-            brando/e2e/priv/static/manifest.json
-            brando/e2e/priv/static/assets/
+          path: brando/e2e/priv/static/
           if-no-files-found: error
           overwrite: true
           retention-days: 1

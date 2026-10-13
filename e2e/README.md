@@ -45,7 +45,8 @@ deadline leaves time to finish reports before GitHub's job deadline.
 
 CI compiles Elixir and builds the E2E consumer's backend/frontend assets in
 parallel preparation jobs. All five browser jobs download the same run's
-`e2e-consumer-assets` artifact, containing both manifests and their asset files.
+`e2e-consumer-assets` artifact, containing the complete generated `priv/static`
+tree, including both manifests, bundled assets and Vite's copied public files.
 The first legacy shard still installs Brando/backend dependencies for its
 Vite component tests; the other shards only install Playwright's Node packages.
 Every install keeps the frozen lockfile check. pnpm's package store and Yarn's
