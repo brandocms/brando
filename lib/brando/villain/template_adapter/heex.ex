@@ -150,6 +150,12 @@ defmodule Brando.Villain.TemplateAdapter.Heex do
         |> Map.put(:entries, entries || [])
         |> Map.put(:entries_with_meta, entries_with_meta || [])
 
+      # The one entry chosen for a `:single` block, as `entries`.
+      %{datasource: true, datasource_type: :single, datasource_module: ds_module, datasource_query: query} ->
+        ids = block.block_identifiers |> Enum.sort_by(&(&1.sequence || 0)) |> Enum.map(& &1.identifier_id)
+        {:ok, entries} = Brando.Datasource.get_single_entries(ds_module, query, ids)
+        Map.put(assigns, :entries, entries)
+
       _ ->
         Map.put(assigns, :entries, [])
     end
