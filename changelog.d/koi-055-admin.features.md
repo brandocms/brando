@@ -10,8 +10,9 @@
 
 - **⌘Z (Ctrl+Z) undoes a block move or delete.** Outside a text field, rich
   text or code editor, ⌘Z undoes this editor's last structural change in the
-  block editor, newest first: a deleted block comes back as with the
-  notice's Undo, and a block moved (by dragging, Move up/down or the
-  outline) or children reordered go back where they were. A move into
-  another parent is not undone this way. In a text field ⌘Z is still the
-  field's own undo of typing.
+  block editor they last worked in, newest first: a deleted block comes back
+  as with the notice's Undo, and a block moved (by dragging, Move up/down or
+  the outline) or children reordered go back where they were. Any change it
+  cannot undo (an insert, a paste, a move into another parent, another
+  editor's change to the structure) ends what it can, so it never steps over
+  one. In a text field ⌘Z is still the field's own undo of typing.

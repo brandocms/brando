@@ -95,6 +95,80 @@ test.describe('Undoing block changes with the keyboard', () => {
     await expectOrder(page, ['Alfa', 'Beta', 'Gamma'])
   })
 
+  test('a change it cannot undo ends what ⌘Z undoes', async ({ page }) => {
+    expect((await page.request.post('/e2e/setup_fixtures/norwegian-admin-user')).ok()).toBe(true)
+    await page.setViewportSize({ width: 1440, height: 2600 })
+    await page.goto('/admin/pages/create')
+    await syncLV(page)
+    await page.locator('input[name="page[title]"]').fill('Angre etter innsetting')
+    await page.locator('input[name="page[uri]"]').fill('angre-etter-innsetting')
+
+    await addStyledHeader(page, 'Alfa')
+    await addStyledHeader(page, 'Beta')
+    await choose(page, 0, 'Slett')
+    await expectOrder(page, ['Beta'])
+
+    // An insert is not on the stack: ⌘Z neither takes it out nor brings the
+    // deleted block back past it. The notice still can.
+    await addStyledHeader(page, 'Delta')
+    await undoOutsideFields(page)
+    await expectOrder(page, ['Beta', 'Delta'])
+    await expect(page.getByTestId('block-bin')).toBeVisible()
+  })
+
+  test("another editor's move ends what ⌘Z undoes", async ({ page, secondUserPage }) => {
+    await page.setViewportSize({ width: 1440, height: 2600 })
+    await page.goto('/admin/pages/create')
+    await syncLV(page)
+    await page.locator('input[name="page[title]"]').fill('Undo after a remote move')
+    await page.locator('input[name="page[uri]"]').fill('undo-after-a-remote-move')
+
+    const addEnglishHeader = async (text) => {
+      const index = await rootBlocks(page).count()
+      await page.getByRole('button', { name: 'Add block' }).last().click()
+      await page.getByRole('button', { name: '05 LIVE PREVIEW TEST' }).click()
+      await expect(page.locator('.module-picker-namespace.active')).toContainText('05 LIVE PREVIEW TEST')
+      await page.getByRole('button', { name: 'Styled Header', exact: true }).click()
+      await syncLV(page)
+      const textarea = headers(page).nth(index)
+      await textarea.fill(text)
+      await textarea.blur()
+      await syncLV(page)
+    }
+
+    for (const text of ['Alfa', 'Beta', 'Gamma']) await addEnglishHeader(text)
+
+    await page.getByTestId('split-dropdown-button').click()
+    await page.getByRole('button', { name: /Save and continue editing/ }).click()
+    await expect(page).toHaveURL(/\/update\//, { timeout: 30000 })
+    await syncLV(page)
+    await expectOrder(page, ['Alfa', 'Beta', 'Gamma'])
+
+    await secondUserPage.setViewportSize({ width: 1440, height: 2600 })
+    await secondUserPage.goto(new URL(page.url()).pathname)
+    await syncLV(secondUserPage)
+    await expectOrder(secondUserPage, ['Alfa', 'Beta', 'Gamma'])
+
+    const moveAs = async (who, index, name) => {
+      await awaitBlockShip(who)
+      const blockMenu = rootBlocks(who).nth(index).locator('.block-action-dropdown').first()
+      await blockMenu.getByRole('button', { name: 'More actions', exact: true }).click()
+      await blockMenu.locator('.block-action-dropdown-content').getByRole('button', { name, exact: true }).click()
+      await syncLV(who)
+    }
+
+    // A moves Gamma up; then B moves Alfa down, which A sees
+    await moveAs(page, 2, 'Move up')
+    await expectOrder(page, ['Alfa', 'Gamma', 'Beta'])
+    await expectOrder(secondUserPage, ['Alfa', 'Gamma', 'Beta'])
+    await moveAs(secondUserPage, 0, 'Move down')
+    await expectOrder(page, ['Gamma', 'Alfa', 'Beta'])
+
+    // A's ⌘Z does not put Gamma back by its old index among B's order
+    await undoOutsideFields(page)
+    await expectOrder(page, ['Gamma', 'Alfa', 'Beta'])
+  })
+
   test('undoes a reorder of a block’s children', async ({ page }) => {
     expect((await page.request.post('/e2e/setup_fixtures/norwegian-admin-user')).ok()).toBe(true)
     await page.setViewportSize({ width: 1440, height: 2600 })
