@@ -985,10 +985,9 @@ defmodule BrandoAdmin.Components.Form do
     |> assign(:working_copy, nil)
     |> assign(:entry, updated_entry)
     |> assign_refreshed_form()
-    |> assign(:block_map, [])
+    |> remount_block_fields()
     |> assign_entry_for_blocks()
     |> clear_blocks_root_changesets()
-    |> reload_all_blocks()
     |> force_svelte_remounts(:all)
     |> then(&{:ok, &1})
   end
@@ -1004,7 +1003,7 @@ defmodule BrandoAdmin.Components.Form do
      |> assign(:entry, updated_entry)
      |> put_form(to_form(new_changeset, []))
      |> clear_owned_assets()
-     |> assign(:block_map, [])
+     |> remount_block_fields()
      |> force_svelte_remounts(:all)}
   end
 
@@ -6481,9 +6480,20 @@ defmodule BrandoAdmin.Components.Form do
     socket
   end
 
+  # Out of the render now, and in again with the next block map
+  # (`set_block_map`); a block field still there then starts over
+  # (`BlockField` "remount").
+  defp remount_block_fields(socket) do
+    for {field, _schema, _entry_blocks, _opts} <- socket.assigns.block_map do
+      send_update(BlockField, id: "#{socket.assigns.id}-blocks-#{field}", event: "remount")
+    end
+
+    assign(socket, :block_map, [])
+  end
+
   # `scope: :changed` after a save lets each block field skip roots it can
   # prove already hold the saved rows; every other reload re-seeds them all.
-  defp reload_all_blocks(socket, scope \\ :all) do
+  defp reload_all_blocks(socket, scope) do
     block_map = socket.assigns.block_map
     id = socket.assigns.id
 
