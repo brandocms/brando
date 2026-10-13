@@ -26,10 +26,7 @@ defmodule E2eProject.DoctorTest do
     report = Jason.decode!(json)
     checks = Map.new(report["checks"], &{&1["id"], &1})
 
-    assert Map.keys(checks) |> Enum.sort() ==
-             Enum.sort(
-               ~w(versions node migrations oban configuration admin_assets admin_routes image_configs modules module_entry_paths sitemap robots json_ld alt_text test_database deprecations)
-             )
+    assert Map.keys(checks) |> Enum.sort() == Brando.Doctor.default_checks() |> Enum.map(& &1.id()) |> Enum.sort()
 
     refute Enum.any?(report["checks"], &(&1["summary"] == "could not run")), json
 

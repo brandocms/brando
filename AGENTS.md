@@ -29,6 +29,7 @@
   - lcov for Codecov (after the above): `MIX_ENV=test mix run --no-start .github/scripts/coverage_lcov.exs` writes `cover/lcov.info`
 - Translations: add strings in code, run `mix gettext.extract --merge` (never add or remove catalogue entries by hand), translate the new Norwegian entries; see [TRANSLATIONS.md](TRANSLATIONS.md), which also covers the merge driver for rebases.
 - Changelog entries: add a fragment file in `changelog.d/` rather than editing `CHANGELOG.md`; [its README](changelog.d/README.md) has the naming, sections and format.
+- Guide text that describes changed behaviour ships in the same PR as the change.
 - Code analysis:
   - Refactoring opportunities: `mix credo suggest --format json --all --only refactor`
   - Design: `mix credo suggest --format json --all --only design`
@@ -49,6 +50,7 @@
   Codex found scoping bugs four Claude rounds had passed, and each found one the other missed.
   Merge both lists before fixing. Codex reviews statically, so reproduce each finding with a
   failing test first.
+- Fix rounds: give a round's findings to a fresh agent, with only the branch and the findings as its brief. Re-review only the fix commits, and stop when a round finds no P1.
 
 ## Admin UI design
 - **Admin screens** follow the [Admin UI design guide](docs/admin-ui-design.md). Read its index first, then only the sections the screen needs; its Utilities example is the reference alongside existing components.
