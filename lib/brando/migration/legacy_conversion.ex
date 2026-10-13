@@ -25,6 +25,8 @@ defmodule Brando.Migration.LegacyConversion do
   # Tables with a json `*data` column that brando_103 and brando_108 pass over
   @not_villain ~w(revisions content_modules sites_globals pages_properties)
 
+  @media_types ~w(picture gallery video)
+
   # Refs brando_108 turns into table rows
   @row_ref_types ~w(table list)
 
@@ -203,14 +205,23 @@ defmodule Brando.Migration.LegacyConversion do
       vars: vars,
       refs:
         """
-        SELECT r.block_id, r.id, r.name, r.image_id IS NOT NULL, r.video_id IS NOT NULL, r.gallery_id,
+        SELECT r.block_id, r.id, r.name, r.data->>'type', r.image_id IS NOT NULL, r.video_id IS NOT NULL,
+               r.gallery_id,
                (SELECT count(*) FROM #{name(schema, "galleries_gallery_objects")} o
                 WHERE o.gallery_id = r.gallery_id AND (o.image_id IS NOT NULL OR o.video_id IS NOT NULL))
         FROM #{name(schema, "content_refs")} r WHERE r.block_id IS NOT NULL ORDER BY r.block_id, r.sequence, r.id
         """
         |> rows()
-        |> Enum.group_by(&hd/1, fn [_block_id, id, name, image, video, gallery_id, gallery_count] ->
-          %{id: id, name: name, image: image, video: video, gallery_id: gallery_id, gallery_count: gallery_count}
+        |> Enum.group_by(&hd/1, fn [_block_id, id, name, type, image, video, gallery_id, gallery_count] ->
+          %{
+            id: id,
+            name: name,
+            type: type,
+            image: image,
+            video: video,
+            gallery_id: gallery_id,
+            gallery_count: gallery_count
+          }
         end),
       fragments:
         "SELECT id FROM #{name(schema, "pages_fragments")}"
@@ -221,7 +232,12 @@ defmodule Brando.Migration.LegacyConversion do
       modules:
         "SELECT id, name FROM #{name(schema, "content_modules")}"
         |> rows()
-        |> Map.new(fn [id, name] -> {id, I18nString.localized(name)} end)
+        |> Map.new(fn [id, name] -> {id, I18nString.localized(name)} end),
+      # The "Legacy Content Wrapper" brando_108 puts free-standing blocks in
+      wrappers:
+        "SELECT id FROM #{name(schema, "content_modules")} WHERE class = 'legacy-content'"
+        |> rows()
+        |> MapSet.new(&hd/1)
     }
   end
 
@@ -246,12 +262,77 @@ defmodule Brando.Migration.LegacyConversion do
 
     findings =
       for [id, legacy] <- entries, is_list(legacy) do
-        at = %{table: source.table, entry_id: id, path: [], unpaired: nil}
-        compare_level(legacy, Map.get(roots, id, []), at, content, :block)
+        new = Map.get(roots, id, [])
+        at = %{table: source.table, entry_id: id, path: [], unpaired: difference(legacy, new, content, [])}
+        compare_level(legacy, new, at, content, :block)
       end
 
     {Map.put(source, :entries, length(entries)), List.flatten(findings)}
   end
+
+  # Where an entry's blocks no longer line up with its Villain list, at any
+  # level: another count, type or module at a place, or a wrapped block now
+  # in a block that is not its wrapper. Such an entry's findings are still
+  # reported, but nothing is repaired in it: pairing by position would put
+  # one block's media in another's.
+  defp difference(legacy, new, content, where) do
+    by_position = by_position(new)
+
+    if length(legacy) == length(new) do
+      legacy
+      |> Enum.with_index()
+      |> Enum.find_value(fn {block, index} ->
+        block_difference(block, Map.get(by_position, index), content, where ++ ["block #{index + 1}"])
+      end)
+    else
+      place(where, "#{length(legacy)} blocks in Villain, #{length(new)} now")
+    end
+  end
+
+  defp block_difference(_legacy, nil, _content, where), do: place(where, "not there now")
+
+  defp block_difference(%{"type" => type}, new, content, where) when type in @wrapped_types do
+    content_ref = content.refs |> Map.get(new.id, []) |> Enum.find(&(&1.name == "content"))
+
+    cond do
+      new.type != "module" or not MapSet.member?(content.wrappers, new.module_id) ->
+        place(where, "a #{type} block in Villain, now not in a Legacy Content Wrapper")
+
+      type in @media_types and (is_nil(content_ref) or content_ref.type != type) ->
+        place(where, "a #{type} block in Villain, its content ref is not a #{type} now")
+
+      true ->
+        nil
+    end
+  end
+
+  defp block_difference(%{"type" => "module"} = legacy, new, content, where) do
+    id = data(legacy, "module_id")
+
+    cond do
+      new.type != "module" -> place(where, "a module in Villain, a #{new.type} block now")
+      id != new.module_id -> place(where, "module #{id} in Villain, #{new.module_id || "none"} now")
+      data(legacy, "multi") == true -> difference(list(legacy, "entries"), children(new, content), content, where)
+      true -> nil
+    end
+  end
+
+  defp block_difference(%{"type" => "container"} = legacy, new, content, where) do
+    if new.type == "container",
+      do: difference(list(legacy, "blocks"), children(new, content), content, where),
+      else: place(where, "a container in Villain, a #{new.type} block now")
+  end
+
+  defp block_difference(legacy, new, _content, where) do
+    case expected_type(legacy) do
+      type when type in ["module_entry", nil] or type == new.type -> nil
+      type -> place(where, "a #{type} block in Villain, a #{new.type} block now")
+    end
+  end
+
+  defp children(block, content), do: Map.get(content.children, block.id, [])
+
+  defp place(where, what), do: Enum.join(where ++ [what], " › ")
 
   defp compare_level(legacy, new, at, content, kind) do
     by_position = by_position(new)
@@ -334,7 +415,6 @@ defmodule Brando.Migration.LegacyConversion do
     refs = legacy |> list("refs") |> Enum.filter(&is_map/1)
     {row_refs, refs} = Enum.split_with(refs, &(ref_type(&1) in @row_ref_types))
     new_refs = Map.get(content.refs, new.id, [])
-    at = check_module(at, legacy, new)
 
     Enum.concat([
       compare_vars(legacy |> list("vars") |> Enum.filter(&is_map/1), Map.get(content.vars, new.id, []), at),
@@ -389,17 +469,6 @@ defmodule Brando.Migration.LegacyConversion do
     end)
   end
 
-  # A module block whose module is not the one Villain had is still compared
-  # by position, but its media is not repaired from the Villain data
-  defp check_module(at, %{"type" => "module"} = legacy, new) do
-    case data(legacy, "module_id") do
-      id when is_nil(id) or id == new.module_id -> at
-      id -> %{at | unpaired: at.unpaired || "module #{id} in Villain, #{new.module_id || "none"} now"}
-    end
-  end
-
-  defp check_module(at, _legacy, _new), do: at
-
   defp ref_names(refs), do: Enum.map(refs, & &1.name)
 
   # Each Villain ref that showed media against the ref of the same name (the
@@ -422,13 +491,27 @@ defmodule Brando.Migration.LegacyConversion do
     end)
   end
 
+  @since "lost in the conversion, or removed by an editor since"
+
+  # A ref of another type now holds no media of the Villain one; it is
+  # reported, and left alone
+  defp media_loss(name, %{"type" => type, "data" => %{} = data}, %{type: now}, at)
+       when type in @media_types and type != now do
+    if media_shown?(type, data) do
+      message = "ref #{name}: a #{type} in Villain, a #{now || "typeless"} ref now (#{@since})"
+      [media_missing(%{at | unpaired: at.unpaired || "the ref is a #{now} ref now"}, message, nil)]
+    else
+      []
+    end
+  end
+
   defp media_loss(name, %{"type" => "picture", "data" => %{} = data}, %{image: false} = ref, at) do
     case legacy_path(data) do
       nil ->
         []
 
       path ->
-        message = "ref #{name}: legacy image #{path} is not linked; the picture is empty"
+        message = "ref #{name}: legacy image #{path} has no image now (#{@since})"
         [media_missing(at, message, {:picture, ref.id, data})]
     end
   end
@@ -439,7 +522,7 @@ defmodule Brando.Migration.LegacyConversion do
         []
 
       url ->
-        message = "ref #{name}: legacy video #{url} is not linked; the video is empty"
+        message = "ref #{name}: legacy video #{url} has no video now (#{@since})"
         [media_missing(at, message, {:video, ref.id, data})]
     end
   end
@@ -453,15 +536,20 @@ defmodule Brando.Migration.LegacyConversion do
         []
 
       is_nil(ref.gallery_id) ->
-        [media_missing(at, "ref #{name}: #{count} legacy images, no gallery now", {:gallery, ref.id, nil, images})]
+        message = "ref #{name}: #{count} legacy images, no gallery now (#{@since})"
+        [media_missing(at, message, {:gallery, ref.id, nil, images})]
 
       true ->
-        message = "ref #{name}: #{count} legacy images, #{ref.gallery_count} in its gallery now"
+        message = "ref #{name}: #{count} legacy images, #{ref.gallery_count} in its gallery now (#{@since})"
         [media_missing(at, message, {:gallery, ref.id, ref.gallery_id, images})]
     end
   end
 
   defp media_loss(_name, _legacy, _ref, _at), do: []
+
+  defp media_shown?("picture", data), do: legacy_path(data) != nil
+  defp media_shown?("video", data), do: legacy_video(data) != nil
+  defp media_shown?("gallery", data), do: legacy_gallery_images(data) != []
 
   defp media_missing(%{unpaired: nil} = at, message, repair), do: %{missing(at, message) | repair: repair}
   defp media_missing(at, message, _repair), do: %{missing(at, message) | repair: {:unpaired, at.unpaired}}

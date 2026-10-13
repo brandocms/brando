@@ -44,7 +44,10 @@ defmodule Mix.Tasks.Brando.Check.LegacyConversion do
   A finding reads as a path to what is missing, grouped by table and entry:
 
       pages #12 › block 3 (module "Values") › vars: heading missing
-      pages #2 › block 3 (module "Jobb med oss") › ref pic: legacy image images/site/posts/1n60vo3o9p06.jpg is not linked; the picture is empty
+      pages #2 › block 3 (module "Jobb med oss") › ref pic: legacy image images/site/posts/1n60vo3o9p06.jpg has no image now (lost in the conversion, or removed by an editor since)
+
+  The check compares with Villain only, so media an editor removed since
+  the conversion reads the same as media the conversion lost.
 
   `mix brando.repair.legacy_media` puts back the pictures, gallery images and
   videos it names, from the Villain data.

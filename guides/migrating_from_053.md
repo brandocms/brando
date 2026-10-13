@@ -635,13 +635,18 @@ snapshot with a Villain field.
    no row (deleted, or in the trash), although 0.53 showed it from the
    picture's own data; galleries lost such images too. A site that ran that
    copy sees findings like
-   `pages #2 › block 3 (module "Jobb med oss") › ref pic: legacy image images/site/posts/1n60vo3o9p06.jpg is not linked; the picture is empty`.
+   `pages #2 › block 3 (module "Jobb med oss") › ref pic: legacy image images/site/posts/1n60vo3o9p06.jpg has no image now (lost in the conversion, or removed by an editor since)`.
    `mix brando.repair.legacy_media --dry-run` lists what it would do about
    each; without `--dry-run` it links the image the Villain data names, or
    makes its row from that data, and adds missing gallery images in their
-   places. It reads the Villain columns, so run it before dropping them, then
-   run the check again. A site that has resaved its entries since resaves
-   them again afterwards.
+   places. It writes only where it can tell the media was lost in the
+   conversion: it skips, with the reason, an entry whose blocks no longer
+   line up with Villain's, an entry, block or gallery edited since the
+   conversion, and, once the conversion is more than 30 days old, any image
+   it would have to make, as emptying the trash leaves no trace of what an
+   editor deleted. Run it soon after the upgrade, while the Villain columns
+   are there, then run the check again; what it skipped is for an editor.
+   A site that has resaved its entries since resaves them again afterwards.
 6. In `down/0`, undo only what `up/0` added: leave out the tables, indexes
    and columns that existed before the migration.
 7. Roll back and forward once on a scratch copy. A second

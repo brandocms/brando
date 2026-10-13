@@ -10,6 +10,8 @@ defmodule Brando.Migrations.UpgradeFromVillainTest do
   # already has today's tables, cannot stand in for the old one.
   use ExUnit.Case, async: false
 
+  import Brando.Test.Support, only: [put_test_env: 2]
+
   alias Brando.Migration.LegacyConversion
   alias Brando.Utils
   alias BrandoIntegration.Repo
@@ -23,6 +25,11 @@ defmodule Brando.Migrations.UpgradeFromVillainTest do
   # brando_133 as sites ran it until it created images for legacy media that
   # matched no row: it linked pictures by path only and left the rest empty
   @shipped_133 "test/fixtures/upgrade/brando_133_transfer_ref_media_data.shipped.txt"
+  # Each template runs as version `@version + its number`, and the copies the
+  # repair task reads the conversion's time through are stubs with those
+  # versions
+  @version 20_260_101_000_000
+  @copies ~w(brando_133_transfer_ref_media_data brando_175_add_updated_by)
 
   setup do
     config = Repo.config()
@@ -61,7 +68,18 @@ defmodule Brando.Migrations.UpgradeFromVillainTest do
       :ok = Ecto.Adapters.Postgres.storage_down(storage)
     end)
 
-    :ok
+    copies = Path.join(System.tmp_dir!(), "#{database}_migrations")
+    File.mkdir_p!(copies)
+    on_exit(fn -> File.rm_rf!(copies) end)
+
+    for name <- @copies do
+      [_, number] = Regex.run(~r/brando_(\d+)_/, name)
+      File.write!(Path.join(copies, "#{@version + String.to_integer(number)}_#{name}.exs"), "")
+    end
+
+    put_test_env(:public_migrations_path, copies)
+
+    %{copies: copies}
   end
 
   defp templates(range) do
@@ -84,7 +102,7 @@ defmodule Brando.Migrations.UpgradeFromVillainTest do
     [{module, _bytecode}] = path |> File.read!() |> edit.() |> Code.compile_string(path)
 
     try do
-      :ok = Ecto.Migrator.up(Repo, System.unique_integer([:positive]), module, log: false)
+      :ok = Ecto.Migrator.up(Repo, @version + number(path), module, log: false)
     rescue
       error -> reraise RuntimeError, "#{Path.basename(path)}: #{Exception.message(error)}", __STACKTRACE__
     after
@@ -387,7 +405,7 @@ defmodule Brando.Migrations.UpgradeFromVillainTest do
 
     images = %{
       linked: insert_image!("images/site/posts/linked.jpg"),
-      deleted: insert_image!("images/site/posts/trashed.jpg", ", now()"),
+      deleted: insert_image!("images/site/posts/trashed.jpg", ", '2023-06-01'"),
       by_size: insert_image!("images/site/posts/by-size.png"),
       known: insert_image!("images/site/gallery/known.jpg")
     }
@@ -537,13 +555,26 @@ defmodule Brando.Migrations.UpgradeFromVillainTest do
       }
     ]
 
+    # A free-standing picture without a row, which brando_108 wraps
+    hero = %{
+      "type" => "picture",
+      "uid" => Utils.generate_uid(),
+      "hidden" => false,
+      "data" => %{
+        "path" => "/media/images/site/posts/hero.jpg",
+        "sizes" => legacy_sizes("posts", "hero.jpg", "/media/"),
+        "width" => 2000,
+        "height" => 1000
+      }
+    }
+
     [[page_id]] =
       insert!(
         """
         INSERT INTO pages (uri, language, title, template, status, data, inserted_at, updated_at)
         VALUES ('kontakt', 'no', 'Kontakt', 'default.html', 1, $1, $2, $2)
         """,
-        [blocks, now]
+        [blocks ++ [hero], now]
       )
 
     %{page: page_id, images: images, services: services_id, koi_path: koi_path}
@@ -562,7 +593,7 @@ defmodule Brando.Migrations.UpgradeFromVillainTest do
       SELECT r.name, i.path, i.deleted_at IS NOT NULL, r.gallery_id FROM content_refs r
       JOIN pages_blocks pb ON pb.block_id = r.block_id
       LEFT JOIN images i ON i.id = r.image_id
-      WHERE pb.entry_id = $1 ORDER BY r.sequence
+      WHERE pb.entry_id = $1 ORDER BY pb.sequence, r.sequence
       """,
       [page_id]
     )
@@ -743,7 +774,8 @@ defmodule Brando.Migrations.UpgradeFromVillainTest do
                ["pic4", nil, false, nil],
                ["pic5", "images/site/posts/linked.jpg", false, nil],
                ["gallery", nil, false, gallery_id],
-               ["media", nil, false, nil]
+               ["media", nil, false, nil],
+               ["content", "images/site/posts/hero.jpg", false, nil]
              ] = ref_media(page_id)
 
       assert [["images/site/posts/1n60vo3o9p06.jpg", sizes, 1600, 1067, "#9a8f7e", ["jpg"]]] =
@@ -782,19 +814,21 @@ defmodule Brando.Migrations.UpgradeFromVillainTest do
       migrate_with_shipped_133()
 
       at = ~s|pages ##{page_id} › block 1 (module "Jobb med oss")|
+      since = "(lost in the conversion, or removed by an editor since)"
 
       expected = [
-        "#{at} › ref pic: legacy image #{koi_path} is not linked; the picture is empty",
-        "#{at} › ref pic2: legacy image images/site/posts/trashed.jpg is not linked; the picture is empty",
-        "#{at} › ref pic3: legacy image images/site/posts/stale.jpg is not linked; the picture is empty",
-        "#{at} › ref gallery: 2 legacy images, 1 in its gallery now"
+        "#{at} › ref pic: legacy image #{koi_path} has no image now #{since}",
+        "#{at} › ref pic2: legacy image images/site/posts/trashed.jpg has no image now #{since}",
+        "#{at} › ref pic3: legacy image images/site/posts/stale.jpg has no image now #{since}",
+        "#{at} › ref gallery: 2 legacy images, 1 in its gallery now #{since}",
+        "pages ##{page_id} › block 3 (picture, wrapped) › ref content: legacy image /media/images/site/posts/hero.jpg has no image now #{since}"
       ]
 
       assert findings() == Enum.map(expected, &{:missing, &1})
 
       assert {{:exit, {:shutdown, 1}}, output} = run_check([])
       assert Enum.map(expected, &("  " <> &1)) -- output == []
-      assert last_line(output) =~ "4 missing"
+      assert last_line(output) =~ "5 missing"
     end
 
     test "the repair task puts back what the shipped brando_133 lost, after a dry run that writes nothing" do
@@ -812,23 +846,24 @@ defmodule Brando.Migrations.UpgradeFromVillainTest do
       before = state.()
       at = ~s|pages ##{page_id} › block 1 (module "Jobb med oss")|
 
-      assert {nil, ["Repairing legacy media in public (dry run: nothing is written)\n" | output]} =
+      assert {nil, ["Repairing legacy media in public (dry run: nothing is written)\n", "Changes after " <> _ | output]} =
                run_task(RepairTask, ["--dry-run"])
 
       assert [
                "  #{at} › ref pic › makes an image of images/site/posts/1n60vo3o9p06.jpg from the legacy data and links it",
                "  #{at} › ref pic2 › makes an image of images/site/posts/trashed.jpg from the legacy data and links it",
                "  #{at} › ref pic3 › links image ##{images.by_size} (images/site/posts/by-size.png)",
-               "  #{at} › ref gallery › adds 1 image to gallery #1 (1 made from the legacy data)"
-             ] == Enum.slice(output, 0, 4)
+               "  #{at} › ref gallery › adds 1 image to gallery #1 (1 made from the legacy data)",
+               "  pages ##{page_id} › block 3 (picture, wrapped) › ref content › makes an image of images/site/posts/hero.jpg from the legacy data and links it"
+             ] == Enum.slice(output, 0, 5)
 
-      assert summary_line(output) =~ "4 refs to repair: 3 images and 0 videos to make from the legacy data."
+      assert summary_line(output) =~ "5 refs to repair: 4 images and 0 videos to make from the legacy data."
       assert last_line(output) == "Run without --dry-run to write them, then mix brando.entries.resave."
       assert state.() == before
-      assert length(findings()) == 4
+      assert length(findings()) == 5
 
       assert {nil, output} = run_task(RepairTask, [])
-      assert summary_line(output) =~ "4 refs repaired: 3 images and 0 videos made from the legacy data."
+      assert summary_line(output) =~ "5 refs repaired: 4 images and 0 videos made from the legacy data."
       assert last_line(output) == "Run mix brando.entries.resave, and restart a running server."
 
       assert findings() == []
@@ -840,7 +875,8 @@ defmodule Brando.Migrations.UpgradeFromVillainTest do
                ["pic4", nil, false, nil],
                ["pic5", "images/site/posts/linked.jpg", false, nil],
                ["gallery", nil, false, gallery_id],
-               ["media", nil, false, nil]
+               ["media", nil, false, nil],
+               ["content", "images/site/posts/hero.jpg", false, nil]
              ] = ref_media(page_id)
 
       assert [["images/site/posts/1n60vo3o9p06.jpg", sizes, 1600, 1067, "#9a8f7e", ["jpg"]]] =
@@ -867,20 +903,11 @@ defmodule Brando.Migrations.UpgradeFromVillainTest do
       assert last_line(output) =~ "every Villain block, var, ref and fragment came through"
     end
 
-    test "the repair task skips a block whose module changed, and stops when the Villain columns are gone" do
+    test "the repair task stops when the Villain columns are gone" do
       load_schema()
       insert_villain_site()
-      %{page: page_id} = insert_koi_page()
-
+      insert_koi_page()
       migrate_with_shipped_133()
-
-      [[other_module]] = rows("SELECT id FROM content_modules WHERE class = 'video'")
-      rows("UPDATE content_blocks SET module_id = $1 WHERE id = $2", [other_module, root_block(page_id, 0)])
-
-      assert {nil, ["Repairing legacy media in public\n" | output]} = run_task(RepairTask, [])
-      assert Enum.at(output, 0) =~ "› ref pic › skipped: module "
-      assert summary_line(output) =~ "0 refs repaired, 4 skipped"
-      assert length(findings()) == 4
 
       for table <- ~w(pages pages_fragments content_templates), do: rows("ALTER TABLE #{table} DROP COLUMN data")
 
@@ -905,6 +932,189 @@ defmodule Brando.Migrations.UpgradeFromVillainTest do
              {% for link in entries %}<a href="{{ link.vars.url }}">{{ link.vars.text }}</a>{% endfor %}
              {{ content | renderless }}
              """
+    end
+  end
+
+  # The page with its media lost by the shipped brando_133, how the repair
+  # sees it, and a way to tell nothing was written
+  defp lost_media do
+    load_schema()
+    insert_villain_site()
+    koi = insert_koi_page()
+    migrate_with_shipped_133()
+
+    state = fn ->
+      {ref_media(koi.page), rows("SELECT id, path, deleted_at FROM images ORDER BY id"),
+       rows("SELECT id, gallery_id, image_id, sequence, config FROM galleries_gallery_objects ORDER BY id")}
+    end
+
+    Map.put(koi, :state, state)
+  end
+
+  defp repairs(opts \\ []) do
+    assert {:ok, %{repairs: repairs}} = Brando.Migration.LegacyMediaRepair.run("public", opts)
+    Enum.map(repairs, fn {finding, action} -> {finding.message |> String.split(":") |> hd(), action} end)
+  end
+
+  defp utc_in(seconds), do: NaiveDateTime.add(NaiveDateTime.utc_now(), seconds) |> NaiveDateTime.truncate(:second)
+
+  describe "repairing legacy media safely, weeks after the conversion" do
+    test "an entry whose blocks no longer line up with Villain's is left alone" do
+      %{page: page_id, state: state} = lost_media()
+
+      # An editor adds another "Jobb med oss" block above the one that lost
+      # its pictures: by position, Villain's block 1 is the new one now
+      [[jobs]] = rows("SELECT id FROM content_modules WHERE class = 'jobs'")
+
+      [[block]] =
+        insert!(
+          "INSERT INTO content_blocks (uid, type, module_id, active, collapsed, inserted_at, updated_at) VALUES ($1, 'module', $2, true, false, now(), now())",
+          [Utils.generate_uid(), jobs]
+        )
+
+      for name <- ~w(pic pic2 pic3 pic5) do
+        rows(
+          "INSERT INTO content_refs (uid, name, block_id, data, sequence, active, collapsed, inserted_at, updated_at) VALUES ($1, $2, $3, $4, 0, true, false, now(), now())",
+          [Utils.generate_uid(), name, block, %{"type" => "picture", "data" => %{}}]
+        )
+      end
+
+      rows("UPDATE pages_blocks SET sequence = sequence + 1 WHERE entry_id = $1", [page_id])
+      rows("INSERT INTO pages_blocks (entry_id, block_id, sequence) VALUES ($1, $2, 0)", [page_id, block])
+
+      before = state.()
+      assert [_ | _] = repairs = repairs()
+
+      for {_ref, action} <- repairs do
+        assert {:skip, "3 blocks in Villain, 4 now"} = action
+      end
+
+      assert {nil, _output} = run_task(RepairTask, [])
+      assert state.() == before
+    end
+
+    test "a wrapped block in another module, or a ref of another type now, is left alone" do
+      %{page: page_id, state: state} = lost_media()
+
+      wrapper = root_block(page_id, 2)
+      rows("UPDATE content_refs SET data = jsonb_set(data, '{type}', '\"text\"') WHERE block_id = $1", [wrapper])
+      before = state.()
+
+      assert Enum.all?(
+               repairs(),
+               &match?({_, {:skip, "block 3 › a picture block in Villain, its content ref is not a picture now"}}, &1)
+             )
+
+      run_task(RepairTask, [])
+      assert state.() == before
+
+      [[jobs]] = rows("SELECT id FROM content_modules WHERE class = 'jobs'")
+      rows("UPDATE content_blocks SET module_id = $1 WHERE id = $2", [jobs, wrapper])
+
+      assert Enum.all?(
+               repairs(),
+               &match?({_, {:skip, "block 3 › a picture block in Villain, now not in a Legacy Content Wrapper"}}, &1)
+             )
+    end
+
+    test "an entry, block or gallery edited since the conversion is left alone" do
+      %{page: page_id, state: state} = lost_media()
+      before = state.()
+
+      # An editor cleared a picture, or removed gallery images: the entry's
+      # save moves its edited_at
+      rows("UPDATE pages SET edited_at = $1 WHERE id = $2", [utc_in(60), page_id])
+      assert Enum.all?(repairs(), &match?({_, {:skip, "edited " <> _}}, &1))
+      run_task(RepairTask, [])
+      assert state.() == before
+
+      rows("UPDATE pages SET edited_at = NULL WHERE id = $1", [page_id])
+      rows("UPDATE content_blocks SET edited_at = $1 WHERE id = $2", [utc_in(86_400), root_block(page_id, 2)])
+      [[gallery_id]] = rows("SELECT gallery_id FROM content_refs WHERE name = 'gallery' AND gallery_id IS NOT NULL")
+      rows("UPDATE galleries_gallery_objects SET edited_at = $1 WHERE gallery_id = $2", [utc_in(86_400), gallery_id])
+
+      assert %{
+               "ref content" => {:skip, "its block was edited since the conversion"},
+               "ref gallery" => {:skip, "its gallery was edited since the conversion"},
+               "ref pic" => {:make_image, _}
+             } =
+               Map.new(repairs())
+    end
+
+    test "an image to make is left alone once the trash may have emptied one an editor deleted since" do
+      %{page: page_id, images: images, state: state} = lost_media()
+
+      # The conversion 40 days ago. pic5 was linked; an editor trashed its
+      # image, and emptying the trash 30 days later deleted it and nilled
+      # the ref, with no trace left
+      for {table, columns} <- [
+            {"schema_migrations", ~w(inserted_at)},
+            {"content_blocks", ~w(inserted_at updated_at edited_at)},
+            {"galleries_gallery_objects", ~w(inserted_at updated_at edited_at)}
+          ] do
+        set = Enum.map_join(columns, ", ", &"#{&1} = #{&1} - interval '40 days'")
+        rows("UPDATE #{table} SET #{set}")
+      end
+
+      rows("DELETE FROM images WHERE id = $1", [images.linked])
+      before = state.()
+
+      doubt =
+        "the conversion is more than 30 days old, and the trash is emptied after 30 days: " <>
+          "media an editor deleted since may be gone without a trace, and this could bring it back"
+
+      assert %{"ref pic5" => {:skip, ^doubt}, "ref pic" => {:skip, ^doubt}, "ref pic3" => {:link_image, _, _}} =
+               Map.new(repairs())
+
+      run_task(RepairTask, [])
+
+      assert [
+               ["pic", nil, false, nil],
+               ["pic2", nil, false, nil],
+               ["pic3", "images/site/posts/by-size.png", false, nil] | _
+             ] =
+               ref_media(page_id)
+
+      refute state.() == before
+
+      # Within 30 days, an image an editor trashed is still in the trash: its
+      # ref is left alone, the others made
+      rows("UPDATE schema_migrations SET inserted_at = inserted_at + interval '35 days'")
+      rows("UPDATE images SET deleted_at = $1 WHERE path = 'images/site/posts/trashed.jpg'", [utc_in(0)])
+
+      assert %{"ref pic2" => {:skip, "its image went to the trash " <> _}, "ref pic" => {:make_image, _}} =
+               Map.new(repairs())
+    end
+
+    test "an image picked while the repair runs stays" do
+      %{page: page_id, images: images} = lost_media()
+
+      pick = fn ->
+        rows(
+          "UPDATE content_refs SET image_id = $1 WHERE name = 'pic' AND block_id = $2",
+          [images.known, root_block(page_id, 0)]
+        )
+      end
+
+      assert %{"ref pic" => {:skip, "media was picked for it while the repair ran"}, "ref pic2" => {:make_image, _}} =
+               Map.new(repairs(before_write: pick))
+
+      assert [["pic", "images/site/gallery/known.jpg", false, nil] | _] = ref_media(page_id)
+    end
+
+    test "without the conversion's time nothing is written, and --converted-at gives it", %{copies: copies} do
+      %{state: state} = lost_media()
+      before = state.()
+      [[migrated_at]] = rows("SELECT max(inserted_at) FROM schema_migrations")
+      File.rm!(Path.join(copies, "#{@version + 133}_brando_133_transfer_ref_media_data.exs"))
+
+      assert Enum.all?(repairs(), &match?({_, {:skip, "can't tell when brando_133 ran" <> _}}, &1))
+      run_task(RepairTask, [])
+      assert state.() == before
+
+      assert {nil, output} = run_task(RepairTask, ["--converted-at", NaiveDateTime.to_iso8601(migrated_at)])
+      assert Enum.any?(output, &(&1 =~ "count as editors'"))
+      assert findings() == []
     end
   end
 

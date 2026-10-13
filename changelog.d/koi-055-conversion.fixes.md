@@ -20,9 +20,9 @@
   passed as "came through". A picture whose Villain data had a `path` now
   needs an image, a gallery as many images as Villain listed, and a video
   with a URL or remote id a video: `pages #2 › block 3 (module "Jobb med
-  oss") › ref pic: legacy image images/site/posts/1n60vo3o9p06.jpg is not
-  linked; the picture is empty`. A ref that showed nothing on 0.53 is not a
-  loss.
+  oss") › ref pic: legacy image images/site/posts/1n60vo3o9p06.jpg has no
+  image now (lost in the conversion, or removed by an editor since)`. A ref
+  that showed nothing on 0.53 is not a loss.
 
 - **Multi module code reads its entries' vars again.** Module code stored in
   the database that reads its entries the 0.53 way,
