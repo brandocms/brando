@@ -4,7 +4,7 @@ import { syncLV } from '../../utils'
 const rows = page => page.locator('[phx-hook="Brando.TransformerFields"]')
 const field = (row, name) => row.locator(`[name="transformer_item[${name}]"]`)
 
-async function createClient(page) {
+async function createClient(page, overrides = {}) {
   expect((await page.request.post('/e2e/setup_fixtures/norwegian-admin-user')).ok()).toBe(true)
   const response = await page.request.post('/__e2e/db/factory', {
     data: {
@@ -15,7 +15,8 @@ async function createClient(page) {
           title, sequence, status: 'published', aliases: [`${title} one`, `${title} two`],
           label: { en: `${title} label`, no: `${title} merkelapp`, de: `${title} Beschriftung` },
           description: { en: `${title} description`, no: `${title} beskrivelse`, de: `${title} Beschreibung` },
-          featured: false, size: 's', kind: 'talk',
+          featured: false, size: 's', kind: 'talk', tags: sequence === 0 ? ['red'] : ['blue'],
+          ...overrides,
         })),
       },
     },
@@ -76,9 +77,10 @@ test('simple transformer controls still save to their own row', async ({ page })
   const url = await createClient(page)
   const first = rows(page).nth(0)
   const second = rows(page).nth(1)
-  await first.getByRole('checkbox').check()
+  await first.getByRole('checkbox').focus()
+  await first.getByRole('checkbox').press('Space')
   await second.getByRole('radio', { name: 'M', exact: true }).check()
-  await first.locator('.multiselect').getByRole('button', { name: 'Velg', exact: true }).click()
+  await first.locator('[data-component=":select"]').getByRole('button', { name: 'Velg', exact: true }).click()
   await page.getByRole('dialog').getByRole('button', { name: 'Exhibition', exact: true }).click()
   await field(first, 'title').fill('Edited plain title')
   await saveAndReload(page, url)
@@ -88,9 +90,97 @@ test('simple transformer controls still save to their own row', async ({ page })
   await expect(field(first, 'kind')).toHaveValue('exhibition')
   await expect(field(second, 'kind')).toHaveValue('talk')
   await expect(second.getByRole('radio', { name: 'M', exact: true })).toBeChecked()
-  await first.getByRole('checkbox').uncheck()
+  await first.getByRole('checkbox').focus()
+  await first.getByRole('checkbox').press('Space')
   await saveAndReload(page, url)
   await expect(first.getByRole('checkbox')).not.toBeChecked()
+})
+
+test('transformer array MultiSelect persists adding, removing and clearing selections in separate rows', async ({ page }) => {
+  const url = await createClient(page)
+  const first = rows(page).nth(0)
+  const second = rows(page).nth(1)
+  const tags = row => row.locator('input[name="transformer_item[tags][]"]')
+  const toggleTags = async (row, labels) => {
+    await row.locator('[data-component=":multi_select"]').getByRole('button', { name: 'Velg', exact: true }).click()
+    const dialog = page.getByRole('dialog', { name: 'Velg alternativer', exact: true })
+    for (const label of labels) {
+      await dialog.getByRole('checkbox', { name: label, exact: true }).click()
+      await syncLV(page)
+    }
+    await dialog.getByRole('button', { name: 'Lukk dialog', exact: true }).click()
+    await expect(dialog).not.toBeVisible()
+  }
+  const expectTags = async (row, values) => {
+    await expect.poll(() => tags(row).evaluateAll(inputs => inputs.map(input => input.value).filter(Boolean))).toEqual(values)
+  }
+
+  await toggleTags(first, ['Green'])
+  await toggleTags(second, ['Red'])
+  await saveAndReload(page, url)
+  await expectTags(first, ['red', 'green'])
+  await expectTags(second, ['blue', 'red'])
+
+  await toggleTags(first, ['Red'])
+  await toggleTags(second, ['Blue'])
+  await saveAndReload(page, url)
+  await expectTags(first, ['green'])
+  await expectTags(second, ['red'])
+
+  await toggleTags(first, ['Green'])
+  await saveAndReload(page, url)
+  await expectTags(first, [])
+  await expectTags(second, ['red'])
+})
+
+test('an earlier transformer reply cannot restore a removed string list member before the next keystroke', async ({ page }) => {
+  await page.clock.install()
+  let hold = false
+  const held = []
+  let release
+  let editRef
+  let editReplyHeld = false
+  await page.routeWebSocket('**/live/websocket*', socket => {
+    const server = socket.connectToServer()
+    socket.onMessage(message => {
+      const [, ref, , event, payload] = JSON.parse(message)
+      if (hold && event === 'event' && payload.event === 'update_field' && payload.value.field === 'aliases') {
+        editRef ??= ref
+      }
+      server.send(message)
+    })
+    server.onMessage(message => {
+      if (hold) {
+        held.push(message)
+        const [, ref, , event] = JSON.parse(message)
+        if (ref === editRef && event === 'phx_reply') editReplyHeld = true
+      } else socket.send(message)
+    })
+    release = () => {
+      hold = false
+      for (const message of held.splice(0)) socket.send(message)
+    }
+  })
+  const url = await createClient(page, { aliases: ['a', 'b', 'c'] })
+  const first = rows(page).nth(0)
+  const aliases = first.locator('input[name="transformer_item[aliases][]"]')
+  hold = true
+  await aliases.first().fill('edited a')
+  // Wait for the debounced edit's actual reply before deleting b. Releasing
+  // it inside the removal's 300 ms debounce used to restore b's old row while
+  // LiveView preserved the focused c, yielding [edited a, c, c, empty].
+  await expect.poll(() => editReplyHeld).toBe(true)
+  // Freeze the remaining debounce window, so even a slow CI worker delivers
+  // the old reply and types the next key before a debounced removal can send.
+  await page.clock.pauseAt(Date.now() + 100)
+  await first.getByRole('button', { name: 'Fjern rad', exact: true }).nth(1).click()
+  release()
+  await expect(first).not.toHaveAttribute('data-phx-ref-lock', /.+/)
+  await aliases.nth(1).press('ArrowRight')
+  await aliases.nth(1).pressSequentially('z')
+  await page.clock.resume()
+  await saveAndReload(page, url)
+  await expect.poll(() => aliases.evaluateAll(inputs => inputs.map(input => input.value))).toEqual(['edited a', 'cz', ''])
 })
 
 test('transformer string lists save additions, removals and clearing without changing another row', async ({ page }) => {

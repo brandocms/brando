@@ -69,9 +69,11 @@ export default (app) => ({
     }
 
     this.handleEvent(`b:validate`, (opts) => {
+      const scope = opts.scope ? this.$form.querySelector(`#${CSS.escape(opts.scope)}`) : this.$form
+      if (!scope) return
       if (opts.target) {
         const sel = `[name="${opts.target}"]`
-        const target = this.$form.querySelector(sel)
+        const target = scope.querySelector(sel)
         if (target) {
           if (opts.hasOwnProperty('value')) {
             target.value = opts.value

@@ -1114,9 +1114,11 @@ Expanding an entry offers a picker for each of its asset fields, so media can
 be swapped or removed without uploading again.
 
 Entry inputs also support translated text and textareas, and array values
-such as `:string_list`. Editing one language retains the entry's other
-translations. Adding, removing or clearing list values affects only that
-entry, and saving includes edits still waiting for the input's debounce.
+such as `:string_list` and array-backed `:multi_select`. Editing one language
+retains the entry's other translations. Adding, removing or clearing list
+values affects only that entry, and saving includes edits still waiting for
+the input's debounce. String-list removals take effect immediately, including
+when an earlier edit is still waiting for its reply.
 
 ### Custom subform components
 

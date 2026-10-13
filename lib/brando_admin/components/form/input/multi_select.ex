@@ -66,7 +66,7 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
             wrapped_labels={@wrapped_labels}
             sequenced?={@sequenced?}
             field={@field}
-            empty_array?={@presets != [] && (@array_touched || is_list(@field.value))}
+            empty_array?={@array_touched || (@presets != [] && is_list(@field.value))}
           />
         </div>
 
@@ -1321,8 +1321,8 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
     {:noreply,
      socket
      |> assign(:selected_options, updated_selected_options)
-     |> assign(:array_touched, true)
-     |> assign_label()}
+     |> assign_label()
+     |> publish_array_selection()}
   end
 
   def handle_event("add_preset", %{"preset" => key}, %{assigns: %{relation_type: {:array, _}}} = socket) do
@@ -1341,9 +1341,8 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
         {:noreply,
          socket
          |> assign(:selected_options, values)
-         |> assign(:array_touched, true)
          |> assign_label()
-         |> push_event("b:validate", %{target: "#{socket.assigns.field.name}[]"})}
+         |> publish_array_selection()}
     end
   end
 
@@ -1455,7 +1454,12 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
     %{selected_options: selected, input_options: opts, relation_key: rk, relation_type: rt} = socket.assigns
     updated = Enum.filter(selected, &(not is_nil(get_opt(&1, opts, rk, rt))))
 
-    {:noreply, socket |> assign(:selected_options, updated) |> assign(:invalid_options, []) |> assign_label()}
+    {:noreply,
+     socket
+     |> assign(:selected_options, updated)
+     |> assign(:invalid_options, [])
+     |> assign_label()
+     |> publish_array_selection()}
   end
 
   def handle_event("reset", _, %{assigns: %{relation_type: relation_type}} = socket)
@@ -1489,7 +1493,8 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
      socket
      |> assign(:selected_options, [])
      |> assign(:count_label, label)
-     |> assign_label()}
+     |> assign_label()
+     |> publish_array_selection()}
   end
 
   def handle_event("show_form", _, socket) do
@@ -1567,6 +1572,17 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
   def maybe_add_relation(struct, relation_key, assoc_data) do
     put_in(struct, [Access.key(relation_key)], assoc_data)
   end
+
+  # The patch installs every selected input (including an empty-array sentinel)
+  # before this event publishes them. Transformer rows share input names, so
+  # identify this field's own container rather than the first name in the form.
+  defp publish_array_selection(%{assigns: %{relation_type: {:array, _}, field: field}} = socket) do
+    socket
+    |> assign(:array_touched, true)
+    |> push_event("b:validate", %{scope: "#{field.id}-selected-rows", target: "#{field.name}[]"})
+  end
+
+  defp publish_array_selection(socket), do: socket
 
   defp propagate_has_many_update(socket, selected_options, selected_options_structs) do
     %{field: field, subform_id: subform_id, on_change: on_change, relation: relation, relation_type: relation_type} =
