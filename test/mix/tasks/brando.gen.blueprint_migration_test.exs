@@ -62,7 +62,15 @@ defmodule Mix.Tasks.Brando.Gen.BlueprintMigrationTest do
     assert preview =~ "version 1"
     refute File.exists?(context.root)
     Igniter.Test.assert_unchanged(planned)
+    # The task list names the Blueprint; the encoded request stays out of it.
     assert [{"brando.blueprint.apply_plan", [request]}] = planned.tasks
+    assert request =~ ~r/\ABrando\.MigrationTest\.ExecutionV1@[0-9a-f]{8}\z/
+
+    # Another run planning the same Blueprint keeps its own request.
+    other = plan(context, ["--dry-run"])
+    assert [{"brando.blueprint.apply_plan", [other_request]}] = other.tasks
+    refute other_request == request
+
     assert {:ok, metadata} = MigrationRequest.apply(request)
     assert File.exists?(metadata.migration)
     assert File.exists?(metadata.snapshot)
@@ -320,7 +328,9 @@ defmodule Mix.Tasks.Brando.Gen.BlueprintMigrationTest do
       assert versions == versions |> Enum.uniq() |> Enum.sort()
 
       assert [{"brando.blueprint.apply_plan", requests}] = planned.tasks
-      assert length(requests) == 2
+      assert [execution, tag] = requests
+      assert execution =~ ~r/\ABrando\.MigrationTest\.ExecutionV1@[0-9a-f]{8}\z/
+      assert tag =~ ~r/\ABrando\.MigrationTest\.Tag@[0-9a-f]{8}\z/
       assert [summary] = planned.notices
       assert summary =~ "Brando.MigrationTest.ExecutionV1: priv/repo/migrations/#{hd(versions)}_"
       assert summary =~ "Up to date: Brando.MigrationTest.StorageV1"

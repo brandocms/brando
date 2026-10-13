@@ -6,33 +6,54 @@ defmodule Brando.Upgrade.Snapshot.URLs do
     * `/`
     * every published page, in every language
     * for every other Blueprint with an `absolute_url`, one published entry
-      per language
+      per language: the one with the most blocks, since a heavy entry shows
+      more of what an upgrade changed than the first one made
     * a path that does not exist, per language and without one, for the 404
       page
     * `/robots.txt` and `/sitemap.xml`
+
+  Given a way to ask the old site (`:found?`), entry URLs it answers with 404
+  are left out, and for each other Blueprint the next-heaviest entry is tried
+  instead: comparing two 404 pages tells nothing about the entry.
+
+  Entries are read from the Blueprint's table (published, not deleted, in
+  the language), not through its context's list function, so scoping a
+  site adds in its own `query :list` does not apply; with `:found?` the old
+  site has the last word.
 
   Paths are relative to the site's root, sorted and without duplicates.
   A Blueprint whose entries cannot be listed is left out, with a warning
   returned beside the paths.
   """
 
+  import Ecto.Query, only: [from: 2, where: 3]
+
   alias Brando.Pages.Page
   alias Brando.SEO.Audit
 
   @missing "brando-upgrade-snapshot-missing"
+  # Entries of a Blueprint tried, heaviest first, for one whose URL works.
+  @candidates 10
 
   @doc """
-  `{paths, warnings}`: the URL set and a line for each Blueprint left out.
+  `{paths, warnings}`: the URL set and a line for each Blueprint, or URL,
+  left out.
+
+  ## Options
+
+    * `:found?` — called with an entry's path; `false` when the old site
+      answers it with 404. Every path counts as found by default.
   """
-  @spec list() :: {[String.t()], [String.t()]}
-  def list do
+  @spec list(keyword()) :: {[String.t()], [String.t()]}
+  def list(opts \\ []) do
     languages = languages()
+    found? = Keyword.get(opts, :found?, fn _path -> true end)
 
     {entry_paths, warnings} =
       blueprints()
-      |> Enum.map(&blueprint_paths(&1, languages))
+      |> Enum.map(&blueprint_paths(&1, languages, found?))
       |> Enum.reduce({[], []}, fn
-        {:ok, paths}, {all, warnings} -> {all ++ paths, warnings}
+        {:ok, paths, left_out}, {all, warnings} -> {all ++ paths, warnings ++ left_out}
         {:error, warning}, {all, warnings} -> {all, warnings ++ [warning]}
       end)
 
@@ -40,6 +61,46 @@ defmodule Brando.Upgrade.Snapshot.URLs do
     paths = ["/", "/robots.txt", "/sitemap.xml"] ++ missing ++ entry_paths
 
     {paths |> Enum.uniq() |> Enum.sort(), warnings}
+  end
+
+  @doc """
+  Up to `limit` (`nil` for all) published entries of `schema` matching
+  `args` (`:language`), the ones with the most blocks first (top-level
+  blocks, every block field), then by id. Loaded with what the schema's
+  `absolute_url` needs.
+  """
+  @spec heaviest(module(), map(), pos_integer() | nil) :: [struct()]
+  def heaviest(schema, args, limit) do
+    ids = heaviest_ids(schema, args)
+    load(schema, if(limit, do: Enum.take(ids, limit), else: ids))
+  end
+
+  defp heaviest_ids(schema, args) do
+    counts = block_counts(schema)
+    schema |> published_ids(args) |> Enum.sort_by(&{-Map.get(counts, &1, 0), &1})
+  end
+
+  defp load(schema, ids) do
+    by_id = from(e in schema, where: e.id in ^ids) |> Brando.Repo.all() |> Map.new(&{&1.id, &1})
+
+    ids
+    |> Enum.flat_map(&List.wrap(by_id[&1]))
+    |> Brando.Repo.preload(schema.__absolute_url_preloads__())
+  end
+
+  @doc """
+  The paths of up to #{@candidates} of `schema`'s heaviest published entries
+  matching `args` that have a URL, the ones `list/1` tries in turn. Entries
+  are loaded a few at a time, so those without a URL don't use up the
+  candidates.
+  """
+  @spec candidate_paths(module(), map()) :: [String.t()]
+  def candidate_paths(schema, args) do
+    schema
+    |> heaviest_ids(args)
+    |> Stream.chunk_every(@candidates)
+    |> Stream.flat_map(&(schema |> load(&1) |> paths(schema)))
+    |> Enum.take(@candidates)
   end
 
   defp languages do
@@ -60,40 +121,71 @@ defmodule Brando.Upgrade.Snapshot.URLs do
     end)
   end
 
-  defp blueprint_paths(schema, languages) do
-    context = schema.__modules__().context
-    list = :"list_#{schema.__naming__().plural}"
-
-    if Code.ensure_loaded?(context) and function_exported?(context, list, 1) do
-      {:ok, entry_paths(schema, &list_entries(context, list, schema, &1), languages)}
-    else
-      {:error, "#{inspect(schema)}: no #{inspect(context)}.#{list}/1 to read its entries; add its URLs by hand"}
-    end
+  # Every published page; one entry of anything else, per language when it
+  # is translated.
+  defp blueprint_paths(schema, languages, found?) do
+    if schema == Page, do: page_paths(found?), else: entry_paths(schema, languages, found?)
   rescue
     exception -> {:error, "#{inspect(schema)}: #{Exception.message(exception)}"}
   end
 
-  # Every published page; one entry of anything else, per language when it
-  # is translated.
-  defp entry_paths(Page, list, _languages), do: %{} |> list.() |> paths(Page)
-
-  defp entry_paths(schema, list, languages) do
-    if schema.has_trait(Brando.Trait.Translatable),
-      do: Enum.flat_map(languages, &(%{language: &1, limit: 5} |> list.() |> paths(schema) |> Enum.take(1))),
-      else: %{limit: 5} |> list.() |> paths(schema) |> Enum.take(1)
+  defp page_paths(found?) do
+    {found, missing} = Page |> heaviest(%{}, nil) |> paths(Page) |> Enum.split_with(found?)
+    {:ok, found, Enum.map(missing, &"404 on the old site: #{&1}")}
   end
 
-  defp list_entries(context, list, schema, args) do
-    args =
-      args
-      |> Map.put(:preload, schema.__absolute_url_preloads__())
-      |> Map.put(:order, "asc id")
+  defp entry_paths(schema, languages, found?) do
+    args = if schema.has_trait(Brando.Trait.Translatable), do: Enum.map(languages, &%{language: &1}), else: [%{}]
 
-    args = if :status in schema.__schema__(:fields), do: Map.put(args, :status, :published), else: args
+    {paths, left_out} =
+      Enum.reduce(args, {[], []}, fn args, {paths, left_out} ->
+        candidates = candidate_paths(schema, args)
 
-    case apply(context, list, [args]) do
-      {:ok, entries} -> entries
-      _ -> []
+        case {Enum.find(candidates, found?), candidates} do
+          {nil, []} ->
+            {paths, left_out}
+
+          {nil, [first | _]} ->
+            warning = "404 on the old site: #{first}, and every other #{inspect(schema)} entry tried#{language(args)}"
+            {paths, left_out ++ [warning]}
+
+          {path, _candidates} ->
+            {paths ++ [path], left_out}
+        end
+      end)
+
+    {:ok, paths, left_out}
+  end
+
+  defp language(%{language: language}), do: " (#{language})"
+  defp language(_args), do: ""
+
+  defp published_ids(schema, args) do
+    fields = schema.__schema__(:fields)
+    query = from(e in schema, select: e.id)
+    query = if :status in fields, do: where(query, [e], e.status == ^:published), else: query
+    query = if :deleted_at in fields, do: where(query, [e], is_nil(e.deleted_at)), else: query
+
+    query =
+      case args do
+        %{language: language} when is_binary(language) -> where(query, [e], e.language == ^language)
+        _ -> query
+      end
+
+    Brando.Repo.all(query)
+  end
+
+  # Top-level blocks per entry, summed over the schema's block fields.
+  defp block_counts(schema) do
+    if function_exported?(schema, :__blocks_fields__, 0) do
+      schema.__blocks_fields__()
+      |> Enum.flat_map(fn %{name: name} ->
+        join_schema = Module.concat([schema, name |> to_string() |> Macro.camelize()])
+        Brando.Repo.all(from(j in join_schema, group_by: j.entry_id, select: {j.entry_id, count()}))
+      end)
+      |> Enum.reduce(%{}, fn {id, count}, acc -> Map.update(acc, id, count, &(&1 + count)) end)
+    else
+      %{}
     end
   end
 

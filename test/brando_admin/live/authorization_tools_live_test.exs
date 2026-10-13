@@ -5,6 +5,9 @@ defmodule BrandoAdmin.AuthorizationToolsLiveTest do
   setup do
     put_test_env(:authorization_mode, :legacy)
     put_test_env(:tenancy_mode, :none)
+    # The page also runs the system check, and render_async/2 waits for every
+    # async on the page: Brando's own checks take seconds on a loaded runner.
+    put_test_env(Brando.Doctor, skip: Brando.Doctor.default_checks())
   end
 
   test "superusers can report, backfill and review groups before cutover", %{conn: conn} do

@@ -682,18 +682,36 @@ defmodule Brando.HTML do
 
   def include_assets(%{admin: true} = assigns) do
     if Brando.env() in [:prod, :e2e, :test] or Application.get_env(Brando.otp_app(), :hmr) === false do
+      assigns = assign(assigns, :unbuilt?, Brando.env() == :dev and admin_manifest_empty?())
+
       ~H"""
       {Vite.Render.main_css(:admin) |> raw()}
       {Vite.Render.main_js(:admin) |> raw()}
+      <.admin_assets_notice :if={@unbuilt?} show />
       """
     else
-      assigns = assign(assigns, :vite_origin, vite_dev_server_origin("ADMIN", 3333))
+      assigns =
+        assign(assigns,
+          vite_origin: vite_dev_server_origin("ADMIN", 3333),
+          notice?: Brando.env() == :dev
+        )
 
       ~H"""
       <!-- admin dev/test -->
-      <script type="module" src={@vite_origin <> "/@vite/client"} phx-no-format>
+      <.admin_assets_notice :if={@notice?} origin={@vite_origin} />
+      <script
+        type="module"
+        src={@vite_origin <> "/@vite/client"}
+        onerror={@notice? && "brandoAdminAssetsMissing()"}
+        phx-no-format
+      >
       </script>
-      <script type="module" src={@vite_origin <> "/src/main.js"} phx-no-format>
+      <script
+        type="module"
+        src={@vite_origin <> "/src/main.js"}
+        onerror={@notice? && "brandoAdminAssetsMissing()"}
+        phx-no-format
+      >
       </script>
       <!-- end admin dev/test -->
       """
@@ -772,6 +790,53 @@ defmodule Brando.HTML do
         """
       end
     end
+  end
+
+  defp admin_manifest_empty? do
+    Brando.Utils.try_path(Vite.Manifest.read(:admin), [:entries, :files]) in [nil, []]
+  end
+
+  # Development only. Without its assets the admin is a blank page: the
+  # notice is held in a <template> in the head, and shown (with its own
+  # stylesheet, the admin's is what is missing) when the Vite dev server's
+  # scripts fail to load (`origin`), or at once when there is no build
+  # (`show`). English, like the mix tasks: it is for the developer.
+  attr :origin, :string, default: nil
+  attr :show, :boolean, default: false
+
+  defp admin_assets_notice(assigns) do
+    assigns = assign(assigns, :otp_app, Brando.otp_app())
+
+    ~H"""
+    <template id="brando-admin-assets-notice">
+      <div class="brando-admin-assets-notice" role="alert">
+        <%= if @origin do %>
+          <strong>Admin assets not reachable at {@origin}</strong>
+          <p>
+            Start the admin's Vite dev server: <code>pnpm dev</code> in <code>assets/backend</code>.
+            Or build them there with <code>pnpm build</code> and set <code>config :{@otp_app}, hmr: false</code>.
+          </p>
+        <% else %>
+          <strong>Admin assets not built</strong>
+          <p>
+            There is no <code>priv/static/admin_manifest.json</code>. Build them with <code>pnpm build</code>
+            in <code>assets/backend</code>, or set <code>config :{@otp_app}, hmr: true</code>
+            and run <code>pnpm dev</code>
+            there.
+          </p>
+        <% end %>
+      </div>
+    </template>
+    <style>
+      .brando-admin-assets-notice{position:fixed;top:16px;left:16px;right:16px;z-index:10000;max-width:720px;margin:0 auto;padding:16px 20px;border:1px solid #d9a441;border-radius:8px;background:#fff8e6;color:#1d2433;font:14px/1.5 system-ui,sans-serif;box-shadow:0 4px 16px rgba(0,0,0,.08)}.brando-admin-assets-notice p{margin:4px 0 0}.brando-admin-assets-notice code{font:13px ui-monospace,monospace;background:rgba(0,0,0,.06);padding:1px 4px;border-radius:3px}
+    </style>
+    <script>
+      window.brandoAdminAssetsMissing=function(){var show=function(){if(document.getElementById("brando-admin-assets-notice-shown"))return;var t=document.getElementById("brando-admin-assets-notice");if(!t)return;var n=t.content.firstElementChild.cloneNode(true);n.id="brando-admin-assets-notice-shown";document.body.appendChild(n)};if(document.body){show()}else{document.addEventListener("DOMContentLoaded",show)}};
+    </script>
+    <script :if={@show}>
+      brandoAdminAssetsMissing();
+    </script>
+    """
   end
 
   defp vite_dev_server_origin(scope, default_port) do

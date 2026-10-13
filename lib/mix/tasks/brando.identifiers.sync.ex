@@ -13,6 +13,10 @@ defmodule Mix.Tasks.Brando.Identifiers.Sync do
 
   An entry that raises is skipped and listed at the end, and the task then
   exits with status 1.
+
+  A server that is already running keeps serving what it cached before:
+  restart it, or use Configuration → Cache → Empty all caches in its admin.
+  The task says so when it is done.
   """
   use Mix.Task
 
@@ -36,9 +40,11 @@ defmodule Mix.Tasks.Brando.Identifiers.Sync do
     case Brando.Blueprint.Identifier.sync() do
       :ok ->
         Mix.shell().info([:green, "\n==> Done.\n"])
+        Mix.Brando.running_server_note()
 
       {:error, failures} ->
         Mix.shell().error("\n==> Done, but #{length(failures)} identifier(s) failed. See above.\n")
+        Mix.Brando.running_server_note()
         exit({:shutdown, 1})
     end
   end

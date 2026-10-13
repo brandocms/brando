@@ -338,6 +338,10 @@ end
 
 Brando.Cache.Globals.set()
 
+# ReqLLM's model catalogue loads on its first lookup, which takes seconds on a
+# loaded runner. Loaded here, no test pays for it inside a timed wait.
+{:ok, _} = LLMDB.load()
+
 fixture_src = Path.expand(".", __DIR__) <> "/fixtures/sample.jpg"
 media_path = Brando.config(:media_path)
 

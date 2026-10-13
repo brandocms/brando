@@ -144,6 +144,24 @@ defmodule Mix.Brando.Igniter.AssetsTest do
       assert IgniterCase.source(plan, "assets/backend/css/blocks.css") == template("assets/backend/css/blocks.css")
     end
 
+    test "brings an earlier template's postcss.config.cjs up to date, and keeps a site's own" do
+      earlier =
+        "module.exports = {\n  plugins: [\n    require('@brandocms/europacss'),\n    require('autoprefixer')()\n  ]\n}\n"
+
+      plan = upgrade(old_backend(%{"assets/backend/postcss.config.cjs" => earlier}))
+
+      assert IgniterCase.source(plan, "assets/backend/postcss.config.cjs") ==
+               template("assets/backend/postcss.config.cjs")
+
+      own = "module.exports = { plugins: [require('@brandocms/europacss'), require('postcss-nested')] }\n"
+      plan = upgrade(old_backend(%{"assets/backend/postcss.config.cjs" => own}))
+      Igniter.Test.assert_unchanged(plan, "assets/backend/postcss.config.cjs")
+    end
+
+    test "the E2E admin builds with the template's PostCSS config" do
+      assert File.read!("e2e/assets/backend/postcss.config.cjs") == template("assets/backend/postcss.config.cjs")
+    end
+
     test "replaces the Dockerfile's yarn assets_backend stage with the template's pnpm stage" do
       plan = upgrade(old_backend())
       dockerfile = IgniterCase.source(plan, "Dockerfile")

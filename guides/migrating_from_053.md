@@ -141,6 +141,10 @@ Pin the toolchain with mise or asdf: a current Elixir and OTP, and Node 22 or
 such as Node 23 in both yarn and pnpm installs. Use the same Node major as the
 Dockerfile's `node:` stages.
 
+`scripts/prepare_055_deps.exs` and `mix brando.doctor` print the `node` on the
+PATH and warn when it is an odd release or older than the one Brando is tested
+on, before an install fails on it.
+
 ### Run the source tasks
 
 Once the dependencies resolve, run:
@@ -212,6 +216,23 @@ the result before the source tasks, so their diff holds only their changes.
   `hero_html`) in a moved schema's own templates to `rendered_blocks`
   (`rendered_hero_blocks`), and lists, with file and line, the `.html` reads
   it left;
+- rewrites a fragment's `html` read out of a fragments map to
+  `rendered_blocks` (`@partials["footer"].html`, where
+  `plug Brando.Plug.Fragment, as: :partials` or a `get_fragments` call fills
+  the map), and lists the other `…].html` map reads with file and line. A
+  fragment has no `html` since 0.54, and such a read fails the page with a
+  `KeyError`;
+- adds `relation:` to a `:multi_select` on a has_many relation that has only
+  `relation_key:`, naming the join schema's belongs_to on that key
+  (`relation_key: :category_id` gets `relation: :category`). The admin form
+  crashed without it, and a Blueprint without it no longer compiles. An input
+  whose belongs_to it cannot find is listed;
+- drops the options of an `:entries` input's `for:` (now `sources:`) that
+  the identifiers it lists do not have, such as `preload:` and an order by
+  `sequence`, and says what it dropped. The options apply to the identifiers,
+  not the source schema (see [Related entries](blueprint_forms.md#related-entries));
+  a Blueprint with such options no longer compiles. Options it cannot read
+  are listed;
 - rewrites 0.53 navigation item reads inside `for item <- @navigation.items`
   (and `:for`) to `Brando.HTML.get_menu_item_url/1`, `get_menu_item_text/1`,
   `get_menu_item_target_blank/1` and `item.children`, and, when templates read
@@ -325,6 +346,15 @@ the result before the source tasks, so their diff holds only their changes.
   (slideshows became `gallery` in `brando_77`). Delete those; nothing calls
   them;
 - removes the Sharp `processor_module` setting, as `mix brando.migrate54` does;
+- writes `identifier false` on an embedded Blueprint (`data_layer :embedded`)
+  that declares an identifier, which 0.55 refuses to compile;
+- writes `default_srcset:` in an image asset's `cfg` as `srcset: %{default:
+  […]}`, or removes it beside a `srcset:`. Brando ignored `default_srcset`
+  there, so the asset used its `srcset` or the default config's; 0.55 rejects
+  the field. Check that the sizes the list names are in the asset's `sizes`;
+- lists, with file and line, each read of an `:entries` relation
+  (`project.related_entries`) that does not go through `.identifier` (see
+  below);
 - copies each Blueprint's translations from its 0.53 `*_naming`, `*_forms`
   and `*_listings` catalogs, and the `default` domain's translations of its
   `t/1` labels, into its schema's domain, in every locale of the Gettext
@@ -410,8 +440,19 @@ correct rewrite depends on application semantics:
   `Brando.Videos.Video` records and migrating their data;
 - updating source-controlled Liquid/HEEx ref paths and `gallery_images` access
   (Brando-owned migrations handle database-stored module/fragment code);
-- updating code that traverses generated `*_identifiers` associations for
-  `:entries` relations, whose join entries are now exposed directly;
+- updating code that reads an `:entries` relation. It holds the join rows,
+  each with its `identifier`, where it held identifiers, so
+  `Enum.map(project.related_entries, & &1.entry_id)` fails with a `KeyError`.
+  `mix brando.migrate55` lists the reads. Preload the identifiers through the
+  rows and read the entry id there:
+
+  ```elixir
+  project = Brando.Repo.preload(project, related_entries: :identifier)
+  ids = Enum.map(project.related_entries, & &1.identifier.entry_id)
+  ```
+
+  The rows come in the order the editor picked them; a list query on `ids`
+  does not keep it (see [Entries](blueprint_fields.md#entries));
 - moving datasource declarations that still use `Brando.Datasource` outside a
   Blueprint module onto the appropriate Blueprint;
 - writing the row component for each listing `mix brando.migrate54` listed
@@ -792,12 +833,23 @@ All three accept `--yes`, so they can run from a script, and
 `mix brando.upgrade.database` runs them, then `mix brando.check.image_texts`,
 then rebuilds the search index.
 
+The tasks write to the database, not to a running server's cache. A server
+that was running meanwhile keeps serving the pages it cached before (pages
+are cached without expiry): restart it, or use Configuration → Cache → Empty
+all caches in its admin.
+
 `mix brando.images.adopt` records which config each image was made with, for
 the images whose files already match it, so Utilities → Recreate changed
 images only recreates the ones that differ. Try it with `--dry-run` first;
 `--verbose` names each image's difference (`sizes: missing ["xlarge"]`,
-`formats: has [:jpg], config [:jpg, :avif]`) and ends with a count per config
-target and reason. See [Media](media.md#images-made-before-fingerprints).
+`formats: has [:jpg], config [:jpg, :avif]`,
+`large: file missing: images/site/default/large/x.jpg`) and ends with a count
+per config target and reason. Run it where the media is: on a copy without
+the media files it stops with `No image files found under <media path>`, and
+the doctor and Utilities say the same instead of recommending a recreate. A
+`formats` difference is real (the default config gained `:webp`, say) and the
+images need recreating on the server; a missing file on a machine without
+the media is not. See [Media](media.md#images-made-before-fingerprints).
 
 Run these against staging first and inspect counts and representative entries.
 They mutate application data and are not reversed by `mix ecto.rollback`.
@@ -880,12 +932,18 @@ the pre-upgrade commit on a copy of the database (port 4000, say). In the
 upgraded application, once its database is migrated:
 
 ```shell
-mix brando.upgrade.snapshot urls --output urls.txt
+mix brando.upgrade.snapshot urls --output urls.txt --base-url http://localhost:4000
 mix brando.upgrade.snapshot capture tmp/before --base-url http://localhost:4000 --urls urls.txt
 # start the upgraded site on another port
 mix brando.upgrade.snapshot capture tmp/after --base-url http://localhost:4001 --urls urls.txt
 mix brando.upgrade.snapshot diff tmp/before tmp/after
 ```
+
+`urls` picks, for each Blueprint other than pages, the entry with the most
+blocks in each language. With `--base-url` it asks the old site for each
+entry URL, leaves out those it answers with 404 (a language whose routes are
+switched off, for instance) and tries the next-heaviest entry instead. Add
+entries you know are unusual to the list by hand.
 
 It reports status, visible text, `<head>` tags and element structure
 separately, so a moved `data-src` or a reordered list shows even when the

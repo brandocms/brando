@@ -22,10 +22,51 @@ defmodule Mix.Brando.MigrationRequest do
     |> Base.url_encode64(padding: false)
   end
 
-  def apply(request), do: request |> reviewed_plan() |> Migrations.commit_plan()
+  # Igniter lists a queued task with its arguments ("These tasks will be
+  # run") and runs it as a `mix` command of its own, and an encoded request is
+  # a long base64 string. Each request is kept in a file under the build path,
+  # named after its Blueprint and this run, and the task's arguments are
+  # those names (`MyApp.Article@3f9a2c1b`). An argument that names no kept request is taken as an encoded
+  # request; the digest inside still refuses a plan that changed since.
+  def task_args(plans) do
+    Enum.map(plans, fn plan ->
+      # Another run planning the same Blueprint must not replace this one.
+      name = "#{inspect(plan.module)}@#{Base.encode16(:crypto.strong_rand_bytes(4), case: :lower)}"
+      file = kept_file(name)
+      File.mkdir_p!(Path.dirname(file))
+      File.write!(file, encode(plan))
+      name
+    end)
+  end
+
+  def apply(argument) do
+    result = argument |> kept() |> reviewed_plan() |> Migrations.commit_plan()
+    forget([argument])
+    result
+  end
 
   # Every request is checked against its review before any of them is written.
-  def apply_all(requests), do: requests |> Enum.map(&reviewed_plan/1) |> Migrations.commit_plans()
+  def apply_all(arguments) do
+    result = arguments |> Enum.map(&(&1 |> kept() |> reviewed_plan())) |> Migrations.commit_plans()
+    forget(arguments)
+    result
+  end
+
+  defp kept(argument) do
+    case kept_file(argument) do
+      nil -> argument
+      file -> if File.regular?(file), do: File.read!(file), else: argument
+    end
+  end
+
+  defp forget(arguments) do
+    for argument <- arguments, file = kept_file(argument), do: File.rm(file)
+  end
+
+  defp kept_file(name) do
+    if Regex.match?(~r/\A[A-Z][A-Za-z0-9_]*(\.[A-Z][A-Za-z0-9_]*)*@[0-9a-f]{8}\z/, name),
+      do: Path.join([Mix.Project.build_path(), "brando", "blueprint_plans", name])
+  end
 
   # A reconciled plan reads the database. A Mix task does not start the repo,
   # and its URL usually lives in config/runtime.exs, so load the configuration

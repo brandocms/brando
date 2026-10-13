@@ -60,7 +60,8 @@ defmodule Brando.Images.Adoption do
     * `{:formats, has, config}` - the image's formats and the config's;
     * `{:size_keys, missing, extra}` - the config's size keys the image lacks,
       and the image's keys the config no longer has;
-    * `{:missing, key}` - a size's file is missing;
+    * `{:missing, key, file}` - a size's file is missing: `file` is its path
+      in the media folder;
     * `{:dimensions, key, actual, config}` - a size's `{width, height}` and
       what processing makes of the original with today's spec; either is
       `nil` when it can't be read or worked out;
@@ -69,7 +70,11 @@ defmodule Brando.Images.Adoption do
   @type verdict :: :match | {:differ, reason :: term} | {:skipped, reason :: term}
   @type counts :: %{adopted: non_neg_integer, differ: non_neg_integer, skipped: non_neg_integer}
 
+  @type difference :: :formats | :sizes | :missing_file | :dimensions | :error | :cdn | :no_config
+
   @batch_size 500
+  # Images whose files `media_status/0` looks for.
+  @media_sample 20
   # Resizing rounds each side, so a size may be a pixel off its spec.
   @tolerance 1
   # Header reads are cheapest for these; AVIF goes through libheif.
@@ -157,6 +162,86 @@ defmodule Brando.Images.Adoption do
       if Keyword.get(opts, :check, :files) == :records,
         do: :match,
         else: check_files(image, config)
+    end
+  end
+
+  @doc """
+  What kind of difference a verdict from `check/3` (or `adopt_unrecorded/1`'s
+  `:on_differ`) names, for counting them: `:formats` and `:sizes` (the size
+  keys) are differences in the config, `:missing_file` and `:dimensions` in
+  the files. Skipped images give their reason, `:cdn` or `:no_config`.
+  """
+  @spec difference(verdict) :: difference | nil
+  def difference({:differ, {:formats, _has, _config}}), do: :formats
+  def difference({:differ, {:size_keys, _missing, _extra}}), do: :sizes
+  def difference({:differ, {:missing, _key, _file}}), do: :missing_file
+  def difference({:differ, {:dimensions, _key, _actual, _config}}), do: :dimensions
+  def difference({:differ, {:error, _message}}), do: :error
+  def difference({:skipped, reason}) when reason in [:cdn, :no_config], do: reason
+  def difference(_verdict), do: nil
+
+  @doc "Whether the current environment has images `adopt_unrecorded/1` would check."
+  @spec unrecorded?() :: boolean
+  def unrecorded? do
+    query =
+      from i in Images.Image,
+        where: is_nil(i.config_fingerprint) and is_nil(i.deleted_at) and not is_nil(i.config_target),
+        select: true,
+        limit: 1
+
+    Brando.Repo.one(query) == true
+  end
+
+  @doc """
+  Whether the current environment's media folder holds its images' files.
+
+  Looks for the files, original or size, of #{@media_sample} images picked at
+  random among those kept locally (not on the CDN without a local copy), and
+  when none of them has one, for any file in the folders the images live in.
+  `{:empty, media_root}` when there is none either: the folder is empty or
+  not mounted, or the media was never synced to this machine. Every image
+  then differs for want of its files, and recreating them needs the
+  originals, so neither the counts nor a recreate mean anything until the
+  media is in place. `:ok` otherwise, and when there are no such images.
+  """
+  @spec media_status() :: :ok | {:empty, String.t()}
+  def media_status do
+    local =
+      from i in Images.Image, where: is_nil(i.deleted_at) and not is_nil(i.path) and (is_nil(i.cdn) or i.cdn == false)
+
+    sample =
+      Brando.Repo.all(from i in local, order_by: fragment("random()"), limit: @media_sample, select: {i.path, i.sizes})
+
+    cond do
+      sample == [] -> :ok
+      Enum.any?(sample, &any_file?/1) -> :ok
+      local |> image_folders() |> Enum.any?(&files_in?/1) -> :ok
+      true -> {:empty, Images.Utils.media_path()}
+    end
+  end
+
+  defp any_file?({path, sizes}) do
+    size_paths = if is_map(sizes), do: Enum.filter(Map.values(sizes), &is_binary/1), else: []
+    Enum.any?([path | size_paths], &(&1 |> Images.Utils.media_path() |> File.exists?()))
+  end
+
+  # The folders the originals are in: a sample can miss the few images whose
+  # files are there.
+  defp image_folders(query) do
+    Brando.Repo.all(
+      from i in query,
+        distinct: true,
+        limit: 1_000,
+        select: fragment("substring(? from '^(.*)/[^/]*$')", i.path)
+    )
+  end
+
+  defp files_in?(nil), do: false
+
+  defp files_in?(folder) do
+    case File.ls(Images.Utils.media_path(folder)) do
+      {:ok, [_ | _]} -> true
+      _ -> false
     end
   end
 
@@ -286,21 +371,22 @@ defmodule Brando.Images.Adoption do
   end
 
   defp check_size(image, key, path, size_cfg, header_format) when is_binary(path) do
-    files = Map.new(image.formats, &{&1, Images.Utils.media_path(Brando.Utils.change_extension(path, to_string(&1)))})
+    files = Map.new(image.formats, &{&1, Brando.Utils.change_extension(path, to_string(&1))})
+    missing = Enum.find(image.formats, &(not File.exists?(Images.Utils.media_path(files[&1]))))
 
     cond do
-      Enum.all?(files, fn {_format, file} -> File.exists?(file) end) ->
-        check_dimensions(image, key, files[header_format], size_cfg, header_format)
+      is_nil(missing) ->
+        check_dimensions(image, key, Images.Utils.media_path(files[header_format]), size_cfg, header_format)
 
       image.cdn ->
         {:skipped, :cdn}
 
       true ->
-        {:differ, {:missing, key}}
+        {:differ, {:missing, key, files[missing]}}
     end
   end
 
-  defp check_size(_image, key, _path, _size_cfg, _header_format), do: {:differ, {:missing, key}}
+  defp check_size(_image, key, _path, _size_cfg, _header_format), do: {:differ, {:missing, key, nil}}
 
   # An SVG's sizes are the original itself.
   defp check_dimensions(_image, _key, _file, _size_cfg, :svg), do: :ok

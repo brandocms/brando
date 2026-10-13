@@ -88,6 +88,13 @@ msgstr[1] ""
 
 #: lib/brando/doctor/checks/image_configs.ex
 #, elixir-autogen, elixir-format
+msgid "%{count} differs"
+msgid_plural "%{count} differ"
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/brando/doctor/checks/image_configs.ex
+#, elixir-autogen, elixir-format
 msgid "%{count} differs (recreate it)"
 msgid_plural "%{count} differ (recreate them)"
 msgstr[0] ""
@@ -144,6 +151,34 @@ msgstr[1] ""
 
 #: lib/brando/doctor/checks/image_configs.ex
 #, elixir-autogen, elixir-format
+msgid "%{count} in dimensions"
+msgid_plural "%{count} in dimensions"
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/brando/doctor/checks/image_configs.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} in formats"
+msgid_plural "%{count} in formats"
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/brando/doctor/checks/image_configs.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} in sizes"
+msgid_plural "%{count} in sizes"
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/brando/doctor/checks/image_configs.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} likely matches"
+msgid_plural "%{count} likely match"
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/brando/doctor/checks/image_configs.ex
+#, elixir-autogen, elixir-format
 msgid "%{count} likely matches (mix brando.images.adopt checks and records that)"
 msgid_plural "%{count} likely match (mix brando.images.adopt checks and records that)"
 msgstr[0] ""
@@ -160,6 +195,13 @@ msgstr[1] ""
 #, elixir-autogen, elixir-format
 msgid "%{count} new Brando migration not copied"
 msgid_plural "%{count} new Brando migrations not copied"
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/brando/doctor/checks/image_configs.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} on the CDN only"
+msgid_plural "%{count} on the CDN only"
 msgstr[0] ""
 msgstr[1] ""
 
@@ -198,6 +240,13 @@ msgid_plural "%{count} stuck"
 msgstr[0] ""
 msgstr[1] ""
 
+#: lib/brando/doctor/checks/image_configs.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} unreadable"
+msgid_plural "%{count} unreadable"
+msgstr[0] ""
+msgstr[1] ""
+
 #: lib/brando/doctor/checks/migrations.ex
 #, elixir-autogen, elixir-format
 msgid "%{count} upgrade migration differs from Brando's template"
@@ -209,6 +258,13 @@ msgstr[1] ""
 #, elixir-autogen, elixir-format
 msgid "%{count} warning"
 msgid_plural "%{count} warnings"
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/brando/doctor/checks/image_configs.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} with a missing file"
+msgid_plural "%{count} with missing files"
 msgstr[0] ""
 msgstr[1] ""
 
@@ -268,10 +324,32 @@ msgstr[1] ""
 
 #: lib/brando/doctor/checks/image_configs.ex
 #, elixir-autogen, elixir-format
+msgid "%{target}: %{count} image whose config target no longer resolves uses the default image config"
+msgid_plural "%{target}: %{count} images whose config target no longer resolves use the default image config"
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/brando/doctor/checks/image_configs.ex
+#, elixir-autogen, elixir-format
 msgid "%{target}: %{count} image without recorded settings"
 msgid_plural "%{target}: %{count} images without recorded settings"
 msgstr[0] ""
 msgstr[1] ""
+
+#: lib/brando/doctor/checks/node.ex
+#, elixir-autogen, elixir-format
+msgid "%{version}: Node %{major} is an odd release"
+msgstr ""
+
+#: lib/brando/doctor/checks/node.ex
+#, elixir-autogen, elixir-format
+msgid "%{version}: Node %{major} is older than Brando is tested on"
+msgstr ""
+
+#: lib/brando/doctor/checks/node.ex
+#, elixir-autogen, elixir-format
+msgid "%{version}: older than Vite 8 accepts (%{minimum})"
+msgstr ""
 
 #: lib/brando/doctor/checks/admin_assets.ex
 #, elixir-autogen, elixir-format
@@ -353,9 +431,14 @@ msgstr ""
 msgid "GET /robots.txt goes to %{plug}"
 msgstr ""
 
+#: lib/brando/doctor/checks/image_configs.ex
+#, elixir-autogen, elixir-format
+msgid "Go to image sizes"
+msgstr ""
+
 #: lib/brando/doctor/checks/sitemap.ex
 #, elixir-autogen, elixir-format
-msgid "Generate sitemap"
+msgid "Go to sitemap"
 msgstr ""
 
 #: lib/brando/doctor/source.ex
@@ -428,6 +511,16 @@ msgstr ""
 msgid "Modules"
 msgstr ""
 
+#: lib/brando/doctor/checks/node.ex
+#, elixir-autogen, elixir-format
+msgid "Node %{major} (or another even LTS major ≥ %{major})"
+msgstr ""
+
+#: lib/brando/doctor/checks/node.ex
+#, elixir-autogen, elixir-format
+msgid "Node.js"
+msgstr ""
+
 #: lib/brando_admin/components/system_check.ex
 #, elixir-autogen, elixir-format
 msgid "OK"
@@ -451,11 +544,6 @@ msgstr ""
 #: lib/brando/doctor/checks/alt_text.ex
 #, elixir-autogen, elixir-format
 msgid "Open images"
-msgstr ""
-
-#: lib/brando/doctor/checks/image_configs.ex
-#, elixir-autogen, elixir-format
-msgid "Recreate changed images"
 msgstr ""
 
 #: lib/brando/doctor/checks/modules.ex
@@ -543,6 +631,11 @@ msgstr ""
 msgid "a static robots.txt may stand in front of the SEO text"
 msgstr ""
 
+#: lib/brando/doctor/checks/robots.ex
+#, elixir-autogen, elixir-format
+msgid "a static robots.txt stands in front of the SEO text"
+msgstr ""
+
 #: lib/brando/doctor/checks/oban.ex
 #, elixir-autogen, elixir-format
 msgid "add %{queues} to the queues in config :brando, Oban (see Brando.Supervisor)"
@@ -576,6 +669,25 @@ msgstr ""
 #: lib/brando/doctor/checks/admin_assets.ex
 #, elixir-autogen, elixir-format
 msgid "brandojs not installed"
+msgstr ""
+
+#: lib/brando/doctor/checks/image_configs.ex
+#, elixir-autogen, elixir-format
+msgid "by its record it differs from its config"
+msgid_plural "by their records all %{count} differ"
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/brando/doctor/checks/image_configs.ex
+#, elixir-autogen, elixir-format
+msgid "by its record it likely matches its config"
+msgid_plural "by their records all likely match their config"
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/brando/doctor/checks/image_configs.ex
+#, elixir-autogen, elixir-format
+msgid "by their records"
 msgstr ""
 
 #: lib/brando/doctor/checks/robots.ex
@@ -630,7 +742,17 @@ msgstr ""
 
 #: lib/brando/doctor/checks/robots.ex
 #, elixir-autogen, elixir-format
-msgid "delete priv/static/robots.txt and remove it from static_paths"
+msgid "delete priv/static/robots.txt and remove %{entry} from %{setting}"
+msgstr ""
+
+#: lib/brando/doctor/checks/robots.ex
+#, elixir-autogen, elixir-format
+msgid "delete priv/static/robots.txt, and remove robots.txt from the only: list of the endpoint's Plug.Static (static_paths/0 in the web module on Phoenix 1.7 and later), if it is there"
+msgstr ""
+
+#: lib/brando/doctor/checks/robots.ex
+#, elixir-autogen, elixir-format
+msgid "delete priv/static/robots.txt: Plug.Static in %{file} has no only:, so it serves every file in priv/static"
 msgstr ""
 
 #: lib/brando/doctor/checks/configuration.ex
@@ -806,9 +928,19 @@ msgstr ""
 msgid "no identity"
 msgstr ""
 
+#: lib/brando/doctor/checks/image_configs.ex
+#, elixir-autogen, elixir-format
+msgid "no image files under %{path} (is the media synced?)"
+msgstr ""
+
 #: lib/brando/doctor/checks/configuration.ex
 #, elixir-autogen, elixir-format
 msgid "no mailer"
+msgstr ""
+
+#: lib/brando/doctor/checks/node.ex
+#, elixir-autogen, elixir-format
+msgid "no node on the PATH"
 msgstr ""
 
 #: lib/brando/doctor/checks/configuration.ex
@@ -846,6 +978,11 @@ msgstr ""
 msgid "no sitemap module"
 msgstr ""
 
+#: lib/brando/doctor/checks/node.ex
+#, elixir-autogen, elixir-format
+msgid "node --version printed %{version}"
+msgstr ""
+
 #: lib/brando/doctor/checks/deprecations.ex
 #, elixir-autogen, elixir-format
 msgid "none in lib/"
@@ -871,6 +1008,11 @@ msgstr ""
 msgid "not served by Brando"
 msgstr ""
 
+#: lib/brando/doctor/checks/image_configs.ex
+#, elixir-autogen, elixir-format
+msgid "of those: %{differences}"
+msgstr ""
+
 #: lib/brando/doctor/checks/alt_text.ex
 #, elixir-autogen, elixir-format
 msgid "open each image marked “No alt text” under Images and write its Alt. text (no AI provider is configured to draft it)"
@@ -884,6 +1026,11 @@ msgstr ""
 #: lib/brando/doctor/checks/configuration.ex
 #, elixir-autogen, elixir-format
 msgid "placeholder sender address"
+msgstr ""
+
+#: lib/brando/doctor/checks/robots.ex
+#, elixir-autogen, elixir-format
+msgid "priv/static/robots.txt is not served (not in %{setting}); delete it"
 msgstr ""
 
 #: lib/brando/doctor/checks/oban.ex
@@ -1001,6 +1148,11 @@ msgstr ""
 msgid "testing mode, jobs run inline"
 msgstr ""
 
+#: lib/brando/doctor/checks/node.ex
+#, elixir-autogen, elixir-format
+msgid "the admin and frontend assets build with %{advice}"
+msgstr ""
+
 #: lib/brando/doctor/checks/test_database.ex
 #, elixir-autogen, elixir-format
 msgid "the config files read Mix.env(), which cannot be read for :test from here"
@@ -1036,7 +1188,22 @@ msgstr ""
 msgid "up to date"
 msgstr ""
 
+#: lib/brando/doctor/checks/node.ex
+#, elixir-autogen, elixir-format
+msgid "use %{advice}"
+msgstr ""
+
+#: lib/brando/doctor/checks/node.ex
+#, elixir-autogen, elixir-format
+msgid "use %{advice}: odd releases are not LTS, and pnpm and yarn refuse them for Vite 8 and the asset packages"
+msgstr ""
+
 #: lib/brando/doctor/checks/versions.ex
 #, elixir-autogen, elixir-format
 msgid "use the versions this Brando supports (see the installation guide)"
+msgstr ""
+
+#: lib/brando/doctor/checks/image_configs.ex
+#, elixir-autogen, elixir-format
+msgid "where the media is (on the server, or here once it is synced or mounted), run mix brando.images.adopt to record the images that match, then Utilities → Recreate changed images for the rest; here neither works, as adopting needs the files and recreating the originals"
 msgstr ""

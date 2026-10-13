@@ -42,6 +42,16 @@ test('every sequence is reachable: no two share their keys', () => {
   assert.equal(new Set(sequences).size, sequences.length)
 })
 
+test('⌘Z is dispatched for the block undo, never in a text field or a dialog', () => {
+  const undo = find('undo')
+  assert.ok(undo.dispatch)
+  assert.ok(!undo.inText)
+  assert.ok(!undo.inModal)
+  assert.ok(matches('undo', key('z', { metaKey: true })))
+  assert.ok(matches('undo', key('z', { ctrlKey: true })))
+  assert.ok(!matches('undo', key('Z', { metaKey: true, shiftKey: true })))
+})
+
 test('Mod is ⌘ or Ctrl, and Shift must match', () => {
   assert.ok(matches('save', key('s', { metaKey: true })))
   assert.ok(matches('save', key('s', { ctrlKey: true })))

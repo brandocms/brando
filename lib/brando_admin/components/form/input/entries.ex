@@ -40,7 +40,7 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
         Missing `sources` option for `:entries` field `#{inspect(field.field)}`
 
             input :#{inspect(field.field)}, :entries, sources: [
-              {MyApp.Projects.Project, %{preload: [:category]}},
+              {MyApp.Projects.Project, %{order: "asc title"}},
               {Brando.Pages.Page, %{}}
             ]
 

@@ -682,6 +682,7 @@ defmodule BrandoAdmin.Components.Form do
      socket
      |> put_local_form(to_form(changeset, []))
      |> update_entry_with_relation(path ++ [field], nil)
+     |> send_relation_to_blocks(path, field, nil)
      |> update_entry_assocs(path ++ [field], nil)
      |> own_asset(path, relation_key, :id)
      |> ship_all_field_changes()
@@ -984,10 +985,9 @@ defmodule BrandoAdmin.Components.Form do
     |> assign(:working_copy, nil)
     |> assign(:entry, updated_entry)
     |> assign_refreshed_form()
-    |> assign(:block_map, [])
+    |> remount_block_fields()
     |> assign_entry_for_blocks()
     |> clear_blocks_root_changesets()
-    |> reload_all_blocks()
     |> force_svelte_remounts(:all)
     |> then(&{:ok, &1})
   end
@@ -1003,7 +1003,7 @@ defmodule BrandoAdmin.Components.Form do
      |> assign(:entry, updated_entry)
      |> put_form(to_form(new_changeset, []))
      |> clear_owned_assets()
-     |> assign(:block_map, [])
+     |> remount_block_fields()
      |> force_svelte_remounts(:all)}
   end
 
@@ -1847,6 +1847,7 @@ defmodule BrandoAdmin.Components.Form do
 
     socket
     |> assign(:entry, updated_entry)
+    |> send_relation_to_blocks(path, field, asset)
     |> put_local_form(to_form(updated_changeset, []))
     |> own_asset(path, relation_key, :id)
     |> Drafts.dirty()
@@ -2183,6 +2184,22 @@ defmodule BrandoAdmin.Components.Form do
   end
 
   # Transformer changeset updates are now handled by the Transformer component
+
+  defp set_thumbnail_elsewhere(socket, video_id, image_id) do
+    with {:ok, video} <- Brando.Videos.get_video(video_id),
+         {:ok, image} <- Brando.Images.get_image(image_id),
+         {:ok, _video} <-
+           video
+           |> change(%{thumbnail_id: image.id})
+           |> Map.put(:action, :update)
+           |> Brando.Videos.update_video(socket.assigns.current_user) do
+      send(self(), {:toast, gettext("The thumbnail was set on the video it was picked for")})
+    else
+      _ -> send(self(), {:toast, gettext("Could not set video thumbnail")})
+    end
+
+    socket
+  end
 
   defp update_entry_with_relation(socket, path, updated_relation) do
     entry = socket.assigns.entry || struct(socket.assigns.schema)
@@ -3856,7 +3873,7 @@ defmodule BrandoAdmin.Components.Form do
           />
 
           <.live_component module={FilePicker} id="file-picker" />
-          <.live_component module={ImagePicker} id="image-picker" upload_in_form? />
+          <.live_component module={ImagePicker} id="image-picker" current_user={@current_user} upload_in_form? />
           <.live_component module={VideoPicker} id="video-picker" current_user={@current_user} />
           <.live_component module={TipTapLinkDialog} id="tiptap-link-dialog" />
 
@@ -4957,6 +4974,7 @@ defmodule BrandoAdmin.Components.Form do
     {:noreply,
      socket
      |> assign(:entry, Map.put(entry, edit_video.field, nil))
+     |> send_relation_to_blocks(edit_video.path, edit_video.field, nil)
      |> assign(:video_changeset, nil)
      |> assign(:editing_video?, false)
      |> assign(:edit_video, %{edit_video | video: nil})
@@ -4975,6 +4993,7 @@ defmodule BrandoAdmin.Components.Form do
       event_target: socket.assigns.myself,
       multi: false,
       selected_images: if(video && video.thumbnail_id, do: [video.thumbnail_id], else: []),
+      pick_values: if(video && video.id, do: %{"video_id" => video.id}, else: %{}),
       form_id: socket.assigns.id
     )
 
@@ -4984,6 +5003,20 @@ defmodule BrandoAdmin.Components.Form do
   # The image picker's pick, when the video drawer opened it for a thumbnail
   # (`browse_video_thumbnail`) — the only time the form is its target. Saved
   # at once, like `reset_video_thumbnail`.
+  # A copy from the whole library can be ready after the drawer moved on to
+  # another video: the pick names its video, and goes to that one.
+  def handle_event("select_image", %{"id" => image_id, "video_id" => video_id}, socket) do
+    case socket.assigns.edit_video do
+      %{video: %{id: current_id}} when current_id != nil ->
+        if to_string(current_id) == to_string(video_id),
+          do: handle_event("select_image", %{"id" => image_id}, socket),
+          else: {:noreply, set_thumbnail_elsewhere(socket, video_id, image_id)}
+
+      _ ->
+        {:noreply, set_thumbnail_elsewhere(socket, video_id, image_id)}
+    end
+  end
+
   def handle_event("select_image", %{"id" => image_id}, socket) do
     edit_video = socket.assigns.edit_video
 
@@ -5055,6 +5088,7 @@ defmodule BrandoAdmin.Components.Form do
     {:noreply,
      socket
      |> assign(:entry, Map.put(entry, edit_file.field, nil))
+     |> send_relation_to_blocks(edit_file.path, edit_file.field, nil)
      |> assign(:file_changeset, nil)
      # `reset_file_field/2` closes the drawer (`toggle_drawer`), so the flag has
      # to come down with it — leaving it set stranded the main save behind
@@ -5090,6 +5124,7 @@ defmodule BrandoAdmin.Components.Form do
     {:noreply,
      socket
      |> assign(:entry, Map.put(entry, edit_image.field, nil))
+     |> send_relation_to_blocks(edit_image.path, edit_image.field, nil)
      |> assign(:image_changeset, nil)
      # Same as reset_file_field above — this closes the image drawer, so the
      # guard flag must come down or the entry can never be saved again.
@@ -6445,9 +6480,20 @@ defmodule BrandoAdmin.Components.Form do
     socket
   end
 
+  # Out of the render now, and in again with the next block map
+  # (`set_block_map`); a block field still there then starts over
+  # (`BlockField` "remount").
+  defp remount_block_fields(socket) do
+    for {field, _schema, _entry_blocks, _opts} <- socket.assigns.block_map do
+      send_update(BlockField, id: "#{socket.assigns.id}-blocks-#{field}", event: "remount")
+    end
+
+    assign(socket, :block_map, [])
+  end
+
   # `scope: :changed` after a save lets each block field skip roots it can
   # prove already hold the saved rows; every other reload re-seeds them all.
-  defp reload_all_blocks(socket, scope \\ :all) do
+  defp reload_all_blocks(socket, scope) do
     block_map = socket.assigns.block_map
     id = socket.assigns.id
 
@@ -7211,6 +7257,15 @@ defmodule BrandoAdmin.Components.Form do
       |> put_change(rendered_field_name, rendered_blocks)
       |> put_change(rendered_at_field_name, DateTime.truncate(DateTime.utc_now(), :second))
     end)
+  end
+
+  # An asset field's relation committed or cleared (a pick, an upload, a
+  # removal). The form's own change is its `_id`, and the blocks that read the
+  # entry read the relation (`{% picture entry.cover %}`), so they are sent
+  # the relation itself.
+  defp send_relation_to_blocks(socket, path, field, asset) do
+    full_path = path ++ [field]
+    send_updated_entry_field_to_blocks(socket, Brando.Utils.build_access_path(full_path), asset, to_string(hd(full_path)))
   end
 
   defp send_updated_entry_field_to_blocks(socket, path, change, field) do

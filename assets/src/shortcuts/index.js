@@ -113,10 +113,38 @@ export function available(shortcut) {
   return true
 }
 
+// The block field the editor last worked in (a click, a key or the focus in
+// it), which undoes its own last block moved or deleted. Only while it shows:
+// ⌘Z never changes a block field in a hidden tab.
+let lastBlockField = null
+
+function noteBlockField(event) {
+  const field = event.target?.closest?.('[data-undo]')
+  if (field) lastBlockField = field
+}
+
+function blockUndoTarget() {
+  const field = lastBlockField
+  if (!field || !field.isConnected) return null
+  const shows = typeof field.checkVisibility === 'function' ? field.checkVisibility() : field.offsetParent !== null
+  return shows ? field : null
+}
+
 function builtIn(app, id) {
   const shortcut = SHORTCUTS.find(s => s.id === id)
   if (id.startsWith('go-')) return () => navigate(app, destination(shortcut))
   if (id === 'new-entry') return () => navigate(app, createUrl())
+  if (id === 'undo') {
+    return () => {
+      const field = blockUndoTarget()
+      if (!field || !app?.liveSocket) return false
+      // With nothing to undo the key is still the block editor's: the
+      // browser's own undo would take back typing in a field that has lost
+      // the focus, out of sight.
+      if (field.dataset.undoAt) app.liveSocket.execJS(field, field.dataset.undo)
+      return true
+    }
+  }
   if (id === 'preview') {
     return () => {
       const toggle = previewToggle()
@@ -143,6 +171,8 @@ function target(event) {
 export default function installShortcuts(app) {
   if (installed) return
   installed = true
+
+  for (const type of ['pointerdown', 'focusin', 'keydown']) document.addEventListener(type, noteBlockField, true)
 
   window.addEventListener(
     'keydown',
