@@ -8,6 +8,7 @@ defmodule Brando.Doctor.Checks.Configuration do
   use Gettext, backend: Brando.Gettext
 
   alias Brando.Doctor.Result
+  alias Brando.Mailer
 
   @cdn_contexts [Brando.Images, Brando.Files]
 
@@ -83,12 +84,7 @@ defmodule Brando.Doctor.Checks.Configuration do
   none) in production is a warning.
   """
   def mailer do
-    mailer = Brando.Mailer.mailer()
-    senders = senders()
-    # The first sender with a problem, else the first.
-    {site, from} =
-      Enum.find(senders, &is_nil(elem(&1, 1))) || Enum.find(senders, &Brando.Mailer.placeholder?(elem(&1, 1))) ||
-        hd(senders)
+    mailer = Mailer.mailer()
 
     cond do
       is_nil(mailer) ->
@@ -102,11 +98,24 @@ defmodule Brando.Doctor.Checks.Configuration do
         {:error, dgettext("doctor", "Mailer: %{mailer} does not exist", mailer: inspect(mailer)),
          dgettext("doctor", "mailer module missing")}
 
+      true ->
+        sender_finding(mailer)
+    end
+  end
+
+  # The first sender with a problem, else the first, and the adapter.
+  defp sender_finding(mailer) do
+    senders = senders()
+
+    {site, from} =
+      Enum.find(senders, &is_nil(elem(&1, 1))) || Enum.find(senders, &Mailer.placeholder?(elem(&1, 1))) || hd(senders)
+
+    cond do
       is_nil(from) ->
         {:warning, no_sender_item(mailer, site), dgettext("doctor", "no sender address"),
          dgettext("doctor", "set the address Brando sends from: `config :brando, Brando.Mailer, from: …`")}
 
-      Brando.Mailer.placeholder?(from) ->
+      Mailer.placeholder?(from) ->
         {:error, placeholder_item(mailer, from, site), dgettext("doctor", "placeholder sender address"),
          dgettext(
            "doctor",
@@ -133,7 +142,7 @@ defmodule Brando.Doctor.Checks.Configuration do
   # one; without tenancy, or with sites that may fall back to it, the
   # general one is checked too.
   defp senders do
-    config = Application.get_env(:brando, Brando.Mailer, [])
+    config = Application.get_env(:brando, Mailer, [])
     sites = if is_map(config[:sites]), do: config[:sites], else: %{}
     general = {nil, config[:from]}
 

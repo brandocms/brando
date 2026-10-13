@@ -57,21 +57,19 @@ if Code.ensure_loaded?(Igniter) do
     defp backend_config_calls(content, backend) do
       case Code.string_to_quoted(content) do
         {:ok, ast} ->
-          {_ast, calls} =
-            Macro.prewalk(ast, [], fn
-              {:config, _, [_app, {:__aliases__, _, parts}, options]} = node, calls ->
-                if Module.concat(parts) == backend, do: {node, calls ++ [options]}, else: {node, calls}
-
-              node, calls ->
-                {node, calls}
-            end)
-
+          {_ast, calls} = Macro.prewalk(ast, [], &collect_config_call(&1, &2, backend))
           calls
 
         _error ->
           [:unreadable]
       end
     end
+
+    defp collect_config_call({:config, _, [_app, {:__aliases__, _, parts}, options]} = node, calls, backend) do
+      if Module.concat(parts) == backend, do: {node, calls ++ [options]}, else: {node, calls}
+    end
+
+    defp collect_config_call(node, calls, _backend), do: {node, calls}
 
     defp options_config_priv(options) when is_list(options) do
       case if(Keyword.keyword?(options), do: Keyword.fetch(options, :priv), else: {:ok, :unreadable}) do
