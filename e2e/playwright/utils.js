@@ -350,21 +350,6 @@ const fillSlugSource = async (locator, text) => {
   await locator.blur()
 }
 
-// Image uploads first open the asset browser so the user can confirm the
-// destination folder. Keep upload specs aligned with that browser-first flow.
-const confirmUploadFolder = async page => {
-  // The picker renders in the admin user's language. Matching only the English
-  // label made this a silent no-op for a Norwegian admin: the destination
-  // drawer stayed open, the upload never started, and the caller timed out
-  // waiting for an image that was never going to appear.
-  const confirm = page.getByRole('button', { name: /^(Upload here|Last opp her)$/ })
-  const opened = await confirm.waitFor({ state: 'visible', timeout: 3000 }).then(() => true).catch(() => false)
-  if (!opened) return
-
-  await confirm.click()
-  await expect(confirm).not.toBeVisible({ timeout: 10000 })
-}
-
 // An image upload of a file the library already has asks, in the upload
 // manager, whether to use the existing image (947c92cef). The manager stays
 // open over the bottom-right of the page — drawer and modal footers included —
@@ -449,7 +434,6 @@ module.exports = {
   waitForPreviewUpdate,
   setPreviewDevice,
   fillSlugSource,
-  confirmUploadFolder,
   keepDuplicateUploads,
   expectCanvasOverlayAligned,
   mediaMenu,

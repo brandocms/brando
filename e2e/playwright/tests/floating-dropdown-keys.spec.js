@@ -1,5 +1,5 @@
 import { test, expect } from '../test-support/setupAuth'
-import { syncLV, confirmUploadFolder } from '../utils'
+import { syncLV } from '../utils'
 
 // The action menus of `Brando.FloatingDropdown` take a menu button's keys:
 // opening moves the focus to the first action, ArrowDown/ArrowUp move and
@@ -86,7 +86,6 @@ test("the image drawer's Replace and More menus work from the keyboard", async (
   await syncLV(page)
   const field = page.locator('#project_listing_image-media')
   await field.locator('input[type=file]').setInputFiles('./fixtures/image.jpg')
-  await confirmUploadFolder(page)
   await expect(field.locator('img')).toBeVisible({ timeout: 30000 })
   await field.getByRole('button', { name: 'Configure', exact: true }).click()
   const drawer = page.getByRole('dialog', { name: 'Image details', exact: true })

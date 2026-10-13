@@ -1,5 +1,5 @@
 import { test, expect } from '../../test-support/setupAuth'
-import { syncLV, confirmUploadFolder } from '../../utils'
+import { syncLV } from '../../utils'
 
 // The settings preview, saving, and the meta tags, robots.txt and redirects
 // the site serves from them are LiveView tests in
@@ -16,7 +16,6 @@ test('the fallback image uploads into the sharing preview, which fits a phone', 
 
   const imageField = page.locator('#seo_fallback_meta_image-media')
   await imageField.locator('input[type="file"]').setInputFiles('./fixtures/image.jpg')
-  await confirmUploadFolder(page)
   await expect(imageField.locator('img')).toBeVisible({ timeout: 30000 })
   await syncLV(page)
   await expect(page.getByText('No image associated with')).toHaveCount(0)

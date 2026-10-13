@@ -58,6 +58,7 @@
 
 ## Subsystem skills and docs
 Load only what the change touches:
+- **Playwright E2E tests** (flakes, readiness, fixtures, fixed waits): [brando-e2e](.claude/skills/brando-e2e/SKILL.md).
 - **Blocks** (block state, ops, refs, vars, containers, block changesets): [brando-blocks](.claude/skills/brando-blocks/SKILL.md). Read it before touching block state.
 - **Uploads and media fields** (asset browser, pickers, UploadManager): [brando-uploads](.claude/skills/brando-uploads/SKILL.md); architecture and transports in `docs/UPLOADER.md`.
 - **Admin form state** (parent/component state, transformers, save collection, recovery): [brando-admin-forms](.claude/skills/brando-admin-forms/SKILL.md). Before reading the 7,000-line `components/form.ex`, find the area in its [section map](.claude/skills/brando-admin-forms/form-map.md).

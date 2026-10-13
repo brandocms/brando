@@ -2,7 +2,6 @@ import { test, expect } from '../../test-support/setupAuth'
 import {
   syncLV,
   fillSlugSource,
-  confirmUploadFolder,
   expectCanvasOverlayAligned,
   setEntryStatus,
 } from '../../utils'
@@ -63,7 +62,6 @@ test('opens image editor, adjusts focal point, and saves', async ({ page }, test
   // Upload through the field, then edit shared metadata in the workspace drawer.
   const imageField = page.locator('#project_listing_image-media')
   await imageField.locator('input[type="file"]').setInputFiles('./fixtures/image.jpg')
-  await confirmUploadFolder(page)
   await expect(imageField.locator('img')).toBeVisible({ timeout: 30000 })
   await imageField.getByRole('button', { name: 'Configure', exact: true }).click()
   const details = page.getByRole('dialog', { name: 'Image details', exact: true })

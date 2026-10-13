@@ -4,9 +4,7 @@ import {
   toggleLivePreview,
   getPreviewFrame,
   waitForPreviewReady,
-  waitForPreviewUpdate,
   setPreviewDevice,
-  confirmUploadFolder
 } from '../../utils'
 
 test.describe('Live Preview with Blocks, Vars and Refs', () => {
@@ -53,8 +51,7 @@ test.describe('Live Preview with Blocks, Vars and Refs', () => {
       await expect(frame.locator('header[b-tpl="styled-header"] h1')).toContainText('Header Text')
 
       // Disconnect the LiveSocket to simulate a network blip
-      await page.evaluate(() => window.liveSocket.disconnect())
-      await page.waitForTimeout(500)
+      await page.evaluate(() => new Promise(resolve => window.liveSocket.disconnect(resolve)))
 
       // Reconnect the LiveSocket — the reconnect hook restores the preview
       await page.evaluate(() => window.liveSocket.connect())
@@ -75,7 +72,7 @@ test.describe('Live Preview with Blocks, Vars and Refs', () => {
       // Make a change and verify the preview still updates
       const headerTextarea = page.locator('.header-block textarea')
       await headerTextarea.fill('After Reconnect')
-      await waitForPreviewUpdate(page)
+      await syncLV(page)
       await expect(restoredFrame.locator('header[b-tpl="styled-header"] h1')).toContainText('After Reconnect', { timeout: 10000 })
     })
 
@@ -101,18 +98,15 @@ test.describe('Live Preview with Blocks, Vars and Refs', () => {
       await toggleLivePreview(page)
       await waitForPreviewReady(page)
 
-      // Test tablet size
-      await setPreviewDevice(page, 'tablet')
-      // Verify the tablet button is active or the iframe has changed size
-      await page.waitForTimeout(300)
-
-      // Test mobile size
-      await setPreviewDevice(page, 'mobile')
-      await page.waitForTimeout(300)
-
-      // Test desktop size
-      await setPreviewDevice(page, 'desktop')
-      await page.waitForTimeout(300)
+      // Check the selected control and the iframe's actual layout viewport.
+      // A sleep after clicking cannot establish that the device switch worked.
+      const iframe = page.locator('.live-preview-wrapper iframe')
+      for (const [device, width] of [['tablet', 768], ['mobile', 375], ['desktop', 1440]]) {
+        await setPreviewDevice(page, device)
+        await expect(page.locator(`[data-live-preview-target="${device}"]`)).toHaveAttribute('aria-pressed', 'true')
+        await expect(iframe).toHaveAttribute('data-live-preview-device', device)
+        await expect.poll(() => getPreviewFrame(page).locator('html').evaluate(el => el.clientWidth)).toBe(width)
+      }
     })
   })
 
@@ -146,7 +140,7 @@ test.describe('Live Preview with Blocks, Vars and Refs', () => {
 
       // Change the caption variable (use the one inside Block Variables, not the picture ref's caption)
       await page.locator('.block-vars').getByLabel('Caption').fill('Updated caption text')
-      await waitForPreviewUpdate(page)
+      await syncLV(page)
 
       // Verify caption updated in preview
       await expect(frame.locator('figcaption')).toContainText('Updated caption text')
@@ -154,14 +148,10 @@ test.describe('Live Preview with Blocks, Vars and Refs', () => {
       // Upload an image to the picture ref
       // The picture block has class .picture-block with a .file-input inside
       await page.locator('.picture-block .file-input').first().setInputFiles('./fixtures/image.jpg')
-      await confirmUploadFolder(page)
       await syncLV(page)
-      await page.waitForTimeout(2000) // Wait for upload to complete
-
-      await waitForPreviewUpdate(page)
 
       // Verify image appears in preview (use first() since picture element contains multiple img tags)
-      await expect(frame.locator('figure picture').first()).toBeVisible()
+      await expect(frame.locator('figure picture').first()).toBeVisible({ timeout: 20000 })
     })
 
     test('toggling show_border var updates preview', async ({ page }) => {
@@ -193,14 +183,14 @@ test.describe('Live Preview with Blocks, Vars and Refs', () => {
 
       // Toggle show_border to true - click the slider in the field-wrapper containing the label
       await page.locator('.field-wrapper:has-text("Show border") .slider').click()
-      await waitForPreviewUpdate(page)
+      await syncLV(page)
 
       // Verify border is now shown
       await expect(frame.locator('figure[data-border="true"]')).toBeVisible()
 
       // Toggle back to false
       await page.locator('.field-wrapper:has-text("Show border") .slider').click()
-      await waitForPreviewUpdate(page)
+      await syncLV(page)
 
       // Verify border is hidden again
       await expect(frame.locator('figure[data-border="true"]')).not.toBeVisible()
@@ -240,31 +230,28 @@ test.describe('Live Preview with Blocks, Vars and Refs', () => {
 
       // Change title variable (use locator within block-vars to avoid matching page title)
       await page.locator('.block-vars').getByLabel('Title').fill('My Custom Gallery')
-      await waitForPreviewUpdate(page)
+      await syncLV(page)
       await expect(frame.locator('.gallery-title')).toContainText('My Custom Gallery')
 
       // Change layout to list - click Select button then click option
       await page.locator('.field-wrapper:has-text("Layout") .button-edit').click()
       await page.locator('.field-wrapper:has-text("Layout") .options-option:has-text("list")').click()
-      await waitForPreviewUpdate(page)
+      await syncLV(page)
       await expect(frame.locator('section[data-layout="list"]')).toBeVisible()
 
       // Toggle stagger animation - click the slider in the field-wrapper containing the label
       await page.locator('.field-wrapper:has-text("Stagger animation") .slider').click()
-      await waitForPreviewUpdate(page)
+      await syncLV(page)
       await expect(frame.locator('section[data-stagger="true"]')).toBeVisible()
 
       // Upload images to gallery
       // The gallery block has class .gallery-block with a .file-input inside
       await page.locator('.gallery-block .file-input').setInputFiles(['./fixtures/image.jpg', './fixtures/image2.jpg'])
-      await confirmUploadFolder(page)
       await syncLV(page)
-      // Allow time for upload processing
-      await page.waitForTimeout(3000)
       // Wait for both image objects to appear in gallery
       await expect(page.locator('.gallery-block .gallery-object')).toHaveCount(2, { timeout: 15000 })
 
-      await waitForPreviewUpdate(page)
+      await syncLV(page)
 
       // Select video for gallery
       await page.locator('.gallery-block').getByRole('button', { name: 'Select videos', exact: true }).click()
@@ -317,19 +304,19 @@ test.describe('Live Preview with Blocks, Vars and Refs', () => {
       // Change alignment to center - click Select button then click option
       await page.locator('.field-wrapper:has-text("Alignment") .button-edit').click()
       await page.locator('.field-wrapper:has-text("Alignment") .options-option:has-text("center")').click()
-      await waitForPreviewUpdate(page)
+      await syncLV(page)
       await expect(frame.locator('header[b-tpl="styled-header"][style*="text-align: center"]')).toBeVisible()
 
       // Change alignment to right - click Select button then click option
       await page.locator('.field-wrapper:has-text("Alignment") .button-edit').click()
       await page.locator('.field-wrapper:has-text("Alignment") .options-option:has-text("right")').click()
-      await waitForPreviewUpdate(page)
+      await syncLV(page)
       await expect(frame.locator('header[b-tpl="styled-header"][style*="text-align: right"]')).toBeVisible()
 
       // Edit the header text in the ref (header block uses a textarea)
       const headerTextarea = page.locator('.header-block textarea')
       await headerTextarea.fill('Custom Header')
-      await waitForPreviewUpdate(page)
+      await syncLV(page)
       await expect(frame.locator('header[b-tpl="styled-header"] h1')).toContainText('Custom Header')
     })
   })
@@ -364,14 +351,14 @@ test.describe('Live Preview with Blocks, Vars and Refs', () => {
 
       // Toggle show_intro to false - click the slider in the field-wrapper containing the label
       await page.locator('.field-wrapper:has-text("Show intro") .slider').click()
-      await waitForPreviewUpdate(page)
+      await syncLV(page)
 
       // Verify intro is hidden
       await expect(frame.locator('.intro')).not.toBeVisible()
 
       // Toggle back to true
       await page.locator('.field-wrapper:has-text("Show intro") .slider').click()
-      await waitForPreviewUpdate(page)
+      await syncLV(page)
 
       // Verify intro is visible again
       await expect(frame.locator('.intro')).toBeVisible()
@@ -397,10 +384,6 @@ test.describe('Live Preview with Blocks, Vars and Refs', () => {
       await page.getByRole('button', { name: 'Video Player' }).click()
       await syncLV(page)
 
-      // Wait for block to be fully initialized before enabling preview
-      await page.waitForTimeout(300)
-      await syncLV(page)
-
       // Enable live preview
       await toggleLivePreview(page)
       await waitForPreviewReady(page)
@@ -414,12 +397,12 @@ test.describe('Live Preview with Blocks, Vars and Refs', () => {
 
       // Toggle autoplay to true - click the slider in the field-wrapper containing the label
       await page.locator('.field-wrapper:has-text("Autoplay") .slider').click()
-      await waitForPreviewUpdate(page)
+      await syncLV(page)
       await expect(frame.locator('div[data-autoplay="true"]')).toBeAttached({ timeout: 10000 })
 
       // Toggle controls to false - click the slider in the field-wrapper containing the label
       await page.locator('.field-wrapper:has-text("Show controls") .slider').click()
-      await waitForPreviewUpdate(page)
+      await syncLV(page)
       await expect(frame.locator('div[data-controls="false"]')).toBeAttached({ timeout: 10000 })
     })
   })
@@ -504,11 +487,11 @@ test.describe('Live Preview with Blocks, Vars and Refs', () => {
       // Change header alignment (scope within first block vars) - click Select button then click option
       await page.locator('.field-wrapper:has-text("Alignment")').first().locator('.button-edit').click()
       await page.locator('.field-wrapper:has-text("Alignment")').first().locator('.options-option:has-text("right")').click()
-      await waitForPreviewUpdate(page)
+      await syncLV(page)
 
       // Change caption text (Caption is unique to the second block, so we can use it directly)
       await page.getByRole('textbox', { name: 'Caption' }).fill('Multi block caption')
-      await waitForPreviewUpdate(page)
+      await syncLV(page)
 
       // Verify both changes in preview (use b-tpl to target module output)
       await expect(frame.locator('header[b-tpl="styled-header"][style*="text-align: right"]')).toBeVisible()
@@ -558,7 +541,7 @@ test.describe('Live Preview with Blocks, Vars and Refs', () => {
 
       // Click Delete from the dropdown
       await headerBlock.locator('.block-action-dropdown-content button:has-text("Delete")').first().click()
-      await waitForPreviewUpdate(page)
+      await syncLV(page)
 
       // Assert: header is NOT visible in iframe
       await expect(frame.locator('header[b-tpl="styled-header"]')).not.toBeVisible()
@@ -597,14 +580,14 @@ test.describe('Live Preview with Blocks, Vars and Refs', () => {
       // Click the module-level active toggle (first() to skip nested ref block toggles)
       const block = page.locator('.entry-block:has(:text("STYLED HEADER"))')
       await block.locator('.switch.small.on-off .slider').first().click()
-      await waitForPreviewUpdate(page)
+      await syncLV(page)
 
       // Assert: header NOT visible in iframe (deactivated blocks render empty)
       await expect(frame.locator('header[b-tpl="styled-header"]')).not.toBeVisible()
 
       // Click toggle again to reactivate
       await block.locator('.switch.small.on-off .slider').first().click()
-      await waitForPreviewUpdate(page)
+      await syncLV(page)
 
       // Assert: header IS visible again in iframe
       await expect(frame.locator('header[b-tpl="styled-header"]')).toBeVisible()
@@ -650,7 +633,6 @@ test.describe('Live Preview with Blocks, Vars and Refs', () => {
       // Click Duplicate from the dropdown
       await block.locator('.block-action-dropdown-content button:has-text("Duplicate")').click()
       await syncLV(page)
-      await waitForPreviewUpdate(page)
 
       // Assert: TWO styled-header elements in iframe
       await expect(frame.locator('header[b-tpl="styled-header"]')).toHaveCount(2)
@@ -692,14 +674,11 @@ test.describe('Live Preview with Blocks, Vars and Refs', () => {
       // Upload through the shared field while live preview remains open.
       const imageField = page.locator('.media-field[data-kind="block_var"][id$="-image-media"]')
       await imageField.locator('input[type="file"]').setInputFiles('./fixtures/image.jpg')
-      await confirmUploadFolder(page)
 
       // Wait for image to process
       await expect(imageField.locator('img')).toBeVisible({ timeout: 20000 })
       await expect(imageField).toHaveAttribute('data-asset-id', /\d+/)
       await syncLV(page)
-
-      await waitForPreviewUpdate(page)
 
       // Verify image now appears in preview iframe
       await expect(frame.locator('div[b-tpl="image-file-vars"] img')).toBeVisible()
@@ -735,7 +714,8 @@ test.describe('Live Preview with Blocks, Vars and Refs', () => {
 
       // Trigger an initial update so initializeLazyVideos runs and adds data-booted
       await page.getByRole('textbox', { name: 'Label' }).fill('First update')
-      await waitForPreviewUpdate(page)
+      await syncLV(page)
+      await expect(frame.locator('.morph-label')).toContainText('First update')
       await expect(frame.locator('[data-smart-video][data-booted]')).toHaveCount(1)
 
       // Stamp a custom property on the <video> element to track DOM identity
@@ -745,7 +725,7 @@ test.describe('Live Preview with Blocks, Vars and Refs', () => {
 
       // Change the label var again to trigger another morphdom update
       await page.getByRole('textbox', { name: 'Label' }).fill('Second update')
-      await waitForPreviewUpdate(page)
+      await syncLV(page)
 
       // Verify the label updated (morphdom worked)
       await expect(frame.locator('.morph-label')).toContainText('Second update')
@@ -787,7 +767,7 @@ test.describe('Live Preview with Blocks, Vars and Refs', () => {
 
       // Change the label var to trigger a morphdom update
       await page.getByRole('textbox', { name: 'Label' }).fill('Changed label')
-      await waitForPreviewUpdate(page)
+      await syncLV(page)
 
       // Verify the label updated (morphdom worked)
       await expect(frame.locator('.morph-label')).toContainText('Changed label')

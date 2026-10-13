@@ -39,7 +39,14 @@ restating them. This audit does not retire unrelated deployment or project skill
 
 ## Validation and future maintenance
 
-The two new skills are intentionally maintenance-focused; neither substitutes
+The `brando-e2e` skill adds the browser/server coordination decisions behind the
+existing test commands: LiveView acknowledgement versus debounce, upload delivery,
+preview receipt and another editor's state; sandbox-bound login; isolated servers;
+and measuring fixed-wait changes without losing timer coverage. Those boundaries
+are not covered by a generic Playwright authoring guide. It links to AGENTS.md and
+the subsystem skills rather than duplicating their setup or application contracts.
+
+The admin-form and live-preview skills are intentionally maintenance-focused; neither substitutes
 for a public developer guide. Check their relative links/source references and
 YAML metadata, then compare each instruction with the named implementation and
 regression. There is no application behavior change requiring runtime tests.

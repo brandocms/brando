@@ -1,5 +1,5 @@
 import { test, expect } from '../../test-support/setupAuth'
-import { syncLV, confirmUploadFolder, setEntryStatus } from '../../utils'
+import { syncLV, setEntryStatus } from '../../utils'
 
 test('creates a simple page', async ({ page }) => {
   await page.goto('/admin')
@@ -146,7 +146,6 @@ test('creates meta information', async ({ page }) => {
   // Upload the SEO image directly in the Meta field.
   const imageField = page.locator('#page_meta_image-media')
   await imageField.locator('input[type="file"]').setInputFiles('./fixtures/image.jpg')
-  await confirmUploadFolder(page)
   await expect(imageField.locator('img')).toBeVisible({ timeout: 30000 })
 
   // Then pick from the library through the field itself. That lands in the

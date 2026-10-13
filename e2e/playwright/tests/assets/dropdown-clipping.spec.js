@@ -1,5 +1,5 @@
 import { test, expect } from '../../test-support/setupAuth'
-import { syncLV, confirmUploadFolder } from '../../utils'
+import { syncLV } from '../../utils'
 
 // Visibility/bounding boxes alone pass for menus clipped by overflow: clip.
 // Check the actual hit targets at both edges of every action as well.
@@ -42,7 +42,6 @@ for (const [type, module, file] of [
     await page.getByRole('button', { name: module, exact: true }).click()
     const field = page.locator(`.${type === 'image' ? 'picture' : type}-block .media-field--block:visible`)
     await field.locator('input[type=file]').setInputFiles(`./fixtures/${file}`)
-    if (type === 'image') await confirmUploadFolder(page)
     await expect(field).toHaveAttribute('data-asset-id', /\d+/, { timeout: 30000 })
     if (type === 'image') await expect(field.locator('img')).toBeVisible({ timeout: 30000 })
 
@@ -74,7 +73,6 @@ for (const [type, module, file] of [
     const chooser = page.waitForEvent('filechooser')
     await menu.getByRole('button', { name: 'Upload replacement', exact: true }).click()
     await (await chooser).setFiles(`./fixtures/${file}`)
-    if (type === 'image') await confirmUploadFolder(page)
     await expect(menu).not.toBeVisible()
     await expect(field).not.toHaveAttribute('data-asset-id', originalId, { timeout: 30000 })
 
@@ -100,7 +98,6 @@ test('image drawer menus follow scrolling, flip at the viewport edge and dismiss
   await syncLV(page)
   const field = page.locator('#project_listing_image-media')
   await field.locator('input[type=file]').setInputFiles('./fixtures/image.jpg')
-  await confirmUploadFolder(page)
   await expect(field.locator('img')).toBeVisible({ timeout: 30000 })
   await field.getByRole('button', { name: 'Configure', exact: true }).click()
   const drawer = page.getByRole('dialog', { name: 'Image details', exact: true })

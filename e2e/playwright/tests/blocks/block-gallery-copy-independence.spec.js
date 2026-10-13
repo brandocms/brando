@@ -1,5 +1,5 @@
 import { test, expect } from '../../test-support/setupAuth'
-import { syncLV, confirmUploadFolder } from '../../utils'
+import { syncLV } from '../../utils'
 
 /**
  * Opens the block action dropdown and clicks the Copy button.
@@ -52,7 +52,6 @@ test.describe('Gallery copy independence', () => {
     await page
       .locator('.gallery-block .file-input')
       .setInputFiles(['./fixtures/image.jpg', './fixtures/image2.jpg'])
-    await confirmUploadFolder(page)
     await syncLV(page)
 
     await expect(page.locator('.gallery-block .gallery-object')).toHaveCount(2, {
