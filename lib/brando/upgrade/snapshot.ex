@@ -83,6 +83,17 @@ defmodule Brando.Upgrade.Snapshot do
     Enum.map(pages, &Map.delete(&1, :body))
   end
 
+  @doc """
+  The status code `base_url` answers `path` with, redirects not followed, or
+  nil when there is no response.
+
+  Takes `:req_options` like `capture/3`.
+  """
+  @spec status(String.t(), String.t(), keyword()) :: non_neg_integer() | nil
+  def status(path, base_url, opts \\ []) do
+    fetch(path, String.trim_trailing(base_url, "/"), Keyword.get(opts, :req_options, [])).status
+  end
+
   defp clear(dir) do
     case File.read(Path.join(dir, @index)) do
       {:ok, index} ->

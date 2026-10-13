@@ -85,6 +85,18 @@ defmodule BrandoAdmin.Sites.UtilsLive do
       "dominant_colors" => Images.Processing.image_maintenance_running?("dominant_colors")
     })
     |> assign(:changed_images, Images.Processing.count_changed_images())
+    |> assign_unsynced_media()
+  end
+
+  # With no image files in the media folder every image looks changed, and
+  # recreating needs the originals: say so rather than urge a recreate.
+  defp assign_unsynced_media(%{assigns: %{changed_images: 0}} = socket), do: assign(socket, :unsynced_media, nil)
+
+  defp assign_unsynced_media(socket) do
+    case Images.Adoption.media_status() do
+      {:empty, root} -> assign(socket, :unsynced_media, root)
+      :ok -> assign(socket, :unsynced_media, nil)
+    end
   end
 
   defp assign_info(socket) do
@@ -234,6 +246,9 @@ defmodule BrandoAdmin.Sites.UtilsLive do
                   @changed_images
                 )}
               </small>
+              <small :if={!@image_tasks["recreate_sizes"] && @unsynced_media} id="utils-unsynced-media">
+                {gettext("No image files found under %{path}. Is the media synced to this server?", path: @unsynced_media)}
+              </small>
               <small :if={!@image_tasks["recreate_sizes"] && @changed_images == 0} class="utils-empty-status">
                 {gettext("All images match their settings")}
               </small>
@@ -259,7 +274,7 @@ defmodule BrandoAdmin.Sites.UtilsLive do
               </button>
               <button
                 type="button"
-                class={["utils-button", @changed_images > 0 && "primary"]}
+                class={["utils-button", @changed_images > 0 && !@unsynced_media && "primary"]}
                 phx-click="recreate_changed_image_sizes"
                 disabled={@image_tasks["recreate_sizes"] || @changed_images == 0}
                 data-confirm-title={gettext("Recreate the sizes of changed images?")}

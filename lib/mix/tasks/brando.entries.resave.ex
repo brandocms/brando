@@ -21,6 +21,10 @@ defmodule Mix.Tasks.Brando.Entries.Resave do
       without a terminal to answer on, the task does nothing and exits
       non-zero.
 
+  A server that is already running keeps serving the pages it cached before
+  (pages are cached without expiry): restart it, or use Configuration → Cache
+  → Empty all caches in its admin. The task says so when it is done.
+
   """
   @spec run(any) :: no_return
   def run(args) do
@@ -64,7 +68,9 @@ defmodule Mix.Tasks.Brando.Entries.Resave do
         resave_entries(blueprint)
       end
 
+      report_stale_config_targets()
       Mix.shell().info([:green, "\n==> Done.\n"])
+      Mix.Brando.running_server_note()
     else
       Mix.shell().info("Nothing was done.")
     end
@@ -84,7 +90,23 @@ defmodule Mix.Tasks.Brando.Entries.Resave do
 
     if blueprint_module.__has_identifier__() do
       resave_entries(blueprint_module)
+      report_stale_config_targets()
       Mix.shell().info([:green, "\n==> Done.\n"])
+      Mix.Brando.running_server_note()
+    end
+  end
+
+  # Rendering falls back to the default image config for images whose
+  # config target no longer resolves; one line per target says how many.
+  defp report_stale_config_targets do
+    stale = Brando.Images.Processing.stale_config_targets()
+
+    if stale != %{} do
+      Mix.shell().info([:yellow, "\n==> Images with a config target that no longer resolves:\n"])
+
+      for {target, count} <- Enum.sort(stale) do
+        Mix.shell().info("    * " <> Brando.Images.ConfigResolver.stale_target_message(target, count))
+      end
     end
   end
 

@@ -431,13 +431,14 @@ defmodule Brando.Doctor.ChecksTest do
 
       Factory.insert(:image, config_fingerprint: "0123456789ab")
       Factory.insert(:image, config_fingerprint: nil, path: "image/2.jpg")
+      ImageFileFixtures.write_image("image/2.jpg", {300, 292})
 
       result = Checks.ImageConfigs.run(context())
       assert result.status == :warning
 
       # Factory images have five sizes where the config has six.
       assert result.summary ==
-               "1 config changed since its images were made (1 image); 1 image was made before Brando recorded its settings: it differs from its config (recreate it)"
+               "1 config changed since its images were made (1 image); 1 image was made before Brando recorded its settings: it differs from its config (recreate it); of those: 1 in sizes"
 
       assert result.items == ["default: 1 image", "default: 1 image without recorded settings"]
       # The link only scrolls to Utilities → Image sizes, so it says so
@@ -487,7 +488,7 @@ defmodule Brando.Doctor.ChecksTest do
       result = Checks.ImageConfigs.run(context())
 
       assert result.summary ==
-               "3 images were made before Brando recorded their settings: 2 already match (mix brando.images.adopt records that), 1 differs (recreate it)"
+               "3 images were made before Brando recorded their settings: 2 already match (mix brando.images.adopt records that), 1 differs (recreate it); of those: 1 in formats"
 
       assert result.fix ==
                "Utilities → Recreate changed images recreates the images that differ; mix brando.images.adopt --dry-run --verbose lists why each one differs"
@@ -496,16 +497,90 @@ defmodule Brando.Doctor.ChecksTest do
     test "none match" do
       Factory.insert(:image, config_fingerprint: nil, path: "image/3.jpg")
       Factory.insert(:image, config_fingerprint: nil, path: "image/4.jpg")
+      ImageFileFixtures.write_image("image/3.jpg", {300, 292})
 
       result = Checks.ImageConfigs.run(context())
 
       assert result.summary ==
-               "2 images were made before Brando recorded their settings: all 2 differ from their config (recreate them)"
+               "2 images were made before Brando recorded their settings: all 2 differ from their config (recreate them); of those: 2 in sizes"
 
       assert result.items == ["default: 2 images without recorded settings"]
 
       assert result.fix ==
                "Utilities → Recreate changed images recreates the images that differ; mix brando.images.adopt --dry-run --verbose lists why each one differs"
+    end
+
+    test "counts config differences apart from missing files" do
+      ImageFileFixtures.unrecorded_image("doctor-kinds-match")
+      ImageFileFixtures.unrecorded_image("doctor-kinds-formats", formats: [:jpg, :webp], write: [:jpg])
+      ImageFileFixtures.unrecorded_image("doctor-kinds-missing")
+      File.rm!(Brando.Images.Utils.media_path("images/adoption/large/doctor-kinds-missing.jpg"))
+
+      result = Checks.ImageConfigs.run(context())
+
+      assert result.summary ==
+               "3 images were made before Brando recorded their settings: 1 already matches (mix brando.images.adopt records that), 2 differ (recreate them); of those: 1 in formats, 1 with a missing file"
+    end
+
+    test "no image files in the media folder: asks for the media, not a recreate" do
+      Brando.Repo.update_all(from(i in Image, where: is_nil(i.deleted_at)), set: [deleted_at: DateTime.utc_now()])
+      Factory.insert(:image, config_fingerprint: nil, path: "images/unsynced/1.jpg")
+      Factory.insert(:image, config_fingerprint: nil, path: "images/unsynced/2.jpg", formats: [:jpg, :webp])
+      root = Brando.Images.Utils.media_path()
+
+      result = Checks.ImageConfigs.run(context())
+
+      # Without files, only formats and size keys are compared, and nothing
+      # here can adopt or recreate them.
+      assert result.summary ==
+               "no image files under #{root} (is the media synced?); 2 images were made before Brando recorded their settings: by their records all 2 differ; of those: 1 in formats, 1 in sizes"
+
+      assert result.link == nil
+
+      assert result.fix ==
+               "where the media is (on the server, or here once it is synced or mounted), run mix brando.images.adopt to record the images that match, then Utilities → Recreate changed images for the rest; here neither works, as adopting needs the files and recreating the originals"
+    end
+
+    test "no image files, some match by their records: one plain account, no advice to adopt here" do
+      Brando.Repo.update_all(from(i in Image, where: is_nil(i.deleted_at)), set: [deleted_at: DateTime.utc_now()])
+      Factory.insert(:image, config_fingerprint: nil, path: "images/unsynced/3.jpg", formats: [:jpg, :webp])
+
+      # The config's size keys and formats: a match by its record.
+      for n <- 1..2 do
+        Factory.insert(:image,
+          config_fingerprint: nil,
+          path: "images/unsynced/match-#{n}.jpg",
+          sizes:
+            Map.new(ImageFileFixtures.standard_sizes(), fn {key, _} -> {key, "images/unsynced/#{key}/match-#{n}.jpg"} end)
+        )
+      end
+
+      result = Checks.ImageConfigs.run(context())
+
+      assert result.summary ==
+               "no image files under #{Brando.Images.Utils.media_path()} (is the media synced?); 3 images were made before Brando recorded their settings: by their records 2 likely match, 1 differs; of those: 1 in formats"
+
+      refute result.summary =~ "checks and records that"
+      refute result.summary =~ "recreate"
+      assert result.fix =~ "here neither works"
+    end
+
+    test "images whose config target no longer resolves are listed, not warned about" do
+      for n <- 1..10 do
+        Factory.insert(:image,
+          path: "images/gallery/#{n}.jpg",
+          config_target: "image:Brando.Pages.Page:gallery",
+          config_fingerprint: nil
+        )
+      end
+
+      result = Checks.ImageConfigs.run(context())
+
+      assert %Result{status: :ok, summary: "all images match their settings"} = result
+
+      assert result.items == [
+               "image:Brando.Pages.Page:gallery: 10 images whose config target no longer resolves use the default image config"
+             ]
     end
 
     test "none left to record" do
@@ -546,7 +621,7 @@ defmodule Brando.Doctor.ChecksTest do
 
       Brando.Tenant.with_prefix("tenant_adoption_two", fn ->
         # Environments of a site share its media folder: another name.
-        ImageFileFixtures.unrecorded_image("doctor-env-two", write: [])
+        ImageFileFixtures.unrecorded_image("doctor-env-two", formats: [:jpg, :webp], write: [:jpg])
       end)
 
       result =
@@ -555,7 +630,7 @@ defmodule Brando.Doctor.ChecksTest do
         )
 
       assert result.summary ==
-               "2 images were made before Brando recorded their settings: 1 already matches (mix brando.images.adopt records that), 1 differs (recreate it)"
+               "2 images were made before Brando recorded their settings: 1 already matches (mix brando.images.adopt records that), 1 differs (recreate it); of those: 1 in formats"
 
       assert result.items == [
                "[adoption/one] default: 1 image without recorded settings",
@@ -622,6 +697,42 @@ defmodule Brando.Doctor.ChecksTest do
     end
   end
 
+  describe "Node" do
+    test "an even LTS major from the tested one on passes" do
+      assert %Result{status: :ok, summary: "v22.15.0"} = Checks.Node.evaluate("v22.15.0")
+      assert %Result{status: :ok} = Checks.Node.evaluate("v24.9.0")
+    end
+
+    test "an odd release is a warning that names what to use" do
+      result = Checks.Node.evaluate("v23.11.0")
+      assert result.status == :warning
+      assert result.summary == "v23.11.0: Node 23 is an odd release"
+      assert result.fix =~ "use Node 22 (or another even LTS major ≥ 22): odd releases are not LTS"
+    end
+
+    test "older than tested, or than Vite 8 accepts" do
+      assert %Result{status: :warning, summary: "v20.19.0: Node 20 is older than Brando is tested on"} =
+               Checks.Node.evaluate("v20.19.0")
+
+      assert %Result{status: :warning, summary: "v22.3.0: older than Vite 8 accepts (22.12)"} =
+               Checks.Node.evaluate("v22.3.0")
+    end
+
+    test "no node on the PATH is skipped, with what to install" do
+      result = Checks.Node.evaluate(nil)
+      assert result.status == :skipped
+      assert result.fix =~ "Node 22"
+    end
+
+    test "the advice comes from Brando.Toolchain" do
+      assert Brando.Toolchain.node_advice() ==
+               "Node #{Brando.Toolchain.node_major()} (or another even LTS major ≥ #{Brando.Toolchain.node_major()})"
+
+      assert Brando.Toolchain.check_node("23.1.0") == {:odd, 23}
+      assert Brando.Toolchain.check_node("not a version") == :unknown
+    end
+  end
+
   describe "Robots" do
     test "served by Brando" do
       assert %Result{status: :ok} = Checks.Robots.evaluate(BrandoWeb.SEOController, false)
@@ -632,6 +743,85 @@ defmodule Brando.Doctor.ChecksTest do
     test "routed elsewhere, or behind a static file" do
       assert %Result{status: :warning, summary: "not served by Brando"} = Checks.Robots.evaluate(nil, false)
       assert %Result{status: :warning} = Checks.Robots.evaluate(BrandoWeb.SEOController, true)
+    end
+
+    @endpoint_source """
+    defmodule MyAppWeb.Endpoint do
+      use Phoenix.Endpoint, otp_app: :my_app
+
+      plug Brando.Plug.Media, at: "/media"
+
+      plug Plug.Static,
+        at: "/",
+        from: :my_app,
+        gzip: Brando.env() == :prod,
+        ONLY
+
+      plug MyAppWeb.Router
+    end
+    """
+
+    defp static(only), do: Checks.Robots.static_serving(String.replace(@endpoint_source, "ONLY", only), "endpoint.ex")
+
+    test "a static robots.txt the endpoint's Plug.Static never serves is no warning" do
+      # The pre-1.7 layout Brando's installer writes: a literal `only:`.
+      static = static("only: ~w(assets js fonts images ico favicon.ico)")
+      assert {:not_served, _layout} = static
+
+      result = Checks.Robots.evaluate(BrandoWeb.SEOController, static)
+      assert %Result{status: :ok, summary: "served from SEO settings"} = result
+
+      assert result.items == [
+               "priv/static/robots.txt is not served (not in Plug.Static's only: in endpoint.ex); delete it"
+             ]
+    end
+
+    test "the fix names the setting the endpoint has" do
+      literal = Checks.Robots.evaluate(BrandoWeb.SEOController, static(~s|only: ~w(assets robots.txt)|))
+      assert literal.status == :warning
+      assert literal.summary == "a static robots.txt stands in front of the SEO text"
+      assert literal.fix == "delete priv/static/robots.txt and remove robots.txt from Plug.Static's only: in endpoint.ex"
+
+      everything = Checks.Robots.evaluate(BrandoWeb.SEOController, static("cache_control_for_etags: false"))
+
+      assert everything.fix ==
+               "delete priv/static/robots.txt: Plug.Static in endpoint.ex has no only:, so it serves every file in priv/static"
+
+      # Plug.Static takes empty lists as no filter at all.
+      empty = Checks.Robots.evaluate(BrandoWeb.SEOController, static("only: []"))
+      assert empty.status == :warning
+      assert empty.fix =~ "has no only:, so it serves every file in priv/static"
+
+      matching = Checks.Robots.evaluate(BrandoWeb.SEOController, static(~s|only_matching: ~w(robots)|))
+      assert matching.fix =~ "remove robots from Plug.Static's only_matching: in endpoint.ex"
+    end
+
+    test "only: from static_paths/0 is called" do
+      defmodule StaticPathsWeb do
+        def static_paths, do: ~w(assets fonts images favicon.ico robots.txt)
+      end
+
+      result =
+        Checks.Robots.evaluate(
+          BrandoWeb.SEOController,
+          static("only: Brando.Doctor.ChecksTest.StaticPathsWeb.static_paths()")
+        )
+
+      assert result.status == :warning
+
+      assert result.fix ==
+               "delete priv/static/robots.txt and remove robots.txt from static_paths/0 in Brando.Doctor.ChecksTest.StaticPathsWeb"
+    end
+
+    test "an endpoint it can't read keeps the warning, worded for both layouts" do
+      assert {:unknown, nil} = Checks.Robots.static_serving(nil, nil)
+      assert {:unknown, nil} = static("only: paths()")
+
+      result = Checks.Robots.evaluate(BrandoWeb.SEOController, {:unknown, nil})
+      assert result.summary == "a static robots.txt may stand in front of the SEO text"
+
+      assert result.fix ==
+               "delete priv/static/robots.txt, and remove robots.txt from the only: list of the endpoint's Plug.Static (static_paths/0 in the web module on Phoenix 1.7 and later), if it is there"
     end
   end
 

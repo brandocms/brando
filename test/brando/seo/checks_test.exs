@@ -103,8 +103,9 @@ defmodule Brando.SEO.ChecksTest do
     assert status(checks, :meta_description_not_fallback) == :fail
   end
 
+  # The audit row carries the cover's image id, not a path.
   test "a cover image satisfies the image check when there is no meta image" do
-    assert status(Checks.run(row(%{cover: "images/cover.jpg"}), ctx()), :meta_image) == :pass
+    assert status(Checks.run(row(%{cover: 42}), ctx()), :meta_image) == :pass
     assert status(Checks.run(row(%{cover: nil}), ctx()), :meta_image) == :fail
   end
 

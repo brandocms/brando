@@ -14,7 +14,11 @@
 # "~> 1.18" with `listeners: [Phoenix.CodeReloader]` in project/0. Running it
 # again changes nothing. Then it lists what mix.lock still has on HTTPoison
 # or hackney 1, which Brando's ex_aws 2.7 (hackney 4) cannot resolve beside.
-# --dry-run prints the changes without writing them.
+# --dry-run prints the changes without writing them. Last, it prints the
+# `node` on the PATH and says when it is one the asset builds refuse.
+
+# The Node releases Brando supports, from the checkout this script is in.
+Code.require_file(Path.expand("../lib/brando/toolchain.ex", __DIR__))
 
 defmodule Brando.Prepare055Deps do
   # The guide's list (test/scripts/prepare_055_deps_test.exs keeps the two
@@ -63,6 +67,7 @@ defmodule Brando.Prepare055Deps do
     end
 
     report_lock(dir, result)
+    report_node()
 
     IO.puts("""
 
@@ -71,6 +76,30 @@ defmodule Brando.Prepare055Deps do
         mix deps.unlock --all && mix deps.get
     """)
   end
+
+  defp report_node do
+    advice = Brando.Toolchain.node_advice()
+
+    case Brando.Toolchain.node_version() do
+      nil ->
+        IO.puts("\nNode: none on the PATH. The admin and frontend assets build with #{advice}.")
+
+      version ->
+        IO.puts("\nNode: #{version}" <> node_advice(Brando.Toolchain.check_node(version), advice))
+    end
+  end
+
+  defp node_advice(:ok, _advice), do: ""
+
+  defp node_advice({:odd, major}, advice),
+    do: ". Node #{major} is an odd release, which pnpm and yarn refuse for Vite 8 and the asset packages: use #{advice}."
+
+  defp node_advice({:old, major}, advice), do: ". Node #{major} is older than Brando is tested on: use #{advice}."
+
+  defp node_advice({:below_minimum, minimum}, advice),
+    do: ", older than Vite 8 accepts (#{minimum}): use #{advice}."
+
+  defp node_advice(:unknown, advice), do: ", not a version this reads: use #{advice}."
 
   defp abort(message) do
     IO.puts(:stderr, message)
