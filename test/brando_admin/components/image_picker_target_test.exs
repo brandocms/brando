@@ -233,11 +233,11 @@ defmodule BrandoAdmin.Components.ImagePickerTargetTest do
       field_b = %Phoenix.LiveComponent.CID{cid: 22}
 
       socket = open_for_field(user, %{event_target: field_a})
-      origin = {socket.assigns.open_generation, socket.assigns.event_target}
+      origin = {socket.assigns.open_generation, socket.assigns.event_target, socket.assigns.pick_values}
 
       # Still open for field A: the copy goes to A
       {:noreply, same} = ImagePicker.handle_async(:pick_library_image, {:ok, {origin, {:ok, picked}}}, socket)
-      assert picks(same) == [%{id: picked.id, target: "11"}]
+      assert picks(same) == [%{id: picked.id, target: "11", values: %{}}]
 
       # Opened for field B in the meantime: dropped
       {:ok, reopened} =

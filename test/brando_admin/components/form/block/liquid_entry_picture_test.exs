@@ -2,7 +2,7 @@ defmodule BrandoAdmin.Components.Form.Block.LiquidEntryPictureTest do
   # A module whose code shows the entry's own picture, `{% picture
   # entry.cover {…} %}`, is previewed in the block editor with the entry's
   # image in place, or none: the entry may have no cover, or none loaded.
-  use ExUnit.Case, async: true
+  use ExUnit.Case, async: false
 
   alias BrandoAdmin.Components.Form.Block
 
@@ -15,6 +15,22 @@ defmodule BrandoAdmin.Components.Form.Block.LiquidEntryPictureTest do
 
     assert {:entry_picture, "entry.cover", src} = entry_picture(Block.liquid_splits(@code, [], entry))
     assert src == Brando.Utils.media_url("images/projects/cover/frysja.jpg")
+  end
+
+  test "a cover only the CDN has previews from the CDN" do
+    original = Application.get_env(:brando, Brando.Images, [])
+
+    Brando.Test.Support.put_test_env(
+      Brando.Images,
+      Keyword.put(original, :cdn, %{enabled: true, media_url: "https://cdn.example.com", keep_local_copy: false})
+    )
+
+    cover = %Brando.Images.Image{path: "images/projects/cover/frysja.jpg", cdn: true, config_target: "default"}
+
+    assert {:entry_picture, "entry.cover", src} =
+             entry_picture(Block.liquid_splits(@code, [], %{title: "Frysja", cover: cover}))
+
+    assert src == "https://cdn.example.com/media/images/projects/cover/frysja.jpg"
   end
 
   test "an entry without a cover, or with none loaded, previews no image" do

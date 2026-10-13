@@ -17094,6 +17094,11 @@ msgstr ""
 msgid "The text is marked when you save the entry."
 msgstr ""
 
+#: lib/brando_admin/components/form.ex
+#, elixir-autogen, elixir-format
+msgid "The thumbnail was set on the video it was picked for"
+msgstr ""
+
 #: lib/brando_admin/components/form/meta_drawer.ex
 #, elixir-autogen, elixir-format
 msgid "The title, description and image that search engines and social media show for this entry."

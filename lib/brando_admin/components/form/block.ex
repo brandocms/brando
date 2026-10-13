@@ -48,6 +48,7 @@ defmodule BrandoAdmin.Components.Form.Block do
   alias Brando.Content.BlockSlots
   alias Brando.Content.BlockSlots.Lifecycle, as: CollectionLifecycle
   alias Brando.Tracing
+  alias Brando.Utils
   alias Brando.Villain.Blocks.GalleryObjectOverride
   alias BrandoAdmin.Components.Form.Block.Events
   alias BrandoAdmin.Components.Form.Block.LiquidPreview
@@ -2944,9 +2945,13 @@ defmodule BrandoAdmin.Components.Form.Block do
       |> String.split(".")
       |> Enum.map(&String.to_existing_atom/1)
 
-    case Brando.Utils.try_path(entry, var_path ++ [:path]) do
-      path when is_binary(path) -> Brando.Utils.media_url(path)
-      _ -> ""
+    # The image, not only its path: one only the CDN has is served from there
+    case Utils.try_path(entry, var_path) do
+      %{path: path} = image when is_binary(path) ->
+        Utils.img_url(image, :original, prefix: Utils.media_url())
+
+      _ ->
+        ""
     end
   rescue
     ArgumentError -> ""

@@ -68,6 +68,7 @@ defmodule BrandoAdmin.Components.ImagePicker do
      |> assign(:event_target, event_target)
      |> assign(:multi, multi)
      |> assign(:selected_images, selected_images)
+     |> assign(:pick_values, params[:pick_values] || %{})
      |> leave_library()
      |> open_for(config_target)
      |> assign_folder_state(nil)
@@ -391,9 +392,9 @@ defmodule BrandoAdmin.Components.ImagePicker do
   # The copy is for the field the picker was open for when it was picked.
   # Opened since for another one, the picker would hand it to that field, so
   # the reply is dropped instead.
-  def handle_async(:pick_library_image, {:ok, {{generation, target}, {:ok, picked}}}, socket) do
+  def handle_async(:pick_library_image, {:ok, {{generation, target, values}, {:ok, picked}}}, socket) do
     if generation == socket.assigns.open_generation do
-      {:noreply, push_event(socket, "b:image_picker:pick", %{id: picked.id, target: to_string(target)})}
+      {:noreply, push_event(socket, "b:image_picker:pick", %{id: picked.id, target: to_string(target), values: values})}
     else
       send(
         self(),
@@ -415,7 +416,7 @@ defmodule BrandoAdmin.Components.ImagePicker do
   defp start_pick(socket, image_id) do
     user = socket.assigns.current_user
     config_target = socket.assigns.config_target
-    origin = {socket.assigns.open_generation, socket.assigns.event_target}
+    origin = {socket.assigns.open_generation, socket.assigns.event_target, socket.assigns.pick_values}
     scope = Brando.Authorization.Boundary.current_scope()
     parent = self()
 
@@ -674,6 +675,7 @@ defmodule BrandoAdmin.Components.ImagePicker do
                   event_target={@event_target}
                   picker_mode={@picker_mode}
                   from_library={@scope == :library}
+                  pick_values={@pick_values}
                   myself={@myself}
                 />
               </div>
@@ -798,6 +800,7 @@ defmodule BrandoAdmin.Components.ImagePicker do
         end
       }
       phx-value-id={@image.id}
+      {pick_value_attrs(@pick_values)}
     >
       <span class="image-picker__selected-indicator" aria-hidden="true">
         <.icon name="check" />
@@ -864,6 +867,7 @@ defmodule BrandoAdmin.Components.ImagePicker do
     |> assign_new(:scope, fn -> :field end)
     |> assign_new(:library_offered?, fn -> false end)
     |> assign_new(:open_generation, fn -> 0 end)
+    |> assign_new(:pick_values, fn -> %{} end)
     |> assign_new(:folder_memory, fn -> %{} end)
     |> assign_new(:config_target, fn -> nil end)
     |> assign_new(:event_target, fn -> nil end)
@@ -1053,6 +1057,10 @@ defmodule BrandoAdmin.Components.ImagePicker do
     |> assign(:custom_folders, custom_folders)
     |> update(:open_generation, &(&1 + 1))
   end
+
+  # What the opener sends along to name what the pick is for (the video a
+  # thumbnail is picked for), returned with every `select_image`.
+  defp pick_value_attrs(values), do: Enum.map(values, fn {key, value} -> {"phx-value-#{key}", value} end)
 
   # Opening for a field starts on its own images. A folder from the library
   # means nothing there, but the field's last folder, and folders made in the

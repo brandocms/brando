@@ -33,6 +33,7 @@
 - **An entry form no longer crashes on a module that shows the entry's
   picture.** The block editor's preview of `{% picture entry.cover {…} %}`
   (and any `entry.<field>` picture) raised a `FunctionClauseError`, so the
-  form never opened (since 0.54). It previews the entry's image, or none when
-  the entry has none, has it unloaded or has no such field, and follows the
-  entry when its picture changes.
+  form never opened (since 0.54). It previews the entry's image (from the CDN
+  when only the CDN has it), or none when the entry has none, has it unloaded
+  or has no such field, and follows the field when an image is picked,
+  uploaded, removed or reset.
