@@ -19,10 +19,9 @@ defmodule Brando.Repo.Migrations.Brando219RewriteMultiModuleEntryPaths do
   output (not HTML text, quoted strings, comments or raw blocks):
 
     * a loop variable over `entries`, `for` or `tablerow`, in the loop's
-      body, unless a loop or assign inside binds the name again;
+      body;
     * a variable assigned an entry (`entries.first`, `entries.last`,
-      `entries[0]`, `entries | first`, `entries | last`), until it is
-      assigned again;
+      `entries[0]`, `entries | first`, `entries | last`), after the assign;
     * those paths read straight off `entries` (`entries.first.data.vars.x`);
     * the same through a variable assigned the list
       (`{% assign items = entries | reverse %}`);
@@ -30,10 +29,18 @@ defmodule Brando.Repo.Migrations.Brando219RewriteMultiModuleEntryPaths do
       (`entries | sort: "data.vars.order"` becomes `"vars.order"`); other
       quoted strings are left as they are.
 
+  A variable an assign or capture binds that is bound elsewhere too (by a
+  loop of the same name, another assign or capture, or `entries` assigned)
+  is left as it is: Liquid's scopes decide which binding a read sees (an
+  assign in a loop writes the outer scope, one in an `if` may not run, a
+  capture renders before it binds), and a wrong guess renders nothing.
+  Loops alone are followed, nested or not. The migration prints each line
+  it leaves reading `.data.vars` or `.data.refs`, with the module's id, for
+  a hand fix; `mix brando.doctor` lists them too.
+
   Datasource modules, whose `entries` are the datasource's records, and HEEx
   modules are left alone. Code already reading `link.vars` is left as it is,
-  so the migration is safe to run again. `mix brando.doctor` lists module
-  code that still reads `.data.vars` or `.data.refs` after it.
+  so the migration is safe to run again.
 
   Entries keep the HTML they rendered with the old code until they are
   rendered again: run `mix brando.entries.resave` afterwards, and restart a
@@ -54,11 +61,32 @@ defmodule Brando.Repo.Migrations.Brando219RewriteMultiModuleEntryPaths do
 
   def up do
     for prefix <- prefixes(), {id, code} <- modules(prefix) do
-      case rewrite(code) do
-        ^code -> :ok
-        fixed -> repo().query!(~s(UPDATE "#{prefix}".content_modules SET code = $1 WHERE id = $2), [fixed, id])
+      fixed = rewrite(code)
+
+      if fixed != code,
+        do: repo().query!(~s(UPDATE "#{prefix}".content_modules SET code = $1 WHERE id = $2), [fixed, id])
+
+      for {line, liquid} <- leftovers(fixed) do
+        IO.warn(
+          "brando_219: module ##{id} (#{prefix}) still reads #{liquid} on line #{line}, " <>
+            "through a variable bound more than once or one it does not follow; rewrite it by hand",
+          []
+        )
       end
     end
+  end
+
+  # Liquid that still reads `.data.vars` or `.data.refs`, as `[{line, liquid}]`
+  @doc false
+  def leftovers(code) do
+    @liquid
+    |> Regex.scan(code, return: :index)
+    |> Enum.filter(fn [{start, length}] ->
+      binary_part(code, start, length) |> unquoted(& &1) |> then(&(&1 =~ ~r/\.data\.(?:vars|refs)\b/))
+    end)
+    |> Enum.map(fn [{start, length}] ->
+      {code |> binary_part(0, start) |> String.split("\n") |> length(), binary_part(code, start, length)}
+    end)
   end
 
   def down, do: :ok
@@ -66,12 +94,14 @@ defmodule Brando.Repo.Migrations.Brando219RewriteMultiModuleEntryPaths do
   # Walks the Liquid tags and output in order, tracking which variables
   # hold the list of entries (`entries`, and lists assigned from it) and
   # which hold one entry (a loop variable over such a list, or one assigned
-  # its first, last or nth). A loop binds its variable for its body only,
-  # and an assign or capture binds a variable again from there on; inside a
-  # comment or raw block nothing is read.
+  # its first, last or nth). A loop binds its variable for its body; inside
+  # a comment or raw block nothing is read. A name an assign or capture binds
+  # and something else binds too is never taken to hold entries.
   @doc false
   def rewrite(code) do
-    initial = %{bindings: %{"entries" => :list}, loops: [], skip: nil}
+    rebound = rebound(code)
+    bindings = if "entries" in rebound, do: %{}, else: %{"entries" => :list}
+    initial = %{bindings: bindings, loops: [], skip: nil, rebound: rebound}
 
     {parts, rest_at, _state} =
       @liquid
@@ -86,6 +116,24 @@ defmodule Brando.Repo.Migrations.Brando219RewriteMultiModuleEntryPaths do
     |> IO.iodata_to_binary()
   end
 
+  # Names an assign or capture binds that are bound elsewhere too, by a
+  # loop, another assign or capture, or (for `entries`) the module. Loops
+  # alone are followed: each binds its variable for its own body.
+  defp rebound(code) do
+    sites =
+      ~r/\{%-?\s*(?:(for|tablerow)\s+(\w+)\s+in\b|(assign)\s+(\w+)\s*=|(capture)\s+(\w+))/
+      |> Regex.scan(code)
+      |> Enum.map(fn
+        [_, _loop, name] -> {name, :loop}
+        [_, "", "", _assign, name | _] -> {name, :assign}
+        [_, "", "", "", "", _capture, name] -> {name, :assign}
+      end)
+      |> Kernel.++([{"entries", :given}])
+      |> Enum.group_by(&elem(&1, 0), &elem(&1, 1))
+
+    for {name, kinds} <- sites, :assign in kinds and length(kinds) > 1, into: MapSet.new(), do: name
+  end
+
   defp step(liquid, %{skip: nil} = state) do
     case tag(liquid) do
       {name, _args} when name in ["comment", "raw"] ->
@@ -96,7 +144,9 @@ defmodule Brando.Repo.Migrations.Brando219RewriteMultiModuleEntryPaths do
 
         case Regex.run(~r/^\s*(\w+)\s+in\s+([\w.\[\]]+)/, args) do
           [_, var, source] ->
-            binding = if kind(source, state.bindings) == :list, do: :entry, else: :other
+            binding =
+              if kind(source, state.bindings) == :list and var not in state.rebound, do: :entry, else: :other
+
             loop = {var, Map.fetch(state.bindings, var)}
             {fixed, %{state | bindings: Map.put(state.bindings, var, binding), loops: [loop | state.loops]}}
 
@@ -153,8 +203,11 @@ defmodule Brando.Repo.Migrations.Brando219RewriteMultiModuleEntryPaths do
   defp end_loop(%{loops: [nil | loops]} = state), do: %{state | loops: loops}
   defp end_loop(state), do: state
 
-  defp bind(state, var, :other), do: %{state | bindings: Map.delete(state.bindings, var)}
-  defp bind(state, var, kind), do: %{state | bindings: Map.put(state.bindings, var, kind)}
+  defp bind(state, var, kind) do
+    if kind == :other or var in state.rebound,
+      do: %{state | bindings: Map.delete(state.bindings, var)},
+      else: %{state | bindings: Map.put(state.bindings, var, kind)}
+  end
 
   # What an expression holds: the list of entries, one entry, or other
   defp kind(expression, bindings) do

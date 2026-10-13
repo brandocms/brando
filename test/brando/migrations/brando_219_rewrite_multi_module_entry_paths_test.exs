@@ -98,30 +98,40 @@ defmodule Brando.Migrations.RewriteMultiModuleEntryPathsTest do
              """
     end
 
-    test "stops at a variable bound again: an inner loop of the same name, or an assign", %{migration: migration} do
+    test "leaves a variable bound more than once for a hand fix, and the doctor lists it", %{migration: migration} do
+      # Liquid's scopes decide which binding a read sees (an assign inside a
+      # loop writes the outer scope, an assign in an `if` may not run, a
+      # capture renders before it binds), so a name bound twice is not
+      # guessed at
       code = """
       {% for item in entries %}{{ item.data.vars.title }}
         {% for item in item.data.refs.cards.data.items %}{{ item.data.vars.title }}{% endfor %}
-        {{ item.data.vars.after }}
-        {% assign item = other %}{{ item.data.vars.gone }}
+        {% assign item = other %}{{ item.data.vars.after }}
       {% endfor %}
-      {{ item.data.vars.outside }}
-      {% assign first = entries.first %}{{ first.data.vars.a }}
-      {% assign first = other.first %}{{ first.data.vars.b }}
-      {% capture last %}x{% endcapture %}{% assign last = entries.last %}{{ last.data.vars.c }}
+      {% assign first = entries.first %}{% if never %}{% assign first = other %}{% endif %}{{ first.data.vars.a }}
+      {% assign last = entries.last %}{% capture last %}{{ last.data.vars.b }}{% endcapture %}
+      {% for link in entries %}{{ link.data.vars.url }}{% endfor %}
       """
 
-      assert migration.rewrite(code) == """
-             {% for item in entries %}{{ item.vars.title }}
-               {% for item in item.refs.cards.data.items %}{{ item.data.vars.title }}{% endfor %}
-               {{ item.vars.after }}
-               {% assign item = other %}{{ item.data.vars.gone }}
-             {% endfor %}
-             {{ item.data.vars.outside }}
-             {% assign first = entries.first %}{{ first.vars.a }}
-             {% assign first = other.first %}{{ first.data.vars.b }}
-             {% capture last %}x{% endcapture %}{% assign last = entries.last %}{{ last.vars.c }}
-             """
+      fixed = migration.rewrite(code)
+
+      assert fixed == String.replace(code, "{{ link.data.vars.url }}", "{{ link.vars.url }}")
+
+      assert [
+               {1, "{{ item.data.vars.title }}"},
+               {2, "{% for item in item.data.refs.cards.data.items %}"},
+               {2, "{{ item.data.vars.title }}"},
+               {3, "{{ item.data.vars.after }}"},
+               {5, "{{ first.data.vars.a }}"},
+               {6, "{{ last.data.vars.b }}"}
+             ] = Brando.Doctor.Checks.ModuleEntryPaths.scan(fixed)
+
+      # Loops alone are followed: an inner loop of the same name binds it for
+      # its own body
+      assert migration.rewrite(
+               "{% for item in entries %}{% for item in item.data.refs.cards %}{{ item.data.vars.t }}{% endfor %}{{ item.data.vars.u }}{% endfor %}"
+             ) ==
+               "{% for item in entries %}{% for item in item.refs.cards %}{{ item.data.vars.t }}{% endfor %}{{ item.vars.u }}{% endfor %}"
     end
 
     test "rewrites only the property arguments of filters applied to the entries", %{migration: migration} do
@@ -212,15 +222,26 @@ defmodule Brando.Migrations.RewriteMultiModuleEntryPathsTest do
     datasource = "{% for entry in entries %}{{ entry.data.vars.x }}{% endfor %}"
     multi = for schema <- ["public", @tenant], do: insert.(schema, @koi, %{})
     untouched = [insert.("public", datasource, %{datasource: true}), insert.("public", datasource, %{type: "heex"})]
+    rebound = "{% assign item = entries.first %}\n{% capture item %}{{ item.data.vars.title }}{% endcapture %}"
+    {"public", rebound_id} = insert.("public", rebound, %{})
 
     for _run <- 1..2 do
-      Ecto.Migrator.up(Repo, System.unique_integer([:positive]), migration, log: false, migration_lock: false)
+      warnings =
+        ExUnit.CaptureIO.capture_io(:stderr, fn ->
+          Ecto.Migrator.up(Repo, System.unique_integer([:positive]), migration, log: false, migration_lock: false)
+        end)
 
       for {schema, id} <- multi do
         assert code(schema, id) == String.replace(@koi, ".data.vars.", ".vars.")
       end
 
       for {schema, id} <- untouched, do: assert(code(schema, id) == datasource)
+
+      # Left for a hand fix, and named
+      assert code("public", rebound_id) == rebound
+
+      assert warnings =~
+               "brando_219: module ##{rebound_id} (public) still reads {{ item.data.vars.title }} on line 2"
     end
   end
 
