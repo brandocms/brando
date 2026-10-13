@@ -2,6 +2,12 @@ defmodule Brando.Migrations.TransferRefMediaData do
   use Ecto.Migration
 
   def up do
+    # Postgres can't estimate how many refs the jsonb filters below select,
+    # takes it for one, and joins every ref against every image in a nested
+    # loop: minutes for 20,000 refs and 50,000 images, against a second with
+    # hash joins. Until the gallery objects are made.
+    execute "SET LOCAL enable_nestloop = off"
+
     # Link each picture ref to the image its legacy data shows (see
     # resolve_images/1). A picture whose image has no live row, because the
     # row was deleted or never made, was still shown by 0.53 from the ref's
@@ -271,6 +277,8 @@ defmodule Brando.Migrations.TransferRefMediaData do
     WHERE image_id IS NOT NULL
     """
 
+    execute "SET LOCAL enable_nestloop = DEFAULT"
+
     # Clean up gallery data - remove the images array
     # NOTE: active and collapsed are now database columns, not in JSONB data
     execute """
@@ -538,45 +546,78 @@ defmodule Brando.Migrations.TransferRefMediaData do
   end
 
   # The live image each item's legacy data `d` shows, as `image_id` next to
-  # the item's columns. The identity implied by `sizes` comes before `path`:
-  # legacy data can carry a stale `path` next to correct `sizes`, since a
-  # replaced image wrote one but not the other, and the old renderer read
-  # `sizes`, so that is the image the site displayed. Matching `path` first
-  # would silently swap it for a different picture. A soft-deleted row is not
-  # a match: emptying the trash deletes it, and what links to it with it.
+  # the item's columns, and whether a row may be made for it (`makeable`).
+  # A soft-deleted row is not a match: emptying the trash deletes it, and
+  # what links to it with it.
+  #
+  # `sizes` and `path` usually name the same image (a size file is
+  # `<dir>/<size>/<name>`, or the file itself for an SVG; its extension may
+  # be a converted one). Then only a row with that exact `path` is a match,
+  # as two images can share a stem (`team.png`, `team.jpg`), and when there
+  # is none a row is made from the data.
+  #
+  # When they name different images, `path` is stale: a replaced image wrote
+  # one but not the other, and the old renderer read `sizes`, so that is the
+  # image the site displayed. It is linked when exactly one row has its
+  # stem; otherwise the ref is left unlinked, keeping its data, rather than
+  # linked to what the stale path names.
+  #
+  # The live images are read once, and matched on equality, so this joins
+  # rather than scanning `images` per item.
   defp resolve_images(items) do
     """
-    SELECT #{items}.*, COALESCE(by_size.id, by_path.id) AS image_id
-    FROM #{items}
-    LEFT JOIN LATERAL (
-      SELECT value
-      FROM jsonb_each_text(
-        CASE WHEN jsonb_typeof(#{items}.d->'sizes') = 'object' THEN #{items}.d->'sizes' ELSE '{}'::jsonb END
-      )
-      WHERE value IS NOT NULL AND value <> ''
-      LIMIT 1
-    ) sz ON TRUE
-    -- The size file may carry a converted extension (a .png source renders to
-    -- .jpg), so compare the extensionless path rather than the filename.
-    LEFT JOIN LATERAL (
-      SELECT i.id
-      FROM images i
-      WHERE sz.value IS NOT NULL
-      AND i.deleted_at IS NULL
-      AND regexp_replace(i.path, '\\.[^.]+$', '') IN (#{size_path_candidates("sz.value")})
-      ORDER BY i.id
-      LIMIT 1
-    ) by_size ON TRUE
-    -- Fall back to `path` when there are no sizes, or when the image the sizes
-    -- name is gone.
-    LEFT JOIN LATERAL (
-      SELECT i.id
-      FROM images i
-      WHERE i.deleted_at IS NULL
-      AND i.path IN (#{path_candidates("#{items}.d->>'path'")})
-      ORDER BY i.id
-      LIMIT 1
-    ) by_path ON TRUE
+    WITH live AS MATERIALIZED (
+      SELECT id, path, regexp_replace(path, '\\.[^.]+$', '') AS stem
+      FROM images
+      WHERE deleted_at IS NULL
+    ),
+    normalised AS MATERIALIZED (
+      SELECT x.*, n.cpath, n.csize,
+        regexp_replace(n.cpath, '\\.[^.]+$', '') AS pstem,
+        ARRAY[
+          regexp_replace(n.csize, '\\.[^.]+$', ''),
+          regexp_replace(regexp_replace(n.csize, '/[^/]+/([^/]+)$', '/\\1'), '\\.[^.]+$', '')
+        ] AS sstems
+      FROM (SELECT #{items}.*, row_number() OVER () AS item_key FROM #{items}) x
+      CROSS JOIN LATERAL (
+        SELECT
+          #{canonical_path("x.d->>'path'")} AS cpath,
+          (
+            SELECT #{canonical_path("value")}
+            FROM jsonb_each_text(CASE WHEN jsonb_typeof(x.d->'sizes') = 'object' THEN x.d->'sizes' ELSE '{}'::jsonb END)
+            WHERE value IS NOT NULL AND btrim(value) <> ''
+            ORDER BY key
+            LIMIT 1
+          ) AS csize
+      ) n
+    ),
+    exact AS (
+      SELECT o.item_key, min(live.id) AS id
+      FROM normalised o
+      CROSS JOIN LATERAL unnest(ARRAY[o.d->>'path', o.cpath]) AS v(path)
+      JOIN live ON live.path = v.path
+      GROUP BY o.item_key
+    ),
+    by_size AS (
+      SELECT o.item_key, count(DISTINCT live.id) AS n, min(live.id) AS id
+      FROM normalised o
+      CROSS JOIN LATERAL unnest(o.sstems) AS v(stem)
+      JOIN live ON live.stem = v.stem
+      GROUP BY o.item_key
+    ),
+    judged AS (
+      SELECT o.*, (o.csize IS NULL OR o.pstem IS NULL OR o.pstem = ANY(o.sstems)) AS agree
+      FROM normalised o
+    )
+    SELECT j.*,
+      CASE
+        WHEN j.agree AND j.cpath IS NOT NULL THEN e.id
+        WHEN z.n = 1 THEN z.id
+      END AS image_id,
+      (j.agree AND j.cpath IS NOT NULL AND e.id IS NULL) AS makeable
+    FROM judged j
+    LEFT JOIN exact e ON e.item_key = j.item_key
+    LEFT JOIN by_size z ON z.item_key = j.item_key
     """
   end
 
@@ -586,7 +627,7 @@ defmodule Brando.Migrations.TransferRefMediaData do
   # the data has none), dominant color and focal point. Its texts stay on the
   # ref or gallery object that set them.
   defp insert_images(items) do
-    path = canonical_path("d->>'path'")
+    path = "cpath"
 
     """
     INSERT INTO images (
@@ -627,8 +668,7 @@ defmodule Brando.Migrations.TransferRefMediaData do
       NOW(),
       NOW()
     FROM resolved
-    WHERE image_id IS NULL
-    AND #{legacy_path("d")} IS NOT NULL
+    WHERE makeable
     ORDER BY #{path}, ord
     """
   end
@@ -650,17 +690,6 @@ defmodule Brando.Migrations.TransferRefMediaData do
   end
 
   defp path_candidates(expression), do: expression |> path_variants() |> Enum.join(", ")
-
-  # A gallery size path names the size directory in front of the filename and
-  # may carry a converted extension, so compare it extensionless and without
-  # the size directory.
-  defp size_path_candidates(expression) do
-    expression
-    |> path_variants()
-    |> Enum.map_join(", ", fn variant ->
-      "regexp_replace(regexp_replace(#{variant}, '/[^/]+/([^/]+)$', '/\\1'), '\\.[^.]+$', '')"
-    end)
-  end
 
   defp path_variants(expression) do
     stripped =

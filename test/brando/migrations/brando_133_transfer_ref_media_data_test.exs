@@ -62,6 +62,57 @@ defmodule Brando.Migrations.TransferRefMediaDataTest do
              Repo.get!(Brando.Images.Image, image_id(missing_ref))
   end
 
+  defp ref_data(ref_id) do
+    %{rows: [[data]]} = Repo.query!("SELECT data->'data' FROM content_refs WHERE id = $1", [ref_id])
+    data
+  end
+
+  test "an exact path wins over an image its sizes name by stem", %{migration: migration} do
+    # Two images sharing a stem, and an SVG whose sizes point at itself, so
+    # dropping the size folder names another image
+    png = Factory.insert(:image, path: "images/site/posts/team.png")
+    jpg = Factory.insert(:image, path: "images/site/posts/team.jpg")
+    other_logo = Factory.insert(:image, path: "images/site/logo.png")
+    svg = Factory.insert(:image, path: "images/site/posts/logo.svg")
+
+    team =
+      insert_ref(%{
+        type: "picture",
+        data: %{path: "images/site/posts/team.jpg", sizes: %{small: "images/site/posts/small/team.jpg"}}
+      })
+
+    logo =
+      insert_ref(%{
+        type: "picture",
+        data: %{path: "images/site/posts/logo.svg", sizes: %{small: "images/site/posts/logo.svg"}}
+      })
+
+    Ecto.Migrator.up(Repo, System.unique_integer([:positive]), migration, log: false, migration_lock: false)
+
+    assert image_id(team) == jpg.id
+    assert image_id(logo) == svg.id
+    refute image_id(team) == png.id
+    refute image_id(logo) == other_logo.id
+  end
+
+  test "a stale path is not linked when the image its sizes name has no row", %{migration: migration} do
+    # 0.53 showed B, from the sizes; A is what the stale path names
+    Factory.insert(:image, path: "images/site/posts/a.jpg")
+
+    ref =
+      insert_ref(%{
+        type: "picture",
+        data: %{path: "images/site/posts/a.jpg", sizes: %{small: "images/site/posts/small/b.jpg"}}
+      })
+
+    Ecto.Migrator.up(Repo, System.unique_integer([:positive]), migration, log: false, migration_lock: false)
+
+    assert image_id(ref) == nil
+    # The data stays for the check to report and an editor to settle
+    assert %{"path" => "images/site/posts/a.jpg", "sizes" => %{"small" => "images/site/posts/small/b.jpg"}} =
+             ref_data(ref)
+  end
+
   test "links gallery images whose legacy path or sizes carry the media prefix", %{migration: migration} do
     # Galleries without a block are credited to user 1.
     Repo.get(Brando.Users.User, 1) || Factory.insert(:random_user, id: 1)
