@@ -85,6 +85,69 @@ defmodule Brando.Blueprint.VerifierTest do
            }
   end
 
+  test "built-in type aliases preserve custom casting and module declarations" do
+    module =
+      compile_blueprint(
+        quote do
+          attributes do
+            attribute :aliases, :string_list, default: []
+            attribute :module_aliases, Brando.Type.StringList, default: []
+            attribute :description, :i18n_string
+            attribute :module_description, Brando.Type.I18nString
+          end
+        end
+      )
+
+    for field <- [:aliases, :module_aliases] do
+      assert module.__schema__(:type, field) == Brando.Type.StringList
+
+      for input <- [
+            [" first ", "", "second"],
+            " first, ,second ",
+            %{"10" => "second", "2" => " first ", "3" => ""}
+          ] do
+        changeset = module.changeset(struct(module), %{field => input})
+        assert changeset.valid?
+        assert Ecto.Changeset.get_field(changeset, field) == ["first", "second"]
+      end
+
+      changeset = module.changeset(struct(module, [{field, ["old"]}]), %{field => []})
+      assert changeset.valid?
+      assert Ecto.Changeset.get_field(changeset, field) == []
+    end
+
+    for field <- [:description, :module_description] do
+      assert module.__schema__(:type, field) == Brando.Type.I18nString
+      translations = %{"en" => "Description", "no" => "Beskrivelse"}
+      changeset = module.changeset(struct(module), %{field => translations})
+      assert changeset.valid?
+      assert Ecto.Changeset.get_field(changeset, field) == translations
+    end
+  end
+
+  test "the string-list alias keeps the module's migration storage and dumped defaults" do
+    [alias_schema, module_schema] =
+      for type <- [:string_list, Brando.Type.StringList] do
+        module =
+          compile_blueprint(
+            quote do
+              attributes do
+                attribute :aliases, unquote(type), default: [" first ", "", "second"], null: false
+              end
+            end
+          )
+
+        Brando.Blueprint.Migrations.Schema.build(module)
+      end
+
+    assert alias_schema == module_schema
+    assert [column] = alias_schema.columns
+    assert column.type == {:array, :string}
+    assert column.opts == %{default: ["first", "second"], null: false}
+    assert {:ok, diff} = Brando.Blueprint.Migrations.Diff.compare(alias_schema, module_schema)
+    assert Brando.Blueprint.Migrations.Diff.empty?(diff)
+  end
+
   test "keeps migration-only column options out of Ecto schema field options" do
     module =
       compile_blueprint(
@@ -403,14 +466,16 @@ defmodule Brando.Blueprint.VerifierTest do
       )
     end
 
-    assert_raise Spark.Error.DslError, ~r/`prevent_collision` requires a string/, fn ->
-      compile_blueprint(
-        quote do
-          attributes do
-            attribute :position, :integer, unique: [prevent_collision: true]
+    for type <- [:integer, :string_list] do
+      assert_raise Spark.Error.DslError, ~r/`prevent_collision` requires a string/, fn ->
+        compile_blueprint(
+          quote do
+            attributes do
+              attribute :value, unquote(type), unique: [prevent_collision: true]
+            end
           end
-        end
-      )
+        )
+      end
     end
   end
 

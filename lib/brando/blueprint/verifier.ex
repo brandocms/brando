@@ -42,6 +42,7 @@ defmodule Brando.Blueprint.Verifier do
     :map,
     :naive_datetime,
     :status,
+    :string_list,
     :time,
     :timestamp,
     :uuid

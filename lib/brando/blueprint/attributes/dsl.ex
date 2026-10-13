@@ -19,6 +19,7 @@ defmodule Brando.Blueprint.Attributes.Dsl do
     :slug,
     :status,
     :string,
+    :string_list,
     :text,
     :time,
     :timestamp,

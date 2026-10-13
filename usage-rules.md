@@ -310,7 +310,7 @@ fields, generate a migration as described in
 
 * Attribute types: `:string`, `:text`, `:slug`, `:integer`, `:float`,
   `:decimal`, `:boolean`, `:map`, `:id`, `:date`, `:time`, `:datetime` (UTC),
-  `:naive_datetime`, `:uuid`, `:status`, `:enum`, `:language`, `:i18n_string`,
+  `:naive_datetime`, `:uuid`, `:status`, `:enum`, `:language`, `:i18n_string`, `:string_list`,
   `{:array, type}`, or an `Ecto.Type` module. A bare `:array` is rejected, and
   `:file` does not compile; use a [file asset](deps/brando/guides/blueprint_fields.md#assets).
 * A `:slug` attribute does not slugify itself; the form's

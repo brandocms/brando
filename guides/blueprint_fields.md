@@ -61,11 +61,16 @@ attribute :name, type, options
   languages. See [Languages](#languages).
 * `:i18n_string`: one short text per language in a single `jsonb` field.
   See [Translated strings](#translated-strings).
+* `:string_list`: a list of strings, trimmed and with blank entries removed.
+  See [String lists](#string-lists).
 * `{:array, type}`: an array of `:string`, `:integer`, `:id`, `:map`, `:enum`
   or `Ecto.Enum`. A bare `:array` is rejected; always give the element type.
 * A module: an `Ecto.Type` or `Ecto.ParameterizedType`, such as
-  `Brando.Type.StringList` or `PolymorphicEmbed`. The migration uses the
-  type's primitive storage type.
+  `PolymorphicEmbed`. The migration uses the type's primitive storage type.
+
+The built-in types also accept their module forms: `Brando.Type.I18nString`
+and `Brando.Type.StringList`. Prefer `:i18n_string` and `:string_list` in
+Blueprint declarations.
 
 `:file` is in the type list but its Ecto type does not exist, so it does not
 compile; use a [file asset](#assets).
@@ -113,7 +118,7 @@ exception: their options are passed to the type unchecked. Use the root
 
 * Attribute types: `:string`, `:text`, `:slug`, `:integer`, `:float`,
   `:decimal`, `:boolean`, `:map`, `:id`, `:date`, `:time`, `:datetime` (UTC),
-  `:naive_datetime`, `:uuid`, `:status`, `:enum`, `:language`, `:i18n_string`,
+  `:naive_datetime`, `:uuid`, `:status`, `:enum`, `:language`, `:i18n_string`, `:string_list`,
   `{:array, type}`, or an `Ecto.Type` module. A bare `:array` is rejected, and
   `:file` does not compile; use a [file asset](#assets).
 * A `:slug` attribute does not slugify itself; the form's
@@ -168,6 +173,19 @@ language, and all-blank values are stored as `nil`. Edit it with the
 `:i18n_text` or `:i18n_textarea` input, and read one language with
 `Brando.Type.I18nString.get(value, language)`, which falls back to the
 default language. See [Languages and translations](i18n.md#translated-strings-in-one-field).
+
+### String lists
+
+```elixir
+attribute :aliases, :string_list, default: []
+```
+
+`:string_list` uses `Brando.Type.StringList`, stored as `{:array, :string}`.
+It accepts a list, an indexed map submitted by a form, or a comma-separated
+string. Casting trims each entry and drops blanks. Use `{:array, :string}`
+to preserve whitespace around nonblank entries; the generated changeset's
+default Ecto cast still drops empty and whitespace-only entries. Edit a
+`:string_list` attribute with the form's `:string_list` input.
 
 ### Polymorphic embeds
 
