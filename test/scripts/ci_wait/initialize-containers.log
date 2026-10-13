@@ -1,0 +1,14 @@
+2026-10-13T07:50:04.7121980Z ##[group]Create local container network
+2026-10-13T07:50:04.7128181Z ##[command]/usr/bin/docker network create --label 7c18e6 github_network_9ddaede19bf845cb9dc827ff949d20c8
+2026-10-13T07:50:04.9738052Z 91c39727693105693fcb29c11f56d8f4290ddb488b4eaa6a6842285c0258c8ee
+2026-10-13T07:50:04.9756318Z ##[endgroup]
+2026-10-13T07:50:04.9772539Z ##[group]Starting db service container
+2026-10-13T07:50:04.9785945Z ##[command]/usr/bin/docker pull public.ecr.aws/docker/library/postgres:14
+2026-10-13T07:50:05.7559036Z Error response from daemon: toomanyrequests: Data limit exceeded
+2026-10-13T07:50:05.7582135Z ##[warning]Docker pull failed with exit code 1, back off 2.519 seconds before retry.
+2026-10-13T07:50:08.2775466Z ##[command]/usr/bin/docker pull public.ecr.aws/docker/library/postgres:14
+2026-10-13T07:50:08.7868624Z Error response from daemon: toomanyrequests: Data limit exceeded
+2026-10-13T07:50:08.7881645Z ##[warning]Docker pull failed with exit code 1, back off 2.007 seconds before retry.
+2026-10-13T07:50:10.7957577Z ##[command]/usr/bin/docker pull public.ecr.aws/docker/library/postgres:14
+2026-10-13T07:50:11.2954618Z Error response from daemon: toomanyrequests: Data limit exceeded
+2026-10-13T07:50:11.3028196Z ##[error]Docker pull failed with exit code 1

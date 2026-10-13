@@ -11,14 +11,16 @@
 #
 # A PR is queued once every check run on its head commit has finished and
 # passed ("Coverage report" aside). When some failed, it is not queued, and
-# each failed job is explained as scripts/ci-wait --run does: a known flake
-# from .github/known-flakes.txt with its rerun command, or a real failure.
-# A PR already in the queue is followed from where it is.
+# each failed job is explained as scripts/ci-wait --run does, also while
+# other jobs of its run still run: a known flake from .github/known-flakes.txt
+# with its rerun command, CI infrastructure (failed setting up), or a real
+# failure. A PR already in the queue is followed from where it is.
 #
 # When a PR drops out of the queue, it says why: the files that conflict with
 # main (from git merge-tree, which needs the remote named origin), the failed
 # merge-group jobs, or who dequeued it. When every failed merge-group job is a
-# known flake, it puts the PR back in the queue once and says which flake.
+# known flake or CI infrastructure, it puts the PR back in the queue once and
+# says why.
 #
 # A PR whose base is another listed PR's branch waits for that PR to merge,
 # is retargeted to main, and then goes through the same steps; when that PR
@@ -131,15 +133,16 @@ explain_runs() {
 }
 
 # explain_drop RUN... — explain_runs for the failed merge-group runs, and
-# succeeds only when there are some and ci-wait read each one and found known
-# flakes only.
+# succeeds only when there are some and ci-wait read each one and found only
+# known flakes or CI infrastructure failures.
 explain_drop() {
   local run out flaky=true
   [ $# -gt 0 ] || flaky=false
   for run in "$@"; do
     out="$("$here/ci-wait" --run "$run" --repo "$repo" 2>&1)"
     case "$(head -n 1 <<<"$out")" in
-      "Run $run: FAILED (known flakes only):"*) ;;
+      "Run $run: FAILED (known flakes only):"* | "Run $run: FAILED (CI infrastructure only):"* | \
+        "Run $run: FAILED (known flakes and CI infrastructure only):"*) ;;
       *) flaky=false ;;
     esac
     sed -n '2,$p' <<<"$out"
@@ -147,14 +150,21 @@ explain_drop() {
   [ "$flaky" = true ]
 }
 
-# flake_names EXPLANATION — "<flake> (<job>)" for each line of explain_drop
-# output, joined with "; "; fails on a line that is not a known flake.
-flake_names() {
-  local line out="" re='^  ([^:]+): known flake: (.+) — rerun with: '
+# drop_reasons EXPLANATION — "known flake <flake> (<job>)" or "CI
+# infrastructure failure in <step> (<job>)" for each line of explain_drop
+# output, joined with "; "; fails on a line that is neither.
+drop_reasons() {
+  local line out="" flake='^  ([^:]+): known flake: (.+) — rerun with: '
+  local infra='^  ([^:]+): CI infrastructure: failed in (.+) — rerun with: '
   [ -n "$1" ] || return 1
   while IFS= read -r line; do
-    [[ "$line" =~ $re ]] || return 1
-    out="${out:+$out; }${BASH_REMATCH[2]} (${BASH_REMATCH[1]})"
+    if [[ "$line" =~ $flake ]]; then
+      out="${out:+$out; }known flake ${BASH_REMATCH[2]} (${BASH_REMATCH[1]})"
+    elif [[ "$line" =~ $infra ]]; then
+      out="${out:+$out; }CI infrastructure failure in ${BASH_REMATCH[2]} (${BASH_REMATCH[1]})"
+    else
+      return 1
+    fi
   done <<<"$1"
   printf '%s' "$out"
 }
@@ -257,9 +267,9 @@ follow_queue() {
               2>>"$work/err"))"
             flaky=$?
             # Once per PR: a second drop is not the same bad luck.
-            if [ "$requeued" = false ] && [ "$flaky" -eq 0 ] && flakes="$(flake_names "$explained")" &&
+            if [ "$requeued" = false ] && [ "$flaky" -eq 0 ] && flakes="$(drop_reasons "$explained")" &&
               position="$(enqueue_at "$(field "$info" .id)" "$(field "$info" .headRefOid)" 2>"$work/requeue-$pr")"; then
-              say "$pr" "dropped on known flake $flakes; re-queued at position $position"
+              say "$pr" "dropped on $flakes; re-queued at position $position"
               requeued=true
               before="$count"
               tries=0

@@ -40,7 +40,8 @@ cat >"$tmp/bin/gh" <<'EOF'
 # "STATE ENTRY [REASON [COMMIT]]" per poll once queued, the last one
 # repeating), <pr>.queued once enqueued, checks-<sha> (check runs JSON, one
 # per poll, the last repeating), runs-<sha> (workflow runs JSON),
-# unreadable-<run> (that run's jobs fail to load) and calls.
+# unreadable-<run> (that run's jobs fail to load), running-<run> (that run
+# has a job still going), step (the failed step, default Run Tests) and calls.
 s="$STATE"
 args=("$@")
 filter=""
@@ -131,10 +132,14 @@ case "$1 $2" in
       */actions/runs/*/jobs*)
         id="${2#*/actions/runs/}" && id="${id%%/*}"
         [ -f "$s/unreadable-$id" ] && { echo "HTTP 502" >&2; exit 1; }
-        jq -n --arg id "$id" '{jobs: [{name: "mix test", status: "completed", conclusion: "failure",
-          html_url: "https://github.com/o/r/actions/runs/\($id)/job/\($id)"}]}' | out ;;
+        running=false
+        [ -f "$s/running-$id" ] && running=true
+        jq -n --arg id "$id" --argjson running "$running" '{jobs: ([{name: "mix test", status: "completed",
+          conclusion: "failure", html_url: "https://github.com/o/r/actions/runs/\($id)/job/\($id)"}]
+          + if $running then [{name: "E2E", status: "in_progress", conclusion: null,
+            html_url: "https://github.com/o/r/actions/runs/\($id)/job/1"}] else [] end)}' | out ;;
       */actions/jobs/*/logs) cat "$s/job.log" ;;
-      */actions/jobs/*) echo "Run Tests" ;;
+      */actions/jobs/*) cat "$s/step" 2>/dev/null || echo "Run Tests" ;;
       *) exit 1 ;;
     esac ;;
   "pr edit")
@@ -251,6 +256,13 @@ checks 7777777a "[$green, $red]"
 run "reads every page of check runs" 1 "PR 13: checks failed on 7777777, not queued: mix test
   mix test: known flake: beam-jit-crash — rerun with: gh run rerun 77 --failed" 13
 
+fresh still-running
+pr 18 feat-18 main 8888888c
+checks 8888888c "$red"
+touch "$state/running-77"
+run "explains a failed job while other jobs of its run still run" 1 "PR 18: checks failed on 8888888, not queued: mix test
+  mix test: known flake: beam-jit-crash — rerun with: gh run rerun 77 --failed" 18
+
 fresh merge-group
 pr 7 feat-7 main 1111111a "OPEN AWAITING_CHECKS" "OPEN - failed_checks 9999999"
 checks 1111111a "$green"
@@ -274,6 +286,16 @@ if [ "$(cat "$state/calls")" != "$(printf 'enqueue 14 8888888a\nenqueue 14 88888
   echo "FAIL     calls:"
   sed 's/^/     | /' "$state/calls"
 fi
+
+fresh infra-requeue
+pr 17 feat-17 main 8888888b "OPEN AWAITING_CHECKS" "OPEN - failed_checks 9999993" "OPEN AWAITING_CHECKS" "MERGED - merged"
+checks 8888888b "$green"
+echo '{"workflow_runs": [{"id": 88, "conclusion": "failure"}]}' >"$state/runs-9999993"
+cp "$logs/initialize-containers.log" "$state/job.log"
+echo "Initialize containers" >"$state/step"
+run "re-queues a PR the queue dropped on a job that failed setting up" 0 "PR 17: checks green on 8888888; queued at position 1
+PR 17: dropped on CI infrastructure failure in Initialize containers (mix test); re-queued at position 1
+PR 17: merged" 17
 
 fresh flake-unreadable
 pr 16 feat-16 main 6666666c "OPEN AWAITING_CHECKS" "OPEN - failed_checks 9999992"
