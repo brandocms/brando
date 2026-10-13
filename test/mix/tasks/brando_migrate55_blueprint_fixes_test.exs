@@ -242,6 +242,34 @@ defmodule Mix.Tasks.Brando.Migrate55BlueprintFixesTest do
     assert migrated =~ "default_srcset: [\n      {\"small\", \"700w\"},"
   end
 
+  test "rewrites default_srcset only in the attribute given as cfg, beside another on its line" do
+    partner =
+      String.replace(
+        @partner,
+        "  attributes do",
+        "  @small_cfg [default_srcset: []]; @display_opts %{default_srcset: []}\n\n  attributes do"
+      )
+      |> String.replace("asset :logo, :image, cfg: @logo_cfg", "asset :logo, :image, cfg: @small_cfg")
+
+    migrated = migrate(%{@partner_path => partner}) |> source(@partner_path)
+
+    assert migrated =~ "@small_cfg [srcset: %{default: []}]"
+    assert migrated =~ "@display_opts %{default_srcset: []}"
+  end
+
+  test "lists a read of an :entries relation whose line has .identifier only in a string" do
+    controller = """
+    defmodule KoiWeb.ProjectController do
+      def ids(project) do
+        Enum.map(project.related_entries, & &1.entry_id) |> IO.inspect(label: ".identifier")
+      end
+    end
+    """
+
+    igniter = migrate(%{@project_path => @project, @controller_path => controller})
+    assert_has_warning(igniter, &(&1 =~ "#{@controller_path}:3:"))
+  end
+
   test "lists a read of an :entries relation whose line mentions .identifier only in a comment" do
     controller = """
     defmodule KoiWeb.ProjectController do

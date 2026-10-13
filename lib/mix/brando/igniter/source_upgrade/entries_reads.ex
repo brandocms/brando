@@ -87,9 +87,13 @@ if Code.ensure_loaded?(Igniter) do
 
       for {{start, read_end}, next} <- Enum.zip(starts, ends),
           rest = binary_part(line, read_end, next - read_end),
-          not (rest |> strip_comment() |> String.match?(~r/\.identifier\b/)),
+          not (rest |> strip_strings() |> strip_comment() |> String.match?(~r/\.identifier\b/)),
           do: start
     end
+
+    # String and charlist literals, interpolations included: `.identifier`
+    # there is no read. A string the line does not close runs to its end.
+    defp strip_strings(text), do: String.replace(text, ~r/"(?:[^"\\]|\\.)*("|$)|'(?:[^'\\]|\\.)*('|$)/, "")
 
     # A `#` that starts a comment, not an interpolation.
     defp strip_comment(text), do: text |> String.split(~r/(^|\s)#(?!\{)/, parts: 2) |> hd()

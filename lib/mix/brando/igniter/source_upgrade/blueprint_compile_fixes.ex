@@ -77,8 +77,9 @@ if Code.ensure_loaded?(Igniter) do
     # `zipper` is the module's body, as a subtree: the file may hold other
     # modules.
     defp update(zipper) do
-      identifier_lines = zipper |> embedded_identifiers() |> MapSet.new(&line/1)
-      srcset_lines = zipper |> default_srcsets() |> MapSet.new(fn {key, _sibling_srcset?} -> line(key) end)
+      # By line and column: two declarations can share a line.
+      identifier_lines = zipper |> embedded_identifiers() |> MapSet.new(&position/1)
+      srcset_lines = zipper |> default_srcsets() |> MapSet.new(fn {key, _sibling_srcset?} -> position(key) end)
 
       Zipper.traverse(zipper, &update_node(&1, identifier_lines, srcset_lines))
     end
@@ -86,14 +87,14 @@ if Code.ensure_loaded?(Igniter) do
     defp update_node(zipper, identifier_lines, srcset_lines) do
       case Zipper.node(zipper) do
         {:identifier, meta, [_template]} = node ->
-          if MapSet.member?(identifier_lines, line(node)),
+          if MapSet.member?(identifier_lines, position(node)),
             do: Zipper.replace(zipper, {:identifier, meta, [{:__block__, [], [false]}]}),
             else: zipper
 
         node ->
           with {:ok, pairs} <- pairs(node),
                {key, _value} <- default_srcset(pairs),
-               true <- MapSet.member?(srcset_lines, line(key)) do
+               true <- MapSet.member?(srcset_lines, position(key)) do
             Zipper.replace(zipper, rewrite_pairs(node, pairs))
           else
             _ -> zipper
@@ -215,6 +216,8 @@ if Code.ensure_loaded?(Igniter) do
 
     defp line({{:__block__, meta, _}, _value}), do: meta[:line]
     defp line({_form, meta, _args}), do: meta[:line]
+
+    defp position({_form, meta, _args}), do: {meta[:line], meta[:column]}
 
     defp notice(igniter, []), do: igniter
 
