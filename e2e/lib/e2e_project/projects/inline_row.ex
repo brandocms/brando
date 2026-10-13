@@ -37,10 +37,10 @@ defmodule E2eProject.Projects.InlineRow do
     attribute :confirmed, :boolean, default: false
     attribute :kind, :string
     attribute :size, :string
-    attribute :aliases, Brando.Type.StringList
+    attribute :aliases, :string_list
     attribute :tags, {:array, :string}
-    attribute :label, Brando.Type.I18nString
-    attribute :description, Brando.Type.I18nString
+    attribute :label, :i18n_string
+    attribute :description, :i18n_string
   end
 
   assets do

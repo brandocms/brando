@@ -26,6 +26,7 @@ defmodule Brando.Blueprint.Utils do
   @image_type Module.concat(["Brando", "Type", "Image"])
   @video_type Module.concat(["Brando", "Type", "Video"])
   @i18n_string_type Module.concat(["Brando", "Type", "I18nString"])
+  @string_list_type Module.concat(["Brando", "Type", "StringList"])
 
   @doc """
   Maps a Blueprint attribute type to its Ecto schema type.
@@ -40,6 +41,7 @@ defmodule Brando.Blueprint.Utils do
   def to_ecto_type(:enum), do: Ecto.Enum
   def to_ecto_type(:video), do: @video_type
   def to_ecto_type(:i18n_string), do: @i18n_string_type
+  def to_ecto_type(:string_list), do: @string_list_type
   def to_ecto_type(:slug), do: :string
   def to_ecto_type(:datetime), do: :utc_datetime
   def to_ecto_type(:timestamp), do: :naive_datetime

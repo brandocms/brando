@@ -376,7 +376,8 @@ type.
   `confirmation` constraint.
 * `:code`: a code editor for source text such as HTML or Liquid.
 * `:string_list`: a list of short strings edited one per row, for an
-  attribute using `Brando.Type.StringList`.
+  attribute declared with [`:string_list`](blueprint_fields.md#string-lists)
+  (or `Brando.Type.StringList`).
 * `:disclosed_text`: shows "Label: value" and opens a text field on click,
   for values that rarely change.
 * `:hidden`: a hidden input. `:hidden_i18n` does the same for each language

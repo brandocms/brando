@@ -16,6 +16,7 @@ defmodule Brando.Blueprint.UtilsEctoTest do
     assert Utils.to_ecto_type(:image) == Brando.Type.Image
     assert Utils.to_ecto_type(:video) == Brando.Type.Video
     assert Utils.to_ecto_type(:i18n_string) == Brando.Type.I18nString
+    assert Utils.to_ecto_type(:string_list) == Brando.Type.StringList
     assert Utils.to_ecto_type(:decimal) == :decimal
     assert Utils.to_ecto_type({:array, :enum}) == {:array, Ecto.Enum}
     assert Utils.to_ecto_type({:array, Ecto.Enum}) == {:array, Ecto.Enum}
