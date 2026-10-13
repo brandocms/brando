@@ -311,6 +311,19 @@ defmodule Mix.Tasks.Brando.Migrate55PersistIdentifiersTest do
     igniter = migrate(Map.put(files, "lib/lett/articles/article.ex", file_level))
     refute source(igniter, "lib/lett/producers/producer.ex") =~ "persist_identifier"
 
+    # A later alias of the same name does not reach back: at the top of the
+    # file, and in the module's body after the input.
+    later_alias = file_level <> "\nalias Lett.Archived.Producer\n"
+    igniter = migrate(Map.put(files, "lib/lett/articles/article.ex", later_alias))
+    refute source(igniter, "lib/lett/producers/producer.ex") =~ "persist_identifier"
+
+    in_body =
+      String.replace(article, "  alias Lett.Producers.{Producer, Farm}\n", "  alias Lett.Producers.Producer\n")
+      |> String.replace(~r/\nend\n\z/, "\n\n  alias Lett.Archived.Producer\nend\n")
+
+    igniter = migrate(Map.put(files, "lib/lett/articles/article.ex", in_body))
+    refute source(igniter, "lib/lett/producers/producer.ex") =~ "persist_identifier"
+
     # An alias the task cannot resolve keeps the Blueprint.
     unresolved = String.replace(article, "  alias __MODULE__.Featured\n", "  alias unquote(:dynamic).Featured\n")
     igniter = migrate(Map.put(files, "lib/lett/articles/article.ex", unresolved))

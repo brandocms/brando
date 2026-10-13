@@ -221,44 +221,44 @@ if Code.ensure_loaded?(Igniter) do
 
     defp entries_may_select?(content, module) do
       case Sourceror.parse_string(content) do
-        {:ok, ast} -> ast |> module_scopes(nil, file_aliases(ast)) |> Enum.any?(&scope_may_select?(&1, module))
+        {:ok, ast} -> ast |> statements() |> scopes_in(nil, %{}) |> Enum.any?(&scope_may_select?(&1, module))
         _error -> true
       end
     end
 
-    defp scope_may_select?(%{relations: relations, inputs: inputs} = scope, module) do
-      sourced = for {name, {:ok, _references}} <- inputs, do: name
+    defp scope_may_select?(%{relations: relations, inputs: inputs, current: current}, module) do
+      sourced = for {name, {:ok, _references}, _aliases} <- inputs, do: name
 
       Enum.any?(relations, &(&1 not in sourced)) or
         Enum.any?(inputs, fn
-          {_name, {:ok, references}} ->
-            resolved = Enum.map(references, &resolve_reference(&1, scope))
+          {_name, {:ok, references}, aliases} ->
+            resolved = Enum.map(references, &resolve_reference(&1, current, aliases))
             :error in resolved or {:ok, module} in resolved
 
-          {_name, :unknown} ->
+          {_name, :unknown, _aliases} ->
             true
         end)
     end
 
-    # Aliases declared at the file's top level, outside any module.
-    defp file_aliases(ast), do: ast |> statements() |> Enum.reduce(%{}, &declare_alias(&1, nil, &2))
+    # The scopes of the modules among `statements`, read in order, as the
+    # compiler does: an alias reaches the statements after it, in its own
+    # module and the modules nested in it after it.
+    defp scopes_in(statements, parent, aliases) do
+      {_aliases, scopes} =
+        Enum.reduce(statements, {aliases, []}, fn
+          {:alias, _, _} = statement, {aliases, scopes} ->
+            {declare_alias(statement, parent, aliases), scopes}
 
-    # One scope per `defmodule` in the file: its name, the aliases in reach
-    # (the enclosing ones, then its body's, in order), and the `:entries`
-    # relations and inputs in it (not in a module nested in it).
-    defp module_scopes(ast, parent, enclosing) do
-      {_ast, scopes} =
-        Macro.prewalk(ast, [], fn
-          {:defmodule, _, [name, [{_do, body}]]}, scopes ->
-            {:skipped, scopes ++ module_scope(name, body, parent, enclosing)}
-
-          node, scopes ->
-            {node, scopes}
+          statement, {aliases, scopes} ->
+            {aliases, scopes ++ modules_within(statement, parent, aliases)}
         end)
 
       scopes
     end
 
+    # A module's scope: its name, the `:entries` relations and inputs in its
+    # body (not in a module nested in it), each input with the aliases in
+    # reach where it stands, and the scopes of its nested modules.
     defp module_scope(name, body, parent, enclosing) do
       # A nested `defmodule Name` defines `Parent.Name`.
       current =
@@ -270,11 +270,42 @@ if Code.ensure_loaded?(Igniter) do
         end
 
       statements = statements(body)
-      aliases = Enum.reduce(statements, enclosing, &declare_alias(&1, current, &2))
-      {relations, inputs} = statements |> Enum.map(&without_modules/1) |> entries_calls()
-      nested = Enum.flat_map(statements, &module_scopes(&1, current, aliases))
 
-      [%{current: current, aliases: aliases, relations: relations, inputs: inputs} | nested]
+      {_aliases, relations, inputs} =
+        Enum.reduce(statements, {enclosing, [], []}, fn statement, {aliases, relations, inputs} ->
+          aliases = declare_alias(statement, current, aliases)
+          {found_relations, found_inputs} = statement |> without_modules() |> entries_calls()
+
+          {aliases, relations ++ found_relations,
+           inputs ++ Enum.map(found_inputs, fn {name, sources} -> {name, sources, aliases} end)}
+        end)
+
+      nested = nested_scopes(statements, current, enclosing)
+      [%{current: current, relations: relations, inputs: inputs} | nested]
+    end
+
+    defp nested_scopes(statements, current, enclosing) do
+      {_aliases, scopes} =
+        Enum.reduce(statements, {enclosing, []}, fn statement, {aliases, scopes} ->
+          aliases = declare_alias(statement, current, aliases)
+          {aliases, scopes ++ modules_within(statement, current, aliases)}
+        end)
+
+      scopes
+    end
+
+    # The modules defined in `ast`, which may be a `defmodule` or hold some.
+    defp modules_within(ast, parent, aliases) do
+      {_ast, scopes} =
+        Macro.prewalk(ast, [], fn
+          {:defmodule, _, [name, [{_do, body}]]}, scopes ->
+            {:skipped, scopes ++ module_scope(name, body, parent, aliases)}
+
+          node, scopes ->
+            {node, scopes}
+        end)
+
+      scopes
     end
 
     defp statements({:__block__, _, statements}) when is_list(statements), do: statements
@@ -334,7 +365,7 @@ if Code.ensure_loaded?(Igniter) do
     defp expand({:__MODULE__, _, _}, current, _aliases), do: if(current, do: {:ok, current}, else: :error)
     defp expand(_reference, _current, _aliases), do: :error
 
-    defp resolve_reference(reference, %{current: current, aliases: aliases}) do
+    defp resolve_reference(reference, current, aliases) do
       with {:ok, parts} <- expand(reference, current, aliases), do: {:ok, Module.concat(parts)}
     end
 
