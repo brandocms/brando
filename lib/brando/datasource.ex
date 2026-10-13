@@ -257,13 +257,17 @@ defmodule Brando.Datasource do
   Grab list of entries from database.
 
   `type` is the datasource's type, `:list` for a list module and
-  `:selection` for the options of a selection. A list and a selection may
+  `:selection` or `:single` for picker options. A single datasource with
+  only a `get` callback returns no choices. A list and a selection may
   share a key; with `:*`, the list is found first.
   """
   def list_results(module_binary, key, vars, language, type \\ :*) do
     {module, atom_key} = Registry.resolve(module_binary, key)
-    ds = get_datasource(module, type, atom_key)
-    Callback.call(ds.list, [module_binary, language, vars])
+
+    case get_datasource(module, type, atom_key) do
+      %{type: :single, list: nil} -> {:ok, []}
+      ds -> Callback.call(ds.list, [module_binary, language, vars])
+    end
   end
 
   @doc """

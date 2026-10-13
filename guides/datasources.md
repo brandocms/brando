@@ -200,6 +200,10 @@ The block stores the choice in `block_identifiers`, just like assistant selectio
 Liquid receives `entries` and HEEx receives `@entries` as a list with zero or one
 entry, so the same iteration patterns work for both selection types.
 
+For `:single`, only `get` is required. The optional `list` callback supplies the
+picker's choices; without it, the picker has no new choices and existing selections
+still resolve through `get`.
+
 Outside a module, call
 `Brando.Datasource.get_single(YourBlueprint, "one_page", identifier)` directly.
 Function callbacks can also be MFA tuples; runtime arguments come first, followed

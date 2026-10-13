@@ -229,8 +229,15 @@ defmodule BrandoAdmin.Components.Form.Block.Events do
         )
       end
 
+    # A picker click deliberately changes the selection, including clearing
+    # a choice another editor just sent through replace_form.
+    target =
+      if belongs_to == :root,
+        do: ["entry_block", "block", "block_identifiers"],
+        else: ["child_block", "block_identifiers"]
+
     socket
-    |> Block.assign_block_form(new_form)
+    |> Block.assign_block_form(new_form, target: target)
     |> Block.render_module()
     |> Block.maybe_update_live_preview_block()
     |> then(&{:halt, &1})
