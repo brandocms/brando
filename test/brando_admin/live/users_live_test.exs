@@ -85,7 +85,14 @@ defmodule BrandoAdmin.UsersLiveTest do
     assert view |> element(".user-directory-columns") |> render() =~ if(groups?, do: "Legacy role", else: "Role")
 
     # Create
-    {form, _html} = live_form(conn, "/admin/users/create", "user_form")
+    {:ok, form, _html} =
+      view
+      |> element("a[href='/admin/users/create']")
+      |> render_click()
+      |> follow_redirect(conn, "/admin/users/create")
+
+    render_async(form, 5_000)
+    await_selector(form, "#user_form_form input")
     assert has_element?(form, "input[type=radio][name='user[language]'][value=en]")
     role = if groups?, do: %{}, else: %{"role" => "editor"}
 
@@ -114,7 +121,15 @@ defmodule BrandoAdmin.UsersLiveTest do
 
     # Update
     assert has_element?(view, "#{row(created)} a[href='/admin/users/update/#{created.id}']", "Coverage Editor")
-    {form, _html} = live_form(conn, "/admin/users/update/#{created.id}", "user_form")
+
+    {:ok, form, _html} =
+      view
+      |> element("#{row(created)} a[href='/admin/users/update/#{created.id}']", "Coverage Editor")
+      |> render_click()
+      |> follow_redirect(conn, "/admin/users/update/#{created.id}")
+
+    render_async(form, 5_000)
+    await_selector(form, "#user_form_form input")
     save_user(form, %{"name" => "Updated Coverage Editor"})
 
     view = listing(conn)
