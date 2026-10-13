@@ -84,9 +84,11 @@ defmodule Brando.Doctor.Checks.Configuration do
   """
   def mailer do
     mailer = Brando.Mailer.mailer()
-    # As configured: `Brando.Mailer.sender/0` drops a placeholder outside
-    # development.
-    from = Application.get_env(:brando, Brando.Mailer, [])[:from]
+    senders = senders()
+    # The first sender with a problem, else the first.
+    {site, from} =
+      Enum.find(senders, &is_nil(elem(&1, 1))) || Enum.find(senders, &Brando.Mailer.placeholder?(elem(&1, 1))) ||
+        hd(senders)
 
     cond do
       is_nil(mailer) ->
@@ -101,16 +103,11 @@ defmodule Brando.Doctor.Checks.Configuration do
          dgettext("doctor", "mailer module missing")}
 
       is_nil(from) ->
-        {:warning, dgettext("doctor", "Mailer: %{mailer}, no sender", mailer: inspect(mailer)),
-         dgettext("doctor", "no sender address"),
+        {:warning, no_sender_item(mailer, site), dgettext("doctor", "no sender address"),
          dgettext("doctor", "set the address Brando sends from: `config :brando, Brando.Mailer, from: …`")}
 
       Brando.Mailer.placeholder?(from) ->
-        {:error,
-         dgettext("doctor", "Mailer: %{mailer}, placeholder sender %{from}",
-           mailer: inspect(mailer),
-           from: format_from(from)
-         ), dgettext("doctor", "placeholder sender address"),
+        {:error, placeholder_item(mailer, from, site), dgettext("doctor", "placeholder sender address"),
          dgettext(
            "doctor",
            "set `config :brando, Brando.Mailer, from: …` to an address your mail provider sends for"
@@ -129,6 +126,63 @@ defmodule Brando.Doctor.Checks.Configuration do
          nil}
     end
   end
+
+  # `{site_key | nil, from}` for each sender Brando sends from, as
+  # configured: `Brando.Mailer.sender/0` drops a placeholder outside
+  # development. Each site sends from its own sender, or else the general
+  # one; without tenancy, or with sites that may fall back to it, the
+  # general one is checked too.
+  defp senders do
+    config = Application.get_env(:brando, Brando.Mailer, [])
+    sites = if is_map(config[:sites]), do: config[:sites], else: %{}
+    general = {nil, config[:from]}
+
+    site_senders =
+      for key <- site_keys(sites), do: {key, (sites[key] || [])[:from] || config[:from]}
+
+    if site_senders == [] or general_used?(sites), do: [general | site_senders], else: site_senders
+  end
+
+  defp site_keys(sites) do
+    case Brando.Tenant.mode() do
+      :single -> [Brando.config(:site_key)]
+      :multi -> sites |> Map.keys() |> Enum.sort()
+      _none -> []
+    end
+  rescue
+    _error -> []
+  end
+
+  # A multi-site installation's sites without a sender of their own send
+  # from the general one.
+  defp general_used?(sites) do
+    case Brando.Tenant.mode() do
+      :multi -> Enum.any?(Brando.Tenant.Registry.list_sites(), &is_nil((sites[&1.key] || [])[:from]))
+      _mode -> false
+    end
+  rescue
+    _error -> true
+  end
+
+  defp no_sender_item(mailer, nil), do: dgettext("doctor", "Mailer: %{mailer}, no sender", mailer: inspect(mailer))
+
+  defp no_sender_item(mailer, site),
+    do: dgettext("doctor", "Mailer: %{mailer}, no sender for site %{site}", mailer: inspect(mailer), site: site)
+
+  defp placeholder_item(mailer, from, nil),
+    do:
+      dgettext("doctor", "Mailer: %{mailer}, placeholder sender %{from}",
+        mailer: inspect(mailer),
+        from: format_from(from)
+      )
+
+  defp placeholder_item(mailer, from, site),
+    do:
+      dgettext("doctor", "Mailer: %{mailer}, placeholder sender %{from} for site %{site}",
+        mailer: inspect(mailer),
+        from: format_from(from),
+        site: site
+      )
 
   defp development_adapter?(mailer), do: adapter(mailer) in [nil, Swoosh.Adapters.Local, Swoosh.Adapters.Test]
 

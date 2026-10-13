@@ -283,6 +283,29 @@ defmodule Brando.Doctor.ChecksTest do
       assert fix =~ "an address your mail provider sends for"
     end
 
+    test "checks the sender each site sends from" do
+      put_test_env(:tenancy_mode, :single)
+      put_test_env(:site_key, "acme")
+
+      # A valid general sender, but the site's own is a placeholder.
+      put_test_env(Brando.Mailer,
+        from: {"Brando", "noreply@brandocms.com"},
+        sites: %{"acme" => [from: {"Acme", "noreply@example.com"}]}
+      )
+
+      assert {:error, item, "placeholder sender address", _fix} = Checks.Configuration.mailer()
+      assert item =~ "placeholder sender Acme <noreply@example.com> for site acme"
+
+      # A placeholder general sender the site does not send from.
+      put_test_env(Brando.Mailer,
+        from: {"Brando", "noreply@example.com"},
+        sites: %{"acme" => [from: {"Acme", "post@acme.no"}]}
+      )
+
+      assert {:ok, item, nil} = Checks.Configuration.mailer()
+      assert item =~ "from Acme <post@acme.no>"
+    end
+
     test "a development adapter in production is a warning" do
       put_test_env(Brando.Mailer, from: {"Brando", "noreply@brandocms.com"})
       put_test_env(:env, :prod)
