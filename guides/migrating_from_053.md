@@ -607,6 +607,8 @@ It takes the template's package versions, `engines` and `packageManager`
 (keeping the application's own packages, scripts and BrandoJS source), replaces
 `vite.config.js`, removes `svelte.config.cjs` and yarn/npm lockfiles, and
 replaces the Dockerfile's `assets_backend` stage with the template's pnpm stage.
+It also moves the admin's CSS build to native EuropaCSS (see
+[Native EuropaCSS](#native-europacss)).
 Customized CSS and other existing files are kept. It also moves the
 `assets_frontend` stage up to the same Node major when
 `assets/frontend/package.json` sets no `engines.node`, or one that allows it;
@@ -626,6 +628,105 @@ so rerun the setup after updating BrandoJS.
 `mix brando.doctor` reports admin assets from an older BrandoJS and suggests
 `npx yalc update` and `pnpm install`. On a yarn-era `assets/backend` that is not
 enough: run `mix brando.gen.backend --upgrade` first, then the setup above.
+
+#### Native EuropaCSS
+
+The admin's CSS builds with the native (Rust) EuropaCSS compiler through its
+Vite plugin, `@brandocms/vite-plugin-europacss`, instead of the legacy
+`@brandocms/europacss` PostCSS plugin. The upgrade task makes these changes to
+`assets/backend`, keeping the application's CSS and its own configuration:
+
+- `package.json` drops `@brandocms/europacss` and `autoprefixer` and adds the
+  Vite plugin; `vite.config.js` (replaced) runs it with `europa.json5`.
+- `europa.json5` is created. It extends Brando's preset, so the application
+  lists only what it changes:
+
+  ```json5
+  {
+    extends: './node_modules/@brandocms/brandojs/europa.json5',
+    theme: { colors: { dark: '#1d2422', blue: '#3a5f8a' } },
+  }
+  ```
+
+  Objects merge key by key with the preset's; arrays and plain values replace
+  them. The preset sets `nesting: 'expanded'`, so nested rules under a
+  selector list compile to plain lists, each with its own specificity, as the
+  legacy compiler wrote them, and `responsiveOrder: 'generated-last'` (below).
+- `postcss.config.cjs` and `europa.config.cjs` are removed when they are an
+  earlier template's, unchanged. An application's own is kept with a notice:
+  move its settings into `europa.json5` (`europa migrate-config
+  europa.config.cjs -o converted.json5` converts static ones) and its PostCSS
+  plugins into `vite.config.js`, then delete it. The converter warns that
+  `theme.typography.paddingDivider` is deprecated: it fed
+  `@column-typography`, which EuropaCSS removed in 0.2.0, so it had no effect
+  in 0.13 either. Delete it unless the application's CSS reads it with
+  `theme()`. `lineHeight` (the default for `vertical-rhythm()`) and `sections`
+  (applied with `@unpack`) remain supported.
+
+Until the native packages are published, a build needs the `europa`
+executable on `PATH` (`cargo build --locked --release -p europacss` in a
+EuropaCSS checkout, then add its `target/release`) and the Vite plugin from
+that checkout through Yalc: `npx yalc publish --private` in its
+`packages/vite`, then `npx yalc add --dev @brandocms/vite-plugin-europacss` in
+`assets/backend`. `mix brando.assets.setup` stops with these instructions when
+either is missing. The Docker build copies `assets/backend/.yalc`; it also
+needs `europa` in its Node image, which only the published package will
+provide.
+
+The application's admin CSS needs these changes; the upgrade task lists the
+`@row` and `@container;` it finds:
+
+- **Cascade layers.** The admin's styles are in the layers `reset, vendor,
+  brando, app`, in that order. Put the application's rules in `@layer app { … }`
+  and declare the order first, as the template's `css/app.css` does:
+  application rules then outrank Brando's whatever their selectors. Unlayered
+  rules outrank every layer. `!important` reverses layer order: an
+  `!important` in Brando's layer outranks one in `app`.
+- **`@row`** is gone. Write out what 0.13 compiled it to; `gap` is not
+  equivalent where children set their own margins:
+
+  ```css
+  .row {
+    display: flex;
+    flex-wrap: nowrap;            /* `wrap` for `@row N/wrap` */
+
+    > * {
+      @space margin-left 1;
+
+      &:nth-child(2n+1) {         /* `@row N`: Nn+1; bare `@row`: 1 */
+        margin-left: 0;
+      }
+    }
+  }
+  ```
+
+- **`@container;`** is now a CSS container query: use `@space container;`.
+- **Suffix nesting** (`&__title`, `&-pin`) is not CSS nesting. Write the full
+  class; `europa migrate --fix` rewrites the simple cases.
+- **`@keyframes` inside a rule** is an error: move it outside the selector.
+- **Responsive order is 0.13's.** The preset sets `responsiveOrder:
+  'generated-last'`: a hand-written `@media` stays where it is written, and
+  media from Europa's directives (`@space`, `@fontsize`, `@responsive`…)
+  comes after the plain rules of the stylesheet, as 0.13 appended it. Keep
+  it: the application's `europa.json5` compiles Brando's CSS as well, and
+  EuropaCSS's default, `'all-last'`, would move Brando's hand-written `@media`
+  after its plain rules too.
+- Package imports (`@import 'pkg/file.css'`) and Vite aliases work: the Vite
+  plugin resolves them.
+
+Check the stylesheet, then compare the old and new builds in a browser:
+
+```shell
+cd assets/backend
+europa migrate css/app.css --from 1.0.0-beta.6 --config europa.json5 --check
+europa compare http://localhost:4000/admin --before old-admin.css --after new-admin.css \
+  --stylesheet /assets/admin/admin-<hash>.css --viewport 1440x900 --viewport 390x844
+```
+
+`europa migrate` follows package imports from `node_modules`, as the Vite
+plugin does. Keep a copy of the CSS the legacy build wrote before upgrading;
+`europa compare` swaps it into a logged-in page (see EuropaCSS's guide to
+comparing rendered styles).
 
 ### Review a generated Florist configuration
 

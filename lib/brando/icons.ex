@@ -32,17 +32,22 @@ defmodule Brando.Icons do
   # One rule per icon, keyed on a class so the browser matches it in constant
   # time: `.lucide-house{--lucide:url("data:…")}`. `[data-icon]` paints
   # `currentColor` through that mask. This is the Phoenix generator's Heroicons
-  # technique: one DOM node and one dynamic attribute per icon.
+  # technique: one DOM node and one dynamic attribute per icon. The sheet is in
+  # the admin's lowest cascade layer, `reset`, so the `[data-icon]` defaults
+  # yield to every admin and application rule, as their zero specificity did
+  # before the admin's styles moved into layers.
   @svg_open ~s(<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'>)
 
   @stylesheet IO.iodata_to_binary([
+                "@layer reset{",
                 ":where([data-icon]){display:inline-block;flex:none;width:1.25rem;height:1.25rem;",
                 "vertical-align:middle;background-color:currentColor;",
                 "-webkit-mask:var(--lucide) center/contain no-repeat;mask:var(--lucide) center/contain no-repeat}",
                 for name <- @names do
                   body = icons |> Map.fetch!(name) |> String.replace("\"", "'")
                   [".lucide-", name, ~s[{--lucide:url("data:image/svg+xml;utf8,], @svg_open, body, ~s[</svg>")}]]
-                end
+                end,
+                "}"
               ])
 
   @stylesheet_gzip :zlib.gzip(@stylesheet)

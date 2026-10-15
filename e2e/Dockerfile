@@ -58,10 +58,9 @@ FROM node:22 AS assets_backend
 # Keep in step with `packageManager` in assets/backend/package.json
 RUN npm install --global pnpm@10.32.1
 
-# @brandocms/europacss fetches postcss-functions from GitHub, and the lockfile
-# may record it as an SSH remote. The build has no SSH key; the repository is
-# public, so fetch it over HTTPS.
-RUN git config --global url."https://github.com/".insteadOf "git@github.com:"
+# The admin's CSS builds with the native EuropaCSS compiler: the build needs
+# the `europa` executable on PATH and @brandocms/vite-plugin-europacss, which
+# is installed from .yalc until it is published.
 
 # The backend links BrandoJS from this checkout (`link:../../../assets`),
 # outside this build context. Pass it in as a named context:
@@ -76,13 +75,14 @@ RUN --mount=type=cache,target=/root/.local/share/pnpm/store,sharing=locked \
       pnpm install \
       --frozen-lockfile \
       --prefer-offline
-COPY --from=brandojs europa.config.js ./
+COPY --from=brandojs europa.json5 ./
 COPY --from=brandojs src ./src
 COPY --from=brandojs css ./css
 COPY --from=brandojs vite ./vite
 
 WORKDIR /opt/app/assets/backend
 COPY assets/backend/package.json assets/backend/pnpm-lock.yaml ./
+COPY assets/backend/.yalc ./.yalc
 RUN --mount=type=cache,target=/root/.local/share/pnpm/store,sharing=locked \
       pnpm install \
       --frozen-lockfile \

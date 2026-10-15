@@ -1,0 +1,43 @@
+/* The legacy `@row` and `@row <n>`, which EuropaCSS no longer has: a
+   non-wrapping flex row whose children are one gutter apart (a margin-left),
+   except the first of every <n>. `@extend %row;` keeps 0.13's output exactly;
+   `gap` is not equivalent where children set their own margins. Placeholders
+   emit nothing and expand where they are extended. */
+%row {
+  display: flex;
+  flex-wrap: nowrap;
+
+  > * {
+    @space margin-left 1;
+
+    &:nth-child(1) {
+      margin-left: 0;
+    }
+  }
+}
+
+%row-2 {
+  display: flex;
+  flex-wrap: nowrap;
+
+  > * {
+    @space margin-left 1;
+
+    &:nth-child(2n+1) {
+      margin-left: 0;
+    }
+  }
+}
+
+%row-3 {
+  display: flex;
+  flex-wrap: nowrap;
+
+  > * {
+    @space margin-left 1;
+
+    &:nth-child(3n+1) {
+      margin-left: 0;
+    }
+  }
+}

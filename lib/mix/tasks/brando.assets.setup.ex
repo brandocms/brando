@@ -17,7 +17,10 @@ defmodule Mix.Tasks.Brando.Assets.Setup do
   Publishes to a project-local Yalc store under `_build`, adds BrandoJS to the
   backend, and runs pnpm install in both Vite consumers. Unless `--no-build` is
   supplied, builds both consumers. It does not run a standalone framework build.
-  Node.js, pnpm and Yalc must already be installed.
+  Node.js, pnpm and Yalc must already be installed. Building the admin also
+  needs the native EuropaCSS compiler, `europa`, and its Vite plugin, which the
+  backend installs from `.yalc` until they are published; the task stops with
+  instructions when either is missing.
 
   `--backend-only` installs and builds the admin (`assets/backend`) alone, for
   applications whose frontend uses another package manager or build.
@@ -52,6 +55,8 @@ defmodule Mix.Tasks.Brando.Assets.Setup do
       Mix.raise("--source must point to the @brandocms/brandojs package directory.")
     end
 
+    check_europa!(backend, options[:build] != false)
+
     Enum.each(["node", "pnpm", "yalc"], fn tool ->
       unless System.find_executable(tool),
         do: Mix.raise("#{tool} is required by mix brando.assets.setup but was not found on PATH.")
@@ -64,6 +69,33 @@ defmodule Mix.Tasks.Brando.Assets.Setup do
       run!("pnpm", ["install"], path)
       if options[:build] != false, do: run!("pnpm", ["build"], path)
     end)
+  end
+
+  @europa_plugin "@brandocms/vite-plugin-europacss"
+
+  # The admin's CSS builds with the native EuropaCSS compiler. Until its
+  # packages are published, the backend installs the Vite plugin from .yalc
+  # and the build runs the `europa` executable from PATH.
+  defp check_europa!(backend, build?) do
+    package = backend |> Path.join("package.json") |> File.read!() |> Jason.decode!()
+    plugin = get_in(package, ["devDependencies", @europa_plugin]) || ""
+
+    if String.starts_with?(plugin, "file:") and not File.dir?(Path.join(backend, String.trim_leading(plugin, "file:"))) do
+      Mix.raise("""
+      assets/backend installs #{@europa_plugin} from #{String.trim_leading(plugin, "file:")}, which is missing. \
+      Until the package is published, add it from a EuropaCSS checkout: run `npx yalc publish --private` in its \
+      packages/vite, then `npx yalc add --dev #{@europa_plugin}` in assets/backend.
+      """)
+    end
+
+    if build? and is_nil(System.find_executable("europa")) and
+         not File.exists?(Path.join(backend, "node_modules/.bin/europa")) do
+      Mix.raise("""
+      Building the admin needs the native EuropaCSS compiler, `europa`, on PATH. Build it in a EuropaCSS \
+      checkout with `cargo build --locked --release -p europacss` and add its target/release to PATH, or \
+      rerun with --no-build.
+      """)
+    end
   end
 
   defp source_path(options) do

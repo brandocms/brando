@@ -60,13 +60,13 @@ WORKDIR /opt/app/assets/backend
 # Keep in step with `packageManager` in assets/backend/package.json
 RUN npm install --global pnpm@10.32.1
 
-# @brandocms/europacss fetches postcss-functions from GitHub, and the lockfile
-# may record it as an SSH remote. The build has no SSH key; the repository is
-# public, so fetch it over HTTPS.
-RUN git config --global url."https://github.com/".insteadOf "git@github.com:"
+# The admin's CSS builds with the native EuropaCSS compiler: the build needs
+# the `europa` executable on PATH and @brandocms/vite-plugin-europacss, which
+# is installed from .yalc until it is published.
 
 # The lockfile is the one `mix brando.assets.setup` writes; commit it.
-# BrandoJS itself is installed from .yalc.
+# BrandoJS itself (and the EuropaCSS Vite plugin, for now) is installed from
+# .yalc.
 COPY assets/backend/package.json assets/backend/pnpm-lock.yaml ./
 COPY assets/backend/.yalc ./.yalc
 

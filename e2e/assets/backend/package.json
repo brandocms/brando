@@ -12,9 +12,8 @@
     "@brandocms/jupiter": "5.0.0-beta.19"
   },
   "devDependencies": {
-    "@brandocms/europacss": "^0.13.1",
+    "@brandocms/vite-plugin-europacss": "file:.yalc/@brandocms/vite-plugin-europacss",
     "@sveltejs/vite-plugin-svelte": "7.3.1",
-    "autoprefixer": "^10.6.1",
     "svelte": "^5.57.2",
     "vite": "^8.3.3"
   },

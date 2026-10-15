@@ -38,6 +38,7 @@ defmodule Brando.IconsTest do
   test "the stylesheet holds one rule per icon and its path carries the version" do
     stylesheet = Icons.stylesheet()
 
+    assert stylesheet =~ ~r/^@layer reset\{:where\(\[data-icon\]\)\{.*\}\}$/s
     assert stylesheet =~ ~s(.lucide-house{--lucide:url\("data:image/svg+xml;utf8,<svg )
     assert length(String.split(stylesheet, ".lucide-")) - 1 == length(Icons.names())
     refute stylesheet =~ ~r/[#%]/

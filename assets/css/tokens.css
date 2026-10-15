@@ -1,15 +1,20 @@
 /* Admin colour tokens.
 
-   The only stylesheet allowed to contain hex colours: every other file uses
-   these custom properties. `.github/scripts/check_css_colors.sh` enforces this
-   in CI.
+   The roles with an entry in the admin palette (`theme.colors` in
+   europa.json5), and the palette's own names at the end, take their value
+   from it with `theme(colors.*)`, so an application's europa.json5 sets them;
+   the table is in europa.json5 and docs/admin-ui-design.md. The other roles
+   are defined here. This is the only
+   stylesheet allowed to contain hex colours: every other file uses these
+   custom properties. `.github/scripts/check_css_colors.sh` enforces both in
+   CI.
 
    Names describe a role, not a colour, so a role can change value (or gain a
    dark-mode value) without renaming its uses. See docs/admin-ui-design.md. */
 
 :root {
   /* Text */
-  --brando-ink: #272b2a;
+  --brando-ink: theme(colors.dark);
   --brando-muted: #626b66;
   /* Text and icons on a dark fill: the accent, a status colour, a photo */
   --brando-ink-inverse: #ffffff;
@@ -17,7 +22,7 @@
   --brando-faint: #9aa39c;
 
   /* Hairlines, borders and dividers */
-  --brando-line: #dce2dc;
+  --brando-line: theme(colors.peachDarkest);
   /* A border under the pointer or holding focus, and a drop target's outline */
   --brando-line-strong: #bacabd;
   /* Dividers between the rows inside a framed list or table, a step lighter
@@ -25,21 +30,21 @@
   --brando-line-soft: #ecf0ea;
 
   /* The one action colour: primary buttons, links, focus, progress */
-  --brando-accent: #254e3f;
+  --brando-accent: theme(colors.blue);
   --brando-accent-hover: #1a3d30;
 
   /* Surfaces */
-  --brando-surface-page: #fafbf9;
+  --brando-surface-page: theme(colors.peachLighter);
   --brando-surface: #ffffff;
-  --brando-surface-subform: #f8fbf6;
+  --brando-surface-subform: theme(colors.peach);
   --brando-line-subform: #e2e9df;
   --brando-surface-shaded: #fbfcfa;
   --brando-surface-hover: #f5f8f3;
-  --brando-surface-selected: #eef3ea;
+  --brando-surface-selected: theme(colors.peachDarker);
   /* A sage tint that sets a panel apart from the white around it: a neutral
      notice, a section header, an icon tile, a hovered secondary button */
   --brando-surface-tint: #f1f5ef;
-  --brando-overlay: rgb(30 43 37 / 30%);
+  --brando-overlay: theme(colors.overlay);
   /* The login box's layered shadow: a soft, deep lift for floating panels. */
   --brando-shadow-overlay: 0 2.8px 2.2px rgba(0, 0, 0, 0.02),
     0 6.7px 5.3px rgba(0, 0, 0, 0.028),
@@ -111,11 +116,11 @@
   --brando-module-peach-dot: #fdba74;
 
   /* Entry status. Always shown with a text label as well. */
-  --brando-status-published: #3cb371;
-  --brando-status-pending: #f1ac00;
-  --brando-status-draft: #636363;
-  --brando-status-disabled: #cd5c5c;
-  --brando-status-deleted: #171a18;
+  --brando-status-published: theme(colors.status.published);
+  --brando-status-pending: theme(colors.status.pending);
+  --brando-status-draft: theme(colors.status.draft);
+  --brando-status-disabled: theme(colors.status.disabled);
+  --brando-status-deleted: theme(colors.status.deleted);
 
   /* The sidebar's own inks: dark green text, a muted green for secondary
      text, a hairline, the hover tint and the surface of the current page. */
@@ -146,23 +151,29 @@
   --brando-chip-active-bg: var(--brando-surface-selected);
   --brando-chip-active-fg: var(--brando-accent);
 
-  /* Deprecated: legacy names Brando's own stylesheets no longer use. They are
-     kept for applications whose admin CSS still refers to them, and will be
-     removed in a later release. Use the role names above. */
+  /* The admin palette (`theme.colors` in europa.json5) at run time, under its
+     entry names, for application CSS that works with the palette rather than
+     a role. Brando's own stylesheets use the roles above. */
+  --brando-color-dark: theme(colors.dark);
+  --brando-color-blue: theme(colors.blue);
+  --brando-color-peach: theme(colors.peach);
+  --brando-color-peach-lighter: theme(colors.peachLighter);
+  --brando-color-peach-darker: theme(colors.peachDarker);
+  --brando-color-peach-darkest: theme(colors.peachDarkest);
+  --brando-color-overlay: theme(colors.overlay);
+  --brando-color-gray: theme(colors.gray);
+  --brando-color-gray-light: theme(colors.grayLight);
+  --brando-color-white: theme(colors.white);
+  --brando-color-black: theme(colors.black);
+
+  /* Earlier names for some roles, kept for application CSS that uses them.
+     `--brando-color-input` is the input background, not `colors.input`. */
   --brando-color-background: var(--brando-surface-page);
   --brando-color-content-background: var(--brando-surface);
   --brando-color-foreground: var(--brando-ink);
-  --brando-color-dark: var(--brando-ink);
-  --brando-color-blue: var(--brando-accent);
-  --brando-color-peach: var(--brando-surface-subform);
-  --brando-color-peach-darker: var(--brando-surface-selected);
   --brando-color-nav-background: var(--brando-surface-page);
   --brando-color-shaded: #fcfcfd;
   --brando-color-input: #ffffff;
-  --brando-color-white: #ffffff;
-  --brando-color-gray: #333333;
-  --brando-color-gray-light: #bcbcbc;
-  --brando-color-black: #000000;
   --brando-shaded-surface: var(--brando-surface-shaded);
   --brando-color-block-ref-background: #fcfcfc;
 }

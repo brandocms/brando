@@ -1,5 +1,3 @@
-@europa base;
-
 /* Native checkboxes, radios, range sliders and progress bars take the accent.
    accent-color is inherited, so this one declaration covers the admin. */
 :root {

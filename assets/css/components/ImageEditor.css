@@ -61,8 +61,6 @@
     border-top-color: var(--workspace-accent); border-radius: 50%;
     animation: image-editor-spin 900ms linear infinite;
   }
-  @keyframes image-editor-spin { to { transform: rotate(360deg); } }
-  @keyframes image-editor-loading-in { to { opacity: 1; } }
   @media (prefers-reduced-motion: reduce) {
     .image-editor-spinner { animation: none; }
     #image-editor-hook[aria-busy="true"] .image-editor-main .image-editor-loading-content {
@@ -147,3 +145,7 @@
     }
   }
 }
+
+@keyframes image-editor-loading-in { to { opacity: 1; } }
+
+@keyframes image-editor-spin { to { transform: rotate(360deg); } }

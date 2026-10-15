@@ -103,7 +103,10 @@ mix deps.compile brando   # in the site
 
 Admin JavaScript has to be published into the site as well: `npx yalc
 publish` in Brando's `assets`, then `npx yalc update @brandocms/brandojs` and
-`pnpm install` in the site's `assets/backend`, and restart its Vite.
+`pnpm install` in the site's `assets/backend`, and restart its Vite. The
+admin's CSS builds with native EuropaCSS: until its packages are published,
+the build needs `europa` on `PATH` and the Vite plugin from a EuropaCSS
+checkout (see [Native EuropaCSS](migrating_from_053.md#native-europacss)).
 
 The package installer calls the same `brando.install` task. Preserve your selected
 Git/path source while testing unreleased work; a bare `igniter.install brando`

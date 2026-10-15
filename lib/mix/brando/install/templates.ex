@@ -161,9 +161,8 @@ defmodule Mix.Brando.Install.Templates do
     {:eex, "scripts/sync_media_from_remote_to_local.sh", "scripts/sync_media_from_remote_to_local.sh"},
 
     # Backend tooling
-    {:copy, "assets/backend/europa.config.cjs", "assets/backend/europa.config.cjs"},
+    {:copy, "assets/backend/europa.json5", "assets/backend/europa.json5"},
     {:copy, "assets/backend/package.json", "assets/backend/package.json"},
-    {:copy, "assets/backend/postcss.config.cjs", "assets/backend/postcss.config.cjs"},
     {:copy, "assets/backend/README.md", "assets/backend/README.md"},
     {:copy, "assets/backend/vite.config.js", "assets/backend/vite.config.js"},
 
@@ -178,7 +177,6 @@ defmodule Mix.Brando.Install.Templates do
     # Backend src
     {:copy, "assets/backend/src/main.js", "assets/backend/src/main.js"},
     {:copy, "assets/backend/css/app.css", "assets/backend/css/app.css"},
-    {:copy, "assets/backend/css/blocks.css", "assets/backend/css/blocks.css"},
 
     # Frontend assets
     {:keep, "assets/frontend/public/fonts", "assets/frontend/public/fonts"},

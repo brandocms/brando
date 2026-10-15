@@ -483,15 +483,6 @@ figcaption.tiny {
     }
   }
 
-  @keyframes spin {
-    from {
-      transform: rotate(0deg);
-    }
-    to {
-      transform: rotate(360deg);
-    }
-  }
-
   .revisions-table {
     width: 100%;
     margin-top: 12px;

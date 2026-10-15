@@ -39,3 +39,7 @@ assets/frontend/.yalc
 
 # test_e2e_parallel.sh shard logs and media
 /tmp/
+
+# The EuropaCSS Vite adapter, installed locally with yalc until it is published
+/assets/backend/.yalc/
+/assets/backend/yalc.lock

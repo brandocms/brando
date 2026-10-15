@@ -1,7 +1,12 @@
 #!/usr/bin/env bash
-# Rejects hex colour literals in the admin stylesheets outside the tokens file.
+# Rejects hex colour literals in the admin stylesheets outside the tokens file,
+# and checks that the roles the admin palette owns come from it.
 #
-# Colours belong in assets/css/tokens.css as role custom properties. Files not
+# Colours belong in assets/css/tokens.css as role custom properties. The roles
+# with an entry in the palette (`theme.colors` in assets/europa.json5), and the
+# palette's own `--brando-color-*` names, must be set there with
+# `theme(colors.*)`, so an application's europa.json5 changes them; the other
+# roles hold their own values in tokens.css. Files not
 # yet converted are listed in .github/css-color-allowlist.txt with their
 # current literal count: a file may not gain literals, and when it loses some
 # its entry must be lowered (or removed at zero), so the list only shrinks.
@@ -73,6 +78,42 @@ if [ "${1:-}" = "--update" ]; then
 fi
 
 status=0
+
+# Custom property, palette entry: the roles in the table in assets/europa.json5
+# and the palette names in tokens.css.
+palette_roles="
+--brando-ink dark
+--brando-accent blue
+--brando-surface-page peachLighter
+--brando-surface-subform peach
+--brando-surface-selected peachDarker
+--brando-line peachDarkest
+--brando-overlay overlay
+--brando-status-published status.published
+--brando-status-pending status.pending
+--brando-status-draft status.draft
+--brando-status-disabled status.disabled
+--brando-status-deleted status.deleted
+--brando-color-dark dark
+--brando-color-blue blue
+--brando-color-peach peach
+--brando-color-peach-lighter peachLighter
+--brando-color-peach-darker peachDarker
+--brando-color-peach-darkest peachDarkest
+--brando-color-overlay overlay
+--brando-color-gray gray
+--brando-color-gray-light grayLight
+--brando-color-white white
+--brando-color-black black
+"
+
+while read -r role key; do
+  [ -n "$role" ] || continue
+  if ! grep -Eq "^[[:space:]]*${role}:[[:space:]]*theme\(colors\.${key}\);" "$tokens"; then
+    echo "$tokens: set $role from the admin palette, as \`$role: theme(colors.$key);\`. Change the colour in assets/europa.json5." >&2
+    status=1
+  fi
+done <<< "$palette_roles"
 
 while read -r file n; do
   allowed=$(awk -v f="$file" '$1 == f { print $2 }' "$allowlist")
