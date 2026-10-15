@@ -14,7 +14,7 @@ import Config
 config :<%= application_name %>, <%= application_module %>Web.Endpoint,
   http: [:inet6, port: {:system, "PORT"}],
   # force_ssl: [rewrite_on: [:x_forwarded_proto]],
-  check_origin: ["//*.b-y.no", "//localhost:4000"],
+  check_origin: ["//*.<%= application_name %>.com", "//localhost:4000"],
   server: true,
   cache_static_manifest: "priv/static/cache_manifest.json"
 

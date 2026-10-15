@@ -19,8 +19,6 @@ config :<%= application_name %>, <%= application_module %>Web.Endpoint,
   check_origin: [
     "//<%= application_name %>.com",
     "//*.<%= application_name %>.com",
-    "//*.univers.agency",
-    "//*.b-y.no",
     "//localhost:4000"
   ],
   server: true,
