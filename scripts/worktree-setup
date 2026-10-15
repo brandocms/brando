@@ -5,11 +5,6 @@
 #   scripts/worktree-setup          slug from the worktree's directory name
 #   scripts/worktree-setup myslug   name the test database brando_test_myslug
 #
-# The E2E admin needs the native EuropaCSS compiler and its Vite plugin, which
-# are not published yet: run with EUROPA_REPO=/path/to/europacss (a checkout
-# with the compiler built) to install them, and keep its target/release on
-# PATH when building the admin later.
-#
 # Steps: Elixir deps (offline from the Hex cache first), E2E deps, a test-env
 # compile, the unit-test database (create, migrate, seed once), pnpm installs
 # with pnpm 10, E2E asset builds when missing, Playwright's Chromium, and the
@@ -107,20 +102,6 @@ pnpm_install() {
   return "$status"
 }
 
-# The E2E admin's CSS builds with the native EuropaCSS compiler. Until its
-# packages are published, EUROPA_REPO names a EuropaCSS checkout with the
-# compiler built (cargo build --locked --release -p europacss): its `europa`
-# goes on PATH, and its Vite plugin into e2e/assets/backend/.yalc.
-europa_plugin="e2e/assets/backend/.yalc/@brandocms/vite-plugin-europacss"
-if [ -n "${EUROPA_REPO:-}" ]; then
-  export PATH="$EUROPA_REPO/target/release:$PATH"
-fi
-
-europa_vite_plugin() {
-  (cd "$EUROPA_REPO/packages/vite" && tool npx -y yalc@1.0.0-pre.53 publish --private) &&
-    (cd e2e/assets/backend && tool npx -y yalc@1.0.0-pre.53 add --dev @brandocms/vite-plugin-europacss)
-}
-
 backend_build() {
   (cd e2e/assets/backend && CI=true tool npx -y pnpm@10 build)
 }
@@ -151,24 +132,13 @@ fi
 step "compile (MIX_ENV=test)" test_compile
 step "test database $(basename "$test_db_url")" test_database
 step "pnpm install assets" pnpm_install assets
-if [ ! -d "$europa_plugin" ] && [ -n "${EUROPA_REPO:-}" ]; then
-  step "EuropaCSS Vite plugin (Yalc)" europa_vite_plugin
-fi
-if [ -d "$europa_plugin" ]; then
-  step "pnpm install e2e/assets/backend" pnpm_install e2e/assets/backend
-  backend_ready=true
-else
-  echo "setup: E2E backend skipped: set EUROPA_REPO to a EuropaCSS checkout (see scripts/worktree-setup)"
-  backend_ready=false
-fi
+step "pnpm install e2e/assets/backend" pnpm_install e2e/assets/backend
 step "pnpm install e2e/playwright" pnpm_install e2e/playwright
 
 if [ -f e2e/priv/static/admin_manifest.json ]; then
   echo "setup: E2E backend assets already built (rebuild after JS/CSS changes)"
-elif [ "$backend_ready" = true ] && command -v europa >/dev/null 2>&1; then
-  step "build E2E backend assets" backend_build
 else
-  echo "setup: E2E backend assets not built: the build needs \`europa\` on PATH (EUROPA_REPO)"
+  step "build E2E backend assets" backend_build
 fi
 if [ -f e2e/priv/static/manifest.json ]; then
   echo "setup: E2E frontend assets already built"

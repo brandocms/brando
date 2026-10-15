@@ -14,7 +14,8 @@
   cannot be nested in a rule; the upgrade task lists the `@row`s it finds.
   `theme.colors` is the admin's supported palette: `tokens.css` sets the
   matching roles and the `--brando-color-*` names from it, so an application's
-  `europa.json5` recolours the admin. Until the native packages are
-  published, a build needs the `europa` executable and the Vite plugin from a
-  EuropaCSS checkout. See "Native EuropaCSS" in
+  `europa.json5` recolours the admin. The plugin and
+  `@brandocms/europacss-cli` are pinned to 0.1.0-beta.0 from npm, which
+  installs the compiler for the build machine's platform; no Rust toolchain
+  is needed, and the CLI is `pnpm exec europa`. See "Native EuropaCSS" in
   [Migrating from 0.53](guides/migrating_from_053.md#native-europacss).

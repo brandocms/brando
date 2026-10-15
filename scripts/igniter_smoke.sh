@@ -3,7 +3,6 @@ set -euo pipefail
 
 # Requires an explicit disposable PostgreSQL service, phx_new 1.8.13, pnpm,
 # Yalc and Playwright Chromium. Only the generated consumer builds JS/CSS.
-# Until the native EuropaCSS packages are published, also EUROPA_REPO (below).
 : "${BRANDO_SMOKE_PGPORT:?Set BRANDO_SMOKE_PGPORT to a disposable PostgreSQL service}"
 smoke_mode="${1:-none}"
 case "$smoke_mode" in none|single|multi) ;; *) echo 'Expected none, single or multi' >&2; exit 2 ;; esac
@@ -63,14 +62,6 @@ cmp "$smoke_root/before-rerun" "$smoke_root/after-rerun"
 elixir "$framework_dir/scripts/igniter_smoke/check_agent_files.exs" "$framework_dir" > "$smoke_root/logs/agent-files.log" 2>&1
 
 elixir "$framework_dir/scripts/igniter_smoke/frontend_fixture.exs"
-# The admin's CSS builds with the native EuropaCSS compiler. Until its packages
-# are published, EUROPA_REPO names a EuropaCSS checkout with the compiler built:
-# its `europa` goes on PATH and its Vite plugin into assets/backend/.yalc.
-if [[ -n "${EUROPA_REPO:-}" ]]; then
-  export PATH="$EUROPA_REPO/target/release:$PATH"
-  (cd "$EUROPA_REPO/packages/vite" && yalc publish --private --store-folder "$smoke_root/europa_yalc") > "$smoke_root/logs/europa-plugin.log" 2>&1
-  (cd assets/backend && yalc add --dev @brandocms/vite-plugin-europacss --store-folder "$smoke_root/europa_yalc") >> "$smoke_root/logs/europa-plugin.log" 2>&1
-fi
 mix brando.assets.setup > "$smoke_root/logs/assets.log" 2>&1
 mix run --no-start "$framework_dir/scripts/igniter_smoke/check_assets.exs" "$framework_dir" > "$smoke_root/logs/asset-bytes.log" 2>&1
 mix ecto.create > "$smoke_root/logs/database-create.log" 2>&1

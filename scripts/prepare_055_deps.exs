@@ -92,12 +92,9 @@ defmodule Brando.Prepare055Deps do
   defp node_advice(:ok, _advice), do: ""
 
   defp node_advice({:odd, major}, advice),
-    do: ". Node #{major} is an odd release, which pnpm and yarn refuse for Vite 8 and the asset packages: use #{advice}."
+    do: ". Node #{major} is an odd release, which is not LTS: use #{advice}."
 
   defp node_advice({:old, major}, advice), do: ". Node #{major} is older than Brando is tested on: use #{advice}."
-
-  defp node_advice({:below_minimum, minimum}, advice),
-    do: ", older than Vite 8 accepts (#{minimum}): use #{advice}."
 
   defp node_advice(:unknown, advice), do: ", not a version this reads: use #{advice}."
 

@@ -179,11 +179,11 @@ Pin the toolchain with mise or asdf:
   1.8's code reloader unloads every consolidated protocol on every request,
   which adds 50 to 70 ms to each request in development. Releases have no
   code reloader.
-- Node 22. Brando's `.mise.toml` pins it, CI builds with it, and the template
-  Dockerfile's `node:22` stages, which `mix brando.gen.backend --upgrade`
+- Node 24. Brando's `.mise.toml` pins it, CI builds with it, and the template
+  Dockerfile's `node:24` stages, which `mix brando.gen.backend --upgrade`
   writes (see [Admin assets](#admin-assets)), build with it. The admin's
-  `engines` (`^20.19 || ^22.12 || >=24`) rejects an odd release such as
-  Node 23 in both yarn and pnpm installs.
+  `engines` (`>=24.0.0`) rejects Node 22 and older, and the odd 23, in pnpm
+  installs.
 
 `scripts/prepare_055_deps.exs` and `mix brando.doctor` print the `node` on the
 PATH and warn when it is an odd release or older than the one Brando is tested
@@ -637,7 +637,8 @@ Vite plugin, `@brandocms/vite-plugin-europacss`, instead of the legacy
 `assets/backend`, keeping the application's CSS and its own configuration:
 
 - `package.json` drops `@brandocms/europacss` and `autoprefixer` and adds the
-  Vite plugin; `vite.config.js` (replaced) runs it with `europa.json5`.
+  Vite plugin and `@brandocms/europacss-cli`, both from npm at an exact
+  version; `vite.config.js` (replaced) runs the plugin with `europa.json5`.
 - `europa.json5` is created. It extends Brando's preset, so the application
   lists only what it changes:
 
@@ -657,7 +658,7 @@ Vite plugin, `@brandocms/vite-plugin-europacss`, instead of the legacy
   packing; the compiled CSS is unaffected.
 - `postcss.config.cjs` and `europa.config.cjs` are removed when they are an
   earlier template's, unchanged. An application's own is kept with a notice:
-  move its settings into `europa.json5` (`europa migrate-config
+  move its settings into `europa.json5` (`pnpm exec europa migrate-config
   europa.config.cjs -o converted.json5` converts static ones) and its PostCSS
   plugins into `vite.config.js`, then delete it. The converter warns that
   `theme.typography.paddingDivider` is deprecated: it fed
@@ -666,15 +667,13 @@ Vite plugin, `@brandocms/vite-plugin-europacss`, instead of the legacy
   `theme()`. `lineHeight` (the default for `vertical-rhythm()`) and `sections`
   (applied with `@unpack`) remain supported.
 
-Until the native packages are published, a build needs the `europa`
-executable on `PATH` (`cargo build --locked --release -p europacss` in a
-EuropaCSS checkout, then add its `target/release`) and the Vite plugin from
-that checkout through Yalc: `npx yalc publish --private` in its
-`packages/vite`, then `npx yalc add --dev @brandocms/vite-plugin-europacss` in
-`assets/backend`. `mix brando.assets.setup` stops with these instructions when
-either is missing. The Docker build copies `assets/backend/.yalc`; it also
-needs `europa` in its Node image, which only the published package will
-provide.
+`@brandocms/europacss-cli` provides the compiler: pnpm installs its
+executable for the machine it runs on from the lockfile's optional
+dependencies (macOS, Windows, and Linux with glibc or musl, x64 and arm64), so
+no Rust toolchain is needed. Install on the machine that builds, as the
+template Dockerfile does, rather than copying `node_modules` between
+platforms, and never with `--no-optional`. The CLI is `pnpm exec europa` in
+`assets/backend`.
 
 The application's admin CSS needs these changes; the upgrade task lists the
 `@row` and `@container;` it finds:
@@ -705,7 +704,7 @@ The application's admin CSS needs these changes; the upgrade task lists the
 
 - **`@container;`** is now a CSS container query: use `@space container;`.
 - **Suffix nesting** (`&__title`, `&-pin`) is not CSS nesting. Write the full
-  class; `europa migrate --fix` rewrites the simple cases.
+  class; `pnpm exec europa migrate --fix` rewrites the simple cases.
 - **`@keyframes` inside a rule** is an error: move it outside the selector.
 - **Responsive order is 0.13's.** The preset sets `responsiveOrder:
   'generated-last'`: a hand-written `@media` stays where it is written, and
@@ -721,8 +720,8 @@ Check the stylesheet, then compare the old and new builds in a browser:
 
 ```shell
 cd assets/backend
-europa migrate css/app.css --from 1.0.0-beta.6 --config europa.json5 --check
-europa compare http://localhost:4000/admin --before old-admin.css --after new-admin.css \
+pnpm exec europa migrate css/app.css --from 1.0.0-beta.6 --config europa.json5 --check
+pnpm exec europa compare http://localhost:4000/admin --before old-admin.css --after new-admin.css \
   --stylesheet /assets/admin/admin-<hash>.css --viewport 1440x900 --viewport 390x844
 ```
 

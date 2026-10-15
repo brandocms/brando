@@ -15,9 +15,12 @@ importers:
         specifier: 5.0.0-beta.19
         version: 5.0.0-beta.19
     devDependencies:
+      '@brandocms/europacss-cli':
+        specifier: 0.1.0-beta.0
+        version: 0.1.0-beta.0
       '@brandocms/vite-plugin-europacss':
-        specifier: file:.yalc/@brandocms/vite-plugin-europacss
-        version: file:.yalc/@brandocms/vite-plugin-europacss(vite@8.3.3)
+        specifier: 0.1.0-beta.0
+        version: 0.1.0-beta.0(vite@8.3.3)
       '@sveltejs/vite-plugin-svelte':
         specifier: 7.3.1
         version: 7.3.1(svelte@5.57.2)(vite@8.3.3)
@@ -30,12 +33,56 @@ importers:
 
 packages:
 
+  '@brandocms/europacss-cli@0.1.0-beta.0':
+    resolution: {integrity: sha512-xsWlgAzbp+ERhJcPOMa4KZNOs90i6ONtT7GglmwyNjuiPyiKDE32yRcmJfrW6ZXvJ/PHyTxDCotfBN5JpiehwA==}
+    engines: {node: ^22.12.0 || >=24.0.0}
+    hasBin: true
+
+  '@brandocms/europacss-darwin-arm64@0.1.0-beta.0':
+    resolution: {integrity: sha512-yYF21E63t7TiYm9xUm2EpMEI2CJoa3lfnDWHNCrV6ODgXcgX8GZwiLiR8t3OZdukuSq3mEiLxAWcau/C5eaGug==}
+    cpu: [arm64]
+    os: [darwin]
+
+  '@brandocms/europacss-darwin-x64@0.1.0-beta.0':
+    resolution: {integrity: sha512-BwmrHKH5xLPybbvLZlDx3ehjN4p9n7HS0zy82RQUOBoV2c3xqiMRZN+Us/XlESdb6xVJgy6JojNixE74D6rMTQ==}
+    cpu: [x64]
+    os: [darwin]
+
+  '@brandocms/europacss-linux-arm64-gnu@0.1.0-beta.0':
+    resolution: {integrity: sha512-PRCdx1b2LV9Ae1LbIuf9GyKpUOhX49iPyBrexgGHmgu091Ay3BvYWioRZlN7hplvYMpP0dban9LXEwubYMt5ww==}
+    cpu: [arm64]
+    os: [linux]
+    libc: [glibc]
+
+  '@brandocms/europacss-linux-arm64-musl@0.1.0-beta.0':
+    resolution: {integrity: sha512-zhzTmUCt/3xQD5JnKd+MBQkhiKtZikHKXedRH6Emh8vOX9uUOLRZmiiFsuRICa5fd7T0uD67AxioPrL5vAdSvg==}
+    cpu: [arm64]
+    os: [linux]
+    libc: [musl]
+
+  '@brandocms/europacss-linux-x64-gnu@0.1.0-beta.0':
+    resolution: {integrity: sha512-ULwZl98nqACRVtqSgKRJmfa3bqzgok7qoD41zm1mGIgq31mGpkv7sRw2kZ7WXjUAW319HCC5Uam4Akm/kZjBaw==}
+    cpu: [x64]
+    os: [linux]
+    libc: [glibc]
+
+  '@brandocms/europacss-linux-x64-musl@0.1.0-beta.0':
+    resolution: {integrity: sha512-5dJARPMbZ/55SAw6vXlFER6ZoYOsBUz2XRFG3w1fF95ONInAd1K3X9KhySEkOyOE8kPDhvuty3bv5AT/eguYIg==}
+    cpu: [x64]
+    os: [linux]
+    libc: [musl]
+
+  '@brandocms/europacss-win32-x64@0.1.0-beta.0':
+    resolution: {integrity: sha512-VgnmztGkbkpXDq1a1scIjhpKZy6rTk85OjXEhmWPk/ig7MWvR3Ck31KK6NdaROu8Oql3GQuzaFj4oGZDdG+qjQ==}
+    cpu: [x64]
+    os: [win32]
+
   '@brandocms/jupiter@5.0.0-beta.19':
     resolution: {integrity: sha512-8oa6L5uCcfoJc8MgBUNDMM3LsboN70KUzOcBZtM3htlnr02kLRdlFO+wPcDkBNp+Gg2pgDiVXf2A3JCCdoeZ2g==}
 
-  '@brandocms/vite-plugin-europacss@file:.yalc/@brandocms/vite-plugin-europacss':
-    resolution: {directory: .yalc/@brandocms/vite-plugin-europacss, type: directory}
-    engines: {node: '>=20.19'}
+  '@brandocms/vite-plugin-europacss@0.1.0-beta.0':
+    resolution: {integrity: sha512-Am4fGiwKifH+GagxQ0g8jgNfMfta7uuzVu/PnUAydmyPE+0IXO0KpXJotiMH5kguID2OBCE2+jj693pSDah8qA==}
+    engines: {node: ^22.12.0 || >=24.0.0}
     peerDependencies:
       vite: ^6.4.3 || ^8.3.0
 
@@ -444,6 +491,37 @@ packages:
 
 snapshots:
 
+  '@brandocms/europacss-cli@0.1.0-beta.0':
+    optionalDependencies:
+      '@brandocms/europacss-darwin-arm64': 0.1.0-beta.0
+      '@brandocms/europacss-darwin-x64': 0.1.0-beta.0
+      '@brandocms/europacss-linux-arm64-gnu': 0.1.0-beta.0
+      '@brandocms/europacss-linux-arm64-musl': 0.1.0-beta.0
+      '@brandocms/europacss-linux-x64-gnu': 0.1.0-beta.0
+      '@brandocms/europacss-linux-x64-musl': 0.1.0-beta.0
+      '@brandocms/europacss-win32-x64': 0.1.0-beta.0
+
+  '@brandocms/europacss-darwin-arm64@0.1.0-beta.0':
+    optional: true
+
+  '@brandocms/europacss-darwin-x64@0.1.0-beta.0':
+    optional: true
+
+  '@brandocms/europacss-linux-arm64-gnu@0.1.0-beta.0':
+    optional: true
+
+  '@brandocms/europacss-linux-arm64-musl@0.1.0-beta.0':
+    optional: true
+
+  '@brandocms/europacss-linux-x64-gnu@0.1.0-beta.0':
+    optional: true
+
+  '@brandocms/europacss-linux-x64-musl@0.1.0-beta.0':
+    optional: true
+
+  '@brandocms/europacss-win32-x64@0.1.0-beta.0':
+    optional: true
+
   '@brandocms/jupiter@5.0.0-beta.19':
     dependencies:
       lodash.defaultsdeep: 4.6.1
@@ -453,8 +531,9 @@ snapshots:
       - react
       - react-dom
 
-  '@brandocms/vite-plugin-europacss@file:.yalc/@brandocms/vite-plugin-europacss(vite@8.3.3)':
+  '@brandocms/vite-plugin-europacss@0.1.0-beta.0(vite@8.3.3)':
     dependencies:
+      '@brandocms/europacss-cli': 0.1.0-beta.0
       vite: 8.3.3
 
   '@jridgewell/gen-mapping@0.3.13':

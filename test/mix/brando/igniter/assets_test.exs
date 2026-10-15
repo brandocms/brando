@@ -140,8 +140,12 @@ defmodule Mix.Brando.Igniter.AssetsTest do
       refute Map.has_key?(package["devDependencies"], "@brandocms/europacss")
       refute Map.has_key?(package["devDependencies"], "autoprefixer")
 
-      assert package["devDependencies"]["@brandocms/vite-plugin-europacss"] ==
-               wanted["devDependencies"]["@brandocms/vite-plugin-europacss"]
+      # Both EuropaCSS packages at the template's exact npm version, the CLI
+      # for `pnpm exec europa`.
+      for name <- ~w(@brandocms/europacss-cli @brandocms/vite-plugin-europacss) do
+        assert package["devDependencies"][name] == wanted["devDependencies"][name]
+        assert package["devDependencies"][name] =~ ~r/^\d+\.\d+\.\d+/
+      end
 
       assert IgniterCase.source(plan, "assets/backend/vite.config.js") == template("assets/backend/vite.config.js")
       Igniter.Test.assert_rms(plan, ["assets/backend/svelte.config.cjs", "assets/backend/yarn.lock"])
@@ -223,7 +227,7 @@ defmodule Mix.Brando.Igniter.AssetsTest do
     test "says the assets_frontend stage keeps its Node image when there is no frontend package to check" do
       [notice] = upgrade(old_backend()).notices |> Enum.filter(&(&1 =~ "assets_frontend"))
       assert notice =~ "still builds on node:18"
-      assert notice =~ "which builds on node:22"
+      assert notice =~ "which builds on node:24"
       assert notice =~ "There is no assets/frontend/package.json"
 
       {_, stage, _} = Mix.Brando.Igniter.Assets.dockerfile_stage(template("Dockerfile"), "assets_frontend")
@@ -282,44 +286,6 @@ defmodule Mix.Brando.Igniter.AssetsTest do
         try do
           assert_raise Mix.Error, ~r/is required by mix brando.assets.setup/, fn ->
             Mix.Tasks.Brando.Assets.Setup.run(["--source", source, "--no-build", "--backend-only"])
-          end
-        after
-          System.put_env("PATH", path)
-        end
-      end)
-    after
-      File.rm_rf!(directory)
-    end
-  end
-
-  test "brando.assets.setup says how to provide the unpublished EuropaCSS compiler and Vite plugin" do
-    directory = Path.join(System.tmp_dir!(), "brando-europa-#{System.unique_integer([:positive])}")
-    source = Path.join(directory, "brandojs")
-    package = ~s({"devDependencies": {"@brandocms/vite-plugin-europacss": "file:.yalc/@brandocms/vite-plugin-europacss"}})
-
-    try do
-      File.mkdir_p!(Path.join(directory, "assets/backend"))
-      File.mkdir_p!(source)
-      File.write!(Path.join(directory, "assets/backend/package.json"), package)
-      File.write!(Path.join(source, "package.json"), ~s({"name": "@brandocms/brandojs"}))
-
-      File.cd!(directory, fn ->
-        assert_raise Mix.Error, ~r/yalc add --dev @brandocms\/vite-plugin-europacss/, fn ->
-          Mix.Tasks.Brando.Assets.Setup.run(["--source", source, "--backend-only"])
-        end
-
-        File.mkdir_p!("assets/backend/.yalc/@brandocms/vite-plugin-europacss")
-        path = System.get_env("PATH")
-        System.put_env("PATH", "")
-
-        try do
-          assert_raise Mix.Error, ~r/native EuropaCSS compiler, `europa`, on PATH/, fn ->
-            Mix.Tasks.Brando.Assets.Setup.run(["--source", source, "--backend-only"])
-          end
-
-          # Without a build it goes on to the tool checks.
-          assert_raise Mix.Error, ~r/is required by mix brando.assets.setup/, fn ->
-            Mix.Tasks.Brando.Assets.Setup.run(["--source", source, "--backend-only", "--no-build"])
           end
         after
           System.put_env("PATH", path)

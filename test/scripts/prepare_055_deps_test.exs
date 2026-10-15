@@ -140,15 +140,13 @@ defmodule Brando.Scripts.Prepare055DepsTest do
   test "prints the running Node, and what to use instead of an odd release", %{tmp_dir: tmp_dir} do
     dir = app(Path.join(tmp_dir, "app"), @before_state)
 
-    odd = run_script(["--dry-run", dir], node_on_path(Path.join(tmp_dir, "odd"), "v23.11.0"))
+    odd = run_script(["--dry-run", dir], node_on_path(Path.join(tmp_dir, "odd"), "v25.2.0"))
 
     assert odd =~
-             "Node: v23.11.0. Node 23 is an odd release, which pnpm and yarn refuse for Vite 8 and the asset packages"
+             "Node: v25.2.0. Node 25 is an odd release, which is not LTS: use Node 24 (or another even LTS major ≥ 24)."
 
-    assert odd =~ "use Node 22 (or another even LTS major ≥ 22)."
-
-    even = run_script(["--dry-run", dir], node_on_path(Path.join(tmp_dir, "even"), "v22.15.0"))
-    assert even =~ "Node: v22.15.0\n"
+    even = run_script(["--dry-run", dir], node_on_path(Path.join(tmp_dir, "even"), "v24.9.0"))
+    assert even =~ "Node: v24.9.0\n"
   end
 
   test "rewrites a Lett-shaped mix.exs as the upgrade did by hand", %{tmp_dir: tmp_dir} do

@@ -53,14 +53,14 @@ RUN mix compile
 # - job: assets backend
 # -----------------------------------
 
-FROM node:22 AS assets_backend
+FROM node:24 AS assets_backend
 
 # Keep in step with `packageManager` in assets/backend/package.json
 RUN npm install --global pnpm@10.32.1
 
-# The admin's CSS builds with the native EuropaCSS compiler: the build needs
-# the `europa` executable on PATH and @brandocms/vite-plugin-europacss, which
-# is installed from .yalc until it is published.
+# The admin's CSS builds with the native EuropaCSS compiler. pnpm installs
+# its executable for this image's platform from the lockfile's optional
+# dependencies, so never pass --no-optional or copy node_modules in.
 
 # The backend links BrandoJS from this checkout (`link:../../../assets`),
 # outside this build context. Pass it in as a named context:
@@ -82,7 +82,6 @@ COPY --from=brandojs vite ./vite
 
 WORKDIR /opt/app/assets/backend
 COPY assets/backend/package.json assets/backend/pnpm-lock.yaml ./
-COPY assets/backend/.yalc ./.yalc
 RUN --mount=type=cache,target=/root/.local/share/pnpm/store,sharing=locked \
       pnpm install \
       --frozen-lockfile \
@@ -98,7 +97,7 @@ RUN pnpm build
 # - job: assets frontend
 # -----------------------------------
 
-FROM node:22 AS assets_frontend
+FROM node:24 AS assets_frontend
 WORKDIR /opt/app/assets/frontend
 ENV YARN_CACHE_FOLDER ~/.yarn
 

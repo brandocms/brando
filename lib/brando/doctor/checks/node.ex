@@ -1,9 +1,9 @@
 defmodule Brando.Doctor.Checks.Node do
   @moduledoc """
   The Node.js on the PATH, which builds the admin and frontend assets,
-  against what Brando is tested on (`Brando.Toolchain`): an odd release, or
-  one older than the asset packages accept, fails their install with an
-  engines error, or nothing checks it until then.
+  against what Brando is tested on (`Brando.Toolchain`): one older than the
+  asset packages accept fails their install with an engines error, and an odd
+  release is not LTS, or nothing checks it until then.
   """
   use Brando.Doctor.Check
   use Gettext, backend: Brando.Gettext
@@ -40,7 +40,7 @@ defmodule Brando.Doctor.Checks.Node do
           fix:
             dgettext(
               "doctor",
-              "use %{advice}: odd releases are not LTS, and pnpm and yarn refuse them for Vite 8 and the asset packages",
+              "use %{advice}: odd releases are not LTS",
               advice: advice()
             )
         )
@@ -51,12 +51,6 @@ defmodule Brando.Doctor.Checks.Node do
             version: version,
             major: major
           ),
-          fix: dgettext("doctor", "use %{advice}", advice: advice())
-        )
-
-      {:below_minimum, minimum} ->
-        warning(
-          dgettext("doctor", "%{version}: older than Vite 8 accepts (%{minimum})", version: version, minimum: minimum),
           fix: dgettext("doctor", "use %{advice}", advice: advice())
         )
 

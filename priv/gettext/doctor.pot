@@ -357,11 +357,6 @@ msgstr ""
 msgid "%{version}: Node %{major} is older than Brando is tested on"
 msgstr ""
 
-#: lib/brando/doctor/checks/node.ex
-#, elixir-autogen, elixir-format
-msgid "%{version}: older than Vite 8 accepts (%{minimum})"
-msgstr ""
-
 #: lib/brando/doctor/checks/admin_assets.ex
 #, elixir-autogen, elixir-format
 msgid ".yalc brandojs %{version}"
@@ -1226,7 +1221,7 @@ msgstr ""
 
 #: lib/brando/doctor/checks/node.ex
 #, elixir-autogen, elixir-format
-msgid "use %{advice}: odd releases are not LTS, and pnpm and yarn refuse them for Vite 8 and the asset packages"
+msgid "use %{advice}: odd releases are not LTS"
 msgstr ""
 
 #: lib/brando/doctor/checks/versions.ex

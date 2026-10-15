@@ -12,7 +12,8 @@
     "@brandocms/jupiter": "5.0.0-beta.19"
   },
   "devDependencies": {
-    "@brandocms/vite-plugin-europacss": "file:.yalc/@brandocms/vite-plugin-europacss",
+    "@brandocms/europacss-cli": "0.1.0-beta.0",
+    "@brandocms/vite-plugin-europacss": "0.1.0-beta.0",
     "@sveltejs/vite-plugin-svelte": "7.3.1",
     "svelte": "^5.57.2",
     "vite": "^8.3.3"
@@ -26,7 +27,7 @@
     ]
   },
   "engines": {
-    "node": "^20.19.0 || ^22.12.0 || >=24.0.0"
+    "node": ">=24.0.0"
   },
   "packageManager": "pnpm@10.32.1"
 }

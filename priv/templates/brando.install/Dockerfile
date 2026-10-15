@@ -54,19 +54,18 @@ RUN mix compile
 # - job: assets backend
 # -----------------------------------
 
-FROM node:22 AS assets_backend
+FROM node:24 AS assets_backend
 WORKDIR /opt/app/assets/backend
 
 # Keep in step with `packageManager` in assets/backend/package.json
 RUN npm install --global pnpm@10.32.1
 
-# The admin's CSS builds with the native EuropaCSS compiler: the build needs
-# the `europa` executable on PATH and @brandocms/vite-plugin-europacss, which
-# is installed from .yalc until it is published.
+# The admin's CSS builds with the native EuropaCSS compiler. pnpm installs
+# its executable for this image's platform from the lockfile's optional
+# dependencies, so never pass --no-optional or copy node_modules in.
 
 # The lockfile is the one `mix brando.assets.setup` writes; commit it.
-# BrandoJS itself (and the EuropaCSS Vite plugin, for now) is installed from
-# .yalc.
+# BrandoJS itself is installed from .yalc.
 COPY assets/backend/package.json assets/backend/pnpm-lock.yaml ./
 COPY assets/backend/.yalc ./.yalc
 
@@ -85,7 +84,7 @@ RUN pnpm build
 # - job: assets frontend
 # -----------------------------------
 
-FROM node:22 AS assets_frontend
+FROM node:24 AS assets_frontend
 WORKDIR /opt/app/assets/frontend
 
 # pnpm uses a different cache structure

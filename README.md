@@ -53,7 +53,7 @@ reusable modules.
 
 Brando 0.55 needs Elixir 1.18 or newer, Phoenix 1.8, LiveView 1.2 and
 PostgreSQL. Images are processed with Image and Vix/libvips. `sharp-cli` and
-`gifsicle` are no longer used. The admin assets are built with Node.js 22 and pnpm.
+`gifsicle` are no longer used. The admin assets are built with Node.js 24 and pnpm.
 
 Follow [Installation and generators](guides/generators.md). It creates a
 Phoenix application, runs `mix brando.install`, builds the frontend and admin

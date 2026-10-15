@@ -118,11 +118,11 @@ if Code.ensure_loaded?(Igniter) do
 
           mix brando.assets.setup --backend-only
 
-      The admin's CSS now builds with the native EuropaCSS compiler: the `europa` executable and the
-      @brandocms/vite-plugin-europacss package ("Native EuropaCSS" in Brando's
-      guides/migrating_from_053.md says how to install them). Check the application's own admin CSS with
+      The admin's CSS now builds with the native EuropaCSS compiler, which pnpm installs from npm
+      (@brandocms/europacss-cli and @brandocms/vite-plugin-europacss; "Native EuropaCSS" in Brando's
+      guides/migrating_from_053.md). Check the application's own admin CSS with
 
-          cd assets/backend && europa migrate css/app.css --from 1.0.0-beta.6 --config europa.json5 --check
+          cd assets/backend && pnpm exec europa migrate css/app.css --from 1.0.0-beta.6 --config europa.json5 --check
 
       Commit the assets/backend/pnpm-lock.yaml it writes; the Docker build installs from it.
       """)
@@ -174,7 +174,7 @@ if Code.ensure_loaded?(Igniter) do
       """
       #{path} is not one Brando's templates wrote, so it is kept, but the admin now builds with \
       assets/backend/europa.json5, which extends Brando's preset. Move its settings there \
-      (`europa migrate-config #{Path.basename(path)} -o converted.json5` converts static ones), then delete it.
+      (`pnpm exec europa migrate-config #{Path.basename(path)} -o converted.json5` converts static ones), then delete it.
       """
     end
 
