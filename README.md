@@ -57,7 +57,7 @@ PostgreSQL. Images are processed with Image and Vix/libvips. `sharp-cli` and
 
 Follow [Installation and generators](guides/generators.md). It creates a
 Phoenix application, runs `mix brando.install`, builds the frontend and admin
-assets through Vite/Yalc, runs the migrations, sets up languages and creates the
+assets through Vite, runs the migrations, sets up languages and creates the
 first administrator.
 
 Keep the Elixir and BrandoJS dependencies on the same revision.

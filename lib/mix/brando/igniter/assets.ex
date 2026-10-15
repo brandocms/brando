@@ -5,6 +5,8 @@ if Code.ensure_loaded?(Igniter) do
 
     @moduledoc false
 
+    alias Mix.Brando.BrandoJS
+    alias Mix.Brando.Igniter.Files
     alias Mix.Brando.Igniter.Install
     alias Mix.Brando.Install.Templates
 
@@ -255,9 +257,13 @@ if Code.ensure_loaded?(Igniter) do
       {igniter, igniter.rewrite |> Rewrite.source!(path) |> Rewrite.Source.get(:content)}
     end
 
-    defp template_contents({format, source, _target}, project) do
+    defp template_contents({format, source, target}, project) do
       template = Templates.contents(format, source)
-      if format == :eex, do: EEx.eval_string(template, Install.template_binding(project)), else: template
+      contents = if format == :eex, do: EEx.eval_string(template, Install.template_binding(project)), else: template
+
+      # The template pins Brando's own version; a development version has no
+      # npm release, so its admin takes BrandoJS from a checkout through Yalc.
+      if target == @backend_package, do: BrandoJS.put_spec(contents, BrandoJS.spec()), else: contents
     end
 
     defp replace_file(igniter, path, contents) do
@@ -280,12 +286,32 @@ if Code.ensure_loaded?(Igniter) do
         {:ok, current} when is_map(current) ->
           upgraded = upgrade_package_json(current, template)
 
-          if upgraded == current,
-            do: igniter,
-            else: replace_file(igniter, @backend_package, encode_package(upgraded, [contents, template_json]))
+          igniter =
+            if upgraded == current,
+              do: igniter,
+              else: replace_file(igniter, @backend_package, encode_package(upgraded, [contents, template_json]))
+
+          local_source_notice(igniter, BrandoJS.dependency(current))
 
         _ ->
           Igniter.add_issue(igniter, "#{@backend_package} must be a JSON object.")
+      end
+    end
+
+    # A released Brando has a matching npm release of BrandoJS. An admin that
+    # still takes it from a checkout keeps doing so until told otherwise.
+    defp local_source_notice(igniter, spec) do
+      if BrandoJS.local?(spec) and not BrandoJS.development?(Brando.version()) do
+        Igniter.add_notice(igniter, """
+        #{@backend_package} takes #{BrandoJS.package()} from a local source (#{spec}). Brando #{Brando.version()}
+        is published to npm with a matching BrandoJS; to install that instead, run
+
+            mix brando.assets.setup --npm
+
+        Keep the local source while you work on Brando itself.
+        """)
+      else
+        igniter
       end
     end
 
@@ -299,11 +325,13 @@ if Code.ensure_loaded?(Igniter) do
       |> upgrade_overrides(template)
     end
 
-    # The template's version wins, except for BrandoJS, whose source (a Yalc
-    # copy, a link to a checkout) is the application's choice.
+    # The template's version wins, BrandoJS's included, except when BrandoJS
+    # comes from a local source (a Yalc copy, a link to a checkout): that is
+    # the application's choice.
     defp upgrade_dependencies(package, template, key) do
       current = Map.drop(package[key] || %{}, @retired_backend_packages)
-      wanted = Map.drop(template[key] || %{}, ["@brandocms/brandojs"])
+      keep = if BrandoJS.local?(current[BrandoJS.package()]), do: [BrandoJS.package()], else: []
+      wanted = Map.drop(template[key] || %{}, keep)
       Map.put(package, key, Map.merge(current, wanted))
     end
 
@@ -504,15 +532,16 @@ if Code.ensure_loaded?(Igniter) do
       end)
     end
 
-    defp plan_asset({format, source, target} = file, igniter, project) do
+    defp plan_asset({_format, source, target} = file, igniter, project) do
       cond do
         Path.extname(target) in [".ico", ".woff2"] ->
           binary_asset(igniter, source, target)
 
         Path.basename(target) == "package.json" && Igniter.exists?(igniter, target) ->
-          template = Templates.contents(format, source)
-          contents = if format == :eex, do: EEx.eval_string(template, Install.template_binding(project)), else: template
-          merge_package(igniter, target, contents)
+          merge_package(igniter, target, template_contents(file, project))
+
+        target == @backend_package ->
+          Files.create(igniter, target, template_contents(file, project))
 
         true ->
           Install.copy(igniter, file, project)

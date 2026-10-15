@@ -407,16 +407,32 @@ defmodule Brando.Doctor.ChecksTest do
       assert result.fix =~ "0.55.0-dev"
     end
 
-    test "a .yalc copy beside a plain version" do
+    test "an npm version reads node_modules, not a .yalc copy left from a local setup" do
       root =
         backend(%{"dependencies" => %{"@brandocms/brandojs" => "0.55.0"}}, %{
-          ".yalc/@brandocms/brandojs/package.json" => %{"version" => "0.54.0"}
+          ".yalc/@brandocms/brandojs/package.json" => %{"version" => "0.54.0"},
+          "node_modules/@brandocms/brandojs/package.json" => %{"version" => "0.55.0"}
+        })
+
+      result = Checks.AdminAssets.evaluate(Path.join(root, "assets/backend"), "0.55.0")
+      assert result.status == :ok
+      assert result.summary == "brandojs 0.55.0"
+    end
+
+    test "an npm install of another version is a warning, fixed by switching to npm at Brando's version" do
+      root =
+        backend(%{"dependencies" => %{"@brandocms/brandojs" => "0.55.0-beta.0"}}, %{
+          "node_modules/@brandocms/brandojs/package.json" => %{"version" => "0.55.0-beta.0"}
         })
 
       result = Checks.AdminAssets.evaluate(Path.join(root, "assets/backend"), "0.55.0")
       assert result.status == :warning
-      assert result.summary == ".yalc brandojs 0.54.0"
-      assert result.fix =~ "npx yalc publish in Brando's assets, then npx yalc update"
+      assert result.fix == "expected 0.55.0, run mix brando.assets.setup --npm --backend-only"
+    end
+
+    test "an npm version that is not installed yet" do
+      root = backend(%{"dependencies" => %{"@brandocms/brandojs" => "0.55.0"}}, %{})
+      assert %Result{status: :error} = Checks.AdminAssets.evaluate(Path.join(root, "assets/backend"), "0.55.0")
     end
 
     test "a backend that is not a pnpm project yet is upgraded first" do

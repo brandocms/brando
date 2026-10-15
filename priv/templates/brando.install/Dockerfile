@@ -65,9 +65,11 @@ RUN npm install --global pnpm@10.32.1
 # dependencies, so never pass --no-optional or copy node_modules in.
 
 # The lockfile is the one `mix brando.assets.setup` writes; commit it.
-# BrandoJS itself is installed from .yalc.
+# BrandoJS comes from npm, or from .yalc while you work on Brando itself
+# (`mix brando.assets.setup --local`). The `[c]` makes the .yalc copy
+# optional: BuildKit skips a COPY wildcard that matches nothing.
 COPY assets/backend/package.json assets/backend/pnpm-lock.yaml ./
-COPY assets/backend/.yalc ./.yalc
+COPY assets/backend/.yal[c] ./.yalc/
 
 RUN --mount=type=cache,target=/root/.local/share/pnpm/store,sharing=locked \
   pnpm install \
@@ -90,10 +92,10 @@ WORKDIR /opt/app/assets/frontend
 # Keep in step with `packageManager` in assets/frontend/package.json
 RUN npm install --global pnpm@10.32.1
 
-# Jupiter comes from npm. If you install it from Yalc instead, add
-#   COPY assets/frontend/.yalc ./.yalc
-# here: Docker fails a COPY whose source is missing, so the template has none.
+# Jupiter comes from npm, or from .yalc if you install it from a checkout.
+# The `[c]` makes the .yalc copy optional, as in assets_backend.
 COPY assets/frontend/package.json assets/frontend/pnpm-lock.yaml ./
+COPY assets/frontend/.yal[c] ./.yalc/
 
 # Use pnpm cache directory as a cache mount
 # pnpm stores cache in ~/.local/share/pnpm/store by default

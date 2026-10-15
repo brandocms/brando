@@ -61,6 +61,17 @@ defmodule Mix.Brando.Igniter.AssetsTest do
     assert Enum.all?(plan.tasks, fn {task, _args} -> task == "brando.assets.copy" end)
   end
 
+  test "a generated admin takes BrandoJS from Brando's spec: npm for a release, Yalc for a -dev version" do
+    plan = IgniterCase.phoenix_project() |> Igniter.compose_task(Mix.Tasks.Brando.Gen.Backend, [])
+    source = IgniterCase.source(plan, "assets/backend/package.json")
+    template = Templates.contents(:copy, "assets/backend/package.json")
+
+    assert Jason.decode!(source)["dependencies"]["@brandocms/brandojs"] == Mix.Brando.BrandoJS.spec()
+    # Only the BrandoJS spec differs from the template, which pins Brando's version.
+    assert Jason.decode!(template)["dependencies"]["@brandocms/brandojs"] == Brando.version()
+    assert Jason.decode!(source) == Jason.decode!(Mix.Brando.BrandoJS.put_spec(template, Mix.Brando.BrandoJS.spec()))
+  end
+
   describe "brando.gen.backend --upgrade" do
     # A 0.54 site's admin, as smartwatt had it: yarn, Vite 5, Svelte 4.
     @old_package ~s({
@@ -154,6 +165,20 @@ defmodule Mix.Brando.Igniter.AssetsTest do
       assert IgniterCase.source(plan, "assets/backend/europa.json5") == template("assets/backend/europa.json5")
       # Its stylesheet keeps importing BrandoJS's: the Vite plugin resolves package imports.
       Igniter.Test.assert_unchanged(plan, "assets/backend/css/app.css")
+    end
+
+    test "an npm BrandoJS pin moves to Brando's spec, a local source stays" do
+      npm = String.replace(@old_package, "file:.yalc/@brandocms/brandojs", "0.54.0")
+      plan = upgrade(old_backend(%{"assets/backend/package.json" => npm}))
+      package = plan |> IgniterCase.source("assets/backend/package.json") |> Jason.decode!()
+      assert package["dependencies"]["@brandocms/brandojs"] == Mix.Brando.BrandoJS.spec()
+
+      for spec <- ["file:.yalc/@brandocms/brandojs", "link:../../../brando/assets"] do
+        local = String.replace(@old_package, "file:.yalc/@brandocms/brandojs", spec)
+        plan = upgrade(old_backend(%{"assets/backend/package.json" => local}))
+        package = plan |> IgniterCase.source("assets/backend/package.json") |> Jason.decode!()
+        assert package["dependencies"]["@brandocms/brandojs"] == spec
+      end
     end
 
     test "removes an earlier template's legacy EuropaCSS configs and keeps a site's own with a notice" do

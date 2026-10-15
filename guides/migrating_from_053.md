@@ -90,8 +90,10 @@ deploy from `github:`. [Installation and generators](generators.md) describes
 working against a `path:` checkout, including `mix deps.compile brando` after
 changing it.
 
-The admin's JavaScript, BrandoJS, comes from the same Brando source through
-Yalc. `mix brando.assets.setup --backend-only` (see
+The admin's JavaScript, BrandoJS, comes from npm at Brando's version once
+Brando is released, and from the same Brando source through Yalc for a
+development version or while working on Brando. With a Yalc copy,
+`mix brando.assets.setup --backend-only` (see
 [Admin assets](#admin-assets)) publishes the dependency's `assets` directory to
 a store under `_build` and updates `assets/backend/.yalc`. By hand, the steps
 are `npx yalc publish` in Brando's `assets`, then
@@ -622,11 +624,17 @@ mix brando.assets.setup --backend-only
 `--backend-only` leaves `assets/frontend` alone, for a frontend that still uses
 yarn or its own build; without it the task installs and builds both with pnpm.
 Commit the `assets/backend/pnpm-lock.yaml` it writes: the Docker build installs
-from it. The Docker image ships the admin from the local `assets/backend/.yalc`,
-so rerun the setup after updating BrandoJS.
+from it. The upgrade keeps where the admin takes BrandoJS from: an npm version
+moves to Brando's, and a Yalc copy or linked checkout stays. When Brando is a
+release and the admin still uses a Yalc copy, a notice suggests
+`mix brando.assets.setup --npm`, which pins the npm release and removes the
+copy. The Docker image installs BrandoJS from npm, or ships the local
+`assets/backend/.yalc` when the admin uses one, so rerun the setup after
+updating BrandoJS.
 
 `mix brando.doctor` reports admin assets from an older BrandoJS and suggests
-`npx yalc update` and `pnpm install`. On a yarn-era `assets/backend` that is not
+the fix for its source: `mix brando.assets.setup --npm` for npm,
+`npx yalc update` and `pnpm install` for a Yalc copy. On a yarn-era `assets/backend` that is not
 enough: run `mix brando.gen.backend --upgrade` first, then the setup above.
 Its Admin CSS compiler check warns while `assets/backend` is not on the native
 EuropaCSS packages at the versions Brando's template pins (the legacy

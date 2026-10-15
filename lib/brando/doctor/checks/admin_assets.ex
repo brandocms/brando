@@ -1,8 +1,8 @@
 defmodule Brando.Doctor.Checks.AdminAssets do
   @moduledoc """
   The admin's BrandoJS against Brando: the version of `@brandocms/brandojs`
-  in `assets/backend/.yalc` (or the checkout it links to, or `node_modules`)
-  should be Brando's own. An older publish gives an admin whose JavaScript
+  the admin installs, from npm into `node_modules` or from a local source
+  (`assets/backend/.yalc` or the checkout it links to), should be Brando's own. An older publish gives an admin whose JavaScript
   does not match the server.
 
   Reads the source tree, so it is skipped in a release.
@@ -70,15 +70,11 @@ defmodule Brando.Doctor.Checks.AdminAssets do
   defp installed(backend, "link:" <> path), do: local(backend, path)
   defp installed(backend, "file:" <> path), do: local(backend, path)
 
+  # An npm version: what pnpm installed. A .yalc copy left from an earlier
+  # local setup is not what the admin builds from.
   defp installed(backend, _spec) do
-    yalc = Path.join([backend, ".yalc", @package])
     node_modules = Path.join([backend, "node_modules", @package])
-
-    cond do
-      File.dir?(yalc) -> {:yalc, read_version(yalc)}
-      File.dir?(node_modules) -> {:node_modules, read_version(node_modules)}
-      true -> :not_installed
-    end
+    if File.dir?(node_modules), do: {:node_modules, read_version(node_modules)}, else: :not_installed
   end
 
   defp local(backend, path) do
@@ -126,7 +122,7 @@ defmodule Brando.Doctor.Checks.AdminAssets do
       summary,
       installed,
       version,
-      dgettext("doctor", "expected %{version}, run mix brando.assets.setup --backend-only", version: version)
+      dgettext("doctor", "expected %{version}, run mix brando.assets.setup --npm --backend-only", version: version)
     )
   end
 

@@ -7,6 +7,20 @@ const DEFAULT_PACKAGE = '@brandocms/brandojs'
 const POLL_MS = 1500
 
 /**
+ * Whether the project in `root` takes `packageName` from its .yalc copy:
+ * `yalc add` writes `file:.yalc/…`, `yalc add --link` writes `link:.yalc/…`.
+ */
+export function installedFromYalc(root, packageName = DEFAULT_PACKAGE) {
+  try {
+    const pkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'))
+    const spec = pkg.dependencies?.[packageName] ?? pkg.devDependencies?.[packageName] ?? ''
+    return /^(file|link):\.yalc\//.test(spec)
+  } catch {
+    return false
+  }
+}
+
+/**
  * Vite plugin: pull a yalc-linked package as soon as it is published.
  *
  * Developing Brando against a project means publishing brandojs to the yalc
@@ -44,10 +58,12 @@ export default function yalcAutoUpdate(packageName = DEFAULT_PACKAGE) {
     apply: 'serve',
 
     configureServer(server) {
-      // No lock means this project takes the package from npm rather than from
-      // the store, and has nothing to catch up with.
+      // No lock, or a package.json that no longer takes the package from
+      // .yalc, means this project installs it from npm and has nothing to
+      // catch up with. A lock left behind by an earlier Yalc setup would
+      // otherwise swap the npm copy for whatever the store holds.
       const lockFile = path.join(server.config.root, 'yalc.lock')
-      if (!fs.existsSync(lockFile)) return
+      if (!fs.existsSync(lockFile) || !installedFromYalc(server.config.root, packageName)) return
 
       const store = process.env.YALC_STORE_FOLDER || path.join(os.homedir(), '.yalc')
       const storeDir = path.join(store, 'packages', ...packageName.split('/'))
