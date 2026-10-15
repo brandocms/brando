@@ -44,7 +44,13 @@ Publishing is manual: no workflow builds or publishes the packages yet.
    `CHANGELOG.md` section, the supported versions and the known limitations
    as notes.
 10. In a pull request to `main`, add a new `## … (Unreleased)` heading at the top of
-    `CHANGELOG.md` for the next fragments to collate into. After a stable
-    release, move to the next development version with
-    `scripts/release-version bump X.Y+1.0-dev`, committed as
-    `Start X.Y+1.0 development`.
+    `CHANGELOG.md` for the next fragments to collate into, and move `main`
+    past the release so a Git install of it reads as newer:
+    - After a prerelease, bump to the next one:
+      `scripts/release-version bump X.Y.Z-beta.N+1`, committed as
+      `Start X.Y.Z-beta.N+1`. Not back to `X.Y.Z-dev`: a `-dev` version
+      counts as older than every prerelease of the same version, so
+      upgrading from the published beta to it would be a downgrade.
+    - After a stable release, bump to the next development version:
+      `scripts/release-version bump X.Y+1.0-dev`, committed as
+      `Start X.Y+1.0 development`.
