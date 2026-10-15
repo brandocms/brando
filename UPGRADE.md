@@ -618,9 +618,8 @@ end
   Unless you are running an ancient Brando version, this would already be your default.
 
 * If using `fabfile.py`, be sure to update this to include the new `grant_db` function. You need this to prevent
-  migration errors when running Oban migrations.
-
-    `$ cp deps/brando/priv/templates/brando.install/fabfile.py .`
+  migration errors when running Oban migrations. (Brando no longer ships a fabfile; deploy with Florist, see
+  `guides/deployment.md`.)
 
 * If you have no custom logic in your `authorization.ex` you can rerun
 
@@ -949,8 +948,8 @@ end
       gsed -i "s=prod=staging=" Dockerfile.staging && \
       rm Dockerfile
   ```
-* Ensure you have fabfile.py version 3.0.0
-  --> copy from https://github.com/univers-agency/brando/blob/develop/priv/templates/brando.install/fabfile.py
+* Ensure you have fabfile.py version 3.0.0 (Brando no longer ships a fabfile; deploy with Florist, see
+  `guides/deployment.md`)
 * Ensure `rel/config.exs` has:
     ```
     environment :staging do
