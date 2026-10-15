@@ -387,6 +387,20 @@ else
   fail "a failed bump removes its temporary files" "$(ls -A "$script_tmp")"
 fi
 
+# A read-only target stops the bump before any file changes.
+fresh
+set_json "$backend" '.dependencies["@brandocms/brandojs"] = "0.55.0-dev"'
+set_line "$template" '{:brando, path:' '      {:brando, "== 0.55.0-dev"}'
+chmod 444 "$case_root/$template"
+cp -R "$case_root" "$scratch/readonly.before"
+expect "bump stops on a read-only target" 1 "is not writable; nothing was changed" bump 0.55.0-beta.1
+if diff="$(diff -r "$scratch/readonly.before" "$case_root")"; then
+  pass "a bump stopped by a read-only target changes nothing"
+else
+  fail "a bump stopped by a read-only target changes nothing" "$diff"
+fi
+chmod 644 "$case_root/$template"
+
 if [ "$failures" -gt 0 ]; then
   echo "$failures case(s) failed"
   exit 1

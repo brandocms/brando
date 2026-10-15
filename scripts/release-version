@@ -200,9 +200,17 @@ jq_edit() {
   jq "$@" "$root/$file" >"$tmp"
 }
 
-# write_back: copies every staged file over its target.
+# write_back: copies every staged file over its target, after checking that
+# every target can be written, so a read-only one stops the bump before any
+# file changes.
 write_back() {
   local i
+  for i in "${!staged[@]}"; do
+    [ -w "$root/${staged[$i]}" ] || {
+      problem "${staged[$i]} is not writable; nothing was changed"
+      exit 1
+    }
+  done
   for i in "${!staged[@]}"; do
     cat "$work/$i" >"$root/${staged[$i]}" || exit 1
   done
