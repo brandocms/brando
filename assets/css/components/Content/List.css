@@ -537,7 +537,7 @@
   }
 
   .list-header {
-    @row;
+    @extend %row;
     font-weight: 500;
     padding-bottom: 10px;
   }
@@ -687,7 +687,7 @@
 
     .main-content,
     .child-row {
-      @row;
+      @extend %row;
       @space padding-top 10px;
       @space padding-bottom 10px;
       align-items: center;

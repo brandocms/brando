@@ -12,7 +12,7 @@
 - E2E test workflow:
   - **CRITICAL**: Always `source .envrc` in the `e2e/` folder before running any e2e commands
   - **E2E logger level**: Default is `:warning` in `e2e/config/e2e.exs`. Change to `:debug` when troubleshooting server-side issues, then change back.
-  - **If JS/CSS changed**: Rebuild assets first: `cd e2e/assets/backend && pnpm build`
+  - **If JS/CSS changed**: Rebuild assets first: `cd e2e/assets/backend && pnpm build`. The native EuropaCSS compiler comes from npm with the backend's dependencies; for its CLI use `pnpm exec europa` there.
   - **Frontend asset validation boundary**: Do not run or report a standalone build from Brando's root `assets/` directory as a validation gate. Brando's frontend assets are consumed by the actual applications through Yalc and compiled by each consumer application's Vite build. For repository work, validate JS/CSS with the E2E consumer build above and the relevant E2E tests. Only investigate a standalone root asset build if the user explicitly asks for it.
   - **Full suite with reset**: `cd e2e && source .envrc && ./test_e2e.sh --reset`
   - **Single test with reset**: `cd e2e && source .envrc && ./test_e2e.sh --reset tests/path/to/test.spec.js`

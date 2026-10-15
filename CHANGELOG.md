@@ -36,8 +36,10 @@ build has no source tasks to run and starts here:
    the rest (see [Media](guides/media.md#images-made-before-fingerprints)).
 
 Then the steps particular to some features, each described under Breaking:
-rebuild the search index in each environment, add the `Brando.Plug.Markdown`
-and `Brando.Plug.IndexNow` endpoint plugs, and, in an application that sets
+rebuild the search index in each environment, move the admin's CSS build to
+native EuropaCSS with `mix brando.gen.backend --upgrade`, add the
+`Brando.Plug.Markdown` and `Brando.Plug.IndexNow` endpoint plugs, and, in an
+application that sets
 `config :brando, Oban` itself, add the `content_events`, `webhooks` and
 `search_index` queues and the webhook delivery purger to its crontab.
 `mix brando.doctor` reports migrations that have not

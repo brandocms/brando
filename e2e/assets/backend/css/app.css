@@ -1,120 +1,187 @@
-.blocks-wrapper {
-  [data-moonwalk],
-  [data-moonwalk-section],
-  [data-moonwalk-run] {
-    opacity: 1 !important;
-    transform: none;
-  }
-}
+/* This application's admin styles, compiled by EuropaCSS with europa.json5.
+   They are in the `app` cascade layer, which outranks Brando's own rules
+   (the `brando` layer) whatever their selectors; an `!important` in Brando's
+   layer still outranks one here. The rows are written out as the legacy
+   `@row N` compiled them: a non-wrapping flex row whose children are one
+   gutter apart, except the first of every N.
 
-[b-tpl="image | image"] {
-  .inner {
-    @row 2;
+   The admin's layer order comes first: whichever stylesheet loads first
+   fixes it, and this one is imported before Brando's. */
+@layer reset, vendor, brando, app;
 
-    > figure {
-      @column 6/12;
+@layer app {
+  .blocks-wrapper {
+    [data-moonwalk],
+    [data-moonwalk-section],
+    [data-moonwalk-run] {
+      opacity: 1 !important;
+      transform: none;
     }
   }
-}
 
-[b-tpl="contact info"] {
-  .inner {
-    > .header .header-block textarea {
-      text-align: center;
-    }
+  [b-tpl="image | image"] {
+    .inner {
+      display: flex;
+      flex-wrap: nowrap;
 
-    > article {
-      @row 2;
+      > * {
+        @space margin-left 1;
 
-      > section {
+        &:nth-child(2n+1) {
+          margin-left: 0;
+        }
+      }
+
+      > figure {
         @column 6/12;
       }
     }
   }
-}
 
-[b-tpl="hiring"] {
-  .inner {
-    > .header .header-block textarea {
-      text-align: center;
-    }
+  [b-tpl="contact info"] {
+    .inner {
+      > .header .header-block textarea {
+        text-align: center;
+      }
 
-    > article {
-      @row 2;
+      > article {
+        display: flex;
+        flex-wrap: nowrap;
 
-      > section {
-        @column 6/12;
+        > * {
+          @space margin-left 1;
+
+          &:nth-child(2n+1) {
+            margin-left: 0;
+          }
+        }
+
+        > section {
+          @column 6/12;
+        }
       }
     }
   }
-}
 
-[b-tpl="project skip"] {
-  .inner {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
+  [b-tpl="hiring"] {
+    .inner {
+      > .header .header-block textarea {
+        text-align: center;
+      }
 
-    > a {
+      > article {
+        display: flex;
+        flex-wrap: nowrap;
+
+        > * {
+          @space margin-left 1;
+
+          &:nth-child(2n+1) {
+            margin-left: 0;
+          }
+        }
+
+        > section {
+          @column 6/12;
+        }
+      }
+    }
+  }
+
+  [b-tpl="project skip"] {
+    .inner {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+
+      > a {
+        display: none;
+      }
+
+      > figure {
+        max-width: 500px;
+      }
+    }
+  }
+
+  [b-tpl="quote"] {
+    .inner {
       display: none;
     }
-
-    > figure {
-      max-width: 500px;
-    }
   }
-}
 
-[b-tpl="quote"] {
-  .inner {
-    display: none;
-  }
-}
-
-[b-tpl="lede"] {
-  .inner {
-    .text-block.lede .ProseMirror p {
-      @fontsize 3vw;
-    }
-  }
-}
-
-[b-tpl="footer"] {
-  .header {
-    .text-block.lede .ProseMirror p {
-      text-align: center;
-      @fontsize 4vw;
+  [b-tpl="lede"] {
+    .inner {
+      .text-block.lede .ProseMirror p {
+        @fontsize 3vw;
+      }
     }
   }
 
-  .info {
-    @row 3;
-    > section {
-      @column 1/3;
+  [b-tpl="footer"] {
+    .header {
+      .text-block.lede .ProseMirror p {
+        text-align: center;
+        @fontsize 4vw;
+      }
+    }
+
+    .info {
+      display: flex;
+      flex-wrap: nowrap;
+
+      > * {
+        @space margin-left 1;
+
+        &:nth-child(3n+1) {
+          margin-left: 0;
+        }
+      }
+      > section {
+        @column 1/3;
+      }
+    }
+
+    .credits {
+      display: flex;
+      flex-wrap: nowrap;
+
+      > * {
+        @space margin-left 1;
+
+        &:nth-child(3n+1) {
+          margin-left: 0;
+        }
+      }
+      > section {
+        @column 1/3;
+      }
     }
   }
 
-  .credits {
-    @row 3;
-    > section {
-      @column 1/3;
-    }
-  }
-}
+  [b-tpl="image | text"],
+  [b-tpl="text | image"],
+  [b-tpl="image | text / image"],
+  [b-tpl="text / image | image / text"] {
+    .inner {
+      display: flex;
+      flex-wrap: nowrap;
 
-[b-tpl="image | text"],
-[b-tpl="text | image"],
-[b-tpl="image | text / image"],
-[b-tpl="text / image | image / text"] {
-  .inner {
-    @row 2;
+      > * {
+        @space margin-left 1;
 
-    > figure {
-      @column 6/12;
-    }
+        &:nth-child(2n+1) {
+          margin-left: 0;
+        }
+      }
 
-    > article {
-      @column 6/12;
+      > figure {
+        @column 6/12;
+      }
+
+      > article {
+        @column 6/12;
+      }
     }
   }
 }

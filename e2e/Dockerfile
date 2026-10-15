@@ -53,15 +53,14 @@ RUN mix compile
 # - job: assets backend
 # -----------------------------------
 
-FROM node:22 AS assets_backend
+FROM node:24 AS assets_backend
 
 # Keep in step with `packageManager` in assets/backend/package.json
 RUN npm install --global pnpm@10.32.1
 
-# @brandocms/europacss fetches postcss-functions from GitHub, and the lockfile
-# may record it as an SSH remote. The build has no SSH key; the repository is
-# public, so fetch it over HTTPS.
-RUN git config --global url."https://github.com/".insteadOf "git@github.com:"
+# The admin's CSS builds with the native EuropaCSS compiler. pnpm installs
+# its executable for this image's platform from the lockfile's optional
+# dependencies, so never pass --no-optional or copy node_modules in.
 
 # The backend links BrandoJS from this checkout (`link:../../../assets`),
 # outside this build context. Pass it in as a named context:
@@ -76,7 +75,7 @@ RUN --mount=type=cache,target=/root/.local/share/pnpm/store,sharing=locked \
       pnpm install \
       --frozen-lockfile \
       --prefer-offline
-COPY --from=brandojs europa.config.js ./
+COPY --from=brandojs europa.json5 ./
 COPY --from=brandojs src ./src
 COPY --from=brandojs css ./css
 COPY --from=brandojs vite ./vite
@@ -98,7 +97,7 @@ RUN pnpm build
 # - job: assets frontend
 # -----------------------------------
 
-FROM node:22 AS assets_frontend
+FROM node:24 AS assets_frontend
 WORKDIR /opt/app/assets/frontend
 ENV YARN_CACHE_FOLDER ~/.yarn
 

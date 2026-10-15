@@ -1,0 +1,4 @@
+/* EuropaCSS's base bundle (normalize.css and Europa's reset), in the `reset`
+   cascade layer below everything else, as the legacy compiler put it before
+   the whole stylesheet. */
+@europa base;

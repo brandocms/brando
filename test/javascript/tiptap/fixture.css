@@ -1,0 +1,7 @@
+/* One compilation, as in brando.css: AI.css extends %admin_dropdown_panel,
+   which FloatingDropdown.css defines. */
+@import "../../../assets/css/tokens.css";
+/* The AI request and the suggestion are drawn by the shared AI looks. */
+@import "../../../assets/css/components/AI.css";
+@import "../../../assets/css/components/FloatingDropdown.css";
+@import "../../../assets/css/components/Form/Input/TipTap.css";

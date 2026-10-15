@@ -1,0 +1,9 @@
+// EuropaCSS configuration for the admin: Brando's preset, then this
+// application's changes to it. Objects merge key by key with the preset's;
+// arrays and plain values replace them. For example, to change the admin's
+// text colour and accent:
+//
+//   theme: { colors: { dark: '#1d2422', blue: '#3a5f8a' } },
+{
+  extends: './node_modules/@brandocms/brandojs/europa.json5',
+}

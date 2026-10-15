@@ -260,7 +260,9 @@ labels, and use monospace for keys, configuration, and technical values.
 
 The approved palette is defined once, as custom properties in
 [`assets/css/tokens.css`](../assets/css/tokens.css). Use the token, not its
-value:
+value. The values below are Brando's defaults; the roles marked with a
+palette entry come from the admin's EuropaCSS palette (see
+[Application colours](#application-colours) below):
 
 | Role | Token | Value |
 | --- | --- | --- |
@@ -305,19 +307,55 @@ export cards share `--brando-surface-shaded`. Screens don't keep tints of
 their own: a blue or lavender panel becomes a neutral surface, and an "OK",
 "added" or "active" state uses the success tokens.
 
-The legacy Europa colours in `assets/europa.config.js` are deprecated, and
-Brando's stylesheets no longer use them. They point at these roles, so
-`theme(colors.dark)` is `--brando-ink`, `blue` is `--brando-accent`, `peach` is
-`--brando-surface-subform`, `peachDarker` is `--brando-surface-selected` and
-`colors.status.*` are the status tokens. The old custom properties are aliases:
-`--brando-color-dark` → `--brando-ink`, `--brando-color-blue` →
-`--brando-accent`, `--brando-color-peach` → `--brando-surface-subform`. They
-are kept, marked deprecated in `tokens.css`, only for applications whose own
-admin CSS still uses them. Use the role names.
+### Application colours
+
+`theme.colors` in [`assets/europa.json5`](../assets/europa.json5) is the
+admin palette, and a supported configuration API: an application changes the
+admin's colours in its own `assets/backend/europa.json5`, which extends
+Brando's. `tokens.css` sets these roles from it with `theme(colors.*)`:
+
+| Palette entry | Role |
+| --- | --- |
+| `dark` | `--brando-ink` |
+| `blue` | `--brando-accent` |
+| `peachLighter` | `--brando-surface-page` |
+| `peach` | `--brando-surface-subform` |
+| `peachDarker` | `--brando-surface-selected` |
+| `peachDarkest` | `--brando-line` |
+| `overlay` | `--brando-overlay` |
+| `status.draft`, `status.pending`, `status.published`, `status.disabled`, `status.deleted` | `--brando-status-*` |
+
+```json5
+// assets/backend/europa.json5
+{
+  extends: './node_modules/@brandocms/brandojs/europa.json5',
+  theme: { colors: { dark: '#1d2422', blue: '#3a5f8a' } },
+}
+```
+
+The application's entries merge into Brando's, so the rest of the palette
+stays. `villain.main`, `villain.secondary` and `villain.popover` refer to
+`blue`, `peach` and `dark`, and follow them. Application admin CSS can use
+any entry with `theme(colors.*)` or `@color`. An application can also set a
+role directly, `:root { --brando-accent: … }` in its `app` layer, which
+outranks Brando's `tokens.css`; that changes the role at run time only, not
+`theme(colors.*)` values compiled into other application CSS. The roles
+without a palette entry are set only in `tokens.css`.
+
+The palette is also available at run time under its entry names:
+`--brando-color-dark`, `--brando-color-blue`, `--brando-color-peach`,
+`--brando-color-peach-lighter`, `--brando-color-peach-darker`,
+`--brando-color-peach-darkest`, `--brando-color-overlay`,
+`--brando-color-gray`, `--brando-color-gray-light`, `--brando-color-white`
+and `--brando-color-black`, each set with `theme(colors.*)`. Use them in
+application CSS that works with the palette; Brando's stylesheets use the
+roles. A few earlier role names remain as aliases, such as
+`--brando-color-background` for `--brando-surface-page`.
 
 Do not add hex colours to admin stylesheets. CI runs
 `.github/scripts/check_css_colors.sh`, which fails when a file outside
-`tokens.css` gains a hex literal. Files not yet converted are listed with their
+`tokens.css` gains a hex literal, or when a role in the table above, or a
+palette name, no longer takes its value from the palette. Files not yet converted are listed with their
 current count in `.github/css-color-allowlist.txt`; when you convert colours,
 lower the count (or remove the entry), which `--update` rewrites for you. A
 colour that has no role yet belongs in `tokens.css` under a role name. For a

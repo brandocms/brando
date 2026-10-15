@@ -66,13 +66,11 @@ jobs:
           version: 10.32.1
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 24
       - name: Install the qualified Phoenix generator and Yalc
         run: |
           mix archive.install hex phx_new 1.8.13 --force
           npm install --global yalc@1.0.0-pre.53
-      - name: Fetch public GitHub asset dependencies over HTTPS
-        run: git config --global url."https://github.com/".insteadOf "git@github.com:"
       - name: Install browser test dependencies
         run: |
           pnpm --dir scripts/igniter_smoke install --frozen-lockfile

@@ -25,9 +25,13 @@
           back to server truth — which would delete any style attribute JS had put
           there, flashing the un-animated form. `login-revealed` lands on <html>,
           which LiveView never touches, and is added the moment the reveal starts
-          so a later patch can never strand the form invisible. --%>
+          so a later patch can never strand the form invisible.
+
+          The @layer statement fixes the order of the admin's cascade layers
+          before any stylesheet loads: the icon sheet (reset), third-party
+          styles, Brando's rules, then the application's. --%>
     <style>
-      html.moonwalk [data-moonwalk-run],html.moonwalk [data-moonwalk-section],html.moonwalk [data-moonwalk]{opacity:0}html.moonwalk:not(.login-revealed) #application-login{opacity:0}html.moonwalk:not(.app-revealed) :is(#navigation,#admin,#brando-chrome){opacity:0}.fader{background-color:var(--brando-surface-page,#fafbf9);position:fixed;top:0;left:0;right:0;bottom:0;z-index:9998;display:none}
+      @layer reset,vendor,brando,app;html.moonwalk [data-moonwalk-run],html.moonwalk [data-moonwalk-section],html.moonwalk [data-moonwalk]{opacity:0}html.moonwalk:not(.login-revealed) #application-login{opacity:0}html.moonwalk:not(.app-revealed) :is(#navigation,#admin,#brando-chrome){opacity:0}.fader{background-color:var(--brando-surface-page,#fafbf9);position:fixed;top:0;left:0;right:0;bottom:0;z-index:9998;display:none}
     </style>
     <link rel="stylesheet" href={Brando.Icons.stylesheet_path()} />
     <.include_assets admin />

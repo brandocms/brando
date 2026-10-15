@@ -778,29 +778,26 @@ defmodule Brando.Doctor.ChecksTest do
 
   describe "Node" do
     test "an even LTS major from the tested one on passes" do
-      assert %Result{status: :ok, summary: "v22.15.0"} = Checks.Node.evaluate("v22.15.0")
-      assert %Result{status: :ok} = Checks.Node.evaluate("v24.9.0")
+      assert %Result{status: :ok, summary: "v24.9.0"} = Checks.Node.evaluate("v24.9.0")
+      assert %Result{status: :ok} = Checks.Node.evaluate("v26.1.0")
     end
 
     test "an odd release is a warning that names what to use" do
-      result = Checks.Node.evaluate("v23.11.0")
+      result = Checks.Node.evaluate("v25.2.0")
       assert result.status == :warning
-      assert result.summary == "v23.11.0: Node 23 is an odd release"
-      assert result.fix =~ "use Node 22 (or another even LTS major ≥ 22): odd releases are not LTS"
+      assert result.summary == "v25.2.0: Node 25 is an odd release"
+      assert result.fix == "use Node 24 (or another even LTS major ≥ 24): odd releases are not LTS"
     end
 
-    test "older than tested, or than Vite 8 accepts" do
-      assert %Result{status: :warning, summary: "v20.19.0: Node 20 is older than Brando is tested on"} =
-               Checks.Node.evaluate("v20.19.0")
-
-      assert %Result{status: :warning, summary: "v22.3.0: older than Vite 8 accepts (22.12)"} =
-               Checks.Node.evaluate("v22.3.0")
+    test "older than tested" do
+      assert %Result{status: :warning, summary: "v22.23.3: Node 22 is older than Brando is tested on"} =
+               Checks.Node.evaluate("v22.23.3")
     end
 
     test "no node on the PATH is skipped, with what to install" do
       result = Checks.Node.evaluate(nil)
       assert result.status == :skipped
-      assert result.fix =~ "Node 22"
+      assert result.fix =~ "Node 24"
     end
 
     test "the advice comes from Brando.Toolchain" do

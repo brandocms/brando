@@ -36,8 +36,8 @@ defmodule Mix.Brando.Igniter.DockerfileFrontendTest do
   test "moves the frontend to the admin's Node when its package sets no engines.node" do
     plan = upgrade(%{"assets/frontend/package.json" => package(%{})})
 
-    assert frontend_from(plan) == "FROM node:22 AS assets_frontend"
-    assert frontend_notice(plan) =~ "now builds on node:22 (was node:16)"
+    assert frontend_from(plan) == "FROM node:24 AS assets_frontend"
+    assert frontend_notice(plan) =~ "now builds on node:24 (was node:16)"
     assert frontend_notice(plan) =~ "sets no engines.node"
     assert IgniterCase.source(plan, "Dockerfile") =~ "COPY assets/frontend/package.json assets/frontend/yarn.lock ./"
   end
@@ -48,11 +48,11 @@ defmodule Mix.Brando.Igniter.DockerfileFrontendTest do
     plan =
       upgrade(%{
         "Dockerfile" => dockerfile,
-        "assets/frontend/package.json" => package(%{"engines" => %{"node" => ">=16 <23"}})
+        "assets/frontend/package.json" => package(%{"engines" => %{"node" => ">=16 <25"}})
       })
 
-    assert frontend_from(plan) == "FROM node:22-bookworm-slim AS assets_frontend"
-    assert frontend_notice(plan) =~ ~s|allows it (engines.node ">=16 <23")|
+    assert frontend_from(plan) == "FROM node:24-bookworm-slim AS assets_frontend"
+    assert frontend_notice(plan) =~ ~s|allows it (engines.node ">=16 <25")|
   end
 
   test "keeps it, and says why, when engines.node excludes that major" do
@@ -61,7 +61,7 @@ defmodule Mix.Brando.Igniter.DockerfileFrontendTest do
     assert frontend_from(plan) == "FROM node:16 AS assets_frontend"
     notice = frontend_notice(plan)
     assert notice =~ "still builds on node:16"
-    assert notice =~ ~s|requires Node "^16.20.0" (engines.node), which excludes Node 22.|
+    assert notice =~ ~s|requires Node "^16.20.0" (engines.node), which excludes Node 24.|
   end
 
   test "keeps it when engines.node cannot be read" do
@@ -82,9 +82,9 @@ defmodule Mix.Brando.Igniter.DockerfileFrontendTest do
   test "never moves it down, nor a pinned digest or an unusual variant" do
     package = %{"assets/frontend/package.json" => package(%{})}
 
-    newer = String.replace(@dockerfile, "FROM node:16 AS", "FROM node:24 AS")
+    newer = String.replace(@dockerfile, "FROM node:16 AS", "FROM node:26 AS")
     plan = upgrade(Map.put(package, "Dockerfile", newer))
-    assert frontend_from(plan) == "FROM node:24 AS assets_frontend"
+    assert frontend_from(plan) == "FROM node:26 AS assets_frontend"
     refute frontend_notice(plan)
 
     for {image, reason} <- [

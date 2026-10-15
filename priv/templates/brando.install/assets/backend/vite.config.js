@@ -1,6 +1,7 @@
 import yalcAutoUpdate from '@brandocms/brandojs/vite/yalcAutoUpdate.mjs'
 import { defineConfig } from 'vite'
 import { svelte } from '@sveltejs/vite-plugin-svelte'
+import europa from '@brandocms/vite-plugin-europacss'
 
 // Export these in the same environment as Phoenix; Brando.HTML reads them too.
 const host = process.env.BRANDO_VITE_ADMIN_HOST ?? 'localhost'
@@ -23,10 +24,16 @@ export default defineConfig({
       ignored: ['!**/node_modules/@brandocms/brandojs/**'],
     },
   },
+  css: {
+    devSourcemap: true,
+    // No PostCSS config: EuropaCSS and Vite's Lightning CSS pass do its work.
+    postcss: { plugins: [] },
+  },
   build: {
     manifest: 'admin_manifest.json',
     emptyOutDir: false,
     target: 'es2022',
+    cssMinify: 'lightningcss',
     outDir: '../../priv/static', // <- Phoenix expects our files here
     // Maps are written without a sourceMappingURL comment, so browsers never
     // ask for them. `mix brando.digest` deletes them before release; upload
@@ -63,5 +70,16 @@ export default defineConfig({
   // `yalc publish` in brando/assets only writes to the yalc store. This pulls
   // it from there into this project as it lands, so the admin never runs new
   // templates against the JS from a previous publish.
-  plugins: [svelte({ configFile: false }), yalcAutoUpdate()],
+  //
+  // EuropaCSS compiles the admin's stylesheets with the `europa` executable,
+  // using europa.json5, under one browser policy for Europa's transforms and
+  // Vite's CSS minifier.
+  plugins: [
+    svelte({ configFile: false }),
+    yalcAutoUpdate(),
+    europa({
+      config: './europa.json5',
+      targets: ['defaults'],
+    }),
+  ],
 })

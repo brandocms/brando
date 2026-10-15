@@ -214,37 +214,37 @@ h2.titlecase + .button-group-vertical button:first-of-type {
       opacity: 0.4;
       pointer-events: none;
     }
+  }
 
-    &-text {
-      display: flex;
-      align-items: center;
-      font-size: 12px;
+  .selected-label-text {
+    display: flex;
+    align-items: center;
+    font-size: 12px;
 
-      svg {
-        margin-right: 5px;
+    svg {
+      margin-right: 5px;
 
-        circle {
+      circle {
+        fill: var(--brando-status-published);
+
+        &.draft {
+          fill: var(--brando-status-draft);
+        }
+
+        &.pending {
+          fill: var(--brando-status-pending);
+        }
+
+        &.published {
           fill: var(--brando-status-published);
+        }
 
-          &.draft {
-            fill: var(--brando-status-draft);
-          }
+        &.disabled {
+          fill: var(--brando-status-disabled);
+        }
 
-          &.pending {
-            fill: var(--brando-status-pending);
-          }
-
-          &.published {
-            fill: var(--brando-status-published);
-          }
-
-          &.disabled {
-            fill: var(--brando-status-disabled);
-          }
-
-          &.deleted {
-            fill: var(--brando-status-deleted);
-          }
+        &.deleted {
+          fill: var(--brando-status-deleted);
         }
       }
     }

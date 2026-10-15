@@ -1,9 +1,6 @@
 import { tick } from 'svelte'
 import hookFactory from '../../../assets/src/hooks/TipTap/index.js'
-import '../../../assets/css/tokens.css'
-// The AI request and the suggestion are drawn by the shared AI looks.
-import '../../../assets/css/components/AI.css'
-import '../../../assets/css/components/Form/Input/TipTap.css'
+import './fixture.css'
 
 const app = { components: [] }
 let sequence = 0

@@ -40,7 +40,7 @@
 
   .caption-editor {
     .caption-row {
-      @row 2;
+      @extend %row-2;
       @space margin-bottom 15px;
 
       > figure {

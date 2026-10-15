@@ -36,7 +36,9 @@ if Code.ensure_loaded?(Igniter) do
     end
 
     # Packages earlier backend templates installed that the current one dropped.
-    @retired_backend_packages ~w(svelte-preprocess)
+    # The legacy EuropaCSS PostCSS plugin and autoprefixer gave way to the
+    # native compiler's Vite plugin and Lightning CSS.
+    @retired_backend_packages ~w(svelte-preprocess @brandocms/europacss autoprefixer)
     # Files earlier backend templates installed that nothing reads any more.
     # vite-plugin-svelte 7 loads only svelte.config.{js,ts,mjs,mts}.
     @retired_backend_files ~w(assets/backend/svelte.config.cjs)
@@ -44,12 +46,50 @@ if Code.ensure_loaded?(Igniter) do
     @legacy_backend_lockfiles ~w(assets/backend/yarn.lock assets/backend/package-lock.json)
     @backend_package "assets/backend/package.json"
     @backend_vite_config "assets/backend/vite.config.js"
-    @backend_postcss_config "assets/backend/postcss.config.cjs"
-    # postcss.config.cjs as earlier templates wrote it, compared without
-    # whitespace. One that still reads like this is the template's, and takes
-    # the current one; a site's own is left alone.
-    @previous_backend_postcss_configs [
-      "module.exports={plugins:[require('@brandocms/europacss'),require('autoprefixer')()]}"
+
+    # The legacy EuropaCSS build's config files as earlier templates wrote
+    # them, compared without whitespace. The native build reads neither: one
+    # still like this is removed, a site's own is kept with a notice.
+    @legacy_postcss_configs [
+      "module.exports={plugins:[require('@brandocms/europacss'),require('autoprefixer')()]}",
+      ~S"""
+      // Europa's at-rules write rules and declarations with no source file of their
+      // own: the base styles it parses from normalize.css, the output of @space,
+      // @font and the like. Vite resolves a declaration's url() from its file, and
+      // warns that "a PostCSS plugin did not pass the `from` option" when there is
+      // none. They belong to the file whose at-rule wrote them, so each takes the
+      // source of the nearest node around it that has one.
+      const sourceFromFile = () => ({
+        postcssPlugin: 'brando-source-from-file',
+        OnceExit(root) {
+          root.walk(node => {
+            if (node.source?.input?.file) return
+            let parent = node.parent
+            while (parent && !parent.source?.input?.file) parent = parent.parent
+            if (parent) node.source = parent.source
+          })
+        }
+      })
+      sourceFromFile.postcss = true
+
+      module.exports = {
+        plugins: [
+          require('@brandocms/europacss'),
+          require('autoprefixer')(),
+          sourceFromFile()
+        ]
+      }
+      """
+    ]
+    @legacy_europa_configs [
+      "module.exports=require('@brandocms/brandojs/europa.config.js')",
+      "module.exports=require('brandojs/europa.config.js')",
+      "module.exports=require('../../../../brando/assets/europa.config.js')"
+    ]
+    @legacy_europa_files [
+      {"assets/backend/postcss.config.cjs", @legacy_postcss_configs},
+      {"assets/backend/europa.config.cjs", @legacy_europa_configs},
+      {"assets/backend/europa.config.js", @legacy_europa_configs}
     ]
 
     @doc """
@@ -59,20 +99,30 @@ if Code.ensure_loaded?(Igniter) do
     the application's (its own extra packages, scripts and BrandoJS source
     stay), `vite.config.js` is replaced, files the template retired and
     yarn/npm lockfiles are removed, and the Dockerfile's `assets_backend`
-    stage becomes the template's pnpm stage. `postcss.config.cjs` is replaced
-    when it is an earlier template's, unchanged. CSS and every other existing
-    file are kept; missing template files are created.
+    stage becomes the template's pnpm stage. The legacy EuropaCSS build's
+    `postcss.config.cjs` and `europa.config.cjs` are removed when they are an
+    earlier template's, unchanged. CSS and every other existing file are kept,
+    with a notice for legacy at-rules they use; missing template files,
+    `europa.json5` among them, are created.
     """
     def upgrade(igniter, project) do
       Templates.manifest()
       |> Enum.filter(fn {_format, _source, target} -> String.starts_with?(target, "assets/backend/") end)
       |> Enum.reduce(igniter, &upgrade_asset(&1, &2, project))
       |> remove_files(@retired_backend_files ++ @legacy_backend_lockfiles)
+      |> retire_legacy_europa_files()
+      |> notice_legacy_css()
       |> upgrade_dockerfile()
       |> Igniter.add_notice("""
       Review the assets/backend diff, then install and build the admin with pnpm:
 
           mix brando.assets.setup --backend-only
+
+      The admin's CSS now builds with the native EuropaCSS compiler, which pnpm installs from npm
+      (@brandocms/europacss-cli and @brandocms/vite-plugin-europacss; "Native EuropaCSS" in Brando's
+      guides/migrating_from_053.md). Check the application's own admin CSS with
+
+          cd assets/backend && pnpm exec europa migrate css/app.css --from 1.0.0-beta.6 --config europa.json5 --check
 
       Commit the assets/backend/pnpm-lock.yaml it writes; the Docker build installs from it.
       """)
@@ -89,21 +139,91 @@ if Code.ensure_loaded?(Igniter) do
         target == @backend_vite_config ->
           replace_file(igniter, target, template_contents(file, project))
 
-        target == @backend_postcss_config ->
-          upgrade_postcss_config(igniter, file, project)
-
         true ->
           igniter
       end
     end
 
-    defp upgrade_postcss_config(igniter, file, project) do
-      igniter = Igniter.include_existing_file(igniter, @backend_postcss_config)
-      contents = igniter.rewrite |> Rewrite.source!(@backend_postcss_config) |> Rewrite.Source.get(:content)
+    defp retire_legacy_europa_files(igniter) do
+      Enum.reduce(@legacy_europa_files, igniter, &retire_legacy_europa_file/2)
+    end
 
-      if String.replace(contents, ~r/\s/, "") in @previous_backend_postcss_configs,
-        do: replace_file(igniter, @backend_postcss_config, template_contents(file, project)),
-        else: igniter
+    defp retire_legacy_europa_file({path, previous}, igniter) do
+      if Igniter.exists?(igniter, path) do
+        {igniter, contents} = read_file(igniter, path)
+
+        if without_whitespace(contents) in Enum.map(previous, &without_whitespace/1),
+          do: Igniter.rm(igniter, path),
+          else: Igniter.add_notice(igniter, own_legacy_file_notice(path))
+      else
+        igniter
+      end
+    end
+
+    defp without_whitespace(contents), do: String.replace(contents, ~r/\s/, "")
+
+    defp own_legacy_file_notice("assets/backend/postcss.config.cjs" = path) do
+      """
+      #{path} is not one Brando's templates wrote, so it is kept. The admin's vite.config.js no longer \
+      loads a PostCSS config: EuropaCSS runs as a Vite plugin and Lightning CSS adds vendor prefixes. Move \
+      any plugin it still needs into vite.config.js's `css.postcss`, then delete it.
+      """
+    end
+
+    defp own_legacy_file_notice(path) do
+      """
+      #{path} is not one Brando's templates wrote, so it is kept, but the admin now builds with \
+      assets/backend/europa.json5, which extends Brando's preset. Move its settings there \
+      (`pnpm exec europa migrate-config #{Path.basename(path)} -o converted.json5` converts static ones), then delete it.
+      """
+    end
+
+    defp backend_stylesheets(igniter) do
+      igniter = Igniter.include_glob(igniter, "assets/backend/css/**/*.css")
+
+      sources =
+        igniter.rewrite
+        |> Rewrite.sources()
+        |> Enum.filter(&String.starts_with?(&1.path, "assets/backend/css/"))
+        |> Enum.sort_by(& &1.path)
+        |> Enum.map(&{&1.path, Rewrite.Source.get(&1, :content)})
+
+      {igniter, sources}
+    end
+
+    # Legacy EuropaCSS at-rules the native compiler rejects, in the
+    # application's admin stylesheets.
+    @removed_at_rules [
+      {~r/@row\b/,
+       "`@row`, which EuropaCSS no longer has: write out its 0.13 expansion (flex-wrap, child margin-left " <>
+         "gutters and the nth-child resets) as \"Native EuropaCSS\" in Brando's guides/migrating_from_053.md " <>
+         "shows; `gap` is not equivalent"},
+      {~r/@container\s*;/, "`@container;`, which is now a CSS container query: use `@space container;`"}
+    ]
+
+    defp notice_legacy_css(igniter) do
+      {igniter, sources} = backend_stylesheets(igniter)
+
+      for {path, contents} <- sources, {pattern, advice} <- @removed_at_rules, reduce: igniter do
+        igniter ->
+          case line_numbers(contents, pattern) do
+            [] -> igniter
+            lines -> Igniter.add_notice(igniter, "#{path} (lines #{Enum.join(lines, ", ")}) uses #{advice}.")
+          end
+      end
+    end
+
+    defp line_numbers(contents, pattern) do
+      contents
+      |> String.split("\n")
+      |> Enum.with_index(1)
+      |> Enum.filter(fn {line, _number} -> Regex.match?(pattern, line) end)
+      |> Enum.map(&elem(&1, 1))
+    end
+
+    defp read_file(igniter, path) do
+      igniter = Igniter.include_existing_file(igniter, path)
+      {igniter, igniter.rewrite |> Rewrite.source!(path) |> Rewrite.Source.get(:content)}
     end
 
     defp template_contents({format, source, _target}, project) do

@@ -17,7 +17,8 @@ defmodule Mix.Tasks.Brando.Assets.Setup do
   Publishes to a project-local Yalc store under `_build`, adds BrandoJS to the
   backend, and runs pnpm install in both Vite consumers. Unless `--no-build` is
   supplied, builds both consumers. It does not run a standalone framework build.
-  Node.js, pnpm and Yalc must already be installed.
+  Node.js, pnpm and Yalc must already be installed. pnpm installs the native
+  EuropaCSS compiler the admin's CSS builds with from npm.
 
   `--backend-only` installs and builds the admin (`assets/backend`) alone, for
   applications whose frontend uses another package manager or build.

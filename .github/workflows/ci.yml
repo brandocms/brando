@@ -576,7 +576,7 @@ jobs:
           version: 10.32.1
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 24
           cache: pnpm
           cache-dependency-path: |
             brando/assets/pnpm-lock.yaml
@@ -589,9 +589,6 @@ jobs:
           key: e2e-yarn-v1-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('brando/e2e/assets/frontend/yarn.lock') }}
           restore-keys: |
             e2e-yarn-v1-${{ runner.os }}-${{ runner.arch }}-
-      # europacss has a public dependency pinned to an SSH GitHub URL.
-      - name: Fetch GitHub git dependencies over HTTPS
-        run: git config --global url."https://github.com/".insteadOf "git@github.com:"
       - name: Install Brando asset dependencies
         working-directory: brando/assets
         run: pnpm install --frozen-lockfile
@@ -722,21 +719,12 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 24
           cache: pnpm
           cache-dependency-path: |
             brando/assets/pnpm-lock.yaml
             brando/e2e/assets/backend/pnpm-lock.yaml
             brando/e2e/playwright/pnpm-lock.yaml
-
-      # `@brandocms/europacss` pins postcss-functions to an SSH remote
-      # (git@github.com:twined/postcss-functions.git) in its own published
-      # dependencies, so it cannot be changed from this repo. The runner has no
-      # SSH key and the clone exits 128. The repo is public, so rewriting to
-      # HTTPS fetches it anonymously; git rewrites at clone time, leaving the
-      # lockfile and --frozen-lockfile intact.
-      - name: Fetch GitHub git dependencies over HTTPS
-        run: git config --global url."https://github.com/".insteadOf "git@github.com:"
 
       - name: Restore E2E dependencies and build
         uses: actions/cache/restore@v6.1.0

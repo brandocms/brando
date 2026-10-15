@@ -1,5 +1,5 @@
 .globals-live {
-  @row 2;
+  @extend %row-2;
 
   .categories {
     @column 5/16;

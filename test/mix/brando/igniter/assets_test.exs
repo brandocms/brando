@@ -136,30 +136,77 @@ defmodule Mix.Brando.Igniter.AssetsTest do
       assert package["dependencies"]["site-widget"] == "^2.0.0"
       assert package["scripts"]["dev"] == "vite --host"
 
+      # The legacy EuropaCSS PostCSS build gives way to the native compiler's Vite plugin.
+      refute Map.has_key?(package["devDependencies"], "@brandocms/europacss")
+      refute Map.has_key?(package["devDependencies"], "autoprefixer")
+
+      # Both EuropaCSS packages at the template's exact npm version, the CLI
+      # for `pnpm exec europa`.
+      for name <- ~w(@brandocms/europacss-cli @brandocms/vite-plugin-europacss) do
+        assert package["devDependencies"][name] == wanted["devDependencies"][name]
+        assert package["devDependencies"][name] =~ ~r/^\d+\.\d+\.\d+/
+      end
+
       assert IgniterCase.source(plan, "assets/backend/vite.config.js") == template("assets/backend/vite.config.js")
       Igniter.Test.assert_rms(plan, ["assets/backend/svelte.config.cjs", "assets/backend/yarn.lock"])
-      Igniter.Test.assert_unchanged(plan, "assets/backend/css/app.css")
 
-      # Files the old backend lacked are created.
-      assert IgniterCase.source(plan, "assets/backend/css/blocks.css") == template("assets/backend/css/blocks.css")
+      # Files the old backend lacked are created, the EuropaCSS config among them.
+      assert IgniterCase.source(plan, "assets/backend/europa.json5") == template("assets/backend/europa.json5")
+      # Its stylesheet keeps importing BrandoJS's: the Vite plugin resolves package imports.
+      Igniter.Test.assert_unchanged(plan, "assets/backend/css/app.css")
     end
 
-    test "brings an earlier template's postcss.config.cjs up to date, and keeps a site's own" do
-      earlier =
+    test "removes an earlier template's legacy EuropaCSS configs and keeps a site's own with a notice" do
+      earlier_postcss =
         "module.exports = {\n  plugins: [\n    require('@brandocms/europacss'),\n    require('autoprefixer')()\n  ]\n}\n"
 
-      plan = upgrade(old_backend(%{"assets/backend/postcss.config.cjs" => earlier}))
+      for postcss <- [earlier_postcss, File.read!("test/fixtures/legacy_europa/postcss.config.cjs")] do
+        plan =
+          upgrade(
+            old_backend(%{
+              "assets/backend/postcss.config.cjs" => postcss,
+              "assets/backend/europa.config.cjs" => "module.exports = require('@brandocms/brandojs/europa.config.js')\n"
+            })
+          )
 
-      assert IgniterCase.source(plan, "assets/backend/postcss.config.cjs") ==
-               template("assets/backend/postcss.config.cjs")
+        Igniter.Test.assert_rms(plan, [
+          "assets/backend/postcss.config.cjs",
+          "assets/backend/europa.config.cjs",
+          "assets/backend/svelte.config.cjs",
+          "assets/backend/yarn.lock"
+        ])
+      end
 
-      own = "module.exports = { plugins: [require('@brandocms/europacss'), require('postcss-nested')] }\n"
-      plan = upgrade(old_backend(%{"assets/backend/postcss.config.cjs" => own}))
-      Igniter.Test.assert_unchanged(plan, "assets/backend/postcss.config.cjs")
+      own_postcss = "module.exports = { plugins: [require('@brandocms/europacss'), require('postcss-nested')] }\n"
+
+      own_europa =
+        "const base = require('@brandocms/brandojs/europa.config.js')\nmodule.exports = { ...base, theme: { ...base.theme } }\n"
+
+      plan =
+        upgrade(
+          old_backend(%{
+            "assets/backend/postcss.config.cjs" => own_postcss,
+            "assets/backend/europa.config.cjs" => own_europa
+          })
+        )
+
+      Igniter.Test.assert_unchanged(plan, ["assets/backend/postcss.config.cjs", "assets/backend/europa.config.cjs"])
+      assert Enum.any?(plan.notices, &(&1 =~ "assets/backend/postcss.config.cjs is not one Brando's templates wrote"))
+      assert Enum.any?(plan.notices, &(&1 =~ "europa migrate-config europa.config.cjs"))
     end
 
-    test "the E2E admin builds with the template's PostCSS config" do
-      assert File.read!("e2e/assets/backend/postcss.config.cjs") == template("assets/backend/postcss.config.cjs")
+    test "points out legacy at-rules in the site's admin CSS" do
+      css = ".panels {\n  @row 2;\n}\n@import 'some-package/style.css';\n.row {\n  @row;\n}\n"
+      plan = upgrade(old_backend(%{"assets/backend/css/app.css" => css}))
+
+      assert Enum.any?(plan.notices, &(&1 =~ "assets/backend/css/app.css (lines 2, 6) uses `@row`"))
+      refute Enum.any?(plan.notices, &(&1 =~ "lines 4"))
+      Igniter.Test.assert_unchanged(plan, "assets/backend/css/app.css")
+    end
+
+    test "the E2E admin builds with the template's EuropaCSS config and stylesheet" do
+      assert File.read!("e2e/assets/backend/europa.json5") == template("assets/backend/europa.json5")
+      assert File.read!("e2e/assets/backend/css/app.css") == template("assets/backend/css/app.css")
     end
 
     test "replaces the Dockerfile's yarn assets_backend stage with the template's pnpm stage" do
@@ -180,7 +227,7 @@ defmodule Mix.Brando.Igniter.AssetsTest do
     test "says the assets_frontend stage keeps its Node image when there is no frontend package to check" do
       [notice] = upgrade(old_backend()).notices |> Enum.filter(&(&1 =~ "assets_frontend"))
       assert notice =~ "still builds on node:18"
-      assert notice =~ "which builds on node:22"
+      assert notice =~ "which builds on node:24"
       assert notice =~ "There is no assets/frontend/package.json"
 
       {_, stage, _} = Mix.Brando.Igniter.Assets.dockerfile_stage(template("Dockerfile"), "assets_frontend")
@@ -210,6 +257,7 @@ defmodule Mix.Brando.Igniter.AssetsTest do
       Igniter.Test.assert_unchanged(rerun, [
         "assets/backend/package.json",
         "assets/backend/vite.config.js",
+        "assets/backend/europa.json5",
         "assets/backend/css/app.css",
         "Dockerfile"
       ])

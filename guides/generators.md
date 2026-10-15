@@ -8,7 +8,7 @@ preserved. Conflicting generated files stop the plan, including with `--yes`.
 The developing branch uses Yalc for BrandoJS. Keep the Elixir and JavaScript
 sources on the same revision; npm publication belongs to release preparation.
 The working consumer combination is phx_new 1.8.13, Phoenix 1.8.15, LiveView 1.2.12,
-Elixir 1.20.3, OTP 28.4.1 and PostgreSQL 16.1. Install Node.js 22, pnpm, Yalc, PostgreSQL, the matching
+Elixir 1.20.3, OTP 28.4.1 and PostgreSQL 16.1. Install Node.js 24, pnpm, Yalc, PostgreSQL, the matching
 Phoenix generator and an Image/Vix-supported build environment first.
 
 The old `install.sh` entry point is retired and prints these instructions without
@@ -103,7 +103,9 @@ mix deps.compile brando   # in the site
 
 Admin JavaScript has to be published into the site as well: `npx yalc
 publish` in Brando's `assets`, then `npx yalc update @brandocms/brandojs` and
-`pnpm install` in the site's `assets/backend`, and restart its Vite.
+`pnpm install` in the site's `assets/backend`, and restart its Vite. The
+admin's CSS builds with native EuropaCSS, which pnpm installs from npm (see
+[Native EuropaCSS](migrating_from_053.md#native-europacss)).
 
 The package installer calls the same `brando.install` task. Preserve your selected
 Git/path source while testing unreleased work; a bare `igniter.install brando`

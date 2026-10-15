@@ -278,7 +278,6 @@
   .seo-audit-status { display: flex; gap: 10px; align-items: center; padding: 13px 18px; font-size: 12px; color: var(--workspace-muted); }
   .seo-audit-status.error { color: var(--brando-error-ink); }
   .seo-spinner { width: 15px; height: 15px; border: 2px solid var(--brando-line); border-top-color: var(--brando-accent); border-radius: 50%; animation: seo-spin .8s linear infinite; }
-  @keyframes seo-spin { to { transform: rotate(360deg); } }
 
   .seo-audit-overview { padding: 18px; border-bottom: 1px solid var(--workspace-line); }
   /* A ruled grid: the box draws the outer frame, and each cell draws only its
@@ -458,3 +457,5 @@
     .seo-audit .workspace-panel-heading { flex-direction: column; }
   }
 }
+
+@keyframes seo-spin { to { transform: rotate(360deg); } }
