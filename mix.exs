@@ -234,8 +234,8 @@ defmodule Brando.Mixfile do
       #
       # Not claimed here: that shipping placeholder credentials is itself the
       # risk. `priv/` still ships several on purpose — `brando.install`'s
-      # `deployment.cfg`, `fabfile.py`, `.envrc.prod` — because a scaffold has
-      # to hand the operator something to fill in.
+      # `.envrc.prod` and `.envrc.staging` — because a scaffold has to hand the
+      # operator something to fill in.
       # Frontend `assets/` are absent on purpose. The admin frontend reaches consuming
       # applications as the `@brandocms/brandojs` npm package (or through Yalc
       # from a checkout), never through this tarball, and the generator

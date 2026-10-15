@@ -155,8 +155,6 @@ defmodule Mix.Brando.Install.Templates do
     {:copy, "gitignore", ".gitignore"},
     {:copy, "dockerignore", ".dockerignore"},
     {:copy, "Dockerfile", "Dockerfile"},
-    {:copy, "fabfile.py", "fabfile.py"},
-    {:eex, "deployment.cfg", "deployment.cfg"},
     {:eex, "scripts/sync_media_from_local_to_remote.sh", "scripts/sync_media_from_local_to_remote.sh"},
     {:eex, "scripts/sync_media_from_remote_to_local.sh", "scripts/sync_media_from_remote_to_local.sh"},
 

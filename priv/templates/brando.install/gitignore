@@ -31,8 +31,6 @@ bower_components
 media*
 sql
 prod_rel
-deployment.cfg
-fabfile.pyc
 assets/backend/.yalc
 assets/frontend/.yalc
 /release-archives

@@ -426,7 +426,8 @@ definition. It preserves existing release settings, runtime configuration,
 secrets, Dockerfiles and deployment files. Build with `MIX_ENV=prod mix release`,
 then invoke migrations explicitly as described in [Deployment](deployment.md).
 `brando.install.fabfile` is retired and directs callers to release generation and
-Florist; it does not modify existing Fabric files.
+Florist; it does not modify existing Fabric files. `brando.install` no longer
+writes `fabfile.py` or `deployment.cfg` into a new application.
 
 ```sh
 mix brando.gen.otel
