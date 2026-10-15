@@ -26,7 +26,7 @@ The second design review uses the approved workspace implementation directly: `2
 - **Video playback:** Play button and Progress bar continue the same lined settings rows as the inherited playback flags.
 - **Keyboard behavior:** media drawers reuse the approved modal hook. Escape closes the active panel, menus return focus to their disclosure, and selecting an asset returns focus to its field.
 
-The screenshot iterations exposed legacy drawer flex sizing and picker typography overriding the new shell, an overlay remaining active after a nested panel closed, a video thumbnail overflowing its column, excess mobile folder-rail height, and streamed grid tiles stacking into one column. These were corrected in the actual application, with intermediate captures retained under `implementation/revision-2`.
+The screenshot iterations exposed legacy drawer flex sizing and picker typography overriding the new shell, an overlay remaining active after a nested panel closed, a video thumbnail overflowing its column, excess mobile folder-rail height, and streamed grid tiles stacking into one column. These were corrected in the actual application.
 
 ## The interaction contract
 
