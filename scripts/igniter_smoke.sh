@@ -2,20 +2,29 @@
 set -euo pipefail
 
 # Requires an explicit disposable PostgreSQL service, phx_new 1.8.13, pnpm,
-# Yalc and Playwright Chromium. Only the generated consumer builds JS/CSS.
+# Yalc (checkout source only) and Playwright Chromium. Only the generated
+# consumer builds JS/CSS.
+#
+#   BRANDO_SMOKE_SOURCE  checkout (default): Brando as a path dependency on this
+#                        checkout, BrandoJS through Yalc. packaged: the Hex and npm
+#                        packages a release candidate would publish (see
+#                        scripts/igniter_smoke/packages.sh), with no checkout or Yalc.
 : "${BRANDO_SMOKE_PGPORT:?Set BRANDO_SMOKE_PGPORT to a disposable PostgreSQL service}"
 smoke_mode="${1:-none}"
 case "$smoke_mode" in none|single|multi) ;; *) echo 'Expected none, single or multi' >&2; exit 2 ;; esac
 smoke_bootstrap="${BRANDO_SMOKE_BOOTSTRAP:-fresh}"
 case "$smoke_bootstrap" in fresh|precompiled) ;; *) echo 'Expected fresh or precompiled bootstrap' >&2; exit 2 ;; esac
+smoke_source="${BRANDO_SMOKE_SOURCE:-checkout}"
+case "$smoke_source" in checkout|packaged) ;; *) echo 'Expected checkout or packaged source' >&2; exit 2 ;; esac
 framework_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-smoke_root="$(mktemp -d "${TMPDIR:-/tmp}/brando-igniter-smoke.XXXXXX")"
+smoke_tmp="${TMPDIR:-/tmp}"
+smoke_root="$(mktemp -d "${smoke_tmp%/}/brando-igniter-smoke.XXXXXX")"
 smoke_app="$smoke_root/consumer"
 smoke_database="brando_igniter_smoke_$(basename "$smoke_root" | tr '[:upper:].-' '[:lower:]__')"
 smoke_port="${BRANDO_SMOKE_PORT:-4482}"
 smoke_server_pid=''
 mkdir -p "$smoke_root/logs"
-echo "Igniter $smoke_mode smoke consumer: $smoke_root"
+echo "Igniter $smoke_mode smoke consumer ($smoke_source): $smoke_root"
 if [[ -n "${GITHUB_OUTPUT:-}" ]]; then echo "root=$smoke_root" >> "$GITHUB_OUTPUT"; fi
 trap 'echo "Smoke failed near line $LINENO; inspect $smoke_root/logs" >&2' ERR
 
@@ -27,13 +36,32 @@ stop_server() {
 }
 trap stop_server EXIT
 
+# The directory the consumer takes Brando from, and whose templates and skills
+# the checks compare against.
+brando_dir="$framework_dir"
+if [[ "$smoke_source" == packaged ]]; then
+  "$framework_dir/scripts/igniter_smoke/packages.sh" "$framework_dir" "$smoke_root"
+  brando_dir="$smoke_root/packages/hex"
+  smoke_version="$(cat "$smoke_root/packages/VERSION")"
+  smoke_npm_tarball="$smoke_root/packages/brandocms-brandojs-$smoke_version.tgz"
+  # Any Yalc run fails loudly: a released install must not need it.
+  mkdir -p "$smoke_root/no-yalc"
+  printf '#!/bin/sh\necho "packaged smoke: yalc must not run (yalc $*)" >&2\nexit 97\n' > "$smoke_root/no-yalc/yalc"
+  chmod +x "$smoke_root/no-yalc/yalc"
+  export PATH="$smoke_root/no-yalc:$PATH"
+  package_digest() {
+    (cd "$brando_dir" && { find . | LC_ALL=C sort; find . -type f -print0 | LC_ALL=C sort -z | xargs -0 shasum -a 256; } | shasum -a 256)
+  }
+  package_before="$(package_digest)"
+fi
+
 if [[ -n "${BRANDO_SMOKE_PHX_EBIN:-}" ]]; then
   elixir -pa "$BRANDO_SMOKE_PHX_EBIN" -S mix phx.new "$smoke_app" --app igniter_smoke --module IgniterSmoke --no-install --no-assets --no-dashboard --no-mailer > "$smoke_root/logs/phoenix.log" 2>&1
 else
   mix phx.new "$smoke_app" --app igniter_smoke --module IgniterSmoke --no-install --no-assets --no-dashboard --no-mailer > "$smoke_root/logs/phoenix.log" 2>&1
 fi
 cd "$smoke_app"
-elixir "$framework_dir/scripts/igniter_smoke/bootstrap.exs" "$framework_dir" "$smoke_database" "$smoke_mode" "$smoke_port"
+elixir "$framework_dir/scripts/igniter_smoke/bootstrap.exs" "$brando_dir" "$smoke_database" "$smoke_mode" "$smoke_port"
 if [[ "$smoke_bootstrap" == precompiled ]]; then
   elixir "$framework_dir/scripts/igniter_smoke/customize.exs"
   elixir "$framework_dir/scripts/igniter_smoke/optional_dependency.exs" remove
@@ -53,17 +81,23 @@ cmp "$smoke_root/before-preview" "$smoke_root/after-preview"
 
 install_options=(--yes --tenancy-mode "$smoke_mode" --public-site --replace-phoenix-home)
 if [[ "$smoke_mode" == single ]]; then install_options+=(--site-key smoke); fi
-mix igniter.install "brando@path:$framework_dir" "${install_options[@]}" > "$smoke_root/logs/install.log" 2>&1
+mix igniter.install "brando@path:$brando_dir" "${install_options[@]}" > "$smoke_root/logs/install.log" 2>&1
 mix compile --warnings-as-errors > "$smoke_root/logs/compile.log" 2>&1
 elixir "$framework_dir/scripts/igniter_smoke/fingerprint.exs" > "$smoke_root/before-rerun"
 mix brando.install --yes > "$smoke_root/logs/rerun.log" 2>&1
 elixir "$framework_dir/scripts/igniter_smoke/fingerprint.exs" > "$smoke_root/after-rerun"
 cmp "$smoke_root/before-rerun" "$smoke_root/after-rerun"
-elixir "$framework_dir/scripts/igniter_smoke/check_agent_files.exs" "$framework_dir" > "$smoke_root/logs/agent-files.log" 2>&1
+elixir "$framework_dir/scripts/igniter_smoke/check_agent_files.exs" "$brando_dir" > "$smoke_root/logs/agent-files.log" 2>&1
 
 elixir "$framework_dir/scripts/igniter_smoke/frontend_fixture.exs"
+if [[ "$smoke_source" == packaged ]]; then
+  mix run --no-start "$framework_dir/scripts/igniter_smoke/packaged.exs" pin "$smoke_version" "$smoke_npm_tarball" > "$smoke_root/logs/packaged-pin.log" 2>&1
+fi
 mix brando.assets.setup > "$smoke_root/logs/assets.log" 2>&1
-mix run --no-start "$framework_dir/scripts/igniter_smoke/check_assets.exs" "$framework_dir" > "$smoke_root/logs/asset-bytes.log" 2>&1
+mix run --no-start "$framework_dir/scripts/igniter_smoke/check_assets.exs" "$brando_dir" > "$smoke_root/logs/asset-bytes.log" 2>&1
+if [[ "$smoke_source" == packaged ]]; then
+  mix run --no-start "$framework_dir/scripts/igniter_smoke/packaged.exs" verify "$smoke_version" "$smoke_npm_tarball" > "$smoke_root/logs/packaged-verify.log" 2>&1
+fi
 mix ecto.create > "$smoke_root/logs/database-create.log" 2>&1
 mix ecto.migrate > "$smoke_root/logs/framework-migrations.log" 2>&1
 mix run "$framework_dir/scripts/igniter_smoke/seed.exs" > "$smoke_root/logs/seed.log" 2>&1
@@ -99,4 +133,12 @@ done
 if [[ "$smoke_ready" != true ]]; then echo "Consumer did not start; inspect $smoke_root/logs/server.log" >&2; exit 1; fi
 BRANDO_SMOKE_BASE_URL="http://127.0.0.1:$smoke_port" BRANDO_SMOKE_ARTIFACTS="$smoke_root/browser" \
   pnpm --dir "$framework_dir/scripts/igniter_smoke" exec playwright test --config playwright.config.js > "$smoke_root/logs/browser.log" 2>&1
+if [[ "$smoke_source" == packaged ]]; then
+  if [[ "$(package_digest)" != "$package_before" ]]; then echo "The consumer wrote into the Hex package at $brando_dir" >&2; exit 1; fi
+  # Nothing in the consumer, its dependencies or node_modules may name the checkout.
+  if grep -rlF -e "$framework_dir" -e "$(cd "$framework_dir" && pwd -P)" . > "$smoke_root/logs/checkout-references.log"; then
+    echo "The consumer references the Brando checkout; see $smoke_root/logs/checkout-references.log" >&2
+    exit 1
+  fi
+fi
 echo "Igniter $smoke_mode smoke passed: $smoke_root"
