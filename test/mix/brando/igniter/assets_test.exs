@@ -100,7 +100,7 @@ defmodule Mix.Brando.Igniter.AssetsTest do
   end
 
   describe "brando.gen.backend --upgrade" do
-    # A 0.54 site's admin, as smartwatt had it: yarn, Vite 5, Svelte 4.
+    # A 0.54 site's admin as a production site had it: yarn, Vite 5, Svelte 4.
     @old_package ~s({
       "name": "backend",
       "version": "0.0.0",

@@ -42,7 +42,7 @@ On a multi-site installation, a site can send as itself. Its entry under
 
 ```elixir
 config :brando, Brando.Mailer,
-  from: {"Univers", "noreply@univers.no"},
+  from: {"My App", "noreply@myapp.com"},
   sites: %{
     "acme" => [from: {"Acme", "noreply@acme.no"}, reply_to: "post@acme.no"]
   }

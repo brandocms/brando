@@ -203,7 +203,7 @@ defmodule Brando.Villain.ParserDispatchTest do
       assert html =~ "DISPATCHED_CAPTION"
     end
 
-    # The one that broke bielkeyang: the site turned the cover off and the play
+    # The one that broke a production site: it turned the cover off and the play
     # button on, and got Brando's hardcoded SVG cover and no play button.
     test "are used for video_file_options/1 inside video/2", %{user: user} do
       video = Factory.insert(:external_file_video, creator: user)

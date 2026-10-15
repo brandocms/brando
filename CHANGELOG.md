@@ -813,8 +813,8 @@ production dump.
   Select and boolean filter values reach the context unescaped, so a select
   value such as `"in_progress"` no longer arrives as `"in\_progress"`.
 
-- **Upgrading a 0.53/0.54 site takes fewer manual steps** (from the smartwatt
-  upgrade). See [Migrating from 0.53 or 0.54](guides/migrating_from_053.md),
+- **Upgrading a 0.53/0.54 site takes fewer manual steps** (from a
+  production site's upgrade). See [Migrating from 0.53 or 0.54](guides/migrating_from_053.md),
   which now also covers the dependency, Node, legacy-snapshot and test-database
   steps.
   - `mix brando.migrate54` and `migrate55` no longer compile the application

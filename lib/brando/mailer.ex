@@ -20,7 +20,7 @@ defmodule Brando.Mailer do
   On a multi-site installation, a site can send as itself, by site key:
 
       config :brando, Brando.Mailer,
-        from: {"Univers", "noreply@univers.no"},
+        from: {"My App", "noreply@myapp.com"},
         sites: %{
           "acme" => [from: {"Acme", "noreply@acme.no"}, reply_to: "post@acme.no"]
         }

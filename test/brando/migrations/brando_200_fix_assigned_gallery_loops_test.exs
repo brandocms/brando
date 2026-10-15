@@ -9,7 +9,7 @@ defmodule Brando.Migrations.FixAssignedGalleryLoopsTest do
                "priv/templates/brando.upgrade/migrations/brando_200_fix_assigned_gallery_loops.exs"
              )
 
-  # Modules 20, 21 and 23 from smartwatt, as brando_136 left them.
+  # Modules 20, 21 and 23 from a production site, as brando_136 left them.
   @fixtures Path.expand("../../fixtures/gallery_loops", __DIR__)
   @modules ~w(integration_compatibility info_slider logo_marquee)
   @tenant "tenant_acme_staging"

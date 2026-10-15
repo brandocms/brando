@@ -18,8 +18,6 @@ config :e2e_project, E2eProjectWeb.Endpoint,
   check_origin: [
     "//e2e_project.com",
     "//*.e2e_project.com",
-    "//*.univers.agency",
-    "//*.b-y.no",
     "//localhost:4000"
   ],
   server: true,

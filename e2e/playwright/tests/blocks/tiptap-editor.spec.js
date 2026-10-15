@@ -95,7 +95,7 @@ test('Norwegian link dialog translates destinations, appearance, targets and anc
   const client = await fixture(page, 'E2eProject.Projects.Client', { name: 'Norske lenker', slug: 'norske-lenker', status: 'published', language: 'en' })
   const project = await fixture(page, 'E2eProject.Projects.Project', {
     title: 'Butikk', slug: 'norsk-lenkedialog', client_id: client.id, status: 'draft', language: 'en',
-    introduction: '<h2>Butikk</h2><p>Storgata 36A<br>0189 Oslo<br><a href="https://example.com/kart">Kart →</a></p><p>12–18 (tors)<br>12–16 (fre/lør)</p><p>shop@10-10.no</p>',
+    introduction: '<h2>Butikk</h2><p>Eksempelveien 1<br>0000 Oslo<br><a href="https://example.com/kart">Kart →</a></p><p>10–17 (man)<br>11–15 (lør)</p><p>butikk@example.com</p>',
   })
   const response = await page.request.post('/e2e/setup_fixtures/norwegian-admin-user')
   expect(response.ok()).toBe(true)

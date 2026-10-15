@@ -987,19 +987,19 @@ defmodule Brando.Doctor.ChecksTest do
 
   describe "JSONLD" do
     test "a complete identity passes" do
-      identities = [{nil, [%{language: "en", name: "Univers", logo?: true}]}]
-      assert %Result{status: :ok} = Checks.JSONLD.evaluate(identities, "https://univers.no")
+      identities = [{nil, [%{language: "en", name: "Studio", logo?: true}]}]
+      assert %Result{status: :ok} = Checks.JSONLD.evaluate(identities, "https://studio.test")
     end
 
     test "a missing logo or name is a warning per language" do
-      identities = [{nil, [%{language: "en", name: "Univers", logo?: false}, %{language: "no", name: "", logo?: true}]}]
-      result = Checks.JSONLD.evaluate(identities, "https://univers.no")
+      identities = [{nil, [%{language: "en", name: "Studio", logo?: false}, %{language: "no", name: "", logo?: true}]}]
+      result = Checks.JSONLD.evaluate(identities, "https://studio.test")
       assert result.status == :warning
       assert result.items == ["en: no logo", "no: no name"]
     end
 
     test "no identity or no URL is an error" do
-      assert %Result{status: :error} = Checks.JSONLD.evaluate([{"acme/live", []}], "https://univers.no")
+      assert %Result{status: :error} = Checks.JSONLD.evaluate([{"acme/live", []}], "https://studio.test")
       assert %Result{status: :error} = Checks.JSONLD.evaluate([{nil, [%{language: "en", name: "U", logo?: true}]}], "")
     end
 

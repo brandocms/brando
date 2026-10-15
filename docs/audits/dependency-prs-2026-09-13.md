@@ -26,8 +26,7 @@ cleanup. Seven were merged after reviewing their diffs and passing CI results;
 
 At review, Jupiter's npm `next` tag resolved to `5.0.0-beta.18`, while `latest`
 still pointed to `3.48.4`. The frontend template and E2E frontend pin the beta.
-The [Ses Optikk v6.0 frontend](https://github.com/tmjoen/ses_optikk/tree/v6.0/assets/frontend)
-and Jupiter's [v5 changelog](https://github.com/brandocms/jupiter/blob/next/CHANGELOG.md)
+A production site's frontend and Jupiter's [v5 changelog](https://github.com/brandocms/jupiter/blob/next/CHANGELOG.md)
 provided the migration reference.
 
 The menu uses Motion sequences, waits for animation completion before emitting

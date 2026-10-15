@@ -31,11 +31,10 @@ bower_components
 media*
 sql
 prod_rel
-deployment.cfg
-fabfile.pyc
 assets/frontend/.yalc
 /release-archives
 /certs/tmp/
+/site_assets/
 
 # test_e2e_parallel.sh shard logs and media
 /tmp/

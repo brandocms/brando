@@ -94,7 +94,7 @@ defmodule Mix.Tasks.Brando.Migrate54ConfigTest do
 
     if config_env() == :prod do
       config :brando, Brando.Mailer,
-        from: {"Lett", System.get_env("MAIL_FROM", "post@lett.no")}
+        from: {"Lett", System.get_env("MAIL_FROM", "post@studio.test")}
     end
     """
 

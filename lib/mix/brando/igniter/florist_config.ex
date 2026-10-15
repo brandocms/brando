@@ -8,7 +8,7 @@ if Code.ensure_loaded?(Igniter) do
     configuration without evaluating Python or copying secrets.
 
     The converter intentionally targets the deployment model implemented by the
-    bundled `fabfile.py`: separate, single-release `prod` and `staging` targets
+    `fabfile.py` earlier Brando versions generated: separate, single-release `prod` and `staging` targets
     using nginx and Docker-built OTP releases. Settings that cannot be inferred
     safely are reported as warnings and left for the operator to complete.
     """

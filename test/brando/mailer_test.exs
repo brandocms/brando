@@ -35,7 +35,7 @@ defmodule Brando.MailerTest do
 
     test "is the site's own on a multi-site installation" do
       Application.put_env(:brando, Brando.Mailer,
-        from: {"Univers", "noreply@univers.no"},
+        from: {"Studio", "noreply@studio.test"},
         sites: %{"acme" => [from: {"Acme", "noreply@acme.no"}, reply_to: "post@acme.no"]}
       )
 
@@ -45,7 +45,7 @@ defmodule Brando.MailerTest do
                [from: {"Acme", "noreply@acme.no"}, reply_to: "post@acme.no"]
 
       assert Brando.Tenant.with_prefix("tenant_other_live", &Mailer.sender/0) ==
-               [from: {"Univers", "noreply@univers.no"}, reply_to: nil]
+               [from: {"Studio", "noreply@studio.test"}, reply_to: nil]
     end
 
     test "a plain address is sent in the name of the site's identity" do
@@ -126,14 +126,14 @@ defmodule Brando.MailerTest do
         Application.put_env(:brando, Brando.Mailer, from: from)
         assert Mailer.sender()[:from] == nil
 
-        log = capture_log(fn -> assert {:error, :no_sender} = Mailer.deliver(Email.new(to: "ada@lett.no")) end)
+        log = capture_log(fn -> assert {:error, :no_sender} = Mailer.deliver(Email.new(to: "ada@example.com")) end)
         assert log =~ "no address to send email from"
       end
 
       # A placeholder the email already carries: set by the caller, or queued
       # before the upgrade.
-      Application.put_env(:brando, Brando.Mailer, from: {"Lett", "post@lett.no"})
-      placeholder = Email.new(to: "ada@lett.no", from: {"Lett", "noreply@example.com"})
+      Application.put_env(:brando, Brando.Mailer, from: {"Lett", "post@studio.test"})
+      placeholder = Email.new(to: "ada@example.com", from: {"Lett", "noreply@example.com"})
 
       capture_log(fn ->
         assert {:error, :no_sender} = Mailer.deliver(placeholder)
