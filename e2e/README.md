@@ -49,9 +49,8 @@ parallel preparation jobs. All five browser jobs download the same run's
 tree, including both manifests, bundled assets and Vite's copied public files.
 The first legacy shard still installs Brando/backend dependencies for its
 Vite component tests; the other shards only install Playwright's Node packages.
-Every install keeps the frozen lockfile check. pnpm's package store and Yarn's
-download cache are keyed by their lockfiles, with main runs warming them for
-new PRs; built assets are shared within a run, not restored from a source cache.
+Every install keeps the frozen lockfile check. pnpm's package store is keyed
+by the lockfiles, with main runs warming it for new PRs; built assets are shared within a run, not restored from a source cache.
 
 If asset preparation fails, fix that job before rerunning the affected browser
 jobs. The shared asset artifact is retained for one day; after it expires,
@@ -65,7 +64,7 @@ To start your server:
   * Install BrandoJS's own dependencies with `cd ../assets && pnpm install` —
     the backend links BrandoJS from this checkout and builds it from source
   * Install Node.js b/e dependencies with `cd assets/backend && pnpm install`
-  * Install Node.js f/e dependencies with `cd assets/frontend && yarn install`
+  * Install Node.js f/e dependencies with `cd assets/frontend && pnpm install`
 
 `./run_e2e.sh` does all of the above, builds both asset projects and starts the
 server.

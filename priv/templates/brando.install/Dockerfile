@@ -87,12 +87,8 @@ RUN pnpm build
 FROM node:24 AS assets_frontend
 WORKDIR /opt/app/assets/frontend
 
-# pnpm uses a different cache structure
-ENV PNPM_HOME="/pnpm"
-ENV PATH="$PNPM_HOME:$PATH"
-
-# Install pnpm
-RUN corepack enable && corepack prepare pnpm@latest --activate
+# Keep in step with `packageManager` in assets/frontend/package.json
+RUN npm install --global pnpm@10.32.1
 
 COPY assets/frontend/package.json assets/frontend/pnpm-lock.yaml ./
 COPY assets/frontend/.yalc ./.yalc

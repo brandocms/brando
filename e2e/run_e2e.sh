@@ -22,8 +22,6 @@ fi
 # script (set -e) instead of leaving us in the asset directory — previously a
 # failed `cd X && ... && cd ../../` chain skipped the final cd, and the server
 # then started from assets/frontend and died with "no mix.exs was found".
-# The two projects use different package managers: backend is pnpm
-# (pnpm-lock.yaml), frontend is yarn (yarn.lock + "packageManager": "yarn@…").
 # The two asset projects below both import from Brando's own assets/src, so they
 # resolve @tiptap/* and friends out of the root assets/node_modules. Nothing else
 # installs that tree, so it silently drifts from assets/package.json — a stale
@@ -35,7 +33,7 @@ echo "Installing Brando asset dependencies"
 echo "Building static assets [backend]"
 (cd assets/backend && pnpm install && pnpm build)
 echo "Building static assets [frontend]"
-(cd assets/frontend && yarn install && yarn build)
+(cd assets/frontend && pnpm install && pnpm build)
 
 echo "Starting E2E project server"
 MIX_ENV=test PORT="$BRANDO_E2E_PORT" iex -S mix phx.server

@@ -106,9 +106,8 @@ backend_build() {
   (cd e2e/assets/backend && CI=true tool npx -y pnpm@10 build)
 }
 
-# The frontend is a yarn 1 project (its packageManager field).
 frontend_build() {
-  (cd e2e/assets/frontend && tool npx -y yarn@1.22.22 install --frozen-lockfile && tool npx -y yarn@1.22.22 build)
+  pnpm_install e2e/assets/frontend && (cd e2e/assets/frontend && CI=true tool npx -y pnpm@10 build)
 }
 
 playwright_browser() {

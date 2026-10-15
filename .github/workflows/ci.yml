@@ -581,14 +581,8 @@ jobs:
           cache-dependency-path: |
             brando/assets/pnpm-lock.yaml
             brando/e2e/assets/backend/pnpm-lock.yaml
+            brando/e2e/assets/frontend/pnpm-lock.yaml
             brando/e2e/playwright/pnpm-lock.yaml
-      - name: Restore frontend download cache
-        uses: actions/cache@v6.1.0
-        with:
-          path: ${{ runner.temp }}/brando-yarn-cache
-          key: e2e-yarn-v1-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('brando/e2e/assets/frontend/yarn.lock') }}
-          restore-keys: |
-            e2e-yarn-v1-${{ runner.os }}-${{ runner.arch }}-
       - name: Install Brando asset dependencies
         working-directory: brando/assets
         run: pnpm install --frozen-lockfile
@@ -599,13 +593,9 @@ jobs:
           pnpm build
       - name: Build frontend assets
         working-directory: brando/e2e/assets/frontend
-        env:
-          YARN_CACHE_FOLDER: ${{ runner.temp }}/brando-yarn-cache
-        # Enable only yarn: enabling every shim also replaces the pinned pnpm.
         run: |
-          corepack enable yarn
-          yarn install --frozen-lockfile
-          yarn build
+          pnpm install --frozen-lockfile
+          pnpm build
       - name: Warm Playwright's package download cache
         working-directory: brando/e2e/playwright
         run: pnpm install --frozen-lockfile
