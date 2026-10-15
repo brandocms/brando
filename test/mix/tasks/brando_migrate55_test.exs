@@ -228,6 +228,25 @@ defmodule Mix.Tasks.Brando.Migrate55Test do
     assert_creates(igniter, @archive_path, fn archive -> assert archive == legacy_task("0.54") end)
   end
 
+  test "says when assets/backend does not build its CSS with Brando's native EuropaCSS yet" do
+    legacy = ~s({"devDependencies": {"@brandocms/europacss": "^0.13.1", "vite": "^5.0.0"}})
+    igniter = migrate(@blueprint_054, %{"assets/backend/package.json" => legacy})
+
+    assert_has_notice(igniter, fn notice ->
+      notice =~ "does not build the admin's CSS with Brando's native EuropaCSS packages yet" and
+        notice =~ "builds with the legacy @brandocms/europacss ^0.13.1" and
+        notice =~ "@brandocms/vite-plugin-europacss is not a dependency" and
+        notice =~ "mix brando.gen.backend --upgrade"
+    end)
+
+    # The source migration leaves the package alone: the backend upgrade owns it.
+    assert_unchanged(igniter, "assets/backend/package.json")
+
+    current = Jason.encode!(%{"devDependencies" => Brando.EuropaCSS.pins()})
+    igniter = migrate(@blueprint_054, %{"assets/backend/package.json" => current})
+    refute Enum.any?(igniter.notices, &(&1 =~ "native EuropaCSS"))
+  end
+
   test "is idempotent" do
     first_pass = migrate(@blueprint_054)
 

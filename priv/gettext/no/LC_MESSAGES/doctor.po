@@ -322,6 +322,31 @@ msgstr "%{name} %{version} (støttet: %{requirement})"
 msgid "%{name} %{version}, needs %{requirement}"
 msgstr "%{name} %{version}, krever %{requirement}"
 
+#: lib/brando/europa_css.ex
+#, elixir-autogen, elixir-format
+msgid "%{package} %{version} installed, package.json has %{pin}"
+msgstr "%{package} %{version} er installert, package.json har %{pin}"
+
+#: lib/brando/europa_css.ex
+#, elixir-autogen, elixir-format
+msgid "%{package} %{version}, Brando's is %{pin}"
+msgstr "%{package} %{version}, Brandos er %{pin}"
+
+#: lib/brando/europa_css.ex
+#, elixir-autogen, elixir-format
+msgid "%{package} from %{source}, not npm"
+msgstr "%{package} fra %{source}, ikke npm"
+
+#: lib/brando/europa_css.ex
+#, elixir-autogen, elixir-format
+msgid "%{package} is not a dependency"
+msgstr "%{package} er ikke en avhengighet"
+
+#: lib/brando/europa_css.ex
+#, elixir-autogen, elixir-format
+msgid "%{package} not installed"
+msgstr "%{package} er ikke installert"
+
 #: lib/brando/doctor/checks/admin_routes.ex
 #, elixir-autogen, elixir-format
 msgid "%{schema}: %{helpers}"
@@ -362,6 +387,11 @@ msgstr "%{version}: Node %{major} er eldre enn det Brando er testet på"
 #, elixir-autogen, elixir-format
 msgid ".yalc brandojs %{version}"
 msgstr ".yalc brandojs %{version}"
+
+#: lib/brando/doctor/checks/admin_css.ex
+#, elixir-autogen, elixir-format
+msgid "Admin CSS compiler"
+msgstr "CSS-kompilator for admin"
 
 #: lib/brando/doctor/checks/admin_assets.ex
 #, elixir-autogen, elixir-format
@@ -432,6 +462,11 @@ msgstr "Endpoint-URL: ikke satt"
 #, elixir-autogen, elixir-format
 msgid "Error"
 msgstr "Feil"
+
+#: lib/brando/doctor/checks/admin_css.ex
+#, elixir-autogen, elixir-format
+msgid "EuropaCSS %{version}"
+msgstr "EuropaCSS %{version}"
 
 #: lib/brando/doctor/checks/robots.ex
 #, elixir-autogen, elixir-format
@@ -693,6 +728,11 @@ msgstr "brandojs er ikke en avhengighet i assets/backend"
 msgid "brandojs not installed"
 msgstr "brandojs er ikke installert"
 
+#: lib/brando/europa_css.ex
+#, elixir-autogen, elixir-format
+msgid "builds with the legacy %{package} %{version}"
+msgstr "bygger med den gamle %{package} %{version}"
+
 #: lib/brando/doctor/checks/image_configs.ex
 #, elixir-autogen, elixir-format
 msgid "by its record it differs from its config"
@@ -926,6 +966,7 @@ msgid "no API key for the Assistant"
 msgstr "ingen API-nøkkel for assistenten"
 
 #: lib/brando/doctor/checks/admin_assets.ex
+#: lib/brando/doctor/checks/admin_css.ex
 #, elixir-autogen, elixir-format
 msgid "no assets/backend/package.json"
 msgstr "ingen assets/backend/package.json"
@@ -1105,6 +1146,11 @@ msgstr "kjør `mix brando.gen.mail`, og sett så `config :brando, Brando.Mailer,
 msgid "run mix brando.assets.setup --backend-only"
 msgstr "kjør mix brando.assets.setup --backend-only"
 
+#: lib/brando/doctor/checks/admin_css.ex
+#, elixir-autogen, elixir-format
+msgid "run mix brando.gen.backend --upgrade, then mix brando.assets.setup --backend-only"
+msgstr "kjør mix brando.gen.backend --upgrade, deretter mix brando.assets.setup --backend-only"
+
 #: lib/brando/doctor/checks/migrations.ex
 #, elixir-autogen, elixir-format
 msgid "run mix brando.gen.migrations, then mix brando.migrate"
@@ -1139,6 +1185,11 @@ msgstr "kjør mix brando.migrate, deretter mix brando.migrate --tenants"
 #, elixir-autogen, elixir-format
 msgid "run mix brando.migrations.check --update and review the diff"
 msgstr "kjør mix brando.migrations.check --update og gå gjennom endringene"
+
+#: lib/brando/doctor/checks/admin_css.ex
+#, elixir-autogen, elixir-format
+msgid "run pnpm install in assets/backend"
+msgstr "kjør pnpm install i assets/backend"
 
 #: lib/brando/doctor/checks/configuration.ex
 #, elixir-autogen, elixir-format
