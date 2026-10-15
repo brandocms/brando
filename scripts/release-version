@@ -1,0 +1,267 @@
+#!/usr/bin/env bash
+# Keeps the release version in step across Hex, npm and the Git tag. mix.exs
+# is authoritative. Prints one summary line, or one line per problem.
+#
+#   scripts/release-version check [--tag TAG]
+#       fail unless these agree with mix.exs's @version (mix check and CI):
+#       - assets/package.json's version, and its publishConfig.tag: `beta`
+#         for a prerelease, `latest` for a stable version
+#       - the generator's BrandoJS pin in the backend template's package.json,
+#         and its Brando dependency in the template mix.exs: an exact version
+#         must be the release version; a local file:/link: package or a
+#         path:/github:/git: dependency is accepted
+#       - the release tag, which must be `v` + the version: --tag TAG, or in
+#         GitHub Actions the pushed tag (GITHUB_REF_NAME when GITHUB_REF_TYPE
+#         is `tag`)
+#       It also fails unless Phoenix and LiveView have the same exact versions
+#       in mix.exs, e2e/mix.exs and assets/package.json, and unless
+#       assets/LICENSE.md, which the npm package ships, matches LICENSE.md.
+#
+#   scripts/release-version bump VERSION
+#       set VERSION in mix.exs and assets/package.json (and its
+#       publishConfig.tag), and in the generator pins that name the old
+#       version exactly; then check. It writes nothing unless every edit
+#       succeeds, and keeps each file's mode.
+#
+# A version is SemVer 2.0 without build metadata, which npm drops: numeric
+# identifiers have no leading zeros (Elixir's Version and npm reject 0.55.0-beta.01).
+#
+#   RELEASE_VERSION_ROOT  the repository to read and write (default this checkout)
+set -uo pipefail
+
+root="${RELEASE_VERSION_ROOT:-$(cd "$(dirname "$0")/.." && pwd)}"
+mix_exs="mix.exs"
+npm_package="assets/package.json"
+backend_package="priv/templates/brando.install/assets/backend/package.json"
+template_mix="priv/templates/brando.install/mix.exs"
+e2e_mix="e2e/mix.exs"
+license="LICENSE.md"
+npm_license="assets/LICENSE.md"
+brandojs="@brandocms/brandojs"
+
+usage() {
+  echo "usage: scripts/release-version check [--tag TAG] | bump VERSION" >&2
+  exit 2
+}
+
+numeric='(0|[1-9][0-9]*)'
+identifier="($numeric|[0-9A-Za-z-]*[A-Za-z-][0-9A-Za-z-]*)"
+semver="^$numeric\\.$numeric\\.$numeric(-$identifier(\\.$identifier)*)?\$"
+not_semver="is not a version like 0.55.0 or 0.55.0-beta.0 (SemVer 2.0: no leading v, no leading zeros in numeric identifiers, non-empty identifiers of 0-9A-Za-z-, no +build)"
+
+problems=0
+problem() {
+  echo "release-version: $*"
+  problems=$((problems + 1))
+}
+
+# need FILE: fails, with a problem, when FILE is missing.
+need() {
+  [ -f "$root/$1" ] && return 0
+  problem "$1 is missing"
+  return 1
+}
+
+# The @version in mix.exs, when there is exactly one.
+mix_version() {
+  local found
+  found="$(sed -n 's/^  @version "\([^"]*\)"$/\1/p' "$root/$mix_exs")"
+  [ -n "$found" ] && [ "$(wc -l <<<"$found")" -eq 1 ] && echo "$found"
+}
+
+# dist_tag VERSION: the npm dist-tag a version publishes under.
+dist_tag() {
+  case "$1" in
+    *-*) echo beta ;;
+    *) echo latest ;;
+  esac
+}
+
+# exact_pin FILE APP: the requirement of a `{:app, "X"}` dependency, or
+# nothing when it has none.
+exact_pin() {
+  sed -n "s/^ *{:$2, \"\\([^\"]*\\)\".*/\\1/p" "$root/$1" | head -n 1
+}
+
+# The template's uncommented `{:brando, …}` dependency line.
+template_brando() {
+  grep -E '^[[:space:]]*\{:brando,' "$root/$template_mix" | head -n 1
+}
+
+# The BrandoJS spec in the backend template, from dependencies or
+# devDependencies.
+backend_spec() {
+  jq -r --arg p "$brandojs" '.dependencies[$p] // .devDependencies[$p] // empty' "$root/$backend_package"
+}
+
+check() {
+  local tag="" version npm_version npm_tag want_tag spec line requirement app elixir js e2e e2e_present=false
+  while [ $# -gt 0 ]; do
+    case "$1" in
+      --tag) [ $# -ge 2 ] || usage; tag="$2"; shift 2 ;;
+      *) usage ;;
+    esac
+  done
+  if [ -z "$tag" ] && [ "${GITHUB_REF_TYPE:-}" = tag ]; then
+    tag="${GITHUB_REF_NAME:-}"
+  fi
+
+  need "$mix_exs" || return 1
+  if ! version="$(mix_version)"; then
+    problem "$mix_exs needs exactly one line \`  @version \"X.Y.Z\"\`"
+    return 1
+  fi
+  [[ "$version" =~ $semver ]] || problem "$mix_exs's @version $version $not_semver"
+
+  if need "$npm_package"; then
+    npm_version="$(jq -r '.version // empty' "$root/$npm_package")"
+    [ "$npm_version" = "$version" ] ||
+      problem "$npm_package has version ${npm_version:-(none)}, $mix_exs has $version (scripts/release-version bump $version)"
+    npm_tag="$(jq -r '.publishConfig.tag // empty' "$root/$npm_package")"
+    want_tag="$(dist_tag "$version")"
+    [ "$npm_tag" = "$want_tag" ] ||
+      problem "$npm_package has publishConfig.tag ${npm_tag:-(none)}; $version publishes under $want_tag"
+  fi
+
+  if need "$backend_package"; then
+    spec="$(backend_spec)"
+    case "$spec" in
+      "") problem "$backend_package has no $brandojs dependency" ;;
+      file:* | link:* | "$version") ;;
+      *) problem "$backend_package pins $brandojs to $spec: use exactly $version, or a local file:/link: package" ;;
+    esac
+  fi
+
+  if need "$template_mix"; then
+    line="$(template_brando)"
+    if [ -z "$line" ]; then
+      problem "$template_mix has no {:brando, …} dependency"
+    elif requirement="$(sed -n 's/^ *{:brando, "\([^"]*\)".*/\1/p' <<<"$line")" && [ -n "$requirement" ]; then
+      [ "$requirement" = "$version" ] || [ "$requirement" = "== $version" ] ||
+        problem "$template_mix requires {:brando, \"$requirement\"}: use exactly \"$version\", or a path:/github:/git: dependency"
+    elif ! grep -qE '(path|github|git):' <<<"$line"; then
+      problem "$template_mix has an unrecognised Brando dependency: $(sed 's/^ *//' <<<"$line")"
+    fi
+  fi
+
+  need "$e2e_mix" && e2e_present=true
+  for app in phoenix phoenix_live_view; do
+    elixir="$(exact_pin "$mix_exs" "$app")"
+    js=""
+    e2e=""
+    [ -f "$root/$npm_package" ] && js="$(jq -r --arg a "$app" '.dependencies[$a] // empty' "$root/$npm_package")"
+    [ "$e2e_present" = true ] && e2e="$(exact_pin "$e2e_mix" "$app")"
+    if ! [[ "$elixir" =~ $semver ]]; then
+      problem "$mix_exs needs an exact {:$app, \"X.Y.Z\"} for the JavaScript to pair with; it has ${elixir:-none}"
+      continue
+    fi
+    [ "$js" = "$elixir" ] || problem "$npm_package has $app ${js:-(none)}, $mix_exs has $elixir"
+    [ "$e2e_present" = false ] || [ "$e2e" = "$elixir" ] || problem "$e2e_mix has $app ${e2e:-(none)}, $mix_exs has $elixir"
+  done
+
+  if need "$license" && need "$npm_license" && ! cmp -s "$root/$license" "$root/$npm_license"; then
+    problem "$npm_license differs from $license: the npm package must ship the same licence (cp $license $npm_license)"
+  fi
+
+  if [ -n "$tag" ] && [ "$tag" != "v$version" ]; then
+    problem "tag $tag does not match $mix_exs's version $version (expected v$version)"
+  fi
+
+  [ "$problems" -eq 0 ] || return 1
+  echo "release-version: $version in $mix_exs and $npm_package (npm dist-tag $(dist_tag "$version"))${tag:+ and tag $tag}; generator pins agree; npm licence matches; Phoenix $(exact_pin "$mix_exs" phoenix) and LiveView $(exact_pin "$mix_exs" phoenix_live_view) paired"
+}
+
+# bump stages each rewritten file in $work and writes them back only when all
+# edits succeeded. Writing back with `cat >` keeps the target's mode; a mktemp
+# file moved into place would be 0600, and npm pack records that mode.
+work=""
+staged=()
+
+# stage FILE: sets $tmp to the path FILE's new content goes to (not in a
+# subshell, so that $staged keeps FILE).
+stage() {
+  tmp="$work/${#staged[@]}"
+  staged+=("$1")
+}
+
+# replace_line FILE OLD NEW: replaces every line exactly OLD with NEW.
+replace_line() {
+  local tmp
+  stage "$1"
+  awk -v old="$2" -v new="$3" '$0 == old { print new; next } { print }' "$root/$1" >"$tmp"
+}
+
+# jq_edit FILE FILTER ARGS...: rewrites FILE through jq (its two-space format
+# matches the repository's package.json files).
+jq_edit() {
+  local file="$1" tmp
+  shift
+  stage "$file"
+  jq "$@" "$root/$file" >"$tmp"
+}
+
+# write_back: copies every staged file over its target, after checking that
+# every target can be written, so a read-only one stops the bump before any
+# file changes.
+write_back() {
+  local i
+  for i in "${!staged[@]}"; do
+    [ -w "$root/${staged[$i]}" ] || {
+      problem "${staged[$i]} is not writable; nothing was changed"
+      exit 1
+    }
+  done
+  for i in "${!staged[@]}"; do
+    cat "$work/$i" >"$root/${staged[$i]}" || exit 1
+  done
+}
+
+bump() {
+  local new="$1" old line requirement section
+  local messages=()
+  [[ "$new" =~ $semver ]] || {
+    echo "release-version: $new $not_semver" >&2
+    exit 2
+  }
+  need "$mix_exs" && need "$npm_package" || exit 1
+  if ! old="$(mix_version)"; then
+    problem "$mix_exs needs exactly one line \`  @version \"X.Y.Z\"\`"
+    exit 1
+  fi
+
+  work="$(mktemp -d "${TMPDIR:-/tmp}/release-version.XXXXXX")" || exit 1
+  trap 'rm -rf "$work"' EXIT
+
+  replace_line "$mix_exs" "  @version \"$old\"" "  @version \"$new\"" || exit 1
+  jq_edit "$npm_package" --arg v "$new" --arg t "$(dist_tag "$new")" \
+    '.version = $v | .publishConfig = ((.publishConfig // {}) + {tag: $t})' || exit 1
+  messages+=("release-version: $old -> $new in $mix_exs and $npm_package")
+
+  if [ -f "$root/$backend_package" ] && [ "$(backend_spec)" = "$old" ]; then
+    section="$(jq -r --arg p "$brandojs" 'if .dependencies[$p] then "dependencies" else "devDependencies" end' "$root/$backend_package")"
+    jq_edit "$backend_package" --arg s "$section" --arg p "$brandojs" --arg v "$new" '.[$s][$p] = $v' || exit 1
+    messages+=("release-version: $old -> $new in $backend_package")
+  fi
+
+  if [ -f "$root/$template_mix" ]; then
+    line="$(template_brando)"
+    requirement="$(sed -n 's/^ *{:brando, "\([^"]*\)".*/\1/p' <<<"$line")"
+    if [ -n "$requirement" ] && { [ "$requirement" = "$old" ] || [ "$requirement" = "== $old" ]; }; then
+      replace_line "$template_mix" "$line" "${line/\"$requirement\"/\"${requirement%"$old"}$new\"}" || exit 1
+      messages+=("release-version: $old -> $new in $template_mix")
+    fi
+  fi
+
+  write_back
+  printf '%s\n' "${messages[@]}"
+  check
+}
+
+command -v jq >/dev/null 2>&1 || { echo "release-version: needs jq" >&2; exit 1; }
+
+case "${1:-}" in
+  check) shift; check "$@" ;;
+  bump) [ $# -eq 2 ] || usage; bump "$2" ;;
+  -h | --help) awk 'NR > 1 && !/^#/ { exit } NR > 1 { sub(/^# ?/, ""); print }' "$0"; exit 0 ;;
+  *) usage ;;
+esac

@@ -1,7 +1,35 @@
 {
   "name": "@brandocms/brandojs",
   "version": "0.55.0-dev",
+  "description": "BrandoJS, the admin frontend of Brando CMS, shipped as source for the application's Vite build",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/brandocms/brando.git",
+    "directory": "assets"
+  },
+  "homepage": "https://github.com/brandocms/brando/tree/main/assets#readme",
+  "bugs": {
+    "url": "https://github.com/brandocms/brando/issues"
+  },
+  "keywords": [
+    "brando",
+    "cms",
+    "phoenix",
+    "liveview",
+    "admin"
+  ],
   "main": "src/index.js",
+  "files": [
+    "src",
+    "css",
+    "vite",
+    "europa.json5"
+  ],
+  "publishConfig": {
+    "access": "public",
+    "tag": "beta"
+  },
   "scripts": {
     "dev": "vite",
     "build": "vite build",
@@ -45,6 +73,9 @@
     "tippy.js": "^6.3.7",
     "tus-js-client": "^4.3.1",
     "vanilla-picker": "^2.12.3"
+  },
+  "peerDependencies": {
+    "svelte": "^5.57.2"
   },
   "devDependencies": {
     "@sveltejs/vite-plugin-svelte": "7.3.1",

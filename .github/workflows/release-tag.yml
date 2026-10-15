@@ -1,0 +1,23 @@
+name: Release tag
+
+# CI's push trigger covers only main, so a pushed release tag is checked here:
+# scripts/release-version check reads the tag from GITHUB_REF_TYPE and
+# GITHUB_REF_NAME and fails unless it is `v` + mix.exs's version and the
+# npm package and generator agree with that version.
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: read
+
+jobs:
+  version:
+    name: Release tag matches the version
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7.0.1
+
+      - name: Check the tag against the release version
+        run: scripts/release-version check

@@ -324,6 +324,14 @@ jobs:
         if: needs.reuse.outputs.reused != 'true'
         run: bash test/scripts/changelog_test.sh
 
+      - name: Check that Hex, npm and the generator agree on the release version
+        if: needs.reuse.outputs.reused != 'true'
+        run: scripts/release-version check
+
+      - name: Check how release versions are checked and bumped
+        if: needs.reuse.outputs.reused != 'true'
+        run: bash test/scripts/release_version_test.sh
+
       - name: Check scripts/queue and when scripts/check skips its Elixir gates
         if: needs.reuse.outputs.reused != 'true'
         run: |

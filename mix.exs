@@ -237,8 +237,9 @@ defmodule Brando.Mixfile do
       # `deployment.cfg`, `fabfile.py`, `.envrc.prod` — because a scaffold has
       # to hand the operator something to fill in.
       # Frontend `assets/` are absent on purpose. The admin frontend reaches consuming
-      # applications through Yalc (`@brandocms/brandojs`), never through this
-      # tarball, and the generator templates a consumer does need live under
+      # applications as the `@brandocms/brandojs` npm package (or through Yalc
+      # from a checkout), never through this tarball, and the generator
+      # templates a consumer does need live under
       # `priv/templates/`, not here. The one shared rich-text capability registry
       # is included explicitly because Blueprint compilation also reads it.
       #
