@@ -144,12 +144,12 @@ defmodule Brando.Migrations.UpgradeFrom051Test do
       [[identity_id]] =
         rows("""
         INSERT INTO sites_identity (name, alternate_name, inserted_at, updated_at)
-        VALUES ('KF', 'Kunstnerforbundet', now(), now()) RETURNING id
+        VALUES ('ES', 'Example Society', now(), now()) RETURNING id
         """)
 
       query!("""
       INSERT INTO sites_seo (base_url, fallback_meta_title, inserted_at, updated_at)
-      VALUES ('https://example.com', 'Kunstnerforbundet', now(), now())
+      VALUES ('https://example.com', 'Example Society', now(), now())
       """)
 
       run_template("brando_69_add_language_to_global_categories.exs")
@@ -162,10 +162,10 @@ defmodule Brando.Migrations.UpgradeFrom051Test do
       assert rows("SELECT language FROM sites_identities WHERE id = $1", [identity_id]) == [["no"]]
 
       assert rows("SELECT language, name FROM sites_identities ORDER BY language") ==
-               [["en", "KF"], ["no", "KF"]]
+               [["en", "ES"], ["no", "ES"]]
 
       assert rows("SELECT language, fallback_meta_title FROM sites_seos ORDER BY language") ==
-               [["en", "Kunstnerforbundet"], ["no", "Kunstnerforbundet"]]
+               [["en", "Example Society"], ["no", "Example Society"]]
     end
   end
 end

@@ -126,14 +126,14 @@ defmodule Brando.MailerTest do
         Application.put_env(:brando, Brando.Mailer, from: from)
         assert Mailer.sender()[:from] == nil
 
-        log = capture_log(fn -> assert {:error, :no_sender} = Mailer.deliver(Email.new(to: "ada@lett.no")) end)
+        log = capture_log(fn -> assert {:error, :no_sender} = Mailer.deliver(Email.new(to: "ada@example.com")) end)
         assert log =~ "no address to send email from"
       end
 
       # A placeholder the email already carries: set by the caller, or queued
       # before the upgrade.
-      Application.put_env(:brando, Brando.Mailer, from: {"Lett", "post@lett.no"})
-      placeholder = Email.new(to: "ada@lett.no", from: {"Lett", "noreply@example.com"})
+      Application.put_env(:brando, Brando.Mailer, from: {"Lett", "post@studio.test"})
+      placeholder = Email.new(to: "ada@example.com", from: {"Lett", "noreply@example.com"})
 
       capture_log(fn ->
         assert {:error, :no_sender} = Mailer.deliver(placeholder)

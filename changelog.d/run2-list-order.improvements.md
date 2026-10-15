@@ -1,6 +1,6 @@
 - **`mix brando.migrate55` gives public list queries a defined order.** The
   0.55 data migrations rewrite rows, so a query without `ORDER BY` returns
-  them in a new storage order: on Lett the first menu tab changed, and
+  them in a new storage order: on one production site the first menu tab changed, and
   articles with equal `sequence` reshuffled. Calls to your contexts'
   `list_<plural>/1` (from `Brando.Query`'s `query :list`) whose literal
   options map, in the call or bound to a variable earlier in the function,

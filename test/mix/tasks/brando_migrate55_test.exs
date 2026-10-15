@@ -470,7 +470,7 @@ defmodule Mix.Tasks.Brando.Migrate55Test do
     # The sender `mix brando.doctor` asks for goes in with it.
     assert brando =~ ~s|config :brando, Brando.Mailer, from: {"LegacyApp", "noreply@example.com"}|
 
-    sent = chosen <> ~s|\nconfig :brando, Brando.Mailer, from: {"Lett", "post@lett.no"}\n|
+    sent = chosen <> ~s|\nconfig :brando, Brando.Mailer, from: {"Lett", "post@studio.test"}\n|
     igniter = migrate(@blueprint_054, %{"lib/legacy_app/mailer.ex" => mailer, @brando_config_path => sent})
     assert_unchanged(igniter, @brando_config_path)
 
@@ -487,7 +487,7 @@ defmodule Mix.Tasks.Brando.Migrate55Test do
       import Config
 
       if config_env() == :prod do
-        config :brando, Brando.Mailer, from: {"Lett", "post@lett.no"}
+        config :brando, Brando.Mailer, from: {"Lett", "post@studio.test"}
       end
       """
     }
@@ -1926,7 +1926,7 @@ defmodule Mix.Tasks.Brando.Migrate55Test do
     end
 
     test "a 0.54 parser override gets back what the old __using__ gave it, and compiles cleanly" do
-      # smartwatt's parser before the upgrade: a slideshow override rendering
+      # A production site's parser before the upgrade: a slideshow override rendering
       # ~H with Brando.HTML's <.picture>.
       original = File.read!("test/fixtures/villain_parser/parser_054.ex.txt")
 

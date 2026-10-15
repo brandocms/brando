@@ -225,7 +225,7 @@ defmodule Brando.HTML.Video do
   #
   #   * `%Ecto.Association.NotLoaded{}` — `{% video entry.listing_video %}` where
   #     the preview query did not preload the association. Observed in
-  #     production against `Bergo.Projects.Project.listing_video`.
+  #     production against `MyApp.Projects.Project.listing_video`.
   #   * a provider record that is not `status: :ready` — the `:mux`, `:bunny`
   #     and `:cloudflare` clauses all require it, because there is no playback
   #     id to render until the provider's webhook lands. A video is in exactly

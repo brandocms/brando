@@ -111,7 +111,7 @@ defmodule Mix.Brando.Igniter.MailerTest do
     end
 
     test "keeps a configured sender" do
-      sender = @brando <> "\nconfig :brando, Brando.Mailer, from: {\"LETT\", \"noreply@lett.family\"}\n"
+      sender = @brando <> "\nconfig :brando, Brando.Mailer, from: {\"LETT\", \"noreply@studio.test\"}\n"
       igniter = Mailer.configure_for_upgrade(lett(%{"config/brando.exs" => sender}))
 
       refute source(igniter, "config/brando.exs") =~ "example.com"
