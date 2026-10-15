@@ -101,7 +101,8 @@ if Code.ensure_loaded?(Igniter) do
     the application's (its own extra packages, scripts and BrandoJS source
     stay), `vite.config.js` is replaced, files the template retired and
     yarn/npm lockfiles are removed, and the Dockerfile's `assets_backend`
-    stage becomes the template's pnpm stage. The legacy EuropaCSS build's
+    stage becomes the template's pnpm stage, with an older or missing
+    `# syntax=` directive moved to the template's. The legacy EuropaCSS build's
     `postcss.config.cjs` and `europa.config.cjs` are removed when they are an
     earlier template's, unchanged. CSS and every other existing file are kept,
     with a notice for legacy at-rules they use; missing template files,
@@ -139,7 +140,7 @@ if Code.ensure_loaded?(Igniter) do
           upgrade_package(igniter, file, project)
 
         target == @backend_vite_config ->
-          replace_file(igniter, target, template_contents(file, project))
+          replace_file(igniter, target, template_contents(file, project, brando_version(igniter)))
 
         true ->
           igniter
@@ -257,14 +258,17 @@ if Code.ensure_loaded?(Igniter) do
       {igniter, igniter.rewrite |> Rewrite.source!(path) |> Rewrite.Source.get(:content)}
     end
 
-    defp template_contents({format, source, target}, project) do
+    defp template_contents({format, source, target}, project, version) do
       template = Templates.contents(format, source)
       contents = if format == :eex, do: EEx.eval_string(template, Install.template_binding(project)), else: template
 
       # The template pins Brando's own version; a development version has no
       # npm release, so its admin takes BrandoJS from a checkout through Yalc.
-      if target == @backend_package, do: BrandoJS.put_spec(contents, BrandoJS.spec()), else: contents
+      if target == @backend_package, do: BrandoJS.put_spec(contents, BrandoJS.spec(version)), else: contents
     end
+
+    # The Brando version generated files pair with; tests assign another.
+    defp brando_version(igniter), do: igniter.assigns[:brando_version] || Brando.version()
 
     defp replace_file(igniter, path, contents) do
       Igniter.update_file(igniter, path, &Rewrite.Source.update(&1, :content, contents))
@@ -277,7 +281,8 @@ if Code.ensure_loaded?(Igniter) do
     end
 
     defp upgrade_package(igniter, file, project) do
-      template_json = template_contents(file, project)
+      version = brando_version(igniter)
+      template_json = template_contents(file, project, version)
       template = Jason.decode!(template_json)
       igniter = Igniter.include_existing_file(igniter, @backend_package)
       contents = igniter.rewrite |> Rewrite.source!(@backend_package) |> Rewrite.Source.get(:content)
@@ -291,7 +296,7 @@ if Code.ensure_loaded?(Igniter) do
               do: igniter,
               else: replace_file(igniter, @backend_package, encode_package(upgraded, [contents, template_json]))
 
-          local_source_notice(igniter, BrandoJS.dependency(current))
+          local_source_notice(igniter, BrandoJS.local_dependency(current), version)
 
         _ ->
           Igniter.add_issue(igniter, "#{@backend_package} must be a JSON object.")
@@ -300,10 +305,10 @@ if Code.ensure_loaded?(Igniter) do
 
     # A released Brando has a matching npm release of BrandoJS. An admin that
     # still takes it from a checkout keeps doing so until told otherwise.
-    defp local_source_notice(igniter, spec) do
-      if BrandoJS.local?(spec) and not BrandoJS.development?(Brando.version()) do
+    defp local_source_notice(igniter, spec, version) do
+      if spec && not BrandoJS.development?(version) do
         Igniter.add_notice(igniter, """
-        #{@backend_package} takes #{BrandoJS.package()} from a local source (#{spec}). Brando #{Brando.version()}
+        #{@backend_package} takes #{BrandoJS.package()} from a local source (#{spec}). Brando #{version}
         is published to npm with a matching BrandoJS; to install that instead, run
 
             mix brando.assets.setup --npm
@@ -319,20 +324,30 @@ if Code.ensure_loaded?(Igniter) do
       current
       |> merge_defaults(Map.take(template, ~w(name version type scripts)))
       |> Map.merge(Map.take(template, ~w(engines packageManager)))
-      |> upgrade_dependencies(template, "dependencies")
-      |> upgrade_dependencies(template, "devDependencies")
+      |> upgrade_dependencies(template)
       |> upgrade_built_dependencies(template)
       |> upgrade_overrides(template)
     end
 
-    # The template's version wins, BrandoJS's included, except when BrandoJS
-    # comes from a local source (a Yalc copy, a link to a checkout): that is
-    # the application's choice.
-    defp upgrade_dependencies(package, template, key) do
-      current = Map.drop(package[key] || %{}, @retired_backend_packages)
-      keep = if BrandoJS.local?(current[BrandoJS.package()]), do: [BrandoJS.package()], else: []
-      wanted = Map.drop(template[key] || %{}, keep)
-      Map.put(package, key, Map.merge(current, wanted))
+    # The template's versions win, BrandoJS's included, except when BrandoJS
+    # comes from a local source (a Yalc copy, a link to a checkout) in either
+    # section: that is the application's choice. BrandoJS stays in the section
+    # that declares it.
+    defp upgrade_dependencies(package, template) do
+      brandojs = BrandoJS.package()
+      local? = BrandoJS.local_dependency(package) != nil
+
+      package =
+        Enum.reduce(~w(dependencies devDependencies), package, fn key, package ->
+          current = Map.drop(package[key] || %{}, @retired_backend_packages)
+          Map.put(package, key, Map.merge(current, Map.delete(template[key] || %{}, brandojs)))
+        end)
+
+      case {local?, BrandoJS.sections(package)} do
+        {true, _sections} -> package
+        {false, []} -> put_in(package, ["dependencies", brandojs], BrandoJS.dependency(template))
+        {false, sections} -> Enum.reduce(sections, package, &put_in(&2, [&1, brandojs], BrandoJS.dependency(template)))
+      end
     end
 
     defp upgrade_built_dependencies(package, template) do
@@ -393,10 +408,10 @@ if Code.ensure_loaded?(Igniter) do
         {igniter, contents} =
           case dockerfile_stage(current, "assets_backend") do
             {_before, ^stage, _rest} ->
-              {igniter, current}
+              upgrade_dockerfile_syntax(igniter, current)
 
             {before, _old, rest} ->
-              {igniter, Enum.join(before ++ stage ++ rest, "\n")}
+              upgrade_dockerfile_syntax(igniter, Enum.join(before ++ stage ++ rest, "\n"))
 
             nil ->
               {Igniter.add_warning(
@@ -410,6 +425,58 @@ if Code.ensure_loaded?(Igniter) do
       else
         igniter
       end
+    end
+
+    @dockerfile_syntax "docker/dockerfile:1"
+
+    # The template's assets_backend stage copies .yalc only when it exists
+    # (`COPY assets/backend/.yal[c] ./.yalc/`). Dockerfile frontends before
+    # 1.1 fail a COPY wildcard that matches nothing, so an older or missing
+    # `# syntax=` directive moves to the template's.
+    defp upgrade_dockerfile_syntax(igniter, contents) do
+      lines = String.split(contents, "\n")
+      directives = Enum.take_while(lines, &Regex.match?(~r/^#\s*\w+\s*=/, &1))
+      syntax = Enum.find_index(directives, &Regex.match?(~r/^#\s*syntax\s*=/i, &1))
+
+      frontend = syntax && directives |> Enum.at(syntax) |> String.split("=", parts: 2) |> List.last() |> String.trim()
+
+      cond do
+        is_nil(frontend) ->
+          # Directives end at the first other line, a blank one included, so
+          # the blank line separating them goes only before other content.
+          separator = if directives == [] and hd(lines) != "", do: [""], else: []
+          head = ["# syntax=#{@dockerfile_syntax}" | separator]
+          {syntax_notice(igniter, "had no syntax directive"), Enum.join(head ++ lines, "\n")}
+
+        old_dockerfile_frontend?(frontend) ->
+          lines = List.replace_at(lines, syntax, "# syntax=#{@dockerfile_syntax}")
+          {syntax_notice(igniter, "declared #{frontend}"), Enum.join(lines, "\n")}
+
+        Regex.match?(~r{^(docker\.io/)?docker/dockerfile:}, frontend) ->
+          {igniter, contents}
+
+        true ->
+          {Igniter.add_notice(igniter, """
+           The Dockerfile builds with the Dockerfile frontend #{frontend}, which this task keeps. Its assets_backend stage copies \
+           assets/backend/.yalc only when it exists (`COPY assets/backend/.yal[c] ./.yalc/`), which needs a frontend \
+           that skips a COPY wildcard matching nothing, as # syntax=#{@dockerfile_syntax} does.
+           """), contents}
+      end
+    end
+
+    # docker/dockerfile 1.0 and the experimental channel's early tags.
+    defp old_dockerfile_frontend?(frontend) do
+      case Regex.run(~r{^(?:docker\.io/)?docker/dockerfile:([^@\s]+)}, frontend) do
+        [_, tag] -> Regex.match?(~r/^(1\.[01]([.-].*)?|.*experimental.*)$/, tag)
+        nil -> false
+      end
+    end
+
+    defp syntax_notice(igniter, was) do
+      Igniter.add_notice(
+        igniter,
+        "The Dockerfile now builds with # syntax=#{@dockerfile_syntax} (it #{was}): the assets_backend stage's optional .yalc COPY needs it."
+      )
     end
 
     @movable_node ~r/^node:(\d+(?:\.\d+)*)(-(?:alpine|slim|bookworm|bullseye|bookworm-slim|bullseye-slim))?$/
@@ -538,10 +605,10 @@ if Code.ensure_loaded?(Igniter) do
           binary_asset(igniter, source, target)
 
         Path.basename(target) == "package.json" && Igniter.exists?(igniter, target) ->
-          merge_package(igniter, target, template_contents(file, project))
+          merge_package(igniter, target, template_contents(file, project, brando_version(igniter)))
 
         target == @backend_package ->
-          Files.create(igniter, target, template_contents(file, project))
+          Files.create(igniter, target, template_contents(file, project, brando_version(igniter)))
 
         true ->
           Install.copy(igniter, file, project)
@@ -581,7 +648,7 @@ if Code.ensure_loaded?(Igniter) do
                ~w(dependencies devDependencies scripts pnpm),
                &(not Map.has_key?(current, &1) || is_map(current[&1]))
              ) do
-        merged = merge_defaults(current, defaults)
+        merged = merge_defaults(current, without_second_brandojs(defaults, current))
 
         if merged == current do
           igniter
@@ -599,6 +666,18 @@ if Code.ensure_loaded?(Igniter) do
             "#{path} must be a JSON object with object-valued dependency, script and pnpm settings."
           )
       end
+    end
+
+    # A package.json that declares BrandoJS in either section keeps that entry
+    # alone, rather than gaining the template's in `dependencies` as well.
+    defp without_second_brandojs(defaults, current) do
+      if BrandoJS.dependency(current), do: without_brandojs(defaults), else: defaults
+    end
+
+    defp without_brandojs(package) do
+      Enum.reduce(~w(dependencies devDependencies), package, fn key, package ->
+        if is_map(package[key]), do: Map.update!(package, key, &Map.delete(&1, BrandoJS.package())), else: package
+      end)
     end
 
     # Keys keep the order of the JSON documents they came from (the

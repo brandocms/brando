@@ -430,6 +430,19 @@ defmodule Brando.Doctor.ChecksTest do
       assert result.fix == "expected 0.55.0, run mix brando.assets.setup --npm --backend-only"
     end
 
+    test "an npm install with a development Brando, which has no npm release, is fixed with a local copy" do
+      root =
+        backend(%{"dependencies" => %{"@brandocms/brandojs" => "0.55.0"}}, %{
+          "node_modules/@brandocms/brandojs/package.json" => %{"version" => "0.55.0"}
+        })
+
+      result = Checks.AdminAssets.evaluate(Path.join(root, "assets/backend"), "0.56.0-dev")
+      assert result.status == :warning
+
+      assert result.fix ==
+               "expected 0.56.0-dev, a development version without an npm release: run mix brando.assets.setup --local --backend-only"
+    end
+
     test "an npm version that is not installed yet" do
       root = backend(%{"dependencies" => %{"@brandocms/brandojs" => "0.55.0"}}, %{})
       assert %Result{status: :error} = Checks.AdminAssets.evaluate(Path.join(root, "assets/backend"), "0.55.0")

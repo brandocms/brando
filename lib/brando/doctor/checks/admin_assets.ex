@@ -11,6 +11,7 @@ defmodule Brando.Doctor.Checks.AdminAssets do
   use Gettext, backend: Brando.Gettext
 
   alias Brando.Doctor.Context
+  alias Mix.Brando.BrandoJS
 
   @package "@brandocms/brandojs"
 
@@ -35,7 +36,7 @@ defmodule Brando.Doctor.Checks.AdminAssets do
       package ->
         result =
           backend
-          |> installed(dependency(package))
+          |> installed(BrandoJS.dependency(package))
           |> report(version)
 
         if result.status != :ok and not pnpm?(backend, package),
@@ -57,10 +58,6 @@ defmodule Brando.Doctor.Checks.AdminAssets do
       "expected %{version}; assets/backend is not a pnpm project yet: run mix brando.gen.backend --upgrade, then mix brando.assets.setup --backend-only",
       version: version
     )
-  end
-
-  defp dependency(package) do
-    get_in(package, ["dependencies", @package]) || get_in(package, ["devDependencies", @package])
   end
 
   defp installed(_backend, nil), do: :missing
@@ -117,13 +114,19 @@ defmodule Brando.Doctor.Checks.AdminAssets do
 
   defp report({:node_modules, installed}, version) do
     summary = dgettext("doctor", "brandojs %{version}", version: installed || "-")
+    compare(summary, installed, version, npm_fix(version))
+  end
 
-    compare(
-      summary,
-      installed,
-      version,
-      dgettext("doctor", "expected %{version}, run mix brando.assets.setup --npm --backend-only", version: version)
-    )
+  # A development version has no npm release to switch to.
+  defp npm_fix(version) do
+    if BrandoJS.development?(version),
+      do:
+        dgettext(
+          "doctor",
+          "expected %{version}, a development version without an npm release: run mix brando.assets.setup --local --backend-only",
+          version: version
+        ),
+      else: dgettext("doctor", "expected %{version}, run mix brando.assets.setup --npm --backend-only", version: version)
   end
 
   defp compare(summary, installed, version, fix) do

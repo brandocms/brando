@@ -14,29 +14,34 @@ defmodule Mix.Tasks.Brando.Assets.Setup do
       mix brando.assets.setup --source /path/to/brando/assets
       mix brando.assets.setup --npm
 
-  The admin (`assets/backend`) takes `@brandocms/brandojs` from one of two
-  sources, and its `package.json` says which:
+  The admin (`assets/backend`) takes `@brandocms/brandojs` from npm or from a
+  local source, and its `package.json` says which:
 
     * **npm**, pinned to Brando's version (`"@brandocms/brandojs": "0.55.0"`).
       Released Brando versions generate this. The task runs `pnpm install`
       and needs no BrandoJS source.
-    * **A local source**, a Yalc copy of a checkout (`file:.yalc/…`). Use it to
-      work on Brando itself: publish the checkout with `npx yalc publish` and
-      the backend's Vite dev server pulls each new publish. Development
-      versions of Brando (`-dev`) have no npm release and generate this.
+    * **A Yalc copy** of a checkout (`file:.yalc/…`). Use it to work on Brando
+      itself: publish the checkout with `npx yalc publish` and the backend's
+      Vite dev server pulls each new publish. Development versions of Brando
+      (`-dev`) have no npm release and generate this.
+    * **A linked checkout** (`link:../../brando/assets`), which pnpm installs
+      from as it is.
 
-  Without options, the task keeps the source `package.json` names. For a local
-  source it publishes the selected Brando dependency's `assets` directory.
+  Without options, the task keeps the source `package.json` names. For a Yalc
+  copy it publishes the selected Brando dependency's `assets` directory again.
   Hex packages do not include it: supply `--source` pointing to a matching
-  checkout in that case. Keep the Elixir and JS revisions aligned.
+  checkout, or `--npm`, in that case. Keep the Elixir and JS revisions
+  aligned. A `package.json` without BrandoJS gets what a generated admin has:
+  npm at Brando's version, or for a development version a Yalc copy.
 
     * `--local` switches the admin to a Yalc copy of the Brando dependency's
       `assets` directory, `--source PATH` to a Yalc copy of PATH.
     * `--npm` switches it to the npm release of Brando's version and removes
       the Yalc copy.
 
-  A local source is published to a project-local Yalc store under `_build`.
-  Node.js, pnpm and, for a local source, Yalc must already be installed. pnpm
+  A Yalc copy is published to a project-local Yalc store under `_build`.
+  Node.js, pnpm and, for a Yalc copy, Yalc must already be installed; the
+  task checks them before it changes anything. pnpm
   installs the native EuropaCSS compiler the admin's CSS builds with from npm.
   Unless `--no-build` is supplied, builds both consumers. It does not run a
   standalone framework build.
@@ -66,12 +71,11 @@ defmodule Mix.Tasks.Brando.Assets.Setup do
 
     spec = backend |> read_package() |> BrandoJS.dependency()
 
-    case source(options, spec, Brando.version()) do
-      :npm -> install_npm(backend, spec, options[:npm])
-      {:local, source} -> install_local(backend, source_path(source))
-    end
-
-    Enum.each(["node", "pnpm"], &require_tool!/1)
+    # Everything that can fail is checked before the admin changes, so a
+    # missing tool or source never leaves it half-switched.
+    source = options |> source(spec, Brando.version()) |> check_source!(backend, spec)
+    Enum.each(required_tools(source), &require_tool!/1)
+    install_brandojs(source, backend, spec)
 
     Enum.each(consumers, fn path ->
       run!("pnpm", ["install"], path)
@@ -80,16 +84,50 @@ defmodule Mix.Tasks.Brando.Assets.Setup do
   end
 
   @doc """
-  Where the admin takes BrandoJS from: `:npm`, or `{:local, source}` with
-  `source` a path or `:dependency` (the Brando dependency's `assets`).
+  Where the admin takes BrandoJS from, given the options, the BrandoJS spec in
+  its package.json and Brando's version:
+
+    * `:npm`, the npm version package.json pins;
+    * `{:npm, :switch}`, npm at Brando's version, written to package.json;
+    * `{:yalc, source}`, a Yalc copy of `source`, a path or `:dependency` (the
+      Brando dependency's `assets`);
+    * `{:linked, path}`, the checkout a `link:` or `file:` spec names, as it is.
+
+  A package.json without BrandoJS gets what a generated admin has.
   """
   def source(options, spec, version) do
     case Enum.filter([:local, :source, :npm], &options[&1]) do
-      [] -> if BrandoJS.local?(spec) or is_nil(spec), do: {:local, :dependency}, else: :npm
-      [:local] -> {:local, :dependency}
-      [:source] -> {:local, options[:source]}
+      [] -> current_source(spec, version)
+      [:local] -> {:yalc, :dependency}
+      [:source] -> {:yalc, options[:source]}
       [:npm] -> npm!(version)
       _ -> Mix.raise("Choose one of --local, --source and --npm. " <> @usage)
+    end
+  end
+
+  defp check_source!({:yalc, path}, _backend, spec),
+    do: {:yalc, brandojs_dir!(source_path(path, spec), "Use --source for a matching BrandoJS checkout.")}
+
+  defp check_source!({:linked, path}, backend, spec) do
+    hint = "assets/backend/package.json takes it from #{spec}; fix that path, or use --local, --source or --npm."
+    {:linked, brandojs_dir!(Path.expand(path, backend), hint)}
+  end
+
+  defp check_source!(npm, _backend, _spec), do: npm
+
+  defp install_brandojs(:npm, _backend, spec), do: npm_notice(spec)
+  defp install_brandojs({:npm, :switch}, backend, _spec), do: switch_to_npm(backend)
+  defp install_brandojs({:yalc, path}, backend, _spec), do: yalc_add(backend, path)
+  defp install_brandojs({:linked, _path}, _backend, _spec), do: :ok
+
+  defp current_source(nil, version),
+    do: if(BrandoJS.development?(version), do: {:yalc, :dependency}, else: {:npm, :switch})
+
+  defp current_source(spec, _version) do
+    cond do
+      BrandoJS.yalc?(spec) -> {:yalc, :dependency}
+      BrandoJS.local?(spec) -> {:linked, String.replace(spec, ~r/^(link|file):/, "")}
+      true -> :npm
     end
   end
 
@@ -99,35 +137,42 @@ defmodule Mix.Tasks.Brando.Assets.Setup do
         Mix.raise(
           "Brando #{version} is a development version and has no npm release of #{BrandoJS.package()}. Use --local or --source."
         ),
-      else: :npm
+      else: {:npm, :switch}
+  end
+
+  @doc "The executables setting up the admin from `source` (see `source/3`) needs."
+  def required_tools({:yalc, _source}), do: ["node", "pnpm", "yalc"]
+  def required_tools(_source), do: ["node", "pnpm"]
+
+  defp npm_notice(spec) do
+    if spec != Brando.version(),
+      do: Mix.shell().info("assets/backend pins #{BrandoJS.package()} #{spec}; Brando is #{Brando.version()}.")
   end
 
   # Switching to npm pins Brando's version and drops the Yalc copy, so the
   # Vite plugin that follows Yalc publishes has nothing left to follow.
-  defp install_npm(backend, spec, switch?) do
-    if switch? do
-      version = Brando.version()
-      path = Path.join(backend, "package.json")
-      File.write!(path, BrandoJS.put_spec(File.read!(path), version))
-      remove_yalc_copy(backend)
-      Mix.shell().info("#{BrandoJS.package()} now comes from npm at #{version}.")
-    else
-      if spec != Brando.version(),
-        do: Mix.shell().info("assets/backend pins #{BrandoJS.package()} #{spec}; Brando is #{Brando.version()}.")
-    end
+  defp switch_to_npm(backend) do
+    version = Brando.version()
+    path = Path.join(backend, "package.json")
+    File.write!(path, BrandoJS.put_spec(File.read!(path), version))
+    remove_yalc_copy(backend)
+    Mix.shell().info("#{BrandoJS.package()} now comes from npm at #{version}.")
   end
 
-  defp install_local(backend, source) do
-    unless File.regular?(Path.join(source, "package.json")),
-      do: Mix.raise("Missing #{source}/package.json. Use --source for a matching BrandoJS checkout.")
-
-    unless source |> read_package() |> Map.get("name") == BrandoJS.package(),
-      do: Mix.raise("--source must point to the #{BrandoJS.package()} package directory.")
-
-    require_tool!("yalc")
+  defp yalc_add(backend, source) do
     store = Mix.Project.build_path() |> Path.join("brando_yalc") |> Path.expand()
     run!("yalc", ["publish", "--store-folder", store], source)
     run!("yalc", ["add", BrandoJS.package(), "--store-folder", store], backend)
+  end
+
+  defp brandojs_dir!(dir, hint) do
+    unless File.regular?(Path.join(dir, "package.json")),
+      do: Mix.raise("Missing #{dir}/package.json. #{hint}")
+
+    unless dir |> read_package() |> Map.get("name") == BrandoJS.package(),
+      do: Mix.raise("#{dir} is not the #{BrandoJS.package()} package directory. #{hint}")
+
+    dir
   end
 
   @doc "Removes BrandoJS's Yalc copy from `backend`, leaving any other package Yalc holds."
@@ -150,14 +195,29 @@ defmodule Mix.Tasks.Brando.Assets.Setup do
     if File.dir?(dir) and File.ls!(dir) == [], do: File.rmdir!(dir)
   end
 
-  defp source_path(:dependency) do
+  defp source_path(:dependency, spec) do
     case Mix.Project.deps_paths()[:brando] do
       nil -> Mix.raise("Brando must be a dependency of this application, or supply --source PATH.")
-      path -> Path.join(path, "assets") |> Path.expand()
+      path -> dependency_assets!(Path.join(path, "assets") |> Path.expand(), spec)
     end
   end
 
-  defp source_path(path), do: Path.expand(path)
+  defp source_path(path, _spec), do: Path.expand(path)
+
+  # Brando from Hex has no assets directory.
+  defp dependency_assets!(dir, spec) do
+    if File.dir?(dir) do
+      dir
+    else
+      npm = if BrandoJS.development?(Brando.version()), do: "", else: ", or --npm for the npm release of Brando's version"
+
+      Mix.raise("""
+      The Brando dependency has no #{dir}: Hex packages do not include BrandoJS's source, which \
+      assets/backend takes #{BrandoJS.package()} from#{if spec, do: " (#{spec})", else: ""}. Use --source PATH for a \
+      matching BrandoJS checkout#{npm}.
+      """)
+    end
+  end
 
   defp read_package(dir), do: dir |> Path.join("package.json") |> File.read!() |> Jason.decode!()
 

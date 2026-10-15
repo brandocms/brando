@@ -219,16 +219,22 @@ task keeps it:
 
 * **npm**: `"@brandocms/brandojs": "0.55.0"`, Brando's own version. A released
   Brando generates this; `pnpm install` fetches it.
-* **A local source**: `"file:.yalc/@brandocms/brandojs"`, a Yalc copy of a
-  Brando checkout. A `-dev` Brando generates this, and it is how you work on
-  Brando itself. The task publishes the selected Brando dependency's `assets/`
-  to a consumer-local Yalc store under `_build` and adds it to the admin. For
-  an Elixir package without the JavaScript sources, pass
-  `--source /path/to/matching/brando/assets`.
+* **A Yalc copy**: `"file:.yalc/@brandocms/brandojs"`, a copy of a Brando
+  checkout. A `-dev` Brando generates this, and it is how you work on Brando
+  itself. The task publishes the selected Brando dependency's `assets/` to a
+  consumer-local Yalc store under `_build` and adds it to the admin. An Elixir
+  package from Hex has no JavaScript sources: pass
+  `--source /path/to/matching/brando/assets`, or `--npm`.
+* **A linked checkout**: `"link:../../brando/assets"` (or a `file:` path
+  outside `.yalc`). The task checks that the path holds `@brandocms/brandojs`
+  and leaves it to pnpm.
 
-To switch, run `mix brando.assets.setup --local` (or `--source PATH`) to
-take BrandoJS from a checkout, and `mix brando.assets.setup --npm` to go back
+A `package.json` without BrandoJS gets what a generated admin has. To switch,
+run `mix brando.assets.setup --local` (or `--source PATH`) to take BrandoJS
+from a Yalc copy of a checkout, and `mix brando.assets.setup --npm` to go back
 to the npm release of Brando's version. `--npm` also removes the Yalc copy.
+The task checks for Node.js, pnpm and, for a Yalc copy, Yalc before it changes
+anything.
 With a local source, `npx yalc publish` in Brando's `assets` reaches the admin's
 running Vite dev server by itself. Its Vite config includes BrandoJS's
 `yalcAutoUpdate` plugin, which pulls each publish. Use `--no-build` to install

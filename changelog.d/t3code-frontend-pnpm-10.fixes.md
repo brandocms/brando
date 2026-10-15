@@ -2,5 +2,6 @@
   frontend stage**. The template's `assets_frontend` stage copied
   `assets/frontend/.yalc`, which nothing creates (Jupiter comes from npm and
   the folder is ignored), and Docker fails a `COPY` whose source is missing.
-  The copy is now optional (`COPY assets/frontend/.yal[c] ./.yalc/`), so an
-  application that installs Jupiter from Yalc still has it copied.
+  The copy is now optional (`COPY assets/frontend/.yal[c] ./.yalc/`, which the
+  template's `# syntax=docker/dockerfile:1` allows), so an application that
+  installs Jupiter from Yalc still has it copied.

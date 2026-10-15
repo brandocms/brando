@@ -833,6 +833,11 @@ msgstr ""
 
 #: lib/brando/doctor/checks/admin_assets.ex
 #, elixir-autogen, elixir-format
+msgid "expected %{version}, a development version without an npm release: run mix brando.assets.setup --local --backend-only"
+msgstr ""
+
+#: lib/brando/doctor/checks/admin_assets.ex
+#, elixir-autogen, elixir-format
 msgid "expected %{version}, run mix brando.assets.setup --npm --backend-only"
 msgstr ""
 

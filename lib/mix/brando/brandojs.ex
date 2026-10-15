@@ -10,6 +10,7 @@ defmodule Mix.Brando.BrandoJS do
 
   @package "@brandocms/brandojs"
   @yalc_spec "file:.yalc/@brandocms/brandojs"
+  @sections ~w(dependencies devDependencies)
 
   def package, do: @package
 
@@ -29,13 +30,53 @@ defmodule Mix.Brando.BrandoJS do
   def local?(spec) when is_binary(spec), do: String.starts_with?(spec, ["file:", "link:"])
   def local?(_spec), do: false
 
+  @doc "Whether `spec` takes the package from the admin's Yalc copy (`.yalc`)."
+  def yalc?(spec) when is_binary(spec), do: String.starts_with?(spec, ["file:.yalc/", "link:.yalc/"])
+  def yalc?(_spec), do: false
+
   @doc "The BrandoJS spec in a decoded package.json, or nil."
   def dependency(package) when is_map(package) do
-    get_in(package, ["dependencies", @package]) || get_in(package, ["devDependencies", @package])
+    Enum.find_value(@sections, &get_in(package, [&1, @package]))
   end
 
-  @doc "Sets the BrandoJS dependency in package.json `contents` to `spec`, leaving the rest of the text as it is."
+  @doc "The first local BrandoJS spec in a decoded package.json's dependency sections, or nil."
+  def local_dependency(package) when is_map(package) do
+    package |> sections() |> Enum.map(&package[&1][@package]) |> Enum.find(&local?/1)
+  end
+
+  @doc "The sections (`dependencies`, `devDependencies`) of a decoded package.json that declare BrandoJS."
+  def sections(package) when is_map(package) do
+    Enum.filter(@sections, &is_map_key(package[&1] || %{}, @package))
+  end
+
+  @doc """
+  Sets the BrandoJS dependency in package.json `contents` to `spec`, in each
+  section that declares it, or in `dependencies` when none does. Key order is
+  kept.
+  """
   def put_spec(contents, spec) do
-    Regex.replace(~r/("@brandocms\/brandojs"\s*:\s*)"[^"]*"/, contents, ~s(\\1"#{spec}"), global: false)
+    package = Jason.decode!(contents, objects: :ordered_objects)
+
+    sections =
+      case Enum.filter(@sections, &(package[&1][@package] != nil)) do
+        [] -> ["dependencies"]
+        sections -> sections
+      end
+
+    sections
+    |> Enum.reduce(package, fn section, package ->
+      put_key(package, section, put_key(package[section] || Jason.OrderedObject.new([]), @package, spec))
+    end)
+    |> Jason.encode!(pretty: true)
+    |> Kernel.<>("\n")
+  end
+
+  defp put_key(%Jason.OrderedObject{values: values}, key, value) do
+    values =
+      if List.keymember?(values, key, 0),
+        do: List.keyreplace(values, key, 0, {key, value}),
+        else: values ++ [{key, value}]
+
+    Jason.OrderedObject.new(values)
   end
 end

@@ -6,13 +6,17 @@
   `mix brando.assets.setup --local` (or `--source PATH`) switches the admin to
   a Yalc copy, whose `npx yalc publish` reaches the running Vite dev server,
   and `--npm` switches back and removes the copy. Without an option the task
-  keeps the source `package.json` names.
+  keeps the source `package.json` names, a linked checkout included, and checks
+  for Node.js, pnpm and Yalc before it changes anything.
 
 - **Upgrades keep where the admin takes BrandoJS from**. `mix brando.gen.backend
   --upgrade` moves an npm pin to Brando's version and leaves a Yalc copy or
-  linked checkout alone, with a notice suggesting `--npm` once Brando is a
-  release. The template Dockerfile copies `assets/backend/.yalc` only when it
-  exists, so one Dockerfile builds either. `yalcAutoUpdate` follows Yalc
+  linked checkout alone, in whichever dependency section declares it, with a
+  notice suggesting `--npm` once Brando is a release. The template Dockerfile
+  copies `assets/backend/.yalc` only when it exists, so one Dockerfile builds
+  either; it declares `# syntax=docker/dockerfile:1`, since the 1.0 frontend
+  fails a `COPY` wildcard that matches nothing, and the upgrade moves an older
+  or missing `# syntax=` line to it. `yalcAutoUpdate` follows Yalc
   publishes only while `package.json` takes BrandoJS from `.yalc`, so a
   `yalc.lock` left behind no longer swaps the npm copy for the store's, and
   `mix brando.doctor` reads an npm install from `node_modules`.

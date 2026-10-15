@@ -72,6 +72,7 @@ defmodule Brando.IgniterCase do
       igniter.assigns.test_files
       |> Map.merge(files)
       |> Map.merge(options[:files] || %{})
+      |> Map.drop(options[:without] || [])
 
     # Igniter may already have loaded its base project into Rewrite. Reload
     # these paths from the consumer fixture instead of retaining cached source.
