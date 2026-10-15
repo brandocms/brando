@@ -461,6 +461,61 @@ defmodule Brando.Doctor.ChecksTest do
     end
   end
 
+  describe "AdminCss" do
+    @pins Brando.EuropaCSS.pins()
+
+    defp europa_backend(dev_dependencies, installed \\ @pins) do
+      files = Map.new(installed, fn {name, version} -> {"node_modules/#{name}/package.json", %{"version" => version}} end)
+      root = backend(%{"devDependencies" => dev_dependencies}, files)
+      Path.join(root, "assets/backend")
+    end
+
+    test "the template's packages, installed, pass" do
+      result = Checks.AdminCss.evaluate(europa_backend(@pins))
+      assert result.status == :ok
+      assert result.summary == "EuropaCSS #{@pins["@brandocms/europacss-cli"]}"
+    end
+
+    test "the legacy PostCSS plugin is a warning with the upgrade as the fix" do
+      result = Checks.AdminCss.evaluate(europa_backend(%{"@brandocms/europacss" => "^0.13.1"}, %{}))
+
+      assert result.status == :warning
+      assert result.summary == "builds with the legacy @brandocms/europacss ^0.13.1"
+      assert "@brandocms/vite-plugin-europacss is not a dependency" in result.items
+      assert result.fix == "run mix brando.gen.backend --upgrade, then mix brando.assets.setup --backend-only"
+    end
+
+    test "a Yalc copy of the Vite plugin, or another version, is a warning" do
+      yalc = Map.put(@pins, "@brandocms/vite-plugin-europacss", "file:.yalc/@brandocms/vite-plugin-europacss")
+      result = Checks.AdminCss.evaluate(europa_backend(yalc))
+
+      assert result.summary ==
+               "@brandocms/vite-plugin-europacss from file:.yalc/@brandocms/vite-plugin-europacss, not npm"
+
+      older = Map.put(@pins, "@brandocms/europacss-cli", "0.0.1")
+      result = Checks.AdminCss.evaluate(europa_backend(older))
+      assert result.status == :warning
+      assert result.summary == "@brandocms/europacss-cli 0.0.1, Brando's is #{@pins["@brandocms/europacss-cli"]}"
+    end
+
+    test "packages missing from node_modules, or at an older install, need pnpm install" do
+      result = Checks.AdminCss.evaluate(europa_backend(@pins, %{}))
+      assert result.status == :warning
+      assert result.summary == "@brandocms/vite-plugin-europacss not installed"
+      assert result.fix == "run pnpm install in assets/backend"
+
+      stale = Map.put(@pins, "@brandocms/europacss-cli", "0.0.1")
+      result = Checks.AdminCss.evaluate(europa_backend(@pins, stale))
+
+      assert result.summary ==
+               "@brandocms/europacss-cli 0.0.1 installed, package.json has #{@pins["@brandocms/europacss-cli"]}"
+    end
+
+    test "without a backend there is nothing to check" do
+      assert %Result{status: :skipped} = Checks.AdminCss.run(context(root: tmp_dir("no_backend")))
+    end
+  end
+
   describe "ImageConfigs" do
     test "images made with an older config are a warning per config" do
       for target <-

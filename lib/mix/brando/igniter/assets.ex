@@ -221,6 +221,35 @@ if Code.ensure_loaded?(Igniter) do
       |> Enum.map(&elem(&1, 1))
     end
 
+    @doc """
+    For `mix brando.migrate55`: a notice when `assets/backend/package.json`
+    does not build the admin's CSS with Brando's native EuropaCSS packages
+    (`Brando.EuropaCSS`), naming what differs and the two tasks that bring it
+    to the template.
+    """
+    def notice_native_europa(igniter) do
+      with true <- Igniter.exists?(igniter, @backend_package),
+           {igniter, contents} = read_file(igniter, @backend_package),
+           {:ok, %{} = package} <- Jason.decode(contents),
+           [_ | _] = problems <- Brando.EuropaCSS.package_problems(package) do
+        Igniter.add_notice(igniter, """
+        assets/backend does not build the admin's CSS with Brando's native EuropaCSS packages yet:
+
+        #{Enum.map_join(problems, "\n", &("  * " <> Brando.EuropaCSS.describe(&1)))}
+
+        Bring it to the current template, then install and build the admin:
+
+            mix brando.gen.backend --upgrade
+            mix brando.assets.setup --backend-only
+
+        "Admin assets" in Brando's guides/migrating_from_053.md describes both and the CSS changes the
+        native compiler needs.
+        """)
+      else
+        _ -> igniter
+      end
+    end
+
     defp read_file(igniter, path) do
       igniter = Igniter.include_existing_file(igniter, path)
       {igniter, igniter.rewrite |> Rewrite.source!(path) |> Rewrite.Source.get(:content)}

@@ -321,6 +321,31 @@ msgstr ""
 msgid "%{name} %{version}, needs %{requirement}"
 msgstr ""
 
+#: lib/brando/europa_css.ex
+#, elixir-autogen, elixir-format
+msgid "%{package} %{version} installed, package.json has %{pin}"
+msgstr ""
+
+#: lib/brando/europa_css.ex
+#, elixir-autogen, elixir-format
+msgid "%{package} %{version}, Brando's is %{pin}"
+msgstr ""
+
+#: lib/brando/europa_css.ex
+#, elixir-autogen, elixir-format
+msgid "%{package} from %{source}, not npm"
+msgstr ""
+
+#: lib/brando/europa_css.ex
+#, elixir-autogen, elixir-format
+msgid "%{package} is not a dependency"
+msgstr ""
+
+#: lib/brando/europa_css.ex
+#, elixir-autogen, elixir-format
+msgid "%{package} not installed"
+msgstr ""
+
 #: lib/brando/doctor/checks/admin_routes.ex
 #, elixir-autogen, elixir-format
 msgid "%{schema}: %{helpers}"
@@ -360,6 +385,11 @@ msgstr ""
 #: lib/brando/doctor/checks/admin_assets.ex
 #, elixir-autogen, elixir-format
 msgid ".yalc brandojs %{version}"
+msgstr ""
+
+#: lib/brando/doctor/checks/admin_css.ex
+#, elixir-autogen, elixir-format
+msgid "Admin CSS compiler"
 msgstr ""
 
 #: lib/brando/doctor/checks/admin_assets.ex
@@ -430,6 +460,11 @@ msgstr ""
 #: lib/brando_admin/components/system_check.ex
 #, elixir-autogen, elixir-format
 msgid "Error"
+msgstr ""
+
+#: lib/brando/doctor/checks/admin_css.ex
+#, elixir-autogen, elixir-format
+msgid "EuropaCSS %{version}"
 msgstr ""
 
 #: lib/brando/doctor/checks/robots.ex
@@ -692,6 +727,11 @@ msgstr ""
 msgid "brandojs not installed"
 msgstr ""
 
+#: lib/brando/europa_css.ex
+#, elixir-autogen, elixir-format
+msgid "builds with the legacy %{package} %{version}"
+msgstr ""
+
 #: lib/brando/doctor/checks/image_configs.ex
 #, elixir-autogen, elixir-format
 msgid "by its record it differs from its config"
@@ -925,6 +965,7 @@ msgid "no API key for the Assistant"
 msgstr ""
 
 #: lib/brando/doctor/checks/admin_assets.ex
+#: lib/brando/doctor/checks/admin_css.ex
 #, elixir-autogen, elixir-format
 msgid "no assets/backend/package.json"
 msgstr ""
@@ -1104,6 +1145,11 @@ msgstr ""
 msgid "run mix brando.assets.setup --backend-only"
 msgstr ""
 
+#: lib/brando/doctor/checks/admin_css.ex
+#, elixir-autogen, elixir-format
+msgid "run mix brando.gen.backend --upgrade, then mix brando.assets.setup --backend-only"
+msgstr ""
+
 #: lib/brando/doctor/checks/migrations.ex
 #, elixir-autogen, elixir-format
 msgid "run mix brando.gen.migrations, then mix brando.migrate"
@@ -1137,6 +1183,11 @@ msgstr ""
 #: lib/brando/doctor/checks/migrations.ex
 #, elixir-autogen, elixir-format
 msgid "run mix brando.migrations.check --update and review the diff"
+msgstr ""
+
+#: lib/brando/doctor/checks/admin_css.ex
+#, elixir-autogen, elixir-format
+msgid "run pnpm install in assets/backend"
 msgstr ""
 
 #: lib/brando/doctor/checks/configuration.ex

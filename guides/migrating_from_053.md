@@ -628,6 +628,10 @@ so rerun the setup after updating BrandoJS.
 `mix brando.doctor` reports admin assets from an older BrandoJS and suggests
 `npx yalc update` and `pnpm install`. On a yarn-era `assets/backend` that is not
 enough: run `mix brando.gen.backend --upgrade` first, then the setup above.
+Its Admin CSS compiler check warns while `assets/backend` is not on the native
+EuropaCSS packages at the versions Brando's template pins (the legacy
+`@brandocms/europacss`, a Yalc copy, other versions, or an install older than
+`package.json`), and `mix brando.migrate55` names the same in its notice.
 
 #### Native EuropaCSS
 

@@ -5,6 +5,7 @@ if Code.ensure_loaded?(Igniter) do
 
     use Igniter.Mix.Task
 
+    alias Mix.Brando.Igniter.Assets
     alias Mix.Brando.Igniter.Mailer
     alias Mix.Brando.Igniter.PersistIdentifiers
     alias Mix.Brando.Igniter.SourceUpgrade
@@ -47,6 +48,12 @@ if Code.ensure_loaded?(Igniter) do
     `Plural-Forms` headers Gettext 1.0 warns about (including a rule that ran
     into the next header line for want of its `\\n`), and retires the
     consumer-owned `brando.upgrade` task that 0.54 installed.
+
+    When `assets/backend/package.json` does not build the admin's CSS with
+    Brando's native EuropaCSS packages yet (the legacy `@brandocms/europacss`,
+    a Yalc copy, other versions), a notice says what differs and to run
+    `mix brando.gen.backend --upgrade` and `mix brando.assets.setup
+    --backend-only`.
 
     An endpoint `reloadable_apps` list that names a dependency (`[:my_app,
     :brando]`) is removed, so Phoenix's default reloads the application
@@ -120,6 +127,7 @@ if Code.ensure_loaded?(Igniter) do
       |> SourceUpgrade.start_endpoint_last()
       |> Mix.Brando.Igniter.Upgrade.prepare()
       |> add_notices()
+      |> Assets.notice_native_europa()
       |> add_warnings()
     end
 

@@ -34,6 +34,7 @@ defmodule Brando.Doctor do
     Checks.Configuration,
     Checks.AdminRoutes,
     Checks.AdminAssets,
+    Checks.AdminCss,
     Checks.ImageConfigs,
     Checks.Modules,
     Checks.ModuleEntryPaths,
