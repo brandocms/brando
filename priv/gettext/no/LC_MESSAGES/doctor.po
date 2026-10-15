@@ -834,8 +834,13 @@ msgstr "alle bilder har alt-tekst"
 
 #: lib/brando/doctor/checks/admin_assets.ex
 #, elixir-autogen, elixir-format
-msgid "expected %{version}, run mix brando.assets.setup --backend-only"
-msgstr "forventet %{version}, kjør mix brando.assets.setup --backend-only"
+msgid "expected %{version}, a development version without an npm release: run mix brando.assets.setup --local --backend-only"
+msgstr "forventet %{version}, en utviklingsversjon uten npm-utgivelse: kjør mix brando.assets.setup --local --backend-only"
+
+#: lib/brando/doctor/checks/admin_assets.ex
+#, elixir-autogen, elixir-format
+msgid "expected %{version}, run mix brando.assets.setup --npm --backend-only"
+msgstr "forventet %{version}, kjør mix brando.assets.setup --npm --backend-only"
 
 #: lib/brando/doctor/checks/admin_assets.ex
 #, elixir-autogen, elixir-format

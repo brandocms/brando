@@ -68,9 +68,12 @@ one tarball.
 Both asset stages install with the pnpm version pinned in the Dockerfile and
 `pnpm install --frozen-lockfile`, so commit `assets/backend/pnpm-lock.yaml` and
 `assets/frontend/pnpm-lock.yaml`. `mix brando.assets.setup` writes them. After
-updating BrandoJS through Yalc, run `pnpm install` in `assets/backend` and commit
-the lockfile it changes; the build stops on a stale one rather than resolving
-different packages.
+updating BrandoJS, from npm or through Yalc, run `pnpm install` in
+`assets/backend` and commit the lockfile it changes; the build stops on a stale
+one rather than resolving different packages. The admin stage installs
+BrandoJS from npm, or copies `assets/backend/.yalc` when the admin takes it
+from a checkout (`mix brando.assets.setup --local`); a deploy then ships
+whatever that copy holds.
 
 ## System check
 

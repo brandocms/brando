@@ -90,8 +90,10 @@ deploy from `github:`. [Installation and generators](generators.md) describes
 working against a `path:` checkout, including `mix deps.compile brando` after
 changing it.
 
-The admin's JavaScript, BrandoJS, comes from the same Brando source through
-Yalc. `mix brando.assets.setup --backend-only` (see
+The admin's JavaScript, BrandoJS, comes from npm at Brando's version once
+Brando is released, and from the same Brando source through Yalc for a
+development version or while working on Brando. With a Yalc copy,
+`mix brando.assets.setup --backend-only` (see
 [Admin assets](#admin-assets)) publishes the dependency's `assets` directory to
 a store under `_build` and updates `assets/backend/.yalc`. By hand, the steps
 are `npx yalc publish` in Brando's `assets`, then
@@ -607,7 +609,10 @@ It takes the template's package versions, `engines` and `packageManager`
 (keeping the application's own packages, scripts and BrandoJS source), replaces
 `vite.config.js`, removes `svelte.config.cjs` and yarn/npm lockfiles, and
 replaces the Dockerfile's `assets_backend` stage with the template's pnpm stage.
-It also moves the admin's CSS build to native EuropaCSS (see
+That stage copies `assets/backend/.yalc` only when it exists, which Dockerfile
+frontends up to 1.1 can reject, so an older or missing `# syntax=` line at the top
+of the Dockerfile moves to the template's `# syntax=docker/dockerfile:1`; a
+custom frontend is kept with a notice. It also moves the admin's CSS build to native EuropaCSS (see
 [Native EuropaCSS](#native-europacss)).
 Customized CSS and other existing files are kept. It also moves the
 `assets_frontend` stage up to the same Node major when
@@ -622,11 +627,18 @@ mix brando.assets.setup --backend-only
 `--backend-only` leaves `assets/frontend` alone, for a frontend that still uses
 yarn or its own build; without it the task installs and builds both with pnpm.
 Commit the `assets/backend/pnpm-lock.yaml` it writes: the Docker build installs
-from it. The Docker image ships the admin from the local `assets/backend/.yalc`,
-so rerun the setup after updating BrandoJS.
+from it. The upgrade keeps where the admin takes BrandoJS from: an npm version
+moves to Brando's, and a Yalc copy or linked checkout stays. When Brando is a
+release and the admin still uses a Yalc copy, a notice suggests
+`mix brando.assets.setup --npm`, which pins the npm release and removes the
+copy. The Docker image installs BrandoJS from npm, or ships the local
+`assets/backend/.yalc` when the admin uses one, so rerun the setup after
+updating BrandoJS.
 
 `mix brando.doctor` reports admin assets from an older BrandoJS and suggests
-`npx yalc update` and `pnpm install`. On a yarn-era `assets/backend` that is not
+the fix for its source: `mix brando.assets.setup --npm` for npm (`--local`
+while Brando is a `-dev` version, which has no npm release),
+`npx yalc update` and `pnpm install` for a Yalc copy. On a yarn-era `assets/backend` that is not
 enough: run `mix brando.gen.backend --upgrade` first, then the setup above.
 Its Admin CSS compiler check warns while `assets/backend` is not on the native
 EuropaCSS packages at the versions Brando's template pins (the legacy

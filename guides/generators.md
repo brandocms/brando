@@ -5,11 +5,15 @@ source diff, then build assets and initialize the database. Existing Phoenix
 routes, templates, tests, configuration, secrets and dependency choices are
 preserved. Conflicting generated files stop the plan, including with `--yes`.
 
-The developing branch uses Yalc for BrandoJS. Keep the Elixir and JavaScript
-sources on the same revision; npm publication belongs to release preparation.
+The admin's JavaScript and CSS, BrandoJS (`@brandocms/brandojs`), is
+published to npm with every Brando release at the same version, and a released
+Brando installs it from there. Development versions (`-dev`) have no npm
+release and take BrandoJS from the Brando checkout through Yalc; see
+[Build assets](#build-assets).
 The working consumer combination is phx_new 1.8.13, Phoenix 1.8.15, LiveView 1.2.12,
-Elixir 1.20.3, OTP 28.4.1 and PostgreSQL 16.1. Install Node.js 24, pnpm, Yalc, PostgreSQL, the matching
-Phoenix generator and an Image/Vix-supported build environment first.
+Elixir 1.20.3, OTP 28.4.1 and PostgreSQL 16.1. Install Node.js 24, pnpm, PostgreSQL, the matching
+Phoenix generator and an Image/Vix-supported build environment first, and Yalc
+to take BrandoJS from a checkout.
 
 The old `install.sh` entry point is retired and prints these instructions without
 changing the application. Use the commands below for a reviewed installation.
@@ -101,10 +105,13 @@ mix deps.compile brando   # in the site
 # then restart the server
 ```
 
-Admin JavaScript has to be published into the site as well: `npx yalc
-publish` in Brando's `assets`, then `npx yalc update @brandocms/brandojs` and
-`pnpm install` in the site's `assets/backend`, and restart its Vite. The
-admin's CSS builds with native EuropaCSS, which pnpm installs from npm (see
+Admin JavaScript and CSS come from the checkout through Yalc while the site's
+admin takes BrandoJS from a local source (`mix brando.assets.setup --local`;
+see [Build assets](#build-assets)): run `npx yalc publish` in Brando's
+`assets` after a change. The admin's Vite dev server pulls each publish, so
+with HMR on there is nothing else to do. Without it, rerun
+`mix brando.assets.setup --backend-only` to rebuild. The admin's CSS builds
+with native EuropaCSS, which pnpm installs from npm (see
 [Native EuropaCSS](migrating_from_053.md#native-europacss)).
 
 The package installer calls the same `brando.install` task. Preserve your selected
@@ -205,12 +212,33 @@ them separately.
 mix brando.assets.setup
 ```
 
-Asset setup finds `assets/` inside the selected Brando checkout, publishes it to
-a consumer-local Yalc store under `_build`, adds BrandoJS to the admin consumer,
-and runs `pnpm install` and `pnpm build` in both consumer asset directories.
-It does not build the framework's root asset project. For an Elixir package that
-omits the developing JavaScript sources, pass
-`--source /path/to/matching/brando/assets`. Use `--no-build` to install only.
+Asset setup runs `pnpm install` and `pnpm build` in both consumer asset
+directories. It does not build the framework's root asset project. Where the
+admin takes BrandoJS from is set in `assets/backend/package.json`, and the
+task keeps it:
+
+* **npm**: `"@brandocms/brandojs": "0.55.0"`, Brando's own version. A released
+  Brando generates this; `pnpm install` fetches it.
+* **A Yalc copy**: `"file:.yalc/@brandocms/brandojs"`, a copy of a Brando
+  checkout. A `-dev` Brando generates this, and it is how you work on Brando
+  itself. The task publishes the selected Brando dependency's `assets/` to a
+  consumer-local Yalc store under `_build` and adds it to the admin. An Elixir
+  package from Hex has no JavaScript sources: pass
+  `--source /path/to/matching/brando/assets`, or `--npm`.
+* **A linked checkout**: `"link:../../brando/assets"` (or a `file:` path
+  outside `.yalc`). The task checks that the path holds `@brandocms/brandojs`
+  and leaves it to pnpm.
+
+A `package.json` without BrandoJS gets what a generated admin has. To switch,
+run `mix brando.assets.setup --local` (or `--source PATH`) to take BrandoJS
+from a Yalc copy of a checkout, and `mix brando.assets.setup --npm` to go back
+to the npm release of Brando's version. `--npm` also removes the Yalc copy.
+The task checks for Node.js, pnpm and, for a Yalc copy, Yalc before it changes
+anything.
+With a local source, `npx yalc publish` in Brando's `assets` reaches the admin's
+running Vite dev server by itself. Its Vite config includes BrandoJS's
+`yalcAutoUpdate` plugin, which pulls each publish. Use `--no-build` to install
+only.
 
 Vite writes `admin_manifest.json`, `manifest.json` and assets to the consumer's
 `priv/static`. The default uses compiled assets (`config :studio, hmr: false`).
@@ -455,7 +483,7 @@ Run `mix help TASK` for current options. These are separate operations:
 | `brando.gen.blueprint` | Reviewed Blueprint source |
 | `brando.gen` | Reviewed context/admin source; optional public routes |
 | `brando.gen.backend` / `brando.gen.frontend` | Reviewed asset scaffolds with conflict checks |
-| `brando.assets.setup` | Operational Yalc installation and consumer builds |
+| `brando.assets.setup` | Operational asset installation (BrandoJS from npm or a checkout) and consumer builds |
 | `brando.gen.blueprint_migration` | Reviewed migration/snapshot pair with stale-plan checks, for one Blueprint or every application Blueprint with `--all`; database application is separate |
 | `brando.setup` | Operational post-install setup: assets, database, account, seeds |
 | `brando.gen.languages` / `brando.gen.admin` | Operational language/account initialization |

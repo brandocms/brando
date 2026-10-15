@@ -1,7 +1,7 @@
 # Igniter source tasks
 
 Implementation tracker: [#2462](https://github.com/brandocms/brando/issues/2462).
-User-facing commands and the current Yalc bootstrap are in
+User-facing commands and asset setup (BrandoJS from npm or a checkout) are in
 [Installation and generators](../guides/generators.md).
 
 `brando.install`, `brando.gen.blueprint`, `brando.gen`,
@@ -54,7 +54,7 @@ Rewrite normalizes trailing newlines even for binary files. Binary fonts/icons
 therefore never enter its new-file writer. A whitelisted, digest-checked
 `brando.assets.copy` task runs after acceptance, writes exact bytes with atomic
 no-clobber creation, and refuses changed destinations. Dry runs do not copy them.
-`brando.assets.setup` is a separate operational task for Yalc and consumer builds.
+`brando.assets.setup` is a separate operational task for consumer installs and builds, BrandoJS from npm or a Yalc copy of a checkout.
 
 ## CLI and compilation boundaries
 

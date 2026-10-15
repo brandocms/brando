@@ -3,7 +3,7 @@
 <!-- llms-description: `mix brando.doctor` finds what is misconfigured or out of date and says how to fix it; add checks of your own. -->
 
 Most problems on a Brando site come from something out of date or
-misconfigured: a migration not run, admin assets from an older Yalc publish,
+misconfigured: a migration not run, admin assets from an older BrandoJS,
 images made before their settings changed, blocks on old module versions, a
 missing sitemap. `mix brando.doctor` checks for all of these and says what to
 do about each one.
@@ -115,7 +115,7 @@ and summaries are prose.
 | Oban queues | The configured queues (in the admin, the running ones, so a paused queue shows), that the `content_events`, `webhooks` and `search_index` queues are among them, jobs waiting or executing for over an hour, jobs discarded in the last 24 hours |
 | Configuration | The endpoint URL, the mailer and its sender, the CDN settings of `Brando.Images` and `Brando.Files` when enabled, and the Assistant's API key when a model is configured |
 | Admin routes | For each of the application's Blueprints with an admin listing or form route, the route helper its rows and links call, `admin_<singular>_form_path` with `:update` (`admin_<scope>_<singular>_form_path` with `router_scope:`). A site still routing 0.53's `<Name>CreateLive`/`<Name>UpdateLive` fails here; `mix brando.migrate54` converts generated ones |
-| Admin assets | The `@brandocms/brandojs` version in `assets/backend/.yalc` (or the checkout it links to) against Brando's |
+| Admin assets | The `@brandocms/brandojs` version the admin installs against Brando's: from `node_modules` for an npm version, from `assets/backend/.yalc` (or the checkout it links to) for a local source. An npm install at another version suggests `mix brando.assets.setup --npm --backend-only`, or `--local --backend-only` for a development Brando, which has no npm release |
 | Admin CSS compiler | The native EuropaCSS packages in `assets/backend` (`Brando.EuropaCSS`): `@brandocms/vite-plugin-europacss` and `@brandocms/europacss-cli` declared from npm at the versions Brando's backend template pins, and installed at them. The legacy `@brandocms/europacss`, a Yalc copy or path, or another version is a warning with `mix brando.gen.backend --upgrade` as the fix; an install behind `package.json` asks for `pnpm install`. Skipped in a release |
 | Image configs | Images made with an older image config: what Utilities → Recreate changed images recreates. Images made before Brando recorded configs are split, as a dry run of `mix brando.images.adopt`, into those whose files already match and those that differ, counted by how they differ (formats, sizes, missing files, dimensions). With no image files in the media folder at all, it says so and asks for the media instead of a recreate |
 | Modules | Blocks behind their module's version, per module |

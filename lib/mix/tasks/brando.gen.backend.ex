@@ -15,7 +15,8 @@ if Code.ensure_loaded?(Igniter) do
     brings an existing `assets/backend` up to the current template instead:
     package versions, `engines` and `packageManager`, `vite.config.js`, the
     retired `svelte.config.cjs`, yarn/npm lockfiles (the template uses pnpm),
-    and the Dockerfile's `assets_backend` stage. Customized CSS and other
+    and the Dockerfile's `assets_backend` stage, with an older or missing
+    `# syntax=` line moved to `docker/dockerfile:1`. Customized CSS and other
     existing files are kept. Install and build afterwards with
     `mix brando.assets.setup --backend-only`.
 

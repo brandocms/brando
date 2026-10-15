@@ -61,6 +61,44 @@ defmodule Mix.Brando.Igniter.AssetsTest do
     assert Enum.all?(plan.tasks, fn {task, _args} -> task == "brando.assets.copy" end)
   end
 
+  defp generate_backend(igniter, version) do
+    igniter |> Igniter.assign(:brando_version, version) |> Igniter.compose_task(Mix.Tasks.Brando.Gen.Backend, [])
+  end
+
+  test "a generated admin takes BrandoJS from Brando's spec: npm for a release, Yalc for a -dev version" do
+    project = IgniterCase.phoenix_project(without: ["assets/backend/package.json"])
+    template = Templates.contents(:copy, "assets/backend/package.json")
+    # The template pins Brando's version; only the BrandoJS spec differs from it.
+    assert Jason.decode!(template)["dependencies"]["@brandocms/brandojs"] == Brando.version()
+
+    for {version, spec} <- [{"0.55.0", "0.55.0"}, {"0.56.0-dev", "file:.yalc/@brandocms/brandojs"}] do
+      plan = generate_backend(project, version)
+      assert plan.issues == []
+      package = plan |> IgniterCase.source("assets/backend/package.json") |> Jason.decode!()
+
+      assert package["dependencies"]["@brandocms/brandojs"] == spec
+      assert package == template |> Jason.decode!() |> put_in(["dependencies", "@brandocms/brandojs"], spec)
+    end
+
+    # Without an assigned version the generator pairs with this Brando.
+    plan = Igniter.compose_task(project, Mix.Tasks.Brando.Gen.Backend, [])
+    package = plan |> IgniterCase.source("assets/backend/package.json") |> Jason.decode!()
+    assert package["dependencies"]["@brandocms/brandojs"] == Mix.Brando.BrandoJS.spec()
+  end
+
+  test "generating into an existing admin keeps its BrandoJS source, in the section that declares it" do
+    yalc = ~s({"dependencies":{"@brandocms/brandojs":"file:.yalc/@brandocms/brandojs"}})
+    plan = IgniterCase.phoenix_project(files: %{"assets/backend/package.json" => yalc}) |> generate_backend("0.55.0")
+    package = plan |> IgniterCase.source("assets/backend/package.json") |> Jason.decode!()
+    assert package["dependencies"]["@brandocms/brandojs"] == "file:.yalc/@brandocms/brandojs"
+
+    dev = ~s({"devDependencies":{"@brandocms/brandojs":"link:../../brando/assets"}})
+    plan = IgniterCase.phoenix_project(files: %{"assets/backend/package.json" => dev}) |> generate_backend("0.55.0")
+    package = plan |> IgniterCase.source("assets/backend/package.json") |> Jason.decode!()
+    assert package["devDependencies"]["@brandocms/brandojs"] == "link:../../brando/assets"
+    refute Map.has_key?(package["dependencies"], "@brandocms/brandojs")
+  end
+
   describe "brando.gen.backend --upgrade" do
     # A 0.54 site's admin, as smartwatt had it: yarn, Vite 5, Svelte 4.
     @old_package ~s({
@@ -97,9 +135,13 @@ defmodule Mix.Brando.Igniter.AssetsTest do
       |> Map.merge(extra)
     end
 
-    defp upgrade(files) do
-      IgniterCase.phoenix_project(files: files) |> Igniter.compose_task(Mix.Tasks.Brando.Gen.Backend, ["--upgrade"])
+    defp upgrade(files, version \\ nil) do
+      igniter = IgniterCase.phoenix_project(files: files)
+      igniter = if version, do: Igniter.assign(igniter, :brando_version, version), else: igniter
+      Igniter.compose_task(igniter, Mix.Tasks.Brando.Gen.Backend, ["--upgrade"])
     end
+
+    defp upgraded_package(plan), do: plan |> IgniterCase.source("assets/backend/package.json") |> Jason.decode!()
 
     defp template(path), do: Templates.contents(:copy, path)
 
@@ -154,6 +196,49 @@ defmodule Mix.Brando.Igniter.AssetsTest do
       assert IgniterCase.source(plan, "assets/backend/europa.json5") == template("assets/backend/europa.json5")
       # Its stylesheet keeps importing BrandoJS's: the Vite plugin resolves package imports.
       Igniter.Test.assert_unchanged(plan, "assets/backend/css/app.css")
+    end
+
+    test "an npm BrandoJS pin moves to Brando's spec, a local source stays" do
+      npm = String.replace(@old_package, "file:.yalc/@brandocms/brandojs", "0.54.0")
+
+      assert upgraded_package(upgrade(old_backend(%{"assets/backend/package.json" => npm}), "0.55.0"))["dependencies"][
+               "@brandocms/brandojs"
+             ] == "0.55.0"
+
+      dev = upgrade(old_backend(%{"assets/backend/package.json" => npm}), "0.56.0-dev")
+      assert upgraded_package(dev)["dependencies"]["@brandocms/brandojs"] == "file:.yalc/@brandocms/brandojs"
+
+      for spec <- ["file:.yalc/@brandocms/brandojs", "link:../../../brando/assets"] do
+        local = String.replace(@old_package, "file:.yalc/@brandocms/brandojs", spec)
+        plan = upgrade(old_backend(%{"assets/backend/package.json" => local}), "0.55.0")
+        assert upgraded_package(plan)["dependencies"]["@brandocms/brandojs"] == spec
+        assert Enum.any?(plan.notices, &(&1 =~ "mix brando.assets.setup --npm" and &1 =~ spec))
+
+        plan = upgrade(old_backend(%{"assets/backend/package.json" => local}), "0.56.0-dev")
+        refute Enum.any?(plan.notices, &(&1 =~ "mix brando.assets.setup --npm"))
+      end
+    end
+
+    test "BrandoJS in devDependencies stays there: a local source is kept, an npm pin moves to Brando's spec" do
+      package = fn spec -> ~s({"devDependencies": {"@brandocms/brandojs": "#{spec}", "vite": "^5.0.0"}}) end
+
+      plan = upgrade(old_backend(%{"assets/backend/package.json" => package.("link:../../brando/assets")}), "0.55.0")
+      upgraded = upgraded_package(plan)
+      assert upgraded["devDependencies"]["@brandocms/brandojs"] == "link:../../brando/assets"
+      refute Map.has_key?(upgraded["dependencies"], "@brandocms/brandojs")
+      assert upgraded["dependencies"]["@brandocms/jupiter"]
+
+      upgraded = upgraded_package(upgrade(old_backend(%{"assets/backend/package.json" => package.("0.54.0")}), "0.55.0"))
+      assert upgraded["devDependencies"]["@brandocms/brandojs"] == "0.55.0"
+      refute Map.has_key?(upgraded["dependencies"], "@brandocms/brandojs")
+    end
+
+    test "an admin without BrandoJS gets it in dependencies" do
+      upgraded =
+        upgraded_package(upgrade(old_backend(%{"assets/backend/package.json" => ~s({"name": "backend"})}), "0.55.0"))
+
+      assert upgraded["dependencies"]["@brandocms/brandojs"] == "0.55.0"
+      refute Map.has_key?(upgraded["devDependencies"], "@brandocms/brandojs")
     end
 
     test "removes an earlier template's legacy EuropaCSS configs and keeps a site's own with a notice" do
@@ -222,6 +307,57 @@ defmodule Mix.Brando.Igniter.AssetsTest do
       assert dockerfile =~ "FROM --platform=linux/amd64 twined/fehn:3.9 as deps"
       assert dockerfile =~ "COPY assets/frontend/package.json assets/frontend/yarn.lock ./"
       assert dockerfile =~ "RUN yarn build"
+    end
+
+    test "moves an old Dockerfile frontend to docker/dockerfile:1, which skips the optional .yalc COPY's empty match" do
+      assert template("Dockerfile") |> String.split("\n") |> hd() == "# syntax=docker/dockerfile:1"
+      assert old_backend()["Dockerfile"] =~ ~r/\A# syntax = docker\/dockerfile:1.0-experimental\n/
+
+      plan = upgrade(old_backend())
+      dockerfile = IgniterCase.source(plan, "Dockerfile")
+      assert dockerfile =~ ~r/\A# syntax=docker\/dockerfile:1\n\n# ---/
+      assert Enum.any?(plan.notices, &(&1 =~ "declared docker/dockerfile:1.0-experimental"))
+
+      for old <-
+            ~w(docker/dockerfile:1.0 docker/dockerfile:1.1.7 docker/dockerfile:1.1-experimental docker/dockerfile:experimental) do
+        current = String.replace(old_backend()["Dockerfile"], "docker/dockerfile:1.0-experimental", old)
+        dockerfile = IgniterCase.source(upgrade(old_backend(%{"Dockerfile" => current})), "Dockerfile")
+        assert dockerfile =~ ~r/\A# syntax=docker\/dockerfile:1\n/, old
+      end
+    end
+
+    test "reads the syntax directive behind a byte order mark" do
+      current = "\uFEFF" <> old_backend()["Dockerfile"]
+      dockerfile = IgniterCase.source(upgrade(old_backend(%{"Dockerfile" => current})), "Dockerfile")
+      assert dockerfile =~ ~r/\A# syntax=docker\/dockerfile:1\n/
+      refute dockerfile =~ "1.0-experimental"
+    end
+
+    test "adds a syntax directive the Dockerfile lacks, after any other directive" do
+      [_syntax | rest] = String.split(old_backend()["Dockerfile"], "\n")
+      plan = upgrade(old_backend(%{"Dockerfile" => Enum.join(rest, "\n")}))
+      assert IgniterCase.source(plan, "Dockerfile") =~ ~r/\A# syntax=docker\/dockerfile:1\n\n# ---/
+      assert Enum.any?(plan.notices, &(&1 =~ "had no syntax directive"))
+
+      # A blank line would end the directives, leaving the escape one a comment.
+      plan = upgrade(old_backend(%{"Dockerfile" => Enum.join(["# escape=`" | rest], "\n")}))
+      assert IgniterCase.source(plan, "Dockerfile") =~ ~r/\A# syntax=docker\/dockerfile:1\n# escape=`\n\n# ---/
+    end
+
+    test "keeps a current or custom Dockerfile frontend, with a notice for a custom one" do
+      for kept <- ~w(docker/dockerfile:1 docker/dockerfile:1.10 docker/dockerfile:1.7-labs) do
+        current = String.replace(old_backend()["Dockerfile"], "docker/dockerfile:1.0-experimental", kept)
+        plan = upgrade(old_backend(%{"Dockerfile" => current}))
+        assert IgniterCase.source(plan, "Dockerfile") =~ "# syntax = #{kept}\n"
+        refute Enum.any?(plan.notices, &(&1 =~ "syntax")), kept
+      end
+
+      current =
+        String.replace(old_backend()["Dockerfile"], "docker/dockerfile:1.0-experimental", "example.com/frontend:2")
+
+      plan = upgrade(old_backend(%{"Dockerfile" => current}))
+      assert IgniterCase.source(plan, "Dockerfile") =~ "# syntax = example.com/frontend:2\n"
+      assert Enum.any?(plan.notices, &(&1 =~ "Dockerfile frontend example.com/frontend:2, which this task keeps"))
     end
 
     test "says the assets_frontend stage keeps its Node image when there is no frontend package to check" do
