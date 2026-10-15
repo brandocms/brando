@@ -19,7 +19,7 @@ ls priv/repo/migrations | grep -o 'brando_[0-9]*' | sort -t_ -k2 -n | tail -1
 | `brando_55` or lower | 0.51 (`legacy`): Vue admin, no Blueprints | [Migrating from 0.51](migrating_from_051.md) |
 | `brando_56` to `brando_102` | 0.52 or 0.53: Blueprints, content still Villain JSON in `data` columns, no `*_blocks` tables | This guide, both source tasks |
 | `brando_103` to `brando_130` | 0.54: blocks | This guide, without `mix brando.migrate54` |
-| `brando_131` or higher | a 0.55 development build | This guide from section 3 |
+| `brando_131` or higher | a 0.55 development build | Rerun `mix brando.migrate55` (see [Run the source tasks](#run-the-source-tasks)), then this guide from section 3 |
 
 The `@version` in `deps/brando/mix.exs` is a weaker signal: a development
 checkout reported `0.53.0-dev` from mid-2022 to the 0.53.0 release in 2024.
