@@ -11,6 +11,7 @@ defmodule Mix.Brando.BrandoJS do
   @package "@brandocms/brandojs"
   @yalc_spec "file:.yalc/@brandocms/brandojs"
   @sections ~w(dependencies devDependencies)
+  @entry ~r/("@brandocms\/brandojs"\s*:\s*)"(?:[^"\\]|\\.)*"/
 
   def package, do: @package
 
@@ -56,13 +57,20 @@ defmodule Mix.Brando.BrandoJS do
   """
   def put_spec(contents, spec) do
     package = Jason.decode!(contents, objects: :ordered_objects)
+    declared = Enum.filter(@sections, &(package[&1][@package] != nil))
+    entries = Regex.scan(@entry, contents)
 
-    sections =
-      case Enum.filter(@sections, &(package[&1][@package] != nil)) do
-        [] -> ["dependencies"]
-        sections -> sections
-      end
+    # When every textual entry is a declaration (no override or other key of
+    # the same name), only the values change and the file keeps its own
+    # formatting. Otherwise, or to add the entry, it is re-encoded.
+    if declared != [] and length(entries) == length(declared) do
+      Regex.replace(@entry, contents, fn _, key -> key <> Jason.encode!(spec) end)
+    else
+      encode_spec(package, if(declared == [], do: ["dependencies"], else: declared), spec)
+    end
+  end
 
+  defp encode_spec(package, sections, spec) do
     sections
     |> Enum.reduce(package, fn section, package ->
       put_key(package, section, put_key(package[section] || Jason.OrderedObject.new([]), @package, spec))

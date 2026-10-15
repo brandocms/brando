@@ -610,7 +610,7 @@ It takes the template's package versions, `engines` and `packageManager`
 `vite.config.js`, removes `svelte.config.cjs` and yarn/npm lockfiles, and
 replaces the Dockerfile's `assets_backend` stage with the template's pnpm stage.
 That stage copies `assets/backend/.yalc` only when it exists, which Dockerfile
-frontends before 1.1 reject, so an older or missing `# syntax=` line at the top
+frontends up to 1.1 can reject, so an older or missing `# syntax=` line at the top
 of the Dockerfile moves to the template's `# syntax=docker/dockerfile:1`; a
 custom frontend is kept with a notice. It also moves the admin's CSS build to native EuropaCSS (see
 [Native EuropaCSS](#native-europacss)).

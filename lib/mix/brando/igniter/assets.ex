@@ -430,11 +430,13 @@ if Code.ensure_loaded?(Igniter) do
     @dockerfile_syntax "docker/dockerfile:1"
 
     # The template's assets_backend stage copies .yalc only when it exists
-    # (`COPY assets/backend/.yal[c] ./.yalc/`). Dockerfile frontends before
-    # 1.1 fail a COPY wildcard that matches nothing, so an older or missing
-    # `# syntax=` directive moves to the template's.
+    # (`COPY assets/backend/.yal[c] ./.yalc/`). Old Dockerfile frontends
+    # (1.0, the 1.1 releases, the experimental tags) fail or may fail a COPY
+    # wildcard that matches nothing, so such a `# syntax=` directive, or a
+    # missing one, moves to the template's. A leading byte order mark would
+    # hide the first line's directive, and BuildKit strips it only there.
     defp upgrade_dockerfile_syntax(igniter, contents) do
-      lines = String.split(contents, "\n")
+      lines = contents |> String.trim_leading("\uFEFF") |> String.split("\n")
       directives = Enum.take_while(lines, &Regex.match?(~r/^#\s*\w+\s*=/, &1))
       syntax = Enum.find_index(directives, &Regex.match?(~r/^#\s*syntax\s*=/i, &1))
 

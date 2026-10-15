@@ -57,6 +57,14 @@ defmodule Mix.Brando.BrandoJSTest do
              ~s({\n  "dependencies": {\n    "@brandocms/brandojs": "0.55.0",\n    "x": "1"\n  }\n}\n)
   end
 
+  test "put_spec keeps an application's own formatting when it only changes the value" do
+    json =
+      ~s({\n    "files": ["dist"],\n    "dependencies": {\n        "@brandocms/brandojs": "file:.yalc/@brandocms/brandojs",\n        "n": 1e3\n    }\n})
+
+    assert BrandoJS.put_spec(json, "0.55.0") ==
+             String.replace(json, "file:.yalc/@brandocms/brandojs", "0.55.0")
+  end
+
   test "put_spec rewrites the entry in the section that has it, not an override naming the package" do
     json = ~s({
       "pnpm": {"overrides": {"@brandocms/brandojs": "link:../x"}},

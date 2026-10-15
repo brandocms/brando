@@ -326,6 +326,13 @@ defmodule Mix.Brando.Igniter.AssetsTest do
       end
     end
 
+    test "reads the syntax directive behind a byte order mark" do
+      current = "\uFEFF" <> old_backend()["Dockerfile"]
+      dockerfile = IgniterCase.source(upgrade(old_backend(%{"Dockerfile" => current})), "Dockerfile")
+      assert dockerfile =~ ~r/\A# syntax=docker\/dockerfile:1\n/
+      refute dockerfile =~ "1.0-experimental"
+    end
+
     test "adds a syntax directive the Dockerfile lacks, after any other directive" do
       [_syntax | rest] = String.split(old_backend()["Dockerfile"], "\n")
       plan = upgrade(old_backend(%{"Dockerfile" => Enum.join(rest, "\n")}))

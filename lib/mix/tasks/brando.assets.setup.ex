@@ -110,10 +110,17 @@ defmodule Mix.Tasks.Brando.Assets.Setup do
 
   defp check_source!({:linked, path}, backend, spec) do
     hint = "assets/backend/package.json takes it from #{spec}; fix that path, or use --local, --source or --npm."
-    {:linked, brandojs_dir!(Path.expand(path, backend), hint)}
+    path = Path.expand(path, backend)
+
+    # `file:` also takes a packed tarball, which pnpm installs as it is.
+    if tarball?(path),
+      do: if(File.regular?(path), do: {:linked, path}, else: Mix.raise("Missing #{path}. #{hint}")),
+      else: {:linked, brandojs_dir!(path, hint)}
   end
 
   defp check_source!(npm, _backend, _spec), do: npm
+
+  defp tarball?(path), do: String.ends_with?(path, [".tgz", ".tar.gz"])
 
   defp install_brandojs(:npm, _backend, spec), do: npm_notice(spec)
   defp install_brandojs({:npm, :switch}, backend, _spec), do: switch_to_npm(backend)

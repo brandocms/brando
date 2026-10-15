@@ -124,6 +124,29 @@ defmodule Mix.Tasks.Brando.Assets.SetupRunTest do
     assert_raise Mix.Error, ~r/is not the @brandocms\/brandojs package directory/, fn -> setup!(directory) end
   end
 
+  test "a file: tarball is kept as pnpm installs it", %{directory: directory} do
+    tarball = ~s({"dependencies": {"@brandocms/brandojs": "file:../../brandojs-0.55.0.tgz"}}\n)
+    File.write!(Path.join(directory, "assets/backend/package.json"), tarball)
+
+    assert_raise Mix.Error, ~r{Missing .*/brandojs-0\.55\.0\.tgz\.}, fn -> setup!(directory) end
+
+    File.write!(Path.join(directory, "brandojs-0.55.0.tgz"), "")
+    assert_raise Mix.Error, ~r/node is required by mix brando.assets.setup/, fn -> setup!(directory) end
+  end
+
+  test "a missing tool stops a switch to a Yalc copy before Yalc runs", %{directory: directory, package: package} do
+    File.mkdir_p!(Path.join(directory, "brandojs"))
+    File.write!(Path.join(directory, "brandojs/package.json"), ~s({"name": "@brandocms/brandojs"}))
+
+    assert_raise Mix.Error, ~r/node is required by mix brando.assets.setup/, fn ->
+      setup!(directory, ["--source", Path.join(directory, "brandojs"), "--backend-only", "--no-build"])
+    end
+
+    assert File.read!(Path.join(directory, "assets/backend/package.json")) == package
+    refute File.exists?(Path.join(directory, "assets/backend/.yalc"))
+    refute File.exists?(Path.join(directory, "assets/backend/yalc.lock"))
+  end
+
   test "a linked checkout is kept as it is, and a missing tool stops setup before anything changes",
        %{directory: directory, package: package} do
     File.mkdir_p!(Path.join(directory, "brandojs"))
