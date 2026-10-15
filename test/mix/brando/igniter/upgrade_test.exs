@@ -2,6 +2,7 @@ defmodule Mix.Brando.Igniter.UpgradeTest do
   use ExUnit.Case, async: false
 
   alias Brando.IgniterCase
+  alias Mix.Brando.Igniter.Upgrade
 
   @legacy_path "lib/mix/brando.upgrade.ex"
   @archive "priv/brando/legacy_tasks/brando.upgrade.ex.disabled"
@@ -126,17 +127,95 @@ defmodule Mix.Brando.Igniter.UpgradeTest do
     end
   end
 
-  test "version hook composes through Igniter's actual apply-upgrades dispatcher" do
-    version = Application.spec(:brando, :vsn) |> to_string()
+  # Runs the hook the way mix igniter.upgrade does, through Igniter's dispatcher.
+  defp dispatch(from, to) do
     project = IgniterCase.phoenix_project()
 
-    result =
-      %{project | args: %Igniter.Mix.Task.Args{positional: %{packages: ["brando:#{version}:#{version}"]}, argv_flags: []}}
-      |> Igniter.CopiedTasks.do_apply_upgrades()
+    %{project | args: %Igniter.Mix.Task.Args{positional: %{packages: ["brando:#{from}:#{to}"]}, argv_flags: []}}
+    |> Igniter.CopiedTasks.do_apply_upgrades()
+  end
+
+  defp installed_version, do: Application.spec(:brando, :vsn) |> to_string()
+
+  test "version hook composes through Igniter's actual apply-upgrades dispatcher" do
+    result = dispatch(installed_version(), installed_version())
 
     assert result.issues == []
     assert Enum.any?(result.notices, &String.contains?(&1, "already at"))
     Igniter.Test.assert_unchanged(result)
+  end
+
+  describe "compare_versions/2" do
+    test "a dev prerelease precedes the other prereleases and the release of the same version" do
+      assert Upgrade.compare_versions("0.55.0-dev", "0.55.0-beta.0") == :lt
+      assert Upgrade.compare_versions("0.55.0-dev", "0.55.0-rc.1") == :lt
+      assert Upgrade.compare_versions("0.55.0-dev", "0.55.0") == :lt
+      assert Upgrade.compare_versions("0.55.0-beta.0", "0.55.0-dev") == :gt
+      assert Upgrade.compare_versions("0.55.0", "0.55.0-dev") == :gt
+      assert Upgrade.compare_versions("0.55.0-dev", "0.55.0-dev") == :eq
+    end
+
+    test "other versions keep semantic versioning order" do
+      assert Upgrade.compare_versions("0.55.0-beta.1", "0.55.0-beta.0") == :gt
+      assert Upgrade.compare_versions("0.55.0-beta.0", "0.55.0-beta.0") == :eq
+      assert Upgrade.compare_versions("0.56.0-dev", "0.55.0-beta.0") == :gt
+      assert Upgrade.compare_versions("0.56.0-dev", "0.55.0") == :gt
+      assert Upgrade.compare_versions("0.54.0-beta.0", "0.55.0-dev") == :lt
+      assert Upgrade.compare_versions(Version.parse!("0.55.1-dev"), Version.parse!("0.55.0")) == :gt
+    end
+  end
+
+  test "dev to prerelease and dev to release upgrades pass the dispatcher without a recipe" do
+    for to <- ["0.54.0-beta.0", "0.54.0"] do
+      result = dispatch("0.54.0-dev", to)
+
+      assert result.issues == []
+      assert Enum.any?(result.notices, &String.contains?(&1, "missing framework migrations"))
+      refute Enum.any?(result.notices, &String.contains?(&1, "Brando 0.55 source migration prepared"))
+    end
+  end
+
+  test "a 0.54 prerelease is at or above the oldest supported source and crosses into 0.55 once" do
+    result = dispatch("0.54.0-beta.0", installed_version())
+
+    assert result.issues == []
+    assert Enum.count(result.notices, &String.contains?(&1, "Brando 0.55 source migration prepared")) == 1
+  end
+
+  test "a 0.55 dev source passes the downgrade guard towards a 0.55 prerelease or release" do
+    installed = installed_version()
+
+    for to <- ["0.55.0-beta.0", "0.55.0"] do
+      result = dispatch("0.55.0-dev", to)
+
+      refute Enum.any?(result.issues, &String.contains?(&1, "downgrades"))
+
+      if Upgrade.compare_versions(to, installed) == :gt do
+        # Until the dependency itself is at the target, the hook refuses.
+        assert [issue] = result.issues
+        assert issue =~ "The loaded Brando version is #{installed}; cannot apply source upgrades for #{to}."
+        Igniter.Test.assert_unchanged(result)
+      else
+        assert result.issues == []
+        refute Enum.any?(result.notices, &String.contains?(&1, "Brando 0.55 source migration prepared"))
+      end
+    end
+  end
+
+  test "downgrades between prereleases and versions are rejected" do
+    for {from, to} <- [
+          {"0.55.0-beta.0", "0.55.0-dev"},
+          {"0.55.0", "0.55.0-dev"},
+          {"0.55.0-beta.1", "0.55.0-beta.0"},
+          {"0.56.0-dev", "0.55.0-beta.0"},
+          {"0.56.0-dev", "0.55.0-dev"}
+        ] do
+      result = dispatch(from, to)
+
+      assert Enum.any?(result.issues, &String.contains?(&1, "downgrades are not supported")), "#{from} -> #{to}"
+      assert result.tasks == []
+      Igniter.Test.assert_unchanged(result)
+    end
   end
 
   test "invalid versions, unsupported older source and downgrades do not plan changes" do

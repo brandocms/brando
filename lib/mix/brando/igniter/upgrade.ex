@@ -144,7 +144,7 @@ if Code.ensure_loaded?(Igniter) do
     end
 
     defp apply_version(igniter, from, to) do
-      if Version.compare(from, to) == :eq do
+      if compare_versions(from, to) == :eq do
         Igniter.add_notice(
           igniter,
           "Brando is already at #{to}; use mix brando.gen.migrations to reconcile missing framework migration files."
@@ -165,6 +165,27 @@ if Code.ensure_loaded?(Igniter) do
       |> Enum.reduce(igniter, &Igniter.compose_task(&2, &1, []))
     end
 
+    @doc """
+    Orders two Brando versions like `Version.compare/2`, except that a `dev`
+    prerelease (`0.55.0-dev`) precedes every other prerelease of the same
+    version as well as the release. Semantic versioning orders prerelease
+    identifiers lexically, which would put `0.55.0-dev` after `0.55.0-beta.0`.
+    """
+    @spec compare_versions(Version.t() | String.t(), Version.t() | String.t()) :: :lt | :eq | :gt
+    def compare_versions(left, right) when is_binary(left), do: compare_versions(Version.parse!(left), right)
+    def compare_versions(left, right) when is_binary(right), do: compare_versions(left, Version.parse!(right))
+
+    def compare_versions(%Version{} = left, %Version{} = right) do
+      same_release? = {left.major, left.minor, left.patch} == {right.major, right.minor, right.patch}
+
+      cond do
+        not same_release? or left.pre == right.pre -> Version.compare(left, right)
+        left.pre == ["dev"] -> :lt
+        right.pre == ["dev"] -> :gt
+        true -> Version.compare(left, right)
+      end
+    end
+
     defp version(value) when is_binary(value) do
       case Version.parse(value) do
         {:ok, version} -> {:ok, version}
@@ -181,15 +202,15 @@ if Code.ensure_loaded?(Igniter) do
       installed = Application.spec(:brando, :vsn) |> to_string() |> Version.parse!()
 
       cond do
-        Version.compare(from, to) == :gt ->
+        compare_versions(from, to) == :gt ->
           {:error,
            "Brando source downgrades are not supported. Restore the intended dependency and source revision explicitly."}
 
-        Version.compare(to, installed) == :gt ->
+        compare_versions(to, installed) == :gt ->
           {:error,
            "The loaded Brando version is #{installed}; cannot apply source upgrades for #{to}. Update the dependency first."}
 
-        Version.compare(from, @minimum) == :lt ->
+        compare_versions(from, @minimum) == :lt ->
           {:error,
            "Before upgrading from #{from}, follow guides/migrating_from_053.md and run mix brando.migrate54, then mix brando.migrate55. The automatic hook supports #{@minimum} and newer."}
 

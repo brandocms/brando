@@ -127,7 +127,8 @@ compilation paths and schedules removal only after conflict checks. Customized
 implementations require an explicit rename. A separate compile removes the stale
 beam before Igniter resolves the library hook. The current version hook rejects
 downgrades, unsupported old DSL source, future recipes and versions beyond the
-loaded dependency. Equal versions are a no-op. The pre-0.54 DSL conversion remains
+loaded dependency, ordering a `-dev` version before every prerelease and the
+release of the same version. Equal versions are a no-op. The pre-0.54 DSL conversion remains
 an explicit compilation prerequisite, with its own existing rewrite tests.
 
 ## Verification and remaining work
