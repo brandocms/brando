@@ -90,8 +90,10 @@ WORKDIR /opt/app/assets/frontend
 # Keep in step with `packageManager` in assets/frontend/package.json
 RUN npm install --global pnpm@10.32.1
 
+# Jupiter comes from npm. If you install it from Yalc instead, add
+#   COPY assets/frontend/.yalc ./.yalc
+# here: Docker fails a COPY whose source is missing, so the template has none.
 COPY assets/frontend/package.json assets/frontend/pnpm-lock.yaml ./
-COPY assets/frontend/.yalc ./.yalc
 
 # Use pnpm cache directory as a cache mount
 # pnpm stores cache in ~/.local/share/pnpm/store by default
