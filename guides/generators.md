@@ -349,8 +349,10 @@ before missing framework migrations are planned: a 0.54 → 0.55 upgrade runs
 `brando.migrate55` first. A `-dev` version counts as older than every
 prerelease and the release of the same version, so a Git or path installation
 at `0.55.0-dev` moves onto `0.55.0-beta.0` or `0.55.0` as an upgrade, without a
-recipe since both are the 0.55 line. Otherwise versions order as semantic
-versions. Equal versions are a no-op;
+recipe since both are the 0.55 line. If the application ran `mix brando.migrate55`
+against an earlier `0.55.0-dev` build, run it again after the update to pick up
+rewrites added since; the task is idempotent and leaves migrated source unchanged.
+Otherwise versions order as semantic versions. Equal versions are a no-op;
 use `brando.gen.migrations` to reconcile files during development. Applications
 with older DSL syntax must first follow [Migrating from 0.53 or 0.54](migrating_from_053.md).
 Future release transitions require explicit upgrade recipes and qualification.

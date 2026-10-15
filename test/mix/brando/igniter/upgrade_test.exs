@@ -135,6 +135,16 @@ defmodule Mix.Brando.Igniter.UpgradeTest do
     |> Igniter.CopiedTasks.do_apply_upgrades()
   end
 
+  # Runs the hook the way mix igniter.upgrade brando does: Igniter.Upgrades
+  # parses the lock versions into %Version{} structs (nil FROM for a newly added
+  # dependency) and composes the package's upgrade task with them.
+  defp upgrade_with_versions(from, to) do
+    project = IgniterCase.phoenix_project()
+    task = Mix.Task.get("brando.upgrade")
+
+    Igniter.compose_task(project, task, [from && Version.parse!(from), Version.parse!(to)] ++ project.args.argv_flags)
+  end
+
   defp installed_version, do: Application.spec(:brando, :vsn) |> to_string()
 
   test "version hook composes through Igniter's actual apply-upgrades dispatcher" do
@@ -214,6 +224,43 @@ defmodule Mix.Brando.Igniter.UpgradeTest do
 
       assert Enum.any?(result.issues, &String.contains?(&1, "downgrades are not supported")), "#{from} -> #{to}"
       assert result.tasks == []
+      Igniter.Test.assert_unchanged(result)
+    end
+  end
+
+  describe "with the Version structs mix igniter.upgrade passes" do
+    test "a dev to prerelease or release upgrade of the same version plans without a recipe" do
+      for to <- ["0.54.0-beta.0", "0.54.0"] do
+        result = upgrade_with_versions("0.54.0-dev", to)
+
+        assert result.issues == []
+        assert Enum.any?(result.notices, &String.contains?(&1, "missing framework migrations"))
+        refute Enum.any?(result.notices, &String.contains?(&1, "Brando 0.55 source migration prepared"))
+      end
+    end
+
+    test "a 0.54 source crosses into 0.55 once" do
+      result = upgrade_with_versions("0.54.0-beta.0", installed_version())
+
+      assert result.issues == []
+      assert Enum.count(result.notices, &String.contains?(&1, "Brando 0.55 source migration prepared")) == 1
+    end
+
+    test "downgrades are rejected" do
+      for {from, to} <- [{"0.55.0-beta.0", "0.55.0-dev"}, {"0.55.0", "0.55.0-dev"}] do
+        result = upgrade_with_versions(from, to)
+
+        assert Enum.any?(result.issues, &String.contains?(&1, "downgrades are not supported")), "#{from} -> #{to}"
+        assert result.tasks == []
+        Igniter.Test.assert_unchanged(result)
+      end
+    end
+
+    test "a newly added dependency has no FROM and plans no changes" do
+      result = upgrade_with_versions(nil, installed_version())
+
+      assert [issue] = result.issues
+      assert issue =~ "Versioned upgrades require FROM TO arguments"
       Igniter.Test.assert_unchanged(result)
     end
   end

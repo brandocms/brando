@@ -186,6 +186,11 @@ if Code.ensure_loaded?(Igniter) do
       end
     end
 
+    # mix igniter.upgrade passes parsed %Version{} structs; a direct
+    # mix brando.upgrade FROM TO passes strings. A nil FROM (Igniter's value
+    # for a newly added dependency) is treated as a missing argument.
+    defp version(%Version{} = version), do: {:ok, version}
+
     defp version(value) when is_binary(value) do
       case Version.parse(value) do
         {:ok, version} -> {:ok, version}

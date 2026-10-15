@@ -8,3 +8,8 @@
   as a source too). Moving from `0.55.0-dev` to `0.55.0-beta.0` runs no
   version recipe and plans missing framework migrations as before; a real
   downgrade such as `0.55.0-beta.0` to `0.55.0-dev` is rejected.
+
+- **`mix igniter.upgrade brando` runs the version hook.** Igniter passes the
+  old and new versions as `Version` structs, and the hook only accepted
+  strings, so every upgrade stopped with "Versioned upgrades require FROM TO
+  arguments". It now accepts both.
