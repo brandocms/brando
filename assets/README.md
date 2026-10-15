@@ -1,50 +1,55 @@
-# Svelte + TS + Vite
+# @brandocms/brandojs
 
-This template should help get you started developing with Svelte and TypeScript in Vite.
+BrandoJS is the admin frontend of [Brando CMS](https://github.com/brandocms/brando):
+the LiveView hooks, Svelte components, rich-text editor and CSS of the Brando admin.
 
-## Recommended IDE Setup
+It is a source package. It ships JavaScript, Svelte and CSS source and the
+admin's EuropaCSS configuration, not a built bundle; the application's own Vite
+build compiles it.
 
-[VSCode](https://code.visualstudio.com/) + [Svelte](https://marketplace.visualstudio.com/items?itemName=svelte.svelte-vscode).
+## Version
 
-## Need an official Svelte framework?
+Use the BrandoJS version that matches the application's `brando` Hex package
+exactly: `brando` 0.55.0-beta.0 goes with `@brandocms/brandojs` 0.55.0-beta.0.
+Both are released together from the same commit, and an admin whose JavaScript
+comes from another release does not match its server. `mix brando.doctor`
+reports a mismatch.
 
-Check out [SvelteKit](https://github.com/sveltejs/kit#readme), which is also powered by Vite. Deploy anywhere with its serverless-first approach and adapt to various platforms, with out of the box support for TypeScript, SCSS, and Less, and easily-added support for mdsvex, GraphQL, PostCSS, Tailwind CSS, and more.
+Prereleases are published under the `beta` dist-tag, stable releases under
+`latest`.
 
-## Technical considerations
+## Installation
 
-**Why use this over SvelteKit?**
+A Brando application builds its admin in `assets/backend`. Add the package
+there, pinned to the exact version of `brando`, for example:
 
-- SvelteKit is still a work-in-progress.
-- It currently does not support the pure-SPA use case.
-- It brings its own routing solution which might not be preferable for some users.
-- It is first and foremost a framework that just happens to use Vite under the hood, not a Vite app.
-  `vite dev` and `vite build` wouldn't work in a SvelteKit environment, for example.
-
-This template contains as little as possible to get started with Vite + TypeScript + Svelte, while taking into account the developer experience with regards to HMR and intellisense. It demonstrates capabilities on par with the other `create-app` templates and is a good starting point for beginners dipping their toes into a Vite + Svelte project.
-
-Should you later need the extended capabilities and extensibility provided by SvelteKit, the template has been structured similarly to SvelteKit so that it is easy to migrate.
-
-**Why `global.d.ts` instead of `compilerOptions.types` inside `jsconfig.json` or `tsconfig.json`?**
-
-Setting `compilerOptions.types` shuts out all other types not explicitly listed in the configuration. Using triple-slash references keeps the default TypeScript setting of accepting type information from the entire workspace, while also adding `svelte` and `vite/client` type information.
-
-**Why include `.vscode/extensions.json`?**
-
-Other templates indirectly recommend extensions via the README, but this file allows VS Code to prompt the user to install the recommended extension upon opening the project.
-
-**Why enable `allowJs` in the TS template?**
-
-While `allowJs: false` would indeed prevent the use of `.js` files in the project, it does not prevent the use of JavaScript syntax in `.svelte` files. In addition, it would force `checkJs: false`, bringing the worst of both worlds: not being able to guarantee the entire codebase is TypeScript, and also having worse typechecking for the existing JavaScript. In addition, there are valid use cases in which a mixed codebase may be relevant.
-
-**Why is HMR not preserving my local component state?**
-
-HMR state preservation comes with a number of gotchas! It has been disabled by default in both `svelte-hmr` and `@sveltejs/vite-plugin-svelte` due to its often surprising behavior. You can read the details [here](https://github.com/rixo/svelte-hmr#svelte-hmr).
-
-If you have state that's important to retain within a component, consider creating an external store which would not be replaced by HMR.
-
-```ts
-// store.ts
-// An extremely simple external store
-import { writable } from 'svelte/store'
-export default writable(0)
+```json
+{
+  "dependencies": {
+    "@brandocms/brandojs": "0.55.0-beta.0"
+  }
+}
 ```
+
+`assets/backend` uses it in three places:
+
+- `src/main.js` imports the admin's CSS and builds the application:
+  `import '@brandocms/brandojs/css/app.css'` and
+  `import { buildApplication } from '@brandocms/brandojs'`.
+- `europa.json5` extends `./node_modules/@brandocms/brandojs/europa.json5`.
+- `vite.config.js` imports `@brandocms/brandojs/vite/yalcAutoUpdate.mjs`, a
+  development helper for a BrandoJS linked from a local checkout. It does
+  nothing when the application has no `yalc.lock`.
+
+Brando's installer generates these files. Upgrade BrandoJS together with
+`brando`, then rebuild the admin assets.
+
+## Documentation
+
+The Brando guides cover installation, upgrades and the admin:
+[guides/](https://github.com/brandocms/brando/tree/main/guides), starting with
+[Installation and generators](https://github.com/brandocms/brando/blob/main/guides/generators.md).
+
+## License
+
+MIT
