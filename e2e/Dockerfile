@@ -99,21 +99,19 @@ RUN pnpm build
 
 FROM node:24 AS assets_frontend
 WORKDIR /opt/app/assets/frontend
-ENV YARN_CACHE_FOLDER ~/.yarn
 
-COPY assets/frontend/package.json assets/frontend/yarn.lock ./
-#COPY assets/frontend/.yalc ./.yalc
-# Use the yarn cache directory as a cache mount
-RUN --mount=type=cache,target=~/.yarn,sharing=locked \
-      yarn \
-      install \
-      --pure-lockfile \
-      --prefer-offline \
-      --progress=false
+# Keep in step with `packageManager` in assets/frontend/package.json
+RUN npm install --global pnpm@10.32.1
+
+COPY assets/frontend/package.json assets/frontend/pnpm-lock.yaml ./
+RUN --mount=type=cache,target=/root/.local/share/pnpm/store,sharing=locked \
+      pnpm install \
+      --frozen-lockfile \
+      --prefer-offline
 
 COPY assets/frontend/ ./
 
-RUN yarn build
+RUN pnpm build
 RUN mkdir -p ../../priv/static/assets/__srcmaps && \
       mv ../../priv/static/assets/*.map ../../priv/static/assets/__srcmaps/
 

@@ -87,15 +87,13 @@ RUN pnpm build
 FROM node:24 AS assets_frontend
 WORKDIR /opt/app/assets/frontend
 
-# pnpm uses a different cache structure
-ENV PNPM_HOME="/pnpm"
-ENV PATH="$PNPM_HOME:$PATH"
+# Keep in step with `packageManager` in assets/frontend/package.json
+RUN npm install --global pnpm@10.32.1
 
-# Install pnpm
-RUN corepack enable && corepack prepare pnpm@latest --activate
-
+# Jupiter comes from npm. If you install it from Yalc instead, add
+#   COPY assets/frontend/.yalc ./.yalc
+# here: Docker fails a COPY whose source is missing, so the template has none.
 COPY assets/frontend/package.json assets/frontend/pnpm-lock.yaml ./
-COPY assets/frontend/.yalc ./.yalc
 
 # Use pnpm cache directory as a cache mount
 # pnpm stores cache in ~/.local/share/pnpm/store by default
