@@ -652,6 +652,9 @@ Vite plugin, `@brandocms/vite-plugin-europacss`, instead of the legacy
   them. The preset sets `nesting: 'expanded'`, so nested rules under a
   selector list compile to plain lists, each with its own specificity, as the
   legacy compiler wrote them, and `responsiveOrder: 'generated-last'` (below).
+  Its `migration: { mediaPacking: 'none' }` tells `europa migrate` that the
+  0.13 build did not pack media queries, so it skips the warnings that assume
+  packing; the compiled CSS is unaffected.
 - `postcss.config.cjs` and `europa.config.cjs` are removed when they are an
   earlier template's, unchanged. An application's own is kept with a notice:
   move its settings into `europa.json5` (`europa migrate-config

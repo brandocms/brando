@@ -9,6 +9,13 @@
      plain rules of its scope, as the legacy compiler ordered them. */
   responsiveOrder: 'generated-last',
 
+  /* Migration analysis only: the 0.13 build did not pack or sort media
+     queries (checked against its compiled order), so warnings that depend
+     on packing don't apply. Emitted CSS is unchanged. */
+  migration: {
+    mediaPacking: 'none',
+  },
+
   theme: {
     breakpoints: {
       iphone: '0',
