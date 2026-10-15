@@ -26,10 +26,12 @@ Publishing is manual: no workflow builds or publishes the packages yet.
    against the version with
    `scripts/release-version check --tag vX.Y.Z[-beta.N]`, then tag and push:
    `git tag vX.Y.Z[-beta.N]` and `git push origin vX.Y.Z[-beta.N]`.
-   Steps 6 to 8 run from this checkout.
+   Pushing the tag runs the `Release tag` workflow, which checks it with
+   `scripts/release-version check`; wait for it to pass. Steps 6 to 8 run from this checkout.
 6. Review both packages:
-   `cd assets && npm pack --dry-run` (source, CSS, `europa.json5` and the
-   `vite/` helper; no tests or local files), and `mix hex.build`.
+   `cd assets && npm pack --dry-run` (source, CSS, `europa.json5`, the
+   `vite/` helper and `LICENSE.md`; no tests or local files), and
+   `mix hex.build`.
 7. Publish npm first: `cd assets && npm publish`. The dist-tag comes from
    `publishConfig.tag`; check that `npm view @brandocms/brandojs dist-tags`
    shows the new version under `beta` (or `latest` for a stable release).

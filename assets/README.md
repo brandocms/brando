@@ -52,4 +52,4 @@ The Brando guides cover installation, upgrades and the admin:
 
 ## License
 
-MIT
+MIT, see [LICENSE.md](LICENSE.md).
