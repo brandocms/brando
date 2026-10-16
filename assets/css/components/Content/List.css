@@ -956,7 +956,7 @@
   border: 1px solid var(--brando-line);
   border-radius: 8px;
   background-color: var(--brando-surface);
-  box-shadow: 0 16px 48px rgb(19 37 28 / 16%);
+  box-shadow: var(--brando-shadow-xl);
   color: var(--brando-ink);
   font-size: 13px;
   line-height: 18px;

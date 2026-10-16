@@ -170,6 +170,22 @@ an application changes them in its own `europa.json5`, as it does the palette:
 | `--brando-control-lg` | 36px | A form's Save |
 | `--brando-control-touch` | 40px | Every button's minimum on a coarse pointer |
 
+**Shadows** come from `theme.shadows`, in one ink (`colors.shadow`); use the
+step, not a shadow of the screen's own:
+
+| Token | Used for |
+| --- | --- |
+| `--brando-shadow-ring` | A 1px hairline around a raised surface |
+| `--brando-shadow-xs` | Inputs, tabs, a selected segment |
+| `--brando-shadow-sm` | Cards and thumbnails |
+| `--brando-shadow-md` | Dropdowns, popovers and floating buttons |
+| `--brando-shadow-lg` | Menus, toasts, notes and the entry header's panels |
+| `--brando-shadow-xl` | Modals and large floating panels |
+| `--brando-shadow-inset` | A field's inner shade |
+| `--brando-shadow-overlay` | The login box's deep lift |
+
+Behind a modal, dialog or drawer, use `--brando-overlay` (`colors.overlay`).
+
 **Buttons** ([`Btn.css`](../assets/css/components/Btn.css)):
 
 | Class | Use |
@@ -398,7 +414,8 @@ Every other role has an entry too, named after its custom property:
 `surface.hover` `--brando-surface-hover`, `attention.tint`/`.line`/`.ink` the
 attention tokens (and `success.*`, `error.*` likewise), `badge.fill` and
 `badge.ink`, `ai`, `module.<colour>.line|tint|ink|dot`, `nav.*`,
-`presence.p0`–`p5`, `switch.on|off` and `tabbar`. Roles mixed from another
+`presence.p0`–`p5`, `switch.on|off`, `tabbar` and `shadow` (the shadows'
+ink). Roles mixed from another
 (the AI hairlines, the suggestion tints) follow it.
 
 The palette is also available at run time under its entry names:
@@ -411,9 +428,11 @@ application CSS that works with the palette; Brando's stylesheets use the
 roles. A few earlier role names remain as aliases, such as
 `--brando-color-background` for `--brando-surface-page`.
 
-Do not add hex colours to admin stylesheets, `tokens.css` included. CI runs
-`.github/scripts/check_css_colors.sh`, which fails on any hex literal in
-`assets/css`. A colour that has no role yet gets an entry in `theme.colors` in
+Do not add colour literals to admin stylesheets, `tokens.css` included: no hex
+colours and no colour functions (`rgb()`, `hsl()`, `oklch()` and the like),
+also inside data URIs. CI runs `.github/scripts/check_css_colors.sh`, which
+fails on them in `assets/css`; it doesn't catch named colours, so use a role
+there too. A colour that has no role yet gets an entry in `theme.colors` in
 `assets/europa.json5` and a role in `tokens.css` set from it. For a
 translucent version of a role, mix it with transparent:
 `color-mix(in srgb, var(--brando-ink) 8%, transparent)`.

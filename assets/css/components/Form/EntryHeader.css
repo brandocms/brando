@@ -163,7 +163,7 @@
   border: 1px solid var(--brando-line);
   border-radius: 8px;
   background: var(--brando-surface);
-  box-shadow: 0 8px 24px rgb(19 37 28 / 9%);
+  box-shadow: var(--brando-shadow-lg);
   color: var(--brando-ink);
 
   &:not(:popover-open) {
@@ -254,7 +254,7 @@
   border: 1px solid var(--brando-line);
   border-radius: 10px;
   background: var(--brando-surface);
-  box-shadow: 0 4px 16px rgb(19 37 28 / 6%);
+  box-shadow: var(--brando-shadow-md);
 
   .submit-button {
     order: -1;

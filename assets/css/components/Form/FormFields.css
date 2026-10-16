@@ -279,7 +279,7 @@
   padding: 22px 24px 24px;
   border-radius: 10px;
   background-color: var(--brando-surface);
-  box-shadow: 0 0 0 1px rgba(5, 39, 82, 0.06);
+  box-shadow: var(--brando-shadow-ring);
 
   .site-form-intro p {
     margin: 0 0 18px;

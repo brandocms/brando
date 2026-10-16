@@ -43,13 +43,16 @@
      notice, a section header, an icon tile, a hovered secondary button */
   --brando-surface-tint: theme(colors.surface.tint);
   --brando-overlay: theme(colors.overlay);
-  /* The login box's layered shadow: a soft, deep lift for floating panels. */
-  --brando-shadow-overlay: 0 2.8px 2.2px rgba(0, 0, 0, 0.02),
-    0 6.7px 5.3px rgba(0, 0, 0, 0.028),
-    0 12.5px 10px rgba(0, 0, 0, 0.035),
-    0 22.3px 17.9px rgba(0, 0, 0, 0.042),
-    0 41.8px 33.4px rgba(0, 0, 0, 0.05),
-    0 100px 80px rgba(0, 0, 0, 0.07);
+  /* Shadows, from small to large, in one ink (theme.shadows). */
+  --brando-shadow-ink: theme(colors.shadow);
+  --brando-shadow-ring: theme(shadows.ring);
+  --brando-shadow-xs: theme(shadows.xs);
+  --brando-shadow-sm: theme(shadows.sm);
+  --brando-shadow-md: theme(shadows.md);
+  --brando-shadow-lg: theme(shadows.lg);
+  --brando-shadow-xl: theme(shadows.xl);
+  --brando-shadow-inset: theme(shadows.inset);
+  --brando-shadow-overlay: theme(shadows.overlay);
 
   /* Badges: a sage pill with muted ink */
   --brando-badge-bg: theme(colors.badge.fill);
@@ -128,11 +131,12 @@
   --brando-nav-rule: theme(colors.nav.rule);
   --brando-nav-hover: theme(colors.nav.hover);
   --brando-nav-surface: theme(colors.nav.surface);
-  --brando-nav-surface-shadow: 0 1px 2px rgba(22, 38, 28, 0.08), 0 0 0 1px rgba(22, 38, 28, 0.05);
+  --brando-nav-glow: theme(colors.nav.glow);
+  --brando-nav-surface-shadow: 0 1px 2px color-mix(in srgb, var(--brando-nav-ink) 8%, transparent), 0 0 0 1px color-mix(in srgb, var(--brando-nav-ink) 5%, transparent);
 
   /* Other editors, by their place among the avatars: field presence tags,
-     outlines and the follow bar. Dark enough for white text. The pale glows
-     of the same hues are rgba values in Block.css and app.css. */
+     outlines and the follow bar. Dark enough for white text; the glows mix
+     these with transparent (global.css, Block.css). */
   --brando-presence-0: theme(colors.presence.p0);
   --brando-presence-1: theme(colors.presence.p1);
   --brando-presence-2: theme(colors.presence.p2);

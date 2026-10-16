@@ -1,5 +1,8 @@
 #!/usr/bin/env bash
-# Rejects hex colour literals in the admin stylesheets, tokens.css included.
+# Rejects colour literals in the admin stylesheets, tokens.css included: hex
+# colours and the colour functions rgb(), rgba(), hsl(), hsla(), hwb(), lab(),
+# lch(), oklab(), oklch() and color(), in any case and inside data URIs.
+# Named colours (black, white) are not checked.
 #
 # Every admin colour is a value in the admin's theme (`theme.colors` in
 # assets/europa.json5). assets/css/tokens.css sets the role custom properties
@@ -9,9 +12,10 @@
 #
 #   .github/scripts/check_css_colors.sh
 #
-# Comments are ignored. A literal is #rgb, #rgba, #rrggbb or #rrggbbaa not
-# followed by a name character, so ID selectors such as #brando-main are not
-# counted.
+# Comments are ignored. A hex literal is #rgb, #rgba, #rrggbb or #rrggbbaa
+# not followed by a name character, so ID selectors such as #brando-main are
+# not counted. A translucent colour mixes a role with transparent instead:
+# color-mix(in srgb, var(--brando-ink) 8%, transparent).
 set -euo pipefail
 
 cd "$(dirname "$0")/../.."
@@ -43,6 +47,14 @@ count_literals() {
         if (digits == 3 || digits == 4 || digits == 6 || digits == 8) count++
         rest = substr(rest, RSTART + RLENGTH - 1)
       }
+      # Colour functions, in any case, and inside data URIs, where they are
+      # URL-encoded (%22rgb%28…).
+      rest = tolower(out)
+      gsub(/%[0-9a-f][0-9a-f]/, " ", rest)
+      while (match(rest, /(^|[^a-z0-9_-])(rgb|rgba|hsl|hsla|hwb|lab|lch|oklab|oklch|color)\(/)) {
+        count++
+        rest = substr(rest, RSTART + RLENGTH)
+      }
     }
     END { print count + 0 }
   ' "$1"
@@ -55,13 +67,13 @@ while read -r file; do
   files=$((files + 1))
   n=$(count_literals "$file")
   if [ "$n" -gt 0 ]; then
-    echo "$file: $n hex colour literal(s). Use a role from assets/css/tokens.css (var(--brando-ink) and friends); a new colour gets an entry in theme.colors in assets/europa.json5 and a role in tokens.css." >&2
+    echo "$file: $n colour literal(s) (hex or a colour function). Use a role from assets/css/tokens.css (var(--brando-ink) and friends); a new colour gets an entry in theme.colors in assets/europa.json5 and a role in tokens.css." >&2
     status=1
   fi
 done < <(find "$css_dir" -type f -name '*.css' | LC_ALL=C sort)
 
 if [ "$status" -eq 0 ]; then
-  echo "CSS colour check passed: no hex colour literals in $files stylesheets."
+  echo "CSS colour check passed: no colour literals in $files stylesheets."
 fi
 
 exit "$status"

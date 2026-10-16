@@ -194,7 +194,7 @@ code {
       color: black;
       padding: 24px;
       border-radius: 5px;
-      box-shadow: 0 5px 30px rgba(black, 0.1);
+      box-shadow: var(--brando-shadow-lg);
     }
 
     .popover-arrow {
@@ -261,12 +261,12 @@ code {
       }
     }
 
-    &:nth-child(6n+1) { --presence-color: rgba(77, 144, 254, 0.6); }
-    &:nth-child(6n+2) { --presence-color: rgba(72, 199, 142, 0.6); }
-    &:nth-child(6n+3) { --presence-color: rgba(245, 166, 35, 0.6); }
-    &:nth-child(6n+4) { --presence-color: rgba(168, 85, 247, 0.6); }
-    &:nth-child(6n+5) { --presence-color: rgba(239, 68, 68, 0.6); }
-    &:nth-child(6n+6) { --presence-color: rgba(20, 184, 166, 0.6); }
+    &:nth-child(6n+1) { --presence-color: color-mix(in srgb, var(--brando-presence-0) 60%, transparent); }
+    &:nth-child(6n+2) { --presence-color: color-mix(in srgb, var(--brando-presence-1) 60%, transparent); }
+    &:nth-child(6n+3) { --presence-color: color-mix(in srgb, var(--brando-presence-2) 60%, transparent); }
+    &:nth-child(6n+4) { --presence-color: color-mix(in srgb, var(--brando-presence-3) 60%, transparent); }
+    &:nth-child(6n+5) { --presence-color: color-mix(in srgb, var(--brando-presence-4) 60%, transparent); }
+    &:nth-child(6n+6) { --presence-color: color-mix(in srgb, var(--brando-presence-5) 60%, transparent); }
   }
 }
 
@@ -338,15 +338,15 @@ body {
 
   /* Colour roles live in tokens.css. */
   --brando-input-radius: var(--brando-radius-lg);
-  --brando-input-shadow: inset 0 1px 2px rgba(0,0,0,0.03);
+  --brando-input-shadow: var(--brando-shadow-inset);
   --brando-input-focus-shadow: 0 0 0 2.5px color-mix(in srgb, var(--brando-accent) 16%, transparent);
-  --brando-card-shadow: 0 1px 3px rgba(0,0,0,0.05), 0 0 0 1px rgba(0,0,0,0.03);
+  --brando-card-shadow: var(--brando-shadow-xs), var(--brando-shadow-ring);
   --brando-card-radius: 12px;
 
   /* Chip tab switchers — the module editor tabs and the entry form's tab bar.
      Kept as tokens so the two bars cannot drift apart again. */
   --brando-tabbar-radius: 14px;
-  --brando-tabbar-shadow: 0 1px 2px rgba(0,0,0,0.04), 0 0 0 1px rgba(0,0,0,0.03);
+  --brando-tabbar-shadow: var(--brando-shadow-xs), var(--brando-shadow-ring);
   --brando-chip-radius: 8px;
   --brando-chip-padding: 7px 14px;
 
@@ -524,7 +524,7 @@ h3 {
   padding: 12px 14px;
   border-radius: 10px;
   background-color: var(--brando-surface-shaded);
-  box-shadow: 0 0 0 1px rgba(5, 39, 82, 0.06);
+  box-shadow: var(--brando-shadow-ring);
 
   &:hover {
     background-color: var(--brando-surface-hover);
@@ -584,7 +584,7 @@ h3 {
     width: 12px;
     height: 12px;
     border-radius: 3px;
-    box-shadow: 0 0 0 1px rgba(5, 39, 82, 0.15);
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--brando-shadow-ink) 15%, transparent);
   }
 
   .variable-chevron {
@@ -608,7 +608,7 @@ h3 {
 .variable-section {
   padding-top: 22px;
   margin-top: 22px;
-  border-top: 1px solid rgba(5, 39, 82, 0.08);
+  border-top: 1px solid var(--brando-line-soft);
 
   &:first-child {
     padding-top: 18px;
@@ -662,7 +662,7 @@ h3 {
 
 .thumb {
   @space padding-right 1;
-  border-right: 1px solid rgba(0, 0, 0, 0.2);
+  border-right: 1px solid var(--brando-line-strong);
   img {
     max-width: 100%;
     width: 100%;

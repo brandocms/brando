@@ -218,7 +218,7 @@
     inset: 0;
     display: grid;
     place-items: center;
-    background: rgba(0, 0, 0, .28);
+    background: color-mix(in srgb, var(--brando-color-black) 28%, transparent);
     color: var(--brando-ink-inverse);
     opacity: 0;
     transition: opacity .15s ease;

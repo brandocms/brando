@@ -35,8 +35,8 @@
   /* A barely-there green wash: strongest high up in the middle, and never
      darker toward the content than the paper it sits on. */
   background:
-    radial-gradient(130% 42% at 62% -10%, rgba(120, 170, 135, 0.13) 0%, rgba(150, 196, 160, 0.06) 55%, rgba(150, 196, 160, 0) 100%),
-    linear-gradient(100deg, rgba(150, 196, 160, 0) 25%, rgba(150, 196, 160, 0.06) 100%),
+    radial-gradient(130% 42% at 62% -10%, color-mix(in srgb, var(--brando-nav-glow) 13%, transparent) 0%, color-mix(in srgb, var(--brando-nav-glow) 6%, transparent) 55%, transparent 100%),
+    linear-gradient(100deg, transparent 25%, color-mix(in srgb, var(--brando-nav-glow) 6%, transparent) 100%),
     var(--brando-surface-page);
   flex-shrink: 0;
   flex-grow: 0;
