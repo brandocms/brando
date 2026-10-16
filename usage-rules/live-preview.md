@@ -50,7 +50,12 @@ continue to work without changes.
   markup outside individual block regions: an ordinary update replaces only
   `<main>`, a full render the `<body>`; `<html lang>` and `<head>` change when
   the preview reloads. An assign the layout reads, such as navigation in the
-  entry's language, needs its field in both lists. `template_section` and
+  entry's language, needs its field in both lists. Both lists apply to every
+  change to the field: typed, an accepted AI suggestion, or another editor's.
+  A path covers what lies below it, so `[:items]` names a subform: its rows
+  added, removed or reordered, and the fields inside them. A path below a field,
+  such as `[:seo, :title]`, also fires when the whole field changes, as it does
+  when another editor changes it. `template_section` and
   `template_css_classes` accept a string or an entry callback for layout context.
 
 Templates receive `@LIVE_PREVIEW` and a preview connection. Reuse production
