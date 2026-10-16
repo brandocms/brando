@@ -51,7 +51,7 @@ html.is-frontend-editor :is(.progress-wrapper, #brando-main > .progress) {
   h1 {
     margin: 0;
     overflow: hidden;
-    font-size: 18px;
+    font-size: var(--brando-text-2xl);
     font-weight: 500;
     line-height: 24px;
     text-overflow: ellipsis;
@@ -65,7 +65,7 @@ html.is-frontend-editor :is(.progress-wrapper, #brando-main > .progress) {
   min-width: 0;
   margin: 0 !important;
   color: var(--brando-muted);
-  font-size: 12px;
+  font-size: var(--brando-text-sm);
   line-height: 16px;
 
   span {
@@ -139,7 +139,7 @@ html.is-frontend-editor :is(.progress-wrapper, #brando-main > .progress) {
   border: 1px solid var(--brando-line);
   border-radius: 8px;
   background-color: var(--brando-surface);
-  font-size: 13px;
+  font-size: var(--brando-text-md);
   line-height: 18px;
 
   > [data-icon] {
@@ -206,7 +206,7 @@ html.is-frontend-editor :is(.progress-wrapper, #brando-main > .progress) {
   border-radius: 5px;
   background-color: var(--brando-surface);
   color: var(--brando-ink);
-  font-size: 12px;
+  font-size: var(--brando-text-sm);
   line-height: 18px;
   cursor: pointer;
 
@@ -241,7 +241,7 @@ html.is-frontend-editor :is(.progress-wrapper, #brando-main > .progress) {
   }
 
   .user-initial {
-    font-size: 11px;
+    font-size: var(--brando-text-xs);
   }
 
   [data-icon] {
@@ -257,7 +257,7 @@ html.is-frontend-editor :is(.progress-wrapper, #brando-main > .progress) {
   gap: 12px;
   padding: 48px 32px;
   color: var(--brando-muted);
-  font-size: 14px;
+  font-size: var(--brando-text-lg);
   line-height: 20px;
   text-align: center;
 
@@ -317,7 +317,7 @@ html.is-frontend-editor :is(.progress-wrapper, #brando-main > .progress) {
   min-width: 0;
   margin: 0 !important;
   color: var(--brando-muted);
-  font-size: 12px;
+  font-size: var(--brando-text-sm);
   line-height: 16px;
 
   [data-icon] {

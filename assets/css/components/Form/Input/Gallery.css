@@ -137,7 +137,7 @@
 
       .gallery-object-list-filename {
         color: var(--brando-ink);
-        font: 500 14px/19px "Main", sans-serif;
+        font: 500 var(--brando-text-lg)/19px "Main", sans-serif;
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
@@ -145,7 +145,7 @@
 
       .gallery-object-list-title {
         color: var(--brando-ink);
-        font: 12px/18px "Main", sans-serif;
+        font: var(--brando-text-sm)/18px "Main", sans-serif;
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
@@ -156,7 +156,7 @@
         flex-wrap: wrap;
         gap: 0 6px;
         color: var(--brando-muted);
-        font: 12px/18px "Main", sans-serif;
+        font: var(--brando-text-sm)/18px "Main", sans-serif;
         min-width: 0;
 
         > span {
@@ -175,7 +175,7 @@
       .gallery-object-list-alt {
         overflow: hidden;
         color: var(--brando-muted);
-        font: 12px/18px "Main", sans-serif;
+        font: var(--brando-text-sm)/18px "Main", sans-serif;
         white-space: nowrap;
         text-overflow: ellipsis;
 
@@ -189,7 +189,7 @@
         padding: 0 5px;
         border: 1px solid var(--brando-line);
         border-radius: 3px;
-        font-size: 10px;
+        font-size: var(--brando-text-2xs);
         line-height: 15px;
         letter-spacing: 0.02em;
       }
@@ -207,7 +207,7 @@
         align-items: baseline;
         gap: 5px;
         color: var(--brando-muted);
-        font: 12px/18px "Main", sans-serif;
+        font: var(--brando-text-sm)/18px "Main", sans-serif;
         white-space: nowrap;
 
         > i {
@@ -297,7 +297,7 @@
           border-radius: 0;
           background: transparent;
           color: var(--brando-ink);
-          font-size: 11px;
+          font-size: var(--brando-text-xs);
           text-transform: uppercase;
           display: flex;
           align-items: center;
@@ -400,7 +400,7 @@
      other sections, and one panel. */
   .brando-form .subform { padding: 0; border: 0; background: none; box-shadow: none; }
   .subform > .label-wrapper { margin-bottom: 12px; }
-  .subform > .label-wrapper label { font-size: 18px; line-height: 26px; font-weight: 500; color: var(--workspace-ink); }
+  .subform > .label-wrapper label { font-size: var(--brando-text-2xl); line-height: 26px; font-weight: 500; color: var(--workspace-ink); }
 
   .media-gallery {
     padding: 16px;
@@ -427,7 +427,7 @@
     order: 2;
     margin-left: auto;
     color: var(--workspace-muted);
-    font-size: 12px;
+    font-size: var(--brando-text-sm);
   }
 
   .gallery-objects--tiles {
@@ -629,7 +629,7 @@
   border-radius: 10px;
   background: color-mix(in srgb, var(--brando-surface) 92%, transparent);
   color: var(--brando-ink);
-  font: 11px/20px "Main", sans-serif;
+  font: var(--brando-text-xs)/20px "Main", sans-serif;
   text-align: center;
 }
 
@@ -641,7 +641,7 @@
   border-radius: 4px;
   background: color-mix(in srgb, var(--brando-color-black) 60%, transparent);
   color: var(--brando-ink-inverse);
-  font: 10px/16px "Main", sans-serif;
+  font: var(--brando-text-2xs)/16px "Main", sans-serif;
   white-space: nowrap;
 }
 
@@ -723,7 +723,7 @@
   padding: 0 4px;
   border: 0;
   border-radius: 4px;
-  font: 500 9px/1 "Main", sans-serif;
+  font: 500 var(--brando-text-2xs)/1 "Main", sans-serif;
   letter-spacing: 0.02em;
   cursor: pointer;
 
@@ -773,7 +773,7 @@
   background: var(--brando-ink);
   color: var(--brando-ink-inverse);
   box-shadow: var(--brando-shadow-md);
-  font: 400 12px/16px "Main", sans-serif;
+  font: 400 var(--brando-text-sm)/16px "Main", sans-serif;
   letter-spacing: 0;
   text-align: left;
   white-space: normal;
@@ -782,7 +782,7 @@
   b {
     display: block;
     margin-bottom: 2px;
-    font-size: 10px;
+    font-size: var(--brando-text-2xs);
     font-weight: 500;
     letter-spacing: 0.04em;
     text-transform: uppercase;
@@ -810,7 +810,7 @@
   .gallery-tile-peek-hint {
     display: block;
     margin-top: 4px;
-    font-size: 11px;
+    font-size: var(--brando-text-xs);
     opacity: 0.6;
   }
 }
@@ -832,7 +832,7 @@
   background: var(--brando-surface);
   box-shadow: var(--brando-shadow-lg);
   color: var(--brando-ink);
-  font: 13px/18px "Main", sans-serif;
+  font: var(--brando-text-md)/18px "Main", sans-serif;
   text-align: left;
   cursor: default;
 
@@ -847,7 +847,7 @@
 
   .gallery-text-editor-label {
     margin-bottom: 6px;
-    font-size: 12px;
+    font-size: var(--brando-text-sm);
     line-height: 16px;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -868,7 +868,7 @@
     border-radius: 6px;
     background: var(--brando-surface);
     color: var(--brando-ink);
-    font: 13px/18px "Main", sans-serif;
+    font: var(--brando-text-md)/18px "Main", sans-serif;
     resize: none;
     box-shadow: var(--brando-shadow-inset);
 
@@ -890,7 +890,7 @@
   .gallery-text-editor-note {
     margin: 6px 0 0 !important;
     color: var(--brando-muted);
-    font-size: 11px;
+    font-size: var(--brando-text-xs);
     line-height: 15px;
   }
 
@@ -910,7 +910,7 @@
   gap: 8px 14px;
   margin-top: 10px;
   color: var(--brando-muted);
-  font: 12px/18px "Main", sans-serif;
+  font: var(--brando-text-sm)/18px "Main", sans-serif;
 
   .gallery-sheet-legend-item {
     display: inline-flex;

@@ -8,7 +8,7 @@
 
   .integrations-back {
     display: inline-flex; align-items: center; gap: 6px; margin-bottom: 12px;
-    color: var(--brando-muted); font-size: 12px; text-decoration: none;
+    color: var(--brando-muted); font-size: var(--brando-text-sm); text-decoration: none;
     [data-icon] { width: 14px; height: 14px; }
     &:hover { color: var(--brando-ink); }
   }
@@ -21,7 +21,7 @@
 
   .integrations-group {
     padding: 12px 24px; border-bottom: 1px solid var(--brando-line); background: var(--brando-surface-shaded);
-    color: var(--brando-muted); font-family: theme(typography.families.mono); font-size: 11px; font-weight: 400;
+    color: var(--brando-muted); font-family: theme(typography.families.mono); font-size: var(--brando-text-xs); font-weight: 400;
     line-height: 18px; letter-spacing: .12em; text-transform: uppercase;
   }
 
@@ -40,9 +40,9 @@
   }
 
   .integrations-text { display: grid; gap: 4px; min-width: 0; }
-  .integrations-text h3 { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 14px; }
-  .integrations-text p { color: var(--brando-muted); font-size: 13px; line-height: 1.5; overflow-wrap: anywhere; }
-  .integrations-text .integrations-meta { font-size: 12px; }
+  .integrations-text h3 { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: var(--brando-text-lg); }
+  .integrations-text p { color: var(--brando-muted); font-size: var(--brando-text-md); line-height: 1.5; overflow-wrap: anywhere; }
+  .integrations-text .integrations-meta { font-size: var(--brando-text-sm); }
 
   .integrations-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
 
@@ -55,32 +55,32 @@
   }
   .webhook-secret[hidden] { display: none; }
   .webhook-secret-text { display: grid; gap: 4px; }
-  .webhook-secret-text h2 { font-size: 14px; letter-spacing: 0; }
-  .webhook-secret-text p { color: var(--brando-muted); font-size: 13px; }
+  .webhook-secret-text h2 { font-size: var(--brando-text-lg); letter-spacing: 0; }
+  .webhook-secret-text p { color: var(--brando-muted); font-size: var(--brando-text-md); }
   .webhook-secret-value { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
   .webhook-secret-value input {
     flex: 1 1 320px; min-width: 0; height: 40px; padding: 0 12px;
     border: 1px solid var(--brando-line); border-radius: 5px; background: var(--brando-surface);
-    color: var(--brando-ink); font-family: theme(typography.families.mono); font-size: 13px;
+    color: var(--brando-ink); font-family: theme(typography.families.mono); font-size: var(--brando-text-md);
   }
 
   /* The form */
   .webhook-form { margin: 0; }
   .webhook-fields { display: grid; gap: 24px; padding: 24px; }
   .webhook-field { display: grid; gap: 8px; min-width: 0; margin: 0; padding: 0; border: 0; }
-  .webhook-field > label, .webhook-field > legend { padding: 0; font-size: 13px; font-weight: 500; }
+  .webhook-field > label, .webhook-field > legend { padding: 0; font-size: var(--brando-text-md); font-weight: 500; }
   .webhook-field > legend { margin-bottom: 8px; }
   .webhook-field > input {
     width: 100%; max-width: 640px; height: 40px; padding: 0 12px;
     border: 1px solid var(--brando-line); border-radius: 5px; background: var(--brando-surface);
-    color: var(--brando-ink); font-size: 14px;
+    color: var(--brando-ink); font-size: var(--brando-text-lg);
     &:focus-visible { outline: 2px solid var(--brando-accent); outline-offset: 1px; }
   }
-  .webhook-hint { color: var(--brando-muted); font-size: 12px; }
-  .webhook-label { font-size: 13px; font-weight: 500; }
+  .webhook-hint { color: var(--brando-muted); font-size: var(--brando-text-sm); }
+  .webhook-label { font-size: var(--brando-text-md); font-weight: 500; }
   .webhook-url-masked {
     display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; max-width: 640px;
-    code { min-width: 0; overflow-wrap: anywhere; color: var(--brando-ink); font-size: 13px; }
+    code { min-width: 0; overflow-wrap: anywhere; color: var(--brando-ink); font-size: var(--brando-text-md); }
   }
   .webhook-modes { display: flex; flex-wrap: wrap; gap: 8px; }
   .webhook-checks { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 8px; }
@@ -91,18 +91,18 @@
   .webhook-choice {
     display: flex; align-items: center; gap: 10px; min-height: 40px; padding: 8px 12px;
     border: 1px solid var(--brando-line); border-radius: 6px; background: var(--brando-surface);
-    font-size: 13px; cursor: pointer;
+    font-size: var(--brando-text-md); cursor: pointer;
     &:hover { background: var(--brando-surface-hover); }
     input { flex: none; margin: 0; }
     > span { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 8px; min-width: 0; }
-    code { color: var(--brando-muted); font-size: 11px; }
-    small { color: var(--brando-muted); font-size: 12px; }
+    code { color: var(--brando-muted); font-size: var(--brando-text-xs); }
+    small { color: var(--brando-muted); font-size: var(--brando-text-sm); }
   }
   /* A choice with a line under its label: recipients, notification events */
   .webhook-choice:has(small) { align-items: flex-start; }
   .webhook-choice:has(small) > span { flex-direction: column; gap: 2px; }
   .webhook-choice:has(small) input { margin-top: 2px; }
-  .webhook-error { color: color-mix(in srgb, var(--brando-status-disabled), var(--brando-ink) 35%); font-size: 12px; }
+  .webhook-error { color: color-mix(in srgb, var(--brando-status-disabled), var(--brando-ink) 35%); font-size: var(--brando-text-sm); }
   .webhook-form-footer {
     display: flex; justify-content: flex-end; gap: 8px; padding: 16px 24px;
     border-top: 1px solid var(--brando-line); background: var(--brando-surface-shaded); border-radius: 0 0 7px 7px;
@@ -110,7 +110,7 @@
 
   .webhook-paused-note {
     margin-bottom: 16px; padding: 12px 16px; border-radius: 6px;
-    background: var(--brando-note); color: var(--brando-note-ink); font-size: 13px;
+    background: var(--brando-note); color: var(--brando-note-ink); font-size: var(--brando-text-md);
   }
 
   /* The delivery log */

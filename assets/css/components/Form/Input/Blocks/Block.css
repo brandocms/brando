@@ -30,7 +30,7 @@
   }
 
   p {
-    font-size: 13px;
+    font-size: var(--brando-text-md);
     font-family: monospace;
   }
 
@@ -93,7 +93,7 @@
   background-color: var(--brando-ink);
   color: var(--brando-ink-inverse);
   font-family: "Mono";
-  font-size: 10px;
+  font-size: var(--brando-text-2xs);
   text-transform: uppercase;
   cursor: pointer;
 
@@ -556,7 +556,7 @@ button.btn-palette {
   }
 
   figcaption {
-    @fontsize 10px;
+    font-size: var(--brando-text-2xs);
     @space margin-top 5px;
     cursor: help;
 
@@ -603,7 +603,7 @@ button.btn-palette {
 
     .info {
       span.fragment-label {
-        font-size: 10px;
+        font-size: var(--brando-text-2xs);
         line-height: 1.4 !important;
         text-transform: uppercase;
         display: block;
@@ -637,7 +637,7 @@ button.btn-palette {
 
     .info {
       span.vars-label {
-        font-size: 10px;
+        font-size: var(--brando-text-2xs);
         line-height: 1.4 !important;
         text-transform: uppercase;
         display: block;
@@ -676,7 +676,7 @@ button.btn-palette {
 
     .info {
       span.table-label {
-        font-size: 10px;
+        font-size: var(--brando-text-2xs);
         line-height: 1.4 !important;
         text-transform: uppercase;
         display: block;
@@ -708,7 +708,7 @@ button.btn-palette {
      `:where` keeps these rules' specificity what it was for `.block-vars` */
   :is(.block-vars, :where(.table-block .subform-table)) {
     /* One size for every value on a line: text, choices, names, dates */
-    --vars-value-size: 13px;
+    --vars-value-size: var(--brando-text-md);
 
     display: flex;
     flex-direction: column;
@@ -800,7 +800,7 @@ button.btn-palette {
           align-items: center;
           gap: 6px;
           @font main;
-          font-size: 12px;
+          font-size: var(--brando-text-sm);
           font-weight: 400;
           line-height: 20px;
           color: var(--vars-muted);
@@ -817,7 +817,7 @@ button.btn-palette {
       /* Instructions go under the line, across the cell */
       > .meta {
         flex: 0 0 100%;
-        font-size: 11px;
+        font-size: var(--brando-text-xs);
         color: var(--vars-faint);
 
         &:not(:has(.help-text:not([hidden]))) {
@@ -954,7 +954,7 @@ button.btn-palette {
 
       .color-hex {
         @font mono;
-        font-size: 12px;
+        font-size: var(--brando-text-sm);
         margin-left: 8px;
         text-transform: uppercase;
       }
@@ -1058,7 +1058,7 @@ button.btn-palette {
       }
 
       .info {
-        font-size: 12px;
+        font-size: var(--brando-text-sm);
         line-height: 20px;
 
         dt {
@@ -1079,7 +1079,7 @@ button.btn-palette {
     /* Under a title, the URL is a quiet second line. It tells apart entries
        that share a title, such as one in each language. */
     .variable.link .link-preview .link-text + dl {
-      font-size: 10px;
+      font-size: var(--brando-text-2xs);
       line-height: 14px;
       color: var(--vars-muted);
     }
@@ -1142,7 +1142,7 @@ button.btn-palette {
       }
 
       .media-field-meta {
-        font-size: 12px;
+        font-size: var(--brando-text-sm);
         color: var(--vars-faint);
       }
 
@@ -1203,7 +1203,7 @@ button.btn-palette {
       }
 
       .media-field-meta {
-        font-size: 12px;
+        font-size: var(--brando-text-sm);
         color: var(--vars-muted);
       }
 
@@ -1252,7 +1252,7 @@ button.btn-palette {
         flex: 0 1 auto;
         min-width: 0;
         margin: 0;
-        font-size: 11px;
+        font-size: var(--brando-text-xs);
         line-height: 20px;
         color: var(--vars-faint);
         white-space: nowrap;
@@ -1271,7 +1271,7 @@ button.btn-palette {
         right: 0;
         padding: 2px 6px;
         border: 0;
-        font: 12px/20px "Main", sans-serif;
+        font: var(--brando-text-sm)/20px "Main", sans-serif;
         text-transform: none;
         color: var(--vars-muted);
         background: transparent;
@@ -1327,11 +1327,11 @@ button.btn-palette {
 
       .tiptap-type-control {
         padding-inline: 6px;
-        font-size: 12px;
+        font-size: var(--brando-text-sm);
       }
 
       .tiptap-type-control.tiptap-type-pilcrow > span:first-child {
-        font-size: 14px;
+        font-size: var(--brando-text-lg);
         line-height: 15px;
       }
 
@@ -1456,7 +1456,7 @@ button.btn-palette {
 
   .block-render {
     .block-render-preview {
-      font-size: 12px;
+      font-size: var(--brando-text-sm);
       border: 1px solid;
       display: inline-block;
       padding: 3px 6px;
@@ -1552,7 +1552,7 @@ button.btn-palette {
     border-top: 1px solid var(--brando-line);
     padding: 15px 10px;
     width: 100%;
-    font-size: 13px;
+    font-size: var(--brando-text-md);
     line-height: 1.5;
 
     .datasource-info {
@@ -1582,13 +1582,13 @@ button.btn-palette {
       }
 
       .datasource-title {
-        font-size: 14px;
+        font-size: var(--brando-text-lg);
         font-weight: 500;
       }
 
       .datasource-help {
         color: var(--brando-muted);
-        font-size: 12px;
+        font-size: var(--brando-text-sm);
       }
     }
 
@@ -1597,7 +1597,7 @@ button.btn-palette {
       max-width: 560px;
       margin: 0 0 0 40px;
       color: var(--brando-ink);
-      font-size: 12px;
+      font-size: var(--brando-text-sm);
 
       p { margin: 0; }
 
@@ -1626,7 +1626,7 @@ button.btn-palette {
   .module-description,
   .block-description {
     @font mono;
-    font-size: 10px;
+    font-size: var(--brando-text-2xs);
     border-radius: 0;
     padding: 10px 0;
     font-weight: normal;
@@ -1687,7 +1687,7 @@ button.btn-palette {
   }
 
   .block-info {
-    font-size: 8px;
+    font-size: var(--brando-text-2xs);
     text-transform: uppercase;
     text-align: right;
     margin-left: 1rem;
@@ -1730,7 +1730,7 @@ button.btn-palette {
         opacity: 0;
         visibility: hidden;
         color: coral;
-        font-size: 13px;
+        font-size: var(--brando-text-md);
         transition: opacity 450ms ease, visibility 0s 450ms;
         border-color: transparent !important;
         pointer-events: none;
@@ -1831,7 +1831,7 @@ button.btn-palette {
 
         td {
           padding: 0.75rem 0.75rem;
-          font-size: 12px;
+          font-size: var(--brando-text-sm);
         }
       }
     }
@@ -2010,7 +2010,7 @@ button.btn-palette {
     border-radius: 4px;
     background: var(--presence-ink, var(--brando-accent));
     color: var(--brando-surface);
-    font: 500 11px/18px "Main", sans-serif;
+    font: 500 var(--brando-text-xs)/18px "Main", sans-serif;
     letter-spacing: 0;
     text-transform: none;
     white-space: nowrap;
@@ -2032,7 +2032,7 @@ button.btn-palette {
   border-radius: 4px;
   background: var(--presence-ink, var(--brando-accent));
   color: var(--brando-surface);
-  font: 500 11px/18px "Main", sans-serif;
+  font: 500 var(--brando-text-xs)/18px "Main", sans-serif;
   letter-spacing: 0;
   text-transform: none;
   white-space: nowrap;
@@ -2049,7 +2049,7 @@ button.btn-palette {
     radial-gradient(circle at 9px 50%, var(--presence-ink, var(--brando-accent)) 4px, transparent 4.5px),
     var(--brando-badge-bg);
   color: var(--brando-ink);
-  font: 12px/22px "Main", sans-serif;
+  font: var(--brando-text-sm)/22px "Main", sans-serif;
   letter-spacing: 0;
   text-overflow: ellipsis;
   text-transform: none;

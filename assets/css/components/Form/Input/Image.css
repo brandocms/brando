@@ -16,7 +16,7 @@
   justify-content: center;
   align-items: center;
   background-color: color-mix(in srgb, var(--brando-color-black) 60%, transparent);
-  font-size: 30px;
+  font-size: var(--brando-text-6xl);
   font-weight: bold;
   color: var(--brando-ink-inverse);
   z-index: 9;
@@ -64,7 +64,7 @@
       }
 
       .image-info {
-        font-size: 12px;
+        font-size: var(--brando-text-sm);
         padding-left: 0;
       }
     }
@@ -137,7 +137,7 @@
 
     .drop-instructions {
       text-align: center;
-      font-size: 16px;
+      font-size: var(--brando-text-xl);
       margin-bottom: 15px;
     }
 
@@ -163,7 +163,7 @@
       margin-right: 7px;
     }
     p {
-      font-size: 16px;
+      font-size: var(--brando-text-xl);
       margin-bottom: 8px;
     }
   }
@@ -245,7 +245,7 @@
 
     .info {
       @space margin-top 10px;
-      @fontsize 11px;
+      font-size: var(--brando-text-xs);
     }
   }
 

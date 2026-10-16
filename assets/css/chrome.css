@@ -4,7 +4,7 @@
 
 .user-presence-modal {
   p {
-    @fontsize 12px;
+    font-size: var(--brando-text-sm);
     padding-bottom: 1.5em;
   }
 }
@@ -48,17 +48,17 @@
   }
 
   .name {
-    font-size: 13px;
+    font-size: var(--brando-text-md);
     text-transform: uppercase;
   }
 
   .last-active {
-    font-size: 11px;
+    font-size: var(--brando-text-xs);
     text-align: right;
   }
 
   .urls {
-    font-size: 11px;
+    font-size: var(--brando-text-xs);
     display: flex;
     flex-direction: column;
     gap: 0.5em;

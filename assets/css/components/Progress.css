@@ -7,7 +7,7 @@
   left: 0;
   z-index: 9999;
   color: var(--brando-ink-inverse);
-  font-size: 15px;
+  font-size: var(--brando-text-xl);
   min-height: 33px;
   /* Start hidden before JavaScript mounts; processing progress reveals it. */
   transform: translateY(-100%);
@@ -35,16 +35,16 @@
         border: 1px solid white;
         border-radius: 12px;
         padding: 4px 6px;
-        font-size: 11px;
+        font-size: var(--brando-text-xs);
       }
 
       .filename {
         @space margin-right container/2;
-        @font mono 13px;
+        @font mono var(--brando-text-md);
       }
 
       .description {
-        @fontsize 12px;
+        font-size: var(--brando-text-sm);
       }
 
       .percent {

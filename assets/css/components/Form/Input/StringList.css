@@ -51,7 +51,7 @@
     place-items: center;
     align-self: stretch;
     color: var(--list-faint);
-    font: 11px/16px "Mono", monospace;
+    font: var(--brando-text-xs)/16px "Mono", monospace;
     font-variant-numeric: tabular-nums;
 
     [data-icon] {
@@ -74,7 +74,7 @@
     background: transparent;
     box-shadow: none;
     color: var(--list-ink);
-    font: 14px/20px "Main", sans-serif;
+    font: var(--brando-text-lg)/20px "Main", sans-serif;
     outline: none;
 
     /* Subform.css sizes a placeholder on its own; this one matches the values */

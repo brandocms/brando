@@ -6,7 +6,7 @@
   display: grid;
   gap: 16px;
   color: var(--brando-ink);
-  font-size: 13px;
+  font-size: var(--brando-text-md);
   line-height: 20px;
 
   p { margin: 0; padding: 0; }
@@ -29,7 +29,7 @@
     border-radius: 5px;
     background: var(--brando-surface);
     color: var(--brando-ink);
-    font-size: 12px;
+    font-size: var(--brando-text-sm);
     font-weight: 500;
     line-height: 18px;
     text-decoration: none;
@@ -59,7 +59,7 @@
       background: var(--brando-surface-shaded);
       border-bottom: 1px solid var(--brando-line);
       color: var(--brando-muted);
-      font-size: 12px;
+      font-size: var(--brando-text-sm);
       font-weight: 400;
       white-space: nowrap;
     }
@@ -71,7 +71,7 @@
       padding-top: 14px;
       padding-bottom: 6px;
       color: var(--brando-muted);
-      font-size: 11px;
+      font-size: var(--brando-text-xs);
       font-weight: 500;
       letter-spacing: .06em;
       text-transform: uppercase;
@@ -84,7 +84,7 @@
   .seo-crawler-name strong { font-weight: 500; }
   .seo-crawler-name span { color: var(--brando-muted); }
   .seo-crawler-purpose { color: var(--brando-muted); }
-  .seo-crawler-purpose small { display: block; margin-top: 2px; color: var(--brando-note-ink); font-size: 12px; }
+  .seo-crawler-purpose small { display: block; margin-top: 2px; color: var(--brando-note-ink); font-size: var(--brando-text-sm); }
   .seo-crawler-access { width: 1%; white-space: nowrap; }
 
   .seo-crawler-signal {
@@ -98,10 +98,10 @@
     background: var(--brando-surface);
   }
 
-  .seo-crawler-signal h4 { margin: 0; font-size: 13px; font-weight: 500; line-height: 20px; }
-  .seo-crawler-signal p { margin-top: 4px; color: var(--brando-muted); font-size: 12px; line-height: 18px; }
+  .seo-crawler-signal h4 { margin: 0; font-size: var(--brando-text-md); font-weight: 500; line-height: 20px; }
+  .seo-crawler-signal p { margin-top: 4px; color: var(--brando-muted); font-size: var(--brando-text-sm); line-height: 18px; }
 
-  .seo-crawler-lines summary { cursor: pointer; color: var(--brando-ink); font-size: 12px; }
+  .seo-crawler-lines summary { cursor: pointer; color: var(--brando-ink); font-size: var(--brando-text-sm); }
   .seo-crawler-lines pre {
     margin: 8px 0 0;
     padding: 12px 14px;
@@ -110,13 +110,13 @@
     border-radius: 6px;
     background: var(--brando-surface-shaded);
     font-family: theme(typography.families.mono);
-    font-size: 12px;
+    font-size: var(--brando-text-sm);
     line-height: 18px;
     white-space: pre;
   }
-  .seo-crawler-lines p { margin-top: 8px; color: var(--brando-muted); font-size: 12px; }
+  .seo-crawler-lines p { margin-top: 8px; color: var(--brando-muted); font-size: var(--brando-text-sm); }
 
-  .seo-crawlers-note { color: var(--brando-muted); font-size: 12px; line-height: 18px; }
+  .seo-crawlers-note { color: var(--brando-muted); font-size: var(--brando-text-sm); line-height: 18px; }
 
   @media (max-width: 600px) {
     .seo-crawlers-intro { flex-direction: column; }
@@ -169,7 +169,7 @@
     display: block;
     padding: 3px 10px;
     color: var(--brando-muted);
-    font-size: 12px;
+    font-size: var(--brando-text-sm);
     font-weight: 400;
     line-height: 18px;
     white-space: nowrap;
@@ -198,7 +198,7 @@
   gap: 16px 24px;
   margin: 0;
 
-  dt { color: var(--brando-muted); font-size: 12px; line-height: 18px; }
-  dd { margin: 4px 0 0; color: var(--brando-ink); font-size: 13px; line-height: 20px; overflow-wrap: anywhere; }
+  dt { color: var(--brando-muted); font-size: var(--brando-text-sm); line-height: 18px; }
+  dd { margin: 4px 0 0; color: var(--brando-ink); font-size: var(--brando-text-md); line-height: 20px; overflow-wrap: anywhere; }
   a { color: var(--brando-ink); text-underline-offset: 3px; }
 }

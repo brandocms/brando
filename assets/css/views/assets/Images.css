@@ -45,17 +45,17 @@
 .media-workspace {
   .assets-file-browser--inline { margin: 0; display: flex; flex-direction: column; gap: 20px; }
   .image-picker-top { padding: 0 0 16px; border: 0; border-bottom: 1px solid var(--workspace-line); border-radius: 0; background: none; box-shadow: none; gap: 12px; }
-  .image-picker-path { font-family: inherit; font-size: 13px; gap: 4px; }
+  .image-picker-path { font-family: inherit; font-size: var(--brando-text-md); gap: 4px; }
   .image-picker-path .path-link { min-height: 28px; color: var(--workspace-muted); font-weight: 400; }
   .image-picker-path .path-link.active { color: var(--workspace-ink); font-weight: 500; }
   .image-picker-path .path-separator { color: var(--brando-faint); }
   .image-picker-browser { grid-template-columns: 192px minmax(0, 1fr); gap: 24px; min-height: 460px; }
   .image-picker-browser .image-picker-folders { border: 0; border-right: 1px solid var(--workspace-line); border-radius: 0; box-shadow: none; background: none; padding: 0 20px 0 0; gap: 16px; min-height: 380px; }
   .image-picker-folders-header { align-items: center; gap: 8px; }
-  .image-picker-folders-header h3 { font-family: inherit; text-transform: none; font-size: 13px; color: var(--workspace-ink); }
+  .image-picker-folders-header h3 { font-family: inherit; text-transform: none; font-size: var(--brando-text-md); color: var(--workspace-ink); }
   .image-picker-folders-header p { display: none; }
   .image-picker-folders-header .folder-actions { border-color: var(--workspace-line); border-radius: 5px; background: var(--brando-surface); }
-  .image-picker-browser .folder-action { min-height: 30px; height: auto; padding: 5px 10px; border-radius: 5px; border-color: var(--workspace-line); color: var(--workspace-ink); background: var(--brando-surface); font-family: inherit; font-size: 12px; text-transform: none; line-height: 18px; }
+  .image-picker-browser .folder-action { min-height: 30px; height: auto; padding: 5px 10px; border-radius: 5px; border-color: var(--workspace-line); color: var(--workspace-ink); background: var(--brando-surface); font-family: inherit; font-size: var(--brando-text-sm); text-transform: none; line-height: 18px; }
   .image-picker-browser .folder-action:hover:not(:disabled) { background: var(--workspace-wash); color: var(--workspace-ink); border-color: var(--brando-line-strong); }
   /* A destructive action among the folder's: red text, icon and border on
      the usual button, not the big red one. */
@@ -64,23 +64,23 @@
   .image-picker-browser .folder-action.is-destructive:hover:not(:disabled) { background: var(--brando-error); color: var(--brando-error-ink); border-color: color-mix(in srgb, var(--brando-error-ink) 45%, transparent); }
   .image-picker-browser .folder-action.icon-only { min-width: 28px; width: 28px; padding-inline: 6px; }
   .image-picker-folders-header .folder-action + .folder-action { border-color: var(--workspace-line); }
-  .image-picker-browser .new-folder-trigger { display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 5px 10px; min-height: 30px; border: 1px solid var(--workspace-line); border-radius: 5px; background: var(--brando-surface); font-family: inherit; font-size: 12px; text-transform: none; letter-spacing: 0; color: var(--workspace-ink); }
+  .image-picker-browser .new-folder-trigger { display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 5px 10px; min-height: 30px; border: 1px solid var(--workspace-line); border-radius: 5px; background: var(--brando-surface); font-family: inherit; font-size: var(--brando-text-sm); text-transform: none; letter-spacing: 0; color: var(--workspace-ink); }
   .image-picker-browser .new-folder-trigger:hover { background: var(--workspace-wash); }
   .image-picker-browser .new-folder-trigger [data-icon] { width: 14px; height: 14px; }
   .image-picker-browser .folder-list { gap: 4px; }
-  .image-picker-browser .folder-row { min-height: 36px; border: 1px solid transparent; border-radius: 5px; padding: 8px; font-family: inherit; font-size: 13px; line-height: 18px; color: var(--workspace-ink); background: transparent; gap: 8px; }
+  .image-picker-browser .folder-row { min-height: 36px; border: 1px solid transparent; border-radius: 5px; padding: 8px; font-family: inherit; font-size: var(--brando-text-md); line-height: 18px; color: var(--workspace-ink); background: transparent; gap: 8px; }
   .image-picker-browser .folder-row:hover, .image-picker-browser .folder-row.active { background: var(--brando-surface-selected); border-color: var(--brando-line-strong); color: var(--workspace-accent); }
   .image-picker-browser .folder-row [data-icon] { width: 16px; height: 16px; color: var(--brando-faint); }
-  .image-picker-browser .folder-list .empty { font-family: inherit; font-size: 12px; color: var(--workspace-muted); padding: 8px 0; }
+  .image-picker-browser .folder-list .empty { font-family: inherit; font-size: var(--brando-text-sm); color: var(--workspace-muted); padding: 8px 0; }
   .image-picker-browser .new-folder-form { flex-wrap: wrap; gap: 8px; }
   .image-picker-browser .new-folder-form .text.small { border: 1px solid var(--workspace-line); border-radius: 5px; height: 34px; font-family: inherit; padding: 6px 8px; }
   .image-picker-browser .new-folder-actions { border-radius: 5px; border-color: var(--workspace-line); }
   .image-picker-browser .folder-icon-button { min-width: 30px; width: 30px; min-height: 30px; color: var(--workspace-accent); background: var(--brando-surface); }
   .image-picker-main { min-width: 0; }
   .image-picker-main .image-picker-main-header { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin: 0 0 16px; padding: 0; }
-  .image-picker-browser .image-picker-main .image-picker-main-header h3 { color: var(--workspace-ink); font-size: 14px; font-family: inherit; text-transform: none; letter-spacing: 0; }
+  .image-picker-browser .image-picker-main .image-picker-main-header h3 { color: var(--workspace-ink); font-size: var(--brando-text-lg); font-family: inherit; text-transform: none; letter-spacing: 0; }
   .image-picker-main-header .image-picker-main-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
-  .image-picker-main-header .image-picker-main-actions > span { color: var(--workspace-muted); font-size: 12px; font-family: inherit; text-transform: none; letter-spacing: 0; }
+  .image-picker-main-header .image-picker-main-actions > span { color: var(--workspace-muted); font-size: var(--brando-text-sm); font-family: inherit; text-transform: none; letter-spacing: 0; }
   .image-picker-main-actions .folder-action { display: inline-flex; align-items: center; gap: 6px; }
   .image-picker-main-actions label.folder-action { position: relative; overflow: hidden; background: var(--workspace-accent); border-color: var(--workspace-accent); color: var(--brando-ink-inverse); cursor: pointer; }
   .image-picker-main .image-picker-main-header .image-picker-main-actions label.folder-action > span { color: inherit; font: inherit; text-transform: none; letter-spacing: 0; }
@@ -93,22 +93,22 @@
   .library-thumbnail .image-content, .library-thumbnail .img-placeholder { width: 64px; height: 52px; border-radius: 0; }
   .library-thumbnail img { width: 64px; height: 52px; object-fit: contain; }
   .content-list .list-row .library-image-info { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; flex: 1; min-width: 0; width: auto; }
-  .library-image-title { font-size: 12px; line-height: 18px; color: var(--workspace-muted); margin-top: 0; overflow-wrap: anywhere; }
-  .library-image-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; margin-top: 0; color: var(--workspace-muted); font-size: 11px; }
+  .library-image-title { font-size: var(--brando-text-sm); line-height: 18px; color: var(--workspace-muted); margin-top: 0; overflow-wrap: anywhere; }
+  .library-image-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; margin-top: 0; color: var(--workspace-muted); font-size: var(--brando-text-xs); }
   .library-formats { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 4px; }
-  .library-format { display: inline-flex; align-items: center; padding: 0 5px; border: 1px solid var(--workspace-line); border-radius: 3px; background: var(--brando-surface-shaded); color: var(--brando-badge-ink); font-size: 10px; line-height: 17px; letter-spacing: .02em; }
+  .library-format { display: inline-flex; align-items: center; padding: 0 5px; border: 1px solid var(--workspace-line); border-radius: 3px; background: var(--brando-surface-shaded); color: var(--brando-badge-ink); font-size: var(--brando-text-2xs); line-height: 17px; letter-spacing: .02em; }
   .library-alt.missing { color: var(--brando-attention-ink); }
   .content-list .list-row .main-content > .col-4 { width: 184px; flex: 0 0 184px; }
-  .item-meta { font-size: 11px; }
+  .item-meta { font-size: var(--brando-text-xs); }
   .item-meta .avatar-wrapper { display: flex; flex: 0 0 26px; margin-right: 8px; }
   .item-meta .avatar-wrapper:not(:has(img)) { display: none; }
   .item-meta .avatar, .item-meta .avatar .image-content, .item-meta .avatar img { width: 26px; height: 26px; }
   .item-meta .avatar img { border-radius: 50%; object-fit: cover; }
   .item-meta .content { min-width: 0; }
   .item-meta .name { overflow-wrap: anywhere; }
-  .item-meta .name, .item-meta .time { font-size: 11px; color: var(--workspace-muted); }
-  .image-picker-recent-folders .label { font-family: inherit; font-size: 11px; text-transform: none; letter-spacing: 0; }
-  .image-picker-recent-folders .folder-pill { font-family: inherit; font-size: 11px; border-color: var(--workspace-line); border-radius: 4px; }
+  .item-meta .name, .item-meta .time { font-size: var(--brando-text-xs); color: var(--workspace-muted); }
+  .image-picker-recent-folders .label { font-family: inherit; font-size: var(--brando-text-xs); text-transform: none; letter-spacing: 0; }
+  .image-picker-recent-folders .folder-pill { font-family: inherit; font-size: var(--brando-text-xs); border-color: var(--workspace-line); border-radius: 4px; }
   @media (max-width: 700px) {
     .image-picker-browser { grid-template-columns: 1fr; }
     .image-picker-browser .image-picker-folders { min-height: 0; padding: 0 0 16px; border-right: 0; border-bottom: 1px solid var(--workspace-line); gap: 12px; }
@@ -133,8 +133,8 @@
   .image-picker-path .path-link { display: inline-flex; align-items: center; min-height: 28px; padding: 4px 2px; line-height: 18px; text-decoration: none; }
   .image-picker-path .path-link:not(.active):hover { text-decoration: underline; text-underline-offset: 3px; }
   .image-picker-recent-folders { display: flex; align-items: center; justify-content: flex-end; gap: 6px; max-width: 65%; }
-  .image-picker-recent-folders .label { display: inline-flex; align-items: center; margin: 0 4px 0 0; font-size: 11px; line-height: 18px; color: var(--workspace-muted); }
-  .image-picker-recent-folders .folder-pill { display: inline-flex; align-items: center; justify-content: center; height: auto; min-height: 28px; padding: 4px 8px; line-height: 18px; font-size: 12px; font-family: inherit; letter-spacing: 0; color: var(--workspace-muted); background: var(--brando-surface); border: 1px solid var(--workspace-line); border-radius: 5px; }
+  .image-picker-recent-folders .label { display: inline-flex; align-items: center; margin: 0 4px 0 0; font-size: var(--brando-text-xs); line-height: 18px; color: var(--workspace-muted); }
+  .image-picker-recent-folders .folder-pill { display: inline-flex; align-items: center; justify-content: center; height: auto; min-height: 28px; padding: 4px 8px; line-height: 18px; font-size: var(--brando-text-sm); font-family: inherit; letter-spacing: 0; color: var(--workspace-muted); background: var(--brando-surface); border: 1px solid var(--workspace-line); border-radius: 5px; }
   .image-picker-recent-folders .folder-pill:hover { background: var(--brando-surface-selected); border-color: var(--brando-line-strong); color: var(--workspace-accent); }
   .image-picker-browser { grid-template-columns: 180px minmax(0, 1fr); gap: 0; min-height: 420px; }
   .image-picker-browser .image-picker-folders { padding: 16px 12px; min-height: 0; gap: 16px; align-self: stretch; position: static; }
@@ -180,8 +180,8 @@
 /* The asset lists' filters, as in the other workspaces. */
 .media-workspace {
   .advanced-filters-bar { gap: 12px; }
-  .boolean-filter .tiny-toggle-label { font-family: inherit; font-size: 12px; text-transform: none; }
-  .reset-filters-btn { min-height: 30px; padding: 5px 10px; border-color: var(--workspace-line); border-radius: 5px; font-family: inherit; font-size: 12px; text-transform: none; color: var(--workspace-muted); }
+  .boolean-filter .tiny-toggle-label { font-family: inherit; font-size: var(--brando-text-sm); text-transform: none; }
+  .reset-filters-btn { min-height: 30px; padding: 5px 10px; border-color: var(--workspace-line); border-radius: 5px; font-family: inherit; font-size: var(--brando-text-sm); text-transform: none; color: var(--workspace-muted); }
   .reset-filters-btn:hover { background: var(--workspace-wash); color: var(--workspace-accent); }
 }
 
@@ -209,9 +209,9 @@
 
   /* The rows match the image library's: a quiet source line, tight lines */
   .content-list .list-row .library-video-info { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; flex: 1; min-width: 0; }
-  .library-video-info .library-image-title { font-size: 12px; line-height: 18px; color: var(--workspace-muted); }
-  .library-video-info .library-image-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; color: var(--workspace-muted); font-size: 11px; }
-  .library-video-info .library-format { display: inline-flex; align-items: center; padding: 0 5px; border: 1px solid var(--workspace-line); border-radius: 3px; background: var(--brando-surface-shaded); color: var(--brando-badge-ink); font-size: 10px; line-height: 17px; }
+  .library-video-info .library-image-title { font-size: var(--brando-text-sm); line-height: 18px; color: var(--workspace-muted); }
+  .library-video-info .library-image-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; color: var(--workspace-muted); font-size: var(--brando-text-xs); }
+  .library-video-info .library-format { display: inline-flex; align-items: center; padding: 0 5px; border: 1px solid var(--workspace-line); border-radius: 3px; background: var(--brando-surface-shaded); color: var(--brando-badge-ink); font-size: var(--brando-text-2xs); line-height: 17px; }
 
   .library-video-play-icon {
     position: absolute;
@@ -243,7 +243,7 @@
       background: transparent;
       color: var(--workspace-ink);
       font: inherit;
-      font-size: 15px;
+      font-size: var(--brando-text-xl);
       font-weight: 500;
       line-height: 22px;
     }
@@ -281,7 +281,7 @@
 .media-sweep-lede {
   margin: 0;
   color: var(--modal-muted, var(--brando-muted));
-  font-size: 14px;
+  font-size: var(--brando-text-lg);
   line-height: 1.5;
 
   span { display: block; margin-top: 4px; }
@@ -304,7 +304,7 @@
   gap: 14px;
   min-height: 52px;
   padding: 8px 14px;
-  font-size: 13px;
+  font-size: var(--brando-text-md);
 
   & + & { border-top: 1px solid var(--brando-line-soft); }
   &:has(.media-sweep-include input[type="checkbox"]:not(:checked)) > :not(.media-sweep-include) { opacity: .45; }
@@ -349,7 +349,7 @@
   max-width: 40px;
   overflow: hidden;
   font-family: "Mono";
-  font-size: 9px;
+  font-size: var(--brando-text-2xs);
   line-height: 10px;
   text-overflow: clip;
   white-space: nowrap;
@@ -362,7 +362,7 @@
   line-height: 1.35;
 
   strong { overflow: hidden; font-weight: 500; text-overflow: ellipsis; white-space: nowrap; }
-  > span { color: var(--brando-muted); font-size: 12px; }
+  > span { color: var(--brando-muted); font-size: var(--brando-text-sm); }
 }
 
 .media-sweep .media-sweep-name {
@@ -373,7 +373,7 @@
   border-radius: 6px;
   background: var(--brando-surface);
   font-family: "Mono";
-  font-size: 12px;
+  font-size: var(--brando-text-sm);
 }
 
 /* On a phone each entry is its include box beside a stack: the entry, its
@@ -406,7 +406,7 @@
   border-radius: 8px;
   background: var(--brando-success);
   color: var(--brando-success-ink);
-  font-size: 14px;
+  font-size: var(--brando-text-lg);
 
   > [data-icon] { width: 18px; height: 18px; flex-shrink: 0; }
   > span:not([data-icon]) { flex: 1; }
@@ -417,7 +417,7 @@
     border-radius: 6px;
     background: var(--brando-surface);
     color: inherit;
-    font-size: 13px;
+    font-size: var(--brando-text-md);
     cursor: pointer;
   }
 

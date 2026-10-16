@@ -18,7 +18,7 @@
 
     .color-hex {
       @font mono;
-      @fontsize 16px;
+      font-size: var(--brando-text-xl);
       margin-left: 15px;
     }
 

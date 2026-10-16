@@ -11,7 +11,7 @@
   width: 320px;
   background-color: var(--brando-surface);
   border: 1px solid var(--brando-ink);
-  font-size: 14px;
+  font-size: var(--brando-text-lg);
 
   header {
     display: flex;
@@ -128,7 +128,7 @@
       border-radius: 6px;
       background: var(--brando-attention);
       color: var(--brando-attention-ink);
-      font-size: 12px;
+      font-size: var(--brando-text-sm);
       line-height: 1.4;
 
       p { margin: 0; }
@@ -146,7 +146,7 @@
         border-radius: 5px;
         background: var(--brando-surface);
         color: var(--brando-ink);
-        font-size: 12px;
+        font-size: var(--brando-text-sm);
         cursor: pointer;
 
         &:first-child { border-color: var(--brando-line-strong); background: var(--brando-surface-selected); color: var(--brando-accent); }

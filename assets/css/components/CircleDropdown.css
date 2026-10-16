@@ -124,7 +124,7 @@
     @font mono;
     background-color: var(--brando-badge-bg);
     border: 0;
-    font-size: 12px;
+    font-size: var(--brando-text-sm);
     text-transform: uppercase;
     padding: 4px 8px 4px 10px;
     border-radius: 20px;

@@ -145,13 +145,13 @@
 
     p {
       margin: 0 0 3px;
-      font-size: 14px;
+      font-size: var(--brando-text-lg);
       font-weight: 600;
     }
 
     > span {
       max-width: 34ch;
-      font-size: 12px;
+      font-size: var(--brando-text-sm);
       line-height: 1.4;
       opacity: 0.58;
     }
@@ -212,7 +212,7 @@
       p {
         width: 100%;
         margin: 0;
-        font-size: 13px;
+        font-size: var(--brando-text-md);
         line-height: 1.4;
       }
 
@@ -221,7 +221,7 @@
         border-radius: 6px;
         background: var(--brando-surface);
         border: 1px solid var(--brando-line);
-        font-size: 12px;
+        font-size: var(--brando-text-sm);
       }
     }
 
@@ -239,7 +239,7 @@
       p {
         width: 100%;
         margin: 0 0 2px;
-        font-size: 13px;
+        font-size: var(--brando-text-md);
         line-height: 1.4;
         opacity: 0.72;
       }
@@ -249,7 +249,7 @@
         border-radius: 6px;
         background: var(--brando-surface);
         border: 1px solid var(--brando-line);
-        font-size: 12px;
+        font-size: var(--brando-text-sm);
       }
     }
   }
@@ -285,7 +285,7 @@
       input.text,
       label,
       textarea {
-        font-size: 15px;
+        font-size: var(--brando-text-xl);
       }
 
       /* Dividers belong between sections, never above the first one — each
@@ -308,11 +308,11 @@
 
         span {
           font-weight: 650;
-          font-size: 16px;
+          font-size: var(--brando-text-xl);
         }
 
         small {
-          font-size: 12px;
+          font-size: var(--brando-text-sm);
           line-height: 1.35;
           opacity: 0.58;
         }
@@ -356,7 +356,7 @@
 
         p {
           margin: 4px 0 0;
-          font-size: 12px;
+          font-size: var(--brando-text-sm);
           line-height: 1.35;
           opacity: 0.58;
         }
@@ -369,7 +369,7 @@
 
         h2 {
           margin: 0;
-          font-size: 16px;
+          font-size: var(--brando-text-xl);
         }
 
         .module-count {
@@ -382,7 +382,7 @@
           border-radius: 999px;
           background: var(--brando-badge-bg);
           font-family: "Mono";
-          font-size: 11px;
+          font-size: var(--brando-text-xs);
         }
       }
 
@@ -480,7 +480,7 @@
         border-radius: 5px;
         background: var(--brando-surface-subform);
         font-family: "Mono";
-        font-size: 10px;
+        font-size: var(--brando-text-2xs);
         line-height: 1;
         text-transform: uppercase;
       }
@@ -493,14 +493,14 @@
 
         code {
           overflow: hidden;
-          font-size: 12px;
+          font-size: var(--brando-text-sm);
           text-overflow: ellipsis;
           white-space: nowrap;
         }
 
         small {
           overflow: hidden;
-          font-size: 11px;
+          font-size: var(--brando-text-xs);
           opacity: 0.55;
           text-overflow: ellipsis;
           white-space: nowrap;
@@ -523,7 +523,7 @@
    and this is the only <p> in the modal. */
 .module-picker-intro {
   max-width: 58ch;
-  font-size: 14px;
+  font-size: var(--brando-text-lg);
   line-height: 1.55;
   opacity: 0.6;
 }
@@ -562,13 +562,13 @@
     }
 
     span {
-      font-size: 14px;
+      font-size: var(--brando-text-lg);
       font-weight: 600;
     }
 
     small {
       margin-top: 4px;
-      font-size: 11px;
+      font-size: var(--brando-text-xs);
       line-height: 1.35;
       opacity: 0.58;
     }
@@ -594,7 +594,7 @@
 
   h2 {
     margin: 0;
-    font-size: 16px;
+    font-size: var(--brando-text-xl);
   }
 }
 
@@ -630,7 +630,7 @@
 
   li {
     margin-bottom: 4px;
-    font-size: 14px;
+    font-size: var(--brando-text-lg);
 
     &:last-child {
       margin-bottom: 0;
@@ -658,7 +658,7 @@
    `Block.Render.render/1`'s catch-all. */
 .block-unknown-type {
   font-family: Mono, monospace;
-  font-size: 11px;
+  font-size: var(--brando-text-xs);
 }
 
 /* ---------------------------------------------------------------- module sketches
@@ -681,7 +681,7 @@
   border: 1px solid var(--brando-line);
   border-radius: 10px;
   background: var(--brando-surface-hover);
-  font-size: 12px;
+  font-size: var(--brando-text-sm);
   color: var(--brando-faint);
 
   img {
@@ -699,13 +699,13 @@
 
 .module-sketch-hint {
   margin: 0;
-  font-size: 12px;
+  font-size: var(--brando-text-sm);
   color: var(--brando-muted);
 }
 
 .module-sketch-error {
   margin: 0;
-  font-size: 12px;
+  font-size: var(--brando-text-sm);
   color: var(--brando-error-ink);
 }
 
@@ -735,7 +735,7 @@
     gap: 12px;
     min-height: 40px;
     padding: 6px 14px;
-    font-size: 13px;
+    font-size: var(--brando-text-md);
 
     & + li {
       border-top: 1px solid var(--brando-line);
@@ -763,7 +763,7 @@
 
     .error {
       margin-left: auto;
-      font-size: 12px;
+      font-size: var(--brando-text-sm);
       color: var(--brando-error-ink);
     }
 
@@ -795,7 +795,7 @@
   display: flex;
   flex-direction: column;
   gap: 6px;
-  font-size: 12px;
+  font-size: var(--brando-text-sm);
   color: var(--brando-muted);
 
   .bar {

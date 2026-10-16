@@ -35,7 +35,7 @@
     background: transparent;
     color: inherit;
     font-family: "Mono";
-    font-size: 10px;
+    font-size: var(--brando-text-2xs);
     letter-spacing: 0.04em;
     text-transform: uppercase;
     opacity: 0.6;
@@ -97,11 +97,11 @@ input.text {
 
   &.monospace {
     @font mono;
-    font-size: 14px;
+    font-size: var(--brando-text-lg);
 
     &::placeholder {
       @font mono;
-      font-size: 14px;
+      font-size: var(--brando-text-lg);
     }
   }
 
@@ -131,11 +131,11 @@ textarea.text {
 
   &.monospace {
     @font mono;
-    font-size: 14px;
+    font-size: var(--brando-text-lg);
   }
 
   .counter {
-    font-size: 11px;
+    font-size: var(--brando-text-xs);
     float: right;
   }
 }

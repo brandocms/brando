@@ -43,7 +43,7 @@ input.is-overridden {
    left empty, so `Input.rich_text` with `default_value` prints it below the
    editor instead. */
 .tiptap-inherited-value {
-  font-size: 12px;
+  font-size: var(--brando-text-sm);
   line-height: 1.4;
   margin-top: 6px;
   color: var(--brando-muted);
@@ -69,13 +69,13 @@ input.is-overridden {
   align-items: center;
   gap: 4px;
   font-weight: 500;
-  font-size: 12px;
+  font-size: var(--brando-text-sm);
   padding-left: 4px;
   background-color: var(--brando-surface);
 }
 
 .override-reset-all {
-  font-size: 11px;
+  font-size: var(--brando-text-xs);
   color: var(--brando-muted);
   background: none;
   border: 1px solid var(--brando-line);
@@ -140,7 +140,7 @@ button.override-reset-all:hover {
 }
 
 .override-toggle-label {
-  font-size: 12px;
+  font-size: var(--brando-text-sm);
   user-select: none;
 }
 

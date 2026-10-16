@@ -81,7 +81,7 @@
   .file-info,
   .gallery-info {
     @font mono;
-    font-size: 12px;
+    font-size: var(--brando-text-sm);
     display: flex;
     flex-direction: column;
     justify-content: space-between;

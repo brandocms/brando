@@ -17,7 +17,7 @@
     line-height: 1;
 
     .day-label {
-      font-size: 13px;
+      font-size: var(--brando-text-md);
       font-family: theme(typography.families.mono);
     }
   }
@@ -36,14 +36,14 @@
       width: 100px;
       height: 40px;
       padding: 4px 8px;
-      font-size: 13px;
+      font-size: var(--brando-text-md);
       font-family: theme(typography.families.mono);
       background-color: var(--brando-surface);
       border: 1px solid var(--brando-line);
     }
 
     .time-separator {
-      font-size: 13px;
+      font-size: var(--brando-text-md);
       opacity: 0.5;
     }
   }
@@ -55,7 +55,7 @@
       align-items: center;
       gap: 5px;
       cursor: pointer;
-      font-size: 12px;
+      font-size: var(--brando-text-sm);
       font-family: theme(typography.families.mono);
       opacity: 0.65;
       user-select: none;

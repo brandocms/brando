@@ -44,7 +44,7 @@
     }
 
     .user-initial {
-      font-size: 15px;
+      font-size: var(--brando-text-xl);
     }
 
     img {
@@ -67,7 +67,7 @@
   }
 
   .name {
-    font-size: 15px;
+    font-size: var(--brando-text-xl);
     font-weight: normal;
     color: var(--brando-nav-ink);
     user-select: none;
@@ -75,7 +75,7 @@
 
   .role {
     @font mono;
-    font-size: 11px;
+    font-size: var(--brando-text-xs);
     letter-spacing: 0.01em;
     color: var(--brando-nav-muted);
     user-select: none;
@@ -107,7 +107,7 @@
       /* In line with the name above: avatar + gap. */
       padding: 6px 10px 6px 58px;
       margin-inline: -10px;
-      font-size: 14px;
+      font-size: var(--brando-text-lg);
       line-height: 20px;
       color: var(--brando-nav-ink);
       transition: background-color 200ms ease;
@@ -125,7 +125,7 @@
       border-radius: 0;
       background: none;
       font: inherit;
-      font-size: 14px;
+      font-size: var(--brando-text-lg);
       text-align: left;
       cursor: pointer;
     }

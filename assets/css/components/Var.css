@@ -19,11 +19,11 @@
       padding-right: 9px;
       border-radius: 6px;
       @font mono;
-      font-size: 12px !important;
+      font-size: var(--brando-text-sm) !important;
       text-transform: uppercase;
 
       .button-edit {
-        font-size: 12px;
+        font-size: var(--brando-text-sm);
         text-transform: uppercase;
         padding: 4px 6px 4px;
         border-radius: 11px;
@@ -34,7 +34,7 @@
 
   .image-info,
   .file-info {
-    @fontsize 13px;
+    font-size: var(--brando-text-md);
     @space margin-top 15px;
   }
 
@@ -74,7 +74,7 @@
     }
 
     .file-card__name {
-      @fontsize 15px;
+      font-size: var(--brando-text-xl);
       font-weight: 500;
       word-break: break-all;
       margin-bottom: 4px;
@@ -84,7 +84,7 @@
       display: flex;
       gap: 10px;
       @font mono;
-      @fontsize 12px;
+      font-size: var(--brando-text-sm);
       text-transform: uppercase;
       opacity: 0.6;
     }
@@ -136,7 +136,7 @@
     }
 
     .instructions {
-      font-size: 16px;
+      font-size: var(--brando-text-xl);
 
       button {
         margin-top: 10px;
@@ -170,7 +170,7 @@
   background: var(--brando-badge-bg);
   color: var(--brando-muted);
   font-family: inherit;
-  font-size: 11px;
+  font-size: var(--brando-text-xs);
   line-height: 16px;
   text-transform: none;
   vertical-align: 1px;
@@ -208,7 +208,7 @@
 
   .info {
     @font mono;
-    font-size: 10px;
+    font-size: var(--brando-text-2xs);
     text-transform: uppercase;
 
     .link-text {

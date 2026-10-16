@@ -33,7 +33,7 @@
 
 .block-field-assistant-hint {
   color: var(--brando-muted);
-  font-size: 12px;
+  font-size: var(--brando-text-sm);
   line-height: 18px;
   text-align: right;
 }
@@ -181,7 +181,7 @@ section.alert.danger {
   h3 {
     margin: 0;
     color: var(--brando-ink);
-    font-size: 18px;
+    font-size: var(--brando-text-2xl);
     font-weight: 500;
     line-height: 24px;
   }
@@ -189,14 +189,14 @@ section.alert.danger {
   .blocks-welcome-lead {
     margin: 6px 0 0;
     color: var(--brando-muted);
-    font-size: 13px;
+    font-size: var(--brando-text-md);
     line-height: 18px;
   }
 
   .blocks-welcome-or {
     margin: 20px 0 0;
     color: var(--brando-muted);
-    font-size: 12px;
+    font-size: var(--brando-text-sm);
     font-weight: 500;
     line-height: 16px;
   }
@@ -232,20 +232,20 @@ section.alert.danger {
 
     strong {
       margin-top: 10px;
-      font-size: 15px;
+      font-size: var(--brando-text-xl);
       font-weight: 500;
     }
 
     .blocks-welcome-instructions {
       color: var(--brando-muted);
-      font-size: 12px;
+      font-size: var(--brando-text-sm);
       line-height: 1.45;
     }
 
     small {
       margin-top: 2px;
       color: var(--brando-muted);
-      font-size: 11px;
+      font-size: var(--brando-text-xs);
     }
   }
 
@@ -330,7 +330,7 @@ section.alert.danger {
      the only thing ever split. */
   .blocks-welcome-module-name {
     max-width: 100%;
-    font-size: 12.5px;
+    font-size: var(--brando-text-md);
     line-height: 16px;
     overflow-wrap: break-word;
     text-wrap: balance;
@@ -339,7 +339,7 @@ section.alert.danger {
   .blocks-welcome-module-count {
     color: color-mix(in srgb, var(--brando-muted) 70%, var(--brando-surface));
     font-family: theme(typography.families.mono);
-    font-size: 10.5px;
+    font-size: var(--brando-text-xs);
     line-height: 14px;
     white-space: nowrap;
   }
@@ -352,7 +352,7 @@ section.alert.danger {
     border-radius: 4px;
     background: var(--brando-badge-bg);
     color: var(--brando-badge-ink);
-    font-size: 10px;
+    font-size: var(--brando-text-2xs);
     line-height: 15px;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -378,7 +378,7 @@ section.alert.danger {
     border-radius: 5px;
     background: var(--brando-surface);
     color: var(--brando-ink);
-    font-size: 12px;
+    font-size: var(--brando-text-sm);
     font-weight: 500;
     line-height: 18px;
     white-space: nowrap;
@@ -405,14 +405,14 @@ section.alert.danger {
   .blocks-welcome-hint {
     flex-basis: 100%;
     color: var(--brando-muted);
-    font-size: 12px;
+    font-size: var(--brando-text-sm);
     line-height: 18px;
   }
 
   .blocks-welcome-note {
     margin: 14px 0 0;
     color: color-mix(in srgb, var(--brando-muted) 75%, var(--brando-surface));
-    font-size: 12px;
+    font-size: var(--brando-text-sm);
     line-height: 18px;
 
     a {
@@ -464,7 +464,7 @@ section.alert.danger {
   border-radius: 24px;
   background-color: var(--brando-ink);
   color: var(--brando-ink-inverse);
-  font-size: 14px;
+  font-size: var(--brando-text-lg);
 
   .block-bin-undo {
     border: none;
@@ -472,7 +472,7 @@ section.alert.danger {
     border-radius: 18px;
     background-color: var(--brando-surface);
     color: var(--brando-ink);
-    font-size: 14px;
+    font-size: var(--brando-text-lg);
     cursor: pointer;
     transition: background-color 350ms ease;
 
@@ -589,7 +589,7 @@ section.alert.danger {
     box-shadow: none !important;
     padding: 0;
     background: transparent;
-    font-size: 15px;
+    font-size: var(--brando-text-xl);
     color: var(--modal-ink, var(--brando-ink));
     outline: none;
 
@@ -654,7 +654,7 @@ section.alert.danger {
   border: 1px solid var(--brando-line);
   border-bottom-width: 2px;
   border-radius: 4px;
-  font: 500 10.5px/16px "Main", sans-serif;
+  font: 500 var(--brando-text-xs)/16px "Main", sans-serif;
   text-align: center;
   color: var(--brando-muted);
   background: var(--brando-surface);
@@ -686,7 +686,7 @@ section.alert.danger {
   border: 0;
   border-radius: 6px;
   background: transparent;
-  font-size: 13px;
+  font-size: var(--brando-text-md);
   color: var(--brando-ink);
   text-align: left;
   cursor: pointer;
@@ -698,7 +698,7 @@ section.alert.danger {
   }
 
   .count {
-    font-size: 11px;
+    font-size: var(--brando-text-xs);
     color: var(--brando-faint);
   }
 
@@ -734,7 +734,7 @@ section.alert.danger {
     border: 0;
     border-radius: 6px;
     background: transparent;
-    font-size: 13px;
+    font-size: var(--brando-text-md);
     color: var(--brando-ink);
     cursor: pointer;
 
@@ -759,7 +759,7 @@ section.alert.danger {
 .module-picker-group-title {
   margin: 0;
   padding: 14px 12px 4px;
-  font: 400 10.5px/1.4 "Mono", monospace;
+  font: 400 var(--brando-text-xs)/1.4 "Mono", monospace;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--brando-muted);
@@ -821,13 +821,13 @@ section.alert.danger {
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 13.5px;
+  font-size: var(--brando-text-lg);
   font-weight: 500;
   color: var(--brando-ink);
 }
 
 .module-row-help {
-  font-size: 12.5px;
+  font-size: var(--brando-text-md);
   color: var(--brando-muted);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -836,7 +836,7 @@ section.alert.danger {
 
 .module-row-enter {
   margin-left: auto;
-  font-size: 11px;
+  font-size: var(--brando-text-xs);
   color: var(--brando-muted);
   white-space: nowrap;
   visibility: hidden;
@@ -859,7 +859,7 @@ section.alert.danger {
   padding: 10px 16px;
   border-top: 1px solid var(--brando-line);
   background: var(--brando-surface-shaded);
-  font-size: 12px;
+  font-size: var(--brando-text-sm);
   color: var(--brando-muted);
 }
 
@@ -899,7 +899,7 @@ section.alert.danger {
 .blocks-source-note {
   margin: 0 0 8px;
   color: var(--brando-muted);
-  font-size: 12px;
+  font-size: var(--brando-text-sm);
   line-height: 18px;
 
   a {

@@ -36,7 +36,7 @@
 
   .add-module-entry {
     @font mono;
-    @fontsize 16px;
+    font-size: var(--brando-text-xl);
 
     width: 100%;
     border: none;

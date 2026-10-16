@@ -46,7 +46,7 @@
 
 .admin-dialog-title {
   margin: 0;
-  font-size: 16px;
+  font-size: var(--brando-text-xl);
   font-weight: 500;
   line-height: 22px;
   letter-spacing: 0;
@@ -60,7 +60,7 @@
 .admin-dialog-body {
   margin-top: 6px;
   color: var(--dialog-muted);
-  font-size: 13px;
+  font-size: var(--brando-text-md);
   line-height: 20px;
   overflow-wrap: break-word;
 
@@ -102,7 +102,7 @@
   background: var(--brando-surface);
   color: var(--dialog-ink);
   font: inherit;
-  font-size: 12px;
+  font-size: var(--brando-text-sm);
   font-weight: 500;
   line-height: 18px;
   letter-spacing: 0;

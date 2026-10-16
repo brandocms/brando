@@ -10,22 +10,22 @@
   --workspace-wash: var(--brando-surface-hover);
   --workspace-accent: var(--brando-accent);
   max-width: 1280px; width: 100%; padding: 38px 0 64px;
-  color: var(--workspace-ink); font-size: 13px; line-height: 1.55;
+  color: var(--workspace-ink); font-size: var(--brando-text-md); line-height: 1.55;
   *, *::before, *::after { box-sizing: border-box; }
   h1, h2, h3, h4, p, dl, dd { margin: 0; padding: 0; }
   h1, h2, h3, h4 { font-weight: 500; text-transform: none; }
-  h1 { font-size: 32px; line-height: 1.2; letter-spacing: -.035em; }
-  h2 { font-size: 18px; line-height: 1.35; letter-spacing: -.02em; }
-  h3 { font-size: 14px; line-height: 1.5; }
+  h1 { font-size: var(--brando-text-6xl); line-height: 1.2; letter-spacing: -.035em; }
+  h2 { font-size: var(--brando-text-2xl); line-height: 1.35; letter-spacing: -.02em; }
+  h3 { font-size: var(--brando-text-lg); line-height: 1.5; }
   button, input, select, textarea { font-family: inherit; }
   :is(button, input, select, textarea, a, summary, [tabindex]):focus-visible { outline: 2px solid var(--workspace-accent); outline-offset: 3px; }
   .workspace-heading { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; padding-bottom: 24px; margin-bottom: 24px; border-bottom: 1px solid var(--workspace-line); }
   .workspace-heading > div:first-child { min-width: 0; }
   /* The blueprint's icon leads the listing title, a step quieter than the text. */
   :is(.workspace-heading-icon, .content-header-icon) { width: .8em; height: .8em; margin-right: .3em; vertical-align: -.08em; color: var(--workspace-muted); }
-  .workspace-heading p { margin-top: 8px; font-size: 13px; color: var(--workspace-muted); }
+  .workspace-heading p { margin-top: 8px; font-size: var(--brando-text-md); color: var(--workspace-muted); }
   /* "Configuration" above a settings screen's title, as on Utilities */
-  .workspace-eyebrow { display: block; margin-bottom: 8px; color: var(--workspace-muted); font-size: 10px; font-weight: 500; line-height: 1.5; letter-spacing: .12em; text-transform: uppercase; }
+  .workspace-eyebrow { display: block; margin-bottom: 8px; color: var(--workspace-muted); font-size: var(--brando-text-2xs); font-weight: 500; line-height: 1.5; letter-spacing: .12em; text-transform: uppercase; }
   .workspace-heading-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 8px; flex-shrink: 0; }
   > #content-header {
     margin: 0 0 24px; padding: 0 0 24px; border-bottom: 1px solid var(--workspace-line);
@@ -36,7 +36,7 @@
     > .content > .main { display: contents; }
     > .content > .main > h1 { grid-column: 1; grid-row: 1; min-width: 0; }
     > .content > .main > :not(h1) { grid-column: 1 / -1; grid-row: 2; }
-    .main h3 { margin: 8px 0 0; font-size: 13px; line-height: 1.55; color: var(--workspace-muted); }
+    .main h3 { margin: 8px 0 0; font-size: var(--brando-text-md); line-height: 1.55; color: var(--workspace-muted); }
     > .content > .actions { grid-column: 2; grid-row: 1; display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 8px; width: auto; max-width: none; margin: 0; padding: 0; }
   }
   /* The page header's actions. Applications' LiveViews render these as plain
@@ -46,7 +46,7 @@
     display: inline-flex; align-items: center; justify-content: center; gap: 6px;
     width: auto; min-width: 0; height: auto; min-height: var(--brando-control-md); margin: 0; padding: 5px 12px;
     border: 1px solid var(--workspace-line); border-radius: var(--brando-radius-md); background: var(--brando-surface);
-    color: var(--workspace-ink); font-size: 12px; font-weight: 400; line-height: 18px;
+    color: var(--workspace-ink); font-size: var(--brando-text-sm); font-weight: 400; line-height: 18px;
     text-decoration: none; text-transform: none; letter-spacing: 0; white-space: nowrap; box-shadow: none; cursor: pointer;
     &:hover:not(:disabled) { background: var(--workspace-wash); border-color: var(--brando-line-strong); }
     &:disabled { opacity: .45; cursor: not-allowed; }
@@ -70,44 +70,44 @@
   }
   .workspace-menu-items button {
     display: grid; gap: 2px; padding: 8px 10px; border: 0; border-radius: 4px; background: none;
-    color: var(--workspace-ink); font-size: 13px; line-height: 18px; text-align: left; cursor: pointer;
+    color: var(--workspace-ink); font-size: var(--brando-text-md); line-height: 18px; text-align: left; cursor: pointer;
   }
   .workspace-menu-items button:hover { background: var(--workspace-wash); }
-  .workspace-menu-items small { color: var(--workspace-muted); font-size: 12px; }
+  .workspace-menu-items small { color: var(--workspace-muted); font-size: var(--brando-text-sm); }
   .workspace-panel { border: 1px solid var(--workspace-line); border-radius: 7px; background: var(--brando-surface); }
   .workspace-panel + .workspace-panel { margin-top: 24px; }
   .workspace-panel-heading { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 14px 16px; border-bottom: 1px solid var(--workspace-line); background: var(--workspace-wash); border-radius: 6px 6px 0 0; }
-  .workspace-panel-heading h2 { font-size: 14px; letter-spacing: 0; }
-  .workspace-panel-heading p { margin-top: 4px; color: var(--workspace-muted); font-size: 12px; }
-  .workspace-panel-heading > span:not(.badge) { color: var(--workspace-muted); font-size: 12px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .workspace-panel-heading h2 { font-size: var(--brando-text-lg); letter-spacing: 0; }
+  .workspace-panel-heading p { margin-top: 4px; color: var(--workspace-muted); font-size: var(--brando-text-sm); }
+  .workspace-panel-heading > span:not(.badge) { color: var(--workspace-muted); font-size: var(--brando-text-sm); font-variant-numeric: tabular-nums; white-space: nowrap; }
   .workspace-empty { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 48px 24px; text-align: center; }
-  .workspace-empty p { max-width: 420px; color: var(--workspace-muted); font-size: 13px; }
+  .workspace-empty p { max-width: 420px; color: var(--workspace-muted); font-size: var(--brando-text-md); }
   /* The inset lives on the outer cells, not the wrapper, so a row's hover
      wash and an expanded row reach the panel's frame. */
   .workspace-table-scroll { position: relative; overflow-x: auto; }
   .workspace-table {
-    width: 100%; border-collapse: collapse; margin: 0; font-size: 13px;
+    width: 100%; border-collapse: collapse; margin: 0; font-size: var(--brando-text-md);
     /* Own rows only: an expanded row may hold a table of its own, and these
        would otherwise strip its borders and padding from the outside. */
     > :is(thead, tbody) > tr > :is(th, td) { text-align: left; vertical-align: middle; border: 0; }
-    > thead > tr > th { font-size: 12px; color: var(--workspace-muted); font-weight: 400; padding: 10px 12px; border-bottom: 1px solid var(--workspace-line); white-space: nowrap; }
+    > thead > tr > th { font-size: var(--brando-text-sm); color: var(--workspace-muted); font-weight: 400; padding: 10px 12px; border-bottom: 1px solid var(--workspace-line); white-space: nowrap; }
     > tbody > tr > td { padding: 12px; border-bottom: 1px solid var(--brando-line-soft); }
     > :is(thead, tbody) > tr > :is(th, td):first-child { padding-left: 16px; }
     > :is(thead, tbody) > tr > :is(th, td):last-child { padding-right: 16px; }
     > tbody > tr:last-child > td { border: 0; }
     > tbody > tr:hover { background: var(--brando-surface-hover); }
-    code { font-family: theme(typography.families.mono); font-size: 12px; }
-    > tbody > tr > td small { display: block; margin-top: 3px; color: var(--workspace-muted); font-size: 12px; }
+    code { font-family: theme(typography.families.mono); font-size: var(--brando-text-sm); }
+    > tbody > tr > td small { display: block; margin-top: 3px; color: var(--workspace-muted); font-size: var(--brando-text-sm); }
     .row-actions { width: 1%; text-align: right; white-space: nowrap; }
   }
   code { background: transparent; padding: 0; border: 0; }
-  .workspace-mono { font-family: theme(typography.families.mono); font-size: 12px; }
-  .workspace-note { color: var(--workspace-muted); font-size: 12px; padding-top: 16px; }
+  .workspace-mono { font-family: theme(typography.families.mono); font-size: var(--brando-text-sm); }
+  .workspace-note { color: var(--workspace-muted); font-size: var(--brando-text-sm); padding-top: 16px; }
   .workspace-sr-only { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 
   @media (max-width: 600px) {
     padding-top: 24px;
-    h1 { font-size: 26px; }
+    h1 { font-size: var(--brando-text-5xl); }
     .workspace-heading { align-items: flex-start; flex-direction: column; gap: 16px; }
     .workspace-heading-actions { justify-content: flex-start; }
     > #content-header > .content { grid-template-columns: minmax(0, 1fr); }

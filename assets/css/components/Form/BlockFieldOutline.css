@@ -25,7 +25,7 @@
   border-radius: 5px;
   background: var(--brando-surface);
   color: var(--brando-muted);
-  font: 500 12px/18px "Main", sans-serif;
+  font: 500 var(--brando-text-sm)/18px "Main", sans-serif;
   cursor: pointer;
   [data-icon] { flex: none; width: 14px; height: 14px; }
   &:hover, &[aria-expanded="true"] { color: var(--brando-ink); background: var(--brando-surface-hover); }
@@ -66,7 +66,7 @@
 .outline-empty {
   padding: 16px 20px;
   color: var(--brando-faint);
-  font-size: 13px;
+  font-size: var(--brando-text-md);
 }
 
 .outline-item {
@@ -121,12 +121,12 @@
   gap: 6px;
   flex: 1;
   min-width: 0;
-  font-size: 13px;
+  font-size: var(--brando-text-md);
   line-height: 1.3;
 }
 
 .outline-item-label .type-label {
-  font-size: 10px;
+  font-size: var(--brando-text-2xs);
   font-weight: 400;
   text-transform: uppercase;
   letter-spacing: 0.5px;
@@ -149,7 +149,7 @@
   overflow: hidden;
   text-overflow: ellipsis;
   color: var(--brando-faint);
-  font-size: 12px;
+  font-size: var(--brando-text-sm);
 
   &::before {
     content: "\2014\00a0";

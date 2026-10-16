@@ -48,7 +48,7 @@
   border-radius: 50%;
   background: var(--brando-badge-bg);
   color: var(--brando-badge-ink);
-  font-size: 10px;
+  font-size: var(--brando-text-2xs);
   font-weight: 500;
   letter-spacing: .02em;
   line-height: 1;
@@ -77,7 +77,7 @@
   border-radius: 4px;
   background: var(--brando-badge-bg);
   color: var(--brando-badge-ink);
-  font-size: 11px;
+  font-size: var(--brando-text-xs);
   font-weight: 500;
   line-height: 16px;
   letter-spacing: .02em;
@@ -90,7 +90,7 @@
   border: 0;
   background: none;
   font-family: theme(typography.families.mono);
-  font-size: 11px;
+  font-size: var(--brando-text-xs);
   color: var(--activity-muted);
   white-space: nowrap;
 }
@@ -105,7 +105,7 @@ button.activity-revision {
 .activity-detail {
   margin: 0;
   color: var(--activity-muted);
-  font-size: 12px;
+  font-size: var(--brando-text-sm);
   line-height: 1.5;
 }
 
@@ -150,7 +150,7 @@ button.activity-revision {
       border: 1px solid var(--brando-input-border);
       border-radius: var(--brando-input-radius);
       background: var(--brando-surface);
-      font-size: 13px;
+      font-size: var(--brando-text-md);
       color: var(--activity-ink);
     }
   }
@@ -159,7 +159,7 @@ button.activity-revision {
     margin-left: auto;
     padding: 0 4px;
     color: var(--activity-muted);
-    font-size: 12px;
+    font-size: var(--brando-text-sm);
     font-variant-numeric: tabular-nums;
   }
 
@@ -178,11 +178,11 @@ button.activity-revision {
     align-items: baseline;
     gap: 10px;
     margin: 0 0 12px;
-    font-size: 17px;
+    font-size: var(--brando-text-2xl);
 
     span {
       font-family: theme(typography.families.mono);
-      font-size: 11px;
+      font-size: var(--brando-text-xs);
       font-weight: 400;
       letter-spacing: 0;
       color: var(--activity-muted);
@@ -210,7 +210,7 @@ button.activity-revision {
     > time {
       padding-top: 4px;
       font-family: theme(typography.families.mono);
-      font-size: 12px;
+      font-size: var(--brando-text-sm);
       color: var(--activity-muted);
       font-variant-numeric: tabular-nums;
     }
@@ -221,7 +221,7 @@ button.activity-revision {
     align-items: center;
     gap: 10px;
     min-width: 0;
-    font-size: 13px;
+    font-size: var(--brando-text-md);
     line-height: 1.3;
   }
 
@@ -231,7 +231,7 @@ button.activity-revision {
     gap: 2px;
     min-width: 0;
 
-    small { font-size: 11px; color: var(--activity-muted); }
+    small { font-size: var(--brando-text-xs); color: var(--activity-muted); }
   }
 
   .activity-person-line {
@@ -255,12 +255,12 @@ button.activity-revision {
     align-items: baseline;
     gap: 4px 10px;
     margin: 0;
-    font-size: 13px;
+    font-size: var(--brando-text-md);
     line-height: 1.45;
   }
 
   .activity-entry {
-    font-size: 14px;
+    font-size: var(--brando-text-lg);
     font-weight: 500;
     color: var(--activity-ink);
     overflow-wrap: anywhere;
@@ -281,7 +281,7 @@ button.activity-revision {
     text-decoration-color: var(--brando-faint);
   }
 
-  .activity-type { font-size: 11px; color: var(--activity-muted); }
+  .activity-type { font-size: var(--brando-text-xs); color: var(--activity-muted); }
 
   .activity-links {
     display: flex;
@@ -313,14 +313,14 @@ button.activity-revision {
     gap: 2px;
     padding-top: 3px;
     color: var(--activity-muted);
-    font-size: 12px;
+    font-size: var(--brando-text-sm);
     line-height: 1.45;
     text-align: right;
   }
 
   .security-log-ip {
     font-family: theme(typography.families.mono);
-    font-size: 11px;
+    font-size: var(--brando-text-xs);
     font-variant-numeric: tabular-nums;
   }
 
@@ -331,7 +331,7 @@ button.activity-revision {
     gap: 16px;
     margin-top: 24px;
     color: var(--activity-muted);
-    font-size: 12px;
+    font-size: var(--brando-text-sm);
   }
 }
 
@@ -414,7 +414,7 @@ button.activity-revision {
     }
   }
 
-  p { margin: 0; font-size: 13px; line-height: 1.45; color: var(--activity-ink); }
+  p { margin: 0; font-size: var(--brando-text-md); line-height: 1.45; color: var(--activity-ink); }
 
   .activity-meta {
     display: flex;
@@ -425,18 +425,18 @@ button.activity-revision {
 
     time {
       font-family: theme(typography.families.mono);
-      font-size: 11px;
+      font-size: var(--brando-text-xs);
       color: var(--activity-muted);
     }
 
-    .activity-approver { font-size: 12px; color: var(--activity-muted); }
+    .activity-approver { font-size: var(--brando-text-sm); color: var(--activity-muted); }
   }
 
   .activity-compare-link {
     padding: 0;
     border: 0;
     background: none;
-    font-size: 12px;
+    font-size: var(--brando-text-sm);
     color: var(--activity-ink);
     text-decoration: underline;
     text-decoration-color: var(--brando-line-strong);
@@ -453,7 +453,7 @@ button.activity-revision {
   align-items: flex-start;
   gap: 16px;
 
-  h3 { margin: 0; font-size: 15px; font-weight: 500; }
+  h3 { margin: 0; font-size: var(--brando-text-xl); font-weight: 500; }
   .activity-compare { align-self: stretch; }
 }
 
@@ -466,5 +466,5 @@ button.activity-revision {
 .activity-compare-empty {
   margin: 0;
   color: var(--activity-muted);
-  font-size: 13px;
+  font-size: var(--brando-text-md);
 }

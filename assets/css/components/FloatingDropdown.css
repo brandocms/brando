@@ -33,7 +33,7 @@
   background: var(--brando-surface);
   color: var(--brando-ink);
   box-shadow: 0 4px 16px color-mix(in srgb, var(--brando-ink) 8%, transparent), 0 1px 3px color-mix(in srgb, var(--brando-ink) 4%, transparent);
-  font: 12px/20px "Main", sans-serif;
+  font: var(--brando-text-sm)/20px "Main", sans-serif;
   overflow: clip;
 
   > li { list-style: none; margin: 0; padding: 0; }

@@ -16,7 +16,7 @@
   border-radius: 10px;
   background: var(--brando-surface);
   color: var(--brando-ink);
-  font: 14px/20px "Main", sans-serif;
+  font: var(--brando-text-lg)/20px "Main", sans-serif;
   box-shadow: var(--brando-shadow-overlay);
 
   &[open] {
@@ -38,7 +38,7 @@
     border-radius: 4px;
     background: var(--brando-surface);
     color: var(--brando-muted);
-    font: 11px/1 "Mono", monospace;
+    font: var(--brando-text-xs)/1 "Mono", monospace;
     box-sizing: border-box;
   }
 }
@@ -55,7 +55,7 @@
   h2 {
     outline: none;
     margin: 0;
-    font-size: 18px;
+    font-size: var(--brando-text-2xl);
     font-weight: 500;
     line-height: 24px;
     letter-spacing: 0;
@@ -73,7 +73,7 @@
   kbd {
     height: 24px;
     padding: 0 7px;
-    font-size: 12px;
+    font-size: var(--brando-text-sm);
   }
 
   &:hover kbd {
@@ -110,7 +110,7 @@
   margin: 0;
   padding: 4px 0 6px;
   color: var(--brando-muted);
-  font: 11px/14px "Mono", monospace;
+  font: var(--brando-text-xs)/14px "Mono", monospace;
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
@@ -130,7 +130,7 @@
   dt {
     min-width: 0;
     margin: 0;
-    font-size: 14px;
+    font-size: var(--brando-text-lg);
     line-height: 20px;
   }
 
@@ -149,7 +149,7 @@
 .shortcut-sheet-then,
 .shortcut-sheet-or {
   color: var(--brando-faint);
-  font-size: 12px;
+  font-size: var(--brando-text-sm);
   line-height: 16px;
 }
 
@@ -176,7 +176,7 @@
   p {
     margin: 4px 0 0 26px !important;
     color: var(--brando-muted);
-    font-size: 12px;
+    font-size: var(--brando-text-sm);
     line-height: 18px;
   }
 }
@@ -186,7 +186,7 @@
   align-items: center;
   gap: 10px;
   margin: 0;
-  font-size: 14px;
+  font-size: var(--brando-text-lg);
   line-height: 20px;
   text-transform: none;
   letter-spacing: 0;

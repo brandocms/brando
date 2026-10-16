@@ -9,7 +9,7 @@
    `table/1`), whose cells are block variables. */
 :is(.field-wrapper.subform--table, .table-block) {
   --admin-field-height: 32px;
-  --admin-field-font-size: 13px;
+  --admin-field-font-size: var(--brando-text-md);
 }
 
 /* The variable list (Input.Vars, VarsList.css) shares the frame's colours and
@@ -86,7 +86,7 @@
     border-top: 0;
     background: var(--table-head);
     color: var(--table-muted);
-    font: 12px/16px "Main", sans-serif;
+    font: var(--brando-text-sm)/16px "Main", sans-serif;
     text-align: left;
     white-space: nowrap;
   }
@@ -302,7 +302,7 @@
 
     .field-error {
       color: var(--brando-error-ink);
-      font-size: 11px;
+      font-size: var(--brando-text-xs);
       line-height: 15px;
       white-space: normal;
     }
@@ -325,13 +325,13 @@
     background: transparent;
     box-shadow: none;
     color: var(--table-ink);
-    font: 13px/20px "Main", sans-serif;
+    font: var(--brando-text-md)/20px "Main", sans-serif;
     transition: border-color 120ms ease, background-color 120ms ease, box-shadow 120ms ease;
   }
 
   .subform-fields :is(input, textarea).monospace {
     font-family: "Mono", monospace;
-    font-size: 12.5px;
+    font-size: var(--brando-text-md);
     letter-spacing: -.01em;
   }
 
@@ -400,12 +400,12 @@
       padding: 0 8px;
       border: 1px solid transparent;
       border-radius: 4px;
-      font-size: 13px;
+      font-size: var(--brando-text-md);
     }
 
     input::placeholder {
       color: var(--table-faint);
-      font-size: 13px;
+      font-size: var(--brando-text-md);
     }
   }
 
@@ -466,7 +466,7 @@
       align-items: baseline;
       gap: 8px;
       min-width: 0;
-      font: 13px/20px "Main", sans-serif;
+      font: var(--brando-text-md)/20px "Main", sans-serif;
       text-transform: none;
       white-space: nowrap;
     }
@@ -475,7 +475,7 @@
       flex: 0 1 auto;
       min-width: 0;
       overflow: hidden;
-      font-size: 13px;
+      font-size: var(--brando-text-md);
       text-overflow: ellipsis;
       text-transform: none;
     }
@@ -485,7 +485,7 @@
       margin: 0;
       overflow: hidden;
       color: var(--table-muted);
-      font-size: 12px;
+      font-size: var(--brando-text-sm);
       text-overflow: ellipsis;
     }
 
@@ -520,7 +520,7 @@
   .subform-fields .disclosed-text-summary {
     min-height: 32px;
     padding: 0 8px;
-    font-size: 12px;
+    font-size: var(--brando-text-sm);
     white-space: nowrap;
   }
 
@@ -545,7 +545,7 @@
       display: inline-flex;
       align-items: center;
       gap: 5px;
-      font-size: 13px;
+      font-size: var(--brando-text-md);
     }
   }
 
@@ -588,7 +588,7 @@
 
     .select-label {
       overflow: hidden;
-      font-size: 13px;
+      font-size: var(--brando-text-md);
       text-overflow: ellipsis;
       white-space: nowrap;
     }
@@ -631,7 +631,7 @@
     .color-hex,
     .circle.tiny + .color-hex {
       margin: 0;
-      font: 12px/20px "Mono", monospace;
+      font: var(--brando-text-sm)/20px "Mono", monospace;
       text-transform: uppercase;
     }
 
@@ -663,7 +663,7 @@
       padding: 0 8px;
       border: 0;
       background: transparent;
-      font-size: 13px;
+      font-size: var(--brando-text-md);
       field-sizing: content;
     }
 
@@ -678,7 +678,7 @@
       border: 0;
       background: transparent;
       color: var(--table-muted);
-      font-size: 11px;
+      font-size: var(--brando-text-xs);
       opacity: 0;
     }
   }
@@ -744,7 +744,7 @@
 
     .media-field-name {
       overflow: hidden;
-      font-size: 13px;
+      font-size: var(--brando-text-md);
       line-height: 18px;
       text-overflow: ellipsis;
       white-space: nowrap;
@@ -767,7 +767,7 @@
       border-color: transparent;
       background: transparent;
       color: var(--table-muted);
-      font-size: 12px;
+      font-size: var(--brando-text-sm);
     }
   }
 
@@ -802,7 +802,7 @@
       > * {
         margin: 0;
         overflow: hidden;
-        font-size: 13px;
+        font-size: var(--brando-text-md);
         line-height: 20px;
         text-overflow: ellipsis;
         white-space: nowrap;
@@ -826,7 +826,7 @@
       border-color: transparent;
       background: transparent;
       color: var(--table-muted);
-      font-size: 11px;
+      font-size: var(--brando-text-xs);
       opacity: 0;
       transition: opacity 120ms ease;
     }
@@ -870,12 +870,12 @@
 
   .subform-table-count {
     color: var(--table-muted);
-    font-size: 12px;
+    font-size: var(--brando-text-sm);
   }
 
   .subform-empty {
     padding: 14px 12px;
     color: var(--table-muted);
-    font-size: 13px;
+    font-size: var(--brando-text-md);
   }
 }

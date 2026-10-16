@@ -16,7 +16,7 @@
   border-radius: 10px;
   background: var(--brando-surface);
   color: var(--brando-ink);
-  font: 14px/20px "Main", sans-serif;
+  font: var(--brando-text-lg)/20px "Main", sans-serif;
   box-shadow: var(--brando-shadow-overlay);
   &[open] {
     display: flex;
@@ -33,7 +33,7 @@
     border-radius: 4px;
     background: var(--brando-surface);
     color: var(--brando-muted);
-    font: 11px/1 "Mono", monospace;
+    font: var(--brando-text-xs)/1 "Mono", monospace;
     box-sizing: border-box;
   }
 }
@@ -62,7 +62,7 @@
     border: 0;
     background: transparent;
     color: var(--brando-ink);
-    font: 18px/24px "Main", sans-serif;
+    font: var(--brando-text-2xl)/24px "Main", sans-serif;
     box-shadow: none;
 
     &:focus,
@@ -74,7 +74,7 @@
 
     &::placeholder {
       color: var(--brando-muted);
-      font-size: 16px;
+      font-size: var(--brando-text-xl);
     }
   }
 
@@ -89,7 +89,7 @@
     kbd {
       height: 24px;
       padding: 0 7px;
-      font-size: 12px;
+      font-size: var(--brando-text-sm);
     }
 
     &:hover kbd {
@@ -171,7 +171,7 @@
 .command-palette-heading {
   padding: 6px 8px 8px;
   color: var(--brando-muted);
-  font: 11px/14px "Mono", monospace;
+  font: var(--brando-text-xs)/14px "Mono", monospace;
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
@@ -242,7 +242,7 @@
   .command-palette-label {
     min-width: 0;
     overflow: hidden;
-    font-size: 15px;
+    font-size: var(--brando-text-xl);
     line-height: 20px;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -253,7 +253,7 @@
     flex: none;
     gap: 5px;
     color: var(--brando-muted);
-    font-size: 13px;
+    font-size: var(--brando-text-md);
     line-height: 18px;
     white-space: nowrap;
 
@@ -269,7 +269,7 @@
     align-items: center;
     gap: 7px;
     color: var(--brando-muted);
-    font-size: 13px;
+    font-size: var(--brando-text-md);
 
     > span {
       text-box: trim-both cap alphabetic;
@@ -290,7 +290,7 @@
   .command-palette-count {
     flex: none;
     color: var(--brando-muted);
-    font-size: 13px;
+    font-size: var(--brando-text-md);
     font-variant-numeric: tabular-nums;
   }
 
@@ -343,7 +343,7 @@
   border-top: 1px solid var(--brando-line);
   background: var(--brando-surface-shaded);
   color: var(--brando-muted);
-  font: 12px/16px "Mono", monospace;
+  font: var(--brando-text-sm)/16px "Mono", monospace;
 
   .command-palette-hint {
     display: inline-flex;

@@ -4,7 +4,7 @@
   }
 
   .preview.compact {
-    @font mono 13px;
+    @font mono var(--brando-text-md);
     display: flex;
     align-items: stretch;
     border: 1px dashed currentColor;
@@ -22,7 +22,7 @@
 
     .title-and-alt {
       @font main;
-      font-size: 12px;
+      font-size: var(--brando-text-sm);
       display: flex;
       flex-direction: column;
       row-gap: 7px;
@@ -30,7 +30,7 @@
       > div span {
         @font mono;
         text-transform: uppercase;
-        font-size: 10px;
+        font-size: var(--brando-text-2xs);
         font-weight: normal;
       }
     }
@@ -41,7 +41,7 @@
       justify-content: space-between;
       margin-top: 0;
       height: 100%;
-      font-size: 13px;
+      font-size: var(--brando-text-md);
       cursor: auto;
       text-align: left;
     }
@@ -105,7 +105,7 @@
     }
 
     .instructions {
-      font-size: 16px;
+      font-size: var(--brando-text-xl);
 
       button {
         margin-top: 10px;
@@ -134,7 +134,7 @@
   .modal-content {
     .image-info {
       @space margin-top 15px;
-      @fontsize 13px;
+      font-size: var(--brando-text-md);
     }
 
     [data-name="TipTap"] .ProseMirror {
@@ -148,7 +148,7 @@
 
       .instructions {
         text-align: center;
-        font-size: 15px;
+        font-size: var(--brando-text-xl);
       }
 
       svg {

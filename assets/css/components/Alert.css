@@ -15,7 +15,7 @@
   border-radius: 10px;
   background-color: color-mix(in srgb, var(--alert-accent) 8%, var(--brando-surface));
   color: var(--brando-ink);
-  font-size: 13px;
+  font-size: var(--brando-text-md);
   line-height: 1.5;
 
   &.warning {
