@@ -46,16 +46,15 @@
 .modal .modal-body { padding: 24px 28px; min-height: 0; max-height: none; flex: 1 1 auto; overflow: auto; scrollbar-width: thin; color: var(--modal-ink); font: 14px/1.5 "Main", sans-serif; }
 .modal .modal-footer { padding: 16px 24px; min-height: 70px; gap: 10px; border-top: 1px solid var(--modal-line); flex-shrink: 0; background: white; }
 .modal .modal-footer-note { margin-right: auto; font-size: 12px; color: var(--modal-muted); }
-.modal .modal-content :is(button.primary, button.secondary, button.tertiary, a.secondary, button.tiny) {
+.modal .modal-content :is(button.primary, button.secondary, a.secondary, button.tiny) {
   display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 34px; margin: 0;
   padding: 7px 13px; border: 1px solid var(--modal-line); border-radius: 5px; box-shadow: none;
   background: white; color: var(--modal-ink); font: 13px/18px "Main", sans-serif; text-transform: none; letter-spacing: 0;
 }
-.modal .modal-content :is(button.secondary, button.tertiary, button.tiny):hover { background: var(--brando-surface-tint); border-color: var(--brando-line-strong); }
+.modal .modal-content :is(button.secondary, a.secondary, button.tiny):hover { background: var(--brando-surface-tint); border-color: var(--brando-line-strong); }
 .modal .modal-content button.primary { background: var(--modal-accent); border-color: var(--modal-accent); color: white; }
 .modal .modal-content button.primary:hover { background: var(--brando-accent-hover); }
-.modal .modal-content button.primary.danger { background: var(--brando-error-ink); border-color: var(--brando-error-ink); }
-.modal .modal-content button:disabled { opacity: .45; cursor: not-allowed; }
+.modal .modal-content button:disabled:not(.btn) { opacity: .45; cursor: not-allowed; }
 .modal :is(button, input, a, select):focus-visible { outline: 2px solid var(--modal-accent); outline-offset: 3px; }
 .modal .modal-content .field-wrapper { margin: 0 0 20px; }
 .modal .modal-content .field-wrapper:last-child { margin-bottom: 0; }
@@ -167,7 +166,7 @@
 .modal-status circle.deleted { fill: var(--brando-status-deleted); }
 .modal--picker .tiny-toggle-wrapper { display: flex; align-items: center; gap: 12px; margin: 0; }
 .modal--picker .tiny-toggle-label { font: 13px/20px "Main", sans-serif; color: var(--modal-ink); text-transform: none; letter-spacing: 0; }
-.modal--picker .modal-footer .tertiary.ml-auto { margin: 0 auto 0 0; order: -1; color: var(--brando-error-ink); }
+.modal--picker .modal-footer .ml-auto { margin: 0 auto 0 0; order: -1; }
 
 /* B: transfer & delete keeps the ownership decision beside the summary. */
 .modal--transfer .modal-header { background: var(--brando-surface-shaded); }
@@ -233,11 +232,10 @@
 }
 
 /* Form and button globals also apply inside nested dialogs. Own these values here. */
-.modal .modal-content :is(button.primary, button.secondary, button.tertiary, a.secondary, button.tiny) { min-width: 0; width: auto; height: 34px; border-color: var(--modal-line); }
+.modal .modal-content :is(button.primary, button.secondary, a.secondary, button.tiny) { min-width: 0; width: auto; height: 34px; border-color: var(--modal-line); }
 /* Legacy secondary buttons set their border with !important (Button.css). */
 .modal .modal-content :is(button.secondary, a.secondary) { border-color: var(--modal-line) !important; }
 .modal .modal-content button.primary { border-color: var(--modal-accent); }
-.modal .modal-content button.primary.danger { border-color: var(--brando-error-ink); }
 .modal .modal-content .identifier-picker-nav .button-group-vertical.tiny button.secondary { border-color: transparent !important; border-radius: 5px !important; width: 100%; height: auto; font: 13px/18px "Main", sans-serif; text-transform: none; letter-spacing: 0; }
 .modal.modal--picker .modal-content .link-picker-modes .field-wrapper > .label-wrapper,
 .modal.modal--picker .modal-content .identifier-picker-results .select-filter .field-wrapper > .label-wrapper { display: none; }

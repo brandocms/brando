@@ -310,11 +310,11 @@ defmodule BrandoAdmin.Reauth do
         <.prompt_form reauth={@reauth} />
       </div>
       <:footer>
-        <button type="button" class="secondary" phx-click="brando:reauth:cancel">{gettext("Cancel")}</button>
+        <button type="button" class="btn" phx-click="brando:reauth:cancel">{gettext("Cancel")}</button>
         <button
           type="submit"
           form="reauth-form"
-          class="primary"
+          class="btn btn--primary"
           phx-disable-with={gettext("Checking...")}
           data-testid="reauth-submit"
         >

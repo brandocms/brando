@@ -205,7 +205,7 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
                     </div>
                     <button
                       type="button"
-                      class="secondary"
+                      class="btn"
                       phx-click={
                         JS.push("select_custom_value", target: @myself)
                         |> JS.push("close_modal", target: @myself)
@@ -233,7 +233,7 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
                         </div>
                       </div>
                     <% end %>
-                    <button phx-click={JS.push("save_new_entry", target: @myself)} type="button" class="primary">
+                    <button phx-click={JS.push("save_new_entry", target: @myself)} type="button" class="btn btn--primary">
                       {gettext("Save")}
                     </button>
                   </.form>
@@ -245,7 +245,7 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
                 <button
                   :if={@resetable}
                   type="button"
-                  class="tertiary"
+                  class="btn btn--quiet btn--sm"
                   value={nil}
                   phx-click={JS.push("select_option", target: @myself)}
                 >
@@ -253,7 +253,7 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
                 </button>
                 <button
                   type="button"
-                  class="primary small"
+                  class="btn btn--sm btn--primary"
                   phx-click={JS.push("close_modal", target: @myself) |> hide_modal("##{@modal_id}")}
                 >
                   OK
@@ -511,7 +511,13 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
     ~H"""
     <span class="status-label"><.status_circle status={@identifier.status} /> {@identifier.title}</span>
     <%= if @deletable do %>
-      <button class="delete tiny" type="button" value={@entry_id} phx-click={JS.push("select_option", target: @target)}>
+      <button
+        class="btn btn--sm btn--icon btn--quiet"
+        type="button"
+        aria-label={gettext("Remove")}
+        value={@entry_id}
+        phx-click={JS.push("select_option", target: @target)}
+      >
         <.icon name="x" />
       </button>
     <% end %>

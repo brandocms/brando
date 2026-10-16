@@ -113,26 +113,6 @@ figcaption.tiny {
         background: var(--brando-surface);
       }
     }
-
-    button.secondary {
-      color: var(--brando-ink);
-      border-color: color-mix(in srgb, var(--brando-ink) 35%, transparent) !important;
-
-      &:hover {
-        background-color: var(--brando-ink);
-        color: var(--brando-ink-inverse);
-      }
-    }
-
-    button.primary {
-      background-color: var(--brando-accent);
-      color: var(--brando-ink-inverse);
-      border-color: var(--brando-line) !important;
-
-      &:hover {
-        background-color: color-mix(in srgb, var(--brando-ink) 85%, var(--brando-surface));
-      }
-    }
   }
 
   &.narrow {
@@ -343,15 +323,6 @@ figcaption.tiny {
     }
   }
 
-  button.secondary {
-    color: var(--brando-ink-inverse);
-    border-color: var(--brando-ink-inverse) !important;
-
-    &:hover {
-      color: var(--brando-ink);
-    }
-  }
-
   .drawer-info {
     width: 100% !important;
     flex-basis: 100% !important;
@@ -406,19 +377,6 @@ figcaption.tiny {
     .input-image .image-wrapper-compact {
       border: 1px solid var(--brando-ink-inverse);
       background-color: transparent;
-    }
-
-    button.tiny {
-      color: var(--brando-ink-inverse);
-      border: 1px solid var(--brando-ink-inverse);
-      transition:
-        background-color 250ms ease,
-        color 250ms ease;
-
-      &:hover {
-        background-color: var(--brando-surface);
-        color: var(--brando-ink);
-      }
     }
   }
 

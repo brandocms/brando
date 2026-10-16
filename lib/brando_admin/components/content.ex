@@ -215,7 +215,7 @@ defmodule BrandoAdmin.Components.Content do
           <%= if @footer != [] do %>
             <footer class="modal-footer">
               {render_slot(@footer)}
-              <button :if={@ok} class="primary" type="button" phx-click={@ok} phx-value-id={@id}>Ok</button>
+              <button :if={@ok} class="btn btn--primary" type="button" phx-click={@ok} phx-value-id={@id}>Ok</button>
             </footer>
           <% end %>
         </div>

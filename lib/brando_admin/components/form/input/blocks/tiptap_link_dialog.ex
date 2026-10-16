@@ -242,13 +242,13 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.TipTapLinkDialog do
           <p id="tiptap-link-error" class="tiptap-link-error" role="alert">{@error}</p>
         </.form>
         <:footer>
-          <button type="button" class="secondary" phx-click="close_dialog" phx-target={@myself} disabled={@applying}>{gettext(
+          <button type="button" class="btn" phx-click="close_dialog" phx-target={@myself} disabled={@applying}>{gettext(
             "Cancel"
           )}</button>
           <button
             type="submit"
             form="tiptap-link-form"
-            class="primary"
+            class="btn btn--primary"
             phx-disable-with={gettext("Applying…")}
             disabled={
               @applying ||
@@ -258,7 +258,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.TipTapLinkDialog do
           <button
             :if={@has_existing_link?}
             type="button"
-            class="tertiary ml-auto"
+            class="btn btn--quiet btn--danger ml-auto"
             phx-click="remove_link"
             phx-target={@myself}
           >{gettext("Remove link")}</button>

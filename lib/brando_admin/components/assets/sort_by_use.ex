@@ -159,8 +159,8 @@ defmodule BrandoAdmin.Components.Assets.SortByUse do
         </ul>
       </form>
       <:footer>
-        <button type="button" class="secondary" phx-click="sweep_close">{gettext("Cancel")}</button>
-        <button :if={@plan.groups != []} type="submit" form={"#{@asset_type}-sweep-form"} class="primary">
+        <button type="button" class="btn" phx-click="sweep_close">{gettext("Cancel")}</button>
+        <button :if={@plan.groups != []} type="submit" form={"#{@asset_type}-sweep-form"} class="btn btn--primary">
           {submit_label(@asset_type)}
         </button>
       </:footer>

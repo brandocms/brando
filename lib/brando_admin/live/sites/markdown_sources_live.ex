@@ -152,14 +152,14 @@ defmodule BrandoAdmin.Sites.MarkdownSourcesLive do
                 </li>
               </ul>
               <div class="markdown-source-actions">
-                <button type="submit" class="primary" phx-disable-with={gettext("Please wait…")}>
+                <button type="submit" class="btn btn--primary" phx-disable-with={gettext("Please wait…")}>
                   {if @source_mode == "folder", do: gettext("Find Markdown files"), else: gettext("Save source")}
                 </button>
               </div>
             </fieldset>
           </.form>
           <div :if={@source.id} class="markdown-source-actions">
-            <button type="button" phx-click="new">{gettext("Add another source")}</button>
+            <button type="button" class="btn" phx-click="new">{gettext("Add another source")}</button>
           </div>
           <p :if={@discovering} role="status" class="markdown-source-note">{gettext("Finding Markdown files…")}</p>
           <form
@@ -180,7 +180,7 @@ defmodule BrandoAdmin.Sites.MarkdownSourcesLive do
               </label>
             </div>
             <div class="markdown-source-actions">
-              <button type="submit" class="primary" disabled={@folder_selection == [] || !@can_manage}>{ngettext(
+              <button type="submit" class="btn btn--primary" disabled={@folder_selection == [] || !@can_manage}>{ngettext(
                 "Add %{count} document",
                 "Add %{count} documents",
                 length(@folder_selection)
@@ -227,11 +227,15 @@ defmodule BrandoAdmin.Sites.MarkdownSourcesLive do
               <p :if={source.last_error} role="status" class="markdown-source-error">{source.last_error}</p>
             </div>
             <div class="markdown-source-actions">
-              <button type="button" phx-click="edit" phx-value-id={source.id}>{gettext("Edit")}</button>
-              <button type="button" phx-click="sync" phx-value-id={source.id} disabled={!@can_sync || !source.enabled}>{gettext(
-                "Refresh from GitHub"
-              )}</button>
-              <button type="button" phx-click="history" phx-value-id={source.id}>{gettext("History")}</button>
+              <button type="button" class="btn" phx-click="edit" phx-value-id={source.id}>{gettext("Edit")}</button>
+              <button
+                type="button"
+                class="btn"
+                phx-click="sync"
+                phx-value-id={source.id}
+                disabled={!@can_sync || !source.enabled}
+              >{gettext("Refresh from GitHub")}</button>
+              <button type="button" class="btn" phx-click="history" phx-value-id={source.id}>{gettext("History")}</button>
             </div>
             <ol :if={@selected == source.id} class="markdown-source-history">
               <li :for={event <- @events}>

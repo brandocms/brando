@@ -11,7 +11,7 @@ defmodule BrandoAdmin.Content.TableTemplateListLive do
       <.link
         :if={BrandoAdmin.Authorization.allowed?(:create, @schema)}
         navigate="/admin/config/content/table_templates/create"
-        class="primary"
+        class="btn btn--primary"
       >
         {gettext("Create new")}
       </.link>

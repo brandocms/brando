@@ -57,7 +57,7 @@ defmodule BrandoAdmin.Sites.PublishingLive do
       title={gettext("Publishing")}
       subtitle={gettext("Build, preview, deploy, and roll back versioned static artifacts")}
     >
-      <button type="button" class="secondary" phx-click="refresh">{gettext("Refresh")}</button>
+      <button type="button" class="btn" phx-click="refresh">{gettext("Refresh")}</button>
     </Content.header>
 
     <div class="environment-management-live">
@@ -100,7 +100,7 @@ defmodule BrandoAdmin.Sites.PublishingLive do
           <div class="environment-actions">
             <button
               type="submit"
-              class="primary"
+              class="btn btn--primary"
               disabled={!@can_manage? || !BrandoAdmin.Authorization.allowed?(:build, :publishing)}
               phx-disable-with={gettext("Queueing…")}
             >
@@ -134,7 +134,7 @@ defmodule BrandoAdmin.Sites.PublishingLive do
           </label>
           <button
             type="submit"
-            class="secondary"
+            class="btn"
             disabled={
               !@can_manage? || !BrandoAdmin.Authorization.allowed?(:build, :publishing) ||
                 !BrandoAdmin.Authorization.allowed?(:schedule, :publishing)
@@ -202,7 +202,7 @@ defmodule BrandoAdmin.Sites.PublishingLive do
           </label>
           <button
             type="submit"
-            class="secondary"
+            class="btn"
             disabled={!@can_manage? || !BrandoAdmin.Authorization.allowed?(:deploy, :publishing)}
           >
             {gettext("Save deployment settings")}
@@ -255,7 +255,7 @@ defmodule BrandoAdmin.Sites.PublishingLive do
                 <td class="environment-actions">
                   <a
                     :if={previewable?(build)}
-                    class="button secondary small"
+                    class="btn btn--sm"
                     href={preview_url(build)}
                     target="_blank"
                     rel="noreferrer"
@@ -264,7 +264,7 @@ defmodule BrandoAdmin.Sites.PublishingLive do
                   </a>
                   <a
                     :if={build.status == :deployed && public_url(build)}
-                    class="button secondary small"
+                    class="btn btn--sm"
                     href={public_url(build)}
                     target="_blank"
                     rel="noreferrer"
@@ -274,7 +274,7 @@ defmodule BrandoAdmin.Sites.PublishingLive do
                   <button
                     :if={build.status == :ready && is_nil(build.pruned_at)}
                     type="button"
-                    class="primary small"
+                    class="btn btn--sm btn--primary"
                     disabled={
                       !@can_manage? || !BrandoAdmin.Authorization.allowed?(:deploy, :publishing) || !deploy_configured?(@site)
                     }
@@ -287,7 +287,7 @@ defmodule BrandoAdmin.Sites.PublishingLive do
                   <button
                     :if={build.status == :archived && is_nil(build.pruned_at)}
                     type="button"
-                    class="secondary small"
+                    class="btn btn--sm"
                     disabled={
                       !@can_manage? || !BrandoAdmin.Authorization.allowed?(:deploy, :publishing) || !deploy_configured?(@site)
                     }

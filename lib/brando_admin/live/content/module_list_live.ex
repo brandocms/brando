@@ -128,7 +128,11 @@ defmodule BrandoAdmin.Content.ModuleListLive do
           </div>
         </div>
 
-        <button class="primary mt-2" type="button" phx-click={JS.push("import_modules") |> hide_modal("#module-import-modal")}>
+        <button
+          class="btn btn--primary mt-2"
+          type="button"
+          phx-click={JS.push("import_modules") |> hide_modal("#module-import-modal")}
+        >
           {gettext("Import modules")}
         </button>
       </div>

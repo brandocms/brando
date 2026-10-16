@@ -100,12 +100,12 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery.VideoConfig do
         <footer class="modal-footer gallery-object-config-footer">
           <button
             type="button"
-            class="secondary"
+            class="btn"
             phx-click={hide_modal("##{@modal_id}") |> JS.push("cancel_config", target: @myself)}
           >
             {gettext("Cancel")}
           </button>
-          <button type="submit" class="primary">{gettext("Save")}</button>
+          <button type="submit" class="btn btn--primary">{gettext("Save")}</button>
         </footer>
       </form>
     </div>

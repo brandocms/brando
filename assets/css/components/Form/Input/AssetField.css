@@ -25,20 +25,6 @@
   .subform & {
     background-color: transparent;
   }
-
-  /* Softer than the global `button.tiny`, which reads too hard against the
-     light well — especially in the gallery's four-button action row. */
-  .tiny {
-    border-color: var(--brando-input-border);
-    color: var(--brando-ink);
-    background-color: var(--brando-surface);
-    opacity: 0.85;
-
-    &:hover {
-      opacity: 1;
-      border-color: var(--brando-line-strong);
-    }
-  }
 }
 
 .asset-field--single {
@@ -105,7 +91,7 @@
       @font main;
     }
 
-    .tiny {
+    .btn {
       width: fit-content;
       margin-top: 5px;
     }

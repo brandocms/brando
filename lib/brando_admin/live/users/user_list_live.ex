@@ -148,12 +148,12 @@ defmodule BrandoAdmin.Users.UserListLive do
       </div>
       <:footer>
         <span class="modal-footer-note">{gettext("Content is retained.")}</span>
-        <button type="button" class="secondary" phx-click={hide_modal("#transfer-content-modal") |> JS.push("cancel_delete")}>{gettext(
+        <button type="button" class="btn" phx-click={hide_modal("#transfer-content-modal") |> JS.push("cancel_delete")}>{gettext(
           "Cancel"
         )}</button>
         <button
           type="button"
-          class="primary danger"
+          class="btn btn--primary btn--danger"
           disabled={is_nil(@transfer_to_user_id)}
           phx-click="confirm_transfer_delete"
         >{gettext("Transfer & Delete")}</button>

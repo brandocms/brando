@@ -723,7 +723,7 @@ defmodule BrandoAdmin.Components.ImagePicker do
             </div>
             <div class="media-destination-actions">
               <button
-                class="primary small"
+                class="btn btn--sm btn--primary"
                 type="button"
                 phx-click={JS.push("confirm_block_upload_folder", target: @myself) |> toggle_drawer("#image-picker")}
               >

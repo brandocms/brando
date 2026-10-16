@@ -467,7 +467,7 @@ defmodule BrandoAdmin.Components.Form.Input.Image do
               ● {Brando.Images.text(@image, :title, nil)}
             </div>
           </div>
-          <button class="tiny" type="button" phx-click={@click}>
+          <button class="btn btn--sm" type="button" phx-click={@click}>
             {gettext("Edit image")}
           </button>
         </div>
@@ -478,7 +478,7 @@ defmodule BrandoAdmin.Components.Form.Input.Image do
 
         <div :if={@editable} class="image-info">
           <span :if={!@compact}>{gettext("No image associated with field")}</span>
-          <button class="tiny" type="button" phx-click={@click} phx-value-id={"edit-image-#{@field.id}"}>
+          <button class="btn btn--sm" type="button" phx-click={@click} phx-value-id={"edit-image-#{@field.id}"}>
             {gettext("Add image")}
           </button>
         </div>

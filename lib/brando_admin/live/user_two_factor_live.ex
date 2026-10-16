@@ -38,7 +38,7 @@ defmodule BrandoAdmin.UserTwoFactorLive do
             <button
               type="button"
               id="two-factor-passkey"
-              class="primary"
+              class="btn btn--lg btn--primary"
               phx-hook="Brando.Passkey"
               data-passkey="login"
               data-mode="second_factor"
@@ -78,7 +78,7 @@ defmodule BrandoAdmin.UserTwoFactorLive do
             </details>
             <div class="login-actions">
               <button
-                class={[!@passkeys? && "primary"]}
+                class={["btn btn--lg", !@passkeys? && "btn--primary"]}
                 phx-disable-with={gettext("Checking...")}
                 data-testid="two-factor-submit"
               >
@@ -96,7 +96,9 @@ defmodule BrandoAdmin.UserTwoFactorLive do
               </p>
               <.code_field form={@form} label={gettext("Recovery code")} />
               <div class="login-actions">
-                <button phx-disable-with={gettext("Checking...")} data-testid="two-factor-submit">{gettext("Verify")}</button>
+                <button class="btn btn--lg" phx-disable-with={gettext("Checking...")} data-testid="two-factor-submit">{gettext(
+                  "Verify"
+                )}</button>
               </div>
             </details>
             <div class="login-actions">

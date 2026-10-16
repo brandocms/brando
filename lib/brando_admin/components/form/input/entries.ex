@@ -219,7 +219,7 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
               :for={{label, schema, _} <- @available_schemas}
               :key={schema}
               type="button"
-              class="secondary"
+              class="btn"
               phx-click={JS.push("select_schema", target: @myself)}
               phx-value-schema={schema}
             >

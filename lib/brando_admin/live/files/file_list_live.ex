@@ -306,10 +306,10 @@ defmodule BrandoAdmin.Files.FileListLive do
           <p class="replacement-prompt">
             {gettext("Drop a %{extension} file here", extension: Path.extname(@replacement_file.filename))}
           </p>
-          <button type="button" class="secondary small upload-trigger">{gettext("Choose file")}</button>
+          <button type="button" class="btn btn--sm upload-trigger">{gettext("Choose file")}</button>
         </div>
         <:footer>
-          <button type="button" class="secondary" phx-click="close_file_replacement">{gettext("Close")}</button>
+          <button type="button" class="btn" phx-click="close_file_replacement">{gettext("Close")}</button>
         </:footer>
       </Content.modal>
 

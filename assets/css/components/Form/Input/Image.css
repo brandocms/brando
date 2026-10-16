@@ -26,12 +26,6 @@
   }
 }
 
-.secondary + .file-input-wrapper {
-  .label {
-    border-top: none;
-  }
-}
-
 .input-image {
   &.small {
     .image-wrapper-compact {

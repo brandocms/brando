@@ -3551,12 +3551,12 @@ defmodule BrandoAdmin.Components.Form do
         <p>{gettext("Permanent redirect (301)")}</p>
         <p :if={@permalink_redirect_error} role="alert">{@permalink_redirect_error}</p>
         <:footer>
-          <button type="button" class="secondary" phx-click={JS.push("skip_permalink_redirect", target: @myself)}>
+          <button type="button" class="btn" phx-click={JS.push("skip_permalink_redirect", target: @myself)}>
             {gettext("Continue without redirect")}
           </button>
           <button
             type="button"
-            class="primary"
+            class="btn btn--primary"
             phx-click={JS.push("create_permalink_redirect", target: @myself)}
             phx-disable-with={gettext("Creating redirect...")}
           >
@@ -4033,7 +4033,7 @@ defmodule BrandoAdmin.Components.Form do
             label={gettext("Save and close")}
             shortcut={%{key: "S", shift: true}}
             icon="check"
-            class="primary submit-button"
+            class="btn btn--lg btn--save submit-button"
           />
 
           <%!-- A settings screen has one Save, in a bar that stays in view. --%>
@@ -4055,7 +4055,7 @@ defmodule BrandoAdmin.Components.Form do
               label={gettext("Save")}
               shortcut={%{key: "S"}}
               icon="check"
-              class="primary submit-button"
+              class="btn btn--lg btn--save submit-button"
             />
           </div>
 

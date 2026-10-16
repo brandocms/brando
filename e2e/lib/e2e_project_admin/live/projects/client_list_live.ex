@@ -5,21 +5,25 @@ defmodule E2eProjectAdmin.Projects.ClientListLive do
 
   def render(assigns) do
     ~H"""
-    <Content.header icon={@page_icon}
+    <Content.header
+      icon={@page_icon}
       title={gettext("Clients")}
-      subtitle={gettext("Overview")}>
-      <.link navigate={@admin_create_url} class="primary">
-        <%= gettext("Create new") %>
+      subtitle={gettext("Overview")}
+    >
+      <.link navigate={@admin_create_url} class="btn btn--primary">
+        {gettext("Create new")}
       </.link>
     </Content.header>
 
-    <.live_component module={Content.List}
+    <.live_component
+      module={Content.List}
       id={"content_listing_#{@schema}_default"}
       schema={@schema}
       current_user={@current_user}
       uri={@uri}
       params={@params}
-      listing={:default} />
+      listing={:default}
+    />
     """
   end
 end

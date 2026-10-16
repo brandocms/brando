@@ -123,7 +123,7 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
             <:header>
               <%= if @select_form do %>
                 <button
-                  class="header-button secondary"
+                  class="btn header-button"
                   type="button"
                   phx-click={JS.push("show_form", target: @myself) |> show_modal("##{@create_modal_id}")}
                 >
@@ -223,12 +223,17 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
             </div>
             <:footer>
               <div class="button-group">
-                <button :if={@resetable} type="button" class="tertiary" phx-click={JS.push("reset", target: @myself)}>
+                <button
+                  :if={@resetable}
+                  type="button"
+                  class="btn btn--quiet btn--sm"
+                  phx-click={JS.push("reset", target: @myself)}
+                >
                   {gettext("Reset value")}
                 </button>
                 <button
                   type="button"
-                  class="primary small"
+                  class="btn btn--sm btn--primary"
                   phx-click={JS.push("toggle_modal", target: @myself) |> hide_modal("##{@modal_id}")}
                 >
                   OK
@@ -277,7 +282,7 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
               <div class="button-group">
                 <button
                   type="button"
-                  class="secondary small"
+                  class="btn btn--sm"
                   phx-click={JS.push("hide_form", target: @myself) |> hide_modal("##{@create_modal_id}")}
                   phx-target={@myself}
                 >
@@ -285,7 +290,7 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
                 </button>
                 <button
                   type="button"
-                  class="primary small"
+                  class="btn btn--sm btn--primary"
                   phx-click={JS.push("save_new_entry", target: @myself)}
                   phx-target={@myself}
                 >
@@ -1182,7 +1187,7 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
         <span class="invalid-options-warning-text">{@message}</span>
         <button
           type="button"
-          class="tiny clear-invalid-button"
+          class="btn btn--sm clear-invalid-button"
           phx-click={JS.push("clear_invalid_options", target: @target)}
         >
           {gettext("Remove invalid")}

@@ -193,7 +193,7 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
               <button
                 :if={!@entry_form}
                 phx-click={show_modal("##{@form.id}-#{@key}-icon")}
-                class="secondary module-icon-button"
+                class="btn module-icon-button"
                 type="button"
               >
                 <.icon name="image" />
@@ -207,7 +207,7 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
           <.sketch svg={@form[:svg].value} sketch={assigns[:sketch]} />
           <Input.code id={"#{@form.id}-svg"} field={@form[:svg]} label={gettext("SVG")} />
           <:footer>
-            <button type="button" class="primary" phx-click={hide_modal("##{@form.id}-#{@key}-icon")}>
+            <button type="button" class="btn btn--primary" phx-click={hide_modal("##{@form.id}-#{@key}-icon")}>
               {gettext("Done")}
             </button>
           </:footer>
@@ -363,7 +363,7 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
                       <:footer>
                         <button
                           type="button"
-                          class="primary"
+                          class="btn btn--primary"
                           phx-click={close_item_modal("##{@form.id}-#{@key}-ref-#{ref.index}")}
                         >
                           {gettext("Done")}
@@ -432,7 +432,7 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
               <:footer>
                 <button
                   type="button"
-                  class="primary"
+                  class="btn btn--primary"
                   phx-click={close_item_modal("##{@form.id}-#{@key}-var-#{var.index}")}
                 >
                   {gettext("Done")}

@@ -79,7 +79,7 @@ defmodule BrandoAdmin.Components.Form.RevisionsDrawer do
           <div :if={@tab == :revisions} class="button-group">
             <button
               type="button"
-              class="secondary"
+              class="btn"
               phx-click={JS.push("store_revision", target: @form_cid)}
             >
               {gettext("Store current editor state")}
@@ -87,7 +87,7 @@ defmodule BrandoAdmin.Components.Form.RevisionsDrawer do
 
             <button
               type="button"
-              class="secondary"
+              class="btn"
               id="revisions-drawer-confirm-purge"
               phx-hook="Brando.ConfirmClick"
               phx-confirm-click-message={
@@ -136,7 +136,7 @@ defmodule BrandoAdmin.Components.Form.RevisionsDrawer do
             <:failed :let={_failure}>
               <div class="revisions-error" role="alert">
                 <span>{gettext("Failed to load revisions.")}</span>
-                <button type="button" class="secondary" phx-click="fetch_revisions" phx-target={@myself}>
+                <button type="button" class="btn" phx-click="fetch_revisions" phx-target={@myself}>
                   {gettext("Try again")}
                 </button>
               </div>
@@ -341,7 +341,7 @@ defmodule BrandoAdmin.Components.Form.RevisionsDrawer do
             <button
               :if={data.has_more}
               type="button"
-              class="secondary revisions-load-more"
+              class="btn revisions-load-more"
               phx-click="load_more"
               phx-target={@myself}
             >
@@ -570,7 +570,7 @@ defmodule BrandoAdmin.Components.Form.RevisionsDrawer do
 
     ~H"""
     <div class="activity-drawer-compare">
-      <button type="button" class="secondary" phx-click="close_compare" phx-target={@myself}>
+      <button type="button" class="btn" phx-click="close_compare" phx-target={@myself}>
         ← {gettext("All activity")}
       </button>
       <h3>{gettext("Revision #%{from} → revision #%{to}", from: @from, to: @to)}</h3>
@@ -638,7 +638,7 @@ defmodule BrandoAdmin.Components.Form.RevisionsDrawer do
     <button
       :if={@activity.has_more}
       type="button"
-      class="secondary activity-drawer-more"
+      class="btn activity-drawer-more"
       phx-click="activity_more"
       phx-target={@myself}
     >

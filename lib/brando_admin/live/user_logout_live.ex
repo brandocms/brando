@@ -22,7 +22,7 @@ defmodule BrandoAdmin.UserLogoutLive do
           )}
         </p>
         <.form for={%{}} id="logout_form" action="/admin/logout" method="delete" class="login-actions">
-          <button type="submit" class="primary" data-testid="logout-confirm">{gettext("Sign out")}</button>
+          <button type="submit" class="btn btn--lg btn--primary" data-testid="logout-confirm">{gettext("Sign out")}</button>
           <.link href="/admin" class="login-link" data-testid="logout-cancel">
             {gettext("Return to your workspace")}
           </.link>

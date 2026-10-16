@@ -95,18 +95,8 @@
     gap: 16px;
   }
 
-  button.primary {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    text-align: center;
-    line-height: 1.25;
-
-    &:focus-visible {
-      outline: 2px solid var(--brando-accent);
-      outline-offset: 4px;
-      box-shadow: none;
-    }
+  .login-actions .btn--lg {
+    min-width: 180px;
   }
 
   .login-link {
@@ -241,24 +231,5 @@
 
   .login-setup-method {
     padding-bottom: 24px;
-  }
-}
-
-/* The second step's other ways in, when a passkey leads: outlined, the
-   primary button's size */
-.login .login-two-factor .login-two-factor-alternative button:not(.primary, .login-link) {
-  height: 50px;
-  min-width: 180px;
-  padding: 0 24px;
-  border: 1px solid var(--brando-ink);
-  border-radius: 22px;
-  background: var(--brando-surface);
-  color: var(--brando-ink);
-  font-size: 15px;
-  font-weight: 500;
-  cursor: pointer;
-
-  &:hover {
-    background: var(--brando-surface-hover);
   }
 }
