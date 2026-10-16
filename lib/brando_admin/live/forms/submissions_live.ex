@@ -176,11 +176,11 @@ defmodule BrandoAdmin.Forms.SubmissionsLive do
           <% end %>
         </dl>
         <:footer>
-          <button type="button" class="secondary" phx-click="close">{gettext("Close")}</button>
+          <button type="button" class="btn" phx-click="close">{gettext("Close")}</button>
           <button
             :if={@can_delete and @notifies}
             type="button"
-            class="secondary"
+            class="btn"
             phx-click="resend"
             phx-value-id={@selected.id}
           >
@@ -189,7 +189,7 @@ defmodule BrandoAdmin.Forms.SubmissionsLive do
           <button
             :if={@can_delete}
             type="button"
-            class="primary danger"
+            class="btn btn--primary btn--danger"
             phx-click="delete"
             phx-value-id={@selected.id}
             data-confirm={gettext("Delete this submission? This cannot be undone.")}

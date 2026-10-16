@@ -471,7 +471,7 @@ defmodule BrandoAdmin.Components.Form.Transformer do
         <span class="filename">{error.filename}</span>
         <span class="reason">{error.reason}</span>
       </div>
-      <button type="button" class="tiny" phx-click={JS.push("dismiss_upload_errors", target: @myself)}>
+      <button type="button" class="btn btn--sm" phx-click={JS.push("dismiss_upload_errors", target: @myself)}>
         {gettext("Dismiss")}
       </button>
     </div>
@@ -587,7 +587,7 @@ defmodule BrandoAdmin.Components.Form.Transformer do
         </div>
         <button
           type="button"
-          class="tiny replace-cancel"
+          class="btn btn--sm replace-cancel"
           phx-click={JS.push("cancel_replacement", value: %{dom_id: @item.dom_id}, target: @myself)}
         >
           {gettext("Cancel")}

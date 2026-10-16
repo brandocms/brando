@@ -1,33 +1,4 @@
-a.primary {
-  display: inline-block;
-  font-weight: 400;
-}
-
-button.delete.tiny {
-  margin-left: 8px;
-  border: none;
-  width: 18px;
-  height: 18px;
-  border-radius: 50%;
-  color: var(--brando-ink);
-  background-color: var(--brando-surface-subform);
-  transition:
-    background-color 0.08s ease,
-    color 0.08s ease;
-
-  &:hover {
-    color: var(--brando-surface-subform);
-  }
-
-  :is(svg, [data-icon]) {
-    width: 6px;
-    height: 6px;
-    margin-left: -1px;
-  }
-}
-
-button.primary,
-a.primary {
+button.primary {
   font-size: 15px;
   font-weight: 500;
   color: var(--brando-surface-subform);
@@ -52,55 +23,10 @@ a.primary {
     box-shadow: 0px 0px 5px 2px var(--brando-accent);
   }
 
-  &.dark {
-    background-color: var(--brando-ink);
-    border: 1px solid var(--brando-ink);
-    color: var(--brando-surface-subform);
-
-    &:hover {
-      background-color: black;
-      color: var(--brando-surface-subform);
-    }
-  }
-
-  &.loading {
-    background-color: var(--brando-muted);
-    border: 1px solid var(--brando-muted);
-
-    svg {
-      margin: 0 auto;
-      margin-top: -4px;
-      height: 49px;
-    }
-  }
-
   &:hover {
     background-color: var(--brando-ink);
     border-color: var(--brando-ink);
   }
-
-  &.small {
-    @extend %btnSmall;
-  }
-
-  .processing {
-    display: flex;
-    align-items: center;
-
-    svg {
-      @space margin-right 10px;
-      path {
-        &:nth-of-type(2) {
-          fill: white;
-        }
-      }
-    }
-  }
-}
-
-a.secondary {
-  padding-top: 14px;
-  display: inline-block;
 }
 
 button.secondary {
@@ -116,51 +42,6 @@ button.secondary {
   padding-bottom: 0;
   height: 36px;
   line-height: 35px;
-}
-
-a.danger,
-button.danger {
-  font-size: 14px;
-
-  white-space: nowrap;
-  border: none;
-  background-color: var(--brando-error-ink);
-  padding: 12px 22px;
-  color: white;
-  border-radius: 22px;
-
-  min-width: 205px;
-  text-align: center;
-  transition: background-color 0.25s ease, border-color 0.25s ease;
-
-  &.small {
-    @extend %btnSmall;
-  }
-
-  &:first-of-type {
-    @space margin-top 15px;
-  }
-
-  &.fullWidth {
-    min-width: auto;
-  }
-
-  &.narrow {
-    min-width: auto;
-    padding: 15px 18px 16px;
-  }
-
-  &.disabled {
-    color: var(--brando-faint);
-  }
-
-  &.fw {
-    width: 100%;
-  }
-
-  &:hover {
-    background-color: var(--brando-ink);
-  }
 }
 
 %btnSecondary {
@@ -183,60 +64,20 @@ button.danger {
     @extend %btnSmall;
   }
 
-  &.fullWidth {
-    min-width: auto;
-  }
-
-  &.narrow {
-    min-width: auto;
-    padding: 15px 18px 16px;
-  }
-
-  &.disabled {
-    color: var(--brando-faint);
-  }
-
-  &.fw {
-    width: 100%;
-  }
-
   &:hover {
     background-color: var(--brando-surface-subform);
   }
 }
 
-a.secondary,
-button.secondary {
+/* `a.secondary`: the block config modal's "Edit module" link, until the
+   block editor moves to `.btn`. */
+button.secondary,
+a.secondary {
   @extend %btnSecondary;
 }
 
 .secondary + .secondary {
   border-left: none;
-}
-
-button.tertiary,
-a.tertiary {
-  font-size: 14px;
-  color: var(--brando-ink);
-  background-color: transparent;
-  border: none;
-  border-bottom: 1px solid var(--brando-ink);
-  padding: 4px 0;
-  min-width: auto;
-  transition: opacity 0.2s ease;
-
-  &:hover {
-    opacity: 0.6;
-  }
-}
-
-button.stealth {
-  font-size: 16px;
-  border: none;
-  border-bottom: 1px solid var(--brando-accent);
-  padding: 0;
-  height: auto;
-  align-self: center;
 }
 
 button.tiny,
@@ -251,14 +92,6 @@ a.tiny {
   padding: 4px 7px 4px;
   margin-top: -2px;
   transition: background-color 0.35s ease, color 0.35s ease;
-
-  &.right {
-    margin-left: auto;
-  }
-
-  &.static {
-    position: static;
-  }
 
   &:hover {
     background-color: var(--brando-ink);
@@ -276,7 +109,7 @@ a.tiny {
 }
 
 /**
- * Segmented group of `.tiny` buttons — the members sit flush against each
+ * Segmented group of `.media-button`s — the members sit flush against each
  * other, sharing borders, with only the outer corners rounded.
  *
  * Note: distinct from `.button-group` (app.css), which is a plain 8px-gapped
@@ -284,7 +117,7 @@ a.tiny {
  *
  * Members may be the buttons themselves or a wrapper element around one (the
  * gallery's video upload trigger needs its own `phx-hook` element), so the
- * corner rules match both the direct child and a `.tiny` inside it.
+ * corner rules match both the direct child and a `.media-button` inside it.
  */
 .segmented-buttons {
   display: inline-flex;
@@ -296,7 +129,6 @@ a.tiny {
     display: flex;
   }
 
-  .tiny,
   .media-button {
     margin-top: 0;
     border-radius: 0;
@@ -304,14 +136,12 @@ a.tiny {
   }
 
   > :first-child,
-  > :first-child .tiny,
   > :first-child .media-button {
     border-top-left-radius: 5px;
     border-bottom-left-radius: 5px;
   }
 
   > :last-child,
-  > :last-child .tiny,
   > :last-child .media-button {
     border-top-right-radius: 5px;
     border-bottom-right-radius: 5px;
@@ -327,38 +157,10 @@ a.tiny {
   }
 }
 
-.submit-button {
+/* More specific than `.btn`, whose `margin: 0` comes later. */
+.btn.submit-button {
   @space margin-top 30px;
   width: fit-content;
-}
-
-/* The form's save button: the same soft green as the tab bar's save, so the
-   two read as one action, rather than a solid dark block at the end of every
-   form. */
-button.primary.submit-button {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  height: auto;
-  min-width: 0;
-  min-height: 40px;
-  padding: 9px 16px;
-  border: 1px solid var(--brando-line);
-  border-radius: 6px;
-  background-color: var(--brando-surface-selected);
-  color: var(--brando-accent);
-  font-size: 14px;
-  font-weight: 500;
-  line-height: 20px;
-
-  > [data-icon] { width: 16px; height: 16px; }
-  .shortcut { margin-left: 4px; }
-  .processing svg { fill: currentColor; }
-
-  &:hover:not(:disabled) { background-color: color-mix(in srgb, var(--brando-accent) 8%, var(--brando-surface-selected)); border-color: var(--brando-line-strong); }
-  &:focus-visible { box-shadow: 0 0 0 3px color-mix(in srgb, var(--brando-accent) 20%, transparent); }
-  &:disabled { background-color: var(--brando-surface-shaded); border-color: var(--brando-line-soft); color: var(--brando-faint); }
 }
 
 .add-entry-button {

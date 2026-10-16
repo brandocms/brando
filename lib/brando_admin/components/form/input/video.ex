@@ -442,7 +442,7 @@ defmodule BrandoAdmin.Components.Form.Input.Video do
               <div class="meta">{format_duration(get_in(@video.meta, ["mux", "duration"]))}</div>
             <% end %>
           </div>
-          <button class="tiny" type="button" phx-click={@click}>
+          <button class="btn btn--sm" type="button" phx-click={@click}>
             {gettext("Edit video")}
           </button>
         </div>
@@ -450,7 +450,7 @@ defmodule BrandoAdmin.Components.Form.Input.Video do
         <.video_placeholder />
         <div :if={@editable} class="video-info">
           <span>{gettext("No video associated with field")}</span>
-          <button class="tiny" type="button" phx-click={@click} phx-value-id={"edit-video-#{@field.id}"}>
+          <button class="btn btn--sm" type="button" phx-click={@click} phx-value-id={"edit-video-#{@field.id}"}>
             {gettext("Add video")}
           </button>
         </div>

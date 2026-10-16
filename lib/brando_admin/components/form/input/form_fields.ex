@@ -569,7 +569,11 @@ defmodule BrandoAdmin.Components.Form.Input.FormFields do
       </div>
 
       <:footer>
-        <button type="button" class="primary" phx-click={JS.push("close_field", target: @target) |> hide_modal("##{@id}")}>
+        <button
+          type="button"
+          class="btn btn--primary"
+          phx-click={JS.push("close_field", target: @target) |> hide_modal("##{@id}")}
+        >
           {gettext("Done")}
         </button>
       </:footer>

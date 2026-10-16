@@ -69,7 +69,7 @@ defmodule BrandoAdmin.Forms.SubmissionsLiveTest do
     render_async(view)
 
     view |> element("#submission-#{submission.id} button") |> render_click()
-    view |> element("#submission-detail button.danger") |> render_click()
+    view |> element(~s(#submission-detail button[phx-click="delete"])) |> render_click()
 
     refute render(view) =~ "submission-#{submission.id}"
     assert Forms.count_submissions("contact") == 0

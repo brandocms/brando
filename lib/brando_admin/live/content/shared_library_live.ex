@@ -63,7 +63,7 @@ defmodule BrandoAdmin.Content.SharedLibraryLive do
       title={gettext("Shared content library")}
       subtitle={gettext("Curate reusable modules, containers, and palettes across sites")}
     >
-      <button type="button" class="secondary" phx-click="refresh">{gettext("Refresh")}</button>
+      <button type="button" class="btn" phx-click="refresh">{gettext("Refresh")}</button>
     </Content.header>
 
     <div class="environment-management-live shared-library-live">
@@ -173,13 +173,13 @@ defmodule BrandoAdmin.Content.SharedLibraryLive do
           <.link
             :if={@kind == :module}
             navigate={"/admin/config/content/shared_library/modules/update/#{@entry.id}"}
-            class="secondary button"
+            class="btn"
           >
             {gettext("Edit")}
           </.link>
           <button
             type="button"
-            class="danger"
+            class="btn btn--danger"
             phx-click="delete"
             phx-value-kind={@kind}
             phx-value-id={@entry.id}
@@ -222,14 +222,14 @@ defmodule BrandoAdmin.Content.SharedLibraryLive do
             <.link
               :if={@overridden? && @can_customize?}
               navigate={override_route(@kind, @effective, @selected_site, @selected_environment)}
-              class="secondary button"
+              class="btn"
             >
               {gettext("Edit customization")}
             </.link>
             <button
               :if={@can_customize? && @enabled? && !@overridden?}
               type="button"
-              class="secondary"
+              class="btn"
               phx-click="customize"
               phx-value-kind={@kind}
               phx-value-id={@entry.id}
@@ -239,7 +239,7 @@ defmodule BrandoAdmin.Content.SharedLibraryLive do
             <button
               :if={@can_customize? && @overridden?}
               type="button"
-              class="secondary"
+              class="btn"
               phx-click="reset"
               phx-value-kind={@kind}
               phx-value-id={@entry.id}
@@ -250,7 +250,7 @@ defmodule BrandoAdmin.Content.SharedLibraryLive do
             <button
               :if={@can_customize? && @effective && @effective.update_available}
               type="button"
-              class="primary"
+              class="btn btn--primary"
               phx-click="accept_update"
               phx-value-kind={@kind}
               phx-value-id={@entry.id}
@@ -261,7 +261,7 @@ defmodule BrandoAdmin.Content.SharedLibraryLive do
             <button
               :if={@can_customize? && @effective && @effective.update_available}
               type="button"
-              class="secondary"
+              class="btn"
               phx-click="dismiss_update"
               phx-value-kind={@kind}
               phx-value-id={@entry.id}
@@ -311,11 +311,11 @@ defmodule BrandoAdmin.Content.SharedLibraryLive do
           <span>{entry_label(entry)} · v{entry.version || 1}</span>
         </label>
         <div class="environment-actions">
-          <button type="submit" class="primary">{gettext("Save access")}</button>
-          <button type="button" class="secondary" phx-click="enable_all" phx-value-kind={@kind}>
+          <button type="submit" class="btn btn--primary">{gettext("Save access")}</button>
+          <button type="button" class="btn" phx-click="enable_all" phx-value-kind={@kind}>
             {gettext("Enable all")}
           </button>
-          <button type="button" class="secondary" phx-click="disable_all" phx-value-kind={@kind}>
+          <button type="button" class="btn" phx-click="disable_all" phx-value-kind={@kind}>
             {gettext("Disable all")}
           </button>
         </div>
@@ -349,7 +349,7 @@ defmodule BrandoAdmin.Content.SharedLibraryLive do
           <span>{gettext("Colors (JSON)")}</span>
           <textarea name="entry[colors_json]" rows="4">[]</textarea>
         </label>
-        <button type="submit" class="primary">{gettext("Create")}</button>
+        <button type="submit" class="btn btn--primary">{gettext("Create")}</button>
       </form>
     </details>
     """
@@ -379,7 +379,7 @@ defmodule BrandoAdmin.Content.SharedLibraryLive do
           <span>{gettext("Colors (JSON)")}</span>
           <textarea name="entry[colors_json]" rows="5">{colors_json(@entry)}</textarea>
         </label>
-        <button type="submit" class="primary">{gettext("Publish version")}</button>
+        <button type="submit" class="btn btn--primary">{gettext("Publish version")}</button>
       </form>
     </details>
     """

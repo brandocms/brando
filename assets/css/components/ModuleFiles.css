@@ -14,11 +14,7 @@
   .module-files-context span { display: block; color: var(--brando-muted); margin-top: 4px; }
   .module-files-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
   .module-files-card > .module-files-actions { margin-top: auto; padding-top: 4px; }
-  /* height and min-width undo the admin's big global button.primary */
-  .module-files-button { display: inline-flex; align-items: center; justify-content: center; padding: 7px 12px; height: auto; min-width: 0; min-height: 34px; border: 1px solid var(--brando-line-strong); border-radius: 5px; background: var(--brando-surface); color: var(--brando-accent); font-size: 13px; line-height: 18px; font-weight: 500; text-decoration: none; cursor: pointer; }
-  .module-files-button.primary { background: var(--brando-accent); border-color: var(--brando-accent); color: var(--brando-ink-inverse); }
-  .module-files-button:disabled { opacity: 0.5; cursor: not-allowed; }
-  .module-files-button:focus-visible, summary:focus-visible { outline: 2px solid var(--brando-accent); outline-offset: 3px; }
+  summary:focus-visible { outline: 2px solid var(--brando-accent); outline-offset: 3px; }
   .module-files-dropzone { display: flex; flex-direction: column; align-items: flex-start; gap: 12px; padding: 16px; border: 1px dashed var(--brando-line-strong); border-radius: 5px; background: var(--brando-surface); }
   .module-files-dropzone label { font-size: 13px; margin: 0; }
   /* A bare file input: no text-field frame, and the picker button reads like
@@ -58,7 +54,5 @@
     .module-files-card { padding: 18px; }
     .module-files-change > summary { padding: 14px; gap: 8px; flex-wrap: wrap; }
     .module-files-change-body { padding: 14px; }
-    .module-files-button { min-height: 40px; }
   }
-  @media (pointer: coarse) { .module-files-button { min-height: 40px; } }
 }

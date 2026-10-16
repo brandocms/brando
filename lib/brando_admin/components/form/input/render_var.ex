@@ -1383,7 +1383,9 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
           <span>{@identifier.title}</span>
           <small :if={@identifier.language}>{String.upcase(to_string(@identifier.language))}</small>
         </span>
-        <button type="button" class="primary" phx-click={hide_modal("#var-#{@field.id}-link-config")}>{gettext("Done")}</button>
+        <button type="button" class="btn btn--primary" phx-click={hide_modal("#var-#{@field.id}-link-config")}>{gettext(
+          "Done"
+        )}</button>
       </:footer>
     </Content.modal>
     """
@@ -1408,7 +1410,9 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
         </div>
       </div>
       <:footer>
-        <button type="button" class="primary" phx-click={hide_modal("#var-#{@field.id}-image-config")}>{gettext("Done")}</button>
+        <button type="button" class="btn btn--primary" phx-click={hide_modal("#var-#{@field.id}-image-config")}>{gettext(
+          "Done"
+        )}</button>
       </:footer>
     </Content.modal>
     """
@@ -1433,7 +1437,9 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
         </div>
       </div>
       <:footer>
-        <button type="button" class="primary" phx-click={hide_modal("#var-#{@field.id}-file-config")}>{gettext("Done")}</button>
+        <button type="button" class="btn btn--primary" phx-click={hide_modal("#var-#{@field.id}-file-config")}>{gettext(
+          "Done"
+        )}</button>
       </:footer>
     </Content.modal>
     """
@@ -1454,7 +1460,9 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
         remove={JS.push("reset_video", target: @target)}
       />
       <:footer>
-        <button type="button" class="primary" phx-click={hide_modal("#var-#{@field.id}-video-config")}>{gettext("Done")}</button>
+        <button type="button" class="btn btn--primary" phx-click={hide_modal("#var-#{@field.id}-video-config")}>{gettext(
+          "Done"
+        )}</button>
       </:footer>
     </Content.modal>
     """
@@ -1593,7 +1601,9 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
           class="gallery-reset-button"
           phx-click={JS.push("reset_gallery", target: @target)}
         >{gettext("Reset gallery")}</button>
-        <button type="button" class="primary" phx-click={hide_modal("#var-#{@field.id}-gallery-config")}>{gettext("Done")}</button>
+        <button type="button" class="btn btn--primary" phx-click={hide_modal("#var-#{@field.id}-gallery-config")}>{gettext(
+          "Done"
+        )}</button>
       </:footer>
     </Content.modal>
     """

@@ -41,7 +41,6 @@
   .media-destination-target { color: var(--workspace-ink); font-size: 14px; padding-bottom: 6px; }
   .media-destination-actions { display: flex; gap: 8px; align-items: center; flex-shrink: 0; }
   .media-destination-actions button { min-height: 34px; padding: 6px 12px; border-radius: 5px; font: 13px/20px "Main", sans-serif; }
-  .media-destination-actions button.primary { background: var(--workspace-accent); border-color: var(--workspace-accent) !important; color: var(--brando-ink-inverse); }
 }
 .media-drawer-backdrop { display: none; position: fixed; inset: 0; width: 100vw; height: 100dvh; margin: 0; padding: 0; border: 0; border-radius: 0; background: var(--brando-overlay); backdrop-filter: blur(2px); cursor: default; }
 .drawer.media-workspace-drawer[style*="display: block"]:not(.x-100) + .media-drawer-backdrop,

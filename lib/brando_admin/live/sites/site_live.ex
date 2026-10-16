@@ -44,7 +44,7 @@ defmodule BrandoAdmin.Sites.SiteLive do
       title={gettext("Sites")}
       subtitle={gettext("Provision isolated sites, control lifecycle, and assign users")}
     >
-      <button type="button" class="secondary" phx-click="refresh">{gettext("Refresh")}</button>
+      <button type="button" class="btn" phx-click="refresh">{gettext("Refresh")}</button>
     </Content.header>
 
     <div class="environment-management-live">
@@ -80,7 +80,7 @@ defmodule BrandoAdmin.Sites.SiteLive do
               </small>
             </label>
           </div>
-          <button type="submit" class="primary" phx-disable-with={gettext("Provisioning…")}>
+          <button type="submit" class="btn btn--primary" phx-disable-with={gettext("Provisioning…")}>
             {gettext("Create site")}
           </button>
         </form>
@@ -114,7 +114,7 @@ defmodule BrandoAdmin.Sites.SiteLive do
           <button
             :if={site.status == :active}
             type="button"
-            class="secondary"
+            class="btn"
             phx-click="suspend"
             phx-value-id={site.id}
           >
@@ -123,7 +123,7 @@ defmodule BrandoAdmin.Sites.SiteLive do
           <button
             :if={site.status == :suspended}
             type="button"
-            class="primary"
+            class="btn btn--primary"
             phx-click="activate_site"
             phx-value-id={site.id}
           >
@@ -132,7 +132,7 @@ defmodule BrandoAdmin.Sites.SiteLive do
           <button
             :if={site.status != :archived}
             type="button"
-            class="danger"
+            class="btn btn--danger"
             phx-click="archive"
             phx-value-id={site.id}
             phx-confirm={gettext("Archive %{name}? Its domains will stop serving immediately.", name: site.name)}
@@ -142,7 +142,7 @@ defmodule BrandoAdmin.Sites.SiteLive do
           <button
             :if={site.status == :archived}
             type="button"
-            class="secondary"
+            class="btn"
             phx-click="activate_site"
             phx-value-id={site.id}
           >
@@ -151,7 +151,7 @@ defmodule BrandoAdmin.Sites.SiteLive do
           <button
             :if={site.status == :archived}
             type="button"
-            class="danger"
+            class="btn btn--danger"
             phx-click="delete"
             phx-value-id={site.id}
             phx-confirm={gettext("Permanently delete %{name}, all schemas, media, and uploaded assets?", name: site.name)}
@@ -175,7 +175,7 @@ defmodule BrandoAdmin.Sites.SiteLive do
                   <td>
                     <button
                       type="button"
-                      class="danger small"
+                      class="btn btn--sm btn--danger"
                       phx-click="revoke"
                       phx-value-site-id={site.id}
                       phx-value-user-id={assignment.user_id}
@@ -205,7 +205,7 @@ defmodule BrandoAdmin.Sites.SiteLive do
                   <option value="admin">{gettext("Administrator")}</option>
                 </select>
               </label>
-              <button type="submit" class="primary">{gettext("Grant access")}</button>
+              <button type="submit" class="btn btn--primary">{gettext("Grant access")}</button>
             </form>
           </section>
         </div>

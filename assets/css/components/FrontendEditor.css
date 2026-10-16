@@ -305,7 +305,7 @@ html.is-frontend-editor :is(.progress-wrapper, #brando-main > .progress) {
   border-top: 1px solid var(--brando-line);
   background-color: var(--brando-surface);
 
-  button.primary.submit-button {
+  .submit-button {
     margin-top: 0;
   }
 }

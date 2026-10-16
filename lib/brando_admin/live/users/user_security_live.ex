@@ -348,7 +348,7 @@ defmodule BrandoAdmin.Users.UserSecurityLive do
     >
       <TwoFactorComponents.recovery_codes codes={elem(@modal, 1)} />
       <:footer>
-        <button type="button" class="primary" phx-click="close_modal" data-testid="recovery-codes-done">
+        <button type="button" class="btn btn--primary" phx-click="close_modal" data-testid="recovery-codes-done">
           {gettext("I have saved my codes")}
         </button>
       </:footer>
@@ -379,11 +379,11 @@ defmodule BrandoAdmin.Users.UserSecurityLive do
         <p :if={@confirm_error} class="security-confirm-error" role="alert">{@confirm_error}</p>
       </.form>
       <:footer>
-        <button type="button" class="secondary" phx-click="close_modal">{gettext("Cancel")}</button>
+        <button type="button" class="btn" phx-click="close_modal">{gettext("Cancel")}</button>
         <button
           type="submit"
           form="security-confirm-form"
-          class={["primary", elem(@modal, 1) == :disable && "danger"]}
+          class={["btn btn--primary", elem(@modal, 1) == :disable && "btn--danger"]}
           phx-disable-with={gettext("Checking...")}
           data-testid="security-confirm"
         >

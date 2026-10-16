@@ -44,18 +44,7 @@
 .markdown-source-checkbox { display: flex; gap: 8px; align-items: center; }
 .markdown-source-actions {
   display: flex; flex-wrap: wrap; gap: 12px; align-items: center; padding-top: 16px;
-  button {
-    display: inline-flex; align-items: center; justify-content: center;
-    width: auto; min-width: 0; height: auto; min-height: 30px; margin: 0;
-    padding: 5px 12px; border: 1px solid var(--brando-line); border-radius: 5px;
-    background: white; color: var(--brando-ink); font-size: 12px; font-weight: 500; line-height: 18px;
-    letter-spacing: 0; text-transform: none;
-  }
-  button.primary { color: white; background: var(--brando-accent); border-color: var(--brando-accent); }
-  button:hover:not(:disabled) { border-color: var(--brando-line-strong); }
-  button:disabled { opacity: .48; cursor: not-allowed; }
-  :is(button, a):focus-visible { outline: 2px solid var(--brando-accent); outline-offset: 3px; }
-  @media (pointer: coarse) { button { min-height: 40px; } }
+  a:focus-visible { outline: 2px solid var(--brando-accent); outline-offset: 3px; }
   span, a { font-size: 13px; }
 }
 .markdown-source-meta {

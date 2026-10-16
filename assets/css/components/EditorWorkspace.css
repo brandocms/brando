@@ -26,7 +26,7 @@
   .drawer-form .datetime-wrapper > div { background: var(--brando-surface); color: var(--workspace-ink); border-color: var(--workspace-line); border-radius: 5px; }
   .drawer-form .character-count, .drawer-form .prefill-small { border-color: var(--workspace-line) !important; color: var(--workspace-muted); }
   .drawer-form .media-field { border-color: var(--workspace-line); }
-  .drawer-form .media-button, button.secondary {
+  .drawer-form .media-button {
     display: inline-flex; align-items: center; justify-content: center; gap: 6px;
     height: auto; min-height: 34px; margin: 0; padding: 6px 12px;
     border: 1px solid var(--workspace-line) !important; border-radius: 5px;

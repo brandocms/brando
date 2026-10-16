@@ -59,6 +59,21 @@
     height: 14px;
   }
 
+  /* A keyboard hint after the label, and the spinner that replaces it while
+     a form saves (`Primitives.submit_button/1`). */
+  .shortcut {
+    margin-left: 4px;
+  }
+
+  .processing {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+
+    svg {
+      fill: currentColor;
+    }
+  }
 }
 
 .btn--sm {

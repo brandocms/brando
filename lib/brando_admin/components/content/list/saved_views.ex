@@ -387,10 +387,10 @@ defmodule BrandoAdmin.Components.Content.List.SavedViews do
           </label>
         </.form>
         <:footer>
-          <button type="button" class="secondary" phx-click="close_dialog" phx-target={@myself}>
+          <button type="button" class="btn" phx-click="close_dialog" phx-target={@myself}>
             {gettext("Cancel")}
           </button>
-          <button type="submit" form={"#{@id}-form"} class="primary" data-testid="saved-view-submit">
+          <button type="submit" form={"#{@id}-form"} class="btn btn--primary" data-testid="saved-view-submit">
             {if @dialog.mode == :save, do: gettext("Save view"), else: gettext("Rename view")}
           </button>
         </:footer>

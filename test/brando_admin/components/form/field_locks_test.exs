@@ -116,7 +116,7 @@ defmodule BrandoAdmin.Components.Form.FieldLocksTest do
     view |> element(".multiselect > .button-edit") |> render_click()
     assert_receive {:active_field, "var[link_identifier_schemas]", 9, _tab}
 
-    view |> element("button.primary.small", "OK") |> render_click()
+    view |> element("button", ~r/^\s*OK\s*$/) |> render_click()
     assert_receive {:active_field, nil, 9, _tab}
   end
 

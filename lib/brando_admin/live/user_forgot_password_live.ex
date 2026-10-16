@@ -38,7 +38,7 @@ defmodule BrandoAdmin.UserForgotPasswordLive do
         </div>
 
         <div class="login-actions">
-          <button class="primary" phx-disable-with={gettext("Sending...")} data-testid="send-reset-link">
+          <button class="btn btn--lg btn--primary" phx-disable-with={gettext("Sending...")} data-testid="send-reset-link">
             {gettext("Send reset link")}
           </button>
           <.link navigate="/admin/login" class="login-link">{gettext("Back to login")}</.link>

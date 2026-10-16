@@ -23,7 +23,7 @@ defmodule BrandoAdmin.UserTwoFactorSetupLive do
           <Auth.notice message={gettext("Two-factor authentication is on.")} />
           <TwoFactorComponents.recovery_codes :if={@codes != []} codes={@codes} />
           <.form for={%{}} id="two_factor_complete" action="/admin/login/two-factor/complete" class="login-actions">
-            <button class="primary" data-testid="two-factor-continue">{gettext("I have saved my codes")}</button>
+            <button class="btn btn--lg btn--primary" data-testid="two-factor-continue">{gettext("I have saved my codes")}</button>
           </.form>
         <% else %>
           <p class="login-intro">

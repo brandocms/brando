@@ -159,24 +159,12 @@
 
   /* Submits sit at the end of their form rather than filling it, so four
      panels no longer read as four competing calls to action. */
-  form > button[type="submit"] {
+  form > .btn[type="submit"] {
     justify-self: start;
-    min-height: 34px;
     margin-top: 10px;
-    padding: 0 18px;
-    border: none;
-    border-radius: 999px;
-    background: var(--brando-ink);
-    color: var(--brando-surface-subform);
-    font-size: 12px;
-    transition: background-color 150ms ease;
-
-    &:hover:not([disabled]) {
-      background: color-mix(in srgb, var(--brando-ink) 85%, var(--brando-accent));
-    }
   }
 
-  button[disabled] {
+  button[disabled]:not(.btn) {
     cursor: not-allowed;
     opacity: 0.4;
   }
@@ -450,28 +438,9 @@
     display: table-cell;
     white-space: nowrap;
 
-    button {
-      /* .secondary carries a 15px top margin from the base button styles,
-         .danger does not, which left the two misaligned in a row. */
-      min-height: 32px;
+    .btn {
       margin: 0 0 0 8px;
-      padding: 0 14px;
-      line-height: 1;
       vertical-align: middle;
-    }
-  }
-
-  /* Destructive actions stay quiet until they are deliberately reached for. */
-  .environment-actions button.danger,
-  .environment-panel button.danger {
-    border: 1px solid color-mix(in srgb, var(--brando-ink) 20%, transparent);
-    background: transparent;
-    color: color-mix(in srgb, var(--brando-ink) 70%, transparent);
-    transition: border-color 150ms ease, color 150ms ease;
-
-    &:hover:not([disabled]) {
-      border-color: var(--brando-error-ink);
-      color: var(--brando-error-ink);
     }
   }
 
@@ -550,13 +519,6 @@
     display: flex;
     align-items: center;
     gap: 12px;
-
-    button {
-      margin: 0;
-      min-height: 28px;
-      padding: 0 12px;
-      font-size: 11px;
-    }
   }
 
   .environment-log__note {

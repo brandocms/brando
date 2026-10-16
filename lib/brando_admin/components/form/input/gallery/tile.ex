@@ -171,8 +171,8 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery.Tile do
         {gettext("Saved for this gallery only. Empty uses the image library's text.")}
       </p>
       <div class="gallery-text-editor-actions">
-        <button type="button" class="secondary" data-gallery-text-cancel>{gettext("Cancel")}</button>
-        <button type="button" class="primary" data-gallery-text-save>{gettext("Save")}</button>
+        <button type="button" class="btn" data-gallery-text-cancel>{gettext("Cancel")}</button>
+        <button type="button" class="btn btn--primary" data-gallery-text-save>{gettext("Save")}</button>
       </div>
     </div>
     """

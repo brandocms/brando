@@ -69,7 +69,7 @@ defmodule BrandoAdmin.Components.ModuleFiles do
               <div class="module-files-actions">
                 <button
                   type="button"
-                  class="module-files-button"
+                  class="btn"
                   phx-click="export"
                   phx-target={@myself}
                   disabled={!@can_export}
@@ -78,7 +78,7 @@ defmodule BrandoAdmin.Components.ModuleFiles do
                 <a
                   :if={@download}
                   id="module-files-download"
-                  class="module-files-button primary"
+                  class="btn btn--primary"
                   href={@download}
                   download="brando-modules.zip"
                 >{gettext("Download ZIP")}</a>
@@ -104,7 +104,7 @@ defmodule BrandoAdmin.Components.ModuleFiles do
                 <span>{entry.client_name}</span>
                 <button
                   type="button"
-                  class="module-files-button"
+                  class="btn"
                   phx-click="cancel_upload"
                   phx-target={@myself}
                   phx-value-ref={entry.ref}
@@ -123,9 +123,7 @@ defmodule BrandoAdmin.Components.ModuleFiles do
               </p>
               <div :if={@source} class="module-files-upload">
                 <span>{@filename}</span>
-                <button type="button" class="module-files-button" phx-click="reset" phx-target={@myself}>{gettext(
-                  "Remove file"
-                )}</button>
+                <button type="button" class="btn" phx-click="reset" phx-target={@myself}>{gettext("Remove file")}</button>
               </div>
               <details class="module-files-mappings" open={@mappings != ""}>
                 <summary>{gettext("Importing into another site?")}</summary>
@@ -142,7 +140,7 @@ defmodule BrandoAdmin.Components.ModuleFiles do
               <div class="module-files-actions">
                 <button
                   type="submit"
-                  class="module-files-button primary"
+                  class="btn btn--primary"
                   phx-disable-with={gettext("Reading file…")}
                   disabled={!@can_import || (!@source && @uploads.definition_zip.entries == [])}
                 >{gettext("Preview import")}</button>
@@ -215,7 +213,7 @@ defmodule BrandoAdmin.Components.ModuleFiles do
               <a
                 :if={@updated_download}
                 id="module-files-updated-download"
-                class="module-files-button primary"
+                class="btn btn--primary"
                 href={@updated_download}
                 download="brando-modules-updated.zip"
               >{gettext("Download updated ZIP")}</a>
@@ -235,7 +233,7 @@ defmodule BrandoAdmin.Components.ModuleFiles do
             <button
               :if={@result.refresh != []}
               type="button"
-              class="module-files-button"
+              class="btn"
               phx-click="refresh"
               phx-target={@myself}
               phx-disable-with={gettext("Retrying…")}
@@ -249,14 +247,14 @@ defmodule BrandoAdmin.Components.ModuleFiles do
         </div>
         <:footer :if={@plan || @result}>
           <div class="module-files-actions">
-            <button :if={@plan || @result} type="button" class="module-files-button" phx-click="reset" phx-target={@myself}>
+            <button :if={@plan || @result} type="button" class="btn" phx-click="reset" phx-target={@myself}>
               {if @result, do: gettext("Back to import / export"), else: gettext("Cancel preview")}
             </button>
             <button
               :if={@plan}
               id="module-files-apply"
               type="button"
-              class="module-files-button primary"
+              class="btn btn--primary"
               phx-click="apply"
               phx-target={@myself}
               phx-disable-with={gettext("Applying…")}

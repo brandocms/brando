@@ -285,7 +285,7 @@ defmodule BrandoAdmin.Components.Form.FrontendEditor do
             label={gettext("Save")}
             shortcut={%{key: "S"}}
             icon="check"
-            class="primary submit-button"
+            class="btn btn--lg btn--save submit-button"
           />
         </footer>
       </div>

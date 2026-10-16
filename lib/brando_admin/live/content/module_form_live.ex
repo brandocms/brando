@@ -140,7 +140,7 @@ defmodule BrandoAdmin.Content.ModuleFormLive do
             label={gettext("Save")}
             shortcut={%{key: "S", shift: true}}
             icon="check"
-            class="primary submit-button"
+            class="btn btn--lg btn--save submit-button"
           />
         </div>
       </.form>
@@ -179,10 +179,10 @@ defmodule BrandoAdmin.Content.ModuleFormLive do
         )}
       </p>
       <:footer>
-        <button type="button" class="secondary" phx-click={JS.push("cancel_destructive_save")}>
+        <button type="button" class="btn" phx-click={JS.push("cancel_destructive_save")}>
           {gettext("Cancel")}
         </button>
-        <button type="button" class="primary" phx-click={JS.push("confirm_destructive_save")}>
+        <button type="button" class="btn btn--primary" phx-click={JS.push("confirm_destructive_save")}>
           {gettext("Save anyway")}
         </button>
       </:footer>

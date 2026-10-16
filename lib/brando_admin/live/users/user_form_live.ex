@@ -72,11 +72,11 @@ defmodule BrandoAdmin.Users.UserFormLive do
         </div>
       </.form>
       <:footer>
-        <button type="button" class="secondary" phx-click="close_set_password">{gettext("Cancel")}</button>
+        <button type="button" class="btn" phx-click="close_set_password">{gettext("Cancel")}</button>
         <button
           type="submit"
           form="user-set-password-form"
-          class="primary"
+          class="btn btn--primary"
           phx-disable-with={gettext("Saving...")}
           data-testid="set-password"
         >

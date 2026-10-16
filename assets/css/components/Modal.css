@@ -273,17 +273,6 @@
         background-color: var(--brando-ink);
         color: white;
       }
-
-      &.danger {
-        border: 1px solid var(--brando-ink);
-        color: var(--brando-error-ink);
-        background-color: white;
-
-        &:hover {
-          background-color: var(--brando-error-ink);
-          color: white;
-        }
-      }
     }
 
     &.tiny {
@@ -677,12 +666,6 @@
       font-size: 12px;
       margin: 0;
       opacity: 0.7;
-    }
-
-    /* `%btnSecondary` gives its first button a 15px top margin, for stacked
-       form buttons. Inside a centred flex column it just breaks the rhythm. */
-    button.secondary:first-of-type {
-      margin-top: 0;
     }
   }
 }

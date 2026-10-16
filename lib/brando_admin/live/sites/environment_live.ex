@@ -70,7 +70,7 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
       title={gettext("Environments")}
       subtitle={gettext("Create, copy, promote, schedule, and recover isolated content environments")}
     >
-      <button type="button" class="secondary" phx-click="refresh">
+      <button type="button" class="btn" phx-click="refresh">
         {gettext("Refresh")}
       </button>
     </Content.header>
@@ -138,7 +138,7 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
                     <button
                       :if={!environment.live}
                       type="button"
-                      class="secondary small"
+                      class="btn btn--sm"
                       disabled={!@can_manage? || !BrandoAdmin.Authorization.allowed?(:promote, :environments)}
                       phx-click="queue_set_live"
                       phx-value-id={environment.id}
@@ -151,7 +151,7 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
                     <button
                       :if={!environment.live}
                       type="button"
-                      class="danger small"
+                      class="btn btn--sm btn--danger"
                       disabled={!@can_manage? || !BrandoAdmin.Authorization.allowed?(:delete, :environments)}
                       phx-click="delete_environment"
                       phx-value-id={environment.id}
@@ -193,7 +193,7 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
               </label>
               <button
                 type="submit"
-                class="primary"
+                class="btn btn--primary"
                 disabled={!@can_manage? || !BrandoAdmin.Authorization.allowed?(:create, :environments)}
                 phx-disable-with={gettext("Creating…")}
               >
@@ -217,7 +217,7 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
               </label>
               <button
                 type="submit"
-                class="primary"
+                class="btn btn--primary"
                 disabled={
                   !@can_manage? || !BrandoAdmin.Authorization.allowed?(:promote, :environments) || length(@environments) < 2
                 }
@@ -235,7 +235,7 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
               <.schedule_fields default_scheduled_at={@default_scheduled_at} />
               <button
                 type="submit"
-                class="primary"
+                class="btn btn--primary"
                 disabled={
                   !@can_manage? || !BrandoAdmin.Authorization.allowed?(:promote, :environments) || length(@environments) < 2
                 }
@@ -260,7 +260,7 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
               <.schedule_fields default_scheduled_at={@default_scheduled_at} />
               <button
                 type="submit"
-                class="primary"
+                class="btn btn--primary"
                 disabled={
                   !@can_manage? || !BrandoAdmin.Authorization.allowed?(:promote, :environments) ||
                     Enum.all?(@environments, & &1.live)
@@ -297,7 +297,7 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
                   <td class="environment-actions">
                     <button
                       type="button"
-                      class="danger small"
+                      class="btn btn--sm btn--danger"
                       disabled={!@can_manage? || !BrandoAdmin.Authorization.allowed?(:promote, :environments)}
                       phx-click="cancel_operation"
                       phx-value-id={job.id}
@@ -384,7 +384,7 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
             <div class="environment-actions">
               <button
                 type="button"
-                class="secondary"
+                class="btn"
                 disabled={
                   !@can_manage? || !BrandoAdmin.Authorization.allowed?(:promote, :environments) || @archives == [] ||
                     !!@restoring
@@ -396,7 +396,7 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
               </button>
               <button
                 type="button"
-                class="danger"
+                class="btn btn--danger"
                 disabled={
                   !@can_manage? || !BrandoAdmin.Authorization.allowed?(:delete, :environments) || length(@archives) <= 3
                 }
@@ -422,7 +422,7 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
                 <span>{archive.operation || gettext("Recovered archive")}</span>
                 <button
                   type="button"
-                  class="secondary small"
+                  class="btn btn--sm"
                   disabled={!@can_manage? || !BrandoAdmin.Authorization.allowed?(:promote, :environments) || !!@restoring}
                   phx-click="rollback"
                   phx-value-schema={archive.schema}
