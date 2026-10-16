@@ -2942,7 +2942,11 @@ defmodule BrandoAdmin.Components.Form do
   end
 
   # The open live preview follows another editor's changes as it follows
-  # this editor's typing (`validate`).
+  # this editor's typing (`validate`). Between the two halves of a recovery
+  # it waits: the render that ends the recovery has them, and a render
+  # before it would show the form without its recovered input.
+  defp preview_changed_fields(%{assigns: %{live_preview_recovery_pending?: true}} = socket, _fields), do: socket
+
   defp preview_changed_fields(socket, fields) do
     fields
     |> Enum.reduce(socket, fn field, socket ->
@@ -6339,12 +6343,16 @@ defmodule BrandoAdmin.Components.Form do
   # atom exists for (a language key, say), and those must not raise.
   defp path_to_strings(path), do: Enum.map(path, &to_string/1)
 
-  # A declared path covers a change to itself and to anything below it (a
-  # subform row's field), compared whole segment by segment: `[:title]` does
-  # not cover `["title_en"]`.
+  # A declared path covers a change to itself, to anything below it (a
+  # subform row's field) and to what holds it (a whole field another editor
+  # sent), compared whole segment by segment: `[:title]` does not cover
+  # `["title_en"]`.
+  defp path_covers?(_declared, []), do: false
+
   defp path_covers?(declared, string_path) do
     declared = path_to_strings(declared)
-    Enum.take(string_path, length(declared)) == declared
+    depth = min(length(declared), length(string_path))
+    Enum.take(declared, depth) == Enum.take(string_path, depth)
   end
 
   defp request_select_options_update(socket) do

@@ -94,6 +94,24 @@ defmodule BrandoAdmin.Components.Form.RemoteFieldChangesTest do
            }
   end
 
+  # A field another editor changed arrives whole, so it covers a preview
+  # trigger declared below it (an embed's field, say).
+  test "a remote change to a field fires a preview trigger declared below it" do
+    socket =
+      socket(
+        id: "entry_form",
+        live_preview_active?: true,
+        preview_update: nil,
+        fields_demanding_full_live_preview_rerender: [[:title, :lead]],
+        fields_demanding_live_preview_reassign: []
+      )
+
+    changes = [%{field: :title, value: "Remote title", assoc?: false, clock: {1, "remote"}}]
+
+    assert {:ok, updated} = Form.update(%{event: "apply_remote_field_changes", changes: changes}, socket)
+    assert updated.assigns.preview_update.mode == :live_preview_full_rerender
+  end
+
   # Two editors who send the same field at once each get the other's value.
   # The clock (count, then tab) picks one, the same for both.
   test "of two changes to one field, the newer clock wins and an older one is dropped" do

@@ -3,4 +3,5 @@
   only `<main>`; adding, removing or reordering subform rows, and typing in a
   subform row, matched neither list; and another editor's change did not reach
   the open preview at all. A declared path now also covers the fields below
-  it, so `[:items]` names a subform and its rows.
+  it, so `[:items]` names a subform and its rows, and a path below a field
+  fires when the whole field changes.

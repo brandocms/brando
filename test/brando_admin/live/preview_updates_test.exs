@@ -219,6 +219,45 @@ defmodule BrandoAdmin.PreviewUpdatesTest do
     end
   end
 
+  # Between the two halves of a recovery the form has not got its unsaved
+  # input back; the render that ends the recovery has it, and the change.
+  test "a co-editor's change during preview recovery waits for the recovered form", c do
+    other = Factory.insert(:random_user, role: :superuser, config: %Brando.Users.UserConfig{})
+    {view, html} = live_form(c.conn, "/admin/pages/update/#{c.page.id}")
+    key = open_preview(view, "Localized")
+    on_exit(fn -> LivePreview.cleanup_cache(key) end)
+    captured = html |> recovery_params("#page_form_form") |> put_in(["page", "title"], "Recovered title")
+    kill_live(view)
+    {view, _html} = live_form(c.conn, "/admin/pages/update/#{c.page.id}")
+
+    [target] = view |> render() |> Floki.parse_document!() |> Floki.attribute("#live-preview-recovery", "phx-target")
+
+    view
+    |> with_target(String.to_integer(target))
+    |> render_hook("recover_live_preview_state", %{"live_preview" => %{"cache_key" => key}})
+
+    {coeditor, coeditor_html} = live_form(log_in_user(build_conn(), other), "/admin/pages/update/#{c.page.id}")
+    coeditor_form = with_target(coeditor, cid_of(coeditor, "#page_form-el"))
+    render_hook(coeditor_form, "focus", %{"field" => "page[uri]"})
+
+    params =
+      coeditor_html
+      |> form_params("#page_form_form")
+      |> put_in(["page", "uri"], "renamed-uri")
+      |> Map.put("_target", ["page", "uri"])
+
+    coeditor |> element("#page_form_form") |> render_change(params)
+    render_hook(coeditor_form, "blur", %{"field" => "page[uri]"})
+    settle(view)
+
+    refute_receive %Phoenix.Socket.Broadcast{}, 300
+
+    view |> element("#page_form_form") |> render_change(captured)
+
+    assert_receive %Phoenix.Socket.Broadcast{event: "rerender", payload: %{html: html}}, 3_000
+    assert html =~ "Recovered title"
+  end
+
   # An added row changes the entry without a round trip through the browser,
   # so the form refreshes the open preview itself.
   test "adding a page variable updates the open preview", %{conn: conn, page: page} do
