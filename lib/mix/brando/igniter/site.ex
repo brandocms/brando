@@ -9,6 +9,7 @@ if Code.ensure_loaded?(Igniter) do
     alias Igniter.Project.Module, as: ProjectModule
     alias Mix.Brando.Igniter.Files
     alias Mix.Brando.Igniter.Install.Configuration
+    alias Mix.Brando.Igniter.Install.PhoenixStatic
     alias Mix.Brando.Igniter.RouteInventory
     alias Mix.Brando.Igniter.Site.ErrorPages
     alias Mix.Brando.Igniter.Site.LivePreview
@@ -30,6 +31,7 @@ if Code.ensure_loaded?(Igniter) do
         |> files(project, state.lockdown)
         |> Config.configure_new("brando.exs", :brando, [:page_html_module], html)
         |> routes(project, state, controller)
+        |> PhoenixStatic.robots(project)
         |> home_test(project, state)
         |> lockdown_notice(state.lockdown)
         |> ErrorPages.plan(project)

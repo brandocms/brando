@@ -128,7 +128,11 @@ release script that sources them (see [Deployment hosts](#deployment-hosts)),
 Brando's Dockerfile and `.dockerignore` when there are none,
 `MyApp.ReleaseTasks` and a release that writes the tarball Florist deploys,
 relative `media_path` and `log_dir` in `config/prod.exs`, and the
-`.gitignore` lines a Brando application needs. "Release helpers", "Media and
+`.gitignore` lines a Brando application needs. The release does not copy
+`priv/static`, so phx.new's `favicon.ico` there is removed and its
+`images/logo.svg` moves to `assets/frontend/public/images`; with
+`--public-site`, its `robots.txt` is removed too, so Brando answers
+`/robots.txt`. "Release helpers", "Media and
 log paths", "Ignored files" and "The Docker build" in the deployment guide
 describe each, and what an existing file keeps. Florist's own configuration,
 like sample content, remains separate.
@@ -248,6 +252,10 @@ mix brando.gen.site --interactive
 Its pipeline resolves the tenant before locale and identity;
 published pages use the built frontend assets, Brando metadata and named page
 routes. Explicit application routes take precedence over CMS catch-all routing.
+phx.new's `priv/static/robots.txt` is removed while it is unchanged, with
+`robots.txt` in the web module's `static_paths/0`, so `/robots.txt` is the SEO
+settings' text in development as in the release; a changed one is kept, with a
+notice.
 
 An existing Phoenix `PageController.home` route at `/` is removed only with
 `--replace-phoenix-home` or an affirmative interactive answer. Its files remain
