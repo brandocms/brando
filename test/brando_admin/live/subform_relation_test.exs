@@ -36,6 +36,8 @@ defmodule BrandoAdmin.SubformRelationTest do
     pick(view, ctx.image)
     assert row_cover_id(render(view)) == to_string(ctx.image.id)
     assert has_element?(view, "#{@row_media} img")
+    # The row's image is not the article's own `cover`.
+    assert form_assigns(view).entry.cover == nil
 
     save(view)
     assert Repo.get!(ArticleItem, ctx.item.id).cover_id == ctx.image.id
@@ -96,6 +98,15 @@ defmodule BrandoAdmin.SubformRelationTest do
     view
     |> with_target(cid_of(view, @row_cover))
     |> render_click("select_image", %{"id" => to_string(image.id)})
+  end
+
+  defp form_assigns(view) do
+    {components, _, _} = :sys.get_state(view.pid).components
+
+    Enum.find_value(components, fn
+      {_cid, {BrandoAdmin.Components.Form, _id, assigns, _private, _prints}} -> assigns
+      _ -> nil
+    end)
   end
 
   defp row_cover_id(html) do

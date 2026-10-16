@@ -1842,11 +1842,8 @@ defmodule BrandoAdmin.Components.Form do
       |> EctoNestedChangeset.update_at(full_path, fn _ -> asset.id end)
       |> put_asset_in_data(path, field, asset)
 
-    entry_or_default = socket.assigns.entry || struct(socket.assigns.schema)
-    updated_entry = Map.put(entry_or_default, field, asset)
-
     socket
-    |> assign(:entry, updated_entry)
+    |> update_entry_with_relation(path ++ [field], asset)
     |> send_relation_to_blocks(path, field, asset)
     |> put_local_form(to_form(updated_changeset, []))
     |> own_asset(path, relation_key, :id)
