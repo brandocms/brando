@@ -46,40 +46,49 @@ defmodule BrandoAdmin.CommandPaletteTest do
 
     test "rank an exact title, then titles starting with the query, then the rest", c do
       grant(c, @content)
-      page("Hotel Sommerro")
-      page("Sommerro rooftop")
-      page("Sommerro")
+      page("The Example Hotel")
+      page("Example Hotel rooftop")
+      page("Example Hotel")
       page("Somewhere else")
 
-      assert titles(CommandPalette.entries(c.user, "sommerro")) == ["Sommerro", "Sommerro rooftop", "Hotel Sommerro"]
-      assert titles(CommandPalette.entries(c.user, "  SOMMERRO ")) == ["Sommerro", "Sommerro rooftop", "Hotel Sommerro"]
+      assert titles(CommandPalette.entries(c.user, "example hotel")) == [
+               "Example Hotel",
+               "Example Hotel rooftop",
+               "The Example Hotel"
+             ]
+
+      assert titles(CommandPalette.entries(c.user, "  EXAMPLE HOTEL ")) == [
+               "Example Hotel",
+               "Example Hotel rooftop",
+               "The Example Hotel"
+             ]
     end
 
     test "published entries come before pending ones and drafts of the same rank", c do
       grant(c, @content)
-      page("Sommerro draft", status: :draft)
-      page("Sommerro gone", status: :disabled)
-      page("Sommerro pending", status: :pending)
-      page("Sommerro published", status: :published)
+      page("Example Hotel draft", status: :draft)
+      page("Example Hotel gone", status: :disabled)
+      page("Example Hotel pending", status: :pending)
+      page("Example Hotel published", status: :published)
 
-      assert titles(CommandPalette.entries(c.user, "somm")) ==
-               ["Sommerro published", "Sommerro pending", "Sommerro draft", "Sommerro gone"]
+      assert titles(CommandPalette.entries(c.user, "exam")) ==
+               ["Example Hotel published", "Example Hotel pending", "Example Hotel draft", "Example Hotel gone"]
     end
 
     test "the user's content language comes first among equals, and rows name their language", c do
       grant(c, @content)
-      page("Sommerro", language: :en)
-      page("Sommerro", language: :no)
+      page("Example Hotel", language: :en)
+      page("Example Hotel", language: :no)
 
-      assert [%{language: "NO"}, %{language: "EN"}] = CommandPalette.entries(c.user, "sommerro", language: "no")
-      assert [%{language: "EN"}, %{language: "NO"}] = CommandPalette.entries(c.user, "sommerro", language: "en")
+      assert [%{language: "NO"}, %{language: "EN"}] = CommandPalette.entries(c.user, "example hotel", language: "no")
+      assert [%{language: "EN"}, %{language: "NO"}] = CommandPalette.entries(c.user, "example hotel", language: "en")
     end
 
     test "a row has what the identifier row shows and opens the entry's editor", c do
       grant(c, @content)
-      page = page("Sommerro", status: :draft)
+      page = page("Example Hotel", status: :draft)
 
-      assert [entry] = CommandPalette.entries(c.user, "somm")
+      assert [entry] = CommandPalette.entries(c.user, "exam")
       assert entry.url == "/admin/pages/update/#{page.id}"
       assert entry.status == :draft
       assert entry.type == Brando.Blueprint.get_singular(Brando.Pages.Page)
@@ -87,15 +96,15 @@ defmodule BrandoAdmin.CommandPaletteTest do
     end
 
     test "nobody sees an entry they cannot open", c do
-      page("Sommerro")
+      page("Example Hotel")
 
-      assert CommandPalette.entries(c.user, "somm") == []
+      assert CommandPalette.entries(c.user, "exam") == []
 
       group = grant(c, ~w(brando.admin.access brando.pages.read))
-      assert CommandPalette.entries(c.user, "somm") == [], "reading alone does not open the editor"
+      assert CommandPalette.entries(c.user, "exam") == [], "reading alone does not open the editor"
 
       {:ok, _} = Groups.update(c.scope, group.id, %{name: group.name}, @content, group.lock_version)
-      assert titles(CommandPalette.entries(c.user, "somm")) == ["Sommerro"]
+      assert titles(CommandPalette.entries(c.user, "exam")) == ["Example Hotel"]
     end
 
     test "entries of a content type the user has no grant for are left out, and a superuser sees both", c do
@@ -128,10 +137,10 @@ defmodule BrandoAdmin.CommandPaletteTest do
 
     test "deleted entries are left out even when their identifier remains", c do
       grant(c, @content)
-      page = page("Sommerro")
+      page = page("Example Hotel")
       Repo.update!(Ecto.Changeset.change(page, deleted_at: DateTime.utc_now(:second)))
 
-      assert CommandPalette.entries(c.user, "somm") == []
+      assert CommandPalette.entries(c.user, "exam") == []
     end
 
     test "LIKE wildcards in the query match themselves", c do
@@ -207,7 +216,7 @@ defmodule BrandoAdmin.CommandPaletteTest do
       assert shortcuts.(CommandPalette.results(c.context, ">"))
       assert shortcuts.(CommandPalette.results(c.context, "> keyboard"))
       assert shortcuts.(CommandPalette.results(c.context, "shortcuts"))
-      refute shortcuts.(CommandPalette.results(c.context, "sommerro"))
+      refute shortcuts.(CommandPalette.results(c.context, "example hotel"))
     end
 
     test "recent places are kept to eight", c do
@@ -217,11 +226,11 @@ defmodule BrandoAdmin.CommandPaletteTest do
     end
 
     test "a query lists entries, actions and settings", c do
-      page("Sommerro")
-      assert groups = CommandPalette.results(c.context, "somm")
+      page("Example Hotel")
+      assert groups = CommandPalette.results(c.context, "exam")
       assert [:entries, :actions] = Enum.map(groups, & &1.key)
       # The entries end with the way to the search page
-      assert [%{label: "Sommerro"}, %{kind: :search, url: "/admin/search?q=somm"}] = hd(groups).items
+      assert [%{label: "Example Hotel"}, %{kind: :search, url: "/admin/search?q=exam"}] = hd(groups).items
       # The best entry is a page, so "Create page…" is offered
       assert Enum.any?(Enum.at(groups, 1).items, &(&1.label == "Create page…"))
 
@@ -260,14 +269,14 @@ defmodule BrandoAdmin.CommandPaletteTest do
     end
 
     test "images matching the query link to the library filtered by it", c do
-      Factory.insert(:image, path: "images/site/sommerro-1.jpg")
-      Factory.insert(:image, path: "images/site/sommerro-2.jpg")
+      Factory.insert(:image, path: "images/site/example-hotel-1.jpg")
+      Factory.insert(:image, path: "images/site/example-hotel-2.jpg")
       Factory.insert(:image, path: "images/site/other.jpg")
 
       context = %{c.context | assets: [images: "/admin/assets/images"]}
-      [%{key: :actions, items: actions}, %{key: :entries}] = CommandPalette.results(context, "sommerro")
+      [%{key: :actions, items: actions}, %{key: :entries}] = CommandPalette.results(context, "example-hotel")
       assert %{count: 2, url: url} = Enum.find(actions, &(&1.id == "palette-assets-images"))
-      assert url == "/admin/assets/images?filter%3Afolder_id=all&filter%3Apath=sommerro"
+      assert url == "/admin/assets/images?filter%3Afolder_id=all&filter%3Apath=example-hotel"
     end
 
     test "images in nested library folders count, images in hidden folders never do", c do
@@ -275,16 +284,16 @@ defmodule BrandoAdmin.CommandPaletteTest do
       nested = Repo.insert!(%Brando.Media.Folder{scope: "images", name: "press", path: "site/press", parent_id: site.id})
       hidden = Brando.Media.Folders.hidden_folder_id("visitor-uploads")
 
-      Factory.insert(:image, path: "images/site/press/sommerro-1.jpg", folder_id: nested.id)
-      Factory.insert(:image, path: "images/hidden/sommerro-2.jpg", folder_id: hidden)
-      Factory.insert(:image, path: "images/hidden/sommerro-3.jpg", folder_id: hidden)
+      Factory.insert(:image, path: "images/site/press/example-hotel-1.jpg", folder_id: nested.id)
+      Factory.insert(:image, path: "images/hidden/example-hotel-2.jpg", folder_id: hidden)
+      Factory.insert(:image, path: "images/hidden/example-hotel-3.jpg", folder_id: hidden)
 
       context = %{c.context | assets: [images: "/admin/assets/images"]}
-      [%{key: :actions, items: actions}, %{key: :entries}] = CommandPalette.results(context, "sommerro")
+      [%{key: :actions, items: actions}, %{key: :entries}] = CommandPalette.results(context, "example-hotel")
       assert %{count: 1} = Enum.find(actions, &(&1.id == "palette-assets-images"))
 
       Repo.delete_all(from(i in Brando.Images.Image, where: i.folder_id == ^nested.id))
-      items = context |> CommandPalette.results("sommerro") |> Enum.flat_map(& &1.items)
+      items = context |> CommandPalette.results("example-hotel") |> Enum.flat_map(& &1.items)
       refute Enum.find(items, &(&1.id == "palette-assets-images"))
     end
   end
@@ -306,14 +315,14 @@ defmodule BrandoAdmin.CommandPaletteTest do
     end
 
     test "entries come from the current site and environment only", c do
-      page("Sommerro public")
+      page("Example Hotel public")
 
       Brando.Tenant.with_prefix(@prefix, fn ->
         # Through Brando.Repo, which writes to the process's tenant schema
         page =
           Brando.Repo.insert!(%Brando.Pages.Page{
-            title: "Sommerro tenant",
-            uri: "sommerro",
+            title: "Example Hotel tenant",
+            uri: "example-hotel",
             language: :en,
             status: :published,
             template: "default.html",
@@ -328,7 +337,7 @@ defmodule BrandoAdmin.CommandPaletteTest do
           language: :en
         })
 
-        assert titles(CommandPalette.entries(c.user, "somm")) == ["Sommerro tenant"]
+        assert titles(CommandPalette.entries(c.user, "exam")) == ["Example Hotel tenant"]
       end)
     end
   end

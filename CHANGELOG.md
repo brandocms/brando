@@ -1520,7 +1520,7 @@ production dump.
 
 - **Sort by use in the image library.** A folder that has filled up with
   block images can be sorted into folders for the entries that use them
-  (`cases/sommerro`, `pages/about`): a preview with the folders to make,
+  (`cases/example-hotel`, `pages/about`): a preview with the folders to make,
   renaming, per-entry opt-out and undo. Translations share their entry's
   folder; `config :brando, Brando.Images, sweep_priority: [...]` decides who
   gets an image several entries use. With **Not in use** switched on, the

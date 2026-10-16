@@ -34,9 +34,9 @@ defmodule E2eProject.BrandoTestHelpersTest do
   end
 
   test "a factory builds a project with its required client", %{user: user, module: module} do
-    project = insert_entry(Project, %{title: "Sommerro"}, user: user, blocks: [{module, vars: %{"author" => "Ada"}}])
+    project = insert_entry(Project, %{title: "Example Hotel"}, user: user, blocks: [{module, vars: %{"author" => "Ada"}}])
 
-    assert %Project{title: "Sommerro", status: :published, client_id: client_id} = project
+    assert %Project{title: "Example Hotel", status: :published, client_id: client_id} = project
     assert %Client{} = E2eProject.Repo.get!(Client, client_id)
     assert project.rendered_blocks =~ "<cite>Ada</cite>"
   end

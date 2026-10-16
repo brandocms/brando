@@ -50,7 +50,7 @@ defmodule Brando.Content.StaleBlocksTest do
 
   # A page with one block on version 1 of the module, holding `vars` and
   # `refs` as given plus everything version 3 defines.
-  defp page_with_block(c, vars, refs, title \\ "Sommerro") do
+  defp page_with_block(c, vars, refs, title \\ "Example Hotel") do
     page = Factory.insert(:page, creator: c.user, title: title, uri: "p#{System.unique_integer([:positive])}")
     block = insert_block!(c, page, vars, refs)
     {page, block}
@@ -147,7 +147,7 @@ defmodule Brando.Content.StaleBlocksTest do
       assert [stale] = report.blocks
       assert stale.id == block.id
       assert stale.module_version == 1
-      assert [%{label: "Sommerro", schema: Page, id: page_id, url: url}] = stale.entries
+      assert [%{label: "Example Hotel", schema: Page, id: page_id, url: url}] = stale.entries
       assert page_id == page.id
       assert url =~ "/admin"
 
@@ -448,7 +448,7 @@ defmodule Brando.Content.StaleBlocksTest do
       {:ok, _} = Repo.soft_delete(page)
 
       assert [%{entries: [entry]}] = report!(c).blocks
-      assert %{schema: Page, id: id, label: "Sommerro", trashed?: true, revisioned?: true} = entry
+      assert %{schema: Page, id: id, label: "Example Hotel", trashed?: true, revisioned?: true} = entry
       assert id == page.id
 
       plan = StaleBlocks.plan(report!(c), %{{:var, "link"} => :drop})
@@ -547,7 +547,7 @@ defmodule Brando.Content.StaleBlocksTest do
       assert message =~ "permission to change this module"
 
       assert {:error, message} = StaleBlocks.apply(c.module, %{{:var, "link"} => :drop}, module_only)
-      assert message =~ "permission to change Sommerro"
+      assert message =~ "permission to change Example Hotel"
 
       assert var(block, "link")
       assert {:ok, _} = StaleBlocks.apply(c.module, %{{:var, "link"} => :drop}, owner)
@@ -604,7 +604,7 @@ defmodule Brando.Content.StaleBlocksTest do
 
       output = run_task(args)
       assert output =~ "Kulturslider (#{c.module.uid}) is on version 3; 1 blocks are behind."
-      assert output =~ "Block ##{block.id} on version 1: Sommerro (Page, en)"
+      assert output =~ "Block ##{block.id} on version 1: Example Hotel (Page, en)"
       assert output =~ ~s|var link (link): "Les mer → https://by.no/kultur"|
       assert output =~ ~s|ref title (text): "Gammel tittel"|
       assert output =~ "var link in 1 blocks; can map to: cta (link)"
@@ -657,7 +657,7 @@ defmodule Brando.Content.StaleBlocksTest do
       insert_block!(c, template, [link_var()], [])
       args = ["resolve", "--uid", c.module.uid, "--user", to_string(c.user.id), "--drop", "link"]
 
-      assert run_task(args) =~ "Sommerro (Page, en, in the trash)"
+      assert run_task(args) =~ "Example Hotel (Page, en, in the trash)"
 
       output = run_task(args ++ ["--apply"])
       assert output =~ "A revision of 1 of the 2 changed entries was stored first."

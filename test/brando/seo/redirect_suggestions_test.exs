@@ -24,10 +24,10 @@ defmodule Brando.SEO.RedirectSuggestionsTest do
   end
 
   test "a near miss on the slug is a close suggestion; a different slug is none" do
-    rows = [row("Sommerro", "/projects/sommerro")]
+    rows = [row("Example Hotel", "/projects/example-hotel")]
 
-    assert [%{confidence: :close, to: "/projects/sommerro"}] =
-             RedirectSuggestions.suggest([%{url: "/projects/sommero", hits: 1}], rows, "en")
+    assert [%{confidence: :close, to: "/projects/example-hotel"}] =
+             RedirectSuggestions.suggest([%{url: "/projects/example-hotl", hits: 1}], rows, "en")
 
     assert RedirectSuggestions.suggest([%{url: "/projects/vinterbro", hits: 1}], rows, "en") == []
   end
@@ -37,7 +37,7 @@ defmodule Brando.SEO.RedirectSuggestionsTest do
     log = [%{url: "/wp-login.php", hits: 50}, %{url: "/.env", hits: 20}, %{url: "/static/env.css", hits: 2}]
     assert RedirectSuggestions.suggest(log, rows, "en") == []
     assert RedirectSuggestions.noise?("/xmlrpc.php")
-    refute RedirectSuggestions.noise?("/projects/sommerro")
+    refute RedirectSuggestions.noise?("/projects/example-hotel")
   end
 
   test "a URL already covered by a redirect is left out" do

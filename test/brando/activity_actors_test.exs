@@ -19,7 +19,7 @@ defmodule Brando.ActivityActorsTest do
     {:ok, %{user: Factory.insert(:random_user)}}
   end
 
-  defp create_page(user, title \\ "Sommerro") do
+  defp create_page(user, title \\ "Example Hotel") do
     {:ok, page} =
       Pages.create_page(
         %{
@@ -60,7 +60,7 @@ defmodule Brando.ActivityActorsTest do
 
   test "a person's save is theirs, with no proposal and no approver", %{user: user} do
     page = create_page(user)
-    {:ok, _} = Pages.update_page(page.id, %{title: "Sommerro hotel"}, user)
+    {:ok, _} = Pages.update_page(page.id, %{title: "Example Hotel Oslo"}, user)
 
     assert [created, updated] = events(page)
 

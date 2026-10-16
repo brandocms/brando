@@ -98,7 +98,7 @@ defmodule Brando.Videos.MetadataTest do
 
     assert Videos.placeholder_title?(%Videos.Video{title: "file.mp4%20%28720p%29", source_url: url})
     assert Videos.placeholder_title?(%Videos.Video{title: nil, source_url: url})
-    refute Videos.placeholder_title?(%Videos.Video{title: "Sommerro", source_url: url})
+    refute Videos.placeholder_title?(%Videos.Video{title: "Example Hotel", source_url: url})
   end
 
   test "looks up an unlisted Vimeo video through its hashed page URL" do
@@ -129,7 +129,8 @@ defmodule Brando.Videos.MetadataTest do
 
     stub(fn
       "/api/oembed.json", _ ->
-        {:json, %{"title" => "Sommerro", "duration" => 65, "thumbnail_url" => "https://i.vimeocdn.com/video/9-d_295x166"}}
+        {:json,
+         %{"title" => "Example Hotel", "duration" => 65, "thumbnail_url" => "https://i.vimeocdn.com/video/9-d_295x166"}}
 
       "/video/9-d_1280", _ ->
         {:jpeg, jpeg}
@@ -138,7 +139,7 @@ defmodule Brando.Videos.MetadataTest do
     assert {:ok, video} = Videos.fetch_metadata(video, user)
     video = Brando.Repo.preload(video, :thumbnail)
 
-    assert video.title == "Sommerro"
+    assert video.title == "Example Hotel"
     assert video.duration == "00:01:05"
     assert {video.width, video.height} == {1280, 720}
     assert video.thumbnail.status == :processed
