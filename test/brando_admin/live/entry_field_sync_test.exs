@@ -509,7 +509,7 @@ defmodule BrandoAdmin.EntryFieldSyncTest do
       b = open(c.other_conn, c.page)
 
       a |> element("#page_meta_image-media button[phx-click*=open_image]") |> render_click()
-      a |> element("#image-drawer button.destructive") |> render_click()
+      a |> element("#image-drawer button.menu-item--danger") |> render_click()
 
       await_shown(b, "meta_image_id", "")
     end

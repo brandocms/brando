@@ -133,13 +133,14 @@ defmodule BrandoAdmin.Components.Form.FieldActions do
         <button
           :for={action <- @actions}
           type="button"
+          class="menu-item menu-item--ai"
           phx-click="run_field_action"
           phx-target={@target}
           phx-value-field={@field.field}
           phx-value-action={action.name}
           phx-value-panel={@panel}
         >
-          <span>{action.label}</span><.icon name="sparkles" />
+          <.icon name="sparkles" /><span>{action.label}</span>
         </button>
       </div>
     </div>

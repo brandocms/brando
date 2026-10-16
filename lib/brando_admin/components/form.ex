@@ -3837,10 +3837,10 @@ defmodule BrandoAdmin.Components.Form do
                     value={false}
                     event={JS.push("push_submit_redirect", target: @myself)}
                   >
-                    {gettext("Save and close")}<Primitives.shortcut key="S" shift />
+                    {gettext("Save and close")}<Primitives.shortcut key="S" shift class="menu-item-hint" />
                   </Button.dropdown>
                   <Button.dropdown value={false} event={JS.push("push_submit", target: @myself)}>
-                    {gettext("Save and continue editing")}<Primitives.shortcut key="S" />
+                    {gettext("Save and continue editing")}<Primitives.shortcut key="S" class="menu-item-hint" />
                   </Button.dropdown>
                   <Button.dropdown
                     :if={can_create_new?(@schema)}
@@ -4134,7 +4134,7 @@ defmodule BrandoAdmin.Components.Form do
         <button
           :if={@languages?}
           type="button"
-          class="form-tool-language"
+          class="menu-item"
           phx-click={toggle_drawer("##{@id}-alternates-drawer")}
           aria-haspopup="dialog"
         >
@@ -4144,7 +4144,7 @@ defmodule BrandoAdmin.Components.Form do
         <button
           :if={@share?}
           type="button"
-          class="form-tool-share"
+          class="menu-item"
           phx-click={JS.push("share_link", target: @target)}
           aria-busy={to_string(@sharing?)}
           disabled={@sharing?}

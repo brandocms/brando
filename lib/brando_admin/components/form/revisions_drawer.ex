@@ -295,6 +295,7 @@ defmodule BrandoAdmin.Components.Form.RevisionsDrawer do
                         <Button.dropdown
                           :if={!revision.protected && !revision.active && !revision.scheduled}
                           confirm={gettext("Delete this revision permanently?")}
+                          danger
                           event={
                             JS.push("delete_revision",
                               target: @myself,

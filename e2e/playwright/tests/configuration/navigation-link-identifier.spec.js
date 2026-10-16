@@ -30,7 +30,7 @@ test.describe('Link var identifier picker', () => {
     await syncLV(page)
 
     // The picked schema button reflects the selection
-    await expect(schemaButton).toHaveClass(/selected/)
+    await expect(schemaButton).toHaveClass(/\bis-selected\b/)
 
     const identifiers = modal.locator('.identifier-options .identifier')
     await expect(identifiers.first()).toBeVisible()

@@ -1146,8 +1146,8 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
             id={"#{@var.id}-gallery-actions"}
             label={if @gallery_objects == [], do: gettext("Add"), else: gettext("Change")}
           >
-            <button type="button" class="upload-trigger"><.icon name="upload" />{gettext("Upload media")}</button>
-            <button type="button" phx-click={show_modal("#var-#{@var.id}-gallery-config")}>
+            <button type="button" class="menu-item upload-trigger"><.icon name="upload" />{gettext("Upload media")}</button>
+            <button type="button" class="menu-item" phx-click={show_modal("#var-#{@var.id}-gallery-config")}>
               <.icon name="sliders-horizontal" />{gettext("Configure")}
             </button>
           </MediaField.action_menu>

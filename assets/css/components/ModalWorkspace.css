@@ -47,7 +47,7 @@
 .modal .modal-footer { padding: 16px 24px; min-height: 70px; gap: 10px; border-top: 1px solid var(--modal-line); flex-shrink: 0; background: white; }
 .modal .modal-footer-note { margin-right: auto; font-size: var(--brando-text-sm); color: var(--modal-muted); }
 .modal .modal-content button:disabled:not(.btn) { opacity: .45; cursor: not-allowed; }
-.modal :is(button, input, a, select):focus-visible { outline: 2px solid var(--modal-accent); outline-offset: 3px; }
+.modal :is(button, input, a, select):where(:not(.menu-item)):focus-visible { outline: 2px solid var(--modal-accent); outline-offset: 3px; }
 .modal .modal-content .field-wrapper { margin: 0 0 20px; }
 .modal .modal-content .field-wrapper:last-child { margin-bottom: 0; }
 /* Each input's wrapper is the last child of its own `.brando-input`, so the
@@ -274,29 +274,16 @@ button.link-preview { text-align: left; }
   .modal--picker .modal-header { padding: 16px var(--picker-inline-padding); }
 }
 
-/* C's navigation and rows retain the proportions from the approved study. A
-   content type is a menu row, not a button: no frame, muted until selected. */
-.identifier-picker-option {
-  display: flex; align-items: center; justify-content: flex-start; gap: 8px;
-  width: 100%; min-width: 0; height: auto; min-height: 36px; margin: 0; padding: 10px 8px;
-  border: 1px solid transparent; border-radius: 5px; box-shadow: none; background: transparent;
-  color: var(--brando-muted); font: var(--brando-text-sm)/18px "Main", sans-serif; text-transform: none; letter-spacing: 0;
-  text-align: left; white-space: nowrap; cursor: pointer; transition: background-color 0.15s ease, color 0.15s ease;
-}
-.identifier-picker-option:hover { background: var(--brando-surface-selected); }
-.identifier-picker-option.selected { background: var(--brando-surface-selected); color: var(--brando-accent); }
-.identifier-picker-option > [data-icon] { width: 16px; height: 16px; flex: 0 0 16px; }
-.identifier-scope-label { min-width: 0; overflow-wrap: anywhere; text-box: trim-both cap alphabetic; }
-.identifier-scope-count { margin-left: auto; flex-shrink: 0; color: var(--brando-faint); font-size: var(--brando-text-xs); text-box: trim-both cap alphabetic; }
+/* A content type is a menu row (`.menu-item`), its count a `.menu-item-hint`. */
+.identifier-scope-label { min-width: 0; overflow-wrap: anywhere; }
 .identifier-picker-nav { width: 176px; flex-basis: 176px; }
 .identifier-picker-nav h3 { font-size: var(--brando-text-xs); }
 .identifier-results-heading { font-size: var(--brando-text-xs); margin: 16px 0 10px; }
 .identifier-results-count { display: flex; gap: 4px; }
 @media (max-width: 720px) {
   .identifier-picker-nav { width: 100%; }
-  .identifier-picker-option { width: auto; flex-shrink: 0; padding: 8px 9px; font-size: var(--brando-text-xs); }
+  .identifier-picker-option { width: auto; flex-shrink: 0; white-space: nowrap; }
   .identifier-picker-option > [data-icon] { display: none; }
-  .identifier-scope-count { font-size: var(--brando-text-2xs); }
 }
 
 .modal .modal-footer-selection { display: flex; align-items: center; gap: 8px; margin-right: auto; min-width: 0; color: var(--modal-accent); font: var(--brando-text-sm)/18px "Main", sans-serif; }

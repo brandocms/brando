@@ -1159,10 +1159,11 @@ defmodule BrandoAdmin.Components.Content.List do
           :for={export <- @exports}
           :key={export.name}
           type="button"
+          class="menu-item"
           phx-value-name={export.name}
           phx-click={@select_export}
         >
-          {g(@schema, export.label)} <span class="shortcut">{export.type}</span>
+          {g(@schema, export.label)} <span class="menu-item-hint">{export.type}</span>
         </button>
       </CircleDropdown.render>
     </div>
@@ -1288,10 +1289,17 @@ defmodule BrandoAdmin.Components.Content.List do
       <.simple_dropdown id="sorts-dropdown" label={g(@schema, @active_sort.label)}>
         <:options>
           <li :for={sort <- @sorts} :key={sort.key}>
-            <button type="button" phx-click={@on_update} phx-value-sort_key={sort.key}>
-              {g(@schema, sort.label)}
-              <span :if={@sortable? && Row.ordered_by_sequence?(sort)} class="sort-note">
-                {gettext("Rows can be dragged in this order")}
+            <button
+              type="button"
+              class={["menu-item", @active_sort && sort.key == @active_sort.key && "is-selected"]}
+              phx-click={@on_update}
+              phx-value-sort_key={sort.key}
+            >
+              <span>
+                {g(@schema, sort.label)}
+                <small :if={@sortable? && Row.ordered_by_sequence?(sort)}>
+                  {gettext("Rows can be dragged in this order")}
+                </small>
               </span>
             </button>
           </li>
@@ -1420,6 +1428,7 @@ defmodule BrandoAdmin.Components.Content.List do
   attr :encoded_ids, :string, required: true
   attr :language, :string, default: nil
   attr :confirm, :any, default: false
+  attr :danger, :boolean, default: false, doc: "a row that destroys something (`menu-item--danger`)"
   slot :inner_block, required: true
 
   def selection_action_button(%{confirm: confirm} = assigns) when is_binary(confirm) do
@@ -1435,6 +1444,7 @@ defmodule BrandoAdmin.Components.Content.List do
     <button
       id={@id}
       type="button"
+      class={["menu-item", @danger && "menu-item--danger"]}
       phx-hook="Brando.ConfirmClick"
       phx-confirm-click-message={@confirm}
       phx-confirm-click={@confirm_event}
@@ -1447,7 +1457,12 @@ defmodule BrandoAdmin.Components.Content.List do
 
   def selection_action_button(assigns) do
     ~H"""
-    <button phx-click={@event} phx-value-ids={@encoded_ids} {%{phx_value_language: @language} |> filter_nil_attrs()}>
+    <button
+      class={["menu-item", @danger && "menu-item--danger"]}
+      phx-click={@event}
+      phx-value-ids={@encoded_ids}
+      {%{phx_value_language: @language} |> filter_nil_attrs()}
+    >
       {render_slot(@inner_block)}
     </button>
     """
@@ -1516,6 +1531,7 @@ defmodule BrandoAdmin.Components.Content.List do
               :if={BrandoAdmin.Authorization.allowed?(:delete, @schema)}
               event="delete_selected"
               encoded_ids={@encoded_selected_rows}
+              danger
             >
               {gettext("Delete selected")}
             </.selection_action_button>

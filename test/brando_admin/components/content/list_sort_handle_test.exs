@@ -43,8 +43,11 @@ defmodule BrandoAdmin.Components.Content.ListSortHandleTest do
     opts = [active_sort: @by_title, sorts: sorts, schema: Brando.Pages.Page, on_update: "update_sort"]
 
     html = render_component(&List.sorts/1, [sortable?: true] ++ opts)
-    assert [_] = Regex.scan(~r/class="sort-note"/, html)
+    assert [_] = Regex.scan(~r/<small>/, html)
+    assert html =~ "Rows can be dragged in this order"
+    # The current sort is the selected row
+    assert [_] = Regex.scan(~r/is-selected/, html)
 
-    refute render_component(&List.sorts/1, [sortable?: false] ++ opts) =~ "sort-note"
+    refute render_component(&List.sorts/1, [sortable?: false] ++ opts) =~ "<small>"
   end
 end

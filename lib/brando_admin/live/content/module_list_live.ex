@@ -35,21 +35,27 @@ defmodule BrandoAdmin.Content.ModuleListLive do
           <div class="workspace-menu-items">
             <button
               type="button"
+              class="menu-item"
               phx-click={
                 JS.push("open_module_files")
                 |> close_transfer_menu()
                 |> show_modal("#module-files-modal")
               }
             >
-              {gettext("Modules as files")}
-              <small>{gettext("Export and import module definitions (DSL)")}</small>
+              <span>
+                {gettext("Modules as files")}
+                <small>{gettext("Export and import module definitions (DSL)")}</small>
+              </span>
             </button>
             <button
               type="button"
+              class="menu-item"
               phx-click={close_transfer_menu() |> show_modal("#module-import-modal")}
             >
-              {gettext("Paste encoded modules")}
-              <small>{gettext("Import copies of modules from another site")}</small>
+              <span>
+                {gettext("Paste encoded modules")}
+                <small>{gettext("Import copies of modules from another site")}</small>
+              </span>
             </button>
           </div>
         </details>

@@ -569,6 +569,7 @@ defmodule BrandoAdmin.Components.Form.Primitives do
 
   attr :key, :string, required: true
   attr :shift, :boolean, default: false
+  attr :class, :string, default: "shortcut", doc: "`menu-item-hint` in a menu row"
 
   @doc """
   A keyboard shortcut as the platform writes it: "⇧⌘S" on a Mac, "Ctrl+Shift+S"
@@ -577,7 +578,7 @@ defmodule BrandoAdmin.Components.Form.Primitives do
   """
   def shortcut(assigns) do
     ~H"""
-    <span class="shortcut">
+    <span class={@class}>
       <span class="shortcut-mac">{if @shift, do: "⇧"}⌘{@key}</span>
       <span class="shortcut-other">Ctrl+{if @shift, do: "Shift+"}{@key}</span>
     </span>

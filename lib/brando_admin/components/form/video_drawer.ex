@@ -177,13 +177,18 @@ defmodule BrandoAdmin.Components.Form.VideoDrawer do
                 <.icon name="refresh-cw" />{gettext("Replace")}<.icon name="chevron-down" />
               </button>
               <div id="video-drawer-replace-menu" class="media-action-options" popover="auto">
-                <button :if={@upload_input} type="button" phx-click={JS.dispatch("click", to: @upload_input)}>
+                <button
+                  :if={@upload_input}
+                  type="button"
+                  class="menu-item"
+                  phx-click={JS.dispatch("click", to: @upload_input)}
+                >
                   <.icon name="upload" />{gettext("Upload")}
                 </button>
-                <button type="button" phx-click={open_picker(false)}>
+                <button type="button" class="menu-item" phx-click={open_picker(false)}>
                   <.icon name="folder" />{gettext("Select video")}
                 </button>
-                <button :if={@url_allowed?} type="button" phx-click={open_picker(true)}>
+                <button :if={@url_allowed?} type="button" class="menu-item" phx-click={open_picker(true)}>
                   <.icon name="link" />{gettext("Add from URL")}
                 </button>
               </div>
@@ -204,7 +209,7 @@ defmodule BrandoAdmin.Components.Form.VideoDrawer do
                 <.icon name="ellipsis" />
               </button>
               <div id="video-drawer-more-menu" class="media-action-options" popover="auto">
-                <button type="button" class="destructive" phx-click={reset_video_field(@myself)}>
+                <button type="button" class="menu-item menu-item--danger" phx-click={reset_video_field(@myself)}>
                   <.icon name="trash" />{gettext("Remove")}
                 </button>
               </div>

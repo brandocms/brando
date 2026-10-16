@@ -271,7 +271,7 @@
         z-index: 20;
         min-width: 170px;
         margin: 0;
-        padding: 0;
+        padding: 3px;
         list-style: none;
         border-radius: 8px;
         border: 1px solid color-mix(in srgb, var(--brando-ink) 30%, transparent);
@@ -283,47 +283,6 @@
           list-style: none;
           margin: 0;
           padding: 0;
-
-          + li {
-            border-top: 1px solid color-mix(in srgb, var(--brando-ink) 14%, transparent);
-          }
-        }
-
-        button {
-          font-family: "Mono";
-          width: 100%;
-          margin: 0;
-          border: 0;
-          border-radius: 0;
-          background: transparent;
-          color: var(--brando-ink);
-          font-size: var(--brando-text-xs);
-          text-transform: uppercase;
-          display: flex;
-          align-items: center;
-          gap: 0.4rem;
-          padding: 0.44rem 0.58rem;
-          text-align: left;
-          line-height: 1.15;
-
-          [data-icon] {
-            width: 0.8rem;
-            height: 0.8rem;
-          }
-
-          &:hover {
-            background: var(--brando-ink);
-            color: var(--brando-ink-inverse);
-          }
-
-          &.delete-action {
-            color: var(--brando-error-ink);
-          }
-
-          &.delete-action:hover {
-            background: var(--brando-error);
-            color: var(--brando-error-ink);
-          }
         }
       }
     }

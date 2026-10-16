@@ -1266,6 +1266,7 @@ defmodule BrandoAdmin.Components.VideoPicker do
             <li>
               <button
                 type="button"
+                class="menu-item"
                 phx-click={
                   JS.push("start_rename", target: @myself)
                   |> hide_dropdown("#video-picker-menu-#{@video.id}")
@@ -1279,6 +1280,7 @@ defmodule BrandoAdmin.Components.VideoPicker do
             <li>
               <button
                 type="button"
+                class="menu-item"
                 phx-click={
                   JS.push("play_video", target: @myself)
                   |> show_modal("#video-player-modal")
@@ -1295,7 +1297,7 @@ defmodule BrandoAdmin.Components.VideoPicker do
             <li>
               <button
                 type="button"
-                class="delete-action"
+                class="menu-item menu-item--danger"
                 phx-confirm={gettext("Delete this video?")}
                 phx-click={
                   JS.push("delete_video_from_picker",
