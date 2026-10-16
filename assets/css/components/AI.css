@@ -1,8 +1,8 @@
 /* AI in the admin: one look for an action that asks AI for something, and
    one for what AI hands back for review, both in the AI violet
    (`--brando-ai`, tokens.css): these call an external, paid service, so they
-   are marked apart from every other action. See "AI actions and suggestions"
-   in docs/admin-ui-design.md.
+   are marked apart from every other action. See
+   .claude/skills/brando-admin-ui/references/ai-actions.md.
 
    An AI action is a small secondary button: the sparkles icon and the violet
    ink, on a solid violet hairline. Never dashed — a dashed outline means

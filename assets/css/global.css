@@ -1023,7 +1023,7 @@ h3 {
 
 /* The admin's badge: a small label for a state, a type or a count. A tone
    modifier picks one of the message tones; status uses a tone and a dot.
-   See "Buttons and badges" in docs/admin-ui-design.md.
+   See .claude/skills/brando-admin-ui/references/buttons-badges-menus.md.
 
      .badge                     neutral
      .badge--success / --attention / --error / --ai

@@ -1,6 +1,7 @@
 /* A row in a menu: a dropdown, a popover, a context menu or a picker's list
    of options. The panel around it (border, shadow, placement) belongs to the
-   menu; the row's look is this one. See "Menu items" in docs/admin-ui-design.md.
+   menu; the row's look is this one. See
+   .claude/skills/brando-admin-ui/references/buttons-badges-menus.md.
 
      .menu-item             a row: icon, label, then a hint pushed to the end
      .menu-item--danger     destroys something: red text, red tint on hover

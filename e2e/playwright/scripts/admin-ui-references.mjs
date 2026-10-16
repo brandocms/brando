@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // Retakes the admin reference screenshots linked from the docs
-// (docs/admin-ui-design.md, docs/admin-ui/**, docs/entry-drafts,
+// (.claude/skills/brando-admin-ui, docs/admin-ui/**, docs/entry-drafts,
 // docs/module-definitions, guides/content_*.md) from a running E2E server.
 //
 //   cd e2e && source .envrc && MIX_ENV=e2e mix phx.server      # terminal 1

@@ -215,8 +215,8 @@ test('image refs while processing', async ({ page }, testInfo) => {
   }
 })
 
-// The AI looks side by side (docs/admin-ui-design.md, "AI actions and
-// suggestions"). AI controls only render when a provider is configured, which
+// The AI looks side by side (.claude/skills/brando-admin-ui/references/
+// ai-actions.md). AI controls only render when a provider is configured, which
 // an E2E run is not, so the sheet is the components' own markup, copied from
 // the rendered screens and drawn by the admin's stylesheets on an admin page.
 test('ai actions and suggestions: composed sheet', async ({ page }, testInfo) => {

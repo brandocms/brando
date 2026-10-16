@@ -66,7 +66,7 @@ placements. Never silently publish it or imply a draft link will work.
 Use a wide review panel alongside chat, with entry cards, real media, compact
 block outlines, highlighted insertion points and expandable field differences.
 Provide “Adjust”, “Cancel” and an explicit confirmation such as “Apply 3 entry
-changes · affects 2 live pages.” Follow [the admin design guide](admin-ui-design.md).
+changes · affects 2 live pages.” Follow [the admin UI skill](../.claude/skills/brando-admin-ui/SKILL.md).
 Include page previews in v1 for configured targets, as described below. Review
 cards remain available when a content type has no page preview. Arbitrary
 model-generated HTML, JavaScript or generated illustrations are unnecessary for
