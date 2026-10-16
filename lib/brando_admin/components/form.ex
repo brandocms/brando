@@ -6291,10 +6291,12 @@ defmodule BrandoAdmin.Components.Form do
          path_type
        )
        when fdlpr != [] do
-    path = if path_type == :string_path, do: string_path_to_atom_path(path), else: path
+    path = if path_type == :string_path, do: path, else: path_to_strings(path)
     cache_key = socket.assigns.live_preview_cache_key
 
-    for {key, ^path} <- fdlpr, do: LivePreview.invalidate_var(cache_key, key)
+    for {key, trigger_path} <- fdlpr, path_to_strings(trigger_path) == path do
+      LivePreview.invalidate_var(cache_key, key)
+    end
 
     socket
   end
@@ -6305,16 +6307,23 @@ defmodule BrandoAdmin.Components.Form do
 
   # A field in the target's `rerender_on_change` renders the whole page: an
   # ordinary update sends only `<main>`, so the layout around it would keep
-  # what it showed.
+  # what it showed. Queued like every other preview render, so the `update`
+  # the same change queues next merges into it.
   defp maybe_rerender_live_preview_for(
          %{assigns: %{live_preview_active?: true, fields_demanding_full_live_preview_rerender: [_ | _] = paths}} =
            socket,
          string_path
        ) do
-    maybe_full_rerender_live_preview(socket, string_path_to_atom_path(string_path) in paths)
+    if Enum.any?(paths, &(path_to_strings(&1) == string_path)),
+      do: Preview.queue(socket, :live_preview_full_rerender, 0),
+      else: socket
   end
 
   defp maybe_rerender_live_preview_for(socket, _string_path), do: socket
+
+  # Form paths are compared as strings: an input name can hold segments no
+  # atom exists for (a language key, say), and those must not raise.
+  defp path_to_strings(path), do: Enum.map(path, &to_string/1)
 
   defp request_select_options_update(socket) do
     form_blueprint = socket.assigns.form_blueprint
@@ -7751,15 +7760,6 @@ defmodule BrandoAdmin.Components.Form do
     gallery_images
     |> Enum.with_index()
     |> Enum.map(fn {gi, idx} -> Map.put(gi, :sequence, idx) end)
-  end
-
-  defp string_path_to_atom_path(string_path) do
-    Enum.map(string_path, fn segment ->
-      case Integer.parse(segment) do
-        {idx, ""} -> idx
-        _ -> String.to_existing_atom(segment)
-      end
-    end)
   end
 
   defp string_path_to_access_path(string_path) do

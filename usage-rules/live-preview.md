@@ -48,8 +48,9 @@ continue to work without changes.
   earlier callback or persist changes.
 - `rerender_on_change [[:field]]` requests a full-page render when changes affect
   markup outside individual block regions: an ordinary update replaces only
-  `<main>`. An assign the layout reads, such as navigation in the entry's
-  language, needs its field in both lists. `template_section` and
+  `<main>`, a full render the `<body>`; `<html lang>` and `<head>` change when
+  the preview reloads. An assign the layout reads, such as navigation in the
+  entry's language, needs its field in both lists. `template_section` and
   `template_css_classes` accept a string or an entry callback for layout context.
 
 Templates receive `@LIVE_PREVIEW` and a preview connection. Reuse production

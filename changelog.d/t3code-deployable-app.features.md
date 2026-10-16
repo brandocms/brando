@@ -21,6 +21,7 @@
   `LivePreview` gets a `preview_target` for `Brando.Pages.Page` that renders
   with the generated `CMS.PageHTML` and `CMS.Layouts`, with the identity,
   navigation and footer partials the page controller assigns; changing the
-  page's language recomputes them and renders the whole page. The bare module
+  page's language recomputes them and re-renders the page's body;
+  `<html lang>` and `<head>` update when the preview reloads. The bare module
   `brando.install` writes is replaced; a customized one gets a notice with the
   target to add.

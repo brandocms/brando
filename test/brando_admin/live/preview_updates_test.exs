@@ -65,6 +65,48 @@ defmodule BrandoAdmin.PreviewUpdatesTest do
     refute_receive %Phoenix.Socket.Broadcast{event: "update"}, 75
   end
 
+  describe "a schema without block fields" do
+    # Brando.MetaDrawerTest.ActionsArticle: no Blocks trait, one preview
+    # target whose layout reads the title (test_helper.exs)
+    setup %{conn: conn, page: page} do
+      {:ok, view, _html} = live(conn, "/admin/meta-articles/update/#{page.id}", on_error: [duplicate_id: :ignore])
+      render_async(view, 5_000)
+      html = await_selector(view, "#actions_article_form_form input")
+      view |> element("#actions_article_form-preview-trigger") |> render_click()
+      iframe = await_selector(view, "iframe[src*='__livepreview']")
+      [key] = Regex.run(~r/__livepreview\?key=([A-Za-z0-9_-]+)/, iframe, capture: :all_but_first)
+      Brando.endpoint().subscribe("live_preview:#{key}")
+      on_exit(fn -> LivePreview.cleanup_cache(key) end)
+      %{view: view, html: html}
+    end
+
+    defp change_field(view, html, target, value) do
+      params =
+        html
+        |> form_params("#actions_article_form_form")
+        |> put_in(target, value)
+        |> Map.put("_target", target)
+
+      view |> element("#actions_article_form_form") |> render_change(params)
+    end
+
+    test "a field in rerender_on_change renders the whole page once", %{view: view, html: html} do
+      change_field(view, html, ["actions_article", "title"], "Retitled")
+
+      assert_receive %Phoenix.Socket.Broadcast{event: "rerender", payload: %{html: document}}, 2_000
+      assert document =~ "<header>heading:Retitled</header>"
+      refute_receive %Phoenix.Socket.Broadcast{}, 200
+    end
+
+    test "a target segment no atom exists for updates the preview without raising", %{view: view, html: html} do
+      segment = "unknown_#{System.unique_integer([:positive])}"
+      change_field(view, html, ["actions_article", segment], "x")
+
+      assert_receive %Phoenix.Socket.Broadcast{event: "update"}, 2_000
+      assert render(view) =~ "actions_article_form_form"
+    end
+  end
+
   for order <- [:main_first, :preview_first] do
     test "preview recovery keeps unsaved input when #{order}", %{conn: conn, page: page} do
       {view, html} = live_form(conn, "/admin/pages/update/#{page.id}")
