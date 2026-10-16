@@ -183,16 +183,7 @@ if Code.ensure_loaded?(Igniter) do
           |> String.split("\n")
           |> Enum.map(&String.trim/1)
 
-        # The last pattern matching VERSION decides, as in Docker.
-        excluded? =
-          patterns
-          |> Enum.reverse()
-          |> Enum.find_value(fn
-            "!" <> pattern -> if excludes_version?(pattern), do: :kept
-            pattern -> if excludes_version?(pattern), do: :excluded
-          end) == :excluded
-
-        if excluded?,
+        if version_excluded?(patterns),
           do:
             Igniter.add_notice(igniter, docker_notice(".dockerignore may exclude VERSION; keep it in the build context")),
           else: igniter
@@ -200,6 +191,14 @@ if Code.ensure_loaded?(Igniter) do
         igniter
       end
     end
+
+    # The last pattern matching VERSION decides, as in Docker.
+    defp version_excluded?(patterns) do
+      patterns |> Enum.reverse() |> Enum.find_value(&version_rule/1) == :excluded
+    end
+
+    defp version_rule("!" <> pattern), do: if(excludes_version?(pattern), do: :kept)
+    defp version_rule(pattern), do: if(excludes_version?(pattern), do: :excluded)
 
     defp excludes_version?(pattern),
       do: pattern in ~w(VERSION /VERSION **/VERSION VERSION* /VERSION* * ** **/* /*)
