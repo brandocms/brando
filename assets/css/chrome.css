@@ -85,6 +85,7 @@
   }
 }
 
+/* Fixed in the bottom right corner; on a phone they would cover content. */
 .presences {
   display: flex;
   z-index: 1;
@@ -221,4 +222,8 @@
       }
     }
   }
+}
+
+@media (max-width: 600px) {
+  .presences { display: none; }
 }

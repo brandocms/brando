@@ -55,8 +55,9 @@ test('listing filters align, disclose children by keyboard and retain creators o
   await page.screenshot({ path: testInfo.outputPath('pages-expanded-desktop.png'), fullPage: true })
   await page.setViewportSize({ width: 390, height: 844 })
   await noOverflow(page)
-  await expect(page.locator('.main-content .listing-creator .avatar').first()).toBeVisible()
-  await expect(page.locator('.child-row .listing-creator .avatar').first()).toBeVisible()
+  // On a phone the author is a name and a date on the status line; the avatar drops.
+  await expect(page.locator('.main-content .listing-creator .name').first()).toBeVisible()
+  await expect(page.locator('.child-row .listing-creator .name').first()).toBeVisible()
   await page.screenshot({ path: testInfo.outputPath('pages-expanded-mobile.png'), fullPage: true })
 })
 

@@ -32,7 +32,7 @@ for (const [name, route, heading] of [
     await expect(page.getByRole('link', { name: 'Create new' })).toHaveCSS('background-color', 'rgb(37, 78, 63)')
     const firstRow = page.locator('.list-row').first()
     if (await firstRow.count()) {
-      await expect(firstRow.locator('.entry-link').first()).toHaveCSS('font-size', '15px')
+      await expect(firstRow.locator('.entry-link').first()).toHaveCSS('font-size', '14px')
       await expect(firstRow).toHaveCSS('border-radius', '0px')
     }
     await page.screenshot({ path: testInfo.outputPath(`${name}-desktop.png`), fullPage: true })

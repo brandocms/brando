@@ -170,7 +170,6 @@
   }
 
   .sort-container {
-    flex-grow: 1;
     margin-top: 0;
   }
 
@@ -288,6 +287,7 @@
   .list-tools-wrapper {
     display: flex;
     flex-direction: column;
+    flex-shrink: 0;
     gap: 15px;
     @space margin-bottom 20px;
   }

@@ -154,9 +154,11 @@ test('listing actions align with the header rule and selection covers presence',
   await syncLV(page)
   const header = page.locator('#content-header')
   const action = header.getByRole('link', { name: 'Create new', exact: true })
-  const h = await header.boundingBox(), a = await action.boundingBox(), main = await header.locator('.main').boundingBox()
+  // The action sits on the title's line, at the header's right edge, also
+  // under a subtitle ("Overview").
+  const h = await header.boundingBox(), a = await action.boundingBox(), title = await header.locator('h1').boundingBox()
   expect(a.x + a.width).toBeCloseTo(h.x + h.width, 0)
-  expect(a.y + a.height).toBeCloseTo(main.y + main.height, 0)
+  expect(a.y + a.height / 2).toBeCloseTo(title.y + title.height / 2, 0)
   await page.screenshot({ path: testInfo.outputPath('listing-header-desktop.png') })
   await page.goto('/admin/pages')
   await syncLV(page)
