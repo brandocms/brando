@@ -31,19 +31,16 @@ defmodule Mix.Tasks.Brando.GenerateTest do
            }
   end
 
-  test "renders single-site tenancy configuration" do
+  test "writes single-site tenancy and the template's image defaults to config/brando.exs" do
     config =
-      "templates/brando.install/config/brando.exs"
-      |> Mix.Tasks.Brando.Install.render()
-      |> EEx.eval_string(
-        application_name: "photo_blog",
-        application_module: "PhotoBlog",
-        tenancy_mode: :single,
-        site_key: "photo-blog"
-      )
+      Brando.IgniterCase.phoenix_project(app: :photo_blog, module: "PhotoBlog")
+      |> Igniter.compose_task("brando.install", ["--yes", "--tenancy-mode", "single", "--site-key", "photo-blog"])
+      |> Brando.IgniterCase.source("config/brando.exs")
 
     assert config =~ "tenancy_mode: :single"
     assert config =~ ~s(site_key: "photo-blog")
+    assert config =~ "processor_module: Brando.Images.Processor.Vix"
+    assert config =~ ~s({"xlarge", "2100w"})
   end
 
   test "guides interactive single-site setup and supplies the project key default" do

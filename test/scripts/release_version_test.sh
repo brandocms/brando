@@ -18,9 +18,8 @@ failures=0
 case_root=""
 
 # fresh [VERSION] — a scratch repository where everything agrees on VERSION
-# (default 0.55.0-dev), the backend template on a local Yalc package, the
-# template mix.exs on a path dependency and the npm package's licence a copy
-# of the root one.
+# (default 0.55.0-dev), the backend template on a local Yalc package and the
+# npm package's licence a copy of the root one.
 fresh() {
   local version="${1:-0.55.0-dev}" tag=beta
   case "$version" in *-*) ;; *) tag=latest ;; esac
@@ -79,15 +78,6 @@ EOF
   }
 }
 EOF
-  cat >"$case_root/priv/templates/brando.install/mix.exs" <<'EOF'
-  defp deps do
-    [
-      # brando
-      # {:brando, github: "brandocms/brando"}
-      {:brando, path: "../../brando"}
-    ]
-  end
-EOF
 }
 
 # The script's temporary files go here, so that a case can check none are left.
@@ -145,7 +135,6 @@ expect_file() {
 }
 
 backend="priv/templates/brando.install/assets/backend/package.json"
-template="priv/templates/brando.install/mix.exs"
 
 fresh
 expect "agreeing versions pass" 0 "release-version: 0.55.0-dev in mix.exs and assets/package.json (npm dist-tag beta)" check
@@ -192,11 +181,11 @@ expect "a mix.exs without @version fails" 1 "mix.exs needs exactly one line" che
 
 fresh
 set_json "$backend" '.dependencies["@brandocms/brandojs"] = "link:../../../assets"'
-expect "a link: BrandoJS pin passes" 0 "generator pins agree" check
+expect "a link: BrandoJS pin passes" 0 "generator pin agrees" check
 
 fresh
 set_json "$backend" '.dependencies["@brandocms/brandojs"] = "0.55.0-dev"'
-expect "an exact BrandoJS pin on the version passes" 0 "generator pins agree" check
+expect "an exact BrandoJS pin on the version passes" 0 "generator pin agrees" check
 
 fresh
 set_json "$backend" '.dependencies["@brandocms/brandojs"] = "0.54.0"'
@@ -209,31 +198,11 @@ expect "a BrandoJS range fails" 1 "pins @brandocms/brandojs to ^0.55.0-dev" chec
 
 fresh
 set_json "$backend" 'del(.dependencies["@brandocms/brandojs"]) | .devDependencies = {"@brandocms/brandojs": "0.55.0-dev"}'
-expect "an exact BrandoJS pin in devDependencies passes" 0 "generator pins agree" check
+expect "an exact BrandoJS pin in devDependencies passes" 0 "generator pin agrees" check
 
 fresh
 set_json "$backend" 'del(.dependencies["@brandocms/brandojs"])'
 expect "a backend template without BrandoJS fails" 1 "has no @brandocms/brandojs dependency" check
-
-fresh
-set_line "$template" '{:brando, path:' '      {:brando, "== 0.55.0-dev"}'
-expect "an == Brando requirement on the version passes" 0 "generator pins agree" check
-
-fresh
-set_line "$template" '{:brando, path:' '      {:brando, "0.55.0-dev"}'
-expect "a bare Brando version passes" 0 "generator pins agree" check
-
-fresh
-set_line "$template" '{:brando, path:' '      {:brando, "~> 0.55.0-dev"}'
-expect "a Brando range fails" 1 "requires {:brando, \"~> 0.55.0-dev\"}: use exactly \"0.55.0-dev\"" check
-
-fresh
-set_line "$template" '{:brando, path:' '      {:brando, github: "brandocms/brando", branch: "main"}'
-expect "a github: Brando dependency passes" 0 "generator pins agree" check
-
-fresh
-set_line "$template" '{:brando, path:' '      # gone'
-expect "a template without a Brando dependency fails" 1 "has no {:brando, …} dependency" check
 
 fresh
 printf 'Apache\n' >"$case_root/assets/LICENSE.md"
@@ -283,7 +252,6 @@ expect "a missing command prints usage" 2 "usage: scripts/release-version"
 # bump: a prerelease with the generator on exact pins.
 fresh
 set_json "$backend" '.dependencies["@brandocms/brandojs"] = "0.55.0-dev"'
-set_line "$template" '{:brando, path:' '      {:brando, "== 0.55.0-dev"}'
 expect "bump to a prerelease passes the check" 0 "release-version: 0.55.0-beta.0 in mix.exs" bump 0.55.0-beta.0
 expect "bump moved the version line in mix.exs" 0 "0.55.0-beta.0" check --tag v0.55.0-beta.0
 expect_file "bump rewrites only the npm version" assets/package.json <<'EOF'
@@ -310,21 +278,15 @@ expect_file "bump moves an exact BrandoJS pin" "$backend" <<'EOF'
   }
 }
 EOF
-if grep -qxF '      {:brando, "== 0.55.0-beta.0"}' "$case_root/$template"; then
-  pass "bump moves an exact Brando requirement"
-else
-  fail "bump moves an exact Brando requirement" "$(cat "$case_root/$template")"
-fi
 
-# bump: to stable, with the generator on local sources.
+# bump: to stable, with the generator on a local source.
 fresh 0.55.0-beta.0
 cp "$case_root/$backend" "$scratch/backend.before"
-cp "$case_root/$template" "$scratch/template.before"
 expect "bump to a stable version switches the dist-tag to latest" 0 "(npm dist-tag latest)" bump 0.55.0
-if cmp -s "$scratch/backend.before" "$case_root/$backend" && cmp -s "$scratch/template.before" "$case_root/$template"; then
-  pass "bump leaves local generator sources alone"
+if cmp -s "$scratch/backend.before" "$case_root/$backend"; then
+  pass "bump leaves a local generator source alone"
 else
-  fail "bump leaves local generator sources alone"
+  fail "bump leaves a local generator source alone"
 fi
 if grep -qxF '  @version "0.55.0"' "$case_root/mix.exs"; then
   pass "bump writes the mix.exs version"
@@ -354,9 +316,8 @@ listing() { (cd "$case_root" && find . -type f | sort | while read -r f; do echo
 # bump keeps each file's mode and leaves no temporary files.
 fresh
 set_json "$backend" '.dependencies["@brandocms/brandojs"] = "0.55.0-dev"'
-set_line "$template" '{:brando, path:' '      {:brando, "== 0.55.0-dev"}'
 chmod 640 "$case_root/mix.exs" "$case_root/assets/package.json"
-chmod 664 "$case_root/$backend" "$case_root/$template"
+chmod 664 "$case_root/$backend"
 listing >"$scratch/listing.before"
 expect "bump with unusual file modes passes" 0 "release-version: 0.55.0-beta.1 in mix.exs" bump 0.55.0-beta.1
 if diff="$(listing | diff -u "$scratch/listing.before" -)"; then
@@ -390,8 +351,7 @@ fi
 # A read-only target stops the bump before any file changes.
 fresh
 set_json "$backend" '.dependencies["@brandocms/brandojs"] = "0.55.0-dev"'
-set_line "$template" '{:brando, path:' '      {:brando, "== 0.55.0-dev"}'
-chmod 444 "$case_root/$template"
+chmod 444 "$case_root/$backend"
 cp -R "$case_root" "$scratch/readonly.before"
 expect "bump stops on a read-only target" 1 "is not writable; nothing was changed" bump 0.55.0-beta.1
 if diff="$(diff -r "$scratch/readonly.before" "$case_root")"; then
@@ -399,7 +359,7 @@ if diff="$(diff -r "$scratch/readonly.before" "$case_root")"; then
 else
   fail "a bump stopped by a read-only target changes nothing" "$diff"
 fi
-chmod 644 "$case_root/$template"
+chmod 644 "$case_root/$backend"
 
 if [ "$failures" -gt 0 ]; then
   echo "$failures case(s) failed"

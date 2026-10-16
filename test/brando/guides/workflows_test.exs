@@ -1,12 +1,10 @@
 defmodule Brando.Guides.WorkflowsTest do
   use Brando.ConnCase
 
+  alias Brando.Cache
   alias Brando.Factory
   alias Brando.Navigation
   alias Brando.Pages
-
-  @seeds Path.expand("../../..", __DIR__)
-         |> Path.join("priv/templates/brando.install/repo/seeds.exs")
 
   setup do
     put_test_env(:tenancy_mode, :none)
@@ -15,12 +13,23 @@ defmodule Brando.Guides.WorkflowsTest do
     %{user: user}
   end
 
+  # Brando.Setup.Seeds refills the identity, SEO and navigation caches from
+  # this test's sandboxed rows, which roll back while the caches stay.
+  defp restore_caches do
+    cached = Map.new(~w(identity seo navigation)a, &{&1, Cache.get(&1)})
+
+    on_exit(fn ->
+      Enum.each(cached, fn
+        {key, nil} -> Cache.del(key)
+        {key, value} -> Cache.put(key, value, :infinite)
+      end)
+    end)
+  end
+
   test "fresh-install seeds render translated homepages that can be edited and reloaded", %{user: user} do
-    # Use the account created by this sandbox rather than requiring sequence ID 1.
-    @seeds
-    |> EEx.eval_file(application_module: "BrandoIntegration")
-    |> String.replace("Repo.get_by!(Brando.Users.User, id: 1)", "Repo.get_by!(Brando.Users.User, id: #{user.id})")
-    |> Code.eval_string()
+    restore_caches()
+    # What `mix brando.setup` seeds, for every configured language.
+    {:ok, _report} = Brando.Setup.Seeds.run(user)
 
     for language <- ["en", "no"] do
       assert {:ok, page} =
@@ -29,10 +38,11 @@ defmodule Brando.Guides.WorkflowsTest do
                  status: :published
                })
 
-      assert page.template == "default.html"
-      assert page.rendered_blocks =~ "<h1>Welcome to Brando!</h1>"
+      assert page.template == "index.html"
+      assert page.rendered_blocks =~ "<h1>"
+      assert page.rendered_blocks =~ "mix brando.setup"
       assert {:ok, menu} = Navigation.get_menu("main", language)
-      assert length(menu.items) == 3
+      assert length(menu.items) == 2
       assert Enum.all?(menu.items, &(&1.link.type == :link))
     end
 
@@ -40,7 +50,7 @@ defmodule Brando.Guides.WorkflowsTest do
     assert {:ok, _} = Pages.update_page(page, %{title: "Studio homepage"}, user)
     assert {:ok, reloaded} = Pages.get_page(page.id)
     assert reloaded.title == "Studio homepage"
-    assert reloaded.rendered_blocks =~ "Welcome to Brando!"
+    assert reloaded.rendered_blocks =~ "mix brando.setup"
   end
 
   test "the navigation recipe saves nested links and keeps menu languages separate", %{user: user} do

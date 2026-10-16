@@ -102,7 +102,8 @@ defmodule Mix.Brando.Igniter.SourceUpgrade.TestEnvironmentTest do
           "if config_env() != :test do",
           "if config_env() in [:prod, :staging] do",
           "unless config_env() == :test do",
-          "if config_env() not in [:test] do"
+          "if config_env() not in [:test] do",
+          "if config_env() not in [:test, :e2e] do"
         ] do
       runtime = """
       import Config
@@ -141,13 +142,6 @@ defmodule Mix.Brando.Igniter.SourceUpgrade.TestEnvironmentTest do
     assert warning =~ "runtime.exs:8:"
     refute warning =~ "runtime.exs:4:"
     refute warning =~ "BRANDO_DB_TEST_URL"
-  end
-
-  test "the installer's runtime.exs reads the URL only outside tests" do
-    template = File.read!(Application.app_dir(:brando, "priv/templates/brando.install/config/runtime.exs"))
-    runtime = EEx.eval_string(template, application_name: "lett", application_module: "Lett")
-
-    assert runtime_warnings(runtime) == []
   end
 
   test "warns about test_paths that name a missing directory" do

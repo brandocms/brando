@@ -42,9 +42,10 @@ the chain at `brando_56`. Each trap is described below where it bites.
 
 ## 2. Dependencies, toolchain and configuration
 
-Start from the [install templates](https://github.com/brandocms/brando/tree/main/priv/templates/brando.install)
-for `mix.exs`, `config/*.exs`, the router, endpoint and `application_web.ex`,
-and carry the site's own settings over by hand.
+Start from a scratch application made as in
+[Installation and generators](generators.md) (`mix phx.new`, then
+`mix brando.install`) for `mix.exs`, `config/*.exs`, the router, endpoint and
+`application_web.ex`, and carry the site's own settings over by hand.
 
 **The old `mix.lock` will not resolve forward.** Transitive pins from that era
 (`elixir_make`, `hackney` via old HTTP clients, `decimal` via old JSON

@@ -44,8 +44,8 @@ updates:
     include: scope
     
 # BrandoJS and the E2E backend that builds it: the pnpm lockfiles the admin
-# bundle is actually built from. The backend template above has no lockfile;
-# each application generates its own.
+# bundle is actually built from. The templates above have no lockfile; each
+# application generates its own.
 - package-ecosystem: npm
   directory: "/assets/"
   schedule:

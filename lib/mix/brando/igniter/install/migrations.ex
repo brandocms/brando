@@ -73,7 +73,7 @@ if Code.ensure_loaded?(Igniter) do
         Regex.match?(~r/^\d+_brando_/, Path.basename(target)) or
           String.starts_with?(target, "priv/repo/tenant_migrations/")
       else
-        String.starts_with?(target, "priv/repo/") && target != "priv/repo/seeds.exs"
+        String.starts_with?(target, "priv/repo/")
       end
     end
 

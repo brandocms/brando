@@ -146,7 +146,7 @@ if Code.ensure_loaded?(Igniter) do
         end)
 
       igniter
-      |> image_configuration(project, tenancy)
+      |> image_configuration()
       |> Config.configure_new("config.exs", project.otp_app, [:hmr], false)
       |> Config.configure_new("dev.exs", project.otp_app, [:hmr], true)
       |> Config.configure_new(
@@ -176,13 +176,10 @@ if Code.ensure_loaded?(Igniter) do
       Config.configure(igniter, file, :brando, [:tenancy_mode], mode)
     end
 
-    defp image_configuration(igniter, project, tenancy) do
+    defp image_configuration(igniter) do
       # Keep the installer image sizes/srcsets in one maintained template.
-      binding =
-        Mix.Brando.Igniter.Install.template_binding(project) ++ [tenancy_mode: tenancy.mode, site_key: tenancy.site_key]
-
       template = Mix.Brando.Install.Templates.contents(:eex, "config/brando.exs")
-      {:__block__, _, nodes} = template |> EEx.eval_string(binding) |> Code.string_to_quoted!()
+      {:__block__, _, nodes} = Code.string_to_quoted!(template)
 
       {:config, _, [:brando, _, settings]} =
         Enum.find(nodes, fn
