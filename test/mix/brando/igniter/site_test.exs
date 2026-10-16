@@ -493,4 +493,33 @@ defmodule Mix.Brando.Igniter.SiteTest do
                  &1 =~ "remove robots.txt from static_paths/0 in StudioWeb")
            )
   end
+
+  test "a robots.txt the frontend build copied from assets/frontend/public is left alone" do
+    result =
+      project("", %{
+        @robots => @phx_robots,
+        "assets/frontend/public/robots.txt" => @phx_robots,
+        "lib/studio_web.ex" => @web_module
+      })
+      |> generate(["--yes"])
+
+    assert result.rms == []
+    Igniter.Test.assert_unchanged(result, [@robots, "lib/studio_web.ex"])
+    refute Enum.any?(result.notices, &(&1 =~ "is not the file mix phx.new writes"))
+  end
+
+  test "only static paths returned as a literal list lose robots.txt" do
+    computed = """
+    defmodule StudioWeb do
+      @static_paths ~w(assets robots.txt)
+      def static_paths, do: @static_paths -- ~w(robots.txt)
+      def router, do: quote(do: use(Phoenix.Router, helpers: false))
+      defmacro __using__(which), do: apply(__MODULE__, which, [])
+    end
+    """
+
+    result = project("", %{@robots => @phx_robots, "lib/studio_web.ex" => computed}) |> generate(["--yes"])
+    assert @robots in result.rms
+    assert IgniterCase.source(result, "lib/studio_web.ex") =~ "@static_paths -- ~w(robots.txt)"
+  end
 end

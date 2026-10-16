@@ -10,9 +10,9 @@ if Code.ensure_loaded?(Igniter) do
     alias Mix.Brando.Install.Templates
     alias Sourceror.Zipper
 
-    # SHA-256 of the files `mix phx.new` writes to priv/static, the same from
-    # phx_new 1.7.21 to 1.8.13. Only a file still exactly as phx.new wrote it
-    # is removed or moved.
+    # SHA-256 of the files `mix phx.new` writes to priv/static, the same in
+    # the phx_new 1.7.21 and 1.8.13 Hex packages. Only a file still exactly as
+    # phx.new wrote it is removed or moved.
     @robots "priv/static/robots.txt"
     @robots_sha256 "f994bfae2c1db1221ac049f1097776b444048e0b0a7705d33ea511b610bed115"
     @favicon "priv/static/favicon.ico"
@@ -22,6 +22,7 @@ if Code.ensure_loaded?(Igniter) do
 
     @public_favicon "assets/frontend/public/favicon.ico"
     @public_logo "assets/frontend/public/images/logo.svg"
+    @public_robots "assets/frontend/public/robots.txt"
 
     @doc """
     Takes the favicon and logo `mix phx.new` writes out of `priv/static`.
@@ -43,8 +44,9 @@ if Code.ensure_loaded?(Igniter) do
     @doc """
     Removes the `priv/static/robots.txt` `mix phx.new` writes, and `robots.txt`
     from `static_paths/0` in the web module, so `BrandoWeb.SEOController`
-    answers `/robots.txt` in development as it does in the release. A changed
-    file is kept, with a notice.
+    answers `/robots.txt` in development as it does in the release. A copy of
+    the site's own `assets/frontend/public/robots.txt` is left alone, and any
+    other file is kept, with a notice.
     """
     def robots(igniter, project) do
       case read(igniter, @robots) do
@@ -52,17 +54,24 @@ if Code.ensure_loaded?(Igniter) do
           igniter
 
         {igniter, contents} ->
-          if sha256(contents) == @robots_sha256 do
-            igniter
-            |> Igniter.rm(@robots)
-            |> drop_static_path(project.web_module)
-          else
-            Igniter.add_notice(igniter, """
-            #{@robots} is not the file mix phx.new writes, so it was kept. BrandoWeb.SEOController answers
-            /robots.txt from the SEO settings in the admin, but in development Plug.Static serves this file
-            first, and the release does not have it (the Docker build leaves priv/static out). Move its rules
-            to the SEO settings, delete it, and remove robots.txt from static_paths/0 in #{inspect(project.web_module)}.
-            """)
+          {igniter, public} = read(igniter, @public_robots)
+
+          cond do
+            contents == public ->
+              igniter
+
+            sha256(contents) == @robots_sha256 ->
+              igniter
+              |> Igniter.rm(@robots)
+              |> drop_static_path(project.web_module)
+
+            true ->
+              Igniter.add_notice(igniter, """
+              #{@robots} is not the file mix phx.new writes, so it was kept. BrandoWeb.SEOController answers
+              /robots.txt from the SEO settings in the admin, but in development Plug.Static serves this file
+              first, and the release does not have it (the Docker build leaves priv/static out). Move its rules
+              to the SEO settings, delete it, and remove robots.txt from static_paths/0 in #{inspect(project.web_module)}.
+              """)
           end
       end
     end
@@ -128,11 +137,11 @@ if Code.ensure_loaded?(Igniter) do
       end
     end
 
-    # phx.new writes `def static_paths, do: ~w(assets fonts images favicon.ico robots.txt)`;
-    # a list of strings is read too.
+    # phx.new writes `def static_paths, do: ~w(assets fonts images favicon.ico robots.txt)`.
+    # Only a returned literal, a word sigil or a list of strings, is changed.
     defp without_robots(zipper) do
       case CodeFunction.move_to_def(zipper, :static_paths, 0) do
-        {:ok, body} -> {:ok, Zipper.update(body, &Macro.prewalk(&1, fn node -> drop_robots(node) end))}
+        {:ok, body} -> {:ok, Zipper.update(body, &drop_robots/1)}
         :error -> {:ok, zipper}
       end
     end
@@ -146,7 +155,8 @@ if Code.ensure_loaded?(Igniter) do
       end
     end
 
-    defp drop_robots(list) when is_list(list), do: Enum.reject(list, &match?({:__block__, _, ["robots.txt"]}, &1))
+    defp drop_robots({:__block__, meta, [items]}) when is_list(items), do: {:__block__, meta, [drop_robots(items)]}
+    defp drop_robots(items) when is_list(items), do: Enum.reject(items, &match?({:__block__, _, ["robots.txt"]}, &1))
     defp drop_robots(node), do: node
 
     defp read(igniter, path) do
