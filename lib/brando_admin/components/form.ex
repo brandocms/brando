@@ -2173,15 +2173,14 @@ defmodule BrandoAdmin.Components.Form do
 
   # -- Helpers for unified update_entry_relation handler --
 
-  defp update_entry_assocs(socket, path, updated_relation) do
-    access_path = Brando.Utils.build_access_path(path)
-
-    assign(
-      socket,
-      :updated_entry_assocs,
-      put_in(socket.assigns.updated_entry_assocs, access_path, updated_relation)
-    )
+  # The live preview merges these over the entry one level deep, so they hold
+  # the entry's own fields only. A relation in a subform row rides in the
+  # changeset instead, as `put_asset_in_data/4` leaves it.
+  defp update_entry_assocs(socket, [field], updated_relation) do
+    assign(socket, :updated_entry_assocs, Map.put(socket.assigns.updated_entry_assocs, field, updated_relation))
   end
+
+  defp update_entry_assocs(socket, _nested_path, _updated_relation), do: socket
 
   # Transformer changeset updates are now handled by the Transformer component
 
@@ -2201,11 +2200,13 @@ defmodule BrandoAdmin.Components.Form do
     socket
   end
 
-  defp update_entry_with_relation(socket, path, updated_relation) do
+  # The entry's own fields only, as `update_entry_assocs/3`.
+  defp update_entry_with_relation(socket, [field], updated_relation) do
     entry = socket.assigns.entry || struct(socket.assigns.schema)
-    access_path = Brando.Utils.build_access_path(path)
-    assign(socket, :entry, put_in(entry, access_path, updated_relation))
+    assign(socket, :entry, Map.put(entry, field, updated_relation))
   end
+
+  defp update_entry_with_relation(socket, _nested_path, _updated_relation), do: socket
 
   defp live_preview_path(path), do: path
 

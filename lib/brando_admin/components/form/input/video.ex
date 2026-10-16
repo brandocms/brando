@@ -60,7 +60,8 @@ defmodule BrandoAdmin.Components.Form.Input.Video do
       socket
       |> assign(assigns)
       |> then(&assign(&1, :defaults, field_defaults(&1.assigns.opts)))
-      |> assign_new(:form_id, fn -> FormId.for_form(assigns.field.form) end)
+      # A subform row's field is handed `form_id: nil`.
+      |> then(&assign(&1, :form_id, &1.assigns[:form_id] || FormId.for_form(assigns.field.form)))
 
     relation_field_atom = String.to_existing_atom("#{assigns.field.field}_id")
     relation_field = assigns.field.form[relation_field_atom]
