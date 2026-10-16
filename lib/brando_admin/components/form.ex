@@ -8475,6 +8475,27 @@ defmodule BrandoAdmin.Components.Form do
   defp has_language_input?(%{name: :language}), do: true
   defp has_language_input?(_field), do: false
 
+  # `rest` is the path *below* the singular, so it has to be read out of
+  # `entry_params`, not out of the top-level params map — `params` is
+  # `%{"page" => %{"title" => …}}`, so `get_in(params, ["title"])` is
+  # always nil. Every block rendering `{{ entry.title }}` therefore blanked
+  # its entry variables the moment you typed in that field, and stayed
+  # blank until reload. Invisible until a fixture had a module that reads
+  # the entry — see `/bench-entry-consumers`.
+  #
+  # The two representations differ on purpose: `path` walks the entry
+  # *struct* (list indices as `Access.at/1`), `rest` walks the params
+  # *map* (list indices as "0" keys).
+  defp send_target_to_blocks(%{assigns: %{has_blocks?: true, schema: schema}} = socket, entry_params, rest)
+       when rest != ["__force_change"] do
+    case entry_access_path(schema, rest) do
+      {:ok, path} -> send_updated_entry_field_to_blocks(socket, path, param_at(entry_params, rest), hd(rest))
+      :error -> socket
+    end
+  end
+
+  defp send_target_to_blocks(socket, _entry_params, _rest), do: socket
+
   defp validate(params, socket, recovery?) do
     # This is also the recovery event for the main form, and it is what
     # rebuilds the entry from the recovered params — see
@@ -8483,7 +8504,6 @@ defmodule BrandoAdmin.Components.Form do
     schema = socket.assigns.schema
     entry = socket.assigns.entry
     singular = socket.assigns.singular
-    has_blocks? = socket.assigns.has_blocks?
 
     previous = socket.assigns.form.source
     target = target_field(socket, singular, params["_target"])
@@ -8522,22 +8542,7 @@ defmodule BrandoAdmin.Components.Form do
 
     case Map.get(params, "_target") do
       [^singular | rest] ->
-        if has_blocks? && rest != ["__force_change"] do
-          # `rest` is the path *below* the singular, so it has to be read out of
-          # `entry_params`, not out of the top-level params map — `params` is
-          # `%{"page" => %{"title" => …}}`, so `get_in(params, ["title"])` is
-          # always nil. Every block rendering `{{ entry.title }}` therefore blanked
-          # its entry variables the moment you typed in that field, and stayed
-          # blank until reload. Invisible until a fixture had a module that reads
-          # the entry — see `/bench-entry-consumers`.
-          #
-          # The two representations differ on purpose: `path` walks the entry
-          # *struct* (list indices as `Access.at/1`), `rest` walks the params
-          # *map* (list indices as "0" keys).
-          with {:ok, path} <- entry_access_path(schema, rest) do
-            send_updated_entry_field_to_blocks(socket, path, param_at(entry_params, rest), hd(rest))
-          end
-        end
+        send_target_to_blocks(socket, entry_params, rest)
 
         if rest == ["language"] do
           request_select_options_update(socket)
