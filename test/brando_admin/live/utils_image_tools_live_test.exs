@@ -56,13 +56,13 @@ defmodule BrandoAdmin.UtilsImageToolsLiveTest do
     {:ok, view, _} = live(conn, "/admin/config/utils")
 
     assert has_element?(view, "#utils-unsynced-media", "No image files found under #{root}")
-    refute has_element?(view, "button.primary[phx-click=recreate_changed_image_sizes]")
+    refute has_element?(view, "button.btn--primary[phx-click=recreate_changed_image_sizes]")
 
     Factory.insert(:image, path: "images/avatars/27i97a.jpeg", config_fingerprint: nil)
     {:ok, view, _} = live(conn, "/admin/config/utils")
 
     refute has_element?(view, "#utils-unsynced-media")
-    assert has_element?(view, "button.primary[phx-click=recreate_changed_image_sizes]")
+    assert has_element?(view, "button.btn--primary[phx-click=recreate_changed_image_sizes]")
   end
 
   test "keeps unrecorded images that already match and says how many it recreated", %{conn: conn} do
