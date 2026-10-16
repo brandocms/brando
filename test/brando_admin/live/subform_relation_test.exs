@@ -36,11 +36,40 @@ defmodule BrandoAdmin.SubformRelationTest do
     pick(view, ctx.image)
     assert row_cover_id(render(view)) == to_string(ctx.image.id)
     assert has_element?(view, "#{@row_media} img")
-    # The row's image is not the article's own `cover`.
+    # The row's image is not the article's own `cover`, in the entry or in
+    # the input the browser is told to validate.
     assert form_assigns(view).entry.cover == nil
+    image_id = ctx.image.id
+    assert_push_event(view, "b:validate", %{target: "article[items][0][cover_id]", value: ^image_id})
 
     save(view)
     assert Repo.get!(ArticleItem, ctx.item.id).cover_id == ctx.image.id
+  end
+
+  test "a row's picked image replacing another stays shown through an edit", ctx do
+    first = insert_image(ctx, "first", "First")
+    ctx.item |> Ecto.Changeset.change(cover_id: first.id) |> Repo.update!()
+    second = insert_image(ctx, "second", "Second")
+
+    view = open(ctx)
+    assert view |> element(@row_media) |> render() =~ "first.jpg"
+    pick(view, second)
+    assert view |> element(@row_media) |> render() =~ "second.jpg"
+
+    params =
+      view
+      |> render()
+      |> form_params(@form)
+      |> put_in(["article", "items", "0", "label"], "Edited")
+      |> Map.put("_target", ["article", "items", "0", "label"])
+
+    view |> element(@form) |> render_change(params)
+
+    assert row_cover_id(render(view)) == to_string(second.id)
+    assert view |> element(@row_media) |> render() =~ "second.jpg"
+
+    save(view)
+    assert Repo.get!(ArticleItem, ctx.item.id).cover_id == second.id
   end
 
   test "a picked video in a subform row is saved on the row", ctx do
@@ -85,6 +114,46 @@ defmodule BrandoAdmin.SubformRelationTest do
 
     save(view)
     assert Repo.get!(ArticleItem, ctx.item.id).cover_id == nil
+  end
+
+  test "a row's media field takes the form id the subform hands it", ctx do
+    # A row whose schema has no relation named after the form (`project`), so
+    # the id cannot be derived from the row's form name.
+    item = Repo.preload(ctx.item, [:cover, :clip])
+    row = Phoenix.Component.to_form(Ecto.Changeset.change(item), as: "project[items][0]")
+
+    for input <- [BrandoAdmin.Components.Form.Input.Image, BrandoAdmin.Components.Form.Input.Video] do
+      field = if input == BrandoAdmin.Components.Form.Input.Image, do: :cover, else: :clip
+
+      html =
+        render_component(input, %{
+          id: "row-#{field}",
+          field: row[field],
+          form_id: nil,
+          parent_form_id: "project_form",
+          path: [:items, 0],
+          current_user: ctx.current_user,
+          label: "Media",
+          instructions: nil,
+          placeholder: nil,
+          opts: [],
+          subform_id: nil,
+          parent_form: nil
+        })
+
+      assert html =~ ~s(name="project[items][0][#{field}_id]")
+    end
+  end
+
+  defp insert_image(ctx, name, title) do
+    Factory.insert(:image,
+      creator: ctx.current_user,
+      config_target: "image:Brando.SyncTest.ArticleItem:cover",
+      focal: %Brando.Images.Focal{x: 50, y: 50},
+      status: :processed,
+      path: "image/#{name}.jpg",
+      title: %{"en" => title}
+    )
   end
 
   defp open(%{conn: conn, article: article}) do

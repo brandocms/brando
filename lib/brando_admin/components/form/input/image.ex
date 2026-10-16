@@ -86,8 +86,11 @@ defmodule BrandoAdmin.Components.Form.Input.Image do
     socket =
       socket
       |> assign(assigns)
-      # A subform row's field is handed `form_id: nil`.
-      |> then(&assign(&1, :form_id, &1.assigns[:form_id] || FormId.for_form(assigns.field.form)))
+      # A subform row's field is handed `form_id: nil` and the subform's
+      # `parent_form_id`.
+      |> then(
+        &assign(&1, :form_id, &1.assigns[:form_id] || &1.assigns[:parent_form_id] || FormId.for_form(assigns.field.form))
+      )
 
     changeset = assigns.field.form.source
     relation_field_atom = String.to_existing_atom("#{assigns.field.field}_id")

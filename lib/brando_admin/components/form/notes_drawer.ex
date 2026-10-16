@@ -261,12 +261,15 @@ defmodule BrandoAdmin.Components.Form.NotesDrawer do
     end
   end
 
-  # Ids arrive from the browser: anything but a whole integer is no id.
-  defp parse_id(id) when is_integer(id), do: id
+  # Ids arrive from the browser: anything but a whole integer a note id can
+  # hold (a positive bigint) is no id.
+  @max_id 9_223_372_036_854_775_807
+
+  defp parse_id(id) when is_integer(id) and id in 1..@max_id, do: id
 
   defp parse_id(id) when is_binary(id) do
     case Integer.parse(id) do
-      {int, ""} -> int
+      {int, ""} -> parse_id(int)
       _ -> nil
     end
   end

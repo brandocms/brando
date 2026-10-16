@@ -1852,7 +1852,7 @@ defmodule BrandoAdmin.Components.Form do
     # changeset (apply_changes/change), after which there is nothing to ship.
     |> ship_all_field_changes()
     |> push_event("b:validate", %{
-      target: "#{socket.assigns.singular}[#{relation_key}]",
+      target: socket.assigns.singular <> Enum.map_join(full_path, &"[#{&1}]"),
       value: asset.id
     })
   end
@@ -2197,13 +2197,45 @@ defmodule BrandoAdmin.Components.Form do
     socket
   end
 
-  # The entry's own fields only, as `update_entry_assocs/3`.
-  defp update_entry_with_relation(socket, [field], updated_relation) do
-    entry = socket.assigns.entry || struct(socket.assigns.schema)
-    assign(socket, :entry, Map.put(entry, field, updated_relation))
+  # `validate` casts its params onto the entry, so a relation in a subform row
+  # goes on that row too, or the row's input shows the entry's stale one.
+  defp update_entry_with_relation(socket, path, updated_relation) do
+    case Enum.split(path, -1) do
+      {parents, [field]} when is_atom(field) ->
+        entry = socket.assigns.entry || struct(socket.assigns.schema)
+        source = socket.assigns.form.source
+        assign(socket, :entry, put_entry_relation(entry, parents, field, updated_relation, source, []))
+
+      _ ->
+        socket
+    end
   end
 
-  defp update_entry_with_relation(socket, _nested_path, _updated_relation), do: socket
+  defp put_entry_relation(%{} = data, [], field, value, _source, _prefix), do: Map.put(data, field, value)
+
+  # A row is found by its id: the form's row index need not be the entry's.
+  defp put_entry_relation(%{} = data, [key, index | rest], field, value, source, prefix)
+       when is_atom(key) and is_integer(index) do
+    row_path = prefix ++ [key, index]
+
+    with rows when is_list(rows) <- Map.get(data, key),
+         id when not is_nil(id) <- EctoNestedChangeset.get_at(source, row_path ++ [:id]),
+         at when is_integer(at) <- Enum.find_index(rows, &(Map.get(&1, :id) == id)) do
+      Map.put(data, key, List.update_at(rows, at, &put_entry_relation(&1, rest, field, value, source, row_path)))
+    else
+      _ -> data
+    end
+  end
+
+  defp put_entry_relation(%{} = data, [key | rest], field, value, source, prefix) when is_atom(key) do
+    case Map.get(data, key) do
+      %Ecto.Association.NotLoaded{} -> data
+      %{} = nested -> Map.put(data, key, put_entry_relation(nested, rest, field, value, source, prefix ++ [key]))
+      _ -> data
+    end
+  end
+
+  defp put_entry_relation(data, _path, _field, _value, _source, _prefix), do: data
 
   defp live_preview_path(path), do: path
 

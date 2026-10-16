@@ -25,7 +25,7 @@ defmodule BrandoAdmin.NotesDrawerLiveTest do
     assert Floki.attribute(anchor, "data-block-uid") == []
   end
 
-  test "a thread id that is not a whole integer is ignored", %{conn: conn, current_user: user} do
+  test "a thread id that is not a note id is ignored", %{conn: conn, current_user: user} do
     page = Factory.insert(:page, creator: user)
     {:ok, thread, _} = Notes.create_thread(Page, page.id, user, %{"body" => "Check the intro"})
     {:ok, _reply, _} = Notes.reply(thread, user, %{"body" => "Done"})
@@ -37,7 +37,7 @@ defmodule BrandoAdmin.NotesDrawerLiveTest do
     toggle = "#page_form-notes .note-toggle[phx-value-id='#{thread.id}']"
     assert has_element?(view, toggle <> "[aria-expanded='false']")
 
-    for id <- ["abc", "#{thread.id}abc", "1.5", ""] do
+    for id <- ["abc", "#{thread.id}abc", "1.5", "", "-1", "99999999999999999999"] do
       render_click(drawer, "toggle_thread", %{"id" => id})
       render_click(drawer, "reopen", %{"id" => id})
       render_click(drawer, "reply", %{"thread" => id, "reply" => %{"body" => "Lost"}})
