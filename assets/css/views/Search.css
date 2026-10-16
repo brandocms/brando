@@ -7,7 +7,7 @@
   max-width: 1120px;
   padding: 38px 0 64px;
   color: var(--brando-ink);
-  font-size: 14px;
+  font-size: var(--brando-text-lg);
   line-height: 1.55;
 
   *,
@@ -37,7 +37,7 @@
   margin-bottom: 24px;
 
   h1 {
-    font-size: 32px;
+    font-size: var(--brando-text-6xl);
     font-weight: 500;
     line-height: 1.2;
     letter-spacing: -0.025em;
@@ -45,7 +45,7 @@
 
   p {
     color: var(--brando-muted);
-    font-size: 13px;
+    font-size: var(--brando-text-md);
   }
 }
 
@@ -90,7 +90,7 @@
       border-radius: var(--brando-input-radius);
       background: var(--brando-surface);
       color: var(--brando-ink);
-      font: 14px/20px "Main", sans-serif;
+      font: var(--brando-text-lg)/20px "Main", sans-serif;
 
       &::-webkit-search-cancel-button {
         cursor: pointer;
@@ -193,7 +193,7 @@
 .search-title {
   min-width: 0;
   overflow-wrap: anywhere;
-  font-size: 15px;
+  font-size: var(--brando-text-xl);
   line-height: 20px;
 }
 
@@ -202,7 +202,7 @@
   flex: none;
   gap: 5px;
   color: var(--brando-muted);
-  font-size: 13px;
+  font-size: var(--brando-text-md);
   line-height: 18px;
   white-space: nowrap;
 
@@ -218,7 +218,7 @@
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
   color: var(--brando-muted);
-  font-size: 13px;
+  font-size: var(--brando-text-md);
   line-height: 19px;
   overflow-wrap: anywhere;
 
@@ -239,7 +239,7 @@
   gap: 7px;
   padding-top: 2px;
   color: var(--brando-muted);
-  font-size: 13px;
+  font-size: var(--brando-text-md);
   line-height: 18px;
 
   > span {
@@ -272,7 +272,7 @@
   border-radius: 0 0 6px 6px;
   background: var(--brando-surface-shaded);
   color: var(--brando-muted);
-  font-size: 12px;
+  font-size: var(--brando-text-sm);
   line-height: 18px;
 
   .search-count {
@@ -297,7 +297,7 @@
     border: 1px solid var(--brando-ink);
     border-radius: 50%;
     color: var(--brando-ink);
-    font-size: 13px;
+    font-size: var(--brando-text-md);
     line-height: 1;
     text-decoration: none;
     font-variant-numeric: tabular-nums;
@@ -320,7 +320,7 @@
 
   .search-page-gap {
     width: 20px;
-    font-size: 13px;
+    font-size: var(--brando-text-md);
     text-align: center;
   }
 }
@@ -336,7 +336,7 @@
   text-align: center;
 
   h2 {
-    font-size: 17px;
+    font-size: var(--brando-text-2xl);
     font-weight: 500;
     line-height: 1.35;
     overflow-wrap: anywhere;
@@ -344,7 +344,7 @@
 
   p {
     color: var(--brando-muted);
-    font-size: 13px;
+    font-size: var(--brando-text-md);
   }
 
   a {

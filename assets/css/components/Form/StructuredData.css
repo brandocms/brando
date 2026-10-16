@@ -23,14 +23,14 @@
   --sd-error: var(--brando-status-disabled);
   --sd-ok: var(--brando-status-published);
   color: var(--brando-ink);
-  font: 14px/20px "Main", sans-serif;
+  font: var(--brando-text-lg)/20px "Main", sans-serif;
 }
 
 .structured-data-empty {
   margin: 0;
   padding: 24px;
   color: var(--brando-muted);
-  font-size: 13px;
+  font-size: var(--brando-text-md);
 }
 
 .structured-data-inspector {
@@ -72,7 +72,7 @@
 
   text {
     fill: var(--brando-muted);
-    font: 11px/1 theme(typography.families.mono);
+    font: var(--brando-text-xs)/1 theme(typography.families.mono);
     paint-order: stroke;
     stroke: var(--brando-surface-shaded);
     stroke-width: 5px;
@@ -123,7 +123,7 @@
   align-items: center;
   gap: 8px;
   min-width: 0;
-  font: 500 14px/18px "Main", sans-serif;
+  font: 500 var(--brando-text-lg)/18px "Main", sans-serif;
 
   > [data-icon] { flex: none; width: 16px; height: 16px; color: var(--brando-muted); }
   > span:last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -134,7 +134,7 @@
   gap: 4px;
   min-width: 0;
   color: var(--brando-muted);
-  font: 11px/16px theme(typography.families.mono);
+  font: var(--brando-text-xs)/16px theme(typography.families.mono);
   white-space: nowrap;
 
   > span:first-child { overflow: hidden; min-width: 0; text-overflow: ellipsis; }
@@ -160,7 +160,7 @@
   align-items: center;
   gap: 8px 12px;
 
-  h3 { margin: 0; font: 500 20px/26px "Main", sans-serif; letter-spacing: -0.01em; }
+  h3 { margin: 0; font: 500 var(--brando-text-3xl)/26px "Main", sans-serif; letter-spacing: -0.01em; }
 }
 
 .structured-data-fix {
@@ -169,7 +169,7 @@
   border-radius: 5px;
   background: var(--brando-note);
   color: var(--brando-note-ink);
-  font-size: 12px;
+  font-size: var(--brando-text-sm);
   line-height: 18px;
 
   &[data-level="error"] {
@@ -184,7 +184,7 @@
   border: 1px dashed color-mix(in srgb, var(--brando-muted) 45%, var(--sd-line));
   border-radius: 6px;
   color: var(--brando-muted);
-  font-size: 13px;
+  font-size: var(--brando-text-md);
 }
 
 .structured-data-rows {
@@ -207,7 +207,7 @@
 .structured-data-property {
   overflow: hidden;
   color: var(--brando-ink);
-  font: 13px/20px theme(typography.families.mono);
+  font: var(--brando-text-md)/20px theme(typography.families.mono);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -219,7 +219,7 @@
   border: 1px solid var(--sd-line);
   border-radius: 5px;
   background: var(--brando-surface);
-  font-size: 13px;
+  font-size: var(--brando-text-md);
   line-height: 18px;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -241,7 +241,7 @@
 .structured-data-issue {
   grid-column: 3 / 5;
   color: var(--brando-note-ink);
-  font-size: 12px;
+  font-size: var(--brando-text-sm);
   line-height: 16px;
 
   &[data-level="error"] { color: color-mix(in srgb, var(--sd-error) 70%, var(--brando-ink)); }
@@ -250,7 +250,7 @@
 .structured-data-note {
   margin: 0;
   color: var(--brando-muted);
-  font-size: 13px;
+  font-size: var(--brando-text-md);
   line-height: 20px;
 }
 
@@ -263,7 +263,7 @@
 
 .structured-data-disabled-reason {
   color: var(--brando-muted);
-  font-size: 12px;
+  font-size: var(--brando-text-sm);
 }
 
 @media (min-width: 1100px) {

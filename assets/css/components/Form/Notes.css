@@ -63,7 +63,7 @@
 
   h2 {
     margin: 0;
-    font-size: 17px;
+    font-size: var(--brando-text-2xl);
     font-weight: 500;
     line-height: 24px;
   }
@@ -113,7 +113,7 @@
   border-radius: 5px;
   background: var(--brando-surface);
   color: var(--brando-ink);
-  font-size: 12px;
+  font-size: var(--brando-text-sm);
   line-height: 18px;
   cursor: pointer;
 
@@ -133,7 +133,7 @@
     border: 1px solid var(--brando-line);
     border-radius: 6px;
     background: var(--brando-surface);
-    font-size: 13px;
+    font-size: var(--brando-text-md);
 
     &:focus-visible { outline: 2px solid var(--brando-accent); outline-offset: 1px; }
   }
@@ -144,7 +144,7 @@
   margin: 0;
   padding: 20px;
   color: var(--brando-muted);
-  font-size: 13px;
+  font-size: var(--brando-text-md);
   line-height: 20px;
 }
 
@@ -159,7 +159,7 @@
   padding: 16px 20px 20px;
   border-top: 1px solid var(--brando-line);
   color: var(--brando-muted);
-  font-size: 12px;
+  font-size: var(--brando-text-sm);
   line-height: 18px;
 
   p {
@@ -204,7 +204,7 @@
   gap: 6px 8px;
   margin-bottom: 12px;
   color: var(--brando-muted);
-  font-size: 13px;
+  font-size: var(--brando-text-md);
   line-height: 20px;
 }
 
@@ -255,7 +255,7 @@
   border-radius: 999px;
   background: var(--brando-badge-bg);
   color: var(--brando-badge-ink);
-  font-size: 11px;
+  font-size: var(--brando-text-xs);
   line-height: 18px;
 
   [data-icon] { width: 12px; height: 12px; }
@@ -277,7 +277,7 @@
   .activity-avatar {
     width: 28px;
     height: 28px;
-    font-size: 10px;
+    font-size: var(--brando-text-2xs);
   }
 }
 
@@ -291,16 +291,16 @@
   align-items: baseline;
   gap: 8px;
   margin: 0 0 2px !important;
-  font-size: 13px;
+  font-size: var(--brando-text-md);
   line-height: 20px;
 
   strong { font-weight: 500; }
-  time { color: var(--brando-muted); font-size: 12px; }
+  time { color: var(--brando-muted); font-size: var(--brando-text-sm); }
 }
 
 .note-body {
   margin: 0 !important;
-  font-size: 14px;
+  font-size: var(--brando-text-lg);
   line-height: 21px;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
@@ -320,7 +320,7 @@
   gap: 6px 10px;
   margin: 12px 0 0 !important;
   color: var(--brando-muted);
-  font-size: 12px;
+  font-size: var(--brando-text-sm);
   line-height: 18px;
 
   > [data-icon] { width: 14px; height: 14px; color: var(--brando-status-published); }
@@ -358,7 +358,7 @@
 .note-composer-hint {
   margin: 8px 0 0 !important;
   color: var(--brando-muted);
-  font-size: 12px;
+  font-size: var(--brando-text-sm);
   line-height: 18px;
 }
 
@@ -389,7 +389,7 @@
     border: 0;
     background: transparent;
     color: var(--brando-ink);
-    font-size: 14px;
+    font-size: var(--brando-text-lg);
     line-height: 20px;
     resize: none;
 
@@ -413,7 +413,7 @@
     border-radius: 5px;
     background: transparent;
     color: var(--brando-muted);
-    font-size: 13px;
+    font-size: var(--brando-text-md);
     line-height: 18px;
     cursor: pointer;
 
@@ -451,7 +451,7 @@
     border-radius: 4px;
     background: transparent;
     color: var(--brando-ink);
-    font-size: 13px;
+    font-size: var(--brando-text-md);
     line-height: 18px;
     text-align: left;
     cursor: pointer;
@@ -465,7 +465,7 @@
   margin: 0;
   padding: 6px 10px;
   color: var(--brando-muted);
-  font-size: 13px;
+  font-size: var(--brando-text-md);
 }
 
 /* --- In the editor --- */
@@ -483,7 +483,7 @@
     background-color: var(--brando-accent);
     box-shadow: 0 0 0 2px var(--brando-surface);
     color: var(--brando-ink-inverse);
-    font: 500 10px/16px "Main", sans-serif;
+    font: 500 var(--brando-text-2xs)/16px "Main", sans-serif;
     font-variant-numeric: tabular-nums;
     text-align: center;
   }
@@ -515,7 +515,7 @@
 
     &::after {
       content: attr(data-note-label);
-      font-size: 12px;
+      font-size: var(--brando-text-sm);
       line-height: 16px;
       white-space: nowrap;
     }
@@ -533,7 +533,7 @@
   border-radius: 999px;
   background: var(--brando-note);
   color: var(--brando-note-ink);
-  font-size: 11px;
+  font-size: var(--brando-text-xs);
   line-height: 18px;
   white-space: nowrap;
 }
@@ -627,7 +627,7 @@
     border-radius: 4px;
     background: transparent;
     color: var(--brando-ink);
-    font-size: 12px;
+    font-size: var(--brando-text-sm);
     line-height: 18px;
     cursor: pointer;
 

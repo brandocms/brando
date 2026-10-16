@@ -9,7 +9,7 @@
   margin-bottom: 18px;
   padding: 0;
   border: none;
-  font-size: 11px;
+  font-size: var(--brando-text-xs);
 
   summary {
     display: flex;
@@ -34,7 +34,7 @@
   .tenant-switcher__label {
     flex-shrink: 0;
     color: color-mix(in srgb, var(--brando-ink) 50%, transparent);
-    font-size: 9px;
+    font-size: var(--brando-text-2xs);
     letter-spacing: 0.08em;
     text-transform: uppercase;
   }
@@ -94,7 +94,7 @@
   .tenant-switcher__heading {
     padding: 6px 8px 3px;
     color: color-mix(in srgb, var(--brando-ink) 45%, transparent);
-    font-size: 9px;
+    font-size: var(--brando-text-2xs);
     letter-spacing: 0.08em;
     text-transform: uppercase;
   }
@@ -126,7 +126,7 @@
     border-radius: 6px;
     background: transparent;
     color: var(--brando-ink);
-    font-size: 11px;
+    font-size: var(--brando-text-xs);
     text-align: left;
     cursor: pointer;
     transition: background-color 120ms ease;

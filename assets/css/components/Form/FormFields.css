@@ -43,7 +43,7 @@
   .var-chip-label {
     flex: 1;
     width: auto;
-    font-size: 14px;
+    font-size: var(--brando-text-lg);
     opacity: 1;
   }
 
@@ -61,7 +61,7 @@
   width: auto;
   padding: 0 6px;
   @font mono;
-  font-size: 10px;
+  font-size: var(--brando-text-2xs);
 
   &.on {
     background-color: var(--brando-error);
@@ -91,7 +91,7 @@
     border: 1px dashed var(--brando-line);
     border-radius: 999px;
     background-color: var(--brando-surface);
-    font-size: 12px;
+    font-size: var(--brando-text-sm);
     opacity: 0.8;
     transition: opacity 120ms ease, border-color 120ms ease;
 
@@ -110,7 +110,7 @@
   border: 1px dashed var(--brando-line);
   border-radius: 999px;
   background-color: transparent;
-  font-size: 11.5px;
+  font-size: var(--brando-text-sm);
 
   [data-icon] {
     width: 12px;
@@ -142,7 +142,7 @@
     display: flex;
     align-items: center;
     gap: 6px;
-    font-size: 13px;
+    font-size: var(--brando-text-md);
     font-weight: 500;
 
     [data-icon] {
@@ -154,7 +154,7 @@
 
   p {
     margin-top: 4px;
-    font-size: 12px;
+    font-size: var(--brando-text-sm);
     line-height: 1.45;
     opacity: 0.6;
   }
@@ -167,13 +167,13 @@
 
   dt {
     margin-top: 8px;
-    font-size: 11px;
+    font-size: var(--brando-text-xs);
     opacity: 0.55;
   }
 
   dd {
     @font mono;
-    font-size: 12px;
+    font-size: var(--brando-text-sm);
   }
 }
 
@@ -205,7 +205,7 @@
 
   th {
     padding: 0 8px 6px 0;
-    font-size: 11px;
+    font-size: var(--brando-text-xs);
     font-weight: 400;
     text-align: left;
     opacity: 0.55;
@@ -239,13 +239,13 @@
   gap: 3px;
 
   small {
-    font-size: 12px;
+    font-size: var(--brando-text-sm);
     opacity: 0.55;
   }
 }
 
 .form-field-source {
-  font-size: 12px;
+  font-size: var(--brando-text-sm);
   white-space: nowrap;
   opacity: 0.55;
 }
@@ -283,7 +283,7 @@
 
   .site-form-intro p {
     margin: 0 0 18px;
-    font-size: 13px;
+    font-size: var(--brando-text-md);
     opacity: 0.65;
   }
 
@@ -301,13 +301,13 @@
     width: 100%;
     line-height: 1.4;
     margin: 0 0 4px;
-    font-size: 14px;
+    font-size: var(--brando-text-lg);
     font-weight: 500;
   }
 
   .site-form-section-description {
     margin: 0 0 10px;
-    font-size: 12px;
+    font-size: var(--brando-text-sm);
     opacity: 0.6;
   }
 
@@ -343,7 +343,7 @@
 
   .site-form-label {
     padding: 0;
-    font-size: 12px;
+    font-size: var(--brando-text-sm);
   }
 
   .site-form-required {
@@ -358,7 +358,7 @@
     border: 1px solid var(--brando-line);
     border-radius: 6px;
     background-color: var(--brando-surface);
-    font-size: 13px;
+    font-size: var(--brando-text-md);
   }
 
   textarea.site-form-input {
@@ -377,7 +377,7 @@
     align-items: flex-start;
     gap: 7px;
     margin-top: 4px;
-    font-size: 12.5px;
+    font-size: var(--brando-text-md);
 
     input {
       margin-top: 2px;
@@ -386,13 +386,13 @@
 
   .site-form-consent-text {
     display: block;
-    font-size: 11.5px;
+    font-size: var(--brando-text-sm);
     opacity: 0.6;
   }
 
   .site-form-help {
     margin: 0;
-    font-size: 11px;
+    font-size: var(--brando-text-xs);
     opacity: 0.55;
   }
 
@@ -407,7 +407,7 @@
     border-radius: 6px;
     background-color: var(--brando-accent);
     color: var(--brando-ink-inverse);
-    font-size: 13px;
+    font-size: var(--brando-text-md);
   }
 
   fieldset:disabled,
@@ -426,7 +426,7 @@
   padding: 12px 16px;
   border-radius: 10px;
   background-color: var(--brando-surface-shaded);
-  font-size: 13px;
+  font-size: var(--brando-text-md);
 
   span {
     opacity: 0.7;
@@ -453,13 +453,13 @@
   margin: 0;
 
   dt {
-    font-size: 12px;
+    font-size: var(--brando-text-sm);
     opacity: 0.6;
   }
 
   dd {
     margin: 0;
-    font-size: 14px;
+    font-size: var(--brando-text-lg);
     white-space: pre-wrap;
     overflow-wrap: anywhere;
   }
@@ -500,6 +500,6 @@
 .form-submission-error {
   display: block;
   margin-top: 4px;
-  font-size: 13px;
+  font-size: var(--brando-text-md);
   opacity: 0.8;
 }

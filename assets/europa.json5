@@ -203,6 +203,38 @@
       touch: '40px',
     },
 
+    /* The admin's type scale. css/tokens.css sets --brando-text-* from these,
+       and every fixed font size in the admin's stylesheets is one of them,
+       so an application retunes the admin's type here, in its own
+       europa.json5. `.github/scripts/check_css_font_sizes.sh` rejects pixel
+       font sizes. The responsive sizes of the editor's content and inputs
+       stay in typography.sizes (`@fontsize input`).
+
+         text.2xs   tiny labels: counters, keyboard hints, overlines
+         text.xs    help text, metadata, badges
+         text.sm    the default UI text: buttons, rows, inputs' labels
+         text.md    body text and inputs
+         text.lg    emphasised rows, card titles
+         text.xl    section titles (h3)
+         text.2xl   drawer and dialog titles
+         text.3xl   large titles, empty states
+         text.4xl   section headings (h2)
+         text.5xl   page headings on a phone, big figures
+         text.6xl   page headings (h1) */
+    text: {
+      '2xs': '10px',
+      xs: '11px',
+      sm: '12px',
+      md: '13px',
+      lg: '14px',
+      xl: '16px',
+      '2xl': '18px',
+      '3xl': '20px',
+      '4xl': '22px',
+      '5xl': '26px',
+      '6xl': '32px',
+    },
+
     /* The admin's shadows, in one ink (colors.shadow, --brando-shadow-ink).
        css/tokens.css sets --brando-shadow-* from these:
 

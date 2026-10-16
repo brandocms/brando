@@ -22,7 +22,7 @@
     border-radius: 10px;
     padding: 0.5rem 0.65rem;
     font-family: "Mono";
-    font-size: 12px;
+    font-size: var(--brando-text-sm);
   }
 
   .image-picker-toolbar {
@@ -40,7 +40,7 @@
     flex-wrap: wrap;
     gap: 0.15rem;
     min-width: 0;
-    font-size: 12px;
+    font-size: var(--brando-text-sm);
     line-height: 1.25;
 
     .path-link {
@@ -93,7 +93,7 @@
       padding: 0 0.7rem;
       background: transparent;
       color: color-mix(in srgb, var(--brando-ink) 84%, white);
-      font-size: 12px;
+      font-size: var(--brando-text-sm);
       font-family: "Mono";
       text-transform: uppercase;
       letter-spacing: 0.03em;
@@ -122,7 +122,7 @@
       font-family: "Mono";
       text-transform: uppercase;
       letter-spacing: 0.08em;
-      font-size: 11px;
+      font-size: var(--brando-text-xs);
       color: color-mix(in srgb, var(--brando-ink) 64%, white);
       margin-right: 0.25rem;
     }
@@ -136,7 +136,7 @@
     height: 24px;
     line-height: 24px;
     padding: 0 0.62rem;
-    font-size: 11px;
+    font-size: var(--brando-text-xs);
     font-family: "Mono";
     letter-spacing: 0.01em;
     transition:
@@ -188,7 +188,7 @@
 
     h3 {
       margin: 0;
-      font-size: 15px;
+      font-size: var(--brando-text-xl);
       font-family: "Mono";
       text-transform: uppercase;
       color: var(--brando-ink);
@@ -196,7 +196,7 @@
 
     p {
       margin: 0.2rem 0 0;
-      font-size: 12px;
+      font-size: var(--brando-text-sm);
       color: color-mix(in srgb, var(--brando-ink) 64%, white);
       line-height: 1.2;
     }
@@ -240,7 +240,7 @@
     height: 28px;
     line-height: 1;
     padding: 0 0.66rem;
-    font-size: 10px;
+    font-size: var(--brando-text-2xs);
     font-family: "Mono";
     text-transform: uppercase;
     white-space: nowrap;
@@ -290,7 +290,7 @@
     .text.small {
       min-width: 0;
       flex: 1;
-      font-size: 13px;
+      font-size: var(--brando-text-md);
       padding: 0.48rem 0.6rem;
       border-radius: 8px;
       width: 100%;
@@ -306,7 +306,7 @@
 
     #image-picker-new-folder::placeholder,
     .text.small::placeholder {
-      font-size: 13px;
+      font-size: var(--brando-text-md);
     }
   }
 
@@ -385,7 +385,7 @@
     background: color-mix(in srgb, white 75%, transparent);
     color: var(--brando-ink);
     font-family: "Mono";
-    font-size: 11px;
+    font-size: var(--brando-text-xs);
     text-transform: uppercase;
     height: 34px;
     line-height: 34px;
@@ -411,7 +411,7 @@
     padding-right: 0.25rem;
 
     .empty {
-      font-size: 11px;
+      font-size: var(--brando-text-xs);
       color: color-mix(in srgb, var(--brando-ink) 62%, white);
       font-family: "Mono";
       padding: 0.5rem 0.15rem;
@@ -429,7 +429,7 @@
     background: color-mix(in srgb, white 70%, transparent);
     color: var(--brando-ink);
     font-family: "Mono";
-    font-size: 12px;
+    font-size: var(--brando-text-sm);
     transition:
       background-color 160ms ease,
       border-color 160ms ease,
@@ -486,21 +486,21 @@
       .image-picker-scope { align-self: flex-start; margin-bottom: 8px; }
       .image-picker-main-hint {
         margin: 0; max-width: 60ch; overflow-wrap: anywhere;
-        font: 12px/18px "Main", sans-serif;
+        font: var(--brando-text-sm)/18px "Main", sans-serif;
         color: color-mix(in srgb, var(--brando-ink) 55%, white);
       }
 
       h3 {
         @font mono;
         margin: 0;
-        font-size: 12px;
+        font-size: var(--brando-text-sm);
         line-height: 1.25;
         color: color-mix(in srgb, var(--brando-ink) 74%, white);
       }
 
       span {
         font-family: "Mono";
-        font-size: 11px;
+        font-size: var(--brando-text-xs);
         text-transform: uppercase;
         letter-spacing: 0.08em;
         color: color-mix(in srgb, var(--brando-ink) 65%, white);
@@ -520,7 +520,7 @@
           color: color-mix(in srgb, var(--brando-ink) 72%, white);
 
           span {
-            font-size: 10px;
+            font-size: var(--brando-text-2xs);
             letter-spacing: 0.02em;
             text-transform: uppercase;
           }
@@ -547,7 +547,7 @@
   border: 1px solid color-mix(in srgb, var(--brando-surface-subform) 42%, white);
   border-radius: 8px;
   font-family: "Mono";
-  font-size: 11px;
+  font-size: var(--brando-text-xs);
   text-transform: uppercase;
   letter-spacing: 0.04em;
   color: var(--brando-ink);
@@ -573,7 +573,7 @@
     height: 24px;
     line-height: 24px;
     padding: 0 0.55rem;
-    font-size: 10px;
+    font-size: var(--brando-text-2xs);
     font-family: "Mono";
     text-transform: uppercase;
     letter-spacing: 0.03em;
@@ -611,7 +611,7 @@
   background: var(--brando-ink);
   color: white;
   font-family: "Mono";
-  font-size: 14px;
+  font-size: var(--brando-text-lg);
   font-weight: 600;
   box-shadow: var(--brando-shadow-md);
   pointer-events: none;
@@ -649,14 +649,14 @@
     }
 
     span {
-      font-size: 10px;
+      font-size: var(--brando-text-2xs);
       text-transform: uppercase;
       letter-spacing: 0.08em;
     }
 
     strong {
       font-family: "Main";
-      font-size: 14px;
+      font-size: var(--brando-text-lg);
       color: var(--brando-ink);
       font-weight: 600;
     }
@@ -729,14 +729,14 @@
 
     h4 {
       margin: 0;
-      font-size: 15px;
+      font-size: var(--brando-text-xl);
       color: var(--brando-ink);
     }
 
     p {
       margin: 0.35rem auto 0;
       max-width: 52ch;
-      font-size: 12px;
+      font-size: var(--brando-text-sm);
       color: color-mix(in srgb, var(--brando-ink) 67%, white);
     }
 
@@ -910,7 +910,7 @@
         }
 
         .image-picker__filename {
-          font-size: 13px;
+          font-size: var(--brando-text-md);
           font-weight: 600;
           color: var(--brando-ink);
           overflow: hidden;
@@ -922,7 +922,7 @@
         .image-picker__meta,
         .image-picker__status {
           @font mono;
-          font-size: 11px;
+          font-size: var(--brando-text-xs);
           color: color-mix(in srgb, var(--brando-ink) 72%, white);
           text-transform: uppercase;
           letter-spacing: 0.02em;
@@ -994,7 +994,7 @@
               border-radius: 0;
               background: transparent;
               color: var(--brando-ink);
-              font-size: 11px;
+              font-size: var(--brando-text-xs);
               text-transform: uppercase;
               display: flex;
               align-items: center;

@@ -27,7 +27,7 @@
   box-shadow: none;
   color: var(--brando-ai);
   font-family: inherit;
-  font-size: 12px;
+  font-size: var(--brando-text-sm);
   font-weight: 500;
   line-height: 18px;
   letter-spacing: 0;
@@ -151,7 +151,7 @@
   gap: 6px;
   margin: 0;
   color: var(--brando-suggestion-ink);
-  font-size: 12px;
+  font-size: var(--brando-text-sm);
   font-weight: 500;
   line-height: 18px;
   letter-spacing: 0;
@@ -264,7 +264,7 @@
     border-style: solid;
     border-radius: var(--brando-input-radius);
     color: var(--brando-ink);
-    font: 14px/1.5 "Main", sans-serif;
+    font: var(--brando-text-lg)/1.5 "Main", sans-serif;
     resize: vertical;
 
     &:focus-visible {
@@ -281,14 +281,14 @@
 
   > label {
     color: var(--brando-muted);
-    font-size: 12px;
+    font-size: var(--brando-text-sm);
     line-height: 18px;
   }
 }
 
 .field-ai-count {
   color: var(--brando-muted);
-  font-size: 12px;
+  font-size: var(--brando-text-sm);
   line-height: 18px;
   font-variant-numeric: tabular-nums;
 
@@ -299,13 +299,13 @@
 
 .field-ai-error {
   color: var(--brando-error-ink);
-  font-size: 13px;
+  font-size: var(--brando-text-md);
   line-height: 20px;
 }
 
 /* What accepting costs: rich text losing its formatting. */
 .field-ai-warning {
   color: var(--brando-attention-ink);
-  font-size: 13px;
+  font-size: var(--brando-text-md);
   line-height: 20px;
 }

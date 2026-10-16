@@ -6,7 +6,7 @@
 
   &.tiny {
     .checklist-item {
-      font-size: 10px;
+      font-size: var(--brando-text-2xs);
       text-transform: uppercase;
       padding: 2px 12px 2px 2px;
       gap: 0.3em;
@@ -20,7 +20,7 @@
   }
 
   .checklist-item {
-    @font mono 13px;
+    @font mono var(--brando-text-md);
     width: fit-content;
     display: flex;
     align-items: center;
@@ -73,7 +73,7 @@
 
     .checklist-item {
       display: contents;
-      font-size: 9px;
+      font-size: var(--brando-text-2xs);
       letter-spacing: 0.03em;
       text-transform: uppercase;
 
@@ -186,7 +186,7 @@
     border-top: 1px solid var(--brando-line);
     background: var(--brando-surface-shaded);
     color: var(--brando-muted);
-    font-size: 12px;
+    font-size: var(--brando-text-sm);
     line-height: 18px;
 
     .pagination-summary {
@@ -215,7 +215,7 @@
 
     .pagination-gap {
       width: 20px;
-      font-size: 13px;
+      font-size: var(--brando-text-md);
       text-align: center;
     }
 
@@ -233,7 +233,7 @@
       height: 30px;
       border: 1px solid var(--brando-ink);
       border-radius: 50%;
-      font-size: 13px;
+      font-size: var(--brando-text-md);
       line-height: 1;
       transition: background-color 200ms ease;
 
@@ -267,7 +267,7 @@
         min-width: 76px;
         height: 30px;
         padding: 0 30px 0 10px;
-        font-size: 12px;
+        font-size: var(--brando-text-sm);
         line-height: 18px;
         background-position: right 8px center;
         background-size: 14px;
@@ -323,7 +323,7 @@
         display: flex;
         cursor: pointer;
         user-select: none;
-        font-size: 15px;
+        font-size: var(--brando-text-xl);
         text-transform: uppercase;
         padding-left: 15px;
         padding-right: 15px;
@@ -434,7 +434,7 @@
       }
 
       .filter-key {
-        @font mono 12px;
+        @font mono var(--brando-text-sm);
         cursor: pointer;
         user-select: none;
         border: none;
@@ -744,7 +744,7 @@
           margin-top: 5px;
           border-radius: 16px;
           padding: 12px;
-          font-size: 16px;
+          font-size: var(--brando-text-xl);
 
           button {
             width: 100%;
@@ -804,13 +804,13 @@
   gap: 5px;
   margin-top: 0;
   @space margin-bottom 20px;
-  font-size: 13px;
+  font-size: var(--brando-text-md);
 
   .filter {
     @font mono;
     background-color: var(--brando-chip-active-bg);
     border: 0;
-    font-size: 12px;
+    font-size: var(--brando-text-sm);
     text-transform: uppercase;
     padding: 4px 10px 4px 4px;
     border-radius: 20px;
@@ -848,14 +848,14 @@
   align-items: center;
   gap: 0.25em;
   margin-top: 12px;
-  font-size: 13px;
+  font-size: var(--brando-text-md);
 }
 
 .exports {
   position: relative;
   display: flex;
   align-items: center;
-  font-size: 14px;
+  font-size: var(--brando-text-lg);
   justify-content: flex-end;
   background-color: var(--brando-surface);
   margin-left: 5px;
@@ -884,7 +884,7 @@
 
 /* Uses tiny-toggle pattern from form/input - just add label styling */
 .boolean-filter .tiny-toggle-label {
-  @font mono 10px;
+  @font mono var(--brando-text-2xs);
   text-transform: uppercase;
 }
 
@@ -895,12 +895,12 @@
   margin-bottom: 0 !important;
 
   .filter-label {
-    @font mono 10px;
+    @font mono var(--brando-text-2xs);
     text-transform: uppercase;
   }
 
   select {
-    @font mono 10px;
+    @font mono var(--brando-text-2xs);
     padding: 4px;
     border: 1px solid var(--brando-input-border);
     border-radius: 4px;
@@ -917,7 +917,7 @@
 }
 
 .reset-filters-btn {
-  @font mono 10px;
+  @font mono var(--brando-text-2xs);
   text-transform: uppercase;
 
   padding: 4px 6px;
@@ -958,7 +958,7 @@
   background-color: var(--brando-surface);
   box-shadow: var(--brando-shadow-xl);
   color: var(--brando-ink);
-  font-size: 13px;
+  font-size: var(--brando-text-md);
   line-height: 18px;
 }
 
@@ -967,7 +967,7 @@
   align-items: center;
   gap: 8px;
   margin-bottom: 20px;
-  font-size: 17px;
+  font-size: var(--brando-text-2xl);
   font-weight: 500;
   line-height: 24px;
   letter-spacing: -0.01em;
@@ -1061,7 +1061,7 @@
   border-radius: 5px;
   background-color: color-mix(in srgb, var(--brando-status-disabled) 10%, var(--brando-surface));
   color: var(--brando-status-disabled);
-  font-size: 12px;
+  font-size: var(--brando-text-sm);
 }
 
 .translation-dialog-footer {
@@ -1084,7 +1084,7 @@
     background-color: var(--brando-surface);
     color: var(--brando-ink);
     font-family: inherit;
-    font-size: 12px;
+    font-size: var(--brando-text-sm);
     font-weight: 500;
     line-height: 18px;
     text-transform: none;

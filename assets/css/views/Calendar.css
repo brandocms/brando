@@ -46,7 +46,7 @@
 .calendar-nav h2 {
   min-width: 9.5em;
   padding: 0 4px;
-  font-size: 18px;
+  font-size: var(--brando-text-2xl);
   font-variant-numeric: tabular-nums;
 }
 
@@ -88,7 +88,7 @@
     padding: 0 12px;
     border-radius: 5px;
     color: var(--brando-ink);
-    font-size: 13px;
+    font-size: var(--brando-text-md);
     line-height: 20px;
     text-decoration: none;
 
@@ -112,7 +112,7 @@
   padding: 0 4px;
   list-style: none;
   color: var(--brando-muted);
-  font-size: 12px;
+  font-size: var(--brando-text-sm);
 
   li {
     display: inline-flex;
@@ -148,7 +148,7 @@
   span {
     padding: 8px 10px;
     color: var(--brando-muted);
-    font-size: 12px;
+    font-size: var(--brando-text-sm);
     text-transform: capitalize;
   }
 }
@@ -203,7 +203,7 @@
   align-items: center;
   gap: 6px;
   color: var(--brando-muted);
-  font-size: 13px;
+  font-size: var(--brando-text-md);
 }
 
 /* Shown in the phone's list, where no column names the day */
@@ -219,7 +219,7 @@
   height: 24px;
   border-radius: 12px;
   color: var(--brando-ink);
-  font-size: 11px;
+  font-size: var(--brando-text-xs);
   line-height: 1;
   font-variant-numeric: tabular-nums;
 }
@@ -249,7 +249,7 @@
   border: 1px solid var(--brando-line);
   border-radius: 5px;
   background: var(--brando-surface);
-  font-size: 12px;
+  font-size: var(--brando-text-sm);
   line-height: 17px;
 
   &.is-movable {
@@ -304,7 +304,7 @@
 .calendar-item-meta {
   display: none;
   color: var(--brando-muted);
-  font-size: 11px;
+  font-size: var(--brando-text-xs);
   line-height: 16px;
 }
 
@@ -360,7 +360,7 @@
   border-top: 1px solid var(--brando-line-soft);
   background: var(--brando-surface-shaded);
   color: var(--brando-muted);
-  font-size: 13px;
+  font-size: var(--brando-text-md);
   line-height: 20px;
 
   [data-icon] { flex: none; width: 18px; height: 18px; color: var(--brando-faint); }
@@ -373,7 +373,7 @@
 
   label {
     margin: 0;
-    font-size: 13px;
+    font-size: var(--brando-text-md);
   }
 
   .calendar-move-date {
@@ -384,13 +384,13 @@
     border-radius: var(--brando-input-radius);
     background: var(--brando-surface);
     color: var(--brando-ink);
-    font: 14px/20px "Main", sans-serif;
+    font: var(--brando-text-lg)/20px "Main", sans-serif;
   }
 
   .calendar-move-summary {
     margin: 0;
     color: var(--brando-muted);
-    font-size: 13px;
+    font-size: var(--brando-text-md);
   }
 
   .calendar-move-actions {
@@ -465,7 +465,7 @@
   .calendar-day-heading {
     gap: 8px;
     margin-bottom: 4px;
-    font-size: 14px;
+    font-size: var(--brando-text-lg);
   }
 
   .calendar-day-number {
@@ -484,13 +484,13 @@
     border-radius: 10px;
     background: var(--brando-chip-active-bg);
     color: var(--brando-chip-active-fg);
-    font-size: 12px;
+    font-size: var(--brando-text-sm);
     line-height: 20px;
   }
 
   .calendar-item {
     padding: 6px 6px 8px 10px;
-    font-size: 13px;
+    font-size: var(--brando-text-md);
     line-height: 19px;
   }
 

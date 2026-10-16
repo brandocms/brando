@@ -19,7 +19,7 @@
   .listing-status-label { display: inline; }
   /* "Expires 12 Oct" under the status badge */
   .content-list .status:has(> .listing-expiry) { flex-direction: column; align-items: flex-start; gap: 4px; }
-  .listing-expiry { display: block; margin: 0; color: var(--workspace-muted); font-size: 11px; line-height: 16px; white-space: nowrap; }
+  .listing-expiry { display: block; margin: 0; color: var(--workspace-muted); font-size: var(--brando-text-xs); line-height: 16px; white-space: nowrap; }
   /* Fallback for older browsers; consumers can supply different Main fonts. */
   .listing-status-label, .list-tools .statuses .label { transform: translateY(var(--status-label-offset, 2px)); }
   @supports (text-box: trim-both cap alphabetic) {
@@ -43,23 +43,23 @@
      it a few letters wide. */
   .content-list .list-row :is(.listing-title, div:has(> .entry-link)) { flex: 1 1 240px; min-width: 120px; }
   :is(.listing-title, div:has(> .entry-link)) > br { display: none; }
-  :is(.listing-title, div:has(> .entry-link)) > small, :is(.listing-title, div:has(> .entry-link)) > .badge { display: block; height: auto; margin-top: 4px; padding: 0; white-space: normal; border: 0; background: none; line-height: 1.5; color: var(--workspace-muted); font-size: 12px; font-family: inherit; }
-  :is(.listing-title, div:has(> .entry-link)) .badge a { color: var(--workspace-muted); font-size: 12px; overflow-wrap: anywhere; }
+  :is(.listing-title, div:has(> .entry-link)) > small, :is(.listing-title, div:has(> .entry-link)) > .badge { display: block; height: auto; margin-top: 4px; padding: 0; white-space: normal; border: 0; background: none; line-height: 1.5; color: var(--workspace-muted); font-size: var(--brando-text-sm); font-family: inherit; }
+  :is(.listing-title, div:has(> .entry-link)) .badge a { color: var(--workspace-muted); font-size: var(--brando-text-sm); overflow-wrap: anywhere; }
   :is(.listing-title, div:has(> .entry-link)) .badge [data-icon] { width: 12px; height: 12px; margin-right: 6px; }
   .listing-page-icon .badge { padding: 0; border: 0; background: none; }
   .content-list .list-row .main-content > .listing-creator, .content-list .child-row > .listing-creator { flex: 0 0 180px; order: 7; }
-  .item-meta .name, .item-meta .time { color: var(--workspace-muted); font-size: 12px; }
+  .item-meta .name, .item-meta .time { color: var(--workspace-muted); font-size: var(--brando-text-sm); }
   .content-list .list-row .circle-dropdown { order: 8; }
   /* The button that opens a row's children has a column of its own, just
      before the status, so it is in the same place in every row that has one
      (rows without children keep the empty slot). At least 132px; a longer
      label ("12 sider, 14 fragmenter") widens it rather than overflowing. */
   .content-list .list-row .main-content > div:has(> .children-button) { display: flex; justify-content: flex-end; flex: 0 0 auto; min-width: 132px; order: 5; }
-  .content-list .list-row .entry-link { font-size: 14px; font-weight: 500; }
-  .children-button button { display: inline-flex; align-items: center; justify-content: center; width: auto; min-width: 52px; max-width: none; height: 28px; aspect-ratio: auto; padding: 0 9px; border: 1px solid var(--brando-line); border-radius: var(--brando-radius-md); background: var(--brando-surface-tint); color: var(--brando-accent); font-family: inherit; font-size: 12px; line-height: 20px; }
+  .content-list .list-row .entry-link { font-size: var(--brando-text-lg); font-weight: 500; }
+  .children-button button { display: inline-flex; align-items: center; justify-content: center; width: auto; min-width: 52px; max-width: none; height: 28px; aspect-ratio: auto; padding: 0 9px; border: 1px solid var(--brando-line); border-radius: var(--brando-radius-md); background: var(--brando-surface-tint); color: var(--brando-accent); font-family: inherit; font-size: var(--brando-text-sm); line-height: 20px; }
   .children-button button:hover, .children-button button[aria-expanded="true"] { background: var(--brando-surface-selected); color: var(--brando-accent); border-color: var(--brando-line-strong); }
   .children-button button .children-button-count, .children-button button .children-button-close { display: none; }
-  .children-button-disclosure { display: flex; align-items: center; justify-content: center; gap: 7px; font-size: 12px; line-height: 20px; }
+  .children-button-disclosure { display: flex; align-items: center; justify-content: center; gap: 7px; font-size: var(--brando-text-sm); line-height: 20px; }
   .children-number { font-variant-numeric: tabular-nums; }
   .children-button-text { white-space: nowrap; }
   /* The text already says how many; keep only the chevron beside it. */
@@ -134,7 +134,7 @@
   .content-list .list-tools-wrapper { display: flex; flex-direction: row; flex-wrap: wrap; align-items: center; gap: 12px; padding: 6px; border: 1px solid var(--workspace-line); border-radius: 8px; background: var(--brando-surface-shaded); }
   .content-list .list-tools { flex: 1; min-width: 0; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
   .content-list .list-tools .statuses { display: flex; flex-wrap: wrap; gap: 2px; min-height: 38px; margin: 0; background: transparent; }
-  .content-list .list-tools .statuses button { display: inline-flex; align-items: center; gap: 8px; margin: 0; padding: 0 10px; height: 38px; border-radius: 5px; font-family: inherit; font-size: 13px; text-transform: none; line-height: 20px; }
+  .content-list .list-tools .statuses button { display: inline-flex; align-items: center; gap: 8px; margin: 0; padding: 0 10px; height: 38px; border-radius: 5px; font-family: inherit; font-size: var(--brando-text-md); text-transform: none; line-height: 20px; }
   .content-list .list-tools .statuses button.active { background: var(--brando-chip-active-bg); color: var(--brando-chip-active-fg); box-shadow: inset 0 0 0 1px var(--brando-line-strong); }
   .content-list .list-tools .statuses button:hover { background: var(--brando-chip-hover-bg); }
   .content-list .list-tools .statuses .status .label { display: inline; line-height: 20px; padding: 0; }
@@ -153,18 +153,18 @@
   .list-tools-wrapper.has-advanced-filters > .list-filters-and-sorts { grid-column: 3; grid-row: 2; justify-self: end; }
   .content-list .list-filters-and-sorts { display: flex; flex-wrap: wrap; gap: 12px; margin: 0; padding: 0; }
   .content-list .list-filters-and-sorts:empty { display: none; }
-  .content-list .sorts { display: flex; align-items: center; gap: 0; margin: 0; font-size: 13px; line-height: 20px; }
+  .content-list .sorts { display: flex; align-items: center; gap: 0; margin: 0; font-size: var(--brando-text-md); line-height: 20px; }
   .content-list .sorts-label { display: none; }
-  .content-list .sorts .simple-dropdown-button { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 38px; min-height: 38px; line-height: 20px; margin: 0; padding: 0 12px; border: 1px solid var(--workspace-line); border-radius: 5px; background: var(--brando-surface); color: var(--workspace-muted); font-family: inherit; font-size: 12px; text-transform: none; }
-  .content-list .sorts .simple-dropdown-content { font-size: 12px; background: var(--brando-surface); border-color: var(--workspace-line); }
+  .content-list .sorts .simple-dropdown-button { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 38px; min-height: 38px; line-height: 20px; margin: 0; padding: 0 12px; border: 1px solid var(--workspace-line); border-radius: 5px; background: var(--brando-surface); color: var(--workspace-muted); font-family: inherit; font-size: var(--brando-text-sm); text-transform: none; }
+  .content-list .sorts .simple-dropdown-content { font-size: var(--brando-text-sm); background: var(--brando-surface); border-color: var(--workspace-line); }
   .advanced-filters-bar { gap: 12px; }
-  .boolean-filter .tiny-toggle-label, .list-filter-select .filter-label { font-family: inherit; font-size: 12px; text-transform: none; }
+  .boolean-filter .tiny-toggle-label, .list-filter-select .filter-label { font-family: inherit; font-size: var(--brando-text-sm); text-transform: none; }
   /* The sort button's box and chevron (Lucide chevron-down in --workspace-muted) */
-  .list-filter-select select { min-height: 38px; padding: 0 32px 0 12px; border-color: var(--workspace-line); border-radius: 5px; background: var(--brando-surface) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23626b66' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") no-repeat right 12px center / 14px 14px; color: var(--workspace-ink); font-family: inherit; font-size: 12px; }
-  .reset-filters-btn { min-height: 30px; padding: 5px 10px; border-color: var(--workspace-line); border-radius: 5px; font-family: inherit; font-size: 12px; text-transform: none; color: var(--workspace-muted); }
+  .list-filter-select select { min-height: 38px; padding: 0 32px 0 12px; border-color: var(--workspace-line); border-radius: 5px; background: var(--brando-surface) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23626b66' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") no-repeat right 12px center / 14px 14px; color: var(--workspace-ink); font-family: inherit; font-size: var(--brando-text-sm); }
+  .reset-filters-btn { min-height: 30px; padding: 5px 10px; border-color: var(--workspace-line); border-radius: 5px; font-family: inherit; font-size: var(--brando-text-sm); text-transform: none; color: var(--workspace-muted); }
   .reset-filters-btn:hover { background: var(--workspace-wash); color: var(--workspace-accent); }
   .sorts .dropdown-chevron { display: block; width: 14px; height: 14px; }
-  .sorts .sort-note { display: block; margin-top: 2px; font-size: 11px; color: var(--workspace-muted); }
+  .sorts .sort-note { display: block; margin-top: 2px; font-size: var(--brando-text-xs); color: var(--workspace-muted); }
   @media (max-width: 600px) {
     .content-list .list-tools { flex-basis: 100%; }
     .content-list .list-tools .filters { width: 100%; }
@@ -185,7 +185,7 @@
   .content-list .url a:hover { background: var(--brando-surface-selected); }
   .content-list .url a:hover [data-icon] { }
   .content-list .main-content > [class*="col-"]:not(.seq, .cover, .url, .listing-creator, [class*="listing-"], :has(> .entry-link), :has(> .children-button)) { flex: 0 1 180px; min-width: 0; order: 2; max-width: 180px; overflow-wrap: anywhere; }
-  .content-list .empty-list { min-height: 180px; padding: 48px 24px; border: 1px solid var(--workspace-line); border-radius: 6px; background: var(--brando-surface-shaded); color: var(--workspace-muted); font-size: 13px; text-align: center; }
+  .content-list .empty-list { min-height: 180px; padding: 48px 24px; border: 1px solid var(--workspace-line); border-radius: 6px; background: var(--brando-surface-shaded); color: var(--workspace-muted); font-size: var(--brando-text-md); text-align: center; }
   .content-list .empty-list figure { display: none; }
   @media (max-width: 600px) {
     .content-list .list-row .main-content:has(> .cover) { grid-template-columns: 20px 48px max-content minmax(0, 1fr) 30px; }
@@ -208,14 +208,14 @@
   display: flex; align-items: center; gap: 10px;
   .avatar-wrapper { display: flex; flex: 0 0 30px; margin: 0; padding: 0; }
   .avatar-wrapper:not(:has(img)) { display: flex; }
-  .avatar { display: grid; place-items: center; position: relative; background: var(--brando-badge-bg); color: var(--brando-badge-ink); font-size: 13px; line-height: 1; }
+  .avatar { display: grid; place-items: center; position: relative; background: var(--brando-badge-bg); color: var(--brando-badge-ink); font-size: var(--brando-text-md); line-height: 1; }
   .avatar, .avatar .image-content, .avatar img { box-sizing: border-box; width: 30px; height: 30px; border-radius: 50%; }
   .avatar .image-content { overflow: hidden; }
   .avatar img { display: block; object-fit: cover; }
   .creator-initials { display: block; line-height: 1; text-transform: uppercase; }
   .content { min-width: 0; }
-  .name { font-size: 12px; line-height: 18px; }
-  .time { font-size: 11px; line-height: 16px; }
+  .name { font-size: var(--brando-text-sm); line-height: 18px; }
+  .time { font-size: var(--brando-text-xs); line-height: 16px; }
 }
 
 /* Language versions of a synchronized translation, with their open work, one
@@ -228,7 +228,7 @@
   order: 5;
   margin: 0;
   color: var(--workspace-muted);
-  font-size: 12px;
+  font-size: var(--brando-text-sm);
   line-height: 18px;
 
   ul { display: flex; flex-direction: column; margin: 0; padding: 0; list-style: none; }

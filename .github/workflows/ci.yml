@@ -204,6 +204,10 @@ jobs:
         if: needs.reuse.outputs.reused != 'true'
         run: bash .github/scripts/check_css_colors.sh
 
+      - name: Reject pixel font sizes outside the type scale
+        if: needs.reuse.outputs.reused != 'true'
+        run: bash .github/scripts/check_css_font_sizes.sh
+
   quality:
     name: Blueprint quality gates
     needs: reuse

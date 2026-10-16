@@ -16,12 +16,12 @@
   border-radius: 8px;
   background: var(--brando-surface-hover);
   color: var(--translation-ink);
-  font-size: 13px;
+  font-size: var(--brando-text-md);
   line-height: 1.55;
 
   h2, h3, p, ul { margin: 0; padding: 0; }
-  h2 { font-size: 16px; font-weight: 500; line-height: 1.4; text-transform: none; letter-spacing: -.01em; }
-  h3 { display: flex; align-items: baseline; gap: 8px; font-size: 13px; font-weight: 500; text-transform: none; letter-spacing: 0; }
+  h2 { font-size: var(--brando-text-xl); font-weight: 500; line-height: 1.4; text-transform: none; letter-spacing: -.01em; }
+  h3 { display: flex; align-items: baseline; gap: 8px; font-size: var(--brando-text-md); font-weight: 500; text-transform: none; letter-spacing: 0; }
   h3 span { color: var(--translation-muted); font-weight: 400; font-variant-numeric: tabular-nums; }
   ul { list-style: none; }
 
@@ -66,7 +66,7 @@
   align-items: center;
   gap: 6px;
   color: var(--translation-muted);
-  font-size: 12px;
+  font-size: var(--brando-text-sm);
   cursor: pointer;
 
   input { margin: 0; }
@@ -90,7 +90,7 @@
   border-radius: 6px 6px 0 0;
   background: var(--brando-attention);
   color: var(--brando-attention-ink);
-  font-size: 13px;
+  font-size: var(--brando-text-md);
   line-height: 1.5;
 }
 
@@ -134,7 +134,7 @@
   border-radius: 5px;
   background: var(--brando-surface);
   color: var(--translation-ink);
-  font-size: 12px;
+  font-size: var(--brando-text-sm);
   font-weight: 500;
   line-height: 18px;
   letter-spacing: 0;

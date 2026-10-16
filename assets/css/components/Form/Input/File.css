@@ -2,11 +2,11 @@
    (`.asset-field` / `.asset-field--single`). Only file-specific bits live here. */
 .file-preview {
   .name {
-    @fontsize 13px;
+    font-size: var(--brando-text-md);
   }
 
   .updated {
-    font-size: 10px;
+    font-size: var(--brando-text-2xs);
     opacity: 0.8;
   }
 }

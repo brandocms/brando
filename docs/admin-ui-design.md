@@ -318,10 +318,31 @@ window changes size.
 
 ## Use typography and color to establish hierarchy
 
-Retain Brando's existing typefaces. The Utilities scale is approximately 30px for
-the page title, 18–22px for section headings, 13–14px for item titles, and 12–13px
-for descriptions. Small metadata is subordinate, but it still needs to be readable
-at normal zoom. Do not shrink essential instructions to make a layout fit.
+Retain Brando's existing typefaces. Every fixed font size is a step of the type
+scale, `theme.text` in the admin's `europa.json5`, which
+[`assets/css/tokens.css`](../assets/css/tokens.css) sets as `--brando-text-*`.
+Write `font-size: var(--brando-text-sm)` (or the size in a `font` shorthand),
+never a pixel size: `.github/scripts/check_css_font_sizes.sh` rejects pixel font
+sizes in CI. A size between two steps takes the nearer one. The editor's
+content and inputs keep their responsive sizes from `theme.typography.sizes`
+(`@fontsize input`, `@fontsize h2`), which grow with the screen.
+
+| Token | Default | Use |
+| --- | --- | --- |
+| `--brando-text-2xs` | 10px | Counters, keyboard hints, overlines |
+| `--brando-text-xs` | 11px | Help text, metadata, badges |
+| `--brando-text-sm` | 12px | Default UI text: buttons, rows, labels |
+| `--brando-text-md` | 13px | Body text, descriptions, inputs |
+| `--brando-text-lg` | 14px | Item and card titles, settings inputs |
+| `--brando-text-xl` | 16px | Section titles (h3) |
+| `--brando-text-2xl` | 18px | Drawer, panel and dialog titles |
+| `--brando-text-3xl` | 20px | Large titles, sidebar rows, empty states |
+| `--brando-text-4xl` | 22px | Section headings (h2), modal titles |
+| `--brando-text-5xl` | 26px | Page headings on a phone, large figures |
+| `--brando-text-6xl` | 32px | Page headings (h1) |
+
+Small metadata is subordinate, but it still needs to be readable at normal
+zoom. Do not shrink essential instructions to make a layout fit.
 
 Use regular or medium weights, restrained borders, and minimal shadows. Sentence
 case suits headings and actions. Reserve small uppercase labels for short context

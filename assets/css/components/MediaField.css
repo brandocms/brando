@@ -6,7 +6,7 @@
   --media-accent: var(--brando-accent);
   width: 100%; max-width: 620px; min-width: 0; position: relative;
   padding: 16px; border: 1px solid var(--media-line); border-radius: 8px;
-  background: var(--brando-surface); color: var(--media-ink); font: 14px/1.5 "Main", sans-serif;
+  background: var(--brando-surface); color: var(--media-ink); font: var(--brando-text-lg)/1.5 "Main", sans-serif;
   *, *::before, *::after { box-sizing: border-box; }
   > input.file-input { display: none !important; }
   &.media-field--empty { background: var(--brando-surface-hover); border-style: dashed; }
@@ -19,22 +19,22 @@
     img, picture { width: 100%; height: 100%; min-width: 0; max-width: 100%; object-fit: cover; }
   }
   .media-field-copy { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
-  .media-field-name { color: var(--media-ink); font: 500 14px/20px "Main", sans-serif; overflow-wrap: anywhere; }
-  .media-field-meta, .media-field-hint { color: var(--media-muted); font: 12px/18px "Main", sans-serif; }
+  .media-field-name { color: var(--media-ink); font: 500 var(--brando-text-lg)/20px "Main", sans-serif; overflow-wrap: anywhere; }
+  .media-field-meta, .media-field-hint { color: var(--media-muted); font: var(--brando-text-sm)/18px "Main", sans-serif; }
   /* The image's alt text, or that it has none */
-  .media-field-alt { display: block; max-width: 100%; overflow: hidden; color: var(--media-muted); font: 12px/18px "Main", sans-serif; white-space: nowrap; text-overflow: ellipsis; }
-  .media-field-alt-label { margin-right: 2px; padding: 0 5px; border: 1px solid var(--brando-line); border-radius: 3px; font-size: 10px; line-height: 15px; letter-spacing: .02em; }
+  .media-field-alt { display: block; max-width: 100%; overflow: hidden; color: var(--media-muted); font: var(--brando-text-sm)/18px "Main", sans-serif; white-space: nowrap; text-overflow: ellipsis; }
+  .media-field-alt-label { margin-right: 2px; padding: 0 5px; border: 1px solid var(--brando-line); border-radius: 3px; font-size: var(--brando-text-2xs); line-height: 15px; letter-spacing: .02em; }
   .media-field-alt em, .media-field-alt.is-missing { color: var(--brando-attention-ink); font-style: normal; }
   .media-field-alt em::before { content: "· "; color: var(--media-muted); }
-  .media-field-processing { display: inline-flex; align-items: center; gap: 6px; color: var(--media-muted); font: 12px/18px "Main", sans-serif; }
+  .media-field-processing { display: inline-flex; align-items: center; gap: 6px; color: var(--media-muted); font: var(--brando-text-sm)/18px "Main", sans-serif; }
   .media-field-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 16px; }
-  .media-field-destination { display: flex; align-items: center; gap: 6px; margin-top: 12px; color: var(--media-muted); font: 12px/18px "Main", sans-serif; overflow-wrap: anywhere; }
+  .media-field-destination { display: flex; align-items: center; gap: 6px; margin-top: 12px; color: var(--media-muted); font: var(--brando-text-sm)/18px "Main", sans-serif; overflow-wrap: anywhere; }
   .media-field-destination > [data-icon] { width: 14px; height: 14px; flex: 0 0 14px; }
   .media-field-progress:empty { display: none; }
-  .media-field-progress { margin-top: 12px; font: 12px/18px "Main", sans-serif; color: var(--media-accent); }
+  .media-field-progress { margin-top: 12px; font: var(--brando-text-sm)/18px "Main", sans-serif; color: var(--media-accent); }
   .media-field-progress[data-state="error"] { color: var(--brando-error-ink); }
   .media-field-progress progress { display: block; width: 100%; height: 4px; margin-top: 8px; }
-  .media-field-drop { display: none; position: absolute; inset: -1px; z-index: 5; border: 2px solid var(--media-accent); border-radius: 8px; background: color-mix(in srgb, var(--brando-surface-selected) 96%, transparent); color: var(--media-accent); pointer-events: none; align-items: center; justify-content: center; gap: 12px; font: 500 14px/20px "Main", sans-serif; }
+  .media-field-drop { display: none; position: absolute; inset: -1px; z-index: 5; border: 2px solid var(--media-accent); border-radius: 8px; background: color-mix(in srgb, var(--brando-surface-selected) 96%, transparent); color: var(--media-accent); pointer-events: none; align-items: center; justify-content: center; gap: 12px; font: 500 var(--brando-text-lg)/20px "Main", sans-serif; }
   .media-field-drop > [data-icon] { width: 24px; height: 24px; }
   &.dragging > .media-field-drop { display: flex; }
 }
@@ -52,7 +52,7 @@
 .media-field .media-button, .media-gallery .media-button, .media-button {
   display: inline-flex; align-items: center; justify-content: center; gap: 7px;
   width: auto; min-width: 0; height: auto; min-height: 32px; margin: 0; padding: 5px 11px; border: 1px solid var(--brando-line);
-  border-radius: 5px; background: var(--brando-surface); color: var(--brando-ink); font: 12px/20px "Main", sans-serif;
+  border-radius: 5px; background: var(--brando-surface); color: var(--brando-ink); font: var(--brando-text-sm)/20px "Main", sans-serif;
   text-transform: none; letter-spacing: 0; box-shadow: none; cursor: pointer; list-style: none;
   > [data-icon] { width: 15px; height: 15px; flex: 0 0 15px; }
   &:hover { background: var(--brando-surface-selected); border-color: var(--brando-line-strong); }
@@ -80,7 +80,7 @@
 /* Menu items that discard work, and the upload destination under the actions */
 .media-field-replace .media-field-menu button.destructive { color: var(--brando-error-ink); }
 .media-field-replace .media-field-menu button.destructive:hover { background: var(--brando-error); }
-.media-field-replace .media-field-menu .media-field-menu-note { display: flex; align-items: center; gap: 6px; margin: 4px 0 0; padding: 8px 10px 4px; border-top: 1px solid var(--brando-line); color: var(--brando-muted); font: 11px/16px "Main", sans-serif; overflow-wrap: anywhere; }
+.media-field-replace .media-field-menu .media-field-menu-note { display: flex; align-items: center; gap: 6px; margin: 4px 0 0; padding: 8px 10px 4px; border-top: 1px solid var(--brando-line); color: var(--brando-muted); font: var(--brando-text-xs)/16px "Main", sans-serif; overflow-wrap: anywhere; }
 .media-field-replace .media-field-menu .media-field-menu-note [data-icon] { width: 13px; height: 13px; flex-shrink: 0; }
 /* "Change" beside the upload folder: a text link, in the line under an empty
    field and at the end of a menu's note. Selectors out-specify the menu's
@@ -96,7 +96,7 @@
 .media-field-replace {
   position: relative;
   .media-field-menu { position: fixed; inset: auto; margin: 0; min-width: min(190px, calc(100vw - 16px)); max-width: calc(100vw - 16px); max-height: calc(100dvh - 16px); overflow-y: auto; padding: 5px; background: var(--brando-surface); border: 1px solid var(--brando-line); border-radius: 7px; box-shadow: 0 8px 24px color-mix(in srgb, var(--brando-ink) 9%, transparent); }
-  .media-field-menu button { display: flex; align-items: center; gap: 9px; width: 100%; border: 0; border-radius: 4px; padding: 9px 10px; margin: 0; background: var(--brando-surface); color: var(--brando-ink); font: 12px/18px "Main", sans-serif; text-align: left; }
+  .media-field-menu button { display: flex; align-items: center; gap: 9px; width: 100%; border: 0; border-radius: 4px; padding: 9px 10px; margin: 0; background: var(--brando-surface); color: var(--brando-ink); font: var(--brando-text-sm)/18px "Main", sans-serif; text-align: left; }
   .media-field-menu button:hover { background: var(--brando-surface-selected); }
   .media-field-menu [data-icon] { width: 16px; height: 16px; flex-shrink: 0; }
 }
@@ -183,7 +183,7 @@
   .media-button--collapsible-block > .media-button-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 }
 .media-field-drop > div { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
-.media-field-drop-destination { font: 12px/18px "Main", sans-serif; overflow-wrap: anywhere; }
+.media-field-drop-destination { font: var(--brando-text-sm)/18px "Main", sans-serif; overflow-wrap: anywhere; }
 .media-field > .media-field-drop { padding: 16px; }
 @media (max-width: 600px) {
   .media-field { padding: 14px; }
@@ -212,7 +212,7 @@
   background: var(--brando-surface-hover);
   .gallery-buttons, .actions { display: flex; flex-wrap: wrap; gap: 8px; }
   .gallery-buttons { margin-bottom: 16px; }
-  .media-gallery-empty { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; min-height: 150px; font-size: 14px; color: var(--brando-muted); }
+  .media-gallery-empty { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; min-height: 150px; font-size: var(--brando-text-lg); color: var(--brando-muted); }
   .media-gallery-empty svg { width: 28px; height: 28px; }
   > .file-input { display: none; }
   &.dragging > .media-field-drop { display: flex; }
@@ -230,16 +230,16 @@
 .library-upload-trigger > .file-input { display: none; }
 .media-destination-target { display: block; font-weight: 500; padding-bottom: 4px; }
 .media-destination-actions { display: flex; flex-shrink: 0; align-items: center; gap: 8px; }
-#image-picker .image-picker-upload-callout { gap: 16px; font: 13px/1.5 "Main", sans-serif; padding: 14px 16px; }
+#image-picker .image-picker-upload-callout { gap: 16px; font: var(--brando-text-md)/1.5 "Main", sans-serif; padding: 14px 16px; }
 #image-drawer, #file-drawer, #video-drawer {
   max-width: 100vw; background: var(--brando-surface); color: var(--brando-ink);
   .drawer-header { border-bottom: 1px solid var(--brando-line); }
-  .drawer-header h2 { font: 500 22px/1.3 "Main", sans-serif; color: var(--brando-ink); }
+  .drawer-header h2 { font: 500 var(--brando-text-4xl)/1.3 "Main", sans-serif; color: var(--brando-ink); }
 }
 .gallery-block .media-gallery .gallery-buttons .media-button,
 .media-gallery .actions .media-button {
   width: auto; min-width: 0; height: auto; min-height: 32px; border-radius: 5px;
-  padding: 5px 11px; font: 12px/20px "Main", sans-serif; text-transform: none;
+  padding: 5px 11px; font: var(--brando-text-sm)/20px "Main", sans-serif; text-transform: none;
 }
 /* The gallery's trio reads as one segmented control. This has to out-specify
    both the rule above and `.media-gallery .media-button`, which set the radius
@@ -267,13 +267,13 @@
   .drawer-content { color: var(--brando-ink); }
   .media-drawer-actions { display: flex; flex-wrap: wrap; gap: 8px; margin: 16px 0 24px; }
   .media-drawer-actions .media-button { flex: 0 0 auto; width: auto; border-radius: 5px; }
-  .media-drawer-filename { padding-top: 8px; color: var(--brando-muted); font: 12px/18px "Main", sans-serif; overflow-wrap: anywhere; }
-  .media-drawer-note { color: var(--brando-muted); font: 13px/20px "Main", sans-serif; padding-bottom: 20px; }
+  .media-drawer-filename { padding-top: 8px; color: var(--brando-muted); font: var(--brando-text-sm)/18px "Main", sans-serif; overflow-wrap: anywhere; }
+  .media-drawer-note { color: var(--brando-muted); font: var(--brando-text-md)/20px "Main", sans-serif; padding-bottom: 20px; }
   .brando-input { margin-bottom: 20px; }
-  .brando-input input:not([type="checkbox"]):not([type="radio"]):not([type="range"]) { height: 40px; border: 1px solid var(--brando-line); border-radius: 5px; color: var(--brando-ink); font: 14px/20px "Main", sans-serif; }
+  .brando-input input:not([type="checkbox"]):not([type="radio"]):not([type="range"]) { height: 40px; border: 1px solid var(--brando-line); border-radius: 5px; color: var(--brando-ink); font: var(--brando-text-lg)/20px "Main", sans-serif; }
   .label-wrapper { margin-bottom: 8px; }
-  .control-label { color: var(--brando-ink); font: 13px/18px "Main", sans-serif; }
-  .media-field-progress { color: var(--brando-accent); font: 12px/18px "Main", sans-serif; padding-bottom: 12px; }
+  .control-label { color: var(--brando-ink); font: var(--brando-text-md)/18px "Main", sans-serif; }
+  .media-field-progress { color: var(--brando-accent); font: var(--brando-text-sm)/18px "Main", sans-serif; padding-bottom: 12px; }
   .media-field-progress:empty { display: none; }
   .media-field-progress[data-state="error"] { color: var(--brando-error-ink); }
   .media-field-progress progress { display: block; width: 100%; height: 4px; margin-top: 6px; }
@@ -282,20 +282,20 @@
   background: var(--brando-surface-hover); border: 1px solid var(--brando-line); border-radius: 8px; padding: 16px;
   .img-placeholder { height: 72px; min-height: 0; background: transparent; }
   .svg-wrapper { width: 40px; height: 40px; }
-  .file-info { display: flex; flex-direction: column; gap: 4px; padding-top: 8px; font: 13px/18px "Main", sans-serif; color: var(--brando-muted); }
-  .filename { color: var(--brando-ink); font-size: 14px; overflow-wrap: anywhere; }
+  .file-info { display: flex; flex-direction: column; gap: 4px; padding-top: 8px; font: var(--brando-text-md)/18px "Main", sans-serif; color: var(--brando-muted); }
+  .filename { color: var(--brando-ink); font-size: var(--brando-text-lg); overflow-wrap: anywhere; }
 }
 .media-gallery .actions { display: flex; flex-wrap: wrap; gap: 8px; }
 
 .video-block .modal--editor, .modal .gallery-object-config {
   .override-toggle-group { box-shadow: none; margin: 0; padding: 0; border-radius: 0; }
-  .override-toggle-group legend { padding: 0 0 12px; gap: 8px; font: 13px/20px "Main", sans-serif; color: var(--brando-muted); }
+  .override-toggle-group legend { padding: 0 0 12px; gap: 8px; font: var(--brando-text-md)/20px "Main", sans-serif; color: var(--brando-muted); }
   .override-toggle-row { min-height: 44px; gap: 12px; border-bottom: 1px solid var(--brando-line); padding: 10px 0; }
   .override-toggle-btn { width: 36px; height: 20px; border-radius: 10px; background: var(--brando-line); }
   .override-toggle-btn::after { width: 16px; height: 16px; }
   .override-toggle-btn.active { background: var(--brando-accent); }
   .override-toggle-btn.active::after { transform: translateX(16px); }
-  .override-toggle-label, .tiny-toggle-label { font: 14px/20px "Main", sans-serif; color: var(--brando-ink); text-transform: none; letter-spacing: 0; }
+  .override-toggle-label, .tiny-toggle-label { font: var(--brando-text-lg)/20px "Main", sans-serif; color: var(--brando-ink); text-transform: none; letter-spacing: 0; }
   .override-reset-inline, .override-reset-all { width: 26px; height: 26px; border-radius: 5px; border-color: var(--brando-line); margin-left: auto; }
   .override-reset-inline span, .override-reset-all span { width: 12px; height: 12px; }
   .tiny-toggle-wrapper { display: flex; align-items: center; gap: 12px; min-height: 44px; }
@@ -306,7 +306,7 @@
   .gallery-object { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; min-width: 0; }
   .gallery-object > img, .gallery-object > .file-card { width: 100%; height: 150px; margin: 0; border-radius: 5px; object-fit: cover; }
   .gallery-object > .file-card { display: flex; align-items: center; justify-content: center; gap: 12px; padding: 16px; background: var(--brando-surface); border: 1px solid var(--brando-line); color: var(--brando-ink); }
-  .file-card__meta { font: 13px/20px "Main", sans-serif; overflow-wrap: anywhere; }
-  .gallery-object > button { padding: 5px 10px; border: 1px solid var(--brando-line); border-radius: 5px; font: 12px/18px "Main", sans-serif; color: var(--brando-muted); background: var(--brando-surface); }
+  .file-card__meta { font: var(--brando-text-md)/20px "Main", sans-serif; overflow-wrap: anywhere; }
+  .gallery-object > button { padding: 5px 10px; border: 1px solid var(--brando-line); border-radius: 5px; font: var(--brando-text-sm)/18px "Main", sans-serif; color: var(--brando-muted); background: var(--brando-surface); }
   .media-field-progress:not(:empty) { margin-bottom: 16px; }
 }

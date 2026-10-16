@@ -27,7 +27,7 @@
     }
 
     .instructions {
-      font-size: 16px;
+      font-size: var(--brando-text-xl);
 
       button {
         margin-top: 10px;

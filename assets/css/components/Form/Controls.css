@@ -1,7 +1,7 @@
 /* Inputs in the same form share a box and type scale, including custom selects. */
 .brando-form {
   --admin-field-height: 44px;
-  --admin-field-font-size: 14px;
+  --admin-field-font-size: var(--brando-text-lg);
   .field-wrapper :is(input.text, input[type="email"], input[type="tel"], input[type="number"], input[type="url"], input[type="date"]), .field-wrapper .multiselect {
     box-sizing: border-box;
     height: var(--admin-field-height);
@@ -28,7 +28,7 @@
   .field-wrapper .multiselect { padding-inline: 12px 8px; gap: 12px; }
   .multiselect > div:first-child { min-width: 0; }
   .multiselect .select-label { line-height: 20px; overflow-wrap: anywhere; }
-  .multiselect > .button-edit { display: inline-flex; align-items: center; justify-content: center; box-sizing: border-box; flex-shrink: 0; min-height: 28px; padding: 3px 9px; font-size: 12px; line-height: 20px; }
+  .multiselect > .button-edit { display: inline-flex; align-items: center; justify-content: center; box-sizing: border-box; flex-shrink: 0; min-height: 28px; padding: 3px 9px; font-size: var(--brando-text-sm); line-height: 20px; }
 }
 .form-tabs .form-tab-builtins {
   .preview-chooser-trigger .dropdown-chevron,

@@ -6,7 +6,7 @@
   gap: 2px 6px;
   margin-top: 2px;
   color: var(--brando-muted);
-  font-size: 11px;
+  font-size: var(--brando-text-xs);
   line-height: 16px;
 
   a { color: var(--workspace-ink, var(--brando-ink)); text-decoration: underline; text-decoration-color: var(--workspace-line, var(--brando-line)); text-underline-offset: 2px; }
@@ -22,7 +22,7 @@
   padding-top: 24px;
   border-top: 1px solid var(--workspace-line, var(--brando-line));
 
-  h2 { margin: 0 0 12px; font-size: 18px; line-height: 26px; font-weight: 500; color: var(--workspace-ink, var(--brando-ink)); }
+  h2 { margin: 0 0 12px; font-size: var(--brando-text-2xl); line-height: 26px; font-weight: 500; color: var(--workspace-ink, var(--brando-ink)); }
   ul { overflow: hidden; border: 1px solid var(--workspace-line, var(--brando-line)); border-radius: 8px; background: var(--brando-surface); }
   li + li { border-top: 1px solid var(--workspace-line, var(--brando-line)); }
 
@@ -41,7 +41,7 @@
   [data-icon].hidden { visibility: hidden; }
 }
 
-.usage-list-empty { color: var(--brando-muted); font-size: 13px; }
+.usage-list-empty { color: var(--brando-muted); font-size: var(--brando-text-md); }
 
 .usage-cover {
   width: 40px;
@@ -53,8 +53,8 @@
   img { width: 100%; height: 100%; object-fit: cover; }
 }
 
-.usage-label { overflow: hidden; font-size: 14px; text-overflow: ellipsis; white-space: nowrap; }
-.usage-type { color: var(--brando-muted); font-size: 12px; }
+.usage-label { overflow: hidden; font-size: var(--brando-text-lg); text-overflow: ellipsis; white-space: nowrap; }
+.usage-type { color: var(--brando-muted); font-size: var(--brando-text-sm); }
 
 .usage-status {
   width: 8px;

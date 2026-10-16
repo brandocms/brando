@@ -34,7 +34,7 @@
     }
 
     .instructions {
-      font-size: 16px;
+      font-size: var(--brando-text-xl);
 
       button {
         margin-top: 10px;
@@ -73,7 +73,7 @@
   .modal-content {
     .image-info {
       @space margin-top 15px;
-      @fontsize 13px;
+      font-size: var(--brando-text-md);
     }
 
     .img-placeholder {
@@ -83,7 +83,7 @@
 
       .instructions {
         text-align: center;
-        font-size: 15px;
+        font-size: var(--brando-text-xl);
       }
 
       :is(svg, [data-icon]) {

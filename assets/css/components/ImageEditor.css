@@ -17,8 +17,8 @@
     display: flex; align-items: center; justify-content: space-between; gap: 12px;
   }
   .image-editor-stage-heading h3, .image-editor-section-heading h3,
-  .image-editor-previews-title { font: 500 14px/20px "Main", sans-serif; }
-  #image-editor-dimensions { font-size: 12px; color: var(--workspace-muted); font-variant-numeric: tabular-nums; }
+  .image-editor-previews-title { font: 500 var(--brando-text-lg)/20px "Main", sans-serif; }
+  #image-editor-dimensions { font-size: var(--brando-text-sm); color: var(--workspace-muted); font-variant-numeric: tabular-nums; }
   .image-editor-main {
     position: relative; min-width: 0; min-height: 0;
     display: flex; align-items: center; justify-content: center; overflow: hidden;
@@ -53,7 +53,7 @@
   .image-editor-loading {
     position: absolute; inset: 0; margin: 0; display: none;
     align-items: center; justify-content: center;
-    background: var(--brando-badge-bg); color: var(--workspace-muted); font: 12px/18px "Main", sans-serif;
+    background: var(--brando-badge-bg); color: var(--workspace-muted); font: var(--brando-text-sm)/18px "Main", sans-serif;
   }
   .image-editor-loading-content { display: flex; align-items: center; gap: 10px; opacity: 0; }
   .image-editor-spinner {
@@ -79,7 +79,7 @@
   }
   .image-editor-hint {
     display: flex; align-items: flex-start; gap: 8px;
-    color: var(--workspace-muted); font: 12px/18px "Main", sans-serif;
+    color: var(--workspace-muted); font: var(--brando-text-sm)/18px "Main", sans-serif;
     > [data-icon] { width: 16px; height: 16px; flex: 0 0 16px; margin-top: 1px; }
   }
   .image-editor-sidebar {
@@ -91,15 +91,15 @@
   .image-editor-section-heading { margin-bottom: 4px; }
   #image-editor-reset { min-height: 30px; padding: 4px 7px; margin-right: -7px; }
   .zoom-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-  .zoom-header label { font: 13px/20px "Main", sans-serif; color: var(--workspace-ink); }
-  .zoom-value { font: 12px/20px "Mono", monospace; color: var(--workspace-muted); }
+  .zoom-header label { font: var(--brando-text-md)/20px "Main", sans-serif; color: var(--workspace-ink); }
+  .zoom-value { font: var(--brando-text-sm)/20px "Mono", monospace; color: var(--workspace-muted); }
   #image-editor-zoom {
     width: 100%; height: 20px; padding: 0; margin: 0;
     border: 0; background: transparent; cursor: pointer;
   }
   .image-editor-previews { display: flex; flex-direction: column; gap: 14px; }
   .image-editor-previews-heading { display: flex; flex-direction: column; gap: 8px; }
-  .image-editor-previews-hint { font: 12px/18px "Main", sans-serif; color: var(--workspace-muted); }
+  .image-editor-previews-hint { font: var(--brando-text-sm)/18px "Main", sans-serif; color: var(--workspace-muted); }
   .freeform-ratios { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; margin-bottom: 10px; }
   .ratio-btn {
     min-width: 0; display: flex; flex-direction: column; align-items: center; gap: 4px;
@@ -108,7 +108,7 @@
     &:hover { background: var(--brando-surface-hover); border-color: var(--brando-line-strong); color: var(--workspace-accent); }
     &[aria-pressed="true"] { border-color: var(--brando-accent); background: var(--brando-surface-selected); color: var(--workspace-accent); }
     svg { display: block; width: 23px; height: 23px; }
-    .ratio-btn-label { font: 12px/16px "Main", sans-serif; }
+    .ratio-btn-label { font: var(--brando-text-sm)/16px "Main", sans-serif; }
   }
   .crop-preview, .freeform-preview { min-width: 0; border: 1px solid var(--workspace-line); border-radius: 6px; overflow: hidden; }
   .crop-preview-image {
@@ -117,8 +117,8 @@
     canvas { display: block; width: auto; height: auto; max-width: 100%; max-height: 260px; object-fit: contain; }
   }
   .crop-preview-label { display: flex; flex-direction: column; gap: 6px; padding: 12px; border-top: 1px solid var(--workspace-line); }
-  .crop-preview-ratio { align-self: flex-start; padding: 2px 6px; background: var(--brando-badge-bg); color: var(--brando-badge-ink); border-radius: 3px; font: 500 12px/18px "Main", sans-serif; }
-  .crop-preview-sizes { color: var(--workspace-muted); font: 12px/18px "Main", sans-serif; overflow-wrap: anywhere; }
+  .crop-preview-ratio { align-self: flex-start; padding: 2px 6px; background: var(--brando-badge-bg); color: var(--brando-badge-ink); border-radius: 3px; font: 500 var(--brando-text-sm)/18px "Main", sans-serif; }
+  .crop-preview-sizes { color: var(--workspace-muted); font: var(--brando-text-sm)/18px "Main", sans-serif; overflow-wrap: anywhere; }
   .image-editor-actions {
     flex: 0 0 auto; display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap;
     gap: 8px; padding: 18px 24px; border-top: 1px solid var(--workspace-line); background: var(--brando-surface);

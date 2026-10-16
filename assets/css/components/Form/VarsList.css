@@ -112,18 +112,18 @@
     }
 
     .variable-key code {
-      font-size: 12.5px;
+      font-size: var(--brando-text-md);
     }
 
     .variable-key span {
       color: var(--table-muted);
-      font-size: 12px;
+      font-size: var(--brando-text-sm);
       opacity: 1;
     }
 
     .variable-value {
       color: var(--table-ink);
-      font-size: 13px;
+      font-size: var(--brando-text-md);
     }
   }
 

@@ -72,7 +72,7 @@
 
   label {
     &.small {
-      font-size: 14px;
+      font-size: var(--brando-text-lg);
     }
   }
 }

@@ -63,11 +63,11 @@
   .title {
     @space margin-bottom sm;
     font-family: theme(typography.families.mono);
-    font-size: 20px;
+    font-size: var(--brando-text-3xl);
   }
 
   .small {
-    font-size: 14px;
+    font-size: var(--brando-text-lg);
   }
 }
 
@@ -78,12 +78,12 @@
     display: block;
     margin-top: 8px;
     font-family: theme(typography.families.main);
-    font-size: 15px;
+    font-size: var(--brando-text-xl);
   }
 
   .login-intro {
     padding-bottom: 20px;
-    font-size: 14px;
+    font-size: var(--brando-text-lg);
     line-height: 1.5;
   }
 
@@ -100,7 +100,7 @@
   }
 
   .login-link {
-    font-size: 14px;
+    font-size: var(--brando-text-lg);
     color: inherit;
     text-decoration: underline;
     text-underline-offset: 3px;
@@ -144,7 +144,7 @@
 .login {
   .login-recovery {
     padding-bottom: 20px;
-    font-size: 14px;
+    font-size: var(--brando-text-lg);
 
     summary {
       cursor: pointer;
@@ -189,7 +189,7 @@
     border: 0;
     background: none;
     color: inherit;
-    font-size: 14px;
+    font-size: var(--brando-text-lg);
     text-decoration: underline;
     text-underline-offset: 3px;
     cursor: pointer;
@@ -206,7 +206,7 @@
 
   .login-passkey-error {
     padding-bottom: 12px;
-    font-size: 14px;
+    font-size: var(--brando-text-lg);
     color: color-mix(in srgb, var(--brando-status-disabled), var(--brando-ink) 35%);
   }
 
@@ -225,7 +225,7 @@
 
   .login-setup-method-intro {
     padding-bottom: 16px;
-    font-size: 14px;
+    font-size: var(--brando-text-lg);
     line-height: 1.5;
   }
 

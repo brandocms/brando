@@ -197,4 +197,19 @@
   --brando-control-md: theme(controls.md);
   --brando-control-lg: theme(controls.lg);
   --brando-control-touch: theme(controls.touch);
+
+  /* Type: eleven sizes from 10px labels to 32px page headings (theme.text).
+     A stylesheet sets `font-size: var(--brando-text-sm)` and never a pixel
+     size; `.github/scripts/check_css_font_sizes.sh` enforces it in CI. */
+  --brando-text-2xs: theme(text.2xs);
+  --brando-text-xs: theme(text.xs);
+  --brando-text-sm: theme(text.sm);
+  --brando-text-md: theme(text.md);
+  --brando-text-lg: theme(text.lg);
+  --brando-text-xl: theme(text.xl);
+  --brando-text-2xl: theme(text.2xl);
+  --brando-text-3xl: theme(text.3xl);
+  --brando-text-4xl: theme(text.4xl);
+  --brando-text-5xl: theme(text.5xl);
+  --brando-text-6xl: theme(text.6xl);
 }

@@ -17,7 +17,7 @@
   gap: 4px 6px;
   min-width: 0;
   color: var(--brando-muted);
-  font: 400 12px/18px "Main", sans-serif;
+  font: 400 var(--brando-text-sm)/18px "Main", sans-serif;
 
   .entry-breadcrumb-icon {
     flex: none;
@@ -63,7 +63,7 @@
     min-width: 0;
     margin: 0;
     color: var(--brando-ink);
-    font-size: 32px;
+    font-size: var(--brando-text-6xl);
     font-weight: 500;
     line-height: 1.2;
     letter-spacing: -0.035em;
@@ -73,7 +73,7 @@
 
   @media (max-width: 600px) {
     h1 {
-      font-size: 26px;
+      font-size: var(--brando-text-5xl);
     }
   }
 }
@@ -101,7 +101,7 @@
   border-radius: 999px;
   background: var(--brando-surface);
   color: var(--brando-ink);
-  font: 400 13px/18px "Main", sans-serif;
+  font: 400 var(--brando-text-md)/18px "Main", sans-serif;
   white-space: nowrap;
   cursor: pointer;
   transition: background-color 0.2s ease, border-color 0.2s ease;
@@ -186,7 +186,7 @@
   margin: 0;
   padding: 8px 10px;
   border-radius: 5px;
-  font: 400 13px/18px "Main", sans-serif;
+  font: 400 var(--brando-text-md)/18px "Main", sans-serif;
   cursor: pointer;
 
   /* The row is the control: its label clicks the radio, which stays

@@ -17,7 +17,7 @@
 
   .preview.compact {
     @font mono;
-    font-size: 13px;
+    font-size: var(--brando-text-md);
     display: flex;
     align-items: stretch;
     border: 1px dashed var(--brando-muted);
@@ -33,7 +33,7 @@
         justify-content: space-between;
         margin-top: 0;
         height: 100%;
-        font-size: 13px;
+        font-size: var(--brando-text-md);
         cursor: auto;
       }
 
@@ -46,7 +46,7 @@
         span {
           display: block;
           text-transform: uppercase;
-          font-size: 10px;
+          font-size: var(--brando-text-2xs);
           font-weight: normal;
         }
       }
@@ -102,7 +102,7 @@
     }
 
     .instructions {
-      font-size: 16px;
+      font-size: var(--brando-text-xl);
 
       button {
         margin-top: 10px;
@@ -134,7 +134,7 @@
   .modal-content {
     .image-info {
       @space margin-top 15px;
-      @fontsize 13px;
+      font-size: var(--brando-text-md);
     }
 
     .cover {
@@ -155,7 +155,7 @@
 
     .video-info {
       @font mono;
-      font-size: 12px;
+      font-size: var(--brando-text-sm);
       display: flex;
       flex-direction: column;
       row-gap: 5px;
@@ -170,14 +170,14 @@
 
         > span:first-child {
           text-transform: uppercase;
-          font-size: 10px;
+          font-size: var(--brando-text-2xs);
           opacity: 0.5;
         }
       }
 
       .video-info-url {
         text-transform: none;
-        font-size: 12px;
+        font-size: var(--brando-text-sm);
         opacity: 1;
         overflow: hidden;
         text-overflow: ellipsis;
@@ -194,7 +194,7 @@
 
       .instructions {
         text-align: center;
-        font-size: 15px;
+        font-size: var(--brando-text-xl);
       }
 
       svg {

@@ -13,7 +13,7 @@
   background: var(--brando-surface-hover);
   color: var(--brando-ink);
   box-shadow: 0 4px 24px color-mix(in srgb, var(--brando-ink) 15%, transparent);
-  font: 13px/20px "Main", sans-serif;
+  font: var(--brando-text-md)/20px "Main", sans-serif;
   transform: translateY(0);
   opacity: 1;
 
@@ -39,7 +39,7 @@
   @media (max-width: 600px) {
     inset-inline: 8px; bottom: 8px; gap: 8px; padding: 10px;
     .selection-actions { gap: 8px; }
-    .clear-selection button, .selection-actions .circle-dropdown-button { padding-inline: 8px; font-size: 12px; }
+    .clear-selection button, .selection-actions .circle-dropdown-button { padding-inline: 8px; font-size: var(--brando-text-sm); }
   }
   @media (pointer: coarse) { .clear-selection button, .selection-actions .circle-dropdown-button { min-height: 40px; } }
 }
