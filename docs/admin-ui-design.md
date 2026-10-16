@@ -1219,11 +1219,10 @@ form's state model.
 
 The approved identifier appearance is **D: joined cover rows**, selected on
 27 September 2026. Apply it globally to relation fields, block/datasource
-selections, entry/link pickers and alternates. See the
-[approved desktop reference](admin-ui/identifier-variants/variant-d-desktop.png)
-and [mobile reference](admin-ui/identifier-variants/variant-d-mobile.png).
-The [interactive comparison](admin-ui/identifier-variants/standalone.html)
-retains the other variants for context.
+selections, entry/link pickers and alternates. See the shipped
+[relation field](admin-ui/related-entries-selected-1440.png),
+[mobile field](admin-ui/related-entries-selected-390.png) and
+[entry picker](admin-ui/joined-identifiers-picker.png).
 
 Use one outline around adjacent rows, thin dividers, small rectangular covers
 and the content type's icon when no cover exists. Titles lead, with the status

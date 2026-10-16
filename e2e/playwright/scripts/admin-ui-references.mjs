@@ -16,10 +16,6 @@
 // live in scripts/admin-ui-references.spec.js. Chromium runs with
 // --font-render-hinting=none. Every reference is 1× at the stated width; the
 // state column says what the image shows.
-//
-// Not covered: docs/admin-ui/identifier-variants (a design study, see its capture.mjs),
-// docs/admin-ui/content-agent-concepts (concept prototypes) and the dated
-// audits under docs/audits.
 import { spawnSync } from 'node:child_process'
 import { copyFileSync, existsSync, mkdirSync, openSync, readSync, closeSync, readdirSync, statSync } from 'node:fs'
 import path from 'node:path'
