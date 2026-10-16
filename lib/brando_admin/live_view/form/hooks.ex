@@ -200,16 +200,6 @@ defmodule BrandoAdmin.LiveView.Form.Hooks do
      )}
   end
 
-  def on_mount({:hooks_focal_point, _schema}, _params, _session, socket) do
-    {:cont,
-     attach_hook(
-       socket,
-       :b_form_focal_point,
-       :handle_event,
-       &handle_hooks_focal_point_event/3
-     )}
-  end
-
   def on_mount({:hooks_focus, _schema}, _params, _session, socket) do
     {:cont,
      attach_hook(
@@ -246,26 +236,6 @@ defmodule BrandoAdmin.LiveView.Form.Hooks do
       &PubSub.subscribe(Brando.pubsub(), Topic.entry(&1, schema, entry_id))
     )
   end
-
-  defp handle_hooks_focal_point_event(
-         "update_focal_point",
-         %{"field" => field, "x" => x, "y" => y},
-         %{assigns: %{changeset: changeset}} = socket
-       ) do
-    field_atom = String.to_existing_atom(field)
-    updated_focal = %{x: x, y: y}
-
-    updated_field =
-      changeset
-      |> Ecto.Changeset.get_field(field_atom)
-      |> Map.from_struct()
-      |> Map.put(:focal, updated_focal)
-
-    updated_changeset = Ecto.Changeset.put_change(changeset, field_atom, updated_field)
-    {:halt, assign(socket, changeset: updated_changeset)}
-  end
-
-  defp handle_hooks_focal_point_event(_, _, socket), do: {:cont, socket}
 
   # Catch-all for focus events from portal forms (multi-select create modals, etc)
   defp handle_hooks_focus_event("focus", _, socket), do: {:halt, socket}

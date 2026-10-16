@@ -5676,13 +5676,13 @@ defmodule BrandoAdmin.Components.Form do
   def handle_event("recover_drawer_state", %{"drawer" => drawer_params}, socket) do
     case drawer_params do
       %{"type" => "image", "resource_id" => id} when id != "" ->
-        restore_image_drawer(socket, drawer_params)
+        with_drawer_target(socket, drawer_params, &restore_image_drawer/3)
 
       %{"type" => "video", "resource_id" => id} when id != "" ->
-        restore_video_drawer(socket, drawer_params)
+        with_drawer_target(socket, drawer_params, &restore_video_drawer/3)
 
       %{"type" => "file", "resource_id" => id} when id != "" ->
-        restore_file_drawer(socket, drawer_params)
+        with_drawer_target(socket, drawer_params, &restore_file_drawer/3)
 
       # A drawer was open but carried no resource id — recovery cannot rebuild
       # it, and any edits inside it are gone. Rare, but it used to be entirely
@@ -7607,11 +7607,9 @@ defmodule BrandoAdmin.Components.Form do
        do: socket
 
   defp maybe_send_ai_update_to_blocks(socket, string_path, generated_text) do
-    if string_path == ["__force_change"] do
-      socket
-    else
-      access_path = string_path_to_access_path(string_path)
-      send_updated_entry_field_to_blocks(socket, access_path, generated_text, hd(string_path))
+    case entry_access_path(socket.assigns.schema, string_path) do
+      {:ok, access_path} -> send_updated_entry_field_to_blocks(socket, access_path, generated_text, hd(string_path))
+      :error -> socket
     end
   end
 
@@ -7762,14 +7760,68 @@ defmodule BrandoAdmin.Components.Form do
     |> Enum.map(fn {gi, idx} -> Map.put(gi, :sequence, idx) end)
   end
 
-  defp string_path_to_access_path(string_path) do
-    Enum.map(string_path, fn segment ->
-      case Integer.parse(segment) do
-        {idx, ""} -> Access.at(idx)
-        _ -> segment |> String.to_existing_atom() |> Access.key()
+  # The access path into the entry for a form path below the singular
+  # (`["items", "0", "name"]`), which the browser sends. The first segment
+  # must name a field or association of the schema; later ones are an index
+  # or the name of an existing atom. Anything else is `:error`, and no atom is
+  # created. Below the field the steps leave data of another shape untouched
+  # (an index into a struct, a key into nil or one a struct lacks), since
+  # nothing checks the path against a block's copy of the entry.
+  defp entry_access_path(schema, [field | rest]) do
+    fields = schema.__schema__(:fields) ++ schema.__schema__(:virtual_fields) ++ schema.__schema__(:associations)
+
+    with key when not is_nil(key) <- Enum.find(fields, &(Atom.to_string(&1) == field)),
+         {:ok, steps} <- entry_access_steps(rest) do
+      {:ok, [Access.key(key) | steps]}
+    else
+      _ -> :error
+    end
+  end
+
+  defp entry_access_path(_schema, _path), do: :error
+
+  defp entry_access_steps(segments) do
+    Enum.reduce_while(Enum.reverse(segments), {:ok, []}, fn segment, {:ok, steps} ->
+      case entry_access_step(segment) do
+        {:ok, step} -> {:cont, {:ok, [step | steps]}}
+        :error -> {:halt, :error}
       end
     end)
   end
+
+  defp entry_access_step(segment) when segment in ["__struct__", "__meta__"], do: :error
+
+  defp entry_access_step(segment) when is_binary(segment) do
+    case Integer.parse(segment) do
+      {index, ""} ->
+        {:ok, entry_step(&is_list/1, Access.at(index))}
+
+      _ ->
+        case safe_to_existing_atom(segment) do
+          {:ok, key} -> {:ok, entry_step(&(is_map(&1) and (not is_struct(&1) or is_map_key(&1, key))), Access.key(key))}
+          {:error, _} -> :error
+        end
+    end
+  end
+
+  defp entry_access_step(_segment), do: :error
+
+  # `access` where `fits?` holds for the data, a no-op elsewhere.
+  defp entry_step(fits?, access) do
+    fn op, data, next ->
+      cond do
+        fits?.(data) -> access.(op, data, next)
+        op == :get -> nil
+        true -> {nil, data}
+      end
+    end
+  end
+
+  # `get_in/2` over params, which hold maps, lists and strings: a path that
+  # leaves the maps reads nil.
+  defp param_at(value, []), do: value
+  defp param_at(%{} = params, [key | rest]), do: param_at(Map.get(params, key), rest)
+  defp param_at(_value, _path), do: nil
 
   ##
   ## Function components
@@ -8089,20 +8141,34 @@ defmodule BrandoAdmin.Components.Form do
   @video_drawer_fields [:source_url, :type]
   @file_drawer_fields [:title]
 
-  defp restore_image_drawer(socket, params) do
-    resource_id = String.to_integer(params["resource_id"])
+  # The drawer the recovery form names, read from browser params: an id, the
+  # field, schema and path as existing atoms. Anything else is not restored.
+  defp with_drawer_target(socket, params, restore) do
+    with id when is_binary(id) <- params["resource_id"],
+         {resource_id, ""} <- Integer.parse(id),
+         {:ok, [field, schema]} <- existing_atoms([params["field"], params["schema"]]),
+         {:ok, path} <- decode_recovery_path(params["path"]) do
+      target = %{
+        id: resource_id,
+        path: path,
+        field: field,
+        relation_field: nil,
+        schema: schema,
+        form_id: params["form_id"]
+      }
 
-    case Images.get_image(resource_id) do
+      restore.(socket, target, params)
+    else
+      _ ->
+        Logger.debug("Form (#{socket.assigns.id}) ignored drawer recovery params it could not read: #{inspect(params)}")
+        {:noreply, socket}
+    end
+  end
+
+  defp restore_image_drawer(socket, target, params) do
+    case Images.get_image(target.id) do
       {:ok, image} ->
-        edit_image = %{
-          id: resource_id,
-          path: decode_recovery_path(params["path"]),
-          field: String.to_existing_atom(params["field"]),
-          relation_field: nil,
-          schema: String.to_existing_atom(params["schema"]),
-          form_id: params["form_id"],
-          image: image
-        }
+        edit_image = Map.put(target, :image, image)
 
         {:noreply,
          socket
@@ -8117,20 +8183,10 @@ defmodule BrandoAdmin.Components.Form do
     end
   end
 
-  defp restore_video_drawer(socket, params) do
-    resource_id = String.to_integer(params["resource_id"])
-
-    case Brando.Videos.get_video(%{matches: %{id: resource_id}, preload: [:thumbnail, :file]}) do
+  defp restore_video_drawer(socket, target, params) do
+    case Brando.Videos.get_video(%{matches: %{id: target.id}, preload: [:thumbnail, :file]}) do
       {:ok, video} ->
-        edit_video = %{
-          id: resource_id,
-          path: decode_recovery_path(params["path"]),
-          field: String.to_existing_atom(params["field"]),
-          relation_field: nil,
-          schema: String.to_existing_atom(params["schema"]),
-          form_id: params["form_id"],
-          video: video
-        }
+        edit_video = Map.put(target, :video, video)
 
         {:noreply,
          socket
@@ -8145,20 +8201,10 @@ defmodule BrandoAdmin.Components.Form do
     end
   end
 
-  defp restore_file_drawer(socket, params) do
-    resource_id = String.to_integer(params["resource_id"])
-
-    case Brando.Files.get_file(resource_id) do
+  defp restore_file_drawer(socket, target, params) do
+    case Brando.Files.get_file(target.id) do
       {:ok, file} ->
-        edit_file = %{
-          id: resource_id,
-          path: decode_recovery_path(params["path"]),
-          field: String.to_existing_atom(params["field"]),
-          relation_field: nil,
-          schema: String.to_existing_atom(params["schema"]),
-          form_id: params["form_id"],
-          file: file
-        }
+        edit_file = Map.put(target, :file, file)
 
         {:noreply,
          socket
@@ -8248,12 +8294,27 @@ defmodule BrandoAdmin.Components.Form do
 
   defp decode_recovery_path(path_json) when is_binary(path_json) do
     case Jason.decode(path_json) do
-      {:ok, list} when is_list(list) -> Enum.map(list, &String.to_existing_atom/1)
-      _ -> []
+      {:ok, list} when is_list(list) -> existing_atoms(list)
+      _ -> {:ok, []}
     end
   end
 
-  defp decode_recovery_path(_), do: []
+  defp decode_recovery_path(_), do: {:ok, []}
+
+  defp existing_atoms(values) do
+    Enum.reduce_while(Enum.reverse(values), {:ok, []}, fn value, {:ok, atoms} ->
+      case value do
+        value when is_binary(value) ->
+          case safe_to_existing_atom(value) do
+            {:ok, atom} -> {:cont, {:ok, [atom | atoms]}}
+            error -> {:halt, error}
+          end
+
+        _ ->
+          {:halt, {:error, :invalid_field}}
+      end
+    end)
+  end
 
   defp image_editor_payload(image) do
     crop_groups =
@@ -8466,9 +8527,9 @@ defmodule BrandoAdmin.Components.Form do
           # The two representations differ on purpose: `path` walks the entry
           # *struct* (list indices as `Access.at/1`), `rest` walks the params
           # *map* (list indices as "0" keys).
-          path = string_path_to_access_path(rest)
-          change = get_in(entry_params, rest)
-          send_updated_entry_field_to_blocks(socket, path, change, hd(rest))
+          with {:ok, path} <- entry_access_path(schema, rest) do
+            send_updated_entry_field_to_blocks(socket, path, param_at(entry_params, rest), hd(rest))
+          end
         end
 
         if rest == ["language"] do
