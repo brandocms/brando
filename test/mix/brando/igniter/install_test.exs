@@ -61,7 +61,11 @@ defmodule Mix.Brando.Igniter.InstallTest do
     Igniter.Test.assert_creates(igniter, "lib/studio_admin/gettext.ex")
     Igniter.Test.assert_creates(igniter, "priv/repo/migrations/20260101000250_brando_170_add_authorization_groups.exs")
     assert IgniterCase.source(igniter, "assets/backend/package.json") =~ "file:.yalc/@brandocms/brandojs"
-    assert Enum.all?(igniter.tasks, fn {task, _} -> task in ["brando.assets.copy", "deps.get"] end)
+    assert [{"deps.get", []} | _] = igniter.tasks
+
+    assert Enum.all?(igniter.tasks, fn {task, _} ->
+             task in ["brando.assets.copy", "brando.install.secrets", "deps.get"]
+           end)
   end
 
   test "existing admin route ownership blocks before planning source changes" do
@@ -135,18 +139,8 @@ defmodule Mix.Brando.Igniter.InstallTest do
     assert direct.issues == []
     assert composed.issues == []
 
-    # The environment files hold freshly generated secrets, different on every run.
-    contents = fn igniter ->
-      for {path, source} <- igniter.rewrite.sources, !String.starts_with?(path, ".envrc."), into: %{} do
-        {path, Rewrite.Source.get(source, :content)}
-      end
-    end
-
-    assert contents.(direct) == contents.(composed)
-
-    for igniter <- [direct, composed], path <- [".envrc.prod", ".envrc.staging"] do
-      Igniter.Test.assert_creates(igniter, path)
-    end
+    assert Map.new(direct.rewrite.sources, fn {path, source} -> {path, Rewrite.Source.get(source, :content)} end) ==
+             Map.new(composed.rewrite.sources, fn {path, source} -> {path, Rewrite.Source.get(source, :content)} end)
   end
 
   test "an applied install can be rerun with no changes or duplicate initialization" do

@@ -78,6 +78,9 @@ defmodule Mix.Brando.Igniter.FloristConfigTest do
     assert config =~ "set :blue_port, 8055"
     assert config =~ "set :blue_port, 8060"
     assert config =~ "set :noindex, true"
+    # Staging builds the prod release: phx.new has no config/staging.exs.
+    [_, staging] = String.split(config, "target :staging do")
+    assert staging =~ "set :mix_env, :prod"
     assert config =~ "set :pgbackup_enabled, true"
     assert config =~ "FLORIST_DB_PASSWORD_PROD"
     assert config =~ "FLORIST_DB_PASSWORD_STAGING"

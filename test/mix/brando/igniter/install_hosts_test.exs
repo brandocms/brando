@@ -77,11 +77,23 @@ defmodule Mix.Brando.Igniter.InstallHostsTest do
     assert host(igniter, ".envrc.prod") == "example.com"
     assert host(igniter, ".envrc.staging") == "preview.example.net"
 
-    assert IgniterCase.source(igniter, ".envrc.prod") =~
-             ~r{DATABASE_URL="postgres://studio:[A-Za-z0-9_-]+@localhost/studio_prod"}
+    # One database role per target, as FLORIST_DB_PASSWORD_<TARGET> has one password per target.
+    prod_env = IgniterCase.source(igniter, ".envrc.prod")
+    staging_env = IgniterCase.source(igniter, ".envrc.staging")
+    assert prod_env =~ ~s(DATABASE_URL="postgres://studio_prod:__BRANDO_DATABASE_PASSWORD__@localhost/studio_prod")
 
-    assert IgniterCase.source(igniter, ".envrc.staging") =~ "@localhost/studio_staging\""
-    refute IgniterCase.source(igniter, ".envrc.prod") =~ ~r/^export PORT=/m
+    assert staging_env =~
+             ~s(DATABASE_URL="postgres://studio_staging:__BRANDO_DATABASE_PASSWORD__@localhost/studio_staging")
+
+    assert prod_env =~ ~s(SECRET_KEY_BASE="__BRANDO_SECRET_KEY_BASE__")
+    assert prod_env =~ ~s(export RELEASE_NODE="${RELEASE_NODE:-studio_prod@127.0.0.1}")
+    assert staging_env =~ ~s(export RELEASE_NODE="${RELEASE_NODE:-studio_staging@127.0.0.1}")
+    refute prod_env =~ ~r/^export PORT=/m
+    assert {"brando.install.secrets", [".envrc.prod", ".envrc.staging"]} in igniter.tasks
+
+    release_env = IgniterCase.source(igniter, "rel/env.sh.eex")
+    assert release_env =~ ~s(. "$RELEASE_ROOT/.envrc.runtime")
+    assert release_env =~ "export RELEASE_NODE=${RELEASE_NODE:-<%= @release.name %>@127.0.0.1}"
 
     gitignore = IgniterCase.source(igniter, ".gitignore")
     assert gitignore =~ "/_build/"
@@ -97,15 +109,95 @@ defmodule Mix.Brando.Igniter.InstallHostsTest do
     assert host(igniter, ".envrc.staging") == "staging.example.com"
   end
 
-  test "without --domain, --yes uses the placeholder hosts and asks nothing" do
+  test "without --domain, --yes writes no check_origin, uses placeholder hosts and asks nothing" do
     igniter = install(project(), ["--yes"])
 
     assert igniter.issues == []
     refute_received {:mix_shell, :prompt, _}
-    assert check_origin(igniter) == ["//studio.com", "//*.studio.com", "//staging.studio.com"]
+    Igniter.Test.assert_unchanged(igniter, "config/prod.exs")
     assert host(igniter, ".envrc.prod") == "studio.com"
     assert host(igniter, ".envrc.staging") == "staging.studio.com"
     assert Enum.any?(igniter.notices, &(&1 =~ "placeholder studio.com"))
+    assert Enum.any?(igniter.notices, &(&1 =~ "check_origin was not written"))
+  end
+
+  test "--origin or --staging-domain without --domain writes no check_origin" do
+    igniter = install(project(), ["--yes", "--origin", "//cms.example.net", "--staging-domain", "qa.example.net"])
+
+    assert igniter.issues == []
+    Igniter.Test.assert_unchanged(igniter, "config/prod.exs")
+    assert host(igniter, ".envrc.staging") == "qa.example.net"
+    assert Enum.any?(igniter.notices, &(&1 =~ "check_origin was not written"))
+  end
+
+  test "a rerun on an installed application without check_origin writes none" do
+    envrc = "export PHX_HOST=\"realsite.no\"\n"
+
+    igniter =
+      project(%{".envrc.prod" => envrc, ".envrc.staging" => envrc, ".gitignore" => "/.envrc.*\n"})
+      |> install(["--yes"])
+
+    assert igniter.issues == []
+    Igniter.Test.assert_unchanged(igniter, ["config/prod.exs", ".envrc.prod", ".envrc.staging", ".gitignore"])
+    refute Enum.any?(igniter.notices, &(&1 =~ "No --domain was given"))
+  end
+
+  test "a rerun with --domain keeps the hosts the existing environment files serve" do
+    igniter =
+      project(%{
+        ".envrc.prod" => "export PHX_HOST=\"realsite.no\"\n",
+        ".envrc.staging" => "export BRANDO_URL_HOST='staging.studio.com'\n"
+      })
+      |> install(["--yes", "--domain", "example.com"])
+
+    assert check_origin(igniter) == ["//example.com", "//*.example.com", "//staging.example.com", "//realsite.no"]
+  end
+
+  test "a check_origin in a config file imported with a literal path is kept" do
+    igniter =
+      project(%{
+        "config/config.exs" => """
+        import Config
+        import_config "endpoint.exs"
+        import_config "\#{config_env()}.exs"
+        """,
+        "config/endpoint.exs" => """
+        import Config
+        import_config "endpoint/origins.exs"
+        """,
+        "config/endpoint/origins.exs" => """
+        import Config
+        config :studio, StudioWeb.Endpoint, check_origin: ["//live.example.com"]
+        """
+      })
+      |> install(["--yes", "--domain", "example.com"])
+
+    assert igniter.issues == []
+    Igniter.Test.assert_unchanged(igniter, "config/prod.exs")
+    assert Enum.any?(igniter.notices, &(&1 =~ "already configures check_origin"))
+  end
+
+  test "an existing release script is kept, with a notice when it does not source the environment file" do
+    script = "#!/bin/sh\nexport RELEASE_DISTRIBUTION=name\n"
+    igniter = project(%{"rel/env.sh.eex" => script}) |> install(["--yes", "--domain", "example.com"])
+
+    Igniter.Test.assert_unchanged(igniter, "rel/env.sh.eex")
+    assert Enum.any?(igniter.notices, &(&1 =~ "rel/env.sh.eex does not source .envrc.runtime"))
+
+    sourcing = script <> ". \"$RELEASE_ROOT/.envrc.runtime\"\n"
+    igniter = project(%{"rel/env.sh.eex" => sourcing}) |> install(["--yes", "--domain", "example.com"])
+
+    Igniter.Test.assert_unchanged(igniter, "rel/env.sh.eex")
+    refute Enum.any?(igniter.notices, &(&1 =~ "does not source"))
+  end
+
+  test "an environment file un-ignored by a later negation gets an explicit ignore line" do
+    igniter =
+      project(%{".gitignore" => "/_build/\n.envrc*\n!/.envrc.prod\n"})
+      |> install(["--yes", "--domain", "example.com"])
+
+    assert IgniterCase.source(igniter, ".gitignore") ==
+             "/_build/\n.envrc*\n!/.envrc.prod\n\n# Runtime environments with secrets, uploaded by Florist\n/.envrc.prod\n"
   end
 
   test "invalid hosts and origins are blocking issues" do
@@ -113,6 +205,8 @@ defmodule Mix.Brando.Igniter.InstallHostsTest do
           {["--domain", "https://example.com"], "--domain must be a host name"},
           {["--domain", "example.com/path"], "--domain must be a host name"},
           {["--domain", "localhost"], "--domain must be a host name"},
+          {["--domain", "127.0.0.1"], "--domain must be a host name"},
+          {["--origin", "//*.com"], "--origin must be an origin"},
           {["--staging-domain", "*.example.com"], "--staging-domain must be a host name"},
           {["--origin", "example.com"], "--origin must be an origin"},
           {["--origin", "ftp://example.com"], "--origin must be an origin"},
@@ -150,6 +244,35 @@ defmodule Mix.Brando.Igniter.InstallHostsTest do
              "https://cms.example.net"
            ]
 
+    assert host(igniter, ".envrc.staging") == "staging.example.org"
+  end
+
+  test "--interactive keeps the placeholder, and writes no check_origin, on an empty domain answer" do
+    for _ <- 1..3, do: send(self(), {:mix_shell_input, :prompt, ""})
+
+    igniter = install(project(), ["--interactive", "--tenancy-mode", "none"])
+
+    assert igniter.issues == []
+    Igniter.Test.assert_unchanged(igniter, "config/prod.exs")
+    assert host(igniter, ".envrc.prod") == "studio.com"
+    assert host(igniter, ".envrc.staging") == "staging.studio.com"
+  end
+
+  test "--interactive asks no extra origins when check_origin exists and only environment files are missing" do
+    send(self(), {:mix_shell_input, :prompt, "example.org"})
+    send(self(), {:mix_shell_input, :prompt, ""})
+
+    igniter =
+      project(%{
+        "config/prod.exs" => "import Config\nconfig :studio, StudioWeb.Endpoint, check_origin: [\"//example.org\"]\n"
+      })
+      |> install(["--interactive", "--tenancy-mode", "none"])
+
+    assert igniter.issues == []
+    assert_received {:mix_shell, :prompt, ["+ Production domain [studio.com]"]}
+    assert_received {:mix_shell, :prompt, ["+ Staging host [staging.example.org]"]}
+    refute_received {:mix_shell, :prompt, _}
+    Igniter.Test.assert_unchanged(igniter, "config/prod.exs")
     assert host(igniter, ".envrc.staging") == "staging.example.org"
   end
 
@@ -219,6 +342,9 @@ defmodule Mix.Brando.Igniter.InstallHostsTest do
       assert {:error, _} = Hosts.domain("-bad.example.com")
       assert {:error, _} = Hosts.domain("example.com:443")
       assert {:error, _} = Hosts.domain("exa mple.com")
+      assert {:error, _} = Hosts.domain("127.0.0.1")
+      assert {:error, _} = Hosts.domain("example.123")
+      assert Hosts.domain("123.example.com") == {:ok, "123.example.com"}
     end
 
     test "accepts the origin forms Phoenix's check_origin parses" do
@@ -241,7 +367,9 @@ defmodule Mix.Brando.Igniter.InstallHostsTest do
             "wss://example.com",
             "//ex*ample.com",
             "https://example.com/",
-            "//example.com:0"
+            "//example.com:0",
+            "//*.com",
+            "//*.localhost"
           ] do
         assert {:error, _} = Hosts.origin(origin)
       end
@@ -250,6 +378,37 @@ defmodule Mix.Brando.Igniter.InstallHostsTest do
     test "placeholders are valid host names built from the application name" do
       assert Hosts.placeholder(:photo_blog) == "photo-blog.com"
       assert {:ok, _} = Hosts.domain(Hosts.placeholder(:photo_blog))
+    end
+  end
+
+  describe "brando.install.secrets" do
+    @describetag :tmp_dir
+
+    test "fills in the planned markers once, readable by the owner only", %{tmp_dir: dir} do
+      File.cd!(dir, fn ->
+        File.write!(
+          ".envrc.prod",
+          ~s(export DATABASE_URL="postgres://a:__BRANDO_DATABASE_PASSWORD__@h/d"\nexport SECRET_KEY_BASE="__BRANDO_SECRET_KEY_BASE__"\n)
+        )
+
+        Mix.Tasks.Brando.Install.Secrets.run([".envrc.prod"])
+        filled = File.read!(".envrc.prod")
+
+        refute filled =~ "__BRANDO_"
+        assert filled =~ ~r"postgres://a:[A-Za-z0-9_-]{32}@h/d"
+        assert [_, key] = Regex.run(~r/SECRET_KEY_BASE="([^"]+)"/, filled)
+        assert byte_size(key) == 64
+        assert File.stat!(".envrc.prod").mode |> Bitwise.band(0o777) == 0o600
+
+        Mix.Tasks.Brando.Install.Secrets.run([".envrc.prod"])
+        assert File.read!(".envrc.prod") == filled
+      end)
+    end
+
+    test "refuses other files" do
+      assert_raise Mix.Error, ~r/Unknown environment file: config\/prod.exs/, fn ->
+        Mix.Tasks.Brando.Install.Secrets.run(["config/prod.exs"])
+      end
     end
   end
 end

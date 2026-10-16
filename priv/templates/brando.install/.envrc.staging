@@ -1,13 +1,17 @@
 # Runtime environment for the staging target. Florist uploads this file to the
-# server as .envrc.runtime. It holds secrets: keep it out of version control.
+# server as .envrc.runtime, and rel/env.sh.eex sources it when the release
+# starts. It holds secrets: keep it out of version control.
 #
-# The names are the ones a Phoenix config/runtime.exs reads. The database
-# password must match FLORIST_DB_PASSWORD_STAGING, which Florist uses to create
-# the database user.
+# The names are the ones a Phoenix config/runtime.exs reads. Florist creates
+# the database user from the target's database settings: set its user to
+# <%= application_name %>_staging and FLORIST_DB_PASSWORD_STAGING to the password below.
 export PHX_HOST="<%= host %>"
 export PHX_SERVER="true"
-export DATABASE_URL="postgres://<%= application_name %>:<%= :crypto.strong_rand_bytes(24) |> Base.url_encode64(padding: false) %>@localhost/<%= application_name %>_staging"
-export SECRET_KEY_BASE="<%= :crypto.strong_rand_bytes(64) |> Base.encode64() |> binary_part(0, 64) %>"
+export DATABASE_URL="postgres://<%= application_name %>_staging:__BRANDO_DATABASE_PASSWORD__@localhost/<%= application_name %>_staging"
+export SECRET_KEY_BASE="__BRANDO_SECRET_KEY_BASE__"
+
+# Node name for a :single deployment; blue/green services set their own.
+export RELEASE_NODE="${RELEASE_NODE:-<%= application_name %>_staging@127.0.0.1}"
 
 # Systemd sets PORT for each blue/green environment. Set it here only for a
 # :single deployment.

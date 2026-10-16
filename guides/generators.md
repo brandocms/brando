@@ -123,9 +123,9 @@ The generated changes configure Brando, extend supervision/endpoint/router,
 create the admin support modules and Vite projects, and add missing migrations.
 The default preserves your public homepage. CMS public pages are an explicit
 option below. Of the deployment configuration, the installer writes only the
-production endpoint's `check_origin` and the Florist environment files (see
-[Deployment hosts](#deployment-hosts)); the rest, like sample content, remains
-separate.
+production endpoint's `check_origin`, the Florist environment files and the
+release script that sources them (see [Deployment hosts](#deployment-hosts));
+the rest, like sample content, remains separate.
 
 ## Choose configuration
 
@@ -169,34 +169,53 @@ mix brando.install --domain example.com --staging-domain preview.example.net \
 
 `--domain` is the production domain and `--staging-domain` the staging host,
 by default `staging.<domain>`. `--origin` adds a trusted origin and can be
-repeated: `//host`, `//*.host` or `http(s)://host`, each with an optional port.
-A domain is a bare host name, without a scheme, port or path. Invalid values
-stop the install with an issue.
+repeated: `//host`, `//*.host` or `http(s)://host`, each with an optional port;
+a wildcard needs at least two labels after it (`//*.example.com`, not
+`//*.com`). A domain is a bare host name, without a scheme, port or path, and
+not an IP address. Invalid values stop the install with an issue.
 
 The installer writes:
 
-- `check_origin` for the endpoint in `config/prod.exs`: `//<domain>`,
-  `//*.<domain>`, `//<staging host>` and each `--origin`. Staging runs the prod
-  release with its own environment file, so its host is listed here too. The
-  list replaces Phoenix's default check against the endpoint's URL host, so a
-  `PHX_HOST` outside it needs adding.
+- With `--domain`, `check_origin` for the endpoint in `config/prod.exs`:
+  `//<domain>`, `//*.<domain>`, `//<staging host>`, each `--origin`, and the
+  `PHX_HOST` of any `.envrc.prod` or `.envrc.staging` already there. Staging
+  runs the prod release with its own environment file, so its host is listed
+  here too. The list replaces Phoenix's default check against the endpoint's
+  URL host, so add any other host the application serves.
 - `.envrc.prod` and `.envrc.staging` for Florist, with `PHX_HOST` set to the
-  domain and the staging host, a generated `SECRET_KEY_BASE`, and a
-  `DATABASE_URL` whose password `FLORIST_DB_PASSWORD_PROD` or
-  `FLORIST_DB_PASSWORD_STAGING` must match. They use the names a Phoenix
-  `config/runtime.exs` reads, and are added to `.gitignore` because they hold
-  secrets. See "Runtime environment" in [Deployment](deployment.md).
+  domain and the staging host, `PHX_SERVER`, a `SECRET_KEY_BASE`, a
+  `DATABASE_URL` and a `RELEASE_NODE` default. They use the names a Phoenix
+  `config/runtime.exs` reads and are added to `.gitignore` because they hold
+  secrets. The diff and `--dry-run` show markers in place of the secrets,
+  which the installer fills in after you accept the changes.
+- `rel/env.sh.eex`, which makes the release source the environment file
+  Florist copies into it (`.envrc.runtime`) and sets long node names.
 
-Without `--domain`, the hosts are placeholders built from the application name
+Each target has its own database role, `<app>_prod` and `<app>_staging`, as
+Florist takes one password per target: set the target's database user to it
+in `florist.config.exs` (`set :user, "${PROJECT_NAME}_${FLAVOR}"`) and
+`FLORIST_DB_PASSWORD_PROD` or `FLORIST_DB_PASSWORD_STAGING` to the password in
+the `DATABASE_URL`. Build the staging target with `set :mix_env, :prod`, not
+the `:staging` in `florist init`'s example: the application has no
+`config/staging.exs`, and the prod `check_origin` is what lists the staging
+host. See "Runtime environment" in [Deployment](deployment.md).
+
+Without `--domain`, no `check_origin` is written, so Phoenix keeps checking
+origins against the endpoint's URL host, which `PHX_HOST` sets. The
+environment files get placeholder hosts built from the application name
 (`my-app.com`, `staging.my-app.com`) and the installer says so. With
 `--interactive` and no `--domain`, it asks for the domain, then the staging
-host and the extra origins (comma-separated), skipping any an option answers,
-and asks again after an invalid answer. `--yes` and a plain run never ask.
+host and, when `check_origin` is still to be written, the extra origins
+(comma-separated), skipping any an option answers, and asks again after an
+invalid answer; an empty domain answer keeps the placeholder. `--yes` and a
+plain run never ask.
 
-An existing `check_origin` in `config/config.exs`, `config/prod.exs` or
-`config/runtime.exs`, and an existing `.envrc.prod` or `.envrc.staging`, are
-kept: reruns change neither, and asking for different hosts adds a notice
-with the values to set by hand.
+An existing `check_origin` in `config/config.exs`, `config/prod.exs`,
+`config/runtime.exs` or a file they import with a literal path, an existing
+`.envrc.prod` or `.envrc.staging`, and an existing `rel/env.sh.eex` are kept:
+reruns change none of them, and asking for different hosts adds a notice with
+the values to set by hand. A kept `rel/env.sh.eex` that does not source
+`.envrc.runtime` gets a notice too.
 
 ## Add CMS public pages
 

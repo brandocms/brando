@@ -3,29 +3,31 @@ defmodule Mix.Brando.Install.Hosts do
 
   # Labels of 1-63 letters, digits and inner hyphens.
   @label "[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?"
-  @domain Regex.compile!("^(?:#{@label}\\.)+#{@label}$")
-  @origin_host Regex.compile!("^(?:\\*\\.)?(?:#{@label}\\.)*#{@label}$")
+  # The last label of a domain is not all digits, which rules out IP addresses.
+  @domain Regex.compile!("^(?:#{@label}\\.)+(?!\\d+$)#{@label}$")
+  # A wildcard covers subdomains of a name with at least two labels, not a TLD.
+  @origin_host Regex.compile!("^(?:\\*\\.#{@label}\\.|(?:#{@label}\\.)*)#{@label}$")
 
   @doc """
   Resolves the production domain, staging host and extra trusted origins.
 
   Options are validated whether or not they are used. A missing `--domain`
-  becomes the placeholder `<app>.com` unless `guided?`, when the domain,
-  staging host and extra origins are asked for in that order.
+  becomes the placeholder `<app>.com`, flagged `placeholder?`, unless `guided`
+  is `:hosts` or `:all`: then the domain and staging host are asked for, and
+  with `:all` the extra origins too. An empty answer to the domain question
+  keeps the placeholder.
   """
-  def resolve(options, app_name, guided?) do
+  def resolve(options, app_name, guided) do
     with {:ok, domain} <- option(options[:domain], "--domain", &domain/1),
          {:ok, staging} <- option(options[:staging_domain], "--staging-domain", &domain/1),
          {:ok, origins} <- origins(List.wrap(options[:origin])) do
-      hosts =
-        if guided? && domain == nil do
-          prompt(placeholder(app_name), staging, origins)
-        else
-          domain = domain || placeholder(app_name)
-          hosts(domain, staging || "staging.#{domain}", origins, explicit?(options))
-        end
-
-      {:ok, Map.put(hosts, :placeholder?, hosts.domain == placeholder(app_name))}
+      if guided in [:hosts, :all] && domain == nil do
+        {:ok, prompt(placeholder(app_name), staging, origins, guided == :all)}
+      else
+        placeholder? = domain == nil
+        domain = domain || placeholder(app_name)
+        {:ok, hosts(domain, staging || "staging.#{domain}", origins, explicit?(options), placeholder?)}
+      end
     end
   end
 
@@ -37,14 +39,15 @@ defmodule Mix.Brando.Install.Hosts do
   @doc "A placeholder domain built from the application name."
   def placeholder(app_name), do: String.replace(to_string(app_name), "_", "-") <> ".com"
 
-  @doc "Validates a host name: no scheme, port, path or wildcard."
+  @doc "Validates a host name: no scheme, port, path, wildcard or IP address."
   def domain(value) do
     host = value |> String.trim() |> String.downcase()
 
     if String.length(host) <= 253 and Regex.match?(@domain, host) do
       {:ok, host}
     else
-      {:error, "must be a host name such as example.com, without a scheme, port or path; got: #{inspect(value)}"}
+      {:error,
+       "must be a host name such as example.com, without a scheme, port or path, and not an IP address; got: #{inspect(value)}"}
     end
   end
 
@@ -93,14 +96,25 @@ defmodule Mix.Brando.Install.Hosts do
   defp explicit?(options),
     do: options[:domain] != nil or options[:staging_domain] != nil or options[:origin] not in [nil, []]
 
-  defp hosts(domain, staging, origins, explicit?),
-    do: %{domain: domain, staging: staging, origins: origins, explicit?: explicit?}
+  defp hosts(domain, staging, origins, explicit?, placeholder?),
+    do: %{domain: domain, staging: staging, origins: origins, explicit?: explicit?, placeholder?: placeholder?}
 
-  defp prompt(default_domain, staging, origins) do
-    domain = ask("+ Production domain [#{default_domain}]", default_domain, &domain/1)
+  defp prompt(default_domain, staging, origins, origins?) do
+    # An empty answer keeps the placeholder, which writes no check_origin.
+    {domain, placeholder?} =
+      case ask("+ Production domain [#{default_domain}]", nil, &domain/1) do
+        nil -> {default_domain, true}
+        domain -> {domain, false}
+      end
+
     staging = staging || ask("+ Staging host [staging.#{domain}]", "staging.#{domain}", &domain/1)
-    origins = if origins == [], do: ask("+ Extra trusted origins, comma-separated []", "", &origin_list/1), else: origins
-    hosts(domain, staging, origins, true)
+
+    origins =
+      if origins == [] and origins?,
+        do: ask("+ Extra trusted origins, comma-separated []", "", &origin_list/1),
+        else: origins
+
+    hosts(domain, staging, origins, true, placeholder?)
   end
 
   defp origin_list(answer) do
@@ -116,15 +130,17 @@ defmodule Mix.Brando.Install.Hosts do
     end)
   end
 
+  # An empty answer takes the default, or nil when there is none.
   defp ask(question, default, validate) do
-    answer =
-      case Mix.Brando.prompt(question) do
-        "" -> default
-        answer -> answer
-      end
+    with answer when answer != "" <- Mix.Brando.prompt(question),
+         {:ok, value} <- validate.(answer) do
+      value
+    else
+      "" when is_nil(default) ->
+        nil
 
-    case validate.(answer) do
-      {:ok, value} ->
+      "" ->
+        {:ok, value} = validate.(default)
         value
 
       {:error, message} ->

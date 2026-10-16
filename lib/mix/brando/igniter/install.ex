@@ -46,8 +46,8 @@ if Code.ensure_loaded?(Igniter) do
            {:ok, hosts} <- resolve_hosts(options, project, deployment) do
         igniter
         |> Configuration.configure(project, tenancy)
-        |> Deployment.plan(project, hosts, deployment)
         |> dependencies()
+        |> Deployment.plan(project, hosts, deployment)
         |> support_files(project)
         |> AgentFiles.plan()
         |> Assets.plan(project)
@@ -102,9 +102,9 @@ if Code.ensure_loaded?(Igniter) do
       error in Mix.Error -> {:error, Exception.message(error)}
     end
 
-    # Guided questions only when there is something left to generate.
+    # Guided questions only for what is left to generate.
     defp resolve_hosts(options, project, deployment) do
-      Hosts.resolve(options, project.otp_app, options[:interactive] == true and Deployment.pending?(deployment))
+      Hosts.resolve(options, project.otp_app, if(options[:interactive] == true, do: Deployment.guided(deployment)))
     rescue
       error in Mix.Error -> {:error, Exception.message(error)}
     end

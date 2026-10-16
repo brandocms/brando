@@ -33,11 +33,14 @@ if Code.ensure_loaded?(Igniter) do
     Deployment hosts: `--domain` is the production domain, `--staging-domain`
     the staging host (default `staging.<domain>`), and `--origin` (repeatable)
     adds a trusted origin such as `//*.agency.example` or `https://host:8443`.
-    They fill the prod endpoint's `check_origin` in `config/prod.exs` (the
-    domain, its subdomains, the staging host and each origin) and `PHX_HOST` in
-    the new `.envrc.prod` and `.envrc.staging`, which are added to `.gitignore`.
-    Without `--domain` the hosts are `<app>.com` placeholders; `--interactive`
-    asks for them instead. An existing `check_origin` or `.envrc.*` file is
+    With `--domain`, they fill the prod endpoint's `check_origin` in
+    `config/prod.exs` (the domain, its subdomains, the staging host and each
+    origin). They also set `PHX_HOST` in the new `.envrc.prod` and
+    `.envrc.staging`, which are added to `.gitignore` and get their secrets
+    after the changes are accepted, and `rel/env.sh.eex` makes the release
+    source them on the server. Without `--domain` no `check_origin` is written
+    and the hosts are `<app>.com` placeholders; `--interactive` asks for them
+    instead. An existing `check_origin`, `.envrc.*` or `rel/env.sh.eex` is
     never replaced.
     """
 
