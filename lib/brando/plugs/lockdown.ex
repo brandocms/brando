@@ -98,12 +98,13 @@ defmodule Brando.Plug.Lockdown do
   defp key(%{query_params: %{"key" => key}}), do: key
   defp key(_conn), do: nil
 
-  # The session the admin's sign-in writes (BrandoAdmin.UserAuth), of an
-  # account with backend access under the configured authorization mode.
+  # The session the admin's sign-in writes (BrandoAdmin.UserAuth): whoever
+  # can open /admin sees the locked site. In legacy mode that is any active
+  # signed-in user; with groups, an account with backend access.
   defp admin?(token) when is_binary(token) do
     case Users.get_user_by_session_token(token) do
       nil -> false
-      user -> if Engine.enabled?(), do: Engine.backend_access?(user), else: Users.can_login?(user)
+      user -> not Engine.enabled?() or Engine.backend_access?(user)
     end
   end
 

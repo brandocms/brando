@@ -85,12 +85,15 @@ defmodule Brando.Plug.LockdownTest do
     assert conn.status == nil
   end
 
-  test "with legacy roles, users who can sign in to the admin pass, other sessions are locked out" do
+  test "with legacy roles, anyone who can open the admin passes, other sessions are locked out" do
     put_test_env(:lockdown, true)
 
     assert request("/", user_session(:superuser)).status == nil
+    assert request("/", user_session(:user)).status == nil
 
-    for session <- [user_session(:user), %{user_token: "not-a-session-token"}, %{}] do
+    inactive = :random_user |> Factory.insert(role: :editor, active: false) |> session()
+
+    for session <- [inactive, %{user_token: "not-a-session-token"}, %{}] do
       conn = request("/", session)
       assert conn.status == 302
       assert List.keyfind(conn.resp_headers, "location", 0) == {"location", "/coming-soon"}

@@ -293,7 +293,7 @@ config :brando,
 
 While locked, signed-in users with access to the admin see the site: with
 groups authorization, those whose groups grant backend access; with legacy
-roles, editors, admins and superusers. So does the admin's live preview, and
+roles, every active account, as for `/admin`. So does the admin's live preview, and
 shared preview links (`/__p__/…`) stay open to anyone who has one. Visitors who
 enter the password on `/coming-soon`, or open any page with `?key=<password>`,
 see the site for the rest of their session. Without a password, or with an

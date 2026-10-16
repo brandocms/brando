@@ -327,6 +327,26 @@ defmodule Mix.Brando.Igniter.InstallTest do
     end
   end
 
+  test "a context or VERSION copy after the first RUN does not count, and a file destination gets its directory" do
+    late = "FROM elixir\nCOPY mix.exs mix.lock ./\nRUN mix deps.get\nCOPY . .\nRUN mix release\n"
+    updated = late |> then(&install(project(%{"Dockerfile" => &1}))) |> IgniterCase.source("Dockerfile")
+    assert updated =~ "COPY mix.exs mix.lock ./\nCOPY VERSION ./\nRUN mix deps.get\n"
+
+    file_dest = "FROM elixir\nCOPY mix.exs /app/mix.exs\nRUN mix deps.get\n"
+    updated = file_dest |> then(&install(project(%{"Dockerfile" => &1}))) |> IgniterCase.source("Dockerfile")
+    assert updated =~ "COPY mix.exs /app/mix.exs\nCOPY VERSION /app/\nRUN mix deps.get\n"
+
+    renamed = install(project(%{"Dockerfile" => "FROM elixir\nCOPY project.exs /app/mix.exs\nRUN mix deps.get\n"}))
+    Igniter.Test.assert_unchanged(renamed, "Dockerfile")
+  end
+
+  test "a .dockerignore decides by its last pattern matching VERSION" do
+    for {ignore, notice?} <- [{"**/VERSION\n", true}, {"!VERSION\n*\n", true}, {"*\n!VERSION\n", false}] do
+      igniter = install(project(%{"Dockerfile" => @phx_dockerfile, ".dockerignore" => ignore}))
+      assert Enum.any?(igniter.notices, &(&1 =~ ".dockerignore may exclude VERSION")) == notice?, inspect(ignore)
+    end
+  end
+
   test "a Dockerfile that does not copy mix.exs recognizably, or a .dockerignore excluding VERSION, gets a notice" do
     for dockerfile <- [
           ~s(FROM elixir\nCOPY ["mix.exs", "mix.lock", "./"]\n),

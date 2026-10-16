@@ -112,15 +112,23 @@ if Code.ensure_loaded?(Igniter) do
       |> Enum.map(&Enum.reverse/1)
     end
 
+    # Only a VERSION or context copy before the first RUN after the mix.exs
+    # copy counts: that RUN (`mix deps.get`) is what first reads mix.exs.
     defp stage_with_version(lines, copies) do
       index = Enum.find_index(copies, &copies_any?(&1, ["mix.exs"]))
 
-      if index && not Enum.any?(copies, &copies_any?(&1, @context_copies)) do
+      if index && not Enum.any?(Enum.take(copies, first_run_after(lines, index)), &copies_any?(&1, @context_copies)) do
         {:copy, _sources, line_for} = Enum.at(copies, index)
         lines |> List.insert_at(index + 1, line_for.("VERSION")) |> Enum.join("\n")
       else
         Enum.join(lines, "\n")
       end
+    end
+
+    defp first_run_after(lines, index) do
+      lines
+      |> Enum.with_index()
+      |> Enum.find_value(length(lines), fn {line, i} -> i > index and Regex.match?(~r/^\s*RUN\s/i, line) and i end)
     end
 
     defp copies_any?({:copy, sources, _line_for}, paths), do: Enum.any?(sources, &(&1 in paths))
@@ -138,9 +146,26 @@ if Code.ensure_loaded?(Igniter) do
            false <- Enum.any?(flags, &String.starts_with?(&1, "--from")),
            [_, _ | _] <- paths do
         {sources, [dest]} = Enum.split(paths, -1)
-        {:copy, Enum.map(sources, &normalize_source/1), &Enum.join([indent <> "COPY" | flags] ++ [&1, dest], " ")}
+
+        case directory(sources, dest) do
+          nil -> :skip
+          dir -> {:copy, Enum.map(sources, &normalize_source/1), &Enum.join([indent <> "COPY" | flags] ++ [&1, dir], " ")}
+        end
       else
         _ -> :skip
+      end
+    end
+
+    # The directory VERSION goes to. A destination ending in "/" (or "." for
+    # the working directory) is one; a single source copied to a path that
+    # names the same file goes to that path's directory. Anything else (a file
+    # renamed on copy, or a variable whose shape is unknown) is not read, so
+    # the stage gets a notice instead of a line that might overwrite mix.exs.
+    defp directory(sources, dest) do
+      cond do
+        String.ends_with?(dest, "/") or dest in [".", "./"] or String.ends_with?(dest, "/.") -> dest
+        match?([_], sources) and Path.basename(dest) == Path.basename(hd(sources)) -> Path.dirname(dest) <> "/"
+        true -> nil
       end
     end
 
@@ -158,9 +183,14 @@ if Code.ensure_loaded?(Igniter) do
           |> String.split("\n")
           |> Enum.map(&String.trim/1)
 
+        # The last pattern matching VERSION decides, as in Docker.
         excluded? =
-          Enum.any?(patterns, &(&1 in ["VERSION", "/VERSION", "*", "**"])) and
-            not Enum.any?(patterns, &(&1 in ["!VERSION", "!/VERSION"]))
+          patterns
+          |> Enum.reverse()
+          |> Enum.find_value(fn
+            "!" <> pattern -> if excludes_version?(pattern), do: :kept
+            pattern -> if excludes_version?(pattern), do: :excluded
+          end) == :excluded
 
         if excluded?,
           do:
@@ -170,6 +200,9 @@ if Code.ensure_loaded?(Igniter) do
         igniter
       end
     end
+
+    defp excludes_version?(pattern),
+      do: pattern in ~w(VERSION /VERSION **/VERSION VERSION* /VERSION* * ** **/* /*)
 
     defp create(igniter, version), do: Igniter.create_new_file(igniter, "VERSION", version <> "\n")
 
