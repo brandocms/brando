@@ -117,6 +117,43 @@ defmodule BrandoAdmin.Components.Form.DrawerRecoveryTest do
     refute Map.has_key?(changeset.changes, :path)
   end
 
+  # The recovery form is in the page, so its params are the browser's: a
+  # field, schema, path or id that names nothing leaves the drawer closed.
+  test "recovery params that name nothing leave the drawer closed", %{image: image} do
+    unknown = "no_such_name_#{System.unique_integer([:positive])}"
+
+    for {key, value} <- [
+          {"field", unknown},
+          {"schema", unknown},
+          {"schema", "Elixir.String"},
+          {"resource_id", "9223372036854775808"},
+          {"resource_id", "0"},
+          {"path", Jason.encode!([unknown])},
+          {"path", Jason.encode!(["vars", -1])},
+          {"path", Jason.encode!([true])},
+          {"field", nil},
+          {"resource_id", "1x"},
+          {"resource_id", 1}
+        ] do
+      params = put_in(drawer_params(image, "{}"), ["drawer", key], value)
+
+      assert {:noreply, socket} = Form.handle_event("recover_drawer_state", params, socket()),
+             "failed for #{key}: #{inspect(value)}"
+
+      refute socket.assigns.editing_image?
+    end
+  end
+
+  # A field in a subform row has the row's index in its path.
+  test "a recovered drawer keeps its path", %{image: image} do
+    params = put_in(drawer_params(image, "{}"), ["drawer", "path"], Jason.encode!(["vars", 0]))
+
+    assert {:noreply, socket} = Form.handle_event("recover_drawer_state", params, socket())
+    assert socket.assigns.edit_image.path == [:vars, 0]
+    assert socket.assigns.edit_image.field == :meta_image
+    assert socket.assigns.edit_image.schema == Brando.Pages.Page
+  end
+
   describe "unrecoverable drawer state" do
     setup do
       # config/test.exs pins the logger at :error, which would filter the
