@@ -32,9 +32,6 @@ defmodule Mix.Brando.Install.Templates do
     {:eex, "etc/pgbkup.sh", "etc/pgbkup.sh"},
     {:eex, "etc/logrotate/prod.conf", "etc/logrotate/prod.conf"},
     {:eex, "etc/logrotate/staging.conf", "etc/logrotate/staging.conf"},
-    {:eex, "etc/nginx/prod.conf", "etc/nginx/prod.conf"},
-    {:eex, "etc/nginx/staging.conf", "etc/nginx/staging.conf"},
-    {:eex, "etc/nginx/502.html", "etc/nginx/502.html"},
     {:eex, "etc/systemd/prod.service", "etc/systemd/prod.service"},
     {:eex, "etc/systemd/staging.service", "etc/systemd/staging.service"},
 
@@ -100,7 +97,6 @@ defmodule Mix.Brando.Install.Templates do
     {:eex, "config/dev.exs", "config/dev.exs"},
     {:eex, "config/e2e.exs", "config/e2e.exs"},
     {:eex, "config/prod.exs", "config/prod.exs"},
-    {:eex, "config/staging.exs", "config/staging.exs"},
     {:eex, "config/runtime.exs", "config/runtime.exs"},
 
     # Tables that predate versioned Brando migrations

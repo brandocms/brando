@@ -135,8 +135,18 @@ defmodule Mix.Brando.Igniter.InstallTest do
     assert direct.issues == []
     assert composed.issues == []
 
-    assert Map.new(direct.rewrite.sources, fn {path, source} -> {path, Rewrite.Source.get(source, :content)} end) ==
-             Map.new(composed.rewrite.sources, fn {path, source} -> {path, Rewrite.Source.get(source, :content)} end)
+    # The environment files hold freshly generated secrets, different on every run.
+    contents = fn igniter ->
+      for {path, source} <- igniter.rewrite.sources, !String.starts_with?(path, ".envrc."), into: %{} do
+        {path, Rewrite.Source.get(source, :content)}
+      end
+    end
+
+    assert contents.(direct) == contents.(composed)
+
+    for igniter <- [direct, composed], path <- [".envrc.prod", ".envrc.staging"] do
+      Igniter.Test.assert_creates(igniter, path)
+    end
   end
 
   test "an applied install can be rerun with no changes or duplicate initialization" do
@@ -175,7 +185,7 @@ defmodule Mix.Brando.Igniter.InstallTest do
   test "interactive choices are opt-in and supplied answers are not requested again" do
     Mix.shell(Mix.Shell.Process)
     send(self(), {:mix_shell_input, :prompt, "guided-studio"})
-    igniter = project() |> install(["--interactive", "--tenancy-mode", "single"])
+    igniter = project() |> install(["--interactive", "--tenancy-mode", "single", "--domain", "studio.example"])
     assert igniter.issues == []
     assert_received {:mix_shell, :prompt, ["+ Site key [studio]"]}
     refute_received {:mix_shell, :prompt, _}

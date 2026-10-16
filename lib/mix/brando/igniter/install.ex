@@ -15,9 +15,11 @@ if Code.ensure_loaded?(Igniter) do
     alias Mix.Brando.Igniter.Dependencies
     alias Mix.Brando.Igniter.Files
     alias Mix.Brando.Igniter.Install.Configuration
+    alias Mix.Brando.Igniter.Install.Deployment
     alias Mix.Brando.Igniter.Project
     alias Mix.Brando.Igniter.RouteInventory
     alias Mix.Brando.Igniter.Source
+    alias Mix.Brando.Install.Hosts
     alias Mix.Brando.Install.Options
     alias Mix.Brando.Install.Templates
     alias Sourceror.Zipper
@@ -39,9 +41,12 @@ if Code.ensure_loaded?(Igniter) do
            {:ok, igniter} <- preflight(igniter, project),
            {:ok, igniter} <- Mix.Brando.Igniter.Install.Migrations.preflight(igniter),
            {:ok, igniter, existing} <- Configuration.existing_tenancy(igniter),
-           {:ok, tenancy} <- resolve_tenancy(options, existing, project) do
+           {:ok, tenancy} <- resolve_tenancy(options, existing, project),
+           {igniter, deployment} = Deployment.existing(igniter),
+           {:ok, hosts} <- resolve_hosts(options, project, deployment) do
         igniter
         |> Configuration.configure(project, tenancy)
+        |> Deployment.plan(project, hosts, deployment)
         |> dependencies()
         |> support_files(project)
         |> AgentFiles.plan()
@@ -93,6 +98,13 @@ if Code.ensure_loaded?(Igniter) do
       else
         Options.tenancy(options, existing || %{mode: :none, site_key: nil})
       end
+    rescue
+      error in Mix.Error -> {:error, Exception.message(error)}
+    end
+
+    # Guided questions only when there is something left to generate.
+    defp resolve_hosts(options, project, deployment) do
+      Hosts.resolve(options, project.otp_app, options[:interactive] == true and Deployment.pending?(deployment))
     rescue
       error in Mix.Error -> {:error, Exception.message(error)}
     end

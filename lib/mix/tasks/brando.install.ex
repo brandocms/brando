@@ -13,6 +13,7 @@ if Code.ensure_loaded?(Igniter) do
         mix brando.install --interactive
         mix brando.install --tenancy-mode single --site-key my-site
         mix brando.install --public-site --replace-phoenix-home
+        mix brando.install --domain example.com --origin '//*.agency.example'
 
     A new installation defaults to `--tenancy-mode none` without prompting.
     `--interactive` guides missing choices; explicit options take precedence.
@@ -28,6 +29,16 @@ if Code.ensure_loaded?(Igniter) do
     or an affirmative guided answer with `--public-site --interactive`.
     Existing controllers/templates/layouts are preserved; other homepage or
     catch-all ownership requires manual integration.
+
+    Deployment hosts: `--domain` is the production domain, `--staging-domain`
+    the staging host (default `staging.<domain>`), and `--origin` (repeatable)
+    adds a trusted origin such as `//*.agency.example` or `https://host:8443`.
+    They fill the prod endpoint's `check_origin` in `config/prod.exs` (the
+    domain, its subdomains, the staging host and each origin) and `PHX_HOST` in
+    the new `.envrc.prod` and `.envrc.staging`, which are added to `.gitignore`.
+    Without `--domain` the hosts are `<app>.com` placeholders; `--interactive`
+    asks for them instead. An existing `check_origin` or `.envrc.*` file is
+    never replaced.
     """
 
     @impl Igniter.Mix.Task
@@ -43,7 +54,10 @@ if Code.ensure_loaded?(Igniter) do
               site_key: :string,
               tenancy_prompt: :boolean,
               public_site: :boolean,
-              replace_phoenix_home: :boolean
+              replace_phoenix_home: :boolean,
+              domain: :string,
+              staging_domain: :string,
+              origin: :keep
             ]
       }
     end

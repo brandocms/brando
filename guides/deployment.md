@@ -218,6 +218,12 @@ for a `:prod` flavor, `.envrc.staging` for `:staging` — in your project root
 it to the server as `.envrc.runtime`, which the systemd service sources before
 starting your app. The `.runtime` name only ever exists on the server.
 
+`mix brando.install` generates both files for a new application (see
+[Deployment hosts](generators.md#deployment-hosts)), with the variables a
+Phoenix `config/runtime.exs` reads: `PHX_HOST`, `PHX_SERVER`, `DATABASE_URL`
+and `SECRET_KEY_BASE`. Use whichever names your own `config/runtime.exs`
+reads; the example below is for one that reads Brando's `BRANDO_*` variables.
+
 ```bash
 export BRANDO_SECRET_KEY_BASE="generate-with-mix-phx-gen-secret"
 export BRANDO_DB_URL="postgresql://myapp:password@localhost/myapp_prod"

@@ -79,8 +79,13 @@ defmodule Mix.Brando.Igniter.InstallFormatTest do
     end
   end
 
-  defp contents(igniter),
-    do: Map.new(igniter.rewrite.sources, fn {path, source} -> {path, {source.content, Rewrite.Source.issues(source)}} end)
+  # The environment files hold freshly generated secrets, different on every run,
+  # and are not formatted.
+  defp contents(igniter) do
+    for {path, source} <- igniter.rewrite.sources, !String.starts_with?(path, ".envrc."), into: %{} do
+      {path, {source.content, Rewrite.Source.issues(source)}}
+    end
+  end
 
   defp assert_same_plan(each, direct) do
     assert each.issues == direct.issues
