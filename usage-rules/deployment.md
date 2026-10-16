@@ -77,10 +77,14 @@ set in `config/runtime.exs` is the application's own and is kept.
 
 Uploaded and captured frontend asset sets (`site_assets/`) and each site's
 storage and static-site builds (`sites/`) are kept beside the media
-directory unless `:site_assets_path` or `:sites_path` is configured. A media
-directory that is a symlink is followed, so on a Florist server they are
+directory unless `:site_assets_path` or `:sites_path` is configured. When the
+application runs as a release (`RELEASE_ROOT` is set), a media directory that
+is a symlink is followed, so on a Florist server they are
 `<base>/site_assets` and `<base>/sites`, beside the shared `media/`, not in
-the release directory the next deploy replaces.
+the release directory the next deploy replaces. Outside a release, in
+development for instance, the link is not followed. On another server where
+`media` links to a mounted volume, a release keeps them in the volume's parent
+directory; configure both paths to keep them elsewhere.
 
 > #### Do not set PORT for blue/green {: .warning}
 >

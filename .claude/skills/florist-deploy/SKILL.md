@@ -65,7 +65,7 @@ Local: Docker build → OTP release tarball → Florist uploads via SSH → unpa
 
 - **Assets are baked into the release** — `priv/static/` is built during Docker build and included in the tarball. There is no separate asset upload step.
 - **Media lives outside the release** — `media/` is persistent on the server and symlinked into the release. Never assume `media/` is inside `priv/`.
-- **`site_assets/` and `sites/` sit beside the shared media** — `Brando.Tenant.Storage.media_parent/0` follows the release's `media` link, so asset sets and SSG builds land in the base directory, not the release, unless `:site_assets_path`/`:sites_path` are configured.
+- **`site_assets/` and `sites/` sit beside the shared media** — `Brando.Tenant.Storage.media_parent/0` follows the release's `media` link (only when `RELEASE_ROOT` is set, i.e. running as a release), so asset sets and SSG builds land in the base directory, not the release, unless `:site_assets_path`/`:sites_path` are configured.
 - **Blue/green means two running instances** — both share the same database and media directory, but each has its own release with its own `priv/static/`.
 - **Rollback is instant** — switch traffic back to the other color. No rebuild needed.
 - **`priv/static/` is ephemeral** — it gets rebuilt from scratch in every Docker build. Don't store persistent state there.

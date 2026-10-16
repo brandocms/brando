@@ -51,24 +51,48 @@ defmodule Brando.Tenant.Storage do
   The directory holding the media directory, where `sites/` and `site_assets/`
   are kept unless `:sites_path` or `:site_assets_path` is configured.
 
-  A media directory that is a symlink is followed. Florist links each
-  release's `media` to the deploy's shared one, so this is the deploy's base
-  directory, which outlives releases, rather than the release directory the
-  relative `media_path: "./media"` sits in. A missing media directory, or one
-  that is not a link, gives the directory `media_path` names it in.
+  In a release (`RELEASE_ROOT` is set), a media directory that is a symlink is
+  followed. Florist links each release's `media` to the deploy's shared one,
+  so this is the deploy's base directory, which outlives releases, rather
+  than the release directory the relative `media_path: "./media"` sits in.
+  Elsewhere, and for a media directory that is missing or not a link, it is
+  the directory `media_path` names it in: a development checkout whose
+  `media` links to another checkout's keeps its own `sites/` and
+  `site_assets/`.
   """
   @spec media_parent() :: String.t()
   def media_parent do
-    Brando.config(:media_path) |> Path.expand() |> follow_links(0) |> Path.dirname()
+    media = Brando.config(:media_path) |> Path.expand()
+
+    if System.get_env("RELEASE_ROOT") && match?({:ok, _}, File.read_link(media)),
+      do: media |> real_path() |> Path.dirname(),
+      else: Path.dirname(media)
   end
 
-  # Bounded, so a link cycle ends where it was found.
-  defp follow_links(path, 40), do: path
+  # `path` with every symlink along it resolved, as realpath(3) does: a
+  # relative link target is read from the real directory holding the link.
+  # Links followed are bounded, so a cycle ends where the limit is reached.
+  defp real_path(path) do
+    [root | parts] = Path.split(path)
+    walk_path(root, parts, 0)
+  end
 
-  defp follow_links(path, hops) do
-    case File.read_link(path) do
-      {:ok, target} -> target |> Path.expand(Path.dirname(path)) |> follow_links(hops + 1)
-      {:error, _not_a_link} -> path
+  defp walk_path(dir, [], _links), do: dir
+  defp walk_path(dir, ["." | rest], links), do: walk_path(dir, rest, links)
+  defp walk_path(dir, [".." | rest], links), do: walk_path(Path.dirname(dir), rest, links)
+
+  defp walk_path(dir, [part | rest], links) do
+    path = Path.join(dir, part)
+
+    case links < 40 && File.read_link(path) do
+      {:ok, target} ->
+        case Path.split(target) do
+          ["/" | target_parts] -> walk_path("/", target_parts ++ rest, links + 1)
+          target_parts -> walk_path(dir, target_parts ++ rest, links + 1)
+        end
+
+      _not_a_link ->
+        walk_path(path, rest, links)
     end
   end
 
