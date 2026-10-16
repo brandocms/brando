@@ -222,7 +222,7 @@ defmodule Brando.Pages.Page do
       </:outside>
     </.update_link>
     <div class="col-3 listing-kind">
-      <div class="badge uppercase">
+      <div class="badge">
         {gettext("Fragment")}
       </div>
     </div>
@@ -248,7 +248,7 @@ defmodule Brando.Pages.Page do
       </:outside>
     </.update_link>
     <div class="col-2 listing-kind">
-      <div class="badge uppercase">
+      <div class="badge">
         {gettext("Sub page")}
       </div>
     </div>
