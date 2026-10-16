@@ -44,8 +44,32 @@ defmodule Brando.Tenant.Storage do
 
   @spec sites_root() :: String.t()
   def sites_root do
-    Brando.config(:sites_path) ||
-      Brando.config(:media_path) |> Path.expand() |> Path.dirname() |> Path.join("sites")
+    Brando.config(:sites_path) || Path.join(media_parent(), "sites")
+  end
+
+  @doc """
+  The directory holding the media directory, where `sites/` and `site_assets/`
+  are kept unless `:sites_path` or `:site_assets_path` is configured.
+
+  A media directory that is a symlink is followed. Florist links each
+  release's `media` to the deploy's shared one, so this is the deploy's base
+  directory, which outlives releases, rather than the release directory the
+  relative `media_path: "./media"` sits in. A missing media directory, or one
+  that is not a link, gives the directory `media_path` names it in.
+  """
+  @spec media_parent() :: String.t()
+  def media_parent do
+    Brando.config(:media_path) |> Path.expand() |> follow_links(0) |> Path.dirname()
+  end
+
+  # Bounded, so a link cycle ends where it was found.
+  defp follow_links(path, 40), do: path
+
+  defp follow_links(path, hops) do
+    case File.read_link(path) do
+      {:ok, target} -> target |> Path.expand(Path.dirname(path)) |> follow_links(hops + 1)
+      {:error, _not_a_link} -> path
+    end
   end
 
   @spec site_root(Site.t()) :: String.t()

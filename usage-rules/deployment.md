@@ -75,6 +75,13 @@ directory the systemd unit starts in, where Florist links the persistent
 literal path in the base configuration, a value in `config/prod.exs` or one
 set in `config/runtime.exs` is the application's own and is kept.
 
+Uploaded and captured frontend asset sets (`site_assets/`) and each site's
+storage and static-site builds (`sites/`) are kept beside the media
+directory unless `:site_assets_path` or `:sites_path` is configured. A media
+directory that is a symlink is followed, so on a Florist server they are
+`<base>/site_assets` and `<base>/sites`, beside the shared `media/`, not in
+the release directory the next deploy replaces.
+
 > #### Do not set PORT for blue/green {: .warning}
 >
 > With `deployment type: :blue_green`, systemd sets `PORT` per environment —
@@ -94,7 +101,8 @@ user that your app then authenticates as.
 Key points:
 
 - Blue and green each run their own systemd service on separate ports
-- Media is shared via symlinks (Florist creates these automatically)
+- Media is shared via symlinks (Florist creates these automatically); Brando
+  keeps `site_assets/` and `sites/` beside the directory the link leads to
 - Only the `active-environment` file and web server config determine which
   environment receives traffic
 - Florist keeps the last 5 releases per environment and cleans up older ones

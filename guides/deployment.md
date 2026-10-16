@@ -142,6 +142,13 @@ directory the systemd unit starts in, where Florist links the persistent
 literal path in the base configuration, a value in `config/prod.exs` or one
 set in `config/runtime.exs` is the application's own and is kept.
 
+Uploaded and captured frontend asset sets (`site_assets/`) and each site's
+storage and static-site builds (`sites/`) are kept beside the media
+directory unless `:site_assets_path` or `:sites_path` is configured. A media
+directory that is a symlink is followed, so on a Florist server they are
+`<base>/site_assets` and `<base>/sites`, beside the shared `media/`, not in
+the release directory the next deploy replaces.
+
 <!-- usage-rules:end -->
 
 ### Ignored files
@@ -428,6 +435,8 @@ SSL certificates are issued automatically via Let's Encrypt on the first HTTPS r
 │       ├── priv/static/         # built CSS/JS (baked into release)
 │       └── .envrc.runtime       # environment variables
 ├── media/                       # persistent media uploads
+├── site_assets/                 # uploaded frontend asset sets (beside media/)
+├── sites/                       # site storage and static-site builds (beside media/)
 ├── log/                         # application logs
 ├── sql/                         # database backups
 └── etc/                         # configuration files
@@ -449,6 +458,8 @@ SSL certificates are issued automatically via Let's Encrypt on the first HTTPS r
 │           └── media → ../../../media   # symlink to shared media
 ├── active-environment           # contains "blue" or "green"
 ├── media/                       # shared between blue and green
+├── site_assets/                 # beside media/, so shared too
+├── sites/                       # beside media/, so shared too
 ├── log/
 ├── sql/
 └── etc/
@@ -459,7 +470,8 @@ SSL certificates are issued automatically via Let's Encrypt on the first HTTPS r
 Key points:
 
 - Blue and green each run their own systemd service on separate ports
-- Media is shared via symlinks (Florist creates these automatically)
+- Media is shared via symlinks (Florist creates these automatically); Brando
+  keeps `site_assets/` and `sites/` beside the directory the link leads to
 - Only the `active-environment` file and web server config determine which
   environment receives traffic
 - Florist keeps the last 5 releases per environment and cleans up older ones

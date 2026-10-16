@@ -14,3 +14,20 @@
   `reassign_on_change` now refreshes all of them, not the first. A full render
   of a schema without block fields sends the whole document instead of
   `<main>`.
+
+- **Asset sets and static-site builds survive deploys.** Without
+  `:site_assets_path` or `:sites_path`, `site_assets/` and `sites/` were
+  derived as the directory around `media_path`; with a relative
+  `media_path: "./media"` in a Florist release that was the release directory,
+  which the next deploy replaces and Florist later prunes. A media directory
+  that is a symlink, as Florist's release `media` is, is now followed, so they
+  are `<base>/site_assets` and `<base>/sites` beside the shared media.
+  Development and configured roots are unchanged. Nothing is moved: sets and
+  builds made before the upgrade stay recorded at their paths in the old
+  release directory. A static-site build there can no longer be previewed,
+  published or rolled back to, and a set there serves only until Florist
+  prunes that release. After upgrading, upload and activate the frontend
+  asset set again, run and publish a new static-site build, and share
+  previews again (their captured sets are made anew). Copying an old release's
+  `site_assets/` or `sites/` into the base directory does not help, since the
+  records keep the old paths.
