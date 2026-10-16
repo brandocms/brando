@@ -9,7 +9,14 @@ defmodule BrandoAdmin.ValidateTargetTest do
   alias Brando.Pages.Page
 
   setup %{current_user: user} do
-    page = Factory.insert(:page, creator: user, title: "Stored title")
+    {:ok, page} =
+      Brando.Pages.create_page(
+        Factory.params_for(:page,
+          title: "Stored title",
+          vars: [%{key: "size", type: "string", label: "Size", value: "Stored size"}]
+        ),
+        user
+      )
 
     # A Liquid module reads the fields it names; a HEEx module reads them all.
     liquid = insert_module(user, :liquid, ~S(<h1 class="entry-title">{{ entry.title }}</h1>))
@@ -107,6 +114,17 @@ defmodule BrandoAdmin.ValidateTargetTest do
     change(view, ["page", "title"], &put_in(&1, ["page", "title"], "Typed title"))
 
     assert shown_title(view) == "Typed title"
+  end
+
+  test "a value in a subform row reaches the blocks that read the entry", %{conn: conn, page: page} do
+    view = open(conn, page)
+    path = ["page", "vars", "0", "value"]
+
+    change(view, path, &put_in(&1, path, "Typed size"))
+
+    # The HEEx block reads every field; the Liquid one reads only the title.
+    values = view |> block_entries() |> Enum.map(fn %{vars: [var]} -> var.value end) |> Enum.sort()
+    assert values == ["Stored size", "Typed size"]
   end
 
   test "a field name with no atom is ignored", %{conn: conn, page: page} do

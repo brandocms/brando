@@ -125,8 +125,12 @@ defmodule BrandoAdmin.Components.Form.DrawerRecoveryTest do
     for {key, value} <- [
           {"field", unknown},
           {"schema", unknown},
+          {"schema", "Elixir.String"},
+          {"resource_id", "9223372036854775808"},
+          {"resource_id", "0"},
           {"path", Jason.encode!([unknown])},
-          {"path", Jason.encode!([0])},
+          {"path", Jason.encode!(["vars", -1])},
+          {"path", Jason.encode!([true])},
           {"field", nil},
           {"resource_id", "1x"},
           {"resource_id", 1}
@@ -140,11 +144,12 @@ defmodule BrandoAdmin.Components.Form.DrawerRecoveryTest do
     end
   end
 
+  # A field in a subform row has the row's index in its path.
   test "a recovered drawer keeps its path", %{image: image} do
-    params = put_in(drawer_params(image, "{}"), ["drawer", "path"], Jason.encode!(["meta_image"]))
+    params = put_in(drawer_params(image, "{}"), ["drawer", "path"], Jason.encode!(["vars", 0]))
 
     assert {:noreply, socket} = Form.handle_event("recover_drawer_state", params, socket())
-    assert socket.assigns.edit_image.path == [:meta_image]
+    assert socket.assigns.edit_image.path == [:vars, 0]
     assert socket.assigns.edit_image.field == :meta_image
     assert socket.assigns.edit_image.schema == Brando.Pages.Page
   end

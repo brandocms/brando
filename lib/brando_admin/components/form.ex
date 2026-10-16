@@ -8141,12 +8141,18 @@ defmodule BrandoAdmin.Components.Form do
   @video_drawer_fields [:source_url, :type]
   @file_drawer_fields [:title]
 
-  # The drawer the recovery form names, read from browser params: an id, the
-  # field, schema and path as existing atoms. Anything else is not restored.
+  # The largest id a bigint primary key holds; a larger one fails to encode.
+  @max_id 9_223_372_036_854_775_807
+
+  # The drawer the recovery form names, read from browser params: an id, a
+  # blueprint schema, the field as an existing atom and the path to it.
+  # Anything else is not restored.
   defp with_drawer_target(socket, params, restore) do
     with id when is_binary(id) <- params["resource_id"],
-         {resource_id, ""} <- Integer.parse(id),
-         {:ok, [field, schema]} <- existing_atoms([params["field"], params["schema"]]),
+         {resource_id, ""} when resource_id in 1..@max_id//1 <- Integer.parse(id),
+         {:ok, field} <- existing_atom(params["field"]),
+         schema when is_binary(schema) <- params["schema"],
+         {:ok, schema} <- Brando.Assets.ConfigTarget.schema_module(schema),
          {:ok, path} <- decode_recovery_path(params["path"]) do
       target = %{
         id: resource_id,
@@ -8294,24 +8300,25 @@ defmodule BrandoAdmin.Components.Form do
 
   defp decode_recovery_path(path_json) when is_binary(path_json) do
     case Jason.decode(path_json) do
-      {:ok, list} when is_list(list) -> existing_atoms(list)
+      {:ok, list} when is_list(list) -> map_ok(list, &recovery_path_segment/1)
       _ -> {:ok, []}
     end
   end
 
   defp decode_recovery_path(_), do: {:ok, []}
 
-  defp existing_atoms(values) do
-    Enum.reduce_while(Enum.reverse(values), {:ok, []}, fn value, {:ok, atoms} ->
-      case value do
-        value when is_binary(value) ->
-          case safe_to_existing_atom(value) do
-            {:ok, atom} -> {:cont, {:ok, [atom | atoms]}}
-            error -> {:halt, error}
-          end
+  # A field name, or the index of a subform row (`[:clients, 0]`).
+  defp recovery_path_segment(index) when is_integer(index) and index >= 0, do: {:ok, index}
+  defp recovery_path_segment(name), do: existing_atom(name)
 
-        _ ->
-          {:halt, {:error, :invalid_field}}
+  defp existing_atom(name) when is_binary(name), do: safe_to_existing_atom(name)
+  defp existing_atom(_name), do: :error
+
+  defp map_ok(values, fun) do
+    Enum.reduce_while(Enum.reverse(values), {:ok, []}, fn value, {:ok, mapped} ->
+      case fun.(value) do
+        {:ok, result} -> {:cont, {:ok, [result | mapped]}}
+        _ -> {:halt, :error}
       end
     end)
   end
