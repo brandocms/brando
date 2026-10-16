@@ -8,14 +8,12 @@ const local = path => new URL(path, import.meta.url)
 const read = path => readFile(local(path), 'utf8')
 const embed = async (path, type) => `data:${type};base64,${(await readFile(local(path))).toString('base64')}`
 
-// A portable copy keeps the actual consumer fonts. Icons are inline in preview.js.
+// A portable copy keeps the admin's font. Icons are inline in preview.js.
 let html = await read('index.html')
 let css = await read('styles.css')
 let js = await read('preview.js')
-for (const weight of ['Regular', 'Medium']) {
-  const path = `../../../e2e/assets/backend/public/fonts/Main-${weight}.woff2`
-  css = css.replace(path, await embed(path, 'font/woff2'))
-}
+const font = '../../../assets/fonts/SchibstedGrotesk-latin.woff2'
+css = css.replace(font, await embed(font, 'font/woff2'))
 for (const photo of ['architecture', 'room']) {
   const path = `../content-agent-concepts/media/${photo}.jpg`
   js = js.replace(path, await embed(path, 'image/jpeg'))

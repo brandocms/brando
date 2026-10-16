@@ -62,7 +62,8 @@ prototype only, not the proposed backend feature.
 
 The photos and graphic treatments are placeholders, not actual Sommerro project
 assets. `identity.svg`, `film.svg` and `palette.svg` are original artwork created
-for this concept. The fonts come from Brando's E2E consumer.
+for this concept. The font is the admin's Schibsted Grotesk (latin subset, from
+`assets/fonts`), under the SIL Open Font License 1.1 in `media/OFL-SchibstedGrotesk.txt`.
 
 Downloaded sample photography:
 

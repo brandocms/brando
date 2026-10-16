@@ -1,8 +1,7 @@
-@font-face { font-family: Main; src: url('../../../e2e/assets/backend/public/fonts/Main-Regular.woff2'); font-weight: 400; }
-@font-face { font-family: Main; src: url('../../../e2e/assets/backend/public/fonts/Main-Medium.woff2'); font-weight: 500; }
+@font-face { font-family: 'Schibsted Grotesk'; src: url('../../../assets/fonts/SchibstedGrotesk-latin.woff2'); font-weight: 400 900; }
 :root { color-scheme: light; --ink: #272b2a; --muted: #626b66; --line: #dce2dc; --accent: #254e3f; }
 * { box-sizing: border-box; }
-body { margin: 0; background: #f7f8f6; color: var(--ink); font: 14px/1.5 Main, sans-serif; }
+body { margin: 0; background: #f7f8f6; color: var(--ink); font: 14px/1.5 'Schibsted Grotesk', sans-serif; }
 main { max-width: 1672px; margin: auto; padding: 32px; }
 h1, h2, h3, p { margin: 0; }
 button { font: inherit; cursor: pointer; }
@@ -59,7 +58,7 @@ h1 { font-size: 30px; line-height: 38px; font-weight: 500; letter-spacing: -.6px
 .picker .field-label { font-size: 15px; font-weight: 500; }
 .search { display: flex; gap: 9px; align-items: center; border: 1px solid var(--line); border-radius: 5px; padding: 7px 10px; margin: 14px 0; background: #fff; color: #89968c; }
 .search svg { width: 15px; height: 15px; }
-.search input { border: 0; outline: 0; width: 100%; font: 13px/22px Main, sans-serif; color: var(--ink); background: transparent; }
+.search input { border: 0; outline: 0; width: 100%; font: 13px/22px 'Schibsted Grotesk', sans-serif; color: var(--ink); background: transparent; }
 .search:focus-within { outline: 2px solid #345568; outline-offset: 2px; }
 .picker .identifier { width: 100%; cursor: pointer; }
 .identifier.selected { border-color: #a9c3ac; background: #f0f6ef; }
