@@ -27,7 +27,7 @@
   border-radius: 5px;
   background: var(--brando-surface);
   color: var(--brando-muted);
-  font: var(--brando-text-sm)/20px "Main", sans-serif;
+  font: var(--brando-text-sm)/20px var(--brando-font-sans);
   text-transform: none;
   cursor: pointer;
 
@@ -128,7 +128,7 @@
   label {
     margin: 0;
     color: var(--brando-ink);
-    font: 500 var(--brando-text-md)/18px "Main", sans-serif;
+    font: 500 var(--brando-text-md)/18px var(--brando-font-sans);
   }
 
   input {
@@ -141,7 +141,7 @@
     border-radius: 6px;
     background: var(--brando-surface);
     color: var(--brando-ink);
-    font: var(--brando-text-lg)/20px "Main", sans-serif;
+    font: var(--brando-text-lg)/20px var(--brando-font-sans);
 
     &:focus-visible {
       outline: 2px solid var(--brando-accent);

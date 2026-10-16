@@ -59,7 +59,7 @@
 
         .nav-shortcut {
           margin-inline-start: auto;
-          font: var(--brando-text-xs)/14px "Mono", monospace;
+          font: var(--brando-text-xs)/14px var(--brando-font-mono);
           color: var(--brando-nav-muted);
           opacity: 0.6;
         }
@@ -110,7 +110,7 @@
       .nav-group-label {
         margin: 0;
         padding: 6px 10px 4px;
-        font: var(--brando-text-2xs)/14px "Mono", monospace;
+        font: var(--brando-text-2xs)/14px var(--brando-font-mono);
         font-weight: normal;
         letter-spacing: 0.04em;
         text-transform: uppercase;

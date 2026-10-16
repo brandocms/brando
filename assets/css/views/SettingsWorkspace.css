@@ -152,7 +152,7 @@
   .dashboard-side > .dashboard-panel { margin: 0; border-radius: 12px; }
   .dashboard-panel-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding: 14px 18px; border-bottom: 1px solid var(--dash-line); }
   .dashboard-panel-heading h2 { margin: 0; font-size: var(--brando-text-xl); line-height: 22px; font-weight: 500; }
-  .dashboard-count { color: var(--workspace-muted); font: var(--brando-text-sm) "Mono", monospace; }
+  .dashboard-count { color: var(--workspace-muted); font: var(--brando-text-sm) var(--brando-font-mono); }
   .dashboard-entry-list { padding: 0 18px 6px; }
   .dashboard-entry { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-top: 1px solid var(--dash-line); }
   .dashboard-entry:first-child { border-top: 0; }
@@ -380,7 +380,7 @@
   .seo-context-schema { margin-top: 12px; }
   .seo-context-schema h4 { margin: 0; font-size: var(--brando-text-sm); font-weight: 500; }
   .seo-context-schema .seo-audit-filters { padding: 8px 0 0; border-bottom: 0; }
-  .seo-context-schema .seo-chip { font-family: theme(typography.families.mono); font-size: var(--brando-text-xs); }
+  .seo-context-schema .seo-chip { font-family: var(--brando-font-mono); font-size: var(--brando-text-xs); }
 
   /* The finished review is an AI suggestion (.ai-proposal, AI.css); while it
      runs, or when it fails, it is a plain note. */

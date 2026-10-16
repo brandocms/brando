@@ -21,7 +21,7 @@
     background: color-mix(in srgb, white 70%, transparent);
     border-radius: 10px;
     padding: 0.5rem 0.65rem;
-    font-family: "Mono";
+    font-family: var(--brando-font-mono);
     font-size: var(--brando-text-sm);
   }
 
@@ -94,7 +94,7 @@
       background: transparent;
       color: color-mix(in srgb, var(--brando-ink) 84%, white);
       font-size: var(--brando-text-sm);
-      font-family: "Mono";
+      font-family: var(--brando-font-mono);
       text-transform: uppercase;
       letter-spacing: 0.03em;
       transition:
@@ -119,7 +119,7 @@
     align-items: center;
 
     .label {
-      font-family: "Mono";
+      font-family: var(--brando-font-mono);
       text-transform: uppercase;
       letter-spacing: 0.08em;
       font-size: var(--brando-text-xs);
@@ -137,7 +137,7 @@
     line-height: 24px;
     padding: 0 0.62rem;
     font-size: var(--brando-text-xs);
-    font-family: "Mono";
+    font-family: var(--brando-font-mono);
     letter-spacing: 0.01em;
     transition:
       background-color 140ms ease,
@@ -189,7 +189,7 @@
     h3 {
       margin: 0;
       font-size: var(--brando-text-xl);
-      font-family: "Mono";
+      font-family: var(--brando-font-mono);
       text-transform: uppercase;
       color: var(--brando-ink);
     }
@@ -241,7 +241,7 @@
     line-height: 1;
     padding: 0 0.66rem;
     font-size: var(--brando-text-2xs);
-    font-family: "Mono";
+    font-family: var(--brando-font-mono);
     text-transform: uppercase;
     white-space: nowrap;
     color: var(--brando-ink);
@@ -384,7 +384,7 @@
     border-radius: 8px;
     background: color-mix(in srgb, white 75%, transparent);
     color: var(--brando-ink);
-    font-family: "Mono";
+    font-family: var(--brando-font-mono);
     font-size: var(--brando-text-xs);
     text-transform: uppercase;
     height: 34px;
@@ -413,7 +413,7 @@
     .empty {
       font-size: var(--brando-text-xs);
       color: color-mix(in srgb, var(--brando-ink) 62%, white);
-      font-family: "Mono";
+      font-family: var(--brando-font-mono);
       padding: 0.5rem 0.15rem;
     }
   }
@@ -428,7 +428,7 @@
     text-align: left;
     background: color-mix(in srgb, white 70%, transparent);
     color: var(--brando-ink);
-    font-family: "Mono";
+    font-family: var(--brando-font-mono);
     font-size: var(--brando-text-sm);
     transition:
       background-color 160ms ease,
@@ -486,7 +486,7 @@
       .image-picker-scope { align-self: flex-start; margin-bottom: 8px; }
       .image-picker-main-hint {
         margin: 0; max-width: 60ch; overflow-wrap: anywhere;
-        font: var(--brando-text-sm)/18px "Main", sans-serif;
+        font: var(--brando-text-sm)/18px var(--brando-font-sans);
         color: color-mix(in srgb, var(--brando-ink) 55%, white);
       }
 
@@ -499,7 +499,7 @@
       }
 
       span {
-        font-family: "Mono";
+        font-family: var(--brando-font-mono);
         font-size: var(--brando-text-xs);
         text-transform: uppercase;
         letter-spacing: 0.08em;
@@ -546,7 +546,7 @@
   background: color-mix(in srgb, var(--brando-surface-subform) 16%, white);
   border: 1px solid color-mix(in srgb, var(--brando-surface-subform) 42%, white);
   border-radius: 8px;
-  font-family: "Mono";
+  font-family: var(--brando-font-mono);
   font-size: var(--brando-text-xs);
   text-transform: uppercase;
   letter-spacing: 0.04em;
@@ -574,7 +574,7 @@
     line-height: 24px;
     padding: 0 0.55rem;
     font-size: var(--brando-text-2xs);
-    font-family: "Mono";
+    font-family: var(--brando-font-mono);
     text-transform: uppercase;
     letter-spacing: 0.03em;
     transition:
@@ -610,7 +610,7 @@
   border-radius: 999px;
   background: var(--brando-ink);
   color: white;
-  font-family: "Mono";
+  font-family: var(--brando-font-mono);
   font-size: var(--brando-text-lg);
   font-weight: 600;
   box-shadow: var(--brando-shadow-md);
@@ -637,7 +637,7 @@
     flex-direction: column;
     gap: 0.3rem;
     text-align: center;
-    font-family: "Mono";
+    font-family: var(--brando-font-mono);
     color: var(--brando-ink);
     padding: 1rem;
 
@@ -655,7 +655,7 @@
     }
 
     strong {
-      font-family: "Main";
+      font-family: var(--brando-font-sans);
       font-size: var(--brando-text-lg);
       color: var(--brando-ink);
       font-weight: 600;
@@ -708,7 +708,7 @@
     border-radius: 12px;
     padding: 2rem 1rem;
     text-align: center;
-    font-family: "Mono";
+    font-family: var(--brando-font-mono);
     color: color-mix(in srgb, var(--brando-ink) 72%, white);
     background: color-mix(in srgb, white 78%, transparent);
 
@@ -742,7 +742,7 @@
 
     .folder-action {
       margin-top: 16px;
-      font-family: "Main", sans-serif;
+      font-family: var(--brando-font-sans);
     }
   }
 

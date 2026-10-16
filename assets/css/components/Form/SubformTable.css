@@ -86,7 +86,7 @@
     border-top: 0;
     background: var(--table-head);
     color: var(--table-muted);
-    font: var(--brando-text-sm)/16px "Main", sans-serif;
+    font: var(--brando-text-sm)/16px var(--brando-font-sans);
     text-align: left;
     white-space: nowrap;
   }
@@ -325,12 +325,12 @@
     background: transparent;
     box-shadow: none;
     color: var(--table-ink);
-    font: var(--brando-text-md)/20px "Main", sans-serif;
+    font: var(--brando-text-md)/20px var(--brando-font-sans);
     transition: border-color 120ms ease, background-color 120ms ease, box-shadow 120ms ease;
   }
 
   .subform-fields :is(input, textarea).monospace {
-    font-family: "Mono", monospace;
+    font-family: var(--brando-font-mono);
     font-size: var(--brando-text-md);
     letter-spacing: -.01em;
   }
@@ -466,7 +466,7 @@
       align-items: baseline;
       gap: 8px;
       min-width: 0;
-      font: var(--brando-text-md)/20px "Main", sans-serif;
+      font: var(--brando-text-md)/20px var(--brando-font-sans);
       text-transform: none;
       white-space: nowrap;
     }
@@ -631,7 +631,7 @@
     .color-hex,
     .circle.tiny + .color-hex {
       margin: 0;
-      font: var(--brando-text-sm)/20px "Mono", monospace;
+      font: var(--brando-text-sm)/20px var(--brando-font-mono);
       text-transform: uppercase;
     }
 

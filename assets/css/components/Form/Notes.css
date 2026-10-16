@@ -468,7 +468,7 @@
     background-color: var(--brando-accent);
     box-shadow: 0 0 0 2px var(--brando-surface);
     color: var(--brando-ink-inverse);
-    font: 500 var(--brando-text-2xs)/16px "Main", sans-serif;
+    font: 500 var(--brando-text-2xs)/16px var(--brando-font-sans);
     font-variant-numeric: tabular-nums;
     text-align: center;
   }

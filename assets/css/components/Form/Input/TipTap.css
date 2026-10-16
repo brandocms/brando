@@ -140,7 +140,7 @@
 
   .brando-villain-variable {
     background-color: gold;
-    font-family: mono;
+    font-family: var(--brando-font-mono);
     font-size: 80%;
     padding: 6px 2px;
     border-radius: 12px;
@@ -180,7 +180,7 @@
     min-height: 32px; margin: 0; padding: 6px 11px;
     border: 1px solid var(--brando-line); border-radius: 6px;
     background: var(--brando-surface-hover); color: var(--brando-muted);
-    font: 500 var(--brando-text-sm)/18px "Main", sans-serif; white-space: nowrap; cursor: pointer;
+    font: 500 var(--brando-text-sm)/18px var(--brando-font-sans); white-space: nowrap; cursor: pointer;
     &:hover { background: var(--brando-surface-selected); border-color: var(--brando-line-strong); }
     &:focus-visible { outline: 2px solid var(--brando-accent); outline-offset: 3px; }
     &:disabled { opacity: .5; cursor: default; }
@@ -305,25 +305,25 @@
   box-sizing: border-box; display: flex; flex-direction: column; position: fixed; inset: 32px; margin: auto;
   width: min(960px, calc(100vw - 64px)); height: min(820px, calc(100dvh - 64px)); max-height: calc(100dvh - 64px); padding: 0;
   border: 1px solid var(--brando-line); border-radius: 12px; box-shadow: 0 26px 80px color-mix(in srgb, var(--brando-ink) 15%, transparent), 0 4px 16px color-mix(in srgb, var(--brando-ink) 7%, transparent); overflow: hidden;
-  color: var(--brando-ink); font: var(--brando-text-lg)/1.5 "Main", sans-serif;
+  color: var(--brando-ink); font: var(--brando-text-lg)/1.5 var(--brando-font-sans);
   .tiptap-expanded-header { display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 22px 24px; border-bottom: 1px solid var(--brando-line); flex-shrink: 0; }
   .tiptap-expanded-heading { display: flex; align-items: center; gap: 14px; min-width: 0; }
   .tiptap-expanded-icon { display: grid; place-items: center; width: 40px; height: 40px; flex: 0 0 40px; border: 1px solid var(--brando-line); border-radius: 8px; background: var(--brando-surface-hover); color: var(--brando-muted); > [data-icon] { width: 20px; height: 20px; } }
   .tiptap-expanded-heading-copy { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
-  .tiptap-expanded-heading h2 { margin: 0; font: 500 var(--brando-text-4xl)/28px "Main", sans-serif; letter-spacing: -.025em; text-transform: none; text-box: trim-both cap alphabetic; overflow-wrap: anywhere; }
-  .tiptap-expanded-heading p { margin: 0; font: var(--brando-text-sm)/18px "Main", sans-serif; color: var(--brando-muted); text-box: trim-both cap alphabetic; }
-  .tiptap-expanded-done { display: inline-flex; align-items: center; justify-content: center; gap: 8px; flex-shrink: 0; min-height: 34px; padding: 7px 13px; margin: 0; border: 1px solid var(--brando-accent); border-radius: 5px; background: var(--brando-accent); color: var(--brando-ink-inverse); font: var(--brando-text-md)/18px "Main", sans-serif; > [data-icon] { width: 16px; height: 16px; } &:hover { background: var(--brando-accent-hover); } &:focus-visible { outline: 2px solid var(--brando-accent); outline-offset: 3px; } }
+  .tiptap-expanded-heading h2 { margin: 0; font: 500 var(--brando-text-4xl)/28px var(--brando-font-sans); letter-spacing: -.025em; text-transform: none; text-box: trim-both cap alphabetic; overflow-wrap: anywhere; }
+  .tiptap-expanded-heading p { margin: 0; font: var(--brando-text-sm)/18px var(--brando-font-sans); color: var(--brando-muted); text-box: trim-both cap alphabetic; }
+  .tiptap-expanded-done { display: inline-flex; align-items: center; justify-content: center; gap: 8px; flex-shrink: 0; min-height: 34px; padding: 7px 13px; margin: 0; border: 1px solid var(--brando-accent); border-radius: 5px; background: var(--brando-accent); color: var(--brando-ink-inverse); font: var(--brando-text-md)/18px var(--brando-font-sans); > [data-icon] { width: 16px; height: 16px; } &:hover { background: var(--brando-accent-hover); } &:focus-visible { outline: 2px solid var(--brando-accent); outline-offset: 3px; } }
   .tiptap-menu { position: static; flex-shrink: 0; padding: 10px 24px; border-radius: 0; background: var(--brando-surface-shaded); }
   .tiptap-writing-area { flex: 1; min-height: 0; overflow: auto; padding: 24px 32px; background: var(--brando-surface-hover); scrollbar-width: thin; scroll-padding-block: 24px; }
   .tiptap-document { box-sizing: border-box; display: flex; width: 100%; max-width: 736px; min-height: 100%; margin-inline: auto; padding: 40px 48px; background: var(--brando-surface); border: 1px solid var(--brando-line); border-radius: 6px; box-shadow: 0 2px 6px color-mix(in srgb, var(--brando-ink) 3%, transparent); }
   .tiptap-document:focus-within { border-color: var(--brando-line-strong); box-shadow: 0 0 0 2px color-mix(in srgb, var(--brando-accent) 4%, transparent); }
-  .ProseMirror { flex: 1; min-width: 0; min-height: 160px; max-width: none; font: var(--brando-text-2xl)/1.75 "Main", sans-serif; color: var(--brando-ink); caret-color: var(--brando-accent); }
+  .ProseMirror { flex: 1; min-width: 0; min-height: 160px; max-width: none; font: var(--brando-text-2xl)/1.75 var(--brando-font-sans); color: var(--brando-ink); caret-color: var(--brando-accent); }
   .ProseMirror:focus { outline: none; }
   .ProseMirror p { font: inherit; margin-top: 0; margin-bottom: 1.25em; }
   .tiptap-link-preview { flex-shrink: 0; padding-inline: 24px; background: var(--brando-surface-shaded); }
   .tiptap-status { min-height: 42px; flex-shrink: 0; padding: 10px 24px; gap: 16px; background: var(--brando-surface); }
   .tiptap-return-hint { display: inline-flex; align-items: center; gap: 8px; flex: none; font-size: var(--brando-text-sm); }
-  .tiptap-return-hint kbd { border: 1px solid var(--brando-line); border-radius: 4px; padding: 1px 5px; background: var(--brando-surface-hover); color: var(--brando-muted); font: var(--brando-text-xs)/16px "Main", sans-serif; }
+  .tiptap-return-hint kbd { border: 1px solid var(--brando-line); border-radius: 4px; padding: 1px 5px; background: var(--brando-surface-hover); color: var(--brando-muted); font: var(--brando-text-xs)/16px var(--brando-font-sans); }
   .tiptap-notice { flex: 1; }
   .tiptap-word-count { margin-left: auto; flex: none; font-variant-numeric: tabular-nums; }
   &::backdrop { background: var(--brando-overlay); backdrop-filter: blur(2px); }

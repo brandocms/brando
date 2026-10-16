@@ -26,7 +26,7 @@
   border-radius: var(--brando-radius-sm);
   background: transparent;
   color: var(--brando-ink);
-  font: var(--brando-text-sm)/20px "Main", sans-serif;
+  font: var(--brando-text-sm)/20px var(--brando-font-sans);
   font-weight: 400;
   letter-spacing: 0;
   text-align: left;

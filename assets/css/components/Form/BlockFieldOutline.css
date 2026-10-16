@@ -25,7 +25,7 @@
   border-radius: 5px;
   background: var(--brando-surface);
   color: var(--brando-muted);
-  font: 500 var(--brando-text-sm)/18px "Main", sans-serif;
+  font: 500 var(--brando-text-sm)/18px var(--brando-font-sans);
   cursor: pointer;
   [data-icon] { flex: none; width: 14px; height: 14px; }
   &:hover, &[aria-expanded="true"] { color: var(--brando-ink); background: var(--brando-surface-hover); }

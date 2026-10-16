@@ -64,7 +64,7 @@ export default (app) => ({
               border: '1px solid var(--brando-input-border)',
             },
             '.cm-content': {
-              fontFamily: 'Mono',
+              fontFamily: 'var(--brando-font-mono)',
               minHeight: '200px',
             },
             '.cm-gutters': {

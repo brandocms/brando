@@ -9,12 +9,12 @@
 
 .flatpickr-time {
   input.flatpickr-minute {
-    font-family: mono;
+    font-family: var(--brando-font-mono);
     font-size: var(--brando-text-3xl);
   }
 
   input.flatpickr-hour {
-    font-family: mono;
+    font-family: var(--brando-font-mono);
     font-size: var(--brando-text-3xl);
   }
 }
@@ -95,7 +95,7 @@
     border: 0;
     background: transparent;
     color: inherit;
-    font: var(--admin-field-font-size, var(--brando-text-lg))/20px "Main", sans-serif;
+    font: var(--admin-field-font-size, var(--brando-text-lg))/20px var(--brando-font-sans);
     text-overflow: ellipsis;
     outline: none;
   }
@@ -157,7 +157,7 @@
     background: transparent;
     box-shadow: var(--brando-shadow-xs);
     color: inherit;
-    font: var(--brando-text-sm)/20px "Main", sans-serif;
+    font: var(--brando-text-sm)/20px var(--brando-font-sans);
     transition: background-color 0.2s ease, border-color 0.2s ease;
 
     &:hover {

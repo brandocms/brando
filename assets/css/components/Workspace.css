@@ -90,12 +90,12 @@
     > :is(thead, tbody) > tr > :is(th, td):last-child { padding-right: 16px; }
     > tbody > tr:last-child > td { border: 0; }
     > tbody > tr:hover { background: var(--brando-surface-hover); }
-    code { font-family: theme(typography.families.mono); font-size: var(--brando-text-sm); }
+    code { font-family: var(--brando-font-mono); font-size: var(--brando-text-sm); }
     > tbody > tr > td small { display: block; margin-top: 3px; color: var(--workspace-muted); font-size: var(--brando-text-sm); }
     .row-actions { width: 1%; text-align: right; white-space: nowrap; }
   }
   code { background: transparent; padding: 0; border: 0; }
-  .workspace-mono { font-family: theme(typography.families.mono); font-size: var(--brando-text-sm); }
+  .workspace-mono { font-family: var(--brando-font-mono); font-size: var(--brando-text-sm); }
   .workspace-note { color: var(--workspace-muted); font-size: var(--brando-text-sm); padding-top: 16px; }
   .workspace-sr-only { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 
@@ -109,4 +109,11 @@
     .workspace-panel-heading { padding: 16px; flex-wrap: wrap; }
   }
   @media (pointer: coarse) { :is(#content-header .actions > a, #content-header .actions > button):not(.btn) { min-height: var(--brando-control-touch); } }
+}
+
+/* The exported and imported module code in the module list's modals, more
+   specific than the modal's own textarea rule. */
+.modal .modal-content textarea.module-transfer-code {
+  width: 100%;
+  font: var(--brando-text-xs)/1.5 var(--brando-font-mono);
 }

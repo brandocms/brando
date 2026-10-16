@@ -381,7 +381,7 @@
           padding: 0 6px;
           border-radius: 999px;
           background: var(--brando-badge-bg);
-          font-family: "Mono";
+          font-family: var(--brando-font-mono);
           font-size: var(--brando-text-xs);
         }
       }
@@ -479,7 +479,7 @@
         padding: 4px 6px;
         border-radius: 5px;
         background: var(--brando-surface-subform);
-        font-family: "Mono";
+        font-family: var(--brando-font-mono);
         font-size: var(--brando-text-2xs);
         line-height: 1;
         text-transform: uppercase;
@@ -657,7 +657,7 @@
 /* Debug render for a block whose `type` matched no `render/1` clause — see
    `Block.Render.render/1`'s catch-all. */
 .block-unknown-type {
-  font-family: Mono, monospace;
+  font-family: var(--brando-font-mono);
   font-size: var(--brando-text-xs);
 }
 

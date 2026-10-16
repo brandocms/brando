@@ -19,8 +19,8 @@
   .module-files-dropzone label { font-size: var(--brando-text-md); margin: 0; }
   /* A bare file input: no text-field frame, and the picker button reads like
      the admin's light .media-button */
-  .module-files-dropzone input[type="file"] { max-width: 100%; height: auto; margin: 0; padding: 0; border: 0; border-radius: 0; background: none; box-shadow: none; font: var(--brando-text-sm)/20px "Main", sans-serif; color: var(--brando-muted); }
-  .module-files-dropzone input[type="file"]::file-selector-button { min-height: 32px; margin: 0 10px 0 0; padding: 5px 11px; border: 1px solid var(--brando-line); border-radius: 5px; background: var(--brando-surface); color: var(--brando-ink); font: var(--brando-text-sm)/20px "Main", sans-serif; cursor: pointer; }
+  .module-files-dropzone input[type="file"] { max-width: 100%; height: auto; margin: 0; padding: 0; border: 0; border-radius: 0; background: none; box-shadow: none; font: var(--brando-text-sm)/20px var(--brando-font-sans); color: var(--brando-muted); }
+  .module-files-dropzone input[type="file"]::file-selector-button { min-height: 32px; margin: 0 10px 0 0; padding: 5px 11px; border: 1px solid var(--brando-line); border-radius: 5px; background: var(--brando-surface); color: var(--brando-ink); font: var(--brando-text-sm)/20px var(--brando-font-sans); cursor: pointer; }
   .module-files-dropzone input[type="file"]:not(:disabled)::file-selector-button:hover { background: var(--brando-surface-tint); border-color: var(--brando-line-strong); }
   .module-files-dropzone input[type="file"]:disabled::file-selector-button { opacity: .45; cursor: default; }
   .module-files-dropzone span { font-size: var(--brando-text-sm); color: var(--brando-muted); }
@@ -29,7 +29,7 @@
   .module-files-mappings summary { font-size: var(--brando-text-md); cursor: pointer; }
   .module-files-mappings > div { display: flex; flex-direction: column; gap: 12px; padding-top: 16px; }
   .module-files-mappings label { font-size: var(--brando-text-sm); margin: 0; }
-  .module-files-mappings textarea { width: 100%; padding: 10px; border: 1px solid var(--brando-line-strong); border-radius: 5px; font-size: var(--brando-text-sm); font-family: Mono, monospace; background: var(--brando-surface); }
+  .module-files-mappings textarea { width: 100%; padding: 10px; border: 1px solid var(--brando-line-strong); border-radius: 5px; font-size: var(--brando-text-sm); font-family: var(--brando-font-mono); background: var(--brando-surface); }
   .module-files-preview, .module-files-result { display: flex; flex-direction: column; gap: 20px; }
   .module-files-preview-heading { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 12px; }
   .module-files-preview-heading > div { display: flex; flex-direction: column; gap: 6px; }

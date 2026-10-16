@@ -95,7 +95,7 @@
   .user-password-access-actions { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; flex-shrink: 0; }
   .user-password-access-fallback {
     padding: 0; border: 0; background: none; color: var(--brando-muted);
-    font: var(--brando-text-sm)/18px "Main", sans-serif; text-decoration: underline; text-underline-offset: 3px; cursor: pointer;
+    font: var(--brando-text-sm)/18px var(--brando-font-sans); text-decoration: underline; text-underline-offset: 3px; cursor: pointer;
     &:hover { color: var(--brando-ink); }
   }
   :is(.btn, .user-password-access-fallback):focus-visible { outline: 2px solid var(--brando-accent); outline-offset: 3px; }
@@ -124,7 +124,7 @@
   .password-form .label-wrapper { margin-bottom: 8px; }
   .password-form input.text {
     width: 100%; height: 40px; padding: 8px 12px; border: 1px solid var(--brando-line); border-radius: 6px;
-    background: var(--brando-surface); color: var(--brando-ink); font: var(--brando-text-lg)/20px "Main", sans-serif;
+    background: var(--brando-surface); color: var(--brando-ink); font: var(--brando-text-lg)/20px var(--brando-font-sans);
   }
   .password-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; padding-top: 8px; }
 }
@@ -218,14 +218,14 @@
   .two-factor-manual[open] summary { margin-bottom: 4px; }
   .two-factor-secret {
     display: block; padding: 8px 10px; border-radius: 5px; background: var(--brando-surface-shaded);
-    border: 1px solid var(--brando-line); font-family: theme(typography.families.mono); font-size: var(--brando-text-md);
+    border: 1px solid var(--brando-line); font-family: var(--brando-font-mono); font-size: var(--brando-text-md);
     letter-spacing: .04em; overflow-wrap: anywhere; user-select: all;
   }
   .two-factor-confirm { display: grid; gap: 12px; max-width: 320px; }
   .two-factor-confirm .field-wrapper { margin: 0; }
   .two-factor-confirm input.text {
     width: 100%; height: 40px; padding: 8px 12px; border: 1px solid var(--brando-line); border-radius: 6px;
-    background: var(--brando-surface); color: var(--brando-ink); font: var(--brando-text-xl)/20px theme(typography.families.mono); letter-spacing: .12em;
+    background: var(--brando-surface); color: var(--brando-ink); font: var(--brando-text-xl)/20px var(--brando-font-mono); letter-spacing: .12em;
   }
   .two-factor-error { color: color-mix(in srgb, var(--brando-status-disabled), var(--brando-ink) 35%); font-size: var(--brando-text-sm); line-height: 1.5; }
   .two-factor-confirm-actions { display: flex; flex-wrap: wrap; gap: 12px; }
@@ -239,7 +239,7 @@
     display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 24px; margin: 0; padding: 16px 20px;
     border: 1px solid var(--brando-line); border-radius: 6px; background: var(--brando-surface-shaded); list-style: none;
   }
-  .two-factor-code-list code { font-family: theme(typography.families.mono); font-size: var(--brando-text-lg); letter-spacing: .04em; background: none; }
+  .two-factor-code-list code { font-family: var(--brando-font-mono); font-size: var(--brando-text-lg); letter-spacing: .04em; background: none; }
   .two-factor-codes-actions { display: flex; flex-wrap: wrap; gap: 8px; }
 }
 
@@ -273,7 +273,7 @@
   .passkey-setup-form .field-wrapper { margin: 0; }
   .passkey-setup-form input.text {
     width: 100%; height: 40px; padding: 8px 12px; border: 1px solid var(--brando-line); border-radius: 6px;
-    background: var(--brando-surface); color: var(--brando-ink); font: var(--brando-text-lg)/20px "Main", sans-serif;
+    background: var(--brando-surface); color: var(--brando-ink); font: var(--brando-text-lg)/20px var(--brando-font-sans);
   }
   .passkey-setup-hint { margin: 0; color: var(--brando-muted); font-size: var(--brando-text-sm); line-height: 1.5; }
   .two-factor-error { color: color-mix(in srgb, var(--brando-status-disabled), var(--brando-ink) 35%); font-size: var(--brando-text-sm); line-height: 1.5; }
@@ -288,7 +288,7 @@
   .reauth-form .field-wrapper { margin: 0; }
   .reauth-form input.text {
     width: 100%; height: 40px; padding: 8px 12px; border: 1px solid var(--brando-line); border-radius: 6px;
-    background: var(--brando-surface); color: var(--brando-ink); font: var(--brando-text-lg)/20px "Main", sans-serif;
+    background: var(--brando-surface); color: var(--brando-ink); font: var(--brando-text-lg)/20px var(--brando-font-sans);
   }
   .reauth-error { margin: 0; color: color-mix(in srgb, var(--brando-status-disabled), var(--brando-ink) 35%); font-size: var(--brando-text-sm); }
   .reauth-passkey { display: flex; align-items: center; gap: 12px; color: var(--brando-muted); font-size: var(--brando-text-sm); }

@@ -736,22 +736,11 @@
         }
 
         .status-dropdown {
-          border: 1px solid var(--brando-ink);
+          @extend %admin_dropdown_panel;
           position: absolute;
-          background-color: var(--brando-surface-subform);
-          width: 200px;
           z-index: 1;
           margin-top: 5px;
-          border-radius: 16px;
-          padding: 12px;
-          font-size: var(--brando-text-xl);
-
-          button {
-            width: 100%;
-            border: none;
-            display: flex;
-            align-items: center;
-          }
+          min-width: 180px;
         }
 
         > div > svg {

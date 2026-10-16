@@ -3,7 +3,7 @@
   display: flex; flex-wrap: wrap; align-items: center; gap: 10px;
   width: 100%; min-width: 0; min-height: 68px; margin: 0; padding: 11px 12px;
   border: 1px solid var(--brando-line); border-radius: 6px; background: var(--brando-surface); color: var(--brando-ink);
-  font: var(--brando-text-lg)/20px "Main", sans-serif; text-align: left; text-transform: none;
+  font: var(--brando-text-lg)/20px var(--brando-font-sans); text-align: left; text-transform: none;
   letter-spacing: 0; box-shadow: none;
   &.draggable { cursor: grab; }
   &.selectable { cursor: pointer; }
@@ -24,9 +24,9 @@
     > [data-icon] { width: 20px; height: 20px; }
   }
   .identifier-copy { display: flex; flex-direction: column; gap: 3px; flex: 1; min-width: 0; }
-  .identifier-title { color: var(--brando-ink); font: 500 var(--brando-text-lg)/19px "Main", sans-serif; overflow-wrap: anywhere; }
-  .identifier-url { color: var(--brando-muted); font: var(--brando-text-xs)/16px "Main", sans-serif; overflow-wrap: anywhere; }
-  .identifier-details { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 6px; color: var(--brando-muted); font: var(--brando-text-xs)/16px "Main", sans-serif; }
+  .identifier-title { color: var(--brando-ink); font: 500 var(--brando-text-lg)/19px var(--brando-font-sans); overflow-wrap: anywhere; }
+  .identifier-url { color: var(--brando-muted); font: var(--brando-text-xs)/16px var(--brando-font-sans); overflow-wrap: anywhere; }
+  .identifier-details { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 6px; color: var(--brando-muted); font: var(--brando-text-xs)/16px var(--brando-font-sans); }
   .identifier-details > span { display: inline-flex; align-items: center; gap: 6px; }
   .identifier-details > span + span::before { content: "·"; color: var(--brando-faint); }
   /* As tall as a capital and standing on the baseline, like every status dot */
@@ -94,7 +94,7 @@
   border-top: 1px solid var(--brando-line); background: var(--brando-surface-shaded);
   .media-button:disabled { opacity: .45; cursor: default; background: var(--brando-surface); border-color: var(--brando-line); }
 }
-.identifier-empty { display: flex; align-items: center; gap: 16px; padding: 6px; font: var(--brando-text-lg)/20px "Main", sans-serif; }
+.identifier-empty { display: flex; align-items: center; gap: 16px; padding: 6px; font: var(--brando-text-lg)/20px var(--brando-font-sans); }
 .identifier-empty-icon { display: grid; place-items: center; width: 76px; height: 72px; flex: 0 0 76px; border-radius: 5px; background: var(--brando-surface-shaded); color: var(--brando-muted); }
 .identifier-empty-icon > [data-icon] { width: 25px; height: 25px; }
 @media (max-width: 600px) {

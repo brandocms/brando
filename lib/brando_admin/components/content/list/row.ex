@@ -522,6 +522,7 @@ defmodule BrandoAdmin.Components.Content.List.Row do
     ~H"""
     <button
       type="button"
+      class="menu-item"
       phx-click={
         "set_status"
         |> JS.push(value: %{id: @entry_id, status: @status, schema: @schema})

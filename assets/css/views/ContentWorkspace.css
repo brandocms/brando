@@ -20,7 +20,7 @@
   /* "Expires 12 Oct" under the status badge */
   .content-list .status:has(> .listing-expiry) { flex-direction: column; align-items: flex-start; gap: 4px; }
   .listing-expiry { display: block; margin: 0; color: var(--workspace-muted); font-size: var(--brando-text-xs); line-height: 16px; white-space: nowrap; }
-  /* Fallback for older browsers; consumers can supply different Main fonts. */
+  /* Fallback for browsers without text trimming; applications with other fonts can set the offset. */
   .listing-status-label, .list-tools .statuses .label { transform: translateY(var(--status-label-offset, 2px)); }
   @supports (text-box: trim-both cap alphabetic) {
     .listing-status-label, .list-tools .statuses .label {

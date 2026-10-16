@@ -78,7 +78,7 @@
     border: 1px solid var(--brando-input-border, var(--guidance-line));
     border-radius: var(--brando-input-radius, 5px);
     background: var(--brando-surface);
-    font-family: theme(typography.families.mono);
+    font-family: var(--brando-font-mono);
     font-size: var(--brando-text-sm);
     line-height: 1.7;
     resize: vertical;
@@ -127,7 +127,7 @@
     padding: 12px 14px;
     border-radius: 6px;
     background: var(--brando-surface-shaded);
-    font-family: theme(typography.families.mono);
+    font-family: var(--brando-font-mono);
     font-size: var(--brando-text-sm);
     line-height: 1.7;
     white-space: pre-wrap;

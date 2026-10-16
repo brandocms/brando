@@ -218,7 +218,7 @@
   .transfer-recovery-confirm .transfer-actions { padding-top: 16px; }
 }
 @keyframes transfer-spin { to { transform: rotate(360deg); } }
-/* Match the form toolbar's Main font offset in browsers without text trimming. */
+/* Centre the labels' caps in browsers without text trimming. */
 @supports not (text-box: trim-both cap alphabetic) {
   .transfer-workspace .transfer-control-label { transform: translateY(1px); }
   .transfer-workspace .transfer-entry-status .transfer-control-label { transform: translateY(var(--status-label-offset, 2px)); }

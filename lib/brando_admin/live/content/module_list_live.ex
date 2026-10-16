@@ -96,7 +96,7 @@ defmodule BrandoAdmin.Content.ModuleListLive do
     />
 
     <Content.modal title={gettext("Exported modules")} id="module-export-modal">
-      <textarea rows="15" style="width: 100%; font-size: 11px; font-family: Mono"><%= @base64_modules %></textarea>
+      <textarea rows="15" class="module-transfer-code"><%= @base64_modules %></textarea>
     </Content.modal>
 
     <Content.modal title={gettext("Sketches with AI")} id="module-sketches-modal" medium>
@@ -144,7 +144,7 @@ defmodule BrandoAdmin.Content.ModuleListLive do
       </div>
 
       <form :if={!@imported_modules} id="module-import-form" phx-change="validate_module_import">
-        <textarea name="encoded_modules" rows="15" style="width: 100%; font-size: 11px; font-family: Mono"></textarea>
+        <textarea name="encoded_modules" rows="15" class="module-transfer-code"></textarea>
       </form>
     </Content.modal>
     """

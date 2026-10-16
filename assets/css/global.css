@@ -364,7 +364,7 @@ body {
 }
 
 .text-mono {
-  font-family: theme(typography.families.mono);
+  font-family: var(--brando-font-mono);
 }
 
 .toggle-menu {
@@ -935,7 +935,7 @@ h3 {
   border-radius: 20px;
   line-height: 1;
   border: 1px solid var(--brando-ink);
-  font-family: theme(typography.families.mono);
+  font-family: var(--brando-font-mono);
   font-size: var(--brando-text-lg);
   text-transform: uppercase;
   display: flex;

@@ -1,6 +1,6 @@
 .admin-text-diff {
   min-width: 0;
-  font-family: "Main", sans-serif;
+  font-family: var(--brando-font-sans);
   color: var(--brando-ink);
   border: 1px solid var(--brando-line);
   border-radius: 8px;
@@ -44,5 +44,5 @@
   footer p { font-size: var(--brando-text-xs); line-height: 1.5; color: var(--brando-muted); margin: 0; }
   .text-diff-truncated { color: var(--brando-attention-ink); }
   .text-diff-empty { padding: 16px; font-size: var(--brando-text-sm); }
-  &.is-code .text-diff-text { font-family: Mono, monospace; }
+  &.is-code .text-diff-text { font-family: var(--brando-font-mono); }
 }

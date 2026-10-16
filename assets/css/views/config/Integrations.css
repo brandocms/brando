@@ -21,7 +21,7 @@
 
   .integrations-group {
     padding: 12px 24px; border-bottom: 1px solid var(--brando-line); background: var(--brando-surface-shaded);
-    color: var(--brando-muted); font-family: theme(typography.families.mono); font-size: var(--brando-text-xs); font-weight: 400;
+    color: var(--brando-muted); font-family: var(--brando-font-mono); font-size: var(--brando-text-xs); font-weight: 400;
     line-height: 18px; letter-spacing: .12em; text-transform: uppercase;
   }
 
@@ -61,7 +61,7 @@
   .webhook-secret-value input {
     flex: 1 1 320px; min-width: 0; height: 40px; padding: 0 12px;
     border: 1px solid var(--brando-line); border-radius: 5px; background: var(--brando-surface);
-    color: var(--brando-ink); font-family: theme(typography.families.mono); font-size: var(--brando-text-md);
+    color: var(--brando-ink); font-family: var(--brando-font-mono); font-size: var(--brando-text-md);
   }
 
   /* The form */

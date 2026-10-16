@@ -251,7 +251,7 @@
     border-style: solid;
     border-radius: var(--brando-input-radius);
     color: var(--brando-ink);
-    font: var(--brando-text-lg)/1.5 "Main", sans-serif;
+    font: var(--brando-text-lg)/1.5 var(--brando-font-sans);
     resize: vertical;
 
     &:focus-visible {

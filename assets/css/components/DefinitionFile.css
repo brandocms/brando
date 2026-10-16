@@ -2,9 +2,9 @@
    module listing and a notice in the module editor. Out-of-step states warn. */
 .definition-file-marker {
   display: flex; align-items: center; gap: 5px; margin-top: 4px; min-width: 0;
-  color: var(--brando-muted); font: var(--brando-text-xs)/16px "Main", sans-serif;
+  color: var(--brando-muted); font: var(--brando-text-xs)/16px var(--brando-font-sans);
   [data-icon] { width: 13px; height: 13px; flex: 0 0 13px; }
-  .definition-file-path { font-family: Mono, monospace; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .definition-file-path { font-family: var(--brando-font-mono); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   &:not([data-state="in_sync"]) { color: var(--brando-attention-ink); font-weight: 500; }
 }
 
@@ -13,14 +13,14 @@
   display: grid; grid-template-columns: 16px minmax(0, 1fr) auto; align-items: center;
   column-gap: 10px; row-gap: 2px; margin-bottom: 20px; padding: 12px 14px;
   border: 1px solid var(--brando-line); border-radius: 8px; background: var(--brando-surface-shaded); color: var(--brando-ink);
-  font: var(--brando-text-md)/20px "Main", sans-serif;
+  font: var(--brando-text-md)/20px var(--brando-font-sans);
   > [data-icon] { width: 16px; height: 16px; color: var(--brando-muted); }
   p { margin: 0; }
   .definition-file-headline { font-weight: 500; color: var(--brando-ink); }
   .definition-file-path {
     justify-self: end; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
     padding: 1px 7px; border: 1px solid var(--brando-line); border-radius: 4px; background: var(--brando-surface);
-    font: var(--brando-text-xs)/18px Mono, monospace; color: var(--brando-muted); text-decoration: none;
+    font: var(--brando-text-xs)/18px var(--brando-font-mono); color: var(--brando-muted); text-decoration: none;
   }
   a.definition-file-path:hover { border-color: var(--brando-line-strong); color: var(--brando-ink); }
   .definition-file-explanation { grid-column: 2 / -1; max-width: 72ch; font-size: var(--brando-text-sm); line-height: 18px; color: var(--brando-muted); }

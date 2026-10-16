@@ -480,7 +480,7 @@
       min-height: 32px;
       padding: 5px 12px;
       column-gap: 7px;
-      font: var(--brando-text-md)/20px "Main", sans-serif;
+      font: var(--brando-text-md)/20px var(--brando-font-sans);
       color: var(--brando-ink);
       border-radius: 5px;
       border: 1px solid var(--brando-line);

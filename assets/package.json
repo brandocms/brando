@@ -23,6 +23,7 @@
   "files": [
     "src",
     "css",
+    "fonts",
     "vite",
     "europa.json5"
   ],

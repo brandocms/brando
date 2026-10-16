@@ -533,31 +533,31 @@
           //
           iphone: {
             'font-size': '24px',
-            'font-weight': '200',
+            'font-weight': '400',
           },
           mobile: {
             'font-size': '24px',
-            'font-weight': '200',
+            'font-weight': '400',
           },
           ipad_portrait: {
             'font-size': '28px',
-            'font-weight': '200',
+            'font-weight': '400',
           },
           ipad_landscape: {
             'font-size': '32px',
-            'font-weight': '200',
+            'font-weight': '400',
           },
           desktop_md: {
             'font-size': '36px',
-            'font-weight': '200',
+            'font-weight': '400',
           },
           desktop_lg: {
             'font-size': '40px',
-            'font-weight': '200',
+            'font-weight': '400',
           },
           desktop_xl: {
             'font-size': '40px',
-            'font-weight': '200',
+            'font-weight': '400',
           },
         },
 
@@ -703,7 +703,7 @@
 
       families: {
         main: [
-          'Main',
+          '"Schibsted Grotesk"',
           '-apple-system',
           'BlinkMacSystemFont',
           '"Segoe UI"',
@@ -716,7 +716,7 @@
         blocks: ['Blocks'],
 
         mono: [
-          'Mono',
+          '"JetBrains Mono"',
           'Menlo',
           'Monaco',
           'Consolas',

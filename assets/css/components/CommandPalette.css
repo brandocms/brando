@@ -16,7 +16,7 @@
   border-radius: 10px;
   background: var(--brando-surface);
   color: var(--brando-ink);
-  font: var(--brando-text-lg)/20px "Main", sans-serif;
+  font: var(--brando-text-lg)/20px var(--brando-font-sans);
   box-shadow: var(--brando-shadow-overlay);
   &[open] {
     display: flex;
@@ -33,7 +33,7 @@
     border-radius: 4px;
     background: var(--brando-surface);
     color: var(--brando-muted);
-    font: var(--brando-text-xs)/1 "Mono", monospace;
+    font: var(--brando-text-xs)/1 var(--brando-font-mono);
     box-sizing: border-box;
   }
 }
@@ -62,7 +62,7 @@
     border: 0;
     background: transparent;
     color: var(--brando-ink);
-    font: var(--brando-text-2xl)/24px "Main", sans-serif;
+    font: var(--brando-text-2xl)/24px var(--brando-font-sans);
     box-shadow: none;
 
     &:focus,
@@ -171,7 +171,7 @@
 .command-palette-heading {
   padding: 6px 8px 8px;
   color: var(--brando-muted);
-  font: var(--brando-text-xs)/14px "Mono", monospace;
+  font: var(--brando-text-xs)/14px var(--brando-font-mono);
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
@@ -343,7 +343,7 @@
   border-top: 1px solid var(--brando-line);
   background: var(--brando-surface-shaded);
   color: var(--brando-muted);
-  font: var(--brando-text-sm)/16px "Mono", monospace;
+  font: var(--brando-text-sm)/16px var(--brando-font-mono);
 
   .command-palette-hint {
     display: inline-flex;
