@@ -73,15 +73,6 @@
   &:not(:popover-open) {
     display: none;
   }
-
-  > button > [data-icon] {
-    color: var(--brando-muted);
-  }
-
-  > .saved-views-delete,
-  > .saved-views-delete > [data-icon] {
-    color: var(--brando-error-ink);
-  }
 }
 
 /* Over `.admin-workspace p`, which takes paragraphs' padding */
@@ -100,7 +91,6 @@
 
   &[aria-current="true"] .saved-views-check {
     visibility: visible;
-    color: var(--brando-accent);
   }
 
   .saved-views-name {
@@ -114,17 +104,15 @@
   }
 }
 
+/* A span between the views and the actions; the panel is not a flex box. */
+.saved-views-menu > .menu-separator {
+  display: block;
+}
+
 .saved-views-menu > .saved-views-empty {
   margin: 0;
   padding: 4px 10px 8px;
   color: var(--brando-muted);
-}
-
-.saved-views-separator {
-  display: block;
-  height: 1px;
-  margin: 3px -3px;
-  background: var(--brando-line);
 }
 
 /* The name dialog: one field and the share choice */

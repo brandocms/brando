@@ -828,6 +828,7 @@ defmodule BrandoAdmin.Components.ImagePicker do
             <li>
               <button
                 type="button"
+                class="menu-item"
                 phx-click={
                   JS.push("edit_image_from_picker", target: @myself, value: %{id: @image.id})
                   |> hide_dropdown("##{@menu_id}")
@@ -842,7 +843,7 @@ defmodule BrandoAdmin.Components.ImagePicker do
             <li>
               <button
                 type="button"
-                class="delete-action"
+                class="menu-item menu-item--danger"
                 phx-confirm={gettext("Delete this image?")}
                 phx-click={
                   JS.push("delete_image_from_picker", target: @myself, value: %{id: @image.id})

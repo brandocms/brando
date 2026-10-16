@@ -77,14 +77,11 @@
   > :last-child, > :last-child > .media-button { border-top-right-radius: 5px; border-bottom-right-radius: 5px; }
   > .media-button:hover, > .media-button:focus-visible, > .media-field-replace:hover, > .media-field-replace:focus-within { position: relative; z-index: 1; }
 }
-/* Menu items that discard work, and the upload destination under the actions */
-.media-field-replace .media-field-menu button.destructive { color: var(--brando-error-ink); }
-.media-field-replace .media-field-menu button.destructive:hover { background: var(--brando-error); }
+/* The upload destination under a menu's actions */
 .media-field-replace .media-field-menu .media-field-menu-note { display: flex; align-items: center; gap: 6px; margin: 4px 0 0; padding: 8px 10px 4px; border-top: 1px solid var(--brando-line); color: var(--brando-muted); font: var(--brando-text-xs)/16px "Main", sans-serif; overflow-wrap: anywhere; }
 .media-field-replace .media-field-menu .media-field-menu-note [data-icon] { width: 13px; height: 13px; flex-shrink: 0; }
 /* "Change" beside the upload folder: a text link, in the line under an empty
-   field and at the end of a menu's note. Selectors out-specify the menu's
-   own `button` rules. */
+   field and at the end of a menu's note. */
 .media-field .media-field-destination .media-destination-change,
 .media-field-replace .media-field-menu .media-field-menu-note .media-destination-change {
   display: inline; flex-shrink: 0; width: auto; min-height: 0; margin: 0; padding: 0; border: 0; border-radius: 2px;
@@ -96,9 +93,6 @@
 .media-field-replace {
   position: relative;
   .media-field-menu { position: fixed; inset: auto; margin: 0; min-width: min(190px, calc(100vw - 16px)); max-width: calc(100vw - 16px); max-height: calc(100dvh - 16px); overflow-y: auto; padding: 5px; background: var(--brando-surface); border: 1px solid var(--brando-line); border-radius: 7px; box-shadow: 0 8px 24px color-mix(in srgb, var(--brando-ink) 9%, transparent); }
-  .media-field-menu button { display: flex; align-items: center; gap: 9px; width: 100%; border: 0; border-radius: 4px; padding: 9px 10px; margin: 0; background: var(--brando-surface); color: var(--brando-ink); font: var(--brando-text-sm)/18px "Main", sans-serif; text-align: left; }
-  .media-field-menu button:hover { background: var(--brando-surface-selected); }
-  .media-field-menu [data-icon] { width: 16px; height: 16px; flex-shrink: 0; }
 }
 .media-field--block {
   /* A ref is a thumbnail, a name and a row of buttons — stretching it across a
@@ -199,7 +193,7 @@
   .media-field--field .media-field-actions { grid-column: 1 / -1; }
 }
 @media (pointer: coarse) {
-  .media-field .media-button, .media-field-menu button { min-height: 42px; }
+  .media-field .media-button { min-height: 42px; }
 }
 
 .media-gallery {

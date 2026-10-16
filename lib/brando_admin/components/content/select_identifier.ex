@@ -287,27 +287,27 @@ defmodule BrandoAdmin.Components.Content.SelectIdentifier do
       <button
         :if={@workspace}
         type="button"
-        class={["identifier-picker-option", @selected_schema_raw == "all" && "selected"]}
+        class={["menu-item identifier-picker-option", @selected_schema_raw == "all" && "is-selected"]}
         aria-pressed={to_string(@selected_schema_raw == "all")}
         phx-click={JS.push("select_schema", target: @myself)}
         phx-value-schema="all"
       >
         <.icon name="layout-grid" />
         <span class="identifier-scope-label">{gettext("All content")}</span>
-        <span class="identifier-scope-count">{Enum.sum(Map.values(@schema_counts))}</span>
+        <span class="menu-item-hint">{Enum.sum(Map.values(@schema_counts))}</span>
       </button>
       <button
         :for={{label, schema} <- @available_schemas}
         :key={schema}
         type="button"
-        class={["identifier-picker-option", @selected_schema_raw == to_string(schema) && "selected"]}
+        class={["menu-item identifier-picker-option", @selected_schema_raw == to_string(schema) && "is-selected"]}
         aria-pressed={to_string(@selected_schema_raw == to_string(schema))}
         phx-click={JS.push("select_schema", target: @myself)}
         phx-value-schema={schema}
       >
         <.icon :if={@workspace} name={Brando.Blueprint.get_icon(schema)} />
         <span class={@workspace && "identifier-scope-label"}>{label}</span>
-        <span :if={@workspace} class="identifier-scope-count">{Map.get(@schema_counts, schema, 0)}</span>
+        <span :if={@workspace} class="menu-item-hint">{Map.get(@schema_counts, schema, 0)}</span>
       </button>
     </div>
     """

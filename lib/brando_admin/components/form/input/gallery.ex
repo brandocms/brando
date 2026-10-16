@@ -438,6 +438,7 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
             <li :if={@media_type == :image}>
               <button
                 type="button"
+                class="menu-item"
                 phx-click={
                   JS.push("open_image_editor", target: @myself, value: %{image_id: @gallery_object.image_id})
                   |> hide_dropdown("##{@menu_id}")
@@ -451,6 +452,7 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
             <li>
               <button
                 type="button"
+                class="menu-item"
                 phx-click={
                   JS.push("open_config_modal",
                     target: @myself,
@@ -467,7 +469,7 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
             <li>
               <button
                 type="button"
-                class="delete-action"
+                class="menu-item menu-item--danger"
                 phx-click={remove_object(@gallery_object, @myself) |> hide_dropdown("##{@menu_id}")}
               >
                 <.icon name="trash" />

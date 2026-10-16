@@ -138,16 +138,16 @@ defmodule BrandoAdmin.Components.Assets.MediaField do
         id={"#{@id}-actions"}
         label={if @asset, do: gettext("Change"), else: gettext("Add")}
       >
-        <button :if={@upload_enabled?} type="button" class="upload-trigger">
+        <button :if={@upload_enabled?} type="button" class="menu-item upload-trigger">
           <.icon name="upload" />{if @asset, do: gettext("Upload replacement"), else: gettext("Upload")}
         </button>
-        <button :if={@browse} type="button" phx-click={@browse}><.icon name="folder" />{@browse_label}</button>
-        <button :if={@link} type="button" phx-click={@link}><.icon name="link" />{gettext("Add from URL")}</button>
-        <button :if={@configure && (@asset || !@upload_enabled?)} type="button" phx-click={@configure}>
+        <button :if={@browse} type="button" class="menu-item" phx-click={@browse}><.icon name="folder" />{@browse_label}</button>
+        <button :if={@link} type="button" class="menu-item" phx-click={@link}><.icon name="link" />{gettext("Add from URL")}</button>
+        <button :if={@configure && (@asset || !@upload_enabled?)} type="button" class="menu-item" phx-click={@configure}>
           <.icon name="sliders-horizontal" />{gettext("Configure")}
         </button>
         {render_slot(@actions)}
-        <button :if={@asset && @remove} type="button" class="destructive" phx-click={@remove}>
+        <button :if={@asset && @remove} type="button" class="menu-item menu-item--danger" phx-click={@remove}>
           <.icon name="trash" />{gettext("Remove")}
         </button>
         <.folder_note :if={@upload_enabled?} folder={@folder} choose_folder?={@choose_folder?} />
@@ -210,11 +210,13 @@ defmodule BrandoAdmin.Components.Assets.MediaField do
               {gettext("Replace")}<.icon name="chevron-down" />
             </button>
             <div id={"#{@id}-replace-menu"} class="media-field-menu" popover="auto">
-              <button :if={@upload_enabled?} type="button" class="upload-trigger"><.icon name="upload" />{gettext(
+              <button :if={@upload_enabled?} type="button" class="menu-item upload-trigger"><.icon name="upload" />{gettext(
                 "Upload replacement"
               )}</button>
-              <button :if={@browse} type="button" phx-click={@browse}><.icon name="folder" />{@browse_label}</button>
-              <button :if={@link} type="button" phx-click={@link}><.icon name="link" />{gettext("Add from URL")}</button>
+              <button :if={@browse} type="button" class="menu-item" phx-click={@browse}><.icon name="folder" />{@browse_label}</button>
+              <button :if={@link} type="button" class="menu-item" phx-click={@link}><.icon name="link" />{gettext(
+                "Add from URL"
+              )}</button>
               <.folder_note :if={@upload_enabled?} folder={@folder} choose_folder?={@choose_folder?} />
             </div>
           </div>
@@ -307,8 +309,8 @@ defmodule BrandoAdmin.Components.Assets.MediaField do
 
   @doc """
   A button that opens a small menu of actions, painted in the top layer so a
-  scrolling drawer or a clipped block can't cut it off. Menu items are plain
-  buttons; add `class="destructive"` to one that discards work.
+  scrolling drawer or a clipped block can't cut it off. Each item is a
+  `<button class="menu-item">`; one that discards work adds `menu-item--danger`.
   """
   attr :id, :string, required: true
   attr :label, :string, required: true

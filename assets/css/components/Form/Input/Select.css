@@ -477,40 +477,17 @@ h2.titlecase {
   display: flex;
   flex-direction: column;
   right: 0;
+  min-width: 250px;
   border-radius: 10px;
   overflow: clip;
   border: 1px solid var(--brando-input-border);
+  background: var(--brando-surface);
   box-shadow: var(--brando-shadow-md);
   color: var(--brando-ink);
   z-index: 2;
-  font-family: "Mono";
-  font-size: var(--brando-text-xs);
 
   &.hidden {
     display: none;
-  }
-
-  button,
-  a {
-    display: flex;
-    align-items: center;
-    gap: 0.5em;
-    border: none;
-    background-color: var(--brando-surface);
-    width: max-content;
-    min-width: 250px;
-    padding: 8px 10px;
-    text-align: left;
-    text-transform: uppercase;
-    border-bottom: 1px solid var(--brando-line);
-
-    &:hover {
-      background-color: var(--brando-surface-hover);
-    }
-
-    &:last-of-type {
-      border-bottom: none;
-    }
   }
 }
 

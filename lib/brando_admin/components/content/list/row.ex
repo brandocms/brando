@@ -211,7 +211,7 @@ defmodule BrandoAdmin.Components.Content.List.Row do
   attr :confirm_label, :string, default: nil
   attr :destructive, :boolean, default: false
   attr :describe, :string, default: nil, doc: "LiveView event that replies with the dialog's text"
-  attr :extra_attrs, :list, default: []
+  attr :ai, :boolean, default: false, doc: "calls a paid AI service (`menu-item--ai`)"
   slot :inner_block, required: true
 
   def action_button(assigns) do
@@ -228,12 +228,18 @@ defmodule BrandoAdmin.Components.Content.List.Row do
         phx-confirm-click={@event}
         phx-value-language={@language}
         phx-value-id={@entry_id}
-        {@extra_attrs}
+        class={["menu-item", @destructive && "menu-item--danger", @ai && "menu-item--ai"]}
       >
         {render_slot(@inner_block)}
       </button>
     <% else %>
-      <button id={@id} phx-value-id={@entry_id} phx-value-language={@language} phx-click={@event} {@extra_attrs}>
+      <button
+        id={@id}
+        class={["menu-item", @destructive && "menu-item--danger", @ai && "menu-item--ai"]}
+        phx-value-id={@entry_id}
+        phx-value-language={@language}
+        phx-click={@event}
+      >
         {render_slot(@inner_block)}
       </button>
     <% end %>
@@ -347,9 +353,9 @@ defmodule BrandoAdmin.Components.Content.List.Row do
           entry_id={@entry.id}
           language={lang}
           event="translate_entry_to_language"
-          extra_attrs={[class: "ai-translate-action"]}
+          ai
         >
-          {gettext("Translate to")} [{String.upcase(lang)}] <.icon name="sparkles" />
+          {gettext("Translate to")} [{String.upcase(lang)}] <span class="menu-item-hint"><.icon name="sparkles" /></span>
         </.action_button>
         <.action_button
           :for={lang <- @translation_langs}

@@ -1314,7 +1314,7 @@ button.btn-palette {
         display: none;
       }
 
-      .menu-item {
+      .tiptap-tool {
         min-width: 26px;
         height: 26px;
         padding: 4px;
@@ -1778,7 +1778,6 @@ button.btn-palette {
         top: 30px;
         right: 0;
         z-index: 10;
-        text-transform: uppercase;
       }
     }
   }

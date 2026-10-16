@@ -77,6 +77,7 @@ export default () => ({
     this.items.forEach((user, index) => {
       const option = document.createElement('button')
       option.type = 'button'
+      option.className = 'menu-item'
       option.id = `${picker.id}-${user.id}`
       option.setAttribute('role', 'option')
       option.setAttribute('aria-selected', String(index === this.active))

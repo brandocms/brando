@@ -397,7 +397,7 @@ figcaption.tiny {
           background-color: var(--brando-surface);
           color: var(--brando-ink);
 
-          button {
+          button:not(.menu-item) {
             color: var(--brando-ink);
             border-color: var(--brando-ink);
           }
@@ -418,22 +418,6 @@ figcaption.tiny {
           path {
             &:nth-of-type(2) {
               fill: var(--brando-ink);
-            }
-          }
-        }
-
-        .circle-dropdown {
-          .main-circle {
-            stroke: var(--brando-ink);
-          }
-
-          line {
-            stroke: var(--brando-ink);
-          }
-
-          &:hover {
-            line {
-              stroke: var(--brando-ink-inverse);
             }
           }
         }
@@ -520,26 +504,6 @@ figcaption.tiny {
           &:hover,
           &:focus-visible {
             text-decoration-thickness: 2px;
-          }
-        }
-
-        .circle-dropdown {
-          .main-circle {
-            stroke: var(--brando-ink-inverse);
-          }
-
-          line {
-            stroke: var(--brando-ink-inverse);
-          }
-
-          &:hover {
-            line {
-              stroke: var(--brando-ink-inverse);
-            }
-          }
-
-          ul li button:hover {
-            background-color: var(--brando-surface);
           }
         }
       }

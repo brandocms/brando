@@ -115,6 +115,16 @@ test('image drawer menus follow scrolling, flip at the viewport edge and dismiss
 
   await page.setViewportSize({ width: 390, height: 500 })
   await replace.evaluate(el => el.scrollIntoView({ block: 'end' }))
+  // Two inert copies of its rows make the Replace menu too tall for the
+  // space under its trigger, so it has to open above it.
+  await menu.evaluate(el => {
+    for (const row of [...el.querySelectorAll('.menu-item')]) {
+      const copy = row.cloneNode(true)
+      for (const attr of [...copy.attributes]) if (attr.name.startsWith('phx-')) copy.removeAttribute(attr.name)
+      copy.removeAttribute('id')
+      el.append(copy)
+    }
+  })
   await replace.click()
   await expectUnclipped(menu)
   const triggerBox = await replace.boundingBox()

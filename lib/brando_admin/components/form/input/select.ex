@@ -96,9 +96,7 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
             <button
               :for={opt <- @input_options}
               type="button"
-              class={[
-                "options-option"
-              ]}
+              class="menu-item options-option"
               data-label={extract_label(opt)}
               data-select-label={option_label_html(opt)}
               value={extract_value(opt)}

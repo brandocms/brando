@@ -165,11 +165,14 @@ defmodule BrandoAdmin.Components.Form.ImageDrawer do
               <button
                 id={"image-drawer-upload-#{@upload_dom_id}"}
                 type="button"
+                class="menu-item"
                 phx-click={JS.dispatch("click", to: "#image-drawer-upload-input")}
               ><.icon name="upload" />{gettext("Upload")}</button>
-              <button type="button" phx-click={JS.push("reopen", target: "#image-picker") |> toggle_drawer("#image-picker")}><.icon name="folder" />{gettext(
-                "Select image"
-              )}</button>
+              <button
+                type="button"
+                class="menu-item"
+                phx-click={JS.push("reopen", target: "#image-picker") |> toggle_drawer("#image-picker")}
+              ><.icon name="folder" />{gettext("Select image")}</button>
             </div>
           </div>
           <div
@@ -189,10 +192,10 @@ defmodule BrandoAdmin.Components.Form.ImageDrawer do
               <.icon name="ellipsis" />
             </button>
             <div id="image-drawer-more-menu" class="media-action-options" popover="auto">
-              <button type="button" phx-click={duplicate_image(@edit_image, @myself)}><.icon name="copy" />{gettext(
+              <button type="button" class="menu-item" phx-click={duplicate_image(@edit_image, @myself)}><.icon name="copy" />{gettext(
                 "Duplicate"
               )}</button>
-              <button type="button" class="destructive" phx-click={reset_image_field(@myself)}><.icon name="trash" />{gettext(
+              <button type="button" class="menu-item menu-item--danger" phx-click={reset_image_field(@myself)}><.icon name="trash" />{gettext(
                 "Remove"
               )}</button>
             </div>

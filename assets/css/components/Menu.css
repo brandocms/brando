@@ -1,0 +1,130 @@
+/* A row in a menu: a dropdown, a popover, a context menu or a picker's list
+   of options. The panel around it (border, shadow, placement) belongs to the
+   menu; the row's look is this one. See "Menu items" in docs/admin-ui-design.md.
+
+     .menu-item             a row: icon, label, then a hint pushed to the end
+     .menu-item--danger     destroys something: red text, red tint on hover
+     .menu-item--ai         calls a paid AI service: violet
+     [aria-selected="true"], [aria-checked="true"], [aria-current], .is-selected
+                            the current choice: accent on the selected tint
+     .menu-item-hint        a shortcut or count after the label
+     .menu-item small       a second line, with the label in one span
+     .menu-separator        a rule between groups of rows */
+.menu-item {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 8px;
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  min-height: 32px;
+  height: auto;
+  margin: 0;
+  padding: 6px 10px;
+  border: 0;
+  border-radius: var(--brando-radius-sm);
+  background: transparent;
+  color: var(--brando-ink);
+  font: var(--brando-text-sm)/20px "Main", sans-serif;
+  font-weight: 400;
+  letter-spacing: 0;
+  text-align: left;
+  text-decoration: none;
+  text-transform: none;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  cursor: pointer;
+
+  &:hover:not(:disabled, [aria-disabled="true"]) {
+    background: var(--brando-surface-hover);
+    color: var(--brando-ink);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--brando-accent);
+    outline-offset: -2px;
+  }
+
+  &:disabled,
+  &[aria-disabled="true"] {
+    color: var(--brando-faint);
+    cursor: not-allowed;
+  }
+
+  > [data-icon] {
+    flex: none;
+    width: 14px;
+    height: 14px;
+    color: var(--brando-muted);
+  }
+
+  small {
+    display: block;
+    color: var(--brando-muted);
+    font-size: var(--brando-text-xs);
+    line-height: 16px;
+  }
+}
+
+/* As specific as the hover rule above and after it, so a selected row keeps
+   its look under the pointer. */
+.menu-item:is([aria-selected="true"], [aria-checked="true"], [aria-current]:not([aria-current="false"]), .is-selected) {
+  background: var(--brando-surface-selected);
+  color: var(--brando-accent);
+
+  > [data-icon] { color: currentColor; }
+}
+
+.menu-item--danger {
+  color: var(--brando-error-ink);
+
+  > [data-icon] { color: currentColor; }
+
+  &:hover:not(:disabled, [aria-disabled="true"]) {
+    background: var(--brando-error);
+    color: var(--brando-error-ink);
+  }
+}
+
+.menu-item--ai {
+  color: var(--brando-ai);
+
+  > [data-icon] { color: currentColor; }
+
+  &:hover:not(:disabled, [aria-disabled="true"]) {
+    background: var(--brando-ai-tint);
+    color: var(--brando-ai);
+  }
+}
+
+.menu-item-hint {
+  display: inline-flex;
+  align-items: center;
+  margin-left: auto;
+  padding-left: 12px;
+  color: var(--brando-faint);
+  font-size: var(--brando-text-xs);
+  white-space: nowrap;
+
+  > [data-icon] { width: 14px; height: 14px; }
+}
+
+.menu-item--ai .menu-item-hint { color: currentColor; }
+
+.menu-separator {
+  flex: none;
+  height: 0;
+  margin: 3px 0;
+  padding: 0;
+  border: 0;
+  border-top: 1px solid var(--brando-line-soft);
+  list-style: none;
+}
+
+/* After the rules above, so a coarse pointer always gets the touch height. */
+@media (pointer: coarse) {
+  .menu-item {
+    min-height: var(--brando-control-touch);
+  }
+}

@@ -220,6 +220,24 @@ a type or a count: 20px, 11px text, sentence case, a 4px corner.
 Don't add a badge class for a screen: give `.badge` a tone, and place it with
 a contextual rule (`.my-heading .badge { margin-left: auto; }`).
 
+### Menu items
+
+A row in a dropdown, popover, context menu or picker list is a `.menu-item`
+([`Menu.css`](../assets/css/components/Menu.css)), not a button: 32px (40px on
+a coarse pointer), 12px sentence-case text, a muted 14px icon before the label,
+a 4px corner and the hover tint. The menu owns its panel (border, shadow,
+placement, `%admin_dropdown_panel`); the row's look is always this one.
+
+| Class | Use |
+| --- | --- |
+| `.menu-item` | A row: icon, label, then a hint |
+| `.menu-item--danger` | Deletes or discards: red text, red tint on hover |
+| `.menu-item--ai` | Calls a paid AI service: violet |
+| `aria-selected`, `aria-checked`, `aria-current`, `.is-selected` | The current choice: the accent on the selected tint |
+| `.menu-item-hint` | A shortcut or count after the label, at the row's right edge |
+| `<span>label<small>…</small></span>` | A second line under the label: wrap both in a span, since the row is a flex row |
+| `.menu-separator` | A rule between groups of rows; rows have no rule between each other |
+
 ## Tab views
 
 Approved on 5 October 2026: every tab view in the admin is **pill tabs**, from
@@ -1214,16 +1232,18 @@ metadata slots with their existing callers. Do not add per-field overrides that
 make Related entries look different from the other identifier contexts.
 
 Action, sort, bulk-selection and block menus share `%admin_dropdown_panel` in
-`FloatingDropdown.css`: white surface, muted border, light shadow, compact rows
-and separators. Keep only positioning and trigger styling in the component.
+`FloatingDropdown.css`: white surface, muted border, light shadow. Their rows are
+[menu items](#menu-items). Keep only positioning and trigger styling in the
+component.
 An action menu on the `Brando.FloatingDropdown` hook (the entry toolbar's More,
 the media Replace and More menus) takes a menu button's keys: opening it
 focuses its first action (ArrowUp on the trigger, the last), ArrowDown and
 ArrowUp move and wrap, Home and End jump, Enter and Space choose, Escape closes
-and returns the focus, and Tab leaves. Its items stay plain buttons.
+and returns the focus, and Tab leaves. Its items stay buttons, with the
+`.menu-item` class.
 Bulk selection uses a light fixed bar above presence avatars, with a count and
 an explicit Actions button. Listing title links reveal an arrow on hover/focus.
-Shortcut badges are compact and muted, with a shared right edge inside each menu.
+Shortcuts are a `.menu-item-hint`, muted, with a shared right edge inside each menu.
 Badges (`.badge`, see [Buttons and badges](#buttons-and-badges)) have no
 border: a sage fill (`--brando-badge-bg`) and muted ink (`--brando-badge-ink`)
 on a 4px corner. Keep the hard 1px border

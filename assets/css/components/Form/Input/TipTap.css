@@ -227,8 +227,8 @@
   background: var(--brando-surface);
   border-bottom: 1px solid var(--brando-line);
   border-radius: 6px 6px 0 0;
-  .menu-item-group { display: flex; }
-  .menu-item {
+  .tiptap-tool-group { display: flex; }
+  .tiptap-tool {
     border: 0; border-radius: 4px; background: transparent; color: var(--brando-ink); padding: 6px; margin: 0;
     min-width: 32px; height: 32px; display: inline-flex; align-items: center; justify-content: center; gap: 6px;
     > :is(span, [data-icon]) { display: inline-block; width: 18px; height: 18px; flex-shrink: 0; }
@@ -253,15 +253,10 @@
 .tiptap-popover {
   box-sizing: border-box; margin: 0; padding: 6px; min-width: 180px; max-width: min(340px, calc(100vw - 16px));
   background: var(--brando-surface); border: 1px solid var(--brando-line); border-radius: 6px; box-shadow: 0 6px 20px color-mix(in srgb, var(--brando-ink) 13%, transparent); color: var(--brando-ink);
-  /* Menu rows. A `.btn` in a popover (the anchor editor's actions) keeps its own look. */
-  button:where(:not(.btn)) { display: flex; align-items: center; gap: 8px; width: 100%; border: 0; border-radius: 4px; margin: 0; padding: 9px 12px; background: transparent; text-align: left; color: inherit; font-size: var(--brando-text-md); line-height: 18px; }
-  button > [data-icon] { width: 16px; height: 16px; }
-  button:where(:not(.btn)):hover, button.active { background: var(--brando-surface-selected); }
-  button:where(:not(.btn)):disabled { opacity: .4; cursor: default; }
-  button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px solid var(--brando-accent); outline-offset: 2px; }
+  /* Menu rows are `.menu-item` (Menu.css). */
+  button:where(:not(.menu-item)):focus-visible, input:focus-visible, select:focus-visible { outline: 2px solid var(--brando-accent); outline-offset: 2px; }
   input[type="text"], select { box-sizing: border-box; width: 100%; padding: 8px 10px; min-height: 40px; border: 1px solid var(--brando-line); border-radius: 4px; background: var(--brando-surface); color: inherit; font: inherit; }
-  hr { border: 0; border-top: 1px solid var(--brando-line); margin: 6px 0; }
-  .tiptap-color { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 9px 12px; font-size: var(--brando-text-md); }
+  .tiptap-color { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 6px 10px; font-size: var(--brando-text-sm); }
   input[type="color"] { display: block; width: 34px; height: 32px; border: 1px solid var(--brando-line); background: transparent; padding: 2px; }
 }
 .tiptap-preset-picker {
@@ -290,7 +285,7 @@
   select { font-size: var(--brando-text-lg); }
   /* The request is the AI action, filled (`.ai-action.is-primary`, AI.css);
      this keeps the popover's full-width shape. */
-  button.ai-action { justify-content: center; height: auto; min-height: 34px; min-width: 0; padding: 7px 12px; border-radius: 5px; line-height: 18px; font-weight: 500; }
+  button.ai-action { display: flex; width: 100%; gap: 8px; border: 0; justify-content: center; height: auto; min-height: 34px; min-width: 0; padding: 7px 12px; border-radius: 5px; font-size: var(--brando-text-md); line-height: 18px; font-weight: 500; }
   button.ai-action > [data-icon] { width: 14px; height: 14px; }
   button.ai-action:focus-visible { outline-color: var(--brando-ai); }
 }
@@ -350,8 +345,8 @@
 @keyframes tiptap-suggestion-arrive { from { transform: translateY(5px); opacity: .6; } to { transform: translateY(0); opacity: 1; } }
 @media (prefers-reduced-motion: reduce) { .tiptap-ai-proposal { animation: none; } }
 @media (pointer: coarse) {
-  .tiptap-wrapper .tiptap-menu .menu-item { min-width: 44px; min-height: 44px; }
-  .tiptap-popover button:where(:not(.btn)), .tiptap-ai-editor button.ai-action { min-height: 44px; }
+  .tiptap-wrapper .tiptap-menu .tiptap-tool { min-width: 44px; min-height: 44px; }
+  .tiptap-ai-editor button.ai-action { min-height: 44px; }
   .tiptap-popover input, .tiptap-popover select { font-size: var(--brando-text-xl); }
   .tiptap-editor-shell.expanded:popover-open .tiptap-expanded-done { min-height: 44px; }
 }

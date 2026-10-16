@@ -865,9 +865,6 @@
 
   .circle-dropdown {
     margin-left: 8px;
-    button svg .main-circle {
-      stroke: var(--brando-ink);
-    }
   }
 }
 

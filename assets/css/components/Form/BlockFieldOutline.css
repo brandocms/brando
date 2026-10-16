@@ -41,21 +41,13 @@
   top: 30px;
   right: 0;
   z-index: 10;
-  text-transform: uppercase;
 }
 
-/* The clipboard's own name, trailing the "clear" label. Overrides the icon
-   sizing every other `span` in a dropdown button gets. */
-.block-field-clipboard-clear .block-field-clipboard-label {
-  width: auto;
-  height: auto;
+/* The clipboard's own name, the hint after "Clear clipboard", cut short. */
+.block-field-clipboard-label {
   max-width: 140px;
-  display: inline-block;
-  vertical-align: bottom;
   overflow: hidden;
   text-overflow: ellipsis;
-  text-transform: none;
-  opacity: 0.6;
 }
 
 /* Outline drawer tree */

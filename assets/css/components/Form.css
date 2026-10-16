@@ -909,10 +909,6 @@
   &:not(:popover-open) {
     display: none;
   }
-
-  > button > [data-icon] {
-    color: var(--brando-muted);
-  }
 }
 
 /* Follow mode (`follow_frame/1`, `Presence/follow.js`): a frame in the

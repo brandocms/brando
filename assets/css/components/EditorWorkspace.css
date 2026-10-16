@@ -75,11 +75,6 @@
   .revisions-table .revisions-line .circle-dropdown {
     width: 24px; margin: 0;
     .circle-dropdown-button { width: 24px; height: 24px; padding: 0; }
-    .circle-dropdown-button > svg { width: 24px; height: 24px; }
-    .main-circle { stroke: var(--brando-muted); }
-    line { stroke: var(--brando-muted); }
-    button:hover .main-circle { fill: var(--brando-accent); stroke: var(--brando-accent); }
-    button:hover line { stroke: var(--brando-ink-inverse); }
   }
   .revisions-table .revisions-line td.revision-description { color: var(--workspace-muted); font-size: var(--brando-text-sm); }
   .revisions-table .revisions-line td.revision-publish_at .datepicker-and-button { gap: 8px; }

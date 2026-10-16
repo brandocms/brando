@@ -217,19 +217,6 @@
   &:not(:popover-open) {
     display: none;
   }
-
-  > button {
-    justify-content: space-between;
-    color: var(--brando-ai);
-
-    &:hover {
-      color: var(--brando-ai);
-    }
-
-    &:focus-visible {
-      outline-color: var(--brando-ai);
-    }
-  }
 }
 
 .field-ai-actions > .ai-proposal {

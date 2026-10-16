@@ -2870,12 +2870,12 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
       </button>
       <ul class="block-action-dropdown-content hidden" id={@dropdown_id}>
         <li :if={@instructions}>
-          <button type="button" phx-click="toggle_help" phx-target={@target}>
+          <button type="button" class="menu-item" phx-click="toggle_help" phx-target={@target}>
             <.icon name="circle-question-mark" /> {gettext("Instructions")}
           </button>
         </li>
         <li :if={@config}>
-          <button type="button" phx-click="open_block_config" phx-value-uid={@uid} phx-target={@target}>
+          <button type="button" class="menu-item" phx-click="open_block_config" phx-value-uid={@uid} phx-target={@target}>
             <.icon name="cog" /> {gettext("Configure")}
           </button>
         </li>
@@ -2885,29 +2885,43 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
               `.block-structure-action`: hidden where the structure follows a
               source (a synchronized translation). --%>
         <li class="block-structure-action">
-          <button type="button" phx-click="move_block" phx-value-by="-1" phx-target={@target} data-block-move="up">
+          <button
+            type="button"
+            class="menu-item"
+            phx-click="move_block"
+            phx-value-by="-1"
+            phx-target={@target}
+            data-block-move="up"
+          >
             <.icon name="arrow-up" /> {gettext("Move up")}
           </button>
         </li>
         <li class="block-structure-action">
-          <button type="button" phx-click="move_block" phx-value-by="1" phx-target={@target} data-block-move="down">
+          <button
+            type="button"
+            class="menu-item"
+            phx-click="move_block"
+            phx-value-by="1"
+            phx-target={@target}
+            data-block-move="down"
+          >
             <.icon name="arrow-down" /> {gettext("Move down")}
           </button>
         </li>
         <li class="block-structure-action">
           <%!-- `handle_block_event/3` reads the uid off the component's own assigns, so
                the old `value: %{block_uid: @uid}` never reached anything. --%>
-          <button type="button" phx-click="duplicate_block" phx-target={@target}>
+          <button type="button" class="menu-item" phx-click="duplicate_block" phx-target={@target}>
             <.icon name="copy" /> {gettext("Duplicate here")}
           </button>
         </li>
         <li class="block-structure-action">
-          <button type="button" phx-click="copy_block" phx-target={@target}>
+          <button type="button" class="menu-item" phx-click="copy_block" phx-target={@target}>
             <.icon name="clipboard" /> {gettext("Copy to clipboard")}
           </button>
         </li>
         <li class="block-structure-action">
-          <button type="button" phx-click="delete_block" phx-target={@target}>
+          <button type="button" class="menu-item menu-item--danger" phx-click="delete_block" phx-target={@target}>
             <.icon name="trash" /> {gettext("Delete")}
           </button>
         </li>

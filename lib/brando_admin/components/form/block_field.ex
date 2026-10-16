@@ -3183,6 +3183,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
                   <li>
                     <button
                       type="button"
+                      class="menu-item"
                       phx-click={
                         JS.push("rebuild_outline", target: @myself)
                         |> toggle_drawer("#block-field-#{@block_field}-outline")
@@ -3191,10 +3192,11 @@ defmodule BrandoAdmin.Components.Form.BlockField do
                       <.icon name="text-align-start" /> {gettext("Block outline")}
                     </button>
                   </li>
-                  <li class="dropdown-separator"></li>
+                  <li class="menu-separator"></li>
                   <li>
                     <button
                       type="button"
+                      class="menu-item"
                       phx-click="collapse_root_blocks"
                       phx-target={@myself}
                     >
@@ -3204,6 +3206,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
                   <li>
                     <button
                       type="button"
+                      class="menu-item"
                       phx-click="expand_root_blocks"
                       phx-target={@myself}
                     >
@@ -3213,6 +3216,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
                   <li>
                     <button
                       type="button"
+                      class="menu-item"
                       phx-click="collapse_multi_children"
                       phx-target={@myself}
                     >
@@ -3222,6 +3226,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
                   <li>
                     <button
                       type="button"
+                      class="menu-item"
                       phx-click="expand_multi_children"
                       phx-target={@myself}
                     >
@@ -3229,18 +3234,18 @@ defmodule BrandoAdmin.Components.Form.BlockField do
                     </button>
                   </li>
                 <% end %>
-                <li :if={@clipboard_meta && @root_order != []} class="dropdown-separator"></li>
+                <li :if={@clipboard_meta && @root_order != []} class="menu-separator"></li>
                 <li :if={@clipboard_meta}>
                   <button
                     type="button"
-                    class="block-field-clipboard-clear"
+                    class="menu-item"
                     phx-click="clear_clipboard"
                     phx-target={@myself}
                     data-testid="clear-clipboard"
                   >
                     <.icon name="clipboard-check" />
                     {gettext("Clear clipboard")}
-                    <span :if={@clipboard_meta.label} class="block-field-clipboard-label">
+                    <span :if={@clipboard_meta.label} class="menu-item-hint block-field-clipboard-label">
                       {@clipboard_meta.label}
                     </span>
                   </button>

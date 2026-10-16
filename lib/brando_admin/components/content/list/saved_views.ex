@@ -255,7 +255,7 @@ defmodule BrandoAdmin.Components.Content.List.SavedViews do
             :for={view <- @views}
             :key={view.id}
             type="button"
-            class="saved-views-option"
+            class="menu-item saved-views-option"
             data-testid="saved-view"
             aria-current={(@selected && @selected.id == view.id && "true") || nil}
             phx-click="apply"
@@ -268,8 +268,8 @@ defmodule BrandoAdmin.Components.Content.List.SavedViews do
             <span :if={view.id == @default_id} class="badge">{gettext("Default")}</span>
           </button>
           <p :if={@views == []} class="saved-views-empty">{gettext("No saved views yet")}</p>
-          <span class="saved-views-separator" role="separator"></span>
-          <button type="button" phx-click="open_save" phx-target={@myself} aria-haspopup="dialog">
+          <span class="menu-separator" role="separator"></span>
+          <button type="button" class="menu-item" phx-click="open_save" phx-target={@myself} aria-haspopup="dialog">
             <.icon name="plus" />
             <span>{gettext("Save current view…")}</span>
           </button>
@@ -277,6 +277,7 @@ defmodule BrandoAdmin.Components.Content.List.SavedViews do
             <button
               :if={@can_manage? and @modified?}
               type="button"
+              class="menu-item"
               phx-click="update"
               phx-value-id={@selected.id}
               phx-target={@myself}
@@ -287,6 +288,7 @@ defmodule BrandoAdmin.Components.Content.List.SavedViews do
             <button
               :if={@can_manage?}
               type="button"
+              class="menu-item"
               phx-click="open_rename"
               phx-value-id={@selected.id}
               phx-target={@myself}
@@ -298,6 +300,7 @@ defmodule BrandoAdmin.Components.Content.List.SavedViews do
             <button
               :if={@can_manage?}
               type="button"
+              class="menu-item"
               phx-click="share"
               phx-value-id={@selected.id}
               phx-value-shared={to_string(!@selected.shared)}
@@ -310,6 +313,7 @@ defmodule BrandoAdmin.Components.Content.List.SavedViews do
             <button
               :if={@selected.id != @default_id}
               type="button"
+              class="menu-item"
               phx-click="set_default"
               phx-value-id={@selected.id}
               phx-target={@myself}
@@ -317,14 +321,20 @@ defmodule BrandoAdmin.Components.Content.List.SavedViews do
               <.icon name="star" />
               <span>{gettext("Open the list with this view")}</span>
             </button>
-            <button :if={@selected.id == @default_id} type="button" phx-click="clear_default" phx-target={@myself}>
+            <button
+              :if={@selected.id == @default_id}
+              type="button"
+              class="menu-item"
+              phx-click="clear_default"
+              phx-target={@myself}
+            >
               <.icon name="star-off" />
               <span>{gettext("Open the list without a view")}</span>
             </button>
             <button
               :if={@can_manage?}
               type="button"
-              class="saved-views-delete"
+              class="menu-item menu-item--danger"
               phx-click="delete"
               phx-value-id={@selected.id}
               phx-target={@myself}

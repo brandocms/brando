@@ -1,79 +1,6 @@
 .circle-dropdown {
-  button {
+  > button {
     border: none;
-
-    &.open {
-      svg {
-        .main-circle {
-          fill: var(--brando-ink);
-
-          &.inverted {
-            fill: var(--brando-surface-subform);
-          }
-        }
-        line {
-          transition: stroke 0.3s ease;
-          stroke: var(--brando-surface-subform);
-
-          &.inverted {
-            fill: var(--brando-ink);
-          }
-        }
-        circle {
-          transition: fill 0.3s ease;
-          fill: var(--brando-surface-subform);
-
-          &.inverted {
-            fill: var(--brando-ink);
-          }
-        }
-      }
-    }
-
-    svg {
-      pointer-events: none;
-
-      line {
-        transition: stroke 0.3s ease;
-        stroke: var(--brando-ink);
-
-        &.inverted {
-          stroke: var(--brando-surface-subform);
-        }
-      }
-
-      circle {
-        transition: fill 0.3s ease;
-        fill: var(--brando-ink);
-      }
-
-      .main-circle {
-        transition: fill 0.3s ease;
-        stroke: none;
-        fill: transparent;
-
-        &.inverted {
-          stroke: var(--brando-surface-subform);
-        }
-      }
-    }
-
-    &:hover {
-      svg {
-        line {
-          transition: stroke 0.3s ease;
-          stroke: var(--brando-surface-subform);
-        }
-        circle {
-          transition: fill 0.3s ease;
-          fill: var(--brando-surface-subform);
-        }
-        .main-circle {
-          transition: fill 0.3s ease;
-          fill: var(--brando-ink);
-        }
-      }
-    }
   }
 
   .dropdown-content {
@@ -81,34 +8,11 @@
     position: absolute;
     right: 0;
     top: 30px;
-    text-transform: uppercase;
     z-index: 2;
 
     &.over {
       top: auto;
       bottom: 50px;
-    }
-
-    a,
-    button {
-      &:hover {
-        .shortcut {
-          color: var(--brando-ink);
-        }
-      }
-    }
-
-    /* An AI item keeps the menu's row and takes the AI violet and the
-       sparkles (AI.css), after the label so the labels stay aligned. */
-    button.ai-translate-action {
-      color: var(--brando-ai);
-
-      .lucide-sparkles {
-        width: 14px;
-        height: 14px;
-        margin-left: 4px;
-        vertical-align: -2px;
-      }
     }
   }
 
