@@ -39,10 +39,6 @@ h2.titlecase {
   font-weight: bold;
 }
 
-h2.titlecase + .button-group-vertical button:first-of-type {
-  margin-top: 0 !important;
-}
-
 /* The multi-select dialog: the options and the selection side by side as
    joined identifier rows (Identifier.css). An option is a checkbox row; a
    selected one has a remove button. They stack on a phone. */

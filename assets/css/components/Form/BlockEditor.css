@@ -18,9 +18,8 @@
 
 /* Small icon button for row-level actions — reference rows, select options.
    `.icon` strokes with `currentColor`, so `color` is what makes the glyph
-   visible. It has to be set
-   explicitly on hover: a generic button hover rule elsewhere (`button.tiny`)
-   otherwise recolours the icon to the background and the control vanishes. */
+   visible; hover sets it again, so a broader hover rule cannot recolour the
+   icon to the background and make the control vanish. */
 .module-item-action {
   display: inline-flex;
   align-items: center;
@@ -120,7 +119,7 @@
 }
 
 /* Soft "add another one of these" affordance, shared by the References list and
-   the layout canvas. Deliberately quieter than a `.secondary` button: it sits
+   the layout canvas. Deliberately quieter than a `.btn`: it sits
    under a list it extends, not beside a heading it competes with. */
 .module-add-button {
   display: inline-flex;

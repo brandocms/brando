@@ -5,4 +5,3 @@
   `primary danger` to `btn btn--primary btn--danger`; `small` becomes
   `btn--sm`, and `fullWidth`, `narrow` and `fw` have no replacement. A plain
   `<.link class="primary">` in the page header keeps its look.
-  `button.primary`, `button.secondary` and `.tiny` stay for the block editor.

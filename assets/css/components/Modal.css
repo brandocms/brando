@@ -236,66 +236,12 @@
     }
   }
 
+  /* A column of full-width buttons: the block config's Advanced tab, the
+     entries picker's content types and the identifier picker's nav. */
   .button-group-vertical {
     @space margin-bottom 20px;
     display: flex;
     flex-direction: column;
-
-    :is(button, a) {
-      margin-top: 0;
-      text-align: center !important;
-      border-radius: 0;
-
-      &:first-child {
-        border-top-left-radius: 12px !important;
-        border-top-right-radius: 12px !important;
-        border-bottom-left-radius: 0;
-        border-bottom-right-radius: 0;
-      }
-
-      &:last-child {
-        border-top-left-radius: 0;
-        border-top-right-radius: 0;
-        border-bottom-left-radius: 12px !important;
-        border-bottom-right-radius: 12px !important;
-      }
-
-      + :is(button, a) {
-        margin-top: -1px;
-      }
-
-      &:hover {
-        background-color: var(--brando-ink);
-        color: white;
-      }
-
-      &.selected {
-        background-color: var(--brando-ink);
-        color: white;
-      }
-    }
-
-    &.tiny {
-      width: fit-content;
-      button {
-        font-size: 11px;
-        font-family: "Mono";
-        text-transform: uppercase;
-        text-align: left !important;
-        padding: 10px 10px 10px;
-        min-width: 150px;
-
-        &:first-of-type {
-          border-top-left-radius: 0 !important;
-          border-top-right-radius: 0 !important;
-        }
-
-        &:last-of-type {
-          border-bottom-left-radius: 0 !important;
-          border-bottom-right-radius: 0 !important;
-        }
-      }
-    }
   }
 
   .panels {
@@ -360,10 +306,6 @@
   padding-top: 12px;
   justify-content: flex-end;
   border-top: 1px solid var(--brando-line-soft);
-
-  button.secondary {
-    margin-top: 0;
-  }
 }
 
 /* TipTap link dialog */
@@ -381,10 +323,6 @@
     margin-top: 15px;
   }
 
-  .button-group-vertical.tiny {
-    width: 100%;
-  }
-
   .panels {
     min-width: 700px;
   }
@@ -392,10 +330,6 @@
   .identifier-options .identifier {
     min-width: 0;
     width: 100%;
-  }
-
-  .button-group-vertical.tiny button.secondary {
-    transition: all 0.15s ease;
   }
 
   .panels .panel:nth-of-type(1) {
@@ -424,10 +358,6 @@
   .link-var-target {
     .identifier-options .identifier {
       min-width: 0;
-      width: 100%;
-    }
-
-    .button-group-vertical.tiny {
       width: 100%;
     }
   }

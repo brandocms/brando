@@ -25,7 +25,7 @@ test.describe('Link var identifier picker', () => {
     await syncLV(page)
 
     // Projects (labelled "Cases" here) is the only seeded identifier schema
-    const schemaButton = modal.locator('.button-group-vertical.tiny button', { hasText: 'Cases' })
+    const schemaButton = modal.locator('.identifier-picker-option', { hasText: 'Cases' })
     await schemaButton.click()
     await syncLV(page)
 

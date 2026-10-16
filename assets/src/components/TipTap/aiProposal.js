@@ -47,7 +47,7 @@ export function proposalExtension({ labels, accept, discard, retry, edit }) {
                 field.rows = Math.min(Math.max(proposal.text.split('\n').length, Math.ceil(proposal.text.length / 45), 2), 12)
                 field.setAttribute('aria-label', labels.suggestedText)
                 // Emptied, there is nothing to insert: Accept waits for text.
-                field.addEventListener('input', () => { edit?.(field.value); const accept = panel.querySelector('button.primary'); if (accept) accept.disabled = !field.value.trim() })
+                field.addEventListener('input', () => { edit?.(field.value); const accept = panel.querySelector('.btn--primary'); if (accept) accept.disabled = !field.value.trim() })
                 panel.append(field)
               } else if (proposal.text) { const text = document.createElement('span'); text.className = 'tiptap-ai-text'; text.textContent = proposal.text; panel.append(text) }
               if (proposal.error) { const error = document.createElement('span'); error.className = 'tiptap-ai-error'; error.setAttribute('role', 'alert'); error.textContent = proposal.error; panel.append(error) }
@@ -59,7 +59,7 @@ export function proposalExtension({ labels, accept, discard, retry, edit }) {
                 const btn = document.createElement('button'); btn.type = 'button'
                 if (kind === 'ai') { const mark = document.createElement('span'); mark.className = 'lucide-sparkles'; mark.dataset.icon = ''; mark.setAttribute('aria-hidden', 'true'); btn.append(mark) }
                 btn.append(label)
-                if (kind) btn.className = kind === 'ai' ? 'is-ai' : kind
+                btn.className = kind ? `btn btn--sm btn--${kind}` : 'btn btn--sm'
                 btn.addEventListener('mousedown', e => e.preventDefault()); btn.addEventListener('click', action); actions.append(btn)
               }
               if (editable) { button(labels.accept, accept, 'primary'); actions.lastChild.disabled = !(proposal.text || '').trim() }

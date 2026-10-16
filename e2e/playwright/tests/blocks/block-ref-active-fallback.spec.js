@@ -95,7 +95,7 @@ test.describe('Ref active toggles and template fallbacks', () => {
     await expect(linkModal).toBeVisible()
     await linkModal.getByRole('radio', { name: 'Content', exact: true }).check()
     await syncLV(page)
-    await linkModal.locator('.button-group-vertical.tiny button', { hasText: 'Cases' }).click()
+    await linkModal.locator('.identifier-picker-option', { hasText: 'Cases' }).click()
     await syncLV(page)
     await linkModal.locator('.identifier-options .identifier').first().click()
     await syncLV(page)

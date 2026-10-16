@@ -444,18 +444,6 @@ button.btn-palette {
       color: var(--brando-module-emerald-ink);
     }
 
-    button.tiny,
-    a.tiny {
-      color: currentColor;
-      border-color: currentColor;
-
-      &:hover {
-        border-color: var(--brando-module-emerald-ink);
-        background-color: var(--brando-module-emerald-ink);
-        color: var(--brando-module-emerald-tint);
-      }
-    }
-
     .block-actions {
       .block-action {
         color: var(--brando-module-emerald-ink);

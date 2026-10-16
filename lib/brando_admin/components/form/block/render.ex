@@ -666,12 +666,18 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
                     <p>
                       {gettext("This block embeds a fragment as a block, but no fragment is currently selected.")}
                     </p>
-                    <button type="button" class="tiny" phx-click="open_block_config" phx-value-uid={@uid} phx-target={@target}>
+                    <button
+                      type="button"
+                      class="btn btn--sm"
+                      phx-click="open_block_config"
+                      phx-value-uid={@uid}
+                      phx-target={@target}
+                    >
                       {gettext("Add fragment")}
                     </button>
                   </div>
                   <div :if={@fragment} class="fragment-info">
-                    <.link :if={@update_url} class="tiny button" href={@update_url} target="_blank">
+                    <.link :if={@update_url} class="btn btn--sm" href={@update_url} target="_blank">
                       {gettext("Edit fragment")}
                     </.link>
                   </div>
@@ -1333,7 +1339,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
                 <div class="buttons">
                   <button
                     type="button"
-                    class="tiny"
+                    class="btn btn--sm"
                     phx-click={JS.push("reset_var", target: @target)}
                     phx-value-id={var[:key].value}
                   >
@@ -1341,7 +1347,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
                   </button>
                   <button
                     type="button"
-                    class="tiny"
+                    class="btn btn--sm"
                     phx-click={JS.push("delete_var", target: @target)}
                     phx-value-id={var[:key].value}
                   >
@@ -1360,7 +1366,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
                 <div class="key">{ref[:name].value}</div>
                 <button
                   type="button"
-                  class="tiny"
+                  class="btn btn--sm"
                   phx-click={JS.push("reset_ref", target: @target)}
                   phx-value-id={ref[:name].value}
                 >
@@ -1373,21 +1379,21 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
         <:section id="advanced" label={gettext("Advanced")} icon="settings">
           <h3 class="modal-section-title">{gettext("Advanced")}</h3>
           <div class="button-group-vertical">
-            <button type="button" class="secondary" phx-click={JS.push("fetch_missing_refs", target: @target)}>
+            <button type="button" class="btn" phx-click={JS.push("fetch_missing_refs", target: @target)}>
               {gettext("Fetch missing refs")}
             </button>
-            <button type="button" class="secondary" phx-click={JS.push("reset_refs", target: @target)}>
+            <button type="button" class="btn" phx-click={JS.push("reset_refs", target: @target)}>
               {gettext("Reset all block refs")}
             </button>
-            <button type="button" class="secondary" phx-click={JS.push("fetch_missing_vars", target: @target)}>
+            <button type="button" class="btn" phx-click={JS.push("fetch_missing_vars", target: @target)}>
               {gettext("Fetch missing vars")}
             </button>
-            <button type="button" class="secondary" phx-click={JS.push("reset_vars", target: @target)}>
+            <button type="button" class="btn" phx-click={JS.push("reset_vars", target: @target)}>
               {gettext("Reset all variables")}
             </button>
             <a
               href={"/admin/config/content/modules/update/#{@block_form[:module_id].value}"}
-              class="secondary"
+              class="btn"
               target="_blank"
             >
               {gettext("Edit module")}
@@ -1399,7 +1405,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
         <span class="modal-footer-note">{gettext("Saved with the page")}</span>
         <button
           type="button"
-          class="primary"
+          class="btn btn--primary"
           phx-click={hide_modal("#block-#{@uid}_config") |> JS.push("close_block_config", target: @target)}
         >
           {gettext("Done")}
@@ -1449,7 +1455,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
         </div>
       </div>
       <:footer>
-        <button type="button" class="primary" phx-click="close_block_config" phx-target={@target}>
+        <button type="button" class="btn btn--primary" phx-click="close_block_config" phx-target={@target}>
           {gettext("Close")}
         </button>
       </:footer>
@@ -1516,7 +1522,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
         </div>
       </div>
       <:footer>
-        <button type="button" class="primary" phx-click="close_block_config" phx-target={@target}>
+        <button type="button" class="btn btn--primary" phx-click="close_block_config" phx-target={@target}>
           {gettext("Close")}
         </button>
       </:footer>
@@ -1912,7 +1918,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
         <% end %>
         <:footer>
           <span :if={@config_layout == "editor"} class="modal-footer-note">{gettext("Included when you save the entry")}</span>
-          <button type="button" class="primary" phx-click="close_block_config" phx-target={@target}>
+          <button type="button" class="btn btn--primary" phx-click="close_block_config" phx-target={@target}>
             {if @config_layout == "editor", do: gettext("Done"), else: gettext("Close")}
           </button>
           <%= if @config_footer do %>
@@ -2951,7 +2957,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
             </p>
             <button
               type="button"
-              class="tiny add-table-row"
+              class="btn btn--sm add-table-row"
               phx-click="add_table_row"
               phx-target={@target}
               data-testid="add-table-row"
