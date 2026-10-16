@@ -1,7 +1,7 @@
 name: Igniter consumer smoke
 
 # No merge_group trigger, so do not make these checks required: merge_group
-# has no path filter, so a queue run would start all four consumers for
+# has no path filter, so a queue run would start all six consumers for
 # every queued PR, and a required check from a path-filtered workflow never
 # reports on PRs outside the paths, which then cannot merge.
 on:
@@ -13,6 +13,7 @@ on:
       - 'usage-rules/**'
       - 'scripts/igniter_smoke/**'
       - 'scripts/igniter_smoke.sh'
+      - 'scripts/release-version'
       - 'mix.exs'
       - 'mix.lock'
       - '.github/workflows/igniter-smoke.yml'
@@ -27,25 +28,39 @@ concurrency:
 
 jobs:
   consumer:
-    name: Consumer (${{ matrix.tenancy }}, ${{ matrix.bootstrap }})
+    name: Consumer (${{ matrix.tenancy }}, ${{ matrix.bootstrap }}, ${{ matrix.source }})
     runs-on: ubuntu-latest
     timeout-minutes: 40
     strategy:
       fail-fast: false
       matrix:
+        # checkout: Brando from this checkout, BrandoJS through Yalc.
+        # packaged: the Hex and npm packages a release candidate of this
+        # commit would publish, installed without the checkout or Yalc.
         include:
           - tenancy: none
             bootstrap: fresh
+            source: checkout
           - tenancy: single
             bootstrap: fresh
+            source: checkout
           - tenancy: multi
             bootstrap: fresh
+            source: checkout
           - tenancy: none
             bootstrap: precompiled
+            source: checkout
+          - tenancy: none
+            bootstrap: fresh
+            source: packaged
+          - tenancy: multi
+            bootstrap: fresh
+            source: packaged
     env:
       BRANDO_SMOKE_PGPORT: '5432'
       BRANDO_SMOKE_PGPASSWORD: postgres
       BRANDO_SMOKE_BOOTSTRAP: ${{ matrix.bootstrap }}
+      BRANDO_SMOKE_SOURCE: ${{ matrix.source }}
     steps:
       # The runner's own PostgreSQL (16 on ubuntu-latest). A service
       # container pulled its image on every job, and the registry's pull
@@ -67,10 +82,12 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 24
-      - name: Install the qualified Phoenix generator and Yalc
-        run: |
-          mix archive.install hex phx_new 1.8.13 --force
-          npm install --global yalc@1.0.0-pre.53
+      - name: Install the qualified Phoenix generator
+        run: mix archive.install hex phx_new 1.8.13 --force
+      # A packaged install must not need Yalc, so its job has none.
+      - name: Install Yalc
+        if: matrix.source == 'checkout'
+        run: npm install --global yalc@1.0.0-pre.53
       - name: Install browser test dependencies
         run: |
           pnpm --dir scripts/igniter_smoke install --frozen-lockfile
@@ -82,7 +99,7 @@ jobs:
         if: always() && steps.smoke.outputs.root != ''
         uses: actions/upload-artifact@v4
         with:
-          name: igniter-${{ matrix.tenancy }}-${{ matrix.bootstrap }}
+          name: igniter-${{ matrix.tenancy }}-${{ matrix.bootstrap }}-${{ matrix.source }}
           path: |
             ${{ steps.smoke.outputs.root }}/logs
             ${{ steps.smoke.outputs.root }}/browser

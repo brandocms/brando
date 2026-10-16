@@ -171,8 +171,16 @@ pages, drafts, 404s, robots and its frontend initialization without optional men
 markup. The fixture suite rejects existing authentication table ownership before
 planning installation.
 
+The smoke's packaged source (`BRANDO_SMOKE_SOURCE=packaged`) runs the same
+workflow against the Hex and npm packages a release candidate would publish:
+`mix hex.build` and `npm pack` output from a scratch copy at a non-development
+version, Brando from the unpacked Hex package, BrandoJS from the npm tarball
+through the exact version pin, and no checkout or Yalc. CI runs it for the
+`none` and `multi` tenancy modes.
+
 Keep the issue open for broader existing-app and old-consumer/version-upgrade
-qualification across additional layouts/versions, and release artifact qualification.
+qualification across additional layouts/versions, and registry-download
+qualification after publication.
 The customized/precompiled consumer case is included in the smoke CI matrix and
 passes locally, preserving custom files, routes, configuration, context functions
 and supervision while exercising both browser workflows.

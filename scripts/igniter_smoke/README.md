@@ -6,7 +6,7 @@ matching Yalc assets, rather than an already configured E2E application.
 
 Prerequisites: Elixir 1.20.3 / OTP 28.4.1, phx_new 1.8.13, Node.js 24 or a
 later even major (the admin's `engines` is `>=24.0.0`), pnpm,
-Yalc 1.0.0-pre.53, and a disposable PostgreSQL service. Local checks used Node.js
+Yalc 1.0.0-pre.53 (checkout source only), and a disposable PostgreSQL service. Local checks used Node.js
 23.11.0, pnpm 10.4.1 and PostgreSQL 16.1. All four cases also
 [passed on Linux CI](https://github.com/brandocms/brando/actions/runs/34073198244)
 with Node.js 22, pnpm 10.32.1 and PostgreSQL 14. Install the pinned browser test
@@ -55,9 +55,57 @@ configuration, a context function and a supervised process before installation.
 The check verifies their preserved bytes or runtime behavior after the complete
 installation/generation workflow, including the custom public endpoint.
 
+## Packaged source
+
+`BRANDO_SMOKE_SOURCE=packaged` runs the same consumer workflow against the
+packages a release would publish instead of the checkout:
+
+```sh
+BRANDO_SMOKE_SOURCE=packaged BRANDO_SMOKE_PGPORT=5432 ./scripts/igniter_smoke.sh none
+```
+
+[`packages.sh`](packages.sh) copies the checkout's tracked and unignored files
+to a scratch directory, sets a release candidate version there with
+`scripts/release-version bump`, and builds the Hex tarball (`mix hex.build`)
+and the npm tarball (`npm pack` in `assets/`). The Hex tarball is unpacked as
+`mix deps.get` would unpack it, and the scratch copy is deleted, so no Brando
+checkout remains next to the consumer. `logs/packages.log` has the file
+counts and sizes, `logs/hex-contents.txt` and `logs/npm-contents.txt` the
+listings. Either package containing `node_modules`, `_build`, `deps` or Yalc
+state fails the run.
+
+The candidate version is the checkout's `X.Y.Z` with `-rc.smoke`
+(`0.55.0-dev` becomes `0.55.0-rc.smoke`); `BRANDO_SMOKE_VERSION` overrides it.
+It must not be a development version: a released Brando generates an admin
+that pins `@brandocms/brandojs` to its own version on npm, and that is the path
+this mode qualifies. `rc.smoke` is never published, so the installed version
+also proves which tarball pnpm used.
+
+The consumer takes Brando as a path dependency on the unpacked Hex package,
+which resolves its own dependencies from Hex like any package. The generated
+`assets/backend/package.json` keeps the exact npm pin users get; since no
+registry has the candidate, [`packaged.exs`](packaged.exs) adds a
+`pnpm.overrides` entry pointing that package at the npm tarball. pnpm then
+installs the tarball's contents and resolves its dependencies from npm as a
+registry install would. A local registry would also exercise registry
+metadata and dist-tags, which publication and the registry-download check
+cover.
+
+`mix brando.assets.setup` runs without options and must take the npm path. A
+`yalc` on the front of `PATH` fails if anything runs it, and CI installs no
+Yalc for packaged jobs. After the asset builds the check requires the
+installed BrandoJS version to be the candidate, `pnpm-lock.yaml` to resolve it
+to the tarball, and no `.yalc`, `yalc.lock` or project Yalc store. The run
+fails if the consumer wrote into the unpacked Hex package, or if any file in
+the consumer (dependencies, `_build` and `node_modules` included) names the
+checkout's path.
+
+## Inspecting a run
+
 The generated app and its database remain available for inspection. Dispose of
 them with the temporary directory and PostgreSQL service when finished. The
 workflow in `.github/workflows/igniter-smoke.yml` runs each mode against a separate
 PostgreSQL service on a fresh runner, and retains failure artifacts for seven days.
-Release packages/npm and additional version combinations require separate
-qualification; this job deliberately exercises the current checkout/Yalc path.
+It runs the packaged source for the `none` and `multi` tenancy modes.
+Registry downloads after publication and additional version combinations
+require separate qualification.
