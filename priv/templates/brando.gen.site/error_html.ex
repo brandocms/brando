@@ -31,7 +31,9 @@ defmodule <%= web_module %>.ErrorHTML do
   slot :inner_block, required: true
 
   def error_page(%{conn: %Plug.Conn{} = conn} = assigns) do
-    if Phoenix.Controller.root_layout(conn, "html"), do: content(assigns), else: in_layout(assigns)
+    if Phoenix.Controller.root_layout(conn, "html"),
+      do: content(assigns),
+      else: in_layout(assigns)
   end
 
   def error_page(assigns), do: content(assigns)
@@ -51,7 +53,11 @@ defmodule <%= web_module %>.ErrorHTML do
     ~H"{@page}"
   rescue
     exception ->
-      Logger.error("The error page rendered without the site's layout, which raised:\n" <> Exception.format(:error, exception, __STACKTRACE__))
+      Logger.error(
+        "The error page rendered without the site's layout, which raised:\n" <>
+          Exception.format(:error, exception, __STACKTRACE__)
+      )
+
       bare(assigns)
   end
 

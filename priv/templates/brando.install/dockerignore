@@ -1,4 +1,5 @@
 .elixir_ls
+.envrc*
 .git
 .temp
 _build
@@ -7,6 +8,7 @@ assets/backend/node_modules
 assets/frontend/node_modules
 deps
 e2e
+log
 media
 priv/static
 release-archives

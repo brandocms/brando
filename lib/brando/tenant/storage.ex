@@ -44,8 +44,56 @@ defmodule Brando.Tenant.Storage do
 
   @spec sites_root() :: String.t()
   def sites_root do
-    Brando.config(:sites_path) ||
-      Brando.config(:media_path) |> Path.expand() |> Path.dirname() |> Path.join("sites")
+    Brando.config(:sites_path) || Path.join(media_parent(), "sites")
+  end
+
+  @doc """
+  The directory holding the media directory, where `sites/` and `site_assets/`
+  are kept unless `:sites_path` or `:site_assets_path` is configured.
+
+  In a release (`RELEASE_ROOT` is set), a media directory that is a symlink is
+  followed. Florist links each release's `media` to the deploy's shared one,
+  so this is the deploy's base directory, which outlives releases, rather
+  than the release directory the relative `media_path: "./media"` sits in.
+  Elsewhere, and for a media directory that is missing or not a link, it is
+  the directory `media_path` names it in: a development checkout whose
+  `media` links to another checkout's keeps its own `sites/` and
+  `site_assets/`.
+  """
+  @spec media_parent() :: String.t()
+  def media_parent do
+    media = Brando.config(:media_path) |> Path.expand()
+
+    if System.get_env("RELEASE_ROOT") && match?({:ok, _}, File.read_link(media)),
+      do: media |> real_path() |> Path.dirname(),
+      else: Path.dirname(media)
+  end
+
+  # `path` with every symlink along it resolved, as realpath(3) does: a
+  # relative link target is read from the real directory holding the link.
+  # Links followed are bounded, so a cycle ends where the limit is reached.
+  defp real_path(path) do
+    [root | parts] = Path.split(path)
+    walk_path(root, parts, 0)
+  end
+
+  defp walk_path(dir, [], _links), do: dir
+  defp walk_path(dir, ["." | rest], links), do: walk_path(dir, rest, links)
+  defp walk_path(dir, [".." | rest], links), do: walk_path(Path.dirname(dir), rest, links)
+
+  defp walk_path(dir, [part | rest], links) do
+    path = Path.join(dir, part)
+
+    case links < 40 && File.read_link(path) do
+      {:ok, target} ->
+        case Path.split(target) do
+          ["/" | target_parts] -> walk_path("/", target_parts ++ rest, links + 1)
+          target_parts -> walk_path(dir, target_parts ++ rest, links + 1)
+        end
+
+      _not_a_link ->
+        walk_path(path, rest, links)
+    end
   end
 
   @spec site_root(Site.t()) :: String.t()

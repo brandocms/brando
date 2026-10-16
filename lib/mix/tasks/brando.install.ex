@@ -45,6 +45,14 @@ if Code.ensure_loaded?(Igniter) do
     and the hosts are `<app>.com` placeholders; `--interactive` asks for them
     instead. An existing `check_origin`, `.envrc.*` or `rel/env.sh.eex` is
     never replaced.
+
+    For Florist's release build it also writes Brando's `Dockerfile` and
+    `.dockerignore` when there are none, `ReleaseTasks` and a release with
+    `steps: [:assemble, :tar]` when missing, relative `media_path` and
+    `log_dir` in `config/prod.exs`, and the `.gitignore` lines Brando needs.
+    An existing Dockerfile or release gets a notice of what Florist needs; an
+    existing `.dockerignore` gets the exclusions it misses (with `!`
+    exceptions, a notice instead).
     """
 
     @impl Igniter.Mix.Task

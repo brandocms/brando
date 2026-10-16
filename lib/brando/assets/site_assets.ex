@@ -329,8 +329,7 @@ defmodule Brando.Assets.SiteAssets do
 
   @doc "Returns the configured standalone asset-set storage root."
   def standalone_root do
-    Brando.config(:site_assets_path) ||
-      Brando.config(:media_path) |> Path.expand() |> Path.dirname() |> Path.join("site_assets")
+    Brando.config(:site_assets_path) || Path.join(Storage.media_parent(), "site_assets")
   end
 
   @doc "Returns the asset-set storage root for a standalone or site scope."

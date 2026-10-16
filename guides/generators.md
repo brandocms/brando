@@ -122,10 +122,16 @@ installer does not replace your dependency with a hardcoded relative path.
 The generated changes configure Brando, extend supervision/endpoint/router,
 create the admin support modules and Vite projects, and add missing migrations.
 The default preserves your public homepage. CMS public pages are an explicit
-option below. Of the deployment configuration, the installer writes only the
+option below. For a [Florist deploy](deployment.md), the installer writes the
 production endpoint's `check_origin`, the Florist environment files and the
-release script that sources them (see [Deployment hosts](#deployment-hosts));
-the rest, like sample content, remains separate.
+release script that sources them (see [Deployment hosts](#deployment-hosts)),
+Brando's Dockerfile and `.dockerignore` when there are none,
+`MyApp.ReleaseTasks` and a release that writes the tarball Florist deploys,
+relative `media_path` and `log_dir` in `config/prod.exs`, and the
+`.gitignore` lines a Brando application needs. "Release helpers", "Media and
+log paths", "Ignored files" and "The Docker build" in the deployment guide
+describe each, and what an existing file keeps. Florist's own configuration,
+like sample content, remains separate.
 
 The installer also adds `:brando` to `import_deps` in `.formatter.exs`, so
 `mix format` keeps Blueprint DSL calls without parentheses, and moves the
@@ -237,8 +243,9 @@ mix brando.gen.site --interactive
 ```
 
 `--public-site` creates `YourWeb.CMS.PageController`, `PageHTML`, `Layouts`,
-`SiteContext`, the [lockdown](#lockdown) page and the site's
-[error pages](#error-pages). Its pipeline resolves the tenant before locale and identity;
+`SiteContext`, the [lockdown](#lockdown) page, the site's
+[error pages](#error-pages) and a [live preview](live_preview.md) of pages.
+Its pipeline resolves the tenant before locale and identity;
 published pages use the built frontend assets, Brando metadata and named page
 routes. Explicit application routes take precedence over CMS catch-all routing.
 
@@ -272,6 +279,19 @@ renders, such as a 500, gets the whole layout, built from the request as it was
 when the error was raised. If the layout itself raises, for example while the
 database is down and the caches are cold, the page renders without it and the
 layout's error is logged.
+
+### Live preview
+
+The generator gives `YourWeb.LivePreview` a `preview_target` for
+`Brando.Pages.Page` that renders the edited page as `CMS.PageController`
+does: `CMS.PageHTML` and the page's template inside `CMS.Layouts`' root
+layout, with the identity, the `main` navigation and the `partials`
+fragments assigned. Changing the page's language recomputes those and
+re-renders the page's body, header and footer included; `<html lang>` and
+`<head>` update when the preview reloads. The module `brando.install`
+writes, which has no targets, is replaced; a missing one is created. A
+LivePreview that already previews pages is kept, and any other customized one
+gets a notice with the target to add. See [Live preview](live_preview.md) for more views and assigns.
 
 ### Lockdown
 
@@ -578,8 +598,12 @@ The sitemap selects published pages; review their public URL rules before callin
 maintained default policy; review permissions for your application content types.
 
 Release generation creates `MyApp.ReleaseTasks` and adds a missing Mix release
-definition. It preserves existing release settings, runtime configuration,
-secrets, Dockerfiles and deployment files. Build with `MIX_ENV=prod mix release`,
+definition, with `steps: [:assemble, :tar]` for Florist. `brando.install` does
+the same, so run it only for an application installed before that. It
+preserves existing release settings, runtime configuration, secrets,
+Dockerfiles and deployment files, with a notice when an existing release
+writes no tarball, or when `mix.exs` defines releases but none named after the
+application (it adds no second release then). Build with `MIX_ENV=prod mix release`,
 then invoke migrations explicitly as described in [Deployment](deployment.md).
 `brando.install.fabfile` is retired and directs callers to release generation and
 Florist; it does not modify existing Fabric files. `brando.install` no longer

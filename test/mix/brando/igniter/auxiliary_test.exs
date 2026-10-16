@@ -99,6 +99,20 @@ defmodule Mix.Brando.Igniter.AuxiliaryTest do
     Enum.each(["mix.exs" | Map.keys(files)], &Igniter.Test.assert_unchanged(result, &1))
     assert result.tasks == []
     assert result.rms == []
+    # Florist deploys the tarball, which steps: [:assemble] does not write.
+    assert Enum.any?(result.notices, &(&1 =~ "The studio release in mix.exs does not write a tarball"))
+  end
+
+  test "release adds a definition that writes the tarball Florist deploys, once" do
+    result = Igniter.compose_task(IgniterCase.phoenix_project(), "brando.gen.release", [])
+    assert result.issues == []
+    assert IgniterCase.source(result, "mix.exs") =~ "steps: [:assemble, :tar]"
+    assert IgniterCase.source(result, "lib/studio/release_tasks.ex") =~ "def migrate do"
+    refute Enum.any?(result.notices, &(&1 =~ "does not write a tarball"))
+
+    rerun = result |> IgniterCase.apply_and_reload() |> Igniter.compose_task("brando.gen.release", [])
+    assert rerun.issues == []
+    Igniter.Test.assert_unchanged(rerun)
   end
 
   test "consumer auxiliary templates take precedence" do
@@ -112,6 +126,23 @@ defmodule Mix.Brando.Igniter.AuxiliaryTest do
 
     assert result.issues == []
     assert IgniterCase.source(result, "lib/studio_web/sitemap.ex") =~ "def custom"
+  end
+
+  test "a consumer ReleaseTasks template gets the same bindings as the other auxiliary templates" do
+    template = "priv/templates/brando.install/lib/application_name/release_tasks.ex"
+
+    result =
+      IgniterCase.phoenix_project(
+        files: %{
+          template =>
+            "defmodule <%= application_module %>.ReleaseTasks do\n" <>
+              "  def migrate, do: {:<%= application_name %>, <%= web_module %>}\nend\n"
+        }
+      )
+      |> Igniter.compose_task("brando.gen.release", [])
+
+    assert result.issues == []
+    assert IgniterCase.source(result, "lib/studio/release_tasks.ex") =~ "def migrate, do: {:studio, StudioWeb}"
   end
 
   test "Fabric retirement gives an actionable replacement without writing files" do

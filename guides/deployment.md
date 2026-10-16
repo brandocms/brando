@@ -87,17 +87,28 @@ both reads `etc/traefik/traefik.yml` and installs the Traefik binary, which
 
 <!-- usage-rules:start topic="deployment" -->
 
-Florist builds a standard Mix release. If the application has no release setup
-yet, run:
+Florist builds a standard Mix release in Docker, copies
+`/opt/app/_build/prod/<app>-<version>.tar.gz` out of the image and migrates
+with `bin/<app> eval "MyApp.ReleaseTasks.migrate"`. `mix brando.install`
+creates `MyApp.ReleaseTasks` (`migrate/0`, `rollback/2`, `migrate_tenants/0`)
+and adds a release for the app to `mix.exs` with
+`steps: [:assemble, :tar]`, which writes that tarball. An existing
+ReleaseTasks module and release definition are kept, with a notice when the
+module has no `migrate/0` or the release does not write the tarball.
+
+An application installed before Brando did this gets the same with:
 
 ```bash
 mix brando.gen.release
 ```
 
-It creates `MyApp.ReleaseTasks` (`migrate/0`, `rollback/2`,
-`migrate_tenants/0`) and adds a `releases` entry for the app to `mix.exs` when
-none exists. Existing release settings, runtime configuration, secrets and
-deployment files are left alone. The task requires Igniter.
+It leaves existing release settings, runtime configuration, secrets and
+deployment files alone, and a ReleaseTasks file that differs from its
+template stops it with an issue. When `mix.exs` already defines releases but
+none named after the application, it adds none, since a second release makes
+the unnamed `mix release` fail, and a notice says what Florist needs: the
+release named like Florist's `project_name`, `steps: [:assemble, :tar]`, and
+the only release or `default_release`. The task requires Igniter.
 
 Florist names the release after the version in the `VERSION` file, falling
 back to a literal `@version "..."` in `mix.exs`. `mix brando.install` moves
@@ -110,6 +121,49 @@ Brando's Dockerfile template has it, and the installer adds it after each
 `mix phx.gen.release --docker`'s), with a notice when it cannot.
 
 <!-- usage-rules:end -->
+
+### Media and log paths
+
+<!-- usage-rules:start topic="deployment" -->
+
+A release evaluates `config/config.exs` and `config/prod.exs` when it is
+built, in the Docker image. The installer's `config/brando.exs` sets
+`media_path: Path.expand("./media")` and `log_dir: Path.expand("./log")` for
+development; in a release those would name the image's `/opt/app`. So the
+installer also writes relative paths to `config/prod.exs`:
+
+```elixir
+config :brando, media_path: "./media", log_dir: "./log"
+```
+
+They resolve at runtime in the release's working directory, the `current`
+directory the systemd unit starts in, where Florist links the persistent
+`media/` (see [Server directory structure](#server-directory-structure)). A
+literal path in the base configuration, a value in `config/prod.exs` or one
+set in `config/runtime.exs` is the application's own and is kept.
+
+Uploaded and captured frontend asset sets (`site_assets/`) and each site's
+storage and static-site builds (`sites/`) are kept beside the media
+directory unless `:site_assets_path` or `:sites_path` is configured. When the
+application runs as a release (`RELEASE_ROOT` is set), a media directory that
+is a symlink is followed, so on a Florist server they are
+`<base>/site_assets` and `<base>/sites`, beside the shared `media/`, not in
+the release directory the next deploy replaces. Outside a release, in
+development for instance, the link is not followed. On another server where
+`media` links to a mounted volume, a release keeps them in the volume's parent
+directory; configure both paths to keep them elsewhere.
+
+<!-- usage-rules:end -->
+
+### Ignored files
+
+The installer adds to `.gitignore` what a Brando application builds,
+uploads or downloads in its working folder and phx.new does not ignore: the
+asset projects' `node_modules`, Yalc copies (`.yalc/`, `yalc.lock`), the
+admin and site builds in `priv/static` (`assets/`, `fonts/`, `ico/`,
+`images/admin/` and the Vite and digest manifests), `/media/` (uploads),
+`/log/`, and Florist's `/release-archives/` and `/sql/` (database dumps).
+Lines an existing rule already covers are not added again.
 
 ### Migrating from Fabric
 
@@ -385,6 +439,8 @@ SSL certificates are issued automatically via Let's Encrypt on the first HTTPS r
 │       ├── priv/static/         # built CSS/JS (baked into release)
 │       └── .envrc.runtime       # environment variables
 ├── media/                       # persistent media uploads
+├── site_assets/                 # uploaded frontend asset sets (beside media/)
+├── sites/                       # site storage and static-site builds (beside media/)
 ├── log/                         # application logs
 ├── sql/                         # database backups
 └── etc/                         # configuration files
@@ -406,6 +462,8 @@ SSL certificates are issued automatically via Let's Encrypt on the first HTTPS r
 │           └── media → ../../../media   # symlink to shared media
 ├── active-environment           # contains "blue" or "green"
 ├── media/                       # shared between blue and green
+├── site_assets/                 # beside media/, so shared too
+├── sites/                       # beside media/, so shared too
 ├── log/
 ├── sql/
 └── etc/
@@ -416,7 +474,8 @@ SSL certificates are issued automatically via Let's Encrypt on the first HTTPS r
 Key points:
 
 - Blue and green each run their own systemd service on separate ports
-- Media is shared via symlinks (Florist creates these automatically)
+- Media is shared via symlinks (Florist creates these automatically); Brando
+  keeps `site_assets/` and `sites/` beside the directory the link leads to
 - Only the `active-environment` file and web server config determine which
   environment receives traffic
 - Florist keeps the last 5 releases per environment and cleans up older ones
@@ -442,6 +501,31 @@ Stage 7: release       → mix release (create OTP release tarball)
 Assets (CSS, JS) are built inside the Docker container and baked into the release
 at `priv/static/`. There is no separate asset upload step — everything ships as
 one tarball.
+
+`mix brando.install` writes Brando's
+[Dockerfile](https://github.com/brandocms/brando/blob/main/priv/templates/brando.install/Dockerfile)
+and `.dockerignore` when the application has none. An existing Dockerfile,
+such as `mix phx.gen.release --docker`'s, is kept, with a notice naming what
+Brando's build needs that it lacks: the `assets_backend` and
+`assets_frontend` stages, `mix brando.digest`, and the release built in
+`/opt/app`. phx.gen.release's Dockerfile builds a runtime image instead,
+which Florist does not use. To switch to Brando's, move yours aside and rerun
+the installer.
+
+Florist sends the build context, the project directory, to the Docker daemon
+on every build, and that daemon may be remote. The `.dockerignore` keeps out
+dependencies and build output, `node_modules`, `media/`, Florist's
+`release-archives/` and `sql/` dumps, and the `.envrc*` files with secrets.
+An existing `.dockerignore` gets the exclusions it misses appended, with
+`.envrc*` unless one pattern already covers every `.envrc*` name (exact names
+such as `.envrc.prod` leave a `.envrc.prod.bak` in the context). An appended
+line comes last, so it would override a `!` exception that re-includes part
+of what it covers: such exclusions are named in a notice instead. Exceptions
+that cannot touch them, such as phx.gen.release's `!.git/HEAD`, do not stop
+the rest being appended. `priv/static` is excluded too: the build makes it from the two
+asset projects, so keep static files such as images and fonts in
+`assets/frontend/public`, which Vite copies there. Files phx.new put in
+`priv/static` do not reach the release.
 
 Both asset stages install with the pnpm version pinned in the Dockerfile and
 `pnpm install --frozen-lockfile`, so commit `assets/backend/pnpm-lock.yaml` and
@@ -642,6 +726,20 @@ Set up daily PostgreSQL backups:
 ```bash
 florist prod pgbackup:setup
 ```
+
+With `set :pgbackup_enabled, true` in the target's database settings,
+Florist uploads the project's `etc/pgbkup.sh` and runs it from the postgres
+user's crontab. The installer does not write it; copy Brando's before the
+first `bootstrap` or `pgbackup:setup`:
+
+```bash
+mkdir -p etc
+cp deps/brando/priv/templates/brando.install/etc/pgbkup.sh etc/pgbkup.sh
+chmod +x etc/pgbkup.sh
+```
+
+It backs up every database on the server to `/backups/postgres`; its
+settings are at the top of the file.
 
 Optionally sync backups to cloud storage (DigitalOcean Spaces, S3, etc.):
 

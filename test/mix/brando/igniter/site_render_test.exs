@@ -39,6 +39,8 @@ defmodule Mix.Brando.Igniter.SiteRenderTest do
     files =
       for path <- [
             "#{@web}/cms/layouts.ex",
+            "#{@web}/cms/page_html.ex",
+            "#{@web}/live_preview.ex",
             "#{@web}/controllers/error_html.ex",
             "#{@web}/controllers/error_html/404.html.heex",
             "#{@web}/controllers/error_html/500.html.heex",
@@ -51,10 +53,13 @@ defmodule Mix.Brando.Igniter.SiteRenderTest do
         file
       end
 
-    {:ok, modules, _diagnostics} =
+    {:ok, modules, %{compile_warnings: compile_warnings, runtime_warnings: runtime_warnings}} =
       files
       |> Enum.filter(&String.ends_with?(&1, ".ex"))
       |> Kernel.ParallelCompiler.compile(return_diagnostics: true)
+
+    # The application compiles with --warnings-as-errors.
+    [] = compile_warnings ++ runtime_warnings
 
     on_exit(fn ->
       File.rm_rf!(dir)
@@ -75,6 +80,33 @@ defmodule Mix.Brando.Igniter.SiteRenderTest do
   end
 
   defp site_conn(conn), do: Phoenix.Controller.put_root_layout(conn, html: {RenderSiteWeb.CMS.Layouts, :root})
+
+  # The steps Brando.LivePreview.render/4 takes with a target, which reads the
+  # configured application's LivePreview rather than this one.
+  test "the live preview renders a page with the CMS template, inside the CMS layout", %{conn: conn} do
+    [target] = Spark.Dsl.Extension.get_entities(Module.concat(RenderSiteWeb, LivePreview), [:live_preview])
+    assert target.schema == Brando.Pages.Page
+
+    page = %Brando.Pages.Page{template: "index.html", uri: "index", language: :en, rendered_blocks: "<p>Edited</p>"}
+    assigns = Map.new(target.assigns, &{&1.key, &1.value_fn.(page, :en)})
+    assert %{identity: %{}, partials: %{}} = assigns
+
+    {html_module, template} = target.template.(page)
+    inner = render_to_string(html_module, String.replace(template, ".html", ""), "html", Map.put(assigns, :page, page))
+    assert inner =~ ~s(<main id="content">)
+
+    {layout, name} = target.layout
+    root_assigns = Map.merge(assigns, %{conn: conn, language: "en", inner_content: {:safe, inner}})
+    html = render_to_string(layout, to_string(name), "html", root_assigns)
+    assert html =~ ~s(<html lang="en">)
+    assert html =~ "<p>Edited</p>"
+    assert target.template_section.(page) == "index"
+
+    # The preview caches the assigns for its session, and an update replaces only <main>: a
+    # language change must recompute every assign (all read the language) and render the layout.
+    assert Enum.sort(target.reassign_on_change) == Enum.sort(Enum.map(target.assigns, &{&1.key, [:language]}))
+    assert [:language] in target.rerender_on_change
+  end
 
   test "a missing CMS page renders only the error, inside the layout it already has", %{conn: conn} do
     html = render_to_string(RenderSiteWeb.ErrorHTML, "404", "html", conn: site_conn(conn))

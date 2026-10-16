@@ -970,7 +970,10 @@ files. Background builds never compile source assets on the server: they copy
 the snapshotted uploaded set or the running release's `priv/static`.
 
 The storage roots can be made explicit; otherwise they are derived alongside
-the configured media directory:
+the configured media directory. When the application runs as a release, a
+media directory that is a symlink is followed, so with Florist's release
+`media` link they sit beside the shared media, outside the release. Outside a
+release the link is not followed:
 
 ```elixir
 config :brando,

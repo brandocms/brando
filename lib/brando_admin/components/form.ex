@@ -2225,14 +2225,15 @@ defmodule BrandoAdmin.Components.Form do
          %{assigns: %{has_blocks?: false, live_preview_active?: true}} = socket,
          true
        ) do
-    # For non-block schemas, update the live preview without changing cache_key
-    # This broadcasts to the Phoenix channel which triggers morphdom in the iframe
+    # Non-block schemas have no block fields to collect from, so this renders
+    # now, under the same cache key. "rerender" carries the whole document;
+    # "update" would carry only `<main>`.
     changeset = socket.assigns.form.source
     updated_entry_assocs = socket.assigns.updated_entry_assocs
     schema = socket.assigns.schema
     cache_key = socket.assigns.live_preview_cache_key
 
-    LivePreview.update(schema, changeset, cache_key, updated_entry_assocs)
+    LivePreview.rerender(schema, changeset, cache_key, updated_entry_assocs)
 
     socket
   end
@@ -6290,12 +6291,11 @@ defmodule BrandoAdmin.Components.Form do
          path_type
        )
        when fdlpr != [] do
-    path = if path_type == :string_path, do: string_path_to_atom_path(path), else: path
+    path = if path_type == :string_path, do: path, else: path_to_strings(path)
     cache_key = socket.assigns.live_preview_cache_key
 
-    case Enum.find(fdlpr, fn {_key, trigger_path} -> trigger_path == path end) do
-      {key, _} -> LivePreview.invalidate_var(cache_key, key)
-      nil -> nil
+    for {key, trigger_path} <- fdlpr, path_to_strings(trigger_path) == path do
+      LivePreview.invalidate_var(cache_key, key)
     end
 
     socket
@@ -6304,6 +6304,26 @@ defmodule BrandoAdmin.Components.Form do
   defp maybe_invalidate_live_preview_assign(socket, _string_path, _) do
     socket
   end
+
+  # A field in the target's `rerender_on_change` renders the whole page: an
+  # ordinary update sends only `<main>`, so the layout around it would keep
+  # what it showed. Queued like every other preview render, so the `update`
+  # the same change queues next merges into it.
+  defp maybe_rerender_live_preview_for(
+         %{assigns: %{live_preview_active?: true, fields_demanding_full_live_preview_rerender: [_ | _] = paths}} =
+           socket,
+         string_path
+       ) do
+    if Enum.any?(paths, &(path_to_strings(&1) == string_path)),
+      do: Preview.queue(socket, :live_preview_full_rerender, 0),
+      else: socket
+  end
+
+  defp maybe_rerender_live_preview_for(socket, _string_path), do: socket
+
+  # Form paths are compared as strings: an input name can hold segments no
+  # atom exists for (a language key, say), and those must not raise.
+  defp path_to_strings(path), do: Enum.map(path, &to_string/1)
 
   defp request_select_options_update(socket) do
     form_blueprint = socket.assigns.form_blueprint
@@ -7742,15 +7762,6 @@ defmodule BrandoAdmin.Components.Form do
     |> Enum.map(fn {gi, idx} -> Map.put(gi, :sequence, idx) end)
   end
 
-  defp string_path_to_atom_path(string_path) do
-    Enum.map(string_path, fn segment ->
-      case Integer.parse(segment) do
-        {idx, ""} -> idx
-        _ -> String.to_existing_atom(segment)
-      end
-    end)
-  end
-
   defp string_path_to_access_path(string_path) do
     Enum.map(string_path, fn segment ->
       case Integer.parse(segment) do
@@ -8468,6 +8479,7 @@ defmodule BrandoAdmin.Components.Form do
 
         socket
         |> maybe_invalidate_live_preview_assign(rest, :string_path)
+        |> maybe_rerender_live_preview_for(rest)
         |> maybe_fetch_root_blocks(:live_preview_update, 0)
         |> maybe_finish_live_preview_recovery()
         |> then(&{:noreply, &1})

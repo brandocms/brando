@@ -16,8 +16,10 @@ if Code.ensure_loaded?(Igniter) do
     alias Mix.Brando.Igniter.Files
     alias Mix.Brando.Igniter.Install.Configuration
     alias Mix.Brando.Igniter.Install.Deployment
+    alias Mix.Brando.Igniter.Install.Docker
     alias Mix.Brando.Igniter.Install.Version
     alias Mix.Brando.Igniter.Project
+    alias Mix.Brando.Igniter.Release
     alias Mix.Brando.Igniter.RouteInventory
     alias Mix.Brando.Igniter.Source
     alias Mix.Brando.Install.Hosts
@@ -50,6 +52,8 @@ if Code.ensure_loaded?(Igniter) do
         |> dependencies()
         |> Version.plan()
         |> Deployment.plan(project, hosts, deployment)
+        |> Docker.plan(project)
+        |> Release.plan(project, existing: :keep)
         |> support_files(project)
         |> AgentFiles.plan()
         |> Assets.plan(project)
@@ -182,11 +186,7 @@ if Code.ensure_loaded?(Igniter) do
           igniter
 
         {:error, igniter} ->
-          Files.create(igniter, module_path(preview), """
-          defmodule #{inspect(preview)} do
-            use Brando.LivePreview
-          end
-          """)
+          Files.create(igniter, module_path(preview), Mix.Brando.Igniter.Site.LivePreview.bare(preview))
       end
     end
 
@@ -389,6 +389,10 @@ if Code.ensure_loaded?(Igniter) do
       For single/multi tenancy, provision a site/environment after public migrations;
       see the tenancy guide before initializing tenant content.
       Brando's admin is available at /admin.
+
+      For deploying with Florist the plan adds what the release build needs: a Dockerfile
+      and .dockerignore when there are none, ReleaseTasks and a release that writes the
+      tarball. See Brando's deployment guide (deps/brando/guides/deployment.md).
 
       For coding agents, AGENTS.md links Brando's usage rules
       (deps/brando/usage-rules.md), and .claude/skills has Brando's site skills.

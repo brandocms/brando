@@ -6,7 +6,6 @@ if Code.ensure_loaded?(Igniter) do
     @moduledoc false
 
     alias Igniter.Project.Config
-    alias Igniter.Project.MixProject
     alias Mix.Brando.Igniter.Dependencies
     alias Mix.Brando.Igniter.Files
     alias Mix.Brando.Igniter.Install.Configuration
@@ -67,16 +66,7 @@ if Code.ensure_loaded?(Igniter) do
 
     defp generate(igniter, project, :release) do
       igniter
-      |> copy(
-        project,
-        "brando.install",
-        "lib/application_name/release_tasks.ex",
-        Module.concat(project.app_module, ReleaseTasks)
-      )
-      |> MixProject.update(:project, [:releases, project.otp_app], fn
-        nil -> {:ok, {:code, quote(do: [include_executables_for: [:unix], steps: [:assemble, :tar]])}}
-        zipper -> {:ok, zipper}
-      end)
+      |> Mix.Brando.Igniter.Release.plan(project)
       |> Igniter.add_notice("""
       Review your runtime configuration, then build with MIX_ENV=prod mix release.
       Apply public migrations explicitly with:

@@ -160,6 +160,44 @@ defmodule BrandoIntegrationWeb.Layouts do
     </html>
     """
   end
+
+  def localized(assigns) do
+    ~H"""
+    <html>
+      <head></head>
+      <body>
+        <header>{@greeting}</header>
+        {@inner_content}
+        <footer>{@farewell}</footer>
+      </body>
+    </html>
+    """
+  end
+
+  def titled(assigns) do
+    ~H"""
+    <html>
+      <head></head>
+      <body>
+        <header>{@heading}</header>
+        {@inner_content}
+      </body>
+    </html>
+    """
+  end
+end
+
+defmodule BrandoIntegrationWeb.ArticleHTML do
+  @moduledoc false
+  use Phoenix.Component
+
+  def titled(assigns) do
+    ~H"""
+    <main>
+      <h1>{@entry.title}</h1>
+    </main>
+    """
+  end
 end
 
 defmodule BrandoIntegrationWeb.LivePreview do
@@ -198,6 +236,27 @@ defmodule BrandoIntegrationWeb.LivePreview do
     template fn _ -> raise "Broken preview template" end
     layout {BrandoIntegrationWeb.Layouts, "app"}
     assign :employees, fn _ -> [%{id: 0, name: "Failed view"}] end
+  end
+
+  preview_target Brando.Pages.Page do
+    name :localized
+    label "Localized"
+    description "The page with a header and footer in its language"
+    template {BrandoIntegrationWeb.PageHTML, "blocks"}
+    layout {BrandoIntegrationWeb.Layouts, "localized"}
+    rerender_on_change [[:language]]
+    reassign_on_change [{:greeting, [:language]}, {:farewell, [:language]}]
+    assign :greeting, fn _, language -> "greeting:#{language}" end
+    assign :farewell, fn _, language -> "farewell:#{language}" end
+  end
+
+  # A schema without block fields, whose layout reads the title
+  preview_target Brando.MetaDrawerTest.ActionsArticle do
+    template {BrandoIntegrationWeb.ArticleHTML, "titled"}
+    layout {BrandoIntegrationWeb.Layouts, "titled"}
+    rerender_on_change [[:title]]
+    reassign_on_change [{:heading, [:title]}]
+    assign :heading, fn entry -> "heading:#{entry.title}" end
   end
 
   def list_restaurants! do
