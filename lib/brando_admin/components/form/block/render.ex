@@ -3044,7 +3044,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
             <div class="subform-table-foot">
               <button
                 type="button"
-                class="add-entry-button add-table-row"
+                class="btn add-entry-button add-table-row"
                 phx-click="add_table_row"
                 phx-target={@target}
                 data-testid="add-table-row"

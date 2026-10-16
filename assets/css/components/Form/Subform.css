@@ -468,9 +468,11 @@
     row-gap: 8px;
     margin-top: 12px;
 
-    /* One shape for every action, whichever markup it came from: the light
-       button of media fields and button groups. */
-    .add-entry-button,
+    .add-entry-button {
+      margin-top: 0;
+    }
+
+    /* The light button of media fields and button groups. */
     .upload-button {
       display: inline-flex;
       align-items: center;
@@ -942,13 +944,8 @@
     border-top: 1px solid var(--brando-line);
     background: var(--brando-surface-shaded);
 
-    /* Outranks the settings workspace's own add button */
-    & .add-entry-button.add-entry-button {
+    .add-entry-button {
       margin: 0;
-      min-height: 30px;
-      padding: 4px 12px;
-      border-radius: 999px;
-      font-size: 13px;
     }
   }
 

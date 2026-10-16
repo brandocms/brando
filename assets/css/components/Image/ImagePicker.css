@@ -957,30 +957,8 @@
           align-items: center;
           justify-content: flex-end;
 
-          .image-picker-action-button {
-            border: 0;
-            background: transparent;
-            color: color-mix(in srgb, var(--brando-ink) 74%, white);
-            width: 26px;
-            height: 26px;
-            border-radius: 999px;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            transition:
-              background-color 140ms ease,
-              color 140ms ease;
-
-            [data-icon] {
-              width: 0.95rem;
-              height: 0.95rem;
-              transform: rotate(90deg);
-            }
-
-            &:hover {
-              background: color-mix(in srgb, var(--brando-surface-subform) 30%, white);
-              color: var(--brando-ink);
-            }
+          > .btn > [data-icon] {
+            transform: rotate(90deg);
           }
 
           .image-picker-action-dropdown {

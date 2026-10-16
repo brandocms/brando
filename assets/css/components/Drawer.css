@@ -94,17 +94,6 @@ figcaption.tiny {
       color: var(--brando-ink);
     }
 
-    .drawer-close-button {
-      color: var(--brando-ink);
-      border: 1px solid color-mix(in srgb, var(--brando-ink) 35%, transparent);
-      background: color-mix(in srgb, var(--brando-surface) 90%, transparent);
-
-      &:hover {
-        background-color: var(--brando-ink);
-        color: var(--brando-ink-inverse);
-      }
-    }
-
     .drawer-form {
       input,
       textarea {
@@ -160,19 +149,8 @@ figcaption.tiny {
   }
 
   .drawer-close-button {
-    color: var(--brando-ink-inverse);
-    border: 1px solid var(--brando-ink-inverse);
-    padding: 10px 20px;
-    border-radius: 25px;
-    transition:
-      color 450ms ease,
-      background-color 450ms ease;
-    font-size: 15px;
-
-    &:hover {
-      background-color: var(--brando-surface);
-      color: var(--brando-ink);
-    }
+    flex: none;
+    margin-left: auto;
   }
 
   .img-placeholder {

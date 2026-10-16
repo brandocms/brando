@@ -26,73 +26,6 @@
     display: none;
   }
 
-  /* Own the control geometry: the global secondary buttons have positional margins. */
-  .draft-button {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    min-height: 32px;
-    margin: 0;
-    padding: 5px 12px;
-    border: 1px solid var(--brando-line);
-    border-radius: 5px;
-    background: var(--brando-surface);
-    color: var(--draft-ink);
-    font: inherit;
-    font-weight: 500;
-    font-size: 13px;
-    line-height: 20px;
-    text-align: center;
-    text-decoration: none;
-    cursor: pointer;
-
-    &:hover {
-      background: var(--brando-surface-hover);
-      border-color: var(--brando-line-strong);
-    }
-    &:disabled {
-      opacity: 0.55;
-      cursor: wait;
-    }
-  }
-
-  .draft-button-primary {
-    border-color: var(--draft-accent);
-    background: var(--draft-accent);
-    color: var(--brando-ink-inverse);
-    box-shadow: 0 1px 2px color-mix(in srgb, var(--brando-ink) 8%, transparent);
-
-    &:hover {
-      background: var(--brando-accent-hover);
-      border-color: var(--brando-accent-hover);
-    }
-  }
-
-  .draft-button-quiet {
-    border-color: transparent;
-    background: transparent;
-    color: var(--draft-muted);
-
-    &:hover {
-      border-color: transparent;
-      color: var(--draft-ink);
-    }
-  }
-
-  .draft-button-danger {
-    border-color: transparent;
-    background: transparent;
-    color: var(--brando-error-ink);
-
-    &:hover {
-      border-color: var(--brando-error-line);
-      background: var(--brando-error);
-      color: var(--brando-error-ink);
-    }
-  }
-
-  .draft-button:focus-visible,
   .draft-copy:focus-visible,
   summary:focus-visible,
   .draft-payload:focus-visible,
@@ -191,8 +124,7 @@
   }
 
   .draft-close {
-    flex: 0 0 44px;
-    padding: 10px;
+    flex: none;
     margin-top: -8px;
     margin-right: -8px;
   }
@@ -333,10 +265,6 @@
       font-size: 13px;
       color: var(--draft-muted);
     }
-  }
-  .draft-export .draft-icon, .draft-copy-content .draft-icon {
-    width: 16px;
-    height: 16px;
   }
   .draft-copy-success, .draft-copy-failure {
     display: none;
@@ -551,7 +479,7 @@
     .draft-panel-footer .draft-actions {
       flex: 1 1 100%;
     }
-    .draft-panel-footer .draft-actions .draft-button {
+    .draft-panel-footer .draft-actions .btn {
       flex: 1 1 auto;
     }
     .draft-recovery-notice {
@@ -560,7 +488,7 @@
     .draft-recovery-notice .draft-actions {
       width: 100%;
     }
-    .draft-recovery-notice .draft-button {
+    .draft-recovery-notice .btn {
       flex: 1 1 auto;
     }
     .draft-retention-note {
@@ -615,12 +543,6 @@
     .draft-preview-heading .draft-actions {
       gap: 8px;
     }
-  }
-}
-
-@media (pointer: coarse) {
-  .draft-recovery .draft-button {
-    min-height: 40px;
   }
 }
 

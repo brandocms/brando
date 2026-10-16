@@ -228,7 +228,7 @@
     width: 1%;
   }
 
-  .module-add-button {
+  > .btn {
     margin-top: 10px;
   }
 }

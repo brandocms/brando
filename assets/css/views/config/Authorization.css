@@ -21,9 +21,9 @@
   h4 { font-size: 13px; font-weight: 500; }
   strong { font-weight: 500; }
   small { font-size: 12px; color: var(--access-muted); }
-  button, input, textarea, select { font-family: inherit; font-size: inherit; }
+  button:where(:not(.btn)), input, textarea, select { font-family: inherit; font-size: inherit; }
   button { cursor: pointer; }
-  button:disabled { opacity: .45; cursor: not-allowed; }
+  button:disabled:where(:not(.btn)) { opacity: .45; cursor: not-allowed; }
   :is(button, input, textarea, select, a, summary, [tabindex]):focus-visible {
     outline: 2px solid var(--access-accent); outline-offset: 3px;
   }
@@ -33,20 +33,6 @@
     font-size: 13px; line-height: 20px; box-shadow: none;
     &::placeholder { color: var(--brando-muted); font-size: inherit; opacity: 1; }
     &:disabled { background: var(--access-wash); color: var(--access-muted); }
-  }
-  .access-button {
-    display: inline-flex; justify-content: center; align-items: center; gap: 6px;
-    min-height: 30px; width: auto; min-width: 0; height: auto; margin: 0; padding: 5px 12px;
-    border: 1px solid var(--access-line); border-radius: 5px; background: var(--brando-surface);
-    color: var(--access-ink); font-size: 12px; font-weight: 500; line-height: 18px;
-    white-space: nowrap; text-transform: none; text-decoration: none; letter-spacing: 0; box-shadow: none;
-    &:hover:not(:disabled) { background: var(--access-wash); border-color: var(--brando-line-strong); }
-    &.quiet { border-color: transparent; background: transparent; padding-inline: 8px; }
-    &.primary-action { background: var(--access-accent); border-color: var(--access-accent); color: var(--brando-ink-inverse); }
-    &.primary-action:hover:not(:disabled) { background: var(--brando-accent-hover); border-color: var(--brando-accent-hover); }
-    &.primary-action:disabled { background: var(--access-wash); border-color: var(--access-line); color: var(--access-muted); opacity: 1; }
-    &.destructive { color: var(--brando-error-ink); }
-    &.destructive:hover:not(:disabled) { background: var(--brando-error); border-color: var(--brando-error-line); }
   }
   .authorization-selected-count { display: inline-flex; align-items: center; gap: 5px; font-variant-numeric: tabular-nums; }
   .authorization-page-heading {
@@ -64,7 +50,6 @@
   .authorization-groups { min-width: 0; }
   .authorization-heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 12px; }
   .authorization-heading h2 { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 500; letter-spacing: 0; }
-  .authorization-heading .access-button { padding-inline: 10px; }
   .authorization-group-list { display: grid; gap: 4px; margin-top: 12px; }
   .authorization-group-list > button {
     width: 100%; display: flex; justify-content: space-between; align-items: center; gap: 8px;
@@ -148,7 +133,7 @@
   .authorization-editor-footer { display: flex; justify-content: space-between; gap: 16px; padding-top: 20px; }
   .authorization-editor-footer > div { display: flex; gap: 8px; flex-wrap: wrap; }
   .authorization-notice { padding: 14px 16px; margin-block: 16px; border: 1px solid var(--brando-line); border-radius: 5px; background: var(--brando-surface-tint); font-size: 12px; line-height: 1.65; }
-  .authorization-notice > .access-button { margin-top: 16px; }
+  .authorization-notice > .btn { margin-top: 16px; }
   .authorization-notice.success { border-color: var(--brando-success-line); background: var(--brando-success); }
   .authorization-notice.error { border-color: var(--brando-error-line); background: var(--brando-error); color: var(--brando-error-ink); }
   .authorization-empty { padding: 56px 24px; text-align: center; }
@@ -158,7 +143,7 @@
   .authorization-protected { padding: 24px; border: 1px solid var(--access-line); border-radius: 6px; background: var(--access-wash); }
   .authorization-protected h3 { font-size: 20px; font-weight: 400; margin-top: 12px; }
   .authorization-protected p { max-width: 560px; color: var(--access-muted); margin-top: 12px; line-height: 1.7; font-size: 13px; }
-  .authorization-review > .access-button { margin-left: -8px; }
+  .authorization-review > .btn { margin-left: -12px; }
   .authorization-review > h2 { margin-top: 20px; }
   .authorization-lead { color: var(--access-muted); font-size: 13px; margin-top: 8px; }
   .authorization-review-details { margin: 24px 0; font-size: 13px; }
@@ -189,7 +174,7 @@
   .authorization-person strong { font-size: 13px; }
   .authorization-person small { display: block; }
   .authorization-avatar { display: grid; place-items: center; width: 32px; height: 32px; flex: 0 0 32px; border-radius: 50%; background: var(--brando-badge-bg); color: var(--brando-badge-ink); font-size: 11px; }
-  .authorization-effective > .access-button { margin-left: -8px; }
+  .authorization-effective > .btn { margin-left: -12px; }
   .authorization-effective > h3 { font-size: 22px; font-weight: 400; margin-top: 20px; }
   .authorization-effective > .authorization-protected { margin-top: 24px; }
   .authorization-access-section { margin-top: 24px; }
@@ -243,7 +228,7 @@
     .authorization-review-details > div, .authorization-access-section dl > div { grid-template-columns: 1fr; gap: 4px; }
   }
   @media (pointer: coarse) {
-    .access-button, input:not([type='checkbox']) { min-height: 40px; }
+    input:not([type='checkbox']) { min-height: 40px; }
     .authorization-tab { min-height: 40px; }
   }
 }

@@ -379,7 +379,7 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
                 <button
                   phx-click={show_modal("##{@form.id}-#{@key}-create-ref")}
                   type="button"
-                  class="module-add-button"
+                  class="btn"
                   aria-label={gettext("Add reference")}
                 >
                   <.icon name="plus" />
@@ -454,7 +454,7 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
           <button
             phx-click={show_modal("##{@form.id}-#{@key}-create-var")}
             type="button"
-            class="module-add-button"
+            class="btn"
             aria-label={gettext("Add variable")}
           >
             <.icon name="plus" />

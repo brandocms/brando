@@ -112,7 +112,7 @@ defmodule BrandoAdmin.Components.Form.Input.Vars do
             <button
               id={"#{@field.id}-add-entry"}
               type="button"
-              class="add-entry-button"
+              class="btn add-entry-button"
               phx-click="add_subentry"
               phx-target={@myself}
             >

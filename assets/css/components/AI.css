@@ -303,61 +303,6 @@
   line-height: 20px;
 }
 
-/* Accept is the form's primary action in the sage accent, Discard is
-   secondary; Try again is an `AIAction.button`. */
-.field-ai-actions button.field-ai-button {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  box-sizing: border-box;
-  width: auto;
-  min-width: 0;
-  height: auto;
-  min-height: 30px;
-  margin: 0;
-  padding: 5px 12px;
-  border: 1px solid var(--brando-line);
-  border-radius: 5px;
-  background: var(--brando-surface);
-  box-shadow: none;
-  color: var(--brando-ink);
-  font-family: inherit;
-  font-size: 12px;
-  font-weight: 500;
-  line-height: 18px;
-  letter-spacing: 0;
-  text-transform: none;
-  white-space: nowrap;
-  cursor: pointer;
-
-  &:hover {
-    border-color: var(--brando-line-strong);
-    background: var(--brando-surface-hover);
-    color: var(--brando-ink);
-  }
-
-  &.primary {
-    border-color: var(--brando-accent);
-    background: var(--brando-accent);
-    color: var(--brando-ink-inverse);
-
-    &:hover {
-      border-color: var(--brando-accent-hover);
-      background: var(--brando-accent-hover);
-      color: var(--brando-ink-inverse);
-    }
-  }
-
-  &:focus-visible {
-    outline: 2px solid var(--brando-accent);
-    outline-offset: 3px;
-  }
-
-  @media (pointer: coarse) {
-    min-height: 40px;
-  }
-}
-
 /* What accepting costs: rich text losing its formatting. */
 .field-ai-warning {
   color: var(--brando-attention-ink);

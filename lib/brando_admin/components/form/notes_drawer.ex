@@ -481,10 +481,10 @@ defmodule BrandoAdmin.Components.Form.NotesDrawer do
         {gettext("The text is marked when you save the entry.")}
       </p>
       <div class="note-composer-actions">
-        <button type="button" class="note-button" phx-click="cancel_compose" phx-target={@myself}>
+        <button type="button" class="btn" phx-click="cancel_compose" phx-target={@myself}>
           {gettext("Cancel")}
         </button>
-        <button type="submit" class="note-button is-primary">{gettext("Add note")}</button>
+        <button type="submit" class="btn btn--primary">{gettext("Add note")}</button>
       </div>
     </form>
     """

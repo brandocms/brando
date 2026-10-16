@@ -173,10 +173,10 @@ defmodule BrandoAdmin.Components.Form.AltTextSuggestion do
           >{text}</textarea>
         </div>
         <div class="ai-proposal-actions">
-          <button type="button" class="field-ai-button primary" phx-click="accept" phx-target={@myself}>
+          <button type="button" class="btn btn--primary" phx-click="accept" phx-target={@myself}>
             {gettext("Accept")}
           </button>
-          <button type="button" class="field-ai-button" phx-click="discard" phx-target={@myself}>
+          <button type="button" class="btn" phx-click="discard" phx-target={@myself}>
             {gettext("Discard")}
           </button>
           <AIAction.button :if={@retry_event} phx-click={@retry_event} phx-target={@retry_target} phx-value-panel={@id}>

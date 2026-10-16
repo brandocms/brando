@@ -80,7 +80,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.MarkdownSourceBlock do
             </p>
             <p :if={@source && @source.last_error} role="status">{@source.last_error}</p>
             <div :if={@source} class="markdown-source-actions">
-              <button type="button" class="markdown-source-button" phx-click="refresh_versions" phx-target={@myself}>{gettext(
+              <button type="button" class="btn btn--sm" phx-click="refresh_versions" phx-target={@myself}>{gettext(
                 "Check available versions"
               )}</button>
               <a href="/admin/config/markdown-sources" target="_blank" rel="noopener">{gettext("Manage sources")}</a>
@@ -102,7 +102,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.MarkdownSourceBlock do
                 {Phoenix.HTML.raw(@preview.html)}
               </section>
               <div :if={@preview && @data.policy != :follow} class="markdown-source-actions">
-                <button type="button" class="markdown-source-button" phx-click="accept_version" phx-target={@myself}>
+                <button type="button" class="btn btn--sm" phx-click="accept_version" phx-target={@myself}>
                   {gettext("Use displayed version")}
                 </button>
                 <span>{gettext("Included when you save the entry")}</span>

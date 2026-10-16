@@ -17,39 +17,8 @@
   *, *::before, *::after { box-sizing: border-box; }
   h1, h2, h3, p, ol, pre { margin: 0; padding: 0; }
   h1, h2, h3 { font-weight: 500; letter-spacing: -.025em; text-transform: none; }
-  button, textarea, select { font: inherit; }
+  button:where(:not(.btn)), textarea, select { font: inherit; }
   :is(button, textarea, a):focus-visible { outline: 2px solid var(--guidance-green); outline-offset: 3px; }
-
-  .guidance-button {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 6px;
-    width: auto;
-    min-width: 0;
-    height: auto;
-    min-height: 30px;
-    margin: 0;
-    padding: 5px 12px;
-    box-shadow: none;
-    letter-spacing: 0;
-    text-transform: none;
-    border: 1px solid var(--guidance-line);
-    border-radius: 5px;
-    background: var(--brando-surface);
-    color: var(--guidance-ink);
-    font-size: 12px;
-    font-weight: 500;
-    line-height: 18px;
-    white-space: nowrap;
-    cursor: pointer;
-
-    &:hover:not(:disabled) { border-color: var(--brando-line-strong); background: var(--brando-surface-tint); }
-    &:disabled { opacity: .48; cursor: not-allowed; }
-    &.primary { border-color: var(--guidance-green); background: var(--guidance-green); color: var(--brando-ink-inverse); }
-    &.primary:hover:not(:disabled) { background: var(--brando-accent-hover); }
-    &.quiet { border-color: transparent; background: transparent; }
-  }
 }
 
 .guidance-heading {

@@ -265,7 +265,7 @@ defmodule BrandoAdmin.AI.AssistantLive do
           <div class="assistant-history">
             <button
               type="button"
-              class="assistant-quiet-button"
+              class="btn btn--quiet"
               phx-click="toggle_history"
               aria-expanded={to_string(@show_history)}
               aria-controls="assistant-history-list"
@@ -285,7 +285,7 @@ defmodule BrandoAdmin.AI.AssistantLive do
               </li>
             </ul>
           </div>
-          <.link patch="/admin/assistant" class="assistant-button">
+          <.link patch="/admin/assistant" class="btn">
             <.icon name="plus" />{gettext("New conversation")}
           </.link>
         </div>
@@ -340,7 +340,7 @@ defmodule BrandoAdmin.AI.AssistantLive do
             <.link
               :if={@connected_count > 0 or @connected != []}
               patch="/admin/assistant/connected"
-              class="assistant-quiet-button assistant-connected-link"
+              class="btn btn--quiet assistant-connected-link"
             >
               <.icon name="plug" />{gettext("From connected tools")}
               <span :if={@connected_count > 0} class="assistant-count">
@@ -576,7 +576,7 @@ defmodule BrandoAdmin.AI.AssistantLive do
       <button
         :if={@item.open?}
         type="button"
-        class="assistant-apply assistant-request-use"
+        class="btn btn--ai assistant-request-use"
         phx-click="send"
         phx-value-message={gettext("I have attached the media. Use it.")}
         disabled={!@available? or attached(@aliases, @item.kind) == 0}
@@ -846,7 +846,7 @@ defmodule BrandoAdmin.AI.AssistantLive do
           <span :for={{count, label} <- counts(@proposal.effects)}><strong>{count}</strong> {label}</span>
         </p>
         <div :if={!@shared and !@preview and @under_review?} class="assistant-share">
-          <button :if={!@review_link and !@share_choice} type="button" class="assistant-button" phx-click="share_review">
+          <button :if={!@review_link and !@share_choice} type="button" class="btn" phx-click="share_review">
             <.icon name="user-plus" />{gettext("Share for review")}
           </button>
           <form :if={@share_choice} class="assistant-share-choice" phx-submit="share_review">
@@ -859,10 +859,10 @@ defmodule BrandoAdmin.AI.AssistantLive do
               </label>
             </fieldset>
             <div>
-              <button type="submit" class="assistant-button">
+              <button type="submit" class="btn">
                 <.icon name="link" />{gettext("Create link")}
               </button>
-              <button type="button" class="assistant-quiet-button" phx-click="cancel_share">{gettext("Cancel")}</button>
+              <button type="button" class="btn btn--quiet" phx-click="cancel_share">{gettext("Cancel")}</button>
             </div>
           </form>
           <div :if={@review_link} class="assistant-share-link">
@@ -898,7 +898,7 @@ defmodule BrandoAdmin.AI.AssistantLive do
         <button
           :if={@proposal.status == "applied"}
           type="button"
-          class="assistant-button assistant-undo"
+          class="btn assistant-undo"
           phx-click="undo"
           data-confirm={gettext("Undo the proposal? Each entry goes back to how it was before, and new entries are deleted.")}
         >
@@ -943,7 +943,7 @@ defmodule BrandoAdmin.AI.AssistantLive do
             <button
               :if={entry.preview? and @under_review? and entry.action != :source}
               type="button"
-              class="assistant-button assistant-card-preview"
+              class="btn btn--sm assistant-card-preview"
               phx-click="preview"
               phx-value-key={entry.key}
             >
@@ -1025,20 +1025,20 @@ defmodule BrandoAdmin.AI.AssistantLive do
           <span>{block_summary(@proposal.effects)}</span>
         </div>
         <div class="assistant-apply-actions">
-          <button type="button" class="assistant-button assistant-discard" phx-click="cancel_proposal">
+          <button type="button" class="btn btn--lg btn--quiet btn--danger" phx-click="cancel_proposal">
             {gettext("Discard")}
           </button>
           <button
             :if={@proposal.conversation_id}
             type="button"
-            class="assistant-button"
+            class="btn btn--lg"
             phx-click={JS.focus(to: "#assistant-input")}
           >
             {gettext("Adjust")}
           </button>
           <button
             type="button"
-            class="assistant-apply"
+            class="btn btn--lg btn--primary assistant-apply"
             phx-click="apply"
             phx-value-id={@proposal.id}
             phx-value-version={@proposal.version}
@@ -1307,7 +1307,7 @@ defmodule BrandoAdmin.AI.AssistantLive do
     <div class="assistant-frame-state is-error" role="alert">
       <.icon name="triangle-alert" />
       <p>{gettext("The page could not be rendered: %{message}", message: @message)}</p>
-      <button type="button" class="assistant-button" phx-click="preview" phx-value-key={@preview.key}>
+      <button type="button" class="btn" phx-click="preview" phx-value-key={@preview.key}>
         {gettext("Try again")}
       </button>
     </div>

@@ -332,7 +332,7 @@ defmodule BrandoAdmin.Sites.ContentTransferLive do
           </form>
           <button
             type="button"
-            class="transfer-button is-primary"
+            class="btn btn--lg btn--save"
             phx-click="prepare_export"
             disabled={selected_count(@selected) == 0 || @busy != nil}
           ><span class="transfer-control-label">{dgettext("content_transfer", "Prepare export")}</span></button>
@@ -428,7 +428,7 @@ defmodule BrandoAdmin.Sites.ContentTransferLive do
                 </li>
               </ul>
             </div>
-            <button type="button" class="transfer-button" phx-click="include_entry" phx-value-key={dep["entry_key"]}>
+            <button type="button" class="btn btn--sm" phx-click="include_entry" phx-value-key={dep["entry_key"]}>
               <span class="transfer-control-label">{dgettext("content_transfer", "Include entry")}</span>
             </button>
           </div>
@@ -469,11 +469,11 @@ defmodule BrandoAdmin.Sites.ContentTransferLive do
           </p>
         </div>
         <div class="transfer-actions">
-          <button type="button" class="transfer-button" phx-click="edit_export"><span class="transfer-control-label">{dgettext(
+          <button type="button" class="btn btn--lg" phx-click="edit_export"><span class="transfer-control-label">{dgettext(
             "content_transfer",
             "Edit selection"
           )}</span></button><a
-            class="transfer-button is-primary"
+            class="btn btn--lg btn--save"
             id="transfer-download"
             href={@download}
             download="brando-content.zip"
@@ -556,7 +556,7 @@ defmodule BrandoAdmin.Sites.ContentTransferLive do
             <div class="transfer-upload-actions">
               <p id="transfer-review-help">{dgettext("content_transfer", "Review first. Apply when you’re ready.")}</p>
               <button
-                class="transfer-button is-primary is-blue"
+                class="btn btn--lg btn--save"
                 type="submit"
                 aria-describedby="transfer-review-help"
                 disabled={!upload_ready?(@uploads.content_bundle) || @busy != nil}
@@ -599,7 +599,7 @@ defmodule BrandoAdmin.Sites.ContentTransferLive do
             <span class="transfer-eyebrow">{dgettext("content_transfer", "Incoming bundle")}</span><h2>{@filename}</h2><p>
               {@archive.bundle["source"]["label"]} · {bundle_label(@archive.bundle)}
             </p>
-          </div><button type="button" class="transfer-button" phx-click="cancel_import" disabled={@busy != nil}><span class="transfer-control-label">{dgettext(
+          </div><button type="button" class="btn" phx-click="cancel_import" disabled={@busy != nil}><span class="transfer-control-label">{dgettext(
             "content_transfer",
             "Cancel import"
           )}</span></button>
@@ -1049,7 +1049,7 @@ defmodule BrandoAdmin.Sites.ContentTransferLive do
                   "content_transfer",
                   "Module definitions are included. Review them if a required module is missing on this site."
                 )}
-              </p><button type="button" class="transfer-button" phx-click="preview_definitions" disabled={@busy != nil}><span class="transfer-control-label">{dgettext(
+              </p><button type="button" class="btn" phx-click="preview_definitions" disabled={@busy != nil}><span class="transfer-control-label">{dgettext(
                 "content_transfer",
                 "Review included definitions"
               )}</span></button>
@@ -1096,7 +1096,7 @@ defmodule BrandoAdmin.Sites.ContentTransferLive do
                 )}</span>
               </li>
             </ul><button
-              class="transfer-button"
+              class="btn"
               type="button"
               phx-click="install_definitions"
               disabled={!safe_definitions?(@definition_plan) || @busy != nil}
@@ -1120,7 +1120,7 @@ defmodule BrandoAdmin.Sites.ContentTransferLive do
             </p>
           </div><button
             type="button"
-            class="transfer-button is-primary"
+            class="btn btn--lg btn--save"
             id="transfer-apply"
             phx-click="apply_import"
             disabled={!Transfer.applicable?(@plan) || @busy != nil}
@@ -1155,11 +1155,11 @@ defmodule BrandoAdmin.Sites.ContentTransferLive do
             "Media processing and static-site deployment may finish separately. Use your normal publishing workflow for a static site."
           )}
         </p><div class="transfer-actions">
-          <button class="transfer-button" phx-click="tab" phx-value-tab="history"><span class="transfer-control-label">{dgettext(
+          <button class="btn btn--lg" phx-click="tab" phx-value-tab="history"><span class="transfer-control-label">{dgettext(
             "content_transfer",
             "View recovery snapshot"
           )}</span></button><button
-            class="transfer-button is-primary"
+            class="btn btn--lg btn--save"
             phx-click="new_import"
           ><span class="transfer-control-label">{dgettext("content_transfer", "Import another bundle")}</span></button>
         </div>
@@ -1203,13 +1203,13 @@ defmodule BrandoAdmin.Sites.ContentTransferLive do
           </div><div class="transfer-actions">
             <button
               type="button"
-              class="transfer-button"
+              class="btn btn--sm"
               phx-click="retry_refresh"
               phx-value-id={receipt.id}
               disabled={@busy != nil}
             ><span class="transfer-control-label">{dgettext("content_transfer", "Retry rendering and media")}</span></button><button
               type="button"
-              class="transfer-button"
+              class="btn btn--sm"
               phx-click="review_restore"
               phx-value-id={receipt.id}
               disabled={receipt.restored_at != nil || @busy != nil}
@@ -1221,11 +1221,11 @@ defmodule BrandoAdmin.Sites.ContentTransferLive do
                 "Restore updated content and remove entries created by this import? Published entries are affected too. Newer edits will block recovery."
               )}
             </p><div class="transfer-actions">
-              <button class="transfer-button" type="button" phx-click="cancel_restore"><span class="transfer-control-label">{dgettext(
+              <button class="btn" type="button" phx-click="cancel_restore"><span class="transfer-control-label">{dgettext(
                 "content_transfer",
                 "Cancel"
               )}</span></button><button
-                class="transfer-button is-primary"
+                class="btn btn--save"
                 type="button"
                 phx-click="restore"
                 phx-value-id={receipt.id}

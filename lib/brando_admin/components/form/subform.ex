@@ -244,7 +244,7 @@ defmodule BrandoAdmin.Components.Form.Subform do
 
   def subentry_add(assigns) do
     ~H"""
-    <button type="button" class="add-entry-button" phx-click={@on_click}>
+    <button type="button" class="btn add-entry-button" phx-click={@on_click}>
       <.icon name="list-plus" />
       {gettext("Add entry")}
     </button>
@@ -262,7 +262,7 @@ defmodule BrandoAdmin.Components.Form.Subform do
 
   def sort_by_filename(assigns) do
     ~H"""
-    <button type="button" class="add-entry-button" phx-click={@on_click}>
+    <button type="button" class="btn add-entry-button" phx-click={@on_click}>
       <.icon name="arrow-down-a-z" />
       {gettext("Sort by filename")}
     </button>

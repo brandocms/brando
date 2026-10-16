@@ -171,43 +171,6 @@
   }
 }
 
-.picture-block .image-wrapper {
-  position: relative;
-
-  .edit-image-btn {
-    cursor: pointer;
-    z-index: 1;
-    position: absolute;
-    top: 8px;
-    right: 8px;
-    background-color: var(--brando-surface);
-    width: 25px;
-    height: 25px;
-    border-radius: 50%;
-    border: none;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 0;
-    box-shadow: var(--brando-shadow-xs);
-
-    &:hover {
-      background-color: var(--brando-ink);
-      border: 1px solid var(--brando-line-strong);
-
-      span {
-        background-color: var(--brando-surface);
-      }
-    }
-
-    span {
-      background-color: var(--brando-ink);
-      width: 14px;
-      height: 14px;
-    }
-  }
-}
-
 .image-content {
   position: relative;
   flex-shrink: 0;
