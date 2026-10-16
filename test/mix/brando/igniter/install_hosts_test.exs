@@ -80,7 +80,7 @@ defmodule Mix.Brando.Igniter.InstallHostsTest do
     # One database role per target, as FLORIST_DB_PASSWORD_<TARGET> has one password per target.
     prod_env = IgniterCase.source(igniter, ".envrc.prod")
     staging_env = IgniterCase.source(igniter, ".envrc.staging")
-    assert prod_env =~ ~s(DATABASE_URL="postgres://studio_prod:__BRANDO_DATABASE_PASSWORD__@localhost/studio_prod")
+    assert prod_env =~ ~s(DATABASE_URL="postgres://studio:__BRANDO_DATABASE_PASSWORD__@localhost/studio_prod")
 
     assert staging_env =~
              ~s(DATABASE_URL="postgres://studio_staging:__BRANDO_DATABASE_PASSWORD__@localhost/studio_staging")
@@ -128,6 +128,38 @@ defmodule Mix.Brando.Igniter.InstallHostsTest do
     Igniter.Test.assert_unchanged(igniter, "config/prod.exs")
     assert host(igniter, ".envrc.staging") == "qa.example.net"
     assert Enum.any?(igniter.notices, &(&1 =~ "check_origin was not written"))
+  end
+
+  test "a rerun with only --origin, on an installed application, says why nothing was written" do
+    envrc = "export PHX_HOST=\"realsite.no\"\n"
+
+    igniter =
+      project(%{".envrc.prod" => envrc, ".envrc.staging" => envrc, ".gitignore" => "/.envrc.*\n"})
+      |> install(["--yes", "--origin", "//cms.example.net"])
+
+    Igniter.Test.assert_unchanged(igniter, "config/prod.exs")
+    assert Enum.any?(igniter.notices, &(&1 =~ "take effect only with a domain"))
+  end
+
+  test "environment files an earlier run left with secret markers get their secrets filled in" do
+    marked = "export PHX_HOST=\"realsite.no\"\nexport SECRET_KEY_BASE=\"__BRANDO_SECRET_KEY_BASE__\"\n"
+    filled = "export PHX_HOST=\"realsite.no\"\nexport SECRET_KEY_BASE=\"done\"\n"
+
+    igniter =
+      project(%{".envrc.prod" => marked, ".envrc.staging" => filled, ".gitignore" => "/.envrc.*\n"})
+      |> install(["--yes"])
+
+    assert {"brando.install.secrets", [".envrc.prod"]} in igniter.tasks
+  end
+
+  test "prod connects as Florist's default database user, staging as its own" do
+    igniter = install(project(), ["--yes", "--domain", "example.com"])
+
+    assert IgniterCase.source(igniter, ".envrc.prod") =~
+             "postgres://studio:__BRANDO_DATABASE_PASSWORD__@localhost/studio_prod"
+
+    assert IgniterCase.source(igniter, ".envrc.staging") =~
+             "postgres://studio_staging:__BRANDO_DATABASE_PASSWORD__@localhost/studio_staging"
   end
 
   test "a rerun on an installed application without check_origin writes none" do
@@ -189,6 +221,18 @@ defmodule Mix.Brando.Igniter.InstallHostsTest do
 
     Igniter.Test.assert_unchanged(igniter, "rel/env.sh.eex")
     refute Enum.any?(igniter.notices, &(&1 =~ "does not source"))
+    refute Enum.any?(igniter.notices, &(&1 =~ "short node names"))
+
+    short = "#!/bin/sh\n. \"$RELEASE_ROOT/.envrc.runtime\"\n"
+    igniter = project(%{"rel/env.sh.eex" => short}) |> install(["--yes", "--domain", "example.com"])
+    assert Enum.any?(igniter.notices, &(&1 =~ "keeps the default short node names"))
+  end
+
+  test "a leading space or an unreadable negation does not count as ignoring the environment files" do
+    for gitignore <- [" .envrc*\n", ".envrc*\n!.envrc.[ps]rod\n"] do
+      igniter = project(%{".gitignore" => gitignore}) |> install(["--yes", "--domain", "example.com"])
+      assert IgniterCase.source(igniter, ".gitignore") =~ "\n/.envrc.prod\n", inspect(gitignore)
+    end
   end
 
   test "an environment file un-ignored by a later negation gets an explicit ignore line" do
@@ -351,6 +395,8 @@ defmodule Mix.Brando.Igniter.InstallHostsTest do
       for origin <- [
             "//example.com",
             "//*.example.com",
+            "//*.preview.client.no",
+            "https://*.a.b.c:8443",
             "https://example.com",
             "http://localhost:4000",
             "//host.example:8080"

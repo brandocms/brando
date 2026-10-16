@@ -3,11 +3,12 @@
 # starts. It holds secrets: keep it out of version control.
 #
 # The names are the ones a Phoenix config/runtime.exs reads. Florist creates
-# the database user from the target's database settings: set its user to
-# <%= application_name %>_prod and FLORIST_DB_PASSWORD_PROD to the password below.
+# the database user from the target's database settings. The user here is
+# Florist's default (the project name); set FLORIST_DB_PASSWORD_PROD to the
+# password below.
 export PHX_HOST="<%= host %>"
 export PHX_SERVER="true"
-export DATABASE_URL="postgres://<%= application_name %>_prod:__BRANDO_DATABASE_PASSWORD__@localhost/<%= application_name %>_prod"
+export DATABASE_URL="postgres://<%= application_name %>:__BRANDO_DATABASE_PASSWORD__@localhost/<%= application_name %>_prod"
 export SECRET_KEY_BASE="__BRANDO_SECRET_KEY_BASE__"
 
 # Node name for a :single deployment; blue/green services set their own.

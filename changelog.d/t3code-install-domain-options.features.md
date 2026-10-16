@@ -5,8 +5,8 @@
   `.envrc.staging` files, and with `--domain` fill `check_origin` for the
   endpoint in `config/prod.exs` (the domain, its subdomains, the staging host
   and each origin). The environment files use the names a Phoenix
-  `config/runtime.exs` reads, a database user per target (`<app>_prod`,
-  `<app>_staging`) and a per-target `RELEASE_NODE` default, and get a
+  `config/runtime.exs` reads, a database user per target (`<app>`,
+  Florist's default, and `<app>_staging`) and a per-target `RELEASE_NODE` default, and get a
   `.gitignore` entry; their secrets are filled in after the changes are
   accepted, so no diff or `--dry-run` shows them. A new `rel/env.sh.eex`
   sources Florist's `.envrc.runtime` when the release starts. Without

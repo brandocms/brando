@@ -6,7 +6,7 @@ defmodule Mix.Brando.Install.Hosts do
   # The last label of a domain is not all digits, which rules out IP addresses.
   @domain Regex.compile!("^(?:#{@label}\\.)+(?!\\d+$)#{@label}$")
   # A wildcard covers subdomains of a name with at least two labels, not a TLD.
-  @origin_host Regex.compile!("^(?:\\*\\.#{@label}\\.|(?:#{@label}\\.)*)#{@label}$")
+  @origin_host Regex.compile!("^(?:\\*\\.(?:#{@label}\\.)+|(?:#{@label}\\.)*)#{@label}$")
 
   @doc """
   Resolves the production domain, staging host and extra trusted origins.

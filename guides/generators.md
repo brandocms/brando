@@ -191,11 +191,12 @@ The installer writes:
 - `rel/env.sh.eex`, which makes the release source the environment file
   Florist copies into it (`.envrc.runtime`) and sets long node names.
 
-Each target has its own database role, `<app>_prod` and `<app>_staging`, as
-Florist takes one password per target: set the target's database user to it
-in `florist.config.exs` (`set :user, "${PROJECT_NAME}_${FLAVOR}"`) and
-`FLORIST_DB_PASSWORD_PROD` or `FLORIST_DB_PASSWORD_STAGING` to the password in
-the `DATABASE_URL`. Build the staging target with `set :mix_env, :prod`, not
+Prod connects as `<app>`, Florist's default database user, and staging as
+its own `<app>_staging`: Florist takes one password per target, and a role
+both targets share keeps the password of whichever was set up first. Set the
+staging target's database user in `florist.config.exs`
+(`set :user, "${PROJECT_NAME}_staging"`), and `FLORIST_DB_PASSWORD_PROD` or
+`FLORIST_DB_PASSWORD_STAGING` to the password in the `DATABASE_URL`. Build the staging target with `set :mix_env, :prod`, not
 the `:staging` in `florist init`'s example: the application has no
 `config/staging.exs`, and the prod `check_origin` is what lists the staging
 host. See "Runtime environment" in [Deployment](deployment.md).

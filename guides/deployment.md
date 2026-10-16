@@ -162,7 +162,7 @@ target :prod do
 
   database do
     set :name, "${PROJECT_NAME}_${FLAVOR}"
-    set :user, "${PROJECT_NAME}_${FLAVOR}"
+    set :user, "${PROJECT_NAME}"
   end
 
   docker do
@@ -253,7 +253,9 @@ prod and staging on one server don't share a node name:
 application (see [Deployment hosts](generators.md#deployment-hosts)), with the
 variables a Phoenix `config/runtime.exs` reads: `PHX_HOST`, `PHX_SERVER`,
 `DATABASE_URL` and `SECRET_KEY_BASE`, plus that `RELEASE_NODE` default. Their
-`DATABASE_URL` uses the user `<app>_prod` or `<app>_staging`. Use whichever
+`DATABASE_URL` uses the user `<app>` for prod (Florist's default) and
+`<app>_staging` for staging, whose target sets
+`set :user, "${PROJECT_NAME}_staging"`. Use whichever
 names your own `config/runtime.exs` reads; the example below is for one that
 reads Brando's `BRANDO_*` variables.
 

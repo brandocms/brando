@@ -25,10 +25,11 @@ if Code.ensure_loaded?(Igniter) do
     def existing(igniter) do
       {igniter, check_origin?} = check_origin?(igniter, @origin_configs, MapSet.new())
 
-      {igniter, envrc} =
-        Enum.reduce(@envrc, {igniter, %{}}, fn {flavor, path}, {igniter, envrc} ->
+      {igniter, envrc, unfilled} =
+        Enum.reduce(@envrc, {igniter, %{}, []}, fn {flavor, path}, {igniter, envrc, unfilled} ->
           {igniter, contents} = contents(igniter, path)
-          {igniter, Map.put(envrc, flavor, contents && envrc_host(contents))}
+          unfilled = if contents && contents =~ "__BRANDO_", do: unfilled ++ [path], else: unfilled
+          {igniter, Map.put(envrc, flavor, contents && envrc_host(contents)), unfilled}
         end)
 
       {igniter, release_env} = contents(igniter, @release_env)
@@ -38,6 +39,7 @@ if Code.ensure_loaded?(Igniter) do
          check_origin?: check_origin?,
          envrc: Map.new(envrc, fn {flavor, host} -> {flavor, host != nil} end),
          envrc_hosts: envrc |> Map.values() |> Enum.reject(&(&1 in [nil, ""])),
+         unfilled_envrc: unfilled,
          release_env: release_env
        }}
     end
@@ -68,6 +70,7 @@ if Code.ensure_loaded?(Igniter) do
       igniter
       |> check_origin(project, hosts, existing)
       |> envrc(project, hosts, created)
+      |> fill_secrets(existing.unfilled_envrc)
       |> release_env(project, existing.release_env)
       |> kept_envrc_notice(hosts, existing)
       |> gitignore(Enum.map(created, &elem(&1, 1)))
@@ -127,19 +130,37 @@ if Code.ensure_loaded?(Igniter) do
       |> Igniter.add_task("brando.install.secrets", Enum.map(created, &elem(&1, 1)))
     end
 
+    # An earlier run whose secrets task never ran (a failed deps.get, an
+    # interrupted install) left the markers in place; fill them in now.
+    defp fill_secrets(igniter, []), do: igniter
+    defp fill_secrets(igniter, paths), do: Igniter.add_task(igniter, "brando.install.secrets", paths)
+
     defp release_env(igniter, project, nil),
       do: Mix.Brando.Igniter.Install.copy(igniter, {:eex, @release_env, @release_env}, project)
 
     defp release_env(igniter, _project, contents) do
-      if String.contains?(contents, ".envrc.runtime") do
-        igniter
-      else
-        Igniter.add_notice(igniter, """
-        #{@release_env} does not source .envrc.runtime, the environment file Florist copies
-        into each release, so .envrc.prod and .envrc.staging do not reach the application.
-        Source "$RELEASE_ROOT/.envrc.runtime" in it, before any RELEASE_NODE default.
-        """)
+      cond do
+        not String.contains?(contents, ".envrc.runtime") ->
+          release_env_notice(igniter)
+
+        not Regex.match?(~r/RELEASE_DISTRIBUTION=["']?name/, contents) ->
+          Igniter.add_notice(igniter, """
+          #{@release_env} sources .envrc.runtime but keeps the default short node names, while
+          the environment files default RELEASE_NODE to a long name (<app>_prod@127.0.0.1).
+          Add `export RELEASE_DISTRIBUTION=name` to it, or the release will not start.
+          """)
+
+        true ->
+          igniter
       end
+    end
+
+    defp release_env_notice(igniter) do
+      Igniter.add_notice(igniter, """
+      #{@release_env} does not source .envrc.runtime, the environment file Florist copies
+      into each release, so .envrc.prod and .envrc.staging do not reach the application.
+      Source "$RELEASE_ROOT/.envrc.runtime" in it, before any RELEASE_NODE default.
+      """)
     end
 
     defp kept_envrc_notice(igniter, hosts, existing) do
@@ -179,7 +200,8 @@ if Code.ensure_loaded?(Igniter) do
       last_match =
         content
         |> String.split("\n")
-        |> Enum.map(&gitignore_rule(String.trim(&1)))
+        # Git keeps leading spaces and drops unescaped trailing ones.
+        |> Enum.map(&gitignore_rule(String.trim_trailing(&1)))
         |> Enum.reverse()
         |> Enum.find(&(&1 != nil and Regex.match?(elem(&1, 1), file)))
 
@@ -188,13 +210,22 @@ if Code.ensure_loaded?(Igniter) do
 
     defp gitignore_rule(""), do: nil
     defp gitignore_rule("#" <> _), do: nil
-    defp gitignore_rule("!" <> pattern), do: with({_, regex} <- gitignore_rule(pattern), do: {true, regex})
+    # A negation this matcher cannot read might un-ignore the file, so it
+    # counts as matching it: the explicit ignore line gets added.
+    defp gitignore_rule("!" <> pattern) do
+      case gitignore_rule(pattern) do
+        {_, regex} -> {true, regex}
+        nil -> {true, ~r/.*/}
+      end
+    end
 
     defp gitignore_rule(pattern) do
       pattern = pattern |> String.trim_leading("**/") |> String.trim_leading("/")
 
-      # A trailing slash matches directories only, and an inner one a nested path.
-      if pattern == "" or String.contains?(pattern, "/") do
+      # A trailing slash matches directories only, and an inner one a nested
+      # path. Character classes and escapes are not read: such a rule never
+      # counts as ignoring the file.
+      if pattern == "" or String.contains?(pattern, ["/", "[", "\\"]) do
         nil
       else
         glob =
@@ -223,6 +254,16 @@ if Code.ensure_loaded?(Igniter) do
       """
 
       Igniter.add_notice(igniter, envrc <> (origin || ""))
+    end
+
+    # --origin or --staging-domain without --domain write nothing: a list
+    # without the real host would block it.
+    defp placeholder_notice(igniter, %{placeholder?: true, explicit?: true}, _existing, []) do
+      Igniter.add_notice(igniter, """
+      Origins or a staging host take effect only with a domain (--domain, or the domain
+      question with --interactive): without the real host, check_origin would block it, so
+      nothing was written.
+      """)
     end
 
     defp placeholder_notice(igniter, _hosts, _existing, _created), do: igniter
