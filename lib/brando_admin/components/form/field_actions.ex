@@ -303,14 +303,14 @@ defmodule BrandoAdmin.Components.Form.FieldActions do
           <button
             :if={@proposal.status == :ready}
             type="button"
-            class="field-ai-button primary"
+            class="btn btn--primary"
             phx-click="accept"
             phx-value-replace={to_string(@proposal.conflict)}
             phx-target={@myself}
           >
             {if @proposal.conflict, do: gettext("Replace"), else: gettext("Accept")}
           </button>
-          <button type="button" class="field-ai-button" phx-click="discard" phx-target={@myself}>
+          <button type="button" class="btn" phx-click="discard" phx-target={@myself}>
             {if @proposal.status == :running, do: gettext("Cancel"), else: gettext("Discard")}
           </button>
           <AIAction.button

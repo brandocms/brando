@@ -94,10 +94,10 @@ defmodule BrandoAdmin.AI.GuidanceLive do
               </span>
             </div>
             <div class="guidance-actions">
-              <button :if={@dirty?} type="button" class="guidance-button quiet" phx-click="discard">
+              <button :if={@dirty?} type="button" class="btn btn--quiet" phx-click="discard">
                 {gettext("Discard changes")}
               </button>
-              <button type="submit" class="guidance-button primary" disabled={!@dirty?} phx-disable-with={gettext("Saving…")}>
+              <button type="submit" class="btn btn--primary" disabled={!@dirty?} phx-disable-with={gettext("Saving…")}>
                 {gettext("Save guidance")}
               </button>
             </div>
@@ -114,7 +114,7 @@ defmodule BrandoAdmin.AI.GuidanceLive do
             </select>
             <button
               type="submit"
-              class="guidance-button"
+              class="btn"
               data-confirm={@dirty? && gettext("Replace your unsaved changes with the copied guidance?")}
             >
               {gettext("Copy into editor")}
@@ -156,7 +156,7 @@ defmodule BrandoAdmin.AI.GuidanceLive do
             <button
               :if={!(@current && version.id == @current.id)}
               type="button"
-              class="guidance-button"
+              class="btn btn--sm"
               phx-click="restore"
               phx-value-id={version.id}
               data-confirm={@dirty? && gettext("Replace your unsaved changes with this version?")}

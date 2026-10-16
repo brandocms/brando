@@ -222,19 +222,19 @@ defmodule BrandoAdmin.Components.Form.StructuredData do
       </p>
 
       <div class="structured-data-actions">
-        <button type="button" class="structured-data-action" data-copy-json-ld>
+        <button type="button" class="btn" data-copy-json-ld>
           <.icon name="copy" />
           <span data-copy-label>{gettext("Copy JSON-LD")}</span>
         </button>
         <%= case @rich_results do %>
           <% {:ok, url} -> %>
-            <a class="structured-data-action" href={url} target="_blank" rel="noopener noreferrer" data-rich-results>
+            <a class="btn" href={url} target="_blank" rel="noopener noreferrer" data-rich-results>
               <.icon name="external-link" />{gettext("Rich Results Test")}
             </a>
           <% {:disabled, reason} -> %>
             <button
               type="button"
-              class="structured-data-action"
+              class="btn"
               disabled
               data-rich-results
               aria-describedby={"#{@id}-rich-results-reason"}

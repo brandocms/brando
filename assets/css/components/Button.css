@@ -53,38 +53,8 @@
   width: fit-content;
 }
 
-.add-entry-button {
-  /* A secondary action beside a list: the same light button as media fields
-     and button groups (see MediaField.css .media-button), not a dark outline. */
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
+.btn.add-entry-button {
   margin-top: 12px;
-  min-height: 32px;
-  padding: 5px 12px;
-  font: 13px/20px "Main", sans-serif;
-  color: var(--brando-ink);
-  background-color: var(--brando-surface);
-  border: 1px solid var(--brando-line);
-  border-radius: 5px;
-  cursor: pointer;
-  transition: background-color 0.15s ease, border-color 0.15s ease;
-
-  :is(svg, [data-icon]) {
-    width: 15px;
-    height: 15px;
-    flex-shrink: 0;
-  }
-
-  &:hover {
-    background-color: var(--brando-surface-tint);
-    border-color: var(--brando-line-strong);
-  }
-
-  &:focus-visible {
-    outline: 2px solid var(--brando-accent);
-    outline-offset: 3px;
-  }
 }
 
 /* An icon placed straight in a control takes the control's text size. The

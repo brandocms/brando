@@ -214,7 +214,7 @@ defmodule BrandoAdmin.Components.Form.Input.FormFields do
             </div>
 
             <div :if={!@locked} class="var-layout-foot">
-              <button type="button" class="module-add-button" phx-click={show_modal("##{@id}-add")}>
+              <button type="button" class="btn" phx-click={show_modal("##{@id}-add")}>
                 <.icon name="plus" />
                 {gettext("Add field")}
               </button>
@@ -645,7 +645,7 @@ defmodule BrandoAdmin.Components.Form.Input.FormFields do
       <button
         :if={!@locked}
         type="button"
-        class="module-add-button"
+        class="btn"
         phx-click={JS.push("add_option", value: %{uid: @entry.uid}, target: @target)}
       >
         <.icon name="plus" />

@@ -742,7 +742,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
 
                             <button
                               type="button"
-                              class="module-add-button"
+                              class="btn"
                               phx-click={JS.push("add_select_var_option", value: %{var_key: @key}, target: @target)}
                             >
                               <.icon name="plus" />

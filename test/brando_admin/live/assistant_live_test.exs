@@ -244,7 +244,7 @@ defmodule BrandoAdmin.AssistantLiveTest do
     view |> element(suggestion) |> render_click()
     assert has_element?(view, suggestion <> ".is-picked", "image1")
 
-    view |> element(".assistant-request .assistant-apply") |> render_click()
+    view |> element(".assistant-request .assistant-request-use") |> render_click()
     eventually(view, &(&1 =~ "I will use image1."))
     assert has_element?(view, ".assistant-bubble", "I have attached the media. Use it.")
     refute has_element?(view, ".assistant-request.is-open")
@@ -895,7 +895,7 @@ defmodule BrandoAdmin.AssistantLiveTest do
     test "one is rejected, and a change can be left out of another", %{conn: conn} = c do
       rejected = mcp_proposal(c, c.current_user, "Rejected")
       {:ok, view, _} = live(conn, "/admin/assistant/connected/#{rejected}")
-      view |> element("button.assistant-discard") |> render_click()
+      view |> element(~s(button[phx-click="cancel_proposal"])) |> render_click()
       assert has_element?(view, "h2", "Discarded")
       refute has_element?(view, ~s(#assistant-connected-list a[data-proposal-id="#{rejected}"]))
       assert has_element?(view, ".assistant-connected-empty")

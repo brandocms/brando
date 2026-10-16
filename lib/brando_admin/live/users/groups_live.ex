@@ -90,7 +90,7 @@ defmodule BrandoAdmin.Users.GroupsLive do
             <button
               :if={Engine.can?(@authorization, :create, :groups)}
               type="button"
-              class="access-button"
+              class="btn btn--sm"
               phx-click="new"
               data-confirm={discard_confirmation(@selected, @draft, @permissions)}
             >{gettext("New group")}</button>
@@ -136,7 +136,7 @@ defmodule BrandoAdmin.Users.GroupsLive do
           <%= if @selected do %>
             <%= if @preview do %>
               <section class="authorization-review" aria-label={gettext("Review permission changes")}>
-                <button type="button" class="access-button quiet" phx-click="cancel_review">{gettext("Back to editing")}</button>
+                <button type="button" class="btn btn--quiet" phx-click="cancel_review">{gettext("Back to editing")}</button>
                 <h2
                   id="authorization-review-title"
                   data-access-return="#authorization-review-button"
@@ -195,7 +195,7 @@ defmodule BrandoAdmin.Users.GroupsLive do
                 <div class="authorization-review-actions">
                   <button
                     type="button"
-                    class="access-button primary-action"
+                    class="btn btn--primary"
                     phx-click="save"
                     phx-disable-with={gettext("Saving…")}
                   >{gettext("Confirm & save")}</button>
@@ -203,7 +203,7 @@ defmodule BrandoAdmin.Users.GroupsLive do
                   <button
                     :if={@stale?}
                     type="button"
-                    class="access-button"
+                    class="btn"
                     phx-click="reload"
                     data-confirm={gettext("Discard your draft and load the latest saved version?")}
                   >{gettext("Load latest version")}</button>
@@ -226,7 +226,7 @@ defmodule BrandoAdmin.Users.GroupsLive do
                   type="submit"
                   form="group-permissions"
                   id="authorization-review-button"
-                  class="access-button primary-action"
+                  class="btn btn--primary"
                   disabled={!@dirty?}
                   phx-disable-with={gettext("Preparing review…")}
                 >{gettext("Review changes")}</button>
@@ -305,7 +305,7 @@ defmodule BrandoAdmin.Users.GroupsLive do
                         {gettext("These permissions are no longer registered and grant no access.")}
                       </p>
                       <p :for={key <- retired_permissions(@catalog, @permissions)}>{key}</p>
-                      <button :if={@authorization.superuser?} type="button" class="access-button" phx-click="remove_retired">{gettext(
+                      <button :if={@authorization.superuser?} type="button" class="btn" phx-click="remove_retired">{gettext(
                         "Remove retired permissions"
                       )}</button>
                     </div>
@@ -336,14 +336,14 @@ defmodule BrandoAdmin.Users.GroupsLive do
                       <button
                         :if={@selected.id && Engine.can?(@authorization, :create, :groups)}
                         type="button"
-                        class="access-button quiet"
+                        class="btn btn--quiet"
                         phx-click="clone"
                         data-confirm={discard_confirmation(@selected, @draft, @permissions)}
                       >{gettext("Duplicate group")}</button>
                       <button
                         :if={@dirty?}
                         type="button"
-                        class="access-button quiet"
+                        class="btn btn--quiet"
                         phx-click="discard"
                         data-confirm={gettext("Discard your unsaved group changes?")}
                       >{gettext("Discard changes")}</button>
@@ -351,7 +351,7 @@ defmodule BrandoAdmin.Users.GroupsLive do
                     <button
                       :if={@selected.id && is_nil(@selected.preset) && Engine.can?(@authorization, :delete, :groups)}
                       type="button"
-                      class="access-button quiet destructive"
+                      class="btn btn--quiet btn--danger"
                       phx-click="delete"
                       data-confirm={
                         ngettext(
@@ -368,7 +368,7 @@ defmodule BrandoAdmin.Users.GroupsLive do
               <div :if={@tab == "members"} class="authorization-members">
                 <%= if @effective do %>
                   <section class="authorization-effective">
-                    <button type="button" class="access-button quiet" phx-click="close_effective">{gettext("All members")}</button>
+                    <button type="button" class="btn btn--quiet" phx-click="close_effective">{gettext("All members")}</button>
                     <h3
                       id="authorization-effective-title"
                       data-access-return={"#member-access-#{@effective_person.id}"}
@@ -424,7 +424,7 @@ defmodule BrandoAdmin.Users.GroupsLive do
                     <button
                       :if={Engine.can?(@authorization, :assign, :groups) && !@adding_member?}
                       type="button"
-                      class="access-button"
+                      class="btn"
                       phx-click="show_add_member"
                     >{gettext("Add member")}</button>
                   </div>
@@ -432,7 +432,7 @@ defmodule BrandoAdmin.Users.GroupsLive do
                     <div class="authorization-heading">
                       <h4>{gettext("Add a member")}</h4><button
                         type="button"
-                        class="access-button quiet"
+                        class="btn btn--sm btn--quiet"
                         phx-click="cancel_add_member"
                       >{gettext("Cancel")}</button>
                     </div>
@@ -451,7 +451,7 @@ defmodule BrandoAdmin.Users.GroupsLive do
                       <div :for={person <- available_people(@directory, @members)}>
                         <span>{person.name}</span><button
                           type="button"
-                          class="access-button"
+                          class="btn btn--sm"
                           phx-click="add_member"
                           phx-value-user_id={person.id}
                           aria-label={gettext("Add %{name}", name: person.name)}
@@ -471,7 +471,7 @@ defmodule BrandoAdmin.Users.GroupsLive do
                     <div><strong>{person.name}</strong><small :if={!person.active}>{gettext("Disabled account")}</small></div>
                     <button
                       type="button"
-                      class="access-button quiet"
+                      class="btn btn--sm btn--quiet"
                       phx-click="effective"
                       id={"member-access-#{person.id}"}
                       phx-value-id={person.id}
@@ -479,7 +479,7 @@ defmodule BrandoAdmin.Users.GroupsLive do
                     <button
                       :if={Engine.can?(@authorization, :assign, :groups)}
                       type="button"
-                      class="access-button quiet"
+                      class="btn btn--sm btn--quiet"
                       phx-click="remove_member"
                       phx-value-id={person.id}
                       data-confirm={

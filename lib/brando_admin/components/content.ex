@@ -84,7 +84,12 @@ defmodule BrandoAdmin.Components.Content do
             <p :if={@subtitle}>{@subtitle}</p>
           </div>
           <h2 :if={!@workspace}>{@title}</h2>
-          <button phx-click={@close} type="button" class="drawer-close-button" aria-label={gettext("Close")}>
+          <button
+            phx-click={@close}
+            type="button"
+            class={["btn drawer-close-button", @workspace && "btn--quiet btn--icon"]}
+            aria-label={gettext("Close")}
+          >
             <.icon :if={@workspace} name="x" />
             <span :if={!@workspace}>{gettext("Close")}</span>
           </button>

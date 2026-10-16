@@ -817,7 +817,7 @@ defmodule BrandoAdmin.Components.ImagePicker do
         <div :if={@picker_mode == :select} class="image-picker__actions">
           <button
             type="button"
-            class="image-picker-action-button"
+            class="btn btn--sm btn--quiet btn--icon"
             aria-label={gettext("Image actions")}
             phx-click={toggle_dropdown("##{@menu_id}")}
             phx-click-away={hide_dropdown("##{@menu_id}")}

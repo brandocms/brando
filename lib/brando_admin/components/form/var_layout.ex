@@ -179,7 +179,7 @@ defmodule BrandoAdmin.Components.Form.VarLayout do
           <div class="var-layout-foot">
             <button
               type="button"
-              class="module-add-button"
+              class="btn"
               phx-click={show_modal("##{@form.id}-#{@form_key}-create-var")}
             >
               <.icon name="plus" />

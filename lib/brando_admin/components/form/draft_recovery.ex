@@ -57,10 +57,10 @@ defmodule BrandoAdmin.Components.Form.DraftRecovery do
           </div>
         </div>
         <div class="draft-actions">
-          <button type="button" class="draft-button draft-button-primary" phx-click="draft_open" phx-target={@target}>
+          <button type="button" class="btn btn--primary" phx-click="draft_open" phx-target={@target}>
             {gettext("Review recovery copy")}
           </button>
-          <button type="button" class="draft-button" phx-click="draft_dismiss" phx-target={@target}>
+          <button type="button" class="btn" phx-click="draft_dismiss" phx-target={@target}>
             {gettext("Continue without restoring")}
           </button>
         </div>
@@ -79,7 +79,7 @@ defmodule BrandoAdmin.Components.Form.DraftRecovery do
           </div>
           <button
             type="button"
-            class="draft-button draft-button-quiet draft-close"
+            class="btn btn--quiet btn--icon draft-close"
             phx-click="draft_dismiss"
             phx-target={@target}
             aria-label={gettext("Close recovery panel")}
@@ -152,7 +152,7 @@ defmodule BrandoAdmin.Components.Form.DraftRecovery do
                   label={gettext("Copy text")}
                 />
                 <a
-                  class="draft-button draft-export"
+                  class="btn btn--sm"
                   download="entry-recovery.json"
                   href={"data:application/json;base64," <> Base.encode64(Jason.encode!(@state.selected.payload, pretty: true))}
                 >
@@ -206,7 +206,7 @@ defmodule BrandoAdmin.Components.Form.DraftRecovery do
           <button
             :if={@state.selected}
             type="button"
-            class="draft-button draft-button-danger"
+            class="btn btn--quiet btn--danger"
             phx-click="draft_discard"
             phx-value-id={@state.selected.id}
             phx-target={@target}
@@ -215,13 +215,13 @@ defmodule BrandoAdmin.Components.Form.DraftRecovery do
             {gettext("Discard copy")}
           </button>
           <div class="draft-actions">
-            <button type="button" class="draft-button" phx-click="draft_clean" phx-target={@target}>
+            <button type="button" class="btn" phx-click="draft_clean" phx-target={@target}>
               {if @entry_id, do: gettext("Open saved version"), else: gettext("Start fresh")}
             </button>
             <button
               :if={@state.selected && @state.compatible?}
               type="button"
-              class="draft-button"
+              class="btn"
               phx-click="draft_restore_compatible"
               phx-value-id={@state.selected.id}
               phx-target={@target}
@@ -231,7 +231,7 @@ defmodule BrandoAdmin.Components.Form.DraftRecovery do
             <button
               :if={@state.selected}
               type="button"
-              class="draft-button draft-button-primary"
+              class="btn btn--primary"
               phx-click="draft_restore"
               phx-value-id={@state.selected.id}
               phx-target={@target}
@@ -252,7 +252,7 @@ defmodule BrandoAdmin.Components.Form.DraftRecovery do
 
   defp copy_button(assigns) do
     ~H"""
-    <button id={@id} type="button" class="draft-button draft-copy-content" data-draft-copy={@source} aria-label={@label}>
+    <button id={@id} type="button" class="btn btn--sm draft-copy-content" data-draft-copy={@source} aria-label={@label}>
       <Brando.HTML.Icon.icon name="copy" class="draft-icon" />
       <span class="draft-copy-label">{@label}</span>
       <span class="draft-copy-success" role="status">{gettext("Copied")}</span>

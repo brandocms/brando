@@ -865,7 +865,7 @@ defmodule BrandoAdmin.Components.VideoPicker do
                   <button
                     :if={@allow_external_urls?}
                     type="button"
-                    class="video-picker-add-btn"
+                    class="btn btn--sm"
                     phx-click={JS.push("toggle_url_input", target: @myself)}
                   >
                     <.icon name="link" />
@@ -879,7 +879,7 @@ defmodule BrandoAdmin.Components.VideoPicker do
                   <button
                     :for={provider <- @library_providers}
                     type="button"
-                    class="video-picker-add-btn"
+                    class="btn btn--sm"
                     aria-expanded={to_string(@library != nil && @library.strategy == provider.strategy)}
                     aria-controls={"#{@id}-library"}
                     phx-click={JS.push("open_library", value: %{strategy: provider.strategy}, target: @myself)}
@@ -901,7 +901,7 @@ defmodule BrandoAdmin.Components.VideoPicker do
                   >
                     <button
                       type="button"
-                      class="video-picker-add-btn upload-trigger"
+                      class="btn btn--sm upload-trigger"
                     >
                       <.icon name="upload" />
                       {gettext("Upload file")}
@@ -917,7 +917,7 @@ defmodule BrandoAdmin.Components.VideoPicker do
                   >
                     <button
                       type="button"
-                      class="video-picker-add-btn"
+                      class="btn btn--sm"
                       onclick="this.closest('[phx-hook]').querySelector('.video-picker-file-input').click()"
                     >
                       <.icon name="upload" />
@@ -944,7 +944,7 @@ defmodule BrandoAdmin.Components.VideoPicker do
                     placeholder={gettext("Paste YouTube, Vimeo or direct video URL")}
                     phx-mounted={JS.focus()}
                   />
-                  <button type="button" class="video-picker-add-btn">
+                  <button type="button" class="btn">
                     <%= if @creating_video do %>
                       {gettext("Creating...")}
                     <% else %>
@@ -1003,7 +1003,7 @@ defmodule BrandoAdmin.Components.VideoPicker do
                   aria-label={gettext("Search %{provider}", provider: @library.label)}
                   placeholder={gettext("Search by title")}
                 />
-                <button type="submit" class="video-picker-add-btn">{gettext("Search")}</button>
+                <button type="submit" class="btn">{gettext("Search")}</button>
               </form>
 
               <p :if={@library.error} class="video-picker-library-error" role="alert">{@library.error}</p>
@@ -1024,7 +1024,7 @@ defmodule BrandoAdmin.Components.VideoPicker do
                         <span class="video-picker-library-status">{gettext("In library")}</span>
                         <button
                           type="button"
-                          class="video-picker-add-btn"
+                          class="btn btn--sm"
                           phx-click="add_from_library"
                           phx-value-remote-id={item.remote_id}
                           phx-target={@myself}
@@ -1034,7 +1034,7 @@ defmodule BrandoAdmin.Components.VideoPicker do
                       <% item.playable? -> %>
                         <button
                           type="button"
-                          class="video-picker-add-btn"
+                          class="btn btn--sm"
                           phx-click="add_from_library"
                           phx-value-remote-id={item.remote_id}
                           phx-target={@myself}

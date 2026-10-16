@@ -41,9 +41,6 @@
   .brando-form .subform-entry:not(.subform-table-body > *, .vars-row, .summary-entry) .subform-tools button:hover { background: color-mix(in srgb, var(--brando-accent) 8%, var(--brando-surface-selected)); }
   .brando-form .submit-button { display: inline-flex; align-items: center; justify-content: center; width: auto; min-width: 116px; margin-top: 24px; }
   .brando-form .settings-save-bar .submit-button { margin: 0; }
-  .add-entry-button { display: inline-flex; align-items: center; gap: 8px; min-height: 34px; height: auto; margin-top: 12px; padding: 7px 12px; border: 1px solid var(--brando-line); border-radius: 6px; background: var(--brando-surface); color: var(--brando-accent); font-family: inherit; font-size: 13px; line-height: 18px; }
-  .add-entry-button [data-icon] { display: block; width: 14px; height: 14px; margin: 0; }
-  .add-entry-button:hover { background: var(--brando-surface-selected); border-color: var(--brando-line-strong); }
   .global-save-actions { padding-top: 20px; }
   .global-tabs > [role="region"] { max-width: 880px; }
   .global-tabs > .global-set-tabs { margin-bottom: 24px; }
@@ -84,7 +81,7 @@
     .brando-form .subform-entry:not(.subform-table-body > *, .vars-row, .summary-entry) .subform-fields { flex-wrap: wrap; }
     .brando-form .subform-entry:not(.subform-table-body > *, .vars-row, .summary-entry) .subform-fields > .brando-input { flex-basis: 100%; }
   }
-  @media (pointer: coarse) { .form-tab-customs button, .add-entry-button { min-height: 40px; } }
+  @media (pointer: coarse) { .form-tab-customs button { min-height: 40px; } }
 }
 .admin-workspace.seo-workspace {
   .brando-form fieldset:not(:has(.subform)) { max-width: 800px; }

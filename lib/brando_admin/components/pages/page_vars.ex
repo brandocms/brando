@@ -89,7 +89,7 @@ defmodule BrandoAdmin.Components.Pages.PageVars do
           <button
             id={"#{@field.id}-add-entry"}
             type="button"
-            class="add-entry-button"
+            class="btn add-entry-button"
             phx-click={JS.push("add_subentry", target: @myself)}
           >
             <.icon name="list-plus" />

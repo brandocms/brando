@@ -59,7 +59,7 @@ test('reviews, applies and rejects proposals from a connected tool', async ({ pa
   await syncLV(page)
   await list.getByRole('link', { name: /Retitle the MCP rejected page/ }).click()
   await syncLV(page)
-  await review.locator('button.assistant-discard').click()
+  await review.locator('button[phx-click="cancel_proposal"]').click()
   await expect(list.locator('li')).toHaveCount(1)
   await expect(list.getByTestId('assistant-state-waiting')).toHaveCount(0)
   await expect(review.locator('button.assistant-apply')).toHaveCount(0)

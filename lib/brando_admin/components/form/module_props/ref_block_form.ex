@@ -633,7 +633,7 @@ defmodule BrandoAdmin.Components.Form.ModuleProps.RefBlockForm do
           name={"#{block_data.name}[sort_style_ids][]"}
           value="new"
           phx-click={JS.dispatch("change")}
-          class="add-entry-button"
+          class="btn add-entry-button"
         >
           {gettext("Add style")}
         </button>

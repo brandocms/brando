@@ -10,42 +10,6 @@
   gap: 0.5rem;
 }
 
-.video-picker-add-btn {
-  @font mono;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.35rem;
-  border: 1px solid color-mix(in srgb, var(--brando-ink) 26%, transparent);
-  border-radius: 999px;
-  background: color-mix(in srgb, white 80%, transparent);
-  color: var(--brando-ink);
-  font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
-  height: 32px;
-  padding: 0 0.75rem;
-  transition:
-    background-color 150ms ease,
-    border-color 150ms ease,
-    color 150ms ease;
-
-  [data-icon] {
-    width: 0.82rem;
-    height: 0.82rem;
-    opacity: 0.72;
-  }
-
-  &:hover {
-    background: var(--brando-ink);
-    border-color: var(--brando-ink);
-    color: white;
-
-    [data-icon] {
-      opacity: 1;
-    }
-  }
-}
-
 .video-picker-url-input {
   margin-top: 0.35rem;
   padding: 0.55rem 0.65rem;
@@ -82,7 +46,7 @@
     }
   }
 
-  .video-picker-add-btn {
+  > .btn {
     align-self: flex-start;
     margin-top: 0.1rem;
   }
