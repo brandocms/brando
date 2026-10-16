@@ -10,9 +10,7 @@
 > Fields project the sticky manager's state; they never own transfers. Picture
 > refs now receive the association on upload completion and refresh their preview
 > when processing finishes. Default image destinations use the existing folder
-> browser, with request-correlated confirmation and cancellation. See the
-> [implementation record](audits/media-upload-2026-09-08/IMPLEMENTATION.md)
-> for verified coverage and remaining transport/recovery boundaries. Earlier
+> browser, with request-correlated confirmation and cancellation. Earlier
 > phase notes below are historical.
 
 > Status: **Phases 1–2 implemented (2026-07-05).**

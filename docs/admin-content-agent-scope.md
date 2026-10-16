@@ -379,8 +379,7 @@ must be tested and committed there as well as the Brando-side changes here.
 
 ## Selected interface and design artifacts
 
-Three interactive directions are available in
-[the offline concept prototype](admin-ui/content-agent-concepts/concepts.html):
+Three interactive directions were prototyped:
 
 - **A — Workspace (selected):** persistent conversation beside a visual proposal,
   with on-demand page previews, Before / Proposed, viewport controls and change
@@ -392,10 +391,8 @@ Three interactive directions are available in
 
 These are concept mockups with illustrative media and simulated actions, not
 implemented admin screens. They have no LLM, MCP or Brando data connection.
-The user selected A and requested page previews. The preview extension is shown
-in [desktop](admin-ui/content-agent-concepts/workspace-page-preview-desktop.png)
-and [mobile](admin-ui/content-agent-concepts/workspace-page-preview-mobile.png)
-screenshots. Open the offline prototype and choose **Preview page** on any card.
+The user selected A and requested page previews. The shipped screens are in
+[the content assistant guide](../guides/content_assistant.md).
 
 Recommended next implementation step: prove the domain proposal/apply path for
 the actual site's Case definition and category schemas. That will establish the

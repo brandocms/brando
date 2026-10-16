@@ -12,7 +12,7 @@ import path from 'path'
 // bytes. BENCH_TIMELINE=1 adds every frame of each step to the output.
 //
 // This replaces the throwaway spec behind the keystroke/collapse/config rows
-// of docs/audits/block-editor-client-side-2026-09-13.md.
+// of the 2026-09-13 client-side block editor audit.
 //
 //   pnpm playwright test --config bench/playwright.bench.config.js bench/interactions.spec.js
 
