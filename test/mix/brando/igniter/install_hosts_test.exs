@@ -20,6 +20,7 @@ defmodule Mix.Brando.Igniter.InstallHostsTest do
             "config/prod.exs" => """
             import Config
             config :studio, StudioWeb.Endpoint, cache_static_manifest: "priv/static/cache_manifest.json"
+            config :brando, media_path: "./media", log_dir: "./log"
             """
           },
           files
@@ -28,6 +29,10 @@ defmodule Mix.Brando.Igniter.InstallHostsTest do
   end
 
   defp install(igniter, args), do: Igniter.compose_task(igniter, Install, args)
+
+  # Covers what the installer ignores for Brando, so these tests see only
+  # the environment file rules.
+  @brando_ignores "node_modules/\n.yalc/\nyalc.lock\n/priv/static/\n/media/\n/log/\n/release-archives/\n/sql/\n"
 
   defp check_origin(igniter) do
     quoted = igniter.rewrite |> Rewrite.source!("config/prod.exs") |> Rewrite.Source.get(:quoted)
@@ -134,7 +139,7 @@ defmodule Mix.Brando.Igniter.InstallHostsTest do
     envrc = "export PHX_HOST=\"realsite.no\"\n"
 
     igniter =
-      project(%{".envrc.prod" => envrc, ".envrc.staging" => envrc, ".gitignore" => "/.envrc.*\n"})
+      project(%{".envrc.prod" => envrc, ".envrc.staging" => envrc, ".gitignore" => "/.envrc.*\n" <> @brando_ignores})
       |> install(["--yes", "--origin", "//cms.example.net"])
 
     Igniter.Test.assert_unchanged(igniter, "config/prod.exs")
@@ -146,7 +151,7 @@ defmodule Mix.Brando.Igniter.InstallHostsTest do
     filled = "export PHX_HOST=\"realsite.no\"\nexport SECRET_KEY_BASE=\"done\"\n"
 
     igniter =
-      project(%{".envrc.prod" => marked, ".envrc.staging" => filled, ".gitignore" => "/.envrc.*\n"})
+      project(%{".envrc.prod" => marked, ".envrc.staging" => filled, ".gitignore" => "/.envrc.*\n" <> @brando_ignores})
       |> install(["--yes"])
 
     assert {"brando.install.secrets", [".envrc.prod"]} in igniter.tasks
@@ -166,7 +171,7 @@ defmodule Mix.Brando.Igniter.InstallHostsTest do
     envrc = "export PHX_HOST=\"realsite.no\"\n"
 
     igniter =
-      project(%{".envrc.prod" => envrc, ".envrc.staging" => envrc, ".gitignore" => "/.envrc.*\n"})
+      project(%{".envrc.prod" => envrc, ".envrc.staging" => envrc, ".gitignore" => "/.envrc.*\n" <> @brando_ignores})
       |> install(["--yes"])
 
     assert igniter.issues == []
@@ -237,11 +242,12 @@ defmodule Mix.Brando.Igniter.InstallHostsTest do
 
   test "an environment file un-ignored by a later negation gets an explicit ignore line" do
     igniter =
-      project(%{".gitignore" => "/_build/\n.envrc*\n!/.envrc.prod\n"})
+      project(%{".gitignore" => @brando_ignores <> "/_build/\n.envrc*\n!/.envrc.prod\n"})
       |> install(["--yes", "--domain", "example.com"])
 
     assert IgniterCase.source(igniter, ".gitignore") ==
-             "/_build/\n.envrc*\n!/.envrc.prod\n\n# Runtime environments with secrets, uploaded by Florist\n/.envrc.prod\n"
+             @brando_ignores <>
+               "/_build/\n.envrc*\n!/.envrc.prod\n\n# Runtime environments with secrets, uploaded by Florist\n/.envrc.prod\n"
   end
 
   test "invalid hosts and origins are blocking issues" do
@@ -308,7 +314,9 @@ defmodule Mix.Brando.Igniter.InstallHostsTest do
 
     igniter =
       project(%{
-        "config/prod.exs" => "import Config\nconfig :studio, StudioWeb.Endpoint, check_origin: [\"//example.org\"]\n"
+        "config/prod.exs" =>
+          "import Config\nconfig :studio, StudioWeb.Endpoint, check_origin: [\"//example.org\"]\n" <>
+            "config :brando, media_path: \"./media\", log_dir: \"./log\"\n"
       })
       |> install(["--interactive", "--tenancy-mode", "none"])
 
@@ -351,7 +359,7 @@ defmodule Mix.Brando.Igniter.InstallHostsTest do
         end
         """,
         ".envrc.prod" => envrc,
-        ".gitignore" => "/_build/\n.envrc*\n"
+        ".gitignore" => "/_build/\n.envrc*\n" <> @brando_ignores
       })
       |> install(["--yes", "--domain", "example.com"])
 

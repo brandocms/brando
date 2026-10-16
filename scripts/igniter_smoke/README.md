@@ -33,7 +33,10 @@ postgres/postgres. `BRANDO_SMOKE_PORT` selects the consumer HTTP port (4482).
 instead of the installed archive.
 
 The script verifies an unattended dry run and an installation rerun against
-source fingerprints. It builds both Vite consumers, verifies manifests and exact
+source fingerprints, and that the installer wrote what Florist's release build
+needs (Brando's Dockerfile and `.dockerignore`, ReleaseTasks, a release that
+writes the tarball, a runtime `media_path`) and a live preview target for CMS
+pages. It builds both Vite consumers, verifies manifests and exact
 binary assets, migrates the database, and initializes the chosen tenancy mode.
 The installer explicitly selects CMS page rendering and replaces the generated
 Phoenix homepage route. It seeds published and draft Pages inside live environments,

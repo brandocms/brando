@@ -11,8 +11,10 @@ if Code.ensure_loaded?(Igniter) do
 
         mix brando.gen.release
 
-    Creates ReleaseTasks and adds a release definition when absent. Existing release
-    settings, secrets, runtime configuration and deployment files are preserved.
+    Creates ReleaseTasks and adds a release definition when absent, with
+    `steps: [:assemble, :tar]` for the tarball Florist deploys; `brando.install`
+    does the same. Existing release settings, secrets, runtime configuration and
+    deployment files are preserved, with a notice when the release writes no tarball.
     Database migrations and deployment remain explicit operations.
     Namespace selection uses the shared --module/--web-module/--repo options.
     """

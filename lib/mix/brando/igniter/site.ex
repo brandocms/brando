@@ -11,6 +11,7 @@ if Code.ensure_loaded?(Igniter) do
     alias Mix.Brando.Igniter.Install.Configuration
     alias Mix.Brando.Igniter.RouteInventory
     alias Mix.Brando.Igniter.Site.ErrorPages
+    alias Mix.Brando.Igniter.Site.LivePreview
     alias Mix.Brando.Igniter.Template
     alias Sourceror.Zipper
 
@@ -32,6 +33,7 @@ if Code.ensure_loaded?(Igniter) do
         |> home_test(project, state)
         |> lockdown_notice(state.lockdown)
         |> ErrorPages.plan(project)
+        |> LivePreview.plan(project)
         |> Igniter.add_notice("""
         CMS pages are prepared under #{inspect(project.web_module)}.CMS.
         The root page and unmatched public paths use published Brando pages.

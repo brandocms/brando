@@ -99,6 +99,20 @@ defmodule Mix.Brando.Igniter.AuxiliaryTest do
     Enum.each(["mix.exs" | Map.keys(files)], &Igniter.Test.assert_unchanged(result, &1))
     assert result.tasks == []
     assert result.rms == []
+    # Florist deploys the tarball, which steps: [:assemble] does not write.
+    assert Enum.any?(result.notices, &(&1 =~ "The studio release in mix.exs does not write a tarball"))
+  end
+
+  test "release adds a definition that writes the tarball Florist deploys, once" do
+    result = Igniter.compose_task(IgniterCase.phoenix_project(), "brando.gen.release", [])
+    assert result.issues == []
+    assert IgniterCase.source(result, "mix.exs") =~ "steps: [:assemble, :tar]"
+    assert IgniterCase.source(result, "lib/studio/release_tasks.ex") =~ "def migrate do"
+    refute Enum.any?(result.notices, &(&1 =~ "does not write a tarball"))
+
+    rerun = result |> IgniterCase.apply_and_reload() |> Igniter.compose_task("brando.gen.release", [])
+    assert rerun.issues == []
+    Igniter.Test.assert_unchanged(rerun)
   end
 
   test "consumer auxiliary templates take precedence" do

@@ -363,7 +363,7 @@ defmodule Mix.Brando.Igniter.InstallTest do
     assert Enum.any?(ignored.notices, &(&1 =~ ".dockerignore may exclude VERSION"))
 
     kept = install(project(%{"Dockerfile" => @phx_dockerfile, ".dockerignore" => "*\n!mix.exs\n!VERSION\n"}))
-    refute Enum.any?(kept.notices, &(&1 =~ ".dockerignore"))
+    refute Enum.any?(kept.notices, &(&1 =~ ".dockerignore may exclude VERSION"))
   end
 
   test "the formatter imports Brando's, which keeps Blueprint DSL calls without parentheses" do

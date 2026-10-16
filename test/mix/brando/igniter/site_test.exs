@@ -386,4 +386,60 @@ defmodule Mix.Brando.Igniter.SiteTest do
     refute IgniterCase.source(result, "lib/studio_web/router.ex") =~ "Brando.Plug.Lockdown"
     assert Enum.any?(result.notices, &(&1 =~ "StudioWeb.LockdownController already serve /coming-soon"))
   end
+
+  @live_preview "lib/studio_web/live_preview.ex"
+
+  test "installing with the public site previews CMS pages in the CMS layout and templates" do
+    result = project() |> Igniter.compose_task(Mix.Tasks.Brando.Install, ["--public-site", "--replace-phoenix-home"])
+    assert result.issues == []
+
+    preview = IgniterCase.source(result, @live_preview)
+    assert preview =~ "preview_target Pages.Page do"
+    assert preview =~ "layout {StudioWeb.CMS.Layouts, :root}"
+    assert preview =~ "template fn page -> {StudioWeb.CMS.PageHTML, page.template} end"
+    assert preview =~ "template_prop :page"
+    assert preview =~ ~s|Pages.get_fragments(%{filter: %{parent_key: "partials", language: language}})|
+  end
+
+  test "the LivePreview brando.install wrote gets the page target, once; a missing one is created" do
+    bare = Mix.Brando.Igniter.Site.LivePreview.bare(StudioWeb.LivePreview)
+    result = project("", %{@live_preview => bare}) |> generate(["--yes"])
+    assert IgniterCase.source(result, @live_preview) =~ "preview_target Pages.Page do"
+
+    rerun = result |> IgniterCase.apply_and_reload() |> generate()
+    Igniter.Test.assert_unchanged(rerun, @live_preview)
+
+    # Formatted on creation: without Brando's formatter, as here, the DSL gets parentheses.
+    created = project("") |> generate(["--yes"])
+    assert code(IgniterCase.source(created, @live_preview)) == code(IgniterCase.source(result, @live_preview))
+  end
+
+  defp code(source), do: source |> Sourceror.parse_string!() |> Sourceror.strip_meta()
+
+  test "a LivePreview that already previews pages is kept; a customized one gets a notice" do
+    own_page = """
+    defmodule StudioWeb.LivePreview do
+      use Brando.LivePreview
+
+      preview_target Brando.Pages.Page do
+        layout {StudioWeb.Layouts, "app"}
+        template {StudioWeb.PageHTML, "show"}
+      end
+    end
+    """
+
+    result = project("", %{@live_preview => own_page}) |> generate(["--yes"])
+    Igniter.Test.assert_unchanged(result, @live_preview)
+    refute Enum.any?(result.notices, &(&1 =~ "no preview target for Brando.Pages.Page"))
+
+    own_project = String.replace(own_page, "Brando.Pages.Page", "Studio.Projects.Project")
+    result = project("", %{@live_preview => own_project}) |> generate(["--yes"])
+    Igniter.Test.assert_unchanged(result, @live_preview)
+
+    assert Enum.any?(
+             result.notices,
+             &(&1 =~ "#{@live_preview} is customized and has no preview target for Brando.Pages.Page" and
+                 &1 =~ "layout {StudioWeb.CMS.Layouts, :root}")
+           )
+  end
 end

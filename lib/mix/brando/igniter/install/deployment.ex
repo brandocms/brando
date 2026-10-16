@@ -6,6 +6,7 @@ if Code.ensure_loaded?(Igniter) do
     @moduledoc false
 
     alias Igniter.Project.Config
+    alias Mix.Brando.Igniter.Install.Configuration
     alias Mix.Brando.Install.Hosts
     alias Mix.Brando.Install.Templates
     alias Rewrite.Source
@@ -15,6 +16,30 @@ if Code.ensure_loaded?(Igniter) do
     # Files these import with a literal path are read too.
     @origin_configs ~w(config/config.exs config/prod.exs config/runtime.exs)
     @release_env "rel/env.sh.eex"
+    @release_paths [media_path: "./media", log_dir: "./log"]
+    # What a Brando application builds, uploads or downloads in its working
+    # folder, beyond what phx.new ignores. Vite builds the admin and the site
+    # into priv/static, their public/ folders included, and mix brando.digest
+    # writes the cache manifest; Florist writes release-archives/ and sql/.
+    @brando_ignores ~w(
+      /assets/backend/node_modules/
+      /assets/frontend/node_modules/
+      /assets/backend/.yalc/
+      /assets/backend/yalc.lock
+      /assets/frontend/.yalc/
+      /assets/frontend/yalc.lock
+      /priv/static/assets/
+      /priv/static/fonts/
+      /priv/static/ico/
+      /priv/static/images/admin/
+      /priv/static/admin_manifest.json
+      /priv/static/manifest.json
+      /priv/static/cache_manifest.json
+      /media/
+      /log/
+      /release-archives/
+      /sql/
+    )
 
     @doc """
     Reads what the application already has: the `.envrc.<flavor>` files and the
@@ -73,8 +98,31 @@ if Code.ensure_loaded?(Igniter) do
       |> fill_secrets(existing.unfilled_envrc)
       |> release_env(project, existing.release_env)
       |> kept_envrc_notice(hosts, existing)
-      |> gitignore(Enum.map(created, &elem(&1, 1)))
+      |> release_paths()
+      |> gitignore([
+        {"Runtime environments with secrets, uploaded by Florist", Enum.map(created, &"/#{elem(&1, 1)}")},
+        {"Brando: asset dependencies and builds, uploads, logs, Florist's archives and dumps", @brando_ignores}
+      ])
       |> placeholder_notice(hosts, existing, created)
+    end
+
+    # A release evaluates config/prod.exs when it is built, in the Docker
+    # image, so Path.expand there would name the image's /opt/app. Relative
+    # paths resolve in the release's working directory, where Florist links
+    # the persistent media directory.
+    defp release_paths(igniter) do
+      Enum.reduce(@release_paths, igniter, fn {key, path}, igniter ->
+        if own_path?(igniter, key),
+          do: igniter,
+          else: Config.configure_new(igniter, "prod.exs", :brando, [key], path)
+      end)
+    end
+
+    # A literal path in the base configuration, or one set at runtime, is the
+    # application's own choice.
+    defp own_path?(igniter, key) do
+      Config.configures_key?(igniter, "runtime.exs", :brando, [key]) or
+        match?({:ok, _igniter, path} when is_binary(path), Configuration.read(igniter, key))
     end
 
     defp host(hosts, :prod), do: hosts.domain
@@ -177,64 +225,94 @@ if Code.ensure_loaded?(Igniter) do
       end
     end
 
-    defp gitignore(igniter, []), do: igniter
-
-    defp gitignore(igniter, paths) do
-      Igniter.create_or_update_file(igniter, ".gitignore", String.trim_leading(missing_block(paths)), fn source ->
+    # Each group's lines that .gitignore does not cover yet, under the group's
+    # heading.
+    defp gitignore(igniter, groups) do
+      Igniter.create_or_update_file(igniter, ".gitignore", String.trim_leading(missing_blocks(groups, "")), fn source ->
         content = Source.get(source, :content)
 
-        case Enum.reject(paths, &ignored?(content, &1)) do
-          [] -> source
-          missing -> Source.update(source, :content, String.trim_trailing(content) <> "\n" <> missing_block(missing))
+        case missing_blocks(groups, content) do
+          "" -> source
+          missing -> Source.update(source, :content, String.trim_trailing(content) <> "\n" <> missing)
         end
       end)
     end
 
-    defp missing_block(paths),
-      do: "\n# Runtime environments with secrets, uploaded by Florist\n" <> Enum.map_join(paths, "\n", &"/#{&1}") <> "\n"
-
-    # Git's rule for a file in the repository root: the last pattern that
-    # matches it decides, and a leading ! un-ignores. Patterns this does not
-    # understand never count as ignoring, so the explicit line gets added.
-    defp ignored?(content, file) do
-      last_match =
+    defp missing_blocks(groups, content) do
+      rules =
         content
         |> String.split("\n")
         # Git keeps leading spaces and drops unescaped trailing ones.
         |> Enum.map(&gitignore_rule(String.trim_trailing(&1)))
-        |> Enum.reverse()
-        |> Enum.find(&(&1 != nil and Regex.match?(elem(&1, 1), file)))
+        |> Enum.reject(&is_nil/1)
 
-      match?({false, _pattern}, last_match)
+      Enum.map_join(groups, fn {heading, lines} ->
+        case Enum.reject(lines, &ignored?(rules, &1)) do
+          [] -> ""
+          missing -> "\n# #{heading}\n" <> Enum.join(missing, "\n") <> "\n"
+        end
+      end)
+    end
+
+    # Git's rule: the last pattern that matches a path decides, a leading !
+    # un-ignores, and nothing in an ignored directory can be un-ignored.
+    # `line` is the rule this would add, "/path" for a file and "/path/" for a
+    # directory. Patterns this does not understand never count as ignoring, so
+    # the explicit line gets added.
+    defp ignored?(rules, line) do
+      dir? = String.ends_with?(line, "/")
+      segments = line |> String.trim("/") |> String.split("/")
+      depth = length(segments)
+
+      # The path and each directory above it, with its name.
+      segments
+      |> Enum.scan({"", nil}, fn name, {parent, _name} -> {Path.join(parent, name), name} end)
+      |> Enum.with_index(1)
+      |> Enum.any?(fn {{path, name}, level} -> ignored_path?(rules, path, name, dir? or level < depth) end)
+    end
+
+    defp ignored_path?(rules, path, name, dir?) do
+      last_match = rules |> Enum.reverse() |> Enum.find(&rule_matches?(&1, path, name, dir?))
+      match?({false, _anchored?, _dir_only?, _regex}, last_match)
+    end
+
+    defp rule_matches?({_negated?, anchored?, dir_only?, regex}, path, name, dir?) do
+      (dir? or not dir_only?) and Regex.match?(regex, if(anchored?, do: path, else: name))
     end
 
     defp gitignore_rule(""), do: nil
     defp gitignore_rule("#" <> _), do: nil
-    # A negation this matcher cannot read might un-ignore the file, so it
+    # A negation this matcher cannot read might un-ignore the path, so it
     # counts as matching it: the explicit ignore line gets added.
     defp gitignore_rule("!" <> pattern) do
       case gitignore_rule(pattern) do
-        {_, regex} -> {true, regex}
-        nil -> {true, ~r/.*/}
+        {_, anchored?, dir_only?, regex} -> {true, anchored?, dir_only?, regex}
+        nil -> {true, false, false, ~r/.*/}
       end
     end
 
+    # A slash before the end anchors a pattern to the repository root; without
+    # one it matches a name at any depth. A trailing slash matches directories
+    # only. Character classes and escapes are not read: such a rule never
+    # counts as ignoring.
     defp gitignore_rule(pattern) do
-      pattern = pattern |> String.trim_leading("**/") |> String.trim_leading("/")
+      dir_only? = String.ends_with?(pattern, "/")
+      pattern = String.trim_trailing(pattern, "/")
+      anchored? = String.contains?(pattern, "/")
+      pattern = String.trim_leading(pattern, "/")
 
-      # A trailing slash matches directories only, and an inner one a nested
-      # path. Character classes and escapes are not read: such a rule never
-      # counts as ignoring the file.
-      if pattern == "" or String.contains?(pattern, ["/", "[", "\\"]) do
+      if pattern == "" or String.contains?(pattern, ["[", "\\"]) do
         nil
       else
         glob =
           pattern
           |> Regex.escape()
+          |> String.replace("\\*\\*/", "(.*/)?")
+          |> String.replace("/\\*\\*", "(/.*)?")
           |> String.replace("\\*", "[^/]*")
           |> String.replace("\\?", "[^/]")
 
-        {false, Regex.compile!("^#{glob}$")}
+        {false, anchored?, dir_only?, Regex.compile!("^#{glob}$")}
       end
     end
 

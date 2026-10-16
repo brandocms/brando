@@ -12,7 +12,8 @@ if Code.ensure_loaded?(Igniter) do
     It also adds the `/coming-soon` page `Brando.Plug.Lockdown` sends visitors to
     while `config :brando, lockdown: true`, with the plug in the CMS pipeline,
     and 404 and 500 pages in the site's layout, replacing phx.new's `ErrorHTML`
-    while it is unchanged.
+    while it is unchanged. Pages get a live preview target in Web.LivePreview,
+    rendered with the CMS layout and templates, unless the module is customized.
 
         mix brando.gen.site --replace-phoenix-home
         mix brando.gen.site --interactive
