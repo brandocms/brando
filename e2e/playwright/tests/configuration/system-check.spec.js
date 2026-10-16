@@ -47,6 +47,6 @@ test('Utilities runs the system check beside the page and links fixes', async ({
   await expect(card).toHaveAttribute('aria-busy', 'false', { timeout: 30000 })
 
   // The fix is a link, not an action
-  await modules.locator('a.utils-button').click()
+  await modules.locator('.system-check-side a').click()
   await expect(page).toHaveURL(/\/admin\/config\/content\/modules\/stale-blocks$/)
 })

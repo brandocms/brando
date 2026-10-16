@@ -18,7 +18,7 @@ test('the content SEO tab audits published pages', async ({ page }, testInfo) =>
   const audit = page.locator('.seo-audit')
   await expect(audit.locator('.seo-stats')).toBeVisible({ timeout: 15000 })
   await expect(audit.locator('.seo-audit-table tbody tr.seo-audit-row').first()).toBeVisible()
-  await expect(tabs.locator('button[phx-value-tab="content"] .seo-score-badge')).toBeVisible()
+  await expect(tabs.locator('button[phx-value-tab="content"]').getByTestId('seo-score')).toBeVisible()
 
   const firstToggle = audit.locator('.seo-row-toggle').first()
   await firstToggle.click()

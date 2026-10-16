@@ -1,4 +1,0 @@
-# Hex colour literals per admin stylesheet, checked by
-# .github/scripts/check_css_colors.sh. Counts may only go down: convert
-# colours to the role tokens in assets/css/tokens.css and lower the count.
-assets/css/views/assets/Images.css 1

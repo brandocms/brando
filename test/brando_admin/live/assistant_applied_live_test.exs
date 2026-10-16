@@ -98,7 +98,7 @@ defmodule BrandoAdmin.AssistantAppliedLiveTest do
       source = card(c.identity)
 
       assert has_element?(view, ".assistant-counts", "1 updated entry")
-      assert has_element?(view, source <> " .assistant-badge.is-source", "Source")
+      assert has_element?(view, source <> " [data-testid=assistant-action-source]", "Source")
       assert has_element?(view, source <> " .assistant-placement", "The original stays here.")
       refute has_element?(view, source <> " .assistant-card-preview")
       assert has_element?(view, card(c.work) <> " .assistant-card-preview")
@@ -110,7 +110,7 @@ defmodule BrandoAdmin.AssistantAppliedLiveTest do
       assert Brando.Repo.get!(Page, c.identity.id).updated_at == before.updated_at
       assert has_element?(view, ".assistant-receipt li", "Unchanged")
       assert has_element?(view, ".assistant-counts", "1 updated entry")
-      assert has_element?(view, source <> " .assistant-badge.is-source")
+      assert has_element?(view, source <> " [data-testid=assistant-action-source]")
 
       undo!(view)
       assert has_element?(view, ".assistant-counts", "1 updated entry")

@@ -45,7 +45,7 @@ defmodule BrandoAdmin.Sites.MCPLive do
             <div class="integrations-text">
               <h3>
                 {site_label(@tenant)}
-                <span class={["workspace-badge", @enabled? && "positive"]} data-testid="mcp-status">
+                <span class={["badge", @enabled? && "badge--success"]} data-testid="mcp-status">
                   {if @enabled?, do: gettext("On"), else: gettext("Off")}
                 </span>
               </h3>
@@ -158,7 +158,7 @@ defmodule BrandoAdmin.Sites.MCPLive do
               <tr :for={grant <- @grants} data-testid="mcp-grant" data-id={grant.id}>
                 <td>
                   {grant.client_name}
-                  <span :if={MCP.grant_expired?(grant)} class="workspace-badge warning" data-testid="mcp-grant-expired">
+                  <span :if={MCP.grant_expired?(grant)} class="badge badge--attention" data-testid="mcp-grant-expired">
                     {gettext("Expired")}
                   </span>
                   <small><code>{URI.parse(grant.client_id).host}</code></small>

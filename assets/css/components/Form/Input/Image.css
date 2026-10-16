@@ -226,19 +226,6 @@
     padding-top: 1px;
   }
 
-  .upload-status {
-    background-color: var(--brando-surface-subform);
-    margin-bottom: 10px;
-    padding: 7px;
-    border-radius: 12px;
-    display: flex;
-    align-items: center;
-    font-size: 14px;
-
-    svg {
-      margin-right: 7px;
-    }
-  }
 }
 
 .image-modal-content {

@@ -107,7 +107,7 @@ defmodule BrandoAdmin.MCP.ConsentLive do
             <h2>{gettext("This app cannot be connected")}</h2>
             <p>{refusal(@reason)}</p>
           </div>
-          <span class="workspace-badge negative">{gettext("Not allowed")}</span>
+          <span class="badge badge--error">{gettext("Not allowed")}</span>
         </header>
         <dl class="mcp-consent-facts">
           <div>

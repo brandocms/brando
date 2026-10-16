@@ -206,7 +206,8 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
                 <div class="multiselect-chosen">
                   <h2 id={"#{@field.id}-chosen-heading"} class="multiselect-heading">
                     {gettext("Currently selected")}
-                    <span :if={@selected_options != []} class="count-badge">{@count_label |> raw}</span>
+                    <span :if={@selected_options != []} class="badge badge--count" data-testid="multiselect-count">{@count_label
+                    |> raw}</span>
                   </h2>
                   <.chosen_rows
                     id_prefix={"#{@field.id}-chosen"}

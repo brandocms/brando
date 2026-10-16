@@ -729,7 +729,7 @@ defmodule BrandoAdmin.Components.Activity do
         <section :if={section[:kind] == :order} class="draft-order-diff" aria-labelledby={"#{@id}-order-#{index}"}>
           <header>
             <h4 id={"#{@id}-order-#{index}"}>{section.title}</h4>
-            <span class="draft-order-badge">{gettext("Order changed")}</span>
+            <span class="badge">{gettext("Order changed")}</span>
           </header>
           <ol>
             <li :for={move <- section.moves}>

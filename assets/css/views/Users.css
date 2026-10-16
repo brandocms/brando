@@ -20,10 +20,6 @@
   .content-list .list-row:first-child { border-top: 1px solid var(--workspace-line); }
   .content-list .list-row:hover { background: var(--brando-surface-hover); }
   .content-list .list-row.selected { background: var(--brando-surface-selected); }
-  /* Tiny badges (dates, categories) are white by default, which disappears on
-     a white row: give them a green wash, and white where the row turns green */
-  .content-list .list-row .badge.tiny { background: var(--brando-badge-bg); }
-  .content-list .list-row:is(:hover, .selected) .badge.tiny { background: var(--brando-surface); }
   .content-list .list-row .main-content > div:first-of-type { padding-left: 0; }
   .content-list .list-row .entry-link { color: var(--workspace-ink); font-size: 15px; line-height: 22px; font-weight: 500; overflow-wrap: anywhere; }
   .content-list .list-row .entry-link:hover, .content-list .list-row .entry-link:focus-visible { text-decoration: none; }
@@ -56,7 +52,7 @@
      name to a quarter of the account column and wrap it */
   .user-account .user-identity { flex: none; width: 100%; max-width: none; margin: 0; padding: 0; }
   .user-email { display: block; color: var(--workspace-muted); overflow-wrap: anywhere; font-size: 12px; margin-top: 3px; }
-  .user-role .workspace-badge { text-transform: capitalize; }
+  .user-role .badge { text-transform: capitalize; }
   .user-activity { font-size: 12px; font-variant-numeric: tabular-nums; }
   .user-activity time { display: block; }
   .user-activity small { display: block; font-size: 11px; color: var(--workspace-muted); margin-top: 3px; }
@@ -144,11 +140,6 @@
 /* The two-factor row under the password row of a saved user's form */
 .user-security-access {
   .user-password-access-label { display: flex; align-items: center; gap: 8px; }
-  .user-password-access-label .workspace-badge {
-    padding: 0 7px; border-radius: 4px; background: var(--brando-badge-bg); color: var(--brando-badge-ink);
-    font-size: 11px; line-height: 18px; font-weight: 400;
-  }
-  .user-password-access-label .workspace-badge.positive { background: var(--brando-surface-selected); color: var(--brando-accent); }
   .user-security-locked { color: color-mix(in srgb, var(--brando-status-disabled), var(--brando-ink) 35%); }
 }
 
@@ -293,7 +284,6 @@
   .security-item-icon { width: 18px; height: 18px; color: var(--brando-muted); }
   .security-item-text { display: grid; gap: 2px; min-width: 0; }
   .security-item-title { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 13px; font-weight: 500; overflow-wrap: anywhere; }
-  .security-item-title .workspace-badge { font-weight: 400; }
   .security-item-meta { color: var(--brando-muted); font-size: 12px; overflow-wrap: anywhere; }
   .security-sessions { padding-top: 4px; }
 }

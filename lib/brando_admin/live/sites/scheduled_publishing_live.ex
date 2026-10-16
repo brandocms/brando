@@ -78,9 +78,9 @@ defmodule BrandoAdmin.Sites.ScheduledPublishingLive do
                 </td>
                 <td>
                   <span class={[
-                    "workspace-badge",
-                    job.state in ["scheduled", "available", "executing", "completed"] && "positive",
-                    job.state in ["retryable", "discarded", "cancelled"] && "warning"
+                    "badge",
+                    job.state in ["scheduled", "available", "executing", "completed"] && "badge--success",
+                    job.state in ["retryable", "discarded", "cancelled"] && "badge--attention"
                   ]}>{job_state_label(job.state)}</span>
                 </td>
                 <td class="publishing-date">

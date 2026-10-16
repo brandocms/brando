@@ -754,9 +754,9 @@ defmodule BrandoAdmin.Components.Form.Translation do
         <li :for={member <- @state.members}>
           <.link :if={member.entry_id != @state.entry_id} navigate={member.url}>{language_label(member.language)}</.link>
           <strong :if={member.entry_id == @state.entry_id}>{language_label(member.language)}</strong>
-          <span :if={member.role == :source} class="translation-badge">{gettext("Source")}</span>
-          <span :if={member.role == :target and not member.synchronized?} class="translation-badge">{gettext("Independent")}</span>
-          <span :if={member.open > 0} class="translation-badge is-work">
+          <span :if={member.role == :source} class="badge">{gettext("Source")}</span>
+          <span :if={member.role == :target and not member.synchronized?} class="badge">{gettext("Independent")}</span>
+          <span :if={member.open > 0} class="badge badge--attention">
             {ngettext("%{count} open item", "%{count} open items", member.open)}
           </span>
         </li>

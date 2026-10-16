@@ -364,9 +364,11 @@
   .actions .media-button { white-space: nowrap; }
   .media-button { padding-inline: 8px; }
   .gallery-objects { margin-top: 12px; }
+  /* Empty, it is as wide as an empty image, video or file field
+     (`.media-field--field`); with objects it takes the column for its grid. */
   &.media-gallery--empty {
     display: grid; grid-template-columns: 112px minmax(0, 1fr); gap: 0 16px;
-    padding: 6px;
+    padding: 6px; max-width: 520px;
     > .media-field-preview { grid-column: 1; grid-row: 1 / span 2; width: 112px; height: 112px; background: var(--brando-surface-hover); }
     > .gallery-info { display: flex; flex-direction: column; gap: 2px; grid-column: 2; min-width: 0; padding: 8px 10px 0 0; }
     .media-field-name { font-weight: 400; }

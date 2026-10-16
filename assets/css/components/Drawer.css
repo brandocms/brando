@@ -343,11 +343,6 @@ figcaption.tiny {
     }
   }
 
-  .input-image .image-wrapper-compact .image-info .btn-small:hover {
-    color: var(--brando-ink);
-    background-color: var(--brando-surface);
-  }
-
   button.secondary {
     color: var(--brando-ink-inverse);
     border-color: var(--brando-ink-inverse) !important;
@@ -363,12 +358,6 @@ figcaption.tiny {
     min-width: 100% !important;
 
     @space padding-y 20px;
-
-    .button-group-horizontal {
-      width: 100% !important;
-      flex-basis: 100% !important;
-      min-width: 100% !important;
-    }
 
     p {
       @space margin-bottom 15px;
@@ -627,14 +616,6 @@ figcaption.tiny {
           &:focus-visible {
             text-decoration-thickness: 2px;
           }
-        }
-
-        .revision-scheduled-badge {
-          display: inline-block;
-          padding: 2px 5px;
-          border: 1px solid currentcolor;
-          font-size: 10px;
-          text-transform: uppercase;
         }
 
         .circle-dropdown {

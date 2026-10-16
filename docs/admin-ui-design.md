@@ -14,6 +14,7 @@ the second covers particular components and screens.
   [Task and hierarchy](#start-with-the-task-and-hierarchy) ·
   [Spacing](#make-spacing-a-system) ·
   [Controls and native selects](#keep-controls-compact-and-predictable) ·
+  [Buttons and badges](#buttons-and-badges) ·
   [Typography and colour](#use-typography-and-color-to-establish-hierarchy) ·
   [Copy](#write-factual-useful-copy) ·
   [Metadata](#present-metadata-as-information) ·
@@ -120,10 +121,10 @@ wraps, as well as with shorter text.
 
 ## Keep controls compact and predictable
 
-Utilities uses 30px desktop buttons: 12px text, 18px line height, 5px vertical
-padding, 12px horizontal padding, a 1px border, and a 5px radius. These proportions
-are a useful starting point for secondary admin actions. Coarse-pointer controls
-use a minimum height of 40px; check touch usability in context.
+Use the shared `.btn` (see [Buttons and badges](#buttons-and-badges)) rather
+than a button of the screen's own: 30px by default, 12px text, a 1px border and a
+6px corner. Coarse-pointer controls use a minimum height of 40px; check touch
+usability in context.
 
 Align equivalent actions consistently. In a settings list, use a shared right
 edge and consistent widths where the labels allow it. In parallel workflow
@@ -150,6 +151,58 @@ translated labels. Check the closed control, the open options, keyboard
 selection and the narrow layout in the browser, with screenshots, and read
 the option labels on screen in Norwegian: status names and field labels show
 their translations, not humanised English.
+
+## Buttons and badges
+
+Approved October 2026. The admin has one button and one badge; a screen picks
+a size and a look from them instead of drawing its own. Their sizes are
+`theme.radius` and `theme.controls` in the admin's `europa.json5`, which
+[`assets/css/tokens.css`](../assets/css/tokens.css) sets as custom properties;
+an application changes them in its own `europa.json5`, as it does the palette:
+
+| Token | Value | Used for |
+| --- | --- | --- |
+| `--brando-radius-sm` | 4px | Badges and small chips |
+| `--brando-radius-md` | 6px | Buttons |
+| `--brando-radius-lg` | 8px | Inputs and cards (`--brando-input-radius`) |
+| `--brando-control-sm` | 26px | Toolbar and inline buttons |
+| `--brando-control-md` | 30px | The default button |
+| `--brando-control-lg` | 36px | A form's Save |
+| `--brando-control-touch` | 40px | Every button's minimum on a coarse pointer |
+
+**Buttons** ([`Btn.css`](../assets/css/components/Btn.css)):
+
+| Class | Use |
+| --- | --- |
+| `.btn` | The default: a bordered 30px button |
+| `.btn--sm`, `.btn--lg` | 26px in toolbars and rows; 36px for a form's Save |
+| `.btn--primary` | The screen's main action, in the accent fill. One per area |
+| `.btn--save` | A form's Save: the accent on a tint, at `--lg` |
+| `.btn--quiet` | No frame until hovered: tools, Cancel, secondary row actions |
+| `.btn--danger` | Destructive actions; with `.btn--primary`, filled, for the final step of one |
+| `.btn--ai` | An action that calls a paid AI service |
+| `.btn--icon` | Icon only, square; it still needs a name (see [Icon-only buttons and tooltips](#icon-only-buttons-and-tooltips)) |
+| `.btn--pill` | Fully rounded. Only for toggles, such as the block editor's + |
+| `.btn-group` | Buttons joined into one control, rounded at the ends |
+
+Actions are rectangles; the pill shape is kept for things that switch state or
+filter (toggles, filter chips, [tabs](#tab-views)). Rows in dropdowns and
+menus are menu items, not buttons.
+
+**Badges** (`.badge` in [`global.css`](../assets/css/global.css)) label a state,
+a type or a count: 20px, 11px text, sentence case, a 4px corner.
+
+| Class | Use |
+| --- | --- |
+| `.badge` | Neutral: a type, a role, a count of things |
+| `.badge--success`, `.badge--attention`, `.badge--error` | The message tones: done or active, needs attention, failed |
+| `.badge--ai` | An AI result or state |
+| `.badge--outline` | A hairline and no fill: a file type, a protected flag |
+| `.badge--count` | A number beside a tab or heading; a tone modifier tints it (`badge--count badge--attention`) |
+| `.badge-dot` | A status dot inside a badge, one cap high |
+
+Don't add a badge class for a screen: give `.badge` a tone, and place it with
+a contextual rule (`.my-heading .badge { margin-left: auto; }`).
 
 ## Tab views
 
@@ -259,10 +312,9 @@ case suits headings and actions. Reserve small uppercase labels for short contex
 labels, and use monospace for keys, configuration, and technical values.
 
 The approved palette is defined once, as custom properties in
-[`assets/css/tokens.css`](../assets/css/tokens.css). Use the token, not its
-value. The values below are Brando's defaults; the roles marked with a
-palette entry come from the admin's EuropaCSS palette (see
-[Application colours](#application-colours) below):
+[`assets/css/tokens.css`](../assets/css/tokens.css) set from the admin's
+EuropaCSS theme (see [Application colours](#application-colours) below). Use
+the token, not its value. The values below are Brando's defaults:
 
 | Role | Token | Value |
 | --- | --- | --- |
@@ -339,8 +391,15 @@ stays. `villain.main`, `villain.secondary` and `villain.popover` refer to
 any entry with `theme(colors.*)` or `@color`. An application can also set a
 role directly, `:root { --brando-accent: … }` in its `app` layer, which
 outranks Brando's `tokens.css`; that changes the role at run time only, not
-`theme(colors.*)` values compiled into other application CSS. The roles
-without a palette entry are set only in `tokens.css`.
+`theme(colors.*)` values compiled into other application CSS.
+
+Every other role has an entry too, named after its custom property:
+`muted` sets `--brando-muted`, `line.strong` `--brando-line-strong`,
+`surface.hover` `--brando-surface-hover`, `attention.tint`/`.line`/`.ink` the
+attention tokens (and `success.*`, `error.*` likewise), `badge.fill` and
+`badge.ink`, `ai`, `module.<colour>.line|tint|ink|dot`, `nav.*`,
+`presence.p0`–`p5`, `switch.on|off` and `tabbar`. Roles mixed from another
+(the AI hairlines, the suggestion tints) follow it.
 
 The palette is also available at run time under its entry names:
 `--brando-color-dark`, `--brando-color-blue`, `--brando-color-peach`,
@@ -352,13 +411,10 @@ application CSS that works with the palette; Brando's stylesheets use the
 roles. A few earlier role names remain as aliases, such as
 `--brando-color-background` for `--brando-surface-page`.
 
-Do not add hex colours to admin stylesheets. CI runs
-`.github/scripts/check_css_colors.sh`, which fails when a file outside
-`tokens.css` gains a hex literal, or when a role in the table above, or a
-palette name, no longer takes its value from the palette. Files not yet converted are listed with their
-current count in `.github/css-color-allowlist.txt`; when you convert colours,
-lower the count (or remove the entry), which `--update` rewrites for you. A
-colour that has no role yet belongs in `tokens.css` under a role name. For a
+Do not add hex colours to admin stylesheets, `tokens.css` included. CI runs
+`.github/scripts/check_css_colors.sh`, which fails on any hex literal in
+`assets/css`. A colour that has no role yet gets an entry in `theme.colors` in
+`assets/europa.json5` and a role in `tokens.css` set from it. For a
 translucent version of a role, mix it with transparent:
 `color-mix(in srgb, var(--brando-ink) 8%, transparent)`.
 
@@ -1118,8 +1174,9 @@ and returns the focus, and Tab leaves. Its items stay plain buttons.
 Bulk selection uses a light fixed bar above presence avatars, with a count and
 an explicit Actions button. Listing title links reveal an arrow on hover/focus.
 Shortcut badges are compact and muted, with a shared right edge inside each menu.
-Badges (`.badge`) are pills without a border: a sage fill
-(`--brando-badge-bg`) and muted ink (`--brando-badge-ink`), the same palette as `.workspace-badge`. Keep the hard 1px border
+Badges (`.badge`, see [Buttons and badges](#buttons-and-badges)) have no
+border: a sage fill (`--brando-badge-bg`) and muted ink (`--brando-badge-ink`)
+on a 4px corner. Keep the hard 1px border
 for controls with a selected state, such as the status radios.
 
 Meta, revisions and scheduled publishing use the media browser's workspace

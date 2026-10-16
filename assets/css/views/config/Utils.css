@@ -7,8 +7,9 @@
   *, *::before, *::after { box-sizing: border-box; }
   h1, h2, h3, h4, h5, p, ul, dl, dd { margin: 0; padding: 0; }
   h1, h2, h3, h4, h5 { font-weight: 500; letter-spacing: -.025em; text-transform: none; }
-  button, input, a { font: inherit; }
-  button:disabled { opacity: .48; cursor: not-allowed; }
+  /* `.btn` brings its own font and disabled state. */
+  :is(button, input, a):not(.btn) { font: inherit; }
+  button:disabled:not(.btn) { opacity: .48; cursor: not-allowed; }
   :is(button, input, a, summary, [tabindex]):focus-visible { outline: 2px solid var(--utils-green); outline-offset: 4px; }
   code, pre { font-family: theme(typography.families.mono); font-size: 11px; overflow-wrap: anywhere; }
   .utils-eyebrow { display: block; color: var(--utils-muted); font-size: 10px; font-weight: 500; letter-spacing: .12em; text-transform: uppercase; line-height: 1.5; }
@@ -32,12 +33,6 @@
   .utils-step-number > span { display: inline-flex; justify-content: center; align-items: center; width: 20px; height: 20px; border-radius: 50%; color: var(--utils-green); background: var(--brando-surface-selected); }
   .utils-migration-steps h3 { font-size: 14px; margin-bottom: 8px; }
   .utils-migration-steps p { color: var(--utils-muted); font-size: 12px; line-height: 1.65; }
-  .utils-button { display: inline-flex; align-items: center; justify-content: center; gap: 6px; width: auto; min-width: 0; min-height: 30px; height: auto; margin: 0; padding: 5px 12px; border: 1px solid var(--utils-line); border-radius: 5px; background: var(--brando-surface); color: var(--utils-ink); font-size: 12px; font-weight: 500; line-height: 18px; text-decoration: none; text-transform: none; letter-spacing: 0; box-shadow: none; cursor: pointer; }
-  .utils-button:hover:not(:disabled) { background: var(--brando-surface-tint); border-color: var(--brando-line-strong); }
-  .utils-button.primary { color: var(--brando-ink-inverse); background: var(--utils-green); border-color: var(--utils-green); }
-  .utils-button.primary:hover:not(:disabled) { background: var(--brando-accent-hover); }
-  .utils-button.quiet { border-color: transparent; background: transparent; }
-  .utils-button-count { display: inline-flex; align-items: center; justify-content: center; min-width: 20px; padding: 0 6px; border-radius: 10px; background: var(--brando-attention); color: var(--brando-attention-ink); font-size: 11px; line-height: 18px; font-variant-numeric: tabular-nums; }
   /* Global paragraph resets remove bottom margins; actions own their spacing. */
   .utils-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; padding-top: 16px; }
   .utils-migration-steps .utils-actions { margin-top: auto; }
@@ -60,9 +55,6 @@
   summary::-webkit-details-marker { display: none; }
   .utils-rules summary::after { content: '+'; margin-left: auto; font-size: 16px; }
   .utils-rules[open] summary::after { content: '−'; }
-  .utils-pill { display: inline-flex; align-items: center; padding: 3px 8px; border-radius: 30px; background: var(--brando-badge-bg); color: var(--brando-badge-ink); font-size: 10px; white-space: nowrap; line-height: 1.5; }
-  .utils-pill.conditional { background: var(--brando-attention); color: var(--brando-attention-ink); }
-  .utils-pill.mint { background: var(--brando-success); color: var(--brando-success-ink); }
   .utils-rules-content { padding: 0 16px 18px; }
   .utils-rules-content > p { font-size: 12px; color: var(--utils-muted); max-width: 80ch; margin-bottom: 12px; }
   .utils-module-name { display: inline-block; background: var(--brando-badge-bg); padding: 6px 9px; border-radius: 4px; margin: 16px 0; }
@@ -142,7 +134,7 @@
   .utils-maintenance-list small { display: block; font-size: 11px; color: var(--utils-muted); margin-top: 8px; }
   .utils-maintenance-list .utils-empty-status { display: flex; align-items: center; gap: 6px; }
   .utils-empty-status::before { content: ''; width: 5px; height: 5px; border-radius: 50%; background: var(--brando-faint); }
-  .utils-maintenance-list .utils-button { min-width: 140px; }
+  .utils-maintenance-list .btn { min-width: 140px; }
   .utils-maintenance-list .utils-row-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
   .utils-system-info { margin-top: 32px; padding-top: 24px; border-top: 1px solid var(--utils-line); }
   .utils-system-info h2 { font-size: 12px; letter-spacing: 0; margin-bottom: 16px; }
@@ -150,9 +142,6 @@
   .utils-system-info dl > div { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
   .utils-system-info dt { color: var(--utils-muted); font-size: 11px; }
   .utils-system-info dd { font-family: theme(typography.families.mono); font-size: 12px; overflow-wrap: anywhere; }
-  @media (pointer: coarse) {
-    .utils-button { min-height: 40px; padding-block: 9px; }
-  }
   @media (max-width: 1100px) {
     .utils-auth-heading, .utils-transfer-heading { flex-direction: column; gap: 16px; }
     .utils-transfer-scope { text-align: left; }
@@ -177,7 +166,7 @@
     .utils-transfer-grid, .utils-grant-diff { grid-template-columns: 1fr; }
     .utils-transfer-grid > * { padding: 20px; }
     .utils-maintenance-list article { grid-template-columns: 1fr; justify-items: start; gap: 16px; padding: 20px; }
-    .utils-maintenance-list .utils-button { min-width: 0; }
+    .utils-maintenance-list .btn { min-width: 0; }
     .utils-maintenance-list .utils-row-actions { justify-content: flex-start; }
     .utils-system-info dl { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .utils-rule-role { grid-template-columns: 1fr; gap: 8px; }
@@ -220,9 +209,6 @@
     background: var(--brando-surface); border-bottom: 1px solid var(--utils-line);
     > span { margin-right: auto; color: var(--utils-muted); font-size: 12px; font-variant-numeric: tabular-nums; }
   }
-  .utils-button.block-audit-remove { color: var(--brando-error-ink); border-color: var(--brando-error-line); }
-  .utils-button.block-audit-remove:hover:not(:disabled) { background: var(--brando-error); border-color: color-mix(in srgb, var(--brando-error-ink) 45%, transparent); }
-  .utils-button.block-audit-remove > [data-icon] { width: 14px; height: 14px; color: inherit; }
 
   .block-audit-group { margin-bottom: 26px; }
   .block-audit-group h3 { display: flex; align-items: baseline; gap: 10px; margin-bottom: 8px; font-size: 15px; }
@@ -254,11 +240,6 @@
   .block-audit-status { display: flex; justify-content: flex-end; font-size: 12px; }
   .block-audit-held { display: flex; flex-direction: column; align-items: flex-end; gap: 3px; color: var(--utils-muted); }
   .block-audit-held a { color: var(--utils-green); }
-  .block-audit-chip {
-    display: inline-flex; align-items: center; padding: 3px 9px; border: 1px solid var(--brando-attention-line); border-radius: 30px;
-    background: var(--brando-attention); color: var(--brando-attention-ink); font-size: 11px; white-space: nowrap;
-  }
-  .block-audit-chip.is-ok { border-color: var(--brando-success-line); background: var(--brando-success); color: var(--brando-success-ink); }
 
   .block-audit-archive { margin-top: 36px; }
   .block-audit-archive .utils-section-heading p { color: var(--utils-muted); font-size: 12px; margin-top: 4px; }
@@ -291,7 +272,7 @@
   .system-check-items ul { list-style: none; display: grid; gap: 4px; margin-top: 8px; padding: 8px 10px; border-radius: 4px; background: var(--brando-surface-shaded); font-family: theme(typography.families.mono); font-size: 11px; line-height: 1.5; overflow-wrap: anywhere; }
 
   .system-check-side { display: contents; }
-  .system-check-side .utils-button { grid-column: 3; width: 100%; }
+  .system-check-side .btn { grid-column: 3; width: 100%; }
   .system-check-status { grid-column: 2; display: inline-flex; align-items: center; gap: 6px; color: var(--brando-ink); font-size: 12px; white-space: nowrap; }
   .system-check-status i { flex-shrink: 0; width: 8px; height: 8px; border-radius: 50%; background: var(--brando-status-draft); }
   .system-check-status.is-ok i { background: var(--brando-status-published); }
@@ -314,7 +295,7 @@
     .system-check-totals { justify-content: flex-start; }
     .system-check-row { grid-template-columns: 1fr; gap: 12px; padding: 16px 20px; }
     .system-check-side { display: flex; align-items: center; justify-content: flex-start; flex-wrap: wrap; gap: 12px 16px; }
-    .system-check-side .utils-button { width: auto; }
+    .system-check-side .btn { width: auto; }
     .system-check-bone.is-status { grid-column: auto; }
     .system-check-bone { width: 70%; }
   }

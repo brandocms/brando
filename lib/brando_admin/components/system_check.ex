@@ -40,7 +40,7 @@ defmodule BrandoAdmin.Components.SystemCheck do
           <span :if={@counts} class="system-check-tally" data-testid="system-check-tally">{tally(@counts)}</span>
           <button
             type="button"
-            class="utils-button"
+            class="btn"
             phx-click="refresh"
             disabled={@busy}
             aria-describedby="system-check-title"
@@ -99,7 +99,7 @@ defmodule BrandoAdmin.Components.SystemCheck do
     assigns = assign(assigns, anchor: anchor, label: label)
 
     ~H"""
-    <a href={@anchor} class="utils-button">{@label}</a>
+    <a href={@anchor} class="btn">{@label}</a>
     """
   end
 
@@ -107,7 +107,7 @@ defmodule BrandoAdmin.Components.SystemCheck do
     assigns = assign(assigns, path: path, label: label)
 
     ~H"""
-    <.link navigate={@path} class="utils-button">{@label}</.link>
+    <.link navigate={@path} class="btn">{@label}</.link>
     """
   end
 
@@ -115,7 +115,7 @@ defmodule BrandoAdmin.Components.SystemCheck do
     assigns = assign(assigns, path: Brando.routes().admin_live_path(assigns.socket, view), label: label)
 
     ~H"""
-    <.link navigate={@path} class="utils-button">{@label}</.link>
+    <.link navigate={@path} class="btn">{@label}</.link>
     """
   end
 

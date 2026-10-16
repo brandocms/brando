@@ -132,7 +132,7 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelectPickerTest do
       |> Enum.map(&(&1 |> Floki.attribute("data-label") |> hd()))
 
     assert labels == ["Projects", "Om oss"]
-    assert has_element?(view, ".multiselect-chosen .count-badge", "2 selected")
+    assert has_element?(view, ".multiselect-chosen [data-testid=multiselect-count]", "2 selected")
 
     view |> element(option("Projects")) |> render_click()
     assert has_element?(view, option("Projects") <> "[aria-checked=false]")

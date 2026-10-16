@@ -160,7 +160,7 @@ defmodule BrandoAdmin.Sites.UtilsLive do
                 {gettext("Update the identifiers used to reference content.")}
               </p>
             </div>
-            <button type="button" class="utils-button" phx-click="sync_identifiers" phx-disable-with={gettext("Syncing…")}>{gettext(
+            <button type="button" class="btn" phx-click="sync_identifiers" phx-disable-with={gettext("Syncing…")}>{gettext(
               "Sync identifiers"
             )}</button>
           </article>
@@ -196,7 +196,7 @@ defmodule BrandoAdmin.Sites.UtilsLive do
             </div>
             <button
               type="button"
-              class="utils-button"
+              class="btn"
               phx-click="rebuild_search_index"
               disabled={@search_index.state in [:queued, :running] or is_nil(@search_index.count)}
             >
@@ -211,10 +211,10 @@ defmodule BrandoAdmin.Sites.UtilsLive do
             </div>
             <.link
               navigate={Brando.routes().admin_live_path(@socket, BrandoAdmin.Sites.BlockAuditLive)}
-              class="utils-button"
+              class="btn"
             >
               {gettext("Review loose blocks")}
-              <span :if={@loose_blocks > 0} class="utils-button-count">{@loose_blocks}</span>
+              <span :if={@loose_blocks > 0} class="badge badge--count badge--attention">{@loose_blocks}</span>
             </.link>
           </article>
           <article id="utils-sitemap">
@@ -229,7 +229,7 @@ defmodule BrandoAdmin.Sites.UtilsLive do
               </small>
               <small :if={!@sitemap_last_updated} class="utils-empty-status">{gettext("Not generated")}</small>
             </div>
-            <button type="button" class="utils-button" phx-click="generate_sitemap" phx-disable-with={gettext("Generating…")}>{gettext(
+            <button type="button" class="btn" phx-click="generate_sitemap" phx-disable-with={gettext("Generating…")}>{gettext(
               "Generate sitemap"
             )}</button>
           </article>
@@ -263,7 +263,7 @@ defmodule BrandoAdmin.Sites.UtilsLive do
             <div class="utils-row-actions">
               <button
                 type="button"
-                class="utils-button"
+                class="btn"
                 phx-click="recreate_image_sizes"
                 disabled={@image_tasks["recreate_sizes"]}
                 data-confirm-title={gettext("Recreate the sizes of every image?")}
@@ -274,7 +274,7 @@ defmodule BrandoAdmin.Sites.UtilsLive do
               </button>
               <button
                 type="button"
-                class={["utils-button", @changed_images > 0 && !@unsynced_media && "primary"]}
+                class={["btn", @changed_images > 0 && !@unsynced_media && "btn--primary"]}
                 phx-click="recreate_changed_image_sizes"
                 disabled={@image_tasks["recreate_sizes"] || @changed_images == 0}
                 data-confirm-title={gettext("Recreate the sizes of changed images?")}
@@ -294,7 +294,7 @@ defmodule BrandoAdmin.Sites.UtilsLive do
             </div>
             <button
               type="button"
-              class="utils-button"
+              class="btn"
               phx-click="recalculate_dominant_colors"
               disabled={@image_tasks["dominant_colors"]}
               data-confirm-title={gettext("Read the dominant color of every image again?")}

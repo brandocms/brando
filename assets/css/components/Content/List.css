@@ -578,10 +578,6 @@
       .main-content .circle-flag {
         background-color: var(--brando-surface);
       }
-
-      .badge.tiny {
-        background-color: var(--brando-surface);
-      }
     }
 
     &:nth-of-type(even) {

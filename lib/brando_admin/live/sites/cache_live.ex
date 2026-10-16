@@ -93,7 +93,7 @@ defmodule BrandoAdmin.Sites.CacheLive do
 
     ~H"""
     <tr>
-      <td><span class="workspace-badge">{@row.type}</span></td>
+      <td><span class="badge">{@row.type}</span></td>
       <td><code>{@row.module}</code></td><td><code>{@row.key}</code></td>
       <td>
         <%= if @row.id do %>

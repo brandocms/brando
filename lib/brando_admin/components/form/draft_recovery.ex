@@ -321,7 +321,7 @@ defmodule BrandoAdmin.Components.Form.DraftRecovery do
     <section id={@id} class="draft-order-diff" aria-labelledby={@id <> "-title"}>
       <header>
         <h4 id={@id <> "-title"}>{@section.title}</h4>
-        <span class="draft-order-badge">{gettext("Order changed")}</span>
+        <span class="badge">{gettext("Order changed")}</span>
       </header>
       <div class="draft-order-columns" aria-hidden="true">
         <span>{gettext("Content")}</span>

@@ -70,8 +70,6 @@ h2.titlecase + .button-group-vertical button:first-of-type {
     font: 500 13px/20px "Main", sans-serif;
     letter-spacing: 0;
     text-transform: none;
-
-    .count-badge { margin-left: 0; }
   }
 
   .multiselect-list {
@@ -588,17 +586,6 @@ h2.titlecase + .button-group-vertical button:first-of-type {
       }
     }
   }
-}
-
-.count-badge {
-  display: inline-block;
-  margin-left: 6px;
-  padding: 1px 8px;
-  border-radius: 10px;
-  background-color: color-mix(in srgb, var(--brando-ink) 7%, transparent);
-  font-size: 10px;
-  font-weight: 500;
-  letter-spacing: 0;
 }
 
 .invalid-options-warning {

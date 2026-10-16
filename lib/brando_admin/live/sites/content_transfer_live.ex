@@ -386,7 +386,7 @@ defmodule BrandoAdmin.Sites.ContentTransferLive do
         <div class="transfer-review-list">
           <article :for={entry <- @exported.bundle["entries"] || []}>
             <div>
-              <h3>{entry["title"]} <span class="transfer-badge">{schema_label(entry["schema"])}</span></h3><p>
+              <h3>{entry["title"]} <span class="badge">{schema_label(entry["schema"])}</span></h3><p>
                 {dgettext("content_transfer", "Whole entry")} · {Map.get(
                   @language_labels,
                   entry["language"],
@@ -394,12 +394,12 @@ defmodule BrandoAdmin.Sites.ContentTransferLive do
                 )}
               </p>
             </div>
-            <span class="transfer-badge">{dgettext("content_transfer", "Fields, metadata & content")}</span>
+            <span class="badge">{dgettext("content_transfer", "Fields, metadata & content")}</span>
           </article>
           <article :for={field <- if(@exported.bundle["version"] == 1, do: @exported.bundle["fields"], else: [])}>
             <div>
               <h3>{field["title"]}</h3><p>{Labels.field(field["field"])} · {String.upcase(field["language"])}</p>
-            </div><span class="transfer-badge">{dngettext(
+            </div><span class="badge">{dngettext(
               "content_transfer",
               "%{count} block",
               "%{count} blocks",
@@ -418,7 +418,7 @@ defmodule BrandoAdmin.Sites.ContentTransferLive do
           <div :for={dep <- related_entries(@exported.bundle)} class="transfer-related-row">
             <div class="transfer-related-content">
               <div class="transfer-related-title">
-                <strong>{dep["label"]}</strong><span class="transfer-badge">{dependency_type(dep)}</span>
+                <strong>{dep["label"]}</strong><span class="badge">{dependency_type(dep)}</span>
               </div>
               <ul class="transfer-reference-paths">
                 <li :for={usage <- dependency_usages(@exported.bundle, dep)}>
@@ -448,13 +448,13 @@ defmodule BrandoAdmin.Sites.ContentTransferLive do
               data-kind={hd(dependencies)["kind"]}
             >
               <h3>
-                <Brando.HTML.Icon.icon name={dependency_icon(hd(dependencies)["kind"])} />{type}<span class="transfer-badge">{length(
+                <Brando.HTML.Icon.icon name={dependency_icon(hd(dependencies)["kind"])} />{type}<span class="badge">{length(
                   dependencies
                 )}</span>
               </h3>
               <div class="transfer-dependency-list">
                 <div :for={dep <- dependencies}>
-                  <span>{dep["label"]}</span><small class="transfer-badge">{export_dependency_status(@exported.bundle, dep)}</small>
+                  <span>{dep["label"]}</span><small class="badge">{export_dependency_status(@exported.bundle, dep)}</small>
                 </div>
               </div>
             </section>
@@ -757,7 +757,7 @@ defmodule BrandoAdmin.Sites.ContentTransferLive do
                   )}
                 </p>
               </div>
-              <span class={["transfer-badge", item.mode == "update" && "warning"]}>{entry_mode_label(item.mode)}</span>
+              <span class={["badge", item.mode == "update" && "badge--attention"]}>{entry_mode_label(item.mode)}</span>
             </header>
             <div class="transfer-entry-controls">
               <div>
@@ -1005,7 +1005,7 @@ defmodule BrandoAdmin.Sites.ContentTransferLive do
                   selected={item.action != :bundle && item.id == option.id}
                 >
                   {option.label}
-                </option></select><span class={["transfer-badge", item.issue && "warning"]}>{dependency_status(item)}</span><p
+                </option></select><span class={["badge", item.issue && "badge--attention"]}>{dependency_status(item)}</span><p
                   :if={item.issue}
                   class="transfer-inline-error"
                 >
@@ -1199,7 +1199,7 @@ defmodule BrandoAdmin.Sites.ContentTransferLive do
                   )}
             </h3><p>
               <BrandoAdmin.Dates.time at={receipt.inserted_at} format={:long} />
-            </p><span :if={receipt.restored_at} class="transfer-badge">{dgettext("content_transfer", "Recovered")}</span><code>{receipt.package_id}</code>
+            </p><span :if={receipt.restored_at} class="badge">{dgettext("content_transfer", "Recovered")}</span><code>{receipt.package_id}</code>
           </div><div class="transfer-actions">
             <button
               type="button"

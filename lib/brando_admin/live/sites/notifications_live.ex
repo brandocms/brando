@@ -709,12 +709,12 @@ defmodule BrandoAdmin.Sites.NotificationsLive do
 
   defp state(assigns) do
     ~H"""
-    <span :if={@route.active} class="workspace-badge positive" data-testid="notification-route-state">
+    <span :if={@route.active} class="badge badge--success" data-testid="notification-route-state">
       {gettext("Active")}
     </span>
     <span
       :if={!@route.active}
-      class={["workspace-badge", if(@route.paused_reason == :failures, do: "negative", else: "warning")]}
+      class={["badge", if(@route.paused_reason == :failures, do: "badge--error", else: "badge--attention")]}
       data-testid="notification-route-state"
     >
       {paused_label(@route.paused_reason)}
@@ -757,16 +757,16 @@ defmodule BrandoAdmin.Sites.NotificationsLive do
 
   defp delivery_state(assigns) do
     ~H"""
-    <span class={["workspace-badge", state_tone(@delivery.state)]} data-testid="notification-delivery-state">
+    <span class={["badge", state_tone(@delivery.state)]} data-testid="notification-delivery-state">
       {if @delivery.response_status, do: @delivery.response_status, else: state_label(@delivery.state)}
       <span :if={@delivery.response_status}>· {state_label(@delivery.state)}</span>
     </span>
     """
   end
 
-  defp state_tone("succeeded"), do: "positive"
-  defp state_tone("retrying"), do: "warning"
-  defp state_tone("failed"), do: "negative"
+  defp state_tone("succeeded"), do: "badge--success"
+  defp state_tone("retrying"), do: "badge--attention"
+  defp state_tone("failed"), do: "badge--error"
   defp state_tone(_), do: nil
 
   defp state_label("pending"), do: gettext("Queued")

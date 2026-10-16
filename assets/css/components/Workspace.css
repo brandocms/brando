@@ -71,7 +71,7 @@
   .workspace-panel-heading { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 14px 16px; border-bottom: 1px solid var(--workspace-line); background: var(--workspace-wash); border-radius: 6px 6px 0 0; }
   .workspace-panel-heading h2 { font-size: 14px; letter-spacing: 0; }
   .workspace-panel-heading p { margin-top: 4px; color: var(--workspace-muted); font-size: 12px; }
-  .workspace-panel-heading > span { color: var(--workspace-muted); font-size: 12px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .workspace-panel-heading > span:not(.badge) { color: var(--workspace-muted); font-size: 12px; font-variant-numeric: tabular-nums; white-space: nowrap; }
   .workspace-empty { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 48px 24px; text-align: center; }
   .workspace-empty p { max-width: 420px; color: var(--workspace-muted); font-size: 13px; }
   /* The inset lives on the outer cells, not the wrapper, so a row's hover
@@ -94,10 +94,6 @@
   }
   code { background: transparent; padding: 0; border: 0; }
   .workspace-mono { font-family: theme(typography.families.mono); font-size: 12px; }
-  .workspace-badge { display: inline-flex; align-items: center; gap: 6px; padding: 2px 7px; border-radius: 4px; font-size: 11px; line-height: 18px; font-weight: 400; white-space: nowrap; background: var(--brando-badge-bg); color: var(--brando-badge-ink); }
-  .workspace-badge.positive { background: var(--brando-success); color: var(--brando-success-ink); }
-  .workspace-badge.warning { background: var(--brando-attention); color: var(--brando-attention-ink); }
-  .workspace-badge.negative { background: var(--brando-error); color: var(--brando-error-ink); }
   .workspace-note { color: var(--workspace-muted); font-size: 12px; padding-top: 16px; }
   .workspace-sr-only { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 

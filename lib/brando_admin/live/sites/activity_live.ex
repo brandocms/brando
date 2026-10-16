@@ -384,7 +384,7 @@ defmodule BrandoAdmin.Sites.ActivityLive do
 
       <div :if={@view == :content and @count > length(@events)} class="activity-more">
         <span>{gettext("Showing %{shown} of %{count}", shown: length(@events), count: @count)}</span>
-        <button type="button" class="utils-button" phx-click="load_more">{gettext("Load older activity")}</button>
+        <button type="button" class="btn" phx-click="load_more">{gettext("Load older activity")}</button>
       </div>
 
       <Content.modal
@@ -468,7 +468,7 @@ defmodule BrandoAdmin.Sites.ActivityLive do
 
       <div :if={@count > length(@events)} class="activity-more">
         <span>{gettext("Showing %{shown} of %{count}", shown: length(@events), count: @count)}</span>
-        <button type="button" class="utils-button" phx-click="load_more">{gettext("Load older events")}</button>
+        <button type="button" class="btn" phx-click="load_more">{gettext("Load older events")}</button>
       </div>
     </div>
     """
@@ -549,14 +549,14 @@ defmodule BrandoAdmin.Sites.ActivityLive do
         <button
           :if={@compare?}
           type="button"
-          class="utils-button"
+          class="btn"
           phx-click="compare"
           phx-value-id={@event.id}
         >
           {gettext("Compare")}
         </button>
-        <.link :if={@trash_path} navigate={@trash_path} class="utils-button">{gettext("Open trash")}</.link>
-        <.link :if={@proposal_path} navigate={@proposal_path} class="utils-button">{gettext("Open proposal")}</.link>
+        <.link :if={@trash_path} navigate={@trash_path} class="btn">{gettext("Open trash")}</.link>
+        <.link :if={@proposal_path} navigate={@proposal_path} class="btn">{gettext("Open proposal")}</.link>
         <span :if={@event.revision} class="activity-revision">
           {gettext("Revision #%{revision}", revision: @event.revision)}
         </span>

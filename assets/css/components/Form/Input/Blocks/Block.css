@@ -1486,10 +1486,6 @@ button.btn-palette {
       font-size: 95%;
       background-color: var(--brando-surface-subform);
 
-      .help-content-buttons {
-        margin: 0 auto;
-        text-align: center;
-      }
     }
   }
 

@@ -31,7 +31,7 @@ defmodule BrandoAdmin.Components.AuthorizationTools do
           <h3>{gettext("Migration report")}</h3>
           <p>{gettext("Inspect accounts, site assignments, and legacy application rules.")}</p>
           <div class="utils-actions">
-            <button class="utils-button" type="button" phx-click="authorization_report" disabled={@busy != nil}>
+            <button class="btn" type="button" phx-click="authorization_report" disabled={@busy != nil}>
               {cond do
                 @busy == "report" -> gettext("Inspecting…")
                 @report -> gettext("Refresh report")
@@ -45,7 +45,7 @@ defmodule BrandoAdmin.Components.AuthorizationTools do
           <h3>{gettext("Prepare groups")}</h3>
           <p>{gettext("Create default groups and map legacy roles to memberships. Existing changes are preserved.")}</p>
           <div class="utils-actions">
-            <button class="utils-button" type="button" phx-click="authorization_backfill" disabled={@busy != nil || !@report}>
+            <button class="btn" type="button" phx-click="authorization_backfill" disabled={@busy != nil || !@report}>
               {if @busy == "backfill", do: gettext("Preparing…"), else: gettext("Prepare groups")}
             </button>
           </div>
@@ -56,7 +56,7 @@ defmodule BrandoAdmin.Components.AuthorizationTools do
           <p>{gettext("Review and edit group permissions and memberships before enabling group authorization.")}</p>
           <div class="utils-actions">
             <a
-              class="utils-button"
+              class="btn"
               href={if @scope.kind == :installation, do: "/admin/groups?scope=installation", else: "/admin/groups"}
             >{gettext("Review groups")}</a>
           </div>
@@ -95,7 +95,7 @@ defmodule BrandoAdmin.Components.AuthorizationTools do
         </div>
         <details class="utils-rules" open>
           <summary>
-            <span>{gettext("Application rules")}</span><span class="utils-pill">{@report.application_rules.review_count} {gettext(
+            <span>{gettext("Application rules")}</span><span class="badge">{@report.application_rules.review_count} {gettext(
               "to review"
             )}</span>
           </summary>
@@ -118,7 +118,7 @@ defmodule BrandoAdmin.Components.AuthorizationTools do
                 <li :for={rule <- role.rules}>
                   <span class={["utils-rule-effect", rule.effect == "Cannot" && "is-deny"]}>{rule.effect}</span>
                   <code>{rule.action} {rule.subject}</code>
-                  <span :if={rule.conditional} class="utils-pill conditional">{gettext("Conditional")}</span>
+                  <span :if={rule.conditional} class="badge badge--attention">{gettext("Conditional")}</span>
                   <pre :if={rule.conditions}>{rule.conditions}</pre>
                 </li>
               </ul>
@@ -158,7 +158,7 @@ defmodule BrandoAdmin.Components.AuthorizationTools do
             <div class="utils-actions">
               <button
                 type="button"
-                class="utils-button"
+                class="btn"
                 phx-click="authorization_export"
                 phx-disable-with={gettext("Preparing…")}
               >{gettext("Prepare export")}</button>
@@ -206,7 +206,7 @@ defmodule BrandoAdmin.Components.AuthorizationTools do
             <div class="utils-actions">
               <button
                 type="submit"
-                class="utils-button"
+                class="btn"
                 disabled={@uploads.authorization_config.entries == []}
                 phx-disable-with={gettext("Reading file…")}
               >{gettext("Preview import")}</button>
@@ -222,14 +222,14 @@ defmodule BrandoAdmin.Components.AuthorizationTools do
           <div class="utils-preview-heading">
             <h4 id="import-preview-title" tabindex="-1" phx-mounted={JS.focus()}>{gettext("Import preview")}</h4><button
               type="button"
-              class="utils-button quiet"
+              class="btn btn--quiet"
               phx-click="authorization_cancel_preview"
             >{gettext("Cancel")}</button>
           </div>
           <div class="utils-preview-totals">
-            <span class="utils-pill mint">{@preview.created} {gettext("new")}</span><span class="utils-pill conditional">{@preview.updated} {gettext(
+            <span class="badge badge--success">{@preview.created} {gettext("new")}</span><span class="badge badge--attention">{@preview.updated} {gettext(
               "updated"
-            )}</span><span class="utils-pill">{@preview.unchanged} {gettext("unchanged")}</span><span>{gettext(
+            )}</span><span class="badge">{@preview.unchanged} {gettext("unchanged")}</span><span>{gettext(
               "%{count} existing members affected",
               count: @preview.members
             )}</span>
@@ -237,7 +237,7 @@ defmodule BrandoAdmin.Components.AuthorizationTools do
           <p :if={@preview.changes == []}>{gettext("This file contains no groups to import.")}</p>
           <details :for={change <- @preview.changes} class="utils-import-change">
             <summary>
-              <span><strong>{change.entry["name"]}</strong><code>{change.entry["key"]}</code></span><span class="utils-change-counts"><span class="utils-pill">{action_label(
+              <span><strong>{change.entry["name"]}</strong><code>{change.entry["key"]}</code></span><span class="utils-change-counts"><span class="badge">{action_label(
                 change.action
               )}</span><span class="utils-added">+{length(change.added)}</span><span class="utils-removed">−{length(
                 change.removed
@@ -281,7 +281,7 @@ defmodule BrandoAdmin.Components.AuthorizationTools do
                 else: gettext("Updated grants will apply immediately to existing members.")}
             </p><button
               type="button"
-              class="utils-button primary"
+              class="btn btn--primary"
               phx-click="authorization_apply"
               phx-disable-with={gettext("Importing…")}
               disabled={@preview.created + @preview.updated == 0}

@@ -126,7 +126,7 @@
 
 /* Buttons */
 
-.assistant-button, .assistant-quiet-button, .assistant-icon-button, .assistant-apply {
+.assistant-button, .assistant-quiet-button, .assistant-apply {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -143,10 +143,9 @@
   white-space: nowrap;
 }
 
-.assistant-button:hover, .assistant-icon-button:hover:not(:disabled) { background: var(--assistant-surface); }
+.assistant-button:hover { background: var(--assistant-surface); }
 .assistant-quiet-button { border-color: transparent; background: transparent; color: var(--assistant-muted); }
 .assistant-quiet-button:hover { color: var(--assistant-ink); }
-.assistant-icon-button { padding: 5px 8px; }
 .assistant-link-button { border: 0; background: none; padding: 0; color: var(--assistant-accent); font-size: 12px; text-decoration: underline; text-underline-offset: 2px; }
 
 .assistant-apply {
@@ -193,8 +192,7 @@
 
   a:hover { background: var(--brando-surface-hover); }
   a[aria-current="page"] { background: var(--brando-surface-selected); }
-  .assistant-badge { grid-column: 2; grid-row: 1; align-self: start; }
-  .assistant-badge.is-waiting { background: var(--brando-suggestion); color: var(--brando-suggestion-ink); }
+  .badge { grid-column: 2; grid-row: 1; align-self: start; }
 }
 
 .assistant-connected-summary { grid-column: 1; grid-row: 1; font-size: 13px; font-weight: 500; line-height: 1.4; overflow-wrap: anywhere; }
@@ -660,18 +658,6 @@
 
 .assistant-saved-preview { display: inline-flex; align-items: center; gap: 4px; }
 .assistant-card footer .assistant-saved-preview [data-icon] { width: 12px; height: 12px; }
-
-.assistant-badge {
-  padding: 2px 8px;
-  border-radius: 999px;
-  background: var(--assistant-surface);
-  color: var(--assistant-muted);
-  font-size: 11px;
-  white-space: nowrap;
-
-  &.is-create { background: var(--assistant-new); color: var(--assistant-new-ink); }
-  &.is-update { background: var(--assistant-new); color: var(--assistant-new-ink); }
-}
 
 .assistant-changes { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; font-size: 13px; }
 .assistant-changes > li { display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; }

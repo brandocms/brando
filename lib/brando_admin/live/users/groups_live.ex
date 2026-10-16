@@ -120,7 +120,7 @@ defmodule BrandoAdmin.Users.GroupsLive do
               <span><strong>{group.name}</strong><small class="authorization-member-count">
                 {ngettext("%{count} member", "%{count} members", length(group.memberships))}
               </small></span>
-              <span :if={group.preset == :superuser} class="access-tag">{gettext("Protected")}</span>
+              <span :if={group.preset == :superuser} class="badge badge--outline">{gettext("Protected")}</span>
             </button>
           </nav>
           <p :if={filter_groups(@groups, @group_search) == []} class="authorization-hint">{gettext("No matching groups.")}</p>
@@ -247,7 +247,9 @@ defmodule BrandoAdmin.Users.GroupsLive do
               <div hidden={@tab != "permissions"}>
                 <%= if @selected.preset == :superuser do %>
                   <div class="authorization-protected">
-                    <span class="access-tag">{gettext("Protected")}</span><h3>{gettext("Full installation access")}</h3>
+                    <span class="badge badge--outline">{gettext("Protected")}</span><h3>
+                      {gettext("Full installation access")}
+                    </h3>
                     <p>
                       {gettext(
                         "Superusers can manage every active site and all installation settings. These permissions are maintained automatically."
@@ -378,7 +380,7 @@ defmodule BrandoAdmin.Users.GroupsLive do
                     <p class="authorization-lead">{gettext("Permissions from all groups in this scope.")}</p>
                     <%= if Enum.any?(@effective, & &1.explanation.superuser?) do %>
                       <div class="authorization-protected">
-                        <span class="access-tag">{gettext("Superuser")}</span><h3>{gettext("Full access")}</h3><p>
+                        <span class="badge badge--outline">{gettext("Superuser")}</span><h3>{gettext("Full access")}</h3><p>
                           {gettext("Protected Superuser access covers this scope. Individual content policies still apply.")}
                         </p>
                       </div>
@@ -529,9 +531,13 @@ defmodule BrandoAdmin.Users.GroupsLive do
 
   defp count_badge(assigns) do
     ~H"""
-    <span class={["access-count-badge", "access-count-#{@tone}"]}>{render_slot(@inner_block)}</span>
+    <span class={["badge", count_tone(@tone)]}>{render_slot(@inner_block)}</span>
     """
   end
+
+  defp count_tone("mint"), do: "badge--success"
+  defp count_tone("peach"), do: "badge--error"
+  defp count_tone(_), do: nil
 
   defp permission_section(assigns) do
     assigns =

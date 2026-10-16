@@ -60,11 +60,6 @@
   .stale-block-entry small { color: var(--utils-muted); font-size: 12px; }
   .stale-block-version { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
   .stale-block-version small { color: var(--brando-faint); font-size: 11px; font-variant-numeric: tabular-nums; }
-  .stale-block-chip {
-    display: inline-flex; align-items: center; padding: 2px 9px; border: 1px solid var(--brando-attention-line); border-radius: 30px;
-    background: var(--brando-attention); color: var(--brando-attention-ink); font-size: 11px; white-space: nowrap; font-variant-numeric: tabular-nums;
-  }
-  .stale-block-chip.is-ok { border-color: var(--brando-success-line); background: var(--brando-success); color: var(--brando-success-ink); }
   .stale-block-note { margin-top: 10px; color: var(--utils-muted); font-size: 12px; }
   .stale-block-problem { margin-top: 10px; color: var(--brando-error-ink); font-size: 12px; overflow-wrap: anywhere; }
 
@@ -101,11 +96,6 @@
   .stale-blocks-more, .stale-blocks-nothing-lost, .stale-blocks-remaining { margin-top: 12px; color: var(--utils-muted); font-size: 12px; }
   .stale-blocks-review .utils-apply-bar { margin-top: 20px; }
   .stale-blocks-review-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
-  .utils-button.stale-blocks-destructive { color: var(--brando-ink-inverse); background: var(--brando-error-ink); border-color: var(--brando-error-ink); }
-  .utils-button.stale-blocks-destructive:hover:not(:disabled) {
-    background: color-mix(in srgb, var(--brando-error-ink) 85%, var(--brando-ink));
-    border-color: color-mix(in srgb, var(--brando-error-ink) 85%, var(--brando-ink));
-  }
 
   @media (max-width: 800px) {
     .stale-leftover { grid-template-columns: 1fr; gap: 12px; padding: 16px 20px; }

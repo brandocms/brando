@@ -67,7 +67,7 @@ defmodule BrandoAdmin.StaleBlocksLiveTest do
 
     assert has_element?(view, ~s([data-leftover="var:title"] h3), "title")
     assert has_element?(view, "#stale-block-#{first.id} .stale-block-entry a", "Identity")
-    assert has_element?(view, "#stale-block-#{first.id} .stale-block-chip", "Version 1")
+    assert has_element?(view, "#stale-block-#{first.id} [data-testid=stale-block-version]", "Version 1")
     assert has_element?(view, "#stale-block-#{first.id} .stale-block-value", "Old title 0")
     # the mapping target is the shared select, with the compatible var offered
     assert has_element?(view, ~s(select.admin-select[name="bulk[var:title]"] option[value="map:heading"]))

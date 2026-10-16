@@ -152,7 +152,7 @@ defmodule BrandoAdmin.AI.GuidanceLive do
               <span :if={version.note} class="guidance-note">{version.note}</span>
               <p class="guidance-excerpt">{excerpt(version.text)}</p>
             </div>
-            <span :if={@current && version.id == @current.id} class="guidance-pill">{gettext("In use")}</span>
+            <span :if={@current && version.id == @current.id} class="badge badge--success">{gettext("In use")}</span>
             <button
               :if={!(@current && version.id == @current.id)}
               type="button"

@@ -81,7 +81,7 @@ defmodule Brando.Sites.GlobalSet do
       <span class="global-set-title"><span class="global-set-icon"><Brando.HTML.Icon.icon name="globe" /></span><span class="global-set-text"><span class="global-set-name">{@entry.label}</span><small class="global-set-key monospace">{@entry.key}</small></span></span>
     </.update_link>
     <.field columns={3}>
-      <span class="workspace-badge">{ngettext("%{count} variable", "%{count} variables", Enum.count(@entry.vars))}</span>
+      <span class="badge">{ngettext("%{count} variable", "%{count} variables", Enum.count(@entry.vars))}</span>
     </.field>
     """
   end

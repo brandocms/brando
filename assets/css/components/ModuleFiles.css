@@ -39,9 +39,6 @@
   .module-files-preview-heading > div { display: flex; flex-direction: column; gap: 6px; }
   .module-files-status { color: var(--brando-muted); font-size: 12px; }
   .module-files-counts { display: flex; flex-wrap: wrap; gap: 8px; }
-  .module-files-badge { display: inline-flex; align-items: center; font-size: 12px; line-height: 18px; padding: 3px 9px; border-radius: 4px; background: var(--brando-badge-bg); color: var(--brando-badge-ink); white-space: nowrap; }
-  .module-files-badge.create, .module-files-badge.update { background: var(--brando-success); color: var(--brando-success-ink); }
-  .module-files-badge.conflict, .module-files-badge.migration_required { background: var(--brando-error); color: var(--brando-error-ink); }
   .module-files-change { border: 1px solid var(--brando-line); border-radius: 6px; }
   .module-files-change > summary { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 16px 20px; cursor: pointer; }
   .module-files-change > summary > span:first-child { display: flex; flex: 1; flex-direction: column; gap: 5px; min-width: 0; }

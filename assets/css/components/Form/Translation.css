@@ -77,17 +77,6 @@
 .translation-members li { display: inline-flex; align-items: center; gap: 6px; }
 .translation-members a { color: var(--translation-accent); text-decoration: underline; text-underline-offset: 2px; }
 
-.translation-badge {
-  padding: 1px 8px;
-  border-radius: 30px;
-  background: var(--brando-badge-bg);
-  color: var(--brando-badge-ink);
-  font-size: 11px;
-  white-space: nowrap;
-
-  &.is-work { background: var(--brando-attention); color: var(--brando-attention-ink); }
-}
-
 /* Marks from Brando.TranslationWork. */
 .block[data-translation-work] { box-shadow: 0 0 0 2px var(--brando-attention-line); border-radius: 6px; }
 .field-wrapper[data-translation-work] { box-shadow: -3px 0 0 var(--brando-attention-line); }

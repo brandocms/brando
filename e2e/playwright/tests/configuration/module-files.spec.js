@@ -92,7 +92,7 @@ test('export and import DSL bundles with review, updated baselines and responsiv
   const exported = await download(page, '#module-files-download')
   expect(exported.subarray(0, 2).toString()).toBe('PK')
   await preview(page, exported)
-  await expect(page.locator('.module-files-counts .module-files-badge')).toHaveCount(1)
+  await expect(page.getByTestId('module-files-count')).toHaveCount(1)
   await expect(page.locator('.module-files-counts')).toContainText('Unchanged:')
   await page.getByRole('button', { name: 'Cancel preview', exact: true }).click()
 

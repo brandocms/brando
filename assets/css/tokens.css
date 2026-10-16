@@ -1,13 +1,11 @@
-/* Admin colour tokens.
+/* Admin tokens: colours, then sizes (at the end).
 
-   The roles with an entry in the admin palette (`theme.colors` in
-   europa.json5), and the palette's own names at the end, take their value
-   from it with `theme(colors.*)`, so an application's europa.json5 sets them;
-   the table is in europa.json5 and docs/admin-ui-design.md. The other roles
-   are defined here. This is the only
-   stylesheet allowed to contain hex colours: every other file uses these
-   custom properties. `.github/scripts/check_css_colors.sh` enforces both in
-   CI.
+   Every value comes from the admin's theme in europa.json5 (`theme.colors`,
+   `theme.radius`, `theme.controls`) with `theme()`, so an application's
+   europa.json5 changes any of them; the table is in europa.json5 and
+   docs/admin-ui-design.md. Values derived from another role (color-mix, a
+   var()) stay here. No stylesheet holds a hex colour, this one included:
+   `.github/scripts/check_css_colors.sh` enforces it in CI.
 
    Names describe a role, not a colour, so a role can change value (or gain a
    dark-mode value) without renaming its uses. See docs/admin-ui-design.md. */
@@ -15,35 +13,35 @@
 :root {
   /* Text */
   --brando-ink: theme(colors.dark);
-  --brando-muted: #626b66;
+  --brando-muted: theme(colors.muted);
   /* Text and icons on a dark fill: the accent, a status colour, a photo */
-  --brando-ink-inverse: #ffffff;
+  --brando-ink-inverse: theme(colors.inkInverse);
   /* Placeholders, disabled text, counters and separators between metadata */
-  --brando-faint: #9aa39c;
+  --brando-faint: theme(colors.faint);
 
   /* Hairlines, borders and dividers */
   --brando-line: theme(colors.peachDarkest);
   /* A border under the pointer or holding focus, and a drop target's outline */
-  --brando-line-strong: #bacabd;
+  --brando-line-strong: theme(colors.line.strong);
   /* Dividers between the rows inside a framed list or table, a step lighter
      than the frame around them */
-  --brando-line-soft: #ecf0ea;
+  --brando-line-soft: theme(colors.line.soft);
 
   /* The one action colour: primary buttons, links, focus, progress */
   --brando-accent: theme(colors.blue);
-  --brando-accent-hover: #1a3d30;
+  --brando-accent-hover: theme(colors.accentHover);
 
   /* Surfaces */
   --brando-surface-page: theme(colors.peachLighter);
-  --brando-surface: #ffffff;
+  --brando-surface: theme(colors.surface.base);
   --brando-surface-subform: theme(colors.peach);
-  --brando-line-subform: #e2e9df;
-  --brando-surface-shaded: #fbfcfa;
-  --brando-surface-hover: #f5f8f3;
+  --brando-line-subform: theme(colors.line.subform);
+  --brando-surface-shaded: theme(colors.surface.shaded);
+  --brando-surface-hover: theme(colors.surface.hover);
   --brando-surface-selected: theme(colors.peachDarker);
   /* A sage tint that sets a panel apart from the white around it: a neutral
      notice, a section header, an icon tile, a hovered secondary button */
-  --brando-surface-tint: #f1f5ef;
+  --brando-surface-tint: theme(colors.surface.tint);
   --brando-overlay: theme(colors.overlay);
   /* The login box's layered shadow: a soft, deep lift for floating panels. */
   --brando-shadow-overlay: 0 2.8px 2.2px rgba(0, 0, 0, 0.02),
@@ -54,15 +52,15 @@
     0 100px 80px rgba(0, 0, 0, 0.07);
 
   /* Badges: a sage pill with muted ink */
-  --brando-badge-bg: #eef0eb;
-  --brando-badge-ink: #566153;
+  --brando-badge-bg: theme(colors.badge.fill);
+  --brando-badge-ink: theme(colors.badge.ink);
 
   /* AI: anything that asks an external, paid AI service for something is
      marked in this violet, and so is what it hands back for review. One base
      (the ink: text, icons, focus, a filled control; 6.9:1 on white) and the
      rest mixed from it: a filled control on hover, the hairline, the
      hairline on hover, and a hover tint (AI.css). */
-  --brando-ai: #634f8f;
+  --brando-ai: theme(colors.ai);
   --brando-ai-hover: color-mix(in srgb, var(--brando-ai) 82%, var(--brando-ink));
   --brando-ai-line: color-mix(in srgb, var(--brando-ai) 35%, var(--brando-surface));
   --brando-ai-line-strong: color-mix(in srgb, var(--brando-ai) 60%, var(--brando-surface));
@@ -76,21 +74,21 @@
 
   /* Needs attention: a missing alt text, an unprocessed image, unsaved or
      untranslated work, a warning badge. A tint for the chip and its ink. */
-  --brando-attention: #fbefda;
-  --brando-attention-line: #e4b866;
-  --brando-attention-ink: #87662d;
+  --brando-attention: theme(colors.attention.tint);
+  --brando-attention-line: theme(colors.attention.line);
+  --brando-attention-ink: theme(colors.attention.ink);
 
   /* Done or fine: a passed check, an added line, something active or
      connected, a finished import. The tint, its border and its ink. */
-  --brando-success: #e8f2e9;
-  --brando-success-line: #d0e3d2;
-  --brando-success-ink: #2f6343;
+  --brando-success: theme(colors.success.tint);
+  --brando-success-line: theme(colors.success.line);
+  --brando-success-ink: theme(colors.success.ink);
 
   /* Errors: a failed save or upload, an invalid field, a destructive action.
      The tint, its border and its ink, as on Utilities and in toasts. */
-  --brando-error: #fff1ed;
-  --brando-error-line: #e8ccc4;
-  --brando-error-ink: #8c4232;
+  --brando-error: theme(colors.error.tint);
+  --brando-error-line: theme(colors.error.line);
+  --brando-error-ink: theme(colors.error.ink);
 
   /* Editors' notes: the amber of a missing alt text. A tint for highlights
      and counts, a rule for underlines and pins, and its ink (Notes.css). */
@@ -102,18 +100,18 @@
      emerald, peach) tint its blocks' chrome: the border, the title bar and
      its ink, and the dot in the outline. Blue, the default, uses the
      neutral roles above. */
-  --brando-module-pink-line: #fce7f3;
-  --brando-module-pink-tint: #fdf2f8;
-  --brando-module-pink-ink: #831843;
-  --brando-module-pink-dot: #f9a8d4;
-  --brando-module-emerald-line: #d1fae5;
-  --brando-module-emerald-tint: #ecfdf5;
-  --brando-module-emerald-ink: #064e3b;
-  --brando-module-emerald-dot: #6ee7b7;
-  --brando-module-peach-line: #ffedd5;
-  --brando-module-peach-tint: #fff7ed;
-  --brando-module-peach-ink: #7c2d12;
-  --brando-module-peach-dot: #fdba74;
+  --brando-module-pink-line: theme(colors.module.pink.line);
+  --brando-module-pink-tint: theme(colors.module.pink.tint);
+  --brando-module-pink-ink: theme(colors.module.pink.ink);
+  --brando-module-pink-dot: theme(colors.module.pink.dot);
+  --brando-module-emerald-line: theme(colors.module.emerald.line);
+  --brando-module-emerald-tint: theme(colors.module.emerald.tint);
+  --brando-module-emerald-ink: theme(colors.module.emerald.ink);
+  --brando-module-emerald-dot: theme(colors.module.emerald.dot);
+  --brando-module-peach-line: theme(colors.module.peach.line);
+  --brando-module-peach-tint: theme(colors.module.peach.tint);
+  --brando-module-peach-ink: theme(colors.module.peach.ink);
+  --brando-module-peach-dot: theme(colors.module.peach.dot);
 
   /* Entry status. Always shown with a text label as well. */
   --brando-status-published: theme(colors.status.published);
@@ -124,29 +122,29 @@
 
   /* The sidebar's own inks: dark green text, a muted green for secondary
      text, a hairline, the hover tint and the surface of the current page. */
-  --brando-nav-ink: #16261c;
-  --brando-nav-accent: #1f3d2b;
-  --brando-nav-muted: rgba(22, 38, 28, 0.62);
-  --brando-nav-rule: rgba(22, 38, 28, 0.13);
-  --brando-nav-hover: rgba(22, 38, 28, 0.045);
-  --brando-nav-surface: #ffffff;
+  --brando-nav-ink: theme(colors.nav.ink);
+  --brando-nav-accent: theme(colors.nav.accent);
+  --brando-nav-muted: theme(colors.nav.muted);
+  --brando-nav-rule: theme(colors.nav.rule);
+  --brando-nav-hover: theme(colors.nav.hover);
+  --brando-nav-surface: theme(colors.nav.surface);
   --brando-nav-surface-shadow: 0 1px 2px rgba(22, 38, 28, 0.08), 0 0 0 1px rgba(22, 38, 28, 0.05);
 
   /* Other editors, by their place among the avatars: field presence tags,
      outlines and the follow bar. Dark enough for white text. The pale glows
      of the same hues are rgba values in Block.css and app.css. */
-  --brando-presence-0: #2563c9;
-  --brando-presence-1: #1f7a4f;
-  --brando-presence-2: #a8520b;
-  --brando-presence-3: #7e3fc4;
-  --brando-presence-4: #c0392b;
-  --brando-presence-5: #0f766e;
+  --brando-presence-0: theme(colors.presence.p0);
+  --brando-presence-1: theme(colors.presence.p1);
+  --brando-presence-2: theme(colors.presence.p2);
+  --brando-presence-3: theme(colors.presence.p3);
+  --brando-presence-4: theme(colors.presence.p4);
+  --brando-presence-5: theme(colors.presence.p5);
 
   /* Inputs, chips and tab bars */
-  --brando-input-border: #e0e0e0;
-  --brando-switch-on: #9cc79f;
-  --brando-switch-off: #c0c0c0;
-  --brando-tabbar-bg: #fcfcfd;
+  --brando-input-border: theme(colors.line.input);
+  --brando-switch-on: theme(colors.switch.on);
+  --brando-switch-off: theme(colors.switch.off);
+  --brando-tabbar-bg: theme(colors.tabbar);
   --brando-chip-hover-bg: var(--brando-surface-hover);
   --brando-chip-active-bg: var(--brando-surface-selected);
   --brando-chip-active-fg: var(--brando-accent);
@@ -172,8 +170,27 @@
   --brando-color-content-background: var(--brando-surface);
   --brando-color-foreground: var(--brando-ink);
   --brando-color-nav-background: var(--brando-surface-page);
-  --brando-color-shaded: #fcfcfd;
-  --brando-color-input: #ffffff;
+  --brando-color-shaded: theme(colors.legacy.shaded);
+  --brando-color-input: theme(colors.legacy.input);
   --brando-shaded-surface: var(--brando-surface-shaded);
-  --brando-color-block-ref-background: #fcfcfc;
+  --brando-color-block-ref-background: theme(colors.legacy.blockRef);
+}
+
+/* Sizes. Corners and control heights come in three steps; a component picks
+   a step instead of a pixel value, so the admin keeps one set of shapes. The
+   values are `theme.radius` and `theme.controls` in europa.json5, so an
+   application's europa.json5 sets them, as it does the palette. See "Buttons
+   and badges" in docs/admin-ui-design.md. */
+:root {
+  /* Corners: badges and small chips, buttons, inputs and cards. */
+  --brando-radius-sm: theme(radius.sm);
+  --brando-radius-md: theme(radius.md);
+  --brando-radius-lg: theme(radius.lg);
+
+  /* Control heights: small (toolbars, inline actions), default, large (a
+     form's Save). Coarse pointers raise every step to the touch size. */
+  --brando-control-sm: theme(controls.sm);
+  --brando-control-md: theme(controls.md);
+  --brando-control-lg: theme(controls.lg);
+  --brando-control-touch: theme(controls.touch);
 }

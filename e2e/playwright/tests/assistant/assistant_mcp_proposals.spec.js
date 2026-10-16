@@ -26,7 +26,7 @@ test('reviews, applies and rejects proposals from a connected tool', async ({ pa
 
   const list = page.locator('#assistant-connected-list')
   await expect(list.locator('li')).toHaveCount(2)
-  await expect(list.locator('.assistant-badge.is-waiting')).toHaveCount(2)
+  await expect(list.getByTestId('assistant-state-waiting')).toHaveCount(2)
   await expect(page.locator('#assistant-composer')).toHaveCount(0)
 
   // Review one: its origin is marked, and its page can be previewed.
@@ -46,8 +46,8 @@ test('reviews, applies and rejects proposals from a connected tool', async ({ pa
 
   await review.locator('button.assistant-apply').click()
   await expect(review.locator('.assistant-feedback.is-success')).toBeVisible({ timeout: 15000 })
-  await expect(list.locator('.assistant-badge.is-applied')).toHaveCount(1)
-  await expect(list.locator('.assistant-badge.is-waiting')).toHaveCount(1)
+  await expect(list.getByTestId('assistant-state-applied')).toHaveCount(1)
+  await expect(list.getByTestId('assistant-state-waiting')).toHaveCount(1)
 
   // The entry has the new title.
   await review.locator('.assistant-receipt a').first().click()
@@ -61,7 +61,7 @@ test('reviews, applies and rejects proposals from a connected tool', async ({ pa
   await syncLV(page)
   await review.locator('button.assistant-discard').click()
   await expect(list.locator('li')).toHaveCount(1)
-  await expect(list.locator('.assistant-badge.is-waiting')).toHaveCount(0)
+  await expect(list.getByTestId('assistant-state-waiting')).toHaveCount(0)
   await expect(review.locator('button.assistant-apply')).toHaveCount(0)
 
   // Nothing waits: the Assistant still links to the list, without a count.

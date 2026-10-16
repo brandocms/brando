@@ -50,8 +50,11 @@
   .block-plus-wrapper { margin: 9px 0; }
 }
 
+/* The storage only holds the notes for their slots, so it draws no surface:
+   `.blocks-wrapper .blocks-content` would otherwise leave an empty shaded strip
+   under the form's block field. */
 .footnote-storage { margin: 0; padding: 0; }
-.footnote-storage > .blocks-content { margin: 0; padding: 0; }
+.blocks-wrapper.footnote-storage > .blocks-content { margin: 0; padding: 0; background-color: transparent; }
 
 .unused-collections {
   margin: 12px 0 24px; padding: 18px 20px; border: 1px solid var(--brando-attention-line);

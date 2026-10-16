@@ -91,7 +91,7 @@
   .markdown-panel-heading { display: flex; align-items: center; gap: 10px; margin-bottom: 20px; }
   .markdown-panel-heading [data-icon] { flex: 0 0 18px; width: 18px; height: 18px; color: var(--brando-muted); }
   .markdown-panel-heading h2 { font-size: 18px; margin: 0; }
-  .markdown-panel-heading .workspace-badge { margin-left: auto; }
+  .markdown-panel-heading .badge { margin-left: auto; }
   .markdown-documents { background: var(--brando-surface); }
   .markdown-documents .workspace-empty { padding: 32px 4px; }
   .workspace-empty > [data-icon] { width: 28px; height: 28px; color: var(--brando-faint); margin-bottom: 8px; }
