@@ -14,7 +14,7 @@ defmodule BrandoAdmin.Pages.PageListLive do
         <.link
           :if={BrandoAdmin.Authorization.allowed?(:create, @schema)}
           navigate="/admin/pages/create"
-          class="workspace-button primary"
+          class="btn btn--primary"
         >
           {gettext("Create page")}
         </.link>

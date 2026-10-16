@@ -151,14 +151,14 @@ defmodule BrandoAdmin.Components.Form.ImageDrawer do
         <div class="image-detail-actions">
           <button
             :if={@edit_image.image && @edit_image.image.path}
-            class="workspace-button primary"
+            class="btn btn--primary"
             type="button"
             phx-click={open_image_editor(@edit_image, @myself)}
           >
             <.icon name="scissors" />{gettext("Edit/Crop")}
           </button>
           <div id="image-drawer-replace" class="media-action-menu" phx-hook="Brando.FloatingDropdown">
-            <button type="button" class="workspace-button" popovertarget="image-drawer-replace-menu" aria-expanded="false">
+            <button type="button" class="btn" popovertarget="image-drawer-replace-menu" aria-expanded="false">
               <.icon name="refresh-cw" />{gettext("Replace")}<.icon name="chevron-down" />
             </button>
             <div id="image-drawer-replace-menu" class="media-action-options" popover="auto">
@@ -181,7 +181,7 @@ defmodule BrandoAdmin.Components.Form.ImageDrawer do
           >
             <button
               type="button"
-              class="workspace-button"
+              class="btn"
               aria-label={gettext("More image actions")}
               popovertarget="image-drawer-more-menu"
               aria-expanded="false"
@@ -216,7 +216,7 @@ defmodule BrandoAdmin.Components.Form.ImageDrawer do
       </.form>
       <:footer>
         <span>{gettext("Shared image settings")}</span>
-        <button type="button" class="workspace-button primary" phx-click={close_image(@myself)}>{gettext("Done")}</button>
+        <button type="button" class="btn btn--primary" phx-click={close_image(@myself)}>{gettext("Done")}</button>
       </:footer>
     </Content.drawer>
     """
@@ -275,7 +275,7 @@ defmodule BrandoAdmin.Components.Form.ImageDrawer do
               <div class="image-editor-controls">
                 <div class="image-editor-section-heading">
                   <h3>{gettext("Crop settings")}</h3>
-                  <button type="button" id="image-editor-reset" class="workspace-button quiet">
+                  <button type="button" id="image-editor-reset" class="btn btn--quiet">
                     <.icon name="refresh-cw" />{gettext("Reset")}
                   </button>
                 </div>
@@ -289,13 +289,13 @@ defmodule BrandoAdmin.Components.Form.ImageDrawer do
             </aside>
           </div>
           <div class="image-editor-actions">
-            <button type="button" class="workspace-button quiet image-editor-cancel" phx-click={close_image_editor()}>
+            <button type="button" class="btn btn--quiet image-editor-cancel" phx-click={close_image_editor()}>
               {gettext("Cancel")}
             </button>
-            <button type="button" class="workspace-button" id="image-editor-save-replace">
+            <button type="button" class="btn" id="image-editor-save-replace">
               {gettext("Save changes")}
             </button>
-            <button type="button" class="workspace-button primary" id="image-editor-save-new">
+            <button type="button" class="btn btn--primary" id="image-editor-save-new">
               <.icon name="copy" />
               {gettext("Save as new copy")}
             </button>

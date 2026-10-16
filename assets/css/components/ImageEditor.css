@@ -122,7 +122,7 @@
   .image-editor-actions {
     flex: 0 0 auto; display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap;
     gap: 8px; padding: 18px 24px; border-top: 1px solid var(--workspace-line); background: var(--brando-surface);
-    .workspace-button { min-height: 36px; padding: 8px 14px; }
+    .btn { min-height: var(--brando-control-lg); padding: 0 14px; }
     .image-editor-cancel { margin-right: auto; }
   }
   @media (max-width: 800px) {
@@ -139,7 +139,7 @@
     .freeform-ratios { grid-template-columns: repeat(4, minmax(0, 1fr)); }
     .image-editor-actions {
       display: grid; grid-template-columns: auto minmax(0, 1fr);
-      .workspace-button { min-height: 40px; white-space: normal; }
+      .btn { height: auto; min-height: var(--brando-control-touch); white-space: normal; }
       .image-editor-cancel { margin: 0; }
       #image-editor-save-new { grid-column: 1 / -1; }
     }

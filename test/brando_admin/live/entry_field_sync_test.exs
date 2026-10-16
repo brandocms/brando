@@ -484,7 +484,7 @@ defmodule BrandoAdmin.EntryFieldSyncTest do
 
       # ×, Done and the backdrop; Escape runs the drawer's `data-modal-close`,
       # the same commands as ×.
-      for close <- [".drawer-close-button", ".drawer-footer .workspace-button.primary", "+ .media-drawer-backdrop"] do
+      for close <- [".drawer-close-button", ".drawer-footer .btn--primary", "+ .media-drawer-backdrop"] do
         a |> element("#page_meta_image-media button[phx-click*=open_image]") |> render_click()
         assert_push_event(c.b, "b:set_active_field", %{field: "page[meta_image]"})
 

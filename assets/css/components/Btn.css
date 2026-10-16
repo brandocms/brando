@@ -132,6 +132,15 @@
   }
 }
 
+/* Quiet and destructive: red text without a frame until hovered. */
+.btn--quiet.btn--danger {
+  color: var(--brando-error-ink);
+
+  &:not(:hover) {
+    border-color: transparent;
+  }
+}
+
 /* The main action, when it destroys: a filled danger button. */
 .btn--primary.btn--danger:not(:disabled) {
   border-color: var(--brando-error-ink);

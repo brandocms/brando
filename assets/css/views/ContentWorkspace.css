@@ -124,7 +124,7 @@
   .library-file-icon [data-icon], .library-video-thumbnail [data-icon] { width: 24px; height: 24px; }
   .content-list .list-row .library-file-action { flex: 0 0 auto; width: auto; }
   .library-image-title { overflow-wrap: anywhere; }
-  @media (max-width: 700px) { .library-file-action .workspace-button { padding-inline: 8px; } }
+  @media (max-width: 700px) { .library-file-action .btn { padding-inline: 8px; } }
 }
 .admin-workspace.content-workspace > :where(.content-list-wrapper) {
   :is(.listing-title, div:has(> .entry-link)) .badge a.flex-h { display: inline-flex; justify-content: flex-start; gap: 0; width: auto; }

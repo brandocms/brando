@@ -81,7 +81,7 @@ defmodule BrandoAdmin.Components.GlobalTabs do
         />
       </.inputs_for>
 
-      <div class="global-save-actions"><button class="workspace-button primary">{gettext("Save")}</button></div>
+      <div class="global-save-actions"><button class="btn btn--primary">{gettext("Save")}</button></div>
     </.form>
     """
   end

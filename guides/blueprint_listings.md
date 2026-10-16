@@ -123,7 +123,7 @@ defmodule MyAppAdmin.Articles.ArticleListLive do
     ~H"""
     <div class="admin-workspace workspace-list content-workspace">
       <Workspace.header icon={@page_icon} title={gettext("Articles")}>
-        <.link :if={@admin_create_url} navigate={@admin_create_url} class="workspace-button primary">
+        <.link :if={@admin_create_url} navigate={@admin_create_url} class="btn btn--primary">
           {gettext("Create new")}
         </.link>
       </Workspace.header>

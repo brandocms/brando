@@ -336,10 +336,10 @@ defmodule BrandoAdmin.Sites.WebhooksLive do
         title={gettext("Webhooks")}
         subtitle={gettext("Signed requests to other systems when content changes in this environment.")}
       >
-        <.link :if={@webhooks != []} navigate="/admin/config/webhooks/deliveries" class="workspace-button">
+        <.link :if={@webhooks != []} navigate="/admin/config/webhooks/deliveries" class="btn">
           {gettext("Delivery log")}
         </.link>
-        <.link navigate="/admin/config/webhooks/new" class="workspace-button primary" data-testid="webhook-new">
+        <.link navigate="/admin/config/webhooks/new" class="btn btn--primary" data-testid="webhook-new">
           <.icon name="plus" />{gettext("Add webhook")}
         </.link>
       </Workspace.header>
@@ -369,10 +369,10 @@ defmodule BrandoAdmin.Sites.WebhooksLive do
             </p>
           </div>
           <div class="integrations-actions">
-            <.link navigate={"/admin/config/webhooks/#{webhook.id}/deliveries"} class="workspace-button">
+            <.link navigate={"/admin/config/webhooks/#{webhook.id}/deliveries"} class="btn">
               {gettext("Delivery log")}
             </.link>
-            <.link navigate={"/admin/config/webhooks/#{webhook.id}/edit"} class="workspace-button">
+            <.link navigate={"/admin/config/webhooks/#{webhook.id}/edit"} class="btn">
               {gettext("Edit")}
             </.link>
           </div>
@@ -395,7 +395,7 @@ defmodule BrandoAdmin.Sites.WebhooksLive do
         }
       >
         <span :if={@webhook}><.state webhook={@webhook} /></span>
-        <.link :if={@webhook} navigate={"/admin/config/webhooks/#{@webhook.id}/deliveries"} class="workspace-button">
+        <.link :if={@webhook} navigate={"/admin/config/webhooks/#{@webhook.id}/deliveries"} class="btn">
           {gettext("Delivery log")}
         </.link>
       </Workspace.header>
@@ -429,7 +429,7 @@ defmodule BrandoAdmin.Sites.WebhooksLive do
             <span class="webhook-label">{gettext("URL")}</span>
             <div class="webhook-url-masked">
               <code class="workspace-mono" data-testid="webhook-url-masked">{masked_url(@webhook)}</code>
-              <button type="button" class="workspace-button" phx-click="replace_url" data-testid="webhook-replace-url">
+              <button type="button" class="btn" phx-click="replace_url" data-testid="webhook-replace-url">
                 {gettext("Replace URL")}
               </button>
             </div>
@@ -534,7 +534,7 @@ defmodule BrandoAdmin.Sites.WebhooksLive do
         </div>
 
         <div class="webhook-form-footer">
-          <button type="submit" class="workspace-button primary" data-testid="webhook-save">
+          <button type="submit" class="btn btn--primary" data-testid="webhook-save">
             {if @webhook, do: gettext("Save webhook"), else: gettext("Create webhook")}
           </button>
         </div>
@@ -555,7 +555,7 @@ defmodule BrandoAdmin.Sites.WebhooksLive do
           <div class="integrations-actions">
             <button
               type="button"
-              class="workspace-button"
+              class="btn"
               phx-click="rotate_secret"
               data-confirm-title={gettext("Rotate the secret?")}
               data-confirm={
@@ -579,7 +579,7 @@ defmodule BrandoAdmin.Sites.WebhooksLive do
             <button
               :if={@webhook.active}
               type="button"
-              class="workspace-button"
+              class="btn"
               phx-click="pause"
               data-testid="webhook-pause"
             >
@@ -588,7 +588,7 @@ defmodule BrandoAdmin.Sites.WebhooksLive do
             <button
               :if={!@webhook.active}
               type="button"
-              class="workspace-button"
+              class="btn"
               phx-click="resume"
               data-testid="webhook-resume"
             >
@@ -604,7 +604,7 @@ defmodule BrandoAdmin.Sites.WebhooksLive do
           <div class="integrations-actions">
             <button
               type="button"
-              class="workspace-button destructive"
+              class="btn btn--danger"
               phx-click="delete"
               data-confirm-title={gettext("Delete this webhook?")}
               data-confirm={gettext("Nothing more is sent to it, and its delivery log is removed.")}
@@ -637,14 +637,14 @@ defmodule BrandoAdmin.Sites.WebhooksLive do
         <button
           :if={@webhook}
           type="button"
-          class="workspace-button"
+          class="btn"
           phx-click="send_test"
           disabled={!@webhook.active}
           data-testid="webhook-send-test"
         >
           <.icon name="send" />{gettext("Send test event")}
         </button>
-        <.link :if={@webhook} navigate={"/admin/config/webhooks/#{@webhook.id}/edit"} class="workspace-button">
+        <.link :if={@webhook} navigate={"/admin/config/webhooks/#{@webhook.id}/edit"} class="btn">
           {gettext("Edit")}
         </.link>
       </Workspace.header>
@@ -692,7 +692,7 @@ defmodule BrandoAdmin.Sites.WebhooksLive do
                   <button
                     :if={delivery.state not in ["pending", "sending"]}
                     type="button"
-                    class="workspace-button"
+                    class="btn"
                     phx-click="redeliver"
                     phx-value-id={delivery.id}
                     data-testid="webhook-redeliver"
@@ -749,14 +749,14 @@ defmodule BrandoAdmin.Sites.WebhooksLive do
         />
         <button
           type="button"
-          class="workspace-button"
+          class="btn"
           data-webhook-secret-copy
           data-copy={gettext("Copy")}
           data-copied={gettext("Copied")}
         >
           {gettext("Copy")}
         </button>
-        <button type="button" class="workspace-button primary" data-webhook-secret-done data-testid="webhook-secret-done">
+        <button type="button" class="btn btn--primary" data-webhook-secret-done data-testid="webhook-secret-done">
           {gettext("Done")}
         </button>
       </div>

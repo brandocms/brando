@@ -39,7 +39,7 @@ defmodule BrandoAdmin.Components.SuggestionReview do
         <button
           :if={@counts[:pending]}
           type="button"
-          class="workspace-button primary"
+          class="btn btn--primary"
           phx-click="accept_all_suggestions"
           disabled={@accepting_all}
         >
@@ -70,7 +70,7 @@ defmodule BrandoAdmin.Components.SuggestionReview do
           </p>
           <div :if={suggestion.status == :failed} class="ai-suggestion-failed">
             <p role="alert">{suggestion.error}</p>
-            <button type="button" class="workspace-button" phx-click="reject_suggestion" phx-value-id={suggestion.id}>
+            <button type="button" class="btn" phx-click="reject_suggestion" phx-value-id={suggestion.id}>
               {gettext("Dismiss")}
             </button>
           </div>
@@ -101,8 +101,8 @@ defmodule BrandoAdmin.Components.SuggestionReview do
               </label>
             </div>
             <div class="ai-suggestion-actions">
-              <button type="submit" class="workspace-button primary">{gettext("Accept")}</button>
-              <button type="button" class="workspace-button" phx-click="reject_suggestion" phx-value-id={suggestion.id}>
+              <button type="submit" class="btn btn--primary">{gettext("Accept")}</button>
+              <button type="button" class="btn" phx-click="reject_suggestion" phx-value-id={suggestion.id}>
                 {gettext("Reject")}
               </button>
             </div>

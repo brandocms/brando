@@ -238,7 +238,7 @@ defmodule Brando.Forms.Form do
     ~H"""
     <div :if={@form.source.data.id} class="form-submissions-link">
       <span>{gettext("What visitors have sent with this form, in every language.")}</span>
-      <.link navigate={"/admin/forms/#{@key}/submissions"} class="workspace-button">{gettext("Submissions")}</.link>
+      <.link navigate={"/admin/forms/#{@key}/submissions"} class="btn">{gettext("Submissions")}</.link>
     </div>
     """
   end

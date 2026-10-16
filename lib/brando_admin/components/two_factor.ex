@@ -26,7 +26,7 @@ defmodule BrandoAdmin.Components.TwoFactor do
         <li :for={code <- @codes}><code data-testid="recovery-code">{code}</code></li>
       </ol>
       <div class="two-factor-codes-actions">
-        <a href={@download} download="recovery-codes.txt" class="workspace-button">
+        <a href={@download} download="recovery-codes.txt" class="btn">
           <.icon name="download" />{gettext("Download codes")}
         </a>
       </div>
@@ -259,7 +259,7 @@ defmodule BrandoAdmin.Components.TwoFactor.Setup do
               <div class="two-factor-confirm-actions">
                 <button
                   type="submit"
-                  class="workspace-button primary"
+                  class="btn btn--primary"
                   phx-disable-with={gettext("Checking...")}
                   data-testid="two-factor-enable"
                 >
@@ -360,7 +360,7 @@ defmodule BrandoAdmin.Components.TwoFactor.PasskeySetup do
         </p>
         <p :if={@error} class="two-factor-error" role="alert" data-testid="passkey-error">{@error}</p>
         <div class="passkey-setup-actions">
-          <button type="submit" class="workspace-button primary" data-testid="passkey-create">
+          <button type="submit" class="btn btn--primary" data-testid="passkey-create">
             <.icon name="fingerprint-pattern" />{gettext("Create a passkey")}
           </button>
         </div>

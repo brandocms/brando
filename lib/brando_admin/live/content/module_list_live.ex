@@ -29,7 +29,7 @@ defmodule BrandoAdmin.Content.ModuleListLive do
       <Workspace.header icon={@page_icon} title={gettext("Block modules")}>
         <%!-- One way in to both: modules as files (DSL), and pasted module copies. --%>
         <details id="module-transfer-menu" class="workspace-menu">
-          <summary class="workspace-button">
+          <summary class="btn">
             {gettext("Import / export")} <.icon name="chevron-down" />
           </summary>
           <div class="workspace-menu-items">
@@ -61,7 +61,7 @@ defmodule BrandoAdmin.Content.ModuleListLive do
         </AIAction.button>
         <button
           :if={BrandoAdmin.Authorization.allowed?(:create, @schema)}
-          class="workspace-button primary"
+          class="btn btn--primary"
           phx-click={JS.push("create_module")}
         >
           {gettext("Create new")}

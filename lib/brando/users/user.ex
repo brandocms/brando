@@ -326,13 +326,13 @@ defmodule Brando.Users.User do
         </p>
       </div>
       <div :if={@own? or @can_reset?} class="user-password-access-actions">
-        <.link :if={@own?} navigate="/admin/users/security" class="workspace-button" data-testid="open-security">
+        <.link :if={@own?} navigate="/admin/users/security" class="btn" data-testid="open-security">
           <Brando.HTML.icon name="shield" />{gettext("Security")}
         </.link>
         <button
           :if={!@own? and @enabled? and @can_reset?}
           type="button"
-          class="workspace-button"
+          class="btn"
           phx-click="reset_two_factor"
           data-testid="reset-two-factor"
           data-confirm-title={gettext("Turn off two-factor authentication for %{name}?", name: @user.name)}
@@ -347,7 +347,7 @@ defmodule Brando.Users.User do
         <button
           :if={!@own? and @can_reset? and @sessions > 0}
           type="button"
-          class="workspace-button"
+          class="btn"
           phx-click="log_out_everywhere"
           data-testid="log-out-everywhere"
           data-confirm-title={gettext("Log %{name} out everywhere?", name: @user.name)}
@@ -392,13 +392,13 @@ defmodule Brando.Users.User do
         <p :if={!@own? and !@can_reset?}>{gettext("Only a superuser can reset the password of another user.")}</p>
       </div>
       <div :if={@own? or @can_reset?} class="user-password-access-actions">
-        <.link :if={@own?} navigate="/admin/users/password" class="workspace-button" data-testid="change-password">
+        <.link :if={@own?} navigate="/admin/users/password" class="btn" data-testid="change-password">
           <Brando.HTML.icon name="key-round" />{gettext("Change password")}
         </.link>
         <button
           :if={!@own?}
           type="button"
-          class="workspace-button"
+          class="btn"
           phx-click="send_password_reset"
           data-testid="send-password-reset"
           data-confirm-title={gettext("Send a password reset link?")}

@@ -29,7 +29,7 @@ defmodule BrandoAdmin.Forms.InboxLive do
     ~H"""
     <div class="admin-workspace workspace-list form-submissions-workspace">
       <Workspace.header title={gettext("Forms")} subtitle={gettext("What visitors have sent with the site's forms")}>
-        <.link :if={@can_configure} navigate="/admin/config/forms" class="workspace-button">
+        <.link :if={@can_configure} navigate="/admin/config/forms" class="btn">
           {gettext("Configure forms")}
         </.link>
       </Workspace.header>
@@ -60,7 +60,7 @@ defmodule BrandoAdmin.Forms.InboxLive do
                 <td class="monospace">{form.count}</td>
                 <td class="monospace">{latest(form.latest)}</td>
                 <td class="workspace-table-actions">
-                  <.link navigate={"/admin/forms/#{form.key}/submissions"} class="workspace-button">
+                  <.link navigate={"/admin/forms/#{form.key}/submissions"} class="btn">
                     {gettext("Open")}
                   </.link>
                 </td>

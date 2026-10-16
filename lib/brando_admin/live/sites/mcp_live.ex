@@ -64,7 +64,7 @@ defmodule BrandoAdmin.Sites.MCPLive do
               <button
                 :if={!@enabled?}
                 type="button"
-                class="workspace-button primary"
+                class="btn btn--primary"
                 phx-click="enable"
                 disabled={!@mounted? or !@secure?}
                 data-testid="mcp-enable"
@@ -81,7 +81,7 @@ defmodule BrandoAdmin.Sites.MCPLive do
               <button
                 :if={@enabled?}
                 type="button"
-                class="workspace-button destructive"
+                class="btn btn--danger"
                 phx-click="disable"
                 data-testid="mcp-disable"
                 data-confirm-title={gettext("Turn the MCP endpoint off?")}
@@ -176,7 +176,7 @@ defmodule BrandoAdmin.Sites.MCPLive do
                 <td class="row-actions">
                   <button
                     type="button"
-                    class="workspace-button destructive"
+                    class="btn btn--danger"
                     phx-click="revoke"
                     phx-value-id={grant.id}
                     data-testid="mcp-grant-revoke"

@@ -76,11 +76,11 @@ defmodule BrandoAdmin.Forms.SubmissionsLive do
     ~H"""
     <div class="admin-workspace workspace-list form-submissions-workspace">
       <Workspace.header title={gettext("Submissions")} subtitle={@title}>
-        <.link :if={@edit_url} navigate={@edit_url} class="workspace-button">{gettext("Edit form")}</.link>
+        <.link :if={@edit_url} navigate={@edit_url} class="btn">{gettext("Edit form")}</.link>
         <a
           :if={@count > 0}
           href={"/admin/forms/#{@key}/submissions/export" <> if(@language, do: "?language=#{@language}", else: "")}
-          class="workspace-button primary"
+          class="btn btn--primary"
           download
         >
           {gettext("Export CSV")}
@@ -134,7 +134,7 @@ defmodule BrandoAdmin.Forms.SubmissionsLive do
                 <td :for={column <- @columns}>{Display.value(@forms, submission, column.key) |> truncate()}</td>
                 <td :if={@email_column}><.email_status submission={submission} /></td>
                 <td class="workspace-table-actions">
-                  <button type="button" class="workspace-button" phx-click="show" phx-value-id={submission.id}>
+                  <button type="button" class="btn" phx-click="show" phx-value-id={submission.id}>
                     {gettext("Open")}
                   </button>
                 </td>
@@ -144,7 +144,7 @@ defmodule BrandoAdmin.Forms.SubmissionsLive do
         </div>
 
         <div :if={length(@submissions) < @count} class="form-submissions-more">
-          <button type="button" class="workspace-button" phx-click="load_more">{gettext("Show more")}</button>
+          <button type="button" class="btn" phx-click="load_more">{gettext("Show more")}</button>
         </div>
       </section>
 

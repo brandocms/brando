@@ -64,7 +64,7 @@ defmodule BrandoAdmin.Images.AltTextLive do
           )
         }
       >
-        <.link navigate={Brando.routes().admin_live_path(@socket, BrandoAdmin.Images.ImageListLive)} class="workspace-button">
+        <.link navigate={Brando.routes().admin_live_path(@socket, BrandoAdmin.Images.ImageListLive)} class="btn">
           {gettext("Back to images")}
         </.link>
       </Workspace.header>

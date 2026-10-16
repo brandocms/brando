@@ -55,7 +55,7 @@ defmodule BrandoAdmin.Users.UserSecurityLive do
             </p>
           </div>
           <div class="security-row-actions">
-            <button type="button" class="workspace-button" phx-click="new_passkey" data-testid="passkey-add">
+            <button type="button" class="btn" phx-click="new_passkey" data-testid="passkey-add">
               <.icon name="plus" />{gettext("Add a passkey")}
             </button>
           </div>
@@ -73,7 +73,7 @@ defmodule BrandoAdmin.Users.UserSecurityLive do
             </div>
             <button
               type="button"
-              class="workspace-button quiet"
+              class="btn btn--quiet"
               phx-click="remove_passkey"
               phx-value-id={passkey.id}
               data-testid="passkey-remove"
@@ -102,7 +102,7 @@ defmodule BrandoAdmin.Users.UserSecurityLive do
               <button
                 :if={!@required? or @passkeys != []}
                 type="button"
-                class="workspace-button destructive"
+                class="btn btn--danger"
                 phx-click="ask_confirm"
                 phx-value-action="disable"
                 data-testid="two-factor-disable"
@@ -122,7 +122,7 @@ defmodule BrandoAdmin.Users.UserSecurityLive do
               </p>
             </div>
             <div class="security-row-actions">
-              <button type="button" class="workspace-button" phx-click="open_setup" data-testid="two-factor-setup">
+              <button type="button" class="btn" phx-click="open_setup" data-testid="two-factor-setup">
                 {gettext("Set up")}
               </button>
             </div>
@@ -142,7 +142,7 @@ defmodule BrandoAdmin.Users.UserSecurityLive do
           <div class="security-row-actions">
             <button
               type="button"
-              class="workspace-button"
+              class="btn"
               phx-click="ask_confirm"
               phx-value-action="regenerate"
               data-testid="recovery-codes-regenerate"
@@ -163,7 +163,7 @@ defmodule BrandoAdmin.Users.UserSecurityLive do
               )}
             </p>
           </div>
-          <.link navigate="/admin/users/password" class="workspace-button">
+          <.link navigate="/admin/users/password" class="btn">
             <.icon name="key-round" />{gettext("Change password")}
           </.link>
         </header>
@@ -178,7 +178,7 @@ defmodule BrandoAdmin.Users.UserSecurityLive do
           <button
             :if={length(@sessions) > 1}
             type="button"
-            class="workspace-button"
+            class="btn"
             phx-click="revoke_other_sessions"
             data-testid="sessions-revoke-others"
             data-confirm-title={gettext("Log out your other sessions?")}
@@ -221,7 +221,7 @@ defmodule BrandoAdmin.Users.UserSecurityLive do
             <button
               :if={session.id != @session_id}
               type="button"
-              class="workspace-button quiet"
+              class="btn btn--quiet"
               phx-click="revoke_session"
               phx-value-id={session.id}
               data-testid="session-revoke"
@@ -273,7 +273,7 @@ defmodule BrandoAdmin.Users.UserSecurityLive do
             </div>
             <button
               type="button"
-              class="workspace-button quiet"
+              class="btn btn--quiet"
               phx-click="revoke_connected_app"
               phx-value-id={grant.id}
               data-testid="connected-app-revoke"

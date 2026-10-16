@@ -73,7 +73,7 @@ defmodule Brando.Files.File do
         href={Brando.Utils.media_url(@entry)}
         target="_blank"
         rel="noopener"
-        class="workspace-button"
+        class="btn"
         aria-label={gettext("Open %{filename}", filename: @entry.filename)}
       >{gettext("Open file")}</a>
     </.field>

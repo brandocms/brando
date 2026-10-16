@@ -22,9 +22,6 @@
   .drawer-form > .assets-file-browser--browser { min-height: 100%; display: grid; }
   .drawer-footer { flex: 0 0 auto; display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 18px 24px; border-top: 1px solid var(--workspace-line); background: var(--brando-surface); }
   .drawer-footer > span { font-size: 12px; color: var(--workspace-muted); }
-  .workspace-button > [data-icon] { width: 15px; height: 15px; }
-  button.workspace-button.primary { background: var(--workspace-accent); border-color: var(--workspace-accent) !important; }
-  button.workspace-button.primary:hover { background: var(--brando-accent-hover); }
   .image-picker-top { padding: 12px 24px; border-radius: 0; border-bottom: 1px solid var(--workspace-line); }
   .image-picker-browser { min-height: 100%; grid-template-columns: 200px minmax(0,1fr); }
   .image-picker-browser .image-picker-folders { background: var(--brando-surface-shaded); padding: 20px 14px; }
@@ -316,7 +313,7 @@
 }
 @media (pointer: coarse) {
   .modal .gallery-workspace-toolbar .actions .media-button { min-height: 42px; }
-  .drawer.media-workspace-drawer :is(.workspace-button,.drawer-close-button,.view-toggle,.video-picker-add-btn,.media-destination-actions button), .media-action-options button { min-height: 40px; }
+  .drawer.media-workspace-drawer :is(.btn,.drawer-close-button,.view-toggle,.video-picker-add-btn,.media-destination-actions button), .media-action-options button { min-height: 40px; }
   .media-gallery--variable .gallery-workspace-item > .gallery-item-remove { min-width: 40px; min-height: 40px; }
 }
 

@@ -344,7 +344,7 @@ defmodule BrandoAdmin.CalendarLive do
           >
             <.icon name="chevron-right" />
           </.link>
-          <.link patch={path(assigns, date: @today)} class="workspace-button calendar-today" id="calendar-today">
+          <.link patch={path(assigns, date: @today)} class="btn calendar-today" id="calendar-today">
             {gettext("Today")}
           </.link>
         </div>
@@ -446,8 +446,8 @@ defmodule BrandoAdmin.CalendarLive do
             {move_summary(@moving.item, @moving.date)}
           </p>
           <div class="calendar-move-actions">
-            <button type="button" class="workspace-button" phx-click="cancel_move">{gettext("Cancel")}</button>
-            <button type="submit" class="workspace-button primary" id="calendar-move-submit">{gettext("Move")}</button>
+            <button type="button" class="btn" phx-click="cancel_move">{gettext("Cancel")}</button>
+            <button type="submit" class="btn btn--primary" id="calendar-move-submit">{gettext("Move")}</button>
           </div>
         </form>
       </Content.modal>

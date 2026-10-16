@@ -35,7 +35,7 @@ defmodule BrandoAdmin.Sites.ScheduledPublishingLive do
         title={gettext("Scheduled Publishing")}
         subtitle={gettext("Review upcoming content and manage the publishing queue.")}
       >
-        <button type="button" class="workspace-button" phx-click="refresh_jobs" phx-disable-with={gettext("Refreshing…")}>
+        <button type="button" class="btn" phx-click="refresh_jobs" phx-disable-with={gettext("Refreshing…")}>
           {gettext("Refresh job queue")}
         </button>
       </Workspace.header>
@@ -89,7 +89,7 @@ defmodule BrandoAdmin.Sites.ScheduledPublishingLive do
                 <td class="row-actions">
                   <button
                     type="button"
-                    class="workspace-button quiet destructive"
+                    class="btn btn--quiet btn--danger"
                     phx-click={JS.push("delete_job", value: %{id: job.id})}
                     data-confirm-title={gettext("Delete the job?")}
                     data-confirm={

@@ -85,12 +85,12 @@ defmodule BrandoAdmin.MCP.ConsentLive do
         <footer class="mcp-consent-footer">
           <p>{gettext("You can disconnect it at any time, under Security → Connected apps.")}</p>
           <div class="mcp-consent-actions">
-            <button type="button" class="workspace-button" phx-click="deny" data-testid="mcp-consent-deny">
+            <button type="button" class="btn" phx-click="deny" data-testid="mcp-consent-deny">
               {gettext("Cancel")}
             </button>
             <button
               type="button"
-              class="workspace-button primary"
+              class="btn btn--primary"
               phx-click="approve"
               phx-disable-with={gettext("Connecting...")}
               data-testid="mcp-consent-approve"
@@ -122,10 +122,10 @@ defmodule BrandoAdmin.MCP.ConsentLive do
         <footer class="mcp-consent-footer">
           <p>{refusal_next(@reason)}</p>
           <div class="mcp-consent-actions">
-            <.link :if={@reason == :two_factor} navigate="/admin/users/security" class="workspace-button primary">
+            <.link :if={@reason == :two_factor} navigate="/admin/users/security" class="btn btn--primary">
               {gettext("Set up two-factor authentication")}
             </.link>
-            <.link navigate="/admin" class="workspace-button">{gettext("Go to the dashboard")}</.link>
+            <.link navigate="/admin" class="btn">{gettext("Go to the dashboard")}</.link>
           </div>
         </footer>
       </section>
@@ -153,13 +153,13 @@ defmodule BrandoAdmin.MCP.ConsentLive do
             <button
               :if={@client_error}
               type="button"
-              class="workspace-button"
+              class="btn"
               phx-click="return"
               data-testid="mcp-consent-return"
             >
               {gettext("Back to %{host}", host: redirect_host(elem(@client_error, 0).redirect_uri))}
             </button>
-            <.link navigate="/admin" class="workspace-button">{gettext("Go to the dashboard")}</.link>
+            <.link navigate="/admin" class="btn">{gettext("Go to the dashboard")}</.link>
           </div>
         </footer>
       </section>

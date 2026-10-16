@@ -60,10 +60,10 @@ defmodule BrandoAdmin.Users.UserUpdatePasswordLive do
             />
           </div>
           <div class="password-actions">
-            <button type="submit" class="workspace-button primary" phx-disable-with={gettext("Saving...")}>
+            <button type="submit" class="btn btn--primary" phx-disable-with={gettext("Saving...")}>
               {gettext("Change password")}
             </button>
-            <.link :if={!@first_login?} navigate={"/admin/users/update/#{@current_user.id}"} class="workspace-button quiet">
+            <.link :if={!@first_login?} navigate={"/admin/users/update/#{@current_user.id}"} class="btn btn--quiet">
               {gettext("Cancel")}
             </.link>
           </div>

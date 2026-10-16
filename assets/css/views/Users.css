@@ -93,20 +93,12 @@
   .user-password-access-label { font-size: 13px; line-height: 1.3; font-weight: 500; }
   .user-password-access-text p { margin: 0; color: var(--brando-muted); font-size: 12px; line-height: 1.5; }
   .user-password-access-actions { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; flex-shrink: 0; }
-  .workspace-button {
-    display: inline-flex; align-items: center; gap: 6px;
-    min-height: 30px; padding: 5px 12px; border: 1px solid var(--brando-line); border-radius: 5px;
-    background: var(--brando-surface); color: var(--brando-ink); font: 500 12px/18px "Main", sans-serif;
-    text-decoration: none; white-space: nowrap; cursor: pointer;
-    &:hover { background: var(--brando-surface-hover); border-color: color-mix(in srgb, var(--brando-line), var(--brando-ink) 20%); }
-    > [data-icon] { width: 14px; height: 14px; }
-  }
   .user-password-access-fallback {
     padding: 0; border: 0; background: none; color: var(--brando-muted);
     font: 12px/18px "Main", sans-serif; text-decoration: underline; text-underline-offset: 3px; cursor: pointer;
     &:hover { color: var(--brando-ink); }
   }
-  :is(.workspace-button, .user-password-access-fallback):focus-visible { outline: 2px solid var(--brando-accent); outline-offset: 3px; }
+  :is(.btn, .user-password-access-fallback):focus-visible { outline: 2px solid var(--brando-accent); outline-offset: 3px; }
   @media (max-width: 600px) {
     flex-direction: column; align-items: flex-start;
     .user-password-access-actions { align-items: flex-start; }
@@ -237,12 +229,6 @@
   }
   .two-factor-error { color: color-mix(in srgb, var(--brando-status-disabled), var(--brando-ink) 35%); font-size: 12px; line-height: 1.5; }
   .two-factor-confirm-actions { display: flex; flex-wrap: wrap; gap: 12px; }
-  .workspace-button {
-    display: inline-flex; align-items: center; gap: 6px; min-height: 30px; padding: 5px 12px;
-    border: 1px solid var(--brando-line); border-radius: 5px; background: var(--brando-surface); color: var(--brando-ink);
-    font: 500 12px/18px "Main", sans-serif; cursor: pointer;
-    &.primary { background: var(--brando-accent); border-color: var(--brando-accent); color: var(--brando-surface); }
-  }
 }
 
 /* Recovery codes, shown once */
@@ -255,13 +241,6 @@
   }
   .two-factor-code-list code { font-family: theme(typography.families.mono); font-size: 14px; letter-spacing: .04em; background: none; }
   .two-factor-codes-actions { display: flex; flex-wrap: wrap; gap: 8px; }
-  .workspace-button {
-    display: inline-flex; align-items: center; gap: 6px; min-height: 30px; padding: 5px 12px;
-    border: 1px solid var(--brando-line); border-radius: 5px; background: var(--brando-surface); color: var(--brando-ink);
-    font: 500 12px/18px "Main", sans-serif; text-decoration: none; cursor: pointer;
-    &:hover { background: var(--brando-surface-hover); }
-    > [data-icon] { width: 14px; height: 14px; }
-  }
 }
 
 /* Asking for the password or a code before a change to sign-in security */
@@ -299,13 +278,6 @@
   .passkey-setup-hint { margin: 0; color: var(--brando-muted); font-size: 12px; line-height: 1.5; }
   .two-factor-error { color: color-mix(in srgb, var(--brando-status-disabled), var(--brando-ink) 35%); font-size: 12px; line-height: 1.5; }
   .passkey-setup-actions { display: flex; flex-wrap: wrap; gap: 12px; padding-top: 4px; }
-  .workspace-button {
-    display: inline-flex; align-items: center; gap: 6px; min-height: 30px; padding: 5px 12px;
-    border: 1px solid var(--brando-line); border-radius: 5px; background: var(--brando-surface); color: var(--brando-ink);
-    font: 500 12px/18px "Main", sans-serif; cursor: pointer;
-    &.primary { background: var(--brando-accent); border-color: var(--brando-accent); color: var(--brando-surface); }
-    > [data-icon] { width: 14px; height: 14px; }
-  }
 }
 
 /* Confirming it is you before a sensitive action (BrandoAdmin.Reauth), in a
@@ -320,15 +292,7 @@
   }
   .reauth-error { margin: 0; color: color-mix(in srgb, var(--brando-status-disabled), var(--brando-ink) 35%); font-size: 12px; }
   .reauth-passkey { display: flex; align-items: center; gap: 12px; color: var(--brando-muted); font-size: 12px; }
-  .reauth-passkey .workspace-button, .reauth-actions .workspace-button {
-    display: inline-flex; align-items: center; gap: 6px; min-height: 30px; padding: 5px 12px;
-    border: 1px solid var(--brando-line); border-radius: 5px; background: var(--brando-surface); color: var(--brando-ink);
-    font: 500 12px/18px "Main", sans-serif; text-decoration: none; cursor: pointer;
-    > [data-icon] { width: 14px; height: 14px; }
-  }
   .reauth-actions { display: flex; flex-wrap: wrap; gap: 12px; padding-top: 8px; }
-  .reauth-actions .workspace-button.primary { background: var(--brando-accent); border-color: var(--brando-accent); color: var(--brando-surface); }
-  .reauth-actions .workspace-button.quiet { border-color: transparent; background: transparent; }
 }
 .reauth-prompt.reauth-prompt-page { padding: 20px 20px 24px; max-width: 520px; }
 .admin-workspace.confirm-workspace .security-panel { max-width: 560px; }
