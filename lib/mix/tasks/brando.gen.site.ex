@@ -9,6 +9,11 @@ if Code.ensure_loaded?(Igniter) do
     Adds CMS page controllers, templates, layouts and tenant context under Web.CMS.
     Run after `brando.install`, or compose with `brando.install --public-site`.
 
+    It also adds the `/coming-soon` page `Brando.Plug.Lockdown` sends visitors to
+    while `config :brando, lockdown: true`, with the plug in the CMS pipeline,
+    and 404 and 500 pages in the site's layout, replacing phx.new's `ErrorHTML`
+    while it is unchanged.
+
         mix brando.gen.site --replace-phoenix-home
         mix brando.gen.site --interactive
 

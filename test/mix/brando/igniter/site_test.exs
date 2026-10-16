@@ -2,27 +2,29 @@ defmodule Mix.Brando.Igniter.SiteTest do
   use ExUnit.Case, async: false
   alias Brando.IgniterCase
 
-  defp project(extra_routes \\ ~s(get "/", PageController, :home)) do
+  defp project(extra_routes \\ ~s(get "/", PageController, :home), files \\ %{}) do
     IgniterCase.phoenix_project(
-      files: %{
-        "lib/studio_web/router.ex" => """
-        defmodule StudioWeb.Router do
-          use StudioWeb, :router
-          import Brando.Router
-          admin_routes "/admin" do
-            live "/", StudioAdmin.DashboardLive
+      files:
+        %{
+          "lib/studio_web/router.ex" => """
+          defmodule StudioWeb.Router do
+            use StudioWeb, :router
+            import Brando.Router
+            admin_routes "/admin" do
+              live "/", StudioAdmin.DashboardLive
+            end
+            scope "/", StudioWeb do
+              pipe_through :browser
+              get "/health", HealthController, :show
+              #{extra_routes}
+            end
           end
-          scope "/", StudioWeb do
-            pipe_through :browser
-            get "/health", HealthController, :show
-            #{extra_routes}
-          end
-        end
-        """,
-        "lib/studio_web/controllers/page_controller.ex" => "# Existing Phoenix controller\n",
-        "lib/studio_web/controllers/page_html/home.html.heex" => "Existing Phoenix homepage",
-        "lib/studio_web/components/layouts/root.html.heex" => "Existing Phoenix layout"
-      }
+          """,
+          "lib/studio_web/controllers/page_controller.ex" => "# Existing Phoenix controller\n",
+          "lib/studio_web/controllers/page_html/home.html.heex" => "Existing Phoenix homepage",
+          "lib/studio_web/components/layouts/root.html.heex" => "Existing Phoenix layout"
+        }
+        |> Map.merge(files)
     )
   end
 
@@ -203,5 +205,185 @@ defmodule Mix.Brando.Igniter.SiteTest do
       |> generate(["--yes"])
 
     assert Enum.any?(customized.issues, &String.contains?(&1, "already contains different content"))
+  end
+
+  @error_html "lib/studio_web/controllers/error_html.ex"
+  @error_test "test/studio_web/controllers/error_html_test.exs"
+
+  # phx.new 1.8's ErrorHTML and its test, comments included.
+  @phoenix_error_html """
+  defmodule StudioWeb.ErrorHTML do
+    @moduledoc \"\"\"
+    This module is invoked by your endpoint in case of errors on HTML requests.
+
+    See config/config.exs.
+    \"\"\"
+    use StudioWeb, :html
+
+    # If you want to customize your error pages,
+    # uncomment the embed_templates/1 call below
+    # and add pages to the error directory:
+    #
+    #   * lib/studio_web/controllers/error_html/404.html.heex
+    #   * lib/studio_web/controllers/error_html/500.html.heex
+    #
+    # embed_templates "error_html/*"
+
+    # The default is to render a plain text page based on
+    # the template name. For example, "404.html" becomes
+    # "Not Found".
+    def render(template, _assigns) do
+      Phoenix.Controller.status_message_from_template(template)
+    end
+  end
+  """
+
+  @phoenix_error_test """
+  defmodule StudioWeb.ErrorHTMLTest do
+    use StudioWeb.ConnCase, async: true
+
+    # Bring render_to_string/4 for testing custom views
+    import Phoenix.Template, only: [render_to_string: 4]
+
+    test "renders 404.html" do
+      assert render_to_string(StudioWeb.ErrorHTML, "404", "html", []) == "Not Found"
+    end
+
+    test "renders 500.html" do
+      assert render_to_string(StudioWeb.ErrorHTML, "500", "html", []) == "Internal Server Error"
+    end
+  end
+  """
+
+  defp with_files(files), do: project(~s(get "/", PageController, :home), files)
+
+  test "phx.new's ErrorHTML and its test give way to the site's error pages, once" do
+    result =
+      %{@error_html => @phoenix_error_html, @error_test => @phoenix_error_test}
+      |> with_files()
+      |> generate(["--replace-phoenix-home", "--yes"])
+
+    assert result.issues == []
+    error_html = IgniterCase.source(result, @error_html)
+    assert error_html =~ ~s(embed_templates "error_html/*")
+    assert error_html =~ "StudioWeb.CMS.Layouts.root()"
+    assert IgniterCase.source(result, "lib/studio_web/controllers/error_html/404.html.heex") =~ "<.error_page"
+    assert IgniterCase.source(result, "lib/studio_web/controllers/error_html/500.html.heex") =~ "<.error_page"
+    assert IgniterCase.source(result, @error_test) =~ "StudioWeb.CMS.Layouts, :root"
+    refute IgniterCase.source(result, @error_test) =~ ~s(== "Not Found")
+
+    rerun = result |> IgniterCase.apply_and_reload() |> generate()
+    assert rerun.issues == []
+    Igniter.Test.assert_unchanged(rerun)
+  end
+
+  test "phx.new 1.7's ErrorHTML (no @moduledoc before 1.7.12) and test are recognized too" do
+    phoenix_17_html = String.replace(@phoenix_error_html, ~r/  @moduledoc """.*?"""\n/s, "")
+
+    phoenix_17_test =
+      String.replace(
+        @phoenix_error_test,
+        "import Phoenix.Template, only: [render_to_string: 4]",
+        "import Phoenix.Template"
+      )
+
+    refute phoenix_17_html =~ "@moduledoc"
+
+    for html <- [@phoenix_error_html, phoenix_17_html] do
+      result =
+        %{@error_html => html, @error_test => phoenix_17_test}
+        |> with_files()
+        |> generate(["--replace-phoenix-home", "--yes"])
+
+      assert result.issues == []
+      assert IgniterCase.source(result, @error_html) =~ "StudioWeb.CMS.Layouts.root()"
+      assert IgniterCase.source(result, @error_test) =~ "StudioWeb.CMS.Layouts, :root"
+      refute Enum.any?(result.notices, &(&1 =~ "customized" or &1 =~ "was kept"))
+    end
+  end
+
+  test "a customized ErrorHTML or error test is kept, with a notice" do
+    customized = String.replace(@phoenix_error_html, "# embed_templates", "embed_templates")
+
+    result = %{@error_html => customized} |> with_files() |> generate(["--replace-phoenix-home", "--yes"])
+
+    assert result.issues == []
+    Igniter.Test.assert_unchanged(result, @error_html)
+    refute Igniter.exists?(result, "lib/studio_web/controllers/error_html/404.html.heex")
+    assert Enum.any?(result.notices, &(&1 =~ "#{@error_html} is customized"))
+
+    own_test = String.replace(@phoenix_error_test, ~s(== "Not Found"), ~s(=~ "Not Found"))
+
+    kept_test =
+      %{@error_html => @phoenix_error_html, @error_test => own_test}
+      |> with_files()
+      |> generate(["--replace-phoenix-home", "--yes"])
+
+    assert kept_test.issues == []
+    Igniter.Test.assert_unchanged(kept_test, @error_test)
+    assert Enum.any?(kept_test.notices, &(&1 =~ "#{@error_test} was kept"))
+  end
+
+  test "the lockdown page is routed outside the site pipeline, which locks CMS pages" do
+    result = project() |> generate(["--replace-phoenix-home", "--yes"])
+    assert result.issues == []
+    assert Igniter.exists?(result, "lib/studio_web/cms/lockdown_controller.ex")
+    assert Igniter.exists?(result, "lib/studio_web/cms/lockdown_html.ex")
+
+    router = IgniterCase.source(result, "lib/studio_web/router.ex")
+    [pipeline, after_pipeline] = String.split(router, ~r/pipeline\(?\s*:brando_site/, parts: 2)
+    refute pipeline =~ "Lockdown"
+    [site_pipeline, _] = String.split(after_pipeline, "end", parts: 2)
+    assert site_pipeline =~ ~r/plug\(?Brando\.Plug\.Lockdown\)?\s+plug\(?StudioWeb\.CMS\.SiteContext/
+    [before_catchall, _] = String.split(router, ~s("/*path"), parts: 2)
+    assert before_catchall =~ ~r/scope\(?\s*"\/coming-soon"/
+    assert before_catchall =~ ~r/get\(?"\/", StudioWeb\.CMS\.LockdownController, :index, as: :lockdown/
+    assert before_catchall =~ ~r/post\(?"\/", StudioWeb\.CMS\.LockdownController, :unlock, as: :lockdown/
+  end
+
+  test "a site generated without the lockdown page gets it on a rerun" do
+    generated = project() |> generate(["--replace-phoenix-home", "--yes"]) |> IgniterCase.apply_and_reload()
+    path = "lib/studio_web/router.ex"
+
+    earlier =
+      generated
+      |> IgniterCase.source(path)
+      |> String.replace(~r/\s*plug\(?Brando\.Plug\.Lockdown\)?/, "")
+      |> String.replace(~r/scope\(?\s*"\/coming-soon".*?\n  end\n/s, "")
+
+    refute earlier =~ "Lockdown"
+
+    rerun =
+      generated
+      |> Igniter.update_file(path, &Rewrite.Source.update(&1, :content, fn _ -> earlier end))
+      |> IgniterCase.apply_and_reload()
+      |> generate()
+
+    assert rerun.issues == []
+    router = IgniterCase.source(rerun, path)
+    assert router =~ ~r/plug\(?Brando\.Plug\.Lockdown\)?\s+plug\(?StudioWeb\.CMS\.SiteContext/
+    [before_catchall, _] = String.split(router, ~s("/*path"), parts: 2)
+    assert before_catchall =~ "StudioWeb.CMS.LockdownController, :unlock"
+
+    again = rerun |> IgniterCase.apply_and_reload() |> generate()
+    assert again.issues == []
+    Igniter.Test.assert_unchanged(again)
+  end
+
+  test "an application's own /coming-soon routes keep the lockdown page" do
+    result =
+      project("""
+      get "/", PageController, :home
+      scope "/coming-soon" do
+        get "/", LockdownController, :index
+        post "/", LockdownController, :post_password
+      end
+      """)
+      |> generate(["--replace-phoenix-home", "--yes"])
+
+    assert result.issues == []
+    refute Igniter.exists?(result, "lib/studio_web/cms/lockdown_controller.ex")
+    refute IgniterCase.source(result, "lib/studio_web/router.ex") =~ "Brando.Plug.Lockdown"
+    assert Enum.any?(result.notices, &(&1 =~ "StudioWeb.LockdownController already serve /coming-soon"))
   end
 end

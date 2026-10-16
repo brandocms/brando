@@ -23,6 +23,9 @@ if Code.ensure_loaded?(Igniter) do
     Phoenix source is extended in place. Existing application files, routes,
     tests, assets, dependencies and secrets are preserved. Conflicting scaffold
     files are reported for review, even with `--yes`. No database is touched.
+    `.formatter.exs` imports Brando's formatting of the Blueprint DSL, and a
+    literal version in `mix.exs` moves to a `VERSION` file that `mix.exs`
+    reads, where Florist looks for the release version.
 
     `--public-site` adds CMS page rendering in a separate Web.CMS namespace.
     An existing Phoenix homepage route needs explicit `--replace-phoenix-home`

@@ -16,6 +16,7 @@ if Code.ensure_loaded?(Igniter) do
     alias Mix.Brando.Igniter.Files
     alias Mix.Brando.Igniter.Install.Configuration
     alias Mix.Brando.Igniter.Install.Deployment
+    alias Mix.Brando.Igniter.Install.Version
     alias Mix.Brando.Igniter.Project
     alias Mix.Brando.Igniter.RouteInventory
     alias Mix.Brando.Igniter.Source
@@ -47,6 +48,7 @@ if Code.ensure_loaded?(Igniter) do
         igniter
         |> Configuration.configure(project, tenancy)
         |> dependencies()
+        |> Version.plan()
         |> Deployment.plan(project, hosts, deployment)
         |> support_files(project)
         |> AgentFiles.plan()
@@ -56,6 +58,9 @@ if Code.ensure_loaded?(Igniter) do
         |> endpoint(project)
         |> router(project)
         |> public_site(project, options)
+        # Last: Rewrite rereads the formatters when .formatter.exs changes, and
+        # the files above are formatted as the project's formatters stood.
+        |> formatter()
         |> instructions(tenancy)
       else
         {:error, %Igniter{} = igniter} -> igniter
@@ -114,6 +119,46 @@ if Code.ensure_loaded?(Igniter) do
       Enum.reduce([{:gettext, "~> 1.0"}, {:jason, "~> 1.0"}], igniter, fn dep, igniter ->
         Dependencies.add_new(igniter, dep)
       end)
+    end
+
+    # Brando's .formatter.exs exports the Blueprint DSL's locals_without_parens.
+    # This is Igniter.Project.Formatter.import_dep/2 without its formatting:
+    # Igniter reformats every loaded source after any .formatter.exs update.
+    defp formatter(igniter) do
+      if Igniter.exists?(igniter, ".formatter.exs") do
+        igniter
+        |> Igniter.include_existing_file(".formatter.exs")
+        |> Igniter.update_file(".formatter.exs", &import_brando/1)
+      else
+        Igniter.add_notice(igniter, "There is no .formatter.exs; add import_deps: [:brando] to the one you create.")
+      end
+    end
+
+    defp import_brando(source) do
+      zipper = source |> Rewrite.Source.get(:quoted) |> Zipper.zip()
+
+      with %Zipper{} = options <- Zipper.down(zipper),
+           false <- imports_brando?(Zipper.rightmost(options)),
+           {:ok, options} <-
+             options
+             |> Zipper.rightmost()
+             |> CodeKeyword.put_in_keyword([:import_deps], [:brando], &Igniter.Code.List.prepend_new_to_list(&1, :brando)) do
+        Rewrite.Source.update(source, :quoted, Zipper.topmost_root(options), by: :configure)
+      else
+        true ->
+          source
+
+        _ ->
+          {:notice,
+           "Add :brando to import_deps in .formatter.exs, so mix format keeps Blueprint DSL calls without parentheses."}
+      end
+    end
+
+    defp imports_brando?(options) do
+      case CodeKeyword.get_key(options, :import_deps) do
+        {:ok, deps} -> Igniter.Code.List.find_list_item_index(deps, &Common.nodes_equal?(&1, :brando)) != nil
+        :error -> false
+      end
     end
 
     defp support_files(igniter, project) do

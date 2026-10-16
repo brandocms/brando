@@ -51,6 +51,11 @@ mkdir "$packages/hex"
 tar -xOf "$packages/brando-$version.tar" contents.tar.gz | tar -xzf - -C "$packages/hex"
 tar -xOf "$packages/brando-$version.tar" metadata.config > "$packages/hex/hex_metadata.config"
 tar -xOf "$packages/brando-$version.tar" contents.tar.gz | tar -tvzf - > "$logs/hex-contents.txt"
+# Applications' `import_deps: [:brando]` reads it from the unpacked package.
+if [[ ! -f "$packages/hex/.formatter.exs" ]]; then
+  echo "packages.sh: the Hex package has no .formatter.exs" >&2
+  exit 1
+fi
 
 (cd "$release/assets" && npm pack --ignore-scripts --pack-destination "$packages" --json) > "$logs/npm-pack.json" 2> "$logs/npm-pack.log"
 npm_tarball="$packages/brandocms-brandojs-$version.tgz"

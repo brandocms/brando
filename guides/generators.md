@@ -127,6 +127,14 @@ production endpoint's `check_origin`, the Florist environment files and the
 release script that sources them (see [Deployment hosts](#deployment-hosts));
 the rest, like sample content, remains separate.
 
+The installer also adds `:brando` to `import_deps` in `.formatter.exs`, so
+`mix format` keeps Blueprint DSL calls without parentheses, and moves the
+application's version to a `VERSION` file that `mix.exs` reads
+(`@version "VERSION" |> File.read!() |> String.trim()`), where Florist looks
+for it. A literal version, inline or in `@version`, moves; an existing
+`VERSION` is kept, and `mix.exs` reads it when the two agree, with a notice when
+they don't. A `mix.exs` that computes its version another way is left as it is.
+
 ## Choose configuration
 
 A new install defaults to `none` without a prompt. Omitted flags on a rerun keep
@@ -228,8 +236,9 @@ mix brando.install --public-site --replace-phoenix-home
 mix brando.gen.site --interactive
 ```
 
-`--public-site` creates `YourWeb.CMS.PageController`, `PageHTML`, `Layouts`, and
-`SiteContext`. Its pipeline resolves the tenant before locale and identity;
+`--public-site` creates `YourWeb.CMS.PageController`, `PageHTML`, `Layouts`,
+`SiteContext`, the [lockdown](#lockdown) page and the site's
+[error pages](#error-pages). Its pipeline resolves the tenant before locale and identity;
 published pages use the built frontend assets, Brando metadata and named page
 routes. Explicit application routes take precedence over CMS catch-all routing.
 
@@ -245,6 +254,63 @@ can use `default.html`. The scaffold configures `:page_html_module` to select it
 own CMS templates while preserving your Phoenix PageHTML and layouts. Templates
 under `priv/templates/brando.gen.site` override packaged defaults. No page or
 account is created by this source generator.
+
+### Error pages
+
+The site's 404 and 500 pages render in its layout, `YourWeb.CMS.Layouts`.
+phx.new's `YourWeb.ErrorHTML`, which `render_errors` in `config/config.exs`
+names, is replaced while it is unchanged from what phx.new generated, and the
+404 and 500 templates go in `controllers/error_html/` next to it. Other
+statuses still render their status message as plain text. phx.new's
+`error_html_test.exs`, which asserts the plain-text pages, is replaced too.
+Both are recognized as phx.new 1.7 and 1.8 generate them. A customized
+`ErrorHTML` or test is kept, with a notice.
+
+A missing CMS page (with `use_default_errors: true`, the installer's default)
+renders the 404 inside the layout the page already has. An error the endpoint
+renders, such as a 500, gets the whole layout, built from the request as it was
+when the error was raised. If the layout itself raises, for example while the
+database is down and the caches are cold, the page renders without it and the
+layout's error is logged.
+
+### Lockdown
+
+`Brando.Plug.Lockdown` keeps a site under construction private. The generator
+puts it first in the `:brando_site` pipeline and adds the page it sends
+visitors to: `YourWeb.CMS.LockdownController` and `LockdownHTML` at
+`/coming-soon`, routed through `:browser` only, with the route name
+`lockdown`. The installer writes `lockdown: false`, so the plug passes everyone
+until you turn it on:
+
+```elixir
+# config/runtime.exs
+config :brando,
+  lockdown: true,
+  lockdown_password: System.get_env("LOCKDOWN_PASSWORD"),
+  # Optional: the site opens by itself after this time.
+  lockdown_until: ~U[2027-01-01 00:00:00Z]
+```
+
+While locked, signed-in users with access to the admin see the site: with
+groups authorization, those whose groups grant backend access; with legacy
+roles, every active account, as for `/admin`. So does the admin's live preview, and
+shared preview links (`/__p__/…`) stay open to anyone who has one. Visitors who
+enter the password on `/coming-soon`, or open any page with `?key=<password>`,
+see the site for the rest of their session. Without a password, or with an
+empty one, only users with admin access get in. `/coming-soon` resolves the
+site itself, so in multi-site mode it renders with that site's assets. Only
+routes through `:brando_site` are locked: add `plug Brando.Plug.Lockdown` to
+any other pipeline that serves public pages. The static site generator fetches
+pages over HTTP without a session, so turn lockdown off before building a
+static site.
+
+An application that already routes `/coming-soon` keeps its own page: the
+generator adds neither the page nor the plug, and says so. Rerunning
+`mix brando.gen.site` on a site generated before the lockdown page adds both,
+as long as what the generator owns (`CMS.PageController`, `PageHTML`,
+`Layouts`, `SiteContext` and the CMS routes) is still as it generated it. A
+customized one is reported as an issue and the rerun writes nothing; add the
+lockdown page and plug by hand then, as above.
 
 <!-- usage-rules:start topic="generators" -->
 
