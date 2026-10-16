@@ -337,7 +337,7 @@
     height: 58px;
     border: 2px solid var(--brando-surface);
     border-radius: 4px;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, .18);
+    box-shadow: var(--brando-shadow-sm);
   }
   .content-list .cover.gallery-stack > :nth-child(1) { z-index: 3; }
   .content-list .cover.gallery-stack > :nth-child(2) { z-index: 2; transform: translate(6px, -2px) rotate(4deg); }

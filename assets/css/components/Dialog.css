@@ -35,7 +35,7 @@
   text-align: left;
 
   &::backdrop {
-    background: rgb(22 28 25 / 45%);
+    background: var(--brando-scrim);
     backdrop-filter: blur(2px);
   }
 

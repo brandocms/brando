@@ -353,7 +353,8 @@
 
     .slider:after {
       transform: translateX(20px);
-      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' width='14' height='14'%3E%3Cpath fill='none' d='M0 0h24v24H0z'/%3E%3Cpath d='M10 15.172l9.192-9.193 1.415 1.414L10 18l-6.364-6.364 1.414-1.414z' fill='rgba(106,159,111,1)'/%3E%3C/svg%3E");
+      background-color: color-mix(in srgb, var(--brando-switch-on), var(--brando-success-ink));
+      mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' width='14' height='14'%3E%3Cpath fill='none' d='M0 0h24v24H0z'/%3E%3Cpath d='M10 15.172l9.192-9.193 1.415 1.414L10 18l-6.364-6.364 1.414-1.414z' fill='black'/%3E%3C/svg%3E");
     }
 
     &.small {
@@ -437,7 +438,7 @@
       transition: 0.3s ease;
       width: 20px;
       border-radius: 50%;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+      box-shadow: var(--brando-shadow-sm);
     }
 
     &:after {
@@ -448,9 +449,9 @@
       width: 20px;
       text-align: center;
       position: absolute;
-      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' width='14' height='14'%3E%3Cpath fill='none' d='M0 0h24v24H0z'/%3E%3Cpath d='M12 10.586l4.95-4.95 1.414 1.414-4.95 4.95 4.95 4.95-1.414 1.414-4.95-4.95-4.95 4.95-1.414-1.414 4.95-4.95-4.95-4.95L7.05 5.636z' fill='rgba(160,160,160,1)'/%3E%3C/svg%3E");
-      background-repeat: no-repeat;
-      background-position: 50%;
+      /* The icon is a mask, so its colour comes from the switch's tokens. */
+      background-color: var(--brando-faint);
+      mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' width='14' height='14'%3E%3Cpath fill='none' d='M0 0h24v24H0z'/%3E%3Cpath d='M12 10.586l4.95-4.95 1.414 1.414-4.95 4.95 4.95 4.95-1.414 1.414-4.95-4.95-4.95 4.95-1.414-1.414 4.95-4.95-4.95-4.95L7.05 5.636z' fill='black'/%3E%3C/svg%3E") 50% / 14px 14px no-repeat;
       transition: 0.3s ease;
     }
 
@@ -473,7 +474,8 @@
 
   input[type="checkbox"]:checked + .slider:after {
     transform: translateX(20px);
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' width='14' height='14'%3E%3Cpath fill='none' d='M0 0h24v24H0z'/%3E%3Cpath d='M10 15.172l9.192-9.193 1.415 1.414L10 18l-6.364-6.364 1.414-1.414z' fill='rgba(106,159,111,1)'/%3E%3C/svg%3E");
+    background-color: color-mix(in srgb, var(--brando-switch-on), var(--brando-success-ink));
+    mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' width='14' height='14'%3E%3Cpath fill='none' d='M0 0h24v24H0z'/%3E%3Cpath d='M10 15.172l9.192-9.193 1.415 1.414L10 18l-6.364-6.364 1.414-1.414z' fill='black'/%3E%3C/svg%3E");
   }
 }
 
@@ -1205,7 +1207,7 @@ html.not-mac .shortcut-other { display: inline; }
         position: absolute;
         inset: 0;
         border-radius: 50%;
-        box-shadow: 0 0 7px 1px var(--presence-color, rgba(77, 144, 254, 0.6));
+        box-shadow: 0 0 7px 1px var(--presence-color, color-mix(in srgb, var(--brando-presence-0) 60%, transparent));
         opacity: 0;
         pointer-events: none;
         will-change: opacity;
@@ -1233,7 +1235,7 @@ html.not-mac .shortcut-other { display: inline; }
   padding: 0 6px 0 14px;
   border-radius: 999px;
   background:
-    radial-gradient(circle at 7px 50%, var(--presence-color-strong, rgba(77, 144, 254, 0.8)) 3px, transparent 3.5px),
+    radial-gradient(circle at 7px 50%, var(--presence-color-strong, color-mix(in srgb, var(--brando-presence-0) 80%, transparent)) 3px, transparent 3.5px),
     var(--brando-badge-bg);
   color: var(--brando-badge-ink);
   font: 11px/18px "Main", sans-serif;
@@ -1295,7 +1297,7 @@ html.not-mac .shortcut-other { display: inline; }
     border: 1px solid var(--brando-line);
     border-radius: 12px;
     background: var(--brando-surface);
-    box-shadow: 0 12px 36px rgba(5, 39, 82, 0.14), 0 2px 8px rgba(5, 39, 82, 0.05);
+    box-shadow: var(--brando-shadow-xl);
     white-space: normal;
     text-align: left;
     z-index: 5;

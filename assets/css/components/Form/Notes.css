@@ -468,7 +468,7 @@
   border: 1px solid var(--brando-line);
   border-radius: 6px;
   background: var(--brando-surface);
-  box-shadow: 0 8px 24px rgb(30 43 37 / 12%);
+  box-shadow: var(--brando-shadow-lg);
 
   &[hidden] { display: none; }
 
@@ -640,7 +640,7 @@
   border: 1px solid var(--brando-line);
   border-radius: 6px;
   background: var(--brando-surface);
-  box-shadow: 0 6px 18px rgb(30 43 37 / 14%);
+  box-shadow: var(--brando-shadow-lg);
 
   &[hidden] { display: none; }
 

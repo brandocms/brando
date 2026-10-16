@@ -142,6 +142,7 @@
         rule: 'rgba(22, 38, 28, 0.13)',
         hover: 'rgba(22, 38, 28, 0.045)',
         surface: '{colors.white}',
+        glow: '#96c4a0',
       },
       presence: {
         p0: '#2563c9',
@@ -156,6 +157,8 @@
         off: '#c0c0c0',
       },
       tabbar: '#fcfcfd',
+      shadow: '#13251c',
+      scrim: 'rgb(22 28 25 / 55%)',
       legacy: {
         shaded: '#fcfcfd',
         input: '{colors.white}',
@@ -199,6 +202,28 @@
       md: '30px',
       lg: '36px',
       touch: '40px',
+    },
+
+    /* The admin's shadows, in one ink (colors.shadow, --brando-shadow-ink).
+       css/tokens.css sets --brando-shadow-* from these:
+
+         ring     a 1px hairline around a raised surface
+         xs       inputs, tabs, a selected segment
+         sm       cards and thumbnails
+         md       dropdowns, popovers and floating buttons
+         lg       menus, toasts, notes and the entry header's panels
+         xl       modals and large floating panels
+         inset    a field's inner shade
+         overlay  the login box's deep lift */
+    shadows: {
+      ring: '0 0 0 1px color-mix(in srgb, var(--brando-shadow-ink) 6%, transparent)',
+      xs: '0 1px 2px color-mix(in srgb, var(--brando-shadow-ink) 6%, transparent)',
+      sm: '0 1px 3px color-mix(in srgb, var(--brando-shadow-ink) 12%, transparent)',
+      md: '0 4px 16px color-mix(in srgb, var(--brando-shadow-ink) 10%, transparent), 0 1px 3px color-mix(in srgb, var(--brando-shadow-ink) 4%, transparent)',
+      lg: '0 8px 24px color-mix(in srgb, var(--brando-shadow-ink) 12%, transparent)',
+      xl: '0 16px 48px color-mix(in srgb, var(--brando-shadow-ink) 16%, transparent)',
+      inset: 'inset 0 1px 2px color-mix(in srgb, var(--brando-shadow-ink) 4%, transparent)',
+      overlay: '0 2.8px 2.2px color-mix(in srgb, var(--brando-shadow-ink) 2%, transparent), 0 6.7px 5.3px color-mix(in srgb, var(--brando-shadow-ink) 2.8%, transparent), 0 12.5px 10px color-mix(in srgb, var(--brando-shadow-ink) 3.5%, transparent), 0 22.3px 17.9px color-mix(in srgb, var(--brando-shadow-ink) 4.2%, transparent), 0 41.8px 33.4px color-mix(in srgb, var(--brando-shadow-ink) 5%, transparent), 0 100px 80px color-mix(in srgb, var(--brando-shadow-ink) 7%, transparent)',
     },
 
     container: {

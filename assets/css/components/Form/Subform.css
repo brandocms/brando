@@ -370,7 +370,7 @@
         border: none;
         border-radius: 6px;
         background: color-mix(in srgb, var(--brando-surface) 95%, transparent);
-        box-shadow: 0 1px 3px rgb(0 0 0 / 12%);
+        box-shadow: var(--brando-shadow-sm);
         color: var(--brando-ink);
         cursor: pointer;
         transition: background-color 0.15s ease, color 0.15s ease;

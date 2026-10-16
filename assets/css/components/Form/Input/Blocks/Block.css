@@ -1963,38 +1963,38 @@ button.btn-palette {
    attributes are). Order matches PRESENCE_COLORS in
    assets/src/Presence/fieldPresence.js. */
 [data-presence-color-index="0"] {
-  --presence-color: rgba(77, 144, 254, 0.6);
-  --presence-color-strong: rgba(77, 144, 254, 0.8);
+  --presence-color: color-mix(in srgb, var(--brando-presence-0) 60%, transparent);
+  --presence-color-strong: color-mix(in srgb, var(--brando-presence-0) 80%, transparent);
   --presence-ink: var(--brando-presence-0);
 }
 
 [data-presence-color-index="1"] {
-  --presence-color: rgba(72, 199, 142, 0.6);
-  --presence-color-strong: rgba(72, 199, 142, 0.8);
+  --presence-color: color-mix(in srgb, var(--brando-presence-1) 60%, transparent);
+  --presence-color-strong: color-mix(in srgb, var(--brando-presence-1) 80%, transparent);
   --presence-ink: var(--brando-presence-1);
 }
 
 [data-presence-color-index="2"] {
-  --presence-color: rgba(245, 166, 35, 0.6);
-  --presence-color-strong: rgba(245, 166, 35, 0.8);
+  --presence-color: color-mix(in srgb, var(--brando-presence-2) 60%, transparent);
+  --presence-color-strong: color-mix(in srgb, var(--brando-presence-2) 80%, transparent);
   --presence-ink: var(--brando-presence-2);
 }
 
 [data-presence-color-index="3"] {
-  --presence-color: rgba(168, 85, 247, 0.6);
-  --presence-color-strong: rgba(168, 85, 247, 0.8);
+  --presence-color: color-mix(in srgb, var(--brando-presence-3) 60%, transparent);
+  --presence-color-strong: color-mix(in srgb, var(--brando-presence-3) 80%, transparent);
   --presence-ink: var(--brando-presence-3);
 }
 
 [data-presence-color-index="4"] {
-  --presence-color: rgba(239, 68, 68, 0.6);
-  --presence-color-strong: rgba(239, 68, 68, 0.8);
+  --presence-color: color-mix(in srgb, var(--brando-presence-4) 60%, transparent);
+  --presence-color-strong: color-mix(in srgb, var(--brando-presence-4) 80%, transparent);
   --presence-ink: var(--brando-presence-4);
 }
 
 [data-presence-color-index="5"] {
-  --presence-color: rgba(20, 184, 166, 0.6);
-  --presence-color-strong: rgba(20, 184, 166, 0.8);
+  --presence-color: color-mix(in srgb, var(--brando-presence-5) 60%, transparent);
+  --presence-color-strong: color-mix(in srgb, var(--brando-presence-5) 80%, transparent);
   --presence-ink: var(--brando-presence-5);
 }
 

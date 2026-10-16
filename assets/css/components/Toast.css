@@ -35,7 +35,7 @@
   border-radius: 6px;
   background: var(--brando-surface);
   color: var(--toast-ink);
-  box-shadow: 0 6px 18px rgb(22 28 25 / 10%);
+  box-shadow: var(--brando-shadow-lg);
   font-size: 12px;
   line-height: 18px;
   pointer-events: auto;

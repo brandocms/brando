@@ -226,7 +226,7 @@ section.alert.danger {
 
     &:hover {
       border-color: color-mix(in srgb, var(--brando-accent) 35%, var(--brando-line));
-      box-shadow: 0 4px 14px rgba(22, 38, 28, 0.08);
+      box-shadow: var(--brando-shadow-md);
       transform: translateY(-1px);
     }
 

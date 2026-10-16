@@ -296,7 +296,7 @@
   font-family: "Mono";
   font-size: 14px;
   font-weight: 600;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+  box-shadow: var(--brando-shadow-md);
   pointer-events: none;
   z-index: 9999;
 }
@@ -414,7 +414,7 @@
 
       &:hover {
         transform: translateY(-1px);
-        box-shadow: 0 2px 16px rgba(0, 0, 0, 0.2);
+        box-shadow: var(--brando-shadow-md);
       }
 
       .video-preview {

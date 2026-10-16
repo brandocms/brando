@@ -65,7 +65,7 @@
   align-items: start;
   gap: 12px;
   padding: 10px 12px;
-  border: 1px solid rgba(5, 39, 82, 0.08);
+  border: 1px solid var(--brando-line-soft);
   border-radius: 9px;
   background-color: var(--brando-surface);
 
