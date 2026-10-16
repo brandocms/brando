@@ -13273,6 +13273,7 @@ msgstr ""
 #: lib/brando_admin/components/form/input/multi_select.ex
 #: lib/brando_admin/components/form/input/render_var.ex
 #: lib/brando_admin/components/form/input/rich_text_labels.ex
+#: lib/brando_admin/components/form/input/select.ex
 #: lib/brando_admin/components/form/transformer.ex
 #: lib/brando_admin/components/form/video_drawer.ex
 #: lib/brando_admin/live/users/groups_live.ex
