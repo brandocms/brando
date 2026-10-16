@@ -115,6 +115,13 @@
     background: var(--brando-surface-selected);
   }
 
+  /* Tinted like the listing's status badge; the pill keeps its border off. */
+  &[data-status] { border-color: transparent; background: var(--brando-badge-bg); color: var(--brando-badge-ink); }
+  &[data-status="published"] { background: var(--brando-success); color: var(--brando-success-ink); }
+  &[data-status="pending"] { background: var(--brando-attention); color: var(--brando-attention-ink); }
+  &[data-status="disabled"] { background: var(--brando-error); color: var(--brando-error-ink); }
+  &[data-status]:hover, &[data-status][aria-expanded="true"] { box-shadow: inset 0 0 0 1px color-mix(in srgb, currentColor 30%, transparent); }
+
   &:focus-visible {
     outline: 2px solid var(--brando-accent);
     outline-offset: 2px;

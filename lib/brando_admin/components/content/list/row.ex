@@ -447,7 +447,11 @@ defmodule BrandoAdmin.Components.Content.List.Row do
 
     ~H"""
     <div class="status">
-      <div center={@is_deleted} phx-click={if !@is_deleted, do: toggle_dropdown("#status-dropdown-#{@entry_id}")}>
+      <div
+        class={["badge", status_tone(@status_value)]}
+        center={@is_deleted}
+        phx-click={if !@is_deleted, do: toggle_dropdown("#status-dropdown-#{@entry_id}")}
+      >
         <.status_circle status={@status_value} publish_at={@publish_at} />
         <span class="listing-status-label">{render_status_label(@status_value)}</span>
         <.status_dropdown
@@ -480,6 +484,12 @@ defmodule BrandoAdmin.Components.Content.List.Row do
   end
 
   def expires_at(_entry), do: nil
+
+  # The status badge's tone; draft and deleted stay neutral.
+  defp status_tone(:published), do: "badge--success"
+  defp status_tone(:pending), do: "badge--attention"
+  defp status_tone(:disabled), do: "badge--error"
+  defp status_tone(_status), do: nil
 
   # Status dropdown component
   attr :id, :string, required: true

@@ -800,9 +800,18 @@ at their actual scale; a reduced full-page image can disguise small typography
 and misalignment. Use populated rows, long namespaces, photos and initials,
 child entries, open menus, and real form values.
 
-- Use 32px workspace headings, 17–18px section headings, and 15px listing titles.
-  Keep secondary metadata smaller without making it pale or difficult to read.
-- A listing toolbar should share one surface and baseline. Filters and sort
+- Use 32px workspace headings, 17–18px section headings, and 14px medium listing
+  titles. Keep secondary metadata smaller without making it pale or difficult to
+  read. A page heading's actions sit on the title's line, also when a subtitle
+  follows; on a phone they go under the subtitle.
+- A listing row is about 60px on desktop: the title over its URL, the columns,
+  the status badge (a dot and its tone, see [Buttons and badges](#buttons-and-badges)),
+  the author (avatar, name, date) and the ⋯ actions menu. The list ends at its
+  last row, with the footer under it. On a phone a row is two lines: the title
+  and the menu, then the status, the author's name and the date.
+- A listing toolbar should share one surface and baseline. When a blueprint adds
+  filters of its own, it takes two rows: the statuses, then search, those filters
+  and the sort and views on the right. Filters and sort
   controls use a 32px box with symmetric padding (40px for coarse pointers).
   Zero-count badges are omitted. Status dots use 1cap,
   optically centered with their labels. Remove inherited margins before adjusting
@@ -817,8 +826,9 @@ child entries, open menus, and real form values.
   information visible on mobile by giving it a deliberate place in the row.
   Clip image wrappers as well as images to the avatar's dimensions.
 - Keep child disclosures rectangular and compact, with an aligned count and one
-  chevron. Reserve enough room for the full namespace rather than forcing it into
-  a narrow badge. Verify opening the children, including records with no status.
+  chevron, in a column of their own just before the status, so they line up from
+  row to row; rows without children keep the empty slot. Reserve enough room for
+  the full namespace rather than forcing it into a narrow badge. Verify opening the children, including records with no status.
 - Text inputs and custom selects in a form must share height, type size, and
   baseline: 44px in content editors, 40px in settings, with 14px text. Keep labels
   on one line where appropriate; inline presence elements can otherwise create an

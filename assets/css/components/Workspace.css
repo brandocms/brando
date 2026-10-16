@@ -29,10 +29,15 @@
   .workspace-heading-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 8px; flex-shrink: 0; }
   > #content-header {
     margin: 0 0 24px; padding: 0 0 24px; border-bottom: 1px solid var(--workspace-line);
-    > .content { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; width: 100%; margin: 0; padding: 0; }
-    > .content > .main { flex: 1; min-width: 0; width: auto; max-width: none; margin: 0; padding: 0; }
+    /* The actions sit on the title's line whether or not a subtitle follows
+       it: the title and the actions share the first row, the subtitle takes
+       the second. */
+    > .content { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 0 24px; width: 100%; margin: 0; padding: 0; }
+    > .content > .main { display: contents; }
+    > .content > .main > h1 { grid-column: 1; grid-row: 1; min-width: 0; }
+    > .content > .main > :not(h1) { grid-column: 1 / -1; grid-row: 2; }
     .main h3 { margin: 8px 0 0; font-size: 13px; line-height: 1.55; color: var(--workspace-muted); }
-    > .content > .actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; flex: 0 0 auto; gap: 8px; width: auto; max-width: none; margin: 0; padding: 0; }
+    > .content > .actions { grid-column: 2; grid-row: 1; display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 8px; width: auto; max-width: none; margin: 0; padding: 0; }
   }
   :is(.workspace-button, #content-header .actions > a, #content-header .actions > button) {
     display: inline-flex; align-items: center; justify-content: center; gap: 6px;
@@ -102,8 +107,8 @@
     h1 { font-size: 26px; }
     .workspace-heading { align-items: flex-start; flex-direction: column; gap: 16px; }
     .workspace-heading-actions { justify-content: flex-start; }
-    > #content-header > .content { align-items: flex-start; flex-direction: column; gap: 16px; }
-    > #content-header .actions { justify-content: flex-start; }
+    > #content-header > .content { grid-template-columns: minmax(0, 1fr); }
+    > #content-header > .content > .actions { grid-column: 1; grid-row: 3; justify-content: flex-start; margin-top: 16px; }
     .workspace-panel-heading { padding: 16px; flex-wrap: wrap; }
   }
   @media (pointer: coarse) { :is(.workspace-button, #content-header .actions > a, #content-header .actions > button) { min-height: 40px; } }

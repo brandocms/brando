@@ -1197,7 +1197,11 @@ defmodule BrandoAdmin.Components.Content.List do
       |> assign_new(:sortable?, fn -> false end)
 
     ~H"""
-    <div class={["list-tools-wrapper", @display_filters != %{} && "has-active-filters"]}>
+    <div class={[
+      "list-tools-wrapper",
+      @display_filters != %{} && "has-active-filters",
+      @advanced_filters != [] && "has-advanced-filters"
+    ]}>
       <div class="list-tools">
         <%= if @has_status? do %>
           <div class="statuses">
