@@ -71,7 +71,7 @@ defmodule BrandoAdmin.Components.Form.AlternatesDrawer do
           </div>
           <p :if={@identifiers == []} class="alternates-empty">{gettext("No linked entries yet.")}</p>
           <button
-            class="workspace-button"
+            class="btn"
             type="button"
             phx-click={JS.push("get_entries_identifiers", target: @myself)}
           >
@@ -85,7 +85,7 @@ defmodule BrandoAdmin.Components.Form.AlternatesDrawer do
               "When you have selected more than 1 connection, you can ensure that the child alternates are linked together as well."
             )}
           </p>
-          <button type="button" class="workspace-button primary" phx-click={JS.push("store_alternates", target: @myself)}>
+          <button type="button" class="btn btn--primary" phx-click={JS.push("store_alternates", target: @myself)}>
             {gettext("Link children")}
           </button>
         </section>

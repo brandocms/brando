@@ -169,7 +169,7 @@ defmodule BrandoAdmin.Sites.IntegrationsLive do
         </p>
       </div>
       <div :if={@on} class="integrations-actions">
-        <.link navigate="/admin/config/seo?tab=content" class="workspace-button">{gettext("Content SEO")}</.link>
+        <.link navigate="/admin/config/seo?tab=content" class="btn">{gettext("Content SEO")}</.link>
       </div>
     </article>
     """
@@ -191,7 +191,7 @@ defmodule BrandoAdmin.Sites.IntegrationsLive do
         </p>
       </div>
       <div :if={@on} class="integrations-actions">
-        <.link navigate="/admin/config/seo?tab=content" class="workspace-button">{gettext("Content SEO")}</.link>
+        <.link navigate="/admin/config/seo?tab=content" class="btn">{gettext("Content SEO")}</.link>
       </div>
     </article>
     """
@@ -216,7 +216,7 @@ defmodule BrandoAdmin.Sites.IntegrationsLive do
         </p>
       </div>
       <div class="integrations-actions">
-        <.link navigate="/admin/config/mcp" class="workspace-button" data-testid="integration-mcp-manage">
+        <.link navigate="/admin/config/mcp" class="btn" data-testid="integration-mcp-manage">
           {if @on, do: gettext("Manage"), else: gettext("Set up")}
         </.link>
       </div>
@@ -254,13 +254,13 @@ defmodule BrandoAdmin.Sites.IntegrationsLive do
         </p>
       </div>
       <div class="integrations-actions">
-        <.link :if={@webhooks.count > 0} navigate="/admin/config/webhooks/deliveries" class="workspace-button">
+        <.link :if={@webhooks.count > 0} navigate="/admin/config/webhooks/deliveries" class="btn">
           {gettext("Delivery log")}
         </.link>
-        <.link :if={@webhooks.count == 0} navigate="/admin/config/webhooks/new" class="workspace-button">
+        <.link :if={@webhooks.count == 0} navigate="/admin/config/webhooks/new" class="btn">
           {gettext("Set up")}
         </.link>
-        <.link navigate="/admin/config/webhooks" class="workspace-button">{gettext("Manage")}</.link>
+        <.link navigate="/admin/config/webhooks" class="btn">{gettext("Manage")}</.link>
       </div>
     </article>
     """
@@ -297,19 +297,19 @@ defmodule BrandoAdmin.Sites.IntegrationsLive do
         <.link
           :if={@notifications.count > 0}
           navigate="/admin/config/notifications/deliveries"
-          class="workspace-button"
+          class="btn"
         >
           {gettext("Delivery log")}
         </.link>
         <.link
           :if={@notifications.count == 0}
           navigate="/admin/config/notifications/new"
-          class="workspace-button"
+          class="btn"
           data-testid="integration-notifications-set-up"
         >
           {gettext("Set up")}
         </.link>
-        <.link navigate="/admin/config/notifications" class="workspace-button" data-testid="integration-notifications-manage">
+        <.link navigate="/admin/config/notifications" class="btn" data-testid="integration-notifications-manage">
           {gettext("Manage")}
         </.link>
       </div>

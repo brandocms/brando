@@ -11,7 +11,7 @@ defmodule <%= admin_module %>.<%= domain %>.<%= camel_singular %>ListLive do
         <.link
           :if={BrandoAdmin.Authorization.allowed?(:create, @schema)}
           navigate={@admin_create_url}
-          class="workspace-button primary"
+          class="btn btn--primary"
         >
           <%%= gettext("Create new") %>
         </.link>

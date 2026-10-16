@@ -269,7 +269,7 @@ defmodule BrandoAdmin.Images.ImageListLive do
       >
         <.link
           navigate={Brando.routes().admin_live_path(@socket, BrandoAdmin.Images.AltTextLive)}
-          class="workspace-button"
+          class="btn"
           data-testid="alt-text-link"
         >
           {gettext("Alt text")}

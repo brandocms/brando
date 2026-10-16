@@ -70,7 +70,7 @@ defmodule BrandoAdmin.Users.SignInPolicyLive do
               {effect(@draft, @affected)}
             </p>
             <div class="security-row-actions">
-              <button type="submit" class="workspace-button primary" data-testid="policy-save" disabled={!@can_save?}>
+              <button type="submit" class="btn btn--primary" data-testid="policy-save" disabled={!@can_save?}>
                 {gettext("Save policy")}
               </button>
             </div>

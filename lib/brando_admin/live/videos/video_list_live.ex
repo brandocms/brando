@@ -259,7 +259,7 @@ defmodule BrandoAdmin.Videos.VideoListLive do
         <button
           :if={@missing_metadata_count > 0}
           type="button"
-          class="workspace-button"
+          class="btn"
           phx-click="fetch_metadata"
           title={gettext("Look up thumbnails, titles and durations at each video's source")}
         >

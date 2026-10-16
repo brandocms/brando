@@ -321,12 +321,12 @@ defmodule BrandoAdmin.Sites.NotificationsLive do
         title={gettext("Notifications")}
         subtitle={gettext("Messages to Slack, Microsoft Teams or email when something happens in this environment.")}
       >
-        <.link :if={@routes != []} navigate="/admin/config/notifications/deliveries" class="workspace-button">
+        <.link :if={@routes != []} navigate="/admin/config/notifications/deliveries" class="btn">
           {gettext("Delivery log")}
         </.link>
         <.link
           navigate="/admin/config/notifications/new"
-          class="workspace-button primary"
+          class="btn btn--primary"
           data-testid="notification-route-new"
         >
           <.icon name="plus" />{gettext("Add route")}
@@ -355,10 +355,10 @@ defmodule BrandoAdmin.Sites.NotificationsLive do
             <p :if={route.last_delivery_at} class="integrations-meta">{last_delivery(route)}</p>
           </div>
           <div class="integrations-actions">
-            <.link navigate={"/admin/config/notifications/#{route.id}/deliveries"} class="workspace-button">
+            <.link navigate={"/admin/config/notifications/#{route.id}/deliveries"} class="btn">
               {gettext("Delivery log")}
             </.link>
-            <.link navigate={"/admin/config/notifications/#{route.id}/edit"} class="workspace-button">
+            <.link navigate={"/admin/config/notifications/#{route.id}/edit"} class="btn">
               {gettext("Edit")}
             </.link>
           </div>
@@ -386,7 +386,7 @@ defmodule BrandoAdmin.Sites.NotificationsLive do
         <.link
           :if={@route}
           navigate={"/admin/config/notifications/#{@route.id}/deliveries"}
-          class="workspace-button"
+          class="btn"
         >
           {gettext("Delivery log")}
         </.link>
@@ -438,7 +438,7 @@ defmodule BrandoAdmin.Sites.NotificationsLive do
               <code class="workspace-mono" data-testid="notification-url-masked">{@route.url_hint}</code>
               <button
                 type="button"
-                class="workspace-button"
+                class="btn"
                 phx-click="replace_url"
                 data-testid="notification-replace-url"
               >
@@ -531,7 +531,7 @@ defmodule BrandoAdmin.Sites.NotificationsLive do
         </div>
 
         <div class="webhook-form-footer">
-          <button type="submit" class="workspace-button primary" data-testid="notification-route-save">
+          <button type="submit" class="btn btn--primary" data-testid="notification-route-save">
             {if @route, do: gettext("Save route"), else: gettext("Create route")}
           </button>
         </div>
@@ -550,7 +550,7 @@ defmodule BrandoAdmin.Sites.NotificationsLive do
           <div class="integrations-actions">
             <button
               type="button"
-              class="workspace-button"
+              class="btn"
               phx-click="send_test"
               disabled={!@route.active}
               data-testid="notification-send-test"
@@ -568,7 +568,7 @@ defmodule BrandoAdmin.Sites.NotificationsLive do
             <button
               :if={@route.active}
               type="button"
-              class="workspace-button"
+              class="btn"
               phx-click="pause"
               data-testid="notification-pause"
             >
@@ -577,7 +577,7 @@ defmodule BrandoAdmin.Sites.NotificationsLive do
             <button
               :if={!@route.active}
               type="button"
-              class="workspace-button"
+              class="btn"
               phx-click="resume"
               data-testid="notification-resume"
             >
@@ -593,7 +593,7 @@ defmodule BrandoAdmin.Sites.NotificationsLive do
           <div class="integrations-actions">
             <button
               type="button"
-              class="workspace-button destructive"
+              class="btn btn--danger"
               phx-click="delete"
               data-confirm-title={gettext("Delete this notification route?")}
               data-confirm={gettext("Nothing more is sent on it, and its delivery log is removed.")}
@@ -626,14 +626,14 @@ defmodule BrandoAdmin.Sites.NotificationsLive do
         <button
           :if={@route}
           type="button"
-          class="workspace-button"
+          class="btn"
           phx-click="send_test"
           disabled={!@route.active}
           data-testid="notification-send-test"
         >
           <.icon name="send" />{gettext("Send test")}
         </button>
-        <.link :if={@route} navigate={"/admin/config/notifications/#{@route.id}/edit"} class="workspace-button">
+        <.link :if={@route} navigate={"/admin/config/notifications/#{@route.id}/edit"} class="btn">
           {gettext("Edit")}
         </.link>
       </Workspace.header>
@@ -677,7 +677,7 @@ defmodule BrandoAdmin.Sites.NotificationsLive do
                   <button
                     :if={Routing.redeliverable?(delivery)}
                     type="button"
-                    class="workspace-button"
+                    class="btn"
                     phx-click="redeliver"
                     phx-value-id={delivery.id}
                     data-testid="notification-redeliver"

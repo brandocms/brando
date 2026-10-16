@@ -400,7 +400,7 @@ button.primary.submit-button {
    buttons, and every new button with an icon came out oversized until a rule
    sized it. :where keeps this at the icon's own specificity, so any rule that
    sizes an icon on purpose still wins. */
-:where(button, a.workspace-button, .folder-action, .media-button) > [data-icon] {
+:where(button, .folder-action, .media-button) > [data-icon] {
   width: 1.3em;
   height: 1.3em;
 }

@@ -13,7 +13,7 @@ defmodule BrandoAdmin.Navigation.MenuListLive do
         <.link
           :if={BrandoAdmin.Authorization.allowed?(:create, @schema)}
           navigate="/admin/config/navigation/menus/create"
-          class="workspace-button primary"
+          class="btn btn--primary"
         >
           {gettext("Create new")}
         </.link>

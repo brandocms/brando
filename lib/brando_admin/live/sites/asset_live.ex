@@ -43,7 +43,7 @@ defmodule BrandoAdmin.Sites.AssetLive do
         title={gettext("Frontend assets")}
         subtitle={gettext("Manage the frontend build currently served by Phoenix")}
       >
-        <button type="button" class="workspace-button" phx-click="refresh">{gettext("Refresh")}</button>
+        <button type="button" class="btn" phx-click="refresh">{gettext("Refresh")}</button>
       </Workspace.header>
 
       <div class="frontend-assets-live">
@@ -85,7 +85,7 @@ defmodule BrandoAdmin.Sites.AssetLive do
             <button
               :if={@active_set}
               type="button"
-              class="workspace-button"
+              class="btn"
               phx-click="deactivate"
               phx-confirm={gettext("Use the frontend assets included in the current release?")}
             >
@@ -159,7 +159,7 @@ defmodule BrandoAdmin.Sites.AssetLive do
                     <button
                       :if={!asset_set.active}
                       type="button"
-                      class="workspace-button primary"
+                      class="btn btn--primary"
                       phx-click="activate"
                       phx-value-id={asset_set.id}
                       phx-confirm={

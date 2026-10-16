@@ -287,10 +287,10 @@ defmodule BrandoAdmin.Reauth do
     <div class="reauth-prompt reauth-prompt-page" id="reauth-prompt">
       <.prompt_form reauth={@reauth} />
       <div class="reauth-actions">
-        <button type="submit" form="reauth-form" class="workspace-button primary" data-testid="reauth-submit">
+        <button type="submit" form="reauth-form" class="btn btn--primary" data-testid="reauth-submit">
           {gettext("Confirm")}
         </button>
-        <.link navigate="/admin" class="workspace-button quiet">{gettext("Cancel")}</.link>
+        <.link navigate="/admin" class="btn btn--quiet">{gettext("Cancel")}</.link>
       </div>
     </div>
     """
@@ -360,7 +360,7 @@ defmodule BrandoAdmin.Reauth do
       <button
         type="button"
         id="reauth-passkey"
-        class="workspace-button"
+        class="btn"
         phx-hook="Brando.Passkey"
         data-passkey="get"
         data-options-event="brando:reauth:passkey_options"

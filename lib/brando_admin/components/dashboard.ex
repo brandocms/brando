@@ -50,7 +50,7 @@ defmodule BrandoAdmin.Components.Dashboard do
           )}
         </p>
       </div>
-      <.link navigate="/admin/config/notifications" class="workspace-button">{gettext("Review notifications")}</.link>
+      <.link navigate="/admin/config/notifications" class="btn">{gettext("Review notifications")}</.link>
     </div>
     """
   end
@@ -79,7 +79,7 @@ defmodule BrandoAdmin.Components.Dashboard do
             )}
           </p>
         </div>
-        <.link navigate={paused_path(@paused_webhooks, "/admin/config/webhooks")} class="workspace-button">
+        <.link navigate={paused_path(@paused_webhooks, "/admin/config/webhooks")} class="btn">
           {gettext("Review webhooks")}
         </.link>
       </div>
@@ -106,7 +106,7 @@ defmodule BrandoAdmin.Components.Dashboard do
         </div>
         <.link
           navigate={paused_path(@paused_routes, "/admin/config/notifications")}
-          class="workspace-button"
+          class="btn"
           data-testid="dashboard-notifications-review"
         >
           {gettext("Review notifications")}

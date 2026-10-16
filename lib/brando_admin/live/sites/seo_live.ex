@@ -141,7 +141,7 @@ defmodule BrandoAdmin.Sites.SEOLive do
           <button
             :if={@settings}
             type="button"
-            class={["workspace-button", !@settings.enabled && "primary"]}
+            class={["btn", !@settings.enabled && "btn--primary"]}
             phx-click="toggle_indexnow"
             disabled={!@available?}
             data-testid="indexnow-toggle"
@@ -332,7 +332,7 @@ defmodule BrandoAdmin.Sites.SEOLive do
         <div class="workspace-heading-actions">
           <button
             type="button"
-            class="workspace-button primary"
+            class="btn btn--primary"
             phx-click="rerun_audit"
             disabled={@audit_status == :running}
           >
@@ -767,7 +767,7 @@ defmodule BrandoAdmin.Sites.SEOLive do
         <AIAction.button :if={@confirm} variant={:primary} phx-click="start_batch">
           {ngettext("Write one description", "Write %{count} descriptions", @count)}
         </AIAction.button>
-        <button :if={@confirm} type="button" class="workspace-button" phx-click="cancel_batch">
+        <button :if={@confirm} type="button" class="btn" phx-click="cancel_batch">
           {gettext("Cancel")}
         </button>
       </div>

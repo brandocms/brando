@@ -16,7 +16,7 @@ defmodule BrandoAdmin.Sites.GlobalSetListLive do
         <.link
           :if={BrandoAdmin.Authorization.allowed?(:create, @schema)}
           navigate="/admin/config/global_sets/create"
-          class="workspace-button primary"
+          class="btn btn--primary"
         >
           {gettext("Create new")}
         </.link>

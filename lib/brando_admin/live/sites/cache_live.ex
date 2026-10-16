@@ -33,7 +33,7 @@ defmodule BrandoAdmin.Sites.CacheLive do
     ~H"""
     <div class="admin-workspace cache-workspace">
       <Workspace.header title={gettext("Cache")} subtitle={gettext("Inspect cached content and clear outdated entries.")}>
-        <button type="button" class="workspace-button" phx-click="empty_caches" phx-disable-with={gettext("Clearing…")}>
+        <button type="button" class="btn" phx-click="empty_caches" phx-disable-with={gettext("Clearing…")}>
           {gettext("Empty all caches")}
         </button>
       </Workspace.header>
@@ -105,7 +105,7 @@ defmodule BrandoAdmin.Sites.CacheLive do
       <td class="row-actions">
         <button
           type="button"
-          class="workspace-button"
+          class="btn"
           phx-click="clear_cache_entry"
           phx-value-key={@cache_token}
           aria-label={gettext("Clear cache %{key}", key: @row.key)}

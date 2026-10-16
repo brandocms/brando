@@ -39,15 +39,18 @@
     .main h3 { margin: 8px 0 0; font-size: 13px; line-height: 1.55; color: var(--workspace-muted); }
     > .content > .actions { grid-column: 2; grid-row: 1; display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 8px; width: auto; max-width: none; margin: 0; padding: 0; }
   }
-  :is(.workspace-button, #content-header .actions > a, #content-header .actions > button) {
+  /* The page header's actions. Applications' LiveViews render these as plain
+     links (`<.link class="primary">`), so they take `.btn`'s look here; an
+     action that is a `.btn` keeps its own. */
+  :is(#content-header .actions > a, #content-header .actions > button):not(.btn) {
     display: inline-flex; align-items: center; justify-content: center; gap: 6px;
-    width: auto; min-width: 0; height: auto; min-height: 30px; margin: 0; padding: 5px 12px;
-    border: 1px solid var(--workspace-line); border-radius: 5px; background: var(--brando-surface);
-    color: var(--workspace-ink); font-size: 12px; font-weight: 500; line-height: 18px;
+    width: auto; min-width: 0; height: auto; min-height: var(--brando-control-md); margin: 0; padding: 5px 12px;
+    border: 1px solid var(--workspace-line); border-radius: var(--brando-radius-md); background: var(--brando-surface);
+    color: var(--workspace-ink); font-size: 12px; font-weight: 400; line-height: 18px;
     text-decoration: none; text-transform: none; letter-spacing: 0; white-space: nowrap; box-shadow: none; cursor: pointer;
     &:hover:not(:disabled) { background: var(--workspace-wash); border-color: var(--brando-line-strong); }
     &:disabled { opacity: .45; cursor: not-allowed; }
-    &.primary { background: var(--workspace-accent); border-color: var(--workspace-accent); color: var(--brando-ink-inverse); }
+    &.primary { background: var(--workspace-accent); border-color: var(--workspace-accent); color: var(--brando-ink-inverse); font-weight: 500; }
     &.primary:hover:not(:disabled) { background: var(--brando-accent-hover); }
     &.quiet { border-color: transparent; background: transparent; }
     &.destructive { color: var(--brando-error-ink); }
@@ -111,5 +114,5 @@
     > #content-header > .content > .actions { grid-column: 1; grid-row: 3; justify-content: flex-start; margin-top: 16px; }
     .workspace-panel-heading { padding: 16px; flex-wrap: wrap; }
   }
-  @media (pointer: coarse) { :is(.workspace-button, #content-header .actions > a, #content-header .actions > button) { min-height: 40px; } }
+  @media (pointer: coarse) { :is(#content-header .actions > a, #content-header .actions > button):not(.btn) { min-height: var(--brando-control-touch); } }
 }

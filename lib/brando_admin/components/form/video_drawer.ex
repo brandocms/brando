@@ -170,7 +170,7 @@ defmodule BrandoAdmin.Components.Form.VideoDrawer do
             <div id="video-drawer-replace" class="media-action-menu" phx-hook="Brando.FloatingDropdown">
               <button
                 type="button"
-                class="workspace-button"
+                class="btn"
                 popovertarget="video-drawer-replace-menu"
                 aria-expanded="false"
               >
@@ -196,7 +196,7 @@ defmodule BrandoAdmin.Components.Form.VideoDrawer do
             >
               <button
                 type="button"
-                class="workspace-button"
+                class="btn"
                 aria-label={gettext("More video actions")}
                 popovertarget="video-drawer-more-menu"
                 aria-expanded="false"
@@ -213,15 +213,15 @@ defmodule BrandoAdmin.Components.Form.VideoDrawer do
             <button
               :if={@upload_input}
               type="button"
-              class="workspace-button primary"
+              class="btn btn--primary"
               phx-click={JS.dispatch("click", to: @upload_input)}
             >
               <.icon name="upload" />{gettext("Upload")}
             </button>
-            <button type="button" class="workspace-button" phx-click={open_picker(false)}>
+            <button type="button" class="btn" phx-click={open_picker(false)}>
               <.icon name="folder" />{gettext("Select video")}
             </button>
-            <button :if={@url_allowed?} type="button" class="workspace-button" phx-click={open_picker(true)}>
+            <button :if={@url_allowed?} type="button" class="btn" phx-click={open_picker(true)}>
               <.icon name="link" />{gettext("Add from URL")}
             </button>
           <% end %>
@@ -288,7 +288,7 @@ defmodule BrandoAdmin.Components.Form.VideoDrawer do
               <div class="video-detail-thumbnail-actions">
                 <button
                   type="button"
-                  class="workspace-button"
+                  class="btn"
                   phx-click={browse_video_thumbnail(@myself)}
                 >
                   {gettext("Select from library")}
@@ -296,7 +296,7 @@ defmodule BrandoAdmin.Components.Form.VideoDrawer do
                 <button
                   :if={thumbnail(@video)}
                   type="button"
-                  class="workspace-button quiet"
+                  class="btn btn--quiet"
                   phx-click={reset_video_thumbnail(@myself)}
                 >
                   {gettext("Remove")}
@@ -326,7 +326,7 @@ defmodule BrandoAdmin.Components.Form.VideoDrawer do
       </.form>
       <:footer>
         <span>{gettext("Shared video settings")}</span>
-        <button type="button" class="workspace-button primary" phx-click={close_video(@myself)}>{gettext("Done")}</button>
+        <button type="button" class="btn btn--primary" phx-click={close_video(@myself)}>{gettext("Done")}</button>
       </:footer>
     </Content.drawer>
     """

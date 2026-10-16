@@ -120,7 +120,7 @@
     > [data-icon] { width: 18px; height: 18px; }
     h2 { font-size: 14px; letter-spacing: 0; color: var(--brando-ink); }
     p { margin-top: 2px; font-size: 13px; }
-    @media (max-width: 600px) { grid-template-columns: auto minmax(0, 1fr); .workspace-button { grid-column: 2; justify-self: start; } }
+    @media (max-width: 600px) { grid-template-columns: auto minmax(0, 1fr); .btn { grid-column: 2; justify-self: start; } }
   }
   .dashboard-heading { margin: 0 0 14px; font-size: 17px; line-height: 24px; font-weight: 500; }
   .dashboard-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 16px; }
