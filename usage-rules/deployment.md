@@ -49,9 +49,10 @@ deployment files are left alone. The task requires Igniter.
 > with an explicit error if they find `PORT=` in the env file. For a `:single`
 > deployment, setting `PORT` is fine and expected.
 
-The database password in `BRANDO_DB_URL` must match `FLORIST_DB_PASSWORD_PROD`,
-since florist uses the latter to create the database user that your app then
-authenticates as.
+The database user and password in the env file's database URL must match the
+target's database user and `FLORIST_DB_PASSWORD_<TARGET>` (for example
+`FLORIST_DB_PASSWORD_PROD`), since florist uses those to create the database
+user that your app then authenticates as.
 
 Key points:
 

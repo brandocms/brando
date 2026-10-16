@@ -83,6 +83,7 @@ install_options=(--yes --tenancy-mode "$smoke_mode" --public-site --replace-phoe
 if [[ "$smoke_mode" == single ]]; then install_options+=(--site-key smoke); fi
 mix igniter.install "brando@path:$brando_dir" "${install_options[@]}" > "$smoke_root/logs/install.log" 2>&1
 mix compile --warnings-as-errors > "$smoke_root/logs/compile.log" 2>&1
+if grep -l '__BRANDO_' .envrc.prod .envrc.staging; then echo "brando.install.secrets left markers in the files above" >&2; exit 1; fi
 elixir "$framework_dir/scripts/igniter_smoke/fingerprint.exs" > "$smoke_root/before-rerun"
 mix brando.install --yes > "$smoke_root/logs/rerun.log" 2>&1
 elixir "$framework_dir/scripts/igniter_smoke/fingerprint.exs" > "$smoke_root/after-rerun"

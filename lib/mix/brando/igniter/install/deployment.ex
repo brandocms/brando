@@ -1,0 +1,327 @@
+if Code.ensure_loaded?(Igniter) do
+  defmodule Mix.Brando.Igniter.Install.Deployment do
+    @doc "Requests recompilation when optional Igniter support is removed."
+    def __mix_recompile__?, do: not Code.ensure_loaded?(Igniter)
+
+    @moduledoc false
+
+    alias Igniter.Project.Config
+    alias Mix.Brando.Install.Hosts
+    alias Mix.Brando.Install.Templates
+    alias Rewrite.Source
+
+    @envrc [prod: ".envrc.prod", staging: ".envrc.staging"]
+    # dev.exs turns the check off for development; it does not apply to a release.
+    # Files these import with a literal path are read too.
+    @origin_configs ~w(config/config.exs config/prod.exs config/runtime.exs)
+    @release_env "rel/env.sh.eex"
+
+    @doc """
+    Reads what the application already has: the `.envrc.<flavor>` files and the
+    hosts they set, any `check_origin` in its base, prod or runtime configuration
+    (or a file those import), and its release environment script. Existing files
+    and settings are never replaced.
+    """
+    def existing(igniter) do
+      {igniter, check_origin?} = check_origin?(igniter, @origin_configs, MapSet.new())
+
+      {igniter, envrc, unfilled} =
+        Enum.reduce(@envrc, {igniter, %{}, []}, fn {flavor, path}, {igniter, envrc, unfilled} ->
+          {igniter, contents} = contents(igniter, path)
+          unfilled = if contents && contents =~ "__BRANDO_", do: unfilled ++ [path], else: unfilled
+          {igniter, Map.put(envrc, flavor, contents && envrc_host(contents)), unfilled}
+        end)
+
+      {igniter, release_env} = contents(igniter, @release_env)
+
+      {igniter,
+       %{
+         check_origin?: check_origin?,
+         envrc: Map.new(envrc, fn {flavor, host} -> {flavor, host != nil} end),
+         envrc_hosts: envrc |> Map.values() |> Enum.reject(&(&1 in [nil, ""])),
+         unfilled_envrc: unfilled,
+         release_env: release_env
+       }}
+    end
+
+    @doc """
+    Which guided host questions are worth asking: none when nothing is left to
+    generate, only the domain and staging host when only environment files are
+    missing, all of them when `check_origin` is.
+    """
+    def guided(existing) do
+      cond do
+        not existing.check_origin? -> :all
+        not Enum.all?(Map.values(existing.envrc)) -> :hosts
+        true -> :none
+      end
+    end
+
+    @doc """
+    Adds `check_origin` to the production endpoint config when a domain was
+    given, creates the prod and staging `.envrc` files, ignored by Git, and the
+    release script that sources them on the server. Staging runs the prod
+    release with its own `.envrc`, so the staging host is a trusted origin of
+    the prod config.
+    """
+    def plan(igniter, project, hosts, existing) do
+      created = for {flavor, path} <- @envrc, !existing.envrc[flavor], do: {flavor, path}
+
+      igniter
+      |> check_origin(project, hosts, existing)
+      |> envrc(project, hosts, created)
+      |> fill_secrets(existing.unfilled_envrc)
+      |> release_env(project, existing.release_env)
+      |> kept_envrc_notice(hosts, existing)
+      |> gitignore(Enum.map(created, &elem(&1, 1)))
+      |> placeholder_notice(hosts, existing, created)
+    end
+
+    defp host(hosts, :prod), do: hosts.domain
+    defp host(hosts, :staging), do: hosts.staging
+
+    defp check_origin(igniter, project, hosts, %{check_origin?: true}) do
+      if hosts.explicit? and not hosts.placeholder? do
+        Igniter.add_notice(igniter, """
+        The application already configures check_origin; it was left unchanged.
+        Add the origins you need to #{inspect(project.endpoint)} yourself:
+          #{Hosts.check_origin(hosts) |> Enum.map_join(", ", &inspect/1)}
+        """)
+      else
+        igniter
+      end
+    end
+
+    # Without a real domain, Phoenix's default (the endpoint's URL host, from
+    # PHX_HOST) is the only safe check: a placeholder list would reject the
+    # application's actual host.
+    defp check_origin(igniter, _project, %{placeholder?: true}, _existing), do: igniter
+
+    defp check_origin(igniter, project, hosts, existing) do
+      # Hosts the existing environment files serve stay trusted on a rerun.
+      placeholder = Hosts.placeholder(project.otp_app)
+
+      served =
+        Enum.reject(
+          existing.envrc_hosts,
+          &(&1 in [placeholder, "localhost"] or String.ends_with?(&1, "." <> placeholder))
+        )
+
+      origins = Hosts.check_origin(hosts) ++ Enum.map(served, &"//#{&1}")
+
+      igniter
+      |> Config.configure_new("prod.exs", project.otp_app, [project.endpoint, :check_origin], Enum.uniq(origins))
+      |> Igniter.add_notice("""
+      check_origin for #{inspect(project.endpoint)} in config/prod.exs replaces Phoenix's check
+      against the endpoint's URL host. Add any other host the application serves to it.
+      """)
+    end
+
+    # The files are planned with markers in place of the secrets, so no diff or
+    # --dry-run shows them; brando.install.secrets fills them in after accepting.
+    defp envrc(igniter, _project, _hosts, []), do: igniter
+
+    defp envrc(igniter, project, hosts, created) do
+      created
+      |> Enum.reduce(igniter, fn {flavor, path}, igniter ->
+        binding = Mix.Brando.Igniter.Install.template_binding(project) ++ [host: host(hosts, flavor)]
+        Igniter.create_new_file(igniter, path, EEx.eval_string(Templates.contents(:eex, path), binding, file: path))
+      end)
+      |> Igniter.add_task("brando.install.secrets", Enum.map(created, &elem(&1, 1)))
+    end
+
+    # An earlier run whose secrets task never ran (a failed deps.get, an
+    # interrupted install) left the markers in place; fill them in now.
+    defp fill_secrets(igniter, []), do: igniter
+    defp fill_secrets(igniter, paths), do: Igniter.add_task(igniter, "brando.install.secrets", paths)
+
+    defp release_env(igniter, project, nil),
+      do: Mix.Brando.Igniter.Install.copy(igniter, {:eex, @release_env, @release_env}, project)
+
+    defp release_env(igniter, _project, contents) do
+      cond do
+        not String.contains?(contents, ".envrc.runtime") ->
+          release_env_notice(igniter)
+
+        not Regex.match?(~r/RELEASE_DISTRIBUTION=["']?name/, contents) ->
+          Igniter.add_notice(igniter, """
+          #{@release_env} sources .envrc.runtime but keeps the default short node names, while
+          the environment files default RELEASE_NODE to a long name (<app>_prod@127.0.0.1).
+          Add `export RELEASE_DISTRIBUTION=name` to it, or the release will not start.
+          """)
+
+        true ->
+          igniter
+      end
+    end
+
+    defp release_env_notice(igniter) do
+      Igniter.add_notice(igniter, """
+      #{@release_env} does not source .envrc.runtime, the environment file Florist copies
+      into each release, so .envrc.prod and .envrc.staging do not reach the application.
+      Source "$RELEASE_ROOT/.envrc.runtime" in it, before any RELEASE_NODE default.
+      """)
+    end
+
+    defp kept_envrc_notice(igniter, hosts, existing) do
+      kept =
+        for {flavor, path} <- @envrc, existing.envrc[flavor], do: "#{path} (asked for PHX_HOST #{host(hosts, flavor)})"
+
+      if hosts.explicit? and not hosts.placeholder? and kept != [] do
+        Igniter.add_notice(igniter, """
+        Existing environment files were left unchanged: #{Enum.join(kept, ", ")}.
+        Set their host yourself if it should change.
+        """)
+      else
+        igniter
+      end
+    end
+
+    defp gitignore(igniter, []), do: igniter
+
+    defp gitignore(igniter, paths) do
+      Igniter.create_or_update_file(igniter, ".gitignore", String.trim_leading(missing_block(paths)), fn source ->
+        content = Source.get(source, :content)
+
+        case Enum.reject(paths, &ignored?(content, &1)) do
+          [] -> source
+          missing -> Source.update(source, :content, String.trim_trailing(content) <> "\n" <> missing_block(missing))
+        end
+      end)
+    end
+
+    defp missing_block(paths),
+      do: "\n# Runtime environments with secrets, uploaded by Florist\n" <> Enum.map_join(paths, "\n", &"/#{&1}") <> "\n"
+
+    # Git's rule for a file in the repository root: the last pattern that
+    # matches it decides, and a leading ! un-ignores. Patterns this does not
+    # understand never count as ignoring, so the explicit line gets added.
+    defp ignored?(content, file) do
+      last_match =
+        content
+        |> String.split("\n")
+        # Git keeps leading spaces and drops unescaped trailing ones.
+        |> Enum.map(&gitignore_rule(String.trim_trailing(&1)))
+        |> Enum.reverse()
+        |> Enum.find(&(&1 != nil and Regex.match?(elem(&1, 1), file)))
+
+      match?({false, _pattern}, last_match)
+    end
+
+    defp gitignore_rule(""), do: nil
+    defp gitignore_rule("#" <> _), do: nil
+    # A negation this matcher cannot read might un-ignore the file, so it
+    # counts as matching it: the explicit ignore line gets added.
+    defp gitignore_rule("!" <> pattern) do
+      case gitignore_rule(pattern) do
+        {_, regex} -> {true, regex}
+        nil -> {true, ~r/.*/}
+      end
+    end
+
+    defp gitignore_rule(pattern) do
+      pattern = pattern |> String.trim_leading("**/") |> String.trim_leading("/")
+
+      # A trailing slash matches directories only, and an inner one a nested
+      # path. Character classes and escapes are not read: such a rule never
+      # counts as ignoring the file.
+      if pattern == "" or String.contains?(pattern, ["/", "[", "\\"]) do
+        nil
+      else
+        glob =
+          pattern
+          |> Regex.escape()
+          |> String.replace("\\*", "[^/]*")
+          |> String.replace("\\?", "[^/]")
+
+        {false, Regex.compile!("^#{glob}$")}
+      end
+    end
+
+    # Only when this run creates environment files: a rerun has nothing to replace.
+    defp placeholder_notice(igniter, %{placeholder?: true} = hosts, existing, [_ | _] = created) do
+      origin =
+        if !existing.check_origin? do
+          """
+          check_origin was not written, so Phoenix checks WebSocket origins against the
+          endpoint's URL host, PHX_HOST. Pass --domain to write it to config/prod.exs.
+          """
+        end
+
+      envrc = """
+      No --domain was given. #{Enum.map_join(created, " and ", &elem(&1, 1))} set PHX_HOST to the
+      placeholder #{hosts.domain} (staging: #{hosts.staging}); replace it before deploying.
+      """
+
+      Igniter.add_notice(igniter, envrc <> (origin || ""))
+    end
+
+    # --origin or --staging-domain without --domain write nothing: a list
+    # without the real host would block it.
+    defp placeholder_notice(igniter, %{placeholder?: true, explicit?: true}, _existing, []) do
+      Igniter.add_notice(igniter, """
+      Origins or a staging host take effect only with a domain (--domain, or the domain
+      question with --interactive): without the real host, check_origin would block it, so
+      nothing was written.
+      """)
+    end
+
+    defp placeholder_notice(igniter, _hosts, _existing, _created), do: igniter
+
+    defp contents(igniter, path) do
+      if Igniter.exists?(igniter, path) do
+        igniter = Igniter.include_existing_file(igniter, path)
+        {igniter, igniter.rewrite |> Rewrite.source!(path) |> Source.get(:content)}
+      else
+        {igniter, nil}
+      end
+    end
+
+    defp envrc_host(contents) do
+      case Regex.run(~r/^\s*(?:export\s+)?(?:PHX_HOST|BRANDO_URL_HOST)=["']?([A-Za-z0-9.-]*)/m, contents) do
+        [_, host] -> String.downcase(host)
+        nil -> ""
+      end
+    end
+
+    # Any check_origin key counts, whichever endpoint or condition it is under:
+    # the application's own choice is kept rather than second-guessed.
+    defp check_origin?(igniter, [], _seen), do: {igniter, false}
+
+    defp check_origin?(igniter, [path | paths], seen) do
+      if path in seen or not Igniter.exists?(igniter, path) do
+        check_origin?(igniter, paths, MapSet.put(seen, path))
+      else
+        igniter = Igniter.include_existing_file(igniter, path)
+        quoted = igniter.rewrite |> Rewrite.source!(path) |> Source.get(:quoted)
+
+        {_, {found?, imports}} =
+          Macro.prewalk(quoted, {false, []}, fn
+            {:__block__, _, [:check_origin]} = node, {_, imports} -> {node, {true, imports}}
+            :check_origin = node, {_, imports} -> {node, {true, imports}}
+            {:import_config, _, [import]} = node, {found?, imports} -> {node, {found?, imported(path, import, imports)}}
+            node, acc -> {node, acc}
+          end)
+
+        if found?,
+          do: {igniter, true},
+          else: check_origin?(igniter, paths ++ Enum.reverse(imports), MapSet.put(seen, path))
+      end
+    end
+
+    # Literal paths only: phx.new's import_config "#{config_env()}.exs" is
+    # config/prod.exs for a release, which is read anyway.
+    defp imported(path, {:__block__, _, [import]}, imports) when is_binary(import) do
+      file = import |> Path.expand(Path.dirname(Path.expand(path))) |> Path.relative_to_cwd()
+      [file | imports]
+    end
+
+    defp imported(_path, _import, imports), do: imports
+  end
+else
+  defmodule Mix.Brando.Igniter.Install.Deployment do
+    @moduledoc false
+    # Revisit this source when the optional dependency becomes available.
+    def __mix_recompile__?, do: Code.ensure_loaded?(Igniter)
+  end
+end

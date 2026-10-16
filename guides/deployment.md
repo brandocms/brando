@@ -188,6 +188,16 @@ end
 
 You can define multiple targets (`:prod`, `:staging`, etc.) in the same config file.
 
+A staging target builds the prod release: keep `set :mix_env, :prod` in it,
+not the `:staging` in `florist init`'s commented example. A Phoenix application
+has no `config/staging.exs`, so `import_config "#{config_env()}.exs"` fails in
+a `:staging` build, and the staging host is trusted through the prod
+`check_origin`. What differs between the targets is the environment file.
+
+Give each target its own database user, as above. Florist takes one password
+per target and leaves an existing user unchanged, so prod and staging sharing
+one user on a server would leave the second target's password unused.
+
 ### Template variables
 
 These are automatically interpolated in config values:
@@ -214,9 +224,40 @@ export FLORIST_SLACK_WEBHOOK_URL="https://hooks.slack.com/services/..."
 
 Create one env file per target, named after the target's flavor — `.envrc.prod`
 for a `:prod` flavor, `.envrc.staging` for `:staging` — in your project root
-(add them to `.gitignore`). Florist reads `.envrc.<flavor>` locally and uploads
-it to the server as `.envrc.runtime`, which the systemd service sources before
-starting your app. The `.runtime` name only ever exists on the server.
+(add them to `.gitignore`). Florist reads `.envrc.<flavor>` locally, uploads
+it to the server as `.envrc.runtime` and copies it into each release. The
+`.runtime` name only ever exists on the server.
+
+The systemd service runs `bin/<app> start`, which does not read the file by
+itself: the release's `rel/env.sh.eex` sources it. Without that script, none
+of the variables reach the application.
+
+```sh
+# rel/env.sh.eex
+if [ -f "$RELEASE_ROOT/.envrc.runtime" ]; then
+  . "$RELEASE_ROOT/.envrc.runtime"
+fi
+
+export RELEASE_DISTRIBUTION=name
+export RELEASE_NODE=${RELEASE_NODE:-<%= @release.name %>@127.0.0.1}
+```
+
+Florist's blue/green services set `RELEASE_NODE` per colour
+(`<app>_<target>_<colour>@127.0.0.1`) and only patch an existing `env.sh` to
+respect it, so keep the `${RELEASE_NODE:-...}` form. For `:single`
+deployments, set a per-target default in the env file, also in that form, so
+prod and staging on one server don't share a node name:
+`export RELEASE_NODE="${RELEASE_NODE:-myapp_staging@127.0.0.1}"`.
+
+`mix brando.install` generates both files and `rel/env.sh.eex` for a new
+application (see [Deployment hosts](generators.md#deployment-hosts)), with the
+variables a Phoenix `config/runtime.exs` reads: `PHX_HOST`, `PHX_SERVER`,
+`DATABASE_URL` and `SECRET_KEY_BASE`, plus that `RELEASE_NODE` default. Their
+`DATABASE_URL` uses the user `<app>` for prod (Florist's default) and
+`<app>_staging` for staging, whose target sets
+`set :user, "${PROJECT_NAME}_staging"`. Use whichever
+names your own `config/runtime.exs` reads; the example below is for one that
+reads Brando's `BRANDO_*` variables.
 
 ```bash
 export BRANDO_SECRET_KEY_BASE="generate-with-mix-phx-gen-secret"
@@ -240,9 +281,10 @@ export POOL_SIZE="15"
 > with an explicit error if they find `PORT=` in the env file. For a `:single`
 > deployment, setting `PORT` is fine and expected.
 
-The database password in `BRANDO_DB_URL` must match `FLORIST_DB_PASSWORD_PROD`,
-since florist uses the latter to create the database user that your app then
-authenticates as.
+The database user and password in the env file's database URL must match the
+target's database user and `FLORIST_DB_PASSWORD_<TARGET>` (for example
+`FLORIST_DB_PASSWORD_PROD`), since florist uses those to create the database
+user that your app then authenticates as.
 
 <!-- usage-rules:end -->
 

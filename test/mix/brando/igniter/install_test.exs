@@ -61,7 +61,11 @@ defmodule Mix.Brando.Igniter.InstallTest do
     Igniter.Test.assert_creates(igniter, "lib/studio_admin/gettext.ex")
     Igniter.Test.assert_creates(igniter, "priv/repo/migrations/20260101000250_brando_170_add_authorization_groups.exs")
     assert IgniterCase.source(igniter, "assets/backend/package.json") =~ "file:.yalc/@brandocms/brandojs"
-    assert Enum.all?(igniter.tasks, fn {task, _} -> task in ["brando.assets.copy", "deps.get"] end)
+    assert [{"deps.get", []} | _] = igniter.tasks
+
+    assert Enum.all?(igniter.tasks, fn {task, _} ->
+             task in ["brando.assets.copy", "brando.install.secrets", "deps.get"]
+           end)
   end
 
   test "existing admin route ownership blocks before planning source changes" do
@@ -175,7 +179,7 @@ defmodule Mix.Brando.Igniter.InstallTest do
   test "interactive choices are opt-in and supplied answers are not requested again" do
     Mix.shell(Mix.Shell.Process)
     send(self(), {:mix_shell_input, :prompt, "guided-studio"})
-    igniter = project() |> install(["--interactive", "--tenancy-mode", "single"])
+    igniter = project() |> install(["--interactive", "--tenancy-mode", "single", "--domain", "studio.example"])
     assert igniter.issues == []
     assert_received {:mix_shell, :prompt, ["+ Site key [studio]"]}
     refute_received {:mix_shell, :prompt, _}
