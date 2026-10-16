@@ -233,10 +233,10 @@ defmodule E2eProject.AssistantModel do
     end
   end
 
-  # "… and create a case called Sommerro with image2" adds a draft case whose
+  # "… and create a case called Example Hotel with image2" adds a draft case whose
   # listing image and first block use that attachment.
   defp case_operations(request, module, results) do
-    with [_, title, alias] <- Regex.run(~r/case called (\w+) with (\w+)/i, request),
+    with [_, title, alias] <- Regex.run(~r/case called (.+?) with (\w+)/i, request),
          %{"id" => id} <-
            Enum.find(results["list_attachments"]["attachments"], &(&1["alias"] == alias)) do
       [
@@ -246,7 +246,7 @@ defmodule E2eProject.AssistantModel do
           "ref" => "case",
           "fields" => %{
             "title" => title,
-            "slug" => String.downcase(title),
+            "slug" => title |> String.downcase() |> String.replace(" ", "-"),
             "language" => "en",
             "introduction" => "<p>#{title}</p>",
             "listing_image_id" => id
@@ -265,7 +265,7 @@ defmodule E2eProject.AssistantModel do
   end
 
   defp case_summary(request) do
-    case Regex.run(~r/case called (\w+)/i, request) do
+    case Regex.run(~r/case called (.+?)(?: with |$)/i, request) do
       [_, title] -> ", and create the #{title} case"
       _ -> ""
     end

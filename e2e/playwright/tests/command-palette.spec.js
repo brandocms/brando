@@ -63,8 +63,8 @@ test('opens with the shortcut inside the entry editor and gives focus back on es
 })
 
 test('opens from the sidebar, finds an entry by title and opens it with enter', async ({ page }) => {
-  await project(page, { title: 'Sommerro rooftop', slug: 'sommerro-rooftop', status: 'draft' })
-  const exact = await project(page, { title: 'Sommerro', slug: 'sommerro', status: 'published' })
+  await project(page, { title: 'Example Hotel rooftop', slug: 'example-hotel-rooftop', status: 'draft' })
+  const exact = await project(page, { title: 'Example Hotel', slug: 'example-hotel', status: 'published' })
 
   await page.goto('/admin')
   await syncLV(page)
@@ -77,11 +77,11 @@ test('opens from the sidebar, finds an entry by title and opens it with enter', 
   await expect(palette(page)).toBeVisible()
   await expect(input(page)).toBeFocused()
 
-  await search(page, 'sommerro')
+  await search(page, 'example hotel')
   // The entries, then the row that opens the search page
   const entries = group(page, 'entries').locator('[role=option].is-entry')
   await expect(entries).toHaveCount(2)
-  await expect(group(page, 'entries').getByRole('option').last()).toHaveAttribute('href', '/admin/search?q=sommerro')
+  await expect(group(page, 'entries').getByRole('option').last()).toHaveAttribute('href', '/admin/search?q=example+hotel')
   // An exact title before one that starts with the query
   await expect(entries.nth(0)).toHaveAttribute('href', `/admin/projects/projects/update/${exact.id}`)
   await expect(entries.nth(0)).toHaveAttribute('aria-selected', 'true')

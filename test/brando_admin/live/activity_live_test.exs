@@ -28,8 +28,8 @@ defmodule BrandoAdmin.ActivityLiveTest do
   end
 
   test "lists what happened, by day, with the person and the entry", %{conn: conn, current_user: user} do
-    page = create_page(user, "Sommerro")
-    {:ok, _} = Pages.update_page(page.id, %{title: "Sommerro hotel", meta_description: "By the sea"}, user)
+    page = create_page(user, "Example Hotel")
+    {:ok, _} = Pages.update_page(page.id, %{title: "Example Hotel Oslo", meta_description: "By the sea"}, user)
 
     {:ok, view, _} = live(conn, "/admin/config/activity")
 
@@ -37,14 +37,14 @@ defmodule BrandoAdmin.ActivityLiveTest do
     assert has_element?(view, ".activity-day h2", "Today")
     assert has_element?(view, ".activity-row .activity-action", "Created")
     assert has_element?(view, ".activity-row .activity-action", "Updated")
-    assert has_element?(view, ".activity-row a.activity-entry", "Sommerro hotel")
+    assert has_element?(view, ".activity-row a.activity-entry", "Example Hotel Oslo")
     assert has_element?(view, ".activity-row .activity-person-name", user.name)
     assert has_element?(view, ".activity-detail", "Changed SEO description and title")
     assert has_element?(view, ".activity-count", "2 events")
   end
 
   test "filters by action and by title", %{conn: conn, current_user: user} do
-    create_page(user, "Sommerro")
+    create_page(user, "Example Hotel")
     page = create_page(user, "Villa Tide")
     {:ok, _} = Pages.delete_page(page.id, user)
 
@@ -56,28 +56,28 @@ defmodule BrandoAdmin.ActivityLiveTest do
     refute has_element?(view, ".activity-row .activity-action", "Created")
     assert has_element?(view, ".activity-row a", "Open trash")
 
-    {:ok, view, _} = live(conn, "/admin/config/activity?q=sommer")
-    assert has_element?(view, ".activity-entry", "Sommerro")
+    {:ok, view, _} = live(conn, "/admin/config/activity?q=example")
+    assert has_element?(view, ".activity-entry", "Example Hotel")
     refute has_element?(view, ".activity-entry", "Villa Tide")
   end
 
   test "compares a change with the revision before it", %{conn: conn, current_user: user} do
-    page = create_page(user, "Sommerro")
-    {:ok, _} = Pages.update_page(page.id, %{title: "Sommerro hotel"}, user)
+    page = create_page(user, "Example Hotel")
+    {:ok, _} = Pages.update_page(page.id, %{title: "Example Hotel Oslo"}, user)
 
     {:ok, view, _} = live(conn, "/admin/config/activity")
 
     view |> element(".activity-row button", "Compare") |> render_click()
 
     assert has_element?(view, "#activity-compare-modal")
-    assert render(element(view, "#activity-comparison")) =~ "Sommerro hotel"
+    assert render(element(view, "#activity-comparison")) =~ "Example Hotel Oslo"
   end
 
   test "a scheduled revision not published because the entry was in the trash says so", %{
     conn: conn,
     current_user: user
   } do
-    page = create_page(user, "Sommerro")
+    page = create_page(user, "Example Hotel")
     {:ok, trashed} = Pages.delete_page(page.id, user)
     Brando.Activity.with_source(:scheduler, fn -> Brando.Activity.scheduled_revision_in_trash(trashed, user, 7) end)
 
@@ -100,10 +100,10 @@ defmodule BrandoAdmin.ActivityLiveTest do
   end
 
   test "a change prepared over MCP names the tool, and the person who approved it", %{conn: conn, current_user: user} do
-    page = create_page(user, "Sommerro")
+    page = create_page(user, "Example Hotel")
 
     Brando.Activity.with_source(:mcp, %{"client" => "Claude Code"}, fn ->
-      {:ok, _} = Pages.update_page(page.id, %{title: "Sommerro hotel"}, user)
+      {:ok, _} = Pages.update_page(page.id, %{title: "Example Hotel Oslo"}, user)
     end)
 
     {:ok, view, _} = live(conn, "/admin/config/activity")
@@ -135,7 +135,7 @@ defmodule BrandoAdmin.ActivityLiveTest do
 
   describe "who made a change" do
     setup %{current_user: user} do
-      hand = create_page(user, "Sommerro")
+      hand = create_page(user, "Example Hotel")
       {:ok, _} = Pages.update_page(hand.id, %{meta_description: "By the sea"}, user)
       assistant = apply_proposal(create_page(user, "Villa Tide"), user, :assistant)
       mcp = apply_proposal(create_page(user, "Aker brygge"), user, :mcp, "Claude Code")

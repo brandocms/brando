@@ -20,14 +20,14 @@ defmodule E2eProject.ContentProposalsTest do
 
     image =
       Repo.insert!(%Brando.Images.Image{
-        path: "images/proposals/sommerro.jpg",
+        path: "images/proposals/example-hotel.jpg",
         width: 1200,
         height: 800,
         formats: [:jpg],
         sizes:
           Map.new(
             ~w(micro thumb small medium large xlarge xlarge_crop),
-            &{&1, "images/proposals/#{&1}/sommerro.jpg"}
+            &{&1, "images/proposals/#{&1}/example-hotel.jpg"}
           ),
         config_target: "default",
         creator_id: actor.id
@@ -75,7 +75,7 @@ defmodule E2eProject.ContentProposalsTest do
     client =
       %Client{}
       |> Client.changeset(
-        %{name: "Sommerro AS", slug: "client-" <> suffix, language: "en", status: "draft"},
+        %{name: "Example Hotel AS", slug: "client-" <> suffix, language: "en", status: "draft"},
         actor
       )
       |> Repo.insert!()
@@ -94,10 +94,10 @@ defmodule E2eProject.ContentProposalsTest do
     ops = [
       %CreateEntry{
         schema: Project,
-        ref: "sommerro",
+        ref: "example_hotel",
         fields: %{
-          title: "Sommerro",
-          slug: "sommerro-" <> suffix,
+          title: "Example Hotel",
+          slug: "example-hotel-" <> suffix,
           introduction: "<p>A hotel in Oslo</p>",
           language: "en",
           client_id: client.id,
@@ -105,9 +105,9 @@ defmodule E2eProject.ContentProposalsTest do
         }
       },
       %InsertBlock{
-        target: {:new, "sommerro"},
+        target: {:new, "example_hotel"},
         module: module.id,
-        values: %{heading: "Sommerro story"},
+        values: %{heading: "Example Hotel story"},
         media: %{cover: {:image, image.id}}
       },
       %InsertBlock{
@@ -126,16 +126,16 @@ defmodule E2eProject.ContentProposalsTest do
     # The case has no id yet. Its page renders from the in-memory entry: the
     # listing image preloads through its foreign key, blocks from the proposal.
     assert {:ok, %{key: case_key, html: case_html}} =
-             Preview.render(proposal, {:new, "sommerro"}, actor)
+             Preview.render(proposal, {:new, "example_hotel"}, actor)
 
     # The title is an editable field component; config/test.exs turns on HEEx
     # debug annotations, which put a comment before it inside the heading.
-    assert case_html =~ ~r{<h2>(<!--[^>]*-->)?Sommerro</h2>}
-    assert case_html =~ "Sommerro story"
+    assert case_html =~ ~r{<h2>(<!--[^>]*-->)?Example Hotel</h2>}
+    assert case_html =~ "Example Hotel story"
     assert case_html =~ image.sizes["xlarge"]
 
     assert {:error, :not_created} =
-             Preview.render(proposal, {:new, "sommerro"}, actor, version: :before)
+             Preview.render(proposal, {:new, "example_hotel"}, actor, version: :before)
 
     assert {:ok, %{key: page_key, html: page_html}} =
              Preview.render(proposal, {Page, page.id}, actor)
@@ -153,10 +153,10 @@ defmodule E2eProject.ContentProposalsTest do
 
     {:ok, _} = Proposals.approve(proposal.id, proposal.version, actor)
     {:ok, receipt} = Proposals.apply(proposal.id, proposal.version, actor)
-    project = Repo.get!(Project, receipt.mappings["created"]["sommerro"])
+    project = Repo.get!(Project, receipt.mappings["created"]["example_hotel"])
     assert project.status == :draft
     assert project.listing_image_id == image.id
-    assert project.rendered_blocks =~ "Sommerro story"
+    assert project.rendered_blocks =~ "Example Hotel story"
     assert Repo.get!(Page, page.id).rendered_blocks =~ "Identity case"
 
     # Lists: the case's categories by id, its related entries as entries.

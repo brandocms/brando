@@ -55,19 +55,19 @@ defmodule Brando.SEO.SharePreviewTest do
 
     test "follow the meta schema, then the SEO settings' fallbacks" do
       page = %Brando.Pages.Page{
-        title: "Sommerro",
+        title: "Example Hotel",
         meta_title: nil,
         meta_description: "A hotel in the old bathhouse.",
         language: :en
       }
 
-      assert %{title: "Sommerro", search_title: "Sommerro", description: "A hotel in the old bathhouse."} =
+      assert %{title: "Example Hotel", search_title: "Example Hotel", description: "A hotel in the old bathhouse."} =
                SharePreview.values(Brando.Pages.Page, page, "en")
 
       # Without a meta schema the share title is the site's fallback, while
       # the search result shows the entry's own title.
-      assert %{title: fallback_title, search_title: "Sommerro"} =
-               SharePreview.values(Brando.Sites.SEO, %{title: "Sommerro"}, "en")
+      assert %{title: fallback_title, search_title: "Example Hotel"} =
+               SharePreview.values(Brando.Sites.SEO, %{title: "Example Hotel"}, "en")
 
       assert fallback_title == Brando.Cache.SEO.get("en").fallback_meta_title
 

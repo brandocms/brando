@@ -47,9 +47,9 @@ defmodule Brando.Content.UsageTest do
   test "an image is used by a video it is the thumbnail of, named by the video's title" do
     image = Factory.insert(:image)
     unused = Factory.insert(:image)
-    video = Factory.insert(:video, title: "Sommerro", thumbnail_id: image.id)
+    video = Factory.insert(:video, title: "Example Hotel", thumbnail_id: image.id)
 
-    assert [%{label: "Sommerro", url: url}] = Usage.list(:image, [image.id, unused.id])[image.id]
+    assert [%{label: "Example Hotel", url: url}] = Usage.list(:image, [image.id, unused.id])[image.id]
     assert url =~ "#{video.id}"
     assert image.id in Usage.used_ids(:image)
     refute unused.id in Usage.used_ids(:image)

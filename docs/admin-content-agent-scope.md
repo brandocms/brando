@@ -29,7 +29,7 @@ This publication policy is a recommendation, not yet an accepted product decisio
    attach existing library assets/folders. Display an attachment tray with
    thumbnails/posters, filenames and stable aliases: `image1`–`image5`,
    `video1`–`video2`. Assign aliases when selected, never by completion order.
-3. Ask for the category placements and a Sommerro case. Resolve actual records,
+3. Ask for the category placements and a Example Hotel case. Resolve actual records,
    block fields and allowed modules. Ask targeted questions for ambiguous titles,
    missing required values or unclear placement. Do not invent facts about a case.
 4. Build and validate a proposal. Show relevant progress, such as “Found Identity
@@ -52,13 +52,13 @@ modules allow the media types:
 | --- | --- | --- | --- |
 | Identity category | Update entry: insert one Case block | `image1` thumbnail, module name, insertion position | Updates the live page if currently published |
 | Naming category | Update entry: insert one Case block | `video2` poster, play control, insertion position | Updates the live page if currently published |
-| Sommerro case | Create entry | `image2` cover, name, proposed slug and required fields | Creates a draft |
+| Example Hotel case | Create entry | `image2` cover, name, proposed slug and required fields | Creates a draft |
 
 The summary should distinguish **one new entry**, **two updated entries**,
 **two inserted blocks**, and **zero deletions**. Entry actions and block actions
 are different counts. Display unused attachments as well.
 
-If those category blocks link to the new Sommerro case, the proposal must model
+If those category blocks link to the new Example Hotel case, the proposal must model
 that dependency. A draft case may not have a working public destination: resolve
 this by explicitly reviewing publication of the case or deferring its linked
 placements. Never silently publish it or imply a draft link will work.
@@ -75,7 +75,7 @@ this review UI. Brando components render the structured proposal.
 ### Page previews inside the workspace
 
 **Preview page** replaces the right-hand overview with a large preview; chat
-stays on the left. Entry tabs switch between Identity, Naming and Sommerro.
+stays on the left. Entry tabs switch between Identity, Naming and Example Hotel.
 Provide **Before / Proposed**, desktop/mobile viewport controls, **Show changes**,
 **Review fields** and **All changes**. The apply bar continues to describe the
 whole batch, including the number of live pages affected. Looking at one page
@@ -379,8 +379,7 @@ must be tested and committed there as well as the Brando-side changes here.
 
 ## Selected interface and design artifacts
 
-Three interactive directions are available in
-[the offline concept prototype](admin-ui/content-agent-concepts/concepts.html):
+Three interactive directions were prototyped:
 
 - **A — Workspace (selected):** persistent conversation beside a visual proposal,
   with on-demand page previews, Before / Proposed, viewport controls and change
@@ -392,10 +391,8 @@ Three interactive directions are available in
 
 These are concept mockups with illustrative media and simulated actions, not
 implemented admin screens. They have no LLM, MCP or Brando data connection.
-The user selected A and requested page previews. The preview extension is shown
-in [desktop](admin-ui/content-agent-concepts/workspace-page-preview-desktop.png)
-and [mobile](admin-ui/content-agent-concepts/workspace-page-preview-mobile.png)
-screenshots. Open the offline prototype and choose **Preview page** on any card.
+The user selected A and requested page previews. The shipped screens are in
+[the content assistant guide](../guides/content_assistant.md).
 
 Recommended next implementation step: prove the domain proposal/apply path for
 the actual site's Case definition and category schemas. That will establish the
@@ -738,7 +735,7 @@ The aim: whatever an editor can change in a block or entry, a proposal can too.
   the selected entry is a field grid.
 
 - **Tried on by.** Asked for an insight article about the typeface made for
-  Sommerro, the assistant could not read the case: its outline was 24 KB,
+  Example Hotel, the assistant could not read the case: its outline was 24 KB,
   over the result limit, and the library search matched the whole phrase. Now
   the outline describes as many blocks in full as fit in 20 KB (and
   `block_uid` reads one part in full); `request_media` takes `from_entry` and

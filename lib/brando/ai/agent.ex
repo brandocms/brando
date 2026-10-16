@@ -12,7 +12,7 @@ defmodule Brando.AI.Agent do
 
       {:ok, conversation} = Agent.start_conversation(user)
       {:ok, "image1"} = Agent.attach(conversation.id, {:image, 12}, user)
-      {:ok, run} = Agent.send_message(conversation.id, "Add the lobby photo to the Sommerro case", user)
+      {:ok, run} = Agent.send_message(conversation.id, "Add the lobby photo to the Example Hotel case", user)
 
   Progress arrives on `subscribe/1` as `{:agent, conversation_id, event}`:
   `{:message, message}`, `{:progress, text}`, `{:proposal, proposal_id}` and

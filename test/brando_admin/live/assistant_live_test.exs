@@ -535,8 +535,8 @@ defmodule BrandoAdmin.AssistantLiveTest do
       ops = [
         %Brando.Content.Proposals.CreateEntry{
           schema: Page,
-          ref: "sommerro",
-          fields: %{title: "Sommerro", uri: "sommerro", language: "en", template: "default.html"}
+          ref: "example_hotel",
+          fields: %{title: "Example Hotel", uri: "example-hotel", language: "en", template: "default.html"}
         },
         %Brando.Content.Proposals.InsertBlock{
           target: {Page, c.identity.id},
@@ -588,7 +588,7 @@ defmodule BrandoAdmin.AssistantLiveTest do
       refute before =~ "Written in the assistant"
       assert html =~ ~s(data-highlight="[]")
 
-      html = view |> element(~s(nav button[phx-value-key="new:sommerro"])) |> render_click()
+      html = view |> element(~s(nav button[phx-value-key="new:example_hotel"])) |> render_click()
       assert html =~ "This page has not been created yet"
 
       # Another entry starts on its content type's default view.
@@ -596,7 +596,7 @@ defmodule BrandoAdmin.AssistantLiveTest do
       html = view |> element(~s(button[phx-value-target="blocks"])) |> render_click()
       new_key = frame_key(html)
       assert {:ok, created} = Brando.LivePreview.get_cache(new_key)
-      assert created =~ "Sommerro"
+      assert created =~ "Example Hotel"
 
       view |> element("button", "All changes") |> render_click()
       assert has_element?(view, ".assistant-cards")

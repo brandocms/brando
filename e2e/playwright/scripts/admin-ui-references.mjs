@@ -16,10 +16,6 @@
 // live in scripts/admin-ui-references.spec.js. Chromium runs with
 // --font-render-hinting=none. Every reference is 1× at the stated width; the
 // state column says what the image shows.
-//
-// Not covered: docs/admin-ui/identifier-variants (a design study, see its capture.mjs),
-// docs/admin-ui/content-agent-concepts (concept prototypes) and the dated
-// audits under docs/audits.
 import { spawnSync } from 'node:child_process'
 import { copyFileSync, existsSync, mkdirSync, openSync, readSync, closeSync, readdirSync, statSync } from 'node:fs'
 import path from 'node:path'
@@ -56,7 +52,7 @@ const spec = {
   draftRefsVars: ['tests/pages/draft-media.spec.js', 'picture and video refs plus image and file vars recover, save and reset'],
   draftReorder: ['tests/pages/draft-reorder.spec.js', 'recovery shows block and gallery moves, preserves accompanying edits and lets wheel scroll the page'],
   assistantEmpty: ['scripts/admin-ui-references.spec.js', 'assistant: empty workspace'],
-  assistantSommerro: ['scripts/admin-ui-references.spec.js', 'assistant: Sommerro proposal from review to applied'],
+  assistantExampleHotel: ['scripts/admin-ui-references.spec.js', 'assistant: Example Hotel proposal from review to applied'],
   assistantNeedsChanges: ['scripts/admin-ui-references.spec.js', 'assistant: proposal that needs changes'],
   aiLooks: ['scripts/admin-ui-references.spec.js', 'ai actions and suggestions: composed sheet'],
 }
@@ -80,12 +76,12 @@ const catalogue = [
   [D + 'ai-actions-and-suggestions.png', 'aiLooks', 'ai-actions-and-suggestions.png', 1440, 'en', 'AI actions and suggestions, composed from the components\' markup (element)'],
 
   [D + 'assistant-empty-desktop.png', 'assistantEmpty', 'assistant-empty-desktop.png', 1440, 'en', 'Assistant, new conversation'],
-  [D + 'assistant-review-desktop.png', 'assistantSommerro', 'assistant-review-desktop.png', 1440, 'en', 'Sommerro proposal ready for review'],
-  [D + 'assistant-needs-changes-desktop.png', 'assistantNeedsChanges', 'assistant-needs-changes-desktop.png', 1440, 'en', 'Sommerro proposal blocked by a used slug'],
-  [D + 'assistant-library-desktop.png', 'assistantSommerro', 'assistant-library-desktop.png', 1440, 'en', 'Attach from the media library dialog over the proposal'],
-  [D + 'assistant-preview-desktop.png', 'assistantSommerro', 'assistant-preview-desktop.png', 1440, 'en', 'Page preview of the proposed Index page'],
-  [D + 'assistant-applied-desktop.png', 'assistantSommerro', 'assistant-applied-desktop.png', 1440, 'en', 'Proposal applied'],
-  [D + 'assistant-applied-mobile.png', 'assistantSommerro', 'assistant-applied-mobile.png', 390, 'en', 'Proposal applied, full page'],
+  [D + 'assistant-review-desktop.png', 'assistantExampleHotel', 'assistant-review-desktop.png', 1440, 'en', 'Example Hotel proposal ready for review'],
+  [D + 'assistant-needs-changes-desktop.png', 'assistantNeedsChanges', 'assistant-needs-changes-desktop.png', 1440, 'en', 'Example Hotel proposal blocked by a used slug'],
+  [D + 'assistant-library-desktop.png', 'assistantExampleHotel', 'assistant-library-desktop.png', 1440, 'en', 'Attach from the media library dialog over the proposal'],
+  [D + 'assistant-preview-desktop.png', 'assistantExampleHotel', 'assistant-preview-desktop.png', 1440, 'en', 'Page preview of the proposed Index page'],
+  [D + 'assistant-applied-desktop.png', 'assistantExampleHotel', 'assistant-applied-desktop.png', 1440, 'en', 'Proposal applied'],
+  [D + 'assistant-applied-mobile.png', 'assistantExampleHotel', 'assistant-applied-mobile.png', 390, 'en', 'Proposal applied, full page'],
 
   [C + 'export-types-norwegian.png', 'exportTypes', 'export-types-norwegian.png', 1440, 'no', 'Import/Export, Page and Fragment filters, Campaign launch selected, full page'],
   [C + 'export-types-norwegian-detail.png', 'exportTypes', 'export-types-norwegian-detail.png', 1440, 'no', 'Same, the entry list (element)'],

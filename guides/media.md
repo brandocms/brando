@@ -434,7 +434,7 @@ it from where the assets are used.
 
 Open the folder under **Resources → Images**, **Videos** or **Files** and
 choose **Sort by use**. The preview lists a folder per entry that uses images,
-videos or files from this one, named by type and title (`cases/sommerro`,
+videos or files from this one, named by type and title (`cases/example-hotel`,
 `pages/about`), with a few of them: images as they are, videos by their
 thumbnail, files by an icon for their type. Untick the ones to leave, rename
 the folders you want different, and move them. The bar above the list offers

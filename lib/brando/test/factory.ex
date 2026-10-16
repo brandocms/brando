@@ -15,7 +15,7 @@ defmodule Brando.Test.Factory do
   The `:creator` trait's creator is the user you pass as `user:`, or a new
   superuser.
 
-      project = insert_entry(MyApp.Projects.Project, %{title: "Sommerro"})
+      project = insert_entry(MyApp.Projects.Project, %{title: "Example Hotel"})
       params = params_for(MyApp.Projects.Project)
   """
 

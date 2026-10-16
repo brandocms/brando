@@ -39,8 +39,8 @@ defmodule BrandoAdmin.MetaPreviewsLiveTest do
     }
 
     Factory.insert(:page,
-      title: "Sommerro",
-      uri: "sommerro",
+      title: "Example Hotel",
+      uri: "example-hotel",
       meta_description: "A hotel in the old bathhouse.",
       creator: user,
       entry_blocks: [%Brando.Pages.Page.Blocks{sequence: 0, block: block}]
@@ -57,13 +57,13 @@ defmodule BrandoAdmin.MetaPreviewsLiveTest do
     assert view |> element("#{previews} [data-testid=meta-preview-search]") |> render() =~ "A hotel in the old bathhouse."
 
     view
-    |> form("#page_form_form", %{"page" => %{"meta_title" => "Sommerro, a hotel reopened"}})
+    |> form("#page_form_form", %{"page" => %{"meta_title" => "Example Hotel, reopened"}})
     |> render_change()
 
     assert view |> element("#{previews} [data-testid=meta-preview-open-graph]") |> render() =~
-             "Sommerro, a hotel reopened"
+             "Example Hotel, reopened"
 
-    assert view |> element("#{previews} [data-testid=meta-preview-x]") |> render() =~ "Sommerro, a hotel reopened"
+    assert view |> element("#{previews} [data-testid=meta-preview-x]") |> render() =~ "Example Hotel, reopened"
 
     # Nothing is read until the tab opens.
     assert view |> element("#{previews} [data-testid=meta-preview-markdown]") |> render() =~ "role=\"status\""
@@ -71,8 +71,8 @@ defmodule BrandoAdmin.MetaPreviewsLiveTest do
     view |> with_target(previews) |> render_hook("load", %{})
 
     markdown = view |> element("#{previews} [data-testid=meta-preview-markdown]") |> render()
-    assert markdown =~ "/sommerro.md"
-    assert markdown =~ "# Sommerro"
+    assert markdown =~ "/example-hotel.md"
+    assert markdown =~ "# Example Hotel"
     assert markdown =~ "Reopened in *2025*."
   end
 end
