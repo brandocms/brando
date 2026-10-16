@@ -212,4 +212,10 @@
   --brando-text-4xl: theme(text.4xl);
   --brando-text-5xl: theme(text.5xl);
   --brando-text-6xl: theme(text.6xl);
+
+  /* Typefaces: Schibsted Grotesk and JetBrains Mono with their fallbacks
+     (theme.typography.families, fonts.css). An application that sets other
+     families in its europa.json5 loads them itself. */
+  --brando-font-sans: theme(typography.families.main);
+  --brando-font-mono: theme(typography.families.mono);
 }

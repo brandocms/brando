@@ -6,7 +6,7 @@
   display: grid; grid-template-columns: 16px minmax(0, 1fr) auto; align-items: center;
   column-gap: 10px; row-gap: 2px; margin-bottom: 20px; padding: 12px 14px;
   border: 1px solid var(--brando-attention-line); border-radius: 8px; background: var(--brando-attention); color: var(--brando-ink);
-  font: var(--brando-text-md)/20px "Main", sans-serif;
+  font: var(--brando-text-md)/20px var(--brando-font-sans);
   > [data-icon] { width: 16px; height: 16px; color: var(--brando-attention-ink); }
   p { margin: 0; }
   .stale-blocks-notice-headline { font-weight: 500; }

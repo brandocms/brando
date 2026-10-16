@@ -348,7 +348,7 @@
 .media-sweep-extension {
   max-width: 40px;
   overflow: hidden;
-  font-family: "Mono";
+  font-family: var(--brando-font-mono);
   font-size: var(--brando-text-2xs);
   line-height: 10px;
   text-overflow: clip;
@@ -372,7 +372,7 @@
   border: 1px solid var(--brando-input-border);
   border-radius: 6px;
   background: var(--brando-surface);
-  font-family: "Mono";
+  font-family: var(--brando-font-mono);
   font-size: var(--brando-text-sm);
 }
 

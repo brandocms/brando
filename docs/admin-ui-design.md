@@ -336,7 +336,14 @@ window changes size.
 
 ## Use typography and color to establish hierarchy
 
-Retain Brando's existing typefaces. Every fixed font size is a step of the type
+The admin's typefaces are Schibsted Grotesk for text and JetBrains Mono for
+code, keys and technical values, both variable and under the SIL Open Font
+License ([`assets/fonts`](../assets/fonts), [`fonts.css`](../assets/css/fonts.css)).
+Write `var(--brando-font-sans)` or `var(--brando-font-mono)`, never a family
+name; they come from `theme.typography.families`. Weights run from 400: use
+400 for text and 500 for emphasis and headings.
+
+Every fixed font size is a step of the type
 scale, `theme.text` in the admin's `europa.json5`, which
 [`assets/css/tokens.css`](../assets/css/tokens.css) sets as `--brando-text-*`.
 Write `font-size: var(--brando-text-sm)` (or the size in a `font` shorthand),

@@ -603,7 +603,7 @@ if Code.ensure_loaded?(Igniter) do
 
     defp plan_asset({_format, source, target} = file, igniter, project) do
       cond do
-        Path.extname(target) in [".ico", ".woff2"] ->
+        Path.extname(target) == ".ico" ->
           binary_asset(igniter, source, target)
 
         Path.basename(target) == "package.json" && Igniter.exists?(igniter, target) ->

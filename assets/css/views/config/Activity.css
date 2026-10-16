@@ -89,7 +89,7 @@
   padding: 0;
   border: 0;
   background: none;
-  font-family: theme(typography.families.mono);
+  font-family: var(--brando-font-mono);
   font-size: var(--brando-text-xs);
   color: var(--activity-muted);
   white-space: nowrap;
@@ -181,7 +181,7 @@ button.activity-revision {
     font-size: var(--brando-text-2xl);
 
     span {
-      font-family: theme(typography.families.mono);
+      font-family: var(--brando-font-mono);
       font-size: var(--brando-text-xs);
       font-weight: 400;
       letter-spacing: 0;
@@ -209,7 +209,7 @@ button.activity-revision {
 
     > time {
       padding-top: 4px;
-      font-family: theme(typography.families.mono);
+      font-family: var(--brando-font-mono);
       font-size: var(--brando-text-sm);
       color: var(--activity-muted);
       font-variant-numeric: tabular-nums;
@@ -319,7 +319,7 @@ button.activity-revision {
   }
 
   .security-log-ip {
-    font-family: theme(typography.families.mono);
+    font-family: var(--brando-font-mono);
     font-size: var(--brando-text-xs);
     font-variant-numeric: tabular-nums;
   }
@@ -424,7 +424,7 @@ button.activity-revision {
     padding-top: 2px;
 
     time {
-      font-family: theme(typography.families.mono);
+      font-family: var(--brando-font-mono);
       font-size: var(--brando-text-xs);
       color: var(--activity-muted);
     }

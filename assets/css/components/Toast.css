@@ -65,7 +65,7 @@
 }
 
 .toast-mono {
-  font-family: theme(typography.families.mono);
+  font-family: var(--brando-font-mono);
   font-size: var(--brando-text-xs);
 }
 
@@ -130,7 +130,7 @@
 
 .progress-popup {
   position: fixed;
-  font-family: "Mono";
+  font-family: var(--brando-font-mono);
   font-size: var(--brando-text-sm);
   text-transform: uppercase;
   background-color: var(--brando-ink);

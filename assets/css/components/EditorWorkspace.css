@@ -3,7 +3,7 @@
   width: min(900px, 100vw);
   &.narrow { width: min(540px, 100vw); }
   .drawer-info { padding: 20px 24px !important; background: var(--brando-surface-shaded); border-bottom: 1px solid var(--workspace-line); }
-  .drawer-info p { margin: 0; padding: 0; font: var(--brando-text-md)/20px "Main", sans-serif; color: var(--workspace-muted); }
+  .drawer-info p { margin: 0; padding: 0; font: var(--brando-text-md)/20px var(--brando-font-sans); color: var(--workspace-muted); }
   .drawer-info p:last-of-type { margin-bottom: 0 !important; }
   .drawer-info p + p { padding-top: 12px; }
   .drawer-form { padding: 24px; }
@@ -16,10 +16,10 @@
   /* As an inline-block the switch sat on the text baseline, which left a
      strut's descent between it and its help text. */
   .drawer-form .field-base > .switch { display: block; }
-  .drawer-form .control-label { color: var(--workspace-ink); font: var(--brando-text-lg)/20px "Main", sans-serif; }
+  .drawer-form .control-label { color: var(--workspace-ink); font: var(--brando-text-lg)/20px var(--brando-font-sans); }
   .drawer-form input.text, .drawer-form textarea, .drawer-form .multiselect {
     background: var(--brando-surface); color: var(--workspace-ink); border: 1px solid var(--workspace-line);
-    border-radius: 5px; font: var(--brando-text-lg)/20px "Main", sans-serif;
+    border-radius: 5px; font: var(--brando-text-lg)/20px var(--brando-font-sans);
   }
   .drawer-form input.text { height: 44px; padding: 0 12px; }
   .drawer-form textarea { padding: 10px 12px; }
@@ -30,7 +30,7 @@
     display: inline-flex; align-items: center; justify-content: center; gap: 6px;
     height: auto; min-height: 34px; margin: 0; padding: 6px 12px;
     border: 1px solid var(--workspace-line) !important; border-radius: 5px;
-    background: var(--brando-surface); color: var(--workspace-ink); font: var(--brando-text-md)/20px "Main", sans-serif;
+    background: var(--brando-surface); color: var(--workspace-ink); font: var(--brando-text-md)/20px var(--brando-font-sans);
     &:hover { background: var(--brando-surface-hover); color: var(--workspace-accent); }
   }
   /* A media field joins its actions into one segmented control, which the
@@ -47,26 +47,26 @@
   }
   /* Alternates: linked entries, then the entries that can be linked */
   .alternates-section + .alternates-section { margin-top: 24px; padding-top: 24px; border-top: 1px solid var(--workspace-line); }
-  .alternates-section h3 { margin: 0 0 12px; color: var(--workspace-ink); font: 500 var(--brando-text-lg)/20px "Main", sans-serif; }
-  .alternates-section p { margin: 0 0 12px; color: var(--workspace-muted); font: var(--brando-text-md)/20px "Main", sans-serif; }
+  .alternates-section h3 { margin: 0 0 12px; color: var(--workspace-ink); font: 500 var(--brando-text-lg)/20px var(--brando-font-sans); }
+  .alternates-section p { margin: 0 0 12px; color: var(--workspace-muted); font: var(--brando-text-md)/20px var(--brando-font-sans); }
   .alternates-section .identifier-list { display: flex; flex-direction: column; gap: 8px; margin: 0 0 12px; }
   .button-group { display: flex; flex-wrap: wrap; width: auto; gap: 8px; margin: 0; padding-top: 16px; }
   .button-group button { flex: 0 1 auto; margin: 0; border-radius: 5px; }
   .revision-preview-notice, .revisions-empty { border: 1px solid var(--workspace-line); border-radius: 6px; background: var(--brando-surface-tint); color: var(--workspace-ink); padding: 12px; margin: 0 0 16px; }
-  .current-schema-version { color: var(--workspace-muted); font: var(--brando-text-sm)/20px "Main", sans-serif; padding-bottom: 12px; }
+  .current-schema-version { color: var(--workspace-muted); font: var(--brando-text-sm)/20px var(--brando-font-sans); padding-bottom: 12px; }
   .current-schema-version .version { background: var(--brando-surface-selected); color: var(--workspace-accent); border-radius: 3px; padding: 2px 6px; }
   .revisions-table { margin: 0; table-layout: fixed; }
   .revisions-table .revision-column { width: 15%; }
   .revisions-table .status-column { width: 30%; }
   .revisions-table .created-column { width: 22%; }
   .revisions-table .actions-column { width: 44px; }
-  .revisions-table th { padding: 10px; border: 0; border-bottom: 1px solid var(--workspace-line); background: var(--brando-surface-shaded); color: var(--workspace-muted); font: var(--brando-text-sm)/18px "Main", sans-serif; text-transform: none; }
-  .revisions-table .revisions-line td { padding: 14px 10px; border: 0; border-bottom: 1px solid var(--workspace-line); background: var(--brando-surface); color: var(--workspace-ink); font: var(--brando-text-md)/20px "Main", sans-serif; text-align: left; vertical-align: middle; white-space: normal; overflow-wrap: anywhere; }
+  .revisions-table th { padding: 10px; border: 0; border-bottom: 1px solid var(--workspace-line); background: var(--brando-surface-shaded); color: var(--workspace-muted); font: var(--brando-text-sm)/18px var(--brando-font-sans); text-transform: none; }
+  .revisions-table .revisions-line td { padding: 14px 10px; border: 0; border-bottom: 1px solid var(--workspace-line); background: var(--brando-surface); color: var(--workspace-ink); font: var(--brando-text-md)/20px var(--brando-font-sans); text-align: left; vertical-align: middle; white-space: normal; overflow-wrap: anywhere; }
   .revisions-table .revisions-line.active td { background: var(--brando-surface-selected); color: var(--workspace-accent); }
   .revisions-table .revisions-line .revision-preview-button { padding: 0; font-weight: 500; }
   .revision-schema, .revision-time { display: block; margin-top: 3px; color: var(--workspace-muted); font-size: var(--brando-text-sm); line-height: 18px; }
   .revision-statuses { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
-  .revision-status { display: inline-flex; align-items: center; gap: 5px; padding: 3px 8px; border: 1px solid var(--brando-line); border-radius: 5px; background: var(--brando-badge-bg); color: var(--brando-muted); font: var(--brando-text-sm)/18px "Main", sans-serif; white-space: nowrap; }
+  .revision-status { display: inline-flex; align-items: center; gap: 5px; padding: 3px 8px; border: 1px solid var(--brando-line); border-radius: 5px; background: var(--brando-badge-bg); color: var(--brando-muted); font: var(--brando-text-sm)/18px var(--brando-font-sans); white-space: nowrap; }
   .revision-status.is-active { background: var(--brando-success); border-color: var(--brando-success-line); color: var(--brando-success-ink); }
   .revision-status.is-scheduled { background: var(--brando-attention); border-color: var(--brando-attention-line); color: var(--brando-attention-ink); }
   .revision-protection { display: inline-flex; align-items: center; gap: 4px; color: var(--workspace-muted); font-size: var(--brando-text-sm); white-space: nowrap; }

@@ -92,7 +92,7 @@
   height: 24px;
   background-color: var(--brando-ink);
   color: var(--brando-ink-inverse);
-  font-family: "Mono";
+  font-family: var(--brando-font-mono);
   font-size: var(--brando-text-2xs);
   text-transform: uppercase;
   cursor: pointer;
@@ -1130,7 +1130,7 @@ button.btn-palette {
       }
 
       .media-field-name {
-        font: 400 var(--vars-value-size)/20px "Main", sans-serif;
+        font: 400 var(--vars-value-size)/20px var(--brando-font-sans);
         min-width: 0;
         overflow: hidden;
         white-space: nowrap;
@@ -1228,7 +1228,7 @@ button.btn-palette {
         /* Input text snaps to whole pixels: 1px left it 0.5px high, 2px
            leaves it 0.45px low, which reads better */
         padding: 2px 6px 0;
-        font: var(--vars-value-size)/20px "Main", sans-serif;
+        font: var(--vars-value-size)/20px var(--brando-font-sans);
         background-color: transparent;
         border: 1px solid transparent;
         border-radius: 4px;
@@ -1271,7 +1271,7 @@ button.btn-palette {
         right: 0;
         padding: 2px 6px;
         border: 0;
-        font: var(--brando-text-sm)/20px "Main", sans-serif;
+        font: var(--brando-text-sm)/20px var(--brando-font-sans);
         text-transform: none;
         color: var(--vars-muted);
         background: transparent;
@@ -2009,7 +2009,7 @@ button.btn-palette {
     border-radius: 4px;
     background: var(--presence-ink, var(--brando-accent));
     color: var(--brando-surface);
-    font: 500 var(--brando-text-xs)/18px "Main", sans-serif;
+    font: 500 var(--brando-text-xs)/18px var(--brando-font-sans);
     letter-spacing: 0;
     text-transform: none;
     white-space: nowrap;
@@ -2031,7 +2031,7 @@ button.btn-palette {
   border-radius: 4px;
   background: var(--presence-ink, var(--brando-accent));
   color: var(--brando-surface);
-  font: 500 var(--brando-text-xs)/18px "Main", sans-serif;
+  font: 500 var(--brando-text-xs)/18px var(--brando-font-sans);
   letter-spacing: 0;
   text-transform: none;
   white-space: nowrap;
@@ -2048,7 +2048,7 @@ button.btn-palette {
     radial-gradient(circle at 9px 50%, var(--presence-ink, var(--brando-accent)) 4px, transparent 4.5px),
     var(--brando-badge-bg);
   color: var(--brando-ink);
-  font: var(--brando-text-sm)/22px "Main", sans-serif;
+  font: var(--brando-text-sm)/22px var(--brando-font-sans);
   letter-spacing: 0;
   text-overflow: ellipsis;
   text-transform: none;

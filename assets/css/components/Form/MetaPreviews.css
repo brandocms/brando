@@ -18,7 +18,7 @@
   display: grid;
   gap: 16px;
   color: var(--brando-ink);
-  font: var(--brando-text-lg)/20px "Main", sans-serif;
+  font: var(--brando-text-lg)/20px var(--brando-font-sans);
 
   p { margin: 0; padding: 0; }
   :is(a, [tabindex]):focus-visible { outline: 2px solid var(--brando-accent); outline-offset: 2px; }
@@ -184,7 +184,7 @@
 
 .meta-preview-markdown-path {
   color: var(--brando-ink);
-  font-family: theme(typography.families.mono);
+  font-family: var(--brando-font-mono);
   font-size: var(--brando-text-sm);
   text-decoration: none;
 
@@ -200,7 +200,7 @@
   border-radius: 8px;
   background: var(--brando-surface-shaded);
   color: var(--brando-ink);
-  font-family: theme(typography.families.mono);
+  font-family: var(--brando-font-mono);
   font-size: var(--brando-text-sm);
   line-height: 20px;
   white-space: pre-wrap;

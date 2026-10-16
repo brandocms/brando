@@ -17,7 +17,7 @@
   background: var(--brando-ink);
   color: var(--brando-ink-inverse);
   box-shadow: 0 2px 8px color-mix(in srgb, var(--brando-ink) 18%, transparent);
-  font: 400 var(--brando-text-sm)/16px "Main", sans-serif;
+  font: 400 var(--brando-text-sm)/16px var(--brando-font-sans);
   letter-spacing: 0;
   text-align: left;
   text-transform: none;

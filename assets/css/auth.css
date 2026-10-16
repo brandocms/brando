@@ -62,7 +62,7 @@
 
   .title {
     @space margin-bottom sm;
-    font-family: theme(typography.families.mono);
+    font-family: var(--brando-font-mono);
     font-size: var(--brando-text-3xl);
   }
 
@@ -77,7 +77,7 @@
   .login-subtitle {
     display: block;
     margin-top: 8px;
-    font-family: theme(typography.families.main);
+    font-family: var(--brando-font-sans);
     font-size: var(--brando-text-xl);
   }
 

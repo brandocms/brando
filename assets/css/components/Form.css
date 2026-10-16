@@ -93,7 +93,7 @@
 
       .live-preview-heading {
         margin-right: auto;
-        font: 500 var(--brando-text-md)/20px "Main", sans-serif;
+        font: 500 var(--brando-text-md)/20px var(--brando-font-sans);
         color: var(--brando-muted);
       }
 
@@ -133,7 +133,7 @@
           border-radius: 0;
           border-right-width: 0;
           background: var(--brando-surface);
-          font: var(--brando-text-sm)/16px "Main", sans-serif;
+          font: var(--brando-text-sm)/16px var(--brando-font-sans);
           [data-icon] { flex: 0 0 20px; width: 20px; height: 20px; }
           &:first-child { border-radius: 7px 0 0 7px; }
           &:last-child { border-radius: 0 7px 7px 0; border-right-width: 1px; }
@@ -488,7 +488,7 @@
 }
 
 .tiny-toggle-label {
-  font-family: "Mono", monospace;
+  font-family: var(--brando-font-mono);
   font-size: var(--brando-text-2xs);
   text-transform: uppercase;
   color: var(--brando-ink);
@@ -643,7 +643,7 @@
     border-radius: 6px;
     background: transparent;
     color: var(--brando-ink);
-    font: 400 var(--brando-text-sm)/18px "Main", sans-serif;
+    font: 400 var(--brando-text-sm)/18px var(--brando-font-sans);
     white-space: nowrap;
     cursor: pointer;
     transition: background-color 0.2s ease;
@@ -702,7 +702,7 @@
       border-radius: 6px 0 0 6px;
       background-color: transparent;
       color: inherit;
-      font: 500 var(--brando-text-sm)/18px "Main", sans-serif;
+      font: 500 var(--brando-text-sm)/18px var(--brando-font-sans);
       white-space: nowrap;
       cursor: pointer;
       transition: background-color 0.2s ease;
@@ -948,7 +948,7 @@
   background-color: var(--presence-ink, var(--brando-accent));
   box-shadow: 0 2px 8px color-mix(in srgb, var(--brando-ink) 16%, transparent);
   color: var(--brando-ink-inverse);
-  font: 500 var(--brando-text-sm)/18px "Main", sans-serif;
+  font: 500 var(--brando-text-sm)/18px var(--brando-font-sans);
   white-space: nowrap;
   transform: translateX(-50%);
 
@@ -1011,7 +1011,7 @@
   min-width: 0;
   text-align: right;
   color: var(--brando-status-disabled);
-  font: 400 var(--brando-text-sm)/18px "Main", sans-serif;
+  font: 400 var(--brando-text-sm)/18px var(--brando-font-sans);
 
   .draft-save-message {
     max-width: 100%;
@@ -1033,7 +1033,7 @@
   min-height: 30px;
   padding: 0 6px;
   color: var(--brando-muted);
-  font: 400 var(--brando-text-sm)/18px "Main", sans-serif;
+  font: 400 var(--brando-text-sm)/18px var(--brando-font-sans);
 
   .draft-save-dot {
     flex: none;
@@ -1169,7 +1169,7 @@ html.not-mac .shortcut-other { display: inline; }
   border-radius: 4px;
   background: var(--brando-surface-hover);
   color: var(--brando-muted);
-  font: var(--brando-text-2xs)/16px "Main", sans-serif;
+  font: var(--brando-text-2xs)/16px var(--brando-font-sans);
   white-space: nowrap;
 }
 
@@ -1236,7 +1236,7 @@ html.not-mac .shortcut-other { display: inline; }
     radial-gradient(circle at 7px 50%, var(--presence-color-strong, color-mix(in srgb, var(--brando-presence-0) 80%, transparent)) 3px, transparent 3.5px),
     var(--brando-badge-bg);
   color: var(--brando-badge-ink);
-  font: var(--brando-text-xs)/18px "Main", sans-serif;
+  font: var(--brando-text-xs)/18px var(--brando-font-sans);
   letter-spacing: 0;
   text-transform: none;
   white-space: nowrap;
@@ -1381,14 +1381,6 @@ html.not-mac .shortcut-other { display: inline; }
   text-overflow: ellipsis;
   font-size: inherit;
   font-weight: inherit;
-}
-
-/* Main's glyphs sit slightly above its line-box center. Align the visible text
-   with the centered icon masks, including text-only tabs. */
-.form-tabs .form-tab-label,
-.form-tabs .tab-text,
-.form-tabs .preview-current-view {
-  transform: translateY(1px);
 }
 
 .form-tabs .split-dropdown-button > [data-icon] {

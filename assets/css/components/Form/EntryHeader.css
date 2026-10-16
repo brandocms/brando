@@ -17,7 +17,7 @@
   gap: 4px 6px;
   min-width: 0;
   color: var(--brando-muted);
-  font: 400 var(--brando-text-sm)/18px "Main", sans-serif;
+  font: 400 var(--brando-text-sm)/18px var(--brando-font-sans);
 
   .entry-breadcrumb-icon {
     flex: none;
@@ -101,7 +101,7 @@
   border-radius: 999px;
   background: var(--brando-surface);
   color: var(--brando-ink);
-  font: 400 var(--brando-text-md)/18px "Main", sans-serif;
+  font: 400 var(--brando-text-md)/18px var(--brando-font-sans);
   white-space: nowrap;
   cursor: pointer;
   transition: background-color 0.2s ease, border-color 0.2s ease;
@@ -186,7 +186,7 @@
   margin: 0;
   padding: 8px 10px;
   border-radius: 5px;
-  font: 400 var(--brando-text-md)/18px "Main", sans-serif;
+  font: 400 var(--brando-text-md)/18px var(--brando-font-sans);
   cursor: pointer;
 
   /* The row is the control: its label clicks the radio, which stays

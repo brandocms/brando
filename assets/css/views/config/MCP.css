@@ -13,7 +13,7 @@
     > div { display: grid; grid-template-columns: 120px minmax(0, 1fr); gap: 4px 16px; }
     dt { margin: 0; color: var(--brando-muted); font-size: var(--brando-text-sm); line-height: 20px; }
     dd { display: grid; gap: 4px; margin: 0; font-size: var(--brando-text-md); line-height: 20px; overflow-wrap: anywhere; }
-    code { font-family: theme(typography.families.mono); font-size: var(--brando-text-sm); }
+    code { font-family: var(--brando-font-mono); font-size: var(--brando-text-sm); }
   }
 
   .mcp-consent-warning {
@@ -50,7 +50,7 @@
   .mcp-url input {
     flex: 1 1 320px; min-width: 0; height: 40px; padding: 0 12px;
     border: 1px solid var(--brando-line); border-radius: 5px; background: var(--brando-surface-shaded);
-    color: var(--brando-ink); font-family: theme(typography.families.mono); font-size: var(--brando-text-md);
+    color: var(--brando-ink); font-family: var(--brando-font-mono); font-size: var(--brando-text-md);
     &:focus-visible { outline: 2px solid var(--brando-accent); outline-offset: 1px; }
   }
   .mcp-grants { margin-top: 24px; }

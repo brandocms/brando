@@ -10,7 +10,7 @@ defmodule Mix.Tasks.Brando.Assets.Copy do
   @impl Mix.Task
   def run([target, expected_digest]) do
     case Enum.find(Templates.manifest(), fn
-           {:copy, _source, ^target} -> Path.extname(target) in [".ico", ".woff2"]
+           {:copy, _source, ^target} -> Path.extname(target) == ".ico"
            _ -> false
          end) do
       {:copy, source, ^target} -> copy!(target, Templates.contents(:copy, source), expected_digest)

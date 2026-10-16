@@ -7,7 +7,7 @@ select.admin-select {
   min-width: 0;
   height: 40px;
   padding: 0 40px 0 14px;
-  font: var(--brando-text-md)/20px "Main", sans-serif;
+  font: var(--brando-text-md)/20px var(--brando-font-sans);
   color: var(--brando-ink);
   border: 1px solid var(--brando-input-border);
   border-radius: var(--brando-input-radius);
@@ -63,7 +63,7 @@ h2.titlecase {
     min-height: 22px;
     margin: 0 0 8px;
     color: var(--brando-ink);
-    font: 500 var(--brando-text-md)/20px "Main", sans-serif;
+    font: 500 var(--brando-text-md)/20px var(--brando-font-sans);
     letter-spacing: 0;
     text-transform: none;
   }
@@ -401,7 +401,7 @@ h2.titlecase {
           font-size: var(--brando-text-xs);
           opacity: 0.55;
           margin-top: 3px;
-          font-family: 'Main';
+          font-family: var(--brando-font-sans);
         }
       }
     }
@@ -564,7 +564,7 @@ h2.titlecase {
   border-radius: 4px;
   padding: 8px 12px;
   font-size: var(--brando-text-md);
-  font-family: "Mono";
+  font-family: var(--brando-font-mono);
 
   .invalid-options-warning-content {
     display: flex;

@@ -13,7 +13,7 @@
   background: var(--brando-surface-hover);
   color: var(--brando-ink);
   box-shadow: 0 4px 24px color-mix(in srgb, var(--brando-ink) 15%, transparent);
-  font: var(--brando-text-md)/20px "Main", sans-serif;
+  font: var(--brando-text-md)/20px var(--brando-font-sans);
   transform: translateY(0);
   opacity: 1;
 

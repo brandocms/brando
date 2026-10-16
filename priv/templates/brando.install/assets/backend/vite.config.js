@@ -12,6 +12,9 @@ export default defineConfig({
   server: {
     host,
     port,
+    // The admin page comes from Phoenix, so asset URLs Vite writes in
+    // development (the admin's fonts) must name Vite's own origin.
+    origin: `http://${host}:${port}`,
     headers: {
       'Access-Control-Allow-Origin': '*',
     },

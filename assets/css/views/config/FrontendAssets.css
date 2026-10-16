@@ -30,7 +30,7 @@
   .frontend-assets-build.active { background: var(--brando-surface-shaded); }
   .frontend-assets-table .frontend-assets-build__identity { width: auto; min-width: 180px; }
   .frontend-assets-build__identity h3 { font-size: var(--brando-text-md); overflow-wrap: anywhere; }
-  .frontend-assets-build__identity code { display: block; margin-top: 5px; font-family: theme(typography.families.mono); font-size: var(--brando-text-xs); color: var(--workspace-muted); overflow-wrap: anywhere; }
+  .frontend-assets-build__identity code { display: block; margin-top: 5px; font-family: var(--brando-font-mono); font-size: var(--brando-text-xs); color: var(--workspace-muted); overflow-wrap: anywhere; }
   .frontend-assets-table .frontend-assets-build__uploaded { width: 175px; font-size: var(--brando-text-sm); white-space: nowrap; }
   .frontend-assets-table .frontend-assets-build__bundle { width: 130px; font-size: var(--brando-text-sm); white-space: nowrap; }
   .frontend-assets-table .frontend-assets-build__status { width: 104px; }

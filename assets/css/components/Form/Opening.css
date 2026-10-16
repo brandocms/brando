@@ -177,7 +177,7 @@
   min-height: 30px;
   padding: 0 8px;
   color: var(--brando-muted);
-  font: 400 var(--brando-text-sm)/18px "Main", sans-serif;
+  font: 400 var(--brando-text-sm)/18px var(--brando-font-sans);
   white-space: nowrap;
 }
 

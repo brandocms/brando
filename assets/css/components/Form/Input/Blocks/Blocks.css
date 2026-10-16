@@ -338,7 +338,7 @@ section.alert.danger {
 
   .blocks-welcome-module-count {
     color: color-mix(in srgb, var(--brando-muted) 70%, var(--brando-surface));
-    font-family: theme(typography.families.mono);
+    font-family: var(--brando-font-mono);
     font-size: var(--brando-text-xs);
     line-height: 14px;
     white-space: nowrap;
@@ -654,7 +654,7 @@ section.alert.danger {
   border: 1px solid var(--brando-line);
   border-bottom-width: 2px;
   border-radius: 4px;
-  font: 500 var(--brando-text-xs)/16px "Main", sans-serif;
+  font: 500 var(--brando-text-xs)/16px var(--brando-font-sans);
   text-align: center;
   color: var(--brando-muted);
   background: var(--brando-surface);
@@ -759,7 +759,7 @@ section.alert.danger {
 .module-picker-group-title {
   margin: 0;
   padding: 14px 12px 4px;
-  font: 400 var(--brando-text-xs)/1.4 "Mono", monospace;
+  font: 400 var(--brando-text-xs)/1.4 var(--brando-font-mono);
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--brando-muted);

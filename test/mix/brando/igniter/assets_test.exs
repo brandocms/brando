@@ -10,7 +10,7 @@ defmodule Mix.Brando.Igniter.AssetsTest do
     assert igniter.issues == []
 
     {"brando.assets.copy", [target, digest]} =
-      Enum.find(igniter.tasks, fn {_, [target, _]} -> String.ends_with?(target, "Mono.woff2") end)
+      Enum.find(igniter.tasks, fn {_, [target, _]} -> String.ends_with?(target, "backend/public/favicon.ico") end)
 
     refute Rewrite.has_source?(igniter.rewrite, target)
     refute Map.has_key?(igniter.assigns.test_files, target)
@@ -27,9 +27,9 @@ defmodule Mix.Brando.Igniter.AssetsTest do
         assert File.read!(target) == Templates.contents(:copy, target)
         Copy.run([target, digest])
         assert File.read!(target) == Templates.contents(:copy, target)
-        File.write!(target, "custom font")
+        File.write!(target, "custom icon")
         assert_raise Mix.Error, ~r/refusing to overwrite/, fn -> Copy.run([target, digest]) end
-        assert File.read!(target) == "custom font"
+        assert File.read!(target) == "custom icon"
         assert Path.wildcard(target <> ".brando-*") == []
       end)
     after
@@ -38,10 +38,10 @@ defmodule Mix.Brando.Igniter.AssetsTest do
   end
 
   test "the copier rejects an unknown path or stale source digest" do
-    assert_raise Mix.Error, ~r/Unknown Brando binary asset/, fn -> Copy.run(["../outside.woff2", "unused"]) end
+    assert_raise Mix.Error, ~r/Unknown Brando binary asset/, fn -> Copy.run(["../outside.ico", "unused"]) end
 
     assert_raise Mix.Error, ~r/changed since planning/, fn ->
-      Copy.run(["assets/backend/public/fonts/Mono.woff2", "stale"])
+      Copy.run(["assets/backend/public/favicon.ico", "stale"])
     end
   end
 

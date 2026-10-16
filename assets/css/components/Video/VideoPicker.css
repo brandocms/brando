@@ -141,7 +141,7 @@
     background: transparent;
     color: color-mix(in srgb, var(--brando-ink) 84%, white);
     font-size: var(--brando-text-sm);
-    font-family: "Mono";
+    font-family: var(--brando-font-mono);
     text-transform: uppercase;
     letter-spacing: 0.03em;
     transition:
@@ -180,7 +180,7 @@
     gap: 0.6rem;
 
     span {
-      font-family: "Mono";
+      font-family: var(--brando-font-mono);
       font-size: var(--brando-text-xs);
       text-transform: uppercase;
       letter-spacing: 0.08em;
@@ -198,7 +198,7 @@
   background: color-mix(in srgb, var(--brando-surface-subform) 16%, white);
   border: 1px solid color-mix(in srgb, var(--brando-surface-subform) 42%, white);
   border-radius: 8px;
-  font-family: "Mono";
+  font-family: var(--brando-font-mono);
   font-size: var(--brando-text-xs);
   text-transform: uppercase;
   letter-spacing: 0.04em;
@@ -226,7 +226,7 @@
     line-height: 24px;
     padding: 0 0.55rem;
     font-size: var(--brando-text-2xs);
-    font-family: "Mono";
+    font-family: var(--brando-font-mono);
     text-transform: uppercase;
     letter-spacing: 0.03em;
     transition:
@@ -257,7 +257,7 @@
   border-radius: 999px;
   background: var(--brando-ink);
   color: white;
-  font-family: "Mono";
+  font-family: var(--brando-font-mono);
   font-size: var(--brando-text-lg);
   font-weight: 600;
   box-shadow: var(--brando-shadow-md);
@@ -301,7 +301,7 @@
     border-radius: 12px;
     padding: 2rem 1rem;
     text-align: center;
-    font-family: "Mono";
+    font-family: var(--brando-font-mono);
     color: color-mix(in srgb, var(--brando-ink) 72%, white);
     background: color-mix(in srgb, white 78%, transparent);
 
