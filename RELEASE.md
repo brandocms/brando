@@ -27,7 +27,11 @@ Publishing is manual: no workflow builds or publishes the packages yet.
    `scripts/release-version check --tag vX.Y.Z[-beta.N]`, then tag and push:
    `git tag vX.Y.Z[-beta.N]` and `git push origin vX.Y.Z[-beta.N]`.
    Pushing the tag runs the `Release tag` workflow, which checks it with
-   `scripts/release-version check`; wait for it to pass. Steps 6 to 8 run from this checkout.
+   `scripts/release-version check`; wait for it to pass. Run steps 6 to 8
+   from a fresh clone of the tag
+   (`git clone --branch vX.Y.Z[-beta.N] --depth 1 https://github.com/brandocms/brando`):
+   Hex packs files from disk without reading `.gitignore`, so an ignored file
+   in a working checkout (a `.yalc` copy, `.DS_Store`) would ship.
 6. Review both packages:
    `cd assets && npm pack --dry-run` (source, CSS, `europa.json5`, the
    `vite/` helper and `LICENSE.md`; no tests or local files), and

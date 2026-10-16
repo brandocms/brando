@@ -136,8 +136,13 @@ BRANDO_SMOKE_BASE_URL="http://127.0.0.1:$smoke_port" BRANDO_SMOKE_ARTIFACTS="$sm
 if [[ "$smoke_source" == packaged ]]; then
   if [[ "$(package_digest)" != "$package_before" ]]; then echo "The consumer wrote into the Hex package at $brando_dir" >&2; exit 1; fi
   # Nothing in the consumer, its dependencies or node_modules may name the checkout.
-  if grep -rlF -e "$framework_dir" -e "$(cd "$framework_dir" && pwd -P)" . > "$smoke_root/logs/checkout-references.log"; then
-    echo "The consumer references the Brando checkout; see $smoke_root/logs/checkout-references.log" >&2
+  # grep exits 1 for no match; 2, an unreadable file, must not pass as one.
+  stop_server
+  references=0
+  grep -rlF -e "$framework_dir" -e "$(cd "$framework_dir" && pwd -P)" . > "$smoke_root/logs/checkout-references.log" ||
+    references=$?
+  if [[ "$references" -ne 1 ]]; then
+    echo "The consumer references the Brando checkout, or the scan failed (grep exit $references); see $smoke_root/logs/checkout-references.log" >&2
     exit 1
   fi
 fi

@@ -32,7 +32,10 @@ version="${BRANDO_SMOKE_VERSION:-${current%%-*}-rc.smoke}"
 case "$version" in
   *-dev | *-dev.*) echo "packages.sh: $version is a development version; pick a release candidate" >&2; exit 2 ;;
 esac
-"$release/scripts/release-version" bump "$version" > "$logs/release-version.log" 2>&1
+# Only the scratch copy is bumped, and a run on a release tag must not check
+# the candidate against that tag.
+env -u GITHUB_REF_TYPE -u GITHUB_REF_NAME RELEASE_VERSION_ROOT="$release" \
+  "$release/scripts/release-version" bump "$version" > "$logs/release-version.log" 2>&1
 
 (cd "$release" && mix hex.build --output "$packages/brando-$version.tar") > "$logs/hex-build.log" 2>&1
 mkdir "$packages/hex"
