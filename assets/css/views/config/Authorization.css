@@ -48,14 +48,6 @@
     &.destructive { color: var(--brando-error-ink); }
     &.destructive:hover:not(:disabled) { background: var(--brando-error); border-color: var(--brando-error-line); }
   }
-  .access-count-badge {
-    display: inline-flex; align-items: center; justify-content: center;
-    min-width: 20px; padding: 1px 6px; border: 0; border-radius: 4px;
-    font-size: 11px; font-weight: 400; font-variant-numeric: tabular-nums;
-    line-height: 18px; white-space: nowrap; background: var(--brando-badge-bg); color: var(--brando-badge-ink);
-    &.access-count-mint { background: var(--brando-success); color: var(--brando-success-ink); }
-    &.access-count-peach { background: var(--brando-error); color: var(--brando-error-ink); }
-  }
   .authorization-selected-count { display: inline-flex; align-items: center; gap: 5px; font-variant-numeric: tabular-nums; }
   .authorization-page-heading {
     display: flex; justify-content: space-between; align-items: center; gap: 24px;
@@ -84,7 +76,6 @@
     &.selected strong { color: var(--access-accent); }
   }
   .authorization-member-count { display: block; margin-top: 3px; font-size: 12px; font-variant-numeric: tabular-nums; }
-  .access-tag { display: inline-block; border: 1px solid var(--access-line); border-radius: 4px; padding: 2px 6px; font-size: 10px; line-height: 16px; white-space: nowrap; color: var(--access-muted); }
   .authorization-hint { font-size: 12px; line-height: 1.65; color: var(--access-muted); margin-top: 16px; }
   .authorization-groups > .authorization-hint { padding: 16px 12px 0; border-top: 1px solid var(--access-line); }
   .authorization-editor { min-width: 0; padding-left: 24px; border-left: 1px solid var(--access-line); min-height: 480px; }

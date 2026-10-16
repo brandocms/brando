@@ -285,8 +285,8 @@ defmodule BrandoAdmin.Sites.SEOLive do
     ~H"""
     <span
       :if={@score}
-      class="seo-score-badge"
-      data-level={score_level(@score)}
+      class={["badge", score_tone(@score)]}
+      data-testid="seo-score"
       aria-label={gettext("Score %{score} of 100", score: @score)}
     >
       {@score}
@@ -518,7 +518,7 @@ defmodule BrandoAdmin.Sites.SEOLive do
                               </td>
                               <td class="seo-check-verdict">
                                 <span :if={check.value} class="seo-check-value">{check.value}</span>
-                                <span class={["seo-check-badge", to_string(check.status)]}>
+                                <span class={["badge", check_tone(check.status)]}>
                                   {status_label(check.status)}
                                 </span>
                               </td>
@@ -1035,7 +1035,7 @@ defmodule BrandoAdmin.Sites.SEOLive do
     <section class="seo-duplicate">
       <header>
         <h4>{@kind}</h4>
-        <span class="workspace-badge warning">
+        <span class="badge badge--attention">
           {ngettext("%{count} entry", "%{count} entries", length(@rows))}
         </span>
       </header>
@@ -1611,14 +1611,20 @@ defmodule BrandoAdmin.Sites.SEOLive do
     end
   end
 
-  defp score_level(score) when score >= 80, do: "good"
-  defp score_level(score) when score >= 50, do: "fair"
-  defp score_level(_), do: "poor"
+  defp score_tone(score) when score >= 80, do: "badge--success"
+  defp score_tone(score) when score >= 50, do: "badge--attention"
+  defp score_tone(_), do: "badge--error"
 
   defp status_label(:pass), do: gettext("OK")
   defp status_label(:warn), do: gettext("Warning")
   defp status_label(:fail), do: gettext("Failed")
   defp status_label(:skip), do: gettext("Not checked")
+
+  defp check_tone(:pass), do: "badge--success"
+  defp check_tone(:warn), do: "badge--attention"
+  defp check_tone(:fail), do: "badge--error"
+  # Skipped stays quiet, a hairline without a fill.
+  defp check_tone(_), do: "badge--outline"
 
   def handle_info({:content_language, _language}, socket) do
     send_update_after(

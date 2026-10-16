@@ -161,7 +161,11 @@ defmodule BrandoAdmin.Components.ModuleFiles do
               {gettext("Existing modules keep their identities. Editor content follows the normal synchronization rules.")}
             </p>
             <div class="module-files-counts">
-              <span :for={{action, count} <- counts(@plan)} class={"module-files-badge #{action}"}>{action_label(action)}: {count}</span>
+              <span
+                :for={{action, count} <- counts(@plan)}
+                class={["badge", action_tone(action)]}
+                data-testid="module-files-count"
+              >{action_label(action)}: {count}</span>
             </div>
             <div :if={!Plan.applicable?(@plan)} class="module-files-feedback error" role="alert">
               {gettext(
@@ -176,7 +180,7 @@ defmodule BrandoAdmin.Components.ModuleFiles do
             >
               <summary>
                 <span><strong>{definition_name(@plan, item)}</strong><code>{item.uid}</code></span>
-                <span class={"module-files-badge #{item.action}"}>{action_label(item.action)}</span>
+                <span class={["badge", action_tone(item.action)]}>{action_label(item.action)}</span>
               </summary>
               <div class="module-files-change-body">
                 <p>
@@ -415,6 +419,9 @@ defmodule BrandoAdmin.Components.ModuleFiles do
   defp action_label(:update), do: gettext("Update")
   defp action_label(:conflict), do: gettext("Conflict")
   defp action_label(:migration_required), do: gettext("Migration required")
+  defp action_tone(action) when action in [:create, :update], do: "badge--success"
+  defp action_tone(action) when action in [:conflict, :migration_required], do: "badge--error"
+  defp action_tone(_), do: nil
   defp display_value(nil), do: ""
   defp display_value(value) when is_binary(value), do: value
   defp display_value(value), do: Jason.encode!(value, pretty: true)

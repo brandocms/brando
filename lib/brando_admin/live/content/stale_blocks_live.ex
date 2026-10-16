@@ -166,7 +166,7 @@ defmodule BrandoAdmin.Content.StaleBlocksLive do
             </p>
           </div>
           <div class="utils-row-actions">
-            <.link navigate={"/admin/config/content/modules/update/#{module.id}/stale-blocks"} class="utils-button">
+            <.link navigate={"/admin/config/content/modules/update/#{module.id}/stale-blocks"} class="btn">
               {gettext("Resolve blocks")}
             </.link>
           </div>
@@ -279,7 +279,10 @@ defmodule BrandoAdmin.Content.StaleBlocksLive do
                   <% end %>
                 </div>
                 <div class="stale-block-version">
-                  <span class={["stale-block-chip", planned.stamps? && "is-ok"]}>
+                  <span
+                    class={["badge", if(planned.stamps?, do: "badge--success", else: "badge--attention")]}
+                    data-testid="stale-block-version"
+                  >
                     {version_line(block.module_version, @report.version, planned.stamps?)}
                   </span>
                   <small>#{block.id}</small>
@@ -336,7 +339,7 @@ defmodule BrandoAdmin.Content.StaleBlocksLive do
 
         <div :if={!@review?} class="utils-apply-bar stale-blocks-apply">
           <p>{summary_line(@plan)}</p>
-          <button type="submit" class="utils-button primary" disabled={@plan.changed == [] or @plan.refused != []}>
+          <button type="submit" class="btn btn--primary" disabled={@plan.changed == [] or @plan.refused != []}>
             {gettext("Review changes")}
           </button>
         </div>
@@ -400,11 +403,11 @@ defmodule BrandoAdmin.Content.StaleBlocksLive do
         <div class="utils-apply-bar">
           <p>{summary_line(@plan)}</p>
           <div class="stale-blocks-review-actions">
-            <button type="button" class="utils-button quiet" phx-click="cancel">{gettext("Change choices")}</button>
+            <button type="button" class="btn btn--quiet" phx-click="cancel">{gettext("Change choices")}</button>
             <button
               id="stale-blocks-resolve"
               type="button"
-              class={["utils-button", if(@plan.lost != [], do: "stale-blocks-destructive", else: "primary")]}
+              class={["btn btn--primary", @plan.lost != [] && "btn--danger"]}
               phx-click="resolve"
               disabled={@plan.changed == [] or @plan.refused != []}
               data-confirm-title={ngettext("Resolve %{count} block?", "Resolve %{count} blocks?", length(@plan.changed))}

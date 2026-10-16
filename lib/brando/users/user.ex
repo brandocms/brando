@@ -142,7 +142,7 @@ defmodule Brando.Users.User do
     </div>
     <.field columns={2} class="user-role">
       <span class="user-detail-label">{if Brando.Authorization.enabled?(), do: t("Legacy role"), else: t("Role")}</span>
-      <span class="workspace-badge">{role_label(@entry.role)}</span>
+      <span class="badge">{role_label(@entry.role)}</span>
     </.field>
     <div class="user-activity user-last-seen">
       <span class="user-detail-label">{t("Last seen")}</span>
@@ -153,7 +153,7 @@ defmodule Brando.Users.User do
       <.activity_time value={@entry.last_login} />
     </div>
     <.field columns={2} class="user-state">
-      <span class={["workspace-badge", @entry.active && @entry.last_login && "positive"]}>
+      <span class={["badge", @entry.active && @entry.last_login && "badge--success"]}>
         {cond do
           !@entry.active -> t("Inactive")
           is_nil(@entry.last_login) -> gettext("Never logged in")
@@ -305,7 +305,7 @@ defmodule Brando.Users.User do
       <div class="user-password-access-text">
         <span class="user-password-access-label">
           {gettext("Two-factor authentication")}
-          <span class={["workspace-badge", @enabled? && "positive"]} data-testid="user-two-factor-status">
+          <span class={["badge", @enabled? && "badge--success"]} data-testid="user-two-factor-status">
             {if @enabled?, do: gettext("On"), else: gettext("Off")}
           </span>
         </span>

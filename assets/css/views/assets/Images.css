@@ -262,7 +262,7 @@
   aspect-ratio: var(--video-ratio);
   margin-inline: auto;
   /* Letterboxing behind a playing video stays true black, like the video's own bars */
-  background: #000;
+  background: var(--brando-color-black);
 
   iframe, video { display: block; width: 100%; height: 100%; border: 0; }
 }

@@ -81,7 +81,7 @@ defmodule BrandoAdmin.Users.UserListLive do
         <div class="transfer-main">
           <div class="transfer-source">
             <Content.modal_person user={@deleting_user} caption={user_role(@deleting_user)} />
-            <span class="modal-badge">{gettext("User to delete")}</span>
+            <span class="badge">{gettext("User to delete")}</span>
           </div>
           <h3>{gettext("Transfer ownership to")}</h3>
           <p class="modal-muted">{gettext("Choose who will own %{name}’s content.", name: @deleting_user.name)}</p>
@@ -124,7 +124,7 @@ defmodule BrandoAdmin.Users.UserListLive do
         </div>
         <div class="transfer-content-summary">
           <div class="transfer-summary-heading">
-            <h3>{gettext("Content to transfer")}</h3><span class="modal-badge">{@transfer_total}</span>
+            <h3>{gettext("Content to transfer")}</h3><span class="badge">{@transfer_total}</span>
           </div>
           <table :if={@content_summary != []}>
             <thead>

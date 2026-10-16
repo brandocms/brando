@@ -54,7 +54,7 @@ defmodule BrandoAdmin.ActivityLiveTest do
     assert_patch(view, "/admin/config/activity?action=trashed")
     assert has_element?(view, ".activity-row .activity-action", "Moved to trash")
     refute has_element?(view, ".activity-row .activity-action", "Created")
-    assert has_element?(view, ".activity-row .utils-button", "Open trash")
+    assert has_element?(view, ".activity-row a", "Open trash")
 
     {:ok, view, _} = live(conn, "/admin/config/activity?q=sommer")
     assert has_element?(view, ".activity-entry", "Sommerro")
@@ -154,7 +154,7 @@ defmodule BrandoAdmin.ActivityLiveTest do
       assistant_row = "#activity-event-#{event_id(c.assistant)}"
       assert has_element?(view, "#{assistant_row} .activity-kind[data-kind=assistant]", "AI")
       assert has_element?(view, "#{assistant_row} .activity-person small", "Approved by #{user.name}")
-      assert has_element?(view, ~s(#{assistant_row} a.utils-button[href="/admin/assistant/connected/#{c.assistant}"]))
+      assert has_element?(view, ~s(#{assistant_row} a[href="/admin/assistant/connected/#{c.assistant}"]))
 
       mcp_row = "#activity-event-#{event_id(c.mcp)}"
       assert has_element?(view, "#{mcp_row} .activity-person-line", "Claude Code")

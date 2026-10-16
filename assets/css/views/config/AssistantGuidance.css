@@ -187,7 +187,6 @@
 }
 
 .guidance-excerpt { flex-basis: 100%; overflow: hidden; color: var(--guidance-muted); text-overflow: ellipsis; white-space: nowrap; }
-.guidance-pill { flex-shrink: 0; padding: 3px 8px; border-radius: 30px; background: var(--brando-success); color: var(--brando-success-ink); font-size: 11px; }
 
 @media (max-width: 720px) {
   .guidance-workspace { padding-top: 16px; }

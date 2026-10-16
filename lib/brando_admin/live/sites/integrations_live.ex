@@ -161,7 +161,7 @@ defmodule BrandoAdmin.Sites.IntegrationsLive do
       <span class="integrations-icon" aria-hidden="true"><.icon name="chart-line" /></span>
       <div class="integrations-text">
         <h3>
-          Plausible <span :if={@on} class="workspace-badge positive">{gettext("Connected")}</span>
+          Plausible <span :if={@on} class="badge badge--success">{gettext("Connected")}</span>
         </h3>
         <p :if={@on}>{gettext("Visitors per entry, in Content SEO.")}</p>
         <p :if={!@on}>
@@ -181,7 +181,7 @@ defmodule BrandoAdmin.Sites.IntegrationsLive do
       <span class="integrations-icon" aria-hidden="true"><.icon name="search" /></span>
       <div class="integrations-text">
         <h3>
-          Google Search Console <span :if={@on} class="workspace-badge positive">{gettext("Connected")}</span>
+          Google Search Console <span :if={@on} class="badge badge--success">{gettext("Connected")}</span>
         </h3>
         <p :if={@on}>{gettext("Searches, clicks and impressions per entry, in Content SEO.")}</p>
         <p :if={!@on}>
@@ -204,8 +204,8 @@ defmodule BrandoAdmin.Sites.IntegrationsLive do
       <div class="integrations-text">
         <h3>
           {gettext("Connected AI tools")}
-          <span :if={@on} class="workspace-badge positive">{gettext("On")}</span>
-          <span :if={@mcp.count > 0} class="workspace-badge">
+          <span :if={@on} class="badge badge--success">{gettext("On")}</span>
+          <span :if={@mcp.count > 0} class="badge">
             {ngettext("%{count} connection", "%{count} connections", @mcp.count)}
           </span>
         </h3>
@@ -231,7 +231,7 @@ defmodule BrandoAdmin.Sites.IntegrationsLive do
       <div class="integrations-text">
         <h3>
           {gettext("Webhooks")}
-          <span :if={@webhooks.count > 0} class="workspace-badge">
+          <span :if={@webhooks.count > 0} class="badge">
             {ngettext("%{count} webhook", "%{count} webhooks", @webhooks.count)}
           </span>
         </h3>
@@ -273,7 +273,7 @@ defmodule BrandoAdmin.Sites.IntegrationsLive do
       <div class="integrations-text">
         <h3>
           {gettext("Notifications")}
-          <span :if={@notifications.count > 0} class="workspace-badge">
+          <span :if={@notifications.count > 0} class="badge">
             {ngettext("%{count} route", "%{count} routes", @notifications.count)}
           </span>
         </h3>

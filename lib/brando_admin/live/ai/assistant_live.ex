@@ -526,7 +526,10 @@ defmodule BrandoAdmin.AI.AssistantLive do
               <span>{origin_label(record)}</span>
               <BrandoAdmin.Dates.time at={record.inserted_at} />
             </span>
-            <span class={["assistant-badge", "is-#{connected_state(record)}"]}>
+            <span
+              class={["badge", connected_state_tone(connected_state(record))]}
+              data-testid={"assistant-state-#{connected_state(record)}"}
+            >
               {connected_state_label(connected_state(record))}
             </span>
           </.link>
@@ -889,7 +892,7 @@ defmodule BrandoAdmin.AI.AssistantLive do
               {item.title}
             </.link>
             <span :if={!(item[:saved_url] || item[:admin_url])}>{item.title}</span>
-            <span class="assistant-badge">{receipt_badge(item, @receipt)}</span>
+            <span class="badge" data-testid="assistant-receipt-badge">{receipt_badge(item, @receipt)}</span>
           </li>
         </ul>
         <button
@@ -929,7 +932,7 @@ defmodule BrandoAdmin.AI.AssistantLive do
           <div class="assistant-card-body">
             <header>
               <span class="assistant-card-type">{entry.content_type}</span>
-              <span class={["assistant-badge", "is-#{entry.action}"]}>
+              <span class={["badge", action_tone(entry.action)]} data-testid={"assistant-action-#{entry.action}"}>
                 {action_label(entry.action)}
               </span>
             </header>
@@ -1983,6 +1986,9 @@ defmodule BrandoAdmin.AI.AssistantLive do
   defp action_label(:source), do: gettext("Source")
   defp action_label(_action), do: gettext("Update")
 
+  defp action_tone(action) when action in [:create, :update], do: "badge--ai"
+  defp action_tone(_action), do: nil
+
   # New entries and drafts can be published as the proposal is applied.
   defp publishable?(entry), do: entry.action == :create or (entry.action == :update and entry.status == "draft")
 
@@ -2552,6 +2558,10 @@ defmodule BrandoAdmin.AI.AssistantLive do
   defp connected_state(record) do
     if DateTime.compare(record.expires_at, DateTime.utc_now()) == :lt, do: "expired", else: "waiting"
   end
+
+  defp connected_state_tone("waiting"), do: "badge--ai"
+  defp connected_state_tone("applied"), do: "badge--success"
+  defp connected_state_tone(_state), do: nil
 
   defp connected_state_label("waiting"), do: gettext("Waiting for review")
   defp connected_state_label("applied"), do: gettext("Applied")

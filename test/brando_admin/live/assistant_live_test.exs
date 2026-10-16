@@ -762,7 +762,7 @@ defmodule BrandoAdmin.AssistantLiveTest do
       {:ok, view, _html} = live(conn, "/admin/assistant/#{c.conversation.id}")
       view |> element(~s(.assistant-publish input[phx-value-key="new:news"])) |> render_click()
       view |> element("button.assistant-apply") |> render_click()
-      assert has_element?(view, ".assistant-receipt .assistant-badge", "Published")
+      assert has_element?(view, ".assistant-receipt [data-testid=assistant-receipt-badge]", "Published")
       assert Brando.Repo.get_by!(Page, uri: "news").status == :published
     end
 
@@ -859,7 +859,7 @@ defmodule BrandoAdmin.AssistantLiveTest do
       assert_patch(view, "/admin/assistant/connected")
       assert has_element?(view, "h2", "Choose a proposal")
       assert has_element?(view, ~s(#assistant-connected-list a[data-proposal-id="#{id}"]), "From Claude Code via MCP")
-      assert has_element?(view, "#assistant-connected-list .assistant-badge.is-waiting", "Waiting for review")
+      assert has_element?(view, "#assistant-connected-list [data-testid=assistant-state-waiting]", "Waiting for review")
       refute has_element?(view, "#assistant-composer")
 
       view |> element(~s(#assistant-connected-list a[data-proposal-id="#{id}"])) |> render_click()
@@ -881,7 +881,7 @@ defmodule BrandoAdmin.AssistantLiveTest do
       view |> element("button.assistant-apply") |> render_click()
       assert has_element?(view, "h2", "Applied")
       assert blocks(c) == 4
-      assert has_element?(view, "#assistant-connected-list .assistant-badge.is-applied", "Applied")
+      assert has_element?(view, "#assistant-connected-list [data-testid=assistant-state-applied]", "Applied")
 
       # Nothing waits now; the applied one stays listed.
       {:ok, view, _} = live(conn, "/admin/assistant")

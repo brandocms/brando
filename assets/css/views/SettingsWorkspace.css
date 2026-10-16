@@ -227,28 +227,6 @@
     margin-bottom: 28px;
   }
 
-  .seo-score-badge {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-width: 34px;
-    height: 22px;
-    padding: 0 7px;
-    border-radius: 11px;
-    font-size: 12px;
-    font-family: theme(typography.families.mono);
-    font-variant-numeric: tabular-nums;
-    background: var(--brando-badge-bg);
-    color: var(--brando-badge-ink);
-  }
-  .seo-score-badge[data-level="good"] { background: var(--brando-success); color: var(--brando-success-ink); }
-  .seo-score-badge[data-level="fair"] { background: var(--brando-attention); color: var(--brando-attention-ink); }
-  .seo-score-badge[data-level="poor"] { background: var(--brando-error); color: var(--brando-error-ink); }
-  /* On a tinted tab a second pastel fill clashes with the tab's own; a white
-     pill with a hairline in the level colour sits on any tab and still reads
-     as good, fair or poor through its ink. */
-  .seo-tabs .seo-score-badge { background: var(--brando-surface); box-shadow: inset 0 0 0 1px color-mix(in srgb, currentColor 25%, transparent); }
-
   .seo-audit .workspace-panel-heading { display: flex; justify-content: space-between; gap: 16px; align-items: flex-start; }
   .seo-audit-filters { display: flex; flex-wrap: wrap; gap: 6px; padding: 14px 18px; border-bottom: 1px solid var(--workspace-line); }
   .seo-chip {
@@ -385,13 +363,8 @@
   .seo-check-table tr[data-status="skip"] .seo-check-label { color: var(--brando-faint); }
   .seo-check-verdict { width: 1%; white-space: nowrap; text-align: right; }
   .seo-check-value { margin-right: 8px; color: var(--workspace-muted); font-variant-numeric: tabular-nums; }
-  /* Only a verdict worth acting on carries a fill; the skipped ones stay quiet
-     so eleven rows do not read as eleven alerts. */
-  .seo-check-badge { display: inline-block; min-width: 68px; padding: 0 8px; border-radius: 4px; font-size: 11px; line-height: 20px; text-align: center; }
-  .seo-check-badge.pass { background: var(--brando-success); color: var(--brando-success-ink); }
-  .seo-check-badge.warn { background: var(--brando-attention); color: var(--brando-attention-ink); }
-  .seo-check-badge.fail { background: var(--brando-error); color: var(--brando-error-ink); }
-  .seo-check-badge.skip { color: var(--brando-faint); }
+  /* Verdicts share one width so the column lines up */
+  .seo-check-verdict .badge { justify-content: center; min-width: 68px; }
   .seo-audit .seo-search-preview { max-width: none; border-radius: 7px; background: var(--brando-surface); }
   .seo-preview-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 10px; font-size: 12px; }
 

@@ -190,7 +190,7 @@ defmodule BrandoAdmin.Sites.MarkdownSourcesLive do
         </section>
         <section class="markdown-source-panel markdown-documents">
           <div class="markdown-panel-heading">
-            <Brando.HTML.Icon.icon name="file-text" /><h2>{gettext("Connected documents")}</h2><span class="workspace-badge">{length(
+            <Brando.HTML.Icon.icon name="file-text" /><h2>{gettext("Connected documents")}</h2><span class="badge">{length(
               @sources
             )}</span>
           </div>

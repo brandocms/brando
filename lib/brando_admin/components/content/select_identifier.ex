@@ -208,7 +208,7 @@ defmodule BrandoAdmin.Components.Content.SelectIdentifier do
                   <dt>{gettext("Content type")}</dt><dd>
                     <span>{Brando.Blueprint.get_plural(@selected_identifier.schema)}</span><span
                       :if={@selected_identifier.language}
-                      class="modal-badge"
+                      class="badge"
                     >{String.upcase(to_string(@selected_identifier.language))}</span>
                   </dd>
                 </div>

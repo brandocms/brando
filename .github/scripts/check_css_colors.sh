@@ -1,19 +1,13 @@
 #!/usr/bin/env bash
-# Rejects hex colour literals in the admin stylesheets outside the tokens file,
-# and checks that the roles the admin palette owns come from it.
+# Rejects hex colour literals in the admin stylesheets, tokens.css included.
 #
-# Colours belong in assets/css/tokens.css as role custom properties. The roles
-# with an entry in the palette (`theme.colors` in assets/europa.json5), and the
-# palette's own `--brando-color-*` names, must be set there with
-# `theme(colors.*)`, so an application's europa.json5 changes them; the other
-# roles hold their own values in tokens.css. Files not
-# yet converted are listed in .github/css-color-allowlist.txt with their
-# current literal count: a file may not gain literals, and when it loses some
-# its entry must be lowered (or removed at zero), so the list only shrinks.
+# Every admin colour is a value in the admin's theme (`theme.colors` in
+# assets/europa.json5). assets/css/tokens.css sets the role custom properties
+# from it with `theme(colors.*)`, and every other stylesheet uses those roles
+# (`var(--brando-ink)` and friends), so an application's europa.json5 changes
+# any colour.
 #
-#   .github/scripts/check_css_colors.sh           check (CI)
-#   .github/scripts/check_css_colors.sh --update  rewrite the allowlist from
-#                                                 the current counts
+#   .github/scripts/check_css_colors.sh
 #
 # Comments are ignored. A literal is #rgb, #rgba, #rrggbb or #rrggbbaa not
 # followed by a name character, so ID selectors such as #brando-main are not
@@ -23,8 +17,6 @@ set -euo pipefail
 cd "$(dirname "$0")/../.."
 
 css_dir="assets/css"
-tokens="assets/css/tokens.css"
-allowlist=".github/css-color-allowlist.txt"
 
 count_literals() {
   awk '
@@ -56,90 +48,20 @@ count_literals() {
   ' "$1"
 }
 
-current=$(mktemp)
-trap 'rm -f "$current"' EXIT
+status=0
+files=0
 
-find "$css_dir" -type f -name '*.css' ! -path "$tokens" | LC_ALL=C sort | while read -r file; do
+while read -r file; do
+  files=$((files + 1))
   n=$(count_literals "$file")
   if [ "$n" -gt 0 ]; then
-    printf '%s %s\n' "$file" "$n"
-  fi
-done > "$current"
-
-if [ "${1:-}" = "--update" ]; then
-  {
-    echo "# Hex colour literals per admin stylesheet, checked by"
-    echo "# .github/scripts/check_css_colors.sh. Counts may only go down: convert"
-    echo "# colours to the role tokens in assets/css/tokens.css and lower the count."
-    cat "$current"
-  } > "$allowlist"
-  echo "Wrote $allowlist ($(wc -l < "$current" | tr -d ' ') files)."
-  exit 0
-fi
-
-status=0
-
-# Custom property, palette entry: the roles in the table in assets/europa.json5
-# and the palette names in tokens.css.
-palette_roles="
---brando-ink dark
---brando-accent blue
---brando-surface-page peachLighter
---brando-surface-subform peach
---brando-surface-selected peachDarker
---brando-line peachDarkest
---brando-overlay overlay
---brando-status-published status.published
---brando-status-pending status.pending
---brando-status-draft status.draft
---brando-status-disabled status.disabled
---brando-status-deleted status.deleted
---brando-color-dark dark
---brando-color-blue blue
---brando-color-peach peach
---brando-color-peach-lighter peachLighter
---brando-color-peach-darker peachDarker
---brando-color-peach-darkest peachDarkest
---brando-color-overlay overlay
---brando-color-gray gray
---brando-color-gray-light grayLight
---brando-color-white white
---brando-color-black black
-"
-
-while read -r role key; do
-  [ -n "$role" ] || continue
-  if ! grep -Eq "^[[:space:]]*${role}:[[:space:]]*theme\(colors\.${key}\);" "$tokens"; then
-    echo "$tokens: set $role from the admin palette, as \`$role: theme(colors.$key);\`. Change the colour in assets/europa.json5." >&2
+    echo "$file: $n hex colour literal(s). Use a role from assets/css/tokens.css (var(--brando-ink) and friends); a new colour gets an entry in theme.colors in assets/europa.json5 and a role in tokens.css." >&2
     status=1
   fi
-done <<< "$palette_roles"
-
-while read -r file n; do
-  allowed=$(awk -v f="$file" '$1 == f { print $2 }' "$allowlist")
-  if [ -z "$allowed" ]; then
-    echo "$file: $n hex colour literal(s). Use the role tokens in $tokens (var(--brando-ink) and friends) instead." >&2
-    status=1
-  elif [ "$n" -gt "$allowed" ]; then
-    echo "$file: $n hex colour literals, allowlist permits $allowed. Use the role tokens in $tokens for new colours." >&2
-    status=1
-  elif [ "$n" -lt "$allowed" ]; then
-    echo "$file: down to $n hex colour literals from $allowed. Lower its count in $allowlist." >&2
-    status=1
-  fi
-done < "$current"
-
-while read -r file allowed; do
-  case "$file" in ''|'#'*) continue ;; esac
-  if ! awk -v f="$file" '$1 == f { found = 1 } END { exit !found }' "$current"; then
-    echo "$file: listed in $allowlist but has no hex colour literals (or no longer exists). Remove its entry." >&2
-    status=1
-  fi
-done < "$allowlist"
+done < <(find "$css_dir" -type f -name '*.css' | LC_ALL=C sort)
 
 if [ "$status" -eq 0 ]; then
-  total=$(awk '{ sum += $2 } END { print sum + 0 }' "$current")
-  echo "CSS colour check passed: $total allowlisted literals in $(wc -l < "$current" | tr -d ' ') files."
+  echo "CSS colour check passed: no hex colour literals in $files stylesheets."
 fi
 
 exit "$status"

@@ -38,7 +38,7 @@ defmodule BrandoAdmin.Users.UserSecurityLive do
             <p>{gettext("Confirm it is you with a passkey or a code from your phone, as well as your password.")}</p>
           </div>
           <span
-            class={["workspace-badge", @enabled? && "positive"]}
+            class={["badge", @enabled? && "badge--success"]}
             data-testid="two-factor-status"
             data-enabled={to_string(@enabled?)}
           >
@@ -206,7 +206,7 @@ defmodule BrandoAdmin.Users.UserSecurityLive do
             <div class="security-item-text">
               <span class="security-item-title">
                 {if session.user_agent, do: TwoFactorComponents.browser(session.user_agent), else: gettext("Unknown browser")}
-                <span :if={session.id == @session_id} class="workspace-badge positive">{gettext("This browser")}</span>
+                <span :if={session.id == @session_id} class="badge badge--success">{gettext("This browser")}</span>
               </span>
               <span class="security-item-meta">
                 {[
@@ -249,10 +249,10 @@ defmodule BrandoAdmin.Users.UserSecurityLive do
             <.icon name="plug" class="security-item-icon" />
             <div class="security-item-text">
               <span class="security-item-title">
-                {grant.client_name} <span class="workspace-badge">{URI.parse(grant.client_id).host}</span>
+                {grant.client_name} <span class="badge">{URI.parse(grant.client_id).host}</span>
                 <span
                   :if={Brando.MCP.grant_expired?(grant)}
-                  class="workspace-badge warning"
+                  class="badge badge--attention"
                   data-testid="connected-app-expired"
                 >
                   {gettext("Expired: connect it again from the app")}

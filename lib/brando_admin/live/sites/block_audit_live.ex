@@ -234,15 +234,15 @@ defmodule BrandoAdmin.Sites.BlockAuditLive do
           <span>
             {gettext("%{count} selected", count: MapSet.size(@selected))}
           </span>
-          <button type="button" class="utils-button" phx-click="select_all" disabled={MapSet.size(@removable) == 0}>
+          <button type="button" class="btn" phx-click="select_all" disabled={MapSet.size(@removable) == 0}>
             {gettext("Select all that can be removed")}
           </button>
-          <button type="button" class="utils-button quiet" phx-click="select_none" disabled={MapSet.size(@selected) == 0}>
+          <button type="button" class="btn btn--quiet" phx-click="select_none" disabled={MapSet.size(@selected) == 0}>
             {gettext("Select none")}
           </button>
           <button
             type="button"
-            class="utils-button block-audit-remove"
+            class="btn btn--danger"
             phx-click="remove"
             disabled={MapSet.size(@selected) == 0}
             data-confirm-destructive
@@ -297,11 +297,11 @@ defmodule BrandoAdmin.Sites.BlockAuditLive do
                 </small>
               </div>
               <div class="block-audit-status">
-                <span :if={tree.status == :removable} class="block-audit-chip is-ok">{gettext("Can be removed")}</span>
-                <span :if={tree.status == :held_by_draft} class="block-audit-chip">{gettext("In a recovery copy")}</span>
-                <span :if={tree.status == :unverifiable} class="block-audit-chip">{gettext("Cannot be verified")}</span>
+                <span :if={tree.status == :removable} class="badge badge--success">{gettext("Can be removed")}</span>
+                <span :if={tree.status == :held_by_draft} class="badge badge--attention">{gettext("In a recovery copy")}</span>
+                <span :if={tree.status == :unverifiable} class="badge badge--attention">{gettext("Cannot be verified")}</span>
                 <div :if={tree.status == :held_by_revision} class="block-audit-held">
-                  <span class="block-audit-chip">{gettext("Held by a version")}</span>
+                  <span class="badge badge--attention">{gettext("Held by a version")}</span>
                   <span :for={holder <- Enum.take(tree.held_by, 3)}>
                     <.link :if={@holders[holder_key(holder)][:url]} navigate={@holders[holder_key(holder)].url}>
                       {@holders[holder_key(holder)].label}
@@ -338,7 +338,7 @@ defmodule BrandoAdmin.Sites.BlockAuditLive do
                 )} · {gettext("removed %{date}", date: BrandoAdmin.Dates.short(item.inserted_at))}
               </small>
             </div>
-            <button type="button" class="utils-button" phx-click="restore" phx-value-id={item.id}>
+            <button type="button" class="btn" phx-click="restore" phx-value-id={item.id}>
               {gettext("Restore")}
             </button>
           </li>

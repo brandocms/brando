@@ -44,7 +44,7 @@
   .listing-home [data-icon] { display: block; width: 16px; height: 16px; }
   .content-list .list-row :is(.listing-title, div:has(> .entry-link)) { flex: 1 1 240px; min-width: 0; }
   :is(.listing-title, div:has(> .entry-link)) > br { display: none; }
-  :is(.listing-title, div:has(> .entry-link)) > small, :is(.listing-title, div:has(> .entry-link)) > .badge { display: block; margin-top: 4px; padding: 0; border: 0; background: none; line-height: 1.5; color: var(--workspace-muted); font-size: 12px; font-family: inherit; }
+  :is(.listing-title, div:has(> .entry-link)) > small, :is(.listing-title, div:has(> .entry-link)) > .badge { display: block; height: auto; margin-top: 4px; padding: 0; white-space: normal; border: 0; background: none; line-height: 1.5; color: var(--workspace-muted); font-size: 12px; font-family: inherit; }
   :is(.listing-title, div:has(> .entry-link)) .badge a { color: var(--workspace-muted); font-size: 12px; overflow-wrap: anywhere; }
   :is(.listing-title, div:has(> .entry-link)) .badge [data-icon] { width: 12px; height: 12px; margin-right: 6px; }
   .listing-page-icon .badge { padding: 0; border: 0; background: none; }
@@ -67,12 +67,11 @@
   .children-button button[aria-expanded="true"] [data-icon] { transform: rotate(90deg); }
   .content-list .child-rows { margin: 0 16px 0 38px; padding: 0; border-left: 1px solid var(--workspace-line); }
   .content-list .child-row { background: var(--brando-surface-shaded); border-radius: 0; border-top: 1px solid var(--workspace-line); padding-left: 12px; }
-  .child-row .badge { text-transform: none; font-family: inherit; font-size: 11px; border-color: var(--workspace-line); }
   .listing-module-icon { flex: 0 0 32px; }
   .listing-module-icon .svg { display: flex; width: 32px; height: 32px; align-items: center; justify-content: center; }
   .listing-module-icon img { width: 28px; height: 28px; object-fit: contain; }
   .listing-category { flex: 0 0 224px; order: 5; }
-  .listing-category .badge { display: inline-block; max-width: 100%; line-height: 20px; font-size: 12px; font-family: inherit; text-transform: none; background: var(--brando-badge-bg); color: var(--workspace-muted); border: 0; padding: 3px 7px; }
+  .listing-category .badge { display: inline-block; max-width: 100%; overflow: hidden; text-overflow: ellipsis; line-height: 20px; }
   @media (max-width: 1000px) {
     .content-list .list-row .main-content > .listing-creator, .content-list .child-row > .listing-creator { flex-basis: 140px; }
     .listing-category { flex-basis: 180px; }

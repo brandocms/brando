@@ -1,0 +1,202 @@
+/* The admin's button. One component in three sizes and a few looks, replacing
+   the buttons screens drew for themselves as each area moves over. See "Buttons and badges" in docs/admin-ui-design.md.
+
+     .btn                   default: bordered, 30px
+     .btn--sm / .btn--lg    26px for toolbars and inline actions, 36px for a form's Save
+     .btn--primary          the main action: accent fill
+     .btn--save             a form's Save: the accent on a tint
+     .btn--quiet            no frame until hovered
+     .btn--danger           destructive; with --primary, filled
+     .btn--ai               calls a paid AI service
+     .btn--icon             icon only (square); give it a label or aria-label
+     .btn--pill             fully rounded: toggles only (the block editor's +)
+     .btn-group             joined buttons, rounded at the ends */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: var(--brando-control-md);
+  min-height: var(--brando-control-md);
+  margin: 0;
+  padding: 0 12px;
+  border: 1px solid var(--brando-line);
+  border-radius: var(--brando-radius-md);
+  background: var(--brando-surface);
+  color: var(--brando-ink);
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1;
+  text-transform: none;
+  letter-spacing: 0;
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color 0.12s ease, border-color 0.12s ease, color 0.12s ease;
+
+  &:hover:not(:disabled) {
+    background: var(--brando-surface-tint);
+    border-color: var(--brando-line-strong);
+  }
+
+  &:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--brando-accent) 20%, transparent);
+  }
+
+  &:disabled,
+  &[aria-disabled="true"] {
+    border-color: var(--brando-line);
+    background: var(--brando-surface-shaded);
+    color: var(--brando-faint);
+    cursor: not-allowed;
+  }
+
+  > [data-icon] {
+    flex: none;
+    width: 14px;
+    height: 14px;
+  }
+
+}
+
+.btn--sm {
+  height: var(--brando-control-sm);
+  min-height: var(--brando-control-sm);
+  padding: 0 9px;
+  gap: 5px;
+}
+
+.btn--lg {
+  height: var(--brando-control-lg);
+  min-height: var(--brando-control-lg);
+  padding: 0 16px;
+  font-size: 13px;
+  font-weight: 500;
+
+  > [data-icon] {
+    width: 16px;
+    height: 16px;
+  }
+}
+
+.btn--primary {
+  border-color: var(--brando-accent);
+  background: var(--brando-accent);
+  color: var(--brando-ink-inverse);
+  font-weight: 500;
+
+  &:hover:not(:disabled) {
+    border-color: var(--brando-accent-hover);
+    background: var(--brando-accent-hover);
+  }
+}
+
+.btn--save {
+  border-color: var(--brando-line);
+  background: var(--brando-surface-selected);
+  color: var(--brando-accent);
+  font-weight: 500;
+
+  &:hover:not(:disabled) {
+    border-color: var(--brando-line-strong);
+    background: color-mix(in srgb, var(--brando-accent) 8%, var(--brando-surface-selected));
+  }
+}
+
+.btn--quiet {
+  border-color: transparent;
+  background: transparent;
+  color: var(--brando-muted);
+
+  &:hover:not(:disabled) {
+    border-color: transparent;
+    background: var(--brando-surface-hover);
+    color: var(--brando-ink);
+  }
+
+  &:disabled {
+    border-color: transparent;
+    background: transparent;
+  }
+}
+
+.btn--danger {
+  border-color: var(--brando-error-line);
+  color: var(--brando-error-ink);
+
+  &:hover:not(:disabled) {
+    border-color: var(--brando-error-ink);
+    background: var(--brando-error);
+  }
+}
+
+/* The main action, when it destroys: a filled danger button. */
+.btn--primary.btn--danger:not(:disabled) {
+  border-color: var(--brando-error-ink);
+  background: var(--brando-error-ink);
+  color: var(--brando-ink-inverse);
+
+  &:hover:not(:disabled) {
+    border-color: color-mix(in srgb, var(--brando-error-ink) 85%, var(--brando-ink));
+    background: color-mix(in srgb, var(--brando-error-ink) 85%, var(--brando-ink));
+  }
+}
+
+.btn--ai {
+  border-color: var(--brando-ai-line);
+  color: var(--brando-ai);
+
+  &:hover:not(:disabled) {
+    border-color: var(--brando-ai-line-strong);
+    background: var(--brando-ai-tint);
+  }
+}
+
+.btn--icon {
+  width: var(--brando-control-md);
+  padding: 0;
+
+  &.btn--sm { width: var(--brando-control-sm); }
+  &.btn--lg { width: var(--brando-control-lg); }
+}
+
+.btn--pill {
+  border-radius: 999px;
+}
+
+.btn-group {
+  display: inline-flex;
+
+  > .btn {
+    border-radius: 0;
+    margin-left: -1px;
+
+    &:first-child {
+      margin-left: 0;
+      border-radius: var(--brando-radius-md) 0 0 var(--brando-radius-md);
+    }
+
+    &:last-child {
+      border-radius: 0 var(--brando-radius-md) var(--brando-radius-md) 0;
+    }
+
+    &:only-child {
+      border-radius: var(--brando-radius-md);
+    }
+
+    /* The hovered or focused button's whole border shows over its neighbour's. */
+    &:hover,
+    &:focus-visible {
+      position: relative;
+    }
+  }
+}
+
+/* After the sizes, so every one of them keeps the touch minimum. */
+@media (pointer: coarse) {
+  .btn {
+    min-height: var(--brando-control-touch);
+  }
+}

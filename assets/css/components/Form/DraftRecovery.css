@@ -101,29 +101,10 @@
     outline-offset: 3px;
   }
 
-  .draft-recovery-status,
-  .draft-storage-status,
   .draft-actions {
     display: flex;
     align-items: center;
     gap: 10px;
-  }
-
-  .draft-recovery-status {
-    justify-content: space-between;
-    gap: 16px;
-    min-height: 28px;
-    color: var(--draft-muted);
-    font-size: 12px;
-
-    .draft-button {
-      font-size: 12px;
-      padding-inline: 10px;
-    }
-    .draft-icon {
-      width: 16px;
-      height: 16px;
-    }
   }
 
   .draft-actions {
@@ -382,7 +363,6 @@
     font: 13px/20px "Main", sans-serif;
     header { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; padding: 14px 16px; background: var(--brando-surface-shaded); border-bottom: 1px solid var(--brando-line); }
     h4 { margin: 0; font: inherit; font-weight: 500; }
-    .draft-order-badge { padding: 3px 7px; border-radius: 4px; background: var(--brando-badge-bg); color: var(--brando-badge-ink); font-size: 11px; }
     .draft-order-columns { display: flex; justify-content: space-between; gap: 16px; padding: 8px 16px; color: var(--brando-muted); font-size: 11px; }
     ol { list-style: none; padding: 0; margin: 0; }
     li { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin: 0; padding: 12px 16px; border-top: 1px solid var(--brando-line); }
@@ -582,10 +562,6 @@
     }
     .draft-recovery-notice .draft-button {
       flex: 1 1 auto;
-    }
-    .draft-recovery-status {
-      flex-wrap: wrap;
-      gap: 0;
     }
     .draft-retention-note {
       align-items: flex-start;

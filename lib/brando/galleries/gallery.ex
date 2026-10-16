@@ -124,7 +124,7 @@ defmodule Brando.Galleries.Gallery do
       </:outside>
     </.update_link>
     <.field columns={3} class="listing-gallery-count">
-      <span class="workspace-badge">{ngettext("1 object", "%{count} objects", @object_count)}</span>
+      <span class="badge">{ngettext("1 object", "%{count} objects", @object_count)}</span>
     </.field>
     """
   end

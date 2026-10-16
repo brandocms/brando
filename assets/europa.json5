@@ -48,7 +48,8 @@
          overlay       --brando-overlay           modal and loader backdrop
          status.*      --brando-status-*          entry status dots
 
-       The other roles in tokens.css have no palette entry. Application CSS
+       Every other colour role in tokens.css has an entry below the status
+       colours, so all of the admin's colours are set here. Application CSS
        can also use these names with `theme(colors.*)` and `@color`; values
        that repeat another entry refer to it, so they follow an override. */
     colors: {
@@ -74,6 +75,93 @@
         deleted: '#171a18',
       },
 
+      /* The other colour roles in css/tokens.css, by the custom property
+         they set: muted is --brando-muted, line.strong --brando-line-strong,
+         attention.tint --brando-attention, module.pink.dot
+         --brando-module-pink-dot, presence.p0 --brando-presence-0. */
+      muted: '#626b66',
+      inkInverse: '{colors.white}',
+      faint: '#9aa39c',
+      line: {
+        strong: '#bacabd',
+        soft: '#ecf0ea',
+        subform: '#e2e9df',
+        input: '#e0e0e0',
+      },
+      accentHover: '#1a3d30',
+      surface: {
+        base: '{colors.white}',
+        shaded: '#fbfcfa',
+        hover: '#f5f8f3',
+        tint: '#f1f5ef',
+      },
+      badge: {
+        fill: '#eef0eb',
+        ink: '#566153',
+      },
+      ai: '#634f8f',
+      attention: {
+        tint: '#fbefda',
+        line: '#e4b866',
+        ink: '#87662d',
+      },
+      success: {
+        tint: '#e8f2e9',
+        line: '#d0e3d2',
+        ink: '#2f6343',
+      },
+      error: {
+        tint: '#fff1ed',
+        line: '#e8ccc4',
+        ink: '#8c4232',
+      },
+      module: {
+        pink: {
+          line: '#fce7f3',
+          tint: '#fdf2f8',
+          ink: '#831843',
+          dot: '#f9a8d4',
+        },
+        emerald: {
+          line: '#d1fae5',
+          tint: '#ecfdf5',
+          ink: '#064e3b',
+          dot: '#6ee7b7',
+        },
+        peach: {
+          line: '#ffedd5',
+          tint: '#fff7ed',
+          ink: '#7c2d12',
+          dot: '#fdba74',
+        },
+      },
+      nav: {
+        ink: '#16261c',
+        accent: '#1f3d2b',
+        muted: 'rgba(22, 38, 28, 0.62)',
+        rule: 'rgba(22, 38, 28, 0.13)',
+        hover: 'rgba(22, 38, 28, 0.045)',
+        surface: '{colors.white}',
+      },
+      presence: {
+        p0: '#2563c9',
+        p1: '#1f7a4f',
+        p2: '#a8520b',
+        p3: '#7e3fc4',
+        p4: '#c0392b',
+        p5: '#0f766e',
+      },
+      switch: {
+        on: '#9cc79f',
+        off: '#c0c0c0',
+      },
+      tabbar: '#fcfcfd',
+      legacy: {
+        shaded: '#fcfcfd',
+        input: '{colors.white}',
+        blockRef: '#fcfcfc',
+      },
+
       villain: {
         main: '{colors.blue}',
         mainFaded: '#aaaaaa',
@@ -87,6 +175,30 @@
         availableBlockHover: '#eeeeee',
         popover: '{colors.dark}',
       },
+    },
+
+    /* The admin's corners and control heights. css/tokens.css sets
+       --brando-radius-* and --brando-control-* from these, so an application
+       changes them here, in its own europa.json5:
+
+         radius.sm      badges and small chips
+         radius.md      buttons
+         radius.lg      inputs and cards
+         controls.sm    toolbar and inline buttons
+         controls.md    the default button
+         controls.lg    a form's Save
+         controls.touch every button's minimum on a coarse pointer */
+    radius: {
+      sm: '4px',
+      md: '6px',
+      lg: '8px',
+    },
+
+    controls: {
+      sm: '26px',
+      md: '30px',
+      lg: '36px',
+      touch: '40px',
     },
 
     container: {

@@ -835,11 +835,6 @@
       overflow-wrap: break-word;
     }
 
-    .badge {
-      padding: 3px 7px 2px;
-      font-size: 10px;
-    }
-
     small {
       display: block;
       flex-basis: 100%;

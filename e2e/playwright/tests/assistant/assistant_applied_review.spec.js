@@ -51,7 +51,7 @@ test('an applied proposal shows what it applied, and each card links to its page
   // Identity is only copied from: a source, not an updated entry.
   const source = cards.nth(0)
   const expectSource = async () => {
-    await expect(source.locator('.assistant-badge.is-source')).toBeVisible()
+    await expect(source.getByTestId('assistant-action-source')).toBeVisible()
     await expect(source.locator('.assistant-card-preview')).toHaveCount(0)
     await expect(review.locator('.assistant-counts strong').first()).toHaveText('3')
   }

@@ -43,7 +43,7 @@
   .transfer-related-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding-top: 12px; border-top: 1px solid var(--brando-line-soft); }
   .transfer-related-row > div { min-width: 0; display: grid; gap: 4px; }
   .transfer-related-row strong { font-size: 13px; font-weight: 500; overflow-wrap: anywhere; }
-  .transfer-related-row span { font-size: 12px; color: var(--transfer-muted); }
+  .transfer-related-row span:not(.badge) { font-size: 12px; color: var(--transfer-muted); }
   .transfer-related-row .transfer-button { flex-shrink: 0; }
   #transfer-entry-mappings { display: grid; gap: 20px; }
   .transfer-whole-entry { min-width: 0; border: 1px solid var(--transfer-line); border-radius: 9px; background: var(--brando-surface); overflow: hidden; padding: 0 24px 20px; }
@@ -145,14 +145,11 @@
   .transfer-stats dd { font-size: 26px; letter-spacing: -.035em; padding-top: 5px; }
   .transfer-review-list article { display: flex; justify-content: space-between; gap: 16px; align-items: center; padding: 16px 0; border-bottom: 1px solid var(--brando-line-soft); }
   .transfer-review-list p { font-size: 11px; padding-top: 4px; }
-  .transfer-badge { display: inline-flex; align-items: center; border: 1px solid var(--transfer-line); border-radius: 4px; padding: 3px 7px; background: var(--brando-badge-bg); color: var(--brando-badge-ink); font-size: 10px; white-space: nowrap; }
-  .transfer-badge.warning { background: var(--brando-attention); border-color: var(--brando-attention-line); color: var(--brando-attention-ink); }
   .transfer-details { margin: 20px 0; border: 1px solid var(--transfer-line); border-radius: 6px; }
   summary { cursor: pointer; padding: 13px 16px; font-size: 12px; }
   .transfer-dependency-list { padding: 0 16px 16px; display: grid; gap: 10px; }
   .transfer-dependency-list > div { display: flex; justify-content: space-between; gap: 18px; }
-  .transfer-dependency-list span { font-size: 12px; }
-  .transfer-dependency-list small { font-size: 11px; color: var(--transfer-muted); }
+  .transfer-dependency-list span:not(.badge) { font-size: 12px; }
   .transfer-import-start { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 32px; }
   .transfer-upload-card { padding: 26px; border: 1px solid var(--transfer-line); border-radius: 10px; background: white; }
   .transfer-upload-card .transfer-feedback { margin-top: 16px; }
@@ -203,9 +200,9 @@
   .transfer-dependencies { padding-top: 32px; }
   .transfer-dependency-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 24px; padding: 17px 0; border-bottom: 1px solid var(--transfer-line); }
   .transfer-dependency-row h3 { font-size: 13px; overflow-wrap: anywhere; }
-  .transfer-dependency-row > div > span { color: var(--transfer-muted); font-size: 11px; }
+  .transfer-dependency-row > div > span:not(.badge) { color: var(--transfer-muted); font-size: 11px; }
   .transfer-dependency-row code { display: block; padding-top: 4px; }
-  .transfer-dependency-choice .transfer-badge { margin-top: 8px; }
+  .transfer-dependency-choice .badge { margin-top: 8px; }
   .transfer-dependencies .transfer-note { margin-top: 20px; }
   .transfer-definition-plan { display: grid; gap: 14px; padding: 20px; margin-top: 18px; border: 1px solid var(--transfer-line); border-radius: 7px; }
   .transfer-definition-plan ul { padding-left: 18px; font-size: 12px; }
@@ -290,7 +287,7 @@
   .transfer-entry-metadata time { font-variant-numeric: tabular-nums; }
   .transfer-related-content { min-width: 0; }
   .transfer-related-title { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
-  .transfer-related-title .transfer-badge { margin: 0; display: inline-flex; }
+  .transfer-related-title .badge { margin: 0; }
   .transfer-reference-paths { list-style: none; padding: 0; margin: 10px 0 0; display: grid; gap: 6px; }
   .transfer-reference-paths li { display: flex; align-items: baseline; gap: 8px; font-size: 12px; line-height: 1.6; color: var(--workspace-muted); overflow-wrap: anywhere; }
   .transfer-reference-paths [data-icon] { width: 13px; height: 13px; flex-shrink: 0; }
@@ -300,11 +297,11 @@
   .transfer-dependency-group { border: 1px solid var(--workspace-line); border-radius: 6px; overflow: hidden; }
   .transfer-dependency-group h3 { display: flex; align-items: center; gap: 8px; padding: 12px 16px; background: var(--brando-surface-hover); font-size: 14px; }
   .transfer-dependency-group h3 [data-icon] { width: 16px; height: 16px; }
-  .transfer-dependency-group h3 .transfer-badge { margin-left: auto; }
+  .transfer-dependency-group h3 .badge { margin-left: auto; }
   .transfer-dependency-list { margin: 0; padding: 0 16px; }
   .transfer-dependency-list > div { gap: 16px; padding: 10px 0; border-top: 1px solid var(--brando-line-soft); }
   .transfer-dependency-list > div > span { min-width: 0; overflow-wrap: anywhere; }
-  .transfer-dependency-list small { flex-shrink: 0; white-space: normal; }
+  .transfer-dependency-list .badge { flex-shrink: 0; }
   @media (max-width: 600px) {
     .transfer-dependency-list > div { align-items: flex-start; flex-direction: column; gap: 6px; }
     .transfer-related-row { align-items: flex-start; flex-direction: column; }
