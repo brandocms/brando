@@ -77,8 +77,9 @@ as deprecated shims in 0.55 and 0.56 and are removed in 0.57.
 
 ## 0.52.0
 
-* Pull in new `mix.exs` and rename to your application's names
-  https://github.com/brandocms/brando/blob/master/priv/templates/brando.install/mix.exs
+* Pull in new `mix.exs` and rename to your application's names. (Brando no longer ships this template; compare
+  with a new Phoenix application that has `mix brando.install`, see `guides/generators.md` and
+  `guides/migrating_from_051.md`.)
 
 * `mix deps.get` -- you might need to unlock some deps, i.e: `mix deps.unlock phoenix_ecto`
 
@@ -98,14 +99,9 @@ as deprecated shims in 0.55 and 0.56 and are removed in 0.57.
 * Delete graphql
   `$ rm -rf lib/my_app/graphql`
 
-* Pull down a new router from:
-  https://github.com/brandocms/brando/blob/main/priv/templates/brando.install/lib/application_name_web/router.ex
-
-* Pull down a new `application_web.ex` from:
-  https://github.com/brandocms/brando/blob/main/priv/templates/brando.install/lib/application_name_web.ex
-
-* Pull down a new `endpoint.ex` from:
-  https://github.com/brandocms/brando/blob/main/priv/templates/brando.install/lib/application_name_web/endpoint.ex
+* Pull down a new router, `application_web.ex` and `endpoint.ex`. (Brando no longer ships these templates; compare
+  with a new Phoenix application that has `mix brando.install`, see `guides/generators.md` and
+  `guides/migrating_from_051.md`.)
 
 * Delete the admin channel (or the whole dir, if you don't have anything of your own there):
   `$ rm -rf lib/my_app_web/channels`

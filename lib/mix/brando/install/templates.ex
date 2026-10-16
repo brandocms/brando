@@ -2,24 +2,10 @@ defmodule Mix.Brando.Install.Templates do
   @moduledoc false
 
   @new [
-    # Mix template
-    {:eex, "mix.exs", "mix.exs"},
-
-    # VERSION
-    {:eex, "VERSION", "VERSION"},
-
-    # README
-    {:eex, "README.md", "README.md"},
-
-    # Formatter
-    {:eex, "formatter.exs", ".formatter.exs"},
-
-    # Release cfg & setup
-    {:eex, ".envrc", ".envrc"},
+    # Release environment files (Mix.Brando.Igniter.Install.Deployment)
     {:eex, ".envrc.prod", ".envrc.prod"},
     {:eex, ".envrc.staging", ".envrc.staging"},
     {:eex, "rel/env.sh.eex", "rel/env.sh.eex"},
-    {:eex, "rel/vm.args.eex", "rel/vm.args.eex"},
     {:eex, "lib/application_name/release_tasks.ex", "lib/application_name/release_tasks.ex"},
 
     # Application-owned migrations for named environment schemas
@@ -27,77 +13,18 @@ defmodule Mix.Brando.Install.Templates do
     {:eex, "tenant_migrations/20260816002300_add_shared_content_library.exs",
      "priv/repo/tenant_migrations/20260816002300_add_shared_content_library.exs"},
 
-    # Etc. Various OS config files and log directory.
-    {:keep, "log", "log"},
-    {:eex, "etc/pgbkup.sh", "etc/pgbkup.sh"},
-    {:eex, "etc/logrotate/prod.conf", "etc/logrotate/prod.conf"},
-    {:eex, "etc/logrotate/staging.conf", "etc/logrotate/staging.conf"},
-    {:eex, "etc/systemd/prod.service", "etc/systemd/prod.service"},
-    {:eex, "etc/systemd/staging.service", "etc/systemd/staging.service"},
-
-    # Main application file
-    {:eex, "lib/application_name/application.ex", "lib/application_name/application.ex"},
-
     # Tuple implementation for Jason
     {:eex, "lib/application_name/tuple.ex", "lib/application_name/tuple.ex"},
 
     # Presence
     {:eex, "lib/application_name/presence.ex", "lib/application_name/presence.ex"},
 
-    # Router template
-    {:eex, "lib/application_name_web/router.ex", "lib/application_name_web/router.ex"},
-
-    # Lockdown files
-    {:eex, "lib/application_name_web/controllers/lockdown_controller.ex",
-     "lib/application_name_web/controllers/lockdown_controller.ex"},
-    {:eex, "lib/application_name_web/components/layouts/lockdown.html.heex",
-     "lib/application_name_web/components/layouts/lockdown.html.heex"},
-    {:eex, "lib/application_name_web/controllers/lockdown_html/index.html.heex",
-     "lib/application_name_web/controllers/lockdown_html/index.html.heex"},
-    {:eex, "lib/application_name_web/controllers/lockdown_html.ex",
-     "lib/application_name_web/controllers/lockdown_html.ex"},
-
-    # Page files
-    {:eex, "lib/application_name_web/controllers/page_controller.ex",
-     "lib/application_name_web/controllers/page_controller.ex"},
-    {:eex, "lib/application_name_web/controllers/page_html.ex", "lib/application_name_web/controllers/page_html.ex"},
-    {:eex, "lib/application_name_web/controllers/page_html/index.html.heex",
-     "lib/application_name_web/controllers/page_html/index.html.heex"},
-    {:eex, "lib/application_name_web/controllers/page_html/default.html.heex",
-     "lib/application_name_web/controllers/page_html/default.html.heex"},
-
-    # Fallback and errors
-    {:eex, "lib/application_name_web/controllers/fallback_controller.ex",
-     "lib/application_name_web/controllers/fallback_controller.ex"},
-    {:eex, "lib/application_name_web/controllers/error_html.ex", "lib/application_name_web/controllers/error_html.ex"},
-    {:eex, "lib/application_name_web/controllers/error_html/404.html.heex",
-     "lib/application_name_web/controllers/error_html/404.html.heex"},
-    {:eex, "lib/application_name_web/controllers/error_html/500.html.heex",
-     "lib/application_name_web/controllers/error_html/500.html.heex"},
-
-    # Partials
-    {:eex, "lib/application_name_web/components/partials/navigation.html.heex",
-     "lib/application_name_web/components/partials/navigation.html.heex"},
-    {:eex, "lib/application_name_web/components/partials/footer.html.heex",
-     "lib/application_name_web/components/partials/footer.html.heex"},
-    {:eex, "lib/application_name_web/components/partials/logo.html.heex",
-     "lib/application_name_web/components/partials/logo.html.heex"},
-
     # Default Villain parser & filters
     {:eex, "lib/application_name_web/villain/parser.ex", "lib/application_name_web/villain/parser.ex"},
     {:eex, "lib/application_name_web/villain/filters.ex", "lib/application_name_web/villain/filters.ex"},
 
-    # E2E test setup
-    {:eex, "lib/application_name/factory.ex", "lib/application_name/factory.ex"},
-    {:eex, "test/e2e/test_helper.exs", "test/e2e/test_helper.exs"},
-
-    # Default configuration files
+    # The Brando.Images defaults the installer configures
     {:eex, "config/brando.exs", "config/brando.exs"},
-    {:eex, "config/config.exs", "config/config.exs"},
-    {:eex, "config/dev.exs", "config/dev.exs"},
-    {:eex, "config/e2e.exs", "config/e2e.exs"},
-    {:eex, "config/prod.exs", "config/prod.exs"},
-    {:eex, "config/runtime.exs", "config/runtime.exs"},
 
     # Tables that predate versioned Brando migrations
     {:eex, "migrations/20150123230712_create_users.exs", "priv/repo/migrations/20150123230712_create_users.exs"},
@@ -111,35 +38,8 @@ defmodule Mix.Brando.Install.Templates do
      "priv/repo/migrations/20171103152205_create_pagefragments.exs"},
     {:eex, "migrations/20190426105600_create_templates.exs", "priv/repo/migrations/20190426105600_create_templates.exs"},
 
-    # Repo seeds
-    {:eex, "repo/seeds.exs", "priv/repo/seeds.exs"},
-
-    # Layouts
-    {:eex, "lib/application_name_web/components/layouts.ex", "lib/application_name_web/components/layouts.ex"},
-    {:eex, "lib/application_name_web/components/layouts/app.html.heex",
-     "lib/application_name_web/components/layouts/app.html.heex"},
-    {:eex, "lib/application_name_web/components/layouts/bare.html.heex",
-     "lib/application_name_web/components/layouts/bare.html.heex"},
-
-    # Gettext templates
-    {:keep, "priv/static/gettext/backend/nb", "priv/static/gettext/backend/nb/LC_MESSAGES"},
-    {:keep, "priv/static/gettext/frontend", "priv/static/gettext/frontend"},
-    {:eex, "lib/application_name_web/gettext.ex", "lib/application_name_web/gettext.ex"},
-
-    # Endpoint
-    {:eex, "lib/application_name_web/endpoint.ex", "lib/application_name_web/endpoint.ex"},
-
-    # Repo
-    {:eex, "lib/application_name/repo.ex", "lib/application_name/repo.ex"},
-
     # Authorization
     {:eex, "lib/application_name/authorization.ex", "lib/application_name/authorization.ex"},
-
-    # Telemetry
-    {:eex, "lib/application_name_web/telemetry.ex", "lib/application_name_web/telemetry.ex"},
-
-    # Live Preview
-    {:eex, "lib/application_name_web/live_preview.ex", "lib/application_name_web/live_preview.ex"},
 
     # Admin
     {:eex, "lib/application_name_admin/menus.ex", "lib/application_name_admin/menus.ex"},
@@ -148,11 +48,8 @@ defmodule Mix.Brando.Install.Templates do
 
   @static [
     # Deployment tools
-    {:copy, "gitignore", ".gitignore"},
     {:copy, "dockerignore", ".dockerignore"},
     {:copy, "Dockerfile", "Dockerfile"},
-    {:eex, "scripts/sync_media_from_local_to_remote.sh", "scripts/sync_media_from_local_to_remote.sh"},
-    {:eex, "scripts/sync_media_from_remote_to_local.sh", "scripts/sync_media_from_remote_to_local.sh"},
 
     # Backend tooling
     {:copy, "assets/backend/europa.json5", "assets/backend/europa.json5"},

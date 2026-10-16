@@ -6,10 +6,9 @@
 #       fail unless these agree with mix.exs's @version (mix check and CI):
 #       - assets/package.json's version, and its publishConfig.tag: `beta`
 #         for a prerelease, `latest` for a stable version
-#       - the generator's BrandoJS pin in the backend template's package.json,
-#         and its Brando dependency in the template mix.exs: an exact version
-#         must be the release version; a local file:/link: package or a
-#         path:/github:/git: dependency is accepted
+#       - the generator's BrandoJS pin in the backend template's package.json:
+#         an exact version must be the release version; a local file:/link:
+#         package is accepted
 #       - the release tag, which must be `v` + the version: --tag TAG, or in
 #         GitHub Actions the pushed tag (GITHUB_REF_NAME when GITHUB_REF_TYPE
 #         is `tag`)
@@ -19,7 +18,7 @@
 #
 #   scripts/release-version bump VERSION
 #       set VERSION in mix.exs and assets/package.json (and its
-#       publishConfig.tag), and in the generator pins that name the old
+#       publishConfig.tag), and in the generator pin when it names the old
 #       version exactly; then check. It writes nothing unless every edit
 #       succeeds, and keeps each file's mode.
 #
@@ -33,7 +32,6 @@ root="${RELEASE_VERSION_ROOT:-$(cd "$(dirname "$0")/.." && pwd)}"
 mix_exs="mix.exs"
 npm_package="assets/package.json"
 backend_package="priv/templates/brando.install/assets/backend/package.json"
-template_mix="priv/templates/brando.install/mix.exs"
 e2e_mix="e2e/mix.exs"
 license="LICENSE.md"
 npm_license="assets/LICENSE.md"
@@ -83,11 +81,6 @@ exact_pin() {
   sed -n "s/^ *{:$2, \"\\([^\"]*\\)\".*/\\1/p" "$root/$1" | head -n 1
 }
 
-# The template's uncommented `{:brando, …}` dependency line.
-template_brando() {
-  grep -E '^[[:space:]]*\{:brando,' "$root/$template_mix" | head -n 1
-}
-
 # The BrandoJS spec in the backend template, from dependencies or
 # devDependencies.
 backend_spec() {
@@ -95,7 +88,7 @@ backend_spec() {
 }
 
 check() {
-  local tag="" version npm_version npm_tag want_tag spec line requirement app elixir js e2e e2e_present=false
+  local tag="" version npm_version npm_tag want_tag spec app elixir js e2e e2e_present=false
   while [ $# -gt 0 ]; do
     case "$1" in
       --tag) [ $# -ge 2 ] || usage; tag="$2"; shift 2 ;;
@@ -132,18 +125,6 @@ check() {
     esac
   fi
 
-  if need "$template_mix"; then
-    line="$(template_brando)"
-    if [ -z "$line" ]; then
-      problem "$template_mix has no {:brando, …} dependency"
-    elif requirement="$(sed -n 's/^ *{:brando, "\([^"]*\)".*/\1/p' <<<"$line")" && [ -n "$requirement" ]; then
-      [ "$requirement" = "$version" ] || [ "$requirement" = "== $version" ] ||
-        problem "$template_mix requires {:brando, \"$requirement\"}: use exactly \"$version\", or a path:/github:/git: dependency"
-    elif ! grep -qE '(path|github|git):' <<<"$line"; then
-      problem "$template_mix has an unrecognised Brando dependency: $(sed 's/^ *//' <<<"$line")"
-    fi
-  fi
-
   need "$e2e_mix" && e2e_present=true
   for app in phoenix phoenix_live_view; do
     elixir="$(exact_pin "$mix_exs" "$app")"
@@ -168,7 +149,7 @@ check() {
   fi
 
   [ "$problems" -eq 0 ] || return 1
-  echo "release-version: $version in $mix_exs and $npm_package (npm dist-tag $(dist_tag "$version"))${tag:+ and tag $tag}; generator pins agree; npm licence matches; Phoenix $(exact_pin "$mix_exs" phoenix) and LiveView $(exact_pin "$mix_exs" phoenix_live_view) paired"
+  echo "release-version: $version in $mix_exs and $npm_package (npm dist-tag $(dist_tag "$version"))${tag:+ and tag $tag}; generator pin agrees; npm licence matches; Phoenix $(exact_pin "$mix_exs" phoenix) and LiveView $(exact_pin "$mix_exs" phoenix_live_view) paired"
 }
 
 # bump stages each rewritten file in $work and writes them back only when all
@@ -217,7 +198,7 @@ write_back() {
 }
 
 bump() {
-  local new="$1" old line requirement section
+  local new="$1" old section
   local messages=()
   [[ "$new" =~ $semver ]] || {
     echo "release-version: $new $not_semver" >&2
@@ -241,15 +222,6 @@ bump() {
     section="$(jq -r --arg p "$brandojs" 'if .dependencies[$p] then "dependencies" else "devDependencies" end' "$root/$backend_package")"
     jq_edit "$backend_package" --arg s "$section" --arg p "$brandojs" --arg v "$new" '.[$s][$p] = $v' || exit 1
     messages+=("release-version: $old -> $new in $backend_package")
-  fi
-
-  if [ -f "$root/$template_mix" ]; then
-    line="$(template_brando)"
-    requirement="$(sed -n 's/^ *{:brando, "\([^"]*\)".*/\1/p' <<<"$line")"
-    if [ -n "$requirement" ] && { [ "$requirement" = "$old" ] || [ "$requirement" = "== $old" ]; }; then
-      replace_line "$template_mix" "$line" "${line/\"$requirement\"/\"${requirement%"$old"}$new\"}" || exit 1
-      messages+=("release-version: $old -> $new in $template_mix")
-    fi
   fi
 
   write_back
