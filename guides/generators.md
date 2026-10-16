@@ -600,7 +600,8 @@ definition, with `steps: [:assemble, :tar]` for Florist. `brando.install` does
 the same, so run it only for an application installed before that. It
 preserves existing release settings, runtime configuration, secrets,
 Dockerfiles and deployment files, with a notice when an existing release
-writes no tarball. Build with `MIX_ENV=prod mix release`,
+writes no tarball, or when `mix.exs` defines releases but none named after the
+application (it adds no second release then). Build with `MIX_ENV=prod mix release`,
 then invoke migrations explicitly as described in [Deployment](deployment.md).
 `brando.install.fabfile` is retired and directs callers to release generation and
 Florist; it does not modify existing Fabric files. `brando.install` no longer

@@ -4,9 +4,11 @@
   runs, and a release with `steps: [:assemble, :tar]` for the tarball Florist
   copies out of the image. An existing Dockerfile is kept, with a notice of
   what Brando's build needs that it lacks; an existing `.dockerignore` gets
-  the exclusions it misses, the `.envrc*` files with secrets among them (with
-  `!` exceptions, a notice instead); an existing ReleaseTasks or release is
-  kept, with a notice when it has no `migrate/0` or writes no tarball.
+  the exclusions it misses, the `.envrc*` files with secrets among them (a
+  notice instead for those a `!` exception could re-include); an existing
+  ReleaseTasks or release is kept, with a notice when it has no `migrate/0`
+  or writes no tarball, and releases with none named after the application
+  get a notice instead of a second release.
   `.gitignore` gets what a Brando application builds, uploads or downloads:
   the asset projects' `node_modules` and Yalc copies, the builds in
   `priv/static`, `/media/`, `/log/`, and Florist's `/release-archives/` and

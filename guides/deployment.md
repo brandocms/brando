@@ -104,7 +104,11 @@ mix brando.gen.release
 
 It leaves existing release settings, runtime configuration, secrets and
 deployment files alone, and a ReleaseTasks file that differs from its
-template stops it with an issue. The task requires Igniter.
+template stops it with an issue. When `mix.exs` already defines releases but
+none named after the application, it adds none, since a second release makes
+the unnamed `mix release` fail, and a notice says what Florist needs: the
+release named like Florist's `project_name`, `steps: [:assemble, :tar]`, and
+the only release or `default_release`. The task requires Igniter.
 
 Florist names the release after the version in the `VERSION` file, falling
 back to a literal `@version "..."` in `mix.exs`. `mix brando.install` moves
@@ -496,9 +500,13 @@ Florist sends the build context, the project directory, to the Docker daemon
 on every build, and that daemon may be remote. The `.dockerignore` keeps out
 dependencies and build output, `node_modules`, `media/`, Florist's
 `release-archives/` and `sql/` dumps, and the `.envrc*` files with secrets.
-An existing `.dockerignore` gets the exclusions it misses appended; one with
-`!` exceptions, which an appended line could override, gets a notice
-instead. `priv/static` is excluded too: the build makes it from the two
+An existing `.dockerignore` gets the exclusions it misses appended, with
+`.envrc*` unless one pattern already covers every `.envrc*` name (exact names
+such as `.envrc.prod` leave a `.envrc.prod.bak` in the context). An appended
+line comes last, so it would override a `!` exception that re-includes part
+of what it covers: such exclusions are named in a notice instead. Exceptions
+that cannot touch them, such as phx.gen.release's `!.git/HEAD`, do not stop
+the rest being appended. `priv/static` is excluded too: the build makes it from the two
 asset projects, so keep static files such as images and fonts in
 `assets/frontend/public`, which Vite copies there. Files phx.new put in
 `priv/static` do not reach the release.

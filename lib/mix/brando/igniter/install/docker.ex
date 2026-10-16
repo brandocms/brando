@@ -32,7 +32,9 @@ if Code.ensure_loaded?(Igniter) do
       {"media", ["media"]},
       {"release-archives", ["release-archives"]},
       {"sql", ["sql"]},
-      {".envrc*", [".envrc", ".envrc.prod", ".envrc.staging"]}
+      # Names standing for every .envrc* file: none, dotted, backup and
+      # arbitrary suffixes. Exact names such as .envrc.prod leave the rest out.
+      {".envrc*", [".envrc", ".envrc.prod", ".envrc.staging", ".envrc.prod.bak", ".envrc~", ".envrc-x9q"]}
     ]
 
     @doc """
@@ -43,9 +45,10 @@ if Code.ensure_loaded?(Igniter) do
     An existing Dockerfile is kept, with a notice naming what Brando's build
     needs that it lacks. An existing `.dockerignore` gets the exclusions it is
     missing (dependencies, build output, uploads, Florist's archives and
-    database dumps, and the environment files with secrets) appended; one with
-    `!` exceptions, which an appended line could override, gets a notice
-    instead.
+    database dumps, and the environment files with secrets) appended. An
+    appended line comes last and so overrides any `!` exception matching a path
+    it covers: the exclusions such an exception could touch are named in a
+    notice instead.
     """
     def plan(igniter, project) do
       igniter
@@ -85,30 +88,61 @@ if Code.ensure_loaded?(Igniter) do
         {igniter, contents} = contents(igniter, ".dockerignore")
         rules = rules(contents)
         missing = for {line, paths} <- @context_exclusions, not Enum.all?(paths, &excluded?(rules, &1)), do: line
-        exclude(igniter, missing, Enum.any?(rules, &match?({true, _}, &1)))
+        exceptions = for {true, _regex, segments} <- rules, do: segments
+        {conflicting, appendable} = Enum.split_with(missing, &conflicts?(exceptions, &1))
+
+        igniter
+        |> append(appendable)
+        |> dockerignore_notice(conflicting)
       else
         Files.create(igniter, ".dockerignore", Templates.contents(:copy, "dockerignore"))
       end
     end
 
-    defp exclude(igniter, [], _exceptions?), do: igniter
-    defp exclude(igniter, missing, true = _exceptions?), do: dockerignore_notice(igniter, missing)
-    defp exclude(igniter, missing, false), do: Igniter.update_file(igniter, ".dockerignore", &append(&1, missing))
+    defp append(igniter, []), do: igniter
+    defp append(igniter, missing), do: Igniter.update_file(igniter, ".dockerignore", &append_lines(&1, missing))
 
-    defp append(source, missing) do
+    defp append_lines(source, missing) do
       Source.update(source, :content, fn content ->
         String.trim_trailing(content) <>
           "\n\n# Kept out of the Docker build context by Brando\n" <> Enum.join(missing, "\n") <> "\n"
       end)
     end
 
+    defp dockerignore_notice(igniter, []), do: igniter
+
     defp dockerignore_notice(igniter, missing) do
       Igniter.add_notice(igniter, """
-      .dockerignore has exceptions (`!` lines), so it was left unchanged. Make sure it keeps these
-      out of the Docker build context, which Florist sends to the Docker daemon on every build:
+      .dockerignore has exceptions (`!` lines) that an appended exclusion would override, so these
+      were not added. Make sure it keeps them out of the Docker build context, which Florist sends
+      to the Docker daemon on every build:
       #{Enum.map_join(missing, "\n", &"  #{&1}")}
       """)
     end
+
+    # Whether an exception could re-include a path the line excludes: one
+    # pattern matches a path that is, or is inside, a path the other matches.
+    defp conflicts?(exceptions, line) do
+      line = segments(line)
+      Enum.any?(exceptions, &(&1 == :any or overlap?(&1, line)))
+    end
+
+    defp overlap?([], _), do: true
+    defp overlap?(_, []), do: true
+    defp overlap?(["**" | rest] = a, [_ | b_rest] = b), do: overlap?(rest, b) or overlap?(a, b_rest)
+    defp overlap?([_ | a_rest] = a, ["**" | rest] = b), do: overlap?(a, rest) or overlap?(a_rest, b)
+
+    defp overlap?([a | a_rest], [b | b_rest]),
+      do: intersect?(String.graphemes(a), String.graphemes(b)) and overlap?(a_rest, b_rest)
+
+    # Whether two single-segment globs (`*`, `?` and literal characters) match
+    # a common name.
+    defp intersect?([], []), do: true
+    defp intersect?(["*" | rest] = a, b), do: intersect?(rest, b) or (b != [] and intersect?(a, tl(b)))
+    defp intersect?(a, ["*" | rest] = b), do: intersect?(a, rest) or (a != [] and intersect?(tl(a), b))
+    defp intersect?([], _), do: false
+    defp intersect?(_, []), do: false
+    defp intersect?([a | a_rest], [b | b_rest]), do: (a == b or "?" in [a, b]) and intersect?(a_rest, b_rest)
 
     # Docker's rule: patterns are matched from the context root, a pattern
     # that matches a directory excludes what is in it, and the last pattern
@@ -116,7 +150,7 @@ if Code.ensure_loaded?(Igniter) do
     defp excluded?(rules, path) do
       paths = path |> Path.split() |> Enum.scan(&Path.join(&2, &1))
 
-      Enum.reduce(rules, false, fn {negated?, regex}, excluded? ->
+      Enum.reduce(rules, false, fn {negated?, regex, _segments}, excluded? ->
         if Enum.any?(paths, &Regex.match?(regex, &1)), do: not negated?, else: excluded?
       end)
     end
@@ -139,10 +173,17 @@ if Code.ensure_loaded?(Igniter) do
       pattern = pattern |> String.trim_leading("/") |> String.trim_leading("./") |> String.trim_trailing("/")
 
       cond do
-        String.contains?(pattern, ["[", "\\"]) -> if negated?, do: [{true, ~r/.*/}], else: []
+        String.contains?(pattern, ["[", "\\"]) -> if negated?, do: [{true, ~r/.*/, :any}], else: []
         pattern == "" -> []
-        true -> [{negated?, Regex.compile!("^" <> glob(pattern) <> "$")}]
+        true -> [{negated?, Regex.compile!("^" <> glob(pattern) <> "$"), segments(pattern)}]
       end
+    end
+
+    # A `**` within a segment crosses directories like a whole `**` segment.
+    defp segments(pattern) do
+      pattern
+      |> String.split("/", trim: true)
+      |> Enum.map(&if(String.contains?(&1, "**"), do: "**", else: &1))
     end
 
     defp glob(pattern) do

@@ -114,17 +114,48 @@ defmodule Mix.Brando.Igniter.InstallDeployTest do
     igniter = install(project(%{".dockerignore" => String.replace(covered, ".envrc*", ".envrc.*")}))
     assert IgniterCase.source(igniter, ".dockerignore") =~ "by Brando\n.envrc*\n"
 
-    # An exception after an exclusion re-includes the path; an appended line could override it.
+    # Exact names leave out the rest of the family, such as a .envrc.prod.bak with credentials.
+    exact = String.replace(covered, ".envrc*", ".envrc\n.envrc.prod\n.envrc.staging")
+    igniter = install(project(%{".dockerignore" => exact}))
+
+    assert IgniterCase.source(igniter, ".dockerignore") ==
+             exact <> "\n# Kept out of the Docker build context by Brando\n.envrc*\n"
+  end
+
+  test "exclusions are appended past exceptions that cannot re-include them" do
+    # mix phx.gen.release --docker re-includes .git/HEAD and .git/refs.
+    phoenix = File.read!(Application.app_dir(:phoenix, "priv/templates/phx.gen.release/dockerignore.eex"))
+    assert phoenix =~ "\n!.git/HEAD\n"
+    igniter = install(project(%{".dockerignore" => phoenix}))
+
+    assert IgniterCase.source(igniter, ".dockerignore") ==
+             String.trim_trailing(phoenix) <>
+               "\n\n# Kept out of the Docker build context by Brando\n" <>
+               "assets/backend/node_modules\nassets/frontend/node_modules\nmedia\nrelease-archives\nsql\n.envrc*\n"
+
+    refute notice?(igniter, ".dockerignore has exceptions")
+
+    # An exception after an exclusion re-includes the path, and lines that cannot touch it are appended.
     excepted = "_build\ndeps\n**/node_modules\nmedia\n!media/fonts\n"
     igniter = install(project(%{".dockerignore" => excepted}))
+
+    assert IgniterCase.source(igniter, ".dockerignore") ==
+             excepted <> "\n# Kept out of the Docker build context by Brando\nrelease-archives\nsql\n.envrc*\n"
+
+    refute notice?(igniter, ".dockerignore has exceptions")
+
+    # An appended line would override an exception re-including part of what it covers.
+    examples = "_build\ndeps\n**/node_modules\nmedia\nrelease-archives\nsql\n!.envrc.example\n"
+    igniter = install(project(%{".dockerignore" => examples}))
     Igniter.Test.assert_unchanged(igniter, ".dockerignore")
     assert notice?(igniter, ".dockerignore has exceptions")
     assert notice?(igniter, "  .envrc*")
-    refute notice?(igniter, "  media\n")
 
-    # A file that excludes everything and re-includes what the build copies needs nothing.
+    # A file that excludes everything and re-includes what the build copies: !assets re-includes
+    # the node_modules inside it, which an appended line would exclude again.
     allowlist = "*\n!mix.exs\n!mix.lock\n!VERSION\n!config\n!lib\n!priv\n!rel\n!assets\n"
     igniter = install(project(%{".dockerignore" => allowlist}))
+    Igniter.Test.assert_unchanged(igniter, ".dockerignore")
     assert notice?(igniter, ".dockerignore has exceptions")
     assert notice?(igniter, "  assets/backend/node_modules")
     refute notice?(igniter, "  _build")
@@ -198,5 +229,25 @@ defmodule Mix.Brando.Igniter.InstallDeployTest do
       |> install()
 
     refute notice?(tarball, "does not write a tarball")
+  end
+
+  test "releases without one named after the application get a notice instead of a second release" do
+    igniter =
+      project()
+      |> Igniter.Project.MixProject.update(:project, [:releases], fn _ ->
+        {:ok, {:code, [site: [include_executables_for: [:unix]]]}}
+      end)
+      |> IgniterCase.apply_and_reload()
+      |> install()
+
+    assert igniter.issues == []
+    mix = IgniterCase.source(igniter, "mix.exs")
+    assert mix =~ "releases: [site: [include_executables_for: [:unix]]]"
+    refute mix =~ "studio: ["
+    assert notice?(igniter, "mix.exs defines :site in releases: but no studio release")
+    assert notice?(igniter, "steps: [:assemble, :tar]")
+    assert notice?(igniter, "project_name")
+    assert notice?(igniter, "default_release")
+    refute notice?(igniter, "does not write a tarball")
   end
 end

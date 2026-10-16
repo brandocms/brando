@@ -17,7 +17,9 @@ if Code.ensure_loaded?(Igniter) do
     Docker image (`steps: [:assemble, :tar]`).
 
     A missing release definition is added; an existing one is kept, with a
-    notice when it does not write the tarball. With `existing: :keep`
+    notice when it does not write the tarball. When mix.exs defines releases
+    but none named after the application, none is added (a second release
+    breaks an unnamed `mix release`), and a notice says what Florist needs. With `existing: :keep`
     (`brando.install`), an existing ReleaseTasks module is kept whatever it
     holds; otherwise (`brando.gen.release`) a ReleaseTasks file that differs
     from the template is an issue.
@@ -38,7 +40,12 @@ if Code.ensure_loaded?(Igniter) do
     end
 
     defp release_tasks(igniter, project, :issue) do
-      binding = [application_name: to_string(project.otp_app), application_module: inspect(project.app_module)]
+      binding = [
+        application_name: to_string(project.otp_app),
+        application_module: inspect(project.app_module),
+        web_module: inspect(project.web_module)
+      ]
+
       path = "lib/#{Macro.underscore(Module.concat(project.app_module, ReleaseTasks))}.ex"
 
       case Template.render(igniter, "brando.install", "lib/application_name/release_tasks.ex", binding) do
@@ -61,14 +68,30 @@ if Code.ensure_loaded?(Igniter) do
     end
 
     defp release(igniter, project) do
-      {igniter, steps} = existing_steps(igniter, project.otp_app)
+      case existing_release(igniter, project.otp_app) do
+        {igniter, {:others, names}} ->
+          other_release_notice(igniter, project, names)
 
-      igniter
-      |> MixProject.update(:project, [:releases, project.otp_app], fn
-        nil -> {:ok, {:code, quote(do: [include_executables_for: [:unix], steps: [:assemble, :tar]])}}
-        zipper -> {:ok, zipper}
-      end)
-      |> tar_notice(project, steps)
+        {igniter, steps} ->
+          igniter
+          |> MixProject.update(:project, [:releases, project.otp_app], fn
+            nil -> {:ok, {:code, quote(do: [include_executables_for: [:unix], steps: [:assemble, :tar]])}}
+            zipper -> {:ok, zipper}
+          end)
+          |> tar_notice(project, steps)
+      end
+    end
+
+    defp other_release_notice(igniter, project, names) do
+      Igniter.add_notice(igniter, """
+      mix.exs defines #{Enum.map_join(names, ", ", &inspect/1)} in releases: but no #{project.otp_app} release, so
+      none was added: with two releases the unnamed `mix release --overwrite` in Brando's Dockerfile fails.
+      Florist copies _build/prod/<project_name>-<version>.tar.gz out of the Docker image, so the release
+      it deploys must:
+        * be named like Florist's project_name (rename the release, or set project_name to its name)
+        * write the tarball: steps: [:assemble, :tar]
+        * be the one `mix release` builds: the only release, or default_release: <name> in project/0
+      """)
     end
 
     defp tar_notice(igniter, project, :without_tar) do
@@ -81,24 +104,33 @@ if Code.ensure_loaded?(Igniter) do
 
     defp tar_notice(igniter, _project, _steps), do: igniter
 
-    # :without_tar for a literal release definition without :tar in its steps;
-    # :ok otherwise, including definitions this cannot read.
-    defp existing_steps(igniter, app) do
+    # {:others, names} for literal releases without one named after the
+    # application; :without_tar for a literal release definition without :tar
+    # in its steps; :ok otherwise, including definitions this cannot read.
+    defp existing_release(igniter, app) do
       igniter = Igniter.include_existing_file(igniter, "mix.exs")
       contents = igniter.rewrite |> Rewrite.source!("mix.exs") |> Rewrite.Source.get(:content)
-      {igniter, steps(contents, app)}
+      {igniter, release_state(contents, app)}
     end
 
-    defp steps(contents, app) do
+    defp release_state(contents, app) do
       with {:ok, quoted} <- Code.string_to_quoted(contents),
            releases when is_list(releases) <- project_keyword(quoted, :releases),
-           true <- Keyword.keyword?(releases),
-           release when is_list(release) <- Keyword.get(releases, app),
-           true <- Keyword.keyword?(release) do
-        release |> Keyword.get(:steps, [:assemble]) |> tarball()
+           true <- Keyword.keyword?(releases) do
+        case Keyword.fetch(releases, app) do
+          {:ok, release} -> steps(release)
+          :error when releases == [] -> :ok
+          :error -> {:others, Keyword.keys(releases)}
+        end
       else
         _ -> :ok
       end
+    end
+
+    defp steps(release) do
+      if is_list(release) and Keyword.keyword?(release),
+        do: release |> Keyword.get(:steps, [:assemble]) |> tarball(),
+        else: :ok
     end
 
     defp tarball(steps) when is_list(steps), do: if(:tar in steps, do: :ok, else: :without_tar)

@@ -128,6 +128,23 @@ defmodule Mix.Brando.Igniter.AuxiliaryTest do
     assert IgniterCase.source(result, "lib/studio_web/sitemap.ex") =~ "def custom"
   end
 
+  test "a consumer ReleaseTasks template gets the same bindings as the other auxiliary templates" do
+    template = "priv/templates/brando.install/lib/application_name/release_tasks.ex"
+
+    result =
+      IgniterCase.phoenix_project(
+        files: %{
+          template =>
+            "defmodule <%= application_module %>.ReleaseTasks do\n" <>
+              "  def migrate, do: {:<%= application_name %>, <%= web_module %>}\nend\n"
+        }
+      )
+      |> Igniter.compose_task("brando.gen.release", [])
+
+    assert result.issues == []
+    assert IgniterCase.source(result, "lib/studio/release_tasks.ex") =~ "def migrate, do: {:studio, StudioWeb}"
+  end
+
   test "Fabric retirement gives an actionable replacement without writing files" do
     assert_raise Mix.Error, ~r/brando.gen.release.*guides\/deployment.md/, fn ->
       Mix.Tasks.Brando.Install.Fabfile.run([])
