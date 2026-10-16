@@ -101,6 +101,11 @@ defmodule Mix.Brando.Igniter.SiteRenderTest do
     assert html =~ ~s(<html lang="en">)
     assert html =~ "<p>Edited</p>"
     assert target.template_section.(page) == "index"
+
+    # The preview caches the assigns for its session, and an update replaces only <main>: a
+    # language change must recompute every assign (all read the language) and render the layout.
+    assert Enum.sort(target.reassign_on_change) == Enum.sort(Enum.map(target.assigns, &{&1.key, [:language]}))
+    assert [:language] in target.rerender_on_change
   end
 
   test "a missing CMS page renders only the error, inside the layout it already has", %{conn: conn} do

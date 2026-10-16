@@ -8,9 +8,9 @@ defmodule BrandoAdmin.PreviewUpdatesTest do
     {:ok, page: page}
   end
 
-  defp open_preview(view) do
+  defp open_preview(view, choice \\ "Blocks") do
     view |> element("button[phx-click=toggle_preview_targets]") |> render_click()
-    view |> element("button.preview-choice", "Blocks") |> render_click()
+    view |> element("button.preview-choice", choice) |> render_click()
     html = await_selector(view, "iframe[src*='__livepreview']")
     [key] = Regex.run(~r/__livepreview\?key=([A-Za-z0-9_-]+)/, html, capture: :all_but_first)
     Brando.endpoint().subscribe("live_preview:#{key}")
@@ -39,6 +39,29 @@ defmodule BrandoAdmin.PreviewUpdatesTest do
     assert document =~ "<head"
     assert document =~ html
     assert Repo.get!(Brando.Pages.Page, page.id).title == "Stored title"
+    refute_receive %Phoenix.Socket.Broadcast{event: "update"}, 75
+  end
+
+  # The layout's header and footer sit outside <main>, which is all an
+  # ordinary update carries, and read assigns cached for the session.
+  test "a field in rerender_on_change refreshes its assigns and the layout around <main>", c do
+    {view, html} = live_form(c.conn, "/admin/pages/update/#{c.page.id}")
+    key = open_preview(view, "Localized")
+    on_exit(fn -> LivePreview.cleanup_cache(key) end)
+    assert {:ok, document} = LivePreview.get_cache(key)
+    assert document =~ "<header>greeting:en</header>"
+
+    params =
+      html
+      |> form_params("#page_form_form")
+      |> put_in(["page", "language"], "no")
+      |> Map.put("_target", ["page", "language"])
+
+    view |> element("#page_form_form") |> render_change(params)
+
+    assert_receive %Phoenix.Socket.Broadcast{event: "rerender", payload: %{html: html}}, 3_000
+    assert html =~ "<header>greeting:no</header>"
+    assert html =~ "<footer>farewell:no</footer>"
     refute_receive %Phoenix.Socket.Broadcast{event: "update"}, 75
   end
 

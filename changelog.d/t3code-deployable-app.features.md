@@ -20,6 +20,7 @@
 - **`mix brando.gen.site` gives CMS pages a live preview.** The application's
   `LivePreview` gets a `preview_target` for `Brando.Pages.Page` that renders
   with the generated `CMS.PageHTML` and `CMS.Layouts`, with the identity,
-  navigation and footer partials the page controller assigns. The bare module
+  navigation and footer partials the page controller assigns; changing the
+  page's language recomputes them and renders the whole page. The bare module
   `brando.install` writes is replaced; a customized one gets a notice with the
   target to add.

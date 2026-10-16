@@ -286,10 +286,11 @@ The generator gives `YourWeb.LivePreview` a `preview_target` for
 `Brando.Pages.Page` that renders the edited page as `CMS.PageController`
 does: `CMS.PageHTML` and the page's template inside `CMS.Layouts`' root
 layout, with the identity, the `main` navigation and the `partials`
-fragments assigned. The module `brando.install` writes, which has no targets,
-is replaced; a missing one is created. A LivePreview that already previews
-pages is kept, and any other customized one gets a notice with the target to
-add. See [Live preview](live_preview.md) for more views and assigns.
+fragments assigned. Changing the page's language recomputes those and renders
+the whole page again, header and footer included. The module `brando.install`
+writes, which has no targets, is replaced; a missing one is created. A
+LivePreview that already previews pages is kept, and any other customized one
+gets a notice with the target to add. See [Live preview](live_preview.md) for more views and assigns.
 
 ### Lockdown
 

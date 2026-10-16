@@ -12,6 +12,16 @@ defmodule <%= web_module %>.LivePreview do
     template_section fn page -> page.uri end
     template_prop :page
 
+    # The assigns are cached for the preview session and follow the page's
+    # language; the header and footer they fill sit outside <main>, which is
+    # all an ordinary update replaces.
+    rerender_on_change [[:language]]
+    reassign_on_change [
+      {:identity, [:language]},
+      {:navigation, [:language]},
+      {:partials, [:language]}
+    ]
+
     assign :identity, fn _page, language -> Brando.Cache.Identity.get(to_string(language)) end
 
     assign :navigation, fn _page, language ->
