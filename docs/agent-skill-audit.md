@@ -29,6 +29,16 @@ it does not remove the distinct state-coordination contracts owned by the retain
 block, upload, admin-form, and live-preview maintenance skills. The table above
 preserves the reasoning at the original audit baseline.
 
+## Admin UI (2026-10-17)
+
+`docs/admin-ui-design.md` became the `brando-admin-ui` skill. It was already
+agent-facing (AGENTS.md told agents to read its index, then only the sections
+a screen needs), so the skill moves its only home rather than duplicating it:
+the rules every admin change needs stay in `SKILL.md`, and each component
+section is a reference file loaded when the screen has that component. The
+reference screenshots stay in `docs/admin-ui/`, where the guides and
+`admin-ui-references.mjs` also use them.
+
 ## Existing instructions reused
 
 The block skill remains needed for the single-owner ops architecture. The upload

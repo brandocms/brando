@@ -121,7 +121,7 @@ re-checked against the whole document.
 
 ## Admin UI and accessibility
 
-Screens follow [docs/admin-ui-design.md](docs/admin-ui-design.md): its
-foundations for every change (spacing, controls, keyboard focus, accessible
-names, copy, the rendered-result checks) and the sections for the components
-touched. Review against the guide and the PR's screenshots at 1440px and 390px.
+Screens follow the [brando-admin-ui skill](.claude/skills/brando-admin-ui/SKILL.md):
+its rules for every change (spacing, controls, keyboard focus, accessible
+names, copy, the rendered-result checks) and the references for the components
+touched. Review against the skill and the PR's screenshots at 1440px and 390px.

@@ -3,12 +3,13 @@
    Every value comes from the admin's theme in europa.json5 (`theme.colors`,
    `theme.radius`, `theme.controls`) with `theme()`, so an application's
    europa.json5 changes any of them; the table is in europa.json5 and
-   docs/admin-ui-design.md. Values derived from another role (color-mix, a
+   .claude/skills/brando-admin-ui/references/typography-and-colour.md. Values derived from another role (color-mix, a
    var()) stay here. No stylesheet holds a hex colour, this one included:
    `.github/scripts/check_css_colors.sh` enforces it in CI.
 
    Names describe a role, not a colour, so a role can change value (or gain a
-   dark-mode value) without renaming its uses. See docs/admin-ui-design.md. */
+   dark-mode value) without renaming its uses. See
+   .claude/skills/brando-admin-ui/references/typography-and-colour.md. */
 
 :root {
   /* Text */
@@ -183,8 +184,8 @@
 /* Sizes. Corners and control heights come in three steps; a component picks
    a step instead of a pixel value, so the admin keeps one set of shapes. The
    values are `theme.radius` and `theme.controls` in europa.json5, so an
-   application's europa.json5 sets them, as it does the palette. See "Buttons
-   and badges" in docs/admin-ui-design.md. */
+   application's europa.json5 sets them, as it does the palette. See
+   .claude/skills/brando-admin-ui/references/buttons-badges-menus.md. */
 :root {
   /* Corners: badges and small chips, buttons, inputs and cards. */
   --brando-radius-sm: theme(radius.sm);
