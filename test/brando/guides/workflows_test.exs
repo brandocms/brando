@@ -1,6 +1,7 @@
 defmodule Brando.Guides.WorkflowsTest do
   use Brando.ConnCase
 
+  alias Brando.Cache
   alias Brando.Factory
   alias Brando.Navigation
   alias Brando.Pages
@@ -15,12 +16,12 @@ defmodule Brando.Guides.WorkflowsTest do
   # Brando.Setup.Seeds refills the identity, SEO and navigation caches from
   # this test's sandboxed rows, which roll back while the caches stay.
   defp restore_caches do
-    cached = Map.new(~w(identity seo navigation)a, &{&1, Brando.Cache.get(&1)})
+    cached = Map.new(~w(identity seo navigation)a, &{&1, Cache.get(&1)})
 
     on_exit(fn ->
       Enum.each(cached, fn
-        {key, nil} -> Brando.Cache.del(key)
-        {key, value} -> Brando.Cache.put(key, value, :infinite)
+        {key, nil} -> Cache.del(key)
+        {key, value} -> Cache.put(key, value, :infinite)
       end)
     end)
   end
