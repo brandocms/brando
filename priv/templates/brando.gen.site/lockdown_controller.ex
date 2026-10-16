@@ -3,9 +3,15 @@ defmodule <%= web_module %>.CMS.LockdownController do
   The page `Brando.Plug.Lockdown` sends visitors to while the site is locked
   (`config :brando, lockdown: true`). A visitor who enters the configured
   `lockdown_password` browses the site for the rest of the session.
+
+  The route is outside the `:brando_site` pipeline, whose lockdown plug would
+  redirect it to itself, so it resolves the site (`Brando.Plug.Tenant`) here.
   """
   use BrandoWeb, :controller
 
+  alias Brando.Plug.Lockdown
+
+  plug Brando.Plug.Tenant
   plug :put_view, html: <%= web_module %>.CMS.LockdownHTML
   plug :put_layout, false
   plug :put_root_layout, html: {<%= web_module %>.CMS.LockdownHTML, :root}
@@ -13,7 +19,7 @@ defmodule <%= web_module %>.CMS.LockdownController do
   def index(conn, _params), do: render_form(conn, false)
 
   def unlock(conn, %{"password" => password}) when is_binary(password) do
-    if password?(password) do
+    if Lockdown.password?(password) do
       conn
       |> configure_session(renew: true)
       |> put_session(:lockdown_authorized, true)
@@ -31,21 +37,7 @@ defmodule <%= web_module %>.CMS.LockdownController do
     render(conn, :index,
       action: Brando.helpers().lockdown_path(conn, :unlock),
       failed?: failed?,
-      password?: password() != nil
+      password?: Lockdown.password() != nil
     )
-  end
-
-  defp password?(given) do
-    case password() do
-      nil -> false
-      password -> Plug.Crypto.secure_compare(given, password)
-    end
-  end
-
-  defp password do
-    case Brando.config(:lockdown_password) do
-      password when is_binary(password) and password != "" -> password
-      _ -> nil
-    end
   end
 end

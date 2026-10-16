@@ -35,7 +35,7 @@ if Code.ensure_loaded?(Igniter) do
             same_code?(current, generated) ->
               templates(igniter, project, path)
 
-            same_code?(current, phoenix_error_html(project)) ->
+            Enum.any?(phoenix_error_html(project), &same_code?(current, &1)) ->
               igniter
               |> Igniter.update_file(path, &Source.update(&1, :content, generated))
               |> templates(project, path)
@@ -74,7 +74,7 @@ if Code.ensure_loaded?(Igniter) do
         igniter = Igniter.include_existing_file(igniter, path)
         current = igniter.rewrite |> Rewrite.source!(path) |> Source.get(:content)
 
-        if same_code?(current, phoenix_error_test(project)) do
+        if Enum.any?(phoenix_error_test(project), &same_code?(current, &1)) do
           replace(igniter, project, path, "error_html_test.exs")
         else
           Igniter.add_notice(igniter, """
@@ -111,17 +111,12 @@ if Code.ensure_loaded?(Igniter) do
       end
     end
 
-    # What phx.new 1.7 and 1.8 generate, without the comments.
+    # What phx.new 1.7 and 1.8 generate, without the comments; before 1.7.12
+    # without the @moduledoc.
     defp phoenix_error_html(project) do
       web = inspect(project.web_module)
 
-      """
-      defmodule #{web}.ErrorHTML do
-        @moduledoc \"\"\"
-        This module is invoked by your endpoint in case of errors on HTML requests.
-
-        See config/config.exs.
-        \"\"\"
+      body = """
         use #{web}, :html
 
         def render(template, _assigns) do
@@ -129,26 +124,39 @@ if Code.ensure_loaded?(Igniter) do
         end
       end
       """
+
+      moduledoc = """
+        @moduledoc \"\"\"
+        This module is invoked by your endpoint in case of errors on HTML requests.
+
+        See config/config.exs.
+        \"\"\"
+      """
+
+      for doc <- [moduledoc, ""], do: "defmodule #{web}.ErrorHTML do\n" <> doc <> body
     end
 
+    # 1.7 imports all of Phoenix.Template, 1.8 only render_to_string/4.
     defp phoenix_error_test(project) do
       web = inspect(project.web_module)
 
-      """
-      defmodule #{web}.ErrorHTMLTest do
-        use #{web}.ConnCase, async: true
+      for import <- ["import Phoenix.Template, only: [render_to_string: 4]", "import Phoenix.Template"] do
+        """
+        defmodule #{web}.ErrorHTMLTest do
+          use #{web}.ConnCase, async: true
 
-        import Phoenix.Template, only: [render_to_string: 4]
+          #{import}
 
-        test "renders 404.html" do
-          assert render_to_string(#{web}.ErrorHTML, "404", "html", []) == "Not Found"
+          test "renders 404.html" do
+            assert render_to_string(#{web}.ErrorHTML, "404", "html", []) == "Not Found"
+          end
+
+          test "renders 500.html" do
+            assert render_to_string(#{web}.ErrorHTML, "500", "html", []) == "Internal Server Error"
+          end
         end
-
-        test "renders 500.html" do
-          assert render_to_string(#{web}.ErrorHTML, "500", "html", []) == "Internal Server Error"
-        end
+        """
       end
-      """
     end
   end
 else

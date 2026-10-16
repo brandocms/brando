@@ -12,6 +12,8 @@ if Code.ensure_loaded?(Igniter) do
     alias Rewrite.Source
 
     @attribute ~s[@version "VERSION" |> File.read!() |> String.trim()]
+    # COPY sources that bring VERSION into an image.
+    @context_copies ["VERSION", ".", "./"]
 
     @doc """
     Keeps the application's version in a `VERSION` file that `mix.exs` reads.
@@ -23,16 +25,149 @@ if Code.ensure_loaded?(Igniter) do
     pointed at it when its literal version agrees, and a notice reports a
     disagreement. A `mix.exs` that already reads `VERSION`, or computes its
     version some other way, is left unchanged.
+
+    When `mix.exs` reads `VERSION`, each Dockerfile stage that copies `mix.exs`
+    copies `VERSION` after it, so the image's mix commands can evaluate it; a
+    Dockerfile this cannot follow, or a `.dockerignore` that may exclude
+    `VERSION`, gets a notice.
     """
     def plan(igniter) do
       {igniter, file} = version_file(igniter)
 
       case {mix_version(igniter), file} do
-        {:reads_file, _} -> igniter
-        {{:literal, version, at}, nil} -> igniter |> create(version) |> read_file(at)
-        {{:literal, version, at}, version} -> read_file(igniter, at)
+        {:reads_file, _} -> docker(igniter)
+        {{:literal, version, at}, nil} -> igniter |> create(version) |> read_file(at) |> docker()
+        {{:literal, version, at}, version} -> igniter |> read_file(at) |> docker()
         {{:literal, version, _at}, file} -> disagreement(igniter, version, file)
         {:other, _} -> other_notice(igniter, file)
+      end
+    end
+
+    # The Docker build evaluates mix.exs (phx.gen.release's Dockerfile runs
+    # `mix deps.get` after `COPY mix.exs mix.lock ./`), so every stage that
+    # copies mix.exs needs VERSION next to it.
+    defp docker(igniter) do
+      if Igniter.exists?(igniter, "Dockerfile") do
+        igniter = Igniter.include_existing_file(igniter, "Dockerfile")
+        current = igniter.rewrite |> Rewrite.source!("Dockerfile") |> Source.get(:content)
+
+        {contents, recognized?} = copy_version(current)
+
+        igniter =
+          if contents == current,
+            do: igniter,
+            else: Igniter.update_file(igniter, "Dockerfile", &Source.update(&1, :content, contents))
+
+        igniter =
+          if recognized?,
+            do: igniter,
+            else:
+              Igniter.add_notice(
+                igniter,
+                docker_notice("The Dockerfile does not copy mix.exs in a way this installer recognizes")
+              )
+
+        dockerignore(igniter)
+      else
+        igniter
+      end
+    end
+
+    defp docker_notice(reason) do
+      """
+      #{reason}. mix.exs now reads VERSION, so the Docker build needs it next to mix.exs:
+        COPY VERSION ./
+      """
+    end
+
+    # Lines are kept as they are; a stage that copies mix.exs and not VERSION
+    # (or the whole build context) gets `COPY VERSION <dest>` after that line.
+    # Not recognized when nothing copies mix.exs, VERSION or the context, or a
+    # stage copies mix.exs in a form `copy/1` does not read.
+    defp copy_version(contents) do
+      stages = contents |> String.split("\n") |> stages()
+      copies = Enum.map(stages, fn lines -> Enum.map(lines, &copy/1) end)
+      copied? = Enum.any?(List.flatten(copies), &copies_any?(&1, ["mix.exs" | @context_copies]))
+
+      {stages |> Enum.zip_with(copies, &stage_with_version/2) |> Enum.join("\n"),
+       copied? and not Enum.any?(Enum.zip(stages, copies), &unread_mix_copy?/1)}
+    end
+
+    defp unread_mix_copy?({lines, copies}) do
+      not Enum.any?(copies, &copies_any?(&1, @context_copies)) and
+        lines
+        |> Enum.zip(copies)
+        |> Enum.any?(fn {line, copy} ->
+          copy == :skip and Regex.match?(~r/^\s*(COPY|ADD)\s(?!.*--from).*mix\.exs/i, line)
+        end)
+    end
+
+    defp stages(lines) do
+      lines
+      |> Enum.reduce([], fn
+        line, [] -> [[line]]
+        line, [stage | rest] = stages -> if from?(line), do: [[line] | stages], else: [[line | stage] | rest]
+      end)
+      |> Enum.reverse()
+      |> Enum.map(&Enum.reverse/1)
+    end
+
+    defp stage_with_version(lines, copies) do
+      index = Enum.find_index(copies, &copies_any?(&1, ["mix.exs"]))
+
+      if index && not Enum.any?(copies, &copies_any?(&1, @context_copies)) do
+        {:copy, _sources, line_for} = Enum.at(copies, index)
+        lines |> List.insert_at(index + 1, line_for.("VERSION")) |> Enum.join("\n")
+      else
+        Enum.join(lines, "\n")
+      end
+    end
+
+    defp copies_any?({:copy, sources, _line_for}, paths), do: Enum.any?(sources, &(&1 in paths))
+    defp copies_any?(:skip, _paths), do: false
+
+    defp from?(line), do: Regex.match?(~r/^\s*FROM\s/i, line)
+
+    # `COPY [--chown=...] src... dest` on one line, from the build context,
+    # with its sources less any leading "./", and a function that writes the
+    # line for another source with the same flags and destination.
+    defp copy(line) do
+      with [_, indent, rest] <- Regex.run(~r/^(\s*)COPY\s+(.*?)\s*$/i, line),
+           false <- String.ends_with?(rest, "\\") or String.starts_with?(rest, "["),
+           {flags, paths} = rest |> String.split() |> Enum.split_while(&String.starts_with?(&1, "--")),
+           false <- Enum.any?(flags, &String.starts_with?(&1, "--from")),
+           [_, _ | _] <- paths do
+        {sources, [dest]} = Enum.split(paths, -1)
+        {:copy, Enum.map(sources, &normalize_source/1), &Enum.join([indent <> "COPY" | flags] ++ [&1, dest], " ")}
+      else
+        _ -> :skip
+      end
+    end
+
+    defp normalize_source("./" <> source) when source != "", do: source
+    defp normalize_source(source), do: source
+
+    defp dockerignore(igniter) do
+      if Igniter.exists?(igniter, ".dockerignore") do
+        igniter = Igniter.include_existing_file(igniter, ".dockerignore")
+
+        patterns =
+          igniter.rewrite
+          |> Rewrite.source!(".dockerignore")
+          |> Source.get(:content)
+          |> String.split("\n")
+          |> Enum.map(&String.trim/1)
+
+        excluded? =
+          Enum.any?(patterns, &(&1 in ["VERSION", "/VERSION", "*", "**"])) and
+            not Enum.any?(patterns, &(&1 in ["!VERSION", "!/VERSION"]))
+
+        if excluded?,
+          do:
+            Igniter.add_notice(igniter, docker_notice(".dockerignore may exclude VERSION; keep it in the build context")),
+          else: igniter
+      else
+        igniter
       end
     end
 

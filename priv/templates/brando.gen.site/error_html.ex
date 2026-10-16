@@ -9,6 +9,8 @@ defmodule <%= web_module %>.ErrorHTML do
   """
   use BrandoWeb, :html
 
+  require Logger
+
   embed_templates "error_html/*"
 
   def render(template, _assigns) do
@@ -21,20 +23,51 @@ defmodule <%= web_module %>.ErrorHTML do
   A CMS page that was not found is rendered inside that layout already. The
   endpoint renders errors without a layout, with the conn as it was when the
   error was raised, so the layout gets that conn's assigns and the default
-  language when its pipeline never set one.
+  language when its pipeline never set one. If the layout raises (say, the
+  database is down and its caches are cold), the error is logged and the page
+  renders without it. Without a conn, only the message renders.
   """
-  attr :conn, Plug.Conn, required: true
+  attr :conn, Plug.Conn, default: nil
   slot :inner_block, required: true
 
-  def error_page(assigns) do
-    if Phoenix.Controller.root_layout(assigns.conn, "html") do
-      content(assigns)
-    else
+  def error_page(%{conn: %Plug.Conn{} = conn} = assigns) do
+    if Phoenix.Controller.root_layout(conn, "html"), do: content(assigns), else: in_layout(assigns)
+  end
+
+  def error_page(assigns), do: content(assigns)
+
+  # Rendered to iodata here rather than when the response is sent, so that an
+  # error the layout raises is rescued.
+  defp in_layout(assigns) do
+    page =
       assigns.conn.assigns
       |> Map.put_new(:language, Brando.config(:default_language))
       |> Map.merge(%{conn: assigns.conn, inner_content: content(assigns), __changed__: nil})
       |> <%= web_module %>.CMS.Layouts.root()
-    end
+      |> Phoenix.HTML.Safe.to_iodata()
+
+    assigns = assign(assigns, :page, {:safe, page})
+
+    ~H"{@page}"
+  rescue
+    exception ->
+      Logger.error("The error page rendered without the site's layout, which raised:\n" <> Exception.format(:error, exception, __STACKTRACE__))
+      bare(assigns)
+  end
+
+  defp bare(assigns) do
+    ~H"""
+    <!DOCTYPE html>
+    <html lang={Brando.config(:default_language)}>
+      <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+      </head>
+      <body>
+        <.content inner_block={@inner_block} />
+      </body>
+    </html>
+    """
   end
 
   defp content(assigns) do

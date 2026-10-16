@@ -253,6 +253,8 @@ defmodule Brando.Mixfile do
         "priv",
         "assets/src/components/TipTap/capabilities.json",
         "mix.exs",
+        # Applications' `import_deps: [:brando]` reads its `export`.
+        ".formatter.exs",
         # Read by coding agents in applications, directly or through the
         # usage_rules package: the rules generated from the guides, and the
         # site-building skills in usage-rules/skills.

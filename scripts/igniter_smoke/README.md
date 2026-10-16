@@ -72,7 +72,8 @@ and the npm tarball (`npm pack` in `assets/`). The Hex tarball is unpacked as
 checkout remains next to the consumer. `logs/packages.log` has the file
 counts and sizes, `logs/hex-contents.txt` and `logs/npm-contents.txt` the
 listings. Either package containing `node_modules`, `_build`, `deps` or Yalc
-state fails the run.
+state fails the run, and so does a Hex package without the `.formatter.exs`
+that applications' `import_deps: [:brando]` reads.
 
 The candidate version is the checkout's `X.Y.Z` with `-rc.smoke`
 (`0.55.0-dev` becomes `0.55.0-rc.smoke`); `BRANDO_SMOKE_VERSION` overrides it.

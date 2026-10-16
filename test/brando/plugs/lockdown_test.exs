@@ -8,8 +8,10 @@ defmodule Brando.Plug.LockdownTest do
   use RouterHelper
 
   import Brando.Test.Support, only: [put_test_env: 2]
+  import Ecto.Query, only: [from: 2]
   import Plug.Conn
 
+  alias Brando.Authorization.{Catalog, Groups, Membership, Scope}
   alias Brando.Factory
   alias Brando.Plug.Lockdown
 
@@ -49,9 +51,11 @@ defmodule Brando.Plug.LockdownTest do
     |> Lockdown.call([])
   end
 
-  defp user_session(role) do
-    user = Factory.insert(:random_user, role: role)
-    %{user_token: Brando.Users.generate_user_session_token(user)}
+  defp user_session(role), do: :random_user |> Factory.insert(role: role) |> session()
+  defp session(user), do: %{user_token: Brando.Users.generate_user_session_token(user)}
+
+  defp locked?(conn) do
+    conn.status == 302 and List.keyfind(conn.resp_headers, "location", 0) == {"location", "/coming-soon"}
   end
 
   test "lockdown" do
@@ -81,7 +85,7 @@ defmodule Brando.Plug.LockdownTest do
     assert conn.status == nil
   end
 
-  test "users signed in to the admin pass, other sessions are locked out" do
+  test "with legacy roles, users who can sign in to the admin pass, other sessions are locked out" do
     put_test_env(:lockdown, true)
 
     assert request("/", user_session(:superuser)).status == nil
@@ -106,10 +110,46 @@ defmodule Brando.Plug.LockdownTest do
     assert request("/", %{lockdown_authorized: true}).status == nil
   end
 
-  test "without a password, no key authorizes" do
+  test "with groups authorization, backend access lets a user in, not the legacy role" do
+    put_test_env(:lockdown, true)
+    put_test_env(:authorization_mode, :groups)
+    editor = Factory.insert(:random_user, role: :editor)
+    superuser = Factory.insert(:random_user, role: :superuser)
+    {:ok, _} = Brando.Authorization.Migration.run()
+
+    assert request("/", session(editor)).status == nil
+
+    Brando.Repo.delete_all(from(m in Membership, where: m.user_id == ^editor.id))
+    assert locked?(request("/", session(editor)))
+
+    group_admin = Factory.insert(:random_user, role: :user)
+    assert locked?(request("/", session(group_admin)))
+
+    scope = Scope.standalone(superuser)
+    {:ok, admins} = Groups.create(scope, %{name: "Site admins"}, [Catalog.get(:access, :backend).key])
+    {:ok, :ok} = Groups.add_member(scope, admins.id, group_admin.id)
+    assert request("/", session(group_admin)).status == nil
+  end
+
+  test "without a password, or with an empty one, no key authorizes" do
     put_test_env(:lockdown, true)
 
-    assert request("/?key=", %{}).status == 302
+    assert locked?(request("/?key=", %{}))
+
+    put_test_env(:lockdown_password, "")
+    conn = request("/?key=", %{})
+    assert locked?(conn)
+    refute get_session(conn, :lockdown_authorized)
+  end
+
+  test "shared preview links stay reachable, other pages are locked" do
+    put_test_env(:lockdown, true)
+
+    assert request("/__p__/some-preview-key", %{}).status == nil
+
+    for path <- ["/", "/about", "/__p__", "/__p__/some-preview-key/more"] do
+      assert locked?(request(path, %{}))
+    end
   end
 
   test "lockdown pass with expired target date" do

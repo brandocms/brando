@@ -272,6 +272,80 @@ defmodule Mix.Brando.Igniter.InstallTest do
     assert Enum.any?(computed.notices, &(&1 =~ "computes its version"))
   end
 
+  # The stages of phx.gen.release --docker's Dockerfile (Phoenix 1.8) that copy files.
+  @phx_dockerfile """
+  ARG BUILDER_IMAGE="hexpm/elixir:1.18.4-erlang-28.0.2-debian-bookworm-20250811-slim"
+  ARG RUNNER_IMAGE="debian:bookworm-20250811-slim"
+
+  FROM ${BUILDER_IMAGE} AS builder
+
+  WORKDIR /app
+
+  RUN mix local.hex --force && mix local.rebar --force
+
+  ENV MIX_ENV="prod"
+
+  # install mix dependencies
+  COPY mix.exs mix.lock ./
+  RUN mix deps.get --only $MIX_ENV
+  RUN mkdir config
+
+  COPY config/config.exs config/${MIX_ENV}.exs config/
+  RUN mix deps.compile
+
+  COPY priv priv
+  COPY lib lib
+  COPY assets assets
+  RUN mix assets.deploy
+  RUN mix compile
+  COPY config/runtime.exs config/
+  COPY rel rel
+  RUN mix release
+
+  FROM ${RUNNER_IMAGE} AS final
+  WORKDIR "/app"
+  COPY --from=builder --chown=nobody:root /app/_build/${MIX_ENV}/rel/studio ./
+  CMD ["/app/bin/server"]
+  """
+
+  test "the Dockerfile copies VERSION after mix.exs, in each stage that copies mix.exs, once" do
+    dockerfile = @phx_dockerfile <> "\nFROM builder AS other\nCOPY --chown=nobody mix.exs /srv/\nRUN mix deps.get\n"
+    igniter = install(project(%{"Dockerfile" => dockerfile}))
+    assert igniter.issues == []
+
+    updated = IgniterCase.source(igniter, "Dockerfile")
+    assert updated =~ "COPY mix.exs mix.lock ./\nCOPY VERSION ./\nRUN mix deps.get --only $MIX_ENV\n"
+    assert updated =~ "COPY --chown=nobody mix.exs /srv/\nCOPY --chown=nobody VERSION /srv/\nRUN mix deps.get\n"
+    assert updated |> String.split("COPY VERSION") |> length() == 2
+    assert String.replace(updated, ~r/^COPY (--chown=nobody )?VERSION .*\n/m, "") == dockerfile
+    refute Enum.any?(igniter.notices, &(&1 =~ "COPY VERSION"))
+
+    for kept <- [updated, String.replace(@phx_dockerfile, "COPY mix.exs mix.lock ./", "COPY . .")] do
+      rerun = install(project(%{"Dockerfile" => kept}))
+      assert rerun.issues == []
+      Igniter.Test.assert_unchanged(rerun, "Dockerfile")
+    end
+  end
+
+  test "a Dockerfile that does not copy mix.exs recognizably, or a .dockerignore excluding VERSION, gets a notice" do
+    for dockerfile <- [
+          ~s(FROM elixir\nCOPY ["mix.exs", "mix.lock", "./"]\n),
+          ~s(FROM elixir AS one\nCOPY . .\nFROM elixir AS two\nCOPY ["mix.exs", "./"]\n),
+          "FROM my-custom-image\n"
+        ] do
+      igniter = install(project(%{"Dockerfile" => dockerfile}))
+      assert igniter.issues == []
+      Igniter.Test.assert_unchanged(igniter, "Dockerfile")
+      assert Enum.any?(igniter.notices, &(&1 =~ "does not copy mix.exs" and &1 =~ "COPY VERSION ./"))
+    end
+
+    ignored = install(project(%{"Dockerfile" => @phx_dockerfile, ".dockerignore" => "*\n!mix.exs\n"}))
+    assert Enum.any?(ignored.notices, &(&1 =~ ".dockerignore may exclude VERSION"))
+
+    kept = install(project(%{"Dockerfile" => @phx_dockerfile, ".dockerignore" => "*\n!mix.exs\n!VERSION\n"}))
+    refute Enum.any?(kept.notices, &(&1 =~ ".dockerignore"))
+  end
+
   test "the formatter imports Brando's, which keeps Blueprint DSL calls without parentheses" do
     for {formatter, expected} <- [
           {~s([import_deps: [:ecto, :phoenix], inputs: ["*.{ex,exs}"]]), [:brando, :ecto, :phoenix]},

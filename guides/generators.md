@@ -262,13 +262,16 @@ phx.new's `YourWeb.ErrorHTML`, which `render_errors` in `config/config.exs`
 names, is replaced while it is unchanged from what phx.new generated, and the
 404 and 500 templates go in `controllers/error_html/` next to it. Other
 statuses still render their status message as plain text. phx.new's
-`error_html_test.exs`, which asserts the plain-text pages, is replaced too. A
-customized `ErrorHTML` or test is kept, with a notice.
+`error_html_test.exs`, which asserts the plain-text pages, is replaced too.
+Both are recognized as phx.new 1.7 and 1.8 generate them. A customized
+`ErrorHTML` or test is kept, with a notice.
 
 A missing CMS page (with `use_default_errors: true`, the installer's default)
 renders the 404 inside the layout the page already has. An error the endpoint
 renders, such as a 500, gets the whole layout, built from the request as it was
-when the error was raised.
+when the error was raised. If the layout itself raises, for example while the
+database is down and the caches are cold, the page renders without it and the
+layout's error is logged.
 
 ### Lockdown
 
@@ -288,17 +291,26 @@ config :brando,
   lockdown_until: ~U[2027-01-01 00:00:00Z]
 ```
 
-While locked, users signed in to the admin and the admin's live preview see
-the site. Visitors who enter the password on `/coming-soon`, or open any page
-with `?key=<password>`, see it for the rest of their session. Without a
-password, only signed-in users get in. Only routes through `:brando_site` are
-locked: add `plug Brando.Plug.Lockdown` to any other pipeline that serves
-public pages. The static site generator fetches pages over HTTP without a
-session, so turn lockdown off before building a static site.
+While locked, signed-in users with access to the admin see the site: with
+groups authorization, those whose groups grant backend access; with legacy
+roles, editors, admins and superusers. So does the admin's live preview, and
+shared preview links (`/__p__/…`) stay open to anyone who has one. Visitors who
+enter the password on `/coming-soon`, or open any page with `?key=<password>`,
+see the site for the rest of their session. Without a password, or with an
+empty one, only users with admin access get in. `/coming-soon` resolves the
+site itself, so in multi-site mode it renders with that site's assets. Only
+routes through `:brando_site` are locked: add `plug Brando.Plug.Lockdown` to
+any other pipeline that serves public pages. The static site generator fetches
+pages over HTTP without a session, so turn lockdown off before building a
+static site.
 
 An application that already routes `/coming-soon` keeps its own page: the
-generator adds neither the page nor the plug, and says so. A site generated
-before the lockdown page gets both when `mix brando.gen.site` runs again.
+generator adds neither the page nor the plug, and says so. Rerunning
+`mix brando.gen.site` on a site generated before the lockdown page adds both,
+as long as what the generator owns (`CMS.PageController`, `PageHTML`,
+`Layouts`, `SiteContext` and the CMS routes) is still as it generated it. A
+customized one is reported as an issue and the rerun writes nothing; add the
+lockdown page and plug by hand then, as above.
 
 <!-- usage-rules:start topic="generators" -->
 

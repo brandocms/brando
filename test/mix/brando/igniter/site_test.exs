@@ -277,6 +277,31 @@ defmodule Mix.Brando.Igniter.SiteTest do
     Igniter.Test.assert_unchanged(rerun)
   end
 
+  test "phx.new 1.7's ErrorHTML (no @moduledoc before 1.7.12) and test are recognized too" do
+    phoenix_17_html = String.replace(@phoenix_error_html, ~r/  @moduledoc """.*?"""\n/s, "")
+
+    phoenix_17_test =
+      String.replace(
+        @phoenix_error_test,
+        "import Phoenix.Template, only: [render_to_string: 4]",
+        "import Phoenix.Template"
+      )
+
+    refute phoenix_17_html =~ "@moduledoc"
+
+    for html <- [@phoenix_error_html, phoenix_17_html] do
+      result =
+        %{@error_html => html, @error_test => phoenix_17_test}
+        |> with_files()
+        |> generate(["--replace-phoenix-home", "--yes"])
+
+      assert result.issues == []
+      assert IgniterCase.source(result, @error_html) =~ "StudioWeb.CMS.Layouts.root()"
+      assert IgniterCase.source(result, @error_test) =~ "StudioWeb.CMS.Layouts, :root"
+      refute Enum.any?(result.notices, &(&1 =~ "customized" or &1 =~ "was kept"))
+    end
+  end
+
   test "a customized ErrorHTML or error test is kept, with a notice" do
     customized = String.replace(@phoenix_error_html, "# embed_templates", "embed_templates")
 

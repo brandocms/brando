@@ -43,8 +43,10 @@ back to a literal `@version "..."` in `mix.exs`. `mix brando.install` moves
 phx.new's inline `version: "0.1.0"` to `VERSION` and makes `mix.exs` read it,
 so bump the version in `VERSION`. Florist writes `current/VERSION` on the
 server itself when it unpacks a release, so the release needs no copy, but the
-Docker build evaluates `mix.exs` and needs `COPY VERSION` next to
-`mix.exs`, as Brando's Dockerfile template has.
+Docker build evaluates `mix.exs` and needs `COPY VERSION` next to `mix.exs`.
+Brando's Dockerfile template has it, and the installer adds it after each
+`COPY` of `mix.exs` in an existing Dockerfile (such as
+`mix phx.gen.release --docker`'s), with a notice when it cannot.
 
 > #### Do not set PORT for blue/green {: .warning}
 >

@@ -4,9 +4,11 @@ defmodule Mix.Brando.Igniter.SiteRenderTest do
   use Brando.ConnCase, async: false
 
   import Brando.Test.Support, only: [put_test_env: 2]
+  import ExUnit.CaptureLog, only: [capture_log: 1]
   import Phoenix.Template, only: [render_to_string: 4]
 
   alias Brando.IgniterCase
+  alias Brando.Tenant
 
   @web "lib/render_site_web"
 
@@ -92,6 +94,66 @@ defmodule Mix.Brando.Igniter.SiteRenderTest do
     assert render_to_string(RenderSiteWeb.ErrorHTML, "401", "html", []) == "Unauthorized"
   end
 
+  test "without a conn, as phx.new's error test renders them, the pages render only the message" do
+    html = render_to_string(RenderSiteWeb.ErrorHTML, "404", "html", [])
+    assert html =~ "Page not found"
+    refute html =~ "<html"
+  end
+
+  test "a layout that raises leaves a 500 page without it, and logs the layout's error", %{conn: conn} do
+    # The layout's lang={@language} cannot render a map.
+    conn = Plug.Conn.assign(conn, :language, %{broken: true})
+
+    log =
+      capture_log(fn ->
+        html = render_to_string(RenderSiteWeb.ErrorHTML, "500", "html", conn: conn)
+        assert html =~ "<html"
+        assert html =~ "Something went wrong"
+        refute html =~ ~s(id="top")
+      end)
+
+    assert log =~ "The error page rendered without the site's layout"
+  end
+
+  test "the lockdown page resolves the site's tenant", %{conn: conn} do
+    put_test_env(:tenancy_mode, :multi)
+    Tenant.Cache.clear()
+    Tenant.put_prefix("tenant_other_production")
+
+    try do
+      unknown = lockdown(%{conn | host: "unknown.test"}, :index, %{})
+      assert unknown.status == 404
+      assert Tenant.current_prefix() == nil
+
+      {:ok, site} =
+        Tenant.Registry.create_site(%{
+          name: "Acme",
+          key: "acme",
+          languages: ["en"],
+          default_language: "en",
+          status: :active,
+          delivery_mode: :dynamic
+        })
+
+      {:ok, _} =
+        Tenant.Registry.create_environment(site, %{
+          name: "Production",
+          key: "production",
+          live: true,
+          domain: "www.acme.test"
+        })
+
+      # The site's schema is not migrated here: the page's palettes CSS
+      # querying it shows the page renders in the site's context.
+      error = assert_raise Plug.Conn.WrapperError, fn -> lockdown(%{conn | host: "www.acme.test"}, :index, %{}) end
+      assert error.conn.assigns.current_site.id == site.id
+      assert Exception.message(error) =~ ~s("tenant_acme_production"."content_palettes")
+    after
+      Tenant.put_prefix(nil)
+      Tenant.Cache.clear()
+    end
+  end
+
   test "the lockdown page offers the password form only when a password is configured", %{conn: conn} do
     locked = lockdown(conn, :index, %{})
     assert locked.status == 200
@@ -115,5 +177,15 @@ defmodule Mix.Brando.Igniter.SiteRenderTest do
     right = lockdown(conn, :unlock, %{"password" => "open-sesame"})
     assert Phoenix.ConnTest.redirected_to(right) == "/"
     assert Plug.Conn.get_session(right, :lockdown_authorized)
+  end
+
+  test "an empty password is no password: no form, and an empty answer is refused", %{conn: conn} do
+    put_test_env(:lockdown_password, "")
+
+    refute lockdown(conn, :index, %{}).resp_body =~ ~s(name="password")
+
+    empty = lockdown(conn, :unlock, %{"password" => ""})
+    assert empty.status == 401
+    refute Plug.Conn.get_session(empty, :lockdown_authorized)
   end
 end
