@@ -1164,6 +1164,7 @@ defmodule BrandoAdmin.Components.Form do
           )
           |> tap(&FrontendEditor.field_changed/1)
           |> maybe_invalidate_live_preview_assign([field])
+          |> maybe_rerender_live_preview_for([to_string(field)])
           |> maybe_fetch_root_blocks(:live_preview_update, 0)
 
         {:ok, socket}
@@ -2937,6 +2938,19 @@ defmodule BrandoAdmin.Components.Form do
     |> own_changed_assets(fields)
     |> Drafts.dirty()
     |> force_svelte_remounts(fields)
+    |> preview_changed_fields(fields)
+  end
+
+  # The open live preview follows another editor's changes as it follows
+  # this editor's typing (`validate`).
+  defp preview_changed_fields(socket, fields) do
+    fields
+    |> Enum.reduce(socket, fn field, socket ->
+      socket
+      |> maybe_invalidate_live_preview_assign([field])
+      |> maybe_rerender_live_preview_for([to_string(field)])
+    end)
+    |> maybe_fetch_root_blocks(:live_preview_update, 0)
   end
 
   # Changes held while this editor was in their field apply once it has left
@@ -6294,7 +6308,7 @@ defmodule BrandoAdmin.Components.Form do
     path = if path_type == :string_path, do: path, else: path_to_strings(path)
     cache_key = socket.assigns.live_preview_cache_key
 
-    for {key, trigger_path} <- fdlpr, path_to_strings(trigger_path) == path do
+    for {key, trigger_path} <- fdlpr, path_covers?(trigger_path, path) do
       LivePreview.invalidate_var(cache_key, key)
     end
 
@@ -6314,7 +6328,7 @@ defmodule BrandoAdmin.Components.Form do
            socket,
          string_path
        ) do
-    if Enum.any?(paths, &(path_to_strings(&1) == string_path)),
+    if Enum.any?(paths, &path_covers?(&1, string_path)),
       do: Preview.queue(socket, :live_preview_full_rerender, 0),
       else: socket
   end
@@ -6324,6 +6338,14 @@ defmodule BrandoAdmin.Components.Form do
   # Form paths are compared as strings: an input name can hold segments no
   # atom exists for (a language key, say), and those must not raise.
   defp path_to_strings(path), do: Enum.map(path, &to_string/1)
+
+  # A declared path covers a change to itself and to anything below it (a
+  # subform row's field), compared whole segment by segment: `[:title]` does
+  # not cover `["title_en"]`.
+  defp path_covers?(declared, string_path) do
+    declared = path_to_strings(declared)
+    Enum.take(string_path, length(declared)) == declared
+  end
 
   defp request_select_options_update(socket) do
     form_blueprint = socket.assigns.form_blueprint
@@ -7623,6 +7645,7 @@ defmodule BrandoAdmin.Components.Form do
     |> update_changeset(path, key, text)
     |> maybe_send_ai_update_to_blocks(string_path, text)
     |> maybe_invalidate_live_preview_assign(string_path, :string_path)
+    |> maybe_rerender_live_preview_for(string_path)
     |> maybe_fetch_root_blocks(:live_preview_update, 0)
     |> maybe_force_ai_component_remount(socket.assigns.form_blueprint, field_atom)
   end

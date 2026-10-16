@@ -244,17 +244,20 @@ defmodule BrandoIntegrationWeb.LivePreview do
     description "The page with a header and footer in its language"
     template {BrandoIntegrationWeb.PageHTML, "blocks"}
     layout {BrandoIntegrationWeb.Layouts, "localized"}
-    rerender_on_change [[:language]]
-    reassign_on_change [{:greeting, [:language]}, {:farewell, [:language]}]
+    rerender_on_change [[:language], [:vars]]
+    reassign_on_change [{:greeting, [:language]}, {:farewell, [:language]}, {:farewell, [:vars]}]
     assign :greeting, fn _, language -> "greeting:#{language}" end
-    assign :farewell, fn _, language -> "farewell:#{language}" end
+
+    assign :farewell, fn entry, language ->
+      Enum.join(["farewell:#{language}" | for(%{key: k} when is_binary(k) <- entry.vars, do: k)], " ")
+    end
   end
 
   # A schema without block fields, whose layout reads the title
   preview_target Brando.MetaDrawerTest.ActionsArticle do
     template {BrandoIntegrationWeb.ArticleHTML, "titled"}
     layout {BrandoIntegrationWeb.Layouts, "titled"}
-    rerender_on_change [[:title]]
+    rerender_on_change [[:title], [:meta_description]]
     reassign_on_change [{:heading, [:title]}]
     assign :heading, fn entry -> "heading:#{entry.title}" end
   end

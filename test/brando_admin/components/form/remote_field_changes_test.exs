@@ -36,7 +36,8 @@ defmodule BrandoAdmin.Components.Form.RemoteFieldChangesTest do
           unshipped_fields: MapSet.new(),
           replaced_values: %{},
           held_remote: %{},
-          field_clocks: %{}
+          field_clocks: %{},
+          live_preview_active?: false
         ],
         assigns
       )

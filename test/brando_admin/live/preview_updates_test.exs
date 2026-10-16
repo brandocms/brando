@@ -65,6 +65,57 @@ defmodule BrandoAdmin.PreviewUpdatesTest do
     refute_receive %Phoenix.Socket.Broadcast{event: "update"}, 75
   end
 
+  # The layout's footer reads the page variables' keys (test_helper.exs).
+  test "a subform in rerender_on_change follows its rows and the fields in them", c do
+    {view, _html} = live_form(c.conn, "/admin/pages/update/#{c.page.id}")
+    key = open_preview(view, "Localized")
+    on_exit(fn -> LivePreview.cleanup_cache(key) end)
+
+    view |> element("#page_vars-add-entry") |> render_click()
+    settle(view)
+
+    assert_receive %Phoenix.Socket.Broadcast{event: "rerender", payload: %{html: html}}, 3_000
+    assert html =~ "<footer>farewell:en key</footer>"
+
+    params =
+      view
+      |> render()
+      |> form_params("#page_form_form")
+      |> put_in(["page", "vars", "0", "key"], "renamed")
+      |> Map.put("_target", ["page", "vars", "0", "key"])
+
+    view |> element("#page_form_form") |> render_change(params)
+
+    assert_receive %Phoenix.Socket.Broadcast{event: "rerender", payload: %{html: html}}, 3_000
+    assert html =~ "<footer>farewell:en renamed</footer>"
+  end
+
+  # A change another editor makes reaches this editor's form without a
+  # `validate`, and its open preview follows it as it follows typing.
+  test "a co-editor's change to a field in rerender_on_change refreshes the open preview", c do
+    other = Factory.insert(:random_user, role: :superuser, config: %Brando.Users.UserConfig{})
+    {view, _html} = live_form(c.conn, "/admin/pages/update/#{c.page.id}")
+    {coeditor, html} = live_form(log_in_user(build_conn(), other), "/admin/pages/update/#{c.page.id}")
+    key = open_preview(view, "Localized")
+    on_exit(fn -> LivePreview.cleanup_cache(key) end)
+
+    coeditor_form = with_target(coeditor, cid_of(coeditor, "#page_form-el"))
+    render_hook(coeditor_form, "focus", %{"field" => "page[language]"})
+
+    params =
+      html
+      |> form_params("#page_form_form")
+      |> put_in(["page", "language"], "no")
+      |> Map.put("_target", ["page", "language"])
+
+    coeditor |> element("#page_form_form") |> render_change(params)
+    render_hook(coeditor_form, "blur", %{"field" => "page[language]"})
+
+    assert_receive %Phoenix.Socket.Broadcast{event: "rerender", payload: %{html: html}}, 3_000
+    assert html =~ "<header>greeting:no</header>"
+    assert html =~ "<footer>farewell:no</footer>"
+  end
+
   describe "a schema without block fields" do
     # Brando.MetaDrawerTest.ActionsArticle: no Blocks trait, one preview
     # target whose layout reads the title (test_helper.exs)
@@ -104,6 +155,33 @@ defmodule BrandoAdmin.PreviewUpdatesTest do
 
       assert_receive %Phoenix.Socket.Broadcast{event: "update"}, 2_000
       assert render(view) =~ "actions_article_form_form"
+    end
+
+    # `[:title]` covers a field below it, not one whose name starts with it
+    test "a field whose name begins with a declared one only updates", %{view: view, html: html} do
+      change_field(view, html, ["actions_article", "title_#{System.unique_integer([:positive])}"], "x")
+
+      assert_receive %Phoenix.Socket.Broadcast{event: "update"}, 2_000
+      refute_receive %Phoenix.Socket.Broadcast{event: "rerender"}, 200
+    end
+
+    test "an accepted AI suggestion in a rerender_on_change field renders the whole page", %{view: view} do
+      Phoenix.LiveView.send_update(view.pid, BrandoAdmin.Components.Form,
+        id: "actions_article_form",
+        event: "accept_field_action",
+        field_name: "actions_article[meta_description]",
+        field: :meta_description,
+        text: "Written by AI",
+        replace: true
+      )
+
+      assert_receive %Phoenix.Socket.Broadcast{event: "rerender"}, 2_000
+      refute_receive %Phoenix.Socket.Broadcast{}, 200
+
+      assert view
+             |> render()
+             |> form_params("#actions_article_form_form")
+             |> get_in(["actions_article", "meta_description"]) == "Written by AI"
     end
   end
 
