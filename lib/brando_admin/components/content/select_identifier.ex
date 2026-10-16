@@ -283,11 +283,11 @@ defmodule BrandoAdmin.Components.Content.SelectIdentifier do
     assigns = assigns |> assign_new(:workspace, fn -> false end) |> assign_new(:schema_counts, fn -> %{} end)
 
     ~H"""
-    <div class="button-group-vertical tiny">
+    <div class="button-group-vertical">
       <button
         :if={@workspace}
         type="button"
-        class={["secondary", @selected_schema_raw == "all" && "selected"]}
+        class={["identifier-picker-option", @selected_schema_raw == "all" && "selected"]}
         aria-pressed={to_string(@selected_schema_raw == "all")}
         phx-click={JS.push("select_schema", target: @myself)}
         phx-value-schema="all"
@@ -300,7 +300,7 @@ defmodule BrandoAdmin.Components.Content.SelectIdentifier do
         :for={{label, schema} <- @available_schemas}
         :key={schema}
         type="button"
-        class={["secondary", @selected_schema_raw == to_string(schema) && "selected"]}
+        class={["identifier-picker-option", @selected_schema_raw == to_string(schema) && "selected"]}
         aria-pressed={to_string(@selected_schema_raw == to_string(schema))}
         phx-click={JS.push("select_schema", target: @myself)}
         phx-value-schema={schema}

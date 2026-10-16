@@ -46,14 +46,6 @@
 .modal .modal-body { padding: 24px 28px; min-height: 0; max-height: none; flex: 1 1 auto; overflow: auto; scrollbar-width: thin; color: var(--modal-ink); font: 14px/1.5 "Main", sans-serif; }
 .modal .modal-footer { padding: 16px 24px; min-height: 70px; gap: 10px; border-top: 1px solid var(--modal-line); flex-shrink: 0; background: white; }
 .modal .modal-footer-note { margin-right: auto; font-size: 12px; color: var(--modal-muted); }
-.modal .modal-content :is(button.primary, button.secondary, a.secondary, button.tiny) {
-  display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 34px; margin: 0;
-  padding: 7px 13px; border: 1px solid var(--modal-line); border-radius: 5px; box-shadow: none;
-  background: white; color: var(--modal-ink); font: 13px/18px "Main", sans-serif; text-transform: none; letter-spacing: 0;
-}
-.modal .modal-content :is(button.secondary, a.secondary, button.tiny):hover { background: var(--brando-surface-tint); border-color: var(--brando-line-strong); }
-.modal .modal-content button.primary { background: var(--modal-accent); border-color: var(--modal-accent); color: white; }
-.modal .modal-content button.primary:hover { background: var(--brando-accent-hover); }
 .modal .modal-content button:disabled:not(.btn) { opacity: .45; cursor: not-allowed; }
 .modal :is(button, input, a, select):focus-visible { outline: 2px solid var(--modal-accent); outline-offset: 3px; }
 .modal .modal-content .field-wrapper { margin: 0 0 20px; }
@@ -70,7 +62,6 @@
 .modal .modal-content .instructions { font-size: 12px; color: var(--modal-muted); }
 .modal .modal-content :is(.titlecase, .modal-section-title) { margin: 0 0 20px; font: 500 17px/24px "Main", sans-serif; color: var(--modal-ink); text-transform: none; letter-spacing: 0; }
 .modal .modal-content .button-group-vertical { gap: 10px; margin: 0; }
-.modal .modal-content .button-group-vertical :is(button, a) { border-radius: 5px !important; margin: 0; min-width: 0; }
 .modal .modal-muted { margin: 0; color: var(--modal-muted); font-size: 13px; line-height: 20px; }
 .modal .modal-technical-note { margin-top: 24px; padding-top: 16px; border-top: 1px solid var(--modal-line); color: var(--modal-muted); font-size: 12px; overflow-wrap: anywhere; }
 .modal-person { display: inline-flex; align-items: center; gap: 10px; min-width: 0; }
@@ -136,8 +127,6 @@
 .identifier-picker-nav { width: 160px; flex: 0 0 160px; padding: 20px 8px; background: var(--brando-surface-hover); border-right: 1px solid var(--modal-line); overflow: auto; }
 .identifier-picker-nav h3 { font: 12px/18px "Main", sans-serif; color: var(--modal-muted); padding: 0 12px; margin: 0 0 16px; }
 .modal .identifier-picker-nav .button-group-vertical { width: 100%; gap: 4px; }
-.modal .identifier-picker-nav button.secondary { width: 100%; padding: 10px 12px; border-color: transparent; min-height: 36px; background: transparent; justify-content: flex-start; font-size: 13px; text-align: left !important; }
-.modal .identifier-picker-nav button.secondary.selected { background: var(--brando-surface-selected); color: var(--modal-accent); }
 .identifier-picker-results { flex: 1; min-width: 0; padding: 20px; overflow: auto; scrollbar-width: thin; }
 .identifier-picker-results .select-filter { margin: 0; }
 .identifier-picker-results .select-filter .label-wrapper { display: none; }
@@ -219,7 +208,6 @@
   .identifier-picker-nav { display: block; width: 100%; padding: 6px 8px; border-right: 0; border-bottom: 1px solid var(--modal-line); position: sticky; top: 0; z-index: 1; }
   .identifier-picker-nav h3 { display: none; }
   .modal .identifier-picker-nav .button-group-vertical { display: flex; flex-direction: row; overflow: auto; }
-  .modal .identifier-picker-nav button.secondary { width: auto; flex-shrink: 0; white-space: nowrap; padding: 8px 10px; font-size: 12px; }
   .identifier-picker-results { overflow: visible; padding: 16px; }
   .identifier-picker-details { width: 100%; padding: 20px 18px; overflow: visible; border-left: 0; border-top: 1px solid var(--modal-line); }
   .modal--transfer .transfer-content-modal { display: flex; flex-direction: column; gap: 20px; }
@@ -231,16 +219,9 @@
   .modal.visible > .modal-backdrop, .modal.visible > .modal-dialog { animation: none; }
 }
 
-/* Form and button globals also apply inside nested dialogs. Own these values here. */
-.modal .modal-content :is(button.primary, button.secondary, a.secondary, button.tiny) { min-width: 0; width: auto; height: 34px; border-color: var(--modal-line); }
-/* Legacy secondary buttons set their border with !important (Button.css). */
-.modal .modal-content :is(button.secondary, a.secondary) { border-color: var(--modal-line) !important; }
-.modal .modal-content button.primary { border-color: var(--modal-accent); }
-.modal .modal-content .identifier-picker-nav .button-group-vertical.tiny button.secondary { border-color: transparent !important; border-radius: 5px !important; width: 100%; height: auto; font: 13px/18px "Main", sans-serif; text-transform: none; letter-spacing: 0; }
 .modal.modal--picker .modal-content .link-picker-modes .field-wrapper > .label-wrapper,
 .modal.modal--picker .modal-content .identifier-picker-results .select-filter .field-wrapper > .label-wrapper { display: none; }
 .modal .modal-content .identifier-picker-results .select-filter input.text { padding-left: 38px; padding-right: 34px; }
-.modal .modal-content .identifier-picker-nav .button-group-vertical.tiny button.secondary:hover { background: var(--brando-surface-selected); }
 .modal--editor .variable-section:first-child { margin-top: 0; padding-top: 0; }
 .modal--editor .variable-section > h3, .modal--editor .variable-note { opacity: 1; }
 .modal--editor .variable-grid + .variable-grid { margin-top: 16px; }
@@ -257,7 +238,6 @@
 .modal .modal-content .identifier-link-settings .field-wrapper:has(.switch) .control-label > span { font-size: 13px; white-space: normal; }
 @media (max-width: 720px) {
   .modal .modal-content .modal-footer button { height: 40px; }
-  .modal .modal-content .identifier-picker-nav .button-group-vertical.tiny button.secondary { width: auto; }
 }
 
 .modal .modal-content .variable-grid .field-wrapper { margin-bottom: 0; }
@@ -294,10 +274,18 @@ button.link-preview { text-align: left; }
   .modal--picker .modal-header { padding: 16px var(--picker-inline-padding); }
 }
 
-/* C's navigation and rows retain the proportions from the approved study. */
-.modal .modal-content .identifier-picker-nav .button-group-vertical.tiny button.secondary { display: flex; align-items: center; gap: 8px; padding: 10px 8px; font-size: 12px; line-height: 18px; color: var(--modal-muted); }
-.modal .modal-content .identifier-picker-nav .button-group-vertical.tiny button.secondary.selected { background: var(--brando-surface-selected); color: var(--modal-accent); }
-.identifier-picker-nav button > [data-icon] { width: 16px; height: 16px; flex: 0 0 16px; }
+/* C's navigation and rows retain the proportions from the approved study. A
+   content type is a menu row, not a button: no frame, muted until selected. */
+.identifier-picker-option {
+  display: flex; align-items: center; justify-content: flex-start; gap: 8px;
+  width: 100%; min-width: 0; height: auto; min-height: 36px; margin: 0; padding: 10px 8px;
+  border: 1px solid transparent; border-radius: 5px; box-shadow: none; background: transparent;
+  color: var(--brando-muted); font: 12px/18px "Main", sans-serif; text-transform: none; letter-spacing: 0;
+  text-align: left; white-space: nowrap; cursor: pointer; transition: background-color 0.15s ease, color 0.15s ease;
+}
+.identifier-picker-option:hover { background: var(--brando-surface-selected); }
+.identifier-picker-option.selected { background: var(--brando-surface-selected); color: var(--brando-accent); }
+.identifier-picker-option > [data-icon] { width: 16px; height: 16px; flex: 0 0 16px; }
 .identifier-scope-label { min-width: 0; overflow-wrap: anywhere; text-box: trim-both cap alphabetic; }
 .identifier-scope-count { margin-left: auto; flex-shrink: 0; color: var(--brando-faint); font-size: 11px; text-box: trim-both cap alphabetic; }
 .identifier-picker-nav { width: 176px; flex-basis: 176px; }
@@ -306,9 +294,9 @@ button.link-preview { text-align: left; }
 .identifier-results-count { display: flex; gap: 4px; }
 @media (max-width: 720px) {
   .identifier-picker-nav { width: 100%; }
-  .identifier-picker-nav button > [data-icon] { display: none; }
+  .identifier-picker-option { width: auto; flex-shrink: 0; padding: 8px 9px; font-size: 11px; }
+  .identifier-picker-option > [data-icon] { display: none; }
   .identifier-scope-count { font-size: 10px; }
-  .modal .modal-content .identifier-picker-nav .button-group-vertical.tiny button.secondary { padding: 8px 9px; font-size: 11px; }
 }
 
 .modal .modal-footer-selection { display: flex; align-items: center; gap: 8px; margin-right: auto; min-width: 0; color: var(--modal-accent); font: 12px/18px "Main", sans-serif; }

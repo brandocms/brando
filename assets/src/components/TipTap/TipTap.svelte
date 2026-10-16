@@ -294,7 +294,7 @@
   <div bind:this={anchorMenu} popover="auto" class="tiptap-popover tiptap-anchor-editor" role="dialog" tabindex="-1" aria-label={labels.anchor} onkeydown={menuKeys}>
     <label for={`${id}-anchor`}>{labels.anchorId}</label><input id={`${id}-anchor`} type="text" bind:value={anchorId} aria-invalid={!!anchorError} aria-describedby={`${id}-anchor-help`} />
     <p id={`${id}-anchor-help`}>{anchorError || labels.anchorHelp}</p>
-    <div class="tiptap-popover-actions"><button type="button" class="primary" onclick={applyAnchor}>{labels.apply}</button><button type="button" onclick={() => command('unsetJumpAnchor')}>{labels.remove}</button><button type="button" onclick={async () => { await navigator.clipboard.writeText(`#${anchorId}`); notice = labels.copied }}>{labels.copyLink}</button></div>
+    <div class="tiptap-popover-actions"><button type="button" class="btn btn--sm btn--primary" onclick={applyAnchor}>{labels.apply}</button><button type="button" class="btn btn--sm btn--quiet" onclick={() => command('unsetJumpAnchor')}>{labels.remove}</button><button type="button" class="btn btn--sm btn--quiet" onclick={async () => { await navigator.clipboard.writeText(`#${anchorId}`); notice = labels.copied }}>{labels.copyLink}</button></div>
   </div>
   <div bind:this={aiMenu} popover="auto" class="tiptap-popover tiptap-ai-editor" role="dialog" tabindex="-1" aria-label={labels.ai} onkeydown={menuKeys}>
     <label for={`${id}-ai-mode`}>{labels.ai}</label><select id={`${id}-ai-mode`} bind:value={aiMode}>{#each ['rewrite', 'shorten', 'continue'] as mode}<option value={mode}>{labels[mode]}</option>{/each}</select>

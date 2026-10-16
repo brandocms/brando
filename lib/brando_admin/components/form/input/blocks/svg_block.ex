@@ -73,7 +73,13 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.SvgBlock do
                   <.icon name="code-xml" />
                 </figure>
                 <div class="instructions">
-                  <button type="button" class="tiny" phx-click="open_block_config" phx-value-uid={@uid} phx-target={@target}>
+                  <button
+                    type="button"
+                    class="btn btn--sm"
+                    phx-click="open_block_config"
+                    phx-value-uid={@uid}
+                    phx-target={@target}
+                  >
                     {gettext("Configure SVG block")}
                   </button>
                 </div>

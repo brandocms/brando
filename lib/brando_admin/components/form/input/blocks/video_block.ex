@@ -270,13 +270,13 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
                   <div class="media-field-actions">
                     <button
                       type="button"
-                      class="secondary"
+                      class="btn"
                       phx-click={JS.push("set_target", target: @myself) |> toggle_drawer("#image-picker")}
                     >{gettext("Select cover image")}</button>
                     <button
                       :if={@cover_image}
                       type="button"
-                      class="secondary"
+                      class="btn"
                       phx-click={JS.push("reset_image", target: @myself)}
                     >{gettext("Remove cover image")}</button>
                   </div>

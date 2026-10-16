@@ -60,7 +60,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.MapBlock do
                 )}<br /><br />
               </small>
               <textarea id={"block-#{@uid}-url"} type="text" class="text monospace" rows="3"></textarea>
-              <button id={"block-#{@uid}-button"} type="button" class="secondary small">
+              <button id={"block-#{@uid}-button"} type="button" class="btn btn--sm">
                 {gettext("Get map info")}
               </button>
             </div>
@@ -86,7 +86,13 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.MapBlock do
                   <.icon name="map-pin" />
                 </figure>
                 <div class="instructions">
-                  <button type="button" class="tiny" phx-click="open_block_config" phx-value-uid={@uid} phx-target={@target}>
+                  <button
+                    type="button"
+                    class="btn btn--sm"
+                    phx-click="open_block_config"
+                    phx-value-uid={@uid}
+                    phx-target={@target}
+                  >
                     {gettext("Configure map block")}
                   </button>
                 </div>

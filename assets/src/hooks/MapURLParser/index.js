@@ -31,7 +31,7 @@ export default app => ({
         // input container where there is no surrounding modal at all.
         const $modalButton = this.el
           .closest('.modal-content')
-          ?.querySelector('.modal-footer button.primary')
+          ?.querySelector('.modal-footer .btn--primary')
         if ($modalButton) {
           $modalButton.click()
         }

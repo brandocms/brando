@@ -44,11 +44,6 @@
       font-size: 13px;
       cursor: auto;
       text-align: left;
-
-      button.tiny {
-        margin-top: 7px;
-        width: fit-content;
-      }
     }
   }
 
@@ -57,10 +52,6 @@
       display: flex;
       justify-content: space-between;
       align-items: flex-start;
-
-      button.tiny {
-        margin-top: 0;
-      }
 
       .info-wrapper {
         display: flex;

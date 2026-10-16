@@ -283,7 +283,7 @@ test('ai actions and suggestions: composed sheet', async ({ page }, testInfo) =>
         <span class="tiptap-ai-heading ai-proposal-label">${sparkles}AI suggestion</span>
         <span class="tiptap-ai-text">Our rooms face the sea, with wide windows and quiet mornings on the terrace.</span>
         <span class="tiptap-ai-actions ai-proposal-actions">
-          <button type="button" class="primary">Accept</button><button type="button">Discard</button><button type="button" class="is-ai">${sparkles}Try again</button>
+          <button type="button" class="btn btn--sm btn--primary">Accept</button><button type="button" class="btn btn--sm">Discard</button><button type="button" class="btn btn--sm btn--ai">${sparkles}Try again</button>
         </span>
       </div>`
     document.body.append(sheet)

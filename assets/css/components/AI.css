@@ -304,8 +304,7 @@
 }
 
 /* Accept is the form's primary action in the sage accent, Discard is
-   secondary; Try again is an `AIAction.button`. Scoped to outrank the global
-   `button.primary` (Button.css), whose 50px pill this is not. */
+   secondary; Try again is an `AIAction.button`. */
 .field-ai-actions button.field-ai-button {
   display: inline-flex;
   align-items: center;
