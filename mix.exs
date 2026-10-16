@@ -261,6 +261,16 @@ defmodule Brando.Mixfile do
         "README.md",
         "CHANGELOG.md",
         "UPGRADE.md"
+      ],
+      # The directories above are globbed from disk, ignored files included.
+      # A Yalc copy or a node_modules a working checkout can hold under priv/
+      # (the backend template's .yalc is gitignored), and macOS metadata,
+      # never ship. Publish from a fresh clone anyway (RELEASE.md): this list
+      # only covers the files it names.
+      exclude_patterns: [
+        ~r{(^|/)(\.yalc|node_modules)(/|$)},
+        ~r{(^|/)yalc\.lock$},
+        ~r{(^|/)\.DS_Store$}
       ]
     ]
   end

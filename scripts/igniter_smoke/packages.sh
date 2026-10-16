@@ -26,6 +26,15 @@ git -C "$framework" ls-files -z --cached --others --exclude-standard |
   (cd "$framework" && perl -0ne 'chomp; print "$_\0" if -e $_' | tar --null -T - -cf -) |
   tar -xf - -C "$release"
 
+# Leftovers a working checkout can hold inside the packaged directories,
+# ignored by Git but globbed by Hex. The package's exclude_patterns must keep
+# them out; the contents check below fails if one ships.
+stray="$release/priv/templates/brando.install/assets/backend"
+mkdir -p "$stray/.yalc/@brandocms/brandojs" "$release/priv/node_modules/stray"
+echo '{"name": "@brandocms/brandojs"}' > "$stray/.yalc/@brandocms/brandojs/package.json"
+echo '{}' > "$stray/yalc.lock"
+touch "$release/priv/node_modules/stray/index.js" "$release/priv/.DS_Store"
+
 current="$(sed -n 's/^  @version "\([^"]*\)"$/\1/p' "$release/mix.exs")"
 version="${BRANDO_SMOKE_VERSION:-${current%%-*}-rc.smoke}"
 # A development version generates a Yalc copy instead of the npm pin.
@@ -50,7 +59,7 @@ tar -tvzf "$npm_tarball" > "$logs/npm-contents.txt"
 rm -rf "$release"
 
 # Local build and linking state must never reach a package.
-if grep -E '(^|[ /])(node_modules|_build|deps|\.yalc|yalc\.lock)(/|$)' "$logs/hex-contents.txt" "$logs/npm-contents.txt"; then
+if grep -E '(^|[ /])(node_modules|_build|deps|\.yalc|yalc\.lock|\.DS_Store)(/|$)' "$logs/hex-contents.txt" "$logs/npm-contents.txt"; then
   echo "packages.sh: a package contains local build or linking state (above)" >&2
   exit 1
 fi
