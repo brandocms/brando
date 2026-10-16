@@ -3,7 +3,7 @@ defmodule Brando.SEO.Markdown do
   The Markdown version of an entry's page, for AI tools and answer engines.
 
   An entry's page is also served as Markdown at its URL with `.md` appended
-  (`/projects/sommerro.md`), and at its normal URL to a request that asks for
+  (`/projects/example-hotel.md`), and at its normal URL to a request that asks for
   `text/markdown` in its `Accept` header. The HTML page names it with
   `<link rel="alternate" type="text/markdown">`. `Brando.Plug.Markdown`
   serves it; see [Markdown alternates](markdown_alternates.html).
@@ -88,8 +88,8 @@ defmodule Brando.SEO.Markdown do
   @doc """
   `url` with `.md` appended to its path, keeping any query string.
 
-      iex> Brando.SEO.Markdown.markdown_url("https://example.com/projects/sommerro/")
-      "https://example.com/projects/sommerro.md"
+      iex> Brando.SEO.Markdown.markdown_url("https://example.com/projects/example-hotel/")
+      "https://example.com/projects/example-hotel.md"
 
       iex> Brando.SEO.Markdown.markdown_url("https://example.com/")
       "https://example.com/index.md"

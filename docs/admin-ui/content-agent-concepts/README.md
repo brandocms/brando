@@ -60,7 +60,7 @@ prototype only, not the proposed backend feature.
 
 ## Illustrative media
 
-The photos and graphic treatments are placeholders, not actual Sommerro project
+The photos and graphic treatments are placeholders, not actual Example Hotel project
 assets. `identity.svg`, `film.svg` and `palette.svg` are original artwork created
 for this concept. The fonts come from Brando's E2E consumer.
 

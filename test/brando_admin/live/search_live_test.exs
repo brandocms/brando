@@ -36,14 +36,14 @@ defmodule BrandoAdmin.SearchLiveTest do
   end
 
   test "searches titles and content, and marks what matched", %{conn: conn, current_user: user} do
-    page = page(user, "Sommerro", meta_description: "A hotel by the fjord in Oslo")
+    page = page(user, "Example Hotel", meta_description: "A hotel by the fjord in Oslo")
     page(user, "Villa Tide", meta_description: "Nothing to see")
 
     {:ok, view, _} = live(conn, "/admin/search?q=fjord")
 
     assert has_element?(view, "h1", "Search")
     assert has_element?(view, "#search-input[value=fjord]")
-    assert has_element?(view, ".search-row a[href='/admin/pages/update/#{page.id}'] .search-title", "Sommerro")
+    assert has_element?(view, ".search-row a[href='/admin/pages/update/#{page.id}'] .search-title", "Example Hotel")
     assert has_element?(view, ".search-row .search-snippet mark", "fjord")
     assert has_element?(view, ".search-row .search-status[data-status=published]", "Published")
     refute has_element?(view, ".search-title", "Villa Tide")
@@ -51,13 +51,13 @@ defmodule BrandoAdmin.SearchLiveTest do
   end
 
   test "a title or text that looks like markup is shown as text", %{conn: conn, current_user: user} do
-    page(user, "<script>alert('x')</script> Sommerro", meta_description: "<img src=x onerror=alert(1)> fjord")
+    page(user, "<script>alert('x')</script> Example Hotel", meta_description: "<img src=x onerror=alert(1)> fjord")
 
-    {:ok, view, html} = live(conn, "/admin/search?q=sommerro")
+    {:ok, view, html} = live(conn, "/admin/search?q=example+hotel")
 
     refute html =~ "<script>alert"
     refute render(view) =~ "<img src=x"
-    assert has_element?(view, ".search-title", "<script>alert('x')</script> Sommerro")
+    assert has_element?(view, ".search-title", "<script>alert('x')</script> Example Hotel")
 
     {:ok, view, _} = live(conn, "/admin/search?q=fjord")
     refute render(view) =~ "<img src=x"
@@ -65,44 +65,44 @@ defmodule BrandoAdmin.SearchLiveTest do
   end
 
   test "filters live in the URL, and only known values count", %{conn: conn, current_user: user} do
-    page(user, "Sommerro published")
-    page(user, "Sommerro draft", status: :draft)
-    page(user, "Sommerro norsk", language: :no)
+    page(user, "Example Hotel published")
+    page(user, "Example Hotel draft", status: :draft)
+    page(user, "Example Hotel norsk", language: :no)
 
-    {:ok, view, _} = live(conn, "/admin/search?q=sommerro")
+    {:ok, view, _} = live(conn, "/admin/search?q=example+hotel")
     assert has_element?(view, "#search-results-count", "3 results")
     assert has_element?(view, "#search-type option[value='pages.page']", "(3)")
 
-    view |> form("#search-form", %{q: "sommerro", status: "draft"}) |> render_change()
-    assert_patch(view, "/admin/search?q=sommerro&status=draft")
-    assert has_element?(view, ".search-title", "Sommerro draft")
-    refute has_element?(view, ".search-title", "Sommerro published")
+    view |> form("#search-form", %{q: "example hotel", status: "draft"}) |> render_change()
+    assert_patch(view, "/admin/search?q=example+hotel&status=draft")
+    assert has_element?(view, ".search-title", "Example Hotel draft")
+    refute has_element?(view, ".search-title", "Example Hotel published")
 
-    view |> form("#search-form", %{q: "sommerro", status: "", language: "no"}) |> render_change()
-    assert_patch(view, "/admin/search?q=sommerro&language=no")
-    assert has_element?(view, ".search-title", "Sommerro norsk")
+    view |> form("#search-form", %{q: "example hotel", status: "", language: "no"}) |> render_change()
+    assert_patch(view, "/admin/search?q=example+hotel&language=no")
+    assert has_element?(view, ".search-title", "Example Hotel norsk")
     assert has_element?(view, "#search-results-count", "1 result")
 
     # Anything else is left out
-    {:ok, view, _} = live(conn, "/admin/search?q=sommerro&status=gone&language=xx&type=evil&sort=drop&page=-3")
+    {:ok, view, _} = live(conn, "/admin/search?q=example+hotel&status=gone&language=xx&type=evil&sort=drop&page=-3")
     assert has_element?(view, "#search-results-count", "3 results")
     assert has_element?(view, "#search-sort option[value=relevance][selected]")
   end
 
   test "pages of twenty", %{conn: conn, current_user: user} do
-    for n <- 1..23, do: page(user, "Sommerro #{n}")
+    for n <- 1..23, do: page(user, "Example Hotel #{n}")
 
-    {:ok, view, _} = live(conn, "/admin/search?q=sommerro")
+    {:ok, view, _} = live(conn, "/admin/search?q=example+hotel")
     assert view |> element("#search-list") |> render() |> String.split("search-row-body") |> length() == 21
     assert has_element?(view, ".search-pages a[aria-current=page]", "1")
 
     view |> element(".search-pages a[rel=next]") |> render_click()
-    assert_patch(view, "/admin/search?q=sommerro&page=2")
+    assert_patch(view, "/admin/search?q=example+hotel&page=2")
     assert view |> element("#search-list") |> render() |> String.split("search-row-body") |> length() == 4
   end
 
   test "before a search and when nothing matches", %{conn: conn, current_user: user} do
-    page(user, "Sommerro")
+    page(user, "Example Hotel")
 
     {:ok, view, _} = live(conn, "/admin/search")
     assert has_element?(view, "#search-start")
@@ -113,7 +113,7 @@ defmodule BrandoAdmin.SearchLiveTest do
   end
 
   test "an empty index says so, and where to rebuild it", %{conn: conn} do
-    {:ok, view, _} = live(conn, "/admin/search?q=sommerro")
+    {:ok, view, _} = live(conn, "/admin/search?q=example+hotel")
     refute has_element?(view, "#search-none")
     assert has_element?(view, "#search-empty-index a[href='/admin/config/utils#utils-search-index']")
   end

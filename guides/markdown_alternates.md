@@ -3,7 +3,7 @@
 An entry's page can also be read as Markdown, which AI tools and answer
 engines parse more reliably than a designed HTML page. Brando serves it:
 
-* at the page's URL with `.md` appended: `/projects/sommerro.md`, and
+* at the page's URL with `.md` appended: `/projects/example-hotel.md`, and
   `/index.md` for the site's root;
 * at the page's own URL, to a request that prefers `text/markdown` in its
   `Accept` header.
@@ -11,7 +11,7 @@ engines parse more reliably than a designed HTML page. Brando serves it:
 The HTML page names it in its head (`render_hreflangs`):
 
 ```html
-<link rel="alternate" type="text/markdown" href="https://example.com/projects/sommerro.md">
+<link rel="alternate" type="text/markdown" href="https://example.com/projects/example-hotel.md">
 ```
 
 The meta drawer's **Previews** tab shows the Markdown path and the start of
@@ -71,7 +71,7 @@ HTTP/1.1 200 OK
 content-type: text/markdown; charset=utf-8
 vary: Accept
 etag: W/"md-…"
-link: <https://example.com/projects/sommerro>; rel="canonical"
+link: <https://example.com/projects/example-hotel>; rel="canonical"
 ```
 
 The `Link` header names the HTML page as canonical, so search engines don't

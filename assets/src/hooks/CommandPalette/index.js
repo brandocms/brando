@@ -358,7 +358,7 @@ export default () => ({
     const { pathname, search } = window.location
     if (!pathname.startsWith('/admin') || /^\/admin\/(login|logout|access-denied)/.test(pathname)) return
 
-    // "Sommerro — Case | Brando" → "Sommerro — Case"
+    // "Example Hotel — Case | Brando" → "Example Hotel — Case"
     const title = document.title.replace(/\s+\|[^|]*$/, '').trim()
     const place = { path: pathname + search, title }
     const places = [place, ...this.readRecent().filter(p => p.path.split('?')[0] !== pathname)].slice(0, RECENT_LIMIT)

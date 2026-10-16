@@ -1,7 +1,7 @@
 defmodule BrandoAdmin.Media.Sweep do
   @moduledoc """
   Sorts the images, videos or files lying loose in one library folder into
-  folders named after where they are used: `cases/sommerro`, `pages/about`.
+  folders named after where they are used: `cases/example-hotel`, `pages/about`.
   A library fills one flat folder over the years, since block media all
   uploads to the same place; where each asset belongs is already known from
   the entries that show it.
@@ -358,7 +358,7 @@ defmodule BrandoAdmin.Media.Sweep do
     end)
   end
 
-  # "cases/sommerro": the schema's plural and the entry's title, slugified.
+  # "cases/example-hotel": the schema's plural and the entry's title, slugified.
   # Two entries of a type with the same title get their ids added.
   defp names(by_owner, labels) do
     named =

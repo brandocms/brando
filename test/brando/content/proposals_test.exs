@@ -56,8 +56,8 @@ defmodule Brando.Content.ProposalsTest do
     [
       %CreateEntry{
         schema: Page,
-        ref: :sommerro,
-        fields: %{title: "Sommerro", uri: "sommerro", language: "en", template: "default.html"}
+        ref: :example_hotel,
+        fields: %{title: "Example Hotel", uri: "example-hotel", language: "en", template: "default.html"}
       },
       %InsertBlock{
         target: {Page, c.identity.id},
@@ -156,9 +156,9 @@ defmodule Brando.Content.ProposalsTest do
     assert slot.data.type == "video"
     assert slot.video_id == c.video.id
 
-    created = Repo.get!(Page, receipt.mappings["created"]["sommerro"])
+    created = Repo.get!(Page, receipt.mappings["created"]["example_hotel"])
     assert created.status == :draft
-    assert created.title == "Sommerro"
+    assert created.title == "Example Hotel"
 
     # The pages had no revision: applying keeps one of how they were, for
     # undo, and the save adds its own.
@@ -173,7 +173,7 @@ defmodule Brando.Content.ProposalsTest do
     assert {:ok, again} = Proposals.apply(proposal.id, proposal.version, c.user)
     assert again.id == receipt.id
     assert block_count() == blocks + 2
-    assert Repo.aggregate(from(p in Page, where: p.uri == "sommerro"), :count) == 1
+    assert Repo.aggregate(from(p in Page, where: p.uri == "example-hotel"), :count) == 1
   end
 
   test "a media slot takes an image through its picture template", c do
@@ -562,9 +562,9 @@ defmodule Brando.Content.ProposalsTest do
       assert block_count() == blocks
       assert Repo.all(Receipt) == []
 
-      assert {:error, :not_created} = Preview.render(proposal, {:new, "sommerro"}, c.user, version: :before)
-      assert {:ok, %{html: created}} = Preview.render(proposal, {:new, "sommerro"}, c.user, preview_target: :blocks)
-      assert created =~ "Sommerro"
+      assert {:error, :not_created} = Preview.render(proposal, {:new, "example_hotel"}, c.user, version: :before)
+      assert {:ok, %{html: created}} = Preview.render(proposal, {:new, "example_hotel"}, c.user, preview_target: :blocks)
+      assert created =~ "Example Hotel"
 
       Preview.discard([proposed_key, before_key])
     end

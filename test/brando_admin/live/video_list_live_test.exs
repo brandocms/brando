@@ -11,10 +11,10 @@ defmodule BrandoAdmin.VideoListLiveTest do
     assert html =~ "Not in use"
 
     view
-    |> form("#list-row-#{video.id} .library-video-rename", %{"video_id" => video.id, "title" => "Sommerro"})
+    |> form("#list-row-#{video.id} .library-video-rename", %{"video_id" => video.id, "title" => "Example Hotel"})
     |> render_submit()
 
-    assert {:ok, %{title: "Sommerro"}} = Videos.get_video(%{matches: %{id: video.id}})
+    assert {:ok, %{title: "Example Hotel"}} = Videos.get_video(%{matches: %{id: video.id}})
 
     view |> element("#list-row-#{video.id} .library-video-play") |> render_click()
     assert has_element?(view, "#video-player-modal iframe[src*='youtube.com/embed/#{video.remote_id}']")

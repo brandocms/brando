@@ -417,7 +417,7 @@ defmodule BrandoAdmin.CommandPalette do
   defp assistant?(user), do: Brando.AI.Agent.available?() and Brando.AI.Agent.allowed?(user)
 
   # Create actions for the types the query names, or else for the type of the
-  # best entry found: "somm" finds a case, so "Create case…" is offered.
+  # best entry found: "exam" finds a case, so "Create case…" is offered.
   defp create_matches(context, term, entries) do
     actions = create_actions(context.content_types)
 
