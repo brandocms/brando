@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 # Rejects colour literals in the admin stylesheets, tokens.css included: hex
-# colours and rgb(), rgba(), hsl() and hsla().
+# colours and the colour functions rgb(), rgba(), hsl(), hsla(), hwb(), lab(),
+# lch(), oklab(), oklch() and color(), in any case and inside data URIs.
+# Named colours (black, white) are not checked.
 #
 # Every admin colour is a value in the admin's theme (`theme.colors` in
 # assets/europa.json5). assets/css/tokens.css sets the role custom properties
@@ -45,8 +47,11 @@ count_literals() {
         if (digits == 3 || digits == 4 || digits == 6 || digits == 8) count++
         rest = substr(rest, RSTART + RLENGTH - 1)
       }
-      rest = out
-      while (match(rest, /(^|[^a-zA-Z0-9_-])(rgb|rgba|hsl|hsla)\(/)) {
+      # Colour functions, in any case, and inside data URIs, where they are
+      # URL-encoded (%22rgb%28…).
+      rest = tolower(out)
+      gsub(/%[0-9a-f][0-9a-f]/, " ", rest)
+      while (match(rest, /(^|[^a-z0-9_-])(rgb|rgba|hsl|hsla|hwb|lab|lch|oklab|oklch|color)\(/)) {
         count++
         rest = substr(rest, RSTART + RLENGTH)
       }
@@ -62,7 +67,7 @@ while read -r file; do
   files=$((files + 1))
   n=$(count_literals "$file")
   if [ "$n" -gt 0 ]; then
-    echo "$file: $n colour literal(s) (hex, rgb() or hsl()). Use a role from assets/css/tokens.css (var(--brando-ink) and friends); a new colour gets an entry in theme.colors in assets/europa.json5 and a role in tokens.css." >&2
+    echo "$file: $n colour literal(s) (hex or a colour function). Use a role from assets/css/tokens.css (var(--brando-ink) and friends); a new colour gets an entry in theme.colors in assets/europa.json5 and a role in tokens.css." >&2
     status=1
   fi
 done < <(find "$css_dir" -type f -name '*.css' | LC_ALL=C sort)

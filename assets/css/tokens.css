@@ -43,9 +43,6 @@
      notice, a section header, an icon tile, a hovered secondary button */
   --brando-surface-tint: theme(colors.surface.tint);
   --brando-overlay: theme(colors.overlay);
-  /* Backdrops: behind a modal, dialog or drawer. */
-  --brando-scrim: theme(colors.scrim);
-
   /* Shadows, from small to large, in one ink (theme.shadows). */
   --brando-shadow-ink: theme(colors.shadow);
   --brando-shadow-ring: theme(shadows.ring);

@@ -9,26 +9,21 @@
 // injected child nodes are not covered by the sticky mechanism); see
 // Block.css.
 
-// Order matches the `data-presence-color-index` palette in Block.css. The
-// entry fields' presence avatar still takes the colour as a custom property.
-const PRESENCE_COLORS = [
-  '77, 144, 254', // blue
-  '72, 199, 142', // green
-  '245, 166, 35', // orange
-  '168, 85, 247', // purple
-  '239, 68, 68', // red
-  '20, 184, 166', // teal
-]
+// Six editor colours, `--brando-presence-0`…`5` in tokens.css, in the order of
+// the `data-presence-color-index` palette in Block.css. The entry fields'
+// presence avatar still takes its glow as a custom property, mixed from the
+// same token so it matches the editor's avatar.
+const PRESENCE_SLOTS = 6
 
 export function getPresenceColorIndex(userId) {
   const els = document.querySelectorAll('.page-presences [data-presence-user-id]')
   const ids = Array.from(els).map(el => el.dataset.presenceUserId)
   const idx = ids.indexOf(String(userId))
-  return Math.max(0, idx) % PRESENCE_COLORS.length
+  return Math.max(0, idx) % PRESENCE_SLOTS
 }
 
 export function getPresenceColor(userId, alpha = 0.6) {
-  return `rgba(${PRESENCE_COLORS[getPresenceColorIndex(userId)]}, ${alpha})`
+  return `color-mix(in srgb, var(--brando-presence-${getPresenceColorIndex(userId)}) ${Math.round(alpha * 100)}%, transparent)`
 }
 
 function blockEl(uid) {

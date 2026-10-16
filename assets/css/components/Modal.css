@@ -77,7 +77,7 @@
 
 .modal-backdrop {
   display: none;
-  background-color: var(--brando-scrim);
+  background-color: var(--brando-overlay);
   backdrop-filter: blur(4px);
   height: 100%;
   left: 0;

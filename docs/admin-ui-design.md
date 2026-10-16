@@ -184,7 +184,7 @@ step, not a shadow of the screen's own:
 | `--brando-shadow-inset` | A field's inner shade |
 | `--brando-shadow-overlay` | The login box's deep lift |
 
-Behind a modal, dialog or drawer, use `--brando-scrim` (`colors.scrim`).
+Behind a modal, dialog or drawer, use `--brando-overlay` (`colors.overlay`).
 
 **Buttons** ([`Btn.css`](../assets/css/components/Btn.css)):
 
@@ -414,8 +414,8 @@ Every other role has an entry too, named after its custom property:
 `surface.hover` `--brando-surface-hover`, `attention.tint`/`.line`/`.ink` the
 attention tokens (and `success.*`, `error.*` likewise), `badge.fill` and
 `badge.ink`, `ai`, `module.<colour>.line|tint|ink|dot`, `nav.*`,
-`presence.p0`–`p5`, `switch.on|off`, `tabbar`, `shadow` (the shadows' ink)
-and `scrim` (the backdrop behind modals). Roles mixed from another
+`presence.p0`–`p5`, `switch.on|off`, `tabbar` and `shadow` (the shadows'
+ink). Roles mixed from another
 (the AI hairlines, the suggestion tints) follow it.
 
 The palette is also available at run time under its entry names:
@@ -429,8 +429,10 @@ roles. A few earlier role names remain as aliases, such as
 `--brando-color-background` for `--brando-surface-page`.
 
 Do not add colour literals to admin stylesheets, `tokens.css` included: no hex
-colours and no `rgb()`, `rgba()`, `hsl()` or `hsla()`. CI runs
-`.github/scripts/check_css_colors.sh`, which fails on any in `assets/css`. A colour that has no role yet gets an entry in `theme.colors` in
+colours and no colour functions (`rgb()`, `hsl()`, `oklch()` and the like),
+also inside data URIs. CI runs `.github/scripts/check_css_colors.sh`, which
+fails on them in `assets/css`; it doesn't catch named colours, so use a role
+there too. A colour that has no role yet gets an entry in `theme.colors` in
 `assets/europa.json5` and a role in `tokens.css` set from it. For a
 translucent version of a role, mix it with transparent:
 `color-mix(in srgb, var(--brando-ink) 8%, transparent)`.

@@ -158,7 +158,6 @@
       },
       tabbar: '#fcfcfd',
       shadow: '#13251c',
-      scrim: 'rgb(22 28 25 / 55%)',
       legacy: {
         shaded: '#fcfcfd',
         input: '{colors.white}',

@@ -449,8 +449,10 @@
       width: 20px;
       text-align: center;
       position: absolute;
-      /* The icon is a mask, so its colour comes from the switch's tokens. */
-      background-color: var(--brando-faint);
+      /* The icon is a mask, so its colour comes from the switch's tokens; it
+         keeps it in forced colours, where a system colour would hide it. */
+      forced-color-adjust: none;
+      background-color: color-mix(in srgb, var(--brando-switch-off), var(--brando-ink) 20%);
       mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' width='14' height='14'%3E%3Cpath fill='none' d='M0 0h24v24H0z'/%3E%3Cpath d='M12 10.586l4.95-4.95 1.414 1.414-4.95 4.95 4.95 4.95-1.414 1.414-4.95-4.95-4.95 4.95-1.414-1.414 4.95-4.95-4.95-4.95L7.05 5.636z' fill='black'/%3E%3C/svg%3E") 50% / 14px 14px no-repeat;
       transition: 0.3s ease;
     }

@@ -443,7 +443,7 @@
   width: 18px;
   height: 18px;
   border-radius: 50%;
-  background: var(--brando-scrim);
+  background: color-mix(in srgb, var(--brando-color-black) 55%, transparent);
   color: var(--brando-ink-inverse);
 
   [data-icon] { width: 10px; height: 10px; }
