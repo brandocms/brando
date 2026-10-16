@@ -99,6 +99,14 @@ It creates `MyApp.ReleaseTasks` (`migrate/0`, `rollback/2`,
 none exists. Existing release settings, runtime configuration, secrets and
 deployment files are left alone. The task requires Igniter.
 
+Florist names the release after the version in the `VERSION` file, falling
+back to a literal `@version "..."` in `mix.exs`. `mix brando.install` moves
+phx.new's inline `version: "0.1.0"` to `VERSION` and makes `mix.exs` read it,
+so bump the version in `VERSION`. Florist writes `current/VERSION` on the
+server itself when it unpacks a release, so the release needs no copy, but the
+Docker build evaluates `mix.exs` and needs `COPY VERSION` next to
+`mix.exs`, as Brando's Dockerfile template has.
+
 <!-- usage-rules:end -->
 
 ### Migrating from Fabric

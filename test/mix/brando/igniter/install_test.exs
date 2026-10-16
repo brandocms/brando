@@ -211,6 +211,80 @@ defmodule Mix.Brando.Igniter.InstallTest do
     end
   end
 
+  defp mix_exs(project, attributes \\ "") do
+    """
+    defmodule Studio.MixProject do
+      use Mix.Project
+      #{attributes}
+      def project, do: [app: :studio, #{project}, deps: deps()]
+      def application, do: [mod: {Studio.Application, []}]
+      defp deps, do: [{:brando, path: "../framework"}]
+    end
+    """
+  end
+
+  @reads_version ~s[@version "VERSION" |> File.read!() |> String.trim()]
+
+  test "phx.new's inline version moves to a VERSION file that mix.exs reads" do
+    igniter = install(project())
+    assert igniter.issues == []
+    assert IgniterCase.source(igniter, "VERSION") == "0.1.0\n"
+
+    mix = IgniterCase.source(igniter, "mix.exs")
+    assert mix =~ @reads_version
+    assert mix =~ "version: @version"
+    refute mix =~ ~s(version: "0.1.0")
+  end
+
+  test "a literal @version moves to VERSION and keeps its attribute" do
+    igniter = install(project(%{"mix.exs" => mix_exs("version: @version", ~s(@version "2.3.4"))}))
+    assert igniter.issues == []
+    assert IgniterCase.source(igniter, "VERSION") == "2.3.4\n"
+    assert IgniterCase.source(igniter, "mix.exs") =~ @reads_version
+    refute IgniterCase.source(igniter, "mix.exs") =~ ~s(@version "2.3.4")
+  end
+
+  test "an existing VERSION is kept: mix.exs reads it when they agree, a notice reports a disagreement" do
+    agreeing = install(project(%{"VERSION" => "0.1.0\n"}))
+    assert agreeing.issues == []
+    Igniter.Test.assert_unchanged(agreeing, "VERSION")
+    assert IgniterCase.source(agreeing, "mix.exs") =~ @reads_version
+
+    disagreeing = install(project(%{"VERSION" => "1.0.0\n"}))
+    assert disagreeing.issues == []
+    Igniter.Test.assert_unchanged(disagreeing, "VERSION")
+    refute IgniterCase.source(disagreeing, "mix.exs") =~ @reads_version
+    assert Enum.any?(disagreeing.notices, &(&1 =~ "VERSION says 1.0.0 and mix.exs says 0.1.0"))
+  end
+
+  test "a mix.exs that reads VERSION, or computes its version otherwise, keeps its version" do
+    reads = mix_exs("version: @version", @reads_version)
+    result = install(project(%{"mix.exs" => reads, "VERSION" => "0.4.0\n"}))
+    assert result.issues == []
+    Igniter.Test.assert_unchanged(result, "VERSION")
+    refute Enum.any?(result.notices, &(&1 =~ "VERSION"))
+    assert length(String.split(IgniterCase.source(result, "mix.exs"), "@version \"VERSION\"")) == 2
+
+    computed = install(project(%{"mix.exs" => mix_exs(~s|version: System.get_env("APP_VERSION", "0.1.0")|)}))
+    assert computed.issues == []
+    refute Igniter.exists?(computed, "VERSION")
+    assert IgniterCase.source(computed, "mix.exs") =~ ~s|System.get_env("APP_VERSION", "0.1.0")|
+    assert Enum.any?(computed.notices, &(&1 =~ "computes its version"))
+  end
+
+  test "the formatter imports Brando's, which keeps Blueprint DSL calls without parentheses" do
+    for {formatter, expected} <- [
+          {~s([import_deps: [:ecto, :phoenix], inputs: ["*.{ex,exs}"]]), [:brando, :ecto, :phoenix]},
+          {~s([inputs: ["*.{ex,exs}"]]), [:brando]}
+        ] do
+      igniter = install(project(%{".formatter.exs" => formatter}))
+      assert igniter.issues == []
+      {options, _} = Code.eval_string(IgniterCase.source(igniter, ".formatter.exs"))
+      assert options[:import_deps] == expected
+      assert options[:inputs] == ["*.{ex,exs}"]
+    end
+  end
+
   test "historical migration timestamps and edits are preserved and new files follow them" do
     name = "brando_170_add_authorization_groups.exs"
     historical = "priv/repo/migrations/20300101000000_#{name}"

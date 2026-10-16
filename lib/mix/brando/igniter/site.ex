@@ -10,7 +10,11 @@ if Code.ensure_loaded?(Igniter) do
     alias Mix.Brando.Igniter.Files
     alias Mix.Brando.Igniter.Install.Configuration
     alias Mix.Brando.Igniter.RouteInventory
+    alias Mix.Brando.Igniter.Site.ErrorPages
     alias Mix.Brando.Igniter.Template
+    alias Sourceror.Zipper
+
+    @lockdown_path "/coming-soon"
 
     def plan(igniter, project, options) do
       controller = Module.concat(project.web_module, CMS.PageController)
@@ -22,10 +26,12 @@ if Code.ensure_loaded?(Igniter) do
            {:ok, state} <- ownership(router, project, controller),
            :ok <- replace_home(state.home?, options) do
         igniter
-        |> files(project)
+        |> files(project, state.lockdown)
         |> Config.configure_new("brando.exs", :brando, [:page_html_module], html)
         |> routes(project, state, controller)
         |> home_test(project, state)
+        |> lockdown_notice(state.lockdown)
+        |> ErrorPages.plan(project)
         |> Igniter.add_notice("""
         CMS pages are prepared under #{inspect(project.web_module)}.CMS.
         The root page and unmatched public paths use published Brando pages.
@@ -33,6 +39,8 @@ if Code.ensure_loaded?(Igniter) do
         No content was created by this plan: mix brando.setup seeds a published
         index page, or create one yourself in /admin/pages with URI index and
         template index.html. Until then / has no page to render.
+        To lock the site while it is being built, set `lockdown: true` and a
+        `lockdown_password` for :brando; see the lockdown section of the generators guide.
         """)
       else
         {:error, %Igniter{} = igniter} -> igniter
@@ -69,9 +77,40 @@ if Code.ensure_loaded?(Igniter) do
           {:error, "CMS page routes are partially configured or customized. Integrate them explicitly before rerunning."}
 
         true ->
-          {:ok, %{home?: home?, home: home, present?: owned != []}}
+          {:ok, %{home?: home?, home: home, present?: owned != [], lockdown: lockdown(routes, project)}}
       end
     end
+
+    # Brando.Plug.Lockdown redirects to lockdown_path(conn, :index). Routes an
+    # application already has at /coming-soon, like the ones the retired
+    # install.sh skeleton wrote, keep serving it.
+    defp lockdown(routes, project) do
+      controller = lockdown_controller(project)
+
+      foreign =
+        Enum.filter(routes, fn route ->
+          route.module != controller and route.kind not in [:unknown, :admin_routes] and
+            not String.contains?(route.path, "*") and RouteInventory.covers?(route, @lockdown_path)
+        end)
+
+      cond do
+        Enum.any?(routes, &(&1.module == controller)) -> :present
+        foreign != [] -> {:foreign, foreign}
+        true -> :missing
+      end
+    end
+
+    defp lockdown_controller(project), do: Module.concat(project.web_module, CMS.LockdownController)
+
+    defp lockdown_notice(igniter, {:foreign, routes}) do
+      Igniter.add_notice(igniter, """
+      #{Enum.map_join(routes, ", ", &inspect(&1.module))} already serve #{@lockdown_path}, so no
+      lockdown page was generated. Brando.Plug.Lockdown sends locked-out visitors to
+      lockdown_path(conn, :index); keep a route with that name.
+      """)
+    end
+
+    defp lockdown_notice(igniter, _lockdown), do: igniter
 
     # A router this task wrote before 0.55 routes the support paths to the
     # controllers' deprecated names; they are the same declarations.
@@ -182,14 +221,19 @@ if Code.ensure_loaded?(Igniter) do
       end
     end
 
-    defp files(igniter, project) do
+    defp files(igniter, project, lockdown) do
+      lockdown_files =
+        if match?({:foreign, _}, lockdown),
+          do: [],
+          else: [{"lockdown_controller.ex", CMS.LockdownController}, {"lockdown_html.ex", CMS.LockdownHTML}]
+
       Enum.reduce(
         [
           {"controller.ex", CMS.PageController},
           {"html.ex", CMS.PageHTML},
           {"layouts.ex", CMS.Layouts},
           {"context.ex", CMS.SiteContext}
-        ],
+        ] ++ lockdown_files,
         igniter,
         fn {template, suffix}, igniter ->
           path = "lib/#{Macro.underscore(Module.concat(project.web_module, suffix))}.ex"
@@ -206,7 +250,7 @@ if Code.ensure_loaded?(Igniter) do
       ProjectModule.find_and_update_module!(igniter, project.router, fn router ->
         router
         |> remove_homepage(state)
-        |> ensure_site_routes(project, controller, state.present?)
+        |> ensure_site_routes(project, controller, state)
       end)
     end
 
@@ -218,16 +262,36 @@ if Code.ensure_loaded?(Igniter) do
       end)
     end
 
-    defp ensure_site_routes(router, _project, _controller, true), do: {:ok, router}
+    # A site generated before the lockdown page gets its routes on a rerun.
+    defp ensure_site_routes(router, project, _controller, %{present?: true, lockdown: :missing}) do
+      with {:ok, pipeline} <- site_pipeline(router),
+           {:ok, body} <- Common.move_to_do_block(pipeline),
+           {:ok, first} <- CodeFunction.move_to_function_call_in_current_scope(body, :plug, [1, 2]),
+           router = first |> Common.add_code("plug Brando.Plug.Lockdown", placement: :before) |> Zipper.topmost(),
+           {:ok, pipeline} <- site_pipeline(router) do
+        {:ok, Common.add_code(pipeline, lockdown_scope(project), placement: :before)}
+      else
+        _ ->
+          {:warning,
+           "The :brando_site pipeline has no plug to add Brando.Plug.Lockdown before; the lockdown routes were not added. See the lockdown section of the generators guide."}
+      end
+    end
 
-    defp ensure_site_routes(router, project, controller, false) do
-      case CodeFunction.move_to_function_call(router, :pipeline, 2, &CodeFunction.argument_equals?(&1, 0, :brando_site)) do
+    defp ensure_site_routes(router, _project, _controller, %{present?: true}), do: {:ok, router}
+
+    defp ensure_site_routes(router, project, controller, state) do
+      lockdown? = state.lockdown == :missing
+
+      case site_pipeline(router) do
         :error ->
           {:ok,
            Common.add_code(router, """
            pipeline :brando_site do
+             #{if lockdown?, do: "plug Brando.Plug.Lockdown"}
              plug #{inspect(project.web_module)}.CMS.SiteContext
            end
+
+           #{if lockdown?, do: lockdown_scope(project)}
 
            scope "/" do
              pipe_through [:browser, :brando_site]
@@ -243,6 +307,22 @@ if Code.ensure_loaded?(Igniter) do
         {:ok, _} ->
           {:error, "An existing :brando_site pipeline requires explicit integration."}
       end
+    end
+
+    defp site_pipeline(router),
+      do: CodeFunction.move_to_function_call(router, :pipeline, 2, &CodeFunction.argument_equals?(&1, 0, :brando_site))
+
+    # Outside :brando_site, whose lockdown plug would redirect the page to itself.
+    defp lockdown_scope(project) do
+      controller = inspect(lockdown_controller(project))
+
+      """
+      scope "#{@lockdown_path}" do
+        pipe_through :browser
+        get "/", #{controller}, :index, as: :lockdown
+        post "/", #{controller}, :unlock, as: :lockdown
+      end
+      """
     end
 
     defp declarations(controller) do

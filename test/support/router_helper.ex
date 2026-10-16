@@ -266,6 +266,7 @@ defmodule BrandoIntegrationWeb.Router do
 
   scope "/coming-soon" do
     get "/", BrandoIntegration.LockdownController, :index
+    post "/", BrandoIntegration.LockdownController, :unlock
   end
 
   scope "/", assigns: %{language: "en"} do
