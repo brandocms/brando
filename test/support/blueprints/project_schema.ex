@@ -121,7 +121,7 @@ defmodule Brando.BlueprintTest.Project do
         fieldset do
           size :half
           input :title, :text
-          input :slug, :slug, from: :title
+          input :slug, :slug, source: :title
         end
       end
 

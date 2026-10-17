@@ -113,7 +113,7 @@ defmodule Brando.SyncTest.Article do
       tab "Content" do
         fieldset do
           input :title, :text
-          input :slug, :slug, from: :title
+          input :slug, :slug, source: :title
           # Two AI actions (FieldActionsLiveTest); they show only where
           # Brando.AI is configured.
           input :subtitle, :textarea,
@@ -156,7 +156,7 @@ defmodule Brando.SyncTest.Article do
       tab "Content" do
         fieldset do
           input :title, :text
-          input :slug, :slug, from: :title
+          input :slug, :slug, source: :title
 
           input :subtitle, :rich_text,
             write_with_ai: [prompt: "Keep it short.", from: [:notes]],
@@ -174,7 +174,7 @@ defmodule Brando.SyncTest.Article do
       tab "Content" do
         fieldset do
           input :title, :text
-          input :slug, :slug, from: :title
+          input :slug, :slug, source: :title
 
           # Read-only but for superusers: its AI action is not offered to
           # anyone else (FieldActionsLiveTest)
@@ -191,7 +191,7 @@ defmodule Brando.SyncTest.Article do
       tab "Content" do
         fieldset do
           input :title, :text
-          input :slug, :slug, from: :title
+          input :slug, :slug, source: :title
 
           inputs_for :author do
             cardinality :one

@@ -58,6 +58,24 @@ defmodule Brando.Blueprint.Forms.Dsl do
     ]
   }
 
+  # `blocks` is only read directly under `form`. Spark resolves the macro
+  # lexically, so without these a `blocks` in a tab, fieldset or `inputs_for`
+  # compiles and is dropped. Each container takes one that fails the build.
+  @misplaced_blocks Map.new([:tab, :fieldset, :inputs_for], fn container ->
+                      {container,
+                       %Spark.Dsl.Entity{
+                         name: :blocks,
+                         args: [:name, {:optional, :opts}],
+                         target: Forms.Input,
+                         auto_set_fields: [type: :blocks],
+                         transform: {__MODULE__, :misplaced_blocks, [container]},
+                         schema: [
+                           name: [type: :atom, required: true, doc: "Block field name"],
+                           opts: [type: :keyword_list, required: false, default: [], doc: "Block options"]
+                         ]
+                       }}
+                    end)
+
   @alert %Spark.Dsl.Entity{
     name: :alert,
     args: [:type, {:optional, :content}],
@@ -86,7 +104,8 @@ defmodule Brando.Blueprint.Forms.Dsl do
     target: Forms.Subform,
     args: [:name],
     entities: [
-      sub_fields: [@input]
+      sub_fields: [@input],
+      misplaced_blocks: [@misplaced_blocks.inputs_for]
     ],
     schema: [
       name: [
@@ -170,7 +189,8 @@ defmodule Brando.Blueprint.Forms.Dsl do
       fields: [
         @input,
         @inputs_for
-      ]
+      ],
+      misplaced_blocks: [@misplaced_blocks.fieldset]
     ],
     schema: [
       label: [type: :string, required: false, doc: "Optional translated section heading"],
@@ -219,7 +239,8 @@ defmodule Brando.Blueprint.Forms.Dsl do
     args: [:name],
     entities: [
       fields: [@fieldset],
-      alerts: [@alert]
+      alerts: [@alert],
+      misplaced_blocks: [@misplaced_blocks.tab]
     ],
     schema: [
       name: [
@@ -310,7 +331,8 @@ defmodule Brando.Blueprint.Forms.Dsl do
     opts = opts || []
     ai = Keyword.get(opts, :ai)
 
-    with {:ok, actions} <- Forms.AIAction.build(input.type, Keyword.get(opts, :ai_actions), input.name),
+    with :ok <- verify_slug_source(input),
+         {:ok, actions} <- Forms.AIAction.build(input.type, Keyword.get(opts, :ai_actions), input.name),
          {:ok, write_with_ai} <- Forms.WriteWithAI.validate(input.type, Keyword.get(opts, :write_with_ai)) do
       # The checked `write_with_ai:`, with `from:` as a list
       opts = if is_nil(write_with_ai), do: opts, else: Keyword.put(opts, :write_with_ai, write_with_ai)
@@ -319,6 +341,39 @@ defmodule Brando.Blueprint.Forms.Dsl do
       {:ok, %{input | actions: actions, ai: ai, opts: opts}}
     end
   end
+
+  # A slug input reads its source field from `source:` only. Under `for:`
+  # (its 0.53 name) or `from:` the slug would never fill in.
+  defp verify_slug_source(%Forms.Input{type: :slug, name: name, opts: opts}) do
+    case Enum.find([:from, :for], &Keyword.has_key?(opts || [], &1)) do
+      nil ->
+        :ok
+
+      key ->
+        {:error,
+         "slug input #{inspect(name)} has `#{key}:`, which the slug input does not read. " <>
+           "Name the field the slug is built from with `source:`, as in " <>
+           "`input #{inspect(name)}, :slug, source: #{inspect(Keyword.fetch!(opts, key))}`."}
+    end
+  end
+
+  defp verify_slug_source(_input), do: :ok
+
+  @doc """
+  Fails the build for a `blocks` declared inside a `tab`, `fieldset` or
+  `inputs_for`, which would otherwise be dropped without a word.
+  """
+  def misplaced_blocks(%Forms.Input{name: name}, container) do
+    {:error,
+     "`blocks #{inspect(name)}` is declared inside #{container_name(container)}. " <>
+       "Declare it directly under `form do`, next to the tabs. A block field renders as its own " <>
+       "form, after the entry form: inside it, the block editor would be a form nested in a form " <>
+       "(invalid HTML), and each change to the entry's fields would resend every block."}
+  end
+
+  defp container_name(:tab), do: "a `tab`"
+  defp container_name(:fieldset), do: "a `fieldset`"
+  defp container_name(:inputs_for), do: "an `inputs_for`"
 
   defp deprecated_ai(_input, nil, actions, _write_with_ai, opts), do: {actions, opts}
 

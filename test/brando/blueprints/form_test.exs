@@ -162,7 +162,7 @@ defmodule Brando.Blueprint.FormsTest do
                 },
                 %Brando.Blueprint.Forms.Input{
                   name: :slug,
-                  opts: [from: :title],
+                  opts: [source: :title],
                   component: nil,
                   type: :slug
                 }

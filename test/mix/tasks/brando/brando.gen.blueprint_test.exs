@@ -22,6 +22,30 @@ defmodule Mix.Tasks.Brando.Gen.BlueprintTest do
     assert result.tasks == []
   end
 
+  test "the generated Blueprint compiles, with a slug built from the title and draft as default status" do
+    schema = "Product#{System.unique_integer([:positive])}"
+    result = IgniterCase.phoenix_project() |> generate(["Catalog", schema, "--admin-module", "Brando"])
+    assert result.issues == []
+    source = IgniterCase.source(result, "lib/studio/catalog/#{Macro.underscore(schema)}.ex")
+
+    assert source =~ ~r/input\(?:slug, :slug, source: :title/
+    assert source =~ ~r/default_params\(?%\{"status" => "draft"\}/
+
+    {_modules, diagnostics} = Code.with_diagnostics(fn -> Code.compile_string(source) end)
+
+    # The verifiers report a bad Blueprint as compile warnings. Protocols are
+    # consolidated in the test build, so the trait implementations warn.
+    assert diagnostics
+           |> Enum.map(& &1.message)
+           |> Enum.reject(&(&1 =~ "protocol has already been consolidated")) == []
+
+    module = Module.concat([Studio, Catalog, schema])
+
+    assert %{default_params: %{"status" => "draft"}, tabs: [%{fields: [%{fields: inputs}]}]} = module.__form__()
+    assert %{opts: opts} = Enum.find(inputs, &(&1.name == :slug))
+    assert opts[:source] == :title
+  end
+
   test "accepts naming overrides and nested domains" do
     result = IgniterCase.phoenix_project() |> generate(["Directory.People", "Person", "--plural", "people"])
     assert result.issues == []
@@ -95,6 +119,8 @@ defmodule Mix.Tasks.Brando.Gen.BlueprintTest do
     result = generate(base, ["Catalog", "Product"])
     assert result.issues == []
     assert IgniterCase.source(result, "lib/studio/catalog/product.ex") =~ ":local"
+    # Igniter parses each `.ex` file it writes; the EEx template is not one.
+    IgniterCase.prepare_for_write!(result)
     result = generate(base, ["Catalog", "Product", "--template", "custom.ex.eex"])
     assert result.issues == []
     assert IgniterCase.source(result, "lib/studio/catalog/product.ex") =~ ":explicit"
