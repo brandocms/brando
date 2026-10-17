@@ -1,4 +1,4 @@
-- **A slug input with `from:` or `for:` fails to compile** (#PR). The slug
+- **A slug input with `from:` or `for:` fails to compile** (#3229). The slug
   input reads the field it is built from only from `source:`; `from:` (which
   `mix brando.gen.blueprint` used to write) and `for:` (the 0.53 name) were
   accepted and ignored, so the slug never filled in. Write
