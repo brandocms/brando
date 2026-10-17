@@ -96,22 +96,24 @@ defmodule Brando.Vite do
         nil -> nil
       end
 
-    loop(port, os_pid, server, "")
+    loop(port, os_pid, server, "", "")
   end
 
-  defp loop(port, os_pid, server, tail) do
+  defp loop(port, os_pid, server, tail, pending) do
     receive do
       {^port, {:data, data}} ->
-        IO.write(data)
-        loop(port, os_pid, server, keep_tail(tail <> data))
+        pending = write_output(pending <> data)
+        loop(port, os_pid, server, keep_tail(tail <> data), pending)
 
       {^port, {:exit_status, status}} ->
+        flush_output(pending)
         exited(status, server, tail)
 
       {:EXIT, ^port, _reason} ->
-        loop(port, os_pid, server, tail)
+        loop(port, os_pid, server, tail, pending)
 
       {:EXIT, _from, reason} ->
+        flush_output(pending)
         stop(port, os_pid)
         # Phoenix's watcher catches an exit raised here and sleeps 2 s before
         # passing it on, which holds up the endpoint's shutdown. An exit
@@ -133,6 +135,28 @@ defmodule Brando.Vite do
         if Port.info(port), do: Port.close(port)
     end
   end
+
+  # The console takes only whole UTF-8 characters, and a chunk from the port
+  # can end inside one. Writes the whole characters, replaces invalid bytes,
+  # and returns an incomplete character at the end for the next chunk.
+  defp write_output(data) do
+    case :unicode.characters_to_binary(data) do
+      text when is_binary(text) ->
+        IO.write(text)
+        ""
+
+      {:incomplete, text, rest} ->
+        IO.write(text)
+        rest
+
+      {:error, text, <<_invalid, rest::binary>>} ->
+        IO.write(text <> "\uFFFD")
+        write_output(rest)
+    end
+  end
+
+  defp flush_output(""), do: :ok
+  defp flush_output(pending), do: IO.write(String.replace_invalid(pending))
 
   defp keep_tail(tail) when byte_size(tail) > @tail_bytes,
     do: binary_part(tail, byte_size(tail) - @tail_bytes, @tail_bytes)

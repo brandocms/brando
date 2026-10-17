@@ -146,6 +146,21 @@ defmodule Brando.ViteTest do
     refute log =~ "[error]"
   end
 
+  test "a character split across writes reaches the console whole", %{backend: backend} do
+    # ➜ is E2 9E 9C, and an incomplete character at exit is replaced
+    fake_vite(backend, """
+    printf '\\342\\236'
+    sleep 0.2
+    printf '\\234 ready\\n'
+    sleep 0.2
+    printf 'end \\342'
+    """)
+
+    output = capture_io(fn -> assert Brando.Vite.watch(backend) == :ok end)
+
+    assert output == "➜ ready\nend �"
+  end
+
   test "Vite stops when the watcher dies without shutting down, as when the VM exits",
        %{backend: backend} do
     fake_vite(backend, "echo $$ > vite.pid\nexec sleep 300\n")
