@@ -1233,18 +1233,24 @@ defmodule Brando.Translations do
 
     {copies, failed, dropped, raised} = copy_each(schema, ids, language, actor, override_opts, batch)
 
-    # The copies made so far are saved, so their links are put right even when
-    # a later copy raised.
-    removed = link_batch_copies(schema, copies, batch)
-
     case raised do
       nil ->
-        %{failed: Enum.reverse(failed), dropped_links: dropped + removed}
+        %{failed: Enum.reverse(failed), dropped_links: dropped + link_batch_copies(schema, copies, batch)}
 
+      # The copies made so far are saved, so their links are put right even
+      # when a later copy raised; the error that stopped the batch goes on.
       {kind, reason, stacktrace} ->
+        links =
+          try do
+            "#{dropped + link_batch_copies(schema, copies, batch)} link(s) were left out of the copies made"
+          catch
+            link_kind, link_reason ->
+              "Their links could not be put right (#{Exception.format_banner(link_kind, link_reason)}) in the copies made"
+          end
+
         Logger.error(
           "(!) Copying #{inspect(schema)} entries to #{language} stopped at an error. " <>
-            "#{dropped + removed} link(s) were left out of the copies made: #{inspect(Map.values(copies))}"
+            "#{links}: #{inspect(Map.values(copies))}. Not copied: #{inspect(Enum.map(failed, &elem(&1, 0)))}"
         )
 
         :erlang.raise(kind, reason, stacktrace)
