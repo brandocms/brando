@@ -24,10 +24,11 @@ defmodule Brando.Blueprint.PreloadsTest do
     end
   end
 
-  test "complete relation preloads include direct has-one associations" do
+  test "complete relation preloads include direct has-one associations and their relations" do
     preloads = RelationPreloads.for_schema(Brando.Navigation.Item)
 
-    assert :link in preloads
+    assert {:link, link_preloads} = List.keyfind(preloads, :link, 0)
+    assert :image in link_preloads
   end
 
   test "cast has-many preloads preserve the declared order" do
@@ -45,6 +46,12 @@ defmodule Brando.Blueprint.PreloadsTest do
 
     assert [%Ecto.Query.ByExpr{expr: [asc: _sequence_expression]}] = query.order_bys
     assert query.preloads == [:contributor]
+  end
+
+  test "cast one-to-one preloads include the related entry's own assets" do
+    assert {:author, [:portrait]} in RelationPreloads.for_schema(Brando.SyncTest.Article)
+    # A cast belongs_to whose schema has no assets or relations of its own
+    assert :location in RelationPreloads.for_schema(Brando.BlueprintTest.P1)
   end
 
   test "complete preloads retain entry identifiers and direct assets" do

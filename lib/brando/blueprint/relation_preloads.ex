@@ -16,8 +16,8 @@ defmodule Brando.Blueprint.RelationPreloads do
   @doc """
   Returns preloads for persisted relations on `schema`.
 
-  Cast `has_many` relations include their direct assets and non-recursive
-  relations. Their declared `preload_order` is preserved; sequenced children
+  Cast `has_many`, `has_one` and `belongs_to` relations include their direct
+  assets and non-recursive relations. Their declared `preload_order` is preserved; sequenced children
   default to ascending sequence when no explicit order is configured.
   """
   @spec for_schema(module()) :: list()
@@ -44,6 +44,17 @@ defmodule Brando.Blueprint.RelationPreloads do
       order ->
         preload_query = from entry in module, order_by: ^order, preload: ^sub_preloads
         {name, preload_query}
+    end
+  end
+
+  # A cast one-to-one relation is a subform too: its image and file inputs
+  # read their association from the loaded struct.
+  defp preload_relation(%{type: type, name: name, opts: %{cast: cast, module: module}}, parent_schema)
+       when type in [:has_one, :belongs_to] and cast not in [nil, false] do
+    if Brando.Blueprint.blueprint?(module) do
+      preload_unsequenced(name, asset_preloads(module) ++ relation_preloads(module, parent_schema))
+    else
+      name
     end
   end
 

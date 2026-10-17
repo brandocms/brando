@@ -212,6 +212,16 @@ defmodule BrandoAdmin.SubformRelationTest do
       %{author: author, portrait: image}
     end
 
+    test "opens with its saved image on the form's automatic preloads", ctx do
+      ctx.author |> Ecto.Changeset.change(portrait_id: ctx.portrait.id) |> Repo.update!()
+      view = open_author(ctx)
+
+      assert author_portrait_id(render(view)) == to_string(ctx.portrait.id)
+      assert has_element?(view, ~s([id$="_portrait-media"] img))
+      assert %ArticleAuthor{portrait: %{id: portrait_id}} = form_assigns(view).entry.author
+      assert portrait_id == ctx.portrait.id
+    end
+
     test "an upload to its image field is processed for that field", ctx do
       view = open_author(ctx)
       manager = find_live_child(view, "brando-upload-manager-lv")

@@ -183,11 +183,9 @@ defmodule Brando.SyncTest.Article do
       end
     end
 
-    # A one-to-one subform with an image field (SubformRelationTest). The
-    # automatic preloads leave out the subform's own assets.
+    # A one-to-one subform with an image field (SubformRelationTest), on the
+    # form's automatic preloads.
     form :author do
-      query %{preload: [:alternate_entries, author: :portrait]}
-
       tab "Content" do
         fieldset do
           input :title, :text
