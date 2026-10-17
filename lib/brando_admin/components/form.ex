@@ -2171,6 +2171,16 @@ defmodule BrandoAdmin.Components.Form do
 
   defp update_entry_assocs(socket, _nested_path, _updated_relation), do: socket
 
+  # A drawer save changes the asset an entry field shows, and the entry the
+  # next `validate` casts onto; the preview's copy of it follows.
+  defp refresh_asset_in_preview(socket, [], field, asset) do
+    if Map.has_key?(socket.assigns.updated_entry_assocs, field),
+      do: update_entry_assocs(socket, [field], asset),
+      else: socket
+  end
+
+  defp refresh_asset_in_preview(socket, _path, _field, _asset), do: socket
+
   # Transformer changeset updates are now handled by the Transformer component
 
   defp set_thumbnail_elsewhere(socket, video_id, image_id) do
@@ -2953,6 +2963,7 @@ defmodule BrandoAdmin.Components.Form do
     # what this editor's own pick reports, the preview merges and the blocks
     # read.
     assets = for field <- fields, {name, _schema} <- [asset_fk_map[field]], do: name
+    relations = remote_relations(changeset.data.__struct__, fields)
 
     socket
     |> put_form(to_form(changeset, []))
@@ -2963,15 +2974,34 @@ defmodule BrandoAdmin.Components.Form do
     |> own_changed_assets(fields)
     |> Drafts.dirty()
     |> force_svelte_remounts(fields)
-    |> put_remote_assets_in_preview(changeset, assets)
+    |> put_remote_relations_in_preview(changeset, relations, asset_fk_map)
     |> send_remote_fields_to_blocks(changeset, fields ++ assets)
-    |> preview_changed_fields(fields ++ relation_names(changeset.data.__struct__, fields))
+    |> preview_changed_fields(fields ++ Enum.map(relations, &elem(&1, 0)))
   end
 
-  # The preview merges `updated_entry_assocs` over the changeset, so an asset
-  # this editor picked earlier would hide the one another editor picked now.
-  defp put_remote_assets_in_preview(socket, changeset, assets) do
-    Enum.reduce(assets, socket, &update_entry_assocs(&2, [&1], Map.get(changeset.data, &1)))
+  # The preview merges `updated_entry_assocs` over the changeset, so a
+  # relation this editor picked earlier would hide the one another editor
+  # picked now. An asset's record is in the changeset already
+  # (`apply_field_change/3`); another relation loaded in it is the old one,
+  # and one not loaded the preview preloads by its key.
+  defp put_remote_relations_in_preview(socket, changeset, relations, asset_fk_map) do
+    Enum.reduce(relations, socket, fn {name, key, related}, socket ->
+      stale? =
+        Map.has_key?(socket.assigns.updated_entry_assocs, name) or
+          (not Map.has_key?(asset_fk_map, key) and Ecto.assoc_loaded?(Map.get(changeset.data, name)))
+
+      if stale?,
+        do: update_entry_assocs(socket, [name], remote_relation(changeset, name, key, related, asset_fk_map)),
+        else: socket
+    end)
+  end
+
+  defp remote_relation(changeset, name, key, related, asset_fk_map) do
+    cond do
+      Map.has_key?(asset_fk_map, key) -> Map.get(changeset.data, name)
+      id = Changeset.get_field(changeset, key) -> Brando.Repo.get(related, id)
+      true -> nil
+    end
   end
 
   # The blocks that read the entry follow another editor's change as they
@@ -2984,14 +3014,14 @@ defmodule BrandoAdmin.Components.Form do
     end)
   end
 
-  # The `belongs_to` relations whose foreign keys are among `fields`. A
-  # preview option names a relation (`[:cover]`, `[:category]`) as this
-  # editor's own pick reports it (`update_entry_relation`).
-  defp relation_names(schema, fields) do
+  # The `belongs_to` relations whose foreign keys are among `fields`, as
+  # `{name, key, related}`. A preview option names a relation (`[:cover]`,
+  # `[:category]`) as this editor's own pick reports it (`update_entry_relation`).
+  defp remote_relations(schema, fields) do
     for name <- schema.__schema__(:associations),
-        %Ecto.Association.BelongsTo{owner_key: key} <- [schema.__schema__(:association, name)],
+        %Ecto.Association.BelongsTo{owner_key: key, related: related} <- [schema.__schema__(:association, name)],
         key in fields,
-        do: name
+        do: {name, key, related}
   end
 
   # The open live preview follows another editor's changes as it follows
@@ -5352,6 +5382,7 @@ defmodule BrandoAdmin.Components.Form do
      # changes into data, leaving nothing for ship_all_field_changes to see
      |> ship_all_field_changes()
      |> assign(:entry, updated_entry)
+     |> refresh_asset_in_preview(path, field, updated_file)
      |> put_form(to_form(updated_changeset, []))
      |> assign(:file_changeset, validated_changeset)
      |> assign(:editing_file?, false)
@@ -5556,6 +5587,7 @@ defmodule BrandoAdmin.Components.Form do
      # changes into data, leaving nothing for ship_all_field_changes to see
      |> ship_all_field_changes()
      |> assign(:entry, updated_entry)
+     |> refresh_asset_in_preview(path, field, Map.get(updated_entry, field))
      |> put_form(to_form(updated_changeset, []))
      |> assign(:image_changeset, validated_changeset)
      |> assign(:edit_image, edit_image)
@@ -5719,6 +5751,7 @@ defmodule BrandoAdmin.Components.Form do
      # changes into data, leaving nothing for ship_all_field_changes to see
      |> ship_all_field_changes()
      |> assign(:entry, updated_entry)
+     |> refresh_asset_in_preview(path, field, updated_video)
      |> put_form(to_form(updated_changeset, []))
      |> assign(:video_changeset, validated_changeset)
      |> assign(:edit_video, edit_video)

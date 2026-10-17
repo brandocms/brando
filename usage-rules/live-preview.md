@@ -55,9 +55,11 @@ continue to work without changes.
   A path covers what lies below it, so `[:items]` names a subform: its rows
   added, removed or reordered, and the fields inside them. A path below a field,
   such as `[:seo, :title]`, also fires when the whole field changes, as it does
-  when another editor changes it. Name an asset or `belongs_to` relation by the
-  relation, `[:cover]`, not its key: it fires when the relation is picked,
-  uploaded or removed, here or by another editor. `template_section` and
+  when another editor changes it. An image, video or file field, `[:cover]`,
+  fires when it is picked, uploaded or removed, here or by another editor. A
+  select that sets a relation with `update_relation` fires the relation,
+  `[:category]`; a select without it fires only its key, `[:category_id]`.
+  `template_section` and
   `template_css_classes` accept a string or an entry callback for layout context.
 
 Templates receive `@LIVE_PREVIEW` and a preview connection. Reuse production

@@ -97,25 +97,69 @@ defmodule BrandoAdmin.Components.Form.EntryPictureBlockSyncTest do
     assert form.assigns.updated_entry_assocs == %{meta_image: second}
   end
 
+  # The drawer's save changes the image the field shows; the preview's copy
+  # of it follows, or the title edited there never reaches the preview.
+  test "saving the image's drawer refreshes the image the preview shows", ctx do
+    %{page: page, user: user} = ctx
+    image = Factory.insert(:image, creator: user, focal: %Brando.Images.Focal{x: 50, y: 50}, status: :processed)
+    edit_image = %{path: [], field: :meta_image, relation_field: :meta_image_id, image: image}
+
+    socket =
+      page
+      |> form_socket(user, edit_image)
+      |> Component.assign(sync_assigns())
+      |> Component.assign(:updated_entry_assocs, %{meta_image: image})
+
+    params = %{"image" => %{"title" => %{"en" => "Example Hotel lobby"}}}
+    {:noreply, form} = Form.handle_event("save_image", params, socket)
+
+    assert form.assigns.updated_entry_assocs.meta_image.title == %{"en" => "Example Hotel lobby"}
+  end
+
+  # The preview merges a relation this editor picked (a select with
+  # `update_relation`) over the entry, and otherwise preloads only a relation
+  # not loaded yet; another editor's pick replaces both.
+  for {held, page_parent} <- [{"one this editor picked", :not_loaded}, {"a loaded one", :loaded}] do
+    test "another editor's pick replaces #{held}", ctx do
+      %{page: page, user: user} = ctx
+      parent = Factory.insert(:page, creator: user, title: "Example Hotel")
+
+      {page, assocs} =
+        if unquote(page_parent) == :loaded, do: {%{page | parent: nil}, %{}}, else: {page, %{parent: nil}}
+
+      socket =
+        page
+        |> form_socket(user, nil)
+        |> Component.assign(sync_assigns())
+        |> Component.assign(:updated_entry_assocs, assocs)
+
+      changes = [%{field: :parent_id, value: parent.id, assoc?: false, clock: {1, "remote"}}]
+
+      {:ok, form} = Form.update(%{event: "apply_remote_field_changes", changes: changes}, socket)
+
+      assert form.assigns.updated_entry_assocs.parent.id == parent.id
+    end
+  end
+
+  defp sync_assigns do
+    [
+      tiptap_epoch: "mounted-form",
+      dirty_fields: [],
+      synced_values: %{},
+      unshipped_fields: MapSet.new(),
+      replaced_values: %{},
+      held_remote: %{},
+      field_clocks: %{},
+      live_preview_active?: false
+    ]
+  end
+
   # Another editor's pick arrives as the image's id (`apply_remote/2`); the
   # block reads the relation, so that is what it gets.
   test "another editor's pick moves the block's preview to it", ctx do
     %{page: page, user: user, second: second} = ctx
     block = block_socket(page)
-
-    socket =
-      page
-      |> form_socket(user, nil)
-      |> Component.assign(
-        tiptap_epoch: "mounted-form",
-        dirty_fields: [],
-        synced_values: %{},
-        unshipped_fields: MapSet.new(),
-        replaced_values: %{},
-        held_remote: %{},
-        field_clocks: %{},
-        live_preview_active?: false
-      )
+    socket = page |> form_socket(user, nil) |> Component.assign(sync_assigns())
 
     changes = [%{field: :meta_image_id, value: second.id, assoc?: false, clock: {1, "remote"}}]
 
