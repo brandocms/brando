@@ -180,7 +180,11 @@ for port in "${smoke_vite_ports[@]}"; do
 done
 mix run --no-start "$framework_dir/scripts/igniter_smoke/database.exs" snapshot > "$smoke_root/logs/database-snapshot.log" 2>&1
 start_server server.log vite
-curl --silent --fail "http://127.0.0.1:$smoke_port/admin/login" | grep -qF "http://localhost:$BRANDO_VITE_ADMIN_PORT/@vite/client"
+admin_login="$(curl --silent --fail "http://127.0.0.1:$smoke_port/admin/login")"
+if [[ "$admin_login" != *"http://localhost:$BRANDO_VITE_ADMIN_PORT/@vite/client"* ]]; then
+  echo "With hmr: true the admin did not load Vite's client; inspect $smoke_root/logs/server.log" >&2
+  exit 1
+fi
 run_browser vite
 stop_server
 
