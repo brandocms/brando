@@ -81,6 +81,49 @@ defmodule BrandoAdmin.Components.Form.EntryPictureBlockSyncTest do
     assert block |> deliver_to_block() |> preview_src() =~ "second.jpg"
   end
 
+  # The live preview merges `updated_entry_assocs` over the entry, so an image
+  # picked earlier would hide the one uploaded now.
+  test "an upload replaces the image the preview shows", ctx do
+    %{page: page, user: user, first: first, second: second} = ctx
+    edit_image = %{path: [], field: :meta_image, relation_field: :meta_image_id, image: first}
+    socket = page |> form_socket(user, edit_image) |> Component.assign(:updated_entry_assocs, %{meta_image: first})
+
+    {:ok, form} =
+      Form.update(
+        %{event: "entry_field_upload_complete", asset_type: :image, field: :meta_image, path: [], asset: second},
+        socket
+      )
+
+    assert form.assigns.updated_entry_assocs == %{meta_image: second}
+  end
+
+  # Another editor's pick arrives as the image's id (`apply_remote/2`); the
+  # block reads the relation, so that is what it gets.
+  test "another editor's pick moves the block's preview to it", ctx do
+    %{page: page, user: user, second: second} = ctx
+    block = block_socket(page)
+
+    socket =
+      page
+      |> form_socket(user, nil)
+      |> Component.assign(
+        tiptap_epoch: "mounted-form",
+        dirty_fields: [],
+        synced_values: %{},
+        unshipped_fields: MapSet.new(),
+        replaced_values: %{},
+        held_remote: %{},
+        field_clocks: %{},
+        live_preview_active?: false
+      )
+
+    changes = [%{field: :meta_image_id, value: second.id, assoc?: false, clock: {1, "remote"}}]
+
+    {:ok, _form} = Form.update(%{event: "apply_remote_field_changes", changes: changes}, socket)
+
+    assert block |> deliver_to_block() |> preview_src() =~ "second.jpg"
+  end
+
   test "removing the image clears the block's preview", ctx do
     %{page: page, user: user} = ctx
     block = block_socket(page)

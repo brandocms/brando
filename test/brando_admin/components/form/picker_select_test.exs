@@ -36,6 +36,7 @@ defmodule BrandoAdmin.Components.Form.PickerSelectTest do
     |> Component.assign(:current_user, user)
     |> Component.assign(:processing_images, [])
     |> Component.assign(:blocks_wanting_entry, %{})
+    |> Component.assign(:updated_entry_assocs, %{})
     # drawer state `assign_drawer_recovery_state/1` destructures
     |> Component.assign(:editing_image?, true)
     |> Component.assign(:editing_video?, false)

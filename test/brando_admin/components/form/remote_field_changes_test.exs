@@ -2,6 +2,7 @@ defmodule BrandoAdmin.Components.Form.RemoteFieldChangesTest do
   use ExUnit.Case, async: true
 
   alias BrandoAdmin.Components.Form
+  alias BrandoAdmin.Components.Form.Block
   alias Ecto.Changeset
   alias Phoenix.Component
 
@@ -15,6 +16,17 @@ defmodule BrandoAdmin.Components.Form.RemoteFieldChangesTest do
     end
 
     def __rich_text_fields__, do: [:body, :caption]
+  end
+
+  defmodule Hotel do
+    use Ecto.Schema
+
+    schema "example_hotels" do
+      field :title, :string
+      belongs_to :cover, Brando.Images.Image
+    end
+
+    def __image_fields__, do: [%{name: :cover}]
   end
 
   defp socket(assigns \\ []) do
@@ -37,7 +49,9 @@ defmodule BrandoAdmin.Components.Form.RemoteFieldChangesTest do
           replaced_values: %{},
           held_remote: %{},
           field_clocks: %{},
-          live_preview_active?: false
+          live_preview_active?: false,
+          updated_entry_assocs: %{},
+          blocks_wanting_entry: %{}
         ],
         assigns
       )
@@ -110,6 +124,70 @@ defmodule BrandoAdmin.Components.Form.RemoteFieldChangesTest do
 
     assert {:ok, updated} = Form.update(%{event: "apply_remote_field_changes", changes: changes}, socket)
     assert updated.assigns.preview_update.mode == :live_preview_full_rerender
+  end
+
+  # Another editor's asset pick arrives as its foreign key; the preview
+  # option names the relation, as this editor's own pick reports it.
+  test "a remote change to a relation's foreign key fires the triggers declared on the relation" do
+    cache_key = "remote-fk-#{System.unique_integer([:positive])}"
+    Cachex.put(:cache, "#{cache_key}__VAR__cover_key", "stale")
+    hotel = %Hotel{id: 1, title: "Example Hotel", cover_id: 4}
+
+    socket =
+      socket(
+        id: "hotel_form",
+        schema: Hotel,
+        entry: hotel,
+        singular: "hotel",
+        form: Component.to_form(Changeset.change(hotel), as: "hotel"),
+        live_preview_active?: true,
+        live_preview_cache_key: cache_key,
+        preview_update: nil,
+        fields_demanding_full_live_preview_rerender: [[:cover]],
+        fields_demanding_live_preview_reassign: [{:cover_key, [:cover]}],
+        # a cover this editor picked earlier, which the preview merges over the entry
+        updated_entry_assocs: %{cover: %Brando.Images.Image{id: 4}}
+      )
+
+    changes = [%{field: :cover_id, value: nil, assoc?: false, clock: {1, "remote"}}]
+
+    assert {:ok, updated} = Form.update(%{event: "apply_remote_field_changes", changes: changes}, socket)
+    assert updated.assigns.preview_update.mode == :live_preview_full_rerender
+    assert {:ok, nil} = Cachex.get(:cache, "#{cache_key}__VAR__cover_key")
+    assert updated.assigns.updated_entry_assocs == %{cover: nil}
+  end
+
+  # Blocks that read the entry (`{{ entry.title }}`) follow another editor's
+  # change as they follow this editor's typing, and an asset's blocks get
+  # the relation, as this editor's own pick sends it (`relation_changed/4`).
+  test "a remote change reaches the blocks that read the field it changed" do
+    hotel = %Hotel{id: 1, title: "Example Hotel", cover_id: 4}
+
+    socket =
+      socket(
+        schema: Hotel,
+        entry: hotel,
+        singular: "hotel",
+        form: Component.to_form(Changeset.change(hotel), as: "hotel"),
+        blocks_wanting_entry: %{
+          {Block, "reads-title"} => ["title"],
+          {Block, "reads-cover"} => ["cover"],
+          {Block, "reads-other"} => ["uri"]
+        }
+      )
+
+    changes = [
+      %{field: :title, value: "Example Hotel Annex", assoc?: false, clock: {1, "remote"}},
+      %{field: :cover_id, value: nil, assoc?: false, clock: {1, "remote"}}
+    ]
+
+    assert {:ok, _updated} = Form.update(%{event: "apply_remote_field_changes", changes: changes}, socket)
+
+    assert_receive {:phoenix, :send_update,
+                    {{Block, "reads-title"}, %{event: "update_entry_field", path: [_], change: "Example Hotel Annex"}}}
+
+    assert_receive {:phoenix, :send_update, {{Block, "reads-cover"}, %{event: "update_entry_field", change: nil}}}
+    refute_receive {:phoenix, :send_update, {{Block, "reads-other"}, _}}
   end
 
   # Two editors who send the same field at once each get the other's value.

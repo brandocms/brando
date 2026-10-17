@@ -244,7 +244,7 @@ defmodule BrandoIntegrationWeb.LivePreview do
     description "The page with a header and footer in its language"
     template {BrandoIntegrationWeb.PageHTML, "blocks"}
     layout {BrandoIntegrationWeb.Layouts, "localized"}
-    rerender_on_change [[:language], [:vars]]
+    rerender_on_change [[:language], [:vars], [:meta_image]]
     reassign_on_change [{:greeting, [:language]}, {:farewell, [:language]}, {:farewell, [:vars]}]
     assign :greeting, fn _, language -> "greeting:#{language}" end
 

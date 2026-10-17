@@ -682,8 +682,7 @@ defmodule BrandoAdmin.Components.Form do
      socket
      |> put_local_form(to_form(changeset, []))
      |> update_entry_with_relation(path ++ [field], nil)
-     |> send_relation_to_blocks(path, field, nil)
-     |> update_entry_assocs(path ++ [field], nil)
+     |> relation_changed(path, field, nil)
      |> own_asset(path, relation_key, :id)
      |> ship_all_field_changes()
      |> push_event("b:validate", %{})}
@@ -889,9 +888,6 @@ defmodule BrandoAdmin.Components.Form do
     force_live_preview_update =
       live_preview_active? && Map.get(params, :force_live_preview_update, false)
 
-    fields_demanding_full_live_preview_rerender =
-      socket.assigns.fields_demanding_full_live_preview_rerender
-
     # 1. Always update updated_entry_assocs (for live preview)
     socket = update_entry_assocs(socket, path, updated_relation)
     socket = if params[:draft_dirty], do: Drafts.dirty(socket), else: socket
@@ -912,17 +908,12 @@ defmodule BrandoAdmin.Components.Form do
         socket
       end
 
-    # 5. Always handle live preview
-    lp_path = live_preview_path(path)
-
-    full_rerender? =
-      live_preview_active? &&
-        Enum.any?(fields_demanding_full_live_preview_rerender, &(&1 == lp_path))
-
+    # 5. Always handle live preview. A forced update queued after a full
+    # rerender merges into it.
     socket
-    |> maybe_invalidate_live_preview_assign(lp_path)
-    |> maybe_full_rerender_live_preview(full_rerender?)
-    |> maybe_force_live_preview_update(full_rerender?, force_live_preview_update)
+    |> maybe_invalidate_live_preview_assign(path)
+    |> maybe_rerender_live_preview_for(path_to_strings(path))
+    |> then(&if(force_live_preview_update, do: fetch_root_blocks(&1, :live_preview_update, 0), else: &1))
     |> then(&{:ok, &1})
   end
 
@@ -1844,7 +1835,7 @@ defmodule BrandoAdmin.Components.Form do
       |> put_asset_in_data(path, field, asset)
 
     socket
-    |> send_relation_to_blocks(path, field, asset)
+    |> relation_changed(path, field, asset)
     |> put_local_form(to_form(updated_changeset, []))
     |> update_entry_with_relation(path ++ [field], asset)
     |> own_asset(path, relation_key, :id)
@@ -2255,20 +2246,6 @@ defmodule BrandoAdmin.Components.Form do
     end
   end
 
-  defp live_preview_path(path), do: path
-
-  defp maybe_force_live_preview_update(socket, true, _) do
-    socket
-  end
-
-  defp maybe_force_live_preview_update(socket, false, true) do
-    fetch_root_blocks(socket, :live_preview_update, 0)
-  end
-
-  defp maybe_force_live_preview_update(socket, _, _) do
-    socket
-  end
-
   defp maybe_full_rerender_live_preview(
          %{assigns: %{has_blocks?: false, live_preview_active?: true}} = socket,
          true
@@ -2288,10 +2265,6 @@ defmodule BrandoAdmin.Components.Form do
 
   defp maybe_full_rerender_live_preview(%{assigns: %{has_blocks?: true}} = socket, true) do
     fetch_root_blocks(socket, :live_preview_full_rerender, 1200)
-  end
-
-  defp maybe_full_rerender_live_preview(socket, false) do
-    socket
   end
 
   defp maybe_assign_block_map(socket) do
@@ -2976,6 +2949,11 @@ defmodule BrandoAdmin.Components.Form do
           else: Map.update(replaced, field, [stale], &Enum.take(Enum.uniq([stale | &1]), 5))
       end)
 
+    # An asset arrives as its key (`:cover_id`); the relation (`:cover`) is
+    # what this editor's own pick reports, the preview merges and the blocks
+    # read.
+    assets = for field <- fields, {name, _schema} <- [asset_fk_map[field]], do: name
+
     socket
     |> put_form(to_form(changeset, []))
     |> assign(:replaced_values, replaced)
@@ -2985,7 +2963,35 @@ defmodule BrandoAdmin.Components.Form do
     |> own_changed_assets(fields)
     |> Drafts.dirty()
     |> force_svelte_remounts(fields)
-    |> preview_changed_fields(fields)
+    |> put_remote_assets_in_preview(changeset, assets)
+    |> send_remote_fields_to_blocks(changeset, fields ++ assets)
+    |> preview_changed_fields(fields ++ relation_names(changeset.data.__struct__, fields))
+  end
+
+  # The preview merges `updated_entry_assocs` over the changeset, so an asset
+  # this editor picked earlier would hide the one another editor picked now.
+  defp put_remote_assets_in_preview(socket, changeset, assets) do
+    Enum.reduce(assets, socket, &update_entry_assocs(&2, [&1], Map.get(changeset.data, &1)))
+  end
+
+  # The blocks that read the entry follow another editor's change as they
+  # follow this editor's typing (`send_target_to_blocks/3`).
+  defp send_remote_fields_to_blocks(socket, changeset, fields) do
+    entry = apply_changes(changeset)
+
+    Enum.reduce(fields, socket, fn field, socket ->
+      send_updated_entry_field_to_blocks(socket, [Access.key(field)], Map.get(entry, field), to_string(field))
+    end)
+  end
+
+  # The `belongs_to` relations whose foreign keys are among `fields`. A
+  # preview option names a relation (`[:cover]`, `[:category]`) as this
+  # editor's own pick reports it (`update_entry_relation`).
+  defp relation_names(schema, fields) do
+    for name <- schema.__schema__(:associations),
+        %Ecto.Association.BelongsTo{owner_key: key} <- [schema.__schema__(:association, name)],
+        key in fields,
+        do: name
   end
 
   # The open live preview follows another editor's changes as it follows
@@ -5040,7 +5046,7 @@ defmodule BrandoAdmin.Components.Form do
     {:noreply,
      socket
      |> assign(:entry, Map.put(entry, edit_video.field, nil))
-     |> send_relation_to_blocks(edit_video.path, edit_video.field, nil)
+     |> relation_changed(edit_video.path, edit_video.field, nil)
      |> assign(:video_changeset, nil)
      |> assign(:editing_video?, false)
      |> assign(:edit_video, %{edit_video | video: nil})
@@ -5154,7 +5160,7 @@ defmodule BrandoAdmin.Components.Form do
     {:noreply,
      socket
      |> assign(:entry, Map.put(entry, edit_file.field, nil))
-     |> send_relation_to_blocks(edit_file.path, edit_file.field, nil)
+     |> relation_changed(edit_file.path, edit_file.field, nil)
      |> assign(:file_changeset, nil)
      # `reset_file_field/2` closes the drawer (`toggle_drawer`), so the flag has
      # to come down with it — leaving it set stranded the main save behind
@@ -5190,7 +5196,7 @@ defmodule BrandoAdmin.Components.Form do
     {:noreply,
      socket
      |> assign(:entry, Map.put(entry, edit_image.field, nil))
-     |> send_relation_to_blocks(edit_image.path, edit_image.field, nil)
+     |> relation_changed(edit_image.path, edit_image.field, nil)
      |> assign(:image_changeset, nil)
      # Same as reset_file_field above — this closes the image drawer, so the
      # guard flag must come down or the entry can never be saved again.
@@ -7359,10 +7365,17 @@ defmodule BrandoAdmin.Components.Form do
   # An asset field's relation committed or cleared (a pick, an upload, a
   # removal). The form's own change is its `_id`, and the blocks that read the
   # entry read the relation (`{% picture entry.cover %}`), so they are sent
-  # the relation itself.
-  defp send_relation_to_blocks(socket, path, field, asset) do
+  # the relation itself. The preview merges it over the entry and fires the
+  # triggers declared on it (`[:cover]`), as for a relation the input reports
+  # (`update_entry_relation`).
+  defp relation_changed(socket, path, field, asset) do
     full_path = path ++ [field]
-    send_updated_entry_field_to_blocks(socket, Brando.Utils.build_access_path(full_path), asset, to_string(hd(full_path)))
+
+    socket
+    |> send_updated_entry_field_to_blocks(Brando.Utils.build_access_path(full_path), asset, to_string(hd(full_path)))
+    |> update_entry_assocs(full_path, asset)
+    |> maybe_invalidate_live_preview_assign(full_path)
+    |> maybe_rerender_live_preview_for(path_to_strings(full_path))
   end
 
   defp send_updated_entry_field_to_blocks(socket, path, change, field) do

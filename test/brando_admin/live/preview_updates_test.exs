@@ -90,6 +90,68 @@ defmodule BrandoAdmin.PreviewUpdatesTest do
     assert html =~ "<footer>farewell:en renamed</footer>"
   end
 
+  # An image arrives from another editor as its key, `meta_image_id`; the
+  # target names the field, `[:meta_image]`, as this editor's own pick does.
+  test "a co-editor's image pick fires the trigger declared on the image field", c do
+    other = Factory.insert(:random_user, role: :superuser, config: %Brando.Users.UserConfig{})
+    image = Factory.insert(:image, creator: other, focal: %Brando.Images.Focal{x: 50, y: 50}, status: :processed)
+    {view, _html} = live_form(c.conn, "/admin/pages/update/#{c.page.id}")
+    {coeditor, _html} = live_form(log_in_user(build_conn(), other), "/admin/pages/update/#{c.page.id}")
+    key = open_preview(view, "Localized")
+    on_exit(fn -> LivePreview.cleanup_cache(key) end)
+    refute_receive %Phoenix.Socket.Broadcast{}, 100
+
+    Phoenix.LiveView.send_update(coeditor.pid, BrandoAdmin.Components.Form,
+      id: "page_form",
+      event: "entry_field_upload_complete",
+      asset_type: :image,
+      field: :meta_image,
+      path: [],
+      asset: image
+    )
+
+    assert_receive %Phoenix.Socket.Broadcast{event: "rerender"}, 3_000
+  end
+
+  # An upload the UploadManager delivers commits the image's key without the
+  # image input reporting the relation.
+  test "an image uploaded into a field fires the trigger declared on it", c do
+    image = Factory.insert(:image, creator: c.current_user, focal: %Brando.Images.Focal{x: 50, y: 50}, status: :processed)
+    {view, _html} = live_form(c.conn, "/admin/pages/update/#{c.page.id}")
+    key = open_preview(view, "Localized")
+    on_exit(fn -> LivePreview.cleanup_cache(key) end)
+    refute_receive %Phoenix.Socket.Broadcast{}, 100
+
+    Phoenix.LiveView.send_update(view.pid, BrandoAdmin.Components.Form,
+      id: "page_form",
+      event: "entry_field_upload_complete",
+      asset_type: :image,
+      field: :meta_image,
+      path: [],
+      asset: image
+    )
+
+    assert_receive %Phoenix.Socket.Broadcast{event: "rerender"}, 3_000
+  end
+
+  # A relation picked in a subform row (a variable's image) is reported with
+  # the row's path; `[:vars]` covers it as it covers typing in the row.
+  test "a relation picked in a subform row fires the trigger on the subform", c do
+    {view, _html} = live_form(c.conn, "/admin/pages/update/#{c.page.id}")
+    key = open_preview(view, "Localized")
+    on_exit(fn -> LivePreview.cleanup_cache(key) end)
+    refute_receive %Phoenix.Socket.Broadcast{}, 100
+
+    Phoenix.LiveView.send_update(view.pid, BrandoAdmin.Components.Form,
+      id: "page_form",
+      event: "update_entry_relation",
+      path: [:vars, 0, :image],
+      updated_relation: nil
+    )
+
+    assert_receive %Phoenix.Socket.Broadcast{event: "rerender"}, 1_000
+  end
+
   # A change another editor makes reaches this editor's form without a
   # `validate`, and its open preview follows it as it follows typing.
   test "a co-editor's change to a field in rerender_on_change refreshes the open preview", c do
