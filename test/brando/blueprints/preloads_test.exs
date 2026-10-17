@@ -71,7 +71,7 @@ defmodule Brando.Blueprint.PreloadsTest do
   end
 
   test "cast one-to-one preloads include the related entry's own assets" do
-    assert {:author, [:portrait]} in RelationPreloads.for_schema(Brando.SyncTest.Article)
+    assert {:author, [:portrait, :links]} in RelationPreloads.for_schema(Brando.SyncTest.Article)
     # A cast belongs_to whose schema has no assets or relations of its own
     assert :location in RelationPreloads.for_schema(Brando.BlueprintTest.P1)
   end

@@ -522,18 +522,28 @@ defmodule Brando.TranslationsTest do
 
     test "a one-to-one subform row is copied, not moved", c do
       image = Factory.insert(:image, creator_id: c.user.id)
-      Repo.insert!(%SyncTest.ArticleAuthor{article_id: c.source.id, name: "Example Author", portrait_id: image.id})
+
+      Repo.insert!(%SyncTest.ArticleAuthor{
+        article_id: c.source.id,
+        name: "Example Author",
+        portrait_id: image.id,
+        links: [%SyncTest.ArticleAuthorLink{label: "Example Hotel"}]
+      })
 
       {:ok, copy} = SyncTest.duplicate_article(c.source.id, c.user, change_fields: [slug: "copy"])
       {:ok, translation} = Translations.create_target(Article, c.source.id, :en, c.user)
 
       original = load(c.source.id).author
       assert {original.name, original.portrait_id} == {"Example Author", image.id}
+      # The row's own rows stay with it, and the copies get theirs
+      assert [%{label: "Example Hotel"} = original_link] = original.links
 
       for entry <- [copy, translation] do
         copied = load(entry.id).author
         assert copied.id != original.id
         assert {copied.name, copied.portrait_id} == {"Example Author", image.id}
+        assert [%{label: "Example Hotel"} = copied_link] = copied.links
+        assert copied_link.id != original_link.id
       end
     end
 

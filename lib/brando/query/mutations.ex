@@ -332,12 +332,17 @@ defmodule Brando.Query.Mutations do
     end)
   end
 
+  # A copied row's own loaded rows would move with it the same way.
   defp detach_rows(rows, related_key, owned?) do
     Enum.flat_map(rows, fn
       %{id: nil} = row -> [row]
-      row when owned? -> [row |> Map.merge(%{:id => nil, related_key => nil}) |> update_meta()]
+      row when owned? -> [row |> Map.merge(%{:id => nil, related_key => nil}) |> update_meta() |> detach_row_children()]
       _row -> []
     end)
+  end
+
+  defp detach_row_children(%module{} = row) do
+    if Brando.Blueprint.blueprint?(module), do: detach_children(row, module), else: row
   end
 
   # A gallery belongs to the ref, var or asset that points at it — see
