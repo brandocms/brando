@@ -12,7 +12,7 @@ if Code.ensure_loaded?(Igniter) do
         mix brando.install
         mix brando.install --interactive
         mix brando.install --tenancy-mode single --site-key my-site
-        mix brando.install --public-site --replace-phoenix-home
+        mix brando.install --no-public-site
         mix brando.install --domain example.com --origin '//*.agency.example'
 
     A new installation defaults to `--tenancy-mode none` without prompting.
@@ -27,11 +27,16 @@ if Code.ensure_loaded?(Igniter) do
     literal version in `mix.exs` moves to a `VERSION` file that `mix.exs`
     reads, where Florist looks for the release version.
 
-    `--public-site` adds CMS page rendering in a separate Web.CMS namespace.
-    An existing Phoenix homepage route needs explicit `--replace-phoenix-home`
-    or an affirmative guided answer with `--public-site --interactive`.
-    Existing controllers/templates/layouts are preserved; other homepage or
-    catch-all ownership requires manual integration.
+    A new installation also adds the CMS public site (`mix brando.gen.site`):
+    page rendering in a separate Web.CMS namespace that answers `/`. phx.new's
+    homepage route is replaced while its `PageController` and `home.html.heex`
+    are as phx.new wrote them; a changed homepage is kept, without the site,
+    with a notice, and `--interactive` asks instead. Existing
+    controllers/templates/layouts are preserved. Other homepage, catch-all or
+    parameter-first routes, or a router without a `:browser` pipeline, leave
+    the site out, with a notice naming them. `--no-public-site` leaves the
+    site out. Reruns keep what the application has; add the site to an
+    installed application with `mix brando.gen.site`.
 
     Deployment hosts: `--domain` is the production domain, `--staging-domain`
     the staging host (default `staging.<domain>`), and `--origin` (repeatable)
@@ -54,9 +59,15 @@ if Code.ensure_loaded?(Igniter) do
     existing `.dockerignore` gets the exclusions it misses (with `!`
     exceptions, a notice instead). The build does not copy `priv/static`:
     phx.new's `favicon.ico` there is removed and its `images/logo.svg` moves
-    to `assets/frontend/public/images`, and with `--public-site` its
+    to `assets/frontend/public/images`, and with the public site its
     `robots.txt` is removed, with `robots.txt` in `static_paths/0`. A file
     changed since phx.new wrote it is kept, with a notice.
+
+    A new installation gets a `.tool-versions` pinning the Erlang, Elixir,
+    Node.js and pnpm versions Brando is tested with, for asdf and mise, when
+    the install runs the Erlang and Elixir asdf or mise installed under those
+    names and neither the application nor a folder above it pins a toolchain;
+    otherwise a notice suggests it.
     """
 
     @impl Igniter.Mix.Task
@@ -72,7 +83,6 @@ if Code.ensure_loaded?(Igniter) do
               site_key: :string,
               tenancy_prompt: :boolean,
               public_site: :boolean,
-              replace_phoenix_home: :boolean,
               domain: :string,
               staging_domain: :string,
               origin: :keep

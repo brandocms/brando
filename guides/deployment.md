@@ -160,8 +160,10 @@ directory; configure both paths to keep them elsewhere.
 The installer adds to `.gitignore` what a Brando application builds,
 uploads or downloads in its working folder and phx.new does not ignore: the
 asset projects' `node_modules`, Yalc copies (`.yalc/`, `yalc.lock`), the
-admin and site builds in `priv/static` (`assets/`, `fonts/`, `ico/`,
-`images/admin/` and the Vite and digest manifests), `/media/` (uploads),
+admin and site builds in `priv/static` (`assets/`; `favicon.ico`, `fonts/`,
+`ico/` and `images/`, which Vite copies from the asset projects' `public/`
+folders, so keep a site's images in `assets/frontend/public/images`; and the
+Vite and digest manifests), `/media/` (uploads),
 `/log/`, and Florist's `/release-archives/` and `/sql/` (database dumps).
 Lines an existing rule already covers are not added again.
 
@@ -528,8 +530,8 @@ asset projects, so keep static files such as images and fonts in
 `priv/static` works in development and is missing from the release, so the
 installer takes out the ones `mix phx.new` writes: its `favicon.ico` goes
 (Brando writes its own to `assets/frontend/public`), and `images/logo.svg`
-moves to `assets/frontend/public/images/logo.svg`. With `--public-site` its
-`robots.txt` goes too, with `robots.txt` in `static_paths/0` of the web module,
+moves to `assets/frontend/public/images/logo.svg`. With the CMS public site,
+which a new install adds unless given `--no-public-site`, its `robots.txt` goes too, with `robots.txt` in `static_paths/0` of the web module,
 so `BrandoWeb.SEOController` answers `/robots.txt` in development as in the
 release. Only files still as phx.new wrote them are touched; a changed one is
 kept, with a notice saying where it belongs.

@@ -105,7 +105,9 @@ export default function yalcAutoUpdate(packageName = DEFAULT_PACKAGE) {
       // no node_modules of its own. npm and yarn hoist the package's
       // dependencies to the project root, so they still resolve from there;
       // pnpm keeps them out of the root, so after a pull nothing the package
-      // imports resolves until pnpm links them again.
+      // imports resolves until pnpm links them again. A pure Yalc copy (the one
+      // `mix brando.assets.setup` adds) leaves node_modules alone, and pnpm
+      // install is what brings the pull into it.
       const root = server.config.root
       const relinks = fs.existsSync(path.join(root, 'pnpm-lock.yaml'))
       const relinkArgs = ['install', '--prefer-offline']

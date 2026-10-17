@@ -34,8 +34,7 @@ defmodule Brando.System do
     {:ok, {:media_path, :exists}} = check_media_path_exists()
     {:ok, {:media_url, :exists}} = check_media_url_exists()
     {:ok, {:executable, :exists}} = check_image_processing_executable()
-    {:ok, {:identity, :exists}} = check_identity_exists()
-    {:ok, {:seo, :exists}} = check_seo_exists()
+    :ok = check_content(Brando.env())
     {:ok, {:authorization, :exists}} = check_authorization_exists()
     {:ok, {:env, :exists}} = check_env()
     {:ok, {:presence, :exists}} = check_presence_exists()
@@ -172,26 +171,34 @@ defmodule Brando.System do
     end
   end
 
-  defp check_identity_exists,
-    do: check_content_exists(Brando.Sites.Identity, :identity, "identity", "identities")
+  @doc """
+  Warns when the site's identity or SEO settings are missing, in each site's
+  live environment with tenancy. Skipped in the test environment, whose
+  database starts empty.
+  """
+  def check_content(:test), do: :ok
 
-  defp check_seo_exists,
-    do: check_content_exists(Brando.Sites.SEO, :seo, "seo", "seo entries")
+  def check_content(_env) do
+    check_content_exists(Brando.Sites.Identity, "identity", "identities")
+    check_content_exists(Brando.Sites.SEO, "seo", "seo entries")
+  end
 
   # With tenancy enabled `public` holds only the structural template that new
   # environments are cloned from, so content lives in each site's live
   # environment and has to be checked there.
-  defp check_content_exists(schema, key, singular, plural) do
+  defp check_content_exists(schema, singular, plural) do
     Enum.each(content_scopes(), &log_content(schema, singular, plural, &1))
-    {:ok, {key, :exists}}
   end
 
   defp log_content(schema, singular, plural, {label, opts}) do
     case Brando.Repo.all(schema, opts) do
-      [] -> Logger.error("==> No #{plural} found#{label}.")
+      [] -> Logger.warning("==> No #{plural} found#{label}.#{seeds_hint(label)}")
       entries -> Enum.each(entries, &log_content_entry(&1, singular, label))
     end
   end
+
+  defp seeds_hint(""), do: " mix brando.gen.seeds creates them."
+  defp seeds_hint(_site), do: ""
 
   defp log_content_entry(entry, singular, label) do
     Logger.debug("==> #{singular}: [#{entry.language}] exists#{label}")

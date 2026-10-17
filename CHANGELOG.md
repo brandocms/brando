@@ -1773,7 +1773,7 @@ production dump.
   scaffold CSS is rewritten against it, and `.label`, `.button`, `.textlink`
   and `.section-head` are available as shared furniture for your own modules.
 
-- `mix brando.install --public-site --replace-phoenix-home` now retires the
+- Replacing phx.new's homepage route with CMS pages now retires the
   generated Phoenix homepage request test along with the route it covers.
   A customized test is preserved with a notice instead.
 
