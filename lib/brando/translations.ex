@@ -775,22 +775,41 @@ defmodule Brando.Translations do
   end
 
   # An `:entries` relation's join rows, pointed at the same entries' versions
-  # in `language`. The copy inserts them as rows of its own.
-  defp related_in_language(rows, language) when is_list(rows) do
+  # in `language`. The copy inserts them as rows of its own. A row whose entry
+  # has no version there is left out and counted on `dropped`, unless its
+  # identifier is in `kept` (an entry copied in the same batch, linked once its
+  # copy exists).
+  defp related_in_language(rows, language, kept \\ MapSet.new(), dropped \\ nil)
+
+  defp related_in_language([], _language, _kept, _dropped), do: []
+
+  defp related_in_language(rows, language, kept, dropped) when is_list(rows) do
     ids = Enum.map(rows, & &1.identifier_id)
     identifiers = from(i in Identifier, where: i.id in ^ids) |> Repo.all() |> Map.new(&{&1.id, &1})
 
     rows
     |> Enum.flat_map(fn row ->
       case identifiers[row.identifier_id] && counterpart_id(identifiers[row.identifier_id], language) do
-        nil -> []
-        id -> [%{row | identifier_id: id, identifier: nil}]
+        nil ->
+          cond do
+            MapSet.member?(kept, row.identifier_id) -> [%{row | identifier: nil}]
+            dropped -> count_dropped(dropped)
+            true -> []
+          end
+
+        id ->
+          [%{row | identifier_id: id, identifier: nil}]
       end
     end)
     |> Enum.uniq_by(& &1.identifier_id)
   end
 
-  defp related_in_language(rows, _language), do: rows
+  defp related_in_language(rows, _language, _kept, _dropped), do: rows
+
+  defp count_dropped(dropped) do
+    :counters.add(dropped, 1, 1)
+    []
+  end
 
   defp counterpart_id(%Identifier{} = identifier, language) do
     case identifier_language(identifier) do
@@ -1192,6 +1211,92 @@ defmodule Brando.Translations do
     language = to_string(language)
     [map_entries: &related_in_language(&1, language)]
   end
+
+  @doc """
+  Copies the entries of `schema` with `ids` into `language`, each with
+  `override_opts` and `language_copy_opts/1`, as the listing's "Duplicate
+  selected to a language" does.
+
+  A related entry copied in the same batch is linked as its copy. One with no
+  version in `language` that was not copied with it is left out, and counted.
+  Returns the ids that could not be copied, each with its error, and the
+  number of links left out.
+  """
+  @spec copy_batch_to_language(module(), [integer()], String.t() | atom(), term(), keyword()) ::
+          %{failed: [{integer(), term()}], dropped_links: non_neg_integer()}
+  def copy_batch_to_language(schema, ids, language, actor, override_opts) do
+    language = to_string(language)
+    duplicate = :"duplicate_#{schema.__naming__().singular}"
+    context = schema.__modules__().context
+
+    # An identifier of an entry in the batch, to the entry
+    batch =
+      Repo.all(from i in Identifier, where: i.schema == ^schema and i.entry_id in ^ids, select: {i.id, i.entry_id})
+      |> Map.new()
+
+    kept = batch |> Map.keys() |> MapSet.new()
+
+    {copies, failed, dropped} =
+      Enum.reduce(ids, {%{}, [], 0}, fn id, {copies, failed, dropped} ->
+        counter = :counters.new(1, [])
+        opts = override_opts ++ [map_entries: &related_in_language(&1, language, kept, counter)]
+
+        case apply(context, duplicate, [id, actor, opts]) do
+          {:ok, copy} -> {Map.put(copies, id, copy), failed, dropped + :counters.get(counter, 1)}
+          error -> {copies, [{id, error} | failed], dropped}
+        end
+      end)
+
+    %{failed: Enum.reverse(failed), dropped_links: dropped + link_batch_copies(schema, copies, batch)}
+  end
+
+  # The copies' links that still name an entry of the batch, at any depth, now
+  # name its copy; a link to an entry whose copy failed is removed. Returns
+  # the number removed.
+  defp link_batch_copies(_schema, _copies, batch) when map_size(batch) == 0, do: 0
+
+  defp link_batch_copies(schema, copies, batch) do
+    for {_id, copy} <- copies,
+        %{identifier_id: identifier_id} = row <- entries_rows(copy),
+        Map.has_key?(batch, identifier_id),
+        reduce: 0 do
+      removed ->
+        query = from j in row.__struct__, where: j.id == ^row.id
+
+        case copies[batch[identifier_id]] do
+          nil ->
+            Repo.delete_all(query)
+            removed + 1
+
+          linked ->
+            Repo.update_all(query, set: [identifier_id: identifier_id_for(schema, linked.id)])
+            removed
+        end
+    end
+  end
+
+  # The join rows of every `:entries` relation an inserted copy holds, its
+  # subform rows' included.
+  defp entries_rows(%module{} = entry) do
+    if Brando.Blueprint.blueprint?(module) do
+      Enum.flat_map(Brando.Blueprint.Relations.__relations__(module), fn
+        %{type: :entries, name: name} ->
+          loaded_rows(Map.get(entry, name))
+
+        %{type: type, name: name, opts: %{cast: true}} when type in [:has_many, :has_one] ->
+          entry |> Map.get(name) |> loaded_rows() |> Enum.flat_map(&entries_rows/1)
+
+        _relation ->
+          []
+      end)
+    else
+      []
+    end
+  end
+
+  defp loaded_rows(rows) when is_list(rows), do: rows
+  defp loaded_rows(%{__meta__: _} = row), do: [row]
+  defp loaded_rows(_), do: []
 
   @doc """
   `change_fields` for copying an entry of `schema` into another language.

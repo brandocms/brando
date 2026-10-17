@@ -34,3 +34,5 @@
   copy into another language (a translation, or the listing's duplicate and
   translate to a language) links their versions in its language, those of its
   subform rows included, and leaves out an entry that has none yet.
+  Duplicating several selected entries to a language links an entry copied
+  with them as its copy, and says how many links were left out.
