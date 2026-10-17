@@ -144,31 +144,16 @@ if Code.ensure_loaded?(Igniter) do
       get #{inspect(show_path)}, #{inspect(m.controller)}, :show
       """
 
-      # :brando_site's put_locale takes the language from the path; without
-      # it, the scope's assigns give it.
-      assigns = fn language ->
-        if m.languages && !m.site_layouts, do: ", assigns: %{language: #{inspect(language)}}", else: ""
+      # A separate scope preserves existing Phoenix scope aliases and pipelines.
+      code = """
+      scope "/"#{if m.languages, do: scope_assigns(m, m.languages.default), else: ""} do
+        pipe_through #{pipelines}
+        #{routes}
+        #{language_scopes(m, routes, prefixes)}
       end
+      """
 
-      language_scopes = fn languages ->
-        Enum.map_join(languages, "\n", fn language ->
-          """
-          scope #{inspect("/" <> language)}, as: #{scope_as(language)}#{assigns.(language)} do
-            #{routes}
-          end
-          """
-        end)
-      end
-
-      existing = fn zipper ->
-        for prefix <- ["" | Enum.map(prefixes, &("/" <> &1))] do
-          {prefix,
-           Enum.map(
-             [{path, :index}, {show_path, :show}],
-             &route_state(zipper, :get, prefix <> elem(&1, 0), m.controller, elem(&1, 1))
-           )}
-        end
-      end
+      existing = &existing_routes(&1, m, [{path, :index}, {show_path, :show}], prefixes)
 
       added_languages =
         case ProjectModule.find_module(igniter, m.project.router) do
@@ -176,41 +161,56 @@ if Code.ensure_loaded?(Igniter) do
           _ -> nil
         end
 
+      added_code =
+        added_languages &&
+          """
+          scope "/" do
+            pipe_through #{pipelines}
+            #{language_scopes(m, routes, added_languages)}
+          end
+          """
+
       igniter
-      |> ProjectModule.find_and_update_module!(m.project.router, fn zipper ->
-        # A separate scope preserves existing Phoenix scope aliases and pipelines.
-        code = """
-        scope "/"#{if m.languages, do: assigns.(m.languages.default), else: ""} do
-          pipe_through #{pipelines}
+      |> ProjectModule.find_and_update_module!(
+        m.project.router,
+        &update_public_routes(&1, existing, code, added_code, m, path)
+      )
+      |> added_languages_notice(m, path, added_languages)
+    end
+
+    defp update_public_routes(zipper, existing, code, added_code, m, path) do
+      states = zipper |> existing.() |> Enum.flat_map(&elem(&1, 1))
+
+      cond do
+        Enum.all?(states, &(&1 == :present)) -> {:ok, zipper}
+        Enum.all?(states, &(&1 == :missing)) -> insert_public_scope(zipper, code, m)
+        added_code -> insert_public_scope(zipper, added_code, m)
+        true -> {:error, "Public routes at #{path} conflict with existing or partial routes. Integrate them explicitly."}
+      end
+    end
+
+    # :brando_site's put_locale takes the language from the path; without
+    # it, the scope's assigns give it.
+    defp scope_assigns(m, language) do
+      if m.languages && !m.site_layouts, do: ", assigns: %{language: #{inspect(language)}}", else: ""
+    end
+
+    defp language_scopes(m, routes, languages) do
+      Enum.map_join(languages, "\n", fn language ->
+        """
+        scope #{inspect("/" <> language)}, as: #{scope_as(language)}#{scope_assigns(m, language)} do
           #{routes}
-          #{language_scopes.(prefixes)}
         end
         """
-
-        states = zipper |> existing.() |> Enum.flat_map(&elem(&1, 1))
-
-        cond do
-          Enum.all?(states, &(&1 == :present)) ->
-            {:ok, zipper}
-
-          Enum.all?(states, &(&1 == :missing)) ->
-            insert_public_scope(zipper, code, m)
-
-          added_languages ->
-            code = """
-            scope "/" do
-              pipe_through #{pipelines}
-              #{language_scopes.(added_languages)}
-            end
-            """
-
-            insert_public_scope(zipper, code, m)
-
-          true ->
-            {:error, "Public routes at #{path} conflict with existing or partial routes. Integrate them explicitly."}
-        end
       end)
-      |> added_languages_notice(m, path, added_languages)
+    end
+
+    # Each prefix ("" for the unprefixed routes) with the state of its routes.
+    defp existing_routes(zipper, m, routes, prefixes) do
+      for prefix <- ["" | Enum.map(prefixes, &("/" <> &1))] do
+        {prefix,
+         Enum.map(routes, fn {path, action} -> route_state(zipper, :get, prefix <> path, m.controller, action) end)}
+      end
     end
 
     # The languages whose scopes are missing beside routes generated before
