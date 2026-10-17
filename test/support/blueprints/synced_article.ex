@@ -40,6 +40,8 @@ defmodule Brando.SyncTest.Article do
 
   relations do
     relation :parent, :belongs_to, module: __MODULE__
+    # Links to other content, which a copy keeps (TranslationsTest: duplication)
+    relation :related_entries, :entries
     relation :blocks, :has_many, module: :blocks
     # Declared only in `form :notes` (FieldActionsLiveTest)
     relation :notes, :has_many, module: :blocks
@@ -183,11 +185,9 @@ defmodule Brando.SyncTest.Article do
       end
     end
 
-    # A one-to-one subform with an image field (SubformRelationTest). The
-    # automatic preloads leave out the subform's own assets.
+    # A one-to-one subform with an image field (SubformRelationTest), on the
+    # form's automatic preloads.
     form :author do
-      query %{preload: [:alternate_entries, author: :portrait]}
-
       tab "Content" do
         fieldset do
           input :title, :text
@@ -217,6 +217,9 @@ defmodule Brando.SyncTest.ArticleItem do
 
   trait :ensure_uid
   trait :sequenced
+
+  # A row marked for deletion stays in the form (SubformRelationTest)
+  @allow_mark_as_deleted true
 
   identifier false
   persist_identifier false
@@ -279,5 +282,51 @@ defmodule Brando.SyncTest.ArticleAuthor do
 
   relations do
     relation :article, :belongs_to, module: Brando.SyncTest.Article
+
+    # Rows the one-to-one subform owns (TranslationsTest: duplication)
+    relation :links, :has_many,
+      module: Brando.SyncTest.ArticleAuthorLink,
+      foreign_key: :author_id,
+      on_replace: :delete,
+      cast: true
+  end
+end
+
+defmodule Brando.SyncTest.ArticleAuthorLink do
+  @moduledoc false
+  use Brando.Blueprint,
+    application: "Brando",
+    domain: "SyncTest",
+    schema: "ArticleAuthorLink",
+    singular: "article_author_link",
+    plural: "article_author_links",
+    gettext_module: Brando.Gettext
+
+  trait :blocks
+
+  identifier false
+  persist_identifier false
+
+  attributes do
+    attribute :label, :string
+  end
+
+  assets do
+    asset :gallery, :gallery,
+      cfg: [
+        allowed_mimetypes: ["image/jpeg", "image/png"],
+        default_size: "medium",
+        upload_path: Path.join("images", "synced_author_links"),
+        random_filename: true,
+        size_limit: 10_240_000,
+        sizes: %{"medium" => %{"size" => "500x500", "quality" => 65, "crop" => true}},
+        srcset: [{"medium", "500w"}]
+      ]
+  end
+
+  relations do
+    relation :author, :belongs_to, module: Brando.SyncTest.ArticleAuthor
+    relation :blocks, :has_many, module: :blocks
+    relation :related_entries, :entries
   end
 end

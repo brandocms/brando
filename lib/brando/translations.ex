@@ -23,6 +23,8 @@ defmodule Brando.Translations do
 
   import Ecto.Query
 
+  require Logger
+
   alias Brando.Blueprint.Unique
   alias Brando.Content.Identifier
   alias Brando.Repo
@@ -774,6 +776,44 @@ defmodule Brando.Translations do
     end
   end
 
+  # An `:entries` relation's join rows, pointed at the same entries' versions
+  # in `language`. The copy inserts them as rows of its own. A row whose entry
+  # has no version there is left out and counted on `dropped`, unless its
+  # identifier is in `kept` (an entry copied in the same batch, linked once its
+  # copy exists).
+  defp related_in_language(rows, language, kept \\ MapSet.new(), dropped \\ nil)
+
+  defp related_in_language([], _language, _kept, _dropped), do: []
+
+  defp related_in_language(rows, language, kept, dropped) when is_list(rows) do
+    ids = Enum.map(rows, & &1.identifier_id)
+    identifiers = from(i in Identifier, where: i.id in ^ids) |> Repo.all() |> Map.new(&{&1.id, &1})
+
+    rows
+    |> Enum.flat_map(fn row ->
+      identifier = identifiers[row.identifier_id]
+      relate_row(row, identifier && counterpart_id(identifier, language), kept, dropped)
+    end)
+    |> Enum.uniq_by(& &1.identifier_id)
+  end
+
+  defp related_in_language(rows, _language, _kept, _dropped), do: rows
+
+  defp relate_row(row, nil, kept, dropped) do
+    cond do
+      MapSet.member?(kept, row.identifier_id) -> [%{row | identifier: nil}]
+      dropped -> count_dropped(dropped)
+      true -> []
+    end
+  end
+
+  defp relate_row(row, identifier_id, _kept, _dropped), do: [%{row | identifier_id: identifier_id, identifier: nil}]
+
+  defp count_dropped(dropped) do
+    :counters.add(dropped, 1, 1)
+    []
+  end
+
   defp counterpart_id(%Identifier{} = identifier, language) do
     case identifier_language(identifier) do
       nil -> identifier.id
@@ -1156,7 +1196,176 @@ defmodule Brando.Translations do
       keep_sync_uid: true
     ]
 
-    apply(context, :"duplicate_#{singular}", [source_id, actor, override_opts])
+    # The source among its own related entries is linked as the copy, once
+    # the copy exists: a batch of one (`copy_batch_to_language/5`).
+    source_id = cast_entry_id(schema, source_id)
+    batch = batch_identifiers(schema, [source_id], language)
+    override_opts = override_opts ++ [map_entries: &related_in_language(&1, language, MapSet.new(Map.keys(batch)))]
+
+    with {:ok, copy} <- apply(context, :"duplicate_#{singular}", [source_id, actor, override_opts]) do
+      link_batch_copies(schema, %{source_id => copy.id}, batch)
+      {:ok, copy}
+    end
+  end
+
+  @doc """
+  Duplicate options for copying an entry into `language`, besides its
+  `change_fields`: the copy's related entries (`:entries` relations, its
+  subform rows' included) point at their versions in `language`, and one
+  with no version in it yet is left out. A relation the entry's own
+  `change_fields` name is left to them. Later changes to the source's related
+  entries are not synchronized.
+  """
+  @spec language_copy_opts(String.t() | atom()) :: keyword()
+  def language_copy_opts(language) do
+    language = to_string(language)
+    [map_entries: &related_in_language(&1, language)]
+  end
+
+  @doc """
+  Copies the entries of `schema` with `ids` into `language`, each with
+  `override_opts` and `language_copy_opts/1`, as the listing's "Duplicate
+  selected to a language" does.
+
+  A related entry copied in the same batch is linked as its copy. One with no
+  version in `language` that was not copied with it is left out, and counted.
+  Returns the ids that could not be copied, each with its error, and the
+  number of links left out.
+  """
+  @spec copy_batch_to_language(module(), [integer() | String.t()], String.t() | atom(), term(), keyword()) ::
+          %{failed: [{term(), term()}], dropped_links: non_neg_integer()}
+  def copy_batch_to_language(schema, ids, language, actor, override_opts) do
+    language = to_string(language)
+    ids = Enum.map(ids, &cast_entry_id(schema, &1))
+    batch = batch_identifiers(schema, ids, language)
+
+    {copies, failed, dropped, raised} = copy_each(schema, ids, language, actor, override_opts, batch)
+
+    case raised do
+      nil ->
+        %{failed: Enum.reverse(failed), dropped_links: dropped + link_batch_copies(schema, copies, batch)}
+
+      # The copies made so far are saved, so their links are put right even
+      # when a later copy raised; the error that stopped the batch goes on.
+      {kind, reason, stacktrace} ->
+        links =
+          try do
+            "#{dropped + link_batch_copies(schema, copies, batch)} link(s) were left out of the copies made"
+          catch
+            link_kind, link_reason ->
+              "Their links could not be put right (#{Exception.format_banner(link_kind, link_reason)}) in the copies made"
+          end
+
+        Logger.error(
+          "(!) Copying #{inspect(schema)} entries to #{language} stopped at an error. " <>
+            "#{links}: #{inspect(Map.values(copies))}. Not copied: #{inspect(Enum.map(failed, &elem(&1, 0)))}"
+        )
+
+        :erlang.raise(kind, reason, stacktrace)
+    end
+  end
+
+  # An id as the schema's primary key: the listing sends strings for UUIDs.
+  defp cast_entry_id(schema, id) do
+    case Ecto.Type.cast(schema.__schema__(:type, :id), id) do
+      {:ok, id} -> id
+      :error -> id
+    end
+  end
+
+  # The identifiers of the batch's entries that have no version in `language`,
+  # each to its entry: links to those are linked to their copies once the
+  # batch is copied. Identifiers name integer ids only.
+  defp batch_identifiers(schema, ids, language) do
+    if schema.__schema__(:type, :id) in [:id, :integer] do
+      from(i in Identifier, where: i.schema == ^schema and i.entry_id in ^Enum.filter(ids, &is_integer/1))
+      |> Repo.all()
+      |> Enum.filter(&is_nil(counterpart_id(&1, language)))
+      |> Map.new(&{&1.id, &1.entry_id})
+    else
+      %{}
+    end
+  end
+
+  # Each entry's copy, the source id to the copy's id. A link to an entry of
+  # the batch is kept as it is until the batch is copied.
+  defp copy_each(schema, ids, language, actor, override_opts, batch) do
+    duplicate = :"duplicate_#{schema.__naming__().singular}"
+    context = schema.__modules__().context
+    kept = batch |> Map.keys() |> MapSet.new()
+
+    Enum.reduce_while(ids, {%{}, [], 0, nil}, fn id, {copies, failed, dropped, nil} ->
+      counter = :counters.new(1, [])
+      opts = override_opts ++ [map_entries: &related_in_language(&1, language, kept, counter)]
+
+      try do
+        case apply(context, duplicate, [id, actor, opts]) do
+          {:ok, copy} -> {:cont, {Map.put(copies, id, copy.id), failed, dropped + :counters.get(counter, 1), nil}}
+          error -> {:cont, {copies, [{id, error} | failed], dropped, nil}}
+        end
+      catch
+        kind, reason -> {:halt, {copies, failed, dropped, {kind, reason, __STACKTRACE__}}}
+      end
+    end)
+  end
+
+  # The copies' links that still name an entry of the batch, at any depth, now
+  # name its copy. A link to an entry that has no copy, or whose copy has no
+  # identifier, is removed. Returns the number removed.
+  defp link_batch_copies(_schema, copies, batch) when map_size(batch) == 0 or map_size(copies) == 0, do: 0
+
+  defp link_batch_copies(schema, copies, batch) do
+    for {join, row_id, identifier_id} <- batch_links(schema, Map.values(copies), Map.keys(batch)), reduce: 0 do
+      removed ->
+        query = from j in join, where: j.id == ^row_id
+
+        case copies[batch[identifier_id]] && identifier_id_for(schema, copies[batch[identifier_id]]) do
+          nil ->
+            Repo.delete_all(query)
+            removed + 1
+
+          copy_identifier_id ->
+            Repo.update_all(query, set: [identifier_id: copy_identifier_id])
+            removed
+        end
+    end
+  end
+
+  # The `:entries` join rows naming one of `identifier_ids` that the entries of
+  # `module` with `ids` hold, and their subform rows at any depth, read from
+  # the database: a context's duplicate may return its copy without them.
+  defp batch_links(module, ids, identifier_ids, seen \\ MapSet.new())
+
+  defp batch_links(_module, [], _identifier_ids, _seen), do: []
+
+  defp batch_links(module, ids, identifier_ids, seen) do
+    ids = Enum.reject(ids, &MapSet.member?(seen, {module, &1}))
+    seen = Enum.reduce(ids, seen, &MapSet.put(&2, {module, &1}))
+
+    Enum.flat_map(Brando.Blueprint.Relations.__relations__(module), fn
+      %{type: :entries, name: name} ->
+        %{related: join, related_key: key} = module.__schema__(:association, name)
+
+        from(j in join,
+          where: field(j, ^key) in ^ids and j.identifier_id in ^identifier_ids,
+          select: {j.id, j.identifier_id}
+        )
+        |> Repo.all()
+        |> Enum.map(fn {id, identifier_id} -> {join, id, identifier_id} end)
+
+      %{type: type, name: name, opts: %{cast: true}} when type in [:has_many, :has_one] ->
+        %{related: child, related_key: key} = module.__schema__(:association, name)
+
+        if ids != [] and Brando.Blueprint.blueprint?(child) do
+          child_ids = Repo.all(from c in child, where: field(c, ^key) in ^ids, select: c.id)
+          batch_links(child, child_ids, identifier_ids, seen)
+        else
+          []
+        end
+
+      _relation ->
+        []
+    end)
   end
 
   @doc """

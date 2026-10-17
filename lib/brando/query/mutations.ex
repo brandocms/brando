@@ -8,6 +8,7 @@ defmodule Brando.Query.Mutations do
   alias Brando.Authorization.Boundary
   alias Brando.Blueprint.Unique
   alias Brando.Content
+  alias Brando.Content.BlockPreloads
   alias Brando.Content.Blocks, as: ContentBlocks
   alias Brando.Datasource
   alias Brando.Notifications
@@ -270,7 +271,7 @@ defmodule Brando.Query.Mutations do
         |> maybe_duplicate_blocks(module, has_blocks?, Map.get(merged_opts, :keep_sync_uid, false))
         |> maybe_merge_fields(merged_opts)
         |> maybe_put_creator(user)
-        |> detach_has_many(module)
+        |> detach_children(module, copy_opts(merged_opts))
         |> drop_fields()
         |> update_meta()
 
@@ -302,21 +303,39 @@ defmodule Brando.Query.Mutations do
     end)
   end
 
-  # A loaded `has_many` row that still has its id would be re-pointed at the
-  # copy on insert — the original entry loses it. Rows the entry owns (subform
-  # relations with `cast: true`) are copied, keeping everything but their id and
-  # foreign key, so a row `uid` still pairs it with the original. Rows it merely
-  # links to, like alternates, are dropped. Rows a `change_fields` handler has
-  # already built (nil id) are left alone.
-  defp detach_has_many(entry, module) do
-    owned =
-      for %{type: :has_many, name: name, opts: %{cast: true}} <- Brando.Blueprint.Relations.__relations__(module),
-          do: name
+  # How the copy's rows are made: `keep_sync_uid` for their blocks, and
+  # `map_entries`, a function over an `:entries` relation's join rows (a
+  # translation points them at its language's versions), for every such
+  # relation at any depth but one the entry's own `change_fields` name.
+  defp copy_opts(merged_opts) do
+    %{
+      keep_sync_uid?: Map.get(merged_opts, :keep_sync_uid, false),
+      map_entries: Map.get(merged_opts, :map_entries),
+      changed: merged_opts |> Map.get(:change_fields, []) |> Enum.map(&change_field_name/1)
+    }
+  end
+
+  # A loaded `has_many` or `has_one` row that still has its id would be
+  # re-pointed at the copy on insert — the original entry loses it. Rows the
+  # entry owns (subform relations with `cast: true`, and the join rows of an
+  # `:entries` relation) are copied, keeping everything but their id and
+  # foreign key, so a row `uid` still pairs it with the original. A copied
+  # row's own rows and blocks are copied the same way, at any depth. Rows it
+  # merely links to, like alternates, are dropped. Rows a `change_fields`
+  # handler has already built (nil id) are left alone. A `belongs_to` keeps its
+  # foreign key on the copy and stays shared.
+  defp detach_children(entry, module, opts) do
+    owned = owned_relations(module)
+    entries = entries_relations(module)
 
     Enum.reduce(module.__schema__(:associations), entry, fn name, acc ->
       case {module.__schema__(:association, name), Map.get(acc, name)} do
         {%Ecto.Association.Has{cardinality: :many, related_key: related_key}, rows} when is_list(rows) ->
-          Map.put(acc, name, detach_rows(rows, related_key, name in owned))
+          rows = map_entries(rows, name, entries, opts)
+          Map.put(acc, name, detach_rows(rows, related_key, name in owned, opts))
+
+        {%Ecto.Association.Has{cardinality: :one, related_key: related_key}, %{__meta__: _} = row} ->
+          Map.put(acc, name, [row] |> detach_rows(related_key, name in owned, opts) |> List.first())
 
         {%Ecto.Association.HasThrough{cardinality: :many}, rows} when is_list(rows) ->
           Map.put(acc, name, [])
@@ -327,12 +346,57 @@ defmodule Brando.Query.Mutations do
     end)
   end
 
-  defp detach_rows(rows, related_key, owned?) do
+  defp owned_relations(module) do
+    for %{type: type, name: name, opts: opts} <- Brando.Blueprint.Relations.__relations__(module),
+        type == :entries or (type in [:has_many, :has_one] and Map.get(opts, :cast) == true),
+        do: name
+  end
+
+  defp entries_relations(module) do
+    for %{type: :entries, name: name} <- Brando.Blueprint.Relations.__relations__(module), do: name
+  end
+
+  defp map_entries(rows, name, entries, %{map_entries: fun, changed: changed}) when is_function(fun, 1) do
+    if name in entries and name not in changed, do: fun.(rows), else: rows
+  end
+
+  defp map_entries(rows, _name, _entries, _opts), do: rows
+
+  defp detach_rows(rows, related_key, owned?, opts) do
+    rows = if owned?, do: load_for_copy(rows), else: rows
+
     Enum.flat_map(rows, fn
       %{id: nil} = row -> [row]
-      row when owned? -> [row |> Map.merge(%{:id => nil, related_key => nil}) |> update_meta()]
+      row when owned? -> [copy_row(row, related_key, opts)]
       _row -> []
     end)
+  end
+
+  # The entry's preloads reach one level into its subforms: a saved row's own
+  # rows and blocks are loaded here, so the copy can have them too.
+  defp load_for_copy([%module{} | _] = rows) do
+    if Brando.Blueprint.blueprint?(module) do
+      preloads = owned_relations(module) ++ BlockPreloads.for_schema(module)
+      loaded = rows |> Enum.reject(&is_nil(&1.id)) |> Repo.preload(preloads) |> Map.new(&{&1.id, &1})
+      Enum.map(rows, &Map.get(loaded, &1.id, &1))
+    else
+      rows
+    end
+  end
+
+  defp load_for_copy(rows), do: rows
+
+  # A row's `change_fields` are the entry's, so they name none of its relations.
+  defp copy_row(%module{} = row, related_key, opts) do
+    copy = row |> Map.merge(%{:id => nil, related_key => nil}) |> clear_timestamps() |> update_meta()
+
+    if Brando.Blueprint.blueprint?(module) do
+      copy
+      |> maybe_duplicate_blocks(module, module.has_trait(Trait.Blocks), opts.keep_sync_uid?)
+      |> detach_children(module, %{opts | changed: []})
+    else
+      copy
+    end
   end
 
   # A gallery belongs to the ref, var or asset that points at it — see
@@ -357,7 +421,8 @@ defmodule Brando.Query.Mutations do
 
   defp gallery_ids(entry, module) do
     asset_ids = for name <- gallery_assets(module), id = Map.get(entry, :"#{name}_id"), do: id
-    asset_ids ++ Enum.flat_map(gallery_holders(entry, module), &holder_gallery_ids/1)
+    row_ids = for %row_module{} = row <- new_rows(entry, module), id <- gallery_ids(row, row_module), do: id
+    asset_ids ++ Enum.flat_map(gallery_holders(entry, module), &holder_gallery_ids/1) ++ row_ids
   end
 
   defp holder_gallery_ids(%{gallery_id: id}) when not is_nil(id), do: [id]
@@ -372,14 +437,32 @@ defmodule Brando.Query.Mutations do
         end
       end)
 
-    map_gallery_holders(entry, module, fn
+    entry
+    |> map_gallery_holders(module, fn
       %{gallery_id: id} = holder when is_map_key(clones, id) ->
         %{holder | gallery_id: clones[id].id, gallery: clones[id]}
 
       holder ->
         holder
     end)
+    |> map_new_rows(module, fn %row_module{} = row -> put_galleries(row, row_module, clones) end)
   end
+
+  # The rows of the entry's subforms that the copy inserts (`detach_children/3`
+  # copied them), whose galleries are the copy's own as well.
+  defp new_rows(entry, module) do
+    for name <- owned_relations(module), row <- List.wrap(Map.get(entry, name)), new_row?(row), do: row
+  end
+
+  defp map_new_rows(entry, module, fun) do
+    Enum.reduce(owned_relations(module), entry, fn name, acc -> Map.update!(acc, name, &map_new_row(&1, fun)) end)
+  end
+
+  defp map_new_row(rows, fun) when is_list(rows), do: Enum.map(rows, &map_new_row(&1, fun))
+  defp map_new_row(row, fun), do: if(new_row?(row), do: fun.(row), else: row)
+
+  defp new_row?(%module{id: nil, __meta__: _}), do: Brando.Blueprint.blueprint?(module)
+  defp new_row?(_row), do: false
 
   defp gallery_assets(module) do
     for %{type: :gallery, name: name} <- Brando.Blueprint.Assets.__assets__(module), do: name
@@ -468,6 +551,13 @@ defmodule Brando.Query.Mutations do
   end
 
   defp maybe_put_creator(entry, _user), do: entry
+
+  # Ecto stamps only the timestamps an insert leaves nil.
+  defp clear_timestamps(row) do
+    Enum.reduce([:inserted_at, :updated_at], row, fn key, acc ->
+      if Map.has_key?(acc, key), do: Map.put(acc, key, nil), else: acc
+    end)
+  end
 
   defp update_meta(struct) do
     put_in(struct, [Access.key(:__meta__), Access.key(:state)], :built)

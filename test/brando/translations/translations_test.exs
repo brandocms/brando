@@ -1,6 +1,8 @@
 defmodule Brando.TranslationsTest do
   use Brando.ConnCase, async: false
 
+  import Ecto.Query, only: [from: 2]
+
   alias Brando.Content.Block
   alias Brando.Factory
   alias Brando.Repo
@@ -520,6 +522,206 @@ defmodule Brando.TranslationsTest do
       assert {copied.uid, copied.label} == {original.uid, original.label}
     end
 
+    test "a one-to-one subform row is copied, not moved", c do
+      image = Factory.insert(:image, creator_id: c.user.id)
+
+      Repo.insert!(%SyncTest.ArticleAuthor{
+        article_id: c.source.id,
+        name: "Example Author",
+        portrait_id: image.id,
+        links: [%SyncTest.ArticleAuthorLink{label: "Example Hotel"}]
+      })
+
+      {:ok, copy} = SyncTest.duplicate_article(c.source.id, c.user, change_fields: [slug: "copy"])
+      {:ok, translation} = Translations.create_target(Article, c.source.id, :en, c.user)
+
+      original = load(c.source.id).author
+      assert {original.name, original.portrait_id} == {"Example Author", image.id}
+      # The row's own rows stay with it, and the copies get theirs
+      assert [%{label: "Example Hotel"} = original_link] = original.links
+
+      for entry <- [copy, translation] do
+        copied = load(entry.id).author
+        assert copied.id != original.id
+        assert {copied.name, copied.portrait_id} == {"Example Author", image.id}
+        assert [%{label: "Example Hotel"} = copied_link] = copied.links
+        assert copied_link.id != original_link.id
+      end
+    end
+
+    test "a copied subform row gets its own blocks and gallery, and keeps its related entries", c do
+      alias SyncTest.ArticleAuthorLink
+
+      image = Factory.insert(:image, creator_id: c.user.id)
+      gallery = Factory.insert(:gallery, gallery_objects: [Factory.build(:gallery_object, image: image, creator: c.user)])
+
+      {:ok, hotel} =
+        SyncTest.create_article(
+          %{title: "Example Hotel", slug: "example-hotel", language: "no", status: "published"},
+          c.user
+        )
+
+      {:ok, hotel_en} = Translations.create_target(Article, hotel.id, :en, c.user)
+      identifier = Repo.get_by!(Brando.Content.Identifier, schema: Article, entry_id: hotel.id)
+
+      author =
+        Repo.insert!(%SyncTest.ArticleAuthor{
+          article_id: c.source.id,
+          name: "Example Author",
+          links: [%ArticleAuthorLink{label: "Example Hotel", gallery_id: gallery.id, rendered_blocks: "<p>Lobby</p>"}]
+        })
+
+      [link] = author.links
+      Repo.insert!(%ArticleAuthorLink.RelatedEntriesIdentifier{parent_id: link.id, identifier_id: identifier.id})
+
+      block =
+        %Block{}
+        |> Block.recursive_block_changeset(
+          %{
+            "uid" => Brando.Utils.generate_uid(),
+            "type" => "module",
+            "module_id" => c.module.id,
+            "creator_id" => c.user.id,
+            "source" => to_string(ArticleAuthorLink.Blocks),
+            "refs" => [
+              %{
+                "uid" => Brando.Utils.generate_uid(),
+                "name" => "body",
+                "data" => %{"type" => "text", "data" => %{"text" => "Lobby"}}
+              }
+            ]
+          },
+          c.user
+        )
+        |> Repo.insert!()
+
+      Repo.insert!(%ArticleAuthorLink.Blocks{entry_id: link.id, block_id: block.id, sequence: 0})
+
+      {:ok, copy} = SyncTest.duplicate_article(c.source.id, c.user, change_fields: [slug: "copy"])
+      {:ok, translation} = Translations.create_target(Article, c.source.id, :en, c.user)
+
+      load_link = fn id ->
+        [link] = load(id).author.links
+        Repo.preload(link, [:related_entries, entry_blocks: [block: :refs]])
+      end
+
+      original = load_link.(c.source.id)
+      assert original.gallery_id == gallery.id
+      assert [%{block_id: block_id}] = original.entry_blocks
+      assert block_id == block.id
+      assert [%{identifier_id: identifier_id}] = original.related_entries
+      assert identifier_id == identifier.id
+
+      for entry <- [copy, translation] do
+        copied = load_link.(entry.id)
+        assert copied.id != original.id
+        assert copied.gallery_id not in [nil, gallery.id]
+        assert copied.rendered_blocks == "<p>Lobby</p>"
+        assert [%{block: copied_block}] = copied.entry_blocks
+        assert copied_block.id != block.id
+        # A translation's blocks keep their sync identity, a duplicate's don't
+        assert copied_block.sync_uid == if(entry.id == translation.id, do: block.uid)
+        assert [%{data: %{data: %{text: "Lobby"}}}] = copied_block.refs
+        # The translation's link points at the English version
+        identifier_en = Repo.get_by(Brando.Content.Identifier, schema: Article, entry_id: hotel_en.id)
+        expected_id = if entry.id == translation.id, do: identifier_en && identifier_en.id, else: identifier_id
+        assert [%{identifier_id: ^expected_id} = copied_entry] = copied.related_entries
+        assert copied_entry.id != hd(original.related_entries).id
+      end
+    end
+
+    test "a context's own change for related entries wins over the language mapping", c do
+      {:ok, other} =
+        SyncTest.create_article(
+          %{title: "Example Hotel", slug: "example-hotel", language: "no", status: "published"},
+          c.user
+        )
+
+      identifier = Repo.get_by!(Brando.Content.Identifier, schema: Article, entry_id: other.id)
+      Repo.insert!(%Article.RelatedEntriesIdentifier{parent_id: c.source.id, identifier_id: identifier.id, sequence: 0})
+
+      {:ok, copy} =
+        SyncTest.duplicate_article(c.source.id, c.user,
+          change_fields: [slug: "copy", related_entries: fn _entry, rows -> rows end],
+          map_entries: fn _rows -> [] end
+        )
+
+      identifier_id = identifier.id
+      assert [%{identifier_id: ^identifier_id}] = load(copy.id).related_entries
+    end
+
+    test "related entries are linked from the copy as well", c do
+      {:ok, other} =
+        SyncTest.create_article(
+          %{title: "Example Hotel", slug: "example-hotel", language: "no", status: "published"},
+          c.user
+        )
+
+      identifier = Repo.get_by!(Brando.Content.Identifier, schema: Article, entry_id: other.id)
+      inserted_at = ~N[2020-01-01 00:00:00]
+
+      Repo.insert!(%Article.RelatedEntriesIdentifier{
+        parent_id: c.source.id,
+        identifier_id: identifier.id,
+        sequence: 0,
+        inserted_at: inserted_at,
+        updated_at: inserted_at
+      })
+
+      {:ok, copy} = SyncTest.duplicate_article(c.source.id, c.user, change_fields: [slug: "copy"])
+
+      assert [original] = load(c.source.id).related_entries
+      assert [copied] = load(copy.id).related_entries
+      assert copied.id != original.id
+      assert {original.identifier_id, copied.identifier_id} == {identifier.id, identifier.id}
+      # The copy's link is a new row, from now
+      assert copied.inserted_at != inserted_at
+    end
+
+    test "a translation of an entry related to itself links itself", c do
+      identifier = Repo.get_by!(Brando.Content.Identifier, schema: Article, entry_id: c.source.id)
+      Repo.insert!(%Article.RelatedEntriesIdentifier{parent_id: c.source.id, identifier_id: identifier.id, sequence: 0})
+
+      {:ok, en} = Translations.create_target(Article, c.source.id, :en, c.user)
+
+      en_identifier = Repo.get_by(Brando.Content.Identifier, schema: Article, entry_id: en.id)
+      assert en_identifier
+      assert [%{identifier_id: identifier_id}] = load(en.id).related_entries
+      assert identifier_id == en_identifier.id
+      assert [%{identifier_id: source_identifier_id}] = load(c.source.id).related_entries
+      assert source_identifier_id == identifier.id
+    end
+
+    test "a translation links the related entries' versions in its language", c do
+      create = fn title, slug ->
+        {:ok, article} =
+          SyncTest.create_article(%{title: title, slug: slug, language: "no", status: "published"}, c.user)
+
+        article
+      end
+
+      identifier_of = fn article -> Repo.get_by!(Brando.Content.Identifier, schema: Article, entry_id: article.id) end
+
+      translated = create.("Example Hotel", "example-hotel")
+      untranslated = create.("Example Hotel Annex", "example-hotel-annex")
+      {:ok, translated_en} = Translations.create_target(Article, translated.id, :en, c.user)
+
+      for {article, sequence} <- [{translated, 0}, {untranslated, 1}] do
+        Repo.insert!(%Article.RelatedEntriesIdentifier{
+          parent_id: c.source.id,
+          identifier_id: identifier_of.(article).id,
+          sequence: sequence
+        })
+      end
+
+      {:ok, en} = Translations.create_target(Article, c.source.id, :en, c.user)
+
+      # One with no English version yet is left out
+      assert [%{identifier_id: identifier_id}] = load(en.id).related_entries
+      assert identifier_id == identifier_of.(translated_en).id
+      assert length(load(c.source.id).related_entries) == 2
+    end
+
     test "a translation whose URI the language already uses gets a free one", c do
       alias Brando.Pages.Page
 
@@ -590,6 +792,156 @@ defmodule Brando.TranslationsTest do
       assert pending_ref.gallery_id == copied.gallery_id
       assert Enum.map(pending_ref.gallery.gallery_objects, & &1.image_id) == [image.id, second.id]
       assert Enum.map(gallery_ref.(load(en.id)).gallery.gallery_objects, & &1.image_id) == [image.id]
+    end
+  end
+
+  describe "copying a batch to a language" do
+    setup c do
+      article = fn title, slug ->
+        {:ok, article} =
+          SyncTest.create_article(%{title: title, slug: slug, language: "no", status: "published"}, c.user)
+
+        article
+      end
+
+      hotel = article.("Example Hotel", "example-hotel")
+      annex = article.("Example Hotel Annex", "example-hotel-annex")
+
+      # The hotel links the annex, and so does its author's link
+      link_to(Article.RelatedEntriesIdentifier, hotel.id, annex)
+
+      author =
+        Repo.insert!(%SyncTest.ArticleAuthor{
+          article_id: hotel.id,
+          name: "Example Author",
+          links: [%SyncTest.ArticleAuthorLink{label: "Example Hotel"}]
+        })
+
+      link_to(SyncTest.ArticleAuthorLink.RelatedEntriesIdentifier, hd(author.links).id, annex)
+      %{hotel: hotel, annex: annex}
+    end
+
+    defp link_to(join, parent_id, entry) do
+      Repo.insert!(struct(join, parent_id: parent_id, identifier_id: identifier_id(entry)))
+    end
+
+    # A translation gets its identifier when something first links to it
+    defp identifier_id(entry) do
+      case Repo.get_by(Brando.Content.Identifier, schema: Article, entry_id: entry.id) do
+        nil -> elem(Brando.Content.create_identifier(Article, entry), 1).id
+        identifier -> identifier.id
+      end
+    end
+
+    defp copy_batch(c, ids) do
+      opts = [change_fields: [{:language, :en} | Translations.free_unique_values(Article)], delete_fields: []]
+      Translations.copy_batch_to_language(Article, ids, "en", c.user, opts)
+    end
+
+    defp english_copy(entry) do
+      [copy_id] = Repo.all(from a in Article, where: a.language == :en and a.title == ^entry.title, select: a.id)
+      copy = load(copy_id)
+
+      case copy.author do
+        %{links: [link]} -> {copy, Repo.preload(link, :related_entries)}
+        nil -> {copy, nil}
+      end
+    end
+
+    test "links an entry copied with it, though its duplicate returns the copy bare", c do
+      Process.put({:synctest_duplicate, c.hotel.id}, :bare)
+
+      assert %{failed: [], dropped_links: 0} = copy_batch(c, [c.hotel.id, c.annex.id])
+
+      {annex_en, _link} = english_copy(c.annex)
+      {hotel_en, link} = english_copy(c.hotel)
+      annex_en_id = identifier_id(annex_en)
+      assert [%{identifier_id: ^annex_en_id}] = hotel_en.related_entries
+      assert [%{identifier_id: ^annex_en_id}] = link.related_entries
+    end
+
+    test "leaves out and counts links to an entry whose copy failed", c do
+      Process.put({:synctest_duplicate, c.annex.id}, :error)
+
+      assert %{failed: [{annex_id, {:error, :synctest_failed}}], dropped_links: 2} =
+               copy_batch(c, [c.hotel.id, c.annex.id])
+
+      assert annex_id == c.annex.id
+      {hotel_en, link} = english_copy(c.hotel)
+      assert {hotel_en.related_entries, link.related_entries} == {[], []}
+    end
+
+    test "leaves no link in the source's language when a later copy raises", c do
+      Process.put({:synctest_duplicate, c.annex.id}, :raise)
+
+      log =
+        ExUnit.CaptureLog.capture_log(fn ->
+          assert_raise RuntimeError, fn -> copy_batch(c, [c.hotel.id, c.annex.id]) end
+        end)
+
+      # The links taken out are counted in the log, as the toast never shows
+      assert log =~ "2 link(s) were left out of the copies made"
+
+      {hotel_en, link} = english_copy(c.hotel)
+      assert {hotel_en.related_entries, link.related_entries} == {[], []}
+    end
+
+    test "keeps a link to an entry of the batch already in the language", c do
+      {:ok, annex_en} = Translations.create_target(Article, c.annex.id, :en, c.user)
+      link_to(Article.RelatedEntriesIdentifier, c.hotel.id, annex_en)
+
+      assert %{failed: [], dropped_links: 0} = copy_batch(c, [c.hotel.id, annex_en.id])
+
+      [hotel_en_id] = Repo.all(from a in Article, where: a.language == :en and a.title == ^c.hotel.title, select: a.id)
+      annex_en_id = identifier_id(annex_en)
+      assert annex_en_id in Enum.map(load(hotel_en_id).related_entries, & &1.identifier_id)
+    end
+
+    @tag capture_log: true
+    test "puts the copies' links right before a throw goes on", c do
+      Process.put({:synctest_duplicate, c.annex.id}, :throw)
+
+      assert catch_throw(copy_batch(c, [c.hotel.id, c.annex.id])) == :synctest_thrown
+
+      {hotel_en, link} = english_copy(c.hotel)
+      assert {hotel_en.related_entries, link.related_entries} == {[], []}
+    end
+
+    # The fixture with UUID keys has no context to duplicate it with: the
+    # batch gets as far as asking for one.
+    @tag capture_log: true
+    test "takes the ids of a schema with UUID keys as they are", c do
+      people =
+        for name <- ["Example Guest", "Example Host"] do
+          Repo.insert!(%Brando.Persons.Person{
+            name: name,
+            email: "#{name}@example.com",
+            language: :no,
+            creator_id: c.user.id
+          })
+        end
+
+      ids = Enum.map(people, & &1.id)
+      opts = [change_fields: [language: :en], delete_fields: []]
+
+      error =
+        assert_raise UndefinedFunctionError, fn ->
+          Translations.copy_batch_to_language(Brando.Persons.Person, ids, "en", c.user, opts)
+        end
+
+      assert error.function == :duplicate_person
+    end
+
+    test "links an entry related to itself to its own copy", c do
+      link_to(Article.RelatedEntriesIdentifier, c.hotel.id, c.hotel)
+
+      assert %{failed: [], dropped_links: 0} = copy_batch(c, [c.hotel.id, c.annex.id])
+
+      {hotel_en, _link} = english_copy(c.hotel)
+      {annex_en, _link} = english_copy(c.annex)
+
+      assert hotel_en.related_entries |> Enum.map(& &1.identifier_id) |> Enum.sort() ==
+               Enum.sort([identifier_id(annex_en), identifier_id(hotel_en)])
     end
   end
 

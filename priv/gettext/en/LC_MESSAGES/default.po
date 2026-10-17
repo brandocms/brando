@@ -922,6 +922,13 @@ msgid_plural "%{count} items"
 msgstr[0] ""
 msgstr[1] ""
 
+#: lib/brando_admin/live_view/listing/hooks.ex
+#, elixir-autogen, elixir-format
+msgid "1 link to an entry with no version in this language was left out of the copies."
+msgid_plural "%{count} links to entries with no version in this language were left out of the copies."
+msgstr[0] ""
+msgstr[1] ""
+
 #: lib/brando/notifications/message.ex
 #, elixir-autogen, elixir-format
 msgid "1 mention"

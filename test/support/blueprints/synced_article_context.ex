@@ -39,4 +39,28 @@ defmodule Brando.SyncTest do
   mutation :delete, Article
 
   mutation :duplicate, {Article, change_fields: [:title, :slug]}
+
+  defoverridable duplicate_article: 2, duplicate_article: 3
+
+  # What a site's hand-written duplicate may do, for the entry a test names
+  # (`Process.put({:synctest_duplicate, id}, how)`, TranslationsTest): return
+  # the copy reloaded without its relations, fail, raise or throw.
+  def duplicate_article(id, user, override_opts \\ []) do
+    case Process.get({:synctest_duplicate, id}) do
+      :error ->
+        {:error, :synctest_failed}
+
+      :raise ->
+        raise "synctest duplicate raised"
+
+      :throw ->
+        throw(:synctest_thrown)
+
+      :bare ->
+        with {:ok, copy} <- super(id, user, override_opts), do: {:ok, Brando.Repo.get!(Article, copy.id)}
+
+      nil ->
+        super(id, user, override_opts)
+    end
+  end
 end

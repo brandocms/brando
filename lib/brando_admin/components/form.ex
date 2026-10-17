@@ -1965,9 +1965,9 @@ defmodule BrandoAdmin.Components.Form do
 
   defp put_asset_in_data(changeset, _nested_path, _field, _asset), do: changeset
 
-  # Rows are counted as `struct_at/2` counts them.
+  # Rows are counted as `inputs_for` counts them (`form_row_at/2`).
   defp subform_struct(rows, [index | rest]) when is_list(rows) and is_integer(index),
-    do: {rows |> Enum.reject(&match?(%Changeset{action: :replace}, &1)) |> Enum.at(index), rest}
+    do: {form_row_at(rows, index), rest}
 
   defp subform_struct(rows, _path) when is_list(rows), do: nil
   defp subform_struct(one, path), do: {one, path}
@@ -2317,7 +2317,8 @@ defmodule BrandoAdmin.Components.Form do
   defp put_entry_relation(%{} = data, [key, index | rest], field, value, %Changeset{} = source, _row?)
        when is_atom(key) and is_integer(index) do
     with rows when is_list(rows) <- Map.get(data, key),
-         %{} = row <- source |> SubformHelpers.current_entries(key) |> List.wrap() |> Enum.at(index),
+         form_rows when is_list(form_rows) <- Map.get(source.changes, key, Map.get(source.data, key)),
+         %{} = row <- form_row_at(form_rows, index),
          row = Changeset.change(row),
          id when not is_nil(id) <- Changeset.get_field(row, :id),
          at when is_integer(at) <- Enum.find_index(rows, &(Map.get(&1, :id) == id)) do
@@ -8660,8 +8661,7 @@ defmodule BrandoAdmin.Components.Form do
   defp form_struct_at(%Phoenix.HTML.Form{source: %Changeset{} = changeset}, path), do: struct_at(changeset, path)
   defp form_struct_at(_form, _path), do: nil
 
-  # Rows are counted as `inputs_for` counts them: a row being replaced is not
-  # in the form, a row marked for deletion is.
+  # Rows are counted as `inputs_for` counts them (`form_row_at/2`).
   defp struct_at(%Changeset{action: :replace}, _path), do: nil
   defp struct_at(%Changeset{data: data}, []), do: data
   defp struct_at(data, []), do: data
@@ -8671,14 +8671,22 @@ defmodule BrandoAdmin.Components.Form do
 
   defp struct_at(%{} = data, [key | rest]) when is_atom(key), do: struct_at(Map.get(data, key), rest)
 
-  defp struct_at(rows, [index | rest]) when is_list(rows) and is_integer(index) do
-    rows
-    |> Enum.reject(&match?(%Changeset{action: :replace}, &1))
-    |> Enum.at(index)
-    |> struct_at(rest)
-  end
+  defp struct_at(rows, [index | rest]) when is_list(rows) and is_integer(index),
+    do: rows |> form_row_at(index) |> struct_at(rest)
 
   defp struct_at(_data, _path), do: nil
+
+  # The rows `inputs_for` shows, each with its index in the relation's own
+  # list: it leaves out a row being replaced and keeps one marked for deletion.
+  defp shown_rows(rows), do: rows |> Enum.with_index() |> Enum.reject(&match?({%Changeset{action: :replace}, _}, &1))
+
+  # The row at a form index.
+  defp form_row_at(rows, index) do
+    case Enum.at(shown_rows(rows), index) do
+      {row, _raw} -> row
+      nil -> nil
+    end
+  end
 
   # A path as the form names it, rows counted as `struct_at/2` counts them,
   # as `EctoNestedChangeset` reads it: its indexes count the relation's own
@@ -8688,7 +8696,7 @@ defmodule BrandoAdmin.Components.Form do
        when is_atom(key) and is_integer(index) do
     case Map.get(changes, key, Map.get(data, key)) do
       rows when is_list(rows) ->
-        shown = rows |> Enum.with_index() |> Enum.reject(&match?({%Changeset{action: :replace}, _}, &1)) |> Enum.at(index)
+        shown = rows |> shown_rows() |> Enum.at(index)
 
         with {row, raw} <- shown || :error,
              {:ok, rest} <- nested_path(row, rest),

@@ -554,6 +554,14 @@ defmodule Brando.VillainTest do
             type: :has_many
           }
         ],
+        "Elixir.Brando.SyncTest.ArticleAuthorLink": [
+          %Brando.Blueprint.Relations.Relation{
+            __identifier__: :blocks,
+            name: :blocks,
+            opts: %{module: :blocks},
+            type: :has_many
+          }
+        ],
         "Elixir.Brando.TraitTest.Project": [
           %Brando.Blueprint.Relations.Relation{
             __identifier__: :blocks,
