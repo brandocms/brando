@@ -11,13 +11,29 @@
   malformed id gives the site's 404 page through `BrandoWeb.FallbackController`,
   or without the CMS site raises `Ecto.NoResultsError`, which `ErrorHTML`
   renders as a 404; it was a plain-text "Not found". The entry page renders
-  the Blueprint's block fields after its title. For a Blueprint with a
-  `language` field the context gets `language` filter and match clauses and
-  the pages show the request's language, so translations can share a slug.
-  The notice says what to wire by hand without the CMS site, prints the
-  `absolute_url` that matches the route when the Blueprint has
-  `absolute_url false`, and mentions `--public-route` only when it was not
-  given.
+  the Blueprint's block fields after its title and loads the associations its
+  meta fields return, such as `meta_image`, which the layout's meta tags
+  raised on unloaded. For a Blueprint with a `language` field each language
+  gets its routes, as the CMS pages do: the default language's unprefixed and
+  the others' in a scope under their code (`/no/articles`), from the
+  configured languages; the pages show the request's language through the
+  query's `language:` option, by slug or by id, so translations can share a
+  slug and the context needs no language clause. Pages by id need an integer
+  or UUID primary key named `id`, and the generator stops with an issue for
+  another (`primary_key false`, say). The notice says what to wire by
+  hand without the CMS site, prints the `absolute_url` that matches the route
+  (with `route_i18n` for a translatable Blueprint, also when its own gives
+  every language one path), and mentions `--public-route` only when it was
+  not given.
+
+- **`brando.gen` consumer templates keep entry pages at `:id`** (#3230).
+  `controller.ex` and `html.ex` in `priv/templates/brando.gen` get the new
+  bindings `param` (`"slug"` or `"id"`, the show route's param and the
+  `show/2` params key), `site_layouts` (the CMS layouts module or nil),
+  `language`, `preloads`, `alternates`, `blocks`, `id_type` and `text_field`. While either is overridden, entry
+  pages keep the `:id` route, which a template copied from the old default
+  matches, and the notice says so; update the template from the default to
+  route by slug.
 
 - **CMS-authored error pages render with the CMS page templates** (#3230).
   With `use_default_errors: false`, `BrandoWeb.FallbackController` rendered

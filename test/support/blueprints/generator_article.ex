@@ -11,6 +11,7 @@ defmodule GeneratorStudio.Catalog.Article do
   trait Brando.Trait.Status
   trait Brando.Trait.Translatable
   trait Brando.Trait.Blocks
+  trait Brando.Trait.Meta
 
   absolute_url ~H"/articles/{@entry.slug}"
 
@@ -22,5 +23,10 @@ defmodule GeneratorStudio.Catalog.Article do
   relations do
     relation :blocks, :has_many, module: :blocks
     relation :bio_blocks, :has_many, module: :blocks
+  end
+
+  meta_schema do
+    field ["title", "og:title"], & &1.title
+    field "og:image", & &1.meta_image
   end
 end

@@ -38,6 +38,36 @@ defmodule GeneratorStudio.Catalog.Category do
   end
 end
 
+defmodule GeneratorStudio.Catalog.Tag do
+  use Brando.Blueprint,
+    application: "GeneratorStudio",
+    domain: "Catalog",
+    schema: "Tag",
+    singular: "tag",
+    plural: "tags"
+
+  primary_key {:id, :binary_id, autogenerate: true}
+
+  attributes do
+    attribute :name, :string
+  end
+end
+
+defmodule GeneratorStudio.Catalog.Reading do
+  use Brando.Blueprint,
+    application: "GeneratorStudio",
+    domain: "Catalog",
+    schema: "Reading",
+    singular: "reading",
+    plural: "readings"
+
+  primary_key false
+
+  attributes do
+    attribute :name, :string
+  end
+end
+
 defmodule Mix.Tasks.Brando.Gen.Test do
   use ExUnit.Case, async: false
 
@@ -52,6 +82,8 @@ defmodule Mix.Tasks.Brando.Gen.Test do
             "lib/generator_studio/catalog/product.ex" => "defmodule GeneratorStudio.Catalog.Product do\nend\n",
             "lib/generator_studio/catalog/category.ex" => "defmodule GeneratorStudio.Catalog.Category do\nend\n",
             "lib/generator_studio/catalog/article.ex" => "defmodule GeneratorStudio.Catalog.Article do\nend\n",
+            "lib/generator_studio/catalog/tag.ex" => "defmodule GeneratorStudio.Catalog.Tag do\nend\n",
+            "lib/generator_studio/catalog/reading.ex" => "defmodule GeneratorStudio.Catalog.Reading do\nend\n",
             "lib/generator_studio_web/router.ex" => """
             defmodule GeneratorStudioWeb.Router do
               use GeneratorStudioWeb, :router
@@ -282,13 +314,28 @@ defmodule Mix.Tasks.Brando.Gen.Test do
 
   defp notices(result), do: Enum.join(result.notices, "\n")
 
+  # Source on one line, for calls the formatter breaks over several.
+  defp flat(result, path), do: result |> IgniterCase.source(path) |> String.replace(~r/[\s(]+/, " ")
+
   # The fixture's formatter keeps the parentheses on router calls.
   defp router(result),
     do: result |> IgniterCase.source("lib/generator_studio_web/router.ex") |> String.replace(["(", ")"], " ")
 
-  # The routes, layout and error pages mix brando.gen.site plans.
-  defp site_project do
-    project()
+  @languages """
+  import Config
+
+  config :brando,
+    default_language: "en",
+    languages: [[value: "en", text: "English"], [value: "no", text: "Norsk"]],
+    scope_default_language_routes: false
+  """
+
+  # The routes, layout and error pages mix brando.gen.site plans, for a site
+  # in English and Norwegian.
+  defp site_project(files \\ %{}) do
+    %{"config/brando.exs" => @languages}
+    |> Map.merge(files)
+    |> project()
     |> Igniter.compose_task(Mix.Tasks.Brando.Gen.Site, ["--yes"])
     |> IgniterCase.apply_and_reload()
   end
@@ -357,17 +404,32 @@ defmodule Mix.Tasks.Brando.Gen.Test do
     [{catch_all, _}] = Regex.run(~r/get "\/\*path"/, router, return: :index)
     assert pipeline < public and public < catch_all
 
+    # Norwegian pages are under /no, as the CMS pages are; :brando_site gives the language.
+    assert router =~
+             ~r/scope "\/no", as: :no\s+do\s+get "\/articles", GeneratorStudioWeb.Catalog.ArticleController, :index/
+
+    assert router =~ ~r/get "\/articles\/:slug", GeneratorStudioWeb.Catalog.ArticleController, :show\s+end\s+end/
+    refute router =~ "assigns:"
+
     controller = IgniterCase.source(result, "lib/generator_studio_web/catalog/article_controller.ex")
     assert controller =~ "use BrandoWeb, :controller"
     assert controller =~ ~r/plug\(?:put_root_layout, html: \{GeneratorStudioWeb.CMS.Layouts, :root\}/
     assert controller =~ ~r/action_fallback\(?BrandoWeb.FallbackController/
     assert controller =~ "put_meta(GeneratorStudio.Catalog.Article, entry)"
-    assert controller =~ "preload: [:alternate_entries]"
-    # Translations may share a slug.
-    assert controller =~ "matches: %{slug: slug, language: conn.assigns.language}"
-    assert controller =~ "filter: %{language: conn.assigns.language}"
+    # Translations may share a slug: the query engine's language option picks the request's.
+    flat = flat(result, "lib/generator_studio_web/catalog/article_controller.ex")
+
+    assert flat =~
+             "%{ matches: %{slug: slug}, language: conn.assigns.language, status: :published, preload: [:alternate_entries, :meta_image] })"
+
+    assert flat =~ "list_articles %{ status: :published, language: conn.assigns.language })"
+
+    assert flat =~
+             ~S'defp base_path %{path_info: [language | _], assigns: %{language: language}}), do: "/#{language}/articles"'
+
+    # No clauses of its own for the language.
     context = IgniterCase.source(result, "lib/generator_studio/catalog.ex")
-    assert context =~ ~r/\{:language, value\}, query -> from\(?q in query, where: q.language == \^value/
+    refute context =~ "q.language"
 
     on_exit(fn ->
       :code.purge(GeneratorStudio.Catalog)
@@ -384,9 +446,14 @@ defmodule Mix.Tasks.Brando.Gen.Test do
     assert html =~ "<Brando.HTML.render_blocks entry={@entry} />"
     assert html =~ "<Brando.HTML.render_blocks entry={@entry} field={:bio_blocks} />"
 
+    assert html =~ ~S(href={"#{@base_path}/#{entry.slug}"})
+    assert html =~ "<.link href={@base_path}>Back to articles</.link>"
+
     notices = notices(result)
     assert notices =~ "GeneratorStudioWeb.CMS.Layouts"
-    refute notices =~ "absolute_url"
+    assert notices =~ "/articles for en, /no/articles for no"
+    # Its absolute_url gives one path for every language.
+    assert notices =~ "absolute_url ~H|{route_i18n(@entry, :article_path, :show, [@entry.slug])}|"
 
     rerun =
       result
@@ -395,5 +462,103 @@ defmodule Mix.Tasks.Brando.Gen.Test do
 
     assert rerun.issues == []
     Igniter.Test.assert_unchanged(rerun)
+  end
+
+  test "a UUID primary key is cast as one, and a Blueprint without an :id has no pages by id" do
+    result = generate(project(), "GeneratorStudio.Catalog.Tag", ["--public-route", "/tags"])
+    assert result.issues == []
+    controller = IgniterCase.source(result, "lib/generator_studio_web/catalog/tag_controller.ex")
+    assert controller =~ "Ecto.UUID.cast(id)"
+    refute controller =~ "Integer.parse"
+
+    result = generate(project(), "GeneratorStudio.Catalog.Reading", ["--public-route", "/readings"])
+    assert [issue] = result.issues
+    assert issue =~ "GeneratorStudio.Catalog.Reading's public pages look entries up by id, but its primary key is []"
+  end
+
+  test "without the CMS site, a translatable Blueprint's routes give each language in their assigns" do
+    result =
+      %{"config/brando.exs" => @languages}
+      |> project()
+      |> generate("GeneratorStudio.Catalog.Article", ["--public-route", "/articles"])
+
+    assert result.issues == []
+
+    router = router(result)
+    assert router =~ ~r/scope "\/", assigns: %\{language: "en"\}\s+do\s+pipe_through :browser\s+get "\/articles"/
+    assert router =~ ~r/scope "\/no", as: :no, assigns: %\{language: "no"\}\s+do\s+get "\/articles"/
+
+    controller = flat(result, "lib/generator_studio_web/catalog/article_controller.ex")
+    assert controller =~ "list_articles %{ status: :published, language: conn.assigns.language })"
+    assert controller =~ "matches: %{slug: slug}, language: conn.assigns.language"
+  end
+
+  test "a translatable Blueprint needs its languages in the config" do
+    result = generate(project(), "GeneratorStudio.Catalog.Article", ["--public-route", "/articles"])
+    assert [issue] = result.issues
+    assert issue =~ "generated for each language in config :brando, :languages"
+  end
+
+  test "a consumer controller template from before slug routes keeps the :id route" do
+    template = """
+    defmodule <%= inspect controller_module %> do
+      use <%= web_module %>, :controller
+
+      def show(conn, %{"id" => id}) do
+        {:ok, entry} = <%= inspect context_module %>.get_<%= singular %>(%{matches: %{id: id}})
+        render(conn, :show, entry: entry)
+      end
+    end
+    """
+
+    result =
+      %{"priv/templates/brando.gen/controller.ex" => template}
+      |> project()
+      |> generate("GeneratorStudio.Catalog.Product", ["--public-route", "/products"])
+
+    assert result.issues == []
+    assert router(result) =~ ~s(get "/products/:id", GeneratorStudioWeb.Catalog.ProductController, :show)
+
+    controller = IgniterCase.source(result, "lib/generator_studio_web/catalog/product_controller.ex")
+    assert controller =~ ~s(def show(conn, %{"id" => id}\))
+    assert IgniterCase.source(result, "lib/generator_studio_web/catalog/product_html.ex") =~ ~S(entry.id)
+
+    notices = notices(result)
+    assert notices =~ "priv/templates/brando.gen/controller.ex overrides the default template"
+    assert notices =~ ~s(absolute_url ~H"/products/{@entry.id}")
+  end
+
+  test "public pages need no language clauses in an existing context's filters and matches" do
+    context = """
+    defmodule GeneratorStudio.Catalog do
+      use Brando.Query
+      import Ecto.Query
+
+      filters GeneratorStudio.Catalog.Article do
+        fn {:title, value}, query -> from q in query, where: q.title == ^value end
+      end
+
+      matches GeneratorStudio.Catalog.Article do
+        fn
+          {:id, value}, query -> from q in query, where: q.id == ^value
+          {:slug, value}, query -> from q in query, where: q.slug == ^value
+        end
+      end
+    end
+    """
+
+    result =
+      %{"config/brando.exs" => @languages, "lib/generator_studio/catalog.ex" => context}
+      |> project()
+      |> generate("GeneratorStudio.Catalog.Article", ["--public-route", "/articles"])
+
+    assert result.issues == []
+    refute IgniterCase.source(result, "lib/generator_studio/catalog.ex") =~ "language"
+
+    # The query engine's own language: option, not a filter or match clause.
+    controller = flat(result, "lib/generator_studio_web/catalog/article_controller.ex")
+    assert controller =~ "matches: %{slug: slug}, language: conn.assigns.language"
+    assert controller =~ "list_articles %{ status: :published, language: conn.assigns.language })"
+    refute controller =~ "filter:"
   end
 end

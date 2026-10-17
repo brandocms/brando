@@ -486,7 +486,10 @@ mix brando.gen Studio.Catalog.Product --public-route /products
 
 This adds a controller/HTML pair with an index at `/products` and a page per
 entry at `/products/:slug`, or `/products/:id` when the Blueprint has no `slug`
-field. Schemas with a status field expose published records. The entry page
+field. Pages by id need an integer or UUID primary key named `id`; for another,
+the generator stops with an issue. Schemas with a status field expose published
+records, and the entry page loads the images its [meta fields](blueprints.md#datasources-metadata-and-json-ld) read, such as
+`meta_image`. The entry page
 shows the main field and, for a Blueprint with block fields, their rendered
 blocks (`Brando.HTML.render_blocks/1`). Templates do not assume an image field.
 `--main-field` selects a display/filter field; otherwise the generator prefers
@@ -514,14 +517,26 @@ The default Blueprint leaves `absolute_url false`. The notice then prints the
 `absolute_url ~H"/products/{@entry.slug}"`; set it so admin preview links,
 sitemaps and SEO use the page.
 
-For a Blueprint with a `language` field, the generated context gets `language`
-filter and match clauses, and the pages list and show entries in one language:
-the one `:brando_site` resolves for the request with the CMS site, the default
-language without it. Translations can then share a slug. The routes have no
-language prefix.
+For a Blueprint with a `language` field, each language gets its routes, as the
+[CMS pages](i18n.md) do: the default language's at `/products`, and every other
+language's in a scope under its code, such as `/no/products` (the default
+language's too, at `/en/products`, with `scope_default_language_routes: true`).
+The languages are read from `config :brando, :languages` and `:default_language`
+when the resource is generated; a language added later needs its own scope.
+The pages list and show the request's language with the query's `language:`
+option, so translations can share a slug and the context needs no language
+clause. With the CMS site, `:brando_site` takes the language from the path;
+without it, each scope's `assigns` give it. The notice prints an `absolute_url`
+that gives each translation its prefixed URL, for hreflang links, admin previews
+and sitemaps: `absolute_url ~H|{route_i18n(@entry, :product_path, :show, [@entry.slug])}|`.
+It also prints one when the Blueprint's `absolute_url` gives every language the
+same path.
 
 Consumer templates in `priv/templates/brando.gen.blueprint` and
-`priv/templates/brando.gen` override package defaults. The Blueprint command also
+`priv/templates/brando.gen` override package defaults. With a consumer
+`controller.ex` or `html.ex` in `priv/templates/brando.gen`, entry pages keep the
+`:id` route param, which templates copied before slug routes match, and the
+notice says so; the templates' `param` binding then is `"id"`. The Blueprint command also
 accepts `--template RELATIVE_PATH`, which takes precedence over the conventional
 consumer override. Conflicting output files are preserved for manual integration.
 

@@ -104,18 +104,8 @@ if Code.ensure_loaded?(Igniter) do
           do: "ilike(q.#{field}, ^(\"%\" <> Brando.Query.sanitize_ilike_pattern(value) <> \"%\"))",
           else: "q.#{field} == ^value"
 
-      fields = m.schema.__schema__(:fields)
-      language = if :language in fields, do: [:language], else: []
-      matches = Enum.uniq([:id, field] ++ if(:slug in fields, do: [:slug], else: []) ++ language)
+      matches = Enum.uniq([:id, field] ++ if(:slug in m.schema.__schema__(:fields), do: [:slug], else: []))
       match_clauses = Enum.map_join(matches, "\n", &"{:#{&1}, value}, query -> from q in query, where: q.#{&1} == ^value")
-
-      filter_clauses =
-        [{field, filter} | Enum.map(language, &{&1, "q.#{&1} == ^value"})]
-        |> Enum.uniq_by(&elem(&1, 0))
-        |> Enum.map_join(
-          "\n",
-          fn {name, condition} -> "{:#{name}, value}, query -> from q in query, where: #{condition}" end
-        )
 
       mutations =
         Enum.map([:create, :update, :delete], fn op ->
@@ -139,7 +129,8 @@ if Code.ensure_loaded?(Igniter) do
            String.to_atom("list_#{m.naming.plural}")},
           {:query, [:single, m.schema], "query :single, #{schema}, do: fn query -> query end",
            String.to_atom("get_#{m.naming.singular}")},
-          {:filters, [m.schema], "filters #{schema} do\n fn\n #{filter_clauses}\n end\nend", nil},
+          {:filters, [m.schema],
+           "filters #{schema} do\n fn {:#{field}, value}, query -> from q in query, where: #{filter} end\nend", nil},
           {:matches, [m.schema], "matches #{schema} do\n fn\n #{match_clauses}\n end\nend", nil}
         ]
     end

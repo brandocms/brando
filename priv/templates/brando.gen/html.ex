@@ -1,4 +1,4 @@
-defmodule <%= inspect html_module %> do
+<% index_path = if language, do: "\#{@base_path}", else: public_route %>defmodule <%= inspect html_module %> do
 <%= if site_layouts do %>  use BrandoWeb, :html
 
   def index(assigns) do
@@ -7,7 +7,7 @@ defmodule <%= inspect html_module %> do
       <h1><%= Phoenix.Naming.humanize(plural) %></h1>
       <ul>
         <li :for={entry <- @entries}>
-          <.link href={"<%= public_route %>/#{entry.<%= param %>}"}>{entry.<%= main_field %>}</.link>
+          <.link href={"<%= index_path %>/#{entry.<%= param %>}"}>{entry.<%= main_field %>}</.link>
         </li>
       </ul>
     </main>
@@ -21,7 +21,7 @@ defmodule <%= inspect html_module %> do
         <h1>{@entry.<%= main_field %>}</h1><%= for field <- blocks do %>
         <Brando.HTML.render_blocks entry={@entry}<%= if field != :blocks, do: " field={:#{field}}" %> /><% end %>
       </article>
-      <.link href="<%= public_route %>">Back to <%= String.replace(plural, "_", " ") %></.link>
+      <.link href=<%= if language, do: "{@base_path}", else: inspect(public_route) %>>Back to <%= String.replace(plural, "_", " ") %></.link>
     </main>
     """
   end
@@ -32,7 +32,7 @@ defmodule <%= inspect html_module %> do
     <h1><%= Phoenix.Naming.humanize(plural) %></h1>
     <ul>
       <li :for={entry <- @entries}>
-        <.link href={"<%= public_route %>/#{entry.<%= param %>}"}>{entry.<%= main_field %>}</.link>
+        <.link href={"<%= index_path %>/#{entry.<%= param %>}"}>{entry.<%= main_field %>}</.link>
       </li>
     </ul>
     """
@@ -42,7 +42,7 @@ defmodule <%= inspect html_module %> do
     ~H"""
     <h1>{@entry.<%= main_field %>}</h1><%= for field <- blocks do %>
     <Brando.HTML.render_blocks entry={@entry}<%= if field != :blocks, do: " field={:#{field}}" %> /><% end %>
-    <.link href="<%= public_route %>">Back to <%= String.replace(plural, "_", " ") %></.link>
+    <.link href=<%= if language, do: "{@base_path}", else: inspect(public_route) %>>Back to <%= String.replace(plural, "_", " ") %></.link>
     """
   end
 <% end %>end

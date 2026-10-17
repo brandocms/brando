@@ -8,6 +8,7 @@ if Code.ensure_loaded?(Igniter) do
     alias Igniter.Code.Common
     alias Igniter.Code.Function, as: CodeFunction
     alias Igniter.Project.Module, as: ProjectModule
+    alias Mix.Brando.Igniter.Install.Configuration
     alias Mix.Brando.Igniter.RouteInventory
 
     def validate_public_path(nil), do: :ok
@@ -75,33 +76,90 @@ if Code.ensure_loaded?(Igniter) do
       end
     end
 
+    @doc """
+    The languages a translatable Blueprint's public routes are generated for,
+    from the application's config: the default language's routes have no
+    prefix, and every other language's (the default's too with
+    `scope_default_language_routes: true`) are in a scope named after it, as
+    `Brando.I18n` routes them and `route_i18n` links to them. Nil for a
+    Blueprint without a language.
+    """
+    def languages(igniter, %{language?: true}) do
+      with {:ok, igniter, languages} <- Configuration.read(igniter, :languages),
+           {:ok, igniter, default} <- Configuration.read(igniter, :default_language),
+           {:ok, igniter, scoped?} <- Configuration.read(igniter, :scope_default_language_routes),
+           values when values != [] <- language_values(languages),
+           default = to_string(default),
+           true <- default in values do
+        {:ok, igniter, %{default: default, prefixed: Enum.reject(values, &(&1 == default and scoped? != true))}}
+      else
+        {:error, message} ->
+          {:error, message}
+
+        _ ->
+          {:error,
+           "A translatable Blueprint's public routes are generated for each language in config :brando, " <>
+             ":languages, with :default_language among them. Set both as literals in config/brando.exs."}
+      end
+    end
+
+    def languages(igniter, _metadata), do: {:ok, igniter, nil}
+
+    defp language_values(languages) when is_list(languages) do
+      values = languages |> List.flatten() |> Keyword.get_values(:value) |> Enum.map(&to_string/1)
+      if Enum.all?(values, &Regex.match?(~r/^[a-z][a-z0-9_]*$/, &1)), do: values, else: []
+    end
+
+    defp language_values(_languages), do: []
+
     defp site_pipeline(router),
       do: CodeFunction.move_to_function_call(router, :pipeline, 2, &CodeFunction.argument_equals?(&1, 0, :brando_site))
 
     defp public(igniter, m, path) do
       show_path = path <> "/:" <> m.param
       pipelines = if m.site_layouts, do: "[:browser, :brando_site]", else: ":browser"
+      prefixes = if m.languages, do: m.languages.prefixed, else: []
+
+      routes = """
+      get #{inspect(path)}, #{inspect(m.controller)}, :index
+      get #{inspect(show_path)}, #{inspect(m.controller)}, :show
+      """
+
+      # :brando_site's put_locale takes the language from the path; without
+      # it, the scope's assigns give it.
+      assigns = fn language ->
+        if m.languages && !m.site_layouts, do: ", assigns: %{language: #{inspect(language)}}", else: ""
+      end
+
+      language_scopes =
+        Enum.map_join(prefixes, "\n", fn language ->
+          """
+          scope #{inspect("/" <> language)}, as: :#{language}#{assigns.(language)} do
+            #{routes}
+          end
+          """
+        end)
 
       ProjectModule.find_and_update_module!(igniter, m.project.router, fn zipper ->
         # A separate scope preserves existing Phoenix scope aliases and pipelines.
         code = """
-        scope "/" do
+        scope "/"#{if m.languages, do: assigns.(m.languages.default), else: ""} do
           pipe_through #{pipelines}
-          get #{inspect(path)}, #{inspect(m.controller)}, :index
-          get #{inspect(show_path)}, #{inspect(m.controller)}, :show
+          #{routes}
+          #{language_scopes}
         end
         """
 
         existing =
-          Enum.map([{path, :index}, {show_path, :show}], fn {path, action} ->
-            route_state(zipper, :get, path, m.controller, action)
-          end)
+          for prefix <- ["" | Enum.map(prefixes, &("/" <> &1))], {path, action} <- [{path, :index}, {show_path, :show}] do
+            route_state(zipper, :get, prefix <> path, m.controller, action)
+          end
 
         cond do
-          existing == [:present, :present] ->
+          Enum.all?(existing, &(&1 == :present)) ->
             {:ok, zipper}
 
-          existing == [:missing, :missing] ->
+          Enum.all?(existing, &(&1 == :missing)) ->
             insert_public_scope(zipper, code, m)
 
           true ->

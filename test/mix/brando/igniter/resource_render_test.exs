@@ -54,7 +54,14 @@ defmodule Mix.Brando.Igniter.ResourceRenderTest do
         }
       )
 
-    installed = base |> Igniter.compose_task(Mix.Tasks.Brando.Install, []) |> IgniterCase.apply_and_reload()
+    installed =
+      base
+      |> Igniter.compose_task(Mix.Tasks.Brando.Install, [])
+      |> Igniter.Project.Config.configure("brando.exs", :brando, [:languages], [
+        [value: "en", text: "English"],
+        [value: "no", text: "Norsk"]
+      ])
+      |> IgniterCase.apply_and_reload()
 
     plain =
       Igniter.compose_task(installed, Mix.Tasks.Brando.Gen, ["GeneratorStudio.Catalog.Note", "--public-route", "/notes"])
@@ -95,16 +102,15 @@ defmodule Mix.Brando.Igniter.ResourceRenderTest do
 
     File.write!(context, """
     defmodule GeneratorStudio.Catalog do
-      def list_articles(%{status: :published, filter: %{language: "en"}}), do: {:ok, [#{inspect(__MODULE__)}.article()]}
+      def list_articles(%{status: :published, language: language}),
+        do: {:ok, Enum.filter(#{inspect(__MODULE__)}.articles(), &(&1.language == language))}
 
-      def get_article(%{
-            matches: %{slug: "known", language: "en"},
-            status: :published,
-            preload: [:alternate_entries]
-          }),
-        do: {:ok, #{inspect(__MODULE__)}.article()}
-
-      def get_article(%{matches: %{slug: slug}}) when is_binary(slug), do: {:error, {:article, :not_found}}
+      def get_article(%{matches: %{slug: slug}, language: language, status: :published, preload: preload}) do
+        case Enum.find(#{inspect(__MODULE__)}.articles(), &(&1.slug == slug and &1.language == language)) do
+          nil -> {:error, {:article, :not_found}}
+          article -> {:ok, #{inspect(__MODULE__)}.preload(article, preload)}
+        end
+      end
 
       def list_notes(%{}), do: {:ok, [%GeneratorStudio.Catalog.Note{id: 1, title: "First note"}]}
       def get_note(%{matches: %{id: 1}}), do: {:ok, %GeneratorStudio.Catalog.Note{id: 1, title: "First note"}}
@@ -138,29 +144,44 @@ defmodule Mix.Brando.Igniter.ResourceRenderTest do
     :ok
   end
 
-  def article do
-    %Article{
-      id: 1,
-      title: "Known article",
-      slug: "known",
-      status: :published,
-      language: :en,
-      alternate_entries: [],
-      rendered_blocks: "<p>Rendered blocks</p>",
-      rendered_bio_blocks: "<p>Rendered bio</p>"
-    }
+  # Associations are not loaded unless asked for, as from the database.
+  def articles do
+    [
+      %Article{
+        id: 1,
+        title: "Known article",
+        slug: "known",
+        status: :published,
+        language: "en",
+        rendered_blocks: "<p>Rendered blocks</p>",
+        rendered_bio_blocks: "<p>Rendered bio</p>"
+      },
+      %Article{id: 2, title: "Kjent artikkel", slug: "kjent", status: :published, language: "no"}
+    ]
+  end
+
+  def preload(article, preloads) do
+    Enum.reduce(preloads, article, fn
+      :alternate_entries, article -> %{article | alternate_entries: []}
+      :meta_image, article -> %{article | meta_image: nil}
+    end)
   end
 
   # Compiled in setup_all, so not named literally: the compiler would warn.
-  defp call(controller, conn, action, params) do
-    conn = conn |> Plug.Conn.assign(:language, "en") |> Phoenix.Controller.put_format("html")
+  defp call(controller, path, action, params, language \\ "en") do
+    conn = :get |> build_conn(path) |> Plug.Conn.assign(:language, language) |> Phoenix.Controller.put_format("html")
     Module.concat([GeneratorStudioWeb, Catalog, controller]).call(%{conn | params: params}, action)
   end
 
   test "with the CMS site, the routes go through :brando_site ahead of the CMS catch-all" do
     router = Module.concat(GeneratorStudioWeb, Router)
 
-    for {path, action, params} <- [{"/articles", :index, %{}}, {"/articles/known", :show, %{"slug" => "known"}}] do
+    for {path, action, params} <- [
+          {"/articles", :index, %{}},
+          {"/articles/known", :show, %{"slug" => "known"}},
+          {"/no/articles", :index, %{}},
+          {"/no/articles/kjent", :show, %{"slug" => "kjent"}}
+        ] do
       assert %{pipe_through: [:browser, :brando_site], plug: plug, plug_opts: ^action, path_params: ^params} =
                Phoenix.Router.route_info(router, "GET", path, "")
 
@@ -168,8 +189,8 @@ defmodule Mix.Brando.Igniter.ResourceRenderTest do
     end
   end
 
-  test "an entry renders its title and blocks inside the site's layout, with Brando meta", %{conn: conn} do
-    conn = call(ArticleController, conn, :show, %{"slug" => "known"})
+  test "an entry renders its title and blocks inside the site's layout, with Brando meta" do
+    conn = call(ArticleController, "/articles/known", :show, %{"slug" => "known"})
     assert conn.status == 200
     assert conn.resp_body =~ ~s(<html lang="en">)
     assert conn.resp_body =~ ~s(id="top")
@@ -177,12 +198,30 @@ defmodule Mix.Brando.Igniter.ResourceRenderTest do
     assert conn.resp_body =~ "<p>Rendered blocks</p>"
     assert conn.resp_body =~ "<p>Rendered bio</p>"
     assert conn.assigns.page_title == "Known article"
-    assert Brando.Plug.HTML.get_page_entry(conn) == article()
+    assert Brando.Plug.HTML.get_page_entry(conn).slug == "known"
+    assert conn.resp_body =~ ~s(<a href="/articles">Back to articles</a>)
 
-    index = call(ArticleController, build_conn(), :index, %{})
+    index = call(ArticleController, "/articles", :index, %{})
     assert index.status == 200
     assert index.resp_body =~ ~s(href="/articles/known")
+    refute index.resp_body =~ "kjent"
     assert index.resp_body =~ ~s(<html lang="en">)
+  end
+
+  test "a translation is at its language's prefix, which its links keep" do
+    conn = call(ArticleController, "/no/articles/kjent", :show, %{"slug" => "kjent"}, "no")
+    assert conn.status == 200
+    assert conn.resp_body =~ "<h1>Kjent artikkel</h1>"
+    assert conn.resp_body =~ ~s(<a href="/no/articles">Back to articles</a>)
+
+    index = call(ArticleController, "/no/articles", :index, %{}, "no")
+    assert index.resp_body =~ ~s(href="/no/articles/kjent")
+    refute index.resp_body =~ "known"
+
+    # The English slug is not a Norwegian entry.
+    controller = Module.concat(GeneratorStudioWeb, Catalog.ArticleController)
+    conn = :get |> build_conn("/no/articles/known") |> Plug.Conn.assign(:language, "no")
+    assert controller.show(conn, %{"slug" => "known"}) == {:error, {:article, :not_found}}
   end
 
   test "a missing entry is left to Brando's fallback controller, which renders the site's 404" do
@@ -191,13 +230,13 @@ defmodule Mix.Brando.Igniter.ResourceRenderTest do
     assert controller.show(conn, %{"slug" => "missing"}) == {:error, {:article, :not_found}}
   end
 
-  test "without the CMS site, an entry shows by id and a missing or malformed id is a 404", %{conn: conn} do
-    shown = call(NoteController, conn, :show, %{"id" => "1"})
+  test "without the CMS site, an entry shows by id and a missing or malformed id is a 404" do
+    shown = call(NoteController, "/notes/1", :show, %{"id" => "1"})
     assert shown.status == 200
     assert shown.resp_body =~ "<h1>First note</h1>"
 
     for id <- ["2", "abc", "1.5", "-1", "99999999999999999999999"] do
-      error = assert_raise Plug.Conn.WrapperError, fn -> call(NoteController, build_conn(), :show, %{"id" => id}) end
+      error = assert_raise Plug.Conn.WrapperError, fn -> call(NoteController, "/notes/#{id}", :show, %{"id" => id}) end
       assert %Ecto.NoResultsError{} = error.reason
       assert Plug.Exception.status(error.reason) == 404
     end
