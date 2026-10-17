@@ -98,4 +98,38 @@ defmodule Mix.Brando.Igniter.TelemetryTest do
       Igniter.Test.assert_unchanged(result, "lib/studio/application.ex")
     end
   end
+
+  # OpentelemetryEcto copies the whole process dictionary on every query, so
+  # the generated wrapper passes on only queries a recording span waits for.
+  test "the generated wrapper passes on only queries a recording span waits for" do
+    require OpenTelemetry.Tracer, as: Tracer
+
+    template = Application.app_dir(:brando, "priv/templates/brando.gen.otel/open_telemetry_ecto.ex.eex")
+    stub = "defmodule OpentelemetryEcto, do: def(handle_event(_, _, meta, test), do: send(test, {:passed, meta.source}))"
+
+    modules = Code.compile_string(stub) ++ Code.compile_string(EEx.eval_file(template, application_module: Probe))
+
+    on_exit(fn ->
+      for {module, _} <- modules, do: :code.delete(module) && :code.purge(module)
+    end)
+
+    test = self()
+    wrapper = Module.concat([Probe, O11y, OpenTelemetryEcto])
+    query = fn meta -> wrapper.handle_event([:repo, :query], %{}, meta, test) end
+
+    query.(%{source: "outside a span"})
+
+    Tracer.with_span "request" do
+      query.(%{source: "in a span"})
+      query.(%{source: "oban", options: [oban_conf: %{}]})
+      Task.async(fn -> query.(%{source: "in a task"}) end) |> Task.await()
+    end
+
+    Tracer.set_current_span(:otel_tracer.non_recording_span(1, 1, 0))
+    query.(%{source: "sampled out"})
+
+    assert_received {:passed, "in a span"}
+    assert_received {:passed, "in a task"}
+    refute_received {:passed, _}
+  end
 end

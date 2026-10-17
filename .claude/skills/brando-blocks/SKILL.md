@@ -396,8 +396,9 @@ other, so it needs no status query.
 - **`render_and_update_entry_block_changeset(changeset, entry, has_vars?, has_table_rows?, force_render?)`** — same but navigates through the entry_block wrapper to the nested block
 - `force_render?` — set true when container flips from `active: false` to `active: true`
 - The final `render_html?` argument comes from `render_live_preview_block?/1`.
-  Slots and single modules with children request a full refresh, so their local
-  validation skips HTML rendering. Media ref changes skip it before a reload.
+  Slots, blocks in slots and single modules with children have their root
+  rendered from the store and patched instead (`BlockField` "preview_root"), so
+  their local validation skips HTML rendering. Media ref changes skip it before a reload.
   Entry-field updates refresh editor splits; Form renders the full preview.
 
 ### Update Trigger

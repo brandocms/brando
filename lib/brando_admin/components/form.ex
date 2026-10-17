@@ -592,25 +592,52 @@ defmodule BrandoAdmin.Components.Form do
     {:ok, Preview.queue(socket, pending.mode, 0)}
   end
 
-  def update(
-        %{
-          event: "update_live_preview_block",
-          rendered_html: rendered_html,
-          uid: uid,
-          has_children?: has_children?
-        },
-        socket
-      ) do
-    payload = %{uid: uid, rendered_html: rendered_html, has_children: has_children?}
-
-    if socket.assigns.frontend_edit do
-      FrontendEditor.update_block(payload)
-    else
-      LivePreview.broadcast(socket.assigns.live_preview_cache_key, "update_block", payload)
-    end
-
-    {:ok, socket}
+  # Notes are numbered and collected across the whole page
+  # (`Brando.Villain.Footnotes`), so a block that holds any renders the page.
+  def update(%{event: "update_live_preview_block", rendered_html: rendered_html} = params, socket) do
+    if Villain.Footnotes.unresolved?(rendered_html),
+      do: {:ok, fetch_root_blocks(socket, :live_preview_update, 0)},
+      else: send_live_preview_block(params, socket)
   end
+
+  # The root of a block that cannot render on its own (`BlockField`
+  # "preview_root"), rendered with the form's entry: a block that does not
+  # read the entry keeps an old one. A slot at the root has no block of its
+  # own in the page to patch.
+  def update(%{event: "render_preview_root", uid: uid, root: root}, %{assigns: %{live_preview_active?: true}} = socket) do
+    if root.block.type == :slot do
+      {:ok, fetch_root_blocks(socket, :live_preview_update, 0)}
+    else
+      entry =
+        socket.assigns.form.source
+        |> Brando.Utils.apply_changes_recursively()
+        |> Map.merge(socket.assigns.updated_entry_assocs)
+
+      html = render_preview_root(root, entry, socket.assigns.frontend_edit)
+      update(%{event: "update_live_preview_block", rendered_html: html, uid: uid, has_children?: false}, socket)
+    end
+  end
+
+  def update(%{event: "render_preview_root"}, socket), do: {:ok, socket}
+
+  # A preview page is missing block patches (`LivePreviewChannel`), which the
+  # cache does not hold: render the whole page again, and say so in the drawer.
+  # While the preview is being recovered after a reconnect, the recovery
+  # renders it once the recovered input is in (`maybe_finish_live_preview_recovery/1`).
+  def update(%{event: "live_preview_patches_lost"}, %{assigns: %{live_preview_recovery_pending?: true}} = socket),
+    do: {:ok, socket}
+
+  def update(
+        %{event: "live_preview_patches_lost", key: key},
+        %{assigns: %{live_preview_active?: true, live_preview_cache_key: key}} = socket
+      ) do
+    socket
+    |> maybe_full_rerender_live_preview(true)
+    |> push_event("b:live_preview_notice", %{})
+    |> then(&{:ok, &1})
+  end
+
+  def update(%{event: "live_preview_patches_lost"}, socket), do: {:ok, socket}
 
   def update(%{event: "update_live_preview"}, %{assigns: %{live_preview_active?: true}} = socket) do
     # update entire live preview (when deleting or inserting blocks)
@@ -2293,7 +2320,7 @@ defmodule BrandoAdmin.Components.Form do
   end
 
   defp maybe_full_rerender_live_preview(%{assigns: %{has_blocks?: true}} = socket, true) do
-    fetch_root_blocks(socket, :live_preview_full_rerender, 1200)
+    fetch_root_blocks(socket, :live_preview_full_rerender, 0)
   end
 
   defp maybe_full_rerender_live_preview(socket, false) do
@@ -3355,7 +3382,7 @@ defmodule BrandoAdmin.Components.Form do
         {:ok, cache_key} ->
           socket
           |> assign(:live_preview_active?, true)
-          |> assign(:live_preview_cache_key, cache_key)
+          |> put_live_preview_key(cache_key)
           |> assign_entry_fields_demanding_live_preview_rerender(schema)
           |> assign_entry_fields_demanding_live_preview_reassign(schema)
           |> push_event("b:live_preview", %{cache_key: cache_key})
@@ -3506,7 +3533,7 @@ defmodule BrandoAdmin.Components.Form do
       {:ok, cache_key} ->
         socket
         |> assign(:live_preview_active?, true)
-        |> assign(:live_preview_cache_key, cache_key)
+        |> put_live_preview_key(cache_key)
         |> clear_blocks_root_changesets()
         |> assign_entry_fields_demanding_live_preview_rerender(schema)
         |> assign_entry_fields_demanding_live_preview_reassign(schema)
@@ -5864,7 +5891,7 @@ defmodule BrandoAdmin.Components.Form do
       socket =
         socket
         |> assign(:live_preview_active?, true)
-        |> assign(:live_preview_cache_key, cache_key)
+        |> put_live_preview_key(cache_key)
         |> assign(:live_preview_schema_target, LivePreview.target_name(cache_key))
         |> assign_entry_fields_demanding_live_preview_rerender(schema)
         |> assign_entry_fields_demanding_live_preview_reassign(schema)
@@ -5908,7 +5935,7 @@ defmodule BrandoAdmin.Components.Form do
     |> assign(:live_preview_active?, false)
     |> assign(:live_preview_menu_open?, false)
     |> assign(:pending_live_preview_target, nil)
-    |> assign(:live_preview_cache_key, nil)
+    |> put_live_preview_key(nil)
     |> push_event("js-exec", %{to: "#sidebar", attr: "data-js-show"})
     |> then(&{:noreply, &1})
   end
@@ -6488,6 +6515,38 @@ defmodule BrandoAdmin.Components.Form do
   end
 
   defp maybe_finish_live_preview_recovery(socket), do: socket
+
+  # Listens for `LivePreview.report_lost_patches/1` while a preview is open,
+  # routed back here by `LiveView.Form.Hooks`.
+  defp put_live_preview_key(socket, key) do
+    previous = socket.assigns[:live_preview_cache_key]
+
+    if connected?(socket) and previous != key do
+      if previous, do: Phoenix.PubSub.unsubscribe(Brando.pubsub(), LivePreview.form_topic(previous))
+      if key, do: Phoenix.PubSub.subscribe(Brando.pubsub(), LivePreview.form_topic(key))
+    end
+
+    assign(socket, :live_preview_cache_key, key)
+  end
+
+  # Frontend edit mode renders as the page was rendered, so embedded fragments
+  # and datasource entries keep their own markers (`FrontendEditor.replace_fields/3`).
+  defp render_preview_root(root, entry, nil), do: Villain.render_block(root, entry, annotate_blocks: true)
+
+  defp render_preview_root(root, entry, _frontend_edit),
+    do: Brando.FrontendEdit.with_active(fn -> render_preview_root(root, entry, nil) end)
+
+  defp send_live_preview_block(%{rendered_html: rendered_html, uid: uid, has_children?: has_children?}, socket) do
+    payload = %{uid: uid, rendered_html: rendered_html, has_children: has_children?}
+
+    if socket.assigns.frontend_edit do
+      FrontendEditor.update_block(payload)
+    else
+      LivePreview.broadcast(socket.assigns.live_preview_cache_key, "update_block", payload)
+    end
+
+    {:ok, socket}
+  end
 
   defp maybe_fetch_root_blocks(%{assigns: %{live_preview_active?: true}} = socket, event, delay) do
     fetch_root_blocks(socket, event, delay)
@@ -8020,6 +8079,12 @@ defmodule BrandoAdmin.Components.Form do
             </div>
           </div>
           <div class="live-preview-iframe-wrapper">
+            <p
+              class="live-preview-notice"
+              role="status"
+              data-message={gettext("The preview was missing some changes, so it was refreshed.")}
+            >
+            </p>
             <iframe
               id="live-preview-frame"
               title={gettext("Live preview")}

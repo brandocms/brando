@@ -25,7 +25,19 @@ const previewSocket = new Phoenix.Socket('/admin/socket', {
 })
 previewSocket.connect()
 
-const channel = previewSocket.channel('live_preview:' + livePreviewKey)
+// The generation of the cached document this page shows: the one it was
+// served (`livePreviewVersion`, set by `Brando.Plug.LivePreview`), then the `v`
+// of each render it applies. Sent on every join, so the channel replays the cache only
+// when this page missed a render.
+let shownVersion = typeof livePreviewVersion === 'undefined' ? null : livePreviewVersion
+// Block patches applied on top of that generation (each patch's `p`). The cache
+// holds none of them, so the channel has the form render the page again when
+// this is behind.
+let shownPatches = 0
+const channel = previewSocket.channel('live_preview:' + livePreviewKey, () => ({
+  version: shownVersion,
+  patches: shownPatches,
+}))
 
 // State management
 let isFirstUpdate = true
@@ -67,8 +79,9 @@ function insertOverrideStyles() {
 /**
  * Handle individual block updates
  */
-channel.on('update_block', function ({ uid, rendered_html, has_children }) {
+channel.on('update_block', function ({ uid, rendered_html, has_children, p }) {
   insertOverrideStyles()
+  if (typeof p === 'number') shownPatches = p
 
   // If not found, rebuild the registry and try again
   if (!contentBlockRegistry.has(uid)) {
@@ -95,6 +108,8 @@ channel.on('update_block', function ({ uid, rendered_html, has_children }) {
  */
 channel.on('update', function (payload) {
   document.documentElement.classList.add('is-updated-live-preview')
+  shownVersion = payload.v
+  shownPatches = 0
 
   const doc = parser.parseFromString(payload.html, 'text/html')
   const main = document.querySelector('main')
@@ -108,9 +123,8 @@ channel.on('update', function (payload) {
     return
   }
 
-  // Both trees, before the morph — see `stampBlockKeys` in block_patch.js.
-  BlockPatch.stampBlockKeys(document)
-  BlockPatch.stampBlockKeys(doc)
+  // Both trees, before the morph — see `prepareMorph` in block_patch.js.
+  BlockPatch.prepareMorph(document, doc)
 
   morphdom(main, newMain, BlockPatch.MORPHDOM_CONFIG_CHILDREN_ONLY)
 
@@ -124,26 +138,38 @@ channel.on('update', function (payload) {
  * Handle full page re-renders (entire body)
  */
 channel.on('rerender', function (payload) {
+  shownVersion = payload.v
+  shownPatches = 0
   rerender(parser.parseFromString(payload.html, 'text/html'))
 })
 
 function rerender(doc) {
-  insertOverrideStyles()
-  document.documentElement.classList.add('is-updated-live-preview')
-
   const newBody = doc.querySelector('body')
 
-  BlockPatch.stampBlockKeys(document)
-  BlockPatch.stampBlockKeys(doc)
+  BlockPatch.prepareMorph(document, doc)
 
   morphdom(body, newBody, BlockPatch.MORPHDOM_CONFIG_FULL)
 
+  preparePage()
+  BlockPatch.announcePatch('rerender', [body])
+}
+
+/**
+ * Get the page ready for patching: media loaded and marked booted (a booted
+ * video container is never morphed, so a player the site mounted survives),
+ * animations shown, blocks keyed and registered.
+ *
+ * Runs once the channel is joined, and after every full rerender. The channel
+ * used to replay the page it had just served on every join, and that morph is
+ * what ran this on load.
+ */
+function preparePage() {
+  insertOverrideStyles()
+  document.documentElement.classList.add('is-updated-live-preview')
   BlockPatch.initializeMedia(document)
   BlockPatch.stampBlockKeys(document)
   rebuildContentBlockRegistry()
-
   body.classList.remove('unloaded')
-  BlockPatch.announcePatch('rerender', [body])
 }
 
 /**
@@ -189,6 +215,7 @@ channel
   .join()
   .receive('ok', () => {
     showConnectionStatus(true)
+    preparePage()
   })
   .receive('error', resp => {
     console.error('[LivePreview] Channel join error:', resp)

@@ -65,10 +65,10 @@ defmodule BrandoAdmin.ProcessingStatusSyncTest do
       on_exit(fn -> Brando.LivePreview.cleanup_cache(key) end)
       flush_preview_updates()
 
-      {:ok, _job} = Processing.queue_processing(image, c.me)
-
-      await(fn -> processed?(b, image) end)
-      assert_receive %Phoenix.Socket.Broadcast{event: "update"}, 2_000
+      assert_preview_renders(key, fn ->
+        {:ok, _job} = Processing.queue_processing(image, c.me)
+        await(fn -> processed?(b, image) end)
+      end)
     end
 
     test "a field in processing does not read its image on every render", c do
