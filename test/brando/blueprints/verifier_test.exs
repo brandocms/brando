@@ -1215,6 +1215,153 @@ defmodule Brando.Blueprint.VerifierTest do
     end
   end
 
+  describe "blocks placement" do
+    defp blocks_blueprint(form_body) do
+      quote do
+        trait :blocks
+
+        attributes do
+          attribute :title, :string
+        end
+
+        relations do
+          relation :entry_blocks, :has_many, module: :blocks
+          relation :items, :embeds_many, module: Brando.Blueprint.VerifierTest.MediaItem
+        end
+
+        forms do
+          form do
+            unquote(form_body)
+          end
+        end
+      end
+    end
+
+    test "compiles a block field declared directly under form" do
+      module =
+        compile_blueprint(
+          blocks_blueprint(
+            quote do
+              blocks :entry_blocks, module_set: "Articles"
+
+              tab "Content" do
+                fieldset do
+                  input :title, :text
+                end
+              end
+            end
+          )
+        )
+
+      assert [%Brando.Blueprint.Forms.Input{name: :entry_blocks, type: :blocks}] = module.__form__().blocks
+    end
+
+    for {container, body} <- [
+          {"a `fieldset`",
+           quote do
+             tab "Content" do
+               fieldset do
+                 input :title, :text
+                 blocks :entry_blocks
+               end
+             end
+           end},
+          {"a `tab`",
+           quote do
+             tab "Content" do
+               blocks :entry_blocks, module_set: "Articles"
+
+               fieldset do
+                 input :title, :text
+               end
+             end
+           end},
+          {"an `inputs_for`",
+           quote do
+             tab "Content" do
+               fieldset do
+                 inputs_for :items do
+                   cardinality :many
+                   blocks :entry_blocks
+                 end
+               end
+             end
+           end}
+        ] do
+      @body body
+      @container container
+      test "fails the build for a block field inside #{container}" do
+        error =
+          assert_raise Spark.Error.DslError, fn ->
+            compile_blueprint(blocks_blueprint(@body))
+          end
+
+        message = Exception.message(error)
+        assert message =~ "`blocks :entry_blocks` is declared inside #{@container}"
+        assert message =~ "Declare it directly under `form do`"
+        assert message =~ "renders as its own form"
+      end
+    end
+  end
+
+  describe "slug source" do
+    for key <- [:from, :for] do
+      @key key
+      test "fails the build for `#{key}:` on a slug input, naming `source:`" do
+        error =
+          assert_raise Spark.Error.DslError, fn ->
+            compile_blueprint(
+              quote do
+                attributes do
+                  attribute :title, :string
+                  attribute :slug, :slug
+                end
+
+                forms do
+                  form do
+                    tab "Content" do
+                      fieldset do
+                        input :slug, :slug, [{unquote(@key), :title}, label: "Slug"]
+                      end
+                    end
+                  end
+                end
+              end
+            )
+          end
+
+        message = Exception.message(error)
+        assert message =~ "slug input :slug has `#{@key}:`, which the slug input does not read"
+        assert message =~ "`input :slug, :slug, source: :title`"
+      end
+    end
+
+    test "reads source: as the slug's field" do
+      module =
+        compile_blueprint(
+          quote do
+            attributes do
+              attribute :title, :string
+              attribute :slug, :slug
+            end
+
+            forms do
+              form do
+                tab "Content" do
+                  fieldset do
+                    input :slug, :slug, source: :title
+                  end
+                end
+              end
+            end
+          end
+        )
+
+      assert :ok = Brando.Blueprint.Forms.Verifier.verify(module.spark_dsl_config())
+      assert [source: :title] = first_subform(module).opts
+    end
+  end
+
   describe "multi_select on a has_many relation" do
     defp multi_select_blueprint(options) do
       tagging = Tagging

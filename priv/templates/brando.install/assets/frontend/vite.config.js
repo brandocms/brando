@@ -30,6 +30,9 @@ export default defineConfig(({ command }) => ({
   server: {
     host,
     port,
+    // A taken port is an error, not a move to the next free one: Brando.HTML
+    // loads the site from this port, and another site's server may hold it.
+    strictPort: true,
     cors: 'localhost',
     hmr: {
       port,

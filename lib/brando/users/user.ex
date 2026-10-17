@@ -94,11 +94,11 @@ defmodule Brando.Users.User do
     relation :config, :embeds_one, module: Brando.Users.UserConfig
   end
 
+  # Never `password`: it holds the stored hash
   @derived_fields ~w(
     id
     name
     email
-    password
     language
     role
     avatar

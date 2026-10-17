@@ -54,6 +54,11 @@ on the entry. Multiple block fields per schema are supported — each gets its
 own relation, form declaration and rendered fields. Without `trait :blocks`
 a `blocks` declaration fails to compile.
 
+`blocks` goes directly under `form do`, never inside a `tab`, `fieldset` or
+`inputs_for`, where it fails to compile. The block editor renders as its own
+form after the entry form: nested in the entry form it would be a form inside
+a form, and every change to an entry field would resend all its blocks.
+
 Form options (passed via `blocks/2` opts):
 
 - `module_set:` — restrict the module picker to a named set (default `"all"`).

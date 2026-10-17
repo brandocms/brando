@@ -15,8 +15,7 @@ if Code.ensure_loaded?(Igniter) do
           {:error, "Template paths must be relative to the project: #{local}"}
 
         Igniter.exists?(igniter, local) ->
-          igniter = Igniter.include_existing_file(igniter, local, source_handler: Rewrite.Source)
-          template = igniter.rewrite |> Rewrite.source!(local) |> Rewrite.Source.get(:content)
+          {igniter, template} = read(igniter, local)
           {:ok, igniter, EEx.eval_string(template, binding, file: local)}
 
         override ->
@@ -28,6 +27,23 @@ if Code.ensure_loaded?(Igniter) do
       end
     rescue
       error -> {:error, "Could not render #{directory}/#{name}: #{Exception.message(error)}"}
+    end
+
+    @doc """
+    `{igniter, content}` of the project's template at `path`, read as text.
+
+    The template is not left in the rewrite: Igniter parses every `.ex`
+    source in it when writing, to place modules, and an EEx template named
+    `.ex` does not parse.
+    """
+    def read(igniter, path) do
+      included? = Rewrite.has_source?(igniter.rewrite, path)
+      igniter = Igniter.include_existing_file(igniter, path, source_handler: Rewrite.Source)
+      content = igniter.rewrite |> Rewrite.source!(path) |> Rewrite.Source.get(:content)
+
+      if included?,
+        do: {igniter, content},
+        else: {%{igniter | rewrite: Rewrite.delete(igniter.rewrite, path)}, content}
     end
   end
 else
