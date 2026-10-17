@@ -774,6 +774,24 @@ defmodule Brando.Translations do
     end
   end
 
+  # An `:entries` relation's join rows, pointed at the same entries' versions
+  # in `language`. The copy inserts them as rows of its own.
+  defp related_in_language(rows, language) when is_list(rows) do
+    ids = Enum.map(rows, & &1.identifier_id)
+    identifiers = from(i in Identifier, where: i.id in ^ids) |> Repo.all() |> Map.new(&{&1.id, &1})
+
+    rows
+    |> Enum.flat_map(fn row ->
+      case identifiers[row.identifier_id] && counterpart_id(identifiers[row.identifier_id], language) do
+        nil -> []
+        id -> [%{row | identifier_id: id, identifier: nil}]
+      end
+    end)
+    |> Enum.uniq_by(& &1.identifier_id)
+  end
+
+  defp related_in_language(rows, _language), do: rows
+
   defp counterpart_id(%Identifier{} = identifier, language) do
     case identifier_language(identifier) do
       nil -> identifier.id
@@ -1138,6 +1156,13 @@ defmodule Brando.Translations do
           opts[:cast] != true,
           do: {name, []}
 
+    # Links to other content point at their versions in this language; one
+    # with no version in it yet is left out. Later changes to the source's
+    # links are not synchronized.
+    related =
+      for %{type: :entries, name: name} <- Brando.Blueprint.Relations.__relations__(schema),
+          do: {name, fn _entry, rows -> related_in_language(rows, language) end}
+
     # A context's duplicate marks a copy ("Title (copy)"); a translation starts
     # from the source's own text instead. Slugs are handled above.
     slug_names = Enum.map(slug_fields, &elem(&1, 0))
@@ -1151,7 +1176,7 @@ defmodule Brando.Translations do
     override_opts = [
       change_fields:
         [{:language, String.to_existing_atom(language)} | slug_fields] ++
-          kept_text ++ separate ++ free_unique_values(schema),
+          kept_text ++ separate ++ related ++ free_unique_values(schema),
       merge_change_fields: true,
       keep_sync_uid: true
     ]

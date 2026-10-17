@@ -363,7 +363,7 @@ defmodule Brando.Query.Mutations do
   defp load_for_copy(rows), do: rows
 
   defp copy_row(%module{} = row, related_key, keep_sync_uid?) do
-    copy = row |> Map.merge(%{:id => nil, related_key => nil}) |> update_meta()
+    copy = row |> Map.merge(%{:id => nil, related_key => nil}) |> clear_timestamps() |> update_meta()
 
     if Brando.Blueprint.blueprint?(module) do
       copy
@@ -528,6 +528,13 @@ defmodule Brando.Query.Mutations do
   end
 
   defp maybe_put_creator(entry, _user), do: entry
+
+  # Ecto stamps only the timestamps an insert leaves nil.
+  defp clear_timestamps(row) do
+    Enum.reduce([:inserted_at, :updated_at], row, fn key, acc ->
+      if Map.has_key?(acc, key), do: Map.put(acc, key, nil), else: acc
+    end)
+  end
 
   defp update_meta(struct) do
     put_in(struct, [Access.key(:__meta__), Access.key(:state)], :built)

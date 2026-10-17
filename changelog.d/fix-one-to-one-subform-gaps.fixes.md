@@ -30,4 +30,6 @@
 
 - **A duplicate or translation keeps the entry's related entries**. The
   links of an `:entries` relation (`related_entries`) were dropped from the
-  copy. The copy now links the same entries, with link rows of its own.
+  copy. A duplicate now links the same entries, with link rows of its own. A
+  translation links their versions in its language, and leaves out an entry
+  that has none yet.

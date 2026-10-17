@@ -609,6 +609,8 @@ defmodule Brando.TranslationsTest do
         assert copied.rendered_blocks == "<p>Lobby</p>"
         assert [%{block: copied_block}] = copied.entry_blocks
         assert copied_block.id != block.id
+        # A translation's blocks keep their sync identity, a duplicate's don't
+        assert copied_block.sync_uid == if(entry.id == translation.id, do: block.uid)
         assert [%{data: %{data: %{text: "Lobby"}}}] = copied_block.refs
         assert [%{identifier_id: ^identifier_id} = copied_entry] = copied.related_entries
         assert copied_entry.id != hd(original.related_entries).id
@@ -623,7 +625,15 @@ defmodule Brando.TranslationsTest do
         )
 
       identifier = Repo.get_by!(Brando.Content.Identifier, schema: Article, entry_id: other.id)
-      Repo.insert!(%Article.RelatedEntriesIdentifier{parent_id: c.source.id, identifier_id: identifier.id, sequence: 0})
+      inserted_at = ~N[2020-01-01 00:00:00]
+
+      Repo.insert!(%Article.RelatedEntriesIdentifier{
+        parent_id: c.source.id,
+        identifier_id: identifier.id,
+        sequence: 0,
+        inserted_at: inserted_at,
+        updated_at: inserted_at
+      })
 
       {:ok, copy} = SyncTest.duplicate_article(c.source.id, c.user, change_fields: [slug: "copy"])
 
@@ -631,6 +641,38 @@ defmodule Brando.TranslationsTest do
       assert [copied] = load(copy.id).related_entries
       assert copied.id != original.id
       assert {original.identifier_id, copied.identifier_id} == {identifier.id, identifier.id}
+      # The copy's link is a new row, from now
+      assert copied.inserted_at != inserted_at
+    end
+
+    test "a translation links the related entries' versions in its language", c do
+      create = fn title, slug ->
+        {:ok, article} =
+          SyncTest.create_article(%{title: title, slug: slug, language: "no", status: "published"}, c.user)
+
+        article
+      end
+
+      identifier_of = fn article -> Repo.get_by!(Brando.Content.Identifier, schema: Article, entry_id: article.id) end
+
+      translated = create.("Example Hotel", "example-hotel")
+      untranslated = create.("Example Hotel Annex", "example-hotel-annex")
+      {:ok, translated_en} = Translations.create_target(Article, translated.id, :en, c.user)
+
+      for {article, sequence} <- [{translated, 0}, {untranslated, 1}] do
+        Repo.insert!(%Article.RelatedEntriesIdentifier{
+          parent_id: c.source.id,
+          identifier_id: identifier_of.(article).id,
+          sequence: sequence
+        })
+      end
+
+      {:ok, en} = Translations.create_target(Article, c.source.id, :en, c.user)
+
+      # One with no English version yet is left out
+      assert [%{identifier_id: identifier_id}] = load(en.id).related_entries
+      assert identifier_id == identifier_of.(translated_en).id
+      assert length(load(c.source.id).related_entries) == 2
     end
 
     test "a translation whose URI the language already uses gets a free one", c do
