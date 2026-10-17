@@ -203,11 +203,10 @@ defmodule BrandoAdmin.Components.Form.DrawerRecoveryTest do
     assert socket.assigns.edit_image.path == [:items, 1]
   end
 
-  # A one-to-one subform being replaced (set to nil) is not in the form.
-  test "a drawer on a one-to-one subform being replaced stays closed", %{image: image} do
+  # A one-to-one subform that was cleared is not in the form.
+  test "a drawer on a cleared one-to-one subform stays closed", %{image: image} do
     author = %Brando.SyncTest.ArticleAuthor{id: 1, name: "Example Author"}
     article = Changeset.change(%Brando.SyncTest.Article{author: author})
-    article = %{article | changes: %{author: %{Changeset.change(author) | action: :replace}}}
 
     params =
       drawer_params(image, "{}")
@@ -215,11 +214,15 @@ defmodule BrandoAdmin.Components.Form.DrawerRecoveryTest do
       |> put_in(["drawer", "field"], "portrait")
       |> put_in(["drawer", "schema"], to_string(Brando.SyncTest.ArticleAuthor))
 
-    assert {:noreply, socket} = Form.handle_event("recover_drawer_state", params, socket(article))
-    refute socket.assigns.editing_image?
+    # Clearing it stores nil; a replaced changeset is matched as well.
+    for changes <- [%{author: nil}, %{author: %{Changeset.change(author) | action: :replace}}] do
+      cleared = %{article | changes: changes}
+      assert {:noreply, socket} = Form.handle_event("recover_drawer_state", params, socket(cleared))
+      refute socket.assigns.editing_image?, "restored for #{inspect(changes)}"
+    end
 
     # The same subform, kept, restores.
-    kept = %{article | changes: %{}}
+    kept = article
     assert {:noreply, socket} = Form.handle_event("recover_drawer_state", params, socket(kept))
     assert socket.assigns.editing_image?
   end
