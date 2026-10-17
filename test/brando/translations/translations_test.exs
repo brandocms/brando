@@ -520,6 +520,23 @@ defmodule Brando.TranslationsTest do
       assert {copied.uid, copied.label} == {original.uid, original.label}
     end
 
+    test "a one-to-one subform row is copied, not moved", c do
+      image = Factory.insert(:image, creator_id: c.user.id)
+      Repo.insert!(%SyncTest.ArticleAuthor{article_id: c.source.id, name: "Example Author", portrait_id: image.id})
+
+      {:ok, copy} = SyncTest.duplicate_article(c.source.id, c.user, change_fields: [slug: "copy"])
+      {:ok, translation} = Translations.create_target(Article, c.source.id, :en, c.user)
+
+      original = load(c.source.id).author
+      assert {original.name, original.portrait_id} == {"Example Author", image.id}
+
+      for entry <- [copy, translation] do
+        copied = load(entry.id).author
+        assert copied.id != original.id
+        assert {copied.name, copied.portrait_id} == {"Example Author", image.id}
+      end
+    end
+
     test "a translation whose URI the language already uses gets a free one", c do
       alias Brando.Pages.Page
 

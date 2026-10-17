@@ -270,7 +270,7 @@ defmodule Brando.Query.Mutations do
         |> maybe_duplicate_blocks(module, has_blocks?, Map.get(merged_opts, :keep_sync_uid, false))
         |> maybe_merge_fields(merged_opts)
         |> maybe_put_creator(user)
-        |> detach_has_many(module)
+        |> detach_children(module)
         |> drop_fields()
         |> update_meta()
 
@@ -302,21 +302,26 @@ defmodule Brando.Query.Mutations do
     end)
   end
 
-  # A loaded `has_many` row that still has its id would be re-pointed at the
-  # copy on insert — the original entry loses it. Rows the entry owns (subform
-  # relations with `cast: true`) are copied, keeping everything but their id and
-  # foreign key, so a row `uid` still pairs it with the original. Rows it merely
-  # links to, like alternates, are dropped. Rows a `change_fields` handler has
-  # already built (nil id) are left alone.
-  defp detach_has_many(entry, module) do
+  # A loaded `has_many` or `has_one` row that still has its id would be
+  # re-pointed at the copy on insert — the original entry loses it. Rows the
+  # entry owns (subform relations with `cast: true`) are copied, keeping
+  # everything but their id and foreign key, so a row `uid` still pairs it with
+  # the original. Rows it merely links to, like alternates, are dropped. Rows a
+  # `change_fields` handler has already built (nil id) are left alone. A
+  # `belongs_to` keeps its foreign key on the copy and stays shared.
+  defp detach_children(entry, module) do
     owned =
-      for %{type: :has_many, name: name, opts: %{cast: true}} <- Brando.Blueprint.Relations.__relations__(module),
+      for %{type: type, name: name, opts: %{cast: true}} <- Brando.Blueprint.Relations.__relations__(module),
+          type in [:has_many, :has_one],
           do: name
 
     Enum.reduce(module.__schema__(:associations), entry, fn name, acc ->
       case {module.__schema__(:association, name), Map.get(acc, name)} do
         {%Ecto.Association.Has{cardinality: :many, related_key: related_key}, rows} when is_list(rows) ->
           Map.put(acc, name, detach_rows(rows, related_key, name in owned))
+
+        {%Ecto.Association.Has{cardinality: :one, related_key: related_key}, %{__meta__: _} = row} ->
+          Map.put(acc, name, row |> List.wrap() |> detach_rows(related_key, name in owned) |> List.first())
 
         {%Ecto.Association.HasThrough{cardinality: :many}, rows} when is_list(rows) ->
           Map.put(acc, name, [])
