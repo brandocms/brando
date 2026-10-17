@@ -1905,6 +1905,42 @@ defmodule BrandoAdmin.Components.Form do
   # asset in `data` the field kept showing the previous asset until some later
   # validate happened to re-render it.
   defp put_asset_in_data(changeset, [], field, asset), do: %{changeset | data: Map.put(changeset.data, field, asset)}
+
+  # A subform row is found by the form's index, which counts the rows the
+  # form shows (`SubformHelpers.current_entries/2`), as `inputs_for` does.
+  # The row goes in its pending changeset and in `data` (by id): a row with
+  # no changes is only in `data`, and `put_assoc` drops an unchanged one.
+  defp put_asset_in_data(changeset, [key, index | rest], field, asset) when is_atom(key) and is_integer(index) do
+    case changeset |> SubformHelpers.current_entries(key) |> List.wrap() |> Enum.at(index) do
+      nil ->
+        changeset
+
+      row ->
+        put = &put_asset_in_data(Changeset.change(&1), rest, field, asset)
+        id = row |> Changeset.change() |> Changeset.get_field(:id)
+
+        changes =
+          case changeset.changes do
+            %{^key => rows} when is_list(rows) ->
+              %{changeset.changes | key => Enum.map(rows, &if(&1 == row, do: put.(&1), else: &1))}
+
+            changes ->
+              changes
+          end
+
+        data =
+          case Map.get(changeset.data, key) do
+            rows when is_list(rows) and not is_nil(id) ->
+              Map.put(changeset.data, key, Enum.map(rows, &if(&1.id == id, do: put.(&1).data, else: &1)))
+
+            _ ->
+              changeset.data
+          end
+
+        %{changeset | changes: changes, data: data}
+    end
+  end
+
   defp put_asset_in_data(changeset, _nested_path, _field, _asset), do: changeset
 
   # Append a delivered asset to the gallery assoc: existing objects are

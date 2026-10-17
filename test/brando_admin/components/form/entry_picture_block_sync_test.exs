@@ -143,6 +143,68 @@ defmodule BrandoAdmin.Components.Form.EntryPictureBlockSyncTest do
     assert form.assigns.form.source.data.meta_image.title == %{"en" => "Example Hotel lobby"}
   end
 
+  # Each drawer's save puts the saved asset in the changeset, at the top level
+  # and in a subform row (a page variable's image, file or video): the render
+  # it queues may come before the browser's `validate`.
+  describe "a drawer's save puts the saved asset in the changeset" do
+    setup %{user: user} do
+      image = Factory.insert(:image, creator: user, focal: %Brando.Images.Focal{x: 50, y: 50}, status: :processed)
+      file = Repo.insert!(%Brando.Files.File{filename: "rates.pdf", filesize: 1, config_target: "default"})
+      video = Factory.insert(:video, creator: user)
+      {:ok, saved_image: image, saved_file: file, saved_video: video}
+    end
+
+    defp drawer_socket(page, user, kind, path, field, asset) do
+      edit = Map.put(%{path: path, field: field, relation_field: :"#{field}_id"}, kind, asset)
+
+      page
+      |> form_socket(user, nil)
+      |> Component.assign(sync_assigns())
+      |> Component.assign(:"edit_#{kind}", edit)
+      |> Component.assign(:"#{kind}_changeset", nil)
+    end
+
+    defp in_row(page, field, asset) do
+      var = %Brando.Content.Var{id: 1, key: "hero", type: field, label: "Hero"}
+      %{page | vars: [Map.merge(var, %{field => asset, :"#{field}_id" => asset.id})]}
+    end
+
+    defp saved(form, []), do: form.assigns.form.source.data
+    defp saved(form, [:vars, 0]), do: form.assigns.form.source |> Changeset.apply_changes() |> Map.get(:vars) |> hd()
+
+    defp with_image(page, [], image), do: {%{page | meta_image: image}, :meta_image}
+    defp with_image(page, _row, image), do: {in_row(page, :image, image), :image}
+
+    for path <- [[], [:vars, 0]] do
+      test "for an image at #{inspect(path)}", %{page: page, user: user, saved_image: image} do
+        path = unquote(path)
+        {page, field} = with_image(page, path, image)
+        socket = drawer_socket(page, user, :image, path, field, image)
+
+        params = %{"image" => %{"title" => %{"en" => "Example Hotel lobby"}}}
+        {:noreply, form} = Form.handle_event("save_image", params, socket)
+
+        assert Map.get(saved(form, path), field).title == %{"en" => "Example Hotel lobby"}
+      end
+    end
+
+    test "for a file", %{page: page, user: user, saved_file: file} do
+      socket = drawer_socket(in_row(page, :file, file), user, :file, [:vars, 0], :file, file)
+
+      {:noreply, form} = Form.handle_event("save_file", %{"file" => %{"title" => "Example Hotel rates"}}, socket)
+
+      assert saved(form, [:vars, 0]).file.title == "Example Hotel rates"
+    end
+
+    test "for a video", %{page: page, user: user, saved_video: video} do
+      socket = drawer_socket(in_row(page, :video, video), user, :video, [:vars, 0], :video, video)
+
+      {:noreply, form} = Form.handle_event("save_video", %{"video" => %{"title" => "Example Hotel tour"}}, socket)
+
+      assert saved(form, [:vars, 0]).video.title == "Example Hotel tour"
+    end
+  end
+
   # The next `validate` casts onto the entry, so a remote image has to be on
   # it too, or the form and the preview go back to the old one.
   test "another editor's pick goes on the entry this editor's next change casts onto", ctx do
