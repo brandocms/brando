@@ -102,9 +102,10 @@ if Code.ensure_loaded?(Igniter) do
     stay), `vite.config.js` is replaced, files the template retired and
     yarn/npm lockfiles are removed, and the Dockerfile's `assets_backend`
     stage becomes the template's pnpm stage, with an older or missing
-    `# syntax=` directive moved to the template's. The legacy EuropaCSS build's
-    `postcss.config.cjs` and `europa.config.cjs` are removed when they are an
-    earlier template's, unchanged. CSS and every other existing file are kept,
+    `# syntax=` directive moved to the template's; an older `twined/fehn` image
+    in its `deps` stage is named in a notice, not changed. The legacy
+    EuropaCSS build's `postcss.config.cjs` and `europa.config.cjs` are removed
+    when they are an earlier template's, unchanged. CSS and every other existing file are kept,
     with a notice for legacy at-rules they use; missing template files,
     `europa.json5` among them, are created.
     """
@@ -421,6 +422,7 @@ if Code.ensure_loaded?(Igniter) do
           end
 
         {igniter, contents} = upgrade_frontend_image(igniter, contents, stage_image(template, "assets_backend"))
+        igniter = notice_build_image(igniter, stage_image(contents, "deps"), stage_image(template, "deps"))
         if contents == current, do: igniter, else: replace_file(igniter, "Dockerfile", contents)
       else
         igniter
@@ -480,6 +482,40 @@ if Code.ensure_loaded?(Igniter) do
         "The Dockerfile now builds with # syntax=#{@dockerfile_syntax} (it #{was}): the assets_backend stage's optional .yalc COPY needs it."
       )
     end
+
+    # The deps stage's fehn image decides the Elixir the release compiles on and
+    # the Ubuntu release, so the glibc and OpenSSL, it runs on. The right image
+    # depends on the server's Ubuntu, so this only reports an older tag.
+    defp notice_build_image(igniter, current, wanted) do
+      with {:ok, have} <- fehn_version(current),
+           {:ok, want} <- fehn_version(wanted),
+           true <- have < want do
+        Igniter.add_notice(igniter, """
+        The Dockerfile's deps stage builds on #{current}, older than the #{wanted} of Brando's Dockerfile, and this task does not change FROM lines. \
+        An image with Elixir older than 1.18 cannot compile Brando: change the line to the variant for the server's Ubuntu release, \
+        #{wanted} (or #{wanted}-noble) for Ubuntu 24.04 or #{wanted}-jammy for Ubuntu 22.04.#{server_notice(have, want, current)} \
+        See "The Docker build" in Brando's guides/deployment.md.
+        """)
+      else
+        _ -> igniter
+      end
+    end
+
+    defp server_notice({have_major, _}, {want_major, _} = want, current) when have_major < want_major do
+      " #{current} is Ubuntu 20.04 or older, and no fehn #{elem(want, 0)}.#{elem(want, 1)} variant runs on such a server: " <>
+        "upgrade it to Ubuntu 22.04 or 24.04, or provision a new one, before deploying a release built on the new image."
+    end
+
+    defp server_notice(_have, _want, _current), do: ""
+
+    defp fehn_version(image) when is_binary(image) do
+      case Regex.run(~r{^(?:docker\.io/)?twined/fehn:(\d+)\.(\d+)(?:-[a-z]+)?$}, image) do
+        [_, major, minor] -> {:ok, {String.to_integer(major), String.to_integer(minor)}}
+        nil -> :error
+      end
+    end
+
+    defp fehn_version(_image), do: :error
 
     @movable_node ~r/^node:(\d+(?:\.\d+)*)(-(?:alpine|slim|bookworm|bullseye|bookworm-slim|bullseye-slim))?$/
 

@@ -518,8 +518,37 @@ Brando's Dockerfile builds on `twined/fehn:4.2`: Elixir 1.20.4 on OTP
 28.5.0.8, on Ubuntu 24.04, the versions Brando's CI tests with and a new
 install's `.tool-versions` pins. Brando requires Elixir 1.18 or newer, so a
 Dockerfile from an earlier install that builds on an older tag (`4.0` has
-Elixir 1.17) cannot compile it: change its `FROM … twined/fehn:<tag>` line to
-`4.2`.
+Elixir 1.17, the `3.x` tags older ones) cannot compile it: change its
+`FROM … twined/fehn:<tag>` line to the 4.2 variant for the server's Ubuntu
+release (below). `mix brando.gen.backend --upgrade` rewrites other parts of
+the Dockerfile but not `FROM`; it names an older tag in a notice.
+
+The release runs on the server outside Docker, with the ERTS and NIFs such as
+`:crypto` built in the image, so the image's Ubuntu release decides which
+servers it starts on: a server with an older glibc, or without the OpenSSL 3
+the `:crypto` NIF links (`libcrypto.so.3`), cannot start it, which shows as
+`GLIBC_2.3x not found` or a `:crypto` that fails to load. Pick the fehn 4.2
+variant that matches the server's Ubuntu release:
+
+| Server       | `FROM` image                                      | glibc, OpenSSL |
+| ------------ | ------------------------------------------------- | -------------- |
+| Ubuntu 24.04 | `twined/fehn:4.2` (the same image as `4.2-noble`) | 2.39, 3.0      |
+| Ubuntu 22.04 | `twined/fehn:4.2-jammy`                           | 2.35, 3.0.2    |
+| Ubuntu 20.04 | none: upgrade the server to 22.04 or 24.04 first  | 2.31, 1.1      |
+
+Check the server before its first deploy from a new image:
+
+```bash
+lsb_release -a    # the Ubuntu release
+ldd --version     # glibc: no older than the image's
+openssl version   # OpenSSL 3.x
+```
+
+The fehn 4.0 and 4.1 images are Ubuntu 24.04, so a site moving from them to
+`4.2` needs nothing new on a server that already runs their releases. The
+fehn 3.x images are Ubuntu 20.04, and no 4.2 variant is: a site moving from
+3.x on an Ubuntu 20.04 server upgrades it to 22.04 or 24.04, or provisions a
+new server, before deploying a release built on 4.2.
 
 Florist sends the build context, the project directory, to the Docker daemon
 on every build, and that daemon may be remote. The `.dockerignore` keeps out

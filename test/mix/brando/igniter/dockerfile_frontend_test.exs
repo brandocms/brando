@@ -99,6 +99,49 @@ defmodule Mix.Brando.Igniter.DockerfileFrontendTest do
     end
   end
 
+  describe "the deps stage's fehn image" do
+    defp deps_from(plan),
+      do: plan |> IgniterCase.source("Dockerfile") |> String.split("\n") |> Enum.find(&(&1 =~ " as deps"))
+
+    defp fehn_notice(plan), do: Enum.find(plan.notices, &(&1 =~ "deps stage builds on"))
+
+    defp upgrade_from(tag) do
+      upgrade(%{
+        "Dockerfile" => String.replace(@dockerfile, "twined/fehn:3.9", "twined/fehn:#{tag}"),
+        "assets/frontend/package.json" => package(%{})
+      })
+    end
+
+    test "names a fehn 3.x tag, with the server it needs, and keeps it" do
+      plan = upgrade_from("3.9")
+
+      assert deps_from(plan) == "FROM --platform=linux/amd64 twined/fehn:3.9 as deps"
+      notice = fehn_notice(plan)
+      assert notice =~ "builds on twined/fehn:3.9, older than the twined/fehn:4.2"
+      assert notice =~ "twined/fehn:4.2 (or twined/fehn:4.2-noble) for Ubuntu 24.04"
+      assert notice =~ "twined/fehn:4.2-jammy for Ubuntu 22.04"
+      assert notice =~ "no fehn 4.2 variant runs on such a server: upgrade it to Ubuntu 22.04 or 24.04"
+      assert notice =~ "guides/deployment.md"
+    end
+
+    test "names an older fehn 4.x tag without a server change" do
+      plan = upgrade_from("4.0")
+
+      assert deps_from(plan) == "FROM --platform=linux/amd64 twined/fehn:4.0 as deps"
+      assert fehn_notice(plan) =~ "builds on twined/fehn:4.0"
+      refute fehn_notice(plan) =~ "upgrade it to Ubuntu"
+    end
+
+    test "says nothing for the template's tag, a newer one or another image" do
+      for tag <- ["4.2", "4.2-noble", "4.2-jammy", "4.10"] do
+        refute fehn_notice(upgrade_from(tag)), tag
+      end
+
+      dockerfile = String.replace(@dockerfile, "twined/fehn:3.9", "hexpm/elixir:1.20.4-erlang-28.5.0.8-ubuntu-noble")
+      refute fehn_notice(upgrade(%{"Dockerfile" => dockerfile, "assets/frontend/package.json" => package(%{})}))
+    end
+  end
+
   test "is idempotent" do
     plan = upgrade(%{"assets/frontend/package.json" => package(%{})})
     rerun = plan |> IgniterCase.apply_and_reload() |> Igniter.compose_task(Mix.Tasks.Brando.Gen.Backend, ["--upgrade"])
