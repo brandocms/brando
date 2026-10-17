@@ -477,9 +477,10 @@ input :client_id, :select,
 * `inline`: the options inline instead of in a dialog;
 * `allow_custom: true`: also accepts a value typed by the editor;
 * `update_relation: {relation, fetcher}`: for a `belongs_to` foreign key,
-  the fetcher receives the chosen ID and returns `{:ok, entry}`, which is put
-  on the relation so the form shows it without a reload. The relation must
-  declare `module:`. It works on top-level inputs only.
+  the fetcher receives the chosen ID and returns `{:ok, entry}` or the entry
+  (a `get_x!` query), which is put on the relation so the form and the live
+  preview show it without a reload, also when another editor picks it. The
+  relation must declare `module:`. It works on top-level inputs only.
 
 ### Multi-select
 
