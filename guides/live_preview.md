@@ -109,26 +109,63 @@ provide explicit labels/descriptions for useful editor-facing choices.
 - `mutate_data fn entry -> ... end` runs after assign callbacks and before block
   rendering. It changes preview data only; it cannot prepare input for an
   earlier callback or persist changes.
-- `rerender_on_change [[:field]]` requests a full-page render when changes affect
-  markup outside individual block regions: an ordinary update replaces only
-  `<main>`, a full render the `<body>`; `<html lang>` and `<head>` change when
-  the preview reloads. An assign the layout reads, such as navigation in the
-  entry's language, needs its field in both lists. Both lists apply to every
-  change to the field: typed, an accepted AI suggestion, or another editor's.
-  A path covers what lies below it, so `[:items]` names a subform: its rows
-  added, removed or reordered, and the fields inside them. A path below a field,
-  such as `[:seo, :title]`, also fires when the whole field changes, as it does
-  when another editor changes it. An image, video or file field, `[:cover]`,
-  fires when it is picked, uploaded or removed, here or by another editor. A
-  select that sets a relation with `update_relation` fires the relation,
-  `[:category]`; for a select without it, declare its key, `[:category_id]`.
-  `template_section` and
-  `template_css_classes` accept a string or an entry callback for layout context.
+- `rerender_on_change [[:field]]` renders the whole `<body>` again when the
+  field changes; see [Fields the layout shows](#fields-the-layout-shows).
+- `template_section` and `template_css_classes` accept a string or an entry
+  callback for layout context.
 
 Templates receive `@LIVE_PREVIEW` and a preview connection. Reuse production
 markup where possible. Collection callbacks receive preloaded, unsaved data
 before block HTML is rendered; cards should use their normal metadata rather
 than assuming freshly rendered block HTML is already present in the callback.
+
+## Fields the layout shows
+
+Every change to the entry updates the preview without any declaration: the
+template renders again and the preview patches `<main>` in place. A field the
+template shows, an image included, needs nothing in the target.
+
+The layout around `<main>` renders again only on a full render. When the
+layout shows an entry field, declare it with `rerender_on_change`, so a change
+to it renders the `<body>` again:
+
+```elixir
+preview_target MyApp.Articles.Article do
+  layout {MyAppWeb.Layouts, "app"}
+  template {MyAppWeb.ArticleHTML, "show"}
+  template_prop :article
+
+  # The layout's header shows the article's cover as a hero image.
+  rerender_on_change [[:cover]]
+end
+```
+
+`<html lang>` and `<head>`, the page title and meta tags included, change only
+when the preview reloads, so a field shown there needs no declaration either.
+
+An assign is cached, so a field its callback reads goes in
+`reassign_on_change`, wherever the assign is shown. When the layout shows the
+assign, such as navigation in the entry's language, the field goes in both
+lists:
+
+```elixir
+reassign_on_change [{:navigation, [:language]}]
+rerender_on_change [[:language]]
+```
+
+A path names an entry field and covers everything below it:
+
+- `[:items]`: a subform, with its rows added, removed or reordered and the
+  fields inside them.
+- `[:seo, :title]`: one field inside `:seo`. It also fires when all of `:seo`
+  changes at once, as when another editor changes it.
+- `[:cover]`: an image, video or file field, when one is picked, uploaded,
+  edited in its drawer or removed.
+- `[:category]`: a select that sets a relation with `update_relation`. For a
+  select without it, declare its key, `[:category_id]`.
+
+Both lists apply to every change to the field: typed, an accepted AI
+suggestion, or another editor's.
 
 ## Elements the site's script takes over
 
