@@ -691,7 +691,9 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
   @doc """
   The record an `update_relation: {relation, fetcher}` select puts on the
   relation for `value`. A fetcher returns `{:ok, record}` or the record
-  itself (a `get_x!` query); anything else is no record.
+  itself (a `get_x!` query); anything else is no record. A `get_x!` query
+  raises for a record deleted since or one the editor may not read, and
+  that is no record too.
   """
   def fetch_relation(nil, _fetcher_fn), do: nil
 
@@ -701,6 +703,8 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
       %_{} = fetched_relation -> fetched_relation
       _ -> nil
     end
+  rescue
+    Ecto.NoResultsError -> nil
   end
 
   defp selected_origin(%{assigns: %{origin_field: nil}}, _params, _value), do: nil

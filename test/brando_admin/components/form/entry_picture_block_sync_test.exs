@@ -317,6 +317,25 @@ defmodule BrandoAdmin.Components.Form.EntryPictureBlockSyncTest do
     assert form.assigns.updated_entry_assocs.parent.title == "Example Hotel, as fetched"
   end
 
+  test "another editor's pick of a relation its fetcher cannot find leaves the relation empty", ctx do
+    %{page: page, user: user} = ctx
+    fetcher = &Brando.Pages.get_page!/1
+    input = %BlueprintForms.Input{name: :parent_id, type: :select, opts: [update_relation: {:parent, fetcher}]}
+    blueprint = %BlueprintForms.Form{tabs: [%BlueprintForms.Tab{fields: [%BlueprintForms.Fieldset{fields: [input]}]}]}
+
+    socket =
+      page
+      |> form_socket(user, nil)
+      |> Component.assign(sync_assigns())
+      |> Component.assign(form_blueprint: blueprint, updated_entry_assocs: %{parent: page})
+
+    changes = [%{field: :parent_id, value: page.id + 1_000_000, assoc?: false, clock: {1, "remote"}}]
+
+    {:ok, form} = Form.update(%{event: "apply_remote_field_changes", changes: changes}, socket)
+
+    assert form.assigns.updated_entry_assocs.parent == nil
+  end
+
   defp sync_assigns do
     [
       tiptap_epoch: "mounted-form",

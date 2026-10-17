@@ -18,6 +18,12 @@ defmodule BrandoAdmin.Components.Form.Input.SelectUpdateRelationTest do
     assert Select.fetch_relation(nil, fn _ -> record end) == nil
   end
 
+  # A `get_x!` fetcher raises for a record deleted since, or one the
+  # editor may not read; the relation is then empty, not the form gone.
+  test "a fetcher that finds no record gives no record" do
+    assert Select.fetch_relation("1", fn _ -> raise Ecto.NoResultsError, queryable: Brando.Pages.Page end) == nil
+  end
+
   test "a container's palette select puts the palette on the relation" do
     palette = Factory.insert(:palette)
 
