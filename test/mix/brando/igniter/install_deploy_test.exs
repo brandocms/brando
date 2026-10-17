@@ -169,21 +169,23 @@ defmodule Mix.Brando.Igniter.InstallDeployTest do
     File.write!(Path.join(dir, ".gitignore"), gitignore)
     {_, 0} = System.cmd("git", ["init", "--quiet", dir])
 
-    # Each file the templates put in a public/ folder, the logo phx.new's moves
-    # to, and a file the site adds to its images.
+    # Each file the templates put in a public/ folder, and the logo phx.new's
+    # moves to.
     copies =
       for {format, _source, target} <- Templates.manifest(),
           [_, rest] <- [Regex.run(~r{^assets/(?:backend|frontend)/public/(.+)$}, target)],
           do: if(format == :keep, do: Path.join(rest, ".keep"), else: rest)
 
-    built = Enum.map(copies ++ ~w(images/logo.svg images/site/photo.jpg), &Path.join("priv/static", &1))
+    built = Enum.map(copies ++ ~w(images/logo.svg), &Path.join("priv/static", &1))
     assert "priv/static/favicon.ico" in built
     assert "priv/static/ico/favicon.ico" in built
 
     for path <- built, do: assert({_, 0} = check_ignore(dir, [path]), path)
 
-    # The application's own sources stay tracked.
-    for path <- ~w(assets/frontend/public/favicon.ico assets/frontend/public/images/logo.svg priv/repo/seeds.exs) do
+    # The application's own sources stay tracked, and so does an image it keeps
+    # in priv/static.
+    for path <-
+          ~w(assets/frontend/public/favicon.ico assets/frontend/public/images/logo.svg priv/repo/seeds.exs priv/static/images/photo.jpg) do
       assert {_, 1} = check_ignore(dir, [path]), path
     end
   end
@@ -358,10 +360,18 @@ defmodule Mix.Brando.Igniter.InstallDeployTest do
     assert changed.rms == []
     assert changed.moves == %{}
     Igniter.Test.assert_unchanged(changed, ["priv/static/favicon.ico", "priv/static/images/logo.svg"])
-    assert notice?(changed, "priv/static/favicon.ico is not the file mix phx.new writes")
-    assert notice?(changed, "move it to assets/frontend/public/favicon.ico")
-    assert notice?(changed, "priv/static/images/logo.svg is not the file mix phx.new writes")
-    assert notice?(changed, "move it to assets/frontend/public/images/logo.svg")
+    # Each named as ignored by the .gitignore lines for what the builds write.
+    for {path, public} <- [
+          {"priv/static/favicon.ico", "assets/frontend/public/favicon.ico"},
+          {"priv/static/images/logo.svg", "assets/frontend/public/images/logo.svg"}
+        ] do
+      assert Enum.any?(
+               changed.notices,
+               &(&1 =~ "#{path} is not the file mix phx.new writes" and &1 =~ "Git ignores it unless it is committed" and
+                   &1 =~ "To ship and track it, move it to #{public}")
+             ),
+             path
+    end
 
     # What the frontend build copies from assets/frontend/public: Brando's favicon and the site's logo.
     built =

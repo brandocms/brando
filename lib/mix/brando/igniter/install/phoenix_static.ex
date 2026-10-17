@@ -94,7 +94,8 @@ if Code.ensure_loaded?(Igniter) do
             true ->
               Igniter.add_notice(igniter, """
               #{@favicon} is not the file mix phx.new writes, so it was kept. The release does not have it:
-              the Docker build makes priv/static from the Vite builds. To ship it, move it to #{@public_favicon},
+              the Docker build makes priv/static from the Vite builds. Git ignores it unless it is committed
+              already, as the Vite builds write it. To ship and track it, move it to #{@public_favicon},
               which the frontend build copies to priv/static.
               """)
           end
@@ -122,11 +123,12 @@ if Code.ensure_loaded?(Igniter) do
       move =
         if public,
           do: "Compare it with #{@public_logo}, which the frontend build copies over it, and delete it.",
-          else: "To ship it, move it to #{@public_logo}, which the frontend build copies to priv/static."
+          else: "To ship and track it, move it to #{@public_logo}, which the frontend build copies to priv/static."
 
       Igniter.add_notice(igniter, """
       #{@logo} is not the file mix phx.new writes, so it was kept. The release does not have it:
-      the Docker build makes priv/static from the Vite builds. #{move}
+      the Docker build makes priv/static from the Vite builds. Git ignores it unless it is committed
+      already, as the frontend build writes it. #{move}
       """)
     end
 
