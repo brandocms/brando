@@ -614,7 +614,9 @@ shows.
 for a complete entry: belongs-to, has-one and collection relations, assets
 with their gallery objects, alternates, identifiers, and block fields with
 `trait :blocks` (pass `skip_blocks: true` to leave them out). A cast
-`has_many` honours its `preload_order`. The admin form
+`has_many`, `has_one` or `belongs_to` (a subform) also brings the related
+entry's own assets and relations, and a cast `has_many` honours its
+`preload_order`. The admin form
 uses this list when it has no [custom query](blueprint_forms.md#loading-the-entry).
 
 <!-- usage-rules:start -->
