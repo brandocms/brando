@@ -1,5 +1,11 @@
-# Compiled with the test support files, before protocol consolidation, for
-# its traits; brando.gen_test generates public pages for it.
+# brando.gen_test and resource_render_test generate public pages for it. Not
+# in test/support's compiled files: those are in every Blueprint list, and
+# app-wide scans (SEO audit, alt text) would query its missing table. Defined
+# after protocol consolidation, its traits' protocol implementations have no
+# effect, which keeps it out of trait listings too.
+ignore_consolidated = Code.get_compiler_option(:ignore_already_consolidated)
+Code.put_compiler_option(:ignore_already_consolidated, true)
+
 defmodule GeneratorStudio.Catalog.Article do
   use Brando.Blueprint,
     application: "GeneratorStudio",
@@ -35,3 +41,5 @@ defmodule GeneratorStudio.Catalog.Article do
     field "og:image", &fallback([&1.meta_image, &1.cover])
   end
 end
+
+Code.put_compiler_option(:ignore_already_consolidated, ignore_consolidated)

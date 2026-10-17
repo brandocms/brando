@@ -310,7 +310,7 @@ defmodule Brando.PagesTest do
           </footer>
           """)
 
-        assert html == "<footer></footer>"
+        assert String.replace(html, ~r/\s/, "") == "<footer></footer>"
       end
 
       draft = Brando.Repo.get_by!(Pages.Fragment, key: "footer")

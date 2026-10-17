@@ -1,3 +1,5 @@
+Code.require_file("../../../support/generator_article.exs", __DIR__)
+
 defmodule GeneratorStudio.Catalog.Product do
   use Brando.Blueprint,
     application: "GeneratorStudio",
