@@ -31,7 +31,14 @@ defmodule Mix.Tasks.Brando.Gen.BlueprintTest do
     assert source =~ ~r/input\(?:slug, :slug, source: :title/
     assert source =~ ~r/default_params\(?%\{"status" => "draft"\}/
 
-    ExUnit.CaptureIO.capture_io(:stderr, fn -> Code.compile_string(source) end)
+    warnings = ExUnit.CaptureIO.capture_io(:stderr, fn -> Code.compile_string(source) end)
+
+    # The verifiers report a bad Blueprint as compile warnings. Protocols are
+    # consolidated in the test build, so the trait implementations warn.
+    assert warnings
+           |> String.split(~r/^warning: /m)
+           |> Enum.reject(&(String.trim(&1) == "" or &1 =~ "protocol has already been consolidated")) == []
+
     module = Module.concat([Studio, Catalog, schema])
 
     assert %{default_params: %{"status" => "draft"}, tabs: [%{fields: [%{fields: inputs}]}]} = module.__form__()
