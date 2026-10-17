@@ -4232,11 +4232,14 @@ defmodule BrandoAdmin.Components.Form do
   attr :schema, :string
   attr :changes, :string
 
-  # The open drawer, for `recover_drawer_state`. It renders after the main
-  # form on purpose: LiveView sends recovery events in document order, and
-  # the drawer is only restored for a struct the form holds at its path, so
-  # the main form has to have recovered its rows first.
-  @doc false
+  @doc """
+  The hidden form that names the open image, video or file drawer, so that
+  `recover_drawer_state` can reopen it after a reconnect.
+
+  Render it after the main form: LiveView sends recovery events in document
+  order, and a drawer is only restored for a struct the form holds at its
+  path, so the main form has to recover its rows first.
+  """
   def drawer_recovery_form(assigns) do
     ~H"""
     <form
