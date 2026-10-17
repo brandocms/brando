@@ -791,22 +791,23 @@ defmodule Brando.Translations do
 
     rows
     |> Enum.flat_map(fn row ->
-      case identifiers[row.identifier_id] && counterpart_id(identifiers[row.identifier_id], language) do
-        nil ->
-          cond do
-            MapSet.member?(kept, row.identifier_id) -> [%{row | identifier: nil}]
-            dropped -> count_dropped(dropped)
-            true -> []
-          end
-
-        id ->
-          [%{row | identifier_id: id, identifier: nil}]
-      end
+      identifier = identifiers[row.identifier_id]
+      relate_row(row, identifier && counterpart_id(identifier, language), kept, dropped)
     end)
     |> Enum.uniq_by(& &1.identifier_id)
   end
 
   defp related_in_language(rows, _language, _kept, _dropped), do: rows
+
+  defp relate_row(row, nil, kept, dropped) do
+    cond do
+      MapSet.member?(kept, row.identifier_id) -> [%{row | identifier: nil}]
+      dropped -> count_dropped(dropped)
+      true -> []
+    end
+  end
+
+  defp relate_row(row, identifier_id, _kept, _dropped), do: [%{row | identifier_id: identifier_id, identifier: nil}]
 
   defp count_dropped(dropped) do
     :counters.add(dropped, 1, 1)

@@ -331,7 +331,7 @@ defmodule Brando.Query.Mutations do
     Enum.reduce(module.__schema__(:associations), entry, fn name, acc ->
       case {module.__schema__(:association, name), Map.get(acc, name)} do
         {%Ecto.Association.Has{cardinality: :many, related_key: related_key}, rows} when is_list(rows) ->
-          rows = if name in entries, do: map_entries(rows, name, opts), else: rows
+          rows = map_entries(rows, name, entries, opts)
           Map.put(acc, name, detach_rows(rows, related_key, name in owned, opts))
 
         {%Ecto.Association.Has{cardinality: :one, related_key: related_key}, %{__meta__: _} = row} ->
@@ -356,11 +356,11 @@ defmodule Brando.Query.Mutations do
     for %{type: :entries, name: name} <- Brando.Blueprint.Relations.__relations__(module), do: name
   end
 
-  defp map_entries(rows, name, %{map_entries: fun, changed: changed}) when is_function(fun, 1) do
-    if name in changed, do: rows, else: fun.(rows)
+  defp map_entries(rows, name, entries, %{map_entries: fun, changed: changed}) when is_function(fun, 1) do
+    if name in entries and name not in changed, do: fun.(rows), else: rows
   end
 
-  defp map_entries(rows, _name, _opts), do: rows
+  defp map_entries(rows, _name, _entries, _opts), do: rows
 
   defp detach_rows(rows, related_key, owned?, opts) do
     rows = if owned?, do: load_for_copy(rows), else: rows
@@ -455,13 +455,11 @@ defmodule Brando.Query.Mutations do
   end
 
   defp map_new_rows(entry, module, fun) do
-    Enum.reduce(owned_relations(module), entry, fn name, acc ->
-      case Map.get(acc, name) do
-        rows when is_list(rows) -> Map.put(acc, name, Enum.map(rows, &if(new_row?(&1), do: fun.(&1), else: &1)))
-        row -> if new_row?(row), do: Map.put(acc, name, fun.(row)), else: acc
-      end
-    end)
+    Enum.reduce(owned_relations(module), entry, fn name, acc -> Map.update!(acc, name, &map_new_row(&1, fun)) end)
   end
+
+  defp map_new_row(rows, fun) when is_list(rows), do: Enum.map(rows, &map_new_row(&1, fun))
+  defp map_new_row(row, fun), do: if(new_row?(row), do: fun.(row), else: row)
 
   defp new_row?(%module{id: nil, __meta__: _}), do: Brando.Blueprint.blueprint?(module)
   defp new_row?(_row), do: false
