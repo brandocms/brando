@@ -93,8 +93,16 @@ defmodule Brando.IgniterCase do
 
   def apply_and_reload(igniter) do
     igniter = Igniter.Test.apply_igniter!(igniter)
+    files = igniter.assigns.test_files
 
-    Enum.reduce(Map.keys(igniter.assigns.test_files), igniter, fn path, igniter ->
+    # Igniter.Test re-includes every file before it applies moves, so a moved
+    # file stays in the rewrite under its old path. Its glob skips dot
+    # directories in the checkout's absolute path, so this only shows where
+    # there are none, as in CI.
+    moved_away = for source <- Rewrite.sources(igniter.rewrite), not Map.has_key?(files, source.path), do: source.path
+    igniter = %{igniter | rewrite: Rewrite.drop(igniter.rewrite, moved_away)}
+
+    Enum.reduce(Map.keys(files), igniter, fn path, igniter ->
       options = if String.starts_with?(path, "priv/templates/"), do: [source_handler: Rewrite.Source], else: []
       Igniter.include_existing_file(igniter, path, options)
     end)
