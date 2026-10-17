@@ -254,6 +254,32 @@ defmodule Brando.LiveCase do
   end
 
   @doc """
+  Runs `fun` and waits until the live preview `key` has rendered again.
+
+  A render that changes nothing on the page (a field the template does not
+  show) is not sent to the iframe (`Brando.LivePreview`), so the render is
+  seen in the preview's cache instead: `fun` runs with a placeholder there,
+  which the render replaces.
+  """
+  def assert_preview_renders(key, fun, attempts \\ 40) do
+    stale = "<html><body><main>stale</main></body></html>"
+    Brando.LivePreview.store_cache(key, stale)
+    fun.()
+    await_preview_render(key, stale, attempts)
+  end
+
+  defp await_preview_render(key, stale, attempts) do
+    case Brando.LivePreview.get_cache(key) do
+      {:ok, ^stale} when attempts > 0 ->
+        Process.sleep(50)
+        await_preview_render(key, stale, attempts - 1)
+
+      {:ok, html} ->
+        refute html == stale, "the live preview did not render again"
+    end
+  end
+
+  @doc """
   Mounts an entry form and waits for it to finish rendering, returning
   `{view, html}`.
 

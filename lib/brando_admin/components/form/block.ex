@@ -2499,7 +2499,8 @@ defmodule BrandoAdmin.Components.Form.Block do
   Returns whether this block can patch its own HTML into the live preview.
 
   Slots and single-entry modules with children cannot render alone, so
-  they fall back to refreshing the whole preview.
+  the root they belong to is rendered and patched instead
+  (`maybe_update_live_preview_block/1`).
   """
   def render_live_preview_block?(%{assigns: %{live_preview_active?: true} = assigns}) do
     assigns[:belongs_to] != :slot && assigns[:type] != :slot &&
@@ -2509,15 +2510,15 @@ defmodule BrandoAdmin.Components.Form.Block do
   def render_live_preview_block?(_socket), do: false
 
   def maybe_update_live_preview_block(%{assigns: %{live_preview_active?: true, belongs_to: :slot}} = socket),
-    do: refresh_live_preview(socket)
+    do: preview_root(socket)
 
   def maybe_update_live_preview_block(%{assigns: %{live_preview_active?: true, type: :slot}} = socket),
-    do: refresh_live_preview(socket)
+    do: preview_root(socket)
 
   def maybe_update_live_preview_block(
         %{assigns: %{live_preview_active?: true, type: :module, multi: false, has_children?: true}} = socket
       ),
-      do: refresh_live_preview(socket)
+      do: preview_root(socket)
 
   def maybe_update_live_preview_block(%{assigns: %{live_preview_active?: true}} = socket) do
     %{
@@ -2543,6 +2544,19 @@ defmodule BrandoAdmin.Components.Form.Block do
   end
 
   def maybe_update_live_preview_block(socket), do: socket
+
+  # The block cannot render on its own, so the root it belongs to is patched
+  # instead (`BlockField` "preview_root"). The op this edit emitted reaches the
+  # field first: both are messages to the same process.
+  defp preview_root(socket) do
+    send_update(BlockField,
+      id: "#{socket.assigns.form_id}-blocks-#{socket.assigns.block_field}",
+      event: "preview_root",
+      uid: socket.assigns.uid
+    )
+
+    socket
+  end
 
   def get_fragment(nil), do: nil
 

@@ -77,7 +77,7 @@ defmodule BrandoAdmin.PreviewUpdatesTest do
       [key] = Regex.run(~r/__livepreview\?key=([A-Za-z0-9_-]+)/, iframe, capture: :all_but_first)
       Brando.endpoint().subscribe("live_preview:#{key}")
       on_exit(fn -> LivePreview.cleanup_cache(key) end)
-      %{view: view, html: html}
+      %{view: view, html: html, key: key}
     end
 
     defp change_field(view, html, target, value) do
@@ -98,11 +98,9 @@ defmodule BrandoAdmin.PreviewUpdatesTest do
       refute_receive %Phoenix.Socket.Broadcast{}, 200
     end
 
-    test "a target segment no atom exists for updates the preview without raising", %{view: view, html: html} do
+    test "a target segment no atom exists for updates the preview without raising", %{view: view, html: html, key: key} do
       segment = "unknown_#{System.unique_integer([:positive])}"
-      change_field(view, html, ["actions_article", segment], "x")
-
-      assert_receive %Phoenix.Socket.Broadcast{event: "update"}, 2_000
+      assert_preview_renders(key, fn -> change_field(view, html, ["actions_article", segment], "x") end)
       assert render(view) =~ "actions_article_form_form"
     end
   end
@@ -149,9 +147,32 @@ defmodule BrandoAdmin.PreviewUpdatesTest do
     on_exit(fn -> LivePreview.cleanup_cache(key) end)
     refute_receive %Phoenix.Socket.Broadcast{event: "update"}, 100
 
-    view |> element("#page_vars-add-entry") |> render_click()
-    settle(view)
+    assert_preview_renders(key, fn ->
+      view |> element("#page_vars-add-entry") |> render_click()
+      settle(view)
+    end)
+  end
 
-    assert_receive %Phoenix.Socket.Broadcast{event: "update"}, 2_000
+  # The cache holds no block patches, so when a preview page reports it is
+  # missing some (`LivePreviewChannel`) the form renders the whole page and
+  # says so in the drawer. A closed preview no longer listens.
+  test "a page missing block patches gets the whole page again, with a notice", %{conn: conn, page: page} do
+    {view, _html} = live_form(conn, "/admin/pages/update/#{page.id}")
+    key = open_preview(view)
+    on_exit(fn -> LivePreview.cleanup_cache(key) end)
+    assert render(view) =~ "The preview was missing some changes"
+    listeners = fn -> Registry.lookup(Brando.pubsub(), LivePreview.form_topic(key)) |> Enum.map(&elem(&1, 0)) end
+    assert listeners.() == [view.pid]
+
+    LivePreview.report_lost_patches(key)
+    assert_receive %Phoenix.Socket.Broadcast{event: "rerender", payload: %{html: html}}, 3_000
+    assert html =~ "<head"
+    assert_push_event(view, "b:live_preview_notice", %{})
+
+    view |> element(".live-preview-close") |> render_click()
+    assert listeners.() == []
+    LivePreview.report_lost_patches(key)
+    settle(view)
+    refute_receive %Phoenix.Socket.Broadcast{event: "rerender"}, 150
   end
 end

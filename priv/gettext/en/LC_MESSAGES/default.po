@@ -16928,6 +16928,11 @@ msgstr ""
 
 #: lib/brando_admin/components/form.ex
 #, elixir-autogen, elixir-format
+msgid "The preview was missing some changes, so it was refreshed."
+msgstr ""
+
+#: lib/brando_admin/components/form.ex
+#, elixir-autogen, elixir-format
 msgid "The previous preview is still open. Check the target configuration and your access, then try again."
 msgstr ""
 

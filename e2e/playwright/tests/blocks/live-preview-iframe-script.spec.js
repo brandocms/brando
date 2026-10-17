@@ -7,20 +7,23 @@ import path from 'path'
 // be fired directly. No server or fixtures involved.
 const JS = path.join(__dirname, '../../../../priv/static/js')
 
-const load = async (page, bodyHtml) => {
+const load = async (page, bodyHtml, version = 1) => {
   const errors = []
   page.on('pageerror', (error) => errors.push(error.message))
   await page.setContent(
     `<html><head><meta name="user_token" content="t"></head><body>${bodyHtml}</body></html>`
   )
-  await page.evaluate(() => {
+  await page.evaluate((version) => {
     window.livePreviewKey = 'test'
+    window.livePreviewVersion = version
     window.__lp = { handlers: {}, patched: [] }
-    const receipt = { receive: () => receipt }
+    // A join that succeeds, as the page's setup on join depends on it
+    const receipt = { receive: (status, callback) => (status === 'ok' && callback(), receipt) }
     window.Phoenix = {
       Socket: class {
         connect() {}
-        channel() {
+        channel(_topic, params) {
+          window.__lp.joinParams = params
           return {
             on: (event, fn) => (window.__lp.handlers[event] = fn),
             onError() {},
@@ -37,7 +40,7 @@ const load = async (page, bodyHtml) => {
         elements: detail.elements.map((el) => el.tagName),
       })
     })
-  })
+  }, version)
   await page.addScriptTag({ path: path.join(JS, 'morphdom-umd.min.js') })
   await page.addScriptTag({ path: path.join(JS, 'block_patch.js') })
   await page.addScriptTag({ path: path.join(JS, 'livepreview.js') })
@@ -141,6 +144,131 @@ test.describe('Live preview iframe script', () => {
     expect(await page.evaluate(() => document.getElementById('title') === window.__title)).toBe(true)
     expect(await page.evaluate(() => window.BrandoBlockPatch.findField('Page:1:blocks') !== null)).toBe(true)
     expect(await page.evaluate(() => window.BrandoBlockPatch.replaceField('Missing:1:blocks', '<p></p>'))).toBeNull()
+    expect(errors).toEqual([])
+  })
+  // The channel replays the cache on join only when this version is not what
+  // the page shows, so the page sends the one it was served, then the `v` of
+  // each render it applies. With it go the block patches applied on top (each
+  // patch's `p`), which the cache does not hold.
+  test('the channel joins with the version the page shows and its patches', async ({ page }) => {
+    const errors = await load(page, '<main><p>old</p></main>', 41)
+    const join = () => page.evaluate(() => window.__lp.joinParams())
+
+    expect(await join()).toEqual({ version: 41, patches: 0 })
+    await push(page, 'update', { html: '<main><p>new</p></main>', v: 42 })
+    expect(await join()).toEqual({ version: 42, patches: 0 })
+    await push(page, 'update_block', { uid: 'x', rendered_html: '<p>x</p>', has_children: false, p: 1 })
+    await push(page, 'update_block', { uid: 'x', rendered_html: '<p>y</p>', has_children: false, p: 2 })
+    expect(await join()).toEqual({ version: 42, patches: 2 })
+    await push(page, 'rerender', { html: '<html><body><main><p>again</p></main></body></html>', v: 43 })
+    expect(await join()).toEqual({ version: 43, patches: 0 })
+    await push(page, 'update_block', { uid: 'x', rendered_html: '<p>z</p>', has_children: false, p: 1 })
+    await push(page, 'update', { html: '<main><p>newer</p></main>', v: 44 })
+    expect(await join()).toEqual({ version: 44, patches: 0 })
+    expect(errors).toEqual([])
+  })
+
+  // The page's lazy images carry what `initializeMedia` set and the server's
+  // HTML does not, so they used to compare unequal on every update: morphdom
+  // stripped `srcset` and `data-ll-loaded` and `initializeMedia` put them back.
+  test('an update leaves an unchanged lazy image alone and still applies changes to one', async ({ page }) => {
+    const image = (alt) =>
+      `<!-- [+:B<a>] --><figure><img data-ll-srcset-image data-src="/a.jpg" data-srcset="/a.jpg 1x" alt="${alt}"></figure><!-- [-:B<a>] -->`
+    const errors = await load(page, `<main>${image('A')}<!-- [+:B<b>] --><p>old</p><!-- [-:B<b>] --></main>`)
+
+    await page.evaluate(() => {
+      window.BrandoBlockPatch.initializeMedia(document)
+      window.__mutations = []
+      new MutationObserver((records) => window.__mutations.push(...records.map((r) => r.attributeName))).observe(
+        document.querySelector('img'),
+        { attributes: true }
+      )
+    })
+
+    await push(page, 'update', { html: `<main>${image('A')}<!-- [+:B<b>] --><p>new</p><!-- [-:B<b>] --></main>`, v: 2 })
+    await expect(page.locator('main p')).toHaveText('new')
+    expect(await page.evaluate(() => window.__mutations)).toEqual([])
+    await expect(page.locator('img')).toHaveAttribute('srcset', '/a.jpg 1x')
+
+    await push(page, 'update', { html: `<main>${image('B')}<!-- [+:B<b>] --><p>new</p><!-- [-:B<b>] --></main>`, v: 3 })
+    await expect(page.locator('img')).toHaveAttribute('alt', 'B')
+    expect(await page.evaluate(() => window.__mutations)).toEqual(['alt'])
+
+    await push(page, 'update_block', {
+      uid: 'a',
+      rendered_html: '<figure><img data-ll-srcset-image data-src="/a.jpg" data-srcset="/a.jpg 1x" alt="B"><figcaption>C</figcaption></figure>',
+      has_children: false,
+    })
+    await expect(page.locator('figcaption')).toHaveText('C')
+    expect(await page.evaluate(() => window.__mutations)).toEqual(['alt'])
+    expect(errors).toEqual([])
+  })
+  // A root rendered whole for a block that cannot render on its own: the
+  // blocks inside it keep their elements and keep receiving their own patches.
+  test('a root patched whole keeps the blocks inside it patchable', async ({ page }) => {
+    const nested = (child, sibling) =>
+      `<section><!-- [+:B<child>] --><p class="child">${child}</p><!-- [-:B<child>] --><!-- [+:B<sibling>] --><p class="sibling">${sibling}</p><!-- [-:B<sibling>] --></section>`
+    const errors = await load(page, `<main><!-- [+:B<root>] -->${nested('one', 'two')}<!-- [-:B<root>] --></main>`)
+    await page.evaluate(() => (window.__sibling = document.querySelector('p.sibling')))
+
+    await push(page, 'update_block', { uid: 'root', rendered_html: nested('changed', 'two'), has_children: false })
+    await expect(page.locator('p.child')).toHaveText('changed')
+    expect(await page.evaluate(() => document.querySelector('p.sibling') === window.__sibling)).toBe(true)
+
+    await push(page, 'update_block', { uid: 'sibling', rendered_html: '<p class="sibling">patched</p>', has_children: false })
+    await expect(page.locator('p.sibling')).toHaveText('patched')
+    await expect(page.locator('p.child')).toHaveText('changed')
+
+    // A nested block whose element the root patch replaced (its tag changed)
+    // is patched where it now is
+    const replaced = `<section><!-- [+:B<child>] --><h2 class="child">heading</h2><!-- [-:B<child>] --><!-- [+:B<sibling>] --><p class="sibling">patched</p><!-- [-:B<sibling>] --></section>`
+    await push(page, 'update_block', { uid: 'root', rendered_html: replaced, has_children: false })
+    await push(page, 'update_block', { uid: 'child', rendered_html: '<h2 class="child">edited</h2>', has_children: false })
+    await expect(page.locator('h2.child')).toHaveText('edited')
+    await expect(page.locator('p.child')).toHaveCount(0)
+    expect(errors).toEqual([])
+  })
+  // Frontend edit mode patches blocks into a page nobody keyed
+  test('a root patched whole on an unkeyed page keeps the blocks inside it', async ({ page }) => {
+    const nested = (child) =>
+      `<section><!-- [+:B<child>] --><p class="child">${child}</p><!-- [-:B<child>] --><!-- [+:B<sibling>] --><p class="sibling">two</p><!-- [-:B<sibling>] --></section>`
+    const errors = await load(page, '<main></main>')
+    await page.evaluate((html) => {
+      document.querySelector('main').innerHTML = html
+      window.__sibling = document.querySelector('p.sibling')
+      window.__registry = window.BrandoBlockPatch.buildRegistry()
+    }, `<!-- [+:B<root>] -->${nested('one')}<!-- [-:B<root>] -->`)
+
+    await page.evaluate(
+      (html) => window.BrandoBlockPatch.patchBlock(window.__registry, { uid: 'root', rendered_html: html, has_children: false }),
+      nested('changed')
+    )
+
+    await expect(page.locator('p.child')).toHaveText('changed')
+    expect(await page.evaluate(() => document.querySelector('p.sibling') === window.__sibling)).toBe(true)
+    expect(errors).toEqual([])
+  })
+
+  test('a lazy image keeps what loaded it: its own loader, or the block it is', async ({ page }) => {
+    const errors = await load(
+      page,
+      '<main><!-- [+:B<a>] --><img class="own" src="/placeholder.gif" data-src="/real.jpg"><!-- [-:B<a>] --><!-- [+:B<b>] --><img class="lazy" data-ll-srcset-image data-src="/b.jpg" data-srcset="/b.jpg 1x"><!-- [-:B<b>] --></main>'
+    )
+    // The site's loader swapped the placeholder; the preview initialised the other
+    await page.evaluate(() => {
+      document.querySelector('img.own').src = '/real.jpg'
+      window.BrandoBlockPatch.initializeMedia(document.querySelector('img.lazy'))
+    })
+
+    await push(page, 'update_block', { uid: 'a', rendered_html: '<img class="own" src="/placeholder.gif" data-src="/real.jpg">', has_children: false })
+    await push(page, 'update_block', {
+      uid: 'b',
+      rendered_html: '<img class="lazy" data-ll-srcset-image data-src="/b.jpg" data-srcset="/b.jpg 1x">',
+      has_children: false,
+    })
+
+    await expect(page.locator('img.own')).toHaveAttribute('src', '/real.jpg')
+    await expect(page.locator('img.lazy')).toHaveAttribute('srcset', '/b.jpg 1x')
     expect(errors).toEqual([])
   })
 })

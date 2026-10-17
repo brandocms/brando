@@ -61,6 +61,9 @@ defmodule Brando.Plug.LivePreview do
   def call(conn, _), do: conn
 
   defp serve(conn, key) do
+    # Before the HTML: see `Brando.LivePreview.page_state/1`
+    generation = Brando.LivePreview.page_state(key).generation
+
     case Brando.LivePreview.get_cache(key) do
       {:ok, nil} ->
         conn
@@ -89,6 +92,7 @@ defmodule Brando.Plug.LivePreview do
           <meta name="user_token" content="#{socket_token}">
           <script>
           var livePreviewKey = '#{key}';
+          var livePreviewVersion = #{generation};
           #{@phoenix_js}
           #{@morphdom_js}
           #{@block_patch_js}
