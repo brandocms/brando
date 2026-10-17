@@ -180,6 +180,10 @@ defmodule BrandoAdmin.LiveView.Form.Hooks do
      )}
   end
 
+  def on_mount({:hooks_live_preview, _schema}, _params, _session, socket) do
+    {:cont, attach_hook(socket, :b_form_live_preview, :handle_info, &handle_hooks_live_preview_info/2)}
+  end
+
   def on_mount({:hooks_mutation_listener, _schema}, _params, _session, socket) do
     {:cont,
      attach_hook(
@@ -1438,6 +1442,19 @@ defmodule BrandoAdmin.LiveView.Form.Hooks do
   end
 
   defp handle_hooks_modules_info(_, socket), do: {:cont, socket}
+
+  # A preview page is missing block patches (`Brando.LivePreview.report_lost_patches/1`)
+  defp handle_hooks_live_preview_info({:live_preview_patches_lost, key}, socket) do
+    send_update(BrandoAdmin.Components.Form,
+      id: "#{socket.assigns.schema.__naming__().singular}_form",
+      event: "live_preview_patches_lost",
+      key: key
+    )
+
+    {:halt, socket}
+  end
+
+  defp handle_hooks_live_preview_info(_, socket), do: {:cont, socket}
 
   defp handle_hooks_mutation_listener_info({:register_mutation_listener, schema, target}, socket) do
     PubSub.subscribe(Brando.pubsub(), Topic.scoped("brando:mutations:#{inspect(schema)}"))

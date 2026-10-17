@@ -275,8 +275,23 @@ defmodule Brando.LivePreview do
 
   defp build_cache_key(_seed), do: "PREVIEW-" <> Base.url_encode64(:crypto.strong_rand_bytes(24), padding: false)
 
-  def store_cache(key, html),
-    do: Cachex.put(:cache, "__live_preview__" <> key, html, expire: :timer.hours(1))
+  # A render is made from the form's whole state, so the new cache holds every
+  # block patch sent before it, and gets a generation of its own
+  # (`page_state/1`). Identical HTML keeps the generation only when no patch
+  # was sent since: the same HTML after patches (an edit undone) differs from
+  # what an iframe holding those patches shows.
+  def store_cache(key, html) do
+    state = page_state(key)
+    {:ok, cached} = get_cache(key)
+    Cachex.put(:cache, "__live_preview__" <> key, html, expire: :timer.hours(1))
+
+    state =
+      if cached == html and state.patches == 0,
+        do: state,
+        else: %{generation: state.generation + 1, patches: 0}
+
+    put_page_state(key, state)
+  end
 
   def get_cache(key) when is_binary(key), do: Cachex.get(:cache, "__live_preview__" <> key)
   def get_cache(_), do: {:ok, nil}
@@ -292,6 +307,8 @@ defmodule Brando.LivePreview do
       Cachex.del(:cache, "__live_preview__" <> cache_key)
       Brando.Authorization.Preview.cleanup(cache_key)
       Cachex.del(:cache, "#{cache_key}__TARGET__")
+      forget_sent(cache_key)
+      Cachex.del(:cache, page_state_key(cache_key))
       invalidate_assigns(cache_key)
     end)
   end
@@ -309,7 +326,7 @@ defmodule Brando.LivePreview do
           wrapper_html = render(schema_module, entry_struct, cache_key, target: target_config.name)
           store_target(cache_key, target_config.name)
           store_cache(cache_key, wrapper_html)
-          broadcast(cache_key, "update", update_payload(wrapper_html))
+          send_render(cache_key, "update", wrapper_html)
           {:ok, cache_key}
 
         _ ->
@@ -373,30 +390,78 @@ defmodule Brando.LivePreview do
 
   @decorate span("brando.preview.update", schema: :schema, preview_event: :event)
   defp render_update(schema, changeset, cache_key, updated_entry_assocs, event) do
-    with :ok <- Brando.Authorization.Preview.authorize_write(cache_key, changeset),
-         :ok <- Brando.Authorization.Preview.register(cache_key, changeset) do
+    with :ok <- Brando.Authorization.Preview.authorize_update(cache_key, changeset) do
       entry_struct = prepare_entry_struct(changeset, updated_entry_assocs)
       target = get_target_config(Module.concat([schema]), target_name(cache_key))
       wrapper_html = render(Module.concat([schema]), entry_struct, cache_key, target: target.name)
       store_target(cache_key, target.name)
       store_cache(cache_key, wrapper_html)
-      if event, do: broadcast(cache_key, event, payload(event, wrapper_html))
+      send_render(cache_key, event, wrapper_html)
       cache_key
     end
   end
 
-  defp payload("reload", _html), do: %{}
-  defp payload("update", html), do: update_payload(html)
-  defp payload(_event, html), do: %{html: html}
+  # Sends a render the caller has just authorized (`authorize_update/2` or
+  # `register/2`), which is the check `broadcast/3` would repeat.
+  #
+  # A render the iframe already shows is not sent: an entry field the template
+  # does not display (meta, slug, publish date) renders the same page. What the
+  # iframe shows is recorded per send: "update" replaces only `<main>`, so after
+  # one only `<main>` is known. A block patch or a cache refresh nobody was sent
+  # (`update_cache/4`) forgets it, and the next render goes out. A reload always
+  # goes out: it is what mounts newly selected media.
+  defp send_render(cache_key, nil, _html), do: forget_sent(cache_key)
+
+  defp send_render(cache_key, event, html) do
+    main = main_part(html)
+    version = version(html)
+    shown = shown(cache_key)
+
+    unchanged? =
+      case event do
+        "update" -> shown.main == version(main)
+        "rerender" -> shown.document == version
+        "reload" -> false
+      end
+
+    unless unchanged? do
+      Cachex.put(:cache, "#{cache_key}__SENT__", sent_after(event, main, version), expire: :timer.hours(1))
+      payload = payload(event, html, main, page_state(cache_key).generation)
+      Brando.endpoint().broadcast("live_preview:#{cache_key}", event, payload)
+    end
+
+    :ok
+  end
+
+  defp sent_after("update", main, _version), do: %{main: version(main), document: nil}
+  defp sent_after(_event, main, version), do: %{main: version(main), document: version}
+
+  defp shown(cache_key) do
+    case Cachex.get(:cache, "#{cache_key}__SENT__") do
+      {:ok, %{} = shown} -> shown
+      _ -> %{main: nil, document: nil}
+    end
+  end
+
+  defp forget_sent(cache_key), do: Cachex.del(:cache, "#{cache_key}__SENT__")
+
+  @doc "Identifies rendered HTML, to tell whether a render changes what was sent."
+  def version(html), do: :erlang.phash2(html, 4_294_967_296)
+
+  # `v` is the generation of the cached document (`page_state/1`), which the
+  # iframe sends again when it rejoins (`livepreview.js`).
+  defp payload("reload", _html, _main, _generation), do: %{}
+  defp payload("update", _html, main, generation), do: %{html: main, v: generation}
+  defp payload(_event, html, _main, generation), do: %{html: html, v: generation}
 
   # The iframe morphs only `<main>` on "update" (`livepreview.js`), so the
   # head, navigation and footer were sent for nothing on every entry-field
   # keystroke. The cache keeps the whole document for reloads and rejoins.
-  defp update_payload(html) do
+  defp main_part(html) do
     # Greedy, so it runs from the first `<main` to the last `</main>`.
     case Regex.run(~r/<main[\s>].*<\/main>/s, html, return: :index) do
-      [{start, len}] -> %{html: binary_part(html, start, len)}
-      nil -> %{html: html}
+      [{start, len}] -> binary_part(html, start, len)
+      nil -> html
     end
   end
 
@@ -407,19 +472,16 @@ defmodule Brando.LivePreview do
     do: do_switch_target(schema, changeset, cache_key, target_name, updated_entry_assocs)
 
   defp do_switch_target(schema, changeset, cache_key, target_name, updated_entry_assocs) do
-    with :ok <- Brando.Authorization.Preview.authorize_write(cache_key, changeset) do
+    with :ok <- Brando.Authorization.Preview.authorize_update(cache_key, changeset) do
       schema_module = Module.concat([schema])
       target = get_target_config(schema_module, target_name)
       entry = prepare_entry_struct(changeset, updated_entry_assocs)
       invalidate_assigns(cache_key)
       html = render(schema_module, entry, cache_key, target: target.name)
-
-      with :ok <- Brando.Authorization.Preview.register(cache_key, changeset) do
-        store_target(cache_key, target.name)
-        store_cache(cache_key, html)
-        broadcast(cache_key, "reload", %{})
-        {:ok, cache_key}
-      end
+      store_target(cache_key, target.name)
+      store_cache(cache_key, html)
+      send_render(cache_key, "reload", html)
+      {:ok, cache_key}
     end
   rescue
     err ->
@@ -452,9 +514,53 @@ defmodule Brando.LivePreview do
   @doc false
   def broadcast(cache_key, event, payload) do
     with :ok <- Brando.Authorization.Preview.authorize_broadcast(cache_key) do
+      payload = if event == "update_block", do: count_patch(cache_key, payload), else: payload
       Brando.endpoint().broadcast("live_preview:#{cache_key}", event, payload)
     end
   end
+
+  # The page now differs from every render sent (`send_render/3`), and from the
+  # cache by one more patch. `p` is that count, which the iframe sends again
+  # when it rejoins (`livepreview.js`).
+  defp count_patch(cache_key, payload) do
+    forget_sent(cache_key)
+    state = page_state(cache_key)
+    put_page_state(cache_key, %{state | patches: state.patches + 1})
+    Map.put(payload, :p, state.patches + 1)
+  end
+
+  @doc """
+  What an iframe that received everything shows: the cache's `generation`,
+  new with each cached document that differs from the one before, and the
+  block `patches` sent over it since. Patches are not in the cache, so a page
+  that rejoins without them cannot get them from it; see
+  `report_lost_patches/1`.
+
+  Read it before `get_cache/1`: the cache is written first, so the HTML read
+  after is at least as new, and a page given an older generation than its
+  HTML only gets the cache again when it joins.
+  """
+  def page_state(cache_key) do
+    case Cachex.get(:cache, page_state_key(cache_key)) do
+      {:ok, %{} = state} -> state
+      _ -> %{generation: 0, patches: 0}
+    end
+  end
+
+  defp put_page_state(cache_key, state),
+    do: Cachex.put(:cache, page_state_key(cache_key), state, expire: :timer.hours(1))
+
+  defp page_state_key(cache_key), do: "#{cache_key}__PAGE__"
+
+  @doc """
+  Tells the form that owns the preview that a page is missing block patches,
+  so it renders the whole page again. The form subscribes to
+  `form_topic/1` while its preview is open.
+  """
+  def report_lost_patches(cache_key),
+    do: Phoenix.PubSub.broadcast(Brando.pubsub(), form_topic(cache_key), {:live_preview_patches_lost, cache_key})
+
+  def form_topic(cache_key), do: "live_preview_form:" <> cache_key
 
   @doc """
   Renders the entry against a pinned frontend asset set, stores the HTML, and

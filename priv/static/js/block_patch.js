@@ -34,6 +34,18 @@ window.BrandoBlockPatch = (function () {
   }
 
   /**
+   * `target` itself when it matches, then its matching descendants: a block's
+   * top-level element can be the lazy image.
+   * @param {Node} target
+   * @param {string} selector
+   * @returns {Element[]}
+   */
+  function withSelf(target, selector) {
+    const found = Array.from(target.querySelectorAll(selector))
+    return target.nodeType === NODE_TYPES.ELEMENT && target.matches(selector) ? [target, ...found] : found
+  }
+
+  /**
    * Force lazy-loaded images to load immediately
    * @param {Node} target - The DOM node to search within (defaults to document)
    */
@@ -44,8 +56,7 @@ window.BrandoBlockPatch = (function () {
     }
 
     // Load images with data-ll-image or data-ll-srcset-image attributes
-    target
-      .querySelectorAll('[data-ll-image]:not([data-ll-loaded]), [data-ll-srcset-image]:not([data-ll-loaded])')
+    withSelf(target, '[data-ll-image]:not([data-ll-loaded]), [data-ll-srcset-image]:not([data-ll-loaded])')
       .forEach(lazyImage => {
         if (lazyImage.dataset.src) {
           lazyImage.src = lazyImage.dataset.src
@@ -57,8 +68,7 @@ window.BrandoBlockPatch = (function () {
       })
 
     // Initialize srcset elements
-    target
-      .querySelectorAll('[data-ll-srcset]:not([data-data-ll-srcset-initialized])')
+    withSelf(target, '[data-ll-srcset]:not([data-data-ll-srcset-initialized])')
       .forEach(lazySrcSet => {
         lazySrcSet.dataset.llSrcsetInitialized = ''
       })
@@ -76,7 +86,7 @@ window.BrandoBlockPatch = (function () {
     }
 
     // Initialize video elements that haven't been booted
-    target.querySelectorAll('[data-smart-video] video:not([data-booted])').forEach(videoElement => {
+    withSelf(target, '[data-smart-video] video:not([data-booted])').forEach(videoElement => {
       // Only set src if data-src exists and src is not already set
       if (videoElement.dataset.src && !videoElement.src) {
         videoElement.src = videoElement.dataset.src
@@ -85,7 +95,7 @@ window.BrandoBlockPatch = (function () {
     })
 
     // Initialize smart video containers
-    target.querySelectorAll('[data-smart-video]:not([data-revealed])').forEach(videoContainer => {
+    withSelf(target, '[data-smart-video]:not([data-revealed])').forEach(videoContainer => {
       videoContainer.dataset.revealed = ''
       videoContainer.dataset.booted = ''
       videoContainer.dataset.playing = ''
@@ -237,17 +247,10 @@ window.BrandoBlockPatch = (function () {
           return false
         }
 
-        // Handle lazy-loaded images
+        // Whatever has a `data-src` shows it, as a site's own lazy loader left
+        // it in the page. A lazy image `initializeMedia` covers already has it
+        // (`prepareMorph`), so an unchanged one compared equal above.
         if (fromEl.dataset.src && toEl.dataset.src) {
-          // Compare image URLs without query parameters
-          const fromSrc = fromEl.dataset.src.split('?')[0]
-          const toSrc = toEl.dataset.src.split('?')[0]
-
-          if (fromSrc === toSrc && toEl.dataset.llLoaded) {
-            return false
-          }
-
-          // Update src if data-src has changed
           toEl.src = toEl.dataset.src
         }
 
@@ -255,6 +258,26 @@ window.BrandoBlockPatch = (function () {
       },
       childrenOnly: childrenOnly,
     }
+  }
+
+  /**
+   * Make the page and new HTML comparable before morphing one into the other.
+   *
+   * Stamps block keys in both (see `stampBlockKeys`), and initialises the new
+   * HTML's lazy media the way the page's already is. The page's images carry
+   * the `src`, `srcset` and `data-ll-loaded` that `initializeMedia` set and the
+   * server's HTML never has, so every block with an image compared unequal:
+   * morphdom walked into all of them, stripped those attributes, and
+   * `initializeMedia` put them back. Initialised alike, an unchanged block is
+   * equal and skipped whole. Media in a parsed document does not load.
+   *
+   * @param {Node} page - The page, or the part of it being morphed
+   * @param {Node} incoming - The parsed new HTML
+   */
+  function prepareMorph(page, incoming) {
+    stampBlockKeys(page)
+    stampBlockKeys(incoming)
+    initializeMedia(incoming)
   }
 
   // Pre-built morphdom configs to avoid creating new objects on every call
@@ -417,6 +440,22 @@ window.BrandoBlockPatch = (function () {
     // splice — which is how a multi-module's children vanished from the preview.
     const newBlocks = parseFragment(rendered_html)
 
+    // Keyed and initialised like the page (`stampBlockKeys`, `prepareMorph`):
+    // unkeyed, a block's own nested blocks could not pair with themselves in
+    // the page, so morphdom replaced them, players included.
+    newBlocks.forEach((newBlock, idx) => {
+      newBlock.setAttribute('data-lp-key', `${uid}:${idx}`)
+      stampBlockKeys(newBlock)
+      initializeMedia(newBlock)
+    })
+
+    // The page's elements keyed alike: frontend edit mode never keys the page
+    // as a whole, and a keyed node never pairs with an unkeyed one.
+    block.elements.forEach(({ element }, idx) => {
+      element.setAttribute('data-lp-key', `${uid}:${idx}`)
+      stampBlockKeys(element)
+    })
+
     // Update children map if needed
     if (has_children) {
       block.elements = mapNestedContent(block.elements)
@@ -484,6 +523,12 @@ window.BrandoBlockPatch = (function () {
       block.elements = newEls
     }
 
+    // Blocks nested in this one (a root rendered whole) were morphed or
+    // replaced along with it: point the registry at what is on the page now.
+    block.elements.forEach(({ element }) => {
+      buildRegistry(element).forEach((nested, nestedUid) => registry.set(nestedUid, nested))
+    })
+
     return block.elements.map(el => el.element)
   }
 
@@ -530,28 +575,32 @@ window.BrandoBlockPatch = (function () {
     }
 
     const parent = field.start.parentNode
-    const next = parent.cloneNode(false)
+    // Built in a document of its own, where media `prepareMorph` initialises
+    // does not load: a copy in the page's document would fetch it.
+    const inert = document.implementation.createHTMLDocument('')
+    const next = inert.importNode(parent, false)
     let node = parent.firstChild
     let inField = false
 
     while (node) {
       if (node === field.start) {
-        next.appendChild(node.cloneNode(false))
+        next.appendChild(inert.importNode(node, false))
+        // Parsed by the page's document, which has scripting on like the page:
+        // in one without, `<noscript>` content parses as elements.
         const template = document.createElement('template')
         template.innerHTML = html
-        next.appendChild(template.content)
+        next.appendChild(inert.adoptNode(template.content))
         inField = true
       } else if (node === field.end) {
-        next.appendChild(node.cloneNode(false))
+        next.appendChild(inert.importNode(node, false))
         inField = false
       } else if (!inField) {
-        next.appendChild(node.cloneNode(true))
+        next.appendChild(inert.importNode(node, true))
       }
       node = node.nextSibling
     }
 
-    stampBlockKeys(parent)
-    stampBlockKeys(next)
+    prepareMorph(parent, next)
     morphdom(parent, next, MORPHDOM_CONFIG_CHILDREN_ONLY)
     initializeMedia(parent)
     return parent
@@ -564,6 +613,7 @@ window.BrandoBlockPatch = (function () {
     initializeLazyVideos,
     initializeMedia,
     stampBlockKeys,
+    prepareMorph,
     isPreserved,
     getMorphdomConfig,
     MORPHDOM_CONFIG_CHILDREN_ONLY,

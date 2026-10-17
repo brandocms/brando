@@ -11,7 +11,10 @@ export default app => ({
     this.$iframeWrapper = this.el.querySelector('.live-preview-iframe-wrapper')
     this.$iframe = this.el.querySelector('iframe')
     this.$divider = this.el.querySelector('.live-preview-divider')
+    this.$notice = this.el.querySelector('.live-preview-notice')
+    this.$notice.textContent = ''
     this.handleEvent('b:live_preview', () => { if (!this.active) this.toggle() })
+    this.handleEvent('b:live_preview_notice', () => this.showNotice())
     this.windowResizeListener = () => this.windowResize()
     this.pointerDown = event => this.startResize(event)
     this.pointerMove = event => {
@@ -60,6 +63,18 @@ export default app => ({
       window.removeEventListener(Events.APPLICATION_RESIZE, this.windowResizeListener)
       this.setPreviewWidth(0, 0.3)
     }
+  },
+
+  // A status line over the top of the preview (`.live-preview-notice`), with
+  // its text from the server-rendered `data-message`.
+  showNotice() {
+    clearTimeout(this.noticeTimer)
+    this.$notice.textContent = this.$notice.dataset.message
+    this.$notice.classList.add('is-visible')
+    this.noticeTimer = setTimeout(() => {
+      this.$notice.classList.remove('is-visible')
+      this.$notice.textContent = ''
+    }, 6000)
   },
 
   lpSetMaxWidth() {
@@ -123,6 +138,7 @@ export default app => ({
   },
 
   destroyed() {
+    clearTimeout(this.noticeTimer)
     this.stopResize()
     this.entrance?.cancel()
     this.widthAnimation?.cancel()

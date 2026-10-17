@@ -65,6 +65,21 @@ an iframe successfully does not establish that recovered unsaved inputs have
 reached the server. Keep the recovery form outside the conditional preview pane
 and avoid replacing the ignored iframe wrapper during ordinary patches.
 
+## What the iframe shows
+
+The iframe joins with the generation of the cache it shows
+(`livePreviewVersion`, then each render's `v`) and the block patches applied
+over it (each `update_block`'s `p`); `LivePreview.page_state/1` holds both.
+`store_cache/2` starts a new generation unless the HTML is unchanged with no
+patch since. The channel replays the cache when the generation differs.
+Patches are not in the cache, so when the iframe is behind, the channel calls
+`report_lost_patches/1`; the form ignores it while recovery is pending. The form
+subscribes to `form_topic/1` while its preview is open
+(`put_live_preview_key/2`), and `LiveView.Form.Hooks` routes the report back to
+it: the form renders the whole page and pushes the drawer's notice. A render
+the iframe already shows is not sent (`send_render/3`); a patch forgets what
+was sent, so the next render goes out.
+
 Use `test/brando_admin/live/preview_updates_test.exs` for both preview recovery
 arrival orders and `test/brando_admin/live/form_recovery_test.exs` for the wider
 mounted-recovery harness.
