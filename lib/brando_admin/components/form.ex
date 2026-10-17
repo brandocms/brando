@@ -1922,34 +1922,11 @@ defmodule BrandoAdmin.Components.Form do
         put = &put_asset_in_data(Changeset.change(&1), rest, field, asset)
         id = shown |> Changeset.change() |> Changeset.get_field(:id)
 
-        changes =
-          case changeset.changes do
-            %{^key => rows} when is_list(rows) ->
-              %{changeset.changes | key => Enum.map(rows, &if(&1 == shown, do: put.(&1), else: &1))}
-
-            %{^key => ^shown} ->
-              %{changeset.changes | key => put.(shown)}
-
-            changes ->
-              changes
-          end
-
-        data =
-          case Map.get(changeset.data, key) do
-            rows when is_list(rows) and not is_nil(id) ->
-              Map.put(changeset.data, key, Enum.map(rows, &if(&1.id == id, do: put.(&1).data, else: &1)))
-
-            rows when is_list(rows) ->
-              changeset.data
-
-            %{} = one when not is_struct(one, Ecto.Association.NotLoaded) ->
-              Map.put(changeset.data, key, put.(one).data)
-
-            _ ->
-              changeset.data
-          end
-
-        %{changeset | changes: changes, data: data}
+        %{
+          changeset
+          | changes: put_in_subform_changes(changeset.changes, key, shown, put),
+            data: put_in_subform_data(changeset.data, key, id, put)
+        }
 
       _ ->
         changeset
@@ -1964,6 +1941,27 @@ defmodule BrandoAdmin.Components.Form do
 
   defp subform_struct(rows, _path) when is_list(rows), do: nil
   defp subform_struct(one, path), do: {one, path}
+
+  defp put_in_subform_changes(changes, key, shown, put) do
+    case changes do
+      %{^key => rows} when is_list(rows) -> %{changes | key => Enum.map(rows, &if(&1 == shown, do: put.(&1), else: &1))}
+      %{^key => ^shown} -> %{changes | key => put.(shown)}
+      changes -> changes
+    end
+  end
+
+  defp put_in_subform_data(data, key, id, put) do
+    case Map.get(data, key) do
+      rows when is_list(rows) and not is_nil(id) ->
+        Map.put(data, key, Enum.map(rows, &if(&1.id == id, do: put.(&1).data, else: &1)))
+
+      %{} = one when not is_struct(one, Ecto.Association.NotLoaded) ->
+        Map.put(data, key, put.(one).data)
+
+      _ ->
+        data
+    end
+  end
 
   # Append a delivered asset to the gallery assoc: existing objects are
   # slimmed to plain maps (put_assoc with mixed nil-ID structs would raise
@@ -3056,22 +3054,48 @@ defmodule BrandoAdmin.Components.Form do
           (not Map.has_key?(asset_fk_map, key) and Ecto.assoc_loaded?(Map.get(changeset.data, name)))
 
       if stale?,
-        do: update_entry_assocs(socket, [name], remote_relation(changeset, assoc, asset_fk_map)),
+        do: update_entry_assocs(socket, [name], remote_relation(socket, changeset, assoc, asset_fk_map)),
         else: socket
     end)
   end
 
+  # A relation a select sets (`update_relation: {relation, fetcher}`) is
+  # fetched as this editor's own pick is (`Select.fetch_relation/2`, with the
+  # option's value as the browser sends it), so it has what the fetcher
+  # preloads; another is loaded by its key.
   defp remote_relation(
+         socket,
          changeset,
          %{field: name, owner_key: key, related: related, related_key: related_key},
          asset_fk_map
        ) do
+    value = Changeset.get_field(changeset, key)
+
     cond do
-      Map.has_key?(asset_fk_map, key) -> Map.get(changeset.data, name)
-      value = Changeset.get_field(changeset, key) -> Brando.Repo.get_by(related, [{related_key, value}])
-      true -> nil
+      Map.has_key?(asset_fk_map, key) ->
+        Map.get(changeset.data, name)
+
+      is_nil(value) ->
+        nil
+
+      fetcher = relation_fetcher(socket.assigns[:form_blueprint], key, name) ->
+        Select.fetch_relation(to_string(value), fetcher)
+
+      true ->
+        Brando.Repo.get_by(related, [{related_key, value}])
     end
   end
+
+  defp relation_fetcher(%BlueprintForms.Form{} = form_blueprint, key, relation) do
+    with %BlueprintForms.Input{name: ^key, type: :select, opts: opts} <- BlueprintForms.get_field(key, form_blueprint),
+         {^relation, fetcher} when is_function(fetcher, 1) <- Keyword.get(opts, :update_relation) do
+      fetcher
+    else
+      _ -> nil
+    end
+  end
+
+  defp relation_fetcher(_form_blueprint, _key, _relation), do: nil
 
   # The next `validate` casts onto the entry, so an asset another editor
   # picked goes on it too, as this editor's own pick does

@@ -9,6 +9,7 @@ defmodule BrandoAdmin.Components.Form.EntryPictureBlockSyncTest do
 
   import Phoenix.Component, only: [to_form: 1]
 
+  alias Brando.Blueprint.Forms, as: BlueprintForms
   alias Brando.Factory
   alias BrandoAdmin.Components.Form
   alias BrandoAdmin.Components.Form.Block
@@ -284,6 +285,36 @@ defmodule BrandoAdmin.Components.Form.EntryPictureBlockSyncTest do
 
       assert form.assigns.updated_entry_assocs.parent.id == parent.id
     end
+  end
+
+  # A select with `update_relation` puts what its fetcher returns on the
+  # relation (preloads included); another editor's pick is fetched the same way.
+  test "another editor's pick of a relation a select sets is fetched by that select's fetcher", ctx do
+    %{page: page, user: user} = ctx
+    parent = Factory.insert(:page, creator: user, title: "Example Hotel")
+    test_pid = self()
+
+    fetcher = fn id ->
+      send(test_pid, {:fetched, id})
+      {:ok, %{Repo.get!(Brando.Pages.Page, id) | title: "Example Hotel, as fetched"}}
+    end
+
+    input = %BlueprintForms.Input{name: :parent_id, type: :select, opts: [update_relation: {:parent, fetcher}]}
+    blueprint = %BlueprintForms.Form{tabs: [%BlueprintForms.Tab{fields: [%BlueprintForms.Fieldset{fields: [input]}]}]}
+
+    socket =
+      page
+      |> form_socket(user, nil)
+      |> Component.assign(sync_assigns())
+      |> Component.assign(form_blueprint: blueprint, updated_entry_assocs: %{parent: nil})
+
+    changes = [%{field: :parent_id, value: parent.id, assoc?: false, clock: {1, "remote"}}]
+
+    {:ok, form} = Form.update(%{event: "apply_remote_field_changes", changes: changes}, socket)
+
+    parent_id = to_string(parent.id)
+    assert_received {:fetched, ^parent_id}
+    assert form.assigns.updated_entry_assocs.parent.title == "Example Hotel, as fetched"
   end
 
   defp sync_assigns do
