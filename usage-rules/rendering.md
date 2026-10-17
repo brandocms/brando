@@ -172,12 +172,11 @@ a page has no URL: `Page.__absolute_url__/1` returns `nil` for it, and the
 content SEO audit leaves it out. Filter the flag in your controllers, and use
 `Page.__url_filter__/0` in your [sitemap](deps/brando/guides/sitemaps.md).
 
-Query the current language explicitly and filter status for public output:
+Query the current language explicitly:
 
 ```elixir
 {:ok, partials} = Brando.Pages.get_fragments(%{
   filter: %{parent_key: "partials", language: conn.assigns.language},
-  status: :published,
   cache: {:ttl, :infinite}
 })
 
@@ -197,10 +196,22 @@ wrapper, which accepts `{{ content }}`, `{{ parent_key }}`, `{{ key }}`, and
 `{{ language }}` substitutions. `render_fragment/1` outputs the stored content
 without that wrapper.
 
-`Brando.Plug.Fragment, parent_key: "partials", as: :partials` is convenient for
-loading a group after the locale plug, but its current query does not restrict
-status. Neither do all of the older fragment lookup helpers. Use the explicit
-query above when a draft fragment must remain private.
+Only a published fragment renders. An unpublished one stays in the map with no
+content, so `{fragment}`, `<Brando.HTML.fragment fragment={fragment} />`,
+`render_fragment(@partials, "footer")` and `fragment.rendered_blocks` all give
+nothing rather than the draft or the missing-fragment diagnostic. The same
+holds for `Brando.Plug.Fragment, parent_key: "partials", as: :partials`, which
+loads a group after the locale plug, for `get_fragments/2`, and for a fragment
+struct from `Brando.Pages.get_fragment/2` rendered with the component, the
+`render_fragment` helpers or `fetch_fragment/2`. `status: :published` gives
+the same map; pass another `:status`, such as `status: :all`, to
+`get_fragments/1` for fragments as stored, with their content.
+
+A fragment embedded in a block, through a fragment block, the
+`{% fragment %}` tag or `<.fragment>`, is rendered into the entry's stored
+HTML. Saving the fragment re-renders the entries holding a fragment block;
+an entry embedding it through the tag or component shows the change on its
+own next save.
 
 ## Navigation
 

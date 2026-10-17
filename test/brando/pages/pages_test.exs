@@ -3,6 +3,10 @@ defmodule Brando.PagesTest do
   use Brando.ConnCase
 
   import Ecto.Query
+  import Phoenix.Component, only: [sigil_H: 2]
+  import Phoenix.HTML, only: [raw: 1]
+  import Phoenix.LiveViewTest, only: [rendered_to_string: 1]
+  import Brando.Pages, only: [render_fragment: 2]
 
   alias Brando.Factory
   alias Brando.Pages
@@ -272,6 +276,100 @@ defmodule Brando.PagesTest do
 
     assert Pages.render_fragment("parent", "frag1") |> Phoenix.HTML.safe_to_string() ==
              "fragment content!"
+  end
+
+  test "an unpublished fragment keeps its key in get_fragments and renders nothing" do
+    for status <- [:draft, :pending, :disabled, nil] do
+      Factory.insert(:fragment, parent_key: "partials", key: "footer", status: status, rendered_blocks: "Draft")
+      Factory.insert(:fragment, parent_key: "partials", key: "header", rendered_blocks: "Published")
+
+      {:ok, partials} = Pages.get_fragments(%{filter: %{parent_key: "partials", language: "en"}})
+      assert Map.keys(partials) |> Enum.sort() == ["footer", "header"]
+      assert partials["header"].rendered_blocks == "Published"
+
+      by_language = Pages.get_fragments("partials", "en")
+      assert Map.keys(by_language) |> Enum.sort() == ["footer", "header"]
+
+      # Asked for explicitly, as an admin screen might.
+      {:ok, all} = Pages.get_fragments(%{filter: %{parent_key: "partials", language: "en"}, status: :all})
+      assert all["footer"].rendered_blocks == "Draft"
+
+      # The old guide's explicit status: :published is the default.
+      {:ok, published} = Pages.get_fragments(%{filter: %{parent_key: "partials", language: "en"}, status: :published})
+      assert Map.keys(published) |> Enum.sort() == ["footer", "header"]
+      assert published["footer"].rendered_blocks == nil
+      assert published["header"].rendered_blocks == "Published"
+
+      # Each way a template reads a partial, from either map.
+      for map <- [partials, by_language] do
+        assigns = %{partials: map}
+
+        html =
+          rendered_to_string(~H"""
+          <footer>
+            {raw(@partials["footer"].rendered_blocks)}{@partials["footer"].rendered_blocks}<Brando.HTML.fragment fragment={
+              @partials["footer"]
+            } />{@partials["footer"]}{render_fragment(@partials, "footer")}
+          </footer>
+          """)
+
+        assert String.replace(html, ~r/\s/, "") == "<footer></footer>"
+      end
+
+      draft = Brando.Repo.get_by!(Pages.Fragment, key: "footer")
+
+      for rendered <- [
+            Pages.render_fragment(draft),
+            Pages.render_fragment("partials", "footer", "en"),
+            Pages.fetch_fragment("footer", "en"),
+            Phoenix.HTML.html_escape(draft)
+          ] do
+        assert Phoenix.HTML.safe_to_string(rendered) == ""
+      end
+
+      Brando.Repo.delete_all(Brando.Pages.Fragment)
+    end
+  end
+
+  test "get_fragments with a :select blanks an unpublished fragment whichever form the select takes" do
+    Factory.insert(:fragment, parent_key: "partials", key: "footer", status: :draft, rendered_blocks: "Draft")
+    Factory.insert(:fragment, parent_key: "partials", key: "header", rendered_blocks: "Published")
+
+    for select <- [
+          {:map, [:key, :rendered_blocks]},
+          [:key, :rendered_blocks],
+          {:struct, [:id, :key, :rendered_blocks]}
+        ] do
+      {:ok, partials} =
+        Pages.get_fragments(%{filter: %{parent_key: "partials", language: "en"}, select: select})
+
+      assert Map.keys(partials) |> Enum.sort() == ["footer", "header"]
+      assert partials["footer"].rendered_blocks == nil
+      assert partials["header"].rendered_blocks == "Published"
+    end
+  end
+
+  test "the fragment component renders nothing for an unpublished fragment, in frontend edit mode too" do
+    page = Factory.insert(:page)
+    draft = Factory.insert(:fragment, page_id: page.id, key: "footer", status: :draft, rendered_blocks: "Draft")
+    published = Factory.insert(:fragment, page_id: page.id, key: "header", rendered_blocks: "Published")
+
+    # A template rendering a fragment it fetched from the page.
+    for fragment <- [Pages.get_fragment(page, "footer"), draft] do
+      assigns = %{fragment: fragment}
+      assert rendered_to_string(~H"<Brando.HTML.fragment fragment={@fragment} />") == ""
+
+      assert Brando.FrontendEdit.with_active(fn ->
+               rendered_to_string(~H"<Brando.HTML.fragment fragment={@fragment} />")
+             end) == ""
+    end
+
+    assigns = %{fragment: published}
+    assert rendered_to_string(~H"<Brando.HTML.fragment fragment={@fragment} />") == "Published"
+
+    # A key missing from a partials map renders nothing, as an absent fragment.
+    assigns = %{partials: %{}}
+    assert rendered_to_string(~H'<Brando.HTML.fragment fragment={@partials["footer"]} />') == ""
   end
 
   test "breadcrumbs are computed on create and update" do

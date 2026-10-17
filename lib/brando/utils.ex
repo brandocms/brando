@@ -548,7 +548,7 @@ defmodule Brando.Utils do
   def get_page_title(%{assigns: %{page_title: title, language: language}} = conn) do
     organization = Cache.Identity.get(language)
 
-    if organization do
+    if map_size(organization) > 0 do
       %{title_prefix: title_prefix, title_postfix: title_postfix} = organization
 
       {title_prefix, title_postfix} =

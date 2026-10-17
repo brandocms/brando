@@ -22,7 +22,8 @@ test('sign in, create and edit generated content, then render it publicly', asyn
   await page.getByTestId('submit').click()
   await expect(page).toHaveURL(/\/admin\/catalog\/products$/)
 
-  const response = await page.goto('/products/1')
+  // A Blueprint with a slug has its public pages by slug.
+  const response = await page.goto('/products/igniter-smoke-product')
   expect(response.status()).toBe(200)
   await expect(page.getByRole('heading', { name: 'Igniter smoke product updated' })).toBeVisible()
 })

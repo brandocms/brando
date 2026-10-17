@@ -186,6 +186,7 @@ for lang <- languages do
     key: "footer",
     title: "Footer",
     language: lang,
+    status: :published,
     entry_blocks: [],
     page_id: p1.id,
     creator_id: user.id
