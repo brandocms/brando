@@ -583,15 +583,62 @@ Public rendering requires an explicit route choice:
 mix brando.gen Studio.Catalog.Product --public-route /products
 ```
 
-This adds a simple controller/HTML pair and browser routes for `/products` and
-`/products/:id`. Schemas with a status field expose published records. The default
-Blueprint leaves `absolute_url false`; define its URL when public routing is ready.
-Generated public controllers resolve tenant context before querying content.
-Templates do not assume an image field. `--main-field` selects a display/filter
-field; otherwise the generator prefers `title`, a string field, then `id`.
+This adds a controller/HTML pair with an index at `/products` and a page per
+entry at `/products/:slug`, or `/products/:id` when the Blueprint has no `slug`
+field. Pages by id need an integer or UUID primary key named `id`; for another,
+the generator stops with an issue. Schemas with a status field expose published
+records, and the entry page loads the images its [meta fields](blueprints.md#datasources-metadata-and-json-ld) read, such as
+`meta_image`. The entry page
+shows the main field and, for a Blueprint with block fields, their rendered
+blocks (`Brando.HTML.render_blocks/1`). Templates do not assume an image field.
+`--main-field` selects a display/filter field; otherwise the generator prefers
+`title`, a string field, then `id`.
+
+With the [CMS public pages](#add-cms-public-pages) (`mix brando.gen.site`, or
+`mix brando.install --public-site`), the routes go in a scope that pipes through
+`[:browser, :brando_site]`, as the CMS pages do, so tenant, locale, identity,
+navigation and [lockdown](#lockdown) apply to them. The scope goes after the
+`:brando_site` pipeline and before the CMS catch-all. The controller renders in
+`YourWeb.CMS.Layouts` with the `partials` fragments, as `CMS.PageController`
+does, and puts the entry's meta tags, title and, for a translatable Blueprint,
+hreflang links. A missing entry goes to `BrandoWeb.FallbackController`, which
+follows a matching redirect or renders the site's [404 page](#error-pages).
+
+Without the CMS site, the routes pipe through `:browser` only, the pages render
+in your application's layout, and the controller resolves the tenant itself. A
+missing entry or malformed id raises `Ecto.NoResultsError`, which your
+`ErrorHTML` renders as a 404. These pages are not locked by
+`Brando.Plug.Lockdown`; the generator's notice says what to wire by hand.
+Generate the CMS site before the resource to get the integrated version.
+
+The default Blueprint leaves `absolute_url false`. The notice then prints the
+`absolute_url` that matches the new route, such as
+`absolute_url ~H"/products/{@entry.slug}"`; set it so admin preview links,
+sitemaps and SEO use the page.
+
+For a Blueprint with a `language` field, each language gets its routes, as the
+[CMS pages](i18n.md) do: the default language's at `/products`, and every other
+language's in a scope under its code, such as `/no/products` (the default
+language's too, at `/en/products`, with `scope_default_language_routes: true`).
+The languages are read from `config :brando, :languages` and `:default_language`
+when the resource is generated. A regional code such as `pt-br` gets the scope
+`as: :"pt-br"`, whose helpers (`:"pt-br_product_path"`) `route_i18n` calls. For a
+language added later, run the command again: it adds the scopes of the languages
+whose routes are missing, and leaves the existing ones.
+The pages list and show the request's language with the query's `language:`
+option, so translations can share a slug and the context needs no language
+clause. With the CMS site, `:brando_site` takes the language from the path;
+without it, each scope's `assigns` give it. The notice prints an `absolute_url`
+that gives each translation its prefixed URL, for hreflang links, admin previews
+and sitemaps: `absolute_url ~H|{route_i18n(@entry, :product_path, :show, [@entry.slug])}|`.
+It also prints one when the Blueprint's `absolute_url` gives every language the
+same path.
 
 Consumer templates in `priv/templates/brando.gen.blueprint` and
-`priv/templates/brando.gen` override package defaults. The Blueprint command also
+`priv/templates/brando.gen` override package defaults. With a consumer
+`controller.ex` or `html.ex` in `priv/templates/brando.gen`, entry pages keep the
+`:id` route param, which templates copied before slug routes match, and the
+notice says so; the templates' `param` binding then is `"id"`. The Blueprint command also
 accepts `--template RELATIVE_PATH`, which takes precedence over the conventional
 consumer override. Conflicting output files are preserved for manual integration.
 

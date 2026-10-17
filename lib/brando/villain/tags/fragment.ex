@@ -10,9 +10,7 @@ defmodule Brando.Villain.Tags.Fragment do
 
   @impl true
   def render([parent_key: parent_key, key: key, language: language], context) do
-    {:ok, fragment} =
-      Pages.get_fragment(%{matches: %{parent_key: parent_key, key: key, language: language}})
-
-    {[fragment.html], context}
+    html = parent_key |> Pages.render_embedded_fragment(key, language) |> Phoenix.HTML.safe_to_string()
+    {[html], context}
   end
 end
