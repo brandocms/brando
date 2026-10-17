@@ -239,6 +239,70 @@ defmodule BrandoAdmin.Components.Form.EntryPictureBlockSyncTest do
       end
     end
 
+    # The same rows: a removed one pending, first, and the one the form shows at 0.
+    defp with_removed_row(page, image, socket_fun) do
+      removed = %Brando.Content.Var{id: 2, key: "old", type: :text, label: "Old"}
+      page = in_row(page, :image, image)
+      [shown] = page.vars
+      page = %{page | vars: [removed, shown]}
+      changeset = page |> Changeset.change() |> Changeset.put_assoc(:vars, [shown])
+      socket = page |> socket_fun.() |> Component.assign(:form, to_form(changeset))
+      {socket, removed, shown}
+    end
+
+    defp row(form, id), do: Enum.find(form.assigns.form.source.changes.vars, &(&1.data.id == id))
+
+    test "a gallery put in a row after a removed row goes on the row shown", %{page: page, user: user, saved_image: image} do
+      {socket, removed, shown} =
+        with_removed_row(page, image, &drawer_socket(&1, user, :image, [:vars, 0], :image, image))
+
+      gallery = %Brando.Galleries.Gallery{config_target: "default", gallery_objects: []}
+
+      {:ok, form} = Form.update(%{action: :put_gallery, path: [:vars, 0], key: :gallery, gallery: gallery}, socket)
+
+      assert %Changeset{action: :replace} = row(form, removed.id)
+      assert %Changeset{} = row(form, shown.id).changes.gallery
+    end
+
+    # A path older than the rows (one removed since) names no row the form shows.
+    test "clearing an image at a row the form no longer shows changes nothing", %{
+      page: page,
+      user: user,
+      saved_image: image
+    } do
+      {socket, removed, shown} =
+        with_removed_row(page, image, &drawer_socket(&1, user, :image, [:vars, 1], :image, image))
+
+      {:ok, form} = Form.update(%{event: "clear_entry_field_asset", field: :image, path: [:vars, 1]}, socket)
+
+      assert %Changeset{action: :replace, changes: changes} = row(form, removed.id)
+      refute Map.has_key?(changes, :image_id)
+      assert Changeset.get_field(row(form, shown.id), :image_id) == image.id
+    end
+
+    # The upload is delivered only while the field still holds what it held
+    # when the upload began: the row the form shows, not the removed one.
+    test "an upload to a row after a removed row is delivered to it", %{page: page, user: user, saved_image: image} do
+      {socket, _removed, shown} =
+        with_removed_row(page, image, &drawer_socket(&1, user, :image, [:vars, 0], :image, image))
+
+      uploaded = Factory.insert(:image, creator: user, focal: %Brando.Images.Focal{x: 50, y: 50}, status: :processed)
+
+      event = %{
+        event: "entry_field_upload_complete",
+        expected_asset_id: image.id,
+        asset_type: :image,
+        field: :image,
+        path: [:vars, 0],
+        asset: uploaded
+      }
+
+      {:ok, form} = Form.update(event, socket)
+
+      row = form.assigns.form.source |> Changeset.apply_changes() |> Map.get(:vars) |> Enum.find(&(&1.id == shown.id))
+      assert row.image_id == uploaded.id
+    end
+
     test "for a file", %{page: page, user: user, saved_file: file} do
       socket = drawer_socket(in_row(page, :file, file), user, :file, [:vars, 0], :file, file)
 
