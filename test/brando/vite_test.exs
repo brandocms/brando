@@ -161,6 +161,46 @@ defmodule Brando.ViteTest do
     assert output == "➜ ready\nend �"
   end
 
+  test "a SIGTERM while the wrapper starts leaves no Vite behind", %{tmp_dir: tmp_dir} do
+    for n <- 0..29 do
+      delay = Enum.at([0, 1, 2, 3, 5, 8], rem(n, 6))
+      dir = Path.join(tmp_dir, "run#{n}")
+      File.mkdir_p!(dir)
+      test = self()
+
+      watcher =
+        spawn(fn ->
+          capture_log(fn -> Brando.Vite.run(dir, "/bin/sh", ["-c", "echo $$ > vite.pid; exec sleep 300"]) end)
+          send(test, {:returned, self()})
+        end)
+
+      os_pid = wrapper_os_pid(watcher)
+      Process.sleep(delay)
+      System.cmd("kill", ["-TERM", Integer.to_string(os_pid)], stderr_to_stdout: true)
+      assert_receive {:returned, ^watcher}, 5_000
+
+      # A command that outlived the wrapper could still be writing its pid
+      Process.sleep(100)
+      pid_file = Path.join(dir, "vite.pid")
+
+      if File.exists?(pid_file) do
+        os_pid = pid_file |> File.read!() |> String.trim()
+        if os_pid != "", do: eventually(fn -> not os_alive?(os_pid) end, 20)
+      end
+    end
+  end
+
+  # Another process can see the port while Port.open/2 is still starting it,
+  # with an OS pid of 0
+  defp wrapper_os_pid(watcher) do
+    port = Enum.find(Port.list(), &(Port.info(&1, :connected) == {:connected, watcher}))
+
+    case port && Port.info(port, :os_pid) do
+      {:os_pid, os_pid} when os_pid > 0 -> os_pid
+      _ -> Process.sleep(1) && wrapper_os_pid(watcher)
+    end
+  end
+
   test "Vite stops when the watcher dies without shutting down, as when the VM exits",
        %{backend: backend} do
     fake_vite(backend, "echo $$ > vite.pid\nexec sleep 300\n")

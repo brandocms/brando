@@ -31,26 +31,20 @@ defmodule Brando.Vite do
 
   # Phoenix stops a command watcher by closing its standard input, and the VM
   # does the same when it exits without shutting down. Vite never reads its
-  # standard input, so it would outlive both. This wrapper runs the command
-  # with standard input from /dev/null, stops it when its own standard input
-  # (the port) reaches end of file, forwards SIGTERM to it, and exits with its
-  # status.
+  # standard input, so it would outlive both. This wrapper starts a watcher on
+  # its standard input (the port), then replaces itself with the command, run
+  # with standard input from /dev/null. The command keeps the wrapper's process
+  # ID, so a SIGTERM to the port's OS process reaches it directly, and the
+  # watcher sends it one when the port's standard input reaches end of file.
+  #
+  # The wrapper forwards no signals: a shell that traps SIGTERM and forks the
+  # command loses a SIGTERM sent to the child between its fork and its exec.
+  # The watcher's output goes to /dev/null so that it does not hold the port
+  # open after the command exits.
   @wrapper ~S"""
   exec 3<&0 0</dev/null
-  "$@" 3<&- &
-  child=$!
-  trap 'kill -TERM "$child" 2>/dev/null' TERM INT HUP
-  { while read -r _ <&3; do :; done; kill -TERM "$child" 2>/dev/null; } &
-  stdin_watcher=$!
-  exec 3<&-
-  status=0
-  wait "$child" || status=$?
-  while kill -0 "$child" 2>/dev/null; do
-    status=0
-    wait "$child" || status=$?
-  done
-  kill "$stdin_watcher" 2>/dev/null
-  exit "$status"
+  { while read -r _ <&3; do :; done; kill -TERM $$; } >/dev/null 2>&1 &
+  exec "$@" 3<&-
   """
 
   @doc """
