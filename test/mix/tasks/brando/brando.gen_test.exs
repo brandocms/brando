@@ -51,6 +51,7 @@ defmodule Mix.Tasks.Brando.Gen.Test do
           %{
             "lib/generator_studio/catalog/product.ex" => "defmodule GeneratorStudio.Catalog.Product do\nend\n",
             "lib/generator_studio/catalog/category.ex" => "defmodule GeneratorStudio.Catalog.Category do\nend\n",
+            "lib/generator_studio/catalog/article.ex" => "defmodule GeneratorStudio.Catalog.Article do\nend\n",
             "lib/generator_studio_web/router.ex" => """
             defmodule GeneratorStudioWeb.Router do
               use GeneratorStudioWeb, :router
@@ -277,5 +278,122 @@ defmodule Mix.Tasks.Brando.Gen.Test do
         Igniter.Test.assert_unchanged(rerun)
       end
     end
+  end
+
+  defp notices(result), do: Enum.join(result.notices, "\n")
+
+  # The fixture's formatter keeps the parentheses on router calls.
+  defp router(result),
+    do: result |> IgniterCase.source("lib/generator_studio_web/router.ex") |> String.replace(["(", ")"], " ")
+
+  # The routes, layout and error pages mix brando.gen.site plans.
+  defp site_project do
+    project()
+    |> Igniter.compose_task(Mix.Tasks.Brando.Gen.Site, ["--yes"])
+    |> IgniterCase.apply_and_reload()
+  end
+
+  test "the notice names --public-route only when it was not given" do
+    assert notices(generate(project())) =~ "generated only with --public-route"
+
+    result = generate(project(), "GeneratorStudio.Catalog.Product", ["--public-route", "/products"])
+    assert result.issues == []
+    refute notices(result) =~ "--public-route"
+  end
+
+  test "without the CMS site, public pages show by slug, raise a 404 and say what to wire by hand" do
+    result = generate(project(), "GeneratorStudio.Catalog.Product", ["--public-route", "/products"])
+    assert result.issues == []
+
+    router = router(result)
+    assert router =~ ~s(get "/products/:slug", GeneratorStudioWeb.Catalog.ProductController, :show)
+    assert router =~ ~r/scope "\/" do\s+pipe_through :browser\s+get "\/products"/
+
+    controller = IgniterCase.source(result, "lib/generator_studio_web/catalog/product_controller.ex")
+    assert controller =~ "use GeneratorStudioWeb, :controller"
+    assert controller =~ "Brando.Plug.Tenant"
+    assert controller =~ ~s(def show(conn, %{"slug" => slug}\))
+    assert controller =~ "matches: %{slug: slug}"
+    assert controller =~ "raise Ecto.NoResultsError, queryable: GeneratorStudio.Catalog.Product"
+    refute controller =~ "send_resp"
+
+    html = IgniterCase.source(result, "lib/generator_studio_web/catalog/product_html.ex")
+    assert html =~ ~S(href={"/products/#{entry.slug}"})
+    refute html =~ "render_blocks"
+
+    notices = notices(result)
+    assert notices =~ "pipes through :browser only"
+    assert notices =~ "Brando.Plug.Lockdown"
+    assert notices =~ "mix brando.gen.site"
+    # The fixture Blueprint has no absolute_url, which is absolute_url false.
+    assert notices =~ ~s(absolute_url ~H"/products/{@entry.slug}")
+  end
+
+  test "a Blueprint without a slug shows by id, and a malformed id is a missing entry" do
+    result = generate(project(), "GeneratorStudio.Catalog.Category", ["--public-route", "/categories"])
+    assert result.issues == []
+
+    assert router(result) =~ ~s(get "/categories/:id", GeneratorStudioWeb.Catalog.CategoryController, :show)
+
+    controller = IgniterCase.source(result, "lib/generator_studio_web/catalog/category_controller.ex")
+    assert controller =~ ~s(def show(conn, %{"id" => id}\))
+    assert controller =~ "{:ok, id} <- parse_id(id)"
+    assert controller =~ "Integer.parse(id)"
+    assert controller =~ "{:error, {:category, :not_found}}"
+    assert notices(result) =~ ~s(absolute_url ~H"/categories/{@entry.id}")
+  end
+
+  test "with the CMS site, public pages pipe through :brando_site and render in the site's layout" do
+    result = generate(site_project(), "GeneratorStudio.Catalog.Article", ["--public-route", "/articles"])
+    assert result.issues == []
+
+    router = router(result)
+    assert router =~ ~r/scope "\/" do\s+pipe_through \[:browser, :brando_site\]\s+get "\/articles"/
+    assert router =~ ~s(get "/articles/:slug", GeneratorStudioWeb.Catalog.ArticleController, :show)
+
+    # After the pipeline it uses, before the CMS catch-all.
+    [{pipeline, _}] = Regex.run(~r/pipeline :brando_site/, router, return: :index)
+    [{public, _}] = Regex.run(~r/get "\/articles"/, router, return: :index)
+    [{catch_all, _}] = Regex.run(~r/get "\/\*path"/, router, return: :index)
+    assert pipeline < public and public < catch_all
+
+    controller = IgniterCase.source(result, "lib/generator_studio_web/catalog/article_controller.ex")
+    assert controller =~ "use BrandoWeb, :controller"
+    assert controller =~ ~r/plug\(?:put_root_layout, html: \{GeneratorStudioWeb.CMS.Layouts, :root\}/
+    assert controller =~ ~r/action_fallback\(?BrandoWeb.FallbackController/
+    assert controller =~ "put_meta(GeneratorStudio.Catalog.Article, entry)"
+    assert controller =~ "preload: [:alternate_entries]"
+    # Translations may share a slug.
+    assert controller =~ "matches: %{slug: slug, language: conn.assigns.language}"
+    assert controller =~ "filter: %{language: conn.assigns.language}"
+    context = IgniterCase.source(result, "lib/generator_studio/catalog.ex")
+    assert context =~ ~r/\{:language, value\}, query -> from\(?q in query, where: q.language == \^value/
+
+    on_exit(fn ->
+      :code.purge(GeneratorStudio.Catalog)
+      :code.delete(GeneratorStudio.Catalog)
+    end)
+
+    assert {GeneratorStudio.Catalog, _} = context |> Code.compile_string() |> List.keyfind(GeneratorStudio.Catalog, 0)
+    assert controller =~ "put_hreflang(entry)"
+    # Tenant comes from the :brando_site pipeline.
+    refute controller =~ "Brando.Plug.Tenant"
+
+    html = IgniterCase.source(result, "lib/generator_studio_web/catalog/article_html.ex")
+    assert html =~ "use BrandoWeb, :html"
+    assert html =~ "<Brando.HTML.render_blocks entry={@entry} />"
+    assert html =~ "<Brando.HTML.render_blocks entry={@entry} field={:bio_blocks} />"
+
+    notices = notices(result)
+    assert notices =~ "GeneratorStudioWeb.CMS.Layouts"
+    refute notices =~ "absolute_url"
+
+    rerun =
+      result
+      |> IgniterCase.apply_and_reload()
+      |> generate("GeneratorStudio.Catalog.Article", ["--public-route", "/articles"])
+
+    assert rerun.issues == []
+    Igniter.Test.assert_unchanged(rerun)
   end
 end

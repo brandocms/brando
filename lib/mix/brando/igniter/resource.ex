@@ -26,6 +26,9 @@ if Code.ensure_loaded?(Igniter) do
            {:ok, igniter, project} <- Project.discover(igniter, options),
            {:ok, metadata} <- metadata(module, project, options),
            :ok <- Routes.validate_public_path(options[:public_route]) do
+        {igniter, site_layouts} = Routes.site_layouts(igniter, project, options)
+        metadata = Map.put(metadata, :site_layouts, site_layouts)
+
         igniter
         |> Context.plan(metadata)
         |> files(metadata, options)
@@ -35,8 +38,8 @@ if Code.ensure_loaded?(Igniter) do
         Review your authorization policy and add a navigation entry in #{inspect(project.admin_module)}.Menus.
         Then compile, generate/review its storage migration, and run mix ecto.migrate.
         No database operation or authorization grant was performed by this generator.
-        Public controllers/routes are generated only with --public-route /your-path.
         """)
+        |> public_notice(metadata, options[:public_route])
       else
         {:error, %Igniter{} = igniter} -> igniter
         {:error, message} -> Igniter.add_issue(igniter, message)
@@ -90,6 +93,13 @@ if Code.ensure_loaded?(Igniter) do
            main_field: field,
            text_field?: module.__schema__(:type, field) == :string,
            status?: :status in module.__schema__(:fields),
+           # Public pages show an entry by its slug when it has one.
+           param: if(:slug in module.__schema__(:fields), do: "slug", else: "id"),
+           id_type: module.__schema__(:type, :id),
+           blocks: Enum.map(module.__blocks_fields__(), & &1.name),
+           language?: :language in module.__schema__(:fields),
+           alternates?: :alternate_entries in module.__schema__(:associations),
+           absolute_url?: module.__has_absolute_url__(),
            required_field?:
              Enum.any?(Brando.Blueprint.Attributes.__attributes__(module), &(&1.name == field && &1.opts[:required])),
            admin_list:
@@ -164,8 +174,52 @@ if Code.ensure_loaded?(Igniter) do
         controller_module: metadata.controller,
         html_module: metadata.html,
         public_route: options[:public_route],
-        status: metadata.status?
+        status: metadata.status?,
+        site_layouts: metadata.site_layouts,
+        param: metadata.param,
+        id_type: metadata.id_type,
+        blocks: metadata.blocks,
+        language: metadata.language?,
+        alternates: metadata.alternates?,
+        text_field: metadata.text_field?
       ]
+    end
+
+    defp public_notice(igniter, _metadata, nil),
+      do: Igniter.add_notice(igniter, "Public controllers/routes are generated only with --public-route /your-path.")
+
+    defp public_notice(igniter, metadata, path) do
+      igniter
+      |> Igniter.add_notice(site_notice(metadata, path))
+      |> absolute_url_notice(metadata, path)
+    end
+
+    defp site_notice(%{site_layouts: nil} = metadata, path) do
+      """
+      #{path} pipes through :browser only and renders in your application's layout:
+      no CMS site was found (a :brando_site pipeline and #{inspect(metadata.project.web_module)}.CMS.Layouts),
+      so these pages get no site assets, Brando meta tags or Brando.Plug.Lockdown.
+      Run mix brando.gen.site, or wire them by hand: pipe the routes through a pipeline with
+      Brando.Plug.Lockdown (it sends visitors to a route named lockdown; see Lockdown in the
+      generators guide) and render with the layout of your public pages.
+      """
+    end
+
+    defp site_notice(metadata, path) do
+      """
+      #{path} pipes through :browser and :brando_site, like the CMS pages, and renders in
+      #{inspect(metadata.site_layouts)} with Brando meta tags. A missing entry renders the site's 404 page.
+      """
+    end
+
+    defp absolute_url_notice(igniter, %{absolute_url?: true}, _path), do: igniter
+
+    defp absolute_url_notice(igniter, metadata, path) do
+      Igniter.add_notice(igniter, """
+      #{inspect(metadata.schema)} has absolute_url false. To link admin previews, sitemaps and SEO to these pages, set:
+
+          absolute_url ~H"#{path}/{@entry.#{metadata.param}}"
+      """)
     end
 
     defp module_path(module), do: "lib/#{Macro.underscore(module)}.ex"

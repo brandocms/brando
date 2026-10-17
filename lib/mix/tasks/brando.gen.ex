@@ -16,7 +16,9 @@ if Code.ensure_loaded?(Igniter) do
     be consumed in the same source plan. Existing context functions are preserved;
     conflicting generated files or routes block the plan, including with --yes.
 
-    Public controllers and routes require --public-route. Review authorization and
+    Public controllers and routes require --public-route. With the CMS site from
+    mix brando.gen.site, they go through its :brando_site pipeline and render in its
+    layout (see the generators guide). Review authorization and
     add a navigation entry explicitly. --main-field selects a persisted display and
     filter field; title, the first string field, or id is used by default.
     Consumer templates in priv/templates/brando.gen take precedence over defaults.

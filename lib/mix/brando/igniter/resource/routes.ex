@@ -56,19 +56,44 @@ if Code.ensure_loaded?(Igniter) do
       end
     end
 
+    @doc """
+    The CMS site's layout module when `brando.gen.site` has set up the public
+    site (its `:brando_site` pipeline and `Web.CMS.Layouts`), or nil.
+    """
+    def site_layouts(igniter, project, options) do
+      layouts = Module.concat(project.web_module, CMS.Layouts)
+
+      with path when is_binary(path) <- options[:public_route],
+           {:ok, {igniter, _, router}} <- ProjectModule.find_module(igniter, project.router),
+           {:ok, _} <- site_pipeline(router),
+           {true, igniter} <- ProjectModule.module_exists(igniter, layouts) do
+        {igniter, layouts}
+      else
+        {:error, %Igniter{} = igniter} -> {igniter, nil}
+        {false, igniter} -> {igniter, nil}
+        _ -> {igniter, nil}
+      end
+    end
+
+    defp site_pipeline(router),
+      do: CodeFunction.move_to_function_call(router, :pipeline, 2, &CodeFunction.argument_equals?(&1, 0, :brando_site))
+
     defp public(igniter, m, path) do
+      show_path = path <> "/:" <> m.param
+      pipelines = if m.site_layouts, do: "[:browser, :brando_site]", else: ":browser"
+
       ProjectModule.find_and_update_module!(igniter, m.project.router, fn zipper ->
         # A separate scope preserves existing Phoenix scope aliases and pipelines.
         code = """
         scope "/" do
-          pipe_through :browser
+          pipe_through #{pipelines}
           get #{inspect(path)}, #{inspect(m.controller)}, :index
-          get #{inspect(path <> "/:id")}, #{inspect(m.controller)}, :show
+          get #{inspect(show_path)}, #{inspect(m.controller)}, :show
         end
         """
 
         existing =
-          Enum.map([{path, :index}, {path <> "/:id", :show}], fn {path, action} ->
+          Enum.map([{path, :index}, {show_path, :show}], fn {path, action} ->
             route_state(zipper, :get, path, m.controller, action)
           end)
 
@@ -77,7 +102,7 @@ if Code.ensure_loaded?(Igniter) do
             {:ok, zipper}
 
           existing == [:missing, :missing] ->
-            insert_public_scope(zipper, code)
+            insert_public_scope(zipper, code, m)
 
           true ->
             {:error, "Public routes at #{path} conflict with existing or partial routes. Integrate them explicitly."}
@@ -85,9 +110,23 @@ if Code.ensure_loaded?(Igniter) do
       end)
     end
 
-    defp insert_public_scope(zipper, code) do
-      # Place explicit routes ahead of catch-all scopes, after router imports.
-      RouteInventory.insert_before_routes(zipper, code)
+    # Explicit routes go ahead of catch-all scopes: with the CMS site, right
+    # before the scope holding its catch-all, after the :brando_site pipeline;
+    # otherwise before the first route, after router imports.
+    defp insert_public_scope(zipper, code, %{site_layouts: nil}), do: RouteInventory.insert_before_routes(zipper, code)
+
+    defp insert_public_scope(zipper, code, m) do
+      page_controller = Module.concat(m.project.web_module, CMS.PageController)
+
+      cms_scope? = fn call ->
+        CodeFunction.function_call?(call, :scope, :any) &&
+          Enum.any?(RouteInventory.at(call), &(&1.module == page_controller && String.contains?(&1.path, "*")))
+      end
+
+      case Common.move_to(zipper, cms_scope?) do
+        {:ok, scope} -> {:ok, Common.add_code(scope, code, placement: :before)}
+        :error -> RouteInventory.insert_before_routes(zipper, code)
+      end
     end
 
     defp ensure_route(body, verb, path, module, action, code) do

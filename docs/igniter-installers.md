@@ -71,8 +71,9 @@ Resource generation takes a compiled Blueprint. A Blueprint with pending source
 changes cannot feed a resource generator in the same plan: accept, compile, then
 generate. Context query declarations and admin routes are edited semantically;
 custom functions are preserved and conflicting names are reported. Public
-controllers/routes require `--public-route`. Authorization and navigation are
-explicit application choices.
+controllers/routes require `--public-route`; when the CMS site exists they pipe
+through its `:brando_site` pipeline, ahead of its catch-all, and render in its
+layout. Authorization and navigation are explicit application choices.
 
 Optional CMS scaffolding uses a distinct Web.CMS namespace and an explicit
 `:page_html_module` configuration. It owns a tenant/locale/identity pipeline,

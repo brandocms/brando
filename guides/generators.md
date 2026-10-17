@@ -484,12 +484,41 @@ Public rendering requires an explicit route choice:
 mix brando.gen Studio.Catalog.Product --public-route /products
 ```
 
-This adds a simple controller/HTML pair and browser routes for `/products` and
-`/products/:id`. Schemas with a status field expose published records. The default
-Blueprint leaves `absolute_url false`; define its URL when public routing is ready.
-Generated public controllers resolve tenant context before querying content.
-Templates do not assume an image field. `--main-field` selects a display/filter
-field; otherwise the generator prefers `title`, a string field, then `id`.
+This adds a controller/HTML pair with an index at `/products` and a page per
+entry at `/products/:slug`, or `/products/:id` when the Blueprint has no `slug`
+field. Schemas with a status field expose published records. The entry page
+shows the main field and, for a Blueprint with block fields, their rendered
+blocks (`Brando.HTML.render_blocks/1`). Templates do not assume an image field.
+`--main-field` selects a display/filter field; otherwise the generator prefers
+`title`, a string field, then `id`.
+
+With the [CMS public pages](#add-cms-public-pages) (`mix brando.gen.site`, or
+`mix brando.install --public-site`), the routes go in a scope that pipes through
+`[:browser, :brando_site]`, as the CMS pages do, so tenant, locale, identity,
+navigation and [lockdown](#lockdown) apply to them. The scope goes after the
+`:brando_site` pipeline and before the CMS catch-all. The controller renders in
+`YourWeb.CMS.Layouts` with the `partials` fragments, as `CMS.PageController`
+does, and puts the entry's meta tags, title and, for a translatable Blueprint,
+hreflang links. A missing entry goes to `BrandoWeb.FallbackController`, which
+follows a matching redirect or renders the site's [404 page](#error-pages).
+
+Without the CMS site, the routes pipe through `:browser` only, the pages render
+in your application's layout, and the controller resolves the tenant itself. A
+missing entry or malformed id raises `Ecto.NoResultsError`, which your
+`ErrorHTML` renders as a 404. These pages are not locked by
+`Brando.Plug.Lockdown`; the generator's notice says what to wire by hand.
+Generate the CMS site before the resource to get the integrated version.
+
+The default Blueprint leaves `absolute_url false`. The notice then prints the
+`absolute_url` that matches the new route, such as
+`absolute_url ~H"/products/{@entry.slug}"`; set it so admin preview links,
+sitemaps and SEO use the page.
+
+For a Blueprint with a `language` field, the generated context gets `language`
+filter and match clauses, and the pages list and show entries in one language:
+the one `:brando_site` resolves for the request with the CMS site, the default
+language without it. Translations can then share a slug. The routes have no
+language prefix.
 
 Consumer templates in `priv/templates/brando.gen.blueprint` and
 `priv/templates/brando.gen` override package defaults. The Blueprint command also
