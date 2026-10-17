@@ -675,7 +675,7 @@ defmodule BrandoAdmin.Components.Form do
 
     changeset =
       socket.assigns.form.source
-      |> EctoNestedChangeset.update_at(path ++ [relation_key], fn _ -> nil end)
+      |> put_key_at(path, relation_key, nil)
       |> put_asset_in_data(path, field, nil)
 
     {:ok,
@@ -692,7 +692,8 @@ defmodule BrandoAdmin.Components.Form do
         %{event: "entry_field_upload_complete", expected_asset_id: expected, field: field, path: path} = assigns,
         socket
       ) do
-    current_id = EctoNestedChangeset.get_at(socket.assigns.form.source, path ++ [String.to_existing_atom("#{field}_id")])
+    source = socket.assigns.form.source
+    current_id = EctoNestedChangeset.get_at(source, nested_path(source, path ++ [String.to_existing_atom("#{field}_id")]))
 
     if Brando.Uploads.AssetIntent.current_selection?(expected, current_id) do
       update(Map.delete(assigns, :expected_asset_id), socket)
@@ -5220,11 +5221,10 @@ defmodule BrandoAdmin.Components.Form do
         %{assigns: %{form: form, edit_video: edit_video, entry: entry, singular: singular}} = socket
       ) do
     relation_key = relation_field_key(edit_video.relation_field, edit_video.field)
-    full_path = edit_video.path ++ [relation_key]
 
     changeset =
       form.source
-      |> EctoNestedChangeset.update_at(full_path, fn _ -> nil end)
+      |> put_key_at(edit_video.path, relation_key, nil)
       |> put_asset_in_data(edit_video.path, edit_video.field, nil)
 
     {:noreply,
@@ -5332,11 +5332,10 @@ defmodule BrandoAdmin.Components.Form do
       ) do
     changeset = form.source
     relation_key = relation_field_key(edit_file.relation_field, edit_file.field)
-    full_path = edit_file.path ++ [relation_key]
 
     updated_changeset =
       changeset
-      |> EctoNestedChangeset.update_at(full_path, fn _ -> nil end)
+      |> put_key_at(edit_file.path, relation_key, nil)
       |> put_asset_in_data(edit_file.path, edit_file.field, nil)
 
     updated_edit_file = Map.put(edit_file, :file, nil)
@@ -5368,11 +5367,10 @@ defmodule BrandoAdmin.Components.Form do
       ) do
     changeset = form.source
     relation_key = relation_field_key(edit_image.relation_field, edit_image.field)
-    full_path = edit_image.path ++ [relation_key]
 
     updated_changeset =
       changeset
-      |> EctoNestedChangeset.update_at(full_path, fn _ -> nil end)
+      |> put_key_at(edit_image.path, relation_key, nil)
       |> put_asset_in_data(edit_image.path, edit_image.field, nil)
 
     updated_edit_image = Map.put(edit_image, :image, nil)
@@ -8617,6 +8615,44 @@ defmodule BrandoAdmin.Components.Form do
   end
 
   defp struct_at(_data, _path), do: nil
+
+  # A path as the form names it, rows counted as `struct_at/2` counts them,
+  # as `EctoNestedChangeset` reads it: its indexes count the relation's own
+  # list, where a row being replaced still is (first).
+  defp nested_path(%Changeset{changes: changes, data: data}, [key, index | rest])
+       when is_atom(key) and is_integer(index) do
+    rows = Map.get(changes, key, Map.get(data, key))
+
+    shown =
+      if is_list(rows),
+        do: rows |> Enum.with_index() |> Enum.reject(&match?({%Changeset{action: :replace}, _}, &1)) |> Enum.at(index)
+
+    case shown do
+      {row, raw} -> [key, raw | nested_path(row, rest)]
+      nil -> [key, index | rest]
+    end
+  end
+
+  defp nested_path(%Changeset{changes: changes, data: data}, [key | rest]) when is_atom(key),
+    do: [key | nested_path(Map.get(changes, key, Map.get(data, key)), rest)]
+
+  defp nested_path(_data, path), do: path
+
+  # The key of an asset field at a path as the form names it. EctoNestedChangeset
+  # writes a relation back with `put_assoc`, which raises for a row being
+  # replaced still in its changes (a row the editor removed), so a row there
+  # is changed in place.
+  defp put_key_at(changeset, [], key, value), do: Changeset.put_change(changeset, key, value)
+
+  defp put_key_at(%Changeset{changes: changes} = changeset, [field, index | rest] = path, key, value)
+       when is_atom(field) and is_integer(index) and is_list(:erlang.map_get(field, changes)) do
+    [^field, raw | _] = nested_path(changeset, path)
+    rows = List.update_at(changes[field], raw, &put_key_at(Changeset.change(&1), rest, key, value))
+    %{changeset | changes: %{changes | field => rows}}
+  end
+
+  defp put_key_at(changeset, path, key, value),
+    do: EctoNestedChangeset.update_at(changeset, path ++ [key], fn _ -> value end)
 
   # A field name, or the index of a subform row (`[:clients, 0]`).
   defp recovery_path_segment(index) when is_integer(index) and index >= 0, do: {:ok, index}

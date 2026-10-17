@@ -204,6 +204,41 @@ defmodule BrandoAdmin.Components.Form.EntryPictureBlockSyncTest do
       assert Changeset.apply_changes(form.assigns.form.source).author.portrait.title == %{"en" => "Example Hotel lobby"}
     end
 
+    # A removed row stays in the relation, first, as a row being replaced; the
+    # form does not count it (`struct_at/2`), so the row shown at 0 is the
+    # second in the relation.
+    for {event, socket_event} <- [{"clear_entry_field_asset", :update}, {"reset_image_field", :handle_event}] do
+      test "#{event} after a removed row clears the row shown", %{page: page, user: user, saved_image: image} do
+        removed = %Brando.Content.Var{id: 2, key: "old", type: :text, label: "Old"}
+        page = in_row(page, :image, image)
+        [shown] = page.vars
+        page = %{page | vars: [removed, shown]}
+        changeset = page |> Changeset.change() |> Changeset.put_assoc(:vars, [shown])
+
+        socket =
+          page
+          |> drawer_socket(user, :image, [:vars, 0], :image, image)
+          |> Component.assign(:form, to_form(changeset))
+
+        form =
+          case unquote(socket_event) do
+            :update ->
+              {:ok, form} = Form.update(%{event: unquote(event), field: :image, path: [:vars, 0]}, socket)
+              form
+
+            :handle_event ->
+              {:noreply, form} = Form.handle_event(unquote(event), %{}, socket)
+              form
+          end
+
+        rows = form.assigns.form.source.changes.vars
+        assert %Changeset{action: :replace} = Enum.find(rows, &(&1.data.id == removed.id))
+        row = Enum.find(rows, &(&1.data.id == shown.id))
+        assert Changeset.get_field(row, :image_id) == nil
+        assert Changeset.apply_changes(row).image == nil
+      end
+    end
+
     test "for a file", %{page: page, user: user, saved_file: file} do
       socket = drawer_socket(in_row(page, :file, file), user, :file, [:vars, 0], :file, file)
 
