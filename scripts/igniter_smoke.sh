@@ -93,8 +93,8 @@ grep -q 'steps: \[:assemble, :tar\]' mix.exs
 grep -q 'def migrate do' lib/igniter_smoke/release_tasks.ex
 grep -q 'media_path: "./media"' config/prod.exs
 grep -q 'preview_target Pages.Page do' lib/igniter_smoke_web/live_preview.ex
-grep -Eq 'get\(?"/", IgniterSmokeWeb\.CMS\.PageController, :index' lib/igniter_smoke_web/router.ex
-if grep -Eq 'get\(?"/", PageController, :home' lib/igniter_smoke_web/router.ex; then echo "phx.new's homepage route was not replaced" >&2; exit 1; fi
+grep -Eq 'get[ (]"/", IgniterSmokeWeb\.CMS\.PageController, :index' lib/igniter_smoke_web/router.ex
+if grep -Eq 'get[ (]"/", PageController, :home' lib/igniter_smoke_web/router.ex; then echo "phx.new's homepage route was not replaced" >&2; exit 1; fi
 elixir "$framework_dir/scripts/igniter_smoke/fingerprint.exs" > "$smoke_root/before-rerun"
 mix brando.install --yes > "$smoke_root/logs/rerun.log" 2>&1
 elixir "$framework_dir/scripts/igniter_smoke/fingerprint.exs" > "$smoke_root/after-rerun"
