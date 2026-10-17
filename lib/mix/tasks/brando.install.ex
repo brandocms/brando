@@ -32,8 +32,9 @@ if Code.ensure_loaded?(Igniter) do
     homepage route is replaced while its `PageController` and `home.html.heex`
     are as phx.new wrote them; a changed homepage is kept, without the site,
     with a notice, and `--interactive` asks instead. Existing
-    controllers/templates/layouts are preserved; other homepage or catch-all
-    routes stop the plan for manual integration. `--no-public-site` leaves the
+    controllers/templates/layouts are preserved. Other homepage, catch-all or
+    parameter-first routes, or a router without a `:browser` pipeline, leave
+    the site out, with a notice naming them. `--no-public-site` leaves the
     site out. Reruns keep what the application has; add the site to an
     installed application with `mix brando.gen.site`.
 

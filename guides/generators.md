@@ -31,8 +31,11 @@ mix igniter.new studio --with phx.new \
 ```
 
 This installs the admin and the CMS public site, which takes `/` from
-phx.new's homepage (see [Add CMS public pages](#add-cms-public-pages)). Pass
-`--no-public-site` to keep Phoenix's homepage and install the admin alone.
+phx.new's homepage (see [Add CMS public pages](#add-cms-public-pages)). To
+keep Phoenix's homepage and install the admin alone, install with
+`--no-public-site`: `mix igniter.install brando --no-public-site`, which passes
+the flag on to Brando's installer, or `mix brando.install --no-public-site`
+once Brando is a dependency.
 
 The archive supplies Igniter and invokes Brando's installer. Brando's optional
 modules automatically recompile if Igniter is added to an already compiled
@@ -126,7 +129,8 @@ installer does not replace your dependency with a hardcoded relative path.
 The generated changes configure Brando, extend supervision/endpoint/router,
 create the admin support modules and Vite projects, and add missing migrations.
 A new install adds the CMS public pages described below unless given
-`--no-public-site`; a homepage the application has made its own is kept.
+`--no-public-site`; a homepage the application has made its own is kept, and
+a router the site can't be added to keeps its routes and gets the admin alone.
 For a [Florist deploy](deployment.md), the installer writes the production
 endpoint's `check_origin`, the Florist environment files and the
 release script that sources them (see [Deployment hosts](#deployment-hosts)),
@@ -286,9 +290,14 @@ A homepage the application has changed is kept, and the site is not generated,
 with a notice naming the `mix brando.gen.site` commands above; `--interactive`
 asks instead. `mix brando.gen.site` removes the route only with
 `--replace-phoenix-home` or an affirmative interactive answer. The controller and
-templates remain available. Other homepages, catch-alls and support-path
-collisions stop the plan for manual integration (or install with
-`--no-public-site`); `--yes` never takes ownership of a changed homepage. Update
+templates remain available. Other homepages (a LiveView at `/`, or Phoenix
+1.6's `PageController, :index`), catch-alls, routes whose first segment is a
+parameter (`scope "/:locale"`, `get "/:slug"`), support-path collisions and a
+router without a `:browser` pipeline, which the site's routes pipe through,
+need manual integration: a new install leaves the site out and installs the
+admin, with a notice naming the routes and the `mix brando.gen.site` command to
+run once they are resolved, and `mix brando.gen.site` stops. `--yes` never takes
+ownership of a changed homepage. Update
 existing homepage request-test expectations when replacing the homepage
 behavior; phx.new's own test of it is removed with the route.
 

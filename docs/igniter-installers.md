@@ -83,8 +83,11 @@ while that controller and its `home.html.heex` are unchanged; a changed homepage
 is kept, without the site, with a notice. Reruns never add it.
 `mix brando.gen.site --replace-phoenix-home` only removes the root Phoenix
 PageController.home declaration; nested routes and Phoenix source files remain.
-Other ownership and custom generated files block the plan. Guidance requires an
-affirmative ownership answer, independently of diff acceptance.
+Other ownership (another homepage, catch-alls, parameter-first routes, support
+paths, or no `:browser` pipeline) blocks `mix brando.gen.site`; a new install
+leaves the site out instead, with a notice naming the routes. Custom generated
+files block the plan. Guidance requires an affirmative ownership answer,
+independently of diff acceptance.
 
 Embedded Blueprints cannot generate standalone resources. Context checks include
 function names supplied by other Blueprint query/mutation declarations. Route
