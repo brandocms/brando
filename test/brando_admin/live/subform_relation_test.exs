@@ -183,6 +183,37 @@ defmodule BrandoAdmin.SubformRelationTest do
     refute Repo.get(ArticleItem, ctx.item.id)
   end
 
+  test "a processed image lands on its row after a row marked for deletion", ctx do
+    second_item = insert_item(ctx, "Second")
+    second_cover = ~s(input[name="article[items][1][cover_id]"])
+    view = open(ctx)
+
+    view
+    |> with_target(cid_of(view, second_cover))
+    |> render_click("select_image", %{"id" => to_string(ctx.image.id)})
+
+    # The first row marked for deletion is still a row of the form.
+    params =
+      view
+      |> render()
+      |> form_params(@form)
+      |> put_in(["article", "items", "0", "marked_as_deleted"], "true")
+      |> Map.put("_target", ["article", "items", "0", "marked_as_deleted"])
+
+    view |> element(@form) |> render_change(params)
+    assert [%{action: :delete}, _] = form_assigns(view).form.source.changes.items
+    assert has_element?(view, second_cover)
+
+    processed = %{ctx.image | path: "image/processed.jpg"}
+    send(view.pid, {processed, [:image, :updated], [:items, 1, :cover]})
+    render(view)
+
+    second_id = second_item.id
+
+    assert %{cover: %{path: "image/processed.jpg"}} =
+             Enum.find(form_assigns(view).entry.items, &(&1.id == second_id))
+  end
+
   test "a processed image whose row path is stale leaves the rows alone", ctx do
     view = open(ctx)
 

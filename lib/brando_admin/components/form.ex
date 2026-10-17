@@ -2230,7 +2230,8 @@ defmodule BrandoAdmin.Components.Form do
   defp put_entry_relation(%{} = data, [key, index | rest], field, value, %Changeset{} = source, _row?)
        when is_atom(key) and is_integer(index) do
     with rows when is_list(rows) <- Map.get(data, key),
-         %{} = row <- source |> SubformHelpers.current_entries(key) |> List.wrap() |> Enum.at(index),
+         form_rows when is_list(form_rows) <- Map.get(source.changes, key, Map.get(source.data, key)),
+         %{} = row <- form_row_at(form_rows, index),
          row = Changeset.change(row),
          id when not is_nil(id) <- Changeset.get_field(row, :id),
          at when is_integer(at) <- Enum.find_index(rows, &(Map.get(&1, :id) == id)) do
@@ -8431,8 +8432,7 @@ defmodule BrandoAdmin.Components.Form do
   defp form_struct_at(%Phoenix.HTML.Form{source: %Changeset{} = changeset}, path), do: struct_at(changeset, path)
   defp form_struct_at(_form, _path), do: nil
 
-  # Rows are counted as `inputs_for` counts them: a row being replaced is not
-  # in the form, a row marked for deletion is.
+  # Rows are counted as `inputs_for` counts them (`form_row_at/2`).
   defp struct_at(%Changeset{action: :replace}, _path), do: nil
   defp struct_at(%Changeset{data: data}, []), do: data
   defp struct_at(data, []), do: data
@@ -8442,14 +8442,14 @@ defmodule BrandoAdmin.Components.Form do
 
   defp struct_at(%{} = data, [key | rest]) when is_atom(key), do: struct_at(Map.get(data, key), rest)
 
-  defp struct_at(rows, [index | rest]) when is_list(rows) and is_integer(index) do
-    rows
-    |> Enum.reject(&match?(%Changeset{action: :replace}, &1))
-    |> Enum.at(index)
-    |> struct_at(rest)
-  end
+  defp struct_at(rows, [index | rest]) when is_list(rows) and is_integer(index),
+    do: rows |> form_row_at(index) |> struct_at(rest)
 
   defp struct_at(_data, _path), do: nil
+
+  # The row at a form index: `inputs_for` leaves out a row being replaced and
+  # keeps one marked for deletion.
+  defp form_row_at(rows, index), do: rows |> Enum.reject(&match?(%Changeset{action: :replace}, &1)) |> Enum.at(index)
 
   # A field name, or the index of a subform row (`[:clients, 0]`).
   defp recovery_path_segment(index) when is_integer(index) and index >= 0, do: {:ok, index}

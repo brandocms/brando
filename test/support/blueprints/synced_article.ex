@@ -216,6 +216,9 @@ defmodule Brando.SyncTest.ArticleItem do
   trait :ensure_uid
   trait :sequenced
 
+  # A row marked for deletion stays in the form (SubformRelationTest)
+  @allow_mark_as_deleted true
+
   identifier false
   persist_identifier false
 
