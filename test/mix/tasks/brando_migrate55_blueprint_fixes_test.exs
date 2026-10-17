@@ -223,7 +223,7 @@ defmodule Mix.Tasks.Brando.Migrate55BlueprintFixesTest do
 
     # The EEx template is not Elixir, and Igniter parses each `.ex` file it writes.
     assert igniter.issues == []
-    apply_igniter!(igniter)
+    Brando.IgniterCase.prepare_for_write!(igniter)
   end
 
   test "lists a slug input's from: in the generator template given over several lines or as a list" do
@@ -431,9 +431,14 @@ defmodule Mix.Tasks.Brando.Migrate55BlueprintFixesTest do
     end)
   end
 
+  # The generator template joins the files after `test_project/1`, whose glob
+  # would parse it as Elixir; a real run reads it only as text.
   defp migrate(files) do
+    {templates, files} = Map.split_with(files, fn {path, _content} -> String.starts_with?(path, "priv/templates/") end)
+
     [app_name: :koi, files: Map.put(files, ".formatter.exs", @formatter)]
     |> test_project()
+    |> then(&Igniter.assign(&1, :test_files, Map.merge(&1.assigns.test_files, templates)))
     |> include_test_files()
     |> Migrate55.igniter()
   end

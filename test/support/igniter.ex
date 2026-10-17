@@ -88,6 +88,21 @@ defmodule Brando.IgniterCase do
     igniter.rewrite |> Rewrite.source!(path) |> Rewrite.Source.get(:content)
   end
 
+  @doc """
+  Runs Igniter's write step, which parses each `.ex` source to place its
+  modules, as a real run does.
+
+  Not `Igniter.Test.apply_igniter!/1`: it then re-reads every test file whose
+  absolute path its glob matches, and so parses a consumer's EEx template
+  named `.ex` as Elixir, which a real run never reads that way.
+  """
+  def prepare_for_write!(igniter) do
+    case Igniter.prepare_for_write(igniter) do
+      %{issues: []} = igniter -> igniter
+      %{issues: issues} -> raise "Igniter's write step reported issues: #{inspect(issues)}"
+    end
+  end
+
   def apply_and_reload(igniter) do
     igniter = Igniter.Test.apply_igniter!(igniter)
     files = igniter.assigns.test_files

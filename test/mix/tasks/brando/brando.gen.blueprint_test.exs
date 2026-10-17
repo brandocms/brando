@@ -120,7 +120,7 @@ defmodule Mix.Tasks.Brando.Gen.BlueprintTest do
     assert result.issues == []
     assert IgniterCase.source(result, "lib/studio/catalog/product.ex") =~ ":local"
     # Igniter parses each `.ex` file it writes; the EEx template is not one.
-    Igniter.Test.apply_igniter!(result)
+    IgniterCase.prepare_for_write!(result)
     result = generate(base, ["Catalog", "Product", "--template", "custom.ex.eex"])
     assert result.issues == []
     assert IgniterCase.source(result, "lib/studio/catalog/product.ex") =~ ":explicit"
