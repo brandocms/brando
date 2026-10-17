@@ -4223,9 +4223,6 @@ defmodule BrandoAdmin.Components.Form do
     """
   end
 
-  attr :presences, :list
-  attr :current_user, :map, required: true
-
   attr :id, :string, required: true
   attr :myself, :any, required: true
   attr :type, :string
@@ -4259,6 +4256,9 @@ defmodule BrandoAdmin.Components.Form do
     </form>
     """
   end
+
+  attr :presences, :list
+  attr :current_user, :map, required: true
 
   # The editors present, each dotted in the colour their field presence has
   # (`data-presence-color-index`, by position, as fieldPresence.js counts it).
@@ -8430,6 +8430,7 @@ defmodule BrandoAdmin.Components.Form do
 
   # Rows are counted as `inputs_for` counts them: a row being replaced is not
   # in the form, a row marked for deletion is.
+  defp struct_at(%Changeset{action: :replace}, _path), do: nil
   defp struct_at(%Changeset{data: data}, []), do: data
   defp struct_at(data, []), do: data
 

@@ -203,6 +203,27 @@ defmodule BrandoAdmin.Components.Form.DrawerRecoveryTest do
     assert socket.assigns.edit_image.path == [:items, 1]
   end
 
+  # A one-to-one subform being replaced (set to nil) is not in the form.
+  test "a drawer on a one-to-one subform being replaced stays closed", %{image: image} do
+    author = %Brando.SyncTest.ArticleAuthor{id: 1, name: "Example Author"}
+    article = Changeset.change(%Brando.SyncTest.Article{author: author})
+    article = %{article | changes: %{author: %{Changeset.change(author) | action: :replace}}}
+
+    params =
+      drawer_params(image, "{}")
+      |> put_in(["drawer", "path"], Jason.encode!(["author"]))
+      |> put_in(["drawer", "field"], "portrait")
+      |> put_in(["drawer", "schema"], to_string(Brando.SyncTest.ArticleAuthor))
+
+    assert {:noreply, socket} = Form.handle_event("recover_drawer_state", params, socket(article))
+    refute socket.assigns.editing_image?
+
+    # The same subform, kept, restores.
+    kept = %{article | changes: %{}}
+    assert {:noreply, socket} = Form.handle_event("recover_drawer_state", params, socket(kept))
+    assert socket.assigns.editing_image?
+  end
+
   # The drawer commits a pick to `<field>_id` at its path in this form, so a
   # field the form does not hold there leaves the drawer closed.
   test "a drawer for a field the form does not hold at its path stays closed", %{image: image} do
