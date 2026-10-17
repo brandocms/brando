@@ -175,7 +175,11 @@ Besides `{% ref %}` and `{% headless_ref %}`:
 ```
 
 - `{% fragment %}` takes the fragment's parent key, key and language as bare
-  words, not a quoted path.
+  words, not a quoted path. Like `<.fragment>`, it renders into the entry's
+  stored HTML when the entry is rendered: nothing for a fragment that is
+  unpublished then, and a change to the fragment's status shows in the entry
+  on its next save. Outside development a missing fragment renders nothing
+  and logs a warning.
 - `{% t %}` outputs its string only when the entry's language matches.
 - `{% link %}` renders an `<a class="link">` from a link var.
 - `{% route %}` and `{% route_i18n %}` call your router's path helpers;

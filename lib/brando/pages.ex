@@ -14,6 +14,8 @@ defmodule Brando.Pages do
   alias Brando.Users.User
   alias Ecto.Changeset
 
+  require Logger
+
   @type changeset :: Changeset.t()
   @type fragment :: Fragment.t()
   @type fragment_error :: {:error, {:fragment, :not_found}} | {:error, changeset}
@@ -418,17 +420,38 @@ defmodule Brando.Pages do
   end
 
   @doc """
-  Get set of fragments by parent key
+  Get set of fragments by parent key.
+
+  For public pages: an unpublished fragment keeps its key, with no content, so
+  it renders nothing however a template reads it. `status: :published` is the
+  same. Pass another `:status`, such as `status: :all`, for fragments as stored.
   """
   def get_fragments(parent_key) when is_binary(parent_key) do
     IO.warn("get_fragments(binary) is deprecated! Use `get_fragments(map)` instead")
     get_fragments(%{filter: %{parent_key: parent_key}})
   end
 
-  def get_fragments(opts) when is_map(opts) do
+  def get_fragments(%{status: status} = opts) when status not in [:published, "published"] do
     {:ok, fragments} = list_fragments(opts)
     {:ok, Map.new(fragments, fn x -> {x.key, x} end)}
   end
+
+  def get_fragments(opts) when is_map(opts) do
+    {:ok, fragments} = opts |> Map.delete(:status) |> select_status() |> list_fragments()
+    {:ok, public_fragments(fragments)}
+  end
+
+  defp select_status(%{select: {kind, fields}} = opts) when kind in [:map, :struct, :raw] and is_list(fields),
+    do: %{opts | select: {kind, Enum.uniq([:status | fields])}}
+
+  defp select_status(%{select: fields} = opts) when is_list(fields), do: %{opts | select: Enum.uniq([:status | fields])}
+  defp select_status(opts), do: opts
+
+  defp public_fragments(fragments), do: Map.new(fragments, &{&1.key, without_draft_content(&1)})
+
+  defp without_draft_content(%{status: :published} = fragment), do: fragment
+  defp without_draft_content(%{rendered_blocks: _} = fragment), do: %{fragment | rendered_blocks: nil}
+  defp without_draft_content(fragment), do: fragment
 
   @doc """
   Get fragment from page
@@ -478,17 +501,16 @@ defmodule Brando.Pages do
   end
 
   @doc """
-  Get set of fragments by parent key and language
+  Get set of fragments by parent key and language, for public pages: an
+  unpublished fragment has no content, as with `get_fragments/1`.
   """
   def get_fragments(parent_key, language) do
-    fragments =
-      Fragment
-      |> where([p], p.parent_key == ^parent_key)
-      |> where([p], p.language == ^language)
-      |> exclude_deleted()
-      |> Brando.Repo.all()
-
-    Map.new(fragments, fn x -> {x.key, x} end)
+    Fragment
+    |> where([p], p.parent_key == ^parent_key)
+    |> where([p], p.language == ^language)
+    |> exclude_deleted()
+    |> Brando.Repo.all()
+    |> public_fragments()
   end
 
   @doc """
@@ -541,7 +563,8 @@ defmodule Brando.Pages do
       fetch_fragment("my/fragment", "en")
 
   If no language is passed, default language set in `brando.exs` will be used.
-  If the fragment isn't found, it will render an error box.
+  If the fragment isn't found, it will render an error box. An unpublished
+  fragment renders nothing.
   """
   def fetch_fragment(key, language \\ nil) when is_binary(key) do
     language = language || Brando.config(:default_language)
@@ -561,14 +584,15 @@ defmodule Brando.Pages do
            </div>))
 
       fragment ->
-        # rendered_blocks is pre-rendered CMS content from our own rendering pipeline
-        # nosec
-        {:safe, Brando.FrontendEdit.rendered_html(fragment, :blocks)}
+        fragment_html(fragment)
     end
   end
 
-  # nosec
-  def render_fragment(%Fragment{} = fragment), do: {:safe, Brando.FrontendEdit.rendered_html(fragment, :blocks)}
+  @doc """
+  Render a fragment, or the fragment under `key` in a map from `get_fragments/1`,
+  or the one with `parent` key and `key`. An unpublished fragment renders nothing.
+  """
+  def render_fragment(%Fragment{} = fragment), do: fragment_html(fragment)
 
   def render_fragment(fragments, key) when is_map(fragments) do
     case Map.get(fragments, key) do
@@ -580,33 +604,58 @@ defmodule Brando.Pages do
            </div>))
 
       fragment ->
-        {:safe, Brando.FrontendEdit.rendered_html(fragment, :blocks)}
+        fragment_html(fragment)
     end
   end
 
   def render_fragment(parent, key, language \\ nil) when is_binary(parent) and is_binary(key) do
-    default_opts = %{matches: %{parent_key: parent, key: key}}
+    case lookup_fragment(parent, key, language) do
+      {:ok, fragment} -> fragment_html(fragment)
+      {:error, {:fragment, :not_found}} -> missing_fragment_html(parent, key, language)
+    end
+  end
 
-    opts =
-      if language do
-        put_in(default_opts, [:matches, :language], language)
-      else
-        default_opts
-      end
+  @doc """
+  `render_fragment/3` for HTML stored with an entry, as the `{% fragment %}`
+  tag renders it: outside development a missing fragment renders nothing, and
+  is logged, since visitors see the stored HTML.
+  """
+  def render_embedded_fragment(parent, key, language \\ nil) when is_binary(parent) and is_binary(key) do
+    case lookup_fragment(parent, key, language) do
+      {:ok, fragment} ->
+        fragment_html(fragment)
 
-    case get_fragment(opts) do
       {:error, {:fragment, :not_found}} ->
-        Phoenix.HTML.raw(~s(<div class="page-fragment-missing">
+        if Brando.env() == :dev do
+          missing_fragment_html(parent, key, language)
+        else
+          Logger.warning("Missing page fragment #{inspect(parent)} #{inspect(key)} #{inspect(language)}")
+          Phoenix.HTML.raw("")
+        end
+    end
+  end
+
+  defp lookup_fragment(parent, key, language) do
+    matches = %{parent_key: parent, key: key}
+    matches = if language, do: Map.put(matches, :language, language), else: matches
+    get_fragment(%{matches: matches})
+  end
+
+  defp missing_fragment_html(parent, key, language) do
+    Phoenix.HTML.raw(~s(<div class="page-fragment-missing">
              <strong>Missing page fragment</strong> <br />
              parent: #{parent}<br />
              key...: #{key}<br />
              lang..: #{language}
            </div>))
-
-      {:ok, fragment} ->
-        {:safe, Brando.FrontendEdit.rendered_html(fragment, :blocks)}
-    end
   end
+
+  # rendered_blocks is pre-rendered CMS content from our own rendering pipeline
+  # nosec
+  defp fragment_html(%Fragment{status: :published} = fragment),
+    do: fragment |> Brando.FrontendEdit.rendered_html(:blocks) |> Phoenix.HTML.raw()
+
+  defp fragment_html(%Fragment{}), do: {:safe, ""}
 
   @doc """
   Compute and store breadcrumbs for a page and its descendants.

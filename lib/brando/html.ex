@@ -239,13 +239,17 @@ defmodule Brando.HTML do
   attr :key, :string
   attr :language, :string
 
+  # An unpublished fragment renders nothing, as with `Brando.Pages.render_fragment/1`.
   def fragment(%{fragment: fragment} = assigns) when not is_nil(fragment) do
-    assigns = assign(assigns, :html, Brando.FrontendEdit.rendered_html(fragment, :blocks))
+    assigns = assign(assigns, :html, Brando.Pages.render_fragment(fragment))
 
     ~H"""
-    {raw(@html)}
+    {@html}
     """
   end
+
+  # A key missing from a partials map.
+  def fragment(%{fragment: nil} = assigns) when not is_map_key(assigns, :parent_key), do: ~H""
 
   # `render_fragment/3` returns safe HTML (or a missing-fragment notice), not
   # the fragment itself.

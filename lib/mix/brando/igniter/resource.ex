@@ -25,7 +25,8 @@ if Code.ensure_loaded?(Igniter) do
            {:ok, igniter, options} <- Configuration.namespace_options(igniter, options),
            {:ok, igniter, project} <- Project.discover(igniter, options),
            {:ok, metadata} <- metadata(module, project, options),
-           :ok <- Routes.validate_public_path(options[:public_route]) do
+           :ok <- Routes.validate_public_path(options[:public_route]),
+           {:ok, igniter, metadata} <- public_metadata(igniter, metadata, options[:public_route]) do
         igniter
         |> Context.plan(metadata)
         |> files(metadata, options)
@@ -35,8 +36,8 @@ if Code.ensure_loaded?(Igniter) do
         Review your authorization policy and add a navigation entry in #{inspect(project.admin_module)}.Menus.
         Then compile, generate/review its storage migration, and run mix ecto.migrate.
         No database operation or authorization grant was performed by this generator.
-        Public controllers/routes are generated only with --public-route /your-path.
         """)
+        |> public_notice(metadata, options[:public_route])
       else
         {:error, %Igniter{} = igniter} -> igniter
         {:error, message} -> Igniter.add_issue(igniter, message)
@@ -90,6 +91,15 @@ if Code.ensure_loaded?(Igniter) do
            main_field: field,
            text_field?: module.__schema__(:type, field) == :string,
            status?: :status in module.__schema__(:fields),
+           # Public pages show an entry by its slug when it has one.
+           param: if(:slug in module.__schema__(:fields), do: "slug", else: "id"),
+           primary_key: module.__schema__(:primary_key),
+           id_type: module.__schema__(:type, :id),
+           blocks: Enum.map(module.__blocks_fields__(), & &1.name),
+           language?: :language in module.__schema__(:fields),
+           alternates?: :alternate_entries in module.__schema__(:associations),
+           preloads: preloads(module),
+           absolute_url?: module.__has_absolute_url__(),
            required_field?:
              Enum.any?(Brando.Blueprint.Attributes.__attributes__(module), &(&1.name == field && &1.opts[:required])),
            admin_list:
@@ -108,6 +118,85 @@ if Code.ensure_loaded?(Igniter) do
         {:error, message} ->
           {:error, message}
       end
+    end
+
+    # The show page's put_meta reads the entry's meta fields; an association
+    # one of them returns must be loaded, or the layout's meta tags raise.
+    defp preloads(module) do
+      alternates = if :alternate_entries in module.__schema__(:associations), do: [:alternate_entries], else: []
+
+      meta_fields =
+        case Spark.Dsl.Extension.get_entities(module, :meta_schemas) do
+          [meta_schema | _] -> meta_schema.fields
+          [] -> []
+        end
+
+      Enum.uniq(alternates ++ meta_associations(meta_fields, struct(module), []))
+    end
+
+    # A fallback such as `fallback([&1.meta_image, &1.cover])` returns only the
+    # first association it reaches unloaded: probe again with that one loaded
+    # and empty, until no meta field returns an unloaded association. Each
+    # field is probed on its own: a field that raises on the probe's empty
+    # entry (`String.slice(&1.title, 0, 155)`) gives nothing, and the others
+    # still count.
+    defp meta_associations(meta_fields, entry, found) do
+      unloaded =
+        for meta_field <- meta_fields,
+            %Ecto.Association.NotLoaded{__field__: field} <- [probe(meta_field.value_fn, entry)],
+            field not in found,
+            uniq: true,
+            do: field
+
+      case unloaded do
+        [] -> found
+        fields -> meta_associations(meta_fields, struct(entry, Map.new(fields, &{&1, nil})), found ++ fields)
+      end
+    end
+
+    defp probe(value_fn, entry) do
+      value_fn.(entry)
+    rescue
+      _ -> nil
+    end
+
+    defp public_metadata(igniter, metadata, nil), do: {:ok, igniter, Map.put(metadata, :site_layouts, nil)}
+
+    defp public_metadata(igniter, metadata, path) do
+      {igniter, site_layouts} = Routes.site_layouts(igniter, metadata.project, public_route: path)
+
+      # A consumer template copied from the default before entry pages had
+      # slugs matches %{"id" => id}; its routes keep :id.
+      override =
+        Enum.find(
+          ["controller.ex", "html.ex"],
+          &Igniter.exists?(igniter, Path.join("priv/templates/brando.gen", &1))
+        )
+
+      metadata =
+        Map.merge(metadata, %{
+          site_layouts: site_layouts,
+          template_override: override && Path.join("priv/templates/brando.gen", override),
+          param: if(override, do: "id", else: metadata.param)
+        })
+
+      with :ok <- primary_key(metadata),
+           {:ok, igniter, languages} <- Routes.languages(igniter, metadata) do
+        {:ok, igniter, Map.put(metadata, :languages, languages)}
+      end
+    end
+
+    defp primary_key(%{param: "slug"}), do: :ok
+
+    defp primary_key(%{primary_key: [:id], id_type: type}) when type in [:id, :integer, :binary_id, Ecto.UUID],
+      do: :ok
+
+    defp primary_key(metadata) do
+      {:error,
+       "#{inspect(metadata.schema)}'s public pages look entries up by id, but its primary key is " <>
+         "#{inspect(Enum.map(metadata.primary_key, &{&1, metadata.schema.__schema__(:type, &1)}))}: " <>
+         "--public-route supports an integer or UUID primary key named :id. " <>
+         "Add a slug field, or write its controller and routes by hand."}
     end
 
     defp default_main_field(module) do
@@ -164,9 +253,99 @@ if Code.ensure_loaded?(Igniter) do
         controller_module: metadata.controller,
         html_module: metadata.html,
         public_route: options[:public_route],
-        status: metadata.status?
+        status: metadata.status?,
+        site_layouts: metadata.site_layouts,
+        param: metadata.param,
+        id_type: metadata.id_type,
+        blocks: metadata.blocks,
+        language: metadata.language?,
+        alternates: metadata.alternates?,
+        preloads: metadata.preloads,
+        text_field: metadata.text_field?
       ]
     end
+
+    defp public_notice(igniter, _metadata, nil),
+      do: Igniter.add_notice(igniter, "Public controllers/routes are generated only with --public-route /your-path.")
+
+    defp public_notice(igniter, metadata, path) do
+      igniter
+      |> Igniter.add_notice(site_notice(metadata, path))
+      |> languages_notice(metadata, path)
+      |> override_notice(metadata)
+      |> absolute_url_notice(metadata, path)
+    end
+
+    defp languages_notice(igniter, %{languages: nil}, _path), do: igniter
+
+    defp languages_notice(igniter, %{languages: languages}, path) do
+      prefixed = Enum.map_join(languages.prefixed, ", ", &"/#{&1}#{path} for #{&1}")
+
+      Igniter.add_notice(igniter, """
+      Each language has its own routes, as the CMS pages do: #{path} for #{languages.default}#{if prefixed != "", do: ", " <> prefixed}.
+      A language you add later needs its scope in the router.
+      """)
+    end
+
+    defp override_notice(igniter, %{template_override: nil}), do: igniter
+
+    defp override_notice(igniter, metadata) do
+      Igniter.add_notice(igniter, """
+      #{metadata.template_override} overrides the default template, so the entry pages keep the :id route
+      param. To show entries by slug, update it from Brando's default, which now has the bindings
+      param, site_layouts, language, preloads and blocks, and change the route to :slug.
+      """)
+    end
+
+    defp site_notice(%{site_layouts: nil} = metadata, path) do
+      """
+      #{path} pipes through :browser only and renders in your application's layout:
+      no CMS site was found (a :brando_site pipeline and #{inspect(metadata.project.web_module)}.CMS.Layouts),
+      so these pages get no site assets, Brando meta tags or Brando.Plug.Lockdown.
+      Run mix brando.gen.site, or wire them by hand: pipe the routes through a pipeline with
+      Brando.Plug.Lockdown (it sends visitors to a route named lockdown; see Lockdown in the
+      generators guide) and render with the layout of your public pages.
+      """
+    end
+
+    defp site_notice(metadata, path) do
+      """
+      #{path} pipes through :browser and :brando_site, like the CMS pages, and renders in
+      #{inspect(metadata.site_layouts)} with Brando meta tags. A missing entry renders the site's 404 page.
+      """
+    end
+
+    defp absolute_url_notice(igniter, %{absolute_url?: true, languages: nil}, _path), do: igniter
+
+    defp absolute_url_notice(igniter, %{absolute_url?: true} = metadata, path) do
+      template = metadata.schema.__absolute_url_template__() |> inspect()
+
+      if template =~ "route_i18n" or template =~ "language" do
+        igniter
+      else
+        Igniter.add_notice(igniter, """
+        #{inspect(metadata.schema)}'s absolute_url gives every language the same path, but a translation's
+        page is under its language's prefix. For hreflang links, admin previews and sitemaps that work, set:
+
+            #{absolute_url(metadata, path)}
+        """)
+      end
+    end
+
+    defp absolute_url_notice(igniter, metadata, path) do
+      Igniter.add_notice(igniter, """
+      #{inspect(metadata.schema)} has absolute_url false. To link admin previews, sitemaps and SEO to these pages, set:
+
+          #{absolute_url(metadata, path)}
+      """)
+    end
+
+    # route_i18n prefixes the entry's language as the routes do, through the
+    # router helpers of the language scopes (no_article_path, and article_path).
+    defp absolute_url(%{languages: nil} = metadata, path), do: ~s|absolute_url ~H"#{path}/{@entry.#{metadata.param}}"|
+
+    defp absolute_url(metadata, _path),
+      do: "absolute_url ~H|{route_i18n(@entry, :#{metadata.naming.singular}_path, :show, [@entry.#{metadata.param}])}|"
 
     defp module_path(module), do: "lib/#{Macro.underscore(module)}.ex"
   end

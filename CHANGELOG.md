@@ -45,6 +45,35 @@ application that sets
 `mix brando.doctor` reports migrations that have not
 run and queues that are missing.
 
+Only published fragments render on public pages now: a draft, pending or
+disabled `partials/footer` renders as empty, where it showed before. Publish
+the fragments the site shows. A `get_fragments/1` call that passes
+`status: :published`, as the old guide said to, now also keeps an unpublished
+fragment's key, with no content, so the option can stay or go. To list the
+unpublished fragments, run this in `iex -S mix` against each environment's
+database (a release: `bin/<app> remote`):
+
+```elixir
+import Ecto.Query
+
+unpublished = fn prefix ->
+  Brando.Repo.all(
+    from(f in Brando.Pages.Fragment,
+      where: (f.status != :published or is_nil(f.status)) and is_nil(f.deleted_at),
+      select: {f.parent_key, f.key, f.language, f.status}
+    ),
+    prefix: prefix
+  )
+end
+
+# Without named environments:
+unpublished.(nil)
+
+# With named environments, once for each environment schema:
+for site <- Brando.Tenant.Registry.list_sites(), environment <- site.environments,
+    do: {site.key, environment.key, unpublished.(Brando.Tenant.prefix(site, environment))}
+```
+
 There are no migrations numbered `brando_206` or `brando_208`: both numbers
 were reserved and never needed, so the gap is not a missed migration.
 

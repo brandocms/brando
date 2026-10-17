@@ -152,7 +152,10 @@ defmodule Brando.Pages.Fragment do
     )
   end
 
+  # An unpublished fragment renders nothing, as when a block embeds it.
   defimpl Phoenix.HTML.Safe do
+    def to_iodata(%{status: status}) when status != :published, do: []
+
     def to_iodata(%{wrapper: nil} = fragment) do
       fragment
       |> Brando.FrontendEdit.rendered_html(:blocks)

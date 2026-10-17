@@ -55,6 +55,7 @@ defmodule Brando.FactoryMixin do
           parent_key: "parent",
           key: "a-key",
           language: "no",
+          status: :published,
           creator: build(:user)
         }
       end

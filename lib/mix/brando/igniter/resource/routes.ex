@@ -8,6 +8,7 @@ if Code.ensure_loaded?(Igniter) do
     alias Igniter.Code.Common
     alias Igniter.Code.Function, as: CodeFunction
     alias Igniter.Project.Module, as: ProjectModule
+    alias Mix.Brando.Igniter.Install.Configuration
     alias Mix.Brando.Igniter.RouteInventory
 
     def validate_public_path(nil), do: :ok
@@ -56,38 +57,202 @@ if Code.ensure_loaded?(Igniter) do
       end
     end
 
+    @doc """
+    The CMS site's layout module when `brando.gen.site` has set up the public
+    site (its `:brando_site` pipeline and `Web.CMS.Layouts`), or nil.
+    """
+    def site_layouts(igniter, project, options) do
+      layouts = Module.concat(project.web_module, CMS.Layouts)
+
+      with path when is_binary(path) <- options[:public_route],
+           {:ok, {igniter, _, router}} <- ProjectModule.find_module(igniter, project.router),
+           {:ok, _} <- site_pipeline(router),
+           {true, igniter} <- ProjectModule.module_exists(igniter, layouts) do
+        {igniter, layouts}
+      else
+        {:error, %Igniter{} = igniter} -> {igniter, nil}
+        {false, igniter} -> {igniter, nil}
+        _ -> {igniter, nil}
+      end
+    end
+
+    @doc """
+    The languages a translatable Blueprint's public routes are generated for,
+    from the application's config: the default language's routes have no
+    prefix, and every other language's (the default's too with
+    `scope_default_language_routes: true`) are in a scope named after it, as
+    `Brando.I18n` routes them and `route_i18n` links to them. Nil for a
+    Blueprint without a language.
+    """
+    def languages(igniter, %{language?: true}) do
+      with {:ok, igniter, languages} <- Configuration.read(igniter, :languages),
+           {:ok, igniter, default} <- Configuration.read(igniter, :default_language),
+           {:ok, igniter, scoped?} <- Configuration.read(igniter, :scope_default_language_routes),
+           values when values != [] <- language_values(languages),
+           :ok <- path_segments(values),
+           default = to_string(default),
+           true <- default in values do
+        {:ok, igniter, %{default: default, prefixed: Enum.reject(values, &(&1 == default and scoped? != true))}}
+      else
+        {:error, message} ->
+          {:error, message}
+
+        _ ->
+          {:error,
+           "A translatable Blueprint's public routes are generated for each language in config :brando, " <>
+             ":languages, with :default_language among them. Set both as literals in config/brando.exs."}
+      end
+    end
+
+    def languages(igniter, _metadata), do: {:ok, igniter, nil}
+
+    defp language_values(languages) when is_list(languages),
+      do: languages |> List.flatten() |> Keyword.get_values(:value) |> Enum.map(&to_string/1)
+
+    defp language_values(_languages), do: []
+
+    # A language's routes are under /<code>, as Brando.I18n.parse_path/1 reads it.
+    defp path_segments(values) do
+      case Enum.reject(values, &Regex.match?(~r/^[A-Za-z0-9][A-Za-z0-9_-]*$/, &1)) do
+        [] ->
+          :ok
+
+        invalid ->
+          {:error,
+           "A translatable Blueprint's public routes are under a scope named after each language, " <>
+             "but #{Enum.map_join(invalid, ", ", &inspect/1)} in config :brando, :languages is not a path segment " <>
+             "of letters, digits, - and _. Write its routes by hand."}
+      end
+    end
+
+    # The scope's name prefixes its router helpers (:"pt-br_article_path"),
+    # which Brando.I18n.Helpers.localized_path/3 calls for the language.
+    defp scope_as(language) do
+      if Regex.match?(~r/^[a-z_][A-Za-z0-9_]*$/, language), do: ":" <> language, else: ":" <> inspect(language)
+    end
+
+    defp site_pipeline(router),
+      do: CodeFunction.move_to_function_call(router, :pipeline, 2, &CodeFunction.argument_equals?(&1, 0, :brando_site))
+
     defp public(igniter, m, path) do
-      ProjectModule.find_and_update_module!(igniter, m.project.router, fn zipper ->
-        # A separate scope preserves existing Phoenix scope aliases and pipelines.
-        code = """
-        scope "/" do
-          pipe_through :browser
-          get #{inspect(path)}, #{inspect(m.controller)}, :index
-          get #{inspect(path <> "/:id")}, #{inspect(m.controller)}, :show
+      show_path = path <> "/:" <> m.param
+      pipelines = if m.site_layouts, do: "[:browser, :brando_site]", else: ":browser"
+      prefixes = if m.languages, do: m.languages.prefixed, else: []
+
+      routes = """
+      get #{inspect(path)}, #{inspect(m.controller)}, :index
+      get #{inspect(show_path)}, #{inspect(m.controller)}, :show
+      """
+
+      # A separate scope preserves existing Phoenix scope aliases and pipelines.
+      code = """
+      scope "/"#{if m.languages, do: scope_assigns(m, m.languages.default), else: ""} do
+        pipe_through #{pipelines}
+        #{routes}
+        #{language_scopes(m, routes, prefixes)}
+      end
+      """
+
+      existing = &existing_routes(&1, m, [{path, :index}, {show_path, :show}], prefixes)
+
+      added_languages =
+        case ProjectModule.find_module(igniter, m.project.router) do
+          {:ok, {_igniter, _source, zipper}} -> missing_languages(existing.(zipper))
+          _ -> nil
+        end
+
+      added_code =
+        added_languages &&
+          """
+          scope "/" do
+            pipe_through #{pipelines}
+            #{language_scopes(m, routes, added_languages)}
+          end
+          """
+
+      igniter
+      |> ProjectModule.find_and_update_module!(
+        m.project.router,
+        &update_public_routes(&1, existing, code, added_code, m, path)
+      )
+      |> added_languages_notice(m, path, added_languages)
+    end
+
+    defp update_public_routes(zipper, existing, code, added_code, m, path) do
+      states = zipper |> existing.() |> Enum.flat_map(&elem(&1, 1))
+
+      cond do
+        Enum.all?(states, &(&1 == :present)) -> {:ok, zipper}
+        Enum.all?(states, &(&1 == :missing)) -> insert_public_scope(zipper, code, m)
+        added_code -> insert_public_scope(zipper, added_code, m)
+        true -> {:error, "Public routes at #{path} conflict with existing or partial routes. Integrate them explicitly."}
+      end
+    end
+
+    # :brando_site's put_locale takes the language from the path; without
+    # it, the scope's assigns give it.
+    defp scope_assigns(m, language) do
+      if m.languages && !m.site_layouts, do: ", assigns: %{language: #{inspect(language)}}", else: ""
+    end
+
+    defp language_scopes(m, routes, languages) do
+      Enum.map_join(languages, "\n", fn language ->
+        """
+        scope #{inspect("/" <> language)}, as: #{scope_as(language)}#{scope_assigns(m, language)} do
+          #{routes}
         end
         """
-
-        existing =
-          Enum.map([{path, :index}, {path <> "/:id", :show}], fn {path, action} ->
-            route_state(zipper, :get, path, m.controller, action)
-          end)
-
-        cond do
-          existing == [:present, :present] ->
-            {:ok, zipper}
-
-          existing == [:missing, :missing] ->
-            insert_public_scope(zipper, code)
-
-          true ->
-            {:error, "Public routes at #{path} conflict with existing or partial routes. Integrate them explicitly."}
-        end
       end)
     end
 
-    defp insert_public_scope(zipper, code) do
-      # Place explicit routes ahead of catch-all scopes, after router imports.
-      RouteInventory.insert_before_routes(zipper, code)
+    # Each prefix ("" for the unprefixed routes) with the state of its routes.
+    defp existing_routes(zipper, m, routes, prefixes) do
+      for prefix <- ["" | Enum.map(prefixes, &("/" <> &1))] do
+        {prefix,
+         Enum.map(routes, fn {path, action} -> route_state(zipper, :get, prefix <> path, m.controller, action) end)}
+      end
+    end
+
+    # The languages whose scopes are missing beside routes generated before
+    # them (a language added to the config since, or routes from before
+    # translations had scopes), or nil when the routes are not just that.
+    defp missing_languages(existing) do
+      with {"", [:present, :present]} <- List.first(existing),
+           true <- Enum.all?(existing, &(elem(&1, 1) in [[:present, :present], [:missing, :missing]])),
+           [_ | _] = missing <- for({"/" <> language, [:missing, :missing]} <- existing, do: language) do
+        missing
+      else
+        _ -> nil
+      end
+    end
+
+    defp added_languages_notice(igniter, %{site_layouts: nil, languages: %{default: default}}, path, [_ | _] = added) do
+      Igniter.add_notice(igniter, """
+      Added the routes of #{Enum.join(added, ", ")} beside the existing #{path} routes. Without the CMS site, the
+      pages take their language from the scope's assigns: give the scope of the unprefixed #{path} routes
+      assigns: %{language: #{inspect(default)}} if it has none.
+      """)
+    end
+
+    defp added_languages_notice(igniter, _m, _path, _added), do: igniter
+
+    # Explicit routes go ahead of catch-all scopes: with the CMS site, right
+    # before the scope holding its catch-all, after the :brando_site pipeline;
+    # otherwise before the first route, after router imports.
+    defp insert_public_scope(zipper, code, %{site_layouts: nil}), do: RouteInventory.insert_before_routes(zipper, code)
+
+    defp insert_public_scope(zipper, code, m) do
+      page_controller = Module.concat(m.project.web_module, CMS.PageController)
+
+      cms_scope? = fn call ->
+        CodeFunction.function_call?(call, :scope, :any) &&
+          Enum.any?(RouteInventory.at(call), &(&1.module == page_controller && String.contains?(&1.path, "*")))
+      end
+
+      case Common.move_to(zipper, cms_scope?) do
+        {:ok, scope} -> {:ok, Common.add_code(scope, code, placement: :before)}
+        :error -> RouteInventory.insert_before_routes(zipper, code)
+      end
     end
 
     defp ensure_route(body, verb, path, module, action, code) do
