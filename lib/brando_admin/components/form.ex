@@ -958,6 +958,7 @@ defmodule BrandoAdmin.Components.Form do
     |> assign(:blocks_detached?, true)
     |> assign(:working_copy, Map.get(message, :revision))
     |> put_local_form(to_form(changeset, []))
+    |> rebuild_preview_relations()
     |> assign_entry_for_blocks()
     |> clear_blocks_root_changesets()
     |> force_svelte_remounts(:all)
@@ -993,6 +994,7 @@ defmodule BrandoAdmin.Components.Form do
      socket
      |> assign(:entry, updated_entry)
      |> put_form(to_form(new_changeset, []))
+     |> rebuild_preview_relations()
      |> clear_owned_assets()
      |> remount_block_fields()
      |> force_svelte_remounts(:all)}
@@ -1278,6 +1280,7 @@ defmodule BrandoAdmin.Components.Form do
      socket
      |> assign(:entry, updated_entry)
      |> put_form(to_form(updated_changeset))
+     |> rebuild_preview_relations()
      |> clear_owned_assets()
      |> force_svelte_remounts(:all)}
   end
@@ -3059,30 +3062,49 @@ defmodule BrandoAdmin.Components.Form do
     end)
   end
 
+  defp remote_relation(socket, changeset, %{field: name, owner_key: key} = assoc, asset_fk_map) do
+    if Map.has_key?(asset_fk_map, key),
+      do: Map.get(changeset.data, name),
+      else: load_relation(socket, assoc, Changeset.get_field(changeset, key))
+  end
+
   # A relation a select sets (`update_relation: {relation, fetcher}`) is
   # fetched as this editor's own pick is (`Select.fetch_relation/2`, with the
   # option's value as the browser sends it), so it has what the fetcher
   # preloads; another is loaded by its key.
-  defp remote_relation(
-         socket,
-         changeset,
-         %{field: name, owner_key: key, related: related, related_key: related_key},
-         asset_fk_map
-       ) do
-    value = Changeset.get_field(changeset, key)
+  defp load_relation(_socket, _assoc, nil), do: nil
 
-    cond do
-      Map.has_key?(asset_fk_map, key) ->
-        Map.get(changeset.data, name)
+  defp load_relation(socket, %{field: name, owner_key: key, related: related, related_key: related_key}, value) do
+    case relation_fetcher(socket.assigns[:form_blueprint], key, name) do
+      nil -> Brando.Repo.get_by(related, [{related_key, value}])
+      fetcher -> Select.fetch_relation(to_string(value), fetcher)
+    end
+  end
 
-      is_nil(value) ->
-        nil
+  # The relations the preview merges over the changeset, rebuilt when the
+  # form's changeset is replaced wholesale (a revision, a recovery copy, a
+  # translation, the entry reloaded): only a relation the changeset holds
+  # for another key than its own, loaded for that key. The rest the preview
+  # reads from the changeset, as at mount.
+  defp rebuild_preview_relations(socket) do
+    changeset = socket.assigns.form.source
+    schema = changeset.data.__struct__
 
-      fetcher = relation_fetcher(socket.assigns[:form_blueprint], key, name) ->
-        Select.fetch_relation(to_string(value), fetcher)
+    relations =
+      for name <- schema.__schema__(:associations),
+          %Ecto.Association.BelongsTo{} = assoc <- [schema.__schema__(:association, name)],
+          stale_relation?(changeset, assoc),
+          into: %{},
+          do: {name, load_relation(socket, assoc, Changeset.get_field(changeset, assoc.owner_key))}
 
-      true ->
-        Brando.Repo.get_by(related, [{related_key, value}])
+    assign(socket, :updated_entry_assocs, relations)
+  end
+
+  defp stale_relation?(changeset, %{field: name, owner_key: key, related_key: related_key}) do
+    case Map.get(changeset.data, name) do
+      %Ecto.Association.NotLoaded{} -> false
+      nil -> not is_nil(Changeset.get_field(changeset, key))
+      held -> Map.get(held, related_key) != Changeset.get_field(changeset, key)
     end
   end
 
@@ -6870,6 +6892,7 @@ defmodule BrandoAdmin.Components.Form do
 
     socket
     |> put_local_form(form)
+    |> rebuild_preview_relations()
     |> own_changed_assets(Map.keys(changeset.changes))
     |> assign_entry_for_blocks()
     |> force_svelte_remounts(:all)
@@ -7463,6 +7486,7 @@ defmodule BrandoAdmin.Components.Form do
   def assign_refreshed_form(%{assigns: %{entry: entry, schema: schema, current_user: current_user}} = socket) do
     socket
     |> put_form(to_form(schema.changeset(entry, %{}, current_user), []))
+    |> rebuild_preview_relations()
     |> clear_owned_assets()
     |> clear_dirty_fields()
   end
