@@ -125,30 +125,39 @@ if Code.ensure_loaded?(Igniter) do
     defp preloads(module) do
       alternates = if :alternate_entries in module.__schema__(:associations), do: [:alternate_entries], else: []
 
-      meta =
-        try do
-          meta_associations(module, struct(module), [])
-        rescue
-          _ -> if :meta_image in module.__schema__(:associations), do: [:meta_image], else: []
+      meta_fields =
+        case Spark.Dsl.Extension.get_entities(module, :meta_schemas) do
+          [meta_schema | _] -> meta_schema.fields
+          [] -> []
         end
 
-      Enum.uniq(alternates ++ meta)
+      Enum.uniq(alternates ++ meta_associations(meta_fields, struct(module), []))
     end
 
     # A fallback such as `fallback([&1.meta_image, &1.cover])` returns only the
     # first association it reaches unloaded: probe again with that one loaded
-    # and empty, until no meta field returns an unloaded association.
-    defp meta_associations(module, entry, found) do
+    # and empty, until no meta field returns an unloaded association. Each
+    # field is probed on its own: a field that raises on the probe's empty
+    # entry (`String.slice(&1.title, 0, 155)`) gives nothing, and the others
+    # still count.
+    defp meta_associations(meta_fields, entry, found) do
       unloaded =
-        for {_target, %Ecto.Association.NotLoaded{__field__: field}} <- Brando.Blueprint.Meta.extract_meta(module, entry),
+        for meta_field <- meta_fields,
+            %Ecto.Association.NotLoaded{__field__: field} <- [probe(meta_field.value_fn, entry)],
             field not in found,
             uniq: true,
             do: field
 
       case unloaded do
         [] -> found
-        fields -> meta_associations(module, struct(entry, Map.new(fields, &{&1, nil})), found ++ fields)
+        fields -> meta_associations(meta_fields, struct(entry, Map.new(fields, &{&1, nil})), found ++ fields)
       end
+    end
+
+    defp probe(value_fn, entry) do
+      value_fn.(entry)
+    rescue
+      _ -> nil
     end
 
     defp public_metadata(igniter, metadata, nil), do: {:ok, igniter, Map.put(metadata, :site_layouts, nil)}

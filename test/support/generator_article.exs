@@ -39,6 +39,8 @@ defmodule GeneratorStudio.Catalog.Article do
   meta_schema do
     field ["title", "og:title"], & &1.title
     field "og:image", &fallback([&1.meta_image, &1.cover])
+    # Raises on the generator's probe, whose entry has no title.
+    field "description", &String.slice(&1.meta_description || &1.title, 0, 155)
   end
 end
 
