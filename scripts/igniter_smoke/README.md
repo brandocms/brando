@@ -4,7 +4,7 @@ This creates a new standalone Phoenix app and a uniquely named database for ever
 run. It exercises the real package installer with the current Brando checkout and
 matching Yalc assets, rather than an already configured E2E application.
 
-Prerequisites: Elixir 1.20.3 / OTP 28.4.1, phx_new 1.8.13, Node.js 24 or a
+Prerequisites: Elixir 1.20.4 / OTP 28.5.0.8, phx_new 1.8.13, Node.js 24 or a
 later even major (the admin's `engines` is `>=24.0.0`), pnpm,
 Yalc 1.0.0-pre.53 (checkout source only), and a disposable PostgreSQL service. Local checks used Node.js
 23.11.0, pnpm 10.4.1 and PostgreSQL 16.1. All four cases also

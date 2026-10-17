@@ -88,8 +88,8 @@ jobs:
 
     strategy:
       fail-fast: false
-      # `otp_label` names the job, and the main ruleset requires these three
-      # names: changing a label means changing the ruleset with it. The 1.19
+      # `otp_label` and `elixir` name the job, and the main ruleset requires
+      # these three names: changing either means changing the ruleset with it. The 1.19
       # leg keeps the label "28" from when it ran OTP 28.0, where the Erlang
       # JIT crashed now and then (beam-jit-crash in .github/known-flakes.txt);
       # OTP 28.4 upgraded asmjit to v1.18 (OTP-19979).
@@ -101,9 +101,9 @@ jobs:
           - elixir: 1.19.5
             otp: "28.5.0.7"
             otp_label: "28"
-          - elixir: 1.20.3
-            otp: "28.4.1"
-            otp_label: "28.4.1"
+          - elixir: 1.20.4
+            otp: "28.5.0.8"
+            otp_label: "28.5.0.8"
 
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -168,22 +168,22 @@ jobs:
 
       # A coverage run stays in one `mix test`, so it exports one file
       - name: Reset db (coverage run)
-        if: inputs.coverage && matrix.elixir == '1.20.3' && needs.reuse.outputs.reused != 'true'
+        if: inputs.coverage && matrix.elixir == '1.20.4' && needs.reuse.outputs.reused != 'true'
         run: mix ecto.reset
 
       - name: Run Tests (coverage run)
-        if: inputs.coverage && matrix.elixir == '1.20.3' && needs.reuse.outputs.reused != 'true'
+        if: inputs.coverage && matrix.elixir == '1.20.4' && needs.reuse.outputs.reused != 'true'
         run: mix test --warnings-as-errors --cover --export-coverage unit
 
       # Four `mix test --partitions 4` at once, each with its own database: the
       # suite is mostly synchronous, so one run leaves most of the runner idle.
       # The script creates, migrates and seeds the databases.
       - name: Run Tests
-        if: "!(inputs.coverage && matrix.elixir == '1.20.3') && needs.reuse.outputs.reused != 'true'"
+        if: "!(inputs.coverage && matrix.elixir == '1.20.4') && needs.reuse.outputs.reused != 'true'"
         run: scripts/test-partitions 4 --warnings-as-errors
 
       - name: Upload unit coverage data
-        if: inputs.coverage && matrix.elixir == '1.20.3'
+        if: inputs.coverage && matrix.elixir == '1.20.4'
         uses: actions/upload-artifact@v4
         with:
           name: coverdata-unit
@@ -225,8 +225,8 @@ jobs:
         if: needs.reuse.outputs.reused != 'true'
         uses: erlef/setup-beam@v1
         with:
-          elixir-version: 1.20.3
-          otp-version: 28.4.1
+          elixir-version: 1.20.4
+          otp-version: 28.5.0.8
 
       - name: Restore deps and _build cache
         if: github.event_name != 'merge_group'
@@ -235,10 +235,10 @@ jobs:
           path: |
             deps
             _build
-          key: quality-${{ runner.os }}-28.4.1-1.20.3-${{ hashFiles('**/mix.lock') }}-${{ github.sha }}
+          key: quality-${{ runner.os }}-28.5.0.8-1.20.4-${{ hashFiles('**/mix.lock') }}-${{ github.sha }}
           restore-keys: |
-            quality-${{ runner.os }}-28.4.1-1.20.3-${{ hashFiles('**/mix.lock') }}-
-            quality-${{ runner.os }}-28.4.1-1.20.3
+            quality-${{ runner.os }}-28.5.0.8-1.20.4-${{ hashFiles('**/mix.lock') }}-
+            quality-${{ runner.os }}-28.5.0.8-1.20.4
 
       # A merge queue run restores the cache but does not save one: its
       # temporary branch could never reuse it, and the entries would evict
@@ -250,10 +250,10 @@ jobs:
           path: |
             deps
             _build
-          key: quality-${{ runner.os }}-28.4.1-1.20.3-${{ hashFiles('**/mix.lock') }}-${{ github.sha }}
+          key: quality-${{ runner.os }}-28.5.0.8-1.20.4-${{ hashFiles('**/mix.lock') }}-${{ github.sha }}
           restore-keys: |
-            quality-${{ runner.os }}-28.4.1-1.20.3-${{ hashFiles('**/mix.lock') }}-
-            quality-${{ runner.os }}-28.4.1-1.20.3
+            quality-${{ runner.os }}-28.5.0.8-1.20.4-${{ hashFiles('**/mix.lock') }}-
+            quality-${{ runner.os }}-28.5.0.8-1.20.4
 
       - name: Install dependencies
         if: needs.reuse.outputs.reused != 'true'
@@ -363,8 +363,8 @@ jobs:
         if: needs.reuse.outputs.reused != 'true'
         uses: erlef/setup-beam@v1
         with:
-          elixir-version: 1.20.3
-          otp-version: 28.4.1
+          elixir-version: 1.20.4
+          otp-version: 28.5.0.8
 
       - name: Restore docs dependencies and build cache
         if: github.event_name != 'merge_group'
@@ -373,10 +373,10 @@ jobs:
           path: |
             deps
             _build
-          key: docs-${{ runner.os }}-28.4.1-1.20.3-${{ hashFiles('**/mix.lock') }}-${{ github.sha }}
+          key: docs-${{ runner.os }}-28.5.0.8-1.20.4-${{ hashFiles('**/mix.lock') }}-${{ github.sha }}
           restore-keys: |
-            docs-${{ runner.os }}-28.4.1-1.20.3-${{ hashFiles('**/mix.lock') }}-
-            docs-${{ runner.os }}-28.4.1-1.20.3
+            docs-${{ runner.os }}-28.5.0.8-1.20.4-${{ hashFiles('**/mix.lock') }}-
+            docs-${{ runner.os }}-28.5.0.8-1.20.4
 
       # A merge queue run restores the cache but does not save one: its
       # temporary branch could never reuse it, and the entries would evict
@@ -388,10 +388,10 @@ jobs:
           path: |
             deps
             _build
-          key: docs-${{ runner.os }}-28.4.1-1.20.3-${{ hashFiles('**/mix.lock') }}-${{ github.sha }}
+          key: docs-${{ runner.os }}-28.5.0.8-1.20.4-${{ hashFiles('**/mix.lock') }}-${{ github.sha }}
           restore-keys: |
-            docs-${{ runner.os }}-28.4.1-1.20.3-${{ hashFiles('**/mix.lock') }}-
-            docs-${{ runner.os }}-28.4.1-1.20.3
+            docs-${{ runner.os }}-28.5.0.8-1.20.4-${{ hashFiles('**/mix.lock') }}-
+            docs-${{ runner.os }}-28.5.0.8-1.20.4
 
       - name: Install documentation dependencies
         if: needs.reuse.outputs.reused != 'true'
@@ -446,8 +446,8 @@ jobs:
         if: needs.reuse.outputs.reused != 'true'
         uses: erlef/setup-beam@v1
         with:
-          elixir-version: 1.20.3
-          otp-version: 28.4.1
+          elixir-version: 1.20.4
+          otp-version: 28.5.0.8
 
       - name: Restore E2E unit-test dependencies and build
         if: github.event_name != 'merge_group'
@@ -456,10 +456,10 @@ jobs:
           path: |
             brando/e2e/deps
             brando/e2e/_build
-          key: e2e-unit-v1-${{ runner.os }}-28.4.1-1.20.3-${{ hashFiles('brando/e2e/mix.lock') }}-${{ github.sha }}
+          key: e2e-unit-v1-${{ runner.os }}-28.5.0.8-1.20.4-${{ hashFiles('brando/e2e/mix.lock') }}-${{ github.sha }}
           restore-keys: |
-            e2e-unit-v1-${{ runner.os }}-28.4.1-1.20.3-${{ hashFiles('brando/e2e/mix.lock') }}-
-            e2e-unit-v1-${{ runner.os }}-28.4.1-1.20.3-
+            e2e-unit-v1-${{ runner.os }}-28.5.0.8-1.20.4-${{ hashFiles('brando/e2e/mix.lock') }}-
+            e2e-unit-v1-${{ runner.os }}-28.5.0.8-1.20.4-
 
       # As in mix_test: a merge queue run restores the cache but saves none.
       - name: Restore E2E unit-test dependencies and build (merge queue, restore only)
@@ -469,10 +469,10 @@ jobs:
           path: |
             brando/e2e/deps
             brando/e2e/_build
-          key: e2e-unit-v1-${{ runner.os }}-28.4.1-1.20.3-${{ hashFiles('brando/e2e/mix.lock') }}-${{ github.sha }}
+          key: e2e-unit-v1-${{ runner.os }}-28.5.0.8-1.20.4-${{ hashFiles('brando/e2e/mix.lock') }}-${{ github.sha }}
           restore-keys: |
-            e2e-unit-v1-${{ runner.os }}-28.4.1-1.20.3-${{ hashFiles('brando/e2e/mix.lock') }}-
-            e2e-unit-v1-${{ runner.os }}-28.4.1-1.20.3-
+            e2e-unit-v1-${{ runner.os }}-28.5.0.8-1.20.4-${{ hashFiles('brando/e2e/mix.lock') }}-
+            e2e-unit-v1-${{ runner.os }}-28.5.0.8-1.20.4-
 
       - name: Install Elixir dependencies
         if: needs.reuse.outputs.reused != 'true'
@@ -552,18 +552,18 @@ jobs:
           path: brando_graphql
       - uses: erlef/setup-beam@v1
         with:
-          elixir-version: 1.20.3
-          otp-version: 28.4.1
+          elixir-version: 1.20.4
+          otp-version: 28.5.0.8
       - name: Restore E2E dependencies and build
         uses: actions/cache@v6.1.0
         with:
           path: |
             brando/e2e/deps
             brando/e2e/_build
-          key: e2e-v1-${{ runner.os }}-28.4.1-1.20.3-${{ hashFiles('brando/e2e/mix.lock') }}-${{ github.sha }}
+          key: e2e-v1-${{ runner.os }}-28.5.0.8-1.20.4-${{ hashFiles('brando/e2e/mix.lock') }}-${{ github.sha }}
           restore-keys: |
-            e2e-v1-${{ runner.os }}-28.4.1-1.20.3-${{ hashFiles('brando/e2e/mix.lock') }}-
-            e2e-v1-${{ runner.os }}-28.4.1-1.20.3-
+            e2e-v1-${{ runner.os }}-28.5.0.8-1.20.4-${{ hashFiles('brando/e2e/mix.lock') }}-
+            e2e-v1-${{ runner.os }}-28.5.0.8-1.20.4-
       - name: Install Elixir dependencies
         working-directory: brando/e2e
         run: source .envrc && MIX_ENV=e2e mix deps.get
@@ -710,8 +710,8 @@ jobs:
       - name: Set up Elixir
         uses: erlef/setup-beam@v1
         with:
-          elixir-version: 1.20.3
-          otp-version: 28.4.1
+          elixir-version: 1.20.4
+          otp-version: 28.5.0.8
 
       - name: Set up pnpm
         uses: pnpm/action-setup@v4
@@ -734,10 +734,10 @@ jobs:
           path: |
             brando/e2e/deps
             brando/e2e/_build
-          key: e2e-v1-${{ runner.os }}-28.4.1-1.20.3-${{ hashFiles('brando/e2e/mix.lock') }}-${{ github.sha }}
+          key: e2e-v1-${{ runner.os }}-28.5.0.8-1.20.4-${{ hashFiles('brando/e2e/mix.lock') }}-${{ github.sha }}
           restore-keys: |
-            e2e-v1-${{ runner.os }}-28.4.1-1.20.3-${{ hashFiles('brando/e2e/mix.lock') }}-
-            e2e-v1-${{ runner.os }}-28.4.1-1.20.3-
+            e2e-v1-${{ runner.os }}-28.5.0.8-1.20.4-${{ hashFiles('brando/e2e/mix.lock') }}-
+            e2e-v1-${{ runner.os }}-28.5.0.8-1.20.4-
 
       - name: Install Elixir dependencies
         working-directory: brando/e2e
@@ -895,8 +895,8 @@ jobs:
       - name: Set up Elixir
         uses: erlef/setup-beam@v1
         with:
-          elixir-version: 1.20.3
-          otp-version: 28.4.1
+          elixir-version: 1.20.4
+          otp-version: 28.5.0.8
 
       - name: Restore deps and _build cache
         uses: actions/cache/restore@v6.1.0
@@ -904,10 +904,10 @@ jobs:
           path: |
             deps
             _build
-          key: deps-${{ runner.os }}-28.4.1-1.20.3-${{ hashFiles('**/mix.lock') }}-${{ github.sha }}
+          key: deps-${{ runner.os }}-28.5.0.8-1.20.4-${{ hashFiles('**/mix.lock') }}-${{ github.sha }}
           restore-keys: |
-            deps-${{ runner.os }}-28.4.1-1.20.3-${{ hashFiles('**/mix.lock') }}-
-            deps-${{ runner.os }}-28.4.1-1.20.3
+            deps-${{ runner.os }}-28.5.0.8-1.20.4-${{ hashFiles('**/mix.lock') }}-
+            deps-${{ runner.os }}-28.5.0.8-1.20.4
 
       - name: Install dependencies
         run: mix deps.get --only test

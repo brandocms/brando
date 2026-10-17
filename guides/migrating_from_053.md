@@ -176,8 +176,8 @@ Pin the toolchain with mise or asdf:
 
 - Elixir 1.18 or newer (Brando's `mix.exs` requires `~> 1.18`) on OTP 27 or
   newer. CI runs Brando's tests on Elixir 1.18.1 with OTP 27.2, 1.19.5 with
-  OTP 28.5 and 1.20.3 with OTP 28.4.1, and Brando's own `.mise.toml` pins
-  1.20.3 and 28.4.1. Develop on 1.19 or later: on older Elixir, Phoenix
+  OTP 28.5 and 1.20.4 with OTP 28.5.0.8, and Brando's own `.mise.toml` pins
+  1.20.4 and 28.5.0.8. Develop on 1.19 or later: on older Elixir, Phoenix
   1.8's code reloader unloads every consolidated protocol on every request,
   which adds 50 to 70 ms to each request in development. Releases have no
   code reloader.

@@ -514,6 +514,13 @@ Brando's build needs that it lacks: the `assets_backend` and
 which Florist does not use. To switch to Brando's, move yours aside and rerun
 the installer.
 
+Brando's Dockerfile builds on `twined/fehn:4.2`: Elixir 1.20.4 on OTP
+28.5.0.8, on Ubuntu 24.04, the versions Brando's CI tests with and a new
+install's `.tool-versions` pins. Brando requires Elixir 1.18 or newer, so a
+Dockerfile from an earlier install that builds on an older tag (`4.0` has
+Elixir 1.17) cannot compile it: change its `FROM … twined/fehn:<tag>` line to
+`4.2`.
+
 Florist sends the build context, the project directory, to the Docker daemon
 on every build, and that daemon may be remote. The `.dockerignore` keeps out
 dependencies and build output, `node_modules`, `media/`, Florist's
