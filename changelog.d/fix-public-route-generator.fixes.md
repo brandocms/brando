@@ -28,3 +28,9 @@
   renders with `:page_html_module` (or `YourWeb.PageView`/`PageHTML`, as the
   page template list finds them) in the root layout the controller had chosen.
   The fallback's `put_namespace_layout` plug, which never ran, is removed.
+
+- **A page title in a language without an identity no longer raises**
+  (#3230). `Brando.Utils.get_page_title/1`, which `Brando.HTML.head/1`
+  calls, matched the identity's title prefix on the empty map the identity
+  cache gives a language with no identity, so a page with a title in such a
+  language raised `MatchError`. It renders the bare title.

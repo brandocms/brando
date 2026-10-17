@@ -439,6 +439,9 @@ defmodule Brando.UtilsTest do
              "CompanyName | Test"
 
     assert get_page_title(%{assigns: %{language: "en"}}) == "CompanyName | Welcome!"
+
+    # A language with no identity yet has no prefix.
+    assert get_page_title(%{assigns: %{language: "xx", page_title: "Test"}}) == "Test"
   end
 
   test "host_and_media_url" do
