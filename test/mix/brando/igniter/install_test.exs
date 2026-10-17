@@ -232,9 +232,11 @@ defmodule Mix.Brando.Igniter.InstallTest do
     |> get_in([:studio, StudioWeb.Endpoint, :watchers])
   end
 
-  defp vite_watcher(root, dir) do
-    shim = "data:text/javascript,process.stdin.on('end',()=>process.kill(process.pid,'SIGTERM')).resume()"
-    ["--import", shim, "node_modules/vite/bin/vite.js", cd: Path.join(root, "assets/#{dir}")]
+  defp vite_watchers(root) do
+    [
+      vite_admin: {Brando.Vite, :watch, [Path.join(root, "assets/backend")]},
+      vite_site: {Brando.Vite, :watch, [Path.join(root, "assets/frontend")]}
+    ]
   end
 
   defp vite_notice?(igniter), do: Enum.any?(igniter.notices, &(&1 =~ "already has watchers"))
@@ -244,16 +246,17 @@ defmodule Mix.Brando.Igniter.InstallTest do
     assert igniter.issues == []
     refute vite_notice?(igniter)
 
-    assert dev_watchers(igniter, "/srv/studio") == [
-             node: vite_watcher("/srv/studio", "backend"),
-             node: vite_watcher("/srv/studio", "frontend")
-           ]
+    assert dev_watchers(igniter, "/srv/studio") == vite_watchers("/srv/studio")
 
     dev = IgniterCase.source(igniter, "config/dev.exs")
     assert dev =~ ~s(secret_key_base: "dev-secret")
     assert dev =~ "hmr: true"
     assert dev =~ "# Vite dev servers for the admin"
-    assert length(String.split(dev, "node_modules/vite/bin/vite.js")) == 3
+    assert length(String.split(dev, "{Brando.Vite, :watch,")) == 3
+
+    for {_, {module, function, args}} <- vite_watchers("/srv/studio") do
+      assert Code.ensure_loaded?(module) and function_exported?(module, function, length(args))
+    end
 
     applied = Igniter.Test.apply_igniter!(igniter)
     reloaded = Enum.reduce(Map.keys(applied.assigns.test_files), applied, &Igniter.include_existing_file(&2, &1))
@@ -267,10 +270,7 @@ defmodule Mix.Brando.Igniter.InstallTest do
     igniter = install(project())
     assert igniter.issues == []
 
-    assert dev_watchers(igniter, "/srv/studio") == [
-             node: vite_watcher("/srv/studio", "backend"),
-             node: vite_watcher("/srv/studio", "frontend")
-           ]
+    assert dev_watchers(igniter, "/srv/studio") == vite_watchers("/srv/studio")
   end
 
   test "the application's own watchers are kept, with a notice naming the Vite watchers" do
@@ -285,9 +285,9 @@ defmodule Mix.Brando.Igniter.InstallTest do
     assert igniter.issues == []
     refute IgniterCase.source(igniter, "config/dev.exs") =~ "vite"
     assert [notice] = Enum.filter(igniter.notices, &(&1 =~ "already has watchers"))
-    assert notice =~ ~s|cd: Path.expand("../assets/backend", __DIR__)|
-    assert notice =~ ~s|cd: Path.expand("../assets/frontend", __DIR__)|
-    assert notice =~ "node_modules/vite/bin/vite.js"
+    assert notice =~ ~s|[Path.expand("../assets/backend", __DIR__)]|
+    assert notice =~ ~s|[Path.expand("../assets/frontend", __DIR__)]|
+    assert notice =~ "vite_admin: {Brando.Vite, :watch,"
   end
 
   defp mix_exs(project, attributes \\ "") do

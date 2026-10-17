@@ -163,33 +163,16 @@ if Code.ensure_loaded?(Igniter) do
       |> Mix.Brando.Igniter.SourceUpgrade.configure_brando_mailer(Module.concat(project.app_module, Mailer))
     end
 
-    # Phoenix stops a watcher by closing its stdin. Vite listens for the end of
-    # stdin but never reads it, so the end never comes and Vite outlives
-    # Phoenix; the --import reads stdin and stops Vite when it closes.
-    @vite_stdin_shim "data:text/javascript,process.stdin.on('end',()=>process.kill(process.pid,'SIGTERM')).resume()"
-
     # The endpoint watchers in config/dev.exs that start the admin's and the
     # site's Vite dev servers with `mix phx.server`, for `hmr: true`.
     defp vite_watchers_code do
       """
       [
-        # Vite dev servers for the admin (assets/backend) and the site (assets/frontend).
-        # The --import stops Vite when Phoenix stops: Vite never reads its stdin otherwise.
-        node: #{vite_watcher_code("backend")},
-        node: #{vite_watcher_code("frontend")}
+        # Vite dev servers for the admin and the site; Brando.Vite stops them with Phoenix.
+        vite_admin: {Brando.Vite, :watch, [Path.expand("../assets/backend", __DIR__)]},
+        vite_site: {Brando.Vite, :watch, [Path.expand("../assets/frontend", __DIR__)]}
       ]
       """
-    end
-
-    defp vite_watcher_code(dir) do
-      String.trim_trailing("""
-      [
-        "--import",
-        #{inspect(@vite_stdin_shim)},
-        "node_modules/vite/bin/vite.js",
-        cd: Path.expand("../assets/#{dir}", __DIR__)
-      ]
-      """)
     end
 
     # Fills the endpoint's watchers in dev.exs when it has none (phx.new
@@ -257,8 +240,8 @@ if Code.ensure_loaded?(Igniter) do
       """
       config/dev.exs already has watchers for #{inspect(project.endpoint)}, so they were kept. With
       hmr: true the admin and the site load their assets from Vite dev servers (ports 3333 and 3000),
-      and mix phx.server does not start them. To start them, add the two node entries of this list
-      to the endpoint's watchers:
+      and mix phx.server does not start them. To start them, add the two entries of this list to
+      the endpoint's watchers:
 
       #{vite_watchers_code() |> Code.format_string!() |> IO.iodata_to_binary()}
       """

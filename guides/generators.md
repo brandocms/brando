@@ -411,35 +411,34 @@ port 3000. The installer adds two endpoint watchers to `config/dev.exs`, so
 ```elixir
 config :studio, StudioWeb.Endpoint,
   watchers: [
-    node: [
-      "--import",
-      "data:text/javascript,process.stdin.on('end',()=>process.kill(process.pid,'SIGTERM')).resume()",
-      "node_modules/vite/bin/vite.js",
-      cd: Path.expand("../assets/backend", __DIR__)
-    ],
-    node: [
-      # the same, with cd: Path.expand("../assets/frontend", __DIR__)
-    ]
+    vite_admin: {Brando.Vite, :watch, [Path.expand("../assets/backend", __DIR__)]},
+    vite_site: {Brando.Vite, :watch, [Path.expand("../assets/frontend", __DIR__)]}
   ]
 ```
 
-Each watcher runs Vite from the project's `node_modules`, so run
-`mix brando.assets.setup` (or `pnpm install` in both directories) first.
-Phoenix stops a watcher by closing its standard input. Vite never reads its
-standard input, so it would not notice and would keep running after Phoenix
-stopped; the `--import` reads it and stops Vite when it closes.
+`Brando.Vite.watch/1` runs Vite from the directory's `node_modules`, so run
+`mix brando.assets.setup` (or `pnpm install` in both directories) first. Vite's
+output goes to the `mix phx.server` log. Vite stops when Phoenix stops, also
+when you leave with Ctrl-C.
 
 The installer fills the watchers only when the endpoint has none (phx.new's
 `watchers: []`, or no `watchers` key). Watchers of the application's own are
-kept, and the installer prints the two entries to add by hand.
+kept, and the installer prints the two entries to add by hand. Applications
+installed by earlier Brando versions have no Vite watchers: add the two entries
+above to the endpoint's `watchers` in `config/dev.exs`, or keep running `pnpm dev` in
+`assets/backend` and `assets/frontend`.
 
-Both generated `vite.config.js` files set `server.strictPort`. When another
-process, such as another site's Vite server, already holds the port, Vite
-exits with `Port 3333 is already in use` in the `mix phx.server` log, instead
-of quietly moving to a port Phoenix does not know. The page still loads
-whatever answers on the port, which may be the other site's assets, so give
-each running site its own ports (below). If a dev server's scripts do not
-load at all, the admin or the site shows a notice naming the address it tried.
+Both generated `vite.config.js` files set `server.strictPort`, so Vite does
+not quietly move to a port Phoenix does not know. When Vite cannot start,
+because another process such as another site's Vite server holds its port,
+because `node_modules` is missing, or because `node` is not on the `PATH`,
+the log has Vite's own output and one error from `Brando.Vite` saying what to
+do. Phoenix carries on without that dev server and does not retry it; restart
+`mix phx.server` once it is fixed. With a taken port the page loads whatever
+answers there, which may be the other site's assets, so give each running site
+its own ports (below). If a dev server's scripts do not load at all, the admin
+or the site shows a notice naming the address it tried. Copy `strictPort` into
+the Vite configs of existing applications.
 
 To run two Brando sites at once, give one of them other ports. Export them in
 that project's shell environment, for example its `.envrc`, so that Phoenix,
