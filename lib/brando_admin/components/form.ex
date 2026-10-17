@@ -1912,23 +1912,23 @@ defmodule BrandoAdmin.Components.Form do
   # validate happened to re-render it.
   defp put_asset_in_data(changeset, [], field, asset), do: %{changeset | data: Map.put(changeset.data, field, asset)}
 
-  # A subform row is found by the form's index, which counts the rows the
-  # form shows (`SubformHelpers.current_entries/2`), as `inputs_for` does.
-  # The row goes in its pending changeset and in `data` (by id): a row with
-  # no changes is only in `data`, and `put_assoc` drops an unchanged one.
-  defp put_asset_in_data(changeset, [key, index | rest], field, asset) when is_atom(key) and is_integer(index) do
-    case changeset |> SubformHelpers.current_entries(key) |> List.wrap() |> Enum.at(index) do
-      nil ->
-        changeset
-
-      row ->
+  # A one-to-one subform's struct (`[:author]`) or a subform row
+  # (`[:vars, 0]`), found as `struct_at/2` finds it. It goes in its pending
+  # changeset and in `data` (a row by id): a subform with no changes is only
+  # in `data`, and `put_assoc` drops an unchanged one.
+  defp put_asset_in_data(changeset, [key | path], field, asset) when is_atom(key) do
+    case subform_struct(Map.get(changeset.changes, key, Map.get(changeset.data, key)), path) do
+      {%{} = shown, rest} when not is_struct(shown, Ecto.Association.NotLoaded) ->
         put = &put_asset_in_data(Changeset.change(&1), rest, field, asset)
-        id = row |> Changeset.change() |> Changeset.get_field(:id)
+        id = shown |> Changeset.change() |> Changeset.get_field(:id)
 
         changes =
           case changeset.changes do
             %{^key => rows} when is_list(rows) ->
-              %{changeset.changes | key => Enum.map(rows, &if(&1 == row, do: put.(&1), else: &1))}
+              %{changeset.changes | key => Enum.map(rows, &if(&1 == shown, do: put.(&1), else: &1))}
+
+            %{^key => ^shown} ->
+              %{changeset.changes | key => put.(shown)}
 
             changes ->
               changes
@@ -1939,15 +1939,31 @@ defmodule BrandoAdmin.Components.Form do
             rows when is_list(rows) and not is_nil(id) ->
               Map.put(changeset.data, key, Enum.map(rows, &if(&1.id == id, do: put.(&1).data, else: &1)))
 
+            rows when is_list(rows) ->
+              changeset.data
+
+            %{} = one when not is_struct(one, Ecto.Association.NotLoaded) ->
+              Map.put(changeset.data, key, put.(one).data)
+
             _ ->
               changeset.data
           end
 
         %{changeset | changes: changes, data: data}
+
+      _ ->
+        changeset
     end
   end
 
   defp put_asset_in_data(changeset, _nested_path, _field, _asset), do: changeset
+
+  # Rows are counted as `struct_at/2` counts them.
+  defp subform_struct(rows, [index | rest]) when is_list(rows) and is_integer(index),
+    do: {rows |> Enum.reject(&match?(%Changeset{action: :replace}, &1)) |> Enum.at(index), rest}
+
+  defp subform_struct(rows, _path) when is_list(rows), do: nil
+  defp subform_struct(one, path), do: {one, path}
 
   # Append a delivered asset to the gallery assoc: existing objects are
   # slimmed to plain maps (put_assoc with mixed nil-ID structs would raise

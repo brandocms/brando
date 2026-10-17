@@ -188,6 +188,21 @@ defmodule BrandoAdmin.Components.Form.EntryPictureBlockSyncTest do
       end
     end
 
+    test "for an image in a one-to-one subform", %{page: page, user: user, saved_image: image} do
+      article = %Brando.SyncTest.Article{id: 1, author: %Brando.SyncTest.ArticleAuthor{id: 1, portrait: image}}
+
+      socket =
+        page
+        |> drawer_socket(user, :image, [:author], :portrait, image)
+        |> Component.assign(schema: Brando.SyncTest.Article, entry: article, singular: "article")
+        |> Component.assign(:form, to_form(Changeset.change(article)))
+
+      params = %{"image" => %{"title" => %{"en" => "Example Hotel lobby"}}}
+      {:noreply, form} = Form.handle_event("save_image", params, socket)
+
+      assert Changeset.apply_changes(form.assigns.form.source).author.portrait.title == %{"en" => "Example Hotel lobby"}
+    end
+
     test "for a file", %{page: page, user: user, saved_file: file} do
       socket = drawer_socket(in_row(page, :file, file), user, :file, [:vars, 0], :file, file)
 
