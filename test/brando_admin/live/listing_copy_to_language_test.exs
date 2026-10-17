@@ -42,6 +42,34 @@ defmodule BrandoAdmin.ListingCopyToLanguageTest do
     assert html =~ "/no/index-2"
   end
 
+  test "Duplicate to a language links the related entries' versions in it", c do
+    alias Brando.SyncTest
+    alias Brando.SyncTest.Article
+
+    article = fn title, slug ->
+      {:ok, article} =
+        SyncTest.create_article(%{title: title, slug: slug, language: "no", status: "published"}, c.current_user)
+
+      article
+    end
+
+    identifier_of = fn entry -> Repo.get_by!(Brando.Content.Identifier, schema: Article, entry_id: entry.id) end
+
+    source = article.("Example Hotel", "example-hotel")
+    hotel = article.("Example Hotel Annex", "example-hotel-annex")
+    {:ok, hotel_en} = Brando.Translations.create_target(Article, hotel.id, :en, c.current_user)
+    Repo.insert!(%Article.RelatedEntriesIdentifier{parent_id: source.id, identifier_id: identifier_of.(hotel).id})
+
+    {:ok, view, _html} = live(c.conn, "/admin/articles")
+    render_click(view, "duplicate_entry_to_language", %{"id" => "#{source.id}", "language" => "en"})
+
+    assert [copy] =
+             Repo.all(from a in Article, where: a.language == :en and a.id != ^hotel_en.id, preload: :related_entries)
+
+    identifier_id = identifier_of.(hotel_en).id
+    assert [%{identifier_id: ^identifier_id}] = copy.related_entries
+  end
+
   test "a language the page already has is not offered, and is refused if asked for", c do
     Brando.AIStub.configure()
     Page.Alternate.add(c.en_index.id, c.no_index.id)

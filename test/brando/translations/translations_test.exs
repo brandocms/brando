@@ -552,7 +552,15 @@ defmodule Brando.TranslationsTest do
 
       image = Factory.insert(:image, creator_id: c.user.id)
       gallery = Factory.insert(:gallery, gallery_objects: [Factory.build(:gallery_object, image: image, creator: c.user)])
-      identifier = Repo.get_by!(Brando.Content.Identifier, schema: Article, entry_id: c.source.id)
+
+      {:ok, hotel} =
+        SyncTest.create_article(
+          %{title: "Example Hotel", slug: "example-hotel", language: "no", status: "published"},
+          c.user
+        )
+
+      {:ok, hotel_en} = Translations.create_target(Article, hotel.id, :en, c.user)
+      identifier = Repo.get_by!(Brando.Content.Identifier, schema: Article, entry_id: hotel.id)
 
       author =
         Repo.insert!(%SyncTest.ArticleAuthor{
@@ -612,9 +620,32 @@ defmodule Brando.TranslationsTest do
         # A translation's blocks keep their sync identity, a duplicate's don't
         assert copied_block.sync_uid == if(entry.id == translation.id, do: block.uid)
         assert [%{data: %{data: %{text: "Lobby"}}}] = copied_block.refs
-        assert [%{identifier_id: ^identifier_id} = copied_entry] = copied.related_entries
+        # The translation's link points at the English version
+        identifier_en = Repo.get_by(Brando.Content.Identifier, schema: Article, entry_id: hotel_en.id)
+        expected_id = if entry.id == translation.id, do: identifier_en && identifier_en.id, else: identifier_id
+        assert [%{identifier_id: ^expected_id} = copied_entry] = copied.related_entries
         assert copied_entry.id != hd(original.related_entries).id
       end
+    end
+
+    test "a context's own change for related entries wins over the language mapping", c do
+      {:ok, other} =
+        SyncTest.create_article(
+          %{title: "Example Hotel", slug: "example-hotel", language: "no", status: "published"},
+          c.user
+        )
+
+      identifier = Repo.get_by!(Brando.Content.Identifier, schema: Article, entry_id: other.id)
+      Repo.insert!(%Article.RelatedEntriesIdentifier{parent_id: c.source.id, identifier_id: identifier.id, sequence: 0})
+
+      {:ok, copy} =
+        SyncTest.duplicate_article(c.source.id, c.user,
+          change_fields: [slug: "copy", related_entries: fn _entry, rows -> rows end],
+          map_entries: fn _rows -> [] end
+        )
+
+      identifier_id = identifier.id
+      assert [%{identifier_id: ^identifier_id}] = load(copy.id).related_entries
     end
 
     test "related entries are linked from the copy as well", c do

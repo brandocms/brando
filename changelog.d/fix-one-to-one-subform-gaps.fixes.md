@@ -31,5 +31,6 @@
 - **A duplicate or translation keeps the entry's related entries**. The
   links of an `:entries` relation (`related_entries`) were dropped from the
   copy. A duplicate now links the same entries, with link rows of its own. A
-  translation links their versions in its language, and leaves out an entry
-  that has none yet.
+  copy into another language (a translation, or the listing's duplicate and
+  translate to a language) links their versions in its language, those of its
+  subform rows included, and leaves out an entry that has none yet.

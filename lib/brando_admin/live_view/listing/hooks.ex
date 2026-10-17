@@ -168,10 +168,9 @@ defmodule BrandoAdmin.LiveView.Listing.Hooks do
     singular = schema.__naming__().singular
     context = schema.__modules__().context
 
-    override_opts = [
-      change_fields: language_copy_fields(schema, language),
-      delete_fields: []
-    ]
+    override_opts =
+      [change_fields: language_copy_fields(schema, language), delete_fields: []] ++
+        Brando.Translations.language_copy_opts(language)
 
     failed =
       Enum.count(ids, fn entry_id ->
@@ -223,7 +222,8 @@ defmodule BrandoAdmin.LiveView.Listing.Hooks do
     singular = schema.__naming__().singular
     context = schema.__modules__().context
 
-    override_opts = [change_fields: language_copy_fields(schema, language)]
+    override_opts =
+      [change_fields: language_copy_fields(schema, language)] ++ Brando.Translations.language_copy_opts(language)
 
     with :ok <- ensure_no_version_in(schema, entry_id, language),
          {:ok, duped_entry} <- apply(context, :"duplicate_#{singular}", [entry_id, user, override_opts]) do
@@ -284,9 +284,9 @@ defmodule BrandoAdmin.LiveView.Listing.Hooks do
       translation_dialog: %{step: :duplicating, entry_url: nil}
     )
 
-    override_opts = [
-      change_fields: language_copy_fields(schema, language, translation_slug_changes(schema, language))
-    ]
+    override_opts =
+      [change_fields: language_copy_fields(schema, language, translation_slug_changes(schema, language))] ++
+        Brando.Translations.language_copy_opts(language)
 
     with :ok <- ensure_no_version_in(schema, entry_id, language),
          {:ok, duped_entry} <- apply(context, :"duplicate_#{singular}", [entry_id, user, override_opts]) do

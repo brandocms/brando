@@ -1156,13 +1156,6 @@ defmodule Brando.Translations do
           opts[:cast] != true,
           do: {name, []}
 
-    # Links to other content point at their versions in this language; one
-    # with no version in it yet is left out. Later changes to the source's
-    # links are not synchronized.
-    related =
-      for %{type: :entries, name: name} <- Brando.Blueprint.Relations.__relations__(schema),
-          do: {name, fn _entry, rows -> related_in_language(rows, language) end}
-
     # A context's duplicate marks a copy ("Title (copy)"); a translation starts
     # from the source's own text instead. Slugs are handled above.
     slug_names = Enum.map(slug_fields, &elem(&1, 0))
@@ -1176,12 +1169,28 @@ defmodule Brando.Translations do
     override_opts = [
       change_fields:
         [{:language, String.to_existing_atom(language)} | slug_fields] ++
-          kept_text ++ separate ++ related ++ free_unique_values(schema),
+          kept_text ++ separate ++ free_unique_values(schema),
       merge_change_fields: true,
       keep_sync_uid: true
     ]
 
+    override_opts = override_opts ++ language_copy_opts(language)
+
     apply(context, :"duplicate_#{singular}", [source_id, actor, override_opts])
+  end
+
+  @doc """
+  Duplicate options for copying an entry into `language`, besides its
+  `change_fields`: the copy's related entries (`:entries` relations, its
+  subform rows' included) point at their versions in `language`, and one
+  with no version in it yet is left out. A relation the entry's own
+  `change_fields` name is left to them. Later changes to the source's related
+  entries are not synchronized.
+  """
+  @spec language_copy_opts(String.t() | atom()) :: keyword()
+  def language_copy_opts(language) do
+    language = to_string(language)
+    [map_entries: &related_in_language(&1, language)]
   end
 
   @doc """

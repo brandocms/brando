@@ -271,7 +271,7 @@ defmodule Brando.Query.Mutations do
         |> maybe_duplicate_blocks(module, has_blocks?, Map.get(merged_opts, :keep_sync_uid, false))
         |> maybe_merge_fields(merged_opts)
         |> maybe_put_creator(user)
-        |> detach_children(module, Map.get(merged_opts, :keep_sync_uid, false))
+        |> detach_children(module, copy_opts(merged_opts))
         |> drop_fields()
         |> update_meta()
 
@@ -303,6 +303,18 @@ defmodule Brando.Query.Mutations do
     end)
   end
 
+  # How the copy's rows are made: `keep_sync_uid` for their blocks, and
+  # `map_entries`, a function over an `:entries` relation's join rows (a
+  # translation points them at its language's versions), for every such
+  # relation at any depth but one the entry's own `change_fields` name.
+  defp copy_opts(merged_opts) do
+    %{
+      keep_sync_uid?: Map.get(merged_opts, :keep_sync_uid, false),
+      map_entries: Map.get(merged_opts, :map_entries),
+      changed: merged_opts |> Map.get(:change_fields, []) |> Enum.map(&change_field_name/1)
+    }
+  end
+
   # A loaded `has_many` or `has_one` row that still has its id would be
   # re-pointed at the copy on insert — the original entry loses it. Rows the
   # entry owns (subform relations with `cast: true`, and the join rows of an
@@ -312,16 +324,18 @@ defmodule Brando.Query.Mutations do
   # merely links to, like alternates, are dropped. Rows a `change_fields`
   # handler has already built (nil id) are left alone. A `belongs_to` keeps its
   # foreign key on the copy and stays shared.
-  defp detach_children(entry, module, keep_sync_uid?) do
+  defp detach_children(entry, module, opts) do
     owned = owned_relations(module)
+    entries = entries_relations(module)
 
     Enum.reduce(module.__schema__(:associations), entry, fn name, acc ->
       case {module.__schema__(:association, name), Map.get(acc, name)} do
         {%Ecto.Association.Has{cardinality: :many, related_key: related_key}, rows} when is_list(rows) ->
-          Map.put(acc, name, detach_rows(rows, related_key, name in owned, keep_sync_uid?))
+          rows = if name in entries, do: map_entries(rows, name, opts), else: rows
+          Map.put(acc, name, detach_rows(rows, related_key, name in owned, opts))
 
         {%Ecto.Association.Has{cardinality: :one, related_key: related_key}, %{__meta__: _} = row} ->
-          Map.put(acc, name, [row] |> detach_rows(related_key, name in owned, keep_sync_uid?) |> List.first())
+          Map.put(acc, name, [row] |> detach_rows(related_key, name in owned, opts) |> List.first())
 
         {%Ecto.Association.HasThrough{cardinality: :many}, rows} when is_list(rows) ->
           Map.put(acc, name, [])
@@ -338,12 +352,22 @@ defmodule Brando.Query.Mutations do
         do: name
   end
 
-  defp detach_rows(rows, related_key, owned?, keep_sync_uid?) do
+  defp entries_relations(module) do
+    for %{type: :entries, name: name} <- Brando.Blueprint.Relations.__relations__(module), do: name
+  end
+
+  defp map_entries(rows, name, %{map_entries: fun, changed: changed}) when is_function(fun, 1) do
+    if name in changed, do: rows, else: fun.(rows)
+  end
+
+  defp map_entries(rows, _name, _opts), do: rows
+
+  defp detach_rows(rows, related_key, owned?, opts) do
     rows = if owned?, do: load_for_copy(rows), else: rows
 
     Enum.flat_map(rows, fn
       %{id: nil} = row -> [row]
-      row when owned? -> [copy_row(row, related_key, keep_sync_uid?)]
+      row when owned? -> [copy_row(row, related_key, opts)]
       _row -> []
     end)
   end
@@ -362,13 +386,14 @@ defmodule Brando.Query.Mutations do
 
   defp load_for_copy(rows), do: rows
 
-  defp copy_row(%module{} = row, related_key, keep_sync_uid?) do
+  # A row's `change_fields` are the entry's, so they name none of its relations.
+  defp copy_row(%module{} = row, related_key, opts) do
     copy = row |> Map.merge(%{:id => nil, related_key => nil}) |> clear_timestamps() |> update_meta()
 
     if Brando.Blueprint.blueprint?(module) do
       copy
-      |> maybe_duplicate_blocks(module, module.has_trait(Trait.Blocks), keep_sync_uid?)
-      |> detach_children(module, keep_sync_uid?)
+      |> maybe_duplicate_blocks(module, module.has_trait(Trait.Blocks), opts.keep_sync_uid?)
+      |> detach_children(module, %{opts | changed: []})
     else
       copy
     end
