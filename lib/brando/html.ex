@@ -665,9 +665,13 @@ defmodule Brando.HTML do
       export BRANDO_VITE_FRONTEND_PORT=3001
       export BRANDO_VITE_ADMIN_PORT=3334
 
-  The installer Vite configs read the same variables. Existing applications
-  should copy the corresponding `server` settings into their Vite configs.
-  A Vite-only `.env` file does not configure the Phoenix process.
+  The installer Vite configs read the same variables, with `strictPort`, so a
+  taken port stops Vite instead of moving it to a port Phoenix does not know.
+  Existing applications should copy the corresponding `server` settings into
+  their Vite configs. A Vite-only `.env` file does not configure the Phoenix
+  process. `mix brando.install` starts both dev servers from the endpoint's
+  `watchers` in `config/dev.exs`. In development, the page shows a notice when
+  a dev server's scripts do not load.
 
   These values are read at render time, rather than through application config,
   because they only configure development servers and must agree with Vite's
@@ -687,7 +691,7 @@ defmodule Brando.HTML do
       ~H"""
       {Vite.Render.main_css(:admin) |> raw()}
       {Vite.Render.main_js(:admin) |> raw()}
-      <.admin_assets_notice :if={@unbuilt?} show />
+      <.assets_notice :if={@unbuilt?} scope={:admin} show />
       """
     else
       assigns =
@@ -698,18 +702,18 @@ defmodule Brando.HTML do
 
       ~H"""
       <!-- admin dev/test -->
-      <.admin_assets_notice :if={@notice?} origin={@vite_origin} />
+      <.assets_notice :if={@notice?} scope={:admin} origin={@vite_origin} />
       <script
         type="module"
         src={@vite_origin <> "/@vite/client"}
-        onerror={@notice? && "brandoAdminAssetsMissing()"}
+        onerror={@notice? && "brandoAssetsMissing('brando-admin-assets-notice')"}
         phx-no-format
       >
       </script>
       <script
         type="module"
         src={@vite_origin <> "/src/main.js"}
-        onerror={@notice? && "brandoAdminAssetsMissing()"}
+        onerror={@notice? && "brandoAssetsMissing('brando-admin-assets-notice')"}
         phx-no-format
       >
       </script>
@@ -729,17 +733,8 @@ defmodule Brando.HTML do
         {Vite.Render.main_css() |> raw()}
         """
       else
-        assigns = assign(assigns, :vite_origin, vite_dev_server_origin("FRONTEND", 3000))
-
         ~H"""
-        <!-- dev/test -->
-        <script type="module" src={@vite_origin <> "/@vite/client"} phx-no-format>
-        </script>
-        <script type="module" src={@vite_origin <> "/js/critical.js"} phx-no-format>
-        </script>
-        <script type="module" src={@vite_origin <> "/js/index.js"} phx-no-format>
-        </script>
-        <!-- end dev/test -->
+        <.frontend_dev_scripts />
         """
       end
     end
@@ -776,65 +771,110 @@ defmodule Brando.HTML do
         {Vite.Render.main_js() |> raw()}
         """
       else
-        assigns = assign(assigns, :vite_origin, vite_dev_server_origin("FRONTEND", 3000))
-
         ~H"""
-        <!-- dev/test -->
-        <script type="module" src={@vite_origin <> "/@vite/client"} phx-no-format>
-        </script>
-        <script type="module" src={@vite_origin <> "/js/critical.js"} phx-no-format>
-        </script>
-        <script type="module" src={@vite_origin <> "/js/index.js"} phx-no-format>
-        </script>
-        <!-- end dev/test -->
+        <.frontend_dev_scripts />
         """
       end
     end
+  end
+
+  defp frontend_dev_scripts(assigns) do
+    assigns =
+      assign(assigns,
+        vite_origin: vite_dev_server_origin("FRONTEND", 3000),
+        notice?: Brando.env() == :dev
+      )
+
+    ~H"""
+    <!-- dev/test -->
+    <.assets_notice :if={@notice?} scope={:site} origin={@vite_origin} />
+    <script
+      type="module"
+      src={@vite_origin <> "/@vite/client"}
+      onerror={@notice? && "brandoAssetsMissing('brando-site-assets-notice')"}
+      phx-no-format
+    >
+    </script>
+    <script
+      type="module"
+      src={@vite_origin <> "/js/critical.js"}
+      onerror={@notice? && "brandoAssetsMissing('brando-site-assets-notice')"}
+      phx-no-format
+    >
+    </script>
+    <script
+      type="module"
+      src={@vite_origin <> "/js/index.js"}
+      onerror={@notice? && "brandoAssetsMissing('brando-site-assets-notice')"}
+      phx-no-format
+    >
+    </script>
+    <!-- end dev/test -->
+    """
   end
 
   defp admin_manifest_empty? do
     Brando.Utils.try_path(Vite.Manifest.read(:admin), [:entries, :files]) in [nil, []]
   end
 
-  # Development only. Without its assets the admin is a blank page: the
-  # notice is held in a <template> in the head, and shown (with its own
-  # stylesheet, the admin's is what is missing) when the Vite dev server's
-  # scripts fail to load (`origin`), or at once when there is no build
-  # (`show`). English, like the mix tasks: it is for the developer.
+  # Development only. Without its assets the admin, or the site, is a blank
+  # page: the notice is held in a <template> in the head, and shown (with its
+  # own stylesheet, the page's is what is missing) when the Vite dev server's
+  # scripts fail to load (`origin`), or at once when the admin has no build
+  # (`show`, the admin only). It goes after <body>, which the site keeps
+  # hidden until its scripts run. English, like the mix tasks: it is for the
+  # developer.
+  attr :scope, :atom, values: [:admin, :site], required: true
   attr :origin, :string, default: nil
   attr :show, :boolean, default: false
 
-  defp admin_assets_notice(assigns) do
-    assigns = assign(assigns, :otp_app, Brando.otp_app())
+  defp assets_notice(assigns) do
+    {label, dir} =
+      case assigns.scope do
+        :admin -> {"Admin", "assets/backend"}
+        :site -> {"Site", "assets/frontend"}
+      end
+
+    assigns =
+      assign(assigns,
+        otp_app: Brando.otp_app(),
+        id: "brando-#{assigns.scope}-assets-notice",
+        label: label,
+        dir: dir
+      )
 
     ~H"""
-    <template id="brando-admin-assets-notice">
-      <div class="brando-admin-assets-notice" role="alert">
+    <template id={@id}>
+      <div class="brando-assets-notice" role="alert">
         <%= if @origin do %>
-          <strong>Admin assets not reachable at {@origin}</strong>
+          <strong>{@label} assets not reachable at {@origin}</strong>
           <p>
-            Start the admin's Vite dev server: <code>pnpm dev</code> in <code>assets/backend</code>.
-            Or build them there with <code>pnpm build</code> and set <code>config :{@otp_app}, hmr: false</code>.
+            <code>mix phx.server</code>
+            starts the Vite dev server in <code>{@dir}</code>
+            through the endpoint's <code>watchers</code>
+            in <code>config/dev.exs</code>. Its log says why Vite did not start, for example a port
+            another site's Vite holds. Or build the assets there with <code>pnpm build</code>
+            and set <code>config :{@otp_app}, hmr: false</code>.
           </p>
         <% else %>
-          <strong>Admin assets not built</strong>
+          <strong>{@label} assets not built</strong>
           <p>
             There is no <code>priv/static/admin_manifest.json</code>. Build them with <code>pnpm build</code>
-            in <code>assets/backend</code>, or set <code>config :{@otp_app}, hmr: true</code>
-            and run <code>pnpm dev</code>
-            there.
+            in <code>{@dir}</code>, or set <code>config :{@otp_app}, hmr: true</code>
+            to use the Vite dev server that <code>mix phx.server</code>
+            starts.
           </p>
         <% end %>
       </div>
     </template>
     <style>
-      .brando-admin-assets-notice{position:fixed;top:16px;left:16px;right:16px;z-index:10000;max-width:720px;margin:0 auto;padding:16px 20px;border:1px solid #d9a441;border-radius:8px;background:#fff8e6;color:#1d2433;font:14px/1.5 system-ui,sans-serif;box-shadow:0 4px 16px rgba(0,0,0,.08)}.brando-admin-assets-notice p{margin:4px 0 0}.brando-admin-assets-notice code{font:13px ui-monospace,monospace;background:rgba(0,0,0,.06);padding:1px 4px;border-radius:3px}
+      .brando-assets-notice{position:fixed;top:16px;left:16px;right:16px;z-index:10000;max-width:720px;margin:0 auto;padding:16px 20px;border:1px solid #d9a441;border-radius:8px;background:#fff8e6;color:#1d2433;font:14px/1.5 system-ui,sans-serif;box-shadow:0 4px 16px rgba(0,0,0,.08)}.brando-assets-notice p{margin:4px 0 0}.brando-assets-notice code{font:13px ui-monospace,monospace;background:rgba(0,0,0,.06);padding:1px 4px;border-radius:3px}
     </style>
     <script>
-      window.brandoAdminAssetsMissing=function(){var show=function(){if(document.getElementById("brando-admin-assets-notice-shown"))return;var t=document.getElementById("brando-admin-assets-notice");if(!t)return;var n=t.content.firstElementChild.cloneNode(true);n.id="brando-admin-assets-notice-shown";document.body.appendChild(n)};if(document.body){show()}else{document.addEventListener("DOMContentLoaded",show)}};
+      window.brandoAssetsMissing=function(id){var show=function(){if(document.getElementById(id+"-shown"))return;var t=document.getElementById(id);if(!t)return;var n=t.content.firstElementChild.cloneNode(true);n.id=id+"-shown";document.documentElement.appendChild(n)};if(document.body){show()}else{document.addEventListener("DOMContentLoaded",show)}};
     </script>
     <script :if={@show}>
-      brandoAdminAssetsMissing();
+      brandoAssetsMissing("brando-admin-assets-notice");
     </script>
     """
   end

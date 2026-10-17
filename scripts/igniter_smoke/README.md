@@ -28,7 +28,12 @@ BRANDO_SMOKE_BOOTSTRAP=precompiled BRANDO_SMOKE_PGPORT=5432 ./scripts/igniter_sm
 
 Set `BRANDO_SMOKE_PGHOST`, `BRANDO_SMOKE_PGUSER`, and
 `BRANDO_SMOKE_PGPASSWORD` for that service. Defaults are localhost and
-postgres/postgres. `BRANDO_SMOKE_PORT` selects the consumer HTTP port (4482).
+postgres/postgres. `BRANDO_SMOKE_PORT` selects the consumer HTTP port (4482). The consumer runs
+as installed, with `hmr: true` and its endpoint watchers starting the admin's
+and the site's Vite dev servers, on the next two ports (4483 and 4484) unless
+`BRANDO_SMOKE_VITE_ADMIN_PORT` and `BRANDO_SMOKE_VITE_FRONTEND_PORT` say
+otherwise. The run fails if one of them answers before the consumer starts,
+or if a Vite server still listens after it stops.
 `BRANDO_SMOKE_PHX_EBIN` optionally selects a compiled phx_new beam directory
 instead of the installed archive.
 

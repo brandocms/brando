@@ -211,6 +211,85 @@ defmodule Mix.Brando.Igniter.InstallTest do
     end
   end
 
+  @phx_new_dev """
+  import Config
+
+  config :studio, StudioWeb.Endpoint,
+    http: [ip: {127, 0, 0, 1}, port: 4000],
+    check_origin: false,
+    code_reloader: true,
+    secret_key_base: "dev-secret",
+    watchers: []
+
+  config :studio, StudioWeb.Endpoint, live_reload: [patterns: [~r"lib/studio_web/.*(ex|heex)$"]]
+  """
+
+  # The watchers as Phoenix reads them, with config/dev.exs under `root`
+  defp dev_watchers(igniter, root) do
+    root
+    |> Path.join("config/dev.exs")
+    |> Config.Reader.eval!(IgniterCase.source(igniter, "config/dev.exs"), env: :dev)
+    |> get_in([:studio, StudioWeb.Endpoint, :watchers])
+  end
+
+  defp vite_watcher(root, dir) do
+    shim = "data:text/javascript,process.stdin.on('end',()=>process.kill(process.pid,'SIGTERM')).resume()"
+    ["--import", shim, "node_modules/vite/bin/vite.js", cd: Path.join(root, "assets/#{dir}")]
+  end
+
+  defp vite_notice?(igniter), do: Enum.any?(igniter.notices, &(&1 =~ "already has watchers"))
+
+  test "phx.new's empty watchers start both Vite dev servers, once" do
+    igniter = project(%{"config/dev.exs" => @phx_new_dev}) |> install()
+    assert igniter.issues == []
+    refute vite_notice?(igniter)
+
+    assert dev_watchers(igniter, "/srv/studio") == [
+             node: vite_watcher("/srv/studio", "backend"),
+             node: vite_watcher("/srv/studio", "frontend")
+           ]
+
+    dev = IgniterCase.source(igniter, "config/dev.exs")
+    assert dev =~ ~s(secret_key_base: "dev-secret")
+    assert dev =~ "hmr: true"
+    assert dev =~ "# Vite dev servers for the admin"
+    assert length(String.split(dev, "node_modules/vite/bin/vite.js")) == 3
+
+    applied = Igniter.Test.apply_igniter!(igniter)
+    reloaded = Enum.reduce(Map.keys(applied.assigns.test_files), applied, &Igniter.include_existing_file(&2, &1))
+    rerun = install(reloaded)
+    assert rerun.issues == []
+    refute vite_notice?(rerun)
+    Igniter.Test.assert_unchanged(rerun, "config/dev.exs")
+  end
+
+  test "an endpoint without watchers gets the Vite watchers" do
+    igniter = install(project())
+    assert igniter.issues == []
+
+    assert dev_watchers(igniter, "/srv/studio") == [
+             node: vite_watcher("/srv/studio", "backend"),
+             node: vite_watcher("/srv/studio", "frontend")
+           ]
+  end
+
+  test "the application's own watchers are kept, with a notice naming the Vite watchers" do
+    dev =
+      String.replace(
+        @phx_new_dev,
+        "watchers: []",
+        ~s|watchers: [esbuild: {Esbuild, :install_and_run, [:studio, ~w(--watch)]}]|
+      )
+
+    igniter = project(%{"config/dev.exs" => dev}) |> install()
+    assert igniter.issues == []
+    refute IgniterCase.source(igniter, "config/dev.exs") =~ "vite"
+    assert [notice] = Enum.filter(igniter.notices, &(&1 =~ "already has watchers"))
+    assert notice =~ ~s|cd: Path.expand("../assets/backend", __DIR__)|
+    assert notice =~ ~s|cd: Path.expand("../assets/frontend", __DIR__)|
+    assert notice =~ "node_modules/vite/bin/vite.js"
+  end
+
   defp mix_exs(project, attributes \\ "") do
     """
     defmodule Studio.MixProject do
