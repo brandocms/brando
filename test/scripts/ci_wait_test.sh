@@ -117,6 +117,9 @@ CASE_STEP="Set up job" check missing.log \
 CASE_RUNNING="E2E (legacy-1)" check jit-crash.log 'known flake: beam-jit-crash — rerun with: gh run rerun 14 --failed'
 # A gh without --allow-escape-sequences (2.88) still reads the log.
 CASE_OLD_GH=1 check jit-crash.log 'known flake: beam-jit-crash — rerun with: gh run rerun 15 --failed'
+# Hex timing out in Install dependencies: a known flake, not a real failure.
+CASE_STEP="Install dependencies" check hex-registry-timeout.log \
+  'known flake: hex-registry-timeout — rerun with: gh run rerun 16 --failed'
 
 # expect <name> <status> <output> <command>... — the command's whole output
 # and exit status.
