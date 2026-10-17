@@ -12,6 +12,15 @@ defmodule BrandoIntegration.UserTest do
     assert default_language == Brando.RuntimeConfig.get(:default_language)
   end
 
+  test "JSON of a user leaves out the password hash" do
+    user = Factory.insert(:random_user)
+    json = user |> Jason.encode!() |> Jason.decode!()
+
+    assert json["email"] == user.email
+    refute Map.has_key?(json, "password")
+    refute Jason.encode!(%{creator: user}) =~ user.password
+  end
+
   test "create/1 and update/1" do
     user = Factory.insert(:random_user)
 
