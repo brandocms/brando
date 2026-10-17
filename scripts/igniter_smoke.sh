@@ -36,7 +36,7 @@ trap 'echo "Smoke failed near line $LINENO; inspect $smoke_root/logs" >&2' ERR
 
 listening() { curl --silent --output /dev/null "http://localhost:$1/"; }
 
-# Stopping Phoenix closes its watchers' stdin, which stops Vite. A Vite
+# Stopping Phoenix stops its Brando.Vite watchers, which stop Vite. A Vite
 # server still listening afterwards fails the run.
 stop_server() {
   if [[ -n "$smoke_server_pid" ]]; then
@@ -147,27 +147,55 @@ if [[ "$smoke_bootstrap" == precompiled ]]; then
   mix run "$framework_dir/scripts/igniter_smoke/check_customized.exs" > "$smoke_root/logs/check-customized.log" 2>&1
 fi
 
+# Starts the consumer and waits for /admin/login, and with "vite" for both
+# Vite dev servers too.
+start_server() {
+  local log="$1" wait_for_vite="${2:-}" attempt
+  PORT="$smoke_port" mix phx.server > "$smoke_root/logs/$log" 2>&1 &
+  smoke_server_pid=$!
+  for attempt in $(seq 1 90); do
+    if curl --silent --fail "http://127.0.0.1:$smoke_port/admin/login" > /dev/null &&
+      { [[ "$wait_for_vite" != vite ]] || {
+        curl --silent --fail "http://localhost:$BRANDO_VITE_ADMIN_PORT/@vite/client" > /dev/null &&
+          curl --silent --fail "http://localhost:$BRANDO_VITE_FRONTEND_PORT/@vite/client" > /dev/null
+      }; }; then
+      return 0
+    fi
+    if ! kill -0 "$smoke_server_pid" 2>/dev/null; then break; fi
+    sleep 1
+  done
+  echo "Consumer or its Vite servers did not start; inspect $smoke_root/logs/$log" >&2
+  return 1
+}
+
+run_browser() {
+  BRANDO_SMOKE_BASE_URL="http://127.0.0.1:$smoke_port" BRANDO_SMOKE_ARTIFACTS="$smoke_root/browser-$1" \
+    pnpm --dir "$framework_dir/scripts/igniter_smoke" exec playwright test --config playwright.config.js > "$smoke_root/logs/browser-$1.log" 2>&1
+}
+
 # As users get it: hmr: true in dev.exs, with the endpoint's watchers starting
 # both Vite dev servers.
 for port in "${smoke_vite_ports[@]}"; do
   if listening "$port"; then echo "Port $port already answers; the consumer's Vite needs it" >&2; exit 1; fi
 done
-PORT="$smoke_port" mix phx.server > "$smoke_root/logs/server.log" 2>&1 &
-smoke_server_pid=$!
-smoke_ready=false
-for attempt in $(seq 1 90); do
-  if curl --silent --fail "http://127.0.0.1:$smoke_port/admin/login" > /dev/null &&
-    curl --silent --fail "http://localhost:$BRANDO_VITE_ADMIN_PORT/@vite/client" > /dev/null &&
-    curl --silent --fail "http://localhost:$BRANDO_VITE_FRONTEND_PORT/@vite/client" > /dev/null; then
-    smoke_ready=true
-    break
-  fi
-  if ! kill -0 "$smoke_server_pid" 2>/dev/null; then break; fi
-  sleep 1
-done
-if [[ "$smoke_ready" != true ]]; then echo "Consumer or its Vite servers did not start; inspect $smoke_root/logs/server.log" >&2; exit 1; fi
-BRANDO_SMOKE_BASE_URL="http://127.0.0.1:$smoke_port" BRANDO_SMOKE_ARTIFACTS="$smoke_root/browser" \
-  pnpm --dir "$framework_dir/scripts/igniter_smoke" exec playwright test --config playwright.config.js > "$smoke_root/logs/browser.log" 2>&1
+mix run --no-start "$framework_dir/scripts/igniter_smoke/database.exs" snapshot > "$smoke_root/logs/database-snapshot.log" 2>&1
+start_server server.log vite
+curl --silent --fail "http://127.0.0.1:$smoke_port/admin/login" | grep -qF "http://localhost:$BRANDO_VITE_ADMIN_PORT/@vite/client"
+run_browser vite
+stop_server
+
+# The built assets, as production serves them: the browser tests again, on
+# the database as seeded, with hmr: false, so a template that does not build,
+# or builds the wrong entries, fails here and not only in a deploy.
+mix run --no-start "$framework_dir/scripts/igniter_smoke/database.exs" restore > "$smoke_root/logs/database-restore.log" 2>&1
+printf '\nconfig :igniter_smoke, hmr: false\n' >> config/dev.exs
+start_server server-built.log
+admin_login="$(curl --silent --fail "http://127.0.0.1:$smoke_port/admin/login")"
+if [[ "$admin_login" == *"@vite/client"* || "$admin_login" != *"/assets/admin/admin-"* ]]; then
+  echo "With hmr: false the admin did not load its built assets; inspect $smoke_root/logs/server-built.log" >&2
+  exit 1
+fi
+run_browser built
 stop_server
 if [[ "$smoke_source" == packaged ]]; then
   if [[ "$(package_digest)" != "$package_before" ]]; then echo "The consumer wrote into the Hex package at $brando_dir" >&2; exit 1; fi

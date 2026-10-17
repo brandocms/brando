@@ -102,5 +102,5 @@ jobs:
           name: igniter-${{ matrix.tenancy }}-${{ matrix.bootstrap }}-${{ matrix.source }}
           path: |
             ${{ steps.smoke.outputs.root }}/logs
-            ${{ steps.smoke.outputs.root }}/browser
+            ${{ steps.smoke.outputs.root }}/browser-*
           retention-days: 7
