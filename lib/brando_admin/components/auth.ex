@@ -122,7 +122,8 @@ defmodule BrandoAdmin.Components.Auth do
 
   @doc """
   An input of the form `field`, with its label and, once the input has been
-  used, its errors. A checkbox has its label after it.
+  used, its errors. A checkbox has its label after it. A password input shows
+  only what was typed into the form (`Primitives.password_value/1`).
   """
   attr :field, FormField, required: true
   attr :label, :string, required: true
@@ -146,7 +147,16 @@ defmodule BrandoAdmin.Components.Auth do
 
   def input(assigns) do
     errors = if Phoenix.Component.used_input?(assigns.field), do: assigns.field.errors, else: []
-    assigns = assign(assigns, :errors, Enum.map(errors, &Primitives.translate_error/1))
+
+    value =
+      if assigns.type == "password",
+        do: Primitives.password_value(assigns.field),
+        else: Phoenix.HTML.Form.normalize_value(assigns.type, assigns.field.value)
+
+    assigns =
+      assigns
+      |> assign(:errors, Enum.map(errors, &Primitives.translate_error/1))
+      |> assign(:value, value)
 
     ~H"""
     <div>
@@ -162,7 +172,7 @@ defmodule BrandoAdmin.Components.Auth do
         type={@type}
         name={@field.name}
         id={@field.id}
-        value={Phoenix.HTML.Form.normalize_value(@type, @field.value)}
+        value={@value}
         class="text"
         aria-invalid={@errors != [] && "true"}
         aria-describedby={"#{@field.id}-error"}

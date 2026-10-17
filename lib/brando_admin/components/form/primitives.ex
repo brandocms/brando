@@ -634,6 +634,16 @@ defmodule BrandoAdmin.Components.Form.Primitives do
   defp field_id(assigns), do: "#{assigns.field.id}"
 
   @doc """
+  The value of a password input for `field`: only what was typed into this
+  form (its param), never the field's value. A user's `password` is the stored
+  hash, so a form built from a saved user has the hash as that value.
+  """
+  def password_value(%Phoenix.HTML.FormField{form: %{params: params}, field: field}) when is_map(params),
+    do: Map.get(params, to_string(field))
+
+  def password_value(_field), do: nil
+
+  @doc """
   Translates an error message using gettext.
   """
   def translate_error({msg, opts}) do
