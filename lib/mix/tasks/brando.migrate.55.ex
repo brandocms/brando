@@ -68,6 +68,11 @@ if Code.ensure_loaded?(Igniter) do
     storage order. Calls with no `order:` at all are listed, since adding one
     changes what the site shows.
 
+    Blueprint declarations 0.55 no longer compiles are rewritten, each listed
+    with file and line: an embedded Blueprint's `identifier` as
+    `identifier false`, `default_srcset:` in an asset's `cfg` as `srcset: %{default: …}`, and
+    `from:` or `for:` on a slug input as `source:`.
+
     It also lists, without changing them:
 
       * front-end scripts under `assets/` that read a video's `data-src`,
@@ -75,7 +80,9 @@ if Code.ensure_loaded?(Igniter) do
         wrapper;
       * a Repo `url:` that `config/runtime.exs` reads from the environment
         in `:test` too, so `mix test` would use, and migrate, that database;
-      * `test_paths` in `mix.exs` that name missing directories.
+      * `test_paths` in `mix.exs` that name missing directories;
+      * slug inputs with `from:` or `for:` in the application's copy of the
+        generator template, `priv/templates/brando.gen.blueprint/blueprint.ex`.
 
     The task changes source files only. Review and compile its diff before
     generating or running database migrations. The complete ordered workflow is

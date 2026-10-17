@@ -406,6 +406,13 @@ those changes in the same commit.
   […]}`, or removes it beside a `srcset:`. Brando ignored `default_srcset`
   there, so the asset used its `srcset` or the default config's; 0.55 rejects
   the field. Check that the sizes the list names are in the asset's `sizes`;
+- writes `from:` or `for:` on a slug input as `source:`, or removes it beside
+  a `source:`. The slug input reads only `source:`: under the others the slug
+  never filled in, and 0.55 refuses to compile them. The 0.55 development
+  `mix brando.gen.blueprint` wrote `from:`: an application's own copy of its
+  template, `priv/templates/brando.gen.blueprint/blueprint.ex`, is EEx and is
+  not rewritten. The task lists its slug inputs that still name `from:` or
+  `for:`; change them to `source:` by hand;
 - lists, with file and line, each read of an `:entries` relation
   (`project.related_entries`) that does not go through `.identifier` (see
   below);

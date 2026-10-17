@@ -18,6 +18,8 @@ defmodule Mix.Tasks.Brando.Migrate55BlueprintFixesTest do
   @partner_path "lib/koi/team/partner.ex"
   @project_path "lib/koi/projects/project.ex"
   @controller_path "lib/koi_web/controllers/project_controller.ex"
+  @article_path "lib/koi/news/article.ex"
+  @generator_template_path "priv/templates/brando.gen.blueprint/blueprint.ex"
 
   # As koi had them on 0.53.
   @property """
@@ -114,6 +116,92 @@ defmodule Mix.Tasks.Brando.Migrate55BlueprintFixesTest do
     end
   end
   """
+
+  # As `mix brando.gen.blueprint` wrote it from 0.55-dev until #3229, with the
+  # 0.53 `for:` beside it.
+  @article """
+  defmodule Koi.News.Article do
+    use Brando.Blueprint,
+      application: "Koi",
+      domain: "News",
+      schema: "Article",
+      singular: "article",
+      plural: "articles"
+
+    attributes do
+      attribute :title, :string, required: true
+      attribute :slug, :slug, required: true
+      attribute :uri, :slug
+    end
+
+    forms do
+      form do
+        tab t("Content") do
+          fieldset do
+            input :title, :text, label: t("Title")
+            input :slug, :slug, from: :title, label: t("Slug")
+            input :uri, :slug, label: t("URI"), for: :title
+          end
+        end
+      end
+    end
+
+    def options, do: [from: :title]
+  end
+  """
+
+  # A consumer's copy of the generator template, as Brando shipped it.
+  @generator_template """
+  defmodule <%= app_module %>.<%= domain %>.<%= schema %> do
+    forms do
+      form do
+        tab t("Content") do
+          fieldset do
+            input :title, :text, label: t("Title")
+            input :slug, :slug, from: :title, label: t("Slug")
+          end
+        end
+      end
+    end
+  end
+  """
+
+  test "names a slug input's source field with source:, which 0.55 reads, and says so" do
+    igniter = migrate(%{@article_path => @article})
+    article = source(igniter, @article_path)
+
+    assert article =~ ~s|input :slug, :slug, source: :title, label: t("Slug")|
+    assert article =~ ~s|input :uri, :slug, label: t("URI"), source: :title|
+    assert article =~ "def options, do: [from: :title]"
+    assert_has_notice(igniter, &(&1 =~ "#{@article_path}:20: `from:` on a slug input is now `source:`"))
+    assert_has_notice(igniter, &(&1 =~ "#{@article_path}:21: `for:` on a slug input is now `source:`"))
+
+    rerun = igniter |> apply_igniter!() |> include_test_files() |> Migrate55.igniter()
+    assert_unchanged(rerun, @article_path)
+  end
+
+  test "drops a slug input's from: beside a source:, which the input read" do
+    article = String.replace(@article, "from: :title, label", "source: :title, from: :name, label")
+
+    igniter = migrate(%{@article_path => article})
+
+    assert source(igniter, @article_path) =~ ~s|input :slug, :slug, source: :title, label: t("Slug")|
+    assert_has_notice(igniter, &(&1 =~ "#{@article_path}:20: `from:` removed; the `source:` beside it stays"))
+  end
+
+  test "lists a slug input's from: in the application's copy of the generator template" do
+    igniter = migrate(%{@generator_template_path => @generator_template})
+
+    assert_has_warning(
+      igniter,
+      &(&1 =~ ~s|#{@generator_template_path}:7: input :slug, :slug, from: :title, label: t("Slug")| and
+          &1 =~ "change the option to `source:` by hand")
+    )
+
+    # The EEx template is not Elixir, and Igniter parses each `.ex` file it writes.
+    assert igniter.issues == []
+    apply_igniter!(igniter)
+  end
 
   test "turns off the identifier of an embedded Blueprint, and says so" do
     igniter = migrate(%{@property_path => @property})
@@ -297,7 +385,11 @@ defmodule Mix.Tasks.Brando.Migrate55BlueprintFixesTest do
 
   defp source(igniter, path), do: igniter.rewrite |> Rewrite.source!(path) |> Rewrite.Source.get(:content)
 
+  # Not the generator template, which is EEx: the task reads it as text.
   defp include_test_files(igniter) do
-    Enum.reduce(Map.keys(igniter.assigns.test_files), igniter, &Igniter.include_existing_file(&2, &1))
+    igniter.assigns.test_files
+    |> Map.keys()
+    |> Enum.reject(&String.starts_with?(&1, "priv/templates/"))
+    |> Enum.reduce(igniter, &Igniter.include_existing_file(&2, &1))
   end
 end

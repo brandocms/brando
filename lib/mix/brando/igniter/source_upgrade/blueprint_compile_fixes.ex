@@ -11,7 +11,12 @@ if Code.ensure_loaded?(Igniter) do
     #   * `default_srcset:` in an asset config, which 0.53 and 0.54 ignored
     #     there (it is a `Brando.Images` setting): written as the asset's
     #     `srcset: %{default: …}`, or removed beside a `srcset:`, which the
-    #     asset used.
+    #     asset used;
+    #   * `from:` or `for:` on a slug input, which no slug input read: written
+    #     `source:`, or removed beside a `source:`. The 0.55-dev generator
+    #     wrote `from:`; the application's copy of its template
+    #     (`priv/templates/brando.gen.blueprint/blueprint.ex`) is EEx, which
+    #     Igniter cannot write as an `.ex` file, so its lines are listed.
     #
     # Run it before the other Blueprint rewrites, so the lines it reports are
     # the file's.
@@ -21,10 +26,16 @@ if Code.ensure_loaded?(Igniter) do
     alias Igniter.Project.Module, as: ProjectModule
     alias Mix.Brando.Igniter.SourceUpgrade
     alias Mix.Brando.Igniter.SourceUpgrade.ModuleScope
+    alias Mix.Brando.Igniter.Template
     alias Rewrite.Source
     alias Sourceror.Zipper
 
     @scopes [:def, :defp, :defmacro, :defmacrop, :fn]
+
+    @slug_source_keys [:from, :for]
+    @generator_template "priv/templates/brando.gen.blueprint/blueprint.ex"
+    # The template is EEx, not Elixir: matched by line.
+    @template_slug_source ~r/^\s*input\(?\s*:\w+,\s*:slug,.*?[\s,(](from|for):/
 
     @srcset_note """
     `default_srcset` was never an asset config field, and Brando ignored it
@@ -32,7 +43,7 @@ if Code.ensure_loaded?(Igniter) do
     applies to the asset; check that each size it names is in its `sizes`.
     """
 
-    @doc "Rewrites both, noting each change with file and line."
+    @doc "Rewrites them, noting each change with file and line."
     def rewrite(igniter) do
       {igniter, blueprints} = SourceUpgrade.find_blueprints(igniter)
 
@@ -52,7 +63,9 @@ if Code.ensure_loaded?(Igniter) do
           end
         end)
 
-      notice(igniter, changes)
+      igniter
+      |> notice(changes)
+      |> warn_generator_template()
     end
 
     # `{line, change}` for what `update/1` changes.
@@ -68,7 +81,14 @@ if Code.ensure_loaded?(Igniter) do
             else: {line(key), "`default_srcset:` is now `srcset: %{default: …}`"}
         end
 
-      Enum.sort(identifiers ++ srcsets)
+      slug_sources =
+        for {key, source_beside?} <- slug_sources(zipper) do
+          if source_beside?,
+            do: {line(key), "`#{literal(key)}:` removed; the `source:` beside it stays"},
+            else: {line(key), "`#{literal(key)}:` on a slug input is now `source:`"}
+        end
+
+      Enum.sort(identifiers ++ srcsets ++ slug_sources)
     end
 
     # Within the module's body: the file may hold other modules.
@@ -81,10 +101,15 @@ if Code.ensure_loaded?(Igniter) do
       identifier_lines = zipper |> embedded_identifiers() |> MapSet.new(&position/1)
       srcset_lines = zipper |> default_srcsets() |> MapSet.new(fn {key, _sibling_srcset?} -> position(key) end)
 
-      Zipper.traverse(zipper, &update_node(&1, identifier_lines, srcset_lines))
+      slug_keys =
+        zipper
+        |> slug_sources()
+        |> Map.new(fn {key, source_beside?} -> {position(key), if(source_beside?, do: :drop, else: :rename)} end)
+
+      Zipper.traverse(zipper, &update_node(&1, identifier_lines, srcset_lines, slug_keys))
     end
 
-    defp update_node(zipper, identifier_lines, srcset_lines) do
+    defp update_node(zipper, identifier_lines, srcset_lines, slug_keys) do
       case Zipper.node(zipper) do
         {:identifier, meta, [_template]} = node ->
           if MapSet.member?(identifier_lines, position(node)),
@@ -92,13 +117,30 @@ if Code.ensure_loaded?(Igniter) do
             else: zipper
 
         node ->
-          with {:ok, pairs} <- pairs(node),
-               {key, _value} <- default_srcset(pairs),
-               true <- MapSet.member?(srcset_lines, position(key)) do
-            Zipper.replace(zipper, rewrite_pairs(node, pairs))
-          else
-            _ -> zipper
+          case pairs(node) do
+            {:ok, pairs} -> update_pairs(zipper, node, pairs, srcset_lines, slug_keys)
+            :error -> zipper
           end
+      end
+    end
+
+    defp update_pairs(zipper, node, pairs, srcset_lines, slug_keys) do
+      cond do
+        Enum.any?(pairs, fn {key, _value} -> Map.has_key?(slug_keys, position(key)) end) ->
+          Zipper.replace(zipper, rewrite_slug_sources(node, pairs, slug_keys))
+
+        srcset_key?(pairs, srcset_lines) ->
+          Zipper.replace(zipper, rewrite_pairs(node, pairs))
+
+        true ->
+          zipper
+      end
+    end
+
+    defp srcset_key?(pairs, srcset_lines) do
+      case default_srcset(pairs) do
+        {key, _value} -> MapSet.member?(srcset_lines, position(key))
+        nil -> false
       end
     end
 
@@ -194,6 +236,58 @@ if Code.ensure_loaded?(Igniter) do
         end
 
       put_pairs(node, pairs)
+    end
+
+    ## Slug source
+
+    # `{key_node, source_beside?}` of each `from:` or `for:` on a slug input.
+    # A second one beside the first counts as beside a `source:`.
+    defp slug_sources(zipper) do
+      for input <- ModuleScope.find_all(zipper, &(CodeFunction.function_call?(&1, :input, 3) and declaration?(&1))),
+          {:input, _meta, [_name, type, options]} <- [call_node(input)],
+          literal(type) == :slug,
+          {:ok, pairs} <- [options |> unwrap() |> pairs()],
+          source? <- [Enum.any?(pairs, &(key(&1) == :source))],
+          {{key, _value}, index} <- pairs |> Enum.filter(&(key(&1) in @slug_source_keys)) |> Enum.with_index(),
+          do: {key, source? or index > 0}
+    end
+
+    defp rewrite_slug_sources(node, pairs, slug_keys) do
+      pairs =
+        Enum.flat_map(pairs, fn {{:__block__, meta, [_key]} = key, value} = pair ->
+          case Map.get(slug_keys, position(key)) do
+            nil -> [pair]
+            :drop -> []
+            :rename -> [{{:__block__, meta, [:source]}, value}]
+          end
+        end)
+
+      put_pairs(node, pairs)
+    end
+
+    defp warn_generator_template(igniter) do
+      if Igniter.exists?(igniter, @generator_template) do
+        {igniter, content} = Template.read(igniter, @generator_template)
+
+        lines =
+          for {line, number} <- content |> String.split("\n") |> Enum.with_index(1),
+              Regex.match?(@template_slug_source, line),
+              do: "  #{@generator_template}:#{number}: #{String.trim(line)}"
+
+        if lines == [] do
+          igniter
+        else
+          Igniter.add_warning(igniter, """
+          #{@generator_template}, this application's copy of the `mix brando.gen.blueprint`
+          template, gives a slug input `from:` or `for:`. A Blueprint generated from it fails to
+          compile on 0.55: change the option to `source:` by hand.
+
+          #{Enum.join(lines, "\n")}
+          """)
+        end
+      else
+        igniter
+      end
     end
 
     # The key/value pairs of a keyword list or a map literal.
