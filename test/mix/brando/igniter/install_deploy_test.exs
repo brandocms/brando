@@ -231,6 +231,96 @@ defmodule Mix.Brando.Igniter.InstallDeployTest do
     refute notice?(tarball, "does not write a tarball")
   end
 
+  @phx_static Map.new(
+                ~w(favicon.ico logo.svg robots.txt),
+                &{&1, File.read!(Path.expand("../../../fixtures/phx_new/#{&1}", __DIR__))}
+              )
+
+  defp phx_static(overrides \\ %{}) do
+    Map.merge(
+      %{
+        "priv/static/favicon.ico" => @phx_static["favicon.ico"],
+        "priv/static/images/logo.svg" => @phx_static["logo.svg"],
+        "priv/static/robots.txt" => @phx_static["robots.txt"]
+      },
+      overrides
+    )
+  end
+
+  test "phx.new's favicon and logo leave priv/static, which the release build does not copy, once" do
+    igniter = install(project(phx_static()))
+    assert igniter.issues == []
+
+    assert "priv/static/favicon.ico" in igniter.rms
+    assert igniter.moves == %{"priv/static/images/logo.svg" => "assets/frontend/public/images/logo.svg"}
+    # Without --public-site nothing else answers /robots.txt.
+    Igniter.Test.assert_unchanged(igniter, "priv/static/robots.txt")
+    refute notice?(igniter, "is not the file mix phx.new writes")
+
+    applied = IgniterCase.apply_and_reload(igniter)
+    refute Igniter.exists?(applied, "priv/static/favicon.ico")
+    refute Igniter.exists?(applied, "priv/static/images/logo.svg")
+    assert IgniterCase.source(applied, "assets/frontend/public/images/logo.svg") == @phx_static["logo.svg"]
+
+    rerun = install(applied)
+    assert rerun.issues == []
+    assert rerun.rms == []
+    assert rerun.moves == %{}
+    Igniter.Test.assert_unchanged(rerun, ["assets/frontend/public/images/logo.svg", "priv/static/robots.txt"])
+    refute notice?(rerun, "is not the file mix phx.new writes")
+  end
+
+  test "changed priv/static files are kept with a notice, and the frontend build's copies are left alone" do
+    changed =
+      install(
+        project(
+          phx_static(%{
+            "priv/static/favicon.ico" => "site favicon",
+            "priv/static/images/logo.svg" => "<svg>site logo</svg>\n"
+          })
+        )
+      )
+
+    assert changed.rms == []
+    assert changed.moves == %{}
+    Igniter.Test.assert_unchanged(changed, ["priv/static/favicon.ico", "priv/static/images/logo.svg"])
+    assert notice?(changed, "priv/static/favicon.ico is not the file mix phx.new writes")
+    assert notice?(changed, "move it to assets/frontend/public/favicon.ico")
+    assert notice?(changed, "priv/static/images/logo.svg is not the file mix phx.new writes")
+    assert notice?(changed, "move it to assets/frontend/public/images/logo.svg")
+
+    # What the frontend build copies from assets/frontend/public: Brando's favicon and the site's logo.
+    built =
+      install(
+        project(%{
+          "priv/static/favicon.ico" => Templates.contents(:copy, "assets/frontend/public/favicon.ico"),
+          "priv/static/images/logo.svg" => "<svg>site logo</svg>\n",
+          "assets/frontend/public/images/logo.svg" => "<svg>site logo</svg>\n"
+        })
+      )
+
+    assert built.rms == []
+    Igniter.Test.assert_unchanged(built, ["priv/static/favicon.ico", "priv/static/images/logo.svg"])
+    refute notice?(built, "is not the file mix phx.new writes")
+
+    # phx.new's logo goes when the site has its own, which the build copies over it.
+    own = install(project(phx_static(%{"assets/frontend/public/images/logo.svg" => "<svg>site logo</svg>\n"})))
+    assert "priv/static/images/logo.svg" in own.rms
+    Igniter.Test.assert_unchanged(own, "assets/frontend/public/images/logo.svg")
+
+    # A changed logo beside the site's own.
+    both =
+      install(
+        project(%{
+          "priv/static/images/logo.svg" => "<svg>old logo</svg>\n",
+          "assets/frontend/public/images/logo.svg" => "<svg>site logo</svg>\n"
+        })
+      )
+
+    assert both.rms == []
+    assert notice?(both, "Compare it with assets/frontend/public/images/logo.svg")
+  end
+
   test "releases without one named after the application get a notice instead of a second release" do
     igniter =
       project()

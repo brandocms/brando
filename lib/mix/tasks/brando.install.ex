@@ -52,7 +52,11 @@ if Code.ensure_loaded?(Igniter) do
     `log_dir` in `config/prod.exs`, and the `.gitignore` lines Brando needs.
     An existing Dockerfile or release gets a notice of what Florist needs; an
     existing `.dockerignore` gets the exclusions it misses (with `!`
-    exceptions, a notice instead).
+    exceptions, a notice instead). The build does not copy `priv/static`:
+    phx.new's `favicon.ico` there is removed and its `images/logo.svg` moves
+    to `assets/frontend/public/images`, and with `--public-site` its
+    `robots.txt` is removed, with `robots.txt` in `static_paths/0`. A file
+    changed since phx.new wrote it is kept, with a notice.
     """
 
     @impl Igniter.Mix.Task

@@ -137,8 +137,15 @@ of what it covers: such exclusions are named in a notice instead. Exceptions
 that cannot touch them, such as phx.gen.release's `!.git/HEAD`, do not stop
 the rest being appended. `priv/static` is excluded too: the build makes it from the two
 asset projects, so keep static files such as images and fonts in
-`assets/frontend/public`, which Vite copies there. Files phx.new put in
-`priv/static` do not reach the release.
+`assets/frontend/public`, which Vite copies there. A file left in
+`priv/static` works in development and is missing from the release, so the
+installer takes out the ones `mix phx.new` writes: its `favicon.ico` goes
+(Brando writes its own to `assets/frontend/public`), and `images/logo.svg`
+moves to `assets/frontend/public/images/logo.svg`. With `--public-site` its
+`robots.txt` goes too, with `robots.txt` in `static_paths/0` of the web module,
+so `BrandoWeb.SEOController` answers `/robots.txt` in development as in the
+release. Only files still as phx.new wrote them are touched; a changed one is
+kept, with a notice saying where it belongs.
 
 Both asset stages install with the pnpm version pinned in the Dockerfile and
 `pnpm install --frozen-lockfile`, so commit `assets/backend/pnpm-lock.yaml` and

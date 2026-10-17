@@ -17,6 +17,7 @@ if Code.ensure_loaded?(Igniter) do
     alias Mix.Brando.Igniter.Install.Configuration
     alias Mix.Brando.Igniter.Install.Deployment
     alias Mix.Brando.Igniter.Install.Docker
+    alias Mix.Brando.Igniter.Install.PhoenixStatic
     alias Mix.Brando.Igniter.Install.Version
     alias Mix.Brando.Igniter.Project
     alias Mix.Brando.Igniter.Release
@@ -57,6 +58,7 @@ if Code.ensure_loaded?(Igniter) do
         |> support_files(project)
         |> AgentFiles.plan()
         |> Assets.plan(project)
+        |> PhoenixStatic.plan()
         |> Mix.Brando.Igniter.Install.Migrations.plan(project)
         |> application(project)
         |> endpoint(project)
