@@ -25,7 +25,13 @@
   hand without the CMS site, prints the `absolute_url` that matches the route
   (with `route_i18n` for a translatable Blueprint, also when its own gives
   every language one path), and mentions `--public-route` only when it was
-  not given.
+  not given. A regional language code such as `pt-br` gets its scope, named
+  `:"pt-br"` so `route_i18n` finds its `:"pt-br_article_path"` helpers; a code
+  that is no path segment stops generation with an issue naming it. Rerun
+  after adding a language, or on routes generated before the language scopes,
+  it adds just the missing languages' scopes, where it stopped with a route
+  conflict. The pages link to the unprefixed path when a controller from an
+  older template assigns no `base_path`.
 
 - **`brando.gen` consumer templates keep entry pages at `:id`** (#3230).
   `controller.ex` and `html.ex` in `priv/templates/brando.gen` get the new

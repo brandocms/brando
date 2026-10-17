@@ -225,6 +225,17 @@ defmodule Mix.Brando.Igniter.ResourceRenderTest do
     assert controller.show(conn, %{"slug" => "known"}) == {:error, {:article, :not_found}}
   end
 
+  test "the pages link to the unprefixed path when a controller from an older template gives no base_path" do
+    html = Module.concat(GeneratorStudioWeb, Catalog.ArticleHTML)
+    [entry | _] = articles()
+
+    index = %{entries: [entry]} |> html.index() |> Phoenix.HTML.Safe.to_iodata() |> IO.iodata_to_binary()
+    assert index =~ ~s(href="/articles/known")
+
+    show = %{entry: entry} |> html.show() |> Phoenix.HTML.Safe.to_iodata() |> IO.iodata_to_binary()
+    assert show =~ ~s(<a href="/articles">Back to articles</a>)
+  end
+
   test "a missing entry is left to Brando's fallback controller, which renders the site's 404" do
     controller = Module.concat(GeneratorStudioWeb, Catalog.ArticleController)
     conn = build_conn() |> Plug.Conn.assign(:language, "en") |> Phoenix.Controller.put_format("html")

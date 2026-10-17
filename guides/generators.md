@@ -522,7 +522,10 @@ For a Blueprint with a `language` field, each language gets its routes, as the
 language's in a scope under its code, such as `/no/products` (the default
 language's too, at `/en/products`, with `scope_default_language_routes: true`).
 The languages are read from `config :brando, :languages` and `:default_language`
-when the resource is generated; a language added later needs its own scope.
+when the resource is generated. A regional code such as `pt-br` gets the scope
+`as: :"pt-br"`, whose helpers (`:"pt-br_product_path"`) `route_i18n` calls. For a
+language added later, run the command again: it adds the scopes of the languages
+whose routes are missing, and leaves the existing ones.
 The pages list and show the request's language with the query's `language:`
 option, so translations can share a slug and the context needs no language
 clause. With the CMS site, `:brando_site` takes the language from the path;

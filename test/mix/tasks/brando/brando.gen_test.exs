@@ -493,6 +493,92 @@ defmodule Mix.Tasks.Brando.Gen.Test do
     assert controller =~ "matches: %{slug: slug}, language: conn.assigns.language"
   end
 
+  test "a regional language code gets its scope, named as route_i18n looks its helpers up" do
+    config = String.replace(@languages, ~s([value: "no", text: "Norsk"]), ~s([value: "pt-br", text: "Português"]))
+
+    result =
+      %{"config/brando.exs" => config}
+      |> project()
+      |> generate("GeneratorStudio.Catalog.Article", ["--public-route", "/articles"])
+
+    assert result.issues == []
+
+    # Brando.I18n.Helpers.localized_path("pt-br", :article_path, …) calls :"pt-br_article_path".
+    assert router(result) =~
+             ~r/scope "\/pt-br", as: :"pt-br", assigns: %\{language: "pt-br"\}\s+do\s+get "\/articles"/
+
+    assert notices(result) =~ "/pt-br/articles for pt-br"
+  end
+
+  test "a language code that is no path segment stops generation and says which" do
+    config = String.replace(@languages, ~s([value: "no", text: "Norsk"]), ~s([value: "n o", text: "Norsk"]))
+
+    result =
+      %{"config/brando.exs" => config}
+      |> project()
+      |> generate("GeneratorStudio.Catalog.Article", ["--public-route", "/articles"])
+
+    assert [issue] = result.issues
+    assert issue =~ ~s("n o")
+  end
+
+  test "a rerun adds the scope of a language added since, and of each language to routes from before them" do
+    result =
+      %{"config/brando.exs" => @languages}
+      |> project()
+      |> generate("GeneratorStudio.Catalog.Article", ["--public-route", "/articles"])
+      |> IgniterCase.apply_and_reload()
+
+    config =
+      String.replace(
+        @languages,
+        ~s([value: "no", text: "Norsk"]),
+        ~s([value: "no", text: "Norsk"], [value: "sv", text: "Svenska"])
+      )
+
+    rerun =
+      result
+      |> Igniter.create_or_update_file("config/brando.exs", config, fn source ->
+        Rewrite.Source.update(source, :content, config)
+      end)
+      |> generate("GeneratorStudio.Catalog.Article", ["--public-route", "/articles"])
+
+    assert rerun.issues == []
+    router = router(rerun)
+    assert router =~ ~r/scope "\/sv", as: :sv, assigns: %\{language: "sv"\}\s+do\s+get "\/articles"/
+    assert length(Regex.scan(~r/scope "\/no"/, router)) == 1
+    assert length(Regex.scan(~r/get "\/articles", /, router)) == 3
+
+    # Unprefixed routes generated before the language scopes.
+    before = """
+    defmodule GeneratorStudioWeb.Router do
+      use GeneratorStudioWeb, :router
+      import Brando.Router
+
+      scope "/" do
+        pipe_through :browser
+        get "/articles", GeneratorStudioWeb.Catalog.ArticleController, :index
+        get "/articles/:slug", GeneratorStudioWeb.Catalog.ArticleController, :show
+      end
+
+      admin_routes "/admin" do
+        live "/", GeneratorStudioAdmin.DashboardLive
+      end
+    end
+    """
+
+    rerun =
+      %{"config/brando.exs" => @languages, "lib/generator_studio_web/router.ex" => before}
+      |> project()
+      |> generate("GeneratorStudio.Catalog.Article", ["--public-route", "/articles"])
+
+    assert rerun.issues == []
+    router = router(rerun)
+    assert router =~ ~r/scope "\/no", as: :no, assigns: %\{language: "no"\}\s+do\s+get "\/articles"/
+    assert length(Regex.scan(~r/get "\/articles", /, router)) == 2
+    assert notices(rerun) =~ ~s(assigns: %{language: "en"} if it has none)
+  end
+
   test "a translatable Blueprint needs its languages in the config" do
     result = generate(project(), "GeneratorStudio.Catalog.Article", ["--public-route", "/articles"])
     assert [issue] = result.issues
@@ -526,6 +612,18 @@ defmodule Mix.Tasks.Brando.Gen.Test do
     notices = notices(result)
     assert notices =~ "priv/templates/brando.gen/controller.ex overrides the default template"
     assert notices =~ ~s(absolute_url ~H"/products/{@entry.id}")
+
+    # A translatable Blueprint's pages link to the unprefixed path when the
+    # overriding controller assigns no base_path.
+    result =
+      %{"priv/templates/brando.gen/controller.ex" => template, "config/brando.exs" => @languages}
+      |> project()
+      |> generate("GeneratorStudio.Catalog.Article", ["--public-route", "/articles"])
+
+    assert result.issues == []
+    html = IgniterCase.source(result, "lib/generator_studio_web/catalog/article_html.ex")
+    assert html =~ ~s|assigns = Map.put_new(assigns, :base_path, "/articles")|
+    assert html =~ ~S(href={"#{@base_path}/#{entry.id}"})
   end
 
   test "public pages need no language clauses in an existing context's filters and matches" do

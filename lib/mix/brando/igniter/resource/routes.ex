@@ -89,6 +89,7 @@ if Code.ensure_loaded?(Igniter) do
            {:ok, igniter, default} <- Configuration.read(igniter, :default_language),
            {:ok, igniter, scoped?} <- Configuration.read(igniter, :scope_default_language_routes),
            values when values != [] <- language_values(languages),
+           :ok <- path_segments(values),
            default = to_string(default),
            true <- default in values do
         {:ok, igniter, %{default: default, prefixed: Enum.reject(values, &(&1 == default and scoped? != true))}}
@@ -105,12 +106,30 @@ if Code.ensure_loaded?(Igniter) do
 
     def languages(igniter, _metadata), do: {:ok, igniter, nil}
 
-    defp language_values(languages) when is_list(languages) do
-      values = languages |> List.flatten() |> Keyword.get_values(:value) |> Enum.map(&to_string/1)
-      if Enum.all?(values, &Regex.match?(~r/^[a-z][a-z0-9_]*$/, &1)), do: values, else: []
-    end
+    defp language_values(languages) when is_list(languages),
+      do: languages |> List.flatten() |> Keyword.get_values(:value) |> Enum.map(&to_string/1)
 
     defp language_values(_languages), do: []
+
+    # A language's routes are under /<code>, as Brando.I18n.parse_path/1 reads it.
+    defp path_segments(values) do
+      case Enum.reject(values, &Regex.match?(~r/^[A-Za-z0-9][A-Za-z0-9_-]*$/, &1)) do
+        [] ->
+          :ok
+
+        invalid ->
+          {:error,
+           "A translatable Blueprint's public routes are under a scope named after each language, " <>
+             "but #{Enum.map_join(invalid, ", ", &inspect/1)} in config :brando, :languages is not a path segment " <>
+             "of letters, digits, - and _. Write its routes by hand."}
+      end
+    end
+
+    # The scope's name prefixes its router helpers (:"pt-br_article_path"),
+    # which Brando.I18n.Helpers.localized_path/3 calls for the language.
+    defp scope_as(language) do
+      if Regex.match?(~r/^[a-z_][A-Za-z0-9_]*$/, language), do: ":" <> language, else: ":" <> inspect(language)
+    end
 
     defp site_pipeline(router),
       do: CodeFunction.move_to_function_call(router, :pipeline, 2, &CodeFunction.argument_equals?(&1, 0, :brando_site))
@@ -131,42 +150,91 @@ if Code.ensure_loaded?(Igniter) do
         if m.languages && !m.site_layouts, do: ", assigns: %{language: #{inspect(language)}}", else: ""
       end
 
-      language_scopes =
-        Enum.map_join(prefixes, "\n", fn language ->
+      language_scopes = fn languages ->
+        Enum.map_join(languages, "\n", fn language ->
           """
-          scope #{inspect("/" <> language)}, as: :#{language}#{assigns.(language)} do
+          scope #{inspect("/" <> language)}, as: #{scope_as(language)}#{assigns.(language)} do
             #{routes}
           end
           """
         end)
+      end
 
-      ProjectModule.find_and_update_module!(igniter, m.project.router, fn zipper ->
+      existing = fn zipper ->
+        for prefix <- ["" | Enum.map(prefixes, &("/" <> &1))] do
+          {prefix,
+           Enum.map(
+             [{path, :index}, {show_path, :show}],
+             &route_state(zipper, :get, prefix <> elem(&1, 0), m.controller, elem(&1, 1))
+           )}
+        end
+      end
+
+      added_languages =
+        case ProjectModule.find_module(igniter, m.project.router) do
+          {:ok, {_igniter, _source, zipper}} -> missing_languages(existing.(zipper))
+          _ -> nil
+        end
+
+      igniter
+      |> ProjectModule.find_and_update_module!(m.project.router, fn zipper ->
         # A separate scope preserves existing Phoenix scope aliases and pipelines.
         code = """
         scope "/"#{if m.languages, do: assigns.(m.languages.default), else: ""} do
           pipe_through #{pipelines}
           #{routes}
-          #{language_scopes}
+          #{language_scopes.(prefixes)}
         end
         """
 
-        existing =
-          for prefix <- ["" | Enum.map(prefixes, &("/" <> &1))], {path, action} <- [{path, :index}, {show_path, :show}] do
-            route_state(zipper, :get, prefix <> path, m.controller, action)
-          end
+        states = zipper |> existing.() |> Enum.flat_map(&elem(&1, 1))
 
         cond do
-          Enum.all?(existing, &(&1 == :present)) ->
+          Enum.all?(states, &(&1 == :present)) ->
             {:ok, zipper}
 
-          Enum.all?(existing, &(&1 == :missing)) ->
+          Enum.all?(states, &(&1 == :missing)) ->
+            insert_public_scope(zipper, code, m)
+
+          added_languages ->
+            code = """
+            scope "/" do
+              pipe_through #{pipelines}
+              #{language_scopes.(added_languages)}
+            end
+            """
+
             insert_public_scope(zipper, code, m)
 
           true ->
             {:error, "Public routes at #{path} conflict with existing or partial routes. Integrate them explicitly."}
         end
       end)
+      |> added_languages_notice(m, path, added_languages)
     end
+
+    # The languages whose scopes are missing beside routes generated before
+    # them (a language added to the config since, or routes from before
+    # translations had scopes), or nil when the routes are not just that.
+    defp missing_languages(existing) do
+      with {"", [:present, :present]} <- List.first(existing),
+           true <- Enum.all?(existing, &(elem(&1, 1) in [[:present, :present], [:missing, :missing]])),
+           [_ | _] = missing <- for({"/" <> language, [:missing, :missing]} <- existing, do: language) do
+        missing
+      else
+        _ -> nil
+      end
+    end
+
+    defp added_languages_notice(igniter, %{site_layouts: nil, languages: %{default: default}}, path, [_ | _] = added) do
+      Igniter.add_notice(igniter, """
+      Added the routes of #{Enum.join(added, ", ")} beside the existing #{path} routes. Without the CMS site, the
+      pages take their language from the scope's assigns: give the scope of the unprefixed #{path} routes
+      assigns: %{language: #{inspect(default)}} if it has none.
+      """)
+    end
+
+    defp added_languages_notice(igniter, _m, _path, _added), do: igniter
 
     # Explicit routes go ahead of catch-all scopes: with the CMS site, right
     # before the scope holding its catch-all, after the :brando_site pipeline;
