@@ -184,7 +184,7 @@ jobs:
 
       - name: Upload unit coverage data
         if: inputs.coverage && matrix.elixir == '1.20.3'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: coverdata-unit
           path: cover/unit.coverdata
@@ -517,7 +517,7 @@ jobs:
           echo "name=$name" >> "$GITHUB_OUTPUT"
           echo "run $GITHUB_RUN_ID tested $GITHUB_SHA" > merge-queue-record.txt
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: ${{ steps.record.outputs.name }}
           path: merge-queue-record.txt
@@ -616,7 +616,7 @@ jobs:
         run: test -s admin_manifest.json && test -s manifest.json
       - name: Share assets with the E2E jobs
         if: github.event_name != 'push'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: e2e-consumer-assets
           path: brando/e2e/priv/static/
@@ -861,7 +861,7 @@ jobs:
 
       - name: Upload E2E reports and artifacts
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: e2e-artifacts-${{ matrix.suite }}
           path: |
@@ -872,7 +872,7 @@ jobs:
 
       - name: Upload E2E coverage data
         if: always() && inputs.coverage
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: coverdata-e2e-${{ matrix.suite }}
           path: brando/cover/*.coverdata
@@ -951,7 +951,7 @@ jobs:
           fail_ci_if_error: true
 
       - name: Upload HTML report
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: coverage-report
           path: |
