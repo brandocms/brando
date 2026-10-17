@@ -19,11 +19,9 @@ if Code.ensure_loaded?(Igniter) do
     @release_paths [media_path: "./media", log_dir: "./log"]
     # What a Brando application builds, uploads or downloads in its working
     # folder, beyond what phx.new ignores. Vite builds the admin and the site
-    # into priv/static, copying their public/ folders there: the files the
-    # templates put in them and the logo the install moves to the site's
-    # images. Other files in priv/static/images stay visible to Git, a site
-    # image included. mix brando.digest writes the cache manifest; Florist
-    # writes release-archives/ and sql/.
+    # into priv/static, copying their public/ folders there (favicon.ico, ico/,
+    # fonts/, images/, a site's own images included), and mix brando.digest
+    # writes the cache manifest; Florist writes release-archives/ and sql/.
     @brando_ignores ~w(
       /assets/backend/node_modules/
       /assets/frontend/node_modules/
@@ -35,9 +33,7 @@ if Code.ensure_loaded?(Igniter) do
       /priv/static/favicon.ico
       /priv/static/fonts/
       /priv/static/ico/
-      /priv/static/images/.keep
-      /priv/static/images/admin/
-      /priv/static/images/logo.svg
+      /priv/static/images/
       /priv/static/admin_manifest.json
       /priv/static/manifest.json
       /priv/static/cache_manifest.json

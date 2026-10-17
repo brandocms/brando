@@ -182,10 +182,12 @@ defmodule Mix.Brando.Igniter.InstallDeployTest do
 
     for path <- built, do: assert({_, 0} = check_ignore(dir, [path]), path)
 
-    # The application's own sources stay tracked, and so does an image it keeps
-    # in priv/static.
+    # An image a site adds to assets/frontend/public/images, where the
+    # install keeps a .keep, is tracked there, and its Vite copy is ignored.
+    assert {_, 0} = check_ignore(dir, ["priv/static/images/photo.jpg"])
+
     for path <-
-          ~w(assets/frontend/public/favicon.ico assets/frontend/public/images/logo.svg priv/repo/seeds.exs priv/static/images/photo.jpg) do
+          ~w(assets/frontend/public/favicon.ico assets/frontend/public/images/logo.svg assets/frontend/public/images/photo.jpg priv/repo/seeds.exs) do
       assert {_, 1} = check_ignore(dir, [path]), path
     end
   end

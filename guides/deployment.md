@@ -161,14 +161,11 @@ The installer adds to `.gitignore` what a Brando application builds,
 uploads or downloads in its working folder and phx.new does not ignore: the
 asset projects' `node_modules`, Yalc copies (`.yalc/`, `yalc.lock`), the
 admin and site builds in `priv/static` (`assets/`; `favicon.ico`, `fonts/`,
-`ico/`, `images/admin/`, `images/.keep` and `images/logo.svg`, which Vite
-copies from the asset projects' `public/` folders; and the Vite and digest
-manifests), `/media/` (uploads),
+`ico/` and `images/`, which Vite copies from the asset projects' `public/`
+folders, so keep a site's images in `assets/frontend/public/images`; and the
+Vite and digest manifests), `/media/` (uploads),
 `/log/`, and Florist's `/release-archives/` and `/sql/` (database dumps).
-Lines an existing rule already covers are not added again. Other images a
-site keeps in `assets/frontend/public/images` are copied to
-`priv/static/images` too, and Git lists those copies; add a line for them if
-you like.
+Lines an existing rule already covers are not added again.
 
 ### Migrating from Fabric
 
