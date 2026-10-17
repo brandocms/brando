@@ -257,8 +257,8 @@ defmodule BrandoAdmin.Components.Form.Input do
   # `Brando.Trait.Password` reads that as "keep the current password".
   def password(assigns) do
     confirmation_field = assigns.field.form[:"#{assigns.field.field}_confirmation"]
-    value = typed_value(assigns.field)
-    confirmation_value = typed_value(confirmation_field)
+    value = Primitives.password_value(assigns.field)
+    confirmation_value = Primitives.password_value(confirmation_field)
 
     assigns =
       assigns
@@ -301,11 +301,6 @@ defmodule BrandoAdmin.Components.Form.Input do
     <% end %>
     """
   end
-
-  defp typed_value(%FormField{form: %{params: params}, field: field}) when is_map(params),
-    do: Map.get(params, to_string(field))
-
-  defp typed_value(_field), do: nil
 
   def phone(assigns) do
     assigns = prepare_input_component(assigns)
