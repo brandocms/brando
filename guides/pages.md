@@ -161,12 +161,11 @@ is optional organization, not the lookup key.
 
 <!-- usage-rules:start topic="rendering" -->
 
-Query the current language explicitly and filter status for public output:
+Query the current language explicitly:
 
 ```elixir
 {:ok, partials} = Brando.Pages.get_fragments(%{
   filter: %{parent_key: "partials", language: conn.assigns.language},
-  status: :published,
   cache: {:ttl, :infinite}
 })
 
@@ -186,10 +185,16 @@ wrapper, which accepts `{{ content }}`, `{{ parent_key }}`, `{{ key }}`, and
 `{{ language }}` substitutions. `render_fragment/1` outputs the stored content
 without that wrapper.
 
-`Brando.Plug.Fragment, parent_key: "partials", as: :partials` is convenient for
-loading a group after the locale plug, but its current query does not restrict
-status. Neither do all of the older fragment lookup helpers. Use the explicit
-query above when a draft fragment must remain private.
+Only a published fragment renders. An unpublished one stays in the map with no
+content, so `{fragment}`, `<Brando.HTML.fragment fragment={fragment} />`,
+`render_fragment(@partials, "footer")` and `fragment.rendered_blocks` all give
+nothing rather than the draft or the missing-fragment diagnostic. The same
+holds for `Brando.Plug.Fragment, parent_key: "partials", as: :partials`, which
+loads a group after the locale plug, for `get_fragments/2`, and for a fragment
+struct from `Brando.Pages.get_fragment/2` rendered with the component, the
+`render_fragment` helpers or `fetch_fragment/2`. Pass a `:status`, such as
+`status: :all`, to `get_fragments/1` for fragments as stored, with their
+content.
 
 <!-- usage-rules:end -->
 

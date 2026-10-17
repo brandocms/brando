@@ -50,6 +50,28 @@ defmodule Brando.Villain.LiquexTest do
     assert html == "\n  Boolean is false\n"
   end
 
+  test "fragment tag renders a published fragment and nothing for an unpublished one" do
+    Factory.insert(:fragment, parent_key: "partials", key: "footer", language: "en", rendered_blocks: "Footer")
+
+    Factory.insert(:fragment,
+      parent_key: "partials",
+      key: "draft",
+      language: "en",
+      status: :draft,
+      rendered_blocks: "Draft"
+    )
+
+    render = fn key ->
+      {:ok, parsed_tpl} = Liquex.parse("{% fragment partials #{key} en %}", Brando.Villain.LiquexParser)
+      {result, _} = Liquex.Render.render!([], parsed_tpl, Brando.Villain.get_base_context())
+      Enum.join(result)
+    end
+
+    assert render.("footer") == "Footer"
+    assert render.("draft") == ""
+    assert render.("missing") =~ "Missing page fragment"
+  end
+
   test "route tag" do
     tpl =
       """

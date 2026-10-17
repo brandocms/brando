@@ -420,18 +420,29 @@ defmodule Brando.Pages do
   @doc """
   Get set of fragments by parent key.
 
-  Gives published fragments only, for public pages; pass a `:status`, such as
-  `status: :all`, for others.
+  For public pages: an unpublished fragment keeps its key, with no content, so
+  it renders nothing however a template reads it. Pass a `:status`, such as
+  `status: :all`, for fragments as stored.
   """
   def get_fragments(parent_key) when is_binary(parent_key) do
     IO.warn("get_fragments(binary) is deprecated! Use `get_fragments(map)` instead")
     get_fragments(%{filter: %{parent_key: parent_key}})
   end
 
-  def get_fragments(opts) when is_map(opts) do
-    {:ok, fragments} = opts |> Map.put_new(:status, :published) |> list_fragments()
+  def get_fragments(%{status: _} = opts) do
+    {:ok, fragments} = list_fragments(opts)
     {:ok, Map.new(fragments, fn x -> {x.key, x} end)}
   end
+
+  def get_fragments(opts) when is_map(opts) do
+    {:ok, fragments} = list_fragments(opts)
+    {:ok, public_fragments(fragments)}
+  end
+
+  defp public_fragments(fragments), do: Map.new(fragments, &{&1.key, without_draft_content(&1)})
+
+  defp without_draft_content(%Fragment{status: :published} = fragment), do: fragment
+  defp without_draft_content(%Fragment{} = fragment), do: %{fragment | rendered_blocks: nil}
 
   @doc """
   Get fragment from page
@@ -481,18 +492,16 @@ defmodule Brando.Pages do
   end
 
   @doc """
-  Get set of published fragments by parent key and language
+  Get set of fragments by parent key and language, for public pages: an
+  unpublished fragment has no content, as with `get_fragments/1`.
   """
   def get_fragments(parent_key, language) do
-    fragments =
-      Fragment
-      |> where([p], p.parent_key == ^parent_key)
-      |> where([p], p.language == ^language)
-      |> Brando.Query.with_status(:published)
-      |> exclude_deleted()
-      |> Brando.Repo.all()
-
-    Map.new(fragments, fn x -> {x.key, x} end)
+    Fragment
+    |> where([p], p.parent_key == ^parent_key)
+    |> where([p], p.language == ^language)
+    |> exclude_deleted()
+    |> Brando.Repo.all()
+    |> public_fragments()
   end
 
   @doc """
@@ -617,7 +626,7 @@ defmodule Brando.Pages do
   # rendered_blocks is pre-rendered CMS content from our own rendering pipeline
   # nosec
   defp fragment_html(%Fragment{status: :published} = fragment),
-    do: {:safe, Brando.FrontendEdit.rendered_html(fragment, :blocks)}
+    do: fragment |> Brando.FrontendEdit.rendered_html(:blocks) |> Phoenix.HTML.raw()
 
   defp fragment_html(%Fragment{}), do: {:safe, ""}
 

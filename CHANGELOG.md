@@ -45,6 +45,20 @@ application that sets
 `mix brando.doctor` reports migrations that have not
 run and queues that are missing.
 
+Only published fragments render on public pages now: a draft, pending or
+disabled `partials/footer` renders as empty, where it showed before. Publish
+the fragments the site shows. To list the others, run in `iex -S mix`:
+
+```elixir
+import Ecto.Query
+
+Brando.Repo.all(
+  from f in Brando.Pages.Fragment,
+    where: (f.status != :published or is_nil(f.status)) and is_nil(f.deleted_at),
+    select: {f.parent_key, f.key, f.language, f.status}
+)
+```
+
 There are no migrations numbered `brando_206` or `brando_208`: both numbers
 were reserved and never needed, so the gap is not a missed migration.
 
