@@ -1,4 +1,4 @@
-- **Password forms no longer put the account's password hash in the page**.
+- **Password forms no longer put the account's password hash in the page** (#3228).
   The bcrypt hash of a user's password was the `value` of the new-password
   input on `/admin/users/password` (every visit, not only the first login), on
   the page a reset link opens, and, for the edited user, in the user form's
@@ -8,7 +8,7 @@
   A password input in the admin now shows only what was typed into it
   (`BrandoAdmin.Components.Form.Primitives.password_value/1`).
 
-- **JSON of a user no longer includes the password hash**. `Brando.Users.User`
+- **JSON of a user no longer includes the password hash** (#3228). `Brando.Users.User`
   derived `Jason.Encoder` with `password` among its fields, so encoding a user,
   or an entry with its `creator` preloaded, would have carried the hash into
   the output. No current path was found that sent it anywhere; the field is
