@@ -69,7 +69,17 @@ defmodule Brando.Villain.LiquexTest do
 
     assert render.("footer") == "Footer"
     assert render.("draft") == ""
-    assert render.("missing") =~ "Missing page fragment"
+
+    # The tag renders into an entry's stored HTML, which visitors see: a
+    # mistyped key is logged, not shown.
+    assert render.("missing") == ""
+  end
+
+  test "a fragment placeholder in a container renders nothing for a missing fragment" do
+    Factory.insert(:fragment, parent_key: "partials", key: "footer", language: "en", rendered_blocks: "Footer")
+
+    assert Brando.Villain.Parser.replace_fragments("{% fragment partials footer en %}|{% fragment partials missing en %}") ==
+             "Footer|"
   end
 
   test "route tag" do

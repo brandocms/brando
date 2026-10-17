@@ -457,7 +457,7 @@ defmodule Brando.Villain.Components do
   def fragment(assigns) do
     rendered =
       assigns.parent_key
-      |> Brando.Pages.render_fragment(assigns.key, assigns.language)
+      |> Brando.Pages.render_embedded_fragment(assigns.key, assigns.language)
       |> Phoenix.HTML.safe_to_string()
 
     assigns = assign(assigns, :rendered, rendered)

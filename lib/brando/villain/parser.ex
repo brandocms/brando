@@ -1441,7 +1441,7 @@ defmodule Brando.Villain.Parser do
       Enum.reduce(fragments, html, fn [_, parent_key, key, language], updated_html ->
         rendered_fragment =
           parent_key
-          |> Brando.Pages.render_fragment(key, language)
+          |> Brando.Pages.render_embedded_fragment(key, language)
           |> Phoenix.HTML.safe_to_string()
 
         String.replace(

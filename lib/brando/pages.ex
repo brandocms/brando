@@ -14,6 +14,8 @@ defmodule Brando.Pages do
   alias Brando.Users.User
   alias Ecto.Changeset
 
+  require Logger
+
   @type changeset :: Changeset.t()
   @type fragment :: Fragment.t()
   @type fragment_error :: {:error, {:fragment, :not_found}} | {:error, changeset}
@@ -600,27 +602,45 @@ defmodule Brando.Pages do
   end
 
   def render_fragment(parent, key, language \\ nil) when is_binary(parent) and is_binary(key) do
-    default_opts = %{matches: %{parent_key: parent, key: key}}
+    case lookup_fragment(parent, key, language) do
+      {:ok, fragment} -> fragment_html(fragment)
+      {:error, {:fragment, :not_found}} -> missing_fragment_html(parent, key, language)
+    end
+  end
 
-    opts =
-      if language do
-        put_in(default_opts, [:matches, :language], language)
-      else
-        default_opts
-      end
+  @doc """
+  `render_fragment/3` for HTML stored with an entry, as the `{% fragment %}`
+  tag renders it: outside development a missing fragment renders nothing, and
+  is logged, since visitors see the stored HTML.
+  """
+  def render_embedded_fragment(parent, key, language \\ nil) when is_binary(parent) and is_binary(key) do
+    case lookup_fragment(parent, key, language) do
+      {:ok, fragment} ->
+        fragment_html(fragment)
 
-    case get_fragment(opts) do
       {:error, {:fragment, :not_found}} ->
-        Phoenix.HTML.raw(~s(<div class="page-fragment-missing">
+        if Brando.env() == :dev do
+          missing_fragment_html(parent, key, language)
+        else
+          Logger.warning("Missing page fragment #{inspect(parent)} #{inspect(key)} #{inspect(language)}")
+          Phoenix.HTML.raw("")
+        end
+    end
+  end
+
+  defp lookup_fragment(parent, key, language) do
+    matches = %{parent_key: parent, key: key}
+    matches = if language, do: Map.put(matches, :language, language), else: matches
+    get_fragment(%{matches: matches})
+  end
+
+  defp missing_fragment_html(parent, key, language) do
+    Phoenix.HTML.raw(~s(<div class="page-fragment-missing">
              <strong>Missing page fragment</strong> <br />
              parent: #{parent}<br />
              key...: #{key}<br />
              lang..: #{language}
            </div>))
-
-      {:ok, fragment} ->
-        fragment_html(fragment)
-    end
   end
 
   # rendered_blocks is pre-rendered CMS content from our own rendering pipeline
