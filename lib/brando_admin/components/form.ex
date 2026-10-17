@@ -5384,6 +5384,7 @@ defmodule BrandoAdmin.Components.Form do
       |> apply_changes()
       |> change()
       |> EctoNestedChangeset.update_at(full_path, fn _ -> file.id end)
+      |> put_asset_in_data(path, field, updated_file)
 
     updated_entry = Map.put(entry_or_default, field, updated_file)
 
@@ -5572,6 +5573,7 @@ defmodule BrandoAdmin.Components.Form do
       |> apply_changes()
       |> change()
       |> EctoNestedChangeset.update_at(relation_full_path, fn _ -> image.id end)
+      |> put_asset_in_data(path, field, updated_image)
 
     entrys_current_image = Brando.Utils.try_path(entry_or_default, field_full_path)
     access_field_full_path = Brando.Utils.build_access_path(field_full_path)
@@ -5756,6 +5758,7 @@ defmodule BrandoAdmin.Components.Form do
       |> apply_changes()
       |> change()
       |> EctoNestedChangeset.update_at(relation_full_path, fn _ -> video.id end)
+      |> put_asset_in_data(path, field, updated_video)
 
     access_field_full_path = Brando.Utils.build_access_path(field_full_path)
     updated_entry = put_in(entry_or_default, access_field_full_path, updated_video)

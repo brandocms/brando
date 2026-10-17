@@ -139,11 +139,13 @@ defmodule BrandoAdmin.Components.Form.EntryPictureBlockSyncTest do
     {:noreply, form} = Form.handle_event("save_image", params, socket)
 
     assert form.assigns.preview_update.mode == :live_preview_full_rerender
+    # the render it queues may come before the browser's `validate`
+    assert form.assigns.form.source.data.meta_image.title == %{"en" => "Example Hotel lobby"}
   end
 
   # The next `validate` casts onto the entry, so a remote image has to be on
   # it too, or the form and the preview go back to the old one.
-  test "another editor's pick stays after this editor's next change", ctx do
+  test "another editor's pick goes on the entry this editor's next change casts onto", ctx do
     %{page: page, user: user, second: second} = ctx
     socket = page |> form_socket(user, nil) |> Component.assign(sync_assigns())
     changes = [%{field: :meta_image_id, value: second.id, assoc?: false, clock: {1, "remote"}}]
