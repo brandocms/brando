@@ -1,5 +1,5 @@
 - **The live preview and the blocks follow every change to an image or a
-  relation, and another editor's changes reach the blocks**. A preview option
+  relation, and another editor's changes reach the blocks** (#3224). A preview option
   declared on an image, video or file field (`rerender_on_change [[:cover]]`,
   or in `reassign_on_change`) fired only when the asset was picked in this
   editor: an upload, a removal, or another editor's pick (which arrives as
