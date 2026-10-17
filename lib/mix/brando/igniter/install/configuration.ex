@@ -176,16 +176,20 @@ if Code.ensure_loaded?(Igniter) do
     end
 
     # Fills the endpoint's watchers in dev.exs when it has none (phx.new
-    # --no-assets writes `watchers: []`). Watchers of the application's own are
-    # kept, with a notice unless they already start both Vite projects.
+    # --no-assets writes `watchers: []`) and dev.exs does not turn hmr off.
+    # Watchers of the application's own are kept, with a notice unless they
+    # already start both Vite projects.
     defp vite_watchers(igniter, project) do
-      case dev_watchers(igniter, project.otp_app, project.endpoint) do
-        {igniter, {:configured, source}} ->
-          if String.contains?(source, "assets/backend") and String.contains?(source, "assets/frontend"),
-            do: igniter,
-            else: Igniter.add_notice(igniter, vite_watchers_notice(project))
+      {igniter, dev} = dev_config(igniter)
+      watchers = if dev, do: config_values(dev, project.otp_app, [project.endpoint, :watchers]), else: []
+      hmr = if dev, do: config_values(dev, project.otp_app, [:hmr]), else: []
 
-        {igniter, _missing_or_empty} ->
+      cond do
+        # The last value in the file is the one that counts
+        match?([{:ok, false} | _], Enum.map(hmr, &Common.expand_literal/1)) ->
+          igniter
+
+        Enum.all?(watchers, &(Common.expand_literal(&1) == {:ok, []})) ->
           Config.configure(
             igniter,
             "dev.exs",
@@ -193,47 +197,60 @@ if Code.ensure_loaded?(Igniter) do
             [project.endpoint, :watchers],
             {:code, Sourceror.parse_string!(vite_watchers_code())}
           )
+
+        true ->
+          source = Enum.map_join(watchers, "\n", &(&1 |> Zipper.node() |> Sourceror.to_string()))
+
+          if String.contains?(source, "assets/backend") and String.contains?(source, "assets/frontend"),
+            do: igniter,
+            else: Igniter.add_notice(igniter, vite_watchers_notice(project))
       end
     end
 
-    # The endpoint's watchers in dev.exs: `:missing`, `:empty`, or
-    # `{:configured, source}` when any `config` call gives it some.
-    defp dev_watchers(igniter, otp_app, endpoint) do
+    defp dev_config(igniter) do
       path = "config/dev.exs"
 
       if Igniter.exists?(igniter, path) do
         igniter = Igniter.include_existing_file(igniter, path)
         quoted = igniter.rewrite |> Rewrite.source!(path) |> Rewrite.Source.get(:quoted)
-        {_, found} = Macro.prewalk(quoted, [], &collect_watchers(&1, &2, otp_app, endpoint))
-
-        case Enum.reject(found, &(&1 == :empty)) do
-          [] when found == [] -> {igniter, :missing}
-          [] -> {igniter, :empty}
-          sources -> {igniter, {:configured, Enum.join(sources, "\n")}}
-        end
+        {igniter, Zipper.zip(quoted)}
       else
-        {igniter, :missing}
+        {igniter, nil}
       end
     end
 
-    defp collect_watchers(node, found, otp_app, endpoint) do
-      zipper = Zipper.zip(node)
+    # The values `config` calls anywhere in the file give `path` under
+    # `otp_app`, the last in the file first. Each call is matched in the whole file's zipper, so an alias
+    # (`alias StudioWeb.Endpoint`) resolves as it does for Config.configure.
+    defp config_values(zipper, otp_app, path) do
+      zipper
+      |> Zipper.traverse([], fn zipper, found ->
+        case config_value(zipper, otp_app, path) do
+          {:ok, value} -> {zipper, [value | found]}
+          :error -> {zipper, found}
+        end
+      end)
+      |> elem(1)
+    end
 
-      with true <- CodeFunction.function_call?(zipper, :config, 3),
-           true <- CodeFunction.argument_equals?(zipper, 0, otp_app),
-           true <- CodeFunction.argument_equals?(zipper, 1, endpoint),
-           {:ok, opts} <- CodeFunction.move_to_nth_argument(zipper, 2),
-           {:ok, watchers} <- CodeKeyword.get_key(opts, :watchers) do
-        value =
-          case Common.expand_literal(watchers) do
-            {:ok, []} -> :empty
-            _ -> watchers |> Zipper.node() |> Sourceror.to_string()
-          end
+    defp config_value(zipper, otp_app, [key | rest] = path) do
+      cond do
+        CodeFunction.function_call?(zipper, :config, 3) and CodeFunction.argument_equals?(zipper, 0, otp_app) and
+            CodeFunction.argument_equals?(zipper, 1, key) ->
+          with {:ok, value} <- CodeFunction.move_to_nth_argument(zipper, 2), do: keyword_path(value, rest)
 
-        {node, [value | found]}
-      else
-        _ -> {node, found}
+        CodeFunction.function_call?(zipper, :config, 2) and CodeFunction.argument_equals?(zipper, 0, otp_app) ->
+          with {:ok, opts} <- CodeFunction.move_to_nth_argument(zipper, 1), do: keyword_path(opts, path)
+
+        true ->
+          :error
       end
+    end
+
+    defp keyword_path(zipper, []), do: {:ok, zipper}
+
+    defp keyword_path(zipper, [key | rest]) do
+      with {:ok, value} <- CodeKeyword.get_key(zipper, key), do: keyword_path(value, rest)
     end
 
     defp vite_watchers_notice(project) do

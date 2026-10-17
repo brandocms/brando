@@ -290,6 +290,32 @@ defmodule Mix.Brando.Igniter.InstallTest do
     assert notice =~ "vite_admin: {Brando.Vite, :watch,"
   end
 
+  test "an aliased endpoint keeps its own watchers" do
+    dev = """
+    import Config
+    alias StudioWeb.Endpoint
+
+    config :studio, Endpoint,
+      http: [ip: {127, 0, 0, 1}, port: 4000],
+      watchers: [esbuild: {Esbuild, :install_and_run, [:studio, ~w(--watch)]}]
+    """
+
+    igniter = project(%{"config/dev.exs" => dev}) |> install()
+    assert igniter.issues == []
+    assert dev_watchers(igniter, "/srv/studio") == [esbuild: {Esbuild, :install_and_run, [:studio, ["--watch"]]}]
+    assert vite_notice?(igniter)
+  end
+
+  test "an application with hmr off in dev.exs gets no Vite watchers" do
+    for hmr_off <- ["config :studio, hmr: false", "config :studio, :hmr, false"] do
+      igniter = project(%{"config/dev.exs" => @phx_new_dev <> hmr_off <> "\n"}) |> install()
+      assert igniter.issues == []
+      assert dev_watchers(igniter, "/srv/studio") == []
+      refute vite_notice?(igniter)
+      refute IgniterCase.source(igniter, "config/dev.exs") =~ "hmr: true"
+    end
+  end
+
   defp mix_exs(project, attributes \\ "") do
     """
     defmodule Studio.MixProject do

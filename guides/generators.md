@@ -422,7 +422,8 @@ output goes to the `mix phx.server` log. Vite stops when Phoenix stops, also
 when you leave with Ctrl-C.
 
 The installer fills the watchers only when the endpoint has none (phx.new's
-`watchers: []`, or no `watchers` key). Watchers of the application's own are
+`watchers: []`, or no `watchers` key) and `config/dev.exs` does not set
+`hmr: false`. Watchers of the application's own are
 kept, and the installer prints the two entries to add by hand. Applications
 installed by earlier Brando versions have no Vite watchers: add the two entries
 above to the endpoint's `watchers` in `config/dev.exs`, or keep running `pnpm dev` in
@@ -453,7 +454,7 @@ export BRANDO_VITE_FRONTEND_PORT=3001
 `BRANDO_VITE_ADMIN_HOST` and `BRANDO_VITE_FRONTEND_HOST` set the hosts
 (default `localhost`). To use the built assets instead, run `pnpm build` in
 both directories, set `config :studio, hmr: false` in `config/dev.exs` and
-remove the two watchers.
+remove the two watchers; running `mix brando.install` again leaves them out.
 
 ## Initialize and sign in
 
