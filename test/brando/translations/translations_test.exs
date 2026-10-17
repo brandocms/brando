@@ -1,3 +1,23 @@
+defmodule Brando.Persons do
+  @moduledoc false
+  # A context for the translatable fixture with UUID keys (TranslationsTest:
+  # copying a batch to a language). Its related entries have no table.
+  use BrandoAdmin, :context
+  use Brando.Query
+
+  import Ecto.Query
+
+  alias Brando.Persons.Person
+
+  query :single, Person, do: fn query -> from(q in query) end
+
+  matches Person do
+    fn {:id, id}, query -> from(t in query, where: t.id == ^id) end
+  end
+
+  mutation :duplicate, {Person, preload: [], change_fields: [:name]}
+end
+
 defmodule Brando.TranslationsTest do
   use Brando.ConnCase, async: false
 
@@ -811,7 +831,13 @@ defmodule Brando.TranslationsTest do
       Repo.insert!(struct(join, parent_id: parent_id, identifier_id: identifier_id(entry)))
     end
 
-    defp identifier_id(entry), do: Repo.get_by!(Brando.Content.Identifier, schema: Article, entry_id: entry.id).id
+    # A translation gets its identifier when something first links to it
+    defp identifier_id(entry) do
+      case Repo.get_by(Brando.Content.Identifier, schema: Article, entry_id: entry.id) do
+        nil -> elem(Brando.Content.create_identifier(Article, entry), 1).id
+        identifier -> identifier.id
+      end
+    end
 
     defp copy_batch(c, ids) do
       opts = [change_fields: [{:language, :en} | Translations.free_unique_values(Article)], delete_fields: []]
@@ -854,10 +880,56 @@ defmodule Brando.TranslationsTest do
     test "leaves no link in the source's language when a later copy raises", c do
       Process.put({:synctest_duplicate, c.annex.id}, :raise)
 
-      assert_raise RuntimeError, fn -> copy_batch(c, [c.hotel.id, c.annex.id]) end
+      log =
+        ExUnit.CaptureLog.capture_log(fn ->
+          assert_raise RuntimeError, fn -> copy_batch(c, [c.hotel.id, c.annex.id]) end
+        end)
+
+      # The links taken out are counted in the log, as the toast never shows
+      assert log =~ "2 link(s) were left out of the copies made"
 
       {hotel_en, link} = english_copy(c.hotel)
       assert {hotel_en.related_entries, link.related_entries} == {[], []}
+    end
+
+    test "keeps a link to an entry of the batch already in the language", c do
+      {:ok, annex_en} = Translations.create_target(Article, c.annex.id, :en, c.user)
+      link_to(Article.RelatedEntriesIdentifier, c.hotel.id, annex_en)
+
+      assert %{failed: [], dropped_links: 0} = copy_batch(c, [c.hotel.id, annex_en.id])
+
+      [hotel_en_id] = Repo.all(from a in Article, where: a.language == :en and a.title == ^c.hotel.title, select: a.id)
+      annex_en_id = identifier_id(annex_en)
+      assert annex_en_id in Enum.map(load(hotel_en_id).related_entries, & &1.identifier_id)
+    end
+
+    @tag capture_log: true
+    test "puts the copies' links right before a throw goes on", c do
+      Process.put({:synctest_duplicate, c.annex.id}, :throw)
+
+      assert catch_throw(copy_batch(c, [c.hotel.id, c.annex.id])) == :synctest_thrown
+
+      {hotel_en, link} = english_copy(c.hotel)
+      assert {hotel_en.related_entries, link.related_entries} == {[], []}
+    end
+
+    test "copies entries with UUID keys", c do
+      people =
+        for name <- ["Example Guest", "Example Host"] do
+          Repo.insert!(%Brando.Persons.Person{
+            name: name,
+            email: "#{name}@example.com",
+            language: :no,
+            creator_id: c.user.id
+          })
+        end
+
+      opts = [change_fields: [language: :en], delete_fields: []]
+
+      assert %{failed: [], dropped_links: 0} =
+               Translations.copy_batch_to_language(Brando.Persons.Person, Enum.map(people, & &1.id), "en", c.user, opts)
+
+      assert Repo.aggregate(from(p in Brando.Persons.Person, where: p.language == :en), :count) == 2
     end
 
     test "links an entry related to itself to its own copy", c do

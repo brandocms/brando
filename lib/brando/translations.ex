@@ -23,6 +23,8 @@ defmodule Brando.Translations do
 
   import Ecto.Query
 
+  require Logger
+
   alias Brando.Blueprint.Unique
   alias Brando.Content.Identifier
   alias Brando.Repo
@@ -1222,31 +1224,54 @@ defmodule Brando.Translations do
   Returns the ids that could not be copied, each with its error, and the
   number of links left out.
   """
-  @spec copy_batch_to_language(module(), [integer()], String.t() | atom(), term(), keyword()) ::
-          %{failed: [{integer(), term()}], dropped_links: non_neg_integer()}
+  @spec copy_batch_to_language(module(), [integer() | String.t()], String.t() | atom(), term(), keyword()) ::
+          %{failed: [{term(), term()}], dropped_links: non_neg_integer()}
   def copy_batch_to_language(schema, ids, language, actor, override_opts) do
     language = to_string(language)
-    ids = Enum.map(ids, &to_entry_id/1)
-
-    # An identifier of an entry in the batch, to the entry
-    batch =
-      Repo.all(from i in Identifier, where: i.schema == ^schema and i.entry_id in ^ids, select: {i.id, i.entry_id})
-      |> Map.new()
+    ids = Enum.map(ids, &cast_entry_id(schema, &1))
+    batch = batch_identifiers(schema, ids, language)
 
     {copies, failed, dropped, raised} = copy_each(schema, ids, language, actor, override_opts, batch)
 
     # The copies made so far are saved, so their links are put right even when
     # a later copy raised.
-    dropped = dropped + link_batch_copies(schema, copies, batch)
+    removed = link_batch_copies(schema, copies, batch)
 
     case raised do
-      nil -> %{failed: Enum.reverse(failed), dropped_links: dropped}
-      {exception, stacktrace} -> reraise exception, stacktrace
+      nil ->
+        %{failed: Enum.reverse(failed), dropped_links: dropped + removed}
+
+      {kind, reason, stacktrace} ->
+        Logger.error(
+          "(!) Copying #{inspect(schema)} entries to #{language} stopped at an error. " <>
+            "#{dropped + removed} link(s) were left out of the copies made: #{inspect(Map.values(copies))}"
+        )
+
+        :erlang.raise(kind, reason, stacktrace)
     end
   end
 
-  defp to_entry_id(id) when is_integer(id), do: id
-  defp to_entry_id(id) when is_binary(id), do: String.to_integer(id)
+  # An id as the schema's primary key: the listing sends strings for UUIDs.
+  defp cast_entry_id(schema, id) do
+    case Ecto.Type.cast(schema.__schema__(:type, :id), id) do
+      {:ok, id} -> id
+      :error -> id
+    end
+  end
+
+  # The identifiers of the batch's entries that have no version in `language`,
+  # each to its entry: links to those are linked to their copies once the
+  # batch is copied. Identifiers name integer ids only.
+  defp batch_identifiers(schema, ids, language) do
+    if schema.__schema__(:type, :id) in [:id, :integer] do
+      from(i in Identifier, where: i.schema == ^schema and i.entry_id in ^Enum.filter(ids, &is_integer/1))
+      |> Repo.all()
+      |> Enum.filter(&is_nil(counterpart_id(&1, language)))
+      |> Map.new(&{&1.id, &1.entry_id})
+    else
+      %{}
+    end
+  end
 
   # Each entry's copy, the source id to the copy's id. A link to an entry of
   # the batch is kept as it is until the batch is copied.
@@ -1264,8 +1289,8 @@ defmodule Brando.Translations do
           {:ok, copy} -> {:cont, {Map.put(copies, id, copy.id), failed, dropped + :counters.get(counter, 1), nil}}
           error -> {:cont, {copies, [{id, error} | failed], dropped, nil}}
         end
-      rescue
-        exception -> {:halt, {copies, failed, dropped, {exception, __STACKTRACE__}}}
+      catch
+        kind, reason -> {:halt, {copies, failed, dropped, {kind, reason, __STACKTRACE__}}}
       end
     end)
   end
