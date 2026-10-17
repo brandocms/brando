@@ -13,9 +13,6 @@ defmodule Mix.Brando.Install.Templates do
     {:eex, "tenant_migrations/20260816002300_add_shared_content_library.exs",
      "priv/repo/tenant_migrations/20260816002300_add_shared_content_library.exs"},
 
-    # Tuple implementation for Jason
-    {:eex, "lib/application_name/tuple.ex", "lib/application_name/tuple.ex"},
-
     # Presence
     {:eex, "lib/application_name/presence.ex", "lib/application_name/presence.ex"},
 

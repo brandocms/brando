@@ -29,7 +29,6 @@ if Code.ensure_loaded?(Igniter) do
     alias Sourceror.Zipper
 
     @support_templates ~w(
-      lib/application_name/tuple.ex
       lib/application_name/presence.ex
       lib/application_name/authorization.ex
       lib/application_name_web/villain/parser.ex
