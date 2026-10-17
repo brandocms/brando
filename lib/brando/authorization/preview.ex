@@ -36,17 +36,40 @@ defmodule Brando.Authorization.Preview do
 
   def authorize_write(key, changeset) do
     if Engine.enabled?() do
-      with %Scope{} = scope <- Boundary.current_scope(),
-           {:ok, %{scope: ^scope, entry: original}} <- metadata(key),
-           entry <- Ecto.Changeset.apply_changes(changeset),
-           true <- original.__struct__ == entry.__struct__ and original.id == entry.id,
-           true <- editable?(scope, entry) do
+      with {:ok, _scope, _entry} <- writable(key, changeset), do: :ok
+    else
+      :ok
+    end
+  end
+
+  @doc """
+  `authorize_write/2` followed by `register/2`, with one check of the entry.
+
+  A preview update authorizes, registers its entry and broadcasts in one call;
+  each of those used to read the entry from the database again. A caller that
+  gets `:ok` may broadcast the render without `authorize_broadcast/1`, which
+  would repeat the same check against the scope and entry just stored.
+  """
+  def authorize_update(key, changeset) do
+    if Engine.enabled?() do
+      with {:ok, scope, entry} <- writable(key, changeset) do
+        Cachex.put(:cache, cache_key(key), %{scope: scope, entry: entry}, expire: @ttl)
         :ok
-      else
-        _ -> {:error, :forbidden}
       end
     else
       :ok
+    end
+  end
+
+  defp writable(key, changeset) do
+    with %Scope{} = scope <- Boundary.current_scope(),
+         {:ok, %{scope: ^scope, entry: original}} <- metadata(key),
+         entry <- Ecto.Changeset.apply_changes(changeset),
+         true <- original.__struct__ == entry.__struct__ and original.id == entry.id,
+         true <- editable?(scope, entry) do
+      {:ok, scope, entry}
+    else
+      _ -> {:error, :forbidden}
     end
   end
 

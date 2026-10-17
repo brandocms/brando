@@ -13,6 +13,13 @@ defmodule Brando.Villain.Footnotes do
   @definition "data-brando-footnote"
 
   @doc """
+  Whether `html` holds note references or notes that only `render/2`, across
+  the whole rendered field, numbers and collects. A block rendered on its own
+  still has them raw.
+  """
+  def unresolved?(html), do: String.contains?(html, @marker) or String.contains?(html, @definition)
+
+  @doc """
   Renders a Blueprint rich-text field and its owned notes as `%{html:, notes:}`.
   Preload the configured `entry_<blocks>` relation and its block trees, just as
   for ordinary Villain rendering. `enabled: false` prevents authoring new notes

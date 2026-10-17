@@ -144,8 +144,30 @@
     }
 
     .live-preview-iframe-wrapper {
+      position: relative;
       flex: 1;
       min-height: 0;
+    }
+
+    /* Without `.is-visible` it has no box but stays a live region, so
+       screen readers announce the text when it is set (LivePreview hook) */
+    .live-preview-notice {
+      position: absolute;
+      top: 12px;
+      left: 24px;
+      right: 16px;
+      z-index: 1;
+      margin: 0;
+      color: var(--brando-ink);
+      font: var(--brando-text-sm)/18px var(--brando-font-sans);
+
+      &.is-visible {
+        padding: 8px 12px;
+        border: 1px solid var(--brando-line);
+        border-radius: 6px;
+        background: var(--brando-surface-tint);
+        box-shadow: var(--brando-shadow-sm);
+      }
     }
 
     iframe {

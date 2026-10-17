@@ -72,7 +72,9 @@ defmodule BrandoAdmin.Components.Form.Block.PreviewTest do
     end
   end
 
-  test "slot owners request a full preview from the operation store" do
+  # Their root is rendered from the operation store and patched alone
+  # (`BrandoAdmin.Components.Form.BlockField.PreviewRootTest`).
+  test "slot owners and slotted blocks ask their field to patch the root they belong to" do
     for attrs <- [
           %{type: :module, multi: false, has_children?: true, belongs_to: :root},
           %{type: :module, multi: false, has_children?: true, belongs_to: :container},
@@ -80,14 +82,24 @@ defmodule BrandoAdmin.Components.Form.Block.PreviewTest do
           %{type: :module, belongs_to: :slot}
         ] do
       socket =
-        %Phoenix.LiveView.Socket{}
-        |> Phoenix.Component.assign(Map.merge(attrs, %{live_preview_active?: true, form_id: "page"}))
+        Phoenix.Component.assign(
+          %Phoenix.LiveView.Socket{},
+          Map.merge(attrs, %{
+            live_preview_active?: true,
+            form_id: "page",
+            block_field: :entry_blocks,
+            uid: "B1"
+          })
+        )
 
       Block.maybe_update_live_preview_block(socket)
       refute Block.render_live_preview_block?(socket)
 
       assert_receive {:phoenix, :send_update,
-                      {{BrandoAdmin.Components.Form, "page"}, %{id: "page", event: "update_live_preview"}}}
+                      {{BrandoAdmin.Components.Form.BlockField, "page-blocks-entry_blocks"},
+                       %{event: "preview_root", uid: "B1"}}}
+
+      refute_received {:phoenix, :send_update, {{BrandoAdmin.Components.Form, _}, %{event: "update_live_preview"}}}
     end
   end
 end

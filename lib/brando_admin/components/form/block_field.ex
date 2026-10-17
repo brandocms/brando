@@ -656,28 +656,9 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     # the others' did. A save marks the revision it read, so its rebase can
     # replay what arrives while it runs.
     {ops, socket} = session_ops_for(socket, tag)
-    block_module = socket.assigns.block_module
-    user_id = socket.assigns.current_user.id
     Tracing.set_attributes(%{"brando.root_count": length(ops.order)})
-
-    root_changesets =
-      Enum.map(ops.order, fn uid ->
-        # a materialization failure here must fail loudly — dropping a block
-        # silently is worse than any crash. recursive?: true is load-bearing —
-        # the default block cast drops "children" params entirely.
-        {:ok, params} = Ops.materialize_root(ops, uid)
-
-        changeset =
-          socket
-          |> materialize_base_struct(uid)
-          |> block_module.changeset(params, user_id, true)
-          |> BlockIdentity.keep_entry_block(
-            BlockIdentity.index(socket.assigns.entry_blocks),
-            socket.assigns[:restored_blocks] || %{}
-          )
-
-        {uid, changeset}
-      end)
+    identities = BlockIdentity.index(socket.assigns.entry_blocks)
+    root_changesets = Enum.map(ops.order, &{&1, root_changeset(socket, ops, &1, identities)})
 
     send_update(BrandoAdmin.Components.Form,
       id: socket.assigns.form_id,
@@ -686,6 +667,31 @@ defmodule BrandoAdmin.Components.Form.BlockField do
       block_field: socket.assigns.block_field,
       tag: tag
     )
+
+    {:ok, socket}
+  end
+
+  # A block that cannot render on its own (a slot, a block in one, a single
+  # module with children) has the root it belongs to materialized from the
+  # store, for the form to render and patch into the preview: one root rather
+  # than the whole page, and not held back by the full render's one-second
+  # interval.
+  def update(%{event: "preview_root", uid: uid}, socket) do
+    ops = session_ops(socket)
+    form = socket.assigns.form_id
+
+    if Ops.known?(ops, uid) do
+      root_uid = Ops.root_of(ops, uid)
+
+      root =
+        socket
+        |> root_changeset(ops, root_uid, BlockIdentity.index(socket.assigns.entry_blocks))
+        |> Brando.Utils.apply_changes_recursively()
+
+      send_update(BrandoAdmin.Components.Form, id: form, event: "render_preview_root", uid: root_uid, root: root)
+    else
+      send_update(BrandoAdmin.Components.Form, id: form, event: "update_live_preview")
+    end
 
     {:ok, socket}
   end
@@ -2022,6 +2028,18 @@ defmodule BrandoAdmin.Components.Form.BlockField do
       %{children: children} when is_list(children) -> find_block_by_uid(children, uid)
       _ -> nil
     end)
+  end
+
+  # A materialization failure must fail loudly — dropping a block silently is
+  # worse than any crash. recursive?: true is load-bearing — the default block
+  # cast drops "children" params entirely.
+  defp root_changeset(socket, ops, uid, identities) do
+    {:ok, params} = Ops.materialize_root(ops, uid)
+
+    socket
+    |> materialize_base_struct(uid)
+    |> socket.assigns.block_module.changeset(params, socket.assigns.current_user.id, true)
+    |> BlockIdentity.keep_entry_block(identities, socket.assigns[:restored_blocks] || %{})
   end
 
   defp materialize_base_struct(socket, uid) do

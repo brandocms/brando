@@ -76,6 +76,42 @@ test.describe('Live Preview with Blocks, Vars and Refs', () => {
       await expect(restoredFrame.locator('header[b-tpl="styled-header"] h1')).toContainText('After Reconnect', { timeout: 10000 })
     })
 
+    // Block patches are not in the cache, so a reloaded preview page is served
+    // without them. The channel sees the page is behind and the form renders
+    // it again, with a notice in the drawer.
+    test('a reloaded preview gets its block edits back, with a notice', async ({ page }) => {
+      await page.goto('/admin')
+      await page.getByRole('link', { name: 'Pages & Sections' }).click()
+      await syncLV(page)
+      await page.getByRole('link', { name: 'Create page' }).click()
+      await syncLV(page)
+      await page.getByLabel('Title', { exact: true }).fill('Lost Patches Page')
+      await page.getByLabel('URI').fill('lost-patches')
+
+      await page.getByRole('button', { name: 'Add block' }).click()
+      await page.getByRole('button', { name: '05 LIVE PREVIEW TEST' }).click()
+      await expect(page.locator('.module-picker-namespace.active')).toContainText('05 LIVE PREVIEW TEST')
+      await page.getByRole('button', { name: 'Styled Header' }).click()
+      await syncLV(page)
+
+      await toggleLivePreview(page)
+      await waitForPreviewReady(page)
+      const heading = getPreviewFrame(page).locator('header[b-tpl="styled-header"] h1')
+      await expect(heading).toContainText('Header Text')
+
+      await page.locator('.header-block textarea').fill('Patched Header')
+      await syncLV(page)
+      await expect(heading).toContainText('Patched Header')
+      // Hidden, the notice has no box over the preview
+      await expect(page.locator('.live-preview-notice')).toBeEmpty()
+      expect((await page.locator('.live-preview-notice').boundingBox()).height).toBe(0)
+
+      await page.locator('#live-preview-frame').evaluate(iframe => iframe.contentWindow.location.reload())
+
+      await expect(page.locator('.live-preview-notice')).toHaveText('The preview was missing some changes, so it was refreshed.')
+      await expect(heading).toContainText('Patched Header')
+    })
+
     test('device size buttons work (desktop/tablet/mobile)', async ({ page }) => {
       await page.goto('/admin')
       await page.getByRole('link', { name: 'Pages & Sections' }).click()

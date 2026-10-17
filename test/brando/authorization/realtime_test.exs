@@ -118,6 +118,99 @@ defmodule Brando.Authorization.RealtimeTest do
     assert_push "rerender", %{html: ^html}
   end
 
+  test "an iframe that joins with the generation it was served gets no replay", c do
+    conn = preview_conn(c.editor, c.key)
+    version = Brando.LivePreview.page_state(c.key).generation
+    assert conn.resp_body =~ "var livePreviewVersion = #{version};"
+
+    socket = admin_socket(c.editor, "preview")
+
+    {:ok, _, _} =
+      subscribe_and_join(socket, BrandoAdmin.LivePreviewChannel, "live_preview:#{c.key}", %{"version" => version})
+
+    refute_push "rerender", _
+
+    # A render it missed while away is replayed when it rejoins
+    newer = "<html><body><main>Rendered while away</main></body></html>"
+    Brando.LivePreview.store_cache(c.key, newer)
+    socket = admin_socket(c.editor, "preview-rejoin")
+
+    {:ok, _, _} =
+      subscribe_and_join(socket, BrandoAdmin.LivePreviewChannel, "live_preview:#{c.key}", %{"version" => version})
+
+    newer_version = version + 1
+    assert_push "rerender", %{html: ^newer, v: ^newer_version}
+  end
+
+  test "an iframe missing block patches has the form render the page again", c do
+    {:ok, html} = Brando.LivePreview.get_cache(c.key)
+    version = Brando.LivePreview.page_state(c.key).generation
+    Phoenix.PubSub.subscribe(Brando.pubsub(), Brando.LivePreview.form_topic(c.key))
+
+    join = fn id, params ->
+      subscribe_and_join(admin_socket(c.editor, id), BrandoAdmin.LivePreviewChannel, "live_preview:#{c.key}", params)
+    end
+
+    patch = %{uid: "B1", rendered_html: "<p>x</p>", has_children: false}
+    Boundary.with_scope(c.scope, fn -> Brando.LivePreview.broadcast(c.key, "update_block", patch) end)
+
+    {:ok, _, _} = join.("has-it", %{"version" => version, "patches" => 1})
+    refute_push "rerender", _
+    refute_received {:live_preview_patches_lost, _}
+
+    # Missed it while away, or was served the cache again on reload
+    {:ok, _, _} = join.("missed-it", %{"version" => version, "patches" => 0})
+    refute_push "rerender", _
+    assert_receive {:live_preview_patches_lost, key} when key == c.key
+
+    # The replayed cache does not hold the patch either
+    {:ok, _, _} = join.("older", %{"version" => version - 1, "patches" => 1})
+    assert_push "rerender", %{html: ^html}
+    assert_receive {:live_preview_patches_lost, _}
+
+    # The same HTML rendered again after that patch (its edit undone) is a new
+    # generation: a page still holding the patch is replayed the cache, and a
+    # later patch counted 1 again is not mistaken for it
+    Brando.LivePreview.store_cache(c.key, html)
+    Boundary.with_scope(c.scope, fn -> Brando.LivePreview.broadcast(c.key, "update_block", patch) end)
+    {:ok, _, _} = join.("undone", %{"version" => version, "patches" => 1})
+    assert_push "rerender", %{html: ^html, v: v} when v == version + 1
+    assert_receive {:live_preview_patches_lost, _}
+
+    # Identical HTML with no patch since keeps its generation
+    Brando.LivePreview.store_cache(c.key, html)
+    assert Brando.LivePreview.page_state(c.key).generation == version + 2
+    Brando.LivePreview.store_cache(c.key, html)
+    assert Brando.LivePreview.page_state(c.key).generation == version + 2
+  end
+
+  test "a preview update reads the entry once to authorize itself", c do
+    test = self()
+    id = "preview-update-reads-#{System.unique_integer([:positive])}"
+    source = Page.__schema__(:source)
+
+    :telemetry.attach(
+      id,
+      [:brando_integration, :repo, :query],
+      fn _event, _measurements, meta, _config ->
+        if self() == test and meta.source == source, do: send(test, :entry_read)
+      end,
+      nil
+    )
+
+    on_exit(fn -> :telemetry.detach(id) end)
+
+    # The test preview target picks its template by `key`
+    changeset = Ecto.Changeset.change(Map.put(%{c.page | entry_blocks: []}, :key, "about"))
+
+    Boundary.with_scope(c.scope, fn ->
+      assert c.key == Brando.LivePreview.update(Page, changeset, c.key)
+    end)
+
+    assert_received :entry_read
+    refute_received :entry_read
+  end
+
   test "preview channels stop on revocation and recheck each outgoing update", c do
     socket = admin_socket(c.editor, "preview")
     {:ok, _, joined} = subscribe_and_join(socket, BrandoAdmin.LivePreviewChannel, "live_preview:#{c.key}")
