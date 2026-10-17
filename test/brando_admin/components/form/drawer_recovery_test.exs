@@ -27,9 +27,10 @@ defmodule BrandoAdmin.Components.Form.DrawerRecoveryTest do
     {:ok, user: user, image: image}
   end
 
-  defp socket do
+  defp socket(entry \\ %Brando.Pages.Page{}) do
     %Phoenix.LiveView.Socket{}
     |> Component.assign(:id, "page_form")
+    |> Component.assign(:form, Component.to_form(Changeset.change(entry)))
     |> Component.assign(:editing_image?, false)
     |> Component.assign(:editing_video?, false)
     |> Component.assign(:editing_file?, false)
@@ -124,6 +125,10 @@ defmodule BrandoAdmin.Components.Form.DrawerRecoveryTest do
 
     for {key, value} <- [
           {"field", unknown},
+          # Existing atoms that name no asset field the drawer opens for
+          {"field", "inserted_at"},
+          {"field", "title"},
+          {"field", "image"},
           {"schema", unknown},
           {"schema", "Elixir.String"},
           {"resource_id", "9223372036854775808"},
@@ -144,14 +149,99 @@ defmodule BrandoAdmin.Components.Form.DrawerRecoveryTest do
     end
   end
 
+  # The drawer's type has to match the field's: an image field does not
+  # restore a video or file drawer.
+  test "a drawer whose type does not match the field stays closed", %{user: user} do
+    video = Factory.insert(:video, creator: user)
+    file = Brando.Repo.insert!(%Brando.Files.File{filename: "fixture.txt", creator_id: user.id})
+
+    for {type, resource} <- [{"video", video}, {"file", file}] do
+      params = put_in(drawer_params(resource, "{}"), ["drawer", "type"], type)
+
+      assert {:noreply, socket} = Form.handle_event("recover_drawer_state", params, socket())
+      refute socket.assigns.editing_video?
+      refute socket.assigns.editing_file?
+    end
+  end
+
   # A field in a subform row has the row's index in its path.
   test "a recovered drawer keeps its path", %{image: image} do
-    params = put_in(drawer_params(image, "{}"), ["drawer", "path"], Jason.encode!(["vars", 0]))
+    article = %Brando.SyncTest.Article{items: [%Brando.SyncTest.ArticleItem{}]}
 
-    assert {:noreply, socket} = Form.handle_event("recover_drawer_state", params, socket())
-    assert socket.assigns.edit_image.path == [:vars, 0]
-    assert socket.assigns.edit_image.field == :meta_image
-    assert socket.assigns.edit_image.schema == Brando.Pages.Page
+    params =
+      drawer_params(image, "{}")
+      |> put_in(["drawer", "path"], Jason.encode!(["items", 0]))
+      |> put_in(["drawer", "field"], "cover")
+      |> put_in(["drawer", "schema"], to_string(Brando.SyncTest.ArticleItem))
+
+    assert {:noreply, socket} = Form.handle_event("recover_drawer_state", params, socket(article))
+    assert socket.assigns.edit_image.path == [:items, 0]
+    assert socket.assigns.edit_image.field == :cover
+    assert socket.assigns.edit_image.schema == Brando.SyncTest.ArticleItem
+  end
+
+  # A row marked for deletion is still a row of the form, so it still counts
+  # in the index of the rows after it.
+  test "a drawer on a row after one marked for deletion keeps its row", %{image: image} do
+    first = %Brando.SyncTest.ArticleItem{id: 1, label: "First"}
+    second = %Brando.SyncTest.ArticleItem{id: 2, label: "Second"}
+    article = Changeset.change(%Brando.SyncTest.Article{items: [first, second]})
+
+    article = %{
+      article
+      | changes: %{items: [%{Changeset.change(first) | action: :delete}, %{Changeset.change(second) | action: :update}]}
+    }
+
+    params =
+      drawer_params(image, "{}")
+      |> put_in(["drawer", "path"], Jason.encode!(["items", 1]))
+      |> put_in(["drawer", "field"], "cover")
+      |> put_in(["drawer", "schema"], to_string(Brando.SyncTest.ArticleItem))
+
+    assert {:noreply, socket} = Form.handle_event("recover_drawer_state", params, socket(article))
+    assert socket.assigns.editing_image?
+    assert socket.assigns.edit_image.path == [:items, 1]
+  end
+
+  # A one-to-one subform that was cleared is not in the form.
+  test "a drawer on a cleared one-to-one subform stays closed", %{image: image} do
+    author = %Brando.SyncTest.ArticleAuthor{id: 1, name: "Example Author"}
+    article = Changeset.change(%Brando.SyncTest.Article{author: author})
+
+    params =
+      drawer_params(image, "{}")
+      |> put_in(["drawer", "path"], Jason.encode!(["author"]))
+      |> put_in(["drawer", "field"], "portrait")
+      |> put_in(["drawer", "schema"], to_string(Brando.SyncTest.ArticleAuthor))
+
+    # Clearing it stores nil; a replaced changeset is matched as well.
+    for changes <- [%{author: nil}, %{author: %{Changeset.change(author) | action: :replace}}] do
+      cleared = %{article | changes: changes}
+      assert {:noreply, socket} = Form.handle_event("recover_drawer_state", params, socket(cleared))
+      refute socket.assigns.editing_image?, "restored for #{inspect(changes)}"
+    end
+
+    # The same subform, kept, restores.
+    kept = article
+    assert {:noreply, socket} = Form.handle_event("recover_drawer_state", params, socket(kept))
+    assert socket.assigns.editing_image?
+  end
+
+  # The drawer commits a pick to `<field>_id` at its path in this form, so a
+  # field the form does not hold there leaves the drawer closed.
+  test "a drawer for a field the form does not hold at its path stays closed", %{image: image} do
+    for changes <- [
+          %{"schema" => to_string(Brando.SyncTest.ArticleAuthor), "field" => "portrait"},
+          %{"path" => Jason.encode!(["title"])},
+          %{"path" => Jason.encode!(["vars", 0])}
+        ] do
+      params = Map.update!(drawer_params(image, "{}"), "drawer", &Map.merge(&1, changes))
+
+      assert {:noreply, socket} = Form.handle_event("recover_drawer_state", params, socket()),
+             "failed for #{inspect(changes)}"
+
+      refute socket.assigns.editing_image?
+    end
   end
 
   describe "unrecoverable drawer state" do
