@@ -50,6 +50,74 @@ defmodule BrandoAdmin.SubformRelationTest do
     assert Repo.get!(ArticleItem, ctx.item.id).cover_id == ctx.image.id
   end
 
+  # Committing an image re-bakes the changeset (`commit_entry_field_asset`),
+  # which drops a removed row that is still pending: the form, the preview,
+  # the next `validate` and the save still treat it as removed.
+  test "an image picked in a row while another row's removal is pending", ctx do
+    {:ok, article} =
+      SyncTest.create_article(
+        %{
+          title: "Example Hotel",
+          slug: "example-hotel",
+          language: "en",
+          status: "published",
+          items: [%{label: "A"}, %{label: "B"}, %{label: "C"}]
+        },
+        ctx.current_user
+      )
+
+    [a, b, c] = article |> Repo.preload(:items) |> Map.get(:items) |> Enum.sort_by(& &1.label)
+    view = open(%{ctx | article: article})
+
+    view
+    |> with_target(cid_of(view, ~s(input[name="article[items][1][label]"])))
+    |> render_click("remove_subentry", %{"key" => "id-#{b.id}"})
+
+    assert row_labels(render(view)) == ["A", "C"]
+
+    assert %Ecto.Changeset{action: :replace} =
+             Enum.find(form_assigns(view).form.source.changes.items, &(&1.data.id == b.id))
+
+    view
+    |> with_target(cid_of(view, ~s(input[name="article[items][1][cover_id]"])))
+    |> render_click("select_image", %{"id" => to_string(ctx.image.id)})
+
+    # The form, and the entry the preview renders (the changeset with the
+    # form's relations over it), before the browser's next `validate`
+    html = render(view)
+    assert row_labels(html) == ["A", "C"]
+
+    assert html |> Floki.parse_document!() |> Floki.attribute(~s(input[name="article[items][1][cover_id]"]), "value") == [
+             to_string(ctx.image.id)
+           ]
+
+    assigns = form_assigns(view)
+    previewed = assigns.form.source |> Brando.Utils.apply_changes_recursively() |> Map.merge(assigns.updated_entry_assocs)
+    assert Enum.map(previewed.items, & &1.label) == ["A", "C"]
+    assert Enum.find(previewed.items, &(&1.id == c.id)).cover.id == ctx.image.id
+
+    # The browser's `validate` after the pick (`b:validate`)
+    params = view |> render() |> form_params(@form) |> Map.put("_target", ["article", "items", "1", "cover_id"])
+    view |> element(@form) |> render_change(params)
+
+    rows = form_assigns(view).form.source.changes.items
+    assert %Ecto.Changeset{action: :replace} = Enum.find(rows, &(&1.data.id == b.id))
+    assert row_labels(render(view)) == ["A", "C"]
+
+    save(view)
+
+    saved = ArticleItem |> Repo.all() |> Enum.filter(&(&1.article_id == article.id)) |> Enum.sort_by(& &1.label)
+    assert Enum.map(saved, &{&1.id, &1.cover_id}) == [{a.id, nil}, {c.id, ctx.image.id}]
+    refute Repo.get(ArticleItem, b.id)
+  end
+
+  defp row_labels(html) do
+    html
+    |> Floki.parse_document!()
+    |> Floki.find(~s(input[name^="article[items]"][name$="[label]"]))
+    |> Floki.attribute("value")
+  end
+
   test "a row's picked image replacing another stays shown through an edit", ctx do
     first = insert_image(ctx, "first", "First")
     ctx.item |> Ecto.Changeset.change(cover_id: first.id) |> Repo.update!()
