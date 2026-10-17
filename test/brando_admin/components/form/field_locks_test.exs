@@ -57,7 +57,8 @@ defmodule BrandoAdmin.Components.Form.FieldLocksTest do
           video_id: nil,
           video: nil,
           myself: 3,
-          defaults: %{}
+          defaults: %{},
+          form_id: "page_form"
         }
       }
 

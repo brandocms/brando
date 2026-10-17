@@ -60,7 +60,11 @@ defmodule BrandoAdmin.Components.Form.Input.Video do
       socket
       |> assign(assigns)
       |> then(&assign(&1, :defaults, field_defaults(&1.assigns.opts)))
-      |> assign_new(:form_id, fn -> FormId.for_form(assigns.field.form) end)
+      # A subform row's field is handed `form_id: nil` and the subform's
+      # `parent_form_id`.
+      |> then(
+        &assign(&1, :form_id, &1.assigns[:form_id] || &1.assigns[:parent_form_id] || FormId.for_form(assigns.field.form))
+      )
 
     relation_field_atom = String.to_existing_atom("#{assigns.field.field}_id")
     relation_field = assigns.field.form[relation_field_atom]
@@ -305,7 +309,7 @@ defmodule BrandoAdmin.Components.Form.Input.Video do
     defaults = socket.assigns.defaults
 
     path = Brando.Utils.get_path_from_field_name(form.name)
-    form_id = FormId.for_form(form)
+    form_id = socket.assigns.form_id
 
     # The field is locked for the other editors while its drawer is open;
     # closing the drawer releases it.
