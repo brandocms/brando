@@ -180,6 +180,29 @@ defmodule BrandoAdmin.Components.Form.DrawerRecoveryTest do
     assert socket.assigns.edit_image.schema == Brando.SyncTest.ArticleItem
   end
 
+  # A row marked for deletion is still a row of the form, so it still counts
+  # in the index of the rows after it.
+  test "a drawer on a row after one marked for deletion keeps its row", %{image: image} do
+    first = %Brando.SyncTest.ArticleItem{id: 1, label: "First"}
+    second = %Brando.SyncTest.ArticleItem{id: 2, label: "Second"}
+    article = Changeset.change(%Brando.SyncTest.Article{items: [first, second]})
+
+    article = %{
+      article
+      | changes: %{items: [%{Changeset.change(first) | action: :delete}, %{Changeset.change(second) | action: :update}]}
+    }
+
+    params =
+      drawer_params(image, "{}")
+      |> put_in(["drawer", "path"], Jason.encode!(["items", 1]))
+      |> put_in(["drawer", "field"], "cover")
+      |> put_in(["drawer", "schema"], to_string(Brando.SyncTest.ArticleItem))
+
+    assert {:noreply, socket} = Form.handle_event("recover_drawer_state", params, socket(article))
+    assert socket.assigns.editing_image?
+    assert socket.assigns.edit_image.path == [:items, 1]
+  end
+
   # The drawer commits a pick to `<field>_id` at its path in this form, so a
   # field the form does not hold there leaves the drawer closed.
   test "a drawer for a field the form does not hold at its path stays closed", %{image: image} do

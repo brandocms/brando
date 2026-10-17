@@ -295,6 +295,56 @@ defmodule BrandoAdmin.SubformRelationTest do
     end
   end
 
+  # The image drawer open on a row added since the last save: after a
+  # reconnect the form's own rows come back from the recovered params.
+  test "an open drawer on an unsaved row comes back after a reconnect", ctx do
+    view = open(ctx)
+
+    view
+    |> with_target(cid_of(view, ~s(input[name="article[items][0][label]"])))
+    |> render_click("add_subentry", %{})
+
+    settle(view)
+    new_cover = ~s(input[name="article[items][1][cover_id]"])
+    assert has_element?(view, new_cover)
+
+    view |> with_target(cid_of(view, new_cover)) |> render_click("open_image", %{})
+    view |> with_target(cid_of(view, new_cover)) |> render_click("select_image", %{"id" => to_string(ctx.image.id)})
+    captured = render(view)
+
+    assert form_params(captured, "#article_form-drawer-recovery")["drawer"]["path"] == ~s(["items",1])
+
+    kill_live(view)
+    view = open(ctx)
+    recover(view, captured)
+
+    assert %{editing_image?: true, edit_image: %{path: [:items, 1], field: :cover}} = form_assigns(view)
+  end
+
+  # What LiveView does on a rejoin: each form the old page had that the new
+  # one renders, in the new page's document order, sends its
+  # `phx-auto-recover` event with the old page's values.
+  defp recover(view, captured) do
+    view
+    |> render()
+    |> Floki.parse_document!()
+    |> Floki.find("form[phx-auto-recover]")
+    |> Enum.each(fn form ->
+      id = "#" <> hd(Floki.attribute(form, "id"))
+
+      case Floki.attribute(form, "phx-auto-recover") do
+        ["recover_form"] ->
+          view |> element(id) |> render_change(recovery_params(captured, id))
+
+        ["recover_drawer_state"] ->
+          view |> with_target(cid_of(view, id)) |> render_hook("recover_drawer_state", form_params(captured, id))
+
+        _ ->
+          :ok
+      end
+    end)
+  end
+
   defp edit_row_label(view) do
     params =
       view

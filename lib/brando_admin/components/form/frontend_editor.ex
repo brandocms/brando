@@ -189,22 +189,6 @@ defmodule BrandoAdmin.Components.Form.FrontendEditor do
             video_context={@video_context}
           />
 
-          <form
-            id={"#{@id}-drawer-recovery"}
-            phx-change="noop"
-            phx-auto-recover="recover_drawer_state"
-            phx-target={@myself}
-            class="hidden"
-          >
-            <input type="hidden" name="drawer[type]" value={@editing_drawer_type} />
-            <input type="hidden" name="drawer[resource_id]" value={@editing_resource_id} />
-            <input type="hidden" name="drawer[field]" value={@editing_field} />
-            <input type="hidden" name="drawer[path]" value={Jason.encode!(@editing_path || [])} />
-            <input type="hidden" name="drawer[schema]" value={@editing_schema} />
-            <input type="hidden" name="drawer[form_id]" value={@id} />
-            <input type="hidden" name="drawer[changes]" value={@editing_drawer_changes} />
-          </form>
-
           <%!-- The entry's own fields are edited in the full editor. The form
                 is still submitted, as saving runs through it, but with no
                 fields in it the save changes only the blocks. --%>
@@ -235,6 +219,17 @@ defmodule BrandoAdmin.Components.Form.FrontendEditor do
               form_id={@id}
             />
           </.form>
+
+          <BrandoAdmin.Components.Form.drawer_recovery_form
+            id={@id}
+            myself={@myself}
+            type={@editing_drawer_type}
+            resource_id={@editing_resource_id}
+            field={@editing_field}
+            path={@editing_path}
+            schema={@editing_schema}
+            changes={@editing_drawer_changes}
+          />
 
           <%!-- A heavy entry's blocks load after the form (`Form.open_entry/1`) --%>
           <div :if={@has_blocks? && !@blocks_ready?} class="frontend-edit-loading">

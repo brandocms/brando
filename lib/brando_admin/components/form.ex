@@ -3978,22 +3978,6 @@ defmodule BrandoAdmin.Components.Form do
             video_context={@video_context}
           />
 
-          <form
-            id={"#{@id}-drawer-recovery"}
-            phx-change="noop"
-            phx-auto-recover="recover_drawer_state"
-            phx-target={@myself}
-            class="hidden"
-          >
-            <input type="hidden" name="drawer[type]" value={@editing_drawer_type} />
-            <input type="hidden" name="drawer[resource_id]" value={@editing_resource_id} />
-            <input type="hidden" name="drawer[field]" value={@editing_field} />
-            <input type="hidden" name="drawer[path]" value={Jason.encode!(@editing_path || [])} />
-            <input type="hidden" name="drawer[schema]" value={@editing_schema} />
-            <input type="hidden" name="drawer[form_id]" value={@id} />
-            <input type="hidden" name="drawer[changes]" value={@editing_drawer_changes} />
-          </form>
-
           <.form
             id={"#{@id}_form"}
             class="main-form"
@@ -4063,6 +4047,17 @@ defmodule BrandoAdmin.Components.Form do
               schema={@schema}
             />
           </.form>
+
+          <.drawer_recovery_form
+            id={@id}
+            myself={@myself}
+            type={@editing_drawer_type}
+            resource_id={@editing_resource_id}
+            field={@editing_field}
+            path={@editing_path}
+            schema={@editing_schema}
+            changes={@editing_drawer_changes}
+          />
 
           <%!-- A heavy entry's block fields as outlines until its blocks
                 have loaded; `@block_map` is built from them. --%>
@@ -4230,6 +4225,40 @@ defmodule BrandoAdmin.Components.Form do
 
   attr :presences, :list
   attr :current_user, :map, required: true
+
+  attr :id, :string, required: true
+  attr :myself, :any, required: true
+  attr :type, :string
+  attr :resource_id, :any
+  attr :field, :string
+  attr :path, :list
+  attr :schema, :string
+  attr :changes, :string
+
+  # The open drawer, for `recover_drawer_state`. It renders after the main
+  # form on purpose: LiveView sends recovery events in document order, and
+  # the drawer is only restored for a struct the form holds at its path, so
+  # the main form has to have recovered its rows first.
+  @doc false
+  def drawer_recovery_form(assigns) do
+    ~H"""
+    <form
+      id={"#{@id}-drawer-recovery"}
+      phx-change="noop"
+      phx-auto-recover="recover_drawer_state"
+      phx-target={@myself}
+      class="hidden"
+    >
+      <input type="hidden" name="drawer[type]" value={@type} />
+      <input type="hidden" name="drawer[resource_id]" value={@resource_id} />
+      <input type="hidden" name="drawer[field]" value={@field} />
+      <input type="hidden" name="drawer[path]" value={Jason.encode!(@path || [])} />
+      <input type="hidden" name="drawer[schema]" value={@schema} />
+      <input type="hidden" name="drawer[form_id]" value={@id} />
+      <input type="hidden" name="drawer[changes]" value={@changes} />
+    </form>
+    """
+  end
 
   # The editors present, each dotted in the colour their field presence has
   # (`data-presence-color-index`, by position, as fieldPresence.js counts it).
@@ -8396,14 +8425,26 @@ defmodule BrandoAdmin.Components.Form do
 
   # The struct a path names in the form: the entry, a one-to-one subform's
   # struct, or a subform row.
-  defp form_struct_at(%Phoenix.HTML.Form{source: %Changeset{} = changeset}, path),
-    do: struct_at(apply_changes(changeset), path)
-
+  defp form_struct_at(%Phoenix.HTML.Form{source: %Changeset{} = changeset}, path), do: struct_at(changeset, path)
   defp form_struct_at(_form, _path), do: nil
 
+  # Rows are counted as `inputs_for` counts them: a row being replaced is not
+  # in the form, a row marked for deletion is.
+  defp struct_at(%Changeset{data: data}, []), do: data
   defp struct_at(data, []), do: data
+
+  defp struct_at(%Changeset{changes: changes, data: data}, [key | rest]) when is_atom(key),
+    do: struct_at(Map.get(changes, key, Map.get(data, key)), rest)
+
   defp struct_at(%{} = data, [key | rest]) when is_atom(key), do: struct_at(Map.get(data, key), rest)
-  defp struct_at(rows, [index | rest]) when is_list(rows) and is_integer(index), do: struct_at(Enum.at(rows, index), rest)
+
+  defp struct_at(rows, [index | rest]) when is_list(rows) and is_integer(index) do
+    rows
+    |> Enum.reject(&match?(%Changeset{action: :replace}, &1))
+    |> Enum.at(index)
+    |> struct_at(rest)
+  end
+
   defp struct_at(_data, _path), do: nil
 
   # A field name, or the index of a subform row (`[:clients, 0]`).
