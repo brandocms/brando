@@ -81,14 +81,26 @@ defmodule Brando.IgniterCase do
       |> Igniter.assign(:test_files, files)
       |> Map.update!(:rewrite, &Rewrite.drop(&1, Map.keys(files)))
 
-    Enum.reduce(Map.keys(files), igniter, fn path, igniter ->
-      options = if String.starts_with?(path, "priv/templates/"), do: [source_handler: Rewrite.Source], else: []
-      Igniter.include_existing_file(igniter, path, options)
-    end)
+    include_files(igniter, files)
   end
 
   def source(igniter, path) do
     igniter.rewrite |> Rewrite.source!(path) |> Rewrite.Source.get(:content)
+  end
+
+  @doc """
+  Runs Igniter's write step, which parses each `.ex` source to place its
+  modules, as a real run does.
+
+  Not `Igniter.Test.apply_igniter!/1`: it then re-reads every test file whose
+  absolute path its glob matches, and so parses a consumer's EEx template
+  named `.ex` as Elixir, which a real run never reads that way.
+  """
+  def prepare_for_write!(igniter) do
+    case Igniter.prepare_for_write(igniter) do
+      %{issues: []} = igniter -> igniter
+      %{issues: issues} -> raise "Igniter's write step reported issues: #{inspect(issues)}"
+    end
   end
 
   def apply_and_reload(igniter) do
@@ -102,9 +114,16 @@ defmodule Brando.IgniterCase do
     moved_away = for source <- Rewrite.sources(igniter.rewrite), not Map.has_key?(files, source.path), do: source.path
     igniter = %{igniter | rewrite: Rewrite.drop(igniter.rewrite, moved_away)}
 
-    Enum.reduce(Map.keys(files), igniter, fn path, igniter ->
-      options = if String.starts_with?(path, "priv/templates/"), do: [source_handler: Rewrite.Source], else: []
-      Igniter.include_existing_file(igniter, path, options)
-    end)
+    include_files(igniter, files)
+  end
+
+  # Not the consumer's generator templates, which a task reads when it uses
+  # them, as from disk: Igniter parses each `.ex` source it writes, and an EEx
+  # template named `.ex` does not parse.
+  defp include_files(igniter, files) do
+    files
+    |> Map.keys()
+    |> Enum.reject(&String.starts_with?(&1, "priv/templates/"))
+    |> Enum.reduce(igniter, &Igniter.include_existing_file(&2, &1))
   end
 end

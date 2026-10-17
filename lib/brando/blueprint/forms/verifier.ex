@@ -177,9 +177,7 @@ defmodule Brando.Blueprint.Forms.Verifier do
   end
 
   defp verify_source_fields(context, form, %{opts: opts} = input) do
-    source = Keyword.get(opts || [], :source, Keyword.get(opts || [], :from))
-
-    source
+    Keyword.get(opts || [], :source)
     |> List.wrap()
     |> validate_entities(&verify_referenced_field(context, form, input, :source, &1))
   end

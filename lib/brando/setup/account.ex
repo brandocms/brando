@@ -10,12 +10,16 @@ defmodule Brando.Setup.Account do
   import Ecto.Query
 
   alias Brando.Users.User
+  alias Brando.Users.UserConfig
 
   @doc """
   Inserts a superuser account.
 
   Expects `:email`, `:name` and `:password`. The password is hashed before
   insertion. Raises on a duplicate email, matching the rest of the setup tasks.
+
+  Whoever runs the setup task chose the password, so the account is not asked
+  to change it on first login (`reset_password_on_first_login`).
   """
   @spec create_superuser(map()) :: User.t()
   def create_superuser(%{email: email, name: name, password: password}) do
@@ -25,7 +29,8 @@ defmodule Brando.Setup.Account do
       password: Bcrypt.hash_pwd_salt(password),
       avatar: nil,
       role: :superuser,
-      language: default_admin_language()
+      language: default_admin_language(),
+      config: %UserConfig{reset_password_on_first_login: false}
     })
   end
 

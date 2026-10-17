@@ -126,6 +126,8 @@ defmodule Mix.Brando.Igniter.AuxiliaryTest do
 
     assert result.issues == []
     assert IgniterCase.source(result, "lib/studio_web/sitemap.ex") =~ "def custom"
+    # Igniter parses each `.ex` file it writes; the EEx template is not one.
+    IgniterCase.prepare_for_write!(result)
   end
 
   test "a consumer ReleaseTasks template gets the same bindings as the other auxiliary templates" do

@@ -34,10 +34,12 @@ defmodule <%= app_module %>.<%= domain %>.<%= schema %> do
 
   forms do
     form do
+      default_params %{"status" => "draft"}
+
       tab t("Content") do
         fieldset do
           input :title, :text, label: t("Title")
-          input :slug, :slug, from: :title, label: t("Slug")
+          input :slug, :slug, source: :title, label: t("Slug")
           input :status, :status, label: t("Status")
         end
       end

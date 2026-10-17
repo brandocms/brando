@@ -23,15 +23,35 @@ smoke_app="$smoke_root/consumer"
 smoke_database="brando_igniter_smoke_$(basename "$smoke_root" | tr '[:upper:].-' '[:lower:]__')"
 smoke_port="${BRANDO_SMOKE_PORT:-4482}"
 smoke_server_pid=''
+# The consumer's endpoint watchers start its two Vite dev servers on these
+# ports, which Brando.HTML reads too. Off the defaults, so other sites' Vite
+# servers on 3000 and 3333 cannot stand in for them.
+export BRANDO_VITE_ADMIN_PORT="${BRANDO_SMOKE_VITE_ADMIN_PORT:-$((smoke_port + 1))}"
+export BRANDO_VITE_FRONTEND_PORT="${BRANDO_SMOKE_VITE_FRONTEND_PORT:-$((smoke_port + 2))}"
+smoke_vite_ports=("$BRANDO_VITE_ADMIN_PORT" "$BRANDO_VITE_FRONTEND_PORT")
 mkdir -p "$smoke_root/logs"
 echo "Igniter $smoke_mode smoke consumer ($smoke_source): $smoke_root"
 if [[ -n "${GITHUB_OUTPUT:-}" ]]; then echo "root=$smoke_root" >> "$GITHUB_OUTPUT"; fi
 trap 'echo "Smoke failed near line $LINENO; inspect $smoke_root/logs" >&2' ERR
 
+listening() { curl --silent --output /dev/null "http://localhost:$1/"; }
+
+# Stopping Phoenix stops its Brando.Vite watchers, which stop Vite. A Vite
+# server still listening afterwards fails the run.
 stop_server() {
   if [[ -n "$smoke_server_pid" ]]; then
     kill "$smoke_server_pid" 2>/dev/null || true
     wait "$smoke_server_pid" 2>/dev/null || true
+    smoke_server_pid=''
+    local port attempt
+    for port in "${smoke_vite_ports[@]}"; do
+      for attempt in $(seq 1 20); do
+        if ! listening "$port"; then continue 2; fi
+        sleep 0.5
+      done
+      echo "A Vite dev server still listens on port $port after the consumer stopped" >&2
+      return 1
+    done
   fi
 }
 trap stop_server EXIT
@@ -131,25 +151,64 @@ if [[ "$smoke_bootstrap" == precompiled ]]; then
   mix run "$framework_dir/scripts/igniter_smoke/check_customized.exs" > "$smoke_root/logs/check-customized.log" 2>&1
 fi
 
-# The installer enables HMR in dev.exs; the smoke serves the built manifests
-# checked above instead of a Vite dev server.
-printf '\nconfig :igniter_smoke, hmr: false\n' >> config/dev.exs
-PORT="$smoke_port" mix phx.server > "$smoke_root/logs/server.log" 2>&1 &
-smoke_server_pid=$!
-smoke_ready=false
-for attempt in $(seq 1 60); do
-  if curl --silent --fail "http://127.0.0.1:$smoke_port/admin/login" > /dev/null; then smoke_ready=true; break; fi
-  if ! kill -0 "$smoke_server_pid" 2>/dev/null; then break; fi
-  sleep 1
+# Starts the consumer and waits for /admin/login, and with "vite" for both
+# Vite dev servers too.
+start_server() {
+  local log="$1" wait_for_vite="${2:-}" attempt
+  PORT="$smoke_port" mix phx.server > "$smoke_root/logs/$log" 2>&1 &
+  smoke_server_pid=$!
+  for attempt in $(seq 1 90); do
+    if curl --silent --fail "http://127.0.0.1:$smoke_port/admin/login" > /dev/null &&
+      { [[ "$wait_for_vite" != vite ]] || {
+        curl --silent --fail "http://localhost:$BRANDO_VITE_ADMIN_PORT/@vite/client" > /dev/null &&
+          curl --silent --fail "http://localhost:$BRANDO_VITE_FRONTEND_PORT/@vite/client" > /dev/null
+      }; }; then
+      return 0
+    fi
+    if ! kill -0 "$smoke_server_pid" 2>/dev/null; then break; fi
+    sleep 1
+  done
+  echo "Consumer or its Vite servers did not start; inspect $smoke_root/logs/$log" >&2
+  return 1
+}
+
+run_browser() {
+  BRANDO_SMOKE_BASE_URL="http://127.0.0.1:$smoke_port" BRANDO_SMOKE_ARTIFACTS="$smoke_root/browser-$1" \
+    pnpm --dir "$framework_dir/scripts/igniter_smoke" exec playwright test --config playwright.config.js > "$smoke_root/logs/browser-$1.log" 2>&1
+}
+
+# As users get it: hmr: true in dev.exs, with the endpoint's watchers starting
+# both Vite dev servers.
+for port in "${smoke_vite_ports[@]}"; do
+  if listening "$port"; then echo "Port $port already answers; the consumer's Vite needs it" >&2; exit 1; fi
 done
-if [[ "$smoke_ready" != true ]]; then echo "Consumer did not start; inspect $smoke_root/logs/server.log" >&2; exit 1; fi
-BRANDO_SMOKE_BASE_URL="http://127.0.0.1:$smoke_port" BRANDO_SMOKE_ARTIFACTS="$smoke_root/browser" \
-  pnpm --dir "$framework_dir/scripts/igniter_smoke" exec playwright test --config playwright.config.js > "$smoke_root/logs/browser.log" 2>&1
+mix run --no-start "$framework_dir/scripts/igniter_smoke/database.exs" snapshot > "$smoke_root/logs/database-snapshot.log" 2>&1
+start_server server.log vite
+admin_login="$(curl --silent --fail "http://127.0.0.1:$smoke_port/admin/login")"
+if [[ "$admin_login" != *"http://localhost:$BRANDO_VITE_ADMIN_PORT/@vite/client"* ]]; then
+  echo "With hmr: true the admin did not load Vite's client; inspect $smoke_root/logs/server.log" >&2
+  exit 1
+fi
+run_browser vite
+stop_server
+
+# The built assets, as production serves them: the browser tests again, on
+# the database as seeded, with hmr: false, so a template that does not build,
+# or builds the wrong entries, fails here and not only in a deploy.
+mix run --no-start "$framework_dir/scripts/igniter_smoke/database.exs" restore > "$smoke_root/logs/database-restore.log" 2>&1
+printf '\nconfig :igniter_smoke, hmr: false\n' >> config/dev.exs
+start_server server-built.log
+admin_login="$(curl --silent --fail "http://127.0.0.1:$smoke_port/admin/login")"
+if [[ "$admin_login" == *"@vite/client"* || "$admin_login" != *"/assets/admin/admin-"* ]]; then
+  echo "With hmr: false the admin did not load its built assets; inspect $smoke_root/logs/server-built.log" >&2
+  exit 1
+fi
+run_browser built
+stop_server
 if [[ "$smoke_source" == packaged ]]; then
   if [[ "$(package_digest)" != "$package_before" ]]; then echo "The consumer wrote into the Hex package at $brando_dir" >&2; exit 1; fi
   # Nothing in the consumer, its dependencies or node_modules may name the checkout.
   # grep exits 1 for no match; 2, an unreadable file, must not pass as one.
-  stop_server
   references=0
   grep -rlF -e "$framework_dir" -e "$(cd "$framework_dir" && pwd -P)" . > "$smoke_root/logs/checkout-references.log" ||
     references=$?

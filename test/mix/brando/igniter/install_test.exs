@@ -216,6 +216,111 @@ defmodule Mix.Brando.Igniter.InstallTest do
     end
   end
 
+  @phx_new_dev """
+  import Config
+
+  config :studio, StudioWeb.Endpoint,
+    http: [ip: {127, 0, 0, 1}, port: 4000],
+    check_origin: false,
+    code_reloader: true,
+    secret_key_base: "dev-secret",
+    watchers: []
+
+  config :studio, StudioWeb.Endpoint, live_reload: [patterns: [~r"lib/studio_web/.*(ex|heex)$"]]
+  """
+
+  # The watchers as Phoenix reads them, with config/dev.exs under `root`
+  defp dev_watchers(igniter, root) do
+    root
+    |> Path.join("config/dev.exs")
+    |> Config.Reader.eval!(IgniterCase.source(igniter, "config/dev.exs"), env: :dev)
+    |> get_in([:studio, StudioWeb.Endpoint, :watchers])
+  end
+
+  defp vite_watchers(root) do
+    [
+      vite_admin: {Brando.Vite, :watch, [Path.join(root, "assets/backend")]},
+      vite_site: {Brando.Vite, :watch, [Path.join(root, "assets/frontend")]}
+    ]
+  end
+
+  defp vite_notice?(igniter), do: Enum.any?(igniter.notices, &(&1 =~ "already has watchers"))
+
+  test "phx.new's empty watchers start both Vite dev servers, once" do
+    igniter = project(%{"config/dev.exs" => @phx_new_dev}) |> install()
+    assert igniter.issues == []
+    refute vite_notice?(igniter)
+
+    assert dev_watchers(igniter, "/srv/studio") == vite_watchers("/srv/studio")
+
+    dev = IgniterCase.source(igniter, "config/dev.exs")
+    assert dev =~ ~s(secret_key_base: "dev-secret")
+    assert dev =~ "hmr: true"
+    assert dev =~ "# Vite dev servers for the admin"
+    assert length(String.split(dev, "{Brando.Vite, :watch,")) == 3
+
+    for {_, {module, function, args}} <- vite_watchers("/srv/studio") do
+      assert Code.ensure_loaded?(module) and function_exported?(module, function, length(args))
+    end
+
+    applied = Igniter.Test.apply_igniter!(igniter)
+    reloaded = Enum.reduce(Map.keys(applied.assigns.test_files), applied, &Igniter.include_existing_file(&2, &1))
+    rerun = install(reloaded)
+    assert rerun.issues == []
+    refute vite_notice?(rerun)
+    Igniter.Test.assert_unchanged(rerun, "config/dev.exs")
+  end
+
+  test "an endpoint without watchers gets the Vite watchers" do
+    igniter = install(project())
+    assert igniter.issues == []
+
+    assert dev_watchers(igniter, "/srv/studio") == vite_watchers("/srv/studio")
+  end
+
+  test "the application's own watchers are kept, with a notice naming the Vite watchers" do
+    dev =
+      String.replace(
+        @phx_new_dev,
+        "watchers: []",
+        ~s|watchers: [esbuild: {Esbuild, :install_and_run, [:studio, ~w(--watch)]}]|
+      )
+
+    igniter = project(%{"config/dev.exs" => dev}) |> install()
+    assert igniter.issues == []
+    refute IgniterCase.source(igniter, "config/dev.exs") =~ "vite"
+    assert [notice] = Enum.filter(igniter.notices, &(&1 =~ "already has watchers"))
+    assert notice =~ ~s|[Path.expand("../assets/backend", __DIR__)]|
+    assert notice =~ ~s|[Path.expand("../assets/frontend", __DIR__)]|
+    assert notice =~ "vite_admin: {Brando.Vite, :watch,"
+  end
+
+  test "an aliased endpoint keeps its own watchers" do
+    dev = """
+    import Config
+    alias StudioWeb.Endpoint
+
+    config :studio, Endpoint,
+      http: [ip: {127, 0, 0, 1}, port: 4000],
+      watchers: [esbuild: {Esbuild, :install_and_run, [:studio, ~w(--watch)]}]
+    """
+
+    igniter = project(%{"config/dev.exs" => dev}) |> install()
+    assert igniter.issues == []
+    assert dev_watchers(igniter, "/srv/studio") == [esbuild: {Esbuild, :install_and_run, [:studio, ["--watch"]]}]
+    assert vite_notice?(igniter)
+  end
+
+  test "an application with hmr off in dev.exs gets no Vite watchers" do
+    for hmr_off <- ["config :studio, hmr: false", "config :studio, :hmr, false"] do
+      igniter = project(%{"config/dev.exs" => @phx_new_dev <> hmr_off <> "\n"}) |> install()
+      assert igniter.issues == []
+      assert dev_watchers(igniter, "/srv/studio") == []
+      refute vite_notice?(igniter)
+      refute IgniterCase.source(igniter, "config/dev.exs") =~ "hmr: true"
+    end
+  end
+
   defp mix_exs(project, attributes \\ "") do
     """
     defmodule Studio.MixProject do
