@@ -5,6 +5,7 @@ defmodule BrandoAdmin.SubformRelationTest do
 
   alias Brando.Repo
   alias Brando.SyncTest
+  alias Brando.SyncTest.ArticleAuthor
   alias Brando.SyncTest.ArticleItem
   alias BrandoAdmin.Components.Form
   alias BrandoAdmin.Components.Form.Input.Image
@@ -87,10 +88,12 @@ defmodule BrandoAdmin.SubformRelationTest do
     pick(view, ctx.image)
 
     # What `ImageProcessor` broadcasts when an upload to the row is done: the
-    # row's path, as the upload target carried it.
-    send(view.pid, {ctx.image, [:image, :updated], [:items, 0]})
+    # row's path and the field, as the upload manager queued it.
+    send(view.pid, {ctx.image, [:image, :updated], [:items, 0, :cover]})
 
     assert row_cover_id(render(view)) == to_string(ctx.image.id)
+    image_id = ctx.image.id
+    assert [%{cover: %{id: ^image_id}}] = form_assigns(view).entry.items
 
     save(view)
     assert Repo.get!(ArticleItem, ctx.item.id).cover_id == ctx.image.id
@@ -189,6 +192,107 @@ defmodule BrandoAdmin.SubformRelationTest do
 
     assert row_cover_id(render(view)) == ""
     assert [%{cover: nil}] = form_assigns(view).entry.items
+  end
+
+  describe "a one-to-one subform" do
+    @author_portrait ~s(input[name="article[author][portrait_id]"])
+    @fixture Path.expand("../../fixtures/sample.jpg", __DIR__)
+
+    setup ctx do
+      author = Repo.insert!(%ArticleAuthor{article_id: ctx.article.id, name: "Example Author"})
+
+      image =
+        Factory.insert(:image,
+          creator: ctx.current_user,
+          config_target: "image:Brando.SyncTest.ArticleAuthor:portrait",
+          focal: %Brando.Images.Focal{x: 50, y: 50},
+          status: :processed
+        )
+
+      %{author: author, portrait: image}
+    end
+
+    test "an upload to its image field is processed for that field", ctx do
+      view = open_author(ctx)
+      manager = find_live_child(view, "brando-upload-manager-lv")
+      test_pid = self()
+      handler = "subform-relation-#{System.unique_integer([:positive])}"
+
+      :telemetry.attach(
+        handler,
+        [:oban, :job, :start],
+        fn _event, _measurements, %{job: job}, _config ->
+          if job.worker == "Brando.Worker.ImageProcessor", do: send(test_pid, {:image_job, job.args})
+        end,
+        nil
+      )
+
+      on_exit(fn -> :telemetry.detach(handler) end)
+
+      ref = intake(manager, form_assigns(view).deliver_topic)
+      name = "#{ref}::sample.jpg"
+      upload = file_input(manager, "form#brando-upload-manager-queue-form", :queue, [file(name)])
+      render_upload(upload, name)
+
+      # The path the processed image comes back with names the field, not
+      # only the subform it is in.
+      assert_receive {:image_job, %{"field_full_path" => ["author", "portrait"]}}
+
+      settle(view)
+      %{asset_id: portrait_id} = :sys.get_state(manager.pid).socket.assigns.items[ref]
+      assert %ArticleAuthor{portrait: %{id: ^portrait_id}} = form_assigns(view).entry.author
+      assert author_portrait_id(render(view)) == to_string(portrait_id)
+
+      save(view)
+      assert Repo.get!(ArticleAuthor, ctx.author.id).portrait_id == portrait_id
+    end
+
+    test "an image that finishes processing lands on its field", ctx do
+      ctx.author |> Ecto.Changeset.change(portrait_id: ctx.portrait.id) |> Repo.update!()
+      view = open_author(ctx)
+
+      send(view.pid, {ctx.portrait, [:image, :updated], [:author, :portrait]})
+
+      assert %ArticleAuthor{portrait: %{id: portrait_id}} = form_assigns(view).entry.author
+      assert portrait_id == ctx.portrait.id
+      refute Map.has_key?(form_assigns(view).updated_entry_assocs, :author)
+      assert author_portrait_id(render(view)) == to_string(ctx.portrait.id)
+
+      save(view)
+      assert Repo.get!(ArticleAuthor, ctx.author.id).portrait_id == ctx.portrait.id
+    end
+
+    defp open_author(%{conn: conn, article: article}) do
+      {view, _html} = live_form(conn, "/admin/articles/update/#{article.id}/author", "article_form")
+      view
+    end
+
+    defp intake(manager, deliver_topic) do
+      render_hook(manager, "intake", %{
+        "files" => [%{"index" => 0, "name" => "sample.jpg", "size" => 1_000, "type" => "image/jpeg"}],
+        "target" => %{
+          "kind" => "entry_field",
+          "field" => "portrait",
+          "path" => ["author"],
+          "asset_type" => "image",
+          "config_target" => "image:Brando.SyncTest.ArticleAuthor:portrait",
+          "deliver_topic" => deliver_topic
+        }
+      })
+
+      [ref] = :sys.get_state(manager.pid).socket.assigns.items |> Map.keys()
+      ref
+    end
+
+    defp file(name), do: %{name: name, content: File.read!(@fixture), type: "image/jpeg"}
+
+    defp author_portrait_id(html) do
+      html
+      |> Floki.parse_document!()
+      |> Floki.find(@author_portrait)
+      |> Floki.attribute("value")
+      |> List.first()
+    end
   end
 
   defp edit_row_label(view) do

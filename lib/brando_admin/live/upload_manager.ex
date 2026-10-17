@@ -926,8 +926,14 @@ defmodule BrandoAdmin.UploadManager do
 
   # Entry-field images must carry their (possibly nested) field path into the
   # Oban job — the [:image, :updated] broadcast routes by it, and an empty
-  # path never reaches nested (subform) fields. The worker converts string
+  # path never reaches nested (subform) fields. The target's `path` is the
+  # form the field is in, so the field goes on the end: `[:author]` alone
+  # reads as the entry's own `author` field. The worker converts string
   # segments back through existing atoms only.
+  defp image_field_path(%{"kind" => "entry_field", "path" => path, "field" => field})
+       when is_list(path) and is_binary(field),
+       do: path ++ [field]
+
   defp image_field_path(%{"kind" => "entry_field", "path" => path}) when is_list(path), do: path
   defp image_field_path(_target), do: []
 
