@@ -670,8 +670,8 @@ defmodule Brando.HTML do
   Existing applications should copy the corresponding `server` settings into
   their Vite configs. A Vite-only `.env` file does not configure the Phoenix
   process. `mix brando.install` starts both dev servers from the endpoint's
-  `watchers` in `config/dev.exs`. In development, the page shows a notice when
-  a dev server's scripts do not load.
+  `watchers` in `config/dev.exs`, through `Brando.Vite`. In development, the
+  page shows a notice when a dev server's scripts fail to load.
 
   These values are read at render time, rather than through application config,
   because they only configure development servers and must agree with Vite's
@@ -847,13 +847,14 @@ defmodule Brando.HTML do
     <template id={@id}>
       <div class="brando-assets-notice" role="alert">
         <%= if @origin do %>
-          <strong>{@label} assets not reachable at {@origin}</strong>
+          <strong>{@label} assets failed to load from {@origin}</strong>
           <p>
-            <code>mix phx.server</code>
-            starts the Vite dev server in <code>{@dir}</code>
-            through the endpoint's <code>watchers</code>
-            in <code>config/dev.exs</code>. Its log says why Vite did not start, for example a port
-            another site's Vite holds. Or build the assets there with <code>pnpm build</code>
+            Either the Vite dev server for <code>{@dir}</code>
+            is not running, or it could not compile a module: check the terminal it runs in. <code>mix phx.server</code>
+            starts it when the endpoint's <code>watchers</code>
+            in <code>config/dev.exs</code>
+            include <code>Brando.Vite</code>; otherwise run <code>pnpm dev</code>
+            in <code>{@dir}</code>. Or build the assets there with <code>pnpm build</code>
             and set <code>config :{@otp_app}, hmr: false</code>.
           </p>
         <% else %>
@@ -861,8 +862,7 @@ defmodule Brando.HTML do
           <p>
             There is no <code>priv/static/admin_manifest.json</code>. Build them with <code>pnpm build</code>
             in <code>{@dir}</code>, or set <code>config :{@otp_app}, hmr: true</code>
-            to use the Vite dev server that <code>mix phx.server</code>
-            starts.
+            to use its Vite dev server.
           </p>
         <% end %>
       </div>

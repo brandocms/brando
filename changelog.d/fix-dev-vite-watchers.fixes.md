@@ -28,10 +28,12 @@
   exported where both Phoenix and Vite read them ("Vite dev servers" in
   `guides/generators.md`).
 
-- **The site shows a notice in development when its Vite dev server is
-  unreachable**, as the admin does, instead of a blank page.
+- **The site shows a notice in development when its Vite dev server's
+  scripts fail to load** (#3227), as the admin does, instead of a blank page.
+  Both notices name the two causes, a dev server that is not running or a
+  module it cannot compile, and both ways of running it.
 
-- **A fresh admin build no longer warns that chunks are larger than 500 kB**.
-  The generated admin Vite config sets `build.chunkSizeWarningLimit` to
-  3072 kB: the admin is one bundle loaded once per session, and the warning
-  had nothing for an application to act on.
+- **A fresh admin build no longer warns that chunks are larger than 500 kB**
+  (#3227). The generated admin Vite config sets `build.chunkSizeWarningLimit`
+  to 3072 kB: the admin is one bundle loaded once per session, and the
+  warning had nothing for an application to act on.

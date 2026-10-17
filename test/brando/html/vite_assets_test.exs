@@ -78,7 +78,7 @@ defmodule Brando.HTML.ViteAssetsTest do
       html = render_component(&HTML.include_assets/1, admin: true)
 
       assert html =~ ~s(<template id="brando-admin-assets-notice">)
-      assert html =~ "Admin assets not reachable at http://localhost:3334"
+      assert html =~ "Admin assets failed to load from http://localhost:3334"
       assert html =~ "config :brando_html_vite_test, hmr: false"
       refute html =~ ~s|brandoAssetsMissing("brando-admin-assets-notice");|
     end
@@ -109,14 +109,18 @@ defmodule Brando.HTML.ViteAssetsTest do
     end
   end
 
-  describe "the notice when the site's Vite dev server is unreachable in development" do
+  describe "the notice when the site's dev server scripts fail to load in development" do
     test "waits for the dev server's scripts to fail, and names the server" do
       System.put_env("BRANDO_VITE_FRONTEND_PORT", "3001")
 
       for html <- [render_component(&HTML.include_assets/1), render_component(&HTML.include_assets/1, only_css: true)] do
         assert html =~ ~s(<template id="brando-site-assets-notice">)
-        assert html =~ "Site assets not reachable at http://localhost:3001"
+        assert html =~ "Site assets failed to load from http://localhost:3001"
         assert html =~ "<code>assets/frontend</code>"
+        # Both causes: no dev server, or one that fails to compile a module
+        assert html =~ "is not running, or it could not compile a module"
+        # Both setups: the Brando.Vite watchers, or a dev server run by hand
+        assert html =~ "include <code>Brando.Vite</code>; otherwise run <code>pnpm dev</code>"
         assert html =~ "config :brando_html_vite_test, hmr: false"
         refute html =~ ~s|brandoAssetsMissing("brando-site-assets-notice");|
       end

@@ -437,8 +437,9 @@ the log has Vite's own output and one error from `Brando.Vite` saying what to
 do. Phoenix carries on without that dev server and does not retry it; restart
 `mix phx.server` once it is fixed. With a taken port the page loads whatever
 answers there, which may be the other site's assets, so give each running site
-its own ports (below). If a dev server's scripts do not load at all, the admin
-or the site shows a notice naming the address it tried. Copy `strictPort` into
+its own ports (below). When a dev server's scripts fail to load, because it is
+not running or cannot compile a module, the admin or the site shows a notice
+naming the address it tried. Copy `strictPort` into
 the Vite configs of existing applications.
 
 To run two Brando sites at once, give one of them other ports. Export them in
