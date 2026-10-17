@@ -51,6 +51,9 @@ defmodule Mix.Brando.Install.Templates do
     {:copy, "dockerignore", ".dockerignore"},
     {:copy, "Dockerfile", "Dockerfile"},
 
+    # The toolchain, for asdf and mise (Mix.Brando.Igniter.Install)
+    {:copy, "tool-versions", ".tool-versions"},
+
     # Backend tooling
     {:copy, "assets/backend/europa.json5", "assets/backend/europa.json5"},
     {:copy, "assets/backend/package.json", "assets/backend/package.json"},

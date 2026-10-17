@@ -54,6 +54,7 @@ if Code.ensure_loaded?(Igniter) do
         |> Version.plan()
         |> Deployment.plan(project, hosts, deployment)
         |> Docker.plan(project)
+        |> toolchain()
         |> Release.plan(project, existing: :keep)
         |> support_files(project)
         |> AgentFiles.plan()
@@ -72,6 +73,17 @@ if Code.ensure_loaded?(Igniter) do
         {:error, %Igniter{} = igniter} -> igniter
         {:error, message} -> Igniter.add_issue(igniter, message)
       end
+    end
+
+    # asdf reads .tool-versions; mise reads it too, and its own files.
+    @toolchain_files ~w(.tool-versions .mise.toml mise.toml .config/mise.toml .config/mise/config.toml)
+
+    # Pins the toolchain Brando is tested with, so a plain `mix` or `pnpm` in
+    # the application uses it whatever the machine's global versions are.
+    defp toolchain(igniter) do
+      if Enum.any?(@toolchain_files, &Igniter.exists?(igniter, &1)),
+        do: igniter,
+        else: Files.create(igniter, ".tool-versions", Templates.contents(:copy, "tool-versions"))
     end
 
     defp public_site_options(options) do

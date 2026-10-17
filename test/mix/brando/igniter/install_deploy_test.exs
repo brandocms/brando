@@ -161,6 +161,35 @@ defmodule Mix.Brando.Igniter.InstallDeployTest do
     refute notice?(igniter, "  _build")
   end
 
+  test "the generated .gitignore covers what the Vite builds copy from public/ into priv/static" do
+    gitignore = install(project()) |> IgniterCase.source(".gitignore")
+    dir = Path.join(System.tmp_dir!(), "brando-gitignore-#{System.unique_integer([:positive])}")
+    File.mkdir_p!(dir)
+    on_exit(fn -> File.rm_rf!(dir) end)
+    File.write!(Path.join(dir, ".gitignore"), gitignore)
+    {_, 0} = System.cmd("git", ["init", "--quiet", dir])
+
+    # Each file the templates put in a public/ folder, the logo phx.new's moves
+    # to, and a file the site adds to its images.
+    copies =
+      for {format, _source, target} <- Templates.manifest(),
+          [_, rest] <- [Regex.run(~r{^assets/(?:backend|frontend)/public/(.+)$}, target)],
+          do: if(format == :keep, do: Path.join(rest, ".keep"), else: rest)
+
+    built = Enum.map(copies ++ ~w(images/logo.svg images/site/photo.jpg), &Path.join("priv/static", &1))
+    assert "priv/static/favicon.ico" in built
+    assert "priv/static/ico/favicon.ico" in built
+
+    for path <- built, do: assert({_, 0} = check_ignore(dir, [path]), path)
+
+    # The application's own sources stay tracked.
+    for path <- ~w(assets/frontend/public/favicon.ico assets/frontend/public/images/logo.svg priv/repo/seeds.exs) do
+      assert {_, 1} = check_ignore(dir, [path]), path
+    end
+  end
+
+  defp check_ignore(dir, args), do: System.cmd("git", ["-C", dir, "check-ignore", "--no-index" | args])
+
   test "an existing .gitignore gets only the Brando lines it does not cover" do
     phoenix = "/_build/\n/deps/\n*.ez\n"
     igniter = install(project(%{".gitignore" => phoenix}))
@@ -182,6 +211,50 @@ defmodule Mix.Brando.Igniter.InstallDeployTest do
     added = String.replace_prefix(IgniterCase.source(igniter, ".gitignore"), skeleton <> "log\n!/media/\n", "")
     assert added =~ "\n/media/\n"
     refute added =~ "/log/"
+  end
+
+  test "a new application gets a .tool-versions, unless it pins its toolchain already" do
+    igniter = install(project())
+    assert IgniterCase.source(igniter, ".tool-versions") == Templates.contents(:copy, "tool-versions")
+
+    rerun = igniter |> IgniterCase.apply_and_reload() |> install()
+    assert rerun.issues == []
+    Igniter.Test.assert_unchanged(rerun, ".tool-versions")
+
+    for {path, contents} <- [{".tool-versions", "elixir 1.19.5-otp-28\n"}, {".mise.toml", "[tools]\n"}] do
+      igniter = install(project(%{path => contents}))
+      assert igniter.issues == []
+      Igniter.Test.assert_unchanged(igniter, path)
+      if path != ".tool-versions", do: refute(Igniter.exists?(igniter, ".tool-versions"))
+    end
+  end
+
+  test "the .tool-versions template pins what the Dockerfile and asset templates build with" do
+    pins =
+      for line <- String.split(Templates.contents(:copy, "tool-versions"), "\n", trim: true), into: %{} do
+        [tool, version] = String.split(line)
+        {tool, version}
+      end
+
+    assert pins |> Map.keys() |> Enum.sort() == ~w(elixir erlang nodejs pnpm)
+
+    dockerfile = Templates.contents(:copy, "Dockerfile")
+    assert [_ | _] = pnpm = Regex.scan(~r/pnpm@(\S+)/, dockerfile, capture: :all_but_first)
+    assert Enum.uniq(pnpm) == [[pins["pnpm"]]]
+
+    for package <- ~w(assets/backend/package.json assets/frontend/package.json) do
+      assert Jason.decode!(Templates.contents(:copy, package))["packageManager"] == "pnpm@#{pins["pnpm"]}", package
+    end
+
+    assert [_ | _] = node = Regex.scan(~r/^FROM\s+node:(\d+)/m, dockerfile, capture: :all_but_first)
+    assert Enum.uniq(node) == [[pins["nodejs"] |> String.split(".") |> hd()]]
+
+    # Brando's own toolchain, which CI tests with.
+    mise = File.read!(".mise.toml")
+
+    for {tool, key} <- [{"erlang", "erlang"}, {"elixir", "elixir"}, {"nodejs", "node"}] do
+      assert mise =~ ~s(#{key} = "#{pins[tool]}"), tool
+    end
   end
 
   test "the release paths keep an application's own literal or runtime setting" do

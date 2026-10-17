@@ -160,8 +160,9 @@ directory; configure both paths to keep them elsewhere.
 The installer adds to `.gitignore` what a Brando application builds,
 uploads or downloads in its working folder and phx.new does not ignore: the
 asset projects' `node_modules`, Yalc copies (`.yalc/`, `yalc.lock`), the
-admin and site builds in `priv/static` (`assets/`, `fonts/`, `ico/`,
-`images/admin/` and the Vite and digest manifests), `/media/` (uploads),
+admin and site builds in `priv/static` (`assets/`, and `favicon.ico`,
+`fonts/`, `ico/` and `images/`, which Vite copies from the asset projects'
+`public/` folders, and the Vite and digest manifests), `/media/` (uploads),
 `/log/`, and Florist's `/release-archives/` and `/sql/` (database dumps).
 Lines an existing rule already covers are not added again.
 

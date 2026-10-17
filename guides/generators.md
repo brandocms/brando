@@ -30,6 +30,12 @@ mix igniter.new studio --with phx.new \
   --install brando@path:/absolute/path/to/brando
 ```
 
+This installs the admin and keeps Phoenix's homepage at `/`. A website, with
+public pages from the CMS, needs `--public-site --replace-phoenix-home` on
+`mix brando.install`, or `mix brando.gen.site --replace-phoenix-home` once the
+install is done (see [Add CMS public pages](#add-cms-public-pages)); following
+this guide without either ends with Phoenix's homepage.
+
 The archive supplies Igniter and invokes Brando's installer. Brando's optional
 modules automatically recompile if Igniter is added to an already compiled
 consumer. The one-shot archive currently fails when launched from inside an
@@ -145,6 +151,13 @@ for it. A literal version, inline or in `@version`, moves; an existing
 `VERSION` is kept, and `mix.exs` reads it when the two agree, with a notice when
 they don't. A `mix.exs` that computes its version another way is left as it is.
 
+An application with neither a `.tool-versions` nor a mise configuration gets a
+`.tool-versions`, which asdf and mise both read, pinning the toolchain above:
+Erlang 28.4.1, Elixir 1.20.3, Node.js 24 and pnpm 10.32.1 (the Node.js major
+and pnpm the Dockerfile's asset stages use). With asdf or mise, `mix` and `pnpm`
+in the application then run those versions whatever the machine's defaults
+are; `asdf install` or `mise install` installs any that are missing.
+
 ## Choose configuration
 
 A new install defaults to `none` without a prompt. Omitted flags on a rerun keep
@@ -158,8 +171,11 @@ mix brando.install --interactive
 
 `--interactive --tenancy-mode single` asks only for the missing site key.
 `--yes` accepts the diff; it neither enables guided questions nor permits replacing
-conflicting files. `--dry-run` previews source without applying it. Igniter 0.8 auto-accepts when
-stdin is redirected; use `--dry-run --yes` for unattended previews (including large diffs).
+conflicting files. `--dry-run` previews source without applying it. In a
+terminal, `--dry-run` asks how to show the diff, and option 1 prints all of it.
+Without a terminal, `--dry-run --yes` prints only the moves and removals of an
+install-sized diff. To review the whole change, commit the application before
+installing, install, and read `git diff` (with `git status` for the new files).
 `--no-tenancy-prompt` remains supported.
 
 Review `config/brando.exs` and your existing Phoenix database/endpoint settings.

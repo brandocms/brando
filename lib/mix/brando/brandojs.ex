@@ -15,6 +15,9 @@ defmodule Mix.Brando.BrandoJS do
 
   def package, do: @package
 
+  @doc "The spec of BrandoJS's Yalc copy in the admin's `.yalc`."
+  def yalc_spec, do: @yalc_spec
+
   @doc "The dependency spec a generated admin uses with Brando `version`."
   def spec(version \\ Brando.version()), do: if(development?(version), do: @yalc_spec, else: version)
 

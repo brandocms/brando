@@ -166,10 +166,21 @@ defmodule Mix.Tasks.Brando.Assets.Setup do
     Mix.shell().info("#{BrandoJS.package()} now comes from npm at #{version}.")
   end
 
+  # `--pure` copies the package into .yalc and yalc.lock only. Without it Yalc
+  # also writes a copy into node_modules, which pnpm then moves aside to
+  # node_modules/.ignored with a warning. pnpm installs the `file:` spec,
+  # written here instead of by Yalc, from the .yalc copy.
   defp yalc_add(backend, source) do
     store = Mix.Project.build_path() |> Path.join("brando_yalc") |> Path.expand()
     run!("yalc", ["publish", "--store-folder", store], source)
-    run!("yalc", ["add", BrandoJS.package(), "--store-folder", store], backend)
+    run!("yalc", ["add", BrandoJS.package(), "--pure", "--store-folder", store], backend)
+
+    package = Path.join(backend, "package.json")
+    contents = File.read!(package)
+    yalc_spec = BrandoJS.yalc_spec()
+
+    if BrandoJS.dependency(Jason.decode!(contents)) != yalc_spec,
+      do: File.write!(package, BrandoJS.put_spec(contents, yalc_spec))
   end
 
   defp brandojs_dir!(dir, hint) do
