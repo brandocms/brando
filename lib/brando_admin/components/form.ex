@@ -702,15 +702,14 @@ defmodule BrandoAdmin.Components.Form do
 
     changeset =
       socket.assigns.form.source
-      |> EctoNestedChangeset.update_at(path ++ [relation_key], fn _ -> nil end)
+      |> put_key_at(path, relation_key, nil)
       |> put_asset_in_data(path, field, nil)
 
     {:ok,
      socket
      |> put_local_form(to_form(changeset, []))
      |> update_entry_with_relation(path ++ [field], nil)
-     |> send_relation_to_blocks(path, field, nil)
-     |> update_entry_assocs(path ++ [field], nil)
+     |> relation_changed(path, field, nil)
      |> own_asset(path, relation_key, :id)
      |> ship_all_field_changes()
      |> push_event("b:validate", %{})}
@@ -720,7 +719,7 @@ defmodule BrandoAdmin.Components.Form do
         %{event: "entry_field_upload_complete", expected_asset_id: expected, field: field, path: path} = assigns,
         socket
       ) do
-    current_id = EctoNestedChangeset.get_at(socket.assigns.form.source, path ++ [String.to_existing_atom("#{field}_id")])
+    current_id = get_shown(socket.assigns.form.source, path ++ [String.to_existing_atom("#{field}_id")])
 
     if Brando.Uploads.AssetIntent.current_selection?(expected, current_id) do
       update(Map.delete(assigns, :expected_asset_id), socket)
@@ -916,9 +915,6 @@ defmodule BrandoAdmin.Components.Form do
     force_live_preview_update =
       live_preview_active? && Map.get(params, :force_live_preview_update, false)
 
-    fields_demanding_full_live_preview_rerender =
-      socket.assigns.fields_demanding_full_live_preview_rerender
-
     # 1. Always update updated_entry_assocs (for live preview)
     socket = update_entry_assocs(socket, path, updated_relation)
     socket = if params[:draft_dirty], do: Drafts.dirty(socket), else: socket
@@ -939,17 +935,12 @@ defmodule BrandoAdmin.Components.Form do
         socket
       end
 
-    # 5. Always handle live preview
-    lp_path = live_preview_path(path)
-
-    full_rerender? =
-      live_preview_active? &&
-        Enum.any?(fields_demanding_full_live_preview_rerender, &(&1 == lp_path))
-
+    # 5. Always handle live preview. A forced update queued after a full
+    # rerender merges into it.
     socket
-    |> maybe_invalidate_live_preview_assign(lp_path)
-    |> maybe_full_rerender_live_preview(full_rerender?)
-    |> maybe_force_live_preview_update(full_rerender?, force_live_preview_update)
+    |> maybe_invalidate_live_preview_assign(path)
+    |> maybe_rerender_live_preview_for(path_to_strings(path))
+    |> then(&if(force_live_preview_update, do: fetch_root_blocks(&1, :live_preview_update, 0), else: &1))
     |> then(&{:ok, &1})
   end
 
@@ -994,6 +985,7 @@ defmodule BrandoAdmin.Components.Form do
     |> assign(:blocks_detached?, true)
     |> assign(:working_copy, Map.get(message, :revision))
     |> put_local_form(to_form(changeset, []))
+    |> rebuild_preview_relations()
     |> assign_entry_for_blocks()
     |> clear_blocks_root_changesets()
     |> force_svelte_remounts(:all)
@@ -1029,6 +1021,7 @@ defmodule BrandoAdmin.Components.Form do
      socket
      |> assign(:entry, updated_entry)
      |> put_form(to_form(new_changeset, []))
+     |> rebuild_preview_relations()
      |> clear_owned_assets()
      |> remount_block_fields()
      |> force_svelte_remounts(:all)}
@@ -1314,6 +1307,7 @@ defmodule BrandoAdmin.Components.Form do
      socket
      |> assign(:entry, updated_entry)
      |> put_form(to_form(updated_changeset))
+     |> rebuild_preview_relations()
      |> clear_owned_assets()
      |> force_svelte_remounts(:all)}
   end
@@ -1877,7 +1871,7 @@ defmodule BrandoAdmin.Components.Form do
       |> put_asset_in_data(path, field, asset)
 
     socket
-    |> send_relation_to_blocks(path, field, asset)
+    |> relation_changed(path, field, asset)
     |> put_local_form(to_form(updated_changeset, []))
     |> update_entry_with_relation(path ++ [field], asset)
     |> own_asset(path, relation_key, :id)
@@ -1947,7 +1941,57 @@ defmodule BrandoAdmin.Components.Form do
   # asset in `data` the field kept showing the previous asset until some later
   # validate happened to re-render it.
   defp put_asset_in_data(changeset, [], field, asset), do: %{changeset | data: Map.put(changeset.data, field, asset)}
+
+  # A one-to-one subform's struct (`[:author]`) or a subform row
+  # (`[:vars, 0]`), found as `struct_at/2` finds it. It goes in its pending
+  # changeset and in `data` (a row by id): a subform with no changes is only
+  # in `data`, and `put_assoc` drops an unchanged one.
+  defp put_asset_in_data(changeset, [key | path], field, asset) when is_atom(key) do
+    case subform_struct(Map.get(changeset.changes, key, Map.get(changeset.data, key)), path) do
+      {%{} = shown, rest} when not is_struct(shown, Ecto.Association.NotLoaded) ->
+        put = &put_asset_in_data(Changeset.change(&1), rest, field, asset)
+        id = shown |> Changeset.change() |> Changeset.get_field(:id)
+
+        %{
+          changeset
+          | changes: put_in_subform_changes(changeset.changes, key, shown, put),
+            data: put_in_subform_data(changeset.data, key, id, put)
+        }
+
+      _ ->
+        changeset
+    end
+  end
+
   defp put_asset_in_data(changeset, _nested_path, _field, _asset), do: changeset
+
+  # Rows are counted as `inputs_for` counts them (`form_row_at/2`).
+  defp subform_struct(rows, [index | rest]) when is_list(rows) and is_integer(index),
+    do: {form_row_at(rows, index), rest}
+
+  defp subform_struct(rows, _path) when is_list(rows), do: nil
+  defp subform_struct(one, path), do: {one, path}
+
+  defp put_in_subform_changes(changes, key, shown, put) do
+    case changes do
+      %{^key => rows} when is_list(rows) -> %{changes | key => Enum.map(rows, &if(&1 == shown, do: put.(&1), else: &1))}
+      %{^key => ^shown} -> %{changes | key => put.(shown)}
+      changes -> changes
+    end
+  end
+
+  defp put_in_subform_data(data, key, id, put) do
+    case Map.get(data, key) do
+      rows when is_list(rows) and not is_nil(id) ->
+        Map.put(data, key, Enum.map(rows, &if(&1.id == id, do: put.(&1).data, else: &1)))
+
+      %{} = one when not is_struct(one, Ecto.Association.NotLoaded) ->
+        Map.put(data, key, put.(one).data)
+
+      _ ->
+        data
+    end
+  end
 
   # Append a delivered asset to the gallery assoc: existing objects are
   # slimmed to plain maps (put_assoc with mixed nil-ID structs would raise
@@ -2004,7 +2048,7 @@ defmodule BrandoAdmin.Components.Form do
     if path == [] do
       put_assoc(changeset, key, gallery_changeset)
     else
-      EctoNestedChangeset.update_at(changeset, path ++ [key], fn _ -> gallery_changeset end)
+      put_key_at(changeset, path, key, gallery_changeset)
     end
   end
 
@@ -2028,7 +2072,7 @@ defmodule BrandoAdmin.Components.Form do
   defp forget_unsaved_objects(gallery), do: gallery
 
   defp gallery_at(changeset, [], key), do: get_field(changeset, key)
-  defp gallery_at(changeset, path, key), do: EctoNestedChangeset.get_at(changeset, path ++ [key])
+  defp gallery_at(changeset, path, key), do: get_shown(changeset, path ++ [key])
 
   # -- Server-owned asset fields --
   #
@@ -2213,6 +2257,22 @@ defmodule BrandoAdmin.Components.Form do
 
   defp update_entry_assocs(socket, _nested_path, _updated_relation), do: socket
 
+  # A drawer save changes the asset an entry field shows, and the entry the
+  # next `validate` casts onto; the preview's copy of it follows, and the
+  # triggers declared on the field fire (the `validate` names only its key).
+  defp refresh_asset_in_preview(socket, path, field, asset) do
+    full_path = path ++ [field]
+
+    socket =
+      if path == [] and Map.has_key?(socket.assigns.updated_entry_assocs, field),
+        do: update_entry_assocs(socket, full_path, asset),
+        else: socket
+
+    socket
+    |> maybe_invalidate_live_preview_assign(full_path)
+    |> maybe_rerender_live_preview_for(path_to_strings(full_path))
+  end
+
   # Transformer changeset updates are now handled by the Transformer component
 
   defp set_thumbnail_elsewhere(socket, video_id, image_id) do
@@ -2289,20 +2349,6 @@ defmodule BrandoAdmin.Components.Form do
     end
   end
 
-  defp live_preview_path(path), do: path
-
-  defp maybe_force_live_preview_update(socket, true, _) do
-    socket
-  end
-
-  defp maybe_force_live_preview_update(socket, false, true) do
-    fetch_root_blocks(socket, :live_preview_update, 0)
-  end
-
-  defp maybe_force_live_preview_update(socket, _, _) do
-    socket
-  end
-
   defp maybe_full_rerender_live_preview(
          %{assigns: %{has_blocks?: false, live_preview_active?: true}} = socket,
          true
@@ -2322,10 +2368,6 @@ defmodule BrandoAdmin.Components.Form do
 
   defp maybe_full_rerender_live_preview(%{assigns: %{has_blocks?: true}} = socket, true) do
     fetch_root_blocks(socket, :live_preview_full_rerender, 0)
-  end
-
-  defp maybe_full_rerender_live_preview(socket, false) do
-    socket
   end
 
   defp maybe_assign_block_map(socket) do
@@ -3010,6 +3052,12 @@ defmodule BrandoAdmin.Components.Form do
           else: Map.update(replaced, field, [stale], &Enum.take(Enum.uniq([stale | &1]), 5))
       end)
 
+    # An asset arrives as its key (`:cover_id`); the relation (`:cover`) is
+    # what this editor's own pick reports, the preview merges and the blocks
+    # read.
+    assets = for field <- fields, {name, _schema} <- [asset_fk_map[field]], do: name
+    relations = remote_relations(changeset.data.__struct__, fields)
+
     socket
     |> put_form(to_form(changeset, []))
     |> assign(:replaced_values, replaced)
@@ -3019,7 +3067,111 @@ defmodule BrandoAdmin.Components.Form do
     |> own_changed_assets(fields)
     |> Drafts.dirty()
     |> force_svelte_remounts(fields)
-    |> preview_changed_fields(fields)
+    |> put_remote_assets_on_entry(changeset, assets)
+    |> put_remote_relations_in_preview(changeset, relations, asset_fk_map)
+    |> send_remote_fields_to_blocks(changeset, fields ++ assets)
+    |> preview_changed_fields(fields ++ Enum.map(relations, & &1.field))
+  end
+
+  # The preview merges `updated_entry_assocs` over the changeset, so a
+  # relation this editor picked earlier would hide the one another editor
+  # picked now. An asset's record is in the changeset already
+  # (`apply_field_change/3`); another relation loaded in it is the old one,
+  # and one not loaded the preview preloads by its key.
+  defp put_remote_relations_in_preview(socket, changeset, relations, asset_fk_map) do
+    Enum.reduce(relations, socket, fn %{field: name, owner_key: key} = assoc, socket ->
+      stale? =
+        Map.has_key?(socket.assigns.updated_entry_assocs, name) or
+          (not Map.has_key?(asset_fk_map, key) and Ecto.assoc_loaded?(Map.get(changeset.data, name)))
+
+      if stale?,
+        do: update_entry_assocs(socket, [name], remote_relation(socket, changeset, assoc, asset_fk_map)),
+        else: socket
+    end)
+  end
+
+  defp remote_relation(socket, changeset, %{field: name, owner_key: key} = assoc, asset_fk_map) do
+    if Map.has_key?(asset_fk_map, key),
+      do: Map.get(changeset.data, name),
+      else: load_relation(socket, assoc, Changeset.get_field(changeset, key))
+  end
+
+  # A relation a select sets (`update_relation: {relation, fetcher}`) is
+  # fetched as this editor's own pick is (`Select.fetch_relation/2`, with the
+  # option's value as the browser sends it), so it has what the fetcher
+  # preloads; another is loaded by its key.
+  defp load_relation(_socket, _assoc, nil), do: nil
+
+  defp load_relation(socket, %{field: name, owner_key: key, related: related, related_key: related_key}, value) do
+    case relation_fetcher(socket.assigns[:form_blueprint], key, name) do
+      nil -> Brando.Repo.get_by(related, [{related_key, value}])
+      fetcher -> Select.fetch_relation(to_string(value), fetcher)
+    end
+  end
+
+  # The relations the preview merges over the changeset, rebuilt when the
+  # form's changeset is replaced wholesale (a revision, a recovery copy, a
+  # translation, the entry reloaded): only a relation the changeset holds
+  # for another key than its own, loaded for that key. The rest the preview
+  # reads from the changeset, as at mount.
+  defp rebuild_preview_relations(socket) do
+    changeset = socket.assigns.form.source
+    schema = changeset.data.__struct__
+
+    relations =
+      for name <- schema.__schema__(:associations),
+          %Ecto.Association.BelongsTo{} = assoc <- [schema.__schema__(:association, name)],
+          stale_relation?(changeset, assoc),
+          into: %{},
+          do: {name, load_relation(socket, assoc, Changeset.get_field(changeset, assoc.owner_key))}
+
+    assign(socket, :updated_entry_assocs, relations)
+  end
+
+  defp stale_relation?(changeset, %{field: name, owner_key: key, related_key: related_key}) do
+    case Map.get(changeset.data, name) do
+      %Ecto.Association.NotLoaded{} -> false
+      nil -> not is_nil(Changeset.get_field(changeset, key))
+      held -> Map.get(held, related_key) != Changeset.get_field(changeset, key)
+    end
+  end
+
+  defp relation_fetcher(%BlueprintForms.Form{} = form_blueprint, key, relation) do
+    with %BlueprintForms.Input{name: ^key, type: :select, opts: opts} <- BlueprintForms.get_field(key, form_blueprint),
+         {^relation, fetcher} when is_function(fetcher, 1) <- Keyword.get(opts, :update_relation) do
+      fetcher
+    else
+      _ -> nil
+    end
+  end
+
+  defp relation_fetcher(_form_blueprint, _key, _relation), do: nil
+
+  # The next `validate` casts onto the entry, so an asset another editor
+  # picked goes on it too, as this editor's own pick does
+  # (`commit_entry_field_asset/4`).
+  defp put_remote_assets_on_entry(socket, changeset, assets) do
+    Enum.reduce(assets, socket, &update_entry_with_relation(&2, [&1], Map.get(changeset.data, &1)))
+  end
+
+  # The blocks that read the entry follow another editor's change as they
+  # follow this editor's typing (`send_target_to_blocks/3`).
+  defp send_remote_fields_to_blocks(socket, changeset, fields) do
+    entry = apply_changes(changeset)
+
+    Enum.reduce(fields, socket, fn field, socket ->
+      send_updated_entry_field_to_blocks(socket, [Access.key(field)], Map.get(entry, field), to_string(field))
+    end)
+  end
+
+  # The `belongs_to` associations whose foreign keys are among `fields`. A
+  # preview option names a relation (`[:cover]`, `[:category]`) as this
+  # editor's own pick reports it (`update_entry_relation`).
+  defp remote_relations(schema, fields) do
+    for name <- schema.__schema__(:associations),
+        %Ecto.Association.BelongsTo{owner_key: key} = assoc <- [schema.__schema__(:association, name)],
+        key in fields,
+        do: assoc
   end
 
   # The open live preview follows another editor's changes as it follows
@@ -5096,17 +5248,16 @@ defmodule BrandoAdmin.Components.Form do
         %{assigns: %{form: form, edit_video: edit_video, entry: entry, singular: singular}} = socket
       ) do
     relation_key = relation_field_key(edit_video.relation_field, edit_video.field)
-    full_path = edit_video.path ++ [relation_key]
 
     changeset =
       form.source
-      |> EctoNestedChangeset.update_at(full_path, fn _ -> nil end)
+      |> put_key_at(edit_video.path, relation_key, nil)
       |> put_asset_in_data(edit_video.path, edit_video.field, nil)
 
     {:noreply,
      socket
      |> assign(:entry, Map.put(entry, edit_video.field, nil))
-     |> send_relation_to_blocks(edit_video.path, edit_video.field, nil)
+     |> relation_changed(edit_video.path, edit_video.field, nil)
      |> assign(:video_changeset, nil)
      |> assign(:editing_video?, false)
      |> assign(:edit_video, %{edit_video | video: nil})
@@ -5208,11 +5359,10 @@ defmodule BrandoAdmin.Components.Form do
       ) do
     changeset = form.source
     relation_key = relation_field_key(edit_file.relation_field, edit_file.field)
-    full_path = edit_file.path ++ [relation_key]
 
     updated_changeset =
       changeset
-      |> EctoNestedChangeset.update_at(full_path, fn _ -> nil end)
+      |> put_key_at(edit_file.path, relation_key, nil)
       |> put_asset_in_data(edit_file.path, edit_file.field, nil)
 
     updated_edit_file = Map.put(edit_file, :file, nil)
@@ -5220,7 +5370,7 @@ defmodule BrandoAdmin.Components.Form do
     {:noreply,
      socket
      |> assign(:entry, Map.put(entry, edit_file.field, nil))
-     |> send_relation_to_blocks(edit_file.path, edit_file.field, nil)
+     |> relation_changed(edit_file.path, edit_file.field, nil)
      |> assign(:file_changeset, nil)
      # `reset_file_field/2` closes the drawer (`toggle_drawer`), so the flag has
      # to come down with it — leaving it set stranded the main save behind
@@ -5244,11 +5394,10 @@ defmodule BrandoAdmin.Components.Form do
       ) do
     changeset = form.source
     relation_key = relation_field_key(edit_image.relation_field, edit_image.field)
-    full_path = edit_image.path ++ [relation_key]
 
     updated_changeset =
       changeset
-      |> EctoNestedChangeset.update_at(full_path, fn _ -> nil end)
+      |> put_key_at(edit_image.path, relation_key, nil)
       |> put_asset_in_data(edit_image.path, edit_image.field, nil)
 
     updated_edit_image = Map.put(edit_image, :image, nil)
@@ -5256,7 +5405,7 @@ defmodule BrandoAdmin.Components.Form do
     {:noreply,
      socket
      |> assign(:entry, Map.put(entry, edit_image.field, nil))
-     |> send_relation_to_blocks(edit_image.path, edit_image.field, nil)
+     |> relation_changed(edit_image.path, edit_image.field, nil)
      |> assign(:image_changeset, nil)
      # Same as reset_file_field above — this closes the image drawer, so the
      # guard flag must come down or the entry can never be saved again.
@@ -5396,6 +5545,7 @@ defmodule BrandoAdmin.Components.Form do
       |> apply_changes()
       |> change()
       |> EctoNestedChangeset.update_at(full_path, fn _ -> file.id end)
+      |> put_asset_in_data(path, field, updated_file)
 
     updated_entry = Map.put(entry_or_default, field, updated_file)
 
@@ -5412,6 +5562,7 @@ defmodule BrandoAdmin.Components.Form do
      # changes into data, leaving nothing for ship_all_field_changes to see
      |> ship_all_field_changes()
      |> assign(:entry, updated_entry)
+     |> refresh_asset_in_preview(path, field, updated_file)
      |> put_form(to_form(updated_changeset, []))
      |> assign(:file_changeset, validated_changeset)
      |> assign(:editing_file?, false)
@@ -5583,6 +5734,7 @@ defmodule BrandoAdmin.Components.Form do
       |> apply_changes()
       |> change()
       |> EctoNestedChangeset.update_at(relation_full_path, fn _ -> image.id end)
+      |> put_asset_in_data(path, field, updated_image)
 
     entrys_current_image = Brando.Utils.try_path(entry_or_default, field_full_path)
     access_field_full_path = Brando.Utils.build_access_path(field_full_path)
@@ -5616,6 +5768,7 @@ defmodule BrandoAdmin.Components.Form do
      # changes into data, leaving nothing for ship_all_field_changes to see
      |> ship_all_field_changes()
      |> assign(:entry, updated_entry)
+     |> refresh_asset_in_preview(path, field, Map.get(updated_entry, field))
      |> put_form(to_form(updated_changeset, []))
      |> assign(:image_changeset, validated_changeset)
      |> assign(:edit_image, edit_image)
@@ -5766,6 +5919,7 @@ defmodule BrandoAdmin.Components.Form do
       |> apply_changes()
       |> change()
       |> EctoNestedChangeset.update_at(relation_full_path, fn _ -> video.id end)
+      |> put_asset_in_data(path, field, updated_video)
 
     access_field_full_path = Brando.Utils.build_access_path(field_full_path)
     updated_entry = put_in(entry_or_default, access_field_full_path, updated_video)
@@ -5779,6 +5933,7 @@ defmodule BrandoAdmin.Components.Form do
      # changes into data, leaving nothing for ship_all_field_changes to see
      |> ship_all_field_changes()
      |> assign(:entry, updated_entry)
+     |> refresh_asset_in_preview(path, field, updated_video)
      |> put_form(to_form(updated_changeset, []))
      |> assign(:video_changeset, validated_changeset)
      |> assign(:edit_video, edit_video)
@@ -6794,6 +6949,7 @@ defmodule BrandoAdmin.Components.Form do
 
     socket
     |> put_local_form(form)
+    |> rebuild_preview_relations()
     |> own_changed_assets(Map.keys(changeset.changes))
     |> assign_entry_for_blocks()
     |> force_svelte_remounts(:all)
@@ -7387,6 +7543,7 @@ defmodule BrandoAdmin.Components.Form do
   def assign_refreshed_form(%{assigns: %{entry: entry, schema: schema, current_user: current_user}} = socket) do
     socket
     |> put_form(to_form(schema.changeset(entry, %{}, current_user), []))
+    |> rebuild_preview_relations()
     |> clear_owned_assets()
     |> clear_dirty_fields()
   end
@@ -7457,10 +7614,17 @@ defmodule BrandoAdmin.Components.Form do
   # An asset field's relation committed or cleared (a pick, an upload, a
   # removal). The form's own change is its `_id`, and the blocks that read the
   # entry read the relation (`{% picture entry.cover %}`), so they are sent
-  # the relation itself.
-  defp send_relation_to_blocks(socket, path, field, asset) do
+  # the relation itself. The preview merges it over the entry and fires the
+  # triggers declared on it (`[:cover]`), as for a relation the input reports
+  # (`update_entry_relation`).
+  defp relation_changed(socket, path, field, asset) do
     full_path = path ++ [field]
-    send_updated_entry_field_to_blocks(socket, Brando.Utils.build_access_path(full_path), asset, to_string(hd(full_path)))
+
+    socket
+    |> send_updated_entry_field_to_blocks(Brando.Utils.build_access_path(full_path), asset, to_string(hd(full_path)))
+    |> update_entry_assocs(full_path, asset)
+    |> maybe_invalidate_live_preview_assign(full_path)
+    |> maybe_rerender_live_preview_for(path_to_strings(full_path))
   end
 
   defp send_updated_entry_field_to_blocks(socket, path, change, field) do
@@ -8512,9 +8676,76 @@ defmodule BrandoAdmin.Components.Form do
 
   defp struct_at(_data, _path), do: nil
 
-  # The row at a form index: `inputs_for` leaves out a row being replaced and
-  # keeps one marked for deletion.
-  defp form_row_at(rows, index), do: rows |> Enum.reject(&match?(%Changeset{action: :replace}, &1)) |> Enum.at(index)
+  # The rows `inputs_for` shows, each with its index in the relation's own
+  # list: it leaves out a row being replaced and keeps one marked for deletion.
+  defp shown_rows(rows), do: rows |> Enum.with_index() |> Enum.reject(&match?({%Changeset{action: :replace}, _}, &1))
+
+  # The row at a form index.
+  defp form_row_at(rows, index) do
+    case Enum.at(shown_rows(rows), index) do
+      {row, _raw} -> row
+      nil -> nil
+    end
+  end
+
+  # A path as the form names it, rows counted as `struct_at/2` counts them,
+  # as `EctoNestedChangeset` reads it: its indexes count the relation's own
+  # list, where a row being replaced still is (first). `:error` when the
+  # form shows no such row (a path older than the rows).
+  defp nested_path(%Changeset{changes: changes, data: data}, [key, index | rest])
+       when is_atom(key) and is_integer(index) do
+    case Map.get(changes, key, Map.get(data, key)) do
+      rows when is_list(rows) ->
+        shown = rows |> shown_rows() |> Enum.at(index)
+
+        with {row, raw} <- shown || :error,
+             {:ok, rest} <- nested_path(row, rest),
+             do: {:ok, [key, raw | rest]}
+
+      _ ->
+        {:ok, [key, index | rest]}
+    end
+  end
+
+  defp nested_path(%Changeset{changes: changes, data: data}, [key | rest]) when is_atom(key) do
+    with {:ok, rest} <- nested_path(Map.get(changes, key, Map.get(data, key)), rest), do: {:ok, [key | rest]}
+  end
+
+  defp nested_path(_data, path), do: {:ok, path}
+
+  # What the form shows at a path (`EctoNestedChangeset.get_at/2` on the row
+  # the form shows there).
+  defp get_shown(changeset, path) do
+    case nested_path(changeset, path) do
+      {:ok, path} -> EctoNestedChangeset.get_at(changeset, path)
+      :error -> nil
+    end
+  end
+
+  # A value at a path as the form names it. EctoNestedChangeset writes a
+  # relation back with `put_assoc`, which raises for a row being replaced
+  # still in its changes (a row the editor removed), so a row there is
+  # changed in place. A path to a row the form no longer shows changes nothing.
+  defp put_key_at(changeset, [], key, value), do: Changeset.put_change(changeset, key, value)
+
+  defp put_key_at(%Changeset{changes: changes} = changeset, [field, index | rest] = path, key, value)
+       when is_atom(field) and is_integer(index) and is_list(:erlang.map_get(field, changes)) do
+    case nested_path(changeset, path) do
+      {:ok, [^field, raw | _]} ->
+        rows = List.update_at(changes[field], raw, &put_key_at(Changeset.change(&1), rest, key, value))
+        %{changeset | changes: %{changes | field => rows}}
+
+      :error ->
+        changeset
+    end
+  end
+
+  defp put_key_at(changeset, path, key, value) do
+    case nested_path(changeset, path) do
+      {:ok, _path} -> EctoNestedChangeset.update_at(changeset, path ++ [key], fn _ -> value end)
+      :error -> changeset
+    end
+  end
 
   # A field name, or the index of a subform row (`[:clients, 0]`).
   defp recovery_path_segment(index) when is_integer(index) and index >= 0, do: {:ok, index}
