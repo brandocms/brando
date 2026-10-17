@@ -18,3 +18,13 @@
   `absolute_url` that matches the route when the Blueprint has
   `absolute_url false`, and mentions `--public-route` only when it was not
   given.
+
+- **CMS-authored error pages render with the CMS page templates** (#3230).
+  With `use_default_errors: false`, `BrandoWeb.FallbackController` rendered
+  the 404 or 410 page's template (`default.html`, say) with the view of the
+  controller that found nothing, so from any controller but the page
+  controller it raised instead of rendering the 404; and running the
+  `:browser` pipeline put phx.new's root layout over the site's. It now
+  renders with `:page_html_module` (or `YourWeb.PageView`/`PageHTML`, as the
+  page template list finds them) in the root layout the controller had chosen.
+  The fallback's `put_namespace_layout` plug, which never ran, is removed.

@@ -2,15 +2,6 @@ defmodule BrandoWeb.FallbackController do
   use Phoenix.Controller, formats: [:html, :json]
 
   import Brando.Plug.HTML
-
-  plug :put_namespace_layout
-
-  def put_namespace_layout(conn, _opts) do
-    web_module = Brando.config(:web_module)
-    layout_module = Module.concat([web_module, :Layouts])
-    put_layout(conn, html: {layout_module, :app})
-  end
-
   import Plug.Conn
 
   alias Brando.I18n
@@ -67,8 +58,7 @@ defmodule BrandoWeb.FallbackController do
   end
 
   defp render_error_page(conn, 404) do
-    # run conn through :browser pipeline
-    conn = Brando.router().browser(conn, [])
+    conn = browser_pipeline(conn)
     path = conn.path_info
     {language, parsed_path} = I18n.parse_path(path)
 
@@ -96,13 +86,13 @@ defmodule BrandoWeb.FallbackController do
       |> assign(:partials, partials)
       |> assign(:page, page)
       |> assign(:parsed_path, parsed_path)
+      |> put_view(html: page_html_module())
       |> render(page.template)
     end
   end
 
   defp render_error_page(conn, 410) do
-    # run conn through :browser pipeline
-    conn = Brando.router().browser(conn, [])
+    conn = browser_pipeline(conn)
     path = conn.path_info
     {language, parsed_path} = I18n.parse_path(path)
 
@@ -129,7 +119,29 @@ defmodule BrandoWeb.FallbackController do
       |> assign(:partials, partials)
       |> assign(:page, page)
       |> assign(:parsed_path, parsed_path)
+      |> put_view(html: page_html_module())
       |> render(page.template)
+    end
+  end
+
+  # The page's controller chose the site's root layout; the :browser pipeline
+  # may put phx.new's over it.
+  defp browser_pipeline(conn) do
+    root_layout = root_layout(conn, "html")
+    conn = Brando.router().browser(conn, [])
+
+    if root_layout, do: put_root_layout(conn, html: root_layout), else: conn
+  end
+
+  # Error pages are CMS pages, whatever view the failing controller had. As
+  # `Brando.Pages.list_templates/0` finds their templates.
+  defp page_html_module do
+    page_view = Brando.web_module(PageView)
+
+    cond do
+      configured = Brando.config(:page_html_module) -> configured
+      Code.ensure_loaded?(page_view) -> page_view
+      true -> Brando.web_module(PageHTML)
     end
   end
 
