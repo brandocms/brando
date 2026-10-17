@@ -49,6 +49,12 @@ defmodule Brando.SyncTest.Article do
       on_replace: :delete,
       preload_order: [asc: :sequence],
       cast: true
+
+    # A one-to-one subform with an image field (SubformRelationTest)
+    relation :author, :has_one,
+      module: Brando.SyncTest.ArticleAuthor,
+      on_replace: :update,
+      cast: true
   end
 
   listings do
@@ -176,6 +182,26 @@ defmodule Brando.SyncTest.Article do
         end
       end
     end
+
+    # A one-to-one subform with an image field (SubformRelationTest). The
+    # automatic preloads leave out the subform's own assets.
+    form :author do
+      query %{preload: [:alternate_entries, author: :portrait]}
+
+      tab "Content" do
+        fieldset do
+          input :title, :text
+          input :slug, :slug, from: :title
+
+          inputs_for :author do
+            cardinality :one
+
+            input :name, :text
+            input :portrait, :image
+          end
+        end
+      end
+    end
   end
 end
 
@@ -214,6 +240,41 @@ defmodule Brando.SyncTest.ArticleItem do
       ]
 
     asset :clip, :video, cfg: :default
+  end
+
+  relations do
+    relation :article, :belongs_to, module: Brando.SyncTest.Article
+  end
+end
+
+defmodule Brando.SyncTest.ArticleAuthor do
+  @moduledoc false
+  use Brando.Blueprint,
+    application: "Brando",
+    domain: "SyncTest",
+    schema: "ArticleAuthor",
+    singular: "article_author",
+    plural: "article_authors",
+    gettext_module: Brando.Gettext
+
+  identifier false
+  persist_identifier false
+
+  attributes do
+    attribute :name, :string
+  end
+
+  assets do
+    asset :portrait, :image,
+      cfg: [
+        allowed_mimetypes: ["image/jpeg", "image/png"],
+        default_size: "medium",
+        upload_path: Path.join("images", "synced_authors"),
+        random_filename: true,
+        size_limit: 10_240_000,
+        sizes: %{"medium" => %{"size" => "500x500", "quality" => 65, "crop" => true}},
+        srcset: [{"medium", "500w"}]
+      ]
   end
 
   relations do

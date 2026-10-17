@@ -24,3 +24,9 @@
 # TEMPORARY (10 Oct 2026): expected fixed by moving the 1.19 leg off OTP 28.0;
 # remove after two weeks without a hit.
 beam-jit-crash log:\[asmjit\] Assertion failed at asmjit/core/jitallocator\.cpp.*exit code 134
+
+# The Hex registry timing out during `mix deps.get`: Hex falls back to its
+# cache, finds no record for a locked package and stops with "Unknown
+# package <name> in lockfile" before any code is compiled. Seen on #3219
+# (17 Oct 2026, polymorphic_embed); a rerun passes.
+hex-registry-timeout log:Failed to fetch record for [A-Za-z0-9_]+ from registry \(using cache instead\) :timeout .*\*\* \(Mix\) Unknown package [A-Za-z0-9_]+ in lockfile

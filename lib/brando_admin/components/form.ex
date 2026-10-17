@@ -1824,7 +1824,13 @@ defmodule BrandoAdmin.Components.Form do
   end
 
   defp commit_entry_field_asset(socket, field, path, asset) do
-    relation_key = String.to_existing_atom("#{field}_id")
+    case safe_to_existing_atom("#{field}_id") do
+      {:ok, relation_key} -> commit_entry_field_asset(socket, field, path, relation_key, asset)
+      _ -> socket
+    end
+  end
+
+  defp commit_entry_field_asset(socket, field, path, relation_key, asset) do
     full_path = path ++ [relation_key]
 
     updated_changeset =
@@ -4062,22 +4068,6 @@ defmodule BrandoAdmin.Components.Form do
             video_context={@video_context}
           />
 
-          <form
-            id={"#{@id}-drawer-recovery"}
-            phx-change="noop"
-            phx-auto-recover="recover_drawer_state"
-            phx-target={@myself}
-            class="hidden"
-          >
-            <input type="hidden" name="drawer[type]" value={@editing_drawer_type} />
-            <input type="hidden" name="drawer[resource_id]" value={@editing_resource_id} />
-            <input type="hidden" name="drawer[field]" value={@editing_field} />
-            <input type="hidden" name="drawer[path]" value={Jason.encode!(@editing_path || [])} />
-            <input type="hidden" name="drawer[schema]" value={@editing_schema} />
-            <input type="hidden" name="drawer[form_id]" value={@id} />
-            <input type="hidden" name="drawer[changes]" value={@editing_drawer_changes} />
-          </form>
-
           <.form
             id={"#{@id}_form"}
             class="main-form"
@@ -4147,6 +4137,17 @@ defmodule BrandoAdmin.Components.Form do
               schema={@schema}
             />
           </.form>
+
+          <.drawer_recovery_form
+            id={@id}
+            myself={@myself}
+            type={@editing_drawer_type}
+            resource_id={@editing_resource_id}
+            field={@editing_field}
+            path={@editing_path}
+            schema={@editing_schema}
+            changes={@editing_drawer_changes}
+          />
 
           <%!-- A heavy entry's block fields as outlines until its blocks
                 have loaded; `@block_map` is built from them. --%>
@@ -4309,6 +4310,43 @@ defmodule BrandoAdmin.Components.Form do
         </button>
       </div>
     </div>
+    """
+  end
+
+  attr :id, :string, required: true
+  attr :myself, :any, required: true
+  attr :type, :string
+  attr :resource_id, :any
+  attr :field, :string
+  attr :path, :list
+  attr :schema, :string
+  attr :changes, :string
+
+  @doc """
+  The hidden form that names the open image, video or file drawer, so that
+  `recover_drawer_state` can reopen it after a reconnect.
+
+  Render it after the main form: LiveView sends recovery events in document
+  order, and a drawer is only restored for a struct the form holds at its
+  path, so the main form has to recover its rows first.
+  """
+  def drawer_recovery_form(assigns) do
+    ~H"""
+    <form
+      id={"#{@id}-drawer-recovery"}
+      phx-change="noop"
+      phx-auto-recover="recover_drawer_state"
+      phx-target={@myself}
+      class="hidden"
+    >
+      <input type="hidden" name="drawer[type]" value={@type} />
+      <input type="hidden" name="drawer[resource_id]" value={@resource_id} />
+      <input type="hidden" name="drawer[field]" value={@field} />
+      <input type="hidden" name="drawer[path]" value={Jason.encode!(@path || [])} />
+      <input type="hidden" name="drawer[schema]" value={@schema} />
+      <input type="hidden" name="drawer[form_id]" value={@id} />
+      <input type="hidden" name="drawer[changes]" value={@changes} />
+    </form>
     """
   end
 
@@ -8326,15 +8364,18 @@ defmodule BrandoAdmin.Components.Form do
   @max_id 9_223_372_036_854_775_807
 
   # The drawer the recovery form names, read from browser params: an id, a
-  # blueprint schema, the field as an existing atom and the path to it.
-  # Anything else is not restored.
+  # blueprint schema, one of its asset fields of the drawer's type, and the
+  # path to that schema's struct in this form. Anything else is not restored:
+  # the restored drawer commits a pick as `<field>_id` at that path.
   defp with_drawer_target(socket, params, restore) do
     with id when is_binary(id) <- params["resource_id"],
          {resource_id, ""} when resource_id in 1..@max_id//1 <- Integer.parse(id),
-         {:ok, field} <- existing_atom(params["field"]),
          schema when is_binary(schema) <- params["schema"],
+         {:ok, %{name: field, type: type}} <- Brando.Assets.ConfigTarget.blueprint_asset(schema, params["field"]),
+         true <- Atom.to_string(type) == params["type"],
          {:ok, schema} <- Brando.Assets.ConfigTarget.schema_module(schema),
-         {:ok, path} <- decode_recovery_path(params["path"]) do
+         {:ok, path} <- decode_recovery_path(params["path"]),
+         %^schema{} <- form_struct_at(socket.assigns[:form], path) do
       target = %{
         id: resource_id,
         path: path,
@@ -8487,6 +8528,31 @@ defmodule BrandoAdmin.Components.Form do
   end
 
   defp decode_recovery_path(_), do: {:ok, []}
+
+  # The struct a path names in the form: the entry, a one-to-one subform's
+  # struct, or a subform row.
+  defp form_struct_at(%Phoenix.HTML.Form{source: %Changeset{} = changeset}, path), do: struct_at(changeset, path)
+  defp form_struct_at(_form, _path), do: nil
+
+  # Rows are counted as `inputs_for` counts them: a row being replaced is not
+  # in the form, a row marked for deletion is.
+  defp struct_at(%Changeset{action: :replace}, _path), do: nil
+  defp struct_at(%Changeset{data: data}, []), do: data
+  defp struct_at(data, []), do: data
+
+  defp struct_at(%Changeset{changes: changes, data: data}, [key | rest]) when is_atom(key),
+    do: struct_at(Map.get(changes, key, Map.get(data, key)), rest)
+
+  defp struct_at(%{} = data, [key | rest]) when is_atom(key), do: struct_at(Map.get(data, key), rest)
+
+  defp struct_at(rows, [index | rest]) when is_list(rows) and is_integer(index) do
+    rows
+    |> Enum.reject(&match?(%Changeset{action: :replace}, &1))
+    |> Enum.at(index)
+    |> struct_at(rest)
+  end
+
+  defp struct_at(_data, _path), do: nil
 
   # A field name, or the index of a subform row (`[:clients, 0]`).
   defp recovery_path_segment(index) when is_integer(index) and index >= 0, do: {:ok, index}
