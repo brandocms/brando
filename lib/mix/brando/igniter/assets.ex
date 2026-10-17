@@ -493,7 +493,8 @@ if Code.ensure_loaded?(Igniter) do
         Igniter.add_notice(igniter, """
         The Dockerfile's deps stage builds on #{current}, older than the #{wanted} of Brando's Dockerfile, and this task does not change FROM lines. \
         An image with Elixir older than 1.18 cannot compile Brando: change the line to the variant for the server's Ubuntu release, \
-        #{wanted} (or #{wanted}-noble) for Ubuntu 24.04 or #{wanted}-jammy for Ubuntu 22.04.#{server_notice(have, want, current)} \
+        #{wanted} (or #{wanted}-noble) for Ubuntu 24.04, #{wanted}-jammy for Ubuntu 22.04 or #{wanted}-focal for Ubuntu 20.04, \
+        whose Elixir and OTP are older than Brando's toolchain.#{server_notice(have, want, current, wanted)} \
         See "The Docker build" in Brando's guides/deployment.md.
         """)
       else
@@ -501,12 +502,12 @@ if Code.ensure_loaded?(Igniter) do
       end
     end
 
-    defp server_notice({have_major, _}, {want_major, _} = want, current) when have_major < want_major do
-      " #{current} is Ubuntu 20.04 or older, and no fehn #{elem(want, 0)}.#{elem(want, 1)} variant runs on such a server: " <>
-        "upgrade it to Ubuntu 22.04 or 24.04, or provision a new one, before deploying a release built on the new image."
+    defp server_notice({have_major, _}, {want_major, _}, current, wanted) when have_major < want_major do
+      " #{current} is Ubuntu 20.04 or older: on a 20.04 server use #{wanted}-focal and pin its Elixir and OTP, " <>
+        "or better, upgrade the server to Ubuntu 22.04 or 24.04."
     end
 
-    defp server_notice(_have, _want, _current), do: ""
+    defp server_notice(_have, _want, _current, _wanted), do: ""
 
     defp fehn_version(image) when is_binary(image) do
       case Regex.run(~r{^(?:docker\.io/)?twined/fehn:(\d+)\.(\d+)(?:-[a-z]+)?$}, image) do

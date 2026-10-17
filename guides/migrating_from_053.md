@@ -189,15 +189,18 @@ Pin the toolchain with mise or asdf:
 - `twined/fehn:4.2` for the release build. A 0.53 or 0.54 Dockerfile builds on
   `twined/fehn:3.9` (Elixir 1.15) or `3.10` (Elixir 1.17), which cannot compile
   Brando's `~> 1.18`. Change its `FROM --platform=linux/amd64 twined/fehn:<tag>
-  as deps` line to the fehn 4.2 variant (Elixir 1.20.4 on OTP 28.5.0.8) for
-  the server's Ubuntu release: `twined/fehn:4.2` (or `4.2-noble`) for Ubuntu
-  24.04, `twined/fehn:4.2-jammy` for Ubuntu 22.04. There is none for Ubuntu
-  20.04, which fehn 3.x built on: a release built on 4.2 does not start there,
-  so upgrade such a server to 22.04 or 24.04, or provision a new one, before
-  the first deploy of the upgraded site. `mix brando.gen.backend --upgrade`
-  rewrites other parts of the Dockerfile but not `FROM`, and names an older
-  tag in a notice. [The Docker build](deployment.md#the-docker-build) has the
-  variants and how to check a server.
+  as deps` line to the fehn 4.2 variant for the server's Ubuntu release, since
+  a release starts only on a server with the image's glibc and OpenSSL:
+  `twined/fehn:4.2` (or `4.2-noble`) for Ubuntu 24.04 and
+  `twined/fehn:4.2-jammy` for Ubuntu 22.04, both Elixir 1.20.4 on OTP
+  28.5.0.8. fehn 3.x built on Ubuntu 20.04, whose variant,
+  `twined/fehn:4.2-focal`, has Elixir 1.19.5 on OTP 28.4.3: on it, pin those
+  versions instead, or better, upgrade the server to 22.04 or 24.04 (or move
+  to a new one) before the first deploy of the upgraded site.
+  `mix brando.gen.backend --upgrade` rewrites other parts of the Dockerfile
+  but not `FROM`, and names an older tag in a notice.
+  [The Docker build](deployment.md#the-docker-build) has the variants and how
+  to check a server.
 
 `scripts/prepare_055_deps.exs` and `mix brando.doctor` print the `node` on the
 PATH and warn when it is an odd release or older than the one Brando is tested

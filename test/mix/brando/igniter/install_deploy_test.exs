@@ -408,9 +408,13 @@ defmodule Mix.Brando.Igniter.InstallDeployTest do
     assert Enum.uniq(node) == [[pins["nodejs"] |> String.split(".") |> hd()]]
 
     # The Erlang and Elixir each twined/fehn tag the Dockerfile may build on
-    # has (4.2 and 4.2-noble are Ubuntu 24.04, 4.2-jammy Ubuntu 22.04); a new
-    # tag goes here when the pins move to it.
-    fehn = Map.new(~w(4.2 4.2-noble 4.2-jammy), &{&1, %{"erlang" => "28.5.0.8", "elixir" => "1.20.4-otp-28"}})
+    # has (4.2 and 4.2-noble are Ubuntu 24.04, 4.2-jammy 22.04, 4.2-focal
+    # 20.04); a new tag goes here when the pins move to it.
+    fehn =
+      ~w(4.2 4.2-noble 4.2-jammy)
+      |> Map.new(&{&1, %{"erlang" => "28.5.0.8", "elixir" => "1.20.4-otp-28"}})
+      |> Map.put("4.2-focal", %{"erlang" => "28.4.3", "elixir" => "1.19.5-otp-28"})
+
     assert [[tag]] = Regex.scan(~r/^FROM\s+(?:--\S+\s+)*twined\/fehn:(\S+)/m, dockerfile, capture: :all_but_first)
 
     assert Map.take(pins, ~w(erlang elixir)) == fehn[tag],

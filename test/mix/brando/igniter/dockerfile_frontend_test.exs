@@ -119,8 +119,8 @@ defmodule Mix.Brando.Igniter.DockerfileFrontendTest do
       notice = fehn_notice(plan)
       assert notice =~ "builds on twined/fehn:3.9, older than the twined/fehn:4.2"
       assert notice =~ "twined/fehn:4.2 (or twined/fehn:4.2-noble) for Ubuntu 24.04"
-      assert notice =~ "twined/fehn:4.2-jammy for Ubuntu 22.04"
-      assert notice =~ "no fehn 4.2 variant runs on such a server: upgrade it to Ubuntu 22.04 or 24.04"
+      assert notice =~ "twined/fehn:4.2-jammy for Ubuntu 22.04 or twined/fehn:4.2-focal for Ubuntu 20.04"
+      assert notice =~ "on a 20.04 server use twined/fehn:4.2-focal and pin its Elixir and OTP"
       assert notice =~ "guides/deployment.md"
     end
 
@@ -129,11 +129,11 @@ defmodule Mix.Brando.Igniter.DockerfileFrontendTest do
 
       assert deps_from(plan) == "FROM --platform=linux/amd64 twined/fehn:4.0 as deps"
       assert fehn_notice(plan) =~ "builds on twined/fehn:4.0"
-      refute fehn_notice(plan) =~ "upgrade it to Ubuntu"
+      refute fehn_notice(plan) =~ "on a 20.04 server"
     end
 
     test "says nothing for the template's tag, a newer one or another image" do
-      for tag <- ["4.2", "4.2-noble", "4.2-jammy", "4.10"] do
+      for tag <- ["4.2", "4.2-noble", "4.2-jammy", "4.2-focal", "4.10"] do
         refute fehn_notice(upgrade_from(tag)), tag
       end
 

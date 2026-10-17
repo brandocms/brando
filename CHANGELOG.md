@@ -49,13 +49,15 @@ Before the first deploy, move the release build to fehn 4.2. A 0.53 or 0.54
 Dockerfile builds on `twined/fehn:3.9` (Elixir 1.15) or `3.10` (Elixir 1.17),
 which cannot compile Brando's `~> 1.18`: change its
 `FROM --platform=linux/amd64 twined/fehn:<tag> as deps` line to the variant
-for the server's Ubuntu release, `twined/fehn:4.2` (or `4.2-noble`) for
-Ubuntu 24.04 and `twined/fehn:4.2-jammy` for Ubuntu 22.04. fehn 3.x built on
-Ubuntu 20.04, which has no 4.2 variant: upgrade such a server to 22.04 or
-24.04, or provision a new one, first. `mix brando.gen.backend --upgrade`
-rewrites other parts of the Dockerfile but not `FROM`, and names an older tag
-in a notice. See "The Docker build" in
-[Deployment](guides/deployment.md#the-docker-build) for checking a server.
+for the server's Ubuntu release, since a release starts only on a server with
+the image's glibc and OpenSSL: `twined/fehn:4.2` (or `4.2-noble`) for Ubuntu
+24.04, `twined/fehn:4.2-jammy` for Ubuntu 22.04, and `twined/fehn:4.2-focal`
+for Ubuntu 20.04, which fehn 3.x built on. `4.2-focal` has Elixir 1.19.5 on
+OTP 28.4.3, so a site on it pins those; upgrading the server to 22.04 or 24.04
+is the better path. `mix brando.gen.backend --upgrade` rewrites other parts of
+the Dockerfile but not `FROM`, and names an older tag in a notice. See "The
+Docker build" in [Deployment](guides/deployment.md#the-docker-build) for
+checking a server.
 
 Only published fragments render on public pages now: a draft, pending or
 disabled `partials/footer` renders as empty, where it showed before. Publish
