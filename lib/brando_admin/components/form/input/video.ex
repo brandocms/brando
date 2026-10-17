@@ -309,7 +309,7 @@ defmodule BrandoAdmin.Components.Form.Input.Video do
     defaults = socket.assigns.defaults
 
     path = Brando.Utils.get_path_from_field_name(form.name)
-    form_id = FormId.for_form(form)
+    form_id = socket.assigns.form_id
 
     # The field is locked for the other editors while its drawer is open;
     # closing the drawer releases it.

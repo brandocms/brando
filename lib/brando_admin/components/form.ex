@@ -1843,9 +1843,9 @@ defmodule BrandoAdmin.Components.Form do
       |> put_asset_in_data(path, field, asset)
 
     socket
-    |> update_entry_with_relation(path ++ [field], asset)
     |> send_relation_to_blocks(path, field, asset)
     |> put_local_form(to_form(updated_changeset, []))
+    |> update_entry_with_relation(path ++ [field], asset)
     |> own_asset(path, relation_key, :id)
     |> Drafts.dirty()
     # Ship while the FK is still a change — the drawer-save path re-bakes the
@@ -2204,38 +2204,55 @@ defmodule BrandoAdmin.Components.Form do
       {parents, [field]} when is_atom(field) ->
         entry = socket.assigns.entry || struct(socket.assigns.schema)
         source = socket.assigns.form.source
-        assign(socket, :entry, put_entry_relation(entry, parents, field, updated_relation, source, []))
+        assign(socket, :entry, put_entry_relation(entry, parents, field, updated_relation, source, false))
 
       _ ->
         socket
     end
   end
 
-  defp put_entry_relation(%{} = data, [], field, value, _source, _prefix), do: Map.put(data, field, value)
+  # `source` is the form's changeset at the same level as `data`. A row is
+  # found by the form's index, which counts the rows the form shows, and then
+  # in the entry by its id. A path can be older than the rows (a processing
+  # job carries it), so a row takes the relation only while its form row
+  # holds it.
+  defp put_entry_relation(%{} = data, [], field, value, source, row?) do
+    if row? and not holds_relation?(source, field, value), do: data, else: Map.put(data, field, value)
+  end
 
-  # A row is found by its id: the form's row index need not be the entry's.
-  defp put_entry_relation(%{} = data, [key, index | rest], field, value, source, prefix)
+  defp put_entry_relation(%{} = data, [key, index | rest], field, value, %Changeset{} = source, _row?)
        when is_atom(key) and is_integer(index) do
-    row_path = prefix ++ [key, index]
-
     with rows when is_list(rows) <- Map.get(data, key),
-         id when not is_nil(id) <- EctoNestedChangeset.get_at(source, row_path ++ [:id]),
+         %{} = row <- source |> SubformHelpers.current_entries(key) |> List.wrap() |> Enum.at(index),
+         row = Changeset.change(row),
+         id when not is_nil(id) <- Changeset.get_field(row, :id),
          at when is_integer(at) <- Enum.find_index(rows, &(Map.get(&1, :id) == id)) do
-      Map.put(data, key, List.update_at(rows, at, &put_entry_relation(&1, rest, field, value, source, row_path)))
+      Map.put(data, key, List.update_at(rows, at, &put_entry_relation(&1, rest, field, value, row, true)))
     else
       _ -> data
     end
   end
 
-  defp put_entry_relation(%{} = data, [key | rest], field, value, source, prefix) when is_atom(key) do
-    case Map.get(data, key) do
-      %Ecto.Association.NotLoaded{} -> data
-      %{} = nested -> Map.put(data, key, put_entry_relation(nested, rest, field, value, source, prefix ++ [key]))
+  defp put_entry_relation(%{} = data, [key | rest], field, value, %Changeset{} = source, _row?) when is_atom(key) do
+    with %{} = nested <- Map.get(data, key),
+         false <- is_struct(nested, Ecto.Association.NotLoaded),
+         %{} = row <- SubformHelpers.current_entries(source, key) do
+      Map.put(data, key, put_entry_relation(nested, rest, field, value, Changeset.change(row), true))
+    else
       _ -> data
     end
   end
 
-  defp put_entry_relation(data, _path, _field, _value, _source, _prefix), do: data
+  defp put_entry_relation(data, _path, _field, _value, _source, _row?), do: data
+
+  defp holds_relation?(%Changeset{} = row, field, value) do
+    fk = "#{field}_id"
+
+    case Enum.find(Map.keys(row.data), &(is_atom(&1) and Atom.to_string(&1) == fk)) do
+      nil -> false
+      key -> Changeset.get_field(row, key) == (value && Map.get(value, :id))
+    end
+  end
 
   defp live_preview_path(path), do: path
 

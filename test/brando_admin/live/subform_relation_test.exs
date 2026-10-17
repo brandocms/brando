@@ -6,6 +6,9 @@ defmodule BrandoAdmin.SubformRelationTest do
   alias Brando.Repo
   alias Brando.SyncTest
   alias Brando.SyncTest.ArticleItem
+  alias BrandoAdmin.Components.Form
+  alias BrandoAdmin.Components.Form.Input.Image
+  alias BrandoAdmin.Components.Form.Input.Video
 
   @form "#article_form_form"
   @row_cover ~s(input[name="article[items][0][cover_id]"])
@@ -56,14 +59,7 @@ defmodule BrandoAdmin.SubformRelationTest do
     pick(view, second)
     assert view |> element(@row_media) |> render() =~ "second.jpg"
 
-    params =
-      view
-      |> render()
-      |> form_params(@form)
-      |> put_in(["article", "items", "0", "label"], "Edited")
-      |> Map.put("_target", ["article", "items", "0", "label"])
-
-    view |> element(@form) |> render_change(params)
+    edit_row_label(view)
 
     assert row_cover_id(render(view)) == to_string(second.id)
     assert view |> element(@row_media) |> render() =~ "second.jpg"
@@ -122,27 +118,92 @@ defmodule BrandoAdmin.SubformRelationTest do
     item = Repo.preload(ctx.item, [:cover, :clip])
     row = Phoenix.Component.to_form(Ecto.Changeset.change(item), as: "project[items][0]")
 
-    for input <- [BrandoAdmin.Components.Form.Input.Image, BrandoAdmin.Components.Form.Input.Video] do
-      field = if input == BrandoAdmin.Components.Form.Input.Image, do: :cover, else: :clip
-
-      html =
-        render_component(input, %{
-          id: "row-#{field}",
-          field: row[field],
-          form_id: nil,
-          parent_form_id: "project_form",
-          path: [:items, 0],
-          current_user: ctx.current_user,
-          label: "Media",
-          instructions: nil,
-          placeholder: nil,
-          opts: [],
-          subform_id: nil,
-          parent_form: nil
+    for {input, field, open} <- [{Image, :cover, "open_image"}, {Video, :clip, "open_video"}] do
+      {:ok, socket} =
+        input.mount(%Phoenix.LiveView.Socket{
+          assigns: %{__changed__: %{}, flash: %{}, myself: %Phoenix.LiveComponent.CID{cid: 1}}
         })
 
-      assert html =~ ~s(name="project[items][0][#{field}_id]")
+      {:ok, socket} =
+        input.update(
+          %{
+            id: "row-#{field}",
+            field: row[field],
+            form_id: nil,
+            parent_form_id: "project_form",
+            path: [:items, 0],
+            current_user: ctx.current_user,
+            label: "Media",
+            instructions: nil,
+            placeholder: nil,
+            opts: [],
+            subform_id: nil,
+            parent_form: nil
+          },
+          socket
+        )
+
+      assert socket.assigns.form_id == "project_form"
+
+      # Opening the field's drawer.
+      assert {:noreply, socket} = input.handle_event(open, %{}, socket)
+      assert socket.assigns.form_id == "project_form"
+      assert_received {:phoenix, :send_update, {{Form, "project_form"}, %{event: "focus_field"}}}
     end
+  end
+
+  test "a row's picked image is put on the same row after a row above is removed", ctx do
+    second_item = insert_item(ctx, "Second")
+    first = insert_image(ctx, "first", "First")
+    second = insert_image(ctx, "second", "Second")
+    third = insert_image(ctx, "third", "Third")
+    ctx.item |> Ecto.Changeset.change(cover_id: first.id) |> Repo.update!()
+    second_item |> Ecto.Changeset.change(cover_id: second.id) |> Repo.update!()
+
+    view = open(ctx)
+
+    view
+    |> with_target(cid_of(view, ~s(input[name="article[items][0][label]"])))
+    |> render_hook("remove_subentry", %{"key" => "id-#{ctx.item.id}"})
+
+    settle(view)
+    assert view |> element(@row_media) |> render() =~ "second.jpg"
+
+    pick(view, third)
+    edit_row_label(view)
+
+    assert row_cover_id(render(view)) == to_string(third.id)
+    assert view |> element(@row_media) |> render() =~ "third.jpg"
+
+    save(view)
+    assert Repo.get!(ArticleItem, second_item.id).cover_id == third.id
+    refute Repo.get(ArticleItem, ctx.item.id)
+  end
+
+  test "a processed image whose row path is stale leaves the rows alone", ctx do
+    view = open(ctx)
+
+    # Rows a processing job's path named before they were removed or moved.
+    send(view.pid, {ctx.image, [:image, :updated], [:items, 3, :cover]})
+    send(view.pid, {ctx.image, [:image, :updated], [:items, 0, :cover]})
+
+    assert row_cover_id(render(view)) == ""
+    assert [%{cover: nil}] = form_assigns(view).entry.items
+  end
+
+  defp edit_row_label(view) do
+    params =
+      view
+      |> render()
+      |> form_params(@form)
+      |> put_in(["article", "items", "0", "label"], "Edited")
+      |> Map.put("_target", ["article", "items", "0", "label"])
+
+    view |> element(@form) |> render_change(params)
+  end
+
+  defp insert_item(ctx, label) do
+    Repo.insert!(%ArticleItem{article_id: ctx.article.id, label: label, sequence: 1, uid: Brando.Utils.generate_uid()})
   end
 
   defp insert_image(ctx, name, title) do
