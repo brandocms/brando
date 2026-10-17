@@ -2172,14 +2172,20 @@ defmodule BrandoAdmin.Components.Form do
   defp update_entry_assocs(socket, _nested_path, _updated_relation), do: socket
 
   # A drawer save changes the asset an entry field shows, and the entry the
-  # next `validate` casts onto; the preview's copy of it follows.
-  defp refresh_asset_in_preview(socket, [], field, asset) do
-    if Map.has_key?(socket.assigns.updated_entry_assocs, field),
-      do: update_entry_assocs(socket, [field], asset),
-      else: socket
-  end
+  # next `validate` casts onto; the preview's copy of it follows, and the
+  # triggers declared on the field fire (the `validate` names only its key).
+  defp refresh_asset_in_preview(socket, path, field, asset) do
+    full_path = path ++ [field]
 
-  defp refresh_asset_in_preview(socket, _path, _field, _asset), do: socket
+    socket =
+      if path == [] and Map.has_key?(socket.assigns.updated_entry_assocs, field),
+        do: update_entry_assocs(socket, full_path, asset),
+        else: socket
+
+    socket
+    |> maybe_invalidate_live_preview_assign(full_path)
+    |> maybe_rerender_live_preview_for(path_to_strings(full_path))
+  end
 
   # Transformer changeset updates are now handled by the Transformer component
 
@@ -2974,9 +2980,10 @@ defmodule BrandoAdmin.Components.Form do
     |> own_changed_assets(fields)
     |> Drafts.dirty()
     |> force_svelte_remounts(fields)
+    |> put_remote_assets_on_entry(changeset, assets)
     |> put_remote_relations_in_preview(changeset, relations, asset_fk_map)
     |> send_remote_fields_to_blocks(changeset, fields ++ assets)
-    |> preview_changed_fields(fields ++ Enum.map(relations, &elem(&1, 0)))
+    |> preview_changed_fields(fields ++ Enum.map(relations, & &1.field))
   end
 
   # The preview merges `updated_entry_assocs` over the changeset, so a
@@ -2985,23 +2992,34 @@ defmodule BrandoAdmin.Components.Form do
   # (`apply_field_change/3`); another relation loaded in it is the old one,
   # and one not loaded the preview preloads by its key.
   defp put_remote_relations_in_preview(socket, changeset, relations, asset_fk_map) do
-    Enum.reduce(relations, socket, fn {name, key, related}, socket ->
+    Enum.reduce(relations, socket, fn %{field: name, owner_key: key} = assoc, socket ->
       stale? =
         Map.has_key?(socket.assigns.updated_entry_assocs, name) or
           (not Map.has_key?(asset_fk_map, key) and Ecto.assoc_loaded?(Map.get(changeset.data, name)))
 
       if stale?,
-        do: update_entry_assocs(socket, [name], remote_relation(changeset, name, key, related, asset_fk_map)),
+        do: update_entry_assocs(socket, [name], remote_relation(changeset, assoc, asset_fk_map)),
         else: socket
     end)
   end
 
-  defp remote_relation(changeset, name, key, related, asset_fk_map) do
+  defp remote_relation(
+         changeset,
+         %{field: name, owner_key: key, related: related, related_key: related_key},
+         asset_fk_map
+       ) do
     cond do
       Map.has_key?(asset_fk_map, key) -> Map.get(changeset.data, name)
-      id = Changeset.get_field(changeset, key) -> Brando.Repo.get(related, id)
+      value = Changeset.get_field(changeset, key) -> Brando.Repo.get_by(related, [{related_key, value}])
       true -> nil
     end
+  end
+
+  # The next `validate` casts onto the entry, so an asset another editor
+  # picked goes on it too, as this editor's own pick does
+  # (`commit_entry_field_asset/4`).
+  defp put_remote_assets_on_entry(socket, changeset, assets) do
+    Enum.reduce(assets, socket, &update_entry_with_relation(&2, [&1], Map.get(changeset.data, &1)))
   end
 
   # The blocks that read the entry follow another editor's change as they
@@ -3014,14 +3032,14 @@ defmodule BrandoAdmin.Components.Form do
     end)
   end
 
-  # The `belongs_to` relations whose foreign keys are among `fields`, as
-  # `{name, key, related}`. A preview option names a relation (`[:cover]`,
-  # `[:category]`) as this editor's own pick reports it (`update_entry_relation`).
+  # The `belongs_to` associations whose foreign keys are among `fields`. A
+  # preview option names a relation (`[:cover]`, `[:category]`) as this
+  # editor's own pick reports it (`update_entry_relation`).
   defp remote_relations(schema, fields) do
     for name <- schema.__schema__(:associations),
-        %Ecto.Association.BelongsTo{owner_key: key, related: related} <- [schema.__schema__(:association, name)],
+        %Ecto.Association.BelongsTo{owner_key: key} = assoc <- [schema.__schema__(:association, name)],
         key in fields,
-        do: {name, key, related}
+        do: assoc
   end
 
   # The open live preview follows another editor's changes as it follows

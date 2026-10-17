@@ -116,6 +116,72 @@ defmodule BrandoAdmin.Components.Form.EntryPictureBlockSyncTest do
     assert form.assigns.updated_entry_assocs.meta_image.title == %{"en" => "Example Hotel lobby"}
   end
 
+  # The drawer's save is reported as the image's id (`b:validate`), which a
+  # trigger declared on the image field does not cover.
+  test "saving the image's drawer fires the preview trigger declared on the field", ctx do
+    %{page: page, user: user} = ctx
+    image = Factory.insert(:image, creator: user, focal: %Brando.Images.Focal{x: 50, y: 50}, status: :processed)
+    edit_image = %{path: [], field: :meta_image, relation_field: :meta_image_id, image: image}
+
+    socket =
+      page
+      |> form_socket(user, edit_image)
+      |> Component.assign(sync_assigns())
+      |> Component.assign(
+        id: "page_form",
+        live_preview_active?: true,
+        preview_update: nil,
+        fields_demanding_full_live_preview_rerender: [[:meta_image]],
+        fields_demanding_live_preview_reassign: []
+      )
+
+    params = %{"image" => %{"title" => %{"en" => "Example Hotel lobby"}}}
+    {:noreply, form} = Form.handle_event("save_image", params, socket)
+
+    assert form.assigns.preview_update.mode == :live_preview_full_rerender
+  end
+
+  # The next `validate` casts onto the entry, so a remote image has to be on
+  # it too, or the form and the preview go back to the old one.
+  test "another editor's pick stays after this editor's next change", ctx do
+    %{page: page, user: user, second: second} = ctx
+    socket = page |> form_socket(user, nil) |> Component.assign(sync_assigns())
+    changes = [%{field: :meta_image_id, value: second.id, assoc?: false, clock: {1, "remote"}}]
+
+    {:ok, form} = Form.update(%{event: "apply_remote_field_changes", changes: changes}, socket)
+
+    assert form.assigns.entry.meta_image.id == second.id
+  end
+
+  defmodule UriLink do
+    use Ecto.Schema
+
+    schema "example_links" do
+      belongs_to :page, Brando.Pages.Page, foreign_key: :page_uri, references: :uri, type: :string
+    end
+  end
+
+  # A relation that references a column other than the primary key is
+  # loaded by that column.
+  test "another editor's pick of a relation by another column loads it by that column", ctx do
+    %{page: page, user: user} = ctx
+    link = %UriLink{id: 1, page_uri: page.uri, page: page}
+
+    socket =
+      page
+      |> form_socket(user, nil)
+      |> Component.assign(sync_assigns())
+      |> Component.assign(schema: UriLink, entry: link, singular: "uri_link")
+      |> Component.assign(:form, to_form(Changeset.change(link)))
+
+    target = Factory.insert(:page, creator: user, title: "Example Hotel", uri: "example-hotel")
+    changes = [%{field: :page_uri, value: "example-hotel", assoc?: false, clock: {1, "remote"}}]
+
+    {:ok, form} = Form.update(%{event: "apply_remote_field_changes", changes: changes}, socket)
+
+    assert form.assigns.updated_entry_assocs.page.id == target.id
+  end
+
   # The preview merges a relation this editor picked (a select with
   # `update_relation`) over the entry, and otherwise preloads only a relation
   # not loaded yet; another editor's pick replaces both.

@@ -121,7 +121,7 @@ provide explicit labels/descriptions for useful editor-facing choices.
   when another editor changes it. An image, video or file field, `[:cover]`,
   fires when it is picked, uploaded or removed, here or by another editor. A
   select that sets a relation with `update_relation` fires the relation,
-  `[:category]`; a select without it fires only its key, `[:category_id]`.
+  `[:category]`; for a select without it, declare its key, `[:category_id]`.
   `template_section` and
   `template_css_classes` accept a string or an entry callback for layout context.
 
