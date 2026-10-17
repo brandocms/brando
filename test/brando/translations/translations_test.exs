@@ -1,23 +1,3 @@
-defmodule Brando.Persons do
-  @moduledoc false
-  # A context for the translatable fixture with UUID keys (TranslationsTest:
-  # copying a batch to a language). Its related entries have no table.
-  use BrandoAdmin, :context
-  use Brando.Query
-
-  import Ecto.Query
-
-  alias Brando.Persons.Person
-
-  query :single, Person, do: fn query -> from(q in query) end
-
-  matches Person do
-    fn {:id, id}, query -> from(t in query, where: t.id == ^id) end
-  end
-
-  mutation :duplicate, {Person, preload: [], change_fields: [:name]}
-end
-
 defmodule Brando.TranslationsTest do
   use Brando.ConnCase, async: false
 
@@ -913,7 +893,10 @@ defmodule Brando.TranslationsTest do
       assert {hotel_en.related_entries, link.related_entries} == {[], []}
     end
 
-    test "copies entries with UUID keys", c do
+    # The fixture with UUID keys has no context to duplicate it with: the
+    # batch gets as far as asking for one.
+    @tag capture_log: true
+    test "takes the ids of a schema with UUID keys as they are", c do
       people =
         for name <- ["Example Guest", "Example Host"] do
           Repo.insert!(%Brando.Persons.Person{
@@ -924,12 +907,15 @@ defmodule Brando.TranslationsTest do
           })
         end
 
+      ids = Enum.map(people, & &1.id)
       opts = [change_fields: [language: :en], delete_fields: []]
 
-      assert %{failed: [], dropped_links: 0} =
-               Translations.copy_batch_to_language(Brando.Persons.Person, Enum.map(people, & &1.id), "en", c.user, opts)
+      error =
+        assert_raise UndefinedFunctionError, fn ->
+          Translations.copy_batch_to_language(Brando.Persons.Person, ids, "en", c.user, opts)
+        end
 
-      assert Repo.aggregate(from(p in Brando.Persons.Person, where: p.language == :en), :count) == 2
+      assert error.function == :duplicate_person
     end
 
     test "links an entry related to itself to its own copy", c do
