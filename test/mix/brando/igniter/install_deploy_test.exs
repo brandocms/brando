@@ -215,20 +215,66 @@ defmodule Mix.Brando.Igniter.InstallDeployTest do
     refute added =~ "/log/"
   end
 
-  test "a new application gets a .tool-versions, unless it pins its toolchain already" do
-    igniter = install(project())
+  # The toolchain the install runs under, as the pin names it, and no folder
+  # above the application pinning one.
+  @pinned %{"erlang" => "28.4.1", "elixir" => "1.20.3-otp-28"}
+
+  defp toolchain(igniter, overrides \\ %{}),
+    do: Igniter.assign(igniter, :brando_toolchain, Map.merge(%{running: @pinned, parents: []}, overrides))
+
+  defp no_pin_notice?(igniter, reason),
+    do: Enum.any?(igniter.notices, &(&1 =~ "No .tool-versions was written: #{reason}" and &1 =~ "erlang 28.4.1"))
+
+  test "a new application gets a .tool-versions when it runs the pinned Erlang and Elixir, once" do
+    igniter = project() |> toolchain() |> install()
+    assert igniter.issues == []
     assert IgniterCase.source(igniter, ".tool-versions") == Templates.contents(:copy, "tool-versions")
+    assert notice?(igniter, "Run `mise install` (or `asdf install`) for the Node.js and pnpm it names.")
 
     rerun = igniter |> IgniterCase.apply_and_reload() |> install()
     assert rerun.issues == []
     Igniter.Test.assert_unchanged(rerun, ".tool-versions")
+    refute notice?(rerun, ".tool-versions")
+  end
 
-    for {path, contents} <- [{".tool-versions", "elixir 1.19.5-otp-28\n"}, {".mise.toml", "[tools]\n"}] do
-      igniter = install(project(%{path => contents}))
+  test "a new application that pins its own toolchain gets a suggestion, not a .tool-versions" do
+    for path <-
+          ~w(.tool-versions .mise.toml mise.toml mise.local.toml .mise/config.toml .config/mise/config.toml .nvmrc .node-version) do
+      igniter = project(%{path => "22\n"}) |> toolchain() |> install()
       assert igniter.issues == []
       Igniter.Test.assert_unchanged(igniter, path)
-      if path != ".tool-versions", do: refute(Igniter.exists?(igniter, ".tool-versions"))
+      if path != ".tool-versions", do: refute(Igniter.exists?(igniter, ".tool-versions"), path)
+      assert no_pin_notice?(igniter, "the application pins its toolchain in #{path}"), path
     end
+  end
+
+  test "a new application below a folder that pins a toolchain gets a suggestion, not a .tool-versions" do
+    parent = Path.join(System.tmp_dir!(), "brando-toolchain-#{System.unique_integer([:positive])}")
+    File.mkdir_p!(parent)
+    on_exit(fn -> File.rm_rf!(parent) end)
+    File.write!(Path.join(parent, ".tool-versions"), "elixir 1.19.5-otp-28\n")
+
+    igniter = project() |> toolchain(%{parents: [Path.join(parent, "empty"), parent]}) |> install()
+    assert igniter.issues == []
+    refute Igniter.exists?(igniter, ".tool-versions")
+    assert no_pin_notice?(igniter, "#{parent}/.tool-versions pins a toolchain for the folders below it")
+  end
+
+  test "a new install run by another Erlang or Elixir suggests the .tool-versions, so asdf can't stop its mix tasks" do
+    for {tool, version} <- [{"erlang", "27.2"}, {"elixir", "1.19.5-otp-28"}] do
+      igniter = project() |> toolchain(%{running: Map.put(@pinned, tool, version)}) |> install()
+      assert igniter.issues == []
+      refute Igniter.exists?(igniter, ".tool-versions"), tool
+      assert no_pin_notice?(igniter, "this install runs #{tool} #{version}"), tool
+    end
+  end
+
+  test "a rerun on an application without a .tool-versions leaves it so, without a notice" do
+    installed = project() |> toolchain(%{running: Map.put(@pinned, "erlang", "27.2")}) |> install()
+    rerun = installed |> IgniterCase.apply_and_reload() |> toolchain() |> install()
+    assert rerun.issues == []
+    refute Igniter.exists?(rerun, ".tool-versions")
+    refute notice?(rerun, ".tool-versions")
   end
 
   test "the .tool-versions template pins what the Dockerfile and asset templates build with" do

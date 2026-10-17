@@ -62,9 +62,10 @@ if Code.ensure_loaded?(Igniter) do
     `robots.txt` is removed, with `robots.txt` in `static_paths/0`. A file
     changed since phx.new wrote it is kept, with a notice.
 
-    An application with neither a `.tool-versions` nor a mise configuration
-    gets a `.tool-versions` pinning the Erlang, Elixir, Node.js and pnpm
-    versions Brando is tested with, for asdf and mise.
+    A new installation gets a `.tool-versions` pinning the Erlang, Elixir,
+    Node.js and pnpm versions Brando is tested with, for asdf and mise, when
+    the install runs that Erlang and Elixir and neither the application nor a
+    folder above it pins a toolchain; otherwise a notice suggests it.
     """
 
     @impl Igniter.Mix.Task

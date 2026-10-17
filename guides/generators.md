@@ -150,12 +150,19 @@ for it. A literal version, inline or in `@version`, moves; an existing
 `VERSION` is kept, and `mix.exs` reads it when the two agree, with a notice when
 they don't. A `mix.exs` that computes its version another way is left as it is.
 
-An application with neither a `.tool-versions` nor a mise configuration gets a
-`.tool-versions`, which asdf and mise both read, pinning the toolchain above:
-Erlang 28.4.1, Elixir 1.20.3, Node.js 24 and pnpm 10.32.1 (the Node.js major
-and pnpm the Dockerfile's asset stages use). With asdf or mise, `mix` and `pnpm`
-in the application then run those versions whatever the machine's defaults
-are; `asdf install` or `mise install` installs any that are missing.
+A new install pins the toolchain above in a `.tool-versions`, which asdf and
+mise both read: Erlang 28.4.1, Elixir 1.20.3, Node.js 24 and pnpm 10.32.1 (the
+Node.js major and pnpm the Dockerfile's asset stages use). With asdf or mise,
+`mix` and `pnpm` in the application then run those versions whatever the
+machine's defaults are; run `mise install` or `asdf install` for the Node.js
+and pnpm it names. The file is written only when the install itself runs that
+Erlang and Elixir, since the install's follow-up `mix` tasks run in the
+application and asdf stops a pinned version it has not installed, and only
+when neither the application nor a folder above it (below your home folder)
+pins a toolchain already: a `.tool-versions`, a mise configuration
+(`mise.toml`, `.mise.toml`, `mise.local.toml`, `.mise/config.toml`,
+`.config/mise.toml`, `.config/mise/config.toml`), `.nvmrc` or `.node-version`.
+Otherwise a notice shows the file's contents to add yourself.
 
 ## Choose configuration
 

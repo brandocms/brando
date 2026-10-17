@@ -7,7 +7,10 @@
   `--interactive` asks instead. `--no-public-site` installs the admin alone,
   and a rerun never adds the site. `mix brando.install` no longer takes
   `--public-site` or `--replace-phoenix-home`.
-- **`mix brando.install` pins the toolchain in a `.tool-versions`** (Erlang,
-  Elixir, Node.js and pnpm, read by asdf and mise) when the application has
-  neither a `.tool-versions` nor a mise configuration, so a plain `mix` or
-  `pnpm` there doesn't run whatever the machine defaults to.
+- **A new `mix brando.install` pins the toolchain in a `.tool-versions`**
+  (Erlang, Elixir, Node.js and pnpm, read by asdf and mise), so a plain `mix`
+  or `pnpm` there doesn't run whatever the machine defaults to. It writes the
+  file only when the install runs the pinned Erlang and Elixir, so asdf can't
+  stop the install's own `mix` tasks, and when neither the application nor a
+  folder above it pins a toolchain (`.tool-versions`, mise configuration,
+  `.nvmrc`, `.node-version`); otherwise a notice shows the contents to add.
