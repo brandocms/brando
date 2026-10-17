@@ -58,7 +58,7 @@ defmodule Mix.Brando.Igniter.ResourceRenderTest do
 
     installed =
       base
-      |> Igniter.compose_task(Mix.Tasks.Brando.Install, [])
+      |> Igniter.compose_task(Mix.Tasks.Brando.Install, ["--no-public-site"])
       |> Igniter.Project.Config.configure("brando.exs", :brando, [:languages], [
         [value: "en", text: "English"],
         [value: "no", text: "Norsk"]

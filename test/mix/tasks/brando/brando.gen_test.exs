@@ -90,6 +90,11 @@ defmodule Mix.Tasks.Brando.Gen.Test do
             defmodule GeneratorStudioWeb.Router do
               use GeneratorStudioWeb, :router
               import Brando.Router
+
+              pipeline :browser do
+                plug :accepts, ["html"]
+              end
+
               admin_routes "/admin" do
                 live "/", GeneratorStudioAdmin.DashboardLive
               end
