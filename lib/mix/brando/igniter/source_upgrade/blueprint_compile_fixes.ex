@@ -255,17 +255,29 @@ if Code.ensure_loaded?(Igniter) do
     end
 
     defp rewrite_slug_sources(node, pairs, slug_keys) do
-      pairs =
-        Enum.flat_map(pairs, fn {{:__block__, meta, [_key]} = key, value} = pair ->
+      {pairs, comments} =
+        Enum.flat_map_reduce(pairs, [], fn {{:__block__, meta, [_key]} = key, value} = pair, comments ->
           case Map.get(slug_keys, position(key)) do
-            nil -> [pair]
-            :drop -> []
-            :rename -> [{{:__block__, meta, [:source]}, value}]
+            nil -> {[put_leading_comments(pair, comments)], []}
+            :drop -> {[], comments ++ Keyword.get(meta, :leading_comments, [])}
+            :rename -> {[put_leading_comments({{:__block__, meta, [:source]}, value}, comments)], []}
           end
         end)
 
+      # A dropped last option's comments go on the option before it.
+      pairs =
+        case {comments, Enum.split(pairs, -1)} do
+          {[], _split} -> pairs
+          {comments, {before, [last]}} -> before ++ [put_leading_comments(last, comments)]
+        end
+
       put_pairs(node, pairs)
     end
+
+    defp put_leading_comments(pair, []), do: pair
+
+    defp put_leading_comments({{:__block__, meta, key}, value}, comments),
+      do: {{:__block__, Keyword.update(meta, :leading_comments, comments, &(comments ++ &1)), key}, value}
 
     defp warn_generator_template(igniter) do
       if Igniter.exists?(igniter, @generator_template) do

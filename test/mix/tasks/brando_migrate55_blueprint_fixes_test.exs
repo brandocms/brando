@@ -189,6 +189,29 @@ defmodule Mix.Tasks.Brando.Migrate55BlueprintFixesTest do
     assert_has_notice(igniter, &(&1 =~ "#{@article_path}:20: `from:` removed; the `source:` beside it stays"))
   end
 
+  test "keeps the comment on a slug input's from: dropped beside a source:" do
+    article =
+      String.replace(@article, ~s|input :slug, :slug, from: :title, label: t("Slug")|, """
+      input :slug, :slug,
+                    source: :title,
+                    # The headline, not the teaser
+                    from: :name,
+                    label: t("Slug")
+
+                  input :path, :slug,
+                    source: :title,
+                    # Last option
+                    for: :name\
+      """)
+
+    migrated = migrate(%{@article_path => article}) |> source(@article_path)
+
+    refute migrated =~ "from: :name"
+    refute migrated =~ "for: :name"
+    assert migrated =~ ~r/source: :title,\n\s+# The headline, not the teaser\n\s+label: t\("Slug"\)/
+    assert migrated =~ ~r/input :path, :slug,\n\s+# Last option\n\s+source: :title\n/
+  end
+
   test "lists a slug input's from: in the application's copy of the generator template" do
     igniter = migrate(%{@generator_template_path => @generator_template})
 
