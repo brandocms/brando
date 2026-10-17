@@ -155,11 +155,13 @@ defmodule BrandoAdmin.PreviewUpdatesTest do
       assert render(view) =~ "actions_article_form_form"
     end
 
-    # `[:title]` covers a field below it, not one whose name starts with it
-    test "a field whose name begins with a declared one only updates", %{view: view, html: html} do
-      change_field(view, html, ["actions_article", "title_#{System.unique_integer([:positive])}"], "x")
-
-      assert_receive %Phoenix.Socket.Broadcast{event: "update"}, 2_000
+    # `[:title]` covers a field below it, not one whose name starts with it.
+    # The page does not show the field, so the update renders the page it
+    # already shows and sends nothing; a rerender would go out, since only
+    # `<main>` is known to be shown after the preview opens.
+    test "a field whose name begins with a declared one only updates", %{view: view, html: html, key: key} do
+      field = ["actions_article", "title_#{System.unique_integer([:positive])}"]
+      assert_preview_renders(key, fn -> change_field(view, html, field, "x") end)
       refute_receive %Phoenix.Socket.Broadcast{event: "rerender"}, 200
     end
 
