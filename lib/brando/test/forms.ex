@@ -5,7 +5,7 @@ defmodule Brando.Test.Forms do
   Imported by `use Brando.Test`; see `Brando.Test`.
 
       {view, _html} = open_form(conn, MyApp.Projects.Project)
-      fill_form(view, MyApp.Projects.Project, title: "Sommerro", client: client.id)
+      fill_form(view, MyApp.Projects.Project, title: "Example Hotel", client: client.id)
       add_block(view, MyApp.Projects.Project, text_module)
       assert {:ok, _path} = save_form(view, MyApp.Projects.Project)
 
@@ -71,7 +71,7 @@ defmodule Brando.Test.Forms do
   the rendered HTML. `attrs` are named as in the blueprint: attributes, assets
   and relations, where a `belongs_to` relation takes the related id.
 
-      fill_form(view, Project, title: "Sommerro", status: :draft, client: client.id)
+      fill_form(view, Project, title: "Example Hotel", status: :draft, client: client.id)
 
   Raises for a name the blueprint does not have, and, through
   `Phoenix.LiveViewTest.form/3`, for a field the form does not show.

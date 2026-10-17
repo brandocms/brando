@@ -1191,6 +1191,7 @@ defmodule BrandoAdmin.Components.Form do
           )
           |> tap(&FrontendEditor.field_changed/1)
           |> maybe_invalidate_live_preview_assign([field])
+          |> maybe_rerender_live_preview_for([to_string(field)])
           |> maybe_fetch_root_blocks(:live_preview_update, 0)
 
         {:ok, socket}
@@ -1869,20 +1870,17 @@ defmodule BrandoAdmin.Components.Form do
       |> EctoNestedChangeset.update_at(full_path, fn _ -> asset.id end)
       |> put_asset_in_data(path, field, asset)
 
-    entry_or_default = socket.assigns.entry || struct(socket.assigns.schema)
-    updated_entry = Map.put(entry_or_default, field, asset)
-
     socket
-    |> assign(:entry, updated_entry)
     |> send_relation_to_blocks(path, field, asset)
     |> put_local_form(to_form(updated_changeset, []))
+    |> update_entry_with_relation(path ++ [field], asset)
     |> own_asset(path, relation_key, :id)
     |> Drafts.dirty()
     # Ship while the FK is still a change — the drawer-save path re-bakes the
     # changeset (apply_changes/change), after which there is nothing to ship.
     |> ship_all_field_changes()
     |> push_event("b:validate", %{
-      target: "#{socket.assigns.singular}[#{relation_key}]",
+      target: socket.assigns.singular <> Enum.map_join(full_path, &"[#{&1}]"),
       value: asset.id
     })
   end
@@ -2200,15 +2198,14 @@ defmodule BrandoAdmin.Components.Form do
 
   # -- Helpers for unified update_entry_relation handler --
 
-  defp update_entry_assocs(socket, path, updated_relation) do
-    access_path = Brando.Utils.build_access_path(path)
-
-    assign(
-      socket,
-      :updated_entry_assocs,
-      put_in(socket.assigns.updated_entry_assocs, access_path, updated_relation)
-    )
+  # The live preview merges these over the entry one level deep, so they hold
+  # the entry's own fields only. A relation in a subform row rides in the
+  # changeset instead, as `put_asset_in_data/4` leaves it.
+  defp update_entry_assocs(socket, [field], updated_relation) do
+    assign(socket, :updated_entry_assocs, Map.put(socket.assigns.updated_entry_assocs, field, updated_relation))
   end
+
+  defp update_entry_assocs(socket, _nested_path, _updated_relation), do: socket
 
   # Transformer changeset updates are now handled by the Transformer component
 
@@ -2228,10 +2225,61 @@ defmodule BrandoAdmin.Components.Form do
     socket
   end
 
+  # `validate` casts its params onto the entry, so a relation in a subform row
+  # goes on that row too, or the row's input shows the entry's stale one.
   defp update_entry_with_relation(socket, path, updated_relation) do
-    entry = socket.assigns.entry || struct(socket.assigns.schema)
-    access_path = Brando.Utils.build_access_path(path)
-    assign(socket, :entry, put_in(entry, access_path, updated_relation))
+    case Enum.split(path, -1) do
+      {parents, [field]} when is_atom(field) ->
+        entry = socket.assigns.entry || struct(socket.assigns.schema)
+        source = socket.assigns.form.source
+        assign(socket, :entry, put_entry_relation(entry, parents, field, updated_relation, source, false))
+
+      _ ->
+        socket
+    end
+  end
+
+  # `source` is the form's changeset at the same level as `data`. A row is
+  # found by the form's index, which counts the rows the form shows, and then
+  # in the entry by its id. A path can be older than the rows (a processing
+  # job carries it), so a row takes the relation only while its form row
+  # holds it.
+  defp put_entry_relation(%{} = data, [], field, value, source, row?) do
+    if row? and not holds_relation?(source, field, value), do: data, else: Map.put(data, field, value)
+  end
+
+  defp put_entry_relation(%{} = data, [key, index | rest], field, value, %Changeset{} = source, _row?)
+       when is_atom(key) and is_integer(index) do
+    with rows when is_list(rows) <- Map.get(data, key),
+         %{} = row <- source |> SubformHelpers.current_entries(key) |> List.wrap() |> Enum.at(index),
+         row = Changeset.change(row),
+         id when not is_nil(id) <- Changeset.get_field(row, :id),
+         at when is_integer(at) <- Enum.find_index(rows, &(Map.get(&1, :id) == id)) do
+      Map.put(data, key, List.update_at(rows, at, &put_entry_relation(&1, rest, field, value, row, true)))
+    else
+      _ -> data
+    end
+  end
+
+  defp put_entry_relation(%{} = data, [key | rest], field, value, %Changeset{} = source, _row?) when is_atom(key) do
+    with %{} = nested <- Map.get(data, key),
+         false <- is_struct(nested, Ecto.Association.NotLoaded),
+         %{} = row <- SubformHelpers.current_entries(source, key) do
+      Map.put(data, key, put_entry_relation(nested, rest, field, value, Changeset.change(row), true))
+    else
+      _ -> data
+    end
+  end
+
+  defp put_entry_relation(data, _path, _field, _value, _source, _row?), do: data
+
+  defp holds_relation?(%Changeset{} = row, field, value) do
+    fk = "#{field}_id"
+
+    case Enum.find(Map.keys(row.data), &(is_atom(&1) and Atom.to_string(&1) == fk)) do
+      nil -> false
+      key -> Changeset.get_field(row, key) == (value && Map.get(value, :id))
+    end
   end
 
   defp live_preview_path(path), do: path
@@ -2964,6 +3012,23 @@ defmodule BrandoAdmin.Components.Form do
     |> own_changed_assets(fields)
     |> Drafts.dirty()
     |> force_svelte_remounts(fields)
+    |> preview_changed_fields(fields)
+  end
+
+  # The open live preview follows another editor's changes as it follows
+  # this editor's typing (`validate`). Between the two halves of a recovery
+  # it waits: the render that ends the recovery has them, and a render
+  # before it would show the form without its recovered input.
+  defp preview_changed_fields(%{assigns: %{live_preview_recovery_pending?: true}} = socket, _fields), do: socket
+
+  defp preview_changed_fields(socket, fields) do
+    fields
+    |> Enum.reduce(socket, fn field, socket ->
+      socket
+      |> maybe_invalidate_live_preview_assign([field])
+      |> maybe_rerender_live_preview_for([to_string(field)])
+    end)
+    |> maybe_fetch_root_blocks(:live_preview_update, 0)
   end
 
   # Changes held while this editor was in their field apply once it has left
@@ -5703,13 +5768,13 @@ defmodule BrandoAdmin.Components.Form do
   def handle_event("recover_drawer_state", %{"drawer" => drawer_params}, socket) do
     case drawer_params do
       %{"type" => "image", "resource_id" => id} when id != "" ->
-        restore_image_drawer(socket, drawer_params)
+        with_drawer_target(socket, drawer_params, &restore_image_drawer/3)
 
       %{"type" => "video", "resource_id" => id} when id != "" ->
-        restore_video_drawer(socket, drawer_params)
+        with_drawer_target(socket, drawer_params, &restore_video_drawer/3)
 
       %{"type" => "file", "resource_id" => id} when id != "" ->
-        restore_file_drawer(socket, drawer_params)
+        with_drawer_target(socket, drawer_params, &restore_file_drawer/3)
 
       # A drawer was open but carried no resource id — recovery cannot rebuild
       # it, and any edits inside it are gone. Rare, but it used to be entirely
@@ -6321,7 +6386,7 @@ defmodule BrandoAdmin.Components.Form do
     path = if path_type == :string_path, do: path, else: path_to_strings(path)
     cache_key = socket.assigns.live_preview_cache_key
 
-    for {key, trigger_path} <- fdlpr, path_to_strings(trigger_path) == path do
+    for {key, trigger_path} <- fdlpr, path_covers?(trigger_path, path) do
       LivePreview.invalidate_var(cache_key, key)
     end
 
@@ -6341,7 +6406,7 @@ defmodule BrandoAdmin.Components.Form do
            socket,
          string_path
        ) do
-    if Enum.any?(paths, &(path_to_strings(&1) == string_path)),
+    if Enum.any?(paths, &path_covers?(&1, string_path)),
       do: Preview.queue(socket, :live_preview_full_rerender, 0),
       else: socket
   end
@@ -6351,6 +6416,18 @@ defmodule BrandoAdmin.Components.Form do
   # Form paths are compared as strings: an input name can hold segments no
   # atom exists for (a language key, say), and those must not raise.
   defp path_to_strings(path), do: Enum.map(path, &to_string/1)
+
+  # A declared path covers a change to itself, to anything below it (a
+  # subform row's field) and to what holds it (a whole field another editor
+  # sent), compared whole segment by segment: `[:title]` does not cover
+  # `["title_en"]`.
+  defp path_covers?(_declared, []), do: false
+
+  defp path_covers?(declared, string_path) do
+    declared = path_to_strings(declared)
+    depth = min(length(declared), length(string_path))
+    Enum.take(declared, depth) == Enum.take(string_path, depth)
+  end
 
   defp request_select_options_update(socket) do
     form_blueprint = socket.assigns.form_blueprint
@@ -7666,11 +7743,9 @@ defmodule BrandoAdmin.Components.Form do
        do: socket
 
   defp maybe_send_ai_update_to_blocks(socket, string_path, generated_text) do
-    if string_path == ["__force_change"] do
-      socket
-    else
-      access_path = string_path_to_access_path(string_path)
-      send_updated_entry_field_to_blocks(socket, access_path, generated_text, hd(string_path))
+    case entry_access_path(socket.assigns.schema, string_path) do
+      {:ok, access_path} -> send_updated_entry_field_to_blocks(socket, access_path, generated_text, hd(string_path))
+      :error -> socket
     end
   end
 
@@ -7682,6 +7757,7 @@ defmodule BrandoAdmin.Components.Form do
     |> update_changeset(path, key, text)
     |> maybe_send_ai_update_to_blocks(string_path, text)
     |> maybe_invalidate_live_preview_assign(string_path, :string_path)
+    |> maybe_rerender_live_preview_for(string_path)
     |> maybe_fetch_root_blocks(:live_preview_update, 0)
     |> maybe_force_ai_component_remount(socket.assigns.form_blueprint, field_atom)
   end
@@ -7821,14 +7897,68 @@ defmodule BrandoAdmin.Components.Form do
     |> Enum.map(fn {gi, idx} -> Map.put(gi, :sequence, idx) end)
   end
 
-  defp string_path_to_access_path(string_path) do
-    Enum.map(string_path, fn segment ->
-      case Integer.parse(segment) do
-        {idx, ""} -> Access.at(idx)
-        _ -> segment |> String.to_existing_atom() |> Access.key()
+  # The access path into the entry for a form path below the singular
+  # (`["items", "0", "name"]`), which the browser sends. The first segment
+  # must name a field or association of the schema; later ones are an index
+  # or the name of an existing atom. Anything else is `:error`, and no atom is
+  # created. Below the field the steps leave data of another shape untouched
+  # (an index into a struct, a key into nil or one a struct lacks), since
+  # nothing checks the path against a block's copy of the entry.
+  defp entry_access_path(schema, [field | rest]) do
+    fields = schema.__schema__(:fields) ++ schema.__schema__(:virtual_fields) ++ schema.__schema__(:associations)
+
+    with key when not is_nil(key) <- Enum.find(fields, &(Atom.to_string(&1) == field)),
+         {:ok, steps} <- entry_access_steps(rest) do
+      {:ok, [Access.key(key) | steps]}
+    else
+      _ -> :error
+    end
+  end
+
+  defp entry_access_path(_schema, _path), do: :error
+
+  defp entry_access_steps(segments) do
+    Enum.reduce_while(Enum.reverse(segments), {:ok, []}, fn segment, {:ok, steps} ->
+      case entry_access_step(segment) do
+        {:ok, step} -> {:cont, {:ok, [step | steps]}}
+        :error -> {:halt, :error}
       end
     end)
   end
+
+  defp entry_access_step(segment) when segment in ["__struct__", "__meta__"], do: :error
+
+  defp entry_access_step(segment) when is_binary(segment) do
+    case Integer.parse(segment) do
+      {index, ""} ->
+        {:ok, entry_step(&is_list/1, Access.at(index))}
+
+      _ ->
+        case safe_to_existing_atom(segment) do
+          {:ok, key} -> {:ok, entry_step(&(is_map(&1) and (not is_struct(&1) or is_map_key(&1, key))), Access.key(key))}
+          {:error, _} -> :error
+        end
+    end
+  end
+
+  defp entry_access_step(_segment), do: :error
+
+  # `access` where `fits?` holds for the data, a no-op elsewhere.
+  defp entry_step(fits?, access) do
+    fn op, data, next ->
+      cond do
+        fits?.(data) -> access.(op, data, next)
+        op == :get -> nil
+        true -> {nil, data}
+      end
+    end
+  end
+
+  # `get_in/2` over params, which hold maps, lists and strings: a path that
+  # leaves the maps reads nil.
+  defp param_at(value, []), do: value
+  defp param_at(%{} = params, [key | rest]), do: param_at(Map.get(params, key), rest)
+  defp param_at(_value, _path), do: nil
 
   ##
   ## Function components
@@ -8154,20 +8284,40 @@ defmodule BrandoAdmin.Components.Form do
   @video_drawer_fields [:source_url, :type]
   @file_drawer_fields [:title]
 
-  defp restore_image_drawer(socket, params) do
-    resource_id = String.to_integer(params["resource_id"])
+  # The largest id a bigint primary key holds; a larger one fails to encode.
+  @max_id 9_223_372_036_854_775_807
 
-    case Images.get_image(resource_id) do
+  # The drawer the recovery form names, read from browser params: an id, a
+  # blueprint schema, the field as an existing atom and the path to it.
+  # Anything else is not restored.
+  defp with_drawer_target(socket, params, restore) do
+    with id when is_binary(id) <- params["resource_id"],
+         {resource_id, ""} when resource_id in 1..@max_id//1 <- Integer.parse(id),
+         {:ok, field} <- existing_atom(params["field"]),
+         schema when is_binary(schema) <- params["schema"],
+         {:ok, schema} <- Brando.Assets.ConfigTarget.schema_module(schema),
+         {:ok, path} <- decode_recovery_path(params["path"]) do
+      target = %{
+        id: resource_id,
+        path: path,
+        field: field,
+        relation_field: nil,
+        schema: schema,
+        form_id: params["form_id"]
+      }
+
+      restore.(socket, target, params)
+    else
+      _ ->
+        Logger.debug("Form (#{socket.assigns.id}) ignored drawer recovery params it could not read: #{inspect(params)}")
+        {:noreply, socket}
+    end
+  end
+
+  defp restore_image_drawer(socket, target, params) do
+    case Images.get_image(target.id) do
       {:ok, image} ->
-        edit_image = %{
-          id: resource_id,
-          path: decode_recovery_path(params["path"]),
-          field: String.to_existing_atom(params["field"]),
-          relation_field: nil,
-          schema: String.to_existing_atom(params["schema"]),
-          form_id: params["form_id"],
-          image: image
-        }
+        edit_image = Map.put(target, :image, image)
 
         {:noreply,
          socket
@@ -8182,20 +8332,10 @@ defmodule BrandoAdmin.Components.Form do
     end
   end
 
-  defp restore_video_drawer(socket, params) do
-    resource_id = String.to_integer(params["resource_id"])
-
-    case Brando.Videos.get_video(%{matches: %{id: resource_id}, preload: [:thumbnail, :file]}) do
+  defp restore_video_drawer(socket, target, params) do
+    case Brando.Videos.get_video(%{matches: %{id: target.id}, preload: [:thumbnail, :file]}) do
       {:ok, video} ->
-        edit_video = %{
-          id: resource_id,
-          path: decode_recovery_path(params["path"]),
-          field: String.to_existing_atom(params["field"]),
-          relation_field: nil,
-          schema: String.to_existing_atom(params["schema"]),
-          form_id: params["form_id"],
-          video: video
-        }
+        edit_video = Map.put(target, :video, video)
 
         {:noreply,
          socket
@@ -8210,20 +8350,10 @@ defmodule BrandoAdmin.Components.Form do
     end
   end
 
-  defp restore_file_drawer(socket, params) do
-    resource_id = String.to_integer(params["resource_id"])
-
-    case Brando.Files.get_file(resource_id) do
+  defp restore_file_drawer(socket, target, params) do
+    case Brando.Files.get_file(target.id) do
       {:ok, file} ->
-        edit_file = %{
-          id: resource_id,
-          path: decode_recovery_path(params["path"]),
-          field: String.to_existing_atom(params["field"]),
-          relation_field: nil,
-          schema: String.to_existing_atom(params["schema"]),
-          form_id: params["form_id"],
-          file: file
-        }
+        edit_file = Map.put(target, :file, file)
 
         {:noreply,
          socket
@@ -8313,12 +8443,28 @@ defmodule BrandoAdmin.Components.Form do
 
   defp decode_recovery_path(path_json) when is_binary(path_json) do
     case Jason.decode(path_json) do
-      {:ok, list} when is_list(list) -> Enum.map(list, &String.to_existing_atom/1)
-      _ -> []
+      {:ok, list} when is_list(list) -> map_ok(list, &recovery_path_segment/1)
+      _ -> {:ok, []}
     end
   end
 
-  defp decode_recovery_path(_), do: []
+  defp decode_recovery_path(_), do: {:ok, []}
+
+  # A field name, or the index of a subform row (`[:clients, 0]`).
+  defp recovery_path_segment(index) when is_integer(index) and index >= 0, do: {:ok, index}
+  defp recovery_path_segment(name), do: existing_atom(name)
+
+  defp existing_atom(name) when is_binary(name), do: safe_to_existing_atom(name)
+  defp existing_atom(_name), do: :error
+
+  defp map_ok(values, fun) do
+    Enum.reduce_while(Enum.reverse(values), {:ok, []}, fn value, {:ok, mapped} ->
+      case fun.(value) do
+        {:ok, result} -> {:cont, {:ok, [result | mapped]}}
+        _ -> {:halt, :error}
+      end
+    end)
+  end
 
   defp image_editor_payload(image) do
     crop_groups =
@@ -8472,6 +8618,27 @@ defmodule BrandoAdmin.Components.Form do
   defp has_language_input?(%{name: :language}), do: true
   defp has_language_input?(_field), do: false
 
+  # `rest` is the path *below* the singular, so it has to be read out of
+  # `entry_params`, not out of the top-level params map — `params` is
+  # `%{"page" => %{"title" => …}}`, so `get_in(params, ["title"])` is
+  # always nil. Every block rendering `{{ entry.title }}` therefore blanked
+  # its entry variables the moment you typed in that field, and stayed
+  # blank until reload. Invisible until a fixture had a module that reads
+  # the entry — see `/bench-entry-consumers`.
+  #
+  # The two representations differ on purpose: `path` walks the entry
+  # *struct* (list indices as `Access.at/1`), `rest` walks the params
+  # *map* (list indices as "0" keys).
+  defp send_target_to_blocks(%{assigns: %{has_blocks?: true, schema: schema}} = socket, entry_params, rest)
+       when rest != ["__force_change"] do
+    case entry_access_path(schema, rest) do
+      {:ok, path} -> send_updated_entry_field_to_blocks(socket, path, param_at(entry_params, rest), hd(rest))
+      :error -> socket
+    end
+  end
+
+  defp send_target_to_blocks(socket, _entry_params, _rest), do: socket
+
   defp validate(params, socket, recovery?) do
     # This is also the recovery event for the main form, and it is what
     # rebuilds the entry from the recovered params — see
@@ -8480,7 +8647,6 @@ defmodule BrandoAdmin.Components.Form do
     schema = socket.assigns.schema
     entry = socket.assigns.entry
     singular = socket.assigns.singular
-    has_blocks? = socket.assigns.has_blocks?
 
     previous = socket.assigns.form.source
     target = target_field(socket, singular, params["_target"])
@@ -8519,22 +8685,7 @@ defmodule BrandoAdmin.Components.Form do
 
     case Map.get(params, "_target") do
       [^singular | rest] ->
-        if has_blocks? && rest != ["__force_change"] do
-          # `rest` is the path *below* the singular, so it has to be read out of
-          # `entry_params`, not out of the top-level params map — `params` is
-          # `%{"page" => %{"title" => …}}`, so `get_in(params, ["title"])` is
-          # always nil. Every block rendering `{{ entry.title }}` therefore blanked
-          # its entry variables the moment you typed in that field, and stayed
-          # blank until reload. Invisible until a fixture had a module that reads
-          # the entry — see `/bench-entry-consumers`.
-          #
-          # The two representations differ on purpose: `path` walks the entry
-          # *struct* (list indices as `Access.at/1`), `rest` walks the params
-          # *map* (list indices as "0" keys).
-          path = string_path_to_access_path(rest)
-          change = get_in(entry_params, rest)
-          send_updated_entry_field_to_blocks(socket, path, change, hd(rest))
-        end
+        send_target_to_blocks(socket, entry_params, rest)
 
         if rest == ["language"] do
           request_select_options_update(socket)

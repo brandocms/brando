@@ -20,7 +20,6 @@ defmodule BrandoAdmin.LiveView.Form.Compiler do
     :hooks_block_sync,
     :hooks_modules,
     :hooks_live_preview,
-    :hooks_focal_point,
     :hooks_focus,
     :hooks_mutations,
     :hooks_mutation_listener,

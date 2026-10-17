@@ -140,11 +140,15 @@ defmodule BrandoAdmin.Components.Form.NotesDrawer do
   def handle_event("search", %{"q" => query}, socket), do: {:noreply, assign(socket, :query, String.trim(query))}
 
   def handle_event("toggle_thread", %{"id" => id}, socket) do
-    id = String.to_integer(id)
-    expanded = socket.assigns.expanded
+    case parse_id(id) do
+      nil ->
+        {:noreply, socket}
 
-    expanded = if MapSet.member?(expanded, id), do: MapSet.delete(expanded, id), else: MapSet.put(expanded, id)
-    {:noreply, assign(socket, :expanded, expanded)}
+      id ->
+        expanded = socket.assigns.expanded
+        expanded = if MapSet.member?(expanded, id), do: MapSet.delete(expanded, id), else: MapSet.put(expanded, id)
+        {:noreply, assign(socket, :expanded, expanded)}
+    end
   end
 
   def handle_event("new_note", _, socket), do: {:noreply, compose(socket, %{})}
@@ -246,19 +250,31 @@ defmodule BrandoAdmin.Components.Form.NotesDrawer do
   defp cancel_pending_mark(socket), do: socket
 
   defp fetch_thread(socket, id) do
-    id = if is_binary(id), do: String.to_integer(id), else: id
-
-    case Notes.get_note(id) do
-      %Note{parent_id: nil, entry_id: entry_id} = note ->
-        # The form's entry id comes from the URL, as a string.
-        if to_string(entry_id) == to_string(socket.assigns.entry_id) and
-             note.entry_type == Notes.entry_type(socket.assigns.schema),
-           do: note
-
-      _ ->
-        nil
+    with id when is_integer(id) <- parse_id(id),
+         %Note{parent_id: nil, entry_id: entry_id} = note <- Notes.get_note(id),
+         # The form's entry id comes from the URL, as a string.
+         true <- to_string(entry_id) == to_string(socket.assigns.entry_id),
+         true <- note.entry_type == Notes.entry_type(socket.assigns.schema) do
+      note
+    else
+      _ -> nil
     end
   end
+
+  # Ids arrive from the browser: anything but a whole integer a note id can
+  # hold (a positive bigint) is no id.
+  @max_id 9_223_372_036_854_775_807
+
+  defp parse_id(id) when is_integer(id) and id in 1..@max_id, do: id
+
+  defp parse_id(id) when is_binary(id) do
+    case Integer.parse(id) do
+      {int, ""} -> parse_id(int)
+      _ -> nil
+    end
+  end
+
+  defp parse_id(_), do: nil
 
   defp mention_ids(params) do
     (params["mentions"] || "")

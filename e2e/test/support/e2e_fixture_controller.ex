@@ -512,7 +512,7 @@ defmodule E2EFixtureController do
       {:ok, _} = Proposals.apply(id, version, user)
     end
 
-    hotel = page.("Sommerro", "activity-sommerro")
+    hotel = page.("Example Hotel", "activity-example-hotel")
     {:ok, _} = Brando.Pages.update_page(hotel.id, %{meta_description: "By the sea"}, user)
 
     apply_proposal.(page.("Villa Tide", "activity-villa-tide"), "Villa Tide, by the fjord", :assistant, nil)
@@ -597,10 +597,10 @@ defmodule E2EFixtureController do
     targets =
       for {page, members} <- [
             {{"Strategy", "projects/category/strategy-and-positioning-for-growing-companies",
-              "en", :published}, ["Sommerro", "Aker"]},
+              "en", :published}, ["Example Hotel", "Aker"]},
             {{"Strategi", "prosjekter/kategori/strategi", "no", :published},
-             ["Sommerro", "Aker"]},
-            {{"Branding", "projects/category/branding", "en", :draft}, ["Sommerro"]}
+             ["Example Hotel", "Aker"]},
+            {{"Branding", "projects/category/branding", "en", :draft}, ["Example Hotel"]}
           ] do
         team_page!(user, section, member, page, members)
       end

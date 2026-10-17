@@ -94,7 +94,7 @@ test('an applied proposal shows what it applied, and each card links to its page
 
   const opened = await page.goto(url)
   expect(opened.ok()).toBe(true)
-  await expect(page.locator('body')).toContainText('Sommerro')
+  await expect(page.locator('body')).toContainText('Example Hotel')
 
   expect(errors).toEqual([])
 })

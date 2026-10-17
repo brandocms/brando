@@ -77,27 +77,27 @@ defmodule Brando.SearchTest do
 
   describe "kept up to date by content events" do
     test "created, updated, unpublished, trashed and restored", %{user: user} do
-      page = create_page(user, %{title: "Sommerro", meta_description: "A hotel by the fjord"})
+      page = create_page(user, %{title: "Example Hotel", meta_description: "A hotel by the fjord"})
 
-      assert %Document{title: "Sommerro", status: :draft, language: "en", config: "english"} = document(page)
-      assert search("fjord") == ["Sommerro"]
+      assert %Document{title: "Example Hotel", status: :draft, language: "en", config: "english"} = document(page)
+      assert search("fjord") == ["Example Hotel"]
 
-      {:ok, _} = Pages.update_page(page.id, %{title: "Sommerro reopened", status: :published}, user)
-      assert %Document{title: "Sommerro reopened", status: :published} = document(page)
+      {:ok, _} = Pages.update_page(page.id, %{title: "Example Hotel reopened", status: :published}, user)
+      assert %Document{title: "Example Hotel reopened", status: :published} = document(page)
 
       {:ok, _} = Pages.update_page(page.id, %{status: :draft}, user)
       assert %Document{status: :draft} = document(page)
 
       {:ok, trashed} = Pages.delete_page(page.id, user)
       assert document(page) == nil
-      assert search("sommerro") == []
+      assert search("example hotel") == []
 
       {:ok, _} = Brando.Authorization.Boundary.restore(user, trashed)
-      assert %Document{title: "Sommerro reopened"} = document(page)
+      assert %Document{title: "Example Hotel reopened"} = document(page)
     end
 
     test "a repeated event is harmless and reads the entry as it is now", %{user: user} do
-      page = create_page(user, %{title: "Sommerro"})
+      page = create_page(user, %{title: "Example Hotel"})
 
       event = %Event{
         id: Ecto.UUID.generate(),
@@ -125,7 +125,7 @@ defmodule Brando.SearchTest do
     end
 
     test "entries changing language leave no document in the old one", %{user: user} do
-      page = create_page(user, %{title: "Sommerro"})
+      page = create_page(user, %{title: "Example Hotel"})
       {:ok, _} = Pages.update_page(page.id, %{language: "no"}, user)
 
       assert [%Document{language: "no", config: "norwegian"}] =
@@ -140,7 +140,7 @@ defmodule Brando.SearchTest do
     end
 
     test "the indexer job runs in the tenant it was queued in and cancels unknown types", %{user: user} do
-      page = Factory.insert(:page, title: "Sommerro", creator: user)
+      page = Factory.insert(:page, title: "Example Hotel", creator: user)
       assert :ok = perform_job(SearchIndexer, %{"schema" => to_string(Page), "entry_id" => page.id})
       assert document(page)
 
@@ -275,11 +275,11 @@ defmodule Brando.SearchTest do
   describe "ranking" do
     setup %{user: user} do
       for {title, status, body} <- [
-            {"Hotel Sommerro", :published, ""},
-            {"Sommerro rooftop", :draft, ""},
-            {"Sommerro", :draft, ""},
-            {"A spa", :published, "Opened at Sommerro in May"},
-            {"An older spa", :published, "Also at Sommerro"}
+            {"The Example Hotel", :published, ""},
+            {"Example Hotel rooftop", :draft, ""},
+            {"Example Hotel", :draft, ""},
+            {"A spa", :published, "Opened at Example Hotel in May"},
+            {"An older spa", :published, "Also at Example Hotel"}
           ] do
         page = create_page(user, %{title: title, status: status, meta_description: body})
         page
@@ -289,13 +289,13 @@ defmodule Brando.SearchTest do
     end
 
     test "an exact title, then titles starting with the text, then the content" do
-      assert ["Sommerro", "Sommerro rooftop" | rest] = search("sommerro")
-      assert Enum.sort(rest) == ["A spa", "An older spa", "Hotel Sommerro"]
-      assert hd(rest) == "Hotel Sommerro", "a title match ranks above the description"
+      assert ["Example Hotel", "Example Hotel rooftop" | rest] = search("example hotel")
+      assert Enum.sort(rest) == ["A spa", "An older spa", "The Example Hotel"]
+      assert hd(rest) == "The Example Hotel", "a title match ranks above the description"
     end
 
     test "a word half typed matches" do
-      assert "Sommerro" in search("somm")
+      assert "Example Hotel" in search("exam")
     end
 
     test "published before drafts of the same rank, then the most recently updated" do
@@ -306,22 +306,22 @@ defmodule Brando.SearchTest do
     end
 
     test "web search syntax: phrases and leaving words out" do
-      assert search(~s("opened at sommerro")) == ["A spa"]
-      assert "A spa" not in search("sommerro -opened")
+      assert search(~s("opened at example hotel")) == ["A spa"]
+      assert "A spa" not in search("example hotel -opened")
     end
 
     test "filters: language, status and type" do
-      assert search("sommerro", status: :draft) == ["Sommerro", "Sommerro rooftop"]
-      assert search("sommerro", language: "no") == []
-      assert search("sommerro", schemas: [Brando.Pages.Fragment]) == []
+      assert search("example hotel", status: :draft) == ["Example Hotel", "Example Hotel rooftop"]
+      assert search("example hotel", language: "no") == []
+      assert search("example hotel", schemas: [Brando.Pages.Fragment]) == []
     end
 
     test "the counts per type and the total" do
-      result = Query.run(Document, "sommerro", limit: 2)
+      result = Query.run(Document, "example hotel", limit: 2)
       assert result.total == 5
       assert result.facets == %{Page => 5}
       assert length(result.rows) == 2
-      assert Query.run(Document, "sommerro", limit: 2, offset: 4).rows |> length() == 1
+      assert Query.run(Document, "example hotel", limit: 2, offset: 4).rows |> length() == 1
     end
 
     test "nothing to search for finds nothing" do
@@ -332,11 +332,11 @@ defmodule Brando.SearchTest do
 
   describe "highlighting" do
     test "the snippet marks the match and keeps markup as text", %{user: user} do
-      create_page(user, %{title: "<script>alert(1)</script> Sommerro", meta_description: "<b>Bold</b> fjord"})
+      create_page(user, %{title: "<script>alert(1)</script> Example Hotel", meta_description: "<b>Bold</b> fjord"})
       [row] = Query.run(Document, "fjord", []).rows
 
       # A title is text: what looks like a tag stays text, to be escaped
-      assert row.title == "<script>alert(1)</script> Sommerro"
+      assert row.title == "<script>alert(1)</script> Example Hotel"
       assert {:mark, "fjord"} in row.snippet
       assert Highlight.text(row.snippet) =~ "Bold fjord"
     end
@@ -370,14 +370,14 @@ defmodule Brando.SearchTest do
     end
 
     test "documents are written to and found in the current site and environment only", %{user: user} do
-      public = Factory.insert(:page, title: "Sommerro public", creator: user)
+      public = Factory.insert(:page, title: "Example Hotel public", creator: user)
       :ok = Search.index_entry(Page, public.id)
 
       Brando.Tenant.with_prefix(@prefix, fn ->
         page =
           Brando.Repo.insert!(%Page{
-            title: "Sommerro tenant",
-            uri: "sommerro",
+            title: "Example Hotel tenant",
+            uri: "example-hotel",
             language: :en,
             status: :published,
             template: "default.html",
@@ -385,17 +385,20 @@ defmodule Brando.SearchTest do
           })
 
         :ok = Search.index_entry(Page, page.id)
-        assert Document |> Query.run("sommerro") |> Map.fetch!(:rows) |> Enum.map(& &1.title) == ["Sommerro tenant"]
+
+        assert Document |> Query.run("example hotel") |> Map.fetch!(:rows) |> Enum.map(& &1.title) == [
+                 "Example Hotel tenant"
+               ]
 
         assert {:ok, 1} = Search.rebuild()
         assert Brando.Repo.aggregate(Document, :count) == 1
         assert %DateTime{} = Search.rebuilt_at()
       end)
 
-      assert search("sommerro") == ["Sommerro public"]
+      assert search("example hotel") == ["Example Hotel public"]
       assert Search.rebuilt_at() == nil
 
-      assert Repo.query!(~s|SELECT title FROM "#{@prefix}".search_documents|).rows == [["Sommerro tenant"]]
+      assert Repo.query!(~s|SELECT title FROM "#{@prefix}".search_documents|).rows == [["Example Hotel tenant"]]
     end
   end
 

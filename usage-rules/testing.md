@@ -67,7 +67,7 @@ through the blueprint's context (`create_project/2` and so on), with its
 identifier, revision and rendered blocks, as the admin creates it:
 
 ```elixir
-project = insert_entry(MyApp.Projects.Project, %{title: "Sommerro"})
+project = insert_entry(MyApp.Projects.Project, %{title: "Example Hotel"})
 ```
 
 Values come from, in order:
@@ -87,7 +87,7 @@ user = insert_user(role: :editor)
 project = insert_entry(Project, %{status: :draft}, user: user)
 
 # Params only, for your own create call
-params = params_for(Project, title: "Sommerro")
+params = params_for(Project, title: "Example Hotel")
 
 # A valid struct that is not inserted (what it refers to is)
 project = build_entry(Project)
@@ -101,7 +101,7 @@ and refs (see below):
 
 ```elixir
 project =
-  insert_entry(Project, %{title: "Sommerro"},
+  insert_entry(Project, %{title: "Example Hotel"},
     blocks: [header_module, {quote_module, vars: %{"author" => "Ada"}}]
   )
 

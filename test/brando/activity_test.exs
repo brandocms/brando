@@ -221,11 +221,11 @@ defmodule Brando.ActivityTest do
   describe "reading" do
     test "filters by person, action and title", %{user: user} do
       other = Factory.insert(:random_user)
-      create_page(user, %{title: "Sommerro"})
+      create_page(user, %{title: "Example Hotel"})
       create_page(other, %{title: "Villa Tide"})
 
       assert [%{title: "Villa Tide"}] = Activity.list(%{user_id: other.id})
-      assert [%{title: "Sommerro"}] = Activity.list(%{q: "sommer"})
+      assert [%{title: "Example Hotel"}] = Activity.list(%{q: "example ho"})
       assert Activity.count(%{action: :created}) == 2
       assert [] = Activity.list(%{action: :deleted})
     end

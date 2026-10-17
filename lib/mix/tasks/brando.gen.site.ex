@@ -14,6 +14,9 @@ if Code.ensure_loaded?(Igniter) do
     and 404 and 500 pages in the site's layout, replacing phx.new's `ErrorHTML`
     while it is unchanged. Pages get a live preview target in Web.LivePreview,
     rendered with the CMS layout and templates, unless the module is customized.
+    phx.new's `priv/static/robots.txt` is removed while it is unchanged, with
+    `robots.txt` in `static_paths/0`, so `/robots.txt` is the SEO settings' text
+    in development too.
 
         mix brando.gen.site --replace-phoenix-home
         mix brando.gen.site --interactive

@@ -344,7 +344,7 @@
       border-radius: 10px;
 
       /* Separate white chips over the media, as in the gallery grid
-         (docs/admin-ui-design.md, "Gallery grid"). */
+         (.claude/skills/brando-admin-ui/references/gallery-grid.md). */
       .subform-tools {
         position: absolute;
         top: 6px;

@@ -1,5 +1,6 @@
 /* The admin's button. One component in three sizes and a few looks, replacing
-   the buttons screens drew for themselves as each area moves over. See "Buttons and badges" in docs/admin-ui-design.md.
+   the buttons screens drew for themselves as each area moves over. See
+   .claude/skills/brando-admin-ui/references/buttons-badges-menus.md.
 
      .btn                   default: bordered, 30px
      .btn--sm / .btn--lg    26px for toolbars and inline actions, 36px for a form's Save

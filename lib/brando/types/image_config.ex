@@ -115,8 +115,8 @@ defmodule Brando.Type.ImageConfig do
       ],
       upload_path: Path.join(["images", "site", "default"]),
       default_size: :largest,
-      # The uploaded file's own name, slugified ("Sommerro Lobby.JPG" is
-      # "sommerro-lobby.jpg"), so the library can be read and searched; a
+      # The uploaded file's own name, slugified ("Example Hotel Lobby.JPG" is
+      # "example-hotel-lobby.jpg"), so the library can be read and searched; a
       # clash gets a numbered suffix.
       random_filename: false,
       slugify_filename: true,

@@ -5,7 +5,7 @@
 import { test, expect } from '../test-support/setupAuth'
 import { syncLV } from '../utils'
 
-const sommerro = 'Put image1 on the Index page and create a case called Sommerro with image2'
+const exampleHotel = 'Put image1 on the Index page and create a case called Example Hotel with image2'
 
 async function factory(page, schema, attributes) {
   const response = await page.request.post('/__e2e/db/factory', { data: { schema, attributes, creator_id: 1, fields: ['id'] } })
@@ -21,14 +21,14 @@ async function syncIdentifiers(page) {
   await syncLV(page)
 }
 
-async function proposeSommerro(page) {
+async function proposeExampleHotel(page) {
   await page.goto('/admin/assistant')
   await syncLV(page)
   await page.locator('#assistant-upload input.file-input').setInputFiles(['./fixtures/image.jpg', './fixtures/image2.jpg'])
   await expect(page.locator('.assistant-attachment:not(.is-pending)')).toHaveCount(2, { timeout: 30000 })
   // The upload drawer clears itself four seconds after the last file.
   await page.waitForTimeout(4500)
-  await page.getByLabel('Message').fill(sommerro)
+  await page.getByLabel('Message').fill(exampleHotel)
   await page.getByLabel('Message').press('Enter')
   await expect(page.locator('.assistant-proposal')).toBeVisible({ timeout: 30000 })
   await page.waitForTimeout(1500)
@@ -43,11 +43,11 @@ test('assistant: empty workspace', async ({ page }, testInfo) => {
   await page.screenshot({ path: testInfo.outputPath('assistant-empty-desktop.png') })
 })
 
-test('assistant: Sommerro proposal from review to applied', async ({ page }, testInfo) => {
+test('assistant: Example Hotel proposal from review to applied', async ({ page }, testInfo) => {
   test.setTimeout(120000)
   await page.setViewportSize({ width: 1440, height: 1000 })
   await syncIdentifiers(page)
-  await proposeSommerro(page)
+  await proposeExampleHotel(page)
   await expect(page.getByRole('heading', { name: 'Ready for your review' })).toBeVisible()
   await page.screenshot({ path: testInfo.outputPath('assistant-review-desktop.png') })
 
@@ -59,7 +59,7 @@ test('assistant: Sommerro proposal from review to applied', async ({ page }, tes
   await page.getByRole('button', { name: 'All changes' }).click()
   await page.waitForTimeout(600)
 
-  await page.getByTitle('Attach images from the media library', { exact: true }).click()
+  await page.locator('button[data-tooltip="Attach images from the media library"]').click()
   await expect(page.locator('#image-picker')).toBeVisible()
   await page.waitForTimeout(1000)
   await page.screenshot({ path: testInfo.outputPath('assistant-library-desktop.png') })
@@ -80,12 +80,12 @@ test('assistant: proposal that needs changes', async ({ page }, testInfo) => {
   test.setTimeout(120000)
   await page.setViewportSize({ width: 1440, height: 1000 })
   // An existing case already uses the slug the proposal wants.
-  const client = await factory(page, 'E2eProject.Projects.Client', { name: 'Sommerro', slug: 'sommerro-client', status: 'published', language: 'en' })
+  const client = await factory(page, 'E2eProject.Projects.Client', { name: 'Example Hotel', slug: 'example-hotel-client', status: 'published', language: 'en' })
   await factory(page, 'E2eProject.Projects.Project', {
-    title: 'Sommerro', slug: 'sommerro', introduction: '<p>The existing Sommerro case.</p>', client_id: client.id, status: 'published', language: 'en',
+    title: 'Example Hotel', slug: 'example-hotel', introduction: '<p>The existing Example Hotel case.</p>', client_id: client.id, status: 'published', language: 'en',
   })
   await syncIdentifiers(page)
-  await proposeSommerro(page)
+  await proposeExampleHotel(page)
   await expect(page.getByRole('heading', { name: 'Needs changes' })).toBeVisible()
   await page.screenshot({ path: testInfo.outputPath('assistant-needs-changes-desktop.png') })
 })
@@ -215,8 +215,8 @@ test('image refs while processing', async ({ page }, testInfo) => {
   }
 })
 
-// The AI looks side by side (docs/admin-ui-design.md, "AI actions and
-// suggestions"). AI controls only render when a provider is configured, which
+// The AI looks side by side (.claude/skills/brando-admin-ui/references/
+// ai-actions.md). AI controls only render when a provider is configured, which
 // an E2E run is not, so the sheet is the components' own markup, copied from
 // the rendered screens and drawn by the admin's stylesheets on an admin page.
 test('ai actions and suggestions: composed sheet', async ({ page }, testInfo) => {

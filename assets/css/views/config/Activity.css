@@ -69,7 +69,7 @@
 
 /* The kind of actor behind a change that no person made by hand: AI, MCP,
    Automatic. A label, not a call to AI, so it keeps the admin's badge look
-   (docs/admin-ui-design.md, "AI actions"). */
+   (.claude/skills/brando-admin-ui/references/ai-actions.md). */
 .activity-kind {
   display: inline-flex;
   align-items: center;

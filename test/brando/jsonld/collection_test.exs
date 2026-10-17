@@ -13,12 +13,12 @@ defmodule Brando.JSONLD.Schema.CollectionTest do
     end
 
     test "describes what the entries are when given a type" do
-      list = ItemList.build([{"Sommerro", "https://x.test/sommerro", "CreativeWork"}])
+      list = ItemList.build([{"Example Hotel", "https://x.test/example-hotel", "CreativeWork"}])
 
       assert [%{item: item, position: 1}] = list.itemListElement
       assert item[:"@type"] == "CreativeWork"
-      assert item[:"@id"] == "https://x.test/sommerro/#creativework"
-      assert item.url == "https://x.test/sommerro"
+      assert item[:"@id"] == "https://x.test/example-hotel/#creativework"
+      assert item.url == "https://x.test/example-hotel"
     end
 
     test "an empty collection still encodes as a list, not null" do

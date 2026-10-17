@@ -9,7 +9,7 @@ defmodule Brando.Plug.Markdown do
 
   Two requests get Markdown:
 
-    * the page's URL with `.md` appended, `/projects/sommerro.md`;
+    * the page's URL with `.md` appended, `/projects/example-hotel.md`;
     * the page's URL with `text/markdown` preferred in `Accept`.
 
   The request goes through the router and the page's controller as usual,

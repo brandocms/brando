@@ -19,7 +19,7 @@ defmodule BrandoAdmin.Components.AIAction do
   `:primary` fills it, for the confirm step of a costed request after its
   estimate ("Describe 3 images"). `busy` marks a request in flight. Put the label in the inner block; the icon is added.
   Anything else (`phx-*`, `disabled`, `data-*`, `aria-*`) is passed through.
-  See "AI actions and suggestions" in `docs/admin-ui-design.md`.
+  See `.claude/skills/brando-admin-ui/references/ai-actions.md`.
   """
   use BrandoAdmin, :component
 

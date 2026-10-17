@@ -2,7 +2,7 @@ defmodule BrandoAdmin.Components.Usage do
   @moduledoc """
   Shows where an asset is used (see `Brando.Content.Usage`).
 
-    * `inline/1` — one line for a listing row: "Used in Sommerro, About".
+    * `inline/1` — one line for a listing row: "Used in Example Hotel, About".
     * `list/1` — a section for an asset's own page: one linked row per entry,
       with its cover, type and status.
   """

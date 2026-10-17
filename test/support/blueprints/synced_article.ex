@@ -132,6 +132,8 @@ defmodule Brando.SyncTest.Article do
 
             input :label, :text
             input :link, :text
+            input :cover, :image
+            input :clip, :video
           end
         end
       end
@@ -197,6 +199,21 @@ defmodule Brando.SyncTest.ArticleItem do
     attribute :uid, :string
     attribute :label, :string
     attribute :link, :string
+  end
+
+  assets do
+    asset :cover, :image,
+      cfg: [
+        allowed_mimetypes: ["image/jpeg", "image/png"],
+        default_size: "medium",
+        upload_path: Path.join("images", "synced_items"),
+        random_filename: true,
+        size_limit: 10_240_000,
+        sizes: %{"medium" => %{"size" => "500x500", "quality" => 65, "crop" => true}},
+        srcset: [{"medium", "500w"}]
+      ]
+
+    asset :clip, :video, cfg: :default
   end
 
   relations do

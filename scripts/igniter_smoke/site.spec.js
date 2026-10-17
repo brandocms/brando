@@ -35,8 +35,11 @@ test('CMS pages render through their own layout and keep unpublished content pri
     expect(response.status()).toBe(404)
     await expect(page.getByText('Unpublished CMS smoke page')).toHaveCount(0)
   }
+  // BrandoWeb.SEOController's default text; phx.new's static robots.txt,
+  // which Plug.Static would serve first, has no such line.
   response = await page.goto('/robots.txt')
   expect(response.status()).toBe(200)
+  expect(await response.text()).toMatch(/^Disallow: \/admin\/$/m)
   if (process.env.BRANDO_SMOKE_BOOTSTRAP === 'precompiled') {
     const health = await page.request.get('/health-check')
     expect(health.status()).toBe(200)
