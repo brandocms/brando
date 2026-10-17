@@ -149,6 +149,7 @@ if Code.ensure_loaded?(Igniter) do
       |> image_configuration()
       |> Config.configure_new("config.exs", project.otp_app, [:hmr], false)
       |> Config.configure_new("dev.exs", project.otp_app, [:hmr], true)
+      |> vite_watchers(project)
       |> Config.configure_new(
         "brando.exs",
         :brando,
@@ -160,6 +161,107 @@ if Code.ensure_loaded?(Igniter) do
       # Req is already one of Brando's dependencies.
       |> Mix.Brando.Igniter.SourceUpgrade.configure_swoosh_client()
       |> Mix.Brando.Igniter.SourceUpgrade.configure_brando_mailer(Module.concat(project.app_module, Mailer))
+    end
+
+    # The endpoint watchers in config/dev.exs that start the admin's and the
+    # site's Vite dev servers with `mix phx.server`, for `hmr: true`.
+    defp vite_watchers_code do
+      """
+      [
+        # Vite dev servers for the admin and the site; Brando.Vite stops them with Phoenix.
+        vite_admin: {Brando.Vite, :watch, [Path.expand("../assets/backend", __DIR__)]},
+        vite_site: {Brando.Vite, :watch, [Path.expand("../assets/frontend", __DIR__)]}
+      ]
+      """
+    end
+
+    # Fills the endpoint's watchers in dev.exs when it has none (phx.new
+    # --no-assets writes `watchers: []`) and dev.exs does not turn hmr off.
+    # Watchers of the application's own are kept, with a notice unless they
+    # already start both Vite projects.
+    defp vite_watchers(igniter, project) do
+      {igniter, dev} = dev_config(igniter)
+      watchers = if dev, do: config_values(dev, project.otp_app, [project.endpoint, :watchers]), else: []
+      hmr = if dev, do: config_values(dev, project.otp_app, [:hmr]), else: []
+
+      cond do
+        # The last value in the file is the one that counts
+        match?([{:ok, false} | _], Enum.map(hmr, &Common.expand_literal/1)) ->
+          igniter
+
+        Enum.all?(watchers, &(Common.expand_literal(&1) == {:ok, []})) ->
+          Config.configure(
+            igniter,
+            "dev.exs",
+            project.otp_app,
+            [project.endpoint, :watchers],
+            {:code, Sourceror.parse_string!(vite_watchers_code())}
+          )
+
+        true ->
+          source = Enum.map_join(watchers, "\n", &(&1 |> Zipper.node() |> Sourceror.to_string()))
+
+          if String.contains?(source, "assets/backend") and String.contains?(source, "assets/frontend"),
+            do: igniter,
+            else: Igniter.add_notice(igniter, vite_watchers_notice(project))
+      end
+    end
+
+    defp dev_config(igniter) do
+      path = "config/dev.exs"
+
+      if Igniter.exists?(igniter, path) do
+        igniter = Igniter.include_existing_file(igniter, path)
+        quoted = igniter.rewrite |> Rewrite.source!(path) |> Rewrite.Source.get(:quoted)
+        {igniter, Zipper.zip(quoted)}
+      else
+        {igniter, nil}
+      end
+    end
+
+    # The values `config` calls anywhere in the file give `path` under
+    # `otp_app`, the last in the file first. Each call is matched in the whole file's zipper, so an alias
+    # (`alias StudioWeb.Endpoint`) resolves as it does for Config.configure.
+    defp config_values(zipper, otp_app, path) do
+      zipper
+      |> Zipper.traverse([], fn zipper, found ->
+        case config_value(zipper, otp_app, path) do
+          {:ok, value} -> {zipper, [value | found]}
+          :error -> {zipper, found}
+        end
+      end)
+      |> elem(1)
+    end
+
+    defp config_value(zipper, otp_app, [key | rest] = path) do
+      cond do
+        CodeFunction.function_call?(zipper, :config, 3) and CodeFunction.argument_equals?(zipper, 0, otp_app) and
+            CodeFunction.argument_equals?(zipper, 1, key) ->
+          with {:ok, value} <- CodeFunction.move_to_nth_argument(zipper, 2), do: keyword_path(value, rest)
+
+        CodeFunction.function_call?(zipper, :config, 2) and CodeFunction.argument_equals?(zipper, 0, otp_app) ->
+          with {:ok, opts} <- CodeFunction.move_to_nth_argument(zipper, 1), do: keyword_path(opts, path)
+
+        true ->
+          :error
+      end
+    end
+
+    defp keyword_path(zipper, []), do: {:ok, zipper}
+
+    defp keyword_path(zipper, [key | rest]) do
+      with {:ok, value} <- CodeKeyword.get_key(zipper, key), do: keyword_path(value, rest)
+    end
+
+    defp vite_watchers_notice(project) do
+      """
+      config/dev.exs already has watchers for #{inspect(project.endpoint)}, so they were kept. With
+      hmr: true the admin and the site load their assets from Vite dev servers (ports 3333 and 3000),
+      and mix phx.server does not start them. To start them, add the two entries of this list to
+      the endpoint's watchers:
+
+      #{vite_watchers_code() |> Code.format_string!() |> IO.iodata_to_binary()}
+      """
     end
 
     def configure_tenancy(igniter, mode, key) do

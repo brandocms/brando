@@ -398,10 +398,66 @@ running Vite dev server by itself. Its Vite config includes BrandoJS's
 `yalcAutoUpdate` plugin, which pulls each publish. Use `--no-build` to install
 only.
 
-Vite writes `admin_manifest.json`, `manifest.json` and assets to the consumer's
-`priv/static`. The default uses compiled assets (`config :studio, hmr: false`).
-For HMR, explicitly enable it and start the relevant Vite servers: frontend on
-3000 and backend on 3333. After framework JS changes, rerun asset setup.
+`pnpm build` writes `admin_manifest.json`, `manifest.json` and assets to the
+consumer's `priv/static`. Production uses them, and so does development with
+`config :studio, hmr: false`. After framework JS changes, rerun asset setup.
+
+### Vite dev servers
+
+In development the installer sets `config :studio, hmr: true` in
+`config/dev.exs`: the admin loads its assets from a Vite dev server for
+`assets/backend` on port 3333, and the site from one for `assets/frontend` on
+port 3000. The installer adds two endpoint watchers to `config/dev.exs`, so
+`mix phx.server` starts both servers and stops them when it stops:
+
+```elixir
+config :studio, StudioWeb.Endpoint,
+  watchers: [
+    vite_admin: {Brando.Vite, :watch, [Path.expand("../assets/backend", __DIR__)]},
+    vite_site: {Brando.Vite, :watch, [Path.expand("../assets/frontend", __DIR__)]}
+  ]
+```
+
+`Brando.Vite.watch/1` runs Vite from the directory's `node_modules`, so run
+`mix brando.assets.setup` (or `pnpm install` in both directories) first. Vite's
+output goes to the `mix phx.server` log. Vite stops when Phoenix stops, also
+when you leave with Ctrl-C.
+
+The installer fills the watchers only when the endpoint has none (phx.new's
+`watchers: []`, or no `watchers` key) and `config/dev.exs` does not set
+`hmr: false`. Watchers of the application's own are
+kept, and the installer prints the two entries to add by hand. Applications
+installed by earlier Brando versions have no Vite watchers: add the two entries
+above to the endpoint's `watchers` in `config/dev.exs`, or keep running `pnpm dev` in
+`assets/backend` and `assets/frontend`.
+
+Both generated `vite.config.js` files set `server.strictPort`, so Vite does
+not quietly move to a port Phoenix does not know. When Vite cannot start,
+because another process such as another site's Vite server holds its port,
+because `node_modules` is missing, or because `node` is not on the `PATH`,
+the log has Vite's own output and one error from `Brando.Vite` saying what to
+do. Phoenix carries on without that dev server and does not retry it; restart
+`mix phx.server` once it is fixed. With a taken port the page loads whatever
+answers there, which may be the other site's assets, so give each running site
+its own ports (below). When a dev server's scripts fail to load, because it is
+not running or cannot compile a module, the admin or the site shows a notice
+naming the address it tried. Copy `strictPort` into
+the Vite configs of existing applications.
+
+To run two Brando sites at once, give one of them other ports. Export them in
+that project's shell environment, for example its `.envrc`, so that Phoenix,
+which renders the script tags, and the Vite servers its watchers start read the
+same values:
+
+```sh
+export BRANDO_VITE_ADMIN_PORT=3334
+export BRANDO_VITE_FRONTEND_PORT=3001
+```
+
+`BRANDO_VITE_ADMIN_HOST` and `BRANDO_VITE_FRONTEND_HOST` set the hosts
+(default `localhost`). To use the built assets instead, run `pnpm build` in
+both directories, set `config :studio, hmr: false` in `config/dev.exs` and
+remove the two watchers; running `mix brando.install` again leaves them out.
 
 ## Initialize and sign in
 

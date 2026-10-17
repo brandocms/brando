@@ -12,6 +12,9 @@ export default defineConfig({
   server: {
     host,
     port,
+    // A taken port is an error, not a move to the next free one: Brando.HTML
+    // loads the admin from this port, and another site's server may hold it.
+    strictPort: true,
     // The admin page comes from Phoenix, so asset URLs Vite writes in
     // development (the admin's fonts) must name Vite's own origin.
     origin: `http://${host}:${port}`,
@@ -37,6 +40,9 @@ export default defineConfig({
     emptyOutDir: false,
     target: 'es2022',
     cssMinify: 'lightningcss',
+    // The admin is one large bundle, loaded once per session (about 1.9 MB of
+    // JS and 1 MB of CSS); Vite's 500 kB warning has nothing to act on here.
+    chunkSizeWarningLimit: 3072,
     outDir: '../../priv/static', // <- Phoenix expects our files here
     // Maps are written without a sourceMappingURL comment, so browsers never
     // ask for them. `mix brando.digest` deletes them before release; upload
