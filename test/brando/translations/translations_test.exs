@@ -678,6 +678,20 @@ defmodule Brando.TranslationsTest do
       assert copied.inserted_at != inserted_at
     end
 
+    test "a translation of an entry related to itself links itself", c do
+      identifier = Repo.get_by!(Brando.Content.Identifier, schema: Article, entry_id: c.source.id)
+      Repo.insert!(%Article.RelatedEntriesIdentifier{parent_id: c.source.id, identifier_id: identifier.id, sequence: 0})
+
+      {:ok, en} = Translations.create_target(Article, c.source.id, :en, c.user)
+
+      en_identifier = Repo.get_by(Brando.Content.Identifier, schema: Article, entry_id: en.id)
+      assert en_identifier
+      assert [%{identifier_id: identifier_id}] = load(en.id).related_entries
+      assert identifier_id == en_identifier.id
+      assert [%{identifier_id: source_identifier_id}] = load(c.source.id).related_entries
+      assert source_identifier_id == identifier.id
+    end
+
     test "a translation links the related entries' versions in its language", c do
       create = fn title, slug ->
         {:ok, article} =

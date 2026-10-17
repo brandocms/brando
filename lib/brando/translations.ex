@@ -1196,9 +1196,16 @@ defmodule Brando.Translations do
       keep_sync_uid: true
     ]
 
-    override_opts = override_opts ++ language_copy_opts(language)
+    # The source among its own related entries is linked as the copy, once
+    # the copy exists: a batch of one (`copy_batch_to_language/5`).
+    source_id = cast_entry_id(schema, source_id)
+    batch = batch_identifiers(schema, [source_id], language)
+    override_opts = override_opts ++ [map_entries: &related_in_language(&1, language, MapSet.new(Map.keys(batch)))]
 
-    apply(context, :"duplicate_#{singular}", [source_id, actor, override_opts])
+    with {:ok, copy} <- apply(context, :"duplicate_#{singular}", [source_id, actor, override_opts]) do
+      link_batch_copies(schema, %{source_id => copy.id}, batch)
+      {:ok, copy}
+    end
   end
 
   @doc """
