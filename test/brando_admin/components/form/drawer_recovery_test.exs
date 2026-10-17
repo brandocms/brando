@@ -27,9 +27,10 @@ defmodule BrandoAdmin.Components.Form.DrawerRecoveryTest do
     {:ok, user: user, image: image}
   end
 
-  defp socket do
+  defp socket(entry \\ %Brando.Pages.Page{}) do
     %Phoenix.LiveView.Socket{}
     |> Component.assign(:id, "page_form")
+    |> Component.assign(:form, Component.to_form(Changeset.change(entry)))
     |> Component.assign(:editing_image?, false)
     |> Component.assign(:editing_video?, false)
     |> Component.assign(:editing_file?, false)
@@ -165,12 +166,35 @@ defmodule BrandoAdmin.Components.Form.DrawerRecoveryTest do
 
   # A field in a subform row has the row's index in its path.
   test "a recovered drawer keeps its path", %{image: image} do
-    params = put_in(drawer_params(image, "{}"), ["drawer", "path"], Jason.encode!(["vars", 0]))
+    article = %Brando.SyncTest.Article{items: [%Brando.SyncTest.ArticleItem{}]}
 
-    assert {:noreply, socket} = Form.handle_event("recover_drawer_state", params, socket())
-    assert socket.assigns.edit_image.path == [:vars, 0]
-    assert socket.assigns.edit_image.field == :meta_image
-    assert socket.assigns.edit_image.schema == Brando.Pages.Page
+    params =
+      drawer_params(image, "{}")
+      |> put_in(["drawer", "path"], Jason.encode!(["items", 0]))
+      |> put_in(["drawer", "field"], "cover")
+      |> put_in(["drawer", "schema"], to_string(Brando.SyncTest.ArticleItem))
+
+    assert {:noreply, socket} = Form.handle_event("recover_drawer_state", params, socket(article))
+    assert socket.assigns.edit_image.path == [:items, 0]
+    assert socket.assigns.edit_image.field == :cover
+    assert socket.assigns.edit_image.schema == Brando.SyncTest.ArticleItem
+  end
+
+  # The drawer commits a pick to `<field>_id` at its path in this form, so a
+  # field the form does not hold there leaves the drawer closed.
+  test "a drawer for a field the form does not hold at its path stays closed", %{image: image} do
+    for changes <- [
+          %{"schema" => to_string(Brando.SyncTest.ArticleAuthor), "field" => "portrait"},
+          %{"path" => Jason.encode!(["title"])},
+          %{"path" => Jason.encode!(["vars", 0])}
+        ] do
+      params = Map.update!(drawer_params(image, "{}"), "drawer", &Map.merge(&1, changes))
+
+      assert {:noreply, socket} = Form.handle_event("recover_drawer_state", params, socket()),
+             "failed for #{inspect(changes)}"
+
+      refute socket.assigns.editing_image?
+    end
   end
 
   describe "unrecoverable drawer state" do

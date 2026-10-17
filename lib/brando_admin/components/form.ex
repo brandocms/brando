@@ -8230,8 +8230,8 @@ defmodule BrandoAdmin.Components.Form do
 
   # The drawer the recovery form names, read from browser params: an id, a
   # blueprint schema, one of its asset fields of the drawer's type, and the
-  # path to it. Anything else is not restored: the restored drawer commits a
-  # pick as `<field>_id` at that path.
+  # path to that schema's struct in this form. Anything else is not restored:
+  # the restored drawer commits a pick as `<field>_id` at that path.
   defp with_drawer_target(socket, params, restore) do
     with id when is_binary(id) <- params["resource_id"],
          {resource_id, ""} when resource_id in 1..@max_id//1 <- Integer.parse(id),
@@ -8239,7 +8239,8 @@ defmodule BrandoAdmin.Components.Form do
          {:ok, %{name: field, type: type}} <- Brando.Assets.ConfigTarget.blueprint_asset(schema, params["field"]),
          true <- Atom.to_string(type) == params["type"],
          {:ok, schema} <- Brando.Assets.ConfigTarget.schema_module(schema),
-         {:ok, path} <- decode_recovery_path(params["path"]) do
+         {:ok, path} <- decode_recovery_path(params["path"]),
+         %^schema{} <- form_struct_at(socket.assigns[:form], path) do
       target = %{
         id: resource_id,
         path: path,
@@ -8392,6 +8393,18 @@ defmodule BrandoAdmin.Components.Form do
   end
 
   defp decode_recovery_path(_), do: {:ok, []}
+
+  # The struct a path names in the form: the entry, a one-to-one subform's
+  # struct, or a subform row.
+  defp form_struct_at(%Phoenix.HTML.Form{source: %Changeset{} = changeset}, path),
+    do: struct_at(apply_changes(changeset), path)
+
+  defp form_struct_at(_form, _path), do: nil
+
+  defp struct_at(data, []), do: data
+  defp struct_at(%{} = data, [key | rest]) when is_atom(key), do: struct_at(Map.get(data, key), rest)
+  defp struct_at(rows, [index | rest]) when is_list(rows) and is_integer(index), do: struct_at(Enum.at(rows, index), rest)
+  defp struct_at(_data, _path), do: nil
 
   # A field name, or the index of a subform row (`[:clients, 0]`).
   defp recovery_path_segment(index) when is_integer(index) and index >= 0, do: {:ok, index}
