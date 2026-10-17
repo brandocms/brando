@@ -420,7 +420,7 @@ defmodule Mix.Tasks.Brando.Gen.Test do
     flat = flat(result, "lib/generator_studio_web/catalog/article_controller.ex")
 
     assert flat =~
-             "%{ matches: %{slug: slug}, language: conn.assigns.language, status: :published, preload: [:alternate_entries, :meta_image] })"
+             "%{ matches: %{slug: slug}, language: conn.assigns.language, status: :published, preload: [:alternate_entries, :meta_image, :cover] })"
 
     assert flat =~ "list_articles %{ status: :published, language: conn.assigns.language })"
 

@@ -12,8 +12,9 @@
   or without the CMS site raises `Ecto.NoResultsError`, which `ErrorHTML`
   renders as a 404; it was a plain-text "Not found". The entry page renders
   the Blueprint's block fields after its title and loads the associations its
-  meta fields return, such as `meta_image`, which the layout's meta tags
-  raised on unloaded. For a Blueprint with a `language` field each language
+  meta fields return, such as `meta_image`, and each one a fallback reaches
+  (`fallback([&1.meta_image, &1.cover])` loads both), which the layout's meta
+  tags raised on unloaded. For a Blueprint with a `language` field each language
   gets its routes, as the CMS pages do: the default language's unprefixed and
   the others' in a scope under their code (`/no/articles`), from the
   configured languages; the pages show the request's language through the

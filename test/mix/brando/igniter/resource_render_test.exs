@@ -164,6 +164,7 @@ defmodule Mix.Brando.Igniter.ResourceRenderTest do
     Enum.reduce(preloads, article, fn
       :alternate_entries, article -> %{article | alternate_entries: []}
       :meta_image, article -> %{article | meta_image: nil}
+      :cover, article -> %{article | cover: nil}
     end)
   end
 

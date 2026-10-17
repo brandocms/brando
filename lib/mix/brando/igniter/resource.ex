@@ -127,15 +127,28 @@ if Code.ensure_loaded?(Igniter) do
 
       meta =
         try do
-          for {_target, %Ecto.Association.NotLoaded{__field__: field}} <-
-                Brando.Blueprint.Meta.extract_meta(module, struct(module)),
-              uniq: true,
-              do: field
+          meta_associations(module, struct(module), [])
         rescue
           _ -> if :meta_image in module.__schema__(:associations), do: [:meta_image], else: []
         end
 
       Enum.uniq(alternates ++ meta)
+    end
+
+    # A fallback such as `fallback([&1.meta_image, &1.cover])` returns only the
+    # first association it reaches unloaded: probe again with that one loaded
+    # and empty, until no meta field returns an unloaded association.
+    defp meta_associations(module, entry, found) do
+      unloaded =
+        for {_target, %Ecto.Association.NotLoaded{__field__: field}} <- Brando.Blueprint.Meta.extract_meta(module, entry),
+            field not in found,
+            uniq: true,
+            do: field
+
+      case unloaded do
+        [] -> found
+        fields -> meta_associations(module, struct(entry, Map.new(fields, &{&1, nil})), found ++ fields)
+      end
     end
 
     defp public_metadata(igniter, metadata, nil), do: {:ok, igniter, Map.put(metadata, :site_layouts, nil)}

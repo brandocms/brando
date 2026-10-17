@@ -21,6 +21,10 @@ defmodule GeneratorStudio.Catalog.Article do
     attribute :slug, :slug, required: true
   end
 
+  assets do
+    asset :cover, :image, cfg: %{}
+  end
+
   relations do
     relation :blocks, :has_many, module: :blocks
     relation :bio_blocks, :has_many, module: :blocks
@@ -28,6 +32,6 @@ defmodule GeneratorStudio.Catalog.Article do
 
   meta_schema do
     field ["title", "og:title"], & &1.title
-    field "og:image", & &1.meta_image
+    field "og:image", &fallback([&1.meta_image, &1.cover])
   end
 end
