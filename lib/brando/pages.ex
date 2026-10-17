@@ -423,28 +423,35 @@ defmodule Brando.Pages do
   Get set of fragments by parent key.
 
   For public pages: an unpublished fragment keeps its key, with no content, so
-  it renders nothing however a template reads it. Pass a `:status`, such as
-  `status: :all`, for fragments as stored.
+  it renders nothing however a template reads it. `status: :published` is the
+  same. Pass another `:status`, such as `status: :all`, for fragments as stored.
   """
   def get_fragments(parent_key) when is_binary(parent_key) do
     IO.warn("get_fragments(binary) is deprecated! Use `get_fragments(map)` instead")
     get_fragments(%{filter: %{parent_key: parent_key}})
   end
 
-  def get_fragments(%{status: _} = opts) do
+  def get_fragments(%{status: status} = opts) when status not in [:published, "published"] do
     {:ok, fragments} = list_fragments(opts)
     {:ok, Map.new(fragments, fn x -> {x.key, x} end)}
   end
 
   def get_fragments(opts) when is_map(opts) do
-    {:ok, fragments} = list_fragments(opts)
+    {:ok, fragments} = opts |> Map.delete(:status) |> select_status() |> list_fragments()
     {:ok, public_fragments(fragments)}
   end
 
+  defp select_status(%{select: {kind, fields}} = opts) when kind in [:map, :struct, :raw] and is_list(fields),
+    do: %{opts | select: {kind, Enum.uniq([:status | fields])}}
+
+  defp select_status(%{select: fields} = opts) when is_list(fields), do: %{opts | select: Enum.uniq([:status | fields])}
+  defp select_status(opts), do: opts
+
   defp public_fragments(fragments), do: Map.new(fragments, &{&1.key, without_draft_content(&1)})
 
-  defp without_draft_content(%Fragment{status: :published} = fragment), do: fragment
-  defp without_draft_content(%Fragment{} = fragment), do: %{fragment | rendered_blocks: nil}
+  defp without_draft_content(%{status: :published} = fragment), do: fragment
+  defp without_draft_content(%{rendered_blocks: _} = fragment), do: %{fragment | rendered_blocks: nil}
+  defp without_draft_content(fragment), do: fragment
 
   @doc """
   Get fragment from page

@@ -294,8 +294,11 @@ defmodule Brando.PagesTest do
       {:ok, all} = Pages.get_fragments(%{filter: %{parent_key: "partials", language: "en"}, status: :all})
       assert all["footer"].rendered_blocks == "Draft"
 
+      # The old guide's explicit status: :published is the default.
       {:ok, published} = Pages.get_fragments(%{filter: %{parent_key: "partials", language: "en"}, status: :published})
-      assert Map.keys(published) == ["header"]
+      assert Map.keys(published) |> Enum.sort() == ["footer", "header"]
+      assert published["footer"].rendered_blocks == nil
+      assert published["header"].rendered_blocks == "Published"
 
       # Each way a template reads a partial, from either map.
       for map <- [partials, by_language] do
@@ -325,6 +328,24 @@ defmodule Brando.PagesTest do
       end
 
       Brando.Repo.delete_all(Brando.Pages.Fragment)
+    end
+  end
+
+  test "get_fragments with a :select blanks an unpublished fragment whichever form the select takes" do
+    Factory.insert(:fragment, parent_key: "partials", key: "footer", status: :draft, rendered_blocks: "Draft")
+    Factory.insert(:fragment, parent_key: "partials", key: "header", rendered_blocks: "Published")
+
+    for select <- [
+          {:map, [:key, :rendered_blocks]},
+          [:key, :rendered_blocks],
+          {:struct, [:id, :key, :rendered_blocks]}
+        ] do
+      {:ok, partials} =
+        Pages.get_fragments(%{filter: %{parent_key: "partials", language: "en"}, select: select})
+
+      assert Map.keys(partials) |> Enum.sort() == ["footer", "header"]
+      assert partials["footer"].rendered_blocks == nil
+      assert partials["header"].rendered_blocks == "Published"
     end
   end
 

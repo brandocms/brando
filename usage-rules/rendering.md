@@ -203,9 +203,15 @@ nothing rather than the draft or the missing-fragment diagnostic. The same
 holds for `Brando.Plug.Fragment, parent_key: "partials", as: :partials`, which
 loads a group after the locale plug, for `get_fragments/2`, and for a fragment
 struct from `Brando.Pages.get_fragment/2` rendered with the component, the
-`render_fragment` helpers or `fetch_fragment/2`. Pass a `:status`, such as
-`status: :all`, to `get_fragments/1` for fragments as stored, with their
-content.
+`render_fragment` helpers or `fetch_fragment/2`. `status: :published` gives
+the same map; pass another `:status`, such as `status: :all`, to
+`get_fragments/1` for fragments as stored, with their content.
+
+A fragment embedded in a block, through a fragment block, the
+`{% fragment %}` tag or `<.fragment>`, is rendered into the entry's stored
+HTML. Saving the fragment re-renders the entries holding a fragment block;
+an entry embedding it through the tag or component shows the change on its
+own next save.
 
 ## Navigation
 
