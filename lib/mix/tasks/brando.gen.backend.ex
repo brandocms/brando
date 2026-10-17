@@ -16,9 +16,10 @@ if Code.ensure_loaded?(Igniter) do
     package versions, `engines` and `packageManager`, `vite.config.js`, the
     retired `svelte.config.cjs`, yarn/npm lockfiles (the template uses pnpm),
     and the Dockerfile's `assets_backend` stage, with an older or missing
-    `# syntax=` line moved to `docker/dockerfile:1`. Customized CSS and other
-    existing files are kept. Install and build afterwards with
-    `mix brando.assets.setup --backend-only`.
+    `# syntax=` line moved to `docker/dockerfile:1`. An older `twined/fehn`
+    image in the Dockerfile's `deps` stage is named in a notice, not changed.
+    Customized CSS and other existing files are kept. Install and build
+    afterwards with `mix brando.assets.setup --backend-only`.
 
     The Dockerfile's `assets_frontend` stage moves up to the `assets_backend`
     stage's Node major when `assets/frontend/package.json` sets no

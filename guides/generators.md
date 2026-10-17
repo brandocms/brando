@@ -11,7 +11,7 @@ Brando installs it from there. Development versions (`-dev`) have no npm
 release and take BrandoJS from the Brando checkout through Yalc; see
 [Build assets](#build-assets).
 The working consumer combination is phx_new 1.8.13, Phoenix 1.8.15, LiveView 1.2.12,
-Elixir 1.20.3, OTP 28.4.1 and PostgreSQL 16.1. Install Node.js 24, pnpm, PostgreSQL, the matching
+Elixir 1.20.4, OTP 28.5.0.8 and PostgreSQL 16.1. Install Node.js 24, pnpm, PostgreSQL, the matching
 Phoenix generator and an Image/Vix-supported build environment first, and Yalc
 to take BrandoJS from a checkout.
 
@@ -155,13 +155,13 @@ for it. A literal version, inline or in `@version`, moves; an existing
 they don't. A `mix.exs` that computes its version another way is left as it is.
 
 A new install pins the toolchain above in a `.tool-versions`, which asdf and
-mise both read: Erlang 28.4.1, Elixir 1.20.3, Node.js 24 and pnpm 10.32.1 (the
+mise both read: Erlang 28.5.0.8, Elixir 1.20.4, Node.js 24 and pnpm 10.32.1 (the
 Node.js major and pnpm the Dockerfile's asset stages use). With asdf or mise,
 `mix` and `pnpm` in the application then run those versions whatever the
 machine's defaults are; run `mise install` or `asdf install` for the Node.js
 and pnpm it names. The file is written only when the install itself runs the
 Erlang and Elixir that asdf or mise installed under those names (an Elixir
-from Homebrew, or one asdf built from source as `1.20.3`, doesn't count),
+from Homebrew, or one asdf built from source as `1.20.4`, doesn't count),
 since the install's follow-up `mix` tasks run in the application and a shim
 stops at a pinned version it has not installed under that name, and only
 when neither the application nor a folder above it (below your home folder)

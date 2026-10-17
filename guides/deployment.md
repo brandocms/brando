@@ -514,6 +514,49 @@ Brando's build needs that it lacks: the `assets_backend` and
 which Florist does not use. To switch to Brando's, move yours aside and rerun
 the installer.
 
+Brando's Dockerfile builds on `twined/fehn:4.2`: Elixir 1.20.4 on OTP
+28.5.0.8, on Ubuntu 24.04, the versions Brando's CI tests with and a new
+install's `.tool-versions` pins. Brando requires Elixir 1.18 or newer, so a
+Dockerfile from an earlier install that builds on an older tag (`4.0` has
+Elixir 1.17, the `3.x` tags older ones) cannot compile it: change its
+`FROM … twined/fehn:<tag>` line to the 4.2 variant for the server's Ubuntu
+release (below). `mix brando.gen.backend --upgrade` rewrites other parts of
+the Dockerfile but not `FROM`; it names an older tag in a notice.
+
+The release runs on the server outside Docker, with the ERTS and NIFs such as
+`:crypto` built in the image, so the image's Ubuntu release decides which
+servers it starts on: a server with an older glibc, or without the OpenSSL
+the `:crypto` NIF links, cannot start it, which shows as
+`GLIBC_2.3x not found` or a `:crypto` that fails to load. Pick the fehn 4.2
+variant that matches the server's Ubuntu release:
+
+| Server       | `FROM` image                                      | Elixir, OTP      | glibc, OpenSSL |
+| ------------ | ------------------------------------------------- | ---------------- | -------------- |
+| Ubuntu 24.04 | `twined/fehn:4.2` (the same image as `4.2-noble`) | 1.20.4, 28.5.0.8 | 2.39, 3.0      |
+| Ubuntu 22.04 | `twined/fehn:4.2-jammy`                           | 1.20.4, 28.5.0.8 | 2.35, 3.0.2    |
+| Ubuntu 20.04 | `twined/fehn:4.2-focal`                           | 1.19.5, 28.4.3   | 2.31, 1.1.1f   |
+
+hexpm no longer publishes current Elixir and OTP for Ubuntu 20.04, so
+`4.2-focal` has Elixir 1.19.5 on OTP 28.4.3, behind the other variants
+(Brando's CI tests Elixir 1.19.5 on OTP 28 too). A site that builds on it pins Erlang 28.4.3
+and Elixir 1.19.5-otp-28 in its `.tool-versions` or `.mise.toml`, to develop on
+what its releases are built with. Moving a 20.04 server to Ubuntu 22.04 or
+24.04, or to a new server, is the better path.
+
+Check the server before its first deploy from a new image:
+
+```bash
+lsb_release -a    # the Ubuntu release
+ldd --version     # glibc: no older than the image's
+openssl version   # OpenSSL: the image's major version
+```
+
+The fehn 4.0 and 4.1 images are Ubuntu 24.04, so a site moving from them to
+`4.2` needs nothing new on a server that already runs their releases. The
+fehn 3.x images are Ubuntu 20.04: a site moving from 3.x keeps its server on
+`4.2-focal`, or on `4.2-jammy` or `4.2` once the server is upgraded to 22.04
+or 24.04 (or the site moves to a new server).
+
 Florist sends the build context, the project directory, to the Docker daemon
 on every build, and that daemon may be remote. The `.dockerignore` keeps out
 dependencies and build output, `node_modules`, `media/`, Florist's

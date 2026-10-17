@@ -233,10 +233,13 @@ defmodule Mix.Brando.Igniter.InstallDeployTest do
   # the names the pin gives, and no folder above the application pins a
   # toolchain.
   defp toolchain(igniter, overrides \\ fn _data -> %{} end) do
-    data = data_dir([{"erlang", "28.4.1"}, {"elixir", "1.20.3-otp-28"}])
+    data = data_dir([{"erlang", "28.5.0.8"}, {"elixir", "1.20.4-otp-28"}])
 
     defaults = %{
-      running: %{"erlang" => installed(data, "erlang", "28.4.1"), "elixir" => installed(data, "elixir", "1.20.3-otp-28")},
+      running: %{
+        "erlang" => installed(data, "erlang", "28.5.0.8"),
+        "elixir" => installed(data, "elixir", "1.20.4-otp-28")
+      },
       data_dirs: [data],
       parents: []
     }
@@ -245,7 +248,7 @@ defmodule Mix.Brando.Igniter.InstallDeployTest do
   end
 
   defp no_pin_notice?(igniter, reason),
-    do: Enum.any?(igniter.notices, &(&1 =~ "No .tool-versions was written: #{reason}" and &1 =~ "erlang 28.4.1"))
+    do: Enum.any?(igniter.notices, &(&1 =~ "No .tool-versions was written: #{reason}" and &1 =~ "erlang 28.5.0.8"))
 
   test "a new application gets a .tool-versions when it runs the pinned Erlang and Elixir, once" do
     igniter = project() |> toolchain() |> install()
@@ -283,21 +286,21 @@ defmodule Mix.Brando.Igniter.InstallDeployTest do
   end
 
   test "a new install that does not run the version manager's pinned installs suggests the .tool-versions" do
-    # Another version; the same Elixir under another name (asdf's 1.20.3,
-    # built from source), whose shim would not find 1.20.3-otp-28; an Elixir
+    # Another version; the same Elixir under another name (asdf's 1.20.4,
+    # built from source), whose shim would not find 1.20.4-otp-28; an Elixir
     # outside the version managers (Homebrew), with theirs installed too.
     for {tool, running} <- [
           {"erlang", &installed(&1, "erlang", "27.2")},
           {"elixir", &installed(&1, "elixir", "1.19.5-otp-28")},
-          {"elixir", &installed(&1, "elixir", "1.20.3")},
-          {"elixir", fn _ -> "/opt/homebrew/Cellar/elixir/1.20.3" end}
+          {"elixir", &installed(&1, "elixir", "1.20.4")},
+          {"elixir", fn _ -> "/opt/homebrew/Cellar/elixir/1.20.4" end}
         ] do
       igniter =
         project()
         |> toolchain(fn data ->
           %{
             running:
-              %{"erlang" => installed(data, "erlang", "28.4.1"), "elixir" => installed(data, "elixir", "1.20.3-otp-28")}
+              %{"erlang" => installed(data, "erlang", "28.5.0.8"), "elixir" => installed(data, "elixir", "1.20.4-otp-28")}
               |> Map.put(tool, running.(data))
           }
         end)
@@ -306,7 +309,7 @@ defmodule Mix.Brando.Igniter.InstallDeployTest do
       assert igniter.issues == []
       refute Igniter.exists?(igniter, ".tool-versions"), running.("data")
 
-      assert no_pin_notice?(igniter, "this install does not run the Erlang 28.4.1 and Elixir 1.20.3-otp-28"),
+      assert no_pin_notice?(igniter, "this install does not run the Erlang 28.5.0.8 and Elixir 1.20.4-otp-28"),
              running.("data")
     end
   end
@@ -315,8 +318,8 @@ defmodule Mix.Brando.Igniter.InstallDeployTest do
     igniter =
       project()
       |> toolchain(fn data ->
-        File.ln_s!("./1.20.3-otp-28", installed(data, "elixir", "1.20"))
-        %{running: %{"erlang" => installed(data, "erlang", "28.4.1"), "elixir" => installed(data, "elixir", "1.20")}}
+        File.ln_s!("./1.20.4-otp-28", installed(data, "elixir", "1.20"))
+        %{running: %{"erlang" => installed(data, "erlang", "28.5.0.8"), "elixir" => installed(data, "elixir", "1.20")}}
       end)
       |> install()
 
@@ -324,7 +327,7 @@ defmodule Mix.Brando.Igniter.InstallDeployTest do
   end
 
   test "the running Erlang and Elixir are pinned installs only where asdf or mise installed them under the pinned names" do
-    pins = %{"erlang" => "28.4.1", "elixir" => "1.20.3-otp-28"}
+    pins = %{"erlang" => "28.5.0.8", "elixir" => "1.20.4-otp-28"}
     elixir = :code.lib_dir(:elixir) |> Path.join("../..") |> Path.expand()
     erlang = to_string(:code.root_dir())
     mise = data_dir([])
@@ -345,15 +348,15 @@ defmodule Mix.Brando.Igniter.InstallDeployTest do
     refute Toolchain.pinned_install?(pins)
 
     # The running Elixir, named as asdf names one it built from source.
-    link.(mise, "erlang", "28.4.1", erlang)
-    link.(mise, "elixir", "1.20.3", elixir)
+    link.(mise, "erlang", "28.5.0.8", erlang)
+    link.(mise, "elixir", "1.20.4", elixir)
     refute Toolchain.pinned_install?(pins)
 
     # The pinned names, but Elixir with another manager than Erlang.
-    link.(asdf, "elixir", "1.20.3-otp-28", elixir)
+    link.(asdf, "elixir", "1.20.4-otp-28", elixir)
     refute Toolchain.pinned_install?(pins)
 
-    link.(asdf, "erlang", "28.4.1", erlang)
+    link.(asdf, "erlang", "28.5.0.8", erlang)
     assert Toolchain.pinned_install?(pins)
   end
 
@@ -374,7 +377,7 @@ defmodule Mix.Brando.Igniter.InstallDeployTest do
     installed =
       project()
       |> toolchain(
-        &%{running: %{"erlang" => installed(&1, "erlang", "27.2"), "elixir" => installed(&1, "elixir", "1.20.3-otp-28")}}
+        &%{running: %{"erlang" => installed(&1, "erlang", "27.2"), "elixir" => installed(&1, "elixir", "1.20.4-otp-28")}}
       )
       |> install()
 
@@ -403,6 +406,19 @@ defmodule Mix.Brando.Igniter.InstallDeployTest do
 
     assert [_ | _] = node = Regex.scan(~r/^FROM\s+node:(\d+)/m, dockerfile, capture: :all_but_first)
     assert Enum.uniq(node) == [[pins["nodejs"] |> String.split(".") |> hd()]]
+
+    # The Erlang and Elixir each twined/fehn tag the Dockerfile may build on
+    # has (4.2 and 4.2-noble are Ubuntu 24.04, 4.2-jammy 22.04, 4.2-focal
+    # 20.04); a new tag goes here when the pins move to it.
+    fehn =
+      ~w(4.2 4.2-noble 4.2-jammy)
+      |> Map.new(&{&1, %{"erlang" => "28.5.0.8", "elixir" => "1.20.4-otp-28"}})
+      |> Map.put("4.2-focal", %{"erlang" => "28.4.3", "elixir" => "1.19.5-otp-28"})
+
+    assert [[tag]] = Regex.scan(~r/^FROM\s+(?:--\S+\s+)*twined\/fehn:(\S+)/m, dockerfile, capture: :all_but_first)
+
+    assert Map.take(pins, ~w(erlang elixir)) == fehn[tag],
+           "twined/fehn:#{tag} does not build with the pinned Erlang and Elixir"
 
     # Brando's own toolchain, which CI tests with.
     mise = File.read!(".mise.toml")

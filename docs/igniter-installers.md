@@ -26,7 +26,7 @@ supervision shapes, ambiguous modules and dynamic/conflicting identity or tenanc
 configuration produce blocking issues. Discovery does not evaluate consumer code.
 
 Source tests use Igniter 0.8.3. Real consumers have been checked with phx_new and
-Phoenix 1.8.13, LiveView 1.2.11, Elixir 1.20.3 and OTP 28.4.1. This is evidence for
+Phoenix 1.8.13, LiveView 1.2.11, Elixir 1.20.4 and OTP 28.5.0.8. This is evidence for
 that combination with PostgreSQL 16.1, not qualification of every version in
 Brando's unit-test matrix. The `igniter.new` archive 0.5.28 one-shot path also
 installs and compiles successfully from outside an existing Mix project.

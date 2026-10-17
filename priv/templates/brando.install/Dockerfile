@@ -5,7 +5,7 @@
 # - job: dependencies
 # -----------------------------------
 
-FROM --platform=linux/amd64 twined/fehn:4.0 as deps
+FROM --platform=linux/amd64 twined/fehn:4.2 as deps
 
 ARG MIX_ENV=prod
 ARG HEX_MIRROR_URL=https://repo.hex.pm
