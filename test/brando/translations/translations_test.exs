@@ -1,6 +1,8 @@
 defmodule Brando.TranslationsTest do
   use Brando.ConnCase, async: false
 
+  import Ecto.Query, only: [from: 2]
+
   alias Brando.Content.Block
   alias Brando.Factory
   alias Brando.Repo
@@ -776,6 +778,98 @@ defmodule Brando.TranslationsTest do
       assert pending_ref.gallery_id == copied.gallery_id
       assert Enum.map(pending_ref.gallery.gallery_objects, & &1.image_id) == [image.id, second.id]
       assert Enum.map(gallery_ref.(load(en.id)).gallery.gallery_objects, & &1.image_id) == [image.id]
+    end
+  end
+
+  describe "copying a batch to a language" do
+    setup c do
+      article = fn title, slug ->
+        {:ok, article} =
+          SyncTest.create_article(%{title: title, slug: slug, language: "no", status: "published"}, c.user)
+
+        article
+      end
+
+      hotel = article.("Example Hotel", "example-hotel")
+      annex = article.("Example Hotel Annex", "example-hotel-annex")
+
+      # The hotel links the annex, and so does its author's link
+      link_to(Article.RelatedEntriesIdentifier, hotel.id, annex)
+
+      author =
+        Repo.insert!(%SyncTest.ArticleAuthor{
+          article_id: hotel.id,
+          name: "Example Author",
+          links: [%SyncTest.ArticleAuthorLink{label: "Example Hotel"}]
+        })
+
+      link_to(SyncTest.ArticleAuthorLink.RelatedEntriesIdentifier, hd(author.links).id, annex)
+      %{hotel: hotel, annex: annex}
+    end
+
+    defp link_to(join, parent_id, entry) do
+      Repo.insert!(struct(join, parent_id: parent_id, identifier_id: identifier_id(entry)))
+    end
+
+    defp identifier_id(entry), do: Repo.get_by!(Brando.Content.Identifier, schema: Article, entry_id: entry.id).id
+
+    defp copy_batch(c, ids) do
+      opts = [change_fields: [{:language, :en} | Translations.free_unique_values(Article)], delete_fields: []]
+      Translations.copy_batch_to_language(Article, ids, "en", c.user, opts)
+    end
+
+    defp english_copy(entry) do
+      [copy_id] = Repo.all(from a in Article, where: a.language == :en and a.title == ^entry.title, select: a.id)
+      copy = load(copy_id)
+
+      case copy.author do
+        %{links: [link]} -> {copy, Repo.preload(link, :related_entries)}
+        nil -> {copy, nil}
+      end
+    end
+
+    test "links an entry copied with it, though its duplicate returns the copy bare", c do
+      Process.put({:synctest_duplicate, c.hotel.id}, :bare)
+
+      assert %{failed: [], dropped_links: 0} = copy_batch(c, [c.hotel.id, c.annex.id])
+
+      {annex_en, _link} = english_copy(c.annex)
+      {hotel_en, link} = english_copy(c.hotel)
+      annex_en_id = identifier_id(annex_en)
+      assert [%{identifier_id: ^annex_en_id}] = hotel_en.related_entries
+      assert [%{identifier_id: ^annex_en_id}] = link.related_entries
+    end
+
+    test "leaves out and counts links to an entry whose copy failed", c do
+      Process.put({:synctest_duplicate, c.annex.id}, :error)
+
+      assert %{failed: [{annex_id, {:error, :synctest_failed}}], dropped_links: 2} =
+               copy_batch(c, [c.hotel.id, c.annex.id])
+
+      assert annex_id == c.annex.id
+      {hotel_en, link} = english_copy(c.hotel)
+      assert {hotel_en.related_entries, link.related_entries} == {[], []}
+    end
+
+    test "leaves no link in the source's language when a later copy raises", c do
+      Process.put({:synctest_duplicate, c.annex.id}, :raise)
+
+      assert_raise RuntimeError, fn -> copy_batch(c, [c.hotel.id, c.annex.id]) end
+
+      {hotel_en, link} = english_copy(c.hotel)
+      assert {hotel_en.related_entries, link.related_entries} == {[], []}
+    end
+
+    test "links an entry related to itself to its own copy", c do
+      link_to(Article.RelatedEntriesIdentifier, c.hotel.id, c.hotel)
+
+      assert %{failed: [], dropped_links: 0} = copy_batch(c, [c.hotel.id, c.annex.id])
+
+      {hotel_en, _link} = english_copy(c.hotel)
+      {annex_en, _link} = english_copy(c.annex)
+
+      assert hotel_en.related_entries |> Enum.map(& &1.identifier_id) |> Enum.sort() ==
+               Enum.sort([identifier_id(annex_en), identifier_id(hotel_en)])
     end
   end
 

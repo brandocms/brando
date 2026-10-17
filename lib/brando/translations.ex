@@ -1226,77 +1226,108 @@ defmodule Brando.Translations do
           %{failed: [{integer(), term()}], dropped_links: non_neg_integer()}
   def copy_batch_to_language(schema, ids, language, actor, override_opts) do
     language = to_string(language)
-    duplicate = :"duplicate_#{schema.__naming__().singular}"
-    context = schema.__modules__().context
+    ids = Enum.map(ids, &to_entry_id/1)
 
     # An identifier of an entry in the batch, to the entry
     batch =
       Repo.all(from i in Identifier, where: i.schema == ^schema and i.entry_id in ^ids, select: {i.id, i.entry_id})
       |> Map.new()
 
+    {copies, failed, dropped, raised} = copy_each(schema, ids, language, actor, override_opts, batch)
+
+    # The copies made so far are saved, so their links are put right even when
+    # a later copy raised.
+    dropped = dropped + link_batch_copies(schema, copies, batch)
+
+    case raised do
+      nil -> %{failed: Enum.reverse(failed), dropped_links: dropped}
+      {exception, stacktrace} -> reraise exception, stacktrace
+    end
+  end
+
+  defp to_entry_id(id) when is_integer(id), do: id
+  defp to_entry_id(id) when is_binary(id), do: String.to_integer(id)
+
+  # Each entry's copy, the source id to the copy's id. A link to an entry of
+  # the batch is kept as it is until the batch is copied.
+  defp copy_each(schema, ids, language, actor, override_opts, batch) do
+    duplicate = :"duplicate_#{schema.__naming__().singular}"
+    context = schema.__modules__().context
     kept = batch |> Map.keys() |> MapSet.new()
 
-    {copies, failed, dropped} =
-      Enum.reduce(ids, {%{}, [], 0}, fn id, {copies, failed, dropped} ->
-        counter = :counters.new(1, [])
-        opts = override_opts ++ [map_entries: &related_in_language(&1, language, kept, counter)]
+    Enum.reduce_while(ids, {%{}, [], 0, nil}, fn id, {copies, failed, dropped, nil} ->
+      counter = :counters.new(1, [])
+      opts = override_opts ++ [map_entries: &related_in_language(&1, language, kept, counter)]
 
+      try do
         case apply(context, duplicate, [id, actor, opts]) do
-          {:ok, copy} -> {Map.put(copies, id, copy), failed, dropped + :counters.get(counter, 1)}
-          error -> {copies, [{id, error} | failed], dropped}
+          {:ok, copy} -> {:cont, {Map.put(copies, id, copy.id), failed, dropped + :counters.get(counter, 1), nil}}
+          error -> {:cont, {copies, [{id, error} | failed], dropped, nil}}
         end
-      end)
-
-    %{failed: Enum.reverse(failed), dropped_links: dropped + link_batch_copies(schema, copies, batch)}
+      rescue
+        exception -> {:halt, {copies, failed, dropped, {exception, __STACKTRACE__}}}
+      end
+    end)
   end
 
   # The copies' links that still name an entry of the batch, at any depth, now
-  # name its copy; a link to an entry whose copy failed is removed. Returns
-  # the number removed.
-  defp link_batch_copies(_schema, _copies, batch) when map_size(batch) == 0, do: 0
+  # name its copy. A link to an entry that has no copy, or whose copy has no
+  # identifier, is removed. Returns the number removed.
+  defp link_batch_copies(_schema, copies, batch) when map_size(batch) == 0 or map_size(copies) == 0, do: 0
 
   defp link_batch_copies(schema, copies, batch) do
-    for {_id, copy} <- copies,
-        %{identifier_id: identifier_id} = row <- entries_rows(copy),
-        Map.has_key?(batch, identifier_id),
-        reduce: 0 do
+    for {join, row_id, identifier_id} <- batch_links(schema, Map.values(copies), Map.keys(batch)), reduce: 0 do
       removed ->
-        query = from j in row.__struct__, where: j.id == ^row.id
+        query = from j in join, where: j.id == ^row_id
 
-        case copies[batch[identifier_id]] do
+        case copies[batch[identifier_id]] && identifier_id_for(schema, copies[batch[identifier_id]]) do
           nil ->
             Repo.delete_all(query)
             removed + 1
 
-          linked ->
-            Repo.update_all(query, set: [identifier_id: identifier_id_for(schema, linked.id)])
+          copy_identifier_id ->
+            Repo.update_all(query, set: [identifier_id: copy_identifier_id])
             removed
         end
     end
   end
 
-  # The join rows of every `:entries` relation an inserted copy holds, its
-  # subform rows' included.
-  defp entries_rows(%module{} = entry) do
-    if Brando.Blueprint.blueprint?(module) do
-      Enum.flat_map(Brando.Blueprint.Relations.__relations__(module), fn
-        %{type: :entries, name: name} ->
-          loaded_rows(Map.get(entry, name))
+  # The `:entries` join rows naming one of `identifier_ids` that the entries of
+  # `module` with `ids` hold, and their subform rows at any depth, read from
+  # the database: a context's duplicate may return its copy without them.
+  defp batch_links(module, ids, identifier_ids, seen \\ MapSet.new())
 
-        %{type: type, name: name, opts: %{cast: true}} when type in [:has_many, :has_one] ->
-          entry |> Map.get(name) |> loaded_rows() |> Enum.flat_map(&entries_rows/1)
+  defp batch_links(_module, [], _identifier_ids, _seen), do: []
 
-        _relation ->
+  defp batch_links(module, ids, identifier_ids, seen) do
+    ids = Enum.reject(ids, &MapSet.member?(seen, {module, &1}))
+    seen = Enum.reduce(ids, seen, &MapSet.put(&2, {module, &1}))
+
+    Enum.flat_map(Brando.Blueprint.Relations.__relations__(module), fn
+      %{type: :entries, name: name} ->
+        %{related: join, related_key: key} = module.__schema__(:association, name)
+
+        from(j in join,
+          where: field(j, ^key) in ^ids and j.identifier_id in ^identifier_ids,
+          select: {j.id, j.identifier_id}
+        )
+        |> Repo.all()
+        |> Enum.map(fn {id, identifier_id} -> {join, id, identifier_id} end)
+
+      %{type: type, name: name, opts: %{cast: true}} when type in [:has_many, :has_one] ->
+        %{related: child, related_key: key} = module.__schema__(:association, name)
+
+        if ids != [] and Brando.Blueprint.blueprint?(child) do
+          child_ids = Repo.all(from c in child, where: field(c, ^key) in ^ids, select: c.id)
+          batch_links(child, child_ids, identifier_ids, seen)
+        else
           []
-      end)
-    else
-      []
-    end
-  end
+        end
 
-  defp loaded_rows(rows) when is_list(rows), do: rows
-  defp loaded_rows(%{__meta__: _} = row), do: [row]
-  defp loaded_rows(_), do: []
+      _relation ->
+        []
+    end)
+  end
 
   @doc """
   `change_fields` for copying an entry of `schema` into another language.
