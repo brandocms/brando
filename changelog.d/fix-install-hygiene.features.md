@@ -16,7 +16,8 @@
 - **A new `mix brando.install` pins the toolchain in a `.tool-versions`**
   (Erlang, Elixir, Node.js and pnpm, read by asdf and mise), so a plain `mix`
   or `pnpm` there doesn't run whatever the machine defaults to. It writes the
-  file only when the install runs the pinned Erlang and Elixir, so asdf can't
-  stop the install's own `mix` tasks, and when neither the application nor a
+  file only when the install runs the Erlang and Elixir asdf or mise
+  installed under the pinned names, so their shims can't stop the install's
+  own `mix` tasks, and when neither the application nor a
   folder above it pins a toolchain (`.tool-versions`, mise configuration,
   `.nvmrc`, `.node-version`); otherwise a notice shows the contents to add.

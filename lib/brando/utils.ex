@@ -1280,4 +1280,35 @@ defmodule Brando.Utils do
       _ -> true
     end
   end
+
+  @doc """
+  `path`, expanded, with every symlink along it resolved, as realpath(3)
+  does: a relative link target is read from the real directory holding the
+  link. Links followed are bounded, so a cycle ends where the limit is
+  reached. The part of `path` that does not exist is kept as given.
+  """
+  @spec real_path(Path.t()) :: String.t()
+  def real_path(path) do
+    [root | parts] = path |> Path.expand() |> Path.split()
+    walk_path(root, parts, 0)
+  end
+
+  defp walk_path(dir, [], _links), do: dir
+  defp walk_path(dir, ["." | rest], links), do: walk_path(dir, rest, links)
+  defp walk_path(dir, [".." | rest], links), do: walk_path(Path.dirname(dir), rest, links)
+
+  defp walk_path(dir, [part | rest], links) do
+    path = Path.join(dir, part)
+
+    case links < 40 && File.read_link(path) do
+      {:ok, target} ->
+        case Path.split(target) do
+          ["/" | target_parts] -> walk_path("/", target_parts ++ rest, links + 1)
+          target_parts -> walk_path(dir, target_parts ++ rest, links + 1)
+        end
+
+      _not_a_link ->
+        walk_path(path, rest, links)
+    end
+  end
 end

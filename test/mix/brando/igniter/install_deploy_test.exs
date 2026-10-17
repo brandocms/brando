@@ -5,6 +5,7 @@ defmodule Mix.Brando.Igniter.InstallDeployTest do
   use ExUnit.Case, async: false
 
   alias Brando.IgniterCase
+  alias Mix.Brando.Igniter.Install.Toolchain
   alias Mix.Brando.Install.Templates
   alias Mix.Tasks.Brando.Install
 
@@ -217,12 +218,31 @@ defmodule Mix.Brando.Igniter.InstallDeployTest do
     refute added =~ "/log/"
   end
 
-  # The toolchain the install runs under, as the pin names it, and no folder
-  # above the application pinning one.
-  @pinned %{"erlang" => "28.4.1", "elixir" => "1.20.3-otp-28"}
+  # A version manager's data folder (asdf's or mise's) with a folder for each
+  # `{tool, name}` install, and the folder itself.
+  defp data_dir(installs) do
+    dir = Path.join(System.tmp_dir!(), "brando-toolchain-#{System.unique_integer([:positive])}")
+    on_exit(fn -> File.rm_rf!(dir) end)
+    for {tool, name} <- installs, do: File.mkdir_p!(Path.join([dir, "installs", tool, name]))
+    dir
+  end
 
-  defp toolchain(igniter, overrides \\ %{}),
-    do: Igniter.assign(igniter, :brando_toolchain, Map.merge(%{running: @pinned, parents: []}, overrides))
+  defp installed(dir, tool, name), do: Path.join([dir, "installs", tool, name])
+
+  # The install runs the Erlang and Elixir a version manager installed under
+  # the names the pin gives, and no folder above the application pins a
+  # toolchain.
+  defp toolchain(igniter, overrides \\ fn _data -> %{} end) do
+    data = data_dir([{"erlang", "28.4.1"}, {"elixir", "1.20.3-otp-28"}])
+
+    defaults = %{
+      running: %{"erlang" => installed(data, "erlang", "28.4.1"), "elixir" => installed(data, "elixir", "1.20.3-otp-28")},
+      data_dirs: [data],
+      parents: []
+    }
+
+    Igniter.assign(igniter, :brando_toolchain, Map.merge(defaults, overrides.(data)))
+  end
 
   defp no_pin_notice?(igniter, reason),
     do: Enum.any?(igniter.notices, &(&1 =~ "No .tool-versions was written: #{reason}" and &1 =~ "erlang 28.4.1"))
@@ -256,23 +276,108 @@ defmodule Mix.Brando.Igniter.InstallDeployTest do
     on_exit(fn -> File.rm_rf!(parent) end)
     File.write!(Path.join(parent, ".tool-versions"), "elixir 1.19.5-otp-28\n")
 
-    igniter = project() |> toolchain(%{parents: [Path.join(parent, "empty"), parent]}) |> install()
+    igniter = project() |> toolchain(fn _data -> %{parents: [Path.join(parent, "empty"), parent]} end) |> install()
     assert igniter.issues == []
     refute Igniter.exists?(igniter, ".tool-versions")
     assert no_pin_notice?(igniter, "#{parent}/.tool-versions pins a toolchain for the folders below it")
   end
 
-  test "a new install run by another Erlang or Elixir suggests the .tool-versions, so asdf can't stop its mix tasks" do
-    for {tool, version} <- [{"erlang", "27.2"}, {"elixir", "1.19.5-otp-28"}] do
-      igniter = project() |> toolchain(%{running: Map.put(@pinned, tool, version)}) |> install()
+  test "a new install that does not run the version manager's pinned installs suggests the .tool-versions" do
+    # Another version; the same Elixir under another name (asdf's 1.20.3,
+    # built from source), whose shim would not find 1.20.3-otp-28; an Elixir
+    # outside the version managers (Homebrew), with theirs installed too.
+    for {tool, running} <- [
+          {"erlang", &installed(&1, "erlang", "27.2")},
+          {"elixir", &installed(&1, "elixir", "1.19.5-otp-28")},
+          {"elixir", &installed(&1, "elixir", "1.20.3")},
+          {"elixir", fn _ -> "/opt/homebrew/Cellar/elixir/1.20.3" end}
+        ] do
+      igniter =
+        project()
+        |> toolchain(fn data ->
+          %{
+            running:
+              %{"erlang" => installed(data, "erlang", "28.4.1"), "elixir" => installed(data, "elixir", "1.20.3-otp-28")}
+              |> Map.put(tool, running.(data))
+          }
+        end)
+        |> install()
+
       assert igniter.issues == []
-      refute Igniter.exists?(igniter, ".tool-versions"), tool
-      assert no_pin_notice?(igniter, "this install runs #{tool} #{version}"), tool
+      refute Igniter.exists?(igniter, ".tool-versions"), running.("data")
+
+      assert no_pin_notice?(igniter, "this install does not run the Erlang 28.4.1 and Elixir 1.20.3-otp-28"),
+             running.("data")
+    end
+  end
+
+  test "a new install run through a version manager's alias of the pinned install gets the .tool-versions" do
+    igniter =
+      project()
+      |> toolchain(fn data ->
+        File.ln_s!("./1.20.3-otp-28", installed(data, "elixir", "1.20"))
+        %{running: %{"erlang" => installed(data, "erlang", "28.4.1"), "elixir" => installed(data, "elixir", "1.20")}}
+      end)
+      |> install()
+
+    assert IgniterCase.source(igniter, ".tool-versions") == Templates.contents(:copy, "tool-versions")
+  end
+
+  test "the running Erlang and Elixir are pinned installs only where asdf or mise installed them under the pinned names" do
+    pins = %{"erlang" => "28.4.1", "elixir" => "1.20.3-otp-28"}
+    elixir = :code.lib_dir(:elixir) |> Path.join("../..") |> Path.expand()
+    erlang = to_string(:code.root_dir())
+    mise = data_dir([])
+    asdf = data_dir([])
+    env = Map.new(~w(MISE_DATA_DIR ASDF_DATA_DIR), &{&1, System.get_env(&1)})
+
+    on_exit(fn ->
+      Enum.each(env, fn {key, value} -> if value, do: System.put_env(key, value), else: System.delete_env(key) end)
+    end)
+
+    System.put_env(%{"MISE_DATA_DIR" => mise, "ASDF_DATA_DIR" => asdf})
+
+    link = fn dir, tool, name, target ->
+      File.mkdir_p!(Path.join([dir, "installs", tool]))
+      File.ln_s!(target, installed(dir, tool, name))
+    end
+
+    refute Toolchain.pinned_install?(pins)
+
+    # The running Elixir, named as asdf names one it built from source.
+    link.(mise, "erlang", "28.4.1", erlang)
+    link.(mise, "elixir", "1.20.3", elixir)
+    refute Toolchain.pinned_install?(pins)
+
+    # The pinned names, but Elixir with another manager than Erlang.
+    link.(asdf, "elixir", "1.20.3-otp-28", elixir)
+    refute Toolchain.pinned_install?(pins)
+
+    link.(asdf, "erlang", "28.4.1", erlang)
+    assert Toolchain.pinned_install?(pins)
+  end
+
+  test "the folders searched for a pin stop at the home folder, a symlinked one included" do
+    base = data_dir([]) |> Brando.Utils.real_path()
+    home = Path.join(base, "home")
+    File.mkdir_p!(Path.join(home, "dev/app"))
+    File.write!(Path.join(home, ".tool-versions"), "elixir 1.19.5-otp-28\n")
+    File.ln_s!(home, Path.join(base, "link"))
+
+    # As File.cwd!/0 gives it: the real path.
+    for given <- [home, Path.join(base, "link")] do
+      assert Toolchain.parents(Path.join(home, "dev/app"), given) == [Path.join(home, "dev")], given
     end
   end
 
   test "a rerun on an application without a .tool-versions leaves it so, without a notice" do
-    installed = project() |> toolchain(%{running: Map.put(@pinned, "erlang", "27.2")}) |> install()
+    installed =
+      project()
+      |> toolchain(
+        &%{running: %{"erlang" => installed(&1, "erlang", "27.2"), "elixir" => installed(&1, "elixir", "1.20.3-otp-28")}}
+      )
+      |> install()
+
     rerun = installed |> IgniterCase.apply_and_reload() |> toolchain() |> install()
     assert rerun.issues == []
     refute Igniter.exists?(rerun, ".tool-versions")

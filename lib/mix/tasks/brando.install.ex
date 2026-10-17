@@ -65,8 +65,9 @@ if Code.ensure_loaded?(Igniter) do
 
     A new installation gets a `.tool-versions` pinning the Erlang, Elixir,
     Node.js and pnpm versions Brando is tested with, for asdf and mise, when
-    the install runs that Erlang and Elixir and neither the application nor a
-    folder above it pins a toolchain; otherwise a notice suggests it.
+    the install runs the Erlang and Elixir asdf or mise installed under those
+    names and neither the application nor a folder above it pins a toolchain;
+    otherwise a notice suggests it.
     """
 
     @impl Igniter.Mix.Task

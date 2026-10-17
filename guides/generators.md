@@ -159,9 +159,11 @@ mise both read: Erlang 28.4.1, Elixir 1.20.3, Node.js 24 and pnpm 10.32.1 (the
 Node.js major and pnpm the Dockerfile's asset stages use). With asdf or mise,
 `mix` and `pnpm` in the application then run those versions whatever the
 machine's defaults are; run `mise install` or `asdf install` for the Node.js
-and pnpm it names. The file is written only when the install itself runs that
-Erlang and Elixir, since the install's follow-up `mix` tasks run in the
-application and asdf stops a pinned version it has not installed, and only
+and pnpm it names. The file is written only when the install itself runs the
+Erlang and Elixir that asdf or mise installed under those names (an Elixir
+from Homebrew, or one asdf built from source as `1.20.3`, doesn't count),
+since the install's follow-up `mix` tasks run in the application and a shim
+stops at a pinned version it has not installed under that name, and only
 when neither the application nor a folder above it (below your home folder)
 pins a toolchain already: a `.tool-versions`, a mise configuration
 (`mise.toml`, `.mise.toml`, `mise.local.toml`, `.mise/config.toml`,

@@ -5,6 +5,7 @@ if Code.ensure_loaded?(Igniter) do
 
     @moduledoc false
 
+    alias Brando.Utils
     alias Mix.Brando.Igniter.Files
     alias Mix.Brando.Install.Templates
 
@@ -21,14 +22,15 @@ if Code.ensure_loaded?(Igniter) do
 
     Igniter runs the install's follow-up tasks (`brando.install.secrets`,
     `deps.get`) as `mix` in the application once the files are written, so the
-    pin is written only when the running Erlang and Elixir are the pinned ones:
-    asdf refuses a pinned version it has not installed. It is also left out
-    when the application or a folder above it, below the home folder, pins a
-    toolchain. Otherwise a notice suggests the file.
+    pin is written only when the running Erlang and Elixir are the installs
+    asdf or mise name as the pin does: a shim stops at a pinned version it has
+    not installed under that name. It is also left out when the application or
+    a folder above it, below the home folder, pins a toolchain. Otherwise a
+    notice suggests the file.
 
     `igniter.assigns[:brando_toolchain]` may give `:running` (`%{"erlang" =>
-    version, "elixir" => version}`) and `:parents` (folders to look in) in
-    place of the running system's.
+    root, "elixir" => root}`), `:data_dirs` (version managers' data folders)
+    and `:parents` (folders to look in) in place of the running system's.
     """
     def plan(igniter, fresh?)
     def plan(igniter, false), do: igniter
@@ -60,6 +62,7 @@ if Code.ensure_loaded?(Igniter) do
     defp reason(igniter, pins) do
       overrides = Map.get(igniter.assigns, :brando_toolchain, %{})
       running = Map.get_lazy(overrides, :running, &running/0)
+      data_dirs = Map.get_lazy(overrides, :data_dirs, &data_dirs/0)
 
       cond do
         own = Enum.find(@toolchain_files, &Igniter.exists?(igniter, &1)) ->
@@ -68,12 +71,29 @@ if Code.ensure_loaded?(Igniter) do
         parent = Enum.find_value(Map.get_lazy(overrides, :parents, &parents/0), &pinned_in/1) ->
           "#{parent} pins a toolchain for the folders below it"
 
-        different = Enum.find(~w(erlang elixir), &(running[&1] != pins[&1])) ->
-          "this install runs #{different} #{running[different]}, not #{pins[different]}, and asdf would stop the install's own `mix` tasks in the application until that is installed"
+        not pinned_install?(pins, running, data_dirs) ->
+          "this install does not run the Erlang #{pins["erlang"]} and Elixir #{pins["elixir"]} that asdf or mise installed under those names " <>
+            "(it runs Erlang from #{running["erlang"]} and Elixir from #{running["elixir"]}), " <>
+            "and with the pin, asdf or mise would stop the install's own `mix` tasks in the application until they are installed under those names"
 
         true ->
           nil
       end
+    end
+
+    @doc """
+    Whether the running Erlang and Elixir (`running`, their root folders) are
+    the installs one version manager has under the names `pins` gives, in
+    `installs/<tool>/<name>` of one of `data_dirs` (mise's and asdf's), so its
+    shims run them with the pin written. Any doubt is a no.
+    """
+    def pinned_install?(pins, running \\ running(), data_dirs \\ data_dirs()) do
+      Enum.any?(data_dirs, fn dir ->
+        Enum.all?(~w(erlang elixir), fn tool ->
+          install = Path.join([dir, "installs", tool, pins[tool]])
+          File.dir?(install) and Utils.real_path(install) == Utils.real_path(running[tool])
+        end)
+      end)
     end
 
     defp pinned_in(dir) do
@@ -83,29 +103,36 @@ if Code.ensure_loaded?(Igniter) do
       end)
     end
 
-    # The folders above the application, up to its user's home folder, whose
-    # own .tool-versions holds the global versions the pin is meant to replace.
-    defp parents do
-      home = System.user_home()
+    @doc """
+    The folders above the application at `cwd`, up to the user's `home`
+    folder, whose own `.tool-versions` holds the global versions the pin is
+    meant to replace. Both are compared as real paths: `File.cwd!/0` gives
+    one, and a home folder may be a symlink.
+    """
+    def parents(cwd \\ File.cwd!(), home \\ System.user_home()) do
+      home = home && Utils.real_path(home)
 
-      File.cwd!()
-      |> Path.expand()
+      cwd
+      |> Utils.real_path()
       |> Path.split()
       |> Enum.drop(-1)
       |> Enum.scan(&Path.join(&2, &1))
       |> Enum.reject(&(&1 == "/" or (home != nil and (home == &1 or String.starts_with?(home, &1 <> "/")))))
     end
 
+    # The running Erlang's and Elixir's root folders.
     defp running do
-      otp = to_string(:erlang.system_info(:otp_release))
+      %{
+        "erlang" => to_string(:code.root_dir()),
+        "elixir" => :code.lib_dir(:elixir) |> Path.join("../..") |> Path.expand()
+      }
+    end
 
-      erlang =
-        case File.read(Path.join([to_string(:code.root_dir()), "releases", otp, "OTP_VERSION"])) do
-          {:ok, version} -> String.trim(version)
-          {:error, _} -> otp
-        end
-
-      %{"erlang" => erlang, "elixir" => "#{System.version()}-otp-#{System.build_info()[:otp_release]}"}
+    # Where mise and asdf keep their installs, under installs/<tool>/<name>.
+    defp data_dirs do
+      mise = System.get_env("MISE_DATA_DIR") || Path.join(System.get_env("XDG_DATA_HOME") || "~/.local/share", "mise")
+      asdf = System.get_env("ASDF_DATA_DIR") || "~/.asdf"
+      Enum.map([mise, asdf], &Path.expand/1)
     end
 
     defp pins(contents) do
