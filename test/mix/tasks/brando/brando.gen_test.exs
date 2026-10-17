@@ -605,6 +605,8 @@ defmodule Mix.Tasks.Brando.Gen.Test do
       |> generate("GeneratorStudio.Catalog.Product", ["--public-route", "/products"])
 
     assert result.issues == []
+    # The EEx template is read, not left in the rewrite for the write step to parse.
+    IgniterCase.prepare_for_write!(result)
     assert router(result) =~ ~s(get "/products/:id", GeneratorStudioWeb.Catalog.ProductController, :show)
 
     controller = IgniterCase.source(result, "lib/generator_studio_web/catalog/product_controller.ex")
