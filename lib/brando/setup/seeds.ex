@@ -852,6 +852,7 @@ defmodule Brando.Setup.Seeds do
         key: "footer",
         title: "Footer",
         language: language,
+        status: :published,
         page_id: page.id,
         creator_id: user.id,
         entry_blocks: [

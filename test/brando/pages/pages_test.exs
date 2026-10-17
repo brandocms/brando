@@ -274,6 +274,34 @@ defmodule Brando.PagesTest do
              "fragment content!"
   end
 
+  test "an unpublished fragment is left out of get_fragments and renders nothing" do
+    for status <- [:draft, :pending, :disabled, nil] do
+      key = "footer-#{status}"
+      draft = Factory.insert(:fragment, parent_key: "partials", key: key, status: status, rendered_blocks: "Draft")
+      Factory.insert(:fragment, parent_key: "partials", key: "header", rendered_blocks: "Published")
+
+      {:ok, partials} = Pages.get_fragments(%{filter: %{parent_key: "partials", language: "en"}})
+      assert Map.keys(partials) == ["header"]
+      assert Map.keys(Pages.get_fragments("partials", "en")) == ["header"]
+
+      # Asked for explicitly, as an admin preview might.
+      {:ok, partials} = Pages.get_fragments(%{filter: %{parent_key: "partials", language: "en"}, status: :all})
+      assert Map.has_key?(partials, key)
+
+      for rendered <- [
+            Pages.render_fragment(draft),
+            Pages.render_fragment(%{key => draft}, key),
+            Pages.render_fragment("partials", key, "en"),
+            Pages.fetch_fragment(key, "en"),
+            Phoenix.HTML.html_escape(draft)
+          ] do
+        assert Phoenix.HTML.safe_to_string(rendered) == ""
+      end
+
+      Brando.Repo.delete_all(Brando.Pages.Fragment)
+    end
+  end
+
   test "breadcrumbs are computed on create and update" do
     user = Factory.insert(:random_user)
 
