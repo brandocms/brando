@@ -124,6 +124,10 @@ defmodule BrandoAdmin.Components.Form.DrawerRecoveryTest do
 
     for {key, value} <- [
           {"field", unknown},
+          # Existing atoms that name no asset field the drawer opens for
+          {"field", "inserted_at"},
+          {"field", "title"},
+          {"field", "image"},
           {"schema", unknown},
           {"schema", "Elixir.String"},
           {"resource_id", "9223372036854775808"},
@@ -141,6 +145,21 @@ defmodule BrandoAdmin.Components.Form.DrawerRecoveryTest do
              "failed for #{key}: #{inspect(value)}"
 
       refute socket.assigns.editing_image?
+    end
+  end
+
+  # The drawer's type has to match the field's: an image field does not
+  # restore a video or file drawer.
+  test "a drawer whose type does not match the field stays closed", %{user: user} do
+    video = Factory.insert(:video, creator: user)
+    file = Brando.Repo.insert!(%Brando.Files.File{filename: "fixture.txt", creator_id: user.id})
+
+    for {type, resource} <- [{"video", video}, {"file", file}] do
+      params = put_in(drawer_params(resource, "{}"), ["drawer", "type"], type)
+
+      assert {:noreply, socket} = Form.handle_event("recover_drawer_state", params, socket())
+      refute socket.assigns.editing_video?
+      refute socket.assigns.editing_file?
     end
   end
 

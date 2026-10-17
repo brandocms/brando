@@ -1833,7 +1833,13 @@ defmodule BrandoAdmin.Components.Form do
   end
 
   defp commit_entry_field_asset(socket, field, path, asset) do
-    relation_key = String.to_existing_atom("#{field}_id")
+    case safe_to_existing_atom("#{field}_id") do
+      {:ok, relation_key} -> commit_entry_field_asset(socket, field, path, relation_key, asset)
+      _ -> socket
+    end
+  end
+
+  defp commit_entry_field_asset(socket, field, path, relation_key, asset) do
     full_path = path ++ [relation_key]
 
     updated_changeset =
@@ -8223,13 +8229,15 @@ defmodule BrandoAdmin.Components.Form do
   @max_id 9_223_372_036_854_775_807
 
   # The drawer the recovery form names, read from browser params: an id, a
-  # blueprint schema, the field as an existing atom and the path to it.
-  # Anything else is not restored.
+  # blueprint schema, one of its asset fields of the drawer's type, and the
+  # path to it. Anything else is not restored: the restored drawer commits a
+  # pick as `<field>_id` at that path.
   defp with_drawer_target(socket, params, restore) do
     with id when is_binary(id) <- params["resource_id"],
          {resource_id, ""} when resource_id in 1..@max_id//1 <- Integer.parse(id),
-         {:ok, field} <- existing_atom(params["field"]),
          schema when is_binary(schema) <- params["schema"],
+         {:ok, %{name: field, type: type}} <- Brando.Assets.ConfigTarget.blueprint_asset(schema, params["field"]),
+         true <- Atom.to_string(type) == params["type"],
          {:ok, schema} <- Brando.Assets.ConfigTarget.schema_module(schema),
          {:ok, path} <- decode_recovery_path(params["path"]) do
       target = %{

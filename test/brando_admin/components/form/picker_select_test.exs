@@ -113,4 +113,15 @@ defmodule BrandoAdmin.Components.Form.PickerSelectTest do
     assert {:ok, socket} = Form.update(%{action: :update_edit_image, image: image}, socket)
     assert socket.assigns.form.source.changes == %{}
   end
+
+  # A field with no `<field>_id` (here a timestamp, as a hand-edited recovery
+  # form could name) is not an asset field: the pick leaves the entry alone.
+  test "a pick for a field that is not an asset field leaves the entry alone", ctx do
+    %{page: page, user: user, image: image} = ctx
+
+    socket = form_socket(page, user, %{edit_image: %{path: [], field: :inserted_at, image: nil}})
+
+    assert {:ok, socket} = Form.update(%{action: :update_edit_image, image: image}, socket)
+    assert socket.assigns.form.source.changes == %{}
+  end
 end
