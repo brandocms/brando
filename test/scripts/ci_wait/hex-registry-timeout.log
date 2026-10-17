@@ -1,0 +1,14 @@
+2026-10-16T23:24:09.7607141Z Cache restored successfully
+2026-10-16T23:24:09.7721643Z Cache restored from key: deps-Linux-27.2-1.18.1-e5b250a7ca2684b32d54866b7185b8e0b1974de62ee00ee051b99a637130f223-d5f5cef69a924971792d9537c4cac02305e006ae
+2026-10-16T23:24:09.7857686Z ##[group]Run mix deps.get --only test
+2026-10-16T23:24:09.7858037Z [36;1mmix deps.get --only test[0m
+2026-10-16T23:24:09.7925158Z shell: /usr/bin/bash -e {0}
+2026-10-16T23:24:09.7925415Z env:
+2026-10-16T23:24:09.7925610Z   MIX_ENV: test
+2026-10-16T23:24:09.7925906Z   INSTALL_DIR_FOR_OTP: /home/runner/work/_temp/.setup-beam/otp
+2026-10-16T23:24:09.7926358Z   INSTALL_DIR_FOR_ELIXIR: /home/runner/work/_temp/.setup-beam/elixir
+2026-10-16T23:24:09.7926721Z ##[endgroup]
+2026-10-16T23:24:25.4557379Z Failed to fetch record for polymorphic_embed from registry (using cache instead)
+2026-10-16T23:24:25.4559285Z :timeout
+2026-10-16T23:24:25.4590312Z ** (Mix) Unknown package polymorphic_embed in lockfile
+2026-10-16T23:24:25.4698474Z ##[error]Process completed with exit code 1.
