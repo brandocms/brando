@@ -411,8 +411,9 @@ those changes in the same commit.
   never filled in, and 0.55 refuses to compile them. The 0.55 development
   `mix brando.gen.blueprint` wrote `from:`: an application's own copy of its
   template, `priv/templates/brando.gen.blueprint/blueprint.ex`, is EEx and is
-  not rewritten. The task lists its slug inputs that still name `from:` or
-  `for:`; change them to `source:` by hand;
+  not rewritten. The task reads it as text and lists the lines that look like
+  a slug input naming `from:` or `for:`; check the slug inputs there and
+  change them to `source:` by hand;
 - lists, with file and line, each read of an `:entries` relation
   (`project.related_entries`) that does not go through `.identifier` (see
   below);

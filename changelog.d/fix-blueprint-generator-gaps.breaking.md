@@ -6,7 +6,7 @@
   to `source:` (or removes them beside a `source:`) and lists each line it
   changed. It does not rewrite an application's own copy of the generator
   template, `priv/templates/brando.gen.blueprint/blueprint.ex`, which is EEx:
-  it lists the slug inputs there that still name `from:` or `for:`, to change
-  by hand. A `blocks` inside a `tab`, `fieldset` or `inputs_for`, which
-  compiled and was dropped, now fails to compile too: move it directly under
-  `form do`. Other unknown input options are still accepted.
+  it reads it as text and lists the lines that look like a slug input naming
+  `from:` or `for:`, to check and change by hand. A `blocks` inside a `tab`,
+  `fieldset` or `inputs_for`, which compiled and was dropped, now fails to
+  compile too: move it directly under `form do`. Other unknown input options are still accepted.

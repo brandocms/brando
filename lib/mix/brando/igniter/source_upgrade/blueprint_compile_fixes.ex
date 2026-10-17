@@ -34,8 +34,10 @@ if Code.ensure_loaded?(Igniter) do
 
     @slug_source_keys [:from, :for]
     @generator_template "priv/templates/brando.gen.blueprint/blueprint.ex"
-    # The template is EEx, not Elixir: matched by line.
-    @template_slug_source ~r/^\s*input\(?\s*:\w+,\s*:slug,.*?[\s,(](from|for):/
+    # The template is EEx, not Elixir: a slug input's options are read as
+    # text, from the end of this match to the end of the call.
+    @template_slug_input ~r/^\s*input\(?\s*:\w+\s*,\s*:slug\s*,\s*\[?/
+    @template_strings ~r/"(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'/
 
     @srcset_note """
     `default_srcset` was never an asset config field, and Brando ignored it
@@ -269,18 +271,20 @@ if Code.ensure_loaded?(Igniter) do
       if Igniter.exists?(igniter, @generator_template) do
         {igniter, content} = Template.read(igniter, @generator_template)
 
+        original = content |> String.split("\n") |> List.to_tuple()
+
         lines =
-          for {line, number} <- content |> String.split("\n") |> Enum.with_index(1),
-              Regex.match?(@template_slug_source, line),
-              do: "  #{@generator_template}:#{number}: #{String.trim(line)}"
+          for number <- template_slug_sources(content),
+              do: "  #{@generator_template}:#{number}: #{original |> elem(number - 1) |> String.trim()}"
 
         if lines == [] do
           igniter
         else
           Igniter.add_warning(igniter, """
           #{@generator_template}, this application's copy of the `mix brando.gen.blueprint`
-          template, gives a slug input `from:` or `for:`. A Blueprint generated from it fails to
-          compile on 0.55: change the option to `source:` by hand.
+          template, is EEx, so the task read it as text and did not change it. These lines
+          look like a slug input given `from:` or `for:`, which fails to compile on 0.55.
+          Check the slug inputs in the template, and change the option to `source:` by hand.
 
           #{Enum.join(lines, "\n")}
           """)
@@ -288,6 +292,71 @@ if Code.ensure_loaded?(Igniter) do
       else
         igniter
       end
+    end
+
+    # Line numbers of a `from:` or `for:` among a slug input's own options in
+    # the template, a call that may continue over the following lines. Not in
+    # a string or comment, nor in an option's nested list.
+    defp template_slug_sources(content) do
+      lines = content |> String.split("\n") |> Enum.map(&template_code/1) |> Enum.with_index(1)
+
+      lines
+      |> Enum.with_index()
+      |> Enum.flat_map(fn {{text, number}, index} ->
+        case Regex.run(@template_slug_input, text, return: :index) do
+          [{0, length}] ->
+            options = binary_part(text, length, byte_size(text) - length)
+            option_keys([{options, number} | Enum.drop(lines, index + 1)], 0, true, [])
+
+          nil ->
+            []
+        end
+      end)
+      |> Enum.uniq()
+      |> Enum.sort()
+    end
+
+    defp template_code(line) do
+      line
+      |> String.replace(@template_strings, ~s(""))
+      |> String.replace(~r/#.*$/, "")
+    end
+
+    defp option_keys([], _depth, _start?, found), do: found
+
+    defp option_keys([{text, number} | lines], depth, start?, found) do
+      case scan_options(text, number, depth, start?, found) do
+        {:done, found} ->
+          found
+
+        {:open, depth, start?, found} ->
+          # Without parentheses, the call goes on past a line that ends in a comma.
+          if depth == 0 and not start?,
+            do: found,
+            else: option_keys(lines, depth, start?, found)
+      end
+    end
+
+    # `start?`: at the start of an option, where a key can be.
+    defp scan_options("", _number, depth, start?, found), do: {:open, depth, start?, found}
+
+    defp scan_options(<<char, rest::binary>>, number, depth, start?, found) when char in ~c" \t",
+      do: scan_options(rest, number, depth, start?, found)
+
+    defp scan_options(<<char, rest::binary>>, number, depth, _start?, found) when char in ~c"([{",
+      do: scan_options(rest, number, depth + 1, false, found)
+
+    defp scan_options(<<char, _rest::binary>>, _number, 0, _start?, found) when char in ~c")]}", do: {:done, found}
+
+    defp scan_options(<<char, rest::binary>>, number, depth, _start?, found) when char in ~c")]}",
+      do: scan_options(rest, number, depth - 1, false, found)
+
+    defp scan_options(<<?,, rest::binary>>, number, depth, _start?, found),
+      do: scan_options(rest, number, depth, depth == 0, found)
+
+    defp scan_options(<<_char, rest::binary>> = text, number, depth, start?, found) do
+      found = if start? and depth == 0 and String.starts_with?(text, ["from:", "for:"]), do: [number | found], else: found
+      scan_options(rest, number, depth, false, found)
     end
 
     # The key/value pairs of a keyword list or a map literal.

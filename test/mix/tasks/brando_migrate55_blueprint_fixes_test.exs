@@ -203,6 +203,38 @@ defmodule Mix.Tasks.Brando.Migrate55BlueprintFixesTest do
     apply_igniter!(igniter)
   end
 
+  test "lists a slug input's from: in the generator template given over several lines or as a list" do
+    template =
+      String.replace(@generator_template, ~s|input :slug, :slug, from: :title, label: t("Slug")|, """
+      input :slug, :slug,
+                    label: t("Slug"),
+                    from: :title
+
+                  input :uri, :slug, [for: :title]\
+      """)
+
+    igniter = migrate(%{@generator_template_path => template})
+
+    assert_has_warning(igniter, fn warning ->
+      warning =~ "#{@generator_template_path}:9: from: :title" and
+        warning =~ "#{@generator_template_path}:11: input :uri, :slug, [for: :title]" and
+        not (warning =~ "#{@generator_template_path}:7:")
+    end)
+  end
+
+  test "does not list a from: in a slug input's string or nested option in the generator template" do
+    template =
+      String.replace(
+        @generator_template,
+        ~s|input :slug, :slug, from: :title, label: t("Slug")|,
+        ~s|input :slug, :slug, source: :title, label: t("Built for: title"), write_with_ai: [prompt: :seo, from: :title]|
+      )
+
+    igniter = migrate(%{@generator_template_path => template})
+
+    refute Enum.any?(igniter.warnings, &(&1 =~ @generator_template_path))
+  end
+
   test "turns off the identifier of an embedded Blueprint, and says so" do
     igniter = migrate(%{@property_path => @property})
     property = source(igniter, @property_path)
