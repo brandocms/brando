@@ -64,7 +64,7 @@ defmodule Brando.Blueprint.RelationPreloads do
 
   defp relation_preloads(schema, parent_schema) do
     for relation <- Relations.__relations__(schema),
-        relation.opts.module != parent_schema,
+        relation.opts.module not in [parent_schema, :blocks],
         relation.type not in [:embeds_many, :embeds_one] do
       relation.name
     end

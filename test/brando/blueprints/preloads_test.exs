@@ -24,6 +24,28 @@ defmodule Brando.Blueprint.PreloadsTest do
     end
   end
 
+  defmodule FragmentOwner do
+    @moduledoc false
+
+    use Brando.Blueprint,
+      application: "Brando",
+      domain: "PreloadsTest",
+      schema: "FragmentOwner",
+      singular: "fragment_owner",
+      plural: "fragment_owners",
+      gettext_module: Brando.Gettext
+
+    relations do
+      relation :fragment, :belongs_to, module: Brando.Pages.Fragment, cast: true
+    end
+  end
+
+  test "a cast relation's preloads leave out its block fields, which are no associations" do
+    assert {:fragment, preloads} = FragmentOwner |> RelationPreloads.for_schema() |> List.keyfind(:fragment, 0)
+    assert :page in preloads
+    refute :blocks in preloads
+  end
+
   test "complete relation preloads include direct has-one associations and their relations" do
     preloads = RelationPreloads.for_schema(Brando.Navigation.Item)
 
