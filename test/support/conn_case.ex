@@ -1,11 +1,3 @@
-defimpl Jason.Encoder, for: Tuple do
-  def encode(tuple, _) do
-    tuple
-    |> Tuple.to_list()
-    |> Jason.encode!()
-  end
-end
-
 defmodule Brando.ConnCase do
   @moduledoc """
   Use this case template for tests that need a Plug connection and

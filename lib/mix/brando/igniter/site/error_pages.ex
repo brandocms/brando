@@ -101,8 +101,8 @@ if Code.ensure_loaded?(Igniter) do
       end
     end
 
-    # Comments, layout and formatting aside.
-    defp same_code?(left, right) do
+    @doc "Whether two Elixir sources are the same code, comments, layout and formatting aside."
+    def same_code?(left, right) do
       with {:ok, left} <- Sourceror.parse_string(left),
            {:ok, right} <- Sourceror.parse_string(right) do
         Sourceror.strip_meta(left) == Sourceror.strip_meta(right)

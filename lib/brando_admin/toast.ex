@@ -18,7 +18,7 @@ defmodule BrandoAdmin.Toast do
 
     identifier_with_type =
       payload.identifier
-      |> Brando.Utils.map_from_struct()
+      |> identifier_fields()
       |> Map.put(:type, translated_type)
 
     payload = put_in(payload, [:identifier], identifier_with_type)
@@ -39,4 +39,9 @@ defmodule BrandoAdmin.Toast do
   def send_to(user, message, opts) do
     Brando.endpoint().broadcast("user:#{user.id}", "toast", Map.merge(%{payload: message}, opts))
   end
+
+  # Shallow, so updated_at stays a DateTime that encodes as ISO 8601: the
+  # lobby channel pushes the payload through the socket's JSON serializer.
+  defp identifier_fields(%_{} = identifier), do: identifier |> Map.from_struct() |> Map.delete(:__meta__)
+  defp identifier_fields(identifier), do: identifier
 end

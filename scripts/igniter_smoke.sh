@@ -99,7 +99,9 @@ mix brando.install --dry-run --yes > "$smoke_root/logs/preview.log" 2>&1
 elixir "$framework_dir/scripts/igniter_smoke/fingerprint.exs" > "$smoke_root/after-preview"
 cmp "$smoke_root/before-preview" "$smoke_root/after-preview"
 
-install_options=(--yes --tenancy-mode "$smoke_mode" --public-site --replace-phoenix-home)
+# A new install adds the CMS public site, which takes / from phx.new's
+# unchanged homepage.
+install_options=(--yes --tenancy-mode "$smoke_mode")
 if [[ "$smoke_mode" == single ]]; then install_options+=(--site-key smoke); fi
 mix igniter.install "brando@path:$brando_dir" "${install_options[@]}" > "$smoke_root/logs/install.log" 2>&1
 mix compile --warnings-as-errors > "$smoke_root/logs/compile.log" 2>&1
@@ -111,6 +113,8 @@ grep -q 'steps: \[:assemble, :tar\]' mix.exs
 grep -q 'def migrate do' lib/igniter_smoke/release_tasks.ex
 grep -q 'media_path: "./media"' config/prod.exs
 grep -q 'preview_target Pages.Page do' lib/igniter_smoke_web/live_preview.ex
+grep -Eq 'get[ (]"/", IgniterSmokeWeb\.CMS\.PageController, :index' lib/igniter_smoke_web/router.ex
+if grep -Eq 'get[ (]"/", PageController, :home' lib/igniter_smoke_web/router.ex; then echo "phx.new's homepage route was not replaced" >&2; exit 1; fi
 elixir "$framework_dir/scripts/igniter_smoke/fingerprint.exs" > "$smoke_root/before-rerun"
 mix brando.install --yes > "$smoke_root/logs/rerun.log" 2>&1
 elixir "$framework_dir/scripts/igniter_smoke/fingerprint.exs" > "$smoke_root/after-rerun"

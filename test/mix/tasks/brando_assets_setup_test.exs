@@ -147,6 +147,39 @@ defmodule Mix.Tasks.Brando.Assets.SetupRunTest do
     refute File.exists?(Path.join(directory, "assets/backend/yalc.lock"))
   end
 
+  test "a Yalc copy is added purely, leaving node_modules to pnpm", %{directory: directory} do
+    File.mkdir_p!(Path.join(directory, "brandojs"))
+    File.write!(Path.join(directory, "brandojs/package.json"), ~s({"name": "@brandocms/brandojs"}))
+
+    bin = Path.join(directory, "bin")
+    calls = Path.join(directory, "calls")
+    File.mkdir_p!(bin)
+
+    for tool <- ~w(node pnpm yalc) do
+      script = Path.join(bin, tool)
+      File.write!(script, "#!/bin/sh\necho \"#{tool} $*\" >> #{calls}\n")
+      File.chmod!(script, 0o755)
+    end
+
+    path = System.get_env("PATH")
+    System.put_env("PATH", bin)
+
+    try do
+      File.cd!(directory, fn ->
+        Setup.run(["--source", Path.join(directory, "brandojs"), "--backend-only", "--no-build"])
+      end)
+    after
+      System.put_env("PATH", path)
+    end
+
+    assert [publish, add, "pnpm install"] = calls |> File.read!() |> String.split("\n", trim: true)
+    assert publish =~ ~r/^yalc publish --store-folder /
+    assert add =~ ~r/^yalc add @brandocms\/brandojs --pure --store-folder /
+
+    package = directory |> Path.join("assets/backend/package.json") |> File.read!() |> Jason.decode!()
+    assert package["dependencies"]["@brandocms/brandojs"] == "file:.yalc/@brandocms/brandojs"
+  end
+
   test "a linked checkout is kept as it is, and a missing tool stops setup before anything changes",
        %{directory: directory, package: package} do
     File.mkdir_p!(Path.join(directory, "brandojs"))

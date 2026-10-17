@@ -18,6 +18,7 @@ if Code.ensure_loaded?(Igniter) do
     alias Mix.Brando.Igniter.Install.Deployment
     alias Mix.Brando.Igniter.Install.Docker
     alias Mix.Brando.Igniter.Install.PhoenixStatic
+    alias Mix.Brando.Igniter.Install.Toolchain
     alias Mix.Brando.Igniter.Install.Version
     alias Mix.Brando.Igniter.Project
     alias Mix.Brando.Igniter.Release
@@ -29,7 +30,6 @@ if Code.ensure_loaded?(Igniter) do
     alias Sourceror.Zipper
 
     @support_templates ~w(
-      lib/application_name/tuple.ex
       lib/application_name/presence.ex
       lib/application_name/authorization.ex
       lib/application_name_web/villain/parser.ex
@@ -42,7 +42,7 @@ if Code.ensure_loaded?(Igniter) do
       with {:ok, igniter, options} <- Configuration.namespace_options(igniter, igniter.args.options),
            {:ok, igniter, project} <- Project.discover(igniter, options),
            :ok <- public_site_options(options),
-           {:ok, igniter} <- preflight(igniter, project),
+           {:ok, igniter, fresh?} <- preflight(igniter, project),
            {:ok, igniter} <- Mix.Brando.Igniter.Install.Migrations.preflight(igniter),
            {:ok, igniter, existing} <- Configuration.existing_tenancy(igniter),
            {:ok, tenancy} <- resolve_tenancy(options, existing, project),
@@ -54,6 +54,7 @@ if Code.ensure_loaded?(Igniter) do
         |> Version.plan()
         |> Deployment.plan(project, hosts, deployment)
         |> Docker.plan(project)
+        |> Toolchain.plan(fresh?)
         |> Release.plan(project, existing: :keep)
         |> support_files(project)
         |> AgentFiles.plan()
@@ -63,7 +64,7 @@ if Code.ensure_loaded?(Igniter) do
         |> application(project)
         |> endpoint(project)
         |> router(project)
-        |> public_site(project, options)
+        |> public_site(project, options, fresh?)
         # Last: Rewrite rereads the formatters when .formatter.exs changes, and
         # the files above are formatted as the project's formatters stood.
         |> formatter()
@@ -75,13 +76,19 @@ if Code.ensure_loaded?(Igniter) do
     end
 
     defp public_site_options(options) do
-      if options[:replace_phoenix_home] && !options[:public_site],
-        do: {:error, "--replace-phoenix-home requires --public-site."},
+      if options[:public_site] == true,
+        do:
+          {:error,
+           "A new install adds the CMS public site unless given --no-public-site; add it to an installed application with mix brando.gen.site."},
         else: :ok
     end
 
-    defp public_site(igniter, project, options) do
-      if options[:public_site], do: Mix.Brando.Igniter.Site.plan(igniter, project, options), else: igniter
+    # Only a new install gets the public site: a rerun keeps what the
+    # application has, like the tenancy mode.
+    defp public_site(igniter, project, options, fresh?) do
+      if fresh? and options[:public_site] != false,
+        do: Mix.Brando.Igniter.Site.plan(igniter, project, Keyword.put(options, :installing, true)),
+        else: igniter
     end
 
     defp preflight(igniter, project) do
@@ -90,14 +97,14 @@ if Code.ensure_loaded?(Igniter) do
 
       cond do
         Enum.any?(routes, &(&1.kind == :admin_routes)) ->
-          {:ok, igniter}
+          {:ok, igniter, false}
 
         Enum.any?(routes, &(&1.kind == :unknown || &1.path == "/admin" || String.starts_with?(&1.path, "/admin/"))) ->
           {:error,
            "The router already owns /admin routes or uses dynamic paths. Review that ownership and integrate Brando's admin_routes block explicitly before installing; existing routes cannot be silently shadowed."}
 
         true ->
-          {:ok, igniter}
+          {:ok, igniter, true}
       end
     end
 

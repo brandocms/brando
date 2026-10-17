@@ -10,6 +10,9 @@ defmodule Mix.Brando.Igniter.SiteTest do
           defmodule StudioWeb.Router do
             use StudioWeb, :router
             import Brando.Router
+            pipeline :browser do
+              plug :accepts, ["html"]
+            end
             admin_routes "/admin" do
               live "/", StudioAdmin.DashboardLive
             end
@@ -29,6 +32,199 @@ defmodule Mix.Brando.Igniter.SiteTest do
   end
 
   defp generate(project, options \\ []), do: Igniter.compose_task(project, Mix.Tasks.Brando.Gen.Site, options)
+
+  # A new phx.new application, before Brando: its homepage as phx.new wrote it.
+  @phx_home File.read!(Path.expand("../../../fixtures/phx_new/home.html.heex", __DIR__))
+  @phx_page_controller """
+  defmodule StudioWeb.PageController do
+    use StudioWeb, :controller
+
+    def home(conn, _params) do
+      render(conn, :home)
+    end
+  end
+  """
+
+  defp fresh(files \\ %{}) do
+    IgniterCase.phoenix_project(
+      files:
+        Map.merge(
+          %{
+            "lib/studio_web/router.ex" => """
+            defmodule StudioWeb.Router do
+              use StudioWeb, :router
+              pipeline :browser do
+                plug :accepts, ["html"]
+              end
+              scope "/", StudioWeb do
+                pipe_through :browser
+                get "/", PageController, :home
+              end
+            end
+            """,
+            "lib/studio_web/controllers/page_controller.ex" => @phx_page_controller,
+            "lib/studio_web/controllers/page_html/home.html.heex" => @phx_home
+          },
+          files
+        )
+    )
+  end
+
+  defp install(project, options \\ ["--yes"]), do: Igniter.compose_task(project, Mix.Tasks.Brando.Install, options)
+
+  # A new application's router with `routes` in its browser scope, and
+  # `pipeline` as its browser pipeline.
+  defp fresh_router(routes, pipeline \\ :browser) do
+    %{
+      "lib/studio_web/router.ex" => """
+      defmodule StudioWeb.Router do
+        use StudioWeb, :router
+        pipeline #{inspect(pipeline)} do
+          plug :accepts, ["html"]
+        end
+        scope "/", StudioWeb do
+          pipe_through #{inspect(pipeline)}
+          #{routes}
+        end
+      end
+      """
+    }
+  end
+
+  describe "a new install" do
+    test "adds the site, in place of phx.new's unchanged homepage" do
+      result = install(fresh())
+      assert result.issues == []
+      assert Igniter.exists?(result, "lib/studio_web/cms/page_controller.ex")
+
+      router = IgniterCase.source(result, "lib/studio_web/router.ex")
+      refute router =~ ~r/get\(?"\/", PageController, :home/
+      assert router =~ ~r/get\(?"\/", StudioWeb.CMS.PageController, :index, as: :page/
+      assert Enum.any?(result.notices, &(&1 =~ "CMS pages now answer /"))
+
+      for path <- ["lib/studio_web/controllers/page_controller.ex", "lib/studio_web/controllers/page_html/home.html.heex"] do
+        Igniter.Test.assert_unchanged(result, path)
+      end
+    end
+
+    test "keeps a homepage the application has changed, without the site, with a notice" do
+      for files <- [
+            %{"lib/studio_web/controllers/page_html/home.html.heex" => @phx_home <> "<p>Our studio</p>\n"},
+            %{
+              "lib/studio_web/controllers/page_controller.ex" =>
+                String.replace(@phx_page_controller, "render(conn, :home)", "render(conn, :home, news: [])")
+            }
+          ] do
+        result = install(fresh(files))
+        assert result.issues == []
+        refute Igniter.exists?(result, "lib/studio_web/cms/page_controller.ex")
+        assert IgniterCase.source(result, "lib/studio_web/router.ex") =~ ~r/get\(?"\/", PageController, :home/
+
+        assert Enum.any?(
+                 result.notices,
+                 &(&1 =~ "is not the one mix phx.new generates, so it was kept" and
+                     &1 =~ "mix brando.gen.site --replace-phoenix-home")
+               )
+      end
+    end
+
+    test "leaves the site out with --no-public-site, and a rerun does not add it" do
+      result = install(fresh(), ["--yes", "--no-public-site"])
+      assert result.issues == []
+      refute Igniter.exists?(result, "lib/studio_web/cms/page_controller.ex")
+      assert IgniterCase.source(result, "lib/studio_web/router.ex") =~ ~r/get\(?"\/", PageController, :home/
+
+      rerun = result |> IgniterCase.apply_and_reload() |> install()
+      assert rerun.issues == []
+      refute Igniter.exists?(rerun, "lib/studio_web/cms/page_controller.ex")
+      Igniter.Test.assert_unchanged(rerun, "lib/studio_web/router.ex")
+    end
+
+    test "leaves out a site it can't add, saying why and how to add it later, and installs the admin" do
+      for {files, named, later} <- [
+            {fresh_router(~s(live "/", HomeLive)), ~s(live "/", StudioWeb.HomeLive), "mix brando.gen.site\n"},
+            {fresh_router(~s(get "/", PageController, :index)), ~s(get "/", StudioWeb.PageController, :index),
+             "mix brando.gen.site\n"},
+            {fresh_router(~s(get "/", PageController, :home\nget "/:slug", PostController, :show)),
+             ~s(get "/:slug", StudioWeb.PostController, :show), "mix brando.gen.site --replace-phoenix-home\n"},
+            {fresh_router(~s(get "/*path", SPAController, :show)), ~s(get "/*path", StudioWeb.SPAController, :show),
+             "mix brando.gen.site\n"},
+            {%{
+               "lib/studio_web/router.ex" => """
+               defmodule StudioWeb.Router do
+                 use StudioWeb, :router
+                 pipeline :browser do
+                   plug :accepts, ["html"]
+                 end
+                 scope "/:locale", StudioWeb do
+                   pipe_through :browser
+                   get "/", PageController, :home
+                 end
+               end
+               """
+             }, ~s(get "/:locale", StudioWeb.PageController, :home), "mix brando.gen.site\n"}
+          ] do
+        result = install(fresh(files))
+        assert result.issues == [], named
+        router = IgniterCase.source(result, "lib/studio_web/router.ex")
+        assert router =~ "admin_routes", named
+        refute router =~ "brando_site", named
+        refute Igniter.exists?(result, "lib/studio_web/cms/page_controller.ex"), named
+
+        assert Enum.any?(
+                 result.notices,
+                 &(&1 =~ "The CMS public site was not added: routes in the router already answer" and &1 =~ named and
+                     String.ends_with?(&1, later))
+               ),
+               named
+      end
+    end
+
+    test "leaves out the site when the router has no :browser pipeline for it" do
+      api_only = %{
+        "lib/studio_web/router.ex" => """
+        defmodule StudioWeb.Router do
+          use StudioWeb, :router
+          pipeline :api do
+            plug :accepts, ["json"]
+          end
+          scope "/api", StudioWeb do
+            pipe_through :api
+          end
+        end
+        """
+      }
+
+      for {files, later} <- [
+            {api_only, "mix brando.gen.site\n"},
+            {fresh_router(~s(get "/", PageController, :home), :public_browser),
+             "mix brando.gen.site --replace-phoenix-home\n"}
+          ] do
+        result = install(fresh(files))
+        assert result.issues == []
+        router = IgniterCase.source(result, "lib/studio_web/router.ex")
+        assert router =~ "admin_routes"
+        refute router =~ "brando_site"
+        refute router =~ ~r/pipe_through[ (]?:browser/
+        refute Igniter.exists?(result, "lib/studio_web/cms/page_controller.ex")
+
+        assert Enum.any?(
+                 result.notices,
+                 &(&1 =~ "The CMS public site was not added: the router has no :browser pipeline" and
+                     String.ends_with?(&1, later))
+               )
+      end
+
+      generated = fresh(api_only) |> install(["--yes", "--no-public-site"]) |> IgniterCase.apply_and_reload()
+      assert [issue] = generate(generated, ["--yes"]).issues
+      assert issue =~ "The router has no :browser pipeline"
+    end
+
+    test "has no --public-site: the site is the default, and mix brando.gen.site adds it later" do
+      result = install(fresh(), ["--yes", "--public-site"])
+      assert Enum.any?(result.issues, &(&1 =~ "add it to an installed application with mix brando.gen.site"))
+    end
+  end
 
   test "homepage replacement is explicit and preserves Phoenix source files and nested routes" do
     result =
@@ -134,6 +330,9 @@ defmodule Mix.Brando.Igniter.SiteTest do
           defmodule StudioWeb.Router do
             use StudioWeb, :router
             import Brando.Router
+            pipeline :browser do
+              plug :accepts, ["html"]
+            end
             admin_routes "/admin" do
               live "/", StudioAdmin.DashboardLive
             end
@@ -159,6 +358,9 @@ defmodule Mix.Brando.Igniter.SiteTest do
           defmodule StudioWeb.Router do
             use StudioWeb, :router
             import Brando.Router
+            pipeline :browser do
+              plug :accepts, ["html"]
+            end
             admin_routes "/admin" do
               live "/", StudioAdmin.DashboardLive
             end
@@ -192,7 +394,7 @@ defmodule Mix.Brando.Igniter.SiteTest do
   end
 
   test "site generation composes with installation and custom owned files block replacement" do
-    result = project() |> Igniter.compose_task(Mix.Tasks.Brando.Install, ["--public-site", "--replace-phoenix-home"])
+    result = install(fresh(), [])
     assert result.issues == []
     assert Igniter.exists?(result, "lib/studio_web/cms/page_controller.ex")
 
@@ -390,7 +592,7 @@ defmodule Mix.Brando.Igniter.SiteTest do
   @live_preview "lib/studio_web/live_preview.ex"
 
   test "installing with the public site previews CMS pages in the CMS layout and templates" do
-    result = project() |> Igniter.compose_task(Mix.Tasks.Brando.Install, ["--public-site", "--replace-phoenix-home"])
+    result = install(fresh(), [])
     assert result.issues == []
 
     preview = IgniterCase.source(result, @live_preview)
@@ -470,8 +672,8 @@ defmodule Mix.Brando.Igniter.SiteTest do
     listed = String.replace(@web_module, "~w(assets fonts images favicon.ico robots.txt)", ~s(["assets", "robots.txt"]))
 
     installed =
-      project(~s(get "/", PageController, :home), %{@robots => @phx_robots, "lib/studio_web.ex" => listed})
-      |> Igniter.compose_task(Mix.Tasks.Brando.Install, ["--public-site", "--replace-phoenix-home", "--yes"])
+      fresh(%{@robots => @phx_robots, "lib/studio_web.ex" => listed})
+      |> install()
 
     assert installed.issues == []
     assert @robots in installed.rms

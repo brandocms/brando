@@ -24,12 +24,19 @@ defmodule Brando.Cache.Query do
   @type changeset :: Ecto.Changeset.t()
   @cache_module Application.compile_env(:brando, :cache_module, Cachex)
 
+  # The widest range :erlang.phash2/2 takes.
+  @hash_range 4_294_967_296
+
   @doc """
   Hashes a query key into the canonical cache-key representation.
+
+  The key is hashed as an Erlang term, so equal terms share an entry
+  whatever their map order, and `:a` and `"a"`, or a tuple and a list, are
+  different keys.
   """
   @spec hash_query({atom(), binary(), term()}) :: term()
   def hash_query({query_type, query_name, _} = query_key) do
-    key = {query_type, query_name, Base.encode16(<<:erlang.phash2(Jason.encode!(query_key))::size(32)>>)}
+    key = {query_type, query_name, Base.encode16(<<:erlang.phash2(query_key, @hash_range)::size(32)>>)}
     Brando.Tenant.cache_key(key)
   end
 

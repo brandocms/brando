@@ -13,11 +13,19 @@ if Code.ensure_loaded?(Igniter) do
     alias Mix.Brando.Igniter.RouteInventory
     alias Mix.Brando.Igniter.Site.ErrorPages
     alias Mix.Brando.Igniter.Site.LivePreview
+    alias Mix.Brando.Igniter.Site.PhoenixHome
     alias Mix.Brando.Igniter.Template
     alias Sourceror.Zipper
 
     @lockdown_path "/coming-soon"
 
+    @doc """
+    Plans the CMS public site. With `installing: true` (a new install, where
+    the site is the default) phx.new's homepage route is replaced while its
+    controller and template are unchanged, and a changed or declined homepage
+    is kept, without the site, with a notice. `mix brando.gen.site` asks for
+    `--replace-phoenix-home` or an interactive answer instead.
+    """
     def plan(igniter, project, options) do
       controller = Module.concat(project.web_module, CMS.PageController)
       html = Module.concat(project.web_module, CMS.PageHTML)
@@ -25,8 +33,9 @@ if Code.ensure_loaded?(Igniter) do
       with {:ok, igniter, configured} <- Configuration.read(igniter, :page_html_module),
            :ok <- configured_html(configured, html),
            {:ok, {igniter, _, router}} <- ProjectModule.find_module(igniter, project.router),
-           {:ok, state} <- ownership(router, project, controller),
-           :ok <- replace_home(state.home?, options) do
+           {:ok, state} <- ownership(router, project, controller, options),
+           :ok <- browser_pipeline(router, state, options),
+           {:ok, igniter} <- replace_home(igniter, project, state.home?, options) do
         igniter
         |> files(project, state.lockdown)
         |> Config.configure_new("brando.exs", :brando, [:page_html_module], html)
@@ -47,6 +56,8 @@ if Code.ensure_loaded?(Igniter) do
         `lockdown_password` for :brando; see the lockdown section of the generators guide.
         """)
       else
+        {:skip, %Igniter{} = igniter} -> igniter
+        {:skip, reason, home?} -> skipped_notice(igniter, reason, home?)
         {:error, %Igniter{} = igniter} -> igniter
         {:error, message} -> Igniter.add_issue(igniter, message)
       end
@@ -60,28 +71,84 @@ if Code.ensure_loaded?(Igniter) do
         {:error,
          "Existing :page_html_module #{inspect(configured)} owns page rendering. Integrate CMS templates explicitly."}
 
-    defp ownership(router, project, controller) do
+    defp ownership(router, project, controller, options) do
       routes = router |> RouteInventory.read() |> Enum.map(&current_module/1)
       owned = Enum.filter(routes, &(&1.module == controller))
       expected = declarations(controller)
       others = if owned == [], do: routes, else: routes -- expected
       home = %{kind: :get, path: "/", module: Module.concat(project.web_module, PageController), action: :home}
       home? = home in others
+      conflicts = Enum.filter(others -- [home], &conflicting_route?/1)
 
       cond do
         not Enum.any?(routes, &(&1.kind == :admin_routes)) ->
-          {:error, "Run mix brando.install first, or use mix brando.install --public-site to compose CMS setup."}
+          {:error, "Run mix brando.install first; a new install adds the CMS site unless given --no-public-site."}
 
-        Enum.any?(others -- [home], &conflicting_route?/1) ->
-          {:error,
-           "Existing public routes own the homepage, a catch-all or a CMS support path. Review/remove those declarations explicitly before generating the CMS site. --replace-phoenix-home only replaces the Phoenix PageController.home route at /."}
+        conflicts != [] ->
+          conflict(
+            options,
+            "Existing public routes own the homepage, a catch-all or a CMS support path (#{describe(conflicts)}). Review/remove those declarations explicitly before generating the CMS site. --replace-phoenix-home only replaces the Phoenix PageController.home route at /.",
+            {"routes in the router already answer the homepage, every path, or a path the site serves (/robots.txt, /sitemaps/:file, /__p__/:preview_key, /__ssg_preview__/:token/*path): #{describe(conflicts)}",
+             "move or remove those routes"},
+            home?
+          )
 
         owned != [] &&
             (Enum.sort(owned) != Enum.sort(Enum.take(expected, -2)) || not Enum.all?(expected, &(&1 in routes))) ->
-          {:error, "CMS page routes are partially configured or customized. Integrate them explicitly before rerunning."}
+          conflict(
+            options,
+            "CMS page routes are partially configured or customized. Integrate them explicitly before rerunning.",
+            {"the router's CMS page routes are partially configured or customized", "integrate them explicitly"},
+            home?
+          )
 
         true ->
           {:ok, %{home?: home?, home: home, present?: owned != [], lockdown: lockdown(routes, project)}}
+      end
+    end
+
+    # A new install leaves out a site it can't add, and installs the admin;
+    # mix brando.gen.site, asked for the site, fails.
+    defp conflict(options, issue, reason, home?),
+      do: if(options[:installing], do: {:skip, reason, home?}, else: {:error, issue})
+
+    defp skipped_notice(igniter, {reason, action}, home?) do
+      Igniter.add_notice(igniter, """
+      The CMS public site was not added: #{reason}. The admin is installed without it.
+      To add the site, #{action}, then run: mix brando.gen.site#{if home?, do: " --replace-phoenix-home"}
+      """)
+    end
+
+    defp describe(routes), do: Enum.map_join(routes, ", ", &describe_route/1)
+
+    defp describe_route(%{kind: :unknown}), do: "a route with a dynamic path"
+
+    defp describe_route(route) do
+      [
+        ~s(#{route.kind} "#{route.path}"),
+        route.module && inspect(route.module),
+        is_atom(route.action) && route.action && inspect(route.action)
+      ]
+      |> Enum.filter(& &1)
+      |> Enum.join(", ")
+    end
+
+    # The site's routes and the lockdown page pipe through :browser.
+    defp browser_pipeline(_router, %{present?: true, lockdown: lockdown}, _options) when lockdown != :missing, do: :ok
+
+    defp browser_pipeline(router, state, options) do
+      case CodeFunction.move_to_function_call(router, :pipeline, 2, &CodeFunction.argument_equals?(&1, 0, :browser)) do
+        {:ok, _} ->
+          :ok
+
+        :error ->
+          conflict(
+            options,
+            "The router has no :browser pipeline, which the CMS routes pipe through. Add one, or name the pipeline that sets up browser requests :browser, before generating the CMS site.",
+            {"the router has no :browser pipeline, which the site's routes pipe through",
+             "add one, or name the pipeline that sets up browser requests :browser"},
+            state.home?
+          )
       end
     end
 
@@ -135,18 +202,24 @@ if Code.ensure_loaded?(Igniter) do
         )
     end
 
-    defp replace_home(false, _), do: :ok
+    defp replace_home(igniter, _project, false, _options), do: {:ok, igniter}
 
-    defp replace_home(true, options) do
+    defp replace_home(igniter, project, true, options) do
+      if options[:installing],
+        do: install_home(igniter, project, options),
+        else: generate_home(igniter, options)
+    end
+
+    defp generate_home(igniter, options) do
       cond do
         options[:replace_phoenix_home] == true ->
-          :ok
+          {:ok, igniter}
 
         options[:replace_phoenix_home] == false ->
           {:error, "The Phoenix homepage was kept. CMS root routing requires --replace-phoenix-home."}
 
         options[:interactive] ->
-          confirm_home()
+          with :ok <- confirm_home("Supply --replace-phoenix-home for unattended use."), do: {:ok, igniter}
 
         true ->
           {:error,
@@ -154,7 +227,41 @@ if Code.ensure_loaded?(Igniter) do
       end
     end
 
-    defp confirm_home do
+    # A new install takes / from phx.new's own homepage, and keeps one the
+    # application has made its own, or one the user chose to keep.
+    defp install_home(igniter, project, options) do
+      if options[:interactive] do
+        case confirm_home("Without --interactive, phx.new's own homepage is replaced and a changed one kept.") do
+          :ok -> {:ok, igniter}
+          {:error, "The Phoenix homepage was kept." <> _} -> {:skip, kept_home_notice(igniter, "was kept")}
+          error -> error
+        end
+      else
+        case PhoenixHome.unchanged?(igniter, project) do
+          {igniter, true} ->
+            {:ok,
+             Igniter.add_notice(igniter, """
+             CMS pages now answer /, in place of phx.new's homepage route. #{inspect(project.web_module)}.PageController
+             and its templates remain. To keep phx.new's homepage instead, install with
+             `mix brando.install --no-public-site` (or `mix igniter.install brando --no-public-site`).
+             """)}
+
+          {igniter, false} ->
+            {:skip, kept_home_notice(igniter, "is not the one mix phx.new generates, so it was kept")}
+        end
+      end
+    end
+
+    defp kept_home_notice(igniter, why) do
+      Igniter.add_notice(igniter, """
+      The Phoenix homepage at / (PageController.home) #{why}, and the CMS public site was not
+      generated. To serve CMS pages, with the route at / replaced (its controller and templates remain):
+        mix brando.gen.site --replace-phoenix-home
+      or answer the question with: mix brando.gen.site --interactive
+      """)
+    end
+
+    defp confirm_home(unattended) do
       case Mix.Brando.prompt("+ Replace the Phoenix homepage route with CMS pages? [y/N]") |> String.downcase() do
         answer when answer in ["y", "yes"] ->
           :ok
@@ -163,7 +270,7 @@ if Code.ensure_loaded?(Igniter) do
           {:error, "The Phoenix homepage was kept. No CMS site changes were accepted."}
 
         _ ->
-          {:error, "Expected yes or no for homepage ownership. Supply --replace-phoenix-home for unattended use."}
+          {:error, "Expected yes or no for homepage ownership. #{unattended}"}
       end
     rescue
       error in [Mix.Error, ErlangError] -> {:error, Exception.message(error)}

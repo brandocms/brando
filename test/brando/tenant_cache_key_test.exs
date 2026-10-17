@@ -63,6 +63,23 @@ defmodule Brando.TenantCacheKeyTest do
     assert {:list, "pages", _hash} = Query.hash_query({:list, "pages", %{}})
   end
 
+  test "query keys hash as Erlang terms, tuples included" do
+    put_test_env(:tenancy_mode, :none)
+    Tenant.put_prefix(nil)
+
+    key = {:list, "pages", %{order: [{:asc, :sequence}], cache: {:ttl, 60_000}, filter: %{status: :published}}}
+    reordered = {:list, "pages", %{filter: %{status: :published}, cache: {:ttl, 60_000}, order: [{:asc, :sequence}]}}
+
+    assert {:list, "pages", hash} = Query.hash_query(key)
+    assert Query.hash_query(reordered) == {:list, "pages", hash}
+
+    refute Query.hash_query({:list, "pages", %{order: [{:desc, :sequence}]}}) ==
+             Query.hash_query({:list, "pages", %{order: [{:asc, :sequence}]}})
+
+    refute Query.hash_query({:list, "pages", %{order: [[:asc, :sequence]]}}) ==
+             Query.hash_query({:list, "pages", %{order: [{:asc, :sequence}]}})
+  end
+
   defp cleanup_tenant_entries do
     Enum.each([:cache, :query], fn cache ->
       {:ok, keys} = Cachex.keys(cache)
