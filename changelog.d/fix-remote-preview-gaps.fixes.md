@@ -12,7 +12,9 @@
   in it. A revision loaded as a working copy, a restored recovery copy or a
   translation brings its own images and relations to the preview, rather
   than one picked before it, and a drawer save in a subform updates that
-  row's asset.
+  row's asset. Clearing or resetting an image, video or file in a subform
+  row, or putting a gallery there, no longer takes the form down while
+  another row's removal is unsaved, and changes the row the form shows.
 
 - **A select's `update_relation` fetcher may return the record** (#3224).
   A fetcher written as a `get_x!` query, as the container's palette select
