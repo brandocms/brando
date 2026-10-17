@@ -6,7 +6,8 @@ defmodule GeneratorStudio.Catalog.Article do
     domain: "Catalog",
     schema: "Article",
     singular: "article",
-    plural: "articles"
+    plural: "articles",
+    gettext_module: Brando.Gettext
 
   trait Brando.Trait.Status
   trait Brando.Trait.Translatable

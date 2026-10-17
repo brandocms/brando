@@ -575,6 +575,20 @@ defmodule Brando.VillainTest do
             opts: %{module: :blocks},
             type: :has_many
           }
+        ],
+        "Elixir.GeneratorStudio.Catalog.Article": [
+          %Brando.Blueprint.Relations.Relation{
+            __identifier__: :blocks,
+            name: :blocks,
+            opts: %{module: :blocks},
+            type: :has_many
+          },
+          %Brando.Blueprint.Relations.Relation{
+            __identifier__: :bio_blocks,
+            name: :bio_blocks,
+            opts: %{module: :blocks},
+            type: :has_many
+          }
         ]
       ]
       |> Enum.map(fn {k, v} -> {k, strip_spark_metadata(v)} end)
