@@ -40,6 +40,8 @@ defmodule Brando.SyncTest.Article do
 
   relations do
     relation :parent, :belongs_to, module: __MODULE__
+    # Links to other content, which a copy keeps (TranslationsTest: duplication)
+    relation :related_entries, :entries
     relation :blocks, :has_many, module: :blocks
     # Declared only in `form :notes` (FieldActionsLiveTest)
     relation :notes, :has_many, module: :blocks
@@ -300,6 +302,8 @@ defmodule Brando.SyncTest.ArticleAuthorLink do
     plural: "article_author_links",
     gettext_module: Brando.Gettext
 
+  trait :blocks
+
   identifier false
   persist_identifier false
 
@@ -307,7 +311,22 @@ defmodule Brando.SyncTest.ArticleAuthorLink do
     attribute :label, :string
   end
 
+  assets do
+    asset :gallery, :gallery,
+      cfg: [
+        allowed_mimetypes: ["image/jpeg", "image/png"],
+        default_size: "medium",
+        upload_path: Path.join("images", "synced_author_links"),
+        random_filename: true,
+        size_limit: 10_240_000,
+        sizes: %{"medium" => %{"size" => "500x500", "quality" => 65, "crop" => true}},
+        srcset: [{"medium", "500w"}]
+      ]
+  end
+
   relations do
     relation :author, :belongs_to, module: Brando.SyncTest.ArticleAuthor
+    relation :blocks, :has_many, module: :blocks
+    relation :related_entries, :entries
   end
 end

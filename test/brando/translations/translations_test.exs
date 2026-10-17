@@ -547,6 +547,92 @@ defmodule Brando.TranslationsTest do
       end
     end
 
+    test "a copied subform row gets its own blocks and gallery, and keeps its related entries", c do
+      alias SyncTest.ArticleAuthorLink
+
+      image = Factory.insert(:image, creator_id: c.user.id)
+      gallery = Factory.insert(:gallery, gallery_objects: [Factory.build(:gallery_object, image: image, creator: c.user)])
+      identifier = Repo.get_by!(Brando.Content.Identifier, schema: Article, entry_id: c.source.id)
+
+      author =
+        Repo.insert!(%SyncTest.ArticleAuthor{
+          article_id: c.source.id,
+          name: "Example Author",
+          links: [%ArticleAuthorLink{label: "Example Hotel", gallery_id: gallery.id, rendered_blocks: "<p>Lobby</p>"}]
+        })
+
+      [link] = author.links
+      Repo.insert!(%ArticleAuthorLink.RelatedEntriesIdentifier{parent_id: link.id, identifier_id: identifier.id})
+
+      block =
+        %Block{}
+        |> Block.recursive_block_changeset(
+          %{
+            "uid" => Brando.Utils.generate_uid(),
+            "type" => "module",
+            "module_id" => c.module.id,
+            "creator_id" => c.user.id,
+            "source" => to_string(ArticleAuthorLink.Blocks),
+            "refs" => [
+              %{
+                "uid" => Brando.Utils.generate_uid(),
+                "name" => "body",
+                "data" => %{"type" => "text", "data" => %{"text" => "Lobby"}}
+              }
+            ]
+          },
+          c.user
+        )
+        |> Repo.insert!()
+
+      Repo.insert!(%ArticleAuthorLink.Blocks{entry_id: link.id, block_id: block.id, sequence: 0})
+
+      {:ok, copy} = SyncTest.duplicate_article(c.source.id, c.user, change_fields: [slug: "copy"])
+      {:ok, translation} = Translations.create_target(Article, c.source.id, :en, c.user)
+
+      load_link = fn id ->
+        [link] = load(id).author.links
+        Repo.preload(link, [:related_entries, entry_blocks: [block: :refs]])
+      end
+
+      original = load_link.(c.source.id)
+      assert original.gallery_id == gallery.id
+      assert [%{block_id: block_id}] = original.entry_blocks
+      assert block_id == block.id
+      assert [%{identifier_id: identifier_id}] = original.related_entries
+      assert identifier_id == identifier.id
+
+      for entry <- [copy, translation] do
+        copied = load_link.(entry.id)
+        assert copied.id != original.id
+        assert copied.gallery_id not in [nil, gallery.id]
+        assert copied.rendered_blocks == "<p>Lobby</p>"
+        assert [%{block: copied_block}] = copied.entry_blocks
+        assert copied_block.id != block.id
+        assert [%{data: %{data: %{text: "Lobby"}}}] = copied_block.refs
+        assert [%{identifier_id: ^identifier_id} = copied_entry] = copied.related_entries
+        assert copied_entry.id != hd(original.related_entries).id
+      end
+    end
+
+    test "related entries are linked from the copy as well", c do
+      {:ok, other} =
+        SyncTest.create_article(
+          %{title: "Example Hotel", slug: "example-hotel", language: "no", status: "published"},
+          c.user
+        )
+
+      identifier = Repo.get_by!(Brando.Content.Identifier, schema: Article, entry_id: other.id)
+      Repo.insert!(%Article.RelatedEntriesIdentifier{parent_id: c.source.id, identifier_id: identifier.id, sequence: 0})
+
+      {:ok, copy} = SyncTest.duplicate_article(c.source.id, c.user, change_fields: [slug: "copy"])
+
+      assert [original] = load(c.source.id).related_entries
+      assert [copied] = load(copy.id).related_entries
+      assert copied.id != original.id
+      assert {original.identifier_id, copied.identifier_id} == {identifier.id, identifier.id}
+    end
+
     test "a translation whose URI the language already uses gets a free one", c do
       alias Brando.Pages.Page
 
