@@ -30,7 +30,7 @@ defmodule Mix.Brando.Igniter.SiteRenderTest do
         end
       end
       """)
-      |> Igniter.compose_task(Mix.Tasks.Brando.Install, ["--public-site", "--replace-phoenix-home"])
+      |> Igniter.compose_task(Mix.Tasks.Brando.Install, [])
 
     [] = planned.issues
 

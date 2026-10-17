@@ -7,7 +7,8 @@ if Code.ensure_loaded?(Igniter) do
     @shortdoc "Plans optional CMS page rendering with explicit homepage ownership"
     @moduledoc """
     Adds CMS page controllers, templates, layouts and tenant context under Web.CMS.
-    Run after `brando.install`, or compose with `brando.install --public-site`.
+    A new `brando.install` composes it unless given `--no-public-site`; run it
+    to add the site to an application installed without one.
 
     It also adds the `/coming-soon` page `Brando.Plug.Lockdown` sends visitors to
     while `config :brando, lockdown: true`, with the plug in the CMS pipeline,

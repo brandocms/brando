@@ -321,12 +321,12 @@ defmodule Mix.Brando.Igniter.InstallDeployTest do
   end
 
   test "phx.new's favicon and logo leave priv/static, which the release build does not copy, once" do
-    igniter = install(project(phx_static()))
+    igniter = install(project(phx_static()), ["--yes", "--no-public-site"])
     assert igniter.issues == []
 
     assert "priv/static/favicon.ico" in igniter.rms
     assert igniter.moves == %{"priv/static/images/logo.svg" => "assets/frontend/public/images/logo.svg"}
-    # Without --public-site nothing else answers /robots.txt.
+    # Without the public site nothing else answers /robots.txt.
     Igniter.Test.assert_unchanged(igniter, "priv/static/robots.txt")
     refute notice?(igniter, "is not the file mix phx.new writes")
 
@@ -351,7 +351,8 @@ defmodule Mix.Brando.Igniter.InstallDeployTest do
             "priv/static/favicon.ico" => "site favicon",
             "priv/static/images/logo.svg" => "<svg>site logo</svg>\n"
           })
-        )
+        ),
+        ["--yes", "--no-public-site"]
       )
 
     assert changed.rms == []

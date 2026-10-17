@@ -30,11 +30,9 @@ mix igniter.new studio --with phx.new \
   --install brando@path:/absolute/path/to/brando
 ```
 
-This installs the admin and keeps Phoenix's homepage at `/`. A website, with
-public pages from the CMS, needs `--public-site --replace-phoenix-home` on
-`mix brando.install`, or `mix brando.gen.site --replace-phoenix-home` once the
-install is done (see [Add CMS public pages](#add-cms-public-pages)); following
-this guide without either ends with Phoenix's homepage.
+This installs the admin and the CMS public site, which takes `/` from
+phx.new's homepage (see [Add CMS public pages](#add-cms-public-pages)). Pass
+`--no-public-site` to keep Phoenix's homepage and install the admin alone.
 
 The archive supplies Igniter and invokes Brando's installer. Brando's optional
 modules automatically recompile if Igniter is added to an already compiled
@@ -127,17 +125,18 @@ installer does not replace your dependency with a hardcoded relative path.
 
 The generated changes configure Brando, extend supervision/endpoint/router,
 create the admin support modules and Vite projects, and add missing migrations.
-The default preserves your public homepage. CMS public pages are an explicit
-option below. For a [Florist deploy](deployment.md), the installer writes the
-production endpoint's `check_origin`, the Florist environment files and the
+A new install adds the CMS public pages described below unless given
+`--no-public-site`; a homepage the application has made its own is kept.
+For a [Florist deploy](deployment.md), the installer writes the production
+endpoint's `check_origin`, the Florist environment files and the
 release script that sources them (see [Deployment hosts](#deployment-hosts)),
 Brando's Dockerfile and `.dockerignore` when there are none,
 `MyApp.ReleaseTasks` and a release that writes the tarball Florist deploys,
 relative `media_path` and `log_dir` in `config/prod.exs`, and the
 `.gitignore` lines a Brando application needs. The release does not copy
 `priv/static`, so phx.new's `favicon.ico` there is removed and its
-`images/logo.svg` moves to `assets/frontend/public/images`; with
-`--public-site`, its `robots.txt` is removed too, so Brando answers
+`images/logo.svg` moves to `assets/frontend/public/images`; with the public
+site, its `robots.txt` is removed too, so Brando answers
 `/robots.txt`. "Release helpers", "Media and
 log paths", "Ignored files" and "The Docker build" in the deployment guide
 describe each, and what an existing file keeps. Florist's own configuration,
@@ -254,15 +253,16 @@ the values to set by hand. A kept `rel/env.sh.eex` that does not source
 
 ## Add CMS public pages
 
-```sh
-# During installation:
-mix brando.install --public-site --replace-phoenix-home
+A new `mix brando.install` adds the public site; `--no-public-site` leaves it
+out. A rerun never adds it. To add it to an application installed without it:
 
-# Or after installing, with guided homepage ownership:
+```sh
+mix brando.gen.site --replace-phoenix-home
+# or, with guided homepage ownership:
 mix brando.gen.site --interactive
 ```
 
-`--public-site` creates `YourWeb.CMS.PageController`, `PageHTML`, `Layouts`,
+The site is `YourWeb.CMS.PageController`, `PageHTML`, `Layouts`,
 `SiteContext`, the [lockdown](#lockdown) page, the site's
 [error pages](#error-pages) and a [live preview](live_preview.md) of pages.
 Its pipeline resolves the tenant before locale and identity;
@@ -273,11 +273,17 @@ phx.new's `priv/static/robots.txt` is removed while it is unchanged, with
 settings' text in development as in the release; a changed one is kept, with a
 notice.
 
-An existing Phoenix `PageController.home` route at `/` is removed only with
-`--replace-phoenix-home` or an affirmative interactive answer. Its files remain
-available. Other homepages, catch-alls and support-path collisions require manual
-integration; `--yes` never selects that ownership for you. Update existing homepage
-request-test expectations when deliberately replacing the homepage behavior.
+On a new install, phx.new's `PageController.home` route at `/` is replaced while
+`PageController` and its `home.html.heex` are still as `mix phx.new` wrote them.
+A homepage the application has changed is kept, and the site is not generated,
+with a notice naming the `mix brando.gen.site` commands above; `--interactive`
+asks instead. `mix brando.gen.site` removes the route only with
+`--replace-phoenix-home` or an affirmative interactive answer. The controller and
+templates remain available. Other homepages, catch-alls and support-path
+collisions stop the plan for manual integration (or install with
+`--no-public-site`); `--yes` never takes ownership of a changed homepage. Update
+existing homepage request-test expectations when replacing the homepage
+behavior; phx.new's own test of it is removed with the route.
 
 After database and account setup, use `/admin/pages` to create and publish a Page
 with URI `index`, marking it as the homepage and choosing `index.html`. Other pages
@@ -669,7 +675,7 @@ Run `mix help TASK` for current options. These are separate operations:
 | `brando.migrate_to_tenant` | Operational data conversion |
 | `brando.migrate` | Runs public or tenant migrations |
 | `brando.modules` | Export, plan and import module-definition DSL files |
-| `brando.gen.site` | Plans optional CMS page rendering with explicit homepage ownership |
+| `brando.gen.site` | Plans CMS page rendering (a new install composes it) with explicit homepage ownership |
 | `brando.gen.sitemap` / `brando.gen.mail` / `brando.gen.authorization` | Reviewed auxiliary modules with conflict checks |
 | `brando.gen.release` | Reviewed release helpers and missing Mix configuration |
 | `brando.install.fabfile` | Retired; use release generation and Florist |

@@ -114,7 +114,7 @@ defmodule Mix.Brando.Igniter.InstallTest do
   end
 
   test "admin routes precede an existing public catch-all" do
-    result =
+    catchall =
       project(%{
         "lib/studio_web/router.ex" => """
         defmodule StudioWeb.Router do
@@ -123,8 +123,12 @@ defmodule Mix.Brando.Igniter.InstallTest do
         end
         """
       })
-      |> install()
 
+    # The CMS site's own catch-all would compete with it.
+    assert [issue] = install(catchall).issues
+    assert issue =~ "mix brando.install --no-public-site"
+
+    result = install(catchall, ["--yes", "--no-public-site"])
     assert result.issues == []
     router = IgniterCase.source(result, "lib/studio_web/router.ex")
     assert [before_catchall, _] = Regex.split(~r/get\(?\s*"\/\*path"/, router)

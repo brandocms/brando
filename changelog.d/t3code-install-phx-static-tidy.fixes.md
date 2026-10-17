@@ -3,7 +3,7 @@
   what `mix phx.new` put there worked in development and was missing from the
   release. The installer now removes phx.new's `favicon.ico` (Brando writes
   its own to `assets/frontend/public`) and moves `images/logo.svg` to
-  `assets/frontend/public/images/logo.svg`. With `--public-site`, and in
+  `assets/frontend/public/images/logo.svg`. With the CMS public site, and in
   `mix brando.gen.site`, it also removes phx.new's `robots.txt` and the
   `robots.txt` entry in `static_paths/0`, which made development serve that
   file instead of the robots text from the SEO settings. Only files still as

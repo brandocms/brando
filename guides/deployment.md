@@ -529,8 +529,8 @@ asset projects, so keep static files such as images and fonts in
 `priv/static` works in development and is missing from the release, so the
 installer takes out the ones `mix phx.new` writes: its `favicon.ico` goes
 (Brando writes its own to `assets/frontend/public`), and `images/logo.svg`
-moves to `assets/frontend/public/images/logo.svg`. With `--public-site` its
-`robots.txt` goes too, with `robots.txt` in `static_paths/0` of the web module,
+moves to `assets/frontend/public/images/logo.svg`. With the CMS public site,
+which a new install adds unless given `--no-public-site`, its `robots.txt` goes too, with `robots.txt` in `static_paths/0` of the web module,
 so `BrandoWeb.SEOController` answers `/robots.txt` in development as in the
 release. Only files still as phx.new wrote them are touched; a changed one is
 kept, with a notice saying where it belongs.
