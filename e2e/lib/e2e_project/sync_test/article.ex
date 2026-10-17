@@ -63,7 +63,7 @@ defmodule E2eProject.SyncTest.Article do
       tab "Content" do
         fieldset do
           input :title, :text
-          input :slug, :slug, from: :title
+          input :slug, :slug, source: :title
           input :subtitle, :textarea
           input :year, :number
           input :featured, :toggle

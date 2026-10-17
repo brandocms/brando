@@ -401,7 +401,7 @@ the slug themselves on a new entry:
   the generated slug. Pages use it to start a child page's URI with its
   parent's.
 
-`from:` passes the compile-time check but is not read by the input; use
+`from:` and `for:` (the 0.53 name) are compile errors on a slug input; use
 `source:`.
 
 ### Choices
@@ -921,10 +921,14 @@ forms do
 end
 ```
 
-`blocks` adds a block editor for a block relation. It is declared on the
-form, not in a tab, and renders below the tabs. The schema needs
-`trait :blocks`, and the name must be a `has_many` relation with
-`module: :blocks`. Options:
+`blocks` adds a block editor for a block relation. It is declared directly
+under `form do`, and renders below the tabs. A block editor is its own form
+next to the entry form, not part of it: inside the entry form it would be a
+form nested in a form, which HTML does not allow, and each change to an entry
+field would send every block over the wire again. A `blocks` inside a `tab`,
+`fieldset` or `inputs_for` therefore fails to compile, and the error says
+where to move it. The schema needs `trait :blocks`, and the name must be a
+`has_many` relation with `module: :blocks`. Options:
 
 * `module_set`: offer only the modules of this set. A site can set it in
   config instead, per schema and field:
@@ -1171,7 +1175,7 @@ form and field, and the module still compiles. Build with `mix compile
 
 * a static `query`'s `:matches` is a map;
 * top-level inputs and subforms name schema fields, and each appears once;
-* `hidden:` and `show_if:` tuples, and `source:`/`from:` options, name schema
+* `hidden:` and `show_if:` tuples, and `source:` options, name schema
   fields;
 * `inputs_for` names a relation whose module is a loaded Ecto schema, its
   `cardinality` matches the relation, and its inputs name fields of the
@@ -1182,5 +1186,7 @@ form and field, and the module still compiles. Build with `mix compile
 * `blocks` names a `has_many` relation with `module: :blocks`, on a schema
   with `trait :blocks`.
 
-Input types, input options, and whether an input type suits its field are
-not checked. Footnote configuration errors raise when the Blueprint compiles.
+Input types, most input options, and whether an input type suits its field are
+not checked. These raise when the Blueprint compiles, as errors rather than
+warnings: footnote configuration errors, a `blocks` anywhere but directly
+under `form do`, and `from:` or `for:` on a slug input.
