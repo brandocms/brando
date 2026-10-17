@@ -17,7 +17,8 @@ defmodule Mix.Tasks.Brando.Setup do
     1. `brando.assets.setup` — Yalc publish and consumer asset builds
     2. `ecto.create` and `ecto.migrate`
     3. a superuser account, prompted for unless `--email`/`--name`/`--password`
-       are supplied, and skipped when an active superuser already exists
+       are supplied, and skipped when an active superuser already exists. It
+       logs in with that password, with no change asked for on first login
     4. `brando.gen.seeds` — identity, SEO, modules, an `index` page, a main
        menu and a footer fragment per configured language. The site's base URL
        and a short description are prompted for (or `--base-url`,

@@ -355,7 +355,9 @@ content seeds. Each step is skipped when its result already exists, so a rerun
 after a failure resumes instead of duplicating. Skip steps with `--no-assets`,
 `--no-db`, `--no-account` and `--no-seeds`. Setup prompts for anything it needs;
 for an unattended run, supply `--email`, `--name` and `--password` for the
-account and `--base-url` and `--description` for the seeded site identity.
+account and `--base-url` and `--description` for the seeded site identity. The
+account logs in with the password given here; it is not asked to change it on
+first login.
 `--source PATH` hands a Brando JavaScript source to asset setup. The sections below describe the same
 steps as individual tasks, which is what to reach for when you want to control
 them separately.
@@ -416,7 +418,8 @@ mix phx.server
 
 The language task creates identity/SEO defaults and prints language configuration;
 choose English (`en`) for the initial defaults. The admin task prompts for account
-details. Open `/admin/login` and sign in. Account creation and database operations
+details. Open `/admin/login` and sign in with that password; like `brando.setup`'s
+account, it is not asked to change it on first login. Account creation and database operations
 are separate from the Igniter source plan.
 
 `brando.gen.seeds` creates the content a new site needs before its first request
