@@ -1,4 +1,4 @@
-- **`mix brando.gen --public-route` pages belong to the CMS site** (#PR).
+- **`mix brando.gen --public-route` pages belong to the CMS site** (#3230).
   With the CMS site from `mix brando.gen.site`, the generated routes pipe
   through `[:browser, :brando_site]`, ahead of the CMS catch-all, so tenant,
   locale, identity, navigation and `Brando.Plug.Lockdown` apply: before, they
