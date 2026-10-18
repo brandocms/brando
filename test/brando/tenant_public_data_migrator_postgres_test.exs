@@ -17,6 +17,9 @@ defmodule Brando.TenantPublicDataMigratorPostgresTest do
   setup do
     previous_repo = Application.fetch_env(:brando, :repo_module)
     Application.put_env(:brando, :repo_module, Repo)
+    # Registered before the queries below, so a setup that raises still puts
+    # the repo back for the tests after it
+    on_exit(fn -> IntegrationRepo.restore_env(:repo_module, previous_repo) end)
 
     unique = System.unique_integer([:positive])
     table = "migration_records_#{unique}"
@@ -35,7 +38,6 @@ defmodule Brando.TenantPublicDataMigratorPostgresTest do
     on_exit(fn ->
       Ecto.Adapters.SQL.query!(Repo, ~s|DROP SCHEMA IF EXISTS "#{target}" CASCADE|, [])
       Ecto.Adapters.SQL.query!(Repo, ~s|DROP TABLE IF EXISTS public."#{table}" CASCADE|, [])
-      IntegrationRepo.restore_env(:repo_module, previous_repo)
     end)
 
     %{table: table, target: target}

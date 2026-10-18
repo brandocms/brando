@@ -204,8 +204,18 @@ defmodule Mix.Brando.Igniter.ResourceRenderTest do
     assert Brando.Plug.HTML.get_page_entry(conn).slug == "known"
     assert conn.resp_body =~ ~s(<a href="/articles">Back to articles</a>)
 
+    # The site's CSS spaces direct children of main: the blocks, and the
+    # .page-section wrappers around the page's own markup.
+    show = Floki.parse_document!(conn.resp_body)
+    assert show |> Floki.find("main > header.page-section > .inner > h1") |> Floki.text() == "Known article"
+    assert show |> Floki.find("main > p") |> Enum.map(&Floki.text/1) == ["Rendered blocks", "Rendered bio"]
+    assert show |> Floki.find("main > .page-section > .inner > a") |> Floki.text() == "Back to articles"
+
     index = call(ArticleController, "/articles", :index, %{})
     assert index.status == 200
+    index_html = Floki.parse_document!(index.resp_body)
+    assert index_html |> Floki.find("main > header.page-section > .inner > h1") |> Floki.text() == "Articles"
+    assert [_] = Floki.find(index_html, ~s(main > section.page-section > .inner > ul a[href="/articles/known"]))
     assert index.resp_body =~ ~s(href="/articles/known")
     refute index.resp_body =~ "kjent"
     assert index.resp_body =~ ~s(<html lang="en">)

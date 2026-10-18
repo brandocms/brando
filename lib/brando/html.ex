@@ -74,8 +74,14 @@ defmodule Brando.HTML do
     target_blank? = get_menu_item_target_blank(item)
     key = item.key
 
-    splat_url? = (assigns.splat && String.starts_with?(url, "/")) || false
+    front_page_url? = front_page_url?(url)
+    splat_url? = (assigns.splat && !front_page_url? && String.starts_with?(url, "/")) || false
     match_url = (splat_url? && Path.join([url, "*"])) || url
+
+    active? =
+      if front_page_url?,
+        do: on_front_page?(assigns.conn, url),
+        else: Utils.active_path?(assigns.conn, match_url)
 
     # drop the leading slash if the url is a hash link and we are on the root path
     url =
@@ -90,7 +96,7 @@ defmodule Brando.HTML do
       |> assign(:url, url)
       |> assign(:text, text)
       |> assign(:key, key)
-      |> assign(:active, Utils.active_path?(assigns.conn, match_url))
+      |> assign(:active, active?)
       |> assign(:target_blank?, target_blank?)
 
     ~H"""
@@ -98,6 +104,34 @@ defmodule Brando.HTML do
       {render_slot(@inner_block, @text)}
     </a>
     """
+  end
+
+  # A front page link (`/`, `/no`, `/no/`) matches only that front page:
+  # splatted, it would match every page in the language
+  defp front_page_url?(url) do
+    case String.trim_trailing(url, "/") do
+      "" -> url == "/"
+      "/" <> language -> language in language_codes()
+      _ -> false
+    end
+  end
+
+  defp language_codes do
+    :languages
+    |> Brando.config()
+    |> List.flatten()
+    |> Keyword.get_values(:value)
+    |> Enum.map(&to_string/1)
+  end
+
+  # The locale plug's `force_path` puts the language in front of `path_info`,
+  # so `GET /` reads as `/en` there. The request path keeps the URL as visited.
+  defp on_front_page?(conn, url) do
+    url = String.trim_trailing(url, "/")
+
+    [conn.request_path, Path.join(["/" | conn.path_info])]
+    |> Enum.reject(&(&1 in [nil, ""]))
+    |> Enum.any?(&(String.trim_trailing(&1, "/") == url))
   end
 
   attr :item, :map, required: true
