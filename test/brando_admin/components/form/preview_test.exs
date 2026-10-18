@@ -48,7 +48,9 @@ defmodule BrandoAdmin.Components.Form.PreviewTest do
   end
 
   test "reload dominates rerender and update, and an immediate request advances a delayed one" do
-    socket = Preview.queue(socket([]), :live_preview_full_rerender, 1200)
+    # Far enough out that a stalled runner can't reach it before the next call;
+    # at 1200 a 1.2 s pause made the delayed request due first, so it was kept.
+    socket = Preview.queue(socket([]), :live_preview_full_rerender, 60_000)
     previous = socket.assigns.preview_update
 
     socket =
