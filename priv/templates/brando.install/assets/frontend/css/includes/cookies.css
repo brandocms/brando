@@ -99,6 +99,7 @@
 
       &:hover {
         @color fg bone.full;
+        color: var(--brando-color-dark);
       }
 
       @responsive >=ipad_portrait {

@@ -99,6 +99,7 @@ body {
   @color fg body.foreground;
   @color bg body.background;
 
+  line-height: normal;
   font-feature-settings: 'calt' 1, 'liga' 1;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;

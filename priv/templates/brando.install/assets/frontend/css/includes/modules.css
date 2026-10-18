@@ -108,6 +108,7 @@ main > [b-tpl] > .inner {
   .actions {
     @display flex/row/nowrap;
     @space gap md;
+    @space gap sm $sm;
     @space margin-top lg;
 
     align-items: center;
@@ -122,21 +123,25 @@ main > [b-tpl] > .inner {
   /* What the installer actually made, stated as a fact row. */
   .ledger {
     @display flex/row/nowrap;
-    @space gap 1;
+    @space column-gap 1;
     @space margin-top xxl;
 
     border-top: 1px solid theme(colors.bone.hairStrong);
 
     .entry {
       @space padding-y md;
+      @column 6/12 $sm;
 
       flex: 1;
     }
 
+    /* On desktop the entries sit in one row with a hairline between them. */
     .entry + .entry {
-      @space padding-left md;
+      @space padding-left md $lg;
 
-      border-left: 1px solid theme(colors.bone.hair);
+      @responsive $lg {
+        border-left: 1px solid theme(colors.bone.hair);
+      }
     }
 
     .value p {
@@ -144,6 +149,7 @@ main > [b-tpl] > .inner {
 
       font-weight: 600;
       letter-spacing: -0.035em;
+      line-height: 1;
       margin-bottom: 0;
     }
 
@@ -160,14 +166,6 @@ main > [b-tpl] > .inner {
 
     @responsive $sm {
       flex-wrap: wrap;
-
-      .entry {
-        flex: 0 0 50%;
-      }
-
-      .entry + .entry {
-        border-left: 0;
-      }
     }
   }
 }
@@ -226,6 +224,7 @@ main > [b-tpl] > .inner {
       display: inline-flex;
       padding: 0.55em 0.9em;
       border: 1px solid theme(colors.bone.hair);
+      line-height: 1.4;
 
       /* The command is a text ref, so it arrives as a paragraph. Until the
          highlighter replaces it, it must not take the step copy's styles. */
@@ -268,12 +267,8 @@ main > [b-tpl] > .inner {
 [b-tpl="cards"] {
   .cards {
     @display flex/row/wrap;
-
-    @responsive $lg {
-      @space gap 1;
-
-      row-gap: 0;
-    }
+    @space column-gap 1 $lg;
+    @space row-gap xl $lg;
 
     @responsive $sm {
       @display flex/column/nowrap;
@@ -290,7 +285,6 @@ main > [b-tpl] > .inner {
 
     @responsive $lg {
       @column 4/12;
-      @space margin-bottom xl;
     }
 
     h3 {
@@ -331,12 +325,7 @@ main > [b-tpl] > .inner {
 [b-tpl="tips"] {
   .tips {
     @display flex/row/wrap;
-
-    @responsive $lg {
-      @space gap 1;
-
-      row-gap: 0;
-    }
+    @space column-gap 1 $lg;
   }
 
   .tip {
@@ -642,6 +631,7 @@ main > [b-tpl] > .inner {
 
     letter-spacing: 0.12em;
     text-transform: uppercase;
+    line-height: 2;
 
     .starred {
       @color fg live;
@@ -668,6 +658,7 @@ main > [b-tpl] > .inner {
   .row {
     @display flex/row/nowrap;
     @space gap lg;
+    @space gap md $sm;
 
     align-items: flex-end;
     justify-content: space-between;
@@ -716,7 +707,7 @@ main > [b-tpl] > .inner {
   .lists {
     @display flex/row/nowrap;
     @space gap xl;
-    @space gap lg <=mobile;
+    @space gap lg $sm;
 
     margin-left: auto;
   }

@@ -803,8 +803,8 @@ To move a frontend that a 0.55 install wrote (`@brandocms/europacss`
    to `plugins`, set `css.postcss` to `{ plugins: [] }`, and remove the
    `HMREuropa` plugin. The Vite plugin watches `europa.json5` and updates the
    CSS when it changes, with no page reload.
-4. Check the stylesheet, fix what it reports, and compare the builds in a
-   browser as for the admin above:
+4. Check the stylesheet, review what it reports (below), then build and
+   compare the builds in a browser as for the admin above:
 
    ```shell
    pnpm exec europa migrate css/app.css --from 1.0.0-beta.16 --config europa.json5 --check
@@ -818,32 +818,51 @@ To move a frontend that a 0.55 install wrote (`@brandocms/europacss`
    `--settle 1200` waits out the header's entrance animation, which otherwise
    stops the comparison with "DOM changed during comparison".
 
-What the 0.55 template's CSS needed, and what to look for in a site's own:
+The check exits with status 1 for as long as any finding is unresolved, and
+some of its findings are correct CSS: it still exits 1 on the 0.55 template's
+own native stylesheet. What it reports for a frontend the 0.55 installer
+wrote:
 
-- **Bundles.** `@europa base` and `@europa arrows` expand where they are
-  written, not at the top of the stylesheet. `@import` has to come first, so
-  they move to a file imported before the others (the template's
-  `css/includes/bundles.css`); otherwise the reset outranks the site's rules.
-- **Directive output stays in place.** The legacy plugin wrote a directive's
-  declarations after the rule's own, so a plain declaration after the
-  directive lost. Now it wins:
-  - `@color border-top bone.hair;` followed by `border-top: 1px solid;`: the
-    shorthand resets the colour to `currentColor`. Put the token in the
-    declaration: `border-top: 1px solid theme(colors.bone.hair);`.
-  - `line-height` after `@fontsize`, and `color` after `@color fg`: the
-    size's `__base__` line height, and the token colour, won before. Remove
-    the plain declaration to keep what the page showed, or keep it for the
-    value it names.
-- **Responsive order.** The legacy plugin packed and sorted all media
-  queries, so an override in `@responsive $sm { … }` could lose to a
-  directive's per-breakpoint media in the same rule (the template's mobile
-  gaps). The native compiler keeps the order written: such overrides now
-  apply.
-- **`@extend`** takes `%placeholder`s only; the legacy plugin ignored an
-  `@extend` of a selector it could not find.
-- **`theme()`** has to resolve to a value. A breakpoint map such as
-  `theme(spacing.radius.regular)` wrote `[object Object]`, which browsers
-  dropped; use `@space border-radius radius.regular;`.
+- **Fix first: `EU_MIGRATION_INCOMPLETE`.** Two rules stop the analysis, and
+  the order findings below appear only once both are fixed:
+  - `theme(spacing.radius.regular)` (`EU_FUNCTION`): a breakpoint map is not a
+    CSS value. The legacy build wrote `[object Object]`, which browsers
+    dropped. Use `@space border-radius radius.regular;`.
+  - `@extend .plain` in `cookies.css` (`EU_EXTEND`): `@extend` takes
+    `%placeholder`s only, and no `.plain` rule exists, so it never extended
+    anything. Delete it.
+- **Fix: `EU_MIGRATION_BUNDLE_ORDER`** on `@europa arrows; @europa base;` at
+  the end of `app.css`. Bundles now expand where they are written, so the reset
+  would outrank the site's rules. `@import`s have to come first, so move the
+  bundles to a file imported before the others, as the template's
+  `css/includes/bundles.css` does. The finding stays after the move: the check
+  reports every bundle, wherever it is.
+- **Expected: `EU_MIGRATION_BREAKPOINT`** (six related findings). Named
+  ranges now end at `< next` instead of `<= next - 1px`, which closes the
+  one-pixel gap between them. Nothing to change.
+- **Review: `EU_MIGRATION_ORDER`** on a plain declaration after a directive in
+  the same rule (`line-height` after `@fontsize`), and on a `$sm` override of a
+  directive's value (the mobile `gap`s, the ledger's `padding-left: 0`). The
+  legacy build never applied them; the native one does. Keep one for the value
+  it names, or delete it to keep what the page showed. The 0.55 template keeps
+  the line heights and the mobile gaps, writing the gaps as
+  `@space gap sm $sm;`. Where a `$sm` rule only undid a desktop treatment, it
+  scopes the treatment instead: the ledger's divider is
+  `@space padding-left md $lg;` with a `$lg` border. The cards and tips use
+  `@space column-gap 1 $lg;` in place of `@space gap 1` with `row-gap: 0`,
+  and the cards space their rows with `@space row-gap xl $lg;` rather than a
+  bottom margin. The check still reports the order of the template's line
+  heights and mobile gaps: they are correct.
+
+The check does not report two order changes, so look for them in the site's
+own CSS:
+
+- `@color border-top bone.hair;` followed by `border-top: 1px solid;`. The
+  legacy build wrote the directive's colour after the shorthand, so the token
+  won; natively the shorthand resets the colour to `currentColor`. Put the
+  token in the declaration: `border-top: 1px solid theme(colors.bone.hair);`.
+- `@color fg token;` followed by `color: …;` in the same rule: the plain
+  `color` used to lose and now wins.
 
 ### Review a generated Florist configuration
 
