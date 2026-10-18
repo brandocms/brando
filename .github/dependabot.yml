@@ -54,6 +54,12 @@ updates:
   open-pull-requests-limit: 10
   allow:
   - dependency-type: production
+  # Tiptap's packages share one @tiptap/core and must move together: bumping
+  # one alone locks two cores.
+  groups:
+    tiptap:
+      patterns:
+      - "@tiptap/*"
   reviewers:
   - tmjoen
   assignees:
