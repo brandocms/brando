@@ -159,13 +159,16 @@ directory; configure both paths to keep them elsewhere.
 
 The installer adds to `.gitignore` what a Brando application builds,
 uploads or downloads in its working folder and phx.new does not ignore: the
-asset projects' `node_modules`, Yalc copies (`.yalc/`, `yalc.lock`), the
-admin and site builds in `priv/static` (`assets/`; `favicon.ico`, `fonts/`,
-`ico/` and `images/`, which Vite copies from the asset projects' `public/`
-folders, so keep a site's images in `assets/frontend/public/images`; and the
-Vite and digest manifests), `/media/` (uploads),
-`/log/`, and Florist's `/release-archives/` and `/sql/` (database dumps).
-Lines an existing rule already covers are not added again.
+asset projects' `node_modules`, Yalc copies (`.yalc/`, `yalc.lock`), all of
+`/priv/static/`, `/media/` (uploads), `/log/`, and Florist's
+`/release-archives/` and `/sql/` (database dumps). `priv/static` holds only
+build output: the admin and site builds, the files Vite copies from the asset
+projects' `public/` folders (so keep a site's images in
+`assets/frontend/public/images`), and what `mix brando.digest` adds. Lines an
+existing rule already covers are not added again. A directory line is not
+added when the `.gitignore` has an exception (`!` line) anchored inside that
+directory, which it would cancel, as Git cannot re-include a file in an
+ignored directory; a notice names it instead.
 
 ### Migrating from Fabric
 
@@ -576,7 +579,9 @@ installer takes out the ones `mix phx.new` writes: its `favicon.ico` goes
 moves to `assets/frontend/public/images/logo.svg`. With the CMS public site,
 which a new install adds unless given `--no-public-site`, its `robots.txt` goes too, with `robots.txt` in `static_paths/0` of the web module,
 so `BrandoWeb.SEOController` answers `/robots.txt` in development as in the
-release. Only files still as phx.new wrote them are touched; a changed one is
+release. Without the public site, `robots.txt` moves to
+`assets/frontend/public/robots.txt`, and `Plug.Static` serves the frontend
+build's copy. Only files still as phx.new wrote them are touched; a changed one is
 kept, with a notice saying where it belongs.
 
 Both asset stages install with the pnpm version pinned in the Dockerfile and

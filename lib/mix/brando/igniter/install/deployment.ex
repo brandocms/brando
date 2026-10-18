@@ -18,10 +18,11 @@ if Code.ensure_loaded?(Igniter) do
     @release_env "rel/env.sh.eex"
     @release_paths [media_path: "./media", log_dir: "./log"]
     # What a Brando application builds, uploads or downloads in its working
-    # folder, beyond what phx.new ignores. Vite builds the admin and the site
-    # into priv/static, copying their public/ folders there (favicon.ico, ico/,
-    # fonts/, images/, a site's own images included), and mix brando.digest
-    # writes the cache manifest; Florist writes release-archives/ and sql/.
+    # folder, beyond what phx.new ignores. priv/static is build output only:
+    # Vite builds the admin and the site there, copying their public/ folders,
+    # mix brando.digest adds digested copies and the cache manifest, and the
+    # installer moves phx.new's own files out (PhoenixStatic). Florist writes
+    # release-archives/ and sql/.
     @brando_ignores ~w(
       /assets/backend/node_modules/
       /assets/frontend/node_modules/
@@ -29,14 +30,7 @@ if Code.ensure_loaded?(Igniter) do
       /assets/backend/yalc.lock
       /assets/frontend/.yalc/
       /assets/frontend/yalc.lock
-      /priv/static/assets/
-      /priv/static/favicon.ico
-      /priv/static/fonts/
-      /priv/static/ico/
-      /priv/static/images/
-      /priv/static/admin_manifest.json
-      /priv/static/manifest.json
-      /priv/static/cache_manifest.json
+      /priv/static/
       /media/
       /log/
       /release-archives/
@@ -230,30 +224,57 @@ if Code.ensure_loaded?(Igniter) do
     # Each group's lines that .gitignore does not cover yet, under the group's
     # heading.
     defp gitignore(igniter, groups) do
-      Igniter.create_or_update_file(igniter, ".gitignore", String.trim_leading(missing_blocks(groups, "")), fn source ->
-        content = Source.get(source, :content)
+      {igniter, content} = contents(igniter, ".gitignore")
+      content = content || ""
+      # Git keeps leading spaces and drops unescaped trailing ones.
+      lines = content |> String.split("\n") |> Enum.map(&String.trim_trailing/1)
+      rules = lines |> Enum.map(&gitignore_rule/1) |> Enum.reject(&is_nil/1)
+      exceptions = for "!" <> pattern <- lines, do: pattern
 
-        case missing_blocks(groups, content) do
-          "" -> source
-          missing -> Source.update(source, :content, String.trim_trailing(content) <> "\n" <> missing)
-        end
+      groups = for {heading, lines} <- groups, do: {heading, Enum.reject(lines, &ignored?(rules, &1))}
+      shadowing = for {_heading, lines} <- groups, line <- lines, shadows?(line, exceptions), do: line
+
+      blocks =
+        Enum.map_join(groups, fn {heading, lines} ->
+          case lines -- shadowing do
+            [] -> ""
+            missing -> "\n# #{heading}\n" <> Enum.join(missing, "\n") <> "\n"
+          end
+        end)
+
+      igniter
+      |> write_gitignore(blocks)
+      |> shadowing_notice(shadowing)
+    end
+
+    defp write_gitignore(igniter, ""), do: igniter
+
+    defp write_gitignore(igniter, blocks) do
+      Igniter.create_or_update_file(igniter, ".gitignore", String.trim_leading(blocks), fn source ->
+        Source.update(source, :content, &(String.trim_trailing(&1) <> "\n" <> blocks))
       end)
     end
 
-    defp missing_blocks(groups, content) do
-      rules =
-        content
-        |> String.split("\n")
-        # Git keeps leading spaces and drops unescaped trailing ones.
-        |> Enum.map(&gitignore_rule(String.trim_trailing(&1)))
-        |> Enum.reject(&is_nil/1)
+    defp shadowing_notice(igniter, []), do: igniter
 
-      Enum.map_join(groups, fn {heading, lines} ->
-        case Enum.reject(lines, &ignored?(rules, &1)) do
-          [] -> ""
-          missing -> "\n# #{heading}\n" <> Enum.join(missing, "\n") <> "\n"
-        end
-      end)
+    defp shadowing_notice(igniter, lines) do
+      Igniter.add_notice(igniter, """
+      .gitignore has exceptions (`!` lines) inside these directories, and Git cannot re-include a
+      file in an ignored directory, so they were not added. Make sure Git ignores what the builds
+      write there:
+      #{Enum.map_join(lines, "\n", &"  #{&1}")}
+      """)
+    end
+
+    # Whether a directory line would cancel an exception anchored inside the
+    # directory, such as `!/priv/static/.well-known/`. The line still wins over
+    # an exception for the directory itself, being last, and a name without a
+    # slash (`!.gitkeep`) is not counted: it matches at any depth.
+    defp shadows?(line, exceptions) do
+      inside = String.trim(line, "/") <> "/"
+
+      String.ends_with?(line, "/") and
+        Enum.any?(exceptions, &(&1 |> String.trim("/") |> String.starts_with?(inside)))
     end
 
     # Git's rule: the last pattern that matches a path decides, a leading !

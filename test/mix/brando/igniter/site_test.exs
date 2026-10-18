@@ -697,17 +697,43 @@ defmodule Mix.Brando.Igniter.SiteTest do
   end
 
   test "a robots.txt the frontend build copied from assets/frontend/public is left alone" do
+    own = "User-agent: *\nDisallow: /private/\n"
+
     result =
       project("", %{
-        @robots => @phx_robots,
-        "assets/frontend/public/robots.txt" => @phx_robots,
+        @robots => own,
+        "assets/frontend/public/robots.txt" => own,
         "lib/studio_web.ex" => @web_module
       })
       |> generate(["--yes"])
 
     assert result.rms == []
-    Igniter.Test.assert_unchanged(result, [@robots, "lib/studio_web.ex"])
+    Igniter.Test.assert_unchanged(result, [@robots, "assets/frontend/public/robots.txt", "lib/studio_web.ex"])
     refute Enum.any?(result.notices, &(&1 =~ "is not the file mix phx.new writes"))
+  end
+
+  test "phx.new's robots.txt in assets/frontend/public, where an install without the site moved it, goes too" do
+    for files <- [
+          %{"assets/frontend/public/robots.txt" => @phx_robots},
+          # With the frontend build's copy.
+          %{"assets/frontend/public/robots.txt" => @phx_robots, @robots => @phx_robots}
+        ] do
+      result = project("", Map.put(files, "lib/studio_web.ex", @web_module)) |> generate(["--yes"])
+      assert result.issues == []
+      assert Enum.sort(result.rms) == Enum.sort(Map.keys(files))
+
+      assert IgniterCase.source(result, "lib/studio_web.ex") =~
+               "def static_paths, do: ~w(assets fonts images favicon.ico)"
+    end
+  end
+
+  test "an install whose site skips itself moves phx.new's robots.txt to assets/frontend/public" do
+    changed = %{"lib/studio_web/controllers/page_html/home.html.heex" => @phx_home <> "<p>Our studio</p>\n"}
+    result = install(fresh(Map.merge(changed, %{@robots => @phx_robots, "lib/studio_web.ex" => @web_module})))
+    assert result.issues == []
+    refute Igniter.exists?(result, "lib/studio_web/cms/page_controller.ex")
+    assert result.moves[@robots] == "assets/frontend/public/robots.txt"
+    assert IgniterCase.source(result, "lib/studio_web.ex") =~ "robots.txt"
   end
 
   test "only static paths returned as a literal list lose robots.txt" do

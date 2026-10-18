@@ -30,10 +30,6 @@ img[data-src], img[data-srcset] { min-height: 1px; min-width: 100%; }
   transform: none;
 }
 
-html, body {
-  min-height: 100%;
-}
-
 svg:not(:root) {
   overflow: hidden;
 }
@@ -93,11 +89,17 @@ html.moonwalk {
   }
 }
 
+/* At least a window tall, with `main` taking the slack, so a short page
+   still ends on the footer. */
 body {
+  @display flex/column/nowrap;
   @font main;
   @fontsize base;
   @color fg body.foreground;
   @color bg body.background;
+
+  min-height: 100vh;
+  min-height: 100dvh;
 
   font-feature-settings: 'calt' 1, 'liga' 1;
   -webkit-font-smoothing: antialiased;
