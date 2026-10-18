@@ -57,8 +57,7 @@ defmodule Mix.Brando.Igniter.InstallDeployTest do
 
     for line <-
           ~w(/assets/backend/node_modules/ /assets/frontend/node_modules/ /assets/backend/.yalc/ /media/ /log/
-             /release-archives/ /sql/ /priv/static/assets/ /priv/static/admin_manifest.json /priv/static/manifest.json
-             /.envrc.prod /.envrc.staging) do
+             /release-archives/ /sql/ /priv/static/ /.envrc.prod /.envrc.staging) do
       assert gitignore =~ ~r/^#{Regex.escape(line)}$/m, line
     end
 

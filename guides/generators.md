@@ -614,8 +614,9 @@ follows a matching redirect or renders the site's [404 page](#error-pages).
 The rendered blocks are direct children of `main`, and the heading, list and
 back link sit in `<div class="inner">` inside `.page-section` wrappers, which the
 installed frontend's `modules.css` spaces with `@space container;` like the
-seeded modules. The heading's `header.page-section` gets the seeded hero's top
-space below the navigation.
+seeded modules. A `.page-section` that opens `main` gets the seeded hero's top
+space below the navigation, and one that ends it the same space before the
+footer. The 404 and 500 pages use the same wrappers.
 
 Without the CMS site, the routes pipe through `:browser` only, the pages render
 in your application's layout, and the controller resolves the tenant itself. A

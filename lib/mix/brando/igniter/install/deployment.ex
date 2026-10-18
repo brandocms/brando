@@ -18,10 +18,11 @@ if Code.ensure_loaded?(Igniter) do
     @release_env "rel/env.sh.eex"
     @release_paths [media_path: "./media", log_dir: "./log"]
     # What a Brando application builds, uploads or downloads in its working
-    # folder, beyond what phx.new ignores. Vite builds the admin and the site
-    # into priv/static, copying their public/ folders there (favicon.ico, ico/,
-    # fonts/, images/, a site's own images included), and mix brando.digest
-    # writes the cache manifest; Florist writes release-archives/ and sql/.
+    # folder, beyond what phx.new ignores. priv/static is build output only:
+    # Vite builds the admin and the site there, copying their public/ folders,
+    # mix brando.digest adds digested copies and the cache manifest, and the
+    # installer moves phx.new's own files out (PhoenixStatic). Florist writes
+    # release-archives/ and sql/.
     @brando_ignores ~w(
       /assets/backend/node_modules/
       /assets/frontend/node_modules/
@@ -29,14 +30,7 @@ if Code.ensure_loaded?(Igniter) do
       /assets/backend/yalc.lock
       /assets/frontend/.yalc/
       /assets/frontend/yalc.lock
-      /priv/static/assets/
-      /priv/static/favicon.ico
-      /priv/static/fonts/
-      /priv/static/ico/
-      /priv/static/images/
-      /priv/static/admin_manifest.json
-      /priv/static/manifest.json
-      /priv/static/cache_manifest.json
+      /priv/static/
       /media/
       /log/
       /release-archives/

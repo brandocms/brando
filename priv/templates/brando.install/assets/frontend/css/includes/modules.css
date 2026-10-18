@@ -10,6 +10,7 @@ main {
   @display flex/column/nowrap;
   @space gap blocks;
 
+  flex-grow: 1;
   padding-top: var(--nav-height);
 }
 
@@ -33,9 +34,20 @@ main > .page-section > .inner {
   @space padding-x indent $lg;
 }
 
-/* A page's own heading opens the page as the seeded hero does. */
-main > header.page-section {
+/* A page that opens with its own section starts as the seeded hero does, below
+   the navigation, and one that ends with its own section leaves the same space
+   before the footer. */
+main > .page-section:first-child {
   @space padding-top xl;
+}
+
+main > .page-section:last-child {
+  @space padding-bottom xl;
+}
+
+/* Space between a page's own heading and the text under it, as on the 404 page. */
+main > .page-section > .inner > h1:not(:last-child) {
+  @space margin-bottom md;
 }
 
 /* Villain wraps a text block's content, so the block — not the last paragraph

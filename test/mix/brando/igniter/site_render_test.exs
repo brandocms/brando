@@ -111,7 +111,10 @@ defmodule Mix.Brando.Igniter.SiteRenderTest do
   test "a missing CMS page renders only the error, inside the layout it already has", %{conn: conn} do
     html = render_to_string(RenderSiteWeb.ErrorHTML, "404", "html", conn: site_conn(conn))
     assert html =~ ~s(class="error-page")
-    assert html =~ "Page not found"
+    # The installed frontend's modules.css gives `.page-section > .inner` the page's gutters.
+    assert html |> Floki.parse_fragment!() |> Floki.find("main > section.page-section > .inner > h1") |> Floki.text() ==
+             "Page not found"
+
     refute html =~ "<html"
   end
 

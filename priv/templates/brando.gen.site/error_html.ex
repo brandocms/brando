@@ -79,7 +79,11 @@ defmodule <%= web_module %>.ErrorHTML do
   defp content(assigns) do
     ~H"""
     <main id="content" class="error-page">
-      {render_slot(@inner_block)}
+      <section class="page-section">
+        <div class="inner">
+          {render_slot(@inner_block)}
+        </div>
+      </section>
     </main>
     """
   end

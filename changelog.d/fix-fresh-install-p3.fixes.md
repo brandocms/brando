@@ -14,8 +14,8 @@
   navigation. The installed `modules.css` styles `main > .page-section` with
   the module rule; in an existing site, add `.page-section` to the
   `main > [b-tpl]` and `main > [b-tpl] > .inner` rules, add
-  `main > header.page-section { @space padding-top xl; }`, and regenerate or
-  edit the HTML modules.
+  `main > .page-section:first-child { @space padding-top xl; }`, and
+  regenerate or edit the HTML modules.
 
 - **The installed frontend build no longer prints `[PLUGIN_TIMINGS]`**
   (#3234). The frontend `vite.config.js` turns off Rolldown's plugin timing
