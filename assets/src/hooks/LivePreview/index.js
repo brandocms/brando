@@ -6,6 +6,9 @@ const DEVICES = { desktop: { width: 1440 }, tablet: { width: 768, height: 1024 }
 export default app => ({
   mounted() {
     this.active = false
+    // Kept from mount: when the preview closes from the server, the hook's
+    // element is already detached in destroyed().
+    this.$form = this.el.closest('.brando-form')
     this.$livePreview = this.el.querySelector('.live-preview')
     this.$livePreview.inert = true
     this.$iframeWrapper = this.el.querySelector('.live-preview-iframe-wrapper')
@@ -47,10 +50,17 @@ export default app => ({
     window.addEventListener('blur', this.pointerEnd)
   },
 
+  // Lifts the form's max width while the preview takes the right side
+  // (Form.css). Sticky, as the form element is patched by LiveView.
+  markPreviewing(previewing) {
+    if (this.$form) this.js()[previewing ? 'addClass' : 'removeClass'](this.$form, 'is-previewing')
+  },
+
   toggle() {
     this.active = !this.active
     this.$livePreview.inert = !this.active
     this.pushEventTo(Dom.find('#brando-nav'), 'toggle_nav', { minimized: this.active })
+    this.markPreviewing(this.active)
     if (this.active) {
       this.lpSetMaxWidth()
       window.addEventListener(Events.APPLICATION_RESIZE, this.windowResizeListener)
@@ -138,6 +148,7 @@ export default app => ({
   },
 
   destroyed() {
+    this.markPreviewing(false)
     clearTimeout(this.noticeTimer)
     this.stopResize()
     this.entrance?.cancel()

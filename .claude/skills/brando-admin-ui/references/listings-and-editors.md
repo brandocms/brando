@@ -11,8 +11,10 @@ child entries, open menus, and real form values.
   follows; on a phone they go under the subtitle.
 - A listing row is about 60px on desktop: the title over its URL, the columns,
   the status badge (a dot and its tone, see [Buttons and badges](buttons-badges-menus.md)),
-  the author (avatar, name, date) and the ⋯ actions menu. The list ends at its
-  last row, with the footer under it. On a phone a row is two lines: the title
+  the author (avatar, name, date) and the ⋯ actions menu. The column headings,
+  rows and footer sit in one frame like `.identifier-list` (`.content-list-frame`:
+  a `--brando-line` border, 6px radius, hairlines between rows); it isn't
+  clipped, so row menus open past it. On a phone a row is two lines: the title
   and the menu, then the status, the author's name and the date.
 - A listing toolbar should share one surface and baseline. When a blueprint adds
   filters of its own, it takes two rows: the statuses, then search, those filters

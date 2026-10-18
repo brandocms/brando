@@ -31,52 +31,56 @@
       current_user={@current_user}
     />
 
-    {render_slot(@column_header)}
+    <%!-- One bordered list, like the identifier lists and inline subform
+          tables: the column headings, the rows and the footer --%>
+    <div class="content-list-frame">
+      {render_slot(@column_header)}
 
-    <.entries
-      :let={entry}
-      target={@myself}
-      listing_name={@listing.name}
-      entries={@entries.entries}
-      pagination_meta={@entries.pagination_meta}
-    >
-      <:empty>
-        <div :if={@empty_title} class="workspace-empty">
-          <h3>{@empty_title}</h3><p>{@empty_description}</p>
-        </div>
-        <div :if={!@empty_title} class="empty-list">
-          <figure>
-            <.icon name="circle" />
-          </figure>
-          {gettext("No matching entries found")}
-        </div>
-      </:empty>
-
-      <.live_component
-        module={Row}
-        id={"list-row-#{@singular}-#{entry.id}"}
-        active_sort={@active_sort}
-        entry={entry}
-        sortable?={@sortable?}
-        status?={@status?}
-        alternates?={@alternates?}
-        creator?={@creator?}
-        listing={@listing}
-        schema={@schema}
-        selected_rows={@selected_rows}
-        content_language={@content_language}
-        current_user={@current_user}
+      <.entries
+        :let={entry}
         target={@myself}
-        click_event="select_row"
-      />
-    </.entries>
+        listing_name={@listing.name}
+        entries={@entries.entries}
+        pagination_meta={@entries.pagination_meta}
+      >
+        <:empty>
+          <div :if={@empty_title} class="workspace-empty">
+            <h3>{@empty_title}</h3><p>{@empty_description}</p>
+          </div>
+          <div :if={!@empty_title} class="empty-list">
+            <figure>
+              <.icon name="circle" />
+            </figure>
+            {gettext("No matching entries found")}
+          </div>
+        </:empty>
 
-    <.pagination
-      id={"listing-#{@listing.name}-pagination"}
-      pagination_meta={@entries.pagination_meta}
-      change_page={JS.push("change_page", target: @myself)}
-      change_limit={JS.push("change_limit", target: @myself)}
-    />
+        <.live_component
+          module={Row}
+          id={"list-row-#{@singular}-#{entry.id}"}
+          active_sort={@active_sort}
+          entry={entry}
+          sortable?={@sortable?}
+          status?={@status?}
+          alternates?={@alternates?}
+          creator?={@creator?}
+          listing={@listing}
+          schema={@schema}
+          selected_rows={@selected_rows}
+          content_language={@content_language}
+          current_user={@current_user}
+          target={@myself}
+          click_event="select_row"
+        />
+      </.entries>
+
+      <.pagination
+        id={"listing-#{@listing.name}-pagination"}
+        pagination_meta={@entries.pagination_meta}
+        change_page={JS.push("change_page", target: @myself)}
+        change_limit={JS.push("change_limit", target: @myself)}
+      />
+    </div>
   </article>
 
   <.selected_rows

@@ -2,8 +2,13 @@
   display: flex;
   flex-direction: row;
 
+  /* Bounded like a listing (Workspace.css), a little wider for two-column
+     rows, so a wide monitor doesn't pull a field's border and its actions to
+     the far edge. With the live preview open (`is-previewing`, set by its
+     hook) the form fills the space up to the preview instead. */
   .form-content {
     min-width: 0;
+    max-width: 1400px;
     flex-shrink: 1;
     flex-grow: 1;
     width: 100%;
@@ -12,6 +17,10 @@
       @space margin-top sm;
       @space margin-bottom sm;
     }
+  }
+
+  &.is-previewing .form-content {
+    max-width: none;
   }
 
   .live-preview-wrapper {

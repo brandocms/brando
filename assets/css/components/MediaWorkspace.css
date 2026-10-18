@@ -310,7 +310,6 @@
 
 .admin-workspace.content-workspace.galleries-workspace {
   .workspace-heading { margin-bottom: 8px; }
-  .content-list .sort-container > .list-row:first-child { border-top: 0; }
   .content-list .list-tools-wrapper:not(:has(button, input, select, a)) { display: none; }
   .gallery-description { display: block; margin-top: 4px; font-size: var(--brando-text-sm); color: var(--workspace-muted); }
   .content-list .main-content > .listing-gallery-count { flex: 0 0 160px; }

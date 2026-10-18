@@ -70,7 +70,8 @@ content. Use one page title, section headings, and smaller item titles. Make
 related items share alignment, spacing, and control treatment.
 
 Choose a bounded width for settings and configuration. Utilities uses a 1120px
-maximum; dense tables and editors may need more. A wide monitor should not pull
+maximum; dense tables and editors may need more: listings stop at 1280px and
+entry forms at 1400px (the form lifts its bound while the live preview is open). A wide monitor should not pull
 short descriptions, actions, and metadata to opposite edges of the screen.
 
 Use numbered steps for an actual sequence. Use cards to group distinct workflows
