@@ -187,7 +187,9 @@ installer takes out the ones `mix phx.new` writes: its `favicon.ico` goes
 moves to `assets/frontend/public/images/logo.svg`. With the CMS public site,
 which a new install adds unless given `--no-public-site`, its `robots.txt` goes too, with `robots.txt` in `static_paths/0` of the web module,
 so `BrandoWeb.SEOController` answers `/robots.txt` in development as in the
-release. Only files still as phx.new wrote them are touched; a changed one is
+release. Without the public site, `robots.txt` moves to
+`assets/frontend/public/robots.txt`, and `Plug.Static` serves the frontend
+build's copy. Only files still as phx.new wrote them are touched; a changed one is
 kept, with a notice saying where it belongs.
 
 Both asset stages install with the pnpm version pinned in the Dockerfile and
