@@ -21,6 +21,17 @@ defmodule Brando.Vite do
   When Vite cannot start, or exits with an error, `watch/1` logs one error
   saying what to do and returns. Phoenix does not restart a watcher that
   returns, so the endpoint keeps running without that dev server.
+
+  When Vite for `assets/backend` (the admin) or `assets/frontend` (the site)
+  fails before it is ready, or exits with an error after it, `watch/1` also
+  records why, for `start_failure/1`. `Brando.HTML.include_assets/1` reads
+  that record: rather than point the page at a port that another site's Vite
+  may hold, it renders the built assets and a notice. A later start that gets
+  as far as Vite's "ready" line clears it. Without a `Brando.Vite` watcher, as
+  when the developer runs `pnpm dev`, nothing is ever recorded.
+
+  Vite with a `logLevel` quieter than `"info"` never prints its "ready" line,
+  so a start of that Vite does not clear an earlier failure.
   """
 
   require Logger
@@ -28,6 +39,22 @@ defmodule Brando.Vite do
   @vite_bin "node_modules/vite/bin/vite.js"
   @stop_timeout 3_000
   @tail_bytes 4_096
+
+  @type role :: :admin | :site
+
+  @typedoc """
+  Why Vite is not running: the port Vite found in use, another exit status
+  before Vite was ready (`:exited`) or after it (`:stopped`), or a check that
+  failed before Vite ran (the message says what to do).
+  """
+  @type failure :: %{
+          dir: String.t(),
+          reason:
+            {:port_in_use, String.t()}
+            | {:exited, integer()}
+            | {:stopped, integer()}
+            | {:not_started, String.t()}
+        }
 
   # Phoenix stops a command watcher by closing its standard input, and the VM
   # does the same when it exits without shutting down. Vite never reads its
@@ -62,11 +89,43 @@ defmodule Brando.Vite do
          {:ok, node} <- find_node(server) do
       run(dir, node, [@vite_bin], server)
     else
-      {:error, message} -> Logger.error(message)
+      {:error, message} ->
+        detail =
+          case String.split(message, "did not start: ", parts: 2) do
+            [_, detail] -> detail
+            [_] -> message
+          end
+
+        record_failure(server, {:not_started, detail})
+        Logger.error(message)
     end
 
     :ok
   end
+
+  @doc """
+  Returns why the last `watch/1` for the admin's or the site's assets
+  directory could not start Vite in this VM, or why its Vite exited with an
+  error, or `nil` when it started, is starting, or never ran.
+  """
+  @spec start_failure(role()) :: failure() | nil
+  def start_failure(role) when role in [:admin, :site], do: :persistent_term.get(failure_key(role), nil)
+
+  defp record_failure(%{role: nil}, _reason), do: :ok
+
+  defp record_failure(%{role: role, dir: dir}, reason),
+    do: :persistent_term.put(failure_key(role), %{dir: dir, reason: reason})
+
+  # Erasing a persistent term makes every process scan its heap, so only when
+  # there is one
+  defp clear_failure(%{role: nil}), do: :ok
+
+  defp clear_failure(%{role: role}) do
+    if start_failure(role), do: :persistent_term.erase(failure_key(role))
+    :ok
+  end
+
+  defp failure_key(role), do: {__MODULE__, :start_failure, role}
 
   @doc false
   # Runs `executable` with `args` in `dir` through the wrapper above. Used by
@@ -90,14 +149,15 @@ defmodule Brando.Vite do
         nil -> nil
       end
 
-    loop(port, os_pid, server, "", "")
+    loop(port, os_pid, Map.put(server, :ready?, false), "", "")
   end
 
   defp loop(port, os_pid, server, tail, pending) do
     receive do
       {^port, {:data, data}} ->
         pending = write_output(pending <> data)
-        loop(port, os_pid, server, keep_tail(tail <> data), pending)
+        tail = keep_tail(tail <> data)
+        loop(port, os_pid, check_ready(server, tail), tail, pending)
 
       {^port, {:exit_status, status}} ->
         flush_output(pending)
@@ -157,6 +217,23 @@ defmodule Brando.Vite do
 
   defp keep_tail(tail), do: tail
 
+  # Vite prints "  VITE v8.3.4  ready in 258 ms" once it listens on its port,
+  # perhaps with colour codes between the words. Its error for a taken port,
+  # "Port 3333 is already in use", has "ready in" too, so only the whole
+  # banner counts.
+  defp check_ready(%{ready?: false} = server, tail) do
+    if Regex.match?(~r/^\s*(?:[A-Z]+-)?VITE v\d\S*\s+ready in \d+(?:\.\d+)? ms/m, strip_ansi(tail)) do
+      clear_failure(server)
+      %{server | ready?: true}
+    else
+      server
+    end
+  end
+
+  defp check_ready(server, _tail), do: server
+
+  defp strip_ansi(text), do: String.replace(text, ~r/\e\[[0-9;?]*[ -\/]*[@-~]/, "")
+
   defp exited(0, _server, _tail), do: :ok
 
   # 128 + SIGINT or SIGTERM: stopped from outside, as Ctrl-C does
@@ -165,15 +242,26 @@ defmodule Brando.Vite do
   end
 
   defp exited(status, server, tail) do
+    port_in_use = Regex.run(~r/Port (\d+) is already in use/, strip_ansi(tail))
+
+    reason =
+      cond do
+        server.ready? -> {:stopped, status}
+        port_in_use -> {:port_in_use, Enum.at(port_in_use, 1)}
+        true -> {:exited, status}
+      end
+
+    record_failure(server, reason)
+
     message =
-      case Regex.run(~r/Port (\d+) is already in use/, tail) do
-        [_, port] ->
+      case reason do
+        {:port_in_use, port} ->
           "Vite for #{server.label} (#{server.dir}) did not start: port #{port} is already in use, " <>
             "perhaps by another site's Vite. Stop that process, or give this site other ports with " <>
             "BRANDO_VITE_ADMIN_PORT and BRANDO_VITE_FRONTEND_PORT, exported where both Phoenix and Vite " <>
             "read them, for example in .envrc."
 
-        nil ->
+        _exited ->
           "Vite for #{server.label} (#{server.dir}) exited with status #{status}; its output is above. " <>
             "If it could not load its dependencies, run mix brando.assets.setup."
       end
@@ -213,9 +301,9 @@ defmodule Brando.Vite do
     relative = Path.relative_to_cwd(dir)
 
     case Path.basename(dir) do
-      "backend" -> %{label: "the admin", dir: relative}
-      "frontend" -> %{label: "the site", dir: relative}
-      _ -> %{label: "the dev server", dir: relative}
+      "backend" -> %{label: "the admin", dir: relative, role: :admin}
+      "frontend" -> %{label: "the site", dir: relative, role: :site}
+      _ -> %{label: "the dev server", dir: relative, role: nil}
     end
   end
 end

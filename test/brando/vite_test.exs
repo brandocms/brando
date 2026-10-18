@@ -7,6 +7,19 @@ defmodule Brando.ViteTest do
 
   @moduletag :tmp_dir
 
+  # What Vite 8.3 prints with FORCE_COLOR, for a port another process holds
+  # (strictPort) and once it listens
+  @taken_port_output """
+  \e[2m11:14:00 AM\e[22m \e[36m\e[1m[vite]\e[22m\e[39m \e[90m\e[2m(client)\e[22m\e[39m Re-optimizing dependencies because vite config has changed
+  \e[31merror when starting dev server:
+  Error: Port 4999 is already in use
+      at httpServerStart (file:///srv/site/assets/backend/node_modules/.pnpm/vite@8.3.4/node_modules/vite/dist/node/chunks/node.js:14706:10)
+      at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+      at async startServer (file:///srv/site/assets/backend/node_modules/.pnpm/vite@8.3.4/node_modules/vite/dist/node/chunks/node.js:25156:30)
+      at async CAC.<anonymous> (file:///srv/site/assets/backend/node_modules/.pnpm/vite@8.3.4/node_modules/vite/dist/node/cli.js:725:3)\e[39m
+  """
+  @ready_output "  \e[32m\e[1mVITE\e[22m v8.3.4\e[39m  \e[2mready in \e[0m\e[1m258\e[22m\e[2m\e[0m ms\e[22m\n\n"
+
   setup %{tmp_dir: tmp_dir} do
     path = System.get_env("PATH")
     on_exit(fn -> System.put_env("PATH", path) end)
@@ -19,7 +32,15 @@ defmodule Brando.ViteTest do
     File.chmod!(Path.join(bin, "node"), 0o755)
     System.put_env("PATH", bin <> ":" <> path)
 
+    # A failure recorded here would make Brando.HTML render built assets in later tests
+    clear_start_failures()
+    on_exit(&clear_start_failures/0)
+
     %{backend: Path.join(tmp_dir, "assets/backend")}
+  end
+
+  defp clear_start_failures do
+    for role <- [:admin, :site], do: :persistent_term.erase({Brando.Vite, :start_failure, role})
   end
 
   defp fake_vite(dir, script) do
@@ -198,6 +219,91 @@ defmodule Brando.ViteTest do
     case port && Port.info(port, :os_pid) do
       {:os_pid, os_pid} when os_pid > 0 -> os_pid
       _ -> Process.sleep(1) && wrapper_os_pid(watcher)
+    end
+  end
+
+  describe "the record of a Vite that did not start" do
+    test "names the taken port, for the admin's directory", %{backend: backend} do
+      fake_vite(backend, "echo 'Error: Port 4999 is already in use' >&2\nexit 1\n")
+
+      capture_io(fn -> capture_log(fn -> Brando.Vite.watch(backend) end) end)
+
+      assert %{reason: {:port_in_use, "4999"}, dir: dir} = Brando.Vite.start_failure(:admin)
+      assert String.ends_with?(dir, "assets/backend")
+      assert Brando.Vite.start_failure(:site) == nil
+    end
+
+    test "keeps what to do when a check fails before Vite runs", %{tmp_dir: tmp_dir} do
+      frontend = Path.join(tmp_dir, "assets/frontend")
+      File.mkdir_p!(frontend)
+
+      capture_log(fn -> Brando.Vite.watch(frontend) end)
+
+      assert %{reason: {:not_started, detail}} = Brando.Vite.start_failure(:site)
+      assert detail =~ "has no node_modules/vite/bin/vite.js. Run mix brando.assets.setup"
+      assert Brando.Vite.start_failure(:admin) == nil
+    end
+
+    test "keeps the exit status of any other failure before Vite is ready", %{backend: backend} do
+      fake_vite(backend, "echo 'Cannot find package vite'\nexit 3\n")
+
+      capture_io(fn -> capture_log(fn -> Brando.Vite.watch(backend) end) end)
+
+      assert %{reason: {:exited, 3}} = Brando.Vite.start_failure(:admin)
+    end
+
+    test "is cleared once a later start is ready, and an exit with an error after that is kept",
+         %{backend: backend} do
+      fake_vite(backend, "echo 'Error: Port 4999 is already in use' >&2\nexit 1\n")
+      capture_io(fn -> capture_log(fn -> Brando.Vite.watch(backend) end) end)
+      assert Brando.Vite.start_failure(:admin)
+
+      # Vite 8's banner, in colour, as with FORCE_COLOR
+      fake_vite(backend, """
+      cat output
+      while [ ! -f stop ]; do sleep 0.05; done
+      exit 1
+      """)
+
+      File.write!(Path.join(backend, "output"), @ready_output)
+
+      # In a process of its own: the watcher traps exits
+      {watcher, ref} =
+        spawn_monitor(fn -> capture_io(fn -> capture_log(fn -> Brando.Vite.watch(backend) end) end) end)
+
+      eventually(fn -> Brando.Vite.start_failure(:admin) == nil end)
+      File.write!(Path.join(backend, "stop"), "")
+      assert_receive {:DOWN, ^ref, :process, ^watcher, :normal}, 5_000
+
+      assert %{reason: {:stopped, 1}} = Brando.Vite.start_failure(:admin)
+    end
+
+    test "is kept for Vite 8's output for a taken port, colour codes and all", %{backend: backend} do
+      fake_vite(backend, "cat output >&2\nexit 1\n")
+      File.write!(Path.join(backend, "output"), @taken_port_output)
+
+      capture_io(fn -> capture_log(fn -> Brando.Vite.watch(backend) end) end)
+
+      assert %{reason: {:port_in_use, "4999"}} = Brando.Vite.start_failure(:admin)
+    end
+
+    test "is kept when the error names a variable with VITE in it", %{backend: backend} do
+      # "already in use" has "ready in" in it
+      fake_vite(backend, """
+      printf '\\033[31merror when starting dev server:\\nError: BRANDO_VITE_ADMIN_PORT: Port 4999 is already in use\\033[39m\\n' >&2
+      exit 1
+      """)
+
+      capture_io(fn -> capture_log(fn -> Brando.Vite.watch(backend) end) end)
+
+      assert %{reason: {:port_in_use, "4999"}} = Brando.Vite.start_failure(:admin)
+    end
+
+    test "is not kept for a directory that is neither the admin's nor the site's", %{tmp_dir: tmp_dir} do
+      capture_log(fn -> Brando.Vite.watch(Path.join(tmp_dir, "assets/other")) end)
+
+      assert Brando.Vite.start_failure(:admin) == nil
+      assert Brando.Vite.start_failure(:site) == nil
     end
   end
 
