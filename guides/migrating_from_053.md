@@ -771,6 +771,80 @@ plugin does. Keep a copy of the CSS the legacy build wrote before upgrading;
 `europa compare` swaps it into a logged-in page (see EuropaCSS's guide to
 comparing rendered styles).
 
+### Site frontend
+
+`mix brando.install` now writes `assets/frontend` for the native compiler as
+well: the same two packages, a `europa.json5` with the site's own tokens (it
+does not extend Brando's preset), and no `postcss.config.cjs` or
+`europa.config.cjs`. No task changes an existing site's frontend, and moving
+it is optional: a frontend on the legacy `@brandocms/europacss` PostCSS plugin
+keeps building, in development and in the Docker image, and
+`mix brando.doctor` checks only the admin's compiler.
+
+To move a frontend that a 0.55 install wrote (`@brandocms/europacss`
+1.0.0-beta.16), work in `assets/frontend`:
+
+1. Keep a copy of the CSS the current build wrote
+   (`priv/static/assets/main-<hash>.css`) to compare against.
+2. Swap the packages, then convert the config. `migrate-config` converts a
+   static `europa.config.cjs` and never overwrites:
+
+   ```shell
+   pnpm remove @brandocms/europacss postcss postcss-reporter css-mqgroup
+   pnpm add -D --save-exact @brandocms/vite-plugin-europacss@0.1.0-beta.0 @brandocms/europacss-cli@0.1.0-beta.0
+   pnpm exec europa migrate-config europa.config.cjs -o europa.json5
+   ```
+
+   The plugin needs Node 22.12 or 24 (`engines.node` in `package.json`). Delete
+   `europa.config.cjs` and `postcss.config.cjs` once `europa.json5` is
+   reviewed.
+3. Copy the template's `vite.config.js`, or make the same changes to the
+   site's own: add `europa({ config: './europa.json5', targets: ['defaults'] })`
+   to `plugins`, set `css.postcss` to `{ plugins: [] }`, and remove the
+   `HMREuropa` plugin. The Vite plugin watches `europa.json5` and updates the
+   CSS when it changes, with no page reload.
+4. Check the stylesheet, fix what it reports, and compare the builds in a
+   browser as for the admin above:
+
+   ```shell
+   pnpm exec europa migrate css/app.css --from 1.0.0-beta.16 --config europa.json5 --check
+   pnpm build
+   pnpm exec europa compare http://localhost:4000/ --before old-main.css \
+     --after ../../priv/static/assets/main-<hash>.css \
+     --stylesheet /assets/main-<hash>.css --ignore-custom-properties --settle 1200 \
+     --viewport 390x844 --viewport 1024x900 --viewport 1440x900
+   ```
+
+   `--settle 1200` waits out the header's entrance animation, which otherwise
+   stops the comparison with "DOM changed during comparison".
+
+What the 0.55 template's CSS needed, and what to look for in a site's own:
+
+- **Bundles.** `@europa base` and `@europa arrows` expand where they are
+  written, not at the top of the stylesheet. `@import` has to come first, so
+  they move to a file imported before the others (the template's
+  `css/includes/bundles.css`); otherwise the reset outranks the site's rules.
+- **Directive output stays in place.** The legacy plugin wrote a directive's
+  declarations after the rule's own, so a plain declaration after the
+  directive lost. Now it wins:
+  - `@color border-top bone.hair;` followed by `border-top: 1px solid;`: the
+    shorthand resets the colour to `currentColor`. Put the token in the
+    declaration: `border-top: 1px solid theme(colors.bone.hair);`.
+  - `line-height` after `@fontsize`, and `color` after `@color fg`: the
+    size's `__base__` line height, and the token colour, won before. Remove
+    the plain declaration to keep what the page showed, or keep it for the
+    value it names.
+- **Responsive order.** The legacy plugin packed and sorted all media
+  queries, so an override in `@responsive $sm { … }` could lose to a
+  directive's per-breakpoint media in the same rule (the template's mobile
+  gaps). The native compiler keeps the order written: such overrides now
+  apply.
+- **`@extend`** takes `%placeholder`s only; the legacy plugin ignored an
+  `@extend` of a selector it could not find.
+- **`theme()`** has to resolve to a value. A breakpoint map such as
+  `theme(spacing.radius.regular)` wrote `[object Object]`, which browsers
+  dropped; use `@space border-radius radius.regular;`.
+
 ### Review a generated Florist configuration
 
 Treat switching deployment tools as its own rehearsed migration. Before the

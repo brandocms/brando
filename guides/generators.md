@@ -117,9 +117,10 @@ admin takes BrandoJS from a local source (`mix brando.assets.setup --local`;
 see [Build assets](#build-assets)): run `npx yalc publish` in Brando's
 `assets` after a change. The admin's Vite dev server pulls each publish, so
 with HMR on there is nothing else to do. Without it, rerun
-`mix brando.assets.setup --backend-only` to rebuild. The admin's CSS builds
-with native EuropaCSS, which pnpm installs from npm (see
-[Native EuropaCSS](migrating_from_053.md#native-europacss)).
+`mix brando.assets.setup --backend-only` to rebuild. The admin's CSS and the
+site's build with native EuropaCSS, which pnpm installs from npm (see
+[Native EuropaCSS](migrating_from_053.md#native-europacss) and
+[Site frontend](migrating_from_053.md#site-frontend)).
 
 The package installer calls the same `brando.install` task. Preserve your selected
 Git/path source while testing unreleased work; a bare `igniter.install brando`

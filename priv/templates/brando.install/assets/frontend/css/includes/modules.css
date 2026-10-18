@@ -114,7 +114,6 @@ main > [b-tpl] > .inner {
 
     @responsive $sm {
       @display flex/column/nowrap;
-      @space gap sm;
 
       align-items: flex-start;
     }
@@ -125,9 +124,8 @@ main > [b-tpl] > .inner {
     @display flex/row/nowrap;
     @space gap 1;
     @space margin-top xxl;
-    @color border-top bone.hairStrong;
 
-    border-top: 1px solid;
+    border-top: 1px solid theme(colors.bone.hairStrong);
 
     .entry {
       @space padding-y md;
@@ -137,9 +135,8 @@ main > [b-tpl] > .inner {
 
     .entry + .entry {
       @space padding-left md;
-      @color border-left bone.hair;
 
-      border-left: 1px solid;
+      border-left: 1px solid theme(colors.bone.hair);
     }
 
     .value p {
@@ -147,7 +144,6 @@ main > [b-tpl] > .inner {
 
       font-weight: 600;
       letter-spacing: -0.035em;
-      line-height: 1;
       margin-bottom: 0;
     }
 
@@ -171,7 +167,6 @@ main > [b-tpl] > .inner {
 
       .entry + .entry {
         border-left: 0;
-        padding-left: 0;
       }
     }
   }
@@ -197,9 +192,8 @@ main > [b-tpl] > .inner {
 
   .step {
     @space padding-top sm;
-    @color border-top bone.faint;
 
-    border-top: 1px solid;
+    border-top: 1px solid theme(colors.bone.faint);
 
     @responsive $lg {
       @column 4/12;
@@ -228,12 +222,10 @@ main > [b-tpl] > .inner {
       @space margin-top md;
       @color fg bone.full;
       @color bg bone.wash;
-      @color border bone.hair;
 
       display: inline-flex;
       padding: 0.55em 0.9em;
-      border: 1px solid;
-      line-height: 1.4;
+      border: 1px solid theme(colors.bone.hair);
 
       /* The command is a text ref, so it arrives as a paragraph. Until the
          highlighter replaces it, it must not take the step copy's styles. */
@@ -291,10 +283,9 @@ main > [b-tpl] > .inner {
 
   .card {
     @space padding-top sm;
-    @color border-top bone.hairStrong;
 
     display: block;
-    border-top: 1px solid;
+    border-top: 1px solid theme(colors.bone.hairStrong);
     text-decoration: none;
 
     @responsive $lg {
@@ -352,9 +343,8 @@ main > [b-tpl] > .inner {
     @display flex/row/nowrap;
     @space gap sm;
     @space padding-y md;
-    @color border-top bone.hair;
 
-    border-top: 1px solid;
+    border-top: 1px solid theme(colors.bone.hair);
 
     @responsive $lg {
       @column 6/12;
@@ -431,10 +421,9 @@ main > [b-tpl] > .inner {
 
   .shell {
     @color bg shell;
-    @color border bone.hairStrong;
+    @space border-radius radius.regular;
 
-    border: 1px solid;
-    border-radius: theme(spacing.radius.regular);
+    border: 1px solid theme(colors.bone.hairStrong);
     overflow: hidden;
 
     @responsive $lg {
@@ -456,10 +445,9 @@ main > [b-tpl] > .inner {
     @space padding-x sm;
     @space padding-y xs;
     @color bg bone.wash;
-    @color border-bottom bone.hair;
 
     align-items: center;
-    border-bottom: 1px solid;
+    border-bottom: 1px solid theme(colors.bone.hair);
 
     i {
       @color bg bone.hairStrong;
@@ -596,11 +584,10 @@ main > [b-tpl] > .inner {
     @space padding-x md;
     @space padding-y xs;
     @color bg bone.wash;
-    @color border-top bone.hair;
     @color fg bone.faint;
 
     align-items: center;
-    border-top: 1px solid;
+    border-top: 1px solid theme(colors.bone.hair);
     letter-spacing: 0.12em;
     text-transform: uppercase;
 
@@ -620,9 +607,8 @@ main > [b-tpl] > .inner {
   /* Instructions run alongside the shell rather than inside its output. */
   .rail .item {
     @space padding-y md;
-    @color border-top bone.hair;
 
-    border-top: 1px solid;
+    border-top: 1px solid theme(colors.bone.hair);
 
     &:first-child {
       @color border-top bone.hairStrong;
@@ -656,7 +642,6 @@ main > [b-tpl] > .inner {
 
     letter-spacing: 0.12em;
     text-transform: uppercase;
-    line-height: 2;
 
     .starred {
       @color fg live;
@@ -676,10 +661,9 @@ main > [b-tpl] > .inner {
 
 [b-tpl="closing"] {
   @color bg black;
-  @color border-top bone.hair;
   @space padding-y xxl;
 
-  border-top: 1px solid;
+  border-top: 1px solid theme(colors.bone.hair);
 
   .row {
     @display flex/row/nowrap;
@@ -690,7 +674,6 @@ main > [b-tpl] > .inner {
 
     @responsive $sm {
       @display flex/column/nowrap;
-      @space gap md;
 
       align-items: flex-start;
     }
@@ -733,6 +716,7 @@ main > [b-tpl] > .inner {
   .lists {
     @display flex/row/nowrap;
     @space gap xl;
+    @space gap lg <=mobile;
 
     margin-left: auto;
   }
@@ -767,8 +751,6 @@ main > [b-tpl] > .inner {
     @space gap lg;
 
     .lists {
-      @space gap lg;
-
       margin-left: 0;
       flex-wrap: wrap;
     }

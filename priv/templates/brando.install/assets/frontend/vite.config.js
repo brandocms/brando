@@ -1,24 +1,7 @@
 import { defineConfig } from 'vite'
 import legacy from '@vitejs/plugin-legacy'
 import eslint from 'vite-plugin-eslint'
-
-function HMREuropa() {
-  return {
-    name: 'custom-hmr',
-    enforce: 'post',
-    // HMR
-    handleHotUpdate({ file, server }) {
-      if (file.endsWith('europa.config.cjs')) {
-        console.log('europa.config.cjs updated. reloading...')
-
-        server.ws.send({
-          type: 'full-reload',
-          path: '*',
-        })
-      }
-    },
-  }
-}
+import europa from '@brandocms/vite-plugin-europacss'
 
 // Export these in the same environment as Phoenix; Brando.HTML reads them too.
 const host = process.env.BRANDO_VITE_FRONTEND_HOST ?? 'localhost'
@@ -40,6 +23,8 @@ export default defineConfig(({ command }) => ({
   },
   css: {
     devSourcemap: true,
+    // No PostCSS config: EuropaCSS and Vite's Lightning CSS pass do its work.
+    postcss: { plugins: [] },
   },
   build: {
     manifest: 'manifest.json',
@@ -66,8 +51,15 @@ export default defineConfig(({ command }) => ({
     },
   },
 
+  // EuropaCSS compiles the site's stylesheets with the `europa` executable,
+  // using europa.json5, under one browser policy for Europa's transforms and
+  // Vite's CSS minifier. It watches europa.json5 and hot-updates the CSS when
+  // it changes.
   plugins: [
-    HMREuropa(),
+    europa({
+      config: './europa.json5',
+      targets: ['defaults'],
+    }),
     eslint({
       failOnError: command === 'build',
       failOnWarning: false,

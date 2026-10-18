@@ -85,7 +85,6 @@
     }
 
     a {
-      @extend .plain;
       @fontsize 14px;
       color: var(--brando-color-dark);
     }
@@ -100,7 +99,6 @@
 
       &:hover {
         @color fg bone.full;
-        color: var(--brando-color-dark);
       }
 
       @responsive >=ipad_portrait {

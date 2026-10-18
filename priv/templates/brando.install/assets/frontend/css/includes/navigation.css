@@ -7,13 +7,11 @@
  */
 
 header[data-nav] {
-  @color border-bottom bone.hair;
-
   /* Matches `body.background` at 80%, so content dims as it scrolls under
      rather than disappearing behind a solid bar. */
   background: rgb(3 14 10 / 80%);
   backdrop-filter: saturate(160%) blur(16px);
-  border-bottom: 1px solid;
+  border-bottom: 1px solid theme(colors.bone.hair);
   position: fixed;
   top: 0;
   z-index: 4;

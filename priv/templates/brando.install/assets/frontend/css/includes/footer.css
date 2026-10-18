@@ -22,14 +22,13 @@ footer {
     @space margin-top xl;
     @space padding-y sm;
     @space padding-x indent $lg;
-    @color border-top bone.hair;
     @color fg bone.faint;
     @font mono;
     @fontsize text/xs;
 
     @display flex/row/nowrap;
 
-    border-top: 1px solid;
+    border-top: 1px solid theme(colors.bone.hair);
     justify-content: space-between;
     letter-spacing: 0.13em;
     text-transform: uppercase;
