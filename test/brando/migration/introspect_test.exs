@@ -52,6 +52,23 @@ defmodule Brando.Migration.IntrospectTest do
     refute Introspect.table_exists?("pages", repo: Repo, prefix: "introspect_missing")
   end
 
+  test "without a prefix, finds tables the way unqualified SQL does, through the search_path" do
+    Repo.query!(~s(CREATE SCHEMA "introspect_app"))
+    Repo.query!(~s[CREATE TABLE "introspect_app".introspect_only_here (id bigserial PRIMARY KEY, name text)])
+    Repo.query!(~s(SET LOCAL search_path TO "introspect_app", public))
+
+    assert Introspect.table_exists?("introspect_only_here", repo: Repo)
+    assert Introspect.column_exists?("introspect_only_here", "name", repo: Repo)
+    refute Introspect.column_exists?("introspect_only_here", "title", repo: Repo)
+
+    # still on the path after the first schema
+    assert Introspect.column_exists?("pages", "title", repo: Repo)
+
+    # a prefix looks in that schema only
+    refute Introspect.table_exists?("introspect_only_here", repo: Repo, prefix: "public")
+    refute Introspect.column_exists?("pages", "title", repo: Repo, prefix: "introspect_app")
+  end
+
   test "inside a migration, uses its repo and sees what it has flushed" do
     :persistent_term.put({AsksDuringMigration, :test}, self())
     on_exit(fn -> :persistent_term.erase({AsksDuringMigration, :test}) end)

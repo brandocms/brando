@@ -995,9 +995,12 @@ edited on purpose:
 mix brando.gen.migrations --refresh
 ```
 
-A database that has already run a copy is not affected by rewriting it. Load test and development databases from a `structure.sql` instead:
-migrate a copy of production, run `mix ecto.dump` (it writes
-`priv/repo/structure.sql`), and commit the result. The usual `test` alias runs
+A database that has already run a copy is not affected by rewriting it.
+
+Alternatively, keep the copies as they are and load test and development
+databases from a `structure.sql`, so they never replay the chain: migrate a
+copy of production, run `mix ecto.dump` (it writes `priv/repo/structure.sql`),
+and commit the result. The usual `test` alias runs
 `ecto.migrate` on an empty database, which replays every migration, so load the
 dump before it:
 

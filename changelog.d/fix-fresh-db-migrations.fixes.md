@@ -5,8 +5,9 @@
   `brando_101` and `brando_102` find the application's tables through its
   current Blueprints, and on an empty database those tables are created by
   later migrations. They now skip a table or column that is not there yet
-  (`Brando.Migration.Introspect`), and act as before where it is; `brando_80`
-  uses the same check. `brando_53` no longer asks you to add your own schemas
+  (`Brando.Migration.Introspect`, which looks through the connection's
+  `search_path`, as their SQL does, or in the migration's prefix), and act as
+  before where it is; `brando_80` uses the same check, in `public` as before. `brando_53` no longer asks you to add your own schemas
   to a reject list. Copies installed earlier keep the old code: rewrite them
   with `mix brando.gen.migrations --refresh`.
 

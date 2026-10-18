@@ -4,6 +4,9 @@ defmodule Brando.Repo.Migrations.ExtractEmbedsOneImageFields do
 
   alias Brando.Migration.Introspect
 
+  # The catalogue queries below look in `public`, so the existence checks do too
+  @public [prefix: "public"]
+
   def change do
     # Preserve image_series data before dropping.
     # A later migration (after galleries table is created) will use this
@@ -34,7 +37,7 @@ defmodule Brando.Repo.Migrations.ExtractEmbedsOneImageFields do
     # table yet when an old database replays the chain.
     for blueprint <- blueprints,
         %{type: :image, name: field_name} <- Brando.Blueprint.Assets.__assets__(blueprint),
-        Introspect.column_exists?(blueprint.__schema__(:source), field_name) do
+        Introspect.column_exists?(blueprint.__schema__(:source), field_name, @public) do
       image_field_query =
         from t in blueprint.__schema__(:source),
           select: %{
@@ -85,7 +88,7 @@ defmodule Brando.Repo.Migrations.ExtractEmbedsOneImageFields do
   end
 
   defp preserve_image_series_data do
-    if Introspect.table_exists?("images_series") do
+    if Introspect.table_exists?("images_series", @public) do
       create table(:_legacy_image_series, primary_key: false) do
         add :id, :bigint
         add :name, :text
@@ -139,7 +142,7 @@ defmodule Brando.Repo.Migrations.ExtractEmbedsOneImageFields do
   end
 
   defp drop_foreign_keys_to(tables) do
-    for table <- tables, Introspect.table_exists?(table), {from_table, constraint} <- foreign_keys_to(table) do
+    for table <- tables, Introspect.table_exists?(table, @public), {from_table, constraint} <- foreign_keys_to(table) do
       execute ~s(ALTER TABLE "#{from_table}" DROP CONSTRAINT IF EXISTS "#{constraint}")
     end
   end
