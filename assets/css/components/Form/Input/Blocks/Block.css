@@ -184,8 +184,31 @@
   }
 }
 
+/* A comment is a note to the editors, never rendered on the site: it takes
+   the amber of the editors' notes (Notes.css) instead of a content block's
+   white, and its text reads at body size rather than as a preview of content.
+   As a ref in a module it has to outrank `.block .ref_block`'s white and its
+   !important border. */
+.block .ref_block[data-block-type="comment"],
 .block[data-block-type="comment"] {
-  background-color: var(--brando-attention);
+  border-color: var(--brando-note-line) !important;
+  /* The content's padding is the gap under the text, not the block's too */
+  padding-bottom: 0;
+  background-color: var(--brando-note);
+  color: var(--brando-note-ink);
+
+  > .block-toolbar {
+    background-color: transparent;
+    color: var(--brando-note-ink);
+  }
+
+  .block-content {
+    border-top-color: var(--brando-note-line);
+    padding: 12px 14px 14px;
+    font-size: var(--brando-text-lg);
+    line-height: 1.55;
+    overflow-wrap: anywhere;
+  }
 }
 
 .base-block {
@@ -1452,75 +1475,6 @@ button.btn-palette {
 
   &[data-block-type="container"] {
     border-radius: 12px;
-  }
-
-  .block-render {
-    .block-render-preview {
-      font-size: var(--brando-text-sm);
-      border: 1px solid;
-      display: inline-block;
-      padding: 3px 6px;
-      margin-bottom: 8px;
-    }
-  }
-
-  &.block-help {
-    padding: 2rem;
-
-    .block-help-content {
-      max-width: 600px;
-      margin: 0 auto;
-      padding: 2rem;
-      font-size: 95%;
-      background-color: var(--brando-surface-subform);
-
-    }
-  }
-
-  &[data-type="datatable"],
-  &[data-type="slideshow"],
-  &[data-type="image"] {
-    display: flex;
-    align-items: center;
-    min-height: 150px;
-  }
-
-  &[data-type="comment"] {
-    background-color: lightyellow;
-  }
-
-  &[data-type="columns"] {
-    .row {
-      .col-2 {
-        width: 16%;
-        max-width: 16%;
-        flex-basis: 16%;
-      }
-
-      .col-3 {
-        width: 25%;
-        max-width: 25%;
-        flex-basis: 25%;
-      }
-
-      .col-4 {
-        width: 33%;
-        max-width: 33%;
-        flex-basis: 33%;
-      }
-
-      .col-6 {
-        width: 50%;
-        max-width: 50%;
-        flex-basis: 50%;
-      }
-
-      .col-12 {
-        width: 100%;
-        max-width: 100%;
-        flex-basis: 100%;
-      }
-    }
   }
 
   .block-table {
