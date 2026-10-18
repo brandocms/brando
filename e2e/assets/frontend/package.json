@@ -2,21 +2,16 @@
   "name": "frontend",
   "description": "e2e_project Frontend",
   "version": "0.0.0",
+  "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
     "serve": "vite preview"
   },
   "devDependencies": {
-    "@brandocms/europacss": "^0.13.1",
+    "@brandocms/europacss-cli": "0.1.0-beta.0",
+    "@brandocms/vite-plugin-europacss": "0.1.0-beta.0",
     "@vitejs/plugin-legacy": "^8.2.3",
-    "autoprefixer": "^10.4.20",
-    "css-mqgroup": "^7.1.0",
-    "postcss": "^8.5.23",
-    "postcss-import": "^16.1.0",
-    "postcss-preset-env": "^10.1.4",
-    "postcss-reporter": "^7.1.0",
-    "stylelint": "^16.14.1",
     "terser": "^5.39.0",
     "vite": "^8.3.0"
   },
@@ -31,15 +26,12 @@
     "vidstack": "^1.12.12"
   },
   "pnpm": {
-    "overrides": {
-      "postcss-functions": "https://codeload.github.com/twined/postcss-functions/tar.gz/7cc41392a686f59c1f0d9fd946fd03f9e11a0158"
-    },
     "ignoredBuiltDependencies": [
       "core-js"
     ]
   },
   "packageManager": "pnpm@10.32.1",
   "engines": {
-    "node": "^20.19.0 || ^22.12.0 || >=24.0.0"
+    "node": "^22.12.0 || >=24.0.0"
   }
 }

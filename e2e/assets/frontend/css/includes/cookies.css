@@ -1,7 +1,3 @@
-#cookies {
-  @space padding-top lg;
-}
-
 .no-js {
   .cookie-container {
     display: block !important;
@@ -19,8 +15,6 @@
   margin-bottom: 0 !important;
   max-width: 100% !important;
   border-top: 1px solid theme(colors.dark);
-
-  @space padding-y 2xs;
 
   @responsive >=desktop_md {
     @space! width 285px;
@@ -85,7 +79,6 @@
     }
 
     a {
-      @extend .plain;
       @fontsize 14px;
       color: var(--brando-color-dark);
     }

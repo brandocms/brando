@@ -1,23 +1,6 @@
 import { defineConfig } from 'vite'
 import legacy from '@vitejs/plugin-legacy'
-
-function HMREuropa() {
-  return {
-    name: 'custom-hmr',
-    enforce: 'post',
-    // HMR
-    handleHotUpdate({ file, server }) {
-      if (file.endsWith('europa.config.cjs')) {
-        console.log('europa.config.cjs updated. reloading...')
-
-        server.ws.send({
-          type: 'full-reload',
-          path: '*',
-        })
-      }
-    },
-  }
-}
+import europa from '@brandocms/vite-plugin-europacss'
 
 // https://vitejs.dev/config/
 export default defineConfig({
@@ -26,6 +9,8 @@ export default defineConfig({
   },
   css: {
     devSourcemap: true,
+    // No PostCSS config: EuropaCSS and Vite's Lightning CSS pass do its work.
+    postcss: { plugins: [] },
   },
   build: {
     manifest: 'manifest.json',
@@ -56,8 +41,14 @@ export default defineConfig({
     },
   },
 
+  // EuropaCSS compiles the site's stylesheets with the `europa` executable,
+  // using europa.json5. It watches europa.json5 and hot-updates the CSS when
+  // it changes.
   plugins: [
-    HMREuropa(),
+    europa({
+      config: './europa.json5',
+      targets: ['defaults'],
+    }),
     legacy({
       // The browsers that must be supported by your legacy bundle.
       // https://babeljs.io/docs/en/babel-preset-env#targets
