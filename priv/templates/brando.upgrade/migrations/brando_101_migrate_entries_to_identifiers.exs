@@ -2,13 +2,19 @@ defmodule Brando.Repo.Migrations.MigrateEntriesToContentIdentifiers do
   use Ecto.Migration
   import Ecto.Query
 
+  alias Brando.Migration.Introspect
+
   def change do
     blueprints = Brando.Blueprint.list_blueprints()
 
+    # Only tables that still have the legacy entries column. A Blueprint whose
+    # table is created by a later migration gets its join table from that
+    # migration.
     for blueprint <- blueprints,
-        %{type: :entries, name: field_name} <- Brando.Blueprint.Relations.__relations__(blueprint) do
+        %{type: :entries, name: field_name} <- Brando.Blueprint.Relations.__relations__(blueprint),
+        table_name = blueprint.__schema__(:source),
+        Introspect.column_exists?(table_name, field_name) do
       # create a join table
-      table_name = blueprint.__schema__(:source)
       join_source = "#{table_name}_#{field_name}_identifiers"
 
       create table(join_source) do

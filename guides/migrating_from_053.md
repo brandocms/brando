@@ -834,7 +834,8 @@ reserved and never needed, so the gap is not a missed migration.
 
 `mix brando.migrations.check`, run against the database you will migrate,
 lists copies made earlier that have not run yet and differ from Brando's
-templates.
+templates. `mix brando.gen.migrations --refresh` rewrites every copy that
+differs, run or not (see [Test and development databases](#test-and-development-databases)).
 
 The Igniter migration-file command does not start the application or touch the
 database. It allocates monotonically increasing Ecto versions and preserves
@@ -977,11 +978,29 @@ trait back for now; `--reconcile` keeps the ones that hold data.
 
 A site that copied Brando migrations years ago may not replay them from an empty
 database: early copies use modules that no longer exist (such as
-`Brando.Sequence.Migration`), and `mix brando.gen.migrations` never refreshes an
-existing copy. Production is unaffected, because it only runs the new
-migrations. Load test and development databases from a `structure.sql` instead:
-migrate a copy of production, run `mix ecto.dump` (it writes
-`priv/repo/structure.sql`), and commit the result. The usual `test` alias runs
+`Brando.Sequence.Migration`), and `mix brando.gen.migrations` leaves an
+existing copy as it is. Production is unaffected, because it only runs the new
+migrations.
+
+Copies of Brando's data migrations made before this release can also stop an
+empty database with `relation "…" does not exist`, naming one of the
+application's own tables (`brando_53` is the first). They find the
+application's tables through its current Blueprints, and on an empty database
+those tables are created by later migrations. The current templates skip a
+table that is not there yet. Rewrite the copies that differ from them, keeping
+their names and timestamps, and review the diff, since a copy may have been
+edited on purpose:
+
+```shell
+mix brando.gen.migrations --refresh
+```
+
+A database that has already run a copy is not affected by rewriting it.
+
+Alternatively, keep the copies as they are and load test and development
+databases from a `structure.sql`, so they never replay the chain: migrate a
+copy of production, run `mix ecto.dump` (it writes `priv/repo/structure.sql`),
+and commit the result. The usual `test` alias runs
 `ecto.migrate` on an empty database, which replays every migration, so load the
 dump before it:
 

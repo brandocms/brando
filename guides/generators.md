@@ -665,6 +665,19 @@ The source command adds missing versioned framework migrations, preserves
 historical files regardless of their timestamps, and does not recreate the
 pre-versioned installation baseline or run the database.
 
+An existing copy is matched by name and left as it is. With `--refresh`, the
+command also rewrites each copy whose code differs from Brando's current
+template, keeping its file name and timestamp, for review like any other plan:
+
+```sh
+mix brando.gen.migrations --refresh
+```
+
+That is the fix when an empty database (a new test database, CI, a new server)
+stops at an old Brando data migration with `relation "…" does not exist`: the
+copy predates the template that skips application tables a later migration
+creates. A database that already ran a copy is not affected by rewriting it.
+
 Older installations generated their own `Mix.Tasks.Brando.Upgrade`, which shadows
 the library's native upgrade hook. Retire the recognized task in a separate step:
 

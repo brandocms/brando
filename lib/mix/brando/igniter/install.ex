@@ -203,16 +203,17 @@ if Code.ensure_loaded?(Igniter) do
       target = target_path(target, project)
 
       case format do
-        :keep ->
-          Files.create(igniter, Path.join(target, ".keep"), "")
-
-        :copy ->
-          Files.create(igniter, target, Templates.contents(:copy, source))
-
-        :eex ->
-          contents = EEx.eval_string(Templates.contents(:eex, source), template_binding(project), file: source)
-          Files.create(igniter, target, rename_namespaces(contents, project))
+        :keep -> Files.create(igniter, Path.join(target, ".keep"), "")
+        _ -> Files.create(igniter, target, render(format, source, project))
       end
+    end
+
+    @doc "A `:copy` or `:eex` template's contents as `copy/3` writes them."
+    def render(:copy, source, _project), do: Templates.contents(:copy, source)
+
+    def render(:eex, source, project) do
+      contents = EEx.eval_string(Templates.contents(:eex, source), template_binding(project), file: source)
+      rename_namespaces(contents, project)
     end
 
     def template_binding(project) do

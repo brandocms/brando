@@ -106,6 +106,62 @@ defmodule Mix.Brando.Igniter.UpgradeTest do
     Igniter.Test.assert_unchanged(rerun)
   end
 
+  defp migration_template(name),
+    do: File.read!(Path.join([:code.priv_dir(:brando), "templates/brando.upgrade/migrations", name]))
+
+  @outdated "priv/repo/migrations/20100101000053_brando_53_convert_fragments_data_to_jsonb_rerun_module_renaming.exs"
+  @current "priv/repo/migrations/20100101000102_brando_102_remove_legacy_entries_fields.exs"
+
+  # A copy whose code differs from its template, and one that differs only in
+  # formatting and comments
+  defp copies do
+    outdated =
+      "brando_53_convert_fragments_data_to_jsonb_rerun_module_renaming.exs"
+      |> migration_template()
+      |> String.replace("Brando.Pages.Fragment\n", "Brando.Pages.Fragment,\n            MyApp.Projects.Project\n")
+
+    current =
+      "# Our copy\n" <>
+        String.replace(migration_template("brando_102_remove_legacy_entries_fields.exs"), "\n\n", "\n")
+
+    %{@outdated => outdated, @current => current}
+  end
+
+  test "framework migration command leaves existing copies alone without --refresh" do
+    files = copies()
+
+    result =
+      IgniterCase.phoenix_project(files: files)
+      |> Igniter.compose_task("brando.gen.migrations", [])
+
+    assert result.issues == []
+    Igniter.Test.assert_unchanged(result, [@outdated, @current])
+    assert Enum.any?(result.notices, &String.contains?(&1, "mix brando.gen.migrations --refresh"))
+  end
+
+  test "framework migration command with --refresh rewrites only the copies whose code differs" do
+    template = migration_template("brando_53_convert_fragments_data_to_jsonb_rerun_module_renaming.exs")
+
+    result =
+      IgniterCase.phoenix_project(files: copies())
+      |> Igniter.compose_task("brando.gen.migrations", ["--refresh"])
+
+    assert result.issues == []
+    Igniter.Test.assert_unchanged(result, @current)
+    assert Code.string_to_quoted!(IgniterCase.source(result, @outdated)) == Code.string_to_quoted!(template)
+    paths = Map.keys(result.rewrite.sources)
+
+    assert Enum.count(
+             paths,
+             &String.ends_with?(&1, "_brando_53_convert_fragments_data_to_jsonb_rerun_module_renaming.exs")
+           ) == 1
+
+    applied = IgniterCase.apply_and_reload(result)
+    rerun = Igniter.compose_task(applied, "brando.gen.migrations", ["--refresh"])
+    assert rerun.issues == []
+    Igniter.Test.assert_unchanged(rerun)
+  end
+
   test "framework migration command copies tenant migrations only when tenancy is on" do
     tenant_migration? = fn result ->
       result.rewrite.sources |> Map.keys() |> Enum.any?(&String.starts_with?(&1, "priv/repo/tenant_migrations/"))
