@@ -288,7 +288,8 @@ Use the components in a HEEx layout:
 `menu` filters items to `:published` by default; the outer condition separately
 checks the **menu** status. `menu_item` resolves the link and marks matching paths
 with `data-link-active`. Use `splat={false}` if a link should match only its exact
-path rather than descendant URLs. Style the active attribute and preserve a
+path rather than descendant URLs; a link to `/` always matches only the front
+page. Style the active attribute and preserve a
 visible keyboard focus indicator. The component supplies an ordinary anchor;
 it does not implement a dropdown interaction for you.
 

@@ -92,6 +92,39 @@ defmodule Brando.HTMLTest do
     assert html =~ ~s(<meta name="title" content="Fallback meta title">)
   end
 
+  describe "menu_item/1 data-link-active" do
+    defp menu_item_active?(request_path, url, splat \\ true) do
+      item = %{key: "item", link: %{link_type: :url, value: url, link_text: "Item", link_target_blank: false}}
+      assigns = %{conn: build_conn(:get, request_path), item: item, splat: splat}
+
+      ~H"""
+      <.menu_item :let={text} conn={@conn} item={@item} splat={@splat}>{text}</.menu_item>
+      """
+      |> rendered_to_string()
+      |> Floki.parse_fragment!()
+      |> Floki.attribute("a", "data-link-active")
+      |> Kernel.!=([])
+    end
+
+    test "a root URL is active only on the root page" do
+      assert menu_item_active?("/", "/")
+      refute menu_item_active?("/projects", "/")
+      refute menu_item_active?("/projects/foo", "/")
+    end
+
+    test "other URLs are active on their own page and subpages" do
+      assert menu_item_active?("/projects", "/projects")
+      assert menu_item_active?("/projects/foo", "/projects")
+      refute menu_item_active?("/", "/projects")
+      refute menu_item_active?("/about", "/projects")
+    end
+
+    test "splat false matches the URL only" do
+      assert menu_item_active?("/projects", "/projects", false)
+      refute menu_item_active?("/projects/foo", "/projects", false)
+    end
+  end
+
   test "active/2" do
     conn = build_conn(:get, "/some/link")
     assert active(conn, "/some/link") == "active"

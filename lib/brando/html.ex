@@ -74,7 +74,8 @@ defmodule Brando.HTML do
     target_blank? = get_menu_item_target_blank(item)
     key = item.key
 
-    splat_url? = (assigns.splat && String.starts_with?(url, "/")) || false
+    # `/*` would match every page, so the root only matches itself
+    splat_url? = (assigns.splat && url != "/" && String.starts_with?(url, "/")) || false
     match_url = (splat_url? && Path.join([url, "*"])) || url
 
     # drop the leading slash if the url is a hash link and we are on the root path
