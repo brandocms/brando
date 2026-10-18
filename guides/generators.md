@@ -607,7 +607,8 @@ follows a matching redirect or renders the site's [404 page](#error-pages).
 The rendered blocks are direct children of `main`, and the heading, list and
 back link sit in `<div class="inner">` inside `.page-section` wrappers, which the
 installed frontend's `modules.css` spaces with `@space container;` like the
-seeded modules.
+seeded modules. The heading's `header.page-section` gets the seeded hero's top
+space below the navigation.
 
 Without the CMS site, the routes pipe through `:browser` only, the pages render
 in your application's layout, and the controller resolves the tenant itself. A

@@ -93,17 +93,54 @@ defmodule Brando.HTMLTest do
   end
 
   describe "menu_item/1 data-link-active" do
-    defp menu_item_active?(request_path, url, splat \\ true) do
-      item = %{key: "item", link: %{link_type: :url, value: url, link_text: "Item", link_target_blank: false}}
-      assigns = %{conn: build_conn(:get, request_path), item: item, splat: splat}
+    # `locale` runs the conn through the site's locale plug with those options
+    defp menu_conn(request_path, locale \\ nil) do
+      conn = build_conn(:get, request_path)
+
+      if locale do
+        conn
+        |> Plug.Test.init_test_session(%{})
+        |> Brando.Plug.I18n.put_locale(locale)
+      else
+        conn
+      end
+    end
+
+    defp url_item(url),
+      do: %{key: "item", link: %{link_type: :url, value: url, link_text: "Item", link_target_blank: false}}
+
+    defp render_menu_item(conn, item, splat) do
+      assigns = %{conn: conn, item: item, splat: splat}
 
       ~H"""
       <.menu_item :let={text} conn={@conn} item={@item} splat={@splat}>{text}</.menu_item>
       """
       |> rendered_to_string()
       |> Floki.parse_fragment!()
+    end
+
+    defp menu_item_active?(conn_or_path, url_or_item, splat \\ true)
+
+    defp menu_item_active?(request_path, url_or_item, splat) when is_binary(request_path),
+      do: menu_item_active?(menu_conn(request_path), url_or_item, splat)
+
+    defp menu_item_active?(conn, url, splat) when is_binary(url), do: menu_item_active?(conn, url_item(url), splat)
+
+    defp menu_item_active?(conn, item, splat) do
+      conn
+      |> render_menu_item(item, splat)
       |> Floki.attribute("a", "data-link-active")
       |> Kernel.!=([])
+    end
+
+    defp index_page_item(language) do
+      page = %Brando.Pages.Page{uri: "index", language: language, has_url: true, title: "Home"}
+      url = Brando.Pages.Page.__absolute_url__(page)
+
+      %{
+        key: "home",
+        link: %{link_type: :identifier, link_text: nil, link_target_blank: false, identifier: %{url: url, title: "Home"}}
+      }
     end
 
     test "a root URL is active only on the root page" do
@@ -119,9 +156,92 @@ defmodule Brando.HTMLTest do
       refute menu_item_active?("/about", "/projects")
     end
 
+    test "a URL with a trailing slash is active on its own page and subpages" do
+      assert menu_item_active?("/projects", "/projects/")
+      assert menu_item_active?("/projects/", "/projects/")
+      assert menu_item_active?("/projects/foo", "/projects/")
+      refute menu_item_active?("/", "/projects/")
+      refute menu_item_active?("/projectsfoo", "/projects/")
+    end
+
     test "splat false matches the URL only" do
       assert menu_item_active?("/projects", "/projects", false)
       refute menu_item_active?("/projects/foo", "/projects", false)
+    end
+
+    test "a link to a language's front page is active only on that front page" do
+      for url <- ["/no", "/no/"] do
+        assert menu_item_active?("/no", url)
+        assert menu_item_active?("/no/", url)
+        refute menu_item_active?("/no/prosjekter", url)
+        refute menu_item_active?("/no/prosjekter/foo", url)
+        refute menu_item_active?("/en", url)
+        refute menu_item_active?("/", url)
+      end
+
+      assert menu_item_active?("/en", "/en/", false)
+      refute menu_item_active?("/en/projects", "/en/", false)
+    end
+
+    test "a path that only starts like a language is not a front page" do
+      assert menu_item_active?("/news/foo", "/news")
+      assert menu_item_active?("/no-access/foo", "/no-access")
+    end
+
+    test "an identifier link to the index page is active only on its front page" do
+      en = index_page_item(:en)
+      no = index_page_item(:no)
+
+      assert menu_item_active?("/en", en)
+      assert menu_item_active?("/en/", en)
+      refute menu_item_active?("/en/projects", en)
+      refute menu_item_active?("/no", en)
+
+      assert menu_item_active?("/no/", no)
+      refute menu_item_active?("/no/prosjekter", no)
+      refute menu_item_active?("/en", no)
+    end
+
+    test "a root anchor link on the front page drops its slash and is not active" do
+      html = render_menu_item(menu_conn("/"), url_item("/#about"), true)
+      assert Floki.attribute(html, "a", "href") == ["#about"]
+      assert Floki.attribute(html, "a", "data-link-active") == []
+
+      html = render_menu_item(menu_conn("/projects"), url_item("/#about"), true)
+      assert Floki.attribute(html, "a", "href") == ["/#about"]
+      assert Floki.attribute(html, "a", "data-link-active") == []
+    end
+
+    test "through the locale plug's forced path, the front page is still the front page" do
+      # GET / keeps its request path but gets the default language put in front
+      # of path_info
+      conn = menu_conn("/", force_path: true)
+      assert conn.path_info == ["en"]
+
+      assert menu_item_active?(conn, "/")
+      assert menu_item_active?(conn, "/", false)
+      assert menu_item_active?(conn, "/en")
+      assert menu_item_active?(conn, index_page_item(:en))
+      refute menu_item_active?(conn, "/no")
+      refute menu_item_active?(conn, "/projects")
+
+      projects = menu_conn("/projects", force_path: true)
+      refute menu_item_active?(projects, "/")
+      refute menu_item_active?(projects, index_page_item(:en))
+      assert menu_item_active?(projects, "/en/projects")
+    end
+
+    test "through the locale plug, a language's front page link does not splat" do
+      for path <- ["/no", "/no/prosjekter", "/no/prosjekter/foo"] do
+        conn = menu_conn(path, [])
+        assert conn.assigns.language == "no"
+        assert menu_item_active?(conn, index_page_item(:no)) == (path == "/no")
+        assert menu_item_active?(conn, "/no") == (path == "/no")
+        refute menu_item_active?(conn, "/")
+      end
+
+      assert menu_item_active?(menu_conn("/en/projects/foo", []), "/en/projects")
+      refute menu_item_active?(menu_conn("/en/projects/foo", []), index_page_item(:en))
     end
   end
 

@@ -33,6 +33,11 @@ main > .page-section > .inner {
   @space padding-x indent $lg;
 }
 
+/* A page's own heading opens the page as the seeded hero does. */
+main > header.page-section {
+  @space padding-top xl;
+}
+
 /* Villain wraps a text block's content, so the block — not the last paragraph
    inside it — owns the trailing space. */
 .paragraph > :last-child {

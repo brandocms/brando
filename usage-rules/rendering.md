@@ -288,9 +288,10 @@ Use the components in a HEEx layout:
 `menu` filters items to `:published` by default; the outer condition separately
 checks the **menu** status. `menu_item` resolves the link and marks matching paths
 with `data-link-active`. Use `splat={false}` if a link should match only its exact
-path rather than descendant URLs; a link to `/` always matches only the front
-page. Style the active attribute and preserve a
-visible keyboard focus indicator. The component supplies an ordinary anchor;
+path rather than descendant URLs. A link to a front page, `/` or a language's
+`/no` or `/no/`, matches only that front page, also when the locale plug's
+`force_path` adds the language to the path. Style the active attribute and
+preserve a visible keyboard focus indicator. The component supplies an ordinary anchor;
 it does not implement a dropdown interaction for you.
 
 ## Forms
