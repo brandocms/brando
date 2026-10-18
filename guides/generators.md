@@ -477,12 +477,16 @@ because another process such as another site's Vite server holds its port,
 because `node_modules` is missing, or because `node` is not on the `PATH`,
 the log has Vite's own output and one error from `Brando.Vite` saying what to
 do. Phoenix carries on without that dev server and does not retry it; restart
-`mix phx.server` once it is fixed. With a taken port the page loads whatever
-answers there, which may be the other site's assets, so give each running site
-its own ports (below). When a dev server's scripts fail to load, because it is
-not running or cannot compile a module, the admin or the site shows a notice
-naming the address it tried. Copy `strictPort` into
-the Vite configs of existing applications.
+`mix phx.server` once it is fixed. Until then the admin, or the site, does not
+load from that port, which may hold the other site's Vite: it uses its last
+build in `priv/static` (from `mix brando.assets.setup` or `pnpm build`), which
+does not follow your edits, and shows a notice saying that Vite did not start
+and why. For a taken port the notice names the variable to change,
+`BRANDO_VITE_ADMIN_PORT` or `BRANDO_VITE_FRONTEND_PORT` (below). When you run
+`pnpm dev` yourself, without the watchers, the page always loads from the port.
+When a dev server's scripts fail to load, because it is not running or cannot
+compile a module, the admin or the site shows a notice naming the address it
+tried. Copy `strictPort` into the Vite configs of existing applications.
 
 To run two Brando sites at once, give one of them other ports. Export them in
 that project's shell environment, for example its `.envrc`, so that Phoenix,

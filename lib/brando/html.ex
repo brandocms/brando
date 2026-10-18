@@ -675,7 +675,10 @@ defmodule Brando.HTML do
   their Vite configs. A Vite-only `.env` file does not configure the Phoenix
   process. `mix brando.install` starts both dev servers from the endpoint's
   `watchers` in `config/dev.exs`, through `Brando.Vite`. In development, the
-  page shows a notice when a dev server's scripts fail to load.
+  page shows a notice when a dev server's scripts fail to load. When a
+  `Brando.Vite` watcher could not start its Vite (`Brando.Vite.start_failure/1`),
+  for example because another site's Vite holds the port, the admin or the
+  site renders its manifest assets instead, with a notice saying why.
 
   These values are read at render time, rather than through application config,
   because they only configure development servers and must agree with Vite's
@@ -689,97 +692,142 @@ defmodule Brando.HTML do
   attr :ignored_chunks, :list, default: []
 
   def include_assets(%{admin: true} = assigns) do
-    if Brando.env() in [:prod, :e2e, :test] or Application.get_env(Brando.otp_app(), :hmr) === false do
-      assigns = assign(assigns, :unbuilt?, Brando.env() == :dev and admin_manifest_empty?())
+    case admin_assets_source() do
+      :manifest ->
+        assigns = assign(assigns, :unbuilt?, Brando.env() == :dev and manifest_empty?(:admin))
 
-      ~H"""
-      {Vite.Render.main_css(:admin) |> raw()}
-      {Vite.Render.main_js(:admin) |> raw()}
-      <.assets_notice :if={@unbuilt?} scope={:admin} show />
-      """
-    else
-      assigns =
-        assign(assigns,
-          vite_origin: vite_dev_server_origin("ADMIN", 3333),
-          notice?: Brando.env() == :dev
-        )
+        ~H"""
+        {Vite.Render.main_css(:admin) |> raw()}
+        {Vite.Render.main_js(:admin) |> raw()}
+        <.assets_notice :if={@unbuilt?} scope={:admin} show />
+        """
 
-      ~H"""
-      <!-- admin dev/test -->
-      <.assets_notice :if={@notice?} scope={:admin} origin={@vite_origin} />
-      <script
-        type="module"
-        src={@vite_origin <> "/@vite/client"}
-        onerror={@notice? && "brandoAssetsMissing('brando-admin-assets-notice')"}
-        phx-no-format
-      >
-      </script>
-      <script
-        type="module"
-        src={@vite_origin <> "/src/main.js"}
-        onerror={@notice? && "brandoAssetsMissing('brando-admin-assets-notice')"}
-        phx-no-format
-      >
-      </script>
-      <!-- end admin dev/test -->
-      """
+      {:vite_failed, failure} ->
+        assigns = vite_failed_assigns(assigns, :admin, failure)
+
+        ~H"""
+        {Vite.Render.main_css(:admin) |> raw()}
+        {Vite.Render.main_js(:admin) |> raw()}
+        <.assets_notice :if={@notice?} scope={:admin} failure={@failure} unbuilt={@unbuilt?} show />
+        """
+
+      :dev_server ->
+        assigns =
+          assign(assigns,
+            vite_origin: vite_dev_server_origin("ADMIN", 3333),
+            notice?: Brando.env() == :dev
+          )
+
+        ~H"""
+        <!-- admin dev/test -->
+        <.assets_notice :if={@notice?} scope={:admin} origin={@vite_origin} />
+        <script
+          type="module"
+          src={@vite_origin <> "/@vite/client"}
+          onerror={@notice? && "brandoAssetsMissing('brando-admin-assets-notice')"}
+          phx-no-format
+        >
+        </script>
+        <script
+          type="module"
+          src={@vite_origin <> "/src/main.js"}
+          onerror={@notice? && "brandoAssetsMissing('brando-admin-assets-notice')"}
+          phx-no-format
+        >
+        </script>
+        <!-- end admin dev/test -->
+        """
     end
   end
 
   def include_assets(%{only_css: true} = assigns) do
-    if Brando.env() == :prod or Application.get_env(:brando, :ssg_run, false) do
-      ~H"""
-      {Vite.Render.main_css() |> raw()}
-      """
-    else
-      if Application.get_env(Brando.otp_app(), :hmr) === false do
+    case site_assets_source() do
+      :manifest ->
         ~H"""
         {Vite.Render.main_css() |> raw()}
         """
-      else
+
+      {:vite_failed, failure} ->
+        assigns = vite_failed_assigns(assigns, :site, failure)
+
+        ~H"""
+        {Vite.Render.main_css() |> raw()}
+        <.assets_notice :if={@notice?} scope={:site} failure={@failure} unbuilt={@unbuilt?} show />
+        """
+
+      :dev_server ->
         ~H"""
         <.frontend_dev_scripts />
         """
-      end
     end
   end
 
   def include_assets(%{only_js: true} = assigns) do
-    if Brando.env() == :prod or Application.get_env(:brando, :ssg_run, false) do
+    if site_assets_source() == :dev_server do
+      ~H"""
+      <!-- prevent double loading of vite client, handled in only_css -->
+      """
+    else
       ~H"""
       {Vite.Render.main_js(:app, @ignored_chunks) |> raw()}
       """
-    else
-      if Application.get_env(Brando.otp_app(), :hmr) === false do
-        ~H"""
-        {Vite.Render.main_js(:app, @ignored_chunks) |> raw()}
-        """
-      else
-        ~H"""
-        <!-- prevent double loading of vite client, handled in only_css -->
-        """
-      end
     end
   end
 
   def include_assets(assigns) do
-    if Brando.env() == :prod or Application.get_env(:brando, :ssg_run, false) do
-      ~H"""
-      {Vite.Render.main_css(:app) |> raw()}
-      {Vite.Render.main_js(:app) |> raw()}
-      """
-    else
-      if Application.get_env(Brando.otp_app(), :hmr) === false do
+    case site_assets_source() do
+      :manifest ->
         ~H"""
         {Vite.Render.main_css() |> raw()}
         {Vite.Render.main_js() |> raw()}
         """
-      else
+
+      {:vite_failed, failure} ->
+        assigns = vite_failed_assigns(assigns, :site, failure)
+
+        ~H"""
+        {Vite.Render.main_css() |> raw()}
+        {Vite.Render.main_js() |> raw()}
+        <.assets_notice :if={@notice?} scope={:site} failure={@failure} unbuilt={@unbuilt?} show />
+        """
+
+      :dev_server ->
         ~H"""
         <.frontend_dev_scripts />
         """
-      end
     end
+  end
+
+  # Where the page loads the admin's assets from: the build in priv/static, or
+  # the Vite dev server, unless this VM's Brando.Vite watcher could not start
+  # it. Then the port may be another site's Vite, so the page takes the build.
+  defp admin_assets_source do
+    cond do
+      Brando.env() in [:prod, :e2e, :test] or hmr_disabled?() -> :manifest
+      failure = Brando.Vite.start_failure(:admin) -> {:vite_failed, failure}
+      true -> :dev_server
+    end
+  end
+
+  defp site_assets_source do
+    cond do
+      Brando.env() == :prod or Application.get_env(:brando, :ssg_run, false) -> :manifest
+      hmr_disabled?() -> :manifest
+      failure = Brando.Vite.start_failure(:site) -> {:vite_failed, failure}
+      true -> :dev_server
+    end
+  end
+
+  defp hmr_disabled?, do: Application.get_env(Brando.otp_app(), :hmr) === false
+
+  defp vite_failed_assigns(assigns, scope, failure) do
+    notice? = Brando.env() == :dev
+
+    assign(assigns,
+      failure: failure,
+      notice?: notice?,
+      unbuilt?: notice? and manifest_empty?(if(scope == :site, do: :app, else: scope))
+    )
   end
 
   defp frontend_dev_scripts(assigns) do
@@ -817,26 +865,28 @@ defmodule Brando.HTML do
     """
   end
 
-  defp admin_manifest_empty? do
-    Brando.Utils.try_path(Vite.Manifest.read(:admin), [:entries, :files]) in [nil, []]
+  defp manifest_empty?(scope) do
+    Brando.Utils.try_path(Vite.Manifest.read(scope), [:entries, :files]) in [nil, []]
   end
 
   # Development only. Without its assets the admin, or the site, is a blank
   # page: the notice is held in a <template> in the head, and shown (with its
   # own stylesheet, the page's is what is missing) when the Vite dev server's
-  # scripts fail to load (`origin`), or at once when the admin has no build
-  # (`show`, the admin only). It goes after <body>, which the site keeps
-  # hidden until its scripts run. English, like the mix tasks: it is for the
-  # developer.
+  # scripts fail to load (`origin`), or at once (`show`) when the admin has no
+  # build or Brando.Vite could not start Vite (`failure`). It goes after
+  # <body>, which the site keeps hidden until its scripts run. English, like
+  # the mix tasks: it is for the developer.
   attr :scope, :atom, values: [:admin, :site], required: true
   attr :origin, :string, default: nil
+  attr :failure, :map, default: nil
+  attr :unbuilt, :boolean, default: false
   attr :show, :boolean, default: false
 
   defp assets_notice(assigns) do
-    {label, dir} =
+    {label, name, dir, port_var, manifest} =
       case assigns.scope do
-        :admin -> {"Admin", "assets/backend"}
-        :site -> {"Site", "assets/frontend"}
+        :admin -> {"Admin", "the admin", "assets/backend", "BRANDO_VITE_ADMIN_PORT", "admin_manifest.json"}
+        :site -> {"Site", "the site", "assets/frontend", "BRANDO_VITE_FRONTEND_PORT", "manifest.json"}
       end
 
     assigns =
@@ -844,13 +894,26 @@ defmodule Brando.HTML do
         otp_app: Brando.otp_app(),
         id: "brando-#{assigns.scope}-assets-notice",
         label: label,
-        dir: dir
+        name: name,
+        dir: dir,
+        port_var: port_var,
+        manifest: manifest
       )
 
     ~H"""
     <template id={@id}>
       <div class="brando-assets-notice" role="alert">
-        <%= if @origin do %>
+        <%= if @failure do %>
+          <.vite_failure_notice failure={@failure} name={@name} port_var={@port_var} />
+          <p :if={!@unbuilt}>
+            This page uses the last build in <code>priv/static</code>
+            instead, which does not follow your edits in <code>{@failure.dir}</code>.
+          </p>
+          <p :if={@unbuilt}>
+            There is no build to use instead: run <code>pnpm build</code> in <code>{@failure.dir}</code>.
+          </p>
+        <% end %>
+        <%= if !@failure && @origin do %>
           <strong>{@label} assets failed to load from {@origin}</strong>
           <p>
             Either the Vite dev server for <code>{@dir}</code>
@@ -861,10 +924,11 @@ defmodule Brando.HTML do
             in <code>{@dir}</code>. Or build the assets there with <code>pnpm build</code>
             and set <code>config :{@otp_app}, hmr: false</code>.
           </p>
-        <% else %>
+        <% end %>
+        <%= if !@failure && !@origin do %>
           <strong>{@label} assets not built</strong>
           <p>
-            There is no <code>priv/static/admin_manifest.json</code>. Build them with <code>pnpm build</code>
+            There is no <code>priv/static/{@manifest}</code>. Build them with <code>pnpm build</code>
             in <code>{@dir}</code>, or set <code>config :{@otp_app}, hmr: true</code>
             to use its Vite dev server.
           </p>
@@ -878,8 +942,47 @@ defmodule Brando.HTML do
       window.brandoAssetsMissing=function(id){var show=function(){if(document.getElementById(id+"-shown"))return;var t=document.getElementById(id);if(!t)return;var n=t.content.firstElementChild.cloneNode(true);n.id=id+"-shown";document.documentElement.appendChild(n)};if(document.body){show()}else{document.addEventListener("DOMContentLoaded",show)}};
     </script>
     <script :if={@show}>
-      brandoAssetsMissing("brando-admin-assets-notice");
+      brandoAssetsMissing("<%= @id %>");
     </script>
+    """
+  end
+
+  attr :failure, :map, required: true
+  attr :name, :string, required: true
+  attr :port_var, :string, required: true
+
+  defp vite_failure_notice(%{failure: %{reason: {:port_in_use, port}}} = assigns) do
+    assigns = assign(assigns, :port, port)
+
+    ~H"""
+    <strong>Vite for {@name} did not start: port {@port} is already in use</strong>
+    <p>
+      Another process holds port {@port}, perhaps another site's Vite. Stop it, or give this site
+      another port with <code>{@port_var}</code>, exported where both Phoenix and Vite read it
+      (for example in <code>.envrc</code>), then restart <code>mix phx.server</code>.
+    </p>
+    """
+  end
+
+  defp vite_failure_notice(%{failure: %{reason: {:exited, status}}} = assigns) do
+    assigns = assign(assigns, :status, status)
+
+    ~H"""
+    <strong>Vite for {@name} did not start</strong>
+    <p>
+      It exited with status {@status} before it was ready; its output is in the <code>mix phx.server</code>
+      terminal. Restart <code>mix phx.server</code>
+      once it is fixed.
+    </p>
+    """
+  end
+
+  defp vite_failure_notice(%{failure: %{reason: {:not_started, message}}} = assigns) do
+    assigns = assign(assigns, :message, message)
+
+    ~H"""
+    <strong>Vite for {@name} did not start</strong>
+    <p>{@message}</p>
     """
   end
 

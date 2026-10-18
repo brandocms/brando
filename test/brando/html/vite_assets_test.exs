@@ -56,6 +56,8 @@ defmodule Brando.HTML.ViteAssetsTest do
 
     cache({:brando, :site_assets, :active, :standalone}, :none)
 
+    for role <- [:admin, :site], do: cache({Brando.Vite, :start_failure, role}, nil)
+
     for {scope, name} <- [app: "cache_manifest", admin: "cache_admin_manifest"] do
       cache(Brando.Tenant.cache_key({:vite, name}), %{
         entries: %{css_files: ["/assets/#{scope}.css"], files: ["/assets/#{scope}.js"]},
@@ -136,6 +138,99 @@ defmodule Brando.HTML.ViteAssetsTest do
         refute html =~ "brandoAssetsMissing"
       end
     end
+  end
+
+  describe "when this app's Brando.Vite watcher could not start Vite" do
+    test "the admin uses its build and says why, rather than load what holds the port" do
+      vite_failed(:admin, {:port_in_use, "3333"})
+      html = render_component(&HTML.include_assets/1, admin: true)
+
+      assert html =~ "/assets/admin.css"
+      assert html =~ "/assets/admin.js"
+      refute html =~ "localhost:3333"
+      refute html =~ "@vite/client"
+
+      assert html =~ ~s(<template id="brando-admin-assets-notice">)
+      assert html =~ "Vite for the admin did not start: port 3333 is already in use"
+      assert html =~ "<code>BRANDO_VITE_ADMIN_PORT</code>"
+      refute html =~ "BRANDO_VITE_FRONTEND_PORT"
+      assert html =~ "uses the last build in <code>priv/static</code>"
+      assert html =~ ~s|brandoAssetsMissing("brando-admin-assets-notice");|
+
+      # The site's Vite started, so the site still loads from it
+      assert frontend_scripts() == @frontend_html
+    end
+
+    test "the site uses its build and says why, once, from the head's styles" do
+      vite_failed(:site, {:port_in_use, "3000"})
+
+      all = render_component(&HTML.include_assets/1)
+      css = render_component(&HTML.include_assets/1, only_css: true)
+      js = render_component(&HTML.include_assets/1, only_js: true)
+
+      for html <- [all, css, js], do: refute(html =~ "localhost:3000")
+      assert all =~ "/assets/app.css"
+      assert all =~ "/assets/app.js"
+      assert css =~ "/assets/app.css"
+      refute css =~ "/assets/app.js"
+      assert js =~ "/assets/app.js"
+
+      for html <- [all, css] do
+        assert html =~ ~s(<template id="brando-site-assets-notice">)
+        assert html =~ "Vite for the site did not start: port 3000 is already in use"
+        assert html =~ "<code>BRANDO_VITE_FRONTEND_PORT</code>"
+        assert html =~ ~s|brandoAssetsMissing("brando-site-assets-notice");|
+      end
+
+      refute js =~ "brando-site-assets-notice"
+      assert admin_scripts() == @admin_html
+    end
+
+    test "names the exit status, or what to do, for other failures" do
+      vite_failed(:admin, {:exited, 3})
+      html = render_component(&HTML.include_assets/1, admin: true)
+      assert html =~ "Vite for the admin did not start"
+      assert html =~ "It exited with status 3 before it was ready"
+
+      vite_failed(:site, {:not_started, "node is not on the PATH. Install Node.js, then restart the server."})
+      html = render_component(&HTML.include_assets/1)
+      assert html =~ "Vite for the site did not start"
+      assert html =~ "node is not on the PATH. Install Node.js"
+    end
+
+    test "says there is no build to use when there is none" do
+      vite_failed(:admin, {:port_in_use, "3333"})
+      cache(Brando.Tenant.cache_key({:vite, "cache_admin_manifest"}), %Brando.Assets.Vite.Manifest{})
+      html = render_component(&HTML.include_assets/1, admin: true)
+
+      assert html =~ "There is no build to use instead: run <code>pnpm build</code>"
+      refute html =~ "uses the last build"
+      refute html =~ "Admin assets not built"
+    end
+
+    test "hmr: false renders the build as before, without the notice" do
+      Application.put_env(@host_app, :hmr, false)
+      vite_failed(:admin, {:port_in_use, "3333"})
+      vite_failed(:site, {:port_in_use, "3000"})
+
+      refute render_component(&HTML.include_assets/1, admin: true) =~ "assets-notice"
+      refute render_component(&HTML.include_assets/1) =~ "assets-notice"
+    end
+
+    test "outside development the build loads without the notice" do
+      Application.put_env(:brando, :env, :staging)
+      vite_failed(:admin, {:port_in_use, "3333"})
+      html = render_component(&HTML.include_assets/1, admin: true)
+
+      assert html =~ "/assets/admin.js"
+      refute html =~ "localhost:3333"
+      refute html =~ "assets-notice"
+    end
+  end
+
+  defp vite_failed(role, reason) do
+    dir = if role == :admin, do: "assets/backend", else: "assets/frontend"
+    :persistent_term.put({Brando.Vite, :start_failure, role}, %{dir: dir, reason: reason})
   end
 
   # The dev server's scripts, without the notice before them
