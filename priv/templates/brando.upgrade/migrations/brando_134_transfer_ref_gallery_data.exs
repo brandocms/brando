@@ -28,7 +28,7 @@ defmodule Brando.Migrations.TransferRefGalleryData do
         updated_at
       ) VALUES (
         'published',
-        1, -- Default creator, adjust as needed
+        1, -- legacy refs carry no creator; credit the first user
         NOW(),
         NOW()
       ) RETURNING id INTO new_gallery_id;

@@ -2,6 +2,11 @@ defmodule Brando.Repo.Migrations.ExtractEmbedsOneImageFields do
   use Ecto.Migration
   import Ecto.Query
 
+  alias Brando.Migration.Introspect
+
+  # The catalogue queries below look in `public`, so the existence checks do too
+  @public [prefix: "public"]
+
   def change do
     # Preserve image_series data before dropping.
     # A later migration (after galleries table is created) will use this
@@ -32,7 +37,7 @@ defmodule Brando.Repo.Migrations.ExtractEmbedsOneImageFields do
     # table yet when an old database replays the chain.
     for blueprint <- blueprints,
         %{type: :image, name: field_name} <- Brando.Blueprint.Assets.__assets__(blueprint),
-        column_exists?(blueprint.__schema__(:source), to_string(field_name)) do
+        Introspect.column_exists?(blueprint.__schema__(:source), field_name, @public) do
       image_field_query =
         from t in blueprint.__schema__(:source),
           select: %{
@@ -83,7 +88,7 @@ defmodule Brando.Repo.Migrations.ExtractEmbedsOneImageFields do
   end
 
   defp preserve_image_series_data do
-    if table_exists?("images_series") do
+    if Introspect.table_exists?("images_series", @public) do
       create table(:_legacy_image_series, primary_key: false) do
         add :id, :bigint
         add :name, :text
@@ -137,7 +142,7 @@ defmodule Brando.Repo.Migrations.ExtractEmbedsOneImageFields do
   end
 
   defp drop_foreign_keys_to(tables) do
-    for table <- tables, table_exists?(table), {from_table, constraint} <- foreign_keys_to(table) do
+    for table <- tables, Introspect.table_exists?(table, @public), {from_table, constraint} <- foreign_keys_to(table) do
       execute ~s(ALTER TABLE "#{from_table}" DROP CONSTRAINT IF EXISTS "#{constraint}")
     end
   end
@@ -157,31 +162,5 @@ defmodule Brando.Repo.Migrations.ExtractEmbedsOneImageFields do
       )
 
     Enum.map(rows, fn [from_table, constraint] -> {from_table, constraint} end)
-  end
-
-  defp table_exists?(table_name) do
-    result =
-      Brando.repo().all(
-        from(t in "tables",
-          prefix: "information_schema",
-          select: [:table_name],
-          where: [table_schema: "public", table_name: ^table_name]
-        )
-      )
-
-    result != []
-  end
-
-  defp column_exists?(table_name, column_name) do
-    result =
-      Brando.repo().all(
-        from(c in "columns",
-          prefix: "information_schema",
-          select: [:column_name],
-          where: [table_schema: "public", table_name: ^table_name, column_name: ^column_name]
-        )
-      )
-
-    result != []
   end
 end

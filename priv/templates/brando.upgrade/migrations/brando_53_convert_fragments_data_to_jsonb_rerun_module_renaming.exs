@@ -2,6 +2,8 @@ defmodule Brando.Migrations.FragmentsDataJSONBRenameTemplatesToModules do
   use Ecto.Migration
   import Ecto.Query
 
+  alias Brando.Migration.Introspect
+
   def change do
     execute """
     ALTER TABLE pages_fragments
@@ -12,7 +14,6 @@ defmodule Brando.Migrations.FragmentsDataJSONBRenameTemplatesToModules do
 
     flush()
 
-    # Add your own schemas to the reject list, if they were created AFTER this migration
     villain_schemas =
       Enum.reject(
         Brando.Content.Blocks.list_blocks(),
@@ -20,7 +21,6 @@ defmodule Brando.Migrations.FragmentsDataJSONBRenameTemplatesToModules do
             Brando.Content.Template,
             Brando.Pages.Page,
             Brando.Pages.Fragment
-            # your schemas here
           ])
       )
 
@@ -34,19 +34,9 @@ defmodule Brando.Migrations.FragmentsDataJSONBRenameTemplatesToModules do
 
     actions =
       for {schema, fields} <- villain_schemas do
-        Enum.map(fields, fn
+        Enum.flat_map(fields, fn
           {_, f, _} ->
-            from(t in schema.__schema__(:source),
-              update: [
-                set: [
-                  {^f,
-                   fragment(
-                     "REPLACE(?::text, '\"type\": \"template\"', '\"type\": \"module\"')::jsonb",
-                     field(t, ^f)
-                   )}
-                ]
-              ]
-            )
+            rename_modules(schema.__schema__(:source), f)
 
           %{name: f} ->
             source =
@@ -54,23 +44,35 @@ defmodule Brando.Migrations.FragmentsDataJSONBRenameTemplatesToModules do
                 do: "pages_pages",
                 else: schema.__schema__(:source)
 
-            from(t in source,
-              update: [
-                set: [
-                  {^f,
-                   fragment(
-                     "REPLACE(?::text, '\"type\": \"template\"', '\"type\": \"module\"')::jsonb",
-                     field(t, ^f)
-                   )}
-                ]
-              ]
-            )
+            rename_modules(source, f)
         end)
       end
       |> List.flatten()
 
     for action <- actions do
       Brando.Repo.update_all(action, [])
+    end
+  end
+
+  # The schemas come from the application's current code: on a database
+  # migrated from scratch, their tables are created by later migrations
+  defp rename_modules(source, f) do
+    if Introspect.column_exists?(source, f) do
+      [
+        from(t in source,
+          update: [
+            set: [
+              {^f,
+               fragment(
+                 "REPLACE(?::text, '\"type\": \"template\"', '\"type\": \"module\"')::jsonb",
+                 field(t, ^f)
+               )}
+            ]
+          ]
+        )
+      ]
+    else
+      []
     end
   end
 end

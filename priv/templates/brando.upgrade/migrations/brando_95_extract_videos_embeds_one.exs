@@ -2,8 +2,10 @@ defmodule Brando.Repo.Migrations.ExtractEmbedsOneVideoFields do
   use Ecto.Migration
   import Ecto.Query
 
+  alias Brando.Migration.Introspect
+
   def change do
-    if table_exists?("videos") do
+    if Introspect.table_exists?("videos") do
       raise """
       brando_95 creates Brando's `videos` table, but this database already has one.
 
@@ -39,11 +41,9 @@ defmodule Brando.Repo.Migrations.ExtractEmbedsOneVideoFields do
 
     for blueprint <- blueprints,
         %{type: :video, name: field_name} <- Brando.Blueprint.Assets.__assets__(blueprint) do
-      # Lookup if we have the old format `field_name` in the fields
-      %{columns: existing_columns} =
-        Brando.repo().query!("select * from #{blueprint.__schema__(:source)} where false;")
-
-      if to_string(field_name) in existing_columns do
+      # Only tables that still have the old format `field_name`. A Blueprint
+      # whose table is created by a later migration has no table here yet.
+      if Introspect.column_exists?(blueprint.__schema__(:source), field_name) do
         video_field_query =
           from(t in blueprint.__schema__(:source),
             select: %{
@@ -117,15 +117,5 @@ defmodule Brando.Repo.Migrations.ExtractEmbedsOneVideoFields do
         end
       end
     end
-  end
-
-  defp table_exists?(table_name) do
-    Brando.repo().all(
-      from(t in "tables",
-        prefix: "information_schema",
-        select: [:table_name],
-        where: [table_schema: "public", table_name: ^table_name]
-      )
-    ) != []
   end
 end

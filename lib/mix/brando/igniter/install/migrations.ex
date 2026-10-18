@@ -5,6 +5,7 @@ if Code.ensure_loaded?(Igniter) do
 
     @moduledoc false
 
+    alias Brando.Migration.TemplateDrift
     alias Mix.Brando.Igniter.Install
     alias Mix.Brando.Igniter.Install.Configuration
     alias Mix.Brando.Install.Templates
@@ -54,7 +55,7 @@ if Code.ensure_loaded?(Igniter) do
         end)
         |> Enum.sort_by(fn {_format, _, target} -> target end)
 
-      Enum.reduce(files, igniter, &copy_missing(&1, &2, project))
+      Enum.reduce(files, igniter, &copy_missing(&1, &2, project, options))
     end
 
     # Tenant migrations only run with named environments; `mix brando.setup.tenancy`
@@ -77,9 +78,9 @@ if Code.ensure_loaded?(Igniter) do
       end
     end
 
-    defp copy_missing({:keep, _, _} = file, igniter, project), do: Install.copy(igniter, file, project)
+    defp copy_missing({:keep, _, _} = file, igniter, project, _options), do: Install.copy(igniter, file, project)
 
-    defp copy_missing({format, source, target}, igniter, project) do
+    defp copy_missing({format, source, target}, igniter, project, options) do
       directory = Path.dirname(target)
       {version, name} = split_name(target)
 
@@ -91,8 +92,10 @@ if Code.ensure_loaded?(Igniter) do
       matches = Enum.filter(installed, &(elem(split_name(&1), 1) == name))
 
       case matches do
-        [_] ->
-          igniter
+        [path] ->
+          if options[:refresh],
+            do: refresh(igniter, path, Install.render(format, source, project)),
+            else: igniter
 
         [] ->
           latest = installed |> Enum.map(&elem(split_name(&1), 0)) |> Enum.max(fn -> 0 end)
@@ -105,6 +108,16 @@ if Code.ensure_loaded?(Igniter) do
             "Multiple historical migrations match #{name}. Reconcile the duplicate files before installing."
           )
       end
+    end
+
+    # A copy is left alone unless its code differs from the template's:
+    # formatting and comments do not count, as in `mix brando.migrations.check`
+    defp refresh(igniter, path, contents) do
+      current = igniter.rewrite |> Rewrite.source!(path) |> Rewrite.Source.get(:content)
+
+      if TemplateDrift.normalize(current) == TemplateDrift.normalize(contents),
+        do: igniter,
+        else: Igniter.update_file(igniter, path, &Rewrite.Source.update(&1, :content, contents))
     end
 
     defp split_name(path) do

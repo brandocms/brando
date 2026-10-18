@@ -50,7 +50,13 @@ binary assets, migrates the database, and initializes the chosen tenancy mode.
 The installer explicitly selects CMS page rendering and replaces the generated
 Phoenix homepage route. It seeds published and draft Pages inside live environments,
 then generates a Blueprint/resource and storage after site provisioning,
-applies the appropriate migrations, signs into the admin, creates and edits a
+applies the appropriate migrations, and migrates a second, empty database
+from scratch (`fresh_migrations.exs`, log `fresh-migrations.log`), as a new
+server, CI or a new test database does. The Blueprint has blocks and an image
+asset (`blocks_blueprint.exs`), which Brando's older data migrations look up
+from current code and must skip while its table does not exist yet; a
+deprecation warning from an installed migration fails that step too. It then
+signs into the admin, creates and edits a
 Product, and checks its public rendering through Chromium. A second browser test
 edits the CMS homepage in admin and checks public cache invalidation, the CMS
 layout, published pages, draft protection, 404s, robots and frontend

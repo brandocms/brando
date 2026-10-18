@@ -2,16 +2,16 @@ defmodule Brando.Repo.Migrations.ExtractEmbedsOneFileFields do
   use Ecto.Migration
   import Ecto.Query
 
+  alias Brando.Migration.Introspect
+
   def change do
     blueprints = Brando.Blueprint.list_blueprints()
 
     for blueprint <- blueprints,
         %{type: :file, name: field_name} <- Brando.Blueprint.Assets.__assets__(blueprint) do
-      # Lookup if we have the old format `field_name` in the fields
-      %{columns: existing_columns} =
-        Brando.repo().query!("select * from #{blueprint.__schema__(:source)} where false;")
-
-      if to_string(field_name) in existing_columns do
+      # Only tables that still have the old format `field_name`. A Blueprint
+      # whose table is created by a later migration has no table here yet.
+      if Introspect.column_exists?(blueprint.__schema__(:source), field_name) do
         file_field_query =
           from(t in blueprint.__schema__(:source),
             select: %{

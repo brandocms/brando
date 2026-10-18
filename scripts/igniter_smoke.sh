@@ -136,6 +136,7 @@ mix run "$framework_dir/scripts/igniter_smoke/seed.exs" > "$smoke_root/logs/seed
 mix run "$framework_dir/scripts/igniter_smoke/seed_pages.exs" > "$smoke_root/logs/seed-pages.log" 2>&1
 
 mix brando.gen.blueprint Catalog Product --yes > "$smoke_root/logs/blueprint.log" 2>&1
+elixir "$framework_dir/scripts/igniter_smoke/blocks_blueprint.exs"
 mix compile --warnings-as-errors > "$smoke_root/logs/blueprint-compile.log" 2>&1
 mix brando.gen IgniterSmoke.Catalog.Product --public-route /products --yes > "$smoke_root/logs/resource.log" 2>&1
 mix compile --warnings-as-errors > "$smoke_root/logs/resource-compile.log" 2>&1
@@ -146,6 +147,13 @@ if [[ "$smoke_mode" == none ]]; then
   mix brando.migrate > "$smoke_root/logs/resource-migrate.log" 2>&1
 else
   mix brando.migrate --tenants > "$smoke_root/logs/resource-migrate.log" 2>&1
+fi
+# Every migration again, on an empty database, now that the app has a Blueprint
+# with blocks: a new server, CI or a new test database migrates this way.
+mix run --no-start "$framework_dir/scripts/igniter_smoke/fresh_migrations.exs" > "$smoke_root/logs/fresh-migrations.log" 2>&1
+if grep -q 'is deprecated' "$smoke_root/logs/fresh-migrations.log"; then
+  echo "A migration Brando installed calls a deprecated function; see $smoke_root/logs/fresh-migrations.log" >&2
+  exit 1
 fi
 if [[ "$smoke_bootstrap" == precompiled ]]; then
   mix run "$framework_dir/scripts/igniter_smoke/check_customized.exs" > "$smoke_root/logs/check-customized.log" 2>&1

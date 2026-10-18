@@ -104,21 +104,37 @@ if Code.ensure_loaded?(Igniter) do
     def migrations(igniter) do
       with {:ok, igniter, options} <- Configuration.namespace_options(igniter, igniter.args.options),
            {:ok, igniter, project} <- Project.discover(igniter, options) do
+        refresh? = igniter.args.options[:refresh] == true
+
         igniter
-        |> Migrations.plan(project, upgrade: true)
+        |> Migrations.plan(project, upgrade: true, refresh: refresh?)
         |> Igniter.add_notice("""
         Review and accept missing framework migrations, then run mix compile.
         Apply public migrations explicitly with mix brando.migrate.
         For named environments, follow with mix brando.migrate --tenants.
-        Historical migration files and timestamps are preserved; no database operations were scheduled.
-        Existing copies are matched by name and never updated. Run mix brando.migrations.check
-        against the database you will migrate to list copies that have not run yet but differ
-        from Brando's current templates.
+        Historical migration file names and timestamps are preserved; no database operations were scheduled.
+        #{existing_copies_notice(refresh?)}
         """)
       else
         {:error, %Igniter{} = igniter} -> igniter
         {:error, message} -> Igniter.add_issue(igniter, message)
       end
+    end
+
+    defp existing_copies_notice(true) do
+      """
+      With --refresh, existing copies whose code differs from Brando's current template are
+      rewritten in place. Review the diff: a copy may have been edited on purpose.\
+      """
+    end
+
+    defp existing_copies_notice(false) do
+      """
+      Existing copies are matched by name and left as they are. Run mix brando.migrations.check
+      against the database you will migrate to list copies that have not run yet but differ
+      from Brando's current templates, or mix brando.gen.migrations --refresh to rewrite every
+      copy that differs (an old copy can stop an empty database from migrating).\
+      """
     end
 
     def plan(igniter) do

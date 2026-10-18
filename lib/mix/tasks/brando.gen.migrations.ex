@@ -19,11 +19,24 @@ if Code.ensure_loaded?(Igniter) do
     Existing copies are matched by name and left as they are, even when the
     template has changed since. `mix brando.migrations.check` lists the ones
     that have not run yet and differ from the current templates.
+
+        mix brando.gen.migrations --refresh
+
+    also rewrites every existing copy whose code differs from its current
+    template (formatting and comments do not count), keeping its file name and
+    timestamp, whether it has run or not. Rewriting a copy that has run changes
+    nothing in a database that ran it; it matters where the migrations run
+    again from scratch (a new test database, CI, a new server), which an old
+    copy can stop with `relation "..." does not exist`. Review the diff: a copy
+    may have been edited on purpose.
     """
 
     @impl Igniter.Mix.Task
     def info(_argv, _source) do
-      %Igniter.Mix.Task.Info{group: :brando, schema: Mix.Brando.Igniter.Project.options()}
+      %Igniter.Mix.Task.Info{
+        group: :brando,
+        schema: Mix.Brando.Igniter.Project.options() ++ [refresh: :boolean]
+      }
     end
 
     @impl Igniter.Mix.Task

@@ -201,7 +201,8 @@ defmodule Brando.Environments.ArchiveUpgrade do
   directory.
 
   An application's copy is whichever version was current when
-  `mix brando.gen.migrations` copied it, and is never updated. A restore
+  `mix brando.gen.migrations` copied it, or last rewrote it with `--refresh`;
+  Brando does not otherwise update it. A restore
   replays the current template whichever version the application ran: only
   the current one is written to run for one environment (earlier ones loop
   over every environment, or, for a few versions that were on main briefly,
