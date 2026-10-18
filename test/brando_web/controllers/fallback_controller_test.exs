@@ -7,6 +7,7 @@ defmodule BrandoWeb.FallbackControllerTest do
 
   alias Brando.Factory
   alias BrandoWeb.FallbackController
+  alias Phoenix.Controller
 
   defmodule PageHTML do
     @moduledoc false
@@ -47,9 +48,9 @@ defmodule BrandoWeb.FallbackControllerTest do
       build_conn(:get, "/articles/missing")
       |> Plug.Test.init_test_session(%{})
       |> assign(:language, "en")
-      |> Phoenix.Controller.put_view(html: ResourceHTML)
-      |> Phoenix.Controller.put_layout(false)
-      |> Phoenix.Controller.put_root_layout(html: {Layouts, :root})
+      |> Controller.put_view(html: ResourceHTML)
+      |> Controller.put_layout(false)
+      |> Controller.put_root_layout(html: {Layouts, :root})
       |> FallbackController.call({:error, {:article, :not_found}})
 
     assert conn.status == 404
@@ -82,10 +83,10 @@ defmodule BrandoWeb.FallbackControllerTest do
     build_conn(:get, "/articles/missing")
     |> Plug.Test.init_test_session(%{})
     |> assign(:language, language)
-    |> Phoenix.Controller.put_view(html: ResourceHTML)
-    |> Phoenix.Controller.put_format("html")
-    |> Phoenix.Controller.put_layout(false)
-    |> Phoenix.Controller.put_root_layout(html: root_layout)
+    |> Controller.put_view(html: ResourceHTML)
+    |> Controller.put_format("html")
+    |> Controller.put_layout(false)
+    |> Controller.put_root_layout(html: root_layout)
     |> FallbackController.call({:error, {:article, :not_found}})
   end
 
