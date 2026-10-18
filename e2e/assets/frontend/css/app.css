@@ -7,13 +7,11 @@
 * Imports
 */
 
+@import "./includes/bundles.css";
 @import "./includes/fonts.css";
 @import "./includes/cookies.css";
 @import "./includes/modules.css";
 @import "./includes/navigation.css";
-
-@europa arrows;
-@europa base;
 
 /* lazyload fix for chrome. sometimes IntersectionObserver doesn't pick up the image */
 img[data-src],

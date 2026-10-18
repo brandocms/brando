@@ -1,4 +1,4 @@
-module.exports = {
+{
   setMaxForVw: true,
   theme: {
     breakpoints: {
@@ -19,7 +19,7 @@ module.exports = {
       $sm: '<=ipad_portrait'
     },
 
-    colors: () => ({
+    colors: {
       black: '#000000',
       white: '#ffffff',
       dark: '#2b2b2b',
@@ -44,7 +44,7 @@ module.exports = {
       },
 
       gray: {
-        900: '#858585'
+        '900': '#858585'
       },
 
       fader: {
@@ -64,7 +64,7 @@ module.exports = {
       navigation: {
         backgroundAlt: 'ghostwhite'
       }
-    }),
+    },
 
     container: {
       maxWidth: {
