@@ -47,7 +47,7 @@ defmodule Brando.Blueprint.ListingComponentsTest do
       })
 
     assert html =~ ~s(id="children-button-42")
-    assert html =~ "+ 3"
+    assert html =~ ~s(class="children-summary")
     assert html =~ "toggle_children"
     assert html =~ ~s(aria-expanded="false")
   end
@@ -66,7 +66,7 @@ defmodule Brando.Blueprint.ListingComponentsTest do
         target: "#list-row-7"
       })
 
-    assert html =~ ~s(class="children-button-text">2 fragments, 1 page</span>)
+    assert html =~ ~s(class="children-button-text">2 fragments · 1 page</span>)
   end
 
   test "listing rows toggle only child fields that exist on the entry" do

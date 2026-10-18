@@ -7384,7 +7384,6 @@ msgstr ""
 msgid "Founding date"
 msgstr ""
 
-#: lib/brando/pages/page.ex
 #: lib/brando_admin/components/form/block/render.ex
 #: lib/brando_admin/components/form/block_field.ex
 #: lib/brando_admin/components/form/block_field/module_picker.ex
@@ -15955,11 +15954,6 @@ msgstr ""
 #: lib/brando_admin/components/form/module_props/ref_block_form.ex
 #, elixir-autogen, elixir-format
 msgid "Styles"
-msgstr ""
-
-#: lib/brando/pages/page.ex
-#, elixir-autogen, elixir-format
-msgid "Sub page"
 msgstr ""
 
 #: lib/brando_admin/live/forms/submissions_live.ex

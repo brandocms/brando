@@ -46,10 +46,11 @@ test('listing filters align, disclose children by keyboard and retain creators o
   await childButton.focus()
   await page.keyboard.press('Enter')
   await expect(childButton).toHaveAttribute('aria-expanded', 'true')
-  await expect(page.locator('.child-row').first()).toBeVisible()
-  // ce48d6d21: the toggle names what it opens ("1 fragment"), which replaces
-  // the bare number beside the chevron.
-  const count = await childButton.locator('.children-button-text').boundingBox()
+  // Index's only child is a fragment, which opens as a chip, not a row
+  await expect(page.locator('.child-chips .child-chip').first()).toBeVisible()
+  // The toggle names what it opens ("1 fragment"): on a wide screen in a
+  // summary beside the chevron, on the chevron's line.
+  const count = await childButton.locator('xpath=following-sibling::span[contains(@class, "children-summary")]').boundingBox()
   const chevron = await childButton.locator('[data-icon]').boundingBox()
   expect(count.y + count.height / 2).toBeCloseTo(chevron.y + chevron.height / 2, 0)
   await page.screenshot({ path: testInfo.outputPath('pages-expanded-desktop.png'), fullPage: true })
@@ -57,7 +58,7 @@ test('listing filters align, disclose children by keyboard and retain creators o
   await noOverflow(page)
   // On a phone the author is a name and a date on the status line; the avatar drops.
   await expect(page.locator('.main-content .listing-creator .name').first()).toBeVisible()
-  await expect(page.locator('.child-row .listing-creator .name').first()).toBeVisible()
+  await expect(page.locator('.child-chips .child-chip').first()).toBeVisible()
   await page.screenshot({ path: testInfo.outputPath('pages-expanded-mobile.png'), fullPage: true })
 })
 

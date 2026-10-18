@@ -90,7 +90,7 @@ defmodule BrandoAdmin.Components.Content.List.Row do
 
       <%= if @show_children do %>
         <div
-          :for={child_field <- @child_fields}
+          :for={{child_field, _child_listing} <- child_groups(@entry, @child_fields, @listing.child_listings, :rows)}
           :key={child_field}
           class="child-rows sort-container"
           id={"sortable-#{@entry.id}-#{child_field}"}
@@ -110,6 +110,18 @@ defmodule BrandoAdmin.Components.Content.List.Row do
             child_listing={@listing.child_listings}
           />
         </div>
+        <.child_chips
+          :for={{child_field, child_listing} <- child_groups(@entry, @child_fields, @listing.child_listings, :chips)}
+          :key={child_field}
+          id={"child-chips-#{@entry.id}-#{child_field}"}
+          parent={@entry}
+          entries={Map.get(@entry, child_field, [])}
+          child_listing={child_listing}
+          parent_listing={@listing}
+          schema={@schema}
+          content_language={@content_language}
+          current_user={assigns[:current_user]}
+        />
       <% end %>
       <span class="list-row-progress" aria-hidden="true"></span>
     </div>
@@ -860,6 +872,116 @@ defmodule BrandoAdmin.Components.Content.List.Row do
         current_user={assigns[:current_user]}
       />
       <span class="list-row-progress" aria-hidden="true"></span>
+    </div>
+    """
+  end
+
+  # The open child fields with the `child_listing` each belongs to, those of
+  # one `style`. The declaration is found by the child schema: the relation's
+  # module, or failing that the first child's struct.
+  defp child_groups(entry, fields, child_listings, style) do
+    relations =
+      if function_exported?(entry.__struct__, :__naming__, 0),
+        do: Brando.Blueprint.Relations.__relations__(entry.__struct__),
+        else: []
+
+    fields
+    |> Enum.map(fn field -> {field, child_listing_for_field(entry, field, relations, child_listings)} end)
+    |> Enum.filter(fn {_field, child_listing} -> ((child_listing && child_listing.style) || :rows) == style end)
+  end
+
+  defp child_listing_for_field(entry, field, relations, child_listings) do
+    schema =
+      Enum.find_value(relations, fn
+        %{name: ^field, opts: %{module: module}} when is_atom(module) -> module
+        _ -> nil
+      end) ||
+        case Map.get(entry, field) do
+          [%{__struct__: module} | _] -> module
+          _ -> nil
+        end
+
+    Enum.find(child_listings || [], &(&1.schema == schema))
+  end
+
+  attr :id, :string, required: true
+  attr :parent, :map, required: true
+  attr :entries, :list, required: true
+  attr :child_listing, :map, required: true
+  attr :parent_listing, :map, required: true
+  attr :schema, :atom, required: true
+  attr :content_language, :string
+  attr :current_user, :any, default: nil
+
+  # A `child_listing … style: :chips`: one line of small cards under the
+  # parent, each the child listing's component with its state and menu, and
+  # the parent's `add` action at the end. For children that belong to the
+  # entry rather than to the tree, such as a page's fragments.
+  def child_chips(assigns) do
+    child_schema = assigns.child_listing.schema
+    add = assigns.child_listing.add
+
+    assigns =
+      assigns
+      |> assign(:listing, Enum.find(assigns.schema.__listings__(), &(&1.name == assigns.child_listing.name)))
+      |> assign(:label, Brando.Blueprint.get_plural(child_schema))
+      |> assign(:icon, Brando.Blueprint.get_icon(child_schema))
+      |> assign(:add_action, add && Enum.find(assigns.parent_listing.actions, &(&1.event == add)))
+
+    ~H"""
+    <div id={@id} class="child-chips" role="group" aria-label={@label}>
+      <span class="child-chips-label" aria-hidden="true">{@label}</span>
+      <.child_chip
+        :for={entry <- @entries}
+        :key={entry.id}
+        entry={entry}
+        icon={@icon}
+        listing={@listing}
+        schema={@schema}
+        content_language={@content_language}
+        current_user={@current_user}
+      />
+      <button
+        :if={@add_action}
+        type="button"
+        class="child-chip child-chip--add"
+        phx-click={JS.push(@add_action.event, value: %{id: @parent.id, language: Map.get(@parent, :language)})}
+      >
+        <.icon name="plus" />
+        {g(@schema, @add_action.label)}
+      </button>
+    </div>
+    """
+  end
+
+  attr :entry, :map, required: true
+  attr :icon, :string, required: true
+  attr :listing, :map, required: true
+  attr :schema, :atom, required: true
+  attr :content_language, :string
+  attr :current_user, :any, default: nil
+
+  defp child_chip(assigns) do
+    assigns = assign(assigns, :status, Map.get(assigns.entry, :status))
+
+    ~H"""
+    <div class="child-chip" data-id={@entry.id}>
+      <.icon name={@icon} class="child-chip-icon" />
+      {Phoenix.LiveView.TagEngine.component(
+        @listing.component,
+        [entry: @entry],
+        {__ENV__.module, __ENV__.function, __ENV__.file, __ENV__.line}
+      )}
+      <span :if={@status && @status != :published} class={["child-chip-state", @status]}>
+        {render_status_label(@status)}
+      </span>
+      <.entry_menu
+        schema={@schema}
+        entry={@entry}
+        content_language={@content_language}
+        listing={@listing}
+        current_user={@current_user}
+      />
     </div>
     """
   end

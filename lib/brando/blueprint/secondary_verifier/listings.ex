@@ -292,7 +292,8 @@ defmodule Brando.Blueprint.SecondaryVerifier.Listings do
     path = [:listings, listing.name, :child_listings, child_listing.name]
 
     with :ok <- Support.verify_key(dsl_state, path, child_listing, "child listing", child_listing.name),
-         :ok <- verify_child_listing_schema(dsl_state, path, child_listing) do
+         :ok <- verify_child_listing_schema(dsl_state, path, child_listing),
+         :ok <- verify_child_listing_add(dsl_state, path, listing, child_listing) do
       if MapSet.member?(listing_names, child_listing.name) do
         :ok
       else
@@ -303,6 +304,23 @@ defmodule Brando.Blueprint.SecondaryVerifier.Listings do
           "child listing references undeclared listing #{inspect(child_listing.name)}"
         )
       end
+    end
+  end
+
+  # The add button pushes one of the parent listing's own actions, so the event
+  # must name one of them.
+  defp verify_child_listing_add(_dsl_state, _path, _listing, %{add: nil}), do: :ok
+
+  defp verify_child_listing_add(dsl_state, path, listing, %{add: event} = child_listing) do
+    if Enum.any?(listing.actions || [], &(&1.event == event)) do
+      :ok
+    else
+      Support.error(
+        dsl_state,
+        path,
+        child_listing,
+        "child listing add #{inspect(event)} is not the event of an action in listing #{inspect(listing.name)}"
+      )
     end
   end
 

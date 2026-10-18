@@ -28,21 +28,24 @@ defmodule BrandoAdmin.Components.ChildListingButton do
       |> assign(:toggle, toggle(button_id, assigns.target, fields))
 
     ~H"""
+    <%!-- The chevron is the button, in front of the row's title; the summary
+          ("3 pages · 2 fragments") sits in a column of its own and toggles
+          too. On a phone the button carries the summary itself
+          (ContentWorkspace.css). --%>
     <div class={["children-button", @count == 0 && "hidden"]}>
       <button
         id={@button_id}
         type="button"
         phx-click={@toggle}
         data-testid="children-button"
-        class={@text && "text"}
         aria-expanded="false"
         aria-label={Gettext.gettext(Brando.Gettext, "Show or hide %{count} children", count: @count)}
       >
-        <span class="children-button-count">+ {@count}</span>
-        <span class="children-button-disclosure" aria-hidden="true"><span class="children-number">{@count}</span><Brando.HTML.Icon.icon name="chevron-right" /></span>
-        <span class="children-button-close">{Gettext.gettext(Brando.Gettext, "Close")}</span>
+        <Brando.HTML.Icon.icon name="chevron-right" />
         <span :if={@text} class="children-button-text">{@text}</span>
       </button>
+      <%!-- Rendered without children too: an empty slot keeps the status column in line --%>
+      <span class="children-summary" aria-hidden="true" phx-click={@count > 0 && @toggle}>{@text}</span>
     </div>
     """
   end
@@ -56,7 +59,7 @@ defmodule BrandoAdmin.Components.ChildListingButton do
     |> JS.push("toggle_children", target: target, value: %{fields: event_fields})
   end
 
-  # "2 fragments", "1 page, 2 fragments": what the toggle opens, so a bare
+  # "2 fragments", "1 page · 2 fragments": what the toggle opens, so a bare
   # number isn't the only clue that the row expands.
   defp describe_children(%{__struct__: schema} = entry, fields) do
     relations =
@@ -67,7 +70,7 @@ defmodule BrandoAdmin.Components.ChildListingButton do
     fields
     |> Enum.map(fn field -> {field, Enum.count(Map.get(entry, field) || [])} end)
     |> Enum.reject(fn {_field, count} -> count == 0 end)
-    |> Enum.map_join(", ", fn {field, count} -> "#{count} #{child_label(relations, field, count)}" end)
+    |> Enum.map_join(" · ", fn {field, count} -> "#{count} #{child_label(relations, field, count)}" end)
     |> case do
       "" -> nil
       text -> text

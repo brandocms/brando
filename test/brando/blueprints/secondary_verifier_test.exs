@@ -355,6 +355,21 @@ defmodule Brando.Blueprint.SecondaryVerifierTest do
     )
 
     assert_compile_error(
+      ~r/child listing add "create_child" is not the event of an action in listing :default/,
+      quote do
+        listings do
+          listing do
+            child_listing name: :children, schema: unquote(__MODULE__), style: :chips, add: "create_child"
+          end
+
+          listing :children do
+            default_actions false
+          end
+        end
+      end
+    )
+
+    assert_compile_error(
       ~r/only `:csv` is implemented/,
       quote do
         listings do
@@ -381,7 +396,8 @@ defmodule Brando.Blueprint.SecondaryVerifierTest do
                 option("Published", "published")
               end
 
-              child_listing name: :children, schema: unquote(__MODULE__)
+              action label: "Add child", event: "create_child"
+              child_listing name: :children, schema: unquote(__MODULE__), style: :chips, add: "create_child"
             end
 
             listing :children do
@@ -393,7 +409,13 @@ defmodule Brando.Blueprint.SecondaryVerifierTest do
         end
       )
 
-    assert [%{filters: [%{key: "status", type: :select}], child_listings: [%{name: :children}]} | _] =
+    assert [
+             %{
+               filters: [%{key: "status", type: :select}],
+               child_listings: [%{name: :children, style: :chips, add: "create_child"}]
+             }
+             | _
+           ] =
              Spark.Dsl.Extension.get_entities(module, [:listings])
 
     listing = module |> Spark.Dsl.Extension.get_entities([:listings]) |> List.first()
