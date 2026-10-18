@@ -326,7 +326,9 @@ Both are recognized as phx.new 1.7 and 1.8 generate them. A customized
 A missing CMS page (with `use_default_errors: true`, the installer's default)
 renders the 404 inside the layout the page already has. An error the endpoint
 renders, such as a 500, gets the whole layout, built from the request as it was
-when the error was raised. If the layout itself raises, for example while the
+when the error was raised. Both get the `partials` fragments, the footer
+included, when the failing controller had not assigned them yet; if those
+cannot be read, the page renders without them and the error is logged. If the layout itself raises, for example while the
 database is down and the caches are cold, the page renders without it and the
 layout's error is logged.
 

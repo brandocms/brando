@@ -29,7 +29,11 @@ defmodule <%= application_module %>.ReleaseTasks do
     Application.fetch_env!(@app, :ecto_repos)
   end
 
+  # Migrating an empty database logs more than the console handler's burst
+  # limit of 500 events a second, and the release halts before the handler
+  # reports what it dropped, so the log would stop partway through.
   defp load_app do
+    _ = :logger.update_handler_config(:default, :config, %{burst_limit_enable: false})
     Application.load(@app)
   end
 end
