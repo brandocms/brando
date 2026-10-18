@@ -141,7 +141,7 @@ By hand, change every one of these the application declares before fetching
 ```
 
 Brando pins `phoenix` 1.8.15 and `phoenix_live_view` 1.2.12 exactly. If the
-application also declares `sentry` (`~> 13.0`), `oban` (`~> 2.23`), `cachex`
+application also declares `sentry` (`~> 14.0`), `oban` (`~> 2.23`), `cachex`
 (`~> 4.0`), `image`, `req` or another of Brando's dependencies, compare it with
 Brando's `mix.exs` as well. In particular:
 
@@ -154,6 +154,12 @@ Brando's `mix.exs` as well. In particular:
   Floki at runtime, and `mix deps.get` stops with "Dependencies have diverged"
   while the application restricts it to tests.
 - Igniter is an optional Brando dependency the source tasks are built on.
+- Sentry 14 removes the `:enable_logs` and `:enable_metrics` options. A
+  `config :sentry` that sets `enable_logs: true` instead sets the level to
+  send in its `:logs` block (`logs: [level: :info]`); without a `:level`,
+  crashes are still reported but structured logs are not. Metrics are always
+  sent; drop them in a `:before_send_metric` callback to stop them. See
+  Sentry's [13.x to 14.x upgrade guide](https://hexdocs.pm/sentry/upgrade-14.x.html).
 - Brando depends on `ex_aws` 2.7, which accepts only hackney 4 whenever
   anything else brings hackney in. Packages still on HTTPoison or hackney 1.x,
   such as `ex_chimp` 0.1, fail with `version solving failed`. Bump `ex_chimp`
