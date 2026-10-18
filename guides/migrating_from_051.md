@@ -166,8 +166,9 @@ Blueprints were written in the current syntax.
 Copy Brando's migrations with `mix brando.gen.migrations`. If the site already
 copied them in an earlier attempt, read the next paragraph first.
 
-**`gen.migrations` copies missing files only; it never updates a copy.** A
-template fixed upstream after you copied it stays as it was in your tree. Run
+**`gen.migrations` copies missing files only; it updates a copy only with
+`--refresh`.** A template fixed upstream after you copied it stays as it was in
+your tree. Run
 `mix brando.migrations.check` against the restored production dump before each
 rehearsal. It lists the copies that database has not run yet whose code differs
 from the current template, and copies of templates that were renumbered since;

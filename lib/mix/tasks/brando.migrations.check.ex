@@ -14,6 +14,9 @@ defmodule Mix.Tasks.Brando.Migrations.Check do
   is only listed: delete it once `mix brando.gen.migrations` has copied the
   template under its new number.
 
+  Copies that have run are history here. `mix brando.gen.migrations --refresh`
+  rewrites those too, for databases migrated again from scratch.
+
   Exits with status 1 while anything is left to act on.
   """
 
@@ -54,7 +57,12 @@ defmodule Mix.Tasks.Brando.Migrations.Check do
 
       true ->
         if !opts[:update],
-          do: Mix.shell().info("\nRun with --update to replace the outdated copies with their templates.")
+          do:
+            Mix.shell().info("""
+
+            Run with --update to replace the outdated copies with their templates, or run
+            mix brando.gen.migrations --refresh to rewrite every copy that differs, run or not.\
+            """)
 
         exit({:shutdown, 1})
     end

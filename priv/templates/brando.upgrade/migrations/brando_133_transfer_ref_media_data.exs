@@ -52,7 +52,7 @@ defmodule Brando.Migrations.TransferRefMediaData do
       'default', -- config_target
       NOW(),
       NOW(),
-      1 -- Default creator_id, should be adjusted based on your needs
+      1 -- legacy refs carry no creator; credit the first user
     FROM content_refs r
     WHERE r.data->>'type' = 'video'
     AND COALESCE(r.data->'data'->>'url', r.data->'data'->>'remote_id') IS NOT NULL
