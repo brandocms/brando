@@ -326,7 +326,10 @@ Vite.
   fresh resolve changes the bundle. pnpm 10 needs `onlyBuiltDependencies`.
 - **EuropaCSS:** 0.51 sites use europacss 0.6. Its config, bundles and several
   at-rules changed meaning in the current compiler; follow the EuropaCSS
-  migration guide, and compare the result against the old build.
+  migration guide, and compare the result against the old build. New sites
+  build their frontend with the native compiler; [Site
+  frontend](migrating_from_053.md#site-frontend) lists what the template's CSS
+  needed for it.
 - **Jupiter:** modules such as `MobileMenu`, `Toggler` and `Lightbox` assume
   current Brando markup. Do not expect them to replace a site's old jQuery
   one-for-one.

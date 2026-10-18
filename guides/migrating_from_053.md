@@ -771,6 +771,99 @@ plugin does. Keep a copy of the CSS the legacy build wrote before upgrading;
 `europa compare` swaps it into a logged-in page (see EuropaCSS's guide to
 comparing rendered styles).
 
+### Site frontend
+
+`mix brando.install` now writes `assets/frontend` for the native compiler as
+well: the same two packages, a `europa.json5` with the site's own tokens (it
+does not extend Brando's preset), and no `postcss.config.cjs` or
+`europa.config.cjs`. No task changes an existing site's frontend, and moving
+it is optional: a frontend on the legacy `@brandocms/europacss` PostCSS plugin
+keeps building, in development and in the Docker image, and
+`mix brando.doctor` checks only the admin's compiler.
+
+To move a frontend that a 0.55 install wrote (`@brandocms/europacss`
+1.0.0-beta.16), work in `assets/frontend`:
+
+1. Keep a copy of the CSS the current build wrote
+   (`priv/static/assets/main-<hash>.css`) to compare against.
+2. Swap the packages, then convert the config. `migrate-config` converts a
+   static `europa.config.cjs` and never overwrites:
+
+   ```shell
+   pnpm remove @brandocms/europacss postcss postcss-reporter css-mqgroup
+   pnpm add -D --save-exact @brandocms/vite-plugin-europacss@0.1.0-beta.0 @brandocms/europacss-cli@0.1.0-beta.0
+   pnpm exec europa migrate-config europa.config.cjs -o europa.json5
+   ```
+
+   The plugin needs Node 22.12 or 24 (`engines.node` in `package.json`). Delete
+   `europa.config.cjs` and `postcss.config.cjs` once `europa.json5` is
+   reviewed.
+3. Copy the template's `vite.config.js`, or make the same changes to the
+   site's own: add `europa({ config: './europa.json5', targets: ['defaults'] })`
+   to `plugins`, set `css.postcss` to `{ plugins: [] }`, and remove the
+   `HMREuropa` plugin. The Vite plugin watches `europa.json5` and updates the
+   CSS when it changes, with no page reload.
+4. Check the stylesheet, review what it reports (below), then build and
+   compare the builds in a browser as for the admin above:
+
+   ```shell
+   pnpm exec europa migrate css/app.css --from 1.0.0-beta.16 --config europa.json5 --check
+   pnpm build
+   pnpm exec europa compare http://localhost:4000/ --before old-main.css \
+     --after ../../priv/static/assets/main-<hash>.css \
+     --stylesheet /assets/main-<hash>.css --ignore-custom-properties --settle 1200 \
+     --viewport 390x844 --viewport 1024x900 --viewport 1440x900
+   ```
+
+   `--settle 1200` waits out the header's entrance animation, which otherwise
+   stops the comparison with "DOM changed during comparison".
+
+The check exits with status 1 for as long as any finding is unresolved, and
+some of its findings are correct CSS: it still exits 1 on the 0.55 template's
+own native stylesheet. What it reports for a frontend the 0.55 installer
+wrote:
+
+- **Fix first: `EU_MIGRATION_INCOMPLETE`.** Two rules stop the analysis, and
+  the order findings below appear only once both are fixed:
+  - `theme(spacing.radius.regular)` (`EU_FUNCTION`): a breakpoint map is not a
+    CSS value. The legacy build wrote `[object Object]`, which browsers
+    dropped. Use `@space border-radius radius.regular;`.
+  - `@extend .plain` in `cookies.css` (`EU_EXTEND`): `@extend` takes
+    `%placeholder`s only, and no `.plain` rule exists, so it never extended
+    anything. Delete it.
+- **Fix: `EU_MIGRATION_BUNDLE_ORDER`** on `@europa arrows; @europa base;` at
+  the end of `app.css`. Bundles now expand where they are written, so the reset
+  would outrank the site's rules. `@import`s have to come first, so move the
+  bundles to a file imported before the others, as the template's
+  `css/includes/bundles.css` does. The finding stays after the move: the check
+  reports every bundle, wherever it is.
+- **Expected: `EU_MIGRATION_BREAKPOINT`** (six related findings). Named
+  ranges now end at `< next` instead of `<= next - 1px`, which closes the
+  one-pixel gap between them. Nothing to change.
+- **Review: `EU_MIGRATION_ORDER`** on a plain declaration after a directive in
+  the same rule (`line-height` after `@fontsize`), and on a `$sm` override of a
+  directive's value (the mobile `gap`s, the ledger's `padding-left: 0`). The
+  legacy build never applied them; the native one does. Keep one for the value
+  it names, or delete it to keep what the page showed. The 0.55 template keeps
+  the line heights and the mobile gaps, writing the gaps as
+  `@space gap sm $sm;`. Where a `$sm` rule only undid a desktop treatment, it
+  scopes the treatment instead: the ledger's divider is
+  `@space padding-left md $lg;` with a `$lg` border. The cards and tips use
+  `@space column-gap 1 $lg;` in place of `@space gap 1` with `row-gap: 0`,
+  and the cards space their rows with `@space row-gap xl $lg;` rather than a
+  bottom margin. The check still reports the order of the template's line
+  heights and mobile gaps: they are correct.
+
+The check does not report two order changes, so look for them in the site's
+own CSS:
+
+- `@color border-top bone.hair;` followed by `border-top: 1px solid;`. The
+  legacy build wrote the directive's colour after the shorthand, so the token
+  won; natively the shorthand resets the colour to `currentColor`. Put the
+  token in the declaration: `border-top: 1px solid theme(colors.bone.hair);`.
+- `@color fg token;` followed by `color: …;` in the same rule: the plain
+  `color` used to lose and now wins.
+
 ### Review a generated Florist configuration
 
 Treat switching deployment tools as its own rehearsed migration. Before the

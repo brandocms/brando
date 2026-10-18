@@ -92,6 +92,9 @@ WORKDIR /opt/app/assets/frontend
 # Keep in step with `packageManager` in assets/frontend/package.json
 RUN npm install --global pnpm@10.32.1
 
+# The site's CSS builds with the native EuropaCSS compiler too, installed
+# from the lockfile's optional dependencies as in assets_backend.
+
 # Jupiter comes from npm, or from .yalc if you install it from a checkout.
 # The `[c]` makes the .yalc copy optional, as in assets_backend.
 COPY assets/frontend/package.json assets/frontend/pnpm-lock.yaml ./

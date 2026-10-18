@@ -1,4 +1,10 @@
-module.exports = {
+// EuropaCSS configuration for the site, compiled by the native `europa`
+// executable through @brandocms/vite-plugin-europacss (see vite.config.js).
+// It is data, not JavaScript: JSON5 with comments and trailing commas, and
+// `'{colors.bone.full}'` to refer to another token. CSS reads a value with
+// `theme(colors.accent)`; breakpoint maps go through `@space`, `@fontsize`
+// and the other at-rules. Vite reloads the CSS when this file changes.
+{
   setMaxForVw: true,
 
   /* The width of the design's desktop artboard. Every `dpx` value is relative
@@ -275,7 +281,8 @@ module.exports = {
           desktop_lg: { 'font-size': '60dpx' },
           desktop_xl: { 'font-size': '60dpx' },
         },
-         'heading/7xl': {
+
+        'heading/7xl': {
           __base__: { 'line-height': '1em' },
           iphone: { 'font-size': '44px' },
           mobile: { 'font-size': '48px' },
@@ -285,8 +292,7 @@ module.exports = {
           desktop_lg: { 'font-size': '92dpx' },
           desktop_xl: { 'font-size': '92dpx' },
         },
-
-     },
+      },
 
       families: {
         /* `main` is what `@europa base` sets on the body. */
@@ -318,8 +324,9 @@ module.exports = {
 
     /* Spacing steps are flat across breakpoints: a component picks a smaller
        step on mobile rather than the step shrinking. Only the block rhythm,
-       the container and the gutters change size. Keep this map flat — nesting
-       steps under `padding:`/`gap:` keys makes every lookup return NaN. */
+       the container and the gutters change size. A step is used by name
+       (`@space padding-top lg`); a group such as `radius` by its path
+       (`@space border-radius radius.regular`). */
     spacing: {
       xxxs: {
         iphone: '4px',

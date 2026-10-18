@@ -7,15 +7,13 @@
 * Imports
 */
 
+@import './includes/bundles.css';
 @import './includes/fonts.css';
 @import "./includes/cookies.css";
 @import "./includes/common.css";
 @import "./includes/modules.css";
 @import "./includes/navigation.css";
 @import "./includes/footer.css";
-
-@europa arrows;
-@europa base;
 
 /* lazyload fix for chrome. sometimes IntersectionObserver doesn't pick up the image */
 img[data-src], img[data-srcset] { min-height: 1px; min-width: 100%; }
@@ -101,7 +99,6 @@ body {
   @color fg body.foreground;
   @color bg body.background;
 
-  line-height: normal;
   font-feature-settings: 'calt' 1, 'liga' 1;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;

@@ -85,7 +85,6 @@
     }
 
     a {
-      @extend .plain;
       @fontsize 14px;
       color: var(--brando-color-dark);
     }

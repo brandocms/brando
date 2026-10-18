@@ -42,7 +42,8 @@ defmodule Mix.Tasks.Brando.Assets.Setup do
   A Yalc copy is published to a project-local Yalc store under `_build`.
   Node.js, pnpm and, for a Yalc copy, Yalc must already be installed; the
   task checks them before it changes anything. pnpm
-  installs the native EuropaCSS compiler the admin's CSS builds with from npm.
+  installs the native EuropaCSS compiler the admin's CSS, and a generated
+  site's, build with from npm.
   Unless `--no-build` is supplied, builds both consumers. It does not run a
   standalone framework build.
 

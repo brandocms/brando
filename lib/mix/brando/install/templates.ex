@@ -69,9 +69,8 @@ defmodule Mix.Brando.Install.Templates do
     {:keep, "assets/frontend/public/fonts", "assets/frontend/public/fonts"},
     {:keep, "assets/frontend/public/fonts", "assets/frontend/public/images"},
     {:copy, "assets/frontend/eslint.config.js", "assets/frontend/eslint.config.js"},
-    {:copy, "assets/frontend/europa.config.cjs", "assets/frontend/europa.config.cjs"},
+    {:copy, "assets/frontend/europa.json5", "assets/frontend/europa.json5"},
     {:copy, "assets/frontend/vite.config.js", "assets/frontend/vite.config.js"},
-    {:copy, "assets/frontend/postcss.config.cjs", "assets/frontend/postcss.config.cjs"},
     {:eex, "assets/frontend/package.json", "assets/frontend/package.json"},
 
     # Frontend static
@@ -81,6 +80,7 @@ defmodule Mix.Brando.Install.Templates do
     # Frontend src - CSS
     {:copy, "assets/frontend/css/app.css", "assets/frontend/css/app.css"},
     {:copy, "assets/frontend/css/critical.css", "assets/frontend/css/critical.css"},
+    {:copy, "assets/frontend/css/includes/bundles.css", "assets/frontend/css/includes/bundles.css"},
     {:copy, "assets/frontend/css/includes/common.css", "assets/frontend/css/includes/common.css"},
     {:copy, "assets/frontend/css/includes/cookies.css", "assets/frontend/css/includes/cookies.css"},
     {:copy, "assets/frontend/css/includes/fonts.css", "assets/frontend/css/includes/fonts.css"},

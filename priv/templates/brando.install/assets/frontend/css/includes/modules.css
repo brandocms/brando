@@ -117,13 +117,13 @@ main > header.page-section {
   .actions {
     @display flex/row/nowrap;
     @space gap md;
+    @space gap sm $sm;
     @space margin-top lg;
 
     align-items: center;
 
     @responsive $sm {
       @display flex/column/nowrap;
-      @space gap sm;
 
       align-items: flex-start;
     }
@@ -132,23 +132,25 @@ main > header.page-section {
   /* What the installer actually made, stated as a fact row. */
   .ledger {
     @display flex/row/nowrap;
-    @space gap 1;
+    @space column-gap 1;
     @space margin-top xxl;
-    @color border-top bone.hairStrong;
 
-    border-top: 1px solid;
+    border-top: 1px solid theme(colors.bone.hairStrong);
 
     .entry {
       @space padding-y md;
+      @column 6/12 $sm;
 
       flex: 1;
     }
 
+    /* On desktop the entries sit in one row with a hairline between them. */
     .entry + .entry {
-      @space padding-left md;
-      @color border-left bone.hair;
+      @space padding-left md $lg;
 
-      border-left: 1px solid;
+      @responsive $lg {
+        border-left: 1px solid theme(colors.bone.hair);
+      }
     }
 
     .value p {
@@ -173,15 +175,6 @@ main > header.page-section {
 
     @responsive $sm {
       flex-wrap: wrap;
-
-      .entry {
-        flex: 0 0 50%;
-      }
-
-      .entry + .entry {
-        border-left: 0;
-        padding-left: 0;
-      }
     }
   }
 }
@@ -206,9 +199,8 @@ main > header.page-section {
 
   .step {
     @space padding-top sm;
-    @color border-top bone.faint;
 
-    border-top: 1px solid;
+    border-top: 1px solid theme(colors.bone.faint);
 
     @responsive $lg {
       @column 4/12;
@@ -237,11 +229,10 @@ main > header.page-section {
       @space margin-top md;
       @color fg bone.full;
       @color bg bone.wash;
-      @color border bone.hair;
 
       display: inline-flex;
       padding: 0.55em 0.9em;
-      border: 1px solid;
+      border: 1px solid theme(colors.bone.hair);
       line-height: 1.4;
 
       /* The command is a text ref, so it arrives as a paragraph. Until the
@@ -285,12 +276,8 @@ main > header.page-section {
 [b-tpl="cards"] {
   .cards {
     @display flex/row/wrap;
-
-    @responsive $lg {
-      @space gap 1;
-
-      row-gap: 0;
-    }
+    @space column-gap 1 $lg;
+    @space row-gap xl $lg;
 
     @responsive $sm {
       @display flex/column/nowrap;
@@ -300,15 +287,13 @@ main > header.page-section {
 
   .card {
     @space padding-top sm;
-    @color border-top bone.hairStrong;
 
     display: block;
-    border-top: 1px solid;
+    border-top: 1px solid theme(colors.bone.hairStrong);
     text-decoration: none;
 
     @responsive $lg {
       @column 4/12;
-      @space margin-bottom xl;
     }
 
     h3 {
@@ -349,21 +334,15 @@ main > header.page-section {
 [b-tpl="tips"] {
   .tips {
     @display flex/row/wrap;
-
-    @responsive $lg {
-      @space gap 1;
-
-      row-gap: 0;
-    }
+    @space column-gap 1 $lg;
   }
 
   .tip {
     @display flex/row/nowrap;
     @space gap sm;
     @space padding-y md;
-    @color border-top bone.hair;
 
-    border-top: 1px solid;
+    border-top: 1px solid theme(colors.bone.hair);
 
     @responsive $lg {
       @column 6/12;
@@ -440,10 +419,9 @@ main > header.page-section {
 
   .shell {
     @color bg shell;
-    @color border bone.hairStrong;
+    @space border-radius radius.regular;
 
-    border: 1px solid;
-    border-radius: theme(spacing.radius.regular);
+    border: 1px solid theme(colors.bone.hairStrong);
     overflow: hidden;
 
     @responsive $lg {
@@ -465,10 +443,9 @@ main > header.page-section {
     @space padding-x sm;
     @space padding-y xs;
     @color bg bone.wash;
-    @color border-bottom bone.hair;
 
     align-items: center;
-    border-bottom: 1px solid;
+    border-bottom: 1px solid theme(colors.bone.hair);
 
     i {
       @color bg bone.hairStrong;
@@ -605,11 +582,10 @@ main > header.page-section {
     @space padding-x md;
     @space padding-y xs;
     @color bg bone.wash;
-    @color border-top bone.hair;
     @color fg bone.faint;
 
     align-items: center;
-    border-top: 1px solid;
+    border-top: 1px solid theme(colors.bone.hair);
     letter-spacing: 0.12em;
     text-transform: uppercase;
 
@@ -629,9 +605,8 @@ main > header.page-section {
   /* Instructions run alongside the shell rather than inside its output. */
   .rail .item {
     @space padding-y md;
-    @color border-top bone.hair;
 
-    border-top: 1px solid;
+    border-top: 1px solid theme(colors.bone.hair);
 
     &:first-child {
       @color border-top bone.hairStrong;
@@ -685,21 +660,20 @@ main > header.page-section {
 
 [b-tpl="closing"] {
   @color bg black;
-  @color border-top bone.hair;
   @space padding-y xxl;
 
-  border-top: 1px solid;
+  border-top: 1px solid theme(colors.bone.hair);
 
   .row {
     @display flex/row/nowrap;
     @space gap lg;
+    @space gap md $sm;
 
     align-items: flex-end;
     justify-content: space-between;
 
     @responsive $sm {
       @display flex/column/nowrap;
-      @space gap md;
 
       align-items: flex-start;
     }
@@ -742,6 +716,7 @@ main > header.page-section {
   .lists {
     @display flex/row/nowrap;
     @space gap xl;
+    @space gap lg $sm;
 
     margin-left: auto;
   }
@@ -776,8 +751,6 @@ main > header.page-section {
     @space gap lg;
 
     .lists {
-      @space gap lg;
-
       margin-left: 0;
       flex-wrap: wrap;
     }

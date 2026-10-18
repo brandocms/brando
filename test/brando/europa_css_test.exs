@@ -18,6 +18,16 @@ defmodule Brando.EuropaCSSTest do
     end
   end
 
+  test "the frontend template pins the same versions as the backend template" do
+    frontend =
+      "priv/templates/brando.install/assets/frontend/package.json"
+      |> File.read!()
+      |> Jason.decode!()
+
+    assert Map.take(frontend["devDependencies"], Map.keys(EuropaCSS.pins())) == EuropaCSS.pins()
+    assert EuropaCSS.package_problems(frontend) == []
+  end
+
   test "the E2E backend builds with the pinned packages" do
     package = "e2e/assets/backend/package.json" |> File.read!() |> Jason.decode!()
     assert EuropaCSS.package_problems(package) == []

@@ -162,13 +162,12 @@ h5 {
   @font mono;
   @fontsize text/xs;
   @color fg bone.full;
-  @color border-bottom bone.hairStrong;
 
   display: inline-block;
   letter-spacing: 0.16em;
   text-transform: uppercase;
   text-decoration: none;
-  border-bottom: 1px solid;
+  border-bottom: 1px solid theme(colors.bone.hairStrong);
   padding-bottom: 5px;
   transition: color 250ms ease-out, border-color 250ms ease-out;
 
