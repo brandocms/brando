@@ -618,6 +618,9 @@ defmodule Brando.HTML do
   slot :inner_block
 
   def head(assigns) do
+    # Once for the page: the record can change between the styles and the scripts
+    assigns = assign(assigns, :assets_source, site_assets_source())
+
     ~H"""
     <head phx-no-format>
       <meta charset={@charset} />
@@ -630,12 +633,12 @@ defmodule Brando.HTML do
       <%= if @import_styles != [] do %><%= render_slot(@import_styles) %><% end %>
       <%= if @scripts != [] do %><%= render_slot(@scripts) %><% end %>
       <.inject_critical_css />
-      <.include_assets only_css />
+      <.site_css source={@assets_source} />
       <.render_palettes_css />
       <%= if @styles != [] do %><%= render_slot(@styles) %><% end %>
       <.preload_fonts fonts={@fonts} />
       <%= if @preload != [] do %><%= render_slot(@preload) %><% end %>
-      <.include_assets ignored_chunks={@ignored_chunks} only_js />
+      <.site_js source={@assets_source} ignored_chunks={@ignored_chunks} />
       <%= if @deferred_scripts != [] do %><%= render_slot(@deferred_scripts) %><% end %>
       <%= if @prefetch != [] do %><%= render_slot(@prefetch) %><% end %>
 
@@ -740,39 +743,11 @@ defmodule Brando.HTML do
     end
   end
 
-  def include_assets(%{only_css: true} = assigns) do
-    case site_assets_source() do
-      :manifest ->
-        ~H"""
-        {Vite.Render.main_css() |> raw()}
-        """
+  def include_assets(%{only_css: true} = assigns),
+    do: site_css(assign(assigns, :source, site_assets_source()))
 
-      {:vite_failed, failure} ->
-        assigns = vite_failed_assigns(assigns, :site, failure)
-
-        ~H"""
-        {Vite.Render.main_css() |> raw()}
-        <.assets_notice :if={@notice?} scope={:site} failure={@failure} unbuilt={@unbuilt?} show />
-        """
-
-      :dev_server ->
-        ~H"""
-        <.frontend_dev_scripts />
-        """
-    end
-  end
-
-  def include_assets(%{only_js: true} = assigns) do
-    if site_assets_source() == :dev_server do
-      ~H"""
-      <!-- prevent double loading of vite client, handled in only_css -->
-      """
-    else
-      ~H"""
-      {Vite.Render.main_js(:app, @ignored_chunks) |> raw()}
-      """
-    end
-  end
+  def include_assets(%{only_js: true} = assigns),
+    do: site_js(assign(assigns, :source, site_assets_source()))
 
   def include_assets(assigns) do
     case site_assets_source() do
@@ -798,13 +773,54 @@ defmodule Brando.HTML do
     end
   end
 
+  # The site's styles and scripts, rendered apart in the head, from one
+  # decision on where the assets come from
+  attr :source, :any, required: true
+
+  defp site_css(assigns) do
+    case assigns.source do
+      :manifest ->
+        ~H"""
+        {Vite.Render.main_css() |> raw()}
+        """
+
+      {:vite_failed, failure} ->
+        assigns = vite_failed_assigns(assigns, :site, failure)
+
+        ~H"""
+        {Vite.Render.main_css() |> raw()}
+        <.assets_notice :if={@notice?} scope={:site} failure={@failure} unbuilt={@unbuilt?} show />
+        """
+
+      :dev_server ->
+        ~H"""
+        <.frontend_dev_scripts />
+        """
+    end
+  end
+
+  attr :source, :any, required: true
+  attr :ignored_chunks, :list, default: []
+
+  defp site_js(assigns) do
+    if assigns.source == :dev_server do
+      ~H"""
+      <!-- prevent double loading of vite client, handled in only_css -->
+      """
+    else
+      ~H"""
+      {Vite.Render.main_js(:app, @ignored_chunks) |> raw()}
+      """
+    end
+  end
+
   # Where the page loads the admin's assets from: the build in priv/static, or
   # the Vite dev server, unless this VM's Brando.Vite watcher could not start
   # it. Then the port may be another site's Vite, so the page takes the build.
   defp admin_assets_source do
     cond do
       Brando.env() in [:prod, :e2e, :test] or hmr_disabled?() -> :manifest
-      failure = Brando.Vite.start_failure(:admin) -> {:vite_failed, failure}
+      failure = Brando.Vite.start_failure(:admin) -> vite_failed(:admin, failure)
       true -> :dev_server
     end
   end
@@ -813,9 +829,22 @@ defmodule Brando.HTML do
     cond do
       Brando.env() == :prod or Application.get_env(:brando, :ssg_run, false) -> :manifest
       hmr_disabled?() -> :manifest
-      failure = Brando.Vite.start_failure(:site) -> {:vite_failed, failure}
+      failure = Brando.Vite.start_failure(:site) -> vite_failed(:app, failure)
       true -> :dev_server
     end
+  end
+
+  # The manifest, and the site's critical CSS, are cached at their first read,
+  # perhaps before the build that `pnpm build` writes while the page runs on
+  # it, so development reads them afresh. `:persistent_term.put/2` with an
+  # unchanged value does nothing.
+  defp vite_failed(scope, failure) do
+    if Brando.env() == :dev do
+      Vite.Manifest.refresh(scope)
+      if scope == :app, do: Vite.Manifest.refresh_critical_css()
+    end
+
+    {:vite_failed, failure}
   end
 
   defp hmr_disabled?, do: Application.get_env(Brando.otp_app(), :hmr) === false
@@ -903,6 +932,14 @@ defmodule Brando.HTML do
     ~H"""
     <template id={@id}>
       <div class="brando-assets-notice" role="alert">
+        <button
+          type="button"
+          class="brando-assets-notice-close"
+          aria-label="Close this notice"
+          onclick="this.parentNode.remove()"
+        >
+          &times;
+        </button>
         <%= if @failure do %>
           <.vite_failure_notice failure={@failure} name={@name} port_var={@port_var} />
           <p :if={!@unbuilt}>
@@ -910,7 +947,8 @@ defmodule Brando.HTML do
             instead, which does not follow your edits in <code>{@failure.dir}</code>.
           </p>
           <p :if={@unbuilt}>
-            There is no build to use instead: run <code>pnpm build</code> in <code>{@failure.dir}</code>.
+            There is no build to use instead: run <code>pnpm build</code>
+            in <code>{@failure.dir}</code>, then reload this page.
           </p>
         <% end %>
         <%= if !@failure && @origin do %>
@@ -936,7 +974,7 @@ defmodule Brando.HTML do
       </div>
     </template>
     <style>
-      .brando-assets-notice{position:fixed;top:16px;left:16px;right:16px;z-index:10000;max-width:720px;margin:0 auto;padding:16px 20px;border:1px solid #d9a441;border-radius:8px;background:#fff8e6;color:#1d2433;font:14px/1.5 system-ui,sans-serif;box-shadow:0 4px 16px rgba(0,0,0,.08)}.brando-assets-notice p{margin:4px 0 0}.brando-assets-notice code{font:13px ui-monospace,monospace;background:rgba(0,0,0,.06);padding:1px 4px;border-radius:3px}
+      .brando-assets-notice{position:fixed;top:16px;left:16px;right:16px;z-index:10000;max-width:720px;margin:0 auto;padding:16px 44px 16px 20px;border:1px solid #d9a441;border-radius:8px;background:#fff8e6;color:#1d2433;font:14px/1.5 system-ui,sans-serif;box-shadow:0 4px 16px rgba(0,0,0,.08)}.brando-assets-notice p{margin:4px 0 0}.brando-assets-notice code{font:13px ui-monospace,monospace;background:rgba(0,0,0,.06);padding:1px 4px;border-radius:3px}.brando-assets-notice-close{position:absolute;top:8px;right:8px;width:28px;height:28px;padding:0;border:0;border-radius:6px;background:none;color:inherit;font:20px/28px system-ui,sans-serif;cursor:pointer}.brando-assets-notice-close:hover{background:rgba(0,0,0,.06)}.brando-assets-notice-close:focus-visible{outline:2px solid #d9a441;outline-offset:1px}
     </style>
     <script>
       window.brandoAssetsMissing=function(id){var show=function(){if(document.getElementById(id+"-shown"))return;var t=document.getElementById(id);if(!t)return;var n=t.content.firstElementChild.cloneNode(true);n.id=id+"-shown";document.documentElement.appendChild(n)};if(document.body){show()}else{document.addEventListener("DOMContentLoaded",show)}};
@@ -971,6 +1009,19 @@ defmodule Brando.HTML do
     <strong>Vite for {@name} did not start</strong>
     <p>
       It exited with status {@status} before it was ready; its output is in the <code>mix phx.server</code>
+      terminal. Restart <code>mix phx.server</code>
+      once it is fixed.
+    </p>
+    """
+  end
+
+  defp vite_failure_notice(%{failure: %{reason: {:stopped, status}}} = assigns) do
+    assigns = assign(assigns, :status, status)
+
+    ~H"""
+    <strong>Vite for {@name} stopped</strong>
+    <p>
+      It exited with status {@status}; its output is in the <code>mix phx.server</code>
       terminal. Restart <code>mix phx.server</code>
       once it is fixed.
     </p>

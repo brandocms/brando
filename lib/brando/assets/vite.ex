@@ -215,6 +215,15 @@ defmodule Brando.Assets.Vite do
       end
     end
 
+    @doc """
+    Reads the critical CSS afresh and caches it, as `refresh/1` does the manifest.
+    """
+    def refresh_critical_css(scope \\ :app) do
+      res = build_critical_css(scope)
+      :persistent_term.put(Brando.Tenant.cache_key(config(scope).critical_css_cache_key), res)
+      res
+    end
+
     defp build_critical_css(scope) do
       manifest = Manifest.read(scope)
       critical_css_files = get_in(manifest, [Access.key(:critical), Access.key(:css_files, [])])

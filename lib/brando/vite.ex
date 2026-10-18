@@ -23,12 +23,15 @@ defmodule Brando.Vite do
   returns, so the endpoint keeps running without that dev server.
 
   When Vite for `assets/backend` (the admin) or `assets/frontend` (the site)
-  fails before it is ready, `watch/1` also records why, for `start_failure/1`.
-  `Brando.HTML.include_assets/1` reads that record: rather than point the page
-  at a port that another site's Vite may hold, it renders the built assets and
-  a notice. A later start that gets as far as Vite's "ready" line clears it.
-  Without a `Brando.Vite` watcher, as when the developer runs `pnpm dev`,
-  nothing is ever recorded.
+  fails before it is ready, or exits with an error after it, `watch/1` also
+  records why, for `start_failure/1`. `Brando.HTML.include_assets/1` reads
+  that record: rather than point the page at a port that another site's Vite
+  may hold, it renders the built assets and a notice. A later start that gets
+  as far as Vite's "ready" line clears it. Without a `Brando.Vite` watcher, as
+  when the developer runs `pnpm dev`, nothing is ever recorded.
+
+  Vite with a `logLevel` quieter than `"info"` never prints its "ready" line,
+  so a start of that Vite does not clear an earlier failure.
   """
 
   require Logger
@@ -40,13 +43,17 @@ defmodule Brando.Vite do
   @type role :: :admin | :site
 
   @typedoc """
-  Why Vite did not start: the port Vite found in use, another exit status
-  before Vite was ready, or a check that failed before Vite ran (the message
-  says what to do).
+  Why Vite is not running: the port Vite found in use, another exit status
+  before Vite was ready (`:exited`) or after it (`:stopped`), or a check that
+  failed before Vite ran (the message says what to do).
   """
   @type failure :: %{
           dir: String.t(),
-          reason: {:port_in_use, String.t()} | {:exited, integer()} | {:not_started, String.t()}
+          reason:
+            {:port_in_use, String.t()}
+            | {:exited, integer()}
+            | {:stopped, integer()}
+            | {:not_started, String.t()}
         }
 
   # Phoenix stops a command watcher by closing its standard input, and the VM
@@ -83,7 +90,12 @@ defmodule Brando.Vite do
       run(dir, node, [@vite_bin], server)
     else
       {:error, message} ->
-        [_, detail] = String.split(message, "did not start: ", parts: 2)
+        detail =
+          case String.split(message, "did not start: ", parts: 2) do
+            [_, detail] -> detail
+            [_] -> message
+          end
+
         record_failure(server, {:not_started, detail})
         Logger.error(message)
     end
@@ -93,8 +105,8 @@ defmodule Brando.Vite do
 
   @doc """
   Returns why the last `watch/1` for the admin's or the site's assets
-  directory could not start Vite in this VM, or `nil` when it started, is
-  starting, or never ran.
+  directory could not start Vite in this VM, or why its Vite exited with an
+  error, or `nil` when it started, is starting, or never ran.
   """
   @spec start_failure(role()) :: failure() | nil
   def start_failure(role) when role in [:admin, :site], do: :persistent_term.get(failure_key(role), nil)
@@ -205,11 +217,12 @@ defmodule Brando.Vite do
 
   defp keep_tail(tail), do: tail
 
-  # Vite prints "VITE v7.1.0  ready in 312 ms" once it listens on its port,
+  # Vite prints "  VITE v8.3.4  ready in 258 ms" once it listens on its port,
   # perhaps with colour codes between the words. Its error for a taken port,
-  # "Port 3333 is already in use", has "ready in" too.
+  # "Port 3333 is already in use", has "ready in" too, so only the whole
+  # banner counts.
   defp check_ready(%{ready?: false} = server, tail) do
-    if Regex.match?(~r/VITE.*ready in /, tail) do
+    if Regex.match?(~r/^\s*(?:[A-Z]+-)?VITE v\d\S*\s+ready in \d+(?:\.\d+)? ms/m, strip_ansi(tail)) do
       clear_failure(server)
       %{server | ready?: true}
     else
@@ -219,6 +232,8 @@ defmodule Brando.Vite do
 
   defp check_ready(server, _tail), do: server
 
+  defp strip_ansi(text), do: String.replace(text, ~r/\e\[[0-9;?]*[ -\/]*[@-~]/, "")
+
   defp exited(0, _server, _tail), do: :ok
 
   # 128 + SIGINT or SIGTERM: stopped from outside, as Ctrl-C does
@@ -227,22 +242,26 @@ defmodule Brando.Vite do
   end
 
   defp exited(status, server, tail) do
-    port_in_use = Regex.run(~r/Port (\d+) is already in use/, tail)
+    port_in_use = Regex.run(~r/Port (\d+) is already in use/, strip_ansi(tail))
 
-    unless server.ready? do
-      reason = if port_in_use, do: {:port_in_use, Enum.at(port_in_use, 1)}, else: {:exited, status}
-      record_failure(server, reason)
-    end
+    reason =
+      cond do
+        server.ready? -> {:stopped, status}
+        port_in_use -> {:port_in_use, Enum.at(port_in_use, 1)}
+        true -> {:exited, status}
+      end
+
+    record_failure(server, reason)
 
     message =
-      case port_in_use do
-        [_, port] ->
+      case reason do
+        {:port_in_use, port} ->
           "Vite for #{server.label} (#{server.dir}) did not start: port #{port} is already in use, " <>
             "perhaps by another site's Vite. Stop that process, or give this site other ports with " <>
             "BRANDO_VITE_ADMIN_PORT and BRANDO_VITE_FRONTEND_PORT, exported where both Phoenix and Vite " <>
             "read them, for example in .envrc."
 
-        nil ->
+        _exited ->
           "Vite for #{server.label} (#{server.dir}) exited with status #{status}; its output is above. " <>
             "If it could not load its dependencies, run mix brando.assets.setup."
       end
