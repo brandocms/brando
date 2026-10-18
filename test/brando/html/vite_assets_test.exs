@@ -147,6 +147,8 @@ defmodule Brando.HTML.ViteAssetsTest do
 
     setup %{tmp_dir: tmp_dir} do
       Application.put_env(@host_app, :hmr, true)
+      # The page refreshes the site's critical CSS into the shared cache
+      cache(Brando.Tenant.cache_key({:vite, "critical_css"}), nil)
       write_manifest(tmp_dir, "admin_manifest.json", "src/main.js", "admin")
       write_manifest(tmp_dir, "manifest.json", "js/index.js", "app")
 
@@ -238,7 +240,6 @@ defmodule Brando.HTML.ViteAssetsTest do
     test "picks up a build made after the first render", %{tmp_dir: tmp_dir} do
       vite_failed(:admin, {:port_in_use, "3333"})
       vite_failed(:site, {:port_in_use, "3000"})
-      cache(Brando.Tenant.cache_key({:vite, "critical_css"}), nil)
       File.rm!("priv/static/admin_manifest.json")
       File.rm!("priv/static/manifest.json")
 
@@ -268,6 +269,21 @@ defmodule Brando.HTML.ViteAssetsTest do
       assert site =~ "/assets/app-new.js"
       assert site =~ "/assets/app-new.css"
       assert render_component(&HTML.inject_critical_css/1) =~ ".critical{color:red}"
+    end
+
+    test "a manifest that a build is still writing leaves the last one in use" do
+      vite_failed(:admin, {:port_in_use, "3333"})
+      vite_failed(:site, {:port_in_use, "3000"})
+      assert render_component(&HTML.include_assets/1, admin: true) =~ "/assets/admin.js"
+      assert render_component(&HTML.include_assets/1) =~ "/assets/app.js"
+
+      for name <- ["admin_manifest.json", "manifest.json"] do
+        File.write!("priv/static/#{name}", ~s({"src/main.js": {"file": "assets/))
+      end
+
+      assert render_component(&HTML.include_assets/1, admin: true) =~ "/assets/admin.js"
+      assert render_component(&HTML.include_assets/1) =~ "/assets/app.js"
+      assert render_component(&HTML.inject_critical_css/1) =~ "no critical css"
     end
 
     test "the head decides once where the site's styles and scripts come from" do

@@ -840,7 +840,7 @@ defmodule Brando.HTML do
   # unchanged value does nothing.
   defp vite_failed(scope, failure) do
     if Brando.env() == :dev do
-      Vite.Manifest.refresh(scope)
+      Vite.Manifest.refresh(scope, keep_cached: true)
       if scope == :app, do: Vite.Manifest.refresh_critical_css()
     end
 

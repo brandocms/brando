@@ -38,6 +38,16 @@ defmodule Brando.Assets.Vite do
       parsed_manifest
     end
 
+    # A build in progress can leave the manifest half written, or briefly gone:
+    # the cached manifest (or none) stands until the next read.
+    def read(manifest_file, cache_key, :force_keep_cached) do
+      read(manifest_file, cache_key, :force)
+    rescue
+      e in [Jason.DecodeError, File.Error] ->
+        Logger.debug("(!) Could not read vite manifest #{inspect(manifest_file)}: #{Exception.message(e)}")
+        :persistent_term.get(Brando.Tenant.cache_key(cache_key), nil) || Manifest.parse(%{})
+    end
+
     @doc """
     # copy from
     - `defp cache_static_manifest(endpoint)`
@@ -133,23 +143,32 @@ defmodule Brando.Assets.Vite do
       |> ViteManifestReader.read(config(scope).manifest_cache_key)
     end
 
-    @spec refresh(atom) :: map()
-    def refresh(:app = scope) do
+    @doc """
+    Reads the manifest afresh and caches it. With `keep_cached: true`, a
+    manifest that cannot be read or decoded leaves the cached one in place
+    rather than raising.
+    """
+    @spec refresh(atom, keyword) :: map()
+    def refresh(scope, opts \\ [])
+
+    def refresh(:app = scope, opts) do
       case Brando.Assets.SiteAssets.current_manifest() do
-        nil -> refresh_release_manifest(scope)
+        nil -> refresh_release_manifest(scope, opts)
         uploaded_manifest -> parse(uploaded_manifest)
       end
     end
 
-    def refresh(scope) do
-      refresh_release_manifest(scope)
+    def refresh(scope, opts) do
+      refresh_release_manifest(scope, opts)
     end
 
-    defp refresh_release_manifest(scope) do
+    defp refresh_release_manifest(scope, opts) do
+      mode = if Keyword.get(opts, :keep_cached, false), do: :force_keep_cached, else: :force
+
       scope
       |> config()
       |> Map.get(:manifest_file)
-      |> ViteManifestReader.read(config(scope).manifest_cache_key, :force)
+      |> ViteManifestReader.read(config(scope).manifest_cache_key, mode)
     end
 
     defp add_css(manifest, css_files, type) do
@@ -216,11 +235,17 @@ defmodule Brando.Assets.Vite do
     end
 
     @doc """
-    Reads the critical CSS afresh and caches it, as `refresh/1` does the manifest.
+    Reads the critical CSS afresh and caches it, as `refresh/1` does the
+    manifest. Under a process-local set override it only reads it, as
+    `critical_css/1` does.
     """
     def refresh_critical_css(scope \\ :app) do
       res = build_critical_css(scope)
-      :persistent_term.put(Brando.Tenant.cache_key(config(scope).critical_css_cache_key), res)
+
+      unless scope == :app and Brando.Assets.SiteAssets.override() do
+        :persistent_term.put(Brando.Tenant.cache_key(config(scope).critical_css_cache_key), res)
+      end
+
       res
     end
 

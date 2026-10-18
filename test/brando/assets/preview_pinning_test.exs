@@ -118,6 +118,20 @@ defmodule Brando.Assets.PreviewPinningTest do
     assert Manifest.read(:app).entries.files == ["/assets/next-build.js"]
   end
 
+  test "a pinned set's critical CSS, read afresh, stays out of the shared cache", %{release: release} do
+    write_release(release, "aaaa")
+    key = Tenant.cache_key({:vite, "critical_css"})
+    :persistent_term.put(key, "/* the active set's */")
+
+    assert {:ok, critical} =
+             SiteAssets.with_preview_set(nil, fn _set ->
+               Manifest.refresh_critical_css() |> Phoenix.HTML.safe_to_string()
+             end)
+
+    assert critical =~ "critical-aaaa"
+    assert :persistent_term.get(key) == "/* the active set's */"
+  end
+
   test "reuses a self-contained uploaded set and merges a partial one with the release", %{release: release} do
     write_release(release, "aaaa")
 
