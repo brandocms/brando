@@ -1,5 +1,5 @@
 - **Generated pages and error pages end clear of the footer, and the footer
-  reaches the bottom of a short page** (#PR). The installed frontend gives the
+  reaches the bottom of a short page** (#3238). The installed frontend gives the
   last `main > .page-section` the same `@space padding-bottom xl;` the first
   gets at the top, so a generated entry page's back link and an index's list
   no longer sit against the footer. `body` is a column at least the window
@@ -12,7 +12,7 @@
   padding-bottom xl; }`, `flex-grow: 1;` on `main`, and `@display
   flex/column/nowrap; min-height: 100dvh;` on `body`.
 
-- **`mix brando.install` ignores all of `priv/static`** (#PR). The listed
+- **`mix brando.install` ignores all of `priv/static`** (#3238). The listed
   paths missed what `mix brando.digest` adds next to them
   (`manifest-<hash>.json`, `.gz` copies, `favicon-<hash>.ico`), which showed up
   as untracked files after a local production build. `priv/static` only holds
