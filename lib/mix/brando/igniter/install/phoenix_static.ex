@@ -43,37 +43,43 @@ if Code.ensure_loaded?(Igniter) do
     end
 
     @doc """
-    Removes the `priv/static/robots.txt` `mix phx.new` writes, and `robots.txt`
-    from `static_paths/0` in the web module, so `BrandoWeb.SEOController`
-    answers `/robots.txt` in development as it does in the release. A copy of
-    the site's own `assets/frontend/public/robots.txt` is left alone, and any
-    other file is kept, with a notice.
+    Removes the `robots.txt` `mix phx.new` writes, from `priv/static` or from
+    `assets/frontend/public`, where an install without the site moved it, and
+    `robots.txt` from `static_paths/0` in the web module, so
+    `BrandoWeb.SEOController` answers `/robots.txt` in development as it does
+    in the release. The frontend build's copy of phx.new's file goes with it.
+    A copy of the site's own `assets/frontend/public/robots.txt` is left alone,
+    and any other file is kept, with a notice.
     """
     def robots(igniter, project) do
-      case read(igniter, @robots) do
-        {igniter, nil} ->
+      {igniter, contents} = read(igniter, @robots)
+      {igniter, public} = read(igniter, @public_robots)
+      phx_public? = is_binary(public) and sha256(public) == @robots_sha256
+
+      igniter =
+        if phx_public?,
+          do: igniter |> Igniter.rm(@public_robots) |> drop_static_path(project.web_module),
+          else: igniter
+
+      cond do
+        is_nil(contents) ->
           igniter
 
-        {igniter, contents} ->
-          {igniter, public} = read(igniter, @public_robots)
+        contents == public ->
+          if phx_public?, do: Igniter.rm(igniter, @robots), else: igniter
 
-          cond do
-            contents == public ->
-              igniter
+        sha256(contents) == @robots_sha256 ->
+          igniter
+          |> Igniter.rm(@robots)
+          |> drop_static_path(project.web_module)
 
-            sha256(contents) == @robots_sha256 ->
-              igniter
-              |> Igniter.rm(@robots)
-              |> drop_static_path(project.web_module)
-
-            true ->
-              Igniter.add_notice(igniter, """
-              #{@robots} is not the file mix phx.new writes, so it was kept. BrandoWeb.SEOController answers
-              /robots.txt from the SEO settings in the admin, but in development Plug.Static serves this file
-              first, and the release does not have it (the Docker build leaves priv/static out). Move its rules
-              to the SEO settings, delete it, and remove robots.txt from static_paths/0 in #{inspect(project.web_module)}.
-              """)
-          end
+        true ->
+          Igniter.add_notice(igniter, """
+          #{@robots} is not the file mix phx.new writes, so it was kept. BrandoWeb.SEOController answers
+          /robots.txt from the SEO settings in the admin, but in development Plug.Static serves this file
+          first, and the release does not have it (the Docker build leaves priv/static out). Move its rules
+          to the SEO settings, delete it, and remove robots.txt from static_paths/0 in #{inspect(project.web_module)}.
+          """)
       end
     end
 
