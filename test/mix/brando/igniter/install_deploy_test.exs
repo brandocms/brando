@@ -49,6 +49,7 @@ defmodule Mix.Brando.Igniter.InstallDeployTest do
     release_tasks = IgniterCase.source(igniter, "lib/studio/release_tasks.ex")
     assert release_tasks =~ "defmodule Studio.ReleaseTasks"
     assert release_tasks =~ "def migrate do"
+    assert release_tasks =~ "burst_limit_enable: false"
 
     mix = IgniterCase.source(igniter, "mix.exs")
     assert mix =~ "releases: [studio: [include_executables_for: [:unix], steps: [:assemble, :tar]]]"

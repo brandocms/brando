@@ -22,10 +22,11 @@ defmodule <%= web_module %>.ErrorHTML do
 
   A CMS page that was not found is rendered inside that layout already. The
   endpoint renders errors without a layout, with the conn as it was when the
-  error was raised, so the layout gets that conn's assigns and the default
-  language when its pipeline never set one. If the layout raises (say, the
-  database is down and its caches are cold), the error is logged and the page
-  renders without it. Without a conn, only the message renders.
+  error was raised, so the layout gets that conn's assigns, the default
+  language when its pipeline never set one, and the `partials` fragments for
+  its footer when its controller never assigned them. If the layout raises
+  (say, the database is down and its caches are cold), the error is logged and
+  the page renders without it. Without a conn, only the message renders.
   """
   attr :conn, Plug.Conn, default: nil
   slot :inner_block, required: true
@@ -41,9 +42,11 @@ defmodule <%= web_module %>.ErrorHTML do
   # Rendered to iodata here rather than when the response is sent, so that an
   # error the layout raises is rescued.
   defp in_layout(assigns) do
+    layout_assigns = Map.put_new(assigns.conn.assigns, :language, Brando.config(:default_language))
+
     page =
-      assigns.conn.assigns
-      |> Map.put_new(:language, Brando.config(:default_language))
+      layout_assigns
+      |> Map.put_new_lazy(:partials, fn -> partials(layout_assigns.language) end)
       |> Map.merge(%{conn: assigns.conn, inner_content: content(assigns), __changed__: nil})
       |> <%= web_module %>.CMS.Layouts.root()
       |> Phoenix.HTML.Safe.to_iodata()
@@ -59,6 +62,16 @@ defmodule <%= web_module %>.ErrorHTML do
       )
 
       bare(assigns)
+  end
+
+  defp partials(language) do
+    {:ok, partials} =
+      Brando.Pages.get_fragments(%{
+        filter: %{parent_key: "partials", language: language},
+        cache: {:ttl, :infinite}
+      })
+
+    partials
   end
 
   defp bare(assigns) do

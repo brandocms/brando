@@ -151,6 +151,26 @@ defmodule BrandoWeb.FallbackController do
     |> put_layout(false)
     |> put_view(Brando.endpoint().config(:render_errors)[:formats])
     |> FourOhFour.add_404()
+    |> assign_partials()
     |> render(:"404")
+  end
+
+  # The error renders in the root layout the failing controller chose, and the
+  # site's layout renders its footer from the partials, which that controller
+  # had not assigned yet.
+  defp assign_partials(%{assigns: %{partials: _}} = conn), do: conn
+
+  defp assign_partials(conn) do
+    if root_layout(conn, "html") do
+      {:ok, partials} =
+        Pages.get_fragments(%{
+          filter: %{parent_key: "partials", language: conn.assigns.language},
+          cache: {:ttl, :infinite}
+        })
+
+      assign(conn, :partials, partials)
+    else
+      conn
+    end
   end
 end

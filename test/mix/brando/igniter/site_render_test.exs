@@ -129,6 +129,22 @@ defmodule Mix.Brando.Igniter.SiteRenderTest do
     assert render_to_string(RenderSiteWeb.ErrorHTML, "401", "html", []) == "Unauthorized"
   end
 
+  test "endpoint errors render the site's footer fragment, unless the conn has its own", %{conn: conn} do
+    Cachex.clear(:query)
+    on_exit(fn -> Cachex.clear(:query) end)
+
+    Brando.Factory.insert(:fragment,
+      parent_key: "partials",
+      key: "footer",
+      rendered_blocks: "<p>Site footer</p>"
+    )
+
+    assert render_to_string(RenderSiteWeb.ErrorHTML, "404", "html", conn: conn) =~ "<p>Site footer</p>"
+
+    own = Plug.Conn.assign(conn, :partials, %{})
+    refute render_to_string(RenderSiteWeb.ErrorHTML, "404", "html", conn: own) =~ "Site footer"
+  end
+
   test "without a conn, as phx.new's error test renders them, the pages render only the message" do
     html = render_to_string(RenderSiteWeb.ErrorHTML, "404", "html", [])
     assert html =~ "Page not found"
