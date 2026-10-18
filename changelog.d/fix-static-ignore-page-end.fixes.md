@@ -17,4 +17,9 @@
   (`manifest-<hash>.json`, `.gz` copies, `favicon-<hash>.ico`), which showed up
   as untracked files after a local production build. `priv/static` only holds
   build output in a Brando application, so the installer now writes
-  `/priv/static/` instead.
+  `/priv/static/` instead. Without the CMS public site, phx.new's
+  `priv/static/robots.txt` moves to `assets/frontend/public/robots.txt`, so it
+  stays tracked and reaches the release, which never had it: the Docker build
+  leaves `priv/static` out. A `.gitignore` with an exception inside
+  `priv/static` (`!/priv/static/.well-known/`) gets a notice instead of the
+  line, which would cancel it.

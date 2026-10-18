@@ -84,11 +84,12 @@ if Code.ensure_loaded?(Igniter) do
     end
 
     # Only a new install gets the public site: a rerun keeps what the
-    # application has, like the tenancy mode.
+    # application has, like the tenancy mode. Without it, phx.new's robots.txt
+    # moves to the frontend's public/ folder.
     defp public_site(igniter, project, options, fresh?) do
       if fresh? and options[:public_site] != false,
         do: Mix.Brando.Igniter.Site.plan(igniter, project, Keyword.put(options, :installing, true)),
-        else: igniter
+        else: PhoenixStatic.public_robots(igniter)
     end
 
     defp preflight(igniter, project) do

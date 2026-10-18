@@ -186,8 +186,16 @@ defmodule Mix.Brando.Igniter.InstallDeployTest do
     # install keeps a .keep, is tracked there, and its Vite copy is ignored.
     assert {_, 0} = check_ignore(dir, ["priv/static/images/photo.jpg"])
 
+    # mix brando.digest's digested copies and gzip files.
     for path <-
-          ~w(assets/frontend/public/favicon.ico assets/frontend/public/images/logo.svg assets/frontend/public/images/photo.jpg priv/repo/seeds.exs) do
+          ~w(priv/static/manifest-6043d8adc435f606826fef84b0cf6952.json priv/static/admin_manifest.json.gz
+             priv/static/favicon-51ad2559584f338e97b3fa532d009549.ico priv/static/robots.txt) do
+      assert {_, 0} = check_ignore(dir, [path]), path
+    end
+
+    for path <-
+          ~w(assets/frontend/public/favicon.ico assets/frontend/public/images/logo.svg assets/frontend/public/images/photo.jpg
+             assets/frontend/public/robots.txt priv/repo/seeds.exs) do
       assert {_, 1} = check_ignore(dir, [path]), path
     end
   end
@@ -215,6 +223,21 @@ defmodule Mix.Brando.Igniter.InstallDeployTest do
     added = String.replace_prefix(IgniterCase.source(igniter, ".gitignore"), skeleton <> "log\n!/media/\n", "")
     assert added =~ "\n/media/\n"
     refute added =~ "/log/"
+  end
+
+  test "a directory line that would cancel an exception inside it is named in a notice instead" do
+    # Git cannot re-include a file inside an ignored directory.
+    kept = "/priv/static/*\n!/priv/static/.well-known/\n.gitkeep\n!.gitkeep\n"
+    igniter = install(project(%{".gitignore" => kept}))
+    added = String.replace_prefix(IgniterCase.source(igniter, ".gitignore"), kept, "")
+
+    refute added =~ "/priv/static/"
+    # An exception that matches a name at any depth leaves the other directories as they were.
+    assert added =~ "\n/media/\n"
+    assert notice?(igniter, ".gitignore has exceptions")
+    assert notice?(igniter, "  /priv/static/")
+
+    refute install(project()) |> notice?(".gitignore has exceptions")
   end
 
   # A version manager's data folder (asdf's or mise's) with a folder for each
@@ -495,22 +518,45 @@ defmodule Mix.Brando.Igniter.InstallDeployTest do
     assert igniter.issues == []
 
     assert "priv/static/favicon.ico" in igniter.rms
-    assert igniter.moves == %{"priv/static/images/logo.svg" => "assets/frontend/public/images/logo.svg"}
-    # Without the public site nothing else answers /robots.txt.
-    Igniter.Test.assert_unchanged(igniter, "priv/static/robots.txt")
+    # Without the public site Plug.Static answers /robots.txt, from the frontend build's copy.
+    assert igniter.moves == %{
+             "priv/static/images/logo.svg" => "assets/frontend/public/images/logo.svg",
+             "priv/static/robots.txt" => "assets/frontend/public/robots.txt"
+           }
+
     refute notice?(igniter, "is not the file mix phx.new writes")
 
     applied = IgniterCase.apply_and_reload(igniter)
     refute Igniter.exists?(applied, "priv/static/favicon.ico")
     refute Igniter.exists?(applied, "priv/static/images/logo.svg")
+    refute Igniter.exists?(applied, "priv/static/robots.txt")
     assert IgniterCase.source(applied, "assets/frontend/public/images/logo.svg") == @phx_static["logo.svg"]
+    assert IgniterCase.source(applied, "assets/frontend/public/robots.txt") == @phx_static["robots.txt"]
 
     rerun = install(applied)
     assert rerun.issues == []
     assert rerun.rms == []
     assert rerun.moves == %{}
-    Igniter.Test.assert_unchanged(rerun, ["assets/frontend/public/images/logo.svg", "priv/static/robots.txt"])
+
+    Igniter.Test.assert_unchanged(rerun, [
+      "assets/frontend/public/images/logo.svg",
+      "assets/frontend/public/robots.txt"
+    ])
+
     refute notice?(rerun, "is not the file mix phx.new writes")
+  end
+
+  test "with the public site robots.txt is left to the SEO settings, also on a rerun" do
+    custom = "User-agent: *\nDisallow: /private/\n"
+    igniter = install(project(phx_static(%{"priv/static/robots.txt" => custom})))
+    assert igniter.issues == []
+    refute Map.has_key?(igniter.moves, "priv/static/robots.txt")
+    assert notice?(igniter, "BrandoWeb.SEOController answers")
+
+    rerun = igniter |> IgniterCase.apply_and_reload() |> install()
+    refute Map.has_key?(rerun.moves, "priv/static/robots.txt")
+    Igniter.Test.assert_unchanged(rerun, "priv/static/robots.txt")
+    refute notice?(rerun, "move it to assets/frontend/public/robots.txt")
   end
 
   test "changed priv/static files are kept with a notice, and the frontend build's copies are left alone" do
@@ -519,7 +565,8 @@ defmodule Mix.Brando.Igniter.InstallDeployTest do
         project(
           phx_static(%{
             "priv/static/favicon.ico" => "site favicon",
-            "priv/static/images/logo.svg" => "<svg>site logo</svg>\n"
+            "priv/static/images/logo.svg" => "<svg>site logo</svg>\n",
+            "priv/static/robots.txt" => "User-agent: *\nDisallow: /private/\n"
           })
         ),
         ["--yes", "--no-public-site"]
@@ -527,11 +574,18 @@ defmodule Mix.Brando.Igniter.InstallDeployTest do
 
     assert changed.rms == []
     assert changed.moves == %{}
-    Igniter.Test.assert_unchanged(changed, ["priv/static/favicon.ico", "priv/static/images/logo.svg"])
+
+    Igniter.Test.assert_unchanged(changed, [
+      "priv/static/favicon.ico",
+      "priv/static/images/logo.svg",
+      "priv/static/robots.txt"
+    ])
+
     # Each named as ignored by the .gitignore lines for what the builds write.
     for {path, public} <- [
           {"priv/static/favicon.ico", "assets/frontend/public/favicon.ico"},
-          {"priv/static/images/logo.svg", "assets/frontend/public/images/logo.svg"}
+          {"priv/static/images/logo.svg", "assets/frontend/public/images/logo.svg"},
+          {"priv/static/robots.txt", "assets/frontend/public/robots.txt"}
         ] do
       assert Enum.any?(
                changed.notices,

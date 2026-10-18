@@ -142,7 +142,8 @@ relative `media_path` and `log_dir` in `config/prod.exs`, and the
 `priv/static`, so phx.new's `favicon.ico` there is removed and its
 `images/logo.svg` moves to `assets/frontend/public/images`; with the public
 site, its `robots.txt` is removed too, so Brando answers
-`/robots.txt`. "Release helpers", "Media and
+`/robots.txt`, and without it `robots.txt` moves to `assets/frontend/public`.
+"Release helpers", "Media and
 log paths", "Ignored files" and "The Docker build" in the deployment guide
 describe each, and what an existing file keeps. Florist's own configuration,
 like sample content, remains separate.

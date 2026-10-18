@@ -7,6 +7,7 @@ if Code.ensure_loaded?(Igniter) do
 
     alias Igniter.Code.Function, as: CodeFunction
     alias Igniter.Project.Module, as: ProjectModule
+    alias Mix.Brando.Igniter.Install.Configuration
     alias Mix.Brando.Install.Templates
     alias Sourceror.Zipper
 
@@ -74,6 +75,45 @@ if Code.ensure_loaded?(Igniter) do
               """)
           end
       end
+    end
+
+    @doc """
+    Moves the `priv/static/robots.txt` `mix phx.new` writes to
+    `assets/frontend/public/robots.txt` in an application without the CMS site
+    (no `:page_html_module`), where `Plug.Static` answers `/robots.txt`. The
+    frontend build copies it back to `priv/static`, so the release has it and
+    Git tracks it. A copy of the public file is left alone, and any other file
+    is kept, with a notice. With the CMS site, `robots/2` removes it instead.
+    """
+    def public_robots(igniter) do
+      with {:ok, igniter, nil} <- Configuration.read(igniter, :page_html_module),
+           {igniter, contents} when is_binary(contents) <- read(igniter, @robots) do
+        {igniter, public} = read(igniter, @public_robots)
+
+        cond do
+          contents == public -> igniter
+          sha256(contents) != @robots_sha256 -> public_robots_notice(igniter, public)
+          public -> Igniter.rm(igniter, @robots)
+          true -> Igniter.move_file(igniter, @robots, @public_robots)
+        end
+      else
+        {:ok, igniter, _page_html_module} -> igniter
+        {igniter, nil} -> igniter
+        {:error, _message} -> igniter
+      end
+    end
+
+    defp public_robots_notice(igniter, public) do
+      move =
+        if public,
+          do: "Compare it with #{@public_robots}, which the frontend build copies over it, and delete it.",
+          else: "To ship and track it, move it to #{@public_robots}, which the frontend build copies to priv/static."
+
+      Igniter.add_notice(igniter, """
+      #{@robots} is not the file mix phx.new writes, so it was kept. The release does not have it:
+      the Docker build makes priv/static from the Vite builds. Git ignores it unless it is committed
+      already, as the frontend build writes it. #{move}
+      """)
     end
 
     defp favicon(igniter) do
