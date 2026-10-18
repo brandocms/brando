@@ -19,6 +19,16 @@ export default app => ({
     this.refreshActive = () => this.markActive()
     window.addEventListener('phx:page-loading-stop', this.refreshActive)
     this.markActive()
+
+    // On narrow screens the sidebar is a drawer (nav.ex): following a link
+    // closes it. Its own JS, so the toggle's aria-expanded stays sticky.
+    this.closeMobileNav = () => {
+      const toggle = document.getElementById('mobile-nav-toggle')
+      if (toggle && document.body.classList.contains('mobile-nav-open')) {
+        this.liveSocket.execJS(toggle, toggle.dataset.close)
+      }
+    }
+    window.addEventListener('phx:page-loading-start', this.closeMobileNav)
   },
 
   // The link for the page we are on: the one whose path is the longest
@@ -212,6 +222,7 @@ export default app => ({
 
   destroyed() {
     window.removeEventListener('phx:page-loading-stop', this.refreshActive)
+    window.removeEventListener('phx:page-loading-start', this.closeMobileNav)
     this.animations.stopAll()
     console.log('(!) Brando.Navigation destroyed')
   }

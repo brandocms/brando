@@ -9630,6 +9630,11 @@ msgstr "Medlemskapet er oppdatert."
 msgid "Mentions"
 msgstr "Omtaler"
 
+#: lib/brando_admin/live/nav.ex
+#, elixir-autogen, elixir-format
+msgid "Menu"
+msgstr "Meny"
+
 #: lib/brando_admin/components/form/input/identity_type_config.ex
 #, elixir-autogen, elixir-format
 msgid "Menu URL"

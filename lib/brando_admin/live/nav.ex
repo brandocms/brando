@@ -145,6 +145,31 @@ defmodule BrandoAdmin.Nav do
       >
         <.icon name="search" />
       </button>
+      <%!-- On narrow screens the sidebar is a drawer, opened from here; the
+            Navigation hook closes it on navigation. --%>
+      <button
+        type="button"
+        id="mobile-nav-toggle"
+        class="mobile-nav-toggle"
+        aria-label={gettext("Menu")}
+        aria-controls="sidebar"
+        aria-expanded="false"
+        data-close={close_mobile_nav()}
+        phx-click={
+          JS.toggle_class("mobile-nav-open", to: "body")
+          |> JS.toggle_attribute({"aria-expanded", "true", "false"})
+        }
+      >
+        <.icon name="menu" />
+      </button>
+      <div
+        class="mobile-nav-backdrop"
+        aria-hidden="true"
+        phx-click={close_mobile_nav()}
+        phx-window-keydown={close_mobile_nav()}
+        phx-key="Escape"
+      >
+      </div>
       <div
         class="sidebar"
         id="sidebar"
@@ -348,6 +373,11 @@ defmodule BrandoAdmin.Nav do
       </div>
     </div>
     """
+  end
+
+  defp close_mobile_nav do
+    JS.remove_class("mobile-nav-open", to: "body")
+    |> JS.set_attribute({"aria-expanded", "false"}, to: "#mobile-nav-toggle")
   end
 
   attr :items, :list, required: true
