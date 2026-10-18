@@ -8,12 +8,20 @@
   def index(assigns) do
 <%= base_path %>    ~H"""
     <main id="content">
-      <h1><%= Phoenix.Naming.humanize(plural) %></h1>
-      <ul>
-        <li :for={entry <- @entries}>
-          <.link href={"<%= index_path %>/#{entry.<%= param %>}"}>{entry.<%= main_field %>}</.link>
-        </li>
-      </ul>
+      <header class="page-section">
+        <div class="inner">
+          <h1><%= Phoenix.Naming.humanize(plural) %></h1>
+        </div>
+      </header>
+      <section class="page-section">
+        <div class="inner">
+          <ul>
+            <li :for={entry <- @entries}>
+              <.link href={"<%= index_path %>/#{entry.<%= param %>}"}>{entry.<%= main_field %>}</.link>
+            </li>
+          </ul>
+        </div>
+      </section>
     </main>
     """
   end
@@ -21,11 +29,17 @@
   def show(assigns) do
 <%= base_path %>    ~H"""
     <main id="content">
-      <article>
-        <h1>{@entry.<%= main_field %>}</h1><%= for field <- blocks do %>
-        <Brando.HTML.render_blocks entry={@entry}<%= if field != :blocks, do: " field={:#{field}}" %> /><% end %>
-      </article>
-      <.link href=<%= if language, do: "{@base_path}", else: inspect(public_route) %>>Back to <%= String.replace(plural, "_", " ") %></.link>
+      <header class="page-section">
+        <div class="inner">
+          <h1>{@entry.<%= main_field %>}</h1>
+        </div>
+      </header><%= for field <- blocks do %>
+      <Brando.HTML.render_blocks entry={@entry}<%= if field != :blocks, do: " field={:#{field}}" %> /><% end %>
+      <div class="page-section">
+        <div class="inner">
+          <.link href=<%= if language, do: "{@base_path}", else: inspect(public_route) %>>Back to <%= String.replace(plural, "_", " ") %></.link>
+        </div>
+      </div>
     </main>
     """
   end

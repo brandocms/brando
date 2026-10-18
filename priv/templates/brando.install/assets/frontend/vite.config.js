@@ -41,6 +41,10 @@ export default defineConfig(({ command }) => ({
         main: 'js/index.js',
         critical: 'js/critical.js',
       },
+      // vite-plugin-eslint lints every module in a transform hook, which
+      // trips Rolldown's plugin timing report on every build. Newer Rolldown
+      // calls this check `bundlerTimings` and still reads this name.
+      checks: { pluginTimings: false },
     },
     terserOptions: {
       mangle: true,

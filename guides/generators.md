@@ -595,8 +595,9 @@ blocks (`Brando.HTML.render_blocks/1`). Templates do not assume an image field.
 `--main-field` selects a display/filter field; otherwise the generator prefers
 `title`, a string field, then `id`.
 
-With the [CMS public pages](#add-cms-public-pages) (`mix brando.gen.site`, or
-`mix brando.install --public-site`), the routes go in a scope that pipes through
+With the [CMS public pages](#add-cms-public-pages) (installed by
+`mix brando.install` unless you pass `--no-public-site`, or added later with
+`mix brando.gen.site`), the routes go in a scope that pipes through
 `[:browser, :brando_site]`, as the CMS pages do, so tenant, locale, identity,
 navigation and [lockdown](#lockdown) apply to them. The scope goes after the
 `:brando_site` pipeline and before the CMS catch-all. The controller renders in
@@ -604,6 +605,11 @@ navigation and [lockdown](#lockdown) apply to them. The scope goes after the
 does, and puts the entry's meta tags, title and, for a translatable Blueprint,
 hreflang links. A missing entry goes to `BrandoWeb.FallbackController`, which
 follows a matching redirect or renders the site's [404 page](#error-pages).
+The rendered blocks are direct children of `main`, and the heading, list and
+back link sit in `<div class="inner">` inside `.page-section` wrappers, which the
+installed frontend's `modules.css` spaces with `@space container;` like the
+seeded modules. The heading's `header.page-section` gets the seeded hero's top
+space below the navigation.
 
 Without the CMS site, the routes pipe through `:browser` only, the pages render
 in your application's layout, and the controller resolves the tenant itself. A

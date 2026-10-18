@@ -23,6 +23,13 @@ defmodule Brando.Environments.CopyPostgresIntegrationTest do
     Application.put_env(:brando, :repo_module, Repo)
     Application.delete_env(:brando, :environment_schema_cloner)
 
+    # Registered before the queries below, so a setup that raises still puts
+    # the config back for the tests after it
+    on_exit(fn ->
+      IntegrationRepo.restore_env(:repo_module, previous_repo)
+      IntegrationRepo.restore_env(:environment_schema_cloner, previous_cloner)
+    end)
+
     unique = System.unique_integer([:positive])
     site_key = "copyint#{unique}"
 
@@ -62,8 +69,6 @@ defmodule Brando.Environments.CopyPostgresIntegrationTest do
     on_exit(fn ->
       drop_site_schemas(site_key)
       SQL.query!(Repo, "DELETE FROM public.sites WHERE id = $1", [site_id])
-      IntegrationRepo.restore_env(:repo_module, previous_repo)
-      IntegrationRepo.restore_env(:environment_schema_cloner, previous_cloner)
       Cache.clear()
     end)
 

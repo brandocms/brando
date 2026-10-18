@@ -19,14 +19,23 @@ main {
  *
  * Every section is full-bleed so it can own a background, and carries the
  * container itself. `.inner` adds the indent the text column sits on.
+ * `.page-section` wraps a template's own markup between the blocks, such as
+ * the heading and links of the pages `mix brando.gen --public-route` makes.
  */
 
-main > [b-tpl] {
+main > [b-tpl],
+main > .page-section {
   @space container;
 }
 
-main > [b-tpl] > .inner {
+main > [b-tpl] > .inner,
+main > .page-section > .inner {
   @space padding-x indent $lg;
+}
+
+/* A page's own heading opens the page as the seeded hero does. */
+main > header.page-section {
+  @space padding-top xl;
 }
 
 /* Villain wraps a text block's content, so the block — not the last paragraph
