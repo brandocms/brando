@@ -4,6 +4,8 @@ defmodule BrandoWeb.FallbackController do
   import Brando.Plug.HTML
   import Plug.Conn
 
+  require Logger
+
   alias Brando.I18n
   alias Brando.Pages
   alias Brando.Sites.FourOhFour
@@ -161,16 +163,22 @@ defmodule BrandoWeb.FallbackController do
   defp assign_partials(%{assigns: %{partials: _}} = conn), do: conn
 
   defp assign_partials(conn) do
-    if root_layout(conn, "html") do
-      {:ok, partials} =
-        Pages.get_fragments(%{
-          filter: %{parent_key: "partials", language: conn.assigns.language},
-          cache: {:ttl, :infinite}
-        })
+    if root_layout(conn, "html"),
+      do: assign(conn, :partials, partials(conn.assigns.language)),
+      else: conn
+  end
 
-      assign(conn, :partials, partials)
-    else
-      conn
-    end
+  # A footer is not worth turning the 404 into a 500: when the fragments cannot
+  # be read (the database is down and the cache is cold), the page renders
+  # without them.
+  defp partials(language) do
+    {:ok, partials} =
+      Pages.get_fragments(%{filter: %{parent_key: "partials", language: language}, cache: {:ttl, :infinite}})
+
+    partials
+  rescue
+    exception ->
+      Logger.warning("The 404 page rendered without the partials, which raised:\n" <> Exception.message(exception))
+      %{}
   end
 end

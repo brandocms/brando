@@ -3,6 +3,7 @@ defmodule BrandoWeb.FallbackControllerTest do
   use Brando.ConnCase, async: false
 
   import Brando.Test.Support, only: [put_test_env: 2]
+  import ExUnit.CaptureLog, only: [capture_log: 1]
 
   alias Brando.Factory
   alias BrandoWeb.FallbackController
@@ -74,13 +75,13 @@ defmodule BrandoWeb.FallbackControllerTest do
     def root(assigns), do: ~H|<body id="site">{@inner_content}{@partials["footer"]}</body>|
   end
 
-  defp built_in_404(root_layout) do
+  defp built_in_404(root_layout, language \\ "en") do
     put_test_env(:use_default_errors, true)
     put_test_env(:endpoint_module, ErrorEndpoint)
 
     build_conn(:get, "/articles/missing")
     |> Plug.Test.init_test_session(%{})
-    |> assign(:language, "en")
+    |> assign(:language, language)
     |> Phoenix.Controller.put_view(html: ResourceHTML)
     |> Phoenix.Controller.put_format("html")
     |> Phoenix.Controller.put_layout(false)
@@ -95,6 +96,23 @@ defmodule BrandoWeb.FallbackControllerTest do
 
     assert conn.status == 404
     assert conn.resp_body == ~s(<body id="site">Page not found<footer>Footer</footer></body>)
+  end
+
+  test "the built-in 404 stays a 404 in its layout when the partials cannot be read" do
+    previous = Logger.level()
+    Logger.configure(level: :warning)
+    on_exit(fn -> Logger.configure(level: previous) end)
+
+    # Not a language the fragments' column takes, so the query raises.
+    log =
+      capture_log(fn ->
+        conn = built_in_404({FooterLayouts, :root}, "xx")
+
+        assert conn.status == 404
+        assert conn.resp_body == ~s(<body id="site">Page not found</body>)
+      end)
+
+    assert log =~ "The 404 page rendered without the partials"
   end
 
   test "the built-in 404 without a root layout reads no partials" do

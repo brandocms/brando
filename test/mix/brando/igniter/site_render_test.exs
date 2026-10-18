@@ -145,6 +145,26 @@ defmodule Mix.Brando.Igniter.SiteRenderTest do
     refute render_to_string(RenderSiteWeb.ErrorHTML, "404", "html", conn: own) =~ "Site footer"
   end
 
+  test "an error page whose partials cannot be read keeps the layout without them", %{conn: conn} do
+    previous = Logger.level()
+    Logger.configure(level: :warning)
+    on_exit(fn -> Logger.configure(level: previous) end)
+
+    # Not a language the fragments' column takes, so the query raises.
+    conn = Plug.Conn.assign(conn, :language, "xx")
+
+    log =
+      capture_log(fn ->
+        html = render_to_string(RenderSiteWeb.ErrorHTML, "500", "html", conn: conn)
+        assert html =~ ~s(<html lang="xx">)
+        assert html =~ ~s(id="top")
+        assert html =~ "Something went wrong"
+      end)
+
+    assert log =~ "The error page rendered without the partials"
+    refute log =~ "without the site's layout"
+  end
+
   test "without a conn, as phx.new's error test renders them, the pages render only the message" do
     html = render_to_string(RenderSiteWeb.ErrorHTML, "404", "html", [])
     assert html =~ "Page not found"

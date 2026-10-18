@@ -64,6 +64,8 @@ defmodule <%= web_module %>.ErrorHTML do
       bare(assigns)
   end
 
+  # When the fragments cannot be read, the page keeps the layout and loses only
+  # the footer.
   defp partials(language) do
     {:ok, partials} =
       Brando.Pages.get_fragments(%{
@@ -72,6 +74,14 @@ defmodule <%= web_module %>.ErrorHTML do
       })
 
     partials
+  rescue
+    exception ->
+      Logger.warning(
+        "The error page rendered without the partials, which raised:\n" <>
+          Exception.message(exception)
+      )
+
+      %{}
   end
 
   defp bare(assigns) do
