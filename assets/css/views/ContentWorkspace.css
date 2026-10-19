@@ -4,9 +4,10 @@
    their own (users, media libraries) must keep their own row layout. The child
    combinator replaces the old `:has(> .content-list-wrapper)` without its cost,
    and :where() keeps the specificity it had before. */
-.listing-status-label, .children-button-disclosure { display: none; }
+.listing-status-label { display: none; }
 .admin-workspace.content-workspace > :where(.content-list-wrapper) {
-  .content-list .list-row .main-content, .content-list .child-row { display: flex; flex-wrap: nowrap; align-items: center; gap: 16px; width: 100%; margin: 0; padding: 10px 16px; }
+  --listing-gap: 16px;
+  .content-list .list-row .main-content, .content-list .child-row { display: flex; flex-wrap: nowrap; align-items: center; gap: var(--listing-gap); width: 100%; margin: 0; padding: 10px 16px; }
   .content-list .list-row .main-content > div, .content-list .child-row > div { width: auto; max-width: none; min-width: 0; margin: 0; padding: 0; }
   .content-list .list-row .main-content > .status, .content-list .child-row > .status { position: static; flex: 0 0 108px; order: 6; border: 0; cursor: default; }
   /* The status is a badge in its tone (row.ex), and the trigger of the status
@@ -50,25 +51,62 @@
   .content-list .list-row .main-content > .listing-creator, .content-list .child-row > .listing-creator { flex: 0 0 180px; order: 7; }
   .item-meta .name, .item-meta .time { color: var(--workspace-muted); font-size: var(--brando-text-sm); }
   .content-list .list-row .circle-dropdown { order: 8; }
-  /* The button that opens a row's children has a column of its own, just
-     before the status, so it is in the same place in every row that has one
-     (rows without children keep the empty slot). At least 132px; a longer
-     label ("12 sider, 14 fragmenter") widens it rather than overflowing. */
-  .content-list .list-row .main-content > div:has(> .children-button) { display: flex; justify-content: flex-end; flex: 0 0 auto; min-width: 132px; order: 5; }
   .content-list .list-row .entry-link { font-size: var(--brando-text-lg); font-weight: 500; }
-  .children-button button { display: inline-flex; align-items: center; justify-content: center; width: auto; min-width: 52px; max-width: none; height: 28px; aspect-ratio: auto; padding: 0 9px; border: 1px solid var(--brando-line); border-radius: var(--brando-radius-md); background: var(--brando-surface-tint); color: var(--brando-accent); font-family: inherit; font-size: var(--brando-text-sm); line-height: 20px; }
-  .children-button button:hover, .children-button button[aria-expanded="true"] { background: var(--brando-surface-selected); color: var(--brando-accent); border-color: var(--brando-line-strong); }
-  .children-button button .children-button-count, .children-button button .children-button-close { display: none; }
-  .children-button-disclosure { display: flex; align-items: center; justify-content: center; gap: 7px; font-size: var(--brando-text-sm); line-height: 20px; }
-  .children-number { font-variant-numeric: tabular-nums; }
-  .children-button-text { white-space: nowrap; }
-  /* The text already says how many; keep only the chevron beside it. */
-  .children-button button.text .children-number { display: none; }
-  .children-button button.text { gap: 6px; padding: 0 10px 0 8px; }
-  .children-button-disclosure [data-icon] { display: block; flex: 0 0 14px; width: 14px; height: 14px; transition: transform .15s; }
-  .children-button button[aria-expanded="true"] [data-icon] { transform: rotate(90deg); }
-  .content-list .child-rows { margin: 0 16px 0 38px; padding: 0; border-left: 1px solid var(--workspace-line); }
-  .content-list .child-row { background: var(--brando-surface-shaded); border-radius: 0; border-top: 1px solid var(--workspace-line); padding-left: 12px; }
+  /* A row with children (Children.children_button, ChildListingButton): the
+     chevron is the button, in front of the title; the summary ("3 pages ·
+     2 fragments") has a column of its own right after the title (the row
+     component renders the button after its title; both keep order 0), before
+     every fixed-width column, so child rows (which have none) keep those
+     columns under the parent's. It toggles too.
+     The wrappers step aside so both are items of the row. Rows without
+     children keep both slots, so titles and statuses stay in line. */
+  .content-list .list-row .main-content > div:has(> .children-button), .children-button { display: contents; }
+  .content-list .list-row .main-content > .seq { order: -2; }
+  .children-button > button { order: -1; display: grid; place-items: center; flex: 0 0 22px; width: 22px; height: 22px; max-width: none; aspect-ratio: auto; margin: 0 -2px; padding: 0; border: 0; border-radius: 5px; background: none; color: var(--workspace-muted); cursor: pointer; }
+  .children-button > button:hover { background: var(--workspace-wash); color: var(--workspace-ink); }
+  .children-button > button [data-icon] { display: block; width: 15px; height: 15px; transition: transform .15s; }
+  .children-button > button[aria-expanded="true"] [data-icon] { transform: rotate(90deg); }
+  .children-button > button .children-button-text { display: none; }
+  .children-summary { order: 0; flex: 0 0 150px; overflow: hidden; color: var(--workspace-muted); font-size: var(--brando-text-sm); line-height: 18px; text-align: right; white-space: nowrap; text-overflow: ellipsis; cursor: pointer; }
+  .children-summary:hover { color: var(--workspace-ink); }
+  .children-button.hidden > * { visibility: hidden; }
+  /* The children of an open row hang from it as a tree: each line in the
+     parent's columns (everything after the title has a fixed width, so the
+     status and author fall under the parent's), its content starting under
+     the parent's title, a connector from the parent's chevron, the grip
+     kept in its own column. Children that belong to the entry rather than to
+     the tree, like a page's fragments, are a line of chips instead. */
+  .content-list :is(.child-rows, .child-chips) { --tree-x: calc(16px + 20px + var(--listing-gap) + 10px); --tree-indent: calc(16px + 20px + var(--listing-gap) + 22px + var(--listing-gap) + 18px); }
+  .content-list .child-rows { margin: 0; padding: 0; border: 0; }
+  .content-list .child-row { position: relative; min-height: 48px; padding-block: 7px; padding-left: var(--tree-indent); border-top: 1px solid var(--brando-line-soft); border-radius: 0; background: var(--brando-surface); }
+  .content-list .child-row > .seq { position: absolute; left: 16px; top: 50%; translate: 0 -50%; }
+  .content-list .child-row::before { content: ""; position: absolute; left: var(--tree-x); top: 0; bottom: 50%; width: calc(var(--tree-indent) - var(--tree-x) - 8px); border-left: 1px solid var(--brando-line-strong); border-bottom: 1px solid var(--brando-line-strong); border-bottom-left-radius: 6px; pointer-events: none; }
+  .content-list .child-row:not(:last-child)::after { content: ""; position: absolute; left: var(--tree-x); top: 50%; bottom: 0; border-left: 1px solid var(--brando-line-strong); pointer-events: none; }
+  .content-list .child-row .entry-link { font-size: var(--brando-text-lg); }
+  /* Chips: "Fragments", then one small card each, then the add action */
+  .content-list .child-chips { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 10px 16px 12px var(--tree-indent); border-top: 1px solid var(--brando-line-soft); background: var(--brando-surface-shaded); }
+  .child-chips-label { margin-right: 4px; color: var(--workspace-muted); font-size: var(--brando-text-sm); line-height: 18px; }
+  .child-chip { display: inline-flex; align-items: center; gap: 6px; min-height: 28px; max-width: 100%; margin: 0; padding: 0 2px 0 9px; border: 1px solid var(--workspace-line); border-radius: 14px; background: var(--brando-surface); color: var(--workspace-ink); font-size: var(--brando-text-md); line-height: 18px; }
+  .child-chip:hover { border-color: var(--brando-line-strong); }
+  /* Opening (openingRow.js, Opening.css): tinted like a row, with the line
+     along its foot kept inside the rounded ends, since the chip can't clip
+     (its menu opens below it). Child rows take the tint over their white. */
+  .content-list :is(.child-chip, .child-row).is-opening { background: var(--brando-surface-hover); }
+  .child-chip.is-opening { position: relative; border-color: var(--brando-line-strong); }
+  .child-chip.is-opening > .list-row-progress { left: 12px; right: 12px; border-radius: 1px; }
+  .child-chip-icon { flex: none; width: 13px; height: 13px; color: var(--workspace-muted); }
+  /* Outranks the row title's flex basis and 120px minimum above */
+  .content-list .list-row .child-chip > .listing-title { display: inline-flex; flex: 0 1 auto; align-items: baseline; gap: 6px; min-width: 0; }
+  .content-list .child-chip .entry-link { overflow: hidden; font-size: var(--brando-text-md); font-weight: 400; line-height: 18px; white-space: nowrap; text-overflow: ellipsis; }
+  .content-list .child-chip .entry-link::after { content: none; }
+  .child-chip-key { color: var(--workspace-muted); font-family: var(--brando-font-mono); font-size: var(--brando-text-xs); white-space: nowrap; }
+  .child-chip-state { color: var(--workspace-muted); font-size: var(--brando-text-xs); white-space: nowrap; }
+  .content-list .child-chip .circle-dropdown { flex: none; margin: 0; }
+  .content-list .child-chip .circle-dropdown-button { width: 24px; height: 24px; padding: 2px; }
+  .content-list .child-chip .circle-dropdown-button > svg { width: 16px; height: 16px; }
+  .child-chip--add { padding: 0 11px 0 8px; border-style: dashed; background: none; color: var(--workspace-muted); font-family: inherit; cursor: pointer; }
+  .child-chip--add:hover { background: var(--brando-surface); color: var(--workspace-accent); }
+  .child-chip--add [data-icon] { width: 13px; height: 13px; }
   .listing-module-icon { flex: 0 0 32px; }
   .listing-module-icon .svg { display: flex; width: 32px; height: 32px; align-items: center; justify-content: center; }
   .listing-module-icon img { width: 28px; height: 28px; object-fit: contain; }
@@ -80,10 +118,9 @@
   @media (max-width: 1200px) {
     .content-list .list-row .main-content > .listing-creator, .content-list .child-row > .listing-creator { flex-basis: 140px; }
     .listing-category { flex-basis: 180px; }
-    .content-list .list-row .main-content > div:has(> .children-button) { min-width: 0; }
   }
   @media (max-width: 1000px) {
-    .content-list .list-row .main-content, .content-list .child-row { gap: 12px; }
+    --listing-gap: 12px;
     .content-list .list-row .main-content > .listing-creator, .content-list .child-row > .listing-creator { flex: 0 1 140px; min-width: 96px; }
   }
   /* On a phone a row is two lines: the title (and its URL), the children and
@@ -92,11 +129,14 @@
   @media (max-width: 600px) {
     .content-list .list-row .main-content, .content-list .child-row { display: grid; grid-template-columns: 20px minmax(0, max-content) minmax(0, 1fr) minmax(0, auto) 30px; gap: 6px 8px; padding: 12px 6px; }
     .listing-expiry { white-space: normal; }
-    .children-button button { max-width: 100%; }
-    .children-button-text { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+    /* The chevron button carries the summary on a phone, at the end of the
+       title's line */
+    .children-button > button { grid-column: 4; grid-row: 1; align-self: start; display: inline-flex; gap: 6px; width: auto; max-width: 100%; height: 28px; margin: 0; padding: 0 10px 0 8px; border: 1px solid var(--workspace-line); border-radius: var(--brando-radius-md); background: var(--brando-surface-tint); color: var(--workspace-accent); font-size: var(--brando-text-sm); }
+    .children-button > button .children-button-text { display: block; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .children-summary { display: none; }
+    .children-button.hidden > button { display: none; }
     .content-list .list-row .seq { grid-column: 1; grid-row: 1; align-self: start; padding-top: 2px; }
     .content-list .list-row :is(.listing-title, div:has(> .entry-link)) { grid-column: 2 / 4; grid-row: 1; }
-    .content-list .list-row .main-content > div:has(> .children-button) { grid-column: 4; grid-row: 1; align-self: start; flex: none; }
     .content-list .list-row .main-content > .status, .content-list .child-row > .status { grid-column: 2; grid-row: 2; }
     .content-list .status:has(> .listing-expiry) { flex-direction: row; flex-wrap: wrap; align-items: center; gap: 0 4px; }
     .listing-expiry { margin: 0; }
@@ -109,7 +149,10 @@
     .content-list .child-row:has(> .listing-kind) > .listing-creator { grid-column: 3; }
     .listing-module-icon { display: none; }
     .listing-category { grid-column: 2 / -1; grid-row: 3; }
-    .content-list .child-rows { margin-left: 16px; margin-right: 0; }
+    .content-list :is(.child-rows, .child-chips) { --tree-x: 12px; --tree-indent: 26px; }
+    .content-list .child-row { padding: 10px 6px 10px 26px; }
+    .content-list .child-row > .seq { position: static; translate: none; }
+    .content-list .child-chips { padding: 10px 6px 12px 26px; }
     /* The author on one line, without the avatar: "Brando Admin · 15.10.26 · 23:47" */
     .content-list .listing-creator .avatar-wrapper { display: none; }
     .content-list .listing-creator .info { display: flex; align-items: baseline; gap: 6px; min-width: 0; white-space: nowrap; }
@@ -117,7 +160,7 @@
     .content-list .listing-creator .name::after { content: " ·"; }
     .content-list .listing-creator .time { flex: none; }
   }
-  @media (pointer: coarse) { .children-button button, .circle-dropdown-button { min-height: 40px; } }
+  @media (pointer: coarse) { .children-button > button, .circle-dropdown-button { min-width: 40px; min-height: 40px; } }
 }
 .media-workspace {
   .library-file-icon, .library-video-thumbnail { display: grid; place-items: center; color: var(--brando-faint); }

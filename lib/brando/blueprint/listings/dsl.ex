@@ -14,6 +14,17 @@ defmodule Brando.Blueprint.Listings.Dsl do
         type: :atom,
         required: true,
         doc: "Child listing schema"
+      ],
+      style: [
+        type: {:in, [:rows, :chips]},
+        default: :rows,
+        doc:
+          "How the children show under their parent: `:rows`, a row each in the parent's columns, or `:chips`, one line of small cards"
+      ],
+      add: [
+        type: :string,
+        required: false,
+        doc: "With `style: :chips`, the event of a parent listing action that adds a child; its button ends the line"
       ]
     ]
   }

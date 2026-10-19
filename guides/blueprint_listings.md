@@ -364,9 +364,11 @@ as an `:i18n_string` attribute: `<.i18n map={@entry.subtitle} />`.
 The listing preloads every image asset of the schema, so
 `<.cover image={@entry.cover} columns={2} />` needs no `query` preload.
 
-`Children.children_button/1` toggles [child rows](#child-listings). It takes
-`entry` and `fields` (required), plus `columns` (default 1), `offset` and
-`class`.
+`Children.children_button/1` toggles [child rows](#child-listings): a
+chevron in front of the row's title, and a summary of what it opens ("3
+pages · 2 fragments") in a column before the fixed columns. Render it right
+after the row's title cell, so the summary keeps that place. It takes `entry`
+and `fields` (required), plus `columns` (default 1), `offset` and `class`.
 
 ## The listing query
 
@@ -891,6 +893,28 @@ end
 listing declared in the same Blueprint, the parent's. `schema` is the
 module of the child entries. A listing can have one child listing per
 schema.
+
+Children show as a tree under their parent: a row each, in the parent's
+columns, with a connector from the parent's chevron. Children that belong
+to the entry rather than to the tree read better as one line of small cards:
+give their `child_listing` `style: :chips`. Each chip is the child listing's
+`component`, the child's status when it isn't published, and its action
+menu. `add:` names the event of one of the parent listing's own `action`s;
+its button ends the line, and it pushes the event with the parent's `id` and
+`language`. Pages show their fragments this way:
+
+```elixir
+action label: t("Create fragment"), event: "create_fragment"
+child_listing name: :page_children, schema: Brando.Pages.Page
+child_listing name: :fragment_children, schema: Brando.Pages.Fragment, style: :chips, add: "create_fragment"
+```
+
+The child listing of chips must have a `component` (a Blueprint without one
+fails to compile), and it should be short, the title and perhaps a key: it
+is drawn on one line. An `add:` action with `confirm` asks before it runs,
+as it does in the menu. Chips aren't sortable. The order of `fields` in
+`children_button` is the order the children open in, with chips after the
+rows.
 
 `children_button` counts the entries in each of `fields` and is hidden when
 there are none. The fields are associations of the entry and must be

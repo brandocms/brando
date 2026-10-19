@@ -7384,7 +7384,6 @@ msgstr "Skjemaer besøkende fyller ut på nettstedet"
 msgid "Founding date"
 msgstr "Stiftelsesdato"
 
-#: lib/brando/pages/page.ex
 #: lib/brando_admin/components/form/block/render.ex
 #: lib/brando_admin/components/form/block_field.ex
 #: lib/brando_admin/components/form/block_field/module_picker.ex
@@ -15452,6 +15451,16 @@ msgstr "Vis innebygde spillerkontroller"
 msgid "Show older activity"
 msgstr "Vis eldre aktivitet"
 
+#: lib/brando_admin/components/child_listing_button.ex
+#, elixir-autogen, elixir-format
+msgid "Show or hide %{children}"
+msgstr "Vis eller skjul %{children}"
+
+#: lib/brando_admin/components/child_listing_button.ex
+#, elixir-autogen, elixir-format
+msgid "Show or hide %{count} children"
+msgstr "Vis eller skjul %{count} underoppføringer"
+
 #: lib/brando_admin/components/image_picker.ex
 #, elixir-autogen, elixir-format
 msgid "Show the whole library"
@@ -15961,11 +15970,6 @@ msgstr "Graf over strukturerte data"
 #, elixir-autogen, elixir-format
 msgid "Styles"
 msgstr "Stiler"
-
-#: lib/brando/pages/page.ex
-#, elixir-autogen, elixir-format
-msgid "Sub page"
-msgstr "Underside"
 
 #: lib/brando_admin/live/forms/submissions_live.ex
 #, elixir-autogen, elixir-format

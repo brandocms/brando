@@ -157,8 +157,8 @@ defmodule Brando.Pages.Page do
       action label: t("Create subpage"), event: "create_subpage"
       action label: t("Create fragment"), event: "create_fragment"
 
-      child_listing name: :fragment_children, schema: @fragment_module
       child_listing name: :page_children, schema: Brando.Pages.Page
+      child_listing name: :fragment_children, schema: @fragment_module, style: :chips, add: "create_fragment"
 
       component &__MODULE__.listing_row/1
     end
@@ -206,26 +206,20 @@ defmodule Brando.Pages.Page do
         </div>
       </:outside>
     </.update_link>
-    <.children_button entry={@entry} fields={[:fragments, :children]} />
+    <.children_button entry={@entry} fields={[:children, :fragments]} />
     """
   end
 
+  # A chip under its page (`style: :chips`): the title and the key the
+  # templates use.
   def listing_fragment_row(assigns) do
     ~H"""
-    <.update_link class="listing-title" entry={@entry} columns={6}>
+    <.update_link class="listing-title" entry={@entry} columns={nil}>
       {@entry.title}
       <:outside>
-        <br />
-        <div class="badge no-border">
-          <Brando.HTML.Icon.icon name="key" class="mr-1" /> {@entry.parent_key}/{@entry.key}
-        </div>
+        <span class="child-chip-key">{@entry.parent_key}/{@entry.key}</span>
       </:outside>
     </.update_link>
-    <div class="col-3 listing-kind">
-      <div class="badge">
-        {gettext("Fragment")}
-      </div>
-    </div>
     """
   end
 
@@ -247,11 +241,6 @@ defmodule Brando.Pages.Page do
         </div>
       </:outside>
     </.update_link>
-    <div class="col-2 listing-kind">
-      <div class="badge">
-        {gettext("Sub page")}
-      </div>
-    </div>
     """
   end
 

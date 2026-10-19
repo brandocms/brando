@@ -16,7 +16,8 @@
 //
 // Dependency-free, so `test/javascript/opening_row.test.mjs` can load it.
 
-const ROW = '.child-row, .list-row'
+// A fragment chip (`child_listing … style: :chips`) is its own target, not its parent's row
+const ROW = '.child-chip, .child-row, .list-row'
 
 export const openingRow = (to, doc = document) => {
   const link = Array.from(doc.querySelectorAll('a.phx-click-loading[data-phx-link="redirect"]')).find(

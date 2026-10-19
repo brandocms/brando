@@ -19,12 +19,12 @@ defmodule Brando.Blueprint.SecondaryVerifier.Listings do
   @doc false
   def verify(dsl_state) do
     listings = Verifier.get_entities(dsl_state, [:listings])
-    listing_names = MapSet.new(listings, & &1.name)
+    listings_by_name = Map.new(listings, &{&1.name, &1})
 
-    Support.validate_entities(listings, &verify_listing(dsl_state, listing_names, &1))
+    Support.validate_entities(listings, &verify_listing(dsl_state, listings_by_name, &1))
   end
 
-  defp verify_listing(dsl_state, listing_names, listing) do
+  defp verify_listing(dsl_state, listings_by_name, listing) do
     path = [:listings, listing.name]
 
     with :ok <- Support.verify_key(dsl_state, path, listing, "listing", listing.name),
@@ -42,7 +42,7 @@ defmodule Brando.Blueprint.SecondaryVerifier.Listings do
          :ok <- Support.validate_entities(listing.exports, &verify_export(dsl_state, listing, &1)) do
       Support.validate_entities(
         listing.child_listings,
-        &verify_child_listing(dsl_state, listing, listing_names, &1)
+        &verify_child_listing(dsl_state, listing, listings_by_name, &1)
       )
     end
   end
@@ -288,21 +288,54 @@ defmodule Brando.Blueprint.SecondaryVerifier.Listings do
     end
   end
 
-  defp verify_child_listing(dsl_state, listing, listing_names, child_listing) do
+  defp verify_child_listing(dsl_state, listing, listings_by_name, child_listing) do
     path = [:listings, listing.name, :child_listings, child_listing.name]
 
     with :ok <- Support.verify_key(dsl_state, path, child_listing, "child listing", child_listing.name),
-         :ok <- verify_child_listing_schema(dsl_state, path, child_listing) do
-      if MapSet.member?(listing_names, child_listing.name) do
-        :ok
-      else
-        Support.error(
-          dsl_state,
-          path,
-          child_listing,
-          "child listing references undeclared listing #{inspect(child_listing.name)}"
-        )
+         :ok <- verify_child_listing_schema(dsl_state, path, child_listing),
+         :ok <- verify_child_listing_add(dsl_state, path, listing, child_listing) do
+      case Map.fetch(listings_by_name, child_listing.name) do
+        {:ok, child} ->
+          verify_child_listing_chips(dsl_state, path, child_listing, child)
+
+        :error ->
+          Support.error(
+            dsl_state,
+            path,
+            child_listing,
+            "child listing references undeclared listing #{inspect(child_listing.name)}"
+          )
       end
+    end
+  end
+
+  # A chip is the child listing's `component` on one line; without one there
+  # is nothing to draw (rows fall back to the listing's fields).
+  defp verify_child_listing_chips(dsl_state, path, %{style: :chips} = child_listing, %{component: nil}) do
+    Support.error(
+      dsl_state,
+      path,
+      child_listing,
+      "child listing #{inspect(child_listing.name)} with style: :chips needs a component in its listing"
+    )
+  end
+
+  defp verify_child_listing_chips(_dsl_state, _path, _child_listing, _child), do: :ok
+
+  # The add button pushes one of the parent listing's own actions, so the event
+  # must name one of them.
+  defp verify_child_listing_add(_dsl_state, _path, _listing, %{add: nil}), do: :ok
+
+  defp verify_child_listing_add(dsl_state, path, listing, %{add: event} = child_listing) do
+    if Enum.any?(listing.actions || [], &(&1.event == event)) do
+      :ok
+    else
+      Support.error(
+        dsl_state,
+        path,
+        child_listing,
+        "child listing add #{inspect(event)} is not the event of an action in listing #{inspect(listing.name)}"
+      )
     end
   end
 

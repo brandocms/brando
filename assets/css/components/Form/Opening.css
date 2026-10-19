@@ -276,7 +276,8 @@
 /* ---------- the listing row an entry is opening from ---------- */
 
 .list-row.is-opening,
-.child-row.is-opening {
+.child-row.is-opening,
+.child-chip.is-opening {
   position: relative;
   background-color: var(--brando-surface-hover);
 
@@ -334,7 +335,8 @@
   white-space: nowrap;
 }
 
-.is-opening .entry-opening {
+/* Only the entry that opens: an opening page row leaves its children's titles alone */
+:is(.list-row.is-opening > .main-content, .child-row.is-opening, .child-chip.is-opening) .entry-opening {
   display: inline-flex;
 }
 
