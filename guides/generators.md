@@ -152,8 +152,10 @@ Igniter calls the library-owned `brando.upgrade FROM TO` hook. It accepts forwar
 upgrades from `0.54.0-dev` onward to a 0.54 or 0.55 target, never beyond the
 loaded dependency version. Each crossed minor version composes its recipe
 before missing framework migrations are planned: a 0.54 → 0.55 upgrade runs
-`brando.migrate55` first. A `-dev` version counts as older than every
-prerelease and the release of the same version, so a Git or path installation
+`brando.migrate55` first. The hook also adds Brando's agent skills and the
+`AGENTS.md` link where they are missing. It generates no Blueprint migrations
+and runs nothing against the database. A `-dev` version counts as older than
+every prerelease and the release of the same version, so a Git or path installation
 at `0.55.0-dev` moves onto `0.55.0-beta.0` or `0.55.0` as an upgrade, without a
 recipe since both are the 0.55 line. Other versions order as semantic
 versions. Equal versions are a no-op; use `brando.gen.migrations` to reconcile

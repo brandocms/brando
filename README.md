@@ -66,15 +66,10 @@ Keep the Elixir and BrandoJS dependencies on the same revision.
 
 0.55 is developed on `main`. The `0.54` branch only receives bug fixes.
 
-Projects on 0.54 run `mix brando.migrate55`. Projects still on 0.53 run
-`mix brando.migrate54` first. The complete steps, covering source, database,
-derived data and Gettext, are in
-[Migrating from 0.53 or 0.54](guides/migrating_from_053.md). Breaking changes
+Sites on 0.53, 0.54 or an earlier 0.55 development build follow
+[Migrating from 0.53 or 0.54](guides/migrating_from_053.md); sites on 0.51
+follow [Migrating from 0.51](guides/migrating_from_051.md). Breaking changes
 are listed in the [changelog](https://github.com/brandocms/brando/blob/main/CHANGELOG.md).
-
-Projects already on 0.55 pick up new Brando migrations with
-`mix brando.gen.migrations`, then run them with `mix brando.migrate`, followed
-by `mix brando.migrate --tenants` when they have named environments.
 
 ## Documentation
 

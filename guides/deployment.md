@@ -187,20 +187,28 @@ Fabric files.
 Check by hand before the first Florist command:
 
 - Passwords are not copied — export `FLORIST_DB_PASSWORD_PROD` (and
-  `FLORIST_DB_PASSWORD_STAGING` when a staging target was generated).
+  `FLORIST_DB_PASSWORD_STAGING` when a staging target was generated). Florist
+  uses the SSH agent by default; do not copy `SSH_PASS` into source control.
 - Anything the task warned about; unconvertible Python expressions fall back
   to documented defaults.
-- Domains, SSL modes and ports. Where `deployment.cfg` doesn't set them, the
-  task takes them from `.envrc.<flavor>`, `etc/nginx/<flavor>.conf` and
-  `etc/supervisord`/`etc/systemd`, and otherwise falls back to `8055`
-  (production) and `8060` (staging); its warnings say which.
+- Domains, SSL modes and ports. A target's domain comes from `<TARGET>_URL`,
+  or, when that is missing or still the install template's
+  `http://somesite.com` (which the task reports), from `BRANDO_URL_HOST` in
+  `.envrc.<flavor>`, then from the `server_name` of the
+  `etc/nginx/<flavor>.conf` server that proxies to the application (the HTTPS
+  one first). The port comes from `PORT=` in `etc/supervisord/<flavor>.conf`
+  or `etc/systemd/<flavor>.service`, checked against the nginx upstream, and
+  otherwise falls back to `8055` (production) and `8060` (staging). The
+  warnings say which source each came from, and name the process manager
+  found: supervisord or systemd.
 - `plug Brando.Plug.Health` in the endpoint, before the router. The task adds
   it; see [Health endpoint](#health-endpoint).
 - The persistent media directory, the legacy `etc/` systemd units or
   supervisord programs, and rclone setup (not migrated).
 
-The full checklist is in "Review a generated Florist configuration" in the
-[0.53 migration guide](migrating_from_053.md).
+The full checklist is
+[Review a generated Florist configuration](migrating_from_053.md#review-a-generated-florist-configuration)
+in the 0.53 migration guide.
 
 ## Configuration
 

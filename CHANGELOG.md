@@ -2,86 +2,10 @@
 
 ### Upgrading
 
-Rewrite the source first. A project on the `0.54` branch runs `mix brando.migrate55`; a project on
-0.53 runs `mix brando.migrate54`, then `mix brando.migrate55`. Both only change source and are safe to
-rerun. `mix brando.migrate54`, and the deprecated Blueprint syntax it rewrites, are removed in 0.56
-(see "How long source migrations ship" in `UPGRADE.md`). `mix igniter.upgrade brando` calls
-`mix brando.upgrade FROM TO`, which runs `mix brando.migrate55` and copies the missing migrations;
-without `FROM TO` it only points to `mix brando.gen.migrations`.
-
-Then bring the database up to date. A project already on a 0.55 development build starts here:
-
-1. `mix brando.gen.migrations` (for a 0.53 or 0.54 project, everything since `brando_130`).
-2. `mix brando.gen.blueprint_migration --all`, for the columns `trait :meta`, `trait :creator` and
-   `trait :scheduled_publishing` add to application schemas.
-3. Review the migrations. `mix brando.migrations.check` lists Brando copies that have not run and
-   differ from Brando's current templates.
-4. `mix brando.migrate`. Check the database ownership step for `brando_153` (Oban v14) under
-   Breaking first. Migrations marked "in every environment" below change `public` and every
-   environment schema in the same run.
-5. `mix brando.migrate --tenants`, when the app has named environments.
-6. `mix brando.entries.resave` and `mix brando.identifiers.sync`.
-7. `mix brando.images.adopt`, once, so **Recreate changed images** skips images whose files already
-   match their config (see [Media](guides/media.md#images-made-before-fingerprints)).
-
-Then the feature steps, each under Breaking: rebuild the search index in each environment; move the
-admin's CSS build to native EuropaCSS with `mix brando.gen.backend --upgrade`; add the
-`Brando.Plug.Markdown` and `Brando.Plug.IndexNow` endpoint plugs; and, in an application that sets
-`config :brando, Oban` itself, add the `content_events`, `webhooks`, `search_index` and
-`notifications` queues, and `Brando.Worker.WebhookDeliveryPurger` and
-`Brando.Worker.ScheduledPublishingSweep` to its crontab. `mix brando.doctor` reports migrations that
-have not run and missing queues.
-
-Before the first deploy, build the release on fehn 4.2: fehn 3.9 and 3.10 cannot compile Brando's
-Elixir `~> 1.18`. In the Dockerfile's `FROM --platform=linux/amd64 twined/fehn:<tag> as deps` line,
-use the tag for the server's Ubuntu release:
-
-- Ubuntu 24.04: `twined/fehn:4.2` (or `4.2-noble`)
-- Ubuntu 22.04: `twined/fehn:4.2-jammy`
-- Ubuntu 20.04: `twined/fehn:4.2-focal`, which has Elixir 1.19.5 on OTP 28.4.3, so pin those (better:
-  upgrade the server to 22.04 or 24.04)
-
-`mix brando.gen.backend --upgrade` does not rewrite `FROM`. See "The Docker build" in
-[Deployment](guides/deployment.md#the-docker-build) to check a server.
-
-Public pages render only published fragments: a draft, pending or disabled `partials/footer`
-renders empty. Publish the fragments the site shows before step 6: an entry that embeds a fragment
-through `{% fragment %}` or a block template stores it as rendered at its save, so it shows a fragment
-published later only on its next save. `get_fragments/1` with `status: :published` can
-keep or drop the option. To list unpublished fragments, run this in `iex -S mix` against each
-environment's database (in a release, `bin/<app> remote`):
-
-```elixir
-import Ecto.Query
-
-unpublished = fn prefix ->
-  Brando.Repo.all(
-    from(f in Brando.Pages.Fragment,
-      where: (f.status != :published or is_nil(f.status)) and is_nil(f.deleted_at),
-      select: {f.parent_key, f.key, f.language, f.status}
-    ),
-    prefix: prefix
-  )
-end
-
-# Without named environments:
-unpublished.(nil)
-
-# With named environments, once for each environment schema:
-for site <- Brando.Tenant.Registry.list_sites(), environment <- site.environments,
-    do: {site.key, environment.key, unpublished.(Brando.Tenant.prefix(site, environment))}
-```
-
-There are no migrations `brando_206` or `brando_208`; the numbers were never used.
-
-Restoring an environment archive taken before a `brando_2xx` migration that changes every
-environment runs that migration on the restore. The restore is refused, and nothing restored, when
-the archive cannot be brought up to date or when the application changed its copy of the migration
-(an unchanged copy of an earlier Brando version is fine).
-
-The full ordered workflow, with Blueprint snapshots and Gettext recovery, is in
-[Migrating from 0.53 or 0.54](guides/migrating_from_053.md). Sites on 0.51 (the `legacy` branch, Vue
-admin) have no automated path: follow [Migrating from 0.51](guides/migrating_from_051.md).
+Follow [Migrating from 0.53 or 0.54](guides/migrating_from_053.md). Its "The short version"
+lists the commands in order and where to stop and review; a site already on a 0.55 development
+build starts where its first table says. Sites on 0.51 (the `legacy` branch, with the Vue admin)
+follow [Migrating from 0.51](guides/migrating_from_051.md).
 
 #### Breaking
 
