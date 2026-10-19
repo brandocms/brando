@@ -1,16 +1,49 @@
 defmodule BrandoAdmin.Menu do
   @moduledoc """
-      import MyAppAdmin.Gettext
+  The application's admin menu (`MyAppAdmin.Menus`). `menu_item` and
+  `menu_subitem` add to the sidebar's Content section; `config_item` adds an
+  application screen under Configuration.
 
-      menus do
-        menu_item t("Projects"), icon: "folder" do
-          menu_subitem t("Projects"), "/admin/projects/projects", icon: "briefcase"
-          menu_subitem t("Categories"), "/admin/projects/categories", icon: "tags"
-          menu_subitem MyApp.Project.Something
+      defmodule MyAppAdmin.Menus do
+        use BrandoAdmin.Menu
+        use Gettext, backend: MyAppAdmin.Gettext
+
+        menus do
+          menu_item t("Projects"), icon: "folder" do
+            menu_subitem t("Projects"), "/admin/projects/projects", icon: "briefcase"
+            menu_subitem t("Categories"), "/admin/projects/categories", icon: "tags"
+            menu_subitem MyApp.Project.Something
+          end
+
+          menu_item MyApp.Team.Member
+
+          config_item t("Shop"), "/admin/config/shop", icon: "store", group: :operations
         end
-
-        menu_item MyApp.Team.Member
       end
+
+  Names given with `t/1` are translated from the application's "menus" catalog.
+
+  ## Configuration items
+
+  `config_item name, url, opts` puts the screen at `url` at the end of one of
+  Configuration's groups, after Brando's own items, in the order declared. The
+  groups are fixed: `:site`, `:publishing`, `:building_blocks` and
+  `:operations`. Options:
+
+    * `:group` - which of them, `:operations` by default. Another key fails to
+      compile.
+    * `:icon` - a Lucide icon, as for `menu_item`.
+    * `:roles` - who sees the item without group authorization,
+      `[:admin, :superuser]` by default. With group authorization the route
+      decides: the item shows to those who may open it, by the requirement its
+      LiveView declares with `__authorization__/0` (see
+      `BrandoAdmin.Authorization`). A LiveView that declares none opens for no
+      one, so its item is hidden from everyone.
+
+  The route is the application's own, inside `admin_routes do … end`:
+  `live "/config/shop", MyAppAdmin.Shop.SettingsLive`. Brando's
+  `/admin/config/…` routes come first, so a path Brando already uses stays
+  Brando's.
 
   Every item shows a [Lucide](https://lucide.dev/icons) icon in the sidebar.
   Items built from a blueprint use its `content_icon` (see
@@ -27,6 +60,7 @@ defmodule BrandoAdmin.Menu do
     quote do
       import BrandoAdmin.Menu
 
+      Module.register_attribute(__MODULE__, :config_items, accumulate: true)
       @before_compile BrandoAdmin.Menu
     end
   end
@@ -36,6 +70,12 @@ defmodule BrandoAdmin.Menu do
           unquote: false do
       def __menus__ do
         @menus
+        |> Enum.reverse()
+        |> translate_menus()
+      end
+
+      def __config_items__ do
+        @config_items
         |> Enum.reverse()
         |> translate_menus()
       end
@@ -309,6 +349,47 @@ defmodule BrandoAdmin.Menu do
     end
   end
 
+  # The keys of `configuration_menu_item/2`'s groups, which applications may not add to.
+  @config_groups [:site, :publishing, :building_blocks, :operations]
+
+  @doc """
+  Adds the application's screen at `url` to Configuration, at the end of a group.
+
+  Options:
+
+    * `:icon` - a Lucide icon name; the fallback dot when absent
+    * `:group` - one of `:site`, `:publishing`, `:building_blocks` and
+      `:operations` (default)
+    * `:roles` - the roles that see the item when group authorization is off,
+      `[:admin, :superuser]` by default. With it on, the route's permission
+      decides, as for every other menu item.
+  """
+  defmacro config_item(name, url, opts \\ []) do
+    quote location: :keep,
+          generated: true,
+          bind_quoted: [name: name, url: url, opts: opts] do
+      Module.put_attribute(__MODULE__, :config_items, %{
+        name: name,
+        url: url,
+        icon: BrandoAdmin.Menu.validate_icon!(opts[:icon]) || BrandoAdmin.Menu.fallback_icon(),
+        group: BrandoAdmin.Menu.validate_config_group!(Keyword.get(opts, :group, :operations)),
+        roles: opts |> Keyword.get(:roles, [:admin, :superuser]) |> List.wrap()
+      })
+    end
+  end
+
+  @doc """
+  Raises unless `group` is one of Configuration's groups. Called at compile time
+  by `config_item/3`.
+  """
+  def validate_config_group!(group) when group in @config_groups, do: group
+
+  def validate_config_group!(group) do
+    raise ArgumentError,
+          "unknown configuration group #{inspect(group)}, use one of " <>
+            Enum.map_join(@config_groups, ", ", &inspect/1)
+  end
+
   defmacro t(msgid) do
     quote do
       dgettext("menus", unquote(msgid))
@@ -424,12 +505,15 @@ defmodule BrandoAdmin.Menu do
     if Brando.Authorization.enabled?(), do: filter_authorized(menus, current_user), else: menus
   end
 
-  # Configuration's screens under four headings. `items` stays one flat list,
+  # Configuration's screens under four headings, the application's own
+  # (`config_item/3`) after Brando's in each. `items` stays one flat list,
   # in group order, for everything that reads it as a list (the command
   # palette, page titles, the "go to" shortcut); each item names its group,
   # and `groups` gives the headings' order and labels for the sidebar. A group
   # with nothing left for this user is dropped, heading and all.
   defp configuration_menu_item(current_user, current_site) do
+    application_items = Brando.admin_module(Menus).__config_items__()
+
     groups =
       [
         {:site, gettext("Site"),
@@ -478,7 +562,8 @@ defmodule BrandoAdmin.Menu do
          ]}
       ]
       |> Enum.map(fn {key, name, items} ->
-        {key, name, items |> List.flatten() |> Enum.reject(&(&1 in [false, nil]))}
+        application = for %{group: ^key} = item <- application_items, do: application_config_item(item, current_user)
+        {key, name, [items, application] |> List.flatten() |> Enum.reject(&(&1 in [false, nil]))}
       end)
 
     %{
@@ -489,6 +574,13 @@ defmodule BrandoAdmin.Menu do
       groups: Enum.map(groups, fn {key, name, _} -> %{key: key, name: name} end),
       items: for({key, _, items} <- groups, item <- items, do: Map.put(item, :group, key))
     }
+  end
+
+  # Without group authorization, for the roles the item names; with it, its
+  # route's permission decides (`filter_authorized/2`).
+  defp application_config_item(%{roles: roles} = item, user) do
+    if Brando.Authorization.enabled?() or (is_map(user) and Map.get(user, :role) in roles),
+      do: Map.drop(item, [:roles, :group])
   end
 
   @doc """

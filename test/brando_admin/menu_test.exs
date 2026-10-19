@@ -3,6 +3,8 @@ defmodule BrandoAdmin.MenuTest do
   # The menu asks the database whether there are global sets.
   use Brando.ConnCase
 
+  alias BrandoAdmin.CommandPalette
+
   defmodule MenuItemBlueprint do
     @moduledoc false
     use BrandoAdmin.Menu
@@ -279,6 +281,114 @@ defmodule BrandoAdmin.MenuTest do
     end
   end
 
+  describe "config_item" do
+    setup do
+      put_test_env(:admin_module, BrandoIntegrationConfigAdmin)
+      :ok
+    end
+
+    test "the application's items end their groups, in the order declared" do
+      groups = configuration_groups(%{role: :superuser})
+
+      assert {:site, [_ | _] = site} = List.keyfind(groups, :site, 0)
+      assert List.last(site) == "/admin/config/storefront"
+
+      assert {:building_blocks, [_ | _] = building_blocks} = List.keyfind(groups, :building_blocks, 0)
+      assert List.last(building_blocks) == "/admin/config/product-blocks"
+
+      assert {:operations, operations} = List.keyfind(groups, :operations, 0)
+
+      assert Enum.take(operations, -4) == [
+               "/admin/config/utils",
+               "/admin/config/shop",
+               "/admin/config/shop-sync",
+               "/admin/config/undeclared"
+             ]
+    end
+
+    test "an item carries its name, icon and group, and the name is translated" do
+      assert %{name: "Shop", icon: "store", group: :operations} = config_item(%{role: :superuser}, "/admin/config/shop")
+      assert %{icon: "dot", group: :site} = config_item(%{role: :superuser}, "/admin/config/storefront")
+      refute Map.has_key?(config_item(%{role: :superuser}, "/admin/config/shop"), :roles)
+
+      assert %{name: "Butikk"} =
+               Gettext.with_locale("no", fn -> config_item(%{role: :superuser}, "/admin/config/shop") end)
+    end
+
+    test "__config_items__/0 lists them in the order declared" do
+      assert [
+               %{name: "Shop", url: "/admin/config/shop", icon: "store", group: :operations, roles: [:admin, :superuser]},
+               %{url: "/admin/config/storefront", group: :site},
+               %{url: "/admin/config/shop-sync"},
+               %{url: "/admin/config/undeclared"},
+               %{url: "/admin/config/product-blocks", roles: [:editor, :admin, :superuser]}
+             ] = BrandoIntegrationConfigAdmin.Menus.__config_items__()
+    end
+
+    test "without group authorization, an item shows to the roles it names" do
+      editor = configuration_groups(%{role: :editor})
+      editor_urls = editor |> Enum.flat_map(&elem(&1, 1)) |> Enum.join(" ")
+
+      refute editor_urls =~ "/admin/config/shop"
+      refute editor_urls =~ "/admin/config/storefront"
+
+      # Building blocks is otherwise empty for an editor
+      assert [:site, :publishing, :building_blocks] = Keyword.keys(editor)
+      assert {:building_blocks, ["/admin/config/product-blocks"]} = List.keyfind(editor, :building_blocks, 0)
+
+      assert config_item(%{role: :admin}, "/admin/config/shop")
+      assert config_item(%{role: :admin}, "/admin/config/storefront")
+      refute config_item(nil, "/admin/config/shop")
+    end
+
+    test "the command palette offers them under Configuration" do
+      # The test application's legacy rules know only superusers
+      user = Brando.Factory.insert(:random_user, role: :superuser)
+      settings = CommandPalette.context(user).settings
+
+      assert %{keywords: ["Operations"]} = Enum.find(settings, &(&1.url == "/admin/config/shop"))
+    end
+
+    test "an unknown group fails at compile time" do
+      assert_raise ArgumentError,
+                   ~r/unknown configuration group :shop, use one of :site, :publishing, :building_blocks, :operations/,
+                   fn ->
+                     Code.compile_quoted(
+                       quote do
+                         defmodule BrandoAdmin.MenuTest.BadGroup do
+                           use BrandoAdmin.Menu
+
+                           menus do
+                             config_item("Shop", "/admin/config/shop", group: :shop)
+                           end
+                         end
+                       end
+                     )
+                   end
+    end
+
+    test "an unknown icon fails at compile time" do
+      assert_raise ArgumentError, ~r/unknown menu icon "nope", see https:\/\/lucide.dev\/icons/, fn ->
+        Code.compile_quoted(
+          quote do
+            defmodule BrandoAdmin.MenuTest.BadConfigIcon do
+              use BrandoAdmin.Menu
+
+              menus do
+                config_item("Shop", "/admin/config/shop", icon: "nope")
+              end
+            end
+          end
+        )
+      end
+    end
+  end
+
+  test "a menu without config_item has no configuration items" do
+    assert BrandoIntegrationAdmin.Menus.__config_items__() == []
+    assert __MODULE__.MenuItemBlueprint.__config_items__() == []
+  end
+
   describe "grouped_items/1" do
     test "a submenu without groups is one group without a heading" do
       items = [%{name: "Index", url: "/admin/projects"}, %{name: "Create", url: "/admin/projects/new"}]
@@ -307,6 +417,10 @@ defmodule BrandoAdmin.MenuTest do
     |> BrandoAdmin.Menu.get_menu(site)
     |> Enum.flat_map(& &1.items)
     |> Enum.find(&(&1[:key] == :configuration))
+  end
+
+  defp config_item(user, url) do
+    user |> configuration() |> Map.fetch!(:items) |> Enum.find(&(&1.url == url))
   end
 
   defp configuration_groups(user, site \\ nil) do

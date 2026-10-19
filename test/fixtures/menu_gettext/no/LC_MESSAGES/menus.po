@@ -1,0 +1,7 @@
+# The "menus" catalog of the application in BrandoAdmin.MenuTest.
+msgid ""
+msgstr ""
+"Language: no\n"
+
+msgid "Shop"
+msgstr "Butikk"

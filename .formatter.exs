@@ -161,6 +161,8 @@ locals_without_parens = [
   menu_subitem: 1,
   menu_subitem: 2,
   menu_subitem: 3,
+  config_item: 2,
+  config_item: 3,
   input: 1,
   inputs_for: 3,
   fieldset: 2,
