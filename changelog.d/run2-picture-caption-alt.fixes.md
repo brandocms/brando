@@ -1,6 +1,2 @@
-- **A picture block without alt text is described by its caption again.**
-  Before 0.55, a picture block with no alt text of its own rendered its
-  caption (title and credits) as `alt`; 0.55 rendered `alt=""`, so pictures
-  converted from Villain lost their only description. The caption's text is
-  used again, now without its HTML (legacy captions often hold an `<h3>`),
-  and alt text set on the block or the image still comes first.
+- A picture block without alt text uses its caption's text as `alt` again, as before 0.55
+  ([#3167](https://github.com/brandocms/brando/pull/3167)).

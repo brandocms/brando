@@ -26,18 +26,28 @@ rewrites in place: edit those in `CHANGELOG.md` itself.
 
 ## Text
 
-The entry exactly as `CHANGELOG.md` would hold it, in the style of the
-entries already there: a list item starting `- `, with a bold lead and the PR
-number when it has one, continuation lines indented two spaces, and no
-headings.
+One line per change: what a project or an editor notices, in one sentence,
+and a link to the pull request. The pull request holds the detail (how it
+works, why, measurements, edge cases).
 
 ```markdown
-- **A selection whose option is no longer offered can be removed** (#1234).
-  In a multi-select over a `has_many` relation, …
+- Opening an entry shows its fields at once, without a loading modal ([#3112](https://github.com/brandocms/brando/pull/3112)).
 ```
 
-`scripts/changelog check` (part of `mix check` and CI) validates the names
-and text.
+An entry that asks the reader to act (a breaking change, a deprecation, a
+migration to run, config to add, code to change) follows its line with those
+steps, indented two spaces: the commands and code to change, without the
+reasoning.
+
+```markdown
+- `ai:` on a form input is deprecated in favour of `ai_actions:` ([#3094](https://github.com/brandocms/brando/pull/3094)).
+  Replace `ai: [prompt: "…", context: [:title]]` with
+  `ai_actions: [generate: [prompt: "…", from: [:title]]]`.
+```
+
+Changes a Brando project cannot see (tests, CI, refactors, agent docs) have
+no entry. Add the link once the pull request is open. An entry is a list item
+starting `- `, with no headings.
 
 ## Into CHANGELOG.md
 

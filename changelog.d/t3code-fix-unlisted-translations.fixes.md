@@ -1,4 +1,2 @@
-- **Translated inputs preserve languages without a configured tab**. Saving
-  another field no longer erases stored translations in unlisted languages,
-  including labels in nested variable rows. Configured languages can still
-  be cleared explicitly.
+- Saving a form keeps a translated field's stored translations in languages that have no tab
+  ([#3182](https://github.com/brandocms/brando/pull/3182)).

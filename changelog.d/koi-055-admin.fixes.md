@@ -1,39 +1,18 @@
-- **Palette swatches in a select stay inside the field.** The 22px
-  `.circle.tiny` swatches kept the overlap meant for 40px circles, so a stack
-  of them in a palette select's label had a negative width: it spilled out of
-  the field over the label, and took a line of its own in the options dialog.
-  Tiny circles in a `.circle-stack` overlap by half their width, and a stack
-  in a select label or option is inline. Sites that worked around it in their
-  own admin CSS can drop the override.
+- Palette swatches in a select stay inside the field
+  ([#3173](https://github.com/brandocms/brando/pull/3173)).
+  Admin CSS that worked around it can drop its override.
 
-- **The system check's links to Utilities rows say where they go.** The
-  sitemap and image config checks linked to their maintenance rows with
-  buttons labelled "Generate sitemap" and "Recreate changed images", the
-  labels of the buttons on those rows, so clicking one and waiting for the
-  action did nothing. They read "Go to sitemap" and "Go to image sizes", and
-  the row they lead to is marked. The checks still only read.
+- The system check's links to Utilities read "Go to sitemap" and "Go to image sizes" and mark the
+  row they lead to ([#3173](https://github.com/brandocms/brando/pull/3173)).
 
-- **The image picker's organize selection, drag to folder and selection
-  marks work again.** Its list's `phx-viewport-bottom` (rows a page at a
-  time) made LiveView mount its own InfiniteScroll hook on the element in
-  place of `Brando.ImagePickerGrid`, so the picker's hook never ran. The hook
-  sits on a wrapper now.
+- The image picker's organize selection, drag to folder and selection marks work again
+  ([#3173](https://github.com/brandocms/brando/pull/3173)).
 
-- **"Use existing" for a re-uploaded file only offers an image made for the
-  same field.** `Brando.Images.find_duplicate/1` matched the file alone, so
-  uploading a file into a meta image field could put a copy cut to the cover
-  field's sizes there, without the size the meta tags render.
+- "Use existing" for a re-uploaded file only offers an image made for the same field
+  ([#3173](https://github.com/brandocms/brando/pull/3173)).
 
-- **The block picker no longer offers the "Legacy Content Wrapper".** The
-  `brando_108` upgrade migration makes this module (namespace "migration")
-  to hold converted Villain blocks, and `brando_188` removes it only where
-  nothing uses it, so a site with converted content listed a "migration"
-  group in the block picker. Blocks that hold legacy content keep it.
+- The block picker no longer offers the "Legacy Content Wrapper"
+  ([#3173](https://github.com/brandocms/brando/pull/3173)).
 
-- **An entry form no longer crashes on a module that shows the entry's
-  picture.** The block editor's preview of `{% picture entry.cover {…} %}`
-  (and any `entry.<field>` picture) raised a `FunctionClauseError`, so the
-  form never opened (since 0.54). It previews the entry's image (from the CDN
-  when only the CDN has it), or none when the entry has none, has it unloaded
-  or has no such field, and follows the field when an image is picked,
-  uploaded, removed or reset.
+- An entry form with a module that shows the entry's picture (`{% picture entry.cover %}`) opens
+  again ([#3173](https://github.com/brandocms/brando/pull/3173)).

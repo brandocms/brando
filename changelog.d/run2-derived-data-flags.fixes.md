@@ -1,7 +1,4 @@
-- **`mix brando.identifiers.sync --yes` runs instead of crashing.** The task
-  took no arguments at all, so the `--yes` the guide's derived-data steps pass
-  to `mix brando.entries.resave` stopped it with a `FunctionClauseError`.
-  `entries.resave`, `identifiers.sync` and `images.adopt` now all accept
-  `--yes` (and `--force`); the two that ask nothing ignore it. An unknown
-  option or an extra argument stops any of the three with a line naming it
-  and the options the task takes, instead of a stack trace.
+- `mix brando.entries.resave`, `mix brando.identifiers.sync` and `mix brando.images.adopt` all
+  accept `--yes` and `--force`, so `identifiers.sync --yes` runs instead of crashing, and an unknown
+  option is named instead of printing a stack trace
+  ([#3167](https://github.com/brandocms/brando/pull/3167)).

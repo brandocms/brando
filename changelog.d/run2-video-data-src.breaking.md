@@ -1,10 +1,5 @@
-- **Front-end code that reads a file video's `data-src` from the `<video>`
-  element must read it from the wrapper.** `Brando.HTML.Video` renders
-  `data-src` on the `[data-smart-video]` wrapper for every file video; the
-  `<video>` itself carries `data-src` only when the video preloads, and `src`
-  otherwise. Brando before 0.53 preloaded every file video, so pages rendered
-  then had `data-src` on the `<video>`, and a site script such as
-  `video.src = video.getAttribute('data-src')` now sets `src` to `"null"` and
-  the video never plays. Read `el.closest('[data-smart-video]').dataset.src`,
-  or fall back to it. `mix brando.migrate55` lists the scripts that read
-  `data-src` near video markup.
+- A file video's `data-src` is on its `[data-smart-video]` wrapper; the `<video>` has it only when
+  it preloads, so a site script that reads it from the `<video>` sets `src` to `"null"`
+  ([#3167](https://github.com/brandocms/brando/pull/3167)).
+  Read `el.closest('[data-smart-video]').dataset.src` instead; `mix brando.migrate55` lists the
+  scripts under `assets/` that read `data-src` from a video.

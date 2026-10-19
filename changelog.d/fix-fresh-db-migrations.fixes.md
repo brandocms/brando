@@ -1,16 +1,7 @@
-- **An application with Blueprints migrates an empty database again.** A new
-  server's `ReleaseTasks.migrate()`, CI or a new test database stopped at
-  `brando_53` with `relation "projects" does not exist`: Brando's data
-  migrations `brando_53`, `brando_92`, `brando_93`, `brando_95`, `brando_96`,
-  `brando_101` and `brando_102` find the application's tables through its
-  current Blueprints, and on an empty database those tables are created by
-  later migrations. They now skip a table or column that is not there yet
-  (`Brando.Migration.Introspect`, which looks through the connection's
-  `search_path`, as their SQL does, or in the migration's prefix), and act as
-  before where it is; `brando_80` uses the same check, in `public` as before. `brando_53` no longer asks you to add your own schemas
-  to a reject list. Copies installed earlier keep the old code: rewrite them
-  with `mix brando.gen.migrations --refresh`.
+- An application with Blueprints migrates an empty database again, past `brando_53`
+  ([#3236](https://github.com/brandocms/brando/pull/3236)).
+  Rewrite migration copies installed earlier with `mix brando.gen.migrations --refresh`.
 
-- **A fresh install's `create_pages` migration no longer warns that
-  `Brando.Villain.Migration.villain/0` is deprecated.** It adds the same `data`
-  and `html` columns directly.
+- A fresh install's `create_pages` migration no longer warns that
+  `Brando.Villain.Migration.villain/0` is deprecated
+  ([#3236](https://github.com/brandocms/brando/pull/3236)).
