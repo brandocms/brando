@@ -161,7 +161,7 @@ end
 <!-- usage-rules:start -->
 
 `mix brando.gen` writes the LiveView, routes and context for a new Blueprint;
-see [Installation and generators](generators.md#generate-a-content-type).
+see [Generators](generators.md#generate-a-content-type).
 
 <!-- usage-rules:end -->
 

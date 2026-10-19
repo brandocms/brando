@@ -43,7 +43,7 @@ the chain at `brando_56`. Each trap is described below where it bites.
 ## 2. Dependencies, toolchain and configuration
 
 Start from a scratch application made as in
-[Installation and generators](generators.md) (`mix phx.new`, then
+[Installation](installation.md) (`mix phx.new`, then
 `mix brando.install`) for `mix.exs`, `config/*.exs`, the router, endpoint and
 `application_web.ex`, and carry the site's own settings over by hand.
 

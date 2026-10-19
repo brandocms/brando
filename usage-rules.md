@@ -20,7 +20,7 @@ Guide: `deps/brando/guides/overview.md`
 
 | I want to… | Start here | Then read |
 | --- | --- | --- |
-| Start a new site | [Installation and generators](deps/brando/guides/generators.md) | [Pages and fragments](deps/brando/guides/pages.md) |
+| Start a new site | [Installation](deps/brando/guides/installation.md) | [Pages and fragments](deps/brando/guides/pages.md) |
 | Upgrade an existing application | [Migrating from 0.53 or 0.54](deps/brando/guides/migrating_from_053.md) | [Blueprint migrations](deps/brando/guides/blueprint_migrations.md) |
 | Define a content type and its admin screens | [Blueprints](deps/brando/guides/blueprints.md) | [Querying and mutations](deps/brando/guides/querying.md) |
 | Build translated pages and menus | [Languages and translations](deps/brando/guides/i18n.md) | [Navigation](deps/brando/guides/navigation.md) |
@@ -534,7 +534,7 @@ end
 ```
 
 `mix brando.gen` writes the LiveView, routes and context for a new Blueprint;
-see [Installation and generators](deps/brando/guides/generators.md#generate-a-content-type).
+see [Generators](deps/brando/guides/generators.md#generate-a-content-type).
 
 The listing passes the values as `filter: %{key: value}` to
 `list_<plural>/1`, and the context runs each pair through its `filters`

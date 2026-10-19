@@ -321,7 +321,7 @@ prod and staging on one server don't share a node name:
 `export RELEASE_NODE="${RELEASE_NODE:-myapp_staging@127.0.0.1}"`.
 
 `mix brando.install` generates both files and `rel/env.sh.eex` for a new
-application (see [Deployment hosts](generators.md#deployment-hosts)), with the
+application (see [Deployment hosts](installation.md#deployment-hosts)), with the
 variables a Phoenix `config/runtime.exs` reads: `PHX_HOST`, `PHX_SERVER`,
 `DATABASE_URL` and `SECRET_KEY_BASE`, plus that `RELEASE_NODE` default. Their
 `DATABASE_URL` uses the user `<app>` for prod (Florist's default) and

@@ -28,7 +28,8 @@ which were not listed separately in that checklist, also have a complete guide.
 | CDN | [CDN](../guides/cdn.md) | Global/field S3 settings, upload transports, media URLs versus object keys, tenant boundaries |
 | Users | [Users and sessions](../guides/users.md) | Creation, restricted accounts, login eligibility, tokens, deactivation, content transfer |
 | Pages/Sections | [Pages and fragments](../guides/pages.md) | Context writes, public routes, templates, vars, homepage URI, hierarchy, breadcrumbs, fragments |
-| Generator | [Installation and generators](../guides/generators.md) | Fresh consumer through first login, asset builds, migration/seeding order, task catalog and overwrite boundaries |
+| Installation | [Installation](../guides/installation.md) | Fresh consumer through first login, asset builds, migration/seeding order and overwrite boundaries |
+| Generator | [Generators](../guides/generators.md) | Content types, framework migrations and upgrades, auxiliary modules, task catalog |
 | Authorization | [Authorization](../guides/authorization.md) | Modes, scoped groups, policies, application enforcement and revocation |
 | META schemas | [Page metadata](../guides/meta.md) | Whole-entry callbacks, fallbacks, locale, controller/title/layout integration and output checks |
 | JSONLD schemas | [JSON-LD](../guides/jsonld.md) | Graph relationships, supported identity fields, controllers, custom schemas |

@@ -86,7 +86,7 @@ Point the Brando dependency at a checkout, or at a commit on GitHub:
 
 Use `path:` to rehearse locally only. The release's Docker build fetches
 dependencies from `mix.exs` and cannot see a checkout outside the project, so
-deploy from `github:`. [Installation and generators](generators.md) describes
+deploy from `github:`. [Installation](installation.md) describes
 working against a `path:` checkout, including `mix deps.compile brando` after
 changing it.
 
@@ -246,7 +246,7 @@ fails until it is replaced. A sender set anywhere in `config/*.exs`, inside an
 After editing a local Brando checkout, run `mix deps.compile brando` and
 restart the server: `mix brando.migrate55` takes `:brando` out of the
 endpoint's `reloadable_apps` (see below), so the code reloader no longer
-picks up Brando's changes (see [Installation and generators](generators.md)).
+picks up Brando's changes (see [Installation](installation.md)).
 
 If the application has never been run through `mix format`, run it and commit
 the result before the source tasks, so their diff holds only their changes.

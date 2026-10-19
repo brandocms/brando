@@ -3,7 +3,7 @@ defmodule Brando.Vite do
   Runs a Vite dev server as a Phoenix endpoint watcher, for `hmr: true` in
   development.
 
-      config :studio, StudioWeb.Endpoint,
+      config :my_app, MyAppWeb.Endpoint,
         watchers: [
           vite_admin: {Brando.Vite, :watch, [Path.expand("../assets/backend", __DIR__)]},
           vite_site: {Brando.Vite, :watch, [Path.expand("../assets/frontend", __DIR__)]}

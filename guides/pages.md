@@ -7,7 +7,7 @@ a page for organization; it does not acquire a public route of its own.
 
 This walkthrough assumes a migrated Brando consumer with a working admin,
 `MyAppWeb.PageHTML`, and the generated browser pipeline. Start with
-[Installation and generators](generators.md) if those are not in place.
+[Installation](installation.md) if those are not in place.
 
 ## Create and reload a page
 

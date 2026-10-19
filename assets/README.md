@@ -48,7 +48,7 @@ Brando's installer generates these files. Upgrade BrandoJS together with
 
 The Brando guides cover installation, upgrades and the admin:
 [guides/](https://github.com/brandocms/brando/tree/main/guides), starting with
-[Installation and generators](https://github.com/brandocms/brando/blob/main/guides/generators.md).
+[Installation](https://github.com/brandocms/brando/blob/main/guides/installation.md).
 
 ## License
 

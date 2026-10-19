@@ -6,6 +6,51 @@ Brando's guides/*.md. Edit the guides, then run the task again. -->
 Load these rules (`brando:generators`) for running setup, generating a content type, renaming fields, hand-written migrations and the files Brando gives coding agents. The core rules
 are in `deps/brando/usage-rules.md`.
 
+## Installation
+
+Guide: `deps/brando/guides/installation.md`
+
+### Run setup
+
+```sh
+mix brando.gen.mail
+mix compile --warnings-as-errors
+mix brando.setup
+```
+
+`brando.gen.mail` reuses the application's Swoosh mailer or creates
+`MyApp.Mailer`, and points Brando at it for password resets and form
+notifications; [Auxiliary generators](deps/brando/guides/generators.md#auxiliary-generators) has
+the details. An application that already had a mailer before installing can
+skip it.
+
+`brando.setup` composes the operational steps an installed application needs:
+asset builds, `ecto.create`/`ecto.migrate`, a superuser account, and default
+content seeds. Each step is skipped when its result already exists, so a rerun
+after a failure resumes instead of duplicating. Skip steps with `--no-assets`,
+`--no-db`, `--no-account` and `--no-seeds`. Setup prompts for anything it needs;
+for an unattended run, supply `--email`, `--name` and `--password` for the
+account and `--base-url` and `--description` for the seeded site identity. The
+account logs in with the password given here; it is not asked to change it on
+first login.
+`--source PATH` hands a Brando JavaScript source to asset setup. The sections below describe the same
+steps as individual tasks, which is what to reach for when you want to control
+them separately.
+
+`mix brando.install` gives coding agents Brando's rules and skills:
+
+* `AGENTS.md` gets a `brando` section linking `deps/brando/usage-rules.md`,
+  inside the `<!-- usage-rules-start -->` block Phoenix writes, or in a new
+  file. `mix usage_rules.sync` from the `usage_rules` package can take that
+  section over; it loads the topic files in `deps/brando/usage-rules/` as
+  `brando:<topic>`.
+* `.claude/skills/` gets Brando's skills for building a site: Blueprints,
+  blocks and modules, live preview, media fields and deploys.
+
+A versioned `mix brando.upgrade` adds the ones that are missing. Neither task
+replaces a skill file or a `brando` section that already exists, so edit them
+freely.
+
 ## Blueprint migrations
 
 Guide: `deps/brando/guides/blueprint_migrations.md`
@@ -51,37 +96,17 @@ continue without a generated migration for that baseline; the hand-written migra
 is not a shortcut for a missing database migration. Use it only after a reviewed hand-written migration exists and the
 database has been verified to match the current Blueprint.
 
-## Installation and generators
+## Generators
 
 Guide: `deps/brando/guides/generators.md`
-
-### Run setup
-
-```sh
-mix compile --warnings-as-errors
-mix brando.setup
-```
-
-`brando.setup` composes the operational steps an installed application needs:
-asset builds, `ecto.create`/`ecto.migrate`, a superuser account, and default
-content seeds. Each step is skipped when its result already exists, so a rerun
-after a failure resumes instead of duplicating. Skip steps with `--no-assets`,
-`--no-db`, `--no-account` and `--no-seeds`. Setup prompts for anything it needs;
-for an unattended run, supply `--email`, `--name` and `--password` for the
-account and `--base-url` and `--description` for the seeded site identity. The
-account logs in with the password given here; it is not asked to change it on
-first login.
-`--source PATH` hands a Brando JavaScript source to asset setup. The sections below describe the same
-steps as individual tasks, which is what to reach for when you want to control
-them separately.
 
 ### Generate a content type
 
 ```sh
 mix brando.gen.blueprint Catalog Product
 mix compile --warnings-as-errors
-mix brando.gen Studio.Catalog.Product
-mix brando.gen.blueprint_migration Studio.Catalog.Product
+mix brando.gen MyApp.Catalog.Product
+mix brando.gen.blueprint_migration MyApp.Catalog.Product
 mix ecto.migrate
 ```
 
@@ -96,20 +121,6 @@ command reads compiled metadata, extends its context using AST edits, and adds
 admin list/form modules and routes. Multiple resources can share a context.
 Existing custom queries remain in place; conflicting functions and owned files
 are reported. Add a navigation entry and review the authorization policy explicitly.
-
-`mix brando.install` gives coding agents Brando's rules and skills:
-
-* `AGENTS.md` gets a `brando` section linking `deps/brando/usage-rules.md`,
-  inside the `<!-- usage-rules-start -->` block Phoenix writes, or in a new
-  file. `mix usage_rules.sync` from the `usage_rules` package can take that
-  section over; it loads the topic files in `deps/brando/usage-rules/` as
-  `brando:<topic>`.
-* `.claude/skills/` gets Brando's skills for building a site: Blueprints,
-  blocks and modules, live preview, media fields and deploys.
-
-A versioned `mix brando.upgrade` adds the ones that are missing. Neither task
-replaces a skill file or a `brando` section that already exists, so edit them
-freely.
 
 For setup failures, fix the first compiler, migration or asset error before
 continuing. After an upgrade, `mix brando.doctor` lists what is still out of

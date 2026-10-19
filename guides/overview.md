@@ -11,7 +11,7 @@ version when maintaining an older installation.
 
 | I want to… | Start here | Then read |
 | --- | --- | --- |
-| Start a new site | [Installation and generators](generators.md) | [Pages and fragments](pages.md) |
+| Start a new site | [Installation](installation.md) | [Pages and fragments](pages.md) |
 | Upgrade an existing application | [Migrating from 0.53 or 0.54](migrating_from_053.md) | [Blueprint migrations](blueprint_migrations.md) |
 | Define a content type and its admin screens | [Blueprints](blueprints.md) | [Querying and mutations](querying.md) |
 | Build translated pages and menus | [Languages and translations](i18n.md) | [Navigation](navigation.md) |
@@ -58,7 +58,7 @@ The mistakes that cost the most time, each explained in its guide:
 
 ## Your first working site
 
-Start with [Installation and generators](generators.md): create a fresh consumer,
+Start with [Installation](installation.md): create a fresh consumer,
 build both asset projects, migrate, initialize languages, and create an
 administrator before seeding. Verify the public homepage and an editor save.
 

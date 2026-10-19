@@ -2,7 +2,8 @@
 
 Implementation tracker: [#2462](https://github.com/brandocms/brando/issues/2462).
 User-facing commands and asset setup (BrandoJS from npm or a checkout) are in
-[Installation and generators](../guides/generators.md).
+[Installation](../guides/installation.md) and
+[Generators](../guides/generators.md).
 
 `brando.install`, `brando.gen.blueprint`, `brando.gen`,
 `brando.gen.blueprint_migration`, framework/tenant migrations, auxiliary
