@@ -204,6 +204,16 @@
     color: var(--brando-note-ink);
   }
 
+  /* The toolbar's icons too, rather than the module colour's ink */
+  .block-actions .block-action {
+    color: var(--brando-note-ink);
+
+    &:hover {
+      background-color: var(--brando-note-ink);
+      color: var(--brando-ink-inverse);
+    }
+  }
+
   .block-content {
     border-top-color: var(--brando-note-line);
     padding: 12px 14px 14px;

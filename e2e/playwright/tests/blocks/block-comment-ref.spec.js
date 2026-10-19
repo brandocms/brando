@@ -47,15 +47,18 @@ for (const color of ['blue', 'pink']) {
 
     const comment = page.locator(".ref_block[data-block-type='comment']")
     await expect(comment).toContainText('Arranged under Works.')
-    const note = await page.evaluate(() => {
+    const token = name => page.evaluate(name => {
       const probe = document.createElement('div')
-      probe.style.backgroundColor = 'var(--brando-note)'
+      probe.style.color = `var(${name})`
       document.body.append(probe)
-      const value = getComputedStyle(probe).backgroundColor
+      const value = getComputedStyle(probe).color
       probe.remove()
       return value
-    })
+    }, name)
+    const note = await token('--brando-note')
     await expect(comment).toHaveCSS('background-color', note)
+    await expect(comment.locator('.block-content')).toHaveCSS('border-top-color', await token('--brando-note-line'))
+    await expect(comment.locator('.block-actions .block-action').first()).toHaveCSS('color', await token('--brando-note-ink'))
     // The text block beside it keeps the white writing surface
     await expect(page.locator(".ref_block[data-block-type='text']")).not.toHaveCSS('background-color', note)
   })
