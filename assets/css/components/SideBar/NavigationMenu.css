@@ -117,8 +117,10 @@
 
   /* Closed, the drawer and its backdrop are not displayed at all: hidden
      only by visibility, the submenu rows the Navigation hook shows inline
-     could still be tabbed to. `allow-discrete` keeps them on screen while
-     they slide and fade out; @starting-style is where they slide in from.
+     could still be tabbed to. They slide in from @starting-style, and out
+     while the close command keeps `mobile-nav-closing` on <body> (nav.ex).
+     The closed state itself has no transition, so crossing the breakpoint
+     lands at once rather than animating the drawer off a wide layout.
      They sit over left drawers (999) and the selection bar and notes panel
      (1000, later in the page, so the backdrop needs more), under modals
      (1050) and toasts. */
@@ -129,9 +131,6 @@
     display: none;
     background-color: var(--brando-overlay);
     opacity: 0;
-    transition:
-      opacity var(--motion-leave) var(--motion-ease-close),
-      display var(--motion-leave) allow-discrete;
   }
 
   #navigation,
@@ -139,9 +138,6 @@
     display: none;
     width: min(300px, 85vw);
     transform: translateX(-100%);
-    transition:
-      transform var(--motion-leave) var(--motion-ease-close),
-      display var(--motion-leave) allow-discrete;
   }
 
   #navigation {
@@ -158,9 +154,7 @@
   body.mobile-nav-open .mobile-nav-backdrop {
     display: block;
     opacity: 1;
-    transition:
-      opacity var(--motion-enter) var(--motion-ease),
-      display var(--motion-enter) allow-discrete;
+    transition: opacity var(--motion-enter) var(--motion-ease);
   }
 
   /* With the id, this also outranks `body.sidebar-hidden`'s hiding of the
@@ -169,9 +163,19 @@
   body.mobile-nav-open :is(#navigation, .content-language-selector) {
     display: block;
     transform: none;
-    transition:
-      transform var(--motion-enter) var(--motion-ease),
-      display var(--motion-enter) allow-discrete;
+    transition: transform var(--motion-enter) var(--motion-ease);
+  }
+
+  body.mobile-nav-closing .mobile-nav-backdrop {
+    display: block;
+    opacity: 0;
+    transition: opacity var(--motion-leave) var(--motion-ease-close);
+  }
+
+  body.mobile-nav-closing :is(#navigation, .content-language-selector) {
+    display: block;
+    transform: translateX(-100%);
+    transition: transform var(--motion-leave) var(--motion-ease-close);
   }
 
   @starting-style {

@@ -373,8 +373,10 @@ defmodule BrandoAdmin.Nav do
     """
   end
 
+  # `mobile-nav-closing` keeps the drawer on screen while it slides out
+  # (NavigationMenu.css): the closed state has no transition of its own.
   defp close_mobile_nav do
-    JS.remove_class("mobile-nav-open", to: "body")
+    JS.remove_class("mobile-nav-open", to: "body", transition: "mobile-nav-closing", time: 300)
     |> JS.set_attribute({"aria-expanded", "false"}, to: "#mobile-nav-toggle")
   end
 
