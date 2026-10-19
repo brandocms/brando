@@ -48,3 +48,26 @@ test("a listing's rows and footer share one frame", async ({ page }) => {
   await expect(menu).toBeVisible()
   await expect(menu.getByText('Edit', { exact: true })).toBeInViewport()
 })
+
+test('with the form at its bound, the notes panel sits at the right edge', async ({ page }) => {
+  await page.setViewportSize({ width: 2200, height: 1100 })
+  await page.goto('/admin/pages/update/1')
+  await syncLV(page)
+
+  await page.locator('.form-tool-notes').click()
+  const panel = page.locator('.notes-panel.is-open .notes-panel-inner')
+  await expect(panel).toBeVisible()
+  await expect.poll(() => width(page.locator('.brando-form .form-content').first())).toBe(1400)
+  await expect.poll(() => panel.evaluate(el => Math.round(innerWidth - el.getBoundingClientRect().right))).toBeLessThanOrEqual(1)
+})
+
+test("an empty listing's message keeps to the frame's border", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 })
+  await page.goto('/admin/projects/categories?status=deleted')
+  await syncLV(page)
+
+  const empty = page.locator('.content-list-frame :is(.workspace-empty, .empty-list)')
+  await expect(empty).toBeVisible()
+  await expect(empty).toHaveCSS('border-top-width', '0px')
+  await expect(empty).toHaveCSS('border-left-width', '0px')
+})

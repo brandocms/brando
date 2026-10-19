@@ -25,7 +25,8 @@
   .content-list-frame > :first-child,
   .content-list-frame > .sort-container:first-child > :first-child { border-radius: 5px 5px 0 0; }
   .content-list-frame > .pagination { border-radius: 0 0 5px 5px; }
-  .content-list-frame :is(.workspace-empty, .empty-list) { border: 0; border-bottom: 1px solid var(--workspace-line); }
+  /* Outranks the empty states' own bordered box (below, and ContentWorkspace.css) */
+  .content-list .content-list-frame :is(.workspace-empty, .empty-list) { border: 0; border-bottom: 1px solid var(--workspace-line); border-radius: 5px 5px 0 0; }
   .content-list .list-row { background: var(--brando-surface); border-radius: 0; margin: 0; border-bottom: 1px solid var(--workspace-line); color: var(--workspace-ink); }
   .content-list .list-row:hover { background: var(--brando-surface-hover); }
   .content-list .list-row.selected { background: var(--brando-surface-selected); }
@@ -70,6 +71,8 @@
   @media (max-width: 1100px) {
     --user-columns: 36px minmax(0, 1fr) auto 30px;
     .user-directory-columns { display: none; }
+    /* Without the headings the first row is the frame's top */
+    .content-list-frame > .sort-container > :first-child { border-radius: 5px 5px 0 0; }
     .list-row .main-content { gap: 12px; }
     .user-avatar { grid-column: 1; grid-row: 1; }
     .user-account { grid-column: 2; grid-row: 1; }
