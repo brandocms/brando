@@ -259,6 +259,24 @@ defmodule BrandoAdmin.SyncTest.ArticleAuthorFormLive do
   end
 end
 
+# An application's own screens under Configuration (`BrandoAdmin.Menu.config_item/3`):
+# one declares what it needs, the other declares nothing.
+defmodule BrandoIntegrationAdmin.ShopSettingsLive do
+  @moduledoc false
+  use Phoenix.LiveView
+
+  def __authorization__, do: {:read, :utilities}
+
+  def render(assigns), do: ~H"<p>Shop settings</p>"
+end
+
+defmodule BrandoIntegrationAdmin.UndeclaredSettingsLive do
+  @moduledoc false
+  use Phoenix.LiveView
+
+  def render(assigns), do: ~H"<p>Undeclared settings</p>"
+end
+
 defmodule BrandoIntegrationWeb.Router do
   @moduledoc false
   use Phoenix.Router
@@ -283,6 +301,8 @@ defmodule BrandoIntegrationWeb.Router do
     live "/articles/update/:entry_id/notes", BrandoAdmin.SyncTest.ArticleNotesFormLive, :update
     live "/articles/update/:entry_id/author", BrandoAdmin.SyncTest.ArticleAuthorFormLive, :update
     live "/meta-articles/update/:entry_id", BrandoAdmin.MetaDrawerTest.ActionsArticleFormLive, :update
+    live "/config/shop", BrandoIntegrationAdmin.ShopSettingsLive
+    live "/config/undeclared", BrandoIntegrationAdmin.UndeclaredSettingsLive
   end
 
   form_routes()

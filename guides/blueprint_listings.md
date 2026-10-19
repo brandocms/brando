@@ -253,6 +253,39 @@ the listing raise. Keep the default listing's `query` to `order`, `status` and
 
 <!-- usage-rules:end -->
 
+### Configuration items
+
+An application screen that configures something, rather than editing content,
+goes under **Configuration** with `config_item` in the same `menus do … end`
+block:
+
+```elixir
+menus do
+  menu_item MyApp.Articles.Article
+
+  config_item t("Shop"), "/admin/config/shop", icon: "store", group: :operations
+end
+```
+
+The item goes at the end of its group, after Brando's own, in the order
+declared. Configuration's groups are fixed: `group:` is `:site`,
+`:publishing`, `:building_blocks` or `:operations` (the default), and any
+other key fails to compile. `icon:` takes a Lucide name, as for `menu_item`.
+
+Without group authorization, `roles:` decides who sees the item, by default
+`[:admin, :superuser]`. With it, the item shows to those who may open its
+route, by the requirement the LiveView declares with `__authorization__/0`
+(see [Groups and authorization](authorization.md)), for example
+`def __authorization__, do: {:read, :utilities}`. A LiveView that declares
+nothing opens for no one in group mode, and its item is hidden from everyone,
+superusers included.
+
+The route is the application's own, in `admin_routes do … end`:
+`live "/config/shop", MyAppAdmin.Shop.SettingsLive`. Brando's `/config/…`
+routes are declared before the application's block, so they take precedence:
+a path Brando already uses stays Brando's, and the compiler warns that the
+application's clause cannot match. Give the screen a path of its own.
+
 ## Declaring listings
 
 ```elixir
