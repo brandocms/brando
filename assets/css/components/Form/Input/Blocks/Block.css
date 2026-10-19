@@ -188,8 +188,10 @@
    the amber of the editors' notes (Notes.css) instead of a content block's
    white, and its text reads at body size rather than as a preview of content.
    As a ref in a module it has to outrank `.block .ref_block`'s white and its
-   !important border. */
+   !important border, and the module colours' own ref rules
+   (`.block[data-color="pink"] .ref_block` and the rest, further down). */
 .block .ref_block[data-block-type="comment"],
+.block[data-color] .ref_block[data-block-type="comment"],
 .block[data-block-type="comment"] {
   border-color: var(--brando-note-line) !important;
   /* The content's padding is the gap under the text, not the block's too */
@@ -205,7 +207,7 @@
   .block-content {
     border-top-color: var(--brando-note-line);
     padding: 12px 14px 14px;
-    font-size: var(--brando-text-lg);
+    font-size: var(--brando-text-md);
     line-height: 1.55;
     overflow-wrap: anywhere;
   }
