@@ -119,12 +119,13 @@
      only by visibility, the submenu rows the Navigation hook shows inline
      could still be tabbed to. `allow-discrete` keeps them on screen while
      they slide and fade out; @starting-style is where they slide in from.
-     They sit over left drawers (999) and the selection bar (1000), under
-     modals and their backdrops (1001 and up). */
+     They sit over left drawers (999) and the selection bar and notes panel
+     (1000, later in the page, so the backdrop needs more), under modals
+     (1050) and toasts. */
   .mobile-nav-backdrop {
     position: fixed;
     inset: 0;
-    z-index: 1000;
+    z-index: 1001;
     display: none;
     background-color: var(--brando-overlay);
     opacity: 0;
@@ -144,14 +145,14 @@
   }
 
   #navigation {
-    z-index: 1001;
+    z-index: 1002;
     height: 100dvh;
     overscroll-behavior: contain;
     box-shadow: var(--brando-shadow-lg);
   }
 
   .content-language-selector {
-    z-index: 1002;
+    z-index: 1003;
   }
 
   body.mobile-nav-open .mobile-nav-backdrop {

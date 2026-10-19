@@ -74,7 +74,11 @@ test('a closed drawer cannot be tabbed into, and focus moves into it and back', 
 
   await toggle.click()
   await expect(drawer).toBeVisible()
-  await expect.poll(() => page.evaluate(() => !!document.activeElement.closest('#navigation'))).toBe(true)
+  // On a link one can see, in the menu: not one in the user row's closed menu
+  await expect.poll(() => page.evaluate(() => {
+    const el = document.activeElement
+    return !!el.closest('#nav') && el.checkVisibility({ visibilityProperty: true })
+  })).toBe(true)
 
   await page.keyboard.press('Escape')
   await expect(drawer).toBeHidden()

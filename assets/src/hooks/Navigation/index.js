@@ -36,9 +36,17 @@ export default app => ({
       const $toggle = toggle()
       if ($toggle && isOpen()) this.liveSocket.execJS($toggle, $toggle.dataset.close)
     }
+    // Without `:modal` support the query throws: treat it as no dialog open
+    const dialogOpen = () => {
+      try {
+        return !!document.querySelector('dialog:modal')
+      } catch (_e) {
+        return !!document.querySelector('dialog[open]')
+      }
+    }
     this.mobileNavKeydown = event => {
       if (event.key !== 'Escape' || event.defaultPrevented || !isOpen()) return
-      if (document.querySelector('dialog:modal')) return
+      if (dialogOpen()) return
       this.closeMobileNav()
     }
     this.wideScreen = window.matchMedia('(min-width: 1024px)')
@@ -52,9 +60,18 @@ export default app => ({
       if (open === wasOpen) return
       wasOpen = open
       const $drawer = document.getElementById('navigation')
+      const $language = document.querySelector('.content-language-selector')
+      const inDrawer = el => $drawer?.contains(el) || $language?.contains(el)
       if (open) {
-        requestAnimationFrame(() => $drawer?.querySelector('a[href], button:not([disabled])')?.focus())
-      } else if (!document.activeElement || document.activeElement === document.body || $drawer?.contains(document.activeElement)) {
+        // The first control one can see: the user row and the tenant switcher
+        // hold links that stay focusable while their menus are closed.
+        requestAnimationFrame(() => {
+          const first = Array.from($drawer?.querySelectorAll('#nav a[href], #nav button:not([disabled])') || []).find(
+            el => el.checkVisibility?.({ visibilityProperty: true }) ?? el.offsetParent !== null
+          )
+          first?.focus()
+        })
+      } else if (!document.activeElement || document.activeElement === document.body || inDrawer(document.activeElement)) {
         toggle()?.focus()
       }
     })
