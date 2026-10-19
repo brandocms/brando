@@ -86,9 +86,7 @@ end
 ```
 
 Calling `Brando.Villain.Parser.render_caption/1` directly gets you Brando's
-implementation, not yours — silently. This is the rule Brando's own
-implementations follow internally, and it is what
-`test/brando/villain/parser/dispatch_test.exs` guards.
+implementation, not yours — silently.
 
 ## Pages and fragments
 
@@ -100,7 +98,7 @@ Keep `page_routes()` **after** application-specific routes: its catch-all would
 otherwise handle requests intended for your controllers. It adds `/`, `/*path`,
 and supporting routes for previews, robots, and sitemaps.
 
-A minimal controller using the current page query API is:
+A minimal page controller is:
 
 ```elixir
 defmodule MyAppWeb.PageController do
@@ -258,8 +256,8 @@ plug Brando.Plug.Tenant
 plug Brando.Plug.Navigation, key: "main", as: :navigation
 ```
 
-The keyword-list form is required. `plug Brando.Plug.Navigation, "main"` is an
-obsolete API. Alternatively, `Brando.Navigation.get_menu("main", "en")` returns
+The keyword-list form is required: `plug Brando.Plug.Navigation, "main"`
+raises. Alternatively, `Brando.Navigation.get_menu("main", "en")` returns
 `{:ok, menu}` or `{:error, {:menu, :not_found}}`.
 
 Use the components in a HEEx layout:

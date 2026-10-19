@@ -44,8 +44,8 @@ prefix supplies that part of the path. Pointing it at a URL that already ends in
 `/media` can duplicate the segment.
 
 An image field may supply its own `cdn` config inside its asset `cfg`, including
-a different bucket and connection. Server-side image uploads honor it. The legacy
-server-side **file** uploader still obtains its bucket and S3 connection from
+a different bucket and connection. Server-side image uploads honor it. The
+server-side **file** uploader takes its bucket and S3 connection from
 `Brando.Files`, even when a field has a CDN config. Keep those settings aligned
 for that transport; use verified direct-upload configuration if field-specific
 file storage is required. A field's URL setting alone cannot move its bytes.
@@ -81,7 +81,7 @@ its global CDN fallback constructs the storage endpoint/bucket URL; use
 
 In `:multi` tenancy, local media uses `media/{site_key}` while records retain
 relative paths. Environments of one site share those bytes. **The site key is
-not automatically inserted into the legacy S3 object-key construction.** If
+not automatically inserted into the S3 object key.** If
 sites share a bucket, configure distinct upload namespaces or buckets and test
 for collisions; do not infer remote isolation from local directory isolation.
 Job tenant context ensures the correct records/configuration are used, but is

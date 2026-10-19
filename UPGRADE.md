@@ -1,4 +1,4 @@
-NOTE: Upgrade notes are in the CHANGELOG now. Coming from 0.51 (`legacy`)?
+NOTE: Upgrade notes are in the CHANGELOG. Coming from 0.51 (`legacy`)?
 Read [guides/migrating_from_051.md](guides/migrating_from_051.md) first; the
 0.52.0 notes below are older and incomplete.
 
@@ -867,8 +867,8 @@ end
     - (if developing on brandojs, yalc it.)
     - **Note, from a later version:** this path no longer exists. The Hex
       package stopped shipping `assets/` entirely, and the admin frontend is
-      distributed as `@brandocms/brandojs` via Yalc. Kept as the historical
-      0.44.0 step; do not follow it on a current upgrade.
+      distributed as `@brandocms/brandojs` via Yalc. Do not follow this step
+      on a current upgrade.
 * Switch out `kurtz` with `brandojs`:
   ```
   gsed -i "s=@univers-agency\/kurtz=brandojs=" assets/backend/src/**/*.js && \

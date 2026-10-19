@@ -88,7 +88,7 @@ initial content, or let the next configured push refresh the sources.
 
 Each selected file remains an individual source with its own placements and
 history. This is a batch-add operation: files added to GitHub later appear when
-you scan the folder again. Existing sources continue to synchronize normally.
+you scan the folder again.
 
 ### Publishing policies
 
@@ -102,8 +102,8 @@ Approval always selects the exact displayed local version. Another import does
 not broaden that approval. Previewing and selecting a version are separate from
 saving the entry. Imported Markdown is read-only; surrounding content remains
 editable. Workers update source state and stored renders, leaving open forms
-and their unsaved fields alone. Entry status and block activation continue to
-control public visibility.
+and their unsaved fields alone. Entry status and block activation control
+public visibility.
 
 **Check available versions** reloads locally imported versions. **Refresh from
 GitHub** in the source manager fetches the configured branch. Neither public
@@ -114,8 +114,8 @@ They survive module template updates, copy/paste, form recovery, and entry
 revisions. Reviewed and pinned revisions render their selected local version.
 **Restoring a Follow revision resumes following the current source**, as the
 policy notice in the editor states; choose a historical version and pin it to
-reproduce older content. All imported versions are retained indefinitely in this
-release, including versions referenced only by revisions. Do not prune these
+reproduce older content. All imported versions are retained indefinitely,
+including versions referenced only by revisions. Do not prune these
 tables independently of revision and placement retention.
 
 Detach a placement by clearing its source and saving the entry. Disable a source
@@ -127,7 +127,7 @@ exposed while versions and placements may reference it.
 ## Automatic static publishing
 
 Dynamic sites serve the rerendered local content immediately. For a live named
-environment on a static site, opt the server connection into the existing SSG
+environment on a static site, opt the server connection into the SSG
 build/deployment pipeline:
 
 ```elixir
@@ -190,7 +190,7 @@ public DNS addresses, no redirects or credentials, read deadlines, a 2 MB
 response cap, and a 512 KB UTF-8 Markdown cap. Repository IDs and public status
 are verified. Traversal, symlinks, submodules, truncated trees, compressed
 responses, and non-document results are rejected. Private repositories and
-arbitrary external URLs are outside this release.
+arbitrary external URLs are not supported.
 
 External Markdown has a separate renderer from trusted CMS Markdown. It supports
 paragraphs, headings, lists, blockquotes, code, tables, strikethrough, links, and
@@ -213,7 +213,6 @@ Workers revalidate this configuration. To rotate a secret, change the server
 setting and GitHub webhook together, then verify a ping and refresh sources to
 recover work cancelled during rotation. Secrets, raw webhook/document bodies,
 and authorization headers are excluded from job arguments and diagnostics.
-Receipt metadata is retained independently of content versions; a future receipt
-retention policy must preserve in-flight work. Even without a historical receipt,
+Receipt metadata is retained independently of content versions. Even without a historical receipt,
 current-ref reconciliation and immutable output hashes prevent stale activation
 and redundant publishing.

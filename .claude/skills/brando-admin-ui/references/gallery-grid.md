@@ -1,7 +1,7 @@
 # Gallery grid (contact sheet)
 
 The gallery field and the gallery block share one grid view, approved as design
-3a on 4 October 2026 (`design/drafts/gallery-grid.html`). Square thumbnails
+3a on 4 October 2026. Square thumbnails
 (`object-fit: cover`) join into one block: an outer `--brando-line` border with a 6px
 radius, hairlines drawn as each cell's 1px outline over a 1px gap on a white
 grid, so the empty cells of a short last row stay white. Five columns, six once

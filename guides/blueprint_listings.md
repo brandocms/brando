@@ -363,8 +363,7 @@ import Brando.Blueprint.Listings.Components.Cover, only: [cover: 1]
 import Brando.Blueprint.Listings.Components.Children, only: [children_button: 1]
 ```
 
-`Brando.Blueprint.Listings.Components` still exposes all of them for older
-Blueprints. Importing the smaller modules keeps a Blueprint from compiling
+`Brando.Blueprint.Listings.Components` exposes all of them. Importing the smaller modules keeps a Blueprint from compiling
 against the cover and child-listing admin code it does not use.
 
 `Core.update_link/1` links to the entry's edit form:

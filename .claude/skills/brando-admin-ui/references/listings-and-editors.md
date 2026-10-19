@@ -22,7 +22,8 @@ child entries, open menus, and real form values.
   controls use a 32px box with symmetric padding (40px for coarse pointers).
   Zero-count badges are omitted. Status dots use 1cap,
   optically centered with their labels. Remove inherited margins before adjusting
-  position. The font stored as Main can differ between consumer applications.
+  position. The admin's sans (`--brando-font-sans`, `theme.typography.families.main`)
+  can differ between consumer applications.
   Status labels use `text-box: trim-both cap alphabetic` so alignment follows the
   font's capital height; descenders extend naturally below it. Older browsers use
   the configurable `--status-label-offset` fallback (2px by default). Untrimmed DOM

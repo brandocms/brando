@@ -1,11 +1,11 @@
 # Tab views
 
-Approved on 5 October 2026: every tab view in the admin is **pill tabs**, from
-the module editor's "In the block / Configure modal" switch, shared as
-`.pill-tabs` in `TabSwitch.css`. The track is `#f7f8f6` with a 1px `#eceeea`
-border, a 22px radius and 3px of padding. Tabs are 13px/18px with 6px 14px of
-padding, muted by opacity. The selected tab is a raised white pill
-(`0 1px 2px` shadow, weight 500). Do not use underlined tabs, tinted tabs or
+Every tab view in the admin is **pill tabs**, like the module editor's "In the
+block / Configure modal" switch, shared as `.pill-tabs` in `TabSwitch.css`.
+The track is `--brando-surface-shaded` with a 1px `--brando-line-soft`
+border, a 22px radius and 3px of padding. Tabs are 13px/18px
+(`--brando-text-md`) with 6px 14px of padding, muted by opacity. The selected
+tab is a raised `--brando-surface` pill (`--brando-shadow-xs`, weight 500). Do not use underlined tabs, tinted tabs or
 button groups.
 
 ```heex
@@ -33,7 +33,7 @@ button groups.
 - A sticky bar that holds tabs and actions (the module editor) is a white bar
   around the track. The entry form's toolbar is split instead: see
   [Entry editor heading and settings screens](entry-heading-and-settings.md).
-  A tab bar's old class (`.transfer-tabs`, `.activity-tabs`…) stays on it for
+  A tab bar's own class (`.transfer-tabs`, `.activity-tabs`…) is for its
   layout and tests only.
 
 Two things are not tab views and keep their own look: the small mono language

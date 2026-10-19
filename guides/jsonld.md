@@ -206,7 +206,7 @@ its `mainEntity`:
 Google's [profile page](https://developers.google.com/search/docs/appearance/structured-data/profile-page)
 result needs `mainEntity` with the person's `name`; `image`, `sameAs`,
 `jobTitle` and `url` are recommended. Other `ProfilePage`s and `AboutPage`s
-are about the site's identity, as before.
+are about the site's identity.
 
 ### Videos
 

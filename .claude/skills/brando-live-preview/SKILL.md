@@ -7,15 +7,18 @@ user-invocable: true
 # Live-preview lifecycle
 
 Paths are repository-relative. Follow the server in `lib/brando/live_preview.ex`,
-the producer in `lib/brando_admin/components/form.ex`, and the consumer in
-`assets/src/hooks/LivePreview/index.js` plus the preview channel/client. Search
-an event name at both ends before changing its payload.
+the producer in `lib/brando_admin/components/form.ex`, and the consumers: the
+admin hook `assets/src/hooks/LivePreview/index.js`, the channel
+`lib/brando_admin/channels/live_preview_channel.ex` and the iframe client
+`priv/static/js/livepreview.js`. Search an event name at both ends before
+changing its payload.
 
 Patching blocks into the page (`priv/static/js/block_patch.js`) is shared with
 frontend edit mode (`priv/static/js/frontend_edit.js`, `guides/frontend_edit.md`),
-whose sidebar form routes the same `update_block` and full-render requests to
-the page in the parent window instead of a preview session
-(`BrandoAdmin.Components.Form.FrontendEditor`). Check both when changing either.
+whose sidebar form sends the same `update_block` patches to the page in the
+parent window instead of a preview session, and turns a full render into one
+replacement per block field (`BrandoAdmin.Components.Form.FrontendEditor`,
+`update_block/1` and `replace_fields/3`). Check both when changing either.
 
 ## Preserve render and cache ordering
 
@@ -34,8 +37,9 @@ the page in the parent window instead of a preview session
   subscriptions remain valid. Device viewport controls and template targets
   are separate choices.
 - Extend `cleanup_cache/1` whenever adding session cache data. Ownership and
-  shared-snapshot rules are documented in `guides/authorization.md`; preserve
-  its update/recovery authorization checks.
+  shared-link rules are documented in `guides/authorization.md` ("Live previews
+  and activity"); preserve the update/recovery checks in
+  `Brando.Authorization.Preview` (`authorize_update/2`, `authorize_write/2`).
 
 ## Coalesced updates
 
@@ -54,7 +58,8 @@ Closing preview or switching targets cancels pending updates.
 render, including nested refs and multiple block fields. Its keys include
 tenant context, and cleanup runs even after failure. Preserve custom parser
 source lists and the shared-library origin lookup. Module projections use the
-existing module-list eviction namespace.
+existing module-list eviction namespace
+(`Brando.Villain.RenderSourceQuery.get_module/2`).
 
 ## Recovery is a two-event handshake
 
@@ -83,6 +88,8 @@ was sent, so the next render goes out.
 Use `test/brando_admin/live/preview_updates_test.exs` for both preview recovery
 arrival orders and `test/brando_admin/live/form_recovery_test.exs` for the wider
 mounted-recovery harness.
+Use `test/brando_admin/components/form/preview_test.exs` for coalescing and
+`test/brando/live_preview/sends_test.exs` for skipped sends and patch counts.
 Use `test/brando/live_preview/live_preview_test.exs` for rendering;
 `test/brando/plugs/live_preview_test.exs` and
 `test/brando_web/controllers/preview_controller_test.exs` for access and snapshots.

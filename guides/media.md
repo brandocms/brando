@@ -43,15 +43,14 @@ and inspect the square thumbnail. `crop: true` uses the configured geometry and
 focal point for the crop; an uncropped size preserves the source proportions.
 Save the product and reopen it before checking the public page.
 
-Brando uses `Brando.Images.Processor.Vix` through the Image library and
-libvips. Configure it in the consumer if overriding an older processor:
+Brando processes images with `Brando.Images.Processor.Vix`, through the Image
+library and libvips. It is the default `processor_module`:
 
 ```elixir
 config :brando, Brando.Images, processor_module: Brando.Images.Processor.Vix
 ```
 
-There is no `sharp-cli` step in this pipeline. Keep libvips/Vix supported by your
-runtime and build image; test processing on the deployment platform. Size and
+Keep libvips/Vix supported by your runtime and build image; test processing on the deployment platform. Size and
 MIME limits apply to incoming uploads, while `formats` controls processed output.
 For SVG, use an explicitly allowed MIME type and inspect its rendering separately
 from raster variants.
@@ -144,9 +143,8 @@ An image matches when its formats are the ones its config produces, its
 sizes have exactly the config's size keys, every size exists in every format
 in the media folder, and each size's pixel dimensions are what its geometry
 gives for the original (scaled, or cropped), within a pixel. Files from the
-older processors match too: the sharp-based one of 0.54 and earlier, and the
-first libvips one, which 0.55 used before its release and which fitted a
-width alone into a square and enlarged smaller originals. Quality and other
+processors of earlier versions match too, 0.55's development builds included.
+Quality and other
 encoder settings are not in a file's header and are not compared, nor is a
 crop's focal point: if a config changed
 only those, use **Recreate image sizes**. Images on the CDN without a local
@@ -159,8 +157,7 @@ instead of reporting every image as different: recreating them would need
 the originals too. A single missing file is named with `--verbose`, as
 `large: file missing: images/site/default/large/x.jpg`.
 
-The task covers every environment of every active site and is safe to run
-again. **Recreate changed images** adopts the same way before recreating, so
+The task covers every environment of every active site. **Recreate changed images** adopts the same way before recreating, so
 from the admin only the images that differ are recreated; it reports how many
 of each. `mix brando.doctor` shows the split as a dry run, with how the images
 differ: in formats or sizes (the config changed, so recreate them) or in their
@@ -272,15 +269,15 @@ and reopen it. To render the preloaded asset:
 ```
 
 Use the two-argument `file_url/2` form with a media prefix for local/CDN-aware
-links. The older one-argument helper builds a local media URL. `content_disposition`
+links. The one-argument helper builds a local media URL only. `content_disposition`
 sets the object header during CDN upload; it does not change your local static
 server's response headers. `:inline` requests browser display, such as an inline
 PDF, while `:attachment` requests download.
 
 **Selecting another file in a field** changes that field's association when the
 entry is saved. **Replacing an asset's bytes** through the file browser keeps its
-record, URL, metadata, folder, and existing references. The latter intentionally
-affects every use of that asset. A failed replacement retains the original.
+record, URL, metadata, folder, and existing references. The latter affects every
+use of that asset. A failed replacement retains the original.
 If a stable URL is cached outside Brando, refresh the CDN/browser cache after a
 replacement; Brando cannot invalidate an arbitrary proxy automatically.
 

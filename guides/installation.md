@@ -17,7 +17,7 @@ to take BrandoJS from a checkout.
 
 ## Create or select a Phoenix application
 
-From outside an existing Mix project, the qualified one-shot development bootstrap is:
+From outside an existing Mix project, the one-shot development bootstrap is:
 
 ```sh
 mix archive.install hex phx_new 1.8.13
@@ -45,8 +45,8 @@ once Brando is a dependency.
 
 The archive supplies Igniter and invokes Brando's installer. Brando's optional
 modules automatically recompile if Igniter is added to an already compiled
-consumer. The one-shot archive currently fails when launched from inside an
-existing Mix project on the qualified Elixir version; create the new application
+consumer. The one-shot archive fails when launched from inside an
+existing Mix project on Elixir 1.20.4; create the new application
 from its parent directory. Existing applications use the package command below.
 
 Alternatively, create Phoenix explicitly, with the same flags:
@@ -131,7 +131,7 @@ site's build with native EuropaCSS, which pnpm installs from npm (see
 The package installer calls the same `brando.install` task. Preserve your selected
 Git/path source while testing unreleased work; a bare `igniter.install brando`
 selects the package source according to Igniter's own dependency rules. Brando's
-installer does not replace your dependency with a hardcoded relative path.
+installer keeps the dependency as you declared it.
 
 The generated changes configure Brando, extend supervision/endpoint/router,
 create the admin support modules and Vite projects, and add missing migrations.
@@ -196,7 +196,7 @@ terminal, `--dry-run` asks how to show the diff, and option 1 prints all of it.
 Without a terminal, `--dry-run --yes` prints only the moves and removals of an
 install-sized diff. To review the whole change, commit the application before
 installing, install, and read `git diff` (with `git status` for the new files).
-`--no-tenancy-prompt` remains supported.
+`--no-tenancy-prompt` turns the questions off, even with `--interactive`.
 
 Review `config/brando.exs` and your existing Phoenix database/endpoint settings.
 The default language is English. Add languages deliberately before initializing
@@ -206,7 +206,7 @@ content. Follow [Sites and environments](tenancy_and_environments.md) when using
 The installer discovers custom namespaces and allows `--module`, `--web-module`,
 `--admin-module`, `--repo`, `--router` and `--endpoint` selection. Ambiguous modules
 and unsupported application layouts produce instructions before files are written.
-Umbrella roots are not currently supported.
+Umbrella roots are not supported.
 
 Existing `/admin` routes, dynamic route paths and conflicting authentication
 migrations require explicit integration. Brando owns the shared public `users`
@@ -428,9 +428,8 @@ mix brando.assets.setup
 ```
 
 Asset setup runs `pnpm install` and `pnpm build` in both consumer asset
-directories. It does not build the framework's root asset project. Where the
-admin takes BrandoJS from is set in `assets/backend/package.json`, and the
-task keeps it:
+directories. Where the admin takes BrandoJS from is set in
+`assets/backend/package.json`, and the task keeps it:
 
 * **npm**: `"@brandocms/brandojs": "0.55.0"`, Brando's own version. A released
   Brando generates this; `pnpm install` fetches it.

@@ -230,8 +230,6 @@ Applications already on Brando 0.54 skip `mix brando.migrate54` and run only
 configuration only, so running one on source that no longer needs it changes
 nothing.
 
-Brando's optional task and helper modules automatically request recompilation
-when Igniter becomes available. The dependency remains optional at runtime.
 Any change to the application's configuration recompiles Brando, which takes
 about a minute. `mix brando.migrate54` therefore writes every `config :brando`
 setting the upgrade asks for at once (`repo_module`, `mailer` and a placeholder
@@ -493,7 +491,7 @@ Where `deployment.cfg` falls short, the converter reads the other legacy files:
   says so;
 - the warnings name the process manager it found: supervisord or systemd.
 
-Passwords are deliberately omitted. Before loading the generated configuration,
+The configuration holds no passwords. Before loading the generated configuration,
 export `FLORIST_DB_PASSWORD_PROD` and, when generated,
 `FLORIST_DB_PASSWORD_STAGING`. Florist uses the SSH agent by default; do not
 copy `SSH_PASS` into source control. The task warns and uses a documented
@@ -900,7 +898,7 @@ first Florist command:
    (`mix brando.migrate55` adds it when it creates the configuration). Florist
    checks `/health` during deploys; without the plug the check never passes.
 6. Configure rclone manually if the fabfile used it. Its prompted credentials
-   and deployment-specific bucket paths are intentionally not migrated.
+   and deployment-specific bucket paths are not migrated.
 7. Verify the Docker image contains the standard Mix release tarball at the
    path expected by Florist's `release_builder: :elixir`, then rehearse build,
    copy, upload, unpack, migrate, restart, and rollback on staging.
@@ -956,7 +954,7 @@ Handle application Blueprints according to their history:
 - For a genuinely new table, use the normal generator output.
 - For a table, root primary-key, physical primary-key source, or existing
   column-level primary-key change, write and test a hand-written Ecto migration,
-  then rebaseline. The generator deliberately refuses to infer these operations.
+  then rebaseline. The generator refuses to infer these operations.
 
 See [Blueprint migrations](blueprint_migrations.md) for renames, physical Ecto
 sources, relation corrections, type/default conversions, legacy snapshots,

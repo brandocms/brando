@@ -99,7 +99,7 @@ height does not solve a button touching the paragraph above it.
 
 ### Let the layout own the gap
 
-Brando's [global stylesheet](../../../assets/css/app.css) includes:
+Brando's [global stylesheet](../../../assets/css/global.css) includes:
 
 ```css
 p:last-of-type {
@@ -107,8 +107,8 @@ p:last-of-type {
 }
 ```
 
-This cancelled the intended paragraph margins in the first Utilities design.
-Several buttons had a measured gap of zero despite apparently correct local CSS.
+It cancels the bottom margin of the last paragraph in a container, so a button
+below a description can measure a gap of zero despite correct-looking local CSS.
 Use parent `gap` or padding on an action wrapper so spacing survives the reset:
 
 ```css
@@ -182,9 +182,9 @@ consistent column spacing. Bound its width and reduce the column count on narrow
 screens. Avoid distributing a handful of tiny label/value pairs across the full
 viewport with `justify-content: space-between`.
 
-Show effective configuration values. The initial Image jobs field was blank
-because the setting was unset, although the application uses a default of 1.
-Resolve the same default as the consuming code. If a value cannot be determined,
+Show effective configuration values. An unset setting the application
+defaults (Image jobs: `concurrent_image_jobs`, default 1) shows that default:
+resolve it as the consuming code does. If a value cannot be determined,
 display a meaningful unknown state instead of inventing a value.
 
 ## Verify the rendered result

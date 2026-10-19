@@ -25,7 +25,7 @@ built-in shorthands are `:blocks`, `:blocks_prevent_circular_references`,
 `:module_versioned`, `:password`, `:permalink`, `:protect_password`,
 `:protect_role`, `:revisioned`, `:scheduled_publishing`, `:sequenced`,
 `:soft_delete`, `:status`, `:timestamped`, `:translatable`,
-`:validate_var_keys` and `:watch_language`. `:villain` still resolves but is
+`:validate_var_keys` and `:watch_language`. `:villain` resolves too but is
 deprecated; use `:blocks`.
 
 The shorthand and the module, `trait Brando.Trait.Status`, register the same
@@ -155,8 +155,8 @@ trait :meta,
   ai_prompts: [meta_title: [prompt: "Write an SEO title from the title", context: [:title]]]
 ```
 
-Before 0.55 it was called `ai:`, which still works in 0.55 and warns when the
-Blueprint compiles, with the `ai_prompts:` to write.
+`ai:` is a deprecated name for it, which warns when the Blueprint compiles,
+with the `ai_prompts:` to write.
 
 See [Page metadata](meta.md) and [Content SEO](content_seo.md).
 
@@ -230,7 +230,7 @@ These serve Brando's own schemas, and are available to applications:
 * `:validate_var_keys`: validates the keys of a module's variables.
 * `:blocks_prevent_circular_references`: stops a fragment from including
   itself.
-* `:watch_language`: does nothing yet.
+* `:watch_language`: does nothing.
 
 <!-- usage-rules:start -->
 

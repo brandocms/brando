@@ -120,8 +120,8 @@ Give `BrandoAdmin.Components.Form`:
   singleton settings screen: the form renders no heading (put a
   `Workspace.header` above it), shows its tabs as plain pill tabs, and saves
   in place from a sticky bar at the bottom.
-* slots: the optional `:instructions` and `:footer`. A `:header` slot from
-  earlier versions is accepted and not shown.
+* slots: the optional `:instructions` and `:footer`. A `:header` slot is
+  accepted and not shown.
 
 ## The form
 
@@ -401,8 +401,7 @@ the slug themselves on a new entry:
   the generated slug. Pages use it to start a child page's URI with its
   parent's.
 
-`from:` and `for:` (the 0.53 name) are compile errors on a slug input; use
-`source:`.
+`from:` and `for:` are compile errors on a slug input; use `source:`.
 
 ### Choices
 
@@ -608,8 +607,8 @@ Omitted `extensions`, `nil` and `["all"]` use the default tools: `p`, `h1` to
 `sup`, `color`, `unsetMarks`, `jumpAnchor`, `smartText` and `align`. An
 explicit `[]` means no optional formatting tools. `"list"` enables bullets
 and `"orderedList"` numbering; Tab and Shift-Tab indent and outdent where
-applicable. `"blockquote"` is opt-in and in no preset. The legacy
-`"action_button"` is read as `"button"`.
+applicable. `"blockquote"` is opt-in and in no preset. `"action_button"` is
+read as `"button"`.
 
 The module reference editor offers **Basic**, **Caption** and **Article**
 presets next to the individual controls. A preset adds tools to the current
@@ -661,7 +660,7 @@ block relation that stores the notes, and `module_set` the module set notes
 are written with; `enabled: false` keeps the configuration but turns the
 feature off. The relation must not also have its own `blocks` editor, the
 schema needs `trait :blocks`, and footnotes work only on top-level inputs, not
-in subforms. See [Footnotes](block_editor.md#footnotes).
+in subforms. See [Footnotes and block regions](footnotes.md#on-a-blueprint-rich-text-field).
 
 ## AI actions on a field
 
@@ -791,8 +790,7 @@ can use it.
 
 In block text, a module turns it on for its text blocks with **Write with
 AI** under Overview in the module editor (`write_with_ai true` in a
-[module definition](module_definitions.md)). It is off in new and existing
-modules. The [`block_text` site prompt](#site-prompts) adds its instructions
+[module definition](module_definitions.md)). It is off by default. The [`block_text` site prompt](#site-prompts) adds its instructions
 to every request there and picks the model, and
 `prompts: [block_text: [write_with_ai: false]]` turns it off in every module.
 
@@ -859,21 +857,20 @@ rendered block content), `model` (a `"provider:model"` spec or a name from
 
 `models:` names the models a site uses: `:default` for everything, and a name
 per kind of job (alt text asks for `:image`) that falls back to `:default`.
-`default_model: "..."` is still read, as `models: [default: "..."]`. Model and
+`default_model: "..."` is read as `models: [default: "..."]`. Model and
 provider settings and credentials stay on the server.
 
-Before 0.55, `prompts:` was called `fields:` and `trait :meta, ai_prompts:`
-was `trait :meta, ai:`. Both old names still work in 0.55: Brando warns at
-boot about `fields:`, and the Blueprint warns when it compiles about `ai:`,
-each with the name to write instead. They are removed in a later release.
+`fields:` is a deprecated name for `prompts:`, and `trait :meta, ai:` for
+`trait :meta, ai_prompts:`. Brando warns at boot about `fields:`, and the
+Blueprint warns when it compiles about `ai:`, each with the name to write
+instead. They are removed in a later release.
 
 ## `ai:` on an input (deprecated)
 
-Before `ai_actions:`, an input took one prompt in `ai:`, and on `:text` and
-`:textarea` its result went straight into the field. In 0.55 `ai:` still
-works, as one action named **Generate** whose result is a suggestion like
-any other, and the Blueprint warns when it compiles, with the `ai_actions:`
-to write instead. It is removed in a later release.
+`ai:` on an input takes one prompt. It works as one action named
+**Generate** whose result is a suggestion like any other, and the Blueprint
+warns when it compiles, with the `ai_actions:` to write instead. It is
+removed in a later release.
 
 ```elixir
 # Deprecated
@@ -890,19 +887,18 @@ input :summary, :textarea,
 `context:` becomes `from:`, which `ai_actions:` requires. `model:` carries
 over. `api_key:` and request options such as `temperature:` have no place in
 `ai_actions:`: set keys under `providers:` and request options under
-`default_opts:`. Until the input is changed, the action keeps them, and like
-`ai:` it sends its prompt even when the fields it reads are empty.
+`default_opts:`. Until the input is changed, the action keeps them and sends
+its prompt even when the fields it reads are empty.
 
 `ai:` keeps its meaning elsewhere too:
 
-* On a `:rich_text` input it turned on Write with AI and gave it its
-  instructions, context and model: it is read as
-  `write_with_ai: [prompt:, from:, model:]`, or `write_with_ai: true` when it
-  had none, so Write with AI stays on there, and the warning prints that.
+* On a `:rich_text` input it turns on Write with AI with its instructions,
+  context and model: it is read as `write_with_ai: [prompt:, from:, model:]`,
+  or `write_with_ai: true` when it has none, and the warning prints that.
 * On a `:hidden` input for a meta field it is the Meta drawer's Generate, an
   action on that input.
 * A custom component (`{:live_component, module}` or a function) gets it in
-  its options as before, without a warning.
+  its options, without a warning.
 
 <!-- usage-rules:start topic="admin-ui" -->
 
@@ -1002,9 +998,7 @@ needs `cast: true` (embeds are always cast). Rows can be dragged into order
 when the related schema has `trait :sequenced` or the relation is an
 `embeds_many`. The parameter names for ordering and removal come from the
 relation's `sort_param:` and `drop_param:`, and default to
-`sort_<name>_ids` and `drop_<name>_ids`. You can keep typing in a remaining
-row while a removal is waiting for its reply; the typed values stay with
-that row when its position changes.
+`sort_<name>_ids` and `drop_<name>_ids`.
 
 What a subform input cannot do: generate with `ai:`, use `update_relation:`
 on a select, take `:unless_superuser`, or carry footnotes.
@@ -1122,13 +1116,7 @@ Expanding an entry offers a picker for each of its asset fields, so media can
 be swapped or removed without uploading again.
 
 Entry inputs also support translated text and textareas, and array values
-such as `:string_list` and array-backed `:multi_select`. Editing one language
-retains the entry's other translations. Adding, removing or clearing list
-values affects only that entry, and saving includes edits still waiting for
-the input's debounce. String-list removals take effect immediately, including
-when an earlier edit is still waiting for its reply.
-Array multi-selects publish the complete selection even while another filter
-edit is waiting for validation.
+such as `:string_list` and array-backed `:multi_select`.
 
 ### Custom subform components
 

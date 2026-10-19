@@ -65,8 +65,8 @@ After public migrations, apply tenant content migrations with
 Foreign keys preserve a referenced schema's explicit prefix, including
 `public.users`, so new tenant tables can reference their shared creators. A
 legacy snapshot that omitted the prefix produces a reviewed, reversible
-constraint change on its next migration. Unprefixed content references continue
-to use the migration's current schema.
+constraint change on its next migration. Unprefixed content references use the
+migration's current schema.
 
 <!-- usage-rules:start topic="generators" -->
 
@@ -106,7 +106,7 @@ migration against that application's own schema and data.
 
 <!-- usage-rules:start topic="generators" -->
 
-Deployment still uses the application's normal Ecto migration command. The Blueprint task generates source files; it
+Deployment uses the application's normal Ecto migration command. The Blueprint task generates source files; it
 never changes a database, and reads one only for warnings or with `--reconcile`.
 
 <!-- usage-rules:end -->
@@ -125,18 +125,15 @@ planning another so migration ordering and history checks remain valid. If the s
 or the migration directory changes after review, the commit rejects the stale
 plan. Generate and review a new plan; do not reuse the old deferred command.
 
-The binary snapshot and its migration are deliberately excluded from Igniter's
-text writer. A deferred task recomputes and verifies the reviewed fingerprint,
-then uses the migration-directory and snapshot locks and paired persistence.
-The normal storage diff engine, rename hints, legacy snapshot upgrades, and
-explicit `--rebaseline` behavior are retained. No database migration is run by
-the source generator.
+The binary snapshot and its migration are kept out of Igniter's text writer. A
+deferred task recomputes and verifies the reviewed fingerprint, then uses the
+migration-directory and snapshot locks and paired persistence. No database
+migration is run by the source generator.
 
 For programmatic callers, `Brando.Blueprint.Migrations.plan/2` creates the plan
 without writes and `commit_plan/1` verifies and persists it. `plan_all/1` and
-`commit_plans/1` do the same for several Blueprints, all or nothing. Existing
-`create_migration/2` and `rebaseline_snapshot/2` callers retain immediate operation
-through the same implementation.
+`commit_plans/1` do the same for several Blueprints, all or nothing.
+`create_migration/2` and `rebaseline_snapshot/2` plan and commit in one call.
 
 ## What the snapshot tracks
 
@@ -174,7 +171,7 @@ ambiguous state. The hint may remain in the Blueprint after the migration; once 
 
 ## Physical Ecto sources
 
-Blueprint field names remain the application-facing Ecto names. A `source:`
+Blueprint field names are the application-facing Ecto names. A `source:`
 option gives a persisted field a different physical database column:
 
 ```elixir
@@ -200,11 +197,11 @@ relations do
 end
 ```
 
-The generator now uses `record_pk`, `headline`, `account_ref`, `owner_ref`, and
+The generator uses `record_pk`, `headline`, `account_ref`, `owner_ref`, and
 `payload` everywhere in the database contract: columns, references, auxiliary
 relations, indexes, constraint names, and snapshots. Runtime constraint names
-use the same physical sources, while changesets and application code continue
-to use `:id`, `:title`, `:tenant_id`, `:owner_id`, and `:metadata`.
+use the same physical sources, while changesets and application code use
+`:id`, `:title`, `:tenant_id`, `:owner_id`, and `:metadata`.
 
 No special step is needed for a new table. For an existing Blueprint created by
 an older generator, first establish which columns the database actually has:
@@ -229,7 +226,7 @@ reference to that one column and rejects a missing or type-incompatible field.
 
 Do not delete a snapshot to make a physical-source mismatch disappear. Igniter
 cannot inspect deployed schemas or decide whether a column should be renamed or
-re-baselined, so this upgrade is intentionally guided rather than automatic.
+re-baselined, so the Igniter upgrade leaves this step to you.
 
 ## Field types, options, and defaults
 
@@ -246,7 +243,7 @@ The migration schema uses the database representation of each Ecto field:
 - Ecto schema-only options do not create migration churn.
 
 This distinction is important for enum defaults. The application-facing default
-remains an atom, but the database receives its string or integer mapping:
+is an atom, but the database receives its string or integer mapping:
 
 ```elixir
 attribute :priority, :enum,
@@ -264,8 +261,7 @@ history, review the next diff according to the live database:
   by hand, verify it and rebaseline instead of applying a fictional change.
 - An integer-mapped enum, enum array, or custom Ecto type may have an older
   snapshot containing text, `Ecto.Enum`, or an Elixir module as its database
-  type. Those old generated declarations could not represent the runtime
-  storage contract reliably. Do not apply an automatic type conversion to
+  type. Do not apply an automatic type conversion to
   production data without inspection. Write an explicit migration (including
   PostgreSQL `USING` conversion when needed), test it backward and forward,
   then use `--rebaseline`. If the live database already has the correct
@@ -308,7 +304,7 @@ migration are safe for production data.
 
 If the live database was already corrected by hand, verify the column and
 foreign-key definitions and rebaseline rather than applying a fictional
-change. Igniter intentionally does not rewrite relation declarations or select
+change. Igniter does not rewrite relation declarations or select
 delete rules because it cannot inspect deployed constraints, dependent data,
 or application ownership semantics.
 
@@ -354,7 +350,7 @@ attribute :slug,
   ]
 ```
 
-Callback-only declarations remain globally unique in the database. If an existing callback already narrows
+Callback-only declarations are globally unique in the database. If an existing callback already narrows
 candidates by one or more persisted columns, add those columns to `with:` and run the normal Blueprint migration
 generator:
 
@@ -374,13 +370,9 @@ changeset constraints use that stored form consistently, including names built
 from long tables, fields, composite unique scopes, and custom
 `constraint_name:` values.
 
-No database migration or Igniter step is required when upgrading. PostgreSQL
-already stored existing overlong names in truncated form. Brando canonicalizes
-older Blueprint snapshots while loading them, so running
-`mix brando.gen.blueprint_migration MyApp.Content.Entry` does not emit a
-drop/recreate migration solely because of this correction. Continue to review
-the generator output normally; any operations it does emit represent other
-storage changes.
+Brando truncates the names in older Blueprint snapshots the same way when it
+loads them, so an overlong name in a snapshot does not produce a drop/recreate
+migration.
 
 ### Collisions after identifier normalization
 
@@ -402,15 +394,15 @@ the database cannot represent.
 
 ### Unique language attributes
 
-Earlier generators could silently retain the ordinary language lookup index
-and discard the unique index when a Blueprint explicitly combined the two:
+A `:language` attribute declared unique gets one unique index, which also
+serves normal language lookups:
 
 ```elixir
 attribute :language, :language, unique: true
 ```
 
-The generator now emits one unique index, which also serves normal language
-lookups. Applications with this declaration must run:
+A snapshot from an older generator holds the ordinary lookup index instead.
+Run the generator for the Blueprint to replace it:
 
 ```shell
 mix brando.gen.blueprint_migration MyApp.Content.Entry
@@ -426,7 +418,7 @@ Blueprints, snapshots, or deployed data.
 
 ## Changes that require a hand-written migration
 
-Table and primary-key changes are deliberately refused. Their safe implementation depends on deployed data, foreign
+Table and primary-key changes are refused. Their safe implementation depends on deployed data, foreign
 keys, application rollout order, and sometimes concurrent versions of the application. Write and test the Ecto
 migration yourself, then record the new known-good Blueprint state:
 

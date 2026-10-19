@@ -66,11 +66,13 @@ blanket selector rule.
 
 ## Preserve isolation and the real transport
 
-- Import `test` from [setupAuth.js](../../../e2e/playwright/test-support/setupAuth.js)
-  for authenticated tests or `setup.js` for login flows. Both bind browser requests
-  to a per-test SQL sandbox through the user-agent. Use `page.request` for fixture
-  requests that must share its sandbox; a separate request context needs the same
-  metadata explicitly.
+- Import `test` from [setupAuth.js](../../../e2e/playwright/test-support/setupAuth.js).
+  It binds browser requests to a per-test SQL sandbox through the user-agent
+  (`sandboxUserAgent`); `page` is logged in. A login flow or anonymous visitor
+  builds its own context with `browser.newContext({ baseURL, userAgent: sandboxUserAgent })`
+  and closes it. Use `page.request` for fixture requests that must share the
+  sandbox; a separate request context or `fetch` sends `sandboxUserAgent` as its
+  `user-agent` explicitly.
 - Keep authentication per test. The login endpoint creates a database session
   token inside the sandbox; reusing a global `storageState` does not preserve the
   token after rollback. `secondUserPage` supplies another identity in the same

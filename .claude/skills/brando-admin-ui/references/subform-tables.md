@@ -1,6 +1,6 @@
 # Inline subform tables
 
-Approved on 4 October 2026 (`design/drafts/redirects-subform.html`). An inline
+Approved on 4 October 2026. An inline
 subform (`inputs_for … style :inline, cardinality :many`) and a table block's
 rows are both a table, built like `.identifier-list`: one `--brando-line` border with a
 6px radius around the whole, hairlines between rows, white rows tinted
