@@ -291,10 +291,10 @@ defmodule BrandoAdmin.MenuTest do
       groups = configuration_groups(%{role: :superuser})
 
       assert {:site, [_ | _] = site} = List.keyfind(groups, :site, 0)
-      assert List.last(site) == "/admin/config/storefront"
+      assert Enum.take(site, -1) == ["/admin/config/storefront"]
 
       assert {:building_blocks, [_ | _] = building_blocks} = List.keyfind(groups, :building_blocks, 0)
-      assert List.last(building_blocks) == "/admin/config/product-blocks"
+      assert Enum.take(building_blocks, -1) == ["/admin/config/product-blocks"]
 
       assert {:operations, operations} = List.keyfind(groups, :operations, 0)
 
