@@ -998,6 +998,7 @@ defmodule BrandoAdmin.Components.Content.List.Row do
         listing={@listing}
         current_user={@current_user}
       />
+      <span class="list-row-progress" aria-hidden="true"></span>
     </div>
     """
   end

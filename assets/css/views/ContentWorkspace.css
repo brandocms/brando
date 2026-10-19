@@ -88,6 +88,12 @@
   .child-chips-label { margin-right: 4px; color: var(--workspace-muted); font-size: var(--brando-text-sm); line-height: 18px; }
   .child-chip { display: inline-flex; align-items: center; gap: 6px; min-height: 28px; max-width: 100%; margin: 0; padding: 0 2px 0 9px; border: 1px solid var(--workspace-line); border-radius: 14px; background: var(--brando-surface); color: var(--workspace-ink); font-size: var(--brando-text-md); line-height: 18px; }
   .child-chip:hover { border-color: var(--brando-line-strong); }
+  /* Opening (openingRow.js, Opening.css): tinted like a row, with the line
+     along its foot kept inside the rounded ends, since the chip can't clip
+     (its menu opens below it). Child rows take the tint over their white. */
+  .content-list :is(.child-chip, .child-row).is-opening { background: var(--brando-surface-hover); }
+  .child-chip.is-opening { position: relative; border-color: var(--brando-line-strong); }
+  .child-chip.is-opening > .list-row-progress { left: 12px; right: 12px; border-radius: 1px; }
   .child-chip-icon { flex: none; width: 13px; height: 13px; color: var(--workspace-muted); }
   /* Outranks the row title's flex basis and 120px minimum above */
   .content-list .list-row .child-chip > .listing-title { display: inline-flex; flex: 0 1 auto; align-items: baseline; gap: 6px; min-width: 0; }
