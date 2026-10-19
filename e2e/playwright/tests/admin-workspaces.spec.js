@@ -33,7 +33,10 @@ for (const [name, route, heading] of [
     const firstRow = page.locator('.list-row').first()
     if (await firstRow.count()) {
       await expect(firstRow.locator('.entry-link').first()).toHaveCSS('font-size', '14px')
-      await expect(firstRow).toHaveCSS('border-radius', '0px')
+      // Rows sit in the listing's one frame, not as separate rounded pills:
+      // the first only rounds its top corners to the frame's
+      await expect(page.locator('.content-list-frame')).toHaveCSS('border-radius', '6px')
+      await expect(firstRow).toHaveCSS('border-radius', '5px 5px 0px 0px')
     }
     await page.screenshot({ path: testInfo.outputPath(`${name}-desktop.png`), fullPage: true })
     await page.setViewportSize({ width: 390, height: 844 })
