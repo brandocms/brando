@@ -242,10 +242,10 @@ The installer writes:
   Florist copies into it (`.envrc.runtime`) and sets long node names.
 
 Prod connects as `<app>`, Florist's default database user, and staging as
-its own `<app>_staging`. Set up the Florist targets to match, with the staging
-target's database user and `set :mix_env, :prod`, as
-[Configuration](deployment.md#configuration) in the deployment guide
-describes, and `FLORIST_DB_PASSWORD_PROD` or `FLORIST_DB_PASSWORD_STAGING` to
+its own `<app>_staging`. Set up the Florist targets to match: in the staging target,
+`set :user, "${PROJECT_NAME}_staging"` and `set :mix_env, :prod` (see
+[Runtime environment](deployment.md#runtime-environment-envrc-flavor) in the deployment
+guide), and `FLORIST_DB_PASSWORD_PROD` or `FLORIST_DB_PASSWORD_STAGING` to
 the password in the `DATABASE_URL`.
 
 Without `--domain`, no `check_origin` is written, so Phoenix keeps checking
@@ -510,8 +510,9 @@ freely.
 
 ## Running the steps separately
 
-`mix brando.setup` runs these steps in order. Run them yourself to control
-each one:
+These are the equivalent steps as individual tasks, to control each one.
+`mix brando.setup` creates the account itself, in place of `brando.gen.admin`,
+and does not run `brando.gen.languages`:
 
 ```sh
 mix brando.assets.setup

@@ -77,6 +77,19 @@ Stop and review at these points:
   ([section 4](#4-repair-derived-data)).
 - **After `mix brando.gettext.reconcile`.** Review the catalog diff.
 
+And these, which no task does for you:
+
+- Change the Dockerfile's `FROM … twined/fehn:<tag>` to a fehn 4.2 variant for
+  the server's Ubuntu release, and build the admin with Node 24
+  ([Dependencies and toolchain](#dependencies-and-toolchain)).
+- On a database deployed with the bundled Fabric workflow, give the
+  application's database user ownership of `oban_job_state` before
+  `brando_153` runs ([section 3](#3-generate-and-review-database-migrations)).
+- In an application that sets `config :brando, Oban` itself, add Brando's
+  queues and cron jobs ([section 4](#4-repair-derived-data)).
+- With group authorization, grant `brando.notifications.manage` to the groups
+  that should manage notification routes ([section 4](#4-repair-derived-data)).
+
 With named environments, `mix brando.upgrade.database` refuses to run: follow
 sections 3 and 4 by hand.
 
@@ -138,9 +151,10 @@ elixir /path/to/brando/scripts/prepare_055_deps.exs --brando-ref <commit sha>
 ```
 
 `--brando-ref` points the Brando dependency at a commit on GitHub. To rehearse
-against a local checkout, give `--brando-path /path/to/brando` instead; deploy
-from the commit, since the release's Docker build cannot see a checkout outside
-the project. `--dry-run` writes nothing. The script edits `mix.exs` as text and
+against a local checkout, give `--brando-path /path/to/brando` instead (see
+[Working against a Brando checkout](#working-against-a-brando-checkout) for
+picking up edits to it); deploy from the commit, since the release's Docker
+build cannot see a checkout outside the project. `--dry-run` writes nothing. The script edits `mix.exs` as text and
 prints each change, then lists the `timex` calls left in `lib/` and what
 `mix.lock` still has on HTTPoison or hackney 1. Running it again changes
 nothing.
@@ -613,14 +627,22 @@ index". Publish the fragments first.
    empty. `mix brando.upgrade.database` rebuilds it for you.
 
 6. **Oban, in an application that sets `config :brando, Oban` itself.** Its
-   configuration replaces Brando's whole default, so add the queues and cron
-   jobs 0.55 needs, or webhooks, notifications, the search index and
-   scheduled publishing never run:
+   configuration replaces Brando's whole default, so it needs every queue and
+   cron job Brando runs. Without them, webhooks, notifications and the search
+   index never update, uploads and orphaned media are never cleaned up, and
+   entries whose publish date passed with no job (clones, restores) stay
+   unpublished. Brando's default, from `Brando.Supervisor`, with the
+   application's own queues and jobs added:
 
    ```elixir
    config :brando, Oban,
      queues: [
        # …the application's queues
+       default: [limit: 1],
+       environment_operations: [limit: 1],
+       ssg_builds: [limit: 1],
+       image_processing: [limit: 1],
+       upload_reaping: [limit: 1],
        content_events: [limit: 1],
        webhooks: [limit: 5],
        notifications: [limit: 2],
@@ -629,15 +651,22 @@ index". Publish the fragments first.
      cron: [
        crontab: [
          # …the application's jobs
+         {"0 2 * * *", Brando.Worker.SitemapGenerator},
+         {"0 3 * * *", Brando.Worker.SoftDeletePurger},
+         {"0 4 * * *", Brando.Worker.RevisionPurger},
+         {"15 4 * * *", Brando.Worker.DraftPurger},
+         {"20 4 * * *", Brando.Worker.ActivityPurger},
+         {"30 4 * * *", Brando.Worker.VideoUploadReaper},
+         {"45 4 * * *", Brando.Worker.UploadIntentReaper},
+         {"0 5 * * *", Brando.Worker.MediaOrphanCleanup},
          {"15 5 * * *", Brando.Worker.FormSubmissionPurger},
          {"25 5 * * *", Brando.Worker.NotFoundPurger},
          {"35 5 * * *", Brando.Worker.WebhookDeliveryPurger},
          {"*/10 * * * *", Brando.Worker.ScheduledPublishingSweep}
-       ]
+       ],
+       timezone: "Etc/UTC"
      ]
    ```
-
-   Brando's default, in `Brando.Supervisor`, lists the rest.
 
 7. **With group authorization, grant the Notifications permission**
    (`brando.notifications.manage`) to the groups that should manage

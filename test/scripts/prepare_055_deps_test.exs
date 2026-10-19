@@ -232,7 +232,7 @@ defmodule Brando.Scripts.Prepare055DepsTest do
 
   test "the constraints are the guide's" do
     guide = File.read!(@guide)
-    [_, section] = String.split(guide, "### Dependencies and toolchain", parts: 2)
+    [_, section] = String.split(guide, "### Dependencies by hand", parts: 2)
     [block | _] = Regex.run(~r/```elixir\n# mix\.exs\n\{:phoenix,.*?```/s, section)
 
     guide_constraints =
