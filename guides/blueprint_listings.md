@@ -366,7 +366,8 @@ The listing preloads every image asset of the schema, so
 
 `Children.children_button/1` toggles [child rows](#child-listings): a
 chevron in front of the row's title, and a summary of what it opens ("3
-pages · 2 fragments") in a column before the fixed columns. It takes `entry`
+pages · 2 fragments") in a column before the fixed columns. Render it right
+after the row's title cell, so the summary keeps that place. It takes `entry`
 and `fields` (required), plus `columns` (default 1), `offset` and `class`.
 
 ## The listing query
@@ -908,8 +909,10 @@ child_listing name: :page_children, schema: Brando.Pages.Page
 child_listing name: :fragment_children, schema: Brando.Pages.Fragment, style: :chips, add: "create_fragment"
 ```
 
-A chip's component should be short, the title and perhaps a key: it is
-drawn on one line. Chips aren't sortable. The order of `fields` in
+The child listing of chips must have a `component` (a Blueprint without one
+fails to compile), and it should be short, the title and perhaps a key: it
+is drawn on one line. An `add:` action with `confirm` asks before it runs,
+as it does in the menu. Chips aren't sortable. The order of `fields` in
 `children_button` is the order the children open in, with chips after the
 rows.
 
