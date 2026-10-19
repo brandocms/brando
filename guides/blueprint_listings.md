@@ -284,7 +284,7 @@ The route is the application's own, in `admin_routes do … end`:
 `live "/config/shop", MyAppAdmin.Shop.SettingsLive`. Brando's `/config/…`
 routes are declared before the application's block, so they take precedence:
 a path Brando already uses stays Brando's, and the compiler warns that the
-application's clause cannot match.
+application's clause cannot match. Give the screen a path of its own.
 
 ## Declaring listings
 

@@ -43,7 +43,7 @@ defmodule BrandoAdmin.Menu do
   The route is the application's own, inside `admin_routes do … end`:
   `live "/config/shop", MyAppAdmin.Shop.SettingsLive`. Brando's
   `/admin/config/…` routes come first, so a path Brando already uses stays
-  Brando's.
+  Brando's: give the screen a path of its own.
 
   Every item shows a [Lucide](https://lucide.dev/icons) icon in the sidebar.
   Items built from a blueprint use its `content_icon` (see
@@ -512,7 +512,7 @@ defmodule BrandoAdmin.Menu do
   # and `groups` gives the headings' order and labels for the sidebar. A group
   # with nothing left for this user is dropped, heading and all.
   defp configuration_menu_item(current_user, current_site) do
-    application_items = Brando.admin_module(Menus).__config_items__()
+    application_items = application_config_items(Brando.admin_module(Menus))
 
     groups =
       [
@@ -574,6 +574,14 @@ defmodule BrandoAdmin.Menu do
       groups: Enum.map(groups, fn {key, name, _} -> %{key: key, name: name} end),
       items: for({key, _, items} <- groups, item <- items, do: Map.put(item, :group, key))
     }
+  end
+
+  # A menu module written by hand, without `use BrandoAdmin.Menu`, has no
+  # `__config_items__/0`.
+  defp application_config_items(menus) do
+    if Code.ensure_loaded?(menus) and function_exported?(menus, :__config_items__, 0),
+      do: menus.__config_items__(),
+      else: []
   end
 
   # Without group authorization, for the roles the item names; with it, its

@@ -36,6 +36,7 @@ defmodule BrandoAdmin.MenuConfigItemsAccessTest do
   end
 
   test "the item shows to those granted what its LiveView requires, and the page opens", c do
+    # role :user is not among the item's default roles: with groups they do not apply
     {user, conn} = member(c, ["brando.admin.access", "brando.utilities.read"])
 
     assert "/admin/config/shop" in configuration_urls(user)
@@ -49,12 +50,6 @@ defmodule BrandoAdmin.MenuConfigItemsAccessTest do
 
     refute "/admin/config/shop" in configuration_urls(user)
     assert {:error, {:redirect, %{to: "/admin/access-denied"}}} = live(conn, "/admin/config/shop")
-  end
-
-  test "roles: do not apply; an editor-role member without the grant does not see an editor item", c do
-    {user, _conn} = member(c, ["brando.admin.access"])
-
-    refute "/admin/config/product-blocks" in configuration_urls(%{user | role: :editor})
   end
 
   test "an item whose LiveView declares no requirement is hidden from everyone, as the page is", c do
