@@ -70,8 +70,8 @@
 
 /* Phones and tablets, where --navigation-width is 0: the sidebar is a drawer
    over the page, opened by a round menu button beside the search one (nav.ex)
-   and closed by its backdrop, Escape or following a link. Closed, it is
-   hidden as well as off screen, so it can't be tabbed into. */
+   and closed by its backdrop, Escape, following a link or widening the
+   window (the Navigation hook). */
 .mobile-nav-toggle,
 .mobile-nav-backdrop {
   display: none;
@@ -115,51 +115,71 @@
     }
   }
 
+  /* Closed, the drawer and its backdrop are not displayed at all: hidden
+     only by visibility, the submenu rows the Navigation hook shows inline
+     could still be tabbed to. `allow-discrete` keeps them on screen while
+     they slide and fade out; @starting-style is where they slide in from.
+     They sit over left drawers (999) and the selection bar (1000), under
+     modals and their backdrops (1001 and up). */
   .mobile-nav-backdrop {
     position: fixed;
     inset: 0;
-    z-index: 997;
-    display: block;
+    z-index: 1000;
+    display: none;
     background-color: var(--brando-overlay);
     opacity: 0;
-    visibility: hidden;
     transition:
       opacity var(--motion-leave) var(--motion-ease-close),
-      visibility 0s linear var(--motion-leave);
+      display var(--motion-leave) allow-discrete;
   }
 
   #navigation,
   .content-language-selector {
+    display: none;
     width: min(300px, 85vw);
     transform: translateX(-100%);
-    visibility: hidden;
     transition:
       transform var(--motion-leave) var(--motion-ease-close),
-      visibility 0s linear var(--motion-leave);
+      display var(--motion-leave) allow-discrete;
   }
 
   #navigation {
-    z-index: 998;
+    z-index: 1001;
+    height: 100dvh;
     overscroll-behavior: contain;
     box-shadow: var(--brando-shadow-lg);
   }
 
   .content-language-selector {
-    z-index: 999;
+    z-index: 1002;
   }
 
-  body.mobile-nav-open {
-    .mobile-nav-backdrop {
-      opacity: 1;
-      visibility: visible;
-      transition: opacity var(--motion-enter) var(--motion-ease);
+  body.mobile-nav-open .mobile-nav-backdrop {
+    display: block;
+    opacity: 1;
+    transition:
+      opacity var(--motion-enter) var(--motion-ease),
+      display var(--motion-enter) allow-discrete;
+  }
+
+  /* With the id, this also outranks `body.sidebar-hidden`'s hiding of the
+     language row (ContentLanguageSelector.css): a sidebar collapsed on a
+     wide screen leaves the drawer whole. */
+  body.mobile-nav-open :is(#navigation, .content-language-selector) {
+    display: block;
+    transform: none;
+    transition:
+      transform var(--motion-enter) var(--motion-ease),
+      display var(--motion-enter) allow-discrete;
+  }
+
+  @starting-style {
+    body.mobile-nav-open .mobile-nav-backdrop {
+      opacity: 0;
     }
 
-    #navigation,
-    .content-language-selector {
-      transform: none;
-      visibility: visible;
-      transition: transform var(--motion-enter) var(--motion-ease);
+    body.mobile-nav-open :is(#navigation, .content-language-selector) {
+      transform: translateX(-100%);
     }
   }
 }

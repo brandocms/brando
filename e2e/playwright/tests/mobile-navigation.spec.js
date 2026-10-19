@@ -55,3 +55,66 @@ test('a wide screen keeps the sidebar and has no menu button', async ({ page }) 
   await expect(page.locator('#mobile-nav-toggle')).toBeHidden()
   await expect(page.locator('#nav').getByRole('link', { name: 'Dashbord' })).toBeVisible()
 })
+
+test('a closed drawer cannot be tabbed into, and focus moves into it and back', async ({ page }) => {
+  // Configuration holds the current page, so the hook opens its section and
+  // shows its rows inline: closed, the drawer must still keep them out of reach.
+  await page.goto('/admin/config/content/modules')
+  await syncLV(page)
+
+  const toggle = page.getByRole('button', { name: 'Meny', exact: true })
+  const drawer = page.locator('#navigation')
+  await expect(drawer).toBeHidden()
+
+  await toggle.focus()
+  for (let i = 0; i < 6; i++) {
+    await page.keyboard.press('Tab')
+    expect(await page.evaluate(() => !!document.activeElement.closest('#navigation'))).toBe(false)
+  }
+
+  await toggle.click()
+  await expect(drawer).toBeVisible()
+  await expect.poll(() => page.evaluate(() => !!document.activeElement.closest('#navigation'))).toBe(true)
+
+  await page.keyboard.press('Escape')
+  await expect(drawer).toBeHidden()
+  await expect(toggle).toBeFocused()
+})
+
+test('Escape closes an open dialog first, and widening the window closes the drawer', async ({ page }) => {
+  await page.goto('/admin')
+  await syncLV(page)
+
+  const toggle = page.getByRole('button', { name: 'Meny', exact: true })
+  const drawer = page.locator('#navigation')
+  await toggle.click()
+  await expect(drawer).toBeVisible()
+
+  // The drawer's own Search row opens the command palette over it
+  await drawer.locator('.nav-search-item').click()
+  const palette = page.locator('#command-palette-dialog')
+  await expect(palette).toBeVisible()
+  await page.keyboard.press('Escape')
+  await expect(palette).toBeHidden()
+  await expect(drawer).toBeVisible()
+  await expect(toggle).toHaveAttribute('aria-expanded', 'true')
+
+  await page.setViewportSize({ width: 1440, height: 900 })
+  // Hidden on a wide screen, so by id rather than by role
+  await expect(page.locator('#mobile-nav-toggle')).toHaveAttribute('aria-expanded', 'false')
+  await page.setViewportSize({ width: 390, height: 844 })
+  await expect(drawer).toBeHidden()
+})
+
+test('the drawer keeps its language row after the sidebar was collapsed on a wide screen', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 })
+  await page.goto('/admin')
+  await syncLV(page)
+  await page.locator('.fullscreen-toggle').click()
+  await expect(page.locator('body')).toHaveClass(/sidebar-hidden/)
+
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.getByRole('button', { name: 'Meny', exact: true }).click()
+  await expect(page.locator('#navigation')).toBeVisible()
+  await expect(page.locator('.content-language-selector')).toBeVisible()
+})

@@ -146,7 +146,7 @@ defmodule BrandoAdmin.Nav do
         <.icon name="search" />
       </button>
       <%!-- On narrow screens the sidebar is a drawer, opened from here; the
-            Navigation hook closes it on navigation. --%>
+            Navigation hook closes it on navigation, Escape and widening. --%>
       <button
         type="button"
         id="mobile-nav-toggle"
@@ -166,8 +166,6 @@ defmodule BrandoAdmin.Nav do
         class="mobile-nav-backdrop"
         aria-hidden="true"
         phx-click={close_mobile_nav()}
-        phx-window-keydown={close_mobile_nav()}
-        phx-key="Escape"
       >
       </div>
       <div

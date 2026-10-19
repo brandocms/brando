@@ -20,15 +20,49 @@ export default app => ({
     window.addEventListener('phx:page-loading-stop', this.refreshActive)
     this.markActive()
 
-    // On narrow screens the sidebar is a drawer (nav.ex): following a link
-    // closes it. Its own JS, so the toggle's aria-expanded stays sticky.
+    this.setupMobileNav()
+  },
+
+  // On narrow screens the sidebar is a drawer (nav.ex), open while <body> has
+  // `mobile-nav-open`. It closes on following a link, on Escape unless a
+  // dialog has it, and when the window widens to the sidebar layout, through
+  // the toggle's own JS so its aria-expanded stays sticky. Opening moves
+  // focus to the first link; closing hands it back to the toggle.
+  setupMobileNav() {
+    const toggle = () => document.getElementById('mobile-nav-toggle')
+    const isOpen = () => document.body.classList.contains('mobile-nav-open')
+
     this.closeMobileNav = () => {
-      const toggle = document.getElementById('mobile-nav-toggle')
-      if (toggle && document.body.classList.contains('mobile-nav-open')) {
-        this.liveSocket.execJS(toggle, toggle.dataset.close)
-      }
+      const $toggle = toggle()
+      if ($toggle && isOpen()) this.liveSocket.execJS($toggle, $toggle.dataset.close)
     }
+    this.mobileNavKeydown = event => {
+      if (event.key !== 'Escape' || event.defaultPrevented || !isOpen()) return
+      if (document.querySelector('dialog:modal')) return
+      this.closeMobileNav()
+    }
+    this.wideScreen = window.matchMedia('(min-width: 1024px)')
+    this.mobileNavWiden = event => {
+      if (event.matches) this.closeMobileNav()
+    }
+
+    let wasOpen = isOpen()
+    this.mobileNavObserver = new MutationObserver(() => {
+      const open = isOpen()
+      if (open === wasOpen) return
+      wasOpen = open
+      const $drawer = document.getElementById('navigation')
+      if (open) {
+        requestAnimationFrame(() => $drawer?.querySelector('a[href], button:not([disabled])')?.focus())
+      } else if (!document.activeElement || document.activeElement === document.body || $drawer?.contains(document.activeElement)) {
+        toggle()?.focus()
+      }
+    })
+
     window.addEventListener('phx:page-loading-start', this.closeMobileNav)
+    window.addEventListener('keydown', this.mobileNavKeydown)
+    this.wideScreen.addEventListener('change', this.mobileNavWiden)
+    this.mobileNavObserver.observe(document.body, { attributes: true, attributeFilter: ['class'] })
   },
 
   // The link for the page we are on: the one whose path is the longest
@@ -223,6 +257,9 @@ export default app => ({
   destroyed() {
     window.removeEventListener('phx:page-loading-stop', this.refreshActive)
     window.removeEventListener('phx:page-loading-start', this.closeMobileNav)
+    window.removeEventListener('keydown', this.mobileNavKeydown)
+    this.wideScreen?.removeEventListener('change', this.mobileNavWiden)
+    this.mobileNavObserver?.disconnect()
     this.animations.stopAll()
     console.log('(!) Brando.Navigation destroyed')
   }
