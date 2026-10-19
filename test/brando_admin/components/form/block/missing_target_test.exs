@@ -1,6 +1,6 @@
 defmodule BrandoAdmin.Components.Form.Block.MissingTargetTest do
   # A block whose module, container or fragment is gone says which one, and
-  # offers to delete the block. The id used to print as a literal `#{...}`:
+  # offers to delete the block. The id must not print as a literal `#{...}`:
   # HEEx does not interpolate Elixir string syntax.
   use ExUnit.Case, async: true
 

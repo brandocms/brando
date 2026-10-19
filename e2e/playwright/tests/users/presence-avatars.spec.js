@@ -6,7 +6,7 @@ async function expectContainedPhoto(avatar) {
   await expect(photo).toBeVisible()
   await expect.poll(() => photo.evaluate(img => img.naturalWidth)).toBeGreaterThan(0)
   // Check the rendered bounds, not just CSS declarations: an intrinsic-width
-  // image wrapper used to escape the small flex avatar and cover the form.
+  // image wrapper can escape the small flex avatar and cover the form.
   await expect.poll(() => avatar.evaluate(el => {
     const outer = el.getBoundingClientRect()
     const inner = el.querySelector('img').getBoundingClientRect()

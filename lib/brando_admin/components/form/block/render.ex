@@ -34,7 +34,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
 
   # Without these two, a block referencing a deleted container/fragment falls
   # through to `render(%{type: :container})` / `render(%{type: :fragment})`,
-  # which read `@container` / `@palette_options` / `@fragment`. Those are now
+  # which read `@container` / `@palette_options` / `@fragment`. Those are
   # always assigned (see `Block.maybe_assign_container/1`), but rendering the
   # normal chrome for a target that no longer exists is still wrong — say so,
   # and offer the same escape hatch as `module_not_found`.
@@ -1252,9 +1252,9 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
   @doc """
   The block's configure surface.
 
-  Rendered eagerly this was 115 full modal subtrees nobody had opened. The
-  chrome — panels, labels, buttons, and the `RenderVar` live_components — now
-  renders only while open.
+  Rendered eagerly, this would be one full modal subtree per block, nearly all
+  of them never opened. The chrome — panels, labels, buttons, and the
+  `RenderVar` live_components — renders only while open.
 
   What cannot be deferred is the *params surface*. This modal sits inside
   `<.form phx-change="validate_block">`, so its inputs are submitted on every
@@ -2182,8 +2182,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
             <%!-- NOT phx-update="ignore": remote-sync applies must reach the
             textarea's DOM value. LV's focused-input protection covers local
             typing, and the block owns its form (single-owner), so a parent
-            re-render can never patch in stale content anymore — the ignore
-            was a workaround from the propagate/clobber era. --%>
+            re-render can never patch in stale content. --%>
             <Input.input
               type={:textarea}
               field={block_data[:text]}
@@ -2367,14 +2366,13 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
   The insert affordance above a block: add, and — when something compatible is
   on the clipboard — paste.
 
-  Paste visibility used to be `:if={can_paste?(@clipboard_meta, ...)}`, which
-  meant every block in the tree took `clipboard_meta` as an assign. Copying one
-  block then changed an assign on all 139 components and re-rendered every one
-  of them: **849 KB in a single frame at 115 root blocks, 1.2 s of server round
-  trip** — by far the largest frame left in the editor, for a change that
-  toggles a handful of buttons.
+  Paste visibility is not an `:if={can_paste?(@clipboard_meta, ...)}`: that
+  would make every block in the tree take `clipboard_meta` as an assign, so
+  copying one block would change an assign on every component and re-render
+  all of them (**849 KB in a single frame at 115 root blocks, 1.2 s of server
+  round trip**) for a change that toggles a handful of buttons.
 
-  The `:root` and `:container` contexts are now decided in CSS instead, from a
+  The `:root` and `:container` contexts are decided in CSS instead, from a
   `data-paste-allow` attribute that `BlockField` renders once on its own root
   (see `Block.css`). No block needs the clipboard to know whether its own
   paste button applies, so nothing re-renders.
@@ -2582,7 +2580,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
   def carried_var(assigns) do
     # Blank, not just nil: once a validate round trip has happened the id comes
     # back as the "" that this component's own hidden input submitted, and
-    # treating that as persisted is what made the fix stop working after the
+    # treating that as persisted would drop the carried fields after the
     # first keystroke.
     assigns =
       assigns
@@ -2847,12 +2845,12 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
   attr :config, :boolean, default: false
 
   # Every attribute here is emitted once per block at every nesting level, so
-  # the encoded JS commands this used to carry (`toggle_dropdown` 443 B,
-  # `show_modal |> hide_dropdown` 1 022 B, and four more) dominated the mount
-  # payload. The triggers vary only by id, so they now name the id and let the
-  # delegated handler in `assets/src/uiCommands.js` rebuild the command. The
-  # handler also closes the open dropdown on any outside click, which is what
-  # the removed `phx-click-away` and the per-item `hide_dropdown` did.
+  # encoded JS commands here (`toggle_dropdown` 443 B, `show_modal |>
+  # hide_dropdown` 1 022 B, and four more) would dominate the mount payload.
+  # The triggers vary only by id, so they name the id and let the delegated
+  # handler in `assets/src/uiCommands.js` rebuild the command. The handler also
+  # closes the open dropdown on any outside click, in place of a
+  # `phx-click-away` and a per-item `hide_dropdown`.
   defp block_actions_dropdown(assigns) do
     dropdown_id = "block-#{assigns.uid}-dropdown"
     assigns = assign(assigns, :dropdown_id, dropdown_id)
@@ -2909,8 +2907,8 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
           </button>
         </li>
         <li class="block-structure-action">
-          <%!-- `handle_block_event/3` reads the uid off the component's own assigns, so
-               the old `value: %{block_uid: @uid}` never reached anything. --%>
+          <%!-- No `value`: `handle_block_event/3` reads the uid off the
+               component's own assigns. --%>
           <button type="button" class="menu-item" phx-click="duplicate_block" phx-target={@target}>
             <.icon name="copy" /> {gettext("Duplicate here")}
           </button>

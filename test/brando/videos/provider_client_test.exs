@@ -2,8 +2,8 @@ defmodule Brando.Videos.ProviderClientTest do
   @moduledoc """
   Coverage for the Mux/Bunny/Cloudflare clients, stubbed at the transport.
 
-  Phase 4 asked for "a behaviour + Mox boundary for the S3/Mux/Bunny clients".
-  These three got a transport stub instead of a behaviour, deliberately:
+  These three are stubbed at the transport rather than behind a behaviour,
+  deliberately:
 
     * they all speak HTTP through `Req`, which ships `Req.Test` for exactly this
       — a behaviour would be a second seam over one the library already gives us;
@@ -15,10 +15,10 @@ defmodule Brando.Videos.ProviderClientTest do
 
   The S3 seam is a behaviour for the opposite reason — see `Brando.CDN.Client`.
 
-  Phase 2's D3 found that `Mux.api_request/3` **raises** on missing credentials
-  rather than returning an error, which took the whole entry form process down
-  with every unsaved change in it. That rescue is covered here from the client
-  side, so it stays true if the client is refactored.
+  `Mux.api_request/3` **raises** on missing credentials rather than returning
+  an error; unrescued, that takes the whole entry form process down with every
+  unsaved change in it. That rescue is covered here from the client side, so it
+  stays true if the client is refactored.
   """
   use ExUnit.Case, async: false
   use Brando.ConnCase
@@ -91,12 +91,12 @@ defmodule Brando.Videos.ProviderClientTest do
       # id, so it lives in `meta`, not in `remote_id`.
       assert video.meta["mux"]["upload_id"] == "upload-123"
       # The row exists before a single byte moves, which is why
-      # `VideoUploadReaper` has to exist — see `research/03-uploads.md:127`.
+      # `VideoUploadReaper` has to exist.
       assert video.status == :uploading
       assert Brando.Repo.get(Brando.Videos.Video, video.id)
     end
 
-    # D3's finding, from the client side. The raise is real and deliberate
+    # The missing-credentials raise, from the client side. It is real and deliberate
     # (a misconfigured site should be loud), so what has to hold is that it is a
     # raise and not a silent success — the *rescue* lives at the call site in
     # `form.ex`, and this pins the thing that rescue is for.
@@ -108,8 +108,8 @@ defmodule Brando.Videos.ProviderClientTest do
       end
     end
 
-    # A non-2xx is an ordinary error return, not a raise — the distinction is
-    # exactly what D3 was about.
+    # A non-2xx is an ordinary error return, not a raise — only missing
+    # credentials raise.
     test "an API rejection comes back as an error tuple" do
       stub_transport(
         Mux,
@@ -169,10 +169,10 @@ defmodule Brando.Videos.ProviderClientTest do
     # header and the `:auth` option, and nothing else
     # (`remove_credentials_if_untrusted/3`, `req/steps.ex:1573-1582`). Bunny
     # authenticates with an `AccessKey` header, so it is covered by neither —
-    # which made a 302 to any other host forward the library API key, on stock
-    # defaults with no config involved. `redirect: false` in the built options
-    # is the fix, and it is config-proof because built options outrank
-    # configured ones.
+    # so a followed 302 to any other host would forward the library API key, on
+    # stock defaults with no config involved. `redirect: false` in the built
+    # options prevents that, and it is config-proof because built options
+    # outrank configured ones.
     #
     # RED: remove `redirect: false` from `api_request/3` and the counter reaches
     # 2 with `accesskey` present on the second request. That mutation is the
@@ -197,9 +197,7 @@ defmodule Brando.Videos.ProviderClientTest do
 
       # The 302 is surfaced as an error rather than chased, so the upload fails
       # loudly instead of leaking quietly. Captured because that error path
-      # logs, and the unit suite's stdout is a tracked baseline in this audit —
-      # a test that adds a line to it every run makes the next phase's number
-      # unreproducible.
+      # logs, and a test should not add a line to the suite's output every run.
       assert capture_log(fn ->
                assert {:error, _} =
                         Bunny.initiate_upload("clip.mp4", Factory.insert(:random_user))
@@ -211,9 +209,9 @@ defmodule Brando.Videos.ProviderClientTest do
   end
 
   # All three providers put their configured `:req_options` *underneath* the
-  # request they built, and that one line was byte-identical in all three — so
-  # it is the line that could drift in one of them unnoticed. It now has a
-  # single owner (`Brando.Videos.Uploaders.ReqOptions`), and this is what makes
+  # request they built — the one line that could drift in one of them
+  # unnoticed. It has a single owner (`Brando.Videos.Uploaders.ReqOptions`),
+  # and this is what makes
   # the direction of that merge falsifiable.
   #
   # Nothing above can see it: the stub is installed through `:req_options`
@@ -295,14 +293,11 @@ defmodule Brando.Videos.ProviderClientTest do
     end
   end
 
-  # All three clients raise on missing credentials, as of 0.54.0. Before that,
-  # Cloudflare returned `{:error, :not_configured}` while Mux and Bunny raised —
-  # so a caller could not handle the three with one branch. The audit recorded
-  # that disagreement six times without resolving it; these tests are what stop
-  # it drifting back apart.
+  # All three clients raise on missing credentials, so a caller can handle the
+  # three with one branch. These tests are what stop them drifting apart.
   #
-  # MUTATION, per provider: restore the other shape — for Cloudflare that is the
-  # `{:error, :not_configured}` return this replaced; for Mux and Bunny, turn the
+  # MUTATION, per provider: give it the other shape — for Cloudflare a
+  # `{:error, :not_configured}` return; for Mux and Bunny, turn the
   # `raise` into the same tuple. Each test reddens on its own provider only,
   # which is the point of having three rather than one.
   describe "missing credentials" do
@@ -336,15 +331,12 @@ defmodule Brando.Videos.ProviderClientTest do
       end
     end
 
-    # An empty string is not the same as an absent key, and until 0.54.1 only
-    # Cloudflare noticed: it checked `present?/1` where Mux and Bunny checked
-    # truthiness. 0.54.0 unified how the failure is *reported*; 9E unifies how
-    # it is *detected*, because the pre-flight validator added in the same phase
-    # has to agree with the raise or the two drift apart.
+    # An empty string is not the same as an absent key: all three check
+    # `present?/1`, not truthiness. The pre-flight validator has to agree with
+    # the raise, or the two drift apart.
     #
-    # MUTATION, per provider: put the truthiness check back (`unless token_id &&
-    # token_secret`). Mux and Bunny redden; Cloudflare, which never had it, does
-    # not.
+    # MUTATION, per provider: make Mux's or Bunny's check truthiness (`unless
+    # token_id && token_secret`). That provider's test reddens.
     test "Mux rejects an empty-string credential" do
       with_config(Mux, access_token_id: "", access_token_secret: "")
 
@@ -383,9 +375,8 @@ defmodule Brando.Videos.ProviderClientTest do
   # Two mechanisms hold that, and they are tested apart on purpose. *Expected*
   # failures are pre-flight validated and never raise — covered by
   # `test/brando_admin/live/video_picker_credentials_test.exs`. *Unexpected*
-  # ones are rescued, which is what this covers. Conflating them is what the
-  # rescue in `Form` used to do, and it is why 0.54.0's breaking change nearly
-  # bought nothing.
+  # ones are rescued, which is what this covers. A rescue that also stood in
+  # for the pre-flight check would hide a missing validation.
   describe "Videos.Uploader.initiate_upload/3 totality" do
     setup do
       {:ok, user: Factory.insert(:random_user)}
@@ -456,8 +447,8 @@ defmodule Brando.Videos.ProviderClientTest do
   # cannot answer differently; these tests are what hold that.
   #
   # These assert all three providers in one test each, so a mutation to one
-  # provider reddens on the FIRST refutation and the other two never run — the
-  # same caveat recorded in Phase 8. Per-provider independence is covered above
+  # provider reddens on the FIRST refutation and the other two never run.
+  # Per-provider independence is covered above
   # instead, by the three separate "rejects an empty-string credential" tests.
   # Measured: mutating only Mux's predicate to truthiness reddens exactly
   # "Mux rejects an empty-string credential" and this block's empty-value test.

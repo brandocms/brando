@@ -9,11 +9,10 @@ import {
 } from '../../utils'
 
 // Regression coverage for root-block drag reordering — the `reposition` event
-// pushed by the Brando.SortableBlocks hook. This path had no e2e coverage
-// before Phase 3 of the block-editor refactor keyed the root block list on uid
-// (`:for`/`:key` in block_field.ex). These specs pin down reorder behaviour
-// (editor order, preview refresh after the position-ack handshake, and
-// persistence) before the reorder flow is rewritten as a single {:move, ...} op.
+// pushed by the Brando.SortableBlocks hook, with the root block list keyed on
+// uid (`:for`/`:key` in block_field.ex). These specs pin down reorder behaviour:
+// editor order, preview refresh after the position-ack handshake, and
+// persistence.
 test.describe('Block reordering (root blocks)', () => {
   test.setTimeout(60000)
 
@@ -279,13 +278,13 @@ test.describe('Block reordering (root blocks)', () => {
       const startCursor = { x: start.x, y: start.y + 30 }
       const first = await settleAndMeasure(startCursor)
 
-      // Move well up the list — the distance that used to open up the gap.
+      // Move well up the list, far enough for any drift to open up a gap.
       const far = { x: start.x, y: start.y - 400 }
       await page.mouse.move(far.x, far.y, { steps: 20 })
       const second = await settleAndMeasure(far)
 
       // The grabbed point must sit at the same place inside the clone as it did
-      // at drag start. A couple of px of rounding is fine; the bug was tens.
+      // at drag start. A couple of px of rounding is fine; drift is tens.
       expect(Math.abs(second.x - first.x)).toBeLessThan(4)
       expect(Math.abs(second.y - first.y)).toBeLessThan(4)
 
@@ -367,10 +366,10 @@ test.describe('Block reordering (root blocks)', () => {
     })
   })
 
-  // Reordering a block used to rebuild every preview element after the change
-  // point rather than move any of them: blocks are delimited by HTML comments,
-  // which morphdom cannot match on, so it paired `main`'s children up by
-  // position. A video block dragged to a new place came back as a fresh,
+  // Reordering a block must move preview elements, not rebuild every one after
+  // the change point. Blocks are delimited by HTML comments, which morphdom
+  // cannot match on, so left to itself it pairs `main`'s children up by
+  // position: a video block dragged to a new place would come back as a fresh,
   // unbooted container — the preview re-initializing a video whose source never
   // changed (and the same for anything below an inserted or deleted block).
   //

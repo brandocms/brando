@@ -63,8 +63,8 @@ defmodule BrandoAdmin.Components.Form.InputAccessibilityTest do
 
     test "a field with instructions exposes them in its description, with or without an error" do
       # Issue #2755: the help text under the label carries the format or
-      # constraint the field actually needs, and used to be a bare div that
-      # nothing pointed at.
+      # constraint the field actually needs, so the field's description must
+      # point at it.
       for form <- [form(%{}, []), form(%{"title" => ""}, title: "can't be blank")] do
         wrapper = render_field_base(form, :title, instructions: "Shown in the browser tab")
 

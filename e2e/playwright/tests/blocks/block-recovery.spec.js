@@ -138,8 +138,8 @@ test.describe('Block Recovery', () => {
     await expect(page.locator('.entry-block')).toHaveCount(0)
   })
 
-  // Phase 4 asked for a "positive sessionStorage-recovery assertion via hard
-  // page.reload()". **There is no such thing, and that is deliberate**: the hook
+  // There is no positive sessionStorage-recovery assertion via a hard
+  // `page.reload()`, **and that is deliberate**: the hook
   // captures in `disconnected()` and recovers in `reconnected()`, while
   // `mounted()` is an explicit no-op ("No recovery on fresh mount"). A reload
   // tears the page down without a disconnect and brings it back as a fresh
@@ -220,22 +220,18 @@ test.describe('Block Recovery', () => {
     await expect(page.locator('.header-block textarea')).toBeVisible()
   })
 
-  // C4, closed in Phase 9D — and the plan's stated reason for closing it was
-  // wrong about the fact.
-  //
-  // The finding was that the snapshot key was schema-scoped, so a stale
-  // snapshot from entry A could be offered to entry B. The static read closed
-  // it on the grounds that the leak "needs the same hook element to survive an
+  // A snapshot key scoped only by schema would let a stale snapshot from entry
+  // A be offered to entry B. That needs the same hook element to survive an
   // entry change, i.e. a push_patch within one LiveView rather than the
-  // push_navigate used between entries" — implying no such path existed.
+  // push_navigate used between entries — and such a path exists.
   //
-  // One does. Save-and-continue on a CREATE is exactly it: form.ex's
+  // Save-and-continue on a CREATE is exactly it: form.ex's
   // `push_patch(to: update_url)` keeps the same LiveView, so the BlockField
   // hook element survives while the entry goes from unsaved to persisted. The
   // `mounted()`-is-a-no-op barrier does not apply on this path.
   //
-  // The leak still does not happen, but because of the OTHER barrier — the one
-  // C4's own fix shipped. `data-entry-id` (block_field.ex) re-renders with the
+  // The leak does not happen because of the OTHER barrier: the entry id in the
+  // key. `data-entry-id` (block_field.ex) re-renders with the
   // patch, so `storageKey()` moves forward with the entry instead of serving
   // the `new` bucket to a persisted entry. That is what this pins.
   test('the recovery key follows the entry across save-and-continue', async ({ page }) => {
@@ -252,7 +248,7 @@ test.describe('Block Recovery', () => {
 
     // The key moved forward with the entry. If this attribute did NOT re-render
     // on the patch, the persisted entry would go on reading and writing the
-    // `new` bucket — which is C4's leak, on the one path that can reach it.
+    // `new` bucket — the cross-entry leak, on the one path that can reach it.
     const entryId = await saveAndContinue(page)
 
     // And recovery still works after the patch, keyed by the new id: capture on
@@ -268,10 +264,9 @@ test.describe('Block Recovery', () => {
     await expect(page.locator('.header-block textarea')).toHaveValue('Key Follows Header')
   })
 
-  // SUGGESTION 4 from the Phase 9 review, and the reason it was worth taking:
-  // C4 is a *cross-entry* leak, so it should be observable as entry A's value
+  // The leak is *cross-entry*, so it should be observable as entry A's value
   // turning up in entry B. The test above infers safety from a key prefix,
-  // which is one indirection away from the thing the finding names.
+  // which is one indirection away from the leak itself.
   //
   // Two distinct entries, both persisted through save-and-continue, with A's
   // snapshot deliberately left behind in sessionStorage — the shape of a real
@@ -308,7 +303,7 @@ test.describe('Block Recovery', () => {
     await disconnect(page)
     await reconnect(page)
 
-    // The finding, stated as the finding: B recovers B.
+    // The leak, stated directly: B recovers B.
     await expect(page.locator('.entry-block')).toHaveCount(1)
     await expect(page.locator('.header-block textarea')).toHaveValue('Entry B Header')
 

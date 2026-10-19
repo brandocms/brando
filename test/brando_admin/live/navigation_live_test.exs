@@ -146,8 +146,8 @@ defmodule BrandoAdmin.NavigationLiveTest do
 
   # Two clicks on "Add entry" that both reach the server before the form has
   # re-rendered the subform. Each click is handled by the subform with the
-  # form as it last rendered it; when each built the whole changeset from
-  # that copy, the second overwrote the first and one row was lost.
+  # form as it last rendered it; were each to build the whole changeset from
+  # that copy, the second would overwrite the first and one row would be lost.
   test "two quick clicks on Add entry add two rows", %{conn: conn, menu: menu} do
     view = open(conn, menu)
     refute has_element?(view, "input[name='menu[items][3][key]']")
@@ -160,9 +160,9 @@ defmodule BrandoAdmin.NavigationLiveTest do
   end
 
   # A saved item the editor removes stays in the changeset, marked for
-  # removal. Writing it back with the next add raised "cannot replace
-  # related" and took the LiveView down; it also shifted every position after
-  # it, so an insert landed one row off.
+  # removal. Writing it back with the next add would raise "cannot replace
+  # related" and take the LiveView down; it would also shift every position
+  # after it, so an insert would land one row off.
   test "an item can be added and inserted after a saved one is removed", %{conn: conn, menu: menu} do
     view = open(conn, menu)
 

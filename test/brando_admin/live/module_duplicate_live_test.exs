@@ -1,7 +1,7 @@
 defmodule BrandoAdmin.ModuleDuplicateLiveTest do
   # The module listing's Duplicate action (`duplicate_entry`) calls
-  # `Brando.Content.duplicate_module/2`: it used to fail on the module's
-  # unique uid, and lost a multi module's children and module sets.
+  # `Brando.Content.duplicate_module/2`, which gives the copy its own unique
+  # uid and keeps a multi module's children and module sets.
   use Brando.LiveCase
 
   import Ecto.Query, only: [from: 2]

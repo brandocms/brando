@@ -110,8 +110,8 @@ test('entries are inserted between rows, removed, and saved in order', async ({ 
 })
 
 // The colour picker holds a change back for a moment while it is dragged.
-// A save pressed in that moment used to read the colour from before; it now
-// asks the picker for it first (assets/src/hooks/Form/pendingChange.js).
+// A save pressed in that moment asks the picker for it first, rather than
+// read the colour from before (assets/src/hooks/Form/pendingChange.js).
 test('a colour picked just before saving is saved', async ({ page }) => {
   await page.goto('/admin/projects/clients/create')
   await syncLV(page)

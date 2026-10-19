@@ -10,7 +10,7 @@
      .btn--danger           destructive; with --primary, filled
      .btn--ai               calls a paid AI service
      .btn--icon             icon only (square); give it a label or aria-label
-     .btn--pill             fully rounded: toggles only (the block editor's +)
+     .btn--pill             fully rounded: toggles only
      .btn-group             joined buttons, rounded at the ends */
 .btn {
   display: inline-flex;

@@ -370,9 +370,9 @@ defmodule Brando.HTML.Video do
   defp preload_value(preload), do: preload
 
   # Captions stay opt-in — a record carrying a caption does not start rendering
-  # a `<figcaption>` on templates that never asked for one. What `caption: true`
-  # resolves *to* is what gained the record: it used to see only `opts[:title]`,
-  # so an editor's caption was unreachable from the tag syntax.
+  # a `<figcaption>` on templates that never asked for one. `caption: true`
+  # resolves to `opts[:title]`, falling back to the record's caption, so an
+  # editor's caption is reachable from the tag syntax.
   defp caption(opts, video) do
     opts
     |> Keyword.get(:caption, false)

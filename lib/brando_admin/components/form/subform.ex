@@ -122,8 +122,8 @@ defmodule BrandoAdmin.Components.Form.Subform do
               >
                 <.empty_subform :if={@empty_subform_fields} field={@field} />
                 <%!-- The row's hidden inputs (its id, LiveView's _persistent_id)
-                      go inside the row, not beside it: beside it they were
-                      matched by position, and after a removal one was left
+                      go inside the row, not beside it: beside it they would be
+                      matched by position, and after a removal one would be left
                       over and sent as an extra, empty row (#3157). --%>
                 <.inputs_for :let={sub_form} field={@field} skip_hidden>
                   <div

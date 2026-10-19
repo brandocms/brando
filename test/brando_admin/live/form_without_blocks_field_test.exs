@@ -1,7 +1,7 @@
 defmodule BrandoAdmin.FormWithoutBlocksFieldTest do
   # The test article's `:no_blocks` form leaves out the schema's `blocks`
-  # relation. Saving used to wait forever for a block field that was never
-  # mounted.
+  # relation. Saving must not wait for a block field that is never mounted,
+  # or it would wait forever.
   use Brando.LiveCase
 
   alias Brando.SyncTest
@@ -32,9 +32,9 @@ defmodule BrandoAdmin.FormWithoutBlocksFieldTest do
     assert saved.title == "Saved without blocks"
   end
 
-  # Review: a schema without block fields saves through its own path,
-  # which kept saying the form held a revision's working copy, so every
-  # later recovery copy said so too, and none matched the saved entry.
+  # A schema without block fields saves through its own path, which must
+  # stop saying the form holds a revision's working copy; otherwise every
+  # later recovery copy says so too, and none matches the saved entry.
   test "a recovery copy taken after a working copy is saved, without block fields, is not one", %{conn: conn} do
     other = Factory.insert(:random_user, config: %Brando.Users.UserConfig{}, avatar: nil)
     {view, _html} = live_form(conn, "/admin/users/update/#{other.id}", "user_form")

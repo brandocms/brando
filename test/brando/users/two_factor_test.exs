@@ -78,7 +78,7 @@ defmodule Brando.Users.TwoFactorTest do
       assert {:error, :invalid_proof} = TwoFactor.enable(other, secret, code, proof: {:signed_in_now, pending_id})
       assert {:error, :invalid_proof} = TwoFactor.enable(user, secret, code, proof: {:signed_in_now, nil})
 
-      # The review's probe: the owner resets their password, which ends the
+      # The owner resets their password, which ends the
       # attacker's waiting sign-in
       {:ok, _} = Users.reset_user_password(user, %{password: "a new one", password_confirmation: "a new one"})
       assert {:error, :invalid_proof} = TwoFactor.enable(user, secret, code, proof: {:signed_in_now, pending_id})

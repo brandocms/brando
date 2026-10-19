@@ -132,9 +132,9 @@ defmodule BrandoAdmin.Utils do
 
   # The JS command builders live in the leaf `BrandoAdmin.JSCommands`, which needs
   # nothing but `Phoenix.LiveView.JS`. Blueprint `listings` blocks build their
-  # actions at compile time, so a schema declaring one used to acquire a
-  # compile-time dependency on this module — and through it on the whole admin.
-  # See issue #2737. Delegated so every existing call site keeps working.
+  # actions at compile time, so defining them here would give a schema declaring
+  # one a compile-time dependency on this module — and through it on the whole
+  # admin. See issue #2737. Delegated so every existing call site keeps working.
   defdelegate toggle_dropdown(js \\ %JS{}, dropdown_id), to: JSCommands
   defdelegate show_dropdown(js \\ %JS{}, dropdown_id), to: JSCommands
   defdelegate hide_dropdown(js \\ %JS{}, dropdown_id), to: JSCommands

@@ -1,11 +1,11 @@
 defmodule BrandoAdmin.Components.Form.Input.VideoTest do
-  # Regression coverage for the video input's asset lookup.
+  # Coverage for the video input's asset lookup.
   #
-  # `update/2` used to hard-match `{:ok, video} = Brando.Videos.get_video(...)`
-  # at four sites. A referenced-but-hard-deleted video — or the nil `video_id`
-  # on the path-lookup branch — raised MatchError and destroyed the entire entry
-  # form LiveView process, taking every unsaved change with it.
-  # `input/image.ex` already guarded this with a `case`.
+  # `update/2` matches `Brando.Videos.get_video(...)` with a `case`, as
+  # `input/image.ex` does. A hard match on `{:ok, video}` would raise MatchError
+  # for a referenced-but-hard-deleted video — or the nil `video_id` on the
+  # path-lookup branch — and destroy the entire entry form LiveView process,
+  # taking every unsaved change with it.
   use ExUnit.Case, async: false
   use Brando.ConnCase
 
@@ -58,8 +58,8 @@ defmodule BrandoAdmin.Components.Form.Input.VideoTest do
 
   # The video picker hands over a video it has just created — "Add from URL",
   # "Add from <provider>" — as an update rather than a `select_video` push.
-  # Without a clause for it the generic `update/2` raised KeyError on `:field`
-  # and took the entry form down.
+  # Without a clause for it the generic `update/2` would raise KeyError on
+  # `:field` and take the entry form down.
   test "selects a video the picker created" do
     video = Factory.insert(:video)
     socket = update_socket(video_field(nil))

@@ -1,8 +1,8 @@
 defmodule BrandoAdmin.FormEntryNotFoundTest do
   # A form for an entry that does not exist (a stale link, or one deleted in
-  # another tab) used to raise from its async load. The LiveView died after it
-  # had connected, the client rejoined, and the next mount raised again: a crash
-  # loop that only ended when the tab was closed.
+  # another tab) must not raise from its async load. The LiveView would die
+  # after it had connected, the client would rejoin, and the next mount would
+  # raise again: a crash loop that only ends when the tab is closed.
   use Brando.LiveCase
 
   test "a missing entry sends the form back to its listing", %{conn: conn} do

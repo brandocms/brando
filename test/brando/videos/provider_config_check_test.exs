@@ -2,10 +2,9 @@ defmodule Brando.Videos.ProviderConfigCheckTest do
   @moduledoc """
   Boot-time reporting of misconfigured video providers.
 
-  The audit carried "nothing validates provider config at boot" as an open item
-  for two phases. Pre-flight validation made a bad deploy *harmless* — the pick
-  is rejected instead of killing the editor's LiveView — but it was still
-  discovered by the first person to try uploading. This closes the timing half.
+  Pre-flight validation makes a bad deploy *harmless* — the pick is rejected
+  instead of killing the editor's LiveView — but on its own it is discovered by
+  the first person to try uploading. Reporting at boot surfaces it at deploy.
 
   Most tests assert `problems/0` directly. The `run/0` error-path test also
   captures its expected report so it does not add noise to the unit-test output.

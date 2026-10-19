@@ -1,15 +1,13 @@
 defmodule BrandoAdmin.Components.Form.EmptyParamsErrorsTest do
-  # Phase 3 / F in the form audit.
-  #
-  # `assign_form/1`, `assign_refreshed_form/1` and `refresh_entry` all forced
-  # `Map.put(:action, :validate)` onto a changeset built from EMPTY params. The
-  # audit's claim was that it achieves nothing, and this pins why: both error
-  # gates in `Form` route through `Phoenix.Component.used_input?/1`, which reads
+  # `assign_form/1`, `assign_refreshed_form/1` and `refresh_entry` build their
+  # changeset from EMPTY params without forcing `Map.put(:action, :validate)`.
+  # Forcing it would achieve nothing, and this pins why: both error gates in
+  # `Form` route through `Phoenix.Component.used_input?/1`, which reads
   # `form.params` and nothing else. A form whose params are `%{}` has no used
   # input, so it cannot surface an error — with or without an action.
   #
   # There is no e2e coverage of validation-error display, so this test is what
-  # makes dropping the forced action safe.
+  # shows the forced action is not needed.
   use ExUnit.Case, async: false
   use Brando.ConnCase
 

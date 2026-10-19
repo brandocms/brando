@@ -1,12 +1,12 @@
 defmodule BrandoAdmin.Components.Form.PickerSelectTest do
-  # Regression coverage for B7 — picking an existing asset in a picker had
-  # different durability than uploading one.
+  # Picking an existing asset in a picker is as durable as uploading one.
   #
   # An UPLOAD commits the FK immediately through `commit_entry_field_asset/4`.
-  # A SELECT only assigned `edit_image` / `image_changeset`; the id reached the
-  # entry changeset solely through the drawer's form submit, which is dispatched
-  # by the close BUTTON (`close_image/2`). Dismiss the drawer any other way —
-  # Esc, the backdrop, navigating away — and the selection was silently lost.
+  # Were a SELECT only to assign `edit_image` / `image_changeset`, the id would
+  # reach the entry changeset solely through the drawer's form submit, which is
+  # dispatched by the close BUTTON (`close_image/2`). Dismissing the drawer any
+  # other way — Esc, the backdrop, navigating away — would silently lose the
+  # selection.
   #
   # Esc/backdrop are client-side, so what is asserted here is the invariant that
   # makes every dismissal path safe: the select itself commits the FK, so no

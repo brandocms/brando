@@ -573,8 +573,8 @@ defmodule Brando.HTMLTest do
     end
 
     test "a record that turns a setting off beats the built-in default" do
-      # `loop` defaults to true, so the `||` chain this replaced could never
-      # see an editor's "off".
+      # `loop` defaults to true, so an `||` chain could never see an editor's
+      # "off".
       refute render_video(mux_video(loop: false), []) =~ "loop"
       assert render_video(mux_video(loop: nil), []) =~ "loop"
     end

@@ -1,17 +1,16 @@
 defmodule BrandoAdmin.Components.Form.VideoUploadTargetTest do
-  # Regression coverage for D2/D3 in the form audit — provider (Mux/Bunny/
-  # Cloudflare) video uploads resolved their config from the wrong schema.
+  # Provider (Mux/Bunny/Cloudflare) video uploads resolve their config from the
+  # schema that owns the video field.
   #
-  # `Form.update(%{action: :get_video_upload_url}, socket)` hand-built
-  # `"video:#{inspect(socket.assigns.schema)}:#{field}"`. `socket.assigns.schema`
-  # is the ENTRY schema, so a video field living on a nested schema (or a block
-  # media ref) resolved against a target that does not exist — silently falling
-  # back to the default video config, which is `:local` and therefore has no
-  # provider upload at all.
+  # `socket.assigns.schema` is the ENTRY schema. A target built from it for a
+  # video field living on a nested schema (or a block media ref) would resolve
+  # against a target that does not exist — silently falling back to the default
+  # video config, which is `:local` and therefore has no provider upload at all.
   #
-  # The drawer already carries the owning schema on `edit_video.schema`, and the
-  # sibling upload trigger in `video_drawer/1` reads it. Both now serialize
-  # through `Brando.Assets.ConfigTarget.serialize/1`.
+  # The drawer carries the owning schema on `edit_video.schema`.
+  # `Form.update(%{action: :get_video_upload_url}, socket)` and the sibling
+  # upload trigger in `video_drawer/1` both serialize it through
+  # `Brando.Assets.ConfigTarget.serialize/1`.
   #
   # Each case is observable without touching a provider: intake validation runs
   # before any HTTP call, and the two schemas below fail it with distinct,
@@ -71,8 +70,8 @@ defmodule BrandoAdmin.Components.Form.VideoUploadTargetTest do
   end
 
   setup do
-    # Credentials for both providers, so `validate_provider_credentials/1` — 9E's
-    # new pre-flight check, which runs *before* `validate_intake/4` — is not the
+    # Credentials for both providers, so `validate_provider_credentials/1` — the
+    # pre-flight check, which runs *before* `validate_intake/4` — is not the
     # thing these tests observe. Without them every case below reports "Video
     # provider is not configured" and the mimetype signal each one relies on to
     # identify the resolved config never surfaces.
@@ -147,8 +146,9 @@ defmodule BrandoAdmin.Components.Form.VideoUploadTargetTest do
     assert error.request_ref == "ref-1"
     assert error.error =~ "Rejected file type [video/quicktime]"
 
-    # Before the fix the target was "video:Brando.Pages.Page:clip", which has no
-    # blueprint asset behind it, so the default (:local) config answered instead:
+    # Against the entry schema the target would be "video:Brando.Pages.Page:clip",
+    # which has no blueprint asset behind it, so the default (:local) config
+    # would answer instead:
     refute error.error =~ "not available for provider uploads"
   end
 
@@ -174,7 +174,7 @@ defmodule BrandoAdmin.Components.Form.VideoUploadTargetTest do
 
   test "an unserializable target reports an upload error instead of raising", ctx do
     # `serialize/1` raises on a missing field segment. A hard match here would
-    # take the whole entry form process down (the A2 class of bug).
+    # take the whole entry form process down.
     socket =
       form_socket(
         Brando.Pages.Page,
@@ -194,17 +194,15 @@ defmodule BrandoAdmin.Components.Form.VideoUploadTargetTest do
 
   test "a missing provider credential is reported, not allowed to kill the form", ctx do
     # Control for the target resolution — an allowed mimetype gets past the
-    # mimetype check and reaches the provider strategy — and coverage for a
-    # defect found while writing it: `Mux.api_request/3` RAISES on missing
-    # credentials, and unrescued that exception takes the entry form process
-    # down with every unsaved change in it (the A2 class).
+    # mimetype check and reaches the provider strategy — and coverage for
+    # missing credentials: `Mux.api_request/3` RAISES on them, and unrescued
+    # that exception would take the entry form process down with every unsaved
+    # change in it.
     #
-    # What changed in 9E is *where* that is caught. It used to be `Form`'s local
-    # rescue turning the RuntimeError back into a tuple, which is why this
-    # asserted the raise's own text. Now `validate_provider_credentials/1`
-    # rejects the pick during pre-flight validation and the provider is never
-    # called — so the assertion is the fixed user-facing string, and the raise
-    # it used to observe is unreachable from here by design.
+    # `validate_provider_credentials/1` rejects the pick during pre-flight
+    # validation and the provider is never called — so the assertion is the
+    # fixed user-facing string, and the raise is unreachable from here by
+    # design.
     Brando.Test.Support.put_test_env(Brando.Videos.Uploaders.Mux, [])
 
     socket =

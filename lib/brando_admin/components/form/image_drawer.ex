@@ -3,30 +3,26 @@ defmodule BrandoAdmin.Components.Form.ImageDrawer do
   Markup for the form's image drawer and the image editor drawer it opens.
 
   **Markup only**, on the same measurement as `VideoDrawer` and `FileDrawer`.
-  The audit plan expected this pair to be the *harder* extraction because the
-  image drawer additionally owns `image_editor_*` state and a focal-point
-  component. Checked before moving anything: that state is `Form`'s, not this
-  module's — the editor's `handle_event/3` clauses, its `allow_upload` for
-  `:image_editor_upload`, and the crop-group builders all read and write the
-  parent's socket, and `assign_drawer_recovery_state/1` covers image, video and
-  file in one `cond`. So the split lands in the same place: markup out,
-  behaviour stays.
+  The image drawer also has `image_editor_*` state and a focal-point component,
+  but that state is `Form`'s, not this module's — the editor's `handle_event/3`
+  clauses, its `allow_upload` for `:image_editor_upload`, and the crop-group
+  builders all read and write the parent's socket, and
+  `assign_drawer_recovery_state/1` covers image, video and file in one `cond`.
+  So the split lands in the same place: markup here, behaviour in `Form`.
 
   `editor/1` (the image editor drawer) is here rather than in `Form` because
   `render/1` is its only opener and `close_image_editor/1` targets the element
   it renders.
 
-  `upload_target_dom_id/1` came along too: it had exactly one caller, in
-  `render/1`.
+  `upload_target_dom_id/1` is here too: its only caller is `render/1`.
 
   Follows `MetaDrawer`, `ScheduledPublishingDrawer`, `VideoDrawer` and
   `FileDrawer`: a `:component` exposing `render/1`, whose events belong to the
   parent form.
 
-  Note this does **not** reduce compile coupling, and no longer claims to. The
-  admin's single compile cycle runs through `use BrandoAdmin, :component`, so
-  every component is inside it regardless of who calls whom — measured when
-  `Form.Primitives` was extracted and the cycle grew by one node.
+  Note this does **not** reduce compile coupling. The admin's single compile
+  cycle runs through `use BrandoAdmin, :component`, so every component is inside
+  it regardless of who calls whom.
   """
   use BrandoAdmin, :component
   use Gettext, backend: Brando.Gettext

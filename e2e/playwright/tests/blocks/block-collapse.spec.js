@@ -3,10 +3,10 @@ import { serverLatency } from '../../test-support/latency'
 import { syncLV } from '../../utils'
 
 // Collapsing a block is a checkbox in its form. The block and the eye icon
-// used to change only when the validate reply came back, which is instant on
-// a local server and a visible lag on a real connection. Server frames are
-// held back here, so the first half of each step passes only if the page
-// changes on its own.
+// change at once rather than when the validate reply comes back, which is
+// instant on a local server and a visible lag on a real connection. Server
+// frames are held back here, so the first half of each step passes only if
+// the page changes on its own.
 test.describe('Collapsing a block', () => {
   test.setTimeout(90000)
 

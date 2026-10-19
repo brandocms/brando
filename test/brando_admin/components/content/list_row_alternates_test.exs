@@ -27,8 +27,8 @@ defmodule BrandoAdmin.Components.Content.ListRowAlternatesTest do
   end
 
   # Identifiers for alternates are built in memory, so their `id` is nil.
-  # Two alternates used to collide on `:key={identifier.id}` and LiveView raised
-  # "found duplicate key nil in comprehension".
+  # Keyed on `:key={identifier.id}`, two alternates would collide and LiveView
+  # would raise "found duplicate key nil in comprehension".
   test "renders an entry with two alternates", %{conn: conn} do
     {:ok, _view, html} = live_isolated(conn, Host)
 

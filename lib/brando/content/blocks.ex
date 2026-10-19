@@ -1021,11 +1021,10 @@ defmodule Brando.Content.Blocks do
   Reapplies the module's template-controlled ref settings onto a block's refs.
 
   Refs the module no longer defines, and refs whose block type it swapped out,
-  are passed through untouched. Both used to be impossible — the first was
-  filtered away before this ran, and the second raised — but a module save is a
-  migration over content the editor owns, and neither case is a reason to
-  overwrite it. `sync_module/2` leaves such a block behind its module's version
-  so it stays visible as needing review.
+  are passed through untouched: a module save is a migration over content the
+  editor owns, and neither case is a reason to overwrite it. `sync_module/2`
+  leaves such a block behind its module's version so it stays visible as
+  needing review.
   """
   def reapply_refs(_module, module_refs, refs) do
     refs_by_name = Map.new(module_refs, &{&1.name, &1})
@@ -1177,8 +1176,7 @@ defmodule Brando.Content.Blocks do
     Enum.reduce(block_changesets, [], fn
       # `marked_as_deleted` needs no clause of its own: `ChangesetRunner`
       # rewrites it to `action: :delete` (or `:ignore`, which `put_assoc` skips)
-      # before this runs. The clause that used to sit here spelled it
-      # `mark_as_deleted` and so never matched anything.
+      # before this runs.
       %{action: :delete}, acc ->
         acc
 

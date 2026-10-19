@@ -5,9 +5,9 @@ defmodule BrandoAdmin.JSCommands do
   # A leaf on purpose: it depends on nothing but `Phoenix.LiveView.JS`.
   # Blueprint's `listings` DSL evaluates a `selection_action`'s event at compile
   # time, so a schema that declares one takes a compile-time dependency on
-  # wherever these live. When that was BrandoAdmin.Utils — which uses the
-  # translator and imports `Phoenix.Component` — a core content schema
-  # recompiled with the admin. See issue #2737.
+  # wherever these live. If that were BrandoAdmin.Utils — which uses the
+  # translator and imports `Phoenix.Component` — a core content schema would
+  # recompile with the admin. See issue #2737.
   #
   # BrandoAdmin.Utils delegates to these, so admin code can keep calling them
   # there.

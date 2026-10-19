@@ -1,18 +1,15 @@
 defmodule BrandoAdmin.Components.Form.DrawerRecoveryTest do
-  # Regression coverage for C2 — edits made inside an open asset drawer were
-  # lost on reconnect.
+  # Edits made inside an open asset drawer survive a reconnect.
   #
-  # This is a chicken-and-egg problem rather than missing plumbing. The drawer's
-  # edit form is `:if={@image_changeset}`-gated, so when the process dies it
-  # exists in neither the old nor the new DOM at the moment LiveView runs its
-  # recovery diff — and LiveView can only recover forms it can see.
-  # `recover_drawer_state` restored *which* asset was being edited, via the
-  # always-rendered `#{@id}-drawer-recovery` form, but nothing inside it: the
-  # caption, credits and alt text a user had typed were gone.
-  #
-  # The fix carries those pending values on the always-rendered form and replays
-  # them onto the freshly loaded resource. These tests drive the real
-  # `recover_drawer_state` handler.
+  # This is a chicken-and-egg problem rather than plumbing. The drawer's edit
+  # form is `:if={@image_changeset}`-gated, so when the process dies it exists
+  # in neither the old nor the new DOM at the moment LiveView runs its recovery
+  # diff — and LiveView can only recover forms it can see.
+  # `recover_drawer_state` restores *which* asset was being edited, via the
+  # always-rendered `#{@id}-drawer-recovery` form. That form also carries the
+  # pending values — caption, credits, alt text — which are replayed onto the
+  # freshly loaded resource. These tests drive the real `recover_drawer_state`
+  # handler.
   use ExUnit.Case, async: false
   use Brando.ConnCase
 
@@ -73,8 +70,7 @@ defmodule BrandoAdmin.Components.Form.DrawerRecoveryTest do
     assert Changeset.get_field(changeset, :credits) == %{"en" => "typed credits"}
 
     # They must be *changes*, not merely applied into data — a value sitting in
-    # `data` never reaches SQL, which is the single mistake behind most of this
-    # audit's findings.
+    # `data` never reaches SQL, the most common way an edit gets lost.
     assert changeset.changes.title == %{"en" => "typed caption"}
     assert changeset.changes.credits == %{"en" => "typed credits"}
   end

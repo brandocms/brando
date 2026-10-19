@@ -884,7 +884,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
   # The switch sits inside a control box the same height as a text input so a
   # toggle and a text field placed on the same row share a baseline. The
   # instructions are demoted to a tooltip — that, plus narrow widths, is what
-  # lets several toggles stack where one used to sit.
+  # lets several toggles sit side by side on one row.
   def render_value_inputs(%{type: :boolean} = assigns) do
     ~H"""
     <div class="brando-input">

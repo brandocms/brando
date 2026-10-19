@@ -1,8 +1,9 @@
 defmodule Brando.Content.OrphanedBlocksTest do
-  # `list_orphaned_blocks/0` used to hardcode the `pages_blocks` join and ignore
-  # `parent_id`, so it reported every nested child — and every block belonging to
-  # any other join schema — as orphaned. Acting on that list would have deleted
-  # live content, and deleting even a genuine orphan breaks revision restore.
+  # `list_orphaned_blocks/0` must cover every join schema and honour
+  # `parent_id`; hardcoding the `pages_blocks` join would report every nested
+  # child — and every block belonging to any other join schema — as orphaned.
+  # Acting on that list would delete live content, and deleting even a genuine
+  # orphan breaks revision restore.
   use ExUnit.Case, async: false
   use Brando.ConnCase
 
@@ -51,8 +52,8 @@ defmodule Brando.Content.OrphanedBlocksTest do
     refute entry_block.block_id in orphaned_ids()
   end
 
-  # The regression: children are owned by their root through `parent_id` and
-  # never have a join row, so a `pages_blocks` existence check flagged them all.
+  # Children are owned by their root through `parent_id` and never have a join
+  # row, so a `pages_blocks` existence check would flag them all.
   test "a nested child of a linked root is not orphaned" do
     user = Factory.insert(:random_user)
     page = Factory.insert(:page, creator: user)

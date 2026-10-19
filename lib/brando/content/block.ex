@@ -330,12 +330,11 @@ defmodule Brando.Content.Block do
   end
 
   # `Brando.Trait.Creator` sets this on the blueprint-generated changeset, but
-  # these hand-written casts never run the trait pipeline — so until now
-  # `creator_id` came from the client, via the hidden inputs `carried_var/1`
-  # emits for an unsaved var's whole cast surface. The user was already threaded
-  # in here and simply ignored. Deriving it server-side closes creator spoofing
-  # on every path at once (carried vars, block recovery, ordinary validate)
-  # rather than one DOM surface at a time.
+  # these hand-written casts never run the trait pipeline — so otherwise
+  # `creator_id` would come from the client, via the hidden inputs
+  # `carried_var/1` emits for an unsaved var's whole cast surface. Deriving it
+  # server-side closes creator spoofing on every path at once (carried vars,
+  # block recovery, ordinary validate) rather than one DOM surface at a time.
   #
   # A client-sent `creator_id` is always discarded. It is only *set* for a var
   # that does not have one yet, so an existing var keeps its original creator
@@ -463,8 +462,7 @@ defmodule Brando.Content.Block do
   # and refs carry theirs so a picker selection survives. Without a declared
   # constraint, a stale or hand-edited id raises `Ecto.ConstraintError` out of
   # the repo instead of returning an invalid changeset — which in the editor
-  # means the LiveView dies and takes every unsaved change with it. That is the
-  # same crash-loses-your-work failure this audit's A2 fixed.
+  # means the LiveView dies and takes every unsaved change with it.
   @media_fks [:image_id, :video_id, :file_id, :gallery_id, :form_id]
 
   defp validate_media_fks(changeset) do

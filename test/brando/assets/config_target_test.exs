@@ -44,9 +44,10 @@ defmodule Brando.Assets.ConfigTargetTest do
                ConfigTarget.config_function!(inspect(FakeBlueprint), "custom_file_cfg")
     end
 
-    # Regression: config_target strings arrive from the client (upload intake) —
-    # the old Module.concat + String.to_atom + apply let any authenticated user
-    # execute arbitrary zero-arity functions ("file:System:function:halt").
+    # config_target strings arrive from the client (upload intake) — resolving
+    # them with a bare Module.concat + String.to_atom + apply would let any
+    # authenticated user execute arbitrary zero-arity functions
+    # ("file:System:function:halt").
     test "refuses functions on non-blueprint modules" do
       assert_raise ArgumentError, ~r/blueprint/, fn ->
         ConfigTarget.config_function!("System", "halt")

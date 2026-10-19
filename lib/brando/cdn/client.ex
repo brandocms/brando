@@ -4,9 +4,8 @@ defmodule Brando.CDN.Client do
 
   Everything Brando needs from a bucket at *runtime* goes through here, so a
   test can drive the direct-upload path — presign, verify the object landed,
-  finalize, reap — without a bucket. Before this boundary existed there was no
-  way to test a successful `Brando.Uploads.finalize_direct/3` at all, which is
-  recorded as the honest limit of the D1 work in the form audit's Phase 2.
+  finalize, reap — without a bucket. Without it there would be no way to test
+  a successful `Brando.Uploads.finalize_direct/3` at all.
 
   Deliberately scoped to the calls that actually cross the network in a request
   or job path. Three things are outside it on purpose:

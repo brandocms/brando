@@ -7,7 +7,7 @@ import { syncLV, awaitBlockDebounce, awaitBlockShip } from '../../utils'
 // Guarantees under test:
 // * blur ships: A's edit reaches B on plain blur — no other block needs
 //   focusing (the settle-ship on focusout), and B SEES it (header textareas
-//   are no longer phx-update="ignore")
+//   are not phx-update="ignore")
 // * B's untouched save includes A's shipped edit instead of clobbering it
 // * late joiners get unsaved state on mount (join sync request/replay)
 // * child structural ops (delete) ship immediately, no blur needed
@@ -156,8 +156,8 @@ test.describe('Multi-user block sync', () => {
     await ta.fill('Alpha blurred by A')
     await awaitBlockDebounce(page)
 
-    // blur to something OUTSIDE the blocks — the old trigger only shipped
-    // when ANOTHER block got focused
+    // blur to something OUTSIDE the blocks — shipping must not depend on
+    // ANOTHER block getting focused
     await page.getByLabel('Title', { exact: true }).click()
     await awaitBlockShip(page)
 
@@ -382,7 +382,7 @@ test.describe('Multi-user block sync', () => {
 
     // B edits another field — every keystroke re-renders B's form; the
     // sticky lock class must survive the patches (a plain classList.add
-    // used to get wiped here)
+    // would be wiped here)
     const uri = secondUserPage.getByLabel('URI')
     await uri.click()
     await uri.fill('multiuser-field-lock-x')

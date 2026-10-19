@@ -249,8 +249,8 @@ defmodule Brando.Blueprint.VerifierTest do
   end
 
   test "rejects a typo in an asset constraint at compile time" do
-    # Assets were not run through constraint verification at all, so a typo
-    # here used to survive compilation and raise from the changeset instead.
+    # Assets run through constraint verification, so a typo here fails
+    # compilation rather than raising from the changeset.
     assert_raise Spark.Error.DslError, ~r/unsupported options \[:one_off\]/, fn ->
       compile_blueprint(
         quote do

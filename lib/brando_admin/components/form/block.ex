@@ -4,7 +4,7 @@ defmodule BrandoAdmin.Components.Form.Block do
   state (changeset + form), at any nesting level (root, container or multi
   child).
 
-  ## State ownership (Phase 3 single-owner architecture)
+  ## State ownership (single owner)
 
   After first mount, the generic `update/2` clause **drops incoming
   `:form`/`:children` assigns** — a parent re-render can never overwrite
@@ -238,9 +238,9 @@ defmodule BrandoAdmin.Components.Form.Block do
 
     has_children? = new_block_list !== []
 
-    # Only the uid travels. This used to ship `children_forms[uid].source` — but
-    # that map is a mount-time seed by design, so a child the user had edited
-    # moved as its ORIGINAL content and the target re-registered that stale diff,
+    # Only the uid travels, not `children_forms[uid].source`: that map is a
+    # mount-time seed by design, so a child the user had edited would move as
+    # its ORIGINAL content and the target would re-register that stale diff,
     # discarding every edit. BlockField rebuilds the child from the op store,
     # which is the one place holding its current state.
     send_to_ref(socket.assigns.parent_ref, %{
@@ -455,8 +455,8 @@ defmodule BrandoAdmin.Components.Form.Block do
         Changeset.put_assoc(block_cs, :children, [])
       end
 
-    # NOTE: the form id must use this block's own uid — it previously used
-    # the deleted child's uid, changing the parent form's id on every delete
+    # NOTE: the form id must use this block's own uid — the deleted child's
+    # uid would change the parent form's id on every delete
     own_uid = socket.assigns.uid
 
     updated_form =
@@ -520,8 +520,8 @@ defmodule BrandoAdmin.Components.Form.Block do
   # the block AFTER this update's patch. The event MUST be pushed from here,
   # not from BlockField: BlockField's push_event rides ITS OWN diff frame,
   # which the client processes BEFORE this queued update — widgets would
-  # re-read their inputs while the DOM still holds the old content (this is
-  # exactly how remote tiptap edits stayed invisible).
+  # re-read their inputs while the DOM still holds the old content, and
+  # remote tiptap edits would stay invisible.
   # A revision's working copy puts these children under another parent
   # (`BlockField.restore_draft/4`): this block stops showing them before
   # any parent takes its new form, so none shows in two places at once.
@@ -794,8 +794,9 @@ defmodule BrandoAdmin.Components.Form.Block do
     |> assign_new(:parent_module_id, fn -> nil end)
     |> assign_new(:parent_module_origin, fn -> nil end)
     # Both lists come out of an ETS-cached query, and an ETS read copies the
-    # whole term onto the reading process's heap — so this was one copy per
-    # block component, all inside the single LiveView process. Scope them to the
+    # whole term onto the reading process's heap — so assigning them everywhere
+    # would mean one copy per block component, all inside the single LiveView
+    # process. Scope them to the
     # blocks that actually render the markup:
     #
     #   * `@fragments` only reaches `fragment_block` / `fragment_config`
@@ -806,7 +807,7 @@ defmodule BrandoAdmin.Components.Form.Block do
     #     and nothing else. `belongs_to == :root` is NOT a reader: a root
     #     `:module` or `:fragment` block never reaches either template.
     #
-    # Anything else was carrying a list it had no template for.
+    # Any other block would carry a list it has no template for.
     |> assign_new(:containers, &block_containers/1)
     |> assign_new(:fragments, &block_fragments/1)
     |> assign_new(:collapsed, fn -> Changeset.get_field(changeset, :collapsed) end)
@@ -1121,19 +1122,18 @@ defmodule BrandoAdmin.Components.Form.Block do
   # keystroke (the params contract: `validate_block` rebuilds every child from
   # whatever params arrive), but their *values* are invariant across an edit
   # session, so re-sending their markup in every diff is pure waste — measured
-  # at 115 root blocks it was 1 191 B of the 12 233 B a single keystroke cost.
+  # at 115 root blocks, 1 191 B of the 12 233 B a single keystroke would cost.
   #
-  # Rendering them straight off `block_form` made them untrackable: the root
-  # path renders inside `<.inputs_for>`, whose body is a comprehension, and a
-  # comprehension entry re-renders every dynamic that depends on one of its
-  # own vars. `block_form` is a fresh struct on every validate, so all of them
-  # did. Precomputing here puts them behind an ordinary assign instead, and
-  # `assign/3` is a no-op when the new value compares equal — an edit that
-  # does not touch them now sends nothing.
+  # Rendering them straight off `block_form` would make them untrackable: the
+  # root path renders inside `<.inputs_for>`, whose body is a comprehension,
+  # and a comprehension entry re-renders every dynamic that depends on one of
+  # its own vars. `block_form` is a fresh struct on every validate, so all of
+  # them would. Precomputing here puts them behind an ordinary assign instead,
+  # and `assign/3` is a no-op when the new value compares equal — an edit that
+  # does not touch them sends nothing.
   #
-  # The markup is deliberately byte-identical to what `Input.hidden` emitted,
-  # `f--` prefix and all (`Input.input` interpolates a nil `id_prefix`). This
-  # is a payload change, not a markup change.
+  # The markup is deliberately byte-identical to what `Input.hidden` emits,
+  # `f--` prefix and all (`Input.input` interpolates a nil `id_prefix`).
   @hidden_block_fields [
     :uid,
     :type,
@@ -1227,7 +1227,7 @@ defmodule BrandoAdmin.Components.Form.Block do
       when type in [:file, :image, :video, :gallery] do
     # Write the foreign key (:file_id / :image_id) — the field the input renders
     # from (extract_value/2) and the changeset persists. The payload has no :type
-    # key, so the old `Map.get(data, :type)` always wrote nil and the var reset.
+    # key, so `Map.get(data, :type)` would always write nil and reset the var.
     fk = :"#{type}_id"
     asset_id = Map.get(data, fk)
     uid = socket.assigns.uid
@@ -1714,23 +1714,23 @@ defmodule BrandoAdmin.Components.Form.Block do
 
   # Deliberately a *wider* test than the registration regex above, because the
   # two failure modes are not symmetric. Getting this wrong in the permissive
-  # direction costs a re-render on entry change — the behaviour before `:entry`
-  # was ever dropped. Getting it wrong in the restrictive direction means a
+  # direction costs a re-render on entry change, as if `:entry` were never
+  # dropped. Getting it wrong in the restrictive direction means a
   # block renders stale entry data forever, silently.
   #
   # So the registration regex is not reusable here: it only catches a literal
   # `entry.<field>`, and misses aliasing (`{% assign e = entry %}` … `{{ e.x }}`)
   # — which the comment above acknowledges the check is supposed to cover. Any
-  # mention of the word at all keeps the block on the old behaviour, and a HEEx
-  # module always does: it receives `entry` through its render context
+  # mention of the word at all keeps the block re-rendering on entry change,
+  # and a HEEx module always does: it receives `entry` through its render context
   # (`Render.heex_assigns/1`), where no regex over the source would find it.
   defp may_read_entry?(socket, module_code) do
     socket.assigns.module_type == :heex or Regex.match?(~r/\bentry\b/, module_code)
   end
 
   # `consumes_entry?` is only set once a module has been resolved, so a block
-  # without one (containers, fragments) keeps the old behaviour of accepting
-  # every entry update — nil is deliberately not treated as false.
+  # without one (containers, fragments) accepts every entry update — nil is
+  # deliberately not treated as false.
   # Kept as its own assign so a keystroke in an entry field other than
   # `language` leaves it unchanged, and the inputs that read it are not re-sent.
   defp assign_entry_language(socket),
@@ -1889,7 +1889,7 @@ defmodule BrandoAdmin.Components.Form.Block do
   Ask the Form to refresh the live preview after a structural change.
 
   Sequence is derived from list order at materialization, so structural
-  changes no longer fan out per-block sequence restamps or wait for an ack
+  changes do not fan out per-block sequence restamps or wait for an ack
   barrier before refreshing.
   """
   def refresh_live_preview(socket) do
@@ -2384,7 +2384,7 @@ defmodule BrandoAdmin.Components.Form.Block do
 
   @doc """
   Assign a rebuilt block form AND mirror its changes into the BlockField op
-  state (Phase 3 single-owner refactor).
+  state (single-owner block state).
 
   This is the chokepoint for content commits: every handler that rebuilds
   this block's form must assign it through here so the uid-keyed diff store
@@ -3465,9 +3465,6 @@ defmodule BrandoAdmin.Components.Form.Block do
   defp retarget_gallery_override(%{} = override, media_type, new_id_str) do
     Map.merge(override, %{object_id: new_id_str, object_type: media_type})
   end
-
-  # Note: Removed create_gallery_with_image and add_image_to_existing_gallery
-  # These are now handled inline in add_image_to_gallery_ref using changesets
 
   defp sequence_gallery_objects(gallery_objects) do
     gallery_objects

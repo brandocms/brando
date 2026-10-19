@@ -1,15 +1,13 @@
 defmodule BrandoAdmin.Components.Form.AddonStatusesTest do
-  # Phase 3 / E1 in the form audit.
-  #
   # `assign_addon_statuses/1` runs from `finish_form_update/1`, which the generic
   # `update/2` clause reaches on EVERY parent re-render — Presence diffs
-  # included. It recomputed data that is fixed for the life of the component
-  # (schema traits, `Code.ensure_compiled!` on the live-preview module, the
-  # transformer map) with plain `assign/2`.
+  # included. What it assigns is fixed for the life of the component (schema
+  # traits, `Code.ensure_compiled!` on the live-preview module, the transformer
+  # map), so it is computed once rather than with plain `assign/2`.
   #
-  # The transformer assigns were the sharp edge: they are STATE owned by
+  # The transformer assigns are the sharp edge: they are STATE owned by
   # `reset_transformer_changesets/1`, and re-initialising them on every update
-  # discarded whatever a transformer had already reported.
+  # would discard whatever a transformer had already reported.
   use ExUnit.Case, async: false
   use Brando.ConnCase
 

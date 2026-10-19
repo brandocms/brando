@@ -444,7 +444,8 @@ defmodule BrandoAdmin.Components.Form.BlockField.ModulePicker do
   # The pick is recorded here as well as in the browser (ModulePickerKeys), the
   # same way. The picker opens with the list it will end up with, so the
   # hook's `set_recent` changes nothing: arriving after the rows had rendered,
-  # it used to put "Recently used" on top and move every row under the pointer.
+  # it would otherwise put "Recently used" on top and move every row under the
+  # pointer.
   defp remember_recent(ids, id), do: Enum.take([id | List.delete(ids, id)], @recent_limit * 4)
 
   # The recently used modules that are in this picker's set, most recent first.

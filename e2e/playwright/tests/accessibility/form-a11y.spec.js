@@ -1,10 +1,10 @@
 import { test, expect } from '../../test-support/setupAuth'
 import { syncLV, setEntryStatus } from '../../utils'
 
-// Issue #1996. The admin is essentially one large form application, and before
-// this it shipped a single ARIA attribute in the whole form layer: a submitted
-// form announced nothing, a keyboard user was scrolled to an error they could
-// not reach, and a modal opened with focus still behind it.
+// Issue #1996. The admin is essentially one large form application, so its
+// form layer has to be accessible: a submitted form announces what failed, a
+// keyboard user is moved to an error they can reach, and a modal takes focus
+// when it opens.
 
 test.describe('Accessible form validation', () => {
   test('a failed save marks the field invalid, announces why, and moves focus to it', async ({

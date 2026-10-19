@@ -291,9 +291,9 @@ test.describe('Entry recovery copies', () => {
     expect(locks.capture).toBeGreaterThan(0)
   })
 
-  // ⌘S used to push the save from the form's hook element, which locked the
-  // form around the block fields (see the capture test above). It is pushed
-  // from its own element, and the input being typed in keeps the focus.
+  // ⌘S pushes the save from its own element, not the form's hook element,
+  // which would lock the form around the block fields (see the capture test
+  // above), and the input being typed in keeps the focus.
   test('⌘S locks only its own element and keeps the focus in the field', async ({ page }) => {
     await page.goto('/admin/pages/create')
     await syncLV(page)

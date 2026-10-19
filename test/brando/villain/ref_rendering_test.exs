@@ -856,9 +856,9 @@ defmodule Brando.Villain.RefRenderingTest do
   # media record's own values (title, credits, alt, the video's playback
   # settings) and settings that describe this *placement* of the media
   # (lazyload, placeholder, play_button, cover). `merge_ref_associations/1`
-  # merges both onto the media struct, and the second kind used to fall off the
-  # end of `Kernel.struct/2` because the media schema had no field for them —
-  # silently, so the renderer just used its defaults.
+  # merges both onto the media struct, so the media schema needs a field for the
+  # second kind too: without one, `Kernel.struct/2` drops them silently and the
+  # renderer just uses its defaults.
   describe "block-level presentation settings" do
     defp render_picture_ref(user, block_data) do
       image = Factory.insert(:image, creator: user, dominant_color: "#112233")

@@ -1,9 +1,9 @@
 defmodule Brando.Cache.QueryEvictAfterCommitTest do
   @moduledoc """
-  A write inside a transaction evicts its cached queries at once, before the
-  commit. A read in between (another process, which still sees the old row)
-  caches the old row again, and it stayed cached for the query's TTL. These
-  tests put the old row back in the cache at that point, as such a read
+  Evicting a write's cached queries at once, inside the transaction, is not
+  enough: a read before the commit (another process, which still sees the old
+  row) caches the old row again, and it would stay cached for the query's TTL.
+  These tests put the old row back in the cache at that point, as such a read
   does, and check it is gone once the transaction has committed.
   """
   use ExUnit.Case, async: false

@@ -1,7 +1,7 @@
 defmodule BrandoAdmin.EditSessionSavesTest do
   # Saves, outside writes and recovery copies with two editors in one entry's
-  # edit session, through real LiveViews. Each test is a case a review found
-  # losing or corrupting work (#2992).
+  # edit session, through real LiveViews. Each test is a way work could be lost
+  # or corrupted (#2992).
   use Brando.LiveCase
 
   import Brando.EditSessionEditors
@@ -79,7 +79,7 @@ defmodule BrandoAdmin.EditSessionSavesTest do
 
   # The view has handled what it was sent and the chains of updates that
   # sent itself (a save's goes Form → block field → Form), and the client
-  # has its pushes: what a fixed sleep or a long refute used to wait for.
+  # has its pushes: what a fixed sleep or a long refute would otherwise wait for.
   defp idle(view) do
     settle(view)
     settle(view)
@@ -92,9 +92,9 @@ defmodule BrandoAdmin.EditSessionSavesTest do
     state
   end
 
-  # #2: save and close used to leave the session without the rebase, so
-  # the other editor's session kept the new block as unsaved and every later
-  # save of theirs failed with "uid has already been taken".
+  # Save and close rebases the session too. Without it the other editor's
+  # session would keep the new block as unsaved and every later save of theirs
+  # would fail with "uid has already been taken".
   test "after a save that closes the editor, the other editor can still save", c do
     [first | _] = c.uids
     a = open(c.conn, c.identity)
@@ -117,7 +117,7 @@ defmodule BrandoAdmin.EditSessionSavesTest do
     assert length(rows(c.identity)) == 4
   end
 
-  # #11: two saves at once with a new block. The second write inserts the
+  # Two saves at once with a new block. The second write inserts the
   # block again and is refused; once the first save's rebase has arrived, a
   # retry goes through.
   test "of two overlapping saves the second can be retried, without a duplicate block", c do
@@ -194,9 +194,9 @@ defmodule BrandoAdmin.EditSessionSavesTest do
     assert Map.new(texts(c.identity))[first] == "<p>Saved by a pushed save</p>"
   end
 
-  # Follow-up, round 2: a save whose new URL opens the redirect prompt left
-  # the edit session on the old rows, its mark pinning the op log, until the
-  # prompt was answered.
+  # A save whose new URL opens the redirect prompt must not leave the edit
+  # session on the old rows, its mark pinning the op log, until the prompt is
+  # answered.
   test "a save that asks about a redirect moves the session on at once", c do
     [first | _] = c.uids
     a = open(c.conn, c.identity)
@@ -214,8 +214,8 @@ defmodule BrandoAdmin.EditSessionSavesTest do
     assert shown_text(b, first) == "<p>Saved with a new URL</p>"
   end
 
-  # Follow-up, round 2: the save button and then ⌘S (or ⌘S twice) before
-  # the first answered wrote the entry twice.
+  # The save button and then ⌘S (or ⌘S twice) before the first answers must
+  # not write the entry twice.
   test "two quick saves write once", c do
     [first | _] = c.uids
     a = open(c.conn, c.identity)
@@ -250,7 +250,7 @@ defmodule BrandoAdmin.EditSessionSavesTest do
     assert revisions.() - before == 1
   end
 
-  # Follow-up: a save's mark is cleared when the save is done, not after a
+  # A save's mark is cleared when the save is done, not after a
   # fixed time. A save that fails lets go of it at once.
   test "a save that fails lets the session forget what it read", c do
     a = open(c.conn, c.identity)
@@ -295,9 +295,9 @@ defmodule BrandoAdmin.EditSessionSavesTest do
     assert length(row.block.refs) == 1
   end
 
-  # #1 (field ops): the same with a save that closes the editor. B's ops on
-  # the new block, replayed onto the saved rows, named its ref by uid; the
-  # next keystroke named it by id, and B's save inserted a second, nameless
+  # The same with a save that closes the editor (field ops). B's ops on the
+  # new block, replayed onto the saved rows, name its ref by uid; the next
+  # keystroke names it by id, and B's save must not insert a second, nameless
   # ref.
   test "typing in a new block while another editor saves and closes, then saving, keeps one ref", c do
     a = open(c.conn, c.identity)
@@ -352,7 +352,7 @@ defmodule BrandoAdmin.EditSessionSavesTest do
     assert block_count(new) == 1
   end
 
-  # #4: applying a recovery copy replaced the whole field and wiped the
+  # Applying a recovery copy must not replace the whole field and wipe the
   # other editor's unsaved work.
   test "applying a recovery copy keeps another editor's unsaved work", c do
     [first, second | _] = c.uids
@@ -401,9 +401,9 @@ defmodule BrandoAdmin.EditSessionSavesTest do
     assert state.diffs[second] != nil and state.diffs[first] != nil
   end
 
-  # #5: unsaved work on a block another writer deleted was announced as
-  # "kept in your recovery copy", which it was not. It comes back as a new
-  # block instead.
+  # Unsaved work on a block another writer deleted comes back as a new block,
+  # rather than being announced as "kept in your recovery copy", which it
+  # would not be.
   test "a block someone else deletes comes back, as new, for the editor with unsaved work in it", c do
     [_first, second | _] = c.uids
     b = open(c.other_conn, c.identity)
@@ -425,10 +425,10 @@ defmodule BrandoAdmin.EditSessionSavesTest do
     assert length(rows(c.identity)) == 3
   end
 
-  # Review: an editor coming back to a session that moved onto other rows
-  # reads its rows again before it builds the copy of a removed block it
-  # worked in. Built over the new rows, which lack the block, the copy lost
-  # what the editor had not changed in it (its ref's name).
+  # An editor coming back to a session that moved onto other rows reads its
+  # rows again before it builds the copy of a removed block it worked in.
+  # Built over the new rows, which lack the block, the copy would lose what
+  # the editor had not changed in it (its ref's name).
   test "a block removed while the session was away comes back whole for the editor with unsaved work in it", c do
     [_first, second | _] = c.uids
     [ref] = c.identity |> rows() |> Enum.find(&(&1.block.uid == second)) |> then(& &1.block.refs)
@@ -480,9 +480,9 @@ defmodule BrandoAdmin.EditSessionSavesTest do
     |> map_size()
   end
 
-  # Review: a joiner with newer rows moved the session onto them, but the
-  # others took it as a plain join, compared blocks alone and kept showing
-  # (and later seeding and saving) the rows without the new one.
+  # A joiner with newer rows moves the session onto them. Taken as a plain
+  # join, comparing blocks alone, the others would keep showing (and later
+  # seed and save) the rows without the new one.
   test "editors read the rows again when a joiner moves the session onto newer rows", c do
     [first | _] = c.uids
     a = open(c.conn, c.identity)
@@ -494,8 +494,8 @@ defmodule BrandoAdmin.EditSessionSavesTest do
     await(fn -> shown_refs(a, first) == 2 end)
   end
 
-  # Review: an editor that came back with older rows read them again, but
-  # kept showing its blocks' forms from the rows it had first.
+  # An editor that comes back with older rows reads them again, and shows its
+  # blocks' forms from those, not from the rows it had first.
   test "an editor that rejoins with older rows shows the rows it read again", c do
     [first | _] = c.uids
     a = open(c.conn, c.identity)
@@ -516,9 +516,9 @@ defmodule BrandoAdmin.EditSessionSavesTest do
     await(fn -> shown_refs(b, first) == 2 end)
   end
 
-  # Review: a row saved while a late rejoiner was away was deleted, and the
-  # rejoiner kept showing (and could seed the next session with) the rows
-  # it had loaded. Through two editors' block fields, as production rejoins.
+  # A row saved while a late rejoiner was away must not be deleted, nor may
+  # the rejoiner keep showing (and seed the next session with) the rows it
+  # had loaded. Through two editors' block fields, as production rejoins.
   test "a late rejoiner keeps its row change and shows the row saved while it was away", c do
     %{page: page, uid: uid} = rows_page!(c.me)
     a = open(c.conn, page)
@@ -585,8 +585,8 @@ defmodule BrandoAdmin.EditSessionSavesTest do
     refute state.diffs[kept]["block"]["sync_uid"] == uid
   end
 
-  # Sol audit: copies placed by positions read before any went in landed
-  # before the second original.
+  # Copies placed by positions read before any went in would land before the
+  # second original.
   test "copies of two new blocks each come right after their own", c do
     a = open(c.conn, c.identity)
     b = open(c.other_conn, c.identity)
@@ -610,8 +610,8 @@ defmodule BrandoAdmin.EditSessionSavesTest do
     end
   end
 
-  # Review: the editor who never changed the block, coming back after the
-  # one who did, was given a copy of the older version.
+  # The editor who never changed the block, coming back after the one who
+  # did, is not given a copy of the older version.
   test "a new block is not copied for the editor who did not change it", c do
     a = open(c.conn, c.identity)
     b = open(c.other_conn, c.identity)
@@ -682,10 +682,10 @@ defmodule BrandoAdmin.EditSessionSavesTest do
     assert shown_text(b, uid) == "<p>Seen by both</p>"
   end
 
-  # Review of #3055: the block came back after its rescue (the proposal was
-  # undone) while the first copy stayed, and work in it was then removed
-  # again. The first copy settled the second rescue, so nothing was
-  # inserted and the new work was lost.
+  # The block comes back after its rescue (the proposal is undone) while the
+  # first copy stays, and work in it is then removed again (#3055). The first
+  # copy must not settle the second rescue, or nothing is inserted and the new
+  # work is lost.
   test "a block removed again while its first copy is still there comes back as a second copy", c do
     [_first, second | _] = c.uids
     b = open(c.other_conn, c.identity)
@@ -710,8 +710,8 @@ defmodule BrandoAdmin.EditSessionSavesTest do
     assert shown_text(b, second <> "-kept") == "<p>First work</p>"
   end
 
-  # #5: a change to a block another editor had just deleted was rejected by
-  # the session without a word to the editor who made it.
+  # A change to a block another editor has just deleted is rejected by the
+  # session, and the editor who made it is told.
   test "a change to a block another editor just deleted is reported to its author", c do
     [_first, second | _] = c.uids
     a = open(c.conn, c.identity)
@@ -731,11 +731,11 @@ defmodule BrandoAdmin.EditSessionSavesTest do
     await(fn -> not (render(b) =~ ~s(data-block-uid="#{second}")) end)
   end
 
-  # Round 3 #3: a container with a child added in it, removed by an outside
-  # write. The child was brought back on its own first, then registered as
-  # the existing child of the container brought back after it, which
-  # overwrote its content and left the container without it. Every `"uid"`
-  # in the params was renamed, those inside ref data too.
+  # A container with a child added in it, removed by an outside write. The
+  # child must not be brought back on its own first, then registered as the
+  # existing child of the container brought back after it, which would
+  # overwrite its content and leave the container without it. Renaming the
+  # `"uid"`s in the params leaves those inside ref data alone.
   test "a removed container with a new child comes back whole, its refs' data untouched", c do
     c = Brando.ProposalFixtures.multi_context(c)
     b = open(c.other_conn, c.work)
@@ -771,10 +771,9 @@ defmodule BrandoAdmin.EditSessionSavesTest do
     assert Enum.all?(kept_child["refs"], &(&1["uid"] not in Enum.map(refs, fn ref -> ref["uid"] end)))
   end
 
-  # Round 3: activating a revision from one's own drawer, with unsaved work
-  # in a block the revision lacks. The write came from the editor's own
-  # process, which was never asked to bring the work back: it was lost
-  # without a word.
+  # Activating a revision from one's own drawer, with unsaved work in a block
+  # the revision lacks. The write comes from the editor's own process, which
+  # must still be asked to bring the work back, or it is lost without a word.
   test "work in a block an activated revision lacks comes back for the editor who activated it", c do
     entry = Page |> Repo.get!(c.identity.id) |> Repo.preload(Brando.Blueprint.preloads_for(Page))
     {:ok, _} = Brando.Revisions.create_revision(entry, c.user)
@@ -801,9 +800,9 @@ defmodule BrandoAdmin.EditSessionSavesTest do
     assert_receive %Phoenix.Socket.Broadcast{event: "toast"}, 2_000
   end
 
-  # Follow-up, round 2: two editors' work in two children of one removed
-  # container. Each brought back its own copy of the container under one
-  # uid, and the session turned the second away: one editor's work was lost.
+  # Two editors' work in two children of one removed container. Were each to
+  # bring back its own copy of the container under one uid, the session would
+  # turn the second away and one editor's work would be lost.
   test "work two editors had in two children of a removed container comes back in one copy", c do
     c = Brando.ProposalFixtures.multi_context(c)
     [x, y | _] = c.child_uids
@@ -831,9 +830,8 @@ defmodule BrandoAdmin.EditSessionSavesTest do
     assert Enum.sort([a_id, b_id]) == Enum.sort([to_string(c.me.id), to_string(c.other.id)])
   end
 
-  # Follow-up: the editor whose unsaved work a removed block held had left,
-  # and nobody brought it back. An editor still here does now, and every
-  # editor still here is told.
+  # The editor whose unsaved work a removed block held has left. An editor
+  # still here brings it back, and every editor still here is told.
   test "work an editor who has left had in a removed block comes back, and the others hear of it", c do
     [_first, second | _] = c.uids
     a = open(c.conn, c.identity)
@@ -876,9 +874,9 @@ defmodule BrandoAdmin.EditSessionSavesTest do
     assert length(session_state(c.identity).order) == 3
   end
 
-  # Follow-up: a child with unsaved work, removed by another write, came
-  # back as a root block of its own: a multi module's entry outside its
-  # module. It now goes back where it was.
+  # A child with unsaved work, removed by another write, goes back where it
+  # was, not as a root block of its own: that would be a multi module's entry
+  # outside its module.
   describe "a removed child with unsaved work" do
     setup c do
       c = Brando.ProposalFixtures.multi_context(c)
@@ -935,9 +933,9 @@ defmodule BrandoAdmin.EditSessionSavesTest do
     end
   end
 
-  # Round 3 #2: an Assistant proposal applied between a save collecting its
-  # blocks and writing them. The rebase gave the form the new rows, the
-  # save's blocks lacked the new one, and the write deleted it.
+  # An Assistant proposal applied between a save collecting its blocks and
+  # writing them. The rebase gives the form the new rows and the save's blocks
+  # lack the new one; the write must not delete it.
   test "an outside write between a save's collect and its write keeps its new block", c do
     [first | _] = c.uids
     a = open(c.conn, c.identity)
@@ -971,9 +969,9 @@ defmodule BrandoAdmin.EditSessionSavesTest do
     assert length(rows(c.identity)) == 4
   end
 
-  # Round 3 #4: undoing a proposal restored a revision inside a transaction
-  # and synced the open editors at once, from rows that were not committed
-  # and, rolled back, never existed.
+  # Undoing a proposal restores a revision inside a transaction. Syncing the
+  # open editors at once would send them rows that were not committed and,
+  # rolled back, never existed.
   test "an outside write reaches open editors only once its transaction commits", c do
     _b = open(c.other_conn, c.identity)
     ref = EditSession.ref(Page, c.identity.id, c.identity.language)
@@ -1001,9 +999,9 @@ defmodule BrandoAdmin.EditSessionSavesTest do
     assert_receive {:edit_session, _, %{kind: :rebase}}, 2_000
   end
 
-  # Round 3 #1 (field ops): A backspaced in one field while B typed in
-  # another field of the same block, and A's edit was taken for an echo of
-  # the form before B's change, and dropped.
+  # Field ops: A backspaces in one field while B types in another field of
+  # the same block. A's edit must not be taken for an echo of the form before
+  # B's change, and dropped.
   test "a backspace right after another editor typed elsewhere in the block is kept", c do
     [first | _] = c.uids
     desc = ["entry_block", "block", "description"]
@@ -1030,8 +1028,8 @@ defmodule BrandoAdmin.EditSessionSavesTest do
     assert shown.(a, text_path()) == "<p>B typing</p>"
   end
 
-  # Round 4: A set the field B had just changed back to A's old value, and it
-  # was taken for an echo of the form before B's change.
+  # A sets the field B has just changed back to A's old value; it must not be
+  # taken for an echo of the form before B's change.
   test "setting a field back right after another editor changed it is kept", c do
     [first | _] = c.uids
     desc = ["entry_block", "block", "description"]
@@ -1057,7 +1055,7 @@ defmodule BrandoAdmin.EditSessionSavesTest do
     await(fn -> shown.(b) == "abc" end)
   end
 
-  # Follow-up, round 2: a toggle set back, or a backspace to the text from
+  # A toggle set back, or a backspace to the text from
   # before, within a second of another editor's change to the same field.
   for {name, path, theirs, mine} <- [
         {"a toggle set back", ["entry_block", "block", "active"], "false", "true"},
@@ -1088,8 +1086,8 @@ defmodule BrandoAdmin.EditSessionSavesTest do
     end
   end
 
-  # #10: refreshing a root for another editor's change also rewrote its seed
-  # form, so the field re-rendered and the block was updated a second time.
+  # Refreshing a root for another editor's change leaves its seed form alone;
+  # rewriting it would re-render the field and update the block a second time.
   test "another editor's change updates only the block it changed", c do
     [first | _] = c.uids
     a = open(c.conn, c.identity)
@@ -1128,8 +1126,8 @@ defmodule BrandoAdmin.EditSessionSavesTest do
     end
   end
 
-  # #9: activating a revision outside the drawer (a scheduled activation)
-  # wrote the entry without telling the open editors.
+  # Activating a revision outside the drawer (a scheduled activation) writes
+  # the entry, and the open editors are told.
   test "activating a revision moves open editors onto it, keeping their unsaved work", c do
     [first, second | _] = c.uids
     entry = Page |> Repo.get!(c.identity.id) |> Repo.preload(Brando.Blueprint.preloads_for(Page))
@@ -1155,10 +1153,10 @@ defmodule BrandoAdmin.EditSessionSavesTest do
   end
 
   # The revisions drawer's preview loads a revision as an unsaved working
-  # copy, replacing the editor's unsaved changes. Those stayed in the edit
-  # session as unsaved work: a replica rejoined with them when the session
-  # stopped, or the session, still running for others, carried them back
-  # over the revision when it was activated or saved.
+  # copy, replacing the editor's unsaved changes. Those must not stay in the
+  # edit session as unsaved work, or a replica would rejoin with them when the
+  # session stopped, or the session, still running for others, would carry
+  # them back over the revision when it was activated or saved.
   describe "a revision loaded as a working copy" do
     setup c do
       previous = Application.get_env(:brando, EditSession, [])
@@ -1344,9 +1342,10 @@ defmodule BrandoAdmin.EditSessionSavesTest do
     end
   end
 
-  # Loading a revision as a working copy made the revision's rows the form's
-  # data, so the form held no changes and Save wrote nothing: the editor
-  # showed the revision restored while the database kept what it had.
+  # Were loading a revision as a working copy to make the revision's rows the
+  # form's data, the form would hold no changes and Save would write nothing:
+  # the editor would show the revision restored while the database kept what
+  # it had.
   describe "saving a revision loaded as a working copy" do
     defp work_rows(page) do
       Page

@@ -2,16 +2,12 @@ defmodule Brando.Uploads.AssetOrphanTest do
   @moduledoc """
   The asset-lifecycle counterpart to `test/brando/content/orphaned_blocks_test.exs`.
 
-  **The plan's framing for this task was wrong, and checking it first is the
-  point.** Phase 4 asked for a test that "uploaded rows are cleaned up on a
-  failed or reset save". They are not, deliberately: `docs/UPLOADER.md:529` makes
-  asset creation independent of delivery, and `research/03-uploads.md:88` records
-  the consequence as an *accepted-by-design orphan* — "the asset row is
-  permanent… there is no GC for unreferenced assets". Writing a cleanup test
-  would have asserted a guarantee the system never made, exactly the mistake D2
-  made with delivery ACKs.
+  Uploaded rows are not cleaned up on a failed or reset save, by design: asset
+  creation is independent of delivery (see "Delivery and the orphan-safe
+  contract" in `.claude/skills/brando-uploads/architecture.md`), so an asset row
+  is permanent and nothing collects unreferenced assets.
 
-  So these tests pin the contract that actually holds, in both directions:
+  These tests pin that contract in both directions:
 
     * an asset survives everything the editor can do to an entry, because it is
       shared library content and deleting it would take other entries' media
@@ -69,11 +65,10 @@ defmodule Brando.Uploads.AssetOrphanTest do
     # image still picked.
     #
     # Driven through `Page.changeset/5` rather than a `validate_required/2` the
-    # test bolts on. The earlier version invented its own failing changeset, so
-    # it asserted only that Ecto does not delete unrelated rows when an insert
-    # fails — true of any schema in any application, and unable to go red for
-    # anything in this repo. `uri` is `required: true` on the blueprint
-    # (`page.ex:94`), so this is the validation a user actually hits.
+    # test bolts on: a hand-made failing changeset would only show that Ecto
+    # leaves unrelated rows alone when an insert fails, which no change in this
+    # repo could break. `uri` is `required: true` on the Page blueprint, so this
+    # is the validation a user actually hits.
     test "survives a failed entry save" do
       user = Factory.insert(:random_user)
       image = Factory.insert(:image, creator: user)

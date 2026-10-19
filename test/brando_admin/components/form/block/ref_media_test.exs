@@ -1,17 +1,16 @@
 defmodule BrandoAdmin.Components.Form.Block.RefMediaTest do
-  # Regression coverage for B1 — media picked on a *persisted* ref used to be
-  # dropped by the very next keystroke, with no disconnect involved.
+  # Media picked on a *persisted* ref survives the very next keystroke, with no
+  # disconnect involved.
   #
   # `Block.commit_ref_data/2` is a pure `send_update`, and `update_ref_data`
-  # writes the FK into the ref changeset's `changes` only. `render.ex` then
-  # suppressed the FK hidden inputs once a ref had a primary key, so the value
-  # had no DOM representation either. `validate_block`'s root clause rebases on
-  # `changeset.data` (the DB refs) — so the pick reverted on the next `validate`.
+  # writes the FK into the ref changeset's `changes` only. `validate_block`'s
+  # root clause rebases on `changeset.data` (the DB refs), so left alone the pick
+  # would revert on the next `validate`.
   #
-  # The fix has two halves and this file covers both:
+  # Two halves keep it, and this file covers both:
   #   (a) `merge_programmatic_ref_media/2` folds the FKs back onto the DB base
-  #   (b) the FK hidden inputs always render, so LiveView form recovery can
-  #       replay them after the process dies
+  #   (b) the FK hidden inputs render even once a ref has a primary key, so
+  #       LiveView form recovery can replay them after the process dies
   use ExUnit.Case, async: false
   use Brando.ConnCase
 

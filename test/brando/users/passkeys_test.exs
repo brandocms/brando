@@ -45,7 +45,7 @@ defmodule Brando.Users.PasskeysTest do
       assert {:ok, _registration, _options} = Passkeys.start_registration(user, {:signed_in_now, pending_id})
     end
 
-    # The review's probe: someone with the password holds the required-setup
+    # Someone with the password holds the required-setup
     # screen open; the owner resets their password, which ends that sign-in
     test "a waiting sign-in vouches only while it lasts, from the start to the registration" do
       user = user()

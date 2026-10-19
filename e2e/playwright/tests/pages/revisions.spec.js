@@ -72,8 +72,8 @@ test.describe('Entry revisions', () => {
   })
 
   // A revision loaded as a working copy is unsaved changes to the entry as
-  // it is now: saving it writes them. It used to become the form's data, so
-  // Save wrote nothing and a reload showed the entry as it was.
+  // it is now: saving it writes them. Were it to become the form's data,
+  // Save would write nothing and a reload would show the entry as it was.
   test('saving a revision loaded as a working copy writes it', async ({ page }) => {
     await page.goto('/admin/pages/create')
     await syncLV(page)

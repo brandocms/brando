@@ -175,7 +175,10 @@ defmodule Brando.Content.SharedLibrary do
     end
   end
 
-  @doc "Compatibility resolver matching the Phase 4 tenant-first contract."
+  @doc """
+  Resolves a reference without an origin, tenant first: the local record, or
+  else the shared one if it is enabled for `site`.
+  """
   def get(kind, id, %Site{} = site, prefix) when kind in @kinds do
     id = normalize_id!(id)
     get_local(kind, id, prefix) || get_shared(kind, id, site, prefix, require_enabled: true)

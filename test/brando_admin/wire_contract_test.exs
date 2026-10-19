@@ -3,9 +3,8 @@ defmodule BrandoAdmin.WireContractTest do
   # `pushEvent` with no `handle_event` crashes at runtime, and a server
   # `push_event` with no `handleEvent` listener silently does nothing.
   # This test inventories both sides from source and fails on drift —
-  # the defect class behind several audit findings (unhandled
-  # `upload_error`/`drop_svg`, the dead `files_selected`/`start_upload_queue`
-  # protocol).
+  # an event one side sends and the other never handles, or a protocol only
+  # one side still speaks.
   #
   # Known blind spots (raw-text scan, by design):
   # - Client→server only covers JS-originated pushes; `JS.push`/`phx-click`

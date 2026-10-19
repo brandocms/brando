@@ -297,9 +297,8 @@ defmodule Brando.UploadsTest do
     end
 
     # And credentials are reported before size, because there is no point
-    # size-checking an upload that cannot start. This is the ordering choice
-    # that broke two existing tests in this file — recorded as a test rather
-    # than as a comment, since the fix for those was to add credentials to the
+    # size-checking an upload that cannot start. Recorded as a test rather than
+    # as a comment, since the other tests in this file add credentials to their
     # setup, which would otherwise quietly hide the decision.
     test "reports missing credentials before an oversized file" do
       put_test_env(Brando.Videos.Uploaders.Mux, [])
@@ -320,7 +319,7 @@ defmodule Brando.UploadsTest do
   end
 
   describe "resolve_video_config/1" do
-    # Regression: the fallback returned the raw configured default, which can
+    # The fallback must not return the raw configured default, which can
     # be a plain map — a non-struct cfg misses handle_upload_type's
     # VideoConfig clause and local video uploads fall into the generic image
     # path ("Failed to read image dimensions").
@@ -333,9 +332,9 @@ defmodule Brando.UploadsTest do
   end
 
   describe "store_upload/4" do
-    # Regression: handle_upload/4 leaks 3/4-tuple errors ({:error, :content_type,
-    # type, allowed} etc.) — an unnormalized shape crashed the sticky manager
-    # mid-consume, killing every in-flight upload.
+    # handle_upload/4 leaks 3/4-tuple errors ({:error, :content_type,
+    # type, allowed} etc.) — an unnormalized shape would crash the sticky
+    # manager mid-consume, killing every in-flight upload.
     test "normalizes a consume-time mimetype rejection to {:error, message}" do
       cfg =
         struct(Brando.Type.FileConfig, %{

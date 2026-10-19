@@ -213,8 +213,8 @@ defmodule BrandoAdmin.Components.Form.ErrorDisplayTest do
     end
 
     test "leaves the label clean on an untouched form" do
-      # Reading form.errors directly used to redden asset labels the moment a
-      # blank create form rendered, with no message to explain them.
+      # Reading form.errors directly would redden asset labels the moment a
+      # blank create form renders, with no message to explain them.
       html = field_base(untouched_form([{:meta_image_id, "can't be blank"}]))
 
       refute html =~ ~r/class="[^"]*control-label[^"]*failed/

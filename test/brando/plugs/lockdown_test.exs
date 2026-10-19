@@ -71,10 +71,9 @@ defmodule Brando.Plug.LockdownTest do
 
     # A mid-test toggle, not a teardown — the off branch is the other half of
     # what this test asserts. `put_test_env/2` above still deletes the key on
-    # exit, which is what these tests used to get wrong: they "restored"
-    # `:lockdown` to `false` and `:lockdown_until` to `nil`, neither of which is
-    # the absent key they started from, and both only if no assertion failed
-    # first.
+    # exit. "Restoring" `:lockdown` to `false` and `:lockdown_until` to `nil`
+    # would be wrong: neither is the absent key the test started from, and
+    # both would only run if no assertion failed first.
     Application.put_env(:brando, :lockdown, false)
 
     conn =

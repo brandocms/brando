@@ -1,9 +1,9 @@
 defmodule Brando.Content.PartialBlockSaveTest do
   # What happens when a multi-root block save is only *partly* valid — one root
-  # rejected, its siblings fine. Untested at any level before this, and the
-  # failure mode it guards against is the one the whole form audit is about:
-  # not "the save failed" (which is fine and visible) but "the save failed and
-  # took the user's other unsaved blocks with it" (which is silent).
+  # rejected, its siblings fine. The failure mode it guards against is the
+  # worst one a form can have: not "the save failed" (which is fine and
+  # visible) but "the save failed and took the user's other unsaved blocks
+  # with it" (which is silent).
   #
   # Drives the same save path `BlockField`'s `fetch_root_blocks` and the Form
   # run: materialize each root, cast recursively over the persisted entry block,
@@ -126,7 +126,7 @@ defmodule Brando.Content.PartialBlockSaveTest do
     # The one that matters most. A rejected save returns the changeset the form
     # re-renders from, so the valid siblings' content has to still be in it —
     # otherwise fixing one block silently discards the edits to the others,
-    # which is Phase 0's data-loss shape arriving through the save path.
+    # silent data loss arriving through the save path.
     test "keeps the valid siblings' content in the returned changeset", %{user: user, page: page} do
       {:error, changeset} =
         save_roots(
@@ -212,12 +212,12 @@ defmodule Brando.Content.PartialBlockSaveTest do
     #
     # The invalidity comes from `Page.changeset/5` — `uri` is `required: true`
     # on the blueprint (`page.ex:94`) — and not from a `validate_required/2` the
-    # test bolts on. That distinction is the whole point of the rewrite: the
-    # earlier version invented both the error and the changeset, so it asserted
-    # Ecto's guarantee that `put_assoc` changes survive an invalid parent. Ecto
-    # is not the thing under test here; Brando's entry changeset is, and if it
-    # ever stopped surfacing the missing `uri`, or dropped `entry_blocks` while
-    # rebuilding, this now goes red.
+    # test bolts on. That distinction is the point: a test that invented both
+    # the error and the changeset would only assert Ecto's guarantee that
+    # `put_assoc` changes survive an invalid parent. Ecto is not the thing under
+    # test here; Brando's entry changeset is, and if it ever stopped surfacing
+    # the missing `uri`, or dropped `entry_blocks` while rebuilding, this goes
+    # red.
     test "persists no blocks and keeps them in the changeset", %{user: user, page: page} do
       changesets = [
         %Brando.Pages.Page.Blocks{}
@@ -243,12 +243,11 @@ defmodule Brando.Content.PartialBlockSaveTest do
   end
 
   describe "block identity" do
-    # `uid` is declared `required: true` on the attribute, but the cast path the
-    # editor uses never enforced it — a root would save with `uid: nil`. That is
+    # `uid` is declared `required: true` on the attribute, and the cast path the
+    # editor uses must enforce it too, or a root saves with `uid: nil`. That is
     # not cosmetic: the op store keys on uid, the component's DOM id is
     # `block-<uid>`, and block recovery keys on `entry_block_form-<uid>`, so a
-    # nil-uid block is unaddressable by every one of them. C6 fixed one way of
-    # producing one; this closes the source.
+    # nil-uid block is unaddressable by every one of them.
     test "a root without a uid is rejected", %{user: user, page: page} do
       {:error, changeset} =
         save_roots(page, [block_params("rootA", user), block_params(nil, user)], user)
@@ -257,8 +256,8 @@ defmodule Brando.Content.PartialBlockSaveTest do
       assert persisted_uids() == []
     end
 
-    # `unique_constraint(:uid)` has been declared on the block changeset all
-    # along; consuming apps back it with `brando_123_blocks_uid_constraint`.
+    # `unique_constraint(:uid)` is declared on the block changeset; consuming
+    # apps back it with `brando_123_blocks_uid_constraint`.
     # Two roots sharing a uid come back as a changeset error, not a raise.
     test "two roots cannot share a uid", %{user: user, page: page} do
       {:error, changeset} =
