@@ -15444,6 +15444,16 @@ msgstr ""
 msgid "Show older activity"
 msgstr ""
 
+#: lib/brando_admin/components/child_listing_button.ex
+#, elixir-autogen, elixir-format
+msgid "Show or hide %{children}"
+msgstr ""
+
+#: lib/brando_admin/components/child_listing_button.ex
+#, elixir-autogen, elixir-format
+msgid "Show or hide %{count} children"
+msgstr ""
+
 #: lib/brando_admin/components/image_picker.ex
 #, elixir-autogen, elixir-format
 msgid "Show the whole library"

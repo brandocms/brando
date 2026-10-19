@@ -48,8 +48,12 @@ test('subpages open as a tree in the page columns, fragments as chips after them
 
   // The children's status and author sit under the parent's
   const x = locator => locator.evaluate(el => Math.round(el.getBoundingClientRect().x))
-  expect(await x(children.first().locator('> .status'))).toBe(await x(row.locator('.main-content > .status')))
-  expect(await x(children.first().locator('> .listing-creator'))).toBe(await x(row.locator('.main-content > .listing-creator')))
+  for (const column of ['.listing-alternates', '.status', '.listing-creator', '.circle-dropdown']) {
+    const parentCell = row.locator(`.main-content > ${column}`)
+    if (await parentCell.count()) {
+      expect(await x(children.first().locator(`> ${column}`)), column).toBe(await x(parentCell))
+    }
+  }
   // and their titles start further in than the parent's
   expect(await x(children.first().locator('.entry-link'))).toBeGreaterThan(await x(row.locator('.main-content .entry-link')))
 

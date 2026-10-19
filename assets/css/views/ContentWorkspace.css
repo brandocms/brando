@@ -54,19 +54,20 @@
   .content-list .list-row .entry-link { font-size: var(--brando-text-lg); font-weight: 500; }
   /* A row with children (Children.children_button, ChildListingButton): the
      chevron is the button, in front of the title; the summary ("3 pages ·
-     2 fragments") has a column of its own right after the title, before
+     2 fragments") has a column of its own right after the title (the row
+     component renders the button after its title; both keep order 0), before
      every fixed-width column, so child rows (which have none) keep those
      columns under the parent's. It toggles too.
      The wrappers step aside so both are items of the row. Rows without
      children keep both slots, so titles and statuses stay in line. */
   .content-list .list-row .main-content > div:has(> .children-button), .children-button { display: contents; }
   .content-list .list-row .main-content > .seq { order: -2; }
-  .children-button > button { order: -1; display: grid; place-items: center; flex: 0 0 22px; width: 22px; height: 22px; margin: 0 -2px; padding: 0; border: 0; border-radius: 5px; background: none; color: var(--workspace-muted); cursor: pointer; }
+  .children-button > button { order: -1; display: grid; place-items: center; flex: 0 0 22px; width: 22px; height: 22px; max-width: none; aspect-ratio: auto; margin: 0 -2px; padding: 0; border: 0; border-radius: 5px; background: none; color: var(--workspace-muted); cursor: pointer; }
   .children-button > button:hover { background: var(--workspace-wash); color: var(--workspace-ink); }
   .children-button > button [data-icon] { display: block; width: 15px; height: 15px; transition: transform .15s; }
   .children-button > button[aria-expanded="true"] [data-icon] { transform: rotate(90deg); }
   .children-button > button .children-button-text { display: none; }
-  .children-summary { order: 4; flex: 0 0 150px; overflow: hidden; color: var(--workspace-muted); font-size: var(--brando-text-sm); line-height: 18px; text-align: right; white-space: nowrap; text-overflow: ellipsis; cursor: pointer; }
+  .children-summary { order: 0; flex: 0 0 150px; overflow: hidden; color: var(--workspace-muted); font-size: var(--brando-text-sm); line-height: 18px; text-align: right; white-space: nowrap; text-overflow: ellipsis; cursor: pointer; }
   .children-summary:hover { color: var(--workspace-ink); }
   .children-button.hidden > * { visibility: hidden; }
   /* The children of an open row hang from it as a tree: each line in the
@@ -88,7 +89,8 @@
   .child-chip { display: inline-flex; align-items: center; gap: 6px; min-height: 28px; max-width: 100%; margin: 0; padding: 0 2px 0 9px; border: 1px solid var(--workspace-line); border-radius: 14px; background: var(--brando-surface); color: var(--workspace-ink); font-size: var(--brando-text-md); line-height: 18px; }
   .child-chip:hover { border-color: var(--brando-line-strong); }
   .child-chip-icon { flex: none; width: 13px; height: 13px; color: var(--workspace-muted); }
-  .child-chip > .listing-title { display: inline-flex; align-items: baseline; gap: 6px; min-width: 0; }
+  /* Outranks the row title's flex basis and 120px minimum above */
+  .content-list .list-row .child-chip > .listing-title { display: inline-flex; flex: 0 1 auto; align-items: baseline; gap: 6px; min-width: 0; }
   .content-list .child-chip .entry-link { overflow: hidden; font-size: var(--brando-text-md); font-weight: 400; line-height: 18px; white-space: nowrap; text-overflow: ellipsis; }
   .content-list .child-chip .entry-link::after { content: none; }
   .child-chip-key { color: var(--workspace-muted); font-family: var(--brando-font-mono); font-size: var(--brando-text-xs); white-space: nowrap; }

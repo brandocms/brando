@@ -370,6 +370,21 @@ defmodule Brando.Blueprint.SecondaryVerifierTest do
     )
 
     assert_compile_error(
+      ~r/child listing :children with style: :chips needs a component in its listing/,
+      quote do
+        listings do
+          listing do
+            child_listing name: :children, schema: unquote(__MODULE__), style: :chips
+          end
+
+          listing :children do
+            default_actions false
+          end
+        end
+      end
+    )
+
+    assert_compile_error(
       ~r/only `:csv` is implemented/,
       quote do
         listings do
@@ -404,6 +419,7 @@ defmodule Brando.Blueprint.SecondaryVerifierTest do
               sort :newest, label: "Newest", order: [desc: :inserted_at]
               action label: "Edit", event: "edit_entry"
               default_actions false
+              component &Function.identity/1
             end
           end
         end

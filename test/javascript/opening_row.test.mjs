@@ -16,7 +16,7 @@ function setup({ linkClass = 'phx-click-loading', href = HREF } = {}) {
   const link = {
     href,
     classList: new Set(linkClass ? [linkClass] : []),
-    closest: (selector) => (selector === '.child-row, .list-row' ? row : null),
+    closest: (selector) => (selector === '.child-chip, .child-row, .list-row' ? row : null),
   }
   const doc = {
     querySelectorAll: (selector) =>

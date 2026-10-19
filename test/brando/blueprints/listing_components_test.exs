@@ -91,4 +91,36 @@ defmodule Brando.Blueprint.ListingComponentsTest do
 
     refute closed_socket.assigns.show_children
   end
+
+  test "a chip line's add button pushes the parent's action and keeps its confirm" do
+    child_listing = %Brando.Blueprint.Listings.ChildListing{
+      name: :fragment_children,
+      schema: Brando.Pages.Fragment,
+      style: :chips,
+      add: "create_fragment"
+    }
+
+    render = fn confirm ->
+      render_component(&Row.child_chips/1, %{
+        id: "child-chips-7-fragments",
+        parent: %Page{id: 7, language: "en"},
+        entries: [],
+        child_listing: child_listing,
+        parent_listing: %{
+          actions: [%{event: "create_fragment", label: "Create fragment", confirm: confirm, visible: nil}]
+        },
+        schema: Page,
+        content_language: "en"
+      })
+    end
+
+    plain = render.(false)
+    assert plain =~ ~s(id="child-chips-7-fragments-add")
+    assert plain =~ "create_fragment"
+    refute plain =~ "phx-confirm-click"
+
+    confirming = render.("Create a fragment?")
+    assert confirming =~ ~s(phx-hook="Brando.ConfirmClick")
+    assert confirming =~ ~s(phx-confirm-click-message="Create a fragment?")
+  end
 end

@@ -7,6 +7,7 @@ defmodule BrandoAdmin.Components.ChildListingButton do
   patches without adding a stateful component between the Blueprint and the row.
   """
   use Phoenix.Component
+  use Gettext, backend: Brando.Gettext
 
   alias Phoenix.LiveView.JS
 
@@ -39,13 +40,17 @@ defmodule BrandoAdmin.Components.ChildListingButton do
         phx-click={@toggle}
         data-testid="children-button"
         aria-expanded="false"
-        aria-label={Gettext.gettext(Brando.Gettext, "Show or hide %{count} children", count: @count)}
+        aria-label={
+          if @text,
+            do: gettext("Show or hide %{children}", children: @text),
+            else: gettext("Show or hide %{count} children", count: @count)
+        }
       >
         <Brando.HTML.Icon.icon name="chevron-right" />
         <span :if={@text} class="children-button-text">{@text}</span>
       </button>
       <%!-- Rendered without children too: an empty slot keeps the status column in line --%>
-      <span class="children-summary" aria-hidden="true" phx-click={@count > 0 && @toggle}>{@text}</span>
+      <span class="children-summary" aria-hidden="true" title={@text} phx-click={@count > 0 && @toggle}>{@text}</span>
     </div>
     """
   end

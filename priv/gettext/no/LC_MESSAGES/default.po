@@ -15446,6 +15446,16 @@ msgstr "Vis innebygde spillerkontroller"
 msgid "Show older activity"
 msgstr "Vis eldre aktivitet"
 
+#: lib/brando_admin/components/child_listing_button.ex
+#, elixir-autogen, elixir-format
+msgid "Show or hide %{children}"
+msgstr "Vis eller skjul %{children}"
+
+#: lib/brando_admin/components/child_listing_button.ex
+#, elixir-autogen, elixir-format
+msgid "Show or hide %{count} children"
+msgstr "Vis eller skjul %{count} underoppføringer"
+
 #: lib/brando_admin/components/image_picker.ex
 #, elixir-autogen, elixir-format
 msgid "Show the whole library"
