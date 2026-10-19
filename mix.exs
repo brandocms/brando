@@ -39,6 +39,7 @@ defmodule Brando.Mixfile do
         source_url: "https://github.com/brandocms/brando",
         extras: [
           "guides/overview.md",
+          "guides/installation.md",
           "guides/migrating_from_053.md",
           "guides/migrating_from_051.md",
           "guides/tenancy_and_environments.md",
@@ -88,7 +89,7 @@ defmodule Brando.Mixfile do
           "guides/doctor.md"
         ],
         groups_for_extras: [
-          Introduction: ["guides/overview.md"],
+          Introduction: ["guides/overview.md", "guides/installation.md"],
           Upgrading: [
             "guides/migrating_from_053.md",
             "guides/migrating_from_051.md"

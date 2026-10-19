@@ -52,13 +52,13 @@ file storage is required. A field's URL setting alone cannot move its bytes.
 
 ## Understand the paths
 
-For a classic installation with `media_path: "/srv/studio/media"`, an image
+For a classic installation with `media_path: "/srv/my_app/media"`, an image
 stored as `images/products/cover.jpg` has these locations:
 
 | Meaning | Example |
 | --- | --- |
 | Database-relative image path | `images/products/cover.jpg` |
-| Local original | `/srv/studio/media/images/products/cover.jpg` |
+| Local original | `/srv/my_app/media/images/products/cover.jpg` |
 | S3 object key | `media/images/products/cover.jpg` |
 | Public CDN URL | `https://media.example.com/media/images/products/cover.jpg` |
 

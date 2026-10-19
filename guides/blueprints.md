@@ -9,7 +9,7 @@ while the Blueprint compiles, so most mistakes fail the build instead of a
 request.
 
 Generate a new content type with `mix brando.gen.blueprint Catalog Product`;
-see [Installation and generators](generators.md#generate-a-content-type).
+see [Generators](generators.md#generate-a-content-type).
 Keep the Blueprint, its generated migrations and its migration snapshots under
 version control.
 
