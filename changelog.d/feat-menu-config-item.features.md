@@ -1,4 +1,4 @@
-- **Applications can add their own screens under Configuration.** In the
+- **Applications can add their own screens under Configuration** (#3249). In the
   admin menu module, `config_item` puts a screen at the end of one of
   Configuration's groups, after Brando's own:
 

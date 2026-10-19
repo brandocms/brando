@@ -3,5 +3,7 @@ msgid ""
 msgstr ""
 "Language: no\n"
 
+#: test/support/config_items_menus.ex
+#, elixir-autogen, elixir-format
 msgid "Shop"
 msgstr "Butikk"
