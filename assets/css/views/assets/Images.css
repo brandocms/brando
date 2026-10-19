@@ -148,11 +148,15 @@
   .content-list .list-tools-wrapper { margin-bottom: 16px; }
   .content-list .list-row .main-content { padding-block: 12px; }
   .content-list .list-row:last-child { border-bottom: 0; }
-  /* The library's pane is the frame: its rows run edge to edge (Users.css) */
-  .content-list .content-list-frame { border: 0; border-radius: 0; background: none; }
-  .content-list .content-list-frame > :first-child,
-  .content-list .content-list-frame > .sort-container > :first-child,
-  .content-list .content-list-frame > .pagination { border-radius: 0; }
+  /* The library's pane (FileBrowser's .image-picker-main) is the frame: its
+     rows run edge to edge (Users.css). Galleries share the workspace class
+     but have no pane, and keep the frame. */
+  .image-picker-main .content-list .content-list-frame { border: 0; border-radius: 0; background: none; }
+  .image-picker-main .content-list .content-list-frame > :first-child,
+  .image-picker-main .content-list .content-list-frame > .sort-container > :first-child,
+  .image-picker-main .content-list .content-list-frame > .pagination { border-radius: 0; }
+  /* The footer's top rule is the only line under the empty message */
+  .image-picker-main .content-list .content-list-frame :is(.workspace-empty, .empty-list) { border-bottom: 0; border-radius: 0; }
   .content-list .pagination { border-top: 1px solid var(--workspace-line); padding-top: 12px; }
   .content-list .workspace-empty { border: 0; background: var(--brando-surface-shaded); }
   @media (max-width: 700px) {

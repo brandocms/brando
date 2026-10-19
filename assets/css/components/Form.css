@@ -1,9 +1,6 @@
 .brando-form {
   display: flex;
   flex-direction: row;
-  /* With the form at its 1400px bound, a side column (the notes panel) still
-     sits at the right edge rather than beside the form. */
-  justify-content: space-between;
 
   /* Bounded like a listing (Workspace.css), a little wider for two-column
      rows, so a wide monitor doesn't pull a field's border and its actions to
@@ -12,6 +9,9 @@
   .form-content {
     min-width: 0;
     max-width: 1400px;
+    /* At its bound the form takes the free space as margin, so side columns
+       (the notes panel, a collapsed preview) keep to the right edge */
+    margin-right: auto;
     flex-shrink: 1;
     flex-grow: 1;
     width: 100%;
