@@ -9630,6 +9630,11 @@ msgstr ""
 msgid "Mentions"
 msgstr ""
 
+#: lib/brando_admin/live/nav.ex
+#, elixir-autogen, elixir-format
+msgid "Menu"
+msgstr ""
+
 #: lib/brando_admin/components/form/input/identity_type_config.ex
 #, elixir-autogen, elixir-format
 msgid "Menu URL"
