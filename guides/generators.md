@@ -4,7 +4,8 @@ Generate content types, framework migrations and auxiliary modules in an
 application that already runs Brando; [Installation](installation.md) sets one
 up. The source generators show their changes as an Igniter diff for review, and
 a conflicting file stops the plan. The [task reference](#task-reference) lists
-every Brando task, including the installation ones.
+the main Brando tasks, including the installation ones; `mix help | grep brando`
+lists them all.
 
 <!-- usage-rules:start topic="generators" -->
 

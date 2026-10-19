@@ -13,9 +13,16 @@ Guide: `deps/brando/guides/installation.md`
 ### Run setup
 
 ```sh
+mix brando.gen.mail
 mix compile --warnings-as-errors
 mix brando.setup
 ```
+
+`brando.gen.mail` reuses the application's Swoosh mailer or creates
+`MyApp.Mailer`, and points Brando at it for password resets and form
+notifications; [Auxiliary generators](deps/brando/guides/generators.md#auxiliary-generators) has
+the details. An application that already had a mailer before installing can
+skip it.
 
 `brando.setup` composes the operational steps an installed application needs:
 asset builds, `ecto.create`/`ecto.migrate`, a superuser account, and default

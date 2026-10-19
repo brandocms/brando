@@ -221,7 +221,7 @@ if Code.ensure_loaded?(Igniter) do
 
     # The values `config` calls anywhere in the file give `path` under
     # `otp_app`, the last in the file first. Each call is matched in the whole file's zipper, so an alias
-    # (`alias StudioWeb.Endpoint`) resolves as it does for Config.configure.
+    # (`alias MyAppWeb.Endpoint`) resolves as it does for Config.configure.
     defp config_values(zipper, otp_app, path) do
       zipper
       |> Zipper.traverse([], fn zipper, found ->

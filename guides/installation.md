@@ -30,10 +30,11 @@ mix igniter.new my_app --with phx.new \
 `--with-args` goes to `mix phx.new`, not to Brando. `--no-install` leaves
 fetching dependencies to Igniter, which fetches them once Brando is added.
 `--no-assets` leaves out esbuild and Tailwind, since Brando installs its own Vite
-builds. `--no-dashboard` and `--no-mailer` leave out Phoenix LiveDashboard and
-the Swoosh mailer, which Brando does not need; `mix brando.gen.mail` (see
-[Auxiliary generators](generators.md#auxiliary-generators)) creates the mailer Brando sends
-its own email with.
+builds. `--no-dashboard` leaves out Phoenix LiveDashboard, which Brando does not
+use. `--no-mailer` leaves out phx.new's Swoosh mailer, because
+`mix brando.gen.mail` creates one and points Brando at it. Brando needs that
+mailer for password resets and form notifications, so [Run setup](#run-setup)
+generates it first.
 
 This installs the admin and the CMS public site, which takes `/` from
 phx.new's homepage (see [Add CMS public pages](#add-cms-public-pages)). To
@@ -394,9 +395,16 @@ lockdown page and plug by hand then, as above.
 ## Run setup
 
 ```sh
+mix brando.gen.mail
 mix compile --warnings-as-errors
 mix brando.setup
 ```
+
+`brando.gen.mail` reuses the application's Swoosh mailer or creates
+`MyApp.Mailer`, and points Brando at it for password resets and form
+notifications; [Auxiliary generators](generators.md#auxiliary-generators) has
+the details. An application that already had a mailer before installing can
+skip it.
 
 `brando.setup` composes the operational steps an installed application needs:
 asset builds, `ecto.create`/`ecto.migrate`, a superuser account, and default
