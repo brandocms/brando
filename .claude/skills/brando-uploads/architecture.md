@@ -50,9 +50,12 @@ ancestor's `data-deliver-topic`; a trigger without one refuses the upload.
 - `data-accept`, `data-max-files` and size hints are UX only; intake enforces.
 - Mixed galleries (`data-allowed-types`) enqueue each file separately, with the
   video config target for videos.
-- `data-folder-browser="true"` on a default-target image holds the files, opens the
-  folder browser and enqueues on `b:block_upload_folder_confirmed` (matched by
-  element id and request id). The confirmed `folder`/`folder_id` ride the target.
+- `data-folder-browser="true"` on a default-target image enqueues at once into the
+  folder chosen for that field, else the last one used, else the config's own
+  (`intake/1`, `destinationFolder/0`). **Change** beside the destination
+  (`changeDestination/0`) opens the folder browser with no files waiting; its
+  `b:block_upload_folder_confirmed` (matched by element id and request id) sets the
+  folder for the field's next uploads, whose `folder`/`folder_id` ride the target.
   A concrete config target takes its folder from its upload config.
 - Single-asset triggers send `expected_asset_id` (the current asset id or `"none"`).
 - `data-click-mode="trigger"`: only `.upload-trigger` children open the file dialog.
