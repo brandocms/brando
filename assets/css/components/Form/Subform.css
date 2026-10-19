@@ -495,9 +495,12 @@
         margin-right: 0;
       }
 
+      /* The colour too: the subform's own `.upload-button:hover` (above)
+         turns the text inverse for its dark hover. */
       &:hover {
         background-color: var(--brando-surface-selected);
         border-color: var(--brando-line-strong);
+        color: var(--brando-ink);
       }
     }
 
