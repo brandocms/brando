@@ -2139,7 +2139,7 @@ defmodule BrandoAdmin.Components.Form do
   # The one place entry params become a changeset (validate, commit_tiptap,
   # recover_form and both save paths, which go through `cast_entry_params/3`).
   # Also returns the fields whose value was kept over the browser's old form,
-  # sent before another editor's change reached it (`drop_echoes/4`).
+  # sent before another editor's change reached it (`drop_echoes/5`).
   # `target` is the entry field the event names, and `target_row` the row
   # of a relation it names (`target_row/3`).
   @decorate span("brando.form.cast", schema: [:socket, :assigns, :schema], entry_id: [:entry, :id])
@@ -3068,7 +3068,7 @@ defmodule BrandoAdmin.Components.Form do
          %{} = row <- Map.get(rows, index) do
       case row do
         %{"id" => id} when is_binary(id) and id != "" -> "id-" <> id
-        %{"_key" => key} when is_binary(key) and key != "" -> key
+        %{"_key" => new_key} when is_binary(new_key) and new_key != "" -> new_key
         _ -> nil
       end
     else
@@ -3089,10 +3089,7 @@ defmodule BrandoAdmin.Components.Form do
 
       cond do
         field == target and is_binary(target_row) ->
-          case RelationRows.take_row(changeset, previous, field, target_row) do
-            {changeset, true} -> {%{changeset | params: drop_param(changeset.params, field)}, [field | echoed]}
-            {changeset, false} -> {changeset, echoed}
-          end
+          take_edited_row(changeset, previous, field, target_row, echoed)
 
         field != target and value in stale and value != echo_value(previous, field) ->
           {keep_field(changeset, previous, field), [field | echoed]}
@@ -3101,6 +3098,13 @@ defmodule BrandoAdmin.Components.Form do
           {changeset, echoed}
       end
     end)
+  end
+
+  defp take_edited_row(changeset, previous, field, target_row, echoed) do
+    case RelationRows.take_row(changeset, previous, field, target_row) do
+      {changeset, true} -> {%{changeset | params: drop_param(changeset.params, field)}, [field | echoed]}
+      {changeset, false} -> {changeset, echoed}
+    end
   end
 
   defp keep_field(changeset, previous, field) do
