@@ -32,6 +32,8 @@ fields), `assign_header_status`. Events: `"validate"`, `"commit_tiptap"`.
 `mark_synced`, `reverted_fields`, `broadcast_dirty_fields`, `clear_dirty_fields`;
 receiving: `event: "apply_remote_field_changes"`, `apply_field_change`;
 focus locks: `handle_event("focus"`, `"blur"`, `event: "reship_active_field"`.
+Another tab's save: `announce_save`, `event: "take_saved_entry"`,
+`take_saved_entry`, `unsaved_edits`, `carry_edit`, `list_rows`, `echo_value`.
 Once #3071 lands this section is headed "Entry field sync" and server-side
 writes go through `put_local_form/2`.
 

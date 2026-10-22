@@ -423,6 +423,34 @@ defmodule BrandoAdmin.Components.Form.Drafts do
 
   def saved(socket, _), do: push_event(socket, "b:draft-reset", %{id: socket.assigns.id, clean: true})
 
+  @doc """
+  Another tab saved the entry, and the form took the saved values in the
+  fields it had not edited (`Form.take_saved_entry/1`). Recovery compares
+  with the saved entry from now on: the next capture writes this tab's own
+  edits against it, or resolves its copy when there are none. Unlike
+  `saved/2`, the copy stays open until then: the edits it holds are unsaved.
+  """
+  def rebase(%{assigns: %{draft: %{initialized?: true} = draft}} = socket, entry) do
+    %{schema: schema, form_blueprint: blueprint, current_user: user} = socket.assigns
+    payload = saved_payload(schema, blueprint, entry, user)
+    modules = Modules.manifest(payload["blocks"])
+    baseline = payload |> Map.put("modules", modules) |> Content.checksum()
+
+    socket
+    |> put_draft(%{
+      draft
+      | baseline: baseline,
+        base_fingerprint: Drafts.fingerprint(entry),
+        modules: Map.merge(modules, draft.modules),
+        candidates: candidates(socket, draft.identity, baseline)
+    })
+    |> dirty()
+  rescue
+    _ -> fail_capture(socket)
+  end
+
+  def rebase(socket, entry), do: keep_baseline(socket, entry)
+
   def review(socket, id) do
     case Drafts.get(socket.assigns.draft.identity, id) do
       nil ->

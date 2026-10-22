@@ -47,6 +47,13 @@ area in [the section map](form-map.md) and grep for the names it lists.
   form shows a param before a saved value), and only when their clock is
   newer. Form recovery is `recover_form`, which marks nothing. Coverage
   lives in `test/brando_admin/live/entry_field_sync_test.exs`.
+- A save reaches the other forms of the entry as `{:entry_saved, …}`
+  ("Saves by other editors" in Form): each rebuilds on the saved entry,
+  keeping only its own unsaved fields (`unshipped_fields`, `synced_values`
+  that differ from the save, has_many rows it changed), and moves its
+  recovery baseline (`Drafts.rebase/2`). A server-side value set at save
+  reaches the others only this way. Coverage lives in
+  `test/brando_admin/live/entry_saved_elsewhere_test.exs`.
 - Read pending subform associations through the helpers in
   `lib/brando_admin/components/form/input/subform_helpers.ex`. Applying child
   changesets before rewriting the association loses pending edits. Use the
