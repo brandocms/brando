@@ -50,9 +50,9 @@ no entry. An entry is a list item starting `- `, with no headings.
 
 Leave the pull request link out, so the PR needs no second commit once it is
 open: collation adds it. It finds the merge that brought the fragment into the
-branch ("Merge pull request #N from …") and ends the entry's line with
-`([#N](https://github.com/brandocms/brando/pull/N))`, before a full stop that
-ends it. An entry that already links or numbers a pull request keeps it: write
+branch ("Merge pull request #N from …") and ends the entry's first sentence
+with `([#N](https://github.com/brandocms/brando/pull/N))`, before its full
+stop. An entry that already links or numbers a pull request keeps it: write
 the link yourself for a change that reached `main` through another pull
 request, such as one stacked on it.
 

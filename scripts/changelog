@@ -174,19 +174,36 @@ pr_of() {
 }
 
 # link_entries <PR number>: the fragment on stdin, with a link to the pull
-# request at the end of each entry's first line that has no PR link or number
-# yet, before a full stop that ends the line. Indented lines (an entry's steps)
-# and code blocks are left as they are.
+# request on each entry that links or numbers none yet: at the end of the
+# entry's first sentence (its first line ending in a full stop, before that
+# full stop; else its first line). Code blocks are left as they are.
 link_entries() {
   awk -v pr="$1" -v url="https://github.com/brandocms/brando/pull/" "$fence_awk"'
-    fence() { print; next }
-    fenced != "" || pr == "" { print; next }
-    /^- / && $0 !~ /\[#[0-9]+\]\(|\(#[0-9]+(, *#[0-9]+)*\)/ {
-      link = " ([#" pr "](" url pr "))"
-      if ($0 ~ /\.$/) $0 = substr($0, 1, length($0) - 1) link "."
-      else $0 = $0 link
+    function flush(   i, at) {
+      if (n == 0) return
+      if (pr != "" && !linked) {
+        at = 1
+        for (i = 1; i <= n; i++) if (!code[i] && buf[i] ~ /\.$/) { at = i; break }
+        link = " ([#" pr "](" url pr "))"
+        if (buf[at] ~ /\.$/) buf[at] = substr(buf[at], 1, length(buf[at]) - 1) link "."
+        else buf[at] = buf[at] link
+      }
+      for (i = 1; i <= n; i++) print buf[i]
+      n = 0
+      linked = 0
     }
-    { print }
+    {
+      in_code = (fenced != "")
+      if (fence()) in_code = 1
+    }
+    !in_code && /^- / { flush() }
+    n == 0 && !/^- / { print; next }
+    {
+      buf[++n] = $0
+      code[n] = in_code
+      if (!in_code && $0 ~ /\[#[0-9]+\]\(|\(#[0-9]+(, *#[0-9]+)*\)/) linked = 1
+    }
+    END { flush() }
   '
 }
 

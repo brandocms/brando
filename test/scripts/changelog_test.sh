@@ -317,6 +317,12 @@ repo="$scratch/case"
 
 - Numbered with a list (#5, #6).
 
+- A sentence that wraps its link
+  onto the next line ([#9](https://github.com/brandocms/brando/pull/9)).
+
+- A sentence that wraps
+  without a link.
+
 - A change the reader must act on.
   Replace `a` with `b`, a step without a link.
 
@@ -372,6 +378,12 @@ expect_changelog "collate adds a PR link to an entry's line without one" <<'EOF'
 - Numbered already (#8).
 
 - Numbered with a list (#5, #6).
+
+- A sentence that wraps its link
+  onto the next line ([#9](https://github.com/brandocms/brando/pull/9)).
+
+- A sentence that wraps
+  without a link ([#12](https://github.com/brandocms/brando/pull/12)).
 
 - A change the reader must act on ([#12](https://github.com/brandocms/brando/pull/12)).
   Replace `a` with `b`, a step without a link.
