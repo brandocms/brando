@@ -20,10 +20,14 @@ defmodule Brando.Videos.Uploaders.Bunny do
   | Option | Values | Default | Description |
   |--------|--------|---------|-------------|
   | `delete_remote_on` | `:on_delete`, `:on_purge`, `false` | `:on_purge` | When to delete from Bunny |
+  | `tus_endpoint` | URL or path | `"https://video.bunnycdn.com/tusupload"` | Where the browser sends the file |
 
   - `:on_delete` - Delete from Bunny immediately when soft-deleted in admin
   - `:on_purge` - Delete from Bunny when soft-delete expires after 30 days (default)
   - `false` - Never delete from Bunny
+
+  The browser's tus client resolves a `tus_endpoint` path against the admin
+  page, so a path such as `"/tus"` points the upload at the site itself.
 
   ## Bunny Documentation
   - Create Video: https://docs.bunny.net/api-reference/stream/manage-videos/create-video
@@ -40,7 +44,7 @@ defmodule Brando.Videos.Uploaders.Bunny do
   require Logger
 
   @base_url "https://video.bunnycdn.com"
-  @tus_endpoint "https://video.bunnycdn.com/tusupload"
+  @default_tus_endpoint "https://video.bunnycdn.com/tusupload"
 
   # Webhook status codes from Bunny
   @status_queued 0
@@ -71,7 +75,7 @@ defmodule Brando.Videos.Uploaders.Bunny do
          {:ok, video} <- create_video_record(sanitized_filename, user, bunny_video, opts) do
       {:ok,
        %{
-         upload_url: @tus_endpoint,
+         upload_url: tus_endpoint(),
          video: video,
          expires_at: tus_auth.expires_at,
          # Additional data needed by the TUS client
@@ -558,6 +562,12 @@ defmodule Brando.Videos.Uploaders.Bunny do
         {:error, reason}
     end
   end
+
+  @doc """
+  The tus endpoint the browser uploads to: the `:tus_endpoint` config, or
+  Bunny's own.
+  """
+  def tus_endpoint, do: get_config(:tus_endpoint) || @default_tus_endpoint
 
   defp get_config(key) do
     :brando

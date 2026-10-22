@@ -213,6 +213,17 @@ config :brando, Brando.Videos.Uploaders.Bunny,
 | `BUNNY_LIBRARY_ID` | Your Video Library ID (numeric) |
 | `BUNNY_CDN_HOSTNAME` | CDN hostname for HLS playback (e.g., `vz-abc123.b-cdn.net`) |
 
+#### Upload endpoint
+
+The admin's browser sends the file to Bunny's tus endpoint,
+`https://video.bunnycdn.com/tusupload`. Set `tus_endpoint` to send it
+elsewhere, such as a test double. A path is resolved against the admin page:
+
+```elixir
+config :brando, Brando.Videos.Uploaders.Bunny,
+  tus_endpoint: "/e2e/bunny/tus"
+```
+
 #### Webhook Setup
 
 Configure the webhook URL in your Bunny Stream dashboard:

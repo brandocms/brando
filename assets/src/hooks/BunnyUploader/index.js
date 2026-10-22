@@ -13,7 +13,10 @@ export default providerVideoUploader({
     const { upload_url: uploadUrl, tus_auth: tusAuth } = response
 
     const upload = new tus.Upload(file, {
-      endpoint: uploadUrl,
+      // tus-js-client resolves the upload's Location against the endpoint, and
+      // throws on a relative one: a configured path (`tus_endpoint`) is the
+      // admin page's.
+      endpoint: new URL(uploadUrl, window.location.href).toString(),
       retryDelays: [0, 3000, 5000, 10000, 20000, 60000, 60000],
       headers: {
         AuthorizationSignature: tusAuth.signature,
