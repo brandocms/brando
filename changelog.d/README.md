@@ -26,23 +26,29 @@ rewrites in place: edit those in `CHANGELOG.md` itself.
 
 ## Text
 
-The entry exactly as `CHANGELOG.md` would hold it, in the style of the
-entries already there: a list item starting `- `, with a bold lead and the PR
-number when it has one, continuation lines indented two spaces, and no
-headings.
+The entry as `CHANGELOG.md` would hold it, in the style of the entries
+already there: a list item starting `- `, with a bold lead, continuation lines
+indented two spaces, and no headings.
 
 ```markdown
-- **A selection whose option is no longer offered can be removed** (#1234).
+- **A selection whose option is no longer offered can be removed.**
   In a multi-select over a `has_many` relation, …
 ```
+
+Leave the PR number out, so the PR needs no second commit once it is open:
+collation adds it. It finds the merge that brought the fragment into the
+branch ("Merge pull request #N from …") and puts `(#N)` after each bold lead
+that has no number, moving a full stop that ends the lead after it:
+`**… can be removed** (#1234).` An entry that already has a number right
+after its bold lead, or at the end of it, keeps it.
 
 `scripts/changelog check` (part of `mix check` and CI) validates the names
 and text.
 
 ## Into CHANGELOG.md
 
-`scripts/changelog collate` moves the fragments into the unreleased section
-and deletes them: at release (see `RELEASE.md`), since the Hex package ships
+`scripts/changelog collate` moves the fragments into the unreleased section,
+adding the PR numbers, and deletes them: at release (see `RELEASE.md`), since the Hex package ships
 `CHANGELOG.md`, and in a PR of its own whenever `CHANGELOG.md` on `main`
 should catch up. Until then the unreleased entries are read here. The
 published documentation does not include the changelog.

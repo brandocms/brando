@@ -31,6 +31,7 @@ git_q -C "$tmp/main" worktree add -q "$tmp/wt" -b feature 2>/dev/null || exit 1
 mkdir -p "$tmp/wt/scripts" "$tmp/wt/.github"
 cp -R "$root/test" "$tmp/wt/"
 cp -R "$root/scripts/." "$tmp/wt/scripts/"
+cp -R "$root/.githooks" "$tmp/wt/"
 cp "$root/.github/known-flakes.txt" "$tmp/wt/.github/" 2>/dev/null
 (cd "$tmp/wt" && git_q add . && git_q commit -qm feature) || exit 1
 

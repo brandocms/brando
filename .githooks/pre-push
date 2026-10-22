@@ -6,6 +6,11 @@
 # Enabled per clone by `git config core.hooksPath .githooks`, which
 # scripts/worktree-setup does. It checks the working tree, not the pushed
 # commits, so commit or set aside unrelated changes first.
+#
+# When the check passes on a clean working tree, the hook records HEAD's tree
+# in .git (brando-check-passed, per worktree). A later push from a clean tree
+# that changes only changelog fragments and Markdown no gate reads since then
+# runs only the changelog check.
 [ "${SKIP_CHECK:-}" = 1 ] && exit 0
 
 # Deleting a remote branch pushes nothing to check.
@@ -22,7 +27,17 @@ cd "$(git rev-parse --show-toplevel)" || exit 1
 unset GIT_DIR GIT_WORK_TREE GIT_INDEX_FILE GIT_PREFIX GIT_COMMON_DIR GIT_OBJECT_DIRECTORY GIT_ALTERNATE_OBJECT_DIRECTORIES GIT_IMPLICIT_WORK_TREE
 [ -x scripts/check ] || exit 0
 
-if ! scripts/check --fast; then
+passed_file="$(git rev-parse --git-path brando-check-passed)"
+passed=()
+[ -s "$passed_file" ] && passed=(--passed "$(cat "$passed_file")")
+tree="$(git rev-parse "HEAD^{tree}")"
+clean=false
+[ -z "$(git status --porcelain)" ] && clean=true
+
+if ! scripts/check --fast ${passed[@]+"${passed[@]}"}; then
   echo "pre-push: mix check --fast failed. Fix it, or push anyway with SKIP_CHECK=1." >&2
   exit 1
+fi
+if [ "$clean" = true ]; then
+  echo "$tree" >"$passed_file"
 fi
