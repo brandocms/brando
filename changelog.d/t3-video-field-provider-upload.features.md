@@ -1,4 +1,4 @@
-- **A video field uploads to its provider itself**. A field whose config
+- **A video field uploads to its provider itself** (#3261). A field whose config
   uploads to Mux, Bunny, Cloudflare or Vimeo offered no Upload, and refused a
   dropped file with "Use Select video to upload a video with this provider".
   Upload and a drop now send the file from the browser straight to the
