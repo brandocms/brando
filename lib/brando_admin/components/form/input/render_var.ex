@@ -1321,7 +1321,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
     </div>
     <dl>
       <dt>{gettext("URL")}=</dt>
-      <dd :if={@identifier}>{@identifier.url}</dd>
+      <dd :if={@identifier}><Content.Identifier.destination identifier={@identifier} /></dd>
       <dd :if={!@identifier}>{gettext("<No URL>")}</dd>
     </dl>
     """

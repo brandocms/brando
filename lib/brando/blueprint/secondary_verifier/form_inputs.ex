@@ -10,7 +10,7 @@ defmodule Brando.Blueprint.SecondaryVerifier.FormInputs do
 
   # `Brando.Content.Identifier`'s columns. Not read from the schema here: this
   # runs while every Blueprint compiles, so it depends on nothing it need not.
-  @identifier_columns ~w(id entry_id schema title status language cover url updated_at)
+  @identifier_columns ~w(id entry_id schema title status language cover url external_url updated_at)
   @orderable ["random" | @identifier_columns]
   # The keys of `sources:` options the identifier list query runs. It
   # crashes on the rest (`filter:`, `cache:`, …): identifiers have no filters,

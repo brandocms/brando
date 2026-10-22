@@ -101,3 +101,10 @@
   .identifier .identifier-cover { width: 36px; flex-basis: 36px; }
   .identifier .identifier-title { font-size: var(--brando-text-md); }
 }
+
+/* An entry linked elsewhere (`link_others_to:`): an arrow and the host,
+   wherever an identifier's destination is shown. */
+.identifier-external {
+  display: inline-flex; align-items: center; gap: 4px; min-width: 0;
+  > [data-icon] { flex: none; width: 12px; height: 12px; }
+}

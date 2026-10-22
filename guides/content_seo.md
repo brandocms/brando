@@ -80,7 +80,9 @@ The same declaration answers `__has_url__/1` for one entry and
 `__url_filter__/0` for list queries, such as a sitemap's, and makes
 `__absolute_url__/1` return `nil` for the rest. Pages with `has_url: false` are
 left out the same way. See `Brando.Blueprint.AbsoluteURL` for the function
-form.
+form. Links to the rest can still go to the client's site with
+`link_others_to:` (see [Blueprints](blueprints.md)); the audit leaves them out
+all the same.
 
 ## Write and review meta descriptions with AI
 

@@ -3,6 +3,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.TipTapLinkDialog do
   use BrandoAdmin, :live_component
   use Gettext, backend: Brando.Gettext
 
+  alias Brando.Content.Identifier
   alias Brando.RichText
   alias BrandoAdmin.Components.Content
   alias BrandoAdmin.Components.Content.SelectIdentifier
@@ -96,7 +97,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.TipTapLinkDialog do
 
   defp open_identifier(identifier_id) do
     case identifier_id && Brando.Content.get_identifier(identifier_id) do
-      {:ok, entry} -> if RichText.allowed_uri?(entry.url), do: entry
+      {:ok, entry} -> if RichText.allowed_uri?(Identifier.link_url(entry)), do: entry
       _ -> nil
     end
   end
@@ -252,7 +253,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.TipTapLinkDialog do
             phx-disable-with={gettext("Applying…")}
             disabled={
               @applying ||
-                (@link_type == :identifier && !RichText.allowed_uri?(@selected_identifier && @selected_identifier.url))
+                (@link_type == :identifier && !RichText.allowed_uri?(Identifier.link_url(@selected_identifier)))
             }
           >{gettext("Apply link")}</button>
           <button
@@ -394,7 +395,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.TipTapLinkDialog do
     if anchor != "", do: "#" <> anchor
   end
 
-  defp link_url(%{link_type: :identifier} = assigns), do: assigns.selected_identifier && assigns.selected_identifier.url
+  defp link_url(%{link_type: :identifier} = assigns), do: Identifier.link_url(assigns.selected_identifier)
 
   defp link_target(draft, assigns) do
     cond do

@@ -3,6 +3,7 @@ defmodule BrandoAdmin.Components.Content.SelectIdentifier do
   use BrandoAdmin, :live_component
   use Gettext, backend: Brando.Gettext
 
+  alias Brando.Content.Identifier
   alias Brando.RichText
   alias BrandoAdmin.Components.Content
   alias BrandoAdmin.Components.Content.Identifier, as: IdentifierRow
@@ -86,7 +87,10 @@ defmodule BrandoAdmin.Components.Content.SelectIdentifier do
     if require_url do
       # Use the same URI policy as selection and application, including for
       # counts. Fetch only the fields needed to validate destinations.
-      Brando.Repo.all(from identifier in query, select: %{schema: identifier.schema, url: identifier.url})
+      Brando.Repo.all(
+        from identifier in query,
+          select: %{schema: identifier.schema, url: identifier.url, external_url: identifier.external_url}
+      )
       |> filter_urls(true)
       |> Enum.frequencies_by(& &1.schema)
     else
@@ -201,7 +205,7 @@ defmodule BrandoAdmin.Components.Content.SelectIdentifier do
             <%= if @selected_identifier do %>
               <div class="identifier-destination-heading">
                 <h4>{@selected_identifier.title}</h4>
-                <p class="identifier-destination">{@selected_identifier.url}</p>
+                <p class="identifier-destination"><IdentifierRow.destination identifier={@selected_identifier} /></p>
               </div>
               <dl class="modal-metadata">
                 <div>
@@ -392,7 +396,7 @@ defmodule BrandoAdmin.Components.Content.SelectIdentifier do
         @select && "selectable",
         @identifier.id == @selected_identifier_id && "selected"
       ]}
-      data-label={if @workspace, do: "#{@identifier.title} #{@identifier.url}", else: @identifier.title}
+      data-label={if @workspace, do: "#{@identifier.title} #{Identifier.link_url(@identifier)}", else: @identifier.title}
       aria-pressed={@select && to_string(@identifier.id == @selected_identifier_id)}
       phx-click={@select}
       phx-value-param={@identifier.id}
@@ -439,7 +443,7 @@ defmodule BrandoAdmin.Components.Content.SelectIdentifier do
 
   def handle_event("select_identifier", %{"id" => id}, socket) do
     with {:ok, identifier} <- Brando.Content.get_identifier(id),
-         true <- !socket.assigns.require_url || RichText.allowed_uri?(identifier.url) do
+         true <- !socket.assigns.require_url || RichText.allowed_uri?(Identifier.link_url(identifier)) do
       select_identifier(socket, identifier)
     else
       _ -> {:noreply, socket |> assign_available_schemas() |> assign_selected_schema()}
@@ -532,7 +536,7 @@ defmodule BrandoAdmin.Components.Content.SelectIdentifier do
     {:ok, identifiers}
   end
 
-  defp filter_urls(identifiers, true), do: Enum.filter(identifiers, &RichText.allowed_uri?(&1.url))
+  defp filter_urls(identifiers, true), do: Enum.filter(identifiers, &RichText.allowed_uri?(Identifier.link_url(&1)))
   defp filter_urls(identifiers, false), do: identifiers
 
   defp identifier_query(schemas, language, statuses, require_url) do
@@ -559,7 +563,8 @@ defmodule BrandoAdmin.Components.Content.SelectIdentifier do
       end
 
     if require_url do
-      where(query, [t], not is_nil(t.url) and t.url != "")
+      # Entries with a page here, or a destination elsewhere (`link_others_to:`).
+      where(query, [t], (not is_nil(t.url) and t.url != "") or (not is_nil(t.external_url) and t.external_url != ""))
     else
       query
     end

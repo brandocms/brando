@@ -16,6 +16,7 @@ defmodule Brando.Content.Identifier do
     language
     cover
     url
+    external_url
     schema
     updated_at
   )a
@@ -30,6 +31,7 @@ defmodule Brando.Content.Identifier do
           language: atom() | nil,
           cover: String.t() | nil,
           url: String.t() | nil,
+          external_url: String.t() | nil,
           updated_at: DateTime.t() | nil
         }
 
@@ -41,9 +43,22 @@ defmodule Brando.Content.Identifier do
     field :status, Brando.Type.Status
     field :language, Brando.Type.Atom
     field :cover, :string
+    # `url` is the entry's page on this site (`__absolute_url__/1`);
+    # `external_url` is where links go when it has none
+    # (`absolute_url ..., link_others_to:`). Link to `link_url/1`.
     field :url, :string
+    field :external_url, :string
     field :updated_at, :utc_datetime
   end
+
+  @doc """
+  Where a link to the entry goes: its page on this site, else the external
+  destination its blueprint names with `link_others_to:`, else `nil`.
+  """
+  @spec link_url(t() | map() | nil) :: String.t() | nil
+  def link_url(%{url: url}) when is_binary(url) and url != "", do: url
+  def link_url(%{external_url: url}) when is_binary(url) and url != "", do: url
+  def link_url(_), do: nil
 
   @doc """
   Builds a changeset for persisting an identifier snapshot.

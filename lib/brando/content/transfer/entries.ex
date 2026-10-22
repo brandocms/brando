@@ -977,7 +977,8 @@ defmodule Brando.Content.Transfer.Entries do
 
   defp ensure_identifier_unused!(identifier, allowed, has_column?) do
     outside_blocks =
-      Brando.Content.Blocks.list_block_ids_with_identifier_in_refs(identifier.id) --
+      (Brando.Content.Blocks.list_block_ids_with_identifier_in_refs(identifier.id) ++
+         Brando.Content.Blocks.list_block_ids_with_identifier_in_html_vars(identifier.id)) --
         (allowed[Brando.Content.Block] || [])
 
     if outside_blocks != [], do: used!()

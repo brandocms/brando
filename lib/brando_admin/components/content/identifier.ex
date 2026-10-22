@@ -21,7 +21,6 @@ defmodule BrandoAdmin.Components.Content.Identifier do
       |> assign(:cover, Map.get(identifier, :cover))
       |> assign(:language, Map.get(identifier, :language))
       |> assign(:status, Map.get(identifier, :status))
-      |> assign(:url, Map.get(identifier, :url))
 
     ~H"""
     <span :if={@draggable} class="identifier-grip" aria-hidden="true">
@@ -44,7 +43,7 @@ defmodule BrandoAdmin.Components.Content.Identifier do
         </span>
         {@identifier.title}
       </span>
-      <span :if={@show_url && @url not in [nil, ""]} class="identifier-url">{@url}</span>
+      <.destination :if={@show_url} identifier={@identifier} class="identifier-url" />
       <span class="identifier-details">
         <span class="identifier-type">{@type}</span>
         <span :if={@language} class="identifier-language">{String.upcase(to_string(@language))}</span>
@@ -55,6 +54,39 @@ defmodule BrandoAdmin.Components.Content.Identifier do
     </span>
     <span :if={@delete != []} class="identifier-remove remove">{render_slot(@delete)}</span>
     """
+  end
+
+  @doc """
+  Where a link to the entry goes: its path on this site, or, for an entry its
+  blueprint links elsewhere (`absolute_url ..., link_others_to:`), an arrow and
+  the destination's host, with the whole address on hover.
+  """
+  attr :identifier, :map, required: true
+  attr :class, :any, default: nil
+
+  def destination(assigns) do
+    url = Map.get(assigns.identifier, :url)
+    external_url = Map.get(assigns.identifier, :external_url)
+
+    assigns =
+      assigns
+      |> assign(:url, url not in [nil, ""] && url)
+      |> assign(:external_url, url in [nil, ""] && external_url not in [nil, ""] && external_url)
+
+    ~H"""
+    <span :if={@url} class={@class}>{@url}</span>
+    <span :if={@external_url} class={[@class, "identifier-external"]} title={@external_url}>
+      <.icon name="external-link" /><span class="visually-hidden">{gettext("Links elsewhere:")}</span>
+      {host(@external_url)}
+    </span>
+    """
+  end
+
+  defp host(url) do
+    case URI.parse(url) do
+      %URI{host: host} when is_binary(host) and host != "" -> String.replace_prefix(host, "www.", "")
+      _ -> url
+    end
   end
 
   @doc "The status's name, for screen readers and the dot's tooltip."

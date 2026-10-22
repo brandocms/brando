@@ -257,7 +257,8 @@ defmodule Brando.MigrationTemplates do
       "pages_fragments" => ~w(unpublish_at),
       "sites_seos" => ~w(crawler_policy),
       "content_modules" => ~w(markdown_code write_with_ai),
-      "activity_events" => ~w(proposal_id approver_id)
+      "activity_events" => ~w(proposal_id approver_id),
+      "content_identifiers" => ~w(external_url)
     }
   end
 
