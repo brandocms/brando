@@ -8521,6 +8521,11 @@ msgstr ""
 msgid "Invalid job identifier."
 msgstr ""
 
+#: lib/brando_admin/components/form/input/video.ex
+#, elixir-autogen, elixir-format
+msgid "Invalid video upload request"
+msgstr ""
+
 #: lib/brando_admin/components/form.ex
 #, elixir-autogen, elixir-format
 msgid "Invalid video upload target"
@@ -17183,6 +17188,11 @@ msgstr ""
 #: lib/brando/uploads.ex
 #, elixir-autogen, elixir-format
 msgid "The video provider could not be reached. Please try again."
+msgstr ""
+
+#: lib/brando/uploads.ex
+#, elixir-autogen, elixir-format
+msgid "The video provider refused the upload. Check its settings, or try again."
 msgstr ""
 
 #: lib/brando_admin/live/sites/webhooks_live.ex

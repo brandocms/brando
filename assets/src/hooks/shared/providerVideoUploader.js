@@ -17,6 +17,11 @@
  *   the ref is used as the `request_ref` so the caller can correlate a file it
  *   already registered server-side with the upload that follows.
  *
+ * Each request's progress is also announced on the hook element as a
+ * `brando:video-upload` event, `detail: { ref, status, progress, error }` with
+ * status `uploading`, `done` or `error`, for a caller that shows it in place:
+ * `Brando.UploadTrigger` on a video field.
+ *
  * Transfers run one at a time. Video files are large and each one costs a
  * server round-trip to provision, so a dropped batch of ten uploads in filename
  * order rather than saturating the connection.
@@ -170,12 +175,18 @@ export default function providerVideoUploader({ label, startTransfer }) {
         percentage,
       })
       window.BrandoUploads?.externalProgress?.(requestRef, percentage)
+      this.announce(requestRef, { status: 'uploading', progress: percentage })
+    },
+
+    announce(requestRef, detail) {
+      this.el.dispatchEvent(new CustomEvent('brando:video-upload', { detail: { ref: requestRef, ...detail } }))
     },
 
     reportSuccess(requestRef, videoId) {
       this.activeUploads.delete(requestRef)
       this.pushVideoEvent('video_upload_complete', { request_ref: requestRef, video_id: videoId })
       window.BrandoUploads?.externalComplete?.(requestRef)
+      this.announce(requestRef, { status: 'done' })
     },
 
     reportError(requestRef, file, error) {
@@ -187,6 +198,7 @@ export default function providerVideoUploader({ label, startTransfer }) {
         error: message,
       })
       window.BrandoUploads?.externalError?.(requestRef, message)
+      this.announce(requestRef, { status: 'error', error: message })
     },
 
     // Resolves when the transfer settles either way — the queue only cares that
