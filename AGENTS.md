@@ -28,7 +28,7 @@
   - Unit + E2E merged: `mix test --cover --export-coverage unit`, then an E2E run with `BRANDO_E2E_COVER=1` (the server exports `cover/e2e.coverdata` on shutdown), then `mix test.coverage` in the Brando root
   - lcov for Codecov (after the above): `MIX_ENV=test mix run --no-start .github/scripts/coverage_lcov.exs` writes `cover/lcov.info`
 - Translations: add strings in code, run `mix gettext.extract --merge` (never add or remove catalogue entries by hand), translate the new Norwegian entries; see [TRANSLATIONS.md](TRANSLATIONS.md), which also covers the merge driver for rebases.
-- Changelog entries: add a fragment file in `changelog.d/` rather than editing `CHANGELOG.md`; [its README](changelog.d/README.md) has the naming, sections and format.
+- Changelog entries: add a fragment file in `changelog.d/` rather than editing `CHANGELOG.md`; [its README](changelog.d/README.md) has the naming, sections and format. Leave the PR number out: collation adds it.
 - Guide text that describes changed behaviour ships in the same PR as the change.
 - Code analysis:
   - Refactoring opportunities: `mix credo suggest --format json --all --only refactor`

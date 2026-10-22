@@ -1691,6 +1691,11 @@ msgstr "Legg til medlem"
 msgid "Add note"
 msgstr "Legg til notat"
 
+#: lib/brando_admin/components/video_picker.ex
+#, elixir-autogen, elixir-format
+msgid "Add one here, or pick one from the whole library."
+msgstr "Legg til en her, eller velg en fra hele biblioteket."
+
 #: lib/brando_admin/components/form/block_field.ex
 #, elixir-autogen, elixir-format
 msgid "Add one in Configuration → Templates"
@@ -1784,6 +1789,11 @@ msgstr "La til et notat"
 #, elixir-autogen, elixir-format
 msgid "Added above"
 msgstr "Lagt til ovenfor"
+
+#: lib/brando_admin/components/video_picker.ex
+#, elixir-autogen, elixir-format
+msgid "Added for this field"
+msgstr "Lagt til for dette feltet"
 
 #: lib/brando_admin/components/video_picker.ex
 #: lib/brando_admin/live/users/groups_live.ex
@@ -6867,6 +6877,11 @@ msgstr "Alle brukere må bruke det."
 msgid "Every user's sign-ins, failed attempts and lockouts, and changes to passwords, two-factor authentication, passkeys, sessions and connected apps."
 msgstr "Alle brukeres innlogginger, mislykkede forsøk og låsinger, og endringer i passord, tofaktorautentisering, passnøkler, økter og tilkoblede apper."
 
+#: lib/brando_admin/components/video_picker.ex
+#, elixir-autogen, elixir-format
+msgid "Every video in the library. A video you pick is used as it is; new ones still follow this field's settings."
+msgstr "Alle videoene i biblioteket. En video du velger, brukes som den er; nye følger fortsatt innstillingene til dette feltet."
+
 #: lib/brando_admin/live/sites/activity_live.ex
 #: lib/brando_admin/live/users/sign_in_policy_live.ex
 #, elixir-autogen, elixir-format
@@ -11628,6 +11643,11 @@ msgstr "Kun superbrukere kan endre passord for andre brukere."
 msgid "Only these"
 msgstr "Bare disse"
 
+#: lib/brando_admin/components/video_picker.ex
+#, elixir-autogen, elixir-format
+msgid "Only videos added for this field. Whole library offers every other video."
+msgstr "Kun videoer som er lagt til for dette feltet. Under Hele biblioteket finner du alle de andre."
+
 #: lib/brando_admin/components/form/module_props/ref_block_form.ex
 #, elixir-autogen, elixir-format
 msgid "Opacity"
@@ -14181,7 +14201,6 @@ msgid "Root"
 msgstr "Rot"
 
 #: lib/brando_admin/components/file_picker.ex
-#: lib/brando_admin/components/video_picker.ex
 #: lib/brando_admin/live/images/alt_text_live.ex
 #: lib/brando_admin/live/images/image_list_live.ex
 #, elixir-format, elixir-autogen
@@ -15467,6 +15486,7 @@ msgid "Show or hide %{count} children"
 msgstr "Vis eller skjul %{count} underoppføringer"
 
 #: lib/brando_admin/components/image_picker.ex
+#: lib/brando_admin/components/video_picker.ex
 #, elixir-autogen, elixir-format
 msgid "Show the whole library"
 msgstr "Vis hele biblioteket"
@@ -19017,6 +19037,11 @@ msgstr "Videoer som allerede ligger i %{provider}-kontoen din. Sletter du en her
 msgid "Videos matching “%{query}”"
 msgstr "Videoer som passer til «%{query}»"
 
+#: lib/brando_admin/components/video_picker.ex
+#, elixir-autogen, elixir-format
+msgid "Videos to choose from"
+msgstr "Videoer å velge mellom"
+
 #: lib/brando_admin/live/ai/assistant_live.ex
 #: lib/brando_admin/live/users/groups_live.ex
 #, elixir-autogen, elixir-format
@@ -19321,6 +19346,7 @@ msgid "Whole entry"
 msgstr "Hele oppføringen"
 
 #: lib/brando_admin/components/image_picker.ex
+#: lib/brando_admin/components/video_picker.ex
 #, elixir-autogen, elixir-format
 msgid "Whole library"
 msgstr "Hele biblioteket"

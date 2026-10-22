@@ -195,6 +195,22 @@ defmodule BrandoAdmin.Images.FolderBrowser do
     end)
   end
 
+  @doc """
+  Entries with no folder, or a folder outside `upload_root`. A picker lists
+  them at its root, so an entry filed outside the picker's root stays in reach.
+  """
+  def entries_outside_root(entries, upload_root) do
+    root = normalize_folder(upload_root)
+    folder_paths_by_id = folder_absolute_paths_for_entries(entries)
+
+    Enum.filter(entries, fn entry ->
+      case entry |> entry_folder_absolute(folder_paths_by_id, root) |> normalize_folder() do
+        nil -> true
+        folder -> not folder_under_root?(folder, root)
+      end
+    end)
+  end
+
   def push_recent_folder(recent_folders, folder) do
     normalized = normalize_folder(folder)
 

@@ -27,3 +27,7 @@ npm-debug.log
 !.claude/skills/**
 !.claude/agents/
 !.claude/agents/**
+
+# `mix gettext.extract` (the Gettext gate in `mix check`) writes the test
+# backend's template here; the tests only read the committed .po files.
+/test/fixtures/menu_gettext/*.pot

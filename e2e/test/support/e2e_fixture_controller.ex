@@ -101,12 +101,43 @@ defmodule E2EFixtureController do
 
         "markdown-source-fourth" ->
           E2E.MarkdownProvider.advance(get_admin_user(), "d", "Fourth")
+
+        "video-library-folders" ->
+          create_video_library_folders()
       end
 
     # Log the user in
     conn = login_user(conn, scenario)
 
     send_resp(conn, 200, "")
+  end
+
+  # Videos added without a field of their own (`config_target: "default"`),
+  # two of them filed in the library's `default` folder: what a field with its
+  # own video cfg finds under the picker's "Whole library".
+  defp create_video_library_folders do
+    user = get_admin_user()
+    folder_id = BrandoAdmin.Images.FolderBrowser.folder_id_for("default", "videos")
+
+    for {title, remote_id, folder_id} <- [
+          {"Harbour at dawn", "harbour01", folder_id},
+          {"Studio tour", "studio01", folder_id},
+          {"Workshop", "workshop01", nil}
+        ] do
+      Brando.Repo.insert!(%Brando.Videos.Video{
+        type: :youtube,
+        title: title,
+        remote_id: remote_id,
+        source_url: "https://www.youtube.com/watch?v=#{remote_id}",
+        width: 1920,
+        height: 1080,
+        config_target: "default",
+        folder_id: folder_id,
+        creator_id: user.id
+      })
+    end
+
+    user
   end
 
   defp create_single_datasource_modules do
