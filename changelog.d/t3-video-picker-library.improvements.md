@@ -1,4 +1,4 @@
-- **The video picker offers the whole library to a field with its own config**.
+- **The video picker offers the whole library to a field with its own config** (#3258).
   It opened on the videos added through that field only, so a field with its
   own `cfg` showed none of the site's existing videos. Like the image picker,
   it now has a "Whole library" tab with the library's folders, and its Root
