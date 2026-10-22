@@ -2,34 +2,30 @@
 
 <!-- llms-description: Tenancy modes, sites and named content environments, tenant migrations, routing and static publication. -->
 
-Brando can run in three tenancy modes. The default preserves the traditional
-single-site, `public`-schema setup; the other modes introduce named content
-environments backed by PostgreSQL schemas.
+Brando can run in three tenancy modes. The default is a single site in the
+`public` schema; the other modes add named content environments backed by
+PostgreSQL schemas.
 
 ## Choose a mode
 
 | Mode | Storage and behavior | Intended use |
 | --- | --- | --- |
-| `:none` | Existing content remains in `public`; no tenant prefix is injected | Traditional Brando installation; default |
+| `:none` | Content is in `public`; no tenant prefix is injected | Single-site installation; default |
 | `:single` | One configured site can have any number of schema-backed environments | Standalone site with production, staging, and project environments |
 | `:multi` | Multiple isolated sites with per-site roles, media, assets, domains, and environments | Agencies and Brando Master installations |
 
 <!-- usage-rules:start topic="tenancy" -->
 
-Upgrading Brando does **not** require an existing project to adopt tenancy.
-Projects that keep the default `:none` mode continue to read and write content
-in `public` as before. They should apply the ordinary Brando-owned public
-database migrations during an upgrade, but they do not need tenant migrations,
-`Brando.Plug.Tenant`, site or environment records, or
-`mix brando.migrate_to_tenant`. The new public registry tables may exist unused
-in this mode.
+Tenancy is opt-in. Projects in the default `:none` mode read and write content
+in `public`. They apply the ordinary Brando-owned public database migrations,
+but do not need tenant migrations, `Brando.Plug.Tenant`, site or environment
+records, or `mix brando.migrate_to_tenant`. The public registry tables may
+exist unused in this mode.
 
 <!-- usage-rules:end -->
 
 The tenant setup and data-conversion sections in this guide apply only when a
-project deliberately changes to `:single` or `:multi`. Existing projects may
-adopt those modes later; there is no requirement to convert every Brando
-project as part of the framework upgrade.
+project changes to `:single` or `:multi`.
 
 The registry itself always lives in `public`:
 
@@ -64,8 +60,7 @@ a partial database index guarantees that no more than one is marked live.
 independent of `tenancy_mode`: a site in a multi-tenant installation can be
 dynamic or static, and uploadable frontend asset sets can be used by either.
 Classic projects in `tenancy_mode: :none` have no site registry record and do
-not need to set `delivery_mode`; Phoenix continues to serve them dynamically as
-it did before tenancy support was introduced.
+not need to set `delivery_mode`; Phoenix serves them dynamically.
 
 | Mode | Public delivery | Content publication |
 | --- | --- | --- |
@@ -125,7 +120,7 @@ hyphens.
 
 Guided setup respects choices supplied as flags. For example,
 `mix brando.install --interactive --tenancy-mode single` asks only for the site
-key. `--tenancy-prompt` remains a compatibility alias for guided tenancy setup;
+key. `--tenancy-prompt` is an alias for guided tenancy setup;
 `--no-tenancy-prompt` suppresses those questions even with `--interactive`.
 
 For repeatable or CI-driven installation, pass the choices explicitly:
@@ -185,8 +180,7 @@ mix deps.get
 mix deps.compile
 ```
 
-Brando's optional task and helper modules automatically request recompilation
-when Igniter becomes available. Then run:
+Then run:
 
 ```bash
 # Asks for anything you do not pass
@@ -410,7 +404,7 @@ content by configuring a module that implements `Brando.Tenant.Seeder`:
 config :brando, tenant_seeder: MyApp.TenantSeeder
 ```
 
-Individual working environments can still be created with
+Individual working environments can also be created with
 `Brando.Environments.create_environment/2`. It creates
 `tenant_{site}_{environment}`, runs all tenant migrations, writes an operation
 log, and compensates a failed schema creation or migration.
@@ -422,7 +416,7 @@ In `single` mode, the site key in the registry must match the configured
 
 <!-- usage-rules:start topic="tenancy" -->
 
-Newly generated routers place `Brando.Plug.Tenant` in the browser pipelines
+Generated routers place `Brando.Plug.Tenant` in the browser pipelines
 before plugs that load content:
 
 ```elixir
@@ -507,7 +501,7 @@ Blocks store both an integer ID and an explicit `local` or `shared` origin for
 their module, container, and palette references. The origin is significant:
 `local:42` and `shared:42` are different references even when PostgreSQL has
 assigned the same integer in both schemas. Existing local blocks are migrated
-with `local`, preserving pre-tenancy behavior.
+with `local`.
 
 Resolution has two paths:
 
@@ -515,7 +509,7 @@ Resolution has two paths:
 - rendering resolves the block's stored origin and may load a shared entry even
   after picker access was revoked.
 
-The second rule is deliberate. Disabling a shared entry prevents adding new
+Disabling a shared entry prevents adding new
 references but never breaks published or draft blocks that already use it.
 Deleting a shared entry is blocked while it is enabled, customized, or
 referenced in any environment. The dashboard shows those sites and
@@ -547,7 +541,7 @@ mix brando.migrate --tenants
 
 ## Per-site roles and lifecycle
 
-Users remain global accounts in `public.users`. Multi-site access is explicit:
+Users are global accounts in `public.users`. Multi-site access is explicit:
 
 ```text
 superuser  global role; bypasses assignments for every active site
@@ -568,7 +562,7 @@ or revokes roles. The underlying API is also available to application tooling:
 {:ok, archived} = Brando.Tenant.Setup.archive_site(active)
 ```
 
-Permanent deletion is deliberately a second step. A site must be archived for
+Permanent deletion is a second step. A site must be archived for
 30 days by default, after which deletion removes every current/archive schema,
 registry row, assignment, media directory, and uploaded asset directory:
 
@@ -630,7 +624,7 @@ and restores its archive.
 Media bytes are not copied. In `:single`, every environment shares the existing
 configured media root. In `:multi`, local uploads, processing, crops, exports,
 sitemaps, downloads, frontend media serving, and orphan cleanup all resolve
-inside `media/{site_key}`. The database continues storing relative paths such
+inside `media/{site_key}`. The database stores relative paths such
 as `images/hero.jpg`, so the same URL can safely resolve to different bytes on
 different site domains.
 
@@ -737,8 +731,6 @@ Rollback brings it up to date as it restores it:
 
   Brando keeps every version it has shipped of these templates in
   `priv/templates/brando.upgrade/history/<name>/`, the current one included.
-  A change to a template's code adds the new version there; a test fails,
-  naming the file to add, until it does.
 
   An application that keeps its migrations elsewhere, or in more than one
   directory, sets `config :brando, :public_migrations_path` to a path or a
@@ -801,8 +793,7 @@ state, and exposes the same site-ownership-checked cancellation path.
 Uploaded frontend builds persist outside releases. Standalone installations use
 `site_assets/sets/{set}`; multi-site installations use
 `sites/{site_key}/assets/sets/{set}`. `Brando.Plug.SiteAssets` must run before
-the release `Plug.Static`; new installers and the E2E application already have
-this order.
+the release `Plug.Static`; the installer places it there.
 
 Florist uploads a clean `priv/static` build and registers it by RPC without
 activating it:
@@ -865,12 +856,11 @@ lists (entries, chunks, CSS, imported fonts and images, plus their source
 maps) are served this way, so an old capture never shadows un-hashed files
 such as `favicon.ico`, and compiled CSS or JavaScript that uses root-relative
 `/assets/...` URLs keeps resolving without any rewriting or build changes.
-Previews created before this feature have no reference and are served as
-before; they cannot be repaired from a later manifest and must be recreated.
+A preview with no pinned set is served from the active set only; it cannot be
+repaired from a later manifest and must be recreated.
 
 A capture failure fails sharing visibly instead of storing a preview tied to
-ephemeral release files. Preview expiry and the frozen unsaved content are
-unchanged.
+ephemeral release files.
 
 ### Pruning contract
 
@@ -946,7 +936,7 @@ as their artifact is pruned.
 
 <!-- usage-rules:start topic="tenancy" -->
 
-The command-line task uses the same renderer and remains interactive by default:
+The command-line task uses the same renderer and is interactive by default:
 
 ```bash
 # Standalone application
@@ -982,7 +972,7 @@ config :brando,
   site_assets_path: "/srv/my_app/site_assets"
 ```
 
-Back up `sites/` and `site_assets/` alongside `media/`. Florist remains
+Back up `sites/` and `site_assets/` alongside `media/`. Florist is
 responsible for clean frontend builds and blue/green shared-directory symlinks;
 Brando owns asset registration/activation and the versioned static artifact
 lifecycle. If the application overrides `config :brando, Oban`, re-declare a
@@ -1065,8 +1055,8 @@ checking before a production cutover.
 
 Run the conversion in a maintenance window after draining tenant-owned Oban
 work such as publishing, rendering, image processing, and CDN uploads. Jobs
-created before tenancy do not contain a tenant prefix and are deliberately
-cancelled rather than allowed to query `public` after tenancy is enabled;
+created before tenancy do not contain a tenant prefix and are cancelled
+rather than allowed to query `public` after tenancy is enabled;
 recreate any future publication schedules after migration. Standalone uploaded
 asset-set records are also not assigned to the new site automatically. Upload
 or register a fresh site-scoped set, verify it, and then activate it from the

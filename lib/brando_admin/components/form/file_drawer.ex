@@ -2,7 +2,7 @@ defmodule BrandoAdmin.Components.Form.FileDrawer do
   @moduledoc """
   Markup for the form's file drawer.
 
-  **Markup only**, on the same measurement that produced `VideoDrawer`: the
+  **Markup only**, on the same measurement as `VideoDrawer`: the
   drawer's `update/2` and `handle_event/3` clauses stay in
   `BrandoAdmin.Components.Form` because they write the *parent's* state, and
   `assign_drawer_recovery_state/1` computes image, video and file state in a
@@ -10,18 +10,16 @@ defmodule BrandoAdmin.Components.Form.FileDrawer do
   `myself` included — is already an explicit assign at the call site, which is
   what makes the markup half free.
 
-  The two JS command helpers come along because their only callers are in here.
+  The two JS command helpers live here because their only callers are in here.
   `close_file/2` dispatches a submit at `#file-drawer-form`, which is rendered
-  by `render/1` — helper and markup are one unit and were only ever apart by
-  accident of file layout.
+  by `render/1` — helper and markup are one unit.
 
   Follows `MetaDrawer`, `ScheduledPublishingDrawer` and `VideoDrawer`: a
   `:component` exposing `render/1`, whose events belong to the parent form.
 
-  Note this does **not** reduce compile coupling, and no longer claims to. The
-  admin's single compile cycle runs through `use BrandoAdmin, :component`, so
-  every component is inside it regardless of who calls whom — measured when
-  `Form.Primitives` was extracted and the cycle grew by one node.
+  Note this does **not** reduce compile coupling. The admin's single compile
+  cycle runs through `use BrandoAdmin, :component`, so every component is inside
+  it regardless of who calls whom.
   """
   use BrandoAdmin, :component
   use Gettext, backend: Brando.Gettext

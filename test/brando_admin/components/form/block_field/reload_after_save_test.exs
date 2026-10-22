@@ -1,6 +1,6 @@
 defmodule BrandoAdmin.Components.Form.BlockField.ReloadAfterSaveTest do
-  # After a save, every mounted root used to be re-seeded with a fresh form
-  # from the reloaded rows: ~8 KB and one frame per root, 1.1 MB at 115 roots.
+  # Re-seeding every mounted root with a fresh form from the reloaded rows
+  # after a save costs ~8 KB and one frame per root, 1.1 MB at 115 roots.
   # A save that persisted what the editor showed leaves untouched roots
   # exactly as they were, so those are skipped — but only when that is
   # proven, because the point of the re-seed is that the editor holds the

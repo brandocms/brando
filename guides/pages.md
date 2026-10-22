@@ -50,7 +50,7 @@ Keep `page_routes()` **after** application-specific routes: its catch-all would
 otherwise handle requests intended for your controllers. It adds `/`, `/*path`,
 and supporting routes for previews, robots, and sitemaps.
 
-A minimal controller using the current page query API is:
+A minimal page controller is:
 
 ```elixir
 defmodule MyAppWeb.PageController do

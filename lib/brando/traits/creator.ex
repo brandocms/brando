@@ -61,7 +61,7 @@ defmodule Brando.Trait.Creator do
 
   For changes put on a changeset after `changeset/3` ran, which the mutator
   above cannot see: the admin form associates an entry's blocks that way, so
-  editing only a block used to leave the entry unstamped. A no-op for
+  without it editing only a block would leave the entry unstamped. A no-op for
   `:system`, for new entries and for schemas without this trait.
   """
   @spec stamp_if_edited(changeset, module(), map() | atom() | integer()) :: changeset

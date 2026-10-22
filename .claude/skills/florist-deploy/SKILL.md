@@ -33,6 +33,8 @@ Local: Docker build → OTP release tarball → Florist uploads via SSH → unpa
 │   ├── 1.0.0/
 │   └── 1.1.0/                  ← priv/static/ is inside the release
 ├── media/                       ← persistent, NOT inside the release
+├── site_assets/                 ← beside media/ (see below)
+├── sites/                       ← beside media/
 ├── log/
 ├── sql/
 └── etc/
@@ -50,13 +52,15 @@ Local: Docker build → OTP release tarball → Florist uploads via SSH → unpa
 │   └── releases/
 ├── active-environment           ← contains "blue" or "green"
 ├── media/                       ← shared between blue and green via symlink
+├── site_assets/                 ← beside media/, so shared too
+├── sites/                       ← beside media/, so shared too
 ├── log/
 ├── sql/
 └── etc/
 ```
 
 - Blue and green each run their own systemd service on different ports
-- Media is shared: `blue/current/media → ../../media` (symlink created by Florist)
+- Media is shared: each release links `blue/releases/{version}/media → ../../../media` (symlink created by Florist)
 - Traffic switching: Florist updates Traefik/nginx config to point to the new port
 - Health check polls the inactive environment before switching traffic
 - Keeps last 5 releases per environment, cleans up older ones
@@ -66,6 +70,9 @@ Local: Docker build → OTP release tarball → Florist uploads via SSH → unpa
 - **Assets are baked into the release** — `priv/static/` is built during Docker build and included in the tarball. There is no separate asset upload step.
 - **Media lives outside the release** — `media/` is persistent on the server and symlinked into the release. Never assume `media/` is inside `priv/`.
 - **`site_assets/` and `sites/` sit beside the shared media** — `Brando.Tenant.Storage.media_parent/0` follows the release's `media` link (only when `RELEASE_ROOT` is set, i.e. running as a release), so asset sets and SSG builds land in the base directory, not the release, unless `:site_assets_path`/`:sites_path` are configured.
-- **Blue/green means two running instances** — both share the same database and media directory, but each has its own release with its own `priv/static/`.
-- **Rollback is instant** — switch traffic back to the other color. No rebuild needed.
-- **`priv/static/` is ephemeral** — it gets rebuilt from scratch in every Docker build. Don't store persistent state there.
+- **Blue/green means two environments** — both share the same database and media directory, but each has its own release with its own `priv/static/`. Both run during a deploy until traffic switches; then the old one is stopped.
+- **Rollback is instant** — switch traffic back to the other color. No rebuild needed. The schema stays as the newer release left it unless the rollback passes `--restore-db`.
+- **A deploy does not migrate** — `florist prod release:deploy` builds, uploads and switches; migrations run separately with `florist prod db:migrate`.
+- **Blue/green needs `plug Brando.Plug.Health`** in the endpoint, before the router: without it the health check never passes and the switch never happens.
+- **No `PORT=` in `.envrc.<flavor>`** — it is uploaded as `.envrc.runtime` and sourced after systemd sets each colour's port, so a `PORT=` line would override it (see `guides/deployment.md`).
+- **`priv/static/` is ephemeral** — it gets rebuilt from scratch in every Docker build, and `.dockerignore` keeps the local one out of the build context. Keep static files in `assets/frontend/public/`, which Vite copies there; a file put in `priv/static/` by hand works in development and is missing from the release.

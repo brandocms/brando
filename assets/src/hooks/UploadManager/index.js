@@ -15,8 +15,8 @@ import { trackUpload, updateUpload, uploadTargetKey } from '../shared/uploadProg
  *   1. pushEvent("intake") with file metadata + target → server replies with
  *      a decision per file ({ref, transport} or {error}).
  *   2. Accepted files are renamed to "<ref>::<name>" (entry↔item matching,
- *      see docs/UPLOADER.md §5.1) and pushed into the manager's own
- *      allow_upload(:queue) via this.upload().
+ *      see "Server transport" in .claude/skills/brando-uploads/architecture.md)
+ *      and pushed into the manager's own allow_upload(:queue) via this.upload().
  */
 
 if (!window.BrandoUploads) {

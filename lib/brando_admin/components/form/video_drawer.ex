@@ -2,7 +2,6 @@ defmodule BrandoAdmin.Components.Form.VideoDrawer do
   @moduledoc """
   Markup for the form's video drawer.
 
-  Extracted from `BrandoAdmin.Components.Form` in Phase 9C of the form audit.
   This module is **markup only**, by measurement rather than by preference. The
   drawer's `update/2` and `handle_event/3` clauses stay in `Form` because they
   write the *parent's* state: `handle_event("save_video_authorized", …)` assigns
@@ -12,10 +11,9 @@ defmodule BrandoAdmin.Components.Form.VideoDrawer do
   computes image, video and file state in a single `cond`, feeding the
   `phx-auto-recover` form that hangs off `Form`'s own element.
 
-  So the plan's premise that these components "already communicate via
-  `send_update`, so the seams are clean" holds **inbound only** (six sites:
-  `Form.Input.Video` and `BrandoAdmin.LiveView.Form.Hooks`). Outbound is direct
-  assignment, not messages. Splitting the behaviour out would mean inventing a
+  So the drawer communicates with `Form` via `send_update` **inbound only** (six
+  sites: `Form.Input.Video` and `BrandoAdmin.LiveView.Form.Hooks`). Outbound is
+  direct assignment, not messages. Splitting the behaviour out would mean inventing a
   callback protocol for the changeset write and a CID change for every control
   in the drawer; splitting the markup out costs nothing, because every input
   this module needs — including `myself` — is already passed as an explicit

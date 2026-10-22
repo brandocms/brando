@@ -1,18 +1,15 @@
 defmodule BrandoAdmin.Components.Form.Block.ContainerScopingTest do
-  # Phase 3 / E2 in the form audit, plus two latent defects the review found
-  # alongside it.
-  #
   # `:containers` and `:palette_options` are ETS-backed lists, and an ETS read
   # copies the whole term onto the reading process's heap — once per block
   # component, all inside the single LiveView process. They are scoped to the
   # blocks that actually render them.
   #
-  # The scoping was originally `type == :container or belongs_to == :root`, on
-  # the premise that `container_config` is rendered by every root block. It is
-  # not: `container_config` (`block/render.ex:526`) sits inside `container/1`,
-  # whose only caller is `render(%{type: :container})`. Root module blocks were
-  # still paying for both lists. These tests pin the corrected boundary, since
-  # nothing else would notice it drifting back.
+  # That is container blocks only, not every root: `container_config`
+  # (`block/render.ex:526`) sits inside `container/1`, whose only caller is
+  # `render(%{type: :container})`. Scoping on
+  # `type == :container or belongs_to == :root` would make root module blocks pay
+  # for both lists. These tests pin the boundary, since nothing else would
+  # notice it drifting.
   use ExUnit.Case, async: false
   use Brando.ConnCase
 
@@ -84,9 +81,9 @@ defmodule BrandoAdmin.Components.Form.Block.ContainerScopingTest do
   describe "a missing container or fragment does not crash the editor" do
     # `render(%{type: :container})` reads @container and @palette_options;
     # `render(%{type: :fragment})` reads @fragment. Setting only the not-found
-    # flag left those unassigned, and there was no render clause matching the
-    # flag — so a block referencing a deleted container raised KeyError mid-render
-    # and took the editor LiveView down, unsaved block edits included.
+    # flag would leave those unassigned, so a block referencing a deleted
+    # container would raise KeyError mid-render and take the editor LiveView
+    # down, unsaved block edits included.
     test "a deleted container still leaves :container and :palette_options assigned" do
       socket =
         Block.maybe_assign_container(socket_with(%{type: :container, container_id: 999_999_999}))

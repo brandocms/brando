@@ -242,9 +242,9 @@ defmodule BrandoAdmin.WorkingCopyPlacementTest do
     assert {nested.parent.uid, nested.sync_uid, nested.module_version} == {"inner", "nested-sync", 5}
   end
 
-  # Review: the roots took their forms one update at a time, so a block
-  # moving between them showed in both in between (a duplicate DOM id) when
-  # it left a nested container, or when two blocks swapped containers.
+  # A block moving between roots must not show in both at once (a duplicate
+  # DOM id) when it leaves a nested container, or when two blocks swap
+  # containers, as it would if the roots took their forms one update at a time.
   test "a child moved into a nested container since goes back out of it", c do
     roots!(c, [
       container(c, "boxA", [container(c, "inner", [module_block(c, "keepI", "Stays inside")])]),
@@ -277,8 +277,8 @@ defmodule BrandoAdmin.WorkingCopyPlacementTest do
     await(fn -> tree(c.page) == saved end)
   end
 
-  # Review: a revision stored before blocks had a module version and a sync
-  # uid holds structs without those keys; the save read them.
+  # A revision stored before blocks had a module version and a sync uid holds
+  # structs without those keys; the save must not expect them.
   test "a revision stored before blocks had module versions and sync uids", c do
     roots!(c, [
       container(c, "boxA", [module_block(c, "keepA", "Stays in A"), module_block(c, "moved", "As in the revision")]),
@@ -304,8 +304,8 @@ defmodule BrandoAdmin.WorkingCopyPlacementTest do
     assert {body("keepA"), row("keepA").module_version} == {"Stays in A", 2}
   end
 
-  # Sol audit: the working copy is cast before it is saved, which gave a
-  # table row deleted since a new sync uid; the save then kept that one.
+  # The working copy is cast before it is saved, which would give a table row
+  # deleted since a new sync uid for the save to keep.
   test "a table row deleted since comes back with its sync uid", c do
     rows = [%{"sequence" => 0, "vars" => []}, %{"sequence" => 1, "vars" => []}]
     roots!(c, [container(c, "boxA", [Map.put(module_block(c, "table", "Rows"), "table_rows", rows)])])
@@ -330,8 +330,8 @@ defmodule BrandoAdmin.WorkingCopyPlacementTest do
     assert Enum.sort(syncs.()) == ["row-gone", "row-kept"]
   end
 
-  # Review: a working copy comes back after a reload through its recovery
-  # copy. Applied as any recovery copy, it left a block moved since where it
+  # A working copy comes back after a reload through its recovery copy.
+  # Applied as any recovery copy, it would leave a block moved since where it
   # is now, with the revision's content and the module version it has now.
   test "a working copy brought back by its recovery copy still goes where the revision has it", c do
     roots!(c, [
@@ -353,8 +353,8 @@ defmodule BrandoAdmin.WorkingCopyPlacementTest do
     assert {body("moved"), moved.sync_uid, moved.module_version} == {"As in the revision", "moved-sync", 3}
   end
 
-  # Sol audit: the recovery copy is cast again, which gave a table row
-  # deleted since a new sync uid.
+  # The recovery copy is cast again, which would give a table row deleted
+  # since a new sync uid.
   test "a table row deleted since comes back with its sync uid through the recovery copy", c do
     rows = [%{"sequence" => 0, "vars" => []}, %{"sequence" => 1, "vars" => []}]
     roots!(c, [container(c, "boxA", [Map.put(module_block(c, "table", "Rows"), "table_rows", rows)])])
@@ -379,8 +379,8 @@ defmodule BrandoAdmin.WorkingCopyPlacementTest do
     assert Enum.sort(syncs.()) == ["row-gone", "row-kept"]
   end
 
-  # Sol audit: an ordinary recovery copy restored over a working copy left
-  # the form saying it was one, and its next copy said so too.
+  # An ordinary recovery copy restored over a working copy must not leave the
+  # form saying it is one, nor its next copy.
   test "a recovery copy restored over a working copy is not one", c do
     roots!(c, [container(c, "boxA", [module_block(c, "keepA", "Stays in A")])])
     revision = revision!(c)
@@ -404,7 +404,7 @@ defmodule BrandoAdmin.WorkingCopyPlacementTest do
     refute Map.has_key?(copy.payload, "working_copy")
   end
 
-  # Review: a revision purged since its working copy's recovery copy was
+  # A revision purged since its working copy's recovery copy was
   # taken: the copy still puts the blocks where the revision had them, at
   # the module versions they have.
   test "a recovered working copy whose revision is gone still puts its blocks back", c do
@@ -429,7 +429,7 @@ defmodule BrandoAdmin.WorkingCopyPlacementTest do
     assert {body("moved"), moved.sync_uid, moved.module_version} == {"As in the revision", "moved-sync", 4}
   end
 
-  # Review: once the working copy is saved, the form's copies are of the
+  # Once the working copy is saved, the form's copies are of the
   # entry again.
   test "a recovery copy taken after the working copy is saved is not one", c do
     roots!(c, [container(c, "boxA", [module_block(c, "keepA", "Stays in A")])])
@@ -448,7 +448,7 @@ defmodule BrandoAdmin.WorkingCopyPlacementTest do
     refute Map.has_key?(copy.payload, "working_copy")
   end
 
-  # Review: which revision a copy is a working copy of is not content. One
+  # Which revision a copy is a working copy of is not content. One
   # that holds what is saved (the revision the entry is at, loaded and left
   # as it is) is no change, and no copy is offered for it.
   test "a working copy that holds what is saved is not a change to recover", c do

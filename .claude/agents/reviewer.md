@@ -74,7 +74,7 @@ and the author; leave them out.
 - **Jobs.** Retries that repeat a side effect; uniqueness that drops a needed
   job or keeps a stale one; jobs left behind when an entry is deleted,
   trashed, copied or rescheduled; a job that acts on state changed since it
-  was enqueued. Oban traps (`docs/background-jobs.md`): `unique` without
+  was enqueued. Oban traps (the `brando-oban` skill): `unique` without
   `period` (60 s); `keys` without `:tenant_prefix`; a snoozing job with no
   bound of its own; a later lookup of a job the Pruner has deleted; a
   `conflict?: true` job with `id: nil`; an insert inside a transaction

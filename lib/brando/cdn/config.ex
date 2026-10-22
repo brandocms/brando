@@ -18,8 +18,9 @@ defmodule Brando.CDN.Config do
     * `:media_url` — public base URL the stored objects are served from.
     * `:bucket` — bucket name to upload to.
     * `:keep_local_copy` — keep the local file after a server-side upload to
-      the CDN. Defaults to `true`. Direct uploads never produce a local copy,
-      regardless of this setting.
+      the CDN. Defaults to `true`. It also applies to a direct image, whose
+      original is fetched back to be processed; direct files and videos never
+      leave a local copy.
     * `:s3` — a `Brando.CDN.S3Config` with the connection settings, or the
       atom `:default` to reuse the config set under `Brando.CDN.S3Config`.
   """

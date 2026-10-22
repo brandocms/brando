@@ -177,9 +177,9 @@ defmodule Brando.Villain.ParserTest do
              "<div class=\"video-wrapper video-file\" data-smart-video data-orientation=\"portrait\" data-preload=\"my_video.mp4\" data-src=\"my_video.mp4\" data-autoplay style=\"--aspect-ratio: 1.0; --aspect-ratio-division: 300/300;\">\n  <video width=\"300\" height=\"300\" alt=\"\" tabindex=\"0\" preload=\"auto\" autoplay muted loop playsinline data-video style=\"--aspect-ratio: 1.0; --aspect-ratio-division: 300/300;\" data-src=\"my_video.mp4\">\n  </video>\n\n  <noscript>\n    <video width=\"300\" height=\"300\" alt=\"\" tabindex=\"0\" preload=\"metadata\" muted loop playsinline src=\"my_video.mp4\">\n    </video>\n  </noscript>\n\n  \n\n  \n    \n      \n         <div data-cover aria-hidden=\"true\">\n           <img\n             width=\"300\"\n             height=\"300\"\n             alt=\"\"\n             src=\"data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20width%3D%27300%27%20height%3D%27300%27%20style%3D%27background%3Argba%280%2C0%2C0%2C0%29%27%2F%3E\" />\n         </div>\n       \n    \n  \n  <figcaption><p>This is a caption</p></figcaption>\n</div>"
   end
 
-  # The parser used to hardcode `cover: :svg`, so every video block grew a cover
-  # it never asked for and the block's own `cover` attribute (default "false")
-  # was unreachable.
+  # The parser reads the block's own `cover` attribute (default "false");
+  # hardcoding `cover: :svg` would give every video block a cover it never
+  # asked for.
   test "video/2 file honours the block's cover setting" do
     base = %{
       source_url: "my_video.mp4",

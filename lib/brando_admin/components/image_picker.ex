@@ -115,19 +115,19 @@ defmodule BrandoAdmin.Components.ImagePicker do
      |> assign(assigns)}
   end
 
-  # Resolves the config target only — it no longer assigns the library, hence
-  # the name. The whole config-target library used to be RETAINED in
-  # `socket.assigns.images`: one copy of every image row per connected admin,
-  # for the life of the session, walked by LiveView change tracking on every
-  # diff, when the only consumer is `assign_folder_state/2` and the rendered
-  # list is already a stream.
+  # Resolves the config target only — it does not assign the library, hence
+  # the name. Retaining the whole config-target library in an assign would keep
+  # one copy of every image row per connected admin, for the life of the
+  # session, walked by LiveView change tracking on every diff, when the only
+  # consumer is `assign_folder_state/2` and the rendered list is already a
+  # stream.
   #
   # The tradeoff, stated plainly: folder navigation (`PickerHelpers` →
-  # `assign_folder_state/2`) used to filter that cached list and now re-queries.
+  # `assign_folder_state/2`) re-queries rather than filtering a cached list.
   # It is the same query the picker already runs on every open, and the five
-  # other call sites re-queried anyway. What this does NOT do is bound the query
-  # itself — see E6 in the form-audit plan for why per-folder scoping is a
-  # bigger change: the folder tree is derived from the entries.
+  # other call sites re-query anyway. What this does NOT do is bound the query
+  # itself — per-folder scoping is a bigger change, because the folder tree is
+  # derived from the entries.
   #
   # (`VideoPicker`'s `:videos` assign looks identical but is NOT the same case —
   # there `assign_folder_state/2` is reached from a dozen places that do not

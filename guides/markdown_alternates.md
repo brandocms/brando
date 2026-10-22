@@ -80,7 +80,7 @@ The HTML of a page with a Markdown version also says `Vary: Accept`, so a
 cache in front of the site keeps the two apart. The Markdown is rendered for
 each request; Brando has no page cache of its own.
 
-Static builds (`Brando.SSG`) do not write `.md` files yet, and a static host
+Static builds (`Brando.SSG`) do not write `.md` files, and a static host
 can't negotiate on `Accept`.
 
 ## What the Markdown holds
@@ -119,4 +119,4 @@ ref as Markdown:
 
 Leave it empty to use the default. The template is stored in the module's
 `markdown_code`; it is not carried by module definition files or content
-transfer archives yet.
+transfer archives.

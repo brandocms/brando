@@ -96,8 +96,7 @@ defmodule Brando.Users do
   @doc """
   Bumps `user`'s `last_login` to current time.
 
-  Called once, from the login controller. It used to double as "last seen",
-  which is what `set_last_seen/1` is for now.
+  Called once, from the login controller. "Last seen" is `set_last_seen/1`'s.
   """
   @spec set_last_login(user) :: {:ok, user}
   def set_last_login(user) do

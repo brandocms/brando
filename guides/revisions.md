@@ -32,9 +32,7 @@ old draft can therefore make a currently published entry a draft. Use scheduled
 revision publication when the intended operation is explicitly “restore this
 snapshot and publish it.”
 
-Ordinary successful context saves capture revisions synchronously. Snapshot
-capture uses the entry state supplied by that save, so a later save cannot race
-with a background snapshot job. There is one active revision per entry; storing
+Ordinary successful context saves capture revisions synchronously. There is one active revision per entry; storing
 an inactive working copy leaves the active marker where it was.
 
 ## Work with a numbered snapshot
@@ -87,8 +85,7 @@ same entry access checks.
 Restoration is transactional. It rebuilds missing historical block links,
 applies the current schema changeset, refreshes the identifier, and moves the
 active marker together. Afterwards it invalidates query caches, schedules
-content rendering/cascades, and notifies open editors. It is not a raw overwrite
-of the serialized struct.
+content rendering/cascades, and notifies open editors.
 
 The drawer labels snapshots from a different schema version and asks the editor
 to review compatibility. A version mismatch is not a promise that restoration

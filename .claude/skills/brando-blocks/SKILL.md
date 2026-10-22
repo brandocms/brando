@@ -21,10 +21,11 @@ Form (LiveView) → BlockField (LiveComponent) → Block (LiveComponent, recursi
 Entry → EntryBlock (join table) → Block → vars/refs/children/table_rows/block_identifiers
 ```
 
-- **EntryBlock** is auto-generated per-schema via the Blueprint `blocks` macro (e.g. `Brando.Pages.Page.Block`). It joins an entry to a `Block` and holds `sequence` and `entry_id`.
-- **Block** holds the actual content: type, module/container/fragment references, vars, refs, children (recursive), table_rows.
+- **EntryBlock** is auto-generated per `module: :blocks` relation by `Brando.Blueprint.maybe_build_blocks_modules/3`, named after the relation (e.g. `Brando.Pages.Page.Blocks` for `relation :blocks`). It joins an entry to a `Block` and holds `sequence` and `entry_id`.
+- **Block** holds the actual content: type, module/container/fragment references, vars, refs, children (recursive), table_rows. Slots (`type: :slot`) are children too.
 - Blocks live **OUTSIDE** the main `<.form>` tag for performance — avoids sending all block data on every keystroke in the main form.
 - Each block has its own `<.form phx-change="validate_block" phx-target={@target}>`.
+- Changing footnotes, named block regions or `type: :slot` blocks: read [footnotes.md](footnotes.md) first.
 
 ---
 
@@ -34,7 +35,7 @@ Entry → EntryBlock (join table) → Block → vars/refs/children/table_rows/bl
 | File | Description |
 |------|-------------|
 | `lib/brando/content/block.ex` | Block schema (Blueprint): attributes, relations, `block_changeset`, `recursive_block_changeset` |
-| `lib/brando/content/var.ex` | Var schema: typed variables (boolean, string, text, html, image, color, select, file, link, date, datetime) |
+| `lib/brando/content/var.ex` | Var schema: typed variables (boolean, string, text, html, image, video, gallery, color, select, file, link, form, date, datetime) |
 | `lib/brando/content/ref.ex` | Ref schema: polymorphic embed `data` field + media associations (image, video, gallery, file) |
 | `lib/brando/content/container.ex` | Container schema |
 | `lib/brando/content/module.ex` | Module schema: defines block templates with vars/refs |
@@ -44,6 +45,8 @@ Entry → EntryBlock (join table) → Block → vars/refs/children/table_rows/bl
 | `lib/brando/content/template.ex` | Block template schema |
 | `lib/brando/content/table_template.ex` | Table template schema |
 | `lib/brando/pages/fragment.ex` | Fragment schema |
+| `lib/brando/content/blocks.ex` | `Brando.Content.Blocks`: build, duplicate, module sync, render fan-out |
+| `lib/brando/content/block_slots.ex` | Slot policy (regions, footnotes); see [footnotes.md](footnotes.md) |
 
 ### LiveView Components
 | File | Description |
@@ -51,6 +54,10 @@ Entry → EntryBlock (join table) → Block → vars/refs/children/table_rows/bl
 | `lib/brando_admin/components/form/block_field.ex` | BlockField component: manages root entry_blocks, builds blocks/containers/fragments, handles recovery, reposition, save cascade |
 | `lib/brando_admin/components/form/block.ex` | Block component: renders individual blocks, manages children, validate_block, refs, live preview |
 | `lib/brando_admin/components/form/block/events.ex` | Event handlers: validate_block, duplicate, delete, reposition, table_row, identifier events |
+| `lib/brando_admin/components/form/block/render.ex` | `Block.Render`: block markup, `block/1` with its `carried_config` |
+| `lib/brando_admin/components/form/block_field/ops.ex` | `BlockField.Ops`: the pure op reducer and materialization |
+| `lib/brando_admin/components/form/block_field/replica.ex` | `BlockField.Replica`: the field's replica of the edit session |
+| `lib/brando/edit_session.ex` | `Brando.EditSession`: one process per open entry, orders and broadcasts ops |
 | `lib/brando_admin/components/form/block_field/module_picker.ex` | Module picker modal |
 
 ### Block Input Components (Ref Renderers)
@@ -80,8 +87,8 @@ each ref type submits with its config closed and open; add new ref types there.
 ### Villain (Rendering & Block Types)
 | File | Description |
 |------|-------------|
-| `lib/brando/villain.ex` | Main Villain module: rendering, parsing, duplicate helpers |
-| `lib/brando/villain/parser.ex` | Liquex template parser |
+| `lib/brando/villain.ex` | Rendering engine (`parse/3`, `render_block/3`); block data management lives in `Brando.Content.Blocks` |
+| `lib/brando/villain/parser.ex` | Parser behaviour: per-type render callbacks, `process_refs`, `render_block_slot/2` |
 | `lib/brando/villain/block.ex` | Base block behaviour and macros |
 | `lib/brando/villain/blocks.ex` | Block type registry (lists all available block types) |
 | `lib/brando/villain/blocks/*.ex` | Individual block type implementations (text, picture, video, header, gallery, etc.) |
@@ -91,14 +98,14 @@ each ref type submits with its config closed and open; add new ref types there.
 |------|-------------|
 | `lib/brando/content.ex` | Content context: CRUD for Block, Container, Module, etc. |
 | `lib/brando/traits/blocks.ex` | Blocks trait for Blueprint schemas |
-| `lib/brando/traits/blocks/prevent_circular_references.ex` | Prevents circular block references |
+| `lib/brando/traits/blocks/prevent_circular_references.ex` | Stops a fragment from embedding itself |
 | `lib/brando/blueprint/villain.ex` | Blueprint villain integration |
 
 ### JS Hooks
 | File | Description |
 |------|-------------|
-| `assets/src/hooks/BlockField/index.js` | Recovery: captures forms to sessionStorage on disconnect, restores missing blocks on reconnect |
-| `assets/src/hooks/Block/index.js` | Autosize textareas via `autosize` library |
+| `assets/src/hooks/BlockField/index.js` | Recovery: captures forms to sessionStorage on disconnect, restores missing blocks on reconnect; renumbers footnotes on update |
+| `assets/src/hooks/Block/index.js` | Autosize textareas via `autosize` library; block-level field presence |
 | `assets/src/hooks/SortableBlocks/index.js` | Drag-and-drop via SortableJS, fires `reposition` event |
 
 ### Tests
@@ -107,7 +114,8 @@ each ref type submits with its config closed and open; add new ref types there.
 | `test/brando/content_test.exs` | Content context tests |
 | `test/brando/villain/villain_test.exs` | Villain rendering tests |
 | `test/brando/villain/blocks/ref_apply_test.exs` | Ref apply_ref tests |
-| `e2e/playwright/tests/blocks/` | E2E tests (identifiers, table rows, live preview) |
+| `test/brando_admin/components/form/block_field/` | Ops reducer, field ops, preview root, reload after save |
+| `e2e/playwright/tests/blocks/` | E2E tests (recovery, reorder, copy/paste, live preview, edit session, footnotes, media, …) |
 | `test/support/edit_session_rejoin.ex` | Edit-session crash and rejoin through two real block fields (late rejoiner, unconfirmed ops, rows fixture); a rejoin test goes through it, never `EditSession.join/4` with built state |
 
 ---
@@ -120,6 +128,7 @@ each ref type submits with its config closed and open; add new ref types there.
 | `:container` | Groups child blocks. Has a container_id pointing to a Container record that defines allowed children and layout. |
 | `:fragment` | References a shared Fragment. Read-only embed — edits happen on the Fragment itself. |
 | `:module_entry` | Module block used within multi-blocks (when `multi: true`). Children of a `:module` block. |
+| `:slot` | Owned collection under a module block or a rich-text field: a named region or a footnote. See [footnotes.md](footnotes.md). |
 
 ---
 
@@ -127,14 +136,16 @@ each ref type submits with its config closed and open; add new ref types there.
 
 ### Block Fields
 ```
-uid, type (:module/:container/:fragment/:module_entry), active, collapsed,
+uid, type (:module/:container/:fragment/:module_entry/:slot), active, collapsed,
 description, anchor, multi, datasource, rendered_html, rendered_at,
-source (Brando.Type.Module), identifier_metas (JSON), module_version,
-sequence, creator_id, module_id, container_id, fragment_id, parent_id, palette_id
+source (Brando.Type.Module), identifier_metas (JSON), module_version, sync_uid,
+slot_name, slot_kind (:region/:footnote), slot_module_set, slot_remap (virtual),
+sequence, creator_id, module_id, container_id, fragment_id, parent_id, palette_id,
+module_origin, container_origin, palette_origin (:local/:shared)
 ```
 
-`module_version` is server-controlled and deliberately absent from `@block_attrs`
-— see section 14.
+`module_version` and `sync_uid` are server-controlled and deliberately absent from
+`@block_attrs` — see section 14.
 
 ### Block Relations
 ```
@@ -144,22 +155,24 @@ has_many through: identifiers (via block_identifiers)
 ```
 
 ### Var Types
-`:boolean`, `:string`, `:text`, `:html`, `:image`, `:datetime`, `:color`, `:select`, `:file`, `:link`, `:date`
+`:boolean`, `:string`, `:text`, `:html`, `:image`, `:video`, `:gallery`, `:datetime`, `:color`, `:select`, `:file`, `:link`, `:form`, `:date`
 
 ### Ref Structure
 - `name` (text) — matches `{% ref refs.name %}` in Liquex templates
 - `data` — PolymorphicEmbed (types from `Brando.Villain.Blocks.list_blocks()`: text, picture, video, header, media, gallery, svg, map, etc.)
 - Media associations: `image`, `video`, `gallery`, `file` (each belongs_to with `on_replace: :nilify`)
-- Standard preloads: `Brando.Content.Ref.preloads()` → `[:image, :file, video: [:thumbnail], gallery: [gallery_objects: [:image, :video]]]`
+- Standard preloads: `Brando.Content.Ref.preloads()` → `[:image, :file, video: [:thumbnail, :file], gallery: [gallery_objects: [:image, video: [:thumbnail, :file]]]]`
 
 ### EntryBlock Structure (auto-generated)
 ```elixir
-# e.g. Brando.Pages.Page.Block
-schema "pages_page_blocks" do
+# e.g. Brando.Pages.Page.Blocks — table "<owner table>_<relation>"
+schema "pages_blocks" do
   belongs_to :entry, Brando.Pages.Page  # or whichever schema
-  belongs_to :block, Brando.Content.Block
+  belongs_to :block, Brando.Content.Block, on_replace: :update
   field :sequence, :integer
+  field :marked_as_deleted, :boolean, default: false, virtual: true
 end
+# changeset(entry_block, attrs, user, recursive? \\ false)
 ```
 
 ---
@@ -167,8 +180,8 @@ end
 ## 5. Component Lifecycle
 
 ### BlockField
-1. `mount/1` — `{:ok, assign(socket, :outline_items, [])}`
-2. `update(assigns, socket)` — catch-all: `initialize_blocks/2`, guarded so it runs once
+1. `mount/1` — assigns defaults (`outline_items`, `undo_stack`, slot drawer state, `live_preview_active?: false`)
+2. `update(assigns, socket)` — catch-all: `initialize_blocks/2` (guarded by `blocks_initialized` so it runs once), then joins the edit session
 3. `initialize_blocks` — builds `@seed_forms` (a uid-keyed map of mount-time seeds) and
    the op store via `assign_ops(Ops.from_entry_blocks(entry_blocks))`. `@root_order` is the
    store's render projection and is assigned **only** through `assign_ops/2`.
@@ -187,7 +200,7 @@ end
    - Sets `block_initialized: true`
 
 **Key guard**: `assign_new` plus the `Map.drop` above are what stop a parent re-render from
-clobbering local editing state — the historical clobber/FK-wipe class of bug.
+clobbering local editing state (the clobber/FK-wipe class of bug).
 
 ---
 
@@ -199,11 +212,14 @@ clobbering local editing state — the historical clobber/FK-wipe class of bug.
 
 ### Building New Blocks
 ```elixir
-BlockField.build_block(module_id, user_id, parent_id, source, type)   # :module or :module_entry
+BlockField.build_block(module_reference, user_id, parent_id, source, type)   # :module or :module_entry
 BlockField.build_container(user_id, parent_id, source)
 BlockField.build_fragment(user_id, parent_id, source)
 ```
-All return a `%Changeset{}` with `action: :insert`.
+`build_block/5` delegates to `Brando.Content.Blocks.build_module_block/5` (`module_reference`
+is a module id or `{origin, id}`) and returns a changeset with `action: :insert`, stamped with
+the module's current version. `build_container/3` and `build_fragment/3` return a plain
+`Changeset.change/2` (no action); the caller sets `:insert` on the entry-block wrapper.
 
 ### Changeset Pipeline
 ```
@@ -217,7 +233,10 @@ block_module.changeset(entry_block, params, user_id)
             └─ cast_assoc(:refs, with: &ref_changeset/3)
 ```
 
-For new blocks (nil ID): filters out `:replace` action from refs/vars, forces `:insert` action.
+`recursive_block_changeset/4` adds `cast_assoc(:children)` (recursive) and
+`BlockSlots.validate/2`. Both first drop row params that name a saved row the block no
+longer has (`drop_vanished_rows/3`). For new blocks (nil ID): filters out `:replace` action
+from refs/vars, sets `sync_uid`, forces `:insert` action.
 
 ### validate_block — Two Variants
 
@@ -227,14 +246,15 @@ For new blocks (nil ID): filters out `:replace` action from refs/vars, forces `:
 3. Restore `original_block_identifiers` from socket assigns
 4. Clear vars/refs for new blocks (nil ID) to avoid duplicate PK warnings
 5. `Block.block_changeset(block_for_changeset, params, user_id)`
-6. `render_and_update_block_changeset` → `Block.assign_block_form/2` (assigns `:form`, emits the update op)
+6. `should_force_live_preview_update?/3` (see below)
+7. `render_and_update_block_changeset` → `Block.assign_block_form/3` with `target:` (assigns `:form`, emits the field op)
 
 **Entry block** (`"entry_block"` params):
 1. Use `changeset.data` (original DB values) as base — NOT `apply_changes`
 2. Same filtering: persisted table_rows, original block_identifiers, clear vars/refs for new
 3. `block_module.changeset(block_for_changeset, params, user_id)` — runs full pipeline including `cast_assoc(:block)`
-4. Check for container active status flip → force render
-5. `render_and_update_entry_block_changeset` → `Block.assign_block_form/2` (assigns `:form`, emits the update op)
+4. `should_force_live_preview_update?/3`: a block that owns children (container, slot, multi, or one with children) flipping `active: false` → `true` forces a full render
+5. `render_and_update_entry_block_changeset` → `Block.assign_block_form/3` with `target:` (assigns `:form`, emits the field op)
 
 **Critical difference**: entry_block uses `changeset.data` as base; child_block uses `apply_changes`. This is because `cast_assoc` for entry_blocks compares params against `data` — using `apply_changes` would bake in previous edits and `cast_assoc` wouldn't detect them.
 
@@ -248,8 +268,8 @@ User types in a block form
   → phx-change="validate_block" (target: the block's @myself)
   → Events.handle_block_event("validate_block", params, socket)
   → build the changeset from params
-  → Block.assign_block_form/2   ← the chokepoint: assigns :form AND emits
-                                   {:update, uid, diff} to BlockField's reducer
+  → Block.assign_block_form/3   ← the chokepoint: assigns :form AND emits
+                                   the changed fields as an op to BlockField's reducer
   → maybe_update_live_preview_block()
 ```
 There is no form handoff to the parent. The block keeps its form; the parent gets a param
@@ -275,7 +295,7 @@ Events.handle_block_event("duplicate_block")
   → has children: send "fetch_changeset_for_duplication" to each child, which reply with
     "provide_changeset_for_duplication" until the parent is `populated: true`
   → then: duplicate via ContentBlocks.duplicate_block/2, put a seed form, and apply an
-    {:insert, uid, sequence, diff} op
+    {:insert, uid, sequence, diff} op (a parent block emits {:insert_child, ...} instead)
 ```
 Duplication is the one place a changeset still travels between components, because a copy
 needs the whole materialized subtree.
@@ -288,8 +308,9 @@ makes paste work **across entries and across schemas**: any BlockField the same 
 reads the same clipboard.
 
 * `initialize_blocks/2` hydrates `clipboard_meta` + `paste_multi_module_id` from the cache.
-  Skipping that hydration is what used to make paste look same-document-only: the buttons
-  are shown by CSS from `data-paste-allow`, which is rendered from `clipboard_meta`.
+  Root and container paste buttons are shown by CSS from `data-paste-allow`, which is
+  rendered from `clipboard_meta`, so without that hydration a freshly opened entry shows
+  no paste buttons.
 * **A paste never consumes the clipboard** — one copy pastes into as many spots and as many
   entries as the user likes. The only way out is the block field's actions dropdown
   (`clear_clipboard` → `Brando.Cache.del/1` + `assign_clipboard_meta(socket, nil)`), which
@@ -307,8 +328,10 @@ reads the same clipboard.
   store snapshots a new block's applied state.
 
 ### Insert / Delete / Reorder
-All are **ops applied to the store**, not list surgery:
-`{:insert, uid, seq, diff}`, `{:delete, uid}`, `{:reorder_children, parent, uids}`. Root-level
+All are **ops applied to the store** (`Ops.apply_op/2`), not list surgery:
+`{:insert, uid, at, diff}`, `{:insert_child, parent, uid, at, diff}`, `{:move, uid, to}`,
+`{:reorder, uids}`, `{:reorder_children, parent, uids}`, `{:move_to_parent, uid, parent, at}`,
+`{:remap_slot, uid, destination, params}`, `{:delete, uid}`. Root-level
 structure is applied by BlockField directly; everything else arrives from blocks through
 `Block.emit_block_op/2`. Blocks read their position from the `list_index` prop supplied by
 the keyed `:for` — never from a form's `sequence` field, which is stale by design.
@@ -321,8 +344,8 @@ the keyed `:for` — never from a form's `sequence` field, which is stale by des
 - **`block_op`** — the main channel. Carries a named op with **param diffs, never changesets
   or forms** (`Ops.block_diff_params/1`).
 - **`provide_changeset_for_duplication`** — duplication only, as above.
-- **`register_block_wanting_entry`** — a block whose module reads `entry.*` registers for the
-  targeted entry fan-out.
+- **`register_block_wanting_entry`** — sent to the Form, not the parent: a block whose module
+  reads `entry.*` registers for the targeted entry fan-out.
 
 ### Downward (Parent → Child)
 - **`replace_form`** — the ONLY sanctioned form handoff after mount. Used post-save and on
@@ -331,11 +354,10 @@ the keyed `:for` — never from a form's `sequence` field, which is stale by des
 - Structural and UI messages: `set_collapsed`, `set_children_collapsed`, `insert_block`,
   `insert_pasted_block`, `paste_block`, `paste_child_block`, `outline_reorder_child`,
   `extract_child`, `update_ref`, `update_ref_data`, `update_block_var`,
-  `update_entry_field`.
+  `update_entry_field`, `replace_entry`, `module_updated`.
 
-> There is **no** position-response tracker, no `send_form_to_parent`, and no
-> `signal_position_update`. Those belonged to the pre-2026-07 architecture and were removed
-> with it — see "Block Editor: single-owner state & ops" at the end of this file.
+> Blocks never hand forms upward and never confirm positions: position comes from the
+> `list_index` prop. See "Block Editor: single-owner state & ops" at the end of this file.
 
 ---
 
@@ -362,13 +384,16 @@ disconnect or not.
 4. The snapshot is removed **only** after the server replies, never before the push — it is the sole copy of blocks that exist nowhere else
 
 ### Server Handler (`block_field.ex: handle_event("recover_blocks")`)
-1. Receives `rootUids`, `missingUids`, `forms` (params keyed by form ID), `childOrder`
+1. Receives `rootUids`, `missingUids`, `forms` (params keyed by form ID), `childOrder`.
+   Missing UIDs the store or the seed forms already know are dropped (`recoverable_uids/2`),
+   and params are whitelisted and scrubbed of server-owned fields (`sanitize_recovered_params/4`)
 2. For each missing UID:
    - Creates base struct with empty associations (vars, refs, table_rows, children, block_identifiers)
    - Grafts the captured child subtree onto the block params from `childOrder`, preserving order (sequence is derived from list position)
    - Runs `block_module.changeset(base_struct, params_with_entry, user_id, true)` — the **recursive** cast. The 3-arity variant has no `cast_assoc(:children)` and drops the subtree silently
    - Sets `action: :insert`
-3. Merges recovered forms with existing forms in original root_uids order
+3. Merges recovered seed forms, applies an `:insert` op per recovered root, then one
+   `{:reorder, uids}` to the pre-disconnect root order (`apply_recovered_block_ops/3`)
 4. Replies `%{recovered: uids}` so the client can drop its snapshot
 
 Form field values — vars, refs, table_rows — are preserved because the recovered
@@ -392,9 +417,9 @@ frames over ~0.8 s. A newly mounted block receives the attributes like any
 other, so it needs no status query.
 
 ### Rendering
-- **`render_and_update_block_changeset(changeset, entry, has_vars?, has_table_rows?)`** — renders a child block's Liquex template, puts `rendered_html` and `rendered_at` into changeset
-- **`render_and_update_entry_block_changeset(changeset, entry, has_vars?, has_table_rows?, force_render?)`** — same but navigates through the entry_block wrapper to the nested block
-- `force_render?` — set true when container flips from `active: false` to `active: true`
+- **`render_and_update_block_changeset(changeset, entry, has_vars?, has_table_rows?, force_render? \\ false, render_html? \\ true)`** — renders a child block's template, puts `rendered_html` and `rendered_at` into changeset
+- **`render_and_update_entry_block_changeset(...)`** — same arguments, but navigates through the entry_block wrapper to the nested block
+- `force_render?` — from `should_force_live_preview_update?/3`: a block that owns children flips from `active: false` to `active: true`
 - The final `render_html?` argument comes from `render_live_preview_block?/1`.
   Slots, blocks in slots and single modules with children have their root
   rendered from the store and patched instead (`BlockField` "preview_root"), so
@@ -407,12 +432,8 @@ or requests a full refresh. Form coalesces full refreshes before collecting
 BlockField state; save/share collection remains separate.
 
 ### Reorder and preview
-There is **no position-response tracker.** Earlier versions waited for every
-block to confirm its new sequence before triggering a preview update; that
-machinery is gone (no `position_response`/`pending_positions` anywhere in
-`lib/` or `assets/src/`). Under the single-owner op store, reorder is a store
-mutation the BlockField applies in one place, so there is no fan-out of
-per-block confirmations left to await.
+Reorder is a store mutation the BlockField applies in one place, so a preview
+update after it waits on nothing: blocks do not confirm their new positions.
 
 ---
 
@@ -485,14 +506,16 @@ A decoded revision holds blocks, vars and table rows as they were stored: fields
 - The snapshot is cleared on the server's reply, not before the push
 
 ### `Brando.Block` (`assets/src/hooks/Block/index.js`)
-- **Purpose**: Auto-resize textareas
+- **Purpose**: Auto-resize textareas, and block-level field presence for root blocks
 - Uses `autosize` library on elements with `[data-autosize]` attribute
 - Re-runs on `mounted()` and `updated()`
+- Pushes `block_focused` (`{uid, field, label}`) on focusin/pointerdown and `block_blurred`
+  (`{uid, still_inside}`) once focus settles; `.ref_block` elements skip both
 
 ### `Brando.SortableBlocks` (`assets/src/hooks/SortableBlocks/index.js`)
 - **Purpose**: Drag-and-drop reordering via SortableJS
-- Config: `handle: '.sort-handle'`, `animation: 150`
-- **`onEnd`**: Pushes `reposition` event with `{old: oldIndex, new: newIndex, ...item.dataset}`
+- Config: `handle` from `data-sortable-handle` (default `'.sort-handle'`), `animation: 150`, `forceFallback: true`
+- **`onEnd`**: Pushes the `data-drop` event (default `reposition`) with `{old: oldIndex, new: newIndex, to: to.dataset, from: from.dataset, ...item.dataset}`, then renumbers footnotes
 - Prevents `phx-blur` from firing during drag (`focusout` stopImmediatePropagation)
 - Optional grouping via `data-blocks-wrapper-type` for cross-container drag
 
@@ -502,9 +525,10 @@ A decoded revision holds blocks, vars and table rows as they were stored: fields
 
 Saving a module re-syncs **every block that uses it, in every entry**:
 
-`Content.update_module/3` → `mutation :update, Module` → `Blocks.render_entries_with_module_id/2`
-→ `list_block_ids_using_module/2` → `sync_and_render_blocks/3` → `Blocks.sync_module/2`
-(one `Repo.update/1` per block, outside a transaction).
+`Content.update_module` (generated by `mutation :update, Module`) → `Blocks.render_entries_with_module_id/2`
+→ `list_block_ids_using_module/2` → `sync_blocks/3` → `Blocks.sync_module/2`
+(one `Repo.update/1` per block, outside a transaction), then the entries holding those
+blocks are queued for re-render.
 
 ### Rules
 
@@ -522,7 +546,7 @@ Saving a module re-syncs **every block that uses it, in every entry**:
   failed write — leaves the block behind, findable via
   `Blocks.list_stale_block_ids/2` and `count_stale_blocks/2`.
 - **A `media` module ref is a slot, not a type.** It legitimately drives
-  picture / video / gallery / svg block refs, each of which has a `MediaBlock`
+  picture / video / gallery / svg / file block refs, each of which has a `MediaBlock`
   clause in `apply_ref/3`. Use `Brando.Villain.Blocks.ref_types_compatible?/2`
   rather than comparing structs — treating that as a retype puts a warning in
   front of every media module edit.
@@ -532,39 +556,43 @@ Saving a module re-syncs **every block that uses it, in every entry**:
 
 ### Classifying a pending module change
 
-`ModuleDiff.diff(old_module, new_module_or_changeset)` → `:none` | `:metadata` |
-`:render` | `:compatible` | `:destructive` (most severe wins). `destructive?/1`
+`ModuleDiff.diff(old_module, new_module_or_changeset)` returns a `%ModuleDiff{}`;
+`classify/1` gives `:none` | `:metadata` | `:render` | `:compatible` | `:destructive`
+(most severe wins) and `effective?/1` is `classify/1 != :none`. `destructive?/1`
 gates the module editor's confirmation dialog; `summary/1` gives the lines it
 shows.
 
 `Module.uid` is lineage identity for definition imports and saved-content
-transfers. The Configuration → Import / export workflow resolves lineage to a
+transfers. Configuration → Content transfer resolves lineage to a
 destination-local ID and stamps new blocks with the destination module version.
-The legacy module-list copy/import flow still mints fresh UIDs at version 1.
+The module list's own Import / export (copy/paste of definitions) mints fresh UIDs
+at version 1.
 See [Content import and export](../../../guides/content_transfer.md) for the
 archive, dependency, permission and recovery contracts.
 
 ---
 
-## Block Editor: single-owner state & ops (Phase 3 architecture)
+## Block Editor: single-owner state & ops
 
 Each block is its own `live_component` and **owns its editing state exclusively** —
 after first mount, a parent re-render can never overwrite a block's form (`Block.update/2`
 drops incoming `:form`/`:children` assigns once initialized). Forms never travel between
 components. The parent (`BlockField`) owns **order + structure + a uid-keyed param-diff
 store** (`BlockField.Ops` — a pure, unit-tested reducer over
-`{order, parents, child_order, diffs, statuses, db_ids, deleted}`).
+`{order, parents, child_order, diffs, statuses, db_ids, rel_ids, row_order, keys, deleted}`).
 
 - **Every mutation is a named op applied by the reducer.** Children emit
   `{:update, uid, params_diff}`, `{:insert_child, parent, uid, at, params}`,
-  `{:reorder_children, parent, uids}`, `{:delete, uid}` etc. via `Block.emit_block_op/2`;
+  `{:set_field, uid, path, value, rev}`, `{:reorder_children, parent, uids}`, `{:delete, uid}` etc.
+  via `Block.emit_block_op/2`;
   BlockField applies its own ops for root-level structure. Ops carry **param diffs, never
   changesets or forms** (`Ops.block_diff_params/1`: persisted records diff by changes, NEW
   records snapshot full applied state — builders pre-populate changeset *data*, so a
   changes-only diff would drop `module_id`/vars/refs).
-- **The chokepoint: `Block.assign_block_form/2`.** Every handler that rebuilds a block's
-  form MUST assign it through this helper — it assigns `:form` AND emits the
-  `{:update, uid, diff}` op, keeping the store save-complete. Assigning `:form` directly
+- **The chokepoint: `Block.assign_block_form/2,3`.** Every handler that rebuilds a block's
+  form MUST assign it through this helper — it assigns `:form` AND emits the op for the
+  fields that changed (see "An event sends the fields it changed" below), keeping the
+  store save-complete. Assigning `:form` directly
   is reserved for render-artifact stamping (`rendered_html`/`rendered_at`).
 - **Save/preview/share materialize from the store** (`Ops.materialize_root/2`): sequence
   derives from list order (never from diff `"sequence"` keys), db ids re-attach so
@@ -582,7 +610,7 @@ store** (`BlockField.Ops` — a pure, unit-tested reducer over
   do not reintroduce one.
 - **The ONLY sanctioned parent→child form handoff after mount is `replace_form`**
   (cascades down the tree): used post-save (re-seed with fresh db ids) and when other
-  editors' ops arrive. Anything else re-introduces the historical clobber/FK-wipe class.
+  editors' ops arrive. Anything else re-introduces the clobber/FK-wipe class.
 - **Media commits: use `Block.commit_ref_data/2`** for one-shot ref commits
   (picker select / reset / upload-complete / image-editor) — never raw
   `send_update(..., event: "update_ref_data", ...)`. Not for per-keystroke updates.
@@ -591,14 +619,15 @@ store** (`BlockField.Ops` — a pure, unit-tested reducer over
   `Block.push_image_editor_init/3` (image editor from blocks).
 - **Multi-user editing goes through the entry's edit session** (`Brando.EditSession`,
   one process per open entry, Livebook's model). Each BlockField's store is a replica
-  (`BlockField.Replica`): `apply_block_op/3` applies a local op at once and casts it to the
-  session, which applies it with the SAME reducer, gives it a revision and broadcasts it;
+  (`BlockField.Replica`): BlockField's `apply_block_op/3` applies a local op at once, records
+  it as pending (`Replica.local/2`) and casts it to the session, which applies it with the SAME reducer, gives it a revision and broadcasts it;
   other editors' ops arrive as `{:edit_session, field, message}` (routed by the form
   hooks) and go onto the replica's confirmed state with this editor's unconfirmed ops
   replayed on top, so everyone converges on the session's order. There is no snapshot
   shipping and no late-joiner request: a joiner gets the session's state. Remote changes
   refresh affected roots through `replace_form` (coalesced); a root the local user works
-  in (`@local_focus`) waits until they leave it. Save, preview, share and recovery copies
+  in (`@local_focus`) is refreshed without re-booting the focused input
+  (`remount_js: :skip_focused`) and once more when they leave the field. Save, preview, share and recovery copies
   read `EditSession.fetch/3`; after a save the BlockField hands the saved rows to
   `EditSession.rebase/4`, which replays only the ops that arrived during the save and moves
   every replica onto the new rows. A revision loaded as a working copy (revisions drawer,
@@ -612,7 +641,8 @@ store** (`BlockField.Ops` — a pure, unit-tested reducer over
   the mark instead of carrying the replaced work back. Anything that replaces the editor's blocks
   wholesale must go through the session as ops or detach like this — never leave the
   session holding work the editor no longer shows. Writes outside the editor (Assistant apply, revision
-  activation in `Revisions.set_entry_to_revision`, content transfer) call
+  activation in `Revisions.set_entry_to_revision`, content transfer, stale-block upgrades in
+  `Brando.Content.StaleBlocks`) call
   `EditSession.sync_saved/1` (`Ops.carry/3`), which waits for the surrounding
   `Brando.Repo.transaction/2` to commit (`Brando.Repo.after_commit/1`) and is dropped on
   rollback — never sync from uncommitted rows. A rebase that reloads the Form's rows while a
@@ -624,13 +654,14 @@ store** (`BlockField.Ops` — a pure, unit-tested reducer over
   session tracks the last op seq it handled per client and returns it with every
   state/rebase, so `Replica.reset/2` drops pending ops it already folded in. A carry
   conflict (another save removed a block this editor had unsaved work in) comes back to
-  that editor as a new block (`<uid>-kept`, its refs with new uids) with a toast — keep
+  that editor as a new block (`<uid>-kept`, or `-kept-2` and on when taken; its refs with
+  new uids) with a toast — keep
   conflicts explicit, never drop work silently. The session groups the conflicts by the
   top-most block the write removed (`group`) and asks ONE editor per group to bring back
   everything under it as one copy, `<group>-kept` (`rescues` in the rebase message): an
   editor here who changed them (it keeps each editor's changed uids, `Ops.op_uids/1`, also
-  after they leave), else any editor here (`orphan?`). Excluded: a dead process, and the
-  caller whose replica moves on with the reply (a join, the replica's own
+  after they leave), else any editor here (`orphan?`). Excluded: a dead process, a read-only
+  editor, and the caller whose replica moves on with the reply (a join, the replica's own
   `EditSession.rebase(..., replica: true)`) — but NOT the process behind `sync_saved/1`,
   whose block fields see the broadcast (activating a revision from one's own drawer).
   Every replica computes its payload; the rescuer inserts, then calls
@@ -647,7 +678,7 @@ store** (`BlockField.Ops` — a pure, unit-tested reducer over
   goes back under its nearest ancestor that is still there (`{:insert_child, ...}`); removed
   ancestors in between come back as `-kept` shells holding only the path to it, and with no
   surviving ancestor the top shell is a root — a child is never brought back as a root on
-  its own. Applying a recovery copy is a `{:carry, ops, base}` op over the
+  its own. Applying a recovery copy is a `{:carry, carried, base}` op (two `Ops` states) over the
   session state, not a state replacement. Editors without `:update` on the entry join
   read-only (the session refuses their ops). Ops must stay pure: the session and every
   replica must reach the same state from the same ops.
@@ -683,7 +714,7 @@ store** (`BlockField.Ops` — a pure, unit-tested reducer over
   two inserts at one place both land there. Saves still write the integer `sequence`
   from list order; there is no key column.
 - **Delete undo is store replay**: local deletes stash `Ops.bin_snapshot/2` (structure +
-  diffs + statuses + db ids + location) BEFORE the delete op; undo replays it as a
+  diffs + statuses + db ids + keys + location) BEFORE the delete op; undo replays it as a
   `{:restore, snapshot}` op — restored roots mount fresh from a re-materialized seed form,
   restored children reach their mounted root via the `replace_form` cascade. The op reaches
   the other editors through the session (a uid left in a remote `deleted` list would kill

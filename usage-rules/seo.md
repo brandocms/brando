@@ -50,8 +50,8 @@ missing configuration without showing placeholder content:
 For code outside a request, `Brando.Cache.Identity.get("en")` returns that
 language's record, or `%{}` if absent. It does not fall back to another language.
 `Brando.Sites.render_identity("en", :name)` is the scalar convenience API.
-Use the cached record's `links` collection for named-link lookup; older unscoped
-identity helpers are not a recipe for multilingual output. Links also become
+`Brando.Sites.get_link/1` does not take a language; for multilingual output,
+look links up in the cached record's `links` collection. Links also become
 `og:see_also` tags, and a link to an X profile (`https://x.com/example`) gives
 pages their `twitter:site` handle; see [Page metadata](deps/brando/guides/meta.md#x-cards).
 
@@ -71,15 +71,13 @@ language's configured robots text, or a default that disallows `/admin/`, then
 the AI crawler policy below, then a `Sitemap:` line once a sitemap has been
 generated (unless the robots text names one). It does not add an environment-specific crawl block
 for you; inspect the intended deployment and configure its policy explicitly.
-The base URL field does not reconfigure Phoenix's endpoint or your DNS. Set the
-endpoint URL correctly
-for canonical URLs, metadata, and [sitemap generation](deps/brando/guides/sitemaps.md).
+The base URL field does not set Phoenix's endpoint URL. Set that too, for
+canonical URLs, metadata, and [sitemap generation](deps/brando/guides/sitemaps.md).
 
 `ai-input` is `no` only when every AI search and user-fetch crawler is blocked.
 The robots text is never changed; the block is added when robots.txt is served.
-Nothing is added until a crawler is blocked or a training preference chosen,
-so a site that never opens the setting serves what it did before. **View
-robots.txt** opens the result. The policy is stored per language, like the
+Nothing is added until a crawler is blocked or a training preference chosen.
+**View robots.txt** opens the result. The policy is stored per language, like the
 robots text, in the SEO entry's `crawler_policy`.
 
 Blocking is a request: the user-fetch crawlers say robots.txt may not apply to

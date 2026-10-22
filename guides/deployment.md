@@ -98,7 +98,7 @@ migration rather than stopping partway through. An existing
 ReleaseTasks module and release definition are kept, with a notice when the
 module has no `migrate/0` or the release does not write the tarball.
 
-An application installed before Brando did this gets the same with:
+To add them to an existing application, run:
 
 ```bash
 mix brando.gen.release
@@ -506,8 +506,7 @@ Stage 7: release       → mix release (create OTP release tarball)
 <!-- usage-rules:start topic="deployment" -->
 
 Assets (CSS, JS) are built inside the Docker container and baked into the release
-at `priv/static/`. There is no separate asset upload step — everything ships as
-one tarball.
+at `priv/static/`, so everything ships as one tarball.
 
 `mix brando.install` writes Brando's
 [Dockerfile](https://github.com/brandocms/brando/blob/main/priv/templates/brando.install/Dockerfile)
@@ -633,8 +632,8 @@ name. Your frontend still has to report errors with `@sentry/browser`. Without
 the secret the step does nothing.
 
 Projects generated before 0.55 move their frontend maps to
-`priv/static/assets/__srcmaps/`, which `Plug.Static` still serves. The digest
-now deletes them there too. To upload them, replace those `mkdir`/`mv` lines
+`priv/static/assets/__srcmaps/`, which `Plug.Static` serves. The digest
+deletes them there too. To upload them, replace those `mkdir`/`mv` lines
 with the `RUN --mount=type=secret,id=sentry_auth_token` step from the
 [Dockerfile template](https://github.com/brandocms/brando/blob/main/priv/templates/brando.install/Dockerfile).
 

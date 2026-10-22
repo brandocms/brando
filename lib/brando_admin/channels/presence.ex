@@ -146,19 +146,18 @@ defmodule BrandoAdmin.Presence do
 
     # Recording the departure here, rather than in a subscriber, is the whole
     # point. `BrandoAdmin.Chrome` is the only subscriber to "presence" and it is
-    # a sticky LiveView — one per open admin browser — and it used to own this
-    # write. So a user's "last seen" was recorded by *other people's* browsers:
-    # when the last admin left, the broadcast went out and the only process that
-    # would have persisted it was the one dying. Someone working alone never had
-    # a departure recorded at all, and their timestamp sat at whatever it was the
-    # last time a colleague happened to be online to witness them leaving.
-    # Reported from production as a user's last-seen frozen twelve days back,
-    # on a site with two editors who rarely overlap.
+    # a sticky LiveView — one per open admin browser. Owning this write there
+    # would mean a user's "last seen" is recorded by *other people's* browsers:
+    # when the last admin leaves, the broadcast goes out and the only process
+    # that would persist it is the one dying. Someone working alone would never
+    # have a departure recorded at all, and their timestamp would sit at
+    # whatever it was the last time a colleague happened to be online to
+    # witness them leaving.
     #
     # `handle_metas/4` runs in the presence process for every leave, watchers or
     # not, which is the property the write needs. It is also the only place that
-    # sees a leave exactly once, so the redundant write every online browser used
-    # to perform goes away with it.
+    # sees a leave exactly once, so there is no redundant write per online
+    # browser.
     defp record_last_seen(user_id) do
       Brando.Users.set_last_seen(%Brando.Users.User{id: user_id})
       :ok

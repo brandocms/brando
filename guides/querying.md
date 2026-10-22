@@ -114,14 +114,13 @@ revision.
 | `status` | both | Filter a schema with a status field |
 | `language`, `exclude_language` | both | Include or exclude languages |
 | `join` | list | Left join associations |
-| `preload` | both | Use the established low-level preload API |
+| `preload` | both | Use the low-level preload API |
 | `include` | both | Recursively load associations with per-node options |
 | `with_deleted` | both | Include soft-deleted entries |
 | `revision` | single | Retrieve a stored revision by number |
 | `cache` | both | Cache the result |
 
-Unknown top-level options are rejected by the query reducer rather than being
-silently ignored.
+The query reducer rejects unknown top-level options.
 
 <!-- usage-rules:end -->
 
@@ -302,7 +301,7 @@ MyApp.Projects.list_projects(%{status: :deleted})
 
 Brando has two association-loading APIs:
 
-- `preload` is the established, low-level API and remains backwards compatible.
+- `preload` is the low-level API.
 - `include` is association-aware, recursive, and provides a uniform place for
   field selection, ordering, nesting, and custom queries.
 
@@ -312,7 +311,7 @@ the associated schema and configure the association as a query node.
 
 ### Preload
 
-Simple and nested Ecto preloads work as before:
+`preload` takes simple and nested Ecto preloads:
 
 ```elixir
 preload: [:category, creator: :avatar]
@@ -324,7 +323,7 @@ An association can be loaded through a join:
 preload: [category: :join]
 ```
 
-Ordered preload queries can use the established tuple form or an Ecto query:
+Ordered preload queries can use a tuple form or an Ecto query:
 
 ```elixir
 preload: [comments: {MyApp.Projects.Comment, [desc: :inserted_at]}]
@@ -339,8 +338,7 @@ MyApp.Projects.list_projects(%{
 })
 ```
 
-The configuration-map form is also available for legacy or specialized
-preloads:
+The configuration-map form is also available for specialized preloads:
 
 ```elixir
 preload: [

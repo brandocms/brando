@@ -133,7 +133,8 @@ use Brando.Blueprint,
   extensions: [MyApp.BlueprintExtension]
 ```
 
-Write the options as literals; module attributes are not available yet.
+Write the options as literals; `use` reads them before module attributes are
+evaluated.
 
 * `application`, `domain`, `schema` (required): PascalCase module segments.
   Brando derives conventional module names from them: the context
@@ -292,8 +293,8 @@ URL fails because a route does not exist or an argument is missing, rather
 than raising. `Brando.Blueprint.URL.resolve/1` calls it for any entry, and
 `resolve(entry, :with_host)` adds the endpoint's host.
 
-The tuple form `absolute_url {:i18n, :article_path, :detail, [:slug]}` still
-compiles, with a deprecation warning; use HEEx with `route_i18n`.
+The tuple form `absolute_url {:i18n, :article_path, :detail, [:slug]}` is
+deprecated and compiles with a warning; use HEEx with `route_i18n`.
 
 <!-- usage-rules:start topic="blueprint-reference" -->
 
@@ -542,7 +543,7 @@ For fields, `__attributes__/1` in `Brando.Blueprint.Attributes`,
 
 ## Deprecated declarations
 
-These still compile but only print a warning; what they declare is dropped.
+These compile with a warning, and what they declare is dropped.
 `mix brando.migrate54` rewrites them:
 
 * `listing_query/1` and `form_query/1`: use `query`.

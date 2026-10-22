@@ -1,14 +1,13 @@
 defmodule BrandoAdmin.FormRecoveryTest do
-  # The first mounted-LiveView tests in this repo. Everything before them drove
-  # form components through `update/2` and `handle_event/3` directly, which
-  # cannot see the thing the form audit is about: what survives the LiveView
-  # process dying, and why.
+  # Form recovery through a mounted LiveView. Driving form components through
+  # `update/2` and `handle_event/3` directly cannot see what survives the
+  # LiveView process dying, and why.
   #
-  # The contract these pin, in the audit's own words: LiveView's default form
-  # recovery replays the DOM against a changeset freshly loaded from the
-  # database. So a value is recoverable **if and only if** it has a DOM input
-  # backing it. Everything Phase 0 fixed was a value that lived only in
-  # changeset `changes` or in component assigns, where recovery could not reach.
+  # The contract these pin: LiveView's default form recovery replays the DOM
+  # against a changeset freshly loaded from the database. So a value is
+  # recoverable **if and only if** it has a DOM input backing it. A value that
+  # lives only in changeset `changes` or in component assigns is out of
+  # recovery's reach.
   use Brando.LiveCase
 
   alias Brando.Factory
@@ -228,7 +227,7 @@ defmodule BrandoAdmin.FormRecoveryTest do
   end
 
   describe "form recovery" do
-    # The baseline the rest of the audit is measured against: a crash on its own
+    # The baseline the rest of this file is measured against: a crash on its own
     # restores nothing. Recovery is the *client* replaying the DOM afterwards,
     # not the server remembering anything.
     test "an unsaved edit is gone after the process dies", %{conn: conn, page: page} do
@@ -270,7 +269,7 @@ defmodule BrandoAdmin.FormRecoveryTest do
 
     # The one above replays with the `_target` a *keystroke* would carry. This
     # one replays with the `_target` **recovery** actually carries, which is not
-    # the same thing and is where the bug lived: `pushFormRecovery` has no
+    # the same thing: `pushFormRecovery` has no
     # originating element, so it names the first non-hidden input in the form —
     # and on the entry form that is the hidden-by-CSS `image_editor_upload` file
     # input (`form.ex:2105`), not an entry field at all.
@@ -292,9 +291,9 @@ defmodule BrandoAdmin.FormRecoveryTest do
       assert form_params(recovered, "#page_form_form")["page"]["title"] == "Edited title"
     end
 
-    # `validate` used to branch on `_target` with only two clauses and no
-    # fallback, so a change event carrying no target at all killed the form
-    # LiveView with `case_clause: nil` — taking every unsaved edit with it.
+    # `validate` handles a change event carrying no target at all. Branching on
+    # `_target` with no fallback clause would kill the form LiveView with
+    # `case_clause: nil` — taking every unsaved edit with it.
     test "a validate with no _target does not kill the form", %{conn: conn, page: page} do
       {view, html} = live_form(conn, "/admin/pages/update/#{page.id}")
 
@@ -348,10 +347,10 @@ defmodule BrandoAdmin.FormRecoveryTest do
   end
 
   describe "recovery-critical DOM" do
-    # C2 shipped a drawer-recovery form that is rendered unconditionally,
-    # precisely so it exists in both the old and the new DOM when LiveView's
-    # recovery diff runs. If it ever became `:if`-gated again the drawer's
-    # in-progress edits would be unrecoverable, exactly as C2 described.
+    # The drawer-recovery form is rendered unconditionally, precisely so it
+    # exists in both the old and the new DOM when LiveView's recovery diff
+    # runs. If it ever became `:if`-gated the drawer's in-progress edits would
+    # be unrecoverable.
     test "the drawer recovery form is always in the DOM", %{conn: conn, page: page} do
       {_view, html} = live_form(conn, "/admin/pages/update/#{page.id}")
 
@@ -364,8 +363,8 @@ defmodule BrandoAdmin.FormRecoveryTest do
       assert Floki.attribute(form, "phx-change") == ["noop"]
     end
 
-    # C1/C3 key the block recovery snapshot on the hook element. C4 made that key
-    # entry-scoped, which only works if the entry id actually reaches the DOM.
+    # The block recovery snapshot is keyed on the hook element and scoped to
+    # the entry, which only works if the entry id actually reaches the DOM.
     test "the block field hook element carries its entry id", %{conn: conn, page: page} do
       {view, _html} = live_form(conn, "/admin/pages/update/#{page.id}")
 

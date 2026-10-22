@@ -1401,12 +1401,12 @@ export default app => ({
    *
    * The focal is a percentage of the image it is stored on, and after a crop that
    * image is the region — so a focal left in the original's coordinates points
-   * somewhere else entirely. We used to save the crop's centre measured against
-   * the original: cropping the top left quarter of a 1000x800 image saved (25,
-   * 25) for a file whose centre is by definition (50, 50), and every `crop: true`
-   * size derived from it was then anchored toward the corner. The square `thumb`
-   * is the one that shows it worst, and `build_crop_groups/1` filters it out of
-   * the previews, so nothing here would have shown the damage either.
+   * somewhere else entirely. Measured against the original, cropping the top
+   * left quarter of a 1000x800 image would save (25, 25) for a file whose centre
+   * is by definition (50, 50), and every `crop: true` size derived from it would
+   * be anchored toward the corner. The square `thumb` is the one that shows it
+   * worst, and `build_crop_groups/1` filters it out of the previews, so nothing
+   * here would show the damage either.
    */
   _remapFocalToRegion(region) {
     const focalPxX = (this.focalX / 100) * this.imageWidth
@@ -1537,7 +1537,7 @@ export default app => ({
   },
 
   // A copy is named after the image it was made from ("lobby-copy.jpg"),
-  // now that uploads keep their names.
+  // as uploads keep their names.
   copyFilename() {
     const base = (this.imageSrc || '').split('/').pop().split('?')[0].replace(/\.[^.]+$/, '')
     return `${base || 'image'}-copy.jpg`

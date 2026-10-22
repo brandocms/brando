@@ -184,9 +184,9 @@ test('opens image editor, adjusts focal point, and saves', async ({ page }, test
 
   // Dragging the frame moves the focal by as much as the frame can follow, not
   // by as much as the pointer moved. The frame is centred on the focal and then
-  // clamped to the image, so once it is against an edge the focal used to carry
-  // on alone: the drag came loose from the pointer and left the focal somewhere
-  // nobody pointed at.
+  // clamped to the image, so once it is against an edge a focal that carried
+  // on alone would come loose from the pointer and end up somewhere nobody
+  // pointed at.
   const focalPosition = async () => {
     const pin = await editorDrawer.locator('.image-editor-focal-pin').boundingBox()
     return {

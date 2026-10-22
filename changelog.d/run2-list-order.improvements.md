@@ -1,13 +1,4 @@
-- **`mix brando.migrate55` gives public list queries a defined order.** The
-  0.55 data migrations rewrite rows, so a query without `ORDER BY` returns
-  them in a new storage order: on one production site the first menu tab changed, and
-  articles with equal `sequence` reshuffled. Calls to your contexts'
-  `list_<plural>/1` (from `Brando.Query`'s `query :list`) whose literal
-  options map, in the call or bound to a variable earlier in the function,
-  orders a Sequenced Blueprint only by `sequence` (`"asc sequence"`,
-  `{:asc, :sequence}`, `[{:asc, :sequence}]`) now order by
-  `"asc sequence, desc inserted_at"`, the admin listing's order, or by
-  `"asc sequence, asc id"` when the Blueprint has no timestamps. Calls with
-  no `order:` at all, in `.ex` files and `.heex` templates, are listed with
-  file and line for you to choose an order, since adding one changes what
-  the page shows.
+- `mix brando.migrate55` adds a tiebreak to `list_<plural>/1` calls ordered only by `sequence`
+  (`"asc sequence, desc inserted_at"`), since the 0.55 data migrations change the rows' storage
+  order ([#3167](https://github.com/brandocms/brando/pull/3167)).
+  Give an `order:` to the calls with none that it lists.

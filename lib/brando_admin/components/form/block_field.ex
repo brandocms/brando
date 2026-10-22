@@ -3,7 +3,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
   The owner of a block field's tree state: root order, nesting structure and
   the uid-keyed param-diff store (`BlockField.Ops`).
 
-  ## State ownership (Phase 3 single-owner architecture)
+  ## State ownership (single owner)
 
   * **This component owns**: the op store (`@block_ops` — order, parents,
     child order, diffs, statuses, db ids, deleted list), clipboard meta, the
@@ -493,8 +493,8 @@ defmodule BrandoAdmin.Components.Form.BlockField do
   #
   # The child's changeset is rebuilt HERE, from the op store, rather than
   # accepted from the source parent — that parent only holds a mount-time seed
-  # form, so a moved child used to arrive with its original content and wipe the
-  # user's edits when the target re-registered its diff.
+  # form, so a child taken from it would arrive with its original content and
+  # wipe the user's edits when the target re-registered its diff.
   def update(
         %{event: "insert_extracted_child", target_parent_uid: target_uid, child_uid: uid, sequence: seq},
         socket
@@ -2335,8 +2335,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
 
   # Whether the mounted root behind `form` (freshly loaded after a save)
   # already holds exactly that row, so re-seeding it would change nothing.
-  # All three are required; a root failing any of them is re-seeded, as every
-  # root used to be:
+  # All three are required; a root failing any of them is re-seeded:
   #
   #   * The store has no diff for the root or anything under it, so the
   #     mounted form is still its seed form. An edited root keeps a form
@@ -3029,7 +3028,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
 
   # Structural changes update the preview directly — sequence is derived
   # from list order at materialization, so there is no per-block restamp
-  # round-trip (nor an ack barrier) to wait for anymore.
+  # round-trip (nor an ack barrier) to wait for.
   defp refresh_live_preview(socket) do
     send_update(BrandoAdmin.Components.Form,
       id: socket.assigns.form_id,

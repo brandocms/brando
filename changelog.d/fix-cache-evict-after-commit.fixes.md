@@ -1,18 +1,8 @@
-- **A cached query no longer keeps an entry as it was before a save.** A
-  save inside a transaction (every save from the admin with group
-  authorization) cleared the entry's cached queries before the save was
-  committed, so a page read by a visitor in between cached the old content
-  again, for as long as the query caches (15 minutes by default). Cached
-  queries are now cleared again once the save has committed.
+- A save inside a transaction no longer leaves a cached query holding the entry as it was before the
+  save ([#3142](https://github.com/brandocms/brando/pull/3142)).
 
-- **One background job per video and per SEO suggestion.** A Vimeo upload
-  that took more than a minute got a second status check that polled Vimeo
-  beside the first until the video was ready; fetching video details twice
-  while the first lookup still waited looked each video up twice; and two
-  runs that queued the same meta description or alt text asked the AI for
-  it twice. Each now has one waiting job at a time.
+- A Vimeo status check, a video details lookup and an AI SEO suggestion each run as one background
+  job at a time ([#3142](https://github.com/brandocms/brando/pull/3142)).
 
-- **Two search index rebuilds asked for at once queue one.** Without
-  tenancy, a rebuild's job carried nothing for its uniqueness to compare,
-  so two editors starting a rebuild from Utilities at the same moment
-  rebuilt the index twice.
+- Two search index rebuilds started at once queue one rebuild
+  ([#3142](https://github.com/brandocms/brando/pull/3142)).

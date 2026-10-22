@@ -246,7 +246,7 @@ defmodule BrandoAdmin.Components.Form.Block.Events do
   ## Block events
 
   # Config chrome is not in the DOM until it is asked for, so opening is a
-  # server round trip rather than the pure-client `show_modal/1` it used to be.
+  # server round trip rather than a pure-client `show_modal/1`.
   # `Content.modal show={true}` makes it visible on arrival — no follow-up JS.
   def handle_block_event("open_block_config", %{"uid" => uid}, socket) do
     {:halt, assign(socket, :config_open, uid)}

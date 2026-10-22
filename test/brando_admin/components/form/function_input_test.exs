@@ -1,8 +1,9 @@
 defmodule BrandoAdmin.Components.Form.FunctionInputTest do
   @moduledoc """
   A blueprint input can be a function component
-  (`input :size, &MyAdmin.size_picker/1`). `Primitives.input/1` used to put the
-  function itself in the wrapper's `data-component` attribute, which raised.
+  (`input :size, &MyAdmin.size_picker/1`). `Primitives.input/1` must not put the
+  function itself in the wrapper's `data-component` attribute: rendering it
+  raises.
   """
   use ExUnit.Case, async: true
 

@@ -11,8 +11,7 @@ icons with `width`/`height` and colour them with `color`. Target one icon with
 
 Keep icons as masked spans. An SVG sprite (`<svg><use href>`) was measured on
 the 115-block e2e entry: one extra node and four dynamics per icon cost 13% on
-mount and broke the bench's payload budget. The span adds nothing over the
-Heroicons it replaced.
+mount and broke the bench's payload budget.
 
 ## Blueprint content-type icons
 
@@ -52,7 +51,7 @@ the search field stays usable throughout. Keep stale results inert while
 loading, honor reduced motion, and retry initialization after reconnecting.
 Typing subsequent queries does not restart the opening skeleton.
 
-Configuration's submenu is grouped (#3102): Site, Publishing, Building blocks
+Configuration's submenu is grouped: Site, Publishing, Building blocks
 and Operations, each under a small heading in the section labels' mono capitals
 (10px, muted, no rule), aligned with the icon column, 10px between groups. A
 group with nothing the user may open has no heading. In `BrandoAdmin.Menu`

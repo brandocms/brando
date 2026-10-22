@@ -1,12 +1,11 @@
 defmodule Brando.HTML.VideoFallbackTest do
   @moduledoc """
-  `Brando.HTML.Video.video/1` used to be a partial function over its `:video`
-  assign: clauses for each provider record, for a binary src, and for `nil` —
-  and nothing else. A miss raised FunctionClauseError out of
-  `Brando.Villain.Tags.Video.render/2`, which in the admin runs inside live
-  preview, so it took the entry form down mid-save with every unsaved change in
-  it. Observed in production while saving a page whose preview rendered
-  `{% video entry.listing_video %}`.
+  `Brando.HTML.Video.video/1` has clauses for each provider record, for a
+  binary src, and for `nil` — and a fallback for anything else. Without it a
+  miss raises FunctionClauseError out of `Brando.Villain.Tags.Video.render/2`,
+  which in the admin runs inside live preview, so it takes the entry form down
+  mid-save with every unsaved change in it — for example while saving a page
+  whose preview renders `{% video entry.listing_video %}`.
 
   Both shapes below are ordinary states, not authoring mistakes, which is why
   the fallback renders the same empty comment `nil` already got rather than an

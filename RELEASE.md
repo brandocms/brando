@@ -16,7 +16,7 @@ Publishing is manual: no workflow builds or publishes the packages yet.
    of `mix check` and CI and fails when the versions disagree.
 2. Collate the changelog: `scripts/changelog collate` moves the
    `changelog.d/` fragments into the `## … (Unreleased)` section of
-   `CHANGELOG.md` and deletes them, adding each entry's PR number from the
+   `CHANGELOG.md` and deletes them, adding each entry's pull request link from the
    merge that brought its fragment in. Run it on an up-to-date `main` with
    its history (not a shallow clone): it names any fragment no pull request
    merged. Rename that heading to `## X.Y.Z[-beta.N]` and review the

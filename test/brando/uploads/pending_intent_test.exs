@@ -1,14 +1,13 @@
 defmodule Brando.Uploads.PendingIntentTest do
-  # Regression coverage for D1 in the form audit — a client-direct upload that
-  # completed after the sticky UploadManager remounted was silently dropped.
+  # Coverage for pending upload intents — a client-direct upload that completes
+  # after the sticky UploadManager remounted must still be finalized.
   #
-  # The key and resolved config target needed to finalize lived only in the
-  # manager's `items` assign, and `mount/1` hard-assigns `items: %{}`. So a
-  # reconnect (or any navigation that rebuilt the Chrome) mid-transfer left the
-  # bytes in the bucket with no `File`/`Image` row, no log, and no reaper —
-  # videos have `VideoUploadReaper`, files and images had nothing.
+  # `mount/1` hard-assigns `items: %{}`, so a reconnect (or any navigation that
+  # rebuilt the Chrome) mid-transfer loses the in-memory key and resolved config
+  # target. Kept only there, the bytes would be left in the bucket with no
+  # `File`/`Image` row, no log, and no reaper.
   #
-  # Intents are now written at presign and removed on finalize / error / cancel.
+  # Intents are written at presign and removed on finalize / error / cancel.
   # What survives is an abandoned transfer, and belongs to
   # `Brando.Worker.UploadIntentReaper`.
   use ExUnit.Case, async: false
@@ -129,7 +128,7 @@ defmodule Brando.Uploads.PendingIntentTest do
 
   describe "the reaper" do
     test "only touches intents past the cutoff", _ctx do
-      # Without an S3 mock (a Phase 4 task) the delete always fails here, so the
+      # These tests do not stub the bucket, so the delete always fails here and the
       # SUCCESS path — delete object, drop row — is not reachable from a test
       # and is deliberately not asserted. What is observable is the age filter:
       # the reaper reports exactly one failure, not two, so it never considered
@@ -152,11 +151,10 @@ defmodule Brando.Uploads.PendingIntentTest do
     end
 
     test "a bucket that refuses the delete KEEPS the row and reports failure" do
-      # Review finding W2/W3. Dropping the row here was the original behaviour
-      # and it destroyed the only durable record that an orphaned object exists
-      # — the object has no asset row, so nothing else can ever find it again.
-      # It also made `max_attempts: 2` dead code, since perform/1 always
-      # returned :ok. This target has no CDN configured, so the delete errors.
+      # Dropping the row here would destroy the only durable record that an
+      # orphaned object exists — the object has no asset row, so nothing else
+      # can ever find it again. Returning :ok would also make `max_attempts: 2`
+      # dead code. This target has no CDN configured, so the delete errors.
       ref = Ecto.UUID.generate()
 
       {:ok, _} =
@@ -193,13 +191,14 @@ defmodule Brando.Uploads.PendingIntentTest do
   end
 
   describe "direct_complete after the manager remounted" do
-    # The behavioural core of D1. A freshly-mounted manager has `items: %{}`,
-    # so the completion arrives with nothing in memory to match it against.
+    # The behavioural core of pending intents. A freshly-mounted manager has
+    # `items: %{}`, so the completion arrives with nothing in memory to match it
+    # against.
     #
-    # There is no S3 mock boundary in this repo yet (a Phase 4 task), so
-    # `finalize_direct/3` cannot be driven to success here. What these assert is
-    # the part that was actually broken: the completion now REACHES finalize via
-    # the persisted intent instead of falling into a silent `_ -> {:noreply}`.
+    # These do not stub the bucket, so `finalize_direct/3` is not driven to
+    # success here (`DirectFinalizeTest` does that). What these assert is that
+    # the completion REACHES finalize via the persisted intent instead of
+    # falling into a silent `_ -> {:noreply}`.
     # config/test.exs pins the logger at :error, so the info/warning lines these
     # tests assert on never reach a handler. `async: false` throughout, so
     # changing it for the block is safe.
@@ -249,10 +248,10 @@ defmodule Brando.Uploads.PendingIntentTest do
                    )
         end)
 
-      # These two lines are what separate the fix from the bare `_ -> {:noreply}`
-      # it replaced. Without an S3 mock, finalize fails either way, so "the
-      # intent survives" and "nothing crashed" are ALSO true of the pre-fix
-      # code — the log is the only observable difference.
+      # These two lines are what separate recovery from a bare
+      # `_ -> {:noreply}`. With no bucket stubbed, finalize fails either way, so
+      # "the intent survives" and "nothing crashed" would ALSO be true of a
+      # silent drop — the log is the only observable difference.
       assert log =~ "recovering direct_complete for ref"
       assert log =~ "recovering direct_complete failed"
 
@@ -262,9 +261,8 @@ defmodule Brando.Uploads.PendingIntentTest do
     end
 
     test "refuses an intent belonging to another user", ctx do
-      # Review finding W5. `finalize_orphaned_complete/3` used the CALLING
-      # socket's user, so an intent recovered under someone else's session would
-      # have attributed the asset to whoever sent the ref.
+      # Finalizing under the CALLING socket's user would attribute an intent
+      # recovered under someone else's session to whoever sent the ref.
       other = Factory.insert(:random_user)
       ref = Ecto.UUID.generate()
       {:ok, _} = Uploads.create_pending_intent(attrs(%{ref: ref, creator_id: other.id}))

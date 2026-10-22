@@ -1,8 +1,8 @@
 defmodule BrandoAdmin.Components.Form.Block.RefEventsTest do
-  # Regression coverage for the ref-management block events.
+  # Coverage for the ref-management block events.
   #
-  # `refs` is `relation :refs, :has_many` (Brando.Content.Block), but these three
-  # handlers drove it with `Changeset.get_embed/put_embed`, which raises
+  # `refs` is `relation :refs, :has_many` (Brando.Content.Block), so these three
+  # handlers must drive it as an assoc. `Changeset.get_embed/put_embed` raises
   # "expected refs to be an embed, got: assoc" and takes the editor LiveView
   # down — discarding every unsaved change in that process. All three are
   # reachable from live buttons in `block/render.ex`.

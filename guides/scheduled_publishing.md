@@ -56,8 +56,8 @@ spending its attempts, for as long as the sweep would still take the date
 (`sweep_days`); after that, or when the site is archived, the job ends and
 leaves the entry as it is. A refusal for any other reason is retried, and on the
 last attempt taken back as above, so the sweep never publishes it as the
-system. A save that fails for another reason, such as validation, is retried
-as before. Without group authorization nothing is refused: schedules run as
+system. A save that fails for another reason, such as validation, is
+retried. Without group authorization nothing is refused: schedules run as
 the user who made them, deactivated or not, and as the system when the account
 no longer exists.
 
@@ -164,8 +164,8 @@ never publishes what the job's user is refused; a job waiting for another,
 later date (one the entry had before an archive was restored) does not hold it
 up. Expiries do not wait.
 
-It only takes dates from the last seven days, so dates left from before the
-sweep existed are not acted on when it first runs; change the window with
+It only takes dates from the last seven days, so older missed dates are not
+acted on; change the window with
 `config :brando, Brando.Publisher, sweep_days: 7`. A content type whose table
 cannot be read in an environment (its migrations lag) is logged and skipped,
 and an entry that fails to save is logged and left alone for a day, or until
@@ -175,7 +175,8 @@ it is saved again. To see what it would do, in every environment:
 mix brando.scheduled_publishing.sweep          # list, change nothing
 mix brando.scheduled_publishing.sweep --apply  # do it now
 ```
- An application that sets
+
+An application that sets
 `config :brando, Oban` itself must add
 `{"*/10 * * * *", Brando.Worker.ScheduledPublishingSweep}` to its crontab;
 `mix brando.doctor` warns when it is missing.

@@ -21,7 +21,7 @@ metadata slots with their existing callers. Do not add per-field overrides that
 make Related entries look different from the other identifier contexts.
 
 Action, sort, bulk-selection and block menus share `%admin_dropdown_panel` in
-`FloatingDropdown.css`: white surface, muted border, light shadow. Their rows are
+`FloatingDropdown.css`: white surface, `--brando-line` border, light shadow. Their rows are
 [menu items](buttons-badges-menus.md#menu-items). Keep only positioning and trigger styling in the
 component.
 An action menu on the `Brando.FloatingDropdown` hook (the entry toolbar's More,

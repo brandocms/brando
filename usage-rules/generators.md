@@ -64,7 +64,7 @@ Before committing a generated migration:
    entries relations, and alternates.
 4. Run the affected application tests.
 
-Deployment still uses the application's normal Ecto migration command. The Blueprint task generates source files; it
+Deployment uses the application's normal Ecto migration command. The Blueprint task generates source files; it
 never changes a database, and reads one only for warnings or with `--reconcile`.
 
 ### Renaming an attribute
@@ -83,7 +83,7 @@ ambiguous state. The hint may remain in the Blueprint after the migration; once 
 
 ### Changes that require a hand-written migration
 
-Table and primary-key changes are deliberately refused. Their safe implementation depends on deployed data, foreign
+Table and primary-key changes are refused. Their safe implementation depends on deployed data, foreign
 keys, application rollout order, and sometimes concurrent versions of the application. Write and test the Ecto
 migration yourself, then record the new known-good Blueprint state:
 

@@ -19,7 +19,7 @@ defmodule BrandoAdmin.Components.Form.Input.SubformHelpers do
 
   This is the same failure mode as the ref media FKs: a value that lives in
   `data` rather than in `changes` never reaches SQL. It is the append-changeset
-  pattern in `docs/ecto-changeset-patterns.md`, and the reason it insists on
+  pattern in the `brando-changesets` skill, and the reason it insists on
   `get_assoc`.
   """
 

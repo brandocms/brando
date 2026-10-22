@@ -26,21 +26,35 @@ rewrites in place: edit those in `CHANGELOG.md` itself.
 
 ## Text
 
-The entry as `CHANGELOG.md` would hold it, in the style of the entries
-already there: a list item starting `- `, with a bold lead, continuation lines
-indented two spaces, and no headings.
+One line per change: what a project or an editor notices, in one sentence.
+The pull request holds the detail (how it works, why, measurements, edge
+cases).
 
 ```markdown
-- **A selection whose option is no longer offered can be removed.**
-  In a multi-select over a `has_many` relation, …
+- Opening an entry shows its fields at once, without a loading modal.
 ```
 
-Leave the PR number out, so the PR needs no second commit once it is open:
-collation adds it. It finds the merge that brought the fragment into the
-branch ("Merge pull request #N from …") and puts `(#N)` after each bold lead
-that has no number, moving a full stop that ends the lead after it:
-`**… can be removed** (#1234).` An entry that already has a number right
-after its bold lead, or at the end of it, keeps it.
+An entry that asks the reader to act (a breaking change, a deprecation, a
+migration to run, config to add, code to change) follows its line with those
+steps, indented two spaces: the commands and code to change, without the
+reasoning.
+
+```markdown
+- `ai:` on a form input is deprecated in favour of `ai_actions:`.
+  Replace `ai: [prompt: "…", context: [:title]]` with
+  `ai_actions: [generate: [prompt: "…", from: [:title]]]`.
+```
+
+Changes a Brando project cannot see (tests, CI, refactors, agent docs) have
+no entry. An entry is a list item starting `- `, with no headings.
+
+Leave the pull request link out, so the PR needs no second commit once it is
+open: collation adds it. It finds the merge that brought the fragment into the
+branch ("Merge pull request #N from …") and ends the entry's first sentence
+with `([#N](https://github.com/brandocms/brando/pull/N))`, before its full
+stop. An entry that already links or numbers a pull request keeps it: write
+the link yourself for a change that reached `main` through another pull
+request, such as one stacked on it.
 
 `scripts/changelog check` (part of `mix check` and CI) validates the names
 and text.
@@ -48,7 +62,7 @@ and text.
 ## Into CHANGELOG.md
 
 `scripts/changelog collate` moves the fragments into the unreleased section,
-adding the PR numbers, and deletes them: at release (see `RELEASE.md`), since the Hex package ships
+adding the pull request links, and deletes them: at release (see `RELEASE.md`), since the Hex package ships
 `CHANGELOG.md`, and in a PR of its own whenever `CHANGELOG.md` on `main`
 should catch up. Until then the unreleased entries are read here. The
 published documentation does not include the changelog.

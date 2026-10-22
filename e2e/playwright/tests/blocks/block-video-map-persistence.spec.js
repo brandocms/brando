@@ -28,8 +28,8 @@ test.describe('Video and map block save persistence', () => {
   //
   // Opening the picker right after a heavy re-render (the map iframe
   // mounting) can lose the click's push event when morphdom replaces the
-  // button mid-click — the modal never opens and the spec used to hang until
-  // the test timeout (the recurring flake in this file). Retry the open until
+  // button mid-click — the modal never opens and the spec would hang until
+  // the test timeout. Retry the open until
   // the picker content is actually on screen.
   const appendBlock = async (page, moduleName) => {
     const addBlock = page.getByRole('button', { name: 'Add block' }).last()

@@ -64,7 +64,7 @@ defmodule BrandoAdmin.Components.Form.BlockField.OpsTest do
     end
 
     # Children rebase on `apply_changes/1`, so each diff is only the delta since
-    # the last validate — they must accumulate or earlier edits are lost (B2).
+    # the last validate — they must accumulate or earlier edits are lost.
     test "merges a CHILD diff onto the stored one" do
       state =
         Ops.new(["p"])
@@ -514,8 +514,8 @@ defmodule BrandoAdmin.Components.Form.BlockField.OpsTest do
              ]
     end
 
-    # Review: a list op leaves every row as a full copy, so a saved row the
-    # rejoiner removed looked changed in the session and came back.
+    # A list op leaves every row as a full copy, so a saved row the rejoiner
+    # removed can look changed in the session; it must not come back.
     test "a rejoin's removal of a saved row holds against rows a list op left as they were" do
       base = table_base([5, 7])
       rows_then = [%{"id" => 5, "cols" => "saved 5"}, %{"id" => 7, "cols" => "saved 7"}]
@@ -526,9 +526,9 @@ defmodule BrandoAdmin.Components.Form.BlockField.OpsTest do
       assert rejoin(live, held, base).diffs["b"]["block"]["table_rows"] == [hd(rows_then), added]
     end
 
-    # Review: a gallery's objects sit under a map in a ref, so a diff holds
-    # them whole, and a reorder gives every one a new sequence: a removal
-    # the rejoiner made was undone by the session's reorder.
+    # A gallery's objects sit under a map in a ref, so a diff holds them
+    # whole, and a reorder gives every one a new sequence: the session's
+    # reorder must not undo a removal the rejoiner made.
     test "a rejoin's removal of a gallery object holds against the session's reorder of the gallery" do
       base = base_rows()
       object = fn id, seq -> %{"id" => id, "image_id" => id + 10, "sequence" => seq, "alt" => "saved #{id}"} end
@@ -562,7 +562,7 @@ defmodule BrandoAdmin.Components.Form.BlockField.OpsTest do
                rejoin(live, held, base).diffs["b"]["block"]["table_rows"]
     end
 
-    # Review: below a row, an item can be named by id on one side and by
+    # Below a row, an item can be named by id on one side and by
     # what it holds on the other (a new gallery object by its image), and
     # only top-level rows have ids to name them by: such a list is the
     # carried side's, never both.
@@ -577,8 +577,8 @@ defmodule BrandoAdmin.Components.Form.BlockField.OpsTest do
                rejoin(live, held, base).diffs["b"]["block"]["refs"]
     end
 
-    # Sol audit: a row another editor added and saved while the rejoiner
-    # was away is not one the rejoiner removed.
+    # A row another editor added and saved while the rejoiner was away is
+    # not one the rejoiner removed.
     test "a rejoin keeps a saved row the rejoiner's rows never had" do
       table = fn rows -> %{id: 2, block: %{uid: "b", id: 20, children: [], table_rows: rows}} end
       held_base = Ops.from_entry_blocks([table.([%{id: 5, sync_uid: "r5"}])])
@@ -595,7 +595,7 @@ defmodule BrandoAdmin.Components.Form.BlockField.OpsTest do
              ]
     end
 
-    # Sol audit: rows the session has no change to were put in id order.
+    # Rows the session has no change to keep their saved order, not id order.
     test "a rejoin takes the saved rows in their order when the session has no change to them" do
       table = fn ids ->
         Ops.from_entry_blocks([
@@ -643,9 +643,9 @@ defmodule BrandoAdmin.Components.Form.BlockField.OpsTest do
       assert [%{"id" => 8, "cols" => "B"}] = rejoin(live, held, old_base).diffs["b"]["block"]["table_rows"]
     end
 
-    # Review: a recovery copy is cast again, which gives its new table rows
-    # fresh sync uids; merged by row, the session's new row and the copy's
-    # were two rows.
+    # A recovery copy is cast again, which gives its new table rows fresh
+    # sync uids; merged by row, the session's new row and the copy's would
+    # be two rows.
     test "a recovery copy's lists are the copy's" do
       base = base_rows()
 
@@ -661,8 +661,8 @@ defmodule BrandoAdmin.Components.Form.BlockField.OpsTest do
       assert apply!(live, {:carry, copy, base}).diffs["b"]["block"]["table_rows"] == copy_rows
     end
 
-    # Sol audit: two items named alike in the list as it is made the
-    # rewritten merge anchor one on itself, forever.
+    # Two items named alike in the list as it is could make the merge
+    # anchor one on itself, forever.
     test "merge_list keeps items named alike in the list as it is, in order" do
       x1 = %{"value" => "x", "label" => "1"}
       x2 = %{"value" => "x", "label" => "2"}
@@ -693,9 +693,9 @@ defmodule BrandoAdmin.Components.Form.BlockField.OpsTest do
       assert micros < 2_000_000
     end
 
-    # Review: a row named by its id alone (a field op's skeleton names the
-    # rows it did not change so) whose row a write has since removed was
-    # cast as a new, blank row.
+    # A row named by its id alone (a field op's skeleton names the rows it
+    # did not change so) whose row a write has since removed would otherwise
+    # be cast as a new, blank row.
     test "a row named by an id the block no longer has is not saved as a new row" do
       alias Brando.Content.Block
       alias Brando.Content.Ref

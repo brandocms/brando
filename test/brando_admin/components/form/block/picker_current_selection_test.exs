@@ -1,13 +1,12 @@
 defmodule BrandoAdmin.Components.Form.Block.PickerCurrentSelectionTest do
-  # Regression coverage for D6 — two block-level image pickers opened with
-  # `selected_images: []` even though the block already had an image.
+  # Block-level image pickers open with the block's current image selected, not
+  # with `selected_images: []`.
   #
   # The uploads skill's contract is "selection means current editing state":
   # reopening a picker must mark the asset the editor is currently showing, not
-  # the one last written to the database, and not nothing at all. Every
-  # entry-field picker already honoured it; `render_var`'s image var and the
-  # video block's cover image did not — `render_var`'s own sibling
-  # `set_file_target` got it right, which is what made the omission visible.
+  # the one last written to the database, and not nothing at all. `render_var`'s
+  # image var and the video block's cover image honour it like every
+  # entry-field picker and `render_var`'s own sibling `set_file_target`.
   #
   # `send_update/2` outside a LiveView process is just a message to `self()`,
   # so the payload each handler ships to the picker is directly assertable.
@@ -69,8 +68,8 @@ defmodule BrandoAdmin.Components.Form.Block.PickerCurrentSelectionTest do
     end
 
     test "the file sibling it was compared against still behaves the same" do
-      # Guards the reference implementation: if `set_file_target` ever regresses
-      # to `[]` the image fix above loses the precedent it was modelled on.
+      # Guards the sibling the image var mirrors: `set_file_target` must not
+      # fall back to `[]` either.
       socket =
         nil
         |> var_socket()

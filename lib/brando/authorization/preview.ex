@@ -45,10 +45,11 @@ defmodule Brando.Authorization.Preview do
   @doc """
   `authorize_write/2` followed by `register/2`, with one check of the entry.
 
-  A preview update authorizes, registers its entry and broadcasts in one call;
-  each of those used to read the entry from the database again. A caller that
-  gets `:ok` may broadcast the render without `authorize_broadcast/1`, which
-  would repeat the same check against the scope and entry just stored.
+  A preview update authorizes, registers its entry and broadcasts in one call,
+  so the entry is read from the database once rather than for each step. A
+  caller that gets `:ok` may broadcast the render without
+  `authorize_broadcast/1`, which would repeat the same check against the scope
+  and entry just stored.
   """
   def authorize_update(key, changeset) do
     if Engine.enabled?() do

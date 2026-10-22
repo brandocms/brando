@@ -6,8 +6,8 @@ defmodule BrandoAdmin.Components.Form.PendingRows do
   Save, by position, and Ecto casts it as it is (`sort_param`, `drop_param`).
   That is right as long as the list is the one the browser last received.
   Between an add or a removal and its patch, it is not: a change serialized
-  in that window lists the rows as they were, so a removed row came back, or
-  an added one was lost (#3157).
+  in that window lists the rows as they were, so a removed row would come
+  back, or an added one be lost (#3157).
 
   So the Form remembers, by row key (`SubformHelpers.row_key/1`), what
   happened in that window, and corrects only that in the next params before

@@ -79,8 +79,9 @@ queries and mutations, filtering, ordering, pagination, preloads, and caching.
 
 The [block editor](block_editor.md) guide introduces modules, refs, and vars.
 [Villain parser](villain_parser.md) covers custom output, [text styles](villain_text_styles.md)
-covers rich text, and [Datasources](datasources.md) connects modules to queried or
-selected entries, including ordering and invalidation.
+covers rich text, [Footnotes and block regions](footnotes.md) adds notes to text and
+named block areas to modules, and [Datasources](datasources.md) connects modules to
+queried or selected entries, including ordering and invalidation.
 [Module definitions](module_definitions.md) exports modules as editable files and
 imports your edits back, and [Markdown sources](markdown_sources.md) places a
 GitHub Markdown document in a module.
@@ -121,7 +122,3 @@ resource policies, application enforcement, and legacy compatibility.
 [Sites and environments](tenancy_and_environments.md) covers installation modes,
 routing, content environments, asset sets, and static publication.
 [Deployment](deployment.md) covers releases through Florist.
-
-The repository's [documentation coverage record](https://github.com/brandocms/brando/blob/main/docs/documentation-coverage.md)
-maps the original documentation topics to guides and records how the remaining
-0.54 guide workflows were checked.

@@ -295,8 +295,8 @@ An example:
 - **Sec.** Secure.
 EOF
 
-# PR numbers: collation adds the number of the pull request whose merge
-# brought each fragment into the branch, after a bold lead with none.
+# PR links: collation adds a link to the pull request whose merge brought each
+# fragment into the branch, at the end of an entry's line with none.
 git_q() { git -c user.name=t -c user.email=t@example.com -c init.defaultBranch=main "$@"; }
 fresh
 repo="$scratch/case"
@@ -307,31 +307,27 @@ repo="$scratch/case"
 
   git_q switch -qc feat-a
   cat > changelog.d/feat-a.fixes.md <<'EOF'
-- **A full stop moves after the number.** Text.
+- The link goes before the full stop.
 
-- **No full stop**, then a comma.
+- No full stop
 
-- **A lead over
-  two lines** and more.
+- Linked already ([#7](https://github.com/brandocms/brando/pull/7)).
 
-- **Numbered already** (#7). Kept.
+- Numbered already (#8).
 
-- **Numbered inside (#8)**. Kept.
+- Numbered with a list (#5, #6).
 
-- **Numbered inside, before the full stop (#9).** Kept.
+- A sentence that wraps its link
+  onto the next line ([#9](https://github.com/brandocms/brando/pull/9)).
 
-- **Numbered with a list** (#5, #6). Kept.
+- A sentence that wraps
+  without a link.
 
-- **Numbered on the next line**
-  (#10). Kept.
-
-- **A lead that ends its line**
-  gets the number on it.
-
-- Not bold, so not numbered.
+- A change the reader must act on.
+  Replace `a` with `b`, a step without a link.
 
   ```markdown
-  - **A code block** is not an entry.
+  - A code block is not an entry.
   ```
 EOF
   git_q add . && git_q commit -qm "Add a" || exit 1
@@ -343,64 +339,60 @@ EOF
 
   # Merged locally into feat-d, which a pull request merged.
   git_q switch -qc feat-c
-  printf -- '- **C.** From a branch merged locally first.\n' > changelog.d/feat-c.features.md
+  printf -- '- From a branch merged locally first.\n' > changelog.d/feat-c.features.md
   git_q add . && git_q commit -qm "Add c" || exit 1
   git_q switch -qc feat-d main && echo d > d.txt && git_q add . && git_q commit -qm d || exit 1
   git_q merge -q --no-ff -m "Merge branch 'feat-c' into feat-d" feat-c || exit 1
   git_q switch -q main && git_q merge -q --no-ff -m "Merge pull request #14 from o/feat-d" feat-d || exit 1
 
   # Committed on main without a pull request, and not committed at all.
-  printf -- '- **Direct.** No pull request.\n' > changelog.d/direct.fixes.md
+  printf -- '- Direct, no pull request.\n' > changelog.d/direct.fixes.md
   git_q add . && git_q commit -qm direct || exit 1
-  printf -- '- **Untracked.** Not committed.\n' > changelog.d/untracked.fixes.md
+  printf -- '- Untracked, not committed.\n' > changelog.d/untracked.fixes.md
 ) || exit 1
 output="$(run collate)"
 status=$?
 if [ "$status" -eq 0 ] && [ "$output" = "changelog: collated 4 fragment(s) into CHANGELOG.md
-changelog: no pull request merged these yet, so their entries keep the PR numbers they had: direct.fixes.md untracked.fixes.md" ]; then
+changelog: no pull request merged these yet, so their entries get no PR link: direct.fixes.md untracked.fixes.md" ]; then
   pass "collate names the fragments no pull request merged"
 else
   fail "collate names the fragments no pull request merged" "got exit $status: $output"
 fi
-expect_changelog "collate adds the PR number after a bold lead without one" <<'EOF'
+expect_changelog "collate adds a PR link to an entry's line without one" <<'EOF'
 ## 0.55.0 (Unreleased)
 
 #### Features
 
-- **C** (#14). From a branch merged locally first.
+- From a branch merged locally first ([#14](https://github.com/brandocms/brando/pull/14)).
 
 #### Fixes
 
-- **Direct.** No pull request.
+- Direct, no pull request.
 
-- **A full stop moves after the number** (#12). Text.
+- The link goes before the full stop ([#12](https://github.com/brandocms/brando/pull/12)).
 
-- **No full stop** (#12), then a comma.
+- No full stop ([#12](https://github.com/brandocms/brando/pull/12))
 
-- **A lead over
-  two lines** (#12) and more.
+- Linked already ([#7](https://github.com/brandocms/brando/pull/7)).
 
-- **Numbered already** (#7). Kept.
+- Numbered already (#8).
 
-- **Numbered inside (#8)**. Kept.
+- Numbered with a list (#5, #6).
 
-- **Numbered inside, before the full stop (#9).** Kept.
+- A sentence that wraps its link
+  onto the next line ([#9](https://github.com/brandocms/brando/pull/9)).
 
-- **Numbered with a list** (#5, #6). Kept.
+- A sentence that wraps
+  without a link ([#12](https://github.com/brandocms/brando/pull/12)).
 
-- **Numbered on the next line**
-  (#10). Kept.
-
-- **A lead that ends its line** (#12)
-  gets the number on it.
-
-- Not bold, so not numbered.
+- A change the reader must act on ([#12](https://github.com/brandocms/brando/pull/12)).
+  Replace `a` with `b`, a step without a link.
 
   ```markdown
-  - **A code block** is not an entry.
+  - A code block is not an entry.
   ```
 
-- **Untracked.** Not committed.
+- Untracked, not committed.
 EOF
 
 # The repository's own fragments.

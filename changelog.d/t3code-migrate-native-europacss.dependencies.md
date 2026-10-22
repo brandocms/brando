@@ -1,5 +1,3 @@
-- **No GitHub SSH dependency in the admin's packages** (#3187). BrandoJS, the
-  generated backend and the E2E backend no longer depend on
-  `@brandocms/europacss`, whose `postcss-functions` was pinned to an SSH Git
-  remote. CI, the Dockerfiles and `scripts/worktree-setup` drop their
-  `git@github.com:` → HTTPS URL rewrite.
+- `@brandocms/vite-plugin-europacss` and `@brandocms/europacss-cli` 0.1.0-beta.0 from npm replace
+  `@brandocms/europacss`, so the admin's packages no longer need a GitHub SSH remote
+  ([#3189](https://github.com/brandocms/brando/pull/3189)).

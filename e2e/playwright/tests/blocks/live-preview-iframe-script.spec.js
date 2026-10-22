@@ -169,8 +169,8 @@ test.describe('Live preview iframe script', () => {
   })
 
   // The page's lazy images carry what `initializeMedia` set and the server's
-  // HTML does not, so they used to compare unequal on every update: morphdom
-  // stripped `srcset` and `data-ll-loaded` and `initializeMedia` put them back.
+  // HTML does not, so compared naively they differ on every update: morphdom
+  // would strip `srcset` and `data-ll-loaded` and `initializeMedia` put them back.
   test('an update leaves an unchanged lazy image alone and still applies changes to one', async ({ page }) => {
     const image = (alt) =>
       `<!-- [+:B<a>] --><figure><img data-ll-srcset-image data-src="/a.jpg" data-srcset="/a.jpg 1x" alt="${alt}"></figure><!-- [-:B<a>] -->`

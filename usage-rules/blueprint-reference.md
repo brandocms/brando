@@ -56,7 +56,7 @@ compile against the other one.
 
 ### Deprecated declarations
 
-These still compile but only print a warning; what they declare is dropped.
+These compile with a warning, and what they declare is dropped.
 `mix brando.migrate54` rewrites them:
 
 * `listing_query/1` and `form_query/1`: use `query`.

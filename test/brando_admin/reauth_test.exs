@@ -125,7 +125,7 @@ defmodule BrandoAdmin.ReauthTest do
   end
 
   describe "a screen that asks first, once open" do
-    # The review's probe: open while confirmed, let the confirmation age, then
+    # The probe: open while confirmed, let the confirmation age, then
     # send a sensitive event over the open socket.
     test "holds an event when the confirmation has run out, and runs it once answered", %{conn: conn} do
       user = Factory.insert(:random_user, role: :editor, avatar: nil, config: %UserConfig{})

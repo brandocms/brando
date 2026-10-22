@@ -1,6 +1,6 @@
 # Buttons and badges
 
-Approved October 2026. The admin has one button and one badge; a screen picks
+The admin has one button and one badge; a screen picks
 a size and a look from them instead of drawing its own. Their sizes are
 `theme.radius` and `theme.controls` in the admin's `europa.json5`, which
 [`assets/css/tokens.css`](../../../../assets/css/tokens.css) sets as custom properties;
@@ -44,7 +44,7 @@ Behind a modal, dialog or drawer, use `--brando-overlay` (`colors.overlay`).
 | `.btn--danger` | Destructive actions; with `.btn--primary`, filled, for the final step of one |
 | `.btn--ai` | An action that calls a paid AI service |
 | `.btn--icon` | Icon only, square; it still needs a name (see [Icon-only buttons and tooltips](icon-buttons-and-tooltips.md)) |
-| `.btn--pill` | Fully rounded. Only for toggles, such as the block editor's + |
+| `.btn--pill` | Fully rounded. Only for toggles |
 | `.btn-group` | Buttons joined into one control, rounded at the ends |
 
 Actions are rectangles; the pill shape is kept for things that switch state or

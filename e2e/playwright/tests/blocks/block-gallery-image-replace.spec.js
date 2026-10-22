@@ -55,7 +55,7 @@ test.describe('Gallery block image replacement', () => {
       timeout: 15000,
     })
 
-    // Save the page — this is the operation that previously failed
+    // Save the page — this is the operation the replaced images must survive
     await page.getByTestId('submit').click()
 
     // Wait for save + image processing to complete and redirect away from create page

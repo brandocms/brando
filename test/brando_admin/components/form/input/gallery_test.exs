@@ -1,20 +1,20 @@
 defmodule BrandoAdmin.Components.Form.Input.GalleryTest do
-  # Regression coverage for D4 and D5 in the form audit.
-  #
-  # D4 — the component addressed the entry form as
+  # Picker writes — the component addresses the entry form by the `form_id`
+  # it is given, not as
   # `"#{changeset.data.__struct__.__naming__().singular}_form"`. That changeset
   # belongs to whatever schema OWNS the gallery field, so for a gallery on a
-  # nested (subform) record it named a component that does not exist and every
-  # picker selection silently went nowhere. It also shipped a replacement
-  # changeset for that nested record — which, had the id ever matched, would
-  # have overwritten the entry's changeset with a subrecord's. The upload path
-  # never had either problem because it delivers `path` + gallery instead.
+  # nested (subform) record the derived name would be a component that does not
+  # exist and every picker selection would silently go nowhere. Like the upload
+  # path, it delivers `path` + gallery rather than a replacement changeset for
+  # the nested record, which could overwrite the entry's changeset with a
+  # subrecord's.
   #
-  # D5 — `gallery_objects` / `selected_images` / `selected_videos` were cached
-  # with `assign_new`, so a gallery mutated anywhere else (an upload delivered
-  # to the entry form, a revision restore) never reached the UI. They now
-  # re-derive from the changeset every update, carrying previously-loaded
-  # `:image` / `:video` across by id so the thumbnails survive the round trip.
+  # Tracking the changeset — `gallery_objects` / `selected_images` /
+  # `selected_videos` re-derive from the changeset every update, so a gallery
+  # mutated anywhere else (an upload delivered to the entry form, a revision
+  # restore) reaches the UI; cached with `assign_new` it would not. Previously
+  # loaded `:image` / `:video` carry across by id so the thumbnails survive the
+  # round trip.
   use ExUnit.Case, async: false
   use Brando.ConnCase
 
@@ -47,7 +47,7 @@ defmodule BrandoAdmin.Components.Form.Input.GalleryTest do
     %{socket | assigns: Map.put(socket.assigns, :myself, %Phoenix.LiveComponent.CID{cid: 1})}
   end
 
-  describe "D4 — picker writes reach the entry form" do
+  describe "picker writes reach the entry form" do
     test "a top-level gallery ships path + key to the entry form", ctx do
       form = to_form(Changeset.change(%ProjectUpdate1{}))
 
@@ -67,8 +67,8 @@ defmodule BrandoAdmin.Components.Form.Input.GalleryTest do
     test "a NESTED gallery addresses the entry form, not its own schema's", ctx do
       # The gallery is owned by a subrecord rendered inside a Page's form.
       # `Form.input/1` threads the entry form component's id down as `form_id`;
-      # before the fix the component ignored it and derived one from its own
-      # changeset's struct instead, naming a component that is not mounted.
+      # an id derived from the component's own changeset's struct would name a
+      # component that is not mounted.
       form = to_form(Changeset.change(%ProjectUpdate1{}), as: "page[projects][0]")
 
       socket =
@@ -122,7 +122,7 @@ defmodule BrandoAdmin.Components.Form.Input.GalleryTest do
     end
   end
 
-  describe "D5 — merge_loaded_media/2" do
+  describe "merge_loaded_media/2" do
     test "recovery loads uncached images and videos from their FKs", ctx do
       video = Factory.insert(:video)
       objects = [%GalleryObject{image_id: ctx.image.id}, %GalleryObject{video_id: video.id}]
@@ -180,14 +180,14 @@ defmodule BrandoAdmin.Components.Form.Input.GalleryTest do
     end
   end
 
-  describe "D5 — the component tracks the changeset" do
+  describe "the component tracks the changeset" do
     test "an externally added object shows up on the next update", ctx do
       empty = to_form(Changeset.change(%ProjectUpdate1{}))
       socket = gallery_socket(empty, [], %{current_user: ctx.user})
 
       # Something else (an upload delivery, a revision restore) writes the
       # gallery into the entry changeset. The component is only handed the new
-      # field — with `assign_new` it kept showing the empty list forever.
+      # field — cached with `assign_new`, it would show the empty list forever.
       gallery = %Brando.Galleries.Gallery{
         id: 1,
         config_target: "gallery:Brando.MigrationTest.ProjectUpdate1:photos",
@@ -231,15 +231,12 @@ defmodule BrandoAdmin.Components.Form.Input.GalleryTest do
     end
   end
 
-  describe "D5 review follow-up — merge picks the FRESHER media, not the loaded one" do
-    # B1 from the Phase 2 review. `merge_loaded_media/2` originally kept the
-    # changeset's object whenever its association happened to be loaded. But the
-    # editor refreshes an image in place when Oban finishes processing it, and
-    # that refresh only ever reaches the cached list — so a stale-but-loaded
-    # changeset copy silently reverted a just-processed image on the next
-    # unrelated update. That is a regression the D5 fix introduced: the
-    # `assign_new` it replaced could not lose a refresh, because it never
-    # re-read.
+  describe "merge picks the FRESHER media, not the loaded one" do
+    # `merge_loaded_media/2` does not keep the changeset's object just because
+    # its association happens to be loaded. The editor refreshes an image in
+    # place when Oban finishes processing it, and that refresh only ever reaches
+    # the cached list — so preferring a stale-but-loaded changeset copy would
+    # silently revert a just-processed image on the next unrelated update.
     defp at(seconds) do
       NaiveDateTime.add(~N[2026-01-01 00:00:00], seconds, :second)
     end
@@ -277,13 +274,14 @@ defmodule BrandoAdmin.Components.Form.Input.GalleryTest do
     end
 
     test "a tie keeps the cached copy — timestamps are only second-precise" do
-      # The e2e regression (`tests/projects/projects.spec.js`). `updated_at` is
-      # `Ecto.Schema.timestamps()`' default `:naive_datetime`, so upload →
+      # Also covered end to end by `tests/projects/projects.spec.js`. `updated_at`
+      # is `Ecto.Schema.timestamps()`' default `:naive_datetime`, so upload →
       # process → refresh routinely lands inside one second and the refreshed
       # image compares EQUAL to the changeset's snapshot of it. Requiring a
-      # strict `:gt` threw the refresh away: uploading two images to a gallery
-      # reverted the first to `:unprocessed` the moment the second was
-      # delivered, and its thumbnail stayed a spinner instead of an `<img>`.
+      # strict `:gt` would throw the refresh away: uploading two images to a
+      # gallery would revert the first to `:unprocessed` the moment the second
+      # was delivered, and its thumbnail would stay a spinner instead of an
+      # `<img>`.
       snapshot = %Brando.Images.Image{id: 1, status: :unprocessed, updated_at: at(0)}
       refreshed = %Brando.Images.Image{id: 1, status: :processed, updated_at: at(0)}
 
@@ -297,9 +295,9 @@ defmodule BrandoAdmin.Components.Form.Input.GalleryTest do
     end
 
     test "a tie writes back an equal term, so it still cannot churn the assign" do
-      # The property the old strict-`:gt` tie-break was protecting. It survives
-      # the change: when both sides hold the same media, keeping the cached one
-      # yields a term equal to the object that went in.
+      # A tie must not churn the assign either: when both sides hold the same
+      # media, keeping the cached one yields a term equal to the object that
+      # went in.
       image = %Brando.Images.Image{id: 1, title: "same", updated_at: at(0)}
       object = object_with_image(image)
 
@@ -307,7 +305,7 @@ defmodule BrandoAdmin.Components.Form.Input.GalleryTest do
     end
 
     test "an unloaded changeset object still borrows the cached media" do
-      # The original D5 behaviour, which must not regress.
+      # The base case: an object with only its FK borrows the loaded media.
       image = %Brando.Images.Image{id: 1, path: "a.jpg", updated_at: at(0)}
 
       assert [%{image: %{path: "a.jpg"}}] =
@@ -318,12 +316,11 @@ defmodule BrandoAdmin.Components.Form.Input.GalleryTest do
     end
   end
 
-  describe "D5 review follow-up — delivery cannot duplicate an object" do
-    # B2 from the Phase 2 review. Upload delivery writes `gallery_objects`
-    # directly AND updates the entry changeset, which reaches this component
-    # again through assign_value/1. Two writers, one event, no guaranteed
-    # ordering — a plain `++` duplicated the object when the direct write
-    # landed second.
+  describe "delivery cannot duplicate an object" do
+    # Upload delivery writes `gallery_objects` directly AND updates the entry
+    # changeset, which reaches this component again through assign_value/1. Two
+    # writers, one event, no guaranteed ordering — a plain `++` would duplicate
+    # the object when the direct write landed second.
     test "append_unique_media/2 is idempotent per media id" do
       object = %GalleryObject{image_id: 7}
 
@@ -348,7 +345,7 @@ defmodule BrandoAdmin.Components.Form.Input.GalleryTest do
     end
 
     test "the delivery clause does not duplicate when it runs twice", ctx do
-      # Drives the real update/2 clause the review flagged.
+      # Drives the real update/2 delivery clause.
       form = to_form(Changeset.change(%ProjectUpdate1{}))
       new_image = %GalleryObject{image_id: ctx.image.id, image: ctx.image}
 

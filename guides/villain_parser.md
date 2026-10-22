@@ -174,9 +174,7 @@ end
 ```
 
 Calling `Brando.Villain.Parser.render_caption/1` directly gets you Brando's
-implementation, not yours — silently. This is the rule Brando's own
-implementations follow internally, and it is what
-`test/brando/villain/parser/dispatch_test.exs` guards.
+implementation, not yours — silently.
 
 <!-- usage-rules:end -->
 

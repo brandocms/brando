@@ -1,7 +1,6 @@
 defmodule BrandoAdmin.Components.Form.Input.OptionsTest do
-  # Phase 3 / E4 in the form audit. The `:languages` / `:admin_languages`
-  # expansion existed as three byte-identical `case` arms in `Input.radios/1`,
-  # `Input.Select` and `Input.MultiSelect`.
+  # `Options.expand/1` is the one `:languages` / `:admin_languages` expansion,
+  # shared by `Input.radios/1`, `Input.Select` and `Input.MultiSelect`.
   # `async: false`: the memoization test below mutates
   # `Application.put_env(:brando, :languages, ...)`, which is global. Nothing
   # reads it concurrently today, but an async test that did would see "Testish".

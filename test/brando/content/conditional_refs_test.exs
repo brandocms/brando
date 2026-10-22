@@ -1,11 +1,10 @@
 defmodule Brando.Content.ConditionalRefsTest do
-  # B5 verification — are refs inside `{% if %}` / `{% for %}` regions deleted
-  # on the first keystroke?
+  # What happens on a keystroke to refs inside `{% if %}` / `{% for %}` regions.
   #
   # `LiquidPreview.strip_logic/1` removes those regions from the module code
   # before the editor splits it into ref slots, so no inputs render for a ref
-  # that lives inside one. `refs` is `on_replace: :delete_if_exists`, so the
-  # question is what `cast_assoc(:refs)` does when params list a subset.
+  # that lives inside one. `refs` is `on_replace: :delete_if_exists`, so these
+  # pin what `cast_assoc(:refs)` does when params list a subset.
   use ExUnit.Case, async: false
   use Brando.ConnCase
 
@@ -76,7 +75,7 @@ defmodule Brando.Content.ConditionalRefsTest do
       |> Enum.map(& &1.data.id)
 
     assert conditional.id in replaced,
-           "expected the unrendered ref to be marked for deletion — B5 confirmed"
+           "expected the unrendered ref to be marked for deletion"
 
     # and it really is gone once applied
     surviving = changeset |> Changeset.apply_changes() |> Map.get(:refs) |> Enum.map(& &1.name)

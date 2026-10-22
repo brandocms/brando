@@ -24,10 +24,9 @@ defmodule Brando.Blueprint.FormComponentResolverTest do
   end
 
   test "Blueprint form metadata stores the RESOLVED module" do
-    # This used to assert the stored value was still the `:vars` token, which is
-    # exactly what E3 in the form audit changed: `Forms.Dsl.transform_form/1`
-    # now resolves it once at Blueprint compile time instead of per field per
-    # diff. The property the token existed for is asserted separately below.
+    # `Forms.Dsl.transform_form/1` resolves the `:vars` token once at Blueprint
+    # compile time instead of per field per diff, so the stored value is the
+    # module. The property the token exists for is asserted separately below.
     [_name_fieldset, vars_fieldset] = TableTemplate.__form__().tabs |> hd() |> Map.fetch!(:fields)
     [vars_subform] = vars_fieldset.fields
 

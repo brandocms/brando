@@ -1,7 +1,7 @@
 defmodule BrandoAdmin.ListingCopyToLanguageTest do
   # The Pages listing's "Duplicate to [NO]" and "Translate to [NO]" copy a page
   # into another language. The Index page is the common case where that
-  # language already has a page at the same URI: the copy used to hit the
+  # language already has a page at the same URI: the copy must not hit the
   # unique index on (uri, language), raise, and take the listing down.
   use Brando.LiveCase
 

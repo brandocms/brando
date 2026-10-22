@@ -190,7 +190,7 @@ export default (app) => ({
     // A concrete form/ref/var target already owns its destination through its
     // upload config. A default-target image goes straight to the folder chosen
     // for this field, or the last one used, or the config's own; "Change"
-    // beside the destination picks another. Uploading no longer stops to ask.
+    // beside the destination picks another. Uploading does not stop to ask.
     if (this.el.dataset.folderBrowser === 'true' && configTarget === 'default' && files.some(file => file.type.startsWith('image/'))) {
       this.enqueue(files, this.destinationFolder() || {})
     } else {

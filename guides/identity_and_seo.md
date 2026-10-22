@@ -83,8 +83,8 @@ missing configuration without showing placeholder content:
 For code outside a request, `Brando.Cache.Identity.get("en")` returns that
 language's record, or `%{}` if absent. It does not fall back to another language.
 `Brando.Sites.render_identity("en", :name)` is the scalar convenience API.
-Use the cached record's `links` collection for named-link lookup; older unscoped
-identity helpers are not a recipe for multilingual output. Links also become
+`Brando.Sites.get_link/1` does not take a language; for multilingual output,
+look links up in the cached record's `links` collection. Links also become
 `og:see_also` tags, and a link to an X profile (`https://x.com/example`) gives
 pages their `twitter:site` handle; see [Page metadata](meta.md#x-cards).
 
@@ -106,7 +106,7 @@ the markup describes content that is actually published.
 
 Every service is emitted into the JSON-LD graph as a `Service` node joined to
 `#identity`, inheriting the organization's `areaServed` unless it names its
-own. Nothing else is needed for the structured data.
+own.
 
 Markup alone mostly feeds AI retrieval. Present the services on the page too,
 so the nodes describe a real section:
@@ -155,9 +155,8 @@ language's configured robots text, or a default that disallows `/admin/`, then
 the AI crawler policy below, then a `Sitemap:` line once a sitemap has been
 generated (unless the robots text names one). It does not add an environment-specific crawl block
 for you; inspect the intended deployment and configure its policy explicitly.
-The base URL field does not reconfigure Phoenix's endpoint or your DNS. Set the
-endpoint URL correctly
-for canonical URLs, metadata, and [sitemap generation](sitemaps.md).
+The base URL field does not set Phoenix's endpoint URL. Set that too, for
+canonical URLs, metadata, and [sitemap generation](sitemaps.md).
 
 <!-- usage-rules:end -->
 
@@ -192,9 +191,8 @@ Content-Signal: search=yes, ai-input=yes, ai-train=no
 
 `ai-input` is `no` only when every AI search and user-fetch crawler is blocked.
 The robots text is never changed; the block is added when robots.txt is served.
-Nothing is added until a crawler is blocked or a training preference chosen,
-so a site that never opens the setting serves what it did before. **View
-robots.txt** opens the result. The policy is stored per language, like the
+Nothing is added until a crawler is blocked or a training preference chosen.
+**View robots.txt** opens the result. The policy is stored per language, like the
 robots text, in the SEO entry's `crawler_policy`.
 
 Blocking is a request: the user-fetch crawlers say robots.txt may not apply to
@@ -271,8 +269,8 @@ test the rule against that path rather than assuming the language prefix is
 stripped for you.
 
 The standard fallback controller checks these rules when content lookup returns
-not found. A still-existing page therefore takes precedence over a manual rule;
-this is not an unconditional redirect plug. Code `410` produces a Gone response
+not found. A still-existing page therefore takes precedence over a manual rule.
+Code `410` produces a Gone response
 through that fallback rather than a Location redirect.
 
 ### Find the URLs worth redirecting

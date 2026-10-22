@@ -56,7 +56,7 @@ early. In production it logs a warning and returns an error, and whatever was
 sending carries on without the email. `Brando.Mailer.ensure_configured/0`
 makes the same check before work that is pointless without email: the
 "Forgot password?" page uses it, and tells the user the site cannot send
-email rather than promising a link that never comes.
+email.
 
 Email sent outside any site — a password reset asked for on the login page
 of a multi-site installation — is queued without a site, and sent from the

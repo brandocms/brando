@@ -1,21 +1,22 @@
 defmodule BrandoAdmin.LiveView.Form.TransformerRoutingTest do
-  # Regression coverage for the webhook -> Transformer routing in
-  # `handle_hooks_video_info/2`'s 2-tuple clause. Both halves of it shipped
-  # broken and neither could be seen in development:
+  # Coverage for the webhook -> Transformer routing in
+  # `handle_hooks_video_info/2`'s 2-tuple clause. Neither half of it can be
+  # seen in development:
   #
-  #   * `schema.__relations__()` — `__relations__` takes the module and lives on
-  #     `Brando.Blueprint.Relations`; it is not defined on the blueprint. Every
-  #     other call site in the codebase gets this right. This one raised
-  #     `UndefinedFunctionError` and killed the form LiveView.
+  #   * the relations — `__relations__` takes the module and lives on
+  #     `Brando.Blueprint.Relations`; it is not defined on the blueprint, so
+  #     `schema.__relations__()` would raise `UndefinedFunctionError` and kill
+  #     the form LiveView.
   #
-  #   * the component id was built as `"<singular>_form-transformer-<rel>"`,
-  #     using the Form *component* id. `fieldset/field.ex` renders the component
-  #     as `"#{@form.id}-transformer-#{@input.name}"` — the HTML form id, with no
-  #     `_form`. That one is silent: `send_update` to an unknown id logs a miss
-  #     and the card simply never updates.
+  #   * the component id — `fieldset/field.ex` renders the component as
+  #     `"#{@form.id}-transformer-#{@input.name}"`: the HTML form id, with no
+  #     `_form`, not the Form *component* id
+  #     (`"<singular>_form-transformer-<rel>"`). A wrong id is silent:
+  #     `send_update` to an unknown id logs a miss and the card simply never
+  #     updates.
   #
   # Only a provider webhook reaches this clause, so a developer with no tunnel
-  # never runs it and both defects reached production intact.
+  # never runs it.
   use ExUnit.Case, async: true
 
   alias BrandoAdmin.LiveView.Form.Hooks

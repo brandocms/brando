@@ -6,9 +6,8 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery.Media do
   `Input.GalleryObjects` (the Gallery blueprint's own form) are different
   components with genuinely different write targets — the first has to reach an
   entry form that owns it at a path, the second edits the entry changeset
-  directly. Everything *around* that write was duplicated line for line, which
-  is how they came to carry the same two bugs (D4, D5): a fix landing in one
-  copy said nothing about the other.
+  directly. Everything *around* that write is the same, and as two copies a
+  fix landing in one would say nothing about the other.
 
   So the write stays with each component and everything else lives here.
   """
@@ -114,8 +113,7 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery.Media do
   @doc """
   Is this picker click selecting or deselecting?
 
-  Both components dispatch on the same question, and both used to parse the id
-  inline to ask it.
+  Both components dispatch on the same question.
   """
   def selected?(selection, id), do: parse_id(id) in selection
 end

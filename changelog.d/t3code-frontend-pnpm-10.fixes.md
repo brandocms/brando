@@ -1,7 +1,3 @@
-- **A newly generated application's Docker build no longer stops at the
-  frontend stage**. The template's `assets_frontend` stage copied
-  `assets/frontend/.yalc`, which nothing creates (Jupiter comes from npm and
-  the folder is ignored), and Docker fails a `COPY` whose source is missing.
-  The copy is now optional (`COPY assets/frontend/.yal[c] ./.yalc/`, which the
-  template's `# syntax=docker/dockerfile:1` allows), so an application that
-  installs Jupiter from Yalc still has it copied.
+- A newly generated application's Docker build gets past the frontend stage, which copied an
+  `assets/frontend/.yalc` that nothing creates
+  ([#3191](https://github.com/brandocms/brando/pull/3191)).

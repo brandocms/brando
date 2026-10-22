@@ -234,7 +234,7 @@ test('an earlier transformer reply cannot restore a removed string list member b
   hold = true
   await aliases.first().fill('edited a')
   // Wait for the debounced edit's actual reply before deleting b. Releasing
-  // it inside the removal's 300 ms debounce used to restore b's old row while
+  // it inside the removal's 300 ms debounce could restore b's old row while
   // LiveView preserved the focused c, yielding [edited a, c, c, empty].
   await expect.poll(() => editReplyHeld).toBe(true)
   // Freeze the remaining debounce window, so even a slow CI worker delivers

@@ -1,6 +1,6 @@
 # Icon-only buttons and tooltips
 
-Approved with #3093 (October 2026). A button is its icon alone only where the
+A button is its icon alone only where the
 icon is clear in context and sits beside related, labelled actions: a media
 field's sources, a row's duplicate and delete, a toolbar's view switch. The
 action an editor came for keeps its label. In a media field that is Upload,

@@ -9,7 +9,7 @@ In the E2E app, send **Preview assistant animations** to replay a paced,
 read-only script without calling an AI provider. This demo exists only in
 `E2eProject.AssistantModel`, never in the production model client.
 
-Approved with issue #2983; the colour changed to violet in October 2026.
+Approved with issue #2983.
 Everything AI in the admin uses two looks, so an editor recognises AI the same
 way everywhere. Both are drawn in the AI violet, `--brando-ai` (`#634f8f`, 6.9:1
 on white), and the tints mixed from it. An AI action sends the content to an
@@ -26,8 +26,8 @@ with AI, Sketches with AI on the Modules screen, the rich-text editor's Write
 with AI. It is a small secondary button: the
 Lucide `sparkles` icon, `--brando-ai` text, a solid violet hairline
 (`--brando-ai-line`, `--brando-ai-line-strong` on hover, over the
-`--brando-ai-tint` surface), white, 30px high with a 5px radius, like the
-other small admin buttons. Render it with `AIAction.button/1`:
+`--brando-ai-tint` surface), white, 30px high (the default `.btn` height) with a 5px radius. Render it
+with `AIAction.button/1`:
 
 ```heex
 <AIAction.button phx-click="suggest_alt_text" phx-target={@myself} size={:compact}>
@@ -48,13 +48,14 @@ other small admin buttons. Render it with `AIAction.button/1`:
   images", "Draw 4 sketches"), and the rich-text editor's Generate
   suggestion.
 - In a toolbar, a menu or a list of choices, an AI item keeps the host's
-  shape and only takes the violet and the sparkles: the rich-text toolbar's
+  shape and only takes the violet and the sparkles (`.menu-item--ai` on a
+  menu row, `.btn--ai` on a `.btn`): the rich-text toolbar's
   sparkles button, the listing's "Translate to" menu item (icon after the
   label, so the labels stay aligned), a suggestion's Try again, the
   assistant's "Let the assistant choose". The translation dialog's sparkles
   and spinner are violet too.
-- The assistant's send button keeps its shape, filled with the violet, as
-  does "Use the ones I attached", which answers the assistant.
+- The assistant's send button keeps its shape, filled with the violet;
+  "Use the 2 I attached", which answers the assistant, is a `.btn--ai`.
 
 For controls, the rule is the call, not the subject. Navigation to the
 Assistant (its sidebar row, the command palette's "Ask the Assistant") and

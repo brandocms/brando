@@ -1,7 +1,8 @@
 # Shared text diffs
 
 Use `BrandoAdmin.Components.TextDiff.diff/1` for line-by-line text comparisons.
-Content transfer, module-file import review and recovery-copy previews use this component. Its shared
+Content transfer, module-file import review, recovery-copy previews and revision
+comparisons (`Activity.comparison/1`: Activity and an entry's History) use this component. Its shared
 styles live in `assets/css/components/TextDiff.css`, and its English/Norwegian
 labels use the `admin_diff` Gettext domain.
 

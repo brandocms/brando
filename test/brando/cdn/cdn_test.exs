@@ -83,7 +83,7 @@ defmodule Brando.CDNTest do
     # The gap the derivation does not close, pinned so it stays known rather
     # than being rediscovered as a surprise. `as: :keyword_list` is documented
     # to return raw values; callers that interpolate it must drop the
-    # credentials themselves, which is what `upload_image/4` now does.
+    # credentials themselves, as `upload_image/4` does.
     test "does not redact the keyword list, which is why the raise drops them itself" do
       inspected =
         bucketless_cfg()

@@ -1,27 +1,23 @@
 defmodule BrandoAdmin.Components.Form.DrawerCloseTest do
-  # Regression coverage for D7 in the form audit.
+  # (a) Closing the image drawer re-queues Oban processing according to what
+  #     the user actually edited, not whether the image is `:processed` yet.
+  #     A gate on processing status is wrong in both directions: a focal-point
+  #     change on an already-processed image (the drawer renders `FocalPoint`
+  #     bound to this very form) would get NO re-queue, leaving every crop
+  #     stale — while an alt-text edit on an unprocessed image would restart a
+  #     pass that was already running, and `queue_processing/4` deletes matching
+  #     jobs before inserting, so the in-flight job's row would go with it.
   #
-  # (a) Closing the image drawer re-queued Oban processing whenever the image
-  #     was not yet `:processed`, regardless of what the user had actually
-  #     edited. That gate is wrong in both directions: a focal-point change on
-  #     an already-processed image (the drawer renders `FocalPoint` bound to
-  #     this very form) got NO re-queue, leaving every crop stale — while an
-  #     alt-text edit on an unprocessed image restarted a pass that was already
-  #     running, and `queue_processing/4` deletes matching jobs before
-  #     inserting, so the in-flight job's row went with it.
-  #
-  # (b) `entry_field_upload_complete` forced `editing_*?` to false. An upload
+  # (b) `entry_field_upload_complete` leaves `editing_*?` alone. An upload
   #     started inside a drawer leaves that drawer OPEN, and
-  #     `assign_drawer_recovery_state/1` gates on exactly those flags — so the
-  #     drawer's recovery snapshot was dropped mid-edit, and a save was let
-  #     through while the image was still processing, which is precisely what
-  #     the guard exists to prevent.
+  #     `assign_drawer_recovery_state/1` gates on exactly those flags — so
+  #     clearing them would drop the drawer's recovery snapshot mid-edit, and
+  #     let a save through while the image was still processing, which is
+  #     precisely what the guard exists to prevent.
   #
-  #     The flag was being cleared there as a workaround for a different bug:
-  #     `reset_image_field` / `reset_file_field` closed their drawer without
-  #     clearing it, stranding the main save behind "close the drawer first"
-  #     with no drawer left to close. (`reset_video_field` always got this
-  #     right, which is what made the pair look deliberate.)
+  #     `reset_image_field` / `reset_file_field` / `reset_video_field` clear the
+  #     flag when they close their drawer; otherwise the main save would be
+  #     stranded behind "close the drawer first" with no drawer left to close.
   use ExUnit.Case, async: false
   use Brando.ConnCase
 

@@ -1,12 +1,12 @@
 defmodule BrandoAdmin.Components.Form.Block.ChildDiffTest do
-  # Regression coverage for B2 — a persisted CHILD block retained only its most
-  # recently edited field.
+  # A persisted CHILD block keeps every field edited before the save, not only
+  # its most recently edited one.
   #
   # The child `validate_block` clause rebases on `apply_changes(changeset)` (the
   # in-memory state), so each emitted diff is a *delta since the last validate*,
-  # not a cumulative diff vs. the DB. `{:update, …}` then replaced the stored
-  # diff wholesale, so edit `description` then `anchor` and the description was
-  # gone by save time.
+  # not a cumulative diff vs. the DB. Were `{:update, …}` to replace the stored
+  # diff wholesale, editing `description` then `anchor` would lose the
+  # description by save time.
   #
   # Roots are unaffected: they rebase on `changeset.data`, so their diffs are
   # already cumulative vs. the DB and replacing is the correct semantic there.

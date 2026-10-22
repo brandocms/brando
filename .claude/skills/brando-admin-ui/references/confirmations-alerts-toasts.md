@@ -1,6 +1,7 @@
 # Confirmations, alerts and toasts
 
-Confirmations and alerts use the native `<dialog>` (`assets/src/alerts.js`):
+Confirmations and alerts use the native `<dialog>` (`assets/src/alerts.js`;
+`data-confirm` is read by `assets/src/confirm.js`):
 left-aligned, a question as the title, the explanation under it, and compact
 buttons on a shared right edge. Write the title as the question and name the
 confirm button after its result rather than “OK”:
@@ -18,7 +19,9 @@ confirm button after its result rather than “OK”:
 Without `data-confirm-title`, the `data-confirm` text becomes the title. Add
 `data-confirm-destructive` for actions that delete or discard: the confirm
 button turns red and Cancel takes the initial focus. `phx-confirm-click` (the
-`ConfirmClick` hook) takes the same title, message and labels.
+`ConfirmClick` hook) takes the same title, message, labels and destructive flag
+as `phx-confirm-click-title`, `-message`, `-confirm`, `-cancel` and
+`-destructive`.
 
 Toasts share one stack in the bottom right (`assets/src/Toast`). Results of the
 user's own actions show a status dot — success fades, errors stay until closed.

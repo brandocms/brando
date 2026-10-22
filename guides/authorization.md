@@ -3,7 +3,7 @@
 <!-- llms-description: Groups, scopes and resource policies, the move from legacy roles, and enforcing permissions in application code. -->
 
 Brando supports an explicit transition from legacy roles to configurable groups.
-Authentication still uses the existing Phoenix session tokens. Authorization decides
+Authentication uses the application's Phoenix session tokens. Authorization decides
 which resources and actions that authenticated account may use in a specific scope.
 
 For account creation, restricted-editor setup, login/session behavior, deactivation,
@@ -175,8 +175,8 @@ Do not expose explanations for arbitrary users or scopes from a public endpoint;
 `Groups.effective/2` provides the authorized administration wrapper.
 
 Generated context mutations accept an authenticated user or `Scope` and enforce
-permissions when group mode is enabled. Ordinary frontend queries retain their
-existing behavior outside a scoped administration request. Custom administration
+permissions when group mode is enabled. Outside a scoped administration request,
+ordinary frontend queries are not filtered by permissions. Custom administration
 reads should use `Authorization.scope/3` or `Boundary.with_scope/2`. Query caches
 are bypassed for scoped admin reads to prevent public cached results from escaping
 resource filters.
@@ -218,7 +218,7 @@ for scoped reads. It must preserve the input query and tenant prefix.
 
 Read and export policies may differ; implement both in `scope/3` when exports
 need stricter filtering. Listing exports use this scope and return a download in
-the authenticated LiveView response instead of writing public files under `/media`.
+the authenticated LiveView response.
 
 <!-- usage-rules:start topic="tenancy" -->
 
@@ -278,8 +278,8 @@ are not included in the site membership directory.
 The upload bridge captures a signed account/site/environment scope at enqueue time.
 Intake verifies that scope before transfer or presigning; finalization verifies
 it again before writing. A sticky upload manager cannot silently adopt a different
-site after navigation. Configuration targets and delivery destinations still pass
-through `Brando.Uploads.AssetIntent` and the existing canonical delivery adapters.
+site after navigation. Configuration targets and delivery destinations pass
+through `Brando.Uploads.AssetIntent` and the canonical delivery adapters.
 
 If all administrator access is lost, an operator with application-shell/database
 access can run `mix brando.authorization.recover admin@example.com`. It restores
@@ -295,8 +295,8 @@ revoking access stops subsequent updates and denies the preview URL. A preview
 from another form or environment cannot be reused to overwrite its content.
 
 **Share preview** creates a separate, expiring link and requires the resource's
-Export permission as well as edit/create access. Shared links remain intentionally
-accessible without signing in until they expire. Expiry is checked when reading
+Export permission as well as edit/create access. Shared links are accessible
+without signing in until they expire. Expiry is checked when reading
 the link, even if background cleanup is delayed.
 
 The activity panel shows colleagues with backend access in the selected workspace.

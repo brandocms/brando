@@ -392,9 +392,9 @@ defmodule Brando.EditSessionTest do
       Ops.from_entry_blocks([%{id: 1, block: block}, entry_block("b", 2, 20)])
     end
 
-    # R1: the session applied A's op and then a save's rebase; A takes the
+    # The session applies A's op and then a save's rebase; A takes the
     # rebase reply before its own op's broadcast. Replaying the op over the
-    # rebased state put A's old value back over a later one.
+    # rebased state would put A's old value back over a later one.
     test "a reset drops the pending ops the session's state already holds" do
       base = rows()
       {:ok, with_a} = Ops.apply_op(base, anchor("b", "A typed"))
@@ -426,8 +426,8 @@ defmodule Brando.EditSessionTest do
       assert {:ok, %{seq: 2}} = EditSession.fetch(info.session, @field)
     end
 
-    # R2: after a crash, a fresh editor reached the new session first and
-    # seeded it from the database; A's confirmed but unsaved work was lost.
+    # After a crash, a fresh editor can reach the new session first and seed
+    # it from the database; A's confirmed but unsaved work must not be lost.
     test "a replica coming back after a crash carries its work onto a session a fresh joiner seeded" do
       ref = new_ref()
       Phoenix.PubSub.subscribe(Brando.pubsub(), ref.topic)
@@ -472,8 +472,8 @@ defmodule Brando.EditSessionTest do
       assert info.state.diffs["a"]["block"]["anchor"] == "held"
     end
 
-    # R3: an unsaved move of a persisted child to another parent was dropped
-    # without a word when someone else wrote the entry.
+    # An unsaved move of a persisted child to another parent must not be
+    # dropped without a word when someone else writes the entry.
     test "carry keeps a child moved to another parent, and reports a move it cannot make" do
       old =
         Ops.from_entry_blocks([entry_block("a", 1, 10, [child("a1", 11)]), entry_block("b", 2, 20, [child("b1", 21)])])
@@ -497,8 +497,7 @@ defmodule Brando.EditSessionTest do
       assert {_state, 0} = session_state(ref)
     end
 
-    # Round 3 #6: a rejoin carries what the editor holds onto the session's
-    # state, and had no read-only check.
+    # A rejoin carries what the editor holds onto the session's state.
     # An editor that loads a revision as a working copy replaces its unsaved
     # changes. Writing that copy must not carry them back.
     test "rows an editor writes after detaching replace what the session held, keeping later ops" do
@@ -646,10 +645,10 @@ defmodule Brando.EditSessionTest do
       assert state.diffs["a"]["block"]["anchor"] == "after the read"
     end
 
-    # Audit F1 (10 Oct 2026): a dirty rejoin between a save's read and its
-    # rebase cleared the log but kept the save's mark, so the rebase replayed
-    # nothing onto the saved rows: the op after the read and the rejoiner's
-    # work were both gone, with no conflict.
+    # A dirty rejoin between a save's read and its rebase must not clear the
+    # log while keeping the save's mark: the rebase would replay nothing onto
+    # the saved rows, and the op after the read and the rejoiner's work would
+    # both be gone, with no conflict.
     test "a rejoin carrying work while a save is in flight keeps that work and later ops through the save's rebase" do
       base = rows()
       {:seeded, data} = Data.join(Data.new(1), @field, base, base)
@@ -669,9 +668,9 @@ defmodule Brando.EditSessionTest do
       assert data.fields[@field].log == []
     end
 
-    # The reviewer's follow-up to F1: carrying a rejoiner's root diff onto the
-    # session replaced the root's diff, so another editor's change to a
-    # different field of that root went, with no conflict.
+    # Carrying a rejoiner's root diff onto the session merges into the root's
+    # diff; replacing it would drop another editor's change to a different
+    # field of that root, with no conflict.
     test "a rejoin carrying work on a root keeps the session's changes to its other fields" do
       base = rows()
       {:seeded, data} = Data.join(Data.new(1), @field, base, base)
@@ -708,9 +707,8 @@ defmodule Brando.EditSessionTest do
       assert Data.state(data, @field).diffs["a"]["block"]["table_rows"] == [%{"id" => 5, "cols" => "B's cell"}, added]
     end
 
-    # Sol audit: the save's rebase replayed the rejoiner's list as it held
-    # it, onto rows that now include a row the save wrote; the next save
-    # would delete that row.
+    # Replaying the rejoiner's list as it held it, onto rows that now include
+    # a row the save wrote, would make the next save delete that row.
     test "a save's rebase replays a rejoin with the rows the merge kept" do
       base = Ops.from_entry_blocks([entry_block("a", 1, 10), entry_block("b", 2, 20)])
       {:seeded, data} = Data.join(Data.new(1), @field, base, base)
@@ -744,8 +742,8 @@ defmodule Brando.EditSessionTest do
       assert [%{"id" => 5, "cols" => "B's cell"}, %{"id" => 8}] = params["block"]["table_rows"]
     end
 
-    # Review: the replayed rejoin held the merged lists whole, so rows the
-    # save had just written came back as unsaved work.
+    # Holding the merged lists whole, the replayed rejoin would bring the rows
+    # the save had just written back as unsaved work.
     test "a save's rebase replays a rejoin without making the saved rows unsaved" do
       base = rows_with(table_rows: [5, 6])
       {:seeded, data} = Data.join(Data.new(1), @field, base, base)
@@ -773,9 +771,9 @@ defmodule Brando.EditSessionTest do
              ]
     end
 
-    # Sol audit: the log matched the rejoiner's rows by the name it had for
-    # them, so a row it named by sync uid, which the session names by id,
-    # was logged without the rejoiner's change.
+    # Matched by the name the rejoiner had for them, a row it named by sync
+    # uid, which the session names by id, would be logged without the
+    # rejoiner's change.
     test "a save's rebase replays a rejoiner's change to a row it named by sync uid" do
       rows_a = fn rows -> %{id: 1, block: %{uid: "a", id: 10, children: [], table_rows: rows}} end
       old = Ops.from_entry_blocks([rows_a.([%{id: 5, sync_uid: "r5"}]), entry_block("b", 2, 20)])
@@ -831,9 +829,9 @@ defmodule Brando.EditSessionTest do
                Data.state(data, @field).diffs["a"]["block"]["table_rows"]
     end
 
-    # Sol audit: the log passed maps inside a row through as the rejoiner
-    # had them. The rows of a list in one (a gallery's objects) the session
-    # added are kept through the save's replay.
+    # Maps inside a row are not passed through as the rejoiner had them: the
+    # rows of a list in one (a gallery's objects) the session added are kept
+    # through the save's replay.
     test "a save's rebase replays a rejoin with the rows of a list in a map inside a row" do
       base = rows_with(refs: [3])
       {:seeded, data} = Data.join(Data.new(1), @field, base, base)
@@ -855,8 +853,8 @@ defmodule Brando.EditSessionTest do
                Data.state(data, @field).diffs["a"]["block"]["refs"]
     end
 
-    # Sol audit: the log indexed a list by identity even when two items are
-    # named alike, which the merge takes whole.
+    # A list with two items named alike is taken whole by the merge, so the
+    # log must not index it by identity either.
     test "a save's rebase replays a rejoiner's list with items named alike as it had it" do
       base = rows_with(vars: [5])
       {:seeded, data} = Data.join(Data.new(1), @field, base, base)
@@ -911,8 +909,8 @@ defmodule Brando.EditSessionTest do
       )
     end
 
-    # Review: a new row the rejoiner held, which a save has since given an
-    # id, came in twice (or was deleted and inserted again).
+    # A new row the rejoiner held, which a save has since given an id, must
+    # not come in twice (or be deleted and inserted again).
     test "a rejoin matches a new row it held with the row a save made of it" do
       ref = new_ref()
       loaded = table_rows_of([{5, "r5"}])
@@ -934,9 +932,9 @@ defmodule Brando.EditSessionTest do
       assert [%{"id" => 5}, %{"id" => 8, "cols" => "B"}] = params["block"]["table_rows"]
     end
 
-    # Sol audit: a session seeded from the rows after the save named only
-    # the rows of blocks with unsaved work, so the rejoiner's new row was
-    # not matched with the row the save made of it.
+    # In a session seeded from the rows after the save, the rejoiner's new
+    # row is still matched with the row the save made of it, not only the
+    # rows of blocks with unsaved work.
     test "a rejoin matches a new row it held with a saved row, in a session seeded after the save" do
       ref = new_ref()
       loaded = table_rows_of([{5, "r5"}])
@@ -957,8 +955,8 @@ defmodule Brando.EditSessionTest do
       assert [%{"id" => 5}, %{"id" => 8, "cols" => "B"}] = params["block"]["table_rows"]
     end
 
-    # Sol audit: the save's replay of that rejoin named the row as the
-    # rejoiner did, and logged it without the rejoiner's change.
+    # Naming the row as the rejoiner did, the save's replay of that rejoin
+    # would log it without the rejoiner's change.
     test "a save's rebase keeps a late rejoiner's change to a row a save made of its new row" do
       ref = new_ref()
       loaded = table_rows_of([{5, "r5"}])
@@ -981,9 +979,10 @@ defmodule Brando.EditSessionTest do
       assert [%{"id" => 5}, %{"id" => 8, "cols" => "B"}] = params["block"]["table_rows"]
     end
 
-    # Review: a join compared blocks only, so an editor with older rows
-    # (that never read a save's added row) could seed or join a session as
-    # if its rows were the session's, and a later rejoin merged against them.
+    # A join compares rows, not blocks only: otherwise an editor with older
+    # rows (that never read a save's added row) could seed or join a session
+    # as if its rows were the session's, and a later rejoin would merge
+    # against them.
     test "a joiner whose rows differ from the session's in their rows reads them again" do
       ref = new_ref()
       old_rows = table_rows_of([{5, "r5"}])
@@ -1060,8 +1059,8 @@ defmodule Brando.EditSessionTest do
       assert state.diffs[kept]["block"]["description"] == "B's version"
     end
 
-    # Sol audit: two rejoiners were both given `n-kept`; the second insert
-    # was turned away and its version lost.
+    # Given the same `n-kept`, the second rejoiner's insert would be turned
+    # away and its version lost.
     test "two rejoiners with their own versions of a new block get copies under different uids" do
       ref = new_ref()
       base = rows()
@@ -1087,8 +1086,8 @@ defmodule Brando.EditSessionTest do
       assert kept == ["n-kept", "n-kept-2"]
     end
 
-    # Sol audit: a block saved before the rejoin is a row with no diff in
-    # the session, so any held version looked different from it.
+    # A block saved before the rejoin is a row with no diff in the session;
+    # a held version of it is not taken for a different one.
     test "a rejoiner holding a new block the session has saved since gets no copy" do
       ref = new_ref()
       base = rows()
@@ -1107,10 +1106,10 @@ defmodule Brando.EditSessionTest do
       assert info.rescues == []
     end
 
-    # Sol audit: a block a rejoin carried into a session seeded from the
-    # rows is stored as the carry made it, which a raw comparison took for
-    # another version: the rejoiner, and the next one holding the same,
-    # were given copies of it.
+    # A block a rejoin carried into a session seeded from the rows is stored
+    # as the carry made it, which a raw comparison would take for another
+    # version: the rejoiner, and the next one holding the same, would be
+    # given copies of it.
     test "rejoiners holding the same new block a fresh session did not have get no copies" do
       ref = new_ref()
       base = rows()
@@ -1124,8 +1123,8 @@ defmodule Brando.EditSessionTest do
       end
     end
 
-    # Sol audit: only a copy's own uid was reserved, so a copy of one of its
-    # children, asked of another rejoiner, could take a uid it would take.
+    # Reserving only a copy's own uid would let a copy of one of its
+    # children, asked of another rejoiner, take a uid it would take.
     test "a copy's children's uids are reserved for it" do
       ref = new_ref()
       base = rows()
@@ -1149,8 +1148,8 @@ defmodule Brando.EditSessionTest do
       refute kept == "c-kept"
     end
 
-    # Sol audit: a block whose children were all removed holds an empty list
-    # of them, which a carry does not store.
+    # A block whose children were all removed holds an empty list of them,
+    # which a carry does not store.
     test "a new block whose children were all removed is the same without them" do
       ref = new_ref()
       base = rows()
@@ -1164,8 +1163,8 @@ defmodule Brando.EditSessionTest do
       end
     end
 
-    # Review: an editor who never changed a new block, coming back after
-    # the one who did, held the older version, and was given a copy of it.
+    # An editor who never changed a new block, coming back after the one who
+    # did, holds the older version, and must not be given a copy of it.
     test "a rejoiner that did not change a new block itself gets no copy of its version" do
       ref = new_ref()
       base = rows()
@@ -1180,9 +1179,9 @@ defmodule Brando.EditSessionTest do
       assert info.state.diffs["n"]["block"]["description"] == "B's change"
     end
 
-    # Review: a pending delete, restore or recovery copy named no block, so
-    # a version they made was not the rejoiner's own, and was dropped
-    # without a word when the session died before confirming it.
+    # A pending delete, restore or recovery copy names the blocks it touched;
+    # otherwise a version they made would not be the rejoiner's own, and would
+    # be dropped without a word when the session died before confirming it.
     test "a replica's changes name the blocks its pending deletes, restores and carries touched" do
       base = rows()
       {:ok, state} = Ops.apply_op(base, {:insert, "n", 1, %{"block" => %{"uid" => "n"}}})
@@ -1341,8 +1340,8 @@ defmodule Brando.EditSessionTest do
       assert_receive {:edit_session, @field, %{kind: :rescued, group: "b", ok?: false, orphan?: false}}, 3_000
     end
 
-    # Round 3: the origin of an outside write was never asked, so the only
-    # editor, activating a revision from its own drawer, lost its work in a
+    # The origin of an outside write is asked too; otherwise the only editor,
+    # activating a revision from its own drawer, would lose its work in a
     # block the revision lacks without a word.
     test "an editor whose own process wrote outside the editor is asked too" do
       ref = new_ref()
@@ -1405,11 +1404,11 @@ defmodule Brando.EditSessionTest do
       assert rescuer in [p1, p2]
     end
 
-    # The review's Z probe: a proposal removed "b", "b" was brought back as
-    # "b-kept", the proposal was undone so "b" returned while "b-kept"
-    # stayed, and the editor worked in "b" again before another write
-    # removed it. The earlier copy settled the new rescue at once, nothing
-    # was inserted, the new work was lost and everyone heard it was back.
+    # A proposal removes "b", "b" is brought back as "b-kept", the proposal
+    # is undone so "b" returns while "b-kept" stays, and the editor works in
+    # "b" again before another write removes it. If the earlier copy settled
+    # the new rescue at once, nothing would be inserted, the new work would be
+    # lost and everyone would hear it was back.
     test "a group removed again while its earlier copy is still there gets a copy of its own" do
       {_ref, session, p1, p2} = removed_with_work()
       send(p1, {:local, {:insert, "b-kept", :end, %{}}})

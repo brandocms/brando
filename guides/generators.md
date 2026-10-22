@@ -161,7 +161,6 @@ files during development. An application that ran `mix brando.migrate55`
 against an earlier `0.55.0-dev` build runs it again after the update to pick up
 rewrites added since; the task is idempotent and leaves migrated source unchanged. Applications
 with older DSL syntax must first follow [Migrating from 0.53 or 0.54](migrating_from_053.md).
-Future release transitions require explicit upgrade recipes and qualification.
 
 ## Auxiliary generators
 
@@ -191,7 +190,7 @@ mailer, for the email Brando sends itself, and writes a placeholder sender
 `MyApp.Contact.ContactForm`; build its notifications with
 `MyApp.Emails.contact(changeset, from: ..., to: ...)`.
 Invalid form data raises before constructing an email. Configure the production
-adapter and credentials deliberately; generating mail helpers never sends mail.
+adapter and credentials in `runtime.exs`.
 
 The sitemap selects published pages; review their public URL rules before calling
 `Brando.Sitemap.generate_sitemap/0`. Authorization generation starts from the
@@ -206,8 +205,7 @@ writes no tarball, or when `mix.exs` defines releases but none named after the
 application (it adds no second release then). Build with `MIX_ENV=prod mix release`,
 then invoke migrations explicitly as described in [Deployment](deployment.md).
 `brando.install.fabfile` is retired and directs callers to release generation and
-Florist; it does not modify existing Fabric files. `brando.install` no longer
-writes `fabfile.py` or `deployment.cfg` into a new application.
+Florist; it does not modify existing Fabric files.
 
 ```sh
 mix brando.gen.otel

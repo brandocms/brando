@@ -1,11 +1,9 @@
 defmodule Brando.Blueprint.Forms.ComponentResolutionTest do
-  # Phase 3 / E3 in the form audit.
-  #
   # `ComponentResolver` lets a Blueprint name an admin LiveComponent by token
-  # instead of compile-depending on it. It was being called from
-  # `Fieldset.Field.render/1`, so every field of every form paid a
-  # `Module.concat/1` on every diff for a value fixed at Blueprint compile time.
-  # `Forms.Dsl.transform_form/1` now resolves it once, into the entity.
+  # instead of compile-depending on it. `Forms.Dsl.transform_form/1` resolves
+  # it once, into the entity, so `Fieldset.Field.render/1` does not pay a
+  # `Module.concat/1` per field per diff for a value fixed at Blueprint compile
+  # time.
   #
   # `resolve/1` itself is covered by `Brando.Blueprint.FormComponentResolverTest`;
   # this file covers what the COMPILED form carries.

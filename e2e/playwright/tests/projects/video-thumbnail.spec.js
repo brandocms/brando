@@ -8,8 +8,8 @@ async function factory(page, schema, attributes) {
 }
 
 // The video drawer's "Select from library" sets the image picker up for the
-// video's thumbnail. It used to open the picker as the last field had left it,
-// so a pick replaced that field's image instead.
+// video's thumbnail. Opened as the last field had left it, a pick would
+// replace that field's image instead.
 test("a video's thumbnail is picked from the library without touching other fields", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 1000 })
   const listing = await factory(page, 'Brando.Images.Image', {

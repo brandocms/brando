@@ -3,8 +3,8 @@ defmodule BrandoAdmin.Components.Form.Block.LiquidVarPreviewTest do
   # for both block shapes. A child block's inputs are named
   # `child_block[vars][i][value]`; a root block wraps its block in an
   # entry_block, so its inputs are `entry_block[block][vars][i][value]`. The
-  # root shape used to fall through to the no-op clause, leaving `{{ caption }}`
-  # stale until save and reopen — issue #2797.
+  # root shape must not fall through to the no-op clause, which would leave
+  # `{{ caption }}` stale until save and reopen — issue #2797.
   use ExUnit.Case, async: false
   use Brando.ConnCase
 
