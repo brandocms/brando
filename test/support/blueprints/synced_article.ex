@@ -185,6 +185,32 @@ defmodule Brando.SyncTest.Article do
       end
     end
 
+    # Another tab's save reaching an open form (EntrySavedElsewhereTest): an
+    # image of the entry's own beside a has_many subform, and a write after
+    # the save.
+    form :elsewhere do
+      after_save &Brando.SyncTest.Article.write_after_save/2
+
+      tab "Content" do
+        fieldset do
+          input :title, :text
+          input :slug, :slug, source: :title
+          input :subtitle, :textarea
+          input :cover, :image
+        end
+
+        fieldset do
+          inputs_for :items do
+            cardinality :many
+            style :inline
+            default %{}
+
+            input :label, :text
+          end
+        end
+      end
+    end
+
     # A one-to-one subform with an image field (SubformRelationTest), on the
     # form's automatic preloads.
     form :author do
@@ -203,6 +229,16 @@ defmodule Brando.SyncTest.Article do
       end
     end
   end
+
+  # A form's `after_save` that writes to the entry (form `:elsewhere`): a
+  # slow one, for a title that asks for it, so another tab's read would find
+  # the entry without it if it came first.
+  def write_after_save(%{title: "Written after save" <> _} = entry, _user) do
+    Process.sleep(300)
+    entry |> Ecto.Changeset.change(subtitle: "Set by after_save") |> Brando.Repo.update!()
+  end
+
+  def write_after_save(_entry, _user), do: :ok
 end
 
 defmodule Brando.SyncTest.ArticleItem do

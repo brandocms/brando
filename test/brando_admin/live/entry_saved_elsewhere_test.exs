@@ -9,7 +9,9 @@ defmodule BrandoAdmin.EntrySavedElsewhereTest do
   import Brando.EditSessionEditors, only: [await: 1]
 
   alias Brando.Content.ModuleSet
+  alias Brando.Content.ModuleSetModule
   alias Brando.Pages.Page
+  alias Brando.SyncTest.Article
 
   setup %{conn: conn, current_user: me} do
     other = Factory.insert(:random_user, role: :superuser, config: %Brando.Users.UserConfig{})
@@ -26,14 +28,19 @@ defmodule BrandoAdmin.EntrySavedElsewhereTest do
     do: view |> form_of(singular) |> render_hook("blur", %{"field" => "#{singular}[#{field}]"})
 
   # A keystroke as the browser sends it: the whole form as the view shows it,
-  # with one field changed and named.
-  defp type(view, singular, field, value) do
+  # with one field changed and named. `field` is a path into a subform or an
+  # embed as a list (`["items", "0", "label"]`).
+  defp type(view, singular, field, value), do: type_in(view, singular, render(view), field, value)
+
+  # The same, in the form as the browser showed it in `html`.
+  defp type_in(view, singular, html, field, value) do
+    path = [singular | List.wrap(field)]
+
     params =
-      view
-      |> render()
+      html
       |> form_params("##{singular}_form_form")
-      |> put_in([singular, field], value)
-      |> Map.put("_target", [singular, field])
+      |> put_in(path, value)
+      |> Map.put("_target", path)
 
     view |> element("##{singular}_form_form") |> render_change(params)
   end
@@ -52,10 +59,34 @@ defmodule BrandoAdmin.EntrySavedElsewhereTest do
     end
   end
 
+  # The Form component's assigns.
+  defp form_assigns(view) do
+    {components, _, _} = :sys.get_state(view.pid).components
+
+    Enum.find_value(components, fn
+      {_cid, {BrandoAdmin.Components.Form, _id, assigns, _private, _prints}} -> assigns
+      _ -> nil
+    end)
+  end
+
+  # Another tab of the entry saved it.
+  defp announce_save(schema, id) do
+    Phoenix.PubSub.broadcast(
+      Brando.pubsub(),
+      Brando.Tenant.Topic.entry("field_sync", schema, id),
+      {:entry_saved, %{tab: "another-tab", user_id: 0}}
+    )
+  end
+
   describe "a has_many list" do
-    setup %{current_user: me, a_conn: a_conn, other_conn: other_conn} do
+    setup %{current_user: me, a_conn: a_conn, other_conn: other_conn} = c do
       [hero, text] = for name <- ["Hero", "Text"], do: Factory.insert(:module, name: name, namespace: "general")
-      set = Repo.insert!(%ModuleSet{title: "Set", creator_id: me.id})
+
+      held =
+        for {module, n} <- Enum.with_index(c[:held] || []),
+            do: %ModuleSetModule{module_id: %{text: text}[module].id, sequence: n}
+
+      set = Repo.insert!(%ModuleSet{title: "Set", creator_id: me.id, module_set_modules: held})
       path = "/admin/config/content/module_sets/update/#{set.id}"
 
       {a, _} = live_form(a_conn, path, "module_set_form")
@@ -64,18 +95,28 @@ defmodule BrandoAdmin.EntrySavedElsewhereTest do
       %{set: set, hero: hero, text: text, path: path, a: a, b: b}
     end
 
-    # Opens the options, picks one and closes them, as an editor does.
+    defp toggle_options(view),
+      do: view |> element("#module_set_module_set_modules-field-base button.button-edit") |> render_click()
+
+    defp click_option(view, module),
+      do: view |> element("button.multiselect-option[value='#{module.id}']") |> render_click()
+
+    # Opens the options, picks one (or takes it out) and closes them, as an
+    # editor does. Closing sends the picks to the other editors.
     defp pick(view, module) do
-      view |> element("#module_set_module_set_modules-field-base button.button-edit") |> render_click()
-      view |> element("button.multiselect-option[value='#{module.id}']") |> render_click()
-      view |> element("#module_set_module_set_modules-field-base button.button-edit") |> render_click()
+      toggle_options(view)
+      click_option(view, module)
+      toggle_options(view)
     end
 
     # The modules the form holds; none is an empty marker, `""`.
     defp chosen(view) do
       case params(view, "module_set")["module_set_modules"] do
-        %{} = rows -> for {_, %{"module_id" => id}} <- rows, do: String.to_integer(id)
-        _ -> []
+        %{} = rows ->
+          for {_, %{"module_id" => id} = row} <- rows, row["marked_as_deleted"] != "true", do: String.to_integer(id)
+
+        _ ->
+          []
       end
     end
 
@@ -86,6 +127,14 @@ defmodule BrandoAdmin.EntrySavedElsewhereTest do
       |> Map.fetch!(:module_set_modules)
       |> Enum.map(& &1.module_id)
       |> Enum.sort()
+    end
+
+    defp capture(view) do
+      main = view |> render() |> form_params("#module_set_form_form") |> Plug.Conn.Query.encode()
+
+      view
+      |> with_target(cid_of(view, "#module_set_form-el"))
+      |> render_hook("draft_capture", %{"main" => main, "blocks" => %{}, "generation" => 1, "request_id" => 1})
     end
 
     test "B's form takes the rows A saved, and B's next save keeps them", c do
@@ -113,6 +162,45 @@ defmodule BrandoAdmin.EntrySavedElsewhereTest do
       end)
     end
 
+    # The picks A sends as A makes them (`multi_select_changed`) leave out
+    # the rows A took out, and B holds them as A's, not as B's own edit.
+    @tag held: [:text]
+    test "a row A took out stays out of B's form, B's save and B's recovery copy", c do
+      pick(c.a, c.text)
+      pick(c.a, c.hero)
+      await(fn -> chosen(c.b) == [c.hero.id] end)
+
+      save_and_stay(c.a, "module_set", false)
+      await(fn -> saved_modules(c.set) == [c.hero.id] end)
+      settle(c.b)
+      assert chosen(c.b) == [c.hero.id]
+
+      capture(c.b)
+
+      for copy <- Brando.Drafts.list(Brando.Drafts.identity(ModuleSet, c.set.id, form_assigns(c.b).current_user.id)) do
+        refute c.text.id in Enum.map(copy.payload["main"]["module_set_modules"] || [], & &1["module_id"])
+      end
+
+      save_and_stay(c.b, "module_set", false)
+      settle(c.b)
+      assert saved_modules(c.set) == [c.hero.id]
+    end
+
+    test "a list B only had from A takes what A saved", c do
+      pick(c.a, c.hero)
+      await(fn -> chosen(c.b) == [c.hero.id] end)
+
+      # A changes the picks again, and saves with the options still open:
+      # the change reaches B only with the save.
+      toggle_options(c.a)
+      click_option(c.a, c.hero)
+      click_option(c.a, c.text)
+      save_and_stay(c.a, "module_set", false)
+      await(fn -> saved_modules(c.set) == [c.text.id] end)
+
+      await(fn -> chosen(c.b) == [c.text.id] end)
+    end
+
     # Picks reach another editor's open options as they are made
     # (`multi_select_changed`), but not another tab of the same editor.
     test "a pick of B's own stays over A's save", c do
@@ -133,6 +221,28 @@ defmodule BrandoAdmin.EntrySavedElsewhereTest do
       await(fn -> saved_modules(c.set) == [c.text.id] end)
     end
 
+    # B's browser sends a keystroke in the form it showed before the save
+    # reached it: the rows in it are the ones the save replaced.
+    test "B's browser sending the rows it showed before A's save doesn't undo the save", c do
+      {b, _} = live_form(c.a_conn, c.path, "module_set_form")
+      before = render(b)
+
+      pick(c.a, c.hero)
+      save_and_stay(c.a, "module_set", false)
+      await(fn -> saved_modules(c.set) == [c.hero.id] end)
+      await(fn -> chosen(b) == [c.hero.id] end)
+
+      type_in(b, "module_set", before, "title", "Set, typed by B")
+      assert chosen(b) == [c.hero.id]
+      assert params(b, "module_set")["title"] == "Set, typed by B"
+
+      save_and_stay(b, "module_set", false)
+
+      await(fn ->
+        Repo.get!(ModuleSet, c.set.id).title == "Set, typed by B" and saved_modules(c.set) == [c.hero.id]
+      end)
+    end
+
     # The other tab's recovery copy is of the form it shows, compared with
     # the entry as saved: it has A's rows, and B's title as B's change.
     test "a recovery copy B captures after A's save has the saved rows", c do
@@ -145,17 +255,26 @@ defmodule BrandoAdmin.EntrySavedElsewhereTest do
       save_and_stay(c.a, "module_set", false)
       await(fn -> Enum.sort(chosen(b)) == Enum.sort([c.hero.id, c.text.id]) end)
 
-      main = b |> render() |> form_params("#module_set_form_form") |> Plug.Conn.Query.encode()
-
-      b
-      |> with_target(cid_of(b, "#module_set_form-el"))
-      |> render_hook("draft_capture", %{"main" => main, "blocks" => %{}, "generation" => 1, "request_id" => 1})
+      capture(b)
 
       [copy] = Brando.Drafts.list(Brando.Drafts.identity(ModuleSet, c.set.id, c.me.id))
       assert copy.payload["main"]["title"] == "Set, typed in B"
 
       assert copy.payload["main"]["module_set_modules"] |> Enum.map(& &1["module_id"]) |> Enum.sort() ==
                Enum.sort([c.hero.id, c.text.id])
+    end
+
+    # The entry went (removed for good, or out of what B may read) between
+    # the save and B reading it back.
+    test "a save B can't read back leaves B's form as it is", c do
+      type(c.b, "module_set", "title", "Set, typed by B")
+      Repo.delete!(c.set)
+
+      announce_save(ModuleSet, c.set.id)
+      settle(c.b)
+
+      assert Process.alive?(c.b.pid)
+      assert params(c.b, "module_set")["title"] == "Set, typed by B"
     end
   end
 
@@ -197,6 +316,327 @@ defmodule BrandoAdmin.EntrySavedElsewhereTest do
       await(fn ->
         saved = Repo.get!(Page, c.page.id)
         saved.uri == "om-oss-b" and saved.publish_at == publish_at and saved.status == :published
+      end)
+    end
+
+    test "B's browser sending the form it showed before A's save keeps the publish_at", c do
+      before = render(c.b)
+
+      type(c.a, "page", "status", "published")
+      save_and_stay(c.a, "page", true)
+      await(fn -> Repo.get!(Page, c.page.id).publish_at != nil end)
+      publish_at = Repo.get!(Page, c.page.id).publish_at
+      await(fn -> shown_publish_at(c.b) not in [nil, ""] end)
+
+      focus(c.b, "page", "uri")
+      type_in(c.b, "page", before, "uri", "om-oss-b")
+      assert {:ok, ^publish_at, _} = DateTime.from_iso8601(shown_publish_at(c.b))
+
+      blur(c.b, "page", "uri")
+      save_and_stay(c.b, "page", true)
+
+      await(fn ->
+        saved = Repo.get!(Page, c.page.id)
+        saved.uri == "om-oss-b" and saved.publish_at == publish_at and saved.status == :published
+      end)
+    end
+
+    # While B's own save collects its blocks, B's save is what B's form
+    # becomes; A's doesn't rebuild it in between.
+    test "B's form isn't rebuilt while B's own save runs", c do
+      type(c.b, "page", "uri", "om-oss-b")
+      c.b |> form_of("page") |> render_hook("save_redirect_target", %{})
+      c.b |> element("#page_form_form") |> render_submit()
+      assert form_assigns(c.b).processing
+
+      held = form_assigns(c.b).form
+
+      type(c.a, "page", "title", "Om oss, A")
+      save_and_stay(c.a, "page", true)
+      await(fn -> Repo.get!(Page, c.page.id).title == "Om oss, A" end)
+      settle(c.b)
+
+      # Values other editors ship still reach it (`apply_remote/2`); the
+      # entry under it stays the one B's save started from.
+      assert form_assigns(c.b).form.data == held.data
+    end
+
+    # A revision loaded as a working copy is the form B saves; the saved
+    # entry is not.
+    test "B's working copy of a revision stays over A's save", c do
+      {:ok, revision} =
+        Page
+        |> Repo.get!(c.page.id)
+        |> Ecto.Changeset.change(title: "Revision title")
+        |> Repo.update!()
+        |> Repo.preload(Brando.Blueprint.preloads_for(Page))
+        |> Brando.Revisions.create_revision(c.me)
+
+      c.page |> Ecto.Changeset.change(title: "Om oss") |> Repo.update!()
+
+      drawer = cid_of(c.b, "#page_form-revisions-drawer-tab-activity")
+      c.b |> with_target(drawer) |> render_hook("select_revision", %{"revision" => revision.revision})
+      await(fn -> params(c.b, "page")["title"] == "Revision title" end)
+
+      type(c.a, "page", "uri", "om-oss-a")
+      save_and_stay(c.a, "page", true)
+      await(fn -> Repo.get!(Page, c.page.id).uri == "om-oss-a" end)
+      settle(c.b)
+
+      assert form_assigns(c.b).working_copy
+      assert params(c.b, "page")["title"] == "Revision title"
+    end
+  end
+
+  describe "an entry whose blocks are still loading" do
+    setup %{current_user: me, a_conn: a_conn, other_conn: other_conn} do
+      {:ok, module} =
+        Brando.Content.create_module(
+          Factory.params_for(:module,
+            name: %{"en" => "Paragraph"},
+            namespace: %{"en" => "Content"},
+            help_text: %{"en" => "Help"},
+            code: "<p>Paragraph</p>"
+          ),
+          me
+        )
+
+      page = Factory.insert(:page, creator: me, title: "Om oss", uri: "om-oss")
+
+      for _ <- 1..(BrandoAdmin.Components.Form.light_block_limit() + 1),
+          do: Brando.Test.insert_block(page, module, user: me)
+
+      path = "/admin/pages/update/#{page.id}"
+      {a, _} = live_form(a_conn, path)
+
+      test = self()
+
+      Application.put_env(:brando, :form_load_gate, fn key ->
+        send(test, {:load_held, key, self()})
+
+        receive do
+          :release -> :ok
+        after
+          5_000 -> :ok
+        end
+      end)
+
+      on_exit(fn -> Application.delete_env(:brando, :form_load_gate) end)
+
+      {:ok, b, _html} = live(other_conn, path)
+      assert_receive {:load_held, :blocks_load, task}
+
+      %{page: page, a: a, b: b, task: task}
+    end
+
+    test "takes A's save in its fields, and its blocks still load", c do
+      type(c.a, "page", "title", "Om oss, A")
+      save_and_stay(c.a, "page", true)
+      await(fn -> Repo.get!(Page, c.page.id).title == "Om oss, A" end)
+      await(fn -> params(c.b, "page")["title"] == "Om oss, A" end)
+
+      send(c.task, :release)
+      render_async(c.b, 5_000)
+      await_selector(c.b, ~s([phx-hook="Brando.BlockField"]))
+
+      count = BrandoAdmin.Components.Form.light_block_limit() + 1
+      assert c.b |> render() |> Floki.parse_document!() |> Floki.find("[data-block-uid]") |> length() >= count
+      assert params(c.b, "page")["title"] == "Om oss, A"
+    end
+  end
+
+  describe "an entry with a subform and an image" do
+    setup %{current_user: me, a_conn: a_conn, other_conn: other_conn} do
+      {:ok, article} =
+        Brando.SyncTest.create_article(
+          %{title: "Article", slug: "article", language: "en", status: "published", items: [%{label: "Old"}]},
+          me
+        )
+
+      image =
+        Factory.insert(:image,
+          creator: me,
+          config_target: "image:Brando.SyncTest.Article:cover",
+          focal: %Brando.Images.Focal{x: 50, y: 50},
+          status: :processed
+        )
+
+      path = "/admin/articles/update/#{article.id}/elsewhere"
+      {a, _} = live_form(a_conn, path, "article_form")
+      {b, _} = live_form(other_conn, path, "article_form")
+
+      %{article: article, image: image, a: a, b: b}
+    end
+
+    defp row_label(view), do: params(view, "article")["items"]["0"]["label"]
+
+    defp saved_article(article), do: Article |> Repo.get!(article.id) |> Repo.preload(:items)
+
+    test "B's edit in a row stays over A's save, and B's save writes both", c do
+      type(c.b, "article", ["items", "0", "label"], "Row by B")
+
+      type(c.a, "article", "title", "Title by A")
+      save_and_stay(c.a, "article", true)
+      await(fn -> params(c.b, "article")["title"] == "Title by A" end)
+      assert row_label(c.b) == "Row by B"
+
+      save_and_stay(c.b, "article", true)
+
+      await(fn ->
+        saved = saved_article(c.article)
+        saved.title == "Title by A" and Enum.map(saved.items, & &1.label) == ["Row by B"]
+      end)
+    end
+
+    test "a row B sets back to what it was before A's save is B's edit", c do
+      type(c.a, "article", ["items", "0", "label"], "New")
+      save_and_stay(c.a, "article", true)
+      await(fn -> Enum.map(saved_article(c.article).items, & &1.label) == ["New"] end)
+      await(fn -> row_label(c.b) == "New" end)
+
+      type(c.b, "article", ["items", "0", "label"], "Old")
+      assert row_label(c.b) == "Old"
+
+      save_and_stay(c.b, "article", true)
+      await(fn -> Enum.map(saved_article(c.article).items, & &1.label) == ["Old"] end)
+    end
+
+    # Picking the image applies the form's changes into its data
+    # (`commit_entry_field_asset/5`), and the browser's `validate` that
+    # follows can come after A's save.
+    test "B's row edit stays when B picks an image just before A's save arrives", c do
+      type(c.b, "article", ["items", "0", "label"], "Row by B")
+
+      c.b
+      |> with_target(cid_of(c.b, ~s(input[name="article[cover_id]"])))
+      |> render_click("select_image", %{"id" => to_string(c.image.id)})
+
+      picked = render(c.b)
+
+      type(c.a, "article", "title", "Title by A")
+      save_and_stay(c.a, "article", true)
+      await(fn -> params(c.b, "article")["title"] == "Title by A" end)
+      assert row_label(c.b) == "Row by B"
+
+      # The browser's `validate` for the pick (`b:validate`), from the form
+      # it showed before the save reached it
+      type_in(c.b, "article", picked, "cover_id", to_string(c.image.id))
+      assert row_label(c.b) == "Row by B"
+      assert params(c.b, "article")["title"] == "Title by A"
+
+      save_and_stay(c.b, "article", true)
+
+      await(fn ->
+        saved = saved_article(c.article)
+
+        saved.title == "Title by A" and saved.cover_id == c.image.id and
+          Enum.map(saved.items, & &1.label) == ["Row by B"]
+      end)
+    end
+
+    # The form's `after_save` writes to the entry once the save is done; the
+    # other tabs read the entry after it.
+    test "what the form's after_save writes reaches B", c do
+      type(c.a, "article", "title", "Written after save")
+      save_and_stay(c.a, "article", true)
+      await(fn -> Repo.get!(Article, c.article.id).subtitle == "Set by after_save" end)
+
+      await(fn -> params(c.b, "article")["subtitle"] == "Set by after_save" end)
+    end
+
+    # The blocks sync through the edit session; B reads the entry's fields
+    # back, not its blocks.
+    test "B reads A's save back without the blocks", c do
+      test = self()
+      id = {__MODULE__, :queries, make_ref()}
+      b_pid = c.b.pid
+
+      :telemetry.attach(
+        id,
+        [:brando_integration, :repo, :query],
+        fn _event, _measurements, meta, _config ->
+          if b_pid in [self() | Process.get(:"$callers", [])], do: send(test, {:b_query, meta.source})
+        end,
+        nil
+      )
+
+      on_exit(fn -> :telemetry.detach(id) end)
+
+      type(c.a, "article", "title", "Title by A")
+      save_and_stay(c.a, "article", true)
+      await(fn -> params(c.b, "article")["title"] == "Title by A" end)
+      :telemetry.detach(id)
+
+      sources = collect_queries([])
+      assert "synctest_articles" in sources
+      refute Enum.any?(sources, &(&1 in ["synctest_articles_blocks", "synctest_articles_notes", "content_blocks"]))
+    end
+  end
+
+  defp collect_queries(sources) do
+    receive do
+      {:b_query, source} -> collect_queries([source | sources])
+    after
+      0 -> sources
+    end
+  end
+
+  describe "a has_one subform" do
+    setup %{current_user: me, a_conn: a_conn, other_conn: other_conn} do
+      {:ok, article} =
+        Brando.SyncTest.create_article(
+          %{title: "Article", slug: "article", language: "en", status: "published"},
+          me
+        )
+
+      Repo.insert!(%Brando.SyncTest.ArticleAuthor{article_id: article.id, name: "Old name"})
+
+      path = "/admin/articles/update/#{article.id}/author"
+      {a, _} = live_form(a_conn, path, "article_form")
+      {b, _} = live_form(other_conn, path, "article_form")
+
+      %{article: article, a: a, b: b}
+    end
+
+    test "B's edit stays over A's save, and B's save writes both", c do
+      type(c.b, "article", ["author", "name"], "Name by B")
+
+      type(c.a, "article", "title", "Title by A")
+      save_and_stay(c.a, "article", true)
+      await(fn -> params(c.b, "article")["title"] == "Title by A" end)
+      assert params(c.b, "article")["author"]["name"] == "Name by B"
+
+      save_and_stay(c.b, "article", true)
+
+      await(fn ->
+        saved = Article |> Repo.get!(c.article.id) |> Repo.preload(:author)
+        saved.title == "Title by A" and saved.author.name == "Name by B"
+      end)
+    end
+  end
+
+  describe "an embeds_many subform" do
+    setup %{current_user: me, a_conn: a_conn, other_conn: other_conn} do
+      palette = Factory.insert(:palette, creator: me, status: :published, colors: [Factory.build(:color)])
+      path = "/admin/config/content/palettes/update/#{palette.id}"
+      {a, _} = live_form(a_conn, path, "palette_form")
+      {b, _} = live_form(other_conn, path, "palette_form")
+      %{palette: palette, a: a, b: b}
+    end
+
+    test "B's edit in a row stays over A's save, and B's save writes both", c do
+      type(c.b, "palette", ["colors", "0", "name"], "Color by B")
+
+      type(c.a, "palette", "instructions", "Instructions by A")
+      save_and_stay(c.a, "palette", false)
+      await(fn -> params(c.b, "palette")["instructions"] == "Instructions by A" end)
+      assert params(c.b, "palette")["colors"]["0"]["name"] == "Color by B"
+
+      save_and_stay(c.b, "palette", false)
+
+      await(fn ->
+        saved = Repo.get!(Brando.Content.Palette, c.palette.id)
+        saved.instructions == "Instructions by A" and Enum.map(saved.colors, & &1.name) == ["Color by B"]
       end)
     end
   end

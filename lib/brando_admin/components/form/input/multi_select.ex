@@ -356,7 +356,7 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
       end)
 
     socket
-    |> propagate_has_many_update(selected_options, selected_options_structs)
+    |> propagate_has_many_update(selected_options, selected_options_structs, true)
     |> then(&{:ok, &1})
   end
 
@@ -1537,11 +1537,7 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
       relation_type = socket.assigns.relation_type
 
       if relation_type in [:has_many, {:subform, :has_many}] and current_user do
-        relation_key = socket.assigns.relation_key
-        selected = socket.assigns.selected_options_structs
-
-        selected_ids =
-          Enum.map(selected, &(Map.get(&1, relation_key) |> to_string()))
+        selected_ids = selected_ids(socket)
 
         Phoenix.PubSub.broadcast(
           Brando.pubsub(),
@@ -1556,6 +1552,13 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
         )
       end
     end
+  end
+
+  # The rows marked to be removed stay in the list until the save.
+  defp selected_ids(%{assigns: %{selected_options: options, relation_key: relation_key}}) do
+    for option <- options,
+        not marked_as_deleted?(option),
+        do: option |> Changeset.get_field(relation_key) |> to_string()
   end
 
   # Others see the field as locked while the options are open; closing them
@@ -1594,7 +1597,8 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
 
   defp publish_array_selection(socket), do: socket
 
-  defp propagate_has_many_update(socket, selected_options, selected_options_structs) do
+  # `remote?`: the picks are another editor's (`apply_remote_selections`).
+  defp propagate_has_many_update(socket, selected_options, selected_options_structs, remote? \\ false) do
     %{field: field, subform_id: subform_id, on_change: on_change, relation: relation, relation_type: relation_type} =
       socket.assigns
 
@@ -1624,13 +1628,15 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
         id: subform_id,
         key: BrandoAdmin.Components.Form.Input.SubformHelpers.row_key(form),
         action: :update_changeset,
-        updated_changeset: updated_changeset
+        updated_changeset: updated_changeset,
+        remote: remote?
       )
     else
       on_change.(%{
         action: :update_changeset,
         path: path,
-        changeset: updated_changeset
+        changeset: updated_changeset,
+        remote: remote?
       })
     end
 

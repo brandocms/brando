@@ -236,6 +236,29 @@ defmodule BrandoAdmin.SyncTest.ArticleNotesFormLive do
   end
 end
 
+defmodule BrandoAdmin.SyncTest.ArticleElsewhereFormLive do
+  @moduledoc false
+  use BrandoAdmin.LiveView.Form, schema: Brando.SyncTest.Article
+
+  alias BrandoAdmin.Components.Form
+
+  def render(assigns) do
+    ~H"""
+    <.live_component
+      module={Form}
+      id="article_form"
+      name={:elsewhere}
+      entry_id={@entry_id}
+      current_user={@current_user}
+      presences={@presences}
+      schema={@schema}
+    >
+      <:header>Article</:header>
+    </.live_component>
+    """
+  end
+end
+
 defmodule BrandoAdmin.SyncTest.ArticleAuthorFormLive do
   @moduledoc false
   use BrandoAdmin.LiveView.Form, schema: Brando.SyncTest.Article
@@ -300,6 +323,7 @@ defmodule BrandoIntegrationWeb.Router do
     live "/articles/update/:entry_id/no-blocks", BrandoAdmin.SyncTest.ArticleNoBlocksFormLive, :update
     live "/articles/update/:entry_id/notes", BrandoAdmin.SyncTest.ArticleNotesFormLive, :update
     live "/articles/update/:entry_id/author", BrandoAdmin.SyncTest.ArticleAuthorFormLive, :update
+    live "/articles/update/:entry_id/elsewhere", BrandoAdmin.SyncTest.ArticleElsewhereFormLive, :update
     live "/meta-articles/update/:entry_id", BrandoAdmin.MetaDrawerTest.ActionsArticleFormLive, :update
     live "/config/shop", BrandoIntegrationAdmin.ShopSettingsLive
     live "/config/undeclared", BrandoIntegrationAdmin.UndeclaredSettingsLive

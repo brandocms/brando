@@ -51,10 +51,12 @@ area in [the section map](form-map.md) and grep for the names it lists.
   them, and values already received from other editors stay. Coverage
   lives in `test/brando_admin/live/entry_field_sync_test.exs`.
 - A save reaches the other forms of the entry as `{:entry_saved, …}`
-  ("Saves by other editors" in Form): each rebuilds on the saved entry,
-  keeping only its own unsaved fields (`unshipped_fields`, `synced_values`
-  that differ from the save, has_many rows it changed), and moves its
-  recovery baseline (`Drafts.rebase/2`). A server-side value set at save
+  ("Saves by other editors" in Form): each reads the entry back without its
+  blocks and rebuilds on it, keeping only its own unsaved fields
+  (`unshipped_fields`, `synced_values` that differ from the save, and the
+  has_many/has_one/many_to_many relations in `edited_relations`, marked
+  when the editor changes them, never by another editor's multi-select),
+  and moves its recovery baseline (`Drafts.rebase/2`). A server-side value set at save
   reaches the others only this way. Coverage lives in
   `test/brando_admin/live/entry_saved_elsewhere_test.exs`.
 - Read pending subform associations through the helpers in

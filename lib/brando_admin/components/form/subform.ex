@@ -21,8 +21,10 @@ defmodule BrandoAdmin.Components.Form.Subform do
 
   # A row's own field (a multi select in it) changed: replace that row in the
   # form's latest list, not in the copy this subform last rendered with.
-  def update(%{action: :update_changeset, key: key, updated_changeset: updated_changeset}, socket) do
-    {:noreply, socket} = SubformHelpers.send_op(socket, {:replace, key, updated_changeset})
+  # `remote` when the change is another editor's picks.
+  def update(%{action: :update_changeset, key: key, updated_changeset: updated_changeset} = message, socket) do
+    op = {:replace, key, updated_changeset}
+    {:noreply, socket} = SubformHelpers.send_op(socket, op, remote: message[:remote] == true)
     {:ok, socket}
   end
 
