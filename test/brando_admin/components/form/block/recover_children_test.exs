@@ -1,22 +1,20 @@
 defmodule BrandoAdmin.Components.Form.Block.RecoverChildrenTest do
-  # Regression coverage for C1 — a brand-new unsaved ROOT block came back from
-  # recovery with all of its children gone.
+  # A brand-new unsaved ROOT block comes back from recovery with its children.
   #
-  # Two independent halves of the same hole:
+  # Two independent halves carry them:
   #
-  #   1. The JS hook captured every block form (root *and* child) but only ever
-  #      forwarded ones matching `entry_block_form-${uid}`, so child params
-  #      never reached the server.
-  #   2. The server built its base struct with `children: []` and cast through
-  #      the 3-arity `changeset/3`, which has no `cast_assoc(:children)` — so
-  #      even had the params arrived, they would have been dropped silently.
+  #   1. The JS hook captures every block form (root *and* child) and forwards
+  #      the child forms too, not only ones matching `entry_block_form-${uid}`.
+  #   2. The server casts them with `cast_assoc(:children)`. A base struct with
+  #      `children: []` cast through the 3-arity `changeset/3`, which has no
+  #      `cast_assoc(:children)`, would drop the params silently.
   #
   # This is the one case default LiveView form recovery structurally cannot
   # reach: the blocks were never persisted, so there is no DB row to rebase a
   # replayed `validate` on.
   #
   # These tests drive the server half — `handle_event("recover_blocks", …)` —
-  # with the payload shape the hook now sends, including `childOrder`.
+  # with the payload shape the hook sends, including `childOrder`.
   use ExUnit.Case, async: false
   use Brando.ConnCase
 

@@ -7,7 +7,7 @@ determines what that account can do. A successful password check is not proof of
 permission to edit pages, manage users, or enter a site.
 
 This guide assumes public migrations are current and an administrator already has
-user-management access. In tenancy modes, users and session tokens remain global
+user-management access. In tenancy modes, users and session tokens are global
 records in `public`; site content and group scope are separate.
 
 ## Create an editor account
@@ -424,10 +424,10 @@ context call should not be treated as a recipient-validation UI. Brando discover
 foreign-key references to `users` and moves every one to the recipient — content
 ownership and edit history (`updated_by_id`) alike,
 deletes the departing account's session-token rows, and soft-deletes the account.
-It deliberately does **not** transfer authorization memberships or `user_sites`
+It does **not** transfer authorization memberships or `user_sites`
 access: the recipient keeps their own permissions.
 
-The current transfer helper discovers table/column names and issues unqualified
+The transfer helper discovers table/column names and issues unqualified
 SQL. It is **not a complete cross-environment migration tool** for a multi-site
 installation. Audit actual references in every tenant schema before deleting a
 global account there; use a schema-aware maintenance workflow for tenant content

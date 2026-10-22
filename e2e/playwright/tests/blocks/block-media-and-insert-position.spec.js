@@ -91,8 +91,8 @@ test.describe('Block regressions: media persistence + insert position', () => {
     // The picker hands the insert to the block field with a `send_update`, which
     // renders after the click has been answered — so `syncLV` can return before
     // the new block exists, while `nth(textIndex)` still resolves to the block
-    // that used to sit there. Wait for the new block, still carrying the module's
-    // default text, before typing into it.
+    // that sat there before the insert. Wait for the new block, still carrying
+    // the module's default text, before typing into it.
     const insertHeaderAbove = async (entryIndex, textIndex, text) => {
       const count = await headers.count()
       await page.locator('.entry-block').nth(entryIndex).locator('.block-plus').first().click()
@@ -113,7 +113,7 @@ test.describe('Block regressions: media persistence + insert position', () => {
     await insertHeaderAbove(0, 0, 'First')
 
     // Insert "Second" above Anchor again (Anchor is now the 2nd block) → [First, Second, Anchor].
-    // Before the fix Anchor kept a stale sequence, so "Second" landed above "First".
+    // If Anchor kept a stale sequence, "Second" would land above "First".
     await insertHeaderAbove(1, 1, 'Second')
 
     // Order in the editor must be First, Second, Anchor.

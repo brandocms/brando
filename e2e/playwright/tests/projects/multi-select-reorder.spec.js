@@ -179,9 +179,9 @@ test.describe('Multi-select reordering', () => {
   })
 
   test('reset value clears selection from the changeset, not just the UI', async ({ page }) => {
-    // Regression: after "Reset value", selecting a single option brought back
-    // every previously selected option (reset only cleared local assigns,
-    // while select_option rebuilds its list from the form changeset)
+    // After "Reset value", selecting a single option must not bring back
+    // the earlier selection: select_option rebuilds its list from the form
+    // changeset, so reset has to clear it there, not only in local assigns
     await page.locator('#nav-sections').getByRole('link', { name: 'Projects' }).click()
     await expect(page).toHaveURL(/\/projects\/projects(\?|$)/)
     await syncLV(page)

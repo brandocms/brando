@@ -1,13 +1,10 @@
 defmodule Brando.Uploads.DirectFinalizeTest do
   @moduledoc """
-  The test D1 could not write.
-
-  Phase 2 shipped the pending-intent machinery that lets a `direct_complete`
-  arriving after the sticky UploadManager remounted still reach
-  `Brando.Uploads.finalize_direct/3`, and said so honestly in the plan: *"no test
-  drives a **successful** finalize, because there is no S3 mock boundary in the
-  repo"*. `Brando.CDN.Client` is that boundary, and this is the coverage it was
-  for — everything past the `HEAD` is real code creating a real row.
+  A **successful** `Brando.Uploads.finalize_direct/3`, driven through the
+  `Brando.CDN.Client` mock — the path a `direct_complete` takes, including one
+  arriving after the sticky UploadManager remounted (see `PendingIntentTest`).
+  Only the bucket is stubbed: everything past the `HEAD` is real code creating
+  a real row.
 
   What this pins that nothing else could: the server trusts **only** its own
   key and resolved target plus what the bucket reports, never the numbers the

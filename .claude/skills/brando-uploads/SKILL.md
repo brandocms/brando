@@ -10,7 +10,11 @@ user-invocable: true
 
 # Media asset fields, browsers, and uploads
 
-The current architecture and transport matrix are documented in `docs/UPLOADER.md`.
+Before changing how an upload is transferred, stored or delivered (the
+`UploadManager` and its hooks, `Brando.Uploads`, a target kind, or a delivery
+adapter), read [architecture.md](architecture.md): the transport per backend, the
+flow and the orphan-safe delivery contract.
+
 Keep these UX and wiring contracts intact when changing image, video, file, or gallery
 fields, refs, and vars:
 
@@ -35,10 +39,11 @@ fields, refs, and vars:
   strings at call sites.
 - **Commit through the owning context.** Pickers and the upload manager deliver assets to
   the established field/ref/var/gallery adapter; they do not mutate unrelated form or
-  block state directly. Block refs continue through `Block.commit_ref_data/2`.
+  block state directly. Block refs go through `Block.commit_ref_data/2`.
 - **Gallery media configuration is per type.** Galleries may independently configure and
-  restrict images and videos. A legacy flat gallery config remains the image config; do
-  not silently apply it to video.
+  restrict images and videos. A flat gallery config (no `image:`/`video:` keys) is the
+  image config and video keeps its defaults
+  (`Brando.Blueprint.AssetConfigNormalizer`); do not silently apply it to video.
 
 For processing after delivery, follow `lib/brando/images/processing.ex` (especially
 `processing_queued?/1` before opportunistic requeueing) and the current Image/Vix

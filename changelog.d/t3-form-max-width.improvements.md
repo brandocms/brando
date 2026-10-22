@@ -1,7 +1,5 @@
-- **Entry forms stop at 1400px on wide screens** (#3244). A field's border and its
-  actions no longer run to the far edge of a large monitor. While the live
-  preview is open the form still fills the space up to it.
+- Entry forms stop at 1400px wide unless the live preview is open
+  ([#3244](https://github.com/brandocms/brando/pull/3244)).
 
-- **A listing's rows sit in one bordered frame** (#3244), like the identifier lists
-  and inline subform tables: the column headings, the rows with a hairline
-  between them and the footer, inside a 6px rounded border.
+- A listing's rows sit in one bordered frame with their headings and footer
+  ([#3244](https://github.com/brandocms/brando/pull/3244)).

@@ -103,7 +103,7 @@ defmodule Brando.Users.ThrottleTest do
       now = DateTime.utc_now()
       hours_ago = &DateTime.add(now, -&1 * 3600, :second)
 
-      # The review's probe: one lockout a day and a bit ago, one an hour ago
+      # One lockout a day and a bit ago, one an hour ago
       for at <- [hours_ago.(25), hours_ago.(1)] do
         Repo.insert!(%Brando.Users.SecurityEvent{user_id: user.id, action: :locked, inserted_at: at})
       end

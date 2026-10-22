@@ -46,7 +46,8 @@ The current fields must be valid for publication, including required asset
 associations. A successful context mutation coordinates identifiers, query-cache
 eviction, and content rendering/cascades. Avoid replacing it with a raw database
 status update. `Brando.Trait.Status.update_status/4` is used by status controls;
-its legacy fast path is narrower than a full context save. Application publication
+in legacy authorization mode it takes a fast path that is narrower than a full
+context save. Application publication
 workflows should use the context as above.
 
 Public queries must explicitly select `status: :published`; the default context

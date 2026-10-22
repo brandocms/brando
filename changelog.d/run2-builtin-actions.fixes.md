@@ -1,9 +1,4 @@
-- **`mix brando.migrate54` removes listing actions that repeat the
-  built-ins.** 0.53 generators declared edit, duplicate and delete as
-  listing actions (`event: "edit_entry"`, …). A listing's `default_actions`
-  offers the same three, so each row menu showed them twice. The task now
-  removes an `action` with one of those events, in the 0.53 `actions [...]`
-  list or an `action` an earlier run wrote, and names each in its notice. A
-  listing with `default_actions false` keeps them, and one with options
-  beyond `label`, `event` and `confirm` is kept and listed with file and
-  line.
+- `mix brando.migrate54` removes listing actions that repeat the built-in edit, duplicate and delete,
+  which showed twice in each row menu ([#3167](https://github.com/brandocms/brando/pull/3167)).
+  Check the listings the task's notice names with file and line: those have options beyond `label`,
+  `event` and `confirm` and are kept.

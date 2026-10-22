@@ -1,6 +1,8 @@
-NOTE: Upgrade notes are in the CHANGELOG now. Coming from 0.51 (`legacy`)?
-Read [guides/migrating_from_051.md](guides/migrating_from_051.md) first; the
-0.52.0 notes below are older and incomplete.
+Upgrade steps are in the migration guides:
+[Migrating from 0.53 or 0.54](guides/migrating_from_053.md) and
+[Migrating from 0.51](guides/migrating_from_051.md). This file holds the
+release policy for source migrations, the modules renamed in 0.55, and the
+notes for 0.52 and older, which are incomplete.
 
 ## How long source migrations ship
 
@@ -22,10 +24,7 @@ next task.
 Database migrations follow a different rule. The `brando_NNN` templates are the
 schema history for every site, including fresh installs, and are never pruned.
 Their numbers can have gaps: a number reserved for a migration that was never
-needed stays unused (`brando_206` and `brando_208` in 0.55). Copy the ones a
-project lacks with `mix brando.gen.migrations`, review them, and run them with
-`mix brando.migrate`, followed by `mix brando.migrate --tenants` when the
-application has named environments.
+needed stays unused (`brando_206` and `brando_208` in 0.55).
 
 ## Modules renamed in 0.55
 
@@ -867,8 +866,8 @@ end
     - (if developing on brandojs, yalc it.)
     - **Note, from a later version:** this path no longer exists. The Hex
       package stopped shipping `assets/` entirely, and the admin frontend is
-      distributed as `@brandocms/brandojs` via Yalc. Kept as the historical
-      0.44.0 step; do not follow it on a current upgrade.
+      distributed as `@brandocms/brandojs` via Yalc. Do not follow this step
+      on a current upgrade.
 * Switch out `kurtz` with `brandojs`:
   ```
   gsed -i "s=@univers-agency\/kurtz=brandojs=" assets/backend/src/**/*.js && \

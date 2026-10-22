@@ -58,12 +58,11 @@ The callbacks return `{:ok, results}`. A list returns entries directly; a
 selection's `list` returns **identifiers for the picker**, and its `get` resolves
 the selected identifiers into entries for rendering. The first list argument may
 be the registered module string or module atom supplied by the caller; this
-example deliberately uses the known Pages schema instead of querying that value
-blindly.
+example names the Pages schema directly.
 
 `get_entries_from_identifiers/2` preserves the incoming identifier order, including
-mixed schemas. Pass an options map, such as `%{preload: [...]}`; the older bare
-preload-list argument is deprecated. Missing or filtered entries can occupy nil
+mixed schemas. Pass an options map, such as `%{preload: [...]}`; a bare
+preload list as the argument is deprecated. Missing or filtered entries can occupy nil
 positions in its result, so remove those before rendering. An empty selection
 returns `{:ok, []}` without invoking your `get` callback.
 

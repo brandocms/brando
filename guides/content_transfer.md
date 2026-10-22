@@ -5,9 +5,8 @@ installations, sites and environments. Entries include authored fields, metadata
 assets, owned records and every block field. Review the bundle before creating
 new entries or updating existing ones on the destination.
 
-**Advanced export options → Block fields only** retains the original workflow:
-replace or append selected fields on an existing entry. Version-1 bundles remain
-supported.
+**Advanced export options → Block fields only** replaces or appends selected
+fields on an existing entry. Version-1 bundles are supported too.
 
 Repository screenshots: [Export](../docs/admin-ui/content-transfer-export.png),
 [upload](../docs/admin-ui/content-transfer-import.png),
@@ -15,16 +14,12 @@ Repository screenshots: [Export](../docs/admin-ui/content-transfer-export.png),
 [mobile selection](../docs/admin-ui/content-transfer-export-mobile.png),
 [desktop review](../docs/admin-ui/content-transfer-review-desktop.png), and
 [mobile review](../docs/admin-ui/content-transfer-review-mobile.png).
-The configuration refinements review in `docs/admin-ui/configuration-refinements/`
-shows the content-type filters, related-entry paths and unchanged-entry reuse.
-It is a repository review rather than a published page, so it is referenced by
-path: an ExDoc link to a Markdown file outside `extras` fails the docs build.
 
 ## Prepare the destination
 
 Run framework migration **174**, which creates recovery receipts and fills only
 missing module and table-template UIDs before making those columns non-null.
-Existing UIDs and module versions stay intact. Provisioned environments inherit
+Provisioned environments inherit
 the constraints; receipts remain in `public` and are scoped to the current
 database, site/environment and actor.
 
@@ -60,13 +55,13 @@ not deploy application code or service credentials.
    content is always an explicit import decision.
    For entries being created or updated, review titles, URI/slug/key, language
    and publication. Key collisions
-   block import instead of silently renaming content. Expand **Review fields &
+   block import. Expand **Review fields &
    content** to inspect changes, block text, assets and owned records.
    New entries default to Draft without a publication schedule; updates keep the
    destination's status and publication date. Choosing the source publication
    settings applies its status and date through the normal publisher scheduler.
    Saving as draft clears the entry's scheduled status job. Block-field bundles
-   retain their **Replace** / **Append** controls.
+   have **Replace** / **Append** controls.
 4. **Resolve dependencies.** Confirm mappings for referenced content and media.
    Module and table-template UIDs match automatically. Historical independent
    copies appear as suggestions and require an explicit choice. Definition
@@ -94,8 +89,8 @@ writes the reviewed entries (or selected block fields), owned records and media.
 database ID is local. Content import resolves a UID to the local module ID and
 stamps newly inserted blocks with that module's current version.
 
-The older module-list import creates independent copies with fresh UIDs and
-version 1. It remains available. A copied module can be explicitly mapped during
+The module-list import creates independent copies with fresh UIDs and
+version 1. A copied module can be explicitly mapped during
 content review when its contract is compatible; matching names or coincident
 database IDs never make that choice automatically. Reviewed mappings are reused
 for unchanged dependency requirements from the same source and workspace.
@@ -146,7 +141,7 @@ are not portable authored values. The current actor owns the destination changes
 
 Shared-library definitions and overrides must be made local before transfer.
 Unsupported reference types and missing application dependencies are actionable
-errors; import does not silently discard their content.
+errors.
 
 ## Media and retries
 
@@ -163,7 +158,7 @@ always independent even when its media is shared.
 
 Each reviewed plan has a unique operation ID. Retrying that plan returns its
 receipt and cannot append duplicate content. Generating a new preview creates a
-new intentional operation. If a connection drops during apply, check **Recent
+new operation. If a connection drops during apply, check **Recent
 imports** before starting another import. After a successful commit, retrying
 rendering/media does not reimport content.
 
@@ -190,8 +185,8 @@ rolls back the entire recovery operation.
 Entries selected with **Use existing unchanged** are excluded from the saved
 entry count and recovery snapshots; recovery leaves their content untouched.
 
-Version-1 recovery remains limited to its selected block fields. Installed
-definitions and transferred library media remain available. Include receipts in the application's
+Recovering a version-1 import covers only its selected block fields. Recovery
+leaves installed definitions and transferred library media in place. Include receipts in the application's
 normal database backup and retention policy. Receipts are not copied between
 tenant environments.
 
@@ -255,7 +250,7 @@ Explicit `fields: ["blocks", "sidebar"]` selectors export version-1 block-field
 bundles. Omit `fields` for complete entries, or pass `scope: :entries` to force
 whole-entry export. Version 2 adds a schema-validated `entries` manifest; its
 block-field index must agree with the entry payload. Both versions use
-`content.json` in a ZIP and the existing optional definition format.
+`content.json` in a ZIP and the optional definition format.
 
 Limits are 128 MB compressed, 256 MB expanded, 8 MB of manifest JSON, 2,000 ZIP
 entries/dependencies, 100 entries/fields, 5,000 blocks per entry/field, 40 block

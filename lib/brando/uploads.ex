@@ -1,9 +1,9 @@
 defmodule Brando.Uploads do
   @moduledoc """
   The uploads context: intake, transport and finalize for the unified upload
-  manager (see `docs/UPLOADER.md`) and for a site's own upload forms
-  (`Brando.Uploads.Direct`). Storing the bytes and creating the asset row is
-  `Brando.Uploads.Store`.
+  manager (see `.claude/skills/brando-uploads/architecture.md`) and for a
+  site's own upload forms (`Brando.Uploads.Direct`). Storing the bytes and
+  creating the asset row is `Brando.Uploads.Store`.
 
   Transports:
 
@@ -20,8 +20,9 @@ defmodule Brando.Uploads do
     delivered to the bucket like any other image's. Opt-in per config:
     `cdn: %Brando.CDN.Config{enabled: true, direct: true}`. Configs with
     `content_disposition` set stay on `:server` transport (the header can't
-    ride an unsigned presigned PUT). Note: direct uploads never produce a
-    local copy, regardless of `keep_local_copy`. **Ops prerequisite:** the
+    ride an unsigned presigned PUT). Direct files and videos leave no local
+    copy; a direct image keeps its fetched original and sizes on disk unless
+    `keep_local_copy: false`. **Ops prerequisite:** the
     bucket CORS must allow `PUT` from the admin origin.
 
   Intake validation happens here, *before* any bytes are transferred.
@@ -643,11 +644,11 @@ defmodule Brando.Uploads do
 
       config :brando, Brando.Uploads, max_concurrent_transfers: 2
 
-  Defaults to 3. Set to 1 for strictly sequential transfers (the old
-  gallery behavior). Queued files wait for a free slot; the drawer shows
-  them as queued. Note this caps *transfer* only — image processing
-  concurrency is still governed by the `:image_processing` Oban queue
-  limit and `config :brando, :concurrent_image_jobs`.
+  Defaults to 3. Set to 1 for strictly sequential transfers. Queued files
+  wait for a free slot; the drawer shows them as queued. Note this caps
+  *transfer* only — image processing concurrency is still governed by the
+  `:image_processing` Oban queue limit and
+  `config :brando, :concurrent_image_jobs`.
   """
   def max_concurrent_transfers do
     config = Application.get_env(:brando, __MODULE__) || []
@@ -715,43 +716,24 @@ defmodule Brando.Uploads do
   defp validate_provider_strategy(%{upload_strategy: strategy}),
     do: {:error, "Video upload strategy #{inspect(strategy)} is not available for provider uploads"}
 
-  # Missing provider credentials are a pre-flight condition, checked here beside
-  # the other pre-flight conditions rather than at the point of the HTTP call.
+  # Missing provider credentials are a pre-flight condition, checked here with
+  # the other pre-flight checks. The provider clients raise on missing
+  # credentials (a deploy-time config error), and not every caller of
+  # `Videos.Uploader.initiate_upload/3` rescues, so checking first keeps a file
+  # pick in the admin from taking the LiveView and its unsaved edits down. The
+  # raises stay as a last-resort guard for other callers.
   #
-  # The three clients raise on missing credentials — deliberately, since 0.54.0:
-  # a deploy-time config error is not a runtime condition. But the check lived
-  # in `api_request`, the hot path, so it fired at file-pick time with the
-  # editor's unsaved work in the blast radius. Only one of the three call sites
-  # of `Videos.Uploader.initiate_upload/3` rescued, so a pick in the video
-  # picker or a transformer took the LiveView down with it. That is fail-late
-  # wearing fail-fast's clothes.
+  # Runs after `validate_provider_strategy/1`, so a non-provider strategy is
+  # reported as such rather than as a credentials problem, and before
+  # `validate_intake/4`, since an upload that cannot start needs no size check.
   #
-  # Checking it here makes the raises unreachable from the admin path without
-  # weakening them: they stay exactly as 0.54.0 decided and become a genuine
-  # last-resort invariant guard for every other caller. Both unrescued call
-  # sites already had `{:error, reason}` branches, so neither needed an edit.
-  #
-  # Ordering is load-bearing. After `validate_provider_strategy/1`, so a
-  # non-provider strategy is rejected on its own terms rather than reported as
-  # a credentials problem; before `validate_intake/4`, because there is no point
-  # size-checking an upload that cannot start.
-  # One clause and a runtime lookup rather than a clause per provider plus a
-  # catch-all. The catch-all is what the shape is avoiding: `validate_provider_strategy/1`
-  # runs first and admits exactly these three, so Elixir 1.20's type checker
-  # narrows the argument through the `with` chain and correctly reports a
-  # trailing `%{upload_strategy: strategy}` clause as unreachable. The old
-  # comment here conceded as much — it called the clause unreachable and kept it
-  # anyway — and `--warnings-as-errors` on 1.20 turns that into a build failure.
-  #
-  # The defensive intent survives, because `Map.fetch/2`'s `:error` branch is
-  # not a function clause and so cannot be pruned: a fourth provider added to
-  # `validate_provider_strategy/1`'s list without an entry below still returns
-  # an error tuple rather than raising `FunctionClauseError`, which is the very
-  # crash this validator exists to prevent. Mirrors `Videos.Uploader`'s
-  # `{:error, {:unknown_strategy, strategy}}` branch.
-  #
-  # It also makes the map the single place a provider is registered, so the two
-  # lists cannot drift.
+  # One clause with a map lookup rather than a clause per provider: Elixir 1.20
+  # narrows the strategy through the `with` chain and would flag a catch-all
+  # clause as unreachable under `--warnings-as-errors`. `Map.fetch/2`'s `:error`
+  # branch still returns an error tuple (mirroring `Videos.Uploader`'s
+  # `{:error, {:unknown_strategy, strategy}}`) if a provider is added to
+  # `validate_provider_strategy/1` without an entry here. The map is the single
+  # registry of providers.
   @provider_modules %{
     mux: Brando.Videos.Uploaders.Mux,
     bunny: Brando.Videos.Uploaders.Bunny,
@@ -773,9 +755,8 @@ defmodule Brando.Uploads do
   User-facing text for a failed provider video upload.
 
   One owner, because three surfaces report the same failures to the same
-  browser channel — `VideoPicker`, `Form` (for the video drawer) and
-  `Form.Transformer` — and they had drifted: the picker pushed `inspect/1` of
-  the raw term, so a reader saw `:provider_not_configured`.
+  browser channel (`VideoPicker`, `Form` for the video drawer, and
+  `Form.Transformer`) and must word them the same.
 
   The atom clauses matter more than the shapes below them. They are the errors
   this module *produces*, so they are the ones a site operator can act on, and

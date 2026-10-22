@@ -13,7 +13,7 @@ Empty values use the same schema normalization when exporting and reading, so
 legacy blank values do not produce spurious updates or writes on reimport.
 
 This workflow supports standalone applications and local modules in a selected
-tenant environment. The admin's existing copy/install export remains available.
+tenant environment. The admin's copy/install export is also available.
 
 ## Using the admin
 
@@ -54,8 +54,8 @@ metadata are ignored. A disconnected/reloaded page requires a new upload and
 preview. Temporary files are removed after reading; uploaded contents and the
 preview are held only in the current LiveView session.
 
-The older **Import modules** and **Export modules** actions still create copies
-using the legacy encoded format. Use the DSL actions to update existing module
+The **Import modules** and **Export modules** actions create copies using the
+legacy encoded format. Use the DSL actions to update existing module
 identities.
 
 ## Export, edit, inspect, import
@@ -242,7 +242,7 @@ rendering snapshots.
 
 A newly authored ref may omit its UID: it is derived deterministically from the
 module UID and ref name. Export makes that UID explicit. Keep it on subsequent
-edits. To install a separate copy, use the existing admin copy workflow or author
+edits. To install a separate copy, use the admin copy workflow or author
 new module, ref and table-template identities throughout the copied tree.
 Changing only the module UID while retaining another module's ref UIDs is rejected.
 
@@ -300,8 +300,7 @@ slot with `headless_ref` and decide in the template:
 The declaration is what gives the ref its slot in the block editor: a
 `{% ref %}` inside `{% if %}` alone gets none.
 
-Unknown settings and unsupported ref types fail validation rather than being
-silently dropped. Export includes default and nil values so a later schema
+Unknown settings and unsupported ref types fail validation. Export includes default and nil values so a later schema
 default cannot quietly change an existing definition.
 
 <!-- usage-rules:start topic="module-definitions" -->
@@ -458,7 +457,7 @@ continue to follow Brando's protected-content rules. Planning parses Liquid or
 compiles HEEx, but does not render every affected entry or prove that all
 datasource/runtime expressions will succeed.
 
-This first importer blocks removed/retyped refs and vars, ref identity changes,
+The importer blocks removed/retyped refs and vars, ref identity changes,
 moving existing children, removing child definitions, changing table columns,
 and changes to the module contract (engine, multi, datasource or table binding).
 There is no force switch that silently deletes editor content. Removing a
@@ -472,9 +471,8 @@ Do not discard or fabricate baseline digests to hide concurrent edits.
 The baseline records a digest of each definition as it was exported. Empty
 values (`nil`, `false`, `""`, `[]`, `%{}`) are left out of it, so a Brando
 upgrade that adds a field to a block type or a var doesn't make untouched
-definitions look changed. Lockfiles written before this (no `"version": 2` in
-`baseline`) are still compared exactly; the next import or export rewrites
-them.
+definitions look changed. A lockfile without `"version": 2` in `baseline` is
+compared exactly; the next import or export rewrites it.
 
 Apply locks the definition tables and recalculates the plan before writing.
 Changes after planning invalidate the plan. A database error rolls back all
@@ -558,7 +556,7 @@ server-side site/environment. The actor's authorization scope must match that
 target. Trusted maintenance callers may explicitly pass `:system`; planning
 then also requires `creator: user_id` for newly inserted var/table records.
 
-Shared-library publication and overrides, remote Florist pull/apply,
-automatic destructive migrations and coordinated frontend asset
-activation are follow-up work. This importer does not change shared-source
-provenance or install frontend assets.
+The importer does not publish to the shared library or manage its overrides,
+pull or apply through Florist, run destructive migrations automatically, or
+install or activate frontend assets. It does not change shared-source
+provenance.

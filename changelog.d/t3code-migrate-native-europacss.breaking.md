@@ -1,21 +1,11 @@
-- **The admin's CSS builds with native EuropaCSS** (#3187). The Rust compiler
-  runs through `@brandocms/vite-plugin-europacss` in the application's Vite
-  build, replacing the `@brandocms/europacss` PostCSS plugin and
-  `autoprefixer`. `assets/backend/europa.json5` extends BrandoJS's preset
-  (`europa.json5`, whose `nesting: 'expanded'` and `responsiveOrder:
-  'generated-last'` keep 0.13's selectors and media order) in place of
-  `europa.config.cjs`; `mix brando.gen.backend --upgrade` creates it, updates the packages and
-  `vite.config.js`, and removes unchanged template copies of
-  `postcss.config.cjs` and `europa.config.cjs`, keeping an application's own
-  with a notice. The admin's styles are in the cascade layers `reset, vendor,
-  brando, app`: application CSS in `@layer app` outranks Brando's rules
-  without matching their selectors, and an `!important` in Brando's layer
-  outranks one in `app`. `@row` and `@container;` are gone and `@keyframes`
-  cannot be nested in a rule; the upgrade task lists the `@row`s it finds.
-  `theme.colors` is the admin's supported palette: `tokens.css` sets the
-  matching roles and the `--brando-color-*` names from it, so an application's
-  `europa.json5` recolours the admin. The plugin and
-  `@brandocms/europacss-cli` are pinned to 0.1.0-beta.0 from npm, which
-  installs the compiler for the build machine's platform; no Rust toolchain
-  is needed, and the CLI is `pnpm exec europa`. See "Native EuropaCSS" in
-  [Migrating from 0.53](guides/migrating_from_053.md#native-europacss).
+- The admin's CSS builds with native EuropaCSS through `@brandocms/vite-plugin-europacss`, replacing
+  the `@brandocms/europacss` PostCSS plugin and `autoprefixer`
+  ([#3189](https://github.com/brandocms/brando/pull/3189)).
+  Run `mix brando.gen.backend --upgrade`: it creates `assets/backend/europa.json5`, updates the
+  packages and `vite.config.js`, and removes unchanged `postcss.config.cjs` and `europa.config.cjs`.
+  Remove `@row` and `@container;` from the admin's CSS (the upgrade lists the `@row`s) and move
+  nested `@keyframes` out of their rules.
+  Put application CSS in `@layer app` to override Brando's rules, and recolour the admin through
+  `theme.colors` in `europa.json5`.
+  The CLI is `pnpm exec europa`. See [Native
+  EuropaCSS](guides/migrating_from_053.md#native-europacss).

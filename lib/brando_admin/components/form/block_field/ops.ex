@@ -2,8 +2,8 @@ defmodule BrandoAdmin.Components.Form.BlockField.Ops do
   @moduledoc """
   Pure operation reducer for a block field's block-tree state.
 
-  Phase 3 of the block editor refactor replaces changesets-travelling-between-
-  components with small named operations applied by one owner (BlockField).
+  Rather than passing changesets between components, the block editor applies
+  small named operations through one owner (BlockField).
   This module is that owner's state + reducer: root order, parent/child
   structure, a uid-keyed param-diff store and per-uid statuses, mutated
   exclusively through `apply_op/2`. Being pure, every structural/content
@@ -746,9 +746,9 @@ defmodule BrandoAdmin.Components.Form.BlockField.Ops do
 
   # ALWAYS emit "children" — the tree is authoritative, including emptiness
   # (`from_entry_blocks`/insert registration know every child). Dropping the
-  # key when empty silently kept rows alive: deleting a parent's last child
-  # never persisted, and a child moved to another parent stayed (duplicated)
-  # under the old one. An empty list over loaded-empty data is a no-op cast.
+  # key when empty would silently keep rows alive: deleting a parent's last
+  # child would never persist, and a child moved to another parent would stay
+  # (duplicated) under the old one. An empty list over loaded-empty data is a no-op cast.
   defp put_children(params, children), do: Map.put(params, "children", children)
 
   # A diff can carry `"id" => nil` (the snapshot of a block that was new when

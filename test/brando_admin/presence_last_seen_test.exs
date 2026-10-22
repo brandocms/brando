@@ -4,17 +4,12 @@ defmodule BrandoAdmin.PresenceLastSeenTest do
   to `users.last_seen` for one who is not.
 
   `last_seen` is written in one place — `LobbyFetcher.handle_metas/4`, on a
-  departure. It used to be `last_login`, written from `BrandoAdmin.Chrome`,
-  which is the only subscriber to the "presence" topic and is a sticky
-  LiveView, one per open admin browser. The write was therefore performed by
-  *other people's* browsers: when the last admin left, the broadcast went out
-  and the only process that would have persisted it was the one dying.
-
-  On a site whose two editors rarely overlap that means the timestamp only ever
-  moves when someone happens to be watching. Reported from production as a
-  user's last-seen frozen twelve days back while they had been using the site
-  daily — and it had last moved on an evening the other editor was demonstrably
-  online.
+  departure. It is not written from `BrandoAdmin.Chrome`: that is the only
+  subscriber to the "presence" topic and a sticky LiveView, one per open admin
+  browser, so the write would be performed by *other people's* browsers. When
+  the last admin left, the broadcast would go out and the only process that
+  could persist it would be the one dying. On a site whose two editors rarely
+  overlap, the timestamp would only move when someone happened to be watching.
 
   These cover the departure itself. A user who is merely closing one of several
   tabs has not left, and must not have a departure recorded.

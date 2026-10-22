@@ -196,9 +196,8 @@ defmodule BrandoAdmin.Components.Form.BlockField.SetFieldTest do
 
   # #12: a list whose items have no identity was named by index, so an item
   # added or removed elsewhere moved every later change onto its neighbour.
-  # Follow-up: a select var's options (an embed, no id) were set whole, so
-  # of two editors each adding one, one lost theirs. They are named by
-  # their value.
+  # A select var's options (an embed, no id) are named by their value. Set
+  # whole, of two editors each adding one, one would lose theirs.
   test "a var's options are named by their value, and new table rows go by their sync uid", c do
     [_intro, multi] = rows(c.work)
     alpha = hd(multi.block.children)
@@ -270,10 +269,10 @@ defmodule BrandoAdmin.Components.Form.BlockField.SetFieldTest do
              Ops.field_op(theirs, mine, intro.block.uid, {shown, theirs})
   end
 
-  # Round 3 #1: every field set back to its value before the replace was
-  # dropped, not only the ones the other editor's change touched. While
-  # someone types in the same block the form is replaced every moment, so a
-  # backspace, or a toggle set back, was lost.
+  # Only the fields the other editor's change touched are dropped when set
+  # back to their value before the replace. While someone types in the same
+  # block the form is replaced every moment, so dropping every such field would
+  # lose a backspace, or a toggle set back.
   test "a field the other editor did not touch counts when set back, a backspace or a toggle", c do
     [intro | _] = rows(c.work)
     text = ["block", "refs", "0", "data", "data", "text"]
@@ -346,8 +345,8 @@ defmodule BrandoAdmin.Components.Form.BlockField.SetFieldTest do
     assert Enum.find(merged, &(&1["image_id"] == 1))["id"] == 9
   end
 
-  # Follow-up, round 2: content identities took precedence over a row's id,
-  # so two objects showing one image were one item.
+  # A row's id takes precedence over content identities; otherwise two
+  # objects showing one image would be one item.
   describe "a gallery showing one image twice" do
     defp gallery do
       %Brando.Galleries.Gallery{
@@ -415,8 +414,8 @@ defmodule BrandoAdmin.Components.Form.BlockField.SetFieldTest do
              Ops.field_op(before, changed, alpha.uid)
   end
 
-  # Round 4: the field the event names was dropped as an echo when the
-  # editor set it back to its value from before another editor changed it.
+  # The field the event names must not be dropped as an echo when the editor
+  # sets it back to its value from before another editor changed it.
   test "the input the event names is never an echo, even set back after another editor's change" do
     data = %Block{id: 1, uid: "b", active: false, description: "x"}
 
@@ -440,8 +439,8 @@ defmodule BrandoAdmin.Components.Form.BlockField.SetFieldTest do
              {:ok, {:set_field, "b", ["description"], "abc", nil}}
   end
 
-  # Round 4: two items were one row when any identity matched, so another
-  # editor's new item sharing a key with an existing one vanished.
+  # Were two items one row when any identity matched, another editor's new
+  # item sharing a key with an existing one would vanish.
   test "list items are the same row by their first identity only" do
     before = [%{"id" => 1, "key" => "k"}]
     current = [%{"id" => 1, "key" => "k"}, %{"id" => 2, "key" => "k"}]
@@ -454,8 +453,8 @@ defmodule BrandoAdmin.Components.Form.BlockField.SetFieldTest do
     assert uids.(Ops.merge_list(abc, abc ++ [%{"uid" => "x"}], reordered)) == ~w(a b c x)
   end
 
-  # Round 3 #5: a list that gained, lost or reordered items was set whole,
-  # so of two editors each adding an item, one lost theirs.
+  # A list that gained, lost or reordered items is not set whole; otherwise of
+  # two editors each adding an item, one would lose theirs.
   test "two editors adding and removing list items both keep their change", c do
     [_intro, multi] = rows = rows(c.work)
     [alpha, beta | _] = multi.block.children

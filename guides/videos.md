@@ -75,7 +75,7 @@ The `upload_strategy` determines where videos are uploaded:
 | Strategy      | Description |
 |---------------|-------------|
 | `:none`       | No uploads: pick from the library or add by URL (the default when nothing is configured) |
-| `:local`      | Traditional server upload, files stored on server/CDN |
+| `:local`      | Server upload, files stored on server/CDN |
 | `:s3`         | Direct original-file upload to S3-compatible storage; no transcoding |
 | `:mux`        | Direct upload to Mux for streaming |
 | `:bunny`      | Direct upload to Bunny Stream with TUS resumable uploads |
@@ -96,8 +96,8 @@ config :brando, :default_video_upload_strategy, :mux
 ```
 
 When not configured, it is `:none`: editors can pick a video from the library
-or add one by URL, but nothing offers an upload. Set `:local` to keep uploading
-to the server.
+or add one by URL, but nothing offers an upload. Set `:local` to upload to the
+server.
 
 This setting affects:
 - Video fields whose `cfg` doesn't set `upload_strategy`
@@ -251,16 +251,12 @@ rejects requests unless the `v1` HMAC signature validates against
 > captures a valid Bunny delivery can resubmit it indefinitely and it will
 > verify.
 >
-> This is Bunny's own specification, not an omission on our side. Their Stream
-> webhook documentation says of the `v1` scheme: *"The URL, timestamp, HTTP
-> method, and headers are not part of the v1 signature."* Checked against
-> [their docs](https://bunny.net/docs/stream/webhooks) on 2026-08-08; `v1` is
-> still the only version they define. If Bunny ever ships a `v2` that signs a
-> timestamp, this plug should adopt it and gain the tolerance check that
-> `MuxWebhook` and `CloudflareStreamWebhook` already have.
+> Bunny's Stream webhook documentation says of the `v1` scheme: *"The URL,
+> timestamp, HTTP method, and headers are not part of the v1 signature."*
+> `v1` is the only version
+> [their docs](https://bunny.net/docs/stream/webhooks) define.
 >
-> This is a property of Bunny's signing scheme, not a gap in the plug. The
-> exposure is bounded: a replayed webhook re-applies a status Bunny already
+> The exposure is bounded: a replayed webhook re-applies a status Bunny already
 > sent for a video the site already owns, so the realistic effect is a video
 > being moved back to an earlier encoding status. It cannot introduce a video,
 > retarget one, or carry an attacker's payload, because the body is signed.
@@ -321,9 +317,9 @@ asset :video, :video,
   }
 ```
 
-Cloudflare signed playback is intentionally rejected until the application has
-a token-signing boundary. Brando stores the HLS/DASH and thumbnail URLs from the
-signed processing webhook rather than constructing a customer hostname.
+Cloudflare signed playback is rejected until the application has a
+token-signing boundary. Brando stores the HLS/DASH and thumbnail URLs from the
+signed processing webhook.
 
 ### Vimeo Configuration
 
@@ -553,8 +549,7 @@ an existing record keeps whatever it has.
 
 Because they set the record, they sit at layer 2: a block or `{% video %}`
 override still wins over them, and they in turn beat the built-in defaults. Keys
-must be real `Brando.Videos.Video` fields; anything else raises rather than being
-silently dropped.
+must be real `Brando.Videos.Video` fields; anything else raises.
 
 To change what a video *block* passes to the player — layer 1 — override
 `video_file_options/1` in your parser; see the
@@ -570,7 +565,7 @@ can be added to a gallery in three ways:
 3. **Upload video files**:
    - With `:local` or a configured `:s3` strategy, the gallery's "Upload media"
      button takes video files as well as images, uploads them through the
-     unified upload manager and appends them to the gallery.
+     upload manager and appends them to the gallery.
    - With a provider strategy (`:mux`/`:bunny`/`:cloudflare`), upload through the video picker's
      "Upload file" button instead — the uploaded video is selected into the
      gallery automatically.
@@ -589,7 +584,7 @@ asset :my_gallery, :gallery,
   }
 ```
 
-A legacy flat gallery `cfg` is still treated as the image configuration. Module
+A legacy flat gallery `cfg` is treated as the image configuration. Module
 gallery refs and gallery vars can further override the image/video config targets
 and restrict the allowed media types in their contextual configuration.
 

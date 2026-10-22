@@ -19,11 +19,12 @@ and recipient details. Keep these proportions on mobile and check wrapped titles
 
 Adjacent metadata values must share their type size and alignment row, including
 values containing badges or status dots. The link sidebar uses 13px values inside
-24px rows with centered contents. Keep status dots at least 1em. Verify the visible
+24px rows with centered contents. Status dots are `1cap` square, as in
+`.modal-status` and `.identifier-status`. Verify the visible
 text positions with the actual consumer font, not only the surrounding boxes.
 
 Use subtle surface colors to distinguish context from editable content. The
-approved transfer summary has a near-white sage surface (`#fbfff7`). Keep
+approved transfer summary has a near-white surface (`--brando-surface-shaded`). Keep
 headers and action rows outside the scrolling body, preserve input through nested
 selection, and return to the original editor and section after choosing a link.
 Block and variable settings currently update the parent form, so their completion
@@ -44,10 +45,10 @@ only the broad layout is insufficient. Compare at 1440px with the consumer's
 real font files. Review each context separately: a link variable inside a menu,
 a nested variable dialog, and the rich-text dialog have different ancestors.
 
-For the C sidebar, use a 21px/28px destination title, a 4px title-to-URL gap,
+For the C sidebar, use a 22px/28px destination title, a 4px title-to-URL gap,
 16px before metadata, 20px from creator to link fields, and 14px between the
 link field and toggle. Keep field labels at 13px, the sidebar at 306px, and
-its background at `#f4f7f9`. Heading/person stacks retain the approved 8px gap.
+its background `--brando-surface-shaded`. Heading/person stacks retain the approved 8px gap.
 
 Align the C header icon, mode switch, and content-type heading text to the same
 20px desktop inset. Use a shared 18px inset for the header and switch on mobile.

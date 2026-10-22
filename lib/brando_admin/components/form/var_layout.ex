@@ -339,9 +339,9 @@ defmodule BrandoAdmin.Components.Form.VarLayout do
         {@entry.label}
       </button>
 
-      <%!-- Widths and actions share one footer toolbar. They used to be two
-            stacked rows, which read as a stray strip of icons under the label;
-            side by side they scan as one control bar and save a row. On a
+      <%!-- Widths and actions share one footer toolbar. As two stacked rows
+            they read as a stray strip of icons under the label; side by side
+            they scan as one control bar and save a row. On a
             quarter-width chip there is not room for both, so the group wraps. --%>
       <div class="var-chip-footer">
         <div class="var-chip-widths">

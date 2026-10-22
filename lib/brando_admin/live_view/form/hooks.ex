@@ -373,20 +373,18 @@ defmodule BrandoAdmin.LiveView.Form.Hooks do
 
   # Currently unreachable: no producer emits a path headed by
   # `:transformer`. `field_full_path` comes from `queue_processing/4`,
-  # whose callers pass either the default `[]` (crop.ex, form.ex:2920/
-  # 3264/4153), `edit_image.path ++ [field]` (form.ex:3358 — and
-  # `edit_image.path` is only ever set by `Input.Image`, which a
-  # transformer never renders; it draws its own `asset_picker` because
-  # "a transformer item deliberately has none"), or
-  # `image_field_path(target)` (upload_manager.ex:425), which returns a
-  # path only for `"kind" => "entry_field"` while the transformer
+  # whose callers pass either the default `[]` (crop.ex and several
+  # form.ex paths), `edit_image.path ++ [field]` (and `edit_image.path` is
+  # only ever set by `Input.Image`, which a transformer never renders; it
+  # draws its own `asset_picker` because "a transformer item deliberately
+  # has none"), or the UploadManager's `image_field_path(target)`, which
+  # returns a path only for `"kind" => "entry_field"` while the transformer
   # enqueues `"transformer_image"`. Transformer image cards are updated
   # through `pending_block_image_updates` instead, not through here.
   #
-  # Kept rather than deleted, but with the id corrected: it was built off the
-  # Form *component* id (`<singular>_form`) where the component is registered
-  # under the HTML form id (`<singular>`), so anything that made this live
-  # would have addressed a component that does not exist and failed silently.
+  # Kept for a future producer. The Transformer component is registered
+  # under the HTML form id (`<singular>`), not the Form component id
+  # (`<singular>_form`), so the id is built from that.
   defp update_transformer_image(socket, singular, relation_key, image) do
     relation_atom = String.to_existing_atom(relation_key)
     transformer_id = "#{singular}-transformer-#{relation_atom}"
@@ -413,23 +411,20 @@ defmodule BrandoAdmin.LiveView.Form.Hooks do
     {:halt, socket}
   end
 
-  # All NINE form-side subscribes sit immediately before a processing round is
-  # queued — `form.ex:3550,3993,4785` (upload, focal re-crop, block re-crop) and
-  # `deliver_asset/3` ×6 (`:536,556,628,653,688,717`, each on upload completion
-  # for one freshly uploaded image). So the subscription can be dropped once that
-  # round finishes: a later LOCALLY started round re-subscribes itself before
-  # queueing. Without this they accumulated for the life of the form, one per
-  # uploaded or re-cropped image, each still delivering to a process that had
-  # already updated. The sticky `UploadManager` has always got this right.
+  # Every form-side subscribe to "brando:image:<id>" sits immediately before a
+  # processing round is queued (the form's upload, focal re-crop and block
+  # re-crop paths, and `deliver_asset/3` on upload completion). So the
+  # subscription is dropped once that round finishes, and a later round started
+  # here re-subscribes before queueing; otherwise subscriptions pile up for the
+  # life of the form, one per uploaded or re-cropped image. The sticky
+  # `UploadManager` does the same.
   #
-  # Note the qualifier: this scopes the form's interest to rounds IT starts. A
-  # round started elsewhere — another admin re-cropping, a re-process from the
-  # image list — no longer reaches this form, where the session-long
-  # subscription used to deliver it. That is the deliberate trade; if a form
-  # ever needs to follow an image it did not touch, this is the line to revisit.
-  # (`form.ex:3993` subscribes and only conditionally requeues, so it can leave
-  # a subscription with no round pending. Harmless — it is dropped by whichever
-  # round completes next.)
+  # This scopes the form's interest to rounds IT starts. A round started
+  # elsewhere (another admin re-cropping, a re-process from the image list)
+  # does not reach this form through this topic; a form that must follow an
+  # image it did not touch needs a change here. The focal re-crop path subscribes and only
+  # conditionally requeues, so it can leave a subscription with no round
+  # pending; whichever round completes next drops it.
   #
   # It must be `:processed`, not merely `[:image, :updated]` — `ImageUploader`
   # broadcasts `:updated` for the freshly uploaded, still-UNPROCESSED image, and
@@ -470,15 +465,15 @@ defmodule BrandoAdmin.LiveView.Form.Hooks do
     end
   end
 
-  # Asset delivery from the sticky UploadManager (docs/UPLOADER.md §6.3/§7).
+  # Asset delivery from the sticky UploadManager. See "Delivery and the
+  # orphan-safe contract" in `.claude/skills/brando-uploads/architecture.md`.
   # Orphan-safe: the asset is already persisted when this fires; if the target
   # component is gone, send_update logs a miss and nothing else happens.
   defp handle_asset_delivery_info({:asset_ready, target, asset}, socket) do
     # Gallery additions must land ONE PER RENDER CYCLE — parallel uploads
     # deliver in quick succession and LiveView batches the resulting
     # send_updates, making the block process multiple adds against the same
-    # initial state (adds get lost; the old flow serialized via the
-    # client-side next_file dance). Queue them with a small spacing instead.
+    # initial state, and adds get lost. Queue them with a small spacing.
     if target["kind"] in [
          "block_ref_gallery",
          "entry_field_gallery",
@@ -723,7 +718,7 @@ defmodule BrandoAdmin.LiveView.Form.Hooks do
     )
   end
 
-  # Entry schema fields (Phase 4) — route to the Form component, which updates
+  # Entry schema fields — route to the Form component, which updates
   # the entry changeset at the field's (possibly nested) path.
   defp deliver_asset(%{"kind" => "entry_field", "field" => field} = target, asset, socket)
        when is_binary(field) and

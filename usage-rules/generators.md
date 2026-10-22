@@ -33,9 +33,9 @@ for an unattended run, supply `--email`, `--name` and `--password` for the
 account and `--base-url` and `--description` for the seeded site identity. The
 account logs in with the password given here; it is not asked to change it on
 first login.
-`--source PATH` hands a Brando JavaScript source to asset setup. The sections below describe the same
-steps as individual tasks, which is what to reach for when you want to control
-them separately.
+`--source PATH` hands a Brando JavaScript source to asset setup. Setup ends
+with `Setup complete.`; [Running the steps separately](deps/brando/guides/installation.md#running-the-steps-separately)
+describes each step as its own task.
 
 `mix brando.install` gives coding agents Brando's rules and skills:
 
@@ -64,7 +64,7 @@ Before committing a generated migration:
    entries relations, and alternates.
 4. Run the affected application tests.
 
-Deployment still uses the application's normal Ecto migration command. The Blueprint task generates source files; it
+Deployment uses the application's normal Ecto migration command. The Blueprint task generates source files; it
 never changes a database, and reads one only for warnings or with `--reconcile`.
 
 ### Renaming an attribute
@@ -83,7 +83,7 @@ ambiguous state. The hint may remain in the Blueprint after the migration; once 
 
 ### Changes that require a hand-written migration
 
-Table and primary-key changes are deliberately refused. Their safe implementation depends on deployed data, foreign
+Table and primary-key changes are refused. Their safe implementation depends on deployed data, foreign
 keys, application rollout order, and sometimes concurrent versions of the application. Write and test the Ecto
 migration yourself, then record the new known-good Blueprint state:
 

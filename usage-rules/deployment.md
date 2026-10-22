@@ -37,7 +37,7 @@ migration rather than stopping partway through. An existing
 ReleaseTasks module and release definition are kept, with a notice when the
 module has no `migrate/0` or the release does not write the tarball.
 
-An application installed before Brando did this gets the same with:
+To add them to an existing application, run:
 
 ```bash
 mix brando.gen.release
@@ -114,8 +114,7 @@ Key points:
 - Florist keeps the last 5 releases per environment and cleans up older ones
 
 Assets (CSS, JS) are built inside the Docker container and baked into the release
-at `priv/static/`. There is no separate asset upload step — everything ships as
-one tarball.
+at `priv/static/`, so everything ships as one tarball.
 
 `mix brando.install` writes Brando's
 [Dockerfile](https://github.com/brandocms/brando/blob/main/priv/templates/brando.install/Dockerfile)

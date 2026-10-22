@@ -157,7 +157,8 @@ use Brando.Blueprint,
   extensions: [MyApp.BlueprintExtension]
 ```
 
-Write the options as literals; module attributes are not available yet.
+Write the options as literals; `use` reads them before module attributes are
+evaluated.
 
 * `application`, `domain`, `schema` (required): PascalCase module segments.
   Brando derives conventional module names from them: the context
@@ -407,7 +408,7 @@ built-in shorthands are `:blocks`, `:blocks_prevent_circular_references`,
 `:module_versioned`, `:password`, `:permalink`, `:protect_password`,
 `:protect_role`, `:revisioned`, `:scheduled_publishing`, `:sequenced`,
 `:soft_delete`, `:status`, `:timestamped`, `:translatable`,
-`:validate_var_keys` and `:watch_language`. `:villain` still resolves but is
+`:validate_var_keys` and `:watch_language`. `:villain` resolves too but is
 deprecated; use `:blocks`.
 
 The shorthand and the module, `trait Brando.Trait.Status`, register the same

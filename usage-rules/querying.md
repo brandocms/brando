@@ -85,14 +85,13 @@ functions return the result and raise when a single entry does not exist.
 | `status` | both | Filter a schema with a status field |
 | `language`, `exclude_language` | both | Include or exclude languages |
 | `join` | list | Left join associations |
-| `preload` | both | Use the established low-level preload API |
+| `preload` | both | Use the low-level preload API |
 | `include` | both | Recursively load associations with per-node options |
 | `with_deleted` | both | Include soft-deleted entries |
 | `revision` | single | Retrieve a stored revision by number |
 | `cache` | both | Cache the result |
 
-Unknown top-level options are rejected by the query reducer rather than being
-silently ignored.
+The query reducer rejects unknown top-level options.
 
 Add a clause for every supported key. An unknown key raises a
 `Brando.Exception.QueryFilterClauseError` or

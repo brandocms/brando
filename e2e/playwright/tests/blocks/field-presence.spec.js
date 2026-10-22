@@ -301,13 +301,13 @@ test.describe('Field presence', () => {
     await expect(chip).toBeHidden()
   })
 
-  // #2992 review: a field op on a block that was new when the save read the
-  // session, replayed after the save gave it rows, named those rows by uid
-  // only, and the next save failed or wrote a duplicate.
+  // A field op on a block that was new when the save read the session,
+  // replayed after the save gave it rows, must name those rows by more than
+  // uid, or the next save fails or writes a duplicate.
   //
-  // The save no longer goes through a form submit, which blurred the focused
-  // input and made every input read-only until the server answered: keys
-  // typed in that gap went nowhere. Under a slow connection the save takes
+  // The save does not go through a form submit, which would blur the focused
+  // input and make every input read-only until the server answered: keys
+  // typed in that gap would go nowhere. Under a slow connection the save takes
   // two round trips, so nothing typed during it may be lost.
   test('typing, saving with the keyboard and typing on in a new block keeps it all', async ({ page, secondUserPage }) => {
     const url = await createPage(page, 'Presence Save While Typing', ['HEEx Parity'])
@@ -347,8 +347,8 @@ test.describe('Field presence', () => {
     await expect(headline(page, 1)).toHaveValue(typed, { timeout: 15000 })
   })
 
-  // #2992 review: the server's answer to an earlier keystroke, arriving
-  // after the last one, was put back when the editor left the field.
+  // The server's answer to an earlier keystroke, arriving after the last
+  // one, must not be put back when the editor leaves the field.
   test('a field typed into in bursts keeps every keystroke when the editor leaves it', async ({ page, secondUserPage }) => {
     const url = await createPage(page, 'Presence Debounced Typing', ['HEEx Parity'])
     await open(page, url)

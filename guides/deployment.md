@@ -98,7 +98,7 @@ migration rather than stopping partway through. An existing
 ReleaseTasks module and release definition are kept, with a notice when the
 module has no `migrate/0` or the release does not write the tarball.
 
-An application installed before Brando did this gets the same with:
+To add them to an existing application, run:
 
 ```bash
 mix brando.gen.release
@@ -187,20 +187,28 @@ Fabric files.
 Check by hand before the first Florist command:
 
 - Passwords are not copied — export `FLORIST_DB_PASSWORD_PROD` (and
-  `FLORIST_DB_PASSWORD_STAGING` when a staging target was generated).
+  `FLORIST_DB_PASSWORD_STAGING` when a staging target was generated). Florist
+  uses the SSH agent by default; do not copy `SSH_PASS` into source control.
 - Anything the task warned about; unconvertible Python expressions fall back
   to documented defaults.
-- Domains, SSL modes and ports. Where `deployment.cfg` doesn't set them, the
-  task takes them from `.envrc.<flavor>`, `etc/nginx/<flavor>.conf` and
-  `etc/supervisord`/`etc/systemd`, and otherwise falls back to `8055`
-  (production) and `8060` (staging); its warnings say which.
+- Domains, SSL modes and ports. A target's domain comes from `<TARGET>_URL`,
+  or, when that is missing or still the install template's
+  `http://somesite.com` (which the task reports), from `BRANDO_URL_HOST` in
+  `.envrc.<flavor>`, then from the `server_name` of the
+  `etc/nginx/<flavor>.conf` server that proxies to the application (the HTTPS
+  one first). The port comes from `PORT=` in `etc/supervisord/<flavor>.conf`
+  or `etc/systemd/<flavor>.service`, checked against the nginx upstream, and
+  otherwise falls back to `8055` (production) and `8060` (staging). The
+  warnings say which source each came from, and name the process manager
+  found: supervisord or systemd.
 - `plug Brando.Plug.Health` in the endpoint, before the router. The task adds
   it; see [Health endpoint](#health-endpoint).
 - The persistent media directory, the legacy `etc/` systemd units or
   supervisord programs, and rclone setup (not migrated).
 
-The full checklist is in "Review a generated Florist configuration" in the
-[0.53 migration guide](migrating_from_053.md).
+The full checklist is
+[Review a generated Florist configuration](migrating_from_053.md#review-a-generated-florist-configuration)
+in the 0.53 migration guide.
 
 ## Configuration
 
@@ -506,8 +514,7 @@ Stage 7: release       → mix release (create OTP release tarball)
 <!-- usage-rules:start topic="deployment" -->
 
 Assets (CSS, JS) are built inside the Docker container and baked into the release
-at `priv/static/`. There is no separate asset upload step — everything ships as
-one tarball.
+at `priv/static/`, so everything ships as one tarball.
 
 `mix brando.install` writes Brando's
 [Dockerfile](https://github.com/brandocms/brando/blob/main/priv/templates/brando.install/Dockerfile)
@@ -633,8 +640,8 @@ name. Your frontend still has to report errors with `@sentry/browser`. Without
 the secret the step does nothing.
 
 Projects generated before 0.55 move their frontend maps to
-`priv/static/assets/__srcmaps/`, which `Plug.Static` still serves. The digest
-now deletes them there too. To upload them, replace those `mkdir`/`mv` lines
+`priv/static/assets/__srcmaps/`, which `Plug.Static` serves. The digest
+deletes them there too. To upload them, replace those `mkdir`/`mv` lines
 with the `RUN --mount=type=secret,id=sentry_auth_token` step from the
 [Dockerfile template](https://github.com/brandocms/brando/blob/main/priv/templates/brando.install/Dockerfile).
 

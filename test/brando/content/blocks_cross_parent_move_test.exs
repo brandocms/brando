@@ -378,10 +378,10 @@ defmodule Brando.Content.BlocksCrossParentMoveTest do
     assert kid.description == "brand new child"
   end
 
-  # B3: the outline used to ship `children_forms[uid].source` — a mount-time
-  # seed — as the moved child's content, so the target re-registered that stale
-  # diff and every edit made before the move was discarded. The move now
-  # materializes the child from the op store instead.
+  # The move materializes the child from the op store. Shipping
+  # `children_forms[uid].source` — a mount-time seed — as the moved child's
+  # content would make the target re-register that stale diff and discard
+  # every edit made before the move.
   test "a child edited before an outline move keeps its edits" do
     user = Factory.insert(:random_user)
     {page, _} = insert_page_with_containers(user)
@@ -427,7 +427,7 @@ defmodule Brando.Content.BlocksCrossParentMoveTest do
     end
   end
 
-  # Review: the move ships the child as BlockField's insert_extracted_child
+  # The move ships the child as BlockField's insert_extracted_child
   # builds it, a changeset over its row (`Ops.block_diff_params/1`), which
   # holds only its changes. Under the new parent the child is a new row, so
   # whatever it did not change has to travel too.
@@ -489,8 +489,8 @@ defmodule Brando.Content.BlocksCrossParentMoveTest do
     assert [%{uid: "grandR", description: "the grandchild", type: :module}] = moved.children
   end
 
-  # Sol audit: a moved child's ref keeps its saved gallery by id, which
-  # dropped the gallery changes the move carried.
+  # A moved child's ref keeps its saved gallery by id; that must not drop the
+  # gallery changes the move carried.
   test "a moved child keeps the unsaved changes to its ref's gallery" do
     user = Factory.insert(:random_user)
     page = Factory.insert(:page, creator: user)
@@ -541,7 +541,7 @@ defmodule Brando.Content.BlocksCrossParentMoveTest do
     assert ref.gallery.gallery_objects |> Enum.map(& &1.image_id) |> Enum.sort() == Enum.sort([first.id, second.id])
   end
 
-  # Review: removing a gallery's last image clears the ref's gallery
+  # Removing a gallery's last image clears the ref's gallery
   # (`put_assoc(:gallery, nil)`). The move must not bring it back by the
   # ref's old `gallery_id` (`apply_changes/1` nils it with the gallery).
   test "a moved child keeps its ref's gallery cleared before the move" do
@@ -593,8 +593,8 @@ defmodule Brando.Content.BlocksCrossParentMoveTest do
     assert new_ref_id != ref_id
   end
 
-  # Sol audit: a var's gallery came along as a nested gallery the var's
-  # cast does not take, so the moved var lost it.
+  # A var's gallery comes along as a nested gallery the var's cast does not
+  # take; the moved var must still keep it.
   test "a moved child's gallery var keeps its gallery" do
     user = Factory.insert(:random_user)
     page = Factory.insert(:page, creator: user)
@@ -632,10 +632,10 @@ defmodule Brando.Content.BlocksCrossParentMoveTest do
     assert cell_gallery_id == gallery.id
   end
 
-  # Sol audit: a moved block is a new row, which the cast gives a new
-  # sync uid (translations match blocks and table rows by it) and no
-  # module version (it then reads as stale). Both are the server's, from
-  # the row the block leaves.
+  # A moved block is a new row, which the cast would give a new sync uid
+  # (translations match blocks and table rows by it) and no module version
+  # (it would then read as stale). Both are the server's, from the row the
+  # block leaves.
   test "a moved child keeps its sync uids and module version" do
     user = Factory.insert(:random_user)
     page = Factory.insert(:page, creator: user)
@@ -682,8 +682,8 @@ defmodule Brando.Content.BlocksCrossParentMoveTest do
     assert [%{sync_uid: "source-grand", module_version: 2}] = moved.children
   end
 
-  # Sol audit: a gallery picked or cleared before the move went back to the
-  # saved one, which the var still had loaded.
+  # A gallery picked or cleared before the move must not go back to the saved
+  # one, which the var still has loaded.
   test "a moved child's gallery var keeps the gallery picked before the move" do
     user = Factory.insert(:random_user)
     page = Factory.insert(:page, creator: user)
@@ -724,9 +724,9 @@ defmodule Brando.Content.BlocksCrossParentMoveTest do
     assert galleries == %{"picked" => picked.id, "cleared" => nil}
   end
 
-  # Sol audit: roots are saved in order, so a child moved into an earlier
-  # container was inserted before its old row was deleted, and the uid's
-  # unique index refused the save.
+  # Roots are saved in order, so a child moved into an earlier container is
+  # inserted before its old row is deleted; the uid's unique index must not
+  # refuse the save.
   test "a child moved into an earlier container saves" do
     user = Factory.insert(:random_user)
     page = Factory.insert(:page, creator: user)

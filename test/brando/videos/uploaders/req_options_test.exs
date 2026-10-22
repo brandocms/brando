@@ -83,9 +83,8 @@ defmodule Brando.Videos.Uploaders.ReqOptionsTest do
     test "an unset provider yields the built options unchanged" do
       # Restored, not merely deleted. `async: false` is not isolation — every
       # other test in this file reads the same key, and a `delete_env` with no
-      # `on_exit` leaves the absence behind for whatever runs next. The suite
-      # has already paid for this shape twice (see `with_config/2` in
-      # `provider_client_test.exs`, and Phase 5's W4).
+      # `on_exit` leaves the absence behind for whatever runs next (see
+      # `with_config/2` in `provider_client_test.exs`).
       original = Application.fetch_env(:brando, @provider)
       Application.delete_env(:brando, @provider)
 

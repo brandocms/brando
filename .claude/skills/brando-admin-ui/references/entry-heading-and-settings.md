@@ -6,8 +6,9 @@ the listing, the blueprint's own name for its entries where it has one, and
 the language: `Projects · Case · EN`), then the entry's title as a 32px ink
 heading at weight 500, or "New case" before the first save. The status is one
 pill below the title (dot, label, chevron) opening the choices as radios of
-the entry form; choices the user may not save are disabled, following
-`Engine.publication_allowed?/2`. `Form.EntryHeader` renders both, and
+the entry form; choices the user may not save are disabled
+(`EntryHeader.status_options/3`, mirroring the publishing rule in
+`Brando.Authorization.Engine`). `Form.EntryHeader` renders both, and
 `EntryHeader.css` styles them. The heading follows the saved entry, so typing
 in the title costs no server work.
 

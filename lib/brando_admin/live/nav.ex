@@ -23,8 +23,8 @@ defmodule BrandoAdmin.Nav do
       |> then(&{:ok, &1})
     else
       # The first render already has the user (`:mount_current_user`), so it
-      # renders the menu too. It used to render an empty column that filled in
-      # a second or two later, once the socket connected, on every page load.
+      # renders the menu too, rather than an empty column that fills in a
+      # second or two later, once the socket connects, on every page load.
       socket
       |> assign(:socket_connected, false)
       |> assign(:current_url, url)

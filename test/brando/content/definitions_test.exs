@@ -507,10 +507,10 @@ defmodule Brando.Content.DefinitionsTest do
   end
 
   test "a module without `multi` can be imported again after the database stores false", c do
-    # `multi` left out of a definition used to normalise to nil, while
-    # content_modules.multi defaults to false in a real database. The two then
-    # never digested alike, and every later import of the untouched module was
-    # refused as "target changed since export".
+    # content_modules.multi defaults to false in a real database, so `multi`
+    # left out of a definition must normalise to false too. Normalised to nil,
+    # the two would never digest alike, and every later import of the
+    # untouched module would be refused as "target changed since export".
     import_args = ["import", "--from", c.path, "--user", to_string(c.user.id)]
     source = File.read!(Path.join(c.path, "hero.exs"))
     ExUnit.CaptureIO.capture_io(fn -> Mix.Tasks.Brando.Modules.run(import_args) end)

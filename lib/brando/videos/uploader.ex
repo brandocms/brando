@@ -193,9 +193,8 @@ defmodule Brando.Videos.Uploader do
     * **Unexpected** ones — a `Req` transport failure, a JSON decode, a bug in a
       provider client — hit the rescue below. That is what a `rescue` is for.
 
-  The rescue lived in `BrandoAdmin.Components.Form` until 9E, which meant the
-  other two call sites (`VideoPicker`, `Form.Transformer`) had no backstop at
-  all. It is here now so one copy covers all three.
+  The rescue is here, not in a caller, so one copy covers all three call
+  sites (`BrandoAdmin.Components.Form`, `VideoPicker`, `Form.Transformer`).
 
   Note what it deliberately does *not* catch: the providers' missing-credential
   raise. That is checked before dispatch, so rescuing it here would convert a

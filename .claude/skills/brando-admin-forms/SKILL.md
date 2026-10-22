@@ -33,8 +33,8 @@ area in [the section map](form-map.md) and grep for the names it lists.
   `test/brando_admin/live_view/form/transformer_routing_test.exs` demonstrates the
   silent delivery failure when those IDs diverge.
 - Top-level asset ids and galleries become server-owned once Form writes them
-  (`own_asset/4`): `cast_entry_params/3` keeps their current value when params
-  arrive, because the hidden inputs lag one render behind delivery. New writers
+  (`own_asset/4`): the cast (`cast_entry_edit/4`, which `cast_entry_params/3`
+  wraps for save) keeps their current value when params arrive, because the hidden inputs lag one render behind delivery. New writers
   of those fields must go through Form and mark ownership. Do not read them back
   from `validate` params. Coverage lives in
   `test/brando_admin/live/stale_validate_asset_race_test.exs`.
@@ -45,7 +45,10 @@ area in [the section map](form-map.md) and grep for the names it lists.
   event follows), or it never ships. Received values go through
   `apply_field_change/3`, which drops the browser's param for the field (the
   form shows a param before a saved value), and only when their clock is
-  newer. Form recovery is `recover_form`, which marks nothing. Coverage
+  newer. Form recovery (`recover_form`) marks only the fields the Form hook
+  lists as typed into offline (`__offline_edits`); other recovered values
+  ship with the oldest clock (`share_recovered/3`), so any real edit beats
+  them, and values already received from other editors stay. Coverage
   lives in `test/brando_admin/live/entry_field_sync_test.exs`.
 - A save reaches the other forms of the entry as `{:entry_saved, …}`
   ("Saves by other editors" in Form): each rebuilds on the saved entry,
@@ -57,7 +60,7 @@ area in [the section map](form-map.md) and grep for the names it lists.
 - Read pending subform associations through the helpers in
   `lib/brando_admin/components/form/input/subform_helpers.ex`. Applying child
   changesets before rewriting the association loses pending edits. Use the
-  append-changeset pattern in `docs/ecto-changeset-patterns.md` and the
+  append-changeset pattern in [brando-changesets](../brando-changesets/SKILL.md) and the
   component identity rules in AGENTS.md rather than inventing a second
   nested-form protocol.
 

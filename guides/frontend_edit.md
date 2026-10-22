@@ -32,8 +32,8 @@ end
 New projects get the plug from `mix brando.install`; the config line is there,
 commented out.
 
-Visitors are not affected. The plug only acts for someone signed in to the admin
-with backend access, and with the config off it does nothing at all.
+The plug only acts for someone signed in to the admin with backend access, and
+with the config off it does nothing.
 
 ## What an admin sees
 

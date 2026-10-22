@@ -19,9 +19,9 @@ defmodule Brando.Supervisor do
     Brando.Villain.HeexRenderer.init_cache()
     Brando.Villain.init_parse_cache()
 
-    # A misconfigured video provider used to be discovered by the first editor
-    # who picked a file. It says so here instead. Logs by default and never
-    # blocks boot — see the moduledoc for why, and for the opt-in strict mode.
+    # A misconfigured video provider says so here, at boot, rather than to the
+    # first editor who picks a file. Logs by default and never blocks boot —
+    # see the moduledoc for why, and for the opt-in strict mode.
     Brando.Videos.ProviderConfigCheck.run()
 
     # Runtime translation configs (Page's) aren't checked by the compiler.

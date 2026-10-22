@@ -104,7 +104,7 @@ defmodule Brando.Videos.VimeoURL do
 
     case find_id(segments) do
       {:ok, id, rest} -> %{id: id, hash: path_hash(rest)}
-      # Not an id Vimeo issues, but embedded as-is before this module existed;
+      # Not an id Vimeo issues, but stored content may embed it as-is;
       # passing it through keeps those embeds exactly as they were.
       :error when segments != [] -> %{id: hd(segments), hash: nil}
       :error -> nil

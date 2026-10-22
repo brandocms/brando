@@ -281,8 +281,7 @@ defmodule BrandoAdmin.Components.Form.Input.Image do
         </div>
       </Primitives.field_base>
       <%!-- `click={false}`: this branch only renders when `@editable` is false,
-            so the old `@editable && open_image(...)` could never be anything
-            else. --%>
+            so `@editable && open_image(...)` could never be anything else. --%>
       <div :if={!@editable} class={["input-image", @small && "small", @square && "square", @compact && "compact"]}>
         <.image_preview
           image={@image}
@@ -358,7 +357,7 @@ defmodule BrandoAdmin.Components.Form.Input.Image do
     # closing the drawer releases it.
     send_update(BrandoAdmin.Components.Form, id: form_id, event: "focus_field", field: field.name)
 
-    # No per-field LiveView upload anymore — uploads go through the sticky
+    # No per-field LiveView upload — uploads go through the sticky
     # UploadManager; the picker is browse/select only.
     send_update(BrandoAdmin.Components.ImagePicker,
       id: "image-picker",

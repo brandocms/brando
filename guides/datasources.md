@@ -59,12 +59,11 @@ The callbacks return `{:ok, results}`. A list returns entries directly; a
 selection's `list` returns **identifiers for the picker**, and its `get` resolves
 the selected identifiers into entries for rendering. The first list argument may
 be the registered module string or module atom supplied by the caller; this
-example deliberately uses the known Pages schema instead of querying that value
-blindly.
+example names the Pages schema directly.
 
 `get_entries_from_identifiers/2` preserves the incoming identifier order, including
-mixed schemas. Pass an options map, such as `%{preload: [...]}`; the older bare
-preload-list argument is deprecated. Missing or filtered entries can occupy nil
+mixed schemas. Pass an options map, such as `%{preload: [...]}`; a bare
+preload list as the argument is deprecated. Missing or filtered entries can occupy nil
 positions in its result, so remove those before rendering. An empty selection
 returns `{:ok, []}` without invoking your `get` callback.
 
@@ -146,14 +145,14 @@ the `page` flag (`<.json_ld … page url={@url} language={@language} />`,
 `CollectionPage` joined to the site's `#website` and `#identity` nodes.
 
 Entries are included only when their Blueprint declares an `absolute_url` and it
-resolves; an entry without a page of its own is skipped rather than given a
-fabricated URL, and an empty collection emits nothing. The markup is refreshed
+resolves; an entry without a page of its own is skipped, and an empty
+collection emits nothing. The markup is refreshed
 exactly when the HTML is — see [Keep dependent pages fresh](#keep-dependent-pages-fresh).
 
 ## Variables, selection metadata, and single results
 
 The list callback's third argument is a map of the module block's variables,
-keyed by strings. Current adapters map each var's `key` to its stored `value`;
+keyed by strings. The adapters map each var's `key` to its stored `value`;
 do not assume every typed var has been converted into a rich asset or boolean
 there. Normalize and validate user-editable values in the callback, and handle
 missing keys so a new block can render before its options are complete.

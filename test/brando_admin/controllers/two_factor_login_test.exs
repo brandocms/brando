@@ -330,7 +330,7 @@ defmodule BrandoAdmin.TwoFactorLoginTest do
       # The app's key; a passkey is offered first
       html = render_click(view, "method", %{"method" => "app"})
 
-      # The review's probe: someone with the password holds the setup screen
+      # The probe: someone with the password holds the setup screen
       # open; the owner resets their password, which ends that sign-in
       {:ok, _} = Users.reset_user_password(user, %{password: "a new one", password_confirmation: "a new one"})
       assert_redirect(view, "/admin/login")

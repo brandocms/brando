@@ -50,7 +50,7 @@ async function capture(page, modal, testInfo, name) {
     await modal.locator('.identifier-picker-details').scrollIntoViewIfNeeded()
     await page.screenshot({ path: testInfo.outputPath(`${name}-mobile-details.png`) })
     // The content navigation must remain clickable after scrolling the sidebar
-    // into view; the search field previously floated over it on mobile.
+    // into view; on mobile the search field must not float over it.
     await modal.locator('.identifier-picker-nav button.is-selected').click()
   }
   await page.setViewportSize({ width: 1440, height: 1000 })

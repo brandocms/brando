@@ -5,16 +5,15 @@ defmodule BrandoAdmin.Components.Form.Primitives do
 
   ## Why these are not in `BrandoAdmin.Components.Form`
 
-  They were, and it made `Form` the sink of a compile cycle. 27 modules call
-  them — `field_base/1` alone has ~90 call sites — while `Form` itself used only
-  two of them. So every input, drawer and block component depended on the
-  6200-line module, and `Form` depended back on those components to render them.
-  `mix xref` reported the whole admin form tree as one 202-node cycle.
+  In `Form` they would make it the sink of a compile cycle. 27 modules call
+  them — `field_base/1` alone has ~90 call sites — while `Form` itself uses only
+  two of them. So every input, drawer and block component would depend on the
+  large form module, and `Form` depends back on those components to render them:
+  `mix xref` reports the whole admin form tree as one cycle.
 
-  Phase 9C moved the video drawer's markup out on the same reasoning and did
-  *not* achieve this: a leaf that nothing depends on can move without changing
-  the graph. Direction is what matters. These are the functions the tree depends
-  **on**, so moving them is what actually cuts the edge.
+  Moving a leaf that nothing depends on (such as the drawers' markup) does not
+  change the graph. Direction is what matters. These are the functions the tree
+  depends **on**, so keeping them out of `Form` is what cuts the edge.
 
   ## What belongs here
 
@@ -22,12 +21,9 @@ defmodule BrandoAdmin.Components.Form.Primitives do
   or the form's drawers — they take a `Phoenix.HTML.FormField` and render it.
   Anything that reads or writes `Form`'s socket assigns belongs in `Form`.
 
-  That test is why this module is deliberately not called `Chrome`, which is
-  what the audit plan called the extraction it expected here: "chrome" describes
-  a shell around content, and these are the innermost pieces rather than the
-  outermost. The plan's line range for it (`:5274-6257`, "~35 pure function
-  components") described neither this block nor anything else in the file — it
-  predated two earlier extractions and was never re-measured.
+  That test is why this module is deliberately not called `Chrome`: "chrome"
+  describes a shell around content, and these are the innermost pieces rather
+  than the outermost.
   """
   use BrandoAdmin, :component
   use BrandoAdmin.Translator
@@ -225,12 +221,8 @@ defmodule BrandoAdmin.Components.Form.Primitives do
           on_change={
             if @form_id,
               do: fn params ->
-                # `BrandoAdmin.Components.Form`, spelled out. This was
-                # `__MODULE__` while it lived in that module — the one line in
-                # this block whose meaning depended on where it sat, and the
-                # compiler caught it because `Primitives` is a plain component
-                # with no `send_update/2` to bind to. Left explicit rather than
-                # re-aliased: the target is the *live component* that owns the
+                # `BrandoAdmin.Components.Form`, spelled out rather than
+                # aliased: the target is the *live component* that owns the
                 # form's state, which is the thing this module deliberately
                 # does not.
                 Phoenix.LiveView.send_update(
@@ -713,8 +705,7 @@ defmodule BrandoAdmin.Components.Form.Primitives do
           inserted into it — a `role="alert"` element that appears *with* its
           message is not reliably announced. It also carries the single id that
           `Input.input/1` points `aria-describedby` at (after the instructions
-          container); the messages used to be sibling spans that each claimed
-          the same id. --%>
+          container), rather than each message span claiming the same id. --%>
     <div id={"#{@f_id}-error"} class="field-errors" role="alert">
       <span :for={error <- @errors} class="field-error">
         {@translate_fn.(error)}

@@ -15,7 +15,7 @@ defmodule Mix.Tasks.Brando.Gettext.Reconcile do
       mix brando.gettext.reconcile
       mix brando.gettext.reconcile --dry-run
 
-  It does, in one step, what the upgrade guide used to list as commands:
+  It does, in one step, what would otherwise take several commands:
 
     1. Extracts the messages, as `mix gettext.extract` does, and updates the
        `.pot` files of each Gettext backend in the application.

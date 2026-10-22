@@ -1,20 +1,19 @@
 defmodule BrandoAdmin.Components.Form.Block.ConfigEventUidTest do
-  # Regression coverage for C6 — the seven block config handlers rebuilt the
-  # block form with `uid = nil` on ROOT blocks.
+  # The seven block config handlers rebuild a ROOT block's form with its uid.
   #
-  # Each handler read `Changeset.get_field(changeset, :uid)`, but for a root the
-  # changeset is the *entry_block* changeset, whose schema has no `:uid` field —
-  # the block (and its uid) lives on the nested `:block` assoc. `get_field/2`
-  # returns its default for an unknown field, so the read silently yielded nil
-  # and the rebuilt form got the id `"entry_block_form-"`.
+  # For a root the changeset is the *entry_block* changeset, whose schema has no
+  # `:uid` field — the block (and its uid) lives on the nested `:block` assoc.
+  # `Changeset.get_field(changeset, :uid)` returns its default for an unknown
+  # field, so reading it there silently yields nil and the rebuilt form gets the
+  # id `"entry_block_form-"`.
   #
   # That id is load-bearing, not cosmetic: the BlockField JS hook keys its
   # sessionStorage recovery snapshot on `entry_block_form-${uid}`
   # (`assets/src/hooks/BlockField/index.js`), so a block whose form id lost its
-  # uid can no longer be recovered after the LiveView process dies. The DOM node
-  # is also re-created, since the id changed.
+  # uid cannot be recovered after the LiveView process dies. The DOM node would
+  # also be re-created, since the id changes.
   #
-  # Child blocks were unaffected — their changeset *is* the block changeset.
+  # Child blocks are not affected — their changeset *is* the block changeset.
   use ExUnit.Case, async: false
   use Brando.ConnCase
 

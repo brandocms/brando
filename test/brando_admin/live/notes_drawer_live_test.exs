@@ -1,8 +1,8 @@
 defmodule BrandoAdmin.NotesDrawerLiveTest do
   # A note on a block that was deleted stays in the entry's notes, marked
-  # detached and no longer pointing at a block. This was part of
-  # e2e/playwright/tests/blocks/block-notes.spec.js; the drawer is
-  # server-rendered. Placing notes and the per-block counts stay there.
+  # detached and no longer pointing at a block. The drawer is server-rendered,
+  # so this is tested here; placing notes and the per-block counts are covered
+  # by e2e/playwright/tests/blocks/block-notes.spec.js.
   use Brando.LiveCase
 
   alias Brando.Notes

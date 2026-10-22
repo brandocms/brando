@@ -1,3 +1,2 @@
-- **Keep subform edits with their row during removals** (#3185). Typing while a row
-  above is being removed on a slow connection no longer splits the values
-  into an extra row or loses the edit when saving.
+- Typing in a subform row while a row above it is being removed keeps the edit in its row when
+  saving ([#3185](https://github.com/brandocms/brando/pull/3185)).

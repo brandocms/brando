@@ -20,32 +20,45 @@ read-only, Save and recovery copies wait. Fixed per mount:
 
 ## Params to changeset, and the form assign
 
-`cast_entry_params` is the one place params become a changeset. Server-owned
-asset fields: the `-- Server-owned asset fields --` comment, `own_asset`,
-`own_changed_assets`, `reapply_owned_assets`. Writing the form: `put_form`,
-`assign_form`, `assign_refreshed_form`, `assign_block_map` (hidden block
-fields), `assign_header_status`. Events: `"validate"`, `"commit_tiptap"`.
+`cast_entry_edit` is the one place params become a changeset (from `validate/3`,
+which `"validate"`, `"commit_tiptap"` and `"recover_form"` all run;
+`cast_entry_params` wraps it for the save paths). Server-owned asset fields:
+the `-- Server-owned asset fields --` comment, `own_asset`,
+`own_changed_assets`, `owned_params`, `reapply_owned_assets`. Writing the form:
+`put_form` (every write; also sets `hidden_block_fields` and calls
+`assign_header_status`), `assign_form`, `assign_refreshed_form`,
+`maybe_assign_block_map` (on load) and `assign_block_map` (after a save and on
+`event: "set_block_map"`).
 
 ## Entry field sync between editors
 
-`ship_all_field_changes`, `do_ship_field_changes`, `unsynced_field_keys`,
-`mark_synced`, `reverted_fields`, `broadcast_dirty_fields`, `clear_dirty_fields`;
-receiving: `event: "apply_remote_field_changes"`, `apply_field_change`;
-focus locks: `handle_event("focus"`, `"blur"`, `event: "reship_active_field"`.
+The `## Entry field sync` comment in form.ex defines the assigns
+(`synced_values`, `unshipped_fields`, `replaced_values`, `held_remote`).
+Shipping: `ship_all_field_changes`, `pending_changes`, `broadcast_field_changes`,
+`event: "ship_field_changes"`, `ship_fields_to` (a joining tab), `announce_join`,
+`sync_fields`, `unsynced_field_keys`. Marking edits: `take_local_edit`,
+`mark_local`, `put_local_form`, `put_written_form`, `drop_echoes`, `keep_field`.
+Receiving: `event: "apply_remote_field_changes"`, `receive_field_changes`,
+`take_newer` (clocks), `apply_remote`, `apply_field_change`, `apply_held_remote`,
+`mark_synced`. Recovery: `settle_edit`, `offline_fields`, `keep_received`,
+`share_recovered`, `restore_saved`. Dirty markers: `broadcast_dirty_fields`,
+`clear_dirty_fields`. Focus locks: `handle_event("focus"`, `"blur"`,
+`event: "reship_active_field"`.
 Another tab's save: `announce_save`, `event: "take_saved_entry"`,
 `take_saved_entry`, `unsaved_edits`, `carry_edit`, `list_rows`, `echo_value`.
-Once #3071 lands this section is headed "Entry field sync" and server-side
-writes go through `put_local_form/2`.
 
 ## Messages from children (`update/2` clauses)
 
 - Relations and whole-changeset writes: `action: :update_entry_relation`,
   `:update_changeset`, `:update_entry`, `:update_entry_hard_reset`,
-  `:refresh_entry`, `event: "append_embed"`, subform ops (`SubformHelpers.apply_op`).
+  `:refresh_entry`, `event: "append_embed"`, subform ops (`action: :update_entries`,
+  `SubformHelpers.apply_op`).
 - Revisions and translations: `action: :load_working_copy`, `:apply_translation`,
   `apply_restored_changeset`.
 - Asset delivery from the UploadManager: `event: "entry_field_upload_complete"`,
-  `deliver_entry_field_asset`, `commit_entry_field_asset`, `commit_selected_asset`;
+  `deliver_entry_field_asset`, `commit_entry_field_asset`, `commit_selected_asset`,
+  `event: "clear_entry_field_asset"`; processing finished:
+  `event: "entry_field_asset_processed"`, `"entry_gallery_image_processed"`;
   galleries: `action: :put_gallery`, `append_gallery_object`, `put_gallery_at`,
   `forget_unsaved_objects`.
 - Drawers: `action: :update_edit_image` / `:update_edit_file` / `:update_edit_video`,
@@ -92,6 +105,7 @@ the form; `EntrySkeleton` draws the loading states), `toolbar_more`, `form_prese
 ## AI
 
 `handle_event("tiptap_ai_generate"`, `"suggest_alt_text"`, `"suggest_entry_alt_text"`,
-`event: "suggest_ref_alt_text"`, `"run_field_action"`, `field_action_run`, `ai_context_fun`.
+`"run_field_action"`, `field_action_run`, `ai_context_fun`; from blocks and suggestion panels:
+`event: "suggest_ref_alt_text"`, `"accept_field_action"`, `"accept_alt_suggestion"`.
 Block fields a request reads are collected first: `with_ai_blocks`, `receive_ai_blocks`
 (tag `{:ai_context, token}`).

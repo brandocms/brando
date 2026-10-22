@@ -5,7 +5,7 @@ defmodule BrandoAdmin.StaleValidateAssetRaceTest do
   `save` the browser serialized before that render (a debounced textarea, a
   rich-text commit) still carries the pre-delivery value for the asset, and
   casting those params onto `socket.assigns.entry` — which never receives the
-  unsaved asset — used to drop it silently.
+  unsaved asset — would drop it silently.
 
   Asset ids and galleries the form process has written are therefore owned by
   the server: params never supply them again until the form is rebuilt from a

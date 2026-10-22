@@ -1,15 +1,15 @@
 defmodule BrandoAdmin.Components.Form.Input.SubformHelpersTest do
-  # Regression coverage for B6 — adding, removing or reordering a subform row
-  # discarded pending input on its SIBLING rows.
+  # Adding, removing or reordering a subform row keeps pending input on its
+  # SIBLING rows.
   #
-  # The handlers rebuilt the relation list with `Ecto.Changeset.get_field/3`.
-  # The subtlety is that `get_field/3` DOES carry the pending value: it returns
-  # applied structs, so the typed text is right there in the struct. What is
-  # lost is the *change* — writing structs back produces child changesets with
-  # empty `changes`, the struct just becomes the new `data`, and Ecto has
-  # nothing to write. The row silently reverts at save.
+  # Rebuilding the relation list with `Ecto.Changeset.get_field/3` would lose
+  # it. The subtlety is that `get_field/3` DOES carry the pending value: it
+  # returns applied structs, so the typed text is right there in the struct.
+  # What is lost is the *change* — writing structs back produces child
+  # changesets with empty `changes`, the struct just becomes the new `data`, and
+  # Ecto has nothing to write. The row would silently revert at save.
   #
-  # Same root cause as the ref media FKs (B1): a value in `data` rather than in
+  # The same rule as for ref media FKs: a value in `data` rather than in
   # `changes` never reaches SQL.
   use ExUnit.Case, async: false
   use Brando.ConnCase
@@ -137,8 +137,8 @@ defmodule BrandoAdmin.Components.Form.Input.SubformHelpersTest do
              )
   end
 
-  test "the old get_field/put_change path is what loses the edit", %{pending: pending} do
-    # documents the exact defect, so a regression is unambiguous
+  test "a get_field/put_change rebuild is what loses the edit", %{pending: pending} do
+    # documents the exact trap, so a regression is unambiguous
     entries = Changeset.get_field(pending, :vars)
 
     # get_field DOES show the pending value...
@@ -214,9 +214,9 @@ defmodule BrandoAdmin.Components.Form.Input.SubformHelpersTest do
 
   describe "rows the editor removed" do
     # A saved row removed in the form (its × sets the drop param) stays in the
-    # relation as a changeset marked for removal. Written back, it raised
+    # relation as a changeset marked for removal. Written back, it would raise
     # "cannot replace related", so removing a saved row and then adding one
-    # crashed the LiveView, and it shifted every position after it.
+    # would crash the LiveView, and it would shift every position after it.
     setup %{block: block} do
       [one, two] = Enum.sort_by(block.vars, & &1.key)
 

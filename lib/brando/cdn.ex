@@ -461,15 +461,13 @@ defmodule Brando.CDN do
   `BadMapError` — *not* `UndefinedFunctionError`, which is what a literal
   `nil.bucket` would give; this is a variable, so it takes the map path.
 
-  Cited by function rather than by line, per the standard the audit arrived at:
-  every interior line number this file has carried has been wrong at least
-  once, including one written into this paragraph that pointed inside this
-  docstring.
+  Cited by function rather than by line: line numbers drift as the file
+  changes.
 
   The config error `get_s3_config/2` raises is the narrower case: it needs
   `:cdn` to be present *and* to carry an explicit `s3: nil`. Either way nothing
   reaches the network, so callers on a possibly-CDN-less config must still
-  check first — which is the part that matters here, and it is unchanged.
+  check first — which is the part that matters here.
   """
   def key_available?(object_key, field_cfg) do
     head_object(object_key, field_cfg) == {:error, :not_found}

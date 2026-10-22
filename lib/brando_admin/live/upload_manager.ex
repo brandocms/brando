@@ -1,6 +1,7 @@
 defmodule BrandoAdmin.UploadManager do
   @moduledoc """
-  Sticky LiveView that owns manager-backed admin uploads (see `docs/UPLOADER.md`).
+  Sticky LiveView that owns manager-backed admin uploads (see
+  `.claude/skills/brando-uploads/architecture.md`).
 
   Runs in its own process next to `BrandoAdmin.Chrome`, so upload progress
   re-renders only this view's drawer — never the editor form. Sources hand
@@ -130,13 +131,12 @@ defmodule BrandoAdmin.UploadManager do
       # No item under this ref: this process was not the one that authorized the
       # upload. `mount/1` hard-assigns `items: %{}`, so a manager that remounted
       # mid-transfer (reconnect, or navigation that rebuilt the Chrome) has no
-      # memory of it — while the bytes ARE already in the bucket. This used to
-      # be a silent no-op, leaving an object with no asset row.
+      # memory of it, while the bytes are already in the bucket.
       #
       # The intent recorded at presign carries everything finalize needs, so
-      # recover from it. There is no drawer row to update — that UI died with
-      # the old process — but the asset lands in the library either way, which
-      # is the same orphan-safe contract delivery already has.
+      # recover from it. There is no drawer row to update (that UI went with the
+      # previous process), but the asset lands in the library either way: the
+      # orphan-safe contract delivery already has.
       nil ->
         {:noreply, finalize_orphaned_complete(socket, ref, user)}
 
@@ -726,14 +726,14 @@ defmodule BrandoAdmin.UploadManager do
   # Delivery is best-effort and orphan-safe: the asset is already persisted;
   # broadcasting to a topic nobody subscribes to is a no-op.
   #
-  # Which is also the problem, and why this logs the topic. `deliver_topic` is
-  # minted per form MOUNT (`form.ex`, `"form:" <> Ecto.UUID.generate()`), while
-  # the item captured its copy at intake — so a form that remounted mid-upload
-  # is listening on a different topic than the one this broadcasts to, and the
-  # asset lands in the library while the field it was uploaded for never hears
-  # about it. Nothing distinguished that from a successful delivery in the logs.
-  # Pair this line with the one `form.ex` logs at mount: same topic means the
-  # delivery could land, different means it could not. See D2.
+  # The topic is logged because a miss is otherwise invisible. `deliver_topic`
+  # is minted per form MOUNT (`form.ex`, `"form:" <> Ecto.UUID.generate()`),
+  # while the item captured its copy at intake, so a form that remounted
+  # mid-upload listens on a different topic: the asset lands in the library and
+  # the field never hears about it. Pair this line with the one `form.ex` logs
+  # at mount: same topic means the delivery could land, different means it could
+  # not. See "Delivery and the orphan-safe contract" in
+  # `.claude/skills/brando-uploads/architecture.md`.
   defp deliver(%{superseded: true}, _asset), do: :ok
 
   # A conversation matches the asset to the alias it reserved for this file.
@@ -899,9 +899,8 @@ defmodule BrandoAdmin.UploadManager do
   defp parse_asset_type("video"), do: :video
   defp parse_asset_type(_), do: :unknown
 
-  # Folder browser support — the trigger carries the confirmed folder in the
-  # target; images store under that folder (mirrors the old form-side
-  # upload_folder_targets handling).
+  # Folder browser support: the trigger carries the confirmed folder in the
+  # target, and images and files store under that folder.
   defp maybe_override_upload_path(cfg, type, folder)
        when type in [:image, :file] and is_binary(folder) and folder != "" do
     case BrandoAdmin.Images.FolderBrowser.absolute_folder(folder, cfg.upload_path) do

@@ -3,11 +3,10 @@ defmodule Brando.LiveCase do
   Test case for tests that mount a real admin LiveView with
   `Phoenix.LiveViewTest.live/2`.
 
-  This is the harness the form audit's Phase 4 asked for. Before it there were
-  zero mounted-LiveView tests in the suite — every form test drove components
-  through `update/2` and `handle_event/3` directly, which cannot observe the
-  parts of a form that only exist once a LiveView process is alive: reconnect
-  and recovery, `push_event` payloads, and what survives the process dying.
+  A form test that drives components through `update/2` and `handle_event/3`
+  directly cannot observe the parts of a form that only exist once a LiveView
+  process is alive: reconnect and recovery, `push_event` payloads, and what
+  survives the process dying. This harness can.
 
   Three pieces have to line up for `live/2` to work here, and all three are set
   up outside this module:
@@ -30,8 +29,8 @@ defmodule Brando.LiveCase do
   `Phoenix.LiveViewTest.live/2` again to model a reconnect: LiveView's own form
   recovery replays the DOM params against a changeset freshly loaded from the
   database, so anything the editor held only in changeset `changes` or in
-  component assigns is gone by design. That distinction is the whole subject of
-  the form audit, and this is the harness that can actually assert it.
+  component assigns is gone by design. What survives a reconnect and what does
+  not is exactly what these tests assert.
   """
 
   use ExUnit.CaseTemplate
@@ -142,10 +141,9 @@ defmodule Brando.LiveCase do
   `form_recovery_test.exs` asserts it. Be clear about what that buys:
   **the pin catches drift, not authorship.** A citation that is wrong the day
   it is written stays wrong at the pinned version, and the assertion passes the
-  whole time. That is not hypothetical — it is how three of the five line
-  numbers this block used to carry survived a pass whose entire job was
-  re-verifying them. Treat the pin as a reason to re-read on a bump, never as
-  evidence that anyone read correctly the first time.
+  whole time, even through a pass whose entire job is re-verifying it. Treat
+  the pin as a reason to re-read on a bump, never as evidence that anyone read
+  correctly the first time.
   """
   def kill_live(view) do
     pid = view.pid

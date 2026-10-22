@@ -229,7 +229,7 @@ export default app => ({
     const { track } = this.animations
 
     // Keep a large section inside its shrinking frame; a long reverse
-    // stagger used to leave its last rows painted over the following menu.
+    // stagger would otherwise leave its last rows painted over the following menu.
     dl.style.overflow = 'clip'
     const expanding = !trigger.classList.contains('open')
     dd.inert = !expanding

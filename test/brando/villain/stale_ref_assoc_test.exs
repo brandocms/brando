@@ -6,9 +6,9 @@ defmodule Brando.Villain.StaleRefAssocTest do
   Live preview materializes a root block by casting the op store's params — which
   carry the freshly picked `*_id` — onto the block's *persisted* base struct,
   whose association still holds the previously saved asset. Ecto never refetches
-  an already-loaded association, so a swapped-in video rendered as the old one
-  and a removed one kept rendering, right up until the entry was saved and
-  reloaded from the database.
+  an already-loaded association, so trusting it would render a swapped-in video
+  as the old one and keep rendering a removed one, right up until the entry was
+  saved and reloaded from the database.
 
   These tests pin the disagreement directly: build a ref whose FK and
   association point at different assets, and assert the FK wins.

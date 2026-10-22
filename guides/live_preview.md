@@ -27,8 +27,7 @@ end
 
 Use the same layout/template assigns as your controller. `template_prop` is the
 assign containing the edited entry (`:entry` by default). A single configured
-view opens immediately from the editor's eye button; existing unnamed targets
-continue to work without changes.
+view opens immediately from the editor's eye button.
 
 <!-- usage-rules:end -->
 

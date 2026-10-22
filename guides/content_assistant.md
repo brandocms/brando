@@ -44,9 +44,8 @@ explains what is missing.
 
 **Providers.** The model is a ReqLLM `"provider:model"` spec, with its key
 under `providers` (or `api_key` in the agent's own configuration). Anthropic
-is the supported provider: the assistant was run against a real
-`anthropic:claude-opus-5-5` on 9 October 2026, and its prompt caching is
-turned on for Anthropic only. Other providers that ReqLLM supports with tool
+is the supported provider, and prompt caching is turned on for Anthropic
+only. Other providers that ReqLLM supports with tool
 calling may work, but have not been checked with the assistant.
 
 <!-- usage-rules:end -->
@@ -68,9 +67,8 @@ may publish.
 
 - **The model runs in the Brando backend.** It reaches Brando only through the
   tools in `Brando.Content.Proposals.Tools`, called in-process as the editor.
-  The Assistant uses no MCP endpoint, route or port: a production release
-  needs no MCP URL, no `mcp_routes()` and no listener for it, and works the
-  same with the [remote endpoint](mcp.md) off. The only connection it makes is
+  The Assistant uses no MCP endpoint and works the same with the
+  [remote endpoint](mcp.md) off. The only connection it makes is
   the outgoing call to the model provider. The model can search and read
   entries, modules and media, and prepare a proposal. It cannot approve or
   apply anything.
@@ -243,7 +241,7 @@ Name modules, slots and settings the way editors see them. The assistant
 matches the names against the modules the block field allows. If a name
 matches nothing, matches several modules, or needs a setting the module does
 not have, the assistant says so and asks. It does not invent module ids, and
-every proposal is still checked and reviewed.
+every proposal is checked and reviewed.
 
 **Instructions for one entry or request** are written in the conversation:
 "Put image3 and image4 after the lede", "Use the quote module for the last
@@ -302,8 +300,7 @@ saved to do this.
   it, so it does not change the layout.
 
 Content types without a preview target show their changes in the card only.
-A template that fails to render shows the error and a retry, never a
-substitute image. Previews are private to the editor who prepared the
+A template that fails to render shows the error and a retry. Previews are private to the editor who prepared the
 proposal, and are removed when another preview replaces them or the proposal
 is applied.
 
@@ -334,7 +331,7 @@ reported as a problem, because the new entry is a draft.
 
 ## Limits
 
-These are the defaults, and what the tests check:
+These are the defaults:
 
 - **A message** gets at most 12 model calls (`max_steps`), 4,096 output
   tokens per call (`max_tokens`) and 300,000 tokens in all

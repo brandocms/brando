@@ -1,15 +1,15 @@
 defmodule BrandoAdmin.Components.Form.Block.RecoverBlocksSecurityTest do
-  # Coverage for C5 — `recover_blocks` is the one editor path that casts a raw
-  # params tree from the browser straight into new DB rows. Everything else the
-  # editor sends is a `validate` against a changeset the server already built.
+  # `recover_blocks` is the one editor path that casts a raw params tree from
+  # the browser straight into new DB rows. Everything else the editor sends is a
+  # `validate` against a changeset the server already built.
   #
-  # Before this, only `entry_id` was forced. `blueprint.ex:318` casts `block_id`
+  # Forcing `entry_id` alone is not enough. `blueprint.ex:318` casts `block_id`
   # (so a payload could attach this entry to another entry's block row) and
   # `@block_attrs` casts `parent_id`, `creator_id` and `source` (cross-entry
-  # child injection and creator spoofing). The recovered uid was also read back
-  # out of the client's own params rather than from the set the server vetted.
+  # child injection and creator spoofing). The recovered uid is read from the
+  # set the server vetted, never back out of the client's own params.
   #
-  # These are all "authenticated admin" findings — Brando has no tenant boundary
+  # These are all "authenticated admin" concerns — Brando has no tenant boundary
   # and every admin can already reach every asset through the pickers. What is
   # defended here is ownership and identity, not visibility.
   use ExUnit.Case, async: false
@@ -304,13 +304,11 @@ defmodule BrandoAdmin.Components.Form.Block.RecoverBlocksSecurityTest do
     assert Changeset.get_field(child_cs, :source) == @block_module
   end
 
-  # W3 from the Phase 0 review, deliberately deferred to Phase 1 so the carried
-  # surface and the recover path would be whitelisted together.
+  # The carried surface is whitelisted together with the recover path.
   #
-  # `carried_var/1` round-trips an unsaved var's whole cast surface through
-  # hidden inputs, so every attribute in that set is hand-editable before
-  # submit. B4 widened `@var_attrs` by six fields and widened that DOM surface
-  # with it.
+  # `carried_var/1` round-trips an unsaved var's cast surface through hidden
+  # inputs, so every attribute in that set is hand-editable before submit, and
+  # a field added to `@var_attrs` widens that DOM surface with it.
   describe "carried var surface" do
     test "excludes ownership and parentage, keeps values" do
       carried = Brando.Content.Block.carried_var_attrs()

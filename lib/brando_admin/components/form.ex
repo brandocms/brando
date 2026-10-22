@@ -79,8 +79,10 @@ defmodule BrandoAdmin.Components.Form do
 
   def mount(socket) do
     # Per-form-INSTANCE topic for asset delivery from the sticky UploadManager
-    # (docs/UPLOADER.md §6.3). A UUID — not schema:id — so create forms (no id
-    # yet) work and two tabs editing the same entry don't share a topic.
+    # ("Delivery and the orphan-safe contract" in
+    # `.claude/skills/brando-uploads/architecture.md`). A UUID — not schema:id —
+    # so create forms (no id yet) work, two tabs editing the same entry don't
+    # share a topic, and no client can guess another form's topic.
     deliver_topic = "form:" <> Ecto.UUID.generate()
 
     if connected?(socket) do
@@ -88,10 +90,10 @@ defmodule BrandoAdmin.Components.Form do
       Phoenix.PubSub.subscribe(Brando.pubsub(), deliver_topic)
 
       # Pairs with the UploadManager's "delivering asset ## to <topic>" line.
-      # Because this is minted per MOUNT, a form that remounts mid-upload starts
-      # listening on a NEW topic while the in-flight item still carries the old
-      # one — and the mismatch was previously invisible. See D2 in
-      # `.claude/plans/form-audit/plan.md`.
+      # Because this is minted per MOUNT, a form that remounts mid-upload
+      # listens on a NEW topic while the in-flight item still carries the one
+      # it was queued with; matching the two lines shows whether a delivery
+      # could land.
       Logger.info("==> Form: listening for asset delivery on #{topic_ref(deliver_topic)}")
     end
 
@@ -162,7 +164,6 @@ defmodule BrandoAdmin.Components.Form do
      |> assign(:deliver_topic, deliver_topic)}
   end
 
-  # Ship field changes — triggered by child components (e.g. multi-select on close)
   def update(%{event: "draft_dirty"}, socket), do: {:ok, Drafts.dirty(socket)}
 
   # A picture block's "Suggest alt text": the block doesn't know the entry's
@@ -687,20 +688,16 @@ defmodule BrandoAdmin.Components.Form do
   end
 
   # Asset delivery from the sticky UploadManager for entry schema fields
-  # (docs/UPLOADER.md Phase 4). Mirrors the old handle_file_progress success
-  # branch: set the FK at the field's path and refresh the drawer state.
-  # Each clause is commit_entry_field_asset/4 plus its drawer-state assigns.
+  # ("Per-source integration" in `.claude/skills/brando-uploads/architecture.md`):
+  # set the FK at the field's path and refresh the drawer state. Each clause is
+  # commit_entry_field_asset/4 plus its drawer-state assigns.
   #
-  # These clauses used to force `editing_*?` to false so the main save was not
-  # rejected with "close the drawer first". That was a workaround for the real
-  # bug — `reset_image_field` / `reset_file_field` closed their drawer without
-  # clearing the flag, stranding the save guard (`reset_video_field` always did
-  # it correctly). Both now clear it, so the flag can stay truthful here.
-  #
-  # It has to: an upload started *inside* a drawer leaves that drawer open, and
-  # `assign_drawer_recovery_state/1` gates on exactly these flags — clearing one
-  # dropped the drawer's recovery snapshot mid-edit, and let a save through
-  # while an image was still processing, which is what the guard exists to stop.
+  # These clauses leave `editing_*?` alone. An upload started *inside* a drawer
+  # leaves that drawer open, and `assign_drawer_recovery_state/1` and the save
+  # guard gate on exactly these flags: clearing one would drop the drawer's
+  # recovery snapshot mid-edit and let a save through while an image is still
+  # processing. The `reset_*_field` handlers clear the flag when they close
+  # their drawer.
   def update(%{event: "clear_entry_field_asset", field: field, path: path}, socket) do
     relation_key = String.to_existing_atom("#{field}_id")
 
@@ -814,8 +811,7 @@ defmodule BrandoAdmin.Components.Form do
     {:ok, deliver_entry_field_asset(socket, :video, field, path, video)}
   end
 
-  # Gallery entry fields: append the delivered image to the gallery assoc
-  # (lifted from the old handle_gallery_progress success branch).
+  # Gallery entry fields: append the delivered image to the gallery assoc.
   def update(
         %{event: "entry_field_upload_complete", asset_type: :gallery, field: key, asset: image} = params,
         socket
@@ -1250,12 +1246,10 @@ defmodule BrandoAdmin.Components.Form do
   # rather than a rebuilt entry changeset.
   #
   # They cannot build one: the changeset they hold belongs to whatever schema
-  # OWNS the gallery, which for a nested gallery is not the entry. Sending that
-  # through `:update_changeset` addressed `"<nested singular>_form"`, a
-  # component that does not exist, so nested gallery picker selections silently
-  # went nowhere; had the id matched, it would have replaced the entry changeset
-  # with a subrecord's. This mirrors how uploads already deliver
-  # (`append_gallery_object/5`), which is why that path never had the bug.
+  # OWNS the gallery, which for a nested gallery is not the entry. Sent through
+  # `:update_changeset` it would address `"<nested singular>_form"`, a component
+  # that does not exist, or replace the entry changeset with a subrecord's. This
+  # mirrors how uploads deliver (`append_gallery_object/5`).
   def update(%{action: :put_gallery, path: path, key: key, gallery: new_gallery}, socket) do
     {:ok,
      socket
@@ -1813,11 +1807,10 @@ defmodule BrandoAdmin.Components.Form do
   # push a targeted b:validate that sets the hidden input's DOM value —
   # Input.File/Image/Video render it from the assoc, so a put_change alone
   # never reaches the submit params.
-  # A picker SELECT has to commit the FK exactly like an upload does. It used to
-  # only assign `edit_image`/`image_changeset`, leaving the id to reach the
-  # changeset through the drawer's form submit — which is dispatched by the close
-  # BUTTON (`close_image/2`). Dismissing the drawer any other way (Esc, backdrop,
-  # navigating away) therefore lost the selection silently.
+  # A picker SELECT has to commit the FK exactly like an upload does, rather
+  # than leave the id to the drawer's form submit: that submit is dispatched by
+  # the close BUTTON (`close_image/2`), so dismissing the drawer any other way
+  # (Esc, backdrop, navigating away) would lose the selection silently.
   #
   # Block-level picks are excluded: they carry a `block_target` and commit
   # through `Block.commit_ref_data/2` instead, and `field` is nil for them.
@@ -1831,11 +1824,11 @@ defmodule BrandoAdmin.Components.Form do
 
   defp commit_selected_asset(socket, _edit_asset, _asset), do: socket
 
-  # Delivery for the three single-asset entry fields. They differed only in
-  # which pair of assigns they wrote (`edit_image`/`image_changeset` and so on),
-  # and keeping three copies is what let the `editing_*?` handling drift apart
-  # between them (see D7). Galleries are genuinely different — they append to an
-  # assoc — and stay on their own clauses.
+  # Delivery for the three single-asset entry fields. They differ only in which
+  # pair of assigns they write (`edit_image`/`image_changeset` and so on), so one
+  # function keeps their `editing_*?` handling from drifting apart. Galleries are
+  # genuinely different — they append to an assoc — and stay on their own
+  # clauses.
   defp deliver_entry_field_asset(socket, asset_type, field, path, asset) do
     edit_key = :"edit_#{asset_type}"
     changeset_key = :"#{asset_type}_changeset"
@@ -1999,7 +1992,7 @@ defmodule BrandoAdmin.Components.Form do
 
   # Append a delivered asset to the gallery assoc: existing objects are
   # slimmed to plain maps (put_assoc with mixed nil-ID structs would raise
-  # duplicate-PK — see docs/ecto-changeset-patterns.md, "New records"),
+  # duplicate-PK — see the brando-changesets skill, "New records"),
   # the new object rides along with its loaded struct, and the whole list is
   # re-sequenced. The gallery is created on first upload.
   defp append_gallery_object(socket, path, key, new_object, config_target) do
@@ -2127,12 +2120,12 @@ defmodule BrandoAdmin.Components.Form do
     |> Map.merge(Map.new(gallery_fields))
   end
 
-  # The one place entry params become a changeset (validate, commit_tiptap and
-  # both save paths).
   defp pending_rows(socket), do: socket.assigns[:pending_rows] || %{}
 
   defp cast_entry_params(socket, entry, params), do: socket |> cast_entry_edit(entry, params, nil) |> elem(0)
 
+  # The one place entry params become a changeset (validate, commit_tiptap,
+  # recover_form and both save paths, which go through `cast_entry_params/3`).
   # Also returns the fields whose value was kept over the browser's old form,
   # sent before another editor's change reached it (`drop_echoes/4`).
   # `target` is the entry field the event names.
@@ -2532,10 +2525,9 @@ defmodule BrandoAdmin.Components.Form do
   end
 
   # These two are STATE, not derived facts, and `reset_transformer_changesets/1`
-  # owns resetting them after a save. Re-initialising them here discarded any
+  # owns resetting them after a save. Re-initialising them here would discard any
   # changeset a transformer had already reported if a re-render landed while the
-  # form was still collecting them — the same "an unrelated update reverts your
-  # work" shape as the rest of this audit. Initialise once, then leave alone.
+  # form was still collecting them. Initialise once, then leave alone.
   defp assign_transformer_statuses(%{assigns: %{transformer_changesets: _}} = socket), do: socket
 
   defp assign_transformer_statuses(socket) do
@@ -2603,9 +2595,6 @@ defmodule BrandoAdmin.Components.Form do
     |> push_event("b:component:remount", %{skip_rich_text: true})
   end
 
-  # Maps FK fields (e.g. :cover_id) to {assoc_field, schema_module}
-  # for loading associated records when receiving remote field changes.
-  #
   # A value equal to the saved one leaves no change, and the form shows a
   # field's param before its saved value: the param this editor's browser
   # sent for the field goes, or the field keeps showing what it typed.
@@ -2642,6 +2631,8 @@ defmodule BrandoAdmin.Components.Form do
     end
   end
 
+  # Maps FK fields (e.g. :cover_id) to {assoc_field, schema_module}
+  # for loading associated records when receiving remote field changes.
   defp build_asset_fk_map(schema) do
     image_fields =
       if function_exported?(schema, :__image_fields__, 0),
@@ -4836,9 +4827,12 @@ defmodule BrandoAdmin.Components.Form do
   defp extract_transformers(%Brando.Blueprint.Forms.Form{transformers: transformers}), do: transformers
 
   def allow_uploads(socket) do
-    # All field/block/var uploads go through the sticky UploadManager
-    # (docs/UPLOADER.md) — only the image editor's "save as new copy" upload
-    # remains form-owned.
+    # Field, gallery, block and var uploads (images, files, videos, including
+    # direct-to-CDN transport) go through the sticky UploadManager
+    # (`.claude/skills/brando-uploads/architecture.md`); Mux/Bunny/
+    # Cloudflare video strategies keep their provider hooks, and the Transformer
+    # component manages its own uploads. Only the image editor's "save as new
+    # copy" upload is form-owned.
     default_socket =
       socket
       |> allow_upload(:image_editor_upload,
@@ -4849,24 +4843,14 @@ defmodule BrandoAdmin.Components.Form do
         progress: &__MODULE__.handle_image_editor_upload_progress/3
       )
 
-    # Image fields upload through the sticky UploadManager (docs/UPLOADER.md
-    # Phase 4).
     socket_with_image_uploads = default_socket
-
-    # Gallery fields upload through the sticky UploadManager (docs/UPLOADER.md
-    # Phase 4).
     socket_with_gallery_uploads = socket_with_image_uploads
 
-    # File fields upload through the sticky UploadManager (docs/UPLOADER.md
-    # Phase 4) — including direct-to-CDN transport when configured.
     socket_with_file_uploads =
       socket_with_gallery_uploads
 
-    # Video fields upload through the sticky UploadManager (docs/UPLOADER.md
-    # Phase 5); Mux/Bunny/Cloudflare strategies keep their provider hooks.
     socket_with_video_uploads = socket_with_file_uploads
 
-    # Transformer uploads are now managed by the Transformer component itself
     socket_with_video_uploads
   end
 
@@ -4951,9 +4935,10 @@ defmodule BrandoAdmin.Components.Form do
 
   # LiveView's form recovery after a reconnect (`phx-auto-recover` on the main
   # form): the browser's form as it was, which is not an edit. It rebuilds
-  # the entry like `validate`, but marks nothing to ship: these may be values
-  # the other editors have since replaced, and they send this tab theirs when
-  # it loads (`announce_join/1`). A value already received from them stays.
+  # the entry like `validate`, but marks only the fields typed into while
+  # offline (`offline_fields/2`); other recovered values go out with the
+  # oldest clock, so any newer edit from the other editors wins
+  # (`share_recovered/3`). A value already received from them stays.
   def handle_event("recover_form", params, socket), do: validate(params, socket, true)
 
   def handle_event("open_block_upload_folder_browser", params, socket) do
@@ -5312,11 +5297,10 @@ defmodule BrandoAdmin.Components.Form do
         Logger.error(inspect(changeset, pretty: true))
 
         # A rejected save leaves the editor on the form by definition, so this
-        # path always renders the button — and it was stuck here too. Observed
-        # in production: a Project failing its `one_of` listing_image/
-        # listing_video constraint showed its errors under a spinner that never
-        # stopped, which reads as "saving is broken" rather than "fix these
-        # fields".
+        # path always renders the button and must clear `processing`: errors
+        # under a spinner that never stops (say a `one_of` listing_image/
+        # listing_video constraint) read as "saving is broken" rather than
+        # "fix these fields".
         {:noreply,
          socket
          |> assign(:processing, false)
@@ -6057,16 +6041,15 @@ defmodule BrandoAdmin.Components.Form do
   # save. `edit_video.video` is nil then, and the clause below binds it straight
   # into `Brando.Videos.Video.changeset/3` — where `ChangesetRunner.run/1` reads
   # `schema.__struct__` on nil, raises KeyError, and takes the entry form
-  # process down with every unsaved change in it. Seen in production as
-  # `video[type]=upload` with an empty drawer.
+  # process down with every unsaved change in it (params like
+  # `video[type]=upload` with an empty drawer).
   #
   # Defaulting to `%Video{}` would not do: `update_video/2` further down expects
   # a persisted record, so a struct with no id only moves the failure. There is
   # genuinely nothing to persist here, so close the drawer — which is exactly
   # what the "no video in params" clause below already does.
   #
-  # `validate_video/2` has guarded this since it was written (`edit_video.video
-  # || %Video{}`); it was only ever the save path that did not.
+  # `validate_video/2` guards the same case with `edit_video.video || %Video{}`.
   def handle_event(
         "save_video_authorized",
         %{"video" => _video_params},
@@ -6179,9 +6162,8 @@ defmodule BrandoAdmin.Components.Form do
         with_drawer_target(socket, drawer_params, &restore_file_drawer/3)
 
       # A drawer was open but carried no resource id — recovery cannot rebuild
-      # it, and any edits inside it are gone. Rare, but it used to be entirely
-      # invisible; the clause below is the ordinary "no drawer was open" case
-      # and is correctly silent.
+      # it, and any edits inside it are gone. Rare, so log it; the clause below
+      # is the ordinary "no drawer was open" case and is correctly silent.
       %{"type" => type} when type not in [nil, ""] ->
         require Logger
 
@@ -6867,11 +6849,9 @@ defmodule BrandoAdmin.Components.Form do
   # open; `validate` is what rebuilds the entry from the recovered form params.
   # Neither can render alone — the first to arrive would render an entry the
   # other has not restored yet — and LiveView does not order them. So each
-  # marks its half done and the second one through renders.
-  #
-  # Previously nothing coordinated them and it worked only because a validate
-  # usually happened to arrive after the preview handler. When it did not, the
-  # preview stayed blank until the editor toggled it off and on.
+  # marks its half done and the second one through renders. Without this the
+  # preview stays blank whenever the validate arrives first, until the editor
+  # toggles it off and on.
   defp maybe_finish_live_preview_recovery(
          %{assigns: %{live_preview_recovery_pending?: true, form_recovered?: true}} = socket
        ) do
@@ -8527,7 +8507,8 @@ defmodule BrandoAdmin.Components.Form do
   # not depend on them.
   @processing_inputs [:focal, :path, :formats, :config_target]
 
-  # The old gate was `status !== :processed`, which is wrong in both directions:
+  # Requeue on what changed, not on `status !== :processed` alone, which is
+  # wrong in both directions:
   #
   #   * it MISSES a focal-point change on an already-processed image — the
   #     drawer renders `FocalPoint` bound to this same form, so `:focal` arrives
@@ -8543,7 +8524,7 @@ defmodule BrandoAdmin.Components.Form do
       # Nothing processing-relevant changed. Still queue an unprocessed image —
       # the upload that created it may never have processed, and the drawer is
       # the only place the editor can recover that from — but not if a pass is
-      # already in flight, which is the case the old gate kept restarting.
+      # already in flight, or closing the drawer would restart it.
       image.status != :processed and not Images.Processing.processing_queued?(image)
     end
   end
@@ -8551,10 +8532,10 @@ defmodule BrandoAdmin.Components.Form do
   # `socket.assigns.schema` is the ENTRY schema. A nested video field — or a
   # block media ref — belongs to a different one, which the drawer carries on
   # `edit_video.schema`; the sibling upload trigger in `VideoDrawer.render/1` already
-  # reads it that way. Hand-building `"video:<entry schema>:<field>"` here sent
+  # reads it that way. A hand-built `"video:<entry schema>:<field>"` would send
   # provider (Mux/Bunny/Cloudflare) uploads to the entry's config instead of the
-  # field's, so the resulting video was invisible to the originating picker and
-  # lost its field-level configuration.
+  # field's, hiding the video from the originating picker and losing its
+  # field-level configuration.
   #
   # The upload strategy + provider settings come from `get_config_for/1`;
   # `field` may be a block media ref (not a registered schema asset), so we
@@ -8571,24 +8552,18 @@ defmodule BrandoAdmin.Components.Form do
     end
   rescue
     # serialize/1 raises on a non-blueprint schema. A hard match here would take
-    # the whole entry form down with it (see A2).
+    # the whole entry form down with it.
     ArgumentError -> nil
   end
 
-  # No rescue here any more, and that is the change rather than an omission.
-  #
-  # This wrapper existed because provider clients raise rather than return on
-  # some configuration failures, and an escaping exception takes the entry form
-  # process down with every unsaved change in it (the A2 class). Both halves of
-  # that are now handled a layer down, where all three call sites benefit:
+  # No rescue here, deliberately. Provider clients raise on some configuration
+  # failures, and an escaping exception would take the entry form process down
+  # with every unsaved change in it. That is handled a layer down, for all three
+  # call sites (this one, the picker and the transformer):
   # `Brando.Uploads.validate_provider_video_intake/2` rejects a missing
-  # credential before dispatch, and `Videos.Uploader.initiate_upload/3` carries
-  # the broad rescue for genuinely unexpected provider exceptions. That function
-  # documents itself as total.
-  #
-  # Keeping a second rescue here would have guarded only the one call site that
-  # was never the problem — the picker and the transformer were the unguarded
-  # ones — while making the facade's guarantee look untrusted.
+  # credential before dispatch, and `Videos.Uploader.initiate_upload/3`, which
+  # documents itself as total, rescues unexpected provider exceptions. A second
+  # rescue here would only make that guarantee look untrusted.
   defp initiate_provider_upload(video_config, config_target, filename, user, file_meta) do
     Brando.Videos.Uploader.initiate_upload(filename, user,
       config: video_config,
@@ -8688,11 +8663,11 @@ defmodule BrandoAdmin.Components.Form do
 
   defp relation_field_key(_relation_field, field), do: field
 
-  # The fields each drawer lets you type into. These are the values that used to
-  # be lost: the drawer's own edit form is `:if={@image_changeset}`-gated, so on
-  # reconnect it exists in neither the old nor the new DOM when LiveView's
-  # recovery diff runs, and LiveView only recovers forms it can see. The
-  # always-rendered recovery form below carries them instead.
+  # The fields each drawer lets you type into. The drawer's own edit form is
+  # `:if={@image_changeset}`-gated, so on reconnect it exists in neither the old
+  # nor the new DOM when LiveView's recovery diff runs, and LiveView only
+  # recovers forms it can see. The always-rendered recovery form below carries
+  # these values instead.
   @image_drawer_fields [:title, :credits, :alt]
   @video_drawer_fields [:source_url, :type]
   @file_drawer_fields [:title]
@@ -9207,9 +9182,9 @@ defmodule BrandoAdmin.Components.Form do
         |> maybe_finish_live_preview_recovery()
         |> then(&{:noreply, &1})
 
-      # Anything else — a target outside the entry, or none at all. A missing
-      # `_target` used to raise `CaseClauseError` here and take the form
-      # LiveView down with every unsaved edit in it.
+      # Anything else — a target outside the entry, or none at all. This clause
+      # keeps a missing `_target` from raising `CaseClauseError` and taking the
+      # form LiveView down with every unsaved edit in it.
       _ ->
         {:noreply, maybe_finish_live_preview_recovery(socket)}
     end

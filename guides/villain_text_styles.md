@@ -15,7 +15,7 @@ Styles are configured per-ref in the Module form under the text block's "Styles"
 
 - Paragraph and headings (`p`, `h1`-`h6`) are applied as node attributes (`class` on the block element).
 - `span` styles are applied as inline marks and can be toggled on selected text.
-- Paragraph remains the base/default style (no class). Style presets should represent named variants such as `lede`.
+- Paragraph is the base/default style (no class). Style presets should represent named variants such as `lede`.
 
 ### Validation
 

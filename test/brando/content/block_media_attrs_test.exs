@@ -1,12 +1,10 @@
 defmodule Brando.Content.BlockMediaAttrsTest do
-  # Regression coverage for B4 — the cast lists that gate media on blocks.
+  # Coverage for the cast lists that gate media on blocks.
   #
-  # `@var_attrs` listed `image_id` and `file_id` but not `video_id`,
-  # `gallery_id` or any of the config-target fields, though the editor renders
-  # and commits all of them. `ref_changeset/3` had the same shape of hole:
-  # `image_id`/`video_id`/`file_id` but no `gallery_id`. Anything omitted is
-  # dropped silently by `cast/3` — no error, no warning, the value just never
-  # reaches the database.
+  # `@var_attrs` and `ref_changeset/3` must list every media field the editor
+  # renders and commits — `image_id`, `video_id`, `file_id`, `gallery_id` and
+  # the config-target fields. Anything omitted is dropped silently by `cast/3`
+  # — no error, no warning, the value just never reaches the database.
   use ExUnit.Case, async: false
   use Brando.ConnCase
 

@@ -436,7 +436,7 @@ defmodule Brando.Revisions.RevisionsTest do
       assert {restore_var("keepB"), restore_row("keepB").module_version} == {"As in the revision", 1}
     end
 
-    # Review: a block the revision holds at no module version (one saved
+    # A block the revision holds at no module version (one saved
     # before blocks had one, or never synced) is not known to be behind.
     test "a block the revision has no module version for keeps its own", %{user: user} do
       page = Factory.insert(:page, creator: user)
@@ -450,7 +450,7 @@ defmodule Brando.Revisions.RevisionsTest do
       assert {restore_var("keepB"), restore_row("keepB").module_version} == {"As in the revision", 4}
     end
 
-    # Review: revisions stored before blocks had a module version and a sync
+    # Revisions stored before blocks had a module version and a sync
     # uid hold structs without those keys. Restoring one now (or publishing
     # it on schedule) keeps what the blocks have.
     for publish? <- [false, true] do
@@ -499,8 +499,8 @@ defmodule Brando.Revisions.RevisionsTest do
     end
   end
 
-  # Sol audit: a table row deleted since came back with a new sync uid, so
-  # its translation no longer matched it.
+  # A table row deleted since must come back with its sync uid, or its
+  # translation no longer matches it.
   test "a table row deleted since comes back with its sync uid", %{user: user} do
     page = Factory.insert(:page, creator: user)
 

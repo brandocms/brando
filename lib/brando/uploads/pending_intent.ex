@@ -5,11 +5,11 @@ defmodule Brando.Uploads.PendingIntent do
   Client-direct transports (files/videos → S3/Spaces) hand the browser a
   presigned PUT and expect a `direct_complete` back. Everything needed to turn
   that callback into an asset row — the object key and the resolved config
-  target — used to live only in the sticky `BrandoAdmin.UploadManager`'s
+  target — cannot live only in the sticky `BrandoAdmin.UploadManager`'s
   `items` assign. `mount/1` hard-assigns `items: %{}`, so a manager that
   remounted mid-transfer (reconnect, or navigation that rebuilt the Chrome)
-  answered the completion with a silent no-op: bytes in the bucket, no `File`
-  or `Image` row, nothing to reap.
+  would answer the completion with a silent no-op: bytes in the bucket, no
+  `File` or `Image` row, nothing to reap.
 
   The key and target are recorded here at *initiate* time and are the only ones
   finalize will trust — a `direct_complete` never supplies its own, before or

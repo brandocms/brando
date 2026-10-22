@@ -70,8 +70,8 @@ plug Brando.Plug.Tenant
 plug Brando.Plug.Navigation, key: "main", as: :navigation
 ```
 
-The keyword-list form is required. `plug Brando.Plug.Navigation, "main"` is an
-obsolete API. Alternatively, `Brando.Navigation.get_menu("main", "en")` returns
+The keyword-list form is required: `plug Brando.Plug.Navigation, "main"`
+raises. Alternatively, `Brando.Navigation.get_menu("main", "en")` returns
 `{:ok, menu}` or `{:error, {:menu, :not_found}}`.
 
 Use the components in a HEEx layout:

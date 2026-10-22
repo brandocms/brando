@@ -1,8 +1,8 @@
 defmodule BrandoAdmin.Components.Form.BlockField.CaptureDraftTest do
-  # A recovery capture used to rebuild every root twice, ~80 ms of the
-  # LiveView process at 115 roots, every few seconds while someone edits.
-  # Roots whose inputs did not change since the last capture now reuse its
-  # result; anything that did change is rebuilt exactly as before.
+  # A recovery capture runs every few seconds while someone edits, and
+  # rebuilding every root costs ~80 ms of the LiveView process at 115 roots.
+  # Roots whose inputs did not change since the last capture reuse its result;
+  # anything that did change is rebuilt in full.
   use ExUnit.Case, async: true
 
   alias Brando.Content.Block

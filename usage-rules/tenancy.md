@@ -10,13 +10,11 @@ are in `deps/brando/usage-rules.md`.
 
 Guide: `deps/brando/guides/tenancy_and_environments.md`
 
-Upgrading Brando does **not** require an existing project to adopt tenancy.
-Projects that keep the default `:none` mode continue to read and write content
-in `public` as before. They should apply the ordinary Brando-owned public
-database migrations during an upgrade, but they do not need tenant migrations,
-`Brando.Plug.Tenant`, site or environment records, or
-`mix brando.migrate_to_tenant`. The new public registry tables may exist unused
-in this mode.
+Tenancy is opt-in. Projects in the default `:none` mode read and write content
+in `public`. They apply the ordinary Brando-owned public database migrations,
+but do not need tenant migrations, `Brando.Plug.Tenant`, site or environment
+records, or `mix brando.migrate_to_tenant`. The public registry tables may
+exist unused in this mode.
 
 ```elixir
 config :brando,
@@ -78,7 +76,7 @@ mix brando.migrate --tenants
 mix brando.migrate --site acme
 ```
 
-Newly generated routers place `Brando.Plug.Tenant` in the browser pipelines
+Generated routers place `Brando.Plug.Tenant` in the browser pipelines
 before plugs that load content:
 
 ```elixir
@@ -136,7 +134,7 @@ defmodule MyAppWeb.SSG do
 end
 ```
 
-The command-line task uses the same renderer and remains interactive by default:
+The command-line task uses the same renderer and is interactive by default:
 
 ```bash
 # Standalone application
@@ -193,8 +191,8 @@ Do not expose explanations for arbitrary users or scopes from a public endpoint;
 `Groups.effective/2` provides the authorized administration wrapper.
 
 Generated context mutations accept an authenticated user or `Scope` and enforce
-permissions when group mode is enabled. Ordinary frontend queries retain their
-existing behavior outside a scoped administration request. Custom administration
+permissions when group mode is enabled. Outside a scoped administration request,
+ordinary frontend queries are not filtered by permissions. Custom administration
 reads should use `Authorization.scope/3` or `Boundary.with_scope/2`. Query caches
 are bypassed for scoped admin reads to prevent public cached results from escaping
 resource filters.

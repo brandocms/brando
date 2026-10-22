@@ -28,8 +28,8 @@
   - Unit + E2E merged: `mix test --cover --export-coverage unit`, then an E2E run with `BRANDO_E2E_COVER=1` (the server exports `cover/e2e.coverdata` on shutdown), then `mix test.coverage` in the Brando root
   - lcov for Codecov (after the above): `MIX_ENV=test mix run --no-start .github/scripts/coverage_lcov.exs` writes `cover/lcov.info`
 - Translations: add strings in code, run `mix gettext.extract --merge` (never add or remove catalogue entries by hand), translate the new Norwegian entries; see [TRANSLATIONS.md](TRANSLATIONS.md), which also covers the merge driver for rebases.
-- Changelog entries: add a fragment file in `changelog.d/` rather than editing `CHANGELOG.md`; [its README](changelog.d/README.md) has the naming, sections and format. Leave the PR number out: collation adds it.
-- Guide text that describes changed behaviour ships in the same PR as the change.
+- Changelog entries: one line per change, plus the steps when the reader must act, in a fragment file in `changelog.d/` ([its README](changelog.d/README.md) has the naming, sections and format). Leave the PR link out: collation adds it.
+- Guide text that describes changed behaviour ships in the same PR as the change. Guides and the README describe what Brando does today, for a reader who never saw the old version; what changed or went away belongs in the changelog and the migration guides.
 - Code analysis:
   - Refactoring opportunities: `mix credo suggest --format json --all --only refactor`
   - Design: `mix credo suggest --format json --all --only design`
@@ -60,13 +60,15 @@
 Load only what the change touches:
 - **Playwright E2E tests** (flakes, readiness, fixtures, fixed waits): [brando-e2e](.claude/skills/brando-e2e/SKILL.md).
 - **Blocks** (block state, ops, refs, vars, containers, block changesets): [brando-blocks](.claude/skills/brando-blocks/SKILL.md). Read it before touching block state.
-- **Uploads and media fields** (asset browser, pickers, UploadManager): [brando-uploads](.claude/skills/brando-uploads/SKILL.md); architecture and transports in `docs/UPLOADER.md`.
-- **Admin form state** (parent/component state, transformers, save collection, recovery): [brando-admin-forms](.claude/skills/brando-admin-forms/SKILL.md). Before reading the 7,000-line `components/form.ex`, find the area in its [section map](.claude/skills/brando-admin-forms/form-map.md).
+- **Uploads and media fields** (asset browser, pickers, UploadManager): [brando-uploads](.claude/skills/brando-uploads/SKILL.md).
+- **Admin form state** (parent/component state, transformers, save collection, recovery): [brando-admin-forms](.claude/skills/brando-admin-forms/SKILL.md). Before reading the 9,000-line `components/form.ex`, find the area in its [section map](.claude/skills/brando-admin-forms/form-map.md).
 - **Live preview** (caches, transport, iframe recovery): [brando-live-preview](.claude/skills/brando-live-preview/SKILL.md).
 - **Deploying** (Florist releases, server layout, where assets and media live): [florist-deploy](.claude/skills/florist-deploy/SKILL.md).
-- **Changesets with associations or embeds** (`put_assoc`, copied structs, adding rows to a LiveView form): [Ecto changeset patterns](docs/ecto-changeset-patterns.md).
-- **Background jobs** (Oban workers, job inserts, `unique`, snooze, tenant context): [Oban traps](docs/background-jobs.md).
-- **Blueprint DSL**: `guides/blueprints.md` and the guides it links; authorization: `guides/authorization.md`, its two modes and `:forbidden` in `Brando.Authorization.Boundary`. Before adding a skill, read [the skill audit](docs/agent-skill-audit.md).
+- **Changesets with associations or embeds** (`put_assoc`, copied structs, adding rows to a LiveView form): [brando-changesets](.claude/skills/brando-changesets/SKILL.md).
+- **Background jobs** (Oban workers, job inserts, `unique`, snooze, tenant context): [brando-oban](.claude/skills/brando-oban/SKILL.md).
+- **Installers and generators** (`mix brando.install`, `brando.gen*`, Igniter tasks, upgrade tasks): [brando-installers](.claude/skills/brando-installers/SKILL.md).
+- **Blueprint DSL**: `guides/blueprints.md` and the guides it links; authorization: `guides/authorization.md`, its two modes and `:forbidden` in `Brando.Authorization.Boundary`.
+- **Adding a skill**: it earns its place with task-specific decisions or failure modes that span components and that no guide or existing skill covers. Reports, plans and audits stay out of the repository.
 
 ## LiveView components
 - **Stable component IDs**: a live_component `id` must be stable (not nil, not derived from rebuilt form internals). LiveView raises for a nil ID; a changed ID, a fresh random UID included, mounts a new component with a new CID.

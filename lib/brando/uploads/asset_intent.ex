@@ -182,12 +182,9 @@ defmodule Brando.Uploads.AssetIntent do
   defp deliver_topic(topic), do: validate_deliver_topic(topic)
 
   @doc """
-  Validate an asset-delivery topic.
-
-  Public because the form claims its own topic from the client now (so it
-  survives a remount — see `BrandoAdmin.Components.Form`), and the *subscribe*
-  side has to apply exactly the same rule as the intake side. A client that
-  could name any topic could subscribe its form to another form's deliveries.
+  Validate an asset-delivery topic: `"form:"` and a UUID, as each mount of
+  `BrandoAdmin.Components.Form` mints one. A client that could name any topic
+  could deliver into another form.
   """
   def validate_deliver_topic("form:" <> uuid = topic) do
     case Ecto.UUID.cast(uuid) do

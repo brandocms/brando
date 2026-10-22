@@ -227,7 +227,7 @@ The `upload_strategy` determines where videos are uploaded:
 | Strategy      | Description |
 |---------------|-------------|
 | `:none`       | No uploads: pick from the library or add by URL (the default when nothing is configured) |
-| `:local`      | Traditional server upload, files stored on server/CDN |
+| `:local`      | Server upload, files stored on server/CDN |
 | `:s3`         | Direct original-file upload to S3-compatible storage; no transcoding |
 | `:mux`        | Direct upload to Mux for streaming |
 | `:bunny`      | Direct upload to Bunny Stream with TUS resumable uploads |
@@ -248,8 +248,8 @@ config :brando, :default_video_upload_strategy, :mux
 ```
 
 When not configured, it is `:none`: editors can pick a video from the library
-or add one by URL, but nothing offers an upload. Set `:local` to keep uploading
-to the server.
+or add one by URL, but nothing offers an upload. Set `:local` to upload to the
+server.
 
 This setting affects:
 - Video fields whose `cfg` doesn't set `upload_strategy`
