@@ -1689,6 +1689,11 @@ msgstr ""
 msgid "Add note"
 msgstr ""
 
+#: lib/brando_admin/components/video_picker.ex
+#, elixir-autogen, elixir-format
+msgid "Add one here, or pick one from the whole library."
+msgstr ""
+
 #: lib/brando_admin/components/form/block_field.ex
 #, elixir-autogen, elixir-format
 msgid "Add one in Configuration → Templates"
@@ -1781,6 +1786,11 @@ msgstr ""
 #: lib/brando_admin/live/sites/seo_live.ex
 #, elixir-autogen, elixir-format
 msgid "Added above"
+msgstr ""
+
+#: lib/brando_admin/components/video_picker.ex
+#, elixir-autogen, elixir-format
+msgid "Added for this field"
 msgstr ""
 
 #: lib/brando_admin/components/video_picker.ex
@@ -6865,6 +6875,11 @@ msgstr ""
 msgid "Every user's sign-ins, failed attempts and lockouts, and changes to passwords, two-factor authentication, passkeys, sessions and connected apps."
 msgstr ""
 
+#: lib/brando_admin/components/video_picker.ex
+#, elixir-autogen, elixir-format
+msgid "Every video in the library. A video you pick is used as it is; new ones still follow this field's settings."
+msgstr ""
+
 #: lib/brando_admin/live/sites/activity_live.ex
 #: lib/brando_admin/live/users/sign_in_policy_live.ex
 #, elixir-autogen, elixir-format
@@ -11621,6 +11636,11 @@ msgstr ""
 msgid "Only these"
 msgstr ""
 
+#: lib/brando_admin/components/video_picker.ex
+#, elixir-autogen, elixir-format
+msgid "Only videos added for this field. Whole library offers every other video."
+msgstr ""
+
 #: lib/brando_admin/components/form/module_props/ref_block_form.ex
 #, elixir-autogen, elixir-format
 msgid "Opacity"
@@ -14174,7 +14194,6 @@ msgid "Root"
 msgstr ""
 
 #: lib/brando_admin/components/file_picker.ex
-#: lib/brando_admin/components/video_picker.ex
 #: lib/brando_admin/live/images/alt_text_live.ex
 #: lib/brando_admin/live/images/image_list_live.ex
 #, elixir-format, elixir-autogen
@@ -15460,6 +15479,7 @@ msgid "Show or hide %{count} children"
 msgstr ""
 
 #: lib/brando_admin/components/image_picker.ex
+#: lib/brando_admin/components/video_picker.ex
 #, elixir-autogen, elixir-format
 msgid "Show the whole library"
 msgstr ""
@@ -19003,6 +19023,11 @@ msgstr ""
 msgid "Videos matching “%{query}”"
 msgstr ""
 
+#: lib/brando_admin/components/video_picker.ex
+#, elixir-autogen, elixir-format
+msgid "Videos to choose from"
+msgstr ""
+
 #: lib/brando_admin/live/ai/assistant_live.ex
 #: lib/brando_admin/live/users/groups_live.ex
 #, elixir-autogen, elixir-format
@@ -19307,6 +19332,7 @@ msgid "Whole entry"
 msgstr ""
 
 #: lib/brando_admin/components/image_picker.ex
+#: lib/brando_admin/components/video_picker.ex
 #, elixir-autogen, elixir-format
 msgid "Whole library"
 msgstr ""
