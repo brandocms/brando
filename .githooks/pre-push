@@ -32,7 +32,7 @@ passed=()
 [ -s "$passed_file" ] && passed=(--passed "$(cat "$passed_file")")
 tree="$(git rev-parse "HEAD^{tree}")"
 clean=false
-[ -z "$(git status --porcelain)" ] && clean=true
+[ -z "$(git status --porcelain --untracked-files=normal)" ] && clean=true
 
 if ! scripts/check --fast ${passed[@]+"${passed[@]}"}; then
   echo "pre-push: mix check --fast failed. Fix it, or push anyway with SKIP_CHECK=1." >&2

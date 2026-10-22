@@ -92,7 +92,7 @@ only_unread_docs() {
 # $passed, only files no fast gate reads.
 unread_since_passed() {
   [ -n "$passed" ] && git cat-file -e "$passed^{tree}" 2>/dev/null || return 1
-  [ -z "$(git status --porcelain)" ] || return 1
+  [ -z "$(git status --porcelain --untracked-files=normal)" ] || return 1
   [ -z "$(read_by_gates "$(git diff --name-only --no-renames "$passed" HEAD --)")" ]
 }
 

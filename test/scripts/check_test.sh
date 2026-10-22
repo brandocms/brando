@@ -249,6 +249,13 @@ echo "draft" >"$repo/notes.md"
 expect_push "an untracked file, even unread Markdown, runs the gates" 0 "check: all gates passed" ran
 kept "  … and records nothing"
 rm "$repo/notes.md"
+change changelog.d/feature.fixes.md
+echo "draft" >"$repo/notes.md"
+git_q -C "$repo" config status.showUntrackedFiles no
+expect_push "  … also when git status hides untracked files" 0 "check: all gates passed" ran
+kept "  … and records nothing then either"
+git_q -C "$repo" config --unset status.showUntrackedFiles
+rm "$repo/notes.md"
 change README.md
 expect_push "a change to Markdown a gate reads runs the gates" 0 "check: all gates passed" ran
 recorded="$(cat "$marker")"

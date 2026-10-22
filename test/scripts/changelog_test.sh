@@ -318,6 +318,16 @@ repo="$scratch/case"
 
 - **Numbered inside (#8)**. Kept.
 
+- **Numbered inside, before the full stop (#9).** Kept.
+
+- **Numbered with a list** (#5, #6). Kept.
+
+- **Numbered on the next line**
+  (#10). Kept.
+
+- **A lead that ends its line**
+  gets the number on it.
+
 - Not bold, so not numbered.
 
   ```markdown
@@ -373,6 +383,16 @@ expect_changelog "collate adds the PR number after a bold lead without one" <<'E
 - **Numbered already** (#7). Kept.
 
 - **Numbered inside (#8)**. Kept.
+
+- **Numbered inside, before the full stop (#9).** Kept.
+
+- **Numbered with a list** (#5, #6). Kept.
+
+- **Numbered on the next line**
+  (#10). Kept.
+
+- **A lead that ends its line** (#12)
+  gets the number on it.
 
 - Not bold, so not numbered.
 
