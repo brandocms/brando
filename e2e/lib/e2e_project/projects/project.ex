@@ -84,6 +84,17 @@ defmodule E2eProject.Projects.Project do
         upload_path: Path.join(["videos", "projects", "cover_videos"])
       }
 
+    # Uploads to Bunny, which the E2E app fakes (E2EFakeBunny)
+    asset :bunny_video, :video,
+      cfg: %{
+        upload_strategy: :bunny
+      }
+
+    asset :no_upload_video, :video,
+      cfg: %{
+        upload_strategy: :none
+      }
+
     asset :cover_file, :file,
       cfg: %{
         allowed_mimetypes: ["application/pdf"],
@@ -202,6 +213,14 @@ defmodule E2eProject.Projects.Project do
           input :cover_video, :video,
             label: t("Cover video"),
             instructions: t("Video for the project's cover")
+
+          input :bunny_video, :video,
+            label: t("Bunny video"),
+            instructions: t("Uploads to Bunny Stream")
+
+          input :no_upload_video, :video,
+            label: t("Library video"),
+            instructions: t("Picked from the library; uploads are off")
 
           input :cover_file, :file,
             label: t("Cover file"),
