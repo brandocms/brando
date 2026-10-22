@@ -117,6 +117,17 @@ defmodule BrandoAdmin.Components.Assets.MediaFieldButtonsTest do
     assert_icon_only(videos, "Select videos")
   end
 
+  # A Bunny or Mux video without a thumbnail image of its own previews with
+  # its provider's frame, as the picker shows it, not the film icon.
+  test "a provider video previews with its provider's frame" do
+    video = %Brando.Videos.Video{id: 1, type: :mux, status: :ready, meta: %{"mux" => %{"playback_id" => "pb-1"}}}
+
+    assert video
+           |> then(&render_field(:video, &1))
+           |> LazyHTML.query(".media-field-preview img")
+           |> LazyHTML.attribute("src") == ["https://image.mux.com/pb-1/thumbnail.jpg"]
+  end
+
   test "the Norwegian labels name the icons" do
     Gettext.with_locale(Brando.Gettext, "no", fn ->
       assert [_upload, library] = :image |> render_field(nil) |> buttons(@group)

@@ -111,6 +111,8 @@ defmodule BrandoAdmin.Components.Assets.MediaField do
               <Content.image image={@asset} size={if @presentation == :block, do: :largest, else: :smallest} />
             <% @type == :video && @asset && loaded_asset(@asset.thumbnail) -> %>
               <Content.image image={@asset.thumbnail} size={:smallest} />
+            <% @type == :video && @asset && Brando.Videos.Helpers.provider_thumbnail_url(@asset) -> %>
+              <img src={Brando.Videos.Helpers.provider_thumbnail_url(@asset)} alt="" loading="lazy" />
             <% @type == :video && video_url(@asset) -> %>
               <video muted preload="metadata" src={"#{video_url(@asset)}#t=0.1"} aria-label={gettext("Video preview")} />
             <% true -> %>
