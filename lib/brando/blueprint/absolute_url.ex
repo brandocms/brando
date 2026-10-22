@@ -317,7 +317,7 @@ defmodule Brando.Blueprint.AbsoluteURL do
 
     link_others_to = Keyword.get(opts, :link_others_to)
 
-    unless is_nil(link_others_to) or is_atom(link_others_to) do
+    unless is_nil(link_others_to) or (is_atom(link_others_to) and not is_boolean(link_others_to)) do
       raise BlueprintError,
         message: "absolute_url link_others_to: names a field, as an atom, got: #{Macro.to_string(link_others_to)}"
     end
@@ -329,6 +329,11 @@ defmodule Brando.Blueprint.AbsoluteURL do
 
   defp external_url(field) do
     quote location: :keep do
+      @after_compile {Brando.Blueprint.AbsoluteURL, :__verify_link_others_to__}
+
+      @doc "The field `absolute_url ..., link_others_to:` names."
+      def __link_others_to__, do: unquote(field)
+
       def __external_url__(entry) when is_map(entry) do
         unless __has_url__(entry), do: Brando.Blueprint.AbsoluteURL.external_url(entry, unquote(field))
       end
@@ -338,10 +343,25 @@ defmodule Brando.Blueprint.AbsoluteURL do
   end
 
   @doc """
+  The blueprint's `@after_compile` check that `link_others_to:` names one of
+  its fields, so a misspelt field fails its compilation rather than every
+  save of an entry it applies to.
+  """
+  def __verify_link_others_to__(env, _bytecode) do
+    module = env.module
+    field = module.__link_others_to__()
+
+    if function_exported?(module, :__schema__, 1) and field not in module.__schema__(:fields) do
+      raise BlueprintError,
+        message: "absolute_url link_others_to: #{inspect(field)} is not a field of #{inspect(module)}"
+    end
+  end
+
+  @doc """
   The link destination stored in `field` of an entry, normalised the way a
   pasted link is (`example.com` gets `https://`), or `nil` when it is empty or
-  not a safe link. Called by the `__external_url__/1` that `link_others_to:`
-  generates; a misspelt field raises.
+  its scheme is not one rich-text links allow (`javascript:`, say). Called by
+  the `__external_url__/1` that `link_others_to:` generates.
   """
   @spec external_url(map(), atom()) :: String.t() | nil
   def external_url(entry, field) do

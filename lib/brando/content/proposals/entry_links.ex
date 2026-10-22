@@ -46,7 +46,8 @@ defmodule Brando.Content.Proposals.EntryLinks do
   defp link(whole, quote, name, id, actor) do
     with {:ok, schema} <- Codec.schema(name),
          {:ok, _entry} <- Error.protect(fn -> Catalog.load!(schema, id, actor, :read) end),
-         {:ok, %{id: identifier_id, url: url}} when is_binary(url) <- Content.get_identifier(schema, %{id: id}) do
+         {:ok, %{id: identifier_id} = identifier} <- Content.get_identifier(schema, %{id: id}),
+         url when is_binary(url) <- Brando.Content.Identifier.link_url(identifier) do
       ~s(href=#{quote}#{url}#{quote} data-identifier-id=#{quote}#{identifier_id}#{quote})
     else
       _ -> whole

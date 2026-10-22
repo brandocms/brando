@@ -2918,7 +2918,7 @@ defmodule BrandoAdmin.Components.Form.Block do
   # clause's `Map.get(data, :value)` would blank the liquid split.
   def update_liquex_block_var(socket, var_key, :link, %{identifier: identifier} = data) do
     case identifier do
-      %{url: url, title: title} -> update_liquid_split_var(socket, var_key, url || title)
+      %{title: title} -> update_liquid_split_var(socket, var_key, Brando.Content.Identifier.link_url(identifier) || title)
       _ -> update_liquid_split_var(socket, var_key, Map.get(data, :value))
     end
   end

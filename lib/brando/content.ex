@@ -871,25 +871,30 @@ defmodule Brando.Content do
   end
 
   defp save_identifier_changes(changeset) do
-    link_url_changed? =
-      Identifier.link_url(changeset.data) != Identifier.link_url(Ecto.Changeset.apply_changes(changeset))
+    old_link_url = Identifier.link_url(changeset.data)
 
     with {:ok, updated_identifier} <- Brando.Repo.update(changeset) do
       Brando.Cache.Query.evict({:ok, updated_identifier})
+      new_link_url = Identifier.link_url(updated_identifier)
 
-      if link_url_changed? do
-        update_identifier_links(updated_identifier)
+      # A destination that goes away leaves stored links as they are: an
+      # absolute_url that reads an association the entry was loaded without
+      # gives nil until the entry is next saved whole.
+      if new_link_url && new_link_url != old_link_url do
+        update_identifier_links(updated_identifier.id, new_link_url)
       end
 
       {:ok, updated_identifier}
     end
   end
 
-  # Stored rich-text links to the entry carry its link destination as `href`.
-  defp update_identifier_links(updated_identifier) do
-    new_url = Identifier.link_url(updated_identifier) || "#"
-    Brando.Content.Blocks.update_identifier_links_in_refs(updated_identifier.id, new_url)
-    Brando.Content.Blocks.update_identifier_links_in_rich_text_fields(updated_identifier.id, new_url)
+  # Stored rich-text links to the entry carry its link destination as `href`,
+  # and cached menus hold the identifier.
+  defp update_identifier_links(identifier_id, new_url) do
+    Brando.Content.Blocks.update_identifier_links_in_refs(identifier_id, new_url)
+    Brando.Content.Blocks.update_identifier_links_in_html_vars(identifier_id, new_url)
+    Brando.Content.Blocks.update_identifier_links_in_rich_text_fields(identifier_id, new_url)
+    Brando.Navigation.refresh_cache_for_identifier(identifier_id)
   end
 
   def get_identifier(id) do

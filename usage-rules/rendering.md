@@ -245,7 +245,9 @@ For an entry-backed link, replace `link_type: :url` and `value` with
 `link_type: :identifier` and `identifier_id: identifier.id`. The identifier is a
 `Brando.Content.Identifier` record, **not the page ID**. The admin picker handles
 that distinction. `link_text: nil` lets the renderer use the identifier title; a non-nil
-`link_text` overrides it. `link_target_blank: true` opens a new tab.
+`link_text` overrides it. `link_target_blank: true` opens a new tab. An entry
+whose blueprint sends links elsewhere (`absolute_url ..., link_others_to:`)
+renders that destination.
 
 ### Load and render it
 

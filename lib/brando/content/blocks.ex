@@ -288,6 +288,23 @@ defmodule Brando.Content.Blocks do
   end
 
   @doc """
+  Return list of all blocks containing `data-identifier-id="ID"` in an html
+  var: one of the block's own, or a cell of one of its table rows.
+  """
+  def list_block_ids_with_identifier_in_html_vars(identifier_id) do
+    from(v in Var,
+      left_join: row in assoc(v, :table_row),
+      where: v.type == :html and ilike(v.value, "%data-identifier-id%"),
+      where: not is_nil(v.block_id) or not is_nil(row.block_id),
+      select: {coalesce(v.block_id, row.block_id), v.value}
+    )
+    |> Repo.all()
+    |> Enum.filter(fn {_block_id, html} -> RichText.contains_identifier?(html, identifier_id) end)
+    |> Enum.map(&elem(&1, 0))
+    |> Enum.uniq()
+  end
+
+  @doc """
   Return list of all blocks using `module_id`
   """
   def list_block_ids_using_module(module_id, origin \\ nil) do
@@ -479,10 +496,13 @@ defmodule Brando.Content.Blocks do
   def update_identifier_links_and_rerender(identifier_id, new_url) do
     update_identifier_links_in_refs(identifier_id, new_url)
 
+    update_identifier_links_in_html_vars(identifier_id, new_url)
+
     var_block_ids = list_block_ids_using_identifier(identifier_id)
     ref_block_ids = list_block_ids_with_identifier_in_refs(identifier_id)
+    html_var_block_ids = list_block_ids_with_identifier_in_html_vars(identifier_id)
 
-    (var_block_ids ++ ref_block_ids)
+    (var_block_ids ++ ref_block_ids ++ html_var_block_ids)
     |> Enum.uniq()
     |> list_root_block_ids_by_source()
     |> list_entry_ids_for_root_blocks_by_source()
@@ -536,6 +556,26 @@ defmodule Brando.Content.Blocks do
 
       _ ->
         :ok
+    end
+  end
+
+  @doc """
+  Update the href of identifier links in html vars (block vars and table
+  cells) that reference the given identifier.
+  """
+  def update_identifier_links_in_html_vars(identifier_id, new_url) do
+    query = from v in Var, where: v.type == :html and ilike(v.value, "%data-identifier-id%"), select: {v.id, v.value}
+
+    for {id, html} <- Repo.all(query), RichText.contains_identifier?(html, identifier_id) do
+      Repo.transaction(fn -> update_locked_var_identifier_link(id, identifier_id, new_url) end)
+    end
+  end
+
+  defp update_locked_var_identifier_link(var_id, identifier_id, new_url) do
+    # Re-read under a row lock so a URL refresh cannot replace newer wording.
+    with %Var{} = var <- Repo.one(from v in Var, where: v.id == ^var_id, lock: "FOR UPDATE"),
+         {:updated, html} <- RichText.update_identifier_url(var.value, identifier_id, new_url) do
+      var |> Changeset.change(value: html) |> Repo.update()
     end
   end
 

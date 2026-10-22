@@ -74,11 +74,29 @@ defmodule Brando.Blueprint.LinkOthersToTest do
         """)
       end
 
-      assert_raise Brando.Exception.BlueprintError, ~r/names a field/, fn ->
+      for value <- [~s("external_link"), "true"] do
+        assert_raise Brando.Exception.BlueprintError, ~r/names a field/, fn ->
+          Code.compile_string("""
+          defmodule Brando.Blueprint.LinkOthersToTest.NotAField do
+            import Brando.Blueprint.AbsoluteURL
+            absolute_url "/x", only: %{type: :full_case}, link_others_to: #{value}
+          end
+          """)
+        end
+      end
+
+      assert_raise Brando.Exception.BlueprintError, ~r/:external_lnk is not a field/, fn ->
         Code.compile_string("""
-        defmodule Brando.Blueprint.LinkOthersToTest.NotAField do
+        defmodule Brando.Blueprint.LinkOthersToTest.Misspelt do
+          use Ecto.Schema
           import Brando.Blueprint.AbsoluteURL
-          absolute_url "/x", only: %{type: :full_case}, link_others_to: "external_link"
+
+          schema "misspelt" do
+            field :type, :string
+            field :external_link, :string
+          end
+
+          absolute_url "/x", only: %{type: "full"}, link_others_to: :external_lnk
         end
         """)
       end
@@ -117,6 +135,63 @@ defmodule Brando.Blueprint.LinkOthersToTest do
 
       change_case(Brando.Repo.get!(Case, target.id), type: :external_link)
       assert Brando.Repo.get!(Case, holder.id).summary =~ ~s(href="https://client.example/work")
+
+      # Nowhere to link to leaves the stored links as they are, not "#"
+      change_case(Brando.Repo.get!(Case, target.id), external_link: nil)
+      assert Brando.Repo.get!(Case, holder.id).summary =~ ~s(href="https://client.example/work")
+    end
+  end
+
+  describe "stored links elsewhere follow the destination" do
+    test "rich text in an html var, in a block or a table cell" do
+      {target, identifier} = insert_case(%{})
+      html = ~s(<p><a href="https://client.example/work" data-identifier-id="#{identifier.id}">the work</a></p>)
+
+      block = Brando.Repo.insert!(%Brando.Content.Block{type: :module, uid: Brando.Utils.generate_uid()})
+      row = Brando.Repo.insert!(%Brando.Content.TableRow{block_id: block.id})
+
+      in_block = Brando.Repo.insert!(%Var{type: :html, key: "body", block_id: block.id, value: html})
+      in_cell = Brando.Repo.insert!(%Var{type: :html, key: "cell", table_row_id: row.id, value: html})
+
+      assert Brando.Content.Blocks.list_block_ids_with_identifier_in_html_vars(identifier.id) == [block.id]
+
+      change_case(target, type: :full_case)
+
+      assert Brando.Repo.get!(Var, in_block.id).value =~ ~s(href="/cases/client-work")
+      assert Brando.Repo.get!(Var, in_cell.id).value =~ ~s(href="/cases/client-work")
+    end
+
+    test "a cached menu item" do
+      {target, identifier} = insert_case(%{})
+      user = Brando.Factory.insert(:random_user, role: :superuser)
+
+      {:ok, _menu} =
+        Brando.Navigation.create_menu(
+          %{
+            title: "Main",
+            key: "link-others",
+            language: "en",
+            status: :published,
+            items: [
+              %{
+                key: "case",
+                status: :published,
+                sequence: 0,
+                link: %{type: :link, key: "link", label: "Link", link_type: :identifier, identifier_id: identifier.id}
+              }
+            ]
+          },
+          user
+        )
+
+      menu_url = fn ->
+        {:ok, menu} = Brando.Navigation.get_menu("link-others", "en")
+        menu.items |> hd() |> Brando.HTML.get_menu_item_url()
+      end
+
+      assert menu_url.() == "https://client.example/work"
+      change_case(target, type: :full_case)
+      assert menu_url.() == "/cases/client-work"
     end
   end
 

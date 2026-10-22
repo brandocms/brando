@@ -42,7 +42,8 @@ defmodule Brando.Worker.EntryCascade do
       if identifier_id do
         var_ids = Blocks.list_block_ids_using_identifier(identifier_id)
         ref_ids = Blocks.list_block_ids_with_identifier_in_refs(identifier_id)
-        Enum.uniq(var_ids ++ ref_ids)
+        html_var_ids = Blocks.list_block_ids_with_identifier_in_html_vars(identifier_id)
+        Enum.uniq(var_ids ++ ref_ids ++ html_var_ids)
       else
         []
       end

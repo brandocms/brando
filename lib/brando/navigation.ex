@@ -119,6 +119,23 @@ defmodule Brando.Navigation do
     Brando.Cache.Navigation.get()
   end
 
+  @doc """
+  Rebuilds the cached menus, once the surrounding transaction commits, when a
+  menu item links to `identifier_id`: the cache holds the identifier its link
+  goes to, which changes when the entry's link destination does.
+  """
+  @spec refresh_cache_for_identifier(pos_integer()) :: :ok
+  def refresh_cache_for_identifier(identifier_id) do
+    query =
+      from v in Brando.Content.Var,
+        where: v.identifier_id == ^identifier_id and not is_nil(v.menu_item_id),
+        select: 1,
+        limit: 1
+
+    if Brando.Repo.one(query), do: Brando.Repo.after_commit(:navigation_cache, &Cache.Navigation.set/0)
+    :ok
+  end
+
   mutation :create, Item do
     fn entry ->
       {:ok, entry}
