@@ -65,7 +65,8 @@ defmodule Brando.Blueprint.AbsoluteURL do
 
   `__absolute_url__/1` returns `nil` for the others, so nothing links to,
   sitemaps or audits a page that does not exist. A link elsewhere (an
-  external URL field) is content, not the entry's URL.
+  external URL field) is content, not the entry's URL; `link_others_to:`
+  below sends links to the entry there.
 
   A one-arity function covers rules that are not plain equality. It answers
   `__has_url__/1` only; `__url_filter__/0` is `nil`, since a function
@@ -74,6 +75,24 @@ defmodule Brando.Blueprint.AbsoluteURL do
       absolute_url ~H"/projects/{@entry.slug}", only: &(&1.external_url in [nil, ""])
 
   Without `only:` every entry has a URL, and `__url_filter__/0` is `nil`.
+
+  ## Where links to the others go
+
+  An entry without a page here can still be a link destination: a case that
+  only links to the client is linked to on the client's site. With `only:`,
+  `link_others_to:` names the field that holds where links to the others go:
+
+      absolute_url ~H"/cases/{@entry.slug}",
+        only: %{type: :full_case},
+        link_others_to: :external_link
+
+  `__external_url__/1` returns that field's value for the entries `only:`
+  excludes, and `nil` for the rest. It is not the entry's URL:
+  `__absolute_url__/1`, `__has_url__/1` and `__url_filter__/0` are unchanged,
+  so sitemaps, the SEO audit and structured data still leave those entries
+  out. The entry's identifier stores it as `external_url`, and link vars,
+  menu items and rich-text links to the entry go there
+  (`Brando.Content.Identifier.link_url/1`).
   """
   alias Brando.Blueprint.TemplateParser
   alias Brando.Exception.BlueprintError
@@ -274,21 +293,63 @@ defmodule Brando.Blueprint.AbsoluteURL do
   end
 
   defmacro absolute_url(tpl, opts) do
-    only =
-      case opts do
-        [only: only] -> only
-        _ -> raise BlueprintError, message: "absolute_url accepts only: as its option, got: #{Macro.to_string(opts)}"
-      end
+    {only, link_others_to} = options!(opts)
 
     quote location: :keep do
       absolute_url(unquote(tpl))
       unquote(url_filter(only))
+      unquote(external_url(link_others_to))
 
       defoverridable __absolute_url__: 1
 
       def __absolute_url__(entry) do
         if __has_url__(entry), do: super(entry)
       end
+    end
+  end
+
+  defp options!(opts) do
+    unless Keyword.keyword?(opts) and Keyword.has_key?(opts, :only) and
+             Keyword.keys(opts) -- [:only, :link_others_to] == [] do
+      raise BlueprintError,
+        message: "absolute_url accepts only: and link_others_to: as its options, got: #{Macro.to_string(opts)}"
+    end
+
+    link_others_to = Keyword.get(opts, :link_others_to)
+
+    unless is_nil(link_others_to) or is_atom(link_others_to) do
+      raise BlueprintError,
+        message: "absolute_url link_others_to: names a field, as an atom, got: #{Macro.to_string(link_others_to)}"
+    end
+
+    {Keyword.fetch!(opts, :only), link_others_to}
+  end
+
+  defp external_url(nil), do: nil
+
+  defp external_url(field) do
+    quote location: :keep do
+      def __external_url__(entry) when is_map(entry) do
+        unless __has_url__(entry), do: Brando.Blueprint.AbsoluteURL.external_url(entry, unquote(field))
+      end
+
+      def __external_url__(_entry), do: nil
+    end
+  end
+
+  @doc """
+  The link destination stored in `field` of an entry, normalised the way a
+  pasted link is (`example.com` gets `https://`), or `nil` when it is empty or
+  not a safe link. Called by the `__external_url__/1` that `link_others_to:`
+  generates; a misspelt field raises.
+  """
+  @spec external_url(map(), atom()) :: String.t() | nil
+  def external_url(entry, field) do
+    with value when is_binary(value) <- Map.fetch!(entry, field),
+         {:ok, url} <- Brando.RichText.normalize_url(value) do
+      url
+    else
+      _ -> nil
     end
   end
 

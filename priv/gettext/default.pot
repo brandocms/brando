@@ -9065,6 +9065,11 @@ msgstr ""
 msgid "Links"
 msgstr ""
 
+#: lib/brando_admin/components/content/identifier.ex
+#, elixir-autogen, elixir-format
+msgid "Links elsewhere:"
+msgstr ""
+
 #: lib/brando_admin/components/content/list/row.ex
 #, elixir-autogen, elixir-format
 msgid "Links updated"

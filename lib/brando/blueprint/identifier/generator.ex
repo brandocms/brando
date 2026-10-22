@@ -50,6 +50,7 @@ defmodule Brando.Blueprint.Identifier.Generator do
     cover = if skip_cover, do: nil, else: extract_cover(cover_asset(module), entry)
     updated_at = extract_updated_at(entry)
     url = extract_url(entry)
+    external_url = extract_external_url(entry)
 
     %Identifier{
       entry_id: entry.id,
@@ -59,7 +60,8 @@ defmodule Brando.Blueprint.Identifier.Generator do
       cover: cover,
       schema: module,
       updated_at: updated_at,
-      url: url
+      url: url,
+      external_url: external_url
     }
   end
 
@@ -170,6 +172,14 @@ defmodule Brando.Blueprint.Identifier.Generator do
   defp extract_url(entry) do
     if function_exported?(entry.__struct__, :__absolute_url__, 1) do
       entry.__struct__.__absolute_url__(entry)
+    else
+      nil
+    end
+  end
+
+  defp extract_external_url(entry) do
+    if function_exported?(entry.__struct__, :__external_url__, 1) do
+      entry.__struct__.__external_url__(entry)
     else
       nil
     end

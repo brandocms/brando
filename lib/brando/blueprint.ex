@@ -249,6 +249,11 @@ defmodule Brando.Blueprint do
       def __url_filter__, do: nil
       defoverridable __url_filter__: 0
 
+      # Where links to an entry without a page here go, from
+      # `absolute_url ..., link_others_to: field`.
+      def __external_url__(_entry), do: nil
+      defoverridable __external_url__: 1
+
       def __has_identifier__, do: false
       defoverridable __has_identifier__: 0
 

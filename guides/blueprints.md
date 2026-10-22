@@ -335,6 +335,36 @@ absolute_url ~H"/projects/{@entry.slug}", only: &(&1.external_url in [nil, ""])
 Without `only:`, every entry has a URL and `__url_filter__/0` is `nil`.
 `absolute_url false` takes no options.
 
+### Where links to the others go
+
+An entry without a page here can still be linked to: a case that only links
+to the client is linked to on the client's site. `link_others_to:` names the
+field that holds where links to the entries `only:` excludes go:
+
+```elixir
+absolute_url ~H"/cases/{@entry.slug}",
+  only: %{type: :full_case},
+  link_others_to: :external_link
+```
+
+The destination is not the entry's URL: sitemaps, the SEO audit, structured
+data and meta previews still leave those entries out, and
+`__absolute_url__/1` still returns `nil` for them. The entry's identifier
+stores the destination as `external_url`, next to `url`, its page here.
+Link pickers then list the entry where a link needs a destination, with an
+arrow and the destination's host. Link vars, menu items and rich-text links
+to it go there. `Brando.Content.Identifier.link_url/1` gives an identifier's
+link destination: its `url`, else its `external_url`.
+
+The value is normalised like a pasted link (`client.example` becomes
+`https://client.example`); an empty or unsafe value means there is nowhere to
+link to. Editing the field, or giving the entry a page here (switching the
+type to `:full_case`), updates the identifier when the entry is saved, and
+existing rich-text links to the entry follow. As with a pasted address, a
+link opens in a new tab only when its editor turns that on.
+
+`link_others_to:` needs `only:`: without it every entry has a page here.
+
 ## Content transfer matching
 
 Blueprints with block fields and persisted identifiers appear in

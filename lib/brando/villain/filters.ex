@@ -4,6 +4,7 @@ defmodule Brando.Villain.Filters do
   """
 
   use Phoenix.Component
+  alias Brando.Content.Identifier
   alias Brando.Content.Var
   alias Brando.Utils
   alias Liquex.Context
@@ -1252,7 +1253,7 @@ defmodule Brando.Villain.Filters do
   end
 
   defp get_link_url(%{link_type: :url, value: url}), do: url
-  defp get_link_url(%{link_type: :identifier, identifier: %{url: url}}), do: url
+  defp get_link_url(%{link_type: :identifier, identifier: %{} = identifier}), do: Identifier.link_url(identifier)
   defp get_link_url(_), do: nil
 
   defp get_link_text(%{link_type: :url, link_text: text}), do: text

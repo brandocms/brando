@@ -854,7 +854,8 @@ defmodule Brando.Content do
         status: new_identifier.status,
         cover: new_identifier.cover,
         updated_at: new_identifier.updated_at,
-        url: new_identifier.url
+        url: new_identifier.url,
+        external_url: new_identifier.external_url
       }
 
       identifier
@@ -870,12 +871,13 @@ defmodule Brando.Content do
   end
 
   defp save_identifier_changes(changeset) do
-    url_changed? = Ecto.Changeset.get_change(changeset, :url)
+    link_url_changed? =
+      Identifier.link_url(changeset.data) != Identifier.link_url(Ecto.Changeset.apply_changes(changeset))
 
     with {:ok, updated_identifier} <- Brando.Repo.update(changeset) do
       Brando.Cache.Query.evict({:ok, updated_identifier})
 
-      if url_changed? do
+      if link_url_changed? do
         update_identifier_links(updated_identifier)
       end
 
@@ -883,8 +885,9 @@ defmodule Brando.Content do
     end
   end
 
+  # Stored rich-text links to the entry carry its link destination as `href`.
   defp update_identifier_links(updated_identifier) do
-    new_url = updated_identifier.url || "#"
+    new_url = Identifier.link_url(updated_identifier) || "#"
     Brando.Content.Blocks.update_identifier_links_in_refs(updated_identifier.id, new_url)
     Brando.Content.Blocks.update_identifier_links_in_rich_text_fields(updated_identifier.id, new_url)
   end

@@ -177,7 +177,10 @@ defmodule Brando.HTML do
   end
 
   def get_menu_item_url(%{link: %{link_type: :url, value: url}}), do: url
-  def get_menu_item_url(%{link: %{link_type: :identifier, identifier: %{url: url}}}), do: url
+
+  def get_menu_item_url(%{link: %{link_type: :identifier, identifier: %{} = identifier}}),
+    do: Brando.Content.Identifier.link_url(identifier)
+
   def get_menu_item_url(_), do: nil
 
   def get_menu_item_text(%{link: %{link_type: :url, link_text: text}}), do: text

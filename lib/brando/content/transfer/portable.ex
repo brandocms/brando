@@ -488,7 +488,10 @@ defmodule Brando.Content.Transfer.Portable do
 
   defp identifier_attrs(tag, attrs, identifier) do
     attrs = List.keystore(attrs, "data-identifier-id", 0, {"data-identifier-id", to_string(identifier.id)})
-    if tag == "a", do: List.keystore(attrs, "href", 0, {"href", identifier.url || ""}), else: attrs
+
+    if tag == "a",
+      do: List.keystore(attrs, "href", 0, {"href", Brando.Content.Identifier.link_url(identifier) || ""}),
+      else: attrs
   end
 
   def resolve!(bindings, token),
