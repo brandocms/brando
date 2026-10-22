@@ -3,7 +3,7 @@ defmodule BrandoAdmin.Components.Form.RelationRows do
   # The has_many, has_one and many_to_many relations of an entry form. They
   # don't ship between editors as field changes (`Form.sync_fields/1`), so
   # another editor's save (`Form.take_saved_entry/1`) is where they meet: a
-  # form keeps the rows its editor changed (`carry/4`) and takes the saved
+  # form keeps the rows its editor changed (`carry/5`) and takes the saved
   # rows in the rest. Rows compare by content (`rows/2`): the rows a form
   # builds again from the browser's params are new structs.
 
@@ -84,11 +84,18 @@ defmodule BrandoAdmin.Components.Form.RelationRows do
   A row the editor changed keeps its changes, applied onto the saved row,
   or as a new row if the save removed it; a row it added stays, and one it
   removed stays removed. Every other row is the saved one, and a row the
-  save added is there too. A relation whose rows can't be replaced
-  (`on_replace: :raise`) keeps every saved row; a has_one the save filled
-  takes the editor's new row as changes to it.
+  save added is there too, unless it is one the editor added as well: a
+  new row of the editor's and a row the save added are one row when they
+  hold the same content, or name the same option in a multi-select
+  (`keys`, `{schema, relation} => relation_key`). A relation whose rows
+  can't be replaced (`on_replace: :raise`) keeps every saved row the
+  editor didn't take out; a has_one the save filled takes the editor's new
+  row as changes to it.
+
+  A row carries what the editor typed into its fields that didn't cast,
+  and the errors for it.
   """
-  def carry(%Changeset{data: %schema{} = data} = saved, %Changeset{} = previous, base, field) do
+  def carry(%Changeset{data: %schema{} = data} = saved, %Changeset{} = previous, base, field, keys \\ %{}) do
     assoc = schema.__schema__(:association, field)
     current = Map.get(data, field)
     base = if is_map(base), do: Map.get(base, field), else: current
@@ -96,8 +103,8 @@ defmodule BrandoAdmin.Components.Form.RelationRows do
 
     cond do
       not Ecto.assoc_loaded?(current) -> carry_unloaded(saved, previous, field)
-      assoc.cardinality == :one -> put_carried(saved, field, carry_one(assoc, current, base, held(previous, field)))
-      true -> put_carried(saved, field, carry_many(assoc, current, base, held(previous, field)))
+      assoc.cardinality == :one -> put_carried(saved, field, carry_one(assoc, current, base, held(previous, field), keys))
+      true -> put_carried(saved, field, carry_many(assoc, current, base, held(previous, field), keys))
     end
   end
 
@@ -112,15 +119,19 @@ defmodule BrandoAdmin.Components.Form.RelationRows do
   defp put_carried(changeset, _field, :keep), do: changeset
   defp put_carried(changeset, field, value), do: Changeset.put_assoc(changeset, field, value)
 
-  # The rows `changeset` holds: changesets from its changes (not the ones
-  # removed), or the structs in its data.
-  defp held(changeset, field) do
+  # The rows a row (or the entry's changeset) holds: changesets from its
+  # changes, or the structs in its data. In a list, a row the editor took
+  # out (`:delete`, a multi-select's unpick) stays, as the editor's intent;
+  # one put_assoc replaced does not.
+  defp held(%Changeset{} = changeset, field) do
     case Map.fetch(changeset.changes, field) do
-      {:ok, rows} when is_list(rows) -> Enum.reject(rows, &removed?/1)
+      {:ok, rows} when is_list(rows) -> Enum.reject(rows, &match?(%Changeset{action: :replace}, &1))
       {:ok, row} -> if removed?(row), do: nil, else: row
       :error -> Map.get(changeset.data, field)
     end
   end
+
+  defp held(row, field), do: Map.get(row, field)
 
   defp removed?(%Changeset{action: action}), do: action in [:replace, :delete]
   defp removed?(_row), do: false
@@ -134,8 +145,8 @@ defmodule BrandoAdmin.Components.Form.RelationRows do
 
   # An entry linked stays linked, and one unlinked stays unlinked, unless
   # the links can't be replaced.
-  defp carry_many(%Association.ManyToMany{} = assoc, saved, base, held) do
-    shown = held |> List.wrap() |> Enum.map(&applied/1)
+  defp carry_many(%Association.ManyToMany{} = assoc, saved, base, held, _keys) do
+    shown = for entry <- List.wrap(held), not removed?(entry), do: applied(entry)
     shown_keys = MapSet.new(shown, &Ecto.primary_key/1)
     base_keys = MapSet.new(base, &Ecto.primary_key/1)
     saved_keys = MapSet.new(saved, &Ecto.primary_key/1)
@@ -154,19 +165,26 @@ defmodule BrandoAdmin.Components.Form.RelationRows do
     Enum.reject(saved, &MapSet.member?(unlinked, Ecto.primary_key(&1))) ++ linked
   end
 
-  defp carry_many(assoc, saved, base, held) do
+  defp carry_many(assoc, saved, base, held, keys) do
     saved_rows = by_key(saved)
     base_rows = by_key(base)
+    held = Enum.with_index(List.wrap(held))
+    matches = same_new_rows(assoc, held, Enum.reject(saved, &Map.has_key?(base_rows, Ecto.primary_key(&1))), keys)
 
     # Each held row as it goes onto the saved ones: `{:row, key, value}` for
     # a saved row, `{:new, anchor, value}` for a row to insert after the
     # saved row `anchor` (the held row before it), or `:drop`.
     {placed, _anchor} =
-      held
-      |> List.wrap()
-      |> Enum.map_reduce(:start, &place(&1, &2, saved_rows, base_rows))
+      Enum.map_reduce(held, :start, fn {entry, at}, anchor ->
+        place(entry, anchor, Map.get(matches, at), {saved_rows, base_rows}, keys)
+      end)
 
-    shown_keys = MapSet.new(for(entry <- List.wrap(held), do: entry |> applied() |> Ecto.primary_key()))
+    shown_keys =
+      MapSet.new(
+        for({entry, _at} <- held, do: entry |> applied() |> Ecto.primary_key()) ++
+          Enum.map(Map.values(matches), &Ecto.primary_key(elem(&1, 1)))
+      )
+
     # The saved rows the form doesn't hold: the save added them, or the
     # editor removed them, which a relation that can't replace a row keeps.
     untouched =
@@ -180,23 +198,107 @@ defmodule BrandoAdmin.Components.Form.RelationRows do
       else: in_saved_order(placed, saved, untouched)
   end
 
-  defp place(entry, anchor, saved_rows, base_rows) do
+  # The editor's new rows that are rows the save added (`fresh`): by their
+  # multi-select option where the relation has one, by their content
+  # otherwise. Each saved row is one held row's at most. Returns the saved
+  # row for each held row's position.
+  defp same_new_rows(assoc, held, fresh, keys) do
+    same = sameness(assoc, keys)
+
+    {matches, _fresh} =
+      Enum.reduce(held, {%{}, fresh}, fn {entry, at}, {matches, fresh} ->
+        row = applied(entry)
+
+        with false <- removed?(entry),
+             true <- new?(row),
+             index when is_integer(index) <- Enum.find_index(fresh, &(same.(&1) == same.(row))) do
+          {Map.put(matches, at, {assoc, Enum.at(fresh, index)}), List.delete_at(fresh, index)}
+        else
+          _ -> {matches, fresh}
+        end
+      end)
+
+    matches
+  end
+
+  # A pick holds the option as the browser sent it, a string.
+  defp sameness(assoc, keys) do
+    case option_key(assoc, keys) do
+      nil -> &Map.delete(row_content(assoc, &1), :sequence)
+      key -> &to_string(Map.get(&1, key))
+    end
+  end
+
+  defp option_key(%{owner: owner, field: field}, keys), do: Map.get(keys, {owner, field})
+
+  # A new row of the editor's that is a row the save added: what it holds
+  # but the option it names is its change to the saved row.
+  defp place(entry, _anchor, {assoc, %_{} = same}, _rows, keys) do
+    key = Ecto.primary_key(same)
+
+    base =
+      case option_key(assoc, keys) do
+        nil -> blank(same)
+        option -> Map.put(blank(same), option, Map.get(applied(entry), option))
+      end
+
+    {{:row, key, carry_row(same, base, entry, keys)}, key}
+  end
+
+  defp place(entry, anchor, nil, {saved_rows, base_rows}, keys) do
     row = applied(entry)
     key = Ecto.primary_key(row)
 
     cond do
+      removed?(entry) and Map.has_key?(saved_rows, key) ->
+        {{:row, key, as_removed(saved_rows[key], entry)}, key}
+
+      removed?(entry) ->
+        {:drop, anchor}
+
       new?(row) ->
         {{:new, anchor, as_insert(entry)}, anchor}
 
       Map.has_key?(saved_rows, key) ->
-        {{:row, key, carry_row(saved_rows[key], Map.get(base_rows, key), row)}, key}
+        {{:row, key, carry_row(saved_rows[key], Map.get(base_rows, key), entry, keys)}, key}
 
       edits(row, Map.get(base_rows, key)) == %{} or marked_as_deleted?(row) ->
         {:drop, anchor}
 
       true ->
-        {{:new, anchor, as_insert(as_new(row))}, anchor}
+        {{:new, anchor, rescued(entry, Map.get(base_rows, key))}, anchor}
     end
+  end
+
+  # The saved row, taken out as the editor took it out.
+  defp as_removed(saved, %Changeset{changes: changes}),
+    do: saved |> Changeset.change(Map.take(changes, [:marked_as_deleted])) |> Map.put(:action, :delete)
+
+  # A row the save removed that the editor changed, as a new row. It has
+  # a key of its own, and is the row the browser names by its old id, from
+  # the form it showed before (`take_row/6`).
+  defp rescued(entry, base) do
+    row = applied(entry)
+
+    rescued =
+      row
+      |> as_new()
+      |> as_insert()
+      |> keep_typed(entry, Map.keys(edits(row, base)))
+      |> SubformHelpers.new_row()
+
+    case Map.get(row, :id) do
+      nil -> rescued
+      id -> %{rescued | params: Map.put(rescued.params, "id", to_string(id))}
+    end
+  end
+
+  # A new row of `schema`, its relations loaded and empty: what a row the
+  # editor added has changed.
+  defp blank(%row_schema{}) do
+    Enum.reduce(fields(row_schema, []), struct(row_schema), fn name, row ->
+      Map.put(row, name, if(row_schema.__schema__(:association, name).cardinality == :one, do: nil, else: []))
+    end)
   end
 
   # The editor reordered the rows.
@@ -230,27 +332,31 @@ defmodule BrandoAdmin.Components.Form.RelationRows do
   end
 
   # A has_one: the row the editor holds, onto the saved one.
-  defp carry_one(assoc, saved, base, held) do
-    case one_onto(assoc, saved, base, held, held && applied(held)) do
+  defp carry_one(assoc, saved, base, held, keys) do
+    case one_onto(assoc, saved, base, held, keys) do
       ^saved -> :keep
       value -> value
     end
   end
 
-  defp one_onto(assoc, saved, base, _held, nil), do: remove_one(assoc, saved, base)
+  defp one_onto(assoc, saved, base, nil, _keys), do: remove_one(assoc, saved, base)
 
-  defp one_onto(_assoc, nil, base, held, row) do
+  defp one_onto(_assoc, nil, base, held, _keys) do
+    row = applied(held)
+
     cond do
       new?(row) -> as_insert(held)
       edits(row, base) == %{} -> :keep
-      true -> as_insert(as_new(row))
+      true -> held |> applied() |> as_new() |> as_insert() |> keep_typed(held, Map.keys(edits(row, base)))
     end
   end
 
-  defp one_onto(_assoc, saved, base, _held, row) do
+  defp one_onto(_assoc, saved, base, held, keys) do
+    row = applied(held)
+
     if new?(row),
-      do: carry_row(saved, struct(row.__struct__), row),
-      else: carry_row(saved, reference(row, base, saved), row)
+      do: carry_row(saved, blank(row), held, keys),
+      else: carry_row(saved, reference(row, base, saved), held, keys)
   end
 
   # The editor removed the row it had: the saved one goes, if it is that row
@@ -273,13 +379,44 @@ defmodule BrandoAdmin.Components.Form.RelationRows do
     end
   end
 
-  # The saved row with the editor's changes to it: what `row` holds otherwise
-  # than `base`, the row its form was built on.
-  defp carry_row(saved, base, row) do
-    case edits(row, base) do
-      edits when edits == %{} -> saved
-      edits -> put_edits(saved, base, edits)
-    end
+  # The saved row with the editor's changes to it: what `entry` holds
+  # otherwise than `base`, the row its form was built on, and what it typed
+  # that didn't cast.
+  defp carry_row(saved, base, entry, keys) do
+    edits = edits(applied(entry), base)
+    typed = Map.keys(edits) ++ Keyword.keys(typing_errors(entry))
+
+    if typed == [],
+      do: saved,
+      else: saved |> put_edits(base, edits, entry, keys) |> keep_typed(entry, typed)
+  end
+
+  # Values typed that didn't cast; other errors are the row's validations,
+  # which the next change runs again on the saved row.
+  defp typing_errors(%Changeset{errors: errors}),
+    do: Enum.filter(errors, fn {_field, {_message, opts}} -> opts[:validation] == :cast end)
+
+  defp typing_errors(_row), do: []
+
+  # What the editor typed into `fields` of the row, as the browser sent it,
+  # and the errors for it: the form shows a row's params over its values.
+  defp keep_typed(%Changeset{} = changeset, %Changeset{params: params, errors: errors}, fields) do
+    names = Enum.map(fields, &Atom.to_string/1)
+    errors = Keyword.drop(changeset.errors, fields) ++ Keyword.take(errors, fields)
+    params = Map.merge(changeset.params || %{}, Map.take(params || %{}, names))
+
+    %{changeset | params: params, errors: errors, valid?: errors == [] and rows_valid?(changeset)}
+  end
+
+  defp keep_typed(changeset, _row, _fields), do: changeset
+
+  # Whether the rows in a changeset's relations are valid, as `put_assoc`
+  # counts them.
+  defp rows_valid?(%Changeset{changes: changes}) do
+    changes
+    |> Map.values()
+    |> List.flatten()
+    |> Enum.all?(&(not match?(%Changeset{valid?: false}, &1)))
   end
 
   defp edits(_row, nil), do: %{}
@@ -306,19 +443,20 @@ defmodule BrandoAdmin.Components.Form.RelationRows do
     row_schema.__schema__(:fields) -- ([:inserted_at, :updated_at | row_schema.__schema__(:primary_key)] ++ marked)
   end
 
-  defp put_edits(%row_schema{} = saved, base, edits) do
+  defp put_edits(%row_schema{} = saved, base, edits, entry, keys) do
     {relations, values} = Map.split(edits, fields(row_schema, []))
     changeset = saved |> Changeset.change(values) |> Map.put(:action, :update)
 
-    Enum.reduce(relations, changeset, fn {name, held}, changeset ->
+    Enum.reduce(Map.keys(relations), changeset, fn name, changeset ->
+      held = held(entry, name)
       assoc = row_schema.__schema__(:association, name)
       current = Map.get(saved, name)
       current = if Ecto.assoc_loaded?(current), do: current, else: Map.get(base, name)
 
       value =
         if assoc.cardinality == :one,
-          do: carry_one(assoc, current, Map.get(base, name), held),
-          else: carry_many(assoc, current, Map.get(base, name), held)
+          do: carry_one(assoc, current, Map.get(base, name), held, keys),
+          else: carry_many(assoc, current, Map.get(base, name), held, keys)
 
       case value do
         :keep -> changeset
@@ -350,10 +488,14 @@ defmodule BrandoAdmin.Components.Form.RelationRows do
   The browser's change in one row (`key`, `SubformHelpers.row_key/1`) of a
   relation another editor's change replaced, sent from the form it showed
   before (`Form.drop_echoes/5`): the relation stays as `previous` has it,
-  but for that row as `changeset` cast it. Returns the changeset, and
-  whether the other rows sent were the old ones.
+  but for what the event changed in that row, as `changeset` cast it: the
+  field it names (`row_field`, as in `_target`) and the fields the row
+  holds otherwise than the browser showed it, which is one of `stale`
+  (`RelationRows.rows/2` of the relations it replaced). The row's other
+  fields stay as `previous` has them. Returns the changeset, and whether
+  the other rows sent were the old ones.
   """
-  def take_row(%Changeset{} = changeset, %Changeset{} = previous, field, key) do
+  def take_row(%Changeset{} = changeset, %Changeset{} = previous, field, key, row_field, stale) do
     sent = SubformHelpers.current_entries(changeset, field)
     held = SubformHelpers.current_entries(previous, field)
 
@@ -364,17 +506,73 @@ defmodule BrandoAdmin.Components.Form.RelationRows do
       row ->
         assoc = changeset.data.__struct__.__schema__(:association, field)
         echoed? = content(assoc, others(sent, key)) != content(assoc, others(held, key))
-        {SubformHelpers.put_entries(changeset, field, put_row(held, key, row)), echoed?}
+        taken = taken_fields(assoc, sent, row, row_field, stale)
+        {SubformHelpers.put_entries(changeset, field, put_row(held, key, row, taken)), echoed?}
     end
   end
 
-  defp others(rows, key), do: for(row <- rows, row_key(row) != key, do: applied(row))
+  defp others(rows, key), do: for(row <- rows, not named?(row, key), do: applied(row))
 
-  defp put_row(rows, key, row) do
-    if Enum.any?(rows, &(row_key(&1) == key)),
-      do: Enum.map(rows, &if(row_key(&1) == key, do: row, else: &1)),
+  defp put_row(rows, key, row, taken) do
+    if Enum.any?(rows, &named?(&1, key)),
+      do: Enum.map(rows, &if(named?(&1, key), do: take_fields(&1, row, taken), else: &1)),
       else: rows ++ [row]
   end
+
+  # The fields of `row` the event changed: the one it names, and the ones
+  # that differ from the row in the form the browser showed (the stale rows
+  # that are the sent ones but for this row). All of them if neither is known.
+  defp taken_fields(%{related: row_schema} = assoc, sent, row, row_field, stale) do
+    shown = for entry <- sent, do: row_content(assoc, applied(entry))
+    at = Enum.find_index(sent, &(&1 == row))
+    named = Enum.filter(fields(row_schema, []) ++ row_schema.__schema__(:fields), &(Atom.to_string(&1) == row_field))
+
+    changed =
+      case Enum.find(List.wrap(stale), &shown_before?(&1, shown, at)) do
+        nil -> []
+        before -> for {name, value} <- Enum.at(shown, at), Map.get(Enum.at(before, at), name) != value, do: name
+      end
+
+    case Enum.uniq(named ++ changed) do
+      [] -> :all
+      taken -> taken
+    end
+  end
+
+  defp shown_before?(before, shown, at) when is_list(before) and is_integer(at) do
+    length(before) == length(shown) and is_map(Enum.at(shown, at)) and
+      List.delete_at(before, at) == List.delete_at(shown, at)
+  end
+
+  defp shown_before?(_before, _shown, _at), do: false
+
+  defp take_fields(_held, row, :all), do: row
+
+  defp take_fields(%Changeset{data: %row_schema{}} = held, row, taken) do
+    relations = fields(row_schema, [])
+
+    Enum.reduce(taken, held, &take_field(&2, row, &1, &1 in relations))
+  end
+
+  defp take_field(held, row, name, true = _relation?) do
+    case Map.fetch(row.changes, name) do
+      {:ok, value} -> %{held | changes: Map.put(held.changes, name, value)}
+      :error -> %{held | changes: Map.delete(held.changes, name)}
+    end
+  end
+
+  defp take_field(held, row, name, false = _relation?) do
+    held
+    |> Changeset.put_change(name, Changeset.get_field(row, name))
+    |> keep_typed(row, [name])
+  end
+
+  # Whether the browser names `row` by `key`: by its id, its `_key`, or the
+  # id of the saved row it was before the save removed it (`rescued/2`).
+  defp named?(row, key), do: row_key(row) == key or old_key(row) == key
+
+  defp old_key(%Changeset{params: %{"id" => id}}) when is_binary(id) and id != "", do: "id-" <> id
+  defp old_key(_row), do: nil
 
   # A row cast from a saved row the save removed has no id of its own: the
   # params still name it.

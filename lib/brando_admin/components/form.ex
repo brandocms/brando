@@ -3061,14 +3061,15 @@ defmodule BrandoAdmin.Components.Form do
   defp target_field(_socket, _singular, _target), do: nil
 
   # The row of a relation `_target` names (`["page", "items", "0", "name"]`),
-  # by its key (`SubformHelpers.row_key/1`) in the params the browser sent.
-  defp target_row(socket, %{"_target" => [singular, key, index | _]} = params, target) when is_atom(target) do
+  # by its key (`SubformHelpers.row_key/1`) in the params the browser sent,
+  # and the row's field it names: `{key, "name"}`.
+  defp target_row(socket, %{"_target" => [singular, key, index | path]} = params, target) when is_atom(target) do
     with true <- target in relation_fields(socket),
          %{} = rows <- get_in(params, [singular, key]),
          %{} = row <- Map.get(rows, index) do
       case row do
-        %{"id" => id} when is_binary(id) and id != "" -> "id-" <> id
-        %{"_key" => new_key} when is_binary(new_key) and new_key != "" -> new_key
+        %{"id" => id} when is_binary(id) and id != "" -> {"id-" <> id, List.first(path)}
+        %{"_key" => new_key} when is_binary(new_key) and new_key != "" -> {new_key, List.first(path)}
         _ -> nil
       end
     else
@@ -3082,14 +3083,14 @@ defmodule BrandoAdmin.Components.Form do
   # change replaced it, in an event that does not name it, is the browser's
   # old form: the replacing value stays. An event in one row of a replaced
   # relation is an edit of that row only: the other rows stay
-  # (`RelationRows.take_row/4`). Returns the fields kept.
+  # (`RelationRows.take_row/6`). Returns the fields kept.
   defp drop_echoes(changeset, previous, replaced, target, target_row) do
     Enum.reduce(replaced, {changeset, []}, fn {field, stale}, {changeset, echoed} ->
       value = echo_value(changeset, field)
 
       cond do
-        field == target and is_binary(target_row) ->
-          take_edited_row(changeset, previous, field, target_row, echoed)
+        field == target and is_tuple(target_row) ->
+          take_edited_row(changeset, previous, field, target_row, stale, echoed)
 
         field != target and value in stale and value != echo_value(previous, field) ->
           {keep_field(changeset, previous, field), [field | echoed]}
@@ -3100,8 +3101,8 @@ defmodule BrandoAdmin.Components.Form do
     end)
   end
 
-  defp take_edited_row(changeset, previous, field, target_row, echoed) do
-    case RelationRows.take_row(changeset, previous, field, target_row) do
+  defp take_edited_row(changeset, previous, field, {key, row_field}, stale, echoed) do
+    case RelationRows.take_row(changeset, previous, field, key, row_field, stale) do
       {changeset, true} -> {%{changeset | params: drop_param(changeset.params, field)}, [field | echoed]}
       {changeset, false} -> {changeset, echoed}
     end
@@ -3505,7 +3506,7 @@ defmodule BrandoAdmin.Components.Form do
   # shipment, or one whose value the editors hold unsaved (shipped,
   # received) if the save has another, and a relation it changed
   # (`edited_relations`) whose rows differ from the saved ones: the rows it
-  # changed, added or removed, onto the saved rows (`RelationRows.carry/4`).
+  # changed, added or removed, onto the saved rows (`RelationRows.carry/5`).
   # Every other field takes the saved value, as a change from another editor
   # does (`apply_remote/2`): the browser's old value for it is an echo from
   # then on, and in a relation, the rows the browser sends beside the one an
@@ -3548,7 +3549,7 @@ defmodule BrandoAdmin.Components.Form do
     relations = relation_fields(socket)
     kept = unsaved_edits(socket, previous, saved, fields, belongs_to, relations)
 
-    base = socket.assigns.entry
+    base = {socket.assigns.entry, option_keys(socket)}
     changeset = Enum.reduce(kept, saved, &carry_edit(&2, previous, base, &1, relations))
     taken = Enum.filter((fields -- belongs_to) ++ relations, &(&1 not in kept))
     changeset = carry_form_state(changeset, previous, kept, taken ++ relations)
@@ -3636,11 +3637,12 @@ defmodule BrandoAdmin.Components.Form do
   # A field the form keeps goes onto the saved entry as it was: its change,
   # or the value it opened with if it was set back to that. A relation keeps
   # the rows this editor changed from `base`, the entry its form was built
-  # on (`RelationRows.carry/4`).
-  defp carry_edit(changeset, previous, base, field, relations) do
+  # on, its multi-select rows by the option they name (`keys`,
+  # `option_keys/1`; `RelationRows.carry/5`).
+  defp carry_edit(changeset, previous, {base, keys}, field, relations) do
     cond do
       field in relations ->
-        RelationRows.carry(changeset, previous, base, field)
+        RelationRows.carry(changeset, previous, base, field, keys)
 
       Map.has_key?(previous.changes, field) ->
         %{changeset | changes: Map.put(changeset.changes, field, previous.changes[field])}
@@ -3666,6 +3668,37 @@ defmodule BrandoAdmin.Components.Form do
       end)
 
     %{changeset | params: params, errors: errors, valid?: errors == [], action: previous.action, data: data}
+  end
+
+  # The option a multi-select's row names (its `relation_key`), by the
+  # schema and relation it is in, subform rows included:
+  # `%{{schema, relation} => key}`. A row another editor saved for an
+  # option is the row this editor holds for it (`RelationRows.carry/5`).
+  defp option_keys(%{assigns: %{schema: schema, form_blueprint: %Brando.Blueprint.Forms.Form{tabs: tabs}}}) do
+    for tab <- tabs, %Brando.Blueprint.Forms.Fieldset{fields: inputs} <- tab.fields, reduce: %{} do
+      keys -> option_keys(schema, inputs, keys)
+    end
+  end
+
+  defp option_keys(_socket), do: %{}
+
+  defp option_keys(schema, inputs, keys) do
+    Enum.reduce(inputs, keys, fn
+      %Brando.Blueprint.Forms.Input{type: :multi_select, name: name, opts: opts}, keys ->
+        case Keyword.get(opts || [], :relation_key) do
+          nil -> keys
+          key -> Map.put(keys, {schema, name}, key)
+        end
+
+      %Brando.Blueprint.Forms.Subform{name: name, sub_fields: sub_fields}, keys ->
+        case schema.__schema__(:association, name) do
+          %{related: related} -> option_keys(related, sub_fields, keys)
+          nil -> keys
+        end
+
+      _input, keys ->
+        keys
+    end)
   end
 
   # has_many, has_one and many_to_many relations the form edits, which don't

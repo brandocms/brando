@@ -84,7 +84,7 @@ defmodule BrandoAdmin.EntrySavedElsewhereTest do
 
       held =
         for {module, n} <- Enum.with_index(c[:held] || []),
-            do: %ModuleSetModule{module_id: %{text: text}[module].id, sequence: n}
+            do: %ModuleSetModule{module_id: %{hero: hero, text: text}[module].id, sequence: n}
 
       set = Repo.insert!(%ModuleSet{title: "Set", creator_id: me.id, module_set_modules: held})
       path = "/admin/config/content/module_sets/update/#{set.id}"
@@ -220,6 +220,86 @@ defmodule BrandoAdmin.EntrySavedElsewhereTest do
 
       save_and_stay(b, "module_set", false)
       await(fn -> saved_modules(c.set) == Enum.sort([c.hero.id, c.text.id]) end)
+    end
+
+    # The modules B's form holds, in the order it shows them.
+    defp chosen_in_order(view) do
+      rows = params(view, "module_set")["module_set_modules"] || %{}
+      order = params(view, "module_set")["sort_module_set_module_ids"] || Map.keys(rows)
+
+      for index <- order,
+          %{"module_id" => id} = row <- [rows[index]],
+          row["marked_as_deleted"] != "true",
+          do: String.to_integer(id)
+    end
+
+    defp saved_modules_in_order(set) do
+      ModuleSet
+      |> Repo.get!(set.id)
+      |> Repo.preload(:module_set_modules)
+      |> Map.fetch!(:module_set_modules)
+      |> Enum.map(& &1.module_id)
+    end
+
+    # A's pick reaches B as A makes it, and B's reaches A: each holds both
+    # as rows it hasn't saved, and A saves them. B's are the rows A saved.
+    test "picks A and B shipped to each other are the rows A saved, once", c do
+      pick(c.a, c.hero)
+      await(fn -> chosen(c.b) == [c.hero.id] end)
+      pick(c.b, c.text)
+      await(fn -> Enum.sort(chosen(c.a)) == Enum.sort([c.hero.id, c.text.id]) end)
+
+      save_and_stay(c.a, "module_set", false)
+      await(fn -> saved_modules(c.set) == Enum.sort([c.hero.id, c.text.id]) end)
+      settle(c.b)
+
+      assert Enum.sort(chosen(c.b)) == Enum.sort([c.hero.id, c.text.id])
+
+      save_and_stay(c.b, "module_set", false)
+      settle(c.b)
+      assert saved_modules(c.set) == Enum.sort([c.hero.id, c.text.id])
+    end
+
+    # Another tab of the same editor gets no picks as they are made: both
+    # tabs picked Hero, and A saved it.
+    test "an option picked in two tabs is one row after A's save", c do
+      {b, _} = live_form(c.a_conn, c.path, "module_set_form")
+
+      Phoenix.PubSub.subscribe(Brando.pubsub(), Brando.Tenant.Topic.entry("field_sync", ModuleSet, c.set.id))
+      pick(c.a, c.hero)
+      pick(b, c.hero)
+      pick(b, c.text)
+      save_and_stay(c.a, "module_set", false)
+      assert_receive {:entry_saved, _}, 5_000
+      assert saved_modules(c.set) == [c.hero.id]
+      settle(b)
+
+      assert chosen_in_order(b) == [c.hero.id, c.text.id]
+
+      save_and_stay(b, "module_set", false)
+      settle(b)
+      assert saved_modules_in_order(c.set) == [c.hero.id, c.text.id]
+    end
+
+    # B drags Text above Hero; A's save is of the title.
+    @tag held: [:hero, :text]
+    test "B's new order stays over A's save, and B's save writes it", c do
+      type(c.b, "module_set", "sort_module_set_module_ids", ["1", "0"])
+      assert chosen_in_order(c.b) == [c.text.id, c.hero.id]
+
+      type(c.a, "module_set", "title", "Set, typed by A")
+      save_and_stay(c.a, "module_set", false)
+      await(fn -> Repo.get!(ModuleSet, c.set.id).title == "Set, typed by A" end)
+      await(fn -> params(c.b, "module_set")["title"] == "Set, typed by A" end)
+
+      assert chosen_in_order(c.b) == [c.text.id, c.hero.id]
+
+      save_and_stay(c.b, "module_set", false)
+
+      await(fn ->
+        Repo.get!(ModuleSet, c.set.id).title == "Set, typed by A" and
+          saved_modules_in_order(c.set) == [c.text.id, c.hero.id]
+      end)
     end
 
     # B's browser sends a keystroke in the form it showed before the save
@@ -645,6 +725,55 @@ defmodule BrandoAdmin.EntrySavedElsewhereTest do
       await(fn -> saved_labels(c.article) == ["Row 0 by B, again", "Second by A"] end)
     end
 
+    # B edited a row A removed: B's form holds it as a new row. B's browser
+    # then sends a keystroke in it from the form it showed before, which
+    # names the row by its old id.
+    @tag items: ["Old", "Second", "Third"]
+    test "a row B edited that A removed takes B's late keystroke in place", c do
+      type(c.b, "article", ["items", "2", "label"], "Third by B")
+      before = render(c.b)
+
+      [_old, second, third] = saved_article(c.article).items
+      Repo.delete!(second)
+      Repo.delete!(third)
+      announce_save(Article, c.article.id)
+      await(fn -> row_labels(c.b) == ["Old", "Third by B"] end)
+
+      type_in(c.b, "article", before, ["items", "2", "label"], "Third by B!")
+      assert row_labels(c.b) == ["Old", "Third by B!"]
+
+      # The browser has drawn the save by its next keystroke.
+      type(c.b, "article", ["items", "1", "label"], "Third by B!!")
+      assert row_labels(c.b) == ["Old", "Third by B!!"]
+
+      save_and_stay(c.b, "article", true)
+      await(fn -> saved_labels(c.article) == ["Old", "Third by B!!"] end)
+    end
+
+    defp row_link(view), do: params(view, "article")["items"]["0"]["link"]
+
+    # A sets the row's link and saves; B's keystroke in the row's label comes
+    # from the form B's browser showed before, with the old link.
+    test "B's late keystroke in a row's label keeps the link A saved in it", c do
+      before = render(c.b)
+
+      [item] = saved_article(c.article).items
+      item |> Ecto.Changeset.change(link: "Link by A") |> Repo.update!()
+      announce_save(Article, c.article.id)
+      await(fn -> row_link(c.b) == "Link by A" end)
+
+      type_in(c.b, "article", before, ["items", "0", "label"], "Label by B")
+      assert row_label(c.b) == "Label by B"
+      assert row_link(c.b) == "Link by A"
+
+      save_and_stay(c.b, "article", true)
+
+      await(fn ->
+        [item] = saved_article(c.article).items
+        item.label == "Label by B" and item.link == "Link by A"
+      end)
+    end
+
     defp row_modules(view) do
       case params(view, "article")["items"]["0"]["item_modules"] do
         %{} = rows ->
@@ -675,6 +804,29 @@ defmodule BrandoAdmin.EntrySavedElsewhereTest do
       await(fn ->
         saved = Article |> Repo.get!(c.article.id) |> Repo.preload(items: :item_modules)
         saved.title == "Title by A" and Enum.map(hd(saved.items).item_modules, & &1.module_id) == [hero.id]
+      end)
+    end
+
+    # A picks a module in the row's multi-select and saves; B's keystroke in
+    # the row's label comes from the form B's browser showed before.
+    test "B's late keystroke in a row's label keeps the pick A saved in it", c do
+      hero = Factory.insert(:module, name: "Hero", namespace: "general")
+      before = render(c.b)
+
+      [item] = saved_article(c.article).items
+      Repo.insert!(%Brando.SyncTest.ArticleItemModule{item_id: item.id, module_id: hero.id, sequence: 0})
+      announce_save(Article, c.article.id)
+      await(fn -> row_modules(c.b) == [hero.id] end)
+
+      type_in(c.b, "article", before, ["items", "0", "label"], "Label by B")
+      assert row_label(c.b) == "Label by B"
+      assert row_modules(c.b) == [hero.id]
+
+      save_and_stay(c.b, "article", true)
+
+      await(fn ->
+        [item] = Article |> Repo.get!(c.article.id) |> Repo.preload(items: :item_modules) |> Map.fetch!(:items)
+        item.label == "Label by B" and Enum.map(item.item_modules, & &1.module_id) == [hero.id]
       end)
     end
 

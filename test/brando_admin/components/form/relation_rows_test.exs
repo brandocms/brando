@@ -72,7 +72,7 @@ defmodule BrandoAdmin.Components.Form.RelationRowsTest do
       field :article_id, :id
     end
 
-    def changeset(item, params), do: Changeset.cast(item, params, [:label])
+    def changeset(item, params), do: Changeset.cast(item, params, [:label, :sequence])
   end
 
   # Rows that can't be replaced (Ecto's default `on_replace`)
@@ -129,6 +129,19 @@ defmodule BrandoAdmin.Components.Form.RelationRowsTest do
              Enum.sort([[id: c.kept.id], [id: c.added.id], [id: c.saved.id]])
   end
 
+  # B took a tag out; A's save linked another.
+  test "a many_to_many keeps the entry this form unlinked out, and takes the one the save linked", c do
+    previous = Photo.changeset(c.photo, %{"tags" => []})
+    saved = c.photo |> Ecto.Changeset.change() |> Ecto.Changeset.put_assoc(:tags, [c.kept, c.saved]) |> Repo.update!()
+    saved = Ecto.Changeset.change(Repo.preload(saved, :tags, force: true))
+
+    carried = RelationRows.carry(saved, previous, c.photo, :tags)
+
+    assert RelationRows.rows(carried, :tags) == [[id: c.saved.id]]
+    assert {:ok, written} = Repo.update(carried)
+    assert written |> reload(:tags) |> Map.fetch!(:tags) |> Enum.map(& &1.id) == [c.saved.id]
+  end
+
   describe "an article" do
     setup do
       %{article: Repo.insert!(%Article{title: "Article"})}
@@ -147,6 +160,85 @@ defmodule BrandoAdmin.Components.Form.RelationRowsTest do
       assert [%{name: "Name by B"}] = RelationRows.rows(carried, :author)
       assert {:ok, written} = Repo.update(carried)
       assert [%{name: "Name by B"}] = Repo.all(Ecto.assoc(written, :author))
+    end
+
+    # Both tabs fill in the author the article doesn't have, B with a link;
+    # A saves first.
+    test "a new has_one onto the saved one keeps its own new rows", c do
+      base = reload(c.article, [:items, author: :links])
+
+      previous =
+        Article.changeset(base, %{
+          "author" => %{"name" => "Name by B", "links" => %{"0" => %{"label" => "Link by B"}}}
+        })
+
+      Repo.insert!(%Author{article_id: c.article.id, name: "Name by A"})
+      saved = base |> reload([:items, author: :links]) |> Changeset.change()
+
+      carried = RelationRows.carry(saved, previous, base, :author)
+
+      assert [%{name: "Name by B", links: [%{label: "Link by B"}]}] = RelationRows.rows(carried, :author)
+      assert {:ok, written} = Repo.update(carried)
+
+      assert %{name: "Name by B", links: [%{label: "Link by B"}]} =
+               written |> reload(author: :links) |> Map.fetch!(:author)
+    end
+
+    # The row B took out is a `:delete` changeset: a relation that can't
+    # replace its rows still lets it go.
+    test "rows that can't be replaced: a row this form took out stays out", c do
+      [first, second] =
+        for {label, n} <- [{"First", 0}, {"Second", 1}],
+            do: Repo.insert!(%Item{article_id: c.article.id, label: label, sequence: n})
+
+      base = reload(c.article, [:author, :items])
+
+      previous =
+        base
+        |> Changeset.change()
+        |> Changeset.put_assoc(:items, [
+          Changeset.change(first),
+          second |> Changeset.change() |> Map.put(:action, :delete)
+        ])
+
+      c.article |> Changeset.change(title: "Title by A") |> Repo.update!()
+      saved = base |> reload([:author, :items]) |> Changeset.change()
+
+      carried = RelationRows.carry(saved, previous, base, :items)
+
+      assert carried |> RelationRows.rows(:items) |> Enum.map(& &1.label) == ["First"]
+      assert {:ok, written} = Repo.update(carried)
+      assert written |> reload(:items) |> Map.fetch!(:items) |> Enum.map(& &1.label) == ["First"]
+    end
+
+    # B typed a label and a value the field can't take (left as typed, with
+    # its error); A's save is of the title.
+    test "a row's edit carries the values typed that didn't cast, and their errors", c do
+      item = Repo.insert!(%Item{article_id: c.article.id, label: "Old", sequence: 0})
+      base = reload(c.article, [:author, :items])
+
+      previous =
+        Article.changeset(base, %{
+          "items" => %{"0" => %{"id" => "#{item.id}", "label" => "Row by B", "sequence" => "1.5"}}
+        })
+
+      c.article |> Changeset.change(title: "Title by A") |> Repo.update!()
+      saved = base |> reload([:author, :items]) |> Changeset.change()
+
+      carried = RelationRows.carry(saved, previous, base, :items)
+
+      assert [row] = carried.changes.items
+      assert Keyword.has_key?(row.errors, :sequence)
+      refute carried.valid?
+
+      [shown] =
+        carried
+        |> Phoenix.Component.to_form()
+        |> Map.fetch!(:source)
+        |> then(&Phoenix.HTML.FormData.to_form(&1, Phoenix.Component.to_form(&1), :items, []))
+
+      assert shown[:label].value == "Row by B"
+      assert shown[:sequence].value == "1.5"
     end
 
     test "rows that can't be replaced: this form's edit in one, the save's in another", c do

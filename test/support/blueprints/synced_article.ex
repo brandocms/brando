@@ -206,6 +206,7 @@ defmodule Brando.SyncTest.Article do
             default %{}
 
             input :label, :text
+            input :link, :text
 
             input :item_modules, :multi_select,
               options: &Brando.SyncTest.Article.module_options/2,

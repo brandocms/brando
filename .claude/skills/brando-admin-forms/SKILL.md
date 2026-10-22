@@ -58,10 +58,12 @@ area in [the section map](form-map.md) and grep for the names it lists.
   when the editor changes them, never by another editor's multi-select),
   and moves its recovery baseline (`Drafts.rebase/2`; the blocks part when
   the block field reads the saved rows, `entry_blocks_reloaded`). A kept
-  relation goes row by row (`RelationRows.carry/4`): the rows this editor
+  relation goes row by row (`RelationRows.carry/5`): the rows this editor
   changed against the entry its form was built on, onto the saved rows,
-  and the saved rows everywhere else; an event in one row of a replaced
-  relation changes that row only (`RelationRows.take_row/4`). A
+  and the saved rows everywhere else; a new row naming the same
+  multi-select option (`relation_key`) as a row the save added is that
+  row. An event in one row of a replaced relation changes only the fields
+  it changed in that row (`RelationRows.take_row/6`). A
   server-side value set at save reaches the others only this way. Coverage
   lives in `test/brando_admin/live/entry_saved_elsewhere_test.exs` and
   `test/brando_admin/components/form/relation_rows_test.exs`.
