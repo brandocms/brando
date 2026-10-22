@@ -152,50 +152,48 @@ defmodule BrandoAdmin.Components.Assets.MediaField do
         </button>
         <.folder_note :if={@upload_enabled?} folder={@folder} choose_folder?={@choose_folder?} />
       </.action_menu>
-      <div :if={@editable && @presentation != :line} class="media-field-actions">
+      <%!-- An empty field without uploads groups the library, the URL and
+            Configure: two labels, too wide for a narrow field's column. --%>
+      <div
+        :if={@editable && @presentation != :line}
+        class={["media-field-actions", !@asset && !@upload_enabled? && @configure && "media-field-actions--wide"]}
+      >
         <%!-- The ways of filling an empty field read as one segmented control.
               Upload leads and keeps its label, the main action beside "Drop …
               here"; every other source is its icon, named by its hidden label
-              and shown in a tooltip. Without Upload the library leads instead. --%>
-        <div :if={!@asset && (@upload_enabled? || @browse || @link)} class="media-field-split">
+              and shown in a tooltip. Without Upload the library leads instead,
+              and Configure, offered then to set up a video by hand, joins the
+              group last. --%>
+        <div
+          :if={!@asset && (@upload_enabled? || @browse || @link || @configure)}
+          class="media-field-split"
+        >
           <button :if={@upload_enabled?} type="button" class="media-button primary upload-trigger">
             <.icon name="upload" />{gettext("Upload")}
           </button>
           <.icon_button :if={@browse} icon="folder" label={@browse_label} labelled={!@upload_enabled?} phx-click={@browse} />
           <.icon_button :if={@link} icon="link" label={gettext("Add from URL")} phx-click={@link} />
+          <button :if={@configure && !@upload_enabled?} type="button" class="media-button" phx-click={@configure}>
+            {gettext("Configure")}
+          </button>
         </div>
         <%!-- A filled field's own actions are one segmented control too:
               Configure, then the same sources in the same order as the empty
               field's. The condition covers the union of the buttons, so the
               group is there exactly when one of them is. --%>
-        <div :if={@compact? && (@asset || !@upload_enabled?)} class="media-field-split">
-          <button
-            :if={@configure && (@asset || !@upload_enabled?)}
-            type="button"
-            class="media-button"
-            phx-click={@configure}
-          >
+        <div :if={@compact? && @asset && (@configure || @upload_enabled? || @browse || @link)} class="media-field-split">
+          <button :if={@configure} type="button" class="media-button" phx-click={@configure}>
             {gettext("Configure")}
           </button>
-          <.icon_button
-            :if={@asset && @upload_enabled?}
-            class="upload-trigger"
-            icon="upload"
-            label={gettext("Upload replacement")}
-          />
-          <.icon_button :if={@asset && @browse} icon="folder" label={@browse_label} phx-click={@browse} />
-          <.icon_button :if={@asset && @link} icon="link" label={gettext("Add from URL")} phx-click={@link} />
+          <.icon_button :if={@upload_enabled?} class="upload-trigger" icon="upload" label={gettext("Upload replacement")} />
+          <.icon_button :if={@browse} icon="folder" label={@browse_label} phx-click={@browse} />
+          <.icon_button :if={@link} icon="link" label={gettext("Add from URL")} phx-click={@link} />
         </div>
         <%!-- On a block the asset's own controls — configure, whatever the caller
               adds, and replace — read as one segmented control. Remove stays
               outside it, since it is the one action that discards work. --%>
         <div class={["media-field-secondary-actions", @asset && !@compact? && "media-field-split"]}>
-          <button
-            :if={!@compact? && @configure && (@asset || !@upload_enabled?)}
-            type="button"
-            class="media-button"
-            phx-click={@configure}
-          >
+          <button :if={!@compact? && @asset && @configure} type="button" class="media-button" phx-click={@configure}>
             {gettext("Configure")}
           </button>
           {render_slot(@actions)}
