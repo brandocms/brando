@@ -1,0 +1,1 @@
+- A video provider's refusal of an upload shows as a plain message instead of the provider's raw response.

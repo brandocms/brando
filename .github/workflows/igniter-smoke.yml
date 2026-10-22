@@ -89,9 +89,31 @@ jobs:
         if: matrix.source == 'checkout'
         run: npm install --global yalc@1.0.0-pre.53
       - name: Install browser test dependencies
+        timeout-minutes: 5
         run: |
           pnpm --dir scripts/igniter_smoke install --frozen-lockfile
-          pnpm --dir scripts/igniter_smoke exec playwright install --with-deps chromium
+          pnpm --dir scripts/igniter_smoke exec playwright install chromium
+      # As in ci.yml's E2E jobs: `install-deps` is `apt-get update && apt-get
+      # install` against the Ubuntu mirrors. On 22 October 2026 one consumer
+      # job got a 403 from packages.microsoft.com and others sat on a silent
+      # Azure mirror until the 40-minute job limit, each costing a full rerun.
+      # apt gives up on a silent mirror after 30 s and retries, each attempt is
+      # capped at 3 minutes, and if both fail the job carries on with the
+      # runner image's packages: Playwright names any library that is missing
+      # when it launches the browser.
+      - name: Install Chromium's system packages
+        timeout-minutes: 8
+        run: |
+          printf '%s\n' 'Acquire::Retries "3";' 'Acquire::http::Timeout "30";' 'Acquire::https::Timeout "30";' |
+            sudo tee /etc/apt/apt.conf.d/80-brando-ci-timeouts > /dev/null
+          for attempt in 1 2; do
+            if sudo env "PATH=$PATH" timeout --kill-after=15s 3m pnpm --dir scripts/igniter_smoke exec playwright install-deps chromium; then
+              exit 0
+            fi
+            echo "::warning::Installing Chromium's system packages failed (attempt $attempt of 2)"
+            sudo timeout 1m dpkg --configure -a || true
+          done
+          echo "::warning::Continuing with the runner image's packages"
       - name: Install and exercise a fresh consumer
         id: smoke
         run: ./scripts/igniter_smoke.sh "${{ matrix.tenancy }}"

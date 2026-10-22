@@ -25,6 +25,13 @@ assets do
 end
 ```
 
+A field's `cfg` applies to the videos added through it: their upload strategy,
+upload path and limits. The video picker opens on the videos added for the
+field, and its "Whole library" tab lists every other video, in the library's
+own folders. A video picked from there is used as it is, not copied: it is a
+record of the provider's video, and its config was only used when it was
+added. Uploads and "Add from URL" in either tab still use the field's `cfg`.
+
 ### Add webhook to your endpoint
 
 Webhook plugs must come BEFORE `Plug.Parsers` to read raw body for signature verification.
@@ -212,6 +219,17 @@ config :brando, Brando.Videos.Uploaders.Bunny,
 | `BUNNY_READ_ONLY_API_KEY` | Read-Only API key used to verify Bunny webhook signatures |
 | `BUNNY_LIBRARY_ID` | Your Video Library ID (numeric) |
 | `BUNNY_CDN_HOSTNAME` | CDN hostname for HLS playback (e.g., `vz-abc123.b-cdn.net`) |
+
+#### Upload endpoint
+
+The admin's browser sends the file to Bunny's tus endpoint,
+`https://video.bunnycdn.com/tusupload`. Set `tus_endpoint` to send it
+elsewhere, such as a test double. A path is resolved against the admin page:
+
+```elixir
+config :brando, Brando.Videos.Uploaders.Bunny,
+  tus_endpoint: "/e2e/bunny/tus"
+```
 
 #### Webhook Setup
 
@@ -454,6 +472,17 @@ this is set to.
 - **`:on_delete`**: When a user deletes a video in the admin, it's immediately removed from its provider. The video cannot be restored from the provider.
 - **`:on_purge`** (default): Videos are soft-deleted locally first. After 30 days, when the soft-delete purger runs, the video is permanently deleted from both the database and the provider. This allows video restoration during the grace period.
 - **`false`**: Videos are only deleted locally. Provider videos remain and must be manually cleaned up.
+
+### Uploading in a Video Field
+
+A video field offers Upload, and takes a file dropped on it, whenever its
+strategy can upload. `:local` and a configured `:s3` go through the upload
+manager. A provider strategy (`:mux`, `:bunny`, `:cloudflare`, `:vimeo`) with
+its credentials sends the file from the browser straight to the provider, as the
+video picker does, with the field's own `cfg` and config target. The field takes
+the video once the file is with the provider, and the provider's webhook reports
+when it has been encoded. Without the credentials the field cannot upload, and
+says so when a file is dropped on it.
 
 ### Video Blocks
 

@@ -1,0 +1,1 @@
+- An empty video field that can't upload shows Configure in the same button group as Select video and Add from URL.

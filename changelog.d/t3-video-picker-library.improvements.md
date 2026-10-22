@@ -1,0 +1,1 @@
+- A field's video picker has a Whole library tab, so a field with its own video config can pick any existing video.

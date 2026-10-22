@@ -23,6 +23,25 @@ defmodule BrandoAdmin.VideoListLiveTest do
     refute has_element?(view, "#video-player-modal")
   end
 
+  # A Bunny or Mux video has no thumbnail image of its own until one is
+  # fetched; the row shows its provider's frame meanwhile, as the picker does.
+  test "a provider video without a thumbnail image shows its provider's frame", %{conn: conn} do
+    video = Factory.insert(:video, type: :mux, remote_id: "m1", meta: %{"mux" => %{"playback_id" => "pb-1"}})
+    stream = Factory.insert(:video, type: :external_file, source_url: "https://vz-abc.b-cdn.net/0f1e2d3c/playlist.m3u8")
+
+    {:ok, view, _html} = live(conn, "/admin/assets/videos")
+
+    assert has_element?(
+             view,
+             ~s(#list-row-#{video.id} .library-video-play img[src="https://image.mux.com/pb-1/thumbnail.jpg"])
+           )
+
+    assert has_element?(
+             view,
+             ~s(#list-row-#{stream.id} .library-video-play img[src="https://vz-abc.b-cdn.net/0f1e2d3c/thumbnail.jpg"])
+           )
+  end
+
   # Every video missing a thumbnail or title gets a lookup, one insert each:
   # the list queues one job that does that, and is done.
   test "fetching missing details queues one job for the lookups", %{conn: conn} do

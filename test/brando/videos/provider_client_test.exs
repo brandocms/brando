@@ -157,6 +157,18 @@ defmodule Brando.Videos.ProviderClientTest do
       assert video.status == :uploading
     end
 
+    test "the browser is sent to Bunny's tus endpoint, or the configured one" do
+      config = [api_key: "bunny-key", library_id: "4242", cdn_hostname: "vz-test.b-cdn.net"]
+      stub_transport(Bunny, config, fn conn -> Req.Test.json(conn, %{"guid" => "guid-123"}) end)
+      user = Factory.insert(:random_user)
+
+      assert {:ok, %{upload_url: "https://video.bunnycdn.com/tusupload"}} = Bunny.initiate_upload("clip.mp4", user)
+
+      with_config(Bunny, Keyword.put(Application.get_env(:brando, Bunny), :tus_endpoint, "/e2e/bunny/tus"))
+
+      assert {:ok, %{upload_url: "/e2e/bunny/tus"}} = Bunny.initiate_upload("clip.mp4", user)
+    end
+
     test "raises rather than returning an error when credentials are missing" do
       with_config(Bunny, [])
 

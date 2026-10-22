@@ -4,6 +4,11 @@
 #   mix check            all gates (the alias runs this script)
 #   mix check --fast     skip `mix docs`, the slowest gate (the pre-push hook)
 #   mix check --verbose  stream each step's output instead of only on failure
+#   mix check --fast --passed TREE
+#                        run only the changelog check when the working tree is
+#                        clean and HEAD changes, against TREE (a tree the gates
+#                        passed on), only files no gate reads (the pre-push
+#                        hook records TREE)
 #
 # Each step runs in the MIX_ENV CI uses for it (test, or docs for `mix docs`),
 # so nothing compiles in dev. Credo runs CI's Blueprint gate, then --strict on
@@ -12,8 +17,12 @@
 #
 # With --fast, when the branch and working tree change only Markdown that no
 # fast gate reads (CHANGELOG.md, docs/, AGENTS.md; not README.md, guides/ or
-# the usage rules), the Elixir gates are skipped. They need deps/: without it
-# the check stops and says to run scripts/worktree-setup.
+# the usage rules) and changelog fragments, the Elixir gates are skipped. They
+# need deps/: without it the check stops and says to run scripts/worktree-setup.
+#
+# The gates that test the repository's own shell tooling (test/scripts/) run
+# only when the branch or working tree changes a file they exercise, listed
+# with each below.
 #
 # Not covered: the unit and E2E suites, the Elixir 1.18/1.19 builds and the
 # Igniter installer smoke (scripts/igniter_smoke.sh).
@@ -27,14 +36,27 @@ unset GIT_DIR GIT_WORK_TREE GIT_INDEX_FILE GIT_PREFIX GIT_COMMON_DIR GIT_OBJECT_
 
 fast=false
 verbose=false
-for arg in "$@"; do
+passed=""
+while [ $# -gt 0 ]; do
+  arg="$1"
+  shift
   case "$arg" in
     --fast) fast=true ;;
     --verbose|-v) verbose=true ;;
-    -h|--help) sed -n '2,19p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+    --passed)
+      [ $# -gt 0 ] || { echo "check: --passed needs a tree" >&2; exit 2; }
+      passed="$1"
+      shift
+      ;;
+    -h|--help) sed -n '2,28p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
     *) echo "check: unknown option $arg" >&2; exit 2 ;;
   esac
 done
+if [ -n "$passed" ] && [ "$fast" != true ]; then
+  # `mix docs` reads Markdown the fast gates don't.
+  echo "check: --passed needs --fast" >&2
+  exit 2
+fi
 
 # The files the branch and the working tree change against the merge base with
 # CHECK_BASE (default origin/main), one per line, a rename as both its paths.
@@ -45,21 +67,42 @@ changed_files() {
   { git diff --name-only --no-renames "$base" --; git ls-files --others --exclude-standard; } | sort -u
 }
 
-# Succeeds when every changed file is Markdown that no fast gate reads, and
-# there is at least one. The fast gates read Elixir, Gettext, CSS and E2E
-# sources; of the Markdown, README.md is compiled into Brando's moduledoc and
-# `mix brando.docs.agents --check` reads guides/ and the usage rules. Markdown
-# under lib, config, priv or test is left to the gates, in case code reads it.
+# Prints the files in $1, one per line, that a fast gate reads. The fast gates
+# read Elixir, Gettext, CSS, E2E and tooling sources; of the Markdown,
+# README.md is compiled into Brando's moduledoc, `mix brando.docs.agents
+# --check` reads guides/ and the usage rules, `scripts/release-version check`
+# the licences and the E2E path check the specs. Markdown under lib, config,
+# priv or test is left to the gates, in case code reads it. changelog.d/ is
+# read only by `scripts/changelog check`, which always runs.
+read_by_gates() {
+  [ -n "$1" ] || return 0
+  awk '/^changelog\.d\// { next }
+    !/\.md$/ || /^(README\.md|LICENSE\.md|assets\/LICENSE\.md|usage-rules\.md|usage-rules\/|guides\/|e2e\/playwright\/tests\/|lib\/|config\/|priv\/|test\/|deps\/)/' <<<"$1"
+}
+
+# Succeeds when the branch and working tree change something, and nothing a
+# fast gate reads.
 only_unread_docs() {
   local files
   files="$(changed_files)" || return 1
-  [ -n "$files" ] || return 1
-  grep -qvE '\.md$' <<<"$files" && return 1
-  ! grep -qE '^(README\.md|usage-rules\.md|usage-rules/|guides/|lib/|config/|priv/|test/|deps/)' <<<"$files"
+  [ -n "$files" ] && [ -z "$(read_by_gates "$files")" ]
+}
+
+# Succeeds when the working tree is clean and HEAD changes, against the tree
+# $passed, only files no fast gate reads.
+unread_since_passed() {
+  [ -n "$passed" ] && git cat-file -e "$passed^{tree}" 2>/dev/null || return 1
+  [ -z "$(git status --porcelain --untracked-files=normal)" ] || return 1
+  [ -z "$(read_by_gates "$(git diff --name-only --no-renames "$passed" HEAD --)")" ]
 }
 
 elixir=true
-if [ "$fast" = true ] && only_unread_docs; then
+others=true
+if unread_since_passed; then
+  elixir=false
+  others=false
+  echo "check: gates skipped (since they last passed, only changelog fragments and Markdown no gate reads changed)"
+elif [ "$fast" = true ] && only_unread_docs; then
   elixir=false
   echo "check: Elixir gates skipped (--fast, and only Markdown no gate reads changed)"
 fi
@@ -229,18 +272,45 @@ if [ "$elixir" = true ]; then
   run_step "Gettext catalogues up to date" gettext_up_to_date
   run_step "xref compile cycles" mix_in test xref graph --format cycles --label compile-connected --fail-above 0
 fi
-run_step "CSS colour tokens" bash .github/scripts/check_css_colors.sh
-run_step "CSS type scale" bash .github/scripts/check_css_font_sizes.sh
-run_step "E2E machine paths" bash .github/scripts/check-e2e-paths.sh
-run_step "ci-wait flake matching" bash test/scripts/ci_wait_test.sh
-run_step "merge queue reuse" bash test/scripts/merge_queue_reuse_test.sh
+# The files a tooling gate exercises, beyond its own test: the script under
+# test, what the test copies or reads from this checkout, and isolate.sh.
+ci_wait_reads='^(scripts/ci-wait|test/scripts/ci_wait_test\.sh|test/scripts/ci_wait/.*|\.github/known-flakes\.txt)$'
+merge_queue_reads='^(\.github/scripts/merge-queue-reuse\.sh|\.github/workflows/ci\.yml|scripts/ci-wait|test/scripts/merge_queue_reuse_test\.sh)$'
+changelog_reads='^(scripts/changelog|test/scripts/(changelog_test|isolate)\.sh)$'
+release_version_reads='^(scripts/release-version|test/scripts/(release_version_test|isolate)\.sh)$'
+queue_reads='^(scripts/(queue|ci-wait)|test/scripts/(queue_test\.sh|isolate\.sh|ci_wait/.*)|\.github/known-flakes\.txt)$'
+# It copies scripts/, .githooks/ and test/ and runs every test in test/scripts/.
+hook_env_reads='^(scripts/.*|\.githooks/.*|test/scripts/.*|\.github/known-flakes\.txt)$'
+check_reads='^(scripts/check|\.githooks/pre-push|test/scripts/(check_test|isolate)\.sh)$'
+
+# tooling_step NAME PATTERN COMMAND... — run_step, when a file the branch or
+# working tree changes matches PATTERN, or when there is no base to compare.
+tooling_step() {
+  local name="$1" pattern="$2" files
+  shift 2
+  if files="$(changed_files)" && ! grep -qE "$pattern" <<<"$files"; then
+    printf 'check: %-28s skipped (no tooling changes)\n' "$name"
+  else
+    run_step "$name" "$@"
+  fi
+}
+
+if [ "$others" = true ]; then
+  run_step "CSS colour tokens" bash .github/scripts/check_css_colors.sh
+  run_step "CSS type scale" bash .github/scripts/check_css_font_sizes.sh
+  run_step "E2E machine paths" bash .github/scripts/check-e2e-paths.sh
+  tooling_step "ci-wait flake matching" "$ci_wait_reads" bash test/scripts/ci_wait_test.sh
+  tooling_step "merge queue reuse" "$merge_queue_reads" bash test/scripts/merge_queue_reuse_test.sh
+fi
 run_step "changelog fragments" scripts/changelog check
-run_step "changelog script" bash test/scripts/changelog_test.sh
-run_step "release versions" scripts/release-version check
-run_step "release-version script" bash test/scripts/release_version_test.sh
-run_step "queue merge-queue steps" bash test/scripts/queue_test.sh
-run_step "shell tests safe under a Git hook" bash test/scripts/hook_env_test.sh
-run_step "check gate selection" bash test/scripts/check_test.sh
+if [ "$others" = true ]; then
+  tooling_step "changelog script" "$changelog_reads" bash test/scripts/changelog_test.sh
+  run_step "release versions" scripts/release-version check
+  tooling_step "release-version script" "$release_version_reads" bash test/scripts/release_version_test.sh
+  tooling_step "queue merge-queue steps" "$queue_reads" bash test/scripts/queue_test.sh
+  tooling_step "shell tests safe under a Git hook" "$hook_env_reads" bash test/scripts/hook_env_test.sh
+  tooling_step "check gate selection" "$check_reads" bash test/scripts/check_test.sh
+fi
 
 if [ "$fast" = true ]; then
   echo "check: docs skipped (--fast)"

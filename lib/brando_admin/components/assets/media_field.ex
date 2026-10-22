@@ -32,6 +32,11 @@ defmodule BrandoAdmin.Components.Assets.MediaField do
   attr :label, :string, default: nil
   # A use's own alt text (a picture block's), shown instead of the library's
   attr :alt_override, :string, default: nil
+  # The id of the caller's provider upload hook (`video_uploader_hook/1`),
+  # which a video field with a provider strategy (Mux, Bunny, Cloudflare,
+  # Vimeo) uploads through: Upload and a drop send the file straight to the
+  # provider, as the picker does. Without one, such a field cannot upload.
+  attr :video_hook_id, :string, default: nil
   slot :inner_block
   slot :actions
 
@@ -39,7 +44,8 @@ defmodule BrandoAdmin.Components.Assets.MediaField do
     target = ConfigTarget.serialize(field_config_target(assigns.config_target))
     {config, _resolved_target} = config(assigns.type, target)
     asset = loaded_asset(assigns.asset)
-    upload_enabled = assigns.editable && upload_enabled?(assigns.type, config)
+    provider_hook_id = provider_hook_id(assigns.type, config, assigns.video_hook_id)
+    upload_enabled = assigns.editable && (provider_hook_id != nil || upload_enabled?(assigns.type, config))
 
     assigns =
       assigns
@@ -47,6 +53,7 @@ defmodule BrandoAdmin.Components.Assets.MediaField do
       |> assign(:compact?, assigns.presentation in [:field, :line])
       |> assign(:config_target, target)
       |> assign(:upload_enabled?, upload_enabled)
+      |> assign(:provider_hook_id, provider_hook_id)
       |> assign(:upload_unavailable, upload_unavailable(assigns.type, config))
       |> assign(:accept, accept(config))
       |> assign(:limit, upload_limit(config))
@@ -72,6 +79,7 @@ defmodule BrandoAdmin.Components.Assets.MediaField do
       class={["media-field", "media-field--#{@presentation}", !@asset && "media-field--empty"]}
       phx-hook={@editable && "Brando.UploadTrigger"}
       data-upload-enabled={to_string(@upload_enabled?)}
+      data-video-hook-id={@provider_hook_id}
       data-upload-unavailable={@upload_unavailable}
       data-kind={@kind}
       data-component-id={@component_id}
@@ -103,6 +111,8 @@ defmodule BrandoAdmin.Components.Assets.MediaField do
               <Content.image image={@asset} size={if @presentation == :block, do: :largest, else: :smallest} />
             <% @type == :video && @asset && loaded_asset(@asset.thumbnail) -> %>
               <Content.image image={@asset.thumbnail} size={:smallest} />
+            <% @type == :video && @asset && Brando.Videos.Helpers.provider_thumbnail_url(@asset) -> %>
+              <img src={Brando.Videos.Helpers.provider_thumbnail_url(@asset)} alt="" loading="lazy" />
             <% @type == :video && video_url(@asset) -> %>
               <video muted preload="metadata" src={"#{video_url(@asset)}#t=0.1"} aria-label={gettext("Video preview")} />
             <% true -> %>
@@ -152,50 +162,48 @@ defmodule BrandoAdmin.Components.Assets.MediaField do
         </button>
         <.folder_note :if={@upload_enabled?} folder={@folder} choose_folder?={@choose_folder?} />
       </.action_menu>
-      <div :if={@editable && @presentation != :line} class="media-field-actions">
+      <%!-- An empty field without uploads groups the library, the URL and
+            Configure: two labels, too wide for a narrow field's column. --%>
+      <div
+        :if={@editable && @presentation != :line}
+        class={["media-field-actions", !@asset && !@upload_enabled? && @configure && "media-field-actions--wide"]}
+      >
         <%!-- The ways of filling an empty field read as one segmented control.
               Upload leads and keeps its label, the main action beside "Drop …
               here"; every other source is its icon, named by its hidden label
-              and shown in a tooltip. Without Upload the library leads instead. --%>
-        <div :if={!@asset && (@upload_enabled? || @browse || @link)} class="media-field-split">
+              and shown in a tooltip. Without Upload the library leads instead,
+              and Configure, offered then to set up a video by hand, joins the
+              group last. --%>
+        <div
+          :if={!@asset && (@upload_enabled? || @browse || @link || @configure)}
+          class="media-field-split"
+        >
           <button :if={@upload_enabled?} type="button" class="media-button primary upload-trigger">
             <.icon name="upload" />{gettext("Upload")}
           </button>
           <.icon_button :if={@browse} icon="folder" label={@browse_label} labelled={!@upload_enabled?} phx-click={@browse} />
           <.icon_button :if={@link} icon="link" label={gettext("Add from URL")} phx-click={@link} />
+          <button :if={@configure && !@upload_enabled?} type="button" class="media-button" phx-click={@configure}>
+            {gettext("Configure")}
+          </button>
         </div>
         <%!-- A filled field's own actions are one segmented control too:
               Configure, then the same sources in the same order as the empty
               field's. The condition covers the union of the buttons, so the
               group is there exactly when one of them is. --%>
-        <div :if={@compact? && (@asset || !@upload_enabled?)} class="media-field-split">
-          <button
-            :if={@configure && (@asset || !@upload_enabled?)}
-            type="button"
-            class="media-button"
-            phx-click={@configure}
-          >
+        <div :if={@compact? && @asset && (@configure || @upload_enabled? || @browse || @link)} class="media-field-split">
+          <button :if={@configure} type="button" class="media-button" phx-click={@configure}>
             {gettext("Configure")}
           </button>
-          <.icon_button
-            :if={@asset && @upload_enabled?}
-            class="upload-trigger"
-            icon="upload"
-            label={gettext("Upload replacement")}
-          />
-          <.icon_button :if={@asset && @browse} icon="folder" label={@browse_label} phx-click={@browse} />
-          <.icon_button :if={@asset && @link} icon="link" label={gettext("Add from URL")} phx-click={@link} />
+          <.icon_button :if={@upload_enabled?} class="upload-trigger" icon="upload" label={gettext("Upload replacement")} />
+          <.icon_button :if={@browse} icon="folder" label={@browse_label} phx-click={@browse} />
+          <.icon_button :if={@link} icon="link" label={gettext("Add from URL")} phx-click={@link} />
         </div>
         <%!-- On a block the asset's own controls — configure, whatever the caller
               adds, and replace — read as one segmented control. Remove stays
               outside it, since it is the one action that discards work. --%>
         <div class={["media-field-secondary-actions", @asset && !@compact? && "media-field-split"]}>
-          <button
-            :if={!@compact? && @configure && (@asset || !@upload_enabled?)}
-            type="button"
-            class="media-button"
-            phx-click={@configure}
-          >
+          <button :if={!@compact? && @asset && @configure} type="button" class="media-button" phx-click={@configure}>
             {gettext("Configure")}
           </button>
           {render_slot(@actions)}
@@ -339,10 +347,26 @@ defmodule BrandoAdmin.Components.Assets.MediaField do
   defp upload_enabled?(:video, cfg), do: Uploads.video_upload_available?(cfg) && cfg.upload_strategy in [:local, :s3]
   defp upload_enabled?(_, _), do: true
 
+  defp provider_hook_id(:video, cfg, hook_id) when is_binary(hook_id) do
+    if video_uploader_hook(cfg.upload_strategy) && Uploads.video_upload_available?(cfg), do: hook_id
+  end
+
+  defp provider_hook_id(_type, _cfg, _hook_id), do: nil
+
+  @doc """
+  The JS hook that uploads a video straight to `strategy`'s provider, or nil
+  for a strategy that uploads through the upload manager or not at all.
+  """
+  def video_uploader_hook(:mux), do: "Brando.MuxUploader"
+  def video_uploader_hook(:bunny), do: "Brando.BunnyUploader"
+  def video_uploader_hook(:cloudflare), do: "Brando.CloudflareUploader"
+  def video_uploader_hook(:vimeo), do: "Brando.VimeoUploader"
+  def video_uploader_hook(_strategy), do: nil
+
   # What a file dropped on a field that can't take it is told. A provider
-  # video field (Mux, Bunny, Cloudflare) uploads through the picker instead —
-  # unless the provider has no credentials, when nothing can upload and the
-  # picker can only pick or add by URL.
+  # video field without a provider upload hook (`video_hook_id`) uploads
+  # through the picker instead — unless the provider has no credentials, when
+  # nothing can upload and the picker can only pick or add by URL.
   defp upload_unavailable(:video, cfg) do
     if Uploads.video_upload_available?(cfg) do
       gettext("Use %{action} to upload a video with this provider.", action: browse_label(:video))

@@ -1,0 +1,1 @@
+- The Videos list and video fields show a Bunny or Mux video's frame when it has no thumbnail image, as the video picker does.

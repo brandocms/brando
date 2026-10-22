@@ -1,0 +1,1 @@
+- A video field set to upload to Mux, Bunny, Cloudflare or Vimeo uploads there itself, from its Upload button or a dropped file.

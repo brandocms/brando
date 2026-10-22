@@ -1,0 +1,1 @@
+- Bunny's upload endpoint can be set with `tus_endpoint` under `config :brando, Brando.Videos.Uploaders.Bunny`.

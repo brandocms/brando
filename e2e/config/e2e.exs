@@ -140,3 +140,15 @@ config :brando, :markdown_sources,
 
 config :brando, :markdown_sources_provider, E2E.MarkdownProvider
 
+# Bunny Stream with fake credentials, answered by the E2E app itself: its API
+# by `E2EFakeBunny` and its tus endpoint under `/e2e/bunny/tus`, which reports
+# each upload's encode finished. Only fields that ask for `upload_strategy:
+# :bunny` use it; the default strategy stays `:local`. The CDN hostname is not
+# a real one: the specs answer its thumbnails in the browser.
+config :brando, Brando.Videos.Uploaders.Bunny,
+  api_key: "e2e-bunny-api-key",
+  webhook_secret: "e2e-bunny-webhook-secret",
+  library_id: "4242",
+  cdn_hostname: "bunny-cdn.e2e.test",
+  tus_endpoint: "/e2e/bunny/tus",
+  req_options: [plug: E2EFakeBunny]

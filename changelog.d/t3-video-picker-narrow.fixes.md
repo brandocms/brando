@@ -1,0 +1,1 @@
+- The video picker's add buttons wrap on a phone instead of running past the drawer's edge.

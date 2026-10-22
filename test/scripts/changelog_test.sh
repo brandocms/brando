@@ -1,9 +1,13 @@
 #!/usr/bin/env bash
 # Checks scripts/changelog against fragments and changelogs in a scratch
-# directory: which fragments `check` accepts, and what `collate` writes.
+# directory: which fragments `check` accepts, and what `collate` writes,
+# including the PR numbers it reads from a scratch repository's merges.
 #
 #   bash test/scripts/changelog_test.sh
 set -uo pipefail
+
+# shellcheck source=test/scripts/isolate.sh
+. "$(dirname "$0")/isolate.sh"
 
 root="$(cd "$(dirname "$0")/../.." && pwd)"
 script="$root/scripts/changelog"
@@ -289,6 +293,106 @@ An example:
 #### Security
 
 - **Sec.** Secure.
+EOF
+
+# PR links: collation adds a link to the pull request whose merge brought each
+# fragment into the branch, at the end of an entry's line with none.
+git_q() { git -c user.name=t -c user.email=t@example.com -c init.defaultBranch=main "$@"; }
+fresh
+repo="$scratch/case"
+(
+  cd "$repo" || exit 1
+  printf '## 0.55.0 (Unreleased)\n' > CHANGELOG.md
+  git_q init -q && in_scratch "$repo" && git_q add . && git_q commit -qm base || exit 1
+
+  git_q switch -qc feat-a
+  cat > changelog.d/feat-a.fixes.md <<'EOF'
+- The link goes before the full stop.
+
+- No full stop
+
+- Linked already ([#7](https://github.com/brandocms/brando/pull/7)).
+
+- Numbered already (#8).
+
+- Numbered with a list (#5, #6).
+
+- A sentence that wraps its link
+  onto the next line ([#9](https://github.com/brandocms/brando/pull/9)).
+
+- A sentence that wraps
+  without a link.
+
+- A change the reader must act on.
+  Replace `a` with `b`, a step without a link.
+
+  ```markdown
+  - A code block is not an entry.
+  ```
+EOF
+  git_q add . && git_q commit -qm "Add a" || exit 1
+  # A pull request merged into feat-a before feat-a merged: its merge does not
+  # bring in the fragment, so it is not the one.
+  git_q switch -qc sub && echo sub > sub.txt && git_q add . && git_q commit -qm sub || exit 1
+  git_q switch -q feat-a && git_q merge -q --no-ff -m "Merge pull request #11 from o/sub" sub || exit 1
+  git_q switch -q main && git_q merge -q --no-ff -m "Merge pull request #12 from o/feat-a" feat-a || exit 1
+
+  # Merged locally into feat-d, which a pull request merged.
+  git_q switch -qc feat-c
+  printf -- '- From a branch merged locally first.\n' > changelog.d/feat-c.features.md
+  git_q add . && git_q commit -qm "Add c" || exit 1
+  git_q switch -qc feat-d main && echo d > d.txt && git_q add . && git_q commit -qm d || exit 1
+  git_q merge -q --no-ff -m "Merge branch 'feat-c' into feat-d" feat-c || exit 1
+  git_q switch -q main && git_q merge -q --no-ff -m "Merge pull request #14 from o/feat-d" feat-d || exit 1
+
+  # Committed on main without a pull request, and not committed at all.
+  printf -- '- Direct, no pull request.\n' > changelog.d/direct.fixes.md
+  git_q add . && git_q commit -qm direct || exit 1
+  printf -- '- Untracked, not committed.\n' > changelog.d/untracked.fixes.md
+) || exit 1
+output="$(run collate)"
+status=$?
+if [ "$status" -eq 0 ] && [ "$output" = "changelog: collated 4 fragment(s) into CHANGELOG.md
+changelog: no pull request merged these yet, so their entries get no PR link: direct.fixes.md untracked.fixes.md" ]; then
+  pass "collate names the fragments no pull request merged"
+else
+  fail "collate names the fragments no pull request merged" "got exit $status: $output"
+fi
+expect_changelog "collate adds a PR link to an entry's line without one" <<'EOF'
+## 0.55.0 (Unreleased)
+
+#### Features
+
+- From a branch merged locally first ([#14](https://github.com/brandocms/brando/pull/14)).
+
+#### Fixes
+
+- Direct, no pull request.
+
+- The link goes before the full stop ([#12](https://github.com/brandocms/brando/pull/12)).
+
+- No full stop ([#12](https://github.com/brandocms/brando/pull/12))
+
+- Linked already ([#7](https://github.com/brandocms/brando/pull/7)).
+
+- Numbered already (#8).
+
+- Numbered with a list (#5, #6).
+
+- A sentence that wraps its link
+  onto the next line ([#9](https://github.com/brandocms/brando/pull/9)).
+
+- A sentence that wraps
+  without a link ([#12](https://github.com/brandocms/brando/pull/12)).
+
+- A change the reader must act on ([#12](https://github.com/brandocms/brando/pull/12)).
+  Replace `a` with `b`, a step without a link.
+
+  ```markdown
+  - A code block is not an entry.
+  ```
+
+- Untracked, not committed.
 EOF
 
 # The repository's own fragments.

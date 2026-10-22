@@ -1,0 +1,1 @@
+- A video added from a URL in a transformer entry's video picker is set on the entry.
