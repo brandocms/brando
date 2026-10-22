@@ -225,6 +225,17 @@ defmodule Brando.Videos.Helpers do
   end
 
   @doc """
+  The thumbnail a video's provider shows for it, for a video without a
+  thumbnail image of its own: the provider's (`thumbnail_url/1`), or one derived
+  from an external file's source URL (`derive_external_thumbnail_url/1`). The
+  admin's previews use it, so a Bunny or Mux video shows its frame there too.
+  """
+  def provider_thumbnail_url(%Video{} = video),
+    do: thumbnail_url(%{video | thumbnail: nil}) || derive_external_thumbnail_url(video)
+
+  def provider_thumbnail_url(_video), do: nil
+
+  @doc """
   Attempt to derive a thumbnail URL from an external file video's source URL
   by matching against known provider URL patterns.
 
