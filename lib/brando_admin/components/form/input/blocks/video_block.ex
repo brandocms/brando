@@ -93,6 +93,11 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
     {:ok, select_video(socket, video_id)}
   end
 
+  # The video picker's handover of a video uploaded in it
+  def update(%{event: "select_video", id: video_id}, socket) do
+    {:ok, select_video(socket, video_id)}
+  end
+
   def update(assigns, socket) do
     block_cs = assigns.block.source
     block_data = Changeset.get_field(block_cs, :data)

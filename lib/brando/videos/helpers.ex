@@ -101,7 +101,9 @@ defmodule Brando.Videos.Helpers do
   @doc """
   Get the thumbnail URL for a video.
 
-  Returns the URL as a string or nil if no thumbnail is available.
+  Returns the URL as a string or nil if no thumbnail is available. A thumbnail
+  image set on the video is used at any time; the provider's own thumbnail
+  only once the video is `:ready`.
 
   ## Examples
 
@@ -117,6 +119,10 @@ defmodule Brando.Videos.Helpers do
   def thumbnail_url(%Video{thumbnail: %Brando.Images.Image{} = img}) do
     Brando.Utils.media_url(img.path)
   end
+
+  # A provider makes its thumbnail as it encodes: before the video is ready,
+  # its URL is a broken image.
+  def thumbnail_url(%Video{status: status}) when status in [:uploading, :processing, :errored], do: nil
 
   def thumbnail_url(%Video{type: :mux, meta: %{"mux" => %{"playback_policy" => "signed"}}}), do: nil
 

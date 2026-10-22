@@ -121,6 +121,11 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
     |> then(&{:ok, &1})
   end
 
+  # A video uploaded in the picker is added the same way: it is new, so it is
+  # never toggled off.
+  def update(%{event: "select_video", id: video_id}, socket),
+    do: update(%{event: "video_created_from_url", video_data: %{id: video_id}}, socket)
+
   def update(%{event: "video_created_from_url", video_data: %{id: video_id}}, socket) do
     # Video was already created by VideoPicker — add it to gallery like select_video does
     socket
