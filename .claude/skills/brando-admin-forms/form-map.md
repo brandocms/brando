@@ -45,9 +45,10 @@ Receiving: `event: "apply_remote_field_changes"`, `receive_field_changes`,
 `clear_dirty_fields`. Focus locks: `handle_event("focus"`, `"blur"`,
 `event: "reship_active_field"`.
 Another tab's save: `announce_save`, `event: "take_saved_entry"`,
-`take_saved_entry`, `unsaved_edits`, `carry_edit`, `echo_value`; relation
-edits: `edited_relations`, `mark_relations`, `put_received_form`, and
-`Form.RelationRows` (`rows`, `carry`).
+`take_saved_entry`, `unsaved_edits`, `carry_edit`, `echo_value`,
+`rebase_on_blocks`; relation edits: `edited_relations`, `mark_relations`,
+`put_received_form`, `target_row`, and `Form.RelationRows` (`rows`,
+`carry`, `take_row`).
 
 ## Messages from children (`update/2` clauses)
 

@@ -1612,7 +1612,9 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
         [field.field]
       end
 
-    if relation do
+    # A subform passes its rows' inputs no `on_change`: the picks reach the
+    # form in the row's changeset below.
+    if relation && on_change do
       on_change.(%{
         event: "update_entry_relation",
         path: path,

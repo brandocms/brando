@@ -206,6 +206,12 @@ defmodule Brando.SyncTest.Article do
             default %{}
 
             input :label, :text
+
+            input :item_modules, :multi_select,
+              options: &Brando.SyncTest.Article.module_options/2,
+              relation_key: :module_id,
+              relation: :module,
+              resetable: true
           end
         end
       end
@@ -239,6 +245,8 @@ defmodule Brando.SyncTest.Article do
   end
 
   def write_after_save(_entry, _user), do: :ok
+
+  def module_options(_, _), do: Brando.Content.list_modules!(%{filter: %{parent_id: nil}, order: "asc name"})
 end
 
 defmodule Brando.SyncTest.ArticleItem do
@@ -283,6 +291,36 @@ defmodule Brando.SyncTest.ArticleItem do
 
   relations do
     relation :article, :belongs_to, module: Brando.SyncTest.Article
+
+    # A multi-select in the row (form `:elsewhere`)
+    relation :item_modules, :has_many,
+      module: Brando.SyncTest.ArticleItemModule,
+      foreign_key: :item_id,
+      on_replace: :delete,
+      cast: true
+  end
+end
+
+defmodule Brando.SyncTest.ArticleItemModule do
+  @moduledoc false
+  use Brando.Blueprint,
+    application: "Brando",
+    domain: "SyncTest",
+    schema: "ArticleItemModule",
+    singular: "article_item_module",
+    plural: "article_item_modules",
+    gettext_module: Brando.Gettext
+
+  trait :sequenced
+
+  @allow_mark_as_deleted true
+
+  identifier false
+  persist_identifier false
+
+  relations do
+    relation :item, :belongs_to, module: Brando.SyncTest.ArticleItem
+    relation :module, :belongs_to, module: Brando.Content.Module
   end
 end
 

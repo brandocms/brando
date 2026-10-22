@@ -202,7 +202,8 @@ defmodule BrandoAdmin.EntrySavedElsewhereTest do
     end
 
     # Picks reach another editor's open options as they are made
-    # (`multi_select_changed`), but not another tab of the same editor.
+    # (`multi_select_changed`), but not another tab of the same editor. A's
+    # saved pick is a row B never had, so B takes it too.
     test "a pick of B's own stays over A's save", c do
       {b, _} = live_form(c.a_conn, c.path, "module_set_form")
 
@@ -215,10 +216,10 @@ defmodule BrandoAdmin.EntrySavedElsewhereTest do
       # B's process has the message too: the renders queue behind it.
       settle(b)
 
-      assert chosen(b) == [c.text.id]
+      assert chosen(b) == [c.text.id, c.hero.id]
 
       save_and_stay(b, "module_set", false)
-      await(fn -> saved_modules(c.set) == [c.text.id] end)
+      await(fn -> saved_modules(c.set) == Enum.sort([c.hero.id, c.text.id]) end)
     end
 
     # B's browser sends a keystroke in the form it showed before the save
@@ -445,11 +446,52 @@ defmodule BrandoAdmin.EntrySavedElsewhereTest do
     end
   end
 
+  describe "an entry's blocks" do
+    setup %{a_conn: a_conn, other_conn: other_conn} do
+      c = Brando.ProposalFixtures.context()
+      uids = c.identity |> Brando.EditSessionEditors.rows() |> Enum.map(& &1.block.uid)
+      path = "/admin/pages/update/#{c.identity.id}"
+      {a, _} = live_form(a_conn, path)
+      {b, _} = live_form(other_conn, path)
+      for view <- [a, b], do: await_selector(view, "[data-block-uid]")
+      %{page: c.identity, uids: uids, a: a, b: b}
+    end
+
+    # What recovery compares a copy with: the entry as saved, its blocks too.
+    defp saved_baseline(view, page) do
+      %{form_blueprint: blueprint, current_user: user} = form_assigns(view)
+
+      entry =
+        Page
+        |> Repo.get!(page.id)
+        |> Repo.preload(Brando.Blueprint.preloads_for(Page), force: true)
+
+      payload = BrandoAdmin.Components.Form.Drafts.saved_payload(Page, blueprint, entry, user)
+      payload |> Map.put("modules", Brando.Drafts.Modules.manifest(payload["blocks"])) |> Brando.Drafts.Content.checksum()
+    end
+
+    # B reads A's save back without its blocks; they reach B through the
+    # edit session, and so does the baseline.
+    test "B's recovery baseline has the blocks A saved", c do
+      [first | _] = c.uids
+      assert form_assigns(c.b).draft.baseline == saved_baseline(c.b, c.page)
+
+      Brando.EditSessionEditors.type(c.a, first, "<p>Saved by A</p>")
+      save_and_stay(c.a, "page", true)
+      await(fn -> Brando.EditSessionEditors.shown_text(c.b, first) == "<p>Saved by A</p>" end)
+      settle(c.b)
+
+      assert form_assigns(c.b).draft.baseline == saved_baseline(c.b, c.page)
+    end
+  end
+
   describe "an entry with a subform and an image" do
-    setup %{current_user: me, a_conn: a_conn, other_conn: other_conn} do
+    setup %{current_user: me, a_conn: a_conn, other_conn: other_conn} = c do
+      items = for {label, n} <- Enum.with_index(c[:items] || ["Old"]), do: %{label: label, sequence: n}
+
       {:ok, article} =
         Brando.SyncTest.create_article(
-          %{title: "Article", slug: "article", language: "en", status: "published", items: [%{label: "Old"}]},
+          %{title: "Article", slug: "article", language: "en", status: "published", items: items},
           me
         )
 
@@ -534,6 +576,108 @@ defmodule BrandoAdmin.EntrySavedElsewhereTest do
       end)
     end
 
+    defp row_labels(view) do
+      rows = params(view, "article")["items"]
+      for {_, row} <- Enum.sort_by(rows, &String.to_integer(elem(&1, 0))), do: row["label"]
+    end
+
+    defp saved_labels(article), do: Enum.map(saved_article(article).items, & &1.label)
+
+    # Each tab edits a row of its own: B's save writes B's row and keeps A's.
+    @tag items: ["Old", "Second"]
+    test "B's edit in one row and A's saved edit in another both stay", c do
+      type(c.b, "article", ["items", "0", "label"], "Row 0 by B")
+      before = render(c.b)
+
+      type(c.a, "article", ["items", "1", "label"], "Row 1 by A")
+      save_and_stay(c.a, "article", true)
+      await(fn -> saved_labels(c.article) == ["Old", "Row 1 by A"] end)
+
+      await(fn -> row_labels(c.b) == ["Row 0 by B", "Row 1 by A"] end)
+
+      # B types on in its row, in the form its browser showed before the save
+      # reached it: row 1 is still the old one there.
+      type_in(c.b, "article", before, ["items", "0", "label"], "Row 0 by B, again")
+      assert row_labels(c.b) == ["Row 0 by B, again", "Row 1 by A"]
+
+      save_and_stay(c.b, "article", true)
+      await(fn -> saved_labels(c.article) == ["Row 0 by B, again", "Row 1 by A"] end)
+    end
+
+    # A row A removed stays removed in B's form unless B edited it; a row
+    # B edited that A removed stays, as a new row.
+    @tag items: ["Old", "Second", "Third"]
+    test "a row A removed stays out of B's form, and one B edited stays", c do
+      type(c.b, "article", ["items", "2", "label"], "Third by B")
+
+      [_old, second, third] = saved_article(c.article).items
+      Repo.delete!(second)
+      Repo.delete!(third)
+      announce_save(Article, c.article.id)
+
+      await(fn -> row_labels(c.b) == ["Old", "Third by B"] end)
+
+      save_and_stay(c.b, "article", true)
+      await(fn -> saved_labels(c.article) == ["Old", "Third by B"] end)
+    end
+
+    # B's browser sends a keystroke in a row from the form it showed before
+    # A's save reached it: the other rows it sends are the ones A's save
+    # replaced, and only the row B typed in is B's edit.
+    @tag items: ["Old", "Second", "Third"]
+    test "B's keystroke in a row, sent from the form before A's save, keeps A's rows", c do
+      before = render(c.b)
+
+      [_old, second, third] = saved_article(c.article).items
+      second |> Ecto.Changeset.change(label: "Second by A") |> Repo.update!()
+      Repo.delete!(third)
+      announce_save(Article, c.article.id)
+      await(fn -> row_labels(c.b) == ["Old", "Second by A"] end)
+
+      type_in(c.b, "article", before, ["items", "0", "label"], "Row 0 by B")
+      assert row_labels(c.b) == ["Row 0 by B", "Second by A"]
+
+      # The browser has drawn the save by its next keystroke.
+      type(c.b, "article", ["items", "0", "label"], "Row 0 by B, again")
+      assert row_labels(c.b) == ["Row 0 by B, again", "Second by A"]
+
+      save_and_stay(c.b, "article", true)
+      await(fn -> saved_labels(c.article) == ["Row 0 by B, again", "Second by A"] end)
+    end
+
+    defp row_modules(view) do
+      case params(view, "article")["items"]["0"]["item_modules"] do
+        %{} = rows ->
+          for {_, %{"module_id" => id} = row} <- rows, row["marked_as_deleted"] != "true", do: String.to_integer(id)
+
+        _ ->
+          []
+      end
+    end
+
+    # B picks a module in the multi-select of a row (the row's own relation,
+    # `{:subform, :has_many}`); A's save is of the title.
+    test "B's pick in a row's multi-select stays over A's save", c do
+      hero = Factory.insert(:module, name: "Hero", namespace: "general")
+      toggle = "#article_items_0_item_modules-field-base button.button-edit"
+      c.b |> element(toggle) |> render_click()
+      c.b |> element("button.multiselect-option[value='#{hero.id}']") |> render_click()
+      c.b |> element(toggle) |> render_click()
+      await(fn -> row_modules(c.b) == [hero.id] end)
+
+      type(c.a, "article", "title", "Title by A")
+      save_and_stay(c.a, "article", true)
+      await(fn -> params(c.b, "article")["title"] == "Title by A" end)
+      assert row_modules(c.b) == [hero.id]
+
+      save_and_stay(c.b, "article", true)
+
+      await(fn ->
+        saved = Article |> Repo.get!(c.article.id) |> Repo.preload(items: :item_modules)
+        saved.title == "Title by A" and Enum.map(hd(saved.items).item_modules, & &1.module_id) == [hero.id]
+      end)
+    end
+
     # The form's `after_save` writes to the entry once the save is done; the
     # other tabs read the entry after it.
     test "what the form's after_save writes reaches B", c do
@@ -612,6 +756,37 @@ defmodule BrandoAdmin.EntrySavedElsewhereTest do
         saved = Article |> Repo.get!(c.article.id) |> Repo.preload(:author)
         saved.title == "Title by A" and saved.author.name == "Name by B"
       end)
+    end
+  end
+
+  describe "a has_one subform, empty" do
+    setup %{current_user: me, a_conn: a_conn, other_conn: other_conn} do
+      {:ok, article} =
+        Brando.SyncTest.create_article(%{title: "Article", slug: "article", language: "en", status: "published"}, me)
+
+      path = "/admin/articles/update/#{article.id}/author"
+      {a, _} = live_form(a_conn, path, "article_form")
+      {b, _} = live_form(other_conn, path, "article_form")
+
+      %{article: article, a: a, b: b}
+    end
+
+    defp saved_authors(article), do: Repo.all(Ecto.assoc(article, :author))
+
+    # Both tabs fill in the author the article doesn't have; A saves first.
+    test "B's author, typed when A saved one, goes onto the saved author", c do
+      type(c.b, "article", ["author", "name"], "Name by B")
+
+      type(c.a, "article", ["author", "name"], "Name by A")
+      save_and_stay(c.a, "article", true)
+      await(fn -> Enum.map(saved_authors(c.article), & &1.name) == ["Name by A"] end)
+
+      await(fn -> form_assigns(c.b).entry.author != nil end)
+      assert Process.alive?(c.b.pid)
+      assert params(c.b, "article")["author"]["name"] == "Name by B"
+
+      save_and_stay(c.b, "article", true)
+      await(fn -> Enum.map(saved_authors(c.article), & &1.name) == ["Name by B"] end)
     end
   end
 

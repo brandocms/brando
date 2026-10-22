@@ -56,9 +56,15 @@ area in [the section map](form-map.md) and grep for the names it lists.
   (`unshipped_fields`, `synced_values` that differ from the save, and the
   has_many/has_one/many_to_many relations in `edited_relations`, marked
   when the editor changes them, never by another editor's multi-select),
-  and moves its recovery baseline (`Drafts.rebase/2`). A server-side value set at save
-  reaches the others only this way. Coverage lives in
-  `test/brando_admin/live/entry_saved_elsewhere_test.exs`.
+  and moves its recovery baseline (`Drafts.rebase/2`; the blocks part when
+  the block field reads the saved rows, `entry_blocks_reloaded`). A kept
+  relation goes row by row (`RelationRows.carry/4`): the rows this editor
+  changed against the entry its form was built on, onto the saved rows,
+  and the saved rows everywhere else; an event in one row of a replaced
+  relation changes that row only (`RelationRows.take_row/4`). A
+  server-side value set at save reaches the others only this way. Coverage
+  lives in `test/brando_admin/live/entry_saved_elsewhere_test.exs` and
+  `test/brando_admin/components/form/relation_rows_test.exs`.
 - Read pending subform associations through the helpers in
   `lib/brando_admin/components/form/input/subform_helpers.ex`. Applying child
   changesets before rewriting the association loses pending edits. Use the
