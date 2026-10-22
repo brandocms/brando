@@ -124,6 +124,11 @@ defmodule BrandoAdmin.Components.Form.Transformer do
     end
   end
 
+  # A video added in the picker from a URL or a provider's library.
+  def update(%{event: "video_created_from_url", video_data: %{id: id}}, socket) do
+    update(%{event: "select_video", id: id}, socket)
+  end
+
   # Delivered by the sticky UploadManager. The ref is the one the client
   # registered its placeholder under; without it — an upload started somewhere
   # the batch never registered — we simply append.

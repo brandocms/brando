@@ -167,6 +167,9 @@
 @Container media-field (max-width: 339px) {
   .media-field--field .media-field-preview { width: 72px; height: 104px; }
   .media-field--field:not(.media-field--empty) .media-field-preview { height: auto; }
+  /* The widest group takes the row under the thumbnail rather than wrapping
+     its labels inside their buttons. */
+  .media-field--field .media-field-actions--wide { grid-column: 1 / -1; }
 }
 /* A ref's card is as wide as its column. On a phone its segmented actions
    (Configure, Edit/Crop, Replace) were wider than the card; there Edit/Crop

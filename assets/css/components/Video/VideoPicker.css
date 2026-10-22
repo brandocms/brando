@@ -4,8 +4,11 @@
   gap: 0.5rem;
 }
 
+/* Add from URL, one button per provider library and Upload file: in a phone's
+   drawer they take more than one line. */
 .video-picker-add-actions {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 0.5rem;
 }

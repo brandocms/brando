@@ -16,8 +16,11 @@ Publishing is manual: no workflow builds or publishes the packages yet.
    of `mix check` and CI and fails when the versions disagree.
 2. Collate the changelog: `scripts/changelog collate` moves the
    `changelog.d/` fragments into the `## … (Unreleased)` section of
-   `CHANGELOG.md` and deletes them. Rename that heading to `## X.Y.Z[-beta.N]`
-   and review the `### Upgrading` prose.
+   `CHANGELOG.md` and deletes them, adding each entry's pull request link from the
+   merge that brought its fragment in. Run it on an up-to-date `main` with
+   its history (not a shallow clone): it names any fragment no pull request
+   merged. Rename that heading to `## X.Y.Z[-beta.N]` and review the
+   `### Upgrading` prose.
 3. Run `mise exec -- mix check`, then commit as `Release X.Y.Z[-beta.N]`.
 4. Open a pull request. Its CI runs the unit suite, documentation, the
    consumer asset build and the E2E suite; merge it once green

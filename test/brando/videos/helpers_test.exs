@@ -61,6 +61,34 @@ defmodule Brando.Videos.HelpersTest do
     assert Helpers.format_duration(3723.4) == "01:02:03"
   end
 
+  describe "provider_thumbnail_url/1" do
+    test "returns the provider's thumbnail, not the video's own image" do
+      video =
+        video(
+          type: :mux,
+          meta: %{"mux" => %{"playback_id" => "abc123"}},
+          thumbnail: %Brando.Images.Image{path: "images/videos/thumbnails/thumb.jpg"}
+        )
+
+      assert Helpers.provider_thumbnail_url(video) == "https://image.mux.com/abc123/thumbnail.jpg"
+    end
+
+    test "derives one from an external file's Bunny stream URL" do
+      video = video(type: :external_file, source_url: "https://vz-abc.b-cdn.net/0f1e2d3c/playlist.m3u8")
+      assert Helpers.provider_thumbnail_url(video) == "https://vz-abc.b-cdn.net/0f1e2d3c/thumbnail.jpg"
+    end
+
+    test "returns nil while the provider is still encoding, and for a video it has no frame for" do
+      assert Helpers.provider_thumbnail_url(
+               video(type: :mux, status: :processing, meta: %{"mux" => %{"playback_id" => "x"}})
+             ) ==
+               nil
+
+      assert Helpers.provider_thumbnail_url(video(type: :upload)) == nil
+      assert Helpers.provider_thumbnail_url(nil) == nil
+    end
+  end
+
   describe "thumbnail_url/1" do
     test "returns media URL for video with Image thumbnail" do
       result =
@@ -79,6 +107,19 @@ defmodule Brando.Videos.HelpersTest do
         Helpers.thumbnail_url(video(type: :mux, meta: %{"mux" => %{"playback_id" => "abc123"}}))
 
       assert result == "https://image.mux.com/abc123/thumbnail.jpg"
+    end
+
+    # The provider has no thumbnail yet: its URL would be a broken image
+    test "returns nil for a provider video that is not ready" do
+      for status <- [:uploading, :processing, :errored] do
+        mux = video(type: :mux, status: status, meta: %{"mux" => %{"playback_id" => "abc123"}})
+        assert Helpers.thumbnail_url(mux) == nil
+      end
+    end
+
+    test "returns a thumbnail image set on the video before it is ready" do
+      thumbnail = %Brando.Images.Image{path: "images/videos/thumbnails/thumb.jpg"}
+      assert Helpers.thumbnail_url(video(type: :bunny, status: :processing, thumbnail: thumbnail)) =~ "thumb.jpg"
     end
 
     test "returns nil for Mux video without playback_id" do

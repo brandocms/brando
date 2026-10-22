@@ -28,6 +28,11 @@ defmodule BrandoAdmin.Components.Form.Input.GalleryObjects do
     {:ok, add_gallery_media(socket, :video, id)}
   end
 
+  # A video uploaded in the picker. Added, never toggled: it is new.
+  def update(%{event: "select_video", id: id}, socket) do
+    {:ok, add_gallery_media(socket, :video, id)}
+  end
+
   def update(%{action: :update_image, updated_image: updated_image, force_validation: true}, socket) do
     updated_image_id = updated_image.id
 

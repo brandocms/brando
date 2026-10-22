@@ -11,6 +11,10 @@ defmodule BrandoAdmin.Components.VideoPicker do
   alias BrandoAdmin.Images.FolderBrowser
   alias Phoenix.LiveView.JS
 
+  # Where the whole library's folders are browsed from: every video folder is
+  # stored under this top-level scope (`FolderBrowser.folder_id_for/2`).
+  @library_root "videos"
+
   def mount(socket) do
     {:ok,
      socket
@@ -56,6 +60,8 @@ defmodule BrandoAdmin.Components.VideoPicker do
      |> assign(:show_new_folder_form, false)
      |> assign_new(:current_user, fn -> assigns[:current_user] end)
      |> assign_new(:upload_progress, fn -> nil end)
+     |> leave_library()
+     |> then(&assign(&1, :library_offered?, library_offered?(&1.assigns)))
      |> assign_videos()
      |> assign_folder_state(nil)
      |> assign_video_upload_available()
@@ -137,8 +143,29 @@ defmodule BrandoAdmin.Components.VideoPicker do
 
   defp resolve_video_config(config_target), do: Brando.Uploads.resolve_video_config(config_target)
 
+  # The rest of the library is offered to a pick for one field, block, ref or
+  # var, and only to an editor who may add videos. A video picked from it is
+  # linked as it is: it is a provider's record, not a rendition made for a
+  # field, and its config target only shaped how it was uploaded. A copy would
+  # share the provider's video with the original, and deleting either would
+  # delete it at the provider for both.
+  defp library_offered?(%{multi: false, config_target: target, current_user: user})
+       when is_binary(target) and not is_nil(user),
+       do: Brando.Authorization.Media.authorize(user, :video) == :ok
+
+  defp library_offered?(_assigns), do: false
+
+  # `config_target: :all` browses every video without adding any, for pickers
+  # that are not choosing for a field (the AI assistant's attachments).
+  # `scope: :library` browses the whole library for a field's pick, all but
+  # the hidden folders, whose videos the site's visitors sent.
   defp assign_videos(socket) do
-    filter = if socket.assigns.config_target == :all, do: %{}, else: %{config_target: socket.assigns.config_target}
+    filter =
+      cond do
+        socket.assigns.config_target == :all -> %{}
+        socket.assigns.scope == :library -> %{folder_id: {:library, Brando.Media.Folders.hidden_folder_ids()}}
+        true -> %{config_target: socket.assigns.config_target}
+      end
 
     {:ok, videos} =
       Brando.Videos.list_videos(%{
@@ -155,6 +182,8 @@ defmodule BrandoAdmin.Components.VideoPicker do
     |> assign_new(:multi, fn -> false end)
     |> assign_new(:videos, fn -> [] end)
     |> assign_new(:config_target, fn -> nil end)
+    |> assign_new(:scope, fn -> :field end)
+    |> assign_new(:library_offered?, fn -> false end)
     |> assign_new(:event_target, fn -> nil end)
     |> assign_new(:selected_videos, fn -> [] end)
     |> assign_new(:current_user, fn -> nil end)
@@ -206,7 +235,8 @@ defmodule BrandoAdmin.Components.VideoPicker do
   end
 
   defp assign_folder_state(socket, requested_folder) do
-    upload_root = video_upload_root(socket.assigns.config_target)
+    upload_root =
+      if socket.assigns.scope == :library, do: @library_root, else: video_upload_root(socket.assigns.config_target)
 
     entries = folder_entries(socket.assigns.videos)
 
@@ -233,27 +263,15 @@ defmodule BrandoAdmin.Components.VideoPicker do
         ""
       end
 
-    matched_entries =
-      FolderBrowser.entries_in_folder(
-        entries,
-        current_folder,
-        upload_root
-      )
+    # The root also lists the videos with no folder, or one outside the root:
+    # a field's own video moved elsewhere in the library stays in reach.
+    outside_root = if current_folder == "", do: FolderBrowser.entries_outside_root(entries, upload_root), else: []
 
-    matched_ids = MapSet.new(Enum.map(matched_entries, & &1.id))
-
-    # Videos with nil folder_id and nil path belong to root
-    unassigned_ids =
-      if current_folder == "" do
-        entries
-        |> Enum.filter(&(is_nil(&1.folder_id) and is_nil(&1.path)))
-        |> Enum.map(& &1.id)
-        |> MapSet.new()
-      else
-        MapSet.new()
-      end
-
-    visible_ids = MapSet.union(matched_ids, unassigned_ids)
+    visible_ids =
+      entries
+      |> FolderBrowser.entries_in_folder(current_folder, upload_root)
+      |> Kernel.++(outside_root)
+      |> MapSet.new(& &1.id)
 
     visible_video_structs =
       socket.assigns.videos
@@ -293,6 +311,41 @@ defmodule BrandoAdmin.Components.VideoPicker do
   defp folder_entry_path(_), do: nil
 
   # -- Video-specific event handlers --
+
+  def handle_event("set_scope", %{"scope" => scope}, socket) when scope in ["field", "library"] do
+    if socket.assigns.library_offered? do
+      {:noreply, socket |> switch_scope(String.to_existing_atom(scope), "") |> push_selection_state()}
+    else
+      {:noreply, socket}
+    end
+  end
+
+  # Root and Up at the root of the field's own videos lead on into the rest
+  # of the library: to its root, or to the folder above the field's.
+  def handle_event(
+        "picker_go_root",
+        _,
+        %{assigns: %{scope: :field, library_offered?: true, current_folder: ""}} = socket
+      ) do
+    {:noreply, socket |> switch_scope(:library, "") |> push_selection_state()}
+  end
+
+  def handle_event("picker_go_root", params, socket), do: handle_event("go_root", params, socket)
+
+  def handle_event(
+        "picker_go_parent",
+        _,
+        %{assigns: %{scope: :field, library_offered?: true, current_folder: ""}} = socket
+      ) do
+    parent =
+      socket.assigns.upload_root
+      |> Path.dirname()
+      |> FolderBrowser.relative_folder(@library_root)
+
+    {:noreply, socket |> switch_scope(:library, parent) |> push_selection_state()}
+  end
+
+  def handle_event("picker_go_parent", params, socket), do: handle_event("go_parent_folder", params, socket)
 
   def handle_event("organize_select_video", %{"id" => id} = params, socket) do
     case parse_item_id(id) do
@@ -606,9 +659,10 @@ defmodule BrandoAdmin.Components.VideoPicker do
       {:ok, video} ->
         {:ok, _video} = Brando.Videos.Uploader.complete_client_upload(video)
 
+        # The stored id, not the browser's copy, which may arrive as a string
         send_update(socket.assigns.event_target, %{
           event: "select_video",
-          id: video_id
+          id: video.id
         })
 
         {:noreply,
@@ -853,10 +907,42 @@ defmodule BrandoAdmin.Components.VideoPicker do
           main_id={"video-picker-main-#{@id}"}
           enable_folder_drop={true}
           folder_drop_event="picker_move_to_folder"
+          go_root_event="picker_go_root"
+          go_parent_event="picker_go_parent"
+          leave_root={@library_offered? and @scope == :field}
         >
           <:main_header>
             <div class="image-picker-main-header">
-              <h3>{if @current_folder == "", do: gettext("Root folder"), else: Path.basename(@current_folder)}</h3>
+              <%!-- The full path, as in the image picker: the field's videos and
+                    the whole library have different roots. --%>
+              <div class="image-picker-main-heading">
+                <nav
+                  :if={@library_offered?}
+                  class="pill-tabs pill-tabs--small image-picker-scope"
+                  aria-label={gettext("Videos to choose from")}
+                >
+                  <button
+                    type="button"
+                    aria-pressed={to_string(@scope == :field)}
+                    phx-click="set_scope"
+                    phx-value-scope="field"
+                    phx-target={@myself}
+                  >
+                    {gettext("Added for this field")}
+                  </button>
+                  <button
+                    type="button"
+                    aria-pressed={to_string(@scope == :library)}
+                    phx-click="set_scope"
+                    phx-value-scope="library"
+                    phx-target={@myself}
+                  >
+                    {gettext("Whole library")}
+                  </button>
+                </nav>
+                <h3>{FolderBrowser.absolute_folder(@current_folder, @upload_root)}</h3>
+                <p :if={@library_offered?} class="image-picker-main-hint">{scope_hint(@scope)}</p>
+              </div>
               <div class="image-picker-main-actions">
                 <span>
                   {ngettext("%{count} video", "%{count} videos", @video_count, count: @video_count)}
@@ -1092,7 +1178,20 @@ defmodule BrandoAdmin.Components.VideoPicker do
               <div class="image-picker-empty">
                 <.icon name="film" />
                 <h4>{gettext("No videos in this folder")}</h4>
-                <p>{gettext("Create a video from URL or choose another folder")}</p>
+                <%= if @library_offered? and @scope == :field do %>
+                  <p>{gettext("Add one here, or pick one from the whole library.")}</p>
+                  <button
+                    type="button"
+                    class="folder-action"
+                    phx-click="set_scope"
+                    phx-value-scope="library"
+                    phx-target={@myself}
+                  >
+                    {gettext("Show the whole library")}
+                  </button>
+                <% else %>
+                  <p>{gettext("Create a video from URL or choose another folder")}</p>
+                <% end %>
               </div>
             <% end %>
 
@@ -1473,6 +1572,34 @@ defmodule BrandoAdmin.Components.VideoPicker do
   defp video_uploader_hook(:cloudflare), do: "Brando.CloudflareUploader"
   defp video_uploader_hook(:vimeo), do: "Brando.VimeoUploader"
   defp video_uploader_hook(_strategy), do: nil
+
+  # Opening for a field starts on its own videos. A folder from the library
+  # means nothing there, so a picker left in the library starts at the root.
+  defp leave_library(%{assigns: %{scope: :library}} = socket),
+    do: assign(socket, scope: :field, custom_folders: [], current_folder: "")
+
+  defp leave_library(socket), do: assign(socket, :scope, :field)
+
+  # The library's own folders differ from the field's, so a switch starts
+  # over in `folder`, relative to the new scope's root.
+  defp switch_scope(socket, scope, folder) do
+    socket
+    |> assign(:scope, scope)
+    |> assign(:custom_folders, [])
+    |> assign(:organize_selected, [])
+    |> assign(:last_organize_selected_id, nil)
+    |> assign(:current_folder, "")
+    |> assign_videos()
+    |> assign_folder_state(folder)
+  end
+
+  defp scope_hint(:library) do
+    gettext("Every video in the library. A video you pick is used as it is; new ones still follow this field's settings.")
+  end
+
+  defp scope_hint(:field) do
+    gettext("Only videos added for this field. Whole library offers every other video.")
+  end
 
   defp video_upload_root(config_target) do
     resolved_target = normalize_video_config_target(config_target) || "default"

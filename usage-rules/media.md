@@ -177,6 +177,13 @@ assets do
 end
 ```
 
+A field's `cfg` applies to the videos added through it: their upload strategy,
+upload path and limits. The video picker opens on the videos added for the
+field, and its "Whole library" tab lists every other video, in the library's
+own folders. A video picked from there is used as it is, not copied: it is a
+record of the provider's video, and its config was only used when it was
+added. Uploads and "Add from URL" in either tab still use the field's `cfg`.
+
 ### Add webhook to your endpoint
 
 Webhook plugs must come BEFORE `Plug.Parsers` to read raw body for signature verification.

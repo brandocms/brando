@@ -26,12 +26,12 @@ rewrites in place: edit those in `CHANGELOG.md` itself.
 
 ## Text
 
-One line per change: what a project or an editor notices, in one sentence,
-and a link to the pull request. The pull request holds the detail (how it
-works, why, measurements, edge cases).
+One line per change: what a project or an editor notices, in one sentence.
+The pull request holds the detail (how it works, why, measurements, edge
+cases).
 
 ```markdown
-- Opening an entry shows its fields at once, without a loading modal ([#3112](https://github.com/brandocms/brando/pull/3112)).
+- Opening an entry shows its fields at once, without a loading modal.
 ```
 
 An entry that asks the reader to act (a breaking change, a deprecation, a
@@ -40,19 +40,29 @@ steps, indented two spaces: the commands and code to change, without the
 reasoning.
 
 ```markdown
-- `ai:` on a form input is deprecated in favour of `ai_actions:` ([#3094](https://github.com/brandocms/brando/pull/3094)).
+- `ai:` on a form input is deprecated in favour of `ai_actions:`.
   Replace `ai: [prompt: "…", context: [:title]]` with
   `ai_actions: [generate: [prompt: "…", from: [:title]]]`.
 ```
 
 Changes a Brando project cannot see (tests, CI, refactors, agent docs) have
-no entry. Add the link once the pull request is open. An entry is a list item
-starting `- `, with no headings.
+no entry. An entry is a list item starting `- `, with no headings.
+
+Leave the pull request link out, so the PR needs no second commit once it is
+open: collation adds it. It finds the merge that brought the fragment into the
+branch ("Merge pull request #N from …") and ends the entry's line with
+`([#N](https://github.com/brandocms/brando/pull/N))`, before a full stop that
+ends it. An entry that already links or numbers a pull request keeps it: write
+the link yourself for a change that reached `main` through another pull
+request, such as one stacked on it.
+
+`scripts/changelog check` (part of `mix check` and CI) validates the names
+and text.
 
 ## Into CHANGELOG.md
 
-`scripts/changelog collate` moves the fragments into the unreleased section
-and deletes them: at release (see `RELEASE.md`), since the Hex package ships
+`scripts/changelog collate` moves the fragments into the unreleased section,
+adding the pull request links, and deletes them: at release (see `RELEASE.md`), since the Hex package ships
 `CHANGELOG.md`, and in a PR of its own whenever `CHANGELOG.md` on `main`
 should catch up. Until then the unreleased entries are read here. The
 published documentation does not include the changelog.

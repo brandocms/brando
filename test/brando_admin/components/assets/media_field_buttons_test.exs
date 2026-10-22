@@ -71,6 +71,7 @@ defmodule BrandoAdmin.Components.Assets.MediaFieldButtonsTest do
     assert [upload, library] = :image |> render_field(nil) |> buttons(@group)
     assert_labelled(upload, "Upload")
     assert_icon_only(library, "Select image")
+    assert :image |> render_field(nil) |> LazyHTML.query(".media-field-actions--wide") |> Enum.empty?()
   end
 
   test "an empty file field: Upload with its label, then the library as an icon" do
@@ -80,11 +81,18 @@ defmodule BrandoAdmin.Components.Assets.MediaFieldButtonsTest do
   end
 
   # The test config has no video upload strategy, so the library leads the
-  # group and keeps its label; adding by URL is still an icon.
-  test "an empty video field without uploads: the library leads, the URL is an icon" do
-    assert [library, url] = :video |> render_field(nil, %{link: %Phoenix.LiveView.JS{}}) |> buttons(@group)
+  # group and keeps its label; adding by URL is still an icon. Configure is
+  # offered too, in the same group rather than one of its own.
+  test "an empty video field without uploads: the library leads, the URL is an icon, Configure joins last" do
+    doc = render_field(:video, nil, %{link: %Phoenix.LiveView.JS{}})
+
+    assert [library, url, configure] = buttons(doc, @group)
     assert_labelled(library, "Select video")
     assert_icon_only(url, "Add from URL")
+    assert_labelled(configure, "Configure")
+    assert doc |> LazyHTML.query(".media-field-actions .media-field-split") |> Enum.count() == 1
+    # Too wide for a narrow field's column: it takes the row under the thumbnail
+    assert doc |> LazyHTML.query(".media-field-actions--wide") |> Enum.count() == 1
   end
 
   test "a filled field: Configure, then the same sources as icons in the same order" do
@@ -115,6 +123,17 @@ defmodule BrandoAdmin.Components.Assets.MediaFieldButtonsTest do
     assert_labelled(upload, "Upload")
     assert_icon_only(images, "Select images")
     assert_icon_only(videos, "Select videos")
+  end
+
+  # A Bunny or Mux video without a thumbnail image of its own previews with
+  # its provider's frame, as the picker shows it, not the film icon.
+  test "a provider video previews with its provider's frame" do
+    video = %Brando.Videos.Video{id: 1, type: :mux, status: :ready, meta: %{"mux" => %{"playback_id" => "pb-1"}}}
+
+    assert video
+           |> then(&render_field(:video, &1))
+           |> LazyHTML.query(".media-field-preview img")
+           |> LazyHTML.attribute("src") == ["https://image.mux.com/pb-1/thumbnail.jpg"]
   end
 
   test "the Norwegian labels name the icons" do

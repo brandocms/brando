@@ -162,7 +162,10 @@ defmodule Brando.Videos.Video do
   def put_usage(videos), do: Brando.Content.Usage.put(videos, :video)
 
   def listing_row(assigns) do
-    assigns = assign(assigns, :title, Brando.Videos.display_title(assigns.entry))
+    assigns =
+      assigns
+      |> assign(:title, Brando.Videos.display_title(assigns.entry))
+      |> assign(:provider_thumbnail, Brando.Videos.Helpers.provider_thumbnail_url(assigns.entry))
 
     ~H"""
     <.field columns={1} class="library-thumbnail library-video-thumbnail">
@@ -180,7 +183,16 @@ defmodule Brando.Videos.Video do
           alt=""
           src={Brando.Utils.img_url(@entry.thumbnail, :smallest, prefix: Brando.Utils.media_url())}
         />
-        <Brando.HTML.Icon.icon :if={!@entry.thumbnail} name="film" />
+        <%!-- Without a thumbnail image of its own, the frame its provider shows --%>
+        <img
+          :if={!@entry.thumbnail && @provider_thumbnail}
+          width="64"
+          height="52"
+          alt=""
+          loading="lazy"
+          src={@provider_thumbnail}
+        />
+        <Brando.HTML.Icon.icon :if={!@entry.thumbnail && !@provider_thumbnail} name="film" />
         <span class="library-video-play-icon" aria-hidden="true"><Brando.HTML.Icon.icon name="play" /></span>
       </button>
     </.field>

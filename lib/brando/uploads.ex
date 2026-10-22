@@ -779,7 +779,12 @@ defmodule Brando.Uploads do
   def video_upload_error_message({:error, reason}), do: video_upload_error_message(reason)
   def video_upload_error_message(reason) when is_binary(reason), do: reason
   def video_upload_error_message(reason) when is_atom(reason), do: to_string(reason)
-  def video_upload_error_message(reason), do: inspect(reason)
+
+  # Anything else is the provider's own answer — a refused request's body, a
+  # transport error — which the uploader has logged. Its raw term means nothing
+  # to an editor.
+  def video_upload_error_message(_reason),
+    do: gettext("The video provider refused the upload. Check its settings, or try again.")
 
   defp validate_optional_mimetype(cfg, mime_type, filename) do
     effective_mime_type =
