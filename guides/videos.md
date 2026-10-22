@@ -459,6 +459,17 @@ this is set to.
 - **`:on_purge`** (default): Videos are soft-deleted locally first. After 30 days, when the soft-delete purger runs, the video is permanently deleted from both the database and the provider. This allows video restoration during the grace period.
 - **`false`**: Videos are only deleted locally. Provider videos remain and must be manually cleaned up.
 
+### Uploading in a Video Field
+
+A video field offers Upload, and takes a file dropped on it, whenever its
+strategy can upload. `:local` and a configured `:s3` go through the upload
+manager. A provider strategy (`:mux`, `:bunny`, `:cloudflare`, `:vimeo`) with
+its credentials sends the file from the browser straight to the provider, as the
+video picker does, with the field's own `cfg` and config target. The field takes
+the video once the file is with the provider, and the provider's webhook reports
+when it has been encoded. Without the credentials the field cannot upload, and
+says so when a file is dropped on it.
+
 ### Video Blocks
 
 Video blocks in the Villain editor use the global `default_video_upload_strategy` setting. The video picker shows an "Upload file" button when that strategy can take an upload: `:local` and a configured `:s3` upload through the upload manager, and a provider strategy uploads directly to the provider once it has credentials and a webhook secret (Bunny also needs `library_id` and `cdn_hostname`). Without them the button is hidden, since an upload would never finish processing.

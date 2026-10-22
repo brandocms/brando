@@ -8508,6 +8508,11 @@ msgstr "Feil e-post eller passord"
 msgid "Invalid job identifier."
 msgstr "Ugyldig jobb-ID."
 
+#: lib/brando_admin/components/form/input/video.ex
+#, elixir-autogen, elixir-format
+msgid "Invalid video upload request"
+msgstr "Ugyldig forespørsel om videoopplasting"
+
 #: lib/brando_admin/components/form.ex
 #, elixir-autogen, elixir-format
 msgid "Invalid video upload target"
@@ -17168,6 +17173,11 @@ msgstr "Verdien lagres med hver innsending; etiketten er det besøkende ser."
 #, elixir-autogen, elixir-format
 msgid "The video provider could not be reached. Please try again."
 msgstr "Videoleverandøren kunne ikke nås. Prøv igjen."
+
+#: lib/brando/uploads.ex
+#, elixir-autogen, elixir-format
+msgid "The video provider refused the upload. Check its settings, or try again."
+msgstr "Videoleverandøren avviste opplastingen. Sjekk innstillingene, eller prøv igjen."
 
 #: lib/brando_admin/live/sites/webhooks_live.ex
 #, elixir-autogen, elixir-format

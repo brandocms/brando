@@ -127,6 +127,7 @@ export default (app) => ({
 
   destroyed() {
     this._unsubscribeProgress?.()
+    this._providerHook?.removeEventListener('brando:video-upload', this._onProviderUpload)
   },
 
   updated() {
@@ -177,6 +178,14 @@ export default (app) => ({
       return
     }
     this.showProgress(null)
+
+    // A video field whose provider takes the upload itself (Mux, Bunny,
+    // Cloudflare, Vimeo) hands the file to the provider's hook, as the video
+    // picker does, instead of the upload manager.
+    if (this.el.dataset.videoHookId) {
+      this.enqueueToProvider(files)
+      return
+    }
 
     // A concrete form/ref/var target already owns its destination through its
     // upload config. A default-target image goes straight to the folder chosen
@@ -261,6 +270,32 @@ export default (app) => ({
       return
     }
     this.enqueueTarget(files, extra)
+  },
+
+  enqueueToProvider(files) {
+    const hook = document.getElementById(this.el.dataset.videoHookId)
+    if (!hook) {
+      this.showProgress({ status: 'error', error: 'The upload destination is unavailable. Reopen this editor.' })
+      return
+    }
+
+    const ref = `field-${window.crypto?.randomUUID?.() || Math.random().toString(36).slice(2, 14)}`
+    this._providerRef = ref
+
+    if (this._providerHook !== hook) {
+      this._providerHook?.removeEventListener('brando:video-upload', this._onProviderUpload)
+      this._onProviderUpload = ({ detail }) => {
+        if (detail.ref !== this._providerRef) return
+        if (detail.status === 'uploading') this.showProgress({ status: 'uploading', progress: detail.progress })
+        else if (detail.status === 'error') this.showProgress({ status: 'error', error: detail.error })
+        else this.showProgress(null)
+      }
+      hook.addEventListener('brando:video-upload', this._onProviderUpload)
+      this._providerHook = hook
+    }
+
+    this.showProgress({ status: 'queued' })
+    hook.dispatchEvent(new CustomEvent('brando:enqueue-videos', { detail: { files, refs: [ref] } }))
   },
 
   enqueueTarget(files, extra = {}) {
