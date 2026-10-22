@@ -34,6 +34,13 @@ defmodule BrandoAdmin.Components.Form.Input.Video do
     {:ok, socket}
   end
 
+  # A video uploaded in the picker (to the server or straight to a provider)
+  # is handed over the same way, once it is stored.
+  def update(%{event: "select_video", id: video_id}, socket) do
+    {:noreply, socket} = select_video(socket, video_id)
+    {:ok, socket}
+  end
+
   # The provider reported on the video this field shows, to every editor with
   # the entry open (`ProcessingWatch`): it moved on from uploading, or is ready.
   # The form takes it into its changeset and entry, for the live preview.

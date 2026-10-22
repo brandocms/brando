@@ -81,6 +81,19 @@ defmodule Brando.Videos.HelpersTest do
       assert result == "https://image.mux.com/abc123/thumbnail.jpg"
     end
 
+    # The provider has no thumbnail yet: its URL would be a broken image
+    test "returns nil for a provider video that is not ready" do
+      for status <- [:uploading, :processing, :errored] do
+        mux = video(type: :mux, status: status, meta: %{"mux" => %{"playback_id" => "abc123"}})
+        assert Helpers.thumbnail_url(mux) == nil
+      end
+    end
+
+    test "returns a thumbnail image set on the video before it is ready" do
+      thumbnail = %Brando.Images.Image{path: "images/videos/thumbnails/thumb.jpg"}
+      assert Helpers.thumbnail_url(video(type: :bunny, status: :processing, thumbnail: thumbnail)) =~ "thumb.jpg"
+    end
+
     test "returns nil for Mux video without playback_id" do
       assert Helpers.thumbnail_url(video(type: :mux, meta: %{"mux" => %{}})) == nil
     end
