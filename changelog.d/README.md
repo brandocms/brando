@@ -21,8 +21,9 @@ a file, a blank line between them.
 | `dependencies` | `#### Dependencies` |
 | `security`     | `#### Security`     |
 
-The upgrade steps under `### Upgrading` are ordered prose that a change
-rewrites in place: edit those in `CHANGELOG.md` itself.
+The ordered upgrade steps live in the migration guide
+(`guides/migrating_from_053.md`), which `### Upgrading` links to: a change
+that adds a step edits the guide.
 
 ## Text
 

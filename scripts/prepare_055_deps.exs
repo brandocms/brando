@@ -6,7 +6,7 @@
 #         [--brando-path PATH | --brando-ref REF] [APP_DIR]
 #
 # It needs no resolved dependencies: it rewrites mix.exs as text and prints
-# each change. From "Dependencies and toolchain" in
+# each change. From "Dependencies by hand" in
 # guides/migrating_from_053.md: the constraints below for the packages the
 # application declares, floki without `only: :test`, timex removed once lib/
 # has no Timex. calls (listed otherwise), igniter for dev and test, the
