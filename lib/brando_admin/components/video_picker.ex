@@ -606,9 +606,10 @@ defmodule BrandoAdmin.Components.VideoPicker do
       {:ok, video} ->
         {:ok, _video} = Brando.Videos.Uploader.complete_client_upload(video)
 
+        # The stored id, not the browser's copy, which may arrive as a string
         send_update(socket.assigns.event_target, %{
           event: "select_video",
-          id: video_id
+          id: video.id
         })
 
         {:noreply,
