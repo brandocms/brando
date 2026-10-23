@@ -422,6 +422,50 @@ defmodule BrandoAdmin.EntrySavedElsewhereTest do
                Enum.sort([c.hero.id, c.text.id])
     end
 
+    # B reconnects (`recover_form`): its browser sends the form it had, with
+    # the fingerprint of the entry that form was built on. B is another tab
+    # of A's editor, which A's picks don't reach as they are made.
+    defp reconnect(c, html) do
+      recovered = html |> form_params("#module_set_form_form") |> Map.put("_target", ["image_editor_upload"])
+      {b, _} = live_form(c.a_conn, c.path, "module_set_form")
+      b |> form_of("module_set") |> render_hook("recover_form", recovered)
+      b
+    end
+
+    test "B's picks, recovered after A saved others while B was away, are B's to settle", c do
+      {b, _} = live_form(c.a_conn, c.path, "module_set_form")
+      pick(b, c.text)
+      html = render(b)
+      kill_live(b)
+
+      pick(c.a, c.hero)
+      save_and_stay(c.a, "module_set", false)
+      await(fn -> saved_modules(c.set) == [c.hero.id] end)
+
+      b = reconnect(c, html)
+      assert chosen(b) == [c.text.id]
+      assert conflict?(b, "module_set_modules")
+
+      settle_conflict(b, "module_set_modules", "Use the saved version")
+      assert chosen(b) == [c.hero.id]
+    end
+
+    test "B's picks, recovered when nobody saved meanwhile, are B's edit", c do
+      {b, _} = live_form(c.a_conn, c.path, "module_set_form")
+      pick(b, c.text)
+      html = render(b)
+      kill_live(b)
+
+      b = reconnect(c, html)
+      assert chosen(b) == [c.text.id]
+      refute conflict?(b, "module_set_modules")
+
+      type(c.a, "module_set", "title", "Set, typed by A")
+      save_and_stay(c.a, "module_set", false)
+      await(fn -> params(b, "module_set")["title"] == "Set, typed by A" end)
+      assert chosen(b) == [c.text.id]
+    end
+
     # The entry went (removed for good, or out of what B may read) between
     # the save and B reading it back.
     test "a save B can't read back leaves B's form as it is", c do

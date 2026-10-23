@@ -121,6 +121,7 @@ defmodule BrandoAdmin.Components.Form do
      |> assign(:relation_conflicts, [])
      |> assign(:form_rev, 0)
      |> assign(:taken_relations, %{})
+     |> assign(:entry_fingerprint, nil)
      |> assign(:replaced_values, %{})
      |> assign(:held_remote, %{})
      |> assign(:field_clocks, %{})
@@ -1469,6 +1470,7 @@ defmodule BrandoAdmin.Components.Form do
     # The entry as it was read, before recovery or deliveries change it: the
     # recovery baseline (`Drafts.init/1`)
     |> assign_new(:opened_entry, fn -> socket.assigns.entry end)
+    |> assign_entry_fingerprint()
     |> assign_addon_statuses()
     |> assign_default_params()
     |> extract_tab_names()
@@ -2250,6 +2252,7 @@ defmodule BrandoAdmin.Components.Form do
 
     socket
     |> assign(:entry, entry)
+    |> assign(:entry_fingerprint, entry_fingerprint(entry))
     |> Drafts.keep_baseline(entry)
   end
 
@@ -2972,17 +2975,28 @@ defmodule BrandoAdmin.Components.Form do
   end
 
   # A relation the recovered form holds otherwise than the entry is the
-  # tab's own, as it was before the reconnect: relations don't ship.
+  # tab's own, as it was before the reconnect: relations don't ship. If the
+  # entry was saved elsewhere since the form was built (its fingerprint,
+  # `_entry_fingerprint`, is another), the save may have changed those rows
+  # too: the form keeps the recovered ones and asks which to keep
+  # (`relation_conflicts`).
   defp settle_edit(true = _recovery?, socket, changeset, %{previous: previous, params: params}) do
     offline = offline_fields(socket, params)
     relations = relation_fields(socket)
+    differs? = &(RelationRows.rows(previous, &1) != RelationRows.rows(changeset, &1))
+    recovered = for field <- relations, field in offline or differs?.(field), do: field
 
-    recovered =
-      for field <- relations,
-          field in offline or RelationRows.rows(previous, field) != RelationRows.rows(changeset, field),
-          do: field
+    conflicts =
+      if params["_entry_fingerprint"] in [nil, "", socket.assigns[:entry_fingerprint]],
+        do: [],
+        else: Enum.filter(recovered, &(differs?.(&1) and &1 not in relation_conflicts(socket)))
 
-    {keep_received(socket, previous, changeset, offline), mark_relations(socket, recovered), offline -- relations}
+    socket =
+      socket
+      |> mark_relations(recovered)
+      |> assign(:relation_conflicts, relation_conflicts(socket) ++ conflicts)
+
+    {keep_received(socket, previous, changeset, offline), socket, offline -- relations}
   end
 
   # A recovered form keeps what the other editors sent this tab since it
@@ -3558,6 +3572,7 @@ defmodule BrandoAdmin.Components.Form do
 
     socket
     |> assign(:entry, entry)
+    |> assign(:entry_fingerprint, entry_fingerprint(entry))
     |> put_form(to_form(changeset, []))
     |> redraw_relations(previous, changeset, relations)
     |> assign(:relation_conflicts, Enum.filter(relation_conflicts(socket), &(&1 in kept)) ++ conflicts)
@@ -3588,6 +3603,17 @@ defmodule BrandoAdmin.Components.Form do
        do: Drafts.rebase(socket, entry)
 
   defp rebase_on_blocks(socket), do: socket
+
+  # The entry the form is built on, as recovery tells it from the entry a
+  # reconnect reads (`settle_edit/4`). Without its blocks: a heavy entry
+  # reads them later, and they sync on their own.
+  defp entry_fingerprint(nil), do: nil
+  defp entry_fingerprint(entry), do: entry |> with_form_blocks(%{}) |> Brando.Drafts.fingerprint()
+
+  defp assign_entry_fingerprint(%{assigns: %{entry_fingerprint: nil, entry: entry}} = socket),
+    do: assign(socket, :entry_fingerprint, entry_fingerprint(entry))
+
+  defp assign_entry_fingerprint(socket), do: socket
 
   # The block associations the form holds, as `put_loaded_blocks/2` puts
   # them: not loaded yet while a heavy entry's blocks load.
@@ -4549,6 +4575,7 @@ defmodule BrandoAdmin.Components.Form do
           >
             <input type="hidden" name={"#{@form.name}[#{:__force_change}]"} phx-debounce="0" />
             <input type="hidden" name="_form_rev" value={@form_rev} />
+            <input type="hidden" name="_entry_fingerprint" value={@entry_fingerprint} />
             <Translation.panel :if={@translation} state={@translation} form_name={@form.name} target={@myself} />
             <div style="display:none">
               <.live_file_input upload={@uploads[:image_editor_upload]} />
