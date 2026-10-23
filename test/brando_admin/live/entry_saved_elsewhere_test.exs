@@ -161,6 +161,48 @@ defmodule BrandoAdmin.EntrySavedElsewhereTest do
       end
     end
 
+    # B cleared the title and left it, then went back in without typing
+    # while A changed it: A's value holds, and B sends nothing back.
+    test "a title B cleared takes A's value when B goes back in without typing", c do
+      focus(c.b, "module_set", "title")
+      type(c.b, "module_set", "title", "")
+      blur(c.b, "module_set", "title")
+      focus(c.b, "module_set", "title")
+
+      type(c.a, "module_set", "title", "Set by A")
+      blur(c.a, "module_set", "title")
+      blur(c.b, "module_set", "title")
+
+      await(fn -> params(c.b, "module_set")["title"] == "Set by A" end)
+      settle(c.a)
+      assert params(c.a, "module_set")["title"] == "Set by A"
+
+      # A's value is no longer an error in B, and A's save is B's too
+      pick(c.a, c.hero)
+      save_and_stay(c.a, "module_set", false)
+      await(fn -> chosen(c.b) == [c.hero.id] end)
+      assert params(c.b, "module_set")["title"] == "Set by A"
+      refute has_element?(c.b, "#module_set_form_form .field-error")
+    end
+
+    # A's save changes the title B is clearing: B's blank and its error stay,
+    # and B leaving the field sends nothing back.
+    test "a title B cleared stays cleared over A's save of another title", c do
+      focus(c.b, "module_set", "title")
+      type(c.b, "module_set", "title", "")
+
+      type(c.a, "module_set", "title", "Set by A")
+      save_and_stay(c.a, "module_set", false)
+      await(fn -> Repo.get!(ModuleSet, c.set.id).title == "Set by A" end)
+      settle(c.b)
+
+      assert params(c.b, "module_set")["title"] == ""
+      blur(c.b, "module_set", "title")
+      settle(c.a)
+      assert params(c.a, "module_set")["title"] == "Set by A"
+      assert params(c.b, "module_set")["title"] == ""
+    end
+
     test "B's form takes the rows A saved, and B's next save keeps them", c do
       # B is typing in the title when A saves: an edit A doesn't have.
       focus(c.b, "module_set", "title")

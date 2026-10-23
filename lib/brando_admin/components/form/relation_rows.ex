@@ -282,16 +282,24 @@ defmodule BrandoAdmin.Components.Form.RelationRows do
       assoc = row_schema.__schema__(:association, name)
       current = Map.get(saved, name)
 
-      value =
-        cond do
-          not Ecto.assoc_loaded?(current) -> :keep
-          assoc.cardinality == :one -> keep_one(assoc, current, held)
-          true -> keep_many(assoc, current, List.wrap(held))
-        end
+      cond do
+        # The saved row didn't load them: the editor's rows go as they are
+        not Ecto.assoc_loaded?(current) ->
+          %{changeset | changes: Map.put(changeset.changes, name, as_changes(held))}
 
-      if value == :keep, do: changeset, else: Changeset.put_assoc(changeset, name, value)
+        assoc.cardinality == :one ->
+          put_kept(changeset, name, keep_one(assoc, current, held))
+
+        true ->
+          put_kept(changeset, name, keep_many(assoc, current, List.wrap(held)))
+      end
     end)
   end
+
+  defp as_changes(rows) when is_list(rows), do: Enum.map(rows, &as_changes/1)
+  defp as_changes(%Changeset{} = row), do: row
+  defp as_changes(nil), do: nil
+  defp as_changes(row), do: row |> Changeset.change() |> Map.put(:action, :insert)
 
   defp changed?(%Changeset{changes: changes, errors: errors}), do: changes != %{} or errors != []
   defp changed?(_row), do: false
@@ -318,7 +326,8 @@ defmodule BrandoAdmin.Components.Form.RelationRows do
   defp typed(%Changeset{} = changeset, %Changeset{params: params, changes: changes, errors: errors}) do
     names = Enum.map(Map.keys(changes) ++ Keyword.keys(errors), &Atom.to_string/1)
     params = Map.merge(changeset.params || %{}, Map.take(params || %{}, ["_key" | names]))
-    %{changeset | params: params}
+    errors = changeset.errors ++ Enum.reject(errors, fn {field, _} -> Keyword.has_key?(changeset.errors, field) end)
+    %{changeset | params: params, errors: errors, valid?: changeset.valid? and errors == []}
   end
 
   defp typed(changeset, _row), do: changeset

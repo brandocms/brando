@@ -118,6 +118,7 @@ defmodule BrandoAdmin.Components.Form do
      |> assign(:synced_values, %{})
      |> assign(:unshipped_fields, MapSet.new())
      |> assign(:edited_relations, MapSet.new())
+     |> assign(:uncast_fields, MapSet.new())
      |> assign(:relation_conflicts, [])
      |> assign(:form_rev, 0)
      |> assign(:taken_relations, %{})
@@ -2716,14 +2717,9 @@ defmodule BrandoAdmin.Components.Form do
 
       if changes != [], do: broadcast_field_changes(socket, entry.id, changes, nil)
 
-      # A value that didn't cast (a required field cleared) has nothing to
-      # ship and stays this editor's edit.
-      errors = socket.assigns.form.source.errors
-      unshippable = MapSet.filter(unshipped_fields(socket), &Keyword.has_key?(errors, &1))
-
       socket
       |> mark_synced(changes)
-      |> assign(:unshipped_fields, unshippable)
+      |> assign(:unshipped_fields, MapSet.new())
       |> broadcast_dirty_fields()
     else
       socket
@@ -2965,8 +2961,20 @@ defmodule BrandoAdmin.Components.Form do
 
     replaced = Map.filter(replaced_values(socket), fn {field, _} -> field in echoed or not sent?.(field) end)
 
+    # A value typed that didn't cast (a required field cleared) is no change,
+    # only an error: it is this editor's until the field casts again or takes
+    # another editor's value. Nothing ships for it.
+    uncast =
+      for field <- fields,
+          field == target or MapSet.member?(uncast_fields(socket), field),
+          Keyword.has_key?(changeset.errors, field),
+          not Map.has_key?(changeset.changes, field),
+          into: MapSet.new(),
+          do: field
+
     socket
     |> assign(:replaced_values, replaced)
+    |> assign(:uncast_fields, uncast)
     |> mark_local(edited)
     |> mark_relations(relations)
   end
@@ -3176,6 +3184,7 @@ defmodule BrandoAdmin.Components.Form do
     |> put_form(to_form(changeset, []))
     |> assign(:replaced_values, replaced)
     |> assign(:unshipped_fields, MapSet.difference(unshipped_fields(socket), MapSet.new(fields)))
+    |> assign(:uncast_fields, MapSet.difference(uncast_fields(socket), MapSet.new(fields)))
     |> assign(:held_remote, Map.drop(held_remote(socket), fields))
     |> mark_synced(changes)
     |> own_changed_assets(fields)
@@ -3404,6 +3413,7 @@ defmodule BrandoAdmin.Components.Form do
 
   defp synced_values(socket), do: socket.assigns[:synced_values] || %{}
   defp unshipped_fields(socket), do: socket.assigns[:unshipped_fields] || MapSet.new()
+  defp uncast_fields(socket), do: socket.assigns[:uncast_fields] || MapSet.new()
   defp edited_relations(socket), do: socket.assigns[:edited_relations] || MapSet.new()
   defp relation_conflicts(socket), do: socket.assigns[:relation_conflicts] || []
   defp conflict_bases(socket), do: socket.assigns[:conflict_bases] || %{}
@@ -3506,6 +3516,7 @@ defmodule BrandoAdmin.Components.Form do
       socket
       |> assign(:synced_values, %{})
       |> assign(:edited_relations, MapSet.new())
+      |> assign(:uncast_fields, MapSet.new())
       |> assign(:relation_conflicts, [])
       |> assign(:conflict_bases, %{})
 
@@ -3603,6 +3614,7 @@ defmodule BrandoAdmin.Components.Form do
     |> assign(:unshipped_fields, MapSet.intersection(unshipped_fields(socket), MapSet.new(kept)))
     |> assign(:synced_values, Map.take(synced_values(socket), kept))
     |> assign(:edited_relations, MapSet.intersection(edited_relations(socket), MapSet.new(kept)))
+    |> assign(:uncast_fields, MapSet.intersection(uncast_fields(socket), MapSet.new(kept)))
     |> own_changed_assets(changed)
     |> rebuild_preview_relations()
     |> update(:updated_entry_assocs, &Map.merge(&1, kept_relations))
@@ -3689,12 +3701,12 @@ defmodule BrandoAdmin.Components.Form do
     own = MapSet.union(unshipped_fields(socket), socket |> synced_values() |> Map.keys() |> MapSet.new())
     edited_relations = edited_relations(socket)
 
-    # A value that didn't cast (a required field cleared) is no change: it
-    # is in the params, with its error.
+    uncast = uncast_fields(socket)
+
     values =
       for field <- fields -- belongs_to,
-          MapSet.member?(own, field),
-          Keyword.has_key?(previous.errors, field) or field_value(previous, field) != field_value(saved, field),
+          MapSet.member?(uncast, field) or
+            (MapSet.member?(own, field) and field_value(previous, field) != field_value(saved, field)),
           do: field
 
     belongs_to =
@@ -3728,6 +3740,10 @@ defmodule BrandoAdmin.Components.Form do
 
       Map.has_key?(previous.changes, field) ->
         %{changeset | changes: Map.put(changeset.changes, field, previous.changes[field])}
+
+      # A value that didn't cast is its param and error (`carry_form_state/4`)
+      Keyword.has_key?(previous.errors, field) ->
+        changeset
 
       true ->
         Changeset.put_change(changeset, field, Map.get(previous.data, field))

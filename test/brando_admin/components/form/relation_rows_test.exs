@@ -279,6 +279,33 @@ defmodule BrandoAdmin.Components.Form.RelationRowsTest do
       end
     end
 
+    # The saved author is read without its links: B's go as they are.
+    test "a new has_one onto a saved one read without its rows keeps the form's rows", c do
+      base = FixedArticle |> Repo.get!(c.article.id) |> Repo.preload(author: :links)
+      held = %FixedAuthor{name: "Name by B", links: [%Link{label: "Link by B"}]}
+      previous = base |> Map.put(:author, held) |> Changeset.change()
+      Repo.insert!(%Author{article_id: c.article.id, name: "Name by A"})
+      saved = FixedArticle |> Repo.get!(c.article.id) |> Repo.preload(:author) |> Changeset.change()
+
+      carried = RelationRows.keep(saved, previous, base, :author)
+
+      assert [%{name: "Name by B", links: [%{label: "Link by B"}]}] = RelationRows.rows(carried, :author)
+    end
+
+    # B's author has a value it typed that didn't cast: its error stays.
+    test "a new has_one onto the saved one keeps the error of a value that didn't cast", c do
+      base = reload(c.article, [:items, author: :links])
+      previous = Article.changeset(base, %{"author" => %{"name" => "Name by B"}})
+      previous = update_in(previous.changes.author, &Changeset.add_error(&1, :name, "is wrong"))
+      Repo.insert!(%Author{article_id: c.article.id, name: "Name by A"})
+      saved = base |> reload([:items, author: :links]) |> Changeset.change()
+
+      carried = RelationRows.keep(saved, previous, base, :author)
+
+      assert Keyword.has_key?(carried.changes.author.errors, :name)
+      refute carried.valid?
+    end
+
     # A relation's base (`base/2`) is its rows' content: a read that returns
     # them in another order has the same base, and a reorder another.
     test "a relation's base doesn't depend on the order the rows were read in", c do
