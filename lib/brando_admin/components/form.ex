@@ -1011,6 +1011,7 @@ defmodule BrandoAdmin.Components.Form do
     |> assign(:blocks_detached?, false)
     |> assign(:working_copy, nil)
     |> assign(:entry, updated_entry)
+    |> assign(:entry_fingerprint, entry_fingerprint(updated_entry))
     |> assign_refreshed_form()
     |> remount_block_fields()
     |> assign_entry_for_blocks()
@@ -1322,6 +1323,7 @@ defmodule BrandoAdmin.Components.Form do
     {:ok,
      socket
      |> assign(:entry, updated_entry)
+     |> assign(:entry_fingerprint, entry_fingerprint(updated_entry))
      |> put_form(to_form(updated_changeset))
      |> rebuild_preview_relations()
      |> clear_owned_assets()
@@ -3724,8 +3726,8 @@ defmodule BrandoAdmin.Components.Form do
   end
 
   # The relations whose rows the browser shows otherwise from now on: the
-  # rows it sends until it has drawn them are the old ones.
-  # A relation the entry leaves unloaded is not in the form.
+  # rows it sends until it has drawn them are the old ones. A relation the
+  # entry leaves unloaded is not in the form.
   defp redraw_relations(socket, previous, changeset, relations) do
     redrawn =
       for field <- relations,
