@@ -12,6 +12,8 @@ defmodule Brando.SavedElsewhereTest.Shelf do
     gettext_module: Brando.Gettext
 
   table "synctest_articles"
+  # The articles' table, not their permissions
+  authorization(key: "brando.saved_elsewhere_test.shelf")
 
   trait :timestamped
 
