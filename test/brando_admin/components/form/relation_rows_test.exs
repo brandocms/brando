@@ -1,6 +1,7 @@
 defmodule BrandoAdmin.Components.Form.RelationRowsTest do
-  # A form keeping the rows its editor changed over another editor's save
-  # (`Form.take_saved_entry/1`).
+  # A form keeping its editor's rows over another editor's save
+  # (`Form.take_saved_entry/1`). Rows are not merged: the form keeps its own,
+  # with the saved values in the rows it didn't change.
   use ExUnit.Case, async: true
 
   alias Brando.Repo
@@ -105,16 +106,15 @@ defmodule BrandoAdmin.Components.Form.RelationRowsTest do
   defp reload(%schema{id: id}, preloads), do: schema |> Repo.get!(id) |> Repo.preload(preloads, force: true)
 
   # B added a tag the entry didn't have (cast as an `:update` of the loaded
-  # tag); A's save added another. Each stays.
-  test "a many_to_many keeps the entries this form added, and those the save added", c do
+  # tag); A's save added another, which B's form doesn't take.
+  test "a many_to_many keeps the entries this form links, not those the save added", c do
     previous = Photo.changeset(c.photo, %{"tags" => [c.kept.id, c.added.id]})
     saved = c.photo |> Ecto.Changeset.change() |> Ecto.Changeset.put_assoc(:tags, [c.kept, c.saved]) |> Repo.update!()
     saved = Ecto.Changeset.change(Repo.preload(saved, :tags, force: true))
 
-    carried = RelationRows.carry(saved, previous, c.photo, :tags)
+    carried = RelationRows.keep(saved, previous, c.photo, :tags)
 
-    assert carried |> RelationRows.rows(:tags) |> Enum.sort() ==
-             Enum.sort([[id: c.kept.id], [id: c.added.id], [id: c.saved.id]])
+    assert carried |> RelationRows.rows(:tags) |> Enum.sort() == Enum.sort([[id: c.kept.id], [id: c.added.id]])
   end
 
   test "a many_to_many that can't replace a link keeps every saved one", c do
@@ -123,23 +123,23 @@ defmodule BrandoAdmin.Components.Form.RelationRowsTest do
     Repo.insert_all("photos_to_tags", [%{photo_id: c.photo.id, tag_id: c.saved.id}])
     saved = base |> reload(:tags) |> Changeset.change()
 
-    carried = RelationRows.carry(saved, previous, base, :tags)
+    carried = RelationRows.keep(saved, previous, base, :tags)
 
     assert carried |> RelationRows.rows(:tags) |> Enum.sort() ==
              Enum.sort([[id: c.kept.id], [id: c.added.id], [id: c.saved.id]])
   end
 
   # B took a tag out; A's save linked another.
-  test "a many_to_many keeps the entry this form unlinked out, and takes the one the save linked", c do
+  test "a many_to_many keeps the entry this form unlinked out, and leaves the one the save linked", c do
     previous = Photo.changeset(c.photo, %{"tags" => []})
     saved = c.photo |> Ecto.Changeset.change() |> Ecto.Changeset.put_assoc(:tags, [c.kept, c.saved]) |> Repo.update!()
     saved = Ecto.Changeset.change(Repo.preload(saved, :tags, force: true))
 
-    carried = RelationRows.carry(saved, previous, c.photo, :tags)
+    carried = RelationRows.keep(saved, previous, c.photo, :tags)
 
-    assert RelationRows.rows(carried, :tags) == [[id: c.saved.id]]
+    assert RelationRows.rows(carried, :tags) == []
     assert {:ok, written} = Repo.update(carried)
-    assert written |> reload(:tags) |> Map.fetch!(:tags) |> Enum.map(& &1.id) == [c.saved.id]
+    assert written |> reload(:tags) |> Map.fetch!(:tags) == []
   end
 
   describe "an article" do
@@ -155,7 +155,7 @@ defmodule BrandoAdmin.Components.Form.RelationRowsTest do
       Repo.insert!(%Author{article_id: c.article.id, name: "Name by A"})
       saved = base |> reload([:author, :items]) |> Changeset.change()
 
-      carried = RelationRows.carry(saved, previous, base, :author)
+      carried = RelationRows.keep(saved, previous, base, :author)
 
       assert [%{name: "Name by B"}] = RelationRows.rows(carried, :author)
       assert {:ok, written} = Repo.update(carried)
@@ -175,7 +175,7 @@ defmodule BrandoAdmin.Components.Form.RelationRowsTest do
       Repo.insert!(%Author{article_id: c.article.id, name: "Name by A"})
       saved = base |> reload([:items, author: :links]) |> Changeset.change()
 
-      carried = RelationRows.carry(saved, previous, base, :author)
+      carried = RelationRows.keep(saved, previous, base, :author)
 
       assert [%{name: "Name by B", links: [%{label: "Link by B"}]}] = RelationRows.rows(carried, :author)
       assert {:ok, written} = Repo.update(carried)
@@ -204,7 +204,7 @@ defmodule BrandoAdmin.Components.Form.RelationRowsTest do
       c.article |> Changeset.change(title: "Title by A") |> Repo.update!()
       saved = base |> reload([:author, :items]) |> Changeset.change()
 
-      carried = RelationRows.carry(saved, previous, base, :items)
+      carried = RelationRows.keep(saved, previous, base, :items)
 
       assert carried |> RelationRows.rows(:items) |> Enum.map(& &1.label) == ["First"]
       assert {:ok, written} = Repo.update(carried)
@@ -225,7 +225,7 @@ defmodule BrandoAdmin.Components.Form.RelationRowsTest do
       c.article |> Changeset.change(title: "Title by A") |> Repo.update!()
       saved = base |> reload([:author, :items]) |> Changeset.change()
 
-      carried = RelationRows.carry(saved, previous, base, :items)
+      carried = RelationRows.keep(saved, previous, base, :items)
 
       assert [row] = carried.changes.items
       assert Keyword.has_key?(row.errors, :sequence)
@@ -260,7 +260,7 @@ defmodule BrandoAdmin.Components.Form.RelationRowsTest do
       Repo.insert!(%Item{article_id: c.article.id, label: "Added by A", sequence: 2})
       saved = base |> reload([:author, :items]) |> Changeset.change()
 
-      carried = RelationRows.carry(saved, previous, base, :items)
+      carried = RelationRows.keep(saved, previous, base, :items)
 
       # The form shows them so: the rows it renders are the ones it saves.
       assert carried |> RelationRows.rows(:items) |> Enum.map(& &1.label) == ["Row 0 by B", "Row 1 by A", "Added by A"]
@@ -294,7 +294,7 @@ defmodule BrandoAdmin.Components.Form.RelationRowsTest do
       author |> Changeset.change(name: "Name by A") |> Repo.update!()
       saved = base |> reload([:items, author: :links]) |> Changeset.change()
 
-      carried = RelationRows.carry(saved, previous, base, :author)
+      carried = RelationRows.keep(saved, previous, base, :author)
 
       assert {:ok, written} = Repo.update(carried)
 

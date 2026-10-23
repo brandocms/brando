@@ -47,6 +47,12 @@ defmodule BrandoAdmin.EntrySavedElsewhereTest do
 
   defp params(view, singular), do: view |> render() |> form_params("##{singular}_form_form") |> Map.fetch!(singular)
 
+  # The notice for a relation both tabs changed (`Form.SavedElsewhere`).
+  defp conflict?(view, field), do: has_element?(view, ~s([data-testid="saved-elsewhere"][data-field="#{field}"]))
+
+  defp settle_conflict(view, field, button),
+    do: view |> element(~s([data-testid="saved-elsewhere"][data-field="#{field}"] button), button) |> render_click()
+
   # "Save and continue editing". A save of a form with block fields is two
   # submits: the first collects the blocks, the second writes.
   defp save_and_stay(view, singular, blocks?) do
@@ -202,9 +208,9 @@ defmodule BrandoAdmin.EntrySavedElsewhereTest do
     end
 
     # Picks reach another editor's open options as they are made
-    # (`multi_select_changed`), but not another tab of the same editor. A's
-    # saved pick is a row B never had, so B takes it too.
-    test "a pick of B's own stays over A's save", c do
+    # (`multi_select_changed`), but not another tab of the same editor. Both
+    # tabs changed the list: B keeps its own and is asked which to keep.
+    defp picked_in_two_tabs(c) do
       {b, _} = live_form(c.a_conn, c.path, "module_set_form")
 
       Phoenix.PubSub.subscribe(Brando.pubsub(), Brando.Tenant.Topic.entry("field_sync", ModuleSet, c.set.id))
@@ -215,11 +221,55 @@ defmodule BrandoAdmin.EntrySavedElsewhereTest do
       assert saved_modules(c.set) == [c.hero.id]
       # B's process has the message too: the renders queue behind it.
       settle(b)
+      b
+    end
 
-      assert chosen(b) == [c.text.id, c.hero.id]
+    test "a pick of B's own stays over A's save, and B keeps it", c do
+      b = picked_in_two_tabs(c)
+
+      assert chosen(b) == [c.text.id]
+      assert conflict?(b, "module_set_modules")
+
+      settle_conflict(b, "module_set_modules", "Keep my version")
+      refute conflict?(b, "module_set_modules")
+      assert chosen(b) == [c.text.id]
 
       save_and_stay(b, "module_set", false)
-      await(fn -> saved_modules(c.set) == Enum.sort([c.hero.id, c.text.id]) end)
+      await(fn -> saved_modules(c.set) == [c.text.id] end)
+    end
+
+    # B's recovery copy holds the pick the form still shows: it is not one
+    # to offer B after A's save.
+    test "B isn't offered its own recovery copy after A's save", c do
+      {b, _} = live_form(c.a_conn, c.path, "module_set_form")
+      pick(b, c.text)
+      capture(b)
+      own = form_assigns(b).draft.id
+      assert Enum.any?(Brando.Drafts.list(form_assigns(b).draft.identity), &(&1.id == own))
+
+      pick(c.a, c.hero)
+      save_and_stay(c.a, "module_set", false)
+      await(fn -> saved_modules(c.set) == [c.hero.id] end)
+      await(fn -> conflict?(b, "module_set_modules") end)
+
+      refute Enum.any?(form_assigns(b).draft.candidates, &(&1.id == own))
+      refute has_element?(b, ~s([data-testid="draft-notice"]))
+    end
+
+    test "B takes the rows A saved over its own pick", c do
+      b = picked_in_two_tabs(c)
+
+      settle_conflict(b, "module_set_modules", "Use the saved version")
+      refute conflict?(b, "module_set_modules")
+      assert chosen(b) == [c.hero.id]
+
+      # The browser sends the rows it showed before: they stay the saved ones.
+      type(b, "module_set", "title", "Set, typed by B")
+      assert chosen(b) == [c.hero.id]
+
+      save_and_stay(b, "module_set", false)
+      await(fn -> Repo.get!(ModuleSet, c.set.id).title == "Set, typed by B" end)
+      assert saved_modules(c.set) == [c.hero.id]
     end
 
     # The modules B's form holds, in the order it shows them.
@@ -293,6 +343,8 @@ defmodule BrandoAdmin.EntrySavedElsewhereTest do
       await(fn -> params(c.b, "module_set")["title"] == "Set, typed by A" end)
 
       assert chosen_in_order(c.b) == [c.text.id, c.hero.id]
+      # A didn't change the list: nothing to ask
+      refute conflict?(c.b, "module_set_modules")
 
       save_and_stay(c.b, "module_set", false)
 
@@ -663,7 +715,8 @@ defmodule BrandoAdmin.EntrySavedElsewhereTest do
 
     defp saved_labels(article), do: Enum.map(saved_article(article).items, & &1.label)
 
-    # Each tab edits a row of its own: B's save writes B's row and keeps A's.
+    # Each tab edits a row of its own: B keeps its row, and the row it didn't
+    # change is A's. Both changed the list, so B is asked.
     @tag items: ["Old", "Second"]
     test "B's edit in one row and A's saved edit in another both stay", c do
       type(c.b, "article", ["items", "0", "label"], "Row 0 by B")
@@ -674,10 +727,15 @@ defmodule BrandoAdmin.EntrySavedElsewhereTest do
       await(fn -> saved_labels(c.article) == ["Old", "Row 1 by A"] end)
 
       await(fn -> row_labels(c.b) == ["Row 0 by B", "Row 1 by A"] end)
+      assert conflict?(c.b, "items")
 
-      # B types on in its row, in the form its browser showed before the save
-      # reached it: row 1 is still the old one there.
+      # A keystroke from the form B's browser showed before the save reached
+      # it, where row 1 is still the old one, leaves the rows as they are.
       type_in(c.b, "article", before, ["items", "0", "label"], "Row 0 by B, again")
+      assert row_labels(c.b) == ["Row 0 by B", "Row 1 by A"]
+
+      # The browser has drawn the save by its next keystroke.
+      type(c.b, "article", ["items", "0", "label"], "Row 0 by B, again")
       assert row_labels(c.b) == ["Row 0 by B, again", "Row 1 by A"]
 
       save_and_stay(c.b, "article", true)
@@ -696,14 +754,16 @@ defmodule BrandoAdmin.EntrySavedElsewhereTest do
       announce_save(Article, c.article.id)
 
       await(fn -> row_labels(c.b) == ["Old", "Third by B"] end)
+      assert conflict?(c.b, "items")
 
       save_and_stay(c.b, "article", true)
       await(fn -> saved_labels(c.article) == ["Old", "Third by B"] end)
     end
 
     # B's browser sends a keystroke in a row from the form it showed before
-    # A's save reached it: the other rows it sends are the ones A's save
-    # replaced, and only the row B typed in is B's edit.
+    # A's save reached it: the rows it sends are the ones A's save replaced,
+    # so the form keeps A's. The input B types in keeps its text while it has
+    # focus, and the next keystroke sends it again.
     @tag items: ["Old", "Second", "Third"]
     test "B's keystroke in a row, sent from the form before A's save, keeps A's rows", c do
       before = render(c.b)
@@ -715,7 +775,8 @@ defmodule BrandoAdmin.EntrySavedElsewhereTest do
       await(fn -> row_labels(c.b) == ["Old", "Second by A"] end)
 
       type_in(c.b, "article", before, ["items", "0", "label"], "Row 0 by B")
-      assert row_labels(c.b) == ["Row 0 by B", "Second by A"]
+      assert row_labels(c.b) == ["Old", "Second by A"]
+      refute conflict?(c.b, "items")
 
       # The browser has drawn the save by its next keystroke.
       type(c.b, "article", ["items", "0", "label"], "Row 0 by B, again")
@@ -727,7 +788,7 @@ defmodule BrandoAdmin.EntrySavedElsewhereTest do
 
     # B edited a row A removed: B's form holds it as a new row. B's browser
     # then sends a keystroke in it from the form it showed before, which
-    # names the row by its old id.
+    # names the row by its old id: the form keeps the row as it is.
     @tag items: ["Old", "Second", "Third"]
     test "a row B edited that A removed takes B's late keystroke in place", c do
       type(c.b, "article", ["items", "2", "label"], "Third by B")
@@ -740,7 +801,7 @@ defmodule BrandoAdmin.EntrySavedElsewhereTest do
       await(fn -> row_labels(c.b) == ["Old", "Third by B"] end)
 
       type_in(c.b, "article", before, ["items", "2", "label"], "Third by B!")
-      assert row_labels(c.b) == ["Old", "Third by B!"]
+      assert row_labels(c.b) == ["Old", "Third by B"]
 
       # The browser has drawn the save by its next keystroke.
       type(c.b, "article", ["items", "1", "label"], "Third by B!!")
@@ -763,6 +824,11 @@ defmodule BrandoAdmin.EntrySavedElsewhereTest do
       await(fn -> row_link(c.b) == "Link by A" end)
 
       type_in(c.b, "article", before, ["items", "0", "label"], "Label by B")
+      assert row_label(c.b) == "Old"
+      assert row_link(c.b) == "Link by A"
+
+      # The browser has drawn the save by its next keystroke.
+      type(c.b, "article", ["items", "0", "label"], "Label by B")
       assert row_label(c.b) == "Label by B"
       assert row_link(c.b) == "Link by A"
 
@@ -819,6 +885,11 @@ defmodule BrandoAdmin.EntrySavedElsewhereTest do
       await(fn -> row_modules(c.b) == [hero.id] end)
 
       type_in(c.b, "article", before, ["items", "0", "label"], "Label by B")
+      assert row_label(c.b) == "Old"
+      assert row_modules(c.b) == [hero.id]
+
+      # The browser has drawn the save by its next keystroke.
+      type(c.b, "article", ["items", "0", "label"], "Label by B")
       assert row_label(c.b) == "Label by B"
       assert row_modules(c.b) == [hero.id]
 

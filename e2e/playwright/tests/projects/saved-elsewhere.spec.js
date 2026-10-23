@@ -97,3 +97,71 @@ test('a tab takes the categories and publishing date another tab saved, and its 
 
   await tab2.close()
 })
+
+// Both tabs change the categories; tab 1 saves. Tab 2 keeps its own pick
+// and asks which to keep; it takes the saved one.
+test('a tab that changed the categories too asks which to keep', async ({ page }) => {
+  const client = await factory(page, 'E2eProject.Projects.Client', {
+    name: 'Conflict client',
+    slug: 'conflict-client',
+    status: 'published',
+    language: 'en',
+  })
+
+  for (const title of ['Category East', 'Category West']) {
+    await factory(page, 'E2eProject.Projects.Category', {
+      title,
+      slug: title.toLowerCase().replace(' ', '-'),
+      status: 'published',
+      language: 'en',
+    })
+  }
+
+  const project = await factory(page, 'E2eProject.Projects.Project', {
+    title: 'Changed in two tabs',
+    slug: 'changed-in-two-tabs',
+    client_id: client.id,
+    introduction: '<p>Opened in two tabs.</p>',
+    status: 'draft',
+    language: 'en',
+  })
+
+  const url = `/admin/projects/projects/update/${project.id}`
+  const tab2 = await page.context().newPage()
+  await tab2.goto(url)
+  await syncLV(tab2)
+  await page.goto(url)
+  await syncLV(page)
+
+  for (const [tab, title] of [
+    [tab2, 'Category West'],
+    [page, 'Category East'],
+  ]) {
+    await tab.locator('#project_project_categories-field-base').getByRole('button', { name: 'Select' }).click()
+    await tab.getByRole('checkbox', { name: title }).click()
+    await syncLV(tab)
+    await tab.getByRole('button', { name: 'OK' }).click()
+    await syncLV(tab)
+  }
+
+  await saveAndContinue(page)
+
+  const notice = tab2.getByTestId('saved-elsewhere')
+  await expect(notice).toBeVisible()
+  await expect(notice).toContainText('Another tab or editor saved')
+  await expect(categories(tab2)).toHaveText(['Category West'])
+  // Its own recovery copy is the form it shows, not one to offer it
+  await expect(tab2.getByTestId('draft-notice')).toHaveCount(0)
+
+  await notice.getByRole('button', { name: 'Use the saved version' }).click()
+  await syncLV(tab2)
+  await expect(notice).toHaveCount(0)
+  await expect(categories(tab2)).toHaveText(['Category East'])
+
+  await saveAndContinue(tab2)
+  await tab2.reload()
+  await syncLV(tab2)
+  await expect(categories(tab2)).toHaveText(['Category East'])
+
+  await tab2.close()
+})

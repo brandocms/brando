@@ -442,7 +442,8 @@ defmodule BrandoAdmin.Components.Form.Drafts do
       | baseline: baseline,
         base_fingerprint: Drafts.fingerprint(entry),
         modules: Map.merge(modules, draft.modules),
-        candidates: candidates(socket, draft.identity, baseline)
+        # This tab's own copy holds the edits the form still shows
+        candidates: Enum.reject(candidates(socket, draft.identity, baseline), &(&1.id == draft.id))
     })
     |> dirty()
   rescue

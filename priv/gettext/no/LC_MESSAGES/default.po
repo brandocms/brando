@@ -2222,6 +2222,11 @@ msgstr "En annen redaktør beholdt sin versjon av en ny blokk du også hadde end
 msgid "Another editor removed the block you were changing."
 msgstr "En annen redaktør fjernet blokken du endret."
 
+#: lib/brando_admin/components/form/saved_elsewhere.ex
+#, elixir-autogen, elixir-format
+msgid "Another tab or editor saved %{field}"
+msgstr "En annen fane eller redaktør lagret %{field}"
+
 #: lib/brando_admin/components/form/input/form_fields.ex
 #, elixir-autogen, elixir-format
 msgid "Any number of options"
@@ -8698,6 +8703,11 @@ msgstr "Hold den under 70 tegn, med ordene folk søker etter."
 msgid "Keep me logged in for 60 days"
 msgstr "Forbli innlogget i 60 dager"
 
+#: lib/brando_admin/components/form/saved_elsewhere.ex
+#, elixir-autogen, elixir-format
+msgid "Keep my version"
+msgstr "Behold min versjon"
+
 #: lib/brando_admin/live/sites/activity_live.ex
 #, elixir-autogen, elixir-format
 msgid "Kept for %{count} day"
@@ -14454,6 +14464,11 @@ msgstr "Lagret %{time} av %{author}"
 msgid "Saved as %{status}"
 msgstr "Lagret som %{status}"
 
+#: lib/brando_admin/components/form/saved_elsewhere.ex
+#, elixir-autogen, elixir-format
+msgid "Saved elsewhere"
+msgstr "Lagret et annet sted"
+
 #: lib/brando_admin/components/form/draft_recovery.ex
 #, elixir-autogen, elixir-format
 msgid "Saved entry"
@@ -18767,6 +18782,11 @@ msgstr "Bruk URL-en til en arbeidsflyt i Teams, på logic.azure.com eller api.po
 msgid "Use the frontend assets included in the current release?"
 msgstr "Bruk frontend-filene som følger med gjeldende release?"
 
+#: lib/brando_admin/components/form/saved_elsewhere.ex
+#, elixir-autogen, elixir-format
+msgid "Use the saved version"
+msgstr "Bruk den lagrede versjonen"
+
 #: lib/brando_admin/components/form/input/blocks/video_block.ex
 #, elixir-autogen, elixir-format
 msgid "Use the video’s defaults or customize playback for this reference."
@@ -19610,6 +19630,11 @@ msgstr "Du kan ikke gjøre denne endringen. Tillatelsene dine kan ha blitt endre
 #, elixir-autogen, elixir-format
 msgid "You can’t edit this"
 msgstr "Du kan ikke redigere dette"
+
+#: lib/brando_admin/components/form/saved_elsewhere.ex
+#, elixir-autogen, elixir-format
+msgid "You changed it too. The form shows your version, and saving replaces the saved one with it."
+msgstr "Du endret det også. Skjemaet viser din versjon, og når du lagrer, erstatter den den lagrede."
 
 #: lib/brando_admin/components/module_files.ex
 #: lib/brando_admin/live/users/user_list_live.ex

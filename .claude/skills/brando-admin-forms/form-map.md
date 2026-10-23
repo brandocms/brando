@@ -47,8 +47,10 @@ Receiving: `event: "apply_remote_field_changes"`, `receive_field_changes`,
 Another tab's save: `announce_save`, `event: "take_saved_entry"`,
 `take_saved_entry`, `unsaved_edits`, `carry_edit`, `echo_value`,
 `rebase_on_blocks`; relation edits: `edited_relations`, `mark_relations`,
-`put_received_form`, `target_row`, and `Form.RelationRows` (`rows`,
-`carry`, `take_row`).
+`put_received_form`, `Form.RelationRows` (`rows`, `keep`); conflicts:
+`relation_conflicts`, `"keep_own_relation"`, `"take_saved_relation"`,
+`Form.SavedElsewhere`; the browser's old rows: `form_rev`,
+`redraw_relations`, `stale_relations`.
 
 ## Messages from children (`update/2` clauses)
 
