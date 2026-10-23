@@ -44,6 +44,16 @@ Receiving: `event: "apply_remote_field_changes"`, `receive_field_changes`,
 `share_recovered`, `restore_saved`. Dirty markers: `broadcast_dirty_fields`,
 `clear_dirty_fields`. Focus locks: `handle_event("focus"`, `"blur"`,
 `event: "reship_active_field"`.
+Another tab's save: `announce_save`, `event: "take_saved_entry"`,
+`take_saved_entry`, `unsaved_edits`, `carry_edit`, `echo_value`,
+`rebase_on_blocks`; relation edits: `edited_relations`, `mark_relations`,
+`put_received_form`, `Form.RelationRows` (`rows`, `keep`); conflicts:
+`relation_conflicts`, `"keep_own_relation"`, `"take_saved_relation"`,
+`Form.SavedElsewhere`; the browser's old rows: `form_rev`,
+`redraw_relations`, `stale_relations` (`RelationRows.stale`,
+`PendingRows.drop`); a save during this form's save: `take_after_save`;
+reconnect after a save elsewhere: `relation_bases` (`_relation_bases`,
+`RelationRows.base`), `conflict_bases`, `drop_conflicts`, `settle_edit`.
 
 ## Messages from children (`update/2` clauses)
 

@@ -107,9 +107,11 @@ test('the keyboard moves between days, and Move to… moves an item without drag
   await page.keyboard.press('ArrowRight')
   await expect(dayCell(page, addDays(day, 1))).toBeFocused()
   await page.keyboard.press('ArrowLeft')
-  await page.keyboard.press('ArrowDown')
-  await expect(dayCell(page, addDays(day, 7))).toBeFocused()
-  await page.keyboard.press('ArrowUp')
+  // A week on, or back near the month's end: the month shows only its own days
+  const week = addDays(day, 7).slice(0, 7) === day.slice(0, 7) ? 7 : -7
+  await page.keyboard.press(week > 0 ? 'ArrowDown' : 'ArrowUp')
+  await expect(dayCell(page, addDays(day, week))).toBeFocused()
+  await page.keyboard.press(week > 0 ? 'ArrowUp' : 'ArrowDown')
   await expect(cell).toBeFocused()
 
   // Enter goes into the day's first item; Escape back to the day

@@ -2220,6 +2220,11 @@ msgstr ""
 msgid "Another editor removed the block you were changing."
 msgstr ""
 
+#: lib/brando_admin/components/form/saved_elsewhere.ex
+#, elixir-autogen, elixir-format
+msgid "Another tab or editor saved %{field}"
+msgstr ""
+
 #: lib/brando_admin/components/form/input/form_fields.ex
 #, elixir-autogen, elixir-format
 msgid "Any number of options"
@@ -8696,6 +8701,11 @@ msgstr ""
 msgid "Keep me logged in for 60 days"
 msgstr ""
 
+#: lib/brando_admin/components/form/saved_elsewhere.ex
+#, elixir-autogen, elixir-format
+msgid "Keep my version"
+msgstr ""
+
 #: lib/brando_admin/live/sites/activity_live.ex
 #, elixir-autogen, elixir-format
 msgid "Kept for %{count} day"
@@ -14457,6 +14467,11 @@ msgstr ""
 msgid "Saved as %{status}"
 msgstr ""
 
+#: lib/brando_admin/components/form/saved_elsewhere.ex
+#, elixir-autogen, elixir-format
+msgid "Saved elsewhere"
+msgstr ""
+
 #: lib/brando_admin/components/form/draft_recovery.ex
 #, elixir-autogen, elixir-format
 msgid "Saved entry"
@@ -18768,6 +18783,11 @@ msgstr ""
 msgid "Use the frontend assets included in the current release?"
 msgstr ""
 
+#: lib/brando_admin/components/form/saved_elsewhere.ex
+#, elixir-autogen, elixir-format
+msgid "Use the saved version"
+msgstr ""
+
 #: lib/brando_admin/components/form/input/blocks/video_block.ex
 #, elixir-autogen, elixir-format
 msgid "Use the video’s defaults or customize playback for this reference."
@@ -19610,6 +19630,11 @@ msgstr ""
 #: lib/brando/frontend_edit/text.ex
 #, elixir-autogen, elixir-format
 msgid "You can’t edit this"
+msgstr ""
+
+#: lib/brando_admin/components/form/saved_elsewhere.ex
+#, elixir-autogen, elixir-format
+msgid "You changed it too. The form shows your version, and saving replaces the saved one with it."
 msgstr ""
 
 #: lib/brando_admin/components/module_files.ex

@@ -92,6 +92,23 @@ defmodule BrandoAdmin.Components.Form.PendingRows do
     end)
   end
 
+  @doc """
+  `entry_params` without the rows of the relations in `fields`, and their
+  sort and drop params: a cast leaves those relations as they are.
+  """
+  @spec drop(map() | nil, module(), [atom()]) :: map() | nil
+  def drop(entry_params, module, [_ | _] = fields) when is_map(entry_params) do
+    names =
+      Enum.flat_map(
+        fields,
+        &[Atom.to_string(&1), param_name(module, &1, :sort_param), param_name(module, &1, :drop_param)]
+      )
+
+    Map.drop(entry_params, names)
+  end
+
+  def drop(entry_params, _module, _fields), do: entry_params
+
   defp key_sort(key) do
     case Integer.parse(key) do
       {n, ""} -> {0, n}

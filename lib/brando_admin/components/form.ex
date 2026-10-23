@@ -66,8 +66,10 @@ defmodule BrandoAdmin.Components.Form do
   alias BrandoAdmin.Components.Form.PendingRows
   alias BrandoAdmin.Components.Form.Preview
   alias BrandoAdmin.Components.Form.Primitives
+  alias BrandoAdmin.Components.Form.RelationRows
   alias BrandoAdmin.Components.Form.RevisionsDrawer
   alias BrandoAdmin.Components.Form.RichTextAI
+  alias BrandoAdmin.Components.Form.SavedElsewhere
   alias BrandoAdmin.Components.Form.ScheduledPublishingDrawer
   alias BrandoAdmin.Components.Form.Translation
   alias BrandoAdmin.Components.Form.VideoDrawer
@@ -115,6 +117,13 @@ defmodule BrandoAdmin.Components.Form do
      |> assign(:dirty_fields, [])
      |> assign(:synced_values, %{})
      |> assign(:unshipped_fields, MapSet.new())
+     |> assign(:edited_relations, MapSet.new())
+     |> assign(:uncast_fields, MapSet.new())
+     |> assign(:relation_conflicts, [])
+     |> assign(:form_rev, 0)
+     |> assign(:taken_relations, %{})
+     |> assign(:conflict_bases, %{})
+     |> assign(:take_after_save?, false)
      |> assign(:replaced_values, %{})
      |> assign(:held_remote, %{})
      |> assign(:field_clocks, %{})
@@ -301,6 +310,10 @@ defmodule BrandoAdmin.Components.Form do
   def update(%{event: "apply_remote_field_changes", changes: changes} = message, socket) do
     {:ok, socket |> receive_field_changes(changes) |> merge_clocks(message[:clocks])}
   end
+
+  # Another tab saved the entry (`{:entry_saved, …}` in LiveView.Form): the
+  # fields this editor has not edited take the saved values.
+  def update(%{event: "take_saved_entry"}, socket), do: {:ok, take_saved_entry(socket)}
 
   def update(%{action: :image_processed, image_id: id}, socket) do
     {:ok, update(socket, :processing_images, &Enum.reject(&1, fn proc_id -> proc_id == id end))}
@@ -1060,8 +1073,10 @@ defmodule BrandoAdmin.Components.Form do
     {:ok,
      socket
      |> assign(:entry, socket.assigns.entry && Map.put(socket.assigns.entry, assoc, entry_blocks))
+     |> assign(:opened_entry, socket.assigns[:opened_entry] && Map.put(socket.assigns.opened_entry, assoc, entry_blocks))
      |> assign(:block_map, block_map)
-     |> put_form(to_form(changeset, []))}
+     |> put_form(to_form(changeset, []))
+     |> rebase_on_blocks()}
   end
 
   def update(%{event: "set_block_map"}, socket) do
@@ -1147,8 +1162,11 @@ defmodule BrandoAdmin.Components.Form do
   # the browser for its fields (which could be a row behind): the other
   # editors learn the field is changed, the blocks that read it get its rows,
   # and the live preview and the website editor follow it.
-  def update(%{action: :update_entries, field: field, op: op}, socket) do
+  def update(%{action: :update_entries, field: field, op: op} = message, socket) do
     changeset = socket.assigns.form.source
+    # A multi-select in a row applying another editor's picks
+    # (`multi_select_changed`) changes the list for them, not for this editor.
+    put = if message[:remote] == true, do: &put_received_form/2, else: &put_local_form/2
 
     case changeset |> SubformHelpers.current_entries(field) |> SubformHelpers.apply_op(op) do
       :stale ->
@@ -1170,7 +1188,7 @@ defmodule BrandoAdmin.Components.Form do
         socket =
           socket
           |> assign(:pending_rows, pending)
-          |> put_local_form(to_form(updated, []))
+          |> put.(to_form(updated, []))
           |> Drafts.dirty()
           |> broadcast_dirty_fields()
           |> send_updated_entry_field_to_blocks(
@@ -1229,6 +1247,11 @@ defmodule BrandoAdmin.Components.Form do
       end
 
     {:ok, socket |> put_local_form(form) |> Drafts.dirty()}
+  end
+
+  # Another editor's multi-select picks (`multi_select_changed`).
+  def update(%{action: :update_changeset, changeset: updated_changeset, remote: true}, socket) do
+    {:ok, socket |> put_received_form(to_form(updated_changeset, [])) |> Drafts.dirty()}
   end
 
   def update(%{action: :update_changeset, changeset: updated_changeset}, socket) do
@@ -2118,23 +2141,29 @@ defmodule BrandoAdmin.Components.Form do
 
   defp pending_rows(socket), do: socket.assigns[:pending_rows] || %{}
 
-  defp cast_entry_params(socket, entry, params), do: socket |> cast_entry_edit(entry, params, nil) |> elem(0)
+  defp cast_entry_params(socket, entry, params, stale),
+    do: socket |> cast_entry_edit(entry, params, nil, stale) |> elem(0)
 
   # The one place entry params become a changeset (validate, commit_tiptap,
-  # recover_form and both save paths, which go through `cast_entry_params/3`).
+  # recover_form and both save paths, which go through `cast_entry_params/4`).
   # Also returns the fields whose value was kept over the browser's old form,
   # sent before another editor's change reached it (`drop_echoes/4`).
-  # `target` is the entry field the event names.
+  # `target` is the entry field the event names. The relations in `stale`
+  # stay as the form has them: the browser sent the rows it showed before
+  # another editor's save replaced them (`stale_relations/2`), so their
+  # params don't reach the cast, where a relation that can't replace a row
+  # would raise for the rows they lack.
   @decorate span("brando.form.cast", schema: [:socket, :assigns, :schema], entry_id: [:entry, :id])
-  defp cast_entry_edit(socket, entry, params, target) do
+  defp cast_entry_edit(socket, entry, params, target, stale) do
     %{schema: schema, current_user: current_user} = socket.assigns
     owned = owned_assets(socket)
     current = socket.assigns.form.source
 
     entry
-    |> schema.changeset(owned_params(params, owned, current), current_user)
+    |> schema.changeset(params |> PendingRows.drop(schema, stale) |> owned_params(owned, current), current_user)
     |> reapply_owned_assets(owned, current)
     |> drop_echoes(current, replaced_values(socket), target)
+    |> keep_fields(current, stale)
   end
 
   # Ids are substituted rather than dropped so the schema's own validations
@@ -2664,6 +2693,11 @@ defmodule BrandoAdmin.Components.Form do
   #     shipment. The field a `validate` names, any other input whose value
   #     the event changed, and fields the form writes itself (an asset
   #     chosen, a subform row added, `put_local_form/2`).
+  #   * `edited_relations`: the has_many, has_one and many_to_many relations
+  #     this editor changed since its last save (`RelationRows`). They don't
+  #     ship; another editor's save keeps them (`take_saved_entry/1`). Marked
+  #     like `unshipped_fields`, and never by a list another editor's
+  #     multi-select sent (`put_received_form/2`).
   #   * `replaced_values`: field => values the browser may still show for a
   #     field another editor's change replaced. An event that carries one of
   #     them for a field it does not name is the browser's old form, sent
@@ -2827,13 +2861,25 @@ defmodule BrandoAdmin.Components.Form do
     |> assign(:replaced_values, Map.drop(replaced_values(socket), fields))
   end
 
+  # Relations this editor changed. A relation another editor's save
+  # replaced stays replaced while the browser sends the rows it showed
+  # before: an edit is in one row (`drop_echoes/5`).
+  defp mark_relations(socket, []), do: socket
+
+  defp mark_relations(socket, fields),
+    do: assign(socket, :edited_relations, MapSet.union(edited_relations(socket), MapSet.new(fields)))
+
   # A change the form makes itself (an asset chosen, a subform row added, a
   # recovery copy restored): the fields it changed are this editor's to ship,
   # and the other editors see them marked until they do.
   defp put_local_form(socket, form) do
     previous = socket.assigns.form.source
 
-    socket = socket |> put_form(form) |> mark_local(changed_fields(socket, previous, form.source))
+    socket =
+      socket
+      |> put_form(form)
+      |> mark_local(changed_fields(socket, previous, form.source))
+      |> mark_relations(changed_relations(socket, previous, form.source))
 
     case socket.assigns[:entry] do
       %{id: id} when not is_nil(id) -> broadcast_dirty_fields(socket)
@@ -2863,26 +2909,74 @@ defmodule BrandoAdmin.Components.Form do
     Enum.filter(fields, &(field_value(previous, &1) != field_value(changeset, &1)))
   end
 
-  # A `validate` from this editor's browser: the field it names, and any
-  # other input whose value it changed, are this editor's changes. Fields
-  # kept over the browser's old form (`echoed`, `drop_echoes/4`) are not. A
-  # replaced field stays replaced while the browser sends what it showed
-  # before; it has caught up once it sends anything else.
+  # The relations `changeset` changed that aren't marked as this editor's yet.
+  defp changed_relations(socket, previous, changeset) do
+    edited = edited_relations(socket)
+
+    for field <- relation_fields(socket),
+        not MapSet.member?(edited, field),
+        RelationRows.rows(previous, field) != RelationRows.rows(changeset, field),
+        do: field
+  end
+
+  # Another editor's multi-select picks (`multi_select_changed`): the list
+  # is theirs now, not an edit of this editor's.
+  defp put_received_form(socket, form) do
+    previous = socket.assigns.form.source
+
+    received =
+      for field <- relation_fields(socket),
+          RelationRows.rows(previous, field) != RelationRows.rows(form.source, field),
+          do: field
+
+    socket
+    |> put_form(form)
+    |> assign(:edited_relations, MapSet.difference(edited_relations(socket), MapSet.new(received)))
+    |> drop_conflicts(received)
+  end
+
+  # A `validate` from this editor's browser: the field it names (a relation
+  # too, by an input in one of its rows), and any other input whose value it
+  # changed, are this editor's changes. Fields kept over the browser's old
+  # form (`echoed`, `drop_echoes/4`) are not. A replaced field stays
+  # replaced while the browser sends what it showed before; it has caught
+  # up once it sends anything else.
   defp take_local_edit(socket, previous, changeset, echoed, target, entry_params) do
     {fields, _belongs_to} = sync_fields(socket)
     sent = if is_map(entry_params), do: entry_params, else: %{}
     sent? = &Map.has_key?(sent, Atom.to_string(&1))
+    edited_relations = edited_relations(socket)
 
     edited =
       for field <- fields,
           field == target or (sent?.(field) and field_value(previous, field) != field_value(changeset, field)),
           do: field
 
+    relations =
+      for field <- relation_fields(socket),
+          not MapSet.member?(edited_relations, field),
+          field == target or
+            (sent?.(field) and RelationRows.rows(previous, field) != RelationRows.rows(changeset, field)),
+          do: field
+
     replaced = Map.filter(replaced_values(socket), fn {field, _} -> field in echoed or not sent?.(field) end)
+
+    # A value typed that didn't cast (a required field cleared) is no change,
+    # only an error: it is this editor's until the field casts again or takes
+    # another editor's value. Nothing ships for it.
+    uncast =
+      for field <- fields,
+          field == target or MapSet.member?(uncast_fields(socket), field),
+          Keyword.has_key?(changeset.errors, field),
+          not Map.has_key?(changeset.changes, field),
+          into: MapSet.new(),
+          do: field
 
     socket
     |> assign(:replaced_values, replaced)
+    |> assign(:uncast_fields, uncast)
     |> mark_local(edited)
+    |> mark_relations(relations)
   end
 
   # What a `validate` changed is this editor's edit; a recovered form is not
@@ -2892,9 +2986,40 @@ defmodule BrandoAdmin.Components.Form do
     {changeset, take_local_edit(socket, previous, changeset, echoed, target, entry_params), []}
   end
 
+  # A relation the recovered form holds otherwise than the entry is the
+  # tab's own, as it was before the reconnect: relations don't ship. If its
+  # rows were saved otherwise since the form was built (its recovered base,
+  # `_relation_bases`, is not the entry's), the form keeps the recovered
+  # rows and asks which to keep (`relation_conflicts`), and keeps asking
+  # after another reconnect (`conflict_bases`). A page rendered without
+  # bases asks nothing.
   defp settle_edit(true = _recovery?, socket, changeset, %{previous: previous, params: params}) do
     offline = offline_fields(socket, params)
-    {keep_received(socket, previous, changeset, offline), socket, offline}
+    relations = relation_fields(socket)
+    differs? = &(RelationRows.rows(previous, &1) != RelationRows.rows(changeset, &1))
+    recovered = for field <- relations, field in offline or differs?.(field), do: field
+    bases = recovered_bases(params)
+    entry = socket.assigns.entry
+
+    conflict_bases =
+      for field <- recovered,
+          field not in relation_conflicts(socket),
+          differs?.(field),
+          base = bases[Atom.to_string(field)],
+          is_binary(base),
+          base != RelationRows.base(entry, field),
+          into: %{},
+          do: {field, base}
+
+    conflicts = Enum.filter(recovered, &Map.has_key?(conflict_bases, &1))
+
+    socket =
+      socket
+      |> mark_relations(recovered)
+      |> update(:relation_conflicts, &(&1 ++ conflicts))
+      |> update(:conflict_bases, &Map.merge(&1, conflict_bases))
+
+    {keep_received(socket, previous, changeset, offline), socket, offline -- relations}
   end
 
   # A recovered form keeps what the other editors sent this tab since it
@@ -2974,10 +3099,10 @@ defmodule BrandoAdmin.Components.Form do
   end
 
   # The entry field `_target` names (`["page", "title"]` or a path into a
-  # subform, `["page", "items", "0", "name"]`).
+  # subform, `["page", "items", "0", "name"]`, which names the relation).
   defp target_field(socket, singular, [singular, key | _]) do
     {fields, _belongs_to} = sync_fields(socket)
-    Enum.find(fields, &(Atom.to_string(&1) == key))
+    Enum.find(fields ++ relation_fields(socket), &(Atom.to_string(&1) == key))
   end
 
   defp target_field(_socket, _singular, _target), do: nil
@@ -2994,6 +3119,16 @@ defmodule BrandoAdmin.Components.Form do
         else: {changeset, echoed}
     end)
   end
+
+  defp keep_fields({changeset, echoed}, previous, fields),
+    do: {Enum.reduce(fields, changeset, &keep_field(&2, previous, &1)), echoed}
+
+  # The relations another editor's save replaced (`take_saved_entry/2`)
+  # after the form the browser sent was drawn: the form revision it carries
+  # (`_form_rev`) is older. A keystroke typed in that window is in a form
+  # the browser then redraws; while its input has focus it keeps the text
+  # and sends it again with the next keystroke.
+  defp stale_relations(socket, params), do: RelationRows.stale(taken_relations(socket), params)
 
   defp keep_field(changeset, previous, field) do
     changes =
@@ -3036,11 +3171,7 @@ defmodule BrandoAdmin.Components.Form do
 
     replaced =
       Enum.reduce(fields, replaced_values(socket), fn field, replaced ->
-        stale = field_value(previous, field)
-
-        if stale == field_value(changeset, field),
-          do: replaced,
-          else: Map.update(replaced, field, [stale], &Enum.take(Enum.uniq([stale | &1]), 5))
+        replace_value(replaced, previous, changeset, field)
       end)
 
     # An asset arrives as its key (`:cover_id`); the relation (`:cover`) is
@@ -3053,6 +3184,7 @@ defmodule BrandoAdmin.Components.Form do
     |> put_form(to_form(changeset, []))
     |> assign(:replaced_values, replaced)
     |> assign(:unshipped_fields, MapSet.difference(unshipped_fields(socket), MapSet.new(fields)))
+    |> assign(:uncast_fields, MapSet.difference(uncast_fields(socket), MapSet.new(fields)))
     |> assign(:held_remote, Map.drop(held_remote(socket), fields))
     |> mark_synced(changes)
     |> own_changed_assets(fields)
@@ -3062,6 +3194,16 @@ defmodule BrandoAdmin.Components.Form do
     |> put_remote_relations_in_preview(changeset, relations, asset_fk_map)
     |> send_remote_fields_to_blocks(changeset, fields ++ assets)
     |> preview_changed_fields(fields ++ Enum.map(relations, & &1.field))
+  end
+
+  # A field whose value another editor's change replaced: the browser may
+  # still send the value it showed before (`drop_echoes/4`).
+  defp replace_value(replaced, previous, changeset, field) do
+    stale = field_value(previous, field)
+
+    if stale == field_value(changeset, field),
+      do: replaced,
+      else: Map.update(replaced, field, [stale], &Enum.take(Enum.uniq([stale | &1]), 5))
   end
 
   # The preview merges `updated_entry_assocs` over the changeset, so a
@@ -3271,6 +3413,12 @@ defmodule BrandoAdmin.Components.Form do
 
   defp synced_values(socket), do: socket.assigns[:synced_values] || %{}
   defp unshipped_fields(socket), do: socket.assigns[:unshipped_fields] || MapSet.new()
+  defp uncast_fields(socket), do: socket.assigns[:uncast_fields] || MapSet.new()
+  defp edited_relations(socket), do: socket.assigns[:edited_relations] || MapSet.new()
+  defp relation_conflicts(socket), do: socket.assigns[:relation_conflicts] || []
+  defp conflict_bases(socket), do: socket.assigns[:conflict_bases] || %{}
+  defp form_rev(socket), do: socket.assigns[:form_rev] || 0
+  defp taken_relations(socket), do: socket.assigns[:taken_relations] || %{}
   defp replaced_values(socket), do: socket.assigns[:replaced_values] || %{}
   defp held_remote(socket), do: socket.assigns[:held_remote] || %{}
 
@@ -3364,12 +3512,345 @@ defmodule BrandoAdmin.Components.Form do
 
   # The form now matches the database, so nothing is pending for anyone.
   defp clear_dirty_fields(socket) do
-    socket = assign(socket, :synced_values, %{})
+    socket =
+      socket
+      |> assign(:synced_values, %{})
+      |> assign(:edited_relations, MapSet.new())
+      |> assign(:uncast_fields, MapSet.new())
+      |> assign(:relation_conflicts, [])
+      |> assign(:conflict_bases, %{})
 
     case socket.assigns[:dirty_fields] do
       [_ | _] -> put_dirty_fields(socket, [])
       _ -> socket
     end
+  end
+
+  ## Saves by other editors
+  #
+  # A tab that saves the entry tells the others (`announce_save/3`), and
+  # each of their forms takes the saved entry as its base
+  # (`take_saved_entry/1`). Without this a form keeps the values it opened
+  # with in every field nobody edited in it: a has_many list (it doesn't
+  # ship, `sync_fields/1`) or a value the save set itself (`publish_at`).
+  # Its next save, or a recovery copy, would revert them.
+  #
+  # The form keeps the fields this editor changed and has not saved, as
+  # they are and still its edits: a field it changed since its last
+  # shipment, or one whose value the editors hold unsaved (shipped,
+  # received) if the save has another, and a relation it changed
+  # (`edited_relations`) whose rows differ from the saved ones, with its
+  # rows as it holds them (`RelationRows.keep/4`). Every other field takes
+  # the saved value, as a change from another editor does
+  # (`apply_remote/2`): the browser's old value for it is an echo from then
+  # on (`drop_echoes/4`). The blocks sync through the edit session: the
+  # entry is read back without them, the form keeps the ones it holds, and
+  # the recovery baseline takes the saved ones when they arrive
+  # (`rebase_on_blocks/1`).
+  #
+  # Rows are not merged. A relation the save changed too is a conflict
+  # (`relation_conflicts`): the form keeps this editor's rows and asks which
+  # to keep, its own (`keep_own_relation`) or the saved ones
+  # (`take_saved_relation`). A relation's rows the browser shows change
+  # with the form revision (`form_rev`, rendered as `_form_rev`): until the
+  # browser sends the new one, the rows it sends are the ones it showed
+  # before, and the form keeps its own (`stale_relations/2`).
+
+  defp announce_save(socket, %{id: id}, :update) do
+    Phoenix.PubSub.broadcast(
+      Brando.pubsub(),
+      Brando.Tenant.Topic.entry("field_sync", socket.assigns.schema, id),
+      {:entry_saved, %{tab: BrandoAdmin.Presence.tab(), user_id: socket.assigns.current_user.id}}
+    )
+  end
+
+  defp announce_save(_socket, _entry, _mutation_type), do: :ok
+
+  # Not while this form saves: its own save rebuilds it, and if the save
+  # fails the form takes the other save then (`take_after_save/1`). Not
+  # while it loads, or shows a revision's working copy, which is not the
+  # entry. An entry gone since the save (deleted, or out of what this
+  # editor may read) is left as the form has it.
+  defp take_saved_entry(%{assigns: %{processing: true}} = socket), do: assign(socket, :take_after_save?, true)
+  defp take_saved_entry(%{assigns: %{entry_loading?: true}} = socket), do: socket
+  defp take_saved_entry(%{assigns: %{working_copy: revision}} = socket) when not is_nil(revision), do: socket
+
+  defp take_saved_entry(%{assigns: %{entry: %{id: id}}} = socket) when not is_nil(id) do
+    case fetch_entry(entry_source(socket), skip_blocks: true) do
+      {:ok, entry} -> take_saved_entry(socket, with_form_blocks(entry, socket.assigns.entry))
+      :not_found -> socket
+    end
+  end
+
+  defp take_saved_entry(socket), do: socket
+
+  defp take_saved_entry(socket, entry) do
+    %{schema: schema, current_user: user, form: %{source: previous}} = socket.assigns
+    saved = schema.changeset(entry, %{}, user)
+    {fields, belongs_to} = sync_fields(socket)
+    relations = relation_fields(socket)
+    kept = unsaved_edits(socket, previous, saved, fields, belongs_to, relations)
+
+    changeset = Enum.reduce(kept, saved, &carry_edit(&2, previous, socket.assigns.entry, &1, relations))
+    taken = Enum.filter((fields -- belongs_to) ++ relations, &(&1 not in kept))
+    changeset = carry_form_state(changeset, previous, kept, taken ++ relations)
+    changed = Enum.filter(taken, &(echo_value(previous, &1) != echo_value(changeset, &1)))
+    replaced = Enum.reduce(changed -- relations, replaced_values(socket), &replace_value(&2, previous, changeset, &1))
+    kept_relations = Map.take(socket.assigns[:updated_entry_assocs] || %{}, kept)
+    conflicts = conflicts(socket, saved, kept)
+    opened = socket.assigns.entry
+
+    socket
+    |> drop_conflicts(relation_conflicts(socket) -- kept)
+    |> update(:relation_conflicts, &(&1 ++ conflicts))
+    |> update(
+      :conflict_bases,
+      &Map.merge(&1, Map.new(conflicts, fn field -> {field, RelationRows.base(opened, field)} end))
+    )
+    |> assign(:entry, entry)
+    |> put_form(to_form(changeset, []))
+    |> redraw_relations(previous, changeset, relations)
+    |> assign(:replaced_values, replaced)
+    |> assign(:unshipped_fields, MapSet.intersection(unshipped_fields(socket), MapSet.new(kept)))
+    |> assign(:synced_values, Map.take(synced_values(socket), kept))
+    |> assign(:edited_relations, MapSet.intersection(edited_relations(socket), MapSet.new(kept)))
+    |> assign(:uncast_fields, MapSet.intersection(uncast_fields(socket), MapSet.new(kept)))
+    |> own_changed_assets(changed)
+    |> rebuild_preview_relations()
+    |> update(:updated_entry_assocs, &Map.merge(&1, kept_relations))
+    |> Drafts.rebase(entry)
+    |> force_svelte_remounts(changed)
+    |> send_remote_fields_to_blocks(changeset, changed)
+    |> preview_changed_fields(changed)
+    |> broadcast_dirty_fields()
+  end
+
+  # Another editor saved while this form's save ran, and the save didn't
+  # write: the form takes the other save in now.
+  defp take_after_save(%{assigns: %{processing: true}} = socket), do: socket
+
+  defp take_after_save(%{assigns: %{take_after_save?: true}} = socket),
+    do: socket |> assign(:take_after_save?, false) |> take_saved_entry()
+
+  defp take_after_save(socket), do: socket
+
+  # A block field read the rows another editor's save wrote
+  # (`entry_blocks_reloaded`): recovery compares with them, as with the rest
+  # of the save (`take_saved_entry/1` reads the entry back without its
+  # blocks). Not while this form saves (its save sets the baseline) or
+  # shows a revision's working copy.
+  defp rebase_on_blocks(%{assigns: %{processing: true}} = socket), do: socket
+  defp rebase_on_blocks(%{assigns: %{working_copy: revision}} = socket) when not is_nil(revision), do: socket
+
+  defp rebase_on_blocks(%{assigns: %{draft: %{initialized?: true}, entry: %{id: id} = entry}} = socket)
+       when not is_nil(id),
+       do: Drafts.rebase(socket, entry)
+
+  defp rebase_on_blocks(socket), do: socket
+
+  # Each relation's rows in the entry the form is built on (its base,
+  # `RelationRows.base/2`), as the browser holds them (`_relation_bases`)
+  # for recovery to tell whether the entry was saved otherwise since
+  # (`settle_edit/4`). A relation with a conflict this editor hasn't
+  # answered keeps the base it had before the save it is with
+  # (`conflict_bases`), so a reconnect still asks.
+  defp relation_bases(nil, _schema, _blueprint, _conflict_bases), do: ""
+
+  defp relation_bases(entry, schema, blueprint, conflict_bases) do
+    for(
+      field <- relation_fields(schema, blueprint),
+      base = RelationRows.base(entry, field),
+      into: %{},
+      do: {field, base}
+    )
+    |> Map.merge(conflict_bases)
+    |> Jason.encode!()
+  end
+
+  defp recovered_bases(params) do
+    with json when is_binary(json) <- params["_relation_bases"],
+         {:ok, %{} = bases} <- Jason.decode(json) do
+      bases
+    else
+      _ -> %{}
+    end
+  end
+
+  # Conflicts settled, or gone with the rows that made them.
+  defp drop_conflicts(socket, fields) do
+    socket
+    |> assign(:relation_conflicts, relation_conflicts(socket) -- fields)
+    |> assign(:conflict_bases, Map.drop(conflict_bases(socket), fields))
+  end
+
+  # The block associations the form holds, as `put_loaded_blocks/2` puts
+  # them: not loaded yet while a heavy entry's blocks load.
+  defp with_form_blocks(%schema{} = entry, held) do
+    if function_exported?(schema, :__blocks_fields__, 0) do
+      Enum.reduce(schema.__blocks_fields__(), entry, fn %{name: name}, entry ->
+        key = :"entry_#{name}"
+        Map.put(entry, key, Map.get(held, key))
+      end)
+    else
+      entry
+    end
+  end
+
+  # The fields of `previous` to keep over the saved entry.
+  defp unsaved_edits(socket, previous, saved, fields, belongs_to, relations) do
+    own = MapSet.union(unshipped_fields(socket), socket |> synced_values() |> Map.keys() |> MapSet.new())
+    edited_relations = edited_relations(socket)
+
+    uncast = uncast_fields(socket)
+
+    values =
+      for field <- fields -- belongs_to,
+          MapSet.member?(uncast, field) or
+            (MapSet.member?(own, field) and field_value(previous, field) != field_value(saved, field)),
+          do: field
+
+    belongs_to =
+      for field <- belongs_to,
+          Map.has_key?(previous.changes, field),
+          MapSet.member?(own, field) or owner_key(saved, field) in values,
+          do: field
+
+    # An edit that didn't cast is not in the rows: it is in a row's params,
+    # with its error.
+    relations =
+      for field <- relations,
+          MapSet.member?(edited_relations, field),
+          RelationRows.rows(previous, field) != :not_loaded,
+          RelationRows.invalid?(previous, field) or RelationRows.rows(previous, field) != RelationRows.rows(saved, field),
+          do: field
+
+    values ++ belongs_to ++ relations
+  end
+
+  defp owner_key(%Changeset{data: %schema{}}, field), do: schema.__schema__(:association, field).owner_key
+
+  # A field the form keeps goes onto the saved entry as it was: its change,
+  # or the value it opened with if it was set back to that. A relation keeps
+  # its rows (`RelationRows.keep/4`; `base` is the entry the form was built
+  # on).
+  defp carry_edit(changeset, previous, base, field, relations) do
+    cond do
+      field in relations ->
+        RelationRows.keep(changeset, previous, base, field)
+
+      Map.has_key?(previous.changes, field) ->
+        %{changeset | changes: Map.put(changeset.changes, field, previous.changes[field])}
+
+      # A value that didn't cast is its param and error (`carry_form_state/4`)
+      Keyword.has_key?(previous.errors, field) ->
+        changeset
+
+      true ->
+        Changeset.put_change(changeset, field, Map.get(previous.data, field))
+    end
+  end
+
+  # The params, errors and asset records of the fields the form keeps; the
+  # fields that take the saved value, and the relations, which are rows
+  # built again, lose the param the browser sent.
+  defp carry_form_state(changeset, previous, kept, dropped) do
+    params = Map.drop(previous.params || %{}, Enum.map(dropped, &Atom.to_string/1))
+    errors = Keyword.drop(changeset.errors, kept) ++ Keyword.take(previous.errors, kept)
+
+    data =
+      changeset.data.__struct__
+      |> build_asset_fk_map()
+      |> Map.take(kept)
+      |> Enum.reduce(changeset.data, fn {_key, {name, _schema}}, data ->
+        Map.put(data, name, Map.get(previous.data, name))
+      end)
+
+    valid? = errors == [] and Enum.all?(Map.values(changeset.changes), &valid_change?/1)
+    %{changeset | params: params, errors: errors, valid?: valid?, action: previous.action, data: data}
+  end
+
+  defp valid_change?(%Changeset{valid?: valid?}), do: valid?
+  defp valid_change?(rows) when is_list(rows), do: Enum.all?(rows, &valid_change?/1)
+  defp valid_change?(_value), do: true
+
+  # The relations this editor kept that the save changed as well: the saved
+  # rows are not the ones its form was built on.
+  defp conflicts(socket, saved, kept) do
+    opened = Changeset.change(socket.assigns.entry)
+    held = relation_conflicts(socket)
+
+    for field <- relation_fields(socket),
+        field in kept,
+        field not in held,
+        RelationRows.rows(opened, field) not in [:not_loaded, RelationRows.rows(saved, field)],
+        do: field
+  end
+
+  # The relations whose rows the browser shows otherwise from now on: the
+  # rows it sends until it has drawn them are the old ones. A relation the
+  # entry leaves unloaded is not in the form.
+  defp redraw_relations(socket, previous, changeset, relations) do
+    redrawn =
+      for field <- relations,
+          :not_loaded not in [echo_value(previous, field), echo_value(changeset, field)],
+          echo_value(previous, field) != echo_value(changeset, field) or
+            relation_keys(previous, field) != relation_keys(changeset, field),
+          do: field
+
+    if redrawn == [] do
+      socket
+    else
+      rev = form_rev(socket) + 1
+      taken = Map.merge(taken_relations(socket), Map.new(redrawn, &{&1, rev}))
+      socket |> assign(:form_rev, rev) |> assign(:taken_relations, taken)
+    end
+  end
+
+  defp relation_keys(changeset, field),
+    do: changeset |> SubformHelpers.current_entries(field) |> List.wrap() |> Enum.map(&SubformHelpers.row_key/1)
+
+  # The saved rows, over this editor's (`relation_conflicts`).
+  defp take_saved_relation(socket, field) do
+    previous = socket.assigns.form.source
+    params = Map.delete(previous.params || %{}, Atom.to_string(field))
+    changeset = %{previous | changes: Map.delete(previous.changes, field), params: params}
+
+    socket
+    |> put_form(to_form(changeset, []))
+    |> redraw_relations(previous, changeset, [field])
+    |> drop_conflicts([field])
+    |> assign(:edited_relations, MapSet.delete(edited_relations(socket), field))
+    |> assign(:pending_rows, Map.delete(pending_rows(socket), field))
+    |> update(:updated_entry_assocs, &Map.delete(&1 || %{}, field))
+    |> rebuild_preview_relations()
+    |> Drafts.dirty()
+    |> force_svelte_remounts([field])
+    |> send_remote_fields_to_blocks(changeset, [field])
+    |> preview_changed_fields([field])
+  end
+
+  # has_many, has_one and many_to_many relations the form edits, which don't
+  # ship as field changes. Block fields sync through their own ops, and a
+  # transformer's rows are its component's.
+  defp relation_fields(%{assigns: %{schema: schema} = assigns}), do: relation_fields(schema, assigns[:form_blueprint])
+
+  defp relation_fields(schema, blueprint) do
+    transformers =
+      case blueprint do
+        %{transformers: transformers} -> Enum.map(transformers, &elem(&1, 0))
+        _ -> []
+      end
+
+    RelationRows.fields(schema, unsynced_field_keys(schema) ++ transformers)
+  end
+
+  # A field as the browser shows it, to tell its echo: a relation by its
+  # rows' content (`RelationRows.rows/2`), since the rows it sends back are
+  # rebuilt.
+  defp echo_value(changeset, field) do
+    if RelationRows.relation?(changeset, field),
+      do: RelationRows.rows(changeset, field),
+      else: field_value(changeset, field)
   end
 
   defp extract_tab_names(%{assigns: %{form_blueprint: %{tabs: tabs}}} = socket) do
@@ -3868,6 +4349,14 @@ defmodule BrandoAdmin.Components.Form do
             entry_id={@entry_id}
           />
 
+          <SavedElsewhere.notices
+            id={"#{@id}-saved-elsewhere"}
+            conflicts={@relation_conflicts}
+            schema={@schema}
+            form_blueprint={@form_blueprint}
+            target={@myself}
+          />
+
           <%!-- Leaves the viewport when the toolbar below it sticks; the Form
                 hook then gives the bar its page-coloured band (`is-stuck`). --%>
           <div :if={@layout == :entry} class="form-tabs-sentinel" aria-hidden="true"></div>
@@ -4161,6 +4650,12 @@ defmodule BrandoAdmin.Components.Form do
             inert={!@blocks_ready?}
           >
             <input type="hidden" name={"#{@form.name}[#{:__force_change}]"} phx-debounce="0" />
+            <input type="hidden" name="_form_rev" value={@form_rev} />
+            <input
+              type="hidden"
+              name="_relation_bases"
+              value={relation_bases(@entry, @schema, @form_blueprint, @conflict_bases)}
+            />
             <Translation.panel :if={@translation} state={@translation} form_name={@form.name} target={@myself} />
             <div style="display:none">
               <.live_file_input upload={@uploads[:image_editor_upload]} />
@@ -4659,6 +5154,20 @@ defmodule BrandoAdmin.Components.Form do
 
   def handle_event("draft_review", %{"id" => id}, socket), do: {:noreply, Drafts.review(socket, id)}
   def handle_event("draft_dismiss", _, socket), do: {:noreply, Drafts.dismiss(socket)}
+
+  # A relation another editor's save changed while this editor had changed
+  # it too ("Saves by other editors").
+  def handle_event("keep_own_relation", %{"field" => name}, socket) do
+    {:noreply, drop_conflicts(socket, Enum.filter(relation_conflicts(socket), &(Atom.to_string(&1) == name)))}
+  end
+
+  def handle_event("take_saved_relation", %{"field" => name}, socket) do
+    case Enum.find(relation_conflicts(socket), &(Atom.to_string(&1) == name)) do
+      nil -> {:noreply, socket}
+      field -> {:noreply, socket |> take_saved_relation(field) |> broadcast_dirty_fields()}
+    end
+  end
+
   def handle_event("draft_discard", %{"id" => id}, socket), do: {:noreply, Drafts.discard(socket, id)}
 
   def handle_event("draft_clean", _, socket) do
@@ -4894,11 +5403,12 @@ defmodule BrandoAdmin.Components.Form do
          |> assign(:processing, false)
          |> assign(:all_blocks_received?, false)
          |> assign(:save_token, nil)
-         |> clear_blocks_root_changesets()}
+         |> clear_blocks_root_changesets()
+         |> take_after_save()}
 
       :ok ->
         {:noreply, result} = handle_event("save", params, assign(socket, :draft_save_checked?, true))
-        {:noreply, result |> assign(:draft_save_checked?, false) |> Drafts.save_result()}
+        {:noreply, result |> assign(:draft_save_checked?, false) |> Drafts.save_result() |> take_after_save()}
     end
   end
 
@@ -4962,7 +5472,7 @@ defmodule BrandoAdmin.Components.Form do
 
     changeset =
       socket
-      |> cast_entry_params(entry_or_default, entry_params)
+      |> cast_entry_params(entry_or_default, entry_params, stale_relations(socket, params))
       |> Brando.Utils.set_action()
       |> Brando.Trait.run_trait_before_save_callbacks(schema, current_user)
 
@@ -5058,7 +5568,7 @@ defmodule BrandoAdmin.Components.Form do
 
     changeset =
       socket
-      |> cast_entry_params(entry_or_default, entry_params)
+      |> cast_entry_params(entry_or_default, entry_params, stale_relations(socket, params))
       |> Brando.Utils.set_action()
       |> Brando.Trait.run_trait_before_save_callbacks(schema, current_user)
       |> assoc_all_transformer_fields(socket.assigns.transformer_changesets)
@@ -6270,6 +6780,8 @@ defmodule BrandoAdmin.Components.Form do
     {socket, stale?} = after_translation_save(socket, schema, entry)
 
     maybe_run_form_after_save(save.form_blueprint, entry, current_user)
+    # The other tabs read the entry back: once all of the save is written.
+    announce_save(socket, entry, mutation_type)
 
     mutation_message =
       Brando.Gettext
@@ -6279,7 +6791,10 @@ defmodule BrandoAdmin.Components.Form do
     send(self(), {:toast, mutation_message})
 
     {:noreply,
-     maybe_offer_permalink_redirect(Drafts.saved(socket, entry), save.entry_or_default, entry, fn socket ->
+     socket
+     |> assign(:take_after_save?, false)
+     |> Drafts.saved(entry)
+     |> maybe_offer_permalink_redirect(save.entry_or_default, entry, fn socket ->
        redirect_after_save_with_blocks(socket, entry, stale?, save)
      end)}
   end
@@ -6410,10 +6925,14 @@ defmodule BrandoAdmin.Components.Form do
 
     {socket, _stale?} = after_translation_save(socket, schema, entry)
     maybe_run_form_after_save(save.form_blueprint, entry, current_user)
+    announce_save(socket, entry, mutation_type)
     send(self(), {:toast, "#{String.capitalize(singular)} #{mutation_type}d"})
 
     {:noreply,
-     maybe_offer_permalink_redirect(Drafts.saved(socket, entry), save.entry_or_default, entry, fn socket ->
+     socket
+     |> assign(:take_after_save?, false)
+     |> Drafts.saved(entry)
+     |> maybe_offer_permalink_redirect(save.entry_or_default, entry, fn socket ->
        redirect_after_save(socket, entry, save)
      end)}
   end
@@ -8921,7 +9440,11 @@ defmodule BrandoAdmin.Components.Form do
     singular = socket.assigns.singular
 
     previous = socket.assigns.form.source
+    # Relations the browser sent as it showed them before another editor's
+    # save; the form keeps its own, so an input in one names nothing.
+    stale = if recovery?, do: [], else: stale_relations(socket, params)
     target = target_field(socket, singular, params["_target"])
+    target = if target in stale, do: nil, else: target
 
     # Rows added or removed since the browser last drew them (`PendingRows`).
     # Recovery is the browser's own rows, so nothing is pending after it.
@@ -8930,9 +9453,10 @@ defmodule BrandoAdmin.Components.Form do
         do: {Map.get(params, singular), %{}},
         else: PendingRows.correct(Map.get(params, singular), pending_rows(socket), previous)
 
+    listed_rows = Map.drop(listed_rows, stale)
     entry_or_default = entry || struct(schema)
 
-    {changeset, echoed} = cast_entry_edit(socket, entry_or_default, entry_params, target)
+    {changeset, echoed} = cast_entry_edit(socket, entry_or_default, entry_params, target, stale)
     changeset = Map.put(changeset, :action, :validate)
 
     edit = %{previous: previous, echoed: echoed, target: target, params: params, entry_params: entry_params}

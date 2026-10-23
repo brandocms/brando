@@ -254,7 +254,8 @@ defmodule BrandoAdmin.Components.Form.Input.SubformHelpers do
       id: "#{module.__naming__().singular}_form",
       action: :update_entries,
       field: field_name,
-      op: op
+      op: op,
+      remote: Keyword.get(opts, :remote, false)
     )
 
     {:noreply, socket}

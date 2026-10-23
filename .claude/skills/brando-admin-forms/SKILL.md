@@ -50,6 +50,34 @@ area in [the section map](form-map.md) and grep for the names it lists.
   ship with the oldest clock (`share_recovered/3`), so any real edit beats
   them, and values already received from other editors stay. Coverage
   lives in `test/brando_admin/live/entry_field_sync_test.exs`.
+- A save reaches the other forms of the entry as `{:entry_saved, …}`
+  ("Saves by other editors" in Form): each reads the entry back without its
+  blocks and rebuilds on it, keeping only its own unsaved fields
+  (`unshipped_fields`, `synced_values` that differ from the save, and the
+  has_many/has_one/many_to_many relations in `edited_relations`, marked
+  when the editor changes them, never by another editor's multi-select),
+  and moves its recovery baseline (`Drafts.rebase/2`; the blocks part when
+  the block field reads the saved rows, `entry_blocks_reloaded`). A kept
+  relation keeps the editor's rows whole (`RelationRows.keep/4`), with the
+  saved values in rows it didn't change; rows are never merged. When the
+  save changed that relation too, the form asks which to keep
+  (`relation_conflicts`, `Form.SavedElsewhere`). The browser sends the rows
+  it showed before until it has drawn the new ones: the form revision
+  (`_form_rev`) tells, and such an event leaves the relation as the form
+  has it (`stale_relations/2`): its params are dropped before the cast
+  (`PendingRows.drop/3`), and a recovery capture copies the form's rows.
+  A save that arrives while the form saves is taken once that save fails
+  (`take_after_save`). On reconnect, each relation's base
+  (`_relation_bases`, `RelationRows.base/2`: its rows in the entry the
+  form is built on, read order left out, computed at render from
+  `@entry`) tells whether its rows were saved otherwise meanwhile; if so,
+  recovered rows that differ from the saved ones are a conflict
+  (`settle_edit/4`). An unanswered conflict keeps its pre-take base
+  (`conflict_bases`), so a reconnect asks again. A save of other fields
+  or of other relations is not a conflict. A server-side value set at
+  save reaches the others only this way. Coverage
+  lives in `test/brando_admin/live/entry_saved_elsewhere_test.exs` and
+  `test/brando_admin/components/form/relation_rows_test.exs`.
 - Read pending subform associations through the helpers in
   `lib/brando_admin/components/form/input/subform_helpers.ex`. Applying child
   changesets before rewriting the association loses pending edits. Use the

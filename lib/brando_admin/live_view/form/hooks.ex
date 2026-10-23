@@ -1357,6 +1357,18 @@ defmodule BrandoAdmin.LiveView.Form.Hooks do
     {:halt, socket}
   end
 
+  # Another tab saved the entry: the form takes the saved values in the
+  # fields this tab has not edited ("Saves by other editors" in Form).
+  defp handle_hooks_block_sync_info({:entry_saved, %{tab: from}}, socket) do
+    schema = socket.assigns[:schema]
+
+    if schema && from != BrandoAdmin.Presence.tab() do
+      send_update(BrandoAdmin.Components.Form, id: "#{schema.__naming__().singular}_form", event: "take_saved_entry")
+    end
+
+    {:halt, socket}
+  end
+
   # Multi-select sync — forward selected IDs directly to the multi-select component
   defp handle_hooks_block_sync_info({:multi_select_changed, %{user_id: user_id} = msg}, socket) do
     if user_id != socket.assigns.current_user.id do
