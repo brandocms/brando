@@ -2789,16 +2789,30 @@ defmodule BrandoAdmin.Components.Form do
   defp announce_join(socket), do: socket
 
   # The fields this editor changed whose value the other editors don't
-  # hold. A field typed back to what they hold has nothing to ship.
+  # hold. A field typed back to what they hold has nothing to ship, and
+  # neither has one cleared or typed into that didn't cast (`uncast?/2`).
   defp pending_changes(socket) do
     changeset = socket.assigns.form.source
     synced = synced_values(socket)
     {_fields, belongs_to} = sync_fields(socket)
 
     for field <- socket |> unshipped_fields() |> Enum.sort(),
+        not uncast?(changeset, field),
         %{value: value} = change <- List.wrap(field_change(changeset, field, belongs_to)),
         value != Map.get(synced, field, Map.get(changeset.data, field)),
         do: change
+  end
+
+  # A required field cleared, or a value that didn't cast, is no change,
+  # only an error. Shipped, it would be the value the form opened with,
+  # which this editor didn't type, so the others keep the last one it sent.
+  # A field opened blank ships its clear as usual, and so does one flagged
+  # by another rule (a group constraint).
+  defp uncast?(changeset, field) do
+    not Map.has_key?(changeset.changes, field) and Map.get(changeset.data, field) not in [nil, ""] and
+      changeset.errors
+      |> Keyword.get_values(field)
+      |> Enum.any?(fn {_message, opts} -> opts[:validation] in [:required, :cast] end)
   end
 
   # A field as it ships: the change, or the saved value when the field was
