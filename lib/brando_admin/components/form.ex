@@ -68,8 +68,8 @@ defmodule BrandoAdmin.Components.Form do
   alias BrandoAdmin.Components.Form.Primitives
   alias BrandoAdmin.Components.Form.RelationRows
   alias BrandoAdmin.Components.Form.RevisionsDrawer
-  alias BrandoAdmin.Components.Form.SavedElsewhere
   alias BrandoAdmin.Components.Form.RichTextAI
+  alias BrandoAdmin.Components.Form.SavedElsewhere
   alias BrandoAdmin.Components.Form.ScheduledPublishingDrawer
   alias BrandoAdmin.Components.Form.Translation
   alias BrandoAdmin.Components.Form.VideoDrawer
