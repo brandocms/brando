@@ -2147,7 +2147,9 @@ defmodule BrandoAdmin.Components.Form do
   # sent before another editor's change reached it (`drop_echoes/4`).
   # `target` is the entry field the event names. The relations in `stale`
   # stay as the form has them: the browser sent the rows it showed before
-  # another editor's save replaced them (`stale_relations/2`).
+  # another editor's save replaced them (`stale_relations/2`), so their
+  # params don't reach the cast, where a relation that can't replace a row
+  # would raise for the rows they lack.
   @decorate span("brando.form.cast", schema: [:socket, :assigns, :schema], entry_id: [:entry, :id])
   defp cast_entry_edit(socket, entry, params, target, stale) do
     %{schema: schema, current_user: current_user} = socket.assigns
@@ -2155,7 +2157,7 @@ defmodule BrandoAdmin.Components.Form do
     current = socket.assigns.form.source
 
     entry
-    |> schema.changeset(owned_params(params, owned, current), current_user)
+    |> schema.changeset(params |> PendingRows.drop(schema, stale) |> owned_params(owned, current), current_user)
     |> reapply_owned_assets(owned, current)
     |> drop_echoes(current, replaced_values(socket), target)
     |> keep_fields(current, stale)
@@ -3683,12 +3685,14 @@ defmodule BrandoAdmin.Components.Form do
 
   # The relations whose rows the browser shows otherwise from now on: the
   # rows it sends until it has drawn them are the old ones.
+  # A relation the entry leaves unloaded is not in the form.
   defp redraw_relations(socket, previous, changeset, relations) do
     redrawn =
-      Enum.filter(relations, fn field ->
-        echo_value(previous, field) != echo_value(changeset, field) or
-          relation_keys(previous, field) != relation_keys(changeset, field)
-      end)
+      for field <- relations,
+          :not_loaded not in [echo_value(previous, field), echo_value(changeset, field)],
+          echo_value(previous, field) != echo_value(changeset, field) or
+            relation_keys(previous, field) != relation_keys(changeset, field),
+          do: field
 
     if redrawn == [] do
       socket

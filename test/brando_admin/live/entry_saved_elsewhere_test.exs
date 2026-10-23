@@ -1038,4 +1038,71 @@ defmodule BrandoAdmin.EntrySavedElsewhereTest do
       end)
     end
   end
+
+  describe "a has_many that can't replace a row" do
+    setup %{current_user: me, a_conn: a_conn, other_conn: other_conn} do
+      {:ok, article} =
+        Brando.SyncTest.create_article(
+          %{title: "Shelf", slug: "shelf", language: "en", status: "published", items: [%{label: "Old", sequence: 0}]},
+          me
+        )
+
+      %{shelf: article, a_conn: a_conn, other_conn: other_conn}
+    end
+
+    defp shelf_labels(shelf),
+      do:
+        Brando.SavedElsewhereTest.Shelf
+        |> Repo.get!(shelf.id)
+        |> Repo.preload(:items)
+        |> Map.fetch!(:items)
+        |> Enum.map(& &1.label)
+
+    # The form reads the entry without its rows (`query`): they are not the
+    # form's to keep.
+    test "a form that leaves the rows unloaded takes A's save", c do
+      path = "/admin/shelves/update/#{c.shelf.id}/title-only"
+      {a, _} = live_form(c.a_conn, path, "shelf_form")
+      {b, _} = live_form(c.other_conn, path, "shelf_form")
+
+      type(a, "shelf", "title", "Shelf by A")
+      save_and_stay(a, "shelf", false)
+      await(fn -> Repo.get!(Brando.SavedElsewhereTest.Shelf, c.shelf.id).title == "Shelf by A" end)
+
+      await(fn -> params(b, "shelf")["title"] == "Shelf by A" end)
+      assert Process.alive?(b.pid)
+    end
+
+    # A adds a row and saves; B's browser sends the form it showed before,
+    # without A's row.
+    test "B's keystroke from the form before A's save keeps A's row", c do
+      path = "/admin/shelves/update/#{c.shelf.id}"
+      {b, _} = live_form(c.other_conn, path, "shelf_form")
+      before = render(b)
+
+      Repo.insert!(%Brando.SyncTest.ArticleItem{article_id: c.shelf.id, label: "Added by A", sequence: 1})
+      announce_save(Brando.SavedElsewhereTest.Shelf, c.shelf.id)
+      await(fn -> map_size(params(b, "shelf")["items"]) == 2 end)
+
+      # As the browser sends it: the form it showed, which has no row of A's
+      # (`render_change/2` would add the inputs the view shows now).
+      params =
+        before
+        |> form_params("#shelf_form_form")
+        |> put_in(["shelf", "title"], "Shelf by B")
+        |> Map.put("_target", ["shelf", "title"])
+
+      refute Enum.any?(Map.values(params["shelf"]["items"]), &(&1["label"] == "Added by A"))
+      b |> form_of("shelf") |> render_hook("validate", params)
+      assert Process.alive?(b.pid)
+      assert params(b, "shelf")["title"] == "Shelf by B"
+
+      save_and_stay(b, "shelf", false)
+
+      await(fn ->
+        Repo.get!(Brando.SavedElsewhereTest.Shelf, c.shelf.id).title == "Shelf by B" and
+          shelf_labels(c.shelf) == ["Old", "Added by A"]
+      end)
+    end
+  end
 end
