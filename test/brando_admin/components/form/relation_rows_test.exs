@@ -162,6 +162,21 @@ defmodule BrandoAdmin.Components.Form.RelationRowsTest do
       assert [%{name: "Name by B"}] = Repo.all(Ecto.assoc(written, :author))
     end
 
+    # B's new author is in the form's data: an asset pick applied the form's
+    # changes there (`Form.commit_entry_field_asset/5`). A saved an author.
+    test "a has_one that can't be replaced takes this form's new row from its data", c do
+      base = reload(c.article, [:author, :items])
+      previous = base |> Map.put(:author, %Author{name: "Name by B"}) |> Changeset.change()
+      Repo.insert!(%Author{article_id: c.article.id, name: "Name by A"})
+      saved = base |> reload([:author, :items]) |> Changeset.change()
+
+      carried = RelationRows.keep(saved, previous, base, :author)
+
+      assert [%{name: "Name by B"}] = RelationRows.rows(carried, :author)
+      assert {:ok, written} = Repo.update(carried)
+      assert [%{name: "Name by B"}] = Repo.all(Ecto.assoc(written, :author))
+    end
+
     # Both tabs fill in the author the article doesn't have, B with a link;
     # A saves first.
     test "a new has_one onto the saved one keeps its own new rows", c do

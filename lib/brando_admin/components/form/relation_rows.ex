@@ -250,6 +250,9 @@ defmodule BrandoAdmin.Components.Form.RelationRows do
     Map.drop(changes, keys)
   end
 
+  # A new row in the form's data: its values.
+  defp edited(%row_schema{} = row), do: edits(row, struct(row_schema))
+
   # The form shows a row's params over its values: only what the editor
   # changed, or typed and didn't cast, stays a param.
   defp typed(%Changeset{} = changeset, %Changeset{params: params, changes: changes, errors: errors}) do
@@ -257,6 +260,8 @@ defmodule BrandoAdmin.Components.Form.RelationRows do
     params = Map.merge(changeset.params || %{}, Map.take(params || %{}, ["_key" | names]))
     %{changeset | params: params}
   end
+
+  defp typed(changeset, _row), do: changeset
 
   # A row the save removed that the editor changed: a new row, with a key of
   # its own, holding what the editor's form showed.
