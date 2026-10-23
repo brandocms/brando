@@ -77,6 +77,17 @@ defmodule BrandoAdmin.Components.Form.RelationRows do
   defp marked_as_deleted?(row), do: Map.get(row, :marked_as_deleted) == true
 
   @doc """
+  Whether a row of the relation holds an edit that didn't cast: its rows
+  (`rows/2`) don't show it.
+  """
+  def invalid?(%Changeset{changes: changes}, field) do
+    case Map.get(changes, field) do
+      rows when is_list(rows) -> Enum.any?(rows, &match?(%Changeset{valid?: false}, &1))
+      row -> match?(%Changeset{valid?: false}, row)
+    end
+  end
+
+  @doc """
   The relation of `saved` as `previous`, the form the editor had, holds it:
   its rows, added rows and removals stay. A row the editor changed keeps its
   changes over the saved row's values, and a row it didn't change is the

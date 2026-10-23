@@ -873,6 +873,54 @@ defmodule BrandoAdmin.EntrySavedElsewhereTest do
       end)
     end
 
+    # B's edit in the row doesn't cast: the row's values are the saved ones,
+    # and what B typed is in its params, with the error.
+    test "B's row edit that didn't cast stays over A's save, with its error", c do
+      type(c.b, "article", ["items", "0", "sequence"], "1.5")
+      assert [%{errors: [sequence: _]}] = form_assigns(c.b).form.source.changes.items
+
+      type(c.a, "article", "title", "Title by A")
+      save_and_stay(c.a, "article", true)
+      await(fn -> params(c.b, "article")["title"] == "Title by A" end)
+
+      assert [%{errors: [sequence: _]} = row] = form_assigns(c.b).form.source.changes.items
+      assert row.params["sequence"] == "1.5"
+      refute form_assigns(c.b).form.source.valid?
+    end
+
+    # A picks a module in row 0 and saves, while row 1 holds B's edit.
+    @tag items: ["Old", "Second"]
+    test "B's edit in one row stays over A's save of a pick in another row", c do
+      hero = Factory.insert(:module, name: "Hero", namespace: "general")
+      type(c.b, "article", ["items", "1", "label"], "Second by B")
+
+      toggle = "#article_items_0_item_modules-field-base button.button-edit"
+      c.a |> element(toggle) |> render_click()
+      c.a |> element("button.multiselect-option[value='#{hero.id}']") |> render_click()
+      c.a |> element(toggle) |> render_click()
+      assert row_modules(c.a) == [hero.id]
+
+      save_and_stay(c.a, "article", true)
+
+      await(fn ->
+        [item | _] = Article |> Repo.get!(c.article.id) |> Repo.preload(items: :item_modules) |> Map.fetch!(:items)
+        Enum.map(item.item_modules, & &1.module_id) == [hero.id]
+      end)
+
+      settle(c.b)
+      assert row_labels(c.b) == ["Old", "Second by B"]
+      assert row_modules(c.b) == [hero.id]
+
+      save_and_stay(c.b, "article", true)
+
+      await(fn ->
+        items = Article |> Repo.get!(c.article.id) |> Repo.preload(items: :item_modules) |> Map.fetch!(:items)
+
+        Enum.map(items, & &1.label) == ["Old", "Second by B"] and
+          Enum.map(hd(items).item_modules, & &1.module_id) == [hero.id]
+      end)
+    end
+
     # A picks a module in the row's multi-select and saves; B's keystroke in
     # the row's label comes from the form B's browser showed before.
     test "B's late keystroke in a row's label keeps the pick A saved in it", c do

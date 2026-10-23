@@ -3624,10 +3624,13 @@ defmodule BrandoAdmin.Components.Form do
           MapSet.member?(own, field) or owner_key(saved, field) in values,
           do: field
 
+    # An edit that didn't cast is not in the rows: it is in a row's params,
+    # with its error.
     relations =
       for field <- relations,
           MapSet.member?(edited_relations, field),
-          RelationRows.rows(previous, field) not in [:not_loaded, RelationRows.rows(saved, field)],
+          RelationRows.rows(previous, field) != :not_loaded,
+          RelationRows.invalid?(previous, field) or RelationRows.rows(previous, field) != RelationRows.rows(saved, field),
           do: field
 
     values ++ belongs_to ++ relations
@@ -3667,8 +3670,13 @@ defmodule BrandoAdmin.Components.Form do
         Map.put(data, name, Map.get(previous.data, name))
       end)
 
-    %{changeset | params: params, errors: errors, valid?: errors == [], action: previous.action, data: data}
+    valid? = errors == [] and Enum.all?(Map.values(changeset.changes), &valid_change?/1)
+    %{changeset | params: params, errors: errors, valid?: valid?, action: previous.action, data: data}
   end
+
+  defp valid_change?(%Changeset{valid?: valid?}), do: valid?
+  defp valid_change?(rows) when is_list(rows), do: Enum.all?(rows, &valid_change?/1)
+  defp valid_change?(_value), do: true
 
   # The relations this editor kept that the save changed as well: the saved
   # rows are not the ones its form was built on.
