@@ -2716,9 +2716,14 @@ defmodule BrandoAdmin.Components.Form do
 
       if changes != [], do: broadcast_field_changes(socket, entry.id, changes, nil)
 
+      # A value that didn't cast (a required field cleared) has nothing to
+      # ship and stays this editor's edit.
+      errors = socket.assigns.form.source.errors
+      unshippable = MapSet.filter(unshipped_fields(socket), &Keyword.has_key?(errors, &1))
+
       socket
       |> mark_synced(changes)
-      |> assign(:unshipped_fields, MapSet.new())
+      |> assign(:unshipped_fields, unshippable)
       |> broadcast_dirty_fields()
     else
       socket
@@ -3684,10 +3689,12 @@ defmodule BrandoAdmin.Components.Form do
     own = MapSet.union(unshipped_fields(socket), socket |> synced_values() |> Map.keys() |> MapSet.new())
     edited_relations = edited_relations(socket)
 
+    # A value that didn't cast (a required field cleared) is no change: it
+    # is in the params, with its error.
     values =
       for field <- fields -- belongs_to,
           MapSet.member?(own, field),
-          field_value(previous, field) != field_value(saved, field),
+          Keyword.has_key?(previous.errors, field) or field_value(previous, field) != field_value(saved, field),
           do: field
 
     belongs_to =

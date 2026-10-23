@@ -143,6 +143,24 @@ defmodule BrandoAdmin.EntrySavedElsewhereTest do
       |> render_hook("draft_capture", %{"main" => main, "blocks" => %{}, "generation" => 1, "request_id" => 1})
     end
 
+    # A required field B cleared is no change, only an error: it stays
+    # cleared, whether B is still in the field or has left it.
+    for left? <- [false, true] do
+      test "a title B cleared stays cleared over A's save (left the field: #{left?})", c do
+        focus(c.b, "module_set", "title")
+        type(c.b, "module_set", "title", "")
+        if unquote(left?), do: blur(c.b, "module_set", "title")
+
+        pick(c.a, c.hero)
+        save_and_stay(c.a, "module_set", false)
+        await(fn -> saved_modules(c.set) == [c.hero.id] end)
+        await(fn -> chosen(c.b) == [c.hero.id] end)
+
+        assert params(c.b, "module_set")["title"] == ""
+        assert has_element?(c.b, "#module_set_form_form .field-error")
+      end
+    end
+
     test "B's form takes the rows A saved, and B's next save keeps them", c do
       # B is typing in the title when A saves: an edit A doesn't have.
       focus(c.b, "module_set", "title")
