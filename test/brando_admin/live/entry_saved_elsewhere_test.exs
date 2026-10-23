@@ -466,6 +466,80 @@ defmodule BrandoAdmin.EntrySavedElsewhereTest do
       assert chosen(b) == [c.text.id]
     end
 
+    defp reconnect_after_kill(c, b) do
+      html = render(b)
+      kill_live(b)
+      reconnect(c, html)
+    end
+
+    # A's save changed the entry, but not its modules: B's recovered picks
+    # are B's edit, as if nobody had saved.
+    test "B's picks, recovered after A saved another field while B was away, are B's edit", c do
+      {b, _} = live_form(c.a_conn, c.path, "module_set_form")
+      pick(b, c.text)
+      html = render(b)
+      kill_live(b)
+
+      type(c.a, "module_set", "title", "Set, typed by A")
+      save_and_stay(c.a, "module_set", false)
+      await(fn -> Repo.get!(ModuleSet, c.set.id).title == "Set, typed by A" end)
+
+      b = reconnect(c, html)
+      assert chosen(b) == [c.text.id]
+      refute conflict?(b, "module_set_modules")
+    end
+
+    # B hasn't answered which to keep when its tab reconnects: it is still
+    # asked, however often it reconnects, and the saved rows stay on offer.
+    test "a conflict B hasn't settled is asked again after B reconnects", c do
+      b = picked_in_two_tabs(c)
+      assert conflict?(b, "module_set_modules")
+
+      b = reconnect_after_kill(c, b)
+      assert chosen(b) == [c.text.id]
+      assert conflict?(b, "module_set_modules")
+
+      b = reconnect_after_kill(c, b)
+      assert conflict?(b, "module_set_modules")
+
+      settle_conflict(b, "module_set_modules", "Use the saved version")
+      assert chosen(b) == [c.hero.id]
+    end
+
+    test "a conflict B settled is not asked again after B reconnects", c do
+      b = picked_in_two_tabs(c)
+      settle_conflict(b, "module_set_modules", "Keep my version")
+
+      b = reconnect_after_kill(c, b)
+      assert chosen(b) == [c.text.id]
+      refute conflict?(b, "module_set_modules")
+    end
+
+    # B's form is rebuilt on the entry as it reads it again (`:update_entry`,
+    # as a revision restore or a child component sends it), with a module
+    # added meanwhile: B's pick after that is B's edit.
+    test "B's picks on an entry the form read again are B's edit after a reconnect", c do
+      {b, _} = live_form(c.a_conn, c.path, "module_set_form")
+      Repo.insert!(%ModuleSetModule{module_set_id: c.set.id, module_id: c.hero.id, sequence: 0})
+      entry = Repo.preload(form_assigns(b).entry, [:module_set_modules], force: true)
+
+      Phoenix.LiveView.send_update(b.pid, BrandoAdmin.Components.Form,
+        id: form_assigns(b).id,
+        action: :update_entry,
+        updated_entry: entry
+      )
+
+      await(fn -> chosen(b) == [c.hero.id] end)
+
+      pick(b, c.text)
+      html = render(b)
+      kill_live(b)
+
+      b = reconnect(c, html)
+      assert Enum.sort(chosen(b)) == Enum.sort([c.hero.id, c.text.id])
+      refute conflict?(b, "module_set_modules")
+    end
+
     # The entry went (removed for good, or out of what B may read) between
     # the save and B reading it back.
     test "a save B can't read back leaves B's form as it is", c do

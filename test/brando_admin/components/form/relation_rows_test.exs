@@ -216,6 +216,21 @@ defmodule BrandoAdmin.Components.Form.RelationRowsTest do
                written |> reload(author: :links) |> Map.fetch!(:author)
     end
 
+    # A relation's base (`base/2`) is its rows' content: a read that returns
+    # them in another order has the same base, and a reorder another.
+    test "a relation's base doesn't depend on the order the rows were read in", c do
+      for {label, n} <- [{"First", 0}, {"Second", 1}],
+          do: Repo.insert!(%Item{article_id: c.article.id, label: label, sequence: n})
+
+      entry = reload(c.article, [:author, :items])
+      reversed = Map.update!(entry, :items, &Enum.reverse/1)
+      reordered = Map.update!(entry, :items, fn items -> Enum.map(items, &%{&1 | sequence: 1 - &1.sequence}) end)
+
+      assert RelationRows.base(entry, :items) == RelationRows.base(reversed, :items)
+      assert RelationRows.base(entry, :items) != RelationRows.base(reordered, :items)
+      assert RelationRows.base(Map.put(entry, :items, %Ecto.Association.NotLoaded{}), :items) == nil
+    end
+
     # The row B took out is a `:delete` changeset: a relation that can't
     # replace its rows still lets it go.
     test "rows that can't be replaced: a row this form took out stays out", c do

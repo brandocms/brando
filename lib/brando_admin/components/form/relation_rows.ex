@@ -77,6 +77,20 @@ defmodule BrandoAdmin.Components.Form.RelationRows do
   defp marked_as_deleted?(row), do: Map.get(row, :marked_as_deleted) == true
 
   @doc """
+  A digest of a relation's rows (`rows/2`) in `entry`, the base a form was
+  built on, for recovery to tell whether the rows were saved otherwise
+  since (`Form.settle_edit/4`). The order the rows were read in is not
+  part of it (a `sequence` field is). `nil` when the entry didn't load
+  the relation.
+  """
+  def base(%_{} = entry, field) do
+    case rows(Changeset.change(entry), field) do
+      :not_loaded -> nil
+      rows -> rows |> Enum.sort() |> Brando.Drafts.checksum() |> binary_part(0, 16)
+    end
+  end
+
+  @doc """
   The relations in `taken` (field => the form revision that replaced their
   rows) that `params` show as they were before: their form revision
   (`_form_rev`) is older.

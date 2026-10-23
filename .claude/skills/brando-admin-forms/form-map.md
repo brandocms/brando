@@ -52,7 +52,8 @@ Another tab's save: `announce_save`, `event: "take_saved_entry"`,
 `Form.SavedElsewhere`; the browser's old rows: `form_rev`,
 `redraw_relations`, `stale_relations` (`RelationRows.stale`,
 `PendingRows.drop`); a save during this form's save: `take_after_save`;
-reconnect after a save elsewhere: `entry_fingerprint`, `settle_edit`.
+reconnect after a save elsewhere: `relation_bases` (`_relation_bases`,
+`RelationRows.base`), `conflict_bases`, `drop_conflicts`, `settle_edit`.
 
 ## Messages from children (`update/2` clauses)
 

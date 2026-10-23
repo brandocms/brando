@@ -67,10 +67,15 @@ area in [the section map](form-map.md) and grep for the names it lists.
   has it (`stale_relations/2`): its params are dropped before the cast
   (`PendingRows.drop/3`), and a recovery capture copies the form's rows.
   A save that arrives while the form saves is taken once that save fails
-  (`take_after_save`). On reconnect, the form's `_entry_fingerprint` tells
-  whether the entry was saved meanwhile; if so, recovered relation rows
-  that differ from the saved ones are conflicts (`settle_edit/4`). A
-  server-side value set at save reaches the others only this way. Coverage
+  (`take_after_save`). On reconnect, each relation's base
+  (`_relation_bases`, `RelationRows.base/2`: its rows in the entry the
+  form is built on, read order left out, computed at render from
+  `@entry`) tells whether its rows were saved otherwise meanwhile; if so,
+  recovered rows that differ from the saved ones are a conflict
+  (`settle_edit/4`). An unanswered conflict keeps its pre-take base
+  (`conflict_bases`), so a reconnect asks again. A save of other fields
+  or of other relations is not a conflict. A server-side value set at
+  save reaches the others only this way. Coverage
   lives in `test/brando_admin/live/entry_saved_elsewhere_test.exs` and
   `test/brando_admin/components/form/relation_rows_test.exs`.
 - Read pending subform associations through the helpers in

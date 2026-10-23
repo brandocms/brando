@@ -121,7 +121,7 @@ defmodule BrandoAdmin.Components.Form do
      |> assign(:relation_conflicts, [])
      |> assign(:form_rev, 0)
      |> assign(:taken_relations, %{})
-     |> assign(:entry_fingerprint, nil)
+     |> assign(:conflict_bases, %{})
      |> assign(:take_after_save?, false)
      |> assign(:replaced_values, %{})
      |> assign(:held_remote, %{})
@@ -1011,7 +1011,6 @@ defmodule BrandoAdmin.Components.Form do
     |> assign(:blocks_detached?, false)
     |> assign(:working_copy, nil)
     |> assign(:entry, updated_entry)
-    |> assign(:entry_fingerprint, entry_fingerprint(updated_entry))
     |> assign_refreshed_form()
     |> remount_block_fields()
     |> assign_entry_for_blocks()
@@ -1323,7 +1322,6 @@ defmodule BrandoAdmin.Components.Form do
     {:ok,
      socket
      |> assign(:entry, updated_entry)
-     |> assign(:entry_fingerprint, entry_fingerprint(updated_entry))
      |> put_form(to_form(updated_changeset))
      |> rebuild_preview_relations()
      |> clear_owned_assets()
@@ -1473,7 +1471,6 @@ defmodule BrandoAdmin.Components.Form do
     # The entry as it was read, before recovery or deliveries change it: the
     # recovery baseline (`Drafts.init/1`)
     |> assign_new(:opened_entry, fn -> socket.assigns.entry end)
-    |> assign_entry_fingerprint()
     |> assign_addon_statuses()
     |> assign_default_params()
     |> extract_tab_names()
@@ -2255,7 +2252,6 @@ defmodule BrandoAdmin.Components.Form do
 
     socket
     |> assign(:entry, entry)
-    |> assign(:entry_fingerprint, entry_fingerprint(entry))
     |> Drafts.keep_baseline(entry)
   end
 
@@ -2935,7 +2931,7 @@ defmodule BrandoAdmin.Components.Form do
     socket
     |> put_form(form)
     |> assign(:edited_relations, MapSet.difference(edited_relations(socket), MapSet.new(received)))
-    |> assign(:relation_conflicts, relation_conflicts(socket) -- received)
+    |> drop_conflicts(received)
   end
 
   # A `validate` from this editor's browser: the field it names (a relation
@@ -2978,26 +2974,37 @@ defmodule BrandoAdmin.Components.Form do
   end
 
   # A relation the recovered form holds otherwise than the entry is the
-  # tab's own, as it was before the reconnect: relations don't ship. If the
-  # entry was saved elsewhere since the form was built (its fingerprint,
-  # `_entry_fingerprint`, is another), the save may have changed those rows
-  # too: the form keeps the recovered ones and asks which to keep
-  # (`relation_conflicts`).
+  # tab's own, as it was before the reconnect: relations don't ship. If its
+  # rows were saved otherwise since the form was built (its recovered base,
+  # `_relation_bases`, is not the entry's), the form keeps the recovered
+  # rows and asks which to keep (`relation_conflicts`), and keeps asking
+  # after another reconnect (`conflict_bases`). A page rendered without
+  # bases asks nothing.
   defp settle_edit(true = _recovery?, socket, changeset, %{previous: previous, params: params}) do
     offline = offline_fields(socket, params)
     relations = relation_fields(socket)
     differs? = &(RelationRows.rows(previous, &1) != RelationRows.rows(changeset, &1))
     recovered = for field <- relations, field in offline or differs?.(field), do: field
+    bases = recovered_bases(params)
+    entry = socket.assigns.entry
 
-    conflicts =
-      if params["_entry_fingerprint"] in [nil, "", socket.assigns[:entry_fingerprint]],
-        do: [],
-        else: Enum.filter(recovered, &(differs?.(&1) and &1 not in relation_conflicts(socket)))
+    conflict_bases =
+      for field <- recovered,
+          field not in relation_conflicts(socket),
+          differs?.(field),
+          base = bases[Atom.to_string(field)],
+          is_binary(base),
+          base != RelationRows.base(entry, field),
+          into: %{},
+          do: {field, base}
+
+    conflicts = Enum.filter(recovered, &Map.has_key?(conflict_bases, &1))
 
     socket =
       socket
       |> mark_relations(recovered)
-      |> assign(:relation_conflicts, relation_conflicts(socket) ++ conflicts)
+      |> update(:relation_conflicts, &(&1 ++ conflicts))
+      |> update(:conflict_bases, &Map.merge(&1, conflict_bases))
 
     {keep_received(socket, previous, changeset, offline), socket, offline -- relations}
   end
@@ -3394,6 +3401,7 @@ defmodule BrandoAdmin.Components.Form do
   defp unshipped_fields(socket), do: socket.assigns[:unshipped_fields] || MapSet.new()
   defp edited_relations(socket), do: socket.assigns[:edited_relations] || MapSet.new()
   defp relation_conflicts(socket), do: socket.assigns[:relation_conflicts] || []
+  defp conflict_bases(socket), do: socket.assigns[:conflict_bases] || %{}
   defp form_rev(socket), do: socket.assigns[:form_rev] || 0
   defp taken_relations(socket), do: socket.assigns[:taken_relations] || %{}
   defp replaced_values(socket), do: socket.assigns[:replaced_values] || %{}
@@ -3494,6 +3502,7 @@ defmodule BrandoAdmin.Components.Form do
       |> assign(:synced_values, %{})
       |> assign(:edited_relations, MapSet.new())
       |> assign(:relation_conflicts, [])
+      |> assign(:conflict_bases, %{})
 
     case socket.assigns[:dirty_fields] do
       [_ | _] -> put_dirty_fields(socket, [])
@@ -3573,13 +3582,18 @@ defmodule BrandoAdmin.Components.Form do
     replaced = Enum.reduce(changed -- relations, replaced_values(socket), &replace_value(&2, previous, changeset, &1))
     kept_relations = Map.take(socket.assigns[:updated_entry_assocs] || %{}, kept)
     conflicts = conflicts(socket, saved, kept)
+    opened = socket.assigns.entry
 
     socket
+    |> drop_conflicts(relation_conflicts(socket) -- kept)
+    |> update(:relation_conflicts, &(&1 ++ conflicts))
+    |> update(
+      :conflict_bases,
+      &Map.merge(&1, Map.new(conflicts, fn field -> {field, RelationRows.base(opened, field)} end))
+    )
     |> assign(:entry, entry)
-    |> assign(:entry_fingerprint, entry_fingerprint(entry))
     |> put_form(to_form(changeset, []))
     |> redraw_relations(previous, changeset, relations)
-    |> assign(:relation_conflicts, Enum.filter(relation_conflicts(socket), &(&1 in kept)) ++ conflicts)
     |> assign(:replaced_values, replaced)
     |> assign(:unshipped_fields, MapSet.intersection(unshipped_fields(socket), MapSet.new(kept)))
     |> assign(:synced_values, Map.take(synced_values(socket), kept))
@@ -3617,16 +3631,40 @@ defmodule BrandoAdmin.Components.Form do
 
   defp rebase_on_blocks(socket), do: socket
 
-  # The entry the form is built on, as recovery tells it from the entry a
-  # reconnect reads (`settle_edit/4`). Without its blocks: a heavy entry
-  # reads them later, and they sync on their own.
-  defp entry_fingerprint(nil), do: nil
-  defp entry_fingerprint(entry), do: entry |> with_form_blocks(%{}) |> Brando.Drafts.fingerprint()
+  # Each relation's rows in the entry the form is built on (its base,
+  # `RelationRows.base/2`), as the browser holds them (`_relation_bases`)
+  # for recovery to tell whether the entry was saved otherwise since
+  # (`settle_edit/4`). A relation with a conflict this editor hasn't
+  # answered keeps the base it had before the save it is with
+  # (`conflict_bases`), so a reconnect still asks.
+  defp relation_bases(nil, _schema, _blueprint, _conflict_bases), do: ""
 
-  defp assign_entry_fingerprint(%{assigns: %{entry_fingerprint: nil, entry: entry}} = socket),
-    do: assign(socket, :entry_fingerprint, entry_fingerprint(entry))
+  defp relation_bases(entry, schema, blueprint, conflict_bases) do
+    for(
+      field <- relation_fields(schema, blueprint),
+      base = RelationRows.base(entry, field),
+      into: %{},
+      do: {field, base}
+    )
+    |> Map.merge(conflict_bases)
+    |> Jason.encode!()
+  end
 
-  defp assign_entry_fingerprint(socket), do: socket
+  defp recovered_bases(params) do
+    with json when is_binary(json) <- params["_relation_bases"],
+         {:ok, %{} = bases} <- Jason.decode(json) do
+      bases
+    else
+      _ -> %{}
+    end
+  end
+
+  # Conflicts settled, or gone with the rows that made them.
+  defp drop_conflicts(socket, fields) do
+    socket
+    |> assign(:relation_conflicts, relation_conflicts(socket) -- fields)
+    |> assign(:conflict_bases, Map.drop(conflict_bases(socket), fields))
+  end
 
   # The block associations the form holds, as `put_loaded_blocks/2` puts
   # them: not loaded yet while a heavy entry's blocks load.
@@ -3757,7 +3795,7 @@ defmodule BrandoAdmin.Components.Form do
     socket
     |> put_form(to_form(changeset, []))
     |> redraw_relations(previous, changeset, [field])
-    |> assign(:relation_conflicts, List.delete(relation_conflicts(socket), field))
+    |> drop_conflicts([field])
     |> assign(:edited_relations, MapSet.delete(edited_relations(socket), field))
     |> assign(:pending_rows, Map.delete(pending_rows(socket), field))
     |> update(:updated_entry_assocs, &Map.delete(&1 || %{}, field))
@@ -3771,9 +3809,11 @@ defmodule BrandoAdmin.Components.Form do
   # has_many, has_one and many_to_many relations the form edits, which don't
   # ship as field changes. Block fields sync through their own ops, and a
   # transformer's rows are its component's.
-  defp relation_fields(%{assigns: %{schema: schema} = assigns}) do
+  defp relation_fields(%{assigns: %{schema: schema} = assigns}), do: relation_fields(schema, assigns[:form_blueprint])
+
+  defp relation_fields(schema, blueprint) do
     transformers =
-      case assigns[:form_blueprint] do
+      case blueprint do
         %{transformers: transformers} -> Enum.map(transformers, &elem(&1, 0))
         _ -> []
       end
@@ -4588,7 +4628,11 @@ defmodule BrandoAdmin.Components.Form do
           >
             <input type="hidden" name={"#{@form.name}[#{:__force_change}]"} phx-debounce="0" />
             <input type="hidden" name="_form_rev" value={@form_rev} />
-            <input type="hidden" name="_entry_fingerprint" value={@entry_fingerprint} />
+            <input
+              type="hidden"
+              name="_relation_bases"
+              value={relation_bases(@entry, @schema, @form_blueprint, @conflict_bases)}
+            />
             <Translation.panel :if={@translation} state={@translation} form_name={@form.name} target={@myself} />
             <div style="display:none">
               <.live_file_input upload={@uploads[:image_editor_upload]} />
@@ -5091,7 +5135,7 @@ defmodule BrandoAdmin.Components.Form do
   # A relation another editor's save changed while this editor had changed
   # it too ("Saves by other editors").
   def handle_event("keep_own_relation", %{"field" => name}, socket) do
-    {:noreply, update(socket, :relation_conflicts, &Enum.reject(&1, fn field -> Atom.to_string(field) == name end))}
+    {:noreply, drop_conflicts(socket, Enum.filter(relation_conflicts(socket), &(Atom.to_string(&1) == name)))}
   end
 
   def handle_event("take_saved_relation", %{"field" => name}, socket) do
