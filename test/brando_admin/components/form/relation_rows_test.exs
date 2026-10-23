@@ -231,6 +231,16 @@ defmodule BrandoAdmin.Components.Form.RelationRowsTest do
       assert RelationRows.base(Map.put(entry, :items, %Ecto.Association.NotLoaded{}), :items) == nil
     end
 
+    test "a relation's base doesn't depend on the order its rows' own rows were read in", c do
+      author = Repo.insert!(%Author{article_id: c.article.id, name: "Author"})
+      for label <- ["First", "Second"], do: Repo.insert!(%Link{author_id: author.id, label: label})
+
+      entry = reload(c.article, [:items, author: :links])
+      reversed = update_in(entry.author.links, &Enum.reverse/1)
+
+      assert RelationRows.base(entry, :author) == RelationRows.base(reversed, :author)
+    end
+
     # The row B took out is a `:delete` changeset: a relation that can't
     # replace its rows still lets it go.
     test "rows that can't be replaced: a row this form took out stays out", c do

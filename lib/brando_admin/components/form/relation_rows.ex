@@ -33,10 +33,13 @@ defmodule BrandoAdmin.Components.Form.RelationRows do
   removed (or marked to be) are left out; a many_to_many row is the entry it
   names.
   """
-  def rows(%Changeset{data: %schema{}} = changeset, field) do
+  def rows(changeset, field), do: rows(changeset, field, & &1)
+
+  # `order` puts each list of rows, a row's own relations' too, in order.
+  defp rows(%Changeset{data: %schema{}} = changeset, field, order) do
     case shown(changeset, field) do
       %Association.NotLoaded{} -> :not_loaded
-      rows -> content(schema.__schema__(:association, field), rows)
+      rows -> content(schema.__schema__(:association, field), rows, order)
     end
   end
 
@@ -60,18 +63,19 @@ defmodule BrandoAdmin.Components.Form.RelationRows do
     end
   end
 
-  defp content(assoc, rows), do: for(row <- List.wrap(rows), not marked_as_deleted?(row), do: row_content(assoc, row))
+  defp content(assoc, rows, order),
+    do: order.(for row <- List.wrap(rows), not marked_as_deleted?(row), do: row_content(assoc, row, order))
 
-  defp row_content(%Association.ManyToMany{}, row), do: Ecto.primary_key(row)
+  defp row_content(%Association.ManyToMany{}, row, _order), do: Ecto.primary_key(row)
 
-  defp row_content(%{related_key: owner_key}, %row_schema{} = row) do
+  defp row_content(%{related_key: owner_key}, %row_schema{} = row, order) do
     skip = [owner_key, :inserted_at, :updated_at | row_schema.__schema__(:primary_key)]
     values = Map.take(row, row_schema.__schema__(:fields) -- skip)
 
     for name <- fields(row_schema, []),
         Ecto.assoc_loaded?(Map.get(row, name)),
         into: values,
-        do: {name, content(row_schema.__schema__(:association, name), Map.get(row, name))}
+        do: {name, content(row_schema.__schema__(:association, name), Map.get(row, name), order)}
   end
 
   defp marked_as_deleted?(row), do: Map.get(row, :marked_as_deleted) == true
@@ -80,13 +84,13 @@ defmodule BrandoAdmin.Components.Form.RelationRows do
   A digest of a relation's rows (`rows/2`) in `entry`, the base a form was
   built on, for recovery to tell whether the rows were saved otherwise
   since (`Form.settle_edit/4`). The order the rows were read in is not
-  part of it (a `sequence` field is). `nil` when the entry didn't load
-  the relation.
+  part of it, in the rows' own relations neither (a `sequence` field
+  is). `nil` when the entry didn't load the relation.
   """
   def base(%_{} = entry, field) do
-    case rows(Changeset.change(entry), field) do
+    case rows(Changeset.change(entry), field, &Enum.sort/1) do
       :not_loaded -> nil
-      rows -> rows |> Enum.sort() |> Brando.Drafts.checksum() |> binary_part(0, 16)
+      rows -> rows |> Brando.Drafts.checksum() |> binary_part(0, 16)
     end
   end
 
