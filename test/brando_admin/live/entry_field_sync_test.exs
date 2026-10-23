@@ -137,6 +137,27 @@ defmodule BrandoAdmin.EntryFieldSyncTest do
     await(fn -> form_field(b, :unpublish_at) == ~U[2026-03-01 10:00:00Z] end)
   end
 
+  # A date that doesn't cast is no change either: B keeps the last one A sent.
+  test "a date typed that doesn't cast sends the other editor nothing", c do
+    Repo.update_all(from(p in Page, where: p.id == ^c.page.id),
+      set: [publish_at: ~U[2026-01-01 10:00:00Z], unpublish_at: ~U[2026-03-01 10:00:00Z]]
+    )
+
+    a = open(c.conn, c.page)
+    b = open(c.other_conn, c.page)
+
+    edit_dates(a, "unpublish_at", %{"publish_at" => "2026-01-01T10:00:00Z", "unpublish_at" => "2026-06-01T10:00:00Z"})
+    await(fn -> form_field(b, :unpublish_at) == ~U[2026-06-01 10:00:00Z] end)
+
+    edit_dates(a, "unpublish_at", %{"publish_at" => "2026-01-01T10:00:00Z", "unpublish_at" => "not a date"})
+    assert Keyword.has_key?(form_errors(a), :unpublish_at)
+    edit(a, "uri", "om-oss-a")
+    await_shown(b, "uri", "om-oss-a")
+    settle(a) && settle(b)
+
+    assert form_field(b, :unpublish_at) == ~U[2026-06-01 10:00:00Z]
+  end
+
   # The date inputs don't redraw their value: a keystroke sends the dates as
   # the browser holds them.
   defp edit_dates(view, field, dates) do
