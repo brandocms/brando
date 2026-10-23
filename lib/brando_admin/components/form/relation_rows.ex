@@ -262,8 +262,17 @@ defmodule BrandoAdmin.Components.Form.RelationRows do
     Map.drop(changes, keys)
   end
 
-  # A new row in the form's data: its values.
-  defp edited(%row_schema{} = row), do: edits(row, struct(row_schema))
+  # A row in the form's data: its values, and the rows of its own relations
+  # (an author's links), as new rows of the row it goes onto.
+  defp edited(%row_schema{} = row) do
+    row = new_struct(row)
+
+    for name <- fields(row_schema, []),
+        rows = Map.get(row, name),
+        Ecto.assoc_loaded?(rows) and rows not in [nil, []],
+        into: edits(row, struct(row_schema)),
+        do: {name, rows}
+  end
 
   # The form shows a row's params over its values: only what the editor
   # changed, or typed and didn't cast, stays a param.
