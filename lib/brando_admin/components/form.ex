@@ -3091,12 +3091,7 @@ defmodule BrandoAdmin.Components.Form do
   # (`_form_rev`) is older. A keystroke typed in that window is in a form
   # the browser then redraws; while its input has focus it keeps the text
   # and sends it again with the next keystroke.
-  defp stale_relations(socket, params) do
-    case Integer.parse(to_string(params["_form_rev"])) do
-      {rev, ""} -> for {field, taken_at} <- taken_relations(socket), rev < taken_at, do: field
-      _ -> []
-    end
-  end
+  defp stale_relations(socket, params), do: RelationRows.stale(taken_relations(socket), params)
 
   defp keep_field(changeset, previous, field) do
     changes =

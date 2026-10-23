@@ -77,6 +77,18 @@ defmodule BrandoAdmin.Components.Form.RelationRows do
   defp marked_as_deleted?(row), do: Map.get(row, :marked_as_deleted) == true
 
   @doc """
+  The relations in `taken` (field => the form revision that replaced their
+  rows) that `params` show as they were before: their form revision
+  (`_form_rev`) is older.
+  """
+  def stale(taken, params) do
+    case Integer.parse(to_string(params["_form_rev"])) do
+      {rev, ""} -> for {field, taken_at} <- taken, rev < taken_at, do: field
+      _ -> []
+    end
+  end
+
+  @doc """
   Whether a row of the relation holds an edit that didn't cast: its rows
   (`rows/2`) don't show it.
   """

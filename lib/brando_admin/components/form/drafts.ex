@@ -11,6 +11,8 @@ defmodule BrandoAdmin.Components.Form.Drafts do
   alias Brando.Drafts.Restore
   alias BrandoAdmin.Components.Form.DraftPreview
   alias BrandoAdmin.Components.Form.DraftRecoveryComponent
+  alias BrandoAdmin.Components.Form.PendingRows
+  alias BrandoAdmin.Components.Form.RelationRows
 
   def init(%{assigns: %{draft: %{initialized?: true}}} = socket), do: socket
 
@@ -157,7 +159,11 @@ defmodule BrandoAdmin.Components.Form.Drafts do
       Enum.map(blueprint.blocks, &{:block, to_string(&1.name)}) ++
         Enum.map(blueprint.transformers, fn {name, _, _} -> {:transformer, to_string(name)} end)
 
-    raw = Plug.Conn.Query.decode(params["main"] || "")[socket.assigns.singular]
+    main = Plug.Conn.Query.decode(params["main"] || "")
+    # Relations another editor's save replaced after the browser drew this
+    # form: the copy has them as the form does (`Form.stale_relations/2`).
+    stale = RelationRows.stale(socket.assigns[:taken_relations] || %{}, main)
+    raw = PendingRows.drop(main[socket.assigns.singular], socket.assigns.schema, stale)
 
     forms =
       Map.new(params["blocks"] || %{}, fn {uid, encoded} ->
@@ -175,7 +181,7 @@ defmodule BrandoAdmin.Components.Form.Drafts do
       generation: draft.generation,
       client_generation: params["generation"],
       request_id: params["request_id"],
-      main: main_params(socket, cs),
+      main: held_relations(main_params(socket, cs), main_params(socket, socket.assigns.form.source), stale),
       parts: %{},
       expected: expected
     }
@@ -205,6 +211,13 @@ defmodule BrandoAdmin.Components.Form.Drafts do
     finish(socket)
   rescue
     _ -> fail_capture(socket)
+  end
+
+  defp held_relations(main, held, stale) do
+    Enum.reduce(stale, main, fn field, main ->
+      key = to_string(field)
+      if Map.has_key?(held, key), do: Map.put(main, key, held[key]), else: Map.delete(main, key)
+    end)
   end
 
   def part(%{assigns: %{draft: %{capture: %{id: id} = capture} = draft}} = socket, id, kind, field, data) do

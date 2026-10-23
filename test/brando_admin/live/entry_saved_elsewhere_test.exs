@@ -397,6 +397,31 @@ defmodule BrandoAdmin.EntrySavedElsewhereTest do
                Enum.sort([c.hero.id, c.text.id])
     end
 
+    # B's browser captures the form it showed before A's save reached it:
+    # the rows in it are the ones A's save replaced.
+    test "a recovery copy of the form B showed before A's save keeps A's rows", c do
+      focus(c.b, "module_set", "title")
+      type(c.b, "module_set", "title", "Set, typed by B")
+      before = render(c.b)
+
+      pick(c.a, c.hero)
+      pick(c.a, c.text)
+      save_and_stay(c.a, "module_set", false)
+      await(fn -> Enum.sort(chosen(c.b)) == Enum.sort([c.hero.id, c.text.id]) end)
+
+      main = before |> form_params("#module_set_form_form") |> Plug.Conn.Query.encode()
+
+      c.b
+      |> with_target(cid_of(c.b, "#module_set_form-el"))
+      |> render_hook("draft_capture", %{"main" => main, "blocks" => %{}, "generation" => 1, "request_id" => 1})
+
+      [copy] = Brando.Drafts.list(form_assigns(c.b).draft.identity)
+      assert copy.payload["main"]["title"] == "Set, typed by B"
+
+      assert copy.payload["main"]["module_set_modules"] |> Enum.map(& &1["module_id"]) |> Enum.sort() ==
+               Enum.sort([c.hero.id, c.text.id])
+    end
+
     # The entry went (removed for good, or out of what B may read) between
     # the save and B reading it back.
     test "a save B can't read back leaves B's form as it is", c do
