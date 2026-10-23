@@ -122,6 +122,7 @@ defmodule BrandoAdmin.Components.Form do
      |> assign(:form_rev, 0)
      |> assign(:taken_relations, %{})
      |> assign(:entry_fingerprint, nil)
+     |> assign(:take_after_save?, false)
      |> assign(:replaced_values, %{})
      |> assign(:held_remote, %{})
      |> assign(:field_clocks, %{})
@@ -3538,11 +3539,12 @@ defmodule BrandoAdmin.Components.Form do
 
   defp announce_save(_socket, _entry, _mutation_type), do: :ok
 
-  # Not while this form saves (its own save rebuilds it), loads, or shows a
-  # revision's working copy, which is not the entry. An entry gone since
-  # the save (deleted, or out of what this editor may read) is left as the
-  # form has it.
-  defp take_saved_entry(%{assigns: %{processing: true}} = socket), do: socket
+  # Not while this form saves: its own save rebuilds it, and if the save
+  # fails the form takes the other save then (`take_after_save/1`). Not
+  # while it loads, or shows a revision's working copy, which is not the
+  # entry. An entry gone since the save (deleted, or out of what this
+  # editor may read) is left as the form has it.
+  defp take_saved_entry(%{assigns: %{processing: true}} = socket), do: assign(socket, :take_after_save?, true)
   defp take_saved_entry(%{assigns: %{entry_loading?: true}} = socket), do: socket
   defp take_saved_entry(%{assigns: %{working_copy: revision}} = socket) when not is_nil(revision), do: socket
 
@@ -3589,6 +3591,15 @@ defmodule BrandoAdmin.Components.Form do
     |> preview_changed_fields(changed)
     |> broadcast_dirty_fields()
   end
+
+  # Another editor saved while this form's save ran, and the save didn't
+  # write: the form takes the other save in now.
+  defp take_after_save(%{assigns: %{processing: true}} = socket), do: socket
+
+  defp take_after_save(%{assigns: %{take_after_save?: true}} = socket),
+    do: socket |> assign(:take_after_save?, false) |> take_saved_entry()
+
+  defp take_after_save(socket), do: socket
 
   # A block field read the rows another editor's save wrote
   # (`entry_blocks_reloaded`): recovery compares with them, as with the rest
@@ -5323,11 +5334,12 @@ defmodule BrandoAdmin.Components.Form do
          |> assign(:processing, false)
          |> assign(:all_blocks_received?, false)
          |> assign(:save_token, nil)
-         |> clear_blocks_root_changesets()}
+         |> clear_blocks_root_changesets()
+         |> take_after_save()}
 
       :ok ->
         {:noreply, result} = handle_event("save", params, assign(socket, :draft_save_checked?, true))
-        {:noreply, result |> assign(:draft_save_checked?, false) |> Drafts.save_result()}
+        {:noreply, result |> assign(:draft_save_checked?, false) |> Drafts.save_result() |> take_after_save()}
     end
   end
 
@@ -6710,7 +6722,10 @@ defmodule BrandoAdmin.Components.Form do
     send(self(), {:toast, mutation_message})
 
     {:noreply,
-     maybe_offer_permalink_redirect(Drafts.saved(socket, entry), save.entry_or_default, entry, fn socket ->
+     socket
+     |> assign(:take_after_save?, false)
+     |> Drafts.saved(entry)
+     |> maybe_offer_permalink_redirect(save.entry_or_default, entry, fn socket ->
        redirect_after_save_with_blocks(socket, entry, stale?, save)
      end)}
   end
@@ -6845,7 +6860,10 @@ defmodule BrandoAdmin.Components.Form do
     send(self(), {:toast, "#{String.capitalize(singular)} #{mutation_type}d"})
 
     {:noreply,
-     maybe_offer_permalink_redirect(Drafts.saved(socket, entry), save.entry_or_default, entry, fn socket ->
+     socket
+     |> assign(:take_after_save?, false)
+     |> Drafts.saved(entry)
+     |> maybe_offer_permalink_redirect(save.entry_or_default, entry, fn socket ->
        redirect_after_save(socket, entry, save)
      end)}
   end

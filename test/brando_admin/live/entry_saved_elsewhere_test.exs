@@ -563,6 +563,37 @@ defmodule BrandoAdmin.EntrySavedElsewhereTest do
       assert form_assigns(c.b).form.data == held.data
     end
 
+    # The browser submits again once the blocks are collected, until the
+    # save has run.
+    defp submit_collected(view) do
+      assert_push_event(view, "b:submit", %{}, 5_000)
+      view |> element("#page_form_form") |> render_submit()
+      if form_assigns(view).processing, do: submit_collected(view)
+    end
+
+    # A's save arrives while B's own save collects its blocks, and B's save
+    # then fails (the title is blank): B's form takes A's save in after all,
+    # and keeps B's edit.
+    test "B's form takes A's save once B's own save fails", c do
+      type(c.b, "page", "uri", "om-oss-b")
+      type(c.b, "page", "title", "")
+      c.b |> form_of("page") |> render_hook("save_redirect_target", %{})
+      c.b |> element("#page_form_form") |> render_submit()
+      assert form_assigns(c.b).processing
+
+      type(c.a, "page", "status", "published")
+      save_and_stay(c.a, "page", true)
+      await(fn -> Repo.get!(Page, c.page.id).publish_at != nil end)
+      settle(c.b)
+
+      submit_collected(c.b)
+      refute form_assigns(c.b).processing
+      assert Repo.get!(Page, c.page.id).title == "Om oss"
+
+      assert shown_publish_at(c.b) not in [nil, ""]
+      assert params(c.b, "page")["uri"] == "om-oss-b"
+    end
+
     # A revision loaded as a working copy is the form B saves; the saved
     # entry is not.
     test "B's working copy of a revision stays over A's save", c do
