@@ -50,7 +50,9 @@ Another tab's save: `announce_save`, `event: "take_saved_entry"`,
 `put_received_form`, `Form.RelationRows` (`rows`, `keep`); conflicts:
 `relation_conflicts`, `"keep_own_relation"`, `"take_saved_relation"`,
 `Form.SavedElsewhere`; the browser's old rows: `form_rev`,
-`redraw_relations`, `stale_relations`.
+`redraw_relations`, `stale_relations` (`RelationRows.stale`,
+`PendingRows.drop`); a save during this form's save: `take_after_save`;
+reconnect after a save elsewhere: `entry_fingerprint`, `settle_edit`.
 
 ## Messages from children (`update/2` clauses)
 

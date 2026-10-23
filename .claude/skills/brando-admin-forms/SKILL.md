@@ -64,7 +64,12 @@ area in [the section map](form-map.md) and grep for the names it lists.
   (`relation_conflicts`, `Form.SavedElsewhere`). The browser sends the rows
   it showed before until it has drawn the new ones: the form revision
   (`_form_rev`) tells, and such an event leaves the relation as the form
-  has it (`stale_relations/2`). A
+  has it (`stale_relations/2`): its params are dropped before the cast
+  (`PendingRows.drop/3`), and a recovery capture copies the form's rows.
+  A save that arrives while the form saves is taken once that save fails
+  (`take_after_save`). On reconnect, the form's `_entry_fingerprint` tells
+  whether the entry was saved meanwhile; if so, recovered relation rows
+  that differ from the saved ones are conflicts (`settle_edit/4`). A
   server-side value set at save reaches the others only this way. Coverage
   lives in `test/brando_admin/live/entry_saved_elsewhere_test.exs` and
   `test/brando_admin/components/form/relation_rows_test.exs`.
