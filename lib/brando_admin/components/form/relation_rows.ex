@@ -250,7 +250,7 @@ defmodule BrandoAdmin.Components.Form.RelationRows do
 
     cond do
       saved && Ecto.primary_key(row) == Ecto.primary_key(saved) -> onto(held, saved)
-      saved && assoc.on_replace in [:raise, :update] -> saved |> Changeset.change(edited(held)) |> typed(held)
+      saved && assoc.on_replace in [:raise, :update] -> held |> edited() |> onto_saved(saved) |> typed(held)
       new?(row) -> held
       changed?(held) -> as_new(held)
       true -> :keep
@@ -271,6 +271,27 @@ defmodule BrandoAdmin.Components.Form.RelationRows do
   end
 
   defp onto(_held, saved), do: saved
+
+  # The editor's values onto a saved row it can't replace. The rows of the
+  # row's own relations go onto the saved row's as the relation lets them
+  # (`keep_one/3`, `keep_many/3`): saved rows it can't replace stay.
+  defp onto_saved(edits, %row_schema{} = saved) do
+    {nested, values} = Map.split(edits, fields(row_schema, []))
+
+    Enum.reduce(nested, Changeset.change(saved, values), fn {name, held}, changeset ->
+      assoc = row_schema.__schema__(:association, name)
+      current = Map.get(saved, name)
+
+      value =
+        cond do
+          not Ecto.assoc_loaded?(current) -> :keep
+          assoc.cardinality == :one -> keep_one(assoc, current, held)
+          true -> keep_many(assoc, current, List.wrap(held))
+        end
+
+      if value == :keep, do: changeset, else: Changeset.put_assoc(changeset, name, value)
+    end)
+  end
 
   defp changed?(%Changeset{changes: changes, errors: errors}), do: changes != %{} or errors != []
   defp changed?(_row), do: false

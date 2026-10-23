@@ -96,6 +96,33 @@ defmodule BrandoAdmin.Components.Form.RelationRowsTest do
     end
   end
 
+  # An author whose links can't be replaced (Ecto's default `on_replace`)
+  defmodule FixedAuthor do
+    @moduledoc false
+    use Ecto.Schema
+
+    schema "synctest_article_authors" do
+      field :name, :string
+      field :article_id, :id
+      has_many :links, Link, foreign_key: :author_id
+    end
+
+    def changeset(author, params), do: author |> Changeset.cast(params, [:name]) |> Changeset.cast_assoc(:links)
+  end
+
+  defmodule FixedArticle do
+    @moduledoc false
+    use Ecto.Schema
+
+    schema "synctest_articles" do
+      field :title, :string
+      has_one :author, FixedAuthor, foreign_key: :article_id
+      timestamps()
+    end
+
+    def changeset(article, params), do: article |> Changeset.cast(params, [:title]) |> Changeset.cast_assoc(:author)
+  end
+
   setup do
     :ok = Ecto.Adapters.SQL.Sandbox.checkout(Repo.repo())
     [kept, added, saved] = for _ <- 1..3, do: Repo.insert!(%Tag{})
@@ -214,6 +241,42 @@ defmodule BrandoAdmin.Components.Form.RelationRowsTest do
 
       assert %{name: "Name by B", links: [%{label: "Link by B"}]} =
                written |> reload(author: :links) |> Map.fetch!(:author)
+    end
+
+    # Both tabs fill in the author, each with a link; A saves first. The
+    # author's links can't be replaced: A's stays beside B's.
+    for from <- [:data, :changes] do
+      test "a new has_one onto the saved one keeps the saved rows it can't replace (B's author in its #{from})", c do
+        base = FixedArticle |> Repo.get!(c.article.id) |> Repo.preload(author: :links)
+
+        previous =
+          case unquote(from) do
+            :data ->
+              base
+              |> Map.put(:author, %FixedAuthor{name: "Name by B", links: [%Link{label: "Link by B"}]})
+              |> Changeset.change()
+
+            :changes ->
+              FixedArticle.changeset(base, %{
+                "author" => %{"name" => "Name by B", "links" => %{"0" => %{"label" => "Link by B"}}}
+              })
+          end
+
+        author = Repo.insert!(%Author{article_id: c.article.id, name: "Name by A"})
+        Repo.insert!(%Link{author_id: author.id, label: "Link by A"})
+        saved = FixedArticle |> Repo.get!(c.article.id) |> Repo.preload(author: :links) |> Changeset.change()
+
+        carried = RelationRows.keep(saved, previous, base, :author)
+
+        assert [%{name: "Name by B", links: links}] = RelationRows.rows(carried, :author)
+        assert links |> Enum.map(& &1.label) |> Enum.sort() == ["Link by A", "Link by B"]
+        assert {:ok, written} = Repo.update(carried)
+
+        assert %{name: "Name by B", links: links} =
+                 FixedArticle |> Repo.get!(written.id) |> Repo.preload(author: :links) |> Map.fetch!(:author)
+
+        assert links |> Enum.map(& &1.label) |> Enum.sort() == ["Link by A", "Link by B"]
+      end
     end
 
     # A relation's base (`base/2`) is its rows' content: a read that returns
