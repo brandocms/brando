@@ -55,6 +55,19 @@ defmodule BrandoAdmin.EntryFieldSyncTest do
 
   defp shows?(view, field, value), do: shown(view, field) == value
 
+  # A field as the Form component holds it.
+  defp form_field(view, field) do
+    {components, _, _} = :sys.get_state(view.pid).components
+
+    Enum.find_value(components, fn
+      {_cid, {BrandoAdmin.Components.Form, _id, assigns, _private, _prints}} ->
+        Ecto.Changeset.get_field(assigns.form.source, field)
+
+      _ ->
+        nil
+    end)
+  end
+
   defp await_shown(view, field, value), do: await(fn -> shows?(view, field, value) end)
 
   # Both editors end where they should, and stay there once every message
@@ -75,6 +88,78 @@ defmodule BrandoAdmin.EntryFieldSyncTest do
     edit(c.a, "uri", "om-oss-a")
 
     assert_both(c, %{"title" => "Om oss", "uri" => "om-oss-a"})
+  end
+
+  # A cleared title doesn't cast: shipped, it would be the title A opened
+  # with, which A didn't type. B keeps the last title A sent.
+  test "a title cleared after it shipped sends the other editor nothing", c do
+    edit(c.a, "title", "Om oss, A")
+    await_shown(c.b, "title", "Om oss, A")
+
+    edit(c.a, "title", "")
+    edit(c.a, "uri", "om-oss-a")
+    await_shown(c.b, "uri", "om-oss-a")
+    settle(c.a) && settle(c.b)
+
+    assert shown(c.a, "title") == ""
+    assert shown(c.b, "title") == "Om oss, A"
+  end
+
+  test "a required field saved blank and cleared again reaches the other editor blank", c do
+    page = Factory.insert(:page, creator: c.me, title: "Tom", uri: "")
+    a = open(c.conn, page)
+    b = open(c.other_conn, page)
+
+    edit(a, "uri", "tom")
+    await_shown(b, "uri", "tom")
+
+    edit(a, "uri", "")
+    await_shown(b, "uri", "")
+  end
+
+  # The expiry flagged by another rule (before the publishing date) has a
+  # value A chose: set back to the saved one, it ships.
+  test "a field set back to its saved value while another rule flags it reaches the other editor", c do
+    Repo.update_all(from(p in Page, where: p.id == ^c.page.id),
+      set: [publish_at: ~U[2026-01-01 10:00:00Z], unpublish_at: ~U[2026-03-01 10:00:00Z]]
+    )
+
+    a = open(c.conn, c.page)
+    b = open(c.other_conn, c.page)
+
+    edit_dates(a, "unpublish_at", %{"publish_at" => "2026-01-01T10:00:00Z", "unpublish_at" => "2026-06-01T10:00:00Z"})
+    await(fn -> form_field(b, :unpublish_at) == ~U[2026-06-01 10:00:00Z] end)
+
+    edit_dates(a, "publish_at", %{"publish_at" => "2026-04-01T10:00:00Z", "unpublish_at" => "2026-06-01T10:00:00Z"})
+    edit_dates(a, "unpublish_at", %{"publish_at" => "2026-04-01T10:00:00Z", "unpublish_at" => "2026-03-01T10:00:00Z"})
+    assert Keyword.has_key?(form_errors(a), :unpublish_at)
+
+    await(fn -> form_field(b, :unpublish_at) == ~U[2026-03-01 10:00:00Z] end)
+  end
+
+  # The date inputs don't redraw their value: a keystroke sends the dates as
+  # the browser holds them.
+  defp edit_dates(view, field, dates) do
+    focus(view, field)
+
+    params =
+      view
+      |> render()
+      |> form_params("#page_form_form")
+      |> Map.update!("page", &Map.merge(&1, dates))
+      |> Map.put("_target", ["page", field])
+
+    view |> element("#page_form_form") |> render_change(params)
+    blur(view, field)
+  end
+
+  defp form_errors(view) do
+    {components, _, _} = :sys.get_state(view.pid).components
+
+    Enum.find_value(components, fn
+      {_cid, {BrandoAdmin.Components.Form, _id, assigns, _private, _prints}} -> assigns.form.source.errors
+      _ -> nil
+    end)
   end
 
   test "another editor's new title survives the first editor's next field", c do

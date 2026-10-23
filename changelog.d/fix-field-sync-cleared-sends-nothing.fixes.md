@@ -1,0 +1,1 @@
+- A required field cleared after its value reached the other editors no longer sends them the value it was opened with; they keep the last value sent.
