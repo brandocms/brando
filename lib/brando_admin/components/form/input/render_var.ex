@@ -383,6 +383,12 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
   # modal is open, and closing it would destroy the hook mid-transfer.
   defp assign_provider_hook(%{assigns: %{render: :config}} = socket, _type, _var), do: clear_provider_hook(socket)
 
+  # A table row's vars share their keys with every other row's, and rows move
+  # by index, so an upload finishing after a row was inserted or moved could
+  # land in another row. They upload through the picker.
+  defp assign_provider_hook(%{assigns: %{provider_upload: false}} = socket, _type, _var),
+    do: clear_provider_hook(socket)
+
   defp assign_provider_hook(%{assigns: %{form_id: form_id}} = socket, :video, var) when not is_nil(form_id) do
     config_target = var[:config_target].value || "default"
 

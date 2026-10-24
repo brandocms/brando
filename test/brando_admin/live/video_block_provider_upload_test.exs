@@ -278,6 +278,46 @@ defmodule BrandoAdmin.VideoBlockProviderUploadTest do
     view |> render() |> Floki.parse_document!() |> Floki.attribute(selector, "value") |> List.first()
   end
 
+  # Every table row's vars share their keys, and rows move by index: an upload
+  # finishing after a row was inserted above could land in another row. A
+  # table row's video var uploads through the picker.
+  test "a table row's video var uploads through the picker", ctx do
+    page = page_with_video_table_row(ctx.user)
+    {view, _html} = live_form(ctx.conn, "/admin/pages/update/#{page.id}")
+    await_selector(view, "[data-block-uid]")
+
+    assert has_element?(view, ~s([id*="table_rows_0_vars_0"][id$="-video-media"][data-upload-enabled="false"]))
+    refute has_element?(view, ~s([id*="table_rows"][id$="-video-uploader"]))
+  end
+
+  defp page_with_video_table_row(user) do
+    template = Repo.insert!(%Brando.Content.TableTemplate{uid: Brando.Utils.generate_uid(), name: "Clips"})
+
+    Repo.insert!(%Brando.Content.Var{type: :video, key: "clip", label: %{"en" => "Clip"}, table_template_id: template.id})
+
+    module = ProposalFixtures.module!(user, "Clips", "<div>clips</div>", table_template_id: template.id)
+    page = Factory.insert(:page, creator: user, title: "Clips", uri: "clips")
+
+    block =
+      %Block{}
+      |> Block.recursive_block_changeset(
+        %{
+          "uid" => Brando.Utils.generate_uid(),
+          "type" => "module",
+          "module_id" => module.id,
+          "sequence" => 0,
+          "creator_id" => user.id,
+          "source" => to_string(Page.Blocks),
+          "table_rows" => [%{"vars" => [%{"type" => "video", "key" => "clip", "label" => "Clip"}]}]
+        },
+        user
+      )
+      |> Repo.insert!()
+
+    Repo.insert!(struct(Page.Blocks, %{entry_id: page.id, block_id: block.id, sequence: 0}))
+    page
+  end
+
   defp open_entry(%{conn: conn, entry: page}) do
     {view, _html} = live_form(conn, "/admin/pages/update/#{page.id}")
     view

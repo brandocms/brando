@@ -484,14 +484,16 @@ or variable's own config target. It takes the video once the file is with the
 provider, and the provider's webhook reports when it has been encoded. Without
 the credentials it cannot upload, and says so when a file is dropped on it.
 
-If another video is chosen while the file is still on its way, that choice
-stands, and the uploaded video stays in the library.
+If another video is chosen, or the video removed, while the file is still on
+its way, that choice stands, and the uploaded video stays in the library.
 
 A video variable takes a provider upload in an entry's form, and in a global
 set's own edit form. A variable on the Globals screen (`/admin/globals`) and a
 module's default value choose from the library instead. A variable in a block's
 settings, shown only while the block's configure dialog is open, uploads
 through the video picker, so that closing the dialog doesn't stop the upload.
+So does a variable in a block's table row, since rows can be inserted and moved
+while a file is on its way.
 
 ### Video Blocks
 
