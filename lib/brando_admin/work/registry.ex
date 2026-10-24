@@ -103,12 +103,14 @@ defmodule BrandoAdmin.Work.Registry do
   def apply_op(:update, nil, key, attrs, at), do: new(key, attrs, at)
 
   def apply_op(:update, %Work{} = work, _key, attrs, at) do
+    done = attrs[:done] || work.done
+
     %{
       work
       | message: attrs.message || work.message,
         percent: Map.get(attrs, :percent, work.percent),
-        total: attrs[:total] || work.total,
-        done: attrs[:done] || work.done,
+        total: if(attrs[:remaining], do: done + attrs[:remaining], else: attrs[:total] || work.total),
+        done: done,
         updated_at: at
     }
   end
@@ -153,7 +155,7 @@ defmodule BrandoAdmin.Work.Registry do
       user_id: user_id,
       message: attrs[:message],
       percent: attrs[:percent],
-      total: attrs[:total],
+      total: attrs[:total] || attrs[:remaining],
       done: attrs[:done] || 0,
       done_message: attrs[:done_message],
       failed_message: attrs[:failed_message],

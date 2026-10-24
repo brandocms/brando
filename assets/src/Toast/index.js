@@ -127,9 +127,12 @@ export default class Toast {
         }
       })
       toast.dataset.workId = id
-      // A result's toast that goes takes its work along
       toast.onRemoved = () => {
-        if (state.toast === toast && state.entry.status !== 'running') this.workState.delete(id)
+        if (state.toast !== toast) return
+        // A result's toast that goes takes its work along; a running one
+        // pushed out by newer toasts stays out until it ends
+        if (state.entry.status !== 'running') this.workState.delete(id)
+        else if (toast.evicted) state.dismissed = true
       }
       state.toast = toast
     } else if (running && !toast.classList.contains('toast--work')) {
@@ -141,10 +144,10 @@ export default class Toast {
 
     fillWork(toast, entry)
 
-    if (!running) {
+    // Only as it ends: a refresh must not set the fade going again
+    if (!running && toast.classList.contains('toast--work')) {
       const kind = entry.status === 'finished' ? 'success' : 'error'
-      toast.classList.remove('toast--work', 'toast--success', 'toast--error')
-      toast.classList.add(`toast--${kind}`)
+      toast.classList.replace('toast--work', `toast--${kind}`)
       toast.querySelector('.toast-spinner')?.classList.replace('toast-spinner', 'toast-dot')
       this.expire(toast, TIMEOUTS[kind])
     }
@@ -190,7 +193,10 @@ export default class Toast {
     this.expire(toast, TIMEOUTS[kind])
 
     const toasts = this.stack.querySelectorAll('.toast:not(.leaving)')
-    if (toasts.length > MAX_VISIBLE) this.remove(toasts[0])
+    if (toasts.length > MAX_VISIBLE) {
+      toasts[0].evicted = true
+      this.remove(toasts[0])
+    }
 
     return toast
   }

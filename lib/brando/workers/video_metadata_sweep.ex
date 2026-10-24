@@ -39,16 +39,23 @@ defmodule Brando.Worker.VideoMetadataSweep do
     |> new()
     |> Work.track(user, work_key(), finish: false, failed: gettext("Could not look the videos up"))
     |> Oban.insert()
-    |> tap(fn
-      # Without an id, the insert lost a race for the lock: whose it is is unknown
-      {:ok, %Oban.Job{conflict?: true} = job} ->
-        if job.args["user_id"] != user_id(user),
-          do: Work.finish(user, work_key(), gettext("The videos are already being looked up"))
-
-      _queued ->
-        :ok
-    end)
+    |> tap(&end_joined(&1, user_id(user)))
   end
+
+  @doc """
+  Ends the user's work after their insert met a waiting sweep, unless that
+  sweep is their own, which reports to them. Another user's reports to that
+  user; an insert that lost the race for the lock comes back without an id
+  and with the caller's own args, and no job reports to them either.
+  """
+  def end_joined({:ok, %Oban.Job{conflict?: true, id: id, args: %{"user_id" => user_id}}}, user_id)
+      when not is_nil(id),
+      do: :ok
+
+  def end_joined({:ok, %Oban.Job{conflict?: true}}, user_id),
+    do: Work.finish(user_id, work_key(), gettext("The videos are already being looked up"))
+
+  def end_joined(_queued, _user_id), do: :ok
 
   @doc "The `BrandoAdmin.Work` key the sweep and its lookups report under."
   def work_key, do: "video-metadata"
@@ -79,9 +86,9 @@ defmodule Brando.Worker.VideoMetadataSweep do
           failed: gettext("Some videos could not be looked up")
         )
       else
-        # A retry counts afresh: what the last attempt queued and is still
-        # waiting is counted at once, as a conflict
-        Work.update(user_id, work_key(), message, total: count, done: 0)
+        # A retry keeps what is counted: the lookups the last attempt queued
+        # are among those still missing, and count themselves when they end
+        Work.update(user_id, work_key(), message, remaining: count)
       end
     end)
   end

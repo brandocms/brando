@@ -51,21 +51,42 @@ defmodule Brando.Worker.VideoMetadataSweepTest do
     BrandoAdmin.Work.finish(first, key)
   end
 
-  test "a sweep that fails ends its work" do
+  # Oban takes the lock only outside testing modes: the conflict it returns
+  # then has no id, and the caller's own args
+  test "an insert that lost the race for the lock ends its work" do
     user = Factory.insert(:random_user)
     BrandoAdmin.Work.subscribe(user)
     key = VideoMetadataSweep.work_key()
     BrandoAdmin.Work.start(user, key, "Looking up")
 
-    # With sites, a sweep queued without one cancels
-    put_test_env(:tenancy_mode, :multi)
+    VideoMetadataSweep.end_joined({:ok, %Oban.Job{conflict?: true, id: nil, args: %{"user_id" => user.id}}}, user.id)
+    assert_receive {:work, ^key, :finished, %BrandoAdmin.Work{message: "The videos are already being looked up"}}
 
-    {:ok, _job} =
-      %{"user_id" => user.id}
-      |> VideoMetadataSweep.new()
-      |> BrandoAdmin.Work.track(user, key, finish: false, failed: "Could not look the videos up")
-      |> Oban.insert()
+    # The user's own waiting sweep keeps it
+    BrandoAdmin.Work.start(user, key, "Looking up")
+    VideoMetadataSweep.end_joined({:ok, %Oban.Job{conflict?: true, id: 1, args: %{"user_id" => user.id}}}, user.id)
+    refute_receive {:work, ^key, :finished, _}, 100
+    BrandoAdmin.Work.finish(user, key)
+  end
 
-    assert_receive {:work, ^key, :failed, %BrandoAdmin.Work{message: "Could not look the videos up"}}
+  # The sweep hands its work on to the lookups, and ends it only if it fails
+  # (BrandoAdmin.WorkTest covers `finish: false`)
+  test "a sweep reports only its failure, in the language of whoever asked" do
+    user = Factory.insert(:random_user)
+
+    Oban.Testing.with_testing_mode(:manual, fn ->
+      assert {:ok, _job} = VideoMetadataSweep.enqueue(user)
+
+      assert [%{meta: %{"brando_work" => work}}] = all_enqueued(worker: VideoMetadataSweep)
+      user_id = user.id
+
+      assert %{
+               "user_id" => ^user_id,
+               "key" => "video-metadata",
+               "finish" => false,
+               "failed" => "Could not look the videos up"
+             } =
+               work
+    end)
   end
 end

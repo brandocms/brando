@@ -90,6 +90,13 @@ defmodule BrandoAdmin.WorkTest do
     refute_receive {:work, "batch", _, _}, 100
   end
 
+  test "a batch that starts over keeps what it counted", %{user_id: user_id} do
+    Work.start(user_id, "batch", "Writing", total: 3)
+    Work.advance(user_id, "batch")
+    Work.update(user_id, "batch", nil, remaining: 2)
+    assert_receive {:work, "batch", :running, %Work{total: 3, done: 1}}
+  end
+
   test "steps that all succeed finish the work", %{user_id: user_id} do
     Work.start(user_id, "batch", "Writing", total: 1, done: "All written")
     Work.advance(user_id, "batch")
@@ -233,6 +240,14 @@ defmodule BrandoAdmin.WorkTest do
       :telemetry.execute([:oban, :job, :start], %{}, %{job: %{job | attempt: 2}})
       :telemetry.execute([:oban, :job, :exception], %{}, %{job: %{job | attempt: 2}, state: :failure})
       refute_receive {:work, "retried", _, _}, 100
+    end
+
+    # A snooze gives the attempt back: the next run is attempt 1 again
+    test "a run after a snooze starts no work", %{user_id: user_id} do
+      job = RetriedWorker.new(%{}) |> Work.track(user_id, "snoozed", running: "Running") |> Ecto.Changeset.apply_changes()
+      job = %{job | attempt: 1, meta: Map.put(job.meta, "snoozed", 1)}
+      :telemetry.execute([:oban, :job, :start], %{}, %{job: job})
+      refute_receive {:work, "snoozed", _, _}, 100
     end
 
     test "a job tracked for the system is left as it is" do

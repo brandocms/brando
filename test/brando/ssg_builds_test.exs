@@ -115,6 +115,34 @@ defmodule Brando.SSGBuildsTest do
     assert_receive {:work, ^failed_key, :failed, %BrandoAdmin.Work{message: "Static build v2 failed"}}
   end
 
+  test "a build requested inside a caller's transaction reports only when it runs", context do
+    creator = Brando.Factory.insert(:random_user)
+    BrandoAdmin.Work.subscribe(creator)
+
+    {:ok, build} =
+      Brando.Repo.transaction(fn -> request_build(context.site, context.environment, creator_id: creator.id) end)
+
+    key = SSGBuild.work_key(build.id)
+    refute_receive {:work, ^key, _, _}, 100
+
+    put_test_env(:ssg_builder, SuccessfulBuilder)
+    assert :ok = perform_job(SSGBuild, %{"build_id" => build.id})
+    assert_receive {:work, ^key, :finished, %BrandoAdmin.Work{message: "Static build v1 is ready"}}
+  end
+
+  # Killed at its timeout three times: Oban gives the job up, and the work fails
+  test "a build job Oban gives up on fails its work", context do
+    creator = Brando.Factory.insert(:random_user)
+    BrandoAdmin.Work.subscribe(creator)
+    build = request_build(context.site, context.environment, creator_id: creator.id)
+    key = SSGBuild.work_key(build.id)
+    assert_receive {:work, ^key, :running, _}
+
+    [job] = all_enqueued(worker: SSGBuild, args: %{"build_id" => build.id})
+    :telemetry.execute([:oban, :job, :exception], %{}, %{job: job, state: :discard})
+    assert_receive {:work, ^key, :failed, %BrandoAdmin.Work{message: "Static build v1 failed"}}
+  end
+
   test "persists failed URLs and a terminal failure log", context do
     build = request_build(context.site, context.environment)
     put_test_env(:ssg_builder, FailedBuilder)

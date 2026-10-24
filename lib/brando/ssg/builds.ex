@@ -200,9 +200,14 @@ defmodule Brando.SSG.Builds do
     # Inside a caller's transaction the build may still be rolled back
     in_transaction? = Repo.repo().in_transaction?()
 
+    # Reported before the job, which may run (and report) the moment it is
+    # committed; a scheduled build reports when it runs
+    report_queued? = not in_transaction? and is_nil(scheduled_at)
+
     Repo.transaction(fn ->
       with {:ok, build} <- %Build{} |> Build.changeset(attrs) |> Repo.insert(@public_opts),
-           {:ok, _job} <- enqueue(build, scheduled_at) do
+           :ok <- report_queued(build, report_queued?),
+           {:ok, _job} <- enqueue_or_withdraw(build, scheduled_at, report_queued?) do
         build
       else
         {:error, reason} -> Repo.rollback(reason)
@@ -211,11 +216,20 @@ defmodule Brando.SSG.Builds do
     |> case do
       {:ok, build} ->
         broadcast(build)
-        unless in_transaction? or scheduled_at, do: SSGBuild.report_queued(build)
         {:ok, build}
 
       {:error, reason} ->
         {:error, reason}
+    end
+  end
+
+  defp report_queued(build, true), do: SSGBuild.report_queued(build)
+  defp report_queued(_build, false), do: :ok
+
+  defp enqueue_or_withdraw(build, scheduled_at, reported?) do
+    with {:error, _reason} = error <- enqueue(build, scheduled_at) do
+      if reported?, do: SSGBuild.report_failed(build)
+      error
     end
   end
 

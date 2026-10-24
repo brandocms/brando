@@ -53,8 +53,10 @@ defmodule BrandoAdmin.Work.Oban do
     end
   end
 
-  # A retry only keeps work running: the attempt before may have ended it
-  defp handle([:oban, :job, :start], _meta, %Oban.Job{attempt: 1}, %{"step" => false} = work) do
+  # A retry, or a run after a snooze (which gives its attempt back), only
+  # keeps work running: the run before may have ended it
+  defp handle([:oban, :job, :start], _meta, %Oban.Job{attempt: 1, meta: meta}, %{"step" => false} = work)
+       when not is_map_key(meta, "snoozed") do
     report(work, :update, %{message: work["running"]})
   end
 

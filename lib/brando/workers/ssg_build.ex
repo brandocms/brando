@@ -25,28 +25,31 @@ defmodule Brando.Worker.SSGBuild do
   def work_key(build_id), do: "static:#{build_id}"
 
   @doc """
-  Reports a build as queued to its creator, once the build and its job are
-  committed, and only while it still waits: a job that ran at once reported
-  itself.
+  Reports a build as queued to its creator, before its job is queued: the
+  job may run, and report, as soon as it is committed. Not inside a
+  caller's transaction, which may still roll the build back.
   """
   @spec report_queued(Build.t()) :: :ok
   def report_queued(%Build{} = build) do
-    if match?(%Build{status: :queued}, Builds.get_build(build.id)) do
-      report(build, fn user, key ->
-        Work.start(user, key, gettext("Static build %{version} is queued", version: build.version),
-          global: true,
-          timeout: @queued_timeout
-        )
-      end)
-    end
+    report(build, fn user, key ->
+      Work.start(user, key, gettext("Static build %{version} is queued", version: build.version),
+        global: true,
+        timeout: @queued_timeout
+      )
+    end)
+  end
 
-    :ok
+  @doc "Reports a build as failed to its creator: its job could not be queued, or the build failed."
+  @spec report_failed(Build.t()) :: :ok
+  def report_failed(%Build{} = build) do
+    report(build, &Work.fail(&1, &2, gettext("Static build %{version} failed", version: build.version), global: true))
   end
 
   @doc """
   Marks a build's job for its creator's `BrandoAdmin.Work`. The job reports
-  its own progress and outcome; tracked, a job Oban gives up on (timed out
-  three times, or lost with its node) ends the work as failed.
+  its own progress and outcome; tracked, a job Oban gives up on (killed at
+  its timeout three times) ends the work as failed. A job lost with its node
+  says nothing: its work times out.
   """
   @spec track(Ecto.Changeset.t(), Build.t()) :: Ecto.Changeset.t()
   def track(changeset, %Build{creator_id: nil}), do: changeset
@@ -59,10 +62,6 @@ defmodule Brando.Worker.SSGBuild do
       timeout: @queued_timeout,
       global: true
     )
-  end
-
-  defp report_failed(%Build{} = build) do
-    report(build, &Work.fail(&1, &2, gettext("Static build %{version} failed", version: build.version), global: true))
   end
 
   @impl Oban.Worker

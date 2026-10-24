@@ -127,7 +127,8 @@ defmodule Brando.Videos do
 
   With `work: key`, each lookup is a step of the user's `BrandoAdmin.Work`
   under `key` (started with a `total:`). A video whose lookup already waits
-  counts as done at once: that lookup does it.
+  counts as done at once, as that lookup does it, unless that lookup is a
+  step of the same work.
   """
   @spec enqueue_metadata([integer()], user | integer(), keyword()) :: {:ok, non_neg_integer()}
   def enqueue_metadata(video_ids, user, opts \\ []) do
@@ -149,7 +150,7 @@ defmodule Brando.Videos do
       |> then(&if(work_key, do: Work.track(&1, user_id, work_key, step: true), else: &1))
       |> Oban.insert()
       |> case do
-        {:ok, %Oban.Job{conflict?: true}} when not is_nil(work_key) -> Work.advance(user_id, work_key)
+        {:ok, %Oban.Job{conflict?: true} = job} when not is_nil(work_key) -> count_waiting(job, user_id, work_key)
         {:error, _reason} when not is_nil(work_key) -> Work.advance(user_id, work_key, :error)
         _queued -> :ok
       end
@@ -157,6 +158,14 @@ defmodule Brando.Videos do
 
     {:ok, length(video_ids)}
   end
+
+  # A lookup that already waits does this one's work: it counts at once,
+  # unless it is a step of the same work and counts itself when it ends
+  defp count_waiting(%Oban.Job{id: id, meta: %{"brando_work" => %{"user_id" => user_id, "key" => key}}}, user_id, key)
+       when not is_nil(id),
+       do: :ok
+
+  defp count_waiting(_job, user_id, work_key), do: Work.advance(user_id, work_key)
 
   @doc """
   Ids of the videos whose source can tell us more than the video knows: no

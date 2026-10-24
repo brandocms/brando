@@ -163,12 +163,16 @@ defmodule BrandoAdmin.Work do
   @doc """
   Reports progress: a new message (nil keeps the last one) and `:percent`.
   Work that is not known yet starts.
+
+  For work with a count, `:total` and `:done` set them, and `remaining: n`
+  makes the total the steps counted so far plus `n` (a batch that starts
+  over, while steps it queued before still count).
   """
   @spec update(user(), String.t(), String.t() | nil, keyword()) :: :ok
   def update(user, key, message \\ nil, opts \\ []) do
     attrs =
       opts
-      |> Keyword.take([:percent, :total, :done])
+      |> Keyword.take([:percent, :total, :done, :remaining])
       |> Map.new()
       |> Map.put(:message, message)
       |> put_scope(opts)
