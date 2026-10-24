@@ -53,6 +53,32 @@ defmodule Brando.Drafts.RestoreTest do
     assert Brando.Repo.get!(Brando.Pages.Page, ctx.page.id).title == ctx.page.title
   end
 
+  # A module set's picks are rows whose `module_id` is the module picked,
+  # not an owner the server sets as it is in the block tree.
+  test "restores a module set's picks", ctx do
+    alias Brando.Content.ModuleSet
+
+    set = Brando.Repo.insert!(%ModuleSet{title: "Set", creator_id: ctx.user.id})
+    {:ok, set} = Brando.Blueprint.EntryQuery.get(ModuleSet, set.id)
+
+    draft = %{
+      format_version: 1,
+      schema_version: Brando.Blueprint.Snapshot.get_current_version(ModuleSet),
+      base_fingerprint: Drafts.fingerprint(set),
+      payload: %{
+        "main" => %{
+          "title" => "Set",
+          "module_set_modules" => [%{"id" => nil, "module_id" => ctx.module.id, "module_set_id" => nil, "sequence" => 0}]
+        },
+        "blocks" => %{}
+      }
+    }
+
+    assert {:ok, cs, []} = Restore.prepare(draft, set, ModuleSet, ctx.user)
+    assert [row] = Changeset.get_assoc(cs, :module_set_modules)
+    assert Changeset.get_field(row, :module_id) == ctx.module.id
+  end
+
   test "added variables get defaults without changing existing draft values", ctx do
     {:ok, _} =
       Brando.Content.update_module(

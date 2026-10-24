@@ -49,7 +49,7 @@ defmodule Brando.Drafts.Restore do
 
   defp block_row_changeset(row, existing, join_schema, user) do
     base = Enum.find(existing, &(to_string(&1.id) == to_string(row["id"]))) || struct(join_schema)
-    row = reconcile(row, base)
+    row = reconcile(row, base, block_tree: true)
     row = Map.put(row, "block", put_source(row["block"], join_schema))
     join_schema.changeset(base, row, user.id, true)
   end
@@ -69,7 +69,16 @@ defmodule Brando.Drafts.Restore do
 
   # Only identities that still belong to the current association may survive.
   # Removed rows become new rows; owner FKs and migration stamps are server-owned.
-  def reconcile(params, %schema{} = base) when is_map(params) do
+  # In a block field's rows (`block_tree: true`) `module_id`, `block_id` and
+  # `table_row_id` are owners (a var's module or block, a join row's block)
+  # except on the block itself; elsewhere they can be what a row holds, such
+  # as the module a module set picks.
+  def reconcile(params, base, opts \\ [])
+
+  def reconcile(params, %schema{} = base, opts) when is_map(params) do
+    owners =
+      if opts[:block_tree] && schema != Brando.Content.Block, do: ["module_id", "block_id", "table_row_id"], else: []
+
     associations = schema.__schema__(:associations)
     embeds = schema.__schema__(:embeds)
     fields = schema.__schema__(:fields) ++ schema.__schema__(:virtual_fields) ++ associations
@@ -77,7 +86,7 @@ defmodule Brando.Drafts.Restore do
 
     params
     |> Map.take(allowed)
-    |> Map.drop(if(schema == Brando.Content.Block, do: [], else: ["module_id", "block_id", "table_row_id"]))
+    |> Map.drop(owners)
     |> Map.drop([
       "creator_id",
       "parent_id",
@@ -95,7 +104,7 @@ defmodule Brando.Drafts.Restore do
       value =
         cond do
           field in associations ->
-            reconcile_relation(value, Map.get(base, field), schema.__schema__(:association, field).queryable)
+            reconcile_relation(value, Map.get(base, field), schema.__schema__(:association, field).queryable, opts)
 
           field in embeds ->
             value
@@ -111,21 +120,21 @@ defmodule Brando.Drafts.Restore do
     end)
   end
 
-  defp reconcile_relation(rows, current, schema) when is_list(rows) do
+  defp reconcile_relation(rows, current, schema, opts) when is_list(rows) do
     current = if is_list(current), do: current, else: []
 
     Enum.map(rows, fn params ->
       base = Enum.find(current, &(Map.get(&1, :id) && to_string(&1.id) == to_string(params["id"]))) || struct(schema)
-      reconcile(params, base)
+      reconcile(params, base, opts)
     end)
   end
 
-  defp reconcile_relation(params, current, schema) when is_map(params) do
+  defp reconcile_relation(params, current, schema, opts) when is_map(params) do
     base = if is_struct(current, schema), do: current, else: struct(schema)
-    reconcile(params, base)
+    reconcile(params, base, opts)
   end
 
-  defp reconcile_relation(value, _current, _schema), do: value
+  defp reconcile_relation(value, _current, _schema, _opts), do: value
 
   defp put_source(block, source) do
     block
