@@ -8528,7 +8528,7 @@ msgstr "Feil e-post eller passord"
 msgid "Invalid job identifier."
 msgstr "Ugyldig jobb-ID."
 
-#: lib/brando_admin/components/form/input/video.ex
+#: lib/brando_admin/components/assets/provider_video_upload.ex
 #, elixir-autogen, elixir-format
 msgid "Invalid video upload request"
 msgstr "Ugyldig forespørsel om videoopplasting"

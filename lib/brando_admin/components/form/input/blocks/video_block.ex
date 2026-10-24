@@ -4,6 +4,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
   use Gettext, backend: Brando.Gettext
 
   alias BrandoAdmin.Components.Assets.MediaField
+  alias BrandoAdmin.Components.Assets.ProviderVideoUpload
   alias BrandoAdmin.Components.Content
   alias BrandoAdmin.Components.Form.Block
   alias BrandoAdmin.Components.Form.Input
@@ -64,9 +65,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
   ]
 
   def update(%{event: "select_video", expected_asset_id: expected} = assigns, socket) do
-    current_id = socket.assigns[:video] && socket.assigns.video.id
-
-    if Brando.Uploads.AssetIntent.current_selection?(expected, current_id) do
+    if Brando.Uploads.AssetIntent.current_selection?(expected, current_video_id(socket)) do
       update(Map.delete(assigns, :expected_asset_id), socket)
     else
       {:ok, socket}
@@ -118,6 +117,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
        Brando.Videos.get_video(%{matches: %{id: video_id}, preload: [:thumbnail, :file]})
      end)
      |> assign_video_display()
+     |> assign_provider_hook(Map.get(block_data, :config_target) || "default")
      |> assign_new(:video_upload_strategy, fn ->
        config_target = Map.get(block_data, :config_target)
 
@@ -130,6 +130,20 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
          Brando.default_video_upload_strategy()
        end
      end)}
+  end
+
+  defp current_video_id(socket), do: socket.assigns[:video] && socket.assigns.video.id
+
+  # The provider upload hook for the ref's config, looked up again when the
+  # config target changes.
+  defp assign_provider_hook(socket, config_target) do
+    if socket.assigns[:provider_config_target] == config_target do
+      socket
+    else
+      socket
+      |> assign(:provider_config_target, config_target)
+      |> assign(:provider_hook, ProviderVideoUpload.hook(config_target))
+    end
   end
 
   defp assign_video_display(socket) do
@@ -234,6 +248,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
                   presentation={:block}
                   browse={JS.push("open_video_picker", target: @myself) |> toggle_drawer("#video-picker")}
                   remove={JS.push("reset_video", target: @myself)}
+                  video_hook_id={@provider_hook && "block-#{@uid}-video-uploader"}
                 />
                 <div class="media-config-fields">
                   <Input.rich_text
@@ -338,6 +353,16 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
             configure={JS.push("open_block_config", target: @target, value: %{uid: @uid})}
             browse={JS.push("open_video_picker", target: @myself) |> toggle_drawer("#video-picker")}
             remove={JS.push("reset_video", target: @myself)}
+            video_hook_id={@provider_hook && "block-#{@uid}-video-uploader"}
+          />
+          <%!-- Upload and a drop on the ref go straight to the provider through
+                this hook, which asks this component for each upload's
+                destination. --%>
+          <div
+            :if={@provider_hook}
+            id={"block-#{@uid}-video-uploader"}
+            phx-hook={@provider_hook}
+            data-target={@myself}
           />
         </Block.block>
       </.inputs_for>
@@ -479,6 +504,31 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
   def handle_event("select_video", %{"id" => video_id}, socket) do
     {:noreply, select_video(socket, video_id)}
   end
+
+  # -- Provider uploads, from the ref's own upload hook --
+
+  # The picker knows the editor, and creates the video with the ref's config.
+  def handle_event("get_video_upload_url", params, socket) do
+    ProviderVideoUpload.initiate_in_picker(socket.assigns.provider_config_target, params)
+    {:noreply, ProviderVideoUpload.remember(socket, params, current_video_id(socket), nil)}
+  end
+
+  # The file is with the provider; the ref shows the video from now on,
+  # unless another one was chosen meanwhile.
+  def handle_event("video_upload_complete", %{"video_id" => video_id} = params, socket) do
+    {still_shown?, socket} =
+      ProviderVideoUpload.still_shown?(socket, params["request_ref"], current_video_id(socket), nil)
+
+    case ProviderVideoUpload.complete(video_id) do
+      {:ok, video} when still_shown? -> {:noreply, select_video(socket, video.id)}
+      _ -> {:noreply, socket}
+    end
+  end
+
+  # Progress and failures show in the ref and the upload drawer, both
+  # client-side.
+  def handle_event("video_upload_progress", _params, socket), do: {:noreply, socket}
+  def handle_event("upload_error", _params, socket), do: {:noreply, socket}
 
   defp select_video(socket, video_id) do
     case Brando.Videos.get_video(%{matches: %{id: video_id}, preload: [:thumbnail, :file]}) do

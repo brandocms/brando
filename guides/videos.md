@@ -473,25 +473,36 @@ this is set to.
 - **`:on_purge`** (default): Videos are soft-deleted locally first. After 30 days, when the soft-delete purger runs, the video is permanently deleted from both the database and the provider. This allows video restoration during the grace period.
 - **`false`**: Videos are only deleted locally. Provider videos remain and must be manually cleaned up.
 
-### Uploading in a Video Field
+### Uploading in a Video Field, Block or Variable
 
-A video field offers Upload, and takes a file dropped on it, whenever its
-strategy can upload. `:local` and a configured `:s3` go through the upload
-manager. A provider strategy (`:mux`, `:bunny`, `:cloudflare`, `:vimeo`) with
-its credentials sends the file from the browser straight to the provider, as the
-video picker does, with the field's own `cfg` and config target. The field takes
-the video once the file is with the provider, and the provider's webhook reports
-when it has been encoded. Without the credentials the field cannot upload, and
-says so when a file is dropped on it.
+A video field, a video block and a video variable offer Upload, and take a file
+dropped on them, whenever their strategy can upload. `:local` and a configured
+`:s3` go through the upload manager. A provider strategy (`:mux`, `:bunny`,
+`:cloudflare`, `:vimeo`) with its credentials sends the file from the browser
+straight to the provider, as the video picker does, with the field's, block's
+or variable's own config target. It takes the video once the file is with the
+provider, and the provider's webhook reports when it has been encoded. Without
+the credentials it cannot upload, and says so when a file is dropped on it.
+
+If another video is chosen, or the video removed, while the file is still on
+its way, that choice stands, and the uploaded video stays in the library.
+
+A video variable takes a provider upload in an entry's form, and in a global
+set's own edit form. A variable on the Globals screen (`/admin/globals`) and a
+module's default value choose from the library instead. A variable in a block's
+settings, shown only while the block's configure dialog is open, uploads
+through the video picker, so that closing the dialog doesn't stop the upload.
+So does a variable in a block's table row, since rows can be inserted and moved
+while a file is on its way.
 
 ### Video Blocks
 
-Video blocks in the Villain editor use the global `default_video_upload_strategy` setting. The video picker shows an "Upload file" button when that strategy can take an upload: `:local` and a configured `:s3` upload through the upload manager, and a provider strategy uploads directly to the provider once it has credentials and a webhook secret (Bunny also needs `library_id` and `cdn_hostname`). Without them the button is hidden, since an upload would never finish processing.
+Video blocks in the Villain editor use the global `default_video_upload_strategy` setting, unless their config target names another. The block and the video picker show Upload when that strategy can take an upload: `:local` and a configured `:s3` upload through the upload manager, and a provider strategy uploads directly to the provider once it has credentials and a webhook secret (Bunny also needs `library_id` and `cdn_hostname`). Without them Upload is hidden, since an upload would never finish processing.
 
 The upload flow:
-1. User selects a video file in the video picker
-2. File is uploaded directly to the provider (e.g., Mux)
-3. Video record is created and associated with the block
+1. The user drops a video file on the block, or picks one with Upload in the block or the video picker
+2. The file is uploaded directly to the provider (e.g., Mux)
+3. The video record is created and associated with the block
 4. Provider webhooks update the video status when processing completes
 
 ### Playback settings

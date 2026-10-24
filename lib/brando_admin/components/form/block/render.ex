@@ -3032,6 +3032,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
                           var={var}
                           render={:all}
                           form_id={@form_id}
+                          provider_upload={false}
                           publish
                         />
                       </.inputs_for>

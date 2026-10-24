@@ -87,6 +87,33 @@ defmodule BrandoAdmin.VideoFieldProviderUploadTest do
     assert Repo.get!(ArticleItem, ctx.item.id).clip_id == video_id
   end
 
+  test "an upload that finishes after another video was picked leaves the pick", ctx do
+    picked = Factory.insert(:video)
+    view = open(ctx)
+
+    view
+    |> with_target(cid_of(view, @hook))
+    |> render_hook("get_video_upload_url", %{
+      "request_ref" => "field-late",
+      "filename" => "clip.mp4",
+      "size" => 1_000,
+      "mime_type" => "video/mp4"
+    })
+
+    assert_push_event(view, "video_upload_url_ready", %{request_ref: "field-late", video_id: video_id})
+
+    view |> with_target(cid_of(view, @hook)) |> render_hook("select_video", %{"id" => picked.id})
+    assert clip_id(view) == to_string(picked.id)
+
+    view
+    |> with_target(cid_of(view, @hook))
+    |> render_hook("video_upload_complete", %{"request_ref" => "field-late", "video_id" => video_id})
+
+    assert clip_id(view) == to_string(picked.id)
+    # The upload stays in the library
+    assert Repo.get(Brando.Videos.Video, video_id)
+  end
+
   test "a refused upload is reported to the hook", ctx do
     view = open(ctx)
 

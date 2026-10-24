@@ -1,6 +1,8 @@
 defmodule BrandoAdmin.PreviewUpdatesTest do
   use Brando.LiveCase
 
+  import Brando.EditSessionEditors, only: [await: 1]
+
   alias Brando.LivePreview
 
   setup %{current_user: user} do
@@ -161,6 +163,8 @@ defmodule BrandoAdmin.PreviewUpdatesTest do
 
     test "a restored recovery copy brings its own image", c do
       {view, html} = live_form(c.conn, "/admin/pages/update/#{c.page.id}")
+      # A capture before the blocks have loaded is skipped
+      await(fn -> form_assigns(view).blocks_ready? end)
       main = html |> form_params("#page_form_form") |> put_in(["page", "title"], "Example Hotel draft")
       view |> element("#page_form_form") |> render_change(Map.put(main, "_target", ["page", "title"]))
 
@@ -173,7 +177,10 @@ defmodule BrandoAdmin.PreviewUpdatesTest do
         "request_id" => 1
       })
 
-      [copy] = Brando.Drafts.list(Brando.Drafts.identity(Brando.Pages.Page, c.page.id, c.current_user.id))
+      # The copy is written once the block fields have answered the capture
+      identity = Brando.Drafts.identity(Brando.Pages.Page, c.page.id, c.current_user.id)
+      await(fn -> Brando.Drafts.list(identity) != [] end)
+      [copy] = Brando.Drafts.list(identity)
       {view, _html} = live_form(c.conn, "/admin/pages/update/#{c.page.id}")
       upload(view, c.second)
 
