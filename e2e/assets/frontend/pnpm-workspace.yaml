@@ -1,0 +1,9 @@
+# pnpm's settings for the E2E app's site, as in Brando's template.
+
+# core-js's install script only prints a message
+allowBuilds:
+  core-js: false
+
+# Jupiter from npm installs the day it is published
+minimumReleaseAgeExclude:
+  - '@brandocms/*'

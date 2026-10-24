@@ -412,6 +412,23 @@ what it kept and why ([What the source tasks change](#mix-brando-gen-backend-upg
 has the details). Check that the frontend builds on the Node of the
 `assets_frontend` stage.
 
+The admin moves to pnpm 12: its `packageManager` becomes `pnpm@12.15.0`, and
+pnpm's settings move from `package.json`'s `pnpm` field, which pnpm 11 stopped
+reading, to `assets/backend/pnpm-workspace.yaml`: the application's own
+`overrides`, and its `onlyBuiltDependencies` and `ignoredBuiltDependencies`
+as `allowBuilds` (`true` and `false`). Any other setting in that field, or an
+existing `pnpm-workspace.yaml` of the application's own, gets a notice naming
+what to move. The Dockerfile's `assets_backend` stage copies the file before
+`pnpm install`.
+
+`assets/frontend` keeps the pnpm its `packageManager` names; pnpm 12 runs that
+version for it. To move the site to pnpm 12 as well, set its `packageManager`
+to `pnpm@12.15.0`, move its `pnpm` field to `assets/frontend/pnpm-workspace.yaml`
+as above (Brando's site template allows no build scripts and declines
+`core-js`'s with `core-js: false`), copy that file in the Dockerfile's
+`assets_frontend` stage with `package.json` and `pnpm-lock.yaml`, install
+`pnpm@12.15.0` there, and run `pnpm install` to update the lockfile.
+
 `--backend-only` leaves `assets/frontend` alone, for a frontend that still uses
 yarn or its own build; without it the task installs and builds both with pnpm.
 Commit the `assets/backend/pnpm-lock.yaml` it writes: the Docker build installs

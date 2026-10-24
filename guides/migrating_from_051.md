@@ -323,7 +323,8 @@ Vite.
   `priv/static`, not by Vite. Until a production build has copied `public/`
   there, the page silently falls back to system fonts.
 - **pnpm:** `pnpm import` keeps the resolved versions of the old lockfile; a
-  fresh resolve changes the bundle. pnpm 10 needs `onlyBuiltDependencies`.
+  fresh resolve changes the bundle. pnpm runs only the install scripts
+  `allowBuilds` in `pnpm-workspace.yaml` allows, and fails on any other.
 - **EuropaCSS:** 0.51 sites use europacss 0.6. Its config, bundles and several
   at-rules changed meaning in the current compiler; follow the EuropaCSS
   migration guide, and compare the result against the old build. New sites

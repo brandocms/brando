@@ -56,7 +56,7 @@ RUN mix compile
 FROM node:24 AS assets_backend
 
 # Keep in step with `packageManager` in assets/backend/package.json
-RUN npm install --global pnpm@10.32.1
+RUN npm install --global pnpm@12.15.0
 
 # The admin's CSS builds with the native EuropaCSS compiler. pnpm installs
 # its executable for this image's platform from the lockfile's optional
@@ -70,7 +70,7 @@ RUN npm install --global pnpm@10.32.1
 # It is placed where the link points, with its own dependencies installed,
 # the same way CI builds the backend.
 WORKDIR /opt/assets
-COPY --from=brandojs package.json pnpm-lock.yaml ./
+COPY --from=brandojs package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 RUN --mount=type=cache,target=/root/.local/share/pnpm/store,sharing=locked \
       pnpm install \
       --frozen-lockfile \
@@ -81,7 +81,7 @@ COPY --from=brandojs css ./css
 COPY --from=brandojs vite ./vite
 
 WORKDIR /opt/app/assets/backend
-COPY assets/backend/package.json assets/backend/pnpm-lock.yaml ./
+COPY assets/backend/package.json assets/backend/pnpm-lock.yaml assets/backend/pnpm-workspace.yaml ./
 RUN --mount=type=cache,target=/root/.local/share/pnpm/store,sharing=locked \
       pnpm install \
       --frozen-lockfile \
@@ -101,9 +101,9 @@ FROM node:24 AS assets_frontend
 WORKDIR /opt/app/assets/frontend
 
 # Keep in step with `packageManager` in assets/frontend/package.json
-RUN npm install --global pnpm@10.32.1
+RUN npm install --global pnpm@12.15.0
 
-COPY assets/frontend/package.json assets/frontend/pnpm-lock.yaml ./
+COPY assets/frontend/package.json assets/frontend/pnpm-lock.yaml assets/frontend/pnpm-workspace.yaml ./
 RUN --mount=type=cache,target=/root/.local/share/pnpm/store,sharing=locked \
       pnpm install \
       --frozen-lockfile \

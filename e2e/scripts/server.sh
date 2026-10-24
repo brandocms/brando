@@ -116,7 +116,7 @@ start() {
     if command -v pnpm >/dev/null 2>&1; then
       (cd assets/backend && pnpm build)
     else
-      (cd assets/backend && CI=true npx -y pnpm@10 build)
+      (cd assets/backend && CI=true npx -y pnpm@12 build)
     fi
   fi
 

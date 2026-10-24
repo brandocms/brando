@@ -58,7 +58,7 @@ FROM node:24 AS assets_backend
 WORKDIR /opt/app/assets/backend
 
 # Keep in step with `packageManager` in assets/backend/package.json
-RUN npm install --global pnpm@10.32.1
+RUN npm install --global pnpm@12.15.0
 
 # The admin's CSS builds with the native EuropaCSS compiler. pnpm installs
 # its executable for this image's platform from the lockfile's optional
@@ -68,7 +68,9 @@ RUN npm install --global pnpm@10.32.1
 # BrandoJS comes from npm, or from .yalc while you work on Brando itself
 # (`mix brando.assets.setup --local`). The `[c]` makes the .yalc copy
 # optional: BuildKit skips a COPY wildcard that matches nothing.
-COPY assets/backend/package.json assets/backend/pnpm-lock.yaml ./
+# pnpm-workspace.yaml holds pnpm's settings: the install scripts it allows,
+# and the overrides
+COPY assets/backend/package.json assets/backend/pnpm-lock.yaml assets/backend/pnpm-workspace.yaml ./
 COPY assets/backend/.yal[c] ./.yalc/
 
 RUN --mount=type=cache,target=/root/.local/share/pnpm/store,sharing=locked \
@@ -90,14 +92,14 @@ FROM node:24 AS assets_frontend
 WORKDIR /opt/app/assets/frontend
 
 # Keep in step with `packageManager` in assets/frontend/package.json
-RUN npm install --global pnpm@10.32.1
+RUN npm install --global pnpm@12.15.0
 
 # The site's CSS builds with the native EuropaCSS compiler too, installed
 # from the lockfile's optional dependencies as in assets_backend.
 
 # Jupiter comes from npm, or from .yalc if you install it from a checkout.
 # The `[c]` makes the .yalc copy optional, as in assets_backend.
-COPY assets/frontend/package.json assets/frontend/pnpm-lock.yaml ./
+COPY assets/frontend/package.json assets/frontend/pnpm-lock.yaml assets/frontend/pnpm-workspace.yaml ./
 COPY assets/frontend/.yal[c] ./.yalc/
 
 # Use pnpm cache directory as a cache mount

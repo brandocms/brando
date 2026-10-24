@@ -1,0 +1,11 @@
+# pnpm's settings for BrandoJS (pnpm 11 stopped reading package.json's
+# `pnpm` field).
+
+overrides:
+  prosemirror-model: 1.25.12
+  prosemirror-transform: 1.12.2
+  prosemirror-view: 1.42.6
+
+# Dependencies whose install scripts run; any other with one fails the install
+allowBuilds:
+  esbuild: true

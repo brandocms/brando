@@ -156,7 +156,7 @@ defmodule Mix.Brando.Igniter.AssetsTest do
       # The file's own key order is kept, and new keys follow the template's.
       keys = Jason.decode!(source, objects: :ordered_objects).values |> Enum.map(&elem(&1, 0))
       assert Enum.take(keys, 6) == ~w(name version type scripts dependencies devDependencies)
-      assert Enum.drop(keys, 6) == ~w(pnpm engines packageManager)
+      assert Enum.drop(keys, 6) == ~w(engines packageManager)
 
       # Nested objects keep their order too.
       ordered = Jason.decode!(source, objects: :ordered_objects)
@@ -171,8 +171,11 @@ defmodule Mix.Brando.Igniter.AssetsTest do
       refute Map.has_key?(package["devDependencies"], "svelte-preprocess")
       assert package["packageManager"] == wanted["packageManager"]
       assert package["engines"] == wanted["engines"]
-      assert package["pnpm"]["onlyBuiltDependencies"] == wanted["pnpm"]["onlyBuiltDependencies"]
-      assert package["pnpm"]["overrides"] == wanted["pnpm"]["overrides"]
+      # pnpm's settings are in pnpm-workspace.yaml, the template's
+      refute Map.has_key?(package, "pnpm")
+
+      assert IgniterCase.source(plan, "assets/backend/pnpm-workspace.yaml") ==
+               template("assets/backend/pnpm-workspace.yaml")
 
       assert package["dependencies"]["@brandocms/brandojs"] == "file:.yalc/@brandocms/brandojs"
       assert package["dependencies"]["site-widget"] == "^2.0.0"
@@ -196,6 +199,50 @@ defmodule Mix.Brando.Igniter.AssetsTest do
       assert IgniterCase.source(plan, "assets/backend/europa.json5") == template("assets/backend/europa.json5")
       # Its stylesheet keeps importing BrandoJS's: the Vite plugin resolves package imports.
       Igniter.Test.assert_unchanged(plan, "assets/backend/css/app.css")
+    end
+
+    # pnpm 11 stopped reading package.json's `pnpm` field
+    test "moves the site's own pnpm settings to pnpm-workspace.yaml" do
+      package =
+        @old_package
+        |> Jason.decode!()
+        |> Map.put("pnpm", %{
+          "overrides" => %{"@codemirror/language" => "6.12.4", "left-pad" => "1.3.0"},
+          "onlyBuiltDependencies" => ["esbuild", "sharp"],
+          "ignoredBuiltDependencies" => ["core-js"],
+          "patchedDependencies" => %{"vite" => "patches/vite.patch"}
+        })
+        |> Jason.encode!(pretty: true)
+
+      plan = upgrade(old_backend(%{"assets/backend/package.json" => package}))
+      assert plan.issues == []
+
+      # What the field held that pnpm-workspace.yaml takes over leaves it
+      assert upgraded_package(plan)["pnpm"] == %{"patchedDependencies" => %{"vite" => "patches/vite.patch"}}
+      assert Enum.any?(plan.notices, &(&1 =~ "patchedDependencies" and &1 =~ "pnpm-workspace.yaml"))
+
+      # The template's settings, then the site's: the template's esbuild and
+      # the retired CodeMirror pin are not repeated
+      assert IgniterCase.source(plan, "assets/backend/pnpm-workspace.yaml") ==
+               String.replace(
+                 template("assets/backend/pnpm-workspace.yaml"),
+                 "  esbuild: true\n",
+                 "  esbuild: true\n  'sharp': true\n  'core-js': false\n"
+               ) <> "\n# Moved from package.json's `pnpm` field\noverrides:\n  'left-pad': '1.3.0'\n"
+    end
+
+    test "leaves a site's own pnpm-workspace.yaml alone, and names what to move to it" do
+      package =
+        @old_package |> Jason.decode!() |> Map.put("pnpm", %{"onlyBuiltDependencies" => ["sharp"]}) |> Jason.encode!()
+
+      own = "packages: []\nallowBuilds:\n  esbuild: true\n"
+
+      plan =
+        upgrade(old_backend(%{"assets/backend/package.json" => package, "assets/backend/pnpm-workspace.yaml" => own}))
+
+      refute Map.has_key?(upgraded_package(plan), "pnpm")
+      Igniter.Test.assert_unchanged(plan, "assets/backend/pnpm-workspace.yaml")
+      assert Enum.any?(plan.notices, &(&1 =~ "'sharp': true"))
     end
 
     test "an npm BrandoJS pin moves to Brando's spec, a local source stays" do

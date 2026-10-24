@@ -48,6 +48,13 @@ if Code.ensure_loaded?(Igniter) do
     @legacy_backend_lockfiles ~w(assets/backend/yarn.lock assets/backend/package-lock.json)
     @backend_package "assets/backend/package.json"
     @backend_vite_config "assets/backend/vite.config.js"
+    @backend_workspace "assets/backend/pnpm-workspace.yaml"
+    # The settings of package.json's `pnpm` field that pnpm 11 stopped
+    # reading and the upgrade moves to pnpm-workspace.yaml
+    @moved_pnpm_settings ~w(overrides onlyBuiltDependencies ignoredBuiltDependencies)
+    # Overrides earlier templates pinned that nothing needs any more:
+    # @codemirror/language 6.13.1 declares the dependency 6.13.0 lacked.
+    @retired_overrides %{"@codemirror/language" => "6.12.4"}
 
     # The legacy EuropaCSS build's config files as earlier templates wrote
     # them, compared without whitespace. The native build reads neither: one
@@ -100,7 +107,10 @@ if Code.ensure_loaded?(Igniter) do
     The template's package versions, `engines` and `packageManager` replace
     the application's (its own extra packages, scripts and BrandoJS source
     stay), `vite.config.js` is replaced, files the template retired and
-    yarn/npm lockfiles are removed, and the Dockerfile's `assets_backend`
+    yarn/npm lockfiles are removed, the settings of `package.json`'s `pnpm`
+    field that pnpm 11 stopped reading (`overrides`, `onlyBuiltDependencies`,
+    `ignoredBuiltDependencies`) move to `pnpm-workspace.yaml` as
+    `overrides` and `allowBuilds`, and the Dockerfile's `assets_backend`
     stage becomes the template's pnpm stage, with an older or missing
     `# syntax=` directive moved to the template's; an older `twined/fehn` image
     in its `deps` stage is named in a notice, not changed. The legacy
@@ -113,6 +123,7 @@ if Code.ensure_loaded?(Igniter) do
       Templates.manifest()
       |> Enum.filter(fn {_format, _source, target} -> String.starts_with?(target, "assets/backend/") end)
       |> Enum.reduce(igniter, &upgrade_asset(&1, &2, project))
+      |> move_pnpm_settings()
       |> remove_files(@retired_backend_files ++ @legacy_backend_lockfiles)
       |> retire_legacy_europa_files()
       |> notice_legacy_css()
@@ -326,8 +337,6 @@ if Code.ensure_loaded?(Igniter) do
       |> merge_defaults(Map.take(template, ~w(name version type scripts)))
       |> Map.merge(Map.take(template, ~w(engines packageManager)))
       |> upgrade_dependencies(template)
-      |> upgrade_built_dependencies(template)
-      |> upgrade_overrides(template)
     end
 
     # The template's versions win, BrandoJS's included, except when BrandoJS
@@ -351,27 +360,117 @@ if Code.ensure_loaded?(Igniter) do
       end
     end
 
-    defp upgrade_built_dependencies(package, template) do
-      built =
-        ((get_in(package, ["pnpm", "onlyBuiltDependencies"]) || []) ++
-           get_in(template, ["pnpm", "onlyBuiltDependencies"]))
-        |> Enum.uniq()
-        |> Kernel.--(@retired_backend_packages)
+    # pnpm 11 reads its settings from pnpm-workspace.yaml only. The upgrade
+    # created the template's when there was none; the application's own
+    # overrides and build-script choices join it there. An application's own
+    # pnpm-workspace.yaml is not rewritten: a notice lists what to move.
+    defp move_pnpm_settings(igniter) do
+      {igniter, contents} = read_file(igniter, @backend_package)
 
-      Map.update(package, "pnpm", %{"onlyBuiltDependencies" => built}, &Map.put(&1, "onlyBuiltDependencies", built))
-    end
+      case Jason.decode(contents) do
+        {:ok, %{"pnpm" => pnpm} = package} when is_map(pnpm) ->
+          rest = Map.drop(pnpm, @moved_pnpm_settings)
+          package = if rest == %{}, do: Map.delete(package, "pnpm"), else: Map.put(package, "pnpm", rest)
 
-    # Pins the template needs (a dependency's broken release) win over the
-    # application's own; the application's other overrides stay.
-    defp upgrade_overrides(package, template) do
-      case get_in(template, ["pnpm", "overrides"]) do
-        wanted when is_map(wanted) and map_size(wanted) > 0 ->
-          overrides = Map.merge(get_in(package, ["pnpm", "overrides"]) || %{}, wanted)
-          Map.update(package, "pnpm", %{"overrides" => overrides}, &Map.put(&1, "overrides", overrides))
+          igniter
+          |> replace_file(@backend_package, encode_package(package, [contents]))
+          |> put_workspace_settings(workspace_settings(pnpm))
+          |> notice_unmoved_pnpm_settings(rest)
 
         _ ->
-          package
+          igniter
       end
+    end
+
+    # What package.json's `pnpm` field adds to the template's
+    # pnpm-workspace.yaml: build scripts allowed (true) or not (false), and
+    # overrides, less what earlier templates set and the current one retired
+    # or sets itself.
+    defp workspace_settings(pnpm) do
+      template_builds = ["esbuild"]
+
+      builds =
+        Enum.map(list(pnpm["onlyBuiltDependencies"]) -- (template_builds ++ @retired_backend_packages), &{&1, true}) ++
+          Enum.map(list(pnpm["ignoredBuiltDependencies"]), &{&1, false})
+
+      overrides =
+        pnpm["overrides"]
+        |> map()
+        |> Enum.reject(fn {name, version} -> @retired_overrides[name] == version end)
+        |> Enum.sort()
+
+      %{builds: Enum.uniq_by(builds, &elem(&1, 0)), overrides: overrides}
+    end
+
+    defp list(value) when is_list(value), do: Enum.filter(value, &is_binary/1)
+    defp list(_value), do: []
+
+    defp map(value) when is_map(value), do: Enum.filter(value, fn {_k, v} -> is_binary(v) end)
+    defp map(_value), do: []
+
+    defp put_workspace_settings(igniter, %{builds: [], overrides: []}), do: igniter
+
+    defp put_workspace_settings(igniter, settings) do
+      template = Templates.contents(:copy, @backend_workspace)
+      {igniter, current} = read_file(igniter, @backend_workspace)
+
+      if current == template do
+        replace_file(igniter, @backend_workspace, workspace_with(template, settings))
+      else
+        Igniter.add_notice(igniter, """
+        pnpm 11 no longer reads package.json's `pnpm` field, and #{@backend_workspace} is your own, so add
+        these settings from #{@backend_package} to it:
+
+        #{settings |> workspace_lines() |> Enum.map_join("
+",
+        &("    " <> &1))}
+        """)
+      end
+    end
+
+    # The template's pnpm-workspace.yaml with the application's settings
+    defp workspace_with(template, %{builds: builds, overrides: overrides}) do
+      allowed = Enum.map_join(builds, &"  #{yaml_string(elem(&1, 0))}: #{elem(&1, 1)}\n")
+      contents = String.replace(template, "allowBuilds:\n  esbuild: true\n", "allowBuilds:\n  esbuild: true\n" <> allowed)
+
+      case overrides do
+        [] ->
+          contents
+
+        overrides ->
+          contents <>
+            "\n# Moved from package.json's `pnpm` field\noverrides:\n" <>
+            Enum.map_join(overrides, &"  #{yaml_string(elem(&1, 0))}: #{yaml_string(elem(&1, 1))}\n")
+      end
+    end
+
+    defp workspace_lines(%{builds: builds, overrides: overrides}) do
+      builds_lines =
+        if builds == [],
+          do: [],
+          else: ["allowBuilds:" | Enum.map(builds, fn {name, allowed} -> "  #{yaml_string(name)}: #{allowed}" end)]
+
+      override_lines =
+        if overrides == [],
+          do: [],
+          else: [
+            "overrides:"
+            | Enum.map(overrides, fn {name, version} -> "  #{yaml_string(name)}: #{yaml_string(version)}" end)
+          ]
+
+      builds_lines ++ override_lines
+    end
+
+    defp yaml_string(value), do: "'" <> String.replace(value, "'", "''") <> "'"
+
+    defp notice_unmoved_pnpm_settings(igniter, rest) when rest == %{}, do: igniter
+
+    defp notice_unmoved_pnpm_settings(igniter, rest) do
+      Igniter.add_notice(igniter, """
+      pnpm 11 no longer reads package.json's `pnpm` field. #{@backend_package} still sets
+      #{rest |> Map.keys() |> Enum.sort() |> Enum.join(", ")} there: move them to #{@backend_workspace}
+      (https://pnpm.io/settings names each one's new form).
+      """)
     end
 
     @doc false

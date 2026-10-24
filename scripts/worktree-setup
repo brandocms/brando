@@ -7,7 +7,7 @@
 #
 # Steps: Elixir deps (offline from the Hex cache first), E2E deps, a test-env
 # compile, the unit-test database (create, migrate, seed once), pnpm installs
-# with pnpm 10, E2E asset builds when missing, Playwright's Chromium, and the
+# with pnpm 12, E2E asset builds when missing, Playwright's Chromium, and the
 # repository's Git hooks. Ends by printing the environment to use.
 #
 # Uses mise (`mise exec --`) for Elixir and Node when it is installed; otherwise
@@ -96,22 +96,22 @@ remove_stray_workspace() {
 pnpm_install() {
   local dir="$1" status
   remove_stray_workspace "$dir"
-  (cd "$dir" && CI=true tool npx -y pnpm@10 install --frozen-lockfile)
+  (cd "$dir" && CI=true tool npx -y pnpm@12 install --frozen-lockfile)
   status=$?
   remove_stray_workspace "$dir"
   return "$status"
 }
 
 backend_build() {
-  (cd e2e/assets/backend && CI=true tool npx -y pnpm@10 build)
+  (cd e2e/assets/backend && CI=true tool npx -y pnpm@12 build)
 }
 
 frontend_build() {
-  pnpm_install e2e/assets/frontend && (cd e2e/assets/frontend && CI=true tool npx -y pnpm@10 build)
+  pnpm_install e2e/assets/frontend && (cd e2e/assets/frontend && CI=true tool npx -y pnpm@12 build)
 }
 
 playwright_browser() {
-  (cd e2e/playwright && CI=true tool npx -y pnpm@10 exec playwright install chromium)
+  (cd e2e/playwright && CI=true tool npx -y pnpm@12 exec playwright install chromium)
 }
 
 echo "setup: $root (slug $slug)"
