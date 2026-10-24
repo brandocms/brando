@@ -289,10 +289,21 @@ defmodule Mix.Brando.Igniter.AssetsTest do
       assert notice =~ "allowBuilds:\n      'esbuild': true"
       assert notice =~ "minimumReleaseAgeExclude:\n      - '@brandocms/*'"
 
-      # With both, nothing to say
-      own = "allowBuilds:\n  'esbuild': true # the admin's\nminimumReleaseAgeExclude:\n  - \"@brandocms/*\"\n"
+      # The scope under another setting is not the exemption
+      own = "allowBuilds:\n  esbuild: true\nignoredOptionalDependencies:\n  - '@brandocms/*'\n"
       plan = upgrade(old_backend(%{"assets/backend/pnpm-workspace.yaml" => own}))
-      refute Enum.any?(plan.notices, &(&1 =~ "is your own"))
+      notice = Enum.find(plan.notices, &(&1 =~ "is your own"))
+      assert notice =~ "minimumReleaseAgeExclude"
+      refute notice =~ "esbuild"
+
+      # With both, in block or flow style, nothing to say
+      for own <- [
+            "allowBuilds:\n  'esbuild': true # the admin's\n\nminimumReleaseAgeExclude:\n  - \"@brandocms/*\"\n",
+            "allowBuilds: {esbuild: true, sharp: false}\nminimumReleaseAgeExclude: ['@brandocms/*', vite]\n"
+          ] do
+        plan = upgrade(old_backend(%{"assets/backend/pnpm-workspace.yaml" => own}))
+        refute Enum.any?(plan.notices, &(&1 =~ "is your own")), own
+      end
     end
 
     # The 0.54 template's field holds only what the template sets itself, but

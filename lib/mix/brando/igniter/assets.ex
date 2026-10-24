@@ -485,12 +485,15 @@ if Code.ensure_loaded?(Igniter) do
       template = Templates.contents(:copy, path)
       {igniter, contents} = read_file(igniter, path)
 
+      builds = setting(contents, "allowBuilds")
+      exemptions = setting(contents, "minimumReleaseAgeExclude")
+
       missing_builds =
         Enum.reject(@workspace_builds[path], fn {name, _choice} ->
-          contents =~ ~r/^\s+['"]?#{Regex.escape(name)}['"]?\s*:\s*(true|false)\s*(#.*)?$/m
+          builds =~ ~r/(^|[\s{,])['"]?#{Regex.escape(name)}['"]?\s*:\s*(true|false)\b/
         end)
 
-      exempt? = contents =~ ~r/^\s*-\s*['"]?@brandocms\/\*['"]?\s*(#.*)?$/m
+      exempt? = exemptions =~ ~r/(^|[\s\[,-])['"]?@brandocms\/\*['"]?\s*([,\]]|$)/m
 
       lines =
         if(missing_builds == [],
@@ -508,6 +511,24 @@ if Code.ensure_loaded?(Igniter) do
 
         #{Enum.map_join(lines, "\n", &("    " <> &1))}
         """)
+      end
+    end
+
+    # A top-level setting's value as text, without comments: the rest of its
+    # line (a flow collection, `{esbuild: true}`) and the indented lines under
+    # it. Enough to find an entry; not a YAML parser.
+    defp setting(contents, key) do
+      contents
+      |> String.split("\n")
+      |> Enum.map(&String.replace(&1, ~r/\s+#.*$|^#.*$/, ""))
+      |> Enum.drop_while(&(not String.match?(&1, ~r/^#{key}\s*:/)))
+      |> case do
+        [] ->
+          ""
+
+        [first | rest] ->
+          block = Enum.take_while(rest, &(&1 == "" or String.match?(&1, ~r/^\s/)))
+          Enum.join([String.replace(first, ~r/^#{key}\s*:/, "") | block], "\n")
       end
     end
 
