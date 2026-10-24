@@ -8526,7 +8526,7 @@ msgstr ""
 msgid "Invalid job identifier."
 msgstr ""
 
-#: lib/brando_admin/components/form/input/video.ex
+#: lib/brando_admin/components/assets/provider_video_upload.ex
 #, elixir-autogen, elixir-format
 msgid "Invalid video upload request"
 msgstr ""

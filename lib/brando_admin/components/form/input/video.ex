@@ -6,6 +6,7 @@ defmodule BrandoAdmin.Components.Form.Input.Video do
   import Ecto.Changeset
 
   alias BrandoAdmin.Components.Assets.MediaField
+  alias BrandoAdmin.Components.Assets.ProviderVideoUpload
   alias BrandoAdmin.Components.Content
   alias BrandoAdmin.Components.Form.Input
   alias BrandoAdmin.Components.Form.Input.FormId
@@ -123,7 +124,7 @@ defmodule BrandoAdmin.Components.Form.Input.Video do
      socket
      |> prepare_input_component()
      |> assign_new(:editable, fn -> Keyword.get(socket.assigns.opts, :editable, true) end)
-     |> assign_new(:provider_hook, fn -> provider_hook(assigns.field) end)
+     |> assign_new(:provider_hook, fn -> ProviderVideoUpload.hook(MediaField.entry_config(assigns.field, :video)) end)
      # Assigned on every update: a subform row's position, and so the name of
      # its id input, changes when a row above it is removed (#3157)
      |> assign(:relation_field, relation_field)
@@ -285,14 +286,6 @@ defmodule BrandoAdmin.Components.Form.Input.Video do
     """
   end
 
-  # The provider upload hook for the field's strategy, when it has one with
-  # credentials: Mux, Bunny, Cloudflare or Vimeo.
-  defp provider_hook(field) do
-    {cfg, _target} = Brando.Uploads.resolve_video_config(MediaField.entry_config(field, :video))
-
-    if Brando.Uploads.video_upload_available?(cfg), do: MediaField.video_uploader_hook(cfg.upload_strategy)
-  end
-
   def open_video(js \\ %JS{}, target) do
     js
     |> JS.push("open_video", target: target)
@@ -378,54 +371,17 @@ defmodule BrandoAdmin.Components.Form.Input.Video do
 
   # Creates the video, with the field's config and target, and hands the hook
   # the provider's destination for the file.
-  def handle_event(
-        "get_video_upload_url",
-        %{"request_ref" => request_ref, "filename" => filename, "size" => size, "mime_type" => mime_type},
-        socket
-      ) do
-    {cfg, config_target} = Brando.Uploads.resolve_video_config(MediaField.entry_config(socket.assigns.field, :video))
-
-    case Brando.Videos.Uploader.initiate_upload(filename, socket.assigns[:current_user],
-           config: cfg,
-           config_target: config_target,
-           file_meta: %{name: filename, size: size, type: mime_type}
-         ) do
-      {:ok, %{upload_url: upload_url, video: video} = result} ->
-        payload =
-          Map.merge(
-            %{upload_url: upload_url, video_id: video.id, filename: filename, request_ref: request_ref},
-            Map.take(result, [:tus_auth])
-          )
-
-        {:noreply, push_event(socket, "video_upload_url_ready", payload)}
-
-      {:error, reason} ->
-        {:noreply,
-         push_event(socket, "video_upload_url_error", %{
-           error: Brando.Uploads.video_upload_error_message(reason),
-           filename: filename,
-           request_ref: request_ref
-         })}
-    end
-  end
-
   def handle_event("get_video_upload_url", params, socket) do
-    {:noreply,
-     push_event(socket, "video_upload_url_error", %{
-       error: gettext("Invalid video upload request"),
-       filename: Map.get(params, "filename", ""),
-       request_ref: Map.get(params, "request_ref", "")
-     })}
+    config_target = MediaField.entry_config(socket.assigns.field, :video)
+    {:noreply, ProviderVideoUpload.initiate(socket, socket.assigns[:current_user], config_target, params)}
   end
 
   # The file is with the provider, which encodes it and reports back
   # (`video_processed`); the field shows the video from now on.
   def handle_event("video_upload_complete", %{"video_id" => video_id}, socket) do
-    with {:ok, video} <- Brando.Videos.get_video(video_id),
-         {:ok, video} <- Brando.Videos.Uploader.complete_client_upload(video) do
-      select_video(socket, video.id)
-    else
-      _ -> {:noreply, socket}
+    case ProviderVideoUpload.complete(video_id) do
+      {:ok, video} -> select_video(socket, video.id)
+      :error -> {:noreply, socket}
     end
   end
 

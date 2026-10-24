@@ -6,6 +6,7 @@ defmodule BrandoAdmin.Components.VideoPicker do
 
   alias Brando.Videos.ProviderLibrary
   alias BrandoAdmin.Components.Assets.FileBrowser
+  alias BrandoAdmin.Components.Assets.ProviderVideoUpload
   alias BrandoAdmin.Components.Content
   alias BrandoAdmin.Components.PickerFolders
   alias BrandoAdmin.Images.FolderBrowser
@@ -67,6 +68,12 @@ defmodule BrandoAdmin.Components.VideoPicker do
      |> assign_video_upload_available()
      |> assign_library_providers()
      |> push_selection_state()}
+  end
+
+  # A video ref or var with a provider takes an upload itself, but doesn't
+  # know the editor; the picker does, and creates the video for it.
+  def update(%{provider_upload: %{config_target: config_target, params: params}}, socket) do
+    {:ok, ProviderVideoUpload.initiate(socket, socket.assigns[:current_user], config_target, params)}
   end
 
   def update(%{selected_videos: selected_videos}, socket) do

@@ -1,0 +1,1 @@
+- A video block and a video variable in an entry set to upload to Mux, Bunny, Cloudflare or Vimeo upload there themselves, from their Upload button or a dropped file, as a video field does.

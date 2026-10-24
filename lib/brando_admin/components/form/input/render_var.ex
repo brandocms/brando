@@ -11,6 +11,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
   alias Brando.Type.I18nString
   alias Brando.Utils
   alias BrandoAdmin.Components.Assets.MediaField
+  alias BrandoAdmin.Components.Assets.ProviderVideoUpload
   alias BrandoAdmin.Components.Content
   alias BrandoAdmin.Components.Form.Input
   alias BrandoAdmin.Components.Form.Primitives
@@ -371,7 +372,26 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
     |> assign(:placeholder, get_field(changeset, :placeholder))
     |> assign(:palette_colors, if(type == :color, do: Input.palette_colors(get_field(changeset, :palette_id))))
     |> assign(:var, var)
+    |> assign_provider_hook(type, var)
   end
+
+  # A video var's provider upload hook, looked up again when its config
+  # target changes. The video picker creates the upload, so only a var in an
+  # entry form (`form_id`), which always has the picker, takes one; a global
+  # set's or a module's default value does not.
+  defp assign_provider_hook(%{assigns: %{form_id: form_id}} = socket, :video, var) when not is_nil(form_id) do
+    config_target = var[:config_target].value || "default"
+
+    if socket.assigns[:provider_config_target] == config_target do
+      socket
+    else
+      socket
+      |> assign(:provider_config_target, config_target)
+      |> assign(:provider_hook, ProviderVideoUpload.hook(config_target))
+    end
+  end
+
+  defp assign_provider_hook(socket, _type, _var), do: assign(socket, :provider_hook, nil)
 
   # Only ever called from the section guarded by `@type in [:color, :link,
   # :select]`, so there is no other type to fall back for.
@@ -685,6 +705,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
                       component_id={@id}
                       var_key={@key}
                       upload_kind={@upload_kind}
+                      provider_hook={@provider_hook}
                     />
                   </section>
                 </:section>
@@ -828,6 +849,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
               component_id={@id}
               var_key={@key}
               upload_kind={@upload_kind}
+              provider_hook={@provider_hook}
             />
           </div>
         <% end %>
@@ -866,6 +888,8 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
   attr(:component_id, :any, default: nil)
   attr(:var_key, :any, default: nil)
   attr(:upload_kind, :string, default: "entry_var")
+  # A video var's provider upload hook (`ProviderVideoUpload.hook/1`)
+  attr(:provider_hook, :string, default: nil)
   # The entry's language: the link picker offers entries in it
   attr(:language, :string, default: nil)
 
@@ -1106,9 +1130,14 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
           configure={show_modal("#var-#{@var.id}-video-config")}
           browse={JS.push("set_video_target", target: @target) |> toggle_drawer("#video-picker")}
           remove={JS.push("reset_video", target: @target)}
+          video_hook_id={@provider_hook && "#{@var.id}-video-uploader"}
         >
           <Input.input type={:hidden} field={@var[:video_id]} value={@video_id || ""} publish />
         </MediaField.field>
+        <%!-- Upload and a drop on the var go straight to the provider through
+              this hook, which asks this component for each upload's
+              destination. --%>
+        <div :if={@provider_hook} id={"#{@var.id}-video-uploader"} phx-hook={@provider_hook} data-target={@target} />
         <.video_modal
           field={@var}
           video={@video}
@@ -1116,6 +1145,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
           component_id={@component_id}
           var_key={@var_key}
           upload_kind={@upload_kind}
+          video_hook_id={@provider_hook && "#{@var.id}-video-uploader"}
         />
       </Primitives.field_base>
       <div :if={@edit} class="brando-input">
@@ -1476,6 +1506,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
         config_target={@field[:config_target].value || "default"}
         browse={JS.push("set_video_target", target: @target) |> toggle_drawer("#video-picker")}
         remove={JS.push("reset_video", target: @target)}
+        video_hook_id={@video_hook_id}
       />
       <:footer>
         <button type="button" class="btn btn--primary" phx-click={hide_modal("#var-#{@field.id}-video-config")}>{gettext(
@@ -1736,6 +1767,33 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
     |> on_change(%{video: nil, video_id: nil})
     |> then(&{:noreply, &1})
   end
+
+  # -- Provider uploads, from a video var's own upload hook --
+
+  # The picker knows the editor, and creates the video with the var's config.
+  def handle_event("get_video_upload_url", params, socket) do
+    ProviderVideoUpload.initiate_in_picker(socket.assigns.provider_config_target, params)
+    {:noreply, socket}
+  end
+
+  # The file is with the provider; the var shows the video from now on.
+  def handle_event("video_upload_complete", %{"video_id" => video_id}, socket) do
+    with {:ok, video} <- ProviderVideoUpload.complete(video_id),
+         {:ok, video} <- Brando.Videos.get_video(%{matches: %{id: video.id}, preload: [:thumbnail, :file]}) do
+      socket
+      |> assign(:video, video)
+      |> assign(:video_id, video.id)
+      |> on_change(%{video: video, video_id: video.id})
+      |> then(&{:noreply, &1})
+    else
+      _ -> {:noreply, socket}
+    end
+  end
+
+  # Progress and failures show in the var and the upload drawer, both
+  # client-side.
+  def handle_event("video_upload_progress", _params, socket), do: {:noreply, socket}
+  def handle_event("upload_error", _params, socket), do: {:noreply, socket}
 
   def handle_event("reset_gallery", _, socket) do
     socket
