@@ -47,32 +47,55 @@ document.addEventListener(
 
 // This browser tab, across reloads and reconnects: an entry's form is
 // edited in one tab per user, and the tab that edits keeps doing so when it
-// reconnects (`BrandoAdmin.LiveView.Form.Tabs`). A duplicated tab copies
-// sessionStorage; the server then gives it an id of its own (`b:brando-tab`).
+// reconnects (`BrandoAdmin.LiveView.Form.Tabs`).
+//
+// The id lives in sessionStorage, which a duplicated tab (and a window a
+// script opens) copies. While a page is open its tab says so (`OPEN_KEY`),
+// and says it no more as it goes (`pagehide`, which a reload passes through
+// too): a page that finds the flag set is a copy of a tab still open, and
+// takes an id of its own.
 const TAB_KEY = 'brando:tab'
+const OPEN_KEY = 'brando:tab-open'
+// The entries this tab edited, so that it edits them again when every tab
+// rejoins at once (a deploy): `b:brando-tab-mode` from the server.
+const EDITING_KEY = 'brando:tab-editing'
 
-const browserTab = () => {
+let tab
+try {
+  tab = sessionStorage.getItem(TAB_KEY)
+  if (!tab || sessionStorage.getItem(OPEN_KEY)) {
+    tab = crypto.randomUUID()
+    sessionStorage.setItem(TAB_KEY, tab)
+    sessionStorage.removeItem(EDITING_KEY)
+  }
+  sessionStorage.setItem(OPEN_KEY, '1')
+  window.addEventListener('pagehide', () => sessionStorage.removeItem(OPEN_KEY))
+  window.addEventListener('pageshow', ({ persisted }) => {
+    if (persisted) sessionStorage.setItem(OPEN_KEY, '1')
+  })
+} catch {
+  tab = undefined
+}
+
+const editing = () => {
   try {
-    let tab = sessionStorage.getItem(TAB_KEY)
-    if (!tab) {
-      tab = crypto.randomUUID()
-      sessionStorage.setItem(TAB_KEY, tab)
-    }
-    return tab
+    return JSON.parse(sessionStorage.getItem(EDITING_KEY) || '[]')
   } catch {
-    return undefined
+    return []
   }
 }
+
+window.addEventListener('phx:b:brando-tab-mode', ({ detail: { key, editing: on } }) => {
+  try {
+    const keys = editing().filter(k => k !== key)
+    if (on) keys.push(key)
+    sessionStorage.setItem(EDITING_KEY, JSON.stringify(keys.slice(-20)))
+  } catch {}
+})
 
 // Close, on a form another of the editor's tabs edits. A browser closes only
 // a tab a script opened; otherwise the button's navigation goes on.
 window.addEventListener('brando:close-tab', () => window.close())
-
-window.addEventListener('phx:b:brando-tab', ({ detail }) => {
-  try {
-    if (detail?.tab) sessionStorage.setItem(TAB_KEY, detail.tab)
-  } catch {}
-})
 
 export default (hooks) => {
   let csrfToken = document
@@ -82,7 +105,7 @@ export default (hooks) => {
     hooks: hooks,
     // A function, so every join (a reconnect, a live navigation) sends the
     // tab as it is now.
-    params: () => ({ _csrf_token: csrfToken, brando_tab: browserTab() }),
+    params: () => ({ _csrf_token: csrfToken, brando_tab: tab, brando_editing: editing() }),
     timeout: 70000,
     dom: {
       onBeforeElUpdated(from, to) {

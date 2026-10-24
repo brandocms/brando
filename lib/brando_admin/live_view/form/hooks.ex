@@ -75,6 +75,7 @@ defmodule BrandoAdmin.LiveView.Form.Hooks do
     if connected?(socket) and not frontend?(socket) do
       {:cont,
        socket
+       |> Tabs.connect()
        |> Tabs.arm(schema, socket.assigns[:entry_id])
        |> attach_hook(:b_form_tabs, :handle_info, &Tabs.handle_info/2)
        |> attach_hook(:b_form_tab_events, :handle_event, &Tabs.handle_event/3)}
@@ -521,6 +522,13 @@ defmodule BrandoAdmin.LiveView.Form.Hooks do
       safe_deliver_asset(target, asset, socket)
       {:halt, socket}
     end
+  end
+
+  # Gallery additions queued before another tab took over editing.
+  defp handle_asset_delivery_info(:deliver_next_gallery_asset, %{assigns: %{tab_access: %{mode: mode}}} = socket)
+       when mode != :editing do
+    if socket.assigns[:gallery_delivery_queue] not in [nil, []], do: send(self(), {:toast, upload_elsewhere_message()})
+    {:halt, assign(socket, :gallery_delivery_queue, [])}
   end
 
   defp handle_asset_delivery_info(:deliver_next_gallery_asset, socket) do

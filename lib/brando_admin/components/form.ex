@@ -301,7 +301,7 @@ defmodule BrandoAdmin.Components.Form do
       cond do
         Map.has_key?(message, :handover) ->
           {socket, copy} = Drafts.adopt(socket, message.handover)
-          take_handed_over(socket, copy)
+          take_handed_over(socket, copy, (message.handover || %{})[:fields] || [])
 
         Map.has_key?(message, :late_handover) ->
           Drafts.refresh_candidates(socket)
@@ -320,7 +320,9 @@ defmodule BrandoAdmin.Components.Form do
   # Another of the editor's tabs takes over: what this form changed goes to
   # it now, and its recovery copy with it (`Drafts.release/2`).
   def update(%{event: "tab_release", to: to}, socket) do
-    {:ok, socket |> ship_all_field_changes() |> Drafts.release(to)}
+    # values typed that didn't cast are this tab's, and don't ship
+    uncast = Enum.map(uncast_fields(socket), &to_string/1)
+    {:ok, socket |> ship_all_field_changes() |> Drafts.release(to, uncast)}
   end
 
   def update(%{event: "tab_release_timeout", token: token}, socket), do: {:ok, Drafts.release_timeout(socket, token)}
@@ -7542,17 +7544,33 @@ defmodule BrandoAdmin.Components.Form do
   # This tab took over from another of the editor's tabs, with its recovery
   # copy (`Drafts.adopt/2`). The fields and blocks it edited came already,
   # through the field sync and the edit session. What doesn't sync comes
-  # from the copy: relations and transformers it has otherwise than this
-  # form, which edited nothing. Both tabs show the same saved entry, so the
-  # copy's rows are cast as they are (`Restore.reconcile/2` is for a copy of
-  # an entry that may have changed since).
-  defp take_handed_over(socket, nil), do: socket
+  # from the copy: values it typed that didn't cast (`fields`, which the
+  # field sync leaves out), and relations and transformers it has otherwise
+  # than this form, which edited nothing. Both tabs show the same saved
+  # entry, so the copy's rows are cast as they are (`Restore.reconcile/2` is
+  # for a copy of an entry that may have changed since).
+  #
+  # A revision's working copy left the edit session (`BlockField`, `detach`):
+  # its blocks are in the copy alone, which is restored whole, as a working
+  # copy again.
+  defp take_handed_over(socket, nil, _fields), do: socket
 
-  defp take_handed_over(socket, copy) do
+  defp take_handed_over(socket, %{payload: %{"working_copy" => working_copy}} = copy, _fields) do
+    %{schema: schema, entry: entry, current_user: user} = socket.assigns
+
+    case Brando.Drafts.Restore.prepare(copy, entry, schema, user, accept_conflict: true, compatible_only: true) do
+      {:ok, changeset, _issues} -> apply_restored_changeset(socket, changeset, :recovery_copy, working_copy)
+      _ -> Drafts.refresh_candidates(socket)
+    end
+  end
+
+  defp take_handed_over(socket, copy, fields) do
     %{schema: schema, entry: entry, form_blueprint: blueprint, current_user: user} = socket.assigns
     main = copy.payload["main"] || %{}
     handed_transformers = copy.payload["transformers"] || %{}
     own = Drafts.main_params(socket, socket.assigns.form.source)
+
+    uncast = for key <- fields, Map.has_key?(main, key), main[key] != own[key], do: key
 
     relations =
       for field <- relation_fields(socket),
@@ -7568,12 +7586,12 @@ defmodule BrandoAdmin.Components.Form do
           handed_transformers[key] != Brando.Drafts.Params.snapshot(Map.get(entry, name) || []),
           do: key
 
-    if relations == [] and transformers == [] do
+    if uncast == [] and relations == [] and transformers == [] do
       socket
     else
       params =
         own
-        |> Map.merge(Map.take(main, relations))
+        |> Map.merge(Map.take(main, uncast ++ relations))
         |> Map.merge(Map.take(handed_transformers, transformers))
         |> Map.drop(["id", "creator_id", "deleted_at"])
 
@@ -7587,8 +7605,13 @@ defmodule BrandoAdmin.Components.Form do
         )
       end
 
+      # as they were in the other tab: errors of this editor's, not changes
+      uncast =
+        for key <- uncast, field = String.to_existing_atom(key), Keyword.has_key?(form.source.errors, field), do: field
+
       socket
       |> put_local_form(form)
+      |> assign(:uncast_fields, MapSet.union(uncast_fields(socket), MapSet.new(uncast)))
       |> rebuild_preview_relations()
       |> assign_entry_for_blocks()
       |> Drafts.dirty()

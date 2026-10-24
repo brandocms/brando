@@ -52,6 +52,21 @@ async function editHere(page) {
   await expect(mainForm(page)).not.toHaveAttribute('inert')
 }
 
+// A duplicated tab, or a window a script opens, copies sessionStorage and
+// with it the tab id: it is another tab all the same.
+test('a copy of a tab is another tab', async ({ page }) => {
+  const url = await project(page, 'Copied tab')
+  await open(page, url)
+  const [copy] = await Promise.all([
+    page.waitForEvent('popup'),
+    page.evaluate(href => window.open(href, '_blank'), url),
+  ])
+  await syncLV(copy)
+  await expect(notice(copy)).toContainText('You have this entry open in another tab')
+  await expect(notice(page)).toBeHidden()
+  await copy.close()
+})
+
 test('a second tab opens read-only, Edit here moves editing with the unsaved title, and the first takes it back', async ({
   page,
 }) => {
@@ -123,8 +138,9 @@ test('a tab that comes back with offline edits after another took over makes a r
 
   await editHere(page)
 
+  // It edited before: it says that another tab edits now
   await restoreConnection(first)
-  await expect(notice(first)).toContainText('You have this entry open in another tab')
+  await expect(notice(first)).toContainText('You are editing this entry in another tab')
   await expect(mainForm(first)).toHaveAttribute('inert')
 
   // The editing tab offers the copy; nothing was applied or saved

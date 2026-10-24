@@ -141,9 +141,12 @@ defmodule BrandoAdmin.Components.Form.Drafts do
 
   # A tab that does not edit (another of the editor's tabs does, see
   # `LiveView.Form.Tabs`) offers no copies: the editing tab does, and the
-  # copies of a tab still open are that tab's own work.
+  # copies of a tab still open are that tab's own work. It keeps none of its
+  # own either, so its status is the entry's: when it was saved.
   defp shown(socket, %{} = draft) do
-    if editing?(socket), do: draft, else: %{draft | candidates: [], open?: false}
+    if editing?(socket),
+      do: draft,
+      else: %{draft | candidates: [], open?: false, status: :ready, checksum: draft.baseline}
   end
 
   defp shown(_socket, draft), do: draft
@@ -343,8 +346,8 @@ defmodule BrandoAdmin.Components.Form.Drafts do
   defp captured(socket, kind) do
     socket =
       case socket.assigns[:tab_release] do
-        %{to: to} ->
-          BrandoAdmin.LiveView.Form.Tabs.hand_over(to, %{draft_id: socket.assigns.draft.id})
+        %{to: to, fields: fields} ->
+          BrandoAdmin.LiveView.Form.Tabs.hand_over(to, %{draft_id: socket.assigns.draft.id, fields: fields})
           socket |> assign(:tab_release, nil) |> rotate()
 
         nil ->
@@ -360,7 +363,7 @@ defmodule BrandoAdmin.Components.Form.Drafts do
   end
 
   defp rotate(%{assigns: %{draft: %{} = draft}} = socket),
-    do: assign(socket, :draft, %{draft | id: Ecto.UUID.generate(), checksum: draft.baseline})
+    do: put_draft(socket, %{draft | id: Ecto.UUID.generate(), checksum: draft.baseline})
 
   # Nothing to keep: the browser's work is the editing tab's.
   defp acknowledge(socket, params) do
@@ -376,26 +379,30 @@ defmodule BrandoAdmin.Components.Form.Drafts do
 
   @doc """
   Another of the editor's tabs takes over. This tab captures once more,
-  what the browser has included, and hands the copy to that tab (`to`);
+  what the browser has included, and hands the copy to that tab (`to`),
+  naming the `fields` it changed that the field sync doesn't carry (typed
+  values that didn't cast);
   without recovery, or when the capture does not come back within
   three seconds, it hands over the copy as it is (`release_timeout/2`).
   """
-  def release(%{assigns: %{draft: %{initialized?: true}}} = socket, to) do
+  def release(socket, to, fields \\ [])
+
+  def release(%{assigns: %{draft: %{initialized?: true}}} = socket, to, fields) do
     token = make_ref()
     send_update_after(socket.assigns.myself, [event: "tab_release_timeout", token: token], release_wait())
 
     socket
-    |> assign(:tab_release, %{to: to, token: token})
+    |> assign(:tab_release, %{to: to, token: token, fields: fields})
     |> push_event("b:draft-release", %{id: socket.assigns.id})
   end
 
-  def release(socket, to) do
+  def release(socket, to, _fields) do
     BrandoAdmin.LiveView.Form.Tabs.hand_over(to, nil)
     socket
   end
 
-  def release_timeout(%{assigns: %{tab_release: %{to: to, token: token}, draft: draft}} = socket, token) do
-    BrandoAdmin.LiveView.Form.Tabs.hand_over(to, draft && %{draft_id: draft.id})
+  def release_timeout(%{assigns: %{tab_release: %{to: to, token: token} = release, draft: draft}} = socket, token) do
+    BrandoAdmin.LiveView.Form.Tabs.hand_over(to, draft && %{draft_id: draft.id, fields: release.fields})
     socket |> assign(:tab_release, nil) |> rotate()
   end
 

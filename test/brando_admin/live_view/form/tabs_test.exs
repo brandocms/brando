@@ -4,7 +4,14 @@ defmodule BrandoAdmin.LiveView.Form.TabsTest do
   alias BrandoAdmin.LiveView.Form.Tabs
 
   defp meta(tab, claim, opened_at \\ 100, pid \\ nil),
-    do: %{tab: tab, pid: pid || spawn(fn -> :ok end), claim: claim, opened_at: opened_at}
+    do: %{
+      tab: tab,
+      pid: pid || spawn(fn -> :ok end),
+      claim: claim,
+      auto: true,
+      opened_at: opened_at,
+      joined: System.unique_integer([:monotonic, :positive])
+    }
 
   defp state(meta, mode, opts \\ []) do
     %{
@@ -102,13 +109,17 @@ defmodule BrandoAdmin.LiveView.Form.TabsTest do
       assert Tabs.settle(state(me, :taking, edited?: true), [me, winner]).mode == :released
     end
 
-    test "the tab's old process, not gone yet after a reconnect, is no other tab" do
+    test "the tab's old process, not gone yet after a reconnect, is no other tab, and edits nothing" do
+      old = meta("a", 4)
       me = meta("a", 4)
-      ghost = meta("a", 4)
 
-      settled = Tabs.settle(state(me, :editing), [me, ghost])
+      settled = Tabs.settle(state(me, :editing), [me, old])
       assert settled.mode == :editing
       refute settled.others?
+
+      superseded = Tabs.settle(state(old, :editing), [me, old])
+      assert superseded.mode == :released
+      assert superseded.actions == [:unclaim]
     end
 
     test "the tab's own claim counts as it knows it, whatever its presence says" do

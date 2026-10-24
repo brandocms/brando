@@ -63,6 +63,15 @@ defmodule BrandoAdmin.OneTabPerUserTest do
   defp claim(view),
     do: view |> element(~s([data-testid="tab-notice"] button[phx-click="brando_tab_claim"])) |> render_click()
 
+  # `to` presses Edit here; `from`'s browser answers the last capture.
+  defp take_over(to, from) do
+    claim(to)
+    assert_push_event(from, "b:draft-release", %{})
+    capture(from)
+    await_mode(to, :editing)
+    settle(to)
+  end
+
   defp notice(view, mode), do: has_element?(view, ~s([data-testid="tab-notice"][data-mode="#{mode}"]))
 
   defp await_mode(view, mode), do: await(fn -> mode(view) == mode end)
@@ -125,6 +134,38 @@ defmodule BrandoAdmin.OneTabPerUserTest do
     assert field(c.a, :uri) == "om-oss-b"
   end
 
+  # A cleared required title doesn't cast, and the field sync leaves it out:
+  # it goes over with the copy.
+  test "a value typed that didn't cast goes over with the copy", c do
+    b = open(c.conn, c.path, "tab-b")
+    view = c.a
+    view |> form() |> render_hook("focus", %{"field" => "page[title]"})
+    type(view, "title", "")
+    assert field(b, :title) == "Om oss"
+
+    take_over(b, c.a)
+
+    await(fn -> b |> render() |> form_params("#page_form_form") |> get_in(["page", "title"]) == "" end)
+    assert Keyword.has_key?(form_assigns(b).form.source.errors, :title)
+  end
+
+  # A revision loaded as a working copy left the edit session: its blocks
+  # are in the copy alone, and the tab that takes over restores it whole.
+  test "a revision's working copy goes over as a working copy", c do
+    entry = Page |> Brando.Repo.get!(c.page.id) |> Brando.Repo.preload(Brando.Blueprint.preloads_for(Page))
+    {:ok, revision} = Brando.Revisions.create_revision(entry, c.current_user)
+    b = open(c.conn, c.path, "tab-b")
+
+    drawer = cid_of(c.a, "#page_form-revisions-drawer-tab-activity")
+    c.a |> with_target(drawer) |> render_hook("select_revision", %{"revision" => revision.revision})
+    await(fn -> form_assigns(c.a).working_copy == revision.revision end)
+
+    take_over(b, c.a)
+
+    await(fn -> form_assigns(b).working_copy == revision.revision end)
+    assert form_assigns(b).blocks_detached?
+  end
+
   test "Take editing back goes the other way", c do
     b = open(c.conn, c.path, "tab-b")
     claim(b)
@@ -159,12 +200,59 @@ defmodule BrandoAdmin.OneTabPerUserTest do
     await_mode(b, :editing)
   end
 
-  test "a tab with the id of a live tab is another tab: it gets an id of its own", c do
-    b = open(c.conn, c.path, "tab-a")
+  # A reconnect the server hasn't noticed yet: the old process is still
+  # there. The new one is the tab, and the old one edits nothing.
+  test "a tab that reconnects while its old process is still there keeps editing", c do
+    a2 = open(c.conn, c.path, "tab-a")
 
-    assert_push_event(b, "b:brando-tab", %{tab: tab})
-    refute tab == "tab-a"
-    assert mode(b) == :waiting
+    assert mode(a2) == :editing
+    await_mode(c.a, :released)
+  end
+
+  # Every tab rejoined at once (a deploy): the tracker forgot the claims,
+  # and a tab that came back first claimed. The tab that edited claims again.
+  test "after a restart the tab that edited edits again, unless the editor chose another since", c do
+    topic = BrandoAdmin.LiveView.Form.Tabs.topic(Page, to_string(c.page.id))
+    kill_live(c.a)
+    b = open(c.conn, c.path, "tab-b")
+    assert mode(b) == :editing
+
+    a =
+      c.conn
+      |> Phoenix.LiveViewTest.put_connect_params(%{"brando_tab" => "tab-a", "brando_editing" => [topic]})
+      |> live_form(c.path)
+      |> elem(0)
+
+    assert mode(a) == :editing
+    await_mode(b, :released)
+
+    # The editor takes editing to B; A comes back thinking it edits
+    claim(b)
+    assert_push_event(a, "b:draft-release", %{})
+    capture(a)
+    await_mode(b, :editing)
+    kill_live(a)
+
+    a =
+      c.conn
+      |> Phoenix.LiveViewTest.put_connect_params(%{"brando_tab" => "tab-a", "brando_editing" => [topic]})
+      |> live_form(c.path)
+      |> elem(0)
+
+    refute mode(a) == :editing
+    assert mode(b) == :editing
+  end
+
+  # A new entry's first save patches the form to its update route, and the
+  # tab claims then: connect params are gone after mount.
+  test "a create form patched to the update route takes part", c do
+    {view, _} =
+      c.conn
+      |> Phoenix.LiveViewTest.put_connect_params(%{"brando_tab" => "tab-new"})
+      |> live_form("/admin/pages/create")
+
+    render_patch(view, c.path)
+    assert mode(view) == :waiting
     assert mode(c.a) == :editing
   end
 
