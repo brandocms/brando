@@ -318,6 +318,35 @@ PR 15: dropped on known flake beam-jit-crash (mix test); re-queued at position 1
 PR 15: dropped from the queue: merge-group checks failed
   mix test: known flake: beam-jit-crash — rerun with: gh run rerun 89 --failed" 15
 
+# Two jobs failing and one still running, all matching --skip-check
+consumer='{"check_runs": [{"name": "mix test", "status": "completed", "conclusion": "success", "html_url": "https://github.com/o/r/actions/runs/7/job/1"},
+  {"name": "Consumer (none, fresh)", "status": "completed", "conclusion": "failure", "html_url": "https://github.com/o/r/actions/runs/79/job/1"},
+  {"name": "Consumer (multi, fresh)", "status": "completed", "conclusion": "failure", "html_url": "https://github.com/o/r/actions/runs/79/job/2"},
+  {"name": "Consumer (single, fresh)", "status": "in_progress", "conclusion": null, "html_url": "https://github.com/o/r/actions/runs/79/job/3"},
+  {"name": "Consumer docs", "status": "completed", "conclusion": "success", "html_url": "https://github.com/o/r/actions/runs/79/job/4"}]}'
+consumer="$(jq -c . <<<"$consumer")"
+
+fresh skip-check
+pr 19 feat-19 main 9999999c "OPEN QUEUED" "MERGED - merged"
+checks 9999999c "$consumer"
+run "queues past failing and running checks matching --skip-check, and names them" 0 "PR 19: checks green on 9999999 but for skipped Consumer (none, fresh) (failure), Consumer (multi, fresh) (failure), Consumer (single, fresh) (in_progress); queued at position 1
+PR 19: merged" 19 --skip-check 'Consumer (*'
+
+fresh skip-check-other
+pr 20 feat-20 main 9999999d
+checks 9999999d "$(jq -c '.check_runs |= map(select(.status == "completed"))' <<<"$consumer")"
+run "still holds back on a failed check --skip-check does not match" 1 "PR 20: checks failed on 9999999, not queued: Consumer (multi, fresh)
+  mix test: known flake: beam-jit-crash — rerun with: gh run rerun 79 --failed" 20 --skip-check 'Consumer (none*'
+[ ! -f "$state/calls" ] || { failures=$((failures + 1)); echo "FAIL     queued anyway: $(cat "$state/calls")"; }
+
+fresh skip-check-only
+pr 21 feat-21 main 9999999e "OPEN QUEUED" "MERGED - merged"
+consumer_only="$(jq -c '.check_runs |= map(select(.name | startswith("Consumer (")))' <<<"$consumer")"
+checks 9999999e "$consumer_only" "$consumer_only" "$consumer"
+run "waits for a check it does not skip, and reads \"*(\" as text" 0 "PR 21: checks green on 9999999 but for skipped Consumer (none, fresh) (failure), Consumer (multi, fresh) (failure), Consumer (single, fresh) (in_progress); queued at position 1
+PR 21: merged" 21 --skip-check '*(*'
+[ "$(cat "$state/reads-9999999e" | wc -l | tr -d ' ')" -ge 3 ] || { failures=$((failures + 1)); echo "FAIL     queued before a check it waits for was registered"; }
+
 fresh already-queued
 pr 8 feat-8 main 2222222b "OPEN LOCKED" "OPEN - manual"
 touch "$state/8.queued"
