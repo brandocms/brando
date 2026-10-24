@@ -75,13 +75,27 @@ defmodule Brando.JSONLD.Videos do
   defp videos_in_block(_block), do: []
 
   defp ref_video(%Ref{active: false}), do: []
-  defp ref_video(%Ref{video: %Video{} = video, data: %VideoBlock{data: %{title: title}}}), do: [{video, [name: title]}]
+
+  defp ref_video(%Ref{video: %Video{} = video, data: %VideoBlock{data: %{title: title}}}),
+    do: [{video, [name: plain_text(title)]}]
+
   defp ref_video(%Ref{video: %Video{} = video}), do: [{video, []}]
   defp ref_video(_ref), do: []
 
   # A module's video variable, loaded with the block's vars.
   defp var_video(%Var{type: :video, video: %Video{} = video}), do: [{video, []}]
   defp var_video(_var), do: []
+
+  # A video block's title is a rich-text caption; a name is its text. An empty
+  # one (`<p></p>`) leaves the video's own.
+  defp plain_text(text) when is_binary(text) do
+    case Floki.parse_fragment(text) do
+      {:ok, nodes} -> nodes |> Floki.text() |> String.replace(~r/\s+/, " ") |> String.trim()
+      _ -> text
+    end
+  end
+
+  defp plain_text(_text), do: nil
 
   defp loaded_list(list) when is_list(list), do: list
   defp loaded_list(_not_loaded), do: []

@@ -52,8 +52,36 @@ defmodule Brando.Villain.Block do
     put_change(ref_target_changeset, :data, updated_block)
   end
 
+  @doc """
+  Stores the block data's rich-text captions (`captions:` in `use
+  Brando.Villain.Block`) as `Brando.Captions.normalize/1` does: an editor
+  emptied leaves `<p></p>`, which is no caption (`nil`), so the placement
+  takes the asset's own again.
+  """
+  def normalize_captions(changeset, []), do: changeset
+
+  def normalize_captions(changeset, captions) do
+    # The data's own changeset, edited in place: `put_change/3` refuses an
+    # embed with `on_replace: :update`
+    case changeset.changes do
+      %{data: %Ecto.Changeset{} = data} ->
+        data =
+          Enum.reduce(
+            captions,
+            data,
+            &Ecto.Changeset.update_change(&2, &1, fn text -> Brando.Captions.normalize(text) end)
+          )
+
+        %{changeset | changes: Map.put(changeset.changes, :data, data)}
+
+      _ ->
+        changeset
+    end
+  end
+
   defmacro __using__(opts) do
     type = Keyword.fetch!(opts, :type)
+    captions = Keyword.get(opts, :captions, [])
 
     quote generated: true do
       @behaviour Brando.Villain.Block
@@ -73,6 +101,7 @@ defmodule Brando.Villain.Block do
         struct
         |> cast(params, ~w(type marked_as_deleted)a)
         |> cast_embed(:data)
+        |> Brando.Villain.Block.normalize_captions(unquote(captions))
         |> maybe_mark_for_deletion()
       end
 

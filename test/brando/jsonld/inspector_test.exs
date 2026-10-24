@@ -189,6 +189,33 @@ defmodule Brando.JSONLD.InspectorTest do
     assert Brando.JSONLD.Videos.from_entry(Post, hidden) == []
   end
 
+  # A video block's title is a rich-text caption: the name is its text, and an
+  # editor emptied (`<p></p>`) leaves the video's own title.
+  test "a video ref's caption names the video as plain text" do
+    ref = fn title ->
+      %Brando.Content.Ref{
+        active: true,
+        video: video(7),
+        data: %Brando.Villain.Blocks.VideoBlock{data: %Brando.Villain.Blocks.VideoBlock.Data{title: title}}
+      }
+    end
+
+    name = fn title ->
+      entry =
+        post(
+          cover_video: nil,
+          entry_blocks: [%{block: %Block{active: true, refs: [ref.(title)], vars: [], children: []}}]
+        )
+
+      [%{name: name}] = Brando.JSONLD.Videos.from_entry(Post, entry)
+      name
+    end
+
+    assert name.("<p>Tour <strong>film</strong> &amp; more</p>") == "Tour film & more"
+    assert name.("<p></p>") == "Video 7"
+    assert name.(nil) == "Video 7"
+  end
+
   describe "a mapping that reads a relation" do
     # A site's field function may enumerate a relation (`keywords/1` listing
     # an entry's categories). The Structured data tab loads the entry with

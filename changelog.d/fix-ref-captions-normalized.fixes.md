@@ -1,0 +1,2 @@
+- A video or picture ref's caption emptied in the editor is stored as no caption, so the placement shows the asset's own title again everywhere, and markup the editor can't make is stripped, as gallery captions are.
+- A video ref's caption names the video in structured data (JSON-LD) as plain text, instead of with its markup or as an empty `<p></p>`.

@@ -1,6 +1,7 @@
 defmodule Brando.Villain.Blocks.VideoBlock do
   @moduledoc false
-  use Brando.Villain.Block, type: "video"
+  # The caption (`title`) is rich text
+  use Brando.Villain.Block, type: "video", captions: [:title]
 
   defmodule Data do
     @moduledoc false
