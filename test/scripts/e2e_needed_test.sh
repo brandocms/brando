@@ -31,6 +31,9 @@ expect true "the E2E app" e2e/playwright/tests/projects/video-picker-upload.spec
 expect true "Markdown below the top level" scripts/queue priv/templates/brando.install/README.md
 expect true "the workflow that runs it" .github/workflows/ci.yml
 expect true "its path check" .github/scripts/check-e2e-paths.sh
+expect true "the JavaScript tests its first shard runs" test/javascript/tiptap/editor.spec.js
+expect true "… and the node ones" test/javascript/upload-progress.test.mjs
+expect true "a fixture an E2E spec reads" test/fixtures/definitions/hero.exs.txt
 expect true "dependencies" mix.lock
 expect true "no paths (a failed lookup)"
 

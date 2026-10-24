@@ -538,27 +538,24 @@ jobs:
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     timeout-minutes: 5
-    continue-on-error: true
-    permissions:
-      contents: read
-      pull-requests: read
     outputs:
       needed: ${{ steps.decide.outputs.needed }}
     steps:
+      # The PR's merge commit and its first parent, the base it merges onto;
+      # their diff is what the PR changes. Trees only, no file contents.
       - uses: actions/checkout@v7.0.1
         with:
+          fetch-depth: 2
+          filter: blob:none
           sparse-checkout: .github/scripts
 
+      # Never fails: anything going wrong runs the suite.
       - name: Read the changed paths
         id: decide
-        env:
-          GH_TOKEN: ${{ github.token }}
-          PR: ${{ github.event.pull_request.number }}
         run: |
-          paths="$(gh api "repos/$GITHUB_REPOSITORY/pulls/$PR/files" --paginate --jq '.[].filename')"
-          # The endpoint lists at most 3,000 files: past that, run the suite.
-          if [ "$(grep -c . <<<"$paths")" -ge 3000 ]; then needed=true
-          else needed="$(.github/scripts/e2e-needed.sh <<<"$paths")"; fi
+          # Without renames, a moved file lists its old path as well as its new one.
+          if paths="$(git diff --name-only --no-renames HEAD^1 HEAD)" &&
+            needed="$(bash .github/scripts/e2e-needed.sh <<<"$paths")"; then :; else needed=true; fi
           echo "needed=$needed" >> "$GITHUB_OUTPUT"
           echo "E2E suite needed: $needed" >> "$GITHUB_STEP_SUMMARY"
 

@@ -2,16 +2,18 @@
 # Reads a pull request's changed paths, one per line, and prints "true" when
 # the browser E2E suite should run for it, "false" when every path is one the
 # suite cannot exercise: the repository's tooling and its tests, the unit
-# tests, guides, changelog fragments, agent docs and top-level Markdown.
+# tests (not the JavaScript ones or fixtures), guides, changelog fragments,
+# agent docs and top-level Markdown.
 # Prints "true" for no paths at all, since a failed lookup must not skip it.
 #
-#   gh api repos/OWNER/NAME/pulls/N/files --paginate --jq '.[].filename' | .github/scripts/e2e-needed.sh
+#   git diff --name-only --no-renames BASE HEAD | bash .github/scripts/e2e-needed.sh
 set -uo pipefail
 
-# Paths the E2E jobs read themselves stay in: the workflow and its path check.
+# Paths the E2E jobs read themselves stay in: the workflow, its path check, the
+# JavaScript tests its first shard runs and the fixtures a spec reads.
 outside_e2e() {
   case "$1" in
-    .github/workflows/ci.yml | .github/scripts/check-e2e-paths.sh) return 1 ;;
+    .github/workflows/ci.yml | .github/scripts/check-e2e-paths.sh | test/javascript/* | test/fixtures/*) return 1 ;;
     scripts/* | test/* | guides/* | changelog.d/* | .claude/* | .github/*) return 0 ;;
     */*) return 1 ;;
     *.md) return 0 ;;
