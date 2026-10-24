@@ -56,6 +56,27 @@ stop_server() {
 }
 trap stop_server EXIT
 
+# GitHub's release downloads now answer with more header bytes than Erlang's
+# httpc takes (header_too_long, 10 KB), so rustler_precompiled can't fetch a
+# NIF (mdex_native's) by itself. Compile the deps that ship one, and fetch each
+# download that fails with curl into rustler_precompiled's cache, then again.
+export RUSTLER_PRECOMPILED_GLOBAL_CACHE_PATH="$smoke_root/precompiled-nifs"
+mkdir -p "$RUSTLER_PRECOMPILED_GLOBAL_CACHE_PATH"
+fetch_precompiled_nifs() {
+  local nif_deps=() dir url attempt log="$smoke_root/logs/precompiled-nifs.log"
+  for dir in deps/*/; do
+    if compgen -G "${dir}checksum-*.exs" > /dev/null; then nif_deps+=("$(basename "$dir")"); fi
+  done
+  if [[ ${#nif_deps[@]} -eq 0 ]]; then return 0; fi
+  for attempt in 1 2; do
+    if mix deps.compile "${nif_deps[@]}" > "$log" 2>&1; then return 0; fi
+    for url in $(grep -oE "couldn't fetch NIF from https://[^ ]+\.tar\.gz" "$log" | sed -E "s/^couldn't fetch NIF from //" | sort -u); do
+      curl --fail --silent --show-error --location "$url" --output "$RUSTLER_PRECOMPILED_GLOBAL_CACHE_PATH/$(basename "$url")"
+    done
+  done
+  mix deps.compile "${nif_deps[@]}" > "$log" 2>&1
+}
+
 # The directory the consumer takes Brando from, and whose templates and skills
 # the checks compare against.
 brando_dir="$framework_dir"
@@ -86,11 +107,13 @@ if [[ "$smoke_bootstrap" == precompiled ]]; then
   elixir "$framework_dir/scripts/igniter_smoke/customize.exs"
   elixir "$framework_dir/scripts/igniter_smoke/optional_dependency.exs" remove
   mix deps.get > "$smoke_root/logs/deps-without-igniter.log" 2>&1
+  fetch_precompiled_nifs
   mix compile > "$smoke_root/logs/compile-without-igniter.log" 2>&1
   mix run --no-start -e 'false = Code.ensure_loaded?(Igniter); false = Mix.Brando.Igniter.Project.__mix_recompile__?()' > "$smoke_root/logs/check-without-igniter.log" 2>&1
   elixir "$framework_dir/scripts/igniter_smoke/optional_dependency.exs" add
 fi
 mix deps.get > "$smoke_root/logs/deps.log" 2>&1
+fetch_precompiled_nifs
 if [[ "$smoke_bootstrap" == precompiled ]]; then
   mix deps.compile > "$smoke_root/logs/compile-with-igniter.log" 2>&1
 fi
