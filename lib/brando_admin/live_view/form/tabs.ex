@@ -16,8 +16,7 @@ defmodule BrandoAdmin.LiveView.Form.Tabs do
   none of the user's other tabs holds a claim, and when the editor presses
   Edit here (or Take editing back); a claim is one more than the highest
   the tab sees, with the tab id breaking a tie, so every tab agrees on the
-  editor without asking the others. A claim the tab made on opening is
-  `auto`; one the editor made is not.
+  editor without asking the others.
 
   ## A browser tab
 
@@ -27,14 +26,12 @@ defmodule BrandoAdmin.LiveView.Form.Tabs do
   same id. Its old process may still be there: the server notices a lost
   connection only when its heartbeat runs out, and a node of a cluster may
   not have dropped it yet. Of the processes with one tab id, the newest is
-  the tab (`joined`): it takes over the old one's claim, and the old one,
-  with no browser left, edits nothing.
+  the tab: the browser counts its joins (`brando_tab_seq`), so no clock is
+  compared. It takes over the old one's claim, and the old one, with no
+  browser left, edits nothing.
 
-  The tab also sends the entries it edited (`brando_editing`), which the
-  server keeps it told of (`b:brando-tab-mode`). When every tab rejoins at
-  once (a deploy, a restart), the tracker has forgotten the claims, and the
-  first tab to rejoin claims; the tab that edited claims again over such an
-  `auto` claim, but not over one the editor made while it was away.
+  When every tab rejoins at once (a deploy, a restart), the tracker has
+  forgotten the claims, and the first tab of the user's to rejoin claims.
 
   ## Modes
 
@@ -56,7 +53,7 @@ defmodule BrandoAdmin.LiveView.Form.Tabs do
   mounts and gets every change after that (`event: "tab_access"`).
   """
   import Phoenix.Component, only: [assign: 3]
-  import Phoenix.LiveView, only: [connected?: 1, get_connect_params: 1, push_event: 3, send_update: 2]
+  import Phoenix.LiveView, only: [connected?: 1, get_connect_params: 1, send_update: 2]
 
   alias Brando.Tenant.Topic
   alias Phoenix.PubSub
@@ -91,13 +88,13 @@ defmodule BrandoAdmin.LiveView.Form.Tabs do
         _ -> Ecto.UUID.generate()
       end
 
-    editing =
-      case params["brando_editing"] do
-        keys when is_list(keys) -> Enum.filter(keys, &is_binary/1)
-        _ -> []
+    seq =
+      case params["brando_tab_seq"] do
+        seq when is_integer(seq) and seq >= 0 -> seq
+        _ -> 0
       end
 
-    assign(socket, :tab_connect, %{tab: tab, editing: editing})
+    assign(socket, :tab_connect, %{tab: tab, seq: seq})
   end
 
   @doc """
@@ -116,30 +113,26 @@ defmodule BrandoAdmin.LiveView.Form.Tabs do
   defp do_arm(socket, schema, entry_id) do
     topic = topic(schema, entry_id)
     key = to_string(socket.assigns.current_user.id)
-    %{tab: tab, editing: editing} = socket.assigns[:tab_connect] || %{tab: Ecto.UUID.generate(), editing: []}
+    %{tab: tab, seq: seq} = socket.assigns[:tab_connect] || %{tab: Ecto.UUID.generate(), seq: 0}
     metas = metas(topic, key)
 
     # This tab's old process, after a reconnect or a reload
-    ghost = metas |> Enum.filter(&(&1.tab == tab)) |> Enum.max_by(& &1.joined, fn -> nil end)
+    ghost = metas |> Enum.filter(&(&1.tab == tab)) |> Enum.max_by(&{&1.seq, &1.pid}, fn -> nil end)
     others = Enum.reject(metas, &(&1.tab == tab))
-    edited? = topic in editing
 
-    {claim, auto} =
+    claim =
       cond do
-        ghost && ghost.claim > 0 -> {ghost.claim, ghost.auto}
-        # every tab rejoined at once: this one edited, and none claimed since
-        edited? and not Enum.any?(others, &(&1.claim > 0 and not &1.auto)) -> {next_claim(others), true}
-        Enum.any?(others, &(&1.claim > 0)) -> {0, true}
-        true -> {next_claim(others), true}
+        ghost && ghost.claim > 0 -> ghost.claim
+        Enum.any?(others, &(&1.claim > 0)) -> 0
+        true -> next_claim(others)
       end
 
     meta = %{
       tab: tab,
       pid: self(),
+      seq: seq,
       claim: claim,
-      auto: auto,
-      opened_at: (ghost && ghost.opened_at) || System.system_time(:second),
-      joined: System.system_time(:microsecond)
+      opened_at: (ghost && ghost.opened_at) || System.system_time(:second)
     }
 
     PubSub.subscribe(Brando.pubsub(), topic)
@@ -151,8 +144,8 @@ defmodule BrandoAdmin.LiveView.Form.Tabs do
       key: key,
       meta: meta,
       schema: schema,
-      mode: if(edited? or (ghost && ghost.claim > 0), do: :released, else: :waiting),
-      edited?: edited? or !!(ghost && ghost.claim > 0),
+      mode: if(ghost && ghost.claim > 0, do: :released, else: :waiting),
+      edited?: !!(ghost && ghost.claim > 0),
       others?: others != [],
       closed?: false,
       other: nil,
@@ -171,16 +164,20 @@ defmodule BrandoAdmin.LiveView.Form.Tabs do
 
   # The user's tabs on the topic. A process of this node that has died is
   # no tab, though the tracker lists it until it has handled the exit.
+  # Fields a meta from an older Brando lacks (a rolling deploy) default.
   @doc false
   def metas(topic, key) do
     case Brando.presence().list(topic) do
-      %{^key => %{metas: metas}} -> Enum.filter(metas, &(valid_meta?(&1) and not dead?(&1.pid)))
-      _ -> []
+      %{^key => %{metas: metas}} ->
+        for meta <- metas, valid_meta?(meta), not dead?(meta.pid), do: Map.put_new(meta, :seq, 0)
+
+      _ ->
+        []
     end
   end
 
-  defp valid_meta?(%{tab: tab, pid: pid, claim: claim, auto: auto, opened_at: _, joined: joined}),
-    do: is_binary(tab) and is_pid(pid) and is_integer(claim) and is_boolean(auto) and is_integer(joined)
+  defp valid_meta?(%{tab: tab, pid: pid, claim: claim, opened_at: _}),
+    do: is_binary(tab) and is_pid(pid) and is_integer(claim)
 
   defp valid_meta?(_), do: false
 
@@ -208,7 +205,7 @@ defmodule BrandoAdmin.LiveView.Form.Tabs do
     me = state.meta
     # A newer process of this browser tab is the tab now: this one has no
     # browser left (`## A browser tab`), and edits nothing.
-    superseded? = Enum.any?(metas, &(&1.tab == me.tab and &1.pid != me.pid and &1.joined > me.joined))
+    superseded? = Enum.any?(metas, &(&1.tab == me.tab and &1.pid != me.pid and {&1.seq, &1.pid} > {me.seq, me.pid}))
     # This tab as it knows itself: its own presence can lag behind an update,
     # and its old processes are not other tabs.
     metas = [me | Enum.reject(metas, &(&1.tab == me.tab))]
@@ -270,7 +267,7 @@ defmodule BrandoAdmin.LiveView.Form.Tabs do
   def claim(%{assigns: %{tab_access: %{mode: mode} = state}} = socket) when mode in [:waiting, :released] do
     metas = metas(state.topic, state.key)
     editor = metas |> Enum.reject(&(&1.tab == state.meta.tab)) |> editor()
-    meta = %{state.meta | claim: next_claim(metas), auto: false}
+    meta = %{state.meta | claim: next_claim(metas)}
     Brando.presence().update(self(), state.topic, state.key, meta)
 
     state =
@@ -385,8 +382,7 @@ defmodule BrandoAdmin.LiveView.Form.Tabs do
 
   @doc """
   Hands the form the tab's state, and keeps it in the process for a form
-  that mounts later; tells the browser tab whether it edits the entry.
-  `extra` says how the tab came to edit: `%{handover: copy | nil}` (adopt
+  that mounts later. `extra` says how the tab came to edit: `%{handover: copy | nil}` (adopt
   the copy, or offer the others), `%{late_handover: copy}`.
   """
   def publish(socket, state, extra \\ nil) do
@@ -399,7 +395,7 @@ defmodule BrandoAdmin.LiveView.Form.Tabs do
       send_update(BrandoAdmin.Components.Form, message)
     end
 
-    push_event(socket, "b:brando-tab-mode", %{key: state.topic, editing: state.mode == :editing})
+    socket
   end
 
   defp form_id(socket) do

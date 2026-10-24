@@ -14,9 +14,11 @@ defmodule BrandoAdmin.OneTabPerUserTest do
     %{page: page, path: path, a: a}
   end
 
-  # A browser tab: its id is in sessionStorage and goes with every join.
+  # A browser tab: its id is in sessionStorage and goes with every join,
+  # which it counts.
   defp open(conn, path, tab) do
-    {view, _html} = conn |> Phoenix.LiveViewTest.put_connect_params(%{"brando_tab" => tab}) |> live_form(path)
+    params = %{"brando_tab" => tab, "brando_tab_seq" => System.unique_integer([:monotonic, :positive])}
+    {view, _html} = conn |> Phoenix.LiveViewTest.put_connect_params(params) |> live_form(path)
     view
   end
 
@@ -207,40 +209,6 @@ defmodule BrandoAdmin.OneTabPerUserTest do
 
     assert mode(a2) == :editing
     await_mode(c.a, :released)
-  end
-
-  # Every tab rejoined at once (a deploy): the tracker forgot the claims,
-  # and a tab that came back first claimed. The tab that edited claims again.
-  test "after a restart the tab that edited edits again, unless the editor chose another since", c do
-    topic = BrandoAdmin.LiveView.Form.Tabs.topic(Page, to_string(c.page.id))
-    kill_live(c.a)
-    b = open(c.conn, c.path, "tab-b")
-    assert mode(b) == :editing
-
-    a =
-      c.conn
-      |> Phoenix.LiveViewTest.put_connect_params(%{"brando_tab" => "tab-a", "brando_editing" => [topic]})
-      |> live_form(c.path)
-      |> elem(0)
-
-    assert mode(a) == :editing
-    await_mode(b, :released)
-
-    # The editor takes editing to B; A comes back thinking it edits
-    claim(b)
-    assert_push_event(a, "b:draft-release", %{})
-    capture(a)
-    await_mode(b, :editing)
-    kill_live(a)
-
-    a =
-      c.conn
-      |> Phoenix.LiveViewTest.put_connect_params(%{"brando_tab" => "tab-a", "brando_editing" => [topic]})
-      |> live_form(c.path)
-      |> elem(0)
-
-    refute mode(a) == :editing
-    assert mode(b) == :editing
   end
 
   # A new entry's first save patches the form to its update route, and the

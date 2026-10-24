@@ -53,21 +53,22 @@ document.addEventListener(
 // script opens) copies. While a page is open its tab says so (`OPEN_KEY`),
 // and says it no more as it goes (`pagehide`, which a reload passes through
 // too): a page that finds the flag set is a copy of a tab still open, and
-// takes an id of its own.
+// takes an id of its own. Every join counts (`brando_tab_seq`), so that the
+// server knows a tab's newest process from an old one it hasn't dropped yet.
 const TAB_KEY = 'brando:tab'
 const OPEN_KEY = 'brando:tab-open'
-// The entries this tab edited, so that it edits them again when every tab
-// rejoins at once (a deploy): `b:brando-tab-mode` from the server.
-const EDITING_KEY = 'brando:tab-editing'
+const SEQ_KEY = 'brando:tab-seq'
 
 let tab
+let seq = 0
 try {
   tab = sessionStorage.getItem(TAB_KEY)
   if (!tab || sessionStorage.getItem(OPEN_KEY)) {
     tab = crypto.randomUUID()
     sessionStorage.setItem(TAB_KEY, tab)
-    sessionStorage.removeItem(EDITING_KEY)
+    sessionStorage.removeItem(SEQ_KEY)
   }
+  seq = parseInt(sessionStorage.getItem(SEQ_KEY) || '0', 10) || 0
   sessionStorage.setItem(OPEN_KEY, '1')
   window.addEventListener('pagehide', () => sessionStorage.removeItem(OPEN_KEY))
   window.addEventListener('pageshow', ({ persisted }) => {
@@ -77,21 +78,13 @@ try {
   tab = undefined
 }
 
-const editing = () => {
+const nextSeq = () => {
+  seq += 1
   try {
-    return JSON.parse(sessionStorage.getItem(EDITING_KEY) || '[]')
-  } catch {
-    return []
-  }
-}
-
-window.addEventListener('phx:b:brando-tab-mode', ({ detail: { key, editing: on } }) => {
-  try {
-    const keys = editing().filter(k => k !== key)
-    if (on) keys.push(key)
-    sessionStorage.setItem(EDITING_KEY, JSON.stringify(keys.slice(-20)))
+    sessionStorage.setItem(SEQ_KEY, String(seq))
   } catch {}
-})
+  return seq
+}
 
 // Close, on a form another of the editor's tabs edits. A browser closes only
 // a tab a script opened; otherwise the button's navigation goes on.
@@ -105,7 +98,7 @@ export default (hooks) => {
     hooks: hooks,
     // A function, so every join (a reconnect, a live navigation) sends the
     // tab as it is now.
-    params: () => ({ _csrf_token: csrfToken, brando_tab: tab, brando_editing: editing() }),
+    params: () => ({ _csrf_token: csrfToken, brando_tab: tab, brando_tab_seq: nextSeq() }),
     timeout: 70000,
     dom: {
       onBeforeElUpdated(from, to) {

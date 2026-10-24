@@ -7551,12 +7551,17 @@ defmodule BrandoAdmin.Components.Form do
   # for a copy of an entry that may have changed since).
   #
   # A revision's working copy left the edit session (`BlockField`, `detach`):
-  # its blocks are in the copy alone, which is restored whole, as a working
-  # copy again.
+  # its blocks are in the copy alone, which is restored as a working copy
+  # again. The fields that sync keep the values this form has: the copy can
+  # be older (the other tab's browser didn't answer its last capture).
   defp take_handed_over(socket, nil, _fields), do: socket
 
-  defp take_handed_over(socket, %{payload: %{"working_copy" => working_copy}} = copy, _fields) do
+  defp take_handed_over(socket, %{payload: %{"working_copy" => working_copy}} = copy, fields) do
     %{schema: schema, entry: entry, current_user: user} = socket.assigns
+    {synced, _belongs_to} = sync_fields(socket)
+    own = Drafts.main_params(socket, socket.assigns.form.source)
+    keep = for field <- synced, key = to_string(field), key not in fields, Map.has_key?(own, key), do: key
+    copy = update_in(copy.payload["main"], &Map.merge(&1 || %{}, Map.take(own, keep)))
 
     case Brando.Drafts.Restore.prepare(copy, entry, schema, user, accept_conflict: true, compatible_only: true) do
       {:ok, changeset, _issues} -> apply_restored_changeset(socket, changeset, :recovery_copy, working_copy)

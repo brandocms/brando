@@ -8,9 +8,8 @@ defmodule BrandoAdmin.LiveView.Form.TabsTest do
       tab: tab,
       pid: pid || spawn(fn -> :ok end),
       claim: claim,
-      auto: true,
       opened_at: opened_at,
-      joined: System.unique_integer([:monotonic, :positive])
+      seq: System.unique_integer([:monotonic, :positive])
     }
 
   defp state(meta, mode, opts \\ []) do
