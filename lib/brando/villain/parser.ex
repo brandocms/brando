@@ -698,6 +698,22 @@ defmodule Brando.Villain.Parser do
     |> Phoenix.LiveViewTest.rendered_to_string()
   end
 
+  # Any other video record (Bunny, Mux, Cloudflare, a Vimeo account, and
+  # whatever provider comes next) renders as `Brando.HTML.video/1` renders it,
+  # handed the record and the block's options. A record the provider hasn't
+  # finished gets its empty comment there.
+  def video(%Brando.Videos.Video{} = video, opts) do
+    assigns = %{
+      video: video,
+      opts: parser_module(opts).video_file_options(video),
+      cover_image: Map.get(video, :cover_image)
+    }
+
+    assigns
+    |> Brando.Villain.Parser.video_tag()
+    |> Phoenix.LiveViewTest.rendered_to_string()
+  end
+
   def video(_, _), do: ""
 
   def file(%{file: %Brando.Files.File{} = file} = data, _) do
@@ -1376,11 +1392,11 @@ defmodule Brando.Villain.Parser do
     has_play_button = Map.get(data, :play_button, false)
     autoplay_setting = Map.get(data, :autoplay)
 
-    # Determine play button display
-    play_button = get_play_button_setting(has_play_button, autoplay_setting)
-
     # Determine if autoplay should be enabled
     autoplay = autoplay_setting not in [nil, false]
+
+    # Determine play button display
+    play_button = get_play_button_setting(has_play_button, autoplay)
 
     # A block's own aspect ratio reshapes the record's size, as for embeds, so
     # the width/height attributes, orientation and cover agree with its style
@@ -1396,7 +1412,7 @@ defmodule Brando.Villain.Parser do
       preload: get_preload_setting(data),
       opacity: Map.get(data, :opacity, 0.1),
       controls: Map.get(data, :controls, false),
-      caption: Map.get(data, :title, false),
+      caption: caption_option(data),
       play_button: play_button,
       progress: Map.get(data, :progress, false)
     ]
@@ -1418,9 +1434,15 @@ defmodule Brando.Villain.Parser do
     end
   end
 
+  # A video block's caption is its title; a video record merged with a ref's
+  # settings carries its figcaption, escaped where it is plain text, in
+  # `caption` (`merge_video_overrides/2`)
+  defp caption_option(%Brando.Videos.Video{caption: caption}), do: caption || false
+  defp caption_option(data), do: Map.get(data, :title, false)
+
   # Helper function for determining play button setting
-  defp get_play_button_setting(has_play_button, autoplay_setting) do
-    if has_play_button && autoplay_setting == false do
+  defp get_play_button_setting(has_play_button, autoplay) do
+    if has_play_button && !autoplay do
       Brando.config(:video_play_button_text) || true
     else
       false
@@ -1866,9 +1888,18 @@ defmodule Brando.Villain.Parser do
         :aspect_ratio,
         :cover_image
       ])
+      # A caption cleared in the editor is `<p></p>`: no title of its own
+      |> Map.update(:title, nil, &if(Brando.Captions.present?(&1), do: &1))
 
     # Merge into the video struct, nil values = use video default
-    Brando.Content.OverrideResolver.merge_overrides(video, override_attrs)
+    merged = Brando.Content.OverrideResolver.merge_overrides(video, override_attrs)
+
+    # The figcaption, in `caption` (`video_file_options/1`): the block's title
+    # is rich text, the record's own title plain text, escaped here. `title`
+    # stays as it was, for what reads it as text (Markdown, templates).
+    caption = override_attrs[:title] || Brando.Captions.library_html(video.title)
+
+    %{merged | caption: caption}
   end
 
   # A ref with no block data at all has nothing to override with. `|| %{}`

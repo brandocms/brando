@@ -172,9 +172,8 @@ defmodule Brando.HTML.Video do
       _ ->
         assigns =
           assigns
-          |> assign(:src, Brando.Videos.Uploaders.Vimeo.embed_url(video, dnt: 1))
-          |> assign(:width, video.width)
-          |> assign(:height, video.height)
+          |> assign(:src, Brando.Videos.Uploaders.Vimeo.embed_url(video, [dnt: 1] ++ vimeo_player_params(opts, video)))
+          |> assign_iframe_size(opts, video)
 
         ~H"""
         <iframe
@@ -247,12 +246,15 @@ defmodule Brando.HTML.Video do
   # actually configure comes from `setting/4`.
   defp render_video(assigns, video, opts, provider) do
     src = Keyword.fetch!(provider, :src)
-    poster = Keyword.get(provider, :poster, false)
+    # A poster passed in (a video block's) wins over the provider's thumbnail
+    poster =
+      case Keyword.get(opts, :poster) do
+        poster when is_binary(poster) and poster != "" -> poster
+        _ -> Keyword.get(provider, :poster, false)
+      end
 
-    aspect_ratio = setting(opts, video, :aspect_ratio, Keyword.get(provider, :aspect_ratio))
-    {fallback_width, fallback_height} = fallback_dimensions(aspect_ratio)
-    width = setting(opts, video, :width, fallback_width)
-    height = setting(opts, video, :height, fallback_height)
+    aspect_ratio = setting(opts, video, :aspect_ratio, provider_aspect_ratio(opts, video, provider))
+    {width, height} = dimensions(opts, video, aspect_ratio)
 
     orientation = (width && height && width > height && "landscape") || "portrait"
     opacity = setting(opts, video, :opacity, 0)
@@ -408,6 +410,65 @@ defmodule Brando.HTML.Video do
   end
 
   defp parsed_dimensions(_parts), do: {nil, nil}
+
+  # A provider's ratio (Bunny's 16/9) is a guess for a video whose size is
+  # unknown. A width and height passed together give the ratio; failing that,
+  # the record's own size does, so overriding one dimension keeps its shape.
+  defp provider_aspect_ratio(opts, video, provider) do
+    record_size = if video, do: {Map.get(video, :width), Map.get(video, :height)}, else: {nil, nil}
+
+    cond do
+      known_size?({Keyword.get(opts, :width), Keyword.get(opts, :height)}) -> nil
+      known_size?(record_size) -> record_size |> Tuple.to_list() |> Enum.join("/")
+      true -> Keyword.get(provider, :aspect_ratio)
+    end
+  end
+
+  # A caller's single dimension takes the other from the ratio, so the
+  # attributes and orientation keep the video's shape
+  defp dimensions(opts, video, aspect_ratio) do
+    {ratio_width, ratio_height} = fallback_dimensions(aspect_ratio)
+
+    case {Keyword.get(opts, :width), Keyword.get(opts, :height), ratio_width} do
+      {width, nil, ratio_width} when is_integer(width) and is_integer(ratio_width) ->
+        {width, round(width * ratio_height / ratio_width)}
+
+      {nil, height, ratio_width} when is_integer(height) and is_integer(ratio_width) ->
+        {round(height * ratio_width / ratio_height), height}
+
+      _ ->
+        {setting(opts, video, :width, ratio_width), setting(opts, video, :height, ratio_height)}
+    end
+  end
+
+  # An embed's size, as a <video>'s: one dimension passed takes the other from
+  # the video's ratio
+  defp assign_iframe_size(assigns, opts, video) do
+    aspect_ratio = setting(opts, video, :aspect_ratio, provider_aspect_ratio(opts, video, []))
+    {width, height} = dimensions(opts, video, aspect_ratio)
+
+    assigns
+    |> assign(:width, width)
+    |> assign(:height, height)
+  end
+
+  defp known_size?({width, height}), do: is_integer(width) and is_integer(height) and width > 0 and height > 0
+
+  # Vimeo's player defaults are its own (no loop), so only what the caller or
+  # the record sets is passed; autoplay needs muted, as in <video>. Controls
+  # stay Vimeo's: its `controls=0` hides the play button too, where Brando's
+  # "controls off" still leaves a way to play.
+  defp vimeo_player_params(opts, video) do
+    autoplay = setting(opts, video, :autoplay, nil)
+
+    [
+      autoplay: autoplay,
+      muted: if(autoplay, do: true, else: setting(opts, video, :muted, nil)),
+      loop: setting(opts, video, :loop, nil)
+    ]
+    |> Enum.reject(fn {_key, value} -> is_nil(value) end)
+    |> Enum.map(fn {key, value} -> {key, if(value, do: 1, else: 0)} end)
+  end
 
   # Mux stores its ratio as "16:9"; the record's own `aspect_ratio` is already
   # in the "16/9" CSS form and wins via `setting/4`. This is the fallback for
