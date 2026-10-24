@@ -282,6 +282,7 @@ queue_reads='^(scripts/(queue|ci-wait)|test/scripts/(queue_test\.sh|isolate\.sh|
 # It copies scripts/, .githooks/ and test/ and runs every test in test/scripts/.
 hook_env_reads='^(scripts/.*|\.githooks/.*|test/scripts/.*|\.github/known-flakes\.txt)$'
 check_reads='^(scripts/check|\.githooks/pre-push|test/scripts/(check_test|isolate)\.sh)$'
+e2e_needed_reads='^(\.github/scripts/e2e-needed\.sh|test/scripts/e2e_needed_test\.sh)$'
 
 # tooling_step NAME PATTERN COMMAND... — run_step, when a file the branch or
 # working tree changes matches PATTERN, or when there is no base to compare.
@@ -310,6 +311,7 @@ if [ "$others" = true ]; then
   tooling_step "queue merge-queue steps" "$queue_reads" bash test/scripts/queue_test.sh
   tooling_step "shell tests safe under a Git hook" "$hook_env_reads" bash test/scripts/hook_env_test.sh
   tooling_step "check gate selection" "$check_reads" bash test/scripts/check_test.sh
+  tooling_step "E2E skip selection" "$e2e_needed_reads" bash test/scripts/e2e_needed_test.sh
 fi
 
 if [ "$fast" = true ]; then
