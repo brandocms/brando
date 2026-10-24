@@ -339,6 +339,14 @@ run "still holds back on a failed check --skip-check does not match" 1 "PR 20: c
   mix test: known flake: beam-jit-crash — rerun with: gh run rerun 79 --failed" 20 --skip-check 'Consumer (none*'
 [ ! -f "$state/calls" ] || { failures=$((failures + 1)); echo "FAIL     queued anyway: $(cat "$state/calls")"; }
 
+fresh skip-check-only
+pr 21 feat-21 main 9999999e "OPEN QUEUED" "MERGED - merged"
+consumer_only="$(jq -c '.check_runs |= map(select(.name | startswith("Consumer (")))' <<<"$consumer")"
+checks 9999999e "$consumer_only" "$consumer_only" "$consumer"
+run "waits for a check it does not skip, and reads \"*(\" as text" 0 "PR 21: checks green on 9999999 but for skipped Consumer (none, fresh) (failure), Consumer (multi, fresh) (failure), Consumer (single, fresh) (in_progress); queued at position 1
+PR 21: merged" 21 --skip-check '*(*'
+[ "$(cat "$state/reads-9999999e" | wc -l | tr -d ' ')" -ge 3 ] || { failures=$((failures + 1)); echo "FAIL     queued before a check it waits for was registered"; }
+
 fresh already-queued
 pr 8 feat-8 main 2222222b "OPEN LOCKED" "OPEN - manual"
 touch "$state/8.queued"

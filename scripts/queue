@@ -207,7 +207,7 @@ timed_out() {
 # in $skipped the skipped ones that have not passed, as "name (state)" joined
 # with ", ".
 skip_runs() {
-  local runs="$1" names=() name pattern
+  local runs="$1" skip="[]" name pattern
   skipped=""
   if [ "${#skip_checks[@]}" -eq 0 ]; then
     echo "$runs"
@@ -215,12 +215,13 @@ skip_runs() {
   fi
   while IFS= read -r name; do
     for pattern in "${skip_checks[@]}"; do
-      # shellcheck disable=SC2053
-      [[ "$name" == $pattern ]] && { names+=("$name"); break; }
+      # `case`, not `[[ == ]]`, which reads "*(" as an extended glob in bash 5.2+
+      # shellcheck disable=SC2254
+      case "$name" in
+        $pattern) skip="$(jq -c --arg n "$name" '. + [$n]' <<<"$skip")"; break ;;
+      esac
     done
   done < <(jq -r '.[].name' <<<"$runs")
-  local skip
-  skip="$(printf '%s\n' "${names[@]}" | jq -Rsc 'split("\n") | map(select(. != ""))')"
   skipped="$(jq -r --argjson skip "$skip" '[.[] | select(.name as $n | $skip | index($n))
     | select(.conclusion != "success" and .conclusion != "neutral" and .conclusion != "skipped")
     | "\(.name) (\(.conclusion // .status))"] | join(", ")' <<<"$runs")"
@@ -238,6 +239,8 @@ wait_for_checks() {
       total="$(jq length <<<"$runs")"
       skip_runs "$runs" >"$work/runs-$pr"
       runs="$(cat "$work/runs-$pr")"
+      # Only skipped checks registered so far: CI has yet to start.
+      [ "$(jq length <<<"$runs")" -gt 0 ] || total=0
       pending="$(jq '[.[] | select(.status != "completed")] | length' <<<"$runs")"
       if [ "$total" -gt 0 ] && [ "$pending" -eq 0 ]; then
         # Right after a push the next workflows may not have registered their
