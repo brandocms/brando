@@ -173,8 +173,7 @@ defmodule Brando.HTML.Video do
         assigns =
           assigns
           |> assign(:src, Brando.Videos.Uploaders.Vimeo.embed_url(video, [dnt: 1] ++ vimeo_player_params(opts, video)))
-          |> assign(:width, setting(opts, video, :width, nil))
-          |> assign(:height, setting(opts, video, :height, nil))
+          |> assign_iframe_size(opts, video)
 
         ~H"""
         <iframe
@@ -442,18 +441,30 @@ defmodule Brando.HTML.Video do
     end
   end
 
+  # An embed's size, as a <video>'s: one dimension passed takes the other from
+  # the video's ratio
+  defp assign_iframe_size(assigns, opts, video) do
+    aspect_ratio = setting(opts, video, :aspect_ratio, provider_aspect_ratio(opts, video, []))
+    {width, height} = dimensions(opts, video, aspect_ratio)
+
+    assigns
+    |> assign(:width, width)
+    |> assign(:height, height)
+  end
+
   defp known_size?({width, height}), do: is_integer(width) and is_integer(height) and width > 0 and height > 0
 
-  # Vimeo's player defaults are its own (controls on, no loop), so only what
-  # the caller or the record sets is passed; autoplay needs muted, as in <video>.
+  # Vimeo's player defaults are its own (no loop), so only what the caller or
+  # the record sets is passed; autoplay needs muted, as in <video>. Controls
+  # stay Vimeo's: its `controls=0` hides the play button too, where Brando's
+  # "controls off" still leaves a way to play.
   defp vimeo_player_params(opts, video) do
     autoplay = setting(opts, video, :autoplay, nil)
 
     [
       autoplay: autoplay,
       muted: if(autoplay, do: true, else: setting(opts, video, :muted, nil)),
-      loop: setting(opts, video, :loop, nil),
-      controls: setting(opts, video, :controls, nil)
+      loop: setting(opts, video, :loop, nil)
     ]
     |> Enum.reject(fn {_key, value} -> is_nil(value) end)
     |> Enum.map(fn {key, value} -> {key, if(value, do: 1, else: 0)} end)

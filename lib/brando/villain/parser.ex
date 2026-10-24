@@ -1412,7 +1412,7 @@ defmodule Brando.Villain.Parser do
       preload: get_preload_setting(data),
       opacity: Map.get(data, :opacity, 0.1),
       controls: Map.get(data, :controls, false),
-      caption: Map.get(data, :title, false),
+      caption: caption_option(data),
       play_button: play_button,
       progress: Map.get(data, :progress, false)
     ]
@@ -1433,6 +1433,12 @@ defmodule Brando.Villain.Parser do
       value -> Keyword.put(opts, key, value)
     end
   end
+
+  # A video block's caption is its title; a video record merged with a ref's
+  # settings carries its figcaption, escaped where it is plain text, in
+  # `caption` (`merge_video_overrides/2`)
+  defp caption_option(%Brando.Videos.Video{caption: caption}), do: caption || false
+  defp caption_option(data), do: Map.get(data, :title, false)
 
   # Helper function for determining play button setting
   defp get_play_button_setting(has_play_button, autoplay) do
@@ -1886,10 +1892,15 @@ defmodule Brando.Villain.Parser do
     # Merge into the video struct, nil values = use video default
     merged = Brando.Content.OverrideResolver.merge_overrides(video, override_attrs)
 
-    # The block's title is rich text; the record's own title is plain text
-    if Brando.Captions.present?(override_attrs[:title]),
-      do: merged,
-      else: %{merged | title: Brando.Captions.library_html(video.title)}
+    # The figcaption, in `caption` (`video_file_options/1`): the block's title
+    # is rich text, the record's own title plain text, escaped here. `title`
+    # stays as it was, for what reads it as text (Markdown, templates).
+    caption =
+      if Brando.Captions.present?(override_attrs[:title]),
+        do: override_attrs[:title],
+        else: Brando.Captions.library_html(video.title)
+
+    %{merged | caption: caption}
   end
 
   # A ref with no block data at all has nothing to override with. `|| %{}`

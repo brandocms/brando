@@ -1,5 +1,5 @@
 - A video block or ref holding a Bunny, Mux, Cloudflare or Vimeo account video renders the video, with the block's settings, instead of nothing.
 - A Bunny video takes its own width and height for its aspect ratio, instead of always 16:9, and a video block's poster applies to provider videos too.
 - A video ref's figcaption escapes the video's library title, as galleries do; a title set on the ref stays rich text.
-- A video block's play button shows when autoplay is left unset, and a Vimeo account video played through Vimeo's player takes the block's autoplay, loop, muted, controls and size.
+- A video block's play button shows when autoplay is left unset, and a Vimeo account video played through Vimeo's player takes the block's autoplay, loop, muted and size.
 - A video given only a width or a height keeps its own aspect ratio.

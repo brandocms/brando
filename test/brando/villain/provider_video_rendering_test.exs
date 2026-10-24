@@ -215,8 +215,55 @@ defmodule Brando.Villain.ProviderVideoRenderingTest do
     assert html =~ ~s(width="1920")
     assert html =~ ~s(height="1920")
 
-    html = Parser.video(%{video | controls: true}, [])
-    assert html =~ ~s(src="https://player.vimeo.com/video/123?h=abc&amp;dnt=1&amp;autoplay=0&amp;controls=1")
+    # Vimeo's controls=0 hides its play button too: controls stay Vimeo's
+    html = Parser.video(%{video | controls: false}, [])
+    assert html =~ ~s(src="https://player.vimeo.com/video/123?h=abc&amp;dnt=1&amp;autoplay=0")
+    refute html =~ "controls="
+
+    # One dimension passed takes the other from the video's ratio
+    html = render_component(&Brando.HTML.Video.video/1, video: video, opts: [width: 400])
+    assert html =~ ~s(width="400")
+    assert html =~ ~s(height="225")
+  end
+
+  # Markdown escapes the title itself; the figcaption's escaping stays out of it
+  test "a video ref's title reaches the Markdown output escaped once" do
+    user = Factory.insert(:random_user)
+    upload = Factory.insert(:upload_video, creator: user, title: "Tom's film & co")
+
+    {:ok, module} =
+      Content.create_module(
+        Factory.params_for(:module, %{
+          code: "{% ref refs.media %}",
+          refs: [%{name: "media", uid: Utils.generate_uid(), data: %{type: "video", data: %{}}}]
+        }),
+        user
+      )
+
+    block = %{
+      type: :module,
+      module_id: module.id,
+      uid: Utils.generate_uid(),
+      active: true,
+      multi: false,
+      children: [],
+      vars: [],
+      refs: [
+        %{
+          name: "media",
+          description: nil,
+          uid: Utils.generate_uid(),
+          video_id: upload.id,
+          video: upload,
+          data: %Brando.Villain.Blocks.VideoBlock{type: "video", data: %Brando.Villain.Blocks.VideoBlock.Data{}}
+        }
+      ]
+    }
+
+    markdown = Brando.Villain.Markdown.render([%{block: block}], %Brando.Pages.Page{language: "en"})
+    assert markdown =~ "Tom's film & co"
+    refute markdown =~ "&amp;"
+    refute markdown =~ "&#39;"
   end
 
   # A caller's single dimension doesn't reshape the record
