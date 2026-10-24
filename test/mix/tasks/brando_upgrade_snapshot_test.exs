@@ -108,8 +108,17 @@ defmodule Mix.Tasks.Brando.Upgrade.SnapshotTest do
                ~s(- meta name="csrf-token"),
                ~s(- meta property="og:locale" content="no"),
                ~s(+ meta property="og:locale" content="nb_NO"),
-               ~s(+ script type="application/ld+json" {"@type": "Organization"})
+               ~s(+ script type="application/ld+json" {"@type":"Organization"})
              ]
+    end
+
+    # JSON-LD is now encoded HTML-safe (`https:\/\/`): a snapshot from before
+    # holds the same data
+    test "JSON-LD compares by its data, not how it is escaped" do
+      escaped = ~s(<script type="application/ld+json">{"url": "https:\\/\\/example.com\\/a"}</script>)
+      plain = ~s(<script type="application/ld+json">{"url": "https://example.com/a"}</script>)
+
+      assert Diff.compare(page(html(plain, "<p>Meny</p>")), page(html(escaped, "<p>Meny</p>"))) == []
     end
 
     test "images count as text by their alt, and text in scripts and styles does not" do

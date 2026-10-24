@@ -75,7 +75,11 @@ defmodule Brando.JSONLD.Videos do
   defp videos_in_block(_block), do: []
 
   defp ref_video(%Ref{active: false}), do: []
-  defp ref_video(%Ref{video: %Video{} = video, data: %VideoBlock{data: %{title: title}}}), do: [{video, [name: title]}]
+
+  # The block's title is a rich-text caption: the name is its text
+  defp ref_video(%Ref{video: %Video{} = video, data: %VideoBlock{data: %{title: title}}}),
+    do: [{video, [name: Brando.Captions.text(title)]}]
+
   defp ref_video(%Ref{video: %Video{} = video}), do: [{video, []}]
   defp ref_video(_ref), do: []
 

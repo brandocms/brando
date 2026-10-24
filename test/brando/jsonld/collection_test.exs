@@ -159,5 +159,20 @@ defmodule Brando.JSONLD.Schema.CollectionTest do
       assert html =~ ~s("@type":"ItemList")
       assert Phoenix.HTML.safe_to_string(Collection.script(nil)) == ""
     end
+
+    test "script/1 can't be closed by the list's name" do
+      name = "</script><script>alert(1)</script>"
+      node = Collection.from_entries([%Thing{id: 1, title: "A", slug: "a"}], name: name)
+      html = node |> Collection.script() |> Phoenix.HTML.safe_to_string()
+
+      assert [_one_tag] = Regex.scan(~r{</script}i, html)
+
+      json =
+        html
+        |> String.replace_prefix(~s(<script type="application/ld+json">), "")
+        |> String.replace_suffix("</script>", "")
+
+      assert %{"name" => ^name} = Jason.decode!(json)
+    end
   end
 end

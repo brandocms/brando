@@ -143,7 +143,7 @@ defmodule Brando.Upgrade.Snapshot.Diff do
 
   defp head_tags({"script", attrs, children} = node, acc) do
     if List.keyfind(attrs, "type", 0) == {"type", "application/ld+json"},
-      do: [head_tag(node) <> " " <> collapse(Floki.text(children, js: true)) | acc],
+      do: [head_tag(node) <> " " <> json_ld_text(Floki.text(children, js: true)) | acc],
       else: acc
   end
 
@@ -153,6 +153,15 @@ defmodule Brando.Upgrade.Snapshot.Diff do
   defp head_tags({tag, _attrs, _children} = node, acc) when tag in @head_tags, do: [head_tag(node) | acc]
   defp head_tags({_tag, _attrs, children}, acc), do: Enum.reduce(children, acc, &head_tags/2)
   defp head_tags(_other, acc), do: acc
+
+  # The data, not how it was escaped: snapshots from before JSON-LD was
+  # encoded HTML-safe (`\/`) compare equal to those after
+  defp json_ld_text(text) do
+    case Jason.decode(text) do
+      {:ok, data} -> Jason.encode!(data)
+      {:error, _} -> collapse(text)
+    end
+  end
 
   defp head_tag({tag, attrs, _children}) do
     csrf? = List.keyfind(attrs, "name", 0) == {"name", "csrf-token"}

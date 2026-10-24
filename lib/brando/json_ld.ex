@@ -140,18 +140,22 @@ defmodule Brando.JSONLD do
 
   @doc """
   Converts struct to JSON. Strips out all nil fields
+
+  The JSON is safe inside a `<script>` tag: `<` and `/` are escaped, so no
+  value can close the tag.
   """
   @spec to_json(%{:__struct__ => atom, optional(atom) => any}) :: any
   def to_json(struct) do
     map = to_slim_map(struct)
-    Jason.encode!(map)
+    Jason.encode!(map, escape: :html_safe)
   end
 
   @doc """
   Assembles a list of JSON-LD entities into a single @graph structure.
 
   Strips @context from individual entities (it goes at the top level only)
-  and wraps everything in a single JSON-LD document.
+  and wraps everything in a single JSON-LD document, safe inside a `<script>`
+  tag as `to_json/1` is.
   """
   def to_graph_json(entities) do
     graph_items =
@@ -171,7 +175,7 @@ defmodule Brando.JSONLD do
       "@context" => "https://schema.org",
       "@graph" => graph_items
     }
-    |> Jason.encode!()
+    |> Jason.encode!(escape: :html_safe)
   end
 
   # Nodes the graph links to rather than nests: a `Person` built for an author

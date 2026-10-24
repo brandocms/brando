@@ -1720,13 +1720,13 @@ defmodule Brando.Content.Proposals do
   defp template(%{data: %{type: "media", data: data}}, "picture"),
     do: %Brando.Villain.Blocks.PictureBlock{
       type: "picture",
-      data: data.template_picture || %Brando.Villain.Blocks.PictureBlock.Data{}
+      data: normalize_caption(data.template_picture || %Brando.Villain.Blocks.PictureBlock.Data{})
     }
 
   defp template(%{data: %{type: "media", data: data}}, "video"),
     do: %Brando.Villain.Blocks.VideoBlock{
       type: "video",
-      data: data.template_video || %Brando.Villain.Blocks.VideoBlock.Data{}
+      data: normalize_caption(data.template_video || %Brando.Villain.Blocks.VideoBlock.Data{})
     }
 
   defp template(%{data: %{type: "media", data: data}}, "gallery"),
@@ -1740,6 +1740,10 @@ defmodule Brando.Content.Proposals do
       type: "file",
       data: data.template_file || %Brando.Villain.Blocks.FileBlock.Data{}
     }
+
+  # A template's caption is rich text, which the module's template doesn't
+  # store as a ref does (`Brando.Captions.normalize/1`)
+  defp normalize_caption(data), do: %{data | title: Brando.Captions.normalize(data.title)}
 
   defp put_values(block, values, _user) when values == %{}, do: block
 

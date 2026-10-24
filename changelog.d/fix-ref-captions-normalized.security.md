@@ -1,0 +1,1 @@
+- Structured data (JSON-LD) escapes `<` and `/` in its script tags, so a video's title or caption, or any other name, holding `</script>` can no longer end the tag and inject script into the public page.

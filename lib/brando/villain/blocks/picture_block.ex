@@ -1,6 +1,7 @@
 defmodule Brando.Villain.Blocks.PictureBlock do
   @moduledoc false
-  use Brando.Villain.Block, type: "picture"
+  # The caption (`title`) is rich text
+  use Brando.Villain.Block, type: "picture", captions: [:title]
 
   defmodule Data do
     @moduledoc false

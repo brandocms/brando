@@ -1864,6 +1864,8 @@ defmodule Brando.Villain.Parser do
         :placeholder,
         :fetchpriority
       ])
+      # A caption cleared in the editor is `<p></p>`: no title of its own
+      |> Map.update(:title, nil, &if(Brando.Captions.present?(&1), do: &1))
 
     # Merge into the image struct, nil values = use image default
     Brando.Content.OverrideResolver.merge_overrides(image, override_attrs)
