@@ -28,7 +28,8 @@ defmodule Brando.Villain.JSONLDFilterTest do
 
     assert html =~ ~s("@type":"CollectionPage")
     assert html =~ ~s("inLanguage":"no")
-    assert html =~ ~s(/things/#collectionpage")
+    # Slashes are escaped in a script tag's JSON
+    assert html =~ ~S(\/things\/#collectionpage")
   end
 
   test "the page flag works without a type" do

@@ -212,8 +212,47 @@ defmodule Brando.JSONLD.InspectorTest do
     end
 
     assert name.("<p>Tour <strong>film</strong> &amp; more</p>") == "Tour film & more"
+    assert name.("<p>Tour</p><p>fil<em>m</em></p>") == "Tour film"
+    assert name.("<p>Tour<br>film</p>") == "Tour film"
     assert name.("<p></p>") == "Video 7"
+    assert name.(~s(<p style="text-align: center;"></p>)) == "Video 7"
     assert name.(nil) == "Video 7"
+  end
+
+  # The page writes the graph into a script tag as it is: a name must not end it
+  test "a video's title or caption can't close the JSON-LD script tag" do
+    attack = "</script><script>alert(1)</script>"
+
+    ref = %Brando.Content.Ref{
+      active: true,
+      video: video(7),
+      data: %Brando.Villain.Blocks.VideoBlock{
+        data: %Brando.Villain.Blocks.VideoBlock.Data{title: "<p>&lt;/script&gt;&lt;script&gt;alert(2)&lt;/script&gt;</p>"}
+      }
+    }
+
+    entry =
+      post(
+        cover_video: video(1, title: attack),
+        entry_blocks: [%{block: %Block{active: true, refs: [ref], vars: [], children: []}}]
+      )
+
+    conn =
+      :get
+      |> Plug.Test.conn("/posts/on-engines")
+      |> Brando.Plug.I18n.put_locale(skip_session: true)
+      |> Brando.Plug.HTML.put_title("On engines")
+      |> Brando.Plug.HTML.put_json_ld(Post, entry)
+
+    assigns = %{conn: conn}
+    html = rendered_to_string(~H"<.render_json_ld conn={@conn} />")
+
+    assert [_one_tag] = Regex.scan(~r{</script}i, html)
+    refute html =~ "<script>alert"
+
+    [json] = Regex.run(~r/<script[^>]*>([\s\S]*?)<\/script>/, html, capture: :all_but_first)
+    names = for %{"@type" => "VideoObject", "name" => name} <- Jason.decode!(json)["@graph"], do: name
+    assert Enum.sort(names) == Enum.sort([attack, "</script><script>alert(2)</script>"])
   end
 
   describe "a mapping that reads a relation" do

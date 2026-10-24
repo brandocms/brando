@@ -127,9 +127,16 @@ defmodule Brando.Content.Proposals.RefConfig do
     %{type: type, data: inner} = block = Changeset.get_field(ref, :data)
     keys = keys(type)
     config = Map.take(config, Enum.map(keys, &to_string/1))
-    inner = inner |> Changeset.cast(config, keys) |> Changeset.apply_changes()
+    inner = inner |> Changeset.cast(config, keys) |> normalize_caption(type) |> Changeset.apply_changes()
     Changeset.put_change(ref, :data, %{block | data: inner})
   end
+
+  # A picture's or video's caption is rich text, stored as the block
+  # changeset stores it (`Brando.Captions.normalize/1`)
+  defp normalize_caption(changeset, type) when type in ~w(picture video),
+    do: Changeset.update_change(changeset, :title, &Brando.Captions.normalize/1)
+
+  defp normalize_caption(changeset, _type), do: changeset
 
   @doc "A ref's settings that differ from its type's defaults, for outlines."
   @spec current(map()) :: map()

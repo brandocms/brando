@@ -247,6 +247,13 @@ defmodule Brando.Villain.RefRenderingTest do
       # A placement's own alt text still wins over the image's.
       overridden = Brando.Villain.parse([block.(%{alt: "Placement alt"})], %Brando.Pages.Page{language: :no})
       assert overridden =~ ~s(alt="Placement alt")
+
+      # A caption emptied in the editor (`<p></p>`) leaves the image's own
+      for emptied <- ["<p></p>", ~s(<p style="text-align: center;"></p>)] do
+        cleared = Brando.Villain.parse([block.(%{title: emptied})], %Brando.Pages.Page{language: :no})
+        assert cleared =~ "Havna"
+        refute cleared =~ emptied
+      end
     end
 
     test "renders video refs with video associations", %{user: user, video: video} do

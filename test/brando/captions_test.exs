@@ -11,6 +11,27 @@ defmodule Brando.CaptionsTest do
     assert Captions.present?("<p>A</p>")
   end
 
+  # Centre a caption, then delete its text: the paragraph keeps its style
+  test "a caption is present only when it has text" do
+    refute Captions.present?(~s(<p style="text-align: center;"></p>))
+    refute Captions.present?(~s(<p style="text-align: center;"><br></p>))
+    refute Captions.present?("<p>&nbsp;</p><p> </p>")
+    refute Captions.present?("<p><strong></strong></p>")
+    assert Captions.present?("<p>&amp;</p>")
+    assert Captions.present?("Fish & chips")
+    assert Captions.normalize(~s(<p style="text-align: center;"></p>)) == nil
+  end
+
+  test "text/1 keeps blocks apart and inline formatting together" do
+    assert Captions.text("<p>Tour</p><p>film</p>") == "Tour film"
+    assert Captions.text("<p>Tour fil<em>m</em></p>") == "Tour film"
+    assert Captions.text("<p>Tour<br>film</p>") == "Tour film"
+    assert Captions.text("<h2>Tour</h2><ul><li>film</li><li>&amp; more</li></ul>") == "Tour film & more"
+    assert Captions.text("<p>  Tour \n film </p>") == "Tour film"
+    assert Captions.text("<p></p>") == nil
+    assert Captions.text(nil) == nil
+  end
+
   test "normalize/1 stores nil for empty and strips unsafe markup" do
     assert Captions.normalize("<p></p>") == nil
 

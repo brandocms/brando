@@ -30,8 +30,7 @@ defmodule Brando.JSONLD.HTML do
 
   def render_json_ld(assigns), do: ~H""
 
-  # Safe: to_graph_json returns JSON from Jason.encode!/1 — no user HTML content.
-  # Content is injected inside <script type="application/ld+json"> which is not
-  # parsed as HTML by browsers.
+  # Raw inside the script tag: to_graph_json escapes `<` and `/`, so no value
+  # can close it.
   defp encode_graph(entities), do: raw(JSONLD.to_graph_json(entities))
 end

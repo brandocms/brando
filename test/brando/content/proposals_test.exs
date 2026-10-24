@@ -189,6 +189,28 @@ defmodule Brando.Content.ProposalsTest do
     assert slot.image_id == c.image.id
   end
 
+  test "a media slot's template caption is stored as a ref's caption", c do
+    module =
+      module!(c.user, "Captioned", "<div>{% ref refs.slot %}</div>",
+        refs: [
+          Brando.ProposalFixtures.ref("slot", %{
+            type: "media",
+            data: %{available_blocks: ["picture"], template_picture: %{title: "<p></p>", img_class: "wide"}}
+          })
+        ]
+      )
+
+    op = %InsertBlock{target: {Page, c.identity.id}, module: module.id, media: %{slot: {:image, c.image.id}}}
+    assert {:ok, proposal} = Proposals.propose([op], c.user)
+    assert {:ok, _} = approve_and_apply(proposal, c.user)
+
+    slot =
+      load(c.identity, c.user).entry_blocks |> List.last() |> then(& &1.block.refs) |> Enum.find(&(&1.name == "slot"))
+
+    assert slot.data.data.img_class == "wide"
+    assert slot.data.data.title == nil
+  end
+
   test "a media slot takes a file through its file template", c do
     file =
       Repo.insert!(%Brando.Files.File{
