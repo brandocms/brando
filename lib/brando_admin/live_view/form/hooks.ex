@@ -7,6 +7,7 @@ defmodule BrandoAdmin.LiveView.Form.Hooks do
   use Gettext, backend: Brando.Gettext
 
   alias Brando.Tenant.Topic
+  alias BrandoAdmin.LiveView.Form.Tabs
   alias Phoenix.PubSub
 
   def on_mount({:setup, schema}, %{"entry_id" => entry_id}, _session, socket) do
@@ -65,6 +66,20 @@ defmodule BrandoAdmin.LiveView.Form.Hooks do
          :page_title,
          gettext("New %{singular}", singular: String.downcase(Brando.Blueprint.get_singular(schema)))
        )}
+    end
+  end
+
+  # One tab per user edits an entry (`BrandoAdmin.LiveView.Form.Tabs`). The
+  # frontend editor is a view of its own and takes no part.
+  def on_mount({:hooks_tabs, schema}, _params, _session, socket) do
+    if connected?(socket) and not frontend?(socket) do
+      {:cont,
+       socket
+       |> Tabs.arm(schema, socket.assigns[:entry_id])
+       |> attach_hook(:b_form_tabs, :handle_info, &Tabs.handle_info/2)
+       |> attach_hook(:b_form_tab_events, :handle_event, &Tabs.handle_event/3)}
+    else
+      {:cont, socket}
     end
   end
 
@@ -229,10 +244,13 @@ defmodule BrandoAdmin.LiveView.Form.Hooks do
      socket
      |> assign_action(:update)
      |> assign_entry_id(entry_id)
-     |> assign_title()}
+     |> assign_title()
+     |> then(&if(frontend?(&1), do: &1, else: Tabs.arm(&1, &1.assigns.schema, entry_id)))}
   end
 
   defp maybe_arm_entry_scope(_params, _uri, socket), do: {:cont, socket}
+
+  defp frontend?(socket), do: match?(%{frontend: true}, socket.assigns[:presence_meta])
 
   defp subscribe_entry_topics(schema, entry_id) do
     Enum.each(
@@ -469,6 +487,17 @@ defmodule BrandoAdmin.LiveView.Form.Hooks do
   # orphan-safe contract" in `.claude/skills/brando-uploads/architecture.md`.
   # Orphan-safe: the asset is already persisted when this fires; if the target
   # component is gone, send_update logs a miss and nothing else happens.
+  # An upload finishing in a tab that edits no more (another of the editor's
+  # tabs took over) is in the library, and goes nowhere in the entry.
+  defp handle_asset_delivery_info({:asset_ready, _target, asset}, %{assigns: %{tab_access: %{mode: mode}}} = socket)
+       when mode != :editing do
+    require Logger
+    Logger.info("==> asset_ready: this tab edits no more; asset ##{asset.id} remains in the library")
+
+    send(self(), {:toast, upload_elsewhere_message()})
+    {:halt, socket}
+  end
+
   defp handle_asset_delivery_info({:asset_ready, target, asset}, socket) do
     # Gallery additions must land ONE PER RENDER CYCLE — parallel uploads
     # deliver in quick succession and LiveView batches the resulting
@@ -511,6 +540,9 @@ defmodule BrandoAdmin.LiveView.Form.Hooks do
   end
 
   defp handle_asset_delivery_info(_, socket), do: {:cont, socket}
+
+  defp upload_elsewhere_message,
+    do: gettext("The upload finished in a tab that is no longer editing. It is in the library, not in the entry.")
 
   defp safe_deliver_asset(target, asset, socket) do
     deliver_asset(target, asset, socket)
@@ -984,6 +1016,14 @@ defmodule BrandoAdmin.LiveView.Form.Hooks do
     {:halt, socket}
   end
 
+  # A provider upload finishing in a tab that edits no more stays in the
+  # library, as any upload does there (`handle_asset_delivery_info/2`).
+  defp handle_hooks_video_event("video_upload_complete", _params, %{assigns: %{tab_access: %{mode: mode}}} = socket)
+       when mode != :editing do
+    send(self(), {:toast, upload_elsewhere_message()})
+    {:halt, socket}
+  end
+
   # Generic event for upload completion - works with any strategy
   defp handle_hooks_video_event("video_upload_complete", %{"video_id" => video_id}, socket) do
     schema = socket.assigns.schema
@@ -1369,9 +1409,11 @@ defmodule BrandoAdmin.LiveView.Form.Hooks do
     {:halt, socket}
   end
 
-  # Multi-select sync — forward selected IDs directly to the multi-select component
-  defp handle_hooks_block_sync_info({:multi_select_changed, %{user_id: user_id} = msg}, socket) do
-    if user_id != socket.assigns.current_user.id do
+  # Multi-select sync — forward selected IDs directly to the multi-select
+  # component. Skipped by tab, not by user: two tabs of one editor sync like
+  # two editors, so the tab that takes over editing has the picks.
+  defp handle_hooks_block_sync_info({:multi_select_changed, %{tab: tab} = msg}, socket) do
+    if tab != BrandoAdmin.Presence.tab() do
       send_update(BrandoAdmin.Components.Form.Input.MultiSelect,
         id: msg.component_id,
         event: "apply_remote_selections",

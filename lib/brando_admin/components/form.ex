@@ -71,12 +71,14 @@ defmodule BrandoAdmin.Components.Form do
   alias BrandoAdmin.Components.Form.RichTextAI
   alias BrandoAdmin.Components.Form.SavedElsewhere
   alias BrandoAdmin.Components.Form.ScheduledPublishingDrawer
+  alias BrandoAdmin.Components.Form.TabNotice
   alias BrandoAdmin.Components.Form.Translation
   alias BrandoAdmin.Components.Form.VideoDrawer
   alias BrandoAdmin.Components.Form.Visibility
   alias BrandoAdmin.Components.ImagePicker
   alias BrandoAdmin.Components.SplitDropdown
   alias BrandoAdmin.Components.VideoPicker
+  alias BrandoAdmin.LiveView.Form.Tabs
   alias Ecto.Changeset
 
   def mount(socket) do
@@ -134,6 +136,12 @@ defmodule BrandoAdmin.Components.Form do
      |> assign(:draft, nil)
      |> assign(:draft_enabled?, false)
      |> assign(:draft_seed, nil)
+     # One tab per user edits the entry (`LiveView.Form.Tabs`)
+     |> assign(:tab_access, Tabs.current())
+     |> assign(:tab_editing?, Tabs.editing?())
+     |> assign(:tab_release, nil)
+     |> assign(:offline_main, nil)
+     |> assign(:offline_blocks, %{})
      |> assign(:translation, nil)
      |> assign(:minor_save?, false)
      |> assign(:draft_save_checked?, false)
@@ -266,6 +274,64 @@ defmodule BrandoAdmin.Components.Form do
     do: {:ok, Drafts.part(socket, id, kind, field, data)}
 
   def update(%{event: "draft_timeout", capture_id: id}, socket), do: {:ok, Drafts.timeout(socket, id)}
+
+  ## One tab per user edits
+  #
+  # Of an editor's tabs on the entry, one edits (`LiveView.Form.Tabs`). The
+  # others show the entry as the editing tab has it, through the field sync
+  # and the edit session, and change nothing: the form and its block fields
+  # are inert, events that would change the entry are ignored
+  # (`@read_only_events`), its block fields send no ops, uploads finishing
+  # there are not attached (`LiveView.Form.Hooks`), and it keeps no recovery
+  # copy, except of edits it came back from offline with (`Drafts.offline/3`).
+
+  # This tab's mode changed. A tab that came to edit takes the copy the other
+  # tab handed over (`handover`), or offers the copies there are (`nil`).
+  def update(%{event: "tab_access", access: access} = message, socket) do
+    editing? = access.mode == :editing
+    changed? = editing? != socket.assigns.tab_editing?
+
+    socket =
+      socket
+      |> assign(:tab_access, access)
+      |> assign(:tab_editing?, editing?)
+      |> then(&if(changed?, do: tell_block_fields_access(&1, editing?), else: &1))
+
+    socket =
+      cond do
+        Map.has_key?(message, :handover) ->
+          {socket, copy} = Drafts.adopt(socket, message.handover)
+          take_handed_over(socket, copy)
+
+        Map.has_key?(message, :late_handover) ->
+          Drafts.refresh_candidates(socket)
+
+        changed? ->
+          # the recovery state shows or hides the copies on offer
+          Drafts.put_draft(socket, socket.assigns.draft)
+
+        true ->
+          socket
+      end
+
+    {:ok, socket}
+  end
+
+  # Another of the editor's tabs takes over: what this form changed goes to
+  # it now, and its recovery copy with it (`Drafts.release/2`).
+  def update(%{event: "tab_release", to: to}, socket) do
+    {:ok, socket |> ship_all_field_changes() |> Drafts.release(to)}
+  end
+
+  def update(%{event: "tab_release_timeout", token: token}, socket), do: {:ok, Drafts.release_timeout(socket, token)}
+
+  # Another of the editor's tabs wrote a copy of edits it could not apply.
+  def update(%{event: "refresh_draft_candidates"}, socket), do: {:ok, Drafts.refresh_candidates(socket)}
+
+  # A block's form recovered with edits typed offline, in a tab that edits
+  # no more (`Block`): they go in a copy, not in the entry.
+  def update(%{event: "offline_block_form", uid: uid, params: params}, socket),
+    do: {:ok, Drafts.offline(socket, {:block, uid}, params)}
 
   # Another editor's tab opened the entry, or reconnected (`:editor_joined`
   # in LiveView.Form): what we changed goes to everyone as usual, and the
@@ -1555,6 +1621,12 @@ defmodule BrandoAdmin.Components.Form do
   @wait_for_blocks ~w(save save_form push_submit push_submit_redirect push_submit_new push_submit_minor
                       open_live_preview open_live_preview_standalone select_preview_target toggle_preview_targets
                       share_link store_revision)
+
+  # Events a tab that edits no more still takes (`handle_event/3`)
+  @read_only_events ~w(blur noop draft_capture select_tab open_live_preview open_live_preview_standalone
+                       select_preview_target change_preview_target toggle_preview_targets close_preview_targets
+                       refresh_live_preview recover_live_preview_state recover_drawer_state share_link
+                       toggle_revisions_drawer_status)
 
   @doc "The most blocks an entry opens with in one step, see `open_entry/1`."
   def light_block_limit, do: @light_block_limit
@@ -4336,7 +4408,7 @@ defmodule BrandoAdmin.Components.Form do
               name={@status_input_name}
               value={@entry_status}
               options={@status_options}
-              disabled={!@blocks_ready?}
+              disabled={!@blocks_ready? or !@tab_editing?}
             />
           </EntryHeader.header>
 
@@ -4352,6 +4424,13 @@ defmodule BrandoAdmin.Components.Form do
           <div :if={@instructions} class="form-instructions">
             {render_slot(@instructions)}
           </div>
+
+          <TabNotice.render
+            id={"#{@id}-tab-notice"}
+            access={@tab_access}
+            ready?={@blocks_ready?}
+            close_to={tab_close_path(@schema)}
+          />
 
           <.live_component
             module={DraftRecoveryComponent}
@@ -4562,7 +4641,7 @@ defmodule BrandoAdmin.Components.Form do
                 languages?={@has_alternates?}
                 share?={@has_live_preview? && BrandoAdmin.Authorization.allowed?(:export, @schema)}
                 sharing?={@sharing_preview?}
-                disabled={!@blocks_ready?}
+                disabled={!@blocks_ready? or !@tab_editing?}
               />
               <div class="split-dropdown form-tool-save">
                 <%!-- Saves and closes, like the bottom button and ⇧⌘S; the menu
@@ -4572,12 +4651,16 @@ defmodule BrandoAdmin.Components.Form do
                   type="button"
                   class="form-tool-save-button"
                   title={gettext("Save and close")}
-                  disabled={!@blocks_ready?}
+                  disabled={!@blocks_ready? or !@tab_editing?}
                 >
                   <.icon name="check" class="s" />
                   <span>{gettext("Save and close")}</span>
                 </button>
-                <SplitDropdown.render id="save-dropdown" label={gettext("Save options")} disabled={!@blocks_ready?}>
+                <SplitDropdown.render
+                  id="save-dropdown"
+                  label={gettext("Save options")}
+                  disabled={!@blocks_ready? or !@tab_editing?}
+                >
                   <Button.dropdown
                     value={false}
                     event={JS.push("push_submit_redirect", target: @myself)}
@@ -4661,7 +4744,7 @@ defmodule BrandoAdmin.Components.Form do
             data-save-event="save_form"
             phx-change="validate"
             phx-auto-recover="recover_form"
-            inert={!@blocks_ready?}
+            inert={!@blocks_ready? or !@tab_editing?}
           >
             <input type="hidden" name={"#{@form.name}[#{:__force_change}]"} phx-debounce="0" />
             <input type="hidden" name="_form_rev" value={@form_rev} />
@@ -4774,6 +4857,7 @@ defmodule BrandoAdmin.Components.Form do
 
           <Primitives.submit_button
             :if={@layout == :entry && @blocks_ready?}
+            disabled={!@tab_editing?}
             processing={@processing}
             form_id={@id}
             label={gettext("Save and close")}
@@ -4796,7 +4880,7 @@ defmodule BrandoAdmin.Components.Form do
             />
             <Primitives.submit_button
               processing={@processing}
-              disabled={!@blocks_ready?}
+              disabled={!@blocks_ready? or !@tab_editing?}
               form_id={@id}
               label={gettext("Save")}
               shortcut={%{key: "S"}}
@@ -5154,6 +5238,19 @@ defmodule BrandoAdmin.Components.Form do
 
     socket_with_video_uploads
   end
+
+  # A tab that edits no more (`## One tab per user edits`) takes what reads
+  # the entry: the live preview, sections, the recovery capture (which keeps
+  # what it came back from offline with). The rest would change the entry.
+  # LiveView's recovery of the form after a reconnect is not applied: what
+  # was typed offline goes in a recovery copy (`Drafts.offline/3`).
+  def handle_event("recover_form", params, %{assigns: %{tab_editing?: false}} = socket) do
+    socket = if offline_fields(socket, params) != [], do: Drafts.offline(socket, :main, params), else: socket
+    {:noreply, socket}
+  end
+
+  def handle_event(event, _params, %{assigns: %{tab_editing?: false}} = socket) when event not in @read_only_events,
+    do: {:noreply, socket}
 
   def handle_event("draft_capture", params, socket), do: {:noreply, Drafts.capture(socket, params)}
 
@@ -7426,6 +7523,82 @@ defmodule BrandoAdmin.Components.Form do
   # revision) is again a working copy of it: the block fields put its blocks
   # where it has them and take the revision's module versions, read here
   # (`BlockField`'s `load_working_copy`).
+  # Close, in a tab that does not edit, when the browser keeps the tab open
+  defp tab_close_path(schema) do
+    schema.__admin_route__(:list, [schema.__modules__().admin_list_view])
+  rescue
+    _ -> nil
+  end
+
+  # The block fields follow the tab: they send no ops while it does not edit.
+  defp tell_block_fields_access(socket, editing?) do
+    for field <- socket.assigns.form_blueprint.blocks do
+      send_update(BlockField, id: "#{socket.assigns.id}-blocks-#{field.name}", event: "tab_access", editing?: editing?)
+    end
+
+    socket
+  end
+
+  # This tab took over from another of the editor's tabs, with its recovery
+  # copy (`Drafts.adopt/2`). The fields and blocks it edited came already,
+  # through the field sync and the edit session. What doesn't sync comes
+  # from the copy: relations and transformers it has otherwise than this
+  # form, which edited nothing. Both tabs show the same saved entry, so the
+  # copy's rows are cast as they are (`Restore.reconcile/2` is for a copy of
+  # an entry that may have changed since).
+  defp take_handed_over(socket, nil), do: socket
+
+  defp take_handed_over(socket, copy) do
+    %{schema: schema, entry: entry, form_blueprint: blueprint, current_user: user} = socket.assigns
+    main = copy.payload["main"] || %{}
+    handed_transformers = copy.payload["transformers"] || %{}
+    own = Drafts.main_params(socket, socket.assigns.form.source)
+
+    relations =
+      for field <- relation_fields(socket),
+          key = to_string(field),
+          Map.has_key?(main, key),
+          main[key] != own[key],
+          do: key
+
+    transformers =
+      for {name, _, _} <- blueprint.transformers,
+          key = to_string(name),
+          Map.has_key?(handed_transformers, key),
+          handed_transformers[key] != Brando.Drafts.Params.snapshot(Map.get(entry, name) || []),
+          do: key
+
+    if relations == [] and transformers == [] do
+      socket
+    else
+      params =
+        own
+        |> Map.merge(Map.take(main, relations))
+        |> Map.merge(Map.take(handed_transformers, transformers))
+        |> Map.drop(["id", "creator_id", "deleted_at"])
+
+      form = to_form(schema.changeset(entry, params, user), [])
+
+      for name <- transformers do
+        send_update(BrandoAdmin.Components.Form.Transformer,
+          id: "#{form.id}-transformer-#{name}",
+          event: "restore_draft",
+          field: form[String.to_existing_atom(name)]
+        )
+      end
+
+      socket
+      |> put_local_form(form)
+      |> rebuild_preview_relations()
+      |> assign_entry_for_blocks()
+      |> Drafts.dirty()
+    end
+  rescue
+    error ->
+      Logger.warning("==> Form: could not take the relations another tab handed over: #{inspect(error.__struct__)}")
+      socket
+  end
+
   defp apply_restored_changeset(socket, changeset, source, working_copy \\ nil) do
     form = to_form(changeset)
     revision_entry = working_copy_revision(socket, working_copy)

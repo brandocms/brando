@@ -3759,6 +3759,7 @@ msgstr "Klikk"
 #: lib/brando_admin/components/form/block_field/module_picker.ex
 #: lib/brando_admin/components/form/input/multi_select.ex
 #: lib/brando_admin/components/form/input/select.ex
+#: lib/brando_admin/components/form/tab_notice.ex
 #: lib/brando_admin/components/layouts/root.html.heex
 #: lib/brando_admin/components/shortcut_sheet.ex
 #: lib/brando_admin/components/video_picker.ex
@@ -6264,6 +6265,16 @@ msgstr "Oppdater globalsett"
 #, elixir-autogen, elixir-format
 msgid "Edit guidance"
 msgstr "Rediger veiledningen"
+
+#: lib/brando_admin/components/form/tab_notice.ex
+#, elixir-autogen, elixir-format
+msgid "Edit here"
+msgstr "Rediger her"
+
+#: lib/brando_admin/components/form/tab_notice.ex
+#, elixir-autogen, elixir-format
+msgid "Edit here to continue. If that tab had unsaved changes, they are offered as a recovery copy."
+msgstr "Rediger her for å fortsette. Hadde den fanen ulagrede endringer, tilbys de som en gjenopprettingskopi."
 
 #: lib/brando_admin/components/form/input/blocks/gallery_block/object.ex
 #: lib/brando_admin/components/form/input/gallery.ex
@@ -11558,6 +11569,11 @@ msgstr "Ett valg, med alle alternativene synlige"
 msgid "One source is created per selected file. Existing sources are skipped. New files added to the folder later must be selected here again."
 msgstr "Det opprettes én kilde per valgt fil. Eksisterende kilder hoppes over. Nye filer som legges i mappen senere, må velges her på nytt."
 
+#: lib/brando_admin/components/form/tab_notice.ex
+#, elixir-autogen, elixir-format
+msgid "One tab edits at a time. Edit here, and the other tab stops editing; your unsaved changes come along."
+msgstr "Én fane redigerer om gangen. Rediger her, så slutter den andre fanen å redigere; de ulagrede endringene dine følger med."
+
 #: lib/brando_admin/components/form/input/identity_type_config.ex
 #, elixir-autogen, elixir-format
 msgid "One topic per line — what the organization is known for"
@@ -16176,10 +16192,20 @@ msgstr "Tabellmal"
 msgid "Tabular data"
 msgstr "Tabelldata"
 
+#: lib/brando_admin/components/form/tab_notice.ex
+#, elixir-autogen, elixir-format
+msgid "Take editing back"
+msgstr "Ta tilbake redigeringen"
+
 #: lib/brando_admin/components/form/var_layout.ex
 #, elixir-autogen, elixir-format
 msgid "Takes the units left over"
 msgstr "Tar enhetene som er til overs"
+
+#: lib/brando_admin/components/form/tab_notice.ex
+#, elixir-autogen, elixir-format
+msgid "Taking over editing from the other tab…"
+msgstr "Tar over redigeringen fra den andre fanen …"
 
 #: lib/brando_admin/live/sites/environment_live.ex
 #: lib/brando_admin/live/sites/publishing_live.ex
@@ -16934,6 +16960,11 @@ msgstr "Det opprinnelige lenkemålet er ikke tilgjengelig. Kontroller den lagred
 msgid "The original stays here."
 msgstr "Originalen blir værende her."
 
+#: lib/brando_admin/components/form/tab_notice.ex
+#, elixir-autogen, elixir-format
+msgid "The other tab was closed"
+msgstr "Den andre fanen ble lukket"
+
 #: lib/brando_admin/live/ai/assistant_live.ex
 #, elixir-autogen, elixir-format
 msgid "The page could not be rendered: %{message}"
@@ -17164,6 +17195,11 @@ msgstr "De strukturerte dataene (JSON-LD) som siden til denne oppføringen gir s
 msgid "The structured data could not be checked."
 msgstr "De strukturerte dataene kunne ikke sjekkes."
 
+#: lib/brando_admin/components/form/tab_notice.ex
+#, elixir-autogen, elixir-format
+msgid "The tab you were editing this entry in was closed."
+msgstr "Fanen du redigerte dette elementet i, ble lukket."
+
 #: lib/brando_admin/live/sites/environment_live.ex
 #, elixir-autogen, elixir-format
 msgid "The target is the live environment: copying replaces what visitors see. Tick “Replace the live content” to go ahead."
@@ -17198,6 +17234,11 @@ msgstr "Oversettelsen kunne ikke endres."
 #, elixir-autogen, elixir-format
 msgid "The upload failed. Choose the file again."
 msgstr "Opplastingen mislyktes. Velg filen på nytt."
+
+#: lib/brando_admin/live_view/form/hooks.ex
+#, elixir-autogen, elixir-format
+msgid "The upload finished in a tab that is no longer editing. It is in the library, not in the entry."
+msgstr "Opplastingen ble ferdig i en fane som ikke redigerer lenger. Den ligger i biblioteket, ikke i elementet."
 
 #: lib/brando_admin/live/users/user_form_live.ex
 #, elixir-autogen, elixir-format
@@ -19576,6 +19617,11 @@ msgstr "Du"
 msgid "You already have a view with this name on this list"
 msgstr "Du har allerede en visning med dette navnet i denne listen"
 
+#: lib/brando_admin/components/form/tab_notice.ex
+#, elixir-autogen, elixir-format
+msgid "You are editing this entry in another tab. This tab only shows it."
+msgstr "Du redigerer dette elementet i en annen fane. Denne fanen viser det bare."
+
 #: lib/brando_admin/live/sites/environment_live.ex
 #, elixir-autogen, elixir-format
 msgid "You are not allowed to manage environments."
@@ -19742,6 +19788,11 @@ msgstr "Du har valgt en filtype som ikke er støttet"
 #, elixir-autogen, elixir-format
 msgid "You have selected too many files"
 msgstr "Du har valgt for mange filer"
+
+#: lib/brando_admin/components/form/tab_notice.ex
+#, elixir-autogen, elixir-format
+msgid "You have this entry open in another tab (opened %{time})"
+msgstr "Du har dette elementet åpent i en annen fane (åpnet %{time})"
 
 #: lib/brando_admin/live/calendar_live.ex
 #, elixir-autogen, elixir-format

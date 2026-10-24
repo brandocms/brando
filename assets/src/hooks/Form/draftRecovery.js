@@ -129,6 +129,13 @@ export default function draftRecovery(hook) {
   window.addEventListener('beforeunload', beforeUnload)
   window.addEventListener('click', beforeNavigate, true)
   hook.handleEvent('b:draft-dirty', event => { if (ours(event)) dirty() })
+  // Another of the editor's tabs takes over editing: the server wants a copy
+  // of what this tab shows now, to hand over (`Drafts.release/2`).
+  hook.handleEvent('b:draft-release', event => {
+    if (!ours(event)) return
+    pending = true
+    capture()
+  })
   hook.handleEvent('b:draft-saved', event => {
     if (!ours(event) || !inFlight || event.request_id !== inFlight.requestId) return
     pending = inFlight.generation !== generation

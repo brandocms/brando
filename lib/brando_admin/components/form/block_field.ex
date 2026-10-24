@@ -777,6 +777,23 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     {:ok, assign(socket, blocks_initialized: false, remount_pending?: true, restored_blocks: %{})}
   end
 
+  # Another of the editor's tabs took over editing, or this one took it back
+  # (`LiveView.Form.Tabs`): the field follows the others and sends nothing,
+  # or edits again.
+  def update(%{event: "tab_access", editing?: editing?}, socket) do
+    socket = assign(socket, :tab_editing?, editing?)
+
+    case socket.assigns[:edit_session] do
+      %Replica{session: session} = replica ->
+        read_only = read_only?(socket)
+        EditSession.set_read_only(session, read_only)
+        {:ok, assign(socket, :edit_session, %{replica | read_only: read_only})}
+
+      _ ->
+        {:ok, socket}
+    end
+  end
+
   def update(assigns, socket) do
     revived? = !!socket.assigns[:remount_pending?]
     # On the first update no block has mounted yet: a session state shown
@@ -788,6 +805,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     |> assign_new(:hidden, fn -> false end)
     |> assign_new(:focus, fn -> nil end)
     |> assign_new(:session_detached?, fn -> false end)
+    |> assign_new(:tab_editing?, &BrandoAdmin.LiveView.Form.Tabs.editing?/0)
     |> initialize_blocks(assigns)
     |> reseed_revived(revived?)
     |> maybe_join_session(mounted?)
@@ -872,7 +890,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     # session carries onto its state (a fresh joiner may have seeded it from
     # the database first).
     held = Keyword.get(opts, :held, base)
-    join_opts = [user_id: user.id, read_only: not may_update?(socket), changed: Keyword.get(opts, :changed, [])]
+    join_opts = [user_id: user.id, read_only: read_only?(socket), changed: Keyword.get(opts, :changed, [])]
     # the rows `held` was built on, for the copies of removed blocks
     loaded = socket.assigns.entry_blocks
 
@@ -930,7 +948,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
 
     # What this editor held, its unconfirmed ops included, went to the
     # session with the join: nothing is cast again.
-    replica = %{Replica.new(ref, info, monitor) | read_only: not may_update?(socket)}
+    replica = %{Replica.new(ref, info, monitor) | read_only: read_only?(socket)}
 
     socket
     |> assign(:edit_session, replica)
@@ -939,6 +957,10 @@ defmodule BrandoAdmin.Components.Form.BlockField do
       also: Keyword.get(opts, :also, [])
     )
   end
+
+  # Following the others, sending nothing: someone who may not change the
+  # entry, or a tab that does not edit it (another of the editor's tabs does).
+  defp read_only?(socket), do: socket.assigns[:tab_editing?] == false or not may_update?(socket)
 
   defp may_update?(%{assigns: %{entry: entry, current_user: user}}) do
     Brando.Authorization.Boundary.authorize(user, :update, entry) == :ok
@@ -2100,6 +2122,17 @@ defmodule BrandoAdmin.Components.Form.BlockField do
   # applied recovery copy — replay what was already accepted.
   defp apply_block_op(socket, op, mode \\ :local)
 
+  # A tab that does not edit changes nothing (`LiveView.Form.Tabs`): its
+  # inert blocks send no edits, and what comes anyway (a shortcut, a
+  # recovered form) is not applied.
+  defp apply_block_op(%{assigns: %{tab_editing?: false}} = socket, op, _mode) do
+    Logger.info(
+      "BlockField (#{socket.assigns.block_field}) is in a tab that does not edit; #{inspect(elem(op, 0))} ignored"
+    )
+
+    socket
+  end
+
   defp apply_block_op(%{assigns: %{source_locked: true}} = socket, op, mode)
        when mode in [:local, :recorded] and elem(op, 0) in @structural_ops,
        do: refuse_structure(socket, elem(op, 0))
@@ -2792,6 +2825,11 @@ defmodule BrandoAdmin.Components.Form.BlockField do
   — vars, refs, table_rows — and the block's whole child subtree are properly
   cast and restored, not just the root block's own fields.
   """
+  # Blocks only this tab had when it went offline are not taken into the
+  # entry by a tab that does not edit (`LiveView.Form.Tabs`).
+  def handle_event("recover_blocks", _params, %{assigns: %{tab_editing?: false}} = socket),
+    do: {:reply, %{recovered: []}, socket}
+
   def handle_event("recover_blocks", params, socket) do
     %{"rootUids" => root_uids, "missingUids" => missing_uids, "forms" => forms} = params
     child_order = Map.get(params, "childOrder", %{})
@@ -3135,6 +3173,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
       id={"#{@id}-wrapper"}
       phx-hook="Brando.BlockField"
       hidden={@hidden}
+      inert={!@tab_editing?}
       class={["blocks-wrapper", @note_collection? && "footnote-storage", @source_locked && "is-source-locked"]}
       data-block-field={"#{@form_name}[#{@block_field}]"}
       data-entry-id={@entry.id}

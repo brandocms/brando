@@ -1,0 +1,1 @@
+- A stale second tab of the same editor no longer puts old values back into an entry (categories, `publish_at`) with its save or recovery copy.

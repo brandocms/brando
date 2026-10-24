@@ -45,13 +45,44 @@ document.addEventListener(
   true
 )
 
+// This browser tab, across reloads and reconnects: an entry's form is
+// edited in one tab per user, and the tab that edits keeps doing so when it
+// reconnects (`BrandoAdmin.LiveView.Form.Tabs`). A duplicated tab copies
+// sessionStorage; the server then gives it an id of its own (`b:brando-tab`).
+const TAB_KEY = 'brando:tab'
+
+const browserTab = () => {
+  try {
+    let tab = sessionStorage.getItem(TAB_KEY)
+    if (!tab) {
+      tab = crypto.randomUUID()
+      sessionStorage.setItem(TAB_KEY, tab)
+    }
+    return tab
+  } catch {
+    return undefined
+  }
+}
+
+// Close, on a form another of the editor's tabs edits. A browser closes only
+// a tab a script opened; otherwise the button's navigation goes on.
+window.addEventListener('brando:close-tab', () => window.close())
+
+window.addEventListener('phx:b:brando-tab', ({ detail }) => {
+  try {
+    if (detail?.tab) sessionStorage.setItem(TAB_KEY, detail.tab)
+  } catch {}
+})
+
 export default (hooks) => {
   let csrfToken = document
     .querySelector("meta[name='csrf-token']")
     ?.getAttribute('content')
   let liveSocket = new LiveSocket('/live', Socket, {
     hooks: hooks,
-    params: { _csrf_token: csrfToken },
+    // A function, so every join (a reconnect, a live navigation) sends the
+    // tab as it is now.
+    params: () => ({ _csrf_token: csrfToken, brando_tab: browserTab() }),
     timeout: 70000,
     dom: {
       onBeforeElUpdated(from, to) {

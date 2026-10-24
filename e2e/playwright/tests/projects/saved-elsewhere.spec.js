@@ -1,11 +1,13 @@
 import { test, expect } from '../../test-support/setupAuth'
 import { syncLV, setEntryStatus } from '../../utils'
 
-// One project open in two tabs. Tab 1 picks categories (a has_many
-// multi-select, which doesn't ship between tabs as a field edit) and
-// publishes, which makes the save set `publish_at`. Tab 2 takes what tab 1
-// saved; before, it kept the form it opened with, and its own save deleted
-// the categories and blanked the publishing date.
+// One project open by two editors. A picks categories (a has_many
+// multi-select, which doesn't ship as a field edit) and publishes, which
+// makes the save set `publish_at`. B takes what A saved; before, it kept the
+// form it opened with, and its own save deleted the categories and blanked
+// the publishing date. One editor's two tabs don't both edit (one tab per
+// user, `forms/one-tab-per-user.spec.js`): the tab that takes over has the
+// categories the other picked.
 
 async function factory(page, schema, attributes) {
   const response = await page.request.post('/__e2e/db/factory', {
@@ -24,8 +26,9 @@ async function saveAndContinue(page) {
   await expect(page.locator('.toast-stack')).toContainText(/updated/i)
 }
 
-test('a tab takes the categories and publishing date another tab saved, and its own save keeps them', async ({
+test('an editor takes the categories and publishing date another editor saved, and their own save keeps them', async ({
   page,
+  secondUserPage,
 }) => {
   const client = await factory(page, 'E2eProject.Projects.Client', {
     name: 'Saved elsewhere client',
@@ -53,7 +56,7 @@ test('a tab takes the categories and publishing date another tab saved, and its 
   })
 
   const url = `/admin/projects/projects/update/${project.id}`
-  const tab2 = await page.context().newPage()
+  const tab2 = secondUserPage
   await tab2.goto(url)
   await syncLV(tab2)
   await expect(categories(tab2)).toHaveCount(0)
@@ -94,13 +97,11 @@ test('a tab takes the categories and publishing date another tab saved, and its 
   await expect(categories(tab2)).toHaveCount(2)
   await expect(publishAt(tab2)).toHaveValue(saved)
   await expect(tab2.getByTestId('status-trigger')).toHaveAttribute('data-status', 'published')
-
-  await tab2.close()
 })
 
-// Both tabs change the categories; tab 1 saves. Tab 2 keeps its own pick
-// and asks which to keep; it takes the saved one.
-test('a tab that changed the categories too asks which to keep', async ({ page }) => {
+// The categories one tab picked and didn't save are in the tab that takes
+// over editing from it.
+test('a tab that takes over has the categories the other tab picked', async ({ page }) => {
   const client = await factory(page, 'E2eProject.Projects.Client', {
     name: 'Conflict client',
     slug: 'conflict-client',
@@ -127,41 +128,29 @@ test('a tab that changed the categories too asks which to keep', async ({ page }
   })
 
   const url = `/admin/projects/projects/update/${project.id}`
+  await page.goto(url)
+  await syncLV(page)
   const tab2 = await page.context().newPage()
   await tab2.goto(url)
   await syncLV(tab2)
-  await page.goto(url)
+  await expect(tab2.getByTestId('tab-notice')).toBeVisible()
+
+  await page.locator('#project_project_categories-field-base').getByRole('button', { name: 'Select' }).click()
+  await page.getByRole('checkbox', { name: 'Category West' }).click()
   await syncLV(page)
-
-  for (const [tab, title] of [
-    [tab2, 'Category West'],
-    [page, 'Category East'],
-  ]) {
-    await tab.locator('#project_project_categories-field-base').getByRole('button', { name: 'Select' }).click()
-    await tab.getByRole('checkbox', { name: title }).click()
-    await syncLV(tab)
-    await tab.getByRole('button', { name: 'OK' }).click()
-    await syncLV(tab)
-  }
-
-  await saveAndContinue(page)
-
-  const notice = tab2.getByTestId('saved-elsewhere')
-  await expect(notice).toBeVisible()
-  await expect(notice).toContainText('Another tab or editor saved')
+  await page.getByRole('button', { name: 'OK' }).click()
+  await syncLV(page)
+  await expect(categories(page)).toHaveText(['Category West'])
   await expect(categories(tab2)).toHaveText(['Category West'])
-  // Its own recovery copy is the form it shows, not one to offer it
-  await expect(tab2.getByTestId('draft-notice')).toHaveCount(0)
 
-  await notice.getByRole('button', { name: 'Use the saved version' }).click()
-  await syncLV(tab2)
-  await expect(notice).toHaveCount(0)
-  await expect(categories(tab2)).toHaveText(['Category East'])
+  await tab2.getByTestId('tab-notice').getByRole('button', { name: 'Edit here' }).click()
+  await expect(tab2.getByTestId('tab-notice')).toBeHidden()
+  await expect(categories(tab2)).toHaveText(['Category West'])
 
   await saveAndContinue(tab2)
   await tab2.reload()
   await syncLV(tab2)
-  await expect(categories(tab2)).toHaveText(['Category East'])
+  await expect(categories(tab2)).toHaveText(['Category West'])
 
   await tab2.close()
 })

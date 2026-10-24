@@ -121,9 +121,11 @@ defmodule BrandoAdmin.Components.Form.Drafts do
       |> assign(:draft, draft)
       |> assign(:draft_enabled?, not is_nil(draft))
 
+    shown = shown(socket, draft)
+
     socket =
       if is_nil(socket.assigns[:draft_seed]) and not is_nil(draft),
-        do: assign(socket, :draft_seed, draft),
+        do: assign(socket, :draft_seed, shown),
         else: socket
 
     for id <- [
@@ -131,11 +133,26 @@ defmodule BrandoAdmin.Components.Form.Drafts do
           DraftRecoveryComponent.status_id(socket.assigns.id),
           DraftRecoveryComponent.details_id(socket.assigns.id)
         ] do
-      send_update(DraftRecoveryComponent, id: id, state: draft)
+      send_update(DraftRecoveryComponent, id: id, state: shown)
     end
 
     socket
   end
+
+  # A tab that does not edit (another of the editor's tabs does, see
+  # `LiveView.Form.Tabs`) offers no copies: the editing tab does, and the
+  # copies of a tab still open are that tab's own work.
+  defp shown(socket, %{} = draft) do
+    if editing?(socket), do: draft, else: %{draft | candidates: [], open?: false}
+  end
+
+  defp shown(_socket, draft), do: draft
+
+  defp editing?(socket), do: socket.assigns[:tab_editing?] != false
+
+  # This tab edits no more: what it shows is the editing tab's work, which
+  # that tab keeps copies of. Nothing is captured.
+  def dirty(%{assigns: %{tab_editing?: false}} = socket), do: socket
 
   def dirty(%{assigns: %{draft: %{initialized?: true} = draft}} = socket) do
     socket
@@ -150,7 +167,20 @@ defmodule BrandoAdmin.Components.Form.Drafts do
   def capture(%{assigns: %{blocks_ready?: false}} = socket, _), do: socket
   def capture(%{assigns: %{draft: %{capture: capture}}} = socket, _) when not is_nil(capture), do: socket
 
-  def capture(socket, params) do
+  # A tab that edits no more captures twice: once as it hands over (the copy
+  # goes to the tab that takes over, `release/2`), and once more if it came
+  # back from offline with edits it could not apply (`offline/3`).
+  def capture(%{assigns: %{tab_editing?: false} = assigns} = socket, params) do
+    cond do
+      assigns[:tab_release] -> do_capture(socket, params, :release)
+      offline?(socket) -> do_capture(socket, offline_params(socket, params), :offline)
+      true -> acknowledge(socket, params)
+    end
+  end
+
+  def capture(socket, params), do: do_capture(socket, params, nil)
+
+  defp do_capture(socket, params, kind) do
     draft = socket.assigns.draft
     id = Ecto.UUID.generate()
     blueprint = socket.assigns.form_blueprint
@@ -183,7 +213,8 @@ defmodule BrandoAdmin.Components.Form.Drafts do
       request_id: params["request_id"],
       main: held_relations(main_params(socket, cs), main_params(socket, socket.assigns.form.source), stale),
       parts: %{},
-      expected: expected
+      expected: expected,
+      kind: kind
     }
 
     socket = put_draft(socket, %{draft | capture: capture, status: :saving})
@@ -304,6 +335,141 @@ defmodule BrandoAdmin.Components.Form.Drafts do
       request_id: capture.request_id,
       draft_id: state.id
     })
+    |> captured(Map.get(capture, :kind))
+  end
+
+  # The copy is the other tab's now (the one that took over adopts it), or
+  # the editing tab's to offer: this tab writes no more to it.
+  defp captured(socket, kind) do
+    socket =
+      case socket.assigns[:tab_release] do
+        %{to: to} ->
+          BrandoAdmin.LiveView.Form.Tabs.hand_over(to, %{draft_id: socket.assigns.draft.id})
+          socket |> assign(:tab_release, nil) |> rotate()
+
+        nil ->
+          socket
+      end
+
+    if kind == :offline do
+      BrandoAdmin.LiveView.Form.Tabs.offer_copy()
+      socket |> assign(:offline_main, nil) |> assign(:offline_blocks, %{}) |> rotate()
+    else
+      socket
+    end
+  end
+
+  defp rotate(%{assigns: %{draft: %{} = draft}} = socket),
+    do: assign(socket, :draft, %{draft | id: Ecto.UUID.generate(), checksum: draft.baseline})
+
+  # Nothing to keep: the browser's work is the editing tab's.
+  defp acknowledge(socket, params) do
+    push_event(socket, "b:draft-saved", %{
+      id: socket.assigns.id,
+      generation: params["generation"],
+      request_id: params["request_id"],
+      draft_id: socket.assigns.draft.id
+    })
+  end
+
+  ## One tab per user edits (`BrandoAdmin.LiveView.Form.Tabs`)
+
+  @doc """
+  Another of the editor's tabs takes over. This tab captures once more,
+  what the browser has included, and hands the copy to that tab (`to`);
+  without recovery, or when the capture does not come back within
+  three seconds, it hands over the copy as it is (`release_timeout/2`).
+  """
+  def release(%{assigns: %{draft: %{initialized?: true}}} = socket, to) do
+    token = make_ref()
+    send_update_after(socket.assigns.myself, [event: "tab_release_timeout", token: token], release_wait())
+
+    socket
+    |> assign(:tab_release, %{to: to, token: token})
+    |> push_event("b:draft-release", %{id: socket.assigns.id})
+  end
+
+  def release(socket, to) do
+    BrandoAdmin.LiveView.Form.Tabs.hand_over(to, nil)
+    socket
+  end
+
+  def release_timeout(%{assigns: %{tab_release: %{to: to, token: token}, draft: draft}} = socket, token) do
+    BrandoAdmin.LiveView.Form.Tabs.hand_over(to, draft && %{draft_id: draft.id})
+    socket |> assign(:tab_release, nil) |> rotate()
+  end
+
+  def release_timeout(socket, _token), do: socket
+
+  defp release_wait, do: 3_000
+
+  @doc """
+  This tab took over from another of the editor's tabs. With the other
+  tab's copy (`%{draft_id: id}`), it writes on in that copy, which is not
+  offered then; returns the copy for the form to take what doesn't sync.
+  Without one, the other tab could not hand over, and its copy is offered
+  as any is.
+  """
+  def adopt(%{assigns: %{draft: %{initialized?: true} = draft}} = socket, %{draft_id: id}) when is_binary(id) do
+    case Drafts.get(draft.identity, id) do
+      %{resolved_at: nil, discarded_at: nil, attempted_at: nil} = copy ->
+        draft = %{
+          draft
+          | id: copy.id,
+            generation: max(draft.generation, copy.generation),
+            persisted: copy.generation,
+            checksum: Content.checksum(copy.payload),
+            modules: Map.merge(copy.payload["modules"] || %{}, draft.modules)
+        }
+
+        {socket |> assign(:draft, draft) |> refresh_candidates() |> dirty(), copy}
+
+      _ ->
+        {refresh_candidates(socket), nil}
+    end
+  rescue
+    _ -> {socket, nil}
+  end
+
+  def adopt(socket, _handover), do: {refresh_candidates(socket), nil}
+
+  @doc "The copies on offer, read again: another tab handed over, or wrote one."
+  def refresh_candidates(%{assigns: %{draft: %{initialized?: true} = draft}} = socket) do
+    candidates = Enum.reject(candidates(socket, draft.identity, draft.baseline), &(&1.id == draft.id))
+    put_draft(socket, %{draft | candidates: candidates})
+  rescue
+    _ -> socket
+  end
+
+  def refresh_candidates(socket), do: socket
+
+  @doc """
+  Edits this tab could not apply, because it edits no more: the entry form
+  LiveView recovered after a reconnect (`recover_form`, with the fields
+  typed into offline), or a block's form (`validate_block` with
+  `__offline_edits`). The next capture writes them as a copy, which the
+  editing tab offers.
+  """
+  def offline(socket, :main, params), do: assign(socket, :offline_main, params)
+
+  def offline(socket, {:block, uid}, params),
+    do: assign(socket, :offline_blocks, Map.put(socket.assigns[:offline_blocks] || %{}, uid, params))
+
+  defp offline?(socket), do: not is_nil(socket.assigns[:offline_main]) or (socket.assigns[:offline_blocks] || %{}) != %{}
+
+  defp offline_params(socket, params) do
+    main =
+      case socket.assigns[:offline_main] do
+        nil -> params["main"]
+        main -> Plug.Conn.Query.encode(main)
+      end
+
+    blocks =
+      Enum.reduce(socket.assigns[:offline_blocks] || %{}, params["blocks"] || %{}, fn {uid, form}, blocks ->
+        Map.put(blocks, uid, Plug.Conn.Query.encode(form))
+      end)
+
+    Map.merge(params, %{"main" => main, "blocks" => blocks})
   end
 
   defp write_capture(socket, draft, generation, payload) do
