@@ -124,7 +124,7 @@ if Code.ensure_loaded?(Igniter) do
       |> Enum.filter(fn {_format, _source, target} -> String.starts_with?(target, "assets/backend/") end)
       |> Enum.reduce(igniter, &upgrade_asset(&1, &2, project))
       |> move_pnpm_settings()
-      |> notice_release_age()
+      |> notice_workspace_gaps(@backend_workspace)
       |> remove_files(@retired_backend_files ++ @legacy_backend_lockfiles)
       |> retire_legacy_europa_files()
       |> notice_legacy_css()
@@ -422,15 +422,8 @@ if Code.ensure_loaded?(Igniter) do
           replace_file(igniter, @backend_workspace, workspace_with(template, settings))
 
         true ->
-          notice_own_workspace(igniter, with_template_builds(settings, current))
+          notice_own_workspace(igniter, settings)
       end
-    end
-
-    # An application's own file also needs what the template allows
-    defp with_template_builds(settings, current) do
-      if current =~ ~r/^\s+['"]?esbuild['"]?:\s*true\s*$/m,
-        do: settings,
-        else: %{settings | builds: [{"esbuild", true} | settings.builds]}
     end
 
     defp notice_own_workspace(igniter, %{builds: [], overrides: []}), do: igniter
@@ -438,7 +431,7 @@ if Code.ensure_loaded?(Igniter) do
     defp notice_own_workspace(igniter, settings) do
       Igniter.add_notice(igniter, """
       pnpm 11 no longer reads package.json's `pnpm` field, and #{@backend_workspace} is your own, so add
-      these settings to it (from #{@backend_package}, and what Brando's admin needs):
+      these settings from #{@backend_package} to it:
 
       #{settings |> workspace_lines() |> Enum.map_join("\n", &("    " <> &1))}
       """)
@@ -479,20 +472,41 @@ if Code.ensure_loaded?(Igniter) do
 
     defp yaml_string(value), do: "'" <> String.replace(value, "'", "''") <> "'"
 
-    # An application's own pnpm-workspace.yaml without the template's
-    # exemption would wait a day to install a BrandoJS released today
-    defp notice_release_age(igniter) do
-      {igniter, contents} = read_file(igniter, @backend_workspace)
+    # What an application's own pnpm-workspace.yaml needs and Brando's
+    # template sets: a choice about each install script the template's
+    # packages have (pnpm stops at one without), and the exemption that lets
+    # Brando's packages install the day they are published
+    @workspace_builds %{
+      @backend_workspace => [{"esbuild", "true"}],
+      "assets/frontend/pnpm-workspace.yaml" => [{"core-js", "false"}]
+    }
 
-      if contents =~ "minimumReleaseAgeExclude" and contents =~ "@brandocms/" do
+    defp notice_workspace_gaps(igniter, path) do
+      template = Templates.contents(:copy, path)
+      {igniter, contents} = read_file(igniter, path)
+
+      missing_builds =
+        Enum.reject(@workspace_builds[path], fn {name, _choice} ->
+          contents =~ ~r/^\s+['"]?#{Regex.escape(name)}['"]?\s*:\s*(true|false)\s*(#.*)?$/m
+        end)
+
+      exempt? = contents =~ ~r/^\s*-\s*['"]?@brandocms\/\*['"]?\s*(#.*)?$/m
+
+      lines =
+        if(missing_builds == [],
+          do: [],
+          else: ["allowBuilds:" | Enum.map(missing_builds, fn {name, choice} -> "  #{yaml_string(name)}: #{choice}" end)]
+        ) ++ if(exempt?, do: [], else: ["minimumReleaseAgeExclude:", "  - '@brandocms/*'"])
+
+      if contents == template or lines == [] do
         igniter
       else
         Igniter.add_notice(igniter, """
-        pnpm waits a day (minimumReleaseAge) before installing a new release, and #{@backend_workspace}
-        does not exempt Brando's packages, so the admin cannot install a BrandoJS published today. Add:
+        #{path} is your own, and lacks what Brando's template sets: a choice about each install script
+        Brando's packages run (pnpm stops at one it has none for), and the exemption from pnpm's one-day
+        wait that lets Brando's packages install the day they are published. Add:
 
-            minimumReleaseAgeExclude:
-              - '@brandocms/*'
+        #{Enum.map_join(lines, "\n", &("    " <> &1))}
         """)
       end
     end
@@ -782,7 +796,7 @@ if Code.ensure_loaded?(Igniter) do
         # pnpm edits it too (the exemptions `minimumReleaseAge` asks for), and
         # the application may have its own: an existing one is kept
         Path.basename(target) == "pnpm-workspace.yaml" && Igniter.exists?(igniter, target) ->
-          igniter
+          notice_workspace_gaps(igniter, target)
 
         target == @backend_package ->
           Files.create(igniter, target, template_contents(file, project, brando_version(igniter)))

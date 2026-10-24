@@ -77,6 +77,17 @@ defmodule Mix.Brando.Igniter.AssetsTest do
     assert plan.issues == []
     Igniter.Test.assert_unchanged(plan, "assets/backend/pnpm-workspace.yaml")
     assert Enum.any?(plan.notices, &(&1 =~ "onlyBuiltDependencies" and &1 =~ "assets/backend/pnpm-workspace.yaml"))
+    # It has what the admin needs
+    refute Enum.any?(plan.notices, &(&1 =~ "is your own"))
+
+    # One that lacks it is kept too, and named
+    plan =
+      IgniterCase.phoenix_project(files: %{"assets/backend/pnpm-workspace.yaml" => "packages: []\n"})
+      |> Igniter.compose_task(Mix.Tasks.Brando.Gen.Backend, [])
+
+    assert plan.issues == []
+    Igniter.Test.assert_unchanged(plan, "assets/backend/pnpm-workspace.yaml")
+    assert Enum.any?(plan.notices, &(&1 =~ "is your own" and &1 =~ "'esbuild': true"))
   end
 
   defp generate_backend(igniter, version) do
@@ -266,6 +277,22 @@ defmodule Mix.Brando.Igniter.AssetsTest do
       assert Enum.any?(plan.notices, &(&1 =~ "'sharp': true"))
       # It lacks the exemption that lets the admin install a BrandoJS published today
       assert Enum.any?(plan.notices, &(&1 =~ "minimumReleaseAgeExclude"))
+    end
+
+    test "names what a site's own pnpm-workspace.yaml lacks, with no pnpm field left to move" do
+      # One package exempted is not Brando's scope, and esbuild has no choice
+      own = "allowBuilds:\n  sharp: true\nminimumReleaseAgeExclude:\n  - '@brandocms/brandojs' # - '@brandocms/*'\n"
+      plan = upgrade(old_backend(%{"assets/backend/pnpm-workspace.yaml" => own}))
+
+      Igniter.Test.assert_unchanged(plan, "assets/backend/pnpm-workspace.yaml")
+      notice = Enum.find(plan.notices, &(&1 =~ "assets/backend/pnpm-workspace.yaml is your own"))
+      assert notice =~ "allowBuilds:\n      'esbuild': true"
+      assert notice =~ "minimumReleaseAgeExclude:\n      - '@brandocms/*'"
+
+      # With both, nothing to say
+      own = "allowBuilds:\n  'esbuild': true # the admin's\nminimumReleaseAgeExclude:\n  - \"@brandocms/*\"\n"
+      plan = upgrade(old_backend(%{"assets/backend/pnpm-workspace.yaml" => own}))
+      refute Enum.any?(plan.notices, &(&1 =~ "is your own"))
     end
 
     # The 0.54 template's field holds only what the template sets itself, but
