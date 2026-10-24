@@ -333,6 +333,22 @@ defmodule BrandoAdmin.SessionSocketsTest do
     end
   end
 
+  describe "the user channel" do
+    # Sent once the channel hears its topic, so no report falls between
+    test "sends the user's running work after the join" do
+      user = user()
+      session = Users.generate_user_session_token(user)
+      assert {:ok, socket} = connect_admin(socket_token(user, session))
+      BrandoAdmin.Work.start(user, "join-sync", "Importing")
+      BrandoAdmin.Work.Registry.sync()
+
+      assert {:ok, _, _} = Phoenix.ChannelTest.subscribe_and_join(socket, BrandoAdmin.UserChannel, "user:#{user.id}")
+      Phoenix.ChannelTest.assert_push("work:sync", %{work: [%{id: "join-sync", status: :running, message: "Importing"}]})
+
+      BrandoAdmin.Work.finish(user, "join-sync")
+    end
+  end
+
   describe "socket ids" do
     test "hold no session token, and the ids from before still disconnect" do
       user = user()

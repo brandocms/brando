@@ -1,11 +1,68 @@
 defmodule Brando.Worker.SSGBuild do
-  @moduledoc "Builds one versioned static artifact under a named tenant environment."
+  @moduledoc """
+  Builds one versioned static artifact under a named tenant environment.
+
+  The build reports to its creator as `BrandoAdmin.Work` under
+  `work_key/1`: queued (`Brando.SSG.Builds.request_build/3`), building with
+  its count of pages, then ready, deployed or failed. Its deploys and
+  rollbacks (`Brando.Worker.SSGDeploy`) report under the same key. The work
+  is global: builds belong to no one site's admin.
+  """
 
   use Oban.Worker, queue: :ssg_builds, max_attempts: 3, unique: [period: :infinity, fields: [:args]]
+  use Gettext, backend: Brando.Gettext
 
   alias Brando.SSG.Build
   alias Brando.SSG.Builds
   alias Brando.SSG.Deploy
+  alias BrandoAdmin.Work
+
+  # A build waits behind the one before it on the serial queue
+  @queued_timeout to_timeout(hour: 1)
+
+  @doc "The `BrandoAdmin.Work` key a build, its deploys and rollbacks report under."
+  @spec work_key(pos_integer()) :: String.t()
+  def work_key(build_id), do: "static:#{build_id}"
+
+  @doc """
+  Reports a build as queued to its creator, before its job is queued: the
+  job may run, and report, as soon as it is committed. Not inside a
+  caller's transaction, which may still roll the build back.
+  """
+  @spec report_queued(Build.t()) :: :ok
+  def report_queued(%Build{} = build) do
+    report(build, fn user, key ->
+      Work.start(user, key, gettext("Static build %{version} is queued", version: build.version),
+        global: true,
+        timeout: @queued_timeout
+      )
+    end)
+  end
+
+  @doc "Reports a build as failed to its creator: its job could not be queued, or the build failed."
+  @spec report_failed(Build.t()) :: :ok
+  def report_failed(%Build{} = build) do
+    report(build, &Work.fail(&1, &2, gettext("Static build %{version} failed", version: build.version), global: true))
+  end
+
+  @doc """
+  Marks a build's job for its creator's `BrandoAdmin.Work`. The job reports
+  its own progress and outcome; tracked, a job Oban gives up on (killed at
+  its timeout three times) ends the work as failed. A job lost with its node
+  says nothing: its work times out.
+  """
+  @spec track(Ecto.Changeset.t(), Build.t()) :: Ecto.Changeset.t()
+  def track(changeset, %Build{creator_id: nil}), do: changeset
+
+  def track(changeset, %Build{} = build) do
+    Work.track(changeset, build.creator_id, work_key(build.id),
+      finish: false,
+      failed:
+        Work.in_locale(build.creator_id, fn -> gettext("Static build %{version} failed", version: build.version) end),
+      timeout: @queued_timeout,
+      global: true
+    )
+  end
 
   @impl Oban.Worker
   def perform(%Oban.Job{args: %{"build_id" => build_id}}) do
@@ -44,6 +101,10 @@ defmodule Brando.Worker.SSGBuild do
   end
 
   defp run_build(build) do
+    report(build, fn user, key ->
+      Work.update(user, key, gettext("Building static version %{version}", version: build.version), global: true)
+    end)
+
     with {:ok, building} <-
            Builds.update(build, %{
              status: :building,
@@ -53,7 +114,7 @@ defmodule Brando.Worker.SSGBuild do
          {:ok, ready} <- finish_build(building, result),
          {:ok, final} <- maybe_deploy(ready),
          :ok <- prune_and_log(final) do
-      notify_creator(final, "Static build #{final.version} is #{final.status}", :success)
+      report(final, &Work.finish(&1, &2, ready_message(final), global: true))
       :ok
     else
       {:error, {:deploy_failed, reason}, ready} -> record_deploy_failure(ready, reason)
@@ -75,6 +136,9 @@ defmodule Brando.Worker.SSGBuild do
         {:rendering, processed, total, _url}
         when processed == 1 or processed == total or rem(processed, 10) == 0 ->
           Builds.record_progress(build.id, processed - 1, total)
+
+          if build.creator_id,
+            do: Work.update(build.creator_id, work_key(build.id), nil, done: processed - 1, total: total, global: true)
 
         _event ->
           :ok
@@ -123,7 +187,13 @@ defmodule Brando.Worker.SSGBuild do
 
   defp record_deploy_failure(build, reason) do
     Builds.append_log(build, "Automatic deployment failed: #{inspect(reason)}")
-    notify_creator(build, "Static build #{build.version} is ready, but deployment failed", :error)
+
+    report(build, fn user, key ->
+      Work.fail(user, key, gettext("Static build %{version} is ready, but deployment failed", version: build.version),
+        global: true
+      )
+    end)
+
     {:error, {:deploy_failed, reason}}
   end
 
@@ -143,7 +213,7 @@ defmodule Brando.Worker.SSGBuild do
 
     case Builds.update(current, attrs) do
       {:ok, failed} ->
-        notify_creator(failed, "Static build #{failed.version} failed", :error)
+        report_failed(failed)
         {:error, reason}
 
       {:error, changeset} ->
@@ -151,12 +221,18 @@ defmodule Brando.Worker.SSGBuild do
     end
   end
 
-  defp notify_creator(%Build{creator: nil}, _message, _level), do: :ok
+  defp ready_message(%Build{status: :deployed, version: version}),
+    do: gettext("Static build %{version} is deployed", version: version)
 
-  defp notify_creator(%Build{creator: creator}, message, level) do
-    BrandoAdmin.Toast.send_to(creator, message, %{level: level, type: :notification})
-  rescue
-    _endpoint_unavailable -> :ok
+  defp ready_message(%Build{version: version}), do: gettext("Static build %{version} is ready", version: version)
+
+  # In the creator's language: the job has none of its own
+  defp report(%Build{creator_id: nil}, _fun), do: :ok
+
+  defp report(%Build{} = build, fun) do
+    creator = if match?(%Brando.Users.User{}, build.creator), do: build.creator, else: build.creator_id
+    Work.in_locale(creator, fn -> fun.(build.creator_id, work_key(build.id)) end)
+    :ok
   end
 
   defp cancel_unbuildable(build, reason) do
@@ -165,6 +241,10 @@ defmodule Brando.Worker.SSGBuild do
       built_at: DateTime.utc_now(),
       build_log: build.build_log <> log_line("Build cancelled: #{inspect(reason)}")
     })
+
+    report(build, fn user, key ->
+      Work.fail(user, key, gettext("Static build %{version} was cancelled", version: build.version), global: true)
+    end)
 
     {:cancel, reason}
   end

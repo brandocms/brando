@@ -51,6 +51,8 @@ defmodule Brando.Supervisor do
              ]
            ]}
       },
+      # Before Oban, so it hears the first job that reports (BrandoAdmin.Work)
+      BrandoAdmin.Work.Registry,
       {Oban, oban_config()}
     ]
 

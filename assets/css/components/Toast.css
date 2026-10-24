@@ -144,3 +144,49 @@
   padding: 12px;
   border: none;
 }
+
+/* Background work (BrandoAdmin.Work): a spinner while it runs, a bar when
+   it knows how far it has come, then the result's dot. */
+.toast-spinner {
+  display: flex;
+  align-items: center;
+  height: 18px;
+
+  &::before {
+    content: '';
+    box-sizing: border-box;
+    width: 10px;
+    height: 10px;
+    border: 1.5px solid var(--brando-line);
+    border-top-color: var(--brando-accent);
+    border-radius: 50%;
+    animation: work-spin 900ms linear infinite;
+  }
+}
+
+.toast--work .toast-text {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  column-gap: 8px;
+}
+
+.toast-count {
+  color: var(--toast-muted);
+}
+
+.toast-progress {
+  flex: 0 0 100%;
+  height: 3px;
+  margin-top: 6px;
+  border-radius: 2px;
+  background: var(--brando-line);
+  overflow: hidden;
+
+  > span {
+    display: block;
+    height: 100%;
+    background: var(--brando-accent);
+    transition: width 200ms ease-out;
+  }
+}

@@ -45,6 +45,15 @@ defmodule BrandoAdmin.Images.AltTextLiveTest do
     assert has_element?(view, ".ai-suggestion img.ai-suggestion-thumbnail")
     refute has_element?(view, "button[phx-click=describe]")
 
+    # The batch reported as one piece of work, shown here rather than as a toast
+    BrandoAdmin.Work.Registry.sync()
+
+    assert has_element?(
+             view,
+             ~s(.work-status[data-work-id="alt-text-suggestions"][data-status="finished"]),
+             "Alt text is ready for review"
+           )
+
     view
     |> form("#suggestion-#{id} form", %{"values" => %{"en" => "A red lighthouse", "no" => "Et rødt fyr"}})
     |> render_submit()

@@ -3,6 +3,8 @@ defmodule BrandoAdmin.Sites.SEOLive do
   use BrandoAdmin.LiveView.Form, schema: Brando.Sites.SEO
   use Gettext, backend: Brando.Gettext
 
+  on_mount BrandoAdmin.Work
+
   alias Brando.AI
   alias Brando.IndexNow
   alias Brando.SEO.Analytics
@@ -15,6 +17,7 @@ defmodule BrandoAdmin.Sites.SEOLive do
   alias BrandoAdmin.Components.AIAction
   alias BrandoAdmin.Components.Form
   alias BrandoAdmin.Components.SuggestionReview
+  alias BrandoAdmin.Components.Work
   alias BrandoAdmin.Components.Workspace
 
   # Image alt text shares the suggestion queue; it is reviewed in the image library.
@@ -105,6 +108,7 @@ defmodule BrandoAdmin.Sites.SEOLive do
           generating={@generating}
           suggestions={@suggestions}
           batch_confirm={@batch_confirm}
+          batch_work={@work[@batch_work_key]}
           accepting_all={@accepting_all}
           critiques={@critiques}
           sort={@sort}
@@ -307,6 +311,7 @@ defmodule BrandoAdmin.Sites.SEOLive do
   attr :generating, :any
   attr :suggestions, :list
   attr :batch_confirm, :boolean
+  attr :batch_work, BrandoAdmin.Work, default: nil
   attr :accepting_all, :boolean
   attr :critiques, :map
   attr :sort, :string
@@ -419,6 +424,8 @@ defmodule BrandoAdmin.Sites.SEOLive do
       <div :if={match?({:error, _}, @audit_status)} class="seo-audit-status error" role="alert">
         {gettext("The audit could not run.")} {elem(@audit_status, 1)}
       </div>
+
+      <Work.status key={batch_work_key()} work={@batch_work} class="seo-batch-work" />
 
       <%= if @audit && @audit_status == :done do %>
         <.overview audit={@audit} ai_available={@ai_available} generating={@generating} />
@@ -1232,8 +1239,16 @@ defmodule BrandoAdmin.Sites.SEOLive do
     %{audit: audit, suggestions: suggestions, audit_language: language, current_user: user} = socket.assigns
 
     if socket.assigns.ai_available and audit do
-      {:ok, count} = Suggestions.enqueue(batch_candidates(audit, suggestions), language, user)
-      send(self(), {:toast, ngettext("Writing one description", "Writing %{count} descriptions", count)})
+      {:ok, _count} =
+        Suggestions.enqueue(batch_candidates(audit, suggestions), language, user,
+          work: [
+            key: batch_work_key(),
+            message: &ngettext("Writing one description", "Writing %{count} descriptions", &1),
+            done: gettext("Descriptions are ready for review"),
+            failed: gettext("Some descriptions could not be written")
+          ]
+        )
+
       {:noreply, socket |> assign(:batch_confirm, false) |> assign_suggestions()}
     else
       {:noreply, socket}
@@ -1405,6 +1420,7 @@ defmodule BrandoAdmin.Sites.SEOLive do
     |> assign(:queries, %{})
     |> assign(:suggestions, [])
     |> assign(:batch_confirm, false)
+    |> assign(:batch_work_key, batch_work_key())
     |> assign(:accepting_all, false)
     |> assign(:ai_available, AI.configured?())
     |> assign(:picker_open, false)
@@ -1457,6 +1473,9 @@ defmodule BrandoAdmin.Sites.SEOLive do
 
   # Entries with no description of their own, less those a suggestion is
   # already on its way for or waiting on review.
+  # The batch reports as one piece of work (BrandoAdmin.Work)
+  defp batch_work_key, do: "seo-descriptions"
+
   defp batch_candidates(audit, suggestions) do
     waiting = MapSet.new(suggestions, &{&1.schema, &1.entry_id})
 

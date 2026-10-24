@@ -9,6 +9,8 @@ defmodule BrandoAdmin.Sites.PublishingLive do
   # may deploy at once), deploying and rolling back ask for the password, a
   # code or a passkey when the session has not confirmed lately.
   on_mount({BrandoAdmin.Reauth, events: ~w(save_deploy_config deploy rollback request_build schedule_build)})
+  # Builds, deploys and rollbacks report on their rows
+  on_mount BrandoAdmin.Work
 
   alias Brando.Environments.Environment
   alias Brando.SSG.Build
@@ -16,8 +18,11 @@ defmodule BrandoAdmin.Sites.PublishingLive do
   alias Brando.Tenant
   alias Brando.Tenant.Access
   alias Brando.Tenant.Registry
+  alias Brando.Worker.SSGBuild
   alias Brando.Worker.SSGDeploy
   alias BrandoAdmin.Components.Content
+  alias BrandoAdmin.Components.Work, as: WorkComponent
+  alias BrandoAdmin.Work
 
   @manager_roles [:admin, :superuser]
 
@@ -250,6 +255,12 @@ defmodule BrandoAdmin.Sites.PublishingLive do
                     {human_status(build.status)}
                   </span>
                   <small :if={build.pruned_at}>{gettext("artifact pruned")}</small>
+                  <WorkComponent.status
+                    key={SSGBuild.work_key(build.id)}
+                    work={@work[SSGBuild.work_key(build.id)]}
+                    global
+                    class="publishing-build-work"
+                  />
                 </td>
                 <td>{format_datetime(build.scheduled_at || build.inserted_at)}</td>
                 <td class="environment-actions">
@@ -351,16 +362,24 @@ defmodule BrandoAdmin.Sites.PublishingLive do
     end
   end
 
+  # The job reports on the build's row, or as a toast elsewhere (BrandoAdmin.Work)
   def handle_event(action, %{"id" => id}, socket) when action in ["deploy", "rollback"] do
+    user = socket.assigns.current_user
+
     with true <- socket.assigns.can_manage?,
          {build_id, ""} <- Integer.parse(id),
-         %Build{site_id: site_id} <- Enum.find(socket.assigns.builds, &(&1.id == build_id)),
+         %Build{site_id: site_id} = build <- Enum.find(socket.assigns.builds, &(&1.id == build_id)),
          true <- site_id == socket.assigns.site.id,
          {:ok, _job} <-
-           %{"build_id" => build_id, "action" => action, "creator_id" => socket.assigns.current_user.id}
+           %{"build_id" => build_id, "action" => action, "creator_id" => user.id}
            |> SSGDeploy.new(tags: ["ssg-deploy", "site:#{site_id}"])
+           # It waits behind any build on the one-at-a-time queue
+           |> Work.track(
+             user,
+             SSGBuild.work_key(build_id),
+             [global: true, timeout: to_timeout(hour: 1)] ++ deploy_messages(action, build.version)
+           )
            |> Oban.insert() do
-      send(self(), {:toast, gettext("Static %{action} queued", action: action)})
       {:noreply, socket}
     else
       _error -> toast_error(socket, gettext("Could not queue the publishing action."))
@@ -369,6 +388,24 @@ defmodule BrandoAdmin.Sites.PublishingLive do
 
   @impl Phoenix.LiveView
   def handle_info({:ssg_build_updated, _build}, socket), do: {:noreply, refresh(socket)}
+
+  defp deploy_messages("deploy", version) do
+    [
+      queued: gettext("Deploy of %{version} is queued", version: version),
+      running: gettext("Deploying %{version}", version: version),
+      done: gettext("%{version} is deployed", version: version),
+      failed: gettext("Could not deploy %{version}", version: version)
+    ]
+  end
+
+  defp deploy_messages("rollback", version) do
+    [
+      queued: gettext("Rollback to %{version} is queued", version: version),
+      running: gettext("Rolling back to %{version}", version: version),
+      done: gettext("Rolled back to %{version}", version: version),
+      failed: gettext("Could not roll back to %{version}", version: version)
+    ]
+  end
 
   defp queue_build(socket, params, scheduled_at) do
     with true <- socket.assigns.can_manage?,
@@ -380,7 +417,8 @@ defmodule BrandoAdmin.Sites.PublishingLive do
              auto_deploy: params["auto_deploy"] == "true",
              scheduled_at: scheduled_at
            ) do
-      send(self(), {:toast, gettext("Queued static build %{version}", version: build.version)})
+      # An immediate build reports on its row (BrandoAdmin.Work); a scheduled one waits
+      if scheduled_at, do: send(self(), {:toast, gettext("Scheduled static build %{version}", version: build.version)})
       {:noreply, refresh(socket)}
     else
       _error -> toast_error(socket, gettext("Could not queue the static build."))

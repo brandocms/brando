@@ -43,7 +43,8 @@ defmodule BrandoAdmin.VideoListLiveTest do
   end
 
   # Every video missing a thumbnail or title gets a lookup, one insert each:
-  # the list queues one job that does that, and is done.
+  # the list queues one job that does that, and shows the lookups as one
+  # piece of work beside the button.
   test "fetching missing details queues one job for the lookups", %{conn: conn} do
     video = Factory.insert(:video, title: nil)
     Req.Test.stub(Brando.Videos.Metadata, &Plug.Conn.send_resp(&1, 404, ""))
@@ -69,7 +70,44 @@ defmodule BrandoAdmin.VideoListLiveTest do
     assert_received {:queued, "Brando.Worker.VideoMetadataSweep", _args}
     assert_received {:queued, "Brando.Worker.VideoMetadata", %{"video_id" => video_id}}
     assert video_id == video.id
-    refute has_element?(view, "button[phx-click='fetch_metadata']")
+
+    # The source answered 404: the lookup gave up, and the video still misses its details
+    BrandoAdmin.Work.Registry.sync()
+
+    assert has_element?(
+             view,
+             ~s(.work-status[data-work-id="video-metadata"][data-status="failed"]),
+             "Some videos could not be looked up"
+           )
+
+    assert has_element?(view, "button[phx-click='fetch_metadata']:not([disabled])")
+  end
+
+  test "fetching details shows the lookups running, and their result when they are in", %{conn: conn} do
+    Factory.insert(:video, title: nil)
+    {:ok, view, _html} = live(conn, "/admin/assets/videos")
+    user = :sys.get_state(view.pid).socket.assigns.current_user
+
+    # As the sweep reports, before its lookups end
+    BrandoAdmin.Work.start(user, "video-metadata", "Looking up 2 videos", total: 2, done: "Thumbnails and titles fetched")
+    BrandoAdmin.Work.advance(user, "video-metadata")
+    BrandoAdmin.Work.Registry.sync()
+
+    assert has_element?(view, "button[phx-click='fetch_metadata'][disabled][aria-busy]", "Fetching thumbnails and titles")
+    assert has_element?(view, ~s(.work-status[data-status="running"] .work-count), "1 / 2")
+
+    BrandoAdmin.Work.advance(user, "video-metadata")
+    BrandoAdmin.Work.Registry.sync()
+
+    assert has_element?(view, ~s(.work-status[data-status="finished"]), "Thumbnails and titles fetched")
+    refute has_element?(view, "button[phx-click='fetch_metadata'][disabled]")
+
+    # A reload while it ran shows it running
+    BrandoAdmin.Work.start(user, "video-metadata", "Looking up 1 video", total: 1)
+    BrandoAdmin.Work.Registry.sync()
+    {:ok, view, _html} = live(conn, "/admin/assets/videos")
+    assert has_element?(view, "button[phx-click='fetch_metadata'][aria-busy]")
+    BrandoAdmin.Work.finish(user, "video-metadata")
   end
 
   test "the Not in use filter lists unused videos, and switching it off drops it", %{conn: conn} do

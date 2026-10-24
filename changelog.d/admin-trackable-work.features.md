@@ -1,0 +1,1 @@
+- Static builds, deploys, rollbacks, video detail lookups and AI suggestion batches show their progress and result on the screen that started them, and as a toast updated in place elsewhere; an application's own jobs can do the same with `BrandoAdmin.Work`.

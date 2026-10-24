@@ -849,6 +849,11 @@ msgstr "%{used} av %{total} enheter brukt"
 msgid "%{used} used in the proposal · %{free} not used"
 msgstr "%{used} brukt i forslaget · %{free} ikke brukt"
 
+#: lib/brando_admin/live/sites/publishing_live.ex
+#, elixir-autogen, elixir-format
+msgid "%{version} is deployed"
+msgstr "%{version} er publisert"
+
 #: lib/brando_admin/components/form/input/form_fields.ex
 #, elixir-autogen, elixir-format
 msgid "%{width} needs %{needed} units — only %{free} free in that row. Narrow another field, or start a new row."
@@ -2075,6 +2080,11 @@ msgstr "Alt-tekst fra oppføringen"
 
 #: lib/brando_admin/live/images/alt_text_live.ex
 #, elixir-autogen, elixir-format
+msgid "Alt text is ready for review"
+msgstr "Alt-tekstene er klare til gjennomgang"
+
+#: lib/brando_admin/live/images/alt_text_live.ex
+#, elixir-autogen, elixir-format
 msgid "Alt text saved"
 msgstr "Alt-teksten er lagret"
 
@@ -2950,6 +2960,11 @@ msgstr "Bygger"
 #, elixir-autogen, elixir-format
 msgid "Building blocks"
 msgstr "Byggeklosser"
+
+#: lib/brando/workers/ssg_build.ex
+#, elixir-autogen, elixir-format
+msgid "Building static version %{version}"
+msgstr "Bygger statisk versjon %{version}"
 
 #: lib/brando_admin/live/users/groups_live.ex
 #, elixir-autogen, elixir-format
@@ -4490,11 +4505,17 @@ msgstr "Klarte ikke opprette omdirigeringen"
 msgid "Could not create the translation"
 msgstr "Kunne ikke opprette oversettelsen"
 
+#: lib/brando_admin/live/sites/publishing_live.ex
+#, elixir-autogen, elixir-format
+msgid "Could not deploy %{version}"
+msgstr "Klarte ikke å publisere %{version}"
+
 #: lib/brando_admin/components/form/input/rich_text_labels.ex
 #, elixir-autogen, elixir-format
 msgid "Could not generate a suggestion. Try again."
 msgstr "Klarte ikke lage et forslag. Prøv igjen."
 
+#: lib/brando/workers/video_metadata_sweep.ex
 #: lib/brando_admin/live/videos/video_list_live.ex
 #, elixir-autogen, elixir-format
 msgid "Could not look the videos up"
@@ -4549,6 +4570,11 @@ msgstr "Kunne ikke gjenopprette: %{reason}"
 #, elixir-autogen, elixir-format
 msgid "Could not revert the frontend assets"
 msgstr "Kunne ikke bytte til frontend-filene fra releasen"
+
+#: lib/brando_admin/live/sites/publishing_live.ex
+#, elixir-autogen, elixir-format
+msgid "Could not roll back to %{version}"
+msgstr "Klarte ikke å rulle tilbake til %{version}"
 
 #: lib/brando_admin/live/content/module_form_live.ex
 #, elixir-autogen, elixir-format
@@ -5497,6 +5523,11 @@ msgstr "Publiser automatisk"
 msgid "Deploy automatically after a successful build"
 msgstr "Publiser automatisk etter et vellykket bygg"
 
+#: lib/brando_admin/live/sites/publishing_live.ex
+#, elixir-autogen, elixir-format
+msgid "Deploy of %{version} is queued"
+msgstr "Publisering av %{version} står i kø"
+
 #: lib/brando_admin/components/authorization_tools.ex
 #, elixir-autogen, elixir-format
 msgid "Deploy this configuration only after reviewing groups, mapping application policies, and testing representative accounts."
@@ -5511,6 +5542,11 @@ msgstr "Publiser via %{strategy} til %{target}"
 #, elixir-autogen, elixir-format
 msgid "Deployed"
 msgstr "Publisert"
+
+#: lib/brando_admin/live/sites/publishing_live.ex
+#, elixir-autogen, elixir-format
+msgid "Deploying %{version}"
+msgstr "Publiserer %{version}"
 
 #: lib/brando_admin/live/sites/publishing_live.ex
 #, elixir-autogen, elixir-format
@@ -5581,6 +5617,11 @@ msgstr "Beskrivelsen er lagret"
 #, elixir-autogen, elixir-format
 msgid "Description written"
 msgstr "Beskrivelsen er skrevet"
+
+#: lib/brando_admin/live/sites/seo_live.ex
+#, elixir-autogen, elixir-format
+msgid "Descriptions are ready for review"
+msgstr "Beskrivelsene er klare til gjennomgang"
 
 #: lib/brando_admin/live/ai/assistant_live.ex
 #, elixir-autogen, elixir-format
@@ -5793,7 +5834,9 @@ msgstr "Ikke tillat"
 #: lib/brando_admin/components/form/module_props.ex
 #: lib/brando_admin/components/form/subform.ex
 #: lib/brando_admin/components/form/video_drawer.ex
+#: lib/brando_admin/components/layouts/root.html.heex
 #: lib/brando_admin/live/sites/webhooks_live.ex
+#: lib/brando_admin/work.ex
 #, elixir-autogen, elixir-format
 msgid "Done"
 msgstr "Ferdig"
@@ -7048,11 +7091,13 @@ msgstr "Eksterne video-URL-er er deaktivert for dette feltet"
 msgid "Facebook, LinkedIn"
 msgstr "Facebook, LinkedIn"
 
+#: lib/brando_admin/components/layouts/root.html.heex
 #: lib/brando_admin/components/video_picker.ex
 #: lib/brando_admin/live/sites/notifications_live.ex
 #: lib/brando_admin/live/sites/scheduled_publishing_live.ex
 #: lib/brando_admin/live/sites/seo_live.ex
 #: lib/brando_admin/live/sites/webhooks_live.ex
+#: lib/brando_admin/work.ex
 #, elixir-format, elixir-autogen
 msgid "Failed"
 msgstr "Mislyktes"
@@ -7112,6 +7157,11 @@ msgstr "Henting for en bruker"
 #, elixir-autogen, elixir-format
 msgid "Fetching entry..."
 msgstr "Henter oppføring..."
+
+#: lib/brando_admin/live/videos/video_list_live.ex
+#, elixir-autogen, elixir-format
+msgid "Fetching thumbnails and titles"
+msgstr "Henter miniatyrbilder og titler"
 
 #: lib/brando_admin/components/form/notes_drawer.ex
 #, elixir-autogen, elixir-format
@@ -9424,6 +9474,7 @@ msgstr "Så etter mappen"
 msgid "Looked for the folder “%{name}”"
 msgstr "Lette etter mappen «%{name}»"
 
+#: lib/brando/workers/video_metadata_sweep.ex
 #: lib/brando_admin/live/videos/video_list_live.ex
 #, elixir-autogen, elixir-format
 msgid "Looking up %{count} video"
@@ -10954,6 +11005,11 @@ msgstr "Ingen video knyttet til feltet"
 #, elixir-autogen, elixir-format
 msgid "No video selected"
 msgstr "Ingen video valgt"
+
+#: lib/brando/workers/video_metadata_sweep.ex
+#, elixir-autogen, elixir-format
+msgid "No videos are missing details"
+msgstr "Ingen videoer mangler detaljer"
 
 #: lib/brando_admin/components/video_picker.ex
 #, elixir-autogen, elixir-format
@@ -12864,11 +12920,6 @@ msgstr "I kø"
 
 #: lib/brando_admin/live/sites/publishing_live.ex
 #, elixir-autogen, elixir-format
-msgid "Queued static build %{version}"
-msgstr "La statisk bygg %{version} i kø"
-
-#: lib/brando_admin/live/sites/publishing_live.ex
-#, elixir-autogen, elixir-format
 msgid "Queueing…"
 msgstr "Legger i kø …"
 
@@ -14226,6 +14277,21 @@ msgstr "Rull tilbake"
 msgid "Roll back to %{version}?"
 msgstr "Rulle tilbake til %{version}?"
 
+#: lib/brando_admin/live/sites/publishing_live.ex
+#, elixir-autogen, elixir-format
+msgid "Rollback to %{version} is queued"
+msgstr "Tilbakerulling til %{version} står i kø"
+
+#: lib/brando_admin/live/sites/publishing_live.ex
+#, elixir-autogen, elixir-format
+msgid "Rolled back to %{version}"
+msgstr "Rullet tilbake til %{version}"
+
+#: lib/brando_admin/live/sites/publishing_live.ex
+#, elixir-autogen, elixir-format
+msgid "Rolling back to %{version}"
+msgstr "Ruller tilbake til %{version}"
+
 #: lib/brando_admin/components/assets/file_browser.ex
 #, elixir-autogen, elixir-format
 msgid "Root"
@@ -14643,6 +14709,11 @@ msgstr "Planlagt publisering kunne ikke oppdateres."
 #, elixir-autogen, elixir-format
 msgid "Scheduled revision for publishing"
 msgstr "Planlagt versjon for publisering"
+
+#: lib/brando_admin/live/sites/publishing_live.ex
+#, elixir-autogen, elixir-format
+msgid "Scheduled static build %{version}"
+msgstr "Planla statisk bygg %{version}"
 
 #: lib/brando_admin/components/form/revisions_drawer.ex
 #, elixir-autogen, elixir-format
@@ -15743,15 +15814,30 @@ msgstr "Smart tekst"
 msgid "Snippet length"
 msgstr "Lengde på tekstutdrag"
 
+#: lib/brando_admin/live/sites/seo_live.ex
+#, elixir-autogen, elixir-format
+msgid "Some descriptions could not be written"
+msgstr "Noen beskrivelser kunne ikke skrives"
+
 #: lib/brando_admin/live_view/listing/hooks.ex
 #, elixir-autogen, elixir-format
 msgid "Some entries could not be copied."
 msgstr "Noen av oppføringene kunne ikke kopieres."
 
+#: lib/brando_admin/live/images/alt_text_live.ex
+#, elixir-autogen, elixir-format
+msgid "Some images could not be described"
+msgstr "Noen bilder kunne ikke beskrives"
+
 #: lib/brando_admin/live/users/sign_in_policy_live.ex
 #, elixir-autogen, elixir-format
 msgid "Some users"
 msgstr "Noen brukere"
+
+#: lib/brando/workers/video_metadata_sweep.ex
+#, elixir-autogen, elixir-format
+msgid "Some videos could not be looked up"
+msgstr "Noen videoer kunne ikke slås opp"
 
 #: lib/brando/users/user_notifier.ex
 #, elixir-autogen, elixir-format
@@ -15901,10 +15987,35 @@ msgstr "Tilstand"
 msgid "Static"
 msgstr "Statisk"
 
-#: lib/brando_admin/live/sites/publishing_live.ex
+#: lib/brando/workers/ssg_build.ex
 #, elixir-autogen, elixir-format
-msgid "Static %{action} queued"
-msgstr "Statisk %{action} lagt i kø"
+msgid "Static build %{version} failed"
+msgstr "Statisk bygg %{version} mislyktes"
+
+#: lib/brando/workers/ssg_build.ex
+#, elixir-autogen, elixir-format
+msgid "Static build %{version} is deployed"
+msgstr "Statisk bygg %{version} er publisert"
+
+#: lib/brando/workers/ssg_build.ex
+#, elixir-autogen, elixir-format
+msgid "Static build %{version} is queued"
+msgstr "Statisk bygg %{version} står i kø"
+
+#: lib/brando/workers/ssg_build.ex
+#, elixir-autogen, elixir-format
+msgid "Static build %{version} is ready"
+msgstr "Statisk bygg %{version} er klart"
+
+#: lib/brando/workers/ssg_build.ex
+#, elixir-autogen, elixir-format
+msgid "Static build %{version} is ready, but deployment failed"
+msgstr "Statisk bygg %{version} er klart, men publiseringen mislyktes"
+
+#: lib/brando/workers/ssg_build.ex
+#, elixir-autogen, elixir-format
+msgid "Static build %{version} was cancelled"
+msgstr "Statisk bygg %{version} ble avbrutt"
 
 #: lib/brando_admin/live/sites/publishing_live.ex
 #, elixir-autogen, elixir-format
@@ -15959,6 +16070,12 @@ msgstr "Slutte å følge kilden? Oversettelsen beholder innholdet, endringene so
 #, elixir-autogen, elixir-format
 msgid "Stop sharing"
 msgstr "Slutt å dele"
+
+#: lib/brando_admin/components/layouts/root.html.heex
+#: lib/brando_admin/work.ex
+#, elixir-autogen, elixir-format
+msgid "Stopped reporting progress"
+msgstr "Sluttet å melde fremdrift"
 
 #: lib/brando_admin/live/ai/assistant_live.ex
 #, elixir-autogen, elixir-format
@@ -17260,6 +17377,11 @@ msgstr "Videoleverandøren kunne ikke nås. Prøv igjen."
 msgid "The video provider refused the upload. Check its settings, or try again."
 msgstr "Videoleverandøren avviste opplastingen. Sjekk innstillingene, eller prøv igjen."
 
+#: lib/brando/workers/video_metadata_sweep.ex
+#, elixir-autogen, elixir-format
+msgid "The videos are already being looked up"
+msgstr "Videoene blir allerede slått opp"
+
 #: lib/brando_admin/live/sites/webhooks_live.ex
 #, elixir-autogen, elixir-format
 msgid "The webhook was deleted."
@@ -17836,6 +17958,11 @@ msgstr "Dette arbeidsområdet"
 #, elixir-autogen, elixir-format
 msgid "Thumbnail"
 msgstr "Miniatyrbilde"
+
+#: lib/brando/workers/video_metadata_sweep.ex
+#, elixir-autogen, elixir-format
+msgid "Thumbnails and titles fetched"
+msgstr "Miniatyrbilder og titler er hentet"
 
 #: lib/brando/forms/messages.ex
 #, elixir-autogen, elixir-format

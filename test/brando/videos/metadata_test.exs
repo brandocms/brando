@@ -161,6 +161,30 @@ defmodule Brando.Videos.MetadataTest do
     end)
   end
 
+  # A lookup waiting as a step of the same work counts itself when it ends
+  test "a lookup already waiting for the same work is not counted twice" do
+    user = Factory.insert(:random_user)
+    video = Factory.insert(:video, creator: user, type: :vimeo, remote_id: "9", source_url: "https://vimeo.com/9")
+    BrandoAdmin.Work.subscribe(user)
+    BrandoAdmin.Work.start(user, "lookups", "Looking up", total: 2)
+
+    Oban.Testing.with_testing_mode(:manual, fn ->
+      Videos.enqueue_metadata([video.id], user, work: "lookups")
+      age_jobs(Brando.Worker.VideoMetadata, 600)
+      Videos.enqueue_metadata([video.id], user, work: "lookups")
+    end)
+
+    BrandoAdmin.Work.Registry.sync()
+    assert %BrandoAdmin.Work{done: 0} = BrandoAdmin.Work.get(user, "lookups")
+
+    # Waiting for other work, or none, it counts at once
+    Oban.Testing.with_testing_mode(:manual, fn -> Videos.enqueue_metadata([video.id], user, work: "other") end)
+    BrandoAdmin.Work.start(user, "other", "Looking up", total: 1)
+    Oban.Testing.with_testing_mode(:manual, fn -> Videos.enqueue_metadata([video.id], user, work: "other") end)
+    assert_receive {:work, "other", :finished, _}
+    BrandoAdmin.Work.finish(user, "lookups")
+  end
+
   defp age_jobs(worker, seconds) do
     import Ecto.Query, only: [from: 2]
     inserted_at = DateTime.add(DateTime.utc_now(), -seconds)
